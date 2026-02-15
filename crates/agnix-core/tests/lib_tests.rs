@@ -4214,7 +4214,11 @@ fn test_validate_project_file_input_produces_diagnostics() {
     assert!(
         result.diagnostics.iter().any(|d| d.rule == "CC-SK-006"),
         "Expected CC-SK-006 for dangerous deploy-prod name, got rules: {:?}",
-        result.diagnostics.iter().map(|d| &d.rule).collect::<Vec<_>>()
+        result
+            .diagnostics
+            .iter()
+            .map(|d| &d.rule)
+            .collect::<Vec<_>>()
     );
 }
 
@@ -4252,7 +4256,11 @@ fn test_validate_project_file_input_valid_file_no_errors() {
     assert!(
         result.diagnostics.is_empty(),
         "Valid CLAUDE.md should produce no diagnostics, got: {:?}",
-        result.diagnostics.iter().map(|d| &d.rule).collect::<Vec<_>>()
+        result
+            .diagnostics
+            .iter()
+            .map(|d| &d.rule)
+            .collect::<Vec<_>>()
     );
 }
 
@@ -4311,7 +4319,11 @@ fn test_validate_project_file_input_unknown_type_skipped() {
     assert!(
         result.diagnostics.is_empty(),
         "Unrecognized file type should produce no diagnostics, got: {:?}",
-        result.diagnostics.iter().map(|d| &d.rule).collect::<Vec<_>>()
+        result
+            .diagnostics
+            .iter()
+            .map(|d| &d.rule)
+            .collect::<Vec<_>>()
     );
 }
 
@@ -4345,7 +4357,11 @@ fn test_validate_project_with_registry_file_input() {
     assert!(
         result.diagnostics.iter().any(|d| d.rule == "CC-SK-006"),
         "Expected CC-SK-006 for dangerous deploy-prod name via registry path, got rules: {:?}",
-        result.diagnostics.iter().map(|d| &d.rule).collect::<Vec<_>>()
+        result
+            .diagnostics
+            .iter()
+            .map(|d| &d.rule)
+            .collect::<Vec<_>>()
     );
 }
 
