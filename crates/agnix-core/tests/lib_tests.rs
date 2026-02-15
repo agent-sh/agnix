@@ -4349,6 +4349,37 @@ fn test_validate_project_with_registry_file_input() {
     );
 }
 
+/// Passing a nonexistent file path - is_file() returns false, so it falls through
+/// to the directory branch. canonicalize fails, walk yields nothing.
+#[test]
+fn test_validate_project_file_input_nonexistent_path() {
+    let temp = tempfile::TempDir::new().unwrap();
+
+    // Create a real SKILL.md with violations in the directory
+    std::fs::write(
+        temp.path().join("SKILL.md"),
+        "---\nname: deploy-prod\ndescription: Deploys\n---\nBody",
+    )
+    .unwrap();
+
+    let mut config = LintConfig::default();
+    config.rules_mut().disabled_rules = vec!["VER-001".to_string()];
+
+    // Pass a nonexistent file - is_file() returns false, treated as directory,
+    // canonicalize fails, walk yields nothing
+    let nonexistent = temp.path().join("nonexistent.md");
+    let result = validate_project(&nonexistent, &config).unwrap();
+
+    assert_eq!(
+        result.files_checked, 0,
+        "Nonexistent file path should result in 0 files checked"
+    );
+    assert!(
+        result.diagnostics.is_empty(),
+        "Nonexistent file path should produce no diagnostics"
+    );
+}
+
 // ============================================================================
 // Validator name() tests
 // ============================================================================
