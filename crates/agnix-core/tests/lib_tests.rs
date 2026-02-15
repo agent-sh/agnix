@@ -4392,7 +4392,8 @@ fn test_validate_project_file_input_nonexistent_path() {
     );
     assert!(
         result.diagnostics.is_empty(),
-        "Nonexistent file path should produce no diagnostics"
+        "Nonexistent file path should produce no diagnostics, got: {:?}",
+        result.diagnostics
     );
 }
 
