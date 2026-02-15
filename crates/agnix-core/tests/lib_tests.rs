@@ -4143,6 +4143,212 @@ fn test_validate_project_rules_xp006() {
     );
 }
 
+// ===== resolve_validation_root file-input Tests =====
+
+#[test]
+fn test_validate_project_file_input_single_file() {
+    // When a file path is passed to validate_project(), only that single file
+    // should be validated - sibling files in other directories are ignored.
+    let temp = tempfile::TempDir::new().unwrap();
+
+    let alpha_dir = temp.path().join("skills").join("alpha");
+    std::fs::create_dir_all(&alpha_dir).unwrap();
+    std::fs::write(
+        alpha_dir.join("SKILL.md"),
+        "---\nname: deploy-prod\ndescription: Deploys\n---\nBody",
+    )
+    .unwrap();
+
+    let beta_dir = temp.path().join("skills").join("beta");
+    std::fs::create_dir_all(&beta_dir).unwrap();
+    std::fs::write(
+        beta_dir.join("SKILL.md"),
+        "---\nname: deploy-staging\ndescription: Deploys staging\n---\nBody",
+    )
+    .unwrap();
+
+    let mut config = LintConfig::default();
+    config.rules_mut().disabled_rules = vec!["VER-001".to_string()];
+
+    // Pass the file path for alpha/SKILL.md, not the directory
+    let target_file = alpha_dir.join("SKILL.md");
+    let result = validate_project(&target_file, &config).unwrap();
+
+    assert_eq!(
+        result.files_checked, 1,
+        "Only the targeted file should be checked, got {}",
+        result.files_checked
+    );
+
+    // All diagnostics should reference the target file, not the beta sibling
+    for d in &result.diagnostics {
+        assert!(
+            d.file.ends_with("alpha/SKILL.md") || d.file.ends_with("alpha\\SKILL.md"),
+            "Diagnostic should reference alpha/SKILL.md, got: {}",
+            d.file.display()
+        );
+    }
+}
+
+#[test]
+fn test_validate_project_file_input_produces_diagnostics() {
+    // Passing a single SKILL.md with a known violation should produce diagnostics.
+    let temp = tempfile::TempDir::new().unwrap();
+    let skill_path = temp.path().join("SKILL.md");
+    std::fs::write(
+        &skill_path,
+        "---\nname: deploy-prod\ndescription: Deploys\n---\nBody",
+    )
+    .unwrap();
+
+    let mut config = LintConfig::default();
+    config.rules_mut().disabled_rules = vec!["VER-001".to_string()];
+
+    let result = validate_project(&skill_path, &config).unwrap();
+
+    assert_eq!(
+        result.files_checked, 1,
+        "Exactly one file should be checked, got {}",
+        result.files_checked
+    );
+    assert!(
+        result.diagnostics.iter().any(|d| d.rule == "CC-SK-006"),
+        "Expected CC-SK-006 for dangerous deploy-prod name, got rules: {:?}",
+        result.diagnostics.iter().map(|d| &d.rule).collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn test_validate_project_file_input_valid_file_no_errors() {
+    // Passing a valid CLAUDE.md file should produce no diagnostics,
+    // even when a sibling SKILL.md has violations.
+    let temp = tempfile::TempDir::new().unwrap();
+
+    // Valid CLAUDE.md
+    std::fs::write(
+        temp.path().join("CLAUDE.md"),
+        "# Project\n\nInstructions here.",
+    )
+    .unwrap();
+
+    // Sibling with violations (should not be scanned)
+    std::fs::write(
+        temp.path().join("SKILL.md"),
+        "---\nname: deploy-prod\ndescription: Deploys\n---\nBody",
+    )
+    .unwrap();
+
+    let mut config = LintConfig::default();
+    config.rules_mut().disabled_rules = vec!["VER-001".to_string()];
+
+    let target_file = temp.path().join("CLAUDE.md");
+    let result = validate_project(&target_file, &config).unwrap();
+
+    assert_eq!(
+        result.files_checked, 1,
+        "Only the targeted CLAUDE.md should be checked, got {}",
+        result.files_checked
+    );
+    assert!(
+        result.diagnostics.is_empty(),
+        "Valid CLAUDE.md should produce no diagnostics, got: {:?}",
+        result.diagnostics.iter().map(|d| &d.rule).collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn test_validate_project_rules_file_input() {
+    // When a file path is passed to validate_project_rules(), the walk is
+    // scoped to that single file. AGM-006 requires multiple AGENTS.md files,
+    // so it should NOT fire when only one file is walked.
+    let temp = tempfile::TempDir::new().unwrap();
+
+    std::fs::write(temp.path().join("AGENTS.md"), "# Root agents").unwrap();
+
+    let sub_dir = temp.path().join("sub");
+    std::fs::create_dir_all(&sub_dir).unwrap();
+    std::fs::write(sub_dir.join("AGENTS.md"), "# Sub agents").unwrap();
+
+    let mut config = LintConfig::default();
+    config.rules_mut().disabled_rules = vec!["VER-001".to_string()];
+
+    // Pass the root AGENTS.md file path, not the directory
+    let target_file = temp.path().join("AGENTS.md");
+    let diagnostics = validate_project_rules(&target_file, &config).unwrap();
+
+    let agm006: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AGM-006").collect();
+    assert!(
+        agm006.is_empty(),
+        "AGM-006 should not fire when walk is scoped to a single file, got {} diagnostics",
+        agm006.len()
+    );
+}
+
+#[test]
+fn test_validate_project_file_input_unknown_type_skipped() {
+    // Passing an unrecognized file type should result in zero files checked
+    // and no diagnostics, even when a sibling recognized file has violations.
+    let temp = tempfile::TempDir::new().unwrap();
+
+    std::fs::write(temp.path().join("main.rs"), "fn main() {}").unwrap();
+    std::fs::write(
+        temp.path().join("SKILL.md"),
+        "---\nname: deploy-prod\ndescription: Deploys\n---\nBody",
+    )
+    .unwrap();
+
+    let mut config = LintConfig::default();
+    config.rules_mut().disabled_rules = vec!["VER-001".to_string()];
+
+    let target_file = temp.path().join("main.rs");
+    let result = validate_project(&target_file, &config).unwrap();
+
+    assert_eq!(
+        result.files_checked, 0,
+        "Unrecognized file type should not be counted, got {}",
+        result.files_checked
+    );
+    assert!(
+        result.diagnostics.is_empty(),
+        "Unrecognized file type should produce no diagnostics, got: {:?}",
+        result.diagnostics.iter().map(|d| &d.rule).collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn test_validate_project_with_registry_file_input() {
+    // validate_project_with_registry() should also respect file-input paths,
+    // validating only the targeted file.
+    let temp = tempfile::TempDir::new().unwrap();
+    let skill_path = temp.path().join("SKILL.md");
+    std::fs::write(
+        &skill_path,
+        "---\nname: deploy-prod\ndescription: Deploys\n---\nBody",
+    )
+    .unwrap();
+
+    let mut config = LintConfig::default();
+    config.rules_mut().disabled_rules = vec!["VER-001".to_string()];
+
+    let registry = ValidatorRegistry::with_defaults();
+    let result = validate_project_with_registry(&skill_path, &config, &registry).unwrap();
+
+    assert_eq!(
+        result.files_checked, 1,
+        "Exactly one file should be checked via registry path, got {}",
+        result.files_checked
+    );
+    assert!(
+        !result.diagnostics.is_empty(),
+        "Expected diagnostics for deploy-prod skill via registry path"
+    );
+    assert!(
+        result.diagnostics.iter().any(|d| d.rule == "CC-SK-006"),
+        "Expected CC-SK-006 for dangerous deploy-prod name via registry path, got rules: {:?}",
+        result.diagnostics.iter().map(|d| &d.rule).collect::<Vec<_>>()
+    );
+}
+
 // ============================================================================
 // Validator name() tests
 // ============================================================================
