@@ -44,6 +44,8 @@ pub struct ValidationResult {
     /// Wall-clock time spent in validation, in milliseconds.
     pub validation_time_ms: Option<u64>,
     /// Number of validator instances registered in the registry (not the count of validators executed).
+    /// The field name uses "factories" for backward compatibility; since v0.12.2 this counts
+    /// pre-built cached instances rather than factory invocations.
     pub validator_factories_registered: usize,
 }
 
@@ -288,8 +290,11 @@ pub fn validate_content(
     // The LSP creates a single shared registry via with_defaults() (without
     // applying config-level disables) and relies on this check to honour
     // per-workspace disabled_validators from the user's LintConfig.
+    // Convert to HashSet for O(1) per-validator lookup instead of O(n) scan.
+    let disabled_set: std::collections::HashSet<&str> =
+        disabled.iter().map(|s| s.as_str()).collect();
     for validator in validators {
-        if disabled.iter().any(|name| name == validator.name()) {
+        if !disabled_set.is_empty() && disabled_set.contains(validator.name()) {
             continue;
         }
         diagnostics.extend(validator.validate(path, content, config));

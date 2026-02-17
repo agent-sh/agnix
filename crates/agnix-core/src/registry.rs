@@ -73,7 +73,7 @@ pub struct ValidatorRegistry {
     /// exactly once at registration time; validators_for() returns a reference
     /// to this pre-built slice.
     validators: HashMap<FileType, Vec<Box<dyn Validator>>>,
-    disabled_validators: HashSet<&'static str>,
+    disabled_validators: HashSet<String>,
 }
 
 impl ValidatorRegistry {
@@ -116,7 +116,7 @@ impl ValidatorRegistry {
     /// validator name).
     pub fn register(&mut self, file_type: FileType, factory: ValidatorFactory) {
         let instance = factory();
-        if self.disabled_validators.contains(instance.name()) {
+        if self.disabled_validators.contains(instance.name() as &str) {
             return;
         }
         self.validators.entry(file_type).or_default().push(instance);
@@ -129,7 +129,7 @@ impl ValidatorRegistry {
 
     /// Return the total number of registered validator instances across all file types.
     #[deprecated(
-        since = "0.13.0",
+        since = "0.12.2",
         note = "renamed to total_validator_count() - validators are now cached, not re-instantiated"
     )]
     pub fn total_factory_count(&self) -> usize {
@@ -155,20 +155,18 @@ impl ValidatorRegistry {
     /// file types. This is an O(n) scan over all cached validators, which is
     /// acceptable since this method is only called at startup.
     pub fn disable_validator(&mut self, name: &'static str) {
-        self.disabled_validators.insert(name);
-        self.remove_disabled_from_cache(name);
+        if self.disabled_validators.insert(name.to_string()) {
+            self.remove_disabled_from_cache(name);
+        }
     }
 
-    /// Disable a validator by name from a runtime string (leaks memory).
+    /// Disable a validator by name from a runtime string.
     ///
     /// Prefer [`disable_validator`](ValidatorRegistry::disable_validator) for
     /// string literals.
     pub fn disable_validator_owned(&mut self, name: &str) {
-        // Only leak if not already present to prevent duplicate memory leaks
-        if !self.disabled_validators.contains(name) {
-            let leaked: &'static str = name.to_owned().leak();
-            self.disabled_validators.insert(leaked);
-            self.remove_disabled_from_cache(leaked);
+        if self.disabled_validators.insert(name.to_string()) {
+            self.remove_disabled_from_cache(name);
         }
     }
 
@@ -218,7 +216,7 @@ impl Default for ValidatorRegistry {
 /// ```
 pub struct ValidatorRegistryBuilder {
     entries: Vec<(FileType, ValidatorFactory)>,
-    disabled_validators: HashSet<&'static str>,
+    disabled_validators: HashSet<String>,
 }
 
 impl ValidatorRegistryBuilder {
@@ -255,19 +253,16 @@ impl ValidatorRegistryBuilder {
     /// The name must match the value returned by [`Validator::name()`]
     /// (e.g., `"XmlValidator"`).
     pub fn without_validator(&mut self, name: &'static str) -> &mut Self {
-        self.disabled_validators.insert(name);
+        self.disabled_validators.insert(name.to_string());
         self
     }
 
-    /// Mark a validator name as disabled from a runtime string (leaks memory).
+    /// Mark a validator name as disabled from a runtime string.
     ///
     /// Prefer [`without_validator`](ValidatorRegistryBuilder::without_validator)
     /// for string literals.
     pub fn without_validator_owned(&mut self, name: &str) -> &mut Self {
-        // Only leak if not already present to prevent duplicate memory leaks
-        if !self.disabled_validators.contains(name) {
-            self.disabled_validators.insert(name.to_owned().leak());
-        }
+        self.disabled_validators.insert(name.to_string());
         self
     }
 
