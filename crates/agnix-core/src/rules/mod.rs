@@ -65,7 +65,7 @@ pub struct ValidatorMetadata {
 /// used for filtering via `disabled_validators` configuration. The default
 /// implementation derives the name from the concrete struct name (e.g.,
 /// `"SkillValidator"`).
-pub trait Validator: 'static {
+pub trait Validator: Send + Sync + 'static {
     /// Validate the given file content and return any diagnostics.
     fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic>;
 
