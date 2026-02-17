@@ -320,11 +320,7 @@ mod tests {
         ];
 
         for variant in &non_generic {
-            assert!(
-                !variant.is_generic(),
-                "{} should not be generic",
-                variant
-            );
+            assert!(!variant.is_generic(), "{} should not be generic", variant);
         }
     }
 

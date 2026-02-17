@@ -187,9 +187,7 @@ impl Backend {
             let file_type = agnix_core::resolve_file_type(&file_path, &config);
             if file_type.is_generic() {
                 // Publish empty diagnostics to clear any stale results
-                self.client
-                    .publish_diagnostics(uri, vec![], None)
-                    .await;
+                self.client.publish_diagnostics(uri, vec![], None).await;
                 return;
             }
         }
