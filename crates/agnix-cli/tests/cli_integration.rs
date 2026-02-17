@@ -910,7 +910,8 @@ fn test_sarif_artifact_uris_relative_to_git_root() {
         .unwrap();
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let json: serde_json::Value = serde_json::from_str(&stdout).expect("SARIF should be valid JSON");
+    let json: serde_json::Value =
+        serde_json::from_str(&stdout).expect("SARIF should be valid JSON");
     let results = json["runs"][0]["results"].as_array().unwrap();
 
     assert!(

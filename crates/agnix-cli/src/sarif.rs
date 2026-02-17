@@ -236,10 +236,7 @@ mod tests {
         std::fs::create_dir(tmp.path().join(".git")).unwrap();
         let result = find_git_root(tmp.path());
         assert!(result.is_some());
-        assert_eq!(
-            result.unwrap(),
-            std::fs::canonicalize(tmp.path()).unwrap()
-        );
+        assert_eq!(result.unwrap(), std::fs::canonicalize(tmp.path()).unwrap());
     }
 
     #[test]
@@ -250,10 +247,7 @@ mod tests {
         std::fs::create_dir_all(&nested).unwrap();
         let result = find_git_root(&nested);
         assert!(result.is_some());
-        assert_eq!(
-            result.unwrap(),
-            std::fs::canonicalize(tmp.path()).unwrap()
-        );
+        assert_eq!(result.unwrap(), std::fs::canonicalize(tmp.path()).unwrap());
     }
 
     #[test]
@@ -263,10 +257,7 @@ mod tests {
         std::fs::write(tmp.path().join(".git"), "gitdir: /some/other/path").unwrap();
         let result = find_git_root(tmp.path());
         assert!(result.is_some());
-        assert_eq!(
-            result.unwrap(),
-            std::fs::canonicalize(tmp.path()).unwrap()
-        );
+        assert_eq!(result.unwrap(), std::fs::canonicalize(tmp.path()).unwrap());
     }
 
     #[test]
