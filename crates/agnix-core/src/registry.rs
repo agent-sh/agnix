@@ -501,7 +501,7 @@ mod tests {
         assert_eq!(
             via_builder.total_validator_count(),
             via_direct.total_validator_count(),
-            "Builder with_defaults should produce the same factory count as with_defaults()"
+            "Builder with_defaults should produce the same validator count as with_defaults()"
         );
     }
 
@@ -794,7 +794,7 @@ mod tests {
         assert_eq!(
             registry.total_validator_count(),
             DEFAULTS.len(),
-            "with_defaults() should register exactly as many factories as DEFAULTS"
+            "with_defaults() should register exactly as many validators as DEFAULTS"
         );
     }
 
