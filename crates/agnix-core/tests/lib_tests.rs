@@ -4689,7 +4689,7 @@ fn test_custom_provider_end_to_end() {
     // Should have the same count as defaults (empty provider adds nothing)
     let defaults = ValidatorRegistry::with_defaults();
     assert_eq!(
-        registry.total_factory_count(),
-        defaults.total_factory_count()
+        registry.total_validator_count(),
+        defaults.total_validator_count()
     );
 }
