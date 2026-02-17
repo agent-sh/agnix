@@ -390,6 +390,7 @@ fn validate_command(path: &Path, cli: &Cli) -> anyhow::Result<()> {
     // workspace root, which IDEs expect. Text/JSON use CWD for backwards compatibility.
     let base_path = if matches!(cli.format, OutputFormat::Sarif) {
         sarif::resolve_sarif_base_path(path)
+            .unwrap_or_else(|| std::fs::canonicalize(".").unwrap_or_else(|_| PathBuf::from(".")))
     } else {
         std::fs::canonicalize(".").unwrap_or_else(|_| PathBuf::from("."))
     };

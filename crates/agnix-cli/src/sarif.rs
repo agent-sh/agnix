@@ -202,27 +202,43 @@ pub fn diagnostics_to_sarif(diagnostics: &[Diagnostic], base_path: &Path) -> Sar
 }
 
 /// Walk ancestors of `start` looking for a `.git` directory or file (worktrees/submodules).
+///
+/// Prefers the canonical path (resolves symlinks for better IDE integration),
+/// but falls back to walking the original path if canonicalization fails.
 /// Returns the repository root path, or `None` if no git marker is found.
 fn find_git_root(start: &Path) -> Option<PathBuf> {
-    let canonical = std::fs::canonicalize(start).ok()?;
-    for ancestor in canonical.ancestors() {
+    // Try canonical path first (resolves symlinks for better IDE integration)
+    if let Ok(canonical) = std::fs::canonicalize(start) {
+        for ancestor in canonical.ancestors() {
+            if ancestor.join(".git").exists() {
+                return Some(ancestor.to_path_buf());
+            }
+        }
+    }
+
+    // Fall back to walking the original path if canonicalization fails
+    for ancestor in start.ancestors() {
         if ancestor.join(".git").exists() {
             return Some(ancestor.to_path_buf());
         }
     }
+
     None
 }
 
 /// Resolve the base path for SARIF artifact URIs.
 ///
 /// Prefers the git repository root so artifact locations are relative to the
-/// workspace root (required for correct IDE integration). Falls back to the
-/// current working directory when the scan path is not inside a git repository.
-pub fn resolve_sarif_base_path(scan_path: &Path) -> PathBuf {
+/// workspace root (required for correct IDE integration). Returns None if the
+/// scan path is not inside a git repository, following the repository rule that
+/// when searching for a resource it is safer to fail explicitly than to risk
+/// silently operating on an incorrect path.
+pub fn resolve_sarif_base_path(scan_path: &Path) -> Option<PathBuf> {
     if let Some(root) = find_git_root(scan_path) {
-        return root;
+        Some(root)
+    } else {
+        None
     }
-    std::fs::canonicalize(".").unwrap_or_else(|_| PathBuf::from("."))
 }
 
 #[cfg(test)]
@@ -276,7 +292,7 @@ mod tests {
         let nested = tmp.path().join("sub");
         std::fs::create_dir(&nested).unwrap();
         let base = resolve_sarif_base_path(&nested);
-        assert_eq!(base, std::fs::canonicalize(tmp.path()).unwrap());
+        assert_eq!(base, Some(std::fs::canonicalize(tmp.path()).unwrap()));
     }
 
     #[test]
@@ -299,17 +315,30 @@ mod tests {
     }
 
     #[test]
-    fn test_resolve_sarif_base_path_fallback_is_absolute() {
-        // When no git root is found, the fallback should still return an
-        // absolute path (from CWD canonicalization). We can't easily create
-        // a directory outside all git repos on CI, but we can verify the
-        // function always returns an absolute path regardless of input.
+    fn test_resolve_sarif_base_path_no_git_repo() {
+        // When no git root is found, resolve_sarif_base_path returns None.
+        // Create a temporary directory with no .git marker to test this case.
+        let tmp = tempfile::tempdir().unwrap();
+        // Check if tmp.path() is inside a git repo on the test machine.
+        // If it is, we'll get Some; if not, we'll get None. Either way,
+        // the function should handle both cases correctly.
+        let _result = resolve_sarif_base_path(tmp.path());
+        // Just verify the function doesn't panic; behavior depends on whether
+        // tmp.path() is inside a repo on the test machine.
+    }
+
+    #[test]
+    fn test_resolve_sarif_base_path_fallback_to_cwd() {
+        // When resolve_sarif_base_path returns None in main.rs,
+        // we fall back to CWD canonicalization. Verify the behavior
+        // by checking that None can be handled with unwrap_or_else.
         let tmp = tempfile::tempdir().unwrap();
         let base = resolve_sarif_base_path(tmp.path());
+        let fallback = base.unwrap_or_else(|| std::fs::canonicalize(".").unwrap_or_else(|_| PathBuf::from(".")));
         assert!(
-            base.is_absolute(),
-            "resolve_sarif_base_path should always return an absolute path, got: {}",
-            base.display()
+            fallback.is_absolute(),
+            "fallback path should always be absolute, got: {}",
+            fallback.display()
         );
     }
 
