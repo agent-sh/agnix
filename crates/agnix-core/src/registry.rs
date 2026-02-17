@@ -71,8 +71,8 @@ impl ValidatorProvider for BuiltinProvider {
 /// (custom providers, disabling validators), use [`ValidatorRegistry::builder`].
 pub struct ValidatorRegistry {
     validators: HashMap<FileType, Vec<ValidatorFactory>>,
-    validator_names: HashMap<FileType, Vec<String>>,
-    disabled_validators: HashSet<String>,
+    validator_names: HashMap<FileType, Vec<&'static str>>,
+    disabled_validators: HashSet<&'static str>,
 }
 
 impl ValidatorRegistry {
@@ -112,7 +112,7 @@ impl ValidatorRegistry {
     pub fn register(&mut self, file_type: FileType, factory: ValidatorFactory) {
         // Cache the validator name once at registration time so disabled
         // validators can be filtered before factory instantiation.
-        let validator_name = factory().name().to_string();
+        let validator_name = factory().name();
         self.validators.entry(file_type).or_default().push(factory);
         self.validator_names
             .entry(file_type)
@@ -148,7 +148,7 @@ impl ValidatorRegistry {
         factories
             .iter()
             .zip(names.iter())
-            .filter(|(_, name)| !self.disabled_validators.contains(name.as_str()))
+            .filter(|(_, name)| !self.disabled_validators.contains(*name))
             .map(|(factory, _)| factory())
             .collect()
     }
@@ -158,8 +158,19 @@ impl ValidatorRegistry {
     /// The name must match the value returned by [`Validator::name()`]
     /// (e.g., `"XmlValidator"`). Disabled validators are excluded from
     /// [`validators_for()`](ValidatorRegistry::validators_for) results.
-    pub fn disable_validator(&mut self, name: impl Into<String>) {
-        self.disabled_validators.insert(name.into());
+    pub fn disable_validator(&mut self, name: &'static str) {
+        self.disabled_validators.insert(name);
+    }
+
+    /// Disable a validator by name, taking ownership of a runtime string.
+    ///
+    /// Use [`disable_validator`](ValidatorRegistry::disable_validator) when the
+    /// name is a string literal. This method leaks the provided string to
+    /// obtain a `&'static str`, which is acceptable for program-lifetime
+    /// configuration data.
+    pub fn disable_validator_owned(&mut self, name: impl Into<String>) {
+        let leaked: &'static str = name.into().leak();
+        self.disabled_validators.insert(leaked);
     }
 
     /// Return the number of validator names currently disabled.
@@ -201,7 +212,7 @@ impl Default for ValidatorRegistry {
 /// ```
 pub struct ValidatorRegistryBuilder {
     entries: Vec<(FileType, ValidatorFactory)>,
-    disabled_validators: HashSet<String>,
+    disabled_validators: HashSet<&'static str>,
 }
 
 impl ValidatorRegistryBuilder {
@@ -237,8 +248,19 @@ impl ValidatorRegistryBuilder {
     ///
     /// The name must match the value returned by [`Validator::name()`]
     /// (e.g., `"XmlValidator"`).
-    pub fn without_validator(&mut self, name: &str) -> &mut Self {
-        self.disabled_validators.insert(name.to_string());
+    pub fn without_validator(&mut self, name: &'static str) -> &mut Self {
+        self.disabled_validators.insert(name);
+        self
+    }
+
+    /// Mark a validator name as disabled, taking ownership of a runtime string.
+    ///
+    /// Use [`without_validator`](ValidatorRegistryBuilder::without_validator)
+    /// when the name is a string literal. This method leaks the provided
+    /// string to obtain a `&'static str`.
+    pub fn without_validator_owned(&mut self, name: impl Into<String>) -> &mut Self {
+        let leaked: &'static str = name.into().leak();
+        self.disabled_validators.insert(leaked);
         self
     }
 
@@ -681,6 +703,29 @@ mod tests {
         registry.disable_validator("XmlValidator");
         registry.disable_validator("XmlValidator");
         assert_eq!(registry.disabled_validator_count(), 1);
+    }
+
+    #[test]
+    fn disable_validator_owned_filters_from_results() {
+        let mut registry = ValidatorRegistry::with_defaults();
+        registry.disable_validator_owned(String::from("XmlValidator"));
+        assert_eq!(registry.disabled_validator_count(), 1);
+
+        let skill_validators = registry.validators_for(FileType::Skill);
+        let names: Vec<&str> = skill_validators.iter().map(|v| v.name()).collect();
+        assert!(!names.contains(&"XmlValidator"));
+    }
+
+    #[test]
+    fn builder_without_validator_owned_disables() {
+        let registry = ValidatorRegistry::builder()
+            .with_defaults()
+            .without_validator_owned(String::from("XmlValidator"))
+            .build();
+
+        let skill_validators = registry.validators_for(FileType::Skill);
+        let names: Vec<&str> = skill_validators.iter().map(|v| v.name()).collect();
+        assert!(!names.contains(&"XmlValidator"));
     }
 
     // ---- Multiple providers ----

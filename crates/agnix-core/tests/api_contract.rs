@@ -617,6 +617,12 @@ fn validator_registry_methods() {
     registry.disable_validator("XmlValidator");
     assert_eq!(registry.disabled_validator_count(), 1);
 
+    // disable_validator_owned() with runtime string
+    let mut registry2 = agnix_core::ValidatorRegistry::with_defaults();
+    let runtime_string = String::from("PromptValidator");
+    registry2.disable_validator_owned(runtime_string);
+    assert_eq!(registry2.disabled_validator_count(), 1);
+
     // builder()
     let _builder_registry = agnix_core::ValidatorRegistry::builder()
         .with_defaults()
@@ -645,6 +651,10 @@ fn builder_method_signatures_compile() {
 
     // without_validator() -> &mut Self
     let _: &mut agnix_core::ValidatorRegistryBuilder = builder.without_validator("XmlValidator");
+
+    // without_validator_owned() with runtime string -> &mut Self
+    let runtime_name = String::from("PromptValidator");
+    let _: &mut agnix_core::ValidatorRegistryBuilder = builder.without_validator_owned(runtime_name);
 
     // build() -> ValidatorRegistry
     let _: agnix_core::ValidatorRegistry = builder.build();
