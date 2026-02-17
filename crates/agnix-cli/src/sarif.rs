@@ -234,11 +234,7 @@ fn find_git_root(start: &Path) -> Option<PathBuf> {
 /// when searching for a resource it is safer to fail explicitly than to risk
 /// silently operating on an incorrect path.
 pub fn resolve_sarif_base_path(scan_path: &Path) -> Option<PathBuf> {
-    if let Some(root) = find_git_root(scan_path) {
-        Some(root)
-    } else {
-        None
-    }
+    find_git_root(scan_path)
 }
 
 #[cfg(test)]
