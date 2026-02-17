@@ -4457,7 +4457,7 @@ fn test_validator_names_are_ascii_and_nonempty() {
 
     for file_type in file_types {
         let validators = registry.validators_for(file_type);
-        for v in &validators {
+        for v in validators {
             let name = v.name();
             assert!(!name.is_empty(), "Validator name should not be empty");
             assert!(name.is_ascii(), "Validator name should be ASCII: {}", name);
@@ -4508,7 +4508,7 @@ fn test_all_validators_have_nonempty_rule_ids() {
 
     for file_type in ALL_VALIDATED_FILE_TYPES {
         let validators = registry.validators_for(*file_type);
-        for v in &validators {
+        for v in validators {
             let meta = v.metadata();
             assert!(
                 !meta.rule_ids.is_empty(),
@@ -4526,7 +4526,7 @@ fn test_metadata_name_matches_name_method() {
 
     for file_type in ALL_VALIDATED_FILE_TYPES {
         let validators = registry.validators_for(*file_type);
-        for v in &validators {
+        for v in validators {
             let meta = v.metadata();
             assert_eq!(
                 meta.name,
@@ -4546,7 +4546,7 @@ fn test_metadata_rule_ids_are_well_formed() {
 
     for file_type in ALL_VALIDATED_FILE_TYPES {
         let validators = registry.validators_for(*file_type);
-        for v in &validators {
+        for v in validators {
             let meta = v.metadata();
             for rule_id in meta.rule_ids {
                 assert!(
@@ -4571,7 +4571,7 @@ fn test_no_duplicate_rule_ids_across_validators() {
 
     for file_type in ALL_VALIDATED_FILE_TYPES {
         let validators = registry.validators_for(*file_type);
-        for v in &validators {
+        for v in validators {
             let meta = v.metadata();
             for rule_id in meta.rule_ids {
                 if let Some(existing_owner) = rule_owners.get(rule_id) {

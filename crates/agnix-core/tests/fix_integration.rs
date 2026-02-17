@@ -29,7 +29,7 @@ fn assert_fix_resolves(file_type: FileType, path: &Path, content: &str, target_r
 
     // Step 1: Validate and collect diagnostics
     let mut all_diags = Vec::new();
-    for v in &validators {
+    for v in validators {
         all_diags.extend(v.validate(path, content, &config));
     }
 
@@ -79,7 +79,7 @@ fn assert_fix_resolves(file_type: FileType, path: &Path, content: &str, target_r
 
     // Step 6: Re-validate and assert target rule is gone
     let mut re_diags = Vec::new();
-    for v in &validators {
+    for v in validators {
         re_diags.extend(v.validate(path, &fixed_content, &config));
     }
     let remaining: Vec<_> = re_diags.iter().filter(|d| d.rule == target_rule).collect();
@@ -218,7 +218,7 @@ fn test_e2e_multi_fix_same_file() {
 
     // Step 1: Validate
     let mut all_diags = Vec::new();
-    for v in &validators {
+    for v in validators {
         all_diags.extend(v.validate(path, content, &config));
     }
 
@@ -249,7 +249,7 @@ fn test_e2e_multi_fix_same_file() {
     // Step 4: Re-validate
     let fixed_content = mock_fs.read_to_string(path).unwrap();
     let mut re_diags = Vec::new();
-    for v in &validators {
+    for v in validators {
         re_diags.extend(v.validate(path, &fixed_content, &config));
     }
 
@@ -283,7 +283,7 @@ fn test_safe_fix_deterministic_as_005() {
     let mut reference_fix: Option<Fix> = None;
     for _ in 0..3 {
         let mut diags = Vec::new();
-        for v in &validators {
+        for v in validators {
             diags.extend(v.validate(path, content, &config));
         }
         let as_005: Vec<_> = diags
@@ -324,7 +324,7 @@ fn test_safe_fix_deterministic_as_006() {
     let mut reference_fix: Option<Fix> = None;
     for _ in 0..3 {
         let mut diags = Vec::new();
-        for v in &validators {
+        for v in validators {
             diags.extend(v.validate(path, content, &config));
         }
         let as_006: Vec<_> = diags
@@ -365,7 +365,7 @@ fn test_unsafe_fix_correctly_marked_xml_001() {
     let validators = registry.validators_for(FileType::Skill);
 
     let mut diags = Vec::new();
-    for v in &validators {
+    for v in validators {
         diags.extend(v.validate(path, content, &config));
     }
     let xml_001: Vec<_> = diags
@@ -386,7 +386,7 @@ fn test_unsafe_fix_correctly_marked_xml_003() {
     let validators = registry.validators_for(FileType::Skill);
 
     let mut diags = Vec::new();
-    for v in &validators {
+    for v in validators {
         diags.extend(v.validate(path, content, &config));
     }
     let xml_003: Vec<_> = diags
@@ -406,7 +406,7 @@ fn test_cc_mem_005_fix_is_safe() {
     let validators = registry.validators_for(FileType::ClaudeMd);
 
     let mut diags = Vec::new();
-    for v in &validators {
+    for v in validators {
         diags.extend(v.validate(path, content, &config));
     }
     let mem_005: Vec<_> = diags
@@ -434,7 +434,7 @@ fn test_safe_only_filter_skips_unsafe() {
     let validators = registry.validators_for(FileType::Skill);
 
     let mut all_diags = Vec::new();
-    for v in &validators {
+    for v in validators {
         all_diags.extend(v.validate(path, content, &config));
     }
 
@@ -473,7 +473,7 @@ fn test_safe_only_filter_skips_unsafe() {
 
     // Re-validate: XML-001 should still fire (unsafe fix was skipped)
     let mut re_diags = Vec::new();
-    for v in &validators {
+    for v in validators {
         re_diags.extend(v.validate(path, &fixed_content, &config));
     }
     let remaining_xml: Vec<_> = re_diags.iter().filter(|d| d.rule == "XML-001").collect();
@@ -493,7 +493,7 @@ fn test_all_fixes_filter_applies_both() {
     let validators = registry.validators_for(FileType::Skill);
 
     let mut all_diags = Vec::new();
-    for v in &validators {
+    for v in validators {
         all_diags.extend(v.validate(path, content, &config));
     }
 
@@ -660,7 +660,7 @@ fn test_e2e_pe_005_fix_removes_redundant_instruction() {
     let validators = registry.validators_for(FileType::ClaudeMd);
 
     let mut diags = Vec::new();
-    for v in &validators {
+    for v in validators {
         diags.extend(v.validate(path, content, &config));
     }
     let pe_005: Vec<_> = diags
@@ -676,7 +676,7 @@ fn test_e2e_pe_005_fix_removes_redundant_instruction() {
 
     // Re-validate - PE-005 should not fire on fixed content
     let mut re_diags = Vec::new();
-    for v in &validators {
+    for v in validators {
         re_diags.extend(v.validate(path, &fixed, &config));
     }
     assert!(
@@ -694,7 +694,7 @@ fn test_e2e_cop_008_fix_removes_unknown_field() {
     let validators = registry.validators_for(FileType::CopilotAgent);
 
     let mut diags = Vec::new();
-    for v in &validators {
+    for v in validators {
         diags.extend(v.validate(path, content, &config));
     }
     let cop_008: Vec<_> = diags
@@ -709,7 +709,7 @@ fn test_e2e_cop_008_fix_removes_unknown_field() {
 
     // Re-validate - COP-008 should not fire on fixed content
     let mut re_diags = Vec::new();
-    for v in &validators {
+    for v in validators {
         re_diags.extend(v.validate(path, &fixed, &config));
     }
     assert!(
@@ -727,7 +727,7 @@ fn test_e2e_agm_001_fix_closes_code_block() {
     let validators = registry.validators_for(FileType::ClaudeMd);
 
     let mut diags = Vec::new();
-    for v in &validators {
+    for v in validators {
         diags.extend(v.validate(path, content, &config));
     }
     let agm_001: Vec<_> = diags
@@ -746,7 +746,7 @@ fn test_e2e_agm_001_fix_closes_code_block() {
 
     // Re-validate - AGM-001 unclosed code block should not fire
     let mut re_diags = Vec::new();
-    for v in &validators {
+    for v in validators {
         re_diags.extend(v.validate(path, &fixed, &config));
     }
     assert!(
