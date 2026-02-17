@@ -288,6 +288,21 @@ mod tests {
     }
 
     #[test]
+    fn test_resolve_sarif_base_path_fallback_is_absolute() {
+        // When no git root is found, the fallback should still return an
+        // absolute path (from CWD canonicalization). We can't easily create
+        // a directory outside all git repos on CI, but we can verify the
+        // function always returns an absolute path regardless of input.
+        let tmp = tempfile::tempdir().unwrap();
+        let base = resolve_sarif_base_path(tmp.path());
+        assert!(
+            base.is_absolute(),
+            "resolve_sarif_base_path should always return an absolute path, got: {}",
+            base.display()
+        );
+    }
+
+    #[test]
     fn test_sarif_version() {
         let sarif = diagnostics_to_sarif(&[], Path::new("."));
         assert_eq!(sarif.version, "2.1.0");
