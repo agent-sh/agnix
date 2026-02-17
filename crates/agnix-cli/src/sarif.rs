@@ -334,7 +334,8 @@ mod tests {
         // by checking that None can be handled with unwrap_or_else.
         let tmp = tempfile::tempdir().unwrap();
         let base = resolve_sarif_base_path(tmp.path());
-        let fallback = base.unwrap_or_else(|| std::fs::canonicalize(".").unwrap_or_else(|_| PathBuf::from(".")));
+        let fallback = base
+            .unwrap_or_else(|| std::fs::canonicalize(".").unwrap_or_else(|_| PathBuf::from(".")));
         assert!(
             fallback.is_absolute(),
             "fallback path should always be absolute, got: {}",
