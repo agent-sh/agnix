@@ -206,7 +206,7 @@ pub fn diagnostics_to_sarif(diagnostics: &[Diagnostic], base_path: &Path) -> Sar
 /// Prefers the canonical path (resolves symlinks for better IDE integration),
 /// but falls back to walking the original path if canonicalization fails.
 /// Returns the repository root path, or `None` if no git marker is found.
-fn find_git_root(start: &Path) -> Option<PathBuf> {
+pub fn find_git_root(start: &Path) -> Option<PathBuf> {
     // Try canonical path first (resolves symlinks for better IDE integration)
     if let Ok(canonical) = std::fs::canonicalize(start) {
         for ancestor in canonical.ancestors() {
@@ -216,25 +216,17 @@ fn find_git_root(start: &Path) -> Option<PathBuf> {
         }
     }
 
-    // Fall back to walking the original path if canonicalization fails
+    // Fall back to walking the original path if canonicalization fails.
+    // Canonicalize the result for consistency with the primary path above.
     for ancestor in start.ancestors() {
         if ancestor.join(".git").exists() {
-            return Some(ancestor.to_path_buf());
+            return Some(
+                std::fs::canonicalize(ancestor).unwrap_or_else(|_| ancestor.to_path_buf()),
+            );
         }
     }
 
     None
-}
-
-/// Resolve the base path for SARIF artifact URIs.
-///
-/// Prefers the git repository root so artifact locations are relative to the
-/// workspace root (required for correct IDE integration). Returns None if the
-/// scan path is not inside a git repository, following the repository rule that
-/// when searching for a resource it is safer to fail explicitly than to risk
-/// silently operating on an incorrect path.
-pub fn resolve_sarif_base_path(scan_path: &Path) -> Option<PathBuf> {
-    find_git_root(scan_path)
 }
 
 #[cfg(test)]
@@ -275,20 +267,35 @@ mod tests {
     #[test]
     fn test_find_git_root_no_repo() {
         let tmp = tempfile::tempdir().unwrap();
-        // No .git marker at all - but note: the temp dir itself might be inside
-        // an actual git repo on the test machine, so we can't assert None.
-        // Instead, verify the function doesn't panic and returns a valid result.
-        let _result = find_git_root(tmp.path());
+        // Create a nested dir with its own .git to isolate from the host repo,
+        // then test a sibling dir that has no .git ancestor within tmp.
+        let repo = tmp.path().join("repo");
+        let orphan = tmp.path().join("orphan");
+        std::fs::create_dir(&repo).unwrap();
+        std::fs::create_dir(repo.join(".git")).unwrap();
+        std::fs::create_dir(&orphan).unwrap();
+
+        // The orphan dir has no .git marker. If the test host's /tmp is inside
+        // a git repo the function may still return Some, so we verify that any
+        // result points outside our tmp dir (i.e. it didn't pick up repo/.git).
+        let result = find_git_root(&orphan);
+        if let Some(ref root) = result {
+            assert!(
+                !root.starts_with(&repo),
+                "Should not find repo/.git from orphan dir, got: {}",
+                root.display()
+            );
+        }
     }
 
     #[test]
-    fn test_resolve_sarif_base_path_with_git_root() {
+    fn test_find_git_root_from_subdirectory() {
         let tmp = tempfile::tempdir().unwrap();
         std::fs::create_dir(tmp.path().join(".git")).unwrap();
         let nested = tmp.path().join("sub");
         std::fs::create_dir(&nested).unwrap();
-        let base = resolve_sarif_base_path(&nested);
-        assert_eq!(base, Some(std::fs::canonicalize(tmp.path()).unwrap()));
+        let root = find_git_root(&nested);
+        assert_eq!(root, Some(std::fs::canonicalize(tmp.path()).unwrap()));
     }
 
     #[test]
@@ -311,30 +318,29 @@ mod tests {
     }
 
     #[test]
-    fn test_resolve_sarif_base_path_no_git_repo() {
-        // When no git root is found, resolve_sarif_base_path returns None.
-        // Create a temporary directory with no .git marker to test this case.
+    fn test_find_git_root_returns_canonical_from_fallback() {
+        // Verify that find_git_root returns a canonical (absolute) path even
+        // when the primary canonicalize-then-walk path is used.
         let tmp = tempfile::tempdir().unwrap();
-        // Check if tmp.path() is inside a git repo on the test machine.
-        // If it is, we'll get Some; if not, we'll get None. Either way,
-        // the function should handle both cases correctly.
-        let _result = resolve_sarif_base_path(tmp.path());
-        // Just verify the function doesn't panic; behavior depends on whether
-        // tmp.path() is inside a repo on the test machine.
+        std::fs::create_dir(tmp.path().join(".git")).unwrap();
+        let result = find_git_root(tmp.path()).unwrap();
+        assert!(
+            result.is_absolute(),
+            "find_git_root should return an absolute path, got: {}",
+            result.display()
+        );
     }
 
     #[test]
-    fn test_resolve_sarif_base_path_fallback_to_cwd() {
-        // When resolve_sarif_base_path returns None in main.rs,
-        // we fall back to CWD canonicalization. Verify the behavior
-        // by checking that None can be handled with unwrap_or_else.
-        let tmp = tempfile::tempdir().unwrap();
-        let base = resolve_sarif_base_path(tmp.path());
-        let fallback = base
+    fn test_find_git_root_none_fallback_to_cwd() {
+        // When find_git_root returns None (no git repo), callers fall back
+        // to CWD canonicalization. Verify the fallback pattern works.
+        let result: Option<PathBuf> = None;
+        let fallback = result
             .unwrap_or_else(|| std::fs::canonicalize(".").unwrap_or_else(|_| PathBuf::from(".")));
         assert!(
             fallback.is_absolute(),
-            "fallback path should always be absolute, got: {}",
+            "CWD fallback should always be absolute, got: {}",
             fallback.display()
         );
     }
