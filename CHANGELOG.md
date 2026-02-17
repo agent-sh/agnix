@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **LSP refactor**: Split oversized `crates/agnix-lsp/src/backend.rs` into focused submodules (`events`, `helpers`, `revalidation`, `tests`) while preserving `Backend` behavior and public exports
 
 ### Performance
+- **ValidatorRegistry instance caching**: Registry now stores pre-constructed `Box<dyn Validator>` instances instead of factories, eliminating per-file validator re-instantiation. `validators_for()` returns `&[Box<dyn Validator>]` (borrowed slice) instead of `Vec<Box<dyn Validator>>`. Added `total_validator_count()` method; `total_factory_count()` is deprecated and will be removed in a future release. The `Validator` trait now requires `Send + Sync + 'static` bounds to allow safe sharing via `Arc<ValidatorRegistry>` (#460)
 - **REF-002 link validation**: Hoisted loop-invariant `canonicalize()` call out of per-link loop in `validate_markdown_links()` - eliminates N-1 redundant filesystem syscalls when validating N markdown links
 - **ValidatorRegistry memory efficiency**: Replaced `String` with `&'static str` for validator names, eliminating per-validator heap allocations during registry construction. Added `disable_validator_owned()` variants for runtime string disabling with duplicate detection to prevent unnecessary memory leaks
 - **Instruction file detection**: Rewrote `is_instruction_file()` to use allocation-free path component iteration and `eq_ignore_ascii_case`, eliminating 2 heap allocations per file during project validation walks

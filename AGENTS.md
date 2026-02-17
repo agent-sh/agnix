@@ -81,7 +81,8 @@ tests/fixtures/     # Test cases by category
 
 ```rust
 // Primary extension point
-pub trait Validator {
+// Implementors must be Send + Sync + 'static (cached in registry, shared across threads)
+pub trait Validator: Send + Sync + 'static {
     fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic>;
     fn name(&self) -> &'static str { /* default: short type name */ }
     fn metadata(&self) -> ValidatorMetadata { /* default: empty rule_ids */ }
@@ -94,11 +95,14 @@ pub trait ValidatorProvider: Send + Sync {
 }
 
 // Registry with builder pattern and runtime filtering
+// Stores cached Box<dyn Validator> instances; no per-file re-instantiation
 pub struct ValidatorRegistry { /* ... */ }
 
 impl ValidatorRegistry {
     pub fn builder() -> ValidatorRegistryBuilder;
     pub fn with_defaults() -> Self;
+    pub fn validators_for(&self, file_type: FileType) -> &[Box<dyn Validator>];
+    pub fn total_validator_count(&self) -> usize;
     pub fn disable_validator(&mut self, name: &'static str);
     pub fn disable_validator_owned(&mut self, name: &str);
 }
