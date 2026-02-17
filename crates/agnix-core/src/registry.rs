@@ -162,15 +162,12 @@ impl ValidatorRegistry {
         self.disabled_validators.insert(name);
     }
 
-    /// Disable a validator by name, taking ownership of a runtime string.
+    /// Disable a validator by name from a runtime string (leaks memory).
     ///
-    /// Use [`disable_validator`](ValidatorRegistry::disable_validator) when the
-    /// name is a string literal. This method leaks the provided string to
-    /// obtain a `&'static str`, which is acceptable for program-lifetime
-    /// configuration data.
+    /// Prefer [`disable_validator`](ValidatorRegistry::disable_validator) for
+    /// string literals.
     pub fn disable_validator_owned(&mut self, name: impl Into<String>) {
-        let leaked: &'static str = name.into().leak();
-        self.disabled_validators.insert(leaked);
+        self.disabled_validators.insert(name.into().leak());
     }
 
     /// Return the number of validator names currently disabled.
@@ -253,14 +250,12 @@ impl ValidatorRegistryBuilder {
         self
     }
 
-    /// Mark a validator name as disabled, taking ownership of a runtime string.
+    /// Mark a validator name as disabled from a runtime string (leaks memory).
     ///
-    /// Use [`without_validator`](ValidatorRegistryBuilder::without_validator)
-    /// when the name is a string literal. This method leaks the provided
-    /// string to obtain a `&'static str`.
+    /// Prefer [`without_validator`](ValidatorRegistryBuilder::without_validator)
+    /// for string literals.
     pub fn without_validator_owned(&mut self, name: impl Into<String>) -> &mut Self {
-        let leaked: &'static str = name.into().leak();
-        self.disabled_validators.insert(leaked);
+        self.disabled_validators.insert(name.into().leak());
         self
     }
 
