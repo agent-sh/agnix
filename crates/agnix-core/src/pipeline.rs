@@ -269,6 +269,11 @@ pub fn validate_content(
     let disabled = &config.rules().disabled_validators;
     let mut diagnostics = Vec::new();
 
+    // Runtime disabled_validators check is intentionally preserved here even
+    // though the registry now filters disabled validators at registration time.
+    // The LSP creates a single shared registry via with_defaults() (without
+    // applying config-level disables) and relies on this check to honour
+    // per-workspace disabled_validators from the user's LintConfig.
     for validator in validators {
         if disabled.iter().any(|name| name == validator.name()) {
             continue;
@@ -884,7 +889,7 @@ pub fn validate_project_with_registry(
 
     // as_millis() returns u128; clamp to u64 for the public API contract.
     let elapsed_ms = validation_start.elapsed().as_millis().min(u64::MAX as u128) as u64;
-    let validator_factories_registered = registry.total_factory_count();
+    let validator_factories_registered = registry.total_validator_count();
 
     Ok(ValidationResult::new(diagnostics, files_checked)
         .with_timing(elapsed_ms)
