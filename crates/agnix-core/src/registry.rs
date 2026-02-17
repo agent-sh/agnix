@@ -166,8 +166,8 @@ impl ValidatorRegistry {
     ///
     /// Prefer [`disable_validator`](ValidatorRegistry::disable_validator) for
     /// string literals.
-    pub fn disable_validator_owned(&mut self, name: impl Into<String>) {
-        self.disabled_validators.insert(name.into().leak());
+    pub fn disable_validator_owned(&mut self, name: &str) {
+        self.disabled_validators.insert(name.to_owned().leak());
     }
 
     /// Return the number of validator names currently disabled.
@@ -254,8 +254,8 @@ impl ValidatorRegistryBuilder {
     ///
     /// Prefer [`without_validator`](ValidatorRegistryBuilder::without_validator)
     /// for string literals.
-    pub fn without_validator_owned(&mut self, name: impl Into<String>) -> &mut Self {
-        self.disabled_validators.insert(name.into().leak());
+    pub fn without_validator_owned(&mut self, name: &str) -> &mut Self {
+        self.disabled_validators.insert(name.to_owned().leak());
         self
     }
 
@@ -703,7 +703,8 @@ mod tests {
     #[test]
     fn disable_validator_owned_filters_from_results() {
         let mut registry = ValidatorRegistry::with_defaults();
-        registry.disable_validator_owned(String::from("XmlValidator"));
+        let name = String::from("XmlValidator");
+        registry.disable_validator_owned(&name);
         assert_eq!(registry.disabled_validator_count(), 1);
 
         let skill_validators = registry.validators_for(FileType::Skill);
@@ -712,10 +713,31 @@ mod tests {
     }
 
     #[test]
+    fn disable_validator_owned_twice_is_idempotent() {
+        let mut registry = ValidatorRegistry::with_defaults();
+        registry.disable_validator_owned("XmlValidator");
+        registry.disable_validator_owned("XmlValidator");
+        assert_eq!(registry.disabled_validator_count(), 1);
+    }
+
+    #[test]
+    fn mixed_static_and_owned_disable() {
+        let mut registry = ValidatorRegistry::with_defaults();
+        registry.disable_validator("XmlValidator");
+        registry.disable_validator_owned("PromptValidator");
+        assert_eq!(registry.disabled_validator_count(), 2);
+
+        let claude_validators = registry.validators_for(FileType::ClaudeMd);
+        let names: Vec<&str> = claude_validators.iter().map(|v| v.name()).collect();
+        assert!(!names.contains(&"XmlValidator"));
+        assert!(!names.contains(&"PromptValidator"));
+    }
+
+    #[test]
     fn builder_without_validator_owned_disables() {
         let registry = ValidatorRegistry::builder()
             .with_defaults()
-            .without_validator_owned(String::from("XmlValidator"))
+            .without_validator_owned("XmlValidator")
             .build();
 
         let skill_validators = registry.validators_for(FileType::Skill);

@@ -203,7 +203,7 @@ pub fn resolve_file_type(path: &Path, config: &LintConfig) -> FileType {
 pub fn validate_file(path: &Path, config: &LintConfig) -> LintResult<Vec<Diagnostic>> {
     let mut registry = ValidatorRegistry::with_defaults();
     for name in &config.rules().disabled_validators {
-        registry.disable_validator_owned(name.clone());
+        registry.disable_validator_owned(name);
     }
     validate_file_with_registry(path, config, &registry)
 }
@@ -284,7 +284,7 @@ pub fn validate_content(
 pub fn validate_project(path: &Path, config: &LintConfig) -> LintResult<ValidationResult> {
     let mut registry = ValidatorRegistry::with_defaults();
     for name in &config.rules().disabled_validators {
-        registry.disable_validator_owned(name.clone());
+        registry.disable_validator_owned(name);
     }
     validate_project_with_registry(path, config, &registry)
 }
