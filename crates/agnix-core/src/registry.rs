@@ -59,19 +59,20 @@ impl ValidatorProvider for BuiltinProvider {
     }
 }
 
-/// Registry that maps [`FileType`] values to validator factories.
+/// Registry that maps [`FileType`] values to cached validator instances.
 ///
 /// This is the extension point for the validation engine. A
-/// `ValidatorRegistry` owns a set of [`ValidatorFactory`] functions for each
-/// supported [`FileType`], and constructs concrete [`Validator`] instances on
-/// demand.
+/// `ValidatorRegistry` owns pre-constructed [`Validator`] instances for each
+/// supported [`FileType`], eliminating per-file instantiation overhead.
 ///
 /// Most callers should use [`ValidatorRegistry::with_defaults`] to obtain a
 /// registry pre-populated with all built-in validators. For advanced use cases
 /// (custom providers, disabling validators), use [`ValidatorRegistry::builder`].
 pub struct ValidatorRegistry {
-    validators: HashMap<FileType, Vec<ValidatorFactory>>,
-    validator_names: HashMap<FileType, Vec<&'static str>>,
+    /// Cached validator instances, keyed by file type. Each factory is called
+    /// exactly once at registration time; validators_for() returns a reference
+    /// to this pre-built slice.
+    validators: HashMap<FileType, Vec<Box<dyn Validator>>>,
     disabled_validators: HashSet<&'static str>,
 }
 
@@ -80,7 +81,6 @@ impl ValidatorRegistry {
     pub fn new() -> Self {
         Self {
             validators: HashMap::new(),
-            validator_names: HashMap::new(),
             disabled_validators: HashSet::new(),
         }
     }
@@ -109,57 +109,53 @@ impl ValidatorRegistry {
     }
 
     /// Register a validator factory for a given file type.
+    ///
+    /// The factory is called immediately and the resulting instance is cached.
+    /// If the validator's name appears in the disabled set, the instance is
+    /// discarded and not stored.
     pub fn register(&mut self, file_type: FileType, factory: ValidatorFactory) {
-        // Cache the validator name once at registration time so disabled
-        // validators can be filtered before factory instantiation.
-        let validator_name = factory().name();
-        self.validators.entry(file_type).or_default().push(factory);
-        self.validator_names
-            .entry(file_type)
-            .or_default()
-            .push(validator_name);
+        let instance = factory();
+        if self.disabled_validators.contains(instance.name()) {
+            return;
+        }
+        self.validators.entry(file_type).or_default().push(instance);
     }
 
-    /// Return the total number of registered validator factories across all file types.
-    pub fn total_factory_count(&self) -> usize {
+    /// Return the total number of cached validator instances across all file types.
+    pub fn total_validator_count(&self) -> usize {
         self.validators.values().map(|v| v.len()).sum()
     }
 
-    /// Build a fresh validator instance list for the given file type.
+    /// Return the total number of registered validator instances across all file types.
+    #[deprecated(
+        since = "0.13.0",
+        note = "renamed to total_validator_count() - validators are now cached, not re-instantiated"
+    )]
+    pub fn total_factory_count(&self) -> usize {
+        self.total_validator_count()
+    }
+
+    /// Return a reference to the cached validator instances for the given file type.
     ///
-    /// Validators whose [`name()`](Validator::name) appears in the
-    /// `disabled_validators` set are excluded from the returned list.
-    /// When no validators are disabled, the filter is skipped entirely.
-    pub fn validators_for(&self, file_type: FileType) -> Vec<Box<dyn Validator>> {
-        let factories = match self.validators.get(&file_type) {
-            Some(f) => f,
-            None => return Vec::new(),
-        };
-
-        if self.disabled_validators.is_empty() {
-            return factories.iter().map(|factory| factory()).collect();
+    /// Returns an empty slice if no validators are registered for `file_type`.
+    /// Instances whose [`name()`](Validator::name) appeared in the
+    /// `disabled_validators` set were already excluded at registration time.
+    pub fn validators_for(&self, file_type: FileType) -> &[Box<dyn Validator>] {
+        match self.validators.get(&file_type) {
+            Some(v) => v,
+            None => &[],
         }
-
-        let names = match self.validator_names.get(&file_type) {
-            Some(names) => names,
-            None => return factories.iter().map(|factory| factory()).collect(),
-        };
-
-        factories
-            .iter()
-            .zip(names.iter())
-            .filter(|(_, name)| !self.disabled_validators.contains(*name))
-            .map(|(factory, _)| factory())
-            .collect()
     }
 
     /// Disable a validator by name at runtime.
     ///
     /// The name must match the value returned by [`Validator::name()`]
-    /// (e.g., `"XmlValidator"`). Disabled validators are excluded from
-    /// [`validators_for()`](ValidatorRegistry::validators_for) results.
+    /// (e.g., `"XmlValidator"`). Matching cached instances are removed from all
+    /// file types. This is an O(n) scan over all cached validators, which is
+    /// acceptable since this method is only called at startup.
     pub fn disable_validator(&mut self, name: &'static str) {
         self.disabled_validators.insert(name);
+        self.drain_disabled(name);
     }
 
     /// Disable a validator by name from a runtime string (leaks memory).
@@ -169,13 +165,22 @@ impl ValidatorRegistry {
     pub fn disable_validator_owned(&mut self, name: &str) {
         // Only leak if not already present to prevent duplicate memory leaks
         if !self.disabled_validators.iter().any(|n| *n == name) {
-            self.disabled_validators.insert(name.to_owned().leak());
+            let leaked: &'static str = name.to_owned().leak();
+            self.disabled_validators.insert(leaked);
+            self.drain_disabled(leaked);
         }
     }
 
     /// Return the number of validator names currently disabled.
     pub fn disabled_validator_count(&self) -> usize {
         self.disabled_validators.len()
+    }
+
+    /// Remove cached instances whose name matches the given disabled name.
+    fn drain_disabled(&mut self, name: &str) {
+        for instances in self.validators.values_mut() {
+            instances.retain(|v| v.name() != name);
+        }
     }
 
     fn register_defaults(&mut self) {
@@ -274,7 +279,6 @@ impl ValidatorRegistryBuilder {
     pub fn build(&mut self) -> ValidatorRegistry {
         let mut registry = ValidatorRegistry {
             validators: HashMap::new(),
-            validator_names: HashMap::new(),
             disabled_validators: std::mem::take(&mut self.disabled_validators),
         };
         for &(file_type, factory) in &self.entries {
@@ -609,7 +613,7 @@ mod tests {
     }
 
     #[test]
-    fn validators_for_filters_disabled_before_instantiation() {
+    fn register_skips_disabled_validators() {
         COUNTING_VALIDATOR_CONSTRUCTED.store(0, Ordering::SeqCst);
 
         let registry = ValidatorRegistry::builder()
@@ -617,12 +621,15 @@ mod tests {
             .without_validator("CountingValidator")
             .build();
 
-        // One construction happens during registration for name caching.
+        // Factory is called once during register() to obtain name, but the
+        // instance is discarded because the name is in the disabled set.
         assert_eq!(COUNTING_VALIDATOR_CONSTRUCTED.load(Ordering::SeqCst), 1);
 
-        // Disabled validators should be filtered before factory() is called.
+        // No cached instances remain for disabled validators.
         let validators = registry.validators_for(FileType::Skill);
         assert!(validators.is_empty());
+
+        // validators_for() no longer calls factories - counter stays at 1.
         assert_eq!(COUNTING_VALIDATOR_CONSTRUCTED.load(Ordering::SeqCst), 1);
     }
 
