@@ -167,7 +167,10 @@ impl ValidatorRegistry {
     /// Prefer [`disable_validator`](ValidatorRegistry::disable_validator) for
     /// string literals.
     pub fn disable_validator_owned(&mut self, name: &str) {
-        self.disabled_validators.insert(name.to_owned().leak());
+        // Only leak if not already present to prevent duplicate memory leaks
+        if !self.disabled_validators.iter().any(|n| *n == name) {
+            self.disabled_validators.insert(name.to_owned().leak());
+        }
     }
 
     /// Return the number of validator names currently disabled.
@@ -255,7 +258,10 @@ impl ValidatorRegistryBuilder {
     /// Prefer [`without_validator`](ValidatorRegistryBuilder::without_validator)
     /// for string literals.
     pub fn without_validator_owned(&mut self, name: &str) -> &mut Self {
-        self.disabled_validators.insert(name.to_owned().leak());
+        // Only leak if not already present to prevent duplicate memory leaks
+        if !self.disabled_validators.iter().any(|n| *n == name) {
+            self.disabled_validators.insert(name.to_owned().leak());
+        }
         self
     }
 
