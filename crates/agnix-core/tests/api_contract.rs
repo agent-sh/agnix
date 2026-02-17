@@ -593,8 +593,9 @@ fn validator_registry_methods() {
     let empty = agnix_core::ValidatorRegistry::new();
     let defaults = agnix_core::ValidatorRegistry::with_defaults();
 
-    // validators_for returns &[Box<dyn Validator>]
+    // validators_for returns &[Box<dyn Validator>] - lock in return type at call site
     let empty_validators = empty.validators_for(agnix_core::FileType::Skill);
+    let _: &[Box<dyn agnix_core::Validator>] = empty_validators;
     assert!(empty_validators.is_empty());
 
     let default_validators = defaults.validators_for(agnix_core::FileType::Skill);

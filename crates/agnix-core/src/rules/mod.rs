@@ -65,6 +65,11 @@ pub struct ValidatorMetadata {
 /// used for filtering via `disabled_validators` configuration. The default
 /// implementation derives the name from the concrete struct name (e.g.,
 /// `"SkillValidator"`).
+///
+/// Implementations must be `Send + Sync + 'static` - validators are cached in
+/// [`ValidatorRegistry`](crate::ValidatorRegistry) and shared across threads
+/// (e.g., via `Arc<ValidatorRegistry>` in the LSP server). Implementations
+/// must not hold non-static references or non-thread-safe interior mutability.
 pub trait Validator: Send + Sync + 'static {
     /// Validate the given file content and return any diagnostics.
     fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic>;

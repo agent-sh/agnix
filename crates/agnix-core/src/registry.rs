@@ -48,8 +48,8 @@ pub trait ValidatorProvider: Send + Sync {
 
 /// The built-in validator provider shipping with agnix-core.
 ///
-/// Contains all 19 validators across all supported file types. Used internally
-/// by [`ValidatorRegistry::with_defaults`] and
+/// Contains all built-in validators across all supported file types. Used
+/// internally by [`ValidatorRegistry::with_defaults`] and
 /// [`ValidatorRegistryBuilder::with_defaults`].
 pub(crate) struct BuiltinProvider;
 
@@ -110,9 +110,10 @@ impl ValidatorRegistry {
 
     /// Register a validator factory for a given file type.
     ///
-    /// The factory is called immediately and the resulting instance is cached.
-    /// If the validator's name appears in the disabled set, the instance is
-    /// discarded and not stored.
+    /// The factory is called exactly once at registration time. If the
+    /// validator's name appears in the disabled set, the instance is
+    /// immediately dropped (the factory is still called once to obtain the
+    /// validator name).
     pub fn register(&mut self, file_type: FileType, factory: ValidatorFactory) {
         let instance = factory();
         if self.disabled_validators.contains(instance.name()) {
@@ -155,7 +156,7 @@ impl ValidatorRegistry {
     /// acceptable since this method is only called at startup.
     pub fn disable_validator(&mut self, name: &'static str) {
         self.disabled_validators.insert(name);
-        self.drain_disabled(name);
+        self.remove_disabled_from_cache(name);
     }
 
     /// Disable a validator by name from a runtime string (leaks memory).
@@ -164,10 +165,10 @@ impl ValidatorRegistry {
     /// string literals.
     pub fn disable_validator_owned(&mut self, name: &str) {
         // Only leak if not already present to prevent duplicate memory leaks
-        if !self.disabled_validators.iter().any(|n| *n == name) {
+        if !self.disabled_validators.contains(name) {
             let leaked: &'static str = name.to_owned().leak();
             self.disabled_validators.insert(leaked);
-            self.drain_disabled(leaked);
+            self.remove_disabled_from_cache(leaked);
         }
     }
 
@@ -177,7 +178,7 @@ impl ValidatorRegistry {
     }
 
     /// Remove cached instances whose name matches the given disabled name.
-    fn drain_disabled(&mut self, name: &str) {
+    fn remove_disabled_from_cache(&mut self, name: &str) {
         for instances in self.validators.values_mut() {
             instances.retain(|v| v.name() != name);
         }
@@ -264,7 +265,7 @@ impl ValidatorRegistryBuilder {
     /// for string literals.
     pub fn without_validator_owned(&mut self, name: &str) -> &mut Self {
         // Only leak if not already present to prevent duplicate memory leaks
-        if !self.disabled_validators.iter().any(|n| *n == name) {
+        if !self.disabled_validators.contains(name) {
             self.disabled_validators.insert(name.to_owned().leak());
         }
         self
@@ -272,10 +273,12 @@ impl ValidatorRegistryBuilder {
 
     /// Produce a [`ValidatorRegistry`] from this builder.
     ///
-    /// Drains the builder's disabled set via [`std::mem::take`], so calling
-    /// `build()` a second time produces a registry with no disabled validators.
-    /// This is intentional: reuse a builder by calling configuration methods
-    /// again before a subsequent `build()`.
+    /// Note: Calling `build()` a second time produces a registry with no
+    /// disabled validators (the disabled set is consumed via
+    /// [`std::mem::take`]), but all registered factories are re-called (the
+    /// entries list is preserved). Each `build()` call invokes all registered
+    /// factories. Reuse a builder by calling configuration methods again
+    /// before a subsequent `build()`.
     pub fn build(&mut self) -> ValidatorRegistry {
         let mut registry = ValidatorRegistry {
             validators: HashMap::new(),
@@ -588,9 +591,14 @@ mod tests {
         assert!(!names.contains(&"XmlValidator"));
     }
 
-    struct CountingValidator;
+    // ---- Per-test counting validators (separate statics to avoid races) ----
 
-    impl Validator for CountingValidator {
+    // Used by register_skips_disabled_validators
+    static SKIP_COUNTING_CONSTRUCTED: AtomicUsize = AtomicUsize::new(0);
+
+    struct SkipCountingValidator;
+
+    impl Validator for SkipCountingValidator {
         fn validate(
             &self,
             _path: &std::path::Path,
@@ -601,36 +609,84 @@ mod tests {
         }
 
         fn name(&self) -> &'static str {
-            "CountingValidator"
+            "SkipCountingValidator"
         }
     }
 
-    static COUNTING_VALIDATOR_CONSTRUCTED: AtomicUsize = AtomicUsize::new(0);
+    fn skip_counting_validator_factory() -> Box<dyn Validator> {
+        SKIP_COUNTING_CONSTRUCTED.fetch_add(1, Ordering::SeqCst);
+        Box::new(SkipCountingValidator)
+    }
 
-    fn counting_validator_factory() -> Box<dyn Validator> {
-        COUNTING_VALIDATOR_CONSTRUCTED.fetch_add(1, Ordering::SeqCst);
-        Box::new(CountingValidator)
+    // Used by register_calls_factory_exactly_once
+    static ONCE_COUNTING_CONSTRUCTED: AtomicUsize = AtomicUsize::new(0);
+
+    struct OnceCountingValidator;
+
+    impl Validator for OnceCountingValidator {
+        fn validate(
+            &self,
+            _path: &std::path::Path,
+            _content: &str,
+            _config: &crate::config::LintConfig,
+        ) -> Vec<crate::diagnostics::Diagnostic> {
+            Vec::new()
+        }
+
+        fn name(&self) -> &'static str {
+            "OnceCountingValidator"
+        }
+    }
+
+    fn once_counting_validator_factory() -> Box<dyn Validator> {
+        ONCE_COUNTING_CONSTRUCTED.fetch_add(1, Ordering::SeqCst);
+        Box::new(OnceCountingValidator)
+    }
+
+    // Used by register_calls_factory_exactly_once_via_builder
+    static BUILDER_COUNTING_CONSTRUCTED: AtomicUsize = AtomicUsize::new(0);
+
+    struct BuilderCountingValidator;
+
+    impl Validator for BuilderCountingValidator {
+        fn validate(
+            &self,
+            _path: &std::path::Path,
+            _content: &str,
+            _config: &crate::config::LintConfig,
+        ) -> Vec<crate::diagnostics::Diagnostic> {
+            Vec::new()
+        }
+
+        fn name(&self) -> &'static str {
+            "BuilderCountingValidator"
+        }
+    }
+
+    fn builder_counting_validator_factory() -> Box<dyn Validator> {
+        BUILDER_COUNTING_CONSTRUCTED.fetch_add(1, Ordering::SeqCst);
+        Box::new(BuilderCountingValidator)
     }
 
     #[test]
     fn register_skips_disabled_validators() {
-        COUNTING_VALIDATOR_CONSTRUCTED.store(0, Ordering::SeqCst);
+        SKIP_COUNTING_CONSTRUCTED.store(0, Ordering::SeqCst);
 
         let registry = ValidatorRegistry::builder()
-            .register(FileType::Skill, counting_validator_factory)
-            .without_validator("CountingValidator")
+            .register(FileType::Skill, skip_counting_validator_factory)
+            .without_validator("SkipCountingValidator")
             .build();
 
         // Factory is called once during register() to obtain name, but the
         // instance is discarded because the name is in the disabled set.
-        assert_eq!(COUNTING_VALIDATOR_CONSTRUCTED.load(Ordering::SeqCst), 1);
+        assert_eq!(SKIP_COUNTING_CONSTRUCTED.load(Ordering::SeqCst), 1);
 
         // No cached instances remain for disabled validators.
         let validators = registry.validators_for(FileType::Skill);
         assert!(validators.is_empty());
 
         // validators_for() no longer calls factories - counter stays at 1.
-        assert_eq!(COUNTING_VALIDATOR_CONSTRUCTED.load(Ordering::SeqCst), 1);
+        assert_eq!(SKIP_COUNTING_CONSTRUCTED.load(Ordering::SeqCst), 1);
     }
 
     #[test]
@@ -928,30 +984,51 @@ mod tests {
 
     #[test]
     fn register_calls_factory_exactly_once() {
-        COUNTING_VALIDATOR_CONSTRUCTED.store(0, Ordering::SeqCst);
+        ONCE_COUNTING_CONSTRUCTED.store(0, Ordering::SeqCst);
 
         let mut registry = ValidatorRegistry::new();
-        registry.register(FileType::Skill, counting_validator_factory);
+        registry.register(FileType::Skill, once_counting_validator_factory);
 
         // Factory called exactly once during register().
-        assert_eq!(COUNTING_VALIDATOR_CONSTRUCTED.load(Ordering::SeqCst), 1);
+        assert_eq!(ONCE_COUNTING_CONSTRUCTED.load(Ordering::SeqCst), 1);
 
         // validators_for() should NOT call the factory again.
         let _validators = registry.validators_for(FileType::Skill);
         assert_eq!(
-            COUNTING_VALIDATOR_CONSTRUCTED.load(Ordering::SeqCst),
+            ONCE_COUNTING_CONSTRUCTED.load(Ordering::SeqCst),
             1,
             "validators_for() must not re-instantiate cached validators"
         );
 
         // Even repeated calls should not increment the counter.
         let _validators = registry.validators_for(FileType::Skill);
-        assert_eq!(COUNTING_VALIDATOR_CONSTRUCTED.load(Ordering::SeqCst), 1);
+        assert_eq!(ONCE_COUNTING_CONSTRUCTED.load(Ordering::SeqCst), 1);
+    }
+
+    #[test]
+    fn register_calls_factory_exactly_once_via_builder() {
+        BUILDER_COUNTING_CONSTRUCTED.store(0, Ordering::SeqCst);
+
+        let registry = ValidatorRegistry::builder()
+            .register(FileType::Skill, builder_counting_validator_factory)
+            .build();
+
+        // Factory called exactly once during build().
+        assert_eq!(BUILDER_COUNTING_CONSTRUCTED.load(Ordering::SeqCst), 1);
+
+        // validators_for() should NOT call the factory again.
+        let _validators = registry.validators_for(FileType::Skill);
+        assert_eq!(
+            BUILDER_COUNTING_CONSTRUCTED.load(Ordering::SeqCst),
+            1,
+            "validators_for() must not re-instantiate cached validators via builder path"
+        );
     }
 
     #[test]
     fn disable_after_construction_removes_from_cache() {
         let mut registry = ValidatorRegistry::with_defaults();
+        let total_before = registry.total_validator_count();
 
         // Verify XmlValidator is present before disabling.
         let before = registry.validators_for(FileType::Skill);
@@ -974,6 +1051,26 @@ mod tests {
         assert!(
             !claude_after.iter().any(|v| v.name() == "XmlValidator"),
             "XmlValidator should be removed from all file types"
+        );
+
+        // XmlValidator appears in 9 file types in DEFAULTS. The total count
+        // must decrease by exactly that amount.
+        let xml_occurrences_in_defaults = DEFAULTS
+            .iter()
+            .filter(|(_, factory)| factory().name() == "XmlValidator")
+            .count();
+        assert_eq!(
+            xml_occurrences_in_defaults, 9,
+            "Expected XmlValidator in 9 DEFAULTS entries"
+        );
+        let total_after = registry.total_validator_count();
+        assert_eq!(
+            total_before - total_after,
+            xml_occurrences_in_defaults,
+            "Disabling XmlValidator should remove exactly {} instances, \
+             but removed {}",
+            xml_occurrences_in_defaults,
+            total_before - total_after
         );
     }
 

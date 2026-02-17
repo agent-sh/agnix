@@ -198,7 +198,12 @@ pub fn resolve_file_type(path: &Path, config: &LintConfig) -> FileType {
     resolve_with_compiled(path, config.root_dir().map(|p| p.as_path()), &compiled)
 }
 
-/// Validate a single file
+/// Validate a single file.
+///
+/// Note: This function creates a new [`ValidatorRegistry`] on every call. For
+/// bulk validation of multiple files, use
+/// [`validate_file_with_registry()`] with a pre-built shared registry for
+/// significantly better performance.
 #[cfg(feature = "filesystem")]
 pub fn validate_file(path: &Path, config: &LintConfig) -> LintResult<Vec<Diagnostic>> {
     let mut registry = ValidatorRegistry::with_defaults();
@@ -208,7 +213,14 @@ pub fn validate_file(path: &Path, config: &LintConfig) -> LintResult<Vec<Diagnos
     validate_file_with_registry(path, config, &registry)
 }
 
-/// Validate a single file with a custom validator registry
+/// Validate a single file with a custom validator registry.
+///
+/// Note: `config.rules().disabled_validators` is NOT applied at runtime in
+/// this path. Callers must disable validators at registry construction time
+/// using [`ValidatorRegistry::disable_validator_owned()`] or the builder
+/// API. For the LSP path where the config changes frequently, use
+/// [`validate_content()`] which applies `disabled_validators` checks at
+/// runtime.
 #[cfg(feature = "filesystem")]
 pub fn validate_file_with_registry(
     path: &Path,
