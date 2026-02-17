@@ -677,8 +677,9 @@ mod tests {
             .without_validator("SkipCountingValidator")
             .build();
 
-        // Factory is called once during register() to obtain name, but the
-        // instance is discarded because the name is in the disabled set.
+        // Factory is called once during build() (via the internal registry.register()
+        // call) to obtain the instance name, but the instance is discarded
+        // because the name is in the disabled set.
         assert_eq!(SKIP_COUNTING_CONSTRUCTED.load(Ordering::SeqCst), 1);
 
         // No cached instances remain for disabled validators.
@@ -1053,11 +1054,12 @@ mod tests {
             "XmlValidator should be removed from all file types"
         );
 
-        // XmlValidator appears in 9 file types in DEFAULTS. The total count
-        // must decrease by exactly that amount.
+        // XmlValidator appears in 9 file types in DEFAULTS. Count via function
+        // pointer comparison (no allocations) and verify the total decreases
+        // by exactly that amount.
         let xml_occurrences_in_defaults = DEFAULTS
             .iter()
-            .filter(|(_, factory)| factory().name() == "XmlValidator")
+            .filter(|(_, factory)| *factory as usize == xml_validator as usize)
             .count();
         assert_eq!(
             xml_occurrences_in_defaults, 9,

@@ -203,7 +203,9 @@ pub fn resolve_file_type(path: &Path, config: &LintConfig) -> FileType {
 /// Note: This function creates a new [`ValidatorRegistry`] on every call. For
 /// bulk validation of multiple files, use
 /// [`validate_file_with_registry()`] with a pre-built shared registry for
-/// significantly better performance.
+/// significantly better performance. Unlike [`validate_file_with_registry()`],
+/// this function applies `config.rules().disabled_validators` to the
+/// freshly-created registry at construction time.
 #[cfg(feature = "filesystem")]
 pub fn validate_file(path: &Path, config: &LintConfig) -> LintResult<Vec<Diagnostic>> {
     let mut registry = ValidatorRegistry::with_defaults();
