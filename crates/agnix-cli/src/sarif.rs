@@ -8,7 +8,7 @@
 use agnix_core::diagnostics::{Diagnostic, DiagnosticLevel};
 use agnix_rules::RULES_DATA;
 use serde::Serialize;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
 const SARIF_SCHEMA: &str = "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json";
@@ -201,10 +201,91 @@ pub fn diagnostics_to_sarif(diagnostics: &[Diagnostic], base_path: &Path) -> Sar
     }
 }
 
+/// Walk ancestors of `start` looking for a `.git` directory or file (worktrees/submodules).
+/// Returns the repository root path, or `None` if no git marker is found.
+fn find_git_root(start: &Path) -> Option<PathBuf> {
+    let canonical = std::fs::canonicalize(start).ok()?;
+    for ancestor in canonical.ancestors() {
+        let git_marker = ancestor.join(".git");
+        if git_marker.is_dir() || git_marker.is_file() {
+            return Some(ancestor.to_path_buf());
+        }
+    }
+    None
+}
+
+/// Resolve the base path for SARIF artifact URIs.
+///
+/// Prefers the git repository root so artifact locations are relative to the
+/// workspace root (required for correct IDE integration). Falls back to the
+/// current working directory when the scan path is not inside a git repository.
+pub fn resolve_sarif_base_path(scan_path: &Path) -> PathBuf {
+    find_git_root(scan_path)
+        .unwrap_or_else(|| std::fs::canonicalize(".").unwrap_or_else(|_| PathBuf::from(".")))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::path::PathBuf;
+
+    #[test]
+    fn test_find_git_root_finds_repo() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::create_dir(tmp.path().join(".git")).unwrap();
+        let result = find_git_root(tmp.path());
+        assert!(result.is_some());
+        assert_eq!(
+            result.unwrap(),
+            std::fs::canonicalize(tmp.path()).unwrap()
+        );
+    }
+
+    #[test]
+    fn test_find_git_root_nested() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::create_dir(tmp.path().join(".git")).unwrap();
+        let nested = tmp.path().join("a").join("b").join("c");
+        std::fs::create_dir_all(&nested).unwrap();
+        let result = find_git_root(&nested);
+        assert!(result.is_some());
+        assert_eq!(
+            result.unwrap(),
+            std::fs::canonicalize(tmp.path()).unwrap()
+        );
+    }
+
+    #[test]
+    fn test_find_git_root_worktree_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        // Git worktrees use a .git *file* pointing to the main repo
+        std::fs::write(tmp.path().join(".git"), "gitdir: /some/other/path").unwrap();
+        let result = find_git_root(tmp.path());
+        assert!(result.is_some());
+        assert_eq!(
+            result.unwrap(),
+            std::fs::canonicalize(tmp.path()).unwrap()
+        );
+    }
+
+    #[test]
+    fn test_find_git_root_no_repo() {
+        let tmp = tempfile::tempdir().unwrap();
+        // No .git marker at all - but note: the temp dir itself might be inside
+        // an actual git repo on the test machine, so we can't assert None.
+        // Instead, verify the function doesn't panic and returns a valid result.
+        let _result = find_git_root(tmp.path());
+    }
+
+    #[test]
+    fn test_resolve_sarif_base_path_with_git_root() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::create_dir(tmp.path().join(".git")).unwrap();
+        let nested = tmp.path().join("sub");
+        std::fs::create_dir(&nested).unwrap();
+        let base = resolve_sarif_base_path(&nested);
+        assert_eq!(base, std::fs::canonicalize(tmp.path()).unwrap());
+    }
 
     #[test]
     fn test_sarif_version() {
