@@ -99,7 +99,8 @@ pub struct ValidatorRegistry { /* ... */ }
 impl ValidatorRegistry {
     pub fn builder() -> ValidatorRegistryBuilder;
     pub fn with_defaults() -> Self;
-    pub fn disable_validator(&mut self, name: impl Into<String>);
+    pub fn disable_validator(&mut self, name: &'static str);
+    pub fn disable_validator_owned(&mut self, name: &str);
 }
 
 // Extensible file type detection (chain-of-responsibility)
