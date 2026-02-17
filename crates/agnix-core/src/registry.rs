@@ -499,8 +499,8 @@ mod tests {
         let via_direct = ValidatorRegistry::with_defaults();
 
         assert_eq!(
-            via_builder.total_factory_count(),
-            via_direct.total_factory_count(),
+            via_builder.total_validator_count(),
+            via_direct.total_validator_count(),
             "Builder with_defaults should produce the same factory count as with_defaults()"
         );
     }
@@ -508,7 +508,7 @@ mod tests {
     #[test]
     fn builder_empty_produces_empty_registry() {
         let registry = ValidatorRegistry::builder().build();
-        assert_eq!(registry.total_factory_count(), 0);
+        assert_eq!(registry.total_validator_count(), 0);
     }
 
     #[test]
@@ -517,7 +517,7 @@ mod tests {
             .register(FileType::Skill, skill_validator)
             .build();
 
-        assert_eq!(registry.total_factory_count(), 1);
+        assert_eq!(registry.total_validator_count(), 1);
         let validators = registry.validators_for(FileType::Skill);
         assert_eq!(validators.len(), 1);
         assert_eq!(validators[0].name(), "SkillValidator");
@@ -562,7 +562,7 @@ mod tests {
             .with_provider(&TestProvider)
             .build();
 
-        assert_eq!(registry.total_factory_count(), 1);
+        assert_eq!(registry.total_validator_count(), 1);
         let validators = registry.validators_for(FileType::Skill);
         assert_eq!(validators.len(), 1);
     }
@@ -640,8 +640,8 @@ mod tests {
         assert_eq!(registry.disabled_validator_count(), 1);
 
         // Should still work normally
-        let count_before = ValidatorRegistry::with_defaults().total_factory_count();
-        assert_eq!(registry.total_factory_count(), count_before);
+        let count_before = ValidatorRegistry::with_defaults().total_validator_count();
+        assert_eq!(registry.total_validator_count(), count_before);
     }
 
     // ---- validators_for filtering ----
@@ -783,7 +783,7 @@ mod tests {
 
         assert!(!registry.validators_for(FileType::Skill).is_empty());
         assert!(!registry.validators_for(FileType::Agent).is_empty());
-        assert_eq!(registry.total_factory_count(), 2);
+        assert_eq!(registry.total_validator_count(), 2);
     }
 
     // ---- Backward compatibility ----
@@ -792,7 +792,7 @@ mod tests {
     fn with_defaults_returns_expected_factories() {
         let registry = ValidatorRegistry::with_defaults();
         assert_eq!(
-            registry.total_factory_count(),
+            registry.total_validator_count(),
             DEFAULTS.len(),
             "with_defaults() should register exactly as many factories as DEFAULTS"
         );
@@ -803,8 +803,8 @@ mod tests {
         let via_default = ValidatorRegistry::default();
         let via_explicit = ValidatorRegistry::with_defaults();
         assert_eq!(
-            via_default.total_factory_count(),
-            via_explicit.total_factory_count()
+            via_default.total_validator_count(),
+            via_explicit.total_validator_count()
         );
     }
 
@@ -908,5 +908,85 @@ mod tests {
                 "{ft:?} has no validators registered in the default registry"
             );
         }
+    }
+
+    // ---- Caching correctness tests ----
+
+    #[test]
+    fn validators_for_returns_same_slice_on_repeated_calls() {
+        let registry = ValidatorRegistry::with_defaults();
+        let first = registry.validators_for(FileType::Skill);
+        let second = registry.validators_for(FileType::Skill);
+
+        // Both calls must return the same underlying slice (same pointer and length).
+        assert_eq!(first.len(), second.len());
+        assert!(
+            std::ptr::eq(first.as_ptr(), second.as_ptr()),
+            "validators_for() must return the same cached slice on repeated calls"
+        );
+    }
+
+    #[test]
+    fn register_calls_factory_exactly_once() {
+        COUNTING_VALIDATOR_CONSTRUCTED.store(0, Ordering::SeqCst);
+
+        let mut registry = ValidatorRegistry::new();
+        registry.register(FileType::Skill, counting_validator_factory);
+
+        // Factory called exactly once during register().
+        assert_eq!(COUNTING_VALIDATOR_CONSTRUCTED.load(Ordering::SeqCst), 1);
+
+        // validators_for() should NOT call the factory again.
+        let _validators = registry.validators_for(FileType::Skill);
+        assert_eq!(
+            COUNTING_VALIDATOR_CONSTRUCTED.load(Ordering::SeqCst),
+            1,
+            "validators_for() must not re-instantiate cached validators"
+        );
+
+        // Even repeated calls should not increment the counter.
+        let _validators = registry.validators_for(FileType::Skill);
+        assert_eq!(COUNTING_VALIDATOR_CONSTRUCTED.load(Ordering::SeqCst), 1);
+    }
+
+    #[test]
+    fn disable_after_construction_removes_from_cache() {
+        let mut registry = ValidatorRegistry::with_defaults();
+
+        // Verify XmlValidator is present before disabling.
+        let before = registry.validators_for(FileType::Skill);
+        assert!(
+            before.iter().any(|v| v.name() == "XmlValidator"),
+            "XmlValidator should be present before disabling"
+        );
+
+        registry.disable_validator("XmlValidator");
+
+        // After disabling, XmlValidator must be absent from the cached slice.
+        let after = registry.validators_for(FileType::Skill);
+        assert!(
+            !after.iter().any(|v| v.name() == "XmlValidator"),
+            "XmlValidator should be removed after disable_validator()"
+        );
+
+        // Also absent from other file types that had XmlValidator.
+        let claude_after = registry.validators_for(FileType::ClaudeMd);
+        assert!(
+            !claude_after.iter().any(|v| v.name() == "XmlValidator"),
+            "XmlValidator should be removed from all file types"
+        );
+    }
+
+    #[test]
+    fn registry_is_send_sync() {
+        fn assert_send_sync<T: Send + Sync>() {}
+        assert_send_sync::<ValidatorRegistry>();
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn deprecated_total_factory_count_matches_total_validator_count() {
+        let registry = ValidatorRegistry::with_defaults();
+        assert_eq!(registry.total_factory_count(), registry.total_validator_count());
     }
 }
