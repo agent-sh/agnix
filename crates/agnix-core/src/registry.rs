@@ -1086,6 +1086,9 @@ mod tests {
     #[allow(deprecated)]
     fn deprecated_total_factory_count_matches_total_validator_count() {
         let registry = ValidatorRegistry::with_defaults();
-        assert_eq!(registry.total_factory_count(), registry.total_validator_count());
+        assert_eq!(
+            registry.total_factory_count(),
+            registry.total_validator_count()
+        );
     }
 }
