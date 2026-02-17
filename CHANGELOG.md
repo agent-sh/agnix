@@ -36,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Performance
 - **REF-002 link validation**: Hoisted loop-invariant `canonicalize()` call out of per-link loop in `validate_markdown_links()` - eliminates N-1 redundant filesystem syscalls when validating N markdown links
+- **ValidatorRegistry memory efficiency**: Replaced `String` with `&'static str` for validator names, eliminating per-validator heap allocations during registry construction. Added `disable_validator_owned()` variants for runtime string disabling with duplicate detection to prevent unnecessary memory leaks
 
 ### Fixed
 - **REF-001**: Corrected metadata to reflect universal applicability across all tools (not claude-code specific), changed source_type to community, and added agentskills.io reference
