@@ -206,8 +206,7 @@ pub fn diagnostics_to_sarif(diagnostics: &[Diagnostic], base_path: &Path) -> Sar
 fn find_git_root(start: &Path) -> Option<PathBuf> {
     let canonical = std::fs::canonicalize(start).ok()?;
     for ancestor in canonical.ancestors() {
-        let git_marker = ancestor.join(".git");
-        if git_marker.is_dir() || git_marker.is_file() {
+        if ancestor.join(".git").exists() {
             return Some(ancestor.to_path_buf());
         }
     }
@@ -220,8 +219,10 @@ fn find_git_root(start: &Path) -> Option<PathBuf> {
 /// workspace root (required for correct IDE integration). Falls back to the
 /// current working directory when the scan path is not inside a git repository.
 pub fn resolve_sarif_base_path(scan_path: &Path) -> PathBuf {
-    find_git_root(scan_path)
-        .unwrap_or_else(|| std::fs::canonicalize(".").unwrap_or_else(|_| PathBuf::from(".")))
+    if let Some(root) = find_git_root(scan_path) {
+        return root;
+    }
+    std::fs::canonicalize(".").unwrap_or_else(|_| PathBuf::from("."))
 }
 
 #[cfg(test)]
@@ -285,6 +286,25 @@ mod tests {
         std::fs::create_dir(&nested).unwrap();
         let base = resolve_sarif_base_path(&nested);
         assert_eq!(base, std::fs::canonicalize(tmp.path()).unwrap());
+    }
+
+    #[test]
+    fn test_find_git_root_nested_repos_returns_innermost() {
+        // Simulate a submodule: outer/.git + outer/inner/.git
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::create_dir(tmp.path().join(".git")).unwrap();
+        let inner = tmp.path().join("inner");
+        std::fs::create_dir(&inner).unwrap();
+        std::fs::create_dir(inner.join(".git")).unwrap();
+        let deep = inner.join("src");
+        std::fs::create_dir(&deep).unwrap();
+
+        let result = find_git_root(&deep).unwrap();
+        assert_eq!(
+            result,
+            std::fs::canonicalize(&inner).unwrap(),
+            "Should return the innermost git root (submodule), not the outer repo"
+        );
     }
 
     #[test]

@@ -913,18 +913,21 @@ fn test_sarif_artifact_uris_relative_to_git_root() {
     let json: serde_json::Value = serde_json::from_str(&stdout).expect("SARIF should be valid JSON");
     let results = json["runs"][0]["results"].as_array().unwrap();
 
-    if !results.is_empty() {
-        let uri = results[0]["locations"][0]["physicalLocation"]["artifactLocation"]["uri"]
-            .as_str()
-            .unwrap();
-        // URI should include "sub/" prefix because it's relative to the git root,
-        // not just "CLAUDE.md" which would be relative to CWD
-        assert!(
-            uri.starts_with("sub/"),
-            "SARIF artifact URI should be relative to git root (expected 'sub/...'), got: {}",
-            uri
-        );
-    }
+    assert!(
+        !results.is_empty(),
+        "Test requires diagnostics to verify URI format"
+    );
+
+    let uri = results[0]["locations"][0]["physicalLocation"]["artifactLocation"]["uri"]
+        .as_str()
+        .unwrap();
+    // URI should include "sub/" prefix because it's relative to the git root,
+    // not just "CLAUDE.md" which would be relative to CWD
+    assert!(
+        uri.starts_with("sub/"),
+        "SARIF artifact URI should be relative to git root (expected 'sub/...'), got: {}",
+        uri
+    );
 }
 
 #[test]
@@ -951,15 +954,18 @@ fn test_json_format_uses_cwd_not_git_root() {
     let json: serde_json::Value = serde_json::from_str(&stdout).expect("JSON should be valid");
     let diagnostics = json["diagnostics"].as_array().unwrap();
 
-    if !diagnostics.is_empty() {
-        let file = diagnostics[0]["file"].as_str().unwrap();
-        // JSON should NOT have "sub/" prefix - it uses CWD-relative paths
-        assert!(
-            !file.starts_with("sub/"),
-            "JSON file path should be relative to CWD, not git root, got: {}",
-            file
-        );
-    }
+    assert!(
+        !diagnostics.is_empty(),
+        "Test requires diagnostics to verify path format"
+    );
+
+    let file = diagnostics[0]["file"].as_str().unwrap();
+    // JSON should NOT have "sub/" prefix - it uses CWD-relative paths
+    assert!(
+        !file.starts_with("sub/"),
+        "JSON file path should be relative to CWD, not git root, got: {}",
+        file
+    );
 }
 
 // ============================================================================
