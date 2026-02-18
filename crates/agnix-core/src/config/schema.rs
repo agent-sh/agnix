@@ -38,7 +38,7 @@ impl LintConfig {
             "WS-SK-",
             "imports::",
         ];
-        for rule_id in &self.rules.disabled_rules {
+        for rule_id in &self.data.rules.disabled_rules {
             let matches_known = known_prefixes
                 .iter()
                 .any(|prefix| rule_id.starts_with(prefix));
@@ -71,7 +71,7 @@ impl LintConfig {
             "windsurf",
             "generic",
         ];
-        for tool in &self.tools {
+        for tool in &self.data.tools {
             let tool_lower = tool.to_lowercase();
             if !known_tools
                 .iter()
@@ -91,7 +91,7 @@ impl LintConfig {
         }
 
         // Warn on deprecated fields
-        if self.target != TargetTool::Generic && self.tools.is_empty() {
+        if self.data.target != TargetTool::Generic && self.data.tools.is_empty() {
             // Only warn if target is non-default and tools is empty
             // (if both are set, tools takes precedence silently)
             warnings.push(ConfigWarning {
@@ -100,7 +100,7 @@ impl LintConfig {
                 suggestion: Some(t!("core.config.deprecated_target_suggestion").to_string()),
             });
         }
-        if self.mcp_protocol_version.is_some() {
+        if self.data.mcp_protocol_version.is_some() {
             warnings.push(ConfigWarning {
                 field: "mcp_protocol_version".to_string(),
                 message: t!("core.config.deprecated_mcp_version").to_string(),
@@ -110,9 +110,9 @@ impl LintConfig {
 
         // Validate files config glob patterns
         let pattern_lists = [
-            ("files.include_as_memory", &self.files.include_as_memory),
-            ("files.include_as_generic", &self.files.include_as_generic),
-            ("files.exclude", &self.files.exclude),
+            ("files.include_as_memory", &self.data.files.include_as_memory),
+            ("files.include_as_generic", &self.data.files.include_as_generic),
+            ("files.exclude", &self.data.files.exclude),
         ];
         for (field, patterns) in &pattern_lists {
             // Warn if pattern count exceeds recommended limit

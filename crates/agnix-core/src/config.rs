@@ -240,10 +240,16 @@ impl std::fmt::Debug for RuntimeContext {
     }
 }
 
-/// Configuration for the linter
+/// Shared, immutable configuration data wrapped in `Arc` for cheap cloning.
+///
+/// All serializable fields of `LintConfig` live here. When `LintConfig` is
+/// cloned (e.g., in `validate_project` / `validate_project_with_registry`),
+/// only the `Arc` refcount is bumped - no heap-allocated `Vec<String>` or
+/// nested structs are deep-copied. Mutation through setters uses
+/// `Arc::make_mut` for copy-on-write semantics.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(default)]
-pub struct LintConfig {
+pub(crate) struct ConfigData {
     /// Severity level threshold
     #[schemars(description = "Minimum severity level to report (Error, Warning, Info)")]
     severity: SeverityLevel,
@@ -314,14 +320,108 @@ pub struct LintConfig {
     /// Default: 10,000 files. Set to `None` to disable the limit (not recommended).
     #[serde(default = "default_max_files")]
     max_files_to_validate: Option<usize>,
+}
+
+impl Default for ConfigData {
+    fn default() -> Self {
+        Self {
+            severity: SeverityLevel::Warning,
+            rules: RuleConfig::default(),
+            exclude: vec![
+                "node_modules/**".to_string(),
+                ".git/**".to_string(),
+                "target/**".to_string(),
+            ],
+            target: TargetTool::Generic,
+            tools: Vec::new(),
+            mcp_protocol_version: None,
+            tool_versions: ToolVersions::default(),
+            spec_revisions: SpecRevisions::default(),
+            files: FilesConfig::default(),
+            locale: None,
+            max_files_to_validate: Some(DEFAULT_MAX_FILES),
+        }
+    }
+}
+
+/// Configuration for the linter
+///
+/// # Cheap Cloning via `Arc<ConfigData>`
+///
+/// All serializable fields are stored in a shared `Arc<ConfigData>`.
+/// Cloning a `LintConfig` bumps the `Arc` refcount and shallow-copies the
+/// lightweight `RuntimeContext` - no heap-allocated `Vec<String>` or nested
+/// structs are deep-copied. Setters use `Arc::make_mut` for copy-on-write
+/// semantics, so mutations only allocate when the `Arc` is shared.
+#[derive(Clone)]
+pub struct LintConfig {
+    /// Shared serializable configuration data.
+    ///
+    /// Accessible within the config module for direct field access in
+    /// submodules (rule_filter, schema, builder, tests).
+    pub(super) data: Arc<ConfigData>,
 
     /// Internal runtime context for validation operations (not serialized).
     ///
     /// Groups the filesystem abstraction, project root directory, and import
     /// cache. These are non-serialized runtime state set up before validation.
-    #[serde(skip)]
-    #[schemars(skip)]
     runtime: RuntimeContext,
+}
+
+// ---------------------------------------------------------------------------
+// Serde, Debug, and JsonSchema implementations for LintConfig
+// ---------------------------------------------------------------------------
+//
+// Because LintConfig wraps its serializable fields in Arc<ConfigData>, we
+// implement Serialize/Deserialize/Debug/JsonSchema manually so that the
+// external representation is flat (identical to the old struct layout).
+// ---------------------------------------------------------------------------
+
+impl std::fmt::Debug for LintConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("LintConfig")
+            .field("severity", &self.data.severity)
+            .field("rules", &self.data.rules)
+            .field("exclude", &self.data.exclude)
+            .field("target", &self.data.target)
+            .field("tools", &self.data.tools)
+            .field("mcp_protocol_version", &self.data.mcp_protocol_version)
+            .field("tool_versions", &self.data.tool_versions)
+            .field("spec_revisions", &self.data.spec_revisions)
+            .field("files", &self.data.files)
+            .field("locale", &self.data.locale)
+            .field("max_files_to_validate", &self.data.max_files_to_validate)
+            .field("runtime", &self.runtime)
+            .finish()
+    }
+}
+
+impl Serialize for LintConfig {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        // Delegate to ConfigData - produces the same flat fields as before.
+        self.data.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for LintConfig {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let data = ConfigData::deserialize(deserializer)?;
+        Ok(Self {
+            data: Arc::new(data),
+            runtime: RuntimeContext::default(),
+        })
+    }
+}
+
+impl JsonSchema for LintConfig {
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        std::borrow::Cow::Borrowed("LintConfig")
+    }
+
+    fn json_schema(generator: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        // Delegate to ConfigData so the schema is identical to the old flat layout.
+        ConfigData::json_schema(generator)
+    }
 }
 
 /// Default maximum files to validate (security limit)
@@ -354,21 +454,7 @@ fn has_path_traversal(normalized: &str) -> bool {
 impl Default for LintConfig {
     fn default() -> Self {
         Self {
-            severity: SeverityLevel::Warning,
-            rules: RuleConfig::default(),
-            exclude: vec![
-                "node_modules/**".to_string(),
-                ".git/**".to_string(),
-                "target/**".to_string(),
-            ],
-            target: TargetTool::Generic,
-            tools: Vec::new(),
-            mcp_protocol_version: None,
-            tool_versions: ToolVersions::default(),
-            spec_revisions: SpecRevisions::default(),
-            files: FilesConfig::default(),
-            locale: None,
-            max_files_to_validate: Some(DEFAULT_MAX_FILES),
+            data: Arc::new(ConfigData::default()),
             runtime: RuntimeContext::default(),
         }
     }
@@ -693,61 +779,61 @@ impl LintConfig {
     /// Get the severity level threshold.
     #[inline]
     pub fn severity(&self) -> SeverityLevel {
-        self.severity
+        self.data.severity
     }
 
     /// Get the rules configuration.
     #[inline]
     pub fn rules(&self) -> &RuleConfig {
-        &self.rules
+        &self.data.rules
     }
 
     /// Get the exclude patterns.
     #[inline]
     pub fn exclude(&self) -> &[String] {
-        &self.exclude
+        &self.data.exclude
     }
 
     /// Get the target tool.
     #[inline]
     pub fn target(&self) -> TargetTool {
-        self.target
+        self.data.target
     }
 
     /// Get the tools list.
     #[inline]
     pub fn tools(&self) -> &[String] {
-        &self.tools
+        &self.data.tools
     }
 
     /// Get the tool versions configuration.
     #[inline]
     pub fn tool_versions(&self) -> &ToolVersions {
-        &self.tool_versions
+        &self.data.tool_versions
     }
 
     /// Get the spec revisions configuration.
     #[inline]
     pub fn spec_revisions(&self) -> &SpecRevisions {
-        &self.spec_revisions
+        &self.data.spec_revisions
     }
 
     /// Get the files configuration.
     #[inline]
     pub fn files_config(&self) -> &FilesConfig {
-        &self.files
+        &self.data.files
     }
 
     /// Get the locale, if set.
     #[inline]
     pub fn locale(&self) -> Option<&str> {
-        self.locale.as_deref()
+        self.data.locale.as_deref()
     }
 
     /// Get the maximum number of files to validate.
     #[inline]
     pub fn max_files_to_validate(&self) -> Option<usize> {
-        self.max_files_to_validate
+        self.data.max_files_to_validate
     }
 
     /// Get the raw `mcp_protocol_version` field value (without fallback logic).
@@ -755,31 +841,36 @@ impl LintConfig {
     /// For the resolved version with fallback, use [`get_mcp_protocol_version()`](Self::get_mcp_protocol_version).
     #[inline]
     pub fn mcp_protocol_version_raw(&self) -> Option<&str> {
-        self.mcp_protocol_version.as_deref()
+        self.data.mcp_protocol_version.as_deref()
     }
 
     // =========================================================================
     // Serializable Field Setters
     // =========================================================================
+    //
+    // All setters use `Arc::make_mut` for copy-on-write semantics. When the
+    // Arc is uniquely owned (refcount == 1), the data is mutated in place
+    // with no allocation. When shared, a clone is made first.
+    // =========================================================================
 
     /// Set the severity level threshold.
     pub fn set_severity(&mut self, severity: SeverityLevel) {
-        self.severity = severity;
+        Arc::make_mut(&mut self.data).severity = severity;
     }
 
     /// Set the target tool.
     pub fn set_target(&mut self, target: TargetTool) {
-        self.target = target;
+        Arc::make_mut(&mut self.data).target = target;
     }
 
     /// Set the tools list.
     pub fn set_tools(&mut self, tools: Vec<String>) {
-        self.tools = tools;
+        Arc::make_mut(&mut self.data).tools = tools;
     }
 
     /// Get a mutable reference to the tools list.
     pub fn tools_mut(&mut self) -> &mut Vec<String> {
-        &mut self.tools
+        &mut Arc::make_mut(&mut self.data).tools
     }
 
     /// Set the exclude patterns.
@@ -787,37 +878,37 @@ impl LintConfig {
     /// Note: This does not validate the patterns. Call [`validate()`](Self::validate)
     /// after using this if validation is needed.
     pub fn set_exclude(&mut self, exclude: Vec<String>) {
-        self.exclude = exclude;
+        Arc::make_mut(&mut self.data).exclude = exclude;
     }
 
     /// Set the locale.
     pub fn set_locale(&mut self, locale: Option<String>) {
-        self.locale = locale;
+        Arc::make_mut(&mut self.data).locale = locale;
     }
 
     /// Set the maximum number of files to validate.
     pub fn set_max_files_to_validate(&mut self, max: Option<usize>) {
-        self.max_files_to_validate = max;
+        Arc::make_mut(&mut self.data).max_files_to_validate = max;
     }
 
     /// Set the MCP protocol version (deprecated field).
     pub fn set_mcp_protocol_version(&mut self, version: Option<String>) {
-        self.mcp_protocol_version = version;
+        Arc::make_mut(&mut self.data).mcp_protocol_version = version;
     }
 
     /// Get a mutable reference to the rules configuration.
     pub fn rules_mut(&mut self) -> &mut RuleConfig {
-        &mut self.rules
+        &mut Arc::make_mut(&mut self.data).rules
     }
 
     /// Get a mutable reference to the tool versions configuration.
     pub fn tool_versions_mut(&mut self) -> &mut ToolVersions {
-        &mut self.tool_versions
+        &mut Arc::make_mut(&mut self.data).tool_versions
     }
 
     /// Get a mutable reference to the spec revisions configuration.
     pub fn spec_revisions_mut(&mut self) -> &mut SpecRevisions {
-        &mut self.spec_revisions
+        &mut Arc::make_mut(&mut self.data).spec_revisions
     }
 
     /// Get a mutable reference to the files configuration.
@@ -825,7 +916,7 @@ impl LintConfig {
     /// Note: Mutations bypass builder validation. Call [`validate()`](Self::validate)
     /// after modifying if validation is needed.
     pub fn files_mut(&mut self) -> &mut FilesConfig {
-        &mut self.files
+        &mut Arc::make_mut(&mut self.data).files
     }
 
     // =========================================================================
@@ -837,29 +928,31 @@ impl LintConfig {
     /// Priority: spec_revisions.mcp_protocol > mcp_protocol_version > default
     #[inline]
     pub fn get_mcp_protocol_version(&self) -> &str {
-        self.spec_revisions
+        self.data
+            .spec_revisions
             .mcp_protocol
             .as_deref()
-            .or(self.mcp_protocol_version.as_deref())
+            .or(self.data.mcp_protocol_version.as_deref())
             .unwrap_or(DEFAULT_MCP_PROTOCOL_VERSION)
     }
 
     /// Check if MCP protocol revision is explicitly pinned
     #[inline]
     pub fn is_mcp_revision_pinned(&self) -> bool {
-        self.spec_revisions.mcp_protocol.is_some() || self.mcp_protocol_version.is_some()
+        self.data.spec_revisions.mcp_protocol.is_some()
+            || self.data.mcp_protocol_version.is_some()
     }
 
     /// Check if Claude Code version is explicitly pinned
     #[inline]
     pub fn is_claude_code_version_pinned(&self) -> bool {
-        self.tool_versions.claude_code.is_some()
+        self.data.tool_versions.claude_code.is_some()
     }
 
     /// Get the pinned Claude Code version, if any
     #[inline]
     pub fn get_claude_code_version(&self) -> Option<&str> {
-        self.tool_versions.claude_code.as_deref()
+        self.data.tool_versions.claude_code.as_deref()
     }
 }
 

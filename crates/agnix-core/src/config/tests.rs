@@ -2,6 +2,13 @@
 
 use super::*;
 
+/// Shorthand for `Arc::make_mut(&mut config.data)` - used throughout tests
+/// to get a mutable reference to the inner `ConfigData` with copy-on-write
+/// semantics. Keeps test code concise.
+fn dm(config: &mut LintConfig) -> &mut ConfigData {
+    Arc::make_mut(&mut config.data)
+}
+
 #[test]
 fn test_default_config_enables_all_rules() {
     let config = LintConfig::default();
@@ -20,7 +27,7 @@ fn test_default_config_enables_all_rules() {
 #[test]
 fn test_disabled_rules_list() {
     let mut config = LintConfig::default();
-    config.rules.disabled_rules = vec!["CC-AG-001".to_string(), "AS-005".to_string()];
+    dm(&mut config).rules.disabled_rules = vec!["CC-AG-001".to_string(), "AS-005".to_string()];
 
     assert!(!config.is_rule_enabled("CC-AG-001"));
     assert!(!config.is_rule_enabled("AS-005"));
@@ -31,7 +38,7 @@ fn test_disabled_rules_list() {
 #[test]
 fn test_category_disabled_skills() {
     let mut config = LintConfig::default();
-    config.rules.skills = false;
+    dm(&mut config).rules.skills = false;
 
     assert!(!config.is_rule_enabled("AS-005"));
     assert!(!config.is_rule_enabled("AS-006"));
@@ -46,7 +53,7 @@ fn test_category_disabled_skills() {
 #[test]
 fn test_category_disabled_amp_checks() {
     let mut config = LintConfig::default();
-    config.rules.amp_checks = false;
+    dm(&mut config).rules.amp_checks = false;
 
     assert!(!config.is_rule_enabled("AMP-001"));
     assert!(!config.is_rule_enabled("AMP-002"));
@@ -61,7 +68,7 @@ fn test_category_disabled_amp_checks() {
 #[test]
 fn test_category_disabled_hooks() {
     let mut config = LintConfig::default();
-    config.rules.hooks = false;
+    dm(&mut config).rules.hooks = false;
 
     assert!(!config.is_rule_enabled("CC-HK-001"));
     assert!(!config.is_rule_enabled("CC-HK-009"));
@@ -74,7 +81,7 @@ fn test_category_disabled_hooks() {
 #[test]
 fn test_category_disabled_agents() {
     let mut config = LintConfig::default();
-    config.rules.agents = false;
+    dm(&mut config).rules.agents = false;
 
     assert!(!config.is_rule_enabled("CC-AG-001"));
     assert!(!config.is_rule_enabled("CC-AG-006"));
@@ -87,7 +94,7 @@ fn test_category_disabled_agents() {
 #[test]
 fn test_category_disabled_memory() {
     let mut config = LintConfig::default();
-    config.rules.memory = false;
+    dm(&mut config).rules.memory = false;
 
     assert!(!config.is_rule_enabled("CC-MEM-005"));
 
@@ -98,7 +105,7 @@ fn test_category_disabled_memory() {
 #[test]
 fn test_category_disabled_plugins() {
     let mut config = LintConfig::default();
-    config.rules.plugins = false;
+    dm(&mut config).rules.plugins = false;
 
     assert!(!config.is_rule_enabled("CC-PL-001"));
 
@@ -109,7 +116,7 @@ fn test_category_disabled_plugins() {
 #[test]
 fn test_category_disabled_xml() {
     let mut config = LintConfig::default();
-    config.rules.xml = false;
+    dm(&mut config).rules.xml = false;
 
     assert!(!config.is_rule_enabled("XML-001"));
     assert!(!config.is_rule_enabled("XML-002"));
@@ -122,7 +129,7 @@ fn test_category_disabled_xml() {
 #[test]
 fn test_category_disabled_imports() {
     let mut config = LintConfig::default();
-    config.rules.imports = false;
+    dm(&mut config).rules.imports = false;
 
     assert!(!config.is_rule_enabled("REF-001"));
     assert!(!config.is_rule_enabled("imports::not_found"));
@@ -134,7 +141,7 @@ fn test_category_disabled_imports() {
 #[test]
 fn test_target_cursor_disables_cc_rules() {
     let mut config = LintConfig::default();
-    config.target = TargetTool::Cursor;
+    dm(&mut config).target = TargetTool::Cursor;
 
     // CC-* rules should be disabled for Cursor
     assert!(!config.is_rule_enabled("CC-AG-001"));
@@ -154,7 +161,7 @@ fn test_target_cursor_disables_cc_rules() {
 #[test]
 fn test_target_codex_disables_cc_rules() {
     let mut config = LintConfig::default();
-    config.target = TargetTool::Codex;
+    dm(&mut config).target = TargetTool::Codex;
 
     // CC-* rules should be disabled for Codex
     assert!(!config.is_rule_enabled("CC-AG-001"));
@@ -167,7 +174,7 @@ fn test_target_codex_disables_cc_rules() {
 #[test]
 fn test_target_claude_code_enables_cc_rules() {
     let mut config = LintConfig::default();
-    config.target = TargetTool::ClaudeCode;
+    dm(&mut config).target = TargetTool::ClaudeCode;
 
     // All rules should be enabled
     assert!(config.is_rule_enabled("CC-AG-001"));
@@ -199,10 +206,10 @@ fn test_unknown_rules_enabled_by_default() {
 #[test]
 fn test_disabled_rules_takes_precedence() {
     let mut config = LintConfig::default();
-    config.rules.disabled_rules = vec!["AS-005".to_string()];
+    dm(&mut config).rules.disabled_rules = vec!["AS-005".to_string()];
 
     // Even with skills enabled, this specific rule is disabled
-    assert!(config.rules.skills);
+    assert!(config.data.rules.skills);
     assert!(!config.is_rule_enabled("AS-005"));
     assert!(config.is_rule_enabled("AS-006"));
 }
@@ -223,12 +230,13 @@ disabled_rules = ["CC-AG-002"]
 
     let config: LintConfig = toml::from_str(toml_str).unwrap();
 
-    assert_eq!(config.target, TargetTool::ClaudeCode);
-    assert!(config.rules.skills);
-    assert!(!config.rules.hooks);
-    assert!(config.rules.agents);
+    assert_eq!(config.data.target, TargetTool::ClaudeCode);
+    assert!(config.data.rules.skills);
+    assert!(!config.data.rules.hooks);
+    assert!(config.data.rules.agents);
     assert!(
         config
+            .data
             .rules
             .disabled_rules
             .contains(&"CC-AG-002".to_string())
@@ -254,18 +262,18 @@ exclude = []
     let config: LintConfig = toml::from_str(toml_str).unwrap();
 
     // All categories should default to true
-    assert!(config.rules.skills);
-    assert!(config.rules.hooks);
-    assert!(config.rules.agents);
-    assert!(config.rules.memory);
-    assert!(config.rules.plugins);
-    assert!(config.rules.xml);
-    assert!(config.rules.mcp);
-    assert!(config.rules.imports);
-    assert!(config.rules.cross_platform);
-    assert!(config.rules.amp_checks);
-    assert!(config.rules.prompt_engineering);
-    assert!(config.rules.disabled_rules.is_empty());
+    assert!(config.data.rules.skills);
+    assert!(config.data.rules.hooks);
+    assert!(config.data.rules.agents);
+    assert!(config.data.rules.memory);
+    assert!(config.data.rules.plugins);
+    assert!(config.data.rules.xml);
+    assert!(config.data.rules.mcp);
+    assert!(config.data.rules.imports);
+    assert!(config.data.rules.cross_platform);
+    assert!(config.data.rules.amp_checks);
+    assert!(config.data.rules.prompt_engineering);
+    assert!(config.data.rules.disabled_rules.is_empty());
 }
 
 // ===== MCP Category Tests =====
@@ -273,7 +281,7 @@ exclude = []
 #[test]
 fn test_category_disabled_mcp() {
     let mut config = LintConfig::default();
-    config.rules.mcp = false;
+    dm(&mut config).rules.mcp = false;
 
     assert!(!config.is_rule_enabled("MCP-001"));
     assert!(!config.is_rule_enabled("MCP-002"));
@@ -312,14 +320,14 @@ fn test_default_mcp_protocol_version() {
 #[test]
 fn test_custom_mcp_protocol_version() {
     let mut config = LintConfig::default();
-    config.mcp_protocol_version = Some("2024-11-05".to_string());
+    dm(&mut config).mcp_protocol_version = Some("2024-11-05".to_string());
     assert_eq!(config.get_mcp_protocol_version(), "2024-11-05");
 }
 
 #[test]
 fn test_mcp_protocol_version_none_fallback() {
     let mut config = LintConfig::default();
-    config.mcp_protocol_version = None;
+    dm(&mut config).mcp_protocol_version = None;
     // Should fall back to default when None
     assert_eq!(config.get_mcp_protocol_version(), "2025-11-25");
 }
@@ -368,7 +376,7 @@ fn test_default_config_enables_xp_rules() {
 #[test]
 fn test_category_disabled_cross_platform() {
     let mut config = LintConfig::default();
-    config.rules.cross_platform = false;
+    dm(&mut config).rules.cross_platform = false;
 
     assert!(!config.is_rule_enabled("XP-001"));
     assert!(!config.is_rule_enabled("XP-002"));
@@ -392,7 +400,7 @@ fn test_xp_rules_work_with_all_targets() {
 
     for target in targets {
         let mut config = LintConfig::default();
-        config.target = target;
+        dm(&mut config).target = target;
 
         assert!(
             config.is_rule_enabled("XP-001"),
@@ -415,7 +423,7 @@ fn test_xp_rules_work_with_all_targets() {
 #[test]
 fn test_disabled_specific_xp_rule() {
     let mut config = LintConfig::default();
-    config.rules.disabled_rules = vec!["XP-001".to_string()];
+    dm(&mut config).rules.disabled_rules = vec!["XP-001".to_string()];
 
     assert!(!config.is_rule_enabled("XP-001"));
     assert!(config.is_rule_enabled("XP-002"));
@@ -435,7 +443,7 @@ cross_platform = false
 
     let config: LintConfig = toml::from_str(toml_str).unwrap();
 
-    assert!(!config.rules.cross_platform);
+    assert!(!config.data.rules.cross_platform);
     assert!(!config.is_rule_enabled("XP-001"));
     assert!(!config.is_rule_enabled("XP-002"));
     assert!(!config.is_rule_enabled("XP-003"));
@@ -458,7 +466,7 @@ fn test_default_config_enables_agm_rules() {
 #[test]
 fn test_category_disabled_agents_md() {
     let mut config = LintConfig::default();
-    config.rules.agents_md = false;
+    dm(&mut config).rules.agents_md = false;
 
     assert!(!config.is_rule_enabled("AGM-001"));
     assert!(!config.is_rule_enabled("AGM-002"));
@@ -486,7 +494,7 @@ fn test_agm_rules_work_with_all_targets() {
 
     for target in targets {
         let mut config = LintConfig::default();
-        config.target = target;
+        dm(&mut config).target = target;
 
         assert!(
             config.is_rule_enabled("AGM-001"),
@@ -504,7 +512,7 @@ fn test_agm_rules_work_with_all_targets() {
 #[test]
 fn test_disabled_specific_agm_rule() {
     let mut config = LintConfig::default();
-    config.rules.disabled_rules = vec!["AGM-001".to_string()];
+    dm(&mut config).rules.disabled_rules = vec!["AGM-001".to_string()];
 
     assert!(!config.is_rule_enabled("AGM-001"));
     assert!(config.is_rule_enabled("AGM-002"));
@@ -527,7 +535,7 @@ agents_md = false
 
     let config: LintConfig = toml::from_str(toml_str).unwrap();
 
-    assert!(!config.rules.agents_md);
+    assert!(!config.data.rules.agents_md);
     assert!(!config.is_rule_enabled("AGM-001"));
     assert!(!config.is_rule_enabled("AGM-006"));
 }
@@ -547,7 +555,7 @@ fn test_default_config_enables_pe_rules() {
 #[test]
 fn test_category_disabled_prompt_engineering() {
     let mut config = LintConfig::default();
-    config.rules.prompt_engineering = false;
+    dm(&mut config).rules.prompt_engineering = false;
 
     assert!(!config.is_rule_enabled("PE-001"));
     assert!(!config.is_rule_enabled("PE-002"));
@@ -572,7 +580,7 @@ fn test_pe_rules_work_with_all_targets() {
 
     for target in targets {
         let mut config = LintConfig::default();
-        config.target = target;
+        dm(&mut config).target = target;
 
         assert!(
             config.is_rule_enabled("PE-001"),
@@ -600,7 +608,7 @@ fn test_pe_rules_work_with_all_targets() {
 #[test]
 fn test_disabled_specific_pe_rule() {
     let mut config = LintConfig::default();
-    config.rules.disabled_rules = vec!["PE-001".to_string()];
+    dm(&mut config).rules.disabled_rules = vec!["PE-001".to_string()];
 
     assert!(!config.is_rule_enabled("PE-001"));
     assert!(config.is_rule_enabled("PE-002"));
@@ -621,7 +629,7 @@ prompt_engineering = false
 
     let config: LintConfig = toml::from_str(toml_str).unwrap();
 
-    assert!(!config.rules.prompt_engineering);
+    assert!(!config.data.rules.prompt_engineering);
     assert!(!config.is_rule_enabled("PE-001"));
     assert!(!config.is_rule_enabled("PE-002"));
     assert!(!config.is_rule_enabled("PE-003"));
@@ -643,7 +651,7 @@ fn test_default_config_enables_cop_rules() {
 #[test]
 fn test_category_disabled_copilot() {
     let mut config = LintConfig::default();
-    config.rules.copilot = false;
+    dm(&mut config).rules.copilot = false;
 
     assert!(!config.is_rule_enabled("COP-001"));
     assert!(!config.is_rule_enabled("COP-002"));
@@ -668,7 +676,7 @@ fn test_cop_rules_work_with_all_targets() {
 
     for target in targets {
         let mut config = LintConfig::default();
-        config.target = target;
+        dm(&mut config).target = target;
 
         assert!(
             config.is_rule_enabled("COP-001"),
@@ -696,7 +704,7 @@ fn test_cop_rules_work_with_all_targets() {
 #[test]
 fn test_disabled_specific_cop_rule() {
     let mut config = LintConfig::default();
-    config.rules.disabled_rules = vec!["COP-001".to_string()];
+    dm(&mut config).rules.disabled_rules = vec!["COP-001".to_string()];
 
     assert!(!config.is_rule_enabled("COP-001"));
     assert!(config.is_rule_enabled("COP-002"));
@@ -717,7 +725,7 @@ copilot = false
 
     let config: LintConfig = toml::from_str(toml_str).unwrap();
 
-    assert!(!config.rules.copilot);
+    assert!(!config.data.rules.copilot);
     assert!(!config.is_rule_enabled("COP-001"));
     assert!(!config.is_rule_enabled("COP-002"));
     assert!(!config.is_rule_enabled("COP-003"));
@@ -741,7 +749,7 @@ fn test_default_config_enables_cur_rules() {
 #[test]
 fn test_category_disabled_cursor() {
     let mut config = LintConfig::default();
-    config.rules.cursor = false;
+    dm(&mut config).rules.cursor = false;
 
     assert!(!config.is_rule_enabled("CUR-001"));
     assert!(!config.is_rule_enabled("CUR-002"));
@@ -768,7 +776,7 @@ fn test_cur_rules_work_with_all_targets() {
 
     for target in targets {
         let mut config = LintConfig::default();
-        config.target = target;
+        dm(&mut config).target = target;
 
         assert!(
             config.is_rule_enabled("CUR-001"),
@@ -786,7 +794,7 @@ fn test_cur_rules_work_with_all_targets() {
 #[test]
 fn test_disabled_specific_cur_rule() {
     let mut config = LintConfig::default();
-    config.rules.disabled_rules = vec!["CUR-001".to_string()];
+    dm(&mut config).rules.disabled_rules = vec!["CUR-001".to_string()];
 
     assert!(!config.is_rule_enabled("CUR-001"));
     assert!(config.is_rule_enabled("CUR-002"));
@@ -809,7 +817,7 @@ cursor = false
 
     let config: LintConfig = toml::from_str(toml_str).unwrap();
 
-    assert!(!config.rules.cursor);
+    assert!(!config.data.rules.cursor);
     assert!(!config.is_rule_enabled("CUR-001"));
     assert!(!config.is_rule_enabled("CUR-002"));
     assert!(!config.is_rule_enabled("CUR-003"));
@@ -829,8 +837,8 @@ fn test_invalid_toml_returns_warning() {
     let (config, warning) = LintConfig::load_or_default(Some(&config_path));
 
     // Should return default config
-    assert_eq!(config.target, TargetTool::Generic);
-    assert!(config.rules.skills);
+    assert_eq!(config.data.target, TargetTool::Generic);
+    assert!(config.data.rules.skills);
 
     // Should have a warning message
     assert!(warning.is_some());
@@ -843,7 +851,7 @@ fn test_invalid_toml_returns_warning() {
 fn test_missing_config_no_warning() {
     let (config, warning) = LintConfig::load_or_default(None);
 
-    assert_eq!(config.target, TargetTool::Generic);
+    assert_eq!(config.data.target, TargetTool::Generic);
     assert!(warning.is_none());
 }
 
@@ -866,8 +874,8 @@ skills = false
 
     let (config, warning) = LintConfig::load_or_default(Some(&config_path));
 
-    assert_eq!(config.target, TargetTool::ClaudeCode);
-    assert!(!config.rules.skills);
+    assert_eq!(config.data.target, TargetTool::ClaudeCode);
+    assert!(!config.data.rules.skills);
     assert!(warning.is_none());
 }
 
@@ -877,7 +885,7 @@ fn test_nonexistent_config_file_returns_warning() {
     let (config, warning) = LintConfig::load_or_default(Some(&nonexistent));
 
     // Should return default config
-    assert_eq!(config.target, TargetTool::Generic);
+    assert_eq!(config.data.target, TargetTool::Generic);
 
     // Should have a warning about the missing file
     assert!(warning.is_some());
@@ -907,9 +915,9 @@ required_fields = true
         .expect("Failed to parse config with removed fields for backward compatibility");
 
     // Config should parse successfully with expected values
-    assert_eq!(config.target, TargetTool::Generic);
-    assert!(config.rules.skills);
-    assert!(config.rules.hooks);
+    assert_eq!(config.data.target, TargetTool::Generic);
+    assert!(config.data.rules.skills);
+    assert!(config.data.rules.hooks);
     // The removed fields are simply ignored
 }
 
@@ -919,10 +927,10 @@ required_fields = true
 fn test_tool_versions_default_unpinned() {
     let config = LintConfig::default();
 
-    assert!(config.tool_versions.claude_code.is_none());
-    assert!(config.tool_versions.codex.is_none());
-    assert!(config.tool_versions.cursor.is_none());
-    assert!(config.tool_versions.copilot.is_none());
+    assert!(config.data.tool_versions.claude_code.is_none());
+    assert!(config.data.tool_versions.codex.is_none());
+    assert!(config.data.tool_versions.cursor.is_none());
+    assert!(config.data.tool_versions.copilot.is_none());
     assert!(!config.is_claude_code_version_pinned());
 }
 
@@ -961,10 +969,10 @@ copilot = "1.0.0"
 "#;
 
     let config: LintConfig = toml::from_str(toml_str).unwrap();
-    assert_eq!(config.tool_versions.claude_code, Some("1.0.0".to_string()));
-    assert_eq!(config.tool_versions.codex, Some("0.1.0".to_string()));
-    assert_eq!(config.tool_versions.cursor, Some("0.45.0".to_string()));
-    assert_eq!(config.tool_versions.copilot, Some("1.0.0".to_string()));
+    assert_eq!(config.data.tool_versions.claude_code, Some("1.0.0".to_string()));
+    assert_eq!(config.data.tool_versions.codex, Some("0.1.0".to_string()));
+    assert_eq!(config.data.tool_versions.cursor, Some("0.45.0".to_string()));
+    assert_eq!(config.data.tool_versions.copilot, Some("1.0.0".to_string()));
 }
 
 // ===== Tool Versions: Pre-release, Build Metadata, Invalid Semver =====
@@ -985,10 +993,10 @@ codex = "0.2.0-beta.3"
 
     let config: LintConfig = toml::from_str(toml_str).unwrap();
     assert_eq!(
-        config.tool_versions.claude_code,
+        config.data.tool_versions.claude_code,
         Some("1.0.0-rc1".to_string())
     );
-    assert_eq!(config.tool_versions.codex, Some("0.2.0-beta.3".to_string()));
+    assert_eq!(config.data.tool_versions.codex, Some("0.2.0-beta.3".to_string()));
     // Pre-release strings are valid semver, confirm they parse
     assert!(semver::Version::parse("1.0.0-rc1").is_ok());
     assert!(semver::Version::parse("0.2.0-beta.3").is_ok());
@@ -1010,11 +1018,11 @@ cursor = "0.45.0+20250101"
 
     let config: LintConfig = toml::from_str(toml_str).unwrap();
     assert_eq!(
-        config.tool_versions.claude_code,
+        config.data.tool_versions.claude_code,
         Some("1.0.0+build123".to_string())
     );
     assert_eq!(
-        config.tool_versions.cursor,
+        config.data.tool_versions.cursor,
         Some("0.45.0+20250101".to_string())
     );
     // Build metadata is valid semver
@@ -1037,7 +1045,7 @@ copilot = "2.0.0-alpha.1+build456"
 
     let config: LintConfig = toml::from_str(toml_str).unwrap();
     assert_eq!(
-        config.tool_versions.copilot,
+        config.data.tool_versions.copilot,
         Some("2.0.0-alpha.1+build456".to_string())
     );
     assert!(semver::Version::parse("2.0.0-alpha.1+build456").is_ok());
@@ -1109,7 +1117,7 @@ claude_code = "not-valid-semver"
 
     let config: LintConfig = toml::from_str(toml_str).unwrap();
     assert_eq!(
-        config.tool_versions.claude_code,
+        config.data.tool_versions.claude_code,
         Some("not-valid-semver".to_string())
     );
     // But semver parsing would fail
@@ -1122,9 +1130,9 @@ claude_code = "not-valid-semver"
 fn test_spec_revisions_default_unpinned() {
     let config = LintConfig::default();
 
-    assert!(config.spec_revisions.mcp_protocol.is_none());
-    assert!(config.spec_revisions.agent_skills_spec.is_none());
-    assert!(config.spec_revisions.agents_md_spec.is_none());
+    assert!(config.data.spec_revisions.mcp_protocol.is_none());
+    assert!(config.data.spec_revisions.agent_skills_spec.is_none());
+    assert!(config.data.spec_revisions.agents_md_spec.is_none());
     // mcp_protocol_version is None by default, so is_mcp_revision_pinned returns false
     assert!(!config.is_mcp_revision_pinned());
 }
@@ -1201,15 +1209,15 @@ agents_md_spec = "1.0.0"
 
     let config: LintConfig = toml::from_str(toml_str).unwrap();
     assert_eq!(
-        config.spec_revisions.mcp_protocol,
+        config.data.spec_revisions.mcp_protocol,
         Some("2024-11-05".to_string())
     );
     assert_eq!(
-        config.spec_revisions.agent_skills_spec,
+        config.data.spec_revisions.agent_skills_spec,
         Some("1.0.0".to_string())
     );
     assert_eq!(
-        config.spec_revisions.agents_md_spec,
+        config.data.spec_revisions.agents_md_spec,
         Some("1.0.0".to_string())
     );
 }
@@ -1230,7 +1238,7 @@ skills = true
 
     let config: LintConfig = toml::from_str(toml_str).unwrap();
     assert!(!config.is_claude_code_version_pinned());
-    assert!(config.tool_versions.claude_code.is_none());
+    assert!(config.data.tool_versions.claude_code.is_none());
 }
 
 #[test]
@@ -1255,8 +1263,8 @@ exclude = []
 fn test_is_mcp_revision_pinned_with_none_mcp_protocol_version() {
     // When both spec_revisions.mcp_protocol and mcp_protocol_version are None
     let mut config = LintConfig::default();
-    config.mcp_protocol_version = None;
-    config.spec_revisions.mcp_protocol = None;
+    dm(&mut config).mcp_protocol_version = None;
+    dm(&mut config).spec_revisions.mcp_protocol = None;
 
     assert!(!config.is_mcp_revision_pinned());
     // Should still return default
@@ -1269,8 +1277,8 @@ fn test_is_mcp_revision_pinned_with_none_mcp_protocol_version() {
 fn test_tools_array_empty_uses_target() {
     // When tools is empty, fall back to target behavior
     let mut config = LintConfig::default();
-    config.tools = vec![];
-    config.target = TargetTool::Cursor;
+    dm(&mut config).tools = vec![];
+    dm(&mut config).target = TargetTool::Cursor;
 
     // With Cursor target and empty tools, CC-* rules should be disabled
     assert!(!config.is_rule_enabled("CC-AG-001"));
@@ -1283,7 +1291,7 @@ fn test_tools_array_empty_uses_target() {
 #[test]
 fn test_tools_array_claude_code_only() {
     let mut config = LintConfig::default();
-    config.tools = vec!["claude-code".to_string()];
+    dm(&mut config).tools = vec!["claude-code".to_string()];
 
     // CC-* rules should be enabled
     assert!(config.is_rule_enabled("CC-AG-001"));
@@ -1303,7 +1311,7 @@ fn test_tools_array_claude_code_only() {
 #[test]
 fn test_tools_array_cursor_only() {
     let mut config = LintConfig::default();
-    config.tools = vec!["cursor".to_string()];
+    dm(&mut config).tools = vec!["cursor".to_string()];
 
     // CUR-* rules should be enabled
     assert!(config.is_rule_enabled("CUR-001"));
@@ -1321,7 +1329,7 @@ fn test_tools_array_cursor_only() {
 #[test]
 fn test_tools_array_copilot_only() {
     let mut config = LintConfig::default();
-    config.tools = vec!["copilot".to_string()];
+    dm(&mut config).tools = vec!["copilot".to_string()];
 
     // COP-* rules should be enabled
     assert!(config.is_rule_enabled("COP-001"));
@@ -1339,7 +1347,7 @@ fn test_tools_array_copilot_only() {
 #[test]
 fn test_tools_array_multiple_tools() {
     let mut config = LintConfig::default();
-    config.tools = vec!["claude-code".to_string(), "cursor".to_string()];
+    dm(&mut config).tools = vec!["claude-code".to_string(), "cursor".to_string()];
 
     // CC-* and CUR-* rules should both be enabled
     assert!(config.is_rule_enabled("CC-AG-001"));
@@ -1358,7 +1366,7 @@ fn test_tools_array_multiple_tools() {
 #[test]
 fn test_tools_array_case_insensitive() {
     let mut config = LintConfig::default();
-    config.tools = vec!["Claude-Code".to_string(), "CURSOR".to_string()];
+    dm(&mut config).tools = vec!["Claude-Code".to_string(), "CURSOR".to_string()];
 
     // Should work case-insensitively
     assert!(config.is_rule_enabled("CC-AG-001"));
@@ -1368,8 +1376,8 @@ fn test_tools_array_case_insensitive() {
 #[test]
 fn test_tools_array_overrides_target() {
     let mut config = LintConfig::default();
-    config.target = TargetTool::Cursor; // Legacy: would disable CC-*
-    config.tools = vec!["claude-code".to_string()]; // New: should enable CC-*
+    dm(&mut config).target = TargetTool::Cursor; // Legacy: would disable CC-*
+    dm(&mut config).tools = vec!["claude-code".to_string()]; // New: should enable CC-*
 
     // tools array should override target
     assert!(config.is_rule_enabled("CC-AG-001"));
@@ -1379,7 +1387,7 @@ fn test_tools_array_overrides_target() {
 #[test]
 fn test_tools_array_amp_tool_enables_amp_rules() {
     let mut config = LintConfig::default();
-    config.tools = vec!["amp".to_string()];
+    dm(&mut config).tools = vec!["amp".to_string()];
 
     assert!(config.is_rule_enabled("AMP-001"));
     assert!(!config.is_rule_enabled("CUR-001"));
@@ -1389,8 +1397,8 @@ fn test_tools_array_amp_tool_enables_amp_rules() {
 #[test]
 fn test_tools_array_amp_respects_disabled_rules() {
     let mut config = LintConfig::default();
-    config.tools = vec!["amp".to_string()];
-    config.rules.disabled_rules = vec!["AMP-001".to_string()];
+    dm(&mut config).tools = vec!["amp".to_string()];
+    dm(&mut config).rules.disabled_rules = vec!["AMP-001".to_string()];
 
     assert!(!config.is_rule_enabled("AMP-001"));
     assert!(config.is_rule_enabled("AMP-002"));
@@ -1409,9 +1417,9 @@ tools = ["claude-code", "cursor"]
 
     let config: LintConfig = toml::from_str(toml_str).unwrap();
 
-    assert_eq!(config.tools.len(), 2);
-    assert!(config.tools.contains(&"claude-code".to_string()));
-    assert!(config.tools.contains(&"cursor".to_string()));
+    assert_eq!(config.data.tools.len(), 2);
+    assert!(config.data.tools.contains(&"claude-code".to_string()));
+    assert!(config.data.tools.contains(&"cursor".to_string()));
 
     // Verify rule enablement
     assert!(config.is_rule_enabled("CC-AG-001"));
@@ -1432,7 +1440,7 @@ exclude = []
 
     let config: LintConfig = toml::from_str(toml_str).unwrap();
 
-    assert!(config.tools.is_empty());
+    assert!(config.data.tools.is_empty());
     // Falls back to target behavior
     assert!(config.is_rule_enabled("CC-AG-001"));
 }
@@ -1440,8 +1448,8 @@ exclude = []
 #[test]
 fn test_tools_disabled_rules_still_works() {
     let mut config = LintConfig::default();
-    config.tools = vec!["claude-code".to_string()];
-    config.rules.disabled_rules = vec!["CC-AG-001".to_string()];
+    dm(&mut config).tools = vec!["claude-code".to_string()];
+    dm(&mut config).rules.disabled_rules = vec!["CC-AG-001".to_string()];
 
     // CC-AG-001 is explicitly disabled even though claude-code is in tools
     assert!(!config.is_rule_enabled("CC-AG-001"));
@@ -1453,8 +1461,8 @@ fn test_tools_disabled_rules_still_works() {
 #[test]
 fn test_tools_category_disabled_still_works() {
     let mut config = LintConfig::default();
-    config.tools = vec!["claude-code".to_string()];
-    config.rules.hooks = false;
+    dm(&mut config).tools = vec!["claude-code".to_string()];
+    dm(&mut config).rules.hooks = false;
 
     // CC-HK-* rules should be disabled because hooks category is disabled
     assert!(!config.is_rule_enabled("CC-HK-001"));
@@ -1514,13 +1522,13 @@ disabled_rules = ["CC-MEM-006"]
     let config: LintConfig = toml::from_str(toml_str).unwrap();
 
     // Should use defaults for unspecified fields
-    assert_eq!(config.severity, SeverityLevel::Warning);
-    assert_eq!(config.target, TargetTool::Generic);
-    assert!(config.rules.skills);
-    assert!(config.rules.hooks);
+    assert_eq!(config.data.severity, SeverityLevel::Warning);
+    assert_eq!(config.data.target, TargetTool::Generic);
+    assert!(config.data.rules.skills);
+    assert!(config.data.rules.hooks);
 
     // disabled_rules should be set
-    assert_eq!(config.rules.disabled_rules, vec!["CC-MEM-006"]);
+    assert_eq!(config.data.rules.disabled_rules, vec!["CC-MEM-006"]);
     assert!(!config.is_rule_enabled("CC-MEM-006"));
 }
 
@@ -1529,9 +1537,9 @@ fn test_partial_config_only_severity() {
     let toml_str = r#"severity = "Error""#;
     let config: LintConfig = toml::from_str(toml_str).unwrap();
 
-    assert_eq!(config.severity, SeverityLevel::Error);
-    assert_eq!(config.target, TargetTool::Generic);
-    assert!(config.rules.skills);
+    assert_eq!(config.data.severity, SeverityLevel::Error);
+    assert_eq!(config.data.target, TargetTool::Generic);
+    assert!(config.data.rules.skills);
 }
 
 #[test]
@@ -1539,8 +1547,8 @@ fn test_partial_config_only_target() {
     let toml_str = r#"target = "ClaudeCode""#;
     let config: LintConfig = toml::from_str(toml_str).unwrap();
 
-    assert_eq!(config.target, TargetTool::ClaudeCode);
-    assert_eq!(config.severity, SeverityLevel::Warning);
+    assert_eq!(config.data.target, TargetTool::ClaudeCode);
+    assert_eq!(config.data.severity, SeverityLevel::Warning);
 }
 
 #[test]
@@ -1548,8 +1556,8 @@ fn test_partial_config_only_exclude() {
     let toml_str = r#"exclude = ["vendor/**", "dist/**"]"#;
     let config: LintConfig = toml::from_str(toml_str).unwrap();
 
-    assert_eq!(config.exclude, vec!["vendor/**", "dist/**"]);
-    assert_eq!(config.severity, SeverityLevel::Warning);
+    assert_eq!(config.data.exclude, vec!["vendor/**", "dist/**"]);
+    assert_eq!(config.data.severity, SeverityLevel::Warning);
 }
 
 #[test]
@@ -1576,11 +1584,11 @@ skills = false
 "#;
     let config: LintConfig = toml::from_str(toml_str).unwrap();
 
-    assert!(!config.rules.skills);
+    assert!(!config.data.rules.skills);
     // Other categories should still be enabled (default true)
-    assert!(config.rules.hooks);
-    assert!(config.rules.agents);
-    assert!(config.rules.memory);
+    assert!(config.data.rules.hooks);
+    assert!(config.data.rules.agents);
+    assert!(config.data.rules.memory);
 }
 
 #[test]
@@ -1588,7 +1596,7 @@ fn test_partial_config_tools_array() {
     let toml_str = r#"tools = ["claude-code", "cursor"]"#;
     let config: LintConfig = toml::from_str(toml_str).unwrap();
 
-    assert_eq!(config.tools, vec!["claude-code", "cursor"]);
+    assert_eq!(config.data.tools, vec!["claude-code", "cursor"]);
     assert!(config.is_rule_enabled("CC-SK-001")); // Claude Code rule
     assert!(config.is_rule_enabled("CUR-001")); // Cursor rule
 }
@@ -1605,12 +1613,12 @@ disabled_rules = ["CC-MEM-006"]
 "#;
     let config: LintConfig = toml::from_str(toml_str).unwrap();
 
-    assert_eq!(config.severity, SeverityLevel::Error);
-    assert_eq!(config.target, TargetTool::ClaudeCode);
-    assert!(!config.rules.xml);
+    assert_eq!(config.data.severity, SeverityLevel::Error);
+    assert_eq!(config.data.target, TargetTool::ClaudeCode);
+    assert!(!config.data.rules.xml);
     assert!(!config.is_rule_enabled("CC-MEM-006"));
     // exclude should use default
-    assert!(config.exclude.contains(&"node_modules/**".to_string()));
+    assert!(config.data.exclude.contains(&"node_modules/**".to_string()));
 }
 
 // ===== Disabled Validators TOML Deserialization =====
@@ -1623,7 +1631,7 @@ disabled_validators = ["XmlValidator", "PromptValidator"]
 "#;
     let config: LintConfig = toml::from_str(toml_str).unwrap();
     assert_eq!(
-        config.rules.disabled_validators,
+        config.data.rules.disabled_validators,
         vec!["XmlValidator", "PromptValidator"]
     );
 }
@@ -1635,7 +1643,7 @@ fn test_disabled_validators_defaults_to_empty() {
 skills = true
 "#;
     let config: LintConfig = toml::from_str(toml_str).unwrap();
-    assert!(config.rules.disabled_validators.is_empty());
+    assert!(config.data.rules.disabled_validators.is_empty());
 }
 
 #[test]
@@ -1645,7 +1653,7 @@ fn test_disabled_validators_empty_array() {
 disabled_validators = []
 "#;
     let config: LintConfig = toml::from_str(toml_str).unwrap();
-    assert!(config.rules.disabled_validators.is_empty());
+    assert!(config.data.rules.disabled_validators.is_empty());
 }
 
 // ===== Disabled Rules Edge Cases =====
@@ -1658,7 +1666,7 @@ disabled_rules = []
 "#;
     let config: LintConfig = toml::from_str(toml_str).unwrap();
 
-    assert!(config.rules.disabled_rules.is_empty());
+    assert!(config.data.rules.disabled_rules.is_empty());
     assert!(config.is_rule_enabled("AS-001"));
     assert!(config.is_rule_enabled("CC-SK-001"));
 }
@@ -1747,9 +1755,9 @@ fn test_config_file_empty() {
     let (config, warning) = LintConfig::load_or_default(Some(&config_path));
 
     // Empty file should use all defaults
-    assert_eq!(config.severity, SeverityLevel::Warning);
-    assert_eq!(config.target, TargetTool::Generic);
-    assert!(config.rules.skills);
+    assert_eq!(config.data.severity, SeverityLevel::Warning);
+    assert_eq!(config.data.target, TargetTool::Generic);
+    assert!(config.data.rules.skills);
     assert!(warning.is_none());
 }
 
@@ -1769,7 +1777,7 @@ fn test_config_file_only_comments() {
     let (config, warning) = LintConfig::load_or_default(Some(&config_path));
 
     // Comments-only file should use all defaults
-    assert_eq!(config.severity, SeverityLevel::Warning);
+    assert_eq!(config.data.severity, SeverityLevel::Warning);
     assert!(warning.is_none());
 }
 
@@ -1793,7 +1801,7 @@ disabled_rules = ["CC-MEM-006"]
 
     let (config, warning) = LintConfig::load_or_default(Some(&config_path));
 
-    assert_eq!(config.severity, SeverityLevel::Error);
+    assert_eq!(config.data.severity, SeverityLevel::Error);
     assert!(!config.is_rule_enabled("CC-MEM-006"));
     assert!(warning.is_none());
 }
@@ -1807,7 +1815,7 @@ fn test_config_invalid_severity_value() {
     let (config, warning) = LintConfig::load_or_default(Some(&config_path));
 
     // Should fall back to defaults with warning
-    assert_eq!(config.severity, SeverityLevel::Warning);
+    assert_eq!(config.data.severity, SeverityLevel::Warning);
     assert!(warning.is_some());
 }
 
@@ -1820,7 +1828,7 @@ fn test_config_invalid_target_value() {
     let (config, warning) = LintConfig::load_or_default(Some(&config_path));
 
     // Should fall back to defaults with warning
-    assert_eq!(config.target, TargetTool::Generic);
+    assert_eq!(config.data.target, TargetTool::Generic);
     assert!(warning.is_some());
 }
 
@@ -1840,7 +1848,7 @@ disabled_rules = "AS-001"
     let (config, warning) = LintConfig::load_or_default(Some(&config_path));
 
     // Should fall back to defaults with warning (wrong type)
-    assert!(config.rules.disabled_rules.is_empty());
+    assert!(config.data.rules.disabled_rules.is_empty());
     assert!(warning.is_some());
 }
 
@@ -1855,7 +1863,7 @@ fn test_config_wrong_type_for_exclude() {
     // Should fall back to defaults with warning (wrong type)
     assert!(warning.is_some());
     // Config should have default exclude values
-    assert!(config.exclude.contains(&"node_modules/**".to_string()));
+    assert!(config.data.exclude.contains(&"node_modules/**".to_string()));
 }
 
 // ===== Config Interaction Tests =====
@@ -1909,20 +1917,20 @@ disabled_rules = ["AS-001"]
 #[test]
 fn test_config_serialize_deserialize_roundtrip() {
     let mut config = LintConfig::default();
-    config.severity = SeverityLevel::Error;
-    config.target = TargetTool::ClaudeCode;
-    config.rules.skills = false;
-    config.rules.amp_checks = false;
-    config.rules.disabled_rules = vec!["CC-MEM-006".to_string()];
+    dm(&mut config).severity = SeverityLevel::Error;
+    dm(&mut config).target = TargetTool::ClaudeCode;
+    dm(&mut config).rules.skills = false;
+    dm(&mut config).rules.amp_checks = false;
+    dm(&mut config).rules.disabled_rules = vec!["CC-MEM-006".to_string()];
 
     let serialized = toml::to_string(&config).unwrap();
     let deserialized: LintConfig = toml::from_str(&serialized).unwrap();
 
-    assert_eq!(deserialized.severity, SeverityLevel::Error);
-    assert_eq!(deserialized.target, TargetTool::ClaudeCode);
-    assert!(!deserialized.rules.skills);
-    assert!(!deserialized.rules.amp_checks);
-    assert_eq!(deserialized.rules.disabled_rules, vec!["CC-MEM-006"]);
+    assert_eq!(deserialized.data.severity, SeverityLevel::Error);
+    assert_eq!(deserialized.data.target, TargetTool::ClaudeCode);
+    assert!(!deserialized.data.rules.skills);
+    assert!(!deserialized.data.rules.amp_checks);
+    assert_eq!(deserialized.data.rules.disabled_rules, vec!["CC-MEM-006"]);
 }
 
 #[test]
@@ -1992,10 +2000,10 @@ disabled_rules = []
 "#;
     let config: LintConfig = toml::from_str(toml_str).unwrap();
 
-    assert_eq!(config.severity, SeverityLevel::Error);
-    assert!(config.rules.skills);
-    assert!(config.rules.hooks);
-    assert!(config.rules.disabled_rules.is_empty());
+    assert_eq!(config.data.severity, SeverityLevel::Error);
+    assert!(config.data.rules.skills);
+    assert!(config.data.rules.hooks);
+    assert!(config.data.rules.disabled_rules.is_empty());
 }
 
 // ===== FileSystem Abstraction Tests =====
@@ -2169,7 +2177,7 @@ fn test_runtime_context_not_serialized() {
 #[test]
 fn test_rule_filter_disabled_rules_checked_first() {
     let mut config = LintConfig::default();
-    config.rules.disabled_rules = vec!["AS-001".to_string()];
+    dm(&mut config).rules.disabled_rules = vec!["AS-001".to_string()];
 
     // Rule should be disabled regardless of category or target
     assert!(!config.is_rule_enabled("AS-001"));
@@ -2181,7 +2189,7 @@ fn test_rule_filter_disabled_rules_checked_first() {
 #[test]
 fn test_rule_filter_target_checked_second() {
     let mut config = LintConfig::default();
-    config.target = TargetTool::Cursor;
+    dm(&mut config).target = TargetTool::Cursor;
 
     // CC-* rules should be disabled for Cursor target
     assert!(!config.is_rule_enabled("CC-SK-001"));
@@ -2193,8 +2201,8 @@ fn test_rule_filter_target_checked_second() {
 #[test]
 fn test_rule_filter_category_checked_third() {
     let mut config = LintConfig::default();
-    config.rules.skills = false;
-    config.rules.amp_checks = false;
+    dm(&mut config).rules.skills = false;
+    dm(&mut config).rules.amp_checks = false;
 
     // Skills category disabled
     assert!(!config.is_rule_enabled("AS-001"));
@@ -2209,9 +2217,9 @@ fn test_rule_filter_category_checked_third() {
 #[test]
 fn test_rule_filter_order_of_checks() {
     let mut config = LintConfig::default();
-    config.target = TargetTool::ClaudeCode;
-    config.rules.skills = true;
-    config.rules.disabled_rules = vec!["CC-SK-001".to_string()];
+    dm(&mut config).target = TargetTool::ClaudeCode;
+    dm(&mut config).rules.skills = true;
+    dm(&mut config).rules.disabled_rules = vec!["CC-SK-001".to_string()];
 
     // disabled_rules takes precedence over everything
     assert!(!config.is_rule_enabled("CC-SK-001"));
@@ -2232,15 +2240,15 @@ fn test_rule_filter_is_tool_alias_works_through_config() {
 #[test]
 fn test_serde_roundtrip_preserves_all_public_fields() {
     let mut config = LintConfig::default();
-    config.severity = SeverityLevel::Error;
-    config.target = TargetTool::ClaudeCode;
-    config.tools = vec!["claude-code".to_string(), "cursor".to_string()];
-    config.exclude = vec!["custom/**".to_string()];
-    config.mcp_protocol_version = Some("2024-11-05".to_string());
-    config.tool_versions.claude_code = Some("1.0.0".to_string());
-    config.spec_revisions.mcp_protocol = Some("2025-11-25".to_string());
-    config.rules.skills = false;
-    config.rules.disabled_rules = vec!["MCP-001".to_string()];
+    dm(&mut config).severity = SeverityLevel::Error;
+    dm(&mut config).target = TargetTool::ClaudeCode;
+    dm(&mut config).tools = vec!["claude-code".to_string(), "cursor".to_string()];
+    dm(&mut config).exclude = vec!["custom/**".to_string()];
+    dm(&mut config).mcp_protocol_version = Some("2024-11-05".to_string());
+    dm(&mut config).tool_versions.claude_code = Some("1.0.0".to_string());
+    dm(&mut config).spec_revisions.mcp_protocol = Some("2025-11-25".to_string());
+    dm(&mut config).rules.skills = false;
+    dm(&mut config).rules.disabled_rules = vec!["MCP-001".to_string()];
 
     // Also set runtime values (should NOT be serialized)
     config.set_root_dir(PathBuf::from("/test/root"));
@@ -2252,24 +2260,24 @@ fn test_serde_roundtrip_preserves_all_public_fields() {
     let deserialized: LintConfig = toml::from_str(&serialized).unwrap();
 
     // All public fields should be preserved
-    assert_eq!(deserialized.severity, SeverityLevel::Error);
-    assert_eq!(deserialized.target, TargetTool::ClaudeCode);
-    assert_eq!(deserialized.tools, vec!["claude-code", "cursor"]);
-    assert_eq!(deserialized.exclude, vec!["custom/**"]);
+    assert_eq!(deserialized.data.severity, SeverityLevel::Error);
+    assert_eq!(deserialized.data.target, TargetTool::ClaudeCode);
+    assert_eq!(deserialized.data.tools, vec!["claude-code", "cursor"]);
+    assert_eq!(deserialized.data.exclude, vec!["custom/**"]);
     assert_eq!(
-        deserialized.mcp_protocol_version,
+        deserialized.data.mcp_protocol_version,
         Some("2024-11-05".to_string())
     );
     assert_eq!(
-        deserialized.tool_versions.claude_code,
+        deserialized.data.tool_versions.claude_code,
         Some("1.0.0".to_string())
     );
     assert_eq!(
-        deserialized.spec_revisions.mcp_protocol,
+        deserialized.data.spec_revisions.mcp_protocol,
         Some("2025-11-25".to_string())
     );
-    assert!(!deserialized.rules.skills);
-    assert_eq!(deserialized.rules.disabled_rules, vec!["MCP-001"]);
+    assert!(!deserialized.data.rules.skills);
+    assert_eq!(deserialized.data.rules.disabled_rules, vec!["MCP-001"]);
 
     // Runtime values should be reset to defaults
     assert!(deserialized.root_dir().is_none());
@@ -2367,7 +2375,7 @@ fn test_validate_empty_config_no_warnings() {
 #[test]
 fn test_validate_valid_disabled_rules() {
     let mut config = LintConfig::default();
-    config.rules.disabled_rules = vec![
+    dm(&mut config).rules.disabled_rules = vec![
         "AS-001".to_string(),
         "CC-SK-007".to_string(),
         "MCP-001".to_string(),
@@ -2391,7 +2399,7 @@ fn test_validate_valid_disabled_rules() {
 #[test]
 fn test_validate_invalid_disabled_rule_pattern() {
     let mut config = LintConfig::default();
-    config.rules.disabled_rules = vec!["INVALID-001".to_string(), "UNKNOWN-999".to_string()];
+    dm(&mut config).rules.disabled_rules = vec!["INVALID-001".to_string(), "UNKNOWN-999".to_string()];
 
     let warnings = config.validate();
 
@@ -2405,7 +2413,7 @@ fn test_validate_invalid_disabled_rule_pattern() {
 fn test_validate_ver_prefix_accepted() {
     // Regression test for #233
     let mut config = LintConfig::default();
-    config.rules.disabled_rules = vec!["VER-001".to_string()];
+    dm(&mut config).rules.disabled_rules = vec!["VER-001".to_string()];
 
     let warnings = config.validate();
 
@@ -2415,7 +2423,7 @@ fn test_validate_ver_prefix_accepted() {
 #[test]
 fn test_validate_valid_tools() {
     let mut config = LintConfig::default();
-    config.tools = vec![
+    dm(&mut config).tools = vec![
         "claude-code".to_string(),
         "cursor".to_string(),
         "codex".to_string(),
@@ -2434,7 +2442,7 @@ fn test_validate_valid_tools() {
 #[test]
 fn test_validate_invalid_tool() {
     let mut config = LintConfig::default();
-    config.tools = vec!["unknown-tool".to_string(), "invalid".to_string()];
+    dm(&mut config).tools = vec!["unknown-tool".to_string(), "invalid".to_string()];
 
     let warnings = config.validate();
 
@@ -2447,7 +2455,7 @@ fn test_validate_invalid_tool() {
 #[test]
 fn test_validate_deprecated_mcp_protocol_version() {
     let mut config = LintConfig::default();
-    config.mcp_protocol_version = Some("2024-11-05".to_string());
+    dm(&mut config).mcp_protocol_version = Some("2024-11-05".to_string());
 
     let warnings = config.validate();
 
@@ -2466,12 +2474,12 @@ fn test_validate_deprecated_mcp_protocol_version() {
 #[test]
 fn test_validate_mixed_valid_invalid() {
     let mut config = LintConfig::default();
-    config.rules.disabled_rules = vec![
+    dm(&mut config).rules.disabled_rules = vec![
         "AS-001".to_string(),    // Valid
         "INVALID-1".to_string(), // Invalid
         "CC-SK-001".to_string(), // Valid
     ];
-    config.tools = vec![
+    dm(&mut config).tools = vec![
         "claude-code".to_string(), // Valid
         "bad-tool".to_string(),    // Invalid
     ];
@@ -2485,7 +2493,7 @@ fn test_validate_mixed_valid_invalid() {
 #[test]
 fn test_config_warning_has_suggestion() {
     let mut config = LintConfig::default();
-    config.rules.disabled_rules = vec!["INVALID-001".to_string()];
+    dm(&mut config).rules.disabled_rules = vec!["INVALID-001".to_string()];
 
     let warnings = config.validate();
 
@@ -2497,7 +2505,7 @@ fn test_config_warning_has_suggestion() {
 fn test_validate_case_insensitive_tools() {
     // Tools should be validated case-insensitively
     let mut config = LintConfig::default();
-    config.tools = vec![
+    dm(&mut config).tools = vec![
         "CLAUDE-CODE".to_string(),
         "CuRsOr".to_string(),
         "COPILOT".to_string(),
@@ -2517,7 +2525,7 @@ fn test_validate_case_insensitive_tools() {
 fn test_validate_multiple_warnings_same_category() {
     // Test that multiple invalid items of the same type are all reported
     let mut config = LintConfig::default();
-    config.rules.disabled_rules = vec![
+    dm(&mut config).rules.disabled_rules = vec![
         "INVALID-001".to_string(),
         "FAKE-RULE".to_string(),
         "NOT-A-RULE".to_string(),
@@ -2538,7 +2546,7 @@ fn test_validate_multiple_warnings_same_category() {
 #[test]
 fn test_validate_multiple_invalid_tools() {
     let mut config = LintConfig::default();
-    config.tools = vec![
+    dm(&mut config).tools = vec![
         "unknown-tool".to_string(),
         "bad-editor".to_string(),
         "claude-code".to_string(), // This one is valid
@@ -2554,7 +2562,7 @@ fn test_validate_multiple_invalid_tools() {
 fn test_validate_empty_string_in_tools() {
     // Empty strings should be flagged as invalid
     let mut config = LintConfig::default();
-    config.tools = vec!["".to_string(), "claude-code".to_string()];
+    dm(&mut config).tools = vec!["".to_string(), "claude-code".to_string()];
 
     let warnings = config.validate();
 
@@ -2566,7 +2574,7 @@ fn test_validate_empty_string_in_tools() {
 #[test]
 fn test_validate_deprecated_target_field() {
     let mut config = LintConfig::default();
-    config.target = TargetTool::ClaudeCode;
+    dm(&mut config).target = TargetTool::ClaudeCode;
     // tools is empty, so target deprecation warning should fire
 
     let warnings = config.validate();
@@ -2582,8 +2590,8 @@ fn test_validate_target_with_tools_no_warning() {
     // When both target and tools are set, don't warn about target
     // because tools takes precedence
     let mut config = LintConfig::default();
-    config.target = TargetTool::ClaudeCode;
-    config.tools = vec!["claude-code".to_string()];
+    dm(&mut config).target = TargetTool::ClaudeCode;
+    dm(&mut config).tools = vec!["claude-code".to_string()];
 
     let warnings = config.validate();
 
@@ -2606,9 +2614,9 @@ fn test_files_config_default_is_empty() {
 #[test]
 fn test_lint_config_default_has_empty_files() {
     let config = LintConfig::default();
-    assert!(config.files.include_as_memory.is_empty());
-    assert!(config.files.include_as_generic.is_empty());
-    assert!(config.files.exclude.is_empty());
+    assert!(config.data.files.include_as_memory.is_empty());
+    assert!(config.data.files.include_as_generic.is_empty());
+    assert!(config.data.files.exclude.is_empty());
 }
 
 #[test]
@@ -2620,13 +2628,13 @@ include_as_generic = ["internal/*.md"]
 exclude = ["drafts/**"]
 "#;
     let config: LintConfig = toml::from_str(toml_str).expect("should parse");
-    assert_eq!(config.files.include_as_memory.len(), 2);
-    assert_eq!(config.files.include_as_memory[0], "docs/ai-rules/*.md");
-    assert_eq!(config.files.include_as_memory[1], "custom/INSTRUCTIONS.md");
-    assert_eq!(config.files.include_as_generic.len(), 1);
-    assert_eq!(config.files.include_as_generic[0], "internal/*.md");
-    assert_eq!(config.files.exclude.len(), 1);
-    assert_eq!(config.files.exclude[0], "drafts/**");
+    assert_eq!(config.data.files.include_as_memory.len(), 2);
+    assert_eq!(config.data.files.include_as_memory[0], "docs/ai-rules/*.md");
+    assert_eq!(config.data.files.include_as_memory[1], "custom/INSTRUCTIONS.md");
+    assert_eq!(config.data.files.include_as_generic.len(), 1);
+    assert_eq!(config.data.files.include_as_generic[0], "internal/*.md");
+    assert_eq!(config.data.files.exclude.len(), 1);
+    assert_eq!(config.data.files.exclude[0], "drafts/**");
 }
 
 #[test]
@@ -2636,9 +2644,9 @@ fn test_files_config_partial_toml() {
 include_as_memory = ["custom.md"]
 "#;
     let config: LintConfig = toml::from_str(toml_str).expect("should parse");
-    assert_eq!(config.files.include_as_memory.len(), 1);
-    assert!(config.files.include_as_generic.is_empty());
-    assert!(config.files.exclude.is_empty());
+    assert_eq!(config.data.files.include_as_memory.len(), 1);
+    assert!(config.data.files.include_as_generic.is_empty());
+    assert!(config.data.files.exclude.is_empty());
 }
 
 #[test]
@@ -2647,9 +2655,9 @@ fn test_files_config_empty_section() {
 [files]
 "#;
     let config: LintConfig = toml::from_str(toml_str).expect("should parse");
-    assert!(config.files.include_as_memory.is_empty());
-    assert!(config.files.include_as_generic.is_empty());
-    assert!(config.files.exclude.is_empty());
+    assert!(config.data.files.include_as_memory.is_empty());
+    assert!(config.data.files.include_as_generic.is_empty());
+    assert!(config.data.files.exclude.is_empty());
 }
 
 #[test]
@@ -2658,13 +2666,13 @@ fn test_files_config_omitted_section() {
 severity = "Warning"
 "#;
     let config: LintConfig = toml::from_str(toml_str).expect("should parse");
-    assert!(config.files.include_as_memory.is_empty());
+    assert!(config.data.files.include_as_memory.is_empty());
 }
 
 #[test]
 fn test_validate_files_invalid_glob() {
     let mut config = LintConfig::default();
-    config.files.include_as_memory = vec!["[invalid".to_string()];
+    dm(&mut config).files.include_as_memory = vec!["[invalid".to_string()];
 
     let warnings = config.validate();
     assert!(
@@ -2678,9 +2686,9 @@ fn test_validate_files_invalid_glob() {
 #[test]
 fn test_validate_files_valid_globs_no_warnings() {
     let mut config = LintConfig::default();
-    config.files.include_as_memory = vec!["docs/**/*.md".to_string()];
-    config.files.include_as_generic = vec!["internal/*.md".to_string()];
-    config.files.exclude = vec!["drafts/**".to_string()];
+    dm(&mut config).files.include_as_memory = vec!["docs/**/*.md".to_string()];
+    dm(&mut config).files.include_as_generic = vec!["internal/*.md".to_string()];
+    dm(&mut config).files.exclude = vec!["drafts/**".to_string()];
 
     let warnings = config.validate();
     assert!(
@@ -2693,7 +2701,7 @@ fn test_validate_files_valid_globs_no_warnings() {
 #[test]
 fn test_validate_files_path_traversal_rejected() {
     let mut config = LintConfig::default();
-    config.files.include_as_memory = vec!["../outside/secrets.md".to_string()];
+    dm(&mut config).files.include_as_memory = vec!["../outside/secrets.md".to_string()];
 
     let warnings = config.validate();
     assert!(
@@ -2708,7 +2716,7 @@ fn test_validate_files_path_traversal_rejected() {
 #[test]
 fn test_validate_files_absolute_path_rejected() {
     let mut config = LintConfig::default();
-    config.files.include_as_generic = vec!["/etc/passwd".to_string()];
+    dm(&mut config).files.include_as_generic = vec!["/etc/passwd".to_string()];
 
     let warnings = config.validate();
     assert!(
@@ -2721,7 +2729,7 @@ fn test_validate_files_absolute_path_rejected() {
 
     // Also test Windows drive letter
     let mut config2 = LintConfig::default();
-    config2.files.exclude = vec!["C:\\Users\\secret".to_string()];
+    dm(&mut config2).files.exclude = vec!["C:\\Users\\secret".to_string()];
 
     let warnings2 = config2.validate();
     assert!(
@@ -2737,7 +2745,7 @@ fn test_validate_files_absolute_path_rejected() {
 fn test_validate_files_pattern_count_limit() {
     let mut config = LintConfig::default();
     // Create 101 patterns to exceed MAX_FILE_PATTERNS (100)
-    config.files.include_as_memory = (0..101).map(|i| format!("pattern-{}.md", i)).collect();
+    dm(&mut config).files.include_as_memory = (0..101).map(|i| format!("pattern-{}.md", i)).collect();
 
     let warnings = config.validate();
     assert!(
@@ -2750,7 +2758,7 @@ fn test_validate_files_pattern_count_limit() {
 
     // 100 patterns should not produce a count warning
     let mut config2 = LintConfig::default();
-    config2.files.include_as_memory = (0..100).map(|i| format!("pattern-{}.md", i)).collect();
+    dm(&mut config2).files.include_as_memory = (0..100).map(|i| format!("pattern-{}.md", i)).collect();
 
     let warnings2 = config2.validate();
     assert!(

@@ -151,7 +151,7 @@ impl LintConfig {
     ///
     /// This delegates to `DefaultRuleFilter` which encapsulates the filtering logic.
     pub fn is_rule_enabled(&self, rule_id: &str) -> bool {
-        let filter = DefaultRuleFilter::new(&self.rules, self.target, &self.tools);
+        let filter = DefaultRuleFilter::new(&self.data.rules, self.data.target, &self.data.tools);
         filter.is_rule_enabled(rule_id)
     }
 

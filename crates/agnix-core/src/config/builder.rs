@@ -183,10 +183,10 @@ impl LintConfigBuilder {
 
         // Validate all glob pattern lists: exclude + files config
         let pattern_lists: &[(&str, &[String])] = &[
-            ("exclude", &config.exclude),
-            ("files.include_as_memory", &config.files.include_as_memory),
-            ("files.include_as_generic", &config.files.include_as_generic),
-            ("files.exclude", &config.files.exclude),
+            ("exclude", &config.data.exclude),
+            ("files.include_as_memory", &config.data.files.include_as_memory),
+            ("files.include_as_generic", &config.data.files.include_as_generic),
+            ("files.exclude", &config.data.files.exclude),
         ];
         for &(field, patterns) in pattern_lists {
             for pattern in patterns {
@@ -224,7 +224,7 @@ impl LintConfigBuilder {
 
     /// Internal: construct the LintConfig from builder state, applying defaults.
     fn build_inner(&mut self) -> LintConfig {
-        let defaults = LintConfig::default();
+        let defaults = ConfigData::default();
 
         let mut rules = self.rules.take().unwrap_or(defaults.rules);
 
@@ -235,7 +235,7 @@ impl LintConfigBuilder {
             &mut self.disabled_validators,
         );
 
-        let mut config = LintConfig {
+        let config_data = ConfigData {
             severity: self.severity.take().unwrap_or(defaults.severity),
             rules,
             exclude: self.exclude.take().unwrap_or(defaults.exclude),
@@ -256,6 +256,10 @@ impl LintConfigBuilder {
                 .max_files_to_validate
                 .take()
                 .unwrap_or(defaults.max_files_to_validate),
+        };
+
+        let mut config = LintConfig {
+            data: Arc::new(config_data),
             runtime: RuntimeContext::default(),
         };
 
