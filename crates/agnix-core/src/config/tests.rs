@@ -969,7 +969,10 @@ copilot = "1.0.0"
 "#;
 
     let config: LintConfig = toml::from_str(toml_str).unwrap();
-    assert_eq!(config.data.tool_versions.claude_code, Some("1.0.0".to_string()));
+    assert_eq!(
+        config.data.tool_versions.claude_code,
+        Some("1.0.0".to_string())
+    );
     assert_eq!(config.data.tool_versions.codex, Some("0.1.0".to_string()));
     assert_eq!(config.data.tool_versions.cursor, Some("0.45.0".to_string()));
     assert_eq!(config.data.tool_versions.copilot, Some("1.0.0".to_string()));
@@ -996,7 +999,10 @@ codex = "0.2.0-beta.3"
         config.data.tool_versions.claude_code,
         Some("1.0.0-rc1".to_string())
     );
-    assert_eq!(config.data.tool_versions.codex, Some("0.2.0-beta.3".to_string()));
+    assert_eq!(
+        config.data.tool_versions.codex,
+        Some("0.2.0-beta.3".to_string())
+    );
     // Pre-release strings are valid semver, confirm they parse
     assert!(semver::Version::parse("1.0.0-rc1").is_ok());
     assert!(semver::Version::parse("0.2.0-beta.3").is_ok());
@@ -2399,7 +2405,8 @@ fn test_validate_valid_disabled_rules() {
 #[test]
 fn test_validate_invalid_disabled_rule_pattern() {
     let mut config = LintConfig::default();
-    dm(&mut config).rules.disabled_rules = vec!["INVALID-001".to_string(), "UNKNOWN-999".to_string()];
+    dm(&mut config).rules.disabled_rules =
+        vec!["INVALID-001".to_string(), "UNKNOWN-999".to_string()];
 
     let warnings = config.validate();
 
@@ -2630,7 +2637,10 @@ exclude = ["drafts/**"]
     let config: LintConfig = toml::from_str(toml_str).expect("should parse");
     assert_eq!(config.data.files.include_as_memory.len(), 2);
     assert_eq!(config.data.files.include_as_memory[0], "docs/ai-rules/*.md");
-    assert_eq!(config.data.files.include_as_memory[1], "custom/INSTRUCTIONS.md");
+    assert_eq!(
+        config.data.files.include_as_memory[1],
+        "custom/INSTRUCTIONS.md"
+    );
     assert_eq!(config.data.files.include_as_generic.len(), 1);
     assert_eq!(config.data.files.include_as_generic[0], "internal/*.md");
     assert_eq!(config.data.files.exclude.len(), 1);
@@ -2745,7 +2755,8 @@ fn test_validate_files_absolute_path_rejected() {
 fn test_validate_files_pattern_count_limit() {
     let mut config = LintConfig::default();
     // Create 101 patterns to exceed MAX_FILE_PATTERNS (100)
-    dm(&mut config).files.include_as_memory = (0..101).map(|i| format!("pattern-{}.md", i)).collect();
+    dm(&mut config).files.include_as_memory =
+        (0..101).map(|i| format!("pattern-{}.md", i)).collect();
 
     let warnings = config.validate();
     assert!(
@@ -2758,7 +2769,8 @@ fn test_validate_files_pattern_count_limit() {
 
     // 100 patterns should not produce a count warning
     let mut config2 = LintConfig::default();
-    dm(&mut config2).files.include_as_memory = (0..100).map(|i| format!("pattern-{}.md", i)).collect();
+    dm(&mut config2).files.include_as_memory =
+        (0..100).map(|i| format!("pattern-{}.md", i)).collect();
 
     let warnings2 = config2.validate();
     assert!(

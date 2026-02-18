@@ -184,8 +184,14 @@ impl LintConfigBuilder {
         // Validate all glob pattern lists: exclude + files config
         let pattern_lists: &[(&str, &[String])] = &[
             ("exclude", &config.data.exclude),
-            ("files.include_as_memory", &config.data.files.include_as_memory),
-            ("files.include_as_generic", &config.data.files.include_as_generic),
+            (
+                "files.include_as_memory",
+                &config.data.files.include_as_memory,
+            ),
+            (
+                "files.include_as_generic",
+                &config.data.files.include_as_generic,
+            ),
             ("files.exclude", &config.data.files.exclude),
         ];
         for &(field, patterns) in pattern_lists {

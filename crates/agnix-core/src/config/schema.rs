@@ -110,8 +110,14 @@ impl LintConfig {
 
         // Validate files config glob patterns
         let pattern_lists = [
-            ("files.include_as_memory", &self.data.files.include_as_memory),
-            ("files.include_as_generic", &self.data.files.include_as_generic),
+            (
+                "files.include_as_memory",
+                &self.data.files.include_as_memory,
+            ),
+            (
+                "files.include_as_generic",
+                &self.data.files.include_as_generic,
+            ),
             ("files.exclude", &self.data.files.exclude),
         ];
         for (field, patterns) in &pattern_lists {

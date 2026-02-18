@@ -945,8 +945,7 @@ impl LintConfig {
     /// Check if MCP protocol revision is explicitly pinned
     #[inline]
     pub fn is_mcp_revision_pinned(&self) -> bool {
-        self.data.spec_revisions.mcp_protocol.is_some()
-            || self.data.mcp_protocol_version.is_some()
+        self.data.spec_revisions.mcp_protocol.is_some() || self.data.mcp_protocol_version.is_some()
     }
 
     /// Check if Claude Code version is explicitly pinned
