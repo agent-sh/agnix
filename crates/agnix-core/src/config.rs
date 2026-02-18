@@ -249,7 +249,7 @@ impl std::fmt::Debug for RuntimeContext {
 /// `Arc::make_mut` for copy-on-write semantics.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(default)]
-pub(crate) struct ConfigData {
+pub(in crate::config) struct ConfigData {
     /// Severity level threshold
     #[schemars(description = "Minimum severity level to report (Error, Warning, Info)")]
     severity: SeverityLevel,
@@ -359,7 +359,7 @@ pub struct LintConfig {
     ///
     /// Accessible within the config module for direct field access in
     /// submodules (rule_filter, schema, builder, tests).
-    pub(super) data: Arc<ConfigData>,
+    pub(in crate::config) data: Arc<ConfigData>,
 
     /// Internal runtime context for validation operations (not serialized).
     ///
@@ -416,6 +416,12 @@ impl<'de> Deserialize<'de> for LintConfig {
 impl JsonSchema for LintConfig {
     fn schema_name() -> std::borrow::Cow<'static, str> {
         std::borrow::Cow::Borrowed("LintConfig")
+    }
+
+    fn schema_id() -> std::borrow::Cow<'static, str> {
+        // Match ConfigData's schema_id so the generator treats them as the same
+        // schema and avoids registering two distinct definitions.
+        ConfigData::schema_id()
     }
 
     fn json_schema(generator: &mut schemars::SchemaGenerator) -> schemars::Schema {

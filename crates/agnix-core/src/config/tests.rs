@@ -3383,6 +3383,19 @@ fn test_set_tools_triggers_cow() {
 }
 
 #[test]
+fn test_tools_mut_triggers_cow() {
+    let config = LintConfig::default();
+    let mut cloned = config.clone();
+    assert!(Arc::ptr_eq(&config.data, &cloned.data));
+
+    cloned.tools_mut().push("cursor".to_string());
+    assert!(!Arc::ptr_eq(&config.data, &cloned.data));
+    // Original unchanged
+    assert!(config.tools().is_empty());
+    assert_eq!(cloned.tools(), &["cursor"]);
+}
+
+#[test]
 fn test_unique_owner_mutates_in_place() {
     // When a LintConfig is the sole owner of its ConfigData,
     // Arc::make_mut should mutate in place (no clone).
