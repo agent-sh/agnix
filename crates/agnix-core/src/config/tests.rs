@@ -3292,3 +3292,121 @@ fn test_path_traversal_edge_cases() {
         .build_unchecked();
     assert_eq!(result.exclude(), &["..foo".to_string()]);
 }
+
+// ===== Arc<ConfigData> Sharing Tests =====
+//
+// These tests verify the cheap-clone optimization introduced by wrapping
+// serializable fields in Arc<ConfigData>. They confirm that:
+// 1. Cloning shares the same Arc (no deep copy)
+// 2. Runtime-only mutations (root_dir, import_cache) don't trigger CoW
+// 3. Serializable field mutations trigger CoW as expected
+// 4. The original config is never affected by mutations on a clone
+
+#[test]
+fn test_clone_shares_config_data_arc() {
+    let config = LintConfig::default();
+    let cloned = config.clone();
+    // After clone, both configs point to the same underlying ConfigData
+    assert!(Arc::ptr_eq(&config.data, &cloned.data));
+}
+
+#[test]
+fn test_set_root_dir_does_not_clone_config_data() {
+    let config = LintConfig::default();
+    let mut cloned = config.clone();
+    cloned.set_root_dir(PathBuf::from("/tmp/test"));
+    // root_dir is stored in RuntimeContext, not ConfigData.
+    // The Arc should still be shared after a runtime-only mutation.
+    assert!(Arc::ptr_eq(&config.data, &cloned.data));
+}
+
+#[test]
+fn test_set_import_cache_does_not_clone_config_data() {
+    let config = LintConfig::default();
+    let mut cloned = config.clone();
+    cloned.set_import_cache(std::sync::Arc::new(std::sync::RwLock::new(
+        std::collections::HashMap::new(),
+    )));
+    // import_cache is stored in RuntimeContext, not ConfigData.
+    assert!(Arc::ptr_eq(&config.data, &cloned.data));
+}
+
+#[test]
+fn test_set_fs_does_not_clone_config_data() {
+    let config = LintConfig::default();
+    let mut cloned = config.clone();
+    cloned.set_fs(Arc::new(crate::fs::RealFileSystem));
+    // fs is stored in RuntimeContext, not ConfigData.
+    assert!(Arc::ptr_eq(&config.data, &cloned.data));
+}
+
+#[test]
+fn test_setter_triggers_cow() {
+    let config = LintConfig::default();
+    let mut cloned = config.clone();
+    // Before mutation, they share the same Arc
+    assert!(Arc::ptr_eq(&config.data, &cloned.data));
+
+    cloned.set_severity(SeverityLevel::Error);
+    // After mutating a serializable field, CoW should have kicked in -
+    // the cloned config now has its own ConfigData allocation.
+    assert!(!Arc::ptr_eq(&config.data, &cloned.data));
+    // The original is unchanged
+    assert_eq!(config.severity(), SeverityLevel::Warning);
+    assert_eq!(cloned.severity(), SeverityLevel::Error);
+}
+
+#[test]
+fn test_rules_mut_triggers_cow() {
+    let config = LintConfig::default();
+    let mut cloned = config.clone();
+    assert!(Arc::ptr_eq(&config.data, &cloned.data));
+
+    cloned.rules_mut().skills = false;
+    assert!(!Arc::ptr_eq(&config.data, &cloned.data));
+    // Original unchanged
+    assert!(config.rules().skills);
+    assert!(!cloned.rules().skills);
+}
+
+#[test]
+fn test_set_tools_triggers_cow() {
+    let config = LintConfig::default();
+    let mut cloned = config.clone();
+    assert!(Arc::ptr_eq(&config.data, &cloned.data));
+
+    cloned.set_tools(vec!["cursor".to_string()]);
+    assert!(!Arc::ptr_eq(&config.data, &cloned.data));
+    // Original unchanged
+    assert!(config.tools().is_empty());
+    assert_eq!(cloned.tools(), &["cursor"]);
+}
+
+#[test]
+fn test_unique_owner_mutates_in_place() {
+    // When a LintConfig is the sole owner of its ConfigData,
+    // Arc::make_mut should mutate in place (no clone).
+    let mut config = LintConfig::default();
+    let ptr_before = Arc::as_ptr(&config.data);
+    config.set_severity(SeverityLevel::Error);
+    let ptr_after = Arc::as_ptr(&config.data);
+    // Same pointer - mutated in place, no allocation
+    assert_eq!(ptr_before, ptr_after);
+}
+
+#[test]
+fn test_deserialized_config_roundtrip_preserves_arc_independence() {
+    // Each deserialized config should have its own Arc (not shared with anything)
+    let toml_str = r#"
+severity = "Error"
+target = "ClaudeCode"
+"#;
+    let config1: LintConfig = toml::from_str(toml_str).unwrap();
+    let config2: LintConfig = toml::from_str(toml_str).unwrap();
+
+    // Two independent deserializations should NOT share an Arc
+    assert!(!Arc::ptr_eq(&config1.data, &config2.data));
+    // But their content should be equal
+    assert_eq!(config1.severity(), config2.severity());
+    assert_eq!(config1.target(), config2.target());
+}
