@@ -44,6 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Parallel validation fold**: Eliminated PathBuf clone on error path in parallel fold by moving the owned value into the diagnostic
 - **LSP lock-free config reads**: Replaced `Arc<RwLock<Arc<LintConfig>>>` with `Arc<ArcSwap<LintConfig>>` in LSP backend, eliminating read lock contention on every `did_change`/`did_open`/`did_save` event (#468)
 - **Disabled-validator fast path**: Added `named_validators()` to `ValidatorProvider` trait (default impl wraps `validators()` with `None` names). Providers that override it with `Some(name)` allow `ValidatorRegistryBuilder` to skip the factory call entirely for disabled validators, avoiding the allocation. Built-in validators use the fast path automatically (#461)
+- **`LintConfig` cheap cloning**: Introduced `Arc<ConfigData>` inner struct to hold all serializable fields. Cloning a `LintConfig` (e.g., in `validate_project` / `validate_project_with_registry` parallel dispatch) now bumps an `Arc` refcount instead of deep-copying `Vec<String>` fields and nested structs. Mutations use `Arc::make_mut` for copy-on-write semantics, so the allocation only occurs when the `Arc` is actually shared (#467)
 
 ### Fixed
 - **`Fix` constructor range assertions**: Added `debug_assert!(start <= end)` to `Fix::replace`, `Fix::replace_with_confidence`, `Fix::delete`, and `Fix::delete_with_confidence` to catch inverted byte ranges in debug builds (#463)
