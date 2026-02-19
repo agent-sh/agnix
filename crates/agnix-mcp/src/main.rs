@@ -858,4 +858,40 @@ mod tests {
             ToolsInput::List(_) => panic!("expected Csv variant for JSON string input"),
         }
     }
+
+    #[test]
+    fn test_validate_file_input_schema_tools_description() {
+        let schema =
+            rmcp::schemars::SchemaGenerator::default().into_root_schema_for::<ValidateFileInput>();
+        let json = serde_json::to_value(&schema).expect("schema should serialize");
+        let json_str = serde_json::to_string(&json).unwrap();
+        // The tools field description must mention Preferred/Fallback so MCP clients
+        // see clear guidance on the expected input format in ValidateFileInput.
+        assert!(
+            json_str.contains("Preferred"),
+            "ValidateFileInput schema must mention 'Preferred' for tools field"
+        );
+        assert!(
+            json_str.contains("fallback"),
+            "ValidateFileInput schema must mention 'fallback' for tools field"
+        );
+    }
+
+    #[test]
+    fn test_validate_project_input_schema_tools_description() {
+        let schema = rmcp::schemars::SchemaGenerator::default()
+            .into_root_schema_for::<ValidateProjectInput>();
+        let json = serde_json::to_value(&schema).expect("schema should serialize");
+        let json_str = serde_json::to_string(&json).unwrap();
+        // The tools field description must mention Preferred/Fallback so MCP clients
+        // see clear guidance on the expected input format in ValidateProjectInput.
+        assert!(
+            json_str.contains("Preferred"),
+            "ValidateProjectInput schema must mention 'Preferred' for tools field"
+        );
+        assert!(
+            json_str.contains("fallback"),
+            "ValidateProjectInput schema must mention 'fallback' for tools field"
+        );
+    }
 }

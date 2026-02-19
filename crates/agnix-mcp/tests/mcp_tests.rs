@@ -610,8 +610,12 @@ mod json_schema_tests {
         );
     }
 
-    /// Helper: given a schema JSON object for a struct, navigate to the anyOf
-    /// array nested inside a property (via $ref resolution for inlined schemas).
+    /// Helper: given a schema JSON object for a struct, navigate to the nested
+    /// anyOf array for the inlined ToolsInput inside the `tools` property.
+    ///
+    /// With `inline_schema = true` on `ToolsInput`, the `tools` property schema
+    /// is an `Option` wrapper (`anyOf: [{anyOf:[array,string]}, {type:null}]`).
+    /// This helper finds the inner `anyOf` that belongs to `ToolsInput`.
     fn get_tools_anyof(schema_json: &serde_json::Value) -> &[serde_json::Value] {
         let props = schema_json
             .get("properties")
@@ -654,6 +658,20 @@ mod json_schema_tests {
         assert!(
             props.get("target").is_some(),
             "schema must include 'target' field"
+        );
+
+        // Verify the property-level description contains the Preferred/Fallback guidance
+        let tools_field_desc = props
+            .get("tools")
+            .and_then(|v| v.get("description"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        // The field description may be on the property directly or hoisted from the Option wrapper.
+        // Check the serialised JSON in case schemars places the description at a different level.
+        let json_str = serde_json::to_string(&json).unwrap();
+        assert!(
+            tools_field_desc.contains("Preferred") || json_str.contains("Preferred"),
+            "tools field description must mention 'Preferred' in ValidateFileInput schema"
         );
 
         // Verify the tools anyOf has array-first ordering with Preferred description
@@ -716,6 +734,18 @@ mod json_schema_tests {
         assert!(
             props.get("target").is_some(),
             "schema must include 'target' field"
+        );
+
+        // Verify the property-level description contains the Preferred/Fallback guidance
+        let tools_field_desc = props
+            .get("tools")
+            .and_then(|v| v.get("description"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        let json_str = serde_json::to_string(&json).unwrap();
+        assert!(
+            tools_field_desc.contains("Preferred") || json_str.contains("Preferred"),
+            "tools field description must mention 'Preferred' in ValidateProjectInput schema"
         );
 
         // Verify the tools anyOf has array-first ordering with Preferred description
