@@ -68,8 +68,9 @@ The validation process follows these steps:
 1. **Directory Walking** (sequential) - Uses `ignore` crate to traverse directories
 2. **File Collection** - Gathers all relevant file paths with exclusion filtering
 3. **File Type Resolution** - `resolve_file_type()` applies `[files]` config overrides, then falls through to `detect_file_type()`
-4. **Parallel Validation** - Processes files in parallel using rayon
-5. **Result Sorting** - Deterministic ordering by severity (errors first) then file path
+4. **CRLF Normalization** - `normalize_line_endings()` converts CRLF and lone-CR to LF before validators run (zero-allocation fast path for LF-only files)
+5. **Parallel Validation** - Processes files in parallel using rayon
+6. **Result Sorting** - Deterministic ordering by severity (errors first) then file path
 
 This architecture ensures fast validation on large projects while maintaining consistent, reproducible output.
 

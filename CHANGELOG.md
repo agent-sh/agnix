@@ -51,6 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **`Fix` constructor range assertions**: Added `debug_assert!(start <= end)` to `Fix::replace`, `Fix::replace_with_confidence`, `Fix::delete`, and `Fix::delete_with_confidence` to catch inverted byte ranges in debug builds (#463)
+- **CRLF line ending normalization**: `normalize_line_endings()` is now applied at all pipeline entry points (`validate_file_with_type`, `validate_content`, `run_project_level_checks`) and in the fix engine (`apply_fixes_with_fs_options`). Windows files with CRLF endings produce identical diagnostics and byte-accurate auto-fixes as their LF equivalents. Files written by `--fix` use LF endings (#480)
 - **`validate_file_with_registry` disabled-validator gap**: `config.rules().disabled_validators` was silently ignored in the `validate_file_with_type` path (used by `validate_file_with_registry` and `validate_project_with_registry`). Validators now respect `disabled_validators` at runtime in all code paths, consistent with `validate_content()` (#469)
 - **REF-001**: Corrected metadata to reflect universal applicability across all tools (not claude-code specific), changed source_type to community, and added agentskills.io reference
 - **CC-HK-001**: Added `TeammateIdle` and `TaskCompleted` as valid hook event names
