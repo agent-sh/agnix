@@ -1079,6 +1079,44 @@ cases:
         assert_eq!(format!("{}", EvalFormat::Csv), "csv");
     }
 
+    /// Test that the `ValidationOutcome::IoError` arm of `evaluate_case` produces
+    /// a diagnostic with rule `"eval::io-error"`.
+    ///
+    /// The IoError arm is reached when the file exists on disk (so
+    /// `validate_path_within_base` succeeds) but cannot be read (so
+    /// `validate_file` returns `ValidationOutcome::IoError`).
+    #[cfg(unix)]
+    #[test]
+    fn test_evaluate_case_io_error_arm() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let temp = tempfile::TempDir::new().unwrap();
+        // Use a known-type path so the file is not skipped as FileType::Unknown
+        let skill_path = temp.path().join("SKILL.md");
+        std::fs::write(&skill_path, "# Test skill\n").unwrap();
+
+        // Make the file unreadable so `validate_file` returns `ValidationOutcome::IoError`
+        std::fs::set_permissions(&skill_path, std::fs::Permissions::from_mode(0o000)).unwrap();
+
+        let case = EvalCase {
+            file: PathBuf::from("SKILL.md"),
+            expected: vec![],
+            description: Some("Unreadable file triggers IoError arm".to_string()),
+        };
+
+        let config = LintConfig::default();
+        let result = evaluate_case(&case, temp.path(), &config);
+
+        // Restore permissions before cleanup
+        std::fs::set_permissions(&skill_path, std::fs::Permissions::from_mode(0o644)).unwrap();
+
+        assert!(
+            result.actual.contains(&"eval::io-error".to_string()),
+            "Expected eval::io-error diagnostic for unreadable file, got: {:?}",
+            result.actual
+        );
+    }
+
     #[test]
     fn test_eval_summary_empty_results() {
         let results: Vec<EvalResult> = vec![];

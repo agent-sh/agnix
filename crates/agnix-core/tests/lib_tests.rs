@@ -5004,3 +5004,29 @@ fn test_validation_outcome_into_diagnostics_preserves_all() {
         "into_diagnostics should preserve all diagnostics"
     );
 }
+
+#[cfg(unix)]
+#[test]
+fn test_validate_project_collects_file_read_error_as_diagnostic() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let dir = tempfile::TempDir::new().unwrap();
+    let skill_path = dir.path().join("SKILL.md");
+    std::fs::write(&skill_path, "# Test\n").unwrap();
+
+    // Make file unreadable so safe_read_file returns an IoError
+    std::fs::set_permissions(&skill_path, std::fs::Permissions::from_mode(0o000)).unwrap();
+
+    let config = LintConfig::builder().build_unchecked();
+    let result = validate_project(dir.path(), &config).unwrap();
+
+    // Restore permissions before cleanup so the tempdir can be deleted
+    std::fs::set_permissions(&skill_path, std::fs::Permissions::from_mode(0o644)).unwrap();
+
+    let has_file_read_error = result.diagnostics.iter().any(|d| d.rule == "file::read");
+    assert!(
+        has_file_read_error,
+        "Expected file::read diagnostic for unreadable file, got: {:?}",
+        result.diagnostics
+    );
+}
