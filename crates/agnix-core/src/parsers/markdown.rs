@@ -376,8 +376,12 @@ pub fn sanitize_for_pulldown_cmark(s: &str) -> std::borrow::Cow<'_, str> {
                 out.push('\n');
             }
             c if c < '\x20' && c != '\t' && c != '\n' => {
-                // Other C0 control characters: strip silently.
-                // These are not valid in markdown and trigger pulldown-cmark bugs.
+                // Replace with a space rather than stripping. Stripping would shorten the
+                // string and shift all subsequent byte offsets, making XmlTag start/end
+                // spans misalign with the (CRLF-normalized) content the fix engine uses.
+                // A space is 1 byte → 1 byte and is harmless to pulldown-cmark.
+                let _ = c;
+                out.push(' ');
             }
             c => out.push(c),
         }
@@ -1271,15 +1275,15 @@ mod tests {
     }
 
     #[test]
-    fn test_sanitize_for_pulldown_cmark_strips_control_chars() {
-        // Control characters should be stripped, leaving valid XML tags detectable
+    fn test_sanitize_for_pulldown_cmark_replaces_control_chars() {
+        // Control characters are replaced with spaces (not stripped) to preserve
+        // byte offsets. Tags should still be detected.
         let content_with_control = "<example>\x02content\x03</example>";
         let tags = extract_xml_tags(content_with_control);
-        // The tags should be found; control chars are stripped
         assert_eq!(
             tags.len(),
             2,
-            "Tags should be found after control char stripping"
+            "Tags should be found after control char replacement"
         );
         assert_eq!(tags[0].name, "example");
         assert!(tags[1].is_closing);
