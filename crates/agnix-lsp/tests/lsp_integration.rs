@@ -1273,6 +1273,129 @@ unknownfield: value
     }
 }
 
+/// Tests verifying how the LSP layer handles `IoError` outcomes from the core
+/// validation pipeline.
+///
+/// The LSP calls `validate_file` / `validate_file_with_registry` and then
+/// converts the resulting `ValidationOutcome` into LSP diagnostics. When the
+/// file is unreadable, the core returns `ValidationOutcome::IoError` and
+/// `into_diagnostics()` must produce a single `file::read` diagnostic at
+/// position line 0 / column 0 (the convention used by `Diagnostic::error` for
+/// non-line-specific errors).
+///
+/// These tests pin that contract so that LSP position mapping (which converts
+/// 1-indexed `Diagnostic.line` to 0-indexed LSP positions) cannot regress.
+mod lsp_io_error_outcome_tests {
+    use agnix_core::{DiagnosticLevel, LintConfig};
+
+    /// Unix-only: make a SKILL.md unreadable, call `validate_file`, assert
+    /// `IoError`, then assert `into_diagnostics()` produces a single
+    /// `file::read` error at line 0 / column 0.
+    ///
+    /// The test is skipped when running as root because root can read files
+    /// regardless of permission bits.
+    #[cfg(unix)]
+    #[test]
+    fn test_lsp_io_error_produces_file_read_diagnostic_at_zero_position() {
+        use std::fs;
+        use std::os::unix::fs::PermissionsExt;
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let skill_path = temp_dir.path().join("SKILL.md");
+
+        fs::write(
+            &skill_path,
+            "---\nname: test-skill\ndescription: Use when testing\n---\n\n# Test\n",
+        )
+        .unwrap();
+
+        // Make the file unreadable.
+        let original_mode = fs::metadata(&skill_path)
+            .unwrap()
+            .permissions()
+            .mode();
+        fs::set_permissions(
+            &skill_path,
+            fs::Permissions::from_mode(0o000),
+        )
+        .unwrap();
+
+        // Probe whether the permission change took effect. On systems where the
+        // process runs as root, chmod(0o000) does not prevent reads, so we skip
+        // rather than produce a false failure.
+        let probe_readable = fs::read(&skill_path).is_ok();
+        if probe_readable {
+            // Running as root or on a filesystem that ignores permission bits.
+            // Restore and skip.
+            fs::set_permissions(
+                &skill_path,
+                fs::Permissions::from_mode(original_mode),
+            )
+            .unwrap();
+            return;
+        }
+
+        let config = LintConfig::default();
+        let result = agnix_core::validate_file(&skill_path, &config);
+
+        // Restore permissions before any assertions so the temp dir can be
+        // cleaned up even if an assertion panics.
+        fs::set_permissions(
+            &skill_path,
+            fs::Permissions::from_mode(original_mode),
+        )
+        .unwrap();
+
+        // The call must succeed at the Result level (IoError is not an Err).
+        assert!(
+            result.is_ok(),
+            "validate_file should return Ok(IoError), not Err: {:?}",
+            result
+        );
+
+        let outcome = result.unwrap();
+        assert!(
+            outcome.is_io_error(),
+            "Expected ValidationOutcome::IoError for unreadable file, got success/skipped"
+        );
+
+        // `into_diagnostics()` must produce exactly one `file::read` error at
+        // line 0 / column 0 - the LSP maps these to position (0, 0) in the
+        // document (first character).
+        let diags = outcome.into_diagnostics();
+        assert_eq!(
+            diags.len(),
+            1,
+            "IoError should produce exactly one diagnostic, got: {:?}",
+            diags
+        );
+
+        let diag = &diags[0];
+        assert_eq!(
+            diag.rule, "file::read",
+            "IoError diagnostic rule should be 'file::read', got: {}",
+            diag.rule
+        );
+        assert_eq!(
+            diag.level,
+            DiagnosticLevel::Error,
+            "IoError diagnostic should have Error level"
+        );
+        assert_eq!(
+            diag.line, 0,
+            "IoError diagnostic should be at line 0 (non-line-specific error position)"
+        );
+        assert_eq!(
+            diag.column, 0,
+            "IoError diagnostic should be at column 0 (non-line-specific error position)"
+        );
+        assert_eq!(
+            diag.file, skill_path,
+            "IoError diagnostic file path should match the input path"
+        );
+    }
+}
+
 mod project_level_validation_tests {
     use agnix_lsp::Backend;
     use tower_lsp::lsp_types::*;

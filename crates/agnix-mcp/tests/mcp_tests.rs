@@ -186,6 +186,56 @@ mod validation_tests {
         );
     }
 
+    /// Verify the `into_diagnostics()` contract for `ValidationOutcome::IoError`
+    /// when `validate_file` is called on a nonexistent path with a known file
+    /// type extension (SKILL.md).
+    ///
+    /// This pins the diagnostic fields that the MCP handler serialises to JSON:
+    /// - `rule` must be `"file::read"`
+    /// - `level` must be `Error`
+    /// - `file` must match the input path
+    ///
+    /// MCP layer JSON serialisation of these fields is covered by the
+    /// `test_diagnostic_json_serialization` test in `output_format_tests`.
+    #[test]
+    fn test_validate_file_io_error_into_diagnostics_fields() {
+        use agnix_core::diagnostics::DiagnosticLevel;
+        use std::path::Path;
+
+        let input_path = Path::new("/nonexistent/path/SKILL.md");
+        let config = LintConfig::default();
+        let outcome = validate_file(input_path, &config).unwrap();
+
+        assert!(
+            outcome.is_io_error(),
+            "Expected IoError for nonexistent SKILL.md path, got: {:?}",
+            outcome
+        );
+
+        let diags = outcome.into_diagnostics();
+        assert_eq!(
+            diags.len(),
+            1,
+            "IoError should produce exactly one diagnostic via into_diagnostics()"
+        );
+
+        let diag = &diags[0];
+        assert_eq!(
+            diag.rule, "file::read",
+            "IoError diagnostic rule must be 'file::read', got: {}",
+            diag.rule
+        );
+        assert_eq!(
+            diag.level,
+            DiagnosticLevel::Error,
+            "IoError diagnostic must have Error level"
+        );
+        assert_eq!(
+            diag.file, input_path,
+            "IoError diagnostic file path must match the input path"
+        );
+    }
+
     #[test]
     fn test_validate_nonexistent_project_path() {
         let config = LintConfig::default();
