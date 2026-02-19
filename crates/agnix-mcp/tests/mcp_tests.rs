@@ -128,7 +128,7 @@ mod validation_tests {
         let result = validate_file(&skill_path, &config);
 
         assert!(result.is_ok());
-        let diagnostics = result.unwrap();
+        let diagnostics = result.unwrap().into_diagnostics();
         // Valid skill should have no errors (may have warnings)
         let errors: Vec<_> = diagnostics
             .iter()
@@ -146,7 +146,7 @@ mod validation_tests {
         let result = validate_file(&skill_path, &config);
 
         assert!(result.is_ok());
-        let diagnostics = result.unwrap();
+        let diagnostics = result.unwrap().into_diagnostics();
         // Invalid skill name should produce error
         let errors: Vec<_> = diagnostics
             .iter()
@@ -175,14 +175,14 @@ mod validation_tests {
     }
 
     #[test]
-    fn test_validate_file_nonexistent_path_returns_file_error() {
+    fn test_validate_file_nonexistent_path_returns_io_error() {
         let config = LintConfig::default();
         let result = validate_file(std::path::Path::new("/nonexistent/path/file.md"), &config);
-        let err = result.unwrap_err();
+        let outcome = result.unwrap();
         assert!(
-            matches!(err, agnix_core::CoreError::File(_)),
-            "nonexistent path should produce CoreError::File, got: {:?}",
-            err
+            outcome.is_io_error(),
+            "nonexistent path should produce ValidationOutcome::IoError, got: {:?}",
+            outcome
         );
     }
 
@@ -207,8 +207,9 @@ mod validation_tests {
         let result = validate_file(std::path::Path::new(""), &config);
 
         // Empty path resolves to FileType::Unknown, and validate_file returns
-        // Ok(vec![]) for unknown file types without reading the file.
+        // Ok(Skipped) for unknown file types without reading the file.
         assert!(result.is_ok(), "Empty path should not panic: {:?}", result);
+        assert!(result.unwrap().is_skipped());
     }
 
     #[test]

@@ -84,6 +84,7 @@ This is a valid skill file.
         let config = LintConfig::default();
         let result = agnix_core::validate_file(&skill_path, &config);
         assert!(result.is_ok());
+        assert!(result.unwrap().is_success());
     }
 
     #[test]
@@ -110,7 +111,7 @@ This skill has an invalid name.
         let result = agnix_core::validate_file(&skill_path, &config);
         assert!(result.is_ok());
 
-        let diagnostics = result.unwrap();
+        let diagnostics = result.unwrap().into_diagnostics();
         // Should have at least one error for invalid name
         assert!(!diagnostics.is_empty());
         assert!(
@@ -129,9 +130,9 @@ This skill has an invalid name.
         let result = agnix_core::validate_file(file.path(), &config);
         assert!(result.is_ok());
 
-        // Unknown file types should return empty diagnostics
-        let diagnostics = result.unwrap();
-        assert!(diagnostics.is_empty());
+        // Unknown file types should return Skipped
+        let outcome = result.unwrap();
+        assert!(outcome.is_skipped());
     }
 }
 
