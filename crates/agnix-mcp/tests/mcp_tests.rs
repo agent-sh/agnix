@@ -625,14 +625,16 @@ mod json_schema_tests {
             .and_then(|v| v.as_array())
             .expect("tools property must have anyOf");
 
-        // The first non-null entry is the inlined ToolsInput anyOf
+        // The first non-null entry is the inlined ToolsInput anyOf.
+        // If this expect fires, inline_schema() = true is not in effect -
+        // check the ToolsInput JsonSchema impl in both main.rs and this file.
         any_of
             .iter()
             .find(|e| e.get("anyOf").is_some())
             .and_then(|e| e.get("anyOf"))
             .and_then(|v| v.as_array())
             .map(|a| a.as_slice())
-            .unwrap_or(any_of.as_slice())
+            .expect("ToolsInput must be inlined as a nested anyOf within the Option wrapper anyOf")
     }
 
     #[test]
@@ -649,10 +651,24 @@ mod json_schema_tests {
 
         // Verify the tools anyOf has array-first ordering with Preferred description
         let any_of = get_tools_anyof(&json);
+        assert_eq!(any_of.len(), 2, "tools anyOf must have exactly two entries in ValidateFileInput");
         assert_eq!(
             any_of[0].get("type").and_then(|v| v.as_str()),
             Some("array"),
             "tools anyOf[0] must be array type in ValidateFileInput"
+        );
+        assert_eq!(
+            any_of[1].get("type").and_then(|v| v.as_str()),
+            Some("string"),
+            "tools anyOf[1] must be string type in ValidateFileInput"
+        );
+        assert_eq!(
+            any_of[0]
+                .get("items")
+                .and_then(|v| v.get("type"))
+                .and_then(|v| v.as_str()),
+            Some("string"),
+            "tools array variant must have items.type == 'string' in ValidateFileInput"
         );
         let desc = any_of[0]
             .get("description")
@@ -662,6 +678,11 @@ mod json_schema_tests {
             desc.contains("Preferred"),
             "tools array variant description must contain 'Preferred', got: {}",
             desc
+        );
+        // Verify inline_schema=true is in effect: ToolsInput must not appear in $defs
+        assert!(
+            json.get("$defs").and_then(|d| d.get("ToolsInput")).is_none(),
+            "ToolsInput must be inlined (not in $defs) - check inline_schema() impl"
         );
     }
 
@@ -679,10 +700,24 @@ mod json_schema_tests {
 
         // Verify the tools anyOf has array-first ordering with Preferred description
         let any_of = get_tools_anyof(&json);
+        assert_eq!(any_of.len(), 2, "tools anyOf must have exactly two entries in ValidateProjectInput");
         assert_eq!(
             any_of[0].get("type").and_then(|v| v.as_str()),
             Some("array"),
             "tools anyOf[0] must be array type in ValidateProjectInput"
+        );
+        assert_eq!(
+            any_of[1].get("type").and_then(|v| v.as_str()),
+            Some("string"),
+            "tools anyOf[1] must be string type in ValidateProjectInput"
+        );
+        assert_eq!(
+            any_of[0]
+                .get("items")
+                .and_then(|v| v.get("type"))
+                .and_then(|v| v.as_str()),
+            Some("string"),
+            "tools array variant must have items.type == 'string' in ValidateProjectInput"
         );
         let desc = any_of[0]
             .get("description")
@@ -692,6 +727,11 @@ mod json_schema_tests {
             desc.contains("Preferred"),
             "tools array variant description must contain 'Preferred', got: {}",
             desc
+        );
+        // Verify inline_schema=true is in effect: ToolsInput must not appear in $defs
+        assert!(
+            json.get("$defs").and_then(|d| d.get("ToolsInput")).is_none(),
+            "ToolsInput must be inlined (not in $defs) - check inline_schema() impl"
         );
     }
 
