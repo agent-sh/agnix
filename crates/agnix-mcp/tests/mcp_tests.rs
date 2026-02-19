@@ -642,16 +642,27 @@ mod json_schema_tests {
         let schema = SchemaGenerator::default().into_root_schema_for::<ValidateFileInput>();
         let json = serde_json::to_value(&schema).expect("schema should serialize");
 
-        let props = json
-            .get("properties")
-            .expect("schema must have properties");
-        assert!(props.get("path").is_some(), "schema must include 'path' field");
-        assert!(props.get("tools").is_some(), "schema must include 'tools' field");
-        assert!(props.get("target").is_some(), "schema must include 'target' field");
+        let props = json.get("properties").expect("schema must have properties");
+        assert!(
+            props.get("path").is_some(),
+            "schema must include 'path' field"
+        );
+        assert!(
+            props.get("tools").is_some(),
+            "schema must include 'tools' field"
+        );
+        assert!(
+            props.get("target").is_some(),
+            "schema must include 'target' field"
+        );
 
         // Verify the tools anyOf has array-first ordering with Preferred description
         let any_of = get_tools_anyof(&json);
-        assert_eq!(any_of.len(), 2, "tools anyOf must have exactly two entries in ValidateFileInput");
+        assert_eq!(
+            any_of.len(),
+            2,
+            "tools anyOf must have exactly two entries in ValidateFileInput"
+        );
         assert_eq!(
             any_of[0].get("type").and_then(|v| v.as_str()),
             Some("array"),
@@ -681,7 +692,9 @@ mod json_schema_tests {
         );
         // Verify inline_schema=true is in effect: ToolsInput must not appear in $defs
         assert!(
-            json.get("$defs").and_then(|d| d.get("ToolsInput")).is_none(),
+            json.get("$defs")
+                .and_then(|d| d.get("ToolsInput"))
+                .is_none(),
             "ToolsInput must be inlined (not in $defs) - check inline_schema() impl"
         );
     }
@@ -691,16 +704,27 @@ mod json_schema_tests {
         let schema = SchemaGenerator::default().into_root_schema_for::<ValidateProjectInput>();
         let json = serde_json::to_value(&schema).expect("schema should serialize");
 
-        let props = json
-            .get("properties")
-            .expect("schema must have properties");
-        assert!(props.get("path").is_some(), "schema must include 'path' field");
-        assert!(props.get("tools").is_some(), "schema must include 'tools' field");
-        assert!(props.get("target").is_some(), "schema must include 'target' field");
+        let props = json.get("properties").expect("schema must have properties");
+        assert!(
+            props.get("path").is_some(),
+            "schema must include 'path' field"
+        );
+        assert!(
+            props.get("tools").is_some(),
+            "schema must include 'tools' field"
+        );
+        assert!(
+            props.get("target").is_some(),
+            "schema must include 'target' field"
+        );
 
         // Verify the tools anyOf has array-first ordering with Preferred description
         let any_of = get_tools_anyof(&json);
-        assert_eq!(any_of.len(), 2, "tools anyOf must have exactly two entries in ValidateProjectInput");
+        assert_eq!(
+            any_of.len(),
+            2,
+            "tools anyOf must have exactly two entries in ValidateProjectInput"
+        );
         assert_eq!(
             any_of[0].get("type").and_then(|v| v.as_str()),
             Some("array"),
@@ -730,7 +754,9 @@ mod json_schema_tests {
         );
         // Verify inline_schema=true is in effect: ToolsInput must not appear in $defs
         assert!(
-            json.get("$defs").and_then(|d| d.get("ToolsInput")).is_none(),
+            json.get("$defs")
+                .and_then(|d| d.get("ToolsInput"))
+                .is_none(),
             "ToolsInput must be inlined (not in $defs) - check inline_schema() impl"
         );
     }
