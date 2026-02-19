@@ -1147,7 +1147,10 @@ mod tests {
         let written = mock_fs
             .read_to_string(std::path::Path::new("/project/skill.md"))
             .unwrap();
-        assert!(!written.contains('\r'), "Written file should have no \\r (LF-normalized)");
+        assert!(
+            !written.contains('\r'),
+            "Written file should have no \\r (LF-normalized)"
+        );
         assert_eq!(written, "name:\n good-name");
     }
 

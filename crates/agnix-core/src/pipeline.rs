@@ -1045,7 +1045,8 @@ mod validate_content_tests {
         let registry = ValidatorRegistry::with_defaults();
         let path = Path::new("skill.md");
 
-        let lf_content = "---\nname: test-skill\ndescription: A test\n---\n\n# Instructions\n\n<unclosed>\n";
+        let lf_content =
+            "---\nname: test-skill\ndescription: A test\n---\n\n# Instructions\n\n<unclosed>\n";
         let crlf_content = "---\r\nname: test-skill\r\ndescription: A test\r\n---\r\n\r\n# Instructions\r\n\r\n<unclosed>\r\n";
 
         let lf_diags = validate_content(path, lf_content, &config, &registry);
@@ -1055,8 +1056,14 @@ mod validate_content_tests {
             lf_diags.len(),
             crlf_diags.len(),
             "CRLF and LF content should produce the same number of diagnostics.\nLF: {:?}\nCRLF: {:?}",
-            lf_diags.iter().map(|d| (&d.rule, d.line, d.column)).collect::<Vec<_>>(),
-            crlf_diags.iter().map(|d| (&d.rule, d.line, d.column)).collect::<Vec<_>>(),
+            lf_diags
+                .iter()
+                .map(|d| (&d.rule, d.line, d.column))
+                .collect::<Vec<_>>(),
+            crlf_diags
+                .iter()
+                .map(|d| (&d.rule, d.line, d.column))
+                .collect::<Vec<_>>(),
         );
 
         for (lf_d, crlf_d) in lf_diags.iter().zip(crlf_diags.iter()) {
@@ -1139,8 +1146,14 @@ mod validate_content_tests {
             lf_diags.len(),
             cr_diags.len(),
             "Lone-CR and LF content should produce the same number of diagnostics.\nLF: {:?}\nCR: {:?}",
-            lf_diags.iter().map(|d| (&d.rule, d.line, d.column)).collect::<Vec<_>>(),
-            cr_diags.iter().map(|d| (&d.rule, d.line, d.column)).collect::<Vec<_>>(),
+            lf_diags
+                .iter()
+                .map(|d| (&d.rule, d.line, d.column))
+                .collect::<Vec<_>>(),
+            cr_diags
+                .iter()
+                .map(|d| (&d.rule, d.line, d.column))
+                .collect::<Vec<_>>(),
         );
         for (lf_d, cr_d) in lf_diags.iter().zip(cr_diags.iter()) {
             assert_eq!(lf_d.rule, cr_d.rule);
@@ -1474,7 +1487,8 @@ mod tests {
         let lf_path = temp.path().join("skill_lf.md");
         let crlf_path = temp.path().join("skill_crlf.md");
 
-        let lf_content = "---\nname: test-skill\ndescription: A test\n---\n\n# Instructions\n\n<unclosed>\n";
+        let lf_content =
+            "---\nname: test-skill\ndescription: A test\n---\n\n# Instructions\n\n<unclosed>\n";
         let crlf_content = "---\r\nname: test-skill\r\ndescription: A test\r\n---\r\n\r\n# Instructions\r\n\r\n<unclosed>\r\n";
 
         std::fs::write(&lf_path, lf_content).unwrap();
@@ -1498,8 +1512,14 @@ mod tests {
             lf_diags.len(),
             crlf_diags.len(),
             "On-disk CRLF file should produce same diagnostic count as LF file.\nLF: {:?}\nCRLF: {:?}",
-            lf_diags.iter().map(|d| (&d.rule, d.line, d.column)).collect::<Vec<_>>(),
-            crlf_diags.iter().map(|d| (&d.rule, d.line, d.column)).collect::<Vec<_>>(),
+            lf_diags
+                .iter()
+                .map(|d| (&d.rule, d.line, d.column))
+                .collect::<Vec<_>>(),
+            crlf_diags
+                .iter()
+                .map(|d| (&d.rule, d.line, d.column))
+                .collect::<Vec<_>>(),
         );
         for (lf_d, crlf_d) in lf_diags.iter().zip(crlf_diags.iter()) {
             assert_eq!(lf_d.rule, crlf_d.rule, "Same rules should fire");
