@@ -1046,6 +1046,70 @@ mod tests {
     }
 
     #[test]
+    fn test_apply_fixes_with_mock_fs_crlf_normalization() {
+        // Verify that apply_fixes_with_fs_options normalizes CRLF before applying fixes.
+        // The fix byte offsets are computed against LF-normalized content (as validators see it).
+        use crate::fs::MockFileSystem;
+
+        let mock_fs = MockFileSystem::new();
+        // File on disk has CRLF endings: "name:\r\n bad-name"
+        // After normalization: "name:\n bad-name" (7 bytes to the space, 8 to 'b')
+        // Fix replaces "bad-name" (bytes 7..15 in normalized form) with "good-name"
+        mock_fs.add_file("/project/skill.md", "name:\r\n bad-name");
+
+        let diagnostics = vec![make_diagnostic(
+            "/project/skill.md",
+            vec![Fix::replace(7, 15, "good-name", "Fix name", true)],
+        )];
+
+        let results =
+            apply_fixes_with_fs(&diagnostics, true, false, Some(Arc::new(mock_fs))).unwrap();
+
+        assert_eq!(results.len(), 1, "Should produce one FixResult");
+        assert!(
+            !results[0].original.contains('\r'),
+            "FixResult.original should be LF-normalized (no \\r)"
+        );
+        assert_eq!(results[0].original, "name:\n bad-name");
+        assert_eq!(results[0].fixed, "name:\n good-name");
+        assert!(results[0].has_changes());
+    }
+
+    #[test]
+    fn test_apply_fixes_with_mock_fs_crlf_no_changes() {
+        // A CRLF file with no applicable fixes should produce no FixResult entries.
+        // (The normalization itself does not count as a "fix" for has_changes purposes,
+        // because original and fixed are both derived from the normalized form.)
+        use crate::fs::MockFileSystem;
+
+        let mock_fs = MockFileSystem::new();
+        // CRLF file with content that has no fixable diagnostics
+        mock_fs.add_file("/project/notes.md", "# Notes\r\n\r\nAll good here.\r\n");
+
+        // Diagnostic with no fixes attached - should yield no FixResult
+        let diag = Diagnostic {
+            file: std::path::PathBuf::from("/project/notes.md"),
+            rule: "TEST-001".to_string(),
+            message: "No fixes".to_string(),
+            line: 1,
+            column: 1,
+            level: crate::diagnostics::DiagnosticLevel::Warning,
+            suggestion: None,
+            fixes: Vec::new(),
+            assumption: None,
+            metadata: None,
+        };
+
+        let results =
+            apply_fixes_with_fs(&[diag], false, false, Some(Arc::new(mock_fs))).unwrap();
+
+        assert!(
+            results.is_empty(),
+            "No FixResult should be emitted when there are no applicable fixes"
+        );
+    }
+
+    #[test]
     fn test_fix_utf8_boundary_skip() {
         // \u{00e9} = 2 bytes: 0xc3 at byte 3, 0xa9 at byte 4
         let content = "caf\u{00e9}";

@@ -1073,12 +1073,12 @@ mod validate_content_tests {
     }
 
     #[test]
-    fn crlf_normalize_is_idempotent_in_validate_content() {
+    fn lf_validation_is_stable() {
         let config = LintConfig::default();
         let registry = ValidatorRegistry::with_defaults();
         let path = Path::new("CLAUDE.md");
 
-        // Already-normalized content should produce the same result
+        // Already-normalized content should produce the same result on repeated calls.
         let content = "# Project\n\nInstructions here.\n";
         let diags1 = validate_content(path, content, &config, &registry);
         let diags2 = validate_content(path, content, &config, &registry);
@@ -1088,6 +1088,30 @@ mod validate_content_tests {
             diags2.len(),
             "Repeated validation of LF content should be stable"
         );
+    }
+
+    #[test]
+    fn crlf_validation_is_idempotent() {
+        let config = LintConfig::default();
+        let registry = ValidatorRegistry::with_defaults();
+        let path = Path::new("skill.md");
+
+        // Validating CRLF content twice should produce identical diagnostics each time.
+        let crlf_content =
+            "---\r\nname: test-skill\r\ndescription: A test\r\n---\r\n\r\n# Instructions\r\n";
+        let diags1 = validate_content(path, crlf_content, &config, &registry);
+        let diags2 = validate_content(path, crlf_content, &config, &registry);
+
+        assert_eq!(
+            diags1.len(),
+            diags2.len(),
+            "Repeated validation of CRLF content should be stable"
+        );
+        for (d1, d2) in diags1.iter().zip(diags2.iter()) {
+            assert_eq!(d1.rule, d2.rule);
+            assert_eq!(d1.line, d2.line);
+            assert_eq!(d1.column, d2.column);
+        }
     }
 }
 
