@@ -1,28 +1,27 @@
 {
   "task": {
-    "id": "480",
-    "title": "Normalize CRLF line endings in frontmatter parser"
+    "id": "461",
+    "title": "Avoid factory() call during registry registration for name caching"
   },
   "workflow": {
     "status": "active",
     "currentPhase": "implementation-complete",
-    "createdAt": "2026-02-19T00:00:00Z",
-    "lastActivityAt": "2026-02-19T00:06:00Z"
+    "createdAt": "2026-02-17T00:00:00Z",
+    "lastActivityAt": "2026-02-18T00:02:00Z"
   },
   "git": {
-    "branch": "fix/crlf-frontmatter-480",
-    "currentSha": "b74335c6f153a1490517cba0517ec69903067dd8",
+    "branch": "perf/avoid-factory-call-461",
+    "baseSha": "64897e6b0eb18af5a949e6a70975ac28b57d1eb5",
     "mainRepoPath": "/home/ubuntu/agnix",
     "isWorktree": true
   },
   "implementation": {
     "implementationComplete": true,
-    "currentStep": 5,
-    "totalSteps": 5,
+    "currentStep": 6,
+    "totalSteps": 6,
     "filesModified": [
-      "crates/agnix-core/src/parsers/frontmatter.rs",
-      "crates/agnix-core/src/pipeline.rs",
-      "crates/agnix-core/src/fixes.rs"
+      "crates/agnix-core/src/registry.rs",
+      "crates/agnix-core/tests/api_contract.rs"
     ]
   },
   "resume": {

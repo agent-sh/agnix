@@ -1,4 +1,0 @@
-cargo:rerun-if-changed=locales
-cargo:rerun-if-changed=locales/es.yml
-cargo:rerun-if-changed=locales/en.yml
-cargo:rerun-if-changed=locales/zh-CN.yml

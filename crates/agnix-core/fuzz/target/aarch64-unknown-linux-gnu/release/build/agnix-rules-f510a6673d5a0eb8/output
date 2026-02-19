@@ -1,1 +1,0 @@
-cargo:rerun-if-changed=/home/ubuntu/worktrees/fix-crlf-480/crates/agnix-rules/rules.json
