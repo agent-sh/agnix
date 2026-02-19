@@ -38,9 +38,18 @@ pub const MAX_REGEX_INPUT_SIZE: usize = 65536; // 64KB
 /// This function is NOT subject to `MAX_REGEX_INPUT_SIZE` limits because it uses
 /// byte-by-byte scanning instead of regex. The limit only applies to regex-based
 /// extraction functions (`extract_xml_tags`, `extract_markdown_links`).
+///
+/// # Input sanitization
+///
+/// Control characters and non-standard line endings are sanitized before parsing
+/// to prevent a known panic in `pulldown-cmark` triggered by C0 control bytes.
 pub fn extract_imports(content: &str) -> Vec<Import> {
+    // Sanitize before parsing: pulldown-cmark has a known panic triggered by C0
+    // control characters combined with certain syntax. Sanitizing here ensures safe
+    // input regardless of how the caller obtained the content.
+    let content = sanitize_for_pulldown_cmark(content);
     // Catch upstream parser panics (e.g., pulldown-cmark bugs) gracefully
-    match panic::catch_unwind(AssertUnwindSafe(|| extract_imports_inner(content))) {
+    match panic::catch_unwind(AssertUnwindSafe(|| extract_imports_inner(&content))) {
         Ok(v) => v,
         Err(_) => {
             eprintln!(
@@ -78,14 +87,24 @@ fn extract_imports_inner(content: &str) -> Vec<Import> {
 /// # Security
 ///
 /// Returns early for content exceeding `MAX_REGEX_INPUT_SIZE` to prevent ReDoS.
+///
+/// # Input sanitization
+///
+/// Control characters and non-standard line endings are sanitized before parsing
+/// to prevent a known panic in `pulldown-cmark` triggered by C0 control bytes.
 pub fn extract_xml_tags(content: &str) -> Vec<XmlTag> {
     // Security: Skip regex processing for oversized content to prevent ReDoS
     if content.len() > MAX_REGEX_INPUT_SIZE {
         return Vec::new();
     }
 
+    // Sanitize before parsing: pulldown-cmark has a known panic triggered by C0
+    // control characters combined with certain syntax. Sanitizing here ensures safe
+    // input regardless of how the caller obtained the content.
+    let content = sanitize_for_pulldown_cmark(content);
+
     // Catch upstream parser panics (e.g., pulldown-cmark bugs) gracefully
-    match panic::catch_unwind(AssertUnwindSafe(|| extract_xml_tags_inner(content))) {
+    match panic::catch_unwind(AssertUnwindSafe(|| extract_xml_tags_inner(&content))) {
         Ok(v) => v,
         Err(_) => {
             eprintln!(
@@ -127,9 +146,18 @@ fn extract_xml_tags_inner(content: &str) -> Vec<XmlTag> {
 /// This function is NOT subject to `MAX_REGEX_INPUT_SIZE` limits because it uses
 /// pulldown-cmark's parser instead of regex. The limit only applies to regex-based
 /// extraction (`extract_xml_tags`).
+///
+/// # Input sanitization
+///
+/// Control characters and non-standard line endings are sanitized before parsing
+/// to prevent a known panic in `pulldown-cmark` triggered by C0 control bytes.
 pub fn extract_markdown_links(content: &str) -> Vec<MarkdownLink> {
+    // Sanitize before parsing: pulldown-cmark has a known panic triggered by C0
+    // control characters combined with certain syntax. Sanitizing here ensures safe
+    // input regardless of how the caller obtained the content.
+    let content = sanitize_for_pulldown_cmark(content);
     // Catch upstream parser panics (e.g., pulldown-cmark bugs) gracefully
-    match panic::catch_unwind(AssertUnwindSafe(|| extract_markdown_links_inner(content))) {
+    match panic::catch_unwind(AssertUnwindSafe(|| extract_markdown_links_inner(&content))) {
         Ok(v) => v,
         Err(_) => {
             eprintln!(
@@ -309,6 +337,50 @@ pub enum XmlBalanceError {
         line: usize,
         column: usize,
     },
+}
+
+/// Sanitize content before passing to `pulldown-cmark`.
+///
+/// `pulldown-cmark` 0.13.0 has a known panic triggered by inputs that contain C0
+/// control characters (U+0001..=U+0008, U+000B, U+000C, U+000E..=U+001F) combined
+/// with certain CommonMark syntax. These characters do not appear in real markdown
+/// files and are not meaningful to the markdown spec.
+///
+/// This function:
+/// - Normalizes CRLF and lone CR to LF
+/// - Converts VT (U+000B) and FF (U+000C) to LF (they are whitespace line-endings)
+/// - Removes remaining C0 control characters (U+0001..=U+0008, U+000E..=U+001F)
+///
+/// Returns `Cow::Borrowed` when the input is already clean (zero allocation).
+pub fn sanitize_for_pulldown_cmark(s: &str) -> std::borrow::Cow<'_, str> {
+    // Fast path: check whether any sanitization is needed.
+    // The most common case (LF-only content with no control chars) takes one scan.
+    let needs_work = s.bytes().any(|b| b == b'\r' || (b < 0x20 && b != b'\t' && b != b'\n'));
+    if !needs_work {
+        return std::borrow::Cow::Borrowed(s);
+    }
+
+    let mut out = String::with_capacity(s.len());
+    let mut chars = s.chars().peekable();
+    while let Some(ch) = chars.next() {
+        match ch {
+            '\r' => {
+                // Normalize CRLF and lone CR to LF
+                chars.next_if_eq(&'\n');
+                out.push('\n');
+            }
+            '\x0b' | '\x0c' => {
+                // VT and FF are line-ending whitespace - treat as LF
+                out.push('\n');
+            }
+            c if c < '\x20' && c != '\t' && c != '\n' => {
+                // Other C0 control characters: strip silently.
+                // These are not valid in markdown and trigger pulldown-cmark bugs.
+            }
+            c => out.push(c),
+        }
+    }
+    std::borrow::Cow::Owned(out)
 }
 
 fn compute_line_starts(content: &str) -> Vec<usize> {
@@ -1146,6 +1218,69 @@ mod tests {
         assert_eq!(tags[1].name, "note");
         let errors = check_xml_balance(&tags);
         assert!(errors.is_empty());
+    }
+
+    // ===== Regression tests for pulldown-cmark panic with control characters =====
+
+    #[test]
+    fn test_extract_xml_tags_no_panic_on_fuzz_crash_input() {
+        // Regression test: pulldown-cmark 0.13.0 panics on inputs containing C0
+        // control characters combined with certain CommonMark syntax. The sanitize
+        // step must prevent the panic before the parser runs.
+        // Input: "*\t [m>\x02\t\x02@&]:+<>\r\x0b" (fuzz crash artifact)
+        let crash_input = "*\t [m>\x02\t\x02@&]:+<>\r\x0b";
+        // None of these should panic
+        let _ = extract_xml_tags(crash_input);
+        let _ = extract_imports(crash_input);
+        let _ = extract_markdown_links(crash_input);
+    }
+
+    #[test]
+    fn test_extract_xml_tags_no_panic_on_c0_control_chars() {
+        // C0 control characters (0x01-0x08, 0x0e-0x1f) combined with markdown
+        // syntax must not cause panics.
+        let inputs = [
+            "*\x01[a]:+<>\r\x0b",   // SOH
+            "*\x07[a]:+<>\r\x0b",   // BEL
+            "*\x08[a]:+<>\r\x0b",   // BS
+            "*\x0c[a]:+<>\r\x0c",   // FF (form feed)
+            "*\x0e[a]:+<>\r\x0b",   // SO
+            "*\x1f[a]:+<>\r\x0b",   // US
+        ];
+        for input in &inputs {
+            let _ = extract_xml_tags(input);
+            let _ = extract_imports(input);
+            let _ = extract_markdown_links(input);
+        }
+    }
+
+    #[test]
+    fn test_sanitize_for_pulldown_cmark_normalizes_crlf() {
+        // Verify that CRLF content produces the same results as LF content
+        let lf_content = "Some <example> text\nmore content\n";
+        let crlf_content = "Some <example> text\r\nmore content\r\n";
+        let tags_lf = extract_xml_tags(lf_content);
+        let tags_crlf = extract_xml_tags(crlf_content);
+        assert_eq!(tags_lf.len(), tags_crlf.len(), "CRLF should produce same tags as LF");
+    }
+
+    #[test]
+    fn test_sanitize_for_pulldown_cmark_strips_control_chars() {
+        // Control characters should be stripped, leaving valid XML tags detectable
+        let content_with_control = "<example>\x02content\x03</example>";
+        let tags = extract_xml_tags(content_with_control);
+        // The tags should be found; control chars are stripped
+        assert_eq!(tags.len(), 2, "Tags should be found after control char stripping");
+        assert_eq!(tags[0].name, "example");
+        assert!(tags[1].is_closing);
+    }
+
+    #[test]
+    fn test_sanitize_preserves_tab_and_newline() {
+        // Tab and LF must be preserved (they are whitespace in CommonMark)
+        let content = "<example>\tcontent\nnext line</example>";
+        let tags = extract_xml_tags(content);
+        assert_eq!(tags.len(), 2, "Tags with tab/newline should be extracted");
     }
 }
 
