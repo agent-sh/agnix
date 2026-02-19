@@ -748,14 +748,16 @@ impl ValidationOutcome {
                     | FileError::TooBig { path, .. }
                     | FileError::NotRegular { path } => path,
                 };
-                vec![Diagnostic::error(
-                    path,
-                    0,
-                    0,
-                    "file::read",
-                    t!("rules.file_read_error", error = error_msg),
-                )
-                .with_suggestion(t!("rules.file_read_error_suggestion"))]
+                vec![
+                    Diagnostic::error(
+                        path,
+                        0,
+                        0,
+                        "file::read",
+                        t!("rules.file_read_error", error = error_msg),
+                    )
+                    .with_suggestion(t!("rules.file_read_error_suggestion")),
+                ]
             }
             ValidationOutcome::Skipped => vec![],
         }

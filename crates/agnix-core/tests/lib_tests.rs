@@ -404,8 +404,9 @@ fn test_validate_file_with_custom_registry() {
     let mut registry = ValidatorRegistry::new();
     registry.register(FileType::Skill, || Box::new(DummyValidator));
 
-    let diagnostics =
-        expect_success(validate_file_with_registry(&skill_path, &LintConfig::default(), &registry).unwrap());
+    let diagnostics = expect_success(
+        validate_file_with_registry(&skill_path, &LintConfig::default(), &registry).unwrap(),
+    );
 
     assert_eq!(diagnostics.len(), 1);
     assert_eq!(diagnostics[0].rule, "TEST-001");
@@ -3082,7 +3083,8 @@ fn test_pe_rules_dispatched() {
         let content = std::fs::read_to_string(fixtures_dir.join(fixture))
             .unwrap_or_else(|_| panic!("Failed to read fixture: {}", fixture));
         std::fs::write(&claude_path, &content).unwrap();
-        let diagnostics = expect_success(validate_file_with_registry(&claude_path, &config, &registry).unwrap());
+        let diagnostics =
+            expect_success(validate_file_with_registry(&claude_path, &config, &registry).unwrap());
         assert!(
             diagnostics.iter().any(|d| d.rule == expected_rule),
             "Expected {} from {} content",
@@ -3096,7 +3098,8 @@ fn test_pe_rules_dispatched() {
     let pe_003_content =
         std::fs::read_to_string(fixtures_dir.join("pe-003-weak-language.md")).unwrap();
     std::fs::write(&agents_path, &pe_003_content).unwrap();
-    let diagnostics = expect_success(validate_file_with_registry(&agents_path, &config, &registry).unwrap());
+    let diagnostics =
+        expect_success(validate_file_with_registry(&agents_path, &config, &registry).unwrap());
     assert!(
         diagnostics.iter().any(|d| d.rule == "PE-003"),
         "Expected PE-003 from AGENTS.md with weak language content"
@@ -4689,7 +4692,8 @@ fn test_disabled_validators_respected_in_validate_file_with_registry() {
 
     // Without disabling, XmlValidator should fire via validate_file_with_registry
     let config = LintConfig::default();
-    let diags = expect_success(validate_file_with_registry(&claude_md, &config, &registry).unwrap());
+    let diags =
+        expect_success(validate_file_with_registry(&claude_md, &config, &registry).unwrap());
     let xml_diags: Vec<_> = diags.iter().filter(|d| d.rule == "XML-001").collect();
     assert!(
         !xml_diags.is_empty(),
@@ -4700,8 +4704,9 @@ fn test_disabled_validators_respected_in_validate_file_with_registry() {
     // With XmlValidator disabled via config, XML-001 should be filtered at runtime
     let mut config_disabled = LintConfig::default();
     config_disabled.rules_mut().disabled_validators = vec!["XmlValidator".to_string()];
-    let diags_disabled =
-        expect_success(validate_file_with_registry(&claude_md, &config_disabled, &registry).unwrap());
+    let diags_disabled = expect_success(
+        validate_file_with_registry(&claude_md, &config_disabled, &registry).unwrap(),
+    );
     let xml_diags_disabled: Vec<_> = diags_disabled
         .iter()
         .filter(|d| d.rule == "XML-001")
@@ -4726,7 +4731,8 @@ fn test_validate_file_with_registry_consistent_with_validate_content() {
     config.rules_mut().disabled_validators = vec!["XmlValidator".to_string()];
 
     // validate_file_with_registry path
-    let file_diags = expect_success(validate_file_with_registry(&claude_md, &config, &registry).unwrap());
+    let file_diags =
+        expect_success(validate_file_with_registry(&claude_md, &config, &registry).unwrap());
     let file_rules: std::collections::HashSet<&str> =
         file_diags.iter().map(|d| d.rule.as_str()).collect();
 
@@ -4832,7 +4838,8 @@ fn test_disabled_validators_multi_validator_validate_file_with_registry() {
 
     // Confirm both rules fire with default config before disabling anything
     let config = LintConfig::default();
-    let diags = expect_success(validate_file_with_registry(&claude_md, &config, &registry).unwrap());
+    let diags =
+        expect_success(validate_file_with_registry(&claude_md, &config, &registry).unwrap());
     assert!(
         diags.iter().any(|d| d.rule == "XML-001"),
         "Expected XML-001 to fire with default config, got rules: {:?}",
@@ -4848,7 +4855,8 @@ fn test_disabled_validators_multi_validator_validate_file_with_registry() {
     let mut config_multi = LintConfig::default();
     config_multi.rules_mut().disabled_validators =
         vec!["XmlValidator".to_string(), "ClaudeMdValidator".to_string()];
-    let diags_multi = expect_success(validate_file_with_registry(&claude_md, &config_multi, &registry).unwrap());
+    let diags_multi =
+        expect_success(validate_file_with_registry(&claude_md, &config_multi, &registry).unwrap());
     assert!(
         !diags_multi.iter().any(|d| d.rule == "XML-001"),
         "Expected XML-001 absent when XmlValidator is disabled, got: {:?}",
@@ -4881,21 +4889,27 @@ fn test_validate_file_with_registry_no_state_leakage_between_configs() {
     config_disabled.rules_mut().disabled_validators = vec!["XmlValidator".to_string()];
 
     // Call 1: enabled - XML-001 should fire
-    let diags1 = expect_success(validate_file_with_registry(&claude_md, &config_enabled, &registry).unwrap());
+    let diags1 = expect_success(
+        validate_file_with_registry(&claude_md, &config_enabled, &registry).unwrap(),
+    );
     assert!(
         diags1.iter().any(|d| d.rule == "XML-001"),
         "Call 1 (enabled): expected XML-001"
     );
 
     // Call 2: disabled - XML-001 should be absent
-    let diags2 = expect_success(validate_file_with_registry(&claude_md, &config_disabled, &registry).unwrap());
+    let diags2 = expect_success(
+        validate_file_with_registry(&claude_md, &config_disabled, &registry).unwrap(),
+    );
     assert!(
         !diags2.iter().any(|d| d.rule == "XML-001"),
         "Call 2 (disabled): expected no XML-001"
     );
 
     // Call 3: enabled again - XML-001 must return (no state leakage from call 2)
-    let diags3 = expect_success(validate_file_with_registry(&claude_md, &config_enabled, &registry).unwrap());
+    let diags3 = expect_success(
+        validate_file_with_registry(&claude_md, &config_enabled, &registry).unwrap(),
+    );
     assert!(
         diags3.iter().any(|d| d.rule == "XML-001"),
         "Call 3 (re-enabled): expected XML-001 to return after disabled call"
@@ -5015,10 +5029,7 @@ fn test_validate_project_collects_file_read_error_as_diagnostic() {
     std::fs::write(&skill_path, "# Test\n").unwrap();
 
     // Make file unreadable so safe_read_file returns an IoError
-    let original_mode = std::fs::metadata(&skill_path)
-        .unwrap()
-        .permissions()
-        .mode();
+    let original_mode = std::fs::metadata(&skill_path).unwrap().permissions().mode();
     std::fs::set_permissions(&skill_path, std::fs::Permissions::from_mode(0o000)).unwrap();
 
     // Probe whether the permission change took effect. On systems where the
@@ -5028,11 +5039,8 @@ fn test_validate_project_collects_file_read_error_as_diagnostic() {
     if probe_readable {
         // Running as root or on a filesystem that ignores permission bits.
         // Restore and skip.
-        std::fs::set_permissions(
-            &skill_path,
-            std::fs::Permissions::from_mode(original_mode),
-        )
-        .unwrap();
+        std::fs::set_permissions(&skill_path, std::fs::Permissions::from_mode(original_mode))
+            .unwrap();
         return;
     }
 

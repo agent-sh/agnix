@@ -885,10 +885,7 @@ pub fn validate_project_with_registry(
                                     0,
                                     0,
                                     "file::read",
-                                    t!(
-                                        "rules.file_read_error",
-                                        error = file_error.to_string()
-                                    ),
+                                    t!("rules.file_read_error", error = file_error.to_string()),
                                 )
                                 .with_suggestion(t!("rules.file_read_error_suggestion")),
                             );

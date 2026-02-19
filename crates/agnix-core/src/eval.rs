@@ -1096,10 +1096,7 @@ cases:
         std::fs::write(&skill_path, "# Test skill\n").unwrap();
 
         // Make the file unreadable so `validate_file` returns `ValidationOutcome::IoError`
-        let original_mode = std::fs::metadata(&skill_path)
-            .unwrap()
-            .permissions()
-            .mode();
+        let original_mode = std::fs::metadata(&skill_path).unwrap().permissions().mode();
         std::fs::set_permissions(&skill_path, std::fs::Permissions::from_mode(0o000)).unwrap();
 
         // Probe whether the permission change took effect. On systems where the
@@ -1109,11 +1106,8 @@ cases:
         if probe_readable {
             // Running as root or on a filesystem that ignores permission bits.
             // Restore and skip.
-            std::fs::set_permissions(
-                &skill_path,
-                std::fs::Permissions::from_mode(original_mode),
-            )
-            .unwrap();
+            std::fs::set_permissions(&skill_path, std::fs::Permissions::from_mode(original_mode))
+                .unwrap();
             return;
         }
 

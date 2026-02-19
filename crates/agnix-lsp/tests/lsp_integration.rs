@@ -1310,15 +1310,8 @@ mod lsp_io_error_outcome_tests {
         .unwrap();
 
         // Make the file unreadable.
-        let original_mode = fs::metadata(&skill_path)
-            .unwrap()
-            .permissions()
-            .mode();
-        fs::set_permissions(
-            &skill_path,
-            fs::Permissions::from_mode(0o000),
-        )
-        .unwrap();
+        let original_mode = fs::metadata(&skill_path).unwrap().permissions().mode();
+        fs::set_permissions(&skill_path, fs::Permissions::from_mode(0o000)).unwrap();
 
         // Probe whether the permission change took effect. On systems where the
         // process runs as root, chmod(0o000) does not prevent reads, so we skip
@@ -1327,11 +1320,7 @@ mod lsp_io_error_outcome_tests {
         if probe_readable {
             // Running as root or on a filesystem that ignores permission bits.
             // Restore and skip.
-            fs::set_permissions(
-                &skill_path,
-                fs::Permissions::from_mode(original_mode),
-            )
-            .unwrap();
+            fs::set_permissions(&skill_path, fs::Permissions::from_mode(original_mode)).unwrap();
             return;
         }
 
@@ -1340,11 +1329,7 @@ mod lsp_io_error_outcome_tests {
 
         // Restore permissions before any assertions so the temp dir can be
         // cleaned up even if an assertion panics.
-        fs::set_permissions(
-            &skill_path,
-            fs::Permissions::from_mode(original_mode),
-        )
-        .unwrap();
+        fs::set_permissions(&skill_path, fs::Permissions::from_mode(original_mode)).unwrap();
 
         // The call must succeed at the Result level (IoError is not an Err).
         assert!(
