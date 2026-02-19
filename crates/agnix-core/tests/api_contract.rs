@@ -920,9 +920,9 @@ fn validation_outcome_exhaustive_match() {
             agnix_core::ValidationOutcome::Success(_diags) => {}
             agnix_core::ValidationOutcome::IoError(_err) => {}
             agnix_core::ValidationOutcome::Skipped => {}
-            // non_exhaustive requires a wildcard arm for downstream crates.
-            // If a new variant is added, this test should be updated to
-            // explicitly match it above (to verify the API contract).
+            // #[non_exhaustive] requires a wildcard arm. When a new variant is added,
+            // the explicit matches above should be updated to catch it early in
+            // internal tests (before the wildcard acts as a catch-all).
             _ => panic!("Unknown ValidationOutcome variant - update this test"),
         }
     }

@@ -207,8 +207,8 @@ pub fn resolve_file_type(path: &Path, config: &LintConfig) -> FileType {
 /// [`ValidationOutcome::IoError`] when the file cannot be read, or
 /// [`ValidationOutcome::Skipped`] when the file type is unknown.
 ///
-/// The `Err` path is reserved for config-level errors only (e.g. invalid
-/// exclude patterns).
+/// The `Err` path is reserved for config-level errors only (e.g. those that
+/// occur during `LintConfig` construction).
 ///
 /// Note: This function creates a new [`ValidatorRegistry`] on every call. For
 /// bulk validation of multiple files, use

@@ -4952,8 +4952,10 @@ fn test_custom_provider_end_to_end() {
 #[test]
 fn test_validation_outcome_io_error_for_nonexistent_file() {
     let config = LintConfig::default();
-    // Use a known file type path (CLAUDE.md) that does not exist on disk
-    let outcome = validate_file(Path::new("/tmp/nonexistent_dir_466/CLAUDE.md"), &config).unwrap();
+    let temp = tempfile::TempDir::new().unwrap();
+    // Create a path to a file that doesn't exist within a temp directory
+    let nonexistent_file = temp.path().join("CLAUDE.md");
+    let outcome = validate_file(&nonexistent_file, &config).unwrap();
     assert!(
         outcome.is_io_error(),
         "Nonexistent file with known type should return IoError, got: {:?}",

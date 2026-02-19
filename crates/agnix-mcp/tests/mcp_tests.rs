@@ -200,11 +200,11 @@ mod validation_tests {
     #[test]
     fn test_validate_file_io_error_into_diagnostics_fields() {
         use agnix_core::diagnostics::DiagnosticLevel;
-        use std::path::Path;
 
-        let input_path = Path::new("/nonexistent/path/SKILL.md");
+        let temp = tempfile::TempDir::new().unwrap();
+        let input_path = temp.path().join("SKILL.md");
         let config = LintConfig::default();
-        let outcome = validate_file(input_path, &config).unwrap();
+        let outcome = validate_file(&input_path, &config).unwrap();
 
         assert!(
             outcome.is_io_error(),
