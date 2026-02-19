@@ -5015,7 +5015,26 @@ fn test_validate_project_collects_file_read_error_as_diagnostic() {
     std::fs::write(&skill_path, "# Test\n").unwrap();
 
     // Make file unreadable so safe_read_file returns an IoError
+    let original_mode = std::fs::metadata(&skill_path)
+        .unwrap()
+        .permissions()
+        .mode();
     std::fs::set_permissions(&skill_path, std::fs::Permissions::from_mode(0o000)).unwrap();
+
+    // Probe whether the permission change took effect. On systems where the
+    // process runs as root, chmod(0o000) does not prevent reads, so we skip
+    // rather than produce a false failure.
+    let probe_readable = std::fs::read(&skill_path).is_ok();
+    if probe_readable {
+        // Running as root or on a filesystem that ignores permission bits.
+        // Restore and skip.
+        std::fs::set_permissions(
+            &skill_path,
+            std::fs::Permissions::from_mode(original_mode),
+        )
+        .unwrap();
+        return;
+    }
 
     let config = LintConfig::builder().build_unchecked();
     let result = validate_project(dir.path(), &config).unwrap();

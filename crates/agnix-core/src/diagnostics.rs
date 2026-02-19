@@ -1,5 +1,7 @@
 //! Diagnostic types and error reporting for lint results
 
+#[cfg(feature = "filesystem")]
+use rust_i18n::t;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use thiserror::Error;
@@ -738,7 +740,7 @@ impl ValidationOutcome {
             ValidationOutcome::Success(diags) => diags,
             #[cfg(feature = "filesystem")]
             ValidationOutcome::IoError(file_error) => {
-                let msg = format!("{}", file_error);
+                let error_msg = file_error.to_string();
                 let path = match file_error {
                     FileError::Read { path, .. }
                     | FileError::Write { path, .. }
@@ -746,7 +748,14 @@ impl ValidationOutcome {
                     | FileError::TooBig { path, .. }
                     | FileError::NotRegular { path } => path,
                 };
-                vec![Diagnostic::error(path, 0, 0, "file::read", msg)]
+                vec![Diagnostic::error(
+                    path,
+                    0,
+                    0,
+                    "file::read",
+                    t!("rules.file_read_error", error = error_msg),
+                )
+                .with_suggestion(t!("rules.file_read_error_suggestion"))]
             }
             ValidationOutcome::Skipped => vec![],
         }
@@ -1715,7 +1724,10 @@ mod tests {
         assert_eq!(diags[0].rule, "file::read");
         assert_eq!(diags[0].file, PathBuf::from("/tmp/missing.md"));
         assert_eq!(diags[0].level, DiagnosticLevel::Error);
-        assert!(diags[0].message.contains("Failed to read file"));
+        // Message uses i18n ("rules.file_read_error"); verify it is non-empty and
+        // the suggestion is also populated.
+        assert!(!diags[0].message.is_empty());
+        assert!(diags[0].suggestion.is_some());
     }
 
     #[cfg(feature = "filesystem")]
@@ -1728,7 +1740,8 @@ mod tests {
         let diags = outcome.into_diagnostics();
         assert_eq!(diags.len(), 1);
         assert_eq!(diags[0].rule, "file::read");
-        assert!(diags[0].message.contains("symlink"));
+        assert_eq!(diags[0].level, DiagnosticLevel::Error);
+        assert!(diags[0].suggestion.is_some());
     }
 
     #[cfg(feature = "filesystem")]
@@ -1743,9 +1756,8 @@ mod tests {
         let diags = outcome.into_diagnostics();
         assert_eq!(diags.len(), 1);
         assert_eq!(diags[0].rule, "file::read");
-        assert!(
-            diags[0].message.contains("too large") || diags[0].message.contains("File too large")
-        );
+        assert_eq!(diags[0].level, DiagnosticLevel::Error);
+        assert!(diags[0].suggestion.is_some());
     }
 
     #[test]
