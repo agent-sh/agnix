@@ -116,7 +116,9 @@ pub use rules::{Validator, ValidatorMetadata};
 #[doc(hidden)]
 pub mod __internal {
     pub use crate::parsers::ImportCache;
-    pub use crate::parsers::frontmatter::{FrontmatterParts, split_frontmatter};
+    pub use crate::parsers::frontmatter::{
+        FrontmatterParts, normalize_line_endings, split_frontmatter,
+    };
     pub use crate::parsers::json::parse_json_config;
     pub use crate::parsers::markdown::Import;
     pub use crate::parsers::markdown::{
