@@ -23,6 +23,7 @@ use crate::diagnostics::{ConfigError, CoreError, LintResult, ValidationError, Va
 use crate::file_types::{FileType, detect_file_type};
 #[cfg(feature = "filesystem")]
 use crate::file_utils;
+use crate::parsers::frontmatter::normalize_line_endings;
 use crate::registry::ValidatorRegistry;
 #[cfg(feature = "filesystem")]
 use crate::schemas;
@@ -263,13 +264,14 @@ fn validate_file_with_type(
         return Ok(ValidationOutcome::Skipped);
     }
 
-    let content = match file_utils::safe_read_file(path) {
+    let raw_content = match file_utils::safe_read_file(path) {
         Ok(content) => content,
         Err(CoreError::File(file_error)) => {
             return Ok(ValidationOutcome::IoError(file_error));
         }
         Err(other) => return Err(other),
     };
+    let content = normalize_line_endings(&raw_content);
 
     let validators = registry.validators_for(file_type);
     let disabled = &config.rules().disabled_validators;
@@ -310,6 +312,8 @@ pub fn validate_content(
         return vec![];
     }
 
+    let content = normalize_line_endings(content);
+
     let validators = registry.validators_for(file_type);
     let disabled = &config.rules().disabled_validators;
     let mut diagnostics = Vec::new();
@@ -320,7 +324,7 @@ pub fn validate_content(
     // respect per-workspace disabled_validators from the user's LintConfig.
     if disabled.is_empty() {
         for validator in validators {
-            diagnostics.extend(validator.validate(path, content, config));
+            diagnostics.extend(validator.validate(path, &content, config));
         }
     } else {
         let disabled_set: HashSet<&str> = disabled.iter().map(|s| s.as_str()).collect();
@@ -328,7 +332,7 @@ pub fn validate_content(
             if disabled_set.contains(validator.name()) {
                 continue;
             }
-            diagnostics.extend(validator.validate(path, content, config));
+            diagnostics.extend(validator.validate(path, &content, config));
         }
     }
 
@@ -1028,6 +1032,62 @@ mod validate_content_tests {
         let content = "# Project\n\nSome instructions.";
         // Should not panic with tool filter
         let _ = validate_content(path, content, &config, &registry);
+    }
+
+    #[test]
+    fn crlf_content_produces_same_diagnostics_as_lf() {
+        let config = LintConfig::default();
+        let registry = ValidatorRegistry::with_defaults();
+        let path = Path::new("skill.md");
+
+        let lf_content = "---\nname: test-skill\ndescription: A test\n---\n\n# Instructions\n\n<unclosed>\n";
+        let crlf_content = "---\r\nname: test-skill\r\ndescription: A test\r\n---\r\n\r\n# Instructions\r\n\r\n<unclosed>\r\n";
+
+        let lf_diags = validate_content(path, lf_content, &config, &registry);
+        let crlf_diags = validate_content(path, crlf_content, &config, &registry);
+
+        assert_eq!(
+            lf_diags.len(),
+            crlf_diags.len(),
+            "CRLF and LF content should produce the same number of diagnostics.\nLF: {:?}\nCRLF: {:?}",
+            lf_diags.iter().map(|d| (&d.rule, d.line, d.column)).collect::<Vec<_>>(),
+            crlf_diags.iter().map(|d| (&d.rule, d.line, d.column)).collect::<Vec<_>>(),
+        );
+
+        for (lf_d, crlf_d) in lf_diags.iter().zip(crlf_diags.iter()) {
+            assert_eq!(
+                lf_d.rule, crlf_d.rule,
+                "Same rules should fire for LF and CRLF content"
+            );
+            assert_eq!(
+                lf_d.line, crlf_d.line,
+                "Line numbers should match between LF and CRLF for rule {}",
+                lf_d.rule
+            );
+            assert_eq!(
+                lf_d.column, crlf_d.column,
+                "Column numbers should match between LF and CRLF for rule {}",
+                lf_d.rule
+            );
+        }
+    }
+
+    #[test]
+    fn crlf_normalize_is_idempotent_in_validate_content() {
+        let config = LintConfig::default();
+        let registry = ValidatorRegistry::with_defaults();
+        let path = Path::new("CLAUDE.md");
+
+        // Already-normalized content should produce the same result
+        let content = "# Project\n\nInstructions here.\n";
+        let diags1 = validate_content(path, content, &config, &registry);
+        let diags2 = validate_content(path, content, &config, &registry);
+
+        assert_eq!(
+            diags1.len(),
+            diags2.len(),
+            "Repeated validation of LF content should be stable"
+        );
     }
 }
 

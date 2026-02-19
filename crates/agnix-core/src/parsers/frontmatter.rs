@@ -21,8 +21,20 @@
 //! **Future Enhancement**: Consider adding explicit depth tracking if memory
 //! profiling reveals issues with pathological YAML structures.
 
+use std::borrow::Cow;
+
 use crate::diagnostics::{CoreError, LintResult, ValidationError};
 use serde::de::DeserializeOwned;
+
+/// Normalize CRLF and lone CR line endings to LF.
+/// Returns `Cow::Borrowed` (zero allocation) when no `\r` is present.
+#[inline]
+pub fn normalize_line_endings(s: &str) -> Cow<'_, str> {
+    if !s.contains('\r') {
+        return Cow::Borrowed(s);
+    }
+    Cow::Owned(s.replace("\r\n", "\n").replace('\r', "\n"))
+}
 
 /// Parse YAML frontmatter from markdown content
 ///
@@ -181,6 +193,9 @@ Body content here"#;
 
     // ===== Edge Case Tests =====
 
+    // Note: split_frontmatter itself does not normalize CRLF line endings.
+    // The pipeline normalizes content before calling it (see pipeline.rs).
+    // These tests document the raw parser behavior with CRLF input.
     #[test]
     fn test_split_frontmatter_crlf() {
         let content = "---\r\nname: test\r\n---\r\nbody";
@@ -191,6 +206,8 @@ Body content here"#;
         assert!(parts.body.contains("body"));
     }
 
+    // See comment above test_split_frontmatter_crlf for why this tests raw
+    // (un-normalized) CRLF behavior.
     #[test]
     fn test_split_frontmatter_crlf_byte_offsets() {
         let content = "---\r\nname: test\r\n---\r\nbody";
@@ -303,6 +320,56 @@ Body content here"#;
         assert!(parts.frontmatter.contains("\u{2705}"));
         assert!(parts.frontmatter.contains("\u{1f60a}"));
     }
+
+    // ===== normalize_line_endings Tests =====
+
+    #[test]
+    fn test_normalize_lf_only_returns_borrowed() {
+        let input = "hello\nworld\n";
+        let result = normalize_line_endings(input);
+        assert!(
+            matches!(result, Cow::Borrowed(_)),
+            "LF-only input should return Cow::Borrowed"
+        );
+        assert_eq!(&*result, input);
+    }
+
+    #[test]
+    fn test_normalize_crlf_returns_owned() {
+        let input = "hello\r\nworld\r\n";
+        let result = normalize_line_endings(input);
+        assert!(
+            matches!(result, Cow::Owned(_)),
+            "CRLF input should return Cow::Owned"
+        );
+        assert_eq!(&*result, "hello\nworld\n");
+    }
+
+    #[test]
+    fn test_normalize_lone_cr() {
+        let input = "hello\rworld\r";
+        let result = normalize_line_endings(input);
+        assert_eq!(&*result, "hello\nworld\n");
+    }
+
+    #[test]
+    fn test_normalize_mixed_line_endings() {
+        let input = "line1\r\nline2\rline3\nline4";
+        let result = normalize_line_endings(input);
+        assert_eq!(&*result, "line1\nline2\nline3\nline4");
+        assert!(!result.contains('\r'));
+    }
+
+    #[test]
+    fn test_normalize_empty_string() {
+        let input = "";
+        let result = normalize_line_endings(input);
+        assert!(
+            matches!(result, Cow::Borrowed(_)),
+            "Empty string should return Cow::Borrowed"
+        );
+        assert_eq!(&*result, "");
+    }
 }
 
 #[cfg(test)]
@@ -355,6 +422,15 @@ mod proptests {
             prop_assert!(parts.has_frontmatter);
             prop_assert!(!parts.has_closing);
             prop_assert!(parts.frontmatter.is_empty());
+        }
+
+        #[test]
+        fn normalize_line_endings_never_contains_cr(content in ".*") {
+            let normalized = normalize_line_endings(&content);
+            prop_assert!(
+                !normalized.contains('\r'),
+                "Normalized output must not contain \\r"
+            );
         }
     }
 }

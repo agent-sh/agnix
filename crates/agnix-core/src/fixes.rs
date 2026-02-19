@@ -2,6 +2,7 @@
 
 use crate::diagnostics::{Diagnostic, FIX_CONFIDENCE_MEDIUM_THRESHOLD, Fix, LintResult};
 use crate::fs::{FileSystem, RealFileSystem};
+use crate::parsers::frontmatter::normalize_line_endings;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -125,7 +126,8 @@ pub fn apply_fixes_with_fs_options(
     let mut results = Vec::new();
 
     for (path, file_diagnostics) in by_file {
-        let original = fs.read_to_string(&path)?;
+        let raw_content = fs.read_to_string(&path)?;
+        let original = normalize_line_endings(&raw_content).into_owned();
 
         let mut fixes = select_fixes(&file_diagnostics, options.mode);
 
