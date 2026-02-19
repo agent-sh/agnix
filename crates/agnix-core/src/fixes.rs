@@ -1070,7 +1070,8 @@ mod tests {
 
         let mock_fs = MockFileSystem::new();
         // File on disk has CRLF endings: "name:\r\n bad-name"
-        // After normalization: "name:\n bad-name" (7 bytes to the space, 8 to 'b')
+        // After normalization: "name:\n bad-name"
+        //   byte 0..5 = "name:", byte 5 = '\n', byte 6 = ' ', byte 7..15 = "bad-name"
         // Fix replaces "bad-name" (bytes 7..15 in normalized form) with "good-name"
         mock_fs.add_file("/project/skill.md", "name:\r\n bad-name");
 

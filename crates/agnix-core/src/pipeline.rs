@@ -495,7 +495,11 @@ fn run_project_level_checks(
             for file_path in instruction_file_paths.iter() {
                 match file_utils::safe_read_file(file_path) {
                     Ok(raw) => {
-                        let content = normalize_line_endings(&raw).into_owned();
+                        let content = if raw.contains('\r') {
+                            normalize_line_endings(&raw).into_owned()
+                        } else {
+                            raw
+                        };
                         file_contents.push((file_path.clone(), content));
                     }
                     Err(e) => {
@@ -1457,5 +1461,57 @@ mod tests {
             "XP-004 should still emit read-error diagnostic when enabled, got: {xp004_errors:?}"
         );
         assert_eq!(xp004_errors[0].file, agents_md);
+    }
+
+    #[test]
+    fn crlf_file_on_disk_produces_same_diagnostics_as_lf() {
+        // validate_file() reads from disk and normalizes CRLF in validate_file_with_type.
+        // Verify the on-disk path produces the same diagnostics as the in-memory path.
+        use crate::diagnostics::ValidationOutcome;
+
+        let temp = tempfile::TempDir::new().unwrap();
+        let lf_path = temp.path().join("skill_lf.md");
+        let crlf_path = temp.path().join("skill_crlf.md");
+
+        let lf_content = "---\nname: test-skill\ndescription: A test\n---\n\n# Instructions\n\n<unclosed>\n";
+        let crlf_content = "---\r\nname: test-skill\r\ndescription: A test\r\n---\r\n\r\n# Instructions\r\n\r\n<unclosed>\r\n";
+
+        std::fs::write(&lf_path, lf_content).unwrap();
+        std::fs::write(&crlf_path, crlf_content).unwrap();
+
+        let config = LintConfig::default();
+
+        let lf_outcome = validate_file(&lf_path, &config).unwrap();
+        let crlf_outcome = validate_file(&crlf_path, &config).unwrap();
+
+        let lf_diags = match lf_outcome {
+            ValidationOutcome::Success(d) => d,
+            other => panic!("Expected Success, got {other:?}"),
+        };
+        let crlf_diags = match crlf_outcome {
+            ValidationOutcome::Success(d) => d,
+            other => panic!("Expected Success, got {other:?}"),
+        };
+
+        assert_eq!(
+            lf_diags.len(),
+            crlf_diags.len(),
+            "On-disk CRLF file should produce same diagnostic count as LF file.\nLF: {:?}\nCRLF: {:?}",
+            lf_diags.iter().map(|d| (&d.rule, d.line, d.column)).collect::<Vec<_>>(),
+            crlf_diags.iter().map(|d| (&d.rule, d.line, d.column)).collect::<Vec<_>>(),
+        );
+        for (lf_d, crlf_d) in lf_diags.iter().zip(crlf_diags.iter()) {
+            assert_eq!(lf_d.rule, crlf_d.rule, "Same rules should fire");
+            assert_eq!(
+                lf_d.line, crlf_d.line,
+                "Line numbers should match for rule {}",
+                lf_d.rule
+            );
+            assert_eq!(
+                lf_d.column, crlf_d.column,
+                "Column numbers should match for rule {}",
+                lf_d.rule
+            );
+        }
     }
 }

@@ -26,14 +26,28 @@ use std::borrow::Cow;
 use crate::diagnostics::{CoreError, LintResult, ValidationError};
 use serde::de::DeserializeOwned;
 
-/// Normalize CRLF and lone CR line endings to LF.
+/// Normalize CRLF (`\r\n`) and lone CR (`\r`) line endings to LF (`\n`).
+///
 /// Returns `Cow::Borrowed` (zero allocation) when no `\r` is present.
+/// When normalization is needed, uses a single-pass scan to avoid the double
+/// allocation that would result from two sequential `replace` calls.
 #[inline]
 pub fn normalize_line_endings(s: &str) -> Cow<'_, str> {
     if !s.contains('\r') {
         return Cow::Borrowed(s);
     }
-    Cow::Owned(s.replace("\r\n", "\n").replace('\r', "\n"))
+    let mut out = String::with_capacity(s.len());
+    let mut chars = s.chars().peekable();
+    while let Some(ch) = chars.next() {
+        if ch == '\r' {
+            // Consume a following '\n' so that \r\n becomes a single \n.
+            chars.next_if_eq(&'\n');
+            out.push('\n');
+        } else {
+            out.push(ch);
+        }
+    }
+    Cow::Owned(out)
 }
 
 /// Parse YAML frontmatter from markdown content
