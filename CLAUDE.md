@@ -68,13 +68,13 @@ tests/fixtures/     # Test cases by category
 - `schemas/` - Type definitions (13 schemas: skill, hooks, agent, mcp, cline, roo, etc.)
 - `rules/` - Validators implementing Validator trait (25 validators)
 - `config.rs` - LintConfig, LintConfigBuilder, ConfigError, ToolVersions, SpecRevisions
-- `diagnostics.rs` - Diagnostic, Fix, DiagnosticLevel
+- `diagnostics.rs` - Diagnostic, Fix, DiagnosticLevel, ValidationOutcome
 - `eval.rs` - Rule efficacy evaluation (precision/recall/F1)
 - `file_types/` - FileType enum, detect_file_type(), FileTypeDetector trait, FileTypeDetectorChain
 - `file_utils.rs` - Safe file I/O (symlink rejection, size limits)
 - `fixes.rs` - Auto-fix application engine
 - `fs.rs` - FileSystem trait abstraction (RealFileSystem, MockFileSystem)
-- `pipeline.rs` - ValidationResult, validate_project(), validate_file()
+- `pipeline.rs` - ValidationResult, validate_project(), validate_file() -> LintResult<ValidationOutcome>
 - `registry.rs` - ValidatorRegistry, ValidatorRegistryBuilder, ValidatorProvider, factory functions
 
 ### Key Abstractions
