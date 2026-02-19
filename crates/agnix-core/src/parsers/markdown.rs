@@ -6,7 +6,6 @@
 //! of Service) attacks. The `MAX_REGEX_INPUT_SIZE` constant limits the size of
 //! content that will be processed by regex operations.
 
-use pulldown_cmark::{Event, Options, Parser, Tag, TagEnd};
 use regex::Regex;
 use std::ops::Range;
 use std::panic::{self, AssertUnwindSafe};
@@ -64,20 +63,10 @@ fn extract_imports_inner(content: &str) -> Vec<Import> {
     let line_starts = compute_line_starts(content);
     let mut imports = Vec::new();
 
-    let parser = Parser::new_ext(content, Options::all()).into_offset_iter();
-    let mut in_code_block = false;
-
-    for (event, range) in parser {
-        match event {
-            Event::Start(Tag::CodeBlock(_)) => in_code_block = true,
-            Event::End(TagEnd::CodeBlock) => in_code_block = false,
-            Event::Code(_) => {}
-            Event::Text(text) | Event::Html(text) | Event::InlineHtml(text) if !in_code_block => {
-                scan_imports_in_text(&text, range, &line_starts, &mut imports);
-            }
-            _ => {}
-        }
-    }
+    scan_non_code_spans(content, |span, span_start| {
+        let range = span_start..span_start + span.len();
+        scan_imports_in_text(span, range, &line_starts, &mut imports);
+    });
 
     imports
 }
@@ -119,20 +108,10 @@ fn extract_xml_tags_inner(content: &str) -> Vec<XmlTag> {
     let line_starts = compute_line_starts(content);
     let mut tags = Vec::new();
 
-    let parser = Parser::new_ext(content, Options::all()).into_offset_iter();
-    let mut in_code_block = false;
-
-    for (event, range) in parser {
-        match event {
-            Event::Start(Tag::CodeBlock(_)) => in_code_block = true,
-            Event::End(TagEnd::CodeBlock) => in_code_block = false,
-            Event::Code(_) => {}
-            Event::Text(text) | Event::Html(text) | Event::InlineHtml(text) if !in_code_block => {
-                scan_xml_tags_in_text(&text, range, &line_starts, &mut tags);
-            }
-            _ => {}
-        }
-    }
+    scan_non_code_spans(content, |span, span_start| {
+        let range = span_start..span_start + span.len();
+        scan_xml_tags_in_text(span, range, &line_starts, &mut tags);
+    });
 
     tags
 }
@@ -172,51 +151,37 @@ fn extract_markdown_links_inner(content: &str) -> Vec<MarkdownLink> {
     let line_starts = compute_line_starts(content);
     let mut links = Vec::new();
 
-    let parser = Parser::new_ext(content, Options::all()).into_offset_iter();
-    let mut in_code_block = false;
+    // Regex for inline links: optional `!` (image), then [text](url)
+    // Uses a simple pattern that avoids nested brackets/parens (sufficient for
+    // real-world agent config files).
+    static_regex!(
+        fn link_re,
+        r"(!?)\[([^\[\]]*)\]\(([^()]*)\)"
+    );
+    let re = link_re();
 
-    // Track current link being built
-    let mut current_link: Option<(String, bool, Range<usize>)> = None; // (url, is_image, range)
-    let mut link_text = String::new();
+    scan_non_code_spans(content, |span, span_start| {
+        for cap in re.captures_iter(span) {
+            let full = cap.get(0).unwrap();
+            let is_image = cap.get(1).is_some_and(|m| m.as_str() == "!");
+            let text = cap.get(2).map(|m| m.as_str()).unwrap_or("").to_string();
+            let url = cap.get(3).map(|m| m.as_str()).unwrap_or("").to_string();
 
-    for (event, range) in parser {
-        match event {
-            Event::Start(Tag::CodeBlock(_)) => in_code_block = true,
-            Event::End(TagEnd::CodeBlock) => in_code_block = false,
-            Event::Code(_) => {}
+            let start_byte = span_start + full.start();
+            let end_byte = span_start + full.end();
+            let (line, column) = line_col_at(start_byte, &line_starts);
 
-            Event::Start(Tag::Link { dest_url, .. }) if !in_code_block => {
-                current_link = Some((dest_url.to_string(), false, range));
-                link_text.clear();
-            }
-
-            Event::Start(Tag::Image { dest_url, .. }) if !in_code_block => {
-                current_link = Some((dest_url.to_string(), true, range));
-                link_text.clear();
-            }
-
-            Event::Text(text) if current_link.is_some() && !in_code_block => {
-                link_text.push_str(&text);
-            }
-
-            Event::End(TagEnd::Link) | Event::End(TagEnd::Image) if !in_code_block => {
-                if let Some((url, is_image, link_range)) = current_link.take() {
-                    let (line, column) = line_col_at(link_range.start, &line_starts);
-                    links.push(MarkdownLink {
-                        url,
-                        text: std::mem::take(&mut link_text),
-                        is_image,
-                        line,
-                        column,
-                        start_byte: link_range.start,
-                        end_byte: link_range.end,
-                    });
-                }
-            }
-
-            _ => {}
+            links.push(MarkdownLink {
+                url,
+                text,
+                is_image,
+                line,
+                column,
+                start_byte,
+                end_byte,
+            });
         }
-    }
+    });
 
     links
 }
@@ -387,6 +352,184 @@ pub fn sanitize_for_pulldown_cmark(s: &str) -> std::borrow::Cow<'_, str> {
         }
     }
     std::borrow::Cow::Owned(out)
+}
+
+/// Call `callback(span, span_start_byte)` for each text span in `content` that
+/// lies outside a fenced code block or inline code span.
+///
+/// This is a panic-free replacement for the `pulldown-cmark` event iterator used
+/// in `extract_xml_tags_inner` and `extract_imports_inner`.  `pulldown-cmark`
+/// 0.13.0 contains an internal invariant bug (unwrap on None) that is triggered
+/// by certain link-reference-definition / tight-paragraph combinations.  Because
+/// `libfuzzer-sys` installs an aborting panic hook, `catch_unwind` cannot catch
+/// the panic in fuzz builds, so we must prevent the panic from occurring at all.
+///
+/// ### What we handle
+///
+/// * **Fenced code blocks** – lines whose first non-space content is a run of
+///   three or more `` ` `` or `~` characters open a fence; a subsequent line
+///   with the same fence character and at least the same run length closes it.
+///   Up to three leading spaces are allowed before the fence (per CommonMark).
+/// * **Inline code spans** – backtick-delimited spans inside a non-fenced line
+///   are skipped.  We match the opening backtick run and look for the same-
+///   length closing run to stay correct for ` ``double`` ` spans.
+///
+/// ### What we do NOT handle
+///
+/// * Indented code blocks (4-space / tab indent).  These are uncommon in real
+///   agent-config files; omitting them is an acceptable trade-off for
+///   simplicity.
+/// * HTML block scanning.  All non-fenced, non-backtick content is yielded.
+fn scan_non_code_spans(content: &str, mut callback: impl FnMut(&str, usize)) {
+    let bytes = content.as_bytes();
+    let len = bytes.len();
+
+    let mut pos: usize = 0;
+    // State for fenced code block
+    let mut in_fence = false;
+    let mut fence_char: u8 = b'`';
+    let mut fence_min_len: usize = 3;
+
+    while pos < len {
+        // Find the end of the current line (pos..line_end) where line_end points
+        // at the byte *after* the newline (or at `len` for the last line).
+        let newline_pos = memchr_newline(bytes, pos).unwrap_or(len);
+        // line_end is the start of the next line
+        let line_end = if newline_pos < len {
+            newline_pos + 1
+        } else {
+            len
+        };
+        let line = &content[pos..line_end];
+        let line_start = pos;
+
+        if in_fence {
+            // Check whether this line closes the fence.
+            // A closing fence is: up to 3 optional spaces, then ≥ fence_min_len
+            // fence_char bytes, then optional spaces, then end-of-line.
+            let line_trimmed = line.trim_end_matches('\n');
+            let n_leading = line_trimmed.bytes().take_while(|&b| b == b' ').count();
+            if n_leading <= 3 {
+                let after = &line_trimmed[n_leading..];
+                let run = after.bytes().take_while(|&b| b == fence_char).count();
+                if run >= fence_min_len {
+                    let rest = &after[run..];
+                    if rest.bytes().all(|b| b == b' ') {
+                        // Closing fence found – exit fenced mode
+                        in_fence = false;
+                        pos = line_end;
+                        continue;
+                    }
+                }
+            }
+            // Inside fenced block: skip the line entirely
+            pos = line_end;
+            continue;
+        }
+
+        // Not in a fenced block.  Check if this line opens a fence.
+        {
+            let line_trimmed = line.trim_end_matches('\n');
+            let n_leading = line_trimmed.bytes().take_while(|&b| b == b' ').count();
+            if n_leading <= 3 {
+                let after = &line_trimmed[n_leading..];
+                let tick_run = after.bytes().take_while(|&b| b == b'`').count();
+                let tilde_run = after.bytes().take_while(|&b| b == b'~').count();
+                // The fence char is whichever has the longer run
+                let (run, ch) = if tick_run >= tilde_run {
+                    (tick_run, b'`')
+                } else {
+                    (tilde_run, b'~')
+                };
+                if run >= 3 {
+                    // Opening fence: skip this line, enter fenced mode
+                    in_fence = true;
+                    fence_char = ch;
+                    fence_min_len = run;
+                    pos = line_end;
+                    continue;
+                }
+            }
+        }
+
+        // Non-code-block line: yield non-inline-code sub-spans.
+        // We walk through the line looking for backtick runs that open/close
+        // inline code spans.
+        let mut cursor = line_start;
+        let mut i = line_start;
+        while i < line_end {
+            if bytes[i] == b'`' {
+                // Measure the length of this backtick run
+                let tick_start = i;
+                while i < line_end && bytes[i] == b'`' {
+                    i += 1;
+                }
+                let tick_len = i - tick_start;
+                // Yield the text before this backtick run
+                if tick_start > cursor {
+                    callback(&content[cursor..tick_start], cursor);
+                }
+                // Find the matching closing backtick run (same length)
+                let search_from = i;
+                let close = find_closing_backtick(bytes, search_from, line_end, tick_len);
+                match close {
+                    Some(close_start) => {
+                        // Skip from cursor past the closing run
+                        i = close_start + tick_len;
+                        cursor = i;
+                    }
+                    None => {
+                        // No matching close on this line: treat the backtick run as
+                        // literal text and continue scanning from after the opening run.
+                        // Yield the backtick run itself as part of the normal text so
+                        // that the caller sees everything except a real closed span.
+                        // Reset cursor to after the tick run and keep scanning.
+                        cursor = tick_start; // include the ticks in next yield
+                        // i is already past the tick run; continue
+                    }
+                }
+            } else {
+                i += 1;
+            }
+        }
+        // Yield any remaining text on this line
+        if cursor < line_end {
+            callback(&content[cursor..line_end], cursor);
+        }
+
+        pos = line_end;
+    }
+}
+
+/// Return the byte position of the start of the first backtick run of exactly
+/// `tick_len` within `bytes[start..end]`.
+fn find_closing_backtick(bytes: &[u8], start: usize, end: usize, tick_len: usize) -> Option<usize> {
+    let mut i = start;
+    while i + tick_len <= end {
+        if bytes[i] == b'`' {
+            let run_start = i;
+            while i < end && bytes[i] == b'`' {
+                i += 1;
+            }
+            let run_len = i - run_start;
+            if run_len == tick_len {
+                return Some(run_start);
+            }
+            // Wrong length run; continue scanning
+        } else {
+            i += 1;
+        }
+    }
+    None
+}
+
+/// Find the position of the next `\n` byte in `bytes[start..]`.
+/// Returns `None` if no newline is found.
+fn memchr_newline(bytes: &[u8], start: usize) -> Option<usize> {
+    bytes[start..]
+        .iter()
+        .position(|&b| b == b'\n')
+        .map(|p| start + p)
 }
 
 fn compute_line_starts(content: &str) -> Vec<usize> {
