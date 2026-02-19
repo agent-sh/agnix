@@ -6,7 +6,9 @@
 
 #[cfg(test)]
 use crate::FileError;
-use crate::{CoreError, Diagnostic, LintConfig, file_utils::safe_read_file, validate_file};
+use crate::{
+    CoreError, Diagnostic, LintConfig, ValidationOutcome, file_utils::safe_read_file, validate_file,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
@@ -395,7 +397,17 @@ pub fn evaluate_case(case: &EvalCase, base_dir: &Path, config: &LintConfig) -> E
 
     // Run validation
     let diagnostics = match validate_file(&file_path, config) {
-        Ok(diags) => diags,
+        Ok(ValidationOutcome::Success(diags)) => diags,
+        Ok(ValidationOutcome::IoError(file_error)) => {
+            vec![Diagnostic::error(
+                file_path.clone(),
+                0,
+                0,
+                "eval::io-error",
+                format!("File I/O error: {}", file_error),
+            )]
+        }
+        Ok(ValidationOutcome::Skipped) => vec![],
         Err(e) => {
             // If validation fails, treat it as if no rules fired
             // but include the error as a special diagnostic

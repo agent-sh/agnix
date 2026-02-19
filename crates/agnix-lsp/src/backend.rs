@@ -124,7 +124,9 @@ impl Backend {
         .await;
 
         match result {
-            Ok(Ok(diagnostics)) => to_lsp_diagnostics(diagnostics),
+            Ok(Ok(outcome)) => {
+                to_lsp_diagnostics(outcome.into_diagnostics())
+            }
             Ok(Err(e)) => vec![create_error_diagnostic(
                 "agnix::validation-error",
                 format!("Validation error: {}", e),

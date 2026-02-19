@@ -362,9 +362,10 @@ impl AgnixServer {
 
         let file_path = Path::new(&input.path);
 
-        let diagnostics = core_validate_file(file_path, &config)
+        let outcome = core_validate_file(file_path, &config)
             .map_err(|e| make_invalid_params(format!("Failed to validate file: {}", e)))?;
 
+        let diagnostics = outcome.into_diagnostics();
         let result = diagnostics_to_result(&input.path, diagnostics, 1);
         let json = serde_json::to_string_pretty(&result)
             .map_err(|e| make_internal_error(format!("Failed to serialize result: {}", e)))?;
