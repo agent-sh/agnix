@@ -317,7 +317,7 @@ fn diagnostics_to_result(
     }
 }
 
-fn make_error(msg: String) -> McpError {
+fn make_internal_error(msg: String) -> McpError {
     McpError::internal_error(msg, None::<Value>)
 }
 
@@ -363,11 +363,11 @@ impl AgnixServer {
         let file_path = Path::new(&input.path);
 
         let diagnostics = core_validate_file(file_path, &config)
-            .map_err(|e| make_error(format!("Failed to validate file: {}", e)))?;
+            .map_err(|e| make_invalid_params(format!("Failed to validate file: {}", e)))?;
 
         let result = diagnostics_to_result(&input.path, diagnostics, 1);
         let json = serde_json::to_string_pretty(&result)
-            .map_err(|e| make_error(format!("Failed to serialize result: {}", e)))?;
+            .map_err(|e| make_internal_error(format!("Failed to serialize result: {}", e)))?;
 
         Ok(CallToolResult::success(vec![Content::text(json)]))
     }
@@ -384,7 +384,7 @@ impl AgnixServer {
         apply_tool_selection(&mut config, input.tools, input.target)?;
 
         let validation_result = core_validate_project(Path::new(&input.path), &config)
-            .map_err(|e| make_error(format!("Failed to validate project: {}", e)))?;
+            .map_err(|e| make_invalid_params(format!("Failed to validate project: {}", e)))?;
 
         let result = diagnostics_to_result(
             &input.path,
@@ -392,7 +392,7 @@ impl AgnixServer {
             validation_result.files_checked,
         );
         let json = serde_json::to_string_pretty(&result)
-            .map_err(|e| make_error(format!("Failed to serialize result: {}", e)))?;
+            .map_err(|e| make_internal_error(format!("Failed to serialize result: {}", e)))?;
 
         Ok(CallToolResult::success(vec![Content::text(json)]))
     }
@@ -416,7 +416,7 @@ impl AgnixServer {
         };
 
         let json = serde_json::to_string_pretty(&output)
-            .map_err(|e| make_error(format!("Failed to serialize rules: {}", e)))?;
+            .map_err(|e| make_internal_error(format!("Failed to serialize rules: {}", e)))?;
 
         Ok(CallToolResult::success(vec![Content::text(json)]))
     }
@@ -442,7 +442,7 @@ impl AgnixServer {
         };
 
         let json = serde_json::to_string_pretty(&output)
-            .map_err(|e| make_error(format!("Failed to serialize rule: {}", e)))?;
+            .map_err(|e| make_internal_error(format!("Failed to serialize rule: {}", e)))?;
 
         Ok(CallToolResult::success(vec![Content::text(json)]))
     }
@@ -501,10 +501,12 @@ async fn main() -> anyhow::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::{
-        ToolsInput, ValidateFileInput, ValidateProjectInput, apply_tool_selection, parse_tools,
+        ToolsInput, ValidateFileInput, ValidateProjectInput, apply_tool_selection,
+        make_internal_error, make_invalid_params, parse_tools,
     };
     use agnix_core::LintConfig;
     use agnix_core::config::TargetTool;
+    use rmcp::model::ErrorCode;
     use serde_json::json;
 
     #[test]
@@ -552,7 +554,32 @@ mod tests {
     #[test]
     fn test_parse_tools_rejects_unknown_tools() {
         let result = parse_tools(Some(ToolsInput::List(vec!["claud-code".to_string()])));
-        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert_eq!(
+            err.code,
+            ErrorCode::INVALID_PARAMS,
+            "unknown tool rejection must use INVALID_PARAMS (-32602)"
+        );
+    }
+
+    #[test]
+    fn test_make_invalid_params_error_code() {
+        let err = make_invalid_params("x".to_string());
+        assert_eq!(
+            err.code,
+            ErrorCode::INVALID_PARAMS,
+            "make_invalid_params must produce error code -32602"
+        );
+    }
+
+    #[test]
+    fn test_make_internal_error_error_code() {
+        let err = make_internal_error("x".to_string());
+        assert_eq!(
+            err.code,
+            ErrorCode::INTERNAL_ERROR,
+            "make_internal_error must produce error code -32603"
+        );
     }
 
     #[test]

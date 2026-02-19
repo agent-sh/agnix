@@ -183,6 +183,18 @@ mod validation_tests {
     }
 
     #[test]
+    fn test_validate_file_nonexistent_path_returns_file_error() {
+        let config = LintConfig::default();
+        let result = validate_file(std::path::Path::new("/nonexistent/path/file.md"), &config);
+        let err = result.unwrap_err();
+        assert!(
+            matches!(err, agnix_core::CoreError::File(_)),
+            "nonexistent path should produce CoreError::File, got: {:?}",
+            err
+        );
+    }
+
+    #[test]
     fn test_validate_nonexistent_project_path() {
         let config = LintConfig::default();
         let temp = tempfile::TempDir::new().unwrap();
