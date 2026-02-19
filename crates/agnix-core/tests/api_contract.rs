@@ -26,6 +26,7 @@ fn public_types_are_importable() {
     let _ = std::any::type_name::<agnix_core::FixResult>();
     let _ = std::any::type_name::<agnix_core::ConfigWarning>();
     let _ = std::any::type_name::<agnix_core::FilesConfig>();
+    let _ = std::any::type_name::<agnix_core::ValidationOutcome>();
 
     // LintResult type alias
     let _ = std::any::type_name::<agnix_core::LintResult<()>>();
@@ -57,11 +58,11 @@ fn public_types_are_importable() {
 fn public_functions_compile_with_expected_signatures() {
     use std::path::Path;
 
-    // validate_file(path, config) -> LintResult<Vec<Diagnostic>>
+    // validate_file(path, config) -> LintResult<ValidationOutcome>
     let _: fn(
         &Path,
         &agnix_core::LintConfig,
-    ) -> agnix_core::LintResult<Vec<agnix_core::Diagnostic>> = agnix_core::validate_file;
+    ) -> agnix_core::LintResult<agnix_core::ValidationOutcome> = agnix_core::validate_file;
 
     // validate_project(path, config) -> LintResult<ValidationResult>
     let _: fn(
@@ -83,12 +84,12 @@ fn public_functions_compile_with_expected_signatures() {
     ) -> agnix_core::LintResult<agnix_core::ValidationResult> =
         agnix_core::validate_project_with_registry;
 
-    // validate_file_with_registry(path, config, registry) -> LintResult<Vec<Diagnostic>>
+    // validate_file_with_registry(path, config, registry) -> LintResult<ValidationOutcome>
     let _: fn(
         &Path,
         &agnix_core::LintConfig,
         &agnix_core::ValidatorRegistry,
-    ) -> agnix_core::LintResult<Vec<agnix_core::Diagnostic>> =
+    ) -> agnix_core::LintResult<agnix_core::ValidationOutcome> =
         agnix_core::validate_file_with_registry;
 
     // detect_file_type(path) -> FileType
@@ -890,6 +891,84 @@ fn file_types_submodule_constants_are_accessible() {
     assert!(!agnix_core::file_types::DOCUMENTATION_DIRECTORIES.is_empty());
     assert!(!agnix_core::file_types::EXCLUDED_FILENAMES.is_empty());
     assert!(!agnix_core::file_types::EXCLUDED_PARENT_DIRECTORIES.is_empty());
+}
+
+// ============================================================================
+// ValidationOutcome exhaustive match and trait implementations
+// ============================================================================
+
+#[test]
+fn validation_outcome_is_importable() {
+    let _ = std::any::type_name::<agnix_core::ValidationOutcome>();
+}
+
+#[test]
+fn validation_outcome_exhaustive_match() {
+    // This match must cover ALL variants. If a variant is added,
+    // this test will fail to compile.
+    let outcomes = [
+        agnix_core::ValidationOutcome::Success(vec![]),
+        agnix_core::ValidationOutcome::IoError(agnix_core::FileError::Symlink {
+            path: std::path::PathBuf::from("dummy"),
+        }),
+        agnix_core::ValidationOutcome::Skipped,
+    ];
+
+    for outcome in outcomes {
+        match &outcome {
+            agnix_core::ValidationOutcome::Success(_diags) => {}
+            agnix_core::ValidationOutcome::IoError(_err) => {}
+            agnix_core::ValidationOutcome::Skipped => {}
+            // non_exhaustive requires a wildcard arm for downstream crates.
+            // If a new variant is added, this test should be updated to
+            // explicitly match it above (to verify the API contract).
+            _ => panic!("Unknown ValidationOutcome variant - update this test"),
+        }
+    }
+}
+
+#[test]
+fn validation_outcome_implements_debug() {
+    assert_debug::<agnix_core::ValidationOutcome>();
+}
+
+#[test]
+fn validation_outcome_convenience_methods() {
+    // Success variant
+    let success = agnix_core::ValidationOutcome::Success(vec![]);
+    assert!(success.is_success());
+    assert!(!success.is_skipped());
+    assert!(!success.is_io_error());
+    assert!(success.diagnostics().is_empty());
+    assert!(success.io_error().is_none());
+
+    // Skipped variant
+    let skipped = agnix_core::ValidationOutcome::Skipped;
+    assert!(skipped.is_skipped());
+    assert!(!skipped.is_success());
+    assert!(!skipped.is_io_error());
+    assert!(skipped.diagnostics().is_empty());
+    assert!(skipped.io_error().is_none());
+
+    // IoError variant
+    let io_err = agnix_core::ValidationOutcome::IoError(agnix_core::FileError::Symlink {
+        path: std::path::PathBuf::from("test"),
+    });
+    assert!(io_err.is_io_error());
+    assert!(!io_err.is_success());
+    assert!(!io_err.is_skipped());
+    assert!(io_err.diagnostics().is_empty());
+    assert!(io_err.io_error().is_some());
+}
+
+#[test]
+fn validation_outcome_into_diagnostics_for_io_error() {
+    let io_err = agnix_core::ValidationOutcome::IoError(agnix_core::FileError::Symlink {
+        path: std::path::PathBuf::from("test.md"),
+    });
+    let diags = io_err.into_diagnostics();
+    assert_eq!(diags.len(), 1);
+    assert_eq!(diags[0].rule, "file::io");
 }
 
 #[test]
