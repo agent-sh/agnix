@@ -1,0 +1,6 @@
+cargo:rerun-if-changed=/home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rust-i18n-3.1.5/examples/locales/en.yml
+cargo:rerun-if-changed=/home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rust-i18n-3.1.5/examples/locales/fr.yml
+cargo:rerun-if-changed=/home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rust-i18n-3.1.5/examples/app/locales/en.yml
+cargo:rerun-if-changed=/home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rust-i18n-3.1.5/examples/app/locales/view.en.yml
+cargo:rerun-if-changed=/home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rust-i18n-3.1.5/examples/app/locales/fr.yml
+cargo:rerun-if-changed=/home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rust-i18n-3.1.5/examples/app/locales/view.fr.yml

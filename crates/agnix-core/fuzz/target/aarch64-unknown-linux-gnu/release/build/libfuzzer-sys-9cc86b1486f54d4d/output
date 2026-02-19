@@ -1,0 +1,107 @@
+cargo:rerun-if-env-changed=CUSTOM_LIBFUZZER_PATH
+cargo:rerun-if-changed=libfuzzer/FuzzerUtilPosix.cpp
+cargo:rerun-if-changed=libfuzzer/FuzzerInterceptors.cpp
+cargo:rerun-if-changed=libfuzzer/FuzzerIOPosix.cpp
+cargo:rerun-if-changed=libfuzzer/FuzzerSHA1.cpp
+cargo:rerun-if-changed=libfuzzer/FuzzerFork.cpp
+cargo:rerun-if-changed=libfuzzer/FuzzerUtilWindows.cpp
+cargo:rerun-if-changed=libfuzzer/FuzzerUtil.cpp
+cargo:rerun-if-changed=libfuzzer/FuzzerMain.cpp
+cargo:rerun-if-changed=libfuzzer/FuzzerDriver.cpp
+cargo:rerun-if-changed=libfuzzer/FuzzerMerge.cpp
+cargo:rerun-if-changed=libfuzzer/FuzzerTracePC.cpp
+cargo:rerun-if-changed=libfuzzer/FuzzerExtFunctionsWeak.cpp
+cargo:rerun-if-changed=libfuzzer/FuzzerUtilLinux.cpp
+cargo:rerun-if-changed=libfuzzer/FuzzerIOWindows.cpp
+cargo:rerun-if-changed=libfuzzer/FuzzerExtraCountersWindows.cpp
+cargo:rerun-if-changed=libfuzzer/FuzzerExtraCountersDarwin.cpp
+cargo:rerun-if-changed=libfuzzer/FuzzerIO.cpp
+cargo:rerun-if-changed=libfuzzer/FuzzerCrossOver.cpp
+cargo:rerun-if-changed=libfuzzer/FuzzerMutate.cpp
+cargo:rerun-if-changed=libfuzzer/FuzzerLoop.cpp
+cargo:rerun-if-changed=libfuzzer/FuzzerDataFlowTrace.cpp
+cargo:rerun-if-changed=libfuzzer/FuzzerUtilDarwin.cpp
+cargo:rerun-if-changed=libfuzzer/FuzzerExtFunctionsDlsym.cpp
+cargo:rerun-if-changed=libfuzzer/FuzzerExtFunctionsWindows.cpp
+cargo:rerun-if-changed=libfuzzer/FuzzerUtilFuchsia.cpp
+cargo:rerun-if-changed=libfuzzer/FuzzerExtraCounters.cpp
+OUT_DIR = Some(/home/ubuntu/worktrees/fix-crlf-480/crates/agnix-core/fuzz/target/aarch64-unknown-linux-gnu/release/build/libfuzzer-sys-9cc86b1486f54d4d/out)
+OPT_LEVEL = Some(3)
+TARGET = Some(aarch64-unknown-linux-gnu)
+CARGO_ENCODED_RUSTFLAGS = Some(-Cpasses=sancov-module-Cllvm-args=-sanitizer-coverage-level=4-Cllvm-args=-sanitizer-coverage-inline-8bit-counters-Cllvm-args=-sanitizer-coverage-pc-table-Cllvm-args=-sanitizer-coverage-trace-compares--cfgfuzzing-Cllvm-args=-simplifycfg-branch-fold-threshold=0-Zsanitizer=address-Cllvm-args=-sanitizer-coverage-stack-depth-Cdebug-assertions-Ccodegen-units=1)
+HOST = Some(aarch64-unknown-linux-gnu)
+cargo:rerun-if-env-changed=CXX_aarch64-unknown-linux-gnu
+CXX_aarch64-unknown-linux-gnu = None
+cargo:rerun-if-env-changed=CXX_aarch64_unknown_linux_gnu
+CXX_aarch64_unknown_linux_gnu = None
+cargo:rerun-if-env-changed=HOST_CXX
+HOST_CXX = None
+cargo:rerun-if-env-changed=CXX
+CXX = None
+cargo:rerun-if-env-changed=CC_ENABLE_DEBUG_OUTPUT
+RUSTC_WRAPPER = Some(sccache)
+cargo:rerun-if-env-changed=CRATE_CC_NO_DEFAULTS
+CRATE_CC_NO_DEFAULTS = None
+DEBUG = Some(true)
+CARGO_CFG_TARGET_FEATURE = Some(neon)
+cargo:rerun-if-env-changed=CXXFLAGS
+CXXFLAGS = None
+cargo:rerun-if-env-changed=HOST_CXXFLAGS
+HOST_CXXFLAGS = None
+cargo:rerun-if-env-changed=CXXFLAGS_aarch64_unknown_linux_gnu
+CXXFLAGS_aarch64_unknown_linux_gnu = None
+cargo:rerun-if-env-changed=CXXFLAGS_aarch64-unknown-linux-gnu
+CXXFLAGS_aarch64-unknown-linux-gnu = None
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+cargo:rerun-if-env-changed=AR_aarch64-unknown-linux-gnu
+AR_aarch64-unknown-linux-gnu = None
+cargo:rerun-if-env-changed=AR_aarch64_unknown_linux_gnu
+AR_aarch64_unknown_linux_gnu = None
+cargo:rerun-if-env-changed=HOST_AR
+HOST_AR = None
+cargo:rerun-if-env-changed=AR
+AR = None
+cargo:rerun-if-env-changed=ARFLAGS
+ARFLAGS = None
+cargo:rerun-if-env-changed=HOST_ARFLAGS
+HOST_ARFLAGS = None
+cargo:rerun-if-env-changed=ARFLAGS_aarch64_unknown_linux_gnu
+ARFLAGS_aarch64_unknown_linux_gnu = None
+cargo:rerun-if-env-changed=ARFLAGS_aarch64-unknown-linux-gnu
+ARFLAGS_aarch64-unknown-linux-gnu = None
+cargo:rustc-link-lib=static=fuzzer
+cargo:rustc-link-search=native=/home/ubuntu/worktrees/fix-crlf-480/crates/agnix-core/fuzz/target/aarch64-unknown-linux-gnu/release/build/libfuzzer-sys-9cc86b1486f54d4d/out
+cargo:rerun-if-env-changed=CXXSTDLIB_aarch64-unknown-linux-gnu
+CXXSTDLIB_aarch64-unknown-linux-gnu = None
+cargo:rerun-if-env-changed=CXXSTDLIB_aarch64_unknown_linux_gnu
+CXXSTDLIB_aarch64_unknown_linux_gnu = None
+cargo:rerun-if-env-changed=HOST_CXXSTDLIB
+HOST_CXXSTDLIB = None
+cargo:rerun-if-env-changed=CXXSTDLIB
+CXXSTDLIB = None
+cargo:rustc-link-lib=stdc++

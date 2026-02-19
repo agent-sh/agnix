@@ -1,0 +1,11 @@
+/home/ubuntu/worktrees/fix-crlf-480/crates/agnix-core/fuzz/target/release/deps/normpath-c9c9be918d8adf6c.d: /home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/normpath-1.5.0/src/lib.rs /home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/normpath-1.5.0/src/base.rs /home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/normpath-1.5.0/src/cmp.rs /home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/normpath-1.5.0/src/error.rs /home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/normpath-1.5.0/src/common/mod.rs
+
+/home/ubuntu/worktrees/fix-crlf-480/crates/agnix-core/fuzz/target/release/deps/libnormpath-c9c9be918d8adf6c.rlib: /home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/normpath-1.5.0/src/lib.rs /home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/normpath-1.5.0/src/base.rs /home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/normpath-1.5.0/src/cmp.rs /home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/normpath-1.5.0/src/error.rs /home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/normpath-1.5.0/src/common/mod.rs
+
+/home/ubuntu/worktrees/fix-crlf-480/crates/agnix-core/fuzz/target/release/deps/libnormpath-c9c9be918d8adf6c.rmeta: /home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/normpath-1.5.0/src/lib.rs /home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/normpath-1.5.0/src/base.rs /home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/normpath-1.5.0/src/cmp.rs /home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/normpath-1.5.0/src/error.rs /home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/normpath-1.5.0/src/common/mod.rs
+
+/home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/normpath-1.5.0/src/lib.rs:
+/home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/normpath-1.5.0/src/base.rs:
+/home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/normpath-1.5.0/src/cmp.rs:
+/home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/normpath-1.5.0/src/error.rs:
+/home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/normpath-1.5.0/src/common/mod.rs:

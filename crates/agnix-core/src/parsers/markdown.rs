@@ -355,7 +355,9 @@ pub enum XmlBalanceError {
 pub fn sanitize_for_pulldown_cmark(s: &str) -> std::borrow::Cow<'_, str> {
     // Fast path: check whether any sanitization is needed.
     // The most common case (LF-only content with no control chars) takes one scan.
-    let needs_work = s.bytes().any(|b| b == b'\r' || (b < 0x20 && b != b'\t' && b != b'\n'));
+    let needs_work = s
+        .bytes()
+        .any(|b| b == b'\r' || (b < 0x20 && b != b'\t' && b != b'\n'));
     if !needs_work {
         return std::borrow::Cow::Borrowed(s);
     }
@@ -1240,12 +1242,12 @@ mod tests {
         // C0 control characters (0x01-0x08, 0x0e-0x1f) combined with markdown
         // syntax must not cause panics.
         let inputs = [
-            "*\x01[a]:+<>\r\x0b",   // SOH
-            "*\x07[a]:+<>\r\x0b",   // BEL
-            "*\x08[a]:+<>\r\x0b",   // BS
-            "*\x0c[a]:+<>\r\x0c",   // FF (form feed)
-            "*\x0e[a]:+<>\r\x0b",   // SO
-            "*\x1f[a]:+<>\r\x0b",   // US
+            "*\x01[a]:+<>\r\x0b", // SOH
+            "*\x07[a]:+<>\r\x0b", // BEL
+            "*\x08[a]:+<>\r\x0b", // BS
+            "*\x0c[a]:+<>\r\x0c", // FF (form feed)
+            "*\x0e[a]:+<>\r\x0b", // SO
+            "*\x1f[a]:+<>\r\x0b", // US
         ];
         for input in &inputs {
             let _ = extract_xml_tags(input);
@@ -1261,7 +1263,11 @@ mod tests {
         let crlf_content = "Some <example> text\r\nmore content\r\n";
         let tags_lf = extract_xml_tags(lf_content);
         let tags_crlf = extract_xml_tags(crlf_content);
-        assert_eq!(tags_lf.len(), tags_crlf.len(), "CRLF should produce same tags as LF");
+        assert_eq!(
+            tags_lf.len(),
+            tags_crlf.len(),
+            "CRLF should produce same tags as LF"
+        );
     }
 
     #[test]
@@ -1270,7 +1276,11 @@ mod tests {
         let content_with_control = "<example>\x02content\x03</example>";
         let tags = extract_xml_tags(content_with_control);
         // The tags should be found; control chars are stripped
-        assert_eq!(tags.len(), 2, "Tags should be found after control char stripping");
+        assert_eq!(
+            tags.len(),
+            2,
+            "Tags should be found after control char stripping"
+        );
         assert_eq!(tags[0].name, "example");
         assert!(tags[1].is_closing);
     }
