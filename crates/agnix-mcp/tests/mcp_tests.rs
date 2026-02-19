@@ -477,66 +477,162 @@ mod integration_tests {
 }
 
 mod json_schema_tests {
-    use schemars::JsonSchema;
+    use rmcp::schemars::{self, JsonSchema, SchemaGenerator};
     use serde::Deserialize;
 
-    #[allow(dead_code)]
-    #[derive(Debug, Deserialize, JsonSchema)]
+    /// Mirror of the real `ToolsInput` enum with the same manual `JsonSchema`
+    /// impl. Binary-only crates cannot export types to integration tests, so
+    /// we replicate the schema here and assert its shape.
+    #[derive(Debug, Deserialize)]
     #[serde(untagged)]
-    enum TestToolsInput {
-        Csv(String),
+    #[allow(dead_code)]
+    enum ToolsInput {
         List(Vec<String>),
+        Csv(String),
     }
 
-    // Test that input structs have proper JSON schema
-    // Fields are used via schema generation, not directly
+    impl JsonSchema for ToolsInput {
+        fn schema_name() -> std::borrow::Cow<'static, str> {
+            "ToolsInput".into()
+        }
+
+        fn schema_id() -> std::borrow::Cow<'static, str> {
+            "test::ToolsInput".into()
+        }
+
+        fn json_schema(_gen: &mut SchemaGenerator) -> schemars::Schema {
+            schemars::json_schema!({
+                "anyOf": [
+                    {
+                        "type": "array",
+                        "items": { "type": "string" },
+                        "description": "Preferred: array of tool names, e.g. [\"claude-code\", \"cursor\"]"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Fallback: comma-separated tool names, e.g. \"claude-code,cursor\""
+                    }
+                ]
+            })
+        }
+    }
+
+    /// Mirror of `ValidateFileInput` with the updated tools field description.
     #[allow(dead_code)]
     #[derive(Debug, Deserialize, JsonSchema)]
-    struct TestValidateFileInput {
+    struct ValidateFileInput {
         path: String,
-        tools: Option<TestToolsInput>,
+        #[schemars(
+            description = "Tools to validate for. Preferred: JSON array of tool names (e.g. [\"claude-code\", \"cursor\"]). Also accepts comma-separated string (e.g. \"claude-code,cursor\") as a fallback."
+        )]
+        tools: Option<ToolsInput>,
         target: Option<String>,
     }
 
+    /// Mirror of `ValidateProjectInput` with the updated tools field description.
     #[allow(dead_code)]
     #[derive(Debug, Deserialize, JsonSchema)]
-    struct TestValidateProjectInput {
+    struct ValidateProjectInput {
         path: String,
-        tools: Option<TestToolsInput>,
+        #[schemars(
+            description = "Tools to validate for. Preferred: JSON array of tool names (e.g. [\"claude-code\", \"cursor\"]). Also accepts comma-separated string (e.g. \"claude-code,cursor\") as a fallback."
+        )]
+        tools: Option<ToolsInput>,
         target: Option<String>,
     }
 
-    #[allow(dead_code)]
-    #[derive(Debug, Deserialize, JsonSchema)]
-    struct TestGetRuleDocsInput {
-        rule_id: String,
+    #[test]
+    fn test_tools_input_schema_anyof_array_first() {
+        let schema = SchemaGenerator::default().into_root_schema_for::<ToolsInput>();
+        let json = serde_json::to_value(&schema).expect("schema should serialize");
+        let any_of = json
+            .get("anyOf")
+            .and_then(|v| v.as_array())
+            .expect("ToolsInput schema must have anyOf");
+
+        assert_eq!(any_of.len(), 2, "anyOf must have exactly two entries");
+
+        assert_eq!(
+            any_of[0].get("type").and_then(|v| v.as_str()),
+            Some("array"),
+            "first anyOf entry must be the array variant"
+        );
+        assert_eq!(
+            any_of[1].get("type").and_then(|v| v.as_str()),
+            Some("string"),
+            "second anyOf entry must be the string variant"
+        );
     }
 
     #[test]
-    fn test_validate_file_input_schema() {
-        let schema = schemars::schema_for!(TestValidateFileInput);
-        let json = serde_json::to_string_pretty(&schema).unwrap();
+    fn test_tools_input_schema_variant_descriptions() {
+        let schema = SchemaGenerator::default().into_root_schema_for::<ToolsInput>();
+        let json = serde_json::to_value(&schema).expect("schema should serialize");
+        let any_of = json
+            .get("anyOf")
+            .and_then(|v| v.as_array())
+            .expect("ToolsInput schema must have anyOf");
 
-        assert!(json.contains("path"));
-        assert!(json.contains("tools"));
-        assert!(json.contains("target"));
+        let array_desc = any_of[0]
+            .get("description")
+            .and_then(|v| v.as_str())
+            .expect("array variant must have a description");
+        assert!(
+            array_desc.contains("Preferred"),
+            "array variant description must contain 'Preferred', got: {}",
+            array_desc
+        );
+
+        let string_desc = any_of[1]
+            .get("description")
+            .and_then(|v| v.as_str())
+            .expect("string variant must have a description");
+        assert!(
+            string_desc.contains("Fallback"),
+            "string variant description must contain 'Fallback', got: {}",
+            string_desc
+        );
     }
 
     #[test]
-    fn test_validate_project_input_schema() {
-        let schema = schemars::schema_for!(TestValidateProjectInput);
-        let json = serde_json::to_string_pretty(&schema).unwrap();
+    fn test_validate_file_input_schema_has_tools_anyof() {
+        let schema = SchemaGenerator::default().into_root_schema_for::<ValidateFileInput>();
+        let json = serde_json::to_value(&schema).expect("schema should serialize");
+        let json_str = serde_json::to_string_pretty(&json).unwrap();
 
-        assert!(json.contains("path"));
-        assert!(json.contains("tools"));
-        assert!(json.contains("target"));
+        assert!(json_str.contains("path"), "schema must include 'path' field");
+        assert!(
+            json_str.contains("tools"),
+            "schema must include 'tools' field"
+        );
+        assert!(
+            json_str.contains("target"),
+            "schema must include 'target' field"
+        );
+        assert!(
+            json_str.contains("Preferred"),
+            "tools field schema must reference 'Preferred' for array format"
+        );
     }
 
     #[test]
-    fn test_get_rule_docs_input_schema() {
-        let schema = schemars::schema_for!(TestGetRuleDocsInput);
-        let json = serde_json::to_string_pretty(&schema).unwrap();
+    fn test_validate_project_input_schema_has_tools_anyof() {
+        let schema = SchemaGenerator::default().into_root_schema_for::<ValidateProjectInput>();
+        let json = serde_json::to_value(&schema).expect("schema should serialize");
+        let json_str = serde_json::to_string_pretty(&json).unwrap();
 
-        assert!(json.contains("rule_id"));
+        assert!(json_str.contains("path"), "schema must include 'path' field");
+        assert!(
+            json_str.contains("tools"),
+            "schema must include 'tools' field"
+        );
+        assert!(
+            json_str.contains("target"),
+            "schema must include 'target' field"
+        );
+        assert!(
+            json_str.contains("Preferred"),
+            "tools field schema must reference 'Preferred' for array format"
+        );
     }
 }
