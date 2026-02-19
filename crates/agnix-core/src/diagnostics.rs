@@ -674,6 +674,99 @@ impl CoreError {
 // Backward compatibility: LintError is now an alias for CoreError
 pub type LintError = CoreError;
 
+/// Outcome of validating a single file.
+///
+/// Returned by [`crate::validate_file`] and [`crate::validate_file_with_registry`].
+/// The `Ok` path of `LintResult<ValidationOutcome>` covers all per-file
+/// situations - successful validation, I/O errors, and skipped files - while
+/// the `Err` path is reserved for config-level errors (e.g. invalid exclude
+/// patterns, too many files).
+///
+/// Use [`into_diagnostics()`](ValidationOutcome::into_diagnostics) for a
+/// quick migration path from the previous `Vec<Diagnostic>` return type.
+#[derive(Debug)]
+#[non_exhaustive]
+pub enum ValidationOutcome {
+    /// Validation ran successfully. The contained diagnostics may be empty
+    /// (no issues found) or non-empty (issues found).
+    Success(Vec<Diagnostic>),
+
+    /// The file could not be read due to an I/O or filesystem error.
+    #[cfg(feature = "filesystem")]
+    IoError(FileError),
+
+    /// The file type is unknown and no validation was performed.
+    Skipped,
+}
+
+impl ValidationOutcome {
+    /// Returns `true` if validation ran (regardless of whether diagnostics were found).
+    pub fn is_success(&self) -> bool {
+        matches!(self, ValidationOutcome::Success(_))
+    }
+
+    /// Returns `true` if the file could not be read.
+    #[cfg(feature = "filesystem")]
+    pub fn is_io_error(&self) -> bool {
+        matches!(self, ValidationOutcome::IoError(_))
+    }
+
+    /// Returns `true` if the file was skipped (unknown file type).
+    pub fn is_skipped(&self) -> bool {
+        matches!(self, ValidationOutcome::Skipped)
+    }
+
+    /// Borrow the diagnostics from a successful validation.
+    ///
+    /// Returns an empty slice for `IoError` and `Skipped` variants.
+    pub fn diagnostics(&self) -> &[Diagnostic] {
+        match self {
+            ValidationOutcome::Success(diags) => diags,
+            #[cfg(feature = "filesystem")]
+            ValidationOutcome::IoError(_) => &[],
+            ValidationOutcome::Skipped => &[],
+        }
+    }
+
+    /// Consume the outcome and return the diagnostics.
+    ///
+    /// - `Success`: returns the contained diagnostics.
+    /// - `IoError`: returns a single `file::io` diagnostic describing the error.
+    /// - `Skipped`: returns an empty `Vec`.
+    pub fn into_diagnostics(self) -> Vec<Diagnostic> {
+        match self {
+            ValidationOutcome::Success(diags) => diags,
+            #[cfg(feature = "filesystem")]
+            ValidationOutcome::IoError(ref file_error) => {
+                let path = match file_error {
+                    FileError::Read { path, .. }
+                    | FileError::Write { path, .. }
+                    | FileError::Symlink { path }
+                    | FileError::TooBig { path, .. }
+                    | FileError::NotRegular { path } => path.clone(),
+                };
+                vec![Diagnostic::error(
+                    path,
+                    0,
+                    0,
+                    "file::io",
+                    format!("{}", file_error),
+                )]
+            }
+            ValidationOutcome::Skipped => vec![],
+        }
+    }
+
+    /// If this is an `IoError`, return a reference to the underlying [`FileError`].
+    #[cfg(feature = "filesystem")]
+    pub fn io_error(&self) -> Option<&FileError> {
+        match self {
+            ValidationOutcome::IoError(e) => Some(e),
+            _ => None,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1548,5 +1641,131 @@ mod tests {
                 );
             }
         }
+    }
+
+    // ===== ValidationOutcome tests =====
+
+    #[test]
+    fn test_validation_outcome_success_empty() {
+        let outcome = ValidationOutcome::Success(vec![]);
+        assert!(outcome.is_success());
+        assert!(!outcome.is_skipped());
+        assert!(outcome.diagnostics().is_empty());
+        assert!(outcome.into_diagnostics().is_empty());
+    }
+
+    #[test]
+    fn test_validation_outcome_success_with_diagnostics() {
+        let diag = Diagnostic::warning(PathBuf::from("test.md"), 1, 0, "AS-001", "test");
+        let outcome = ValidationOutcome::Success(vec![diag]);
+        assert!(outcome.is_success());
+        assert_eq!(outcome.diagnostics().len(), 1);
+        assert_eq!(outcome.diagnostics()[0].rule, "AS-001");
+        let diags = outcome.into_diagnostics();
+        assert_eq!(diags.len(), 1);
+        assert_eq!(diags[0].rule, "AS-001");
+    }
+
+    #[test]
+    fn test_validation_outcome_skipped() {
+        let outcome = ValidationOutcome::Skipped;
+        assert!(outcome.is_skipped());
+        assert!(!outcome.is_success());
+        assert!(outcome.diagnostics().is_empty());
+        assert!(outcome.into_diagnostics().is_empty());
+    }
+
+    #[cfg(feature = "filesystem")]
+    #[test]
+    fn test_validation_outcome_io_error() {
+        let file_error = FileError::Read {
+            path: PathBuf::from("/tmp/missing.md"),
+            source: std::io::Error::new(std::io::ErrorKind::NotFound, "not found"),
+        };
+        let outcome = ValidationOutcome::IoError(file_error);
+        assert!(outcome.is_io_error());
+        assert!(!outcome.is_success());
+        assert!(!outcome.is_skipped());
+        // diagnostics() returns empty slice for IoError
+        assert!(outcome.diagnostics().is_empty());
+    }
+
+    #[cfg(feature = "filesystem")]
+    #[test]
+    fn test_validation_outcome_io_error_ref() {
+        let file_error = FileError::Read {
+            path: PathBuf::from("/tmp/missing.md"),
+            source: std::io::Error::new(std::io::ErrorKind::NotFound, "not found"),
+        };
+        let outcome = ValidationOutcome::IoError(file_error);
+        let err = outcome.io_error().expect("should be Some for IoError");
+        match err {
+            FileError::Read { path, .. } => {
+                assert_eq!(path, &PathBuf::from("/tmp/missing.md"));
+            }
+            _ => panic!("expected FileError::Read"),
+        }
+    }
+
+    #[cfg(feature = "filesystem")]
+    #[test]
+    fn test_validation_outcome_io_error_into_diagnostics() {
+        let file_error = FileError::Read {
+            path: PathBuf::from("/tmp/missing.md"),
+            source: std::io::Error::new(std::io::ErrorKind::NotFound, "not found"),
+        };
+        let outcome = ValidationOutcome::IoError(file_error);
+        let diags = outcome.into_diagnostics();
+        assert_eq!(diags.len(), 1);
+        assert_eq!(diags[0].rule, "file::io");
+        assert_eq!(diags[0].file, PathBuf::from("/tmp/missing.md"));
+        assert_eq!(diags[0].level, DiagnosticLevel::Error);
+        assert!(diags[0].message.contains("Failed to read file"));
+    }
+
+    #[cfg(feature = "filesystem")]
+    #[test]
+    fn test_validation_outcome_io_error_symlink() {
+        let file_error = FileError::Symlink {
+            path: PathBuf::from("/tmp/link.md"),
+        };
+        let outcome = ValidationOutcome::IoError(file_error);
+        let diags = outcome.into_diagnostics();
+        assert_eq!(diags.len(), 1);
+        assert_eq!(diags[0].rule, "file::io");
+        assert!(diags[0].message.contains("symlink"));
+    }
+
+    #[cfg(feature = "filesystem")]
+    #[test]
+    fn test_validation_outcome_io_error_too_big() {
+        let file_error = FileError::TooBig {
+            path: PathBuf::from("/tmp/huge.md"),
+            size: 5_000_000,
+            limit: 1_048_576,
+        };
+        let outcome = ValidationOutcome::IoError(file_error);
+        let diags = outcome.into_diagnostics();
+        assert_eq!(diags.len(), 1);
+        assert_eq!(diags[0].rule, "file::io");
+        assert!(
+            diags[0].message.contains("too large") || diags[0].message.contains("File too large")
+        );
+    }
+
+    #[test]
+    fn test_validation_outcome_success_io_error_ref_is_none() {
+        let outcome = ValidationOutcome::Success(vec![]);
+        #[cfg(feature = "filesystem")]
+        assert!(outcome.io_error().is_none());
+        let _ = outcome;
+    }
+
+    #[test]
+    fn test_validation_outcome_skipped_io_error_ref_is_none() {
+        let outcome = ValidationOutcome::Skipped;
+        #[cfg(feature = "filesystem")]
+        assert!(outcome.io_error().is_none());
+        let _ = outcome;
     }
 }
