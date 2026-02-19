@@ -495,10 +495,11 @@ fn run_project_level_checks(
             for file_path in instruction_file_paths.iter() {
                 match file_utils::safe_read_file(file_path) {
                     Ok(raw) => {
-                        let content = if raw.contains('\r') {
-                            normalize_line_endings(&raw).into_owned()
-                        } else {
-                            raw
+                        // Match on the Cow to avoid a second scan: Borrowed means LF-only
+                        // (reuse the already-owned String), Owned means normalization was needed.
+                        let content = match normalize_line_endings(&raw) {
+                            std::borrow::Cow::Borrowed(_) => raw,
+                            std::borrow::Cow::Owned(normalized) => normalized,
                         };
                         file_contents.push((file_path.clone(), content));
                     }

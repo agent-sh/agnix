@@ -118,7 +118,7 @@ pub fn apply_fixes_with_options(
 ///
 /// File content is CRLF-normalized before fixes are applied, so byte offsets in
 /// [`Fix`] objects must reference LF-normalized positions (as produced by
-/// [`validate_content`] or [`validate_file_with_type`]). Files with CRLF endings
+/// `validate_content` or `validate_file_with_type`). Files with CRLF endings
 /// will be written back with LF endings.
 pub fn apply_fixes_with_fs_options(
     diagnostics: &[Diagnostic],
@@ -139,11 +139,11 @@ pub fn apply_fixes_with_fs_options(
 
     for (path, file_diagnostics) in by_file {
         let raw_content = fs.read_to_string(&path)?;
-        // Avoid an extra allocation on the common LF-only path by reusing raw_content.
-        let original = if raw_content.contains('\r') {
-            normalize_line_endings(&raw_content).into_owned()
-        } else {
-            raw_content
+        // Match on the Cow to avoid a second scan: Borrowed means LF-only (reuse the
+        // already-owned String), Owned means normalization was needed.
+        let original = match normalize_line_endings(&raw_content) {
+            std::borrow::Cow::Borrowed(_) => raw_content,
+            std::borrow::Cow::Owned(normalized) => normalized,
         };
 
         let mut fixes = select_fixes(&file_diagnostics, options.mode);
