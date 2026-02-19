@@ -1227,4 +1227,42 @@ cases:
         assert!(json_str.contains("cases_run"));
         assert!(json_str.contains("overall_f1"));
     }
+
+    /// Test that the `ValidationOutcome::Skipped` arm of `evaluate_case` produces
+    /// no diagnostics and no `eval::io-error` rule when the file has an unknown extension.
+    #[test]
+    fn test_evaluate_case_skipped_for_unknown_extension() {
+        let temp = tempfile::TempDir::new().unwrap();
+        // Create a file with an unknown extension that will be Skipped
+        let unknown_file = temp.path().join("test.xyz");
+        std::fs::write(&unknown_file, "arbitrary content").unwrap();
+
+        let case = EvalCase {
+            file: PathBuf::from("test.xyz"),
+            expected: vec![],
+            description: Some("Unknown file type should be skipped".to_string()),
+        };
+
+        let config = LintConfig::default();
+        let result = evaluate_case(&case, temp.path(), &config);
+
+        // Should not contain eval::io-error (file exists and is readable)
+        assert!(
+            !result.actual.contains(&"eval::io-error".to_string()),
+            "Skipped file should not produce eval::io-error, got: {:?}",
+            result.actual
+        );
+        // Should not contain eval::error
+        assert!(
+            !result.actual.contains(&"eval::error".to_string()),
+            "Skipped file should not produce eval::error, got: {:?}",
+            result.actual
+        );
+        // With empty expected and no actual diagnostics, the case should pass
+        assert!(
+            result.passed(),
+            "Skipped file with empty expected should pass, got: {:?}",
+            result
+        );
+    }
 }

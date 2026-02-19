@@ -55,36 +55,39 @@ mod diagnostic_mapper_tests {
 
 mod validation_tests {
     use agnix_core::LintConfig;
-    use std::io::Write;
     use tempfile::NamedTempFile;
 
     #[test]
     fn test_validate_valid_skill_file() {
-        let mut file = NamedTempFile::with_suffix(".md").unwrap();
-        writeln!(
-            file,
-            r#"---
-name: test-skill
-version: 1.0.0
-model: sonnet
----
-
-# Test Skill
-
-This is a valid skill file.
-"#
+        // Create a skill inside a directory whose name matches the skill name.
+        // This avoids AS-017 (name/directory mismatch). The file also includes
+        // a description to avoid AS-003, and omits non-standard fields
+        // (version, model) to avoid CC-SK-017 / XP-SK-001.
+        let skill_dir = tempfile::tempdir().unwrap();
+        let named_dir = skill_dir.path().join("test-skill");
+        std::fs::create_dir(&named_dir).unwrap();
+        let skill_path = named_dir.join("SKILL.md");
+        std::fs::write(
+            &skill_path,
+            "---\nname: test-skill\ndescription: Use when running test skill\n---\n\n# Test Skill\n\nThis is a valid skill file.\n",
         )
         .unwrap();
-
-        // Rename to SKILL.md to trigger skill validation
-        let skill_dir = tempfile::tempdir().unwrap();
-        let skill_path = skill_dir.path().join("SKILL.md");
-        std::fs::copy(file.path(), &skill_path).unwrap();
 
         let config = LintConfig::default();
         let result = agnix_core::validate_file(&skill_path, &config);
         assert!(result.is_ok());
-        assert!(result.unwrap().is_success());
+        let outcome = result.unwrap();
+        assert!(outcome.is_success());
+        let diags = outcome.into_diagnostics();
+        let errors: Vec<_> = diags
+            .iter()
+            .filter(|d| d.level == agnix_core::DiagnosticLevel::Error)
+            .collect();
+        assert!(
+            errors.is_empty(),
+            "Valid skill file should produce no error-level diagnostics, got: {:?}",
+            errors
+        );
     }
 
     #[test]

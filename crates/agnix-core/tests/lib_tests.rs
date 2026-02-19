@@ -4945,10 +4945,10 @@ fn test_validation_outcome_io_error_for_nonexistent_file() {
         "Nonexistent file with known type should return IoError, got: {:?}",
         outcome
     );
-    // into_diagnostics should produce a file::io diagnostic
+    // into_diagnostics should produce a file::read diagnostic
     let diags = outcome.into_diagnostics();
     assert_eq!(diags.len(), 1);
-    assert_eq!(diags[0].rule, "file::io");
+    assert_eq!(diags[0].rule, "file::read");
 }
 
 #[test]
@@ -5028,5 +5028,33 @@ fn test_validate_project_collects_file_read_error_as_diagnostic() {
         has_file_read_error,
         "Expected file::read diagnostic for unreadable file, got: {:?}",
         result.diagnostics
+    );
+}
+
+#[test]
+fn test_validate_project_skipped_files_not_counted() {
+    // Verify that files with unknown types (Skipped outcome) are not counted
+    // in files_checked, while recognized types are.
+    let temp = tempfile::TempDir::new().unwrap();
+
+    // Create one recognized file (SKILL.md)
+    std::fs::write(
+        temp.path().join("SKILL.md"),
+        "---\nname: test-skill\ndescription: Test skill\n---\nBody",
+    )
+    .unwrap();
+
+    // Create several unrecognized files that should be skipped
+    std::fs::write(temp.path().join("helper.rs"), "fn main() {}").unwrap();
+    std::fs::write(temp.path().join("data.csv"), "a,b,c").unwrap();
+    std::fs::write(temp.path().join("notes.txt"), "some notes").unwrap();
+
+    let config = LintConfig::default();
+    let result = validate_project(temp.path(), &config).unwrap();
+
+    assert_eq!(
+        result.files_checked, 1,
+        "files_checked should count only the recognized SKILL.md, not the skipped .rs/.csv/.txt files, got {}",
+        result.files_checked
     );
 }

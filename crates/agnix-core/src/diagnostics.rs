@@ -731,27 +731,22 @@ impl ValidationOutcome {
     /// Consume the outcome and return the diagnostics.
     ///
     /// - `Success`: returns the contained diagnostics.
-    /// - `IoError`: returns a single `file::io` diagnostic describing the error.
+    /// - `IoError`: returns a single `file::read` diagnostic describing the error.
     /// - `Skipped`: returns an empty `Vec`.
     pub fn into_diagnostics(self) -> Vec<Diagnostic> {
         match self {
             ValidationOutcome::Success(diags) => diags,
             #[cfg(feature = "filesystem")]
-            ValidationOutcome::IoError(ref file_error) => {
+            ValidationOutcome::IoError(file_error) => {
+                let msg = format!("{}", file_error);
                 let path = match file_error {
                     FileError::Read { path, .. }
                     | FileError::Write { path, .. }
                     | FileError::Symlink { path }
                     | FileError::TooBig { path, .. }
-                    | FileError::NotRegular { path } => path.clone(),
+                    | FileError::NotRegular { path } => path,
                 };
-                vec![Diagnostic::error(
-                    path,
-                    0,
-                    0,
-                    "file::io",
-                    format!("{}", file_error),
-                )]
+                vec![Diagnostic::error(path, 0, 0, "file::read", msg)]
             }
             ValidationOutcome::Skipped => vec![],
         }
@@ -1717,7 +1712,7 @@ mod tests {
         let outcome = ValidationOutcome::IoError(file_error);
         let diags = outcome.into_diagnostics();
         assert_eq!(diags.len(), 1);
-        assert_eq!(diags[0].rule, "file::io");
+        assert_eq!(diags[0].rule, "file::read");
         assert_eq!(diags[0].file, PathBuf::from("/tmp/missing.md"));
         assert_eq!(diags[0].level, DiagnosticLevel::Error);
         assert!(diags[0].message.contains("Failed to read file"));
@@ -1732,7 +1727,7 @@ mod tests {
         let outcome = ValidationOutcome::IoError(file_error);
         let diags = outcome.into_diagnostics();
         assert_eq!(diags.len(), 1);
-        assert_eq!(diags[0].rule, "file::io");
+        assert_eq!(diags[0].rule, "file::read");
         assert!(diags[0].message.contains("symlink"));
     }
 
@@ -1747,7 +1742,7 @@ mod tests {
         let outcome = ValidationOutcome::IoError(file_error);
         let diags = outcome.into_diagnostics();
         assert_eq!(diags.len(), 1);
-        assert_eq!(diags[0].rule, "file::io");
+        assert_eq!(diags[0].rule, "file::read");
         assert!(
             diags[0].message.contains("too large") || diags[0].message.contains("File too large")
         );

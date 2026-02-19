@@ -902,6 +902,7 @@ fn validation_outcome_is_importable() {
     let _ = std::any::type_name::<agnix_core::ValidationOutcome>();
 }
 
+#[cfg(feature = "filesystem")]
 #[test]
 fn validation_outcome_exhaustive_match() {
     // This match must cover ALL variants. If a variant is added,
@@ -932,6 +933,7 @@ fn validation_outcome_implements_debug() {
     assert_debug::<agnix_core::ValidationOutcome>();
 }
 
+#[cfg(feature = "filesystem")]
 #[test]
 fn validation_outcome_convenience_methods() {
     // Success variant
@@ -961,6 +963,7 @@ fn validation_outcome_convenience_methods() {
     assert!(io_err.io_error().is_some());
 }
 
+#[cfg(feature = "filesystem")]
 #[test]
 fn validation_outcome_into_diagnostics_for_io_error() {
     let io_err = agnix_core::ValidationOutcome::IoError(agnix_core::FileError::Symlink {
@@ -968,7 +971,7 @@ fn validation_outcome_into_diagnostics_for_io_error() {
     });
     let diags = io_err.into_diagnostics();
     assert_eq!(diags.len(), 1);
-    assert_eq!(diags[0].rule, "file::io");
+    assert_eq!(diags[0].rule, "file::read");
 }
 
 #[test]
