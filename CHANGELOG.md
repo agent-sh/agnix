@@ -62,6 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CC-HK-003**: Downgraded from Error to Info level - matcher field is optional for tool events, not required; omitting it matches all tools (best practice hint, not an error)
 - **SARIF artifact URIs**: Now uses git repository root as base path instead of current working directory, ensuring correct IDE file navigation for SARIF output. Falls back to CWD when scan path is not inside a git repository (#488)
 - **CI**: Moved `VSCE_PAT` from CLI argument to environment variable in VS Code extension publish step, preventing secret exposure in process list (#464)
+- **MCP server error codes**: `validate_file` and `validate_project` tools now return `invalid_params` (JSON-RPC -32602) instead of `internal_error` (-32603) for user-supplied path validation failures, correctly distinguishing client errors from server faults. Renamed internal `make_error` helper to `make_internal_error` for clarity (#462)
 
 ## [0.11.1] - 2026-02-11
 
