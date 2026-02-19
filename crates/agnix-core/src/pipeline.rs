@@ -19,7 +19,7 @@ use rust_i18n::t;
 use crate::config::LintConfig;
 use crate::diagnostics::Diagnostic;
 #[cfg(feature = "filesystem")]
-use crate::diagnostics::{ConfigError, CoreError, LintResult, ValidationError};
+use crate::diagnostics::{ConfigError, CoreError, LintResult, ValidationError, ValidationOutcome};
 use crate::file_types::{FileType, detect_file_type};
 #[cfg(feature = "filesystem")]
 use crate::file_utils;
@@ -203,6 +203,13 @@ pub fn resolve_file_type(path: &Path, config: &LintConfig) -> FileType {
 
 /// Validate a single file.
 ///
+/// Returns [`ValidationOutcome::Success`] with diagnostics when validation runs,
+/// [`ValidationOutcome::IoError`] when the file cannot be read, or
+/// [`ValidationOutcome::Skipped`] when the file type is unknown.
+///
+/// The `Err` path is reserved for config-level errors only (e.g. invalid
+/// exclude patterns).
+///
 /// Note: This function creates a new [`ValidatorRegistry`] on every call. For
 /// bulk validation of multiple files, use
 /// [`validate_file_with_registry()`] with a pre-built shared registry for
@@ -210,7 +217,7 @@ pub fn resolve_file_type(path: &Path, config: &LintConfig) -> FileType {
 /// this function applies `config.rules().disabled_validators` to the
 /// freshly-created registry at construction time.
 #[cfg(feature = "filesystem")]
-pub fn validate_file(path: &Path, config: &LintConfig) -> LintResult<Vec<Diagnostic>> {
+pub fn validate_file(path: &Path, config: &LintConfig) -> LintResult<ValidationOutcome> {
     let mut registry = ValidatorRegistry::with_defaults();
     for name in &config.rules().disabled_validators {
         registry.disable_validator_owned(name);
@@ -219,6 +226,12 @@ pub fn validate_file(path: &Path, config: &LintConfig) -> LintResult<Vec<Diagnos
 }
 
 /// Validate a single file with a custom validator registry.
+///
+/// Returns [`ValidationOutcome::Success`] with diagnostics when validation runs,
+/// [`ValidationOutcome::IoError`] when the file cannot be read, or
+/// [`ValidationOutcome::Skipped`] when the file type is unknown.
+///
+/// The `Err` path is reserved for config-level errors only.
 ///
 /// `config.rules().disabled_validators` is applied at runtime, so callers
 /// may share a single `ValidatorRegistry` across configs that differ only
@@ -229,7 +242,7 @@ pub fn validate_file_with_registry(
     path: &Path,
     config: &LintConfig,
     registry: &ValidatorRegistry,
-) -> LintResult<Vec<Diagnostic>> {
+) -> LintResult<ValidationOutcome> {
     let file_type = resolve_file_type(path, config);
     validate_file_with_type(path, file_type, config, registry)
 }
@@ -245,12 +258,18 @@ fn validate_file_with_type(
     file_type: FileType,
     config: &LintConfig,
     registry: &ValidatorRegistry,
-) -> LintResult<Vec<Diagnostic>> {
+) -> LintResult<ValidationOutcome> {
     if file_type == FileType::Unknown {
-        return Ok(vec![]);
+        return Ok(ValidationOutcome::Skipped);
     }
 
-    let content = file_utils::safe_read_file(path)?;
+    let content = match file_utils::safe_read_file(path) {
+        Ok(content) => content,
+        Err(CoreError::File(file_error)) => {
+            return Ok(ValidationOutcome::IoError(file_error));
+        }
+        Err(other) => return Err(other),
+    };
 
     let validators = registry.validators_for(file_type);
     let disabled = &config.rules().disabled_validators;
@@ -270,7 +289,7 @@ fn validate_file_with_type(
         }
     }
 
-    Ok(diagnostics)
+    Ok(ValidationOutcome::Success(diagnostics))
 }
 
 /// Validate in-memory content for a given path.
@@ -856,7 +875,27 @@ pub fn validate_project_with_registry(
                     // Validate the file using the pre-resolved file_type to avoid
                     // re-compiling [files] glob patterns for every file.
                     match validate_file_with_type(&file_path, file_type, &config, registry) {
-                        Ok(file_diagnostics) => diags.extend(file_diagnostics),
+                        Ok(ValidationOutcome::Success(file_diagnostics)) => {
+                            diags.extend(file_diagnostics);
+                        }
+                        Ok(ValidationOutcome::IoError(file_error)) => {
+                            diags.push(
+                                Diagnostic::error(
+                                    file_path,
+                                    0,
+                                    0,
+                                    "file::read",
+                                    t!(
+                                        "rules.file_read_error",
+                                        error = file_error.to_string()
+                                    ),
+                                )
+                                .with_suggestion(t!("rules.file_read_error_suggestion")),
+                            );
+                        }
+                        Ok(ValidationOutcome::Skipped) => {
+                            // File type unknown - no validation needed
+                        }
                         Err(e) => {
                             diags.push(
                                 Diagnostic::error(
