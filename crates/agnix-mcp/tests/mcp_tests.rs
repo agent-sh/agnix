@@ -175,14 +175,6 @@ mod validation_tests {
     }
 
     #[test]
-    fn test_validate_nonexistent_file() {
-        let config = LintConfig::default();
-        let result = validate_file(std::path::Path::new("/nonexistent/path/file.md"), &config);
-
-        assert!(result.is_err());
-    }
-
-    #[test]
     fn test_validate_file_nonexistent_path_returns_file_error() {
         let config = LintConfig::default();
         let result = validate_file(std::path::Path::new("/nonexistent/path/file.md"), &config);

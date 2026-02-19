@@ -328,7 +328,7 @@ fn make_invalid_params(msg: String) -> McpError {
 /// Agnix MCP Server - validates AI agent configurations
 ///
 /// Provides tools to validate SKILL.md, CLAUDE.md, AGENTS.md, hooks,
-/// MCP configs, and more against 168 rules.
+/// MCP configs, and more against 229 rules.
 
 #[derive(Debug, Clone)]
 pub struct AgnixServer {
@@ -399,7 +399,7 @@ impl AgnixServer {
 
     /// Get all available validation rules
     #[tool(
-        description = "List all 168 validation rules available in agnix. Returns rule IDs and names organized by category (AS-* Agent Skills, CC-* Claude Code, MCP-* Model Context Protocol, COP-* Copilot, CUR-* Cursor, etc.)."
+        description = "List all 229 validation rules available in agnix. Returns rule IDs and names organized by category (AS-* Agent Skills, CC-* Claude Code, MCP-* Model Context Protocol, COP-* Copilot, CUR-* Cursor, etc.)."
     )]
     async fn get_rules(&self) -> Result<CallToolResult, McpError> {
         let rules: Vec<RuleInfo> = agnix_rules::RULES_DATA
@@ -462,11 +462,11 @@ impl ServerHandler for AgnixServer {
             instructions: Some(
                 "Agnix - AI agent configuration linter.\n\n\
                  Validates SKILL.md, CLAUDE.md, AGENTS.md, hooks, MCP configs, \
-                 Cursor rules, and more against 168 rules.\n\n\
+                 Cursor rules, and more against 229 rules.\n\n\
                  Tools:\n\
                  - validate_project: Validate all agent configs in a directory\n\
                  - validate_file: Validate a single config file\n\
-                 - get_rules: List all 168 validation rules\n\
+                 - get_rules: List all 229 validation rules\n\
                  - get_rule_docs: Get details about a specific rule\n\n\
                  Preferred input: tools (CSV string or array)\n\
                  Legacy fallback: target\n\
@@ -660,7 +660,12 @@ mod tests {
             Some(ToolsInput::Csv("unknown-tool".to_string())),
             Some("claude-code".to_string()),
         );
-        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert_eq!(
+            err.code,
+            ErrorCode::INVALID_PARAMS,
+            "unknown tool rejection must use INVALID_PARAMS (-32602)"
+        );
         assert!(config.tools().is_empty());
         assert_eq!(config.target(), TargetTool::Generic);
     }
