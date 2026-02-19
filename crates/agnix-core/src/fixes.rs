@@ -118,7 +118,7 @@ pub fn apply_fixes_with_options(
 ///
 /// File content is CRLF-normalized before fixes are applied, so byte offsets in
 /// [`Fix`] objects must reference LF-normalized positions (as produced by
-/// `validate_content` or `validate_file_with_type`). Files with CRLF endings
+/// `validate_content` or `validate_file`). Files with CRLF endings
 /// will be written back with LF endings.
 pub fn apply_fixes_with_fs_options(
     diagnostics: &[Diagnostic],

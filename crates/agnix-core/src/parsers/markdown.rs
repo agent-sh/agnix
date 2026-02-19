@@ -122,18 +122,17 @@ fn extract_xml_tags_inner(content: &str) -> Vec<XmlTag> {
 ///
 /// # Security
 ///
-/// This function is NOT subject to `MAX_REGEX_INPUT_SIZE` limits because it uses
-/// pulldown-cmark's parser instead of regex. The limit only applies to regex-based
-/// extraction (`extract_xml_tags`).
+/// Uses a regex-based scan rather than a full markdown parser. The scan is limited
+/// to `MAX_REGEX_INPUT_SIZE` bytes to prevent ReDoS; content exceeding that limit
+/// returns an empty result.
 ///
 /// # Input sanitization
 ///
-/// Control characters and non-standard line endings are sanitized before parsing
-/// to prevent a known panic in `pulldown-cmark` triggered by C0 control bytes.
+/// C0 control characters and non-standard line endings are sanitized (replaced with
+/// spaces or LF) before scanning to ensure byte-offset alignment with the original
+/// normalized content.
 pub fn extract_markdown_links(content: &str) -> Vec<MarkdownLink> {
-    // Sanitize before parsing: pulldown-cmark has a known panic triggered by C0
-    // control characters combined with certain syntax. Sanitizing here ensures safe
-    // input regardless of how the caller obtained the content.
+    // Sanitize C0 control characters and normalize CRLF before scanning.
     let content = sanitize_for_pulldown_cmark(content);
     // Catch upstream parser panics (e.g., pulldown-cmark bugs) gracefully
     match panic::catch_unwind(AssertUnwindSafe(|| extract_markdown_links_inner(&content))) {
@@ -304,7 +303,7 @@ pub enum XmlBalanceError {
     },
 }
 
-/// Sanitize content before passing to `pulldown-cmark`.
+/// Sanitize content to prevent parser panics from C0 control characters.
 ///
 /// `pulldown-cmark` 0.13.0 has a known panic triggered by inputs that contain C0
 /// control characters (U+0001..=U+0008, U+000B, U+000C, U+000E..=U+001F) combined
@@ -314,7 +313,8 @@ pub enum XmlBalanceError {
 /// This function:
 /// - Normalizes CRLF and lone CR to LF
 /// - Converts VT (U+000B) and FF (U+000C) to LF (they are whitespace line-endings)
-/// - Removes remaining C0 control characters (U+0001..=U+0008, U+000E..=U+001F)
+/// - Replaces remaining C0 control characters with spaces (U+0020) to preserve byte
+///   offsets; stripping would shift all subsequent positions and break fix ranges
 ///
 /// Returns `Cow::Borrowed` when the input is already clean (zero allocation).
 pub fn sanitize_for_pulldown_cmark(s: &str) -> std::borrow::Cow<'_, str> {
@@ -345,7 +345,6 @@ pub fn sanitize_for_pulldown_cmark(s: &str) -> std::borrow::Cow<'_, str> {
                 // string and shift all subsequent byte offsets, making XmlTag start/end
                 // spans misalign with the (CRLF-normalized) content the fix engine uses.
                 // A space is 1 byte → 1 byte and is harmless to pulldown-cmark.
-                let _ = c;
                 out.push(' ');
             }
             c => out.push(c),
