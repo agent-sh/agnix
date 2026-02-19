@@ -494,7 +494,8 @@ fn run_project_level_checks(
             let mut file_contents: Vec<(PathBuf, String)> = Vec::new();
             for file_path in instruction_file_paths.iter() {
                 match file_utils::safe_read_file(file_path) {
-                    Ok(content) => {
+                    Ok(raw) => {
+                        let content = normalize_line_endings(&raw).into_owned();
                         file_contents.push((file_path.clone(), content));
                     }
                     Err(e) => {
@@ -1111,6 +1112,35 @@ mod validate_content_tests {
             assert_eq!(d1.rule, d2.rule);
             assert_eq!(d1.line, d2.line);
             assert_eq!(d1.column, d2.column);
+        }
+    }
+
+    #[test]
+    fn lone_cr_content_produces_same_diagnostics_as_lf() {
+        // Lone CR (\r without following \n) is the old Mac line ending format.
+        // normalize_line_endings handles it via the second replace('\r', '\n') pass.
+        let config = LintConfig::default();
+        let registry = ValidatorRegistry::with_defaults();
+        let path = Path::new("skill.md");
+
+        let lf_content = "---\nname: test-skill\ndescription: A test\n---\n\n# Instructions\n";
+        // Same content with lone CR instead of LF
+        let cr_content = "---\rname: test-skill\rdescription: A test\r---\r\r# Instructions\r";
+
+        let lf_diags = validate_content(path, lf_content, &config, &registry);
+        let cr_diags = validate_content(path, cr_content, &config, &registry);
+
+        assert_eq!(
+            lf_diags.len(),
+            cr_diags.len(),
+            "Lone-CR and LF content should produce the same number of diagnostics.\nLF: {:?}\nCR: {:?}",
+            lf_diags.iter().map(|d| (&d.rule, d.line, d.column)).collect::<Vec<_>>(),
+            cr_diags.iter().map(|d| (&d.rule, d.line, d.column)).collect::<Vec<_>>(),
+        );
+        for (lf_d, cr_d) in lf_diags.iter().zip(cr_diags.iter()) {
+            assert_eq!(lf_d.rule, cr_d.rule);
+            assert_eq!(lf_d.line, cr_d.line);
+            assert_eq!(lf_d.column, cr_d.column);
         }
     }
 }
