@@ -1122,7 +1122,8 @@ mod validate_content_tests {
     #[test]
     fn lone_cr_content_produces_same_diagnostics_as_lf() {
         // Lone CR (\r without following \n) is the old Mac line ending format.
-        // normalize_line_endings handles it via the second replace('\r', '\n') pass.
+        // normalize_line_endings handles it in its single-pass char iterator,
+        // which converts any bare \r (not followed by \n) to \n.
         let config = LintConfig::default();
         let registry = ValidatorRegistry::with_defaults();
         let path = Path::new("skill.md");
