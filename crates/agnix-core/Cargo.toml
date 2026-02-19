@@ -22,7 +22,6 @@ serde_json.workspace = true
 serde_yaml.workspace = true
 thiserror.workspace = true
 anyhow.workspace = true
-pulldown-cmark.workspace = true
 regex.workspace = true
 ignore = { workspace = true, optional = true }
 glob.workspace = true
