@@ -15,6 +15,15 @@ use std::path::{Path, PathBuf};
 
 use agnix_core::*;
 
+/// Extract diagnostics from a successful `ValidationOutcome`, panicking on
+/// `IoError` or `Skipped` variants.
+fn expect_success(outcome: ValidationOutcome) -> Vec<Diagnostic> {
+    match outcome {
+        ValidationOutcome::Success(diags) => diags,
+        other => panic!("expected ValidationOutcome::Success, got: {:?}", other),
+    }
+}
+
 fn workspace_root() -> &'static Path {
     use std::sync::OnceLock;
 
@@ -396,7 +405,7 @@ fn test_validate_file_with_custom_registry() {
     registry.register(FileType::Skill, || Box::new(DummyValidator));
 
     let diagnostics =
-        validate_file_with_registry(&skill_path, &LintConfig::default(), &registry).unwrap();
+        expect_success(validate_file_with_registry(&skill_path, &LintConfig::default(), &registry).unwrap());
 
     assert_eq!(diagnostics.len(), 1);
     assert_eq!(diagnostics[0].rule, "TEST-001");
@@ -409,9 +418,12 @@ fn test_validate_file_unknown_type() {
     std::fs::write(&unknown_path, "fn main() {}").unwrap();
 
     let config = LintConfig::default();
-    let diagnostics = validate_file(&unknown_path, &config).unwrap();
-
-    assert_eq!(diagnostics.len(), 0);
+    let outcome = validate_file(&unknown_path, &config).unwrap();
+    assert!(
+        outcome.is_skipped(),
+        "Unknown file type should return ValidationOutcome::Skipped, got: {:?}",
+        outcome
+    );
 }
 
 #[test]
@@ -427,7 +439,7 @@ fn test_validate_file_skill() {
     .unwrap();
 
     let config = LintConfig::default();
-    let diagnostics = validate_file(&skill_path, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&skill_path, &config).unwrap());
 
     assert!(diagnostics.is_empty());
 }
@@ -443,7 +455,7 @@ fn test_validate_file_invalid_skill() {
     .unwrap();
 
     let config = LintConfig::default();
-    let diagnostics = validate_file(&skill_path, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&skill_path, &config).unwrap());
 
     assert!(!diagnostics.is_empty());
     assert!(diagnostics.iter().any(|d| d.rule == "CC-SK-006"));
@@ -509,7 +521,7 @@ fn test_validate_invalid_skill_triggers_both_rules() {
     .unwrap();
 
     let config = LintConfig::default();
-    let diagnostics = validate_file(&skill_path, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&skill_path, &config).unwrap());
 
     assert!(diagnostics.iter().any(|d| d.rule == "CC-SK-006"));
     assert!(diagnostics.iter().any(|d| d.rule == "CC-SK-007"));
@@ -528,7 +540,7 @@ fn test_validate_valid_skill_produces_no_errors() {
     .unwrap();
 
     let config = LintConfig::default();
-    let diagnostics = validate_file(&skill_path, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&skill_path, &config).unwrap());
 
     let errors: Vec<_> = diagnostics
         .iter()
@@ -787,7 +799,7 @@ fn test_validate_file_mcp() {
     .unwrap();
 
     let config = LintConfig::default();
-    let diagnostics = validate_file(&mcp_path, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&mcp_path, &config).unwrap());
 
     // Tool without consent field should trigger MCP-005 warning
     assert!(diagnostics.iter().any(|d| d.rule == "MCP-005"));
@@ -804,7 +816,7 @@ fn test_validate_file_mcp_invalid_schema() {
     .unwrap();
 
     let config = LintConfig::default();
-    let diagnostics = validate_file(&mcp_path, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&mcp_path, &config).unwrap());
 
     // Invalid schema should trigger MCP-003
     assert!(diagnostics.iter().any(|d| d.rule == "MCP-003"));
@@ -2090,7 +2102,7 @@ fn test_fixture_positive_cases_by_family() {
     cases.push(("PE-", pe_path));
 
     for (prefix, path) in cases {
-        let diagnostics = validate_file(&path, &config).unwrap();
+        let diagnostics = expect_success(validate_file(&path, &config).unwrap());
         let family_diagnostics: Vec<_> = diagnostics
             .iter()
             .filter(|d| d.rule.starts_with(prefix))
@@ -2217,7 +2229,7 @@ fn test_validate_copilot_fixtures() {
 
     // Validate global instructions
     let global_path = copilot_dir.join(".github/copilot-instructions.md");
-    let diagnostics = validate_file(&global_path, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&global_path, &config).unwrap());
     let cop_errors: Vec<_> = diagnostics
         .iter()
         .filter(|d| d.rule.starts_with("COP-") && d.level == DiagnosticLevel::Error)
@@ -2230,7 +2242,7 @@ fn test_validate_copilot_fixtures() {
 
     // Validate scoped instructions
     let scoped_path = copilot_dir.join(".github/instructions/typescript.instructions.md");
-    let diagnostics = validate_file(&scoped_path, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&scoped_path, &config).unwrap());
     let cop_errors: Vec<_> = diagnostics
         .iter()
         .filter(|d| d.rule.starts_with("COP-") && d.level == DiagnosticLevel::Error)
@@ -2243,7 +2255,7 @@ fn test_validate_copilot_fixtures() {
 
     // Validate custom agent
     let agent_path = copilot_dir.join(".github/agents/reviewer.agent.md");
-    let diagnostics = validate_file(&agent_path, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&agent_path, &config).unwrap());
     let cop_errors: Vec<_> = diagnostics
         .iter()
         .filter(|d| d.rule.starts_with("COP-") && d.level == DiagnosticLevel::Error)
@@ -2256,7 +2268,7 @@ fn test_validate_copilot_fixtures() {
 
     // Validate reusable prompt
     let prompt_path = copilot_dir.join(".github/prompts/refactor.prompt.md");
-    let diagnostics = validate_file(&prompt_path, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&prompt_path, &config).unwrap());
     let cop_errors: Vec<_> = diagnostics
         .iter()
         .filter(|d| d.rule.starts_with("COP-") && d.level == DiagnosticLevel::Error)
@@ -2269,7 +2281,7 @@ fn test_validate_copilot_fixtures() {
 
     // Validate hooks.json
     let hooks_path = copilot_dir.join(".github/hooks/hooks.json");
-    let diagnostics = validate_file(&hooks_path, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&hooks_path, &config).unwrap());
     assert!(
         diagnostics.iter().all(|d| d.rule != "COP-017"),
         "Valid hooks.json should not trigger COP-017, got: {:?}",
@@ -2278,7 +2290,7 @@ fn test_validate_copilot_fixtures() {
 
     // Validate setup workflow
     let setup_steps_path = copilot_dir.join(".github/workflows/copilot-setup-steps.yml");
-    let diagnostics = validate_file(&setup_steps_path, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&setup_steps_path, &config).unwrap());
     assert!(
         diagnostics.iter().all(|d| d.rule != "COP-018"),
         "Valid setup workflow should not trigger COP-018, got: {:?}",
@@ -2295,7 +2307,7 @@ fn test_validate_copilot_invalid_fixtures() {
 
     // COP-001: Empty global file
     let empty_global = copilot_invalid_dir.join(".github/copilot-instructions.md");
-    let diagnostics = validate_file(&empty_global, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&empty_global, &config).unwrap());
     assert!(
         diagnostics.iter().any(|d| d.rule == "COP-001"),
         "Expected COP-001 from empty copilot-instructions.md fixture"
@@ -2304,7 +2316,7 @@ fn test_validate_copilot_invalid_fixtures() {
     // COP-002: Invalid YAML in bad-frontmatter
     let bad_frontmatter =
         copilot_invalid_dir.join(".github/instructions/bad-frontmatter.instructions.md");
-    let diagnostics = validate_file(&bad_frontmatter, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&bad_frontmatter, &config).unwrap());
     assert!(
         diagnostics.iter().any(|d| d.rule == "COP-002"),
         "Expected COP-002 from bad-frontmatter.instructions.md fixture"
@@ -2312,7 +2324,7 @@ fn test_validate_copilot_invalid_fixtures() {
 
     // COP-003: Invalid glob in bad-glob
     let bad_glob = copilot_invalid_dir.join(".github/instructions/bad-glob.instructions.md");
-    let diagnostics = validate_file(&bad_glob, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&bad_glob, &config).unwrap());
     assert!(
         diagnostics.iter().any(|d| d.rule == "COP-003"),
         "Expected COP-003 from bad-glob.instructions.md fixture"
@@ -2321,7 +2333,7 @@ fn test_validate_copilot_invalid_fixtures() {
     // COP-004: Unknown keys in unknown-keys
     let unknown_keys =
         copilot_invalid_dir.join(".github/instructions/unknown-keys.instructions.md");
-    let diagnostics = validate_file(&unknown_keys, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&unknown_keys, &config).unwrap());
     assert!(
         diagnostics.iter().any(|d| d.rule == "COP-004"),
         "Expected COP-004 from unknown-keys.instructions.md fixture"
@@ -2330,7 +2342,7 @@ fn test_validate_copilot_invalid_fixtures() {
     // COP-005: Invalid excludeAgent value
     let bad_exclude_agent =
         copilot_invalid_dir.join(".github/instructions/bad-exclude-agent.instructions.md");
-    let diagnostics = validate_file(&bad_exclude_agent, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&bad_exclude_agent, &config).unwrap());
     assert!(
         diagnostics.iter().any(|d| d.rule == "COP-005"),
         "Expected COP-005 from bad-exclude-agent.instructions.md fixture"
@@ -2339,7 +2351,7 @@ fn test_validate_copilot_invalid_fixtures() {
     // COP-007: Custom agent missing description
     let missing_description =
         copilot_invalid_dir.join(".github/agents/missing-description.agent.md");
-    let diagnostics = validate_file(&missing_description, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&missing_description, &config).unwrap());
     assert!(
         diagnostics.iter().any(|d| d.rule == "COP-007"),
         "Expected COP-007 from missing-description.agent.md fixture"
@@ -2347,7 +2359,7 @@ fn test_validate_copilot_invalid_fixtures() {
 
     // COP-008: Unknown custom-agent field
     let unknown_agent_field = copilot_invalid_dir.join(".github/agents/unknown-field.agent.md");
-    let diagnostics = validate_file(&unknown_agent_field, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&unknown_agent_field, &config).unwrap());
     assert!(
         diagnostics.iter().any(|d| d.rule == "COP-008"),
         "Expected COP-008 from unknown-field.agent.md fixture"
@@ -2355,7 +2367,7 @@ fn test_validate_copilot_invalid_fixtures() {
 
     // COP-009: Invalid custom-agent target
     let invalid_target = copilot_invalid_dir.join(".github/agents/invalid-target.agent.md");
-    let diagnostics = validate_file(&invalid_target, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&invalid_target, &config).unwrap());
     assert!(
         diagnostics.iter().any(|d| d.rule == "COP-009"),
         "Expected COP-009 from invalid-target.agent.md fixture"
@@ -2363,7 +2375,7 @@ fn test_validate_copilot_invalid_fixtures() {
 
     // COP-010: Deprecated infer field
     let deprecated_infer = copilot_invalid_dir.join(".github/agents/deprecated-infer.agent.md");
-    let diagnostics = validate_file(&deprecated_infer, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&deprecated_infer, &config).unwrap());
     assert!(
         diagnostics.iter().any(|d| d.rule == "COP-010"),
         "Expected COP-010 from deprecated-infer.agent.md fixture"
@@ -2371,7 +2383,7 @@ fn test_validate_copilot_invalid_fixtures() {
 
     // COP-012: Unsupported GitHub.com fields
     let unsupported_fields = copilot_invalid_dir.join(".github/agents/unsupported-fields.agent.md");
-    let diagnostics = validate_file(&unsupported_fields, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&unsupported_fields, &config).unwrap());
     assert!(
         diagnostics.iter().any(|d| d.rule == "COP-012"),
         "Expected COP-012 from unsupported-fields.agent.md fixture"
@@ -2379,7 +2391,7 @@ fn test_validate_copilot_invalid_fixtures() {
 
     // COP-013: Empty prompt body
     let empty_prompt = copilot_invalid_dir.join(".github/prompts/empty.prompt.md");
-    let diagnostics = validate_file(&empty_prompt, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&empty_prompt, &config).unwrap());
     assert!(
         diagnostics.iter().any(|d| d.rule == "COP-013"),
         "Expected COP-013 from empty.prompt.md fixture"
@@ -2387,7 +2399,7 @@ fn test_validate_copilot_invalid_fixtures() {
 
     // COP-014: Unknown prompt field
     let unknown_prompt_field = copilot_invalid_dir.join(".github/prompts/unknown-field.prompt.md");
-    let diagnostics = validate_file(&unknown_prompt_field, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&unknown_prompt_field, &config).unwrap());
     assert!(
         diagnostics.iter().any(|d| d.rule == "COP-014"),
         "Expected COP-014 from unknown-field.prompt.md fixture"
@@ -2395,7 +2407,7 @@ fn test_validate_copilot_invalid_fixtures() {
 
     // COP-015: Invalid prompt agent mode
     let invalid_prompt_agent = copilot_invalid_dir.join(".github/prompts/invalid-agent.prompt.md");
-    let diagnostics = validate_file(&invalid_prompt_agent, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&invalid_prompt_agent, &config).unwrap());
     assert!(
         diagnostics.iter().any(|d| d.rule == "COP-015"),
         "Expected COP-015 from invalid-agent.prompt.md fixture"
@@ -2403,7 +2415,7 @@ fn test_validate_copilot_invalid_fixtures() {
 
     // COP-017: Hooks schema violations
     let invalid_hooks = copilot_invalid_dir.join(".github/hooks/hooks.json");
-    let diagnostics = validate_file(&invalid_hooks, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&invalid_hooks, &config).unwrap());
     assert!(
         diagnostics.iter().any(|d| d.rule == "COP-017"),
         "Expected COP-017 from hooks.json fixture"
@@ -2412,7 +2424,7 @@ fn test_validate_copilot_invalid_fixtures() {
     // COP-018: Missing jobs.copilot-setup-steps in workflow
     let invalid_setup_workflow =
         copilot_invalid_dir.join(".github/workflows/copilot-setup-steps.yml");
-    let diagnostics = validate_file(&invalid_setup_workflow, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&invalid_setup_workflow, &config).unwrap());
     assert!(
         diagnostics.iter().any(|d| d.rule == "COP-018"),
         "Expected COP-018 from copilot-setup-steps.yml fixture"
@@ -2426,7 +2438,7 @@ fn test_validate_copilot_006_too_long() {
     let config = LintConfig::default();
 
     let long_global = copilot_too_long_dir.join(".github/copilot-instructions.md");
-    let diagnostics = validate_file(&long_global, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&long_global, &config).unwrap());
     assert!(
         diagnostics.iter().any(|d| d.rule == "COP-006"),
         "Expected COP-006 from copilot-too-long fixture, got: {:?}",
@@ -2434,7 +2446,7 @@ fn test_validate_copilot_006_too_long() {
     );
 
     let long_agent = copilot_too_long_dir.join(".github/agents/too-long.agent.md");
-    let diagnostics = validate_file(&long_agent, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&long_agent, &config).unwrap());
     assert!(
         diagnostics.iter().any(|d| d.rule == "COP-011"),
         "Expected COP-011 from too-long.agent.md fixture, got: {:?}",
@@ -2452,7 +2464,7 @@ fn test_validate_copilot_file_empty() {
     std::fs::write(&file_path, "").unwrap();
 
     let config = LintConfig::default();
-    let diagnostics = validate_file(&file_path, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&file_path, &config).unwrap());
 
     let cop_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "COP-001").collect();
     assert_eq!(cop_001.len(), 1, "Expected COP-001 for empty file");
@@ -2468,7 +2480,7 @@ fn test_validate_copilot_scoped_missing_frontmatter() {
     std::fs::write(&file_path, "# Instructions without frontmatter").unwrap();
 
     let config = LintConfig::default();
-    let diagnostics = validate_file(&file_path, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&file_path, &config).unwrap());
 
     let cop_002: Vec<_> = diagnostics.iter().filter(|d| d.rule == "COP-002").collect();
     assert_eq!(cop_002.len(), 1, "Expected COP-002 for missing frontmatter");
@@ -2494,7 +2506,7 @@ Use idiomatic Rust patterns.
     .unwrap();
 
     let config = LintConfig::default();
-    let diagnostics = validate_file(&file_path, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&file_path, &config).unwrap());
 
     let cop_errors: Vec<_> = diagnostics
         .iter()
@@ -2754,7 +2766,7 @@ fn test_validate_cursor_fixtures() {
 
     // Validate valid .mdc file
     let valid_path = cursor_dir.join(".cursor/rules/valid.mdc");
-    let diagnostics = validate_file(&valid_path, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&valid_path, &config).unwrap());
     let cur_errors: Vec<_> = diagnostics
         .iter()
         .filter(|d| d.rule.starts_with("CUR-") && d.level == DiagnosticLevel::Error)
@@ -2767,7 +2779,7 @@ fn test_validate_cursor_fixtures() {
 
     // Validate .mdc file with multiple globs
     let multiple_globs_path = cursor_dir.join(".cursor/rules/multiple-globs.mdc");
-    let diagnostics = validate_file(&multiple_globs_path, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&multiple_globs_path, &config).unwrap());
     let cur_errors: Vec<_> = diagnostics
         .iter()
         .filter(|d| d.rule.starts_with("CUR-") && d.level == DiagnosticLevel::Error)
@@ -2779,7 +2791,7 @@ fn test_validate_cursor_fixtures() {
     );
 
     let hooks_path = cursor_dir.join(".cursor/hooks.json");
-    let diagnostics = validate_file(&hooks_path, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&hooks_path, &config).unwrap());
     assert!(
         diagnostics.iter().all(|d| !matches!(
             d.rule.as_str(),
@@ -2793,7 +2805,7 @@ fn test_validate_cursor_fixtures() {
     );
 
     let agent_path = cursor_dir.join(".cursor/agents/reviewer.md");
-    let diagnostics = validate_file(&agent_path, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&agent_path, &config).unwrap());
     assert!(
         diagnostics
             .iter()
@@ -2806,7 +2818,7 @@ fn test_validate_cursor_fixtures() {
     );
 
     let environment_path = cursor_dir.join(".cursor/environment.json");
-    let diagnostics = validate_file(&environment_path, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&environment_path, &config).unwrap());
     assert!(
         diagnostics.iter().all(|d| d.rule != "CUR-016"),
         "Valid environment fixture should have no CUR-016 diagnostics, got: {:?}",
@@ -2826,7 +2838,7 @@ fn test_validate_cursor_invalid_fixtures() {
 
     // CUR-001: Empty .mdc file
     let empty_mdc = cursor_invalid_dir.join(".cursor/rules/empty.mdc");
-    let diagnostics = validate_file(&empty_mdc, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&empty_mdc, &config).unwrap());
     assert!(
         diagnostics.iter().any(|d| d.rule == "CUR-001"),
         "Expected CUR-001 from empty.mdc fixture"
@@ -2834,7 +2846,7 @@ fn test_validate_cursor_invalid_fixtures() {
 
     // CUR-002: Missing frontmatter
     let no_frontmatter = cursor_invalid_dir.join(".cursor/rules/no-frontmatter.mdc");
-    let diagnostics = validate_file(&no_frontmatter, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&no_frontmatter, &config).unwrap());
     assert!(
         diagnostics.iter().any(|d| d.rule == "CUR-002"),
         "Expected CUR-002 from no-frontmatter.mdc fixture"
@@ -2842,7 +2854,7 @@ fn test_validate_cursor_invalid_fixtures() {
 
     // CUR-003: Invalid YAML
     let bad_yaml = cursor_invalid_dir.join(".cursor/rules/bad-yaml.mdc");
-    let diagnostics = validate_file(&bad_yaml, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&bad_yaml, &config).unwrap());
     assert!(
         diagnostics.iter().any(|d| d.rule == "CUR-003"),
         "Expected CUR-003 from bad-yaml.mdc fixture"
@@ -2850,7 +2862,7 @@ fn test_validate_cursor_invalid_fixtures() {
 
     // CUR-004: Invalid glob pattern
     let bad_glob = cursor_invalid_dir.join(".cursor/rules/bad-glob.mdc");
-    let diagnostics = validate_file(&bad_glob, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&bad_glob, &config).unwrap());
     assert!(
         diagnostics.iter().any(|d| d.rule == "CUR-004"),
         "Expected CUR-004 from bad-glob.mdc fixture"
@@ -2858,7 +2870,7 @@ fn test_validate_cursor_invalid_fixtures() {
 
     // CUR-005: Unknown keys
     let unknown_keys = cursor_invalid_dir.join(".cursor/rules/unknown-keys.mdc");
-    let diagnostics = validate_file(&unknown_keys, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&unknown_keys, &config).unwrap());
     assert!(
         diagnostics.iter().any(|d| d.rule == "CUR-005"),
         "Expected CUR-005 from unknown-keys.mdc fixture"
@@ -2866,7 +2878,7 @@ fn test_validate_cursor_invalid_fixtures() {
 
     // CUR-010: Invalid hooks schema
     let cur_010_hooks = cursor_invalid_dir.join("hooks-cur010/.cursor/hooks.json");
-    let diagnostics = validate_file(&cur_010_hooks, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&cur_010_hooks, &config).unwrap());
     assert!(
         diagnostics.iter().any(|d| d.rule == "CUR-010"),
         "Expected CUR-010 from hooks-cur010 fixture"
@@ -2874,7 +2886,7 @@ fn test_validate_cursor_invalid_fixtures() {
 
     // CUR-011/CUR-012/CUR-013 from malformed hook entry
     let cur_011_to_013 = cursor_invalid_dir.join("hooks-cur011-013/.cursor/hooks.json");
-    let diagnostics = validate_file(&cur_011_to_013, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&cur_011_to_013, &config).unwrap());
     assert!(
         diagnostics.iter().any(|d| d.rule == "CUR-011"),
         "Expected CUR-011 from hooks-cur011-013 fixture"
@@ -2890,7 +2902,7 @@ fn test_validate_cursor_invalid_fixtures() {
 
     // CUR-014: Invalid Cursor agent frontmatter
     let cur_014_agent = cursor_invalid_dir.join("agent-cur014/.cursor/agents/reviewer.md");
-    let diagnostics = validate_file(&cur_014_agent, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&cur_014_agent, &config).unwrap());
     assert!(
         diagnostics.iter().any(|d| d.rule == "CUR-014"),
         "Expected CUR-014 from agent-cur014 fixture"
@@ -2898,7 +2910,7 @@ fn test_validate_cursor_invalid_fixtures() {
 
     // CUR-015: Empty Cursor agent body
     let cur_015_agent = cursor_invalid_dir.join("agent-cur015/.cursor/agents/reviewer.md");
-    let diagnostics = validate_file(&cur_015_agent, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&cur_015_agent, &config).unwrap());
     assert!(
         diagnostics.iter().any(|d| d.rule == "CUR-015"),
         "Expected CUR-015 from agent-cur015 fixture"
@@ -2907,7 +2919,7 @@ fn test_validate_cursor_invalid_fixtures() {
     // CUR-016: Invalid environment schema
     let cur_016_environment =
         cursor_invalid_dir.join("environment-cur016/.cursor/environment.json");
-    let diagnostics = validate_file(&cur_016_environment, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&cur_016_environment, &config).unwrap());
     assert!(
         diagnostics.iter().any(|d| d.rule == "CUR-016"),
         "Expected CUR-016 from environment-cur016 fixture"
@@ -2920,7 +2932,7 @@ fn test_validate_cursor_legacy_fixture() {
     let legacy_path = fixtures_dir.join("cursor-legacy/.cursorrules");
     let config = LintConfig::default();
 
-    let diagnostics = validate_file(&legacy_path, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&legacy_path, &config).unwrap());
     assert!(
         diagnostics.iter().any(|d| d.rule == "CUR-006"),
         "Expected CUR-006 from .cursorrules fixture"
@@ -2936,7 +2948,7 @@ fn test_validate_cursor_file_empty() {
     std::fs::write(&file_path, "").unwrap();
 
     let config = LintConfig::default();
-    let diagnostics = validate_file(&file_path, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&file_path, &config).unwrap());
 
     let cur_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CUR-001").collect();
     assert_eq!(cur_001.len(), 1, "Expected CUR-001 for empty file");
@@ -2951,7 +2963,7 @@ fn test_validate_cursor_mdc_missing_frontmatter() {
     std::fs::write(&file_path, "# Rules without frontmatter").unwrap();
 
     let config = LintConfig::default();
-    let diagnostics = validate_file(&file_path, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&file_path, &config).unwrap());
 
     let cur_002: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CUR-002").collect();
     assert_eq!(cur_002.len(), 1, "Expected CUR-002 for missing frontmatter");
@@ -2977,7 +2989,7 @@ Use idiomatic Rust patterns.
     .unwrap();
 
     let config = LintConfig::default();
-    let diagnostics = validate_file(&file_path, &config).unwrap();
+    let diagnostics = expect_success(validate_file(&file_path, &config).unwrap());
 
     let cur_errors: Vec<_> = diagnostics
         .iter()
@@ -3070,7 +3082,7 @@ fn test_pe_rules_dispatched() {
         let content = std::fs::read_to_string(fixtures_dir.join(fixture))
             .unwrap_or_else(|_| panic!("Failed to read fixture: {}", fixture));
         std::fs::write(&claude_path, &content).unwrap();
-        let diagnostics = validate_file_with_registry(&claude_path, &config, &registry).unwrap();
+        let diagnostics = expect_success(validate_file_with_registry(&claude_path, &config, &registry).unwrap());
         assert!(
             diagnostics.iter().any(|d| d.rule == expected_rule),
             "Expected {} from {} content",
@@ -3084,7 +3096,7 @@ fn test_pe_rules_dispatched() {
     let pe_003_content =
         std::fs::read_to_string(fixtures_dir.join("pe-003-weak-language.md")).unwrap();
     std::fs::write(&agents_path, &pe_003_content).unwrap();
-    let diagnostics = validate_file_with_registry(&agents_path, &config, &registry).unwrap();
+    let diagnostics = expect_success(validate_file_with_registry(&agents_path, &config, &registry).unwrap());
     assert!(
         diagnostics.iter().any(|d| d.rule == "PE-003"),
         "Expected PE-003 from AGENTS.md with weak language content"
@@ -3894,11 +3906,11 @@ fn test_validate_file_respects_files_config_exclude() {
     config.set_root_dir(root.to_path_buf());
 
     let registry = ValidatorRegistry::with_defaults();
-    let diagnostics = validate_file_with_registry(&claude_file, &config, &registry).unwrap();
+    let outcome = validate_file_with_registry(&claude_file, &config, &registry).unwrap();
     assert!(
-        diagnostics.is_empty(),
-        "Expected empty diagnostics for excluded file, got {} diagnostics",
-        diagnostics.len()
+        outcome.is_skipped(),
+        "Expected Skipped for excluded file, got: {:?}",
+        outcome
     );
 }
 
@@ -4603,7 +4615,7 @@ fn test_disabled_validators_config_filters_in_validate_file() {
 
     // Without disabling, XmlValidator should fire
     let config = LintConfig::default();
-    let diags = validate_file(&claude_md, &config).unwrap();
+    let diags = expect_success(validate_file(&claude_md, &config).unwrap());
     let xml_diags: Vec<_> = diags.iter().filter(|d| d.rule == "XML-001").collect();
     assert!(
         !xml_diags.is_empty(),
@@ -4614,7 +4626,7 @@ fn test_disabled_validators_config_filters_in_validate_file() {
     // With XmlValidator disabled, XML-001 should not appear
     let mut config_disabled = LintConfig::default();
     config_disabled.rules_mut().disabled_validators = vec!["XmlValidator".to_string()];
-    let diags_disabled = validate_file(&claude_md, &config_disabled).unwrap();
+    let diags_disabled = expect_success(validate_file(&claude_md, &config_disabled).unwrap());
     let xml_diags_disabled: Vec<_> = diags_disabled
         .iter()
         .filter(|d| d.rule == "XML-001")
@@ -4677,7 +4689,7 @@ fn test_disabled_validators_respected_in_validate_file_with_registry() {
 
     // Without disabling, XmlValidator should fire via validate_file_with_registry
     let config = LintConfig::default();
-    let diags = validate_file_with_registry(&claude_md, &config, &registry).unwrap();
+    let diags = expect_success(validate_file_with_registry(&claude_md, &config, &registry).unwrap());
     let xml_diags: Vec<_> = diags.iter().filter(|d| d.rule == "XML-001").collect();
     assert!(
         !xml_diags.is_empty(),
@@ -4689,7 +4701,7 @@ fn test_disabled_validators_respected_in_validate_file_with_registry() {
     let mut config_disabled = LintConfig::default();
     config_disabled.rules_mut().disabled_validators = vec!["XmlValidator".to_string()];
     let diags_disabled =
-        validate_file_with_registry(&claude_md, &config_disabled, &registry).unwrap();
+        expect_success(validate_file_with_registry(&claude_md, &config_disabled, &registry).unwrap());
     let xml_diags_disabled: Vec<_> = diags_disabled
         .iter()
         .filter(|d| d.rule == "XML-001")
@@ -4714,7 +4726,7 @@ fn test_validate_file_with_registry_consistent_with_validate_content() {
     config.rules_mut().disabled_validators = vec!["XmlValidator".to_string()];
 
     // validate_file_with_registry path
-    let file_diags = validate_file_with_registry(&claude_md, &config, &registry).unwrap();
+    let file_diags = expect_success(validate_file_with_registry(&claude_md, &config, &registry).unwrap());
     let file_rules: std::collections::HashSet<&str> =
         file_diags.iter().map(|d| d.rule.as_str()).collect();
 
@@ -4745,7 +4757,7 @@ fn test_validate_file_with_registry_consistent_with_validate_content() {
     // Also verify both paths agree when disabled_validators is empty
     let config_empty = LintConfig::default();
     let file_diags_enabled =
-        validate_file_with_registry(&claude_md, &config_empty, &registry).unwrap();
+        expect_success(validate_file_with_registry(&claude_md, &config_empty, &registry).unwrap());
     let content = std::fs::read_to_string(&claude_md).unwrap();
     let content_diags_enabled = validate_content(&claude_md, &content, &config_empty, &registry);
     let file_rules_enabled: std::collections::HashSet<&str> =
@@ -4820,7 +4832,7 @@ fn test_disabled_validators_multi_validator_validate_file_with_registry() {
 
     // Confirm both rules fire with default config before disabling anything
     let config = LintConfig::default();
-    let diags = validate_file_with_registry(&claude_md, &config, &registry).unwrap();
+    let diags = expect_success(validate_file_with_registry(&claude_md, &config, &registry).unwrap());
     assert!(
         diags.iter().any(|d| d.rule == "XML-001"),
         "Expected XML-001 to fire with default config, got rules: {:?}",
@@ -4836,7 +4848,7 @@ fn test_disabled_validators_multi_validator_validate_file_with_registry() {
     let mut config_multi = LintConfig::default();
     config_multi.rules_mut().disabled_validators =
         vec!["XmlValidator".to_string(), "ClaudeMdValidator".to_string()];
-    let diags_multi = validate_file_with_registry(&claude_md, &config_multi, &registry).unwrap();
+    let diags_multi = expect_success(validate_file_with_registry(&claude_md, &config_multi, &registry).unwrap());
     assert!(
         !diags_multi.iter().any(|d| d.rule == "XML-001"),
         "Expected XML-001 absent when XmlValidator is disabled, got: {:?}",
@@ -4869,21 +4881,21 @@ fn test_validate_file_with_registry_no_state_leakage_between_configs() {
     config_disabled.rules_mut().disabled_validators = vec!["XmlValidator".to_string()];
 
     // Call 1: enabled - XML-001 should fire
-    let diags1 = validate_file_with_registry(&claude_md, &config_enabled, &registry).unwrap();
+    let diags1 = expect_success(validate_file_with_registry(&claude_md, &config_enabled, &registry).unwrap());
     assert!(
         diags1.iter().any(|d| d.rule == "XML-001"),
         "Call 1 (enabled): expected XML-001"
     );
 
     // Call 2: disabled - XML-001 should be absent
-    let diags2 = validate_file_with_registry(&claude_md, &config_disabled, &registry).unwrap();
+    let diags2 = expect_success(validate_file_with_registry(&claude_md, &config_disabled, &registry).unwrap());
     assert!(
         !diags2.iter().any(|d| d.rule == "XML-001"),
         "Call 2 (disabled): expected no XML-001"
     );
 
     // Call 3: enabled again - XML-001 must return (no state leakage from call 2)
-    let diags3 = validate_file_with_registry(&claude_md, &config_enabled, &registry).unwrap();
+    let diags3 = expect_success(validate_file_with_registry(&claude_md, &config_enabled, &registry).unwrap());
     assert!(
         diags3.iter().any(|d| d.rule == "XML-001"),
         "Call 3 (re-enabled): expected XML-001 to return after disabled call"
@@ -4916,5 +4928,79 @@ fn test_custom_provider_end_to_end() {
     assert_eq!(
         registry.total_validator_count(),
         defaults.total_validator_count()
+    );
+}
+
+// ============================================================================
+// ValidationOutcome integration tests
+// ============================================================================
+
+#[test]
+fn test_validation_outcome_io_error_for_nonexistent_file() {
+    let config = LintConfig::default();
+    // Use a known file type path (CLAUDE.md) that does not exist on disk
+    let outcome = validate_file(Path::new("/tmp/nonexistent_dir_466/CLAUDE.md"), &config).unwrap();
+    assert!(
+        outcome.is_io_error(),
+        "Nonexistent file with known type should return IoError, got: {:?}",
+        outcome
+    );
+    // into_diagnostics should produce a file::io diagnostic
+    let diags = outcome.into_diagnostics();
+    assert_eq!(diags.len(), 1);
+    assert_eq!(diags[0].rule, "file::io");
+}
+
+#[test]
+fn test_validation_outcome_skipped_for_unknown_type() {
+    let temp = tempfile::TempDir::new().unwrap();
+    let rs_file = temp.path().join("main.rs");
+    std::fs::write(&rs_file, "fn main() {}").unwrap();
+
+    let config = LintConfig::default();
+    let outcome = validate_file(&rs_file, &config).unwrap();
+    assert!(
+        outcome.is_skipped(),
+        "Unknown file type should return Skipped, got: {:?}",
+        outcome
+    );
+    assert!(outcome.diagnostics().is_empty());
+}
+
+#[test]
+fn test_validation_outcome_success_for_valid_file() {
+    let temp = tempfile::TempDir::new().unwrap();
+    let skill_path = temp.path().join("SKILL.md");
+    std::fs::write(
+        &skill_path,
+        "---\nname: code-review\ndescription: Use when reviewing code\n---\nBody",
+    )
+    .unwrap();
+
+    let config = LintConfig::default();
+    let outcome = validate_file(&skill_path, &config).unwrap();
+    assert!(
+        outcome.is_success(),
+        "Valid file should return Success, got: {:?}",
+        outcome
+    );
+}
+
+#[test]
+fn test_validation_outcome_into_diagnostics_preserves_all() {
+    let temp = tempfile::TempDir::new().unwrap();
+    let claude_path = temp.path().join("CLAUDE.md");
+    std::fs::write(&claude_path, "<unclosed>").unwrap();
+
+    let config = LintConfig::default();
+    let outcome = validate_file(&claude_path, &config).unwrap();
+    assert!(outcome.is_success());
+
+    let diag_count = outcome.diagnostics().len();
+    let into_diags = outcome.into_diagnostics();
+    assert_eq!(
+        into_diags.len(),
+        diag_count,
+        "into_diagnostics should preserve all diagnostics"
     );
 }
