@@ -118,6 +118,18 @@ impl schemars::JsonSchema for ToolsInput {
             ]
         })
     }
+
+    /// Inline this schema at every usage site instead of emitting a `$ref`.
+    ///
+    /// With `inline_schema = false` (the schemars default), the generator places
+    /// `ToolsInput` in `$defs` and emits `$ref` pointers from `ValidateFileInput`
+    /// and `ValidateProjectInput`. Some MCP clients do not follow `$ref` when
+    /// rendering input-schema choices, which would hide the array-first preference
+    /// signal. Inlining guarantees that the `anyOf` with array first is visible
+    /// directly at every property site.
+    fn inline_schema() -> bool {
+        true
+    }
 }
 
 /// Input for get_rule_docs tool
@@ -498,7 +510,7 @@ impl ServerHandler for AgnixServer {
                  - validate_file: Validate a single config file\n\
                  - get_rules: List all 229 validation rules\n\
                  - get_rule_docs: Get details about a specific rule\n\n\
-                 Preferred input: tools (CSV string or array)\n\
+                 Preferred input: tools (array of tool names, or comma-separated string as fallback)\n\
                  Legacy fallback: target\n\
                  Supported tools are derived from agnix rule metadata"
                     .to_string(),
@@ -768,12 +780,32 @@ mod tests {
         let schema =
             rmcp::schemars::SchemaGenerator::default().into_root_schema_for::<ToolsInput>();
         let json = serde_json::to_value(&schema).expect("schema should serialize");
-        let any_of = json.get("anyOf").expect("schema should have anyOf");
-        let first = &any_of[0];
+        let any_of = json
+            .get("anyOf")
+            .and_then(|v| v.as_array())
+            .expect("schema should have anyOf array");
+
+        assert_eq!(any_of.len(), 2, "anyOf must have exactly two entries");
+
         assert_eq!(
-            first.get("type").and_then(|v| v.as_str()),
+            any_of[0].get("type").and_then(|v| v.as_str()),
             Some("array"),
             "first anyOf entry must be the array variant"
+        );
+        assert_eq!(
+            any_of[1].get("type").and_then(|v| v.as_str()),
+            Some("string"),
+            "second anyOf entry must be the string variant"
+        );
+
+        // Verify items constraint so MCP clients know array elements are strings
+        assert_eq!(
+            any_of[0]
+                .get("items")
+                .and_then(|v| v.get("type"))
+                .and_then(|v| v.as_str()),
+            Some("string"),
+            "array variant must have items.type == 'string'"
         );
     }
 
