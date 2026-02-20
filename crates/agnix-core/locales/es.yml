@@ -317,6 +317,9 @@ rules:
   ref_002:
     message: "Enlace markdown roto: '%{url}' (archivo no encontrado: %{resolved})"
     suggestion: "Corrige el destino del enlace o elimina el enlace roto"
+  cache_poison:
+    message: "El bloqueo de cache de importaciones fue envenenado por un panico previo del validador; datos recuperados pueden estar desactualizados"
+    suggestion: "Un validador entro en panico mientras sostenia el bloqueo de cache de importaciones. La validacion continua con datos recuperados, pero los resultados pueden estar desactualizados."
 
   # --- Cross-platform (cross_platform.rs) ---
   xp_001:

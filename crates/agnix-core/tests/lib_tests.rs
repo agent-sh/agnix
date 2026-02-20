@@ -3400,48 +3400,45 @@ fn test_concurrent_project_validation() {
 
 #[test]
 fn test_validate_project_with_poisoned_import_cache_does_not_panic() {
-    struct PoisonImportCacheValidator;
-
-    impl Validator for PoisonImportCacheValidator {
-        fn validate(&self, _path: &Path, _content: &str, config: &LintConfig) -> Vec<Diagnostic> {
-            use std::thread;
-
-            if let Some(cache) = config.get_import_cache().cloned() {
-                let _ = thread::spawn(move || {
-                    let _guard = cache.write().unwrap();
-                    panic!("poison import cache lock");
-                })
-                .join();
-            }
-
-            Vec::new()
-        }
-    }
-
-    fn create_poison_validator() -> Box<dyn Validator> {
-        Box::new(PoisonImportCacheValidator)
-    }
+    use std::collections::HashMap;
+    use std::sync::{Arc, RwLock};
 
     let temp = tempfile::TempDir::new().unwrap();
     std::fs::write(temp.path().join("notes.md"), "See @missing.md").unwrap();
 
-    // Start with defaults (which include ImportsValidator for GenericMarkdown),
-    // then add the poison validator so it runs first and poisons the cache.
-    let mut registry = ValidatorRegistry::with_defaults();
-    registry.register(FileType::GenericMarkdown, create_poison_validator);
+    // Pre-poison the shared cache before validation starts
+    let cache: agnix_core::__internal::ImportCache =
+        Arc::new(RwLock::new(HashMap::new()));
+    let cache_for_poison = cache.clone();
+    let _ = std::thread::spawn(move || {
+        let _guard = cache_for_poison.write().unwrap();
+        panic!("poison import cache lock");
+    })
+    .join();
+    assert!(cache.read().is_err(), "Cache lock should be poisoned");
 
-    let config = LintConfig::default();
-    let result = validate_project_with_registry(temp.path(), &config, &registry);
+    let mut config = LintConfig::default();
+    config.set_import_cache(cache);
+
+    let result = validate_project(temp.path(), &config);
     assert!(
         result.is_ok(),
         "Project validation should continue with a poisoned import cache lock"
     );
-    let diagnostics = result.unwrap().diagnostics;
+    let outcome = result.unwrap();
     assert!(
-        diagnostics
+        outcome
+            .diagnostics
             .iter()
             .any(|d| d.rule == "REF-001" && d.message.contains("@missing.md")),
         "Imports validation should still run and report missing imports after cache poisoning"
+    );
+    assert!(
+        outcome
+            .diagnostics
+            .iter()
+            .any(|d| d.rule == "lint::cache-poison"),
+        "Expected lint::cache-poison warning to surface through validation pipeline"
     );
 }
 
