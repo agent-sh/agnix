@@ -541,7 +541,10 @@ mod tests {
         let amp_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AMP-001").collect();
         assert_eq!(amp_001.len(), 1);
         assert!(amp_001[0].message.contains("Invalid YAML frontmatter"));
-        assert_eq!(amp_001[0].line, 3, "serde_yaml reports loc.line()=2 for this error (libyaml places the unclosed-bracket error at EOF, serde_yaml adds its own +1); code then adds 1 for the opening --- delimiter, giving line 3");
+        assert_eq!(
+            amp_001[0].line, 3,
+            "serde_yaml reports loc.line()=2 for this error (libyaml places the unclosed-bracket error at EOF, serde_yaml adds its own +1); code then adds 1 for the opening --- delimiter, giving line 3"
+        );
     }
 
     #[test]
