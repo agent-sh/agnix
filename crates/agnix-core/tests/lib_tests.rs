@@ -5087,3 +5087,56 @@ fn test_validate_project_skipped_files_not_counted() {
         result.files_checked
     );
 }
+
+/// Regression test for #459: invalid glob patterns in [files] config should
+/// produce config::glob Warning diagnostics in validate_project output, not
+/// eprintln! to stderr.
+#[test]
+fn test_invalid_glob_in_files_config_produces_diagnostic() {
+    let temp = tempfile::TempDir::new().unwrap();
+
+    // Write a valid CLAUDE.md so the project has at least one recognized file
+    std::fs::write(
+        temp.path().join("CLAUDE.md"),
+        "# Project\n\nSome instructions.\n",
+    )
+    .unwrap();
+
+    // Build a config with an invalid glob pattern in include_as_memory
+    let mut config = LintConfig::default();
+    config
+        .files_mut()
+        .include_as_memory
+        .push("[invalid-glob".to_string());
+
+    let result = validate_project(temp.path(), &config).unwrap();
+
+    let glob_diags: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.rule == "config::glob")
+        .collect();
+
+    assert_eq!(
+        glob_diags.len(),
+        1,
+        "Expected exactly 1 config::glob diagnostic for the invalid pattern, got: {glob_diags:?}"
+    );
+
+    assert_eq!(
+        glob_diags[0].level,
+        DiagnosticLevel::Warning,
+        "config::glob diagnostic should be Warning level"
+    );
+
+    assert!(
+        glob_diags[0].message.contains("[invalid-glob"),
+        "Diagnostic message should mention the invalid pattern, got: {}",
+        glob_diags[0].message
+    );
+
+    assert!(
+        glob_diags[0].suggestion.is_some(),
+        "config::glob diagnostic should include a suggestion"
+    );
+}

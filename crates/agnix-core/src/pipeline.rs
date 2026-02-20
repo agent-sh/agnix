@@ -1547,6 +1547,107 @@ mod tests {
         assert_eq!(xp004_errors[0].file, agents_md);
     }
 
+    // ===== compile_patterns_with_diagnostics tests =====
+
+    #[test]
+    fn compile_patterns_with_diagnostics_all_valid() {
+        let patterns = vec!["*.md".to_string(), "src/**/*.rs".to_string()];
+        let (compiled, diags) = compile_patterns_with_diagnostics(&patterns);
+        assert_eq!(compiled.len(), 2, "All valid patterns should compile");
+        assert!(
+            diags.is_empty(),
+            "No diagnostics expected for valid patterns, got: {diags:?}"
+        );
+    }
+
+    #[test]
+    fn compile_patterns_with_diagnostics_invalid_pattern() {
+        let patterns = vec!["[invalid".to_string()];
+        let (compiled, diags) = compile_patterns_with_diagnostics(&patterns);
+        assert!(
+            compiled.is_empty(),
+            "Invalid pattern should not produce a compiled pattern"
+        );
+        assert_eq!(
+            diags.len(),
+            1,
+            "Expected exactly one diagnostic for the invalid pattern"
+        );
+        assert_eq!(
+            diags[0].level,
+            crate::DiagnosticLevel::Warning,
+            "Invalid glob diagnostic should be Warning level"
+        );
+        assert_eq!(
+            diags[0].rule, "config::glob",
+            "Invalid glob diagnostic should use rule config::glob"
+        );
+        assert!(
+            diags[0].suggestion.is_some(),
+            "Diagnostic should include a suggestion"
+        );
+    }
+
+    #[test]
+    fn compile_patterns_with_diagnostics_mixed_valid_and_invalid() {
+        let patterns = vec![
+            "*.md".to_string(),
+            "[bad".to_string(),
+            "src/**/*.rs".to_string(),
+            "[also-bad".to_string(),
+        ];
+        let (compiled, diags) = compile_patterns_with_diagnostics(&patterns);
+        assert_eq!(
+            compiled.len(),
+            2,
+            "Only valid patterns should compile, got {}",
+            compiled.len()
+        );
+        assert_eq!(
+            diags.len(),
+            2,
+            "Expected 2 diagnostics for 2 invalid patterns, got {}",
+            diags.len()
+        );
+        for d in &diags {
+            assert_eq!(d.rule, "config::glob");
+            assert_eq!(d.level, crate::DiagnosticLevel::Warning);
+        }
+    }
+
+    #[test]
+    fn compile_patterns_with_diagnostics_empty_input() {
+        let patterns: Vec<String> = vec![];
+        let (compiled, diags) = compile_patterns_with_diagnostics(&patterns);
+        assert!(compiled.is_empty());
+        assert!(diags.is_empty());
+    }
+
+    #[test]
+    fn compile_files_config_with_diagnostics_aggregates_all_lists() {
+        use crate::config::FilesConfig;
+
+        let files = FilesConfig {
+            include_as_memory: vec!["*.md".to_string(), "[bad-memory".to_string()],
+            include_as_generic: vec!["[bad-generic".to_string()],
+            exclude: vec!["valid/**".to_string(), "[bad-exclude".to_string()],
+        };
+        let (compiled, diags) = compile_files_config_with_diagnostics(&files);
+        // Valid patterns: *.md (memory), valid/** (exclude) = 2 compiled total
+        assert_eq!(compiled.include_as_memory.len(), 1);
+        assert_eq!(compiled.include_as_generic.len(), 0);
+        assert_eq!(compiled.exclude.len(), 1);
+        // Invalid patterns: [bad-memory, [bad-generic, [bad-exclude = 3 diagnostics
+        assert_eq!(
+            diags.len(),
+            3,
+            "Expected 3 diagnostics from all 3 pattern lists, got: {diags:?}"
+        );
+        for d in &diags {
+            assert_eq!(d.rule, "config::glob");
+        }
+    }
+
     #[test]
     fn crlf_file_on_disk_produces_same_diagnostics_as_lf() {
         // validate_file() reads from disk and normalizes CRLF in validate_file_with_type.
