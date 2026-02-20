@@ -27,14 +27,14 @@
 
 rust_i18n::i18n!("locales", fallback = "en");
 
-mod backend;
-mod code_actions;
-mod completion_provider;
-mod diagnostic_mapper;
-mod hover_provider;
+pub(crate) mod backend;
+pub(crate) mod code_actions;
+pub(crate) mod completion_provider;
+pub(crate) mod diagnostic_mapper;
+pub(crate) mod hover_provider;
 pub(crate) mod locale;
-mod position;
-mod vscode_config;
+pub(crate) mod position;
+pub(crate) mod vscode_config;
 
 pub use backend::Backend;
 pub use vscode_config::{VsCodeConfig, VsCodeRules, VsCodeSpecs, VsCodeVersions};
@@ -61,3 +61,6 @@ pub async fn start_server() -> anyhow::Result<()> {
     Server::new(stdin, stdout, socket).serve(service).await;
     Ok(())
 }
+
+#[cfg(test)]
+mod testability_tests;

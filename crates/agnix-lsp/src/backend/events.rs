@@ -3,7 +3,7 @@ use agnix_core::normalize_line_endings;
 use super::*;
 
 impl Backend {
-    pub(super) async fn handle_did_open(&self, params: DidOpenTextDocumentParams) {
+    pub(crate) async fn handle_did_open(&self, params: DidOpenTextDocumentParams) {
         let uri = params.text_document.uri;
         // Normalize CRLF so the cached content matches the LF-relative byte offsets
         // produced by validate_content and used by code actions for fix ranges.
@@ -20,7 +20,7 @@ impl Backend {
         self.validate_from_content_and_publish(uri, None).await;
     }
 
-    pub(super) async fn handle_did_change(&self, params: DidChangeTextDocumentParams) {
+    pub(crate) async fn handle_did_change(&self, params: DidChangeTextDocumentParams) {
         let uri = params.text_document.uri;
         if let Some(change) = params.content_changes.into_iter().next() {
             // Normalize CRLF so the cached content matches the LF-relative byte offsets
@@ -39,7 +39,7 @@ impl Backend {
         }
     }
 
-    pub(super) async fn handle_did_save(&self, params: DidSaveTextDocumentParams) {
+    pub(crate) async fn handle_did_save(&self, params: DidSaveTextDocumentParams) {
         let uri = params.text_document.uri;
         self.validate_from_content_and_publish(uri.clone(), None)
             .await;
@@ -52,7 +52,7 @@ impl Backend {
         }
     }
 
-    pub(super) async fn handle_did_close(&self, params: DidCloseTextDocumentParams) {
+    pub(crate) async fn handle_did_close(&self, params: DidCloseTextDocumentParams) {
         {
             let mut docs = self.documents.write().await;
             docs.remove(&params.text_document.uri);

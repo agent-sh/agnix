@@ -21,9 +21,9 @@ use crate::completion_provider::completion_items_for_document;
 use crate::diagnostic_mapper::{deserialize_fixes, to_lsp_diagnostic, to_lsp_diagnostics};
 use crate::hover_provider::hover_at_position;
 
-mod events;
-mod helpers;
-mod revalidation;
+pub(crate) mod events;
+pub(crate) mod helpers;
+pub(crate) mod revalidation;
 
 use helpers::{create_error_diagnostic, normalize_path};
 #[cfg(test)]
@@ -42,31 +42,31 @@ use revalidation::{
 /// validations to avoid repeated allocations.
 #[derive(Clone)]
 pub struct Backend {
-    client: Client,
+    pub(crate) client: Client,
     /// Cached lint configuration reused across validations.
     /// Wrapped in ArcSwap for lock-free reads; initially loaded from .agnix.toml during initialize()
     /// and atomically updated on configuration changes (e.g., VS Code settings merges).
-    config: Arc<ArcSwap<agnix_core::LintConfig>>,
+    pub(crate) config: Arc<ArcSwap<agnix_core::LintConfig>>,
     /// Workspace root path for boundary validation (security).
     /// Set during initialize() from the client's root_uri.
-    workspace_root: Arc<RwLock<Option<PathBuf>>>,
+    pub(crate) workspace_root: Arc<RwLock<Option<PathBuf>>>,
     /// Canonicalized workspace root cached at initialize() to avoid blocking I/O on hot paths.
-    workspace_root_canonical: Arc<RwLock<Option<PathBuf>>>,
-    documents: Arc<RwLock<HashMap<Url, Arc<String>>>>,
+    pub(crate) workspace_root_canonical: Arc<RwLock<Option<PathBuf>>>,
+    pub(crate) documents: Arc<RwLock<HashMap<Url, Arc<String>>>>,
     /// Monotonic generation incremented on each config change.
     /// Used to drop stale diagnostics from older revalidation batches.
-    config_generation: Arc<AtomicU64>,
+    pub(crate) config_generation: Arc<AtomicU64>,
     /// Monotonic generation incremented on each project validation.
     /// Used to drop stale project-level diagnostics from slower validation runs.
-    project_validation_generation: Arc<AtomicU64>,
+    pub(crate) project_validation_generation: Arc<AtomicU64>,
     /// Cached validator registry reused across validations.
     /// Immutable after construction; Arc enables sharing across spawn_blocking tasks.
-    registry: Arc<agnix_core::ValidatorRegistry>,
+    pub(crate) registry: Arc<agnix_core::ValidatorRegistry>,
     /// Cached project-level diagnostics per URI (from validate_project_rules).
     /// Stored separately so they can be merged with per-file diagnostics at publish time.
-    project_level_diagnostics: Arc<RwLock<HashMap<Url, Vec<Diagnostic>>>>,
+    pub(crate) project_level_diagnostics: Arc<RwLock<HashMap<Url, Vec<Diagnostic>>>>,
     /// Tracks which URIs received project-level diagnostics so stale ones can be cleared.
-    project_diagnostics_uris: Arc<RwLock<HashSet<Url>>>,
+    pub(crate) project_diagnostics_uris: Arc<RwLock<HashSet<Url>>>,
 }
 
 impl Backend {
@@ -89,7 +89,7 @@ impl Backend {
     /// Spawn project-level validation in a background task.
     ///
     /// Logs a warning if the spawned task panics, preventing silent failures.
-    fn spawn_project_validation(&self) {
+    pub(crate) fn spawn_project_validation(&self) {
         let backend = self.clone();
         let client = self.client.clone();
         tokio::spawn(async move {
@@ -115,7 +115,7 @@ impl Backend {
     ///
     /// Both `LintConfig` and `ValidatorRegistry` are cloned from cached
     /// instances to avoid repeated allocations on each validation.
-    async fn validate_file(&self, path: PathBuf) -> Vec<Diagnostic> {
+    pub(crate) async fn validate_file(&self, path: PathBuf) -> Vec<Diagnostic> {
         let config = self.config.load_full();
         let registry = Arc::clone(&self.registry);
         let result = tokio::task::spawn_blocking(move || {
@@ -140,7 +140,7 @@ impl Backend {
     ///
     /// Used for did_change events where we have the content in memory.
     /// This avoids reading from disk and provides real-time feedback.
-    async fn validate_from_content_and_publish(
+    pub(crate) async fn validate_from_content_and_publish(
         &self,
         uri: Url,
         expected_config_generation: Option<u64>,
@@ -262,6 +262,16 @@ impl Backend {
         self.client
             .publish_diagnostics(uri, diagnostics, None)
             .await;
+    }
+}
+
+#[cfg(test)]
+impl Backend {
+    /// Creates a Backend with a disconnected client suitable for unit tests.
+    /// The client has no transport - diagnostics published to it are silently dropped.
+    pub(crate) fn new_test() -> Self {
+        let (service, _socket) = tower_lsp::LspService::new(Backend::new);
+        service.inner().clone()
     }
 }
 

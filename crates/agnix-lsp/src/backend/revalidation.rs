@@ -3,9 +3,9 @@ use crate::vscode_config::VsCodeConfig;
 use std::collections::{HashMap, HashSet};
 use std::future::Future;
 
-pub(super) const MAX_CONFIG_REVALIDATION_CONCURRENCY: usize = 8;
+pub(crate) const MAX_CONFIG_REVALIDATION_CONCURRENCY: usize = 8;
 
-pub(super) fn config_revalidation_concurrency(document_count: usize) -> usize {
+pub(crate) fn config_revalidation_concurrency(document_count: usize) -> usize {
     if document_count == 0 {
         return 0;
     }
@@ -25,7 +25,7 @@ pub(super) fn config_revalidation_concurrency(document_count: usize) -> usize {
 /// Partial failures are collected, not propagated: if a spawned task panics
 /// or is cancelled, its `JoinError` is appended to the returned `Vec` and
 /// processing continues with the remaining items.
-pub(super) async fn for_each_bounded<T, I, F, Fut>(
+pub(crate) async fn for_each_bounded<T, I, F, Fut>(
     items: I,
     max_concurrency: usize,
     operation: F,
@@ -72,7 +72,7 @@ where
 impl Backend {
     /// In config-change batch revalidation mode, only publish if the batch generation is current
     /// and the document is still open.
-    pub(super) async fn should_publish_diagnostics(
+    pub(crate) async fn should_publish_diagnostics(
         &self,
         uri: &Url,
         expected_config_generation: Option<u64>,
@@ -112,7 +112,7 @@ impl Backend {
     /// are published directly.
     ///
     /// Stale URIs from previous runs are cleared by publishing empty diagnostics.
-    pub(super) async fn validate_project_rules_and_publish(&self) {
+    pub(crate) async fn validate_project_rules_and_publish(&self) {
         let workspace_root = match &*self.workspace_root.read().await {
             Some(root) => root.clone(),
             None => return,
@@ -240,7 +240,7 @@ impl Backend {
         }
     }
 
-    pub(super) async fn handle_did_change_configuration(
+    pub(crate) async fn handle_did_change_configuration(
         &self,
         params: DidChangeConfigurationParams,
     ) {

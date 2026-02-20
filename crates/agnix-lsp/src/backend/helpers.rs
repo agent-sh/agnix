@@ -1,7 +1,7 @@
 use super::*;
 use std::path::{Component, Path, PathBuf};
 
-pub(super) fn create_error_diagnostic(code: &str, message: String) -> Diagnostic {
+pub(crate) fn create_error_diagnostic(code: &str, message: String) -> Diagnostic {
     Diagnostic {
         range: Range {
             start: Position {
@@ -27,7 +27,7 @@ pub(super) fn create_error_diagnostic(code: &str, message: String) -> Diagnostic
 /// Normalize path components without filesystem access.
 /// Resolves `.` and `..` logically -- used when `canonicalize()` fails.
 /// Expects absolute paths (LSP URIs always produce absolute paths).
-pub(super) fn normalize_path(path: &Path) -> PathBuf {
+pub(crate) fn normalize_path(path: &Path) -> PathBuf {
     let mut components: Vec<Component<'_>> = Vec::new();
     for component in path.components() {
         match component {
@@ -53,7 +53,7 @@ impl Backend {
     ///
     /// Returns true for instruction files (CLAUDE.md, AGENTS.md, .clinerules,
     /// .cursorrules, copilot-instructions.md, etc.) and .agnix.toml config.
-    pub(super) fn is_project_level_trigger(path: &Path) -> bool {
+    pub(crate) fn is_project_level_trigger(path: &Path) -> bool {
         let file_name = match path.file_name().and_then(|n| n.to_str()) {
             Some(name) => name,
             None => return false,
@@ -82,7 +82,7 @@ impl Backend {
     }
 
     /// Get cached document content for a URI.
-    pub(super) async fn get_document_content(&self, uri: &Url) -> Option<Arc<String>> {
+    pub(crate) async fn get_document_content(&self, uri: &Url) -> Option<Arc<String>> {
         self.documents.read().await.get(uri).cloned()
     }
 }
