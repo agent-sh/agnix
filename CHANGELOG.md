@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`MAX_REGEX_INPUT_SIZE` precise boundary tests**: 27 tests covering the exact 65536-byte limit for all 12 guarded regex functions across `markdown.rs`, `prompt.rs`, and `cross_platform.rs` - each function gets an at-limit (processed) and one-byte-over (rejected) test; also confirms `extract_imports` and `extract_markdown_links` are unrestricted (byte-scan/pulldown-cmark, not regex) (#457)
 
 ### Changed
+- **`CoreResult` type alias removed** (breaking): `CoreResult<T>` has been removed from the public API. Use `LintResult<T>` (i.e., `Result<T, LintError>`) instead. `LintError` is a public alias for `CoreError`; both remain exported. (#477)
 - **`visit_imports` refactor**: Refactored the monolithic `visit_imports` recursive function in `imports.rs` into an `ImportScanner` struct-based traversal. Extracted per-import validation logic into a dedicated `process_import` method, significantly reducing cyclomatic complexity and improving maintainability.
 - **`__internal` module feature-gated**: The `__internal` module in `agnix-core` is now behind the `__internal` Cargo feature; it was previously unconditionally public which created semver obligations for internal items (#472)
 - **`normalize_line_endings` promoted to stable public API**: Accessible at the crate root (`agnix_core::normalize_line_endings`) without requiring the `__internal` feature (#472)

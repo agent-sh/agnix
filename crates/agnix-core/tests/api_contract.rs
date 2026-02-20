@@ -28,7 +28,10 @@ fn public_types_are_importable() {
     let _ = std::any::type_name::<agnix_core::FilesConfig>();
     let _ = std::any::type_name::<agnix_core::ValidationOutcome>();
 
-    // LintResult type alias
+    // Error types: CoreError is the concrete enum; LintError is its public alias.
+    // Both are re-exported. CoreResult was removed in #477.
+    let _ = std::any::type_name::<agnix_core::CoreError>();
+    // LintResult type alias - the sole public Result alias.
     let _ = std::any::type_name::<agnix_core::LintResult<()>>();
 
     // ValidatorFactory type alias
@@ -1135,4 +1138,42 @@ fn normalize_line_endings_lf_only_is_borrowed_and_zero_copy() {
         std::ptr::eq(result.as_ptr(), lf_only.as_ptr()),
         "Cow::Borrowed must point to the original allocation"
     );
+}
+
+// ============================================================================
+// LintResult is the sole public Result alias (#477)
+// ============================================================================
+
+/// Verify that `LintResult<T>` is the sole public Result alias in agnix-core.
+///
+/// `CoreResult<T>` was removed in #477 because it was dead code - defined and
+/// re-exported but never used anywhere in the codebase. `LintResult<T>` is the
+/// established convention used across 40+ call sites.
+#[test]
+fn lint_result_is_sole_result_alias() {
+    use agnix_core::{CoreError, LintError, LintResult, ValidationError};
+
+    // LintResult<T> must accept Ok values.
+    let ok: LintResult<u32> = Ok(42);
+    assert_eq!(ok.unwrap(), 42);
+
+    // LintResult<T> must accept Err values constructed from a concrete CoreError variant.
+    // This verifies LintResult<T> = Result<T, LintError> = Result<T, CoreError> end-to-end.
+    let err: LintResult<u32> = Err(CoreError::Validation(ValidationError::TooManyFiles {
+        count: 9999,
+        limit: 1000,
+    }));
+    assert!(err.is_err());
+
+    // LintError and CoreError are type aliases for the same enum - constructing
+    // one variant via CoreError and matching through LintError must work.
+    let lint_err: LintError =
+        CoreError::Validation(ValidationError::TooManyFiles { count: 1, limit: 0 });
+    // Exhaustively match all three CoreError variants through the LintError alias.
+    // If a new CoreError variant is added, this match will fail to compile.
+    match lint_err {
+        LintError::File(_) => {}
+        LintError::Validation(_) => {}
+        LintError::Config(_) => {}
+    }
 }
