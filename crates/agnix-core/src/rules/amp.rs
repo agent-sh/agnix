@@ -55,7 +55,7 @@ impl crate::rules::FrontmatterRanges for YamlFrontmatterAdapter<'_> {
         self.raw
     }
     fn start_line(&self) -> usize {
-        1
+        1 // Opening --- is file line 1; frontmatter content starts at line 2
     }
 }
 
@@ -541,7 +541,7 @@ mod tests {
         let amp_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AMP-001").collect();
         assert_eq!(amp_001.len(), 1);
         assert!(amp_001[0].message.contains("Invalid YAML frontmatter"));
-        assert_eq!(amp_001[0].line, 3, "YAML parse error reports serde_yaml line (1-based within frontmatter) plus 1 for the opening --- delimiter, plus 1 for 0-index conversion");
+        assert_eq!(amp_001[0].line, 3, "serde_yaml reports loc.line()=2 for this error (libyaml places the unclosed-bracket error at EOF, serde_yaml adds its own +1); code then adds 1 for the opening --- delimiter, giving line 3");
     }
 
     #[test]
@@ -798,5 +798,14 @@ mod tests {
         );
         assert!(!amp_002[0].fixes[0].safe, "AMP-002 fix should be unsafe");
         assert_eq!(amp_002[0].fixes[0].replacement, "high");
+
+        // Apply the fix and verify the resulting content is correct
+        let fix = &amp_002[0].fixes[0];
+        let mut fixed = content.to_string();
+        fixed.replace_range(fix.start_byte..fix.end_byte, &fix.replacement);
+        assert!(
+            fixed.contains("severity-default: high"),
+            "Applied fix should produce valid content"
+        );
     }
 }

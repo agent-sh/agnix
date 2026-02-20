@@ -294,9 +294,21 @@ Body content here"#;
         // The leading \r\n after "---" is stripped from frontmatter.
         // Content after "---": "\r\nname: test\r\n---\r\nbody"
         // newline_len = 2 (CRLF)
-        // find("\n---") matches at index 14 in rest ("\r\nname: test\r" = 14 chars)
-        // frontmatter = rest[2..14] = "name: test\r"
+        // find("\n---") matches at index 13 in rest ("\r\nname: test\r" = 13 chars)
+        // frontmatter = rest[2..13] = "name: test\r"
         assert_eq!(parts.frontmatter, "name: test\r");
+    }
+
+    #[test]
+    fn test_split_frontmatter_no_newline_after_opener() {
+        // --- immediately followed by content (no newline), newline_len = 0
+        let content = "---key: val\n---\nbody";
+        let parts = split_frontmatter(content);
+        assert!(parts.has_frontmatter);
+        assert!(parts.has_closing);
+        assert_eq!(parts.frontmatter_start, 3); // newline_len = 0
+        assert_eq!(parts.frontmatter, "key: val");
+        assert_eq!(&content[parts.body_start..], parts.body);
     }
 
     #[test]

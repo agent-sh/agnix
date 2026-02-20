@@ -28,7 +28,7 @@ impl crate::rules::FrontmatterRanges for FrontmatterAdapter<'_> {
         self.raw
     }
     fn start_line(&self) -> usize {
-        1
+        1 // Opening --- is file line 1; frontmatter content starts at line 2
     }
 }
 
@@ -349,6 +349,14 @@ mod tests {
             fix.replacement.contains("always"),
             "Fix should suggest 'always' as closest match, got: {}",
             fix.replacement
+        );
+
+        // Apply the fix and verify the resulting content is correct
+        let mut fixed = content.to_string();
+        fixed.replace_range(fix.start_byte..fix.end_byte, &fix.replacement);
+        assert!(
+            fixed.contains("inclusion: always"),
+            "Applied fix should produce valid content"
         );
     }
 
