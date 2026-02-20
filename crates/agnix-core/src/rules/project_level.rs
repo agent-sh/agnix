@@ -1,4 +1,7 @@
 //! Project-level cross-file validation rules (AGM-006, XP-004/005/006, VER-001).
+// All items in this module require the filesystem feature. The file-level inner
+// attribute avoids repeating #[cfg(feature = "filesystem")] on each import and
+// function - unlike pipeline.rs, this file has no non-filesystem items.
 #![cfg(feature = "filesystem")]
 
 use std::path::{Path, PathBuf};
@@ -46,41 +49,39 @@ pub(crate) fn run_project_level_checks(
     let mut diagnostics = Vec::new();
 
     // AGM-006: Check for multiple AGENTS.md files in the directory tree
-    if config.is_rule_enabled("AGM-006") {
-        if agents_md_paths.len() > 1 {
-            for agents_file in agents_md_paths.iter() {
-                let parent_files =
-                    schemas::agents_md::check_agents_md_hierarchy(agents_file, agents_md_paths);
-                let description = if !parent_files.is_empty() {
-                    let parent_paths = join_paths(parent_files.iter().map(|p| p.as_path()));
-                    format!(
-                        "Nested AGENTS.md detected - parent AGENTS.md files exist at: {parent_paths}",
-                    )
-                } else {
-                    let other_paths = join_paths(
-                        agents_md_paths
-                            .iter()
-                            .filter(|p| p.as_path() != agents_file.as_path())
-                            .map(|p| p.as_path()),
-                    );
-                    format!(
-                        "Multiple AGENTS.md files detected - other AGENTS.md files exist at: {other_paths}",
-                    )
-                };
-
-                diagnostics.push(
-                    Diagnostic::warning(
-                        agents_file.clone(),
-                        1,
-                        0,
-                        "AGM-006",
-                        description,
-                    )
-                    .with_suggestion(
-                        "Some tools load AGENTS.md hierarchically. Document inheritance behavior or consolidate files.".to_string(),
-                    ),
+    if config.is_rule_enabled("AGM-006") && agents_md_paths.len() > 1 {
+        for agents_file in agents_md_paths.iter() {
+            let parent_files =
+                schemas::agents_md::check_agents_md_hierarchy(agents_file, agents_md_paths);
+            let description = if !parent_files.is_empty() {
+                let parent_paths = join_paths(parent_files.iter().map(|p| p.as_path()));
+                format!(
+                    "Nested AGENTS.md detected - parent AGENTS.md files exist at: {parent_paths}",
+                )
+            } else {
+                let other_paths = join_paths(
+                    agents_md_paths
+                        .iter()
+                        .filter(|p| p.as_path() != agents_file.as_path())
+                        .map(|p| p.as_path()),
                 );
-            }
+                format!(
+                    "Multiple AGENTS.md files detected - other AGENTS.md files exist at: {other_paths}",
+                )
+            };
+
+            diagnostics.push(
+                Diagnostic::warning(
+                    agents_file.clone(),
+                    1,
+                    0,
+                    "AGM-006",
+                    description,
+                )
+                .with_suggestion(
+                    "Some tools load AGENTS.md hierarchically. Document inheritance behavior or consolidate files.".to_string(),
+                ),
+            );
         }
     }
 
@@ -411,6 +412,18 @@ mod tests {
             "Root file should get 'Multiple AGENTS.md files detected' message, got: {}",
             root_diag.message
         );
+
+        // Verify listed paths: each message should name the other file
+        assert!(
+            nested_diag.message.contains(&root_agents.to_string_lossy().as_ref()),
+            "Nested file's message should list the root AGENTS.md path, got: {}",
+            nested_diag.message
+        );
+        assert!(
+            root_diag.message.contains(&nested_agents.to_string_lossy().as_ref()),
+            "Root file's message should list the nested AGENTS.md path, got: {}",
+            root_diag.message
+        );
     }
 
     #[test]
@@ -521,9 +534,58 @@ mod tests {
 
         // Sanity check: default config with no versions pinned should produce VER-001
         let diagnostics = run_project_level_checks(&[], &[], &LintConfig::default(), temp.path());
+        let ver001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "VER-001").collect();
         assert!(
-            diagnostics.iter().any(|d| d.rule == "VER-001"),
+            !ver001.is_empty(),
             "Default config should produce VER-001 when no versions are pinned"
+        );
+        // When .agnix.toml is absent, the diagnostic should reference the project root
+        assert_eq!(
+            ver001[0].file,
+            temp.path(),
+            "VER-001 should reference root_dir when .agnix.toml is absent, got: {}",
+            ver001[0].file.display()
+        );
+    }
+
+    #[test]
+    fn test_ver001_suppressed_when_version_pinned() {
+        use crate::config::ToolVersions;
+        let temp = tempfile::TempDir::new().unwrap();
+
+        let config = LintConfig::builder()
+            .tool_versions(ToolVersions {
+                codex: Some("0.1.0".to_string()),
+                ..Default::default()
+            })
+            .build()
+            .unwrap();
+        let diagnostics = run_project_level_checks(&[], &[], &config, temp.path());
+
+        assert!(
+            diagnostics.iter().all(|d| d.rule != "VER-001"),
+            "VER-001 should not fire when at least one tool version is pinned, got: {diagnostics:?}"
+        );
+    }
+
+    #[test]
+    fn test_xp_single_instruction_file_no_diagnostics() {
+        let temp = tempfile::TempDir::new().unwrap();
+
+        let claude_md = temp.path().join("CLAUDE.md");
+        std::fs::write(&claude_md, "# Project\n\nnpm install\n").unwrap();
+
+        // Exactly one file: the XP block requires len() > 1, so no XP diagnostics
+        let diagnostics = run_project_level_checks(
+            &[],
+            &[claude_md],
+            &LintConfig::default(),
+            temp.path(),
+        );
+
+        assert!(
+            diagnostics.iter().all(|d| !d.rule.starts_with("XP-")),
+            "No XP diagnostics should be produced for a single instruction file, got: {diagnostics:?}"
         );
     }
 
