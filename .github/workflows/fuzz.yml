@@ -19,6 +19,10 @@ on:
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash
+
 env:
   FUZZ_DURATION_PR: 300       # 5 minutes for PRs
   FUZZ_DURATION_WEEKLY: 1800  # 30 minutes for weekly runs
@@ -52,6 +56,7 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           INPUT_DURATION: ${{ github.event.inputs.duration }}
         run: |
+          set -euo pipefail
           if [ "$EVENT_NAME" = "schedule" ]; then
             echo "seconds=$FUZZ_DURATION_WEEKLY" >> "$GITHUB_OUTPUT"
           elif [ "$EVENT_NAME" = "workflow_dispatch" ]; then
@@ -63,6 +68,7 @@ jobs:
       - name: Run fuzzer
         working-directory: crates/agnix-core
         run: |
+          set -euo pipefail
           cargo +nightly fuzz run ${{ matrix.target }} -- \
             -max_total_time=${{ steps.duration.outputs.seconds }} \
             -max_len=131072  # 128KB: 2x MAX_REGEX_INPUT_SIZE for boundary testing

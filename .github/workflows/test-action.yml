@@ -17,6 +17,10 @@ on:
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   test-action:
     name: Test (${{ matrix.os }})
@@ -54,6 +58,7 @@ jobs:
           ERRORS: ${{ steps.test-default.outputs.errors }}
           WARNINGS: ${{ steps.test-default.outputs.warnings }}
         run: |
+          set -euo pipefail
           echo "Result: ${RESULT}"
           echo "Errors: ${ERRORS}"
           echo "Warnings: ${WARNINGS}"
@@ -118,6 +123,7 @@ jobs:
           RESULT: ${{ steps.test-json.outputs.result }}
           ERRORS: ${{ steps.test-json.outputs.errors }}
         run: |
+          set -euo pipefail
           # Verify outputs are populated from JSON parsing
           if [ -z "${RESULT}" ]; then
             echo "Error: JSON format did not produce result output"
@@ -138,6 +144,7 @@ jobs:
         env:
           SARIF_FILE: ${{ steps.test-sarif.outputs.sarif-file }}
         run: |
+          set -euo pipefail
           if [ -z "${SARIF_FILE}" ]; then
             echo "Error: sarif_file output not set"
             exit 1
@@ -185,6 +192,7 @@ jobs:
         if: steps.test-fail-on-error.outcome != 'failure'
         shell: bash
         run: |
+          set -euo pipefail
           echo "Expected fail-on-error to fail, but it did not."
           exit 1
 
@@ -194,7 +202,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          set -e
+          set -euo pipefail
           CURL_OPTS=(-sL)
           if [ -n "${GITHUB_TOKEN}" ]; then
             CURL_OPTS+=(-H "Authorization: Bearer ${GITHUB_TOKEN}")

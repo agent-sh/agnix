@@ -31,6 +31,10 @@ permissions:
   contents: read
   issues: write
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   check-drift:
     name: Check for spec drift
@@ -369,6 +373,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -euo pipefail
           ISSUE_NUM=$(gh issue list --repo "${{ github.repository }}" --state open --label "spec-drift" --json number --jq '.[0].number // empty')
           echo "issue_number=$ISSUE_NUM" >> "$GITHUB_OUTPUT"
 
@@ -379,6 +384,7 @@ jobs:
           DRIFT_SOURCES: ${{ needs.check-drift.outputs.drift_sources }}
           ISSUE_NUMBER: ${{ steps.get-issue.outputs.issue_number }}
         run: |
+          set -euo pipefail
           # Build analysis request
           SOURCES_LIST=$(echo "$DRIFT_SOURCES" | jq -r '.[] | "- \(.source) (\(.tier)): \(.url)"' | head -10)
           RULES_LIST=$(echo "$DRIFT_SOURCES" | jq -r '.[].rules' | tr ',' '\n' | tr -d ' ' | sort -u | head -20 | tr '\n' ', ' | sed 's/,$//')

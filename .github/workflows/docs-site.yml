@@ -28,6 +28,10 @@ on:
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash
+
 concurrency:
   group: docs-site-${{ github.ref }}
   cancel-in-progress: true

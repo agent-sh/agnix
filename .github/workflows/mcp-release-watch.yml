@@ -14,6 +14,10 @@ permissions:
   contents: read
   actions: write
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   check-mcp-release:
     name: Check for MCP spec releases
@@ -80,5 +84,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NEW_VERSION: ${{ steps.check-release.outputs.NEW_VERSION }}
         run: |
+          set -euo pipefail
           echo "Triggering spec-drift workflow for MCP version: $NEW_VERSION"
           gh workflow run spec-drift.yml -f tier=s-tier

@@ -12,6 +12,10 @@ env:
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   rule-counts:
     name: Rule Count Check
@@ -142,6 +146,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y valgrind
       - name: Install iai-callgrind-runner
         run: |
+          set -euo pipefail
           cargo install iai-callgrind-runner --version 0.16.1
       - name: Run iai-callgrind benchmarks
         run: cargo bench --bench iai_validation --package agnix-core
@@ -200,6 +205,7 @@ jobs:
         run: cargo build --release --package agnix-cli
       - name: Check binary size
         run: |
+          set -euo pipefail
           SIZE=$(stat -c%s target/release/agnix)
           SIZE_MB=$(echo "scale=2; $SIZE / 1048576" | bc)
           echo "Binary size: ${SIZE_MB}MB ($SIZE bytes)"

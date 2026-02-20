@@ -11,6 +11,10 @@ permissions:
 env:
   CARGO_TERM_COLOR: always
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   build:
     name: Build (${{ matrix.target }})
@@ -67,6 +71,7 @@ jobs:
       - name: Create CLI archive (Unix)
         if: runner.os != 'Windows'
         run: |
+          set -euo pipefail
           cd target/${{ matrix.target }}/release
           tar czvf ../../../agnix-${{ matrix.target }}.tar.gz ${{ matrix.artifact }}
           cd ../../..
@@ -75,6 +80,7 @@ jobs:
       - name: Create LSP archive (Unix)
         if: runner.os != 'Windows'
         run: |
+          set -euo pipefail
           cd target/${{ matrix.target }}/release
           if [ -f agnix-lsp ]; then
             tar czvf ../../../agnix-lsp-${{ matrix.target }}.tar.gz agnix-lsp
@@ -105,6 +111,7 @@ jobs:
       - name: Create MCP archive (Unix)
         if: runner.os != 'Windows'
         run: |
+          set -euo pipefail
           cd target/${{ matrix.target }}/release
           if [ -f agnix-mcp ]; then
             tar czvf ../../../agnix-mcp-${{ matrix.target }}.tar.gz agnix-mcp
@@ -149,6 +156,7 @@ jobs:
       - name: Generate release notes
         id: notes
         run: |
+          set -euo pipefail
           VERSION=${GITHUB_REF#refs/tags/}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
@@ -186,6 +194,7 @@ jobs:
       - name: Verify version matches tag
         id: version
         run: |
+          set -euo pipefail
           TAG_VERSION=${GITHUB_REF#refs/tags/v}
           CARGO_VERSION=$(sed -n '/\[workspace\.package\]/,/^\[/p' Cargo.toml | grep '^version' | head -1 | sed 's/.*"\(.*\)".*/\1/')
           if [ "$TAG_VERSION" != "$CARGO_VERSION" ]; then
@@ -196,6 +205,7 @@ jobs:
 
       - name: Create crate indexing wait helper
         run: |
+          set -euo pipefail
           cat > /tmp/wait-for-crate.sh << 'SCRIPT'
           #!/usr/bin/env bash
           set -euo pipefail
@@ -274,6 +284,7 @@ jobs:
     if: ${{ !contains(github.ref, '-') }}
     defaults:
       run:
+        shell: bash
         working-directory: editors/vscode
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -288,6 +299,7 @@ jobs:
       - name: Sync all versions from tag
         working-directory: .
         run: |
+          set -euo pipefail
           TAG_VERSION="${GITHUB_REF#refs/tags/v}"
           bash scripts/sync-versions.sh "${TAG_VERSION}"
 
@@ -316,6 +328,7 @@ jobs:
     if: ${{ !contains(github.ref, '-') }}
     defaults:
       run:
+        shell: bash
         working-directory: npm
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -328,6 +341,7 @@ jobs:
       - name: Sync all versions from tag
         working-directory: .
         run: |
+          set -euo pipefail
           TAG_VERSION="${GITHUB_REF#refs/tags/v}"
           bash scripts/sync-versions.sh "${TAG_VERSION}"
 
@@ -343,6 +357,7 @@ jobs:
     if: ${{ !contains(github.ref, '-') }}
     defaults:
       run:
+        shell: bash
         working-directory: editors/jetbrains
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -355,6 +370,7 @@ jobs:
       - name: Sync version from tag
         working-directory: .
         run: |
+          set -euo pipefail
           TAG_VERSION="${GITHUB_REF#refs/tags/v}"
           bash scripts/sync-versions.sh "${TAG_VERSION}"
 
@@ -399,6 +415,7 @@ jobs:
       - name: Extract and validate version from tag
         id: version
         run: |
+          set -euo pipefail
           VERSION="${GITHUB_REF#refs/tags/v}"
           if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "Invalid version format: $VERSION"
@@ -414,6 +431,7 @@ jobs:
 
       - name: Verify site data was generated
         run: |
+          set -euo pipefail
           if [ ! -f website/src/data/siteData.json ]; then
             echo "siteData.json was not generated"
             exit 1
@@ -425,6 +443,7 @@ jobs:
 
       - name: Commit and push versioned docs
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add website/src/data/siteData.json website/docs/rules/ website/versioned_docs/ website/versioned_sidebars/ website/versions.json

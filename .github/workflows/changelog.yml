@@ -7,6 +7,10 @@ on:
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   changelog:
     name: Verify Changelog
@@ -22,6 +26,7 @@ jobs:
 
       - name: Check CHANGELOG.md modified
         run: |
+          set -euo pipefail
           if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -q "CHANGELOG.md"; then
             echo "CHANGELOG.md has been modified"
           else
