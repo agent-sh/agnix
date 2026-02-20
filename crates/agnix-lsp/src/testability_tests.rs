@@ -162,9 +162,27 @@ async fn revalidation_should_publish_diagnostics_accessible() {
             .should_publish_diagnostics(&uri, Some(999), None)
             .await
     );
+
+    // Both guards disabled (None, None): always returns true regardless of document presence.
+    assert!(backend.should_publish_diagnostics(&uri, None, None).await);
+    backend.documents.write().await.remove(&uri);
+    assert!(backend.should_publish_diagnostics(&uri, None, None).await);
 }
 
-// ===== events module =====
+#[tokio::test]
+async fn revalidation_handle_did_change_configuration_accessible() {
+    use tower_lsp::lsp_types::{
+        DidChangeConfigurationParams, LSPAny,
+    };
+    let backend = Backend::new_test();
+    // Empty settings JSON: should not panic and no workspace to revalidate.
+    let params = DidChangeConfigurationParams {
+        settings: LSPAny::Null,
+    };
+    backend.handle_did_change_configuration(params).await;
+}
+
+// ===== helpers module (continued) =====
 
 #[test]
 fn backend_is_project_level_trigger_accessible() {
@@ -230,7 +248,8 @@ async fn events_handle_did_change_accessible() {
 async fn events_handle_did_save_accessible() {
     use tower_lsp::lsp_types::{DidSaveTextDocumentParams, TextDocumentIdentifier, Url};
     let backend = Backend::new_test();
-    let uri = Url::parse("file:///CLAUDE.md").unwrap();
+    // Use a non-project-level-trigger URI to avoid spawning a background validation task.
+    let uri = Url::parse("file:///skill.yml").unwrap();
     backend
         .documents
         .write()
@@ -262,7 +281,7 @@ async fn events_handle_did_close_accessible() {
     assert!(backend.documents.read().await.get(&uri).is_none());
 }
 
-// ===== Backend::get_document_content =====
+// ===== helpers module (continued): get_document_content =====
 
 #[tokio::test]
 async fn backend_get_document_content_accessible() {
