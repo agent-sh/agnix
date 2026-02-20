@@ -101,7 +101,7 @@ Results are published to all affected files as diagnostics, ensuring users see c
 
 Priority: **exclude > include_as_memory > include_as_generic > built-in detection**.
 
-Patterns use glob syntax, matched against paths relative to the project root. Backslashes are normalized to forward slashes for cross-platform compatibility.
+Patterns use glob syntax, matched against paths relative to the project root. Backslashes are normalized to forward slashes for cross-platform compatibility. Invalid patterns are not silently discarded - `validate_project()` surfaces them as `Warning` diagnostics (rule `config::glob`) so consumers receive actionable feedback rather than seeing stderr output.
 
 ## Security
 

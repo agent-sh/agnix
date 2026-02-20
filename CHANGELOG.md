@@ -67,6 +67,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CI**: Moved `VSCE_PAT` from CLI argument to environment variable in VS Code extension publish step, preventing secret exposure in process list (#464)
 - **MCP server error codes**: `validate_file` and `validate_project` tools now return `invalid_params` (JSON-RPC -32602) instead of `internal_error` (-32603) for user-supplied path validation failures, correctly distinguishing client errors from server faults. Renamed internal `make_error` helper to `make_internal_error` for clarity (#462)
 - **MCP `tools` input schema**: `ToolsInput` now uses a manual `JsonSchema` impl that emits `anyOf` with the array variant first and `inline_schema = true`, so MCP clients see the array-preferred `anyOf` directly at each property site instead of a `$ref` to `$defs`. Removed the standalone `schemars` 0.8 dependency; tests now use `rmcp::schemars` (v1) directly (#479)
+- **Invalid glob pattern diagnostics**: Invalid `[files]` glob patterns in `.agnix.toml` are now surfaced as `Warning` diagnostics (rule `config::glob`) in the validation output instead of writing to stderr. `markdown.rs` panic recovery paths also no longer write to stderr; they return empty results silently with a source comment (#459)
 
 ## [0.11.1] - 2026-02-11
 
