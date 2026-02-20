@@ -144,10 +144,9 @@ jobs:
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: Install Valgrind
         run: sudo apt-get update && sudo apt-get install -y valgrind
-      - name: Install iai-callgrind-runner
-        run: |
-          set -euo pipefail
-          cargo install iai-callgrind-runner --version 0.16.1
+      - uses: taiki-e/install-action@288875dd3d64326724fa6d9593062d9f8ba0b131 # v2
+        with:
+          tool: iai-callgrind-runner@0.16.1
       - name: Run iai-callgrind benchmarks
         run: cargo bench --bench iai_validation --package agnix-core
         # iai-callgrind measures instruction counts (100% deterministic)

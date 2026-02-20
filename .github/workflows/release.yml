@@ -47,9 +47,10 @@ jobs:
         if: matrix.target == 'x86_64-unknown-linux-musl'
         run: sudo apt-get update && sudo apt-get install -y musl-tools
 
-      - name: Install cross
+      - uses: taiki-e/install-action@288875dd3d64326724fa6d9593062d9f8ba0b131 # v2
         if: matrix.cross
-        run: cargo install cross --git https://github.com/cross-rs/cross --tag v0.2.5
+        with:
+          tool: cross@0.2.5
 
       - uses: dtolnay/rust-toolchain@4be9e76fd7c4901c61fb841f559994984270fce7 # stable
         with:
