@@ -672,7 +672,11 @@ impl CoreError {
     }
 }
 
-// Backward compatibility: LintError is now an alias for CoreError
+/// `LintError` is the canonical public name for [`CoreError`].
+///
+/// Both names are re-exported at the crate root. Internal code constructs
+/// variants via `CoreError`; public API surfaces and function signatures
+/// use `LintError` and [`LintResult`].
 pub type LintError = CoreError;
 
 /// Outcome of validating a single file.

@@ -28,8 +28,10 @@ fn public_types_are_importable() {
     let _ = std::any::type_name::<agnix_core::FilesConfig>();
     let _ = std::any::type_name::<agnix_core::ValidationOutcome>();
 
+    // Error types: CoreError is the concrete enum; LintError is its public alias.
+    // Both are re-exported. CoreResult was removed in #477.
+    let _ = std::any::type_name::<agnix_core::CoreError>();
     // LintResult type alias - the sole public Result alias.
-    // CoreResult was removed in #477; LintResult is the only Result alias.
     let _ = std::any::type_name::<agnix_core::LintResult<()>>();
 
     // ValidatorFactory type alias
@@ -1171,6 +1173,8 @@ fn lint_result_is_sole_result_alias() {
     });
     match lint_err {
         LintError::Validation(_) => {}
-        _ => panic!("LintError variant mismatch - LintError and CoreError must be the same type"),
+        // All CoreError variants are covered above via LintError - this arm is unreachable
+        // because LintError is a type alias for CoreError, not a distinct type.
+        _ => unreachable!("LintError is a type alias for CoreError; all variants are covered"),
     }
 }
