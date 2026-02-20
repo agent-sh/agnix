@@ -3407,8 +3407,7 @@ fn test_validate_project_with_poisoned_import_cache_does_not_panic() {
     std::fs::write(temp.path().join("notes.md"), "See @missing.md").unwrap();
 
     // Pre-poison the shared cache before validation starts
-    let cache: agnix_core::__internal::ImportCache =
-        Arc::new(RwLock::new(HashMap::new()));
+    let cache: agnix_core::__internal::ImportCache = Arc::new(RwLock::new(HashMap::new()));
     let cache_for_poison = cache.clone();
     let _ = std::thread::spawn(move || {
         let _guard = cache_for_poison.write().unwrap();

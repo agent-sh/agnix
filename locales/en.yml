@@ -405,6 +405,9 @@ rules:
   ref_004:
     message: "Non-markdown @import: '%{path}' has extension '%{ext}'"
     suggestion: "Use .md files for @imports - non-markdown files may not be processed correctly"
+  cache_poison:
+    message: "Import cache lock was poisoned by a prior validator panic; recovered stale data"
+    suggestion: "A validator panicked while holding the import cache lock. Validation continues with recovered data, but results may be stale."
 
   # --- Cross-platform (cross_platform.rs) ---
   xp_001:

@@ -317,6 +317,9 @@ rules:
   ref_002:
     message: "损坏的 markdown 链接: '%{url}'（文件未找到: %{resolved}）"
     suggestion: "修复链接目标或删除损坏的链接"
+  cache_poison:
+    message: "导入缓存锁被先前的验证器崩溃毒化；恢复的数据可能已过期"
+    suggestion: "验证器在持有导入缓存锁时崩溃。验证将继续使用恢复的数据，但结果可能已过期。"
 
   # --- Cross-platform (cross_platform.rs) ---
   xp_001:

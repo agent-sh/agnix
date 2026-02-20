@@ -185,7 +185,7 @@ impl Validator for ImportsValidator {
                         &mut seen_diagnostics,
                         Diagnostic::warning(
                             path.to_path_buf(),
-                            0,
+                            1,
                             0,
                             RULE_CACHE_POISON,
                             t!("rules.cache_poison.message"),
@@ -519,7 +519,7 @@ fn get_imports_for_file(
                         seen_diagnostics,
                         Diagnostic::warning(
                             validation_root.to_path_buf(),
-                            0,
+                            1,
                             0,
                             RULE_CACHE_POISON,
                             t!("rules.cache_poison.message"),
@@ -555,7 +555,7 @@ fn get_imports_for_file(
                     seen_diagnostics,
                     Diagnostic::warning(
                         validation_root.to_path_buf(),
-                        0,
+                        1,
                         0,
                         RULE_CACHE_POISON,
                         t!("rules.cache_poison.message"),
@@ -1613,9 +1613,7 @@ mod tests {
             "Validation should still report missing imports with a poisoned shared cache lock"
         );
         assert!(
-            diagnostics
-                .iter()
-                .any(|d| d.rule == RULE_CACHE_POISON),
+            diagnostics.iter().any(|d| d.rule == RULE_CACHE_POISON),
             "Expected lint::cache-poison warning alongside REF-001"
         );
     }
@@ -1648,11 +1646,7 @@ mod tests {
         config.set_import_cache(cache);
 
         let validator = ImportsValidator;
-        let diagnostics = validator.validate(
-            &file_path,
-            "See @a.md and @b.md and @c.md",
-            &config,
-        );
+        let diagnostics = validator.validate(&file_path, "See @a.md and @b.md and @c.md", &config);
 
         let poison_count = diagnostics
             .iter()
