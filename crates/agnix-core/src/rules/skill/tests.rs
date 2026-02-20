@@ -2038,6 +2038,109 @@ Body"#;
     assert!(range.is_none());
 }
 
+#[test]
+fn test_frontmatter_value_byte_range_exhaustive() {
+    let content = "---
+name: test-skill
+description: \"Quoted description\"
+empty:
+  nested: value
+unquoted_with_comment: value # this is a comment
+quoted_with_comment: \"quoted value\" # this is also a comment
+single_quoted: 'single value'
+with_colon: \"value: with colon\"
+  indented_key: indented_value
+---
+Body";
+    let parts = split_frontmatter(content);
+
+    // Unquoted
+    let range = frontmatter_value_byte_range(content, &parts, "name");
+    assert_eq!(&content[range.unwrap().0..range.unwrap().1], "test-skill");
+
+    // Double quoted
+    let range = frontmatter_value_byte_range(content, &parts, "description");
+    assert_eq!(
+        &content[range.unwrap().0..range.unwrap().1],
+        "Quoted description"
+    );
+
+    // Empty (multiline/nested) - currently returns None as it only looks at the same line
+    let range = frontmatter_value_byte_range(content, &parts, "empty");
+    assert!(range.is_none());
+
+    // Unquoted with comment
+    let range = frontmatter_value_byte_range(content, &parts, "unquoted_with_comment");
+    assert_eq!(&content[range.unwrap().0..range.unwrap().1], "value");
+
+    // Quoted with comment
+    let range = frontmatter_value_byte_range(content, &parts, "quoted_with_comment");
+    assert_eq!(&content[range.unwrap().0..range.unwrap().1], "quoted value");
+
+    // Single quoted
+    let range = frontmatter_value_byte_range(content, &parts, "single_quoted");
+    assert_eq!(&content[range.unwrap().0..range.unwrap().1], "single value");
+
+    // With colon
+    let range = frontmatter_value_byte_range(content, &parts, "with_colon");
+    assert_eq!(
+        &content[range.unwrap().0..range.unwrap().1],
+        "value: with colon"
+    );
+
+    // Indented key
+    let range = frontmatter_value_byte_range(content, &parts, "indented_key");
+    assert_eq!(&content[range.unwrap().0..range.unwrap().1], "indented_value");
+
+    // CRLF
+    let content_crlf = "---\r\nname: test-skill\r\ndescription: value\r\n---\r\nBody";
+    let parts_crlf = split_frontmatter(content_crlf);
+    let range = frontmatter_value_byte_range(content_crlf, &parts_crlf, "name");
+    assert_eq!(
+        &content_crlf[range.unwrap().0..range.unwrap().1],
+        "test-skill"
+    );
+
+    // Malformed: unclosed quote
+    let content_malformed = "---\nname: \"unclosed\ndescription: value\n---\nBody";
+    let parts_malformed = split_frontmatter(content_malformed);
+    let range = frontmatter_value_byte_range(content_malformed, &parts_malformed, "name");
+    assert!(range.is_none());
+}
+
+#[test]
+fn test_key_helpers_exhaustive() {
+    let content = "---
+name: test-skill
+  indented_key: value
+# comment
+other: val
+---";
+    let parts = split_frontmatter(content);
+
+    // frontmatter_key_offset
+    // frontmatter starts after "---" (index 3)
+    // content[3..] = "\nname: test-skill\n  indented_key: value\n# comment\nother: val\n---"
+    assert_eq!(frontmatter_key_offset(&parts.frontmatter, "name"), Some(1));
+    assert_eq!(
+        frontmatter_key_offset(&parts.frontmatter, "indented_key"),
+        Some(20)
+    );
+
+    // frontmatter_key_line_byte_range
+    let range = frontmatter_key_line_byte_range(content, &parts, "name").unwrap();
+    assert_eq!(&content[range.0..range.1], "name: test-skill\n");
+
+    let range = frontmatter_key_line_byte_range(content, &parts, "other").unwrap();
+    assert_eq!(&content[range.0..range.1], "other: val\n");
+
+    // CRLF
+    let content_crlf = "---\r\nname: test\r\nother: val\r\n---";
+    let parts_crlf = split_frontmatter(content_crlf);
+    let range = frontmatter_key_line_byte_range(content_crlf, &parts_crlf, "name").unwrap();
+    assert_eq!(&content_crlf[range.0..range.1], "name: test\r\n");
+}
+
 // ===== directory_size_until tests =====
 
 /// Helper to write N bytes to a file efficiently using a small buffer
