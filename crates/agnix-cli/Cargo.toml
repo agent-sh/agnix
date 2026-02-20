@@ -36,6 +36,7 @@ notify = { version = "8", features = ["macos_fsevent"] }
 notify-debouncer-mini = "0.7"
 ctrlc = "3"
 dirs = "5"
+uuid = { workspace = true }
 rust-i18n = { workspace = true }
 sys-locale = { workspace = true }
 

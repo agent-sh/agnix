@@ -179,56 +179,9 @@ impl TelemetryConfig {
     }
 }
 
-/// Generate a random UUID v4.
+/// Generate a random UUID v4 using a CSPRNG.
 fn generate_uuid() -> String {
-    use std::time::{SystemTime, UNIX_EPOCH};
-
-    // Use time + process id + random bytes for uniqueness
-    let time_component = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_nanos();
-
-    let pid = std::process::id();
-
-    // XorShift64 for additional randomness
-    let mut state = time_component as u64 ^ (pid as u64) ^ 0x5DEECE66D;
-    let mut bytes = [0u8; 16];
-
-    for chunk in bytes.chunks_mut(8) {
-        state ^= state << 13;
-        state ^= state >> 7;
-        state ^= state << 17;
-
-        let state_bytes = state.to_le_bytes();
-        for (i, b) in chunk.iter_mut().enumerate() {
-            *b = state_bytes[i];
-        }
-    }
-
-    // Set version (4) and variant (RFC 4122)
-    bytes[6] = (bytes[6] & 0x0f) | 0x40; // Version 4
-    bytes[8] = (bytes[8] & 0x3f) | 0x80; // Variant RFC 4122
-
-    format!(
-        "{:02x}{:02x}{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}",
-        bytes[0],
-        bytes[1],
-        bytes[2],
-        bytes[3],
-        bytes[4],
-        bytes[5],
-        bytes[6],
-        bytes[7],
-        bytes[8],
-        bytes[9],
-        bytes[10],
-        bytes[11],
-        bytes[12],
-        bytes[13],
-        bytes[14],
-        bytes[15]
-    )
+    uuid::Uuid::new_v4().to_string()
 }
 
 #[cfg(test)]

@@ -56,6 +56,9 @@ rayon = "1.10"
 # Lock-free concurrency
 arc-swap = "1"
 
+# UUID generation (security fix: CSPRNG)
+uuid = { version = "1", features = ["v4"] }
+
 # CLI
 clap = { version = "4", features = ["derive", "cargo"] }
 colored = "3.1.1"
