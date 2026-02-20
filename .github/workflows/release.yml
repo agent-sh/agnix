@@ -158,7 +158,7 @@ jobs:
         run: |
           set -euo pipefail
           VERSION=${GITHUB_REF#refs/tags/}
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
           # Extract changelog section for this version
           if grep -q "## \[${VERSION#v}\]" CHANGELOG.md 2>/dev/null; then
@@ -421,7 +421,7 @@ jobs:
             echo "Invalid version format: $VERSION"
             exit 1
           fi
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Install website dependencies
         run: npm --prefix website ci
