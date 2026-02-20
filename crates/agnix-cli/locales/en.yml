@@ -779,11 +779,13 @@ rules:
     message: "No tool or spec versions pinned. Version-dependent rules will use default assumptions."
     suggestion: "Pin versions in .agnix.toml [tool_versions] or [spec_revisions] for deterministic validation."
 
-  # --- File-level errors (lib.rs) ---
+  # --- File-level errors (lib.rs / pipeline.rs) ---
   file_read_error: "Failed to validate file: %{error}"
   file_read_error_suggestion: "Check file permissions and ensure the file is not locked by another process"
   xp_004_read_error: "Failed to read instruction file: %{error}"
   xp_004_read_error_suggestion: "Check file permissions and ensure the file exists and is readable"
+  invalid_glob_pattern: "Ignoring invalid glob pattern '%{pattern}': %{error}"
+  invalid_glob_pattern_suggestion: "Fix the glob pattern syntax. Use standard glob characters: *, **, ?, [abc]"
 
 # ===========================================================================
 # Core - Config warnings, eval output, LintError

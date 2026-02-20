@@ -5142,7 +5142,9 @@ fn test_invalid_glob_in_files_config_produces_diagnostic() {
 
     assert_eq!(
         glob_diags[0].file,
-        std::fs::canonicalize(temp.path()).unwrap().join(".agnix.toml"),
+        std::fs::canonicalize(temp.path())
+            .unwrap()
+            .join(".agnix.toml"),
         "diagnostic file should be absolute path"
     );
 }
@@ -5169,10 +5171,7 @@ fn test_invalid_glob_in_all_files_config_lists_produces_diagnostics() {
         .files_mut()
         .include_as_generic
         .push("[bad-generic".to_string());
-    config
-        .files_mut()
-        .exclude
-        .push("[bad-exclude".to_string());
+    config.files_mut().exclude.push("[bad-exclude".to_string());
 
     let result = validate_project(temp.path(), &config).unwrap();
 
@@ -5192,7 +5191,9 @@ fn test_invalid_glob_in_all_files_config_lists_produces_diagnostics() {
         assert_eq!(d.level, DiagnosticLevel::Warning);
         assert_eq!(
             d.file,
-            std::fs::canonicalize(temp.path()).unwrap().join(".agnix.toml"),
+            std::fs::canonicalize(temp.path())
+                .unwrap()
+                .join(".agnix.toml"),
             "diagnostic file should be absolute path"
         );
         assert!(d.suggestion.is_some());

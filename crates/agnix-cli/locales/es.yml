@@ -559,11 +559,13 @@ rules:
     message: "No hay versiones de herramienta o especificacion fijadas. Las reglas dependientes de version usaran supuestos predeterminados."
     suggestion: "Fija versiones en .agnix.toml [tool_versions] o [spec_revisions] para validacion determinista."
 
-  # --- File-level errors (lib.rs) ---
+  # --- File-level errors (lib.rs / pipeline.rs) ---
   file_read_error: "Error al validar archivo: %{error}"
   file_read_error_suggestion: "Verifica los permisos del archivo y asegura que el archivo no este bloqueado por otro proceso"
   xp_004_read_error: "Error al leer archivo de instrucciones: %{error}"
   xp_004_read_error_suggestion: "Verifica los permisos del archivo y asegura que el archivo existe y es legible"
+  invalid_glob_pattern: "Ignorando patron glob invalido '%{pattern}': %{error}"
+  invalid_glob_pattern_suggestion: "Corrige la sintaxis del patron glob. Usa caracteres glob estandar: *, **, ?, [abc]"
 
 # ===========================================================================
 # Core - Advertencias de configuracion
