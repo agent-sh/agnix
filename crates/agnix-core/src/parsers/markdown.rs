@@ -51,9 +51,7 @@ pub fn extract_imports(content: &str) -> Vec<Import> {
     match panic::catch_unwind(AssertUnwindSafe(|| extract_imports_inner(&content))) {
         Ok(v) => v,
         Err(_) => {
-            eprintln!(
-                "warning: pulldown-cmark panicked during import extraction, returning empty result"
-            );
+            // Upstream parser panicked; return empty result (callers handle gracefully)
             Default::default()
         }
     }
@@ -96,9 +94,7 @@ pub fn extract_xml_tags(content: &str) -> Vec<XmlTag> {
     match panic::catch_unwind(AssertUnwindSafe(|| extract_xml_tags_inner(&content))) {
         Ok(v) => v,
         Err(_) => {
-            eprintln!(
-                "warning: pulldown-cmark panicked during XML tag extraction, returning empty result"
-            );
+            // Upstream parser panicked; return empty result (callers handle gracefully)
             Default::default()
         }
     }
@@ -138,9 +134,7 @@ pub fn extract_markdown_links(content: &str) -> Vec<MarkdownLink> {
     match panic::catch_unwind(AssertUnwindSafe(|| extract_markdown_links_inner(&content))) {
         Ok(v) => v,
         Err(_) => {
-            eprintln!(
-                "warning: pulldown-cmark panicked during link extraction, returning empty result"
-            );
+            // Upstream parser panicked; return empty result (callers handle gracefully)
             Default::default()
         }
     }
