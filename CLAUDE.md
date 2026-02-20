@@ -68,7 +68,7 @@ tests/fixtures/     # Test cases by category
 - `schemas/` - Type definitions (13 schemas: skill, hooks, agent, mcp, cline, roo, etc.)
 - `rules/` - Validators implementing Validator trait (25 validators)
 - `config.rs` - LintConfig, LintConfigBuilder, ConfigError, ToolVersions, SpecRevisions
-- `diagnostics.rs` - Diagnostic, Fix, DiagnosticLevel, ValidationOutcome
+- `diagnostics.rs` - Diagnostic, Fix, DiagnosticLevel, ValidationOutcome, LintError (= CoreError), LintResult
 - `eval.rs` - Rule efficacy evaluation (precision/recall/F1)
 - `file_types/` - FileType enum, detect_file_type(), FileTypeDetector trait, FileTypeDetectorChain
 - `file_utils.rs` - Safe file I/O (symlink rejection, size limits)
