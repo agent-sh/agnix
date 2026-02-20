@@ -28,7 +28,8 @@ fn public_types_are_importable() {
     let _ = std::any::type_name::<agnix_core::FilesConfig>();
     let _ = std::any::type_name::<agnix_core::ValidationOutcome>();
 
-    // LintResult type alias
+    // LintResult type alias - the sole public Result alias.
+    // CoreResult was removed in #477; LintResult is the only Result alias.
     let _ = std::any::type_name::<agnix_core::LintResult<()>>();
 
     // ValidatorFactory type alias
@@ -1134,5 +1135,37 @@ fn normalize_line_endings_lf_only_is_borrowed_and_zero_copy() {
     assert!(
         std::ptr::eq(result.as_ptr(), lf_only.as_ptr()),
         "Cow::Borrowed must point to the original allocation"
+    );
+}
+
+// ============================================================================
+// LintResult is the sole public Result alias (#477)
+// ============================================================================
+
+/// Verify that `LintResult<T>` is the sole public Result alias in agnix-core.
+///
+/// `CoreResult<T>` was removed in #477 because it was dead code - defined and
+/// re-exported but never used anywhere in the codebase. `LintResult<T>` is the
+/// established convention used across 40+ call sites.
+#[test]
+fn lint_result_is_sole_result_alias() {
+    // LintResult<T> must be importable and usable as a Result type.
+    let ok: agnix_core::LintResult<()> = Ok(());
+    assert!(ok.is_ok());
+
+    // LintResult<T> resolves to Result<T, LintError> (which is Result<T, CoreError>).
+    let type_name = std::any::type_name::<agnix_core::LintResult<()>>();
+    assert!(
+        type_name.contains("Result"),
+        "LintResult<()> should resolve to a Result type, got: {}",
+        type_name
+    );
+
+    // LintError and CoreError are the same type (LintError = CoreError alias).
+    let lint_error_name = std::any::type_name::<agnix_core::LintError>();
+    let core_error_name = std::any::type_name::<agnix_core::CoreError>();
+    assert_eq!(
+        lint_error_name, core_error_name,
+        "LintError and CoreError should be the same type"
     );
 }

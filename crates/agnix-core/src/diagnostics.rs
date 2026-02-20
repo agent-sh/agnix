@@ -7,7 +7,6 @@ use std::path::PathBuf;
 use thiserror::Error;
 
 pub type LintResult<T> = Result<T, LintError>;
-pub type CoreResult<T> = Result<T, CoreError>;
 
 /// An automatic fix for a diagnostic
 #[derive(Debug, Clone, Serialize, Deserialize)]
