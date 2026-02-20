@@ -46,9 +46,6 @@ const VALID_AMP_SETTINGS_KEYS: &[&str] = &[
 ];
 
 /// Adapter to use raw frontmatter with `find_yaml_value_range`.
-/// `split_frontmatter()` returns `parts.frontmatter` with a leading `\n`
-/// (the first `.lines()` entry is empty), so `start_line` is 0 to avoid
-/// off-by-one errors in `find_yaml_value_range`'s line-number calculation.
 struct YamlFrontmatterAdapter<'a> {
     raw: &'a str,
 }
@@ -58,7 +55,7 @@ impl crate::rules::FrontmatterRanges for YamlFrontmatterAdapter<'_> {
         self.raw
     }
     fn start_line(&self) -> usize {
-        0
+        1
     }
 }
 
@@ -111,7 +108,9 @@ fn validate_amp_check(path: &Path, content: &str, config: &LintConfig) -> Vec<Di
         Ok(value) => value,
         Err(error) => {
             if amp_001_enabled {
-                let line = error.location().map_or(1, |loc| loc.line());
+                // serde_yaml lines are relative to the frontmatter string;
+                // add 1 to account for the `---` delimiter line.
+                let line = error.location().map_or(1, |loc| loc.line() + 1);
                 let column = error.location().map_or(0, |loc| loc.column());
                 diagnostics.push(
                     Diagnostic::error(
@@ -488,7 +487,9 @@ fn frontmatter_key_line(frontmatter: &str, key: &str) -> usize {
             let trimmed = line.trim_start();
             let after = trimmed.strip_prefix(key)?;
             if after.trim_start().starts_with(':') {
-                Some(idx + 1)
+                // idx is 0-based within frontmatter; add 2 to convert to
+                // 1-based file line number (1 for the `---` line, 1 for 0-index).
+                Some(idx + 2)
             } else {
                 None
             }

@@ -2122,12 +2122,12 @@ other: val
     let parts = split_frontmatter(content);
 
     // frontmatter_key_offset
-    // frontmatter starts after "---" (index 3)
-    // content[3..] = "\nname: test-skill\n  indented_key: value\n# comment\nother: val\n---"
-    assert_eq!(frontmatter_key_offset(&parts.frontmatter, "name"), Some(1));
+    // frontmatter starts after "---\n" (index 4), leading newline is stripped
+    // parts.frontmatter = "name: test-skill\n  indented_key: value\n# comment\nother: val"
+    assert_eq!(frontmatter_key_offset(&parts.frontmatter, "name"), Some(0));
     assert_eq!(
         frontmatter_key_offset(&parts.frontmatter, "indented_key"),
-        Some(20)
+        Some(19)
     );
 
     // frontmatter_key_line_byte_range

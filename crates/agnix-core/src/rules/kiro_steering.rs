@@ -28,11 +28,7 @@ impl crate::rules::FrontmatterRanges for FrontmatterAdapter<'_> {
         self.raw
     }
     fn start_line(&self) -> usize {
-        // split_frontmatter includes a leading \n in the frontmatter string,
-        // so the first content line is at index 1 within raw_content().
-        // With the formula `start_line + 1 + idx`, start_line=0 maps idx=1
-        // to full-content line 2 (the first frontmatter content line).
-        0
+        1
     }
 }
 

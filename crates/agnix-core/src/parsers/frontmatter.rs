@@ -100,11 +100,22 @@ pub fn split_frontmatter(content: &str) -> FrontmatterParts {
     }
 
     let rest = &trimmed[3..];
-    let frontmatter_start = trim_offset + 3;
+
+    // Skip the newline that follows the opening --- delimiter so that
+    // the extracted frontmatter starts at the first content character.
+    let newline_len = if rest.starts_with("\r\n") {
+        2
+    } else if rest.starts_with('\n') {
+        1
+    } else {
+        0
+    };
+
+    let frontmatter_start = trim_offset + 3 + newline_len;
 
     // Find closing ---
     if let Some(end_pos) = rest.find("\n---") {
-        let frontmatter = &rest[..end_pos];
+        let frontmatter = &rest[newline_len..end_pos];
         let body = &rest[end_pos + 4..]; // Skip \n---
         FrontmatterParts {
             has_frontmatter: true,
@@ -112,15 +123,16 @@ pub fn split_frontmatter(content: &str) -> FrontmatterParts {
             frontmatter: frontmatter.to_string(),
             body: body.to_string(),
             frontmatter_start,
-            body_start: frontmatter_start + end_pos + 4,
+            body_start: trim_offset + 3 + end_pos + 4,
         }
     } else {
         // No closing marker - treat entire file as body
+        let body = &rest[newline_len..];
         FrontmatterParts {
             has_frontmatter: true,
             has_closing: false,
             frontmatter: String::new(),
-            body: rest.to_string(),
+            body: body.to_string(),
             frontmatter_start,
             body_start: frontmatter_start,
         }
@@ -165,9 +177,10 @@ Body content here"#;
         let parts = split_frontmatter(content);
         assert!(parts.has_frontmatter);
         assert!(parts.has_closing);
-        // Frontmatter excludes the \n before closing --- (it's part of the delimiter)
-        assert_eq!(parts.frontmatter, "\nname: test");
+        assert_eq!(parts.frontmatter, "name: test");
         assert_eq!(parts.body, "\nbody");
+        // frontmatter_start points past "---\n" (4 bytes)
+        assert_eq!(parts.frontmatter_start, 4);
     }
 
     #[test]
@@ -233,15 +246,15 @@ Body content here"#;
         assert!(parts.frontmatter_start <= content.len());
         assert!(parts.body_start <= content.len());
 
-        // frontmatter_start is at byte 3 (after "---")
-        assert_eq!(parts.frontmatter_start, 3);
+        // frontmatter_start is at byte 5 (after "---\r\n")
+        assert_eq!(parts.frontmatter_start, 5);
 
-        // The frontmatter string is from after "---" to where "\n---" is found.
+        // The leading \r\n after "---" is stripped from frontmatter.
         // Content after "---": "\r\nname: test\r\n---\r\nbody"
-        // find("\n---") matches at position where \n is the \n in \r\n before ---
-        // The match is at index 14 in rest ("\r\nname: test\r" = 14 chars, then "\n---")
-        // So frontmatter = rest[..14] = "\r\nname: test\r"
-        assert_eq!(parts.frontmatter, "\r\nname: test\r");
+        // newline_len = 2 (CRLF)
+        // find("\n---") matches at index 14 in rest ("\r\nname: test\r" = 14 chars)
+        // frontmatter = rest[2..14] = "name: test\r"
+        assert_eq!(parts.frontmatter, "name: test\r");
     }
 
     #[test]
