@@ -25,7 +25,7 @@ pub(crate) fn create_error_diagnostic(code: &str, message: String) -> Diagnostic
 }
 
 /// Normalize path components without filesystem access.
-/// Resolves `.` and `..` logically -- used when `canonicalize()` fails.
+/// Resolves `.` and `..` logically - used when `canonicalize()` fails.
 /// Expects absolute paths (LSP URIs always produce absolute paths).
 pub(crate) fn normalize_path(path: &Path) -> PathBuf {
     let mut components: Vec<Component<'_>> = Vec::new();
@@ -37,7 +37,7 @@ pub(crate) fn normalize_path(path: &Path) -> PathBuf {
                     Some(Component::Normal(_)) => {
                         components.pop();
                     }
-                    // Cannot traverse above root or prefix -- silently drop
+                    // Cannot traverse above root or prefix - silently drop
                     Some(Component::RootDir) | Some(Component::Prefix(_)) => {}
                     _ => components.push(component),
                 }
