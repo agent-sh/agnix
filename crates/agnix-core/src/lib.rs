@@ -89,8 +89,8 @@ pub mod validation;
 
 pub use config::{ConfigWarning, FilesConfig, LintConfig, generate_schema};
 pub use diagnostics::{
-    ConfigError, CoreError, Diagnostic, DiagnosticLevel, FileError, Fix,
-    FixConfidenceTier, LintError, LintResult, RuleMetadata, ValidationError, ValidationOutcome,
+    ConfigError, CoreError, Diagnostic, DiagnosticLevel, FileError, Fix, FixConfidenceTier,
+    LintError, LintResult, RuleMetadata, ValidationError, ValidationOutcome,
 };
 pub use file_types::{FileType, detect_file_type};
 pub use file_types::{FileTypeDetector, FileTypeDetectorChain};

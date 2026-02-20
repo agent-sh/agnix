@@ -1167,10 +1167,8 @@ fn lint_result_is_sole_result_alias() {
 
     // LintError and CoreError are type aliases for the same enum - constructing
     // one variant via CoreError and matching through LintError must work.
-    let lint_err: LintError = CoreError::Validation(ValidationError::TooManyFiles {
-        count: 1,
-        limit: 0,
-    });
+    let lint_err: LintError =
+        CoreError::Validation(ValidationError::TooManyFiles { count: 1, limit: 0 });
     // Exhaustively match all three CoreError variants through the LintError alias.
     // If a new CoreError variant is added, this match will fail to compile.
     match lint_err {
