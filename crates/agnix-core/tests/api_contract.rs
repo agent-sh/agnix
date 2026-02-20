@@ -1171,10 +1171,11 @@ fn lint_result_is_sole_result_alias() {
         count: 1,
         limit: 0,
     });
+    // Exhaustively match all three CoreError variants through the LintError alias.
+    // If a new CoreError variant is added, this match will fail to compile.
     match lint_err {
+        LintError::File(_) => {}
         LintError::Validation(_) => {}
-        // All CoreError variants are covered above via LintError - this arm is unreachable
-        // because LintError is a type alias for CoreError, not a distinct type.
-        _ => unreachable!("LintError is a type alias for CoreError; all variants are covered"),
+        LintError::Config(_) => {}
     }
 }
