@@ -4,7 +4,7 @@ use std::collections::HashSet;
 use std::path::Path;
 
 use super::{
-    PathMatch, SkillFrontmatter, reference_path_regex, windows_path_regex, windows_path_token_regex,
+    reference_path_regex, windows_path_regex, windows_path_token_regex, PathMatch, SkillFrontmatter,
 };
 
 pub(super) fn parse_frontmatter_fields(

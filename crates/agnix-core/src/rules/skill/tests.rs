@@ -2090,7 +2090,10 @@ Body";
 
     // Indented key
     let range = frontmatter_value_byte_range(content, &parts, "indented_key");
-    assert_eq!(&content[range.unwrap().0..range.unwrap().1], "indented_value");
+    assert_eq!(
+        &content[range.unwrap().0..range.unwrap().1],
+        "indented_value"
+    );
 
     // CRLF
     let content_crlf = "---\r\nname: test-skill\r\ndescription: value\r\n---\r\nBody";
