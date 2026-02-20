@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Performance
+- **WASM conversion optimization**: Refactored `WasmDiagnostic::from_diagnostic` to take ownership of `Diagnostic` and its fields, eliminating unnecessary string cloning when converting diagnostics to the WASM-compatible representation in `agnix-wasm`
+
 ### Added
 - **`build_lenient()` on `LintConfigBuilder`**: New builder terminal that runs security-critical glob pattern validation (syntax, path traversal, absolute paths) while skipping semantic warnings such as unknown tool names and deprecated field warnings. Intended for embedders that accept future or unknown tool names without rebuilding. `ConfigError::AbsolutePathPattern` variant added for absolute-path glob patterns (#475)
 - **Expanded autofix coverage**: Added `with_fix()` autofix support to 38 additional validation rules across AGM, AMP, AS, CC-AG, CC-HK, CC-PL, CC-SK, CDX, COP, CUR, GM, KIRO, MCP, OC, PE, and REF categories, bringing total fixable rules from 59 to 97 (42% of all rules)
