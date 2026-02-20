@@ -97,21 +97,54 @@ impl CompiledFilesConfig {
     }
 }
 
+/// Compile glob patterns, collecting any invalid patterns as [`Diagnostic`] warnings
+/// instead of printing to stderr.
+///
+/// Returns the successfully compiled patterns alongside diagnostics for any
+/// patterns that failed to compile. Invalid patterns are silently skipped
+/// from the compiled output.
+#[cfg(feature = "filesystem")]
+fn compile_patterns_with_diagnostics(
+    patterns: &[String],
+) -> (Vec<glob::Pattern>, Vec<Diagnostic>) {
+    let mut compiled = Vec::with_capacity(patterns.len());
+    let mut diagnostics = Vec::new();
+    for p in patterns {
+        let normalized = p.replace('\\', "/");
+        match glob::Pattern::new(&normalized) {
+            Ok(pat) => compiled.push(pat),
+            Err(e) => {
+                diagnostics.push(
+                    Diagnostic::warning(
+                        PathBuf::from(".agnix.toml"),
+                        0,
+                        0,
+                        "config::glob",
+                        t!(
+                            "rules.invalid_glob_pattern",
+                            pattern = p,
+                            error = e.to_string()
+                        ),
+                    )
+                    .with_suggestion(t!("rules.invalid_glob_pattern_suggestion")),
+                );
+            }
+        }
+    }
+    (compiled, diagnostics)
+}
+
+/// Compile glob patterns leniently, discarding diagnostics for invalid patterns.
+///
+/// Used in code paths where diagnostics cannot be surfaced (e.g. the public
+/// [`resolve_file_type`] API, which must not change its return type). Invalid
+/// patterns are silently skipped.
 fn compile_patterns_lenient(patterns: &[String]) -> Vec<glob::Pattern> {
     patterns
         .iter()
         .filter_map(|p| {
             let normalized = p.replace('\\', "/");
-            match glob::Pattern::new(&normalized) {
-                Ok(pat) => Some(pat),
-                Err(e) => {
-                    // TODO: Consider returning invalid glob patterns as Diagnostic warnings instead of eprintln!
-                    // This would allow library consumers to handle warnings programmatically.
-                    // See: https://github.com/avifenesh/agnix/issues
-                    eprintln!("warning: ignoring invalid glob pattern '{}' : {}", p, e);
-                    None
-                }
-            }
+            glob::Pattern::new(&normalized).ok()
         })
         .collect()
 }
@@ -122,6 +155,36 @@ fn compile_files_config(files: &crate::config::FilesConfig) -> CompiledFilesConf
         include_as_generic: compile_patterns_lenient(&files.include_as_generic),
         exclude: compile_patterns_lenient(&files.exclude),
     }
+}
+
+/// Compile `[files]` config patterns, surfacing invalid patterns as diagnostics.
+///
+/// Used by [`validate_project_with_registry`] where diagnostics can be
+/// propagated to the caller. Returns both the compiled config and any
+/// diagnostics for malformed glob patterns.
+#[cfg(feature = "filesystem")]
+fn compile_files_config_with_diagnostics(
+    files: &crate::config::FilesConfig,
+) -> (CompiledFilesConfig, Vec<Diagnostic>) {
+    let mut all_diagnostics = Vec::new();
+
+    let (include_as_memory, diags) = compile_patterns_with_diagnostics(&files.include_as_memory);
+    all_diagnostics.extend(diags);
+
+    let (include_as_generic, diags) = compile_patterns_with_diagnostics(&files.include_as_generic);
+    all_diagnostics.extend(diags);
+
+    let (exclude, diags) = compile_patterns_with_diagnostics(&files.exclude);
+    all_diagnostics.extend(diags);
+
+    (
+        CompiledFilesConfig {
+            include_as_memory,
+            include_as_generic,
+            exclude,
+        },
+        all_diagnostics,
+    )
 }
 
 /// Match options for file inclusion/exclusion glob patterns.
@@ -195,9 +258,11 @@ pub fn resolve_file_type(path: &Path, config: &LintConfig) -> FileType {
         return detect_file_type(path);
     }
 
-    // Compile patterns on-demand for single-file validation.
-    // Invalid patterns are silently skipped here; use LintConfigBuilder::build()
-    // or LintConfig::validate() at config load time if strict validation is desired.
+    // Compile patterns on-demand for single-file validation. Invalid patterns
+    // are silently skipped (no diagnostics) because this public API returns only
+    // a FileType. Use validate_project() for diagnostic surfacing, or
+    // LintConfigBuilder::build() / LintConfig::validate() at config load time
+    // for strict validation.
     let compiled = compile_files_config(files);
     resolve_with_compiled(path, config.root_dir().map(|p| p.as_path()), &compiled)
 }
@@ -784,9 +849,10 @@ pub fn validate_project_with_registry(
     let exclude_patterns = Arc::new(exclude_patterns);
 
     // Pre-compile files config patterns once for the parallel walk.
-    // Invalid patterns are silently skipped here; use LintConfigBuilder::build()
-    // or LintConfig::validate() at config load time if strict validation is desired.
-    let compiled_files = Arc::new(compile_files_config(config.files_config()));
+    // Invalid patterns produce Warning diagnostics that are prepended to results.
+    let (compiled_files_inner, config_diags) =
+        compile_files_config_with_diagnostics(config.files_config());
+    let compiled_files = Arc::new(compiled_files_inner);
 
     let root_path = root_dir.clone();
 
@@ -939,6 +1005,9 @@ pub fn validate_project_with_registry(
             }));
         }
     }
+
+    // Surface any config-level diagnostics (e.g. invalid glob patterns in [files])
+    diagnostics.extend(config_diags);
 
     // Run project-level checks (AGM-006, XP-004/005/006, VER-001)
     {
