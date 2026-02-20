@@ -27,7 +27,8 @@ jobs:
       - name: Check CHANGELOG.md modified
         run: |
           set -euo pipefail
-          if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -q "CHANGELOG.md"; then
+          changed_files=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")
+          if grep -qF "CHANGELOG.md" <<< "$changed_files"; then
             echo "CHANGELOG.md has been modified"
           else
             echo "::error::CHANGELOG.md was not modified. Please add an entry describing your changes."
