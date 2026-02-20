@@ -5139,4 +5139,62 @@ fn test_invalid_glob_in_files_config_produces_diagnostic() {
         glob_diags[0].suggestion.is_some(),
         "config::glob diagnostic should include a suggestion"
     );
+
+    assert_eq!(
+        glob_diags[0].file,
+        temp.path().join(".agnix.toml"),
+        "diagnostic file should be absolute path"
+    );
+}
+
+/// Regression test: invalid patterns across all three [files] lists each produce a diagnostic.
+#[test]
+fn test_invalid_glob_in_all_files_config_lists_produces_diagnostics() {
+    let temp = tempfile::TempDir::new().unwrap();
+
+    // Write a valid CLAUDE.md so the project has at least one recognized file
+    std::fs::write(
+        temp.path().join("CLAUDE.md"),
+        "# Project\n\nSome instructions.\n",
+    )
+    .unwrap();
+
+    // Build a config with an invalid glob pattern in each of the three lists
+    let mut config = LintConfig::default();
+    config
+        .files_mut()
+        .include_as_memory
+        .push("[bad-memory".to_string());
+    config
+        .files_mut()
+        .include_as_generic
+        .push("[bad-generic".to_string());
+    config
+        .files_mut()
+        .exclude
+        .push("[bad-exclude".to_string());
+
+    let result = validate_project(temp.path(), &config).unwrap();
+
+    let glob_diags: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.rule == "config::glob")
+        .collect();
+
+    assert_eq!(
+        glob_diags.len(),
+        3,
+        "Expected exactly 3 config::glob diagnostics (one per list), got: {glob_diags:?}"
+    );
+
+    for d in &glob_diags {
+        assert_eq!(d.level, DiagnosticLevel::Warning);
+        assert_eq!(
+            d.file,
+            temp.path().join(".agnix.toml"),
+            "diagnostic file should be absolute path"
+        );
+        assert!(d.suggestion.is_some());
+    }
 }

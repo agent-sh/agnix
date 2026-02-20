@@ -101,11 +101,16 @@ impl CompiledFilesConfig {
 /// instead of printing to stderr.
 ///
 /// Returns the successfully compiled patterns alongside diagnostics for any
-/// patterns that failed to compile. Invalid patterns are silently skipped
-/// from the compiled output.
+/// patterns that failed to compile. Invalid patterns are excluded from the
+/// compiled output and reported as Diagnostic warnings instead.
+///
+/// `config_file` is the path used in the diagnostic `file` field - callers should
+/// pass an absolute path (e.g. `root_dir.join(".agnix.toml")`) so that diagnostics
+/// are consistent with other config-level diagnostics in the pipeline.
 #[cfg(feature = "filesystem")]
 fn compile_patterns_with_diagnostics(
     patterns: &[String],
+    config_file: &Path,
 ) -> (Vec<glob::Pattern>, Vec<Diagnostic>) {
     let mut compiled = Vec::with_capacity(patterns.len());
     let mut diagnostics = Vec::new();
@@ -116,7 +121,7 @@ fn compile_patterns_with_diagnostics(
             Err(e) => {
                 diagnostics.push(
                     Diagnostic::warning(
-                        PathBuf::from(".agnix.toml"),
+                        config_file.to_path_buf(),
                         0,
                         0,
                         "config::glob",
@@ -162,19 +167,25 @@ fn compile_files_config(files: &crate::config::FilesConfig) -> CompiledFilesConf
 /// Used by [`validate_project_with_registry`] where diagnostics can be
 /// propagated to the caller. Returns both the compiled config and any
 /// diagnostics for malformed glob patterns.
+///
+/// `config_file` is forwarded to [`compile_patterns_with_diagnostics`] for the
+/// diagnostic `file` field.
 #[cfg(feature = "filesystem")]
 fn compile_files_config_with_diagnostics(
     files: &crate::config::FilesConfig,
+    config_file: &Path,
 ) -> (CompiledFilesConfig, Vec<Diagnostic>) {
     let mut all_diagnostics = Vec::new();
 
-    let (include_as_memory, diags) = compile_patterns_with_diagnostics(&files.include_as_memory);
+    let (include_as_memory, diags) =
+        compile_patterns_with_diagnostics(&files.include_as_memory, config_file);
     all_diagnostics.extend(diags);
 
-    let (include_as_generic, diags) = compile_patterns_with_diagnostics(&files.include_as_generic);
+    let (include_as_generic, diags) =
+        compile_patterns_with_diagnostics(&files.include_as_generic, config_file);
     all_diagnostics.extend(diags);
 
-    let (exclude, diags) = compile_patterns_with_diagnostics(&files.exclude);
+    let (exclude, diags) = compile_patterns_with_diagnostics(&files.exclude, config_file);
     all_diagnostics.extend(diags);
 
     (
@@ -850,8 +861,9 @@ pub fn validate_project_with_registry(
 
     // Pre-compile files config patterns once for the parallel walk.
     // Invalid patterns produce Warning diagnostics that are prepended to results.
+    let config_file = root_dir.join(".agnix.toml");
     let (compiled_files_inner, config_diags) =
-        compile_files_config_with_diagnostics(config.files_config());
+        compile_files_config_with_diagnostics(config.files_config(), &config_file);
     let compiled_files = Arc::new(compiled_files_inner);
 
     let root_path = root_dir.clone();
@@ -996,6 +1008,10 @@ pub fn validate_project_with_registry(
                 },
             );
 
+    // Surface config-level diagnostics (e.g. invalid glob patterns in [files])
+    // before the TooManyFiles check so they are never silently discarded.
+    diagnostics.extend(config_diags);
+
     // Check if limit was exceeded and return error
     if limit_exceeded.load(Ordering::Relaxed) {
         if let Some(limit) = max_files {
@@ -1005,9 +1021,6 @@ pub fn validate_project_with_registry(
             }));
         }
     }
-
-    // Surface any config-level diagnostics (e.g. invalid glob patterns in [files])
-    diagnostics.extend(config_diags);
 
     // Run project-level checks (AGM-006, XP-004/005/006, VER-001)
     {
@@ -1552,7 +1565,8 @@ mod tests {
     #[test]
     fn compile_patterns_with_diagnostics_all_valid() {
         let patterns = vec!["*.md".to_string(), "src/**/*.rs".to_string()];
-        let (compiled, diags) = compile_patterns_with_diagnostics(&patterns);
+        let config_file = Path::new(".agnix.toml");
+        let (compiled, diags) = compile_patterns_with_diagnostics(&patterns, config_file);
         assert_eq!(compiled.len(), 2, "All valid patterns should compile");
         assert!(
             diags.is_empty(),
@@ -1563,7 +1577,8 @@ mod tests {
     #[test]
     fn compile_patterns_with_diagnostics_invalid_pattern() {
         let patterns = vec!["[invalid".to_string()];
-        let (compiled, diags) = compile_patterns_with_diagnostics(&patterns);
+        let config_file = Path::new(".agnix.toml");
+        let (compiled, diags) = compile_patterns_with_diagnostics(&patterns, config_file);
         assert!(
             compiled.is_empty(),
             "Invalid pattern should not produce a compiled pattern"
@@ -1586,6 +1601,10 @@ mod tests {
             diags[0].suggestion.is_some(),
             "Diagnostic should include a suggestion"
         );
+        assert!(
+            diags[0].message.contains("[invalid"),
+            "diagnostic message should include the pattern"
+        );
     }
 
     #[test]
@@ -1596,7 +1615,8 @@ mod tests {
             "src/**/*.rs".to_string(),
             "[also-bad".to_string(),
         ];
-        let (compiled, diags) = compile_patterns_with_diagnostics(&patterns);
+        let config_file = Path::new(".agnix.toml");
+        let (compiled, diags) = compile_patterns_with_diagnostics(&patterns, config_file);
         assert_eq!(
             compiled.len(),
             2,
@@ -1618,7 +1638,8 @@ mod tests {
     #[test]
     fn compile_patterns_with_diagnostics_empty_input() {
         let patterns: Vec<String> = vec![];
-        let (compiled, diags) = compile_patterns_with_diagnostics(&patterns);
+        let config_file = Path::new(".agnix.toml");
+        let (compiled, diags) = compile_patterns_with_diagnostics(&patterns, config_file);
         assert!(compiled.is_empty());
         assert!(diags.is_empty());
     }
@@ -1632,7 +1653,8 @@ mod tests {
             include_as_generic: vec!["[bad-generic".to_string()],
             exclude: vec!["valid/**".to_string(), "[bad-exclude".to_string()],
         };
-        let (compiled, diags) = compile_files_config_with_diagnostics(&files);
+        let config_file = Path::new(".agnix.toml");
+        let (compiled, diags) = compile_files_config_with_diagnostics(&files, config_file);
         // Valid patterns: *.md (memory), valid/** (exclude) = 2 compiled total
         assert_eq!(compiled.include_as_memory.len(), 1);
         assert_eq!(compiled.include_as_generic.len(), 0);
