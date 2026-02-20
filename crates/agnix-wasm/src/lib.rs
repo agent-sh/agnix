@@ -43,27 +43,27 @@ struct WasmDiagnostic {
 }
 
 impl WasmDiagnostic {
-    fn from_diagnostic(d: &Diagnostic) -> Self {
+    fn from_diagnostic(d: Diagnostic) -> Self {
         Self {
             level: match d.level {
                 DiagnosticLevel::Error => "error",
                 DiagnosticLevel::Warning => "warning",
                 DiagnosticLevel::Info => "info",
             },
-            rule: d.rule.clone(),
-            message: d.message.clone(),
+            rule: d.rule,
+            message: d.message,
             line: d.line,
             column: d.column,
-            suggestion: d.suggestion.clone(),
-            assumption: d.assumption.clone(),
+            suggestion: d.suggestion,
+            assumption: d.assumption,
             fixes: d
                 .fixes
-                .iter()
+                .into_iter()
                 .map(|f| WasmFix {
                     start_byte: f.start_byte,
                     end_byte: f.end_byte,
-                    replacement: f.replacement.clone(),
-                    description: f.description.clone(),
+                    replacement: f.replacement,
+                    description: f.description,
                     safe: f.safe,
                 })
                 .collect(),
@@ -123,7 +123,7 @@ pub fn validate(filename: &str, content: &str, tool: Option<String>) -> JsValue 
 
     let response = ValidationResponse {
         diagnostics: diagnostics
-            .iter()
+            .into_iter()
             .map(WasmDiagnostic::from_diagnostic)
             .collect(),
         file_type: detected_type.to_string(),
