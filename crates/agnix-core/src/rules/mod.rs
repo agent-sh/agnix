@@ -109,6 +109,11 @@ pub trait Validator: Send + Sync + 'static {
 /// Both ParsedFrontmatter (copilot) and ParsedMdcFrontmatter (cursor) implement this.
 pub(crate) trait FrontmatterRanges {
     fn raw_content(&self) -> &str;
+    /// Return the 1-based line number of the opening `---` delimiter in the full file.
+    ///
+    /// This anchors frontmatter-relative line indices to absolute file positions:
+    /// `find_yaml_value_range` computes `start_line() + 1 + idx` to locate the
+    /// absolute line of each frontmatter key.
     fn start_line(&self) -> usize;
 }
 

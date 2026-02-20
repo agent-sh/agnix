@@ -2373,9 +2373,9 @@ Body"#;
             .collect();
 
         assert_eq!(parse_errors.len(), 1);
-        assert!(
-            parse_errors[0].line > 1,
-            "Expected error line > 1, got {}",
+        assert_eq!(
+            parse_errors[0].line, 2,
+            "Expected error on line 2 (invalid YAML key), got {}",
             parse_errors[0].line
         );
     }

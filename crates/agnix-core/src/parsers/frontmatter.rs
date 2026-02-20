@@ -115,7 +115,7 @@ pub fn split_frontmatter(content: &str) -> FrontmatterParts {
 
     // Find closing ---
     if let Some(end_pos) = rest.find("\n---") {
-        let frontmatter = &rest[newline_len..end_pos];
+        let frontmatter = rest.get(newline_len..end_pos).unwrap_or("");
         let body = &rest[end_pos + 4..]; // Skip \n---
         FrontmatterParts {
             has_frontmatter: true,
@@ -123,6 +123,8 @@ pub fn split_frontmatter(content: &str) -> FrontmatterParts {
             frontmatter: frontmatter.to_string(),
             body: body.to_string(),
             frontmatter_start,
+            // end_pos is relative to `rest` (= trimmed[trim_offset+3..]), so body_start
+            // does not include newline_len - it accounts for the full \n--- (4 bytes).
             body_start: trim_offset + 3 + end_pos + 4,
         }
     } else {
@@ -181,6 +183,7 @@ Body content here"#;
         assert_eq!(parts.body, "\nbody");
         // frontmatter_start points past "---\n" (4 bytes)
         assert_eq!(parts.frontmatter_start, 4);
+        assert_eq!(&content[parts.body_start..], parts.body);
     }
 
     #[test]
@@ -192,6 +195,7 @@ Body content here"#;
         assert!(parts.frontmatter.is_empty());
         assert_eq!(parts.body, "name: test");
         assert_eq!(parts.body_start, 4); // past ---\n
+        assert_eq!(&content[parts.body_start..], parts.body);
     }
 
     #[test]
@@ -203,6 +207,7 @@ Body content here"#;
         assert!(parts.frontmatter.is_empty());
         assert_eq!(parts.body, "name: test");
         assert_eq!(parts.body_start, 5); // past ---\r\n
+        assert_eq!(&content[parts.body_start..], parts.body);
     }
 
     #[test]
@@ -211,6 +216,30 @@ Body content here"#;
         let parts = split_frontmatter(content);
         assert!(!parts.has_frontmatter);
         assert!(!parts.has_closing);
+    }
+
+    #[test]
+    fn test_split_frontmatter_empty_body_lf() {
+        // --- immediately followed by closing --- with LF
+        let content = "---\n---\nbody";
+        let parts = split_frontmatter(content);
+        assert!(parts.has_frontmatter);
+        assert!(parts.has_closing);
+        assert_eq!(parts.frontmatter, "");
+        assert_eq!(parts.body, "\nbody");
+        assert_eq!(&content[parts.body_start..], parts.body);
+    }
+
+    #[test]
+    fn test_split_frontmatter_empty_body_crlf() {
+        // --- immediately followed by closing --- with CRLF
+        let content = "---\r\n---\r\nbody";
+        let parts = split_frontmatter(content);
+        assert!(parts.has_frontmatter);
+        assert!(parts.has_closing);
+        assert_eq!(parts.frontmatter, "");
+        assert_eq!(parts.body, "\r\nbody");
+        assert_eq!(&content[parts.body_start..], parts.body);
     }
 
     #[test]
