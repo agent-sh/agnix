@@ -25,7 +25,9 @@ fn backend_new_test_creates_valid_instance() {
     assert!(backend.registry.total_validator_count() > 0);
     assert_eq!(backend.config_generation.load(Ordering::Relaxed), 0);
     assert_eq!(
-        backend.project_validation_generation.load(Ordering::Relaxed),
+        backend
+            .project_validation_generation
+            .load(Ordering::Relaxed),
         0
     );
 }
@@ -171,9 +173,7 @@ async fn revalidation_should_publish_diagnostics_accessible() {
 
 #[tokio::test]
 async fn revalidation_handle_did_change_configuration_accessible() {
-    use tower_lsp::lsp_types::{
-        DidChangeConfigurationParams, LSPAny,
-    };
+    use tower_lsp::lsp_types::{DidChangeConfigurationParams, LSPAny};
     let backend = Backend::new_test();
     // Empty settings JSON: should not panic and no workspace to revalidate.
     let params = DidChangeConfigurationParams {
@@ -215,8 +215,8 @@ async fn events_handle_did_open_accessible() {
 #[tokio::test]
 async fn events_handle_did_change_accessible() {
     use tower_lsp::lsp_types::{
-        DidChangeTextDocumentParams, TextDocumentContentChangeEvent,
-        VersionedTextDocumentIdentifier, Url,
+        DidChangeTextDocumentParams, TextDocumentContentChangeEvent, Url,
+        VersionedTextDocumentIdentifier,
     };
     let backend = Backend::new_test();
     let uri = Url::parse("file:///CLAUDE.md").unwrap();
@@ -250,11 +250,10 @@ async fn events_handle_did_save_accessible() {
     let backend = Backend::new_test();
     // Use a non-project-level-trigger URI to avoid spawning a background validation task.
     let uri = Url::parse("file:///skill.yml").unwrap();
-    backend
-        .documents
-        .write()
-        .await
-        .insert(uri.clone(), Arc::new("# Agent\nname: my-agent\n".to_string()));
+    backend.documents.write().await.insert(
+        uri.clone(),
+        Arc::new("# Agent\nname: my-agent\n".to_string()),
+    );
     let params = DidSaveTextDocumentParams {
         text_document: TextDocumentIdentifier { uri: uri.clone() },
         text: None,
