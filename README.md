@@ -5,19 +5,19 @@
   <p>
     <a href="https://www.npmjs.com/package/agnix"><img src="https://img.shields.io/npm/v/agnix.svg?color=3C873A" alt="npm"></a>
     <a href="https://crates.io/crates/agnix-cli"><img src="https://img.shields.io/crates/v/agnix-cli.svg?color=E57324" alt="Crates.io"></a>
-    <a href="https://github.com/avifenesh/agnix/releases"><img src="https://img.shields.io/github/v/release/avifenesh/agnix?color=0A7E8C" alt="Release"></a>
-    <a href="https://github.com/avifenesh/agnix/actions/workflows/ci.yml"><img src="https://github.com/avifenesh/agnix/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+    <a href="https://github.com/agent-sh/agnix/releases"><img src="https://img.shields.io/github/v/release/agent-sh/agnix?color=0A7E8C" alt="Release"></a>
+    <a href="https://github.com/agent-sh/agnix/actions/workflows/ci.yml"><img src="https://github.com/agent-sh/agnix/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
     <a href="LICENSE-MIT"><img src="https://img.shields.io/badge/license-MIT%2FApache--2.0-64748B.svg" alt="License"></a>
   </p>
 </div>
 
 <p align="center">Catch broken agent configs before your AI tools silently ignore them.<br>229 rules across Claude Code, Codex CLI, OpenCode, Cursor, Copilot, and more -<br>validating CLAUDE.md, SKILL.md, hooks, MCP configs, and other agent files.</p>
 
-<p align="center"><strong>Auto-fix</strong> | <strong><a href="https://github.com/marketplace/actions/agnix-ci">GitHub Action</a></strong> | <strong><a href="https://marketplace.visualstudio.com/items?itemName=avifenesh.agnix">VS Code</a> + <a href="https://plugins.jetbrains.com/plugin/30087-agnix">JetBrains</a> + <a href="https://github.com/avifenesh/agnix.nvim">Neovim</a> + <a href="https://github.com/avifenesh/agnix/tree/main/editors/zed">Zed</a></strong></p>
+<p align="center"><strong>Auto-fix</strong> | <strong><a href="https://github.com/marketplace/actions/agnix-ci">GitHub Action</a></strong> | <strong><a href="https://marketplace.visualstudio.com/items?itemName=avifenesh.agnix">VS Code</a> + <a href="https://plugins.jetbrains.com/plugin/30087-agnix">JetBrains</a> + <a href="https://github.com/agent-sh/agnix.nvim">Neovim</a> + <a href="https://github.com/agent-sh/agnix/tree/main/editors/zed">Zed</a></strong></p>
 
 <p align="center">
-  <a href="https://avifenesh.github.io/agnix/"><img src="https://img.shields.io/badge/Docs-Website-2563EB?style=for-the-badge" alt="Website"></a>
-  <a href="https://avifenesh.github.io/agnix/playground"><img src="https://img.shields.io/badge/Try_it-Playground-E91E63?style=for-the-badge" alt="Playground"></a>
+  <a href="https://agent-sh.github.io/agnix/"><img src="https://img.shields.io/badge/Docs-Website-2563EB?style=for-the-badge" alt="Website"></a>
+  <a href="https://agent-sh.github.io/agnix/playground"><img src="https://img.shields.io/badge/Try_it-Playground-E91E63?style=for-the-badge" alt="Playground"></a>
   <a href="https://dev.to/avifenesh/your-ai-agent-configs-are-probably-broken-and-you-dont-know-it-16n1"><img src="https://img.shields.io/badge/Blog-Post-0A0A0A?style=for-the-badge&logo=dev.to" alt="Blog Post"></a>
 </p>
 
@@ -38,7 +38,7 @@
 
 agnix validates all of it - 229 rules sourced from official specs, academic research, and real-world breakage patterns. Auto-fix included.
 
-> **Want to try it first?** [Open the playground](https://avifenesh.github.io/agnix/playground) - paste any agent config, see diagnostics instantly. No install, runs in your browser.
+> **Want to try it first?** [Open the playground](https://agent-sh.github.io/agnix/playground) - paste any agent config, see diagnostics instantly. No install, runs in your browser.
 
 ## Quick Start
 
@@ -67,13 +67,13 @@ https://github.com/user-attachments/assets/72d5fe7c-476f-46ea-be64-5785cf6d5600
 npm install -g agnix
 
 # Homebrew (macOS/Linux)
-brew tap avifenesh/agnix && brew install agnix
+brew tap agent-sh/agnix && brew install agnix
 
 # Cargo
 cargo install agnix-cli
 ```
 
-[Pre-built binaries](https://github.com/avifenesh/agnix/releases) | [All install options](https://avifenesh.github.io/agnix/docs/installation)
+[Pre-built binaries](https://github.com/agent-sh/agnix/releases) | [All install options](https://agent-sh.github.io/agnix/docs/installation)
 
 ### Editor Extensions
 
@@ -81,16 +81,16 @@ cargo install agnix-cli
 |--------|---------|
 | **VS Code** | [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=avifenesh.agnix) |
 | **JetBrains** | [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/30087-agnix) |
-| **Neovim** | `{ "avifenesh/agnix.nvim" }` |
+| **Neovim** | `{ "agent-sh/agnix.nvim" }` |
 | **Zed** | Search "agnix" in Extensions |
 
-[Editor setup guide](https://avifenesh.github.io/agnix/docs/editor-integration)
+[Editor setup guide](https://agent-sh.github.io/agnix/docs/editor-integration)
 
 ### GitHub Action
 
 ```yaml
 - name: Validate agent configs
-  uses: avifenesh/agnix@v0
+  uses: agent-sh/agnix@v0
   with:
     target: 'claude-code'
 ```
@@ -107,7 +107,7 @@ agnix --strict .     # Strict mode (warnings = errors)
 agnix --target claude-code .  # Target specific tool
 ```
 
-[Full CLI reference](https://avifenesh.github.io/agnix/docs/configuration) | [All 229 rules](https://avifenesh.github.io/agnix/docs/rules)
+[Full CLI reference](https://agent-sh.github.io/agnix/docs/configuration) | [All 229 rules](https://agent-sh.github.io/agnix/docs/rules)
 
 ## Supported Tools
 
@@ -135,7 +135,7 @@ Rust workspace crates:
 
 Contributions welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the development guide.
 
-[Report a bug](https://github.com/avifenesh/agnix/issues/new) | [Request a rule](https://github.com/avifenesh/agnix/issues/new) | [Good first issues](https://github.com/avifenesh/agnix/labels/good%20first%20issue)
+[Report a bug](https://github.com/agent-sh/agnix/issues/new) | [Request a rule](https://github.com/agent-sh/agnix/issues/new) | [Good first issues](https://github.com/agent-sh/agnix/labels/good%20first%20issue)
 
 ## License
 
@@ -144,7 +144,7 @@ MIT OR Apache-2.0
 ---
 
 <p align="center">
-  <a href="https://github.com/avifenesh/agnix/stargazers">Star this repo</a> to help other developers find agnix.
+  <a href="https://github.com/agent-sh/agnix/stargazers">Star this repo</a> to help other developers find agnix.
 </p>
 
 
