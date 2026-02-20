@@ -559,11 +559,13 @@ rules:
     message: "未固定任何工具或规范版本。依赖版本的规则将使用默认假设。"
     suggestion: "在 .agnix.toml [tool_versions] 或 [spec_revisions] 中固定版本以进行确定性验证。"
 
-  # --- File-level errors (lib.rs) ---
+  # --- File-level errors (lib.rs / pipeline.rs) ---
   file_read_error: "验证文件失败: %{error}"
   file_read_error_suggestion: "检查文件权限并确保该文件未被其他进程锁定"
   xp_004_read_error: "读取指令文件失败: %{error}"
   xp_004_read_error_suggestion: "检查文件权限并确保该文件存在且可读"
+  invalid_glob_pattern: "忽略无效的 glob 模式 '%{pattern}': %{error}"
+  invalid_glob_pattern_suggestion: "修复 glob 模式语法。使用标准 glob 字符: *, **, ?, [abc]"
 
 # ===========================================================================
 # Core - Config warnings
