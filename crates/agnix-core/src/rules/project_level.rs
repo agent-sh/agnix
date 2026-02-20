@@ -270,17 +270,24 @@ mod tests {
     #[test]
     fn test_join_paths_single() {
         let p = std::path::Path::new("/foo/bar.md");
-        assert_eq!(join_paths(std::iter::once(p)), "/foo/bar.md");
+        // Build expected from the path itself so the assertion is platform-correct
+        // (path separators may render differently on Windows).
+        assert_eq!(join_paths(std::iter::once(p)), p.to_string_lossy().as_ref());
     }
 
     #[test]
     fn test_join_paths_multiple() {
-        let paths: Vec<&std::path::Path> = vec![
-            std::path::Path::new("/a.md"),
-            std::path::Path::new("/b.md"),
-            std::path::Path::new("/c.md"),
-        ];
-        assert_eq!(join_paths(paths.into_iter()), "/a.md, /b.md, /c.md");
+        let a = std::path::Path::new("/a.md");
+        let b = std::path::Path::new("/b.md");
+        let c = std::path::Path::new("/c.md");
+        // Build expected from the paths themselves to stay platform-correct.
+        let expected = format!(
+            "{}, {}, {}",
+            a.to_string_lossy(),
+            b.to_string_lossy(),
+            c.to_string_lossy()
+        );
+        assert_eq!(join_paths([a, b, c].iter().copied()), expected);
     }
 
     #[test]
