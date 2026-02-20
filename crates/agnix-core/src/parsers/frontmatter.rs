@@ -190,6 +190,19 @@ Body content here"#;
         assert!(parts.has_frontmatter);
         assert!(!parts.has_closing);
         assert!(parts.frontmatter.is_empty());
+        assert_eq!(parts.body, "name: test");
+        assert_eq!(parts.body_start, 4); // past ---\n
+    }
+
+    #[test]
+    fn test_split_frontmatter_no_closing_crlf() {
+        let content = "---\r\nname: test";
+        let parts = split_frontmatter(content);
+        assert!(parts.has_frontmatter);
+        assert!(!parts.has_closing);
+        assert!(parts.frontmatter.is_empty());
+        assert_eq!(parts.body, "name: test");
+        assert_eq!(parts.body_start, 5); // past ---\r\n
     }
 
     #[test]

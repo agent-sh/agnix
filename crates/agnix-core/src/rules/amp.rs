@@ -541,6 +541,7 @@ mod tests {
         let amp_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AMP-001").collect();
         assert_eq!(amp_001.len(), 1);
         assert!(amp_001[0].message.contains("Invalid YAML frontmatter"));
+        assert_eq!(amp_001[0].line, 3, "YAML parse error reports serde_yaml line (1-based within frontmatter) plus 1 for the opening --- delimiter, plus 1 for 0-index conversion");
     }
 
     #[test]
