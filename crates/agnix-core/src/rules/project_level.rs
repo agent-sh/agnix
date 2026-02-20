@@ -141,8 +141,7 @@ pub(crate) fn run_project_level_checks(
                 })
                 .collect();
 
-            let build_conflicts =
-                schemas::cross_platform::detect_build_conflicts(&file_commands);
+            let build_conflicts = schemas::cross_platform::detect_build_conflicts(&file_commands);
             for conflict in build_conflicts {
                 diagnostics.push(
                     Diagnostic::warning(
@@ -150,13 +149,13 @@ pub(crate) fn run_project_level_checks(
                         conflict.file1_line,
                         0,
                         "XP-004",
-                        format!(
-                            "Conflicting package managers: {} uses {} but {} uses {} for {} commands",
-                            conflict.file1.display(),
-                            conflict.file1_manager.as_str(),
-                            conflict.file2.display(),
-                            conflict.file2_manager.as_str(),
-                            match conflict.command_type {
+                        t!(
+                            "rules.xp_004.message",
+                            file1 = conflict.file1.display().to_string(),
+                            mgr1 = conflict.file1_manager.as_str(),
+                            file2 = conflict.file2.display().to_string(),
+                            mgr2 = conflict.file2_manager.as_str(),
+                            cmd_type = match conflict.command_type {
                                 schemas::cross_platform::CommandType::Install => "install",
                                 schemas::cross_platform::CommandType::Build => "build",
                                 schemas::cross_platform::CommandType::Test => "test",
@@ -165,9 +164,7 @@ pub(crate) fn run_project_level_checks(
                             }
                         ),
                     )
-                    .with_suggestion(
-                        "Standardize on a single package manager across all instruction files".to_string(),
-                    ),
+                    .with_suggestion(t!("rules.xp_004.suggestion")),
                 );
             }
         }
@@ -177,8 +174,7 @@ pub(crate) fn run_project_level_checks(
             let file_constraints: Vec<_> = file_contents
                 .iter()
                 .filter_map(|(path, content)| {
-                    let constraints =
-                        schemas::cross_platform::extract_tool_constraints(content);
+                    let constraints = schemas::cross_platform::extract_tool_constraints(content);
                     if constraints.is_empty() {
                         None
                     } else {
@@ -187,8 +183,7 @@ pub(crate) fn run_project_level_checks(
                 })
                 .collect();
 
-            let tool_conflicts =
-                schemas::cross_platform::detect_tool_conflicts(&file_constraints);
+            let tool_conflicts = schemas::cross_platform::detect_tool_conflicts(&file_constraints);
             for conflict in tool_conflicts {
                 diagnostics.push(
                     Diagnostic::error(
@@ -196,16 +191,14 @@ pub(crate) fn run_project_level_checks(
                         conflict.allow_line,
                         0,
                         "XP-005",
-                        format!(
-                            "Conflicting tool constraints: '{}' is allowed in {} but disallowed in {}",
-                            conflict.tool_name,
-                            conflict.allow_file.display(),
-                            conflict.disallow_file.display()
+                        t!(
+                            "rules.xp_005.message",
+                            tool = conflict.tool_name.as_str(),
+                            allow_file = conflict.allow_file.display().to_string(),
+                            disallow_file = conflict.disallow_file.display().to_string()
                         ),
                     )
-                    .with_suggestion(
-                        "Resolve the conflict by consistently allowing or disallowing the tool".to_string(),
-                    ),
+                    .with_suggestion(t!("rules.xp_005.suggestion")),
                 );
             }
         }
@@ -228,9 +221,7 @@ pub(crate) fn run_project_level_checks(
                             "XP-006",
                             issue.description,
                         )
-                        .with_suggestion(
-                            "Document which file takes precedence (e.g., 'CLAUDE.md takes precedence over AGENTS.md')".to_string(),
-                        ),
+                        .with_suggestion(t!("rules.xp_006.suggestion")),
                     );
                 }
             }
@@ -328,10 +319,18 @@ mod tests {
             xp004_errors[0].file, agents_md,
             "XP-004 error should reference the missing AGENTS.md path"
         );
-        assert_eq!(xp004_errors[0].line, 0, "Read-error diagnostic should have line 0");
-        assert_eq!(xp004_errors[0].column, 0, "Read-error diagnostic should have column 0");
+        assert_eq!(
+            xp004_errors[0].line, 0,
+            "Read-error diagnostic should have line 0"
+        );
+        assert_eq!(
+            xp004_errors[0].column, 0,
+            "Read-error diagnostic should have column 0"
+        );
         assert!(
-            xp004_errors[0].message.contains("Failed to read instruction file"),
+            xp004_errors[0]
+                .message
+                .contains("Failed to read instruction file"),
             "XP-004 message should describe the read failure, got: {}",
             xp004_errors[0].message
         );
@@ -391,7 +390,11 @@ mod tests {
             run_project_level_checks(&agents_md_paths, &[], &LintConfig::default(), temp.path());
 
         let agm006: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AGM-006").collect();
-        assert_eq!(agm006.len(), 2, "Expected one diagnostic per AGENTS.md file");
+        assert_eq!(
+            agm006.len(),
+            2,
+            "Expected one diagnostic per AGENTS.md file"
+        );
 
         let nested_diag = agm006
             .iter()
@@ -408,19 +411,25 @@ mod tests {
             .find(|d| d.file == root_agents)
             .expect("Expected a diagnostic for the root AGENTS.md");
         assert!(
-            root_diag.message.contains("Multiple AGENTS.md files detected"),
+            root_diag
+                .message
+                .contains("Multiple AGENTS.md files detected"),
             "Root file should get 'Multiple AGENTS.md files detected' message, got: {}",
             root_diag.message
         );
 
         // Verify listed paths: each message should name the other file
         assert!(
-            nested_diag.message.contains(&root_agents.to_string_lossy().as_ref()),
+            nested_diag
+                .message
+                .contains(&root_agents.to_string_lossy().as_ref()),
             "Nested file's message should list the root AGENTS.md path, got: {}",
             nested_diag.message
         );
         assert!(
-            root_diag.message.contains(&nested_agents.to_string_lossy().as_ref()),
+            root_diag
+                .message
+                .contains(&nested_agents.to_string_lossy().as_ref()),
             "Root file's message should list the nested AGENTS.md path, got: {}",
             root_diag.message
         );
@@ -479,7 +488,9 @@ mod tests {
             "No XP-004 diagnostics expected when rule is disabled"
         );
         assert!(
-            diagnostics.iter().all(|d| d.rule != "XP-005" && d.rule != "XP-006"),
+            diagnostics
+                .iter()
+                .all(|d| d.rule != "XP-005" && d.rule != "XP-006"),
             "No XP-005/006 diagnostics expected when only one file is readable"
         );
     }
@@ -509,8 +520,12 @@ mod tests {
         );
 
         // Sanity check: with default config, XP-004 read-error diagnostic appears
-        let diagnostics =
-            run_project_level_checks(&[], &instruction_file_paths, &LintConfig::default(), temp.path());
+        let diagnostics = run_project_level_checks(
+            &[],
+            &instruction_file_paths,
+            &LintConfig::default(),
+            temp.path(),
+        );
         assert!(
             diagnostics.iter().any(|d| d.rule.starts_with("XP-")),
             "Default config should produce XP diagnostics for unreadable file"
@@ -576,12 +591,8 @@ mod tests {
         std::fs::write(&claude_md, "# Project\n\nnpm install\n").unwrap();
 
         // Exactly one file: the XP block requires len() > 1, so no XP diagnostics
-        let diagnostics = run_project_level_checks(
-            &[],
-            &[claude_md],
-            &LintConfig::default(),
-            temp.path(),
-        );
+        let diagnostics =
+            run_project_level_checks(&[], &[claude_md], &LintConfig::default(), temp.path());
 
         assert!(
             diagnostics.iter().all(|d| !d.rule.starts_with("XP-")),
@@ -596,13 +607,13 @@ mod tests {
         let agnix_toml = temp.path().join(".agnix.toml");
         std::fs::write(&agnix_toml, "# no versions pinned\n").unwrap();
 
-        let diagnostics =
-            run_project_level_checks(&[], &[], &LintConfig::default(), temp.path());
+        let diagnostics = run_project_level_checks(&[], &[], &LintConfig::default(), temp.path());
 
         let ver001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "VER-001").collect();
         assert_eq!(ver001.len(), 1, "Expected one VER-001 diagnostic");
         assert_eq!(
-            ver001[0].file, agnix_toml,
+            ver001[0].file,
+            agnix_toml,
             "VER-001 diagnostic should reference .agnix.toml when it exists, got: {}",
             ver001[0].file.display()
         );
