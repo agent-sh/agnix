@@ -153,7 +153,7 @@ CLI args → LintConfig → validate_project()
     → detect_file_type() per file (path-based, no I/O)
     → Parallel validation (rayon)
     → Validators from registry run sequentially per file
-    → Post-processing (AGM-006, XP-004/005/006)
+    → Project-level checks (AGM-006, XP-004/005/006, VER-001) via rules/project_level
     → Output (text/JSON/SARIF)
 ```
 

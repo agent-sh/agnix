@@ -95,8 +95,8 @@ pub trait Validator: Send + Sync + 'static {
     /// [`validate`](Validator::validate) method.
     ///
     /// Note: `rule_ids` covers only rules emitted directly by the validator.
-    /// Pipeline-level post-processing rules (e.g. `AGM-006`, `XP-004`..`XP-006`,
-    /// `VER-001`) are not attributed to any validator.
+    /// Project-level cross-file rules (e.g. `AGM-006`, `XP-004`..`XP-006`,
+    /// `VER-001`) live in `rules::project_level` and are not attributed to any validator.
     fn metadata(&self) -> ValidatorMetadata {
         ValidatorMetadata {
             name: self.name(),
