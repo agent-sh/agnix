@@ -1149,23 +1149,28 @@ fn normalize_line_endings_lf_only_is_borrowed_and_zero_copy() {
 /// established convention used across 40+ call sites.
 #[test]
 fn lint_result_is_sole_result_alias() {
-    // LintResult<T> must be importable and usable as a Result type.
-    let ok: agnix_core::LintResult<()> = Ok(());
-    assert!(ok.is_ok());
+    use agnix_core::{CoreError, LintError, LintResult, ValidationError};
 
-    // LintResult<T> resolves to Result<T, LintError> (which is Result<T, CoreError>).
-    let type_name = std::any::type_name::<agnix_core::LintResult<()>>();
-    assert!(
-        type_name.contains("Result"),
-        "LintResult<()> should resolve to a Result type, got: {}",
-        type_name
-    );
+    // LintResult<T> must accept Ok values.
+    let ok: LintResult<u32> = Ok(42);
+    assert_eq!(ok.unwrap(), 42);
 
-    // LintError and CoreError are the same type (LintError = CoreError alias).
-    let lint_error_name = std::any::type_name::<agnix_core::LintError>();
-    let core_error_name = std::any::type_name::<agnix_core::CoreError>();
-    assert_eq!(
-        lint_error_name, core_error_name,
-        "LintError and CoreError should be the same type"
-    );
+    // LintResult<T> must accept Err values constructed from a concrete CoreError variant.
+    // This verifies LintResult<T> = Result<T, LintError> = Result<T, CoreError> end-to-end.
+    let err: LintResult<u32> = Err(CoreError::Validation(ValidationError::TooManyFiles {
+        count: 9999,
+        limit: 1000,
+    }));
+    assert!(err.is_err());
+
+    // LintError and CoreError are type aliases for the same enum - constructing
+    // one variant via CoreError and matching through LintError must work.
+    let lint_err: LintError = CoreError::Validation(ValidationError::TooManyFiles {
+        count: 1,
+        limit: 0,
+    });
+    match lint_err {
+        LintError::Validation(_) => {}
+        _ => panic!("LintError variant mismatch - LintError and CoreError must be the same type"),
+    }
 }
