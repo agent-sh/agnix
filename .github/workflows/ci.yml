@@ -69,7 +69,7 @@ jobs:
       - uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2
         with:
           save-if: ${{ github.ref == 'refs/heads/main' }}
-      - uses: taiki-e/install-action@288875dd3d64326724fa6d9593062d9f8ba0b131 # v2.67.30
+      - uses: taiki-e/install-action@2723513a70062521fb56e5df87a04967751efd2f # v2.68.4
         with:
           tool: cargo-machete@0.9.1
       - run: cargo machete
@@ -98,7 +98,7 @@ jobs:
         with:
           key: ${{ matrix.os }}-${{ matrix.rust }}
           save-if: ${{ github.ref == 'refs/heads/main' }}
-      - uses: taiki-e/install-action@288875dd3d64326724fa6d9593062d9f8ba0b131 # v2.67.30
+      - uses: taiki-e/install-action@2723513a70062521fb56e5df87a04967751efd2f # v2.68.4
         with:
           tool: cargo-nextest@0.9.128
       - run: cargo nextest run --workspace
@@ -116,10 +116,10 @@ jobs:
       - uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2
         with:
           save-if: ${{ github.ref == 'refs/heads/main' }}
-      - uses: taiki-e/install-action@288875dd3d64326724fa6d9593062d9f8ba0b131 # v2.67.30
+      - uses: taiki-e/install-action@2723513a70062521fb56e5df87a04967751efd2f # v2.68.4
         with:
           tool: cargo-llvm-cov@0.6.16
-      - uses: taiki-e/install-action@288875dd3d64326724fa6d9593062d9f8ba0b131 # v2.67.30
+      - uses: taiki-e/install-action@2723513a70062521fb56e5df87a04967751efd2f # v2.68.4
         with:
           tool: cargo-nextest@0.9.128
       - name: Generate coverage
@@ -146,7 +146,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y valgrind
       - name: Install iai-callgrind-runner
         if: runner.os == 'Linux'
-        uses: taiki-e/install-action@288875dd3d64326724fa6d9593062d9f8ba0b131 # v2.67.30
+        uses: taiki-e/install-action@2723513a70062521fb56e5df87a04967751efd2f # v2.68.4
         with:
           tool: iai-callgrind-runner@0.16.1
       - name: Run iai-callgrind benchmarks
@@ -171,7 +171,7 @@ jobs:
         run: cargo check -p agnix-core --no-default-features
       - name: Check agnix-wasm compiles for wasm32
         run: cargo check -p agnix-wasm --target wasm32-unknown-unknown
-      - uses: taiki-e/install-action@288875dd3d64326724fa6d9593062d9f8ba0b131 # v2.67.30
+      - uses: taiki-e/install-action@2723513a70062521fb56e5df87a04967751efd2f # v2.68.4
         with:
           tool: wasm-pack@0.13.1
       - name: Run WASM tests
