@@ -31,6 +31,12 @@ const RULE_IDS: &[&str] = &[
     "REF-004",
 ];
 
+/// Infrastructure rule ID for poisoned-lock recovery diagnostics.
+/// Not included in RULE_IDS because it follows the `namespace::type` convention
+/// used by pipeline-level diagnostics (like `config::glob`, `file::read`),
+/// not the standard `[CATEGORY]-[NUMBER]` validation rule format.
+const RULE_CACHE_POISON: &str = "lint::cache-poison";
+
 pub struct ImportsValidator;
 
 const MAX_IMPORT_DEPTH: usize = 5;
@@ -181,7 +187,7 @@ impl Validator for ImportsValidator {
                             path.to_path_buf(),
                             0,
                             0,
-                            "lint::cache-poison",
+                            RULE_CACHE_POISON,
                             t!("rules.cache_poison.message"),
                         )
                         .with_suggestion(t!("rules.cache_poison.suggestion")),
@@ -515,7 +521,7 @@ fn get_imports_for_file(
                             validation_root.to_path_buf(),
                             0,
                             0,
-                            "lint::cache-poison",
+                            RULE_CACHE_POISON,
                             t!("rules.cache_poison.message"),
                         )
                         .with_suggestion(t!("rules.cache_poison.suggestion")),
@@ -551,7 +557,7 @@ fn get_imports_for_file(
                         validation_root.to_path_buf(),
                         0,
                         0,
-                        "lint::cache-poison",
+                        RULE_CACHE_POISON,
                         t!("rules.cache_poison.message"),
                     )
                     .with_suggestion(t!("rules.cache_poison.suggestion")),
@@ -739,6 +745,7 @@ fn validate_markdown_links(
 mod tests {
     use super::*;
     use crate::config::LintConfig;
+    use crate::diagnostics::DiagnosticLevel;
     use std::fs;
     use tempfile::TempDir;
 
@@ -1556,11 +1563,21 @@ mod tests {
 
         let validator = ImportsValidator;
         let diagnostics = validator.validate(&file_path, "See @target.md", &config);
+        let poison_diag = diagnostics.iter().find(|d| d.rule == RULE_CACHE_POISON);
         assert!(
-            diagnostics
-                .iter()
-                .any(|d| d.rule == "lint::cache-poison"),
+            poison_diag.is_some(),
             "Expected lint::cache-poison warning in diagnostics"
+        );
+        let d = poison_diag.unwrap();
+        assert_eq!(
+            d.level,
+            DiagnosticLevel::Warning,
+            "lint::cache-poison should be a Warning, not {:?}",
+            d.level
+        );
+        assert!(
+            d.suggestion.is_some(),
+            "lint::cache-poison diagnostic should include a suggestion"
         );
     }
 
@@ -1598,7 +1615,7 @@ mod tests {
         assert!(
             diagnostics
                 .iter()
-                .any(|d| d.rule == "lint::cache-poison"),
+                .any(|d| d.rule == RULE_CACHE_POISON),
             "Expected lint::cache-poison warning alongside REF-001"
         );
     }
@@ -1639,11 +1656,54 @@ mod tests {
 
         let poison_count = diagnostics
             .iter()
-            .filter(|d| d.rule == "lint::cache-poison")
+            .filter(|d| d.rule == RULE_CACHE_POISON)
             .count();
         assert_eq!(
             poison_count, 1,
             "Expected exactly 1 lint::cache-poison diagnostic (deduplication), got {}",
+            poison_count
+        );
+    }
+
+    #[test]
+    fn test_shared_cache_poisoned_lock_deduplication_across_recursive_tree() {
+        // Verifies deduplication holds across recursive import traversal:
+        // root.md -> a.md -> b.md (nested chain, not just siblings)
+        use std::collections::HashMap;
+        use std::sync::{Arc, RwLock};
+        use std::thread;
+
+        let temp = TempDir::new().unwrap();
+        let root = temp.path().join("root.md");
+        let a = temp.path().join("a.md");
+        let b = temp.path().join("b.md");
+        fs::write(&root, "See @a.md").unwrap();
+        fs::write(&a, "See @b.md").unwrap();
+        fs::write(&b, "B content").unwrap();
+
+        let cache: crate::parsers::ImportCache = Arc::new(RwLock::new(HashMap::new()));
+
+        let cache_for_poison = cache.clone();
+        let _ = thread::spawn(move || {
+            let _guard = cache_for_poison.write().unwrap();
+            panic!("poison import cache lock");
+        })
+        .join();
+        assert!(cache.read().is_err(), "Cache lock should be poisoned");
+
+        let mut config = LintConfig::default();
+        config.set_import_cache(cache);
+
+        let validator = ImportsValidator;
+        let diagnostics = validator.validate(&root, "See @a.md", &config);
+
+        let poison_count = diagnostics
+            .iter()
+            .filter(|d| d.rule == RULE_CACHE_POISON)
+            .count();
+        assert_eq!(
+            poison_count, 1,
+            "Expected exactly 1 lint::cache-poison across recursive traversal, got {}",
             poison_count
         );
     }
