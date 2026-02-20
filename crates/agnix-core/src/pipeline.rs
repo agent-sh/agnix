@@ -122,7 +122,7 @@ fn compile_patterns_with_diagnostics(
                 diagnostics.push(
                     Diagnostic::warning(
                         config_file.to_path_buf(),
-                        0,
+                        1,
                         0,
                         "config::glob",
                         t!(
@@ -1009,7 +1009,7 @@ pub fn validate_project_with_registry(
             );
 
     // Surface config-level diagnostics (e.g. invalid glob patterns in [files])
-    // before the TooManyFiles check so they are never silently discarded.
+    // before the TooManyFiles check so they are included on successful validation.
     diagnostics.extend(config_diags);
 
     // Check if limit was exceeded and return error
