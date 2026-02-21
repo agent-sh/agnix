@@ -44,7 +44,7 @@ pub struct ParsedAgentFrontmatter {
     pub schema: Option<CopilotAgentSchema>,
     pub raw: String,
     pub start_line: usize,
-    #[allow(dead_code)]
+    #[allow(dead_code)] // parsed but not yet consumed by validators
     pub end_line: usize,
     pub body: String,
     pub unknown_keys: Vec<UnknownKey>,
@@ -188,7 +188,7 @@ fn find_unknown_keys(yaml: &str, start_line: usize) -> Vec<UnknownKey> {
 }
 
 /// Return `true` when the markdown body is empty after trim.
-#[allow(dead_code)]
+#[allow(dead_code)] // schema-level API; validation uses Validator trait
 pub fn is_body_empty(body: &str) -> bool {
     body.trim().is_empty()
 }

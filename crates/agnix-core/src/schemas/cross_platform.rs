@@ -362,7 +362,7 @@ pub enum CommandType {
 #[derive(Debug, Clone)]
 pub struct BuildCommand {
     pub line: usize,
-    #[allow(dead_code)]
+    #[allow(dead_code)] // parsed but not yet consumed by validators
     pub column: usize,
     pub package_manager: PackageManager,
     pub command_type: CommandType,
@@ -442,15 +442,17 @@ pub fn extract_build_commands(content: &str) -> Vec<BuildCommand> {
 
 /// Conflict between build commands across files
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct BuildConflict {
     pub file1: std::path::PathBuf,
     pub file1_line: usize,
     pub file1_manager: PackageManager,
+    #[allow(dead_code)] // parsed but not yet consumed by validators
     pub file1_command: String,
     pub file2: std::path::PathBuf,
+    #[allow(dead_code)] // parsed but not yet consumed by validators
     pub file2_line: usize,
     pub file2_manager: PackageManager,
+    #[allow(dead_code)] // parsed but not yet consumed by validators
     pub file2_command: String,
     pub command_type: CommandType,
 }
@@ -547,7 +549,7 @@ pub enum ConstraintType {
 #[derive(Debug, Clone)]
 pub struct ToolConstraint {
     pub line: usize,
-    #[allow(dead_code)]
+    #[allow(dead_code)] // parsed but not yet consumed by validators
     pub column: usize,
     pub tool_name: String,
     pub constraint_type: ConstraintType,
@@ -724,14 +726,16 @@ fn normalize_tool_name(name: &str) -> Option<String> {
 
 /// Conflict between tool constraints across files
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct ToolConflict {
     pub tool_name: String,
     pub allow_file: std::path::PathBuf,
     pub allow_line: usize,
+    #[allow(dead_code)] // parsed but not yet consumed by validators
     pub allow_context: String,
     pub disallow_file: std::path::PathBuf,
+    #[allow(dead_code)] // parsed but not yet consumed by validators
     pub disallow_line: usize,
+    #[allow(dead_code)] // parsed but not yet consumed by validators
     pub disallow_context: String,
 }
 

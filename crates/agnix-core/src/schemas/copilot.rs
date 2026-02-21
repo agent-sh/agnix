@@ -67,7 +67,7 @@ pub struct UnknownKey {
 #[derive(Debug, Clone)]
 pub struct GlobValidation {
     pub valid: bool,
-    #[allow(dead_code)]
+    #[allow(dead_code)] // parsed but not yet consumed by validators
     pub pattern: String,
     pub error: Option<String>,
 }
@@ -179,7 +179,7 @@ fn find_unknown_keys(yaml: &str, start_line: usize) -> Vec<UnknownKey> {
 /// Commas inside brace expansions (e.g. `{src,lib}`) are preserved as part
 /// of a single pattern. Only commas at brace depth 0 act as separators.
 /// Each segment is trimmed of whitespace; empty segments are skipped.
-#[allow(dead_code)]
+#[allow(dead_code)] // reserved for future use
 pub fn split_comma_separated_globs(s: &str) -> Vec<&str> {
     let mut result = Vec::new();
     let mut brace_depth: usize = 0;

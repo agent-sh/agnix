@@ -249,7 +249,7 @@ pub fn check_project_context(content: &str) -> Option<MissingProjectContext> {
 pub struct UnguardedPlatformFeature {
     pub line: usize,
     pub column: usize,
-    #[allow(dead_code)]
+    #[allow(dead_code)] // parsed but not yet consumed by validators
     pub feature: String,
     pub platform: String,
     pub description: String,
@@ -335,7 +335,7 @@ pub fn find_unguarded_platform_features(content: &str) -> Vec<UnguardedPlatformF
 
 /// Nested AGENTS.md file info
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
+#[allow(dead_code)] // schema-level API; validation uses Validator trait
 pub struct NestedAgentsMd {
     pub path: std::path::PathBuf,
     pub depth: usize,
@@ -344,7 +344,7 @@ pub struct NestedAgentsMd {
 /// Find AGENTS.md files when multiple exist in the directory tree (for AGM-006).
 ///
 /// Returns all AGENTS.md files when more than one exists, including siblings.
-#[allow(dead_code)]
+#[allow(dead_code)] // schema-level API; validation uses Validator trait
 pub fn find_multiple_agents_md(paths: &[std::path::PathBuf]) -> Vec<NestedAgentsMd> {
     // Filter to only AGENTS.md files
     let agents_files: Vec<_> = paths
@@ -381,7 +381,7 @@ pub fn find_multiple_agents_md(paths: &[std::path::PathBuf]) -> Vec<NestedAgents
 }
 
 #[deprecated(note = "Use find_multiple_agents_md; this returns all AGENTS.md files when >1 exist.")]
-#[allow(dead_code)]
+#[allow(dead_code)] // schema-level API; validation uses Validator trait
 pub fn find_nested_agents_md(paths: &[std::path::PathBuf]) -> Vec<NestedAgentsMd> {
     find_multiple_agents_md(paths)
 }

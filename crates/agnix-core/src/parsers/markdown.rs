@@ -163,7 +163,7 @@ fn extract_markdown_links_inner(content: &str) -> Vec<MarkdownLink> {
 }
 
 /// Check if XML tags are balanced
-#[allow(dead_code)]
+#[allow(dead_code)] // reserved for future use
 pub fn check_xml_balance(tags: &[XmlTag]) -> Vec<XmlBalanceError> {
     check_xml_balance_with_content_end(tags, None)
 }
@@ -234,20 +234,20 @@ pub struct MarkdownLink {
     /// The URL/path of the link
     pub url: String,
     /// The link text (alt text for images)
-    #[allow(dead_code)]
+    #[allow(dead_code)] // parsed but not yet consumed by validators
     pub text: String,
     /// Whether this is an image link (![alt](url))
-    #[allow(dead_code)]
+    #[allow(dead_code)] // parsed but not yet consumed by validators
     pub is_image: bool,
     /// Line number (1-indexed)
     pub line: usize,
     /// Column number (1-indexed)
     pub column: usize,
     /// Byte offset of link start
-    #[allow(dead_code)]
+    #[allow(dead_code)] // parsed but not yet consumed by validators
     pub start_byte: usize,
     /// Byte offset of link end
-    #[allow(dead_code)]
+    #[allow(dead_code)] // parsed but not yet consumed by validators
     pub end_byte: usize,
 }
 
@@ -268,7 +268,7 @@ pub enum XmlBalanceError {
         line: usize,
         column: usize,
         /// Byte position of the opening tag (for auto-fix)
-        #[allow(dead_code)]
+        #[allow(dead_code)] // parsed but not yet consumed by validators
         open_tag_end_byte: usize,
         /// Byte position where the closing tag should be inserted (content end)
         content_end_byte: usize,

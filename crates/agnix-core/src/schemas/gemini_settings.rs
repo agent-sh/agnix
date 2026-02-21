@@ -69,7 +69,6 @@ pub struct GeminiSettingsSchema {
 
 /// A single hook definition in hooksConfig
 #[derive(Debug, Clone, Deserialize)]
-#[allow(dead_code)]
 pub struct GeminiHook {
     /// Hook type (must be "command")
     #[serde(rename = "type")]
@@ -77,10 +76,13 @@ pub struct GeminiHook {
     /// Command to execute
     pub command: Option<String>,
     /// Optional hook name
+    #[allow(dead_code)] // deserialized from JSON; fields not individually accessed
     pub name: Option<String>,
     /// Optional timeout in seconds
+    #[allow(dead_code)] // deserialized from JSON; fields not individually accessed
     pub timeout: Option<serde_json::Value>,
     /// Optional description
+    #[allow(dead_code)] // deserialized from JSON; fields not individually accessed
     pub description: Option<String>,
 }
 

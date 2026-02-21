@@ -59,12 +59,12 @@ pub enum Hook {
 }
 
 impl SettingsSchema {
-    #[allow(dead_code)]
+    #[allow(dead_code)] // schema-level API; validation uses Validator trait
     pub fn from_json(content: &str) -> Result<Self, serde_json::Error> {
         serde_json::from_str(content)
     }
 
-    #[allow(dead_code)]
+    #[allow(dead_code)] // schema-level API; validation uses Validator trait
     pub fn to_hooks_schema(&self) -> HooksSchema {
         HooksSchema {
             hooks: self.hooks.clone(),
@@ -73,7 +73,7 @@ impl SettingsSchema {
 }
 
 impl Hook {
-    #[allow(dead_code)]
+    #[allow(dead_code)] // schema-level API; validation uses Validator trait
     pub fn command(&self) -> Option<&str> {
         match self {
             Hook::Command { command, .. } => command.as_deref(),
@@ -81,7 +81,7 @@ impl Hook {
         }
     }
 
-    #[allow(dead_code)]
+    #[allow(dead_code)] // schema-level API; validation uses Validator trait
     pub fn prompt(&self) -> Option<&str> {
         match self {
             Hook::Prompt { prompt, .. } | Hook::Agent { prompt, .. } => prompt.as_deref(),
@@ -89,22 +89,22 @@ impl Hook {
         }
     }
 
-    #[allow(dead_code)]
+    #[allow(dead_code)] // schema-level API; validation uses Validator trait
     pub fn is_command(&self) -> bool {
         matches!(self, Hook::Command { .. })
     }
 
-    #[allow(dead_code)]
+    #[allow(dead_code)] // schema-level API; validation uses Validator trait
     pub fn is_prompt(&self) -> bool {
         matches!(self, Hook::Prompt { .. })
     }
 
-    #[allow(dead_code)]
+    #[allow(dead_code)] // schema-level API; validation uses Validator trait
     pub fn is_agent(&self) -> bool {
         matches!(self, Hook::Agent { .. })
     }
 
-    #[allow(dead_code)]
+    #[allow(dead_code)] // schema-level API; validation uses Validator trait
     pub fn type_name(&self) -> &'static str {
         match self {
             Hook::Command { .. } => "command",
@@ -164,12 +164,12 @@ impl HooksSchema {
         Self::PROMPT_EVENTS.contains(&event)
     }
 
-    #[allow(dead_code)]
+    #[allow(dead_code)] // schema-level API; validation uses Validator trait
     pub fn from_json(content: &str) -> Result<Self, serde_json::Error> {
         serde_json::from_str(content)
     }
 
-    #[allow(dead_code)]
+    #[allow(dead_code)] // schema-level API; validation uses Validator trait
     pub fn validate_events(&self) -> Vec<String> {
         let mut errors = Vec::new();
 
@@ -186,7 +186,7 @@ impl HooksSchema {
         errors
     }
 
-    #[allow(dead_code)]
+    #[allow(dead_code)] // schema-level API; validation uses Validator trait
     pub fn validate(&self) -> Vec<String> {
         let mut errors = Vec::new();
 

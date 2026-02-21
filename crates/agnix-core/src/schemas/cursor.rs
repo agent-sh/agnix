@@ -50,7 +50,7 @@ impl AlwaysApplyField {
     }
 
     /// Returns true if this is a string instead of a boolean.
-    #[allow(dead_code)]
+    #[allow(dead_code)] // schema-level API; validation uses Validator trait
     pub fn is_string(&self) -> bool {
         matches!(self, AlwaysApplyField::String(_))
     }
@@ -115,7 +115,7 @@ pub struct UnknownKey {
 #[derive(Debug, Clone)]
 pub struct GlobValidation {
     pub valid: bool,
-    #[allow(dead_code)]
+    #[allow(dead_code)] // parsed but not yet consumed by validators
     pub pattern: String,
     pub error: Option<String>,
 }

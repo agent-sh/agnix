@@ -25,7 +25,7 @@ pub struct ParsedRuleFrontmatter {
     /// Line number where frontmatter starts (1-indexed)
     pub start_line: usize,
     /// Line number where frontmatter ends (1-indexed)
-    #[allow(dead_code)]
+    #[allow(dead_code)] // parsed but not yet consumed by validators
     pub end_line: usize,
     /// Unknown keys found in frontmatter
     pub unknown_keys: Vec<UnknownKey>,
@@ -45,7 +45,7 @@ pub struct UnknownKey {
 #[derive(Debug, Clone)]
 pub struct GlobValidation {
     pub valid: bool,
-    #[allow(dead_code)]
+    #[allow(dead_code)] // parsed but not yet consumed by validators
     pub pattern: String,
     pub error: Option<String>,
 }
