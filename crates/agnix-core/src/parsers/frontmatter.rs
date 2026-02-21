@@ -64,6 +64,7 @@ pub fn normalize_line_endings(s: &str) -> Cow<'_, str> {
 ///
 /// Protected against YAML bombs by file size limit (1 MiB) and serde_yaml's
 /// internal protections. See module documentation for details.
+#[allow(dead_code)]
 pub fn parse_frontmatter<T: DeserializeOwned>(content: &str) -> LintResult<(T, String)> {
     let parts = split_frontmatter(content);
     let parsed: T = serde_yaml::from_str(&parts.frontmatter)

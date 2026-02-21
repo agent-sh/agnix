@@ -9,6 +9,7 @@ use crate::diagnostics::{ConfigError, CoreError, LintResult};
 use serde::de::DeserializeOwned;
 
 /// Parse JSON config file
+#[allow(dead_code)]
 pub fn parse_json_config<T: DeserializeOwned>(content: &str) -> LintResult<T> {
     let parsed: T = serde_json::from_str(content)
         .map_err(|e| CoreError::Config(ConfigError::ParseError(e.into())))?;
