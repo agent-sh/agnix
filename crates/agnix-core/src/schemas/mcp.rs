@@ -311,6 +311,7 @@ impl McpToolSchema {
 
 impl McpJsonRpcMessage {
     /// Check if JSON-RPC version is valid (must be "2.0")
+    #[allow(dead_code)]
     pub fn has_valid_jsonrpc_version(&self) -> bool {
         match &self.jsonrpc {
             Some(version) => version == "2.0",

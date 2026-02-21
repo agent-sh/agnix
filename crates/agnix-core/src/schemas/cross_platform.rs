@@ -362,6 +362,7 @@ pub enum CommandType {
 #[derive(Debug, Clone)]
 pub struct BuildCommand {
     pub line: usize,
+    #[allow(dead_code)]
     pub column: usize,
     pub package_manager: PackageManager,
     pub command_type: CommandType,
@@ -441,6 +442,7 @@ pub fn extract_build_commands(content: &str) -> Vec<BuildCommand> {
 
 /// Conflict between build commands across files
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct BuildConflict {
     pub file1: std::path::PathBuf,
     pub file1_line: usize,
@@ -545,6 +547,7 @@ pub enum ConstraintType {
 #[derive(Debug, Clone)]
 pub struct ToolConstraint {
     pub line: usize,
+    #[allow(dead_code)]
     pub column: usize,
     pub tool_name: String,
     pub constraint_type: ConstraintType,
@@ -721,6 +724,7 @@ fn normalize_tool_name(name: &str) -> Option<String> {
 
 /// Conflict between tool constraints across files
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct ToolConflict {
     pub tool_name: String,
     pub allow_file: std::path::PathBuf,

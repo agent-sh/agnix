@@ -250,6 +250,7 @@ pub struct AmbiguousInstruction {
     pub line: usize,
     pub column: usize,
     pub term: String,
+    #[allow(dead_code)]
     pub context: String,
 }
 
@@ -341,6 +342,7 @@ static_regex!(fn redundant_instruction_pattern, r"(?i)\b(be helpful|be accurate|
 
 /// Redundant generic instruction found in content
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct RedundantInstruction {
     pub line: usize,
     pub column: usize,

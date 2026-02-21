@@ -24,6 +24,7 @@ pub enum PathsField {
 
 impl PathsField {
     /// Returns true if this is a scalar string (not an array)
+    #[allow(dead_code)]
     pub fn is_scalar(&self) -> bool {
         matches!(self, PathsField::Scalar(_))
     }
@@ -59,6 +60,7 @@ pub struct ParsedClineFrontmatter {
     /// The parsed schema (if valid YAML)
     pub schema: Option<ClineRuleSchema>,
     /// Raw frontmatter string (between --- markers)
+    #[allow(dead_code)]
     pub raw: String,
     /// Line number where frontmatter starts (1-indexed)
     pub start_line: usize,
@@ -86,6 +88,7 @@ pub struct UnknownKey {
 #[derive(Debug, Clone)]
 pub struct GlobValidation {
     pub valid: bool,
+    #[allow(dead_code)]
     pub pattern: String,
     pub error: Option<String>,
 }

@@ -87,6 +87,7 @@ pub struct GenericInstruction {
     pub line: usize,
     pub column: usize,
     pub text: String,
+    #[allow(dead_code)]
     pub pattern: String,
     /// Byte offset of the start of the line containing this instruction
     pub start_byte: usize,
@@ -101,6 +102,7 @@ pub struct GenericInstruction {
 /// Result when token count exceeds limit
 #[derive(Debug, Clone)]
 pub struct TokenCountExceeded {
+    #[allow(dead_code)]
     pub char_count: usize,
     pub estimated_tokens: usize,
     pub limit: usize,

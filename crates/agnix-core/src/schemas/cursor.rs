@@ -50,6 +50,7 @@ impl AlwaysApplyField {
     }
 
     /// Returns true if this is a string instead of a boolean.
+    #[allow(dead_code)]
     pub fn is_string(&self) -> bool {
         matches!(self, AlwaysApplyField::String(_))
     }
@@ -114,6 +115,7 @@ pub struct UnknownKey {
 #[derive(Debug, Clone)]
 pub struct GlobValidation {
     pub valid: bool,
+    #[allow(dead_code)]
     pub pattern: String,
     pub error: Option<String>,
 }

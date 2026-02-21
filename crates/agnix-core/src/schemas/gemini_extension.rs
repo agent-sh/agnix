@@ -31,6 +31,7 @@ pub struct ParsedGeminiExtension {
     /// The parsed schema (if valid JSON)
     pub schema: Option<GeminiExtensionSchema>,
     /// Top-level keys not in known required or optional sets
+    #[allow(dead_code)]
     pub unknown_keys: Vec<String>,
 }
 

@@ -49,6 +49,7 @@ pub struct AuthorInfo {
     pub url: Option<String>,
 }
 
+#[allow(dead_code)]
 impl PluginSchema {
     /// Validate semver format
     pub fn validate_version(&self) -> Result<(), String> {

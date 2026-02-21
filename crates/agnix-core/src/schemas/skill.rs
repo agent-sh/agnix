@@ -57,6 +57,7 @@ pub struct SkillSchema {
     pub agent: Option<String>,
 }
 
+#[allow(dead_code)]
 impl SkillSchema {
     /// Validate skill name format
     pub fn validate_name(&self) -> Result<(), String> {

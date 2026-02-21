@@ -69,6 +69,7 @@ pub struct GeminiSettingsSchema {
 
 /// A single hook definition in hooksConfig
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 pub struct GeminiHook {
     /// Hook type (must be "command")
     #[serde(rename = "type")]

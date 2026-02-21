@@ -58,6 +58,7 @@ pub enum Hook {
     },
 }
 
+#[allow(dead_code)]
 impl SettingsSchema {
     pub fn from_json(content: &str) -> Result<Self, serde_json::Error> {
         serde_json::from_str(content)
@@ -70,6 +71,7 @@ impl SettingsSchema {
     }
 }
 
+#[allow(dead_code)]
 impl Hook {
     pub fn command(&self) -> Option<&str> {
         match self {
@@ -156,10 +158,12 @@ impl HooksSchema {
         Self::PROMPT_EVENTS.contains(&event)
     }
 
+    #[allow(dead_code)]
     pub fn from_json(content: &str) -> Result<Self, serde_json::Error> {
         serde_json::from_str(content)
     }
 
+    #[allow(dead_code)]
     pub fn validate_events(&self) -> Vec<String> {
         let mut errors = Vec::new();
 
@@ -176,6 +180,7 @@ impl HooksSchema {
         errors
     }
 
+    #[allow(dead_code)]
     pub fn validate(&self) -> Vec<String> {
         let mut errors = Vec::new();
 
