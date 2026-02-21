@@ -812,12 +812,15 @@ pub fn validate_project_with_registry(
 
 #[cfg(feature = "filesystem")]
 fn resolve_validation_root(path: &Path) -> LintResult<PathBuf> {
-    if !path.exists() {
-        return Err(CoreError::Validation(ValidationError::RootNotFound {
-            path: path.to_path_buf(),
-        }));
-    }
-    let candidate = if path.is_file() {
+    let metadata = match path.metadata() {
+        Ok(m) => m,
+        Err(_) => {
+            return Err(CoreError::Validation(ValidationError::RootNotFound {
+                path: path.to_path_buf(),
+            }))
+        }
+    };
+    let candidate = if metadata.is_file() {
         path.parent().unwrap_or(Path::new("."))
     } else {
         path

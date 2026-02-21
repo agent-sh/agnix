@@ -4403,8 +4403,8 @@ fn test_validate_project_file_input_nonexistent_path() {
     );
     let err_msg = result.unwrap_err().to_string();
     assert!(
-        err_msg.contains("not found") || err_msg.contains("nonexistent"),
-        "Error message should mention the path: {err_msg}"
+        err_msg.contains("Validation root not found"),
+        "Error message should contain 'Validation root not found': {err_msg}"
     );
 }
 
@@ -4415,8 +4415,8 @@ fn test_validate_project_nonexistent_dir_returns_error() {
     assert!(result.is_err());
     let err_msg = result.unwrap_err().to_string();
     assert!(
-        err_msg.contains("nonexistent") || err_msg.contains("not found"),
-        "Error message should mention the path: {err_msg}"
+        err_msg.contains("Validation root not found"),
+        "Error message should contain 'Validation root not found': {err_msg}"
     );
 }
 
@@ -4427,8 +4427,8 @@ fn test_validate_project_rules_nonexistent_returns_error() {
     let err = result.unwrap_err();
     let err_msg = err.to_string();
     assert!(
-        err_msg.contains("not found"),
-        "Error message should indicate root not found: {err_msg}"
+        err_msg.contains("Validation root not found"),
+        "Error message should contain 'Validation root not found': {err_msg}"
     );
 }
 
@@ -4444,8 +4444,8 @@ fn test_validate_project_with_registry_nonexistent_returns_error() {
     let err = result.unwrap_err();
     let err_msg = err.to_string();
     assert!(
-        err_msg.contains("not found"),
-        "Error message should indicate root not found: {err_msg}"
+        err_msg.contains("Validation root not found"),
+        "Error message should contain 'Validation root not found': {err_msg}"
     );
 }
 

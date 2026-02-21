@@ -248,6 +248,12 @@ mod validation_tests {
             "Non-existent project path should return Err, got: {:?}",
             result
         );
+        let err = result.unwrap_err();
+        let err_msg = err.to_string();
+        assert!(
+            err_msg.contains("Validation root not found"),
+            "Error message should contain 'Validation root not found': {err_msg}"
+        );
     }
 
     #[test]

@@ -3343,3 +3343,15 @@ fn test_no_raw_i18n_keys_in_json_output() {
         }
     }
 }
+
+#[test]
+fn test_cli_nonexistent_path_returns_error() {
+    let temp = tempfile::TempDir::new().unwrap();
+    let missing = temp.path().join("nonexistent_subdir");
+
+    let mut cmd = agnix();
+    cmd.arg(missing.to_str().unwrap())
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Validation root not found"));
+}
