@@ -4376,8 +4376,8 @@ fn test_validate_project_with_registry_file_input() {
     );
 }
 
-/// Passing a nonexistent file path - is_file() returns false, so it falls through
-/// to the directory branch. canonicalize fails, walk yields nothing.
+/// Passing a nonexistent file path should return an error, not silently succeed
+/// with 0 files checked.
 #[test]
 fn test_validate_project_file_input_nonexistent_path() {
     let temp = tempfile::TempDir::new().unwrap();
@@ -4392,20 +4392,51 @@ fn test_validate_project_file_input_nonexistent_path() {
     let mut config = LintConfig::default();
     config.rules_mut().disabled_rules = vec!["VER-001".to_string()];
 
-    // Pass a nonexistent file - is_file() returns false, treated as directory,
-    // canonicalize fails, walk yields nothing
+    // Pass a nonexistent file - should return Err, not silently succeed
     let nonexistent = temp.path().join("nonexistent.md");
-    let result = validate_project(&nonexistent, &config).unwrap();
+    let result = validate_project(&nonexistent, &config);
 
-    assert_eq!(
-        result.files_checked, 0,
-        "Nonexistent file path should result in 0 files checked"
-    );
     assert!(
-        result.diagnostics.is_empty(),
-        "Nonexistent file path should produce no diagnostics, got: {:?}",
-        result.diagnostics
+        result.is_err(),
+        "Nonexistent file path should return Err, got: {:?}",
+        result
     );
+    let err_msg = result.unwrap_err().to_string();
+    assert!(
+        err_msg.contains("not found") || err_msg.contains("nonexistent"),
+        "Error message should mention the path: {err_msg}"
+    );
+}
+
+#[test]
+fn test_validate_project_nonexistent_dir_returns_error() {
+    let config = LintConfig::builder().build_lenient().unwrap();
+    let result = validate_project(Path::new("/nonexistent/path/that/does/not/exist"), &config);
+    assert!(result.is_err());
+    let err_msg = result.unwrap_err().to_string();
+    assert!(
+        err_msg.contains("nonexistent") || err_msg.contains("not found"),
+        "Error message should mention the path: {err_msg}"
+    );
+}
+
+#[test]
+fn test_validate_project_rules_nonexistent_returns_error() {
+    let config = LintConfig::builder().build_lenient().unwrap();
+    let result = validate_project_rules(Path::new("/nonexistent/path/rules"), &config);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_validate_project_with_registry_nonexistent_returns_error() {
+    let registry = ValidatorRegistry::with_defaults();
+    let config = LintConfig::builder().build_lenient().unwrap();
+    let result = validate_project_with_registry(
+        Path::new("/nonexistent/path/registry"),
+        &config,
+        &registry,
+    );
+    assert!(result.is_err());
 }
 
 // ============================================================================

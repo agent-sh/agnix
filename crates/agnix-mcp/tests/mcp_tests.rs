@@ -243,11 +243,10 @@ mod validation_tests {
         let missing = temp.path().join("nonexistent_subdir");
         let result = validate_project(&missing, &config);
 
-        assert!(result.is_ok());
-        let validation = result.unwrap();
-        assert_eq!(
-            validation.files_checked, 0,
-            "Non-existent project path should find no files"
+        assert!(
+            result.is_err(),
+            "Non-existent project path should return Err, got: {:?}",
+            result
         );
     }
 
