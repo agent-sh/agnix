@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- **Fix minimatch ReDoS vulnerability**: Added npm `overrides` in `website/package.json` to force `minimatch@^10.2.1`, resolving Dependabot alert #75 (ReDoS via repeated wildcards in `serve-handler`'s transitive `minimatch@3.1.2` dependency)
+- **Update wasm-bindgen**: Bumped `wasm-bindgen` from 0.2.109 (yanked) to 0.2.110 along with related crates (`js-sys`, `web-sys`, `wasm-bindgen-test`, etc.)
+
 ### Performance
 - **WASM conversion optimization**: Refactored `WasmDiagnostic::from_diagnostic` to take ownership of `Diagnostic` and its fields, eliminating unnecessary string cloning when converting diagnostics to the WASM-compatible representation in `agnix-wasm`
 
