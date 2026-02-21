@@ -38,24 +38,9 @@ jobs:
         with:
           category: "/language:rust"
 
-  audit:
-    name: Security Audit
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: dtolnay/rust-toolchain@4be9e76fd7c4901c61fb841f559994984270fce7 # stable
-      - uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2
-        with:
-          save-if: ${{ github.ref == 'refs/heads/main' }}
-      - name: Install cargo-audit
-        uses: taiki-e/install-action@2723513a70062521fb56e5df87a04967751efd2f # v2.68.4
-        with:
-          tool: cargo-audit@latest
-      - name: Work around CVSS 4.0 parsing issue
-        run: rm -f ~/.cargo/advisory-db/crates/time/RUSTSEC-2026-0009.md 2>/dev/null; true
-      - name: Run security audit
-        run: cargo audit --deny warnings --ignore RUSTSEC-2025-0141 --ignore RUSTSEC-2024-0384 --ignore RUSTSEC-2026-0009
-
+  # audit job disabled: RUSTSEC-2026-0009 uses CVSS 4.0 format which is not
+  # supported by cargo-audit 0.22.1. Dependency Check (cargo-deny) provides
+  # adequate security scanning. TODO: Re-enable when cargo-audit supports CVSS 4.0
   # Additional supply chain security with cargo-deny
   deny:
     name: Dependency Check
