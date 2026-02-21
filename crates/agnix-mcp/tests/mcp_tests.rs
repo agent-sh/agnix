@@ -254,6 +254,10 @@ mod validation_tests {
             err_msg.contains("Validation root not found"),
             "Error message should contain 'Validation root not found': {err_msg}"
         );
+        assert!(
+            err_msg.contains(missing.to_str().unwrap()),
+            "Error message should contain the path: {err_msg}"
+        );
     }
 
     #[test]

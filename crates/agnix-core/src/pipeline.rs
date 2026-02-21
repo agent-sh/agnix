@@ -815,6 +815,9 @@ fn resolve_validation_root(path: &Path) -> LintResult<PathBuf> {
     let metadata = match path.metadata() {
         Ok(m) => m,
         Err(_) => {
+            // Any I/O failure (not found, permission denied, etc.) is treated
+            // uniformly as RootNotFound. For a local linter running as the
+            // invoking user, the distinction is not actionable at this level.
             return Err(CoreError::Validation(ValidationError::RootNotFound {
                 path: path.to_path_buf(),
             }))
