@@ -163,7 +163,7 @@ fn extract_markdown_links_inner(content: &str) -> Vec<MarkdownLink> {
 }
 
 /// Check if XML tags are balanced
-#[allow(dead_code)] // reserved for future use
+#[allow(dead_code)] // used in cfg(test) and __internal; not yet used by production validators
 pub fn check_xml_balance(tags: &[XmlTag]) -> Vec<XmlBalanceError> {
     check_xml_balance_with_content_end(tags, None)
 }
