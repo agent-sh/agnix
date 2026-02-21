@@ -820,7 +820,7 @@ fn resolve_validation_root(path: &Path) -> LintResult<PathBuf> {
             // invoking user, the distinction is not actionable at this level.
             return Err(CoreError::Validation(ValidationError::RootNotFound {
                 path: path.to_path_buf(),
-            }))
+            }));
         }
     };
     let candidate = if metadata.is_file() {
