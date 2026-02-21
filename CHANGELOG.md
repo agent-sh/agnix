@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-02-21
+
 ### Added
 - **XP-008 rule**: New MEDIUM-severity cross-platform rule that warns when CLAUDE.md contains Claude-specific directives (context:fork, agent fields, allowed-tools, hooks, @import) outside a guarded `## Claude Code` section, helping users targeting Cursor avoid silently-ignored configuration
 

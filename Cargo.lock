@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "agnix-cli"
-version = "0.12.4"
+version = "0.13.0"
 dependencies = [
  "agnix-core",
  "agnix-rules",
@@ -33,7 +33,7 @@ dependencies = [
 
 [[package]]
 name = "agnix-core"
-version = "0.12.4"
+version = "0.13.0"
 dependencies = [
  "agnix-core",
  "agnix-rules",
@@ -60,7 +60,7 @@ dependencies = [
 
 [[package]]
 name = "agnix-lsp"
-version = "0.12.4"
+version = "0.13.0"
 dependencies = [
  "agnix-core",
  "anyhow",
@@ -76,7 +76,7 @@ dependencies = [
 
 [[package]]
 name = "agnix-mcp"
-version = "0.12.4"
+version = "0.13.0"
 dependencies = [
  "agnix-core",
  "agnix-rules",
@@ -92,14 +92,14 @@ dependencies = [
 
 [[package]]
 name = "agnix-rules"
-version = "0.12.4"
+version = "0.13.0"
 dependencies = [
  "serde_json",
 ]
 
 [[package]]
 name = "agnix-wasm"
-version = "0.12.4"
+version = "0.13.0"
 dependencies = [
  "agnix-core",
  "console_error_panic_hook",
