@@ -10,6 +10,9 @@
     "generate:rules": "python3 ../scripts/generate-docs-rules.py",
     "version:cut": "docusaurus docs:version"
   },
+  "overrides": {
+    "minimatch": "^10.2.1"
+  },
   "dependencies": {
     "@codemirror/lang-json": "^6.0.1",
     "@codemirror/lang-markdown": "^6.3.1",
