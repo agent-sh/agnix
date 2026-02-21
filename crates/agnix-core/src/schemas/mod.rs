@@ -3,7 +3,6 @@
 //! This module is internal to agnix-core. Some items may not be used
 //! directly but are preserved for potential future use or extensibility.
 
-
 pub mod agent;
 pub mod agents_md;
 pub mod claude_md;

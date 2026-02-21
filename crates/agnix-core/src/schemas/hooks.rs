@@ -58,12 +58,13 @@ pub enum Hook {
     },
 }
 
-#[allow(dead_code)]
 impl SettingsSchema {
+    #[allow(dead_code)]
     pub fn from_json(content: &str) -> Result<Self, serde_json::Error> {
         serde_json::from_str(content)
     }
 
+    #[allow(dead_code)]
     pub fn to_hooks_schema(&self) -> HooksSchema {
         HooksSchema {
             hooks: self.hooks.clone(),
@@ -71,8 +72,8 @@ impl SettingsSchema {
     }
 }
 
-#[allow(dead_code)]
 impl Hook {
+    #[allow(dead_code)]
     pub fn command(&self) -> Option<&str> {
         match self {
             Hook::Command { command, .. } => command.as_deref(),
@@ -80,6 +81,7 @@ impl Hook {
         }
     }
 
+    #[allow(dead_code)]
     pub fn prompt(&self) -> Option<&str> {
         match self {
             Hook::Prompt { prompt, .. } | Hook::Agent { prompt, .. } => prompt.as_deref(),
@@ -87,18 +89,22 @@ impl Hook {
         }
     }
 
+    #[allow(dead_code)]
     pub fn is_command(&self) -> bool {
         matches!(self, Hook::Command { .. })
     }
 
+    #[allow(dead_code)]
     pub fn is_prompt(&self) -> bool {
         matches!(self, Hook::Prompt { .. })
     }
 
+    #[allow(dead_code)]
     pub fn is_agent(&self) -> bool {
         matches!(self, Hook::Agent { .. })
     }
 
+    #[allow(dead_code)]
     pub fn type_name(&self) -> &'static str {
         match self {
             Hook::Command { .. } => "command",

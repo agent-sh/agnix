@@ -49,9 +49,9 @@ pub struct AuthorInfo {
     pub url: Option<String>,
 }
 
-#[allow(dead_code)]
 impl PluginSchema {
     /// Validate semver format
+    #[allow(dead_code)]
     pub fn validate_version(&self) -> Result<(), String> {
         if let Some(ref version) = self.version {
             let trimmed = version.trim();
@@ -69,6 +69,7 @@ impl PluginSchema {
     }
 
     /// Run all validations
+    #[allow(dead_code)]
     pub fn validate(&self) -> Vec<String> {
         let mut errors = Vec::new();
 
