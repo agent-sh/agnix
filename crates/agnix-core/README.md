@@ -19,7 +19,7 @@ This crate provides the parsing, schema validation, and diagnostic generation fo
 |---------|---------|-------------|
 | `filesystem` | yes | Adds `rayon`, `ignore`, and `dirs` for parallel validation and directory walking. |
 
-Setting `default-features = false` removes the file I/O dependencies but still requires `std` - useful for WASM targets where you validate in-memory content only.
+Setting `default-features = false` removes the file I/O dependencies but still requires `std` - useful for WASM targets where you supply content directly rather than reading from disk.
 
 ## Usage
 
