@@ -11,6 +11,8 @@ readme = "README.md"
 keywords = ["agent", "linter", "validation", "mcp", "skills"]
 categories = ["development-tools", "parser-implementations"]
 
+## NOTE: agnix-core requires `std` unconditionally. The `filesystem` feature
+## controls optional file I/O dependencies - it does not enable `no_std` support.
 [features]
 default = ["filesystem"]
 filesystem = ["dep:rayon", "dep:ignore", "dep:dirs"]

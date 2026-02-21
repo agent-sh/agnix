@@ -14,6 +14,9 @@
 //! - CLAUDE.md memory files
 //! - Plugin manifests
 //!
+//! This crate requires `std`. The `filesystem` Cargo feature (enabled by
+//! default) adds file I/O dependencies; disabling it does not enable `no_std`.
+//!
 //! ## Stability Tiers
 //!
 //! Public modules are classified into stability tiers:

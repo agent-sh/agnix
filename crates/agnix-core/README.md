@@ -11,6 +11,16 @@ This crate provides the parsing, schema validation, and diagnostic generation fo
 - Diagnostic generation with line/column locations
 - Support for multiple agent configuration formats
 
+## Feature Flags
+
+`agnix-core` requires `std` and is not `no_std` compatible.
+
+| Feature | Default | Description |
+|---------|---------|-------------|
+| `filesystem` | yes | Adds `rayon`, `ignore`, and `dirs` for parallel validation and directory walking. |
+
+Setting `default-features = false` removes the file I/O dependencies but still requires `std` - useful for WASM targets where you validate in-memory content only.
+
 ## Usage
 
 This is a library crate used by `agnix-cli`. For most users, install the CLI:
