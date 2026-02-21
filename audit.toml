@@ -13,6 +13,9 @@ severity_threshold = "low"
 # Informational advisories are reported but don't fail the build
 informational_warnings = ["unsound"]
 
+# Ignore RUSTSEC-2026-0009 (CVSS 4.0 - unsupported by older cargo-audit)
+ignore = ["RUSTSEC-2026-0009"]
+
 [database]
 # Fetch the advisory database from the default source
 path = "~/.cargo/advisory-db"
