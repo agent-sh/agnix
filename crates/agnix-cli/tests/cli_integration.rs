@@ -3353,6 +3353,7 @@ fn test_cli_nonexistent_path_returns_error() {
     cmd.arg(missing.to_str().unwrap())
         .assert()
         .failure()
+        .code(1)
         .stderr(predicate::str::contains("Validation root not found"))
         .stderr(predicate::str::contains(missing.to_str().unwrap()));
 }
