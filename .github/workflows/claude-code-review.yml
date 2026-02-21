@@ -1,42 +1,77 @@
-name: Claude Code Review
+name: Claude Code - Automated PR Review
 
 on:
   pull_request:
     types: [opened, synchronize, ready_for_review, reopened]
-    # Optional: Only run on specific file changes
-    # paths:
-    #   - "src/**/*.ts"
-    #   - "src/**/*.tsx"
-    #   - "src/**/*.js"
-    #   - "src/**/*.jsx"
-
-permissions: {}
 
 jobs:
   claude-review:
-    # Restricted to repository owner only
-    if: github.event.pull_request.user.login == 'avifenesh'
+    if: >-
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'),
+      github.event.pull_request.author_association)
 
     runs-on: ubuntu-latest
+
     permissions:
-      contents: read
-      pull-requests: read
-      issues: read
-      id-token: write
+      contents: write
+      pull-requests: write
+      issues: write
+      actions: read
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0
+
+      - name: Check run count
+        id: check-runs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EVENT_ACTION: ${{ github.event.action }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          WORKFLOW_FILE="claude-code-review.yml"
+
+          RUN_COUNT=$(gh api \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "repos/${REPO}/actions/workflows/${WORKFLOW_FILE}/runs?head_sha=${HEAD_SHA}&status=completed" \
+            --jq '[.workflow_runs[] | select(.event == "pull_request")] | length' || echo "")
+
+          RUN_COUNT=${RUN_COUNT:-0}
+          if ! echo "$RUN_COUNT" | grep -qE '^[0-9]+$'; then
+            echo "[WARN] Invalid RUN_COUNT value ('$RUN_COUNT') from GitHub API. Defaulting to 0."
+            RUN_COUNT=0
+          fi
+
+          RUN_COUNT=$((RUN_COUNT + 1))
+
+          echo "This is run #$RUN_COUNT for this PR (event: $EVENT_ACTION)"
+
+          if [ "$RUN_COUNT" -le 3 ]; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+            echo "[OK] Will run Claude review (run $RUN_COUNT of 3)"
+          else
+            echo "should_run=false" >> $GITHUB_OUTPUT
+            echo "[SKIP] Skipping Claude review (already ran 3 times)"
+          fi
 
       - name: Run Claude Code Review
-        id: claude-review
-        uses: anthropics/claude-code-action@edd85d61533cbba7b57ed0ca4af1750b1fdfd3c4 # v1
+        if: steps.check-runs.outputs.should_run == 'true'
+        uses: anthropics/claude-code-action@f64219702d7454cf29fe32a74104be6ed43dc637 # v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
-          plugins: 'code-review@claude-code-plugins'
-          prompt: '/code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }} --iterations=3'
-          # Configured: exactly 3 review iterations, restricted to avifenesh only
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          model: claude-opus-4-6
+          use_commit_signing: true
 
+      - name: Comment on PR (skipped)
+        if: steps.check-runs.outputs.should_run == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          gh pr comment "$PR_NUMBER" --body "[INFO] Claude Code review was skipped as it has already run 3 times for this PR."
