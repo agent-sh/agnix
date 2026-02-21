@@ -1,7 +1,7 @@
 ---
 name: agnix
-description: "Use when user asks to 'lint agent configs', 'validate skills', 'check CLAUDE.md', 'validate hooks', 'lint MCP'. Validates agent configuration files against 155 rules across 10+ AI tools."
-version: 5.1.0
+description: "Use when user asks to 'lint agent configs', 'validate skills', 'check CLAUDE.md', 'validate hooks', 'lint MCP'. Validates agent configuration files against 229 rules across 10+ AI tools."
+version: 0.12.2
 argument-hint: "[path] [--fix] [--strict] [--target=claude-code|cursor|codex]"
 ---
 
@@ -16,7 +16,12 @@ const args = '$ARGUMENTS'.split(' ').filter(Boolean);
 const targetPath = args.find(a => !a.startsWith('--')) || '.';
 const fix = args.includes('--fix');
 const strict = args.includes('--strict');
-const target = args.find(a => a.startsWith('--target='))?.split('=')[1] || 'claude-code';
+let target = args.find(a => a.startsWith('--target='))?.split('=')[1];
+if (!target) {
+  const idx = args.indexOf('--target');
+  if (idx !== -1 && args[idx + 1]) target = args[idx + 1];
+}
+target = target || 'claude-code';
 ```
 
 ## When to Use
