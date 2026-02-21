@@ -620,6 +620,9 @@ pub enum ValidationError {
     #[error("Too many files to validate: {count} files found, limit is {limit}")]
     TooManyFiles { count: usize, limit: usize },
 
+    #[error("Validation root not found: {path}")]
+    RootNotFound { path: PathBuf },
+
     #[error(transparent)]
     Other(#[from] anyhow::Error),
 }
@@ -667,6 +670,7 @@ impl CoreError {
             | CoreError::File(FileError::Symlink { path })
             | CoreError::File(FileError::TooBig { path, .. })
             | CoreError::File(FileError::NotRegular { path }) => Some(path),
+            CoreError::Validation(ValidationError::RootNotFound { path }) => Some(path),
             _ => None,
         }
     }
