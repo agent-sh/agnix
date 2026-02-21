@@ -4424,7 +4424,12 @@ fn test_validate_project_nonexistent_dir_returns_error() {
 fn test_validate_project_rules_nonexistent_returns_error() {
     let config = LintConfig::builder().build_lenient().unwrap();
     let result = validate_project_rules(Path::new("/nonexistent/path/rules"), &config);
-    assert!(result.is_err());
+    let err = result.unwrap_err();
+    let err_msg = err.to_string();
+    assert!(
+        err_msg.contains("not found"),
+        "Error message should indicate root not found: {err_msg}"
+    );
 }
 
 #[test]
@@ -4436,7 +4441,12 @@ fn test_validate_project_with_registry_nonexistent_returns_error() {
         &config,
         &registry,
     );
-    assert!(result.is_err());
+    let err = result.unwrap_err();
+    let err_msg = err.to_string();
+    assert!(
+        err_msg.contains("not found"),
+        "Error message should indicate root not found: {err_msg}"
+    );
 }
 
 // ============================================================================

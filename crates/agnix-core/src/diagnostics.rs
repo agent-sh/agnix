@@ -1784,4 +1784,14 @@ mod tests {
         assert!(outcome.io_error().is_none());
         let _ = outcome;
     }
+
+    // ===== CoreError::path() tests =====
+
+    #[test]
+    fn test_core_error_path_root_not_found() {
+        use std::path::PathBuf;
+        let path = PathBuf::from("/some/nonexistent/path");
+        let err = CoreError::Validation(ValidationError::RootNotFound { path: path.clone() });
+        assert_eq!(err.path(), Some(&path));
+    }
 }
