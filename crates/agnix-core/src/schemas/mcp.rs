@@ -62,6 +62,7 @@ pub struct McpToolSchema {
 
 /// MCP resource definition schema
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct McpResourceSchema {
     /// Required: RFC3986 URI identifier
     pub uri: Option<String>,
@@ -89,6 +90,7 @@ pub struct McpResourceSchema {
 
 /// MCP resource read content schema
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct McpResourceContentSchema {
     /// Required: resource URI
     pub uri: Option<String>,
@@ -106,6 +108,7 @@ pub struct McpResourceContentSchema {
 
 /// MCP prompt argument schema
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct McpPromptArgumentSchema {
     /// Required: argument name
     pub name: Option<String>,
@@ -119,6 +122,7 @@ pub struct McpPromptArgumentSchema {
 
 /// MCP prompt definition schema
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct McpPromptSchema {
     /// Required: prompt name
     pub name: Option<String>,
@@ -182,6 +186,7 @@ pub struct McpServerConfig {
 
 /// MCP configuration file schema (standalone .mcp.json)
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct McpConfigSchema {
     /// Server definitions
     #[serde(rename = "mcpServers")]
@@ -213,6 +218,7 @@ pub const DEFAULT_MCP_PROTOCOL_VERSION: &str = "2025-11-25";
 
 /// MCP initialize request params
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct McpInitializeParams {
     /// Protocol version requested by client
     #[serde(rename = "protocolVersion")]
@@ -228,6 +234,7 @@ pub struct McpInitializeParams {
 
 /// MCP initialize result (from server response)
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct McpInitializeResult {
     /// Protocol version negotiated by server
     #[serde(rename = "protocolVersion")]
