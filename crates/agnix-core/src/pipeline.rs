@@ -502,7 +502,7 @@ pub fn validate_project_rules(root: &Path, config: &LintConfig) -> LintResult<Ve
     use ignore::WalkBuilder;
     use std::sync::Arc;
 
-    let root_dir = resolve_validation_root(root);
+    let root_dir = resolve_validation_root(root)?;
     let mut config = config.clone();
     config.set_root_dir(root_dir.clone());
 
@@ -596,7 +596,7 @@ pub fn validate_project_with_registry(
 
     let validation_start = Instant::now();
 
-    let root_dir = resolve_validation_root(path);
+    let root_dir = resolve_validation_root(path)?;
     let mut config = config.clone();
     config.set_root_dir(root_dir.clone());
 
@@ -811,13 +811,18 @@ pub fn validate_project_with_registry(
 }
 
 #[cfg(feature = "filesystem")]
-fn resolve_validation_root(path: &Path) -> PathBuf {
+fn resolve_validation_root(path: &Path) -> LintResult<PathBuf> {
+    if !path.exists() {
+        return Err(CoreError::Validation(ValidationError::RootNotFound {
+            path: path.to_path_buf(),
+        }));
+    }
     let candidate = if path.is_file() {
         path.parent().unwrap_or(Path::new("."))
     } else {
         path
     };
-    std::fs::canonicalize(candidate).unwrap_or_else(|_| candidate.to_path_buf())
+    Ok(std::fs::canonicalize(candidate).unwrap_or_else(|_| candidate.to_path_buf()))
 }
 
 #[cfg(test)]
