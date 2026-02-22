@@ -1,5 +1,9 @@
+/* Shared design tokens from monorepo design-system */
+@import '../../../../design-system/tokens.css';
+@import '../../../../design-system/tokens-docusaurus.css';
+
 /* === Color System === */
-/* Teal palette derived from agnix logo (hue ~174) */
+/* Teal palette derived from agnix logo (hue ~174) - overrides shared accent */
 
 :root {
   --site-primary-hue-saturation: 174 55%;
@@ -10,14 +14,6 @@
   --ifm-color-primary-light: hsl(174, 55%, 34%);
   --ifm-color-primary-lighter: hsl(174, 55%, 38%);
   --ifm-color-primary-lightest: hsl(174, 55%, 45%);
-
-  --ifm-code-font-size: 95%;
-  --ifm-heading-font-weight: 600;
-  --ifm-font-family-base: 'Outfit', system-ui, -apple-system, 'Segoe UI',
-    Roboto, sans-serif;
-  --ifm-font-family-monospace: 'JetBrains Mono', ui-monospace,
-    'SFMono-Regular', 'SF Mono', Menlo, Consolas, monospace;
-  --ifm-global-radius: 6px;
 
   --ag-surface: #ffffff;
   --ag-surface-raised: #f8fafc;
@@ -73,17 +69,6 @@ html[data-theme='dark'] .header-github-link::before {
 
 .prism-code {
   font-size: 0.9rem;
-}
-
-/* Ensure Docusaurus code blocks have visible contrast in light mode */
-:root {
-  --prism-background-color: #f6f8fa;
-  --ifm-code-background: #f0f2f5;
-}
-
-html[data-theme='dark'] {
-  --prism-background-color: #161b22;
-  --ifm-code-background: rgba(110, 118, 129, 0.2);
 }
 
 /* Inline code contrast */
