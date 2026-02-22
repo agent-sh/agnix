@@ -1,6 +1,6 @@
 /* Shared design tokens from monorepo design-system */
-@import '../../../../design-system/tokens.css';
-@import '../../../../design-system/tokens-docusaurus.css';
+@import './design-system/tokens.css';
+@import './design-system/tokens-docusaurus.css';
 
 /* === Color System === */
 /* Teal palette derived from agnix logo (hue ~174) - overrides shared accent */

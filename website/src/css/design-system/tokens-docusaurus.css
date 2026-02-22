@@ -1,0 +1,45 @@
+/*
+ * ==========================================================================
+ * AGENT-SH DESIGN SYSTEM - DOCUSAURUS BRIDGE
+ * ==========================================================================
+ *
+ * Maps shared design tokens to Infima (--ifm-*) variables used by Docusaurus.
+ * Import this AFTER tokens.css in any Docusaurus site.
+ *
+ * Site-specific overrides (e.g. agnix teal accent) should come AFTER this
+ * file in the import order.
+ *
+ * ==========================================================================
+ */
+
+:root {
+  /* Typography */
+  --ifm-font-family-base: var(--font-sans);
+  --ifm-font-family-monospace: var(--font-mono);
+  --ifm-heading-font-weight: var(--font-semibold);
+  --ifm-code-font-size: 95%;
+
+  /* Shape */
+  --ifm-global-radius: var(--radius-default);
+
+  /* Code blocks - light mode defaults */
+  --prism-background-color: #f6f8fa;
+  --ifm-code-background: #f0f2f5;
+
+  /* Link color uses shared accent */
+  --ifm-link-color: var(--color-accent-purple);
+}
+
+html[data-theme='dark'] {
+  /* Background */
+  --ifm-background-color: var(--color-bg-base);
+  --ifm-background-surface-color: var(--color-bg-surface-1);
+
+  /* Text */
+  --ifm-font-color-base: var(--color-text-primary);
+  --ifm-font-color-secondary: var(--color-text-secondary);
+
+  /* Code blocks */
+  --prism-background-color: var(--color-bg-code);
+  --ifm-code-background: rgba(var(--color-zinc-rgb), 0.2);
+}
