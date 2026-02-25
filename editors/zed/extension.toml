@@ -8,9 +8,8 @@ repository = "https://github.com/avifenesh/agnix"
 
 [language_servers.agnix-lsp]
 name = "agnix"
-languages = ["Markdown", "JSON", "MDC"]
+languages = ["Markdown", "JSON"]
 
 [language_servers.agnix-lsp.language_ids]
 "Markdown" = "markdown"
 "JSON" = "json"
-"MDC" = "markdown"
