@@ -50,6 +50,6 @@ agnix ships editor integrations powered by the `agnix-lsp` server:
 | VS Code | [Marketplace](https://marketplace.visualstudio.com/items?itemName=avifenesh.agnix) |
 | JetBrains | [Plugin](https://plugins.jetbrains.com/plugin/30087-agnix) |
 | Neovim | [Plugin](https://github.com/avifenesh/agnix.nvim) |
-| Zed | [Extension](https://github.com/avifenesh/agnix/tree/main/editors/zed) |
+| Zed | [Extension](https://zed.dev/extensions?query=agnix) |
 
 See [Editor Integration](./editor-integration.md) for setup details.

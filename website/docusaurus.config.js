@@ -175,7 +175,7 @@ const config = {
             },
             {
               label: 'Zed',
-              href: 'https://github.com/avifenesh/agnix/tree/main/editors/zed',
+              href: 'https://zed.dev/extensions?query=agnix',
             },
           ],
         },

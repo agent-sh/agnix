@@ -52,7 +52,8 @@ The plugin auto-detects and downloads the `agnix-lsp` binary. For full setup ins
 
 ## Zed
 
-Install the agnix extension from the Zed extension marketplace, or see the
+Install the agnix extension from the
+[Zed extension marketplace](https://zed.dev/extensions?query=agnix), or see the
 [Zed extension README](https://github.com/avifenesh/agnix/tree/main/editors/zed).
 
 ## Other editors
