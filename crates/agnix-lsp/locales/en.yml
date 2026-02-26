@@ -530,15 +530,19 @@ rules:
     message: "Cursor subagent definition is empty after frontmatter"
     suggestion: "Add body instructions below the frontmatter section"
   cur_016:
-    message: ".cursor/environment.json must be an object with snapshot, install, and terminals"
+    message: ".cursor/environment.json must be an object with install (required) and optional start, update, build, terminals"
     parse_error: "Failed to parse .cursor/environment.json: %{error}"
-    snapshot: "Field 'snapshot' must be a string"
     install: "Field 'install' must be a string"
+    missing_install: "Field 'install' is required and must be a string"
     start: "Field 'start' must be a string when present"
-    missing_terminals: "Field 'terminals' is required and must be an array"
+    update: "Field 'update' must be a string when present"
+    invalid_build: "Field 'build' must be an object when present"
+    build_dockerfile: "Field 'build.dockerfile' must be a string when present"
+    build_context: "Field 'build.context' must be a string when present"
     invalid_terminals: "Field 'terminals' must be an array, got %{got}"
     terminal: "terminals[%{index}] must be an object with string fields 'name' and 'command'"
-    suggestion: "Use schema: {\"snapshot\":\"...\",\"install\":\"...\",\"start\":\"...\",\"terminals\":[{\"name\":\"...\",\"command\":\"...\"}]}"
+    terminal_not_object: "terminals[%{index}] must be a JSON object"
+    suggestion: "Use schema: {\"install\":\"...\",\"start\":\"...\",\"build\":{\"dockerfile\":\"...\",\"context\":\"...\"},\"terminals\":[{\"name\":\"...\",\"command\":\"...\"}]}"
 
   # --- Cline (cline.rs) ---
   cln_001:

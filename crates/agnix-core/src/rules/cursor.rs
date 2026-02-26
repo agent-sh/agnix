@@ -1749,6 +1749,23 @@ is_background: false
     }
 
     #[test]
+    fn test_cur_016_environment_snapshot_ignored() {
+        // Snapshot is a UI concept, not part of the environment.json spec.
+        // This regression test ensures we do not validate or reject it.
+        let diagnostics =
+            validate_cursor_environment(r#"{"install":"npm ci","snapshot":42}"#);
+        assert!(
+            diagnostics.iter().all(|d| d.rule != "CUR-016"),
+            "snapshot field should be silently ignored, got: {:?}",
+            diagnostics
+                .iter()
+                .filter(|d| d.rule == "CUR-016")
+                .map(|d| &d.message)
+                .collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
     fn test_cursor_hooks_agents_environment_valid() {
         let hooks =
             r#"{"version":1,"hooks":{"sessionStart":[{"type":"command","command":"echo start"}]}}"#;

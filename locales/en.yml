@@ -541,6 +541,7 @@ rules:
     build_context: "Field 'build.context' must be a string when present"
     invalid_terminals: "Field 'terminals' must be an array, got %{got}"
     terminal: "terminals[%{index}] must be an object with string fields 'name' and 'command'"
+    terminal_not_object: "terminals[%{index}] must be a JSON object"
     suggestion: "Use schema: {\"install\":\"...\",\"start\":\"...\",\"build\":{\"dockerfile\":\"...\",\"context\":\"...\"},\"terminals\":[{\"name\":\"...\",\"command\":\"...\"}]}"
 
   # --- Cline (cline.rs) ---
