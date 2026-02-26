@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - **Unified design system**: Import shared design tokens from agent-sh/design-system. Switch from Outfit to Inter font. Add font preconnect hints to Docusaurus config. Keeps teal accent and light/dark mode.
+- **GitHub Copilot rule revalidation (COP-001 to COP-018)**: Refreshed evidence links and guidance for current custom-agent docs, added strict type checks for `infer` (boolean only), and aligned COP schema coverage for custom-agent keys (`name`, `disable-model-invocation`, `user-invocable`, `metadata`) with updated fixtures and generated rule docs (#567).
 
 ## [0.13.0] - 2026-02-21
 

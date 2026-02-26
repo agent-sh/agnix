@@ -3143,9 +3143,11 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://docs.github.com/en/copilot/customizing-copilot"
+          "https://docs.github.com/en/copilot/reference/custom-instructions-support",
+          "https://docs.github.com/en/copilot/how-tos/custom-instructions/adding-repository-custom-instructions-for-github-copilot",
+          "https://github.blog/changelog/2025-08-28-copilot-coding-agent-now-supports-agents-md-custom-instructions/"
         ],
-        "verified_on": "2026-02-04",
+        "verified_on": "2026-02-26",
         "applies_to": {
           "tool": "github-copilot"
         },
@@ -3170,9 +3172,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://docs.github.com/en/copilot/customizing-copilot"
+          "https://docs.github.com/en/copilot/how-tos/custom-instructions/adding-repository-custom-instructions-for-github-copilot",
+          "https://docs.github.com/en/copilot/reference/custom-instructions-support"
         ],
-        "verified_on": "2026-02-04",
+        "verified_on": "2026-02-26",
         "applies_to": {
           "tool": "github-copilot"
         },
@@ -3198,9 +3201,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://docs.github.com/en/copilot/customizing-copilot"
+          "https://docs.github.com/en/copilot/how-tos/custom-instructions/adding-repository-custom-instructions-for-github-copilot",
+          "https://docs.github.com/en/copilot/reference/custom-instructions-support"
         ],
-        "verified_on": "2026-02-04",
+        "verified_on": "2026-02-26",
         "applies_to": {
           "tool": "github-copilot"
         },
@@ -3225,9 +3229,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://docs.github.com/en/copilot/customizing-copilot"
+          "https://docs.github.com/en/copilot/how-tos/custom-instructions/adding-repository-custom-instructions-for-github-copilot",
+          "https://docs.github.com/en/copilot/reference/custom-instructions-support"
         ],
-        "verified_on": "2026-02-04",
+        "verified_on": "2026-02-26",
         "applies_to": {
           "tool": "github-copilot"
         },
@@ -3253,9 +3258,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://docs.github.com/en/copilot/customizing-copilot"
+          "https://docs.github.com/en/copilot/how-tos/custom-instructions/adding-repository-custom-instructions-for-github-copilot",
+          "https://docs.github.com/en/copilot/reference/custom-instructions-support"
         ],
-        "verified_on": "2026-02-07",
+        "verified_on": "2026-02-26",
         "applies_to": {
           "tool": "github-copilot"
         },
@@ -3281,9 +3287,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://docs.github.com/en/copilot/customizing-copilot"
+          "https://docs.github.com/en/copilot/how-tos/custom-instructions/adding-repository-custom-instructions-for-github-copilot",
+          "https://docs.github.com/en/copilot/reference/custom-instructions-support"
         ],
-        "verified_on": "2026-02-07",
+        "verified_on": "2026-02-26",
         "applies_to": {
           "tool": "github-copilot"
         },
@@ -3310,7 +3317,7 @@
         "source_urls": [
           "https://docs.github.com/en/copilot/reference/custom-agents-configuration"
         ],
-        "verified_on": "2026-02-13",
+        "verified_on": "2026-02-26",
         "applies_to": {
           "tool": "github-copilot"
         },
@@ -3329,7 +3336,7 @@
     },
     {
       "id": "COP-008",
-      "name": "Custom Agent Unknown Frontmatter Field",
+      "name": "Custom Agent Unknown or Invalid Frontmatter Field",
       "severity": "MEDIUM",
       "category": "copilot",
       "evidence": {
@@ -3337,7 +3344,7 @@
         "source_urls": [
           "https://docs.github.com/en/copilot/reference/custom-agents-configuration"
         ],
-        "verified_on": "2026-02-13",
+        "verified_on": "2026-02-26",
         "applies_to": {
           "tool": "github-copilot"
         },
@@ -3352,8 +3359,8 @@
         "autofix": true,
         "fix_safety": "safe"
       },
-      "good_example": "---\ndescription: Review pull requests\ntarget: vscode\n---\nReview pull requests.",
-      "bad_example": "---\ndescription: Review pull requests\nmystery-field: true\n---\nReview pull requests."
+      "good_example": "---\nname: reviewer\ndescription: Review pull requests\nuser-invocable: true\nmetadata:\n  owner: security\n---\nReview pull requests.",
+      "bad_example": "---\ndescription: Review pull requests\nuser-invocable: \"yes\"\nunknown-field: true\n---\nReview pull requests."
     },
     {
       "id": "COP-009",
@@ -3365,7 +3372,7 @@
         "source_urls": [
           "https://docs.github.com/en/copilot/reference/custom-agents-configuration"
         ],
-        "verified_on": "2026-02-13",
+        "verified_on": "2026-02-26",
         "applies_to": {
           "tool": "github-copilot"
         },
@@ -3385,19 +3392,19 @@
     },
     {
       "id": "COP-010",
-      "name": "Custom Agent Uses Deprecated infer Field",
+      "name": "Custom Agent infer Field Must Be Boolean",
       "severity": "MEDIUM",
       "category": "copilot",
       "evidence": {
-        "source_type": "community",
+        "source_type": "vendor_docs",
         "source_urls": [
-          "https://github.com/avifenesh/agnix/issues/400"
+          "https://docs.github.com/en/copilot/reference/custom-agents-configuration"
         ],
-        "verified_on": "2026-02-13",
+        "verified_on": "2026-02-26",
         "applies_to": {
           "tool": "github-copilot"
         },
-        "normative_level": "SHOULD",
+        "normative_level": "MUST",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -3405,11 +3412,10 @@
         }
       },
       "fix": {
-        "autofix": true,
-        "fix_safety": "safe"
+        "autofix": false
       },
-      "good_example": "---\ndescription: Review pull requests\n---\nReview pull requests.",
-      "bad_example": "---\ndescription: Review pull requests\ninfer: true\n---\nReview pull requests."
+      "good_example": "---\ndescription: Review pull requests\ninfer: true\n---\nReview pull requests.",
+      "bad_example": "---\ndescription: Review pull requests\ninfer: \"auto\"\n---\nReview pull requests."
     },
     {
       "id": "COP-011",
@@ -3421,7 +3427,7 @@
         "source_urls": [
           "https://docs.github.com/en/copilot/reference/custom-agents-configuration"
         ],
-        "verified_on": "2026-02-13",
+        "verified_on": "2026-02-26",
         "applies_to": {
           "tool": "github-copilot"
         },
@@ -3448,7 +3454,7 @@
         "source_urls": [
           "https://docs.github.com/en/copilot/reference/custom-agents-configuration"
         ],
-        "verified_on": "2026-02-13",
+        "verified_on": "2026-02-26",
         "applies_to": {
           "tool": "github-copilot"
         },
@@ -3474,9 +3480,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.visualstudio.com/docs/copilot/customization/prompt-files"
+          "https://code.visualstudio.com/docs/copilot/customization/prompt-files",
+          "https://docs.github.com/en/copilot/reference/custom-instructions-support"
         ],
-        "verified_on": "2026-02-13",
+        "verified_on": "2026-02-26",
         "applies_to": {
           "tool": "github-copilot"
         },
@@ -3501,9 +3508,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.visualstudio.com/docs/copilot/customization/prompt-files"
+          "https://code.visualstudio.com/docs/copilot/customization/prompt-files",
+          "https://docs.github.com/en/copilot/reference/custom-instructions-support"
         ],
-        "verified_on": "2026-02-13",
+        "verified_on": "2026-02-26",
         "applies_to": {
           "tool": "github-copilot"
         },
@@ -3529,9 +3537,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.visualstudio.com/docs/copilot/customization/prompt-files"
+          "https://code.visualstudio.com/docs/copilot/customization/prompt-files",
+          "https://docs.github.com/en/copilot/reference/custom-instructions-support"
         ],
-        "verified_on": "2026-02-13",
+        "verified_on": "2026-02-26",
         "applies_to": {
           "tool": "github-copilot"
         },
@@ -3557,9 +3566,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://docs.github.com/en/copilot/reference/hooks-configuration"
+          "https://docs.github.com/en/copilot/concepts/agents/coding-agent/about-hooks"
         ],
-        "verified_on": "2026-02-13",
+        "verified_on": "2026-02-26",
         "applies_to": {
           "tool": "github-copilot"
         },
@@ -3586,7 +3595,7 @@
         "source_urls": [
           "https://docs.github.com/en/copilot/how-tos/agents/copilot-coding-agent/customizing-the-development-environment-for-copilot-coding-agent"
         ],
-        "verified_on": "2026-02-13",
+        "verified_on": "2026-02-26",
         "applies_to": {
           "tool": "github-copilot"
         },

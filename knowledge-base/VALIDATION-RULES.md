@@ -375,7 +375,7 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Requirement**: Skills in `.github/skills/` SHOULD NOT use frontmatter fields unsupported by GitHub Copilot
 **Detection**: SKILL.md path contains `.github/skills/` AND frontmatter has unsupported fields
 **Fix**: [AUTO-FIX, safe] Remove unsupported field
-**Source**: docs.github.com/en/copilot/customizing-copilot
+**Source**: docs.github.com/en/copilot/reference/custom-instructions-support
 
 <a id="cx-sk-001"></a>
 ### CX-SK-001 [MEDIUM] Codex Skill Uses Unsupported Field
@@ -1079,42 +1079,42 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Requirement**: Copilot instruction files MUST have non-empty content
 **Detection**: `content.trim().is_empty()` after stripping frontmatter
 **Fix**: Add meaningful instructions
-**Source**: docs.github.com/en/copilot/customizing-copilot
+**Source**: docs.github.com/en/copilot/how-tos/custom-instructions/adding-repository-custom-instructions-for-github-copilot
 
 <a id="cop-002"></a>
 ### COP-002 [HIGH] Invalid Frontmatter in Scoped Instructions
 **Requirement**: Scoped instruction files (.github/instructions/*.instructions.md) MUST have valid YAML frontmatter with `applyTo` field
 **Detection**: Parse YAML between `---` markers, check for `applyTo` key
 **Fix**: Auto-fix (unsafe) -- insert template frontmatter with applyTo field (missing frontmatter only)
-**Source**: docs.github.com/en/copilot/customizing-copilot
+**Source**: docs.github.com/en/copilot/how-tos/custom-instructions/adding-repository-custom-instructions-for-github-copilot
 
 <a id="cop-003"></a>
 ### COP-003 [HIGH] Invalid Glob Pattern in applyTo
 **Requirement**: `applyTo` field MUST contain valid glob patterns
 **Detection**: Attempt to parse as glob pattern
 **Fix**: Correct the glob syntax
-**Source**: docs.github.com/en/copilot/customizing-copilot
+**Source**: docs.github.com/en/copilot/how-tos/custom-instructions/adding-repository-custom-instructions-for-github-copilot
 
 <a id="cop-004"></a>
 ### COP-004 [MEDIUM] Unknown Frontmatter Keys
 **Requirement**: Scoped instruction frontmatter SHOULD only contain known keys (`applyTo`, `excludeAgent`)
 **Detection**: Check for keys other than `applyTo` and `excludeAgent` in frontmatter
 **Fix**: Remove unknown keys
-**Source**: docs.github.com/en/copilot/customizing-copilot
+**Source**: docs.github.com/en/copilot/how-tos/custom-instructions/adding-repository-custom-instructions-for-github-copilot
 
 <a id="cop-005"></a>
 ### COP-005 [HIGH] Invalid excludeAgent Value
 **Requirement**: The `excludeAgent` frontmatter field in scoped instruction files MUST be either `"code-review"` or `"coding-agent"`
 **Detection**: Parse frontmatter, validate `excludeAgent` value against allowed set
 **Fix**: Auto-fix (unsafe) -- replace with closest valid excludeAgent value
-**Source**: docs.github.com/en/copilot/customizing-copilot
+**Source**: docs.github.com/en/copilot/how-tos/custom-instructions/adding-repository-custom-instructions-for-github-copilot
 
 <a id="cop-006"></a>
 ### COP-006 [MEDIUM] File Length Limit
 **Requirement**: Global instruction files (`.github/copilot-instructions.md`) SHOULD not exceed ~4000 characters
 **Detection**: Check `content.chars().count() > 4000`
 **Fix**: Reduce content or split into scoped instruction files
-**Source**: docs.github.com/en/copilot/customizing-copilot
+**Source**: docs.github.com/en/copilot/how-tos/custom-instructions/adding-repository-custom-instructions-for-github-copilot
 
 <a id="cop-007"></a>
 ### COP-007 [HIGH] Custom Agent Missing Description
@@ -1124,10 +1124,10 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Source**: docs.github.com/en/copilot/reference/custom-agents-configuration
 
 <a id="cop-008"></a>
-### COP-008 [MEDIUM] Custom Agent Unknown Frontmatter Field
-**Requirement**: Custom agent frontmatter SHOULD only use supported keys
-**Detection**: Parse frontmatter and detect unknown top-level keys
-**Fix**: [AUTO-FIX] Remove unsupported keys
+### COP-008 [MEDIUM] Custom Agent Unknown or Invalid Frontmatter Field
+**Requirement**: Custom agent frontmatter SHOULD only use supported keys and supported value types
+**Detection**: Parse frontmatter and detect unknown top-level keys plus invalid value types for typed fields (`disable-model-invocation`, `user-invocable`, `metadata`)
+**Fix**: [AUTO-FIX] Remove unsupported keys (typed value violations are warning-only and not auto-fixed)
 **Source**: docs.github.com/en/copilot/reference/custom-agents-configuration
 
 <a id="cop-009"></a>
@@ -1138,11 +1138,11 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Source**: docs.github.com/en/copilot/reference/custom-agents-configuration
 
 <a id="cop-010"></a>
-### COP-010 [MEDIUM] Custom Agent Uses Deprecated infer Field
-**Requirement**: Custom agent files SHOULD NOT use deprecated `infer` frontmatter
-**Detection**: Detect `infer` key in custom agent frontmatter
-**Fix**: [AUTO-FIX] Remove `infer` and use user-invokable custom agents
-**Source**: github.com/avifenesh/agnix/issues/400
+### COP-010 [MEDIUM] Custom Agent infer Field Must Be Boolean
+**Requirement**: Custom agent `infer` field MUST be a boolean when present
+**Detection**: Parse custom agent frontmatter and validate that `infer` is boolean
+**Fix**: Set `infer` to either `true` or `false`
+**Source**: docs.github.com/en/copilot/reference/custom-agents-configuration
 
 <a id="cop-011"></a>
 ### COP-011 [HIGH] Custom Agent Prompt Body Exceeds Length Limit
@@ -1184,14 +1184,14 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Requirement**: `.github/hooks/hooks.json` MUST use version `1`, valid event names, `type: "command"`, and valid command structure
 **Detection**: Parse JSON and validate version, events, required hook `type`, and command object shape
 **Fix**: Correct hooks schema structure
-**Source**: docs.github.com/en/copilot/reference/hooks-configuration
+**Source**: docs.github.com/en/copilot/concepts/agents/coding-agent/about-hooks
 
 <a id="cop-018"></a>
 ### COP-018 [HIGH] Copilot Setup Steps Missing or Invalid copilot-setup-steps Job
 **Requirement**: `copilot-setup-steps.yml` MUST define `jobs.copilot-setup-steps` with an Ubuntu runner and non-empty `steps`
 **Detection**: Parse workflow YAML and verify `jobs.copilot-setup-steps` exists, `runs-on` targets Ubuntu (or expression), and `steps` is non-empty
 **Fix**: Add or correct `copilot-setup-steps` job in the workflow
-**Source**: docs.github.com/copilot/how-tos/agents/copilot-coding-agent/customizing-the-development-environment-for-copilot-coding-agent
+**Source**: docs.github.com/en/copilot/how-tos/agents/copilot-coding-agent/customizing-the-development-environment-for-copilot-coding-agent
 
 ---
 
@@ -1977,7 +1977,6 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | MCP-021 | Replace 0.0.0.0 with localhost in URL | unsafe |
 | COP-008 | Delete unknown agent frontmatter key | safe |
 | COP-009 | Replace invalid agent target | unsafe |
-| COP-010 | Delete deprecated 'infer' field | safe |
 | COP-012 | Delete unsupported GitHub.com agent field | safe |
 | COP-014 | Delete unknown prompt frontmatter key | safe |
 | COP-015 | Replace invalid prompt type | unsafe |
@@ -2000,7 +1999,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Claude Memory | 12 | 8 | 4 | 0 | 3 |
 | AGENTS.md | 6 | 1 | 5 | 0 | 1 |
 | Claude Plugins | 10 | 8 | 2 | 0 | 3 |
-| GitHub Copilot | 17 | 11 | 6 | 0 | 9 |
+| GitHub Copilot | 17 | 11 | 6 | 0 | 8 |
 | Cursor | 16 | 9 | 7 | 0 | 6 |
 | Cline | 4 | 3 | 1 | 0 | 2 |
 | OpenCode | 8 | 4 | 3 | 1 | 2 |
@@ -2059,4 +2058,4 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
 **Certainty**: 135 HIGH, 87 MEDIUM, 8 LOW
-**Auto-Fixable**: 97 rules (42%)
+**Auto-Fixable**: 96 rules (42%)

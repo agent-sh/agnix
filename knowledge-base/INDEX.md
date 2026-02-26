@@ -95,7 +95,7 @@ knowledge-base/
 | Claude Memory | 12 | 8 | 4 | 0 | 3 |
 | AGENTS.md | 6 | 1 | 5 | 0 | 1 |
 | Claude Plugins | 10 | 8 | 2 | 0 | 3 |
-| GitHub Copilot | 17 | 11 | 6 | 0 | 9 |
+| GitHub Copilot | 17 | 11 | 6 | 0 | 8 |
 | MCP | 24 | 19 | 5 | 0 | 7 |
 | XML | 3 | 3 | 0 | 0 | 3 |
 | References | 4 | 2 | 2 | 0 | 1 |
