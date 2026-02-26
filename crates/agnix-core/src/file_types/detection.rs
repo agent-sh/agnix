@@ -344,8 +344,10 @@ pub fn detect_file_type(path: &Path) -> FileType {
         }
         // Roo Code rules (.roo/rules/*.md)
         name if name.ends_with(".md") && is_under_roo_rules(path) => FileType::RooRules,
-        // Cline rules folder (.clinerules/*.md)
-        name if name.ends_with(".md") && parent == Some(".clinerules") => {
+        // Cline rules folder (.clinerules/*.md, .clinerules/*.txt)
+        name if (name.ends_with(".md") || name.ends_with(".txt"))
+            && parent == Some(".clinerules") =>
+        {
             FileType::ClineRulesFolder
         }
         // Windsurf rules (.windsurf/rules/**/*.md)

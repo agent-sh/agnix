@@ -1,9 +1,10 @@
-//! Cline rules validation rules (CLN-001 to CLN-003)
+//! Cline rules validation rules (CLN-001 to CLN-004)
 //!
 //! Validates:
 //! - CLN-001: Empty clinerules file (HIGH) - files must have content
 //! - CLN-002: Invalid paths glob in clinerules (HIGH) - glob patterns must be valid
 //! - CLN-003: Unknown frontmatter key in clinerules (MEDIUM) - only `paths` is recognized
+//! - CLN-004: Scalar paths in clinerules (HIGH) - must be array, not scalar
 
 use crate::{
     FileType,
@@ -61,7 +62,7 @@ impl Validator for ClineValidator {
         // CLN-001: Empty clinerules file (ERROR)
         if config.is_rule_enabled("CLN-001") {
             if is_folder {
-                // For folder .md files, check body after frontmatter if present
+                // For folder files (.md/.txt), check body after frontmatter if present
                 if let Some(parsed) = parse_frontmatter(content) {
                     // Only check body emptiness when frontmatter parsed successfully;
                     // parse errors (e.g. missing closing ---) produce empty body by default
@@ -108,7 +109,7 @@ impl Validator for ClineValidator {
             }
         }
 
-        // CLN-002 and CLN-003 only apply to folder .md files (they have frontmatter)
+        // CLN-002 and CLN-003 only apply to folder files (.md/.txt) (they have frontmatter)
         if !is_folder {
             return diagnostics;
         }

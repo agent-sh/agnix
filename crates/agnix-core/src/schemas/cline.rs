@@ -2,7 +2,7 @@
 //!
 //! Provides parsing and validation for:
 //! - `.clinerules` single file (plain text, no frontmatter)
-//! - `.clinerules/*.md` folder files (optional `paths` frontmatter)
+//! - `.clinerules/*.md` and `.clinerules/*.txt` folder files (optional `paths` frontmatter)
 //!
 //! Folder files support YAML frontmatter with a `paths` field
 //! containing glob patterns for scoped rule application.
