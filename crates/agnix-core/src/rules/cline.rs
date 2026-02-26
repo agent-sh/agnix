@@ -109,7 +109,7 @@ impl Validator for ClineValidator {
             }
         }
 
-        // CLN-002 and CLN-003 only apply to folder files (.md/.txt) (they have frontmatter)
+        // CLN-002, CLN-003, and CLN-004 only apply to folder files (.md/.txt) (they have frontmatter)
         if !is_folder {
             return diagnostics;
         }
@@ -611,6 +611,7 @@ unknownKey: value
         let cln_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CLN-001").collect();
         assert_eq!(cln_001.len(), 1);
         assert_eq!(cln_001[0].level, DiagnosticLevel::Error);
+        assert!(cln_001[0].message.contains("empty"));
     }
 
     #[test]
@@ -628,15 +629,24 @@ unknownKey: value
         let cln_002: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CLN-002").collect();
         assert_eq!(cln_002.len(), 1);
         assert_eq!(cln_002[0].level, DiagnosticLevel::Error);
+        assert!(cln_002[0].message.contains("Invalid glob pattern"));
     }
 
     #[test]
     fn test_cln_003_unknown_keys_in_txt() {
-        let content = "---\npaths:\n  - \"**/*.ts\"\nunknownKey: value\n---\n# Instructions\n";
+        let content =
+            "---\npaths:\n  - \"**/*.ts\"\nunknownKey: value\nanotherBadKey: 123\n---\n# Instructions\n";
         let diagnostics = validate_folder_txt(content);
         let cln_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CLN-003").collect();
-        assert_eq!(cln_003.len(), 1);
+        assert_eq!(cln_003.len(), 2);
         assert_eq!(cln_003[0].level, DiagnosticLevel::Warning);
+        assert!(cln_003.iter().any(|d| d.message.contains("unknownKey")));
+        assert!(cln_003.iter().any(|d| d.message.contains("anotherBadKey")));
+        assert!(
+            cln_003.iter().all(|d| d.has_fixes()),
+            "All unknown key diagnostics should include deletion fixes"
+        );
+        assert!(cln_003.iter().all(|d| !d.fixes[0].safe));
     }
 
     #[test]
@@ -646,6 +656,14 @@ unknownKey: value
         let cln_004: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CLN-004").collect();
         assert_eq!(cln_004.len(), 1);
         assert_eq!(cln_004[0].level, DiagnosticLevel::Error);
+        assert!(cln_004[0].message.contains("scalar"));
+        assert!(cln_004[0].has_fixes(), "CLN-004 should have an auto-fix");
+        assert!(cln_004[0].fixes[0].safe, "CLN-004 fix should be safe");
+        assert!(
+            cln_004[0].fixes[0].replacement.contains("- \"**/*.ts\""),
+            "Fix should convert scalar to array format, got: {}",
+            cln_004[0].fixes[0].replacement
+        );
     }
 
     #[test]
@@ -659,11 +677,4 @@ unknownKey: value
         );
     }
 
-    #[test]
-    fn test_txt_file_detection() {
-        assert_eq!(
-            crate::detect_file_type(Path::new(".clinerules/python.txt")),
-            FileType::ClineRulesFolder
-        );
-    }
 }

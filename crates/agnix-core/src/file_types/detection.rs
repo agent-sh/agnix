@@ -852,6 +852,14 @@ mod tests {
             detect_file_type(Path::new(".clinerules/config.json")),
             FileType::ClineRulesFolder
         );
+        assert_ne!(
+            detect_file_type(Path::new(".clinerules/config.yaml")),
+            FileType::ClineRulesFolder
+        );
+        assert_ne!(
+            detect_file_type(Path::new(".clinerules/config.toml")),
+            FileType::ClineRulesFolder
+        );
     }
 
     #[test]
