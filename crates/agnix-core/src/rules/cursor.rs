@@ -669,14 +669,8 @@ fn validate_cursor_environment_file(
         && start.as_str().is_none()
     {
         diagnostics.push(
-            Diagnostic::error(
-                path_buf.clone(),
-                1,
-                0,
-                "CUR-016",
-                t!("rules.cur_016.start"),
-            )
-            .with_suggestion(t!("rules.cur_016.suggestion")),
+            Diagnostic::error(path_buf.clone(), 1, 0, "CUR-016", t!("rules.cur_016.start"))
+                .with_suggestion(t!("rules.cur_016.suggestion")),
         );
     }
 
@@ -748,8 +742,7 @@ fn validate_cursor_environment_file(
                 for (index, terminal) in terminals.iter().enumerate() {
                     if let Some(obj) = terminal.as_object() {
                         let has_name = obj.get("name").and_then(JsonValue::as_str).is_some();
-                        let has_command =
-                            obj.get("command").and_then(JsonValue::as_str).is_some();
+                        let has_command = obj.get("command").and_then(JsonValue::as_str).is_some();
                         if !has_name || !has_command {
                             diagnostics.push(
                                 Diagnostic::error(
@@ -769,10 +762,7 @@ fn validate_cursor_environment_file(
                                 1,
                                 0,
                                 "CUR-016",
-                                t!(
-                                    "rules.cur_016.terminal_not_object",
-                                    index = index + 1
-                                ),
+                                t!("rules.cur_016.terminal_not_object", index = index + 1),
                             )
                             .with_suggestion(t!("rules.cur_016.suggestion")),
                         );
@@ -1593,9 +1583,8 @@ is_background: false
 
     #[test]
     fn test_cur_016_invalid_environment_schema() {
-        let diagnostics = validate_cursor_environment(
-            r#"{"install":42,"terminals":[{"name":"main"}]}"#,
-        );
+        let diagnostics =
+            validate_cursor_environment(r#"{"install":42,"terminals":[{"name":"main"}]}"#);
         assert!(diagnostics.iter().any(|d| d.rule == "CUR-016"));
     }
 
@@ -1627,39 +1616,34 @@ is_background: false
         assert!(
             diagnostics.iter().all(|d| d.rule != "CUR-016"),
             "Missing terminals should not trigger CUR-016, got: {:?}",
-            diagnostics.iter().map(|d| (&d.rule, &d.message)).collect::<Vec<_>>()
+            diagnostics
+                .iter()
+                .map(|d| (&d.rule, &d.message))
+                .collect::<Vec<_>>()
         );
     }
 
     #[test]
     fn test_cur_016_environment_invalid_terminals_type() {
-        let diagnostics = validate_cursor_environment(
-            r#"{"install":"npm ci","terminals":{}}"#,
-        );
+        let diagnostics = validate_cursor_environment(r#"{"install":"npm ci","terminals":{}}"#);
         assert!(diagnostics.iter().any(|d| d.rule == "CUR-016"));
     }
 
     #[test]
     fn test_cur_016_environment_start_must_be_string() {
-        let diagnostics = validate_cursor_environment(
-            r#"{"install":"npm ci","start":42}"#,
-        );
+        let diagnostics = validate_cursor_environment(r#"{"install":"npm ci","start":42}"#);
         assert!(diagnostics.iter().any(|d| d.rule == "CUR-016"));
     }
 
     #[test]
     fn test_cur_016_environment_update_must_be_string() {
-        let diagnostics = validate_cursor_environment(
-            r#"{"install":"npm ci","update":42}"#,
-        );
+        let diagnostics = validate_cursor_environment(r#"{"install":"npm ci","update":42}"#);
         assert!(diagnostics.iter().any(|d| d.rule == "CUR-016"));
     }
 
     #[test]
     fn test_cur_016_environment_build_must_be_object() {
-        let diagnostics = validate_cursor_environment(
-            r#"{"install":"npm ci","build":"invalid"}"#,
-        );
+        let diagnostics = validate_cursor_environment(r#"{"install":"npm ci","build":"invalid"}"#);
         assert!(diagnostics.iter().any(|d| d.rule == "CUR-016"));
     }
 
@@ -1669,7 +1653,10 @@ is_background: false
             r#"{"install":"npm ci","build":{"dockerfile":42,"context":true}}"#,
         );
         let cur_016: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CUR-016").collect();
-        assert!(cur_016.len() >= 2, "Expected errors for both build.dockerfile and build.context");
+        assert!(
+            cur_016.len() >= 2,
+            "Expected errors for both build.dockerfile and build.context"
+        );
     }
 
     #[test]
@@ -1680,7 +1667,10 @@ is_background: false
         assert!(
             diagnostics.iter().all(|d| d.rule != "CUR-016"),
             "Valid build should not trigger CUR-016, got: {:?}",
-            diagnostics.iter().map(|d| (&d.rule, &d.message)).collect::<Vec<_>>()
+            diagnostics
+                .iter()
+                .map(|d| (&d.rule, &d.message))
+                .collect::<Vec<_>>()
         );
     }
 
@@ -1689,7 +1679,9 @@ is_background: false
         let diagnostics = validate_cursor_environment(r#"{"install":null}"#);
         let cur_016: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CUR-016").collect();
         assert!(
-            cur_016.iter().any(|d| d.message.contains("must be a string")),
+            cur_016
+                .iter()
+                .any(|d| d.message.contains("must be a string")),
             "install: null should trigger the install message, got: {:?}",
             cur_016.iter().map(|d| &d.message).collect::<Vec<_>>()
         );
@@ -1697,21 +1689,22 @@ is_background: false
 
     #[test]
     fn test_cur_016_environment_valid_update() {
-        let diagnostics = validate_cursor_environment(
-            r#"{"install":"npm ci","update":"apt-get update"}"#,
-        );
+        let diagnostics =
+            validate_cursor_environment(r#"{"install":"npm ci","update":"apt-get update"}"#);
         assert!(
             diagnostics.iter().all(|d| d.rule != "CUR-016"),
             "Valid update should not trigger CUR-016, got: {:?}",
-            diagnostics.iter().map(|d| (&d.rule, &d.message)).collect::<Vec<_>>()
+            diagnostics
+                .iter()
+                .map(|d| (&d.rule, &d.message))
+                .collect::<Vec<_>>()
         );
     }
 
     #[test]
     fn test_cur_016_environment_terminal_non_object() {
-        let diagnostics = validate_cursor_environment(
-            r#"{"install":"npm ci","terminals":[42,"string"]}"#,
-        );
+        let diagnostics =
+            validate_cursor_environment(r#"{"install":"npm ci","terminals":[42,"string"]}"#);
         let cur_016: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CUR-016").collect();
         assert!(
             cur_016.len() >= 2,
@@ -1722,9 +1715,8 @@ is_background: false
 
     #[test]
     fn test_cur_016_environment_build_dockerfile_invalid() {
-        let diagnostics = validate_cursor_environment(
-            r#"{"install":"npm ci","build":{"dockerfile":42}}"#,
-        );
+        let diagnostics =
+            validate_cursor_environment(r#"{"install":"npm ci","build":{"dockerfile":42}}"#);
         let cur_016: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CUR-016").collect();
         assert_eq!(
             cur_016.len(),
@@ -1736,9 +1728,8 @@ is_background: false
 
     #[test]
     fn test_cur_016_environment_build_context_invalid() {
-        let diagnostics = validate_cursor_environment(
-            r#"{"install":"npm ci","build":{"context":true}}"#,
-        );
+        let diagnostics =
+            validate_cursor_environment(r#"{"install":"npm ci","build":{"context":true}}"#);
         let cur_016: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CUR-016").collect();
         assert_eq!(
             cur_016.len(),
@@ -1752,8 +1743,7 @@ is_background: false
     fn test_cur_016_environment_snapshot_ignored() {
         // Snapshot is a UI concept, not part of the environment.json spec.
         // This regression test ensures we do not validate or reject it.
-        let diagnostics =
-            validate_cursor_environment(r#"{"install":"npm ci","snapshot":42}"#);
+        let diagnostics = validate_cursor_environment(r#"{"install":"npm ci","snapshot":42}"#);
         assert!(
             diagnostics.iter().all(|d| d.rule != "CUR-016"),
             "snapshot field should be silently ignored, got: {:?}",
