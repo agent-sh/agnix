@@ -20,7 +20,7 @@
 | References | @imports | 4 |
 | GitHub Copilot | .github/copilot-instructions.md, .github/instructions/*.instructions.md, .github/agents/*.agent.md, .github/prompts/*.prompt.md, .github/hooks/hooks.json, .github/workflows/copilot-setup-steps.yml | 17 |
 | Cursor Project Rules | .cursor/rules/*.mdc, .cursorrules, .cursor/hooks.json, .cursor/agents/**/*.md, .cursor/environment.json | 16 |
-| Cline | .clinerules, .clinerules/*.md | 4 |
+| Cline | .clinerules, .clinerules/*.md, .clinerules/*.txt | 4 |
 | OpenCode | opencode.json | 8 |
 | Gemini CLI | GEMINI.md, GEMINI.local.md, .gemini/settings.json (hooks), gemini-extension.json (extensions), .geminiignore | 9 |
 | Codex CLI | .codex/config.toml | 6 |

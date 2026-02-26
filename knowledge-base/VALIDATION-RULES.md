@@ -1322,21 +1322,21 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 
 <a id="cln-002"></a>
 ### CLN-002 [HIGH] Invalid Paths Glob in Cline Rules
-**Requirement**: `paths` field in `.clinerules/*.md` frontmatter MUST contain valid glob patterns
+**Requirement**: `paths` field in `.clinerules/*.md` and `.clinerules/*.txt` frontmatter MUST contain valid glob patterns
 **Detection**: Parse YAML frontmatter, extract `paths` field, validate each glob pattern
 **Fix**: No auto-fix (glob patterns must be manually corrected)
 **Source**: docs.cline.bot/improving-your-workflow/cline-rules
 
 <a id="cln-003"></a>
 ### CLN-003 [MEDIUM] Unknown Frontmatter Key in Cline Rules
-**Requirement**: Frontmatter in `.clinerules/*.md` files SHOULD only use documented keys (`paths`)
+**Requirement**: Frontmatter in `.clinerules/*.md` and `.clinerules/*.txt` files SHOULD only use documented keys (`paths`)
 **Detection**: Parse YAML frontmatter, check all keys against allowlist
 **Fix**: [AUTO-FIX unsafe] Remove unknown frontmatter keys
 **Source**: docs.cline.bot/improving-your-workflow/cline-rules
 
 <a id="cln-004"></a>
 ### CLN-004 [HIGH] Scalar Paths in Cline Rules
-**Requirement**: `paths` field in `.clinerules/*.md` frontmatter MUST be a YAML array, not a scalar string
+**Requirement**: `paths` field in `.clinerules/*.md` and `.clinerules/*.txt` frontmatter MUST be a YAML array, not a scalar string
 **Detection**: Parse YAML frontmatter, check if `paths` is a scalar string (Cline silently ignores scalar values)
 **Fix**: [AUTO-FIX safe] Convert scalar paths to array format
 **Source**: docs.cline.bot/features/cline-rules

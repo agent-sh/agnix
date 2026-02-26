@@ -149,6 +149,8 @@ pub fn get_supported_file_types() -> JsValue {
         (".github/copilot-instructions.md", "Copilot"),
         ("GEMINI.md", "GeminiMd"),
         (".clinerules", "ClineRules"),
+        (".clinerules/example.md", "ClineRulesFolder"),
+        (".clinerules/example.txt", "ClineRulesFolder"),
         ("CODEX.md", "Codex"),
         (".opencode/instructions.md", "OpenCode"),
         ("mcp.json", "Mcp"),
