@@ -1,5 +1,8 @@
 {
-  "snapshot": "ubuntu-24.04",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
   "install": "npm ci",
   "start": "npm run dev",
   "terminals": [
