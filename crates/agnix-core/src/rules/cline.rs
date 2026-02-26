@@ -634,8 +634,7 @@ unknownKey: value
 
     #[test]
     fn test_cln_003_unknown_keys_in_txt() {
-        let content =
-            "---\npaths:\n  - \"**/*.ts\"\nunknownKey: value\nanotherBadKey: 123\n---\n# Instructions\n";
+        let content = "---\npaths:\n  - \"**/*.ts\"\nunknownKey: value\nanotherBadKey: 123\n---\n# Instructions\n";
         let diagnostics = validate_folder_txt(content);
         let cln_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CLN-003").collect();
         assert_eq!(cln_003.len(), 2);
@@ -668,7 +667,8 @@ unknownKey: value
 
     #[test]
     fn test_valid_txt_no_diagnostics() {
-        let content = "---\npaths:\n  - \"**/*.py\"\n---\n# Python Guidelines\n\nAlways use type hints.\n";
+        let content =
+            "---\npaths:\n  - \"**/*.py\"\n---\n# Python Guidelines\n\nAlways use type hints.\n";
         let diagnostics = validate_folder_txt(content);
         assert!(
             diagnostics.is_empty(),
@@ -676,5 +676,4 @@ unknownKey: value
             diagnostics
         );
     }
-
 }
