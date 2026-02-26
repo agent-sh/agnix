@@ -485,6 +485,13 @@ rules:
   cdx_003:
     message: "AGENTS.override.md no deberia estar en el control de versiones"
     suggestion: "Agrega AGENTS.override.md a .gitignore (contiene configuraciones especificas del usuario)"
+  cdx_006:
+    type_error: "El campo 'project_doc_fallback_filenames' debe ser un array de cadenas de texto"
+    non_string: "El campo 'project_doc_fallback_filenames' contiene una entrada que no es cadena en el indice %{index}"
+    empty: "El campo 'project_doc_fallback_filenames' contiene un nombre de archivo vacio en el indice %{index}"
+    duplicate: "El campo 'project_doc_fallback_filenames' contiene un nombre de archivo duplicado '%{value}'"
+    suspicious: "El campo 'project_doc_fallback_filenames' contiene una entrada con ruta '%{value}'; usa solo nombres de archivo"
+    suggestion: "Usa un array unico de nombres de archivo no vacios como ['AGENTS.md', 'README.md']"
 
   # --- Windsurf (windsurf.rs) ---
   ws_001:

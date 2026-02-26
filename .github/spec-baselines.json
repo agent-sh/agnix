@@ -55,7 +55,22 @@
       "cursor-rules": {
         "url": "https://cursor.com/docs/context/rules",
         "hash": "24529507938b37d3e3815e86b8c1c87cbaf78230c899854f0d74b2d5356c676a",
-        "rules": ["CUR-001", "CUR-002", "CUR-003", "CUR-004", "CUR-005", "CUR-006"]
+        "rules": ["CUR-001", "CUR-002", "CUR-003", "CUR-004", "CUR-005", "CUR-006", "CUR-007", "CUR-008", "CUR-009"]
+      },
+      "cursor-hooks": {
+        "url": "https://cursor.com/docs/agent/hooks",
+        "hash": "4f55df64b01fe7d2c55a9d544eafdda070e35d7f84045c021f4a5ea9fcdd05d8",
+        "rules": ["CUR-010", "CUR-011", "CUR-012", "CUR-013"]
+      },
+      "cursor-subagents": {
+        "url": "https://cursor.com/docs/context/subagents",
+        "hash": "f849221f0342190122e8411587e47f129c915902077da6995753f26c8a03cc9a",
+        "rules": ["CUR-014", "CUR-015"]
+      },
+      "cursor-environment": {
+        "url": "https://cursor.com/docs/cloud-agent/setup",
+        "hash": "326a48176a4541dc5e1d94d7f1ef94c50a007dc4798b85e97e8ada5ec75e8a9e",
+        "rules": ["CUR-016"]
       },
       "github-copilot": {
         "url": "https://docs.github.com/en/copilot/customizing-copilot",

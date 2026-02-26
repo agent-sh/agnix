@@ -2266,6 +2266,14 @@ fn test_validate_copilot_fixtures() {
         "Valid custom agent file should have no COP errors, got: {:?}",
         cop_errors
     );
+    assert!(
+        diagnostics.iter().all(|d| d.rule != "COP-010"),
+        "Valid custom agent should not trigger COP-010 warnings, got: {:?}",
+        diagnostics
+            .iter()
+            .filter(|d| d.rule == "COP-010")
+            .collect::<Vec<_>>()
+    );
 
     // Validate reusable prompt
     let prompt_path = copilot_dir.join(".github/prompts/refactor.prompt.md");
@@ -2374,12 +2382,19 @@ fn test_validate_copilot_invalid_fixtures() {
         "Expected COP-009 from invalid-target.agent.md fixture"
     );
 
-    // COP-010: Deprecated infer field
-    let deprecated_infer = copilot_invalid_dir.join(".github/agents/deprecated-infer.agent.md");
-    let diagnostics = expect_success(validate_file(&deprecated_infer, &config).unwrap());
+    // COP-010: Invalid infer type
+    let invalid_infer = copilot_invalid_dir.join(".github/agents/invalid-infer-type.agent.md");
+    let diagnostics = expect_success(validate_file(&invalid_infer, &config).unwrap());
     assert!(
         diagnostics.iter().any(|d| d.rule == "COP-010"),
-        "Expected COP-010 from deprecated-infer.agent.md fixture"
+        "Expected COP-010 from invalid-infer-type.agent.md fixture"
+    );
+
+    let invalid_infer_null = copilot_invalid_dir.join(".github/agents/invalid-infer-null.agent.md");
+    let diagnostics = expect_success(validate_file(&invalid_infer_null, &config).unwrap());
+    assert!(
+        diagnostics.iter().any(|d| d.rule == "COP-010"),
+        "Expected COP-010 from invalid-infer-null.agent.md fixture"
     );
 
     // COP-012: Unsupported GitHub.com fields

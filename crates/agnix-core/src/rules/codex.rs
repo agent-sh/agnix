@@ -1,4 +1,4 @@
-//! Codex CLI configuration validation rules (CDX-000 to CDX-005)
+//! Codex CLI configuration validation rules (CDX-000 to CDX-006)
 //!
 //! Validates:
 //! - CDX-000: TOML Parse Error (HIGH) - invalid TOML syntax in config.toml
@@ -7,6 +7,7 @@
 //! - CDX-003: AGENTS.override.md in version control (MEDIUM) - should be in .gitignore
 //! - CDX-004: Unknown config key (MEDIUM) - unrecognized key in .codex/config.toml
 //! - CDX-005: project_doc_max_bytes exceeds limit (HIGH) - must be <= 65536
+//! - CDX-006: Invalid project_doc_fallback_filenames (HIGH) - must be unique non-empty filenames
 
 use crate::{
     config::LintConfig,
@@ -15,7 +16,7 @@ use crate::{
     schemas::codex::{VALID_APPROVAL_MODES, VALID_FULL_AUTO_ERROR_MODES, parse_codex_toml},
 };
 use rust_i18n::t;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
 use crate::rules::find_closest_value;
@@ -32,7 +33,7 @@ fn find_toml_string_value_span(
 }
 
 const RULE_IDS: &[&str] = &[
-    "CDX-000", "CDX-001", "CDX-002", "CDX-003", "CDX-004", "CDX-005",
+    "CDX-000", "CDX-001", "CDX-002", "CDX-003", "CDX-004", "CDX-005", "CDX-006",
 ];
 
 pub struct CodexValidator;
@@ -77,13 +78,19 @@ impl Validator for CodexValidator {
             return diagnostics;
         }
 
-        // For CodexConfig files, check CDX-001 through CDX-005
+        // For CodexConfig files, check CDX-001 through CDX-006
         // Skip TOML parsing entirely when all TOML-dependent rules are disabled
         let cdx_001_enabled = config.is_rule_enabled("CDX-001");
         let cdx_002_enabled = config.is_rule_enabled("CDX-002");
         let cdx_004_enabled = config.is_rule_enabled("CDX-004");
         let cdx_005_enabled = config.is_rule_enabled("CDX-005");
-        if !cdx_001_enabled && !cdx_002_enabled && !cdx_004_enabled && !cdx_005_enabled {
+        let cdx_006_enabled = config.is_rule_enabled("CDX-006");
+        if !cdx_001_enabled
+            && !cdx_002_enabled
+            && !cdx_004_enabled
+            && !cdx_005_enabled
+            && !cdx_006_enabled
+        {
             return diagnostics;
         }
 
@@ -281,8 +288,118 @@ impl Validator for CodexValidator {
             }
         }
 
+        // CDX-006: project_doc_fallback_filenames validation
+        if cdx_006_enabled {
+            let line = key_lines
+                .get("project_doc_fallback_filenames")
+                .copied()
+                .unwrap_or(1);
+
+            if parsed.project_doc_fallback_filenames_wrong_type {
+                diagnostics.push(
+                    Diagnostic::error(
+                        path.to_path_buf(),
+                        line,
+                        0,
+                        "CDX-006",
+                        t!("rules.cdx_006.type_error"),
+                    )
+                    .with_suggestion(t!("rules.cdx_006.suggestion")),
+                );
+            } else {
+                for idx in &parsed.project_doc_fallback_filename_non_string_indices {
+                    diagnostics.push(
+                        Diagnostic::error(
+                            path.to_path_buf(),
+                            line,
+                            0,
+                            "CDX-006",
+                            t!("rules.cdx_006.non_string", index = &(idx + 1).to_string()),
+                        )
+                        .with_suggestion(t!("rules.cdx_006.suggestion")),
+                    );
+                }
+
+                for idx in &parsed.project_doc_fallback_filename_empty_indices {
+                    diagnostics.push(
+                        Diagnostic::error(
+                            path.to_path_buf(),
+                            line,
+                            0,
+                            "CDX-006",
+                            t!("rules.cdx_006.empty", index = &(idx + 1).to_string()),
+                        )
+                        .with_suggestion(t!("rules.cdx_006.suggestion")),
+                    );
+                }
+
+                if let Some(filenames) = &schema.project_doc_fallback_filenames {
+                    let mut seen: HashSet<String> = HashSet::new();
+                    let mut duplicates: Vec<String> = Vec::new();
+                    for filename in filenames {
+                        let normalized = filename.trim();
+                        if normalized.is_empty() {
+                            continue;
+                        }
+                        if !seen.insert(normalized.to_string()) {
+                            duplicates.push(normalized.to_string());
+                        }
+                    }
+
+                    duplicates.sort();
+                    duplicates.dedup();
+                    for filename in duplicates {
+                        diagnostics.push(
+                            Diagnostic::warning(
+                                path.to_path_buf(),
+                                line,
+                                0,
+                                "CDX-006",
+                                t!("rules.cdx_006.duplicate", value = filename.as_str()),
+                            )
+                            .with_suggestion(t!("rules.cdx_006.suggestion")),
+                        );
+                    }
+
+                    let mut suspicious: Vec<String> = filenames
+                        .iter()
+                        .map(|name| name.trim())
+                        .filter(|name| is_suspicious_fallback_filename(name))
+                        .map(|name| name.to_string())
+                        .collect();
+                    suspicious.sort();
+                    suspicious.dedup();
+
+                    for filename in suspicious {
+                        diagnostics.push(
+                            Diagnostic::warning(
+                                path.to_path_buf(),
+                                line,
+                                0,
+                                "CDX-006",
+                                t!("rules.cdx_006.suspicious", value = filename.as_str()),
+                            )
+                            .with_suggestion(t!("rules.cdx_006.suggestion")),
+                        );
+                    }
+                }
+            }
+        }
+
         diagnostics
     }
+}
+
+fn is_suspicious_fallback_filename(filename: &str) -> bool {
+    filename.contains('/') || filename.contains('\\') || is_windows_absolute_path(filename)
+}
+
+fn is_windows_absolute_path(value: &str) -> bool {
+    let bytes = value.as_bytes();
+    bytes.len() >= 3
+        && bytes[0].is_ascii_alphabetic()
+        && bytes[1] == b':'
+        && (bytes[2] == b'\\' || bytes[2] == b'/')
 }
 
 /// Build a map of TOML key names to their 1-indexed line numbers in a single pass.
@@ -715,7 +832,9 @@ mod tests {
 
     #[test]
     fn test_all_cdx_rules_can_be_disabled() {
-        let rules = ["CDX-001", "CDX-002", "CDX-003", "CDX-004", "CDX-005"];
+        let rules = [
+            "CDX-001", "CDX-002", "CDX-003", "CDX-004", "CDX-005", "CDX-006",
+        ];
 
         for rule in rules {
             let mut config = LintConfig::default();
@@ -727,6 +846,10 @@ mod tests {
                 "CDX-003" => ("# Override", "AGENTS.override.md"),
                 "CDX-004" => ("totally_unknown_key = true", ".codex/config.toml"),
                 "CDX-005" => ("project_doc_max_bytes = 999999", ".codex/config.toml"),
+                "CDX-006" => (
+                    "project_doc_fallback_filenames = [\"AGENTS.md\", \"AGENTS.md\"]",
+                    ".codex/config.toml",
+                ),
                 _ => unreachable!(),
             };
 
@@ -833,6 +956,7 @@ approvalMode = "suggest"
 fullAutoErrorMode = "ask-user"
 notify = true
 project_doc_max_bytes = 32768
+project_doc_fallback_filenames = ["AGENTS.md", "README.md"]
 "#;
         let diagnostics = validate_config(content);
         let cdx_004: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-004").collect();
@@ -986,6 +1110,89 @@ name = "test"
         let cdx_005: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-005").collect();
         assert_eq!(cdx_004.len(), 1, "CDX-004 should fire for unknown_key");
         assert_eq!(cdx_005.len(), 1, "CDX-005 should fire for exceeding limit");
+    }
+
+    // ===== CDX-006: project_doc_fallback_filenames validation =====
+
+    #[test]
+    fn test_cdx_006_valid_fallback_filenames() {
+        let diagnostics =
+            validate_config("project_doc_fallback_filenames = [\"AGENTS.md\", \"README.md\"]");
+        let cdx_006: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-006").collect();
+        assert!(
+            cdx_006.is_empty(),
+            "Valid fallback filenames should not trigger CDX-006"
+        );
+    }
+
+    #[test]
+    fn test_cdx_006_wrong_type() {
+        let diagnostics = validate_config("project_doc_fallback_filenames = \"AGENTS.md\"");
+        let cdx_006: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-006").collect();
+        assert_eq!(cdx_006.len(), 1);
+        assert_eq!(cdx_006[0].level, DiagnosticLevel::Error);
+        assert!(cdx_006[0].message.contains("must be an array"));
+    }
+
+    #[test]
+    fn test_cdx_006_non_string_entries() {
+        let diagnostics = validate_config("project_doc_fallback_filenames = [\"AGENTS.md\", 42]");
+        let cdx_006: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-006").collect();
+        assert_eq!(cdx_006.len(), 1);
+        assert_eq!(cdx_006[0].level, DiagnosticLevel::Error);
+        assert!(cdx_006[0].message.contains("index 2"));
+    }
+
+    #[test]
+    fn test_cdx_006_empty_entry() {
+        let diagnostics = validate_config("project_doc_fallback_filenames = [\"\", \"AGENTS.md\"]");
+        let cdx_006: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-006").collect();
+        assert_eq!(cdx_006.len(), 1);
+        assert_eq!(cdx_006[0].level, DiagnosticLevel::Error);
+        assert!(cdx_006[0].message.contains("index 1"));
+    }
+
+    #[test]
+    fn test_cdx_006_duplicate_entry_warns() {
+        let diagnostics = validate_config(
+            "project_doc_fallback_filenames = [\"AGENTS.md\", \"README.md\", \"AGENTS.md\"]",
+        );
+        let cdx_006: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-006").collect();
+        assert_eq!(cdx_006.len(), 1);
+        assert_eq!(cdx_006[0].level, DiagnosticLevel::Warning);
+        assert!(cdx_006[0].message.contains("duplicate"));
+    }
+
+    #[test]
+    fn test_cdx_006_suspicious_path_warns() {
+        let diagnostics = validate_config(
+            "project_doc_fallback_filenames = [\"AGENTS.md\", \"docs/AGENTS.md\", \"C:/tmp/a.md\"]",
+        );
+        let cdx_006: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-006").collect();
+        assert_eq!(cdx_006.len(), 2);
+        assert!(cdx_006.iter().all(|d| d.level == DiagnosticLevel::Warning));
+        assert!(cdx_006.iter().any(|d| d.message.contains("docs/AGENTS.md")));
+        assert!(cdx_006.iter().any(|d| d.message.contains("C:/tmp/a.md")));
+    }
+
+    #[test]
+    fn test_cdx_006_line_number() {
+        let content = "model = \"o4-mini\"\nproject_doc_fallback_filenames = [\"\"]";
+        let diagnostics = validate_config(content);
+        let cdx_006: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-006").collect();
+        assert_eq!(cdx_006.len(), 1);
+        assert_eq!(cdx_006[0].line, 2);
+    }
+
+    #[test]
+    fn test_cdx_006_has_suggestion() {
+        let diagnostics = validate_config("project_doc_fallback_filenames = [\"\"]");
+        let cdx_006: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-006").collect();
+        assert_eq!(cdx_006.len(), 1);
+        assert!(
+            cdx_006[0].suggestion.is_some(),
+            "CDX-006 should have a suggestion"
+        );
     }
 
     // ===== Fixture Integration =====

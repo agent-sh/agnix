@@ -1,5 +1,5 @@
 ---
 description: Review pull requests
-infer: true
+infer: null
 ---
 Review pull requests.

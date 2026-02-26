@@ -485,6 +485,13 @@ rules:
   cdx_003:
     message: "AGENTS.override.md 不应纳入版本控制"
     suggestion: "将 AGENTS.override.md 添加到 .gitignore（它包含用户特定的覆盖配置）"
+  cdx_006:
+    type_error: "字段 'project_doc_fallback_filenames' 必须是字符串数组"
+    non_string: "字段 'project_doc_fallback_filenames' 在索引 %{index} 处包含非字符串条目"
+    empty: "字段 'project_doc_fallback_filenames' 在索引 %{index} 处包含空文件名"
+    duplicate: "字段 'project_doc_fallback_filenames' 包含重复文件名 '%{value}'"
+    suspicious: "字段 'project_doc_fallback_filenames' 包含路径样式条目 '%{value}'；请仅使用文件名"
+    suggestion: "使用唯一且非空的文件名数组，例如 ['AGENTS.md', 'README.md']"
 
   # --- Windsurf (windsurf.rs) ---
   ws_001:

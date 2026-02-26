@@ -2,7 +2,7 @@
 
 > Consolidated from 320KB knowledge base, 75+ sources, 5 research agents
 
-**Last Updated**: 2026-02-14
+**Last Updated**: 2026-02-26
 **Coverage**: Agent Skills • MCP • Claude Code • Cursor • Multi-Platform • Prompt Engineering
 
 ---
@@ -375,7 +375,7 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Requirement**: Skills in `.github/skills/` SHOULD NOT use frontmatter fields unsupported by GitHub Copilot
 **Detection**: SKILL.md path contains `.github/skills/` AND frontmatter has unsupported fields
 **Fix**: [AUTO-FIX, safe] Remove unsupported field
-**Source**: docs.github.com/en/copilot/customizing-copilot
+**Source**: docs.github.com/en/copilot/reference/custom-instructions-support
 
 <a id="cx-sk-001"></a>
 ### CX-SK-001 [MEDIUM] Codex Skill Uses Unsupported Field
@@ -1079,42 +1079,42 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Requirement**: Copilot instruction files MUST have non-empty content
 **Detection**: `content.trim().is_empty()` after stripping frontmatter
 **Fix**: Add meaningful instructions
-**Source**: docs.github.com/en/copilot/customizing-copilot
+**Source**: docs.github.com/en/copilot/how-tos/custom-instructions/adding-repository-custom-instructions-for-github-copilot
 
 <a id="cop-002"></a>
 ### COP-002 [HIGH] Invalid Frontmatter in Scoped Instructions
 **Requirement**: Scoped instruction files (.github/instructions/*.instructions.md) MUST have valid YAML frontmatter with `applyTo` field
 **Detection**: Parse YAML between `---` markers, check for `applyTo` key
 **Fix**: Auto-fix (unsafe) -- insert template frontmatter with applyTo field (missing frontmatter only)
-**Source**: docs.github.com/en/copilot/customizing-copilot
+**Source**: docs.github.com/en/copilot/how-tos/custom-instructions/adding-repository-custom-instructions-for-github-copilot
 
 <a id="cop-003"></a>
 ### COP-003 [HIGH] Invalid Glob Pattern in applyTo
 **Requirement**: `applyTo` field MUST contain valid glob patterns
 **Detection**: Attempt to parse as glob pattern
 **Fix**: Correct the glob syntax
-**Source**: docs.github.com/en/copilot/customizing-copilot
+**Source**: docs.github.com/en/copilot/how-tos/custom-instructions/adding-repository-custom-instructions-for-github-copilot
 
 <a id="cop-004"></a>
 ### COP-004 [MEDIUM] Unknown Frontmatter Keys
 **Requirement**: Scoped instruction frontmatter SHOULD only contain known keys (`applyTo`, `excludeAgent`)
 **Detection**: Check for keys other than `applyTo` and `excludeAgent` in frontmatter
 **Fix**: Remove unknown keys
-**Source**: docs.github.com/en/copilot/customizing-copilot
+**Source**: docs.github.com/en/copilot/how-tos/custom-instructions/adding-repository-custom-instructions-for-github-copilot
 
 <a id="cop-005"></a>
 ### COP-005 [HIGH] Invalid excludeAgent Value
 **Requirement**: The `excludeAgent` frontmatter field in scoped instruction files MUST be either `"code-review"` or `"coding-agent"`
 **Detection**: Parse frontmatter, validate `excludeAgent` value against allowed set
 **Fix**: Auto-fix (unsafe) -- replace with closest valid excludeAgent value
-**Source**: docs.github.com/en/copilot/customizing-copilot
+**Source**: docs.github.com/en/copilot/how-tos/custom-instructions/adding-repository-custom-instructions-for-github-copilot
 
 <a id="cop-006"></a>
 ### COP-006 [MEDIUM] File Length Limit
 **Requirement**: Global instruction files (`.github/copilot-instructions.md`) SHOULD not exceed ~4000 characters
 **Detection**: Check `content.chars().count() > 4000`
 **Fix**: Reduce content or split into scoped instruction files
-**Source**: docs.github.com/en/copilot/customizing-copilot
+**Source**: docs.github.com/en/copilot/how-tos/custom-instructions/adding-repository-custom-instructions-for-github-copilot
 
 <a id="cop-007"></a>
 ### COP-007 [HIGH] Custom Agent Missing Description
@@ -1124,10 +1124,10 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Source**: docs.github.com/en/copilot/reference/custom-agents-configuration
 
 <a id="cop-008"></a>
-### COP-008 [MEDIUM] Custom Agent Unknown Frontmatter Field
-**Requirement**: Custom agent frontmatter SHOULD only use supported keys
-**Detection**: Parse frontmatter and detect unknown top-level keys
-**Fix**: [AUTO-FIX] Remove unsupported keys
+### COP-008 [MEDIUM] Custom Agent Unknown or Invalid Frontmatter Field
+**Requirement**: Custom agent frontmatter SHOULD only use supported keys and supported value types
+**Detection**: Parse frontmatter and detect unknown top-level keys plus invalid value types for typed fields (`disable-model-invocation`, `user-invocable`, `metadata`)
+**Fix**: [AUTO-FIX] Remove unsupported keys (typed value violations are warning-only and not auto-fixed)
 **Source**: docs.github.com/en/copilot/reference/custom-agents-configuration
 
 <a id="cop-009"></a>
@@ -1138,11 +1138,11 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Source**: docs.github.com/en/copilot/reference/custom-agents-configuration
 
 <a id="cop-010"></a>
-### COP-010 [MEDIUM] Custom Agent Uses Deprecated infer Field
-**Requirement**: Custom agent files SHOULD NOT use deprecated `infer` frontmatter
-**Detection**: Detect `infer` key in custom agent frontmatter
-**Fix**: [AUTO-FIX] Remove `infer` and use user-invokable custom agents
-**Source**: github.com/avifenesh/agnix/issues/400
+### COP-010 [MEDIUM] Custom Agent infer Field Must Be Boolean
+**Requirement**: Custom agent `infer` field MUST be a boolean when present
+**Detection**: Parse custom agent frontmatter and validate that `infer` is boolean
+**Fix**: Set `infer` to either `true` or `false`
+**Source**: docs.github.com/en/copilot/reference/custom-agents-configuration
 
 <a id="cop-011"></a>
 ### COP-011 [HIGH] Custom Agent Prompt Body Exceeds Length Limit
@@ -1184,14 +1184,14 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Requirement**: `.github/hooks/hooks.json` MUST use version `1`, valid event names, `type: "command"`, and valid command structure
 **Detection**: Parse JSON and validate version, events, required hook `type`, and command object shape
 **Fix**: Correct hooks schema structure
-**Source**: docs.github.com/en/copilot/reference/hooks-configuration
+**Source**: docs.github.com/en/copilot/concepts/agents/coding-agent/about-hooks
 
 <a id="cop-018"></a>
 ### COP-018 [HIGH] Copilot Setup Steps Missing or Invalid copilot-setup-steps Job
 **Requirement**: `copilot-setup-steps.yml` MUST define `jobs.copilot-setup-steps` with an Ubuntu runner and non-empty `steps`
 **Detection**: Parse workflow YAML and verify `jobs.copilot-setup-steps` exists, `runs-on` targets Ubuntu (or expression), and `steps` is non-empty
 **Fix**: Add or correct `copilot-setup-steps` job in the workflow
-**Source**: docs.github.com/copilot/how-tos/agents/copilot-coding-agent/customizing-the-development-environment-for-copilot-coding-agent
+**Source**: docs.github.com/en/copilot/how-tos/agents/copilot-coding-agent/customizing-the-development-environment-for-copilot-coding-agent
 
 ---
 
@@ -1202,63 +1202,63 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Requirement**: Cursor .mdc rule files MUST have non-empty content
 **Detection**: `content.trim().is_empty()` after stripping frontmatter
 **Fix**: Add meaningful rules content
-**Source**: docs.cursor.com/en/context
+**Source**: cursor.com/docs/context/rules
 
 <a id="cur-002"></a>
 ### CUR-002 [MEDIUM] Missing Frontmatter in .mdc File
 **Requirement**: Cursor .mdc files SHOULD have YAML frontmatter with metadata
 **Detection**: File doesn't start with `---` markers
-**Fix**: Auto-fix (unsafe) -- insert template frontmatter with description and globs fields
-**Source**: docs.cursor.com/en/context
+**Fix**: Auto-fix (unsafe) - insert template frontmatter with description and globs fields
+**Source**: cursor.com/docs/context/rules
 
 <a id="cur-003"></a>
 ### CUR-003 [HIGH] Invalid YAML Frontmatter
 **Requirement**: .mdc file frontmatter MUST be valid YAML
 **Detection**: YAML parse error on frontmatter content
 **Fix**: Fix YAML syntax errors in frontmatter
-**Source**: docs.cursor.com/en/context
+**Source**: cursor.com/docs/context/rules
 
 <a id="cur-004"></a>
 ### CUR-004 [HIGH] Invalid Glob Pattern in globs Field
 **Requirement**: `globs` field MUST contain valid glob patterns
 **Detection**: Attempt to parse as glob pattern
 **Fix**: Correct the glob syntax
-**Source**: docs.cursor.com/en/context
+**Source**: cursor.com/docs/context/rules
 
 <a id="cur-005"></a>
 ### CUR-005 [MEDIUM] Unknown Frontmatter Keys
 **Requirement**: .mdc frontmatter SHOULD only contain known keys (description, globs, alwaysApply)
 **Detection**: Check for keys other than known keys in frontmatter
 **Fix**: Remove unknown keys
-**Source**: docs.cursor.com/en/context
+**Source**: cursor.com/docs/context/rules
 
 <a id="cur-006"></a>
 ### CUR-006 [MEDIUM] Legacy .cursorrules File Detected
 **Requirement**: Projects SHOULD migrate from .cursorrules to .cursor/rules/*.mdc format
 **Detection**: File named `.cursorrules`
 **Fix**: Create `.cursor/rules/` directory and migrate rules to .mdc files
-**Source**: docs.cursor.com/en/context
+**Source**: cursor.com/docs/context/rules
 
 <a id="cur-007"></a>
 ### CUR-007 [MEDIUM] alwaysApply with Redundant globs
 **Requirement**: When `alwaysApply: true`, the `globs` field SHOULD NOT be set (it is redundant)
 **Detection**: Frontmatter has both `alwaysApply: true` and a `globs` field
 **Fix**: [AUTO-FIX] Remove the `globs` field (safe)
-**Source**: docs.cursor.com/en/context
+**Source**: cursor.com/docs/context/rules
 
 <a id="cur-008"></a>
 ### CUR-008 [HIGH] Invalid alwaysApply Type
 **Requirement**: `alwaysApply` MUST be a boolean (`true`/`false`), not a quoted string
 **Detection**: `alwaysApply` value is a string (e.g., `"true"` or `"false"`) instead of a boolean
-**Fix**: Auto-fix (safe) -- convert quoted string to unquoted boolean
-**Source**: docs.cursor.com/en/context
+**Fix**: Auto-fix (safe) - convert quoted string to unquoted boolean
+**Source**: cursor.com/docs/context/rules
 
 <a id="cur-009"></a>
 ### CUR-009 [MEDIUM] Missing Description for Agent-Requested Rule
 **Requirement**: Rules with no `alwaysApply` and no `globs` (agent-requested rules) SHOULD have a `description`
 **Detection**: Frontmatter has no `alwaysApply`, no `globs`, and no `description` (or empty description)
 **Fix**: Add a `description` field explaining when the rule should apply
-**Source**: docs.cursor.com/en/context
+**Source**: cursor.com/docs/context/rules
 
 <a id="cur-010"></a>
 ### CUR-010 [HIGH] Invalid .cursor/hooks.json Schema
@@ -1304,10 +1304,10 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 
 <a id="cur-016"></a>
 ### CUR-016 [HIGH] Invalid .cursor/environment.json Schema
-**Requirement**: `.cursor/environment.json` MUST be an object with string `snapshot`, string `install`, and array `terminals`
-**Detection**: Parse JSON and validate required fields plus terminal entry structure
+**Requirement**: `.cursor/environment.json` MUST be an object with string `install` (required), optional string `start`, optional array `terminals`, optional object `build` (with string `dockerfile` and `context`), and optional string `update`
+**Detection**: Parse JSON and validate required fields plus terminal entry and build object structure
 **Fix**: Provide required fields and valid terminal objects (`name`, `command`)
-**Source**: cursor.com/docs/cloud-agent
+**Source**: cursor.com/docs/cloud-agent/setup
 
 ---
 
@@ -1514,6 +1514,13 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Detection**: Parse TOML, validate `project_doc_max_bytes` value is an integer within the allowed range
 **Fix**: Reduce value to 65536 or less (default: 32768)
 **Source**: developers.openai.com/codex/
+
+<a id="cdx-006"></a>
+### CDX-006 [HIGH] Invalid project_doc_fallback_filenames
+**Requirement**: `project_doc_fallback_filenames` in `.codex/config.toml` MUST be an array of unique, non-empty filename strings
+**Detection**: Parse TOML, validate array type, ensure all entries are non-empty strings, flag duplicate and path-like entries
+**Fix**: Use a unique array of bare filenames (e.g., `["AGENTS.md", "README.md"]`)
+**Source**: developers.openai.com/codex/guides/agents-md/
 
 ---
 
@@ -1970,7 +1977,6 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | MCP-021 | Replace 0.0.0.0 with localhost in URL | unsafe |
 | COP-008 | Delete unknown agent frontmatter key | safe |
 | COP-009 | Replace invalid agent target | unsafe |
-| COP-010 | Delete deprecated 'infer' field | safe |
 | COP-012 | Delete unsupported GitHub.com agent field | safe |
 | COP-014 | Delete unknown prompt frontmatter key | safe |
 | COP-015 | Replace invalid prompt type | unsafe |
@@ -1993,12 +1999,12 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Claude Memory | 12 | 8 | 4 | 0 | 3 |
 | AGENTS.md | 6 | 1 | 5 | 0 | 1 |
 | Claude Plugins | 10 | 8 | 2 | 0 | 3 |
-| GitHub Copilot | 17 | 11 | 6 | 0 | 9 |
+| GitHub Copilot | 17 | 11 | 6 | 0 | 8 |
 | Cursor | 16 | 9 | 7 | 0 | 6 |
 | Cline | 4 | 3 | 1 | 0 | 2 |
 | OpenCode | 8 | 4 | 3 | 1 | 2 |
 | Gemini CLI | 9 | 3 | 4 | 2 | 3 |
-| Codex CLI | 6 | 4 | 2 | 0 | 3 |
+| Codex CLI | 7 | 5 | 2 | 0 | 3 |
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | MCP | 24 | 19 | 5 | 0 | 7 |
 | XML | 3 | 3 | 0 | 0 | 3 |
@@ -2018,7 +2024,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Roo Code Skills | 1 | 0 | 1 | 0 | 1 |
 | Roo Code | 6 | 3 | 3 | 0 | 0 |
 | Version Awareness | 1 | 0 | 0 | 1 | 0 |
-| **TOTAL** | **230** | **135** | **87** | **8** | **97** |
+| **TOTAL** | **231** | **136** | **87** | **8** | **97** |
 
 
 ---
@@ -2048,8 +2054,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 230 validation rules across 32 categories
+**Total Coverage**: 231 validation rules across 32 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
 **Certainty**: 135 HIGH, 87 MEDIUM, 8 LOW
-**Auto-Fixable**: 97 rules (42%)
+**Auto-Fixable**: 96 rules (42%)

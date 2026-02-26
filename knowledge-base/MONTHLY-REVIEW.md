@@ -50,6 +50,9 @@ These tools have automated monthly monitoring. Review confirms accuracy and chec
 - https://docs.github.com/en/copilot/customizing-copilot
 - https://docs.cline.bot/features/cline-rules/overview
 - https://cursor.com/docs/context/rules
+- https://cursor.com/docs/agent/hooks
+- https://cursor.com/docs/context/subagents
+- https://cursor.com/docs/cloud-agent/setup
 
 ### B/C Tier: Roo Code, Kiro CLI, amp, pi, gemini cli, continue, Antigravity
 
@@ -144,7 +147,7 @@ After completing the review:
 | Tool/Category | Rule Count | Coverage Status |
 |--------------|------------|-----------------|
 | Claude Code (CC-SK, CC-HK, CC-MEM, CC-AG, CC-PL) | 50+ | Comprehensive |
-| Cursor (CUR-*) | 6 | Good - covers core validation |
+| Cursor (CUR-*) | 16 | Comprehensive - covers rules, hooks, subagents, environment |
 | GitHub Copilot (COP-*) | 6 | Good - covers instruction files and validation |
 | AGENTS.md (AGM-*) | 6 | Good - covers structure and cross-platform |
 | MCP (MCP-*) | 8 | Good - covers protocol compliance |
@@ -167,7 +170,7 @@ After completing the review:
 #### Findings
 
 1. **S-tier coverage is strong**: Claude Code has 50+ rules covering skills, hooks, memory, agents, and plugins. Codex CLI and OpenCode share AGM and XP rules.
-2. **A-tier has good baseline**: Cursor (6 rules), Copilot (4 rules), and Cline (monitored) provide adequate coverage for the most common config patterns.
+2. **A-tier has good baseline**: Cursor (16 rules), Copilot (4 rules), and Cline (monitored) provide adequate coverage for the most common config patterns.
 3. **B/C/D tier gaps exist**: Roo Code, Kiro CLI, amp, pi, Continue, and Aider have no tool-specific rules. These tools rely on generic rules (AS-*, XP-*, AGM-*) where applicable.
 4. **No spec drift detected**: All S-tier and A-tier baselines current as of February 2026.
 5. **Issue templates needed**: Added rule contribution and tool support request templates to streamline community contributions for uncovered tools.
