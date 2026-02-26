@@ -601,12 +601,14 @@ fn validate_cursor_environment_file(
         return diagnostics;
     }
 
+    let path_buf = path.to_path_buf();
+
     let parsed = match serde_json::from_str::<JsonValue>(content) {
         Ok(value) => value,
         Err(error) => {
             diagnostics.push(
                 Diagnostic::error(
-                    path.to_path_buf(),
+                    path_buf.clone(),
                     1,
                     0,
                     "CUR-016",
@@ -623,7 +625,7 @@ fn validate_cursor_environment_file(
         None => {
             diagnostics.push(
                 Diagnostic::error(
-                    path.to_path_buf(),
+                    path_buf.clone(),
                     1,
                     0,
                     "CUR-016",
@@ -639,7 +641,7 @@ fn validate_cursor_environment_file(
         Some(v) if v.as_str().is_none() => {
             diagnostics.push(
                 Diagnostic::error(
-                    path.to_path_buf(),
+                    path_buf.clone(),
                     1,
                     0,
                     "CUR-016",
@@ -651,7 +653,7 @@ fn validate_cursor_environment_file(
         None => {
             diagnostics.push(
                 Diagnostic::error(
-                    path.to_path_buf(),
+                    path_buf.clone(),
                     1,
                     0,
                     "CUR-016",
@@ -668,7 +670,7 @@ fn validate_cursor_environment_file(
     {
         diagnostics.push(
             Diagnostic::error(
-                path.to_path_buf(),
+                path_buf.clone(),
                 1,
                 0,
                 "CUR-016",
@@ -683,7 +685,7 @@ fn validate_cursor_environment_file(
     {
         diagnostics.push(
             Diagnostic::error(
-                path.to_path_buf(),
+                path_buf.clone(),
                 1,
                 0,
                 "CUR-016",
@@ -701,7 +703,7 @@ fn validate_cursor_environment_file(
                 {
                     diagnostics.push(
                         Diagnostic::error(
-                            path.to_path_buf(),
+                            path_buf.clone(),
                             1,
                             0,
                             "CUR-016",
@@ -715,7 +717,7 @@ fn validate_cursor_environment_file(
                 {
                     diagnostics.push(
                         Diagnostic::error(
-                            path.to_path_buf(),
+                            path_buf.clone(),
                             1,
                             0,
                             "CUR-016",
@@ -728,7 +730,7 @@ fn validate_cursor_environment_file(
             None => {
                 diagnostics.push(
                     Diagnostic::error(
-                        path.to_path_buf(),
+                        path_buf.clone(),
                         1,
                         0,
                         "CUR-016",
@@ -751,7 +753,7 @@ fn validate_cursor_environment_file(
                         if !has_name || !has_command {
                             diagnostics.push(
                                 Diagnostic::error(
-                                    path.to_path_buf(),
+                                    path_buf.clone(),
                                     1,
                                     0,
                                     "CUR-016",
@@ -763,11 +765,14 @@ fn validate_cursor_environment_file(
                     } else {
                         diagnostics.push(
                             Diagnostic::error(
-                                path.to_path_buf(),
+                                path_buf.clone(),
                                 1,
                                 0,
                                 "CUR-016",
-                                t!("rules.cur_016.terminal", index = index + 1),
+                                t!(
+                                    "rules.cur_016.terminal_not_object",
+                                    index = index + 1
+                                ),
                             )
                             .with_suggestion(t!("rules.cur_016.suggestion")),
                         );
@@ -777,7 +782,7 @@ fn validate_cursor_environment_file(
             other => {
                 diagnostics.push(
                     Diagnostic::error(
-                        path.to_path_buf(),
+                        path_buf.clone(),
                         1,
                         0,
                         "CUR-016",
@@ -1676,6 +1681,70 @@ is_background: false
             diagnostics.iter().all(|d| d.rule != "CUR-016"),
             "Valid build should not trigger CUR-016, got: {:?}",
             diagnostics.iter().map(|d| (&d.rule, &d.message)).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn test_cur_016_environment_install_null() {
+        let diagnostics = validate_cursor_environment(r#"{"install":null}"#);
+        let cur_016: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CUR-016").collect();
+        assert!(
+            cur_016.iter().any(|d| d.message.contains("must be a string")),
+            "install: null should trigger the install message, got: {:?}",
+            cur_016.iter().map(|d| &d.message).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn test_cur_016_environment_valid_update() {
+        let diagnostics = validate_cursor_environment(
+            r#"{"install":"npm ci","update":"apt-get update"}"#,
+        );
+        assert!(
+            diagnostics.iter().all(|d| d.rule != "CUR-016"),
+            "Valid update should not trigger CUR-016, got: {:?}",
+            diagnostics.iter().map(|d| (&d.rule, &d.message)).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn test_cur_016_environment_terminal_non_object() {
+        let diagnostics = validate_cursor_environment(
+            r#"{"install":"npm ci","terminals":[42,"string"]}"#,
+        );
+        let cur_016: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CUR-016").collect();
+        assert!(
+            cur_016.len() >= 2,
+            "Expected at least 2 CUR-016 errors for non-object terminal entries, got {}",
+            cur_016.len()
+        );
+    }
+
+    #[test]
+    fn test_cur_016_environment_build_dockerfile_invalid() {
+        let diagnostics = validate_cursor_environment(
+            r#"{"install":"npm ci","build":{"dockerfile":42}}"#,
+        );
+        let cur_016: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CUR-016").collect();
+        assert_eq!(
+            cur_016.len(),
+            1,
+            "Expected exactly 1 CUR-016 error for invalid build.dockerfile, got: {:?}",
+            cur_016.iter().map(|d| &d.message).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn test_cur_016_environment_build_context_invalid() {
+        let diagnostics = validate_cursor_environment(
+            r#"{"install":"npm ci","build":{"context":true}}"#,
+        );
+        let cur_016: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CUR-016").collect();
+        assert_eq!(
+            cur_016.len(),
+            1,
+            "Expected exactly 1 CUR-016 error for invalid build.context, got: {:?}",
+            cur_016.iter().map(|d| &d.message).collect::<Vec<_>>()
         );
     }
 
