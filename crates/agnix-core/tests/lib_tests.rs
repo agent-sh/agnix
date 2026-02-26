@@ -2165,6 +2165,85 @@ fn test_fixture_file_type_detection() {
         FileType::CopilotScoped,
         "typescript.instructions.md should be detected as CopilotScoped"
     );
+
+    // Cline .txt fixtures should be detected as FileType::ClineRulesFolder
+    assert_eq!(
+        detect_file_type(&fixtures_dir.join("cline/.clinerules/03-python.txt")),
+        FileType::ClineRulesFolder,
+        "03-python.txt should be detected as ClineRulesFolder"
+    );
+    assert_eq!(
+        detect_file_type(&fixtures_dir.join("cline-invalid/.clinerules/bad-glob.txt")),
+        FileType::ClineRulesFolder,
+        "bad-glob.txt should be detected as ClineRulesFolder"
+    );
+    assert_eq!(
+        detect_file_type(&fixtures_dir.join("cline-invalid/.clinerules/scalar-paths.txt")),
+        FileType::ClineRulesFolder,
+        "scalar-paths.txt should be detected as ClineRulesFolder"
+    );
+    assert_eq!(
+        detect_file_type(&fixtures_dir.join("cline-invalid/.clinerules/unknown-keys.txt")),
+        FileType::ClineRulesFolder,
+        "unknown-keys.txt should be detected as ClineRulesFolder"
+    );
+}
+
+// ===== Cline Validation Integration Tests =====
+
+#[test]
+fn test_validate_cline_fixtures() {
+    let fixtures_dir = get_fixtures_dir();
+    let config = LintConfig::default();
+
+    // Valid .txt file should produce no CLN-* diagnostics
+    let valid_txt = fixtures_dir.join("cline/.clinerules/03-python.txt");
+    let diagnostics = expect_success(validate_file(&valid_txt, &config).unwrap());
+    let cln_diagnostics: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule.starts_with("CLN-"))
+        .collect();
+    assert!(
+        cln_diagnostics.is_empty(),
+        "Expected no CLN-* diagnostics for valid 03-python.txt, got: {:?}",
+        cln_diagnostics
+    );
+}
+
+#[test]
+fn test_validate_cline_invalid_bad_glob_txt() {
+    let fixtures_dir = get_fixtures_dir();
+    let config = LintConfig::default();
+    let bad_glob = fixtures_dir.join("cline-invalid/.clinerules/bad-glob.txt");
+    let diagnostics = expect_success(validate_file(&bad_glob, &config).unwrap());
+    assert!(
+        diagnostics.iter().any(|d| d.rule == "CLN-002"),
+        "Expected CLN-002 from bad-glob.txt fixture"
+    );
+}
+
+#[test]
+fn test_validate_cline_invalid_scalar_paths_txt() {
+    let fixtures_dir = get_fixtures_dir();
+    let config = LintConfig::default();
+    let scalar_paths = fixtures_dir.join("cline-invalid/.clinerules/scalar-paths.txt");
+    let diagnostics = expect_success(validate_file(&scalar_paths, &config).unwrap());
+    assert!(
+        diagnostics.iter().any(|d| d.rule == "CLN-004"),
+        "Expected CLN-004 from scalar-paths.txt fixture"
+    );
+}
+
+#[test]
+fn test_validate_cline_invalid_unknown_keys_txt() {
+    let fixtures_dir = get_fixtures_dir();
+    let config = LintConfig::default();
+    let unknown_keys = fixtures_dir.join("cline-invalid/.clinerules/unknown-keys.txt");
+    let diagnostics = expect_success(validate_file(&unknown_keys, &config).unwrap());
+    assert!(
+        diagnostics.iter().any(|d| d.rule == "CLN-003"),
+        "Expected CLN-003 from unknown-keys.txt fixture"
+    );
 }
 
 // ===== GitHub Copilot Validation Integration Tests =====

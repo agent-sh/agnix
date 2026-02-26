@@ -109,7 +109,8 @@ impl Validator for ClineValidator {
             }
         }
 
-        // CLN-002, CLN-003, and CLN-004 only apply to folder files (.md/.txt) (they have frontmatter)
+        // CLN-002, CLN-003, and CLN-004 only apply to folder files (.md/.txt);
+        // frontmatter is optional but these rules check frontmatter content when present
         if !is_folder {
             return diagnostics;
         }
@@ -663,6 +664,31 @@ unknownKey: value
             "Fix should convert scalar to array format, got: {}",
             cln_004[0].fixes[0].replacement
         );
+    }
+
+    #[test]
+    fn test_cln_001_whitespace_only_txt() {
+        let diagnostics = validate_folder_txt("   \n\n\t  ");
+        let cln_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CLN-001").collect();
+        assert_eq!(cln_001.len(), 1);
+        assert_eq!(cln_001[0].level, DiagnosticLevel::Error);
+    }
+
+    #[test]
+    fn test_cln_001_empty_body_after_frontmatter_txt() {
+        let content = "---\npaths:\n  - \"**/*.py\"\n---\n";
+        let diagnostics = validate_folder_txt(content);
+        let cln_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CLN-001").collect();
+        assert_eq!(cln_001.len(), 1);
+        assert!(cln_001[0].message.contains("no content after frontmatter"));
+    }
+
+    #[test]
+    fn test_cln_001_folder_no_frontmatter_with_content_txt() {
+        let content = "# Rules without frontmatter\n\nSome instructions.";
+        let diagnostics = validate_folder_txt(content);
+        let cln_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CLN-001").collect();
+        assert!(cln_001.is_empty());
     }
 
     #[test]

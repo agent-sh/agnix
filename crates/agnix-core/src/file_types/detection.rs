@@ -848,17 +848,20 @@ mod tests {
 
     #[test]
     fn detect_cline_rules_folder_non_md_txt_rejected() {
-        assert_ne!(
+        assert_eq!(
             detect_file_type(Path::new(".clinerules/config.json")),
-            FileType::ClineRulesFolder
+            FileType::Unknown,
+            "Non-.md/.txt files in .clinerules/ should be Unknown"
         );
-        assert_ne!(
+        assert_eq!(
             detect_file_type(Path::new(".clinerules/config.yaml")),
-            FileType::ClineRulesFolder
+            FileType::Unknown,
+            "Non-.md/.txt files in .clinerules/ should be Unknown"
         );
-        assert_ne!(
+        assert_eq!(
             detect_file_type(Path::new(".clinerules/config.toml")),
-            FileType::ClineRulesFolder
+            FileType::Unknown,
+            "Non-.md/.txt files in .clinerules/ should be Unknown"
         );
     }
 
