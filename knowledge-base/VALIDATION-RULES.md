@@ -1202,63 +1202,63 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Requirement**: Cursor .mdc rule files MUST have non-empty content
 **Detection**: `content.trim().is_empty()` after stripping frontmatter
 **Fix**: Add meaningful rules content
-**Source**: docs.cursor.com/en/context
+**Source**: cursor.com/docs/context/rules
 
 <a id="cur-002"></a>
 ### CUR-002 [MEDIUM] Missing Frontmatter in .mdc File
 **Requirement**: Cursor .mdc files SHOULD have YAML frontmatter with metadata
 **Detection**: File doesn't start with `---` markers
-**Fix**: Auto-fix (unsafe) -- insert template frontmatter with description and globs fields
-**Source**: docs.cursor.com/en/context
+**Fix**: Auto-fix (unsafe) - insert template frontmatter with description and globs fields
+**Source**: cursor.com/docs/context/rules
 
 <a id="cur-003"></a>
 ### CUR-003 [HIGH] Invalid YAML Frontmatter
 **Requirement**: .mdc file frontmatter MUST be valid YAML
 **Detection**: YAML parse error on frontmatter content
 **Fix**: Fix YAML syntax errors in frontmatter
-**Source**: docs.cursor.com/en/context
+**Source**: cursor.com/docs/context/rules
 
 <a id="cur-004"></a>
 ### CUR-004 [HIGH] Invalid Glob Pattern in globs Field
 **Requirement**: `globs` field MUST contain valid glob patterns
 **Detection**: Attempt to parse as glob pattern
 **Fix**: Correct the glob syntax
-**Source**: docs.cursor.com/en/context
+**Source**: cursor.com/docs/context/rules
 
 <a id="cur-005"></a>
 ### CUR-005 [MEDIUM] Unknown Frontmatter Keys
 **Requirement**: .mdc frontmatter SHOULD only contain known keys (description, globs, alwaysApply)
 **Detection**: Check for keys other than known keys in frontmatter
 **Fix**: Remove unknown keys
-**Source**: docs.cursor.com/en/context
+**Source**: cursor.com/docs/context/rules
 
 <a id="cur-006"></a>
 ### CUR-006 [MEDIUM] Legacy .cursorrules File Detected
 **Requirement**: Projects SHOULD migrate from .cursorrules to .cursor/rules/*.mdc format
 **Detection**: File named `.cursorrules`
 **Fix**: Create `.cursor/rules/` directory and migrate rules to .mdc files
-**Source**: docs.cursor.com/en/context
+**Source**: cursor.com/docs/context/rules
 
 <a id="cur-007"></a>
 ### CUR-007 [MEDIUM] alwaysApply with Redundant globs
 **Requirement**: When `alwaysApply: true`, the `globs` field SHOULD NOT be set (it is redundant)
 **Detection**: Frontmatter has both `alwaysApply: true` and a `globs` field
 **Fix**: [AUTO-FIX] Remove the `globs` field (safe)
-**Source**: docs.cursor.com/en/context
+**Source**: cursor.com/docs/context/rules
 
 <a id="cur-008"></a>
 ### CUR-008 [HIGH] Invalid alwaysApply Type
 **Requirement**: `alwaysApply` MUST be a boolean (`true`/`false`), not a quoted string
 **Detection**: `alwaysApply` value is a string (e.g., `"true"` or `"false"`) instead of a boolean
-**Fix**: Auto-fix (safe) -- convert quoted string to unquoted boolean
-**Source**: docs.cursor.com/en/context
+**Fix**: Auto-fix (safe) - convert quoted string to unquoted boolean
+**Source**: cursor.com/docs/context/rules
 
 <a id="cur-009"></a>
 ### CUR-009 [MEDIUM] Missing Description for Agent-Requested Rule
 **Requirement**: Rules with no `alwaysApply` and no `globs` (agent-requested rules) SHOULD have a `description`
 **Detection**: Frontmatter has no `alwaysApply`, no `globs`, and no `description` (or empty description)
 **Fix**: Add a `description` field explaining when the rule should apply
-**Source**: docs.cursor.com/en/context
+**Source**: cursor.com/docs/context/rules
 
 <a id="cur-010"></a>
 ### CUR-010 [HIGH] Invalid .cursor/hooks.json Schema
@@ -1304,10 +1304,10 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 
 <a id="cur-016"></a>
 ### CUR-016 [HIGH] Invalid .cursor/environment.json Schema
-**Requirement**: `.cursor/environment.json` MUST be an object with string `snapshot`, string `install`, and array `terminals`
-**Detection**: Parse JSON and validate required fields plus terminal entry structure
+**Requirement**: `.cursor/environment.json` MUST be an object with string `install` (required), optional string `start`, optional array `terminals`, optional object `build` (with string `dockerfile` and `context`), and optional string `update`
+**Detection**: Parse JSON and validate required fields plus terminal entry and build object structure
 **Fix**: Provide required fields and valid terminal objects (`name`, `command`)
-**Source**: cursor.com/docs/cloud-agent
+**Source**: cursor.com/docs/cloud-agent/setup
 
 ---
 

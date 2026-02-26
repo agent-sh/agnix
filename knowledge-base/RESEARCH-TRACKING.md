@@ -26,7 +26,7 @@ Tools are organized by support tier (see [../CONTRIBUTING.md#tool-tier-system](.
 |------|---------------|-------------------|------------|-----------|---------------|-------------|
 | GitHub Copilot | `.github/copilot-instructions.md`, `.github/instructions/*.instructions.md` | https://docs.github.com/en/copilot/customizing-copilot | Automated (spec-drift.yml) | Monthly | 2026-02-05 | COP |
 | Cline | `.clinerules`, `.cline/rules/*.md` | https://docs.cline.bot/features/cline-rules/overview | Automated (spec-drift.yml) | Monthly | 2026-02-05 | -- |
-| Cursor | `.cursor/rules/*.mdc`, `.cursorrules` | https://cursor.com/docs/context/rules | Automated (spec-drift.yml) | Monthly | 2026-02-05 | CUR |
+| Cursor | `.cursor/rules/*.mdc`, `.cursorrules` | https://cursor.com/docs/context/rules | Automated (spec-drift.yml) | Monthly | 2026-02-26 | CUR |
 
 ### B Tier (test on significant changes if time permits)
 
@@ -85,7 +85,10 @@ Authoritative sources monitored for changes that may affect validation rules.
 | Claude Code - Sub-agents | https://code.claude.com/docs/en/sub-agents | spec-drift.yml (weekly) | CC-AG-001 through CC-AG-007 |
 | Codex CLI - AGENTS.md | https://developers.openai.com/codex/guides/agents-md/ | spec-drift.yml (weekly) | AGM-001 through AGM-006, XP-001 through XP-006 |
 | OpenCode - Rules | https://opencode.ai/docs/rules/ | spec-drift.yml (weekly) | XP-001 through XP-006 |
-| Cursor - Rules | https://cursor.com/docs/context/rules | spec-drift.yml (monthly) | CUR-001 through CUR-006 |
+| Cursor - Rules | https://cursor.com/docs/context/rules | spec-drift.yml (monthly) | CUR-001 through CUR-009 |
+| Cursor - Hooks | https://cursor.com/docs/agent/hooks | spec-drift.yml (monthly) | CUR-010 through CUR-013 |
+| Cursor - Subagents | https://cursor.com/docs/context/subagents | spec-drift.yml (monthly) | CUR-014, CUR-015 |
+| Cursor - Environment | https://cursor.com/docs/cloud-agent/setup | spec-drift.yml (monthly) | CUR-016 |
 | GitHub Copilot | https://docs.github.com/en/copilot/customizing-copilot | spec-drift.yml (monthly) | COP-001 through COP-006 |
 | Cline - Rules | https://docs.cline.bot/features/cline-rules/overview | spec-drift.yml (monthly) | -- |
 
