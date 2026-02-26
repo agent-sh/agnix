@@ -2,7 +2,7 @@
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
   "total_rules": 230,
-  "last_updated": "2026-02-21",
+  "last_updated": "2026-02-27",
   "schema": {
     "evidence": {
       "source_type": "spec|vendor_docs|vendor_code|paper|community",
@@ -5146,7 +5146,7 @@
         "source_urls": [
           "https://opencode.ai/docs/config"
         ],
-        "verified_on": "2026-02-07",
+        "verified_on": "2026-02-27",
         "applies_to": {
           "tool": "opencode"
         },
@@ -5174,7 +5174,7 @@
         "source_urls": [
           "https://opencode.ai/docs/config"
         ],
-        "verified_on": "2026-02-07",
+        "verified_on": "2026-02-27",
         "applies_to": {
           "tool": "opencode"
         },
@@ -5201,7 +5201,7 @@
         "source_urls": [
           "https://opencode.ai/docs/config"
         ],
-        "verified_on": "2026-02-07",
+        "verified_on": "2026-02-27",
         "applies_to": {
           "tool": "opencode"
         },
@@ -5228,7 +5228,7 @@
         "source_urls": [
           "https://opencode.ai/docs/config"
         ],
-        "verified_on": "2026-02-14",
+        "verified_on": "2026-02-27",
         "applies_to": {
           "tool": "opencode"
         },
@@ -5255,7 +5255,7 @@
         "source_urls": [
           "https://opencode.ai/docs/config"
         ],
-        "verified_on": "2026-02-14",
+        "verified_on": "2026-02-27",
         "applies_to": {
           "tool": "opencode"
         },
@@ -5282,7 +5282,7 @@
         "source_urls": [
           "https://opencode.ai/docs/config"
         ],
-        "verified_on": "2026-02-14",
+        "verified_on": "2026-02-27",
         "applies_to": {
           "tool": "opencode"
         },
@@ -5309,7 +5309,7 @@
         "source_urls": [
           "https://opencode.ai/docs/config"
         ],
-        "verified_on": "2026-02-14",
+        "verified_on": "2026-02-27",
         "applies_to": {
           "tool": "opencode"
         },
@@ -5337,7 +5337,7 @@
         "source_urls": [
           "https://opencode.ai/docs/config"
         ],
-        "verified_on": "2026-02-14",
+        "verified_on": "2026-02-27",
         "applies_to": {
           "tool": "opencode"
         },
@@ -5364,7 +5364,7 @@
         "source_urls": [
           "https://opencode.ai/docs/rules"
         ],
-        "verified_on": "2026-02-07",
+        "verified_on": "2026-02-27",
         "applies_to": {
           "tool": "opencode"
         },

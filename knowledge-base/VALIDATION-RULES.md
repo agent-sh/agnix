@@ -1349,7 +1349,7 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 ### OC-001 [HIGH] Invalid Share Mode
 **Requirement**: The `share` field in `opencode.json` MUST be `"manual"`, `"auto"`, or `"disabled"`
 **Detection**: Parse JSON, validate `share` value against allowed set
-**Fix**: Auto-fix (unsafe) -- replace with closest valid share mode
+**Fix**: Auto-fix (unsafe) - replace with closest valid share mode
 **Source**: opencode.ai/docs/config
 
 <a id="oc-002"></a>

@@ -20,29 +20,38 @@ pub const VALID_SHARE_MODES: &[&str] = &["manual", "auto", "disabled"];
 /// Known valid top-level keys for opencode.json
 pub const KNOWN_TOP_LEVEL_KEYS: &[&str] = &[
     "$schema",
-    "theme",
-    "model",
-    "small_model",
-    "provider",
-    "autoupdate",
-    "tools",
-    "tui",
-    "server",
     "agent",
-    "default_agent",
+    "autoshare",
+    "autoupdate",
     "command",
-    "keybinds",
-    "share",
-    "formatter",
-    "permission",
     "compaction",
-    "watcher",
-    "mcp",
-    "plugin",
-    "instructions",
+    "default_agent",
     "disabled_providers",
     "enabled_providers",
+    "enterprise",
     "experimental",
+    "formatter",
+    "instructions",
+    "keybinds",
+    "layout",
+    "logLevel",
+    "lsp",
+    "mcp",
+    "mode",
+    "model",
+    "permission",
+    "plugin",
+    "provider",
+    "server",
+    "share",
+    "skills",
+    "small_model",
+    "snapshot",
+    "theme",
+    "tools",
+    "tui",
+    "username",
+    "watcher",
 ];
 
 /// Valid permission mode values
@@ -452,6 +461,27 @@ mod tests {
 }"#;
         let result = parse_opencode_json(content);
         assert!(result.unknown_keys.is_empty(), "All keys are known");
+    }
+
+    #[test]
+    fn test_new_schema_keys_not_flagged() {
+        let content = r#"{
+  "autoshare": "manual",
+  "enterprise": {},
+  "layout": "stretch",
+  "logLevel": "INFO",
+  "lsp": false,
+  "mode": "agent",
+  "skills": [],
+  "snapshot": false,
+  "username": "dev"
+}"#;
+        let result = parse_opencode_json(content);
+        assert!(
+            result.unknown_keys.is_empty(),
+            "New schema keys should be known: {:?}",
+            result.unknown_keys
+        );
     }
 
     #[test]

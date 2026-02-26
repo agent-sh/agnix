@@ -10,5 +10,8 @@
   "permission": {
     "read": "allow",
     "edit": "ask"
-  }
+  },
+  "skills": [],
+  "username": "dev",
+  "lsp": false
 }
