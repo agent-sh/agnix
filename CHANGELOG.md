@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **`.clinerules/*.txt` file support**: agnix now detects and validates `.clinerules/*.txt` files as `ClineRulesFolder` file type. Rules CLN-002 (invalid paths glob), CLN-003 (unknown frontmatter key), and CLN-004 (scalar paths) now apply to `.txt` files in addition to `.md` files, matching Cline's actual behavior.
+
 ### Changed
 - **Unified design system**: Import shared design tokens from agent-sh/design-system. Switch from Outfit to Inter font. Add font preconnect hints to Docusaurus config. Keeps teal accent and light/dark mode.
 
