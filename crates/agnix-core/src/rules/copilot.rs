@@ -169,7 +169,17 @@ fn validate_custom_agent(path: &Path, content: &str, config: &LintConfig) -> Vec
     }
 
     if let Some(parsed) = &parsed {
-        if config.is_rule_enabled("COP-008") {
+        let cop_008_enabled = config.is_rule_enabled("COP-008");
+        let cop_010_enabled = config.is_rule_enabled("COP-010");
+        let raw_mapping = if cop_008_enabled || cop_010_enabled {
+            serde_yaml::from_str::<serde_yaml::Value>(&parsed.raw)
+                .ok()
+                .and_then(|raw| raw.as_mapping().cloned())
+        } else {
+            None
+        };
+
+        if cop_008_enabled {
             for unknown in &parsed.unknown_keys {
                 let mut diagnostic = Diagnostic::warning(
                     path.to_path_buf(),
@@ -196,6 +206,74 @@ fn validate_custom_agent(path: &Path, content: &str, config: &LintConfig) -> Vec
                 }
 
                 diagnostics.push(diagnostic);
+            }
+
+            if let Some(schema) = &parsed.schema {
+                let raw_value = |key: &str| {
+                    raw_mapping
+                        .as_ref()
+                        .and_then(|mapping| mapping.get(serde_yaml::Value::String(key.to_string())))
+                        .cloned()
+                };
+
+                let disable_model_invocation = schema
+                    .disable_model_invocation
+                    .clone()
+                    .or_else(|| raw_value("disable-model-invocation"));
+                let user_invocable = schema
+                    .user_invocable
+                    .clone()
+                    .or_else(|| raw_value("user-invocable"));
+                let metadata = schema.metadata.clone().or_else(|| raw_value("metadata"));
+
+                let metadata_valid = metadata.as_ref().is_none_or(|value| {
+                    value.as_mapping().is_some_and(|mapping| {
+                        mapping
+                            .iter()
+                            .all(|(key, value)| key.as_str().is_some() && value.as_str().is_some())
+                    })
+                });
+
+                let typed_field_checks = [
+                    (
+                        "disable-model-invocation:",
+                        disable_model_invocation
+                            .as_ref()
+                            .is_some_and(|value| !value.is_bool()),
+                        "disable-model-invocation",
+                        "Set 'disable-model-invocation' to true or false.",
+                    ),
+                    (
+                        "user-invocable:",
+                        user_invocable
+                            .as_ref()
+                            .is_some_and(|value| !value.is_bool()),
+                        "user-invocable",
+                        "Set 'user-invocable' to true or false.",
+                    ),
+                    (
+                        "metadata:",
+                        !metadata_valid,
+                        "metadata",
+                        "Set 'metadata' to an object with string keys and string values.",
+                    ),
+                ];
+
+                for (prefix, invalid, field_name, suggestion) in typed_field_checks {
+                    if invalid {
+                        let line = frontmatter_key_line(&parsed.raw, parsed.start_line, prefix);
+                        diagnostics.push(
+                            Diagnostic::warning(
+                                path.to_path_buf(),
+                                line,
+                                0,
+                                "COP-008",
+                                format!("Field '{}' has invalid value type", field_name),
+                            )
+                            .with_suggestion(suggestion),
+                        );
+                    }
+                }
             }
         }
 
@@ -246,27 +324,32 @@ fn validate_custom_agent(path: &Path, content: &str, config: &LintConfig) -> Vec
                 }
             }
 
-            if config.is_rule_enabled("COP-010") && schema.infer.is_some() {
-                let line = frontmatter_key_line(&parsed.raw, parsed.start_line, "infer:");
-                let mut diagnostic = Diagnostic::warning(
-                    path.to_path_buf(),
-                    line,
-                    0,
-                    "COP-010",
-                    "Custom agent uses deprecated 'infer' field",
-                )
-                .with_suggestion("Remove 'infer' and use user-invokable custom agents instead.");
+            if cop_010_enabled {
+                let infer_is_non_boolean =
+                    schema.infer.as_ref().is_some_and(|infer| !infer.is_bool());
+                let infer_is_explicit_null = if schema.infer.is_none() {
+                    raw_mapping
+                        .as_ref()
+                        .and_then(|map| map.get(serde_yaml::Value::String("infer".to_string())))
+                        .cloned()
+                        .is_some_and(|value| value.is_null())
+                } else {
+                    false
+                };
 
-                if let Some((start, end)) = line_byte_range(content, line) {
-                    diagnostic = diagnostic.with_fix(Fix::delete(
-                        start,
-                        end,
-                        "Remove deprecated 'infer' field",
-                        true,
-                    ));
+                if infer_is_non_boolean || infer_is_explicit_null {
+                    let line = frontmatter_key_line(&parsed.raw, parsed.start_line, "infer:");
+                    diagnostics.push(
+                        Diagnostic::warning(
+                            path.to_path_buf(),
+                            line,
+                            0,
+                            "COP-010",
+                            "Custom agent 'infer' field must be a boolean",
+                        )
+                        .with_suggestion("Set 'infer' to true or false."),
+                    );
                 }
-
-                diagnostics.push(diagnostic);
             }
 
             let applies_to_github = !matches!(schema.target.as_deref(), Some("vscode"));
@@ -1537,6 +1620,46 @@ Review pull requests.
     }
 
     #[test]
+    fn test_cop_008_allows_current_agent_invocation_keys() {
+        let diagnostics = validate_agent(
+            r#"---
+name: reviewer
+description: Review pull requests
+disable-model-invocation: true
+user-invocable: true
+metadata:
+  owner: security
+---
+Review pull requests.
+"#,
+        );
+        assert!(
+            diagnostics.iter().all(|d| d.rule != "COP-008"),
+            "Documented keys should not trigger COP-008"
+        );
+    }
+
+    #[test]
+    fn test_cop_008_rejects_null_current_agent_invocation_keys() {
+        let diagnostics = validate_agent(
+            r#"---
+description: Review pull requests
+disable-model-invocation: null
+user-invocable: null
+metadata: null
+---
+Review pull requests.
+"#,
+        );
+        let cop_008: Vec<_> = diagnostics.iter().filter(|d| d.rule == "COP-008").collect();
+        assert_eq!(
+            cop_008.len(),
+            3,
+            "Expected one COP-008 per null typed field"
+        );
+    }
+
+    #[test]
     fn test_cop_008_invalid_agent_frontmatter_yaml() {
         let diagnostics = validate_agent(
             r#"---
@@ -1616,7 +1739,46 @@ Review pull requests.
     }
 
     #[test]
-    fn test_cop_010_deprecated_infer() {
+    fn test_cop_010_invalid_infer_type() {
+        let diagnostics = validate_agent(
+            r#"---
+description: Review pull requests
+infer: "auto"
+---
+Review pull requests.
+"#,
+        );
+        assert!(diagnostics.iter().any(|d| d.rule == "COP-010"));
+    }
+
+    #[test]
+    fn test_cop_010_invalid_numeric_infer_type() {
+        let diagnostics = validate_agent(
+            r#"---
+description: Review pull requests
+infer: 1
+---
+Review pull requests.
+"#,
+        );
+        assert!(diagnostics.iter().any(|d| d.rule == "COP-010"));
+    }
+
+    #[test]
+    fn test_cop_010_invalid_null_infer_type() {
+        let diagnostics = validate_agent(
+            r#"---
+description: Review pull requests
+infer: null
+---
+Review pull requests.
+"#,
+        );
+        assert!(diagnostics.iter().any(|d| d.rule == "COP-010"));
+    }
+
+    #[test]
+    fn test_cop_010_accepts_boolean_infer() {
         let diagnostics = validate_agent(
             r#"---
 description: Review pull requests
@@ -1625,7 +1787,26 @@ infer: true
 Review pull requests.
 "#,
         );
-        assert!(diagnostics.iter().any(|d| d.rule == "COP-010"));
+        assert!(
+            diagnostics.iter().all(|d| d.rule != "COP-010"),
+            "Boolean infer should not trigger COP-010"
+        );
+    }
+
+    #[test]
+    fn test_cop_010_accepts_boolean_false_infer() {
+        let diagnostics = validate_agent(
+            r#"---
+description: Review pull requests
+infer: false
+---
+Review pull requests.
+"#,
+        );
+        assert!(
+            diagnostics.iter().all(|d| d.rule != "COP-010"),
+            "Boolean infer=false should not trigger COP-010"
+        );
     }
 
     #[test]
@@ -1819,19 +2000,21 @@ Review pull requests.
     }
 
     #[test]
-    fn test_cop_010_has_fix() {
+    fn test_cop_010_has_no_fix() {
         let diagnostics = validate_agent(
             r#"---
 description: Review pull requests
-infer: true
+infer: "auto"
 ---
 Review pull requests.
 "#,
         );
         let cop_010: Vec<_> = diagnostics.iter().filter(|d| d.rule == "COP-010").collect();
         assert_eq!(cop_010.len(), 1);
-        assert!(cop_010[0].has_fixes(), "COP-010 should have auto-fix");
-        assert!(cop_010[0].fixes[0].safe, "COP-010 fix should be safe");
+        assert!(
+            !cop_010[0].has_fixes(),
+            "COP-010 should not offer auto-fix for infer type errors"
+        );
     }
 
     #[test]

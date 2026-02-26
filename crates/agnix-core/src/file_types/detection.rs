@@ -344,8 +344,10 @@ pub fn detect_file_type(path: &Path) -> FileType {
         }
         // Roo Code rules (.roo/rules/*.md)
         name if name.ends_with(".md") && is_under_roo_rules(path) => FileType::RooRules,
-        // Cline rules folder (.clinerules/*.md)
-        name if name.ends_with(".md") && parent == Some(".clinerules") => {
+        // Cline rules folder (.clinerules/*.md, .clinerules/*.txt)
+        name if (name.ends_with(".md") || name.ends_with(".txt"))
+            && parent == Some(".clinerules") =>
+        {
             FileType::ClineRulesFolder
         }
         // Windsurf rules (.windsurf/rules/**/*.md)
@@ -829,6 +831,37 @@ mod tests {
         assert_eq!(
             detect_file_type(Path::new(".clinerules/custom.md")),
             FileType::ClineRulesFolder
+        );
+    }
+
+    #[test]
+    fn detect_cline_rules_folder_txt() {
+        assert_eq!(
+            detect_file_type(Path::new(".clinerules/custom.txt")),
+            FileType::ClineRulesFolder
+        );
+        assert_eq!(
+            detect_file_type(Path::new(".clinerules/01-coding.txt")),
+            FileType::ClineRulesFolder
+        );
+    }
+
+    #[test]
+    fn detect_cline_rules_folder_non_md_txt_rejected() {
+        assert_eq!(
+            detect_file_type(Path::new(".clinerules/config.json")),
+            FileType::Unknown,
+            "Non-.md/.txt files in .clinerules/ should be Unknown"
+        );
+        assert_eq!(
+            detect_file_type(Path::new(".clinerules/config.yaml")),
+            FileType::Unknown,
+            "Non-.md/.txt files in .clinerules/ should be Unknown"
+        );
+        assert_eq!(
+            detect_file_type(Path::new(".clinerules/config.toml")),
+            FileType::Unknown,
+            "Non-.md/.txt files in .clinerules/ should be Unknown"
         );
     }
 

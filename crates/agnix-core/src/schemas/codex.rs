@@ -7,6 +7,7 @@
 //! - `fullAutoErrorMode` field values (ask-user, ignore-and-continue)
 //! - Unknown config keys (CDX-004)
 //! - `project_doc_max_bytes` limits (CDX-005)
+//! - `project_doc_fallback_filenames` shape/content (CDX-006)
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -122,6 +123,10 @@ pub struct CodexConfigSchema {
     /// Maximum size for project documentation files in bytes
     #[serde(default)]
     pub project_doc_max_bytes: Option<i64>,
+
+    /// Fallback filenames used when AGENTS.md is not found
+    #[serde(default)]
+    pub project_doc_fallback_filenames: Option<Vec<String>>,
 }
 
 /// Result of parsing .codex/config.toml
@@ -137,6 +142,12 @@ pub struct ParsedCodexConfig {
     pub full_auto_error_mode_wrong_type: bool,
     /// Whether `project_doc_max_bytes` key exists but has wrong type (not an integer)
     pub project_doc_max_bytes_wrong_type: bool,
+    /// Whether `project_doc_fallback_filenames` key exists but has wrong type (not an array)
+    pub project_doc_fallback_filenames_wrong_type: bool,
+    /// Zero-based indexes of non-string entries in `project_doc_fallback_filenames`
+    pub project_doc_fallback_filename_non_string_indices: Vec<usize>,
+    /// Zero-based indexes of empty/whitespace-only entries in `project_doc_fallback_filenames`
+    pub project_doc_fallback_filename_empty_indices: Vec<usize>,
     /// Unknown top-level keys found in config
     pub unknown_keys: Vec<UnknownKey>,
 }
@@ -197,6 +208,9 @@ pub fn parse_codex_toml(content: &str) -> ParsedCodexConfig {
                 approval_mode_wrong_type: false,
                 full_auto_error_mode_wrong_type: false,
                 project_doc_max_bytes_wrong_type: false,
+                project_doc_fallback_filenames_wrong_type: false,
+                project_doc_fallback_filename_non_string_indices: Vec::new(),
+                project_doc_fallback_filename_empty_indices: Vec::new(),
                 unknown_keys: Vec::new(),
             };
         }
@@ -224,6 +238,36 @@ pub fn parse_codex_toml(content: &str) -> ParsedCodexConfig {
         project_doc_max_bytes_value.is_some_and(|v| !v.is_integer());
     let project_doc_max_bytes = project_doc_max_bytes_value.and_then(|v| v.as_integer());
 
+    // Extract project_doc_fallback_filenames (CDX-006)
+    let project_doc_fallback_filenames_value =
+        table.and_then(|t| t.get("project_doc_fallback_filenames"));
+    let project_doc_fallback_filenames_wrong_type =
+        project_doc_fallback_filenames_value.is_some_and(|v| !v.is_array());
+    let (
+        project_doc_fallback_filenames,
+        project_doc_fallback_filename_non_string_indices,
+        project_doc_fallback_filename_empty_indices,
+    ) = if let Some(values) = project_doc_fallback_filenames_value.and_then(|v| v.as_array()) {
+        let mut filenames = Vec::new();
+        let mut non_string_indices = Vec::new();
+        let mut empty_indices = Vec::new();
+
+        for (idx, value) in values.iter().enumerate() {
+            if let Some(filename) = value.as_str() {
+                if filename.trim().is_empty() {
+                    empty_indices.push(idx);
+                }
+                filenames.push(filename.to_string());
+            } else {
+                non_string_indices.push(idx);
+            }
+        }
+
+        (Some(filenames), non_string_indices, empty_indices)
+    } else {
+        (None, Vec::new(), Vec::new())
+    };
+
     // Detect unknown top-level keys (CDX-004)
     let unknown_keys = detect_unknown_keys(table, content);
 
@@ -232,11 +276,15 @@ pub fn parse_codex_toml(content: &str) -> ParsedCodexConfig {
             approval_mode,
             full_auto_error_mode,
             project_doc_max_bytes,
+            project_doc_fallback_filenames,
         }),
         parse_error: None,
         approval_mode_wrong_type,
         full_auto_error_mode_wrong_type,
         project_doc_max_bytes_wrong_type,
+        project_doc_fallback_filenames_wrong_type,
+        project_doc_fallback_filename_non_string_indices,
+        project_doc_fallback_filename_empty_indices,
         unknown_keys,
     }
 }
@@ -323,6 +371,7 @@ notify = true
         let schema = result.schema.unwrap();
         assert!(schema.approval_mode.is_none());
         assert!(schema.full_auto_error_mode.is_none());
+        assert!(schema.project_doc_fallback_filenames.is_none());
     }
 
     #[test]
@@ -435,6 +484,7 @@ approvalMode = "suggest"
 fullAutoErrorMode = "ask-user"
 notify = true
 project_doc_max_bytes = 32768
+project_doc_fallback_filenames = ["AGENTS.md", "README.md"]
 "#;
         let result = parse_codex_toml(content);
         assert!(result.unknown_keys.is_empty(), "All keys are known");
@@ -488,6 +538,69 @@ name = "test"
         assert!(result.schema.is_some());
         assert!(result.schema.unwrap().project_doc_max_bytes.is_none());
         assert!(!result.project_doc_max_bytes_wrong_type);
+    }
+
+    // ===== project_doc_fallback_filenames Parsing =====
+
+    #[test]
+    fn test_project_doc_fallback_filenames_parsed() {
+        let content = "project_doc_fallback_filenames = [\"AGENTS.md\", \"README.md\"]";
+        let result = parse_codex_toml(content);
+        assert!(result.schema.is_some());
+        assert_eq!(
+            result.schema.unwrap().project_doc_fallback_filenames,
+            Some(vec!["AGENTS.md".to_string(), "README.md".to_string()])
+        );
+        assert!(!result.project_doc_fallback_filenames_wrong_type);
+        assert!(
+            result
+                .project_doc_fallback_filename_non_string_indices
+                .is_empty()
+        );
+        assert!(
+            result
+                .project_doc_fallback_filename_empty_indices
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn test_project_doc_fallback_filenames_wrong_type() {
+        let content = "project_doc_fallback_filenames = \"AGENTS.md\"";
+        let result = parse_codex_toml(content);
+        assert!(result.project_doc_fallback_filenames_wrong_type);
+        assert!(
+            result
+                .project_doc_fallback_filename_non_string_indices
+                .is_empty()
+        );
+        assert!(
+            result
+                .project_doc_fallback_filename_empty_indices
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn test_project_doc_fallback_filenames_non_string_items() {
+        let content = "project_doc_fallback_filenames = [\"AGENTS.md\", 42, true]";
+        let result = parse_codex_toml(content);
+        assert!(!result.project_doc_fallback_filenames_wrong_type);
+        assert_eq!(
+            result.project_doc_fallback_filename_non_string_indices,
+            vec![1, 2]
+        );
+    }
+
+    #[test]
+    fn test_project_doc_fallback_filenames_empty_items() {
+        let content = "project_doc_fallback_filenames = [\"\", \"   \", \"AGENTS.md\"]";
+        let result = parse_codex_toml(content);
+        assert!(!result.project_doc_fallback_filenames_wrong_type);
+        assert_eq!(
+            result.project_doc_fallback_filename_empty_indices,
+            vec![0, 1]
+        );
     }
 
     // ===== find_toml_key_line =====

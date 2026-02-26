@@ -7,11 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **`.clinerules/*.txt` file support**: agnix now detects and validates `.clinerules/*.txt` files as `ClineRulesFolder` file type. Rules CLN-001 through CLN-004 now apply to `.txt` files in addition to `.md` files, matching Cline's actual behavior.
+
 ### Fixed
 - **OC-004 config key allowlist expanded**: Added 9 missing top-level keys (`autoshare`, `enterprise`, `layout`, `logLevel`, `lsp`, `mode`, `skills`, `snapshot`, `username`) to `KNOWN_TOP_LEVEL_KEYS` in the OpenCode schema, eliminating false-positive OC-004 warnings for valid opencode.json fields. All 9 OC rules re-verified against current OpenCode source on 2026-02-27.
-
+- **CUR-016 environment.json validation rewritten**: Schema now matches the current Cursor Cloud Agent spec - `install` is required, `terminals` is optional (was previously required), and `build` (with `dockerfile` and `context`) and `update` fields are now validated. Snapshot-based approach replaced with field-level structural validation. Includes 12 new unit tests.
+- **CUR-001 to CUR-016 verified_on dates updated**: All 16 Cursor rules re-verified against current Cursor documentation on 2026-02-26.
+- **spec-baselines.json expanded**: Baseline entries added for CUR-007 through CUR-016 to enable cross-version regression detection.
 ### Changed
 - **Unified design system**: Import shared design tokens from agent-sh/design-system. Switch from Outfit to Inter font. Add font preconnect hints to Docusaurus config. Keeps teal accent and light/dark mode.
+- **GitHub Copilot rule revalidation (COP-001 to COP-018)**: Refreshed evidence links and guidance for current custom-agent docs, added strict type checks for `infer` (boolean only), and aligned COP schema coverage for custom-agent keys (`name`, `disable-model-invocation`, `user-invocable`, `metadata`) with updated fixtures and generated rule docs (#567).
 
 ## [0.13.0] - 2026-02-21
 
@@ -604,7 +610,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Quick-fix code actions from Fix objects
   - Hover documentation for frontmatter fields
   - Document content caching for performance
-  - Supports all 230 agnix validation rules with severity mapping
+  - Supports all 231 agnix validation rules with severity mapping
 
   - Workspace boundary validation for security (prevents path traversal)
   - Config caching optimization for performance
@@ -620,7 +626,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Case-insensitive tool name matching
   - Takes precedence over legacy `target` field for flexibility
 - VS Code extension with full LSP integration (#22)
-  - Real-time diagnostics for all 230 validation rules
+  - Real-time diagnostics for all 231 validation rules
 
   - Status bar indicator showing agnix validation status
   - Syntax highlighting for SKILL.md YAML frontmatter

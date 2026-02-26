@@ -52,7 +52,7 @@ pub enum FileType {
     CursorRulesLegacy,
     /// Cline rules single file (.clinerules)
     ClineRules,
-    /// Cline rules folder files (.clinerules/*.md)
+    /// Cline rules folder files (.clinerules/*.md, .clinerules/*.txt)
     ClineRulesFolder,
     /// OpenCode configuration (opencode.json)
     OpenCodeConfig,

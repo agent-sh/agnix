@@ -1,0 +1,13 @@
+---
+paths:
+  - "**/*.py"
+---
+# Python Rules
+
+Follow PEP 8 style guidelines.
+
+## Guidelines
+
+- Use type hints for function signatures
+- Prefer f-strings over format()
+- Use pathlib for file system operations

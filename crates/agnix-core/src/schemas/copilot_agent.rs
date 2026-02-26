@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 
 /// Known valid keys for custom agent frontmatter.
 pub const KNOWN_KEYS: &[&str] = &[
+    "name",
     "description",
     "tools",
     "model",
@@ -14,12 +15,17 @@ pub const KNOWN_KEYS: &[&str] = &[
     "argument-hint",
     "handoffs",
     "infer",
+    "disable-model-invocation",
+    "user-invocable",
+    "metadata",
 ];
 
 /// Frontmatter schema for custom Copilot agents.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct CopilotAgentSchema {
+    #[serde(default)]
+    pub name: Option<String>,
     #[serde(default)]
     pub description: Option<String>,
     #[serde(default)]
@@ -36,6 +42,12 @@ pub struct CopilotAgentSchema {
     pub handoffs: Option<serde_yaml::Value>,
     #[serde(default)]
     pub infer: Option<serde_yaml::Value>,
+    #[serde(default)]
+    pub disable_model_invocation: Option<serde_yaml::Value>,
+    #[serde(default)]
+    pub user_invocable: Option<serde_yaml::Value>,
+    #[serde(default)]
+    pub metadata: Option<serde_yaml::Value>,
 }
 
 /// Result of parsing custom-agent frontmatter.

@@ -1,6 +1,5 @@
 {
-  "snapshot": 42,
-  "install": "npm ci",
+  "install": 42,
   "terminals": [
     {
       "name": "app"

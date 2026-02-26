@@ -1,9 +1,10 @@
-//! Cline rules validation rules (CLN-001 to CLN-003)
+//! Cline rules validation rules (CLN-001 to CLN-004)
 //!
 //! Validates:
 //! - CLN-001: Empty clinerules file (HIGH) - files must have content
 //! - CLN-002: Invalid paths glob in clinerules (HIGH) - glob patterns must be valid
 //! - CLN-003: Unknown frontmatter key in clinerules (MEDIUM) - only `paths` is recognized
+//! - CLN-004: Scalar paths in clinerules (HIGH) - must be array, not scalar
 
 use crate::{
     FileType,
@@ -61,7 +62,7 @@ impl Validator for ClineValidator {
         // CLN-001: Empty clinerules file (ERROR)
         if config.is_rule_enabled("CLN-001") {
             if is_folder {
-                // For folder .md files, check body after frontmatter if present
+                // For folder files (.md/.txt), check body after frontmatter if present
                 if let Some(parsed) = parse_frontmatter(content) {
                     // Only check body emptiness when frontmatter parsed successfully;
                     // parse errors (e.g. missing closing ---) produce empty body by default
@@ -108,7 +109,8 @@ impl Validator for ClineValidator {
             }
         }
 
-        // CLN-002 and CLN-003 only apply to folder .md files (they have frontmatter)
+        // CLN-002, CLN-003, and CLN-004 only apply to folder files (.md/.txt);
+        // frontmatter is optional but these rules check frontmatter content when present
         if !is_folder {
             return diagnostics;
         }
@@ -242,6 +244,15 @@ mod tests {
     fn validate_folder_with_config(content: &str, config: &LintConfig) -> Vec<Diagnostic> {
         let validator = ClineValidator;
         validator.validate(Path::new(".clinerules/typescript.md"), content, config)
+    }
+
+    fn validate_folder_txt(content: &str) -> Vec<Diagnostic> {
+        let validator = ClineValidator;
+        validator.validate(
+            Path::new(".clinerules/python.txt"),
+            content,
+            &LintConfig::default(),
+        )
     }
 
     // ===== CLN-001: Empty Clinerules File =====
@@ -590,6 +601,105 @@ unknownKey: value
         assert_eq!(
             crate::detect_file_type(Path::new(".clinerules/01-coding.md")),
             FileType::ClineRulesFolder
+        );
+    }
+
+    // ===== .txt file validation (mirrors .md tests) =====
+
+    #[test]
+    fn test_cln_001_empty_txt_file() {
+        let diagnostics = validate_folder_txt("");
+        let cln_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CLN-001").collect();
+        assert_eq!(cln_001.len(), 1);
+        assert_eq!(cln_001[0].level, DiagnosticLevel::Error);
+        assert!(cln_001[0].message.contains("empty"));
+    }
+
+    #[test]
+    fn test_cln_001_valid_txt_file() {
+        let content = "---\npaths:\n  - \"**/*.py\"\n---\n# Python Rules\n\nFollow PEP 8.\n";
+        let diagnostics = validate_folder_txt(content);
+        let cln_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CLN-001").collect();
+        assert!(cln_001.is_empty());
+    }
+
+    #[test]
+    fn test_cln_002_bad_glob_in_txt() {
+        let content = "---\npaths:\n  - \"[unclosed\"\n---\n# Instructions\n";
+        let diagnostics = validate_folder_txt(content);
+        let cln_002: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CLN-002").collect();
+        assert_eq!(cln_002.len(), 1);
+        assert_eq!(cln_002[0].level, DiagnosticLevel::Error);
+        assert!(cln_002[0].message.contains("Invalid glob pattern"));
+    }
+
+    #[test]
+    fn test_cln_003_unknown_keys_in_txt() {
+        let content = "---\npaths:\n  - \"**/*.ts\"\nunknownKey: value\nanotherBadKey: 123\n---\n# Instructions\n";
+        let diagnostics = validate_folder_txt(content);
+        let cln_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CLN-003").collect();
+        assert_eq!(cln_003.len(), 2);
+        assert_eq!(cln_003[0].level, DiagnosticLevel::Warning);
+        assert!(cln_003.iter().any(|d| d.message.contains("unknownKey")));
+        assert!(cln_003.iter().any(|d| d.message.contains("anotherBadKey")));
+        assert!(
+            cln_003.iter().all(|d| d.has_fixes()),
+            "All unknown key diagnostics should include deletion fixes"
+        );
+        assert!(cln_003.iter().all(|d| !d.fixes[0].safe));
+    }
+
+    #[test]
+    fn test_cln_004_scalar_paths_in_txt() {
+        let content = "---\npaths: \"**/*.ts\"\n---\n# Instructions\n";
+        let diagnostics = validate_folder_txt(content);
+        let cln_004: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CLN-004").collect();
+        assert_eq!(cln_004.len(), 1);
+        assert_eq!(cln_004[0].level, DiagnosticLevel::Error);
+        assert!(cln_004[0].message.contains("scalar"));
+        assert!(cln_004[0].has_fixes(), "CLN-004 should have an auto-fix");
+        assert!(cln_004[0].fixes[0].safe, "CLN-004 fix should be safe");
+        assert!(
+            cln_004[0].fixes[0].replacement.contains("- \"**/*.ts\""),
+            "Fix should convert scalar to array format, got: {}",
+            cln_004[0].fixes[0].replacement
+        );
+    }
+
+    #[test]
+    fn test_cln_001_whitespace_only_txt() {
+        let diagnostics = validate_folder_txt("   \n\n\t  ");
+        let cln_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CLN-001").collect();
+        assert_eq!(cln_001.len(), 1);
+        assert_eq!(cln_001[0].level, DiagnosticLevel::Error);
+    }
+
+    #[test]
+    fn test_cln_001_empty_body_after_frontmatter_txt() {
+        let content = "---\npaths:\n  - \"**/*.py\"\n---\n";
+        let diagnostics = validate_folder_txt(content);
+        let cln_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CLN-001").collect();
+        assert_eq!(cln_001.len(), 1);
+        assert!(cln_001[0].message.contains("no content after frontmatter"));
+    }
+
+    #[test]
+    fn test_cln_001_folder_no_frontmatter_with_content_txt() {
+        let content = "# Rules without frontmatter\n\nSome instructions.";
+        let diagnostics = validate_folder_txt(content);
+        let cln_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CLN-001").collect();
+        assert!(cln_001.is_empty());
+    }
+
+    #[test]
+    fn test_valid_txt_no_diagnostics() {
+        let content =
+            "---\npaths:\n  - \"**/*.py\"\n---\n# Python Guidelines\n\nAlways use type hints.\n";
+        let diagnostics = validate_folder_txt(content);
+        assert!(
+            diagnostics.is_empty(),
+            "Expected no diagnostics for valid .txt file, got: {:?}",
+            diagnostics
         );
     }
 }
