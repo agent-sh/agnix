@@ -11,7 +11,13 @@
     "read": "allow",
     "edit": "ask"
   },
+  "autoshare": "manual",
+  "enterprise": {},
+  "layout": "stretch",
+  "logLevel": "INFO",
+  "lsp": false,
+  "mode": "agent",
   "skills": [],
-  "username": "dev",
-  "lsp": false
+  "snapshot": false,
+  "username": "dev"
 }

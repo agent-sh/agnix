@@ -955,7 +955,16 @@ mod tests {
   "instructions": ["**/*.md"],
   "model": "claude-sonnet-4-5",
   "agent": {},
-  "permission": {}
+  "permission": {},
+  "autoshare": "manual",
+  "enterprise": {},
+  "layout": "stretch",
+  "logLevel": "INFO",
+  "lsp": false,
+  "mode": "agent",
+  "skills": [],
+  "snapshot": false,
+  "username": "dev"
 }"#;
         let diagnostics = validate(content);
         let oc_004: Vec<_> = diagnostics.iter().filter(|d| d.rule == "OC-004").collect();
