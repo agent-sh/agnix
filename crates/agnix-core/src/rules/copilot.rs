@@ -169,7 +169,17 @@ fn validate_custom_agent(path: &Path, content: &str, config: &LintConfig) -> Vec
     }
 
     if let Some(parsed) = &parsed {
-        if config.is_rule_enabled("COP-008") {
+        let cop_008_enabled = config.is_rule_enabled("COP-008");
+        let cop_010_enabled = config.is_rule_enabled("COP-010");
+        let raw_mapping = if cop_008_enabled || cop_010_enabled {
+            serde_yaml::from_str::<serde_yaml::Value>(&parsed.raw)
+                .ok()
+                .and_then(|raw| raw.as_mapping().cloned())
+        } else {
+            None
+        };
+
+        if cop_008_enabled {
             for unknown in &parsed.unknown_keys {
                 let mut diagnostic = Diagnostic::warning(
                     path.to_path_buf(),
@@ -199,10 +209,6 @@ fn validate_custom_agent(path: &Path, content: &str, config: &LintConfig) -> Vec
             }
 
             if let Some(schema) = &parsed.schema {
-                let raw_mapping = serde_yaml::from_str::<serde_yaml::Value>(&parsed.raw)
-                    .ok()
-                    .and_then(|raw| raw.as_mapping().cloned());
-
                 let raw_value = |key: &str| {
                     raw_mapping
                         .as_ref()
@@ -235,7 +241,7 @@ fn validate_custom_agent(path: &Path, content: &str, config: &LintConfig) -> Vec
                             .as_ref()
                             .is_some_and(|value| !value.is_bool()),
                         "disable-model-invocation",
-                        "boolean",
+                        "Set 'disable-model-invocation' to true or false.",
                     ),
                     (
                         "user-invocable:",
@@ -243,17 +249,17 @@ fn validate_custom_agent(path: &Path, content: &str, config: &LintConfig) -> Vec
                             .as_ref()
                             .is_some_and(|value| !value.is_bool()),
                         "user-invocable",
-                        "boolean",
+                        "Set 'user-invocable' to true or false.",
                     ),
                     (
                         "metadata:",
                         !metadata_valid,
                         "metadata",
-                        "object with string keys and string values",
+                        "Set 'metadata' to an object with string keys and string values.",
                     ),
                 ];
 
-                for (prefix, invalid, field_name, expected) in typed_field_checks {
+                for (prefix, invalid, field_name, suggestion) in typed_field_checks {
                     if invalid {
                         let line = frontmatter_key_line(&parsed.raw, parsed.start_line, prefix);
                         diagnostics.push(
@@ -262,12 +268,9 @@ fn validate_custom_agent(path: &Path, content: &str, config: &LintConfig) -> Vec
                                 line,
                                 0,
                                 "COP-008",
-                                format!("Field '{}' must be {}", field_name, expected),
+                                format!("Field '{}' has invalid value type", field_name),
                             )
-                            .with_suggestion(format!(
-                                "Set '{}' to a valid {} value.",
-                                field_name, expected
-                            )),
+                            .with_suggestion(suggestion),
                         );
                     }
                 }
@@ -321,18 +324,14 @@ fn validate_custom_agent(path: &Path, content: &str, config: &LintConfig) -> Vec
                 }
             }
 
-            if config.is_rule_enabled("COP-010") {
+            if cop_010_enabled {
                 let infer_is_non_boolean =
                     schema.infer.as_ref().is_some_and(|infer| !infer.is_bool());
                 let infer_is_explicit_null = if schema.infer.is_none() {
-                    serde_yaml::from_str::<serde_yaml::Value>(&parsed.raw)
-                        .ok()
-                        .and_then(|raw| {
-                            raw.as_mapping().and_then(|map| {
-                                map.get(serde_yaml::Value::String("infer".to_string()))
-                                    .cloned()
-                            })
-                        })
+                    raw_mapping
+                        .as_ref()
+                        .and_then(|map| map.get(serde_yaml::Value::String("infer".to_string())))
+                        .cloned()
                         .is_some_and(|value| value.is_null())
                 } else {
                     false
