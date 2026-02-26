@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **CUR-016 environment.json validation rewritten**: Schema now matches the current Cursor Cloud Agent spec - `install` is required, `terminals` is optional (was previously required), and `build` (with `dockerfile` and `context`) and `update` fields are now validated. Snapshot-based approach replaced with field-level structural validation. Includes 12 new unit tests.
+- **CUR-001 to CUR-016 verified_on dates updated**: All 16 Cursor rules re-verified against current Cursor documentation on 2026-02-26.
+- **spec-baselines.json expanded**: Baseline entries added for CUR-007 through CUR-016 to enable cross-version regression detection.
+
 ### Changed
 - **Unified design system**: Import shared design tokens from agent-sh/design-system. Switch from Outfit to Inter font. Add font preconnect hints to Docusaurus config. Keeps teal accent and light/dark mode.
 
