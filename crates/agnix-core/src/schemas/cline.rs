@@ -10,7 +10,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
-/// Known valid keys for .clinerules/*.md frontmatter
+/// Known valid keys for .clinerules folder file frontmatter
 const KNOWN_KEYS: &[&str] = &["paths"];
 
 /// Paths field can be a single string (scalar) or an array of strings.
@@ -46,7 +46,7 @@ impl PathsField {
     }
 }
 
-/// Frontmatter schema for Cline .clinerules/*.md files
+/// Frontmatter schema for Cline .clinerules folder files
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ClineRuleSchema {
     /// Glob patterns specifying which files this rule applies to
@@ -93,7 +93,7 @@ pub struct GlobValidation {
     pub error: Option<String>,
 }
 
-/// Parse frontmatter from a Cline .clinerules/*.md file
+/// Parse frontmatter from a Cline .clinerules folder file
 ///
 /// Returns parsed frontmatter if present, or None if no frontmatter exists.
 pub fn parse_frontmatter(content: &str) -> Option<ParsedClineFrontmatter> {
