@@ -239,7 +239,9 @@ fn validate_custom_agent(path: &Path, content: &str, config: &LintConfig) -> Vec
                     ),
                     (
                         "user-invocable:",
-                        user_invocable.as_ref().is_some_and(|value| !value.is_bool()),
+                        user_invocable
+                            .as_ref()
+                            .is_some_and(|value| !value.is_bool()),
                         "user-invocable",
                         "boolean",
                     ),
@@ -320,13 +322,16 @@ fn validate_custom_agent(path: &Path, content: &str, config: &LintConfig) -> Vec
             }
 
             if config.is_rule_enabled("COP-010") {
-                let infer_is_non_boolean = schema.infer.as_ref().is_some_and(|infer| !infer.is_bool());
+                let infer_is_non_boolean =
+                    schema.infer.as_ref().is_some_and(|infer| !infer.is_bool());
                 let infer_is_explicit_null = if schema.infer.is_none() {
                     serde_yaml::from_str::<serde_yaml::Value>(&parsed.raw)
                         .ok()
                         .and_then(|raw| {
-                            raw.as_mapping()
-                                .and_then(|map| map.get(serde_yaml::Value::String("infer".to_string())).cloned())
+                            raw.as_mapping().and_then(|map| {
+                                map.get(serde_yaml::Value::String("infer".to_string()))
+                                    .cloned()
+                            })
                         })
                         .is_some_and(|value| value.is_null())
                 } else {
@@ -1648,7 +1653,11 @@ Review pull requests.
 "#,
         );
         let cop_008: Vec<_> = diagnostics.iter().filter(|d| d.rule == "COP-008").collect();
-        assert_eq!(cop_008.len(), 3, "Expected one COP-008 per null typed field");
+        assert_eq!(
+            cop_008.len(),
+            3,
+            "Expected one COP-008 per null typed field"
+        );
     }
 
     #[test]
