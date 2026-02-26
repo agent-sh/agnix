@@ -635,7 +635,6 @@ fn validate_cursor_environment_file(
         }
     };
 
-    // install is required
     match root.get("install") {
         Some(v) if v.as_str().is_none() => {
             diagnostics.push(
@@ -664,7 +663,6 @@ fn validate_cursor_environment_file(
         _ => {}
     }
 
-    // start is optional but must be a string when present
     if let Some(start) = root.get("start")
         && start.as_str().is_none()
     {
@@ -680,7 +678,6 @@ fn validate_cursor_environment_file(
         );
     }
 
-    // update is optional but must be a string when present
     if let Some(update) = root.get("update")
         && update.as_str().is_none()
     {
@@ -696,7 +693,6 @@ fn validate_cursor_environment_file(
         );
     }
 
-    // build is optional but must be an object with string dockerfile and context when present
     if let Some(build) = root.get("build") {
         match build.as_object() {
             Some(build_obj) => {
@@ -744,7 +740,6 @@ fn validate_cursor_environment_file(
         }
     }
 
-    // terminals is optional but must be an array of objects when present
     if let Some(terminals_value) = root.get("terminals") {
         match terminals_value {
             JsonValue::Array(terminals) => {
@@ -1593,7 +1588,6 @@ is_background: false
 
     #[test]
     fn test_cur_016_invalid_environment_schema() {
-        // install must be a string, not a number
         let diagnostics = validate_cursor_environment(
             r#"{"install":42,"terminals":[{"name":"main"}]}"#,
         );
@@ -1614,7 +1608,6 @@ is_background: false
 
     #[test]
     fn test_cur_016_environment_missing_install() {
-        // install is required
         let diagnostics = validate_cursor_environment(r#"{"start":"npm run dev"}"#);
         assert!(
             diagnostics.iter().any(|d| d.rule == "CUR-016"),
