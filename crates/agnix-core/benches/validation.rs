@@ -561,6 +561,14 @@ fn bench_is_instruction_file(c: &mut Criterion) {
         ("agents_md", Path::new("AGENTS.md").to_path_buf()),
         ("gemini_md", Path::new("gemini.md").to_path_buf()),
         ("clinerules", Path::new(".clinerules").to_path_buf()),
+        (
+            "clinerules_folder_md",
+            Path::new(".clinerules/rules.md").to_path_buf(),
+        ),
+        (
+            "clinerules_folder_txt",
+            Path::new(".clinerules/rules.txt").to_path_buf(),
+        ),
         // Directory-based matches
         (
             "cursor_mdc",

@@ -835,6 +835,26 @@ mod tests {
     }
 
     #[test]
+    fn detect_cline_rules_folder_txt() {
+        assert_eq!(
+            detect_file_type(Path::new(".clinerules/custom.txt")),
+            FileType::ClineRulesFolder
+        );
+        assert_eq!(
+            detect_file_type(Path::new(".clinerules/01-coding.txt")),
+            FileType::ClineRulesFolder
+        );
+    }
+
+    #[test]
+    fn detect_cline_rules_folder_non_md_txt_rejected() {
+        assert_ne!(
+            detect_file_type(Path::new(".clinerules/config.json")),
+            FileType::ClineRulesFolder
+        );
+    }
+
+    #[test]
     fn detect_opencode_config() {
         assert_eq!(
             detect_file_type(Path::new("opencode.json")),
