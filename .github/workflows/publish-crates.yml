@@ -72,7 +72,7 @@ jobs:
           ua="User-Agent: agnix-ci (https://github.com/agent-sh/agnix)"
           echo "Waiting for $crate $version to appear on crates.io..."
           for i in $(seq 1 $max_retries); do
-            status=$(curl -s -o /dev/null -w "%{http_code}" -H "$ua" "https://crates.io/api/v1/crates/$crate/$version")
+            status=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 10 --max-time 30 -H "$ua" "https://crates.io/api/v1/crates/$crate/$version" || printf '000')
             if [ "$status" = "200" ]; then
               echo "$crate $version available after $(((i - 1) * interval))s"
               exit 0
