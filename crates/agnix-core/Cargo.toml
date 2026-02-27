@@ -34,7 +34,7 @@ regex.workspace = true
 ignore = { workspace = true, optional = true }
 glob.workspace = true
 rayon = { workspace = true, optional = true }
-dirs = { version = "5", optional = true }
+dirs = { version = "6", optional = true }
 semver = "1"
 toml = "0.8"
 schemars = "1"
