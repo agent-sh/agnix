@@ -1,0 +1,117 @@
+name: Publish Remaining Crates
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (e.g. 0.14.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  publish:
+    name: Publish to crates.io
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: v${{ inputs.version }}
+
+      - uses: dtolnay/rust-toolchain@4be9e76fd7c4901c61fb841f559994984270fce7 # stable
+
+      - uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2
+
+      - name: Create helpers
+        run: |
+          set -euo pipefail
+          cat > /tmp/publish-crate.sh << 'SCRIPT'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          crate="$1"
+          version="$2"
+          echo "Publishing $crate $version..."
+          if cargo publish -p "$crate" 2>&1; then
+            echo "$crate $version published successfully"
+          else
+            status=$(curl -s -o /dev/null -w "%{http_code}" "https://crates.io/api/v1/crates/$crate/$version")
+            if [ "$status" = "200" ]; then
+              echo "$crate $version already published, skipping"
+            else
+              echo "Publish failed and $crate $version not found on crates.io (HTTP $status)"
+              exit 1
+            fi
+          fi
+          SCRIPT
+          chmod +x /tmp/publish-crate.sh
+
+          cat > /tmp/wait-for-crate.sh << 'SCRIPT'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          crate="$1"
+          version="$2"
+          max_retries=30
+          interval=10
+          echo "Waiting for $crate $version to appear on crates.io index..."
+          for i in $(seq 1 $max_retries); do
+            output=$(cargo search "$crate" --limit 1 2>&1) || {
+              if [ "$i" -lt "$max_retries" ]; then
+                echo "Attempt $i/$max_retries: cargo search failed, retrying in ${interval}s..."
+                sleep "$interval"
+                continue
+              fi
+              break
+            }
+            if echo "$output" | grep -qF "$crate = \"$version\""; then
+              echo "$crate $version indexed after $(((i - 1) * interval))s"
+              exit 0
+            fi
+            if [ "$i" -lt "$max_retries" ]; then
+              echo "Attempt $i/$max_retries: $crate $version not yet indexed, retrying in ${interval}s..."
+              sleep "$interval"
+            fi
+          done
+          echo "Error: $crate $version not indexed after $((max_retries * interval))s"
+          exit 1
+          SCRIPT
+          chmod +x /tmp/wait-for-crate.sh
+
+      - name: Publish agnix-rules
+        run: /tmp/publish-crate.sh agnix-rules ${{ inputs.version }}
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+      - name: Wait for agnix-rules indexing
+        run: /tmp/wait-for-crate.sh agnix-rules ${{ inputs.version }}
+
+      - name: Publish agnix-core
+        run: /tmp/publish-crate.sh agnix-core ${{ inputs.version }}
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+      - name: Wait for agnix-core indexing
+        run: /tmp/wait-for-crate.sh agnix-core ${{ inputs.version }}
+
+      - name: Publish agnix-cli
+        run: /tmp/publish-crate.sh agnix-cli ${{ inputs.version }}
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+      - name: Publish agnix-lsp
+        run: /tmp/publish-crate.sh agnix-lsp ${{ inputs.version }}
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+      - name: Publish agnix-mcp
+        run: /tmp/publish-crate.sh agnix-mcp ${{ inputs.version }}
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
