@@ -220,28 +220,20 @@ jobs:
           # crates.io indexing is typically <60s, allow 5 min (30 x 10s) for high-load scenarios
           max_retries=30
           interval=10
-          echo "Waiting for $crate $version to appear on crates.io index..."
+          ua="User-Agent: agnix-ci (https://github.com/agent-sh/agnix)"
+          echo "Waiting for $crate $version to appear on crates.io..."
           for i in $(seq 1 $max_retries); do
-            output=$(cargo search "$crate" --limit 1 2>&1) || {
-              if [ "$i" -lt "$max_retries" ]; then
-                echo "Attempt $i/$max_retries: cargo search failed, retrying in ${interval}s..."
-                sleep "$interval"
-                continue
-              else
-                echo "Attempt $i/$max_retries: cargo search failed, no retries left."
-                break
-              fi
-            }
-            if echo "$output" | grep -qF "$crate = \"$version\""; then
-              echo "$crate $version indexed after $(((i - 1) * interval))s"
+            status=$(curl -s -o /dev/null -w "%{http_code}" -H "$ua" "https://crates.io/api/v1/crates/$crate/$version")
+            if [ "$status" = "200" ]; then
+              echo "$crate $version available after $(((i - 1) * interval))s"
               exit 0
             fi
             if [ "$i" -lt "$max_retries" ]; then
-              echo "Attempt $i/$max_retries: $crate $version not yet indexed, retrying in ${interval}s..."
+              echo "Attempt $i/$max_retries: $crate $version not yet available (HTTP $status), retrying in ${interval}s..."
               sleep "$interval"
             fi
           done
-          echo "Error: $crate $version not indexed after $((max_retries * interval))s"
+          echo "Error: $crate $version not available after $((max_retries * interval))s"
           exit 1
           SCRIPT
           chmod +x /tmp/wait-for-crate.sh
