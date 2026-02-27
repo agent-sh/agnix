@@ -54,7 +54,7 @@ dependencies = [
  "serde_yaml",
  "tempfile",
  "thiserror 2.0.18",
- "toml 0.8.23",
+ "toml 1.0.1+spec-1.1.0",
  "tracking-allocator",
 ]
 
@@ -118,7 +118,7 @@ dependencies = [
  "agnix-rules",
  "serde_json",
  "tempfile",
- "toml 0.8.23",
+ "toml 1.0.1+spec-1.1.0",
 ]
 
 [[package]]
