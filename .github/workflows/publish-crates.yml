@@ -47,7 +47,7 @@ jobs:
           if cargo publish -p "$crate" 2>&1; then
             echo "$crate $version published successfully"
           else
-            status=$(curl -s -o /dev/null -w "%{http_code}" "https://crates.io/api/v1/crates/$crate/$version")
+            status=$(curl -s -o /dev/null -w "%{http_code}" -H "User-Agent: agnix-ci (https://github.com/agent-sh/agnix)" "https://crates.io/api/v1/crates/$crate/$version")
             if [ "$status" = "200" ]; then
               echo "$crate $version already published, skipping"
             else

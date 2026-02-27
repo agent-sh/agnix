@@ -263,7 +263,7 @@ jobs:
             echo "$crate $version published successfully"
           else
             # Check if version already exists on crates.io (handles re-runs after partial failures)
-            status=$(curl -s -o /dev/null -w "%{http_code}" "https://crates.io/api/v1/crates/$crate/$version")
+            status=$(curl -s -o /dev/null -w "%{http_code}" -H "User-Agent: agnix-ci (https://github.com/agent-sh/agnix)" "https://crates.io/api/v1/crates/$crate/$version")
             if [ "$status" = "200" ]; then
               echo "$crate $version already published, skipping"
             else
