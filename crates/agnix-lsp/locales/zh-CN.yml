@@ -580,6 +580,9 @@ rules:
   kr_hk_001:
     message: "无效的 Kiro IDE Hook 事件 '%{event}'"
     suggestion: "使用以下之一：fileEdited、fileCreate、fileDelete、promptSubmit、agentStop、preToolUse、postToolUse、manual"
+  kr_hk_001_parse:
+    message: "Kiro IDE Hook 文件的 JSON 结构无效：%{error}"
+    suggestion: "在配置事件/动作前先修复该 Hook 文件的 JSON 语法"
   kr_hk_002:
     message: "Kiro 文件事件 Hook '%{event}' 缺少 patterns"
     suggestion: "为 fileEdited/fileCreate/fileDelete Hook 添加 patterns"

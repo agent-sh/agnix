@@ -19,7 +19,7 @@ use crate::{
 };
 use regex::Regex;
 use rust_i18n::t;
-use std::path::Path;
+use std::path::{Component, Path};
 use std::sync::OnceLock;
 
 const RULE_IDS: &[&str] = &[
@@ -85,6 +85,12 @@ fn seems_plaintext_secret(value: &str) -> bool {
         && trimmed.len() >= 8
 }
 
+fn has_parent_dir_traversal(reference: &str) -> bool {
+    Path::new(reference)
+        .components()
+        .any(|component| matches!(component, Component::ParentDir))
+}
+
 /// Adapter to use raw frontmatter with `find_yaml_value_range`.
 struct FrontmatterAdapter<'a> {
     raw: &'a str,
@@ -128,27 +134,30 @@ impl Validator for KiroSteeringValidator {
         }
 
         // KIRO-006: Secrets in steering content
-        if config.is_rule_enabled("KIRO-006")
-            && let Some(captures) = secret_pattern().captures(content)
-            && let Some(full_match) = captures.get(0)
-        {
-            let marker = captures
-                .get(1)
-                .map(|m| m.as_str().to_ascii_lowercase())
-                .unwrap_or_else(|| "secret".to_string());
-            let value = captures.get(2).map(|m| m.as_str()).unwrap_or_default();
-            if seems_plaintext_secret(value) {
-                let (line, col) = line_col_at_offset(content, full_match.start());
-                diagnostics.push(
-                    Diagnostic::error(
-                        path.to_path_buf(),
-                        line,
-                        col,
-                        "KIRO-006",
-                        t!("rules.kiro_006.message", marker = marker),
-                    )
-                    .with_suggestion(t!("rules.kiro_006.suggestion")),
-                );
+        if config.is_rule_enabled("KIRO-006") {
+            for captures in secret_pattern().captures_iter(content) {
+                let Some(full_match) = captures.get(0) else {
+                    continue;
+                };
+                let marker = captures
+                    .get(1)
+                    .map(|m| m.as_str().to_ascii_lowercase())
+                    .unwrap_or_else(|| "secret".to_string());
+                let value = captures.get(2).map(|m| m.as_str()).unwrap_or_default();
+                if seems_plaintext_secret(value) {
+                    let (line, col) = line_col_at_offset(content, full_match.start());
+                    diagnostics.push(
+                        Diagnostic::error(
+                            path.to_path_buf(),
+                            line,
+                            col,
+                            "KIRO-006",
+                            t!("rules.kiro_006.message", marker = marker),
+                        )
+                        .with_suggestion(t!("rules.kiro_006.suggestion")),
+                    );
+                    break;
+                }
             }
         }
 
@@ -167,17 +176,16 @@ impl Validator for KiroSteeringValidator {
                 if reference.is_empty()
                     || reference.starts_with("http://")
                     || reference.starts_with("https://")
+                    || Path::new(reference).is_absolute()
+                    || has_parent_dir_traversal(reference)
                 {
                     continue;
                 }
 
-                let resolved = if Path::new(reference).is_absolute() {
-                    Path::new(reference).to_path_buf()
-                } else {
-                    path.parent()
-                        .unwrap_or_else(|| Path::new("."))
-                        .join(reference)
-                };
+                let resolved = path
+                    .parent()
+                    .unwrap_or_else(|| Path::new("."))
+                    .join(reference);
 
                 if !fs.exists(&resolved) {
                     let (line, col) = line_col_at_offset(content, full_match.start());
@@ -919,6 +927,14 @@ mod tests {
     }
 
     #[test]
+    fn test_kiro_006_scans_past_template_values() {
+        let content =
+            "---\ninclusion: always\n---\nTOKEN=${ENV_TOKEN}\npassword=plaintextsecret123\n";
+        let diagnostics = validate_steering(content);
+        assert!(diagnostics.iter().any(|d| d.rule == "KIRO-006"));
+    }
+
+    #[test]
     fn test_kiro_007_file_match_pattern_without_file_match_mode() {
         let content = "---\ninclusion: always\nfileMatchPattern: \"**/*.md\"\n---\n# body\n";
         let diagnostics = validate_steering(content);
@@ -937,6 +953,20 @@ mod tests {
         let content = "---\ninclusion: always\n---\nUse #[[file:docs/missing.md]]\n";
         let diagnostics = validate_steering(content);
         assert!(diagnostics.iter().any(|d| d.rule == "KIRO-009"));
+    }
+
+    #[test]
+    fn test_kiro_009_skips_absolute_inline_file_reference() {
+        let content = "---\ninclusion: always\n---\nUse #[[file:/etc/passwd]]\n";
+        let diagnostics = validate_steering(content);
+        assert!(diagnostics.iter().all(|d| d.rule != "KIRO-009"));
+    }
+
+    #[test]
+    fn test_kiro_009_skips_parent_dir_traversal_inline_file_reference() {
+        let content = "---\ninclusion: always\n---\nUse #[[file:../../secrets.txt]]\n";
+        let diagnostics = validate_steering(content);
+        assert!(diagnostics.iter().all(|d| d.rule != "KIRO-009"));
     }
 
     // ===== Metadata =====

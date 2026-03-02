@@ -343,7 +343,13 @@ fn validate_agent_schema_rules(
         }
     }
 
-    if check_allowed_tools_subset && current_agent.get("allowedTools").is_some() {
+    if check_allowed_tools_subset
+        && current_agent.get("allowedTools").is_some()
+        && current_agent
+            .get("tools")
+            .and_then(Value::as_array)
+            .is_some()
+    {
         let tools = extract_string_array(current_agent.get("tools"));
         let tools_set = normalize_tool_set(&tools);
         let allowed_tools = extract_string_array(current_agent.get("allowedTools"));
@@ -761,6 +767,31 @@ mod tests {
             diagnostics
                 .iter()
                 .any(|diagnostic| diagnostic.rule == "KR-AG-003")
+        );
+    }
+
+    #[test]
+    fn test_kr_ag_003_skips_when_tools_missing() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let agents_dir = temp.path().join(".kiro").join("agents");
+        fs::create_dir_all(&agents_dir).unwrap();
+
+        let missing_tools = agents_dir.join("missing-tools.json");
+        write_agent(
+            &missing_tools,
+            r#"{
+  "name": "missing-tools",
+  "allowedTools": ["readFiles"]
+}"#,
+        );
+
+        let diagnostics = validate(&missing_tools);
+        assert!(
+            diagnostics
+                .iter()
+                .all(|diagnostic| diagnostic.rule != "KR-AG-003"),
+            "KR-AG-003 should skip when tools is absent: {:?}",
+            diagnostics
         );
     }
 

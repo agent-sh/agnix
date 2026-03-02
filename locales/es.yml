@@ -580,6 +580,9 @@ rules:
   kr_hk_001:
     message: "Evento invalido de hook IDE Kiro: '%{event}'"
     suggestion: "Usa uno de: fileEdited, fileCreate, fileDelete, promptSubmit, agentStop, preToolUse, postToolUse, manual"
+  kr_hk_001_parse:
+    message: "El archivo de hook IDE Kiro tiene estructura JSON invalida: %{error}"
+    suggestion: "Corrige la sintaxis JSON del archivo de hook antes de configurar evento/acciones"
   kr_hk_002:
     message: "El hook de archivo Kiro para el evento '%{event}' no tiene patterns"
     suggestion: "Agrega patterns para hooks fileEdited/fileCreate/fileDelete"

@@ -38,6 +38,26 @@ impl Validator for KiroHookValidator {
     fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
         let parsed = parse_kiro_hook(content);
+
+        if config.is_rule_enabled("KR-HK-001")
+            && let Some(parse_error) = parsed.parse_error.as_ref()
+        {
+            diagnostics.push(
+                Diagnostic::error(
+                    path.to_path_buf(),
+                    parse_error.line.max(1),
+                    parse_error.column,
+                    "KR-HK-001",
+                    t!(
+                        "rules.kr_hk_001_parse.message",
+                        error = parse_error.message.as_str()
+                    ),
+                )
+                .with_suggestion(t!("rules.kr_hk_001_parse.suggestion")),
+            );
+            return diagnostics;
+        }
+
         let Some(hook) = parsed.hook else {
             return diagnostics;
         };
@@ -159,6 +179,12 @@ mod tests {
             "../../../../tests/fixtures/kiro-hooks/.kiro/hooks/missing-tool-types.kiro.hook"
         ));
         assert!(diagnostics.iter().any(|d| d.rule == "KR-HK-004"));
+    }
+
+    #[test]
+    fn test_kr_hk_parse_error_reports_diagnostic() {
+        let diagnostics = validate(r#"{"event":"fileEdited","patterns":[}"#);
+        assert!(diagnostics.iter().any(|d| d.rule == "KR-HK-001"));
     }
 
     #[test]
