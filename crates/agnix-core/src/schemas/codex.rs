@@ -173,8 +173,12 @@ pub struct ParseError {
 /// In production, `file_utils::safe_read_file` enforces a 1 MiB limit upstream,
 /// so content passed here is already bounded.
 pub fn parse_codex_toml(content: &str) -> ParsedCodexConfig {
-    // First pass: validate TOML syntax
-    let value: toml::Value = match toml::from_str::<toml::Value>(content) {
+    // First pass: parse the TOML document as a top-level table.
+    //
+    // `toml::Value` parsing accepts full documents on older toml releases, but
+    // newer releases treat `Value` parsing as a single-value parser. Using
+    // `toml::Table` keeps behavior stable across versions.
+    let parsed_table: toml::Table = match toml::from_str::<toml::Table>(content) {
         Ok(v) => v,
         Err(e) => {
             // toml crate provides span info; extract line/column
@@ -218,7 +222,7 @@ pub fn parse_codex_toml(content: &str) -> ParsedCodexConfig {
 
     // Second pass: extract typed fields permissively, tracking type mismatches
     // TOML keys use camelCase: approvalMode, fullAutoErrorMode
-    let table = value.as_table();
+    let table = Some(&parsed_table);
 
     let approval_mode_value = table.and_then(|t| t.get("approvalMode"));
     let approval_mode_wrong_type = approval_mode_value.is_some_and(|v| !v.is_str());
