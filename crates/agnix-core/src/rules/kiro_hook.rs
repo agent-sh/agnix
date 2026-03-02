@@ -25,6 +25,10 @@ fn is_tool_event(event: &str) -> bool {
     matches!(event, "preToolUse" | "postToolUse")
 }
 
+fn has_non_blank_entries(values: &[String]) -> bool {
+    values.iter().any(|value| !value.trim().is_empty())
+}
+
 pub struct KiroHookValidator;
 
 impl Validator for KiroHookValidator {
@@ -85,7 +89,7 @@ impl Validator for KiroHookValidator {
                 && hook
                     .patterns
                     .as_ref()
-                    .is_none_or(|patterns| patterns.is_empty())
+                    .is_none_or(|patterns| !has_non_blank_entries(patterns))
             {
                 diagnostics.push(
                     Diagnostic::error(
@@ -104,7 +108,7 @@ impl Validator for KiroHookValidator {
                 && hook
                     .tool_types
                     .as_ref()
-                    .is_none_or(|tool_types| tool_types.is_empty())
+                    .is_none_or(|tool_types| !has_non_blank_entries(tool_types))
             {
                 diagnostics.push(
                     Diagnostic::warning(
@@ -166,6 +170,18 @@ mod tests {
     }
 
     #[test]
+    fn test_kr_hk_002_blank_patterns_for_file_event() {
+        let diagnostics = validate(
+            r#"{
+  "event": "fileEdited",
+  "patterns": ["   "],
+  "runCommand": "echo changed"
+}"#,
+        );
+        assert!(diagnostics.iter().any(|d| d.rule == "KR-HK-002"));
+    }
+
+    #[test]
     fn test_kr_hk_003_missing_action() {
         let diagnostics = validate(include_str!(
             "../../../../tests/fixtures/kiro-hooks/.kiro/hooks/missing-action.kiro.hook"
@@ -189,6 +205,18 @@ mod tests {
         let diagnostics = validate(include_str!(
             "../../../../tests/fixtures/kiro-hooks/.kiro/hooks/missing-tool-types.kiro.hook"
         ));
+        assert!(diagnostics.iter().any(|d| d.rule == "KR-HK-004"));
+    }
+
+    #[test]
+    fn test_kr_hk_004_blank_tool_types_for_tool_event() {
+        let diagnostics = validate(
+            r#"{
+  "event": "preToolUse",
+  "toolTypes": ["   "],
+  "runCommand": "echo changed"
+}"#,
+        );
         assert!(diagnostics.iter().any(|d| d.rule == "KR-HK-004"));
     }
 
