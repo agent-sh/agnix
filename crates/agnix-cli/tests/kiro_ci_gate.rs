@@ -1,6 +1,7 @@
 use assert_cmd::Command;
 use regex::Regex;
 use serde::Deserialize;
+use std::collections::HashSet;
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -52,6 +53,27 @@ fn agnix() -> Command {
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("agnix");
     cmd.current_dir(workspace_root());
     cmd
+}
+
+fn normalize_repo_url(url: &str) -> Option<String> {
+    let trimmed = url.trim().trim_end_matches('/');
+    let prefix = "https://github.com/";
+    if !trimmed.starts_with(prefix) {
+        return None;
+    }
+
+    let mut parts = trimmed[prefix.len()..].split('/');
+    let owner = parts.next()?;
+    let repo = parts.next()?;
+    if owner.is_empty() || repo.is_empty() || parts.next().is_some() {
+        return None;
+    }
+
+    Some(format!(
+        "https://github.com/{}/{}",
+        owner.to_ascii_lowercase(),
+        repo.to_ascii_lowercase()
+    ))
 }
 
 #[test]
@@ -224,9 +246,18 @@ fn real_world_manifest_has_explicit_kiro_coverage() {
         .filter(|repo| repo.categories.iter().any(|category| category == "kiro"))
         .collect();
 
+    let required_kiro_repos = [
+        "https://github.com/Theadd/kiro-agents",
+        "https://github.com/awsdataarchitect/kiro-best-practices",
+        "https://github.com/dereknguyen269/derek-power",
+        "https://github.com/cremich/promptz",
+    ];
+
     assert!(
-        !kiro_entries.is_empty(),
-        "tests/real-world/repos.yaml must include at least one explicit 'kiro' categorized repo"
+        kiro_entries.len() >= required_kiro_repos.len(),
+        "tests/real-world/repos.yaml must include at least {} explicit 'kiro' categorized repos, found {}",
+        required_kiro_repos.len(),
+        kiro_entries.len()
     );
 
     let repo_url_re =
@@ -236,5 +267,25 @@ fn real_world_manifest_has_explicit_kiro_coverage() {
             .iter()
             .all(|repo| repo_url_re.is_match(&repo.url)),
         "All explicit 'kiro' category entries must be valid GitHub owner/repo URLs"
+    );
+
+    let normalized_kiro_repo_urls: HashSet<String> = kiro_entries
+        .iter()
+        .map(|repo| normalize_repo_url(&repo.url))
+        .collect::<Option<HashSet<String>>>()
+        .expect("All explicit 'kiro' repo URLs must normalize to owner/repo form");
+    let missing_required: Vec<&str> = required_kiro_repos
+        .iter()
+        .copied()
+        .filter(|url| {
+            let normalized_required =
+                normalize_repo_url(url).expect("required Kiro repo URL constants must normalize");
+            !normalized_kiro_repo_urls.contains(&normalized_required)
+        })
+        .collect();
+    assert!(
+        missing_required.is_empty(),
+        "Missing required explicit Kiro real-world repos in tests/real-world/repos.yaml:\n{}",
+        missing_required.join("\n")
     );
 }

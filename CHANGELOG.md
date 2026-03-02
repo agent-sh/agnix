@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **README supported tools update**: Added a Kiro row to the Supported Tools table with current rule coverage (`KIRO-*`, `KR-SK-*`) and current file surface (`.kiro/steering/**/*.md` and `.kiro/skills/**/SKILL.md`) (#596).
 - **Kiro S-tier CI gate**: Added an explicit `Kiro S-tier Gate` step in the main CI test job that executes dedicated Kiro gate checks for target behavior, docs/rule parity integrity, and real-world manifest coverage on every PR/push (#602).
 - **Kiro fixture expansion**: Added fixture packs for Kiro powers, agents, hooks, and MCP settings plus integration tests to keep the corpus present and CLI-runnable (#599).
+- **Kiro real-world repo coverage**: Added/updated explicit Kiro-tagged real-world repos (`awsdataarchitect/kiro-best-practices`, `dereknguyen269/derek-power`, `cremich/promptz`, `Theadd/kiro-agents`) and tightened CI gating to require the expanded baseline in `tests/real-world/repos.yaml` (#598).
 
 ### Changed
 - **Kiro docs and tests**: Expanded integration/contract tests for Kiro target paths and updated usage docs to clarify legacy `--target` behavior versus `tools = [...]` filtering.

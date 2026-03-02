@@ -1460,7 +1460,7 @@ repos:
   - url: https://github.com/Royal-lobster/Transedit
     categories: [auto-discovered]
     status: pending
-  - url: https://github.com/Ryotaverse69/suptia-kiro
+  - url: https://github.com/Theadd/kiro-agents
     categories: [auto-discovered, kiro]
     status: pending
   - url: https://github.com/SAP/e-mobility-charging-stations-simulator
@@ -1913,6 +1913,9 @@ repos:
   - url: https://github.com/aviadshiber/kapsis
     categories: [auto-discovered]
     status: pending
+  - url: https://github.com/awsdataarchitect/kiro-best-practices
+    categories: [auto-discovered, kiro]
+    status: pending
   - url: https://github.com/axAilotl/character-federation
     categories: [auto-discovered]
     status: pending
@@ -2176,6 +2179,9 @@ repos:
     status: pending
   - url: https://github.com/derek1ee/clrviz
     categories: [auto-discovered]
+    status: pending
+  - url: https://github.com/dereknguyen269/derek-power
+    categories: [auto-discovered, kiro]
     status: pending
   - url: https://github.com/deseven/ec-su_axb35-win
     categories: [auto-discovered]
@@ -3154,6 +3160,9 @@ repos:
     status: pending
   - url: https://github.com/pratikpakhale/mixboard
     categories: [auto-discovered]
+    status: pending
+  - url: https://github.com/cremich/promptz
+    categories: [auto-discovered, kiro]
     status: pending
   - url: https://github.com/presidio-oss/aider-based-code-generator
     categories: [auto-discovered]
