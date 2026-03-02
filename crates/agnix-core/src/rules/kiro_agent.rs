@@ -268,7 +268,11 @@ fn validate_cli_hook_rules(
                         1,
                         0,
                         "KR-HK-006",
-                        t!("rules.kr_hk_006.message", event = event.as_str(), index = index),
+                        t!(
+                            "rules.kr_hk_006.message",
+                            event = event.as_str(),
+                            index = index
+                        ),
                     )
                     .with_suggestion(t!("rules.kr_hk_006.suggestion")),
                 );
@@ -339,9 +343,7 @@ fn validate_agent_schema_rules(
         }
     }
 
-    if check_allowed_tools_subset
-        && current_agent.get("allowedTools").is_some()
-    {
+    if check_allowed_tools_subset && current_agent.get("allowedTools").is_some() {
         let tools = extract_string_array(current_agent.get("tools"));
         let tools_set = normalize_tool_set(&tools);
         let allowed_tools = extract_string_array(current_agent.get("allowedTools"));
@@ -727,11 +729,17 @@ mod tests {
         let invalid = agents_dir.join("invalid-resource.json");
         write_agent(
             &invalid,
-            include_str!("../../../../tests/fixtures/kiro-agents/.kiro/agents/invalid-resource.json"),
+            include_str!(
+                "../../../../tests/fixtures/kiro-agents/.kiro/agents/invalid-resource.json"
+            ),
         );
 
         let diagnostics = validate(&invalid);
-        assert!(diagnostics.iter().any(|diagnostic| diagnostic.rule == "KR-AG-002"));
+        assert!(
+            diagnostics
+                .iter()
+                .any(|diagnostic| diagnostic.rule == "KR-AG-002")
+        );
     }
 
     #[test]
@@ -743,11 +751,17 @@ mod tests {
         let invalid = agents_dir.join("mismatched-tools.json");
         write_agent(
             &invalid,
-            include_str!("../../../../tests/fixtures/kiro-agents/.kiro/agents/mismatched-tools.json"),
+            include_str!(
+                "../../../../tests/fixtures/kiro-agents/.kiro/agents/mismatched-tools.json"
+            ),
         );
 
         let diagnostics = validate(&invalid);
-        assert!(diagnostics.iter().any(|diagnostic| diagnostic.rule == "KR-AG-003"));
+        assert!(
+            diagnostics
+                .iter()
+                .any(|diagnostic| diagnostic.rule == "KR-AG-003")
+        );
     }
 
     #[test]
@@ -763,7 +777,11 @@ mod tests {
         );
 
         let diagnostics = validate(&invalid);
-        assert!(diagnostics.iter().any(|diagnostic| diagnostic.rule == "KR-AG-004"));
+        assert!(
+            diagnostics
+                .iter()
+                .any(|diagnostic| diagnostic.rule == "KR-AG-004")
+        );
     }
 
     #[test]
@@ -779,7 +797,11 @@ mod tests {
         );
 
         let diagnostics = validate(&no_mcp);
-        assert!(diagnostics.iter().any(|diagnostic| diagnostic.rule == "KR-AG-005"));
+        assert!(
+            diagnostics
+                .iter()
+                .any(|diagnostic| diagnostic.rule == "KR-AG-005")
+        );
     }
 
     #[test]
@@ -791,11 +813,17 @@ mod tests {
         let invalid = agents_dir.join("invalid-hook-event.json");
         write_agent(
             &invalid,
-            include_str!("../../../../tests/fixtures/kiro-agents/.kiro/agents/invalid-hook-event.json"),
+            include_str!(
+                "../../../../tests/fixtures/kiro-agents/.kiro/agents/invalid-hook-event.json"
+            ),
         );
 
         let diagnostics = validate(&invalid);
-        assert!(diagnostics.iter().any(|diagnostic| diagnostic.rule == "KR-HK-005"));
+        assert!(
+            diagnostics
+                .iter()
+                .any(|diagnostic| diagnostic.rule == "KR-HK-005")
+        );
     }
 
     #[test]
@@ -813,7 +841,11 @@ mod tests {
         );
 
         let diagnostics = validate(&invalid);
-        assert!(diagnostics.iter().any(|diagnostic| diagnostic.rule == "KR-HK-006"));
+        assert!(
+            diagnostics
+                .iter()
+                .any(|diagnostic| diagnostic.rule == "KR-HK-006")
+        );
     }
 
     #[test]

@@ -131,42 +131,48 @@ mod tests {
 
     #[test]
     fn test_kr_hk_001_invalid_event() {
-        let diagnostics =
-            validate(include_str!("../../../../tests/fixtures/kiro-hooks/.kiro/hooks/invalid-event.kiro.hook"));
+        let diagnostics = validate(include_str!(
+            "../../../../tests/fixtures/kiro-hooks/.kiro/hooks/invalid-event.kiro.hook"
+        ));
         assert!(diagnostics.iter().any(|d| d.rule == "KR-HK-001"));
     }
 
     #[test]
     fn test_kr_hk_002_missing_patterns_for_file_event() {
-        let diagnostics = validate(
-            include_str!("../../../../tests/fixtures/kiro-hooks/.kiro/hooks/missing-patterns.kiro.hook"),
-        );
+        let diagnostics = validate(include_str!(
+            "../../../../tests/fixtures/kiro-hooks/.kiro/hooks/missing-patterns.kiro.hook"
+        ));
         assert!(diagnostics.iter().any(|d| d.rule == "KR-HK-002"));
     }
 
     #[test]
     fn test_kr_hk_003_missing_action() {
-        let diagnostics =
-            validate(include_str!("../../../../tests/fixtures/kiro-hooks/.kiro/hooks/missing-action.kiro.hook"));
+        let diagnostics = validate(include_str!(
+            "../../../../tests/fixtures/kiro-hooks/.kiro/hooks/missing-action.kiro.hook"
+        ));
         assert!(diagnostics.iter().any(|d| d.rule == "KR-HK-003"));
     }
 
     #[test]
     fn test_kr_hk_004_missing_tool_types_for_tool_event() {
-        let diagnostics = validate(
-            include_str!("../../../../tests/fixtures/kiro-hooks/.kiro/hooks/missing-tool-types.kiro.hook"),
-        );
+        let diagnostics = validate(include_str!(
+            "../../../../tests/fixtures/kiro-hooks/.kiro/hooks/missing-tool-types.kiro.hook"
+        ));
         assert!(diagnostics.iter().any(|d| d.rule == "KR-HK-004"));
     }
 
     #[test]
     fn test_valid_hooks_have_no_kr_hk_diagnostics() {
         let fixtures = [
-            include_str!("../../../../tests/fixtures/kiro-hooks/.kiro/hooks/valid-file-save.kiro.hook"),
+            include_str!(
+                "../../../../tests/fixtures/kiro-hooks/.kiro/hooks/valid-file-save.kiro.hook"
+            ),
             include_str!(
                 "../../../../tests/fixtures/kiro-hooks/.kiro/hooks/valid-prompt-submit.kiro.hook"
             ),
-            include_str!("../../../../tests/fixtures/kiro-hooks/.kiro/hooks/valid-pre-tool.kiro.hook"),
+            include_str!(
+                "../../../../tests/fixtures/kiro-hooks/.kiro/hooks/valid-pre-tool.kiro.hook"
+            ),
         ];
 
         for fixture in fixtures {

@@ -167,8 +167,8 @@ fn extract_implemented_rule_ids() -> BTreeSet<String> {
     let valid_prefixes = [
         "AS-", "CC-SK-", "CC-HK-", "CC-AG-", "CC-MEM-", "CC-PL-", "AGM-", "MCP-", "COP-", "CUR-",
         "CLN-", "CDX-", "OC-", "GM-", "XML-", "REF-", "PE-", "XP-", "VER-", "WS-", "CR-SK-",
-        "CL-SK-", "CP-SK-", "CX-SK-", "OC-SK-", "WS-SK-", "KR-SK-", "KR-AG-", "KR-HK-",
-        "KR-PW-", "KR-MCP-", "KIRO-", "AMP-SK-", "AMP-", "RC-SK-", "ROO-",
+        "CL-SK-", "CP-SK-", "CX-SK-", "OC-SK-", "WS-SK-", "KR-SK-", "KR-AG-", "KR-HK-", "KR-PW-",
+        "KR-MCP-", "KIRO-", "AMP-SK-", "AMP-", "RC-SK-", "ROO-",
     ];
 
     fn extract_from_file(

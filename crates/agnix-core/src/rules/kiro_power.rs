@@ -62,10 +62,7 @@ impl Validator for KiroPowerValidator {
                 );
             } else if let Some(frontmatter) = parsed.frontmatter.as_ref() {
                 let mut missing = Vec::new();
-                if frontmatter
-                    .name
-                    .as_deref()
-                    .is_none()
+                if frontmatter.name.as_deref().is_none()
                     || frontmatter
                         .name
                         .as_deref()
@@ -73,10 +70,7 @@ impl Validator for KiroPowerValidator {
                 {
                     missing.push("name");
                 }
-                if frontmatter
-                    .description
-                    .as_deref()
-                    .is_none()
+                if frontmatter.description.as_deref().is_none()
                     || frontmatter
                         .description
                         .as_deref()
@@ -95,10 +89,7 @@ impl Validator for KiroPowerValidator {
                             1,
                             0,
                             "KR-PW-001",
-                            t!(
-                                "rules.kr_pw_001.message",
-                                fields = missing.join(", ")
-                            ),
+                            t!("rules.kr_pw_001.message", fields = missing.join(", ")),
                         )
                         .with_suggestion(t!("rules.kr_pw_001.suggestion")),
                     );

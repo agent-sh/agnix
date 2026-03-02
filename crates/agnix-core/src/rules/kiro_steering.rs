@@ -19,12 +19,12 @@ use crate::{
 };
 use regex::Regex;
 use rust_i18n::t;
-use std::sync::OnceLock;
 use std::path::Path;
+use std::sync::OnceLock;
 
 const RULE_IDS: &[&str] = &[
-    "KIRO-001", "KIRO-002", "KIRO-003", "KIRO-004", "KIRO-005", "KIRO-006", "KIRO-007",
-    "KIRO-008", "KIRO-009",
+    "KIRO-001", "KIRO-002", "KIRO-003", "KIRO-004", "KIRO-005", "KIRO-006", "KIRO-007", "KIRO-008",
+    "KIRO-009",
 ];
 const VALID_INCLUSION_MODES: &[&str] = &["always", "fileMatch", "manual", "auto"];
 const VALID_FRONTMATTER_FIELDS: &[&str] = &["inclusion", "name", "description", "fileMatchPattern"];
@@ -412,10 +412,7 @@ impl Validator for KiroSteeringValidator {
                     find_frontmatter_key_line(&parts.frontmatter, "fileMatchPattern"),
                     0,
                     "KIRO-007",
-                    t!(
-                        "rules.kiro_007.message",
-                        inclusion = inclusion_display
-                    ),
+                    t!("rules.kiro_007.message", inclusion = inclusion_display),
                 )
                 .with_suggestion(t!("rules.kiro_007.suggestion")),
             );
@@ -952,15 +949,8 @@ mod tests {
         assert_eq!(
             meta.rule_ids,
             &[
-                "KIRO-001",
-                "KIRO-002",
-                "KIRO-003",
-                "KIRO-004",
-                "KIRO-005",
-                "KIRO-006",
-                "KIRO-007",
-                "KIRO-008",
-                "KIRO-009",
+                "KIRO-001", "KIRO-002", "KIRO-003", "KIRO-004", "KIRO-005", "KIRO-006", "KIRO-007",
+                "KIRO-008", "KIRO-009",
             ]
         );
     }

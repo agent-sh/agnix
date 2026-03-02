@@ -147,17 +147,17 @@ mod tests {
 
     #[test]
     fn test_kr_mcp_001_missing_command_and_url() {
-        let diagnostics = validate(
-            include_str!("../../../../tests/fixtures/kiro-mcp/.kiro/settings/missing-command-url.json"),
-        );
+        let diagnostics = validate(include_str!(
+            "../../../../tests/fixtures/kiro-mcp/.kiro/settings/missing-command-url.json"
+        ));
         assert!(diagnostics.iter().any(|d| d.rule == "KR-MCP-001"));
     }
 
     #[test]
     fn test_kr_mcp_002_hardcoded_secret() {
-        let diagnostics = validate(
-            include_str!("../../../../tests/fixtures/kiro-mcp/.kiro/settings/hardcoded-secrets.json"),
-        );
+        let diagnostics = validate(include_str!(
+            "../../../../tests/fixtures/kiro-mcp/.kiro/settings/hardcoded-secrets.json"
+        ));
         assert!(diagnostics.iter().any(|d| d.rule == "KR-MCP-002"));
     }
 
