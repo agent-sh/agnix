@@ -174,6 +174,17 @@ mod tests {
     }
 
     #[test]
+    fn test_kr_hk_003_blank_action() {
+        let diagnostics = validate(
+            r#"{
+  "event": "promptSubmit",
+  "runCommand": "   "
+}"#,
+        );
+        assert!(diagnostics.iter().any(|d| d.rule == "KR-HK-003"));
+    }
+
+    #[test]
     fn test_kr_hk_004_missing_tool_types_for_tool_event() {
         let diagnostics = validate(include_str!(
             "../../../../tests/fixtures/kiro-hooks/.kiro/hooks/missing-tool-types.kiro.hook"

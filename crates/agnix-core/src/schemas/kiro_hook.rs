@@ -77,7 +77,11 @@ impl KiroIdeHook {
     /// True if either supported action is configured.
     #[allow(dead_code)] // helper for downstream validators
     pub fn has_action(&self) -> bool {
-        self.effective_run_command().is_some() || self.effective_ask_agent().is_some()
+        self.effective_run_command()
+            .is_some_and(|command| !command.trim().is_empty())
+            || self
+                .effective_ask_agent()
+                .is_some_and(|agent| !agent.trim().is_empty())
     }
 }
 
@@ -136,5 +140,22 @@ mod tests {
         let error = parsed.parse_error.expect("expected parse error");
         assert!(error.line > 0);
         assert!(error.column > 0);
+    }
+
+    #[test]
+    fn blank_actions_are_not_treated_as_present() {
+        let parsed = parse_kiro_hook(
+            r#"{
+  "event": "promptSubmit",
+  "runCommand": "   ",
+  "then": {
+    "askAgent": "   "
+  }
+}"#,
+        );
+
+        assert!(parsed.parse_error.is_none());
+        let hook = parsed.hook.expect("hook should parse");
+        assert!(!hook.has_action());
     }
 }
