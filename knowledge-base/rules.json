@@ -1,7 +1,7 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 245,
+  "total_rules": 255,
   "last_updated": "2026-03-02",
   "schema": {
     "evidence": {
@@ -4490,6 +4490,141 @@
       "bad_example": ""
     },
     {
+      "id": "KIRO-005",
+      "name": "Empty Steering Body After Frontmatter",
+      "severity": "MEDIUM",
+      "category": "kiro-steering",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/steering/"
+        ],
+        "verified_on": "2026-03-02",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\ninclusion: always\n---\n# Team Standards\n\nExplain reasoning and include concrete examples.",
+      "bad_example": "---\ninclusion: always\n---\n"
+    },
+    {
+      "id": "KIRO-006",
+      "name": "Secrets Detected in Steering File",
+      "severity": "HIGH",
+      "category": "kiro-steering",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/steering/"
+        ],
+        "verified_on": "2026-03-02",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\ninclusion: always\n---\nUse ${API_KEY} from the environment at runtime.",
+      "bad_example": "---\ninclusion: always\n---\nAPI_KEY=hardcoded-secret-123"
+    },
+    {
+      "id": "KIRO-007",
+      "name": "fileMatchPattern Without fileMatch Inclusion",
+      "severity": "MEDIUM",
+      "category": "kiro-steering",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/steering/"
+        ],
+        "verified_on": "2026-03-02",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\ninclusion: fileMatch\nfileMatchPattern: \"**/*.ts\"\n---\nTypeScript guidance.",
+      "bad_example": "---\ninclusion: always\nfileMatchPattern: \"**/*.ts\"\n---\nThis pattern is never applied."
+    },
+    {
+      "id": "KIRO-008",
+      "name": "Unknown Kiro Steering Frontmatter Field",
+      "severity": "MEDIUM",
+      "category": "kiro-steering",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/steering/"
+        ],
+        "verified_on": "2026-03-02",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\ninclusion: auto\nname: coding-style\ndescription: Team coding standards\n---\nFollow conventions.",
+      "bad_example": "---\ninclusions: always\n---\nTypo in frontmatter key."
+    },
+    {
+      "id": "KIRO-009",
+      "name": "Broken Inline File Reference in Steering",
+      "severity": "MEDIUM",
+      "category": "kiro-steering",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/steering/"
+        ],
+        "verified_on": "2026-03-02",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "Read #[[file:docs/style-guide.md]] before generating code.",
+      "bad_example": "Read #[[file:docs/missing-style-guide.md]] before generating code."
+    },
+    {
       "id": "KR-SK-001",
       "name": "Kiro Skill Uses Unsupported Field",
       "severity": "MEDIUM",
@@ -4516,6 +4651,141 @@
       },
       "good_example": "---\nname: my-skill\ndescription: A useful development skill\n---\n# My Skill\n\nSkill instructions here.",
       "bad_example": "---\nname: my-skill\ndescription: A useful development skill\nmodel: haiku\n---\n# My Skill\n\nSkill instructions here."
+    },
+    {
+      "id": "KR-AG-001",
+      "name": "Unknown Field in Kiro Agent JSON",
+      "severity": "MEDIUM",
+      "category": "kiro-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/cli/custom-agents/configuration-reference"
+        ],
+        "verified_on": "2026-03-02",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"name\": \"review-agent\",\n  \"prompt\": \"Review the diff\",\n  \"model\": \"claude-sonnet-4\"\n}",
+      "bad_example": "{\n  \"name\": \"review-agent\",\n  \"madeUpField\": true\n}"
+    },
+    {
+      "id": "KR-AG-002",
+      "name": "Invalid Kiro Agent Resource Protocol",
+      "severity": "HIGH",
+      "category": "kiro-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/cli/custom-agents/creating"
+        ],
+        "verified_on": "2026-03-02",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"resources\": [\"file://docs/architecture.md\", \"skill://deploy\"]\n}",
+      "bad_example": "{\n  \"resources\": [\"https://example.com/private\"]\n}"
+    },
+    {
+      "id": "KR-AG-003",
+      "name": "allowedTools Not Subset of tools",
+      "severity": "MEDIUM",
+      "category": "kiro-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/cli/custom-agents/configuration-reference"
+        ],
+        "verified_on": "2026-03-02",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"tools\": [\"readFiles\", \"listDirectory\"],\n  \"allowedTools\": [\"readFiles\"]\n}",
+      "bad_example": "{\n  \"tools\": [\"readFiles\"],\n  \"allowedTools\": [\"runShellCommand\"]\n}"
+    },
+    {
+      "id": "KR-AG-004",
+      "name": "Invalid Kiro Agent Model Value",
+      "severity": "MEDIUM",
+      "category": "kiro-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/cli/custom-agents/configuration-reference"
+        ],
+        "verified_on": "2026-03-02",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"model\": \"claude-sonnet-4-5\"\n}",
+      "bad_example": "{\n  \"model\": \"unsupported-model\"\n}"
+    },
+    {
+      "id": "KR-AG-005",
+      "name": "Kiro Agent Has No MCP Access",
+      "severity": "LOW",
+      "category": "kiro-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/cli/custom-agents/configuration-reference"
+        ],
+        "verified_on": "2026-03-02",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"includeMcpJson\": true\n}",
+      "bad_example": "{\n  \"includeMcpJson\": false\n}"
     },
     {
       "id": "KR-AG-006",
@@ -4572,6 +4842,330 @@
       },
       "good_example": "{\n  \"name\": \"orchestrator\",\n  \"allowedTools\": [\"readFiles\"],\n  \"prompt\": \"Delegate review to @reviewer-agent\"\n}",
       "bad_example": "{\n  \"name\": \"orchestrator\",\n  \"allowedTools\": [\"readFiles\", \"runShellCommand\"],\n  \"prompt\": \"Delegate review to @reviewer-agent\"\n}"
+    },
+    {
+      "id": "KR-HK-001",
+      "name": "Invalid Kiro IDE Hook Event Type",
+      "severity": "HIGH",
+      "category": "kiro-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/hooks/types"
+        ],
+        "verified_on": "2026-03-02",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"event\": \"fileEdited\",\n  \"patterns\": [\"**/*.md\"],\n  \"runCommand\": \"echo changed\"\n}",
+      "bad_example": "{\n  \"event\": \"beforeSave\",\n  \"runCommand\": \"echo invalid\"\n}"
+    },
+    {
+      "id": "KR-HK-002",
+      "name": "Kiro File Hook Missing Patterns",
+      "severity": "HIGH",
+      "category": "kiro-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/hooks/types"
+        ],
+        "verified_on": "2026-03-02",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"event\": \"fileEdited\",\n  \"patterns\": [\"**/*.ts\"],\n  \"runCommand\": \"echo ok\"\n}",
+      "bad_example": "{\n  \"event\": \"fileEdited\",\n  \"runCommand\": \"echo missing patterns\"\n}"
+    },
+    {
+      "id": "KR-HK-003",
+      "name": "Kiro IDE Hook Missing Action",
+      "severity": "HIGH",
+      "category": "kiro-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/hooks/actions"
+        ],
+        "verified_on": "2026-03-02",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"event\": \"promptSubmit\",\n  \"askAgent\": \"review-agent\"\n}",
+      "bad_example": "{\n  \"event\": \"promptSubmit\"\n}"
+    },
+    {
+      "id": "KR-HK-004",
+      "name": "Kiro Tool Hook Missing toolTypes Filter",
+      "severity": "MEDIUM",
+      "category": "kiro-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/hooks/types"
+        ],
+        "verified_on": "2026-03-02",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"event\": \"preToolUse\",\n  \"toolTypes\": [\"readFiles\"],\n  \"runCommand\": \"echo ok\"\n}",
+      "bad_example": "{\n  \"event\": \"preToolUse\",\n  \"runCommand\": \"echo broad\"\n}"
+    },
+    {
+      "id": "KR-HK-005",
+      "name": "Invalid Kiro CLI Hook Event Key",
+      "severity": "HIGH",
+      "category": "kiro-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/cli/hooks"
+        ],
+        "verified_on": "2026-03-02",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"hooks\": {\n    \"preToolUse\": [{\"command\": \"echo pre\"}]\n  }\n}",
+      "bad_example": "{\n  \"hooks\": {\n    \"beforePrompt\": [{\"command\": \"echo bad\"}]\n  }\n}"
+    },
+    {
+      "id": "KR-HK-006",
+      "name": "Kiro CLI Hook Missing Command",
+      "severity": "HIGH",
+      "category": "kiro-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/cli/hooks"
+        ],
+        "verified_on": "2026-03-02",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"hooks\": {\n    \"preToolUse\": [{\"command\": \"echo pre\", \"toolTypes\": [\"readFiles\"]}]\n  }\n}",
+      "bad_example": "{\n  \"hooks\": {\n    \"preToolUse\": [{\"toolTypes\": [\"readFiles\"]}]\n  }\n}"
+    },
+    {
+      "id": "KR-MCP-001",
+      "name": "Kiro MCP Server Missing command and url",
+      "severity": "HIGH",
+      "category": "kiro-mcp",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/mcp/configuration"
+        ],
+        "verified_on": "2026-03-02",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"mcpServers\": {\n    \"local\": {\"command\": \"node\", \"args\": [\"server.js\"]}\n  }\n}",
+      "bad_example": "{\n  \"mcpServers\": {\n    \"broken\": {\"args\": [\"--debug\"]}\n  }\n}"
+    },
+    {
+      "id": "KR-MCP-002",
+      "name": "Hardcoded Secrets in Kiro MCP env",
+      "severity": "MEDIUM",
+      "category": "kiro-mcp",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/mcp/configuration"
+        ],
+        "verified_on": "2026-03-02",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"mcpServers\": {\n    \"server\": {\n      \"command\": \"node\",\n      \"env\": {\"API_KEY\": \"${API_KEY}\"}\n    }\n  }\n}",
+      "bad_example": "{\n  \"mcpServers\": {\n    \"server\": {\n      \"command\": \"node\",\n      \"env\": {\"API_KEY\": \"hardcoded-secret\"}\n    }\n  }\n}"
+    },
+    {
+      "id": "KR-PW-001",
+      "name": "Missing Required POWER.md Frontmatter Fields",
+      "severity": "HIGH",
+      "category": "kiro-powers",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/powers/create"
+        ],
+        "verified_on": "2026-03-02",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: review-power\ndescription: Reviews code changes\nkeywords:\n  - review\n  - quality\n---\n# Review Power\n",
+      "bad_example": "# Missing frontmatter\nThis power omits required metadata."
+    },
+    {
+      "id": "KR-PW-002",
+      "name": "Empty POWER.md Keywords Array",
+      "severity": "MEDIUM",
+      "category": "kiro-powers",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/powers/"
+        ],
+        "verified_on": "2026-03-02",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: review-power\ndescription: Reviews code changes\nkeywords:\n  - review\n---\n# Review Power\n",
+      "bad_example": "---\nname: review-power\ndescription: Reviews code changes\nkeywords: []\n---\n# Review Power\n"
+    },
+    {
+      "id": "KR-PW-003",
+      "name": "Empty POWER.md Body",
+      "severity": "MEDIUM",
+      "category": "kiro-powers",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/powers/create"
+        ],
+        "verified_on": "2026-03-02",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: review-power\ndescription: Reviews code changes\nkeywords:\n  - review\n---\n# Onboarding\nUse this power for review flows.\n",
+      "bad_example": "---\nname: review-power\ndescription: Reviews code changes\nkeywords:\n  - review\n---\n"
+    },
+    {
+      "id": "KR-PW-004",
+      "name": "Invalid Adjacent Power mcp.json Structure",
+      "severity": "MEDIUM",
+      "category": "kiro-powers",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/powers/"
+        ],
+        "verified_on": "2026-03-02",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"mcpServers\": {\n    \"local\": {\"command\": \"node\", \"args\": [\"server.js\"]}\n  }\n}",
+      "bad_example": "{\n  \"mcpServers\": []\n}"
     },
     {
       "id": "MCP-001",
@@ -6865,8 +7459,8 @@
     },
     "kiro-agents": {
       "prefix": "KR-AG",
-      "count": 2,
-      "description": "Kiro subagent invocation consistency rules"
+      "count": 7,
+      "description": "Kiro agent configuration and invocation rules"
     },
     "amp-skills": {
       "prefix": "AMP-SK",
@@ -6887,6 +7481,26 @@
       "prefix": "AMP",
       "count": 4,
       "description": "Amp code review checks and settings rules"
+    },
+    "kiro-steering": {
+      "prefix": "KIRO",
+      "count": 9,
+      "description": "Kiro steering file validation rules"
+    },
+    "kiro-hooks": {
+      "prefix": "KR-HK",
+      "count": 6,
+      "description": "Kiro IDE and CLI hook rules"
+    },
+    "kiro-mcp": {
+      "prefix": "KR-MCP",
+      "count": 2,
+      "description": "Kiro MCP configuration rules"
+    },
+    "kiro-powers": {
+      "prefix": "KR-PW",
+      "count": 4,
+      "description": "Kiro power configuration rules"
     }
   },
   "authoring": {

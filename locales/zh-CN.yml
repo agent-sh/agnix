@@ -526,12 +526,87 @@ rules:
   kiro_004:
     message: "Kiro 引导文件为空"
     suggestion: "向文件添加引导内容"
+  kiro_005:
+    message: "Kiro 引导文件包含 frontmatter，但缺少指令正文"
+    suggestion: "在 frontmatter 下方添加有效的引导指令"
+  kiro_006:
+    message: "在 Kiro 引导内容中检测到潜在密钥信息（%{marker}）"
+    suggestion: "移除硬编码凭据，改用环境变量引用"
+  kiro_007:
+    message: "存在 fileMatchPattern，但 inclusion 为 '%{inclusion}' 而不是 'fileMatch'"
+    suggestion: "将 inclusion 设为 fileMatch，或删除 fileMatchPattern"
+  kiro_008:
+    message: "未知的 Kiro 引导 frontmatter 字段 '%{field}'"
+    suggestion: "仅使用受支持字段：inclusion、name、description、fileMatchPattern"
+  kiro_009:
+    message: "内联文件引用指向不存在的路径：%{reference}"
+    suggestion: "修正引用路径或创建被引用文件"
+  kr_pw_001:
+    message: "POWER.md 缺少必需的 frontmatter 字段：%{fields}"
+    suggestion: "添加必需字段：name、description、keywords"
+  kr_pw_001_parse:
+    message: "POWER.md frontmatter YAML 无效：%{error}"
+    suggestion: "修复 POWER.md frontmatter 的 YAML 语法"
+  kr_pw_002:
+    message: "POWER.md 的 keywords 数组为空"
+    suggestion: "为 POWER.md 添加一个或多个激活关键词"
+  kr_pw_003:
+    message: "POWER.md 正文为空"
+    suggestion: "在 POWER.md 正文中添加 onboarding/workflow/reference 内容"
+  kr_pw_004:
+    message: "Power 相邻的 mcp.json 具有无效的 mcpServers 结构"
+    suggestion: "确保 mcp.json 使用对象形式的 mcpServers，并包含有效服务配置"
+  kr_ag_001:
+    message: "Kiro 代理 JSON 中存在未知字段 '%{field}'"
+    suggestion: "删除不受支持字段或改用文档中的 Kiro 代理字段"
+  kr_ag_002:
+    message: "无效的 Kiro 代理资源项：%{resource}"
+    suggestion: "使用 file://、skill://，或带有 type: knowledgeBase 的对象资源"
+  kr_ag_003:
+    message: "allowedTools 包含 '%{tool}'，但该工具不在 tools 中"
+    suggestion: "保持 allowedTools 为 tools 的子集"
+  kr_ag_004:
+    message: "无效的 Kiro 代理 model 值 '%{model}'"
+    suggestion: "使用文档中的 model 值（claude-sonnet-4、claude-sonnet4.5、claude-sonnet-4-5、claude-opus4.5、claude-opus-4-5、Auto）"
+  kr_ag_005:
+    message: "Kiro 代理设置了 includeMcpJson: false，且没有内联 mcpServers"
+    suggestion: "启用 includeMcpJson，或配置内联 mcpServers 以访问 MCP"
   kr_ag_006:
     message: "Kiro 代理引用了未知子代理 '@%{agent}'"
     suggestion: "创建 .kiro/agents/%{agent}.json 或删除该子代理引用"
   kr_ag_007:
     message: "Kiro 代理比被引用子代理 '@%{agent}' 拥有更宽的工具范围（额外工具: %{extra_tools}）"
     suggestion: "收窄当前代理工具范围，或对齐 '@%{agent}' 的工具权限"
+  kr_hk_001:
+    message: "无效的 Kiro IDE Hook 事件 '%{event}'"
+    suggestion: "使用以下之一：fileEdited、fileCreate、fileDelete、promptSubmit、agentStop、preToolUse、postToolUse、manual"
+  kr_hk_002:
+    message: "Kiro 文件事件 Hook '%{event}' 缺少 patterns"
+    suggestion: "为 fileEdited/fileCreate/fileDelete Hook 添加 patterns"
+  kr_hk_003:
+    message: "Kiro IDE Hook 同时缺少 runCommand 和 askAgent 动作"
+    suggestion: "配置 runCommand 或 askAgent（顶层或 then 内）"
+  kr_hk_004:
+    message: "Kiro '%{event}' Hook 缺少 toolTypes 过滤"
+    suggestion: "为 preToolUse/postToolUse Hook 添加 toolTypes"
+  kr_hk_005:
+    message: "代理 JSON 中存在无效的 Kiro CLI Hook 事件键 '%{event}'"
+    suggestion: "使用以下之一：agentSpawn、userPromptSubmit、preToolUse、postToolUse、stop"
+  kr_hk_006:
+    message: "Kiro CLI Hook 条目 %{event}[%{index}] 缺少必需字段 command"
+    suggestion: "为每个 CLI Hook 条目添加非空 command"
+  kr_mcp_001:
+    message: "Kiro MCP 服务 '%{server}' 同时缺少 command 和 url"
+    suggestion: "本地服务请设置 command，远程服务请设置 url"
+  kr_mcp_001_root:
+    message: "Kiro MCP 配置缺少 mcpServers 对象"
+    suggestion: "将 mcpServers 定义为包含一个或多个服务项的对象"
+  kr_mcp_001_parse:
+    message: "Kiro MCP 配置 JSON 结构无效：%{error}"
+    suggestion: "修复 JSON 语法并确保 mcpServers 为对象"
+  kr_mcp_002:
+    message: "Kiro MCP 服务 '%{server}' 在 env '%{env_key}' 中存在潜在硬编码密钥"
+    suggestion: "使用 ${VAR_NAME} 形式的环境变量引用，避免明文密钥"
 
   # --- Prompt engineering (prompt.rs) ---
   pe_001:

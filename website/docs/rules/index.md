@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `245` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `255` validation rules generated from `knowledge-base/rules.json`.
 `96` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -167,9 +167,31 @@ This section contains all `245` validation rules generated from `knowledge-base/
 | [KIRO-002](./generated/kiro-002.md) | Missing Required Fields for Inclusion Mode | HIGH | Kiro Steering | No |
 | [KIRO-003](./generated/kiro-003.md) | Invalid fileMatchPattern Glob | MEDIUM | Kiro Steering | No |
 | [KIRO-004](./generated/kiro-004.md) | Empty Kiro Steering File | MEDIUM | Kiro Steering | No |
+| [KIRO-005](./generated/kiro-005.md) | Empty Steering Body After Frontmatter | MEDIUM | Kiro Steering | No |
+| [KIRO-006](./generated/kiro-006.md) | Secrets Detected in Steering File | HIGH | Kiro Steering | No |
+| [KIRO-007](./generated/kiro-007.md) | fileMatchPattern Without fileMatch Inclusion | MEDIUM | Kiro Steering | No |
+| [KIRO-008](./generated/kiro-008.md) | Unknown Kiro Steering Frontmatter Field | MEDIUM | Kiro Steering | No |
+| [KIRO-009](./generated/kiro-009.md) | Broken Inline File Reference in Steering | MEDIUM | Kiro Steering | No |
 | [KR-SK-001](./generated/kr-sk-001.md) | Kiro Skill Uses Unsupported Field | MEDIUM | Kiro Skills | Yes (safe/unsafe) |
+| [KR-AG-001](./generated/kr-ag-001.md) | Unknown Field in Kiro Agent JSON | MEDIUM | Kiro Agents | No |
+| [KR-AG-002](./generated/kr-ag-002.md) | Invalid Kiro Agent Resource Protocol | HIGH | Kiro Agents | No |
+| [KR-AG-003](./generated/kr-ag-003.md) | allowedTools Not Subset of tools | MEDIUM | Kiro Agents | No |
+| [KR-AG-004](./generated/kr-ag-004.md) | Invalid Kiro Agent Model Value | MEDIUM | Kiro Agents | No |
+| [KR-AG-005](./generated/kr-ag-005.md) | Kiro Agent Has No MCP Access | LOW | Kiro Agents | No |
 | [KR-AG-006](./generated/kr-ag-006.md) | Kiro Agent References Unknown Subagent | MEDIUM | Kiro Agents | No |
 | [KR-AG-007](./generated/kr-ag-007.md) | Kiro Agent Tool Scope Broader Than Referenced Subagent | MEDIUM | Kiro Agents | No |
+| [KR-HK-001](./generated/kr-hk-001.md) | Invalid Kiro IDE Hook Event Type | HIGH | Kiro Hooks | No |
+| [KR-HK-002](./generated/kr-hk-002.md) | Kiro File Hook Missing Patterns | HIGH | Kiro Hooks | No |
+| [KR-HK-003](./generated/kr-hk-003.md) | Kiro IDE Hook Missing Action | HIGH | Kiro Hooks | No |
+| [KR-HK-004](./generated/kr-hk-004.md) | Kiro Tool Hook Missing toolTypes Filter | MEDIUM | Kiro Hooks | No |
+| [KR-HK-005](./generated/kr-hk-005.md) | Invalid Kiro CLI Hook Event Key | HIGH | Kiro Hooks | No |
+| [KR-HK-006](./generated/kr-hk-006.md) | Kiro CLI Hook Missing Command | HIGH | Kiro Hooks | No |
+| [KR-MCP-001](./generated/kr-mcp-001.md) | Kiro MCP Server Missing command and url | HIGH | Kiro MCP | No |
+| [KR-MCP-002](./generated/kr-mcp-002.md) | Hardcoded Secrets in Kiro MCP env | MEDIUM | Kiro MCP | No |
+| [KR-PW-001](./generated/kr-pw-001.md) | Missing Required POWER.md Frontmatter Fields | HIGH | Kiro Powers | No |
+| [KR-PW-002](./generated/kr-pw-002.md) | Empty POWER.md Keywords Array | MEDIUM | Kiro Powers | No |
+| [KR-PW-003](./generated/kr-pw-003.md) | Empty POWER.md Body | MEDIUM | Kiro Powers | No |
+| [KR-PW-004](./generated/kr-pw-004.md) | Invalid Adjacent Power mcp.json Structure | MEDIUM | Kiro Powers | No |
 | [MCP-001](./generated/mcp-001.md) | Invalid JSON-RPC Version | HIGH | MCP | Yes (safe) |
 | [MCP-002](./generated/mcp-002.md) | Missing Required Tool Field | HIGH | MCP | No |
 | [MCP-003](./generated/mcp-003.md) | Invalid JSON Schema | HIGH | MCP | No |

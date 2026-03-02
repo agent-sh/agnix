@@ -416,8 +416,11 @@ fn readme_supported_tools_kiro_row_matches_current_rules_surface() {
     assert!(
         kiro_row.contains("KIRO-\\*")
             && kiro_row.contains("KR-SK-\\*")
-            && kiro_row.contains("KR-AG-\\*"),
-        "Kiro row must include KIRO-*, KR-SK-*, and KR-AG-* prefixes"
+            && kiro_row.contains("KR-AG-\\*")
+            && kiro_row.contains("KR-HK-\\*")
+            && kiro_row.contains("KR-PW-\\*")
+            && kiro_row.contains("KR-MCP-\\*"),
+        "Kiro row must include KIRO-*, KR-SK-*, KR-AG-*, KR-HK-*, KR-PW-*, and KR-MCP-* prefixes"
     );
 
     let kiro_rule_count = index
@@ -427,6 +430,9 @@ fn readme_supported_tools_kiro_row_matches_current_rules_surface() {
             rule.id.starts_with("KIRO-")
                 || rule.id.starts_with("KR-SK-")
                 || rule.id.starts_with("KR-AG-")
+                || rule.id.starts_with("KR-HK-")
+                || rule.id.starts_with("KR-PW-")
+                || rule.id.starts_with("KR-MCP-")
         })
         .count();
     let count_cell = format!("| {} |", kiro_rule_count);
@@ -440,8 +446,11 @@ fn readme_supported_tools_kiro_row_matches_current_rules_surface() {
     assert!(
         kiro_row.contains(".kiro/steering/\\*\\*/\\*.md")
             && kiro_row.contains(".kiro/skills/\\*\\*/SKILL.md")
-            && kiro_row.contains(".kiro/agents/\\*.json"),
-        "Kiro row file surface must document steering, skills, and agents paths"
+            && kiro_row.contains(".kiro/agents/\\*.json")
+            && kiro_row.contains(".kiro/hooks/\\*.kiro.hook")
+            && kiro_row.contains(".kiro/settings/mcp.json")
+            && kiro_row.contains(".kiro/powers/\\*/POWER.md"),
+        "Kiro row file surface must document steering, skills, agents, hooks, mcp, and powers paths"
     );
 }
 

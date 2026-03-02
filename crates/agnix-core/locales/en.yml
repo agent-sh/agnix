@@ -699,6 +699,87 @@ rules:
   kiro_004:
     message: "Kiro steering file is empty"
     suggestion: "Add steering content to the file"
+  kiro_005:
+    message: "Kiro steering file has frontmatter but no instruction body"
+    suggestion: "Add meaningful steering instructions below the frontmatter"
+  kiro_006:
+    message: "Potential secret detected in Kiro steering content (%{marker})"
+    suggestion: "Remove hardcoded credentials and reference environment variables instead"
+  kiro_007:
+    message: "fileMatchPattern is present but inclusion is '%{inclusion}' instead of 'fileMatch'"
+    suggestion: "Set inclusion: fileMatch or remove fileMatchPattern"
+  kiro_008:
+    message: "Unknown Kiro steering frontmatter field '%{field}'"
+    suggestion: "Use only supported fields: inclusion, name, description, fileMatchPattern"
+  kiro_009:
+    message: "Inline file reference points to a missing file: %{reference}"
+    suggestion: "Fix the reference path or create the referenced file"
+  kr_pw_001:
+    message: "POWER.md is missing required frontmatter fields: %{fields}"
+    suggestion: "Add required frontmatter fields: name, description, keywords"
+  kr_pw_001_parse:
+    message: "POWER.md frontmatter is invalid YAML: %{error}"
+    suggestion: "Fix YAML syntax in POWER.md frontmatter"
+  kr_pw_002:
+    message: "POWER.md keywords array is empty"
+    suggestion: "Add one or more activation keywords to POWER.md"
+  kr_pw_003:
+    message: "POWER.md body is empty"
+    suggestion: "Add onboarding/workflow/reference guidance to POWER.md body"
+  kr_pw_004:
+    message: "Adjacent power mcp.json has invalid mcpServers structure"
+    suggestion: "Ensure mcp.json uses an object mcpServers map with valid server entries"
+  kr_ag_001:
+    message: "Unknown field '%{field}' in Kiro agent JSON"
+    suggestion: "Remove unsupported fields or use documented Kiro agent keys"
+  kr_ag_002:
+    message: "Invalid Kiro agent resource entry: %{resource}"
+    suggestion: "Use file://, skill://, or object entries with type: knowledgeBase"
+  kr_ag_003:
+    message: "allowedTools contains '%{tool}' which is not present in tools"
+    suggestion: "Keep allowedTools as a subset of tools"
+  kr_ag_004:
+    message: "Invalid Kiro agent model value '%{model}'"
+    suggestion: "Use a documented model value (claude-sonnet-4, claude-sonnet4.5, claude-sonnet-4-5, claude-opus4.5, claude-opus-4-5, Auto)"
+  kr_ag_005:
+    message: "Kiro agent has includeMcpJson: false and no inline mcpServers"
+    suggestion: "Enable includeMcpJson or configure inline mcpServers for MCP access"
+  kr_ag_006:
+    message: "Kiro agent references unknown subagent '@%{agent}'"
+    suggestion: "Create .kiro/agents/%{agent}.json or remove the subagent reference"
+  kr_ag_007:
+    message: "Kiro agent has broader tools than referenced subagent '@%{agent}' (extra tools: %{extra_tools})"
+    suggestion: "Narrow this agent's tool scope or align '@%{agent}' tool permissions"
+  kr_hk_001:
+    message: "Invalid Kiro IDE hook event '%{event}'"
+    suggestion: "Use one of: fileEdited, fileCreate, fileDelete, promptSubmit, agentStop, preToolUse, postToolUse, manual"
+  kr_hk_002:
+    message: "Kiro file hook for event '%{event}' is missing patterns"
+    suggestion: "Add patterns for fileEdited/fileCreate/fileDelete hooks"
+  kr_hk_003:
+    message: "Kiro IDE hook is missing both runCommand and askAgent action"
+    suggestion: "Configure runCommand or askAgent (top-level or under then)"
+  kr_hk_004:
+    message: "Kiro '%{event}' hook is missing toolTypes filter"
+    suggestion: "Add toolTypes to scope preToolUse/postToolUse hooks"
+  kr_hk_005:
+    message: "Invalid Kiro CLI hook event key '%{event}' in agent JSON"
+    suggestion: "Use one of: agentSpawn, userPromptSubmit, preToolUse, postToolUse, stop"
+  kr_hk_006:
+    message: "Kiro CLI hook entry at %{event}[%{index}] is missing required command"
+    suggestion: "Add a non-empty command to each CLI hook entry"
+  kr_mcp_001:
+    message: "Kiro MCP server '%{server}' is missing both command and url"
+    suggestion: "Set command for local servers or url for remote servers"
+  kr_mcp_001_root:
+    message: "Kiro MCP config is missing mcpServers object"
+    suggestion: "Define mcpServers as an object with one or more server entries"
+  kr_mcp_001_parse:
+    message: "Kiro MCP config has invalid JSON structure: %{error}"
+    suggestion: "Fix JSON syntax and ensure mcpServers is an object"
+  kr_mcp_002:
+    message: "Kiro MCP server '%{server}' has potential hardcoded secret in env '%{env_key}'"
+    suggestion: "Use environment variable indirection such as ${VAR_NAME} instead of plaintext secrets"
 
   # --- Prompt engineering (prompt.rs) ---
   pe_001:

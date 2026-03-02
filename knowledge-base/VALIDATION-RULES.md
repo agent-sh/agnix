@@ -405,6 +405,41 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Fix**: [AUTO-FIX, safe] Remove unsupported field
 **Source**: kiro.dev/docs/context/steering
 
+<a id="kr-ag-001"></a>
+### KR-AG-001 [MEDIUM] Unknown Field in Kiro Agent JSON
+**Requirement**: Kiro agent JSON SHOULD only use documented top-level fields
+**Detection**: `.kiro/agents/*.json` contains unknown top-level keys outside the documented schema
+**Fix**: Remove unsupported keys or rename to documented fields
+**Source**: kiro.dev/docs/cli/custom-agents/configuration-reference
+
+<a id="kr-ag-002"></a>
+### KR-AG-002 [HIGH] Invalid Kiro Agent Resource Protocol
+**Requirement**: Agent `resources` entries MUST use valid Kiro resource forms
+**Detection**: Resource is not `file://`, not `skill://`, and not an object with `type: knowledgeBase`
+**Fix**: Use valid resource URIs or supported structured resource object
+**Source**: kiro.dev/docs/cli/custom-agents/creating
+
+<a id="kr-ag-003"></a>
+### KR-AG-003 [MEDIUM] allowedTools Not Subset of tools
+**Requirement**: `allowedTools` SHOULD be a subset of `tools`
+**Detection**: One or more `allowedTools` entries are not present in `tools`
+**Fix**: Remove mismatched `allowedTools` entries or add them to `tools`
+**Source**: kiro.dev/docs/cli/custom-agents/configuration-reference
+
+<a id="kr-ag-004"></a>
+### KR-AG-004 [MEDIUM] Invalid Kiro Agent Model Value
+**Requirement**: Agent `model` SHOULD use a documented Kiro model value
+**Detection**: `model` value is not one of the known Kiro model identifiers
+**Fix**: Replace `model` with a documented value
+**Source**: kiro.dev/docs/cli/custom-agents/configuration-reference
+
+<a id="kr-ag-005"></a>
+### KR-AG-005 [LOW] Kiro Agent Has No MCP Access
+**Requirement**: Agent MCP access SHOULD be explicit when `includeMcpJson` is disabled
+**Detection**: `includeMcpJson: false` and no inline `mcpServers` are defined
+**Fix**: Enable `includeMcpJson` or configure inline `mcpServers`
+**Source**: kiro.dev/docs/cli/custom-agents/configuration-reference
+
 <a id="kr-ag-006"></a>
 ### KR-AG-006 [MEDIUM] Kiro Agent References Unknown Subagent
 **Requirement**: Kiro agent prompts SHOULD reference only subagents defined in `.kiro/agents/*.json`
@@ -418,6 +453,20 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Detection**: For each referenced `@agent-name`, parent `allowedTools/tools` contains entries not present in the referenced subagent
 **Fix**: Narrow parent tool scope or align referenced subagent permissions
 **Source**: github.com/kirodotdev/kiro/issues/5071, github.com/kirodotdev/kiro/issues/5449
+
+<a id="kr-hk-005"></a>
+### KR-HK-005 [HIGH] Invalid Kiro CLI Hook Event Key
+**Requirement**: Agent JSON `hooks` keys MUST use valid CLI hook event names
+**Detection**: `hooks` object contains key outside `agentSpawn`, `userPromptSubmit`, `preToolUse`, `postToolUse`, `stop`
+**Fix**: Rename event key to a valid CLI hook event
+**Source**: kiro.dev/docs/cli/hooks
+
+<a id="kr-hk-006"></a>
+### KR-HK-006 [HIGH] Kiro CLI Hook Missing Command
+**Requirement**: Each CLI hook entry MUST define a non-empty `command`
+**Detection**: Hook object under a valid CLI event lacks `command` or has an empty value
+**Fix**: Add a non-empty `command` value for each hook entry
+**Source**: kiro.dev/docs/cli/hooks
 
 <a id="amp-sk-001"></a>
 ### AMP-SK-001 [MEDIUM] Amp Skill Uses Unsupported Field
@@ -1731,6 +1780,123 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Fix**: Add steering content to the file
 **Source**: kiro.dev/docs/steering/
 
+<a id="kiro-005"></a>
+### KIRO-005 [MEDIUM] Empty Steering Body After Frontmatter
+**Requirement**: Steering files SHOULD include instruction content below frontmatter
+**Detection**: File has frontmatter delimiters but markdown body is empty
+**Fix**: Add concrete steering instructions below frontmatter
+**Source**: kiro.dev/docs/steering/
+
+<a id="kiro-006"></a>
+### KIRO-006 [HIGH] Secrets Detected in Steering File
+**Requirement**: Steering files MUST NOT include hardcoded credentials
+**Detection**: Content includes likely secret assignment patterns (API keys, tokens, passwords, secrets)
+**Fix**: Remove plaintext secrets and use environment variable expansion
+**Source**: kiro.dev/docs/steering/
+
+<a id="kiro-007"></a>
+### KIRO-007 [MEDIUM] fileMatchPattern Without fileMatch Inclusion
+**Requirement**: `fileMatchPattern` SHOULD only be used with `inclusion: fileMatch`
+**Detection**: `fileMatchPattern` exists while inclusion mode is missing or not `fileMatch`
+**Fix**: Set `inclusion: fileMatch` or remove `fileMatchPattern`
+**Source**: kiro.dev/docs/steering/
+
+<a id="kiro-008"></a>
+### KIRO-008 [MEDIUM] Unknown Steering Frontmatter Field
+**Requirement**: Steering frontmatter SHOULD use only documented keys
+**Detection**: Frontmatter includes key outside `inclusion`, `name`, `description`, `fileMatchPattern`
+**Fix**: Rename or remove unknown frontmatter keys
+**Source**: kiro.dev/docs/steering/
+
+<a id="kiro-009"></a>
+### KIRO-009 [MEDIUM] Broken Inline File Reference
+**Requirement**: Inline `#[[file:...]]` references SHOULD resolve to existing files
+**Detection**: Inline file reference points to a path that does not exist
+**Fix**: Correct the file reference path or create the missing file
+**Source**: kiro.dev/docs/steering/
+
+---
+
+## KIRO POWERS RULES
+
+<a id="kr-pw-001"></a>
+### KR-PW-001 [HIGH] Missing Required POWER.md Frontmatter Fields
+**Requirement**: `POWER.md` MUST define required frontmatter fields `name`, `description`, and `keywords`
+**Detection**: Missing frontmatter, invalid frontmatter, or missing required fields
+**Fix**: Add required frontmatter fields and valid YAML
+**Source**: kiro.dev/docs/powers/create
+
+<a id="kr-pw-002"></a>
+### KR-PW-002 [MEDIUM] Empty POWER.md Keywords Array
+**Requirement**: `keywords` SHOULD contain one or more activation keywords
+**Detection**: `keywords` exists but is an empty array
+**Fix**: Add one or more keywords used for power activation
+**Source**: kiro.dev/docs/powers/
+
+<a id="kr-pw-003"></a>
+### KR-PW-003 [MEDIUM] Empty POWER.md Body
+**Requirement**: `POWER.md` SHOULD include onboarding/workflow/reference content
+**Detection**: Non-empty frontmatter with empty markdown body
+**Fix**: Add body content describing usage and behavior
+**Source**: kiro.dev/docs/powers/create
+
+<a id="kr-pw-004"></a>
+### KR-PW-004 [MEDIUM] Invalid Adjacent Power mcp.json Structure
+**Requirement**: Power-local `mcp.json` SHOULD define a valid `mcpServers` object
+**Detection**: Adjacent `mcp.json` is malformed, missing `mcpServers`, or uses invalid `mcpServers` shape
+**Fix**: Update `mcp.json` to use valid `mcpServers` object structure
+**Source**: kiro.dev/docs/powers/
+
+---
+
+## KIRO IDE HOOKS RULES
+
+<a id="kr-hk-001"></a>
+### KR-HK-001 [HIGH] Invalid Kiro IDE Hook Event Type
+**Requirement**: IDE hook `event` MUST be one of the documented Kiro IDE events
+**Detection**: `event` is missing or outside `fileEdited`, `fileCreate`, `fileDelete`, `promptSubmit`, `agentStop`, `preToolUse`, `postToolUse`, `manual`
+**Fix**: Set `event` to a valid IDE hook event
+**Source**: kiro.dev/docs/hooks/types
+
+<a id="kr-hk-002"></a>
+### KR-HK-002 [HIGH] File Event Hook Missing Patterns
+**Requirement**: File-based IDE hooks MUST include `patterns`
+**Detection**: `event` is `fileEdited`, `fileCreate`, or `fileDelete` and `patterns` is missing/empty
+**Fix**: Add one or more glob patterns in `patterns`
+**Source**: kiro.dev/docs/hooks/types
+
+<a id="kr-hk-003"></a>
+### KR-HK-003 [HIGH] IDE Hook Missing Action
+**Requirement**: IDE hooks MUST define at least one action (`runCommand` or `askAgent`)
+**Detection**: Both top-level and nested `then` action fields are missing
+**Fix**: Add `runCommand` or `askAgent`
+**Source**: kiro.dev/docs/hooks/actions
+
+<a id="kr-hk-004"></a>
+### KR-HK-004 [MEDIUM] Tool Hook Missing toolTypes Filter
+**Requirement**: `preToolUse`/`postToolUse` hooks SHOULD specify `toolTypes`
+**Detection**: Tool hook event has no `toolTypes` filter
+**Fix**: Add `toolTypes` to narrow hook scope
+**Source**: kiro.dev/docs/hooks/types
+
+---
+
+## KIRO MCP RULES
+
+<a id="kr-mcp-001"></a>
+### KR-MCP-001 [HIGH] Kiro MCP Server Missing command and url
+**Requirement**: Each Kiro MCP server MUST define `command` (local) or `url` (remote)
+**Detection**: Server entry has neither `command` nor `url`, or top-level `mcpServers` is invalid
+**Fix**: Define `command` or `url` for each MCP server
+**Source**: kiro.dev/docs/mcp/configuration
+
+<a id="kr-mcp-002"></a>
+### KR-MCP-002 [MEDIUM] Hardcoded Secrets in Kiro MCP env
+**Requirement**: Sensitive MCP `env` values SHOULD use variable expansion instead of plaintext
+**Detection**: Sensitive env keys (API_KEY/SECRET/TOKEN/PASSWORD) contain hardcoded values
+**Fix**: Use `${VAR_NAME}` expansion for sensitive env values
+**Source**: kiro.dev/docs/mcp/configuration
+
 ---
 
 ## UNIVERSAL RULES (XML)
@@ -1959,7 +2125,7 @@ Complete coverage:
 - MCP-001 through MCP-006 (MCP protocol)
 - PE-001 through PE-006 (Prompt engineering)
 - XP-001 through XP-008, XP-SK-001 (Cross-platform)
-- CR-SK-001, CL-SK-001, CP-SK-001, CX-SK-001, OC-SK-001, WS-SK-001, KR-SK-001, KR-AG-006, KR-AG-007, AMP-SK-001, RC-SK-001 (Per-client and Kiro agent rules)
+- CR-SK-001, CL-SK-001, CP-SK-001, CX-SK-001, OC-SK-001, WS-SK-001, KR-SK-001, KR-AG-001 through KR-AG-007, KR-HK-001 through KR-HK-006, KR-PW-001 through KR-PW-004, KR-MCP-001 through KR-MCP-002, AMP-SK-001, RC-SK-001 (Per-client and Kiro rules)
 - Remaining MEDIUM/LOW certainty rules
 
 ---
@@ -2117,14 +2283,17 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | OpenCode Skills | 1 | 0 | 1 | 0 | 1 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | Kiro Skills | 1 | 0 | 1 | 0 | 1 |
-| Kiro Agents | 2 | 0 | 2 | 0 | 0 |
-| Kiro Steering | 4 | 2 | 2 | 0 | 1 |
+| Kiro Agents | 7 | 1 | 5 | 1 | 0 |
+| Kiro Hooks | 6 | 5 | 1 | 0 | 0 |
+| Kiro MCP | 2 | 1 | 1 | 0 | 0 |
+| Kiro Powers | 4 | 1 | 3 | 0 | 0 |
+| Kiro Steering | 9 | 3 | 6 | 0 | 1 |
 | Amp Skills | 1 | 0 | 1 | 0 | 1 |
 | Amp Checks | 4 | 2 | 2 | 0 | 3 |
 | Roo Code Skills | 1 | 0 | 1 | 0 | 1 |
 | Roo Code | 6 | 3 | 3 | 0 | 0 |
 | Version Awareness | 1 | 0 | 0 | 1 | 0 |
-| **TOTAL** | **233** | **136** | **89** | **8** | **96** |
+| **TOTAL** | **255** | **145** | **101** | **9** | **96** |
 
 
 ---
@@ -2154,7 +2323,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 233 validation rules across 32 categories
+**Total Coverage**: 255 validation rules across 36 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
 **Certainty**: 135 HIGH, 87 MEDIUM, 8 LOW

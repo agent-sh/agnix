@@ -526,6 +526,87 @@ rules:
   kiro_004:
     message: "El archivo de orientacion Kiro esta vacio"
     suggestion: "Agrega contenido de orientacion al archivo"
+  kiro_005:
+    message: "El archivo de orientacion Kiro tiene frontmatter pero no tiene cuerpo de instrucciones"
+    suggestion: "Agrega instrucciones utiles debajo del frontmatter"
+  kiro_006:
+    message: "Se detecto un posible secreto en el contenido de orientacion Kiro (%{marker})"
+    suggestion: "Elimina credenciales hardcodeadas y usa variables de entorno"
+  kiro_007:
+    message: "fileMatchPattern existe pero inclusion es '%{inclusion}' en lugar de 'fileMatch'"
+    suggestion: "Usa inclusion: fileMatch o elimina fileMatchPattern"
+  kiro_008:
+    message: "Campo de frontmatter desconocido en orientacion Kiro: '%{field}'"
+    suggestion: "Usa solo campos soportados: inclusion, name, description, fileMatchPattern"
+  kiro_009:
+    message: "La referencia inline de archivo apunta a un archivo inexistente: %{reference}"
+    suggestion: "Corrige la ruta de referencia o crea el archivo referenciado"
+  kr_pw_001:
+    message: "POWER.md no tiene los campos de frontmatter requeridos: %{fields}"
+    suggestion: "Agrega los campos requeridos: name, description, keywords"
+  kr_pw_001_parse:
+    message: "El frontmatter de POWER.md tiene YAML invalido: %{error}"
+    suggestion: "Corrige la sintaxis YAML del frontmatter en POWER.md"
+  kr_pw_002:
+    message: "El array keywords de POWER.md esta vacio"
+    suggestion: "Agrega una o mas keywords de activacion en POWER.md"
+  kr_pw_003:
+    message: "El cuerpo de POWER.md esta vacio"
+    suggestion: "Agrega contenido de onboarding/workflow/referencia en el cuerpo de POWER.md"
+  kr_pw_004:
+    message: "El mcp.json adyacente al power tiene estructura mcpServers invalida"
+    suggestion: "Asegura que mcp.json use un objeto mcpServers con servidores validos"
+  kr_ag_001:
+    message: "Campo desconocido '%{field}' en el JSON de agente Kiro"
+    suggestion: "Elimina campos no soportados o usa claves documentadas de agente Kiro"
+  kr_ag_002:
+    message: "Entrada de recurso invalida en agente Kiro: %{resource}"
+    suggestion: "Usa file://, skill:// o entradas objeto con type: knowledgeBase"
+  kr_ag_003:
+    message: "allowedTools contiene '%{tool}' que no esta presente en tools"
+    suggestion: "Mantén allowedTools como subconjunto de tools"
+  kr_ag_004:
+    message: "Valor de model invalido en agente Kiro: '%{model}'"
+    suggestion: "Usa un valor de modelo documentado (claude-sonnet-4, claude-sonnet4.5, claude-sonnet-4-5, claude-opus4.5, claude-opus-4-5, Auto)"
+  kr_ag_005:
+    message: "El agente Kiro tiene includeMcpJson: false y no tiene mcpServers inline"
+    suggestion: "Activa includeMcpJson o configura mcpServers inline para acceso MCP"
+  kr_ag_006:
+    message: "El agente de Kiro referencia un subagente desconocido '@%{agent}'"
+    suggestion: "Crea .kiro/agents/%{agent}.json o elimina la referencia al subagente"
+  kr_ag_007:
+    message: "El agente de Kiro tiene herramientas mas amplias que el subagente referenciado '@%{agent}' (herramientas extra: %{extra_tools})"
+    suggestion: "Reduce el alcance de herramientas de este agente o alinea los permisos de '@%{agent}'"
+  kr_hk_001:
+    message: "Evento invalido de hook IDE Kiro: '%{event}'"
+    suggestion: "Usa uno de: fileEdited, fileCreate, fileDelete, promptSubmit, agentStop, preToolUse, postToolUse, manual"
+  kr_hk_002:
+    message: "El hook de archivo Kiro para el evento '%{event}' no tiene patterns"
+    suggestion: "Agrega patterns para hooks fileEdited/fileCreate/fileDelete"
+  kr_hk_003:
+    message: "El hook IDE Kiro no tiene acciones runCommand ni askAgent"
+    suggestion: "Configura runCommand o askAgent (en nivel superior o en then)"
+  kr_hk_004:
+    message: "El hook Kiro '%{event}' no tiene filtro toolTypes"
+    suggestion: "Agrega toolTypes para acotar hooks preToolUse/postToolUse"
+  kr_hk_005:
+    message: "Clave de evento de hook CLI Kiro invalida '%{event}' en el JSON del agente"
+    suggestion: "Usa una de: agentSpawn, userPromptSubmit, preToolUse, postToolUse, stop"
+  kr_hk_006:
+    message: "La entrada de hook CLI Kiro en %{event}[%{index}] no tiene command requerido"
+    suggestion: "Agrega un command no vacio en cada entrada de hook CLI"
+  kr_mcp_001:
+    message: "El servidor MCP Kiro '%{server}' no tiene command ni url"
+    suggestion: "Define command para servidores locales o url para servidores remotos"
+  kr_mcp_001_root:
+    message: "La configuracion MCP de Kiro no tiene objeto mcpServers"
+    suggestion: "Define mcpServers como objeto con una o mas entradas de servidor"
+  kr_mcp_001_parse:
+    message: "La configuracion MCP de Kiro tiene estructura JSON invalida: %{error}"
+    suggestion: "Corrige la sintaxis JSON y asegúrate de que mcpServers sea un objeto"
+  kr_mcp_002:
+    message: "El servidor MCP Kiro '%{server}' tiene un posible secreto hardcodeado en env '%{env_key}'"
+    suggestion: "Usa referencias de variables de entorno como ${VAR_NAME} en lugar de secretos en texto plano"
 
   # --- Prompt engineering (prompt.rs) ---
   pe_001:

@@ -121,8 +121,8 @@ fn run_agnix_json(target: &Path) -> Value {
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
-        output.status.success(),
-        "agnix exited with status {} for {}\nstdout:\n{}\nstderr:\n{}",
+        output.status.success() || output.status.code() == Some(1),
+        "agnix exited with unexpected status {} for {}\nstdout:\n{}\nstderr:\n{}",
         output.status,
         target.display(),
         stdout,
@@ -206,9 +206,9 @@ fn kiro_fixture_families_exist_with_required_cases() {
 fn kiro_fixture_families_are_cli_runnable() {
     let root = workspace_root();
     let fixture_roots = [
-        ("tests/fixtures/kiro-powers", 7_u64, 0_u64),
-        ("tests/fixtures/kiro-agents", 10_u64, 0_u64),
-        ("tests/fixtures/kiro-hooks", 7_u64, 0_u64),
+        ("tests/fixtures/kiro-powers", 7_u64, 4_u64),
+        ("tests/fixtures/kiro-agents", 10_u64, 8_u64),
+        ("tests/fixtures/kiro-hooks", 7_u64, 4_u64),
         ("tests/fixtures/kiro-mcp", 1_u64, 0_u64),
     ];
 

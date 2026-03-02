@@ -178,14 +178,20 @@ fn readme_supported_tools_still_lists_kiro_surface() {
     assert!(
         kiro_row.contains("KIRO-\\*")
             && kiro_row.contains("KR-SK-\\*")
-            && kiro_row.contains("KR-AG-\\*"),
-        "Kiro row must include KIRO-*, KR-SK-*, and KR-AG-* prefixes"
+            && kiro_row.contains("KR-AG-\\*")
+            && kiro_row.contains("KR-HK-\\*")
+            && kiro_row.contains("KR-PW-\\*")
+            && kiro_row.contains("KR-MCP-\\*"),
+        "Kiro row must include KIRO-*, KR-SK-*, KR-AG-*, KR-HK-*, KR-PW-*, and KR-MCP-* prefixes"
     );
     assert!(
         kiro_row.contains(".kiro/steering/\\*\\*/\\*.md")
             && kiro_row.contains(".kiro/skills/\\*\\*/SKILL.md")
-            && kiro_row.contains(".kiro/agents/\\*.json"),
-        "Kiro row must include steering, skills, and agents file surfaces"
+            && kiro_row.contains(".kiro/agents/\\*.json")
+            && kiro_row.contains(".kiro/hooks/\\*.kiro.hook")
+            && kiro_row.contains(".kiro/settings/mcp.json")
+            && kiro_row.contains(".kiro/powers/\\*/POWER.md"),
+        "Kiro row must include steering, skills, agents, hooks, mcp, and powers file surfaces"
     );
 }
 
@@ -237,12 +243,15 @@ fn kiro_rules_still_documented_in_validation_rules() {
             rule.id.starts_with("KIRO-")
                 || rule.id.starts_with("KR-SK-")
                 || rule.id.starts_with("KR-AG-")
+                || rule.id.starts_with("KR-HK-")
+                || rule.id.starts_with("KR-PW-")
+                || rule.id.starts_with("KR-MCP-")
         })
         .map(|rule| rule.id.clone())
         .collect();
     assert!(
         !kiro_rules.is_empty(),
-        "Expected at least one KIRO-/KR-SK-/KR-AG- rule in rules.json"
+        "Expected at least one KIRO-/KR-SK-/KR-AG-/KR-HK-/KR-PW-/KR-MCP- rule in rules.json"
     );
 
     let missing_rules: Vec<String> = kiro_rules

@@ -301,6 +301,28 @@ mod validation_tests {
 }
 
 mod rules_tests {
+    use std::path::PathBuf;
+
+    fn expected_rule_count_from_source() -> usize {
+        let rules_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .join("knowledge-base")
+            .join("rules.json");
+        let content = std::fs::read_to_string(&rules_path).unwrap_or_else(|e| {
+            panic!("Failed to read {}: {}", rules_path.display(), e);
+        });
+        let json: serde_json::Value = serde_json::from_str(&content).unwrap_or_else(|e| {
+            panic!("Failed to parse {}: {}", rules_path.display(), e);
+        });
+        json["total_rules"]
+            .as_u64()
+            .unwrap_or_else(|| panic!("Missing numeric total_rules in {}", rules_path.display()))
+            as usize
+    }
+
     #[test]
     fn test_rules_data_not_empty() {
         assert!(!agnix_rules::RULES_DATA.is_empty());
@@ -309,7 +331,7 @@ mod rules_tests {
     #[test]
     fn test_rules_count() {
         // Should match the current source-of-truth total in knowledge-base/rules.json.
-        assert_eq!(agnix_rules::rule_count(), 245);
+        assert_eq!(agnix_rules::rule_count(), expected_rule_count_from_source());
     }
 
     #[test]

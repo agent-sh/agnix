@@ -1,6 +1,6 @@
 # agnix Technical Reference
 
-> Linter for agent configs. 233 rules across 32 categories.
+> Linter for agent configs. 255 rules across 36 categories.
 
 
 ## What agnix Validates
@@ -32,9 +32,12 @@
 | OpenCode Skills | .opencode/skills/*/SKILL.md | 1 |
 | Windsurf | .windsurf/rules/*.md, .windsurf/workflows/*.md, .windsurfrules | 4 |
 | Windsurf Skills | .windsurf/skills/*/SKILL.md | 1 |
-| Kiro Steering | .kiro/steering/*.md | 4 |
+| Kiro Steering | .kiro/steering/*.md | 9 |
 | Kiro Skills | .kiro/skills/*/SKILL.md | 1 |
-| Kiro Agents | .kiro/agents/*.json | 2 |
+| Kiro Agents | .kiro/agents/*.json | 7 |
+| Kiro Hooks | .kiro/hooks/*.kiro.hook | 6 |
+| Kiro MCP | .kiro/settings/mcp.json | 2 |
+| Kiro Powers | .kiro/powers/*/POWER.md | 4 |
 | Amp Skills | .agents/skills/*/SKILL.md | 1 |
 | Amp Checks | .agents/checks/*.md, .amp/settings*.json | 4 |
 | Roo Code Skills | .roo/skills/*/SKILL.md | 1 |
@@ -55,7 +58,7 @@ agnix/
 │   ├── agnix-mcp/      # MCP server
 │   └── agnix-wasm/     # WebAssembly bindings
 ├── editors/            # Neovim, VS Code, JetBrains, Zed integrations
-├── knowledge-base/     # 233 rules documented
+├── knowledge-base/     # 255 rules documented
 
 ├── scripts/            # Build/dev automation scripts
 ├── website/            # Docusaurus documentation website

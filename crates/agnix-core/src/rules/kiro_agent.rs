@@ -1,13 +1,21 @@
-//! Kiro agent validation rules (KR-AG-006 to KR-AG-007).
+//! Kiro agent validation rules (KR-AG-001 to KR-AG-007, KR-HK-005 to KR-HK-006).
 //!
 //! Validates cross-agent invocation references in `.kiro/agents/*.json`:
+//! - KR-AG-001: Unknown top-level field in agent JSON.
+//! - KR-AG-002: Invalid resource protocol/type.
+//! - KR-AG-003: allowedTools contains tool not present in tools.
+//! - KR-AG-004: Invalid model value.
+//! - KR-AG-005: includeMcpJson disabled with no inline mcpServers.
 //! - KR-AG-006: Prompt references a non-existent subagent.
 //! - KR-AG-007: Invoking agent has a broader tool scope than referenced subagent.
+//! - KR-HK-005: Invalid CLI hook event key.
+//! - KR-HK-006: CLI hook entry missing required command.
 
 use crate::{
     config::LintConfig,
     diagnostics::Diagnostic,
     rules::{Validator, ValidatorMetadata},
+    schemas::kiro_agent::VALID_KIRO_AGENT_MODELS,
 };
 use rust_i18n::t;
 use serde_json::Value;
@@ -15,8 +23,41 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
-const RULE_IDS: &[&str] = &["KR-AG-006", "KR-AG-007"];
+const RULE_IDS: &[&str] = &[
+    "KR-AG-001",
+    "KR-AG-002",
+    "KR-AG-003",
+    "KR-AG-004",
+    "KR-AG-005",
+    "KR-AG-006",
+    "KR-AG-007",
+    "KR-HK-005",
+    "KR-HK-006",
+];
 const MAX_PROJECT_SEARCH_DEPTH: usize = 10;
+const VALID_AGENT_FIELDS: &[&str] = &[
+    "name",
+    "description",
+    "prompt",
+    "model",
+    "tools",
+    "allowedTools",
+    "toolAliases",
+    "toolsSettings",
+    "resources",
+    "mcpServers",
+    "includeMcpJson",
+    "hooks",
+    "keyboardShortcut",
+    "welcomeMessage",
+];
+const VALID_CLI_HOOK_EVENTS: &[&str] = &[
+    "agentSpawn",
+    "userPromptSubmit",
+    "preToolUse",
+    "postToolUse",
+    "stop",
+];
 
 #[derive(Debug, Clone)]
 struct AgentInfo {
@@ -122,6 +163,238 @@ fn extract_tools(value: &Value) -> HashSet<String> {
 
 fn has_explicit_tool_scope(value: &Value) -> bool {
     value.get("allowedTools").is_some() || value.get("tools").is_some()
+}
+
+fn extract_string_array(value: Option<&Value>) -> Vec<String> {
+    value
+        .and_then(Value::as_array)
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(Value::as_str)
+                .map(str::trim)
+                .filter(|item| !item.is_empty())
+                .map(ToString::to_string)
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn normalize_tool_set(tools: &[String]) -> HashSet<String> {
+    tools.iter().map(|tool| tool.to_ascii_lowercase()).collect()
+}
+
+fn has_inline_mcp_servers(value: &Value) -> bool {
+    match value.get("mcpServers") {
+        Some(Value::Array(entries)) => !entries.is_empty(),
+        Some(Value::Object(entries)) => !entries.is_empty(),
+        _ => false,
+    }
+}
+
+fn is_valid_resource_entry(resource: &Value) -> bool {
+    match resource {
+        Value::String(uri) => {
+            let normalized = uri.trim().to_ascii_lowercase();
+            normalized.starts_with("file://") || normalized.starts_with("skill://")
+        }
+        Value::Object(obj) => obj
+            .get("type")
+            .and_then(Value::as_str)
+            .is_some_and(|kind| kind == "knowledgeBase"),
+        _ => false,
+    }
+}
+
+fn validate_cli_hook_rules(
+    path: &Path,
+    current_agent: &Value,
+    config: &LintConfig,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let check_invalid_event = config.is_rule_enabled("KR-HK-005");
+    let check_missing_command = config.is_rule_enabled("KR-HK-006");
+    if !check_invalid_event && !check_missing_command {
+        return;
+    }
+
+    let Some(hooks_obj) = current_agent.get("hooks").and_then(Value::as_object) else {
+        return;
+    };
+
+    for (event, entries) in hooks_obj {
+        let event_valid = VALID_CLI_HOOK_EVENTS.contains(&event.as_str());
+
+        if check_invalid_event && !event_valid {
+            diagnostics.push(
+                Diagnostic::error(
+                    path.to_path_buf(),
+                    1,
+                    0,
+                    "KR-HK-005",
+                    t!("rules.kr_hk_005.message", event = event.as_str()),
+                )
+                .with_suggestion(t!("rules.kr_hk_005.suggestion")),
+            );
+        }
+
+        if !check_missing_command || !event_valid {
+            continue;
+        }
+
+        let Some(entries_array) = entries.as_array() else {
+            diagnostics.push(
+                Diagnostic::error(
+                    path.to_path_buf(),
+                    1,
+                    0,
+                    "KR-HK-006",
+                    t!("rules.kr_hk_006.message", event = event.as_str(), index = 0),
+                )
+                .with_suggestion(t!("rules.kr_hk_006.suggestion")),
+            );
+            continue;
+        };
+
+        for (index, entry) in entries_array.iter().enumerate() {
+            let has_command = entry
+                .get("command")
+                .and_then(Value::as_str)
+                .is_some_and(|command| !command.trim().is_empty());
+            if !has_command {
+                diagnostics.push(
+                    Diagnostic::error(
+                        path.to_path_buf(),
+                        1,
+                        0,
+                        "KR-HK-006",
+                        t!("rules.kr_hk_006.message", event = event.as_str(), index = index),
+                    )
+                    .with_suggestion(t!("rules.kr_hk_006.suggestion")),
+                );
+            }
+        }
+    }
+}
+
+fn validate_agent_schema_rules(
+    path: &Path,
+    current_agent: &Value,
+    config: &LintConfig,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let check_unknown_fields = config.is_rule_enabled("KR-AG-001");
+    let check_resource_protocols = config.is_rule_enabled("KR-AG-002");
+    let check_allowed_tools_subset = config.is_rule_enabled("KR-AG-003");
+    let check_model = config.is_rule_enabled("KR-AG-004");
+    let check_no_mcp_access = config.is_rule_enabled("KR-AG-005");
+    if !check_unknown_fields
+        && !check_resource_protocols
+        && !check_allowed_tools_subset
+        && !check_model
+        && !check_no_mcp_access
+    {
+        return;
+    }
+
+    let Some(obj) = current_agent.as_object() else {
+        return;
+    };
+
+    if check_unknown_fields {
+        for key in obj.keys() {
+            if VALID_AGENT_FIELDS.contains(&key.as_str()) {
+                continue;
+            }
+            diagnostics.push(
+                Diagnostic::warning(
+                    path.to_path_buf(),
+                    1,
+                    0,
+                    "KR-AG-001",
+                    t!("rules.kr_ag_001.message", field = key.as_str()),
+                )
+                .with_suggestion(t!("rules.kr_ag_001.suggestion")),
+            );
+        }
+    }
+
+    if check_resource_protocols
+        && let Some(resources) = current_agent.get("resources").and_then(Value::as_array)
+    {
+        for resource in resources {
+            if is_valid_resource_entry(resource) {
+                continue;
+            }
+            diagnostics.push(
+                Diagnostic::error(
+                    path.to_path_buf(),
+                    1,
+                    0,
+                    "KR-AG-002",
+                    t!("rules.kr_ag_002.message", resource = resource.to_string()),
+                )
+                .with_suggestion(t!("rules.kr_ag_002.suggestion")),
+            );
+        }
+    }
+
+    if check_allowed_tools_subset
+        && current_agent.get("allowedTools").is_some()
+    {
+        let tools = extract_string_array(current_agent.get("tools"));
+        let tools_set = normalize_tool_set(&tools);
+        let allowed_tools = extract_string_array(current_agent.get("allowedTools"));
+        for allowed in allowed_tools {
+            if !tools_set.contains(&allowed.to_ascii_lowercase()) {
+                diagnostics.push(
+                    Diagnostic::warning(
+                        path.to_path_buf(),
+                        1,
+                        0,
+                        "KR-AG-003",
+                        t!("rules.kr_ag_003.message", tool = allowed.as_str()),
+                    )
+                    .with_suggestion(t!("rules.kr_ag_003.suggestion")),
+                );
+            }
+        }
+    }
+
+    if check_model
+        && let Some(model) = current_agent.get("model").and_then(Value::as_str)
+        && !VALID_KIRO_AGENT_MODELS.contains(&model)
+    {
+        diagnostics.push(
+            Diagnostic::warning(
+                path.to_path_buf(),
+                1,
+                0,
+                "KR-AG-004",
+                t!("rules.kr_ag_004.message", model = model),
+            )
+            .with_suggestion(t!("rules.kr_ag_004.suggestion")),
+        );
+    }
+
+    if check_no_mcp_access
+        && current_agent
+            .get("includeMcpJson")
+            .and_then(Value::as_bool)
+            .is_some_and(|enabled| !enabled)
+        && !has_inline_mcp_servers(current_agent)
+    {
+        diagnostics.push(
+            Diagnostic::info(
+                path.to_path_buf(),
+                1,
+                0,
+                "KR-AG-005",
+                t!("rules.kr_ag_005.message"),
+            )
+            .with_suggestion(t!("rules.kr_ag_005.suggestion")),
+        );
+    }
 }
 
 fn is_reserved_kiro_agent_filename(filename: &str) -> bool {
@@ -289,15 +562,39 @@ impl Validator for KiroAgentValidator {
     fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
 
+        let check_unknown_fields = config.is_rule_enabled("KR-AG-001");
+        let check_resource_protocols = config.is_rule_enabled("KR-AG-002");
+        let check_allowed_tools_subset = config.is_rule_enabled("KR-AG-003");
+        let check_model = config.is_rule_enabled("KR-AG-004");
+        let check_no_mcp_access = config.is_rule_enabled("KR-AG-005");
         let check_missing_reference = config.is_rule_enabled("KR-AG-006");
         let check_tool_scope = config.is_rule_enabled("KR-AG-007");
-        if !check_missing_reference && !check_tool_scope {
+        let check_cli_hook_event = config.is_rule_enabled("KR-HK-005");
+        let check_cli_hook_command = config.is_rule_enabled("KR-HK-006");
+
+        if !check_unknown_fields
+            && !check_resource_protocols
+            && !check_allowed_tools_subset
+            && !check_model
+            && !check_no_mcp_access
+            && !check_missing_reference
+            && !check_tool_scope
+            && !check_cli_hook_event
+            && !check_cli_hook_command
+        {
             return diagnostics;
         }
 
         let Ok(current_agent) = serde_json::from_str::<Value>(content) else {
             return diagnostics;
         };
+
+        validate_agent_schema_rules(path, &current_agent, config, &mut diagnostics);
+        validate_cli_hook_rules(path, &current_agent, config, &mut diagnostics);
+
+        if !check_missing_reference && !check_tool_scope {
+            return diagnostics;
+        }
 
         let mentions = extract_prompt_agent_mentions(content);
         if mentions.is_empty() {
@@ -399,6 +696,124 @@ mod tests {
         let validator = KiroAgentValidator;
         let content = fs::read_to_string(path).unwrap();
         validator.validate(path, &content, &LintConfig::default())
+    }
+
+    #[test]
+    fn test_kr_ag_001_unknown_fields() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let agents_dir = temp.path().join(".kiro").join("agents");
+        fs::create_dir_all(&agents_dir).unwrap();
+
+        let unknown = agents_dir.join("unknown-fields.json");
+        write_agent(
+            &unknown,
+            include_str!("../../../../tests/fixtures/kiro-agents/.kiro/agents/unknown-fields.json"),
+        );
+
+        let diagnostics = validate(&unknown);
+        let kr_ag_001: Vec<_> = diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.rule == "KR-AG-001")
+            .collect();
+        assert_eq!(kr_ag_001.len(), 2);
+    }
+
+    #[test]
+    fn test_kr_ag_002_invalid_resource_protocol() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let agents_dir = temp.path().join(".kiro").join("agents");
+        fs::create_dir_all(&agents_dir).unwrap();
+
+        let invalid = agents_dir.join("invalid-resource.json");
+        write_agent(
+            &invalid,
+            include_str!("../../../../tests/fixtures/kiro-agents/.kiro/agents/invalid-resource.json"),
+        );
+
+        let diagnostics = validate(&invalid);
+        assert!(diagnostics.iter().any(|diagnostic| diagnostic.rule == "KR-AG-002"));
+    }
+
+    #[test]
+    fn test_kr_ag_003_allowed_tools_subset() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let agents_dir = temp.path().join(".kiro").join("agents");
+        fs::create_dir_all(&agents_dir).unwrap();
+
+        let invalid = agents_dir.join("mismatched-tools.json");
+        write_agent(
+            &invalid,
+            include_str!("../../../../tests/fixtures/kiro-agents/.kiro/agents/mismatched-tools.json"),
+        );
+
+        let diagnostics = validate(&invalid);
+        assert!(diagnostics.iter().any(|diagnostic| diagnostic.rule == "KR-AG-003"));
+    }
+
+    #[test]
+    fn test_kr_ag_004_invalid_model() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let agents_dir = temp.path().join(".kiro").join("agents");
+        fs::create_dir_all(&agents_dir).unwrap();
+
+        let invalid = agents_dir.join("invalid-model.json");
+        write_agent(
+            &invalid,
+            include_str!("../../../../tests/fixtures/kiro-agents/.kiro/agents/invalid-model.json"),
+        );
+
+        let diagnostics = validate(&invalid);
+        assert!(diagnostics.iter().any(|diagnostic| diagnostic.rule == "KR-AG-004"));
+    }
+
+    #[test]
+    fn test_kr_ag_005_no_mcp_access_info() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let agents_dir = temp.path().join(".kiro").join("agents");
+        fs::create_dir_all(&agents_dir).unwrap();
+
+        let no_mcp = agents_dir.join("no-mcp-access.json");
+        write_agent(
+            &no_mcp,
+            include_str!("../../../../tests/fixtures/kiro-agents/.kiro/agents/no-mcp-access.json"),
+        );
+
+        let diagnostics = validate(&no_mcp);
+        assert!(diagnostics.iter().any(|diagnostic| diagnostic.rule == "KR-AG-005"));
+    }
+
+    #[test]
+    fn test_kr_hk_005_invalid_cli_hook_event() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let agents_dir = temp.path().join(".kiro").join("agents");
+        fs::create_dir_all(&agents_dir).unwrap();
+
+        let invalid = agents_dir.join("invalid-hook-event.json");
+        write_agent(
+            &invalid,
+            include_str!("../../../../tests/fixtures/kiro-agents/.kiro/agents/invalid-hook-event.json"),
+        );
+
+        let diagnostics = validate(&invalid);
+        assert!(diagnostics.iter().any(|diagnostic| diagnostic.rule == "KR-HK-005"));
+    }
+
+    #[test]
+    fn test_kr_hk_006_missing_cli_hook_command() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let agents_dir = temp.path().join(".kiro").join("agents");
+        fs::create_dir_all(&agents_dir).unwrap();
+
+        let invalid = agents_dir.join("missing-hook-command.json");
+        write_agent(
+            &invalid,
+            include_str!(
+                "../../../../tests/fixtures/kiro-agents/.kiro/agents/missing-hook-command.json"
+            ),
+        );
+
+        let diagnostics = validate(&invalid);
+        assert!(diagnostics.iter().any(|diagnostic| diagnostic.rule == "KR-HK-006"));
     }
 
     #[test]
@@ -808,6 +1223,19 @@ mod tests {
         let metadata = validator.metadata();
 
         assert_eq!(metadata.name, "KiroAgentValidator");
-        assert_eq!(metadata.rule_ids, &["KR-AG-006", "KR-AG-007"]);
+        assert_eq!(
+            metadata.rule_ids,
+            &[
+                "KR-AG-001",
+                "KR-AG-002",
+                "KR-AG-003",
+                "KR-AG-004",
+                "KR-AG-005",
+                "KR-AG-006",
+                "KR-AG-007",
+                "KR-HK-005",
+                "KR-HK-006",
+            ]
+        );
     }
 }
