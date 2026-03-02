@@ -1,0 +1,5 @@
+{
+  "name": "mismatched-tools-agent",
+  "tools": ["readFiles"],
+  "allowedTools": ["runShellCommand"]
+}

@@ -1,0 +1,4 @@
+{
+  "name": "invalid-resource-agent",
+  "resources": ["https://example.com/not-supported"]
+}

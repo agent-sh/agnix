@@ -1,0 +1,10 @@
+{
+  "name": "valid-agent",
+  "description": "Valid Kiro agent fixture",
+  "model": "claude-sonnet-4-5",
+  "tools": ["readFiles", "listDirectory"],
+  "allowedTools": ["readFiles", "listDirectory"],
+  "resources": ["file://docs/overview.md", "skill://linting"],
+  "includeMcpJson": true,
+  "mcpServers": ["filesystem"]
+}

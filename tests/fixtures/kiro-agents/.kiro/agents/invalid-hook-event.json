@@ -1,0 +1,10 @@
+{
+  "name": "invalid-hook-event-agent",
+  "hooks": {
+    "beforePrompt": [
+      {
+        "command": "echo unsupported"
+      }
+    ]
+  }
+}

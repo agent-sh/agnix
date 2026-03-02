@@ -26,9 +26,14 @@ Keep fixtures minimal, deterministic, and focused on one rule family when possib
 | REF | `refs/` | `refs/valid-links.md` | `refs/broken-link/CLAUDE.md`, `refs/missing-import.md` |
 | XML | `xml/` | `xml/xml-valid.md` | `xml/xml-001-unclosed.md` |
 | Real-world | `real-world/` | `real-world/html5-void-elements/CLAUDE.md` | `real-world/absolute-paths/AGENTS.md` |
+| Kiro Powers (fixture pack) | `kiro-powers/` | `kiro-powers/valid-power/POWER.md` | `kiro-powers/missing-frontmatter/POWER.md`, `kiro-powers/bad-mcp/mcp.json` |
+| Kiro Agents (fixture pack) | `kiro-agents/` | `kiro-agents/.kiro/agents/valid-agent.json` | `kiro-agents/.kiro/agents/invalid-model.json`, `kiro-agents/.kiro/agents/missing-hook-command.json` |
+| Kiro Hooks (fixture pack) | `kiro-hooks/` | `kiro-hooks/.kiro/hooks/valid-file-save.kiro.hook` | `kiro-hooks/.kiro/hooks/invalid-event.kiro.hook`, `kiro-hooks/.kiro/hooks/missing-action.kiro.hook` |
+| Kiro MCP (fixture pack) | `kiro-mcp/` | `kiro-mcp/.kiro/settings/valid-local-mcp.json` | `kiro-mcp/.kiro/settings/missing-command-url.json`, `kiro-mcp/.kiro/settings/hardcoded-secrets.json` |
 
 ## Notes
 - AGENTS.md and cross-platform fixtures intentionally overlap; they are validated by different rule families.
 - `real-world/` fixtures are regression tests derived from testing against 121 real-world repositories.
 - REF-002 only fires on agent config files (CLAUDE.md, AGENTS.md, SKILL.md), so broken-link fixture uses CLAUDE.md.
 - Keep fixture paths stable, as tests assert on filenames.
+- Kiro powers/agents/hooks/MCP fixture packs are guarded by inventory and CLI smoke-baseline checks in `crates/agnix-cli/tests/kiro_fixture_inventory.rs` (including explicit unsupported-path baselines for `.kiro/*` families).

@@ -1,0 +1,6 @@
+{
+  "name": "unknown-fields-agent",
+  "description": "Contains unsupported keys",
+  "madeUpField": true,
+  "anotherOne": "value"
+}

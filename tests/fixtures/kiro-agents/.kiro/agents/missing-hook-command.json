@@ -1,0 +1,10 @@
+{
+  "name": "missing-hook-command-agent",
+  "hooks": {
+    "preToolUse": [
+      {
+        "toolTypes": ["readFiles"]
+      }
+    ]
+  }
+}

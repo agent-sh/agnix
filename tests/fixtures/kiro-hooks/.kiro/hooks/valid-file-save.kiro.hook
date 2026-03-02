@@ -1,0 +1,5 @@
+{
+  "event": "fileEdited",
+  "patterns": ["**/*.md"],
+  "runCommand": "echo file edited"
+}

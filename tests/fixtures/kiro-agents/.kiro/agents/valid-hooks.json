@@ -1,0 +1,11 @@
+{
+  "name": "valid-hooks-agent",
+  "hooks": {
+    "preToolUse": [
+      {
+        "command": "echo pre-tool",
+        "toolTypes": ["readFiles"]
+      }
+    ]
+  }
+}
