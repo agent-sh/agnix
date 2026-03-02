@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `255` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `267` validation rules generated from `knowledge-base/rules.json`.
 `96` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -225,18 +225,6 @@ This section contains all `255` validation rules generated from `knowledge-base/
 | [OC-008](./generated/oc-008.md) | Invalid Permission Config | HIGH | OpenCode | Yes (unsafe) |
 | [OC-009](./generated/oc-009.md) | Invalid Variable Substitution | MEDIUM | OpenCode | No |
 | [OC-SK-001](./generated/oc-sk-001.md) | OpenCode Skill Uses Unsupported Field | MEDIUM | OpenCode Skills | Yes (safe/unsafe) |
-| [OC-CFG-001](./generated/oc-cfg-001.md) | Invalid Model Format | HIGH | OpenCode | No |
-| [OC-CFG-004](./generated/oc-cfg-004.md) | Invalid Default Agent | MEDIUM | OpenCode | No |
-| [OC-CFG-005](./generated/oc-cfg-005.md) | Hardcoded API Key | HIGH | OpenCode | No |
-| [OC-CFG-006](./generated/oc-cfg-006.md) | Invalid MCP Server Structure | HIGH | OpenCode | No |
-| [OC-CFG-007](./generated/oc-cfg-007.md) | MCP Server Missing Command or URL | HIGH | OpenCode | No |
-| [OC-AG-001](./generated/oc-ag-001.md) | Invalid Agent Mode Value | HIGH | OpenCode | No |
-| [OC-AG-002](./generated/oc-ag-002.md) | Invalid Color Format | HIGH | OpenCode | No |
-| [OC-AG-003](./generated/oc-ag-003.md) | Temperature Out of Range | HIGH | OpenCode | No |
-| [OC-AG-004](./generated/oc-ag-004.md) | Steps Not a Positive Integer | HIGH | OpenCode | No |
-| [OC-PM-002](./generated/oc-pm-002.md) | Unknown Permission Key | MEDIUM | OpenCode | No |
-| [OC-AGM-001](./generated/oc-agm-001.md) | Empty AGENTS.md | HIGH | OpenCode | No |
-| [OC-AGM-002](./generated/oc-agm-002.md) | Secrets in AGENTS.md | HIGH | OpenCode | No |
 | [PE-001](./generated/pe-001.md) | Lost in the Middle | MEDIUM | Prompt Engineering | No |
 | [PE-002](./generated/pe-002.md) | Chain-of-Thought on Simple Task | MEDIUM | Prompt Engineering | No |
 | [PE-003](./generated/pe-003.md) | Weak Imperative Language | MEDIUM | Prompt Engineering | Yes (unsafe) |
@@ -272,3 +260,15 @@ This section contains all `255` validation rules generated from `knowledge-base/
 | [XP-007](./generated/xp-007.md) | AGENTS.md Exceeds Codex Byte Limit | MEDIUM | Cross-Platform | No |
 | [XP-008](./generated/xp-008.md) | Claude-specific Features in CLAUDE.md for Cursor | MEDIUM | Cross-Platform | No |
 | [XP-SK-001](./generated/xp-sk-001.md) | Skill Uses Client-Specific Features | LOW | Cross-Platform | No |
+| [OC-CFG-001](./generated/oc-cfg-001.md) | Invalid Model Format | HIGH | OpenCode | No |
+| [OC-CFG-004](./generated/oc-cfg-004.md) | Invalid Default Agent | MEDIUM | OpenCode | No |
+| [OC-CFG-005](./generated/oc-cfg-005.md) | Hardcoded API Key | HIGH | OpenCode | No |
+| [OC-CFG-006](./generated/oc-cfg-006.md) | Invalid MCP Server Structure | HIGH | OpenCode | No |
+| [OC-CFG-007](./generated/oc-cfg-007.md) | MCP Server Missing Command or URL | HIGH | OpenCode | No |
+| [OC-AG-001](./generated/oc-ag-001.md) | Invalid Agent Mode Value | HIGH | OpenCode | No |
+| [OC-AG-002](./generated/oc-ag-002.md) | Invalid Color Format | HIGH | OpenCode | No |
+| [OC-AG-003](./generated/oc-ag-003.md) | Temperature Out of Range | HIGH | OpenCode | No |
+| [OC-AG-004](./generated/oc-ag-004.md) | Steps Not a Positive Integer | HIGH | OpenCode | No |
+| [OC-PM-002](./generated/oc-pm-002.md) | Unknown Permission Key | MEDIUM | OpenCode | No |
+| [OC-AGM-001](./generated/oc-agm-001.md) | Empty AGENTS.md | HIGH | OpenCode | No |
+| [OC-AGM-002](./generated/oc-agm-002.md) | Secrets in AGENTS.md | HIGH | OpenCode | No |

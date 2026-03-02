@@ -2267,7 +2267,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | GitHub Copilot | 17 | 11 | 6 | 0 | 8 |
 | Cursor | 16 | 9 | 7 | 0 | 6 |
 | Cline | 4 | 3 | 1 | 0 | 2 |
-| OpenCode | 8 | 4 | 3 | 1 | 2 |
+| OpenCode | 20 | 14 | 5 | 1 | 2 |
 | Gemini CLI | 9 | 3 | 4 | 2 | 3 |
 | Codex CLI | 7 | 5 | 2 | 0 | 3 |
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
@@ -2293,7 +2293,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Roo Code Skills | 1 | 0 | 1 | 0 | 1 |
 | Roo Code | 6 | 3 | 3 | 0 | 0 |
 | Version Awareness | 1 | 0 | 0 | 1 | 0 |
-| **TOTAL** | **255** | **145** | **101** | **9** | **96** |
+| **TOTAL** | **267** | **155** | **103** | **9** | **96** |
 
 
 ---
@@ -2323,8 +2323,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 255 validation rules across 36 categories
+**Total Coverage**: 267 validation rules across 36 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 135 HIGH, 87 MEDIUM, 8 LOW
+**Certainty**: 155 HIGH, 103 MEDIUM, 9 LOW
 **Auto-Fixable**: 96 rules (42%)
