@@ -62,10 +62,10 @@ impl Validator for KiroHookValidator {
         if event_valid {
             if config.is_rule_enabled("KR-HK-002")
                 && is_file_event(event)
-                && !hook
+                && hook
                     .patterns
                     .as_ref()
-                    .is_some_and(|patterns| !patterns.is_empty())
+                    .is_none_or(|patterns| patterns.is_empty())
             {
                 diagnostics.push(
                     Diagnostic::error(
@@ -81,10 +81,10 @@ impl Validator for KiroHookValidator {
 
             if config.is_rule_enabled("KR-HK-004")
                 && is_tool_event(event)
-                && !hook
+                && hook
                     .tool_types
                     .as_ref()
-                    .is_some_and(|tool_types| !tool_types.is_empty())
+                    .is_none_or(|tool_types| tool_types.is_empty())
             {
                 diagnostics.push(
                     Diagnostic::warning(
