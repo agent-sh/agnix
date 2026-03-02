@@ -146,12 +146,7 @@ impl Validator for KiroPowerValidator {
                                 .config
                                 .as_ref()
                                 .and_then(|cfg| cfg.mcp_servers.as_ref())
-                                .is_none()
-                            || parsed_mcp
-                                .config
-                                .as_ref()
-                                .and_then(|cfg| cfg.mcp_servers.as_ref())
-                                .is_some_and(|servers| servers.is_empty());
+                                .is_none();
 
                         if invalid_structure {
                             diagnostics.push(
@@ -271,6 +266,33 @@ keywords:
         let content = fs::read_to_string(&power_path).unwrap();
         let diagnostics = validator.validate(&power_path, &content, &LintConfig::default());
         assert!(diagnostics.iter().any(|d| d.rule == "KR-PW-004"));
+    }
+
+    #[test]
+    fn test_kr_pw_004_allows_empty_mcp_servers_object() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let power_dir = temp.path().join(".kiro").join("powers").join("ok");
+        fs::create_dir_all(&power_dir).unwrap();
+
+        let power_path = power_dir.join("POWER.md");
+        fs::write(
+            &power_path,
+            r#"---
+name: ok
+description: test
+keywords:
+  - one
+---
+# Body
+"#,
+        )
+        .unwrap();
+        fs::write(power_dir.join("mcp.json"), r#"{"mcpServers":{}}"#).unwrap();
+
+        let validator = KiroPowerValidator;
+        let content = fs::read_to_string(&power_path).unwrap();
+        let diagnostics = validator.validate(&power_path, &content, &LintConfig::default());
+        assert!(!diagnostics.iter().any(|d| d.rule == "KR-PW-004"));
     }
 
     #[test]
