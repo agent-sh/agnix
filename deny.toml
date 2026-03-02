@@ -63,6 +63,11 @@ skip = [
     { name = "schemars_derive", version = "=0.8.22" },
     { name = "thiserror", version = "=1.0.69" }, # many crates use v1
     { name = "thiserror-impl", version = "=1.0.69" },
+    # Mixed toml major versions can appear in PR merge commits:
+    # rust-i18n-support pulls toml 0.8 while core tooling may pull toml 1.x.
+    { name = "serde_spanned", version = "=0.6.9" },
+    { name = "toml", version = "=0.8.23" },
+    { name = "toml_datetime", version = "=0.6.11" },
     { name = "tower", version = "=0.4.13" }, # tower-lsp uses v0.4, rmcp uses v0.5
     # windows-sys: jni (v0.45), dirs (v0.48), notify (v0.52), tokio (v0.60)
     { name = "windows-sys", version = "=0.45.0" },
