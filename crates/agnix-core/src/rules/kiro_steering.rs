@@ -31,7 +31,7 @@ const VALID_FRONTMATTER_FIELDS: &[&str] = &["inclusion", "name", "description", 
 
 fn line_col_at_offset(content: &str, offset: usize) -> (usize, usize) {
     let mut line = 1usize;
-    let mut col = 0usize;
+    let mut col = 1usize;
 
     for (idx, ch) in content.char_indices() {
         if idx >= offset {
@@ -39,7 +39,7 @@ fn line_col_at_offset(content: &str, offset: usize) -> (usize, usize) {
         }
         if ch == '\n' {
             line += 1;
-            col = 0;
+            col = 1;
         } else {
             col += 1;
         }
@@ -886,6 +886,12 @@ mod tests {
             .collect();
         assert_eq!(kiro_003.len(), 1);
         assert_eq!(kiro_003[0].level, DiagnosticLevel::Warning);
+    }
+
+    #[test]
+    fn test_line_col_at_offset_is_one_based() {
+        assert_eq!(line_col_at_offset("secret", 0), (1, 1));
+        assert_eq!(line_col_at_offset("x\nsecret", 2), (2, 1));
     }
 
     #[test]

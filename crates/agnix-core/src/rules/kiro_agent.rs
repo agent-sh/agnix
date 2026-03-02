@@ -185,11 +185,10 @@ fn normalize_tool_set(tools: &[String]) -> HashSet<String> {
 }
 
 fn has_inline_mcp_servers(value: &Value) -> bool {
-    match value.get("mcpServers") {
-        Some(Value::Array(entries)) => !entries.is_empty(),
-        Some(Value::Object(entries)) => !entries.is_empty(),
-        _ => false,
-    }
+    value
+        .get("mcpServers")
+        .and_then(Value::as_object)
+        .is_some_and(|entries| !entries.is_empty())
 }
 
 fn is_valid_resource_entry(resource: &Value) -> bool {
@@ -369,20 +368,26 @@ fn validate_agent_schema_rules(
         }
     }
 
-    if check_model
-        && let Some(model) = current_agent.get("model").and_then(Value::as_str)
-        && !VALID_KIRO_AGENT_MODELS.contains(&model)
-    {
-        diagnostics.push(
-            Diagnostic::warning(
-                path.to_path_buf(),
-                1,
-                0,
-                "KR-AG-004",
-                t!("rules.kr_ag_004.message", model = model),
-            )
-            .with_suggestion(t!("rules.kr_ag_004.suggestion")),
-        );
+    if check_model && let Some(model_value) = current_agent.get("model") {
+        let is_valid_model = model_value
+            .as_str()
+            .is_some_and(|model| VALID_KIRO_AGENT_MODELS.contains(&model));
+        if !is_valid_model {
+            let model = model_value
+                .as_str()
+                .map(ToString::to_string)
+                .unwrap_or_else(|| model_value.to_string());
+            diagnostics.push(
+                Diagnostic::warning(
+                    path.to_path_buf(),
+                    1,
+                    0,
+                    "KR-AG-004",
+                    t!("rules.kr_ag_004.message", model = model.as_str()),
+                )
+                .with_suggestion(t!("rules.kr_ag_004.suggestion")),
+            );
+        }
     }
 
     if check_no_mcp_access
@@ -816,6 +821,29 @@ mod tests {
     }
 
     #[test]
+    fn test_kr_ag_004_non_string_model() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let agents_dir = temp.path().join(".kiro").join("agents");
+        fs::create_dir_all(&agents_dir).unwrap();
+
+        let invalid = agents_dir.join("non-string-model.json");
+        write_agent(
+            &invalid,
+            r#"{
+  "name": "non-string-model",
+  "model": 123
+}"#,
+        );
+
+        let diagnostics = validate(&invalid);
+        assert!(
+            diagnostics
+                .iter()
+                .any(|diagnostic| diagnostic.rule == "KR-AG-004")
+        );
+    }
+
+    #[test]
     fn test_kr_ag_005_no_mcp_access_info() {
         let temp = tempfile::TempDir::new().unwrap();
         let agents_dir = temp.path().join(".kiro").join("agents");
@@ -828,6 +856,30 @@ mod tests {
         );
 
         let diagnostics = validate(&no_mcp);
+        assert!(
+            diagnostics
+                .iter()
+                .any(|diagnostic| diagnostic.rule == "KR-AG-005")
+        );
+    }
+
+    #[test]
+    fn test_kr_ag_005_mcp_server_references_do_not_count_as_inline() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let agents_dir = temp.path().join(".kiro").join("agents");
+        fs::create_dir_all(&agents_dir).unwrap();
+
+        let by_reference = agents_dir.join("mcp-references.json");
+        write_agent(
+            &by_reference,
+            r#"{
+  "name": "mcp-references",
+  "includeMcpJson": false,
+  "mcpServers": ["github"]
+}"#,
+        );
+
+        let diagnostics = validate(&by_reference);
         assert!(
             diagnostics
                 .iter()
