@@ -112,8 +112,25 @@ impl<'a> DefaultRuleFilter<'a> {
             s if s.starts_with("CDX-") => self.rules.codex,
             s if s.starts_with("ROO-") => self.rules.roo_code,
             s if s.starts_with("WS-") => self.rules.windsurf,
-            s if s.starts_with("KIRO-") => self.rules.kiro_steering,
-            s if s.starts_with("KR-AG-") => self.rules.kiro_agents,
+            // Kiro category routing:
+            // - Steering umbrella: steering files, IDE hooks, MCP, and power metadata checks
+            // - Agents: agent JSON rules and CLI hook checks nested under agents
+            s if s.starts_with("KIRO-")
+                || s.starts_with("KR-HK-001")
+                || s.starts_with("KR-HK-002")
+                || s.starts_with("KR-HK-003")
+                || s.starts_with("KR-HK-004")
+                || s.starts_with("KR-MCP-")
+                || s.starts_with("KR-PW-") =>
+            {
+                self.rules.kiro_steering
+            }
+            s if s.starts_with("KR-AG-")
+                || s.starts_with("KR-HK-005")
+                || s.starts_with("KR-HK-006") =>
+            {
+                self.rules.kiro_agents
+            }
             s if s.starts_with("PE-") => self.rules.prompt_engineering,
             // Unknown rules are enabled by default
             _ => true,

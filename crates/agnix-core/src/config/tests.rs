@@ -72,9 +72,14 @@ fn test_category_disabled_kiro_agents() {
 
     assert!(!config.is_rule_enabled("KR-AG-006"));
     assert!(!config.is_rule_enabled("KR-AG-007"));
+    assert!(!config.is_rule_enabled("KR-HK-005"));
+    assert!(!config.is_rule_enabled("KR-HK-006"));
 
     // Kiro steering remains independently controlled.
     assert!(config.is_rule_enabled("KIRO-001"));
+    assert!(config.is_rule_enabled("KR-HK-001"));
+    assert!(config.is_rule_enabled("KR-PW-001"));
+    assert!(config.is_rule_enabled("KR-MCP-001"));
 }
 
 #[test]
@@ -84,9 +89,15 @@ fn test_category_disabled_kiro_steering_does_not_disable_kiro_agents() {
 
     assert!(!config.is_rule_enabled("KIRO-001"));
     assert!(!config.is_rule_enabled("KIRO-004"));
+    assert!(!config.is_rule_enabled("KR-HK-001"));
+    assert!(!config.is_rule_enabled("KR-HK-004"));
+    assert!(!config.is_rule_enabled("KR-PW-001"));
+    assert!(!config.is_rule_enabled("KR-MCP-001"));
 
     // KR-AG rules remain independently controlled.
     assert!(config.is_rule_enabled("KR-AG-006"));
+    assert!(config.is_rule_enabled("KR-HK-005"));
+    assert!(config.is_rule_enabled("KR-HK-006"));
 }
 
 #[test]

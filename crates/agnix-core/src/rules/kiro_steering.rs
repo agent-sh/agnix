@@ -63,8 +63,10 @@ fn find_frontmatter_key_line(frontmatter: &str, key: &str) -> usize {
 fn secret_pattern() -> &'static Regex {
     static RE: OnceLock<Regex> = OnceLock::new();
     RE.get_or_init(|| {
-        Regex::new(r"(?im)(api[_-]?key|token|password|secret)\s*[:=]\s*([^\s#]+)")
-            .expect("secret pattern must compile")
+        Regex::new(
+            r"(?im)\b(?P<marker>api[_-]?key|token|password|[a-z0-9_-]+secret|secret[a-z0-9_-]+)\b\s*[:=]\s*(?P<value>[^\s#]+)",
+        )
+        .expect("secret pattern must compile")
     })
 }
 
@@ -140,10 +142,13 @@ impl Validator for KiroSteeringValidator {
                     continue;
                 };
                 let marker = captures
-                    .get(1)
+                    .name("marker")
                     .map(|m| m.as_str().to_ascii_lowercase())
                     .unwrap_or_else(|| "secret".to_string());
-                let value = captures.get(2).map(|m| m.as_str()).unwrap_or_default();
+                let value = captures
+                    .name("value")
+                    .map(|m| m.as_str())
+                    .unwrap_or_default();
                 if seems_plaintext_secret(value) {
                     let (line, col) = line_col_at_offset(content, full_match.start());
                     diagnostics.push(
@@ -936,6 +941,20 @@ mod tests {
     fn test_kiro_006_scans_past_template_values() {
         let content =
             "---\ninclusion: always\n---\nTOKEN=${ENV_TOKEN}\npassword=plaintextsecret123\n";
+        let diagnostics = validate_steering(content);
+        assert!(diagnostics.iter().any(|d| d.rule == "KIRO-006"));
+    }
+
+    #[test]
+    fn test_kiro_006_ignores_plain_prose_secret_label() {
+        let content = "---\ninclusion: always\n---\nSecret: guidelines\n";
+        let diagnostics = validate_steering(content);
+        assert!(diagnostics.iter().all(|d| d.rule != "KIRO-006"));
+    }
+
+    #[test]
+    fn test_kiro_006_detects_identifier_style_secret_keys() {
+        let content = "---\ninclusion: always\n---\nclient_secret: hardcodedsecret123\n";
         let diagnostics = validate_steering(content);
         assert!(diagnostics.iter().any(|d| d.rule == "KIRO-006"));
     }
