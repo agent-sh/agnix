@@ -38,11 +38,12 @@ fn find_toml_string_value_span(
     crate::span_utils::find_unique_toml_string_value(content, key, current_value)
 }
 
-const RULE_IDS: &[&str] = &[
+const CODEX_MARKDOWN_RULE_IDS: &[&str] = &["CDX-003", "CDX-AG-001", "CDX-AG-002", "CDX-AG-003"];
+
+const CODEX_CONFIG_RULE_IDS: &[&str] = &[
     "CDX-000",
     "CDX-001",
     "CDX-002",
-    "CDX-003",
     "CDX-004",
     "CDX-005",
     "CDX-006",
@@ -58,9 +59,6 @@ const RULE_IDS: &[&str] = &[
     "CDX-CFG-010",
     "CDX-CFG-011",
     "CDX-CFG-012",
-    "CDX-AG-001",
-    "CDX-AG-002",
-    "CDX-AG-003",
     "CDX-APP-001",
 ];
 
@@ -267,7 +265,7 @@ impl Validator for CodexValidator {
     fn metadata(&self) -> ValidatorMetadata {
         ValidatorMetadata {
             name: self.name(),
-            rule_ids: RULE_IDS,
+            rule_ids: CODEX_MARKDOWN_RULE_IDS,
         }
     }
 
@@ -616,7 +614,7 @@ impl Validator for CodexConfigValidator {
     fn metadata(&self) -> ValidatorMetadata {
         ValidatorMetadata {
             name: self.name(),
-            rule_ids: RULE_IDS,
+            rule_ids: CODEX_CONFIG_RULE_IDS,
         }
     }
 
