@@ -427,10 +427,14 @@ pub fn detect_file_type(path: &Path) -> FileType {
         "gemini-extension.json" => FileType::GeminiExtension,
         // Gemini CLI instruction files (GEMINI.md, GEMINI.local.md)
         "GEMINI.md" | "GEMINI.local.md" => FileType::GeminiMd,
-        // Codex CLI configuration (.codex/config.toml)
+        // Codex CLI configuration (.codex/config.toml / config.json / config.yaml / config.yml)
         // Path safety: symlink rejection and size limits are enforced upstream
         // by file_utils::safe_read_file before content reaches any validator.
-        "config.toml" if parent == Some(".codex") => FileType::CodexConfig,
+        "config.toml" | "config.json" | "config.yaml" | "config.yml"
+            if parent == Some(".codex") =>
+        {
+            FileType::CodexConfig
+        }
         name if name.ends_with(".md") => {
             // Agent directories take precedence over filename exclusions.
             // Files like agents/README.md should be validated as agent configs.
@@ -971,6 +975,18 @@ mod tests {
     fn detect_codex_config() {
         assert_eq!(
             detect_file_type(Path::new(".codex/config.toml")),
+            FileType::CodexConfig
+        );
+        assert_eq!(
+            detect_file_type(Path::new(".codex/config.json")),
+            FileType::CodexConfig
+        );
+        assert_eq!(
+            detect_file_type(Path::new(".codex/config.yaml")),
+            FileType::CodexConfig
+        );
+        assert_eq!(
+            detect_file_type(Path::new(".codex/config.yml")),
             FileType::CodexConfig
         );
     }

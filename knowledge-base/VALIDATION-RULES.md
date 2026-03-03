@@ -1691,6 +1691,118 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Fix**: Use a unique array of bare filenames (e.g., `["AGENTS.md", "README.md"]`)
 **Source**: developers.openai.com/codex/guides/agents-md/
 
+<a id="cdx-cfg-001"></a>
+### CDX-CFG-001 [HIGH] Invalid approval_policy Value
+**Requirement**: `approval_policy` in Codex config MUST be `untrusted`, `on-request`, `never`, or `on-failure`
+**Detection**: Parse `.codex/config.toml|json|yaml` and validate `approval_policy` enum values
+**Fix**: No auto-fix (set to a supported value)
+**Source**: developers.openai.com/codex/config-reference, developers.openai.com/codex/config-schema.json
+
+<a id="cdx-cfg-002"></a>
+### CDX-CFG-002 [HIGH] Invalid sandbox_mode Value
+**Requirement**: `sandbox_mode` in Codex config MUST be `read-only`, `workspace-write`, or `danger-full-access`
+**Detection**: Parse `.codex/config.toml|json|yaml` and validate `sandbox_mode` enum values
+**Fix**: No auto-fix (set to a supported value)
+**Source**: developers.openai.com/codex/config-reference, developers.openai.com/codex/config-schema.json
+
+<a id="cdx-cfg-003"></a>
+### CDX-CFG-003 [HIGH] Invalid model_reasoning_effort Value
+**Requirement**: `model_reasoning_effort` in Codex config MUST be one of `none|minimal|low|medium|high|xhigh`
+**Detection**: Parse `.codex/config.toml|json|yaml` and validate `model_reasoning_effort` enum values
+**Fix**: No auto-fix (set to a supported value)
+**Source**: developers.openai.com/codex/config-reference, developers.openai.com/codex/config-schema.json
+
+<a id="cdx-cfg-004"></a>
+### CDX-CFG-004 [HIGH] Invalid model_verbosity Value
+**Requirement**: `model_verbosity` in Codex config MUST be one of `low|medium|high`
+**Detection**: Parse `.codex/config.toml|json|yaml` and validate `model_verbosity` enum values
+**Fix**: No auto-fix (set to a supported value)
+**Source**: developers.openai.com/codex/config-reference, developers.openai.com/codex/config-schema.json
+
+<a id="cdx-cfg-005"></a>
+### CDX-CFG-005 [HIGH] Invalid personality Value
+**Requirement**: `personality` in Codex config MUST be one of `none|friendly|pragmatic`
+**Detection**: Parse `.codex/config.toml|json|yaml` and validate `personality` enum values
+**Fix**: No auto-fix (set to a supported value)
+**Source**: developers.openai.com/codex/config-reference, developers.openai.com/codex/config-schema.json
+
+<a id="cdx-cfg-006"></a>
+### CDX-CFG-006 [MEDIUM] Unknown Codex Config Field
+**Requirement**: Codex config keys SHOULD match the official schema at top-level and known nested sections (`features`, `tui`, `shell_environment_policy`, `mcp_servers`, `apps`)
+**Detection**: Parse `.codex/config.toml|json|yaml`, compare observed keys against allowlists, and report unknown keys
+**Fix**: No auto-fix (remove or rename unsupported fields)
+**Source**: developers.openai.com/codex/config-reference, developers.openai.com/codex/config-schema.json
+
+<a id="cdx-cfg-007"></a>
+### CDX-CFG-007 [HIGH] Danger Full Access Without Acknowledgment
+**Requirement**: `sandbox_mode = "danger-full-access"` MUST include explicit acknowledgement via `notice.hide_full_access_warning = true`
+**Detection**: Parse config and flag danger-full-access when explicit warning acknowledgment is absent
+**Fix**: No auto-fix (explicitly acknowledge risk or reduce sandbox mode)
+**Source**: developers.openai.com/codex/config-reference, developers.openai.com/codex/config-schema.json
+
+<a id="cdx-cfg-008"></a>
+### CDX-CFG-008 [HIGH] Invalid shell_environment_policy.inherit Value
+**Requirement**: `shell_environment_policy.inherit` MUST be one of `core|all|none`
+**Detection**: Parse config and validate `shell_environment_policy.inherit` enum values
+**Fix**: No auto-fix (set to a supported value)
+**Source**: developers.openai.com/codex/config-reference, developers.openai.com/codex/config-schema.json
+
+<a id="cdx-cfg-009"></a>
+### CDX-CFG-009 [HIGH] Invalid MCP Server Structure in Codex Config
+**Requirement**: Each `mcp_servers.<name>` entry MUST be an object and MUST define at least one transport (`command` or `url`)
+**Detection**: Parse config and validate `mcp_servers` object shape and per-server transport presence
+**Fix**: No auto-fix (add `command` or `url`, or fix object shape)
+**Source**: developers.openai.com/codex/config-reference, developers.openai.com/codex/config-schema.json
+
+<a id="cdx-cfg-010"></a>
+### CDX-CFG-010 [HIGH] Hardcoded Secret in Codex Config
+**Requirement**: Codex config MUST NOT hardcode credentials (API keys/tokens/secrets/passwords)
+**Detection**: Scan config string values and key names for hardcoded secret patterns while allowing environment variable references
+**Fix**: No auto-fix (replace with environment variable references)
+**Source**: developers.openai.com/codex/config-reference
+
+<a id="cdx-cfg-011"></a>
+### CDX-CFG-011 [MEDIUM] Invalid Feature Flag Name
+**Requirement**: Keys under `[features]` SHOULD use known Codex feature flag names
+**Detection**: Parse config and report unknown keys under `features`
+**Fix**: No auto-fix (remove unsupported flags or rename)
+**Source**: developers.openai.com/codex/config-reference, developers.openai.com/codex/config-schema.json
+
+<a id="cdx-cfg-012"></a>
+### CDX-CFG-012 [HIGH] Invalid cli_auth_credentials_store Value
+**Requirement**: `cli_auth_credentials_store` MUST be one of `file|keyring|auto|ephemeral`
+**Detection**: Parse config and validate `cli_auth_credentials_store` enum values
+**Fix**: No auto-fix (set to a supported value)
+**Source**: developers.openai.com/codex/config-reference, developers.openai.com/codex/config-schema.json
+
+<a id="cdx-ag-001"></a>
+### CDX-AG-001 [HIGH] Empty AGENTS.md for Codex
+**Requirement**: AGENTS.md used by Codex MUST contain actionable project guidance
+**Detection**: For `AGENTS.md` variants, flag files where `content.trim().is_empty()`
+**Fix**: No auto-fix (add repository-specific instructions)
+**Source**: developers.openai.com/codex/guides/agents-md
+
+<a id="cdx-ag-002"></a>
+### CDX-AG-002 [HIGH] Secrets in AGENTS.md for Codex
+**Requirement**: AGENTS.md MUST NOT include hardcoded credentials or tokens
+**Detection**: Scan AGENTS.md lines for secret markers/prefixes and credential-like assignments
+**Fix**: No auto-fix (remove secrets and use environment variables)
+**Source**: developers.openai.com/codex/guides/agents-md
+
+<a id="cdx-ag-003"></a>
+### CDX-AG-003 [MEDIUM] Generic AGENTS.md Guidance for Codex
+**Requirement**: AGENTS.md SHOULD provide specific, actionable repo guidance instead of generic boilerplate
+**Detection**: Detect generic-only instruction content lacking concrete commands/paths/constraints
+**Fix**: No auto-fix (replace generic text with concrete repository guidance)
+**Source**: developers.openai.com/codex/guides/agents-md
+
+<a id="cdx-app-001"></a>
+### CDX-APP-001 [HIGH] Invalid default_tools_approval_mode Value
+**Requirement**: `apps.<app_id>.default_tools_approval_mode` MUST be one of `auto|prompt|approve`
+**Detection**: Parse config and validate app-level `default_tools_approval_mode` enum values
+**Fix**: No auto-fix (set to a supported value)
+**Source**: developers.openai.com/codex/config-reference, developers.openai.com/codex/config-schema.json
+
 ---
 
 ## ROO CODE RULES
@@ -2288,9 +2400,9 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | GitHub Copilot | 17 | 11 | 6 | 0 | 8 |
 | Cursor | 16 | 9 | 7 | 0 | 6 |
 | Cline | 4 | 3 | 1 | 0 | 2 |
-| OpenCode | 20 | 14 | 5 | 1 | 2 |
+| OpenCode | 23 | 16 | 6 | 1 | 2 |
 | Gemini CLI | 9 | 3 | 4 | 2 | 3 |
-| Codex CLI | 7 | 5 | 2 | 0 | 3 |
+| Codex CLI | 23 | 18 | 5 | 0 | 3 |
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | MCP | 24 | 19 | 5 | 0 | 7 |
 | XML | 3 | 3 | 0 | 0 | 3 |
@@ -2314,7 +2426,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Roo Code Skills | 1 | 0 | 1 | 0 | 1 |
 | Roo Code | 6 | 3 | 3 | 0 | 0 |
 | Version Awareness | 1 | 0 | 0 | 1 | 0 |
-| **TOTAL** | **267** | **155** | **103** | **9** | **96** |
+| **TOTAL** | **286** | **170** | **107** | **9** | **96** |
 
 
 ---
@@ -2344,7 +2456,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 267 validation rules across 36 categories
+**Total Coverage**: 286 validation rules across 36 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
 **Certainty**: 155 HIGH, 103 MEDIUM, 9 LOW

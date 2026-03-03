@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `270` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `286` validation rules generated from `knowledge-base/rules.json`.
 `96` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -113,6 +113,22 @@ This section contains all `270` validation rules generated from `knowledge-base/
 | [CDX-004](./generated/cdx-004.md) | Unknown Config Key | MEDIUM | Codex CLI | Yes (safe) |
 | [CDX-005](./generated/cdx-005.md) | project_doc_max_bytes Exceeds Limit | HIGH | Codex CLI | No |
 | [CDX-006](./generated/cdx-006.md) | Invalid project_doc_fallback_filenames | HIGH | Codex CLI | No |
+| [CDX-CFG-001](./generated/cdx-cfg-001.md) | Invalid approval_policy Value | HIGH | Codex CLI | No |
+| [CDX-CFG-002](./generated/cdx-cfg-002.md) | Invalid sandbox_mode Value | HIGH | Codex CLI | No |
+| [CDX-CFG-003](./generated/cdx-cfg-003.md) | Invalid model_reasoning_effort Value | HIGH | Codex CLI | No |
+| [CDX-CFG-004](./generated/cdx-cfg-004.md) | Invalid model_verbosity Value | HIGH | Codex CLI | No |
+| [CDX-CFG-005](./generated/cdx-cfg-005.md) | Invalid personality Value | HIGH | Codex CLI | No |
+| [CDX-CFG-006](./generated/cdx-cfg-006.md) | Unknown Codex Config Field | MEDIUM | Codex CLI | No |
+| [CDX-CFG-007](./generated/cdx-cfg-007.md) | Danger Full Access Without Acknowledgment | HIGH | Codex CLI | No |
+| [CDX-CFG-008](./generated/cdx-cfg-008.md) | Invalid shell_environment_policy.inherit Value | HIGH | Codex CLI | No |
+| [CDX-CFG-009](./generated/cdx-cfg-009.md) | Invalid MCP Server Structure in Codex Config | HIGH | Codex CLI | No |
+| [CDX-CFG-010](./generated/cdx-cfg-010.md) | Hardcoded Secret in Codex Config | HIGH | Codex CLI | No |
+| [CDX-CFG-011](./generated/cdx-cfg-011.md) | Invalid Feature Flag Name | MEDIUM | Codex CLI | No |
+| [CDX-CFG-012](./generated/cdx-cfg-012.md) | Invalid cli_auth_credentials_store Value | HIGH | Codex CLI | No |
+| [CDX-AG-001](./generated/cdx-ag-001.md) | Empty AGENTS.md for Codex | HIGH | Codex CLI | No |
+| [CDX-AG-002](./generated/cdx-ag-002.md) | Secrets in AGENTS.md for Codex | HIGH | Codex CLI | No |
+| [CDX-AG-003](./generated/cdx-ag-003.md) | Generic AGENTS.md Guidance for Codex | MEDIUM | Codex CLI | No |
+| [CDX-APP-001](./generated/cdx-app-001.md) | Invalid default_tools_approval_mode Value | HIGH | Codex CLI | No |
 | [CL-SK-001](./generated/cl-sk-001.md) | Cline Skill Uses Unsupported Field | MEDIUM | Cline Skills | Yes (safe/unsafe) |
 | [CLN-001](./generated/cln-001.md) | Empty Cline Rules File | HIGH | Cline | No |
 | [CLN-002](./generated/cln-002.md) | Invalid Paths Glob in Cline Rules | HIGH | Cline | No |

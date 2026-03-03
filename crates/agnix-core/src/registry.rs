@@ -740,8 +740,8 @@ impl ValidatorProvider for MiscProvider {
             (FileType::AmpSettings, Some("AmpValidator"), amp_validator),
             (
                 FileType::CodexConfig,
-                Some("CodexValidator"),
-                codex_validator,
+                Some("CodexConfigValidator"),
+                codex_config_validator,
             ),
             (
                 FileType::KiroSteering,
@@ -902,6 +902,10 @@ fn gemini_ignore_validator() -> Box<dyn Validator> {
 
 fn codex_validator() -> Box<dyn Validator> {
     Box::new(crate::rules::codex::CodexValidator)
+}
+
+fn codex_config_validator() -> Box<dyn Validator> {
+    Box::new(crate::rules::codex::CodexConfigValidator)
 }
 
 fn roo_validator() -> Box<dyn Validator> {
@@ -1988,14 +1992,13 @@ mod tests {
 
     #[test]
     fn codex_validator_only_on_expected_file_types() {
-        // CodexValidator must only appear on ClaudeMd (CDX-003) and CodexConfig.
-        // Any other registration would be a misconfiguration.
+        // CodexValidator must only appear on ClaudeMd (CDX-003 and CDX-AG-*).
         let entries = BuiltinProvider.named_validators();
         for (ft, name, _) in &entries {
             if *name == Some("CodexValidator") {
                 assert!(
-                    *ft == FileType::ClaudeMd || *ft == FileType::CodexConfig,
-                    "CodexValidator must only be registered for ClaudeMd or CodexConfig, found {:?}",
+                    *ft == FileType::ClaudeMd,
+                    "CodexValidator must only be registered for ClaudeMd, found {:?}",
                     ft
                 );
             }
@@ -2005,8 +2008,30 @@ mod tests {
             .filter(|(_, name, _)| *name == Some("CodexValidator"))
             .count();
         assert_eq!(
-            codex_count, 2,
-            "CodexValidator should appear exactly twice (ClaudeMd + CodexConfig)"
+            codex_count, 1,
+            "CodexValidator should appear exactly once (ClaudeMd)"
+        );
+    }
+
+    #[test]
+    fn codex_config_validator_only_on_codex_config() {
+        let entries = BuiltinProvider.named_validators();
+        for (ft, name, _) in &entries {
+            if *name == Some("CodexConfigValidator") {
+                assert_eq!(
+                    *ft,
+                    FileType::CodexConfig,
+                    "CodexConfigValidator must only be registered for CodexConfig"
+                );
+            }
+        }
+        let count = entries
+            .iter()
+            .filter(|(_, name, _)| *name == Some("CodexConfigValidator"))
+            .count();
+        assert_eq!(
+            count, 1,
+            "CodexConfigValidator should appear exactly once (CodexConfig)"
         );
     }
 

@@ -61,6 +61,16 @@ where
 fn is_relevant_file(path: &Path) -> bool {
     let filename = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
     let extension = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+    let parent = path
+        .parent()
+        .and_then(|p| p.file_name())
+        .and_then(|n| n.to_str());
+
+    let is_codex_config = parent == Some(".codex")
+        && matches!(
+            filename,
+            "config.toml" | "config.json" | "config.yaml" | "config.yml"
+        );
 
     // Check for relevant filenames
     matches!(
@@ -79,6 +89,7 @@ fn is_relevant_file(path: &Path) -> bool {
             | "copilot-instructions.md"
         | ".agnix.toml"
     ) || extension == "mcp"
+        || is_codex_config
         || filename.ends_with(".mcp.json")
         || filename.ends_with(".mdc")
         || filename.ends_with(".instructions.md")
@@ -95,4 +106,24 @@ fn clear_screen() {
     // ANSI escape code to clear screen and move cursor to top
     print!("\x1B[2J\x1B[1;1H");
     let _ = std::io::Write::flush(&mut std::io::stdout());
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_relevant_file;
+    use std::path::Path;
+
+    #[test]
+    fn codex_config_files_are_relevant() {
+        assert!(is_relevant_file(Path::new(".codex/config.toml")));
+        assert!(is_relevant_file(Path::new(".codex/config.json")));
+        assert!(is_relevant_file(Path::new(".codex/config.yaml")));
+        assert!(is_relevant_file(Path::new(".codex/config.yml")));
+    }
+
+    #[test]
+    fn non_codex_config_files_are_not_relevant_by_name() {
+        assert!(!is_relevant_file(Path::new("configs/config.yaml")));
+        assert!(!is_relevant_file(Path::new("configs/config.json")));
+    }
 }

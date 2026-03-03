@@ -66,7 +66,7 @@ pub enum FileType {
     GeminiExtension,
     /// Gemini CLI ignore file (.geminiignore)
     GeminiIgnore,
-    /// Codex CLI configuration (.codex/config.toml)
+    /// Codex CLI configuration (.codex/config.toml, .codex/config.json, .codex/config.yaml/.yml)
     CodexConfig,
     /// Roo Code rules files (.roorules, .roo/rules/*.md)
     RooRules,

@@ -665,6 +665,65 @@ rules:
     duplicate: "Field 'project_doc_fallback_filenames' contains duplicate filename '%{value}'"
     suspicious: "Field 'project_doc_fallback_filenames' contains path-like entry '%{value}'; use bare filenames only"
     suggestion: "Use a unique array of non-empty filenames like ['AGENTS.md', 'README.md']"
+  cdx_cfg_001:
+    message: "Invalid approval_policy '%{value}'. Valid values: 'untrusted', 'on-request', 'never', 'on-failure'"
+    type_error: "Field 'approval_policy' must be a string"
+    suggestion: "Use one of: 'untrusted', 'on-request', 'never', 'on-failure'"
+  cdx_cfg_002:
+    message: "Invalid sandbox_mode '%{value}'. Valid values: 'read-only', 'workspace-write', 'danger-full-access'"
+    type_error: "Field 'sandbox_mode' must be a string"
+    suggestion: "Use one of: 'read-only', 'workspace-write', or 'danger-full-access'"
+  cdx_cfg_003:
+    message: "Invalid model_reasoning_effort '%{value}'. Valid values: 'none', 'minimal', 'low', 'medium', 'high', 'xhigh'"
+    type_error: "Field 'model_reasoning_effort' must be a string"
+    suggestion: "Use one of: 'none', 'minimal', 'low', 'medium', 'high', 'xhigh'"
+  cdx_cfg_004:
+    message: "Invalid model_verbosity '%{value}'. Valid values: 'low', 'medium', 'high'"
+    type_error: "Field 'model_verbosity' must be a string"
+    suggestion: "Use one of: 'low', 'medium', 'high'"
+  cdx_cfg_005:
+    message: "Invalid personality '%{value}'. Valid values: 'none', 'friendly', 'pragmatic'"
+    type_error: "Field 'personality' must be a string"
+    suggestion: "Use one of: 'none', 'friendly', 'pragmatic'"
+  cdx_cfg_006:
+    message: "Unknown Codex config field '%{key}'"
+    suggestion: "Remove unsupported keys or verify spelling against the official Codex config schema"
+  cdx_cfg_007:
+    message: "sandbox_mode is set to danger-full-access without explicit warning acknowledgment"
+    suggestion: "Set [notice].hide_full_access_warning = true only after explicitly reviewing the risk"
+  cdx_cfg_008:
+    message: "Invalid shell environment inherit mode '%{value}'. Valid values: 'core', 'all', 'none'"
+    type_error: "shell_environment_policy.inherit must be a string"
+    suggestion: "Use one of: 'core', 'all', 'none'"
+  cdx_cfg_009:
+    type_error: "Field 'mcp_servers' must be an object mapping server names to server config objects"
+    invalid_server: "MCP server '%{server}' must be an object"
+    missing_transport: "MCP server '%{server}' must define either a non-empty 'command' or 'url'"
+    suggestion: "Define each MCP server as an object with a command or URL transport"
+  cdx_cfg_010:
+    message: "Potential hardcoded secret in config field '%{key}'"
+    suggestion: "Use environment variable references instead of embedding secrets in config"
+  cdx_cfg_011:
+    message: "Unknown feature flag '%{key}' under [features]"
+    type_error: "Field 'features' must be an object"
+    suggestion: "Remove unsupported feature flags or verify the feature name against Codex docs"
+  cdx_cfg_012:
+    message: "Invalid cli_auth_credentials_store '%{value}'. Valid values: 'file', 'keyring', 'auto', 'ephemeral'"
+    type_error: "Field 'cli_auth_credentials_store' must be a string"
+    suggestion: "Use one of: 'file', 'keyring', 'auto', 'ephemeral'"
+  cdx_ag_001:
+    message: "AGENTS.md is empty"
+    suggestion: "Add concrete repository-specific operating instructions"
+  cdx_ag_002:
+    message: "Potential secret detected in AGENTS.md"
+    suggestion: "Remove hardcoded credentials and reference environment variables instead"
+  cdx_ag_003:
+    message: "AGENTS.md appears overly generic and may not provide actionable project guidance"
+    suggestion: "Add repository-specific commands, paths, and guardrails"
+  cdx_app_001:
+    message: "Invalid default_tools_approval_mode '%{value}' for app '%{app}'. Valid values: 'auto', 'prompt', 'approve'"
+    type_error: "default_tools_approval_mode for app '%{app}' must be a string"
+    suggestion: "Use one of: 'auto', 'prompt', 'approve'"
 
   # --- Windsurf (windsurf.rs) ---
   ws_001:

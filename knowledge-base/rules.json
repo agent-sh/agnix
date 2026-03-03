@@ -1,7 +1,7 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 270,
+  "total_rules": 286,
   "last_updated": "2026-03-03",
   "schema": {
     "evidence": {
@@ -2996,6 +2996,464 @@
       },
       "good_example": "project_doc_fallback_filenames = [\"AGENTS.md\", \"README.md\"]",
       "bad_example": "project_doc_fallback_filenames = [\"AGENTS.md\", \"\", 42, \"AGENTS.md\"]"
+    },
+    {
+      "id": "CDX-CFG-001",
+      "name": "Invalid approval_policy Value",
+      "severity": "HIGH",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://developers.openai.com/codex/config-reference",
+          "https://developers.openai.com/codex/config-schema.json",
+          "https://developers.openai.com/codex/enterprise/managed-configuration"
+        ],
+        "verified_on": "2026-03-03",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "approval_policy = \"on-request\"",
+      "bad_example": "approval_policy = \"always\""
+    },
+    {
+      "id": "CDX-CFG-002",
+      "name": "Invalid sandbox_mode Value",
+      "severity": "HIGH",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://developers.openai.com/codex/config-reference",
+          "https://developers.openai.com/codex/config-schema.json",
+          "https://developers.openai.com/codex/enterprise/managed-configuration"
+        ],
+        "verified_on": "2026-03-03",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "sandbox_mode = \"workspace-write\"",
+      "bad_example": "sandbox_mode = \"open\""
+    },
+    {
+      "id": "CDX-CFG-003",
+      "name": "Invalid model_reasoning_effort Value",
+      "severity": "HIGH",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://developers.openai.com/codex/config-reference",
+          "https://developers.openai.com/codex/config-schema.json",
+          "https://developers.openai.com/codex/enterprise/managed-configuration"
+        ],
+        "verified_on": "2026-03-03",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "model_reasoning_effort = \"high\"",
+      "bad_example": "model_reasoning_effort = \"turbo\""
+    },
+    {
+      "id": "CDX-CFG-004",
+      "name": "Invalid model_verbosity Value",
+      "severity": "HIGH",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://developers.openai.com/codex/config-reference",
+          "https://developers.openai.com/codex/config-schema.json",
+          "https://developers.openai.com/codex/enterprise/managed-configuration"
+        ],
+        "verified_on": "2026-03-03",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "model_verbosity = \"medium\"",
+      "bad_example": "model_verbosity = \"verbose\""
+    },
+    {
+      "id": "CDX-CFG-005",
+      "name": "Invalid personality Value",
+      "severity": "HIGH",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://developers.openai.com/codex/config-reference",
+          "https://developers.openai.com/codex/config-schema.json",
+          "https://developers.openai.com/codex/enterprise/managed-configuration"
+        ],
+        "verified_on": "2026-03-03",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "personality = \"friendly\"",
+      "bad_example": "personality = \"assistant\""
+    },
+    {
+      "id": "CDX-CFG-006",
+      "name": "Unknown Codex Config Field",
+      "severity": "MEDIUM",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://developers.openai.com/codex/config-reference",
+          "https://developers.openai.com/codex/config-schema.json",
+          "https://developers.openai.com/codex/enterprise/managed-configuration"
+        ],
+        "verified_on": "2026-03-03",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "[features]\nmemories = true",
+      "bad_example": "[features]\nunknown_flag = true"
+    },
+    {
+      "id": "CDX-CFG-007",
+      "name": "Danger Full Access Without Acknowledgment",
+      "severity": "HIGH",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://developers.openai.com/codex/config-reference",
+          "https://developers.openai.com/codex/config-schema.json",
+          "https://developers.openai.com/codex/enterprise/managed-configuration"
+        ],
+        "verified_on": "2026-03-03",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "sandbox_mode = \"danger-full-access\"\n[notice]\nhide_full_access_warning = true",
+      "bad_example": "sandbox_mode = \"danger-full-access\""
+    },
+    {
+      "id": "CDX-CFG-008",
+      "name": "Invalid shell_environment_policy.inherit Value",
+      "severity": "HIGH",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://developers.openai.com/codex/config-reference",
+          "https://developers.openai.com/codex/config-schema.json",
+          "https://developers.openai.com/codex/enterprise/managed-configuration"
+        ],
+        "verified_on": "2026-03-03",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "[shell_environment_policy]\ninherit = \"core\"",
+      "bad_example": "[shell_environment_policy]\ninherit = \"system\""
+    },
+    {
+      "id": "CDX-CFG-009",
+      "name": "Invalid MCP Server Structure in Codex Config",
+      "severity": "HIGH",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://developers.openai.com/codex/config-reference",
+          "https://developers.openai.com/codex/config-schema.json",
+          "https://developers.openai.com/codex/enterprise/managed-configuration"
+        ],
+        "verified_on": "2026-03-03",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "[mcp_servers.local]\ncommand = \"npx\"\nargs = [\"-y\", \"@modelcontextprotocol/server-filesystem\"]",
+      "bad_example": "[mcp_servers.local]\nenabled = true"
+    },
+    {
+      "id": "CDX-CFG-010",
+      "name": "Hardcoded Secret in Codex Config",
+      "severity": "HIGH",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://developers.openai.com/codex/config-reference",
+          "https://developers.openai.com/codex/config-schema.json",
+          "https://developers.openai.com/codex/enterprise/managed-configuration"
+        ],
+        "verified_on": "2026-03-03",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "api_key = \"${OPENAI_API_KEY}\"",
+      "bad_example": "api_key = \"sk-live-super-secret-value\""
+    },
+    {
+      "id": "CDX-CFG-011",
+      "name": "Invalid Feature Flag Name",
+      "severity": "MEDIUM",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://developers.openai.com/codex/config-reference",
+          "https://developers.openai.com/codex/config-schema.json",
+          "https://developers.openai.com/codex/enterprise/managed-configuration"
+        ],
+        "verified_on": "2026-03-03",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "[features]\nmemories = true",
+      "bad_example": "[features]\nfuture_flag = true"
+    },
+    {
+      "id": "CDX-CFG-012",
+      "name": "Invalid cli_auth_credentials_store Value",
+      "severity": "HIGH",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://developers.openai.com/codex/config-reference",
+          "https://developers.openai.com/codex/config-schema.json",
+          "https://developers.openai.com/codex/enterprise/managed-configuration"
+        ],
+        "verified_on": "2026-03-03",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "cli_auth_credentials_store = \"keyring\"",
+      "bad_example": "cli_auth_credentials_store = \"vault\""
+    },
+    {
+      "id": "CDX-AG-001",
+      "name": "Empty AGENTS.md for Codex",
+      "severity": "HIGH",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://developers.openai.com/codex/guides/agents-md"
+        ],
+        "verified_on": "2026-03-03",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "# AGENTS.md\n\nUse `cargo test` before opening PRs.",
+      "bad_example": ""
+    },
+    {
+      "id": "CDX-AG-002",
+      "name": "Secrets in AGENTS.md for Codex",
+      "severity": "HIGH",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://developers.openai.com/codex/guides/agents-md"
+        ],
+        "verified_on": "2026-03-03",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "Use `${OPENAI_API_KEY}` from the environment.",
+      "bad_example": "OPENAI_API_KEY=sk-live-super-secret-value"
+    },
+    {
+      "id": "CDX-AG-003",
+      "name": "Generic AGENTS.md Guidance for Codex",
+      "severity": "MEDIUM",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://developers.openai.com/codex/guides/agents-md"
+        ],
+        "verified_on": "2026-03-03",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "Run `cargo test -p agnix-core` and `cargo test -p agnix-cli` before merge.",
+      "bad_example": "Be helpful and accurate."
+    },
+    {
+      "id": "CDX-APP-001",
+      "name": "Invalid default_tools_approval_mode Value",
+      "severity": "HIGH",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://developers.openai.com/codex/config-reference",
+          "https://developers.openai.com/codex/config-schema.json",
+          "https://developers.openai.com/codex/enterprise/managed-configuration"
+        ],
+        "verified_on": "2026-03-03",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "[apps.github]\ndefault_tools_approval_mode = \"prompt\"",
+      "bad_example": "[apps.github]\ndefault_tools_approval_mode = \"manual\""
     },
     {
       "id": "CL-SK-001",
@@ -7460,7 +7918,7 @@
     },
     "opencode": {
       "prefix": "OC",
-      "count": 8,
+      "count": 23,
       "description": "OpenCode configuration rules"
     },
     "gemini-cli": {
@@ -7470,7 +7928,7 @@
     },
     "codex": {
       "prefix": "CDX",
-      "count": 7,
+      "count": 23,
       "description": "Codex CLI configuration validation"
     },
     "roo-code": {
