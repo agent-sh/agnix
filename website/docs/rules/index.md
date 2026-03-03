@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `267` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `270` validation rules generated from `knowledge-base/rules.json`.
 `96` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -261,6 +261,8 @@ This section contains all `267` validation rules generated from `knowledge-base/
 | [XP-008](./generated/xp-008.md) | Claude-specific Features in CLAUDE.md for Cursor | MEDIUM | Cross-Platform | No |
 | [XP-SK-001](./generated/xp-sk-001.md) | Skill Uses Client-Specific Features | LOW | Cross-Platform | No |
 | [OC-CFG-001](./generated/oc-cfg-001.md) | Invalid Model Format | HIGH | OpenCode | No |
+| [OC-CFG-002](./generated/oc-cfg-002.md) | Invalid autoupdate value | HIGH | OpenCode | No |
+| [OC-CFG-003](./generated/oc-cfg-003.md) | Unknown Top-level Config Field | MEDIUM | OpenCode | No |
 | [OC-CFG-004](./generated/oc-cfg-004.md) | Invalid Default Agent | MEDIUM | OpenCode | No |
 | [OC-CFG-005](./generated/oc-cfg-005.md) | Hardcoded API Key | HIGH | OpenCode | No |
 | [OC-CFG-006](./generated/oc-cfg-006.md) | Invalid MCP Server Structure | HIGH | OpenCode | No |
@@ -269,6 +271,7 @@ This section contains all `267` validation rules generated from `knowledge-base/
 | [OC-AG-002](./generated/oc-ag-002.md) | Invalid Color Format | HIGH | OpenCode | No |
 | [OC-AG-003](./generated/oc-ag-003.md) | Temperature Out of Range | HIGH | OpenCode | No |
 | [OC-AG-004](./generated/oc-ag-004.md) | Steps Not a Positive Integer | HIGH | OpenCode | No |
+| [OC-PM-001](./generated/oc-pm-001.md) | Invalid Permission Action | HIGH | OpenCode | No |
 | [OC-PM-002](./generated/oc-pm-002.md) | Unknown Permission Key | MEDIUM | OpenCode | No |
 | [OC-AGM-001](./generated/oc-agm-001.md) | Empty AGENTS.md | HIGH | OpenCode | No |
 | [OC-AGM-002](./generated/oc-agm-002.md) | Secrets in AGENTS.md | HIGH | OpenCode | No |
