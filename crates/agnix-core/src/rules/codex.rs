@@ -674,10 +674,9 @@ fn validate_codex_markdown_rules(
             let has_sensitive_key = ["api_key", "apikey", "secret", "token", "password", "bearer"]
                 .iter()
                 .any(|needle| lower.contains(needle));
-            let contains_key_prefix = line.contains("sk-");
-            if (has_sensitive_key && !line.contains("${") && !line.contains('$'))
-                || contains_key_prefix
-            {
+            let contains_key_prefix = has_sk_token_prefix(line);
+            let has_interpolation = line.contains("${") || line.contains('$');
+            if (has_sensitive_key || contains_key_prefix) && !has_interpolation {
                 diagnostics.push(
                     Diagnostic::error(
                         path.to_path_buf(),
@@ -716,10 +715,40 @@ fn validate_codex_markdown_rules(
     diagnostics
 }
 
+fn has_sk_token_prefix(line: &str) -> bool {
+    line.match_indices("sk-").any(|(idx, _)| {
+        let prev_is_alnum = idx > 0
+            && line[..idx]
+                .chars()
+                .next_back()
+                .is_some_and(|ch| ch.is_ascii_alphanumeric());
+        let next_is_alnum = line[idx + 3..]
+            .chars()
+            .next()
+            .is_some_and(|ch| ch.is_ascii_alphanumeric());
+        !prev_is_alnum && next_is_alnum
+    })
+}
+
 fn validate_codex_config_rules(path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
     let mut diagnostics = Vec::new();
-    let Some(root) = parse_codex_config_value(path, content) else {
-        return diagnostics;
+    let root = match parse_codex_config_value(path, content) {
+        Ok(root) => root,
+        Err(parse_error) => {
+            if config.is_rule_enabled("CDX-000") {
+                diagnostics.push(
+                    Diagnostic::error(
+                        path.to_path_buf(),
+                        parse_error.line,
+                        parse_error.column,
+                        "CDX-000",
+                        t!("rules.cdx_000.message", error = parse_error.message),
+                    )
+                    .with_suggestion(t!("rules.cdx_000.suggestion")),
+                );
+            }
+            return diagnostics;
+        }
     };
 
     let key_lines = build_key_line_map(content);
@@ -906,7 +935,7 @@ fn validate_codex_config_rules(path: &Path, content: &str, config: &LintConfig) 
         let acknowledged = bool_at_path(&root, &["notice", "hide_full_access_warning"]);
         if acknowledged != Some(true) {
             diagnostics.push(
-                Diagnostic::warning(
+                Diagnostic::error(
                     path.to_path_buf(),
                     line_for("sandbox_mode"),
                     0,
@@ -1140,7 +1169,13 @@ fn validate_codex_config_rules(path: &Path, content: &str, config: &LintConfig) 
     diagnostics
 }
 
-fn parse_codex_config_value(path: &Path, content: &str) -> Option<Value> {
+struct CodexConfigParseError {
+    line: usize,
+    column: usize,
+    message: String,
+}
+
+fn parse_codex_config_value(path: &Path, content: &str) -> Result<Value, CodexConfigParseError> {
     let extension = path
         .extension()
         .and_then(OsStr::to_str)
@@ -1149,15 +1184,50 @@ fn parse_codex_config_value(path: &Path, content: &str) -> Option<Value> {
 
     match extension.as_str() {
         "toml" => {
-            let table: toml::Table = toml::from_str(content).ok()?;
-            serde_json::to_value(table).ok()
+            let parsed = parse_codex_toml(content);
+            if let Some(parse_error) = parsed.parse_error {
+                return Err(CodexConfigParseError {
+                    line: parse_error.line.max(1),
+                    column: parse_error.column,
+                    message: parse_error.message,
+                });
+            }
+
+            let table: toml::Table =
+                toml::from_str(content).map_err(|error| CodexConfigParseError {
+                    line: 1,
+                    column: 0,
+                    message: error.to_string(),
+                })?;
+            serde_json::to_value(table).map_err(|error| CodexConfigParseError {
+                line: 1,
+                column: 0,
+                message: error.to_string(),
+            })
         }
-        "json" => serde_json::from_str::<Value>(content).ok(),
+        "json" => serde_json::from_str::<Value>(content).map_err(|error| CodexConfigParseError {
+            line: error.line().max(1),
+            column: error.column(),
+            message: error.to_string(),
+        }),
         "yaml" | "yml" => {
-            let yaml: serde_yaml::Value = serde_yaml::from_str(content).ok()?;
-            serde_json::to_value(yaml).ok()
+            let yaml: serde_yaml::Value =
+                serde_yaml::from_str(content).map_err(|error| CodexConfigParseError {
+                    line: error.location().map_or(1, |loc| loc.line().max(1)),
+                    column: error.location().map_or(0, |loc| loc.column()),
+                    message: error.to_string(),
+                })?;
+            serde_json::to_value(yaml).map_err(|error| CodexConfigParseError {
+                line: 1,
+                column: 0,
+                message: error.to_string(),
+            })
         }
-        _ => None,
+        _ => Err(CodexConfigParseError {
+            line: 1,
+            column: 0,
+            message: "unsupported Codex config file extension".to_string(),
+        }),
     }
 }
 
@@ -2320,7 +2390,12 @@ name = "test"
     #[test]
     fn test_cdx_cfg_007_danger_full_access_without_ack() {
         let diagnostics = validate_config("sandbox_mode = \"danger-full-access\"");
-        assert!(diagnostics.iter().any(|d| d.rule == "CDX-CFG-007"));
+        let cdx_007: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-007")
+            .collect();
+        assert_eq!(cdx_007.len(), 1);
+        assert_eq!(cdx_007[0].level, DiagnosticLevel::Error);
     }
 
     #[test]
@@ -2361,6 +2436,12 @@ name = "test"
         let secret = validate_claude_md("AGENTS.md", "api_key = sk-secret-value-123456");
         assert!(secret.iter().any(|d| d.rule == "CDX-AG-002"));
 
+        let no_false_positive = validate_claude_md(
+            "AGENTS.md",
+            "Use task-runner and ask-for-help in local workflows.",
+        );
+        assert!(!no_false_positive.iter().any(|d| d.rule == "CDX-AG-002"));
+
         let generic = validate_claude_md("AGENTS.md", "Be helpful and accurate.");
         assert!(generic.iter().any(|d| d.rule == "CDX-AG-003"));
     }
@@ -2382,5 +2463,16 @@ name = "test"
         let yaml = "approval_policy: always\n";
         let yaml_diags = validate_config_at_path(".codex/config.yaml", yaml);
         assert!(yaml_diags.iter().any(|d| d.rule == "CDX-CFG-001"));
+    }
+
+    #[test]
+    fn test_cdx_000_reports_json_yaml_parse_errors() {
+        let invalid_json = r#"{"approval_policy":"always""#;
+        let json_diags = validate_config_at_path(".codex/config.json", invalid_json);
+        assert!(json_diags.iter().any(|d| d.rule == "CDX-000"));
+
+        let invalid_yaml = "approval_policy: [always\n";
+        let yaml_diags = validate_config_at_path(".codex/config.yaml", invalid_yaml);
+        assert!(yaml_diags.iter().any(|d| d.rule == "CDX-000"));
     }
 }
