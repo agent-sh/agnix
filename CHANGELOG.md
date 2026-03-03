@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **OpenCode validation rules**: Added validation rules for OpenCode configuration (#601).
+- **OpenCode coverage follow-up**: Added `OC-CFG-002` (autoupdate value), `OC-CFG-003` (unknown top-level key), and `OC-PM-001` (invalid permission action), plus stricter MCP/agent type checks and localization keys for OpenCode diagnostics (#601).
 - **Kiro target support**: Added `Kiro` to `TargetTool` and CLI `--target kiro` handling across CLI, core config, MCP, and LSP target parsing.
 - **Kiro config validation parity**: `.agnix.toml` validation now accepts `tools = ["kiro"]` and Kiro-specific disabled rule prefixes (`KIRO-*`, `KR-SK-*`).
 - **README supported tools update**: Added a Kiro row to the Supported Tools table with current rule coverage (`KIRO-*`, `KR-SK-*`) and current file surface (`.kiro/steering/**/*.md` and `.kiro/skills/**/SKILL.md`) (#596).

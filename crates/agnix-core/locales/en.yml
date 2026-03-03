@@ -633,6 +633,16 @@ rules:
   oc_009:
     message: "Invalid variable substitution '%{pattern}' - %{reason}"
     suggestion: "Use {env:VARIABLE_NAME} or {file:path/to/file} syntax for variable substitution"
+  oc_cfg_002:
+    message: "Invalid autoupdate value. Use boolean true/false or string 'notify'"
+    suggestion: "Set autoupdate to true, false, or 'notify'"
+  oc_cfg_003:
+    message: "Unknown top-level config key '%{key}' in opencode.json"
+    suggestion: "Remove unsupported top-level keys or verify spelling against OpenCode docs"
+  oc_pm_001:
+    message: "Invalid permission action '%{value}' for '%{tool}'. Valid values: 'allow', 'ask', 'deny'"
+    type_error: "Permission values must be strings ('allow', 'ask', 'deny') or nested maps of those strings"
+    suggestion: "Use only 'allow', 'ask', or 'deny' for permission action values"
 
   # --- Codex CLI (codex.rs) ---
   cdx_000:

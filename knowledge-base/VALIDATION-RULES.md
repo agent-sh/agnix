@@ -1474,6 +1474,20 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Fix**: No auto-fix
 **Source**: opencode.ai/docs/config
 
+<a id="oc-cfg-002"></a>
+### OC-CFG-002 [HIGH] Invalid autoupdate value
+**Requirement**: `autoupdate` MUST be a boolean or the string `notify`
+**Detection**: Parse JSON, validate `autoupdate` type/value
+**Fix**: No auto-fix
+**Source**: opencode.ai/docs/config
+
+<a id="oc-cfg-003"></a>
+### OC-CFG-003 [MEDIUM] Unknown Top-level Config Field
+**Requirement**: Top-level config keys SHOULD match documented OpenCode fields
+**Detection**: Parse JSON object keys, flag unknown top-level keys
+**Fix**: No auto-fix
+**Source**: opencode.ai/docs/config
+
 <a id="oc-cfg-004"></a>
 ### OC-CFG-004 [MEDIUM] Invalid Default Agent
 **Requirement**: The `default_agent` field must refer to a valid agent
@@ -1534,6 +1548,13 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 ### OC-PM-002 [MEDIUM] Unknown Permission Key
 **Requirement**: Permission keys MUST be known actions/rules
 **Detection**: Parse JSON, validate permission keys
+**Fix**: No auto-fix
+**Source**: opencode.ai/docs/config
+
+<a id="oc-pm-001"></a>
+### OC-PM-001 [HIGH] Invalid Permission Action
+**Requirement**: Permission actions MUST be `allow`, `ask`, or `deny`
+**Detection**: Parse JSON, validate permission action values across root and nested permission maps
 **Fix**: No auto-fix
 **Source**: opencode.ai/docs/config
 

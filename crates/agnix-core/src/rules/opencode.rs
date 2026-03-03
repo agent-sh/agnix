@@ -34,6 +34,8 @@ const RULE_IDS: &[&str] = &[
     "OC-008",
     "OC-009",
     "OC-CFG-001",
+    "OC-CFG-002",
+    "OC-CFG-003",
     "OC-CFG-004",
     "OC-CFG-005",
     "OC-CFG-006",
@@ -42,6 +44,7 @@ const RULE_IDS: &[&str] = &[
     "OC-AG-002",
     "OC-AG-003",
     "OC-AG-004",
+    "OC-PM-001",
     "OC-PM-002",
 ];
 
@@ -456,6 +459,46 @@ impl Validator for OpenCodeValidator {
                     }
                 }
 
+                // OC-CFG-002: Invalid autoupdate value/type
+                if config.is_rule_enabled("OC-CFG-002")
+                    && let Some(autoupdate_val) = obj.get("autoupdate")
+                {
+                    let is_valid = autoupdate_val.is_boolean()
+                        || autoupdate_val
+                            .as_str()
+                            .is_some_and(|s| s.eq_ignore_ascii_case("notify"));
+
+                    if !is_valid {
+                        diagnostics.push(
+                            Diagnostic::error(
+                                path.to_path_buf(),
+                                find_key_line(content, "autoupdate").unwrap_or(1),
+                                0,
+                                "OC-CFG-002",
+                                t!("rules.oc_cfg_002.message").to_string(),
+                            )
+                            .with_suggestion(t!("rules.oc_cfg_002.suggestion").to_string()),
+                        );
+                    }
+                }
+
+                // OC-CFG-003: Unknown top-level config field
+                if config.is_rule_enabled("OC-CFG-003") {
+                    for unknown in &parsed.unknown_keys {
+                        diagnostics.push(
+                            Diagnostic::warning(
+                                path.to_path_buf(),
+                                unknown.line,
+                                unknown.column,
+                                "OC-CFG-003",
+                                t!("rules.oc_cfg_003.message", key = unknown.key.as_str())
+                                    .to_string(),
+                            )
+                            .with_suggestion(t!("rules.oc_cfg_003.suggestion").to_string()),
+                        );
+                    }
+                }
+
                 // OC-CFG-004: Invalid Default Agent
                 if config.is_rule_enabled("OC-CFG-004") {
                     if let Some(agent_val) = obj.get("default_agent") {
@@ -483,6 +526,20 @@ impl Validator for OpenCodeValidator {
                                     )
                                 );
                             }
+                        } else if !agent_val.is_null() {
+                            diagnostics.push(
+                                Diagnostic::warning(
+                                    path.to_path_buf(),
+                                    find_key_line(content, "default_agent").unwrap_or(1),
+                                    0,
+                                    "OC-CFG-004",
+                                    "Invalid default_agent type. Must be a string referring to a valid agent".to_string(),
+                                )
+                                .with_suggestion(
+                                    "Use a string value such as 'build' or a defined custom agent name"
+                                        .to_string(),
+                                ),
+                            );
                         }
                     }
                 }
@@ -546,72 +603,145 @@ impl Validator for OpenCodeValidator {
                 let check_mcp =
                     config.is_rule_enabled("OC-CFG-006") || config.is_rule_enabled("OC-CFG-007");
                 if check_mcp {
-                    if let Some(mcp_obj) = obj.get("mcp").and_then(|m| m.as_object()) {
-                        for (srv_name, srv_val) in mcp_obj {
-                            if let Some(srv) = srv_val.as_object() {
-                                let srv_type =
-                                    srv.get("type").and_then(|t| t.as_str()).unwrap_or("");
-                                if srv_type != "local" && srv_type != "remote" {
-                                    if config.is_rule_enabled("OC-CFG-006") {
-                                        diagnostics.push(
-                                            Diagnostic::error(
-                                                path.to_path_buf(),
-                                                find_key_line(content, srv_name).unwrap_or(1),
-                                                0,
-                                                "OC-CFG-006",
-                                                t!("rules.oc_cfg_006.message", typ = srv_type)
-                                                    .to_string(),
-                                            )
-                                            .with_suggestion(
-                                                t!("rules.oc_cfg_006.suggestion").to_string(),
-                                            ),
-                                        );
+                    if let Some(mcp_val) = obj.get("mcp") {
+                        if let Some(mcp_obj) = mcp_val.as_object() {
+                            for (srv_name, srv_val) in mcp_obj {
+                                if let Some(srv) = srv_val.as_object() {
+                                    let srv_type =
+                                        srv.get("type").and_then(|t| t.as_str()).unwrap_or("");
+                                    if srv_type != "local" && srv_type != "remote" {
+                                        if config.is_rule_enabled("OC-CFG-006") {
+                                            diagnostics.push(
+                                                Diagnostic::error(
+                                                    path.to_path_buf(),
+                                                    find_key_line(content, srv_name).unwrap_or(1),
+                                                    0,
+                                                    "OC-CFG-006",
+                                                    t!("rules.oc_cfg_006.message", typ = srv_type)
+                                                        .to_string(),
+                                                )
+                                                .with_suggestion(
+                                                    t!("rules.oc_cfg_006.suggestion").to_string(),
+                                                ),
+                                            );
+                                        }
+                                    } else if config.is_rule_enabled("OC-CFG-007") {
+                                        if srv_type == "local" && !srv.contains_key("command") {
+                                            diagnostics.push(
+                                                Diagnostic::error(
+                                                    path.to_path_buf(),
+                                                    find_key_line(content, srv_name).unwrap_or(1),
+                                                    0,
+                                                    "OC-CFG-007",
+                                                    t!("rules.oc_cfg_007.local_missing")
+                                                        .to_string(),
+                                                )
+                                                .with_suggestion(
+                                                    t!("rules.oc_cfg_007.suggestion_local")
+                                                        .to_string(),
+                                                ),
+                                            );
+                                        } else if srv_type == "local"
+                                            && let Some(command_val) = srv.get("command")
+                                        {
+                                            let valid_command =
+                                                command_val.as_array().is_some_and(|arr| {
+                                                    !arr.is_empty()
+                                                        && arr.iter().all(|v| {
+                                                            v.as_str().is_some_and(|s| {
+                                                                !s.trim().is_empty()
+                                                            })
+                                                        })
+                                                });
+
+                                            if !valid_command {
+                                                diagnostics.push(
+                                                    Diagnostic::error(
+                                                        path.to_path_buf(),
+                                                        find_key_line(content, srv_name).unwrap_or(1),
+                                                        0,
+                                                        "OC-CFG-007",
+                                                        "Local MCP server 'command' must be a non-empty array of non-empty strings".to_string(),
+                                                    )
+                                                    .with_suggestion(
+                                                        "Use command like [\"node\", \"server.js\"]"
+                                                            .to_string(),
+                                                    ),
+                                                );
+                                            }
+                                        } else if srv_type == "remote" && !srv.contains_key("url") {
+                                            diagnostics.push(
+                                                Diagnostic::error(
+                                                    path.to_path_buf(),
+                                                    find_key_line(content, srv_name).unwrap_or(1),
+                                                    0,
+                                                    "OC-CFG-007",
+                                                    t!("rules.oc_cfg_007.remote_missing")
+                                                        .to_string(),
+                                                )
+                                                .with_suggestion(
+                                                    t!("rules.oc_cfg_007.suggestion_remote")
+                                                        .to_string(),
+                                                ),
+                                            );
+                                        } else if srv_type == "remote"
+                                            && let Some(url_val) = srv.get("url")
+                                        {
+                                            let valid_url = url_val.as_str().is_some_and(|url| {
+                                                let trimmed = url.trim();
+                                                !trimmed.is_empty()
+                                                    && (trimmed.starts_with("http://")
+                                                        || trimmed.starts_with("https://"))
+                                            });
+
+                                            if !valid_url {
+                                                diagnostics.push(
+                                                    Diagnostic::error(
+                                                        path.to_path_buf(),
+                                                        find_key_line(content, srv_name).unwrap_or(1),
+                                                        0,
+                                                        "OC-CFG-007",
+                                                        "Remote MCP server 'url' must be a non-empty http:// or https:// URL".to_string(),
+                                                    )
+                                                    .with_suggestion(
+                                                        "Set a valid URL such as \"https://example.com/mcp\""
+                                                            .to_string(),
+                                                    ),
+                                                );
+                                            }
+                                        }
                                     }
-                                } else if config.is_rule_enabled("OC-CFG-007") {
-                                    if srv_type == "local" && !srv.contains_key("command") {
-                                        diagnostics.push(
-                                            Diagnostic::error(
-                                                path.to_path_buf(),
-                                                find_key_line(content, srv_name).unwrap_or(1),
-                                                0,
-                                                "OC-CFG-007",
-                                                t!("rules.oc_cfg_007.local_missing").to_string(),
-                                            )
-                                            .with_suggestion(
-                                                t!("rules.oc_cfg_007.suggestion_local").to_string(),
-                                            ),
-                                        );
-                                    } else if srv_type == "remote" && !srv.contains_key("url") {
-                                        diagnostics.push(
-                                            Diagnostic::error(
-                                                path.to_path_buf(),
-                                                find_key_line(content, srv_name).unwrap_or(1),
-                                                0,
-                                                "OC-CFG-007",
-                                                t!("rules.oc_cfg_007.remote_missing").to_string(),
-                                            )
-                                            .with_suggestion(
-                                                t!("rules.oc_cfg_007.suggestion_remote")
-                                                    .to_string(),
-                                            ),
-                                        );
-                                    }
+                                } else if config.is_rule_enabled("OC-CFG-006") {
+                                    diagnostics.push(
+                                        Diagnostic::error(
+                                            path.to_path_buf(),
+                                            find_key_line(content, srv_name).unwrap_or(1),
+                                            0,
+                                            "OC-CFG-006",
+                                            t!("rules.oc_cfg_006.type_error", name = srv_name)
+                                                .to_string(),
+                                        )
+                                        .with_suggestion(
+                                            t!("rules.oc_cfg_006.suggestion_type").to_string(),
+                                        ),
+                                    );
                                 }
-                            } else if config.is_rule_enabled("OC-CFG-006") {
-                                diagnostics.push(
-                                    Diagnostic::error(
-                                        path.to_path_buf(),
-                                        find_key_line(content, srv_name).unwrap_or(1),
-                                        0,
-                                        "OC-CFG-006",
-                                        t!("rules.oc_cfg_006.type_error", name = srv_name)
-                                            .to_string(),
-                                    )
-                                    .with_suggestion(
-                                        t!("rules.oc_cfg_006.suggestion_type").to_string(),
-                                    ),
-                                );
                             }
+                        } else if config.is_rule_enabled("OC-CFG-006") {
+                            diagnostics.push(
+                                Diagnostic::error(
+                                    path.to_path_buf(),
+                                    find_key_line(content, "mcp").unwrap_or(1),
+                                    0,
+                                    "OC-CFG-006",
+                                    "Invalid mcp config type. Expected an object of named servers"
+                                        .to_string(),
+                                )
+                                .with_suggestion(
+                                    "Use object format: \"mcp\": { \"server-name\": { ... } }"
+                                        .to_string(),
+                                ),
+                            );
                         }
                     }
                 }
@@ -651,10 +781,9 @@ impl Validator for OpenCodeValidator {
                                         "accent", "blue", "cyan", "gray", "green", "indigo",
                                         "orange", "pink", "purple", "red", "teal", "yellow",
                                     ];
-                                    if !color_val.starts_with('#')
+                                    if !is_valid_hex_color(color_val)
                                         && !valid_theme_colors.contains(&color_val)
                                     {
-                                        // simplistic check
                                         diagnostics.push(
                                             Diagnostic::error(
                                                 path.to_path_buf(),
@@ -674,32 +803,64 @@ impl Validator for OpenCodeValidator {
 
                             // OC-AG-003
                             if config.is_rule_enabled("OC-AG-003") {
-                                if let Some(temp_val) =
-                                    ag.get("temperature").and_then(|t| t.as_f64())
-                                {
-                                    if !(0.0..=2.0).contains(&temp_val) {
-                                        diagnostics.push(Diagnostic::error(
-                                            path.to_path_buf(),
-                                            find_key_line(content, "temperature").unwrap_or(1),
-                                            0,
-                                            "OC-AG-003",
-                                            "Temperature out of range (must be 0-2)".to_string(),
-                                        ));
+                                if let Some(temp_raw) = ag.get("temperature") {
+                                    if let Some(temp_val) = temp_raw.as_f64() {
+                                        if !(0.0..=2.0).contains(&temp_val) {
+                                            diagnostics.push(Diagnostic::error(
+                                                path.to_path_buf(),
+                                                find_key_line(content, "temperature").unwrap_or(1),
+                                                0,
+                                                "OC-AG-003",
+                                                "Temperature out of range (must be 0-2)"
+                                                    .to_string(),
+                                            ));
+                                        }
+                                    } else if !temp_raw.is_null() {
+                                        diagnostics.push(
+                                            Diagnostic::error(
+                                                path.to_path_buf(),
+                                                find_key_line(content, "temperature").unwrap_or(1),
+                                                0,
+                                                "OC-AG-003",
+                                                "Temperature must be a number between 0 and 2"
+                                                    .to_string(),
+                                            )
+                                            .with_suggestion(
+                                                "Set temperature to a numeric value such as 0.7"
+                                                    .to_string(),
+                                            ),
+                                        );
                                     }
                                 }
                             }
 
                             // OC-AG-004
                             if config.is_rule_enabled("OC-AG-004") {
-                                if let Some(steps_val) = ag.get("steps").and_then(|s| s.as_i64()) {
-                                    if steps_val <= 0 {
-                                        diagnostics.push(Diagnostic::error(
-                                            path.to_path_buf(),
-                                            find_key_line(content, "steps").unwrap_or(1),
-                                            0,
-                                            "OC-AG-004",
-                                            "Steps must be a positive integer".to_string(),
-                                        ));
+                                if let Some(steps_raw) = ag.get("steps") {
+                                    if let Some(steps_val) = steps_raw.as_i64() {
+                                        if steps_val <= 0 {
+                                            diagnostics.push(Diagnostic::error(
+                                                path.to_path_buf(),
+                                                find_key_line(content, "steps").unwrap_or(1),
+                                                0,
+                                                "OC-AG-004",
+                                                "Steps must be a positive integer".to_string(),
+                                            ));
+                                        }
+                                    } else if !steps_raw.is_null() {
+                                        diagnostics.push(
+                                            Diagnostic::error(
+                                                path.to_path_buf(),
+                                                find_key_line(content, "steps").unwrap_or(1),
+                                                0,
+                                                "OC-AG-004",
+                                                "Steps must be a positive integer".to_string(),
+                                            )
+                                            .with_suggestion(
+                                                "Use an integer greater than zero, such as 20"
+                                                    .to_string(),
+                                            ),
+                                        );
                                     }
                                 }
                             }
@@ -738,6 +899,123 @@ impl Validator for OpenCodeValidator {
                                     format!("Unknown permission key '{}'", key),
                                 ));
                             }
+                        }
+                    }
+                }
+
+                // OC-PM-001: Invalid permission action value
+                if config.is_rule_enabled("OC-PM-001")
+                    && let Some(permission_val) = obj.get("permission")
+                {
+                    let perm_line = find_key_line(content, "permission").unwrap_or(1);
+                    match permission_val {
+                        serde_json::Value::String(action) => {
+                            if !VALID_PERMISSION_MODES.contains(&action.as_str()) {
+                                diagnostics.push(
+                                    Diagnostic::error(
+                                        path.to_path_buf(),
+                                        perm_line,
+                                        0,
+                                        "OC-PM-001",
+                                        t!(
+                                            "rules.oc_pm_001.message",
+                                            value = action.as_str(),
+                                            tool = "*"
+                                        )
+                                        .to_string(),
+                                    )
+                                    .with_suggestion(t!("rules.oc_pm_001.suggestion").to_string()),
+                                );
+                            }
+                        }
+                        serde_json::Value::Object(perm_obj) => {
+                            for (tool, mode_value) in perm_obj {
+                                if let Some(mode_str) = mode_value.as_str() {
+                                    if !VALID_PERMISSION_MODES.contains(&mode_str) {
+                                        diagnostics.push(
+                                            Diagnostic::error(
+                                                path.to_path_buf(),
+                                                perm_line,
+                                                0,
+                                                "OC-PM-001",
+                                                t!(
+                                                    "rules.oc_pm_001.message",
+                                                    value = mode_str,
+                                                    tool = tool.as_str()
+                                                )
+                                                .to_string(),
+                                            )
+                                            .with_suggestion(
+                                                t!("rules.oc_pm_001.suggestion").to_string(),
+                                            ),
+                                        );
+                                    }
+                                } else if let Some(mode_obj) = mode_value.as_object() {
+                                    for nested_mode in mode_obj.values() {
+                                        if let Some(pm) = nested_mode.as_str() {
+                                            if !VALID_PERMISSION_MODES.contains(&pm) {
+                                                diagnostics.push(
+                                                    Diagnostic::error(
+                                                        path.to_path_buf(),
+                                                        perm_line,
+                                                        0,
+                                                        "OC-PM-001",
+                                                        t!(
+                                                            "rules.oc_pm_001.message",
+                                                            value = pm,
+                                                            tool = tool.as_str()
+                                                        )
+                                                        .to_string(),
+                                                    )
+                                                    .with_suggestion(
+                                                        t!("rules.oc_pm_001.suggestion")
+                                                            .to_string(),
+                                                    ),
+                                                );
+                                            }
+                                        } else if !nested_mode.is_null() {
+                                            diagnostics.push(
+                                                Diagnostic::error(
+                                                    path.to_path_buf(),
+                                                    perm_line,
+                                                    0,
+                                                    "OC-PM-001",
+                                                    t!("rules.oc_pm_001.type_error").to_string(),
+                                                )
+                                                .with_suggestion(
+                                                    t!("rules.oc_pm_001.suggestion").to_string(),
+                                                ),
+                                            );
+                                        }
+                                    }
+                                } else if !mode_value.is_null() {
+                                    diagnostics.push(
+                                        Diagnostic::error(
+                                            path.to_path_buf(),
+                                            perm_line,
+                                            0,
+                                            "OC-PM-001",
+                                            t!("rules.oc_pm_001.type_error").to_string(),
+                                        )
+                                        .with_suggestion(
+                                            t!("rules.oc_pm_001.suggestion").to_string(),
+                                        ),
+                                    );
+                                }
+                            }
+                        }
+                        serde_json::Value::Null => {}
+                        _ => {
+                            diagnostics.push(
+                                Diagnostic::error(
+                                    path.to_path_buf(),
+                                    perm_line,
+                                    0,
+                                    "OC-PM-001",
+                                    t!("rules.oc_pm_001.type_error").to_string(),
+                                )
+                                .with_suggestion(t!("rules.oc_pm_001.suggestion").to_string()),
+                            );
                         }
                     }
                 }
@@ -886,6 +1164,14 @@ fn find_key_line(content: &str, key: &str) -> Option<usize> {
         }
     }
     None
+}
+
+fn is_valid_hex_color(value: &str) -> bool {
+    if !value.starts_with('#') {
+        return false;
+    }
+    let hex = &value[1..];
+    (hex.len() == 3 || hex.len() == 6) && hex.chars().all(|c| c.is_ascii_hexdigit())
 }
 
 #[cfg(test)]
@@ -1675,6 +1961,24 @@ mod tests {
         assert!(!diagnostics.iter().any(|d| d.rule == "OC-CFG-001"));
     }
 
+    #[test]
+    fn test_oc_cfg_002_invalid_autoupdate() {
+        let diagnostics = validate(r#"{"autoupdate": "yes"}"#);
+        assert!(diagnostics.iter().any(|d| d.rule == "OC-CFG-002"));
+    }
+
+    #[test]
+    fn test_oc_cfg_002_valid_autoupdate_notify() {
+        let diagnostics = validate(r#"{"autoupdate": "notify"}"#);
+        assert!(!diagnostics.iter().any(|d| d.rule == "OC-CFG-002"));
+    }
+
+    #[test]
+    fn test_oc_cfg_003_unknown_top_level_key() {
+        let diagnostics = validate(r#"{"unknown_field": true}"#);
+        assert!(diagnostics.iter().any(|d| d.rule == "OC-CFG-003"));
+    }
+
     // ===== OC-CFG-004: Invalid Default Agent =====
     #[test]
     fn test_oc_cfg_004_invalid_agent() {
@@ -1686,6 +1990,12 @@ mod tests {
     fn test_oc_cfg_004_valid_agent() {
         let diagnostics = validate(r#"{"default_agent": "build"}"#);
         assert!(!diagnostics.iter().any(|d| d.rule == "OC-CFG-004"));
+    }
+
+    #[test]
+    fn test_oc_cfg_004_non_string_agent() {
+        let diagnostics = validate(r#"{"default_agent": 123}"#);
+        assert!(diagnostics.iter().any(|d| d.rule == "OC-CFG-004"));
     }
 
     // ===== OC-CFG-005: Hardcoded API Key =====
@@ -1715,6 +2025,24 @@ mod tests {
         assert!(diagnostics.iter().any(|d| d.rule == "OC-CFG-007"));
     }
 
+    #[test]
+    fn test_oc_cfg_006_mcp_must_be_object() {
+        let diagnostics = validate(r#"{"mcp": []}"#);
+        assert!(diagnostics.iter().any(|d| d.rule == "OC-CFG-006"));
+    }
+
+    #[test]
+    fn test_oc_cfg_007_local_command_type_check() {
+        let diagnostics = validate(r#"{"mcp": {"srv": {"type": "local", "command": "node"}}}"#);
+        assert!(diagnostics.iter().any(|d| d.rule == "OC-CFG-007"));
+    }
+
+    #[test]
+    fn test_oc_cfg_007_remote_url_format_check() {
+        let diagnostics = validate(r#"{"mcp": {"srv": {"type": "remote", "url": "not-a-url"}}}"#);
+        assert!(diagnostics.iter().any(|d| d.rule == "OC-CFG-007"));
+    }
+
     // ===== Agent tests =====
     #[test]
     fn test_oc_ag_001_invalid_mode() {
@@ -1729,8 +2057,20 @@ mod tests {
     }
 
     #[test]
+    fn test_oc_ag_002_invalid_hex_color() {
+        let diagnostics = validate(r##"{"agent": {"a": {"color": "#12"}}}"##);
+        assert!(diagnostics.iter().any(|d| d.rule == "OC-AG-002"));
+    }
+
+    #[test]
     fn test_oc_ag_003_invalid_temp() {
         let diagnostics = validate(r#"{"agent": {"a": {"temperature": 3.0}}}"#);
+        assert!(diagnostics.iter().any(|d| d.rule == "OC-AG-003"));
+    }
+
+    #[test]
+    fn test_oc_ag_003_temperature_type_check() {
+        let diagnostics = validate(r#"{"agent": {"a": {"temperature": "hot"}}}"#);
         assert!(diagnostics.iter().any(|d| d.rule == "OC-AG-003"));
     }
 
@@ -1738,6 +2078,26 @@ mod tests {
     fn test_oc_ag_004_invalid_steps() {
         let diagnostics = validate(r#"{"agent": {"a": {"steps": -1}}}"#);
         assert!(diagnostics.iter().any(|d| d.rule == "OC-AG-004"));
+    }
+
+    #[test]
+    fn test_oc_ag_004_steps_type_check() {
+        let diagnostics = validate(r#"{"agent": {"a": {"steps": "many"}}}"#);
+        assert!(diagnostics.iter().any(|d| d.rule == "OC-AG-004"));
+    }
+
+    #[test]
+    fn test_oc_pm_001_invalid_action() {
+        let diagnostics = validate(r#"{"permission": {"read": "yes"}}"#);
+        assert!(diagnostics.iter().any(|d| d.rule == "OC-PM-001"));
+    }
+
+    #[test]
+    fn test_is_valid_hex_color_helper() {
+        assert!(is_valid_hex_color("#fff"));
+        assert!(is_valid_hex_color("#FF00AA"));
+        assert!(!is_valid_hex_color("#12"));
+        assert!(!is_valid_hex_color("red"));
     }
 
     #[test]

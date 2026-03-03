@@ -1,8 +1,8 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 267,
-  "last_updated": "2026-03-02",
+  "total_rules": 270,
+  "last_updated": "2026-03-03",
   "schema": {
     "evidence": {
       "source_type": "spec|vendor_docs|vendor_code|paper|community",
@@ -7024,6 +7024,60 @@
       "bad_example": "{\n  \"model\": \"claude-3-opus\"\n}"
     },
     {
+      "id": "OC-CFG-002",
+      "name": "Invalid autoupdate value",
+      "severity": "HIGH",
+      "category": "opencode",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://opencode.ai/docs/config"
+        ],
+        "verified_on": "2026-03-03",
+        "applies_to": {
+          "tool": "opencode"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"autoupdate\": \"notify\"\n}",
+      "bad_example": "{\n  \"autoupdate\": \"yes\"\n}"
+    },
+    {
+      "id": "OC-CFG-003",
+      "name": "Unknown Top-level Config Field",
+      "severity": "MEDIUM",
+      "category": "opencode",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://opencode.ai/docs/config"
+        ],
+        "verified_on": "2026-03-03",
+        "applies_to": {
+          "tool": "opencode"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"model\": \"anthropic/claude-3-opus\",\n  \"share\": \"manual\"\n}",
+      "bad_example": "{\n  \"mdoel\": \"anthropic/claude-3-opus\"\n}"
+    },
+    {
       "id": "OC-CFG-004",
       "name": "Invalid Default Agent",
       "severity": "MEDIUM",
@@ -7238,6 +7292,33 @@
       },
       "good_example": "{\n  \"agent\": { \"custom\": { \"steps\": 50 } }\n}",
       "bad_example": "{\n  \"agent\": { \"custom\": { \"steps\": -5 } }\n}"
+    },
+    {
+      "id": "OC-PM-001",
+      "name": "Invalid Permission Action",
+      "severity": "HIGH",
+      "category": "opencode",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://opencode.ai/docs/config"
+        ],
+        "verified_on": "2026-03-03",
+        "applies_to": {
+          "tool": "opencode"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"permission\": { \"read\": \"allow\", \"bash\": \"ask\" }\n}",
+      "bad_example": "{\n  \"permission\": { \"read\": \"yes\" }\n}"
     },
     {
       "id": "OC-PM-002",
