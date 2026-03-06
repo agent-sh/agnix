@@ -5,7 +5,7 @@ All notable changes to agnix will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.16.0] - 2026-03-06
 
 ### Added
 - **Kiro and Codex S-tier alignment (38 new rules)**: Added 22 Kiro rules: `KIRO-010` through `KIRO-014` (missing inclusion mode, steering doc length, duplicate names, conflicting inclusion modes, markdown structure issues), `KR-AG-008` through `KR-AG-013` (agent missing name, agent missing prompt, duplicate tool entries, empty tools array, `toolAliases` references unknown tool, secrets in agent prompt), `KR-HK-007` through `KR-HK-010` (hook timeout out of range, duplicate event handlers, command uses absolute path, secrets in hook command), `KR-MCP-003` through `KR-MCP-005` (missing required args, invalid MCP URL, duplicate MCP server names), and `KR-PW-005` through `KR-PW-008` (step missing description, duplicate keywords, name invalid characters, secrets in power body). Added 16 Codex rules: `CDX-AG-004` through `CDX-AG-007` (AGENTS.md size limit, missing file references, missing project context, contradicts config.toml), `CDX-APP-002` through `CDX-APP-003` (invalid skills configuration, invalid profile configuration), and `CDX-CFG-013` through `CDX-CFG-022` (sandbox_workspace_write mode, model value, model_provider value, model_reasoning_summary value, history configuration, tui configuration, file_opener value, MCP OAuth config, model_context_window value, model_auto_compact_token_limit value). Brings total rule count to 342 (#603).
