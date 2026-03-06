@@ -16,7 +16,7 @@ path = "src/main.rs"
 [dependencies]
 agnix-core = { workspace = true }
 agnix-rules = { workspace = true }
-rmcp = { version = "0.16", features = ["server", "macros", "transport-io"] }
+rmcp = { version = "1.1", features = ["server", "macros", "transport-io"] }
 tokio = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
