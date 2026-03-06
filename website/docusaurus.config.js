@@ -50,7 +50,7 @@ const config = {
         '@type': 'SoftwareApplication',
         name: 'agnix',
         description:
-          `Linter for AI agent configurations. ${siteData.totalRules} validation rules for Skills, Hooks, MCP, Memory, and Plugins across Claude Code, Copilot, Cursor, Cline, and more.`,
+          `Linter for AI agent configurations. ${siteData.totalRules} rules across Claude Code, Codex, OpenCode, Kiro, Cursor, Copilot, and more. CLI, LSP, and IDE plugins.`,
         applicationCategory: 'DeveloperApplication',
         operatingSystem: 'Windows, macOS, Linux',
         url: 'https://avifenesh.github.io/agnix/',
