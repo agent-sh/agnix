@@ -494,29 +494,30 @@ impl AgnixServer {
 #[tool_handler]
 impl ServerHandler for AgnixServer {
     fn get_info(&self) -> ServerInfo {
-        ServerInfo {
-            protocol_version: ProtocolVersion::V_2024_11_05,
-            capabilities: ServerCapabilities::builder().enable_tools().build(),
-            server_info: Implementation {
-                name: "agnix".into(),
-                version: env!("CARGO_PKG_VERSION").into(),
-                ..Default::default()
-            },
-            instructions: Some(
-                "Agnix - AI agent configuration linter.\n\n\
-                 Validates SKILL.md, CLAUDE.md, AGENTS.md, hooks, MCP configs, \
-                 Cursor rules, and more against 230 rules.\n\n\
-                 Tools:\n\
-                 - validate_project: Validate all agent configs in a directory\n\
-                 - validate_file: Validate a single config file\n\
-                 - get_rules: List all 229 validation rules\n\
-                 - get_rule_docs: Get details about a specific rule\n\n\
-                 Preferred input: tools (array of tool names, or comma-separated string as fallback)\n\
-                 Legacy fallback: target\n\
-                 Supported tools are derived from agnix rule metadata"
-                    .to_string(),
-            ),
-        }
+        let mut server_impl = Implementation::default();
+        server_impl.name = "agnix".into();
+        server_impl.version = env!("CARGO_PKG_VERSION").into();
+
+        let mut info = ServerInfo::default();
+        info.protocol_version = ProtocolVersion::V_2024_11_05;
+        info.capabilities = ServerCapabilities::builder().enable_tools().build();
+        info.server_info = server_impl;
+        info.instructions = Some(
+            "Agnix - AI agent configuration linter.\n\n\
+             Validates SKILL.md, CLAUDE.md, AGENTS.md, hooks, MCP configs, \
+             Cursor rules, and more against 230 rules.\n\n\
+             Tools:\n\
+             - validate_project: Validate all agent configs in a directory\n\
+             - validate_file: Validate a single config file\n\
+             - get_rules: List all 229 validation rules\n\
+             - get_rule_docs: Get details about a specific rule\n\n\
+             Preferred input: tools (array of tool names, or comma-separated string as fallback)\n\
+             Legacy fallback: target\n\
+             Supported tools are derived from agnix rule metadata"
+                .to_string(),
+        );
+
+        info
     }
 }
 
