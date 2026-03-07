@@ -71,6 +71,6 @@ agnix --target copilot .
 ## Next steps
 
 - [Configuration](./configuration.md) - customize rules with `.agnix.toml`
-- [Rules Reference](./rules/index.md) - browse all 230 rules
+- [Rules Reference](./rules/index.md) - browse all 342 rules
 - [Editor Integration](./editor-integration.md) - get diagnostics in your editor
 - [Troubleshooting](./troubleshooting.md) - common issues and fixes
