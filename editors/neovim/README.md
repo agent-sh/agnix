@@ -41,7 +41,7 @@ cargo install agnix-lsp
 
 ```lua
 {
-  'avifenesh/agnix.nvim',
+  'agent-sh/agnix',
   ft = { 'markdown', 'json' },
   opts = {},
   config = function(_, opts)
@@ -54,7 +54,7 @@ cargo install agnix-lsp
 
 ```lua
 use {
-  'avifenesh/agnix.nvim',
+  'agent-sh/agnix',
   config = function()
     require('agnix').setup()
   end,
@@ -64,7 +64,7 @@ use {
 ### vim-plug
 
 ```vim
-Plug 'avifenesh/agnix.nvim'
+Plug 'agent-sh/agnix'
 ```
 
 Then in your `init.lua`:

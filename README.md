@@ -81,7 +81,7 @@ cargo install agnix-cli
 |--------|---------|
 | **VS Code** | [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=avifenesh.agnix) |
 | **JetBrains** | [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/30087-agnix) |
-| **Neovim** | `{ "agent-sh/agnix.nvim" }` |
+| **Neovim** | `{ "agent-sh/agnix", config = function() require("agnix").setup() end }` |
 | **Zed** | Search "agnix" in Extensions |
 
 [Editor setup guide](https://agent-sh.github.io/agnix/docs/editor-integration)
