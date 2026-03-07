@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.1] - 2026-03-07
+
 ### Changed
 - **MCP server compatibility**: Updated rmcp dependency from 0.16.0 to 1.1.0 and adapted code for non-exhaustive struct construction using `Default::default()` pattern (#636).
 
