@@ -5,6 +5,11 @@ All notable changes to agnix will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- **MCP server compatibility**: Updated rmcp dependency from 0.16.0 to 1.1.0 and adapted code for non-exhaustive struct construction using `Default::default()` pattern (#636).
+
 ## [0.16.0] - 2026-03-06
 
 ### Added
