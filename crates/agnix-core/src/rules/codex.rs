@@ -722,11 +722,11 @@ fn validate_codex_markdown_rules(
             let lower = line.to_ascii_lowercase();
             // Sensitive keywords only count when they appear in an assignment
             // context (e.g., "token=abc", "secret: xyz"), not as prose words
-            // like "Token efficiency" or "save tokens".
+            // like "Token efficiency" or "save tokens". The keyword must be
+            // directly followed by optional whitespace then = or :.
             let has_sensitive_key = ["api_key", "apikey", "secret", "token", "password", "bearer"]
                 .iter()
-                .any(|needle| contains_word(&lower, needle))
-                && (lower.contains('=') || lower.contains(": "));
+                .any(|needle| has_keyword_assignment(&lower, needle));
             let contains_key_prefix = has_sk_token_prefix(line)
                 || has_token_prefix(line, "ghp_")
                 || has_token_prefix(line, "gho_")
@@ -875,9 +875,10 @@ fn find_backtick_file_refs(line: &str) -> Vec<&str> {
     refs
 }
 
-/// Check if `haystack` contains `word` at a word boundary (not preceded/followed by alphanumeric).
-/// Avoids false positives like "secretary" matching "secret" or "tokenize" matching "token".
-fn contains_word(haystack: &str, word: &str) -> bool {
+/// Check if `haystack` contains `word` at a word boundary followed (with optional whitespace)
+/// by `=` or `:`. Used by CDX-AG-002 to distinguish secret assignments like `token=abc`
+/// from prose like "Token efficiency".
+fn has_keyword_assignment(haystack: &str, word: &str) -> bool {
     let bytes = haystack.as_bytes();
     let word_bytes = word.as_bytes();
     if word_bytes.len() > bytes.len() {
@@ -890,7 +891,12 @@ fn contains_word(haystack: &str, word: &str) -> bool {
         let after_idx = abs + word_bytes.len();
         let after_ok = after_idx >= bytes.len() || !bytes[after_idx].is_ascii_alphanumeric();
         if before_ok && after_ok {
-            return true;
+            // Check if keyword is followed by optional whitespace then = or :
+            let rest = &haystack[after_idx..];
+            let trimmed = rest.trim_start();
+            if trimmed.starts_with('=') || trimmed.starts_with(':') {
+                return true;
+            }
         }
         start = abs + 1;
     }
