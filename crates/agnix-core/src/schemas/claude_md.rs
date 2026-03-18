@@ -163,14 +163,16 @@ pub fn find_negative_without_positive(content: &str) -> Vec<NegativeInstruction>
 
             // Check if there's a positive imperative before the negative
             // e.g., "Use X, don't use Y" or "Fetch fresh data, don't cache"
+            // e.g., "**Report failures** - Never silently bypass"
             let has_positive_before = if mat.start() > 0 {
-                let before_negative = &line[..mat.start()].trim();
-                before_negative.len() > 5
-                    && (before_negative.contains(',')
-                        || before_negative.contains(';')
-                        || before_negative.contains(" - "))
-                    && !before_negative.starts_with("//")
-                    && !before_negative.starts_with('#')
+                let before_raw = &line[..mat.start()];
+                let before_trimmed = before_raw.trim();
+                before_trimmed.len() > 5
+                    && (before_raw.contains(',')
+                        || before_raw.contains(';')
+                        || before_raw.contains(" - "))
+                    && !before_trimmed.starts_with("//")
+                    && !before_trimmed.starts_with('#')
             } else {
                 false
             };
@@ -588,6 +590,26 @@ mod tests {
         assert!(
             results.is_empty(),
             "don't with preceding positive context should not trigger"
+        );
+    }
+
+    #[test]
+    fn test_negative_with_bold_positive_before_dash() {
+        // Issue #661: "**Positive action** - Never negative" pattern
+        let content =
+            "7. **Report script failures before manual fallback** - Never silently bypass broken tooling.";
+        let results = find_negative_without_positive(content);
+        assert!(
+            results.is_empty(),
+            "Bold positive before dash-separated Never should not trigger"
+        );
+
+        // Numbered list with bold positive and don't
+        let content2 = "3. **Always commit before rebasing** - Don't rebase uncommitted work.";
+        let results2 = find_negative_without_positive(content2);
+        assert!(
+            results2.is_empty(),
+            "Bold positive before dash-separated Don't should not trigger"
         );
     }
 
