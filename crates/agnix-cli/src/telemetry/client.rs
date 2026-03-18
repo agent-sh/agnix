@@ -26,9 +26,7 @@ impl TelemetryClient {
             .connect_timeout(Duration::from_secs(3))
             .user_agent(format!("agnix/{}", env!("CARGO_PKG_VERSION")))
             .build()
-            .map_err(|e| {
-                io::Error::other(format!("Failed to create HTTP client: {}", e))
-            })?;
+            .map_err(|e| io::Error::other(format!("Failed to create HTTP client: {}", e)))?;
 
         Ok(Self {
             endpoint: config.endpoint().to_string(),

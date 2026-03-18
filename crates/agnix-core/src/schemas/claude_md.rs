@@ -596,8 +596,7 @@ mod tests {
     #[test]
     fn test_negative_with_bold_positive_before_dash() {
         // Issue #661: "**Positive action** - Never negative" pattern
-        let content =
-            "7. **Report script failures before manual fallback** - Never silently bypass broken tooling.";
+        let content = "7. **Report script failures before manual fallback** - Never silently bypass broken tooling.";
         let results = find_negative_without_positive(content);
         assert!(
             results.is_empty(),
