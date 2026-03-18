@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.3] - 2026-03-19
+
 ### Fixed
 - **CC-MEM-006 false positive on bold positive before dash**: Fix `.trim()` stripping trailing space needed for ` - ` separator detection in `has_positive_before` check. Pattern `**Positive action** - Never negative` is now correctly recognized (#661).
 - **XP-006 false positive for identical CLAUDE.md and AGENTS.md**: Skip "multiple instruction layers" warning when instruction files have identical content, since they are intentional copies for different tools (#660).
