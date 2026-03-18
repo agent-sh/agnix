@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **CC-MEM-006 false positive on bold positive before dash**: Fix `.trim()` stripping trailing space needed for ` - ` separator detection in `has_positive_before` check. Pattern `**Positive action** - Never negative` is now correctly recognized (#661).
+- **XP-006 false positive for identical CLAUDE.md and AGENTS.md**: Skip "multiple instruction layers" warning when instruction files have identical content, since they are intentional copies for different tools (#660).
+- **CDX-AG-002 false positive on prose words**: Require sensitive keywords like `token`, `secret`, `password` to appear in an assignment context (`=` or `:`) before flagging as a potential secret. Prose like "Token efficiency" no longer triggers (#659).
 
 ## [0.16.2] - 2026-03-15
 

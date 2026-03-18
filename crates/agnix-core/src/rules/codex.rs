@@ -720,9 +720,13 @@ fn validate_codex_markdown_rules(
                 continue;
             }
             let lower = line.to_ascii_lowercase();
+            // Sensitive keywords only count when they appear in an assignment
+            // context (e.g., "token=abc", "secret: xyz"), not as prose words
+            // like "Token efficiency" or "save tokens".
             let has_sensitive_key = ["api_key", "apikey", "secret", "token", "password", "bearer"]
                 .iter()
-                .any(|needle| contains_word(&lower, needle));
+                .any(|needle| contains_word(&lower, needle))
+                && (lower.contains('=') || lower.contains(": "));
             let contains_key_prefix = has_sk_token_prefix(line)
                 || has_token_prefix(line, "ghp_")
                 || has_token_prefix(line, "gho_")
@@ -2920,6 +2924,23 @@ name = "test"
             "Use task-runner and ask-for-help in local workflows.",
         );
         assert!(!no_false_positive.iter().any(|d| d.rule == "CDX-AG-002"));
+
+        // Issue #659: prose containing "token" or "secret" should not trigger
+        let prose_token = validate_claude_md(
+            "AGENTS.md",
+            "8. **Token efficiency** - Save tokens over decorations.",
+        );
+        assert!(
+            !prose_token.iter().any(|d| d.rule == "CDX-AG-002"),
+            "Prose word 'Token' should not trigger secret detection"
+        );
+
+        // But keyword + assignment should still trigger
+        let real_secret = validate_claude_md("AGENTS.md", "token = sk-real-secret-123");
+        assert!(
+            real_secret.iter().any(|d| d.rule == "CDX-AG-002"),
+            "Keyword in assignment context should still trigger"
+        );
 
         let generic = validate_claude_md("AGENTS.md", "Be helpful and accurate.");
         assert!(generic.iter().any(|d| d.rule == "CDX-AG-003"));

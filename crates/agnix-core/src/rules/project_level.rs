@@ -205,7 +205,18 @@ pub(crate) fn run_project_level_checks(
 
         // XP-006: Detect multiple layers without documented precedence
         if xp006_enabled {
-            let layers: Vec<_> = file_contents
+            // Deduplicate identical-content instruction files (e.g., CLAUDE.md and
+            // AGENTS.md that are intentional byte-for-byte copies). Identical files
+            // are not conflicting layers and should not trigger a precedence warning.
+            let mut deduped_contents: Vec<&(PathBuf, String)> = Vec::new();
+            for entry in &file_contents {
+                let dominated = deduped_contents.iter().any(|(_, c)| c == &entry.1);
+                if !dominated {
+                    deduped_contents.push(entry);
+                }
+            }
+
+            let layers: Vec<_> = deduped_contents
                 .iter()
                 .map(|(path, content)| schemas::cross_platform::categorize_layer(path, content))
                 .collect();
@@ -536,6 +547,58 @@ mod tests {
         assert!(
             diagnostics.iter().any(|d| d.rule.starts_with("XP-")),
             "Default config should produce XP diagnostics for unreadable file"
+        );
+    }
+
+    #[test]
+    fn test_xp006_identical_claude_agents_no_warning() {
+        // Issue #660: CLAUDE.md and AGENTS.md with identical content should not
+        // trigger "multiple instruction layers" warning.
+        let temp = tempfile::TempDir::new().unwrap();
+
+        let content = "# Project\n\nRun cargo test to run tests.\n";
+        let claude_md = temp.path().join("CLAUDE.md");
+        std::fs::write(&claude_md, content).unwrap();
+        let agents_md = temp.path().join("AGENTS.md");
+        std::fs::write(&agents_md, content).unwrap();
+
+        let instruction_file_paths = vec![claude_md, agents_md];
+
+        let diagnostics = run_project_level_checks(
+            &[],
+            &instruction_file_paths,
+            &LintConfig::default(),
+            temp.path(),
+        );
+
+        assert!(
+            diagnostics.iter().all(|d| d.rule != "XP-006"),
+            "Identical CLAUDE.md and AGENTS.md should not trigger XP-006, got: {diagnostics:?}"
+        );
+    }
+
+    #[test]
+    fn test_xp006_different_claude_agents_still_warns() {
+        // Different content should still trigger the warning
+        let temp = tempfile::TempDir::new().unwrap();
+
+        let claude_md = temp.path().join("CLAUDE.md");
+        std::fs::write(&claude_md, "# Claude instructions\n").unwrap();
+        let agents_md = temp.path().join("AGENTS.md");
+        std::fs::write(&agents_md, "# Different agent instructions\n").unwrap();
+
+        let instruction_file_paths = vec![claude_md, agents_md];
+
+        let diagnostics = run_project_level_checks(
+            &[],
+            &instruction_file_paths,
+            &LintConfig::default(),
+            temp.path(),
+        );
+
+        assert!(
+            diagnostics.iter().any(|d| d.rule == "XP-006"),
+            "Different CLAUDE.md and AGENTS.md should trigger XP-006"
         );
     }
 
