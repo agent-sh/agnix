@@ -38,6 +38,7 @@ STATUS.md
 .claude/state/*
 .claude/workflow-status.json
 .claude/plan.md
+.claude/skillers/
 .claude-workflow-status.json
 .workflow-status.json
 
