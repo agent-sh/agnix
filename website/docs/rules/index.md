@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `342` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `385` validation rules generated from `knowledge-base/rules.json`.
 `102` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -195,14 +195,14 @@ This section contains all `342` validation rules generated from `knowledge-base/
 | [COP-015](./generated/cop-015.md) | Prompt File Invalid Agent Mode | HIGH | GitHub Copilot | Yes (safe) |
 | [COP-017](./generated/cop-017.md) | Copilot Hooks Schema Validation | HIGH | GitHub Copilot | No |
 | [COP-018](./generated/cop-018.md) | Copilot Setup Steps Missing or Invalid copilot-setup-steps Job | HIGH | GitHub Copilot | No |
-| [COP-019](./generated/cop-019.md) | Plugin Missing Required Fields | HIGH | Copilot | No |
-| [COP-020](./generated/cop-020.md) | Plugin Invalid Field Types | MEDIUM | Copilot | No |
-| [COP-022](./generated/cop-022.md) | CLI Skill Missing Frontmatter | HIGH | Copilot | No |
-| [COP-023](./generated/cop-023.md) | CLI Skill Name Format | MEDIUM | Copilot | No |
-| [COP-024](./generated/cop-024.md) | CLI Skill Unknown Field | MEDIUM | Copilot | No |
-| [COP-025](./generated/cop-025.md) | Agent File Wrong Location | LOW | Copilot | No |
-| [COP-026](./generated/cop-026.md) | Deprecated SSE Transport | LOW | Copilot | No |
-| [COP-027](./generated/cop-027.md) | Deprecated Infer Field | LOW | Copilot | No |
+| [COP-019](./generated/cop-019.md) | Plugin Missing Required Fields | HIGH | GitHub Copilot | No |
+| [COP-020](./generated/cop-020.md) | Plugin Invalid Field Types | MEDIUM | GitHub Copilot | No |
+| [COP-022](./generated/cop-022.md) | CLI Skill Missing Frontmatter | HIGH | GitHub Copilot | No |
+| [COP-023](./generated/cop-023.md) | CLI Skill Name Format | MEDIUM | GitHub Copilot | No |
+| [COP-024](./generated/cop-024.md) | CLI Skill Unknown Field | MEDIUM | GitHub Copilot | No |
+| [COP-025](./generated/cop-025.md) | Agent File Wrong Location | LOW | GitHub Copilot | No |
+| [COP-026](./generated/cop-026.md) | Deprecated SSE Transport | LOW | GitHub Copilot | No |
+| [COP-027](./generated/cop-027.md) | Deprecated Infer Field | LOW | GitHub Copilot | No |
 | [CP-SK-001](./generated/cp-sk-001.md) | Copilot Skill Uses Unsupported Field | MEDIUM | Copilot Skills | Yes (safe/unsafe) |
 | [CR-SK-001](./generated/cr-sk-001.md) | Cursor Skill Uses Unsupported Field | MEDIUM | Cursor Skills | Yes (safe/unsafe) |
 | [CUR-001](./generated/cur-001.md) | Empty Cursor Rule File | HIGH | Cursor | No |
@@ -360,12 +360,12 @@ This section contains all `342` validation rules generated from `knowledge-base/
 | [OC-CFG-005](./generated/oc-cfg-005.md) | Hardcoded API Key | HIGH | OpenCode | No |
 | [OC-CFG-006](./generated/oc-cfg-006.md) | Invalid MCP Server Structure | HIGH | OpenCode | No |
 | [OC-CFG-007](./generated/oc-cfg-007.md) | MCP Server Missing Command or URL | HIGH | OpenCode | No |
-| [OC-CFG-013](./generated/oc-cfg-013.md) | Invalid Server Config | HIGH | Opencode | No |
+| [OC-CFG-013](./generated/oc-cfg-013.md) | Invalid Server Config | HIGH | OpenCode | No |
 | [OC-AG-001](./generated/oc-ag-001.md) | Invalid Agent Mode Value | HIGH | OpenCode | No |
 | [OC-AG-002](./generated/oc-ag-002.md) | Invalid Color Format | HIGH | OpenCode | No |
 | [OC-AG-003](./generated/oc-ag-003.md) | Temperature Out of Range | HIGH | OpenCode | No |
 | [OC-AG-004](./generated/oc-ag-004.md) | Steps Not a Positive Integer | HIGH | OpenCode | No |
-| [OC-AG-009](./generated/oc-ag-009.md) | Invalid Agent Disable Type | HIGH | Opencode | No |
+| [OC-AG-009](./generated/oc-ag-009.md) | Invalid Agent Disable Type | HIGH | OpenCode | No |
 | [OC-PM-001](./generated/oc-pm-001.md) | Invalid Permission Action | HIGH | OpenCode | No |
 | [OC-PM-002](./generated/oc-pm-002.md) | Unknown Permission Key | MEDIUM | OpenCode | No |
 | [OC-AGM-001](./generated/oc-agm-001.md) | Empty AGENTS.md | HIGH | OpenCode | No |
@@ -374,8 +374,8 @@ This section contains all `342` validation rules generated from `knowledge-base/
 | [OC-DEP-002](./generated/oc-dep-002.md) | Deprecated tools Field | MEDIUM | OpenCode | Yes (safe) |
 | [OC-DEP-003](./generated/oc-dep-003.md) | Deprecated autoshare Field | MEDIUM | OpenCode | Yes (safe) |
 | [OC-DEP-004](./generated/oc-dep-004.md) | Deprecated CONTEXT.md Filename | MEDIUM | OpenCode | No |
-| [OC-DEP-005](./generated/oc-dep-005.md) | Deprecated TUI Keys | MEDIUM | Opencode | No |
-| [OC-DEP-006](./generated/oc-dep-006.md) | Deprecated MaxSteps Field | MEDIUM | Opencode | No |
+| [OC-DEP-005](./generated/oc-dep-005.md) | Deprecated TUI Keys | MEDIUM | OpenCode | No |
+| [OC-DEP-006](./generated/oc-dep-006.md) | Deprecated MaxSteps Field | MEDIUM | OpenCode | No |
 | [OC-CFG-008](./generated/oc-cfg-008.md) | Invalid Log Level | HIGH | OpenCode | Yes (unsafe) |
 | [OC-CFG-009](./generated/oc-cfg-009.md) | Invalid Compaction Reserved | HIGH | OpenCode | No |
 | [OC-CFG-010](./generated/oc-cfg-010.md) | Invalid Skills URL | HIGH | OpenCode | No |
