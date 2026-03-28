@@ -4015,3 +4015,203 @@ fn test_as_009_has_fix() {
         "Fix should strip XML tags from description"
     );
 }
+
+// ===== CC-SK-018: Invalid effort value =====
+
+#[test]
+fn test_cc_sk_018_invalid_effort() {
+    let content = r#"---
+name: test-skill
+description: Use when testing effort validation
+effort: turbo
+---
+Body"#;
+
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
+
+    let cc_sk_018: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-SK-018")
+        .collect();
+
+    assert_eq!(cc_sk_018.len(), 1);
+    assert_eq!(
+        cc_sk_018[0].level,
+        crate::diagnostics::DiagnosticLevel::Warning
+    );
+    assert!(cc_sk_018[0].message.contains("turbo"));
+}
+
+#[test]
+fn test_cc_sk_018_valid_effort_values() {
+    for effort in &["low", "medium", "high", "max"] {
+        let content = format!(
+            "---\nname: test-skill\ndescription: Use when testing effort\neffort: {}\n---\nBody",
+            effort
+        );
+
+        let validator = SkillValidator;
+        let diagnostics =
+            validator.validate(Path::new("test.md"), &content, &LintConfig::default());
+
+        let cc_sk_018: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SK-018")
+            .collect();
+
+        assert_eq!(
+            cc_sk_018.len(),
+            0,
+            "Effort '{}' should be valid",
+            effort
+        );
+    }
+}
+
+#[test]
+fn test_cc_sk_018_no_effort_ok() {
+    let content = r#"---
+name: test-skill
+description: Use when testing
+---
+Body"#;
+
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
+
+    let cc_sk_018: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-SK-018")
+        .collect();
+
+    assert_eq!(cc_sk_018.len(), 0);
+}
+
+// ===== CC-SK-019: Invalid paths format =====
+
+#[test]
+fn test_cc_sk_019_empty_paths() {
+    let content = "---\nname: test-skill\ndescription: Use when testing paths\npaths: \"\"\n---\nBody";
+
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
+
+    let cc_sk_019: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-SK-019")
+        .collect();
+
+    assert_eq!(cc_sk_019.len(), 1);
+    assert_eq!(
+        cc_sk_019[0].level,
+        crate::diagnostics::DiagnosticLevel::Info
+    );
+}
+
+#[test]
+fn test_cc_sk_019_whitespace_only_paths() {
+    let content = "---\nname: test-skill\ndescription: Use when testing paths\npaths: \"   \"\n---\nBody";
+
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
+
+    let cc_sk_019: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-SK-019")
+        .collect();
+
+    assert_eq!(cc_sk_019.len(), 1);
+}
+
+#[test]
+fn test_cc_sk_019_valid_paths() {
+    let content = r#"---
+name: test-skill
+description: Use when testing paths
+paths: "src/**/*.ts"
+---
+Body"#;
+
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
+
+    let cc_sk_019: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-SK-019")
+        .collect();
+
+    assert_eq!(cc_sk_019.len(), 0);
+}
+
+// ===== CC-SK-020: Invalid shell value =====
+
+#[test]
+fn test_cc_sk_020_invalid_shell() {
+    let content = r#"---
+name: test-skill
+description: Use when testing shell validation
+shell: zsh
+---
+Body"#;
+
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
+
+    let cc_sk_020: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-SK-020")
+        .collect();
+
+    assert_eq!(cc_sk_020.len(), 1);
+    assert_eq!(
+        cc_sk_020[0].level,
+        crate::diagnostics::DiagnosticLevel::Warning
+    );
+    assert!(cc_sk_020[0].message.contains("zsh"));
+}
+
+#[test]
+fn test_cc_sk_020_valid_shell_values() {
+    for shell in &["bash", "powershell"] {
+        let content = format!(
+            "---\nname: test-skill\ndescription: Use when testing shell\nshell: {}\n---\nBody",
+            shell
+        );
+
+        let validator = SkillValidator;
+        let diagnostics =
+            validator.validate(Path::new("test.md"), &content, &LintConfig::default());
+
+        let cc_sk_020: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SK-020")
+            .collect();
+
+        assert_eq!(
+            cc_sk_020.len(),
+            0,
+            "Shell '{}' should be valid",
+            shell
+        );
+    }
+}
+
+#[test]
+fn test_cc_sk_020_no_shell_ok() {
+    let content = r#"---
+name: test-skill
+description: Use when testing
+---
+Body"#;
+
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
+
+    let cc_sk_020: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-SK-020")
+        .collect();
+
+    assert_eq!(cc_sk_020.len(), 0);
+}

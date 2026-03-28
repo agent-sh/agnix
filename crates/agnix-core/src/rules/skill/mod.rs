@@ -7,7 +7,7 @@ use crate::{
     regex_util::static_regex,
     rules::{Validator, ValidatorMetadata},
     schemas::hooks::HooksSchema,
-    schemas::skill::SkillSchema,
+    schemas::skill::{SkillSchema, VALID_EFFORT_LEVELS, VALID_SHELLS},
     validation::is_valid_mcp_tool_format,
 };
 use regex::Regex;
@@ -869,6 +869,82 @@ impl<'a> ValidationContext<'a> {
         }
     }
 
+    /// CC-SK-018, CC-SK-019, CC-SK-020: Validate effort, paths, and shell fields
+    fn validate_cc_effort_paths_shell(&mut self, schema: &SkillSchema) {
+        // CC-SK-018: Invalid effort value
+        if self.config.is_rule_enabled("CC-SK-018") {
+            if let Some(effort) = &schema.effort {
+                if !VALID_EFFORT_LEVELS.contains(&effort.as_str()) {
+                    let (effort_line, effort_col) = self.frontmatter_key_line_col("effort");
+                    self.diagnostics.push(
+                        Diagnostic::warning(
+                            self.path.to_path_buf(),
+                            effort_line,
+                            effort_col,
+                            "CC-SK-018",
+                            format!(
+                                "Invalid effort '{}'. Must be one of: {}",
+                                effort,
+                                VALID_EFFORT_LEVELS.join(", ")
+                            ),
+                        )
+                        .with_suggestion(format!(
+                            "Use one of the valid effort values: {}",
+                            VALID_EFFORT_LEVELS.join(", ")
+                        )),
+                    );
+                }
+            }
+        }
+
+        // CC-SK-019: Invalid paths format
+        if self.config.is_rule_enabled("CC-SK-019") {
+            if let Some(paths) = &schema.paths {
+                if paths.trim().is_empty() {
+                    let (paths_line, paths_col) = self.frontmatter_key_line_col("paths");
+                    self.diagnostics.push(
+                        Diagnostic::info(
+                            self.path.to_path_buf(),
+                            paths_line,
+                            paths_col,
+                            "CC-SK-019",
+                            "paths field is empty".to_string(),
+                        )
+                        .with_suggestion(
+                            "Provide at least one glob pattern or file path".to_string(),
+                        ),
+                    );
+                }
+            }
+        }
+
+        // CC-SK-020: Invalid shell value
+        if self.config.is_rule_enabled("CC-SK-020") {
+            if let Some(shell) = &schema.shell {
+                if !VALID_SHELLS.contains(&shell.as_str()) {
+                    let (shell_line, shell_col) = self.frontmatter_key_line_col("shell");
+                    self.diagnostics.push(
+                        Diagnostic::warning(
+                            self.path.to_path_buf(),
+                            shell_line,
+                            shell_col,
+                            "CC-SK-020",
+                            format!(
+                                "Invalid shell '{}'. Must be one of: {}",
+                                shell,
+                                VALID_SHELLS.join(", ")
+                            ),
+                        )
+                        .with_suggestion(format!(
+                            "Use one of the valid shell values: {}",
+                            VALID_SHELLS.join(", ")
+                        )),
+                    );
+                }
+            }
+        }
+    }
+
     /// CC-SK-007, CC-SK-008: Validate allowed tools
     fn validate_cc_tools(&mut self, schema: &SkillSchema) {
         let (allowed_tools_line, allowed_tools_col) =
@@ -1548,6 +1624,9 @@ const RULE_IDS: &[&str] = &[
     "CC-SK-015",
     "CC-SK-016",
     "CC-SK-017",
+    "CC-SK-018",
+    "CC-SK-019",
+    "CC-SK-020",
 ];
 
 pub struct SkillValidator;
@@ -1659,6 +1738,9 @@ impl Validator for SkillValidator {
 
                 // CC-SK-005 (agent type)
                 ctx.validate_cc_agent(&schema);
+
+                // CC-SK-018 (effort), CC-SK-019 (paths), CC-SK-020 (shell)
+                ctx.validate_cc_effort_paths_shell(&schema);
             }
         }
 

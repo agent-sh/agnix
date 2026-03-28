@@ -560,6 +560,21 @@ rules:
     message: "Cline ignores scalar paths values - use a YAML array instead"
     suggestion: "Change paths to array format: paths:\n  - \"%{pattern}\""
     fix: "Convert scalar paths to array format"
+  cln_005:
+    message: "Cline workflow file is empty"
+    suggestion: "Add workflow steps to the file"
+  cln_006:
+    message: "Cline workflow file contains frontmatter"
+    suggestion: "Cline workflows should be plain markdown without frontmatter"
+  cln_009:
+    message: "Unknown Cline hook event name '%{event}'"
+    suggestion: "Use a valid hook event name: TaskStart, TaskResume, TaskCancel, TaskComplete, PreToolUse, PostToolUse, UserPromptSubmit, PreCompact"
+  cl_sk_002:
+    message: "Cline skill is missing required 'name' field in frontmatter"
+    suggestion: "Add a 'name' field to the SKILL.md frontmatter"
+  cl_sk_003:
+    message: "Cline skill is missing required 'description' field in frontmatter"
+    suggestion: "Add a 'description' field to the SKILL.md frontmatter"
 
   # --- Gemini CLI (gemini_md.rs) ---
   gm_001:

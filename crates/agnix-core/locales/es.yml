@@ -414,6 +414,21 @@ rules:
     message: "Cline ignora valores escalares en paths - usa un arreglo YAML en su lugar"
     suggestion: "Cambia paths a formato de arreglo: paths:\n  - \"%{pattern}\""
     fix: "Convertir paths escalar a formato de arreglo"
+  cln_005:
+    message: "El archivo de flujo de trabajo de Cline esta vacio"
+    suggestion: "Agrega pasos del flujo de trabajo al archivo"
+  cln_006:
+    message: "El archivo de flujo de trabajo de Cline contiene frontmatter"
+    suggestion: "Los flujos de trabajo de Cline deben ser markdown simple sin frontmatter"
+  cln_009:
+    message: "Nombre de evento de hook de Cline desconocido '%{event}'"
+    suggestion: "Usa un nombre de evento de hook valido: TaskStart, TaskResume, TaskCancel, TaskComplete, PreToolUse, PostToolUse, UserPromptSubmit, PreCompact"
+  cl_sk_002:
+    message: "La habilidad de Cline no tiene el campo obligatorio 'name' en el frontmatter"
+    suggestion: "Agrega un campo 'name' al frontmatter de SKILL.md"
+  cl_sk_003:
+    message: "La habilidad de Cline no tiene el campo obligatorio 'description' en el frontmatter"
+    suggestion: "Agrega un campo 'description' al frontmatter de SKILL.md"
 
   # --- Gemini CLI (gemini_md.rs) ---
   gm_001:

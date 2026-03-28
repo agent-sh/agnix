@@ -62,7 +62,6 @@ fn is_hook_path(path: &Path) -> bool {
 
 /// Returns true if the path is a Cline skill SKILL.md
 /// (under `.cline/skills/` or `.clinerules/skills/`).
-#[allow(dead_code)] // Will be used when ClineSkillValidator is registered
 fn is_cline_skill_path(path: &Path) -> bool {
     let components: Vec<&str> = path
         .components()
@@ -358,10 +357,8 @@ impl ClineValidator {
 // CL-SK-002, CL-SK-003 (Cline skill rules)
 // =============================================================================
 
-#[allow(dead_code)] // Will be used when registered
 const CLINE_SKILL_RULE_IDS: &[&str] = &["CL-SK-002", "CL-SK-003"];
 
-#[allow(dead_code)] // Will be registered in a follow-up
 pub struct ClineSkillValidator;
 
 impl Validator for ClineSkillValidator {
@@ -985,7 +982,6 @@ unknownKey: value
     // ===== CLN-005: Empty Workflow File =====
 
     #[test]
-    #[ignore = "requires file type detection wiring for .clinerules/workflows/"]
     fn test_cln_005_empty_workflow() {
         let diagnostics = validate_workflow("");
         let cln_005: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CLN-005").collect();
@@ -995,7 +991,6 @@ unknownKey: value
     }
 
     #[test]
-    #[ignore = "requires file type detection wiring for .clinerules/workflows/"]
     fn test_cln_005_whitespace_only_workflow() {
         let diagnostics = validate_workflow("   \n\n\t  ");
         let cln_005: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CLN-005").collect();
@@ -1022,7 +1017,6 @@ unknownKey: value
     // ===== CLN-006: Workflow with Frontmatter =====
 
     #[test]
-    #[ignore = "requires file type detection wiring for .clinerules/workflows/"]
     fn test_cln_006_workflow_with_frontmatter() {
         let content = "---\ntitle: Deploy\n---\n# Deploy steps\n";
         let diagnostics = validate_workflow(content);
@@ -1062,7 +1056,6 @@ unknownKey: value
     // ===== CLN-009: Unknown Hook Event Name =====
 
     #[test]
-    #[ignore = "requires file type detection wiring for .clinerules/hooks/"]
     fn test_cln_009_unknown_event() {
         let diagnostics = validate_hook(
             ".clinerules/hooks/InvalidEvent.sh",
@@ -1298,7 +1291,6 @@ unknownKey: value
     // ===== Workflow file type detection =====
 
     #[test]
-    #[ignore = "requires file type detection update for .clinerules/workflows/"]
     fn test_workflow_file_detected_as_cline_rules_folder() {
         assert_eq!(
             crate::detect_file_type(Path::new(".clinerules/workflows/deploy.md")),
@@ -1307,7 +1299,6 @@ unknownKey: value
     }
 
     #[test]
-    #[ignore = "requires file type detection update for .clinerules/hooks/"]
     fn test_hook_file_detected_as_cline_rules_folder() {
         assert_eq!(
             crate::detect_file_type(Path::new(".clinerules/hooks/TaskStart.md")),

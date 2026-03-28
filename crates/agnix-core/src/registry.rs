@@ -398,7 +398,7 @@ impl ValidatorRegistryBuilder {
 ///
 /// Used by `BuiltinProvider` (via `debug_assert_eq!`) and tests to catch
 /// accidental additions or removals without updating all providers.
-const EXPECTED_BUILTIN_COUNT: usize = 71;
+const EXPECTED_BUILTIN_COUNT: usize = 72;
 
 // -- Category providers -----------------------------------------------------
 //
@@ -733,6 +733,11 @@ impl ValidatorProvider for MiscProvider {
                 cline_validator,
             ),
             (
+                FileType::ClineRulesFolder,
+                Some("ClineSkillValidator"),
+                cline_skill_validator,
+            ),
+            (
                 FileType::OpenCodeConfig,
                 Some("OpenCodeValidator"),
                 opencode_validator,
@@ -878,6 +883,10 @@ fn cursor_validator() -> Box<dyn Validator> {
 
 fn cline_validator() -> Box<dyn Validator> {
     Box::new(crate::rules::cline::ClineValidator)
+}
+
+fn cline_skill_validator() -> Box<dyn Validator> {
+    Box::new(crate::rules::cline::ClineSkillValidator)
 }
 
 fn opencode_validator() -> Box<dyn Validator> {
@@ -1913,7 +1922,7 @@ mod tests {
 
     #[test]
     fn misc_provider_count() {
-        assert_eq!(MiscProvider.named_validators().len(), 22);
+        assert_eq!(MiscProvider.named_validators().len(), 23);
     }
 
     #[test]

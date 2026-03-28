@@ -201,6 +201,15 @@ fn is_under_windsurf_workflows(path: &Path) -> bool {
     path_contains_consecutive_components(path, ".windsurf", "workflows")
 }
 
+/// Returns true if any path component is `.clinerules`, meaning the file
+/// lives somewhere under a `.clinerules/` directory. This covers direct
+/// children (`.clinerules/*.md`), workflows, hooks, and skills subdirectories.
+fn has_clinerules_ancestor(path: &Path) -> bool {
+    path.components().any(|c| {
+        matches!(c, std::path::Component::Normal(name) if name.to_str() == Some(".clinerules"))
+    })
+}
+
 /// Returns true if the path contains `.kiro/steering` as consecutive
 /// components anywhere in the path.
 fn is_under_kiro_steering(path: &Path) -> bool {
@@ -409,9 +418,10 @@ pub fn detect_file_type(path: &Path) -> FileType {
         }
         // Roo Code rules (.roo/rules/*.md)
         name if name.ends_with(".md") && is_under_roo_rules(path) => FileType::RooRules,
-        // Cline rules folder (.clinerules/*.md, .clinerules/*.txt)
+        // Cline rules folder - any .md/.txt file under .clinerules/ at any depth
+        // (direct children, workflows, hooks, skills subdirectories)
         name if (name.ends_with(".md") || name.ends_with(".txt"))
-            && parent == Some(".clinerules") =>
+            && has_clinerules_ancestor(path) =>
         {
             FileType::ClineRulesFolder
         }
@@ -455,6 +465,11 @@ pub fn detect_file_type(path: &Path) -> FileType {
                     FileType::GenericMarkdown
                 }
             }
+        }
+        // Cline hook scripts under .clinerules/hooks/ (any extension or no extension)
+        // (e.g., .clinerules/hooks/TaskStart, .clinerules/hooks/PreToolUse.sh)
+        _ if path_contains_consecutive_components(path, ".clinerules", "hooks") => {
+            FileType::ClineRulesFolder
         }
         _ => FileType::Unknown,
     }

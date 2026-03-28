@@ -414,6 +414,21 @@ rules:
     message: "Cline 会忽略标量 paths 值 - 请改用 YAML 数组"
     suggestion: "将 paths 改为数组格式: paths:\n  - \"%{pattern}\""
     fix: "将标量 paths 转换为数组格式"
+  cln_005:
+    message: "Cline 工作流文件为空"
+    suggestion: "向文件添加工作流步骤"
+  cln_006:
+    message: "Cline 工作流文件包含 frontmatter"
+    suggestion: "Cline 工作流应为纯 markdown，不包含 frontmatter"
+  cln_009:
+    message: "未知的 Cline hook 事件名称 '%{event}'"
+    suggestion: "使用有效的 hook 事件名称: TaskStart, TaskResume, TaskCancel, TaskComplete, PreToolUse, PostToolUse, UserPromptSubmit, PreCompact"
+  cl_sk_002:
+    message: "Cline 技能缺少必需的 frontmatter 'name' 字段"
+    suggestion: "在 SKILL.md 的 frontmatter 中添加 'name' 字段"
+  cl_sk_003:
+    message: "Cline 技能缺少必需的 frontmatter 'description' 字段"
+    suggestion: "在 SKILL.md 的 frontmatter 中添加 'description' 字段"
 
   # --- Gemini CLI (gemini_md.rs) ---
   gm_001:
