@@ -264,7 +264,10 @@ impl Validator for ClaudeMdValidator {
         // CC-MEM-014: CLAUDE.md exceeds 200-line recommended limit
         if config.is_rule_enabled("CC-MEM-014") {
             const MAX_RECOMMENDED_LINES: usize = 200;
-            let non_empty_lines = content.lines().filter(|line| !line.trim().is_empty()).count();
+            let non_empty_lines = content
+                .lines()
+                .filter(|line| !line.trim().is_empty())
+                .count();
             if non_empty_lines > MAX_RECOMMENDED_LINES {
                 diagnostics.push(
                     Diagnostic::info(

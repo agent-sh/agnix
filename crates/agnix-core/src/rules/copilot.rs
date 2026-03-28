@@ -367,14 +367,11 @@ fn validate_custom_agent(path: &Path, content: &str, config: &LintConfig) -> Vec
                 let has_infer = schema.infer.is_some() || {
                     raw_mapping
                         .as_ref()
-                        .and_then(|map| {
-                            map.get(serde_yaml::Value::String("infer".to_string()))
-                        })
+                        .and_then(|map| map.get(serde_yaml::Value::String("infer".to_string())))
                         .is_some()
                 };
                 if has_infer {
-                    let line =
-                        frontmatter_key_line(&parsed.raw, parsed.start_line, "infer:");
+                    let line = frontmatter_key_line(&parsed.raw, parsed.start_line, "infer:");
                     diagnostics.push(
                         Diagnostic::info(
                             path.to_path_buf(),
@@ -678,10 +675,7 @@ fn validate_plugin_manifest(path: &Path, content: &str, config: &LintConfig) -> 
                         "COP-019",
                         format!("Copilot plugin manifest missing required field '{}'", field),
                     )
-                    .with_suggestion(format!(
-                        "Add a '{}' field to the plugin manifest.",
-                        field
-                    )),
+                    .with_suggestion(format!("Add a '{}' field to the plugin manifest.", field)),
                 );
             }
         }
@@ -803,9 +797,7 @@ fn validate_copilot_skill(path: &Path, content: &str, config: &LintConfig) -> Ve
                         .and_then(|m| m.get(serde_yaml::Value::String("name".to_string())))
                         .is_some_and(|v| !v.is_null());
                     let has_description = mapping
-                        .and_then(|m| {
-                            m.get(serde_yaml::Value::String("description".to_string()))
-                        })
+                        .and_then(|m| m.get(serde_yaml::Value::String("description".to_string())))
                         .is_some_and(|v| !v.is_null());
 
                     if !has_name {
@@ -815,7 +807,8 @@ fn validate_copilot_skill(path: &Path, content: &str, config: &LintConfig) -> Ve
                                 p.start_line,
                                 0,
                                 "COP-022",
-                                "Copilot CLI SKILL.md frontmatter is missing required field 'name'".to_string(),
+                                "Copilot CLI SKILL.md frontmatter is missing required field 'name'"
+                                    .to_string(),
                             )
                             .with_suggestion("Add a 'name' field to the SKILL.md frontmatter."),
                         );
@@ -843,11 +836,7 @@ fn validate_copilot_skill(path: &Path, content: &str, config: &LintConfig) -> Ve
                         {
                             if let Some(name_str) = name_val.as_str() {
                                 if !is_kebab_case(name_str) {
-                                    let line = frontmatter_key_line(
-                                        &p.raw,
-                                        p.start_line,
-                                        "name:",
-                                    );
+                                    let line = frontmatter_key_line(&p.raw, p.start_line, "name:");
                                     diagnostics.push(
                                         Diagnostic::warning(
                                             path.to_path_buf(),
@@ -882,7 +871,10 @@ fn is_kebab_case(s: &str) -> bool {
         return false;
     }
     // Must be only lowercase ASCII letters, digits, and hyphens
-    if !s.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-') {
+    if !s
+        .chars()
+        .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
+    {
         return false;
     }
     // No leading or trailing hyphens
@@ -1066,9 +1058,7 @@ fn validate_mcp_config_sse(path: &Path, content: &str, config: &LintConfig) -> V
                     server_name
                 ),
             )
-            .with_suggestion(
-                "Replace 'sse' with 'http' or 'streamable-http' transport.",
-            ),
+            .with_suggestion("Replace 'sse' with 'http' or 'streamable-http' transport."),
         );
     }
 
@@ -2788,9 +2778,7 @@ description: A useful skill
 
     #[test]
     fn test_cop_022_agents_skills_path() {
-        let diagnostics = validate_copilot_skill_md_agents(
-            "# My Skill\n\nDo something useful.",
-        );
+        let diagnostics = validate_copilot_skill_md_agents("# My Skill\n\nDo something useful.");
         let cop_022: Vec<_> = diagnostics.iter().filter(|d| d.rule == "COP-022").collect();
         assert_eq!(cop_022.len(), 1);
     }
@@ -2977,9 +2965,8 @@ Skill body.
 
     #[test]
     fn test_cop_025_agent_md_in_correct_location() {
-        let diagnostics = validate_agent(
-            "---\ndescription: Review PRs\n---\nReview pull requests.",
-        );
+        let diagnostics =
+            validate_agent("---\ndescription: Review PRs\n---\nReview pull requests.");
         let cop_025: Vec<_> = diagnostics.iter().filter(|d| d.rule == "COP-025").collect();
         assert!(cop_025.is_empty());
     }

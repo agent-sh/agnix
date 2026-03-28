@@ -1585,14 +1585,18 @@ impl Validator for OpenCodeValidator {
                         if let Some(server_obj) = server_val.as_object() {
                             let server_line = find_key_line(content, "server").unwrap_or(1);
                             if let Some(port_val) = server_obj.get("port") {
-                                if port_val.as_i64().is_none() && port_val.as_f64().is_none() && !port_val.is_null() {
+                                if port_val.as_i64().is_none()
+                                    && port_val.as_f64().is_none()
+                                    && !port_val.is_null()
+                                {
                                     diagnostics.push(
                                         Diagnostic::warning(
                                             path.to_path_buf(),
                                             find_key_line(content, "port").unwrap_or(server_line),
                                             0,
                                             "OC-CFG-013",
-                                            "Invalid server.port type. Expected a number".to_string(),
+                                            "Invalid server.port type. Expected a number"
+                                                .to_string(),
                                         )
                                         .with_suggestion(
                                             "Set port to a number such as 8080".to_string(),
@@ -1605,13 +1609,16 @@ impl Validator for OpenCodeValidator {
                                     diagnostics.push(
                                         Diagnostic::warning(
                                             path.to_path_buf(),
-                                            find_key_line(content, "hostname").unwrap_or(server_line),
+                                            find_key_line(content, "hostname")
+                                                .unwrap_or(server_line),
                                             0,
                                             "OC-CFG-013",
-                                            "Invalid server.hostname type. Expected a string".to_string(),
+                                            "Invalid server.hostname type. Expected a string"
+                                                .to_string(),
                                         )
                                         .with_suggestion(
-                                            "Set hostname to a string such as \"localhost\"".to_string(),
+                                            "Set hostname to a string such as \"localhost\""
+                                                .to_string(),
                                         ),
                                     );
                                 }
@@ -1624,11 +1631,10 @@ impl Validator for OpenCodeValidator {
                                             find_key_line(content, "mdns").unwrap_or(server_line),
                                             0,
                                             "OC-CFG-013",
-                                            "Invalid server.mdns type. Expected a boolean".to_string(),
+                                            "Invalid server.mdns type. Expected a boolean"
+                                                .to_string(),
                                         )
-                                        .with_suggestion(
-                                            "Set mdns to true or false".to_string(),
-                                        ),
+                                        .with_suggestion("Set mdns to true or false".to_string()),
                                     );
                                 }
                             }
@@ -1640,7 +1646,8 @@ impl Validator for OpenCodeValidator {
                                             find_key_line(content, "cors").unwrap_or(server_line),
                                             0,
                                             "OC-CFG-013",
-                                            "Invalid server.cors type. Expected an array".to_string(),
+                                            "Invalid server.cors type. Expected an array"
+                                                .to_string(),
                                         )
                                         .with_suggestion(
                                             "Set cors to an array of allowed origins".to_string(),

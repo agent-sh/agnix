@@ -303,8 +303,14 @@ impl ClineValidator {
         // CLN-005: Empty workflow file (ERROR)
         if config.is_rule_enabled("CLN-005") && is_content_empty(content) {
             diagnostics.push(
-                Diagnostic::error(path.to_path_buf(), 1, 0, "CLN-005", t!("rules.cln_005.message"))
-                    .with_suggestion(t!("rules.cln_005.suggestion")),
+                Diagnostic::error(
+                    path.to_path_buf(),
+                    1,
+                    0,
+                    "CLN-005",
+                    t!("rules.cln_005.message"),
+                )
+                .with_suggestion(t!("rules.cln_005.suggestion")),
             );
         }
 
@@ -327,12 +333,7 @@ impl ClineValidator {
     }
 
     /// Hook-specific rules (CLN-009).
-    fn validate_hook(
-        &self,
-        path: &Path,
-        config: &LintConfig,
-        diagnostics: &mut Vec<Diagnostic>,
-    ) {
+    fn validate_hook(&self, path: &Path, config: &LintConfig, diagnostics: &mut Vec<Diagnostic>) {
         // CLN-009: Unknown hook event name (WARNING)
         if config.is_rule_enabled("CLN-009") {
             if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
@@ -416,9 +417,7 @@ impl Validator for ClineSkillValidator {
 
         // Check for top-level description field
         let has_description = fm.lines().any(|line| {
-            !line.starts_with(' ')
-                && !line.starts_with('\t')
-                && line.starts_with("description:")
+            !line.starts_with(' ') && !line.starts_with('\t') && line.starts_with("description:")
         });
 
         if !has_name && config.is_rule_enabled("CL-SK-002") {
@@ -1095,11 +1094,8 @@ unknownKey: value
     fn test_cln_009_disabled() {
         let mut config = LintConfig::default();
         config.rules_mut().disabled_rules = vec!["CLN-009".to_string()];
-        let diagnostics = validate_hook_with_config(
-            ".clinerules/hooks/BadEvent.sh",
-            "#!/bin/bash",
-            &config,
-        );
+        let diagnostics =
+            validate_hook_with_config(".clinerules/hooks/BadEvent.sh", "#!/bin/bash", &config);
         let cln_009: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CLN-009").collect();
         assert!(cln_009.is_empty());
     }
@@ -1117,9 +1113,11 @@ unknownKey: value
     #[test]
     fn test_cl_sk_002_missing_name() {
         let content = "---\ndescription: A test skill\n---\n# Skill body\n";
-        let diagnostics =
-            validate_cline_skill(".cline/skills/my-skill/SKILL.md", content);
-        let cl_sk_002: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CL-SK-002").collect();
+        let diagnostics = validate_cline_skill(".cline/skills/my-skill/SKILL.md", content);
+        let cl_sk_002: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CL-SK-002")
+            .collect();
         assert_eq!(cl_sk_002.len(), 1);
         assert_eq!(cl_sk_002[0].level, DiagnosticLevel::Error);
     }
@@ -1127,18 +1125,22 @@ unknownKey: value
     #[test]
     fn test_cl_sk_002_has_name() {
         let content = "---\nname: my-skill\ndescription: A test skill\n---\n# Skill body\n";
-        let diagnostics =
-            validate_cline_skill(".cline/skills/my-skill/SKILL.md", content);
-        let cl_sk_002: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CL-SK-002").collect();
+        let diagnostics = validate_cline_skill(".cline/skills/my-skill/SKILL.md", content);
+        let cl_sk_002: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CL-SK-002")
+            .collect();
         assert!(cl_sk_002.is_empty());
     }
 
     #[test]
     fn test_cl_sk_002_no_frontmatter() {
         let content = "# Skill without frontmatter";
-        let diagnostics =
-            validate_cline_skill(".cline/skills/my-skill/SKILL.md", content);
-        let cl_sk_002: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CL-SK-002").collect();
+        let diagnostics = validate_cline_skill(".cline/skills/my-skill/SKILL.md", content);
+        let cl_sk_002: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CL-SK-002")
+            .collect();
         assert_eq!(cl_sk_002.len(), 1, "Missing frontmatter means missing name");
     }
 
@@ -1147,12 +1149,12 @@ unknownKey: value
         let mut config = LintConfig::default();
         config.rules_mut().disabled_rules = vec!["CL-SK-002".to_string()];
         let content = "---\ndescription: A skill\n---\n# Body\n";
-        let diagnostics = validate_cline_skill_with_config(
-            ".cline/skills/my-skill/SKILL.md",
-            content,
-            &config,
-        );
-        let cl_sk_002: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CL-SK-002").collect();
+        let diagnostics =
+            validate_cline_skill_with_config(".cline/skills/my-skill/SKILL.md", content, &config);
+        let cl_sk_002: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CL-SK-002")
+            .collect();
         assert!(cl_sk_002.is_empty());
     }
 
@@ -1161,9 +1163,11 @@ unknownKey: value
     #[test]
     fn test_cl_sk_003_missing_description() {
         let content = "---\nname: my-skill\n---\n# Skill body\n";
-        let diagnostics =
-            validate_cline_skill(".cline/skills/my-skill/SKILL.md", content);
-        let cl_sk_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CL-SK-003").collect();
+        let diagnostics = validate_cline_skill(".cline/skills/my-skill/SKILL.md", content);
+        let cl_sk_003: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CL-SK-003")
+            .collect();
         assert_eq!(cl_sk_003.len(), 1);
         assert_eq!(cl_sk_003[0].level, DiagnosticLevel::Error);
     }
@@ -1171,9 +1175,11 @@ unknownKey: value
     #[test]
     fn test_cl_sk_003_has_description() {
         let content = "---\nname: my-skill\ndescription: A test skill\n---\n# Skill body\n";
-        let diagnostics =
-            validate_cline_skill(".cline/skills/my-skill/SKILL.md", content);
-        let cl_sk_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CL-SK-003").collect();
+        let diagnostics = validate_cline_skill(".cline/skills/my-skill/SKILL.md", content);
+        let cl_sk_003: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CL-SK-003")
+            .collect();
         assert!(cl_sk_003.is_empty());
     }
 
@@ -1182,12 +1188,12 @@ unknownKey: value
         let mut config = LintConfig::default();
         config.rules_mut().disabled_rules = vec!["CL-SK-003".to_string()];
         let content = "---\nname: my-skill\n---\n# Body\n";
-        let diagnostics = validate_cline_skill_with_config(
-            ".cline/skills/my-skill/SKILL.md",
-            content,
-            &config,
-        );
-        let cl_sk_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CL-SK-003").collect();
+        let diagnostics =
+            validate_cline_skill_with_config(".cline/skills/my-skill/SKILL.md", content, &config);
+        let cl_sk_003: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CL-SK-003")
+            .collect();
         assert!(cl_sk_003.is_empty());
     }
 
@@ -1196,8 +1202,7 @@ unknownKey: value
     #[test]
     fn test_cl_sk_not_triggered_for_claude_skill() {
         let content = "---\nlicense: MIT\n---\n# Body\n";
-        let diagnostics =
-            validate_cline_skill(".claude/skills/my-skill/SKILL.md", content);
+        let diagnostics = validate_cline_skill(".claude/skills/my-skill/SKILL.md", content);
         assert!(
             diagnostics.is_empty(),
             "CL-SK rules should not fire for non-Cline skill paths"
@@ -1207,10 +1212,15 @@ unknownKey: value
     #[test]
     fn test_cl_sk_works_for_clinerules_skills_path() {
         let content = "---\nlicense: MIT\n---\n# Body\n";
-        let diagnostics =
-            validate_cline_skill(".clinerules/skills/my-skill/SKILL.md", content);
-        let cl_sk_002: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CL-SK-002").collect();
-        let cl_sk_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CL-SK-003").collect();
+        let diagnostics = validate_cline_skill(".clinerules/skills/my-skill/SKILL.md", content);
+        let cl_sk_002: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CL-SK-002")
+            .collect();
+        let cl_sk_003: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CL-SK-003")
+            .collect();
         assert_eq!(
             cl_sk_002.len(),
             1,
@@ -1240,9 +1250,7 @@ unknownKey: value
     fn test_is_hook_path() {
         assert!(is_hook_path(Path::new(".clinerules/hooks/TaskStart.sh")));
         assert!(!is_hook_path(Path::new(".clinerules/typescript.md")));
-        assert!(!is_hook_path(Path::new(
-            ".clinerules/workflows/deploy.md"
-        )));
+        assert!(!is_hook_path(Path::new(".clinerules/workflows/deploy.md")));
     }
 
     #[test]

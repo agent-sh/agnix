@@ -721,10 +721,8 @@ pub(super) fn validate_cc_hk_021_invalid_if_field(
                     if let Some(hooks_arr) = matcher.get("hooks").and_then(|h| h.as_array()) {
                         for (hook_idx, hook) in hooks_arr.iter().enumerate() {
                             if let Some(if_val) = hook.get("if") {
-                                let hook_location = format!(
-                                    "hooks.{}[{}].hooks[{}]",
-                                    event, matcher_idx, hook_idx
-                                );
+                                let hook_location =
+                                    format!("hooks.{}[{}].hooks[{}]", event, matcher_idx, hook_idx);
 
                                 // Check if the event is a tool event
                                 if !tool_events.contains(&event.as_str()) {
@@ -792,8 +790,7 @@ pub(super) fn validate_cc_hk_022_invalid_shell(
                 None => true, // non-string is invalid
             };
             if is_invalid {
-                let hook_location =
-                    format!("hooks.{}[{}].hooks[{}]", event, matcher_idx, hook_idx);
+                let hook_location = format!("hooks.{}[{}].hooks[{}]", event, matcher_idx, hook_idx);
                 let shell_display = shell_val
                     .as_str()
                     .map(|s| s.to_string())
@@ -828,8 +825,7 @@ pub(super) fn validate_cc_hk_023_once_not_boolean(
     for_each_raw_hook(raw_value, |event, matcher_idx, hook_idx, hook| {
         if let Some(once_val) = hook.get("once") {
             if !once_val.is_boolean() {
-                let hook_location =
-                    format!("hooks.{}[{}].hooks[{}]", event, matcher_idx, hook_idx);
+                let hook_location = format!("hooks.{}[{}].hooks[{}]", event, matcher_idx, hook_idx);
                 diagnostics.push(
                     Diagnostic::info(
                         path.to_path_buf(),
@@ -841,9 +837,7 @@ pub(super) fn validate_cc_hk_023_once_not_boolean(
                             hook_location
                         ),
                     )
-                    .with_suggestion(
-                        "Set 'once' to true or false".to_string(),
-                    ),
+                    .with_suggestion("Set 'once' to true or false".to_string()),
                 );
             }
         }
@@ -861,9 +855,9 @@ pub(super) fn validate_cc_hk_024_headers_env_vars(
         if let Some(type_val) = hook.get("type").and_then(|t| t.as_str()) {
             if type_val == "http" {
                 if let Some(headers) = hook.get("headers").and_then(|h| h.as_object()) {
-                    let has_env_var = headers.values().any(|v| {
-                        v.as_str().map(|s| s.contains('$')).unwrap_or(false)
-                    });
+                    let has_env_var = headers
+                        .values()
+                        .any(|v| v.as_str().map(|s| s.contains('$')).unwrap_or(false));
                     if has_env_var {
                         let has_allowed = hook
                             .get("allowedEnvVars")
@@ -871,10 +865,8 @@ pub(super) fn validate_cc_hk_024_headers_env_vars(
                             .map(|a| !a.is_empty())
                             .unwrap_or(false);
                         if !has_allowed {
-                            let hook_location = format!(
-                                "hooks.{}[{}].hooks[{}]",
-                                event, matcher_idx, hook_idx
-                            );
+                            let hook_location =
+                                format!("hooks.{}[{}].hooks[{}]", event, matcher_idx, hook_idx);
                             diagnostics.push(
                                 Diagnostic::warning(
                                     path.to_path_buf(),

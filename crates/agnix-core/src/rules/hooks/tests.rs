@@ -2491,10 +2491,7 @@ fn test_cc_hk_003_all_tool_events_hint_matcher() {
 fn test_cc_hk_004_non_tool_events_reject_matcher() {
     // Stop and UserPromptSubmit are handled by CC-HK-018 instead
     // SubagentStop, SessionStart, etc. now support matchers via MATCHER_EVENTS
-    let non_tool_events = [
-        "TeammateIdle",
-        "TaskCompleted",
-    ];
+    let non_tool_events = ["TeammateIdle", "TaskCompleted"];
 
     for event in non_tool_events {
         let content = format!(
@@ -4191,11 +4188,7 @@ fn test_cc_hk_021_if_field_on_non_tool_event() {
 
     assert_eq!(cc_hk_021.len(), 1);
     assert_eq!(cc_hk_021[0].level, DiagnosticLevel::Warning);
-    assert!(
-        cc_hk_021[0]
-            .message
-            .contains("non-tool event")
-    );
+    assert!(cc_hk_021[0].message.contains("non-tool event"));
 }
 
 #[test]
@@ -4249,11 +4242,7 @@ fn test_cc_hk_022_invalid_shell_value() {
 
     assert_eq!(cc_hk_022.len(), 1);
     assert_eq!(cc_hk_022[0].level, DiagnosticLevel::Warning);
-    assert!(
-        cc_hk_022[0]
-            .message
-            .contains("invalid 'shell' value")
-    );
+    assert!(cc_hk_022[0].message.contains("invalid 'shell' value"));
 }
 
 #[test]
@@ -4307,11 +4296,7 @@ fn test_cc_hk_023_once_not_boolean() {
 
     assert_eq!(cc_hk_023.len(), 1);
     assert_eq!(cc_hk_023[0].level, DiagnosticLevel::Info);
-    assert!(
-        cc_hk_023[0]
-            .message
-            .contains("non-boolean 'once' field")
-    );
+    assert!(cc_hk_023[0].message.contains("non-boolean 'once' field"));
 }
 
 #[test]

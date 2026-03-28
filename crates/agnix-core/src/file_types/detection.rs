@@ -205,9 +205,9 @@ fn is_under_windsurf_workflows(path: &Path) -> bool {
 /// lives somewhere under a `.clinerules/` directory. This covers direct
 /// children (`.clinerules/*.md`), workflows, hooks, and skills subdirectories.
 fn has_clinerules_ancestor(path: &Path) -> bool {
-    path.components().any(|c| {
-        matches!(c, std::path::Component::Normal(name) if name.to_str() == Some(".clinerules"))
-    })
+    path.components().any(
+        |c| matches!(c, std::path::Component::Normal(name) if name.to_str() == Some(".clinerules")),
+    )
 }
 
 /// Returns true if the path contains `.kiro/steering` as consecutive

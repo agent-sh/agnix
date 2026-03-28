@@ -411,10 +411,7 @@ impl Validator for PluginValidator {
                     } else if let Some(arr) = agents.as_array() {
                         arr.iter()
                             .map(|v| {
-                                let name = v
-                                    .get("name")
-                                    .and_then(|n| n.as_str())
-                                    .unwrap_or("");
+                                let name = v.get("name").and_then(|n| n.as_str()).unwrap_or("");
                                 (name, v)
                             })
                             .collect()
@@ -2481,11 +2478,7 @@ mod tests {
             .iter()
             .filter(|d| d.rule == "CC-PL-014")
             .collect();
-        assert_eq!(
-            pl_014.len(),
-            3,
-            "Should flag all three unsupported fields"
-        );
+        assert_eq!(pl_014.len(), 3, "Should flag all three unsupported fields");
     }
 
     #[test]

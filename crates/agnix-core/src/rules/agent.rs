@@ -420,8 +420,7 @@ impl Validator for AgentValidator {
         if config.is_rule_enabled("CC-AG-003") {
             if let Some(model) = &schema.model {
                 if !is_valid_model(model.as_str()) {
-                    let valid_display =
-                        format!("{}, or claude-*", VALID_MODELS.join(", "));
+                    let valid_display = format!("{}, or claude-*", VALID_MODELS.join(", "));
                     let mut diagnostic = Diagnostic::error(
                         path.to_path_buf(),
                         1,
@@ -433,10 +432,7 @@ impl Validator for AgentValidator {
                             valid = valid_display
                         ),
                     )
-                    .with_suggestion(t!(
-                        "rules.cc_ag_003.suggestion",
-                        valid = valid_display
-                    ));
+                    .with_suggestion(t!("rules.cc_ag_003.suggestion", valid = valid_display));
 
                     // Unsafe auto-fix: default invalid model to sonnet.
                     if let Some((start, end)) = frontmatter_value_byte_range(content, "model") {
@@ -924,10 +920,7 @@ impl Validator for AgentValidator {
                             effort, valid_display
                         ),
                     )
-                    .with_suggestion(format!(
-                        "Use a valid effort value: {}",
-                        valid_display
-                    ));
+                    .with_suggestion(format!("Use a valid effort value: {}", valid_display));
 
                     // Unsafe auto-fix: replace with closest valid effort value
                     if let Some(closest) =
@@ -965,15 +958,10 @@ impl Validator for AgentValidator {
                             isolation, valid_display
                         ),
                     )
-                    .with_suggestion(format!(
-                        "Use a valid isolation value: {}",
-                        valid_display
-                    ));
+                    .with_suggestion(format!("Use a valid isolation value: {}", valid_display));
 
                     // Unsafe auto-fix: replace with 'worktree' (the only valid value)
-                    if let Some((start, end)) =
-                        frontmatter_value_byte_range(content, "isolation")
-                    {
+                    if let Some((start, end)) = frontmatter_value_byte_range(content, "isolation") {
                         diagnostic = diagnostic.with_fix(Fix::replace(
                             start,
                             end,
@@ -1021,8 +1009,7 @@ impl Validator for AgentValidator {
             // Re-parse the frontmatter as a generic YAML mapping to detect unknown keys
             if let Ok(value) = serde_yaml::from_str::<serde_yaml::Value>(&parts.frontmatter) {
                 if let Some(mapping) = value.as_mapping() {
-                    let known_set: HashSet<&str> =
-                        KNOWN_AGENT_FIELDS.iter().copied().collect();
+                    let known_set: HashSet<&str> = KNOWN_AGENT_FIELDS.iter().copied().collect();
                     for key in mapping.keys() {
                         if let Some(key_str) = key.as_str() {
                             if !known_set.contains(key_str) {
@@ -1032,10 +1019,7 @@ impl Validator for AgentValidator {
                                         1,
                                         0,
                                         "CC-AG-019",
-                                        format!(
-                                            "Unknown agent frontmatter field '{}'",
-                                            key_str
-                                        ),
+                                        format!("Unknown agent frontmatter field '{}'", key_str),
                                     )
                                     .with_suggestion(format!(
                                         "Remove or rename '{}' - known fields: {}",
@@ -3661,7 +3645,6 @@ Agent instructions"#;
         );
     }
 
-
     // ===== CC-AG-003: Full model IDs (claude-* pattern) =====
 
     #[test]
@@ -3752,8 +3735,15 @@ mcpServers:
 ---
 Body";
         let d = validate(c);
-        let e: Vec<_> = d.iter().filter(|x| x.level == DiagnosticLevel::Error).collect();
-        assert!(e.is_empty(), "New fields should not trigger errors: {:?}", e);
+        let e: Vec<_> = d
+            .iter()
+            .filter(|x| x.level == DiagnosticLevel::Error)
+            .collect();
+        assert!(
+            e.is_empty(),
+            "New fields should not trigger errors: {:?}",
+            e
+        );
     }
 
     #[test]
@@ -3765,7 +3755,12 @@ maxTurns: 10
 ---
 Body";
         let d = validate(c);
-        assert!(d.iter().filter(|x| x.level == DiagnosticLevel::Error).count() == 0);
+        assert!(
+            d.iter()
+                .filter(|x| x.level == DiagnosticLevel::Error)
+                .count()
+                == 0
+        );
     }
 
     #[test]
@@ -3783,14 +3778,22 @@ Body";
     #[test]
     fn test_effort_valid_values() {
         for e in &["low", "medium", "high", "max"] {
-            let c = format!("---
+            let c = format!(
+                "---
 name: a
 description: b
 effort: {}
 ---
-Body", e);
+Body",
+                e
+            );
             let d = validate(&c);
-            assert!(d.iter().filter(|x| x.level == DiagnosticLevel::Error).count() == 0);
+            assert!(
+                d.iter()
+                    .filter(|x| x.level == DiagnosticLevel::Error)
+                    .count()
+                    == 0
+            );
         }
     }
 
@@ -3803,7 +3806,12 @@ background: false
 ---
 Body";
         let d = validate(c);
-        assert!(d.iter().filter(|x| x.level == DiagnosticLevel::Error).count() == 0);
+        assert!(
+            d.iter()
+                .filter(|x| x.level == DiagnosticLevel::Error)
+                .count()
+                == 0
+        );
     }
 
     #[test]
@@ -3827,7 +3835,12 @@ isolation: worktree
 ---
 Body";
         let d = validate(c);
-        assert!(d.iter().filter(|x| x.level == DiagnosticLevel::Error).count() == 0);
+        assert!(
+            d.iter()
+                .filter(|x| x.level == DiagnosticLevel::Error)
+                .count()
+                == 0
+        );
     }
 
     #[test]
@@ -3839,7 +3852,12 @@ initialPrompt: Start here
 ---
 Body";
         let d = validate(c);
-        assert!(d.iter().filter(|x| x.level == DiagnosticLevel::Error).count() == 0);
+        assert!(
+            d.iter()
+                .filter(|x| x.level == DiagnosticLevel::Error)
+                .count()
+                == 0
+        );
     }
 
     #[test]
@@ -3853,7 +3871,12 @@ mcpServers:
 ---
 Body";
         let d = validate(c);
-        assert!(d.iter().filter(|x| x.level == DiagnosticLevel::Error).count() == 0);
+        assert!(
+            d.iter()
+                .filter(|x| x.level == DiagnosticLevel::Error)
+                .count()
+                == 0
+        );
     }
 
     // ===== CC-AG-014 Tests: Invalid Effort Value =====

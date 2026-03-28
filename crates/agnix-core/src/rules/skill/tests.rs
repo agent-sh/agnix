@@ -4060,12 +4060,7 @@ fn test_cc_sk_018_valid_effort_values() {
             .filter(|d| d.rule == "CC-SK-018")
             .collect();
 
-        assert_eq!(
-            cc_sk_018.len(),
-            0,
-            "Effort '{}' should be valid",
-            effort
-        );
+        assert_eq!(cc_sk_018.len(), 0, "Effort '{}' should be valid", effort);
     }
 }
 
@@ -4092,7 +4087,8 @@ Body"#;
 
 #[test]
 fn test_cc_sk_019_empty_paths() {
-    let content = "---\nname: test-skill\ndescription: Use when testing paths\npaths: \"\"\n---\nBody";
+    let content =
+        "---\nname: test-skill\ndescription: Use when testing paths\npaths: \"\"\n---\nBody";
 
     let validator = SkillValidator;
     let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
@@ -4111,7 +4107,8 @@ fn test_cc_sk_019_empty_paths() {
 
 #[test]
 fn test_cc_sk_019_whitespace_only_paths() {
-    let content = "---\nname: test-skill\ndescription: Use when testing paths\npaths: \"   \"\n---\nBody";
+    let content =
+        "---\nname: test-skill\ndescription: Use when testing paths\npaths: \"   \"\n---\nBody";
 
     let validator = SkillValidator;
     let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
@@ -4188,12 +4185,7 @@ fn test_cc_sk_020_valid_shell_values() {
             .filter(|d| d.rule == "CC-SK-020")
             .collect();
 
-        assert_eq!(
-            cc_sk_020.len(),
-            0,
-            "Shell '{}' should be valid",
-            shell
-        );
+        assert_eq!(cc_sk_020.len(), 0, "Shell '{}' should be valid", shell);
     }
 }
 

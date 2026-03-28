@@ -1782,9 +1782,7 @@ fn validate_codex_config_rules(
                         value_type_name(value)
                     ),
                 )
-                .with_suggestion(
-                    "Set windows.sandbox to 'elevated' or 'unelevated'.".to_string(),
-                ),
+                .with_suggestion("Set windows.sandbox to 'elevated' or 'unelevated'.".to_string()),
             );
         }
     }

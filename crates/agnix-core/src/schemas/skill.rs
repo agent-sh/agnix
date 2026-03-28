@@ -72,10 +72,22 @@ pub struct SkillSchema {
 /// Known top-level frontmatter fields for SKILL.md
 #[cfg(test)]
 pub const KNOWN_SKILL_FRONTMATTER_FIELDS: &[&str] = &[
-    "name", "description", "license", "compatibility", "metadata",
-    "allowed-tools", "argument-hint", "disable-model-invocation",
-    "user-invocable", "model", "context", "agent", "hooks",
-    "effort", "paths", "shell",
+    "name",
+    "description",
+    "license",
+    "compatibility",
+    "metadata",
+    "allowed-tools",
+    "argument-hint",
+    "disable-model-invocation",
+    "user-invocable",
+    "model",
+    "context",
+    "agent",
+    "hooks",
+    "effort",
+    "paths",
+    "shell",
 ];
 
 /// Valid model aliases for skill frontmatter
@@ -510,10 +522,7 @@ mod tests {
     fn test_paths_field_stores_value() {
         let mut skill = make_skill("test", "Test skill");
         skill.paths = Some("src/**/*.rs, tests/**/*.rs".to_string());
-        assert_eq!(
-            skill.paths.as_deref(),
-            Some("src/**/*.rs, tests/**/*.rs")
-        );
+        assert_eq!(skill.paths.as_deref(), Some("src/**/*.rs, tests/**/*.rs"));
     }
 
     // ===== Known Frontmatter Fields =====
