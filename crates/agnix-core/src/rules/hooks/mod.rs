@@ -1,4 +1,4 @@
-//! Hooks validation rules (CC-HK-001 to CC-HK-024)
+//! Hooks validation rules (CC-HK-001 to CC-HK-025)
 
 use crate::{
     config::LintConfig,
@@ -37,6 +37,7 @@ const RULE_IDS: &[&str] = &[
     "CC-HK-022",
     "CC-HK-023",
     "CC-HK-024",
+    "CC-HK-025",
 ];
 
 pub struct HooksValidator;
@@ -478,6 +479,11 @@ impl Validator for HooksValidator {
         // CC-HK-024: HTTP headers with $VAR but missing allowedEnvVars
         if config.is_rule_enabled("CC-HK-024") {
             validate_cc_hk_024_headers_env_vars(&raw_value, path, &mut diagnostics);
+        }
+
+        // CC-HK-025: Invalid matcher value for event type
+        if config.is_rule_enabled("CC-HK-025") {
+            validate_cc_hk_025_invalid_matcher_value(&raw_value, path, &mut diagnostics);
         }
 
         let settings: SettingsSchema = match serde_json::from_value(raw_value) {

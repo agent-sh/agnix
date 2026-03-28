@@ -352,6 +352,27 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Fix**: Manual fix required - remove unknown field or correct typo
 **Source**: code.claude.com/docs/en/skills
 
+<a id="cc-sk-018"></a>
+### CC-SK-018 [MEDIUM] Invalid Effort Value
+**Requirement**: effort SHOULD be low, medium, high, or max
+**Detection**: Check effort field value
+**Fix**: Manual
+**Source**: code.claude.com/docs/en/skills
+
+<a id="cc-sk-019"></a>
+### CC-SK-019 [LOW] Invalid Paths Format
+**Requirement**: paths field MAY be present and must not be empty
+**Detection**: Check paths field is non-empty
+**Fix**: Manual
+**Source**: code.claude.com/docs/en/skills
+
+<a id="cc-sk-020"></a>
+### CC-SK-020 [MEDIUM] Invalid Shell Value
+**Requirement**: shell field SHOULD be "bash" or "powershell"
+**Detection**: Check shell field value
+**Fix**: Manual
+**Source**: code.claude.com/docs/en/skills
+
 ---
 
 ## PER-CLIENT SKILL RULES
@@ -696,6 +717,48 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Fix**: Auto-fix (unsafe) -- replace `Setup` with `SessionStart`
 **Source**: code.claude.com/docs/en/hooks
 
+<a id="cc-hk-020"></a>
+### CC-HK-020 [HIGH] HTTP Hook Missing URL
+**Requirement**: HTTP hooks (type: "http") MUST have a url field
+**Detection**: Check for type:"http" entries missing url key
+**Fix**: Manual - add url field
+**Source**: code.claude.com/docs/en/hooks
+
+<a id="cc-hk-021"></a>
+### CC-HK-021 [MEDIUM] Invalid If Field
+**Requirement**: The if field SHOULD be a non-empty string, only on tool events
+**Detection**: Check if field presence and type
+**Fix**: Manual
+**Source**: code.claude.com/docs/en/hooks
+
+<a id="cc-hk-022"></a>
+### CC-HK-022 [MEDIUM] Invalid Shell Value
+**Requirement**: shell field SHOULD be "bash" or "powershell"
+**Detection**: Check shell field value
+**Fix**: Manual
+**Source**: code.claude.com/docs/en/hooks
+
+<a id="cc-hk-023"></a>
+### CC-HK-023 [LOW] Once Field Not Boolean
+**Requirement**: once field MAY be present and must be boolean
+**Detection**: Check once field type
+**Fix**: Manual
+**Source**: code.claude.com/docs/en/hooks
+
+<a id="cc-hk-024"></a>
+### CC-HK-024 [MEDIUM] Headers Missing AllowedEnvVars
+**Requirement**: HTTP hook headers with $VAR interpolation SHOULD have allowedEnvVars
+**Detection**: Check for $ patterns in headers without allowedEnvVars
+**Fix**: Manual - add allowedEnvVars array
+**Source**: code.claude.com/docs/en/hooks
+
+<a id="cc-hk-025"></a>
+### CC-HK-025 [LOW] Invalid Matcher Value
+**Requirement**: Matcher values MAY be validated against known values per event
+**Detection**: Check matcher values against event-specific allowlists
+**Fix**: Manual
+**Source**: code.claude.com/docs/en/hooks
+
 ---
 
 ## CLAUDE CODE RULES (SUBAGENTS)
@@ -791,6 +854,41 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Fix**: [AUTO-FIX] Use kebab-case format (e.g., 'my-skill-name')
 **Source**: code.claude.com/docs/en/sub-agents
 
+<a id="cc-ag-014"></a>
+### CC-AG-014 [MEDIUM] Invalid Effort Value
+**Requirement**: effort SHOULD be low, medium, high, or max
+**Detection**: Check effort field value
+**Fix**: Manual
+**Source**: code.claude.com/docs/en/sub-agents
+
+<a id="cc-ag-015"></a>
+### CC-AG-015 [MEDIUM] Invalid Isolation Value
+**Requirement**: isolation SHOULD be "worktree"
+**Detection**: Check isolation field value
+**Fix**: Manual
+**Source**: code.claude.com/docs/en/sub-agents
+
+<a id="cc-ag-016"></a>
+### CC-AG-016 [MEDIUM] Invalid Background Type
+**Requirement**: background SHOULD be boolean
+**Detection**: Check background field type
+**Fix**: Manual
+**Source**: code.claude.com/docs/en/sub-agents
+
+<a id="cc-ag-017"></a>
+### CC-AG-017 [MEDIUM] Invalid MaxTurns Value
+**Requirement**: maxTurns SHOULD be a positive integer
+**Detection**: Check maxTurns is > 0
+**Fix**: Manual
+**Source**: code.claude.com/docs/en/sub-agents
+
+<a id="cc-ag-019"></a>
+### CC-AG-019 [LOW] Unknown Agent Frontmatter Field
+**Requirement**: Agent frontmatter fields MAY be validated against known set
+**Detection**: Check for keys not in known agent fields
+**Fix**: Manual - remove or fix typo
+**Source**: code.claude.com/docs/en/sub-agents
+
 ---
 
 ## CLAUDE CODE RULES (MEMORY)
@@ -878,6 +976,13 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Requirement**: `.claude/rules/*.md` frontmatter SHOULD only contain known keys (`paths`)
 **Detection**: Parse YAML frontmatter, flag keys not in known set
 **Fix**: Auto-fix (unsafe) - remove unknown key line (may miss multi-line values)
+**Source**: code.claude.com/docs/en/memory
+
+<a id="cc-mem-014"></a>
+### CC-MEM-014 [MEDIUM] CLAUDE.md Exceeds Line Limit
+**Requirement**: CLAUDE.md SHOULD be under 200 lines
+**Detection**: Count non-empty lines
+**Fix**: Manual - split or trim content
 **Source**: code.claude.com/docs/en/memory
 
 ---
@@ -998,6 +1103,34 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Requirement**: If `homepage` field is present, it SHOULD be a valid URL (http/https)
 **Detection**: Validate URL format with http/https scheme check
 **Fix**: Manual fix required
+**Source**: code.claude.com/docs/en/plugins-reference
+
+<a id="cc-pl-011"></a>
+### CC-PL-011 [HIGH] LSP Server Missing Required Fields
+**Requirement**: LSP servers MUST have command and extensionToLanguage
+**Detection**: Check lspServers entries for required fields
+**Fix**: Manual
+**Source**: code.claude.com/docs/en/plugins-reference
+
+<a id="cc-pl-012"></a>
+### CC-PL-012 [MEDIUM] Invalid UserConfig Key
+**Requirement**: userConfig keys SHOULD be valid identifiers
+**Detection**: Check keys match identifier pattern
+**Fix**: Manual
+**Source**: code.claude.com/docs/en/plugins-reference
+
+<a id="cc-pl-013"></a>
+### CC-PL-013 [MEDIUM] Channel Missing Server Reference
+**Requirement**: channels entries SHOULD have server field
+**Detection**: Check each channel has server key
+**Fix**: Manual
+**Source**: code.claude.com/docs/en/plugins-reference
+
+<a id="cc-pl-014"></a>
+### CC-PL-014 [MEDIUM] Plugin Agent Unsupported Field
+**Requirement**: Plugin agents SHOULD NOT use hooks, mcpServers, or permissionMode
+**Detection**: Check plugin agent frontmatter for unsupported keys
+**Fix**: Manual - remove unsupported fields
 **Source**: code.claude.com/docs/en/plugins-reference
 
 ---
@@ -1298,6 +1431,62 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Fix**: Add or correct `copilot-setup-steps` job in the workflow
 **Source**: docs.github.com/en/copilot/how-tos/agents/copilot-coding-agent/customizing-the-development-environment-for-copilot-coding-agent
 
+<a id="cop-019"></a>
+### COP-019 [HIGH] Plugin Missing Required Fields
+**Requirement**: Copilot plugin.json MUST have name, description, and version
+**Detection**: Check plugin manifest for required fields
+**Fix**: Manual
+**Source**: docs.github.com/en/copilot/customizing-copilot
+
+<a id="cop-020"></a>
+### COP-020 [MEDIUM] Plugin Invalid Field Types
+**Requirement**: Plugin manifest fields SHOULD have correct types
+**Detection**: Check name/version/description are strings, keywords is array, agents/skills are objects
+**Fix**: Manual
+**Source**: docs.github.com/en/copilot/customizing-copilot
+
+<a id="cop-022"></a>
+### COP-022 [HIGH] CLI Skill Missing Frontmatter
+**Requirement**: Copilot CLI SKILL.md MUST have name and description frontmatter
+**Detection**: Parse frontmatter, check for required fields
+**Fix**: Manual
+**Source**: docs.github.com/en/copilot/customizing-copilot
+
+<a id="cop-023"></a>
+### COP-023 [MEDIUM] CLI Skill Name Format
+**Requirement**: Copilot CLI skill name SHOULD be kebab-case
+**Detection**: Check name against lowercase-hyphen pattern
+**Fix**: Manual
+**Source**: docs.github.com/en/copilot/customizing-copilot
+
+<a id="cop-024"></a>
+### COP-024 [MEDIUM] CLI Skill Unknown Field
+**Requirement**: Copilot CLI SKILL.md frontmatter fields SHOULD be from known set
+**Detection**: Check for unknown frontmatter keys
+**Fix**: Manual
+**Source**: docs.github.com/en/copilot/customizing-copilot
+
+<a id="cop-025"></a>
+### COP-025 [LOW] Agent File Wrong Location
+**Requirement**: .agent.md files MAY be under .github/agents/ or ~/.copilot/agents/
+**Detection**: Check path of .agent.md files
+**Fix**: Manual - move file
+**Source**: docs.github.com/en/copilot/customizing-copilot
+
+<a id="cop-026"></a>
+### COP-026 [LOW] Deprecated SSE Transport
+**Requirement**: MCP servers MAY use HTTP instead of deprecated SSE
+**Detection**: Check for type:"sse" in mcp-config.json
+**Fix**: Manual - switch to type:"http"
+**Source**: docs.github.com/en/copilot/customizing-copilot
+
+<a id="cop-027"></a>
+### COP-027 [LOW] Deprecated Infer Field
+**Requirement**: Agent infer field MAY be replaced with disable-model-invocation
+**Detection**: Check for infer key in .agent.md frontmatter
+**Fix**: Manual - use disable-model-invocation and user-invocable
+**Source**: docs.github.com/en/copilot/customizing-copilot
+
 ---
 
 ## CURSOR PROJECT RULES
@@ -1414,6 +1603,27 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Fix**: Provide required fields and valid terminal objects (`name`, `command`)
 **Source**: cursor.com/docs/cloud-agent/setup
 
+<a id="cur-017"></a>
+### CUR-017 [MEDIUM] Invalid Hook Entry Field Types
+**Requirement**: Hook entry fields SHOULD have correct types (timeout: number, loop_limit: number|null, failClosed: boolean)
+**Detection**: Check field types in hook entries
+**Fix**: Manual
+**Source**: cursor.com/docs/agent/hooks
+
+<a id="cur-018"></a>
+### CUR-018 [MEDIUM] Prompt Hook Missing Prompt Field
+**Requirement**: Prompt-type hooks SHOULD have a prompt field
+**Detection**: Check for type:"prompt" without prompt key
+**Fix**: Manual
+**Source**: cursor.com/docs/agent/hooks
+
+<a id="cur-019"></a>
+### CUR-019 [LOW] Invalid Prompt Hook Model Type
+**Requirement**: model field on prompt hooks MAY be validated as string
+**Detection**: Check model field type
+**Fix**: Manual
+**Source**: cursor.com/docs/agent/hooks
+
 ---
 
 ## CLINE RULES
@@ -1445,6 +1655,41 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Detection**: Parse YAML frontmatter, check if `paths` is a scalar string (Cline silently ignores scalar values)
 **Fix**: [AUTO-FIX safe] Convert scalar paths to array format
 **Source**: docs.cline.bot/features/cline-rules
+
+<a id="cln-005"></a>
+### CLN-005 [HIGH] Empty Workflow File
+**Requirement**: Workflow files MUST have content
+**Detection**: Check .clinerules/workflows/*.md for empty content
+**Fix**: Manual - add workflow content
+**Source**: docs.cline.bot/features/cline-rules/overview
+
+<a id="cln-006"></a>
+### CLN-006 [MEDIUM] Workflow With Frontmatter
+**Requirement**: Workflow files SHOULD be plain markdown without frontmatter
+**Detection**: Check for --- delimiter at start of workflow file
+**Fix**: Manual - remove frontmatter
+**Source**: docs.cline.bot/features/cline-rules/overview
+
+<a id="cln-009"></a>
+### CLN-009 [MEDIUM] Unknown Hook Event Name
+**Requirement**: Hook filenames SHOULD match valid events: TaskStart, TaskResume, TaskCancel, TaskComplete, PreToolUse, PostToolUse, UserPromptSubmit, PreCompact
+**Detection**: Check filename against event list
+**Fix**: Manual - rename file
+**Source**: docs.cline.bot/features/cline-rules/overview
+
+<a id="cl-sk-002"></a>
+### CL-SK-002 [HIGH] Missing Skill Name
+**Requirement**: Cline SKILL.md MUST have name frontmatter field
+**Detection**: Parse frontmatter, check for name
+**Fix**: Manual - add name field
+**Source**: docs.cline.bot/features/cline-rules/overview
+
+<a id="cl-sk-003"></a>
+### CL-SK-003 [HIGH] Missing Skill Description
+**Requirement**: Cline SKILL.md MUST have description frontmatter field
+**Detection**: Parse frontmatter, check for description
+**Fix**: Manual - add description field
+**Source**: docs.cline.bot/features/cline-rules/overview
 
 ---
 
@@ -1628,6 +1873,20 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Fix**: No auto-fix
 **Source**: opencode.ai/docs/config
 
+<a id="oc-dep-005"></a>
+### OC-DEP-005 [MEDIUM] Deprecated TUI Keys
+**Requirement**: theme, keybinds, tui keys SHOULD be in tui.json, not opencode.json
+**Detection**: Check for deprecated TUI keys in opencode.json
+**Fix**: Manual - move to tui.json
+**Source**: opencode.ai/docs/
+
+<a id="oc-dep-006"></a>
+### OC-DEP-006 [MEDIUM] Deprecated MaxSteps Field
+**Requirement**: maxSteps SHOULD be replaced with steps
+**Detection**: Check for maxSteps without steps in agent config
+**Fix**: Manual - rename to steps
+**Source**: opencode.ai/docs/
+
 <a id="oc-cfg-008"></a>
 ### OC-CFG-008 [HIGH] Invalid Log Level
 **Requirement**: The `logLevel` field MUST be one of: fatal, error, warn, info, debug, trace
@@ -1663,6 +1922,13 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Fix**: No auto-fix
 **Source**: opencode.ai/docs/config
 
+<a id="oc-cfg-013"></a>
+### OC-CFG-013 [HIGH] Invalid Server Config
+**Requirement**: Server config fields MUST have correct types (port: number, hostname: string, mdns: boolean, cors: array)
+**Detection**: Check server object field types
+**Fix**: Manual
+**Source**: opencode.ai/docs/
+
 <a id="oc-ag-005"></a>
 ### OC-AG-005 [HIGH] top_p Out of Range
 **Requirement**: The agent `top_p` field MUST be between 0.0 and 1.0
@@ -1690,6 +1956,13 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Detection**: Parse JSON, validate agent `hidden` is boolean
 **Fix**: No auto-fix
 **Source**: opencode.ai/docs/config
+
+<a id="oc-ag-009"></a>
+### OC-AG-009 [HIGH] Invalid Agent Disable Type
+**Requirement**: Agent disable field MUST be boolean
+**Detection**: Check disable field type
+**Fix**: Manual
+**Source**: opencode.ai/docs/
 
 <a id="oc-lsp-001"></a>
 ### OC-LSP-001 [MEDIUM] LSP Command Without Extensions
@@ -2040,6 +2313,41 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Detection**: Parse config and verify value is a positive integer
 **Fix**: No auto-fix (set to a valid positive integer)
 **Source**: developers.openai.com/codex/config-reference, developers.openai.com/codex/config-schema.json
+
+<a id="cdx-cfg-023"></a>
+### CDX-CFG-023 [MEDIUM] Invalid Approval Policy Sub-field
+**Requirement**: Granular approval_policy sub-fields SHOULD be from known set
+**Detection**: Check object keys against: sandbox_approval, rules, mcp_elicitations, request_permissions, skill_approval
+**Fix**: Manual
+**Source**: developers.openai.com/codex/
+
+<a id="cdx-cfg-024"></a>
+### CDX-CFG-024 [MEDIUM] Invalid Approvals Reviewer Value
+**Requirement**: approvals_reviewer SHOULD be "user" or "guardian_subagent"
+**Detection**: Check enum value
+**Fix**: Manual
+**Source**: developers.openai.com/codex/
+
+<a id="cdx-cfg-025"></a>
+### CDX-CFG-025 [MEDIUM] Invalid Service Tier Value
+**Requirement**: service_tier SHOULD be "flex" or "fast"
+**Detection**: Check enum value
+**Fix**: Manual
+**Source**: developers.openai.com/codex/
+
+<a id="cdx-cfg-026"></a>
+### CDX-CFG-026 [LOW] Invalid Network Permission Field
+**Requirement**: permissions.network sub-fields MAY be validated
+**Detection**: Check keys against known network permission fields
+**Fix**: Manual
+**Source**: developers.openai.com/codex/
+
+<a id="cdx-cfg-027"></a>
+### CDX-CFG-027 [LOW] Invalid Windows Sandbox Value
+**Requirement**: windows.sandbox SHOULD be "elevated" or "unelevated"
+**Detection**: Check enum value
+**Fix**: Manual
+**Source**: developers.openai.com/codex/
 
 <a id="cdx-ag-004"></a>
 ### CDX-AG-004 [MEDIUM] AGENTS.md Exceeds Size Limit

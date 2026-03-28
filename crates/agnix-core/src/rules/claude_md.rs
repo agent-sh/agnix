@@ -21,6 +21,7 @@ const RULE_IDS: &[&str] = &[
     "CC-MEM-008",
     "CC-MEM-009",
     "CC-MEM-010",
+    "CC-MEM-014",
 ];
 
 pub struct ClaudeMdValidator;
@@ -257,6 +258,29 @@ impl Validator for ClaudeMdValidator {
                         );
                     }
                 }
+            }
+        }
+
+        // CC-MEM-014: CLAUDE.md exceeds 200-line recommended limit
+        if config.is_rule_enabled("CC-MEM-014") {
+            const MAX_RECOMMENDED_LINES: usize = 200;
+            let non_empty_lines = content.lines().filter(|line| !line.trim().is_empty()).count();
+            if non_empty_lines > MAX_RECOMMENDED_LINES {
+                diagnostics.push(
+                    Diagnostic::info(
+                        path.to_path_buf(),
+                        1,
+                        0,
+                        "CC-MEM-014",
+                        format!(
+                            "CLAUDE.md has {} non-empty lines, exceeding the recommended {} line limit",
+                            non_empty_lines, MAX_RECOMMENDED_LINES
+                        ),
+                    )
+                    .with_suggestion(
+                        "Split content into multiple files (e.g. CLAUDE.local.md) or trim to keep under 200 non-empty lines.",
+                    ),
+                );
             }
         }
 
@@ -1053,6 +1077,64 @@ You should consider this approach.
         assert!(mem010.is_empty());
     }
 
+    // CC-MEM-014: CLAUDE.md exceeds 200-line recommended limit
+
+    #[test]
+    fn test_cc_mem_014_exceeds_line_limit() {
+        // Create content with 201 non-empty lines
+        let lines: Vec<String> = (1..=201).map(|i| format!("Rule number {}", i)).collect();
+        let content = lines.join("\n");
+
+        let validator = ClaudeMdValidator;
+        let diagnostics =
+            validator.validate(Path::new("CLAUDE.md"), &content, &LintConfig::default());
+
+        let mem014: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-MEM-014")
+            .collect();
+        assert_eq!(mem014.len(), 1);
+        assert!(mem014[0].message.contains("201"));
+        assert!(mem014[0].message.contains("200"));
+    }
+
+    #[test]
+    fn test_cc_mem_014_under_limit() {
+        // Create content with exactly 200 non-empty lines
+        let lines: Vec<String> = (1..=200).map(|i| format!("Rule number {}", i)).collect();
+        let content = lines.join("\n");
+
+        let validator = ClaudeMdValidator;
+        let diagnostics =
+            validator.validate(Path::new("CLAUDE.md"), &content, &LintConfig::default());
+
+        let mem014: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-MEM-014")
+            .collect();
+        assert!(mem014.is_empty());
+    }
+
+    #[test]
+    fn test_cc_mem_014_empty_lines_not_counted() {
+        // 100 non-empty lines + 200 empty lines = should NOT trigger
+        let mut lines: Vec<String> = (1..=100).map(|i| format!("Rule number {}", i)).collect();
+        for _ in 0..200 {
+            lines.push(String::new());
+        }
+        let content = lines.join("\n");
+
+        let validator = ClaudeMdValidator;
+        let diagnostics =
+            validator.validate(Path::new("CLAUDE.md"), &content, &LintConfig::default());
+
+        let mem014: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-MEM-014")
+            .collect();
+        assert!(mem014.is_empty());
+    }
+
     #[test]
     fn test_all_cc_mem_rules_can_be_disabled() {
         let rules = [
@@ -1063,6 +1145,7 @@ You should consider this approach.
             "CC-MEM-008",
             "CC-MEM-009",
             "CC-MEM-010",
+            "CC-MEM-014",
         ];
 
         for rule in rules {

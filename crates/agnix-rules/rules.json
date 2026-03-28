@@ -1,8 +1,8 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 342,
-  "last_updated": "2026-03-06",
+  "total_rules": 386,
+  "last_updated": "2026-03-28",
   "schema": {
     "evidence": {
       "source_type": "spec|vendor_docs|vendor_code|paper|community",
@@ -1212,6 +1212,141 @@
       "bad_example": "---\nname: my-agent\ndescription: Agent with invalid skill name format\nskills:\n  - Code_Review\n  - --bad-name\n---\nAgent instructions."
     },
     {
+      "id": "CC-AG-014",
+      "name": "Invalid Effort Value",
+      "severity": "MEDIUM",
+      "category": "claude-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/sub-agents"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: my-agent\neffort: high\n---\nAgent instructions.",
+      "bad_example": "---\nname: my-agent\neffort: maximum\n---\nAgent instructions."
+    },
+    {
+      "id": "CC-AG-015",
+      "name": "Invalid Isolation Value",
+      "severity": "MEDIUM",
+      "category": "claude-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/sub-agents"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: my-agent\nisolation: full\n---\nAgent instructions.",
+      "bad_example": "---\nname: my-agent\nisolation: partial\n---\nAgent instructions."
+    },
+    {
+      "id": "CC-AG-016",
+      "name": "Invalid Background Type",
+      "severity": "MEDIUM",
+      "category": "claude-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/sub-agents"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: my-agent\nbackground: true\n---\nAgent instructions.",
+      "bad_example": "---\nname: my-agent\nbackground: \"yes\"\n---\nAgent instructions."
+    },
+    {
+      "id": "CC-AG-017",
+      "name": "Invalid MaxTurns Value",
+      "severity": "MEDIUM",
+      "category": "claude-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/sub-agents"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: my-agent\nmax-turns: 10\n---\nAgent instructions.",
+      "bad_example": "---\nname: my-agent\nmax-turns: \"ten\"\n---\nAgent instructions."
+    },
+    {
+      "id": "CC-AG-019",
+      "name": "Unknown Agent Frontmatter Field",
+      "severity": "LOW",
+      "category": "claude-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/sub-agents"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: my-agent\ndescription: A helpful agent\n---\nAgent instructions.",
+      "bad_example": "---\nname: my-agent\npriority: high\n---\nAgent instructions."
+    },
+    {
       "id": "CC-HK-001",
       "name": "Invalid Hook Event",
       "severity": "HIGH",
@@ -1741,6 +1876,192 @@
       "bad_example": "{\n  \"hooks\": {\n    \"Setup\": [\n      {\n        \"hooks\": [\n          { \"type\": \"command\", \"command\": \"echo start\", \"timeout\": 30 }\n        ]\n      }\n    ]\n  }\n}"
     },
     {
+      "id": "CC-HK-020",
+      "name": "HTTP Hook Missing URL",
+      "severity": "HIGH",
+      "category": "claude-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/hooks"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "claude-code",
+          "file_types": [
+            "settings-json",
+            "hooks-json"
+          ]
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{ \"type\": \"http\", \"url\": \"https://example.com/hook\", \"timeout\": 30 }",
+      "bad_example": "{ \"type\": \"http\", \"timeout\": 30 }"
+    },
+    {
+      "id": "CC-HK-021",
+      "name": "Invalid If Field",
+      "severity": "MEDIUM",
+      "category": "claude-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/hooks"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "claude-code",
+          "file_types": [
+            "settings-json",
+            "hooks-json"
+          ]
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{ \"type\": \"command\", \"command\": \"npm test\", \"if\": \"tool_name == 'Bash'\" }",
+      "bad_example": "{ \"type\": \"command\", \"command\": \"npm test\", \"if\": \"\" }"
+    },
+    {
+      "id": "CC-HK-022",
+      "name": "Invalid Shell Value",
+      "severity": "MEDIUM",
+      "category": "claude-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/hooks"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "claude-code",
+          "file_types": [
+            "settings-json",
+            "hooks-json"
+          ]
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{ \"type\": \"command\", \"command\": \"echo hi\", \"shell\": \"bash\" }",
+      "bad_example": "{ \"type\": \"command\", \"command\": \"echo hi\", \"shell\": \"zsh\" }"
+    },
+    {
+      "id": "CC-HK-023",
+      "name": "Once Field Not Boolean",
+      "severity": "LOW",
+      "category": "claude-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/hooks"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "claude-code",
+          "file_types": [
+            "settings-json",
+            "hooks-json"
+          ]
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{ \"type\": \"command\", \"command\": \"echo hi\", \"once\": true }",
+      "bad_example": "{ \"type\": \"command\", \"command\": \"echo hi\", \"once\": \"yes\" }"
+    },
+    {
+      "id": "CC-HK-024",
+      "name": "Headers Missing AllowedEnvVars",
+      "severity": "MEDIUM",
+      "category": "claude-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/hooks"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "claude-code",
+          "file_types": [
+            "settings-json",
+            "hooks-json"
+          ]
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{ \"type\": \"http\", \"url\": \"https://ex.com\", \"headers\": { \"Authorization\": \"$TOKEN\" }, \"allowedEnvVars\": [\"TOKEN\"] }",
+      "bad_example": "{ \"type\": \"http\", \"url\": \"https://ex.com\", \"headers\": { \"Authorization\": \"$TOKEN\" } }"
+    },
+    {
+      "id": "CC-HK-025",
+      "name": "Invalid Matcher Value",
+      "severity": "LOW",
+      "category": "claude-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/hooks"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "claude-code",
+          "file_types": [
+            "settings-json",
+            "hooks-json"
+          ]
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{ \"matcher\": \"Bash\", \"hooks\": [{ \"type\": \"command\", \"command\": \"echo ok\" }] }",
+      "bad_example": "{ \"matcher\": 123, \"hooks\": [{ \"type\": \"command\", \"command\": \"echo ok\" }] }"
+    },
+    {
       "id": "CC-MEM-001",
       "name": "Invalid Import Path",
       "severity": "HIGH",
@@ -2063,6 +2384,33 @@
       "bad_example": "---\npaths:\n  - \"src/**/*.ts\"\ndescription: \"some rule\"\nalwaysApply: true\n---\n# TypeScript Guidelines\n\nAlways use strict mode."
     },
     {
+      "id": "CC-MEM-014",
+      "name": "CLAUDE.md Exceeds Line Limit",
+      "severity": "MEDIUM",
+      "category": "claude-memory",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/memory"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "# Project\n\nKeep CLAUDE.md concise and focused.",
+      "bad_example": "# Project\n\n(500+ lines of instructions that exceed recommended limits)"
+    },
+    {
       "id": "CC-PL-001",
       "name": "Plugin Manifest Not in .claude-plugin/",
       "severity": "HIGH",
@@ -2334,6 +2682,114 @@
       },
       "good_example": "{\n  \"name\": \"my-plugin\",\n  \"description\": \"A useful plugin\",\n  \"version\": \"1.0.0\",\n  \"homepage\": \"https://example.com/my-plugin\"\n}",
       "bad_example": "{\n  \"name\": \"my-plugin\",\n  \"description\": \"A useful plugin\",\n  \"version\": \"1.0.0\",\n  \"homepage\": \"not-a-valid-url\"\n}"
+    },
+    {
+      "id": "CC-PL-011",
+      "name": "LSP Server Missing Required Fields",
+      "severity": "HIGH",
+      "category": "claude-plugins",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/plugins-reference"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"lsp\": { \"command\": \"node\", \"args\": [\"server.js\"], \"languages\": [\"typescript\"] }\n}",
+      "bad_example": "{\n  \"lsp\": { \"command\": \"node\" }\n}"
+    },
+    {
+      "id": "CC-PL-012",
+      "name": "Invalid UserConfig Key",
+      "severity": "MEDIUM",
+      "category": "claude-plugins",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/plugins-reference"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"userConfig\": { \"apiKey\": { \"type\": \"string\" } }\n}",
+      "bad_example": "{\n  \"userConfig\": { \"api key!\": { \"type\": \"string\" } }\n}"
+    },
+    {
+      "id": "CC-PL-013",
+      "name": "Channel Missing Server Reference",
+      "severity": "MEDIUM",
+      "category": "claude-plugins",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/plugins-reference"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"channels\": [{ \"name\": \"stable\", \"server\": \"https://example.com\" }]\n}",
+      "bad_example": "{\n  \"channels\": [{ \"name\": \"stable\" }]\n}"
+    },
+    {
+      "id": "CC-PL-014",
+      "name": "Plugin Agent Unsupported Field",
+      "severity": "MEDIUM",
+      "category": "claude-plugins",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/plugins-reference"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"agents\": [{ \"name\": \"helper\", \"description\": \"Assists with code\" }]\n}",
+      "bad_example": "{\n  \"agents\": [{ \"name\": \"helper\", \"priority\": 1 }]\n}"
     },
     {
       "id": "CC-SK-001",
@@ -2804,6 +3260,87 @@
       },
       "good_example": "---\nname: lint-config\ndescription: Use when validating configuration files\nallowed-tools: Read, Grep\n---\nLint project configuration files.",
       "bad_example": "---\nname: lint-config\ndescription: Use when validating configuration files\nallowed_tools: Read, Grep\n---\nLint project configuration files."
+    },
+    {
+      "id": "CC-SK-018",
+      "name": "Invalid Effort Value",
+      "severity": "MEDIUM",
+      "category": "claude-skills",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/skills"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: my-skill\neffort: high\n---\nSkill instructions.",
+      "bad_example": "---\nname: my-skill\neffort: maximum\n---\nSkill instructions."
+    },
+    {
+      "id": "CC-SK-019",
+      "name": "Invalid Paths Format",
+      "severity": "LOW",
+      "category": "claude-skills",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/skills"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: my-skill\npaths:\n  - \"src/**/*.ts\"\n---\nSkill instructions.",
+      "bad_example": "---\nname: my-skill\npaths: src/**/*.ts\n---\nSkill instructions."
+    },
+    {
+      "id": "CC-SK-020",
+      "name": "Invalid Shell Value",
+      "severity": "MEDIUM",
+      "category": "claude-skills",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/skills"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: my-skill\nshell: bash\n---\nSkill instructions.",
+      "bad_example": "---\nname: my-skill\nshell: zsh\n---\nSkill instructions."
     },
     {
       "id": "CDX-000",
@@ -3900,6 +4437,141 @@
       "bad_example": "profile = 123"
     },
     {
+      "id": "CDX-CFG-023",
+      "name": "Invalid Approval Policy Sub-field",
+      "severity": "MEDIUM",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://developers.openai.com/codex/"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "[approval_policy]\nmode = \"suggest\"",
+      "bad_example": "[approval_policy]\nmode = \"yolo\""
+    },
+    {
+      "id": "CDX-CFG-024",
+      "name": "Invalid Approvals Reviewer Value",
+      "severity": "MEDIUM",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://developers.openai.com/codex/"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "[approvals]\nreviewer = \"user\"",
+      "bad_example": "[approvals]\nreviewer = 42"
+    },
+    {
+      "id": "CDX-CFG-025",
+      "name": "Invalid Service Tier Value",
+      "severity": "MEDIUM",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://developers.openai.com/codex/"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "service_tier = \"default\"",
+      "bad_example": "service_tier = \"ultra\""
+    },
+    {
+      "id": "CDX-CFG-026",
+      "name": "Invalid Network Permission Field",
+      "severity": "LOW",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://developers.openai.com/codex/"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "[network]\nallow = [\"*.example.com\"]",
+      "bad_example": "[network]\nallow = \"all\""
+    },
+    {
+      "id": "CDX-CFG-027",
+      "name": "Invalid Windows Sandbox Value",
+      "severity": "LOW",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://developers.openai.com/codex/"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "[sandbox]\nwindows = \"wsl\"",
+      "bad_example": "[sandbox]\nwindows = \"docker\""
+    },
+    {
       "id": "CL-SK-001",
       "name": "Cline Skill Uses Unsupported Field",
       "severity": "MEDIUM",
@@ -3926,6 +4598,60 @@
       },
       "good_example": "---\nname: my-skill\ndescription: A useful development skill\n---\n# My Skill\n\nSkill instructions here.",
       "bad_example": "---\nname: my-skill\ndescription: A useful development skill\ncontext: fork\n---\n# My Skill\n\nSkill instructions here."
+    },
+    {
+      "id": "CL-SK-002",
+      "name": "Missing Skill Name",
+      "severity": "HIGH",
+      "category": "cline-skills",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://docs.cline.bot/features/cline-rules/overview"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "cline"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: my-skill\ndescription: A skill\n---\n# My Skill",
+      "bad_example": "---\ndescription: A skill\n---\n# My Skill"
+    },
+    {
+      "id": "CL-SK-003",
+      "name": "Missing Skill Description",
+      "severity": "HIGH",
+      "category": "cline-skills",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://docs.cline.bot/features/cline-rules/overview"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "cline"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: my-skill\ndescription: A useful development skill\n---\n# My Skill",
+      "bad_example": "---\nname: my-skill\n---\n# My Skill"
     },
     {
       "id": "CLN-001",
@@ -4036,6 +4762,87 @@
       },
       "good_example": "---\npaths:\n  - \"**/*.ts\"\n---\n# TypeScript Rules\n\nUse strict mode.",
       "bad_example": "---\npaths: \"**/*.ts\"\n---\n# TypeScript Rules\n\nUse strict mode."
+    },
+    {
+      "id": "CLN-005",
+      "name": "Empty Workflow File",
+      "severity": "HIGH",
+      "category": "cline",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://docs.cline.bot/features/cline-rules/overview"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "cline"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "# Deploy Workflow\n\n1. Run tests\n2. Build\n3. Deploy",
+      "bad_example": ""
+    },
+    {
+      "id": "CLN-006",
+      "name": "Workflow With Frontmatter",
+      "severity": "MEDIUM",
+      "category": "cline",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://docs.cline.bot/features/cline-rules/overview"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "cline"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "# Deploy Workflow\n\n1. Run tests\n2. Deploy",
+      "bad_example": "---\nname: deploy\n---\n# Deploy Workflow\n\n1. Run tests\n2. Deploy"
+    },
+    {
+      "id": "CLN-009",
+      "name": "Unknown Hook Event Name",
+      "severity": "MEDIUM",
+      "category": "cline",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://docs.cline.bot/features/cline-rules/overview"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "cline"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"hooks\": { \"on_save\": [{ \"command\": \"npm test\" }] }\n}",
+      "bad_example": "{\n  \"hooks\": { \"on_magic\": [{ \"command\": \"npm test\" }] }\n}"
     },
     {
       "id": "COP-001",
@@ -4513,6 +5320,222 @@
       },
       "good_example": "jobs:\n  copilot-setup-steps:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo setup",
       "bad_example": "jobs:\n  setup:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo setup"
+    },
+    {
+      "id": "COP-019",
+      "name": "Plugin Missing Required Fields",
+      "severity": "HIGH",
+      "category": "copilot",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://docs.github.com/en/copilot/customizing-copilot"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "github-copilot"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"name\": \"my-plugin\",\n  \"version\": \"1.0.0\",\n  \"description\": \"A plugin\"\n}",
+      "bad_example": "{\n  \"name\": \"my-plugin\"\n}"
+    },
+    {
+      "id": "COP-020",
+      "name": "Plugin Invalid Field Types",
+      "severity": "MEDIUM",
+      "category": "copilot",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://docs.github.com/en/copilot/customizing-copilot"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "github-copilot"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"name\": \"my-plugin\",\n  \"version\": \"1.0.0\",\n  \"enabled\": true\n}",
+      "bad_example": "{\n  \"name\": \"my-plugin\",\n  \"version\": 1,\n  \"enabled\": \"yes\"\n}"
+    },
+    {
+      "id": "COP-022",
+      "name": "CLI Skill Missing Frontmatter",
+      "severity": "HIGH",
+      "category": "copilot",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://docs.github.com/en/copilot/customizing-copilot"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "github-copilot"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: my-skill\ndescription: Skill for linting\n---\n# My Skill\nInstructions.",
+      "bad_example": "# My Skill\nInstructions without frontmatter."
+    },
+    {
+      "id": "COP-023",
+      "name": "CLI Skill Name Format",
+      "severity": "MEDIUM",
+      "category": "copilot",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://docs.github.com/en/copilot/customizing-copilot"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "github-copilot"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: lint-config\ndescription: Lint config files\n---",
+      "bad_example": "---\nname: Lint Config!!\ndescription: Lint config files\n---"
+    },
+    {
+      "id": "COP-024",
+      "name": "CLI Skill Unknown Field",
+      "severity": "MEDIUM",
+      "category": "copilot",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://docs.github.com/en/copilot/customizing-copilot"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "github-copilot"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: my-skill\ndescription: A useful skill\n---",
+      "bad_example": "---\nname: my-skill\ndescription: A useful skill\npriority: high\n---"
+    },
+    {
+      "id": "COP-025",
+      "name": "Agent File Wrong Location",
+      "severity": "LOW",
+      "category": "copilot",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://docs.github.com/en/copilot/customizing-copilot"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "github-copilot"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": ".github/copilot-instructions.md",
+      "bad_example": "copilot-instructions.md"
+    },
+    {
+      "id": "COP-026",
+      "name": "Deprecated SSE Transport",
+      "severity": "LOW",
+      "category": "copilot",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://docs.github.com/en/copilot/customizing-copilot"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "github-copilot"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"transport\": \"streamable-http\"\n}",
+      "bad_example": "{\n  \"transport\": \"sse\"\n}"
+    },
+    {
+      "id": "COP-027",
+      "name": "Deprecated Infer Field",
+      "severity": "LOW",
+      "category": "copilot",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://docs.github.com/en/copilot/customizing-copilot"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "github-copilot"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"name\": \"my-plugin\",\n  \"version\": \"1.0.0\"\n}",
+      "bad_example": "{\n  \"name\": \"my-plugin\",\n  \"infer\": true\n}"
     },
     {
       "id": "CP-SK-001",
@@ -5007,6 +6030,96 @@
       },
       "good_example": "{\"build\":{\"dockerfile\":\"Dockerfile\",\"context\":\"..\"},\"install\":\"npm ci\",\"start\":\"npm run dev\",\"terminals\":[{\"name\":\"app\",\"command\":\"npm run dev\"}]}",
       "bad_example": "{\"install\":42,\"terminals\":[{\"name\":\"app\"}]}"
+    },
+    {
+      "id": "CUR-017",
+      "name": "Invalid Hook Entry Field Types",
+      "severity": "MEDIUM",
+      "category": "cursor",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://cursor.com/docs/agent/hooks"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "cursor",
+          "file_types": [
+            "cursor-hooks"
+          ]
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"hooks\": {\n    \"save-file\": [{ \"command\": \"npm run lint\", \"events\": [\"file_saved\"] }]\n  }\n}",
+      "bad_example": "{\n  \"hooks\": {\n    \"save-file\": [{ \"command\": 42, \"events\": \"file_saved\" }]\n  }\n}"
+    },
+    {
+      "id": "CUR-018",
+      "name": "Prompt Hook Missing Prompt Field",
+      "severity": "MEDIUM",
+      "category": "cursor",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://cursor.com/docs/agent/hooks"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "cursor",
+          "file_types": [
+            "cursor-hooks"
+          ]
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"hooks\": {\n    \"ai-review\": [{ \"type\": \"prompt\", \"prompt\": \"Review this change\" }]\n  }\n}",
+      "bad_example": "{\n  \"hooks\": {\n    \"ai-review\": [{ \"type\": \"prompt\" }]\n  }\n}"
+    },
+    {
+      "id": "CUR-019",
+      "name": "Invalid Prompt Hook Model Type",
+      "severity": "LOW",
+      "category": "cursor",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://cursor.com/docs/agent/hooks"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "cursor",
+          "file_types": [
+            "cursor-hooks"
+          ]
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"hooks\": {\n    \"ai-review\": [{ \"type\": \"prompt\", \"prompt\": \"Review\", \"model\": \"gpt-4\" }]\n  }\n}",
+      "bad_example": "{\n  \"hooks\": {\n    \"ai-review\": [{ \"type\": \"prompt\", \"prompt\": \"Review\", \"model\": 123 }]\n  }\n}"
     },
     {
       "id": "CX-SK-001",
@@ -9015,6 +10128,60 @@
       "bad_example": "CONTEXT.md"
     },
     {
+      "id": "OC-DEP-005",
+      "name": "Deprecated TUI Keys",
+      "severity": "MEDIUM",
+      "category": "opencode",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://opencode.ai/docs/"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "opencode"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"tui\": { \"theme\": \"dark\" }\n}",
+      "bad_example": "{\n  \"tui\": { \"colors\": { \"bg\": \"#000\" } }\n}"
+    },
+    {
+      "id": "OC-DEP-006",
+      "name": "Deprecated MaxSteps Field",
+      "severity": "MEDIUM",
+      "category": "opencode",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://opencode.ai/docs/"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "opencode"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"agent\": { \"a\": { \"maxTokens\": 8000 } }\n}",
+      "bad_example": "{\n  \"agent\": { \"a\": { \"maxSteps\": 50 } }\n}"
+    },
+    {
       "id": "OC-CFG-008",
       "name": "Invalid Log Level",
       "severity": "HIGH",
@@ -9151,6 +10318,33 @@
       "bad_example": "{\n  \"mcp\": { \"srv\": { \"oauth\": { \"client_id\": \"abc\" } } }\n}"
     },
     {
+      "id": "OC-CFG-013",
+      "name": "Invalid Server Config",
+      "severity": "HIGH",
+      "category": "opencode",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://opencode.ai/docs/"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "opencode"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"mcp\": { \"srv\": { \"type\": \"stdio\", \"command\": \"node server.js\" } }\n}",
+      "bad_example": "{\n  \"mcp\": { \"srv\": { \"type\": \"invalid\" } }\n}"
+    },
+    {
       "id": "OC-AG-005",
       "name": "top_p Out of Range",
       "severity": "HIGH",
@@ -9258,6 +10452,33 @@
       },
       "good_example": "{\n  \"agent\": { \"a\": { \"hidden\": true } }\n}",
       "bad_example": "{\n  \"agent\": { \"a\": { \"hidden\": \"yes\" } }\n}"
+    },
+    {
+      "id": "OC-AG-009",
+      "name": "Invalid Agent Disable Type",
+      "severity": "HIGH",
+      "category": "opencode",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://opencode.ai/docs/"
+        ],
+        "verified_on": "2026-03-28",
+        "applies_to": {
+          "tool": "opencode"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"agent\": { \"a\": { \"disabled\": true } }\n}",
+      "bad_example": "{\n  \"agent\": { \"a\": { \"disabled\": \"yes\" } }\n}"
     },
     {
       "id": "OC-LSP-001",
@@ -9404,22 +10625,22 @@
     },
     "claude-skills": {
       "prefix": "CC-SK",
-      "count": 17,
+      "count": 20,
       "description": "Claude Code Skills rules"
     },
     "claude-hooks": {
       "prefix": "CC-HK",
-      "count": 19,
+      "count": 25,
       "description": "Claude Code Hooks rules"
     },
     "claude-agents": {
       "prefix": "CC-AG",
-      "count": 13,
+      "count": 18,
       "description": "Claude Code Subagents rules"
     },
     "claude-memory": {
       "prefix": "CC-MEM",
-      "count": 12,
+      "count": 13,
       "description": "Claude Code Memory rules"
     },
     "agents-md": {
@@ -9429,7 +10650,7 @@
     },
     "claude-plugins": {
       "prefix": "CC-PL",
-      "count": 10,
+      "count": 14,
       "description": "Claude Code Plugins rules"
     },
     "mcp": {
@@ -9439,22 +10660,22 @@
     },
     "copilot": {
       "prefix": "COP",
-      "count": 17,
+      "count": 25,
       "description": "GitHub Copilot rules"
     },
     "cursor": {
       "prefix": "CUR",
-      "count": 16,
+      "count": 19,
       "description": "Cursor project rules"
     },
     "cline": {
       "prefix": "CLN",
-      "count": 4,
+      "count": 7,
       "description": "Cline rules validation"
     },
     "opencode": {
       "prefix": "OC",
-      "count": 41,
+      "count": 45,
       "description": "OpenCode configuration rules"
     },
     "gemini-cli": {
@@ -9499,7 +10720,7 @@
     },
     "cline-skills": {
       "prefix": "CL-SK",
-      "count": 1,
+      "count": 3,
       "description": "Cline per-client skill rules"
     },
     "copilot-skills": {

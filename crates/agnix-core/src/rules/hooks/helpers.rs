@@ -898,6 +898,66 @@ pub(super) fn validate_cc_hk_024_headers_env_vars(
     });
 }
 
+/// CC-HK-025: Invalid matcher value for event type.
+/// Events that support matchers have specific valid values.
+/// Validates matcher values on `SessionStart` and `StopFailure`.
+pub(super) fn validate_cc_hk_025_invalid_matcher_value(
+    raw_value: &serde_json::Value,
+    path: &Path,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    const SESSION_START_MATCHERS: &[&str] = &["startup", "resume", "clear", "compact"];
+    const STOP_FAILURE_MATCHERS: &[&str] = &[
+        "rate_limit",
+        "authentication_failed",
+        "billing_error",
+        "invalid_request",
+        "server_error",
+        "max_output_tokens",
+        "unknown",
+    ];
+
+    if let Some(hooks_obj) = raw_value.get("hooks").and_then(|h| h.as_object()) {
+        for (event, matchers) in hooks_obj {
+            let valid_values: &[&str] = match event.as_str() {
+                "SessionStart" => SESSION_START_MATCHERS,
+                "StopFailure" => STOP_FAILURE_MATCHERS,
+                _ => continue,
+            };
+
+            if let Some(matchers_arr) = matchers.as_array() {
+                for (matcher_idx, matcher) in matchers_arr.iter().enumerate() {
+                    if let Some(matcher_val) = matcher.get("matcher").and_then(|m| m.as_str()) {
+                        if !valid_values.contains(&matcher_val) {
+                            let location = format!("hooks.{}[{}]", event, matcher_idx);
+                            diagnostics.push(
+                                Diagnostic::warning(
+                                    path.to_path_buf(),
+                                    1,
+                                    0,
+                                    "CC-HK-025",
+                                    format!(
+                                        "Matcher '{}' at {} is not a known value for event '{}'; expected one of: {}",
+                                        matcher_val,
+                                        location,
+                                        event,
+                                        valid_values.join(", ")
+                                    ),
+                                )
+                                .with_suggestion(format!(
+                                    "Use one of the known matcher values for '{}': {}.",
+                                    event,
+                                    valid_values.join(", ")
+                                )),
+                            );
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1020,5 +1080,150 @@ mod tests {
         let content = r#"{ "type": "command", "command": "echo hi" }"#;
         let result = find_unique_json_field_line_span(content, "async");
         assert!(result.is_none(), "Should return None when field is missing");
+    }
+
+    // ===== CC-HK-025: Invalid matcher value for event type =====
+
+    #[test]
+    fn test_cc_hk_025_invalid_session_start_matcher() {
+        let content = r#"{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "invalid_value",
+        "hooks": [{ "type": "command", "command": "echo hello" }]
+      }
+    ]
+  }
+}"#;
+        let raw_value: serde_json::Value = serde_json::from_str(content).unwrap();
+        let path = Path::new(".claude/settings.json");
+        let mut diagnostics = Vec::new();
+
+        validate_cc_hk_025_invalid_matcher_value(&raw_value, path, &mut diagnostics);
+
+        assert_eq!(diagnostics.len(), 1);
+        assert_eq!(diagnostics[0].rule, "CC-HK-025");
+        assert!(diagnostics[0].message.contains("invalid_value"));
+        assert!(diagnostics[0].message.contains("SessionStart"));
+    }
+
+    #[test]
+    fn test_cc_hk_025_valid_session_start_matchers() {
+        let valid_matchers = ["startup", "resume", "clear", "compact"];
+        for matcher in valid_matchers {
+            let content = format!(
+                r#"{{
+  "hooks": {{
+    "SessionStart": [
+      {{
+        "matcher": "{}",
+        "hooks": [{{ "type": "command", "command": "echo hello" }}]
+      }}
+    ]
+  }}
+}}"#,
+                matcher
+            );
+            let raw_value: serde_json::Value = serde_json::from_str(&content).unwrap();
+            let path = Path::new(".claude/settings.json");
+            let mut diagnostics = Vec::new();
+
+            validate_cc_hk_025_invalid_matcher_value(&raw_value, path, &mut diagnostics);
+
+            assert!(
+                diagnostics.is_empty(),
+                "Matcher '{}' should be valid for SessionStart",
+                matcher
+            );
+        }
+    }
+
+    #[test]
+    fn test_cc_hk_025_invalid_stop_failure_matcher() {
+        let content = r#"{
+  "hooks": {
+    "StopFailure": [
+      {
+        "matcher": "network_error",
+        "hooks": [{ "type": "command", "command": "echo error" }]
+      }
+    ]
+  }
+}"#;
+        let raw_value: serde_json::Value = serde_json::from_str(content).unwrap();
+        let path = Path::new(".claude/settings.json");
+        let mut diagnostics = Vec::new();
+
+        validate_cc_hk_025_invalid_matcher_value(&raw_value, path, &mut diagnostics);
+
+        assert_eq!(diagnostics.len(), 1);
+        assert_eq!(diagnostics[0].rule, "CC-HK-025");
+        assert!(diagnostics[0].message.contains("network_error"));
+        assert!(diagnostics[0].message.contains("StopFailure"));
+    }
+
+    #[test]
+    fn test_cc_hk_025_valid_stop_failure_matchers() {
+        let valid_matchers = [
+            "rate_limit",
+            "authentication_failed",
+            "billing_error",
+            "invalid_request",
+            "server_error",
+            "max_output_tokens",
+            "unknown",
+        ];
+        for matcher in valid_matchers {
+            let content = format!(
+                r#"{{
+  "hooks": {{
+    "StopFailure": [
+      {{
+        "matcher": "{}",
+        "hooks": [{{ "type": "command", "command": "echo err" }}]
+      }}
+    ]
+  }}
+}}"#,
+                matcher
+            );
+            let raw_value: serde_json::Value = serde_json::from_str(&content).unwrap();
+            let path = Path::new(".claude/settings.json");
+            let mut diagnostics = Vec::new();
+
+            validate_cc_hk_025_invalid_matcher_value(&raw_value, path, &mut diagnostics);
+
+            assert!(
+                diagnostics.is_empty(),
+                "Matcher '{}' should be valid for StopFailure",
+                matcher
+            );
+        }
+    }
+
+    #[test]
+    fn test_cc_hk_025_other_events_not_checked() {
+        // Matchers on other events should not trigger CC-HK-025
+        let content = r#"{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "arbitrary_value",
+        "hooks": [{ "type": "command", "command": "echo hello" }]
+      }
+    ]
+  }
+}"#;
+        let raw_value: serde_json::Value = serde_json::from_str(content).unwrap();
+        let path = Path::new(".claude/settings.json");
+        let mut diagnostics = Vec::new();
+
+        validate_cc_hk_025_invalid_matcher_value(&raw_value, path, &mut diagnostics);
+
+        assert!(
+            diagnostics.is_empty(),
+            "CC-HK-025 should not check PreToolUse matchers"
+        );
     }
 }

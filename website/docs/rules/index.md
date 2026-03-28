@@ -48,6 +48,11 @@ This section contains all `342` validation rules generated from `knowledge-base/
 | [CC-AG-011](./generated/cc-ag-011.md) | Invalid Hooks in Agent Frontmatter | HIGH | Claude Agents | No |
 | [CC-AG-012](./generated/cc-ag-012.md) | Bypass Permissions Warning | HIGH | Claude Agents | Yes (unsafe) |
 | [CC-AG-013](./generated/cc-ag-013.md) | Invalid Skill Name Format | MEDIUM | Claude Agents | Yes (unsafe) |
+| [CC-AG-014](./generated/cc-ag-014.md) | Invalid Effort Value | MEDIUM | Claude Agents | No |
+| [CC-AG-015](./generated/cc-ag-015.md) | Invalid Isolation Value | MEDIUM | Claude Agents | No |
+| [CC-AG-016](./generated/cc-ag-016.md) | Invalid Background Type | MEDIUM | Claude Agents | No |
+| [CC-AG-017](./generated/cc-ag-017.md) | Invalid MaxTurns Value | MEDIUM | Claude Agents | No |
+| [CC-AG-019](./generated/cc-ag-019.md) | Unknown Agent Frontmatter Field | LOW | Claude Agents | No |
 | [CC-HK-001](./generated/cc-hk-001.md) | Invalid Hook Event | HIGH | Claude Hooks | Yes (safe/unsafe) |
 | [CC-HK-002](./generated/cc-hk-002.md) | Prompt Hook on Wrong Event | HIGH | Claude Hooks | No |
 | [CC-HK-003](./generated/cc-hk-003.md) | Matcher Hint for Tool Events | LOW | Claude Hooks | No |
@@ -67,6 +72,12 @@ This section contains all `342` validation rules generated from `knowledge-base/
 | [CC-HK-017](./generated/cc-hk-017.md) | Prompt/Agent Hook Missing $ARGUMENTS | MEDIUM | Claude Hooks | Yes (safe) |
 | [CC-HK-018](./generated/cc-hk-018.md) | Matcher on UserPromptSubmit/Stop | LOW | Claude Hooks | Yes (safe) |
 | [CC-HK-019](./generated/cc-hk-019.md) | Deprecated Setup Event | MEDIUM | Claude Hooks | Yes (unsafe) |
+| [CC-HK-020](./generated/cc-hk-020.md) | HTTP Hook Missing URL | HIGH | Claude Hooks | No |
+| [CC-HK-021](./generated/cc-hk-021.md) | Invalid If Field | MEDIUM | Claude Hooks | No |
+| [CC-HK-022](./generated/cc-hk-022.md) | Invalid Shell Value | MEDIUM | Claude Hooks | No |
+| [CC-HK-023](./generated/cc-hk-023.md) | Once Field Not Boolean | LOW | Claude Hooks | No |
+| [CC-HK-024](./generated/cc-hk-024.md) | Headers Missing AllowedEnvVars | MEDIUM | Claude Hooks | No |
+| [CC-HK-025](./generated/cc-hk-025.md) | Invalid Matcher Value | LOW | Claude Hooks | No |
 | [CC-MEM-001](./generated/cc-mem-001.md) | Invalid Import Path | HIGH | Claude Memory | No |
 | [CC-MEM-002](./generated/cc-mem-002.md) | Circular Import | HIGH | Claude Memory | No |
 | [CC-MEM-003](./generated/cc-mem-003.md) | Import Depth Exceeds 5 | HIGH | Claude Memory | No |
@@ -79,6 +90,7 @@ This section contains all `342` validation rules generated from `knowledge-base/
 | [CC-MEM-010](./generated/cc-mem-010.md) | README Duplication | MEDIUM | Claude Memory | No |
 | [CC-MEM-011](./generated/cc-mem-011.md) | Invalid Paths Glob in Rules | HIGH | Claude Memory | No |
 | [CC-MEM-012](./generated/cc-mem-012.md) | Rules File Unknown Frontmatter Key | MEDIUM | Claude Memory | Yes (unsafe) |
+| [CC-MEM-014](./generated/cc-mem-014.md) | CLAUDE.md Exceeds Line Limit | MEDIUM | Claude Memory | No |
 | [CC-PL-001](./generated/cc-pl-001.md) | Plugin Manifest Not in .claude-plugin/ | HIGH | Claude Plugins | No |
 | [CC-PL-002](./generated/cc-pl-002.md) | Components in .claude-plugin/ | HIGH | Claude Plugins | No |
 | [CC-PL-003](./generated/cc-pl-003.md) | Invalid Semver | HIGH | Claude Plugins | Yes (safe) |
@@ -89,6 +101,10 @@ This section contains all `342` validation rules generated from `knowledge-base/
 | [CC-PL-008](./generated/cc-pl-008.md) | Component Inside .claude-plugin | HIGH | Claude Plugins | No |
 | [CC-PL-009](./generated/cc-pl-009.md) | Invalid Author Object | MEDIUM | Claude Plugins | No |
 | [CC-PL-010](./generated/cc-pl-010.md) | Invalid Homepage URL | MEDIUM | Claude Plugins | No |
+| [CC-PL-011](./generated/cc-pl-011.md) | LSP Server Missing Required Fields | HIGH | Claude Plugins | No |
+| [CC-PL-012](./generated/cc-pl-012.md) | Invalid UserConfig Key | MEDIUM | Claude Plugins | No |
+| [CC-PL-013](./generated/cc-pl-013.md) | Channel Missing Server Reference | MEDIUM | Claude Plugins | No |
+| [CC-PL-014](./generated/cc-pl-014.md) | Plugin Agent Unsupported Field | MEDIUM | Claude Plugins | No |
 | [CC-SK-001](./generated/cc-sk-001.md) | Invalid Model Value | HIGH | Claude Skills | Yes (unsafe) |
 | [CC-SK-002](./generated/cc-sk-002.md) | Invalid Context Value | HIGH | Claude Skills | Yes (unsafe) |
 | [CC-SK-003](./generated/cc-sk-003.md) | Context Without Agent | HIGH | Claude Skills | Yes (unsafe) |
@@ -106,6 +122,9 @@ This section contains all `342` validation rules generated from `knowledge-base/
 | [CC-SK-015](./generated/cc-sk-015.md) | Invalid user-invocable Type | HIGH | Claude Skills | Yes (safe) |
 | [CC-SK-016](./generated/cc-sk-016.md) | Indexed $ARGUMENTS Without argument-hint | MEDIUM | Claude Skills | No |
 | [CC-SK-017](./generated/cc-sk-017.md) | Unknown Frontmatter Field | MEDIUM | Claude Skills | No |
+| [CC-SK-018](./generated/cc-sk-018.md) | Invalid Effort Value | MEDIUM | Claude Skills | No |
+| [CC-SK-019](./generated/cc-sk-019.md) | Invalid Paths Format | LOW | Claude Skills | No |
+| [CC-SK-020](./generated/cc-sk-020.md) | Invalid Shell Value | MEDIUM | Claude Skills | No |
 | [CDX-000](./generated/cdx-000.md) | TOML Parse Error | HIGH | Codex CLI | No |
 | [CDX-001](./generated/cdx-001.md) | Invalid Approval Mode | HIGH | Codex CLI | Yes (unsafe) |
 | [CDX-002](./generated/cdx-002.md) | Invalid Full Auto Error Mode | HIGH | Codex CLI | Yes (unsafe) |
@@ -135,6 +154,11 @@ This section contains all `342` validation rules generated from `knowledge-base/
 | [CDX-CFG-020](./generated/cdx-cfg-020.md) | Invalid MCP OAuth Config | HIGH | Codex CLI | No |
 | [CDX-CFG-021](./generated/cdx-cfg-021.md) | Invalid model_context_window Value | MEDIUM | Codex CLI | No |
 | [CDX-CFG-022](./generated/cdx-cfg-022.md) | Invalid model_auto_compact_token_limit Value | MEDIUM | Codex CLI | No |
+| [CDX-CFG-023](./generated/cdx-cfg-023.md) | Invalid Approval Policy Sub-field | MEDIUM | Codex Config | No |
+| [CDX-CFG-024](./generated/cdx-cfg-024.md) | Invalid Approvals Reviewer Value | MEDIUM | Codex Config | No |
+| [CDX-CFG-025](./generated/cdx-cfg-025.md) | Invalid Service Tier Value | MEDIUM | Codex Config | No |
+| [CDX-CFG-026](./generated/cdx-cfg-026.md) | Invalid Network Permission Field | LOW | Codex Config | No |
+| [CDX-CFG-027](./generated/cdx-cfg-027.md) | Invalid Windows Sandbox Value | LOW | Codex Config | No |
 | [CDX-AG-001](./generated/cdx-ag-001.md) | Empty AGENTS.md for Codex | HIGH | Codex CLI | No |
 | [CDX-AG-002](./generated/cdx-ag-002.md) | Secrets in AGENTS.md for Codex | HIGH | Codex CLI | No |
 | [CDX-AG-003](./generated/cdx-ag-003.md) | Generic AGENTS.md Guidance for Codex | MEDIUM | Codex CLI | No |
@@ -146,10 +170,15 @@ This section contains all `342` validation rules generated from `knowledge-base/
 | [CDX-APP-002](./generated/cdx-app-002.md) | Invalid skills Configuration | MEDIUM | Codex CLI | No |
 | [CDX-APP-003](./generated/cdx-app-003.md) | Invalid profile Configuration | MEDIUM | Codex CLI | No |
 | [CL-SK-001](./generated/cl-sk-001.md) | Cline Skill Uses Unsupported Field | MEDIUM | Cline Skills | Yes (safe/unsafe) |
+| [CL-SK-002](./generated/cl-sk-002.md) | Missing Skill Name | HIGH | Cline Skills | No |
+| [CL-SK-003](./generated/cl-sk-003.md) | Missing Skill Description | HIGH | Cline Skills | No |
 | [CLN-001](./generated/cln-001.md) | Empty Cline Rules File | HIGH | Cline | No |
 | [CLN-002](./generated/cln-002.md) | Invalid Paths Glob in Cline Rules | HIGH | Cline | No |
 | [CLN-003](./generated/cln-003.md) | Unknown Frontmatter Key in Cline Rules | MEDIUM | Cline | Yes (unsafe) |
 | [CLN-004](./generated/cln-004.md) | Scalar Paths in Cline Rules | HIGH | Cline | Yes (safe) |
+| [CLN-005](./generated/cln-005.md) | Empty Workflow File | HIGH | Cline | No |
+| [CLN-006](./generated/cln-006.md) | Workflow With Frontmatter | MEDIUM | Cline | No |
+| [CLN-009](./generated/cln-009.md) | Unknown Hook Event Name | MEDIUM | Cline | No |
 | [COP-001](./generated/cop-001.md) | Empty Copilot Instruction File | HIGH | GitHub Copilot | No |
 | [COP-002](./generated/cop-002.md) | Invalid Frontmatter in Scoped Instructions | HIGH | GitHub Copilot | Yes (unsafe) |
 | [COP-003](./generated/cop-003.md) | Invalid Glob Pattern in applyTo | HIGH | GitHub Copilot | No |
@@ -167,6 +196,14 @@ This section contains all `342` validation rules generated from `knowledge-base/
 | [COP-015](./generated/cop-015.md) | Prompt File Invalid Agent Mode | HIGH | GitHub Copilot | Yes (safe) |
 | [COP-017](./generated/cop-017.md) | Copilot Hooks Schema Validation | HIGH | GitHub Copilot | No |
 | [COP-018](./generated/cop-018.md) | Copilot Setup Steps Missing or Invalid copilot-setup-steps Job | HIGH | GitHub Copilot | No |
+| [COP-019](./generated/cop-019.md) | Plugin Missing Required Fields | HIGH | Copilot | No |
+| [COP-020](./generated/cop-020.md) | Plugin Invalid Field Types | MEDIUM | Copilot | No |
+| [COP-022](./generated/cop-022.md) | CLI Skill Missing Frontmatter | HIGH | Copilot | No |
+| [COP-023](./generated/cop-023.md) | CLI Skill Name Format | MEDIUM | Copilot | No |
+| [COP-024](./generated/cop-024.md) | CLI Skill Unknown Field | MEDIUM | Copilot | No |
+| [COP-025](./generated/cop-025.md) | Agent File Wrong Location | LOW | Copilot | No |
+| [COP-026](./generated/cop-026.md) | Deprecated SSE Transport | LOW | Copilot | No |
+| [COP-027](./generated/cop-027.md) | Deprecated Infer Field | LOW | Copilot | No |
 | [CP-SK-001](./generated/cp-sk-001.md) | Copilot Skill Uses Unsupported Field | MEDIUM | Copilot Skills | Yes (safe/unsafe) |
 | [CR-SK-001](./generated/cr-sk-001.md) | Cursor Skill Uses Unsupported Field | MEDIUM | Cursor Skills | Yes (safe/unsafe) |
 | [CUR-001](./generated/cur-001.md) | Empty Cursor Rule File | HIGH | Cursor | No |
@@ -185,6 +222,9 @@ This section contains all `342` validation rules generated from `knowledge-base/
 | [CUR-014](./generated/cur-014.md) | Invalid Cursor Subagent Frontmatter | HIGH | Cursor | No |
 | [CUR-015](./generated/cur-015.md) | Empty Cursor Subagent Body | MEDIUM | Cursor | No |
 | [CUR-016](./generated/cur-016.md) | Invalid Cursor Environment Schema | HIGH | Cursor | No |
+| [CUR-017](./generated/cur-017.md) | Invalid Hook Entry Field Types | MEDIUM | Cursor | No |
+| [CUR-018](./generated/cur-018.md) | Prompt Hook Missing Prompt Field | MEDIUM | Cursor | No |
+| [CUR-019](./generated/cur-019.md) | Invalid Prompt Hook Model Type | LOW | Cursor | No |
 | [CX-SK-001](./generated/cx-sk-001.md) | Codex Skill Uses Unsupported Field | MEDIUM | Codex Skills | Yes (safe/unsafe) |
 | [GM-001](./generated/gm-001.md) | Invalid Markdown Structure in GEMINI.md | HIGH | Gemini CLI | Yes (safe) |
 | [GM-002](./generated/gm-002.md) | Missing Section Headers in GEMINI.md | MEDIUM | Gemini CLI | No |
@@ -321,10 +361,12 @@ This section contains all `342` validation rules generated from `knowledge-base/
 | [OC-CFG-005](./generated/oc-cfg-005.md) | Hardcoded API Key | HIGH | OpenCode | No |
 | [OC-CFG-006](./generated/oc-cfg-006.md) | Invalid MCP Server Structure | HIGH | OpenCode | No |
 | [OC-CFG-007](./generated/oc-cfg-007.md) | MCP Server Missing Command or URL | HIGH | OpenCode | No |
+| [OC-CFG-013](./generated/oc-cfg-013.md) | Invalid Server Config | HIGH | Opencode | No |
 | [OC-AG-001](./generated/oc-ag-001.md) | Invalid Agent Mode Value | HIGH | OpenCode | No |
 | [OC-AG-002](./generated/oc-ag-002.md) | Invalid Color Format | HIGH | OpenCode | No |
 | [OC-AG-003](./generated/oc-ag-003.md) | Temperature Out of Range | HIGH | OpenCode | No |
 | [OC-AG-004](./generated/oc-ag-004.md) | Steps Not a Positive Integer | HIGH | OpenCode | No |
+| [OC-AG-009](./generated/oc-ag-009.md) | Invalid Agent Disable Type | HIGH | Opencode | No |
 | [OC-PM-001](./generated/oc-pm-001.md) | Invalid Permission Action | HIGH | OpenCode | No |
 | [OC-PM-002](./generated/oc-pm-002.md) | Unknown Permission Key | MEDIUM | OpenCode | No |
 | [OC-AGM-001](./generated/oc-agm-001.md) | Empty AGENTS.md | HIGH | OpenCode | No |
@@ -333,6 +375,8 @@ This section contains all `342` validation rules generated from `knowledge-base/
 | [OC-DEP-002](./generated/oc-dep-002.md) | Deprecated tools Field | MEDIUM | OpenCode | Yes (safe) |
 | [OC-DEP-003](./generated/oc-dep-003.md) | Deprecated autoshare Field | MEDIUM | OpenCode | Yes (safe) |
 | [OC-DEP-004](./generated/oc-dep-004.md) | Deprecated CONTEXT.md Filename | MEDIUM | OpenCode | No |
+| [OC-DEP-005](./generated/oc-dep-005.md) | Deprecated TUI Keys | MEDIUM | Opencode | No |
+| [OC-DEP-006](./generated/oc-dep-006.md) | Deprecated MaxSteps Field | MEDIUM | Opencode | No |
 | [OC-CFG-008](./generated/oc-cfg-008.md) | Invalid Log Level | HIGH | OpenCode | Yes (unsafe) |
 | [OC-CFG-009](./generated/oc-cfg-009.md) | Invalid Compaction Reserved | HIGH | OpenCode | No |
 | [OC-CFG-010](./generated/oc-cfg-010.md) | Invalid Skills URL | HIGH | OpenCode | No |
