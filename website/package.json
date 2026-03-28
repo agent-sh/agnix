@@ -10,6 +10,9 @@
     "generate:rules": "python3 ../scripts/generate-docs-rules.py",
     "version:cut": "docusaurus docs:version"
   },
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "overrides": {
     "minimatch": "^10.2.1",
     "serialize-javascript": "^7.0.5"

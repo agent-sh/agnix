@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 - Bump `picomatch` from 2.3.1 to 2.3.2 in editors/vscode and website (CVE-2026-33671, CVE-2026-33672) (#677).
+- Override `serialize-javascript` to ^7.0.5 in website and vscode extension to fix CPU exhaustion DoS (GHSA-qj8w-gfj5-8c6v) (#693).
+
+### Fixed
+- Remove non-standard `version` field from SKILL.md frontmatter (XP-SK-001, code scanning alert #1062) (#693).
 
 ### Fixed
 - **Repo references**: Updated remaining hardcoded `avifenesh/agnix` references to `agent-sh/agnix` across all editors (Zed, Neovim), website, metadata files, and documentation

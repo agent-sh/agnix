@@ -519,6 +519,9 @@
     "package": "vsce package",
     "publish": "vsce publish"
   },
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "overrides": {
     "serialize-javascript": "^7.0.5"
   },
