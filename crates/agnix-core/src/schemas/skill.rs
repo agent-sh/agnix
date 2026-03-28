@@ -70,6 +70,7 @@ pub struct SkillSchema {
 }
 
 /// Known top-level frontmatter fields for SKILL.md
+#[cfg(test)]
 pub const KNOWN_SKILL_FRONTMATTER_FIELDS: &[&str] = &[
     "name", "description", "license", "compatibility", "metadata",
     "allowed-tools", "argument-hint", "disable-model-invocation",

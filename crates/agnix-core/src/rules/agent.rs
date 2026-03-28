@@ -60,12 +60,6 @@ fn is_valid_model(model: &str) -> bool {
     VALID_MODELS.contains(&model) || model.starts_with("claude-")
 }
 
-/// Valid effort levels for agent effort field
-const VALID_EFFORT_LEVELS: &[&str] = &["low", "medium", "high", "max"];
-
-/// Valid isolation modes for agent isolation field
-const VALID_ISOLATION_MODES: &[&str] = &["worktree"];
-
 /// Valid permission modes per CC-AG-004
 const VALID_PERMISSION_MODES: &[&str] = &[
     "default",
