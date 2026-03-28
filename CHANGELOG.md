@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **44 new validation rules** from March 2026 monthly spec drift review covering Claude Code hooks (CC-HK-020..025), skills (CC-SK-018..020), agents (CC-AG-014..017,019), plugins (CC-PL-011..014), memory (CC-MEM-014), Codex CLI (CDX-CFG-023..027), Cursor (CUR-017..019), Cline workflows/hooks/skills (CLN-005,006,009, CL-SK-002,003), Copilot CLI plugins/skills (COP-019..027), and OpenCode (OC-CFG-013, OC-AG-009, OC-DEP-005,006)
+- **HTTP hook type support** for Claude Code hooks (`type: "http"` with url, headers, allowedEnvVars, timeout fields)
+- **Full model ID support** - accept `claude-opus-4-6`, `claude-sonnet-4-6` etc. alongside short aliases in skill and agent frontmatter
+- **Cline workflow/hook/skill detection** - file type detection now routes `.clinerules/workflows/`, `.clinerules/hooks/`, and `.clinerules/skills/` to the Cline validator
+- **Copilot CLI plugin validation** - new rules for `plugin.json` manifests, CLI SKILL.md, and deprecated `infer` field
+
+### Fixed
+- **Spec-drift sentinel workflow** broken since Feb 25 (10+ consecutive failures) - multiline JSON output now uses heredoc syntax
+- **CC-HK-001 false positives** - 11 new hook events added to allowlist (PostCompact, InstructionsLoaded, ConfigChange, CwdChanged, FileChanged, TaskCreated, WorktreeCreate, WorktreeRemove, Elicitation, ElicitationResult, StopFailure)
+- **CC-HK-004 false positives** - matcher support expanded from 4 to 17 events (SessionStart, SessionEnd, Notification, SubagentStart/Stop, PreCompact, PostCompact, ConfigChange, FileChanged, StopFailure, InstructionsLoaded, Elicitation, ElicitationResult)
+- **CC-SK-017 false positives** - `effort`, `paths`, `shell` added to known skill frontmatter fields
+- **CC-AG false positives** - `maxTurns`, `effort`, `background`, `isolation`, `initialPrompt`, `mcpServers` added to agent schema
+- **CDX-004/CDX-CFG-006 false positives** - 4 config keys added (approvals_reviewer, default_permissions, service_tier, openai_base_url)
+- **CDX-CFG-011 false positives** - 3 feature flags added (fast_mode, codex_hooks, smart_approvals)
+- **CUR-014 false positive** - subagent `name` and `description` changed from required to optional per Cursor docs
+- **OpenCode false positive** - `codesearch` added to known permissions
+- **Stale tracking data** - RESEARCH-TRACKING.md updated with current 386-rule inventory, fixed broken URLs (amp.dev, windsurf.com/docs), fixed rule prefix mismatches in spec-baselines.json
+
 ### Security
 - Bump `picomatch` from 2.3.1 to 2.3.2 in editors/vscode and website (CVE-2026-33671, CVE-2026-33672) (#677).
 - Override `serialize-javascript` to ^7.0.5 in website and vscode extension to fix CPU exhaustion DoS (GHSA-qj8w-gfj5-8c6v) (#693).
