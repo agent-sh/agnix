@@ -13,8 +13,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Remove non-standard `version` field from SKILL.md frontmatter (XP-SK-001, code scanning alert #1062) (#693).
-
-### Fixed
 - **Repo references**: Updated remaining hardcoded `avifenesh/agnix` references to `agent-sh/agnix` across all editors (Zed, Neovim), website, metadata files, and documentation
 - **Download URLs**: Updated hardcoded repository path from `avifenesh/agnix` to `agent-sh/agnix` across download scripts, editor extensions, and CI workflows (#676).
 
