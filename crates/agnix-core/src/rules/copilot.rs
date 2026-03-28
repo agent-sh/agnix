@@ -774,17 +774,14 @@ fn validate_copilot_skill(path: &Path, content: &str, config: &LintConfig) -> Ve
                 );
             }
             Some(p) => {
-                if p.parse_error.is_some() {
+                if let Some(ref err) = p.parse_error {
                     diagnostics.push(
                         Diagnostic::error(
                             path.to_path_buf(),
                             p.start_line,
                             0,
                             "COP-022",
-                            format!(
-                                "Copilot CLI SKILL.md has invalid frontmatter: {}",
-                                p.parse_error.as_ref().unwrap()
-                            ),
+                            format!("Copilot CLI SKILL.md has invalid frontmatter: {}", err),
                         )
                         .with_suggestion("Fix YAML syntax in SKILL.md frontmatter."),
                     );
