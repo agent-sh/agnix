@@ -519,6 +519,9 @@
     "package": "vsce package",
     "publish": "vsce publish"
   },
+  "overrides": {
+    "serialize-javascript": "^7.0.5"
+  },
   "devDependencies": {
     "@types/mocha": "^10.0.0",
     "@types/node": "^20.0.0",
