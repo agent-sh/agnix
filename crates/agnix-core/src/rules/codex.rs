@@ -8,7 +8,7 @@
 //! - CDX-004: Unknown config key (MEDIUM) - unrecognized key in .codex/config.toml
 //! - CDX-005: project_doc_max_bytes exceeds limit (HIGH) - must be <= 65536
 //! - CDX-006: Invalid project_doc_fallback_filenames (HIGH) - must be unique non-empty filenames
-//! - CDX-CFG-001..022: Codex config schema/value checks (approval, sandbox, enums, unknown keys, etc.)
+//! - CDX-CFG-001..027: Codex config schema/value checks (approval, sandbox, enums, unknown keys, etc.)
 //! - CDX-AG-001..007: AGENTS.md quality and secret-safety checks for Codex
 //! - CDX-APP-001..003: App and plugin configuration validation
 
@@ -82,6 +82,11 @@ const CODEX_CONFIG_RULE_IDS: &[&str] = &[
     "CDX-CFG-020",
     "CDX-CFG-021",
     "CDX-CFG-022",
+    "CDX-CFG-023",
+    "CDX-CFG-024",
+    "CDX-CFG-025",
+    "CDX-CFG-026",
+    "CDX-CFG-027",
     "CDX-APP-001",
     "CDX-APP-002",
     "CDX-APP-003",
@@ -99,6 +104,30 @@ const VALID_PERSONALITIES: &[&str] = &["none", "friendly", "pragmatic"];
 const VALID_SHELL_ENVIRONMENT_INHERIT: &[&str] = &["core", "all", "none"];
 const VALID_CLI_AUTH_STORES: &[&str] = &["file", "keyring", "auto", "ephemeral"];
 const VALID_DEFAULT_TOOLS_APPROVAL_MODES: &[&str] = &["auto", "prompt", "approve"];
+
+const KNOWN_APPROVAL_POLICY_SUB_FIELDS: &[&str] = &[
+    "mcp_elicitations",
+    "request_permissions",
+    "rules",
+    "sandbox_approval",
+    "skill_approval",
+];
+
+const VALID_APPROVALS_REVIEWER: &[&str] = &["guardian_subagent", "user"];
+
+const VALID_SERVICE_TIERS: &[&str] = &["fast", "flex"];
+
+const KNOWN_PERMISSIONS_NETWORK_KEYS: &[&str] = &[
+    "admin_url",
+    "allowed_domains",
+    "denied_domains",
+    "enable_socks5",
+    "enabled",
+    "mode",
+    "proxy_url",
+];
+
+const VALID_WINDOWS_SANDBOX_VALUES: &[&str] = &["elevated", "unelevated"];
 
 const KNOWN_CONFIG_TOP_LEVEL_KEYS: &[&str] = &[
     "agents",
@@ -985,7 +1014,7 @@ fn validate_codex_config_rules(
                     .with_suggestion(t!("rules.cdx_cfg_001.suggestion")),
                 );
             }
-        } else if !value.is_null() {
+        } else if !value.is_null() && !value.is_object() {
             diagnostics.push(
                 Diagnostic::error(
                     path.to_path_buf(),
@@ -1580,6 +1609,186 @@ fn validate_codex_config_rules(
         }
     }
 
+    // CDX-CFG-023: Invalid granular approval_policy sub-field name
+    if config.is_rule_enabled("CDX-CFG-023")
+        && let Some(value) = value_at_path(&root, &["approval_policy"])
+    {
+        if let Some(obj) = value.as_object() {
+            for key in obj.keys() {
+                if !KNOWN_APPROVAL_POLICY_SUB_FIELDS.contains(&key.as_str()) {
+                    diagnostics.push(
+                        Diagnostic::warning(
+                            path.to_path_buf(),
+                            line_for("approval_policy"),
+                            0,
+                            "CDX-CFG-023",
+                            format!(
+                                "Unknown approval_policy sub-field '{}'. Valid sub-fields: {}",
+                                key,
+                                KNOWN_APPROVAL_POLICY_SUB_FIELDS.join(", ")
+                            ),
+                        )
+                        .with_suggestion(
+                            "Remove or rename the unknown sub-field in approval_policy."
+                                .to_string(),
+                        ),
+                    );
+                }
+            }
+        }
+    }
+
+    // CDX-CFG-024: Invalid approvals_reviewer enum value
+    if config.is_rule_enabled("CDX-CFG-024")
+        && let Some(value) = value_at_path(&root, &["approvals_reviewer"])
+    {
+        if let Some(reviewer) = value.as_str() {
+            if !VALID_APPROVALS_REVIEWER.contains(&reviewer) {
+                diagnostics.push(
+                    Diagnostic::warning(
+                        path.to_path_buf(),
+                        line_for("approvals_reviewer"),
+                        0,
+                        "CDX-CFG-024",
+                        format!(
+                            "Invalid approvals_reviewer value '{}'. Must be one of: {}",
+                            reviewer,
+                            VALID_APPROVALS_REVIEWER.join(", ")
+                        ),
+                    )
+                    .with_suggestion(
+                        "Set approvals_reviewer to 'user' or 'guardian_subagent'.".to_string(),
+                    ),
+                );
+            }
+        } else if !value.is_null() {
+            diagnostics.push(
+                Diagnostic::warning(
+                    path.to_path_buf(),
+                    line_for("approvals_reviewer"),
+                    0,
+                    "CDX-CFG-024",
+                    format!(
+                        "approvals_reviewer must be a string, not {}",
+                        value_type_name(value)
+                    ),
+                )
+                .with_suggestion(
+                    "Set approvals_reviewer to 'user' or 'guardian_subagent'.".to_string(),
+                ),
+            );
+        }
+    }
+
+    // CDX-CFG-025: Invalid service_tier enum value
+    if config.is_rule_enabled("CDX-CFG-025")
+        && let Some(value) = value_at_path(&root, &["service_tier"])
+    {
+        if let Some(tier) = value.as_str() {
+            if !VALID_SERVICE_TIERS.contains(&tier) {
+                diagnostics.push(
+                    Diagnostic::warning(
+                        path.to_path_buf(),
+                        line_for("service_tier"),
+                        0,
+                        "CDX-CFG-025",
+                        format!(
+                            "Invalid service_tier value '{}'. Must be one of: {}",
+                            tier,
+                            VALID_SERVICE_TIERS.join(", ")
+                        ),
+                    )
+                    .with_suggestion("Set service_tier to 'flex' or 'fast'.".to_string()),
+                );
+            }
+        } else if !value.is_null() {
+            diagnostics.push(
+                Diagnostic::warning(
+                    path.to_path_buf(),
+                    line_for("service_tier"),
+                    0,
+                    "CDX-CFG-025",
+                    format!(
+                        "service_tier must be a string, not {}",
+                        value_type_name(value)
+                    ),
+                )
+                .with_suggestion("Set service_tier to 'flex' or 'fast'.".to_string()),
+            );
+        }
+    }
+
+    // CDX-CFG-026: Invalid permissions.network sub-field
+    if config.is_rule_enabled("CDX-CFG-026")
+        && let Some(value) = value_at_path(&root, &["permissions", "network"])
+    {
+        if let Some(obj) = value.as_object() {
+            for key in obj.keys() {
+                if !KNOWN_PERMISSIONS_NETWORK_KEYS.contains(&key.as_str()) {
+                    diagnostics.push(
+                        Diagnostic::info(
+                            path.to_path_buf(),
+                            line_for("network"),
+                            0,
+                            "CDX-CFG-026",
+                            format!(
+                                "Unknown permissions.network sub-field '{}'. Known sub-fields: {}",
+                                key,
+                                KNOWN_PERMISSIONS_NETWORK_KEYS.join(", ")
+                            ),
+                        )
+                        .with_suggestion(
+                            "Remove or rename the unknown sub-field in permissions.network."
+                                .to_string(),
+                        ),
+                    );
+                }
+            }
+        }
+    }
+
+    // CDX-CFG-027: Invalid windows.sandbox enum value
+    if config.is_rule_enabled("CDX-CFG-027")
+        && let Some(value) = value_at_path(&root, &["windows", "sandbox"])
+    {
+        if let Some(sandbox) = value.as_str() {
+            if !VALID_WINDOWS_SANDBOX_VALUES.contains(&sandbox) {
+                diagnostics.push(
+                    Diagnostic::info(
+                        path.to_path_buf(),
+                        line_for("sandbox"),
+                        0,
+                        "CDX-CFG-027",
+                        format!(
+                            "Invalid windows.sandbox value '{}'. Must be one of: {}",
+                            sandbox,
+                            VALID_WINDOWS_SANDBOX_VALUES.join(", ")
+                        ),
+                    )
+                    .with_suggestion(
+                        "Set windows.sandbox to 'elevated' or 'unelevated'.".to_string(),
+                    ),
+                );
+            }
+        } else if !value.is_null() {
+            diagnostics.push(
+                Diagnostic::info(
+                    path.to_path_buf(),
+                    line_for("sandbox"),
+                    0,
+                    "CDX-CFG-027",
+                    format!(
+                        "windows.sandbox must be a string, not {}",
+                        value_type_name(value)
+                    ),
+                )
+                .with_suggestion(
+                    "Set windows.sandbox to 'elevated' or 'unelevated'.".to_string(),
+                ),
+            );
+        }
+    }
+
     if config.is_rule_enabled("CDX-APP-001")
         && let Some(apps) = value_at_path(&root, &["apps"])
     {
@@ -1663,6 +1872,17 @@ fn validate_codex_config_rules(
     }
 
     diagnostics
+}
+
+fn value_type_name(value: &Value) -> &'static str {
+    match value {
+        Value::Null => "null",
+        Value::Bool(_) => "boolean",
+        Value::Number(_) => "number",
+        Value::String(_) => "string",
+        Value::Array(_) => "array",
+        Value::Object(_) => "object",
+    }
 }
 
 struct CodexConfigParseError {
@@ -3125,6 +3345,8 @@ model_context_window = 128000
 model_auto_compact_token_limit = 50000
 profile = "default"
 file_opener = "code"
+approvals_reviewer = "user"
+service_tier = "flex"
 
 [sandbox_workspace_write]
 mode = "allowlist"
@@ -3148,6 +3370,13 @@ enabled = true
 command = "node"
 args = ["server.js"]
 url = "https://example.com"
+
+[windows]
+sandbox = "elevated"
+
+[permissions.network]
+enabled = true
+mode = "allowlist"
 "#;
         let diagnostics = validate_config(content);
         let cdx_cfg: Vec<_> = diagnostics
@@ -3209,5 +3438,257 @@ hide_full_access_warning = true
         let invalid_yaml = "approval_policy: [always\n";
         let yaml_diags = validate_config_at_path(".codex/config.yaml", invalid_yaml);
         assert!(yaml_diags.iter().any(|d| d.rule == "CDX-000"));
+    }
+
+    // ===== CDX-CFG-023: Invalid granular approval_policy sub-field name =====
+
+    #[test]
+    fn test_cdx_cfg_023_unknown_approval_policy_sub_field() {
+        let content = "[approval_policy]\nunknown_field = \"never\"\nrules = \"on-request\"";
+        let diagnostics = validate_config(content);
+        let cdx_023: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-023")
+            .collect();
+        assert_eq!(cdx_023.len(), 1);
+        assert_eq!(cdx_023[0].level, DiagnosticLevel::Warning);
+        assert!(cdx_023[0].message.contains("unknown_field"));
+    }
+
+    #[test]
+    fn test_cdx_cfg_023_valid_approval_policy_sub_fields_no_diagnostic() {
+        let content = "[approval_policy]\nsandbox_approval = \"on-request\"\nrules = \"never\"\nmcp_elicitations = \"on-failure\"";
+        let diagnostics = validate_config(content);
+        let cdx_023: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-023")
+            .collect();
+        assert!(
+            cdx_023.is_empty(),
+            "Valid approval_policy sub-fields should not trigger CDX-CFG-023"
+        );
+    }
+
+    #[test]
+    fn test_cdx_cfg_023_string_approval_policy_no_diagnostic() {
+        let diagnostics = validate_config("approval_policy = \"on-request\"");
+        let cdx_023: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-023")
+            .collect();
+        assert!(cdx_023.is_empty());
+    }
+
+    #[test]
+    fn test_cdx_cfg_023_object_approval_policy_no_type_error_from_001() {
+        let content = "[approval_policy]\nsandbox_approval = \"on-request\"";
+        let diagnostics = validate_config(content);
+        let cdx_001: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-001")
+            .collect();
+        assert!(
+            cdx_001.is_empty(),
+            "CDX-CFG-001 should not fire a type error for object approval_policy"
+        );
+    }
+
+    #[test]
+    fn test_cdx_cfg_023_granular_all_valid_no_diagnostic() {
+        let content = r#"
+[approval_policy]
+sandbox_approval = "on-request"
+rules = "never"
+mcp_elicitations = "on-failure"
+request_permissions = "on-request"
+skill_approval = "never"
+"#;
+        let diagnostics = validate_config(content);
+        let cdx_cfg: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-023" || d.rule == "CDX-CFG-001")
+            .collect();
+        assert!(
+            cdx_cfg.is_empty(),
+            "Granular approval_policy with valid sub-fields should not trigger CDX-CFG-023 or CDX-CFG-001"
+        );
+    }
+
+    // ===== CDX-CFG-024: Invalid approvals_reviewer enum value =====
+
+    #[test]
+    fn test_cdx_cfg_024_invalid_approvals_reviewer() {
+        let diagnostics = validate_config("approvals_reviewer = \"auto\"");
+        let cdx_024: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-024")
+            .collect();
+        assert_eq!(cdx_024.len(), 1);
+        assert_eq!(cdx_024[0].level, DiagnosticLevel::Warning);
+        assert!(cdx_024[0].message.contains("auto"));
+    }
+
+    #[test]
+    fn test_cdx_cfg_024_valid_approvals_reviewer_user() {
+        let diagnostics = validate_config("approvals_reviewer = \"user\"");
+        let cdx_024: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-024")
+            .collect();
+        assert!(cdx_024.is_empty());
+    }
+
+    #[test]
+    fn test_cdx_cfg_024_valid_approvals_reviewer_guardian() {
+        let diagnostics = validate_config("approvals_reviewer = \"guardian_subagent\"");
+        let cdx_024: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-024")
+            .collect();
+        assert!(cdx_024.is_empty());
+    }
+
+    #[test]
+    fn test_cdx_cfg_024_type_error() {
+        let diagnostics = validate_config("approvals_reviewer = 42");
+        let cdx_024: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-024")
+            .collect();
+        assert_eq!(cdx_024.len(), 1);
+        assert!(cdx_024[0].message.contains("string"));
+    }
+
+    // ===== CDX-CFG-025: Invalid service_tier enum value =====
+
+    #[test]
+    fn test_cdx_cfg_025_invalid_service_tier() {
+        let diagnostics = validate_config("service_tier = \"turbo\"");
+        let cdx_025: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-025")
+            .collect();
+        assert_eq!(cdx_025.len(), 1);
+        assert_eq!(cdx_025[0].level, DiagnosticLevel::Warning);
+        assert!(cdx_025[0].message.contains("turbo"));
+    }
+
+    #[test]
+    fn test_cdx_cfg_025_valid_service_tier_flex() {
+        let diagnostics = validate_config("service_tier = \"flex\"");
+        let cdx_025: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-025")
+            .collect();
+        assert!(cdx_025.is_empty());
+    }
+
+    #[test]
+    fn test_cdx_cfg_025_valid_service_tier_fast() {
+        let diagnostics = validate_config("service_tier = \"fast\"");
+        let cdx_025: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-025")
+            .collect();
+        assert!(cdx_025.is_empty());
+    }
+
+    #[test]
+    fn test_cdx_cfg_025_type_error() {
+        let diagnostics = validate_config("service_tier = true");
+        let cdx_025: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-025")
+            .collect();
+        assert_eq!(cdx_025.len(), 1);
+        assert!(cdx_025[0].message.contains("string"));
+    }
+
+    // ===== CDX-CFG-026: Invalid permissions.network sub-field =====
+
+    #[test]
+    fn test_cdx_cfg_026_unknown_network_sub_field() {
+        let content = "[permissions.network]\nunknown_option = true\nenabled = true";
+        let diagnostics = validate_config(content);
+        let cdx_026: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-026")
+            .collect();
+        assert_eq!(cdx_026.len(), 1);
+        assert_eq!(cdx_026[0].level, DiagnosticLevel::Info);
+        assert!(cdx_026[0].message.contains("unknown_option"));
+    }
+
+    #[test]
+    fn test_cdx_cfg_026_valid_network_sub_fields_no_diagnostic() {
+        let content = "[permissions.network]\nenabled = true\nmode = \"allowlist\"\nallowed_domains = [\"example.com\"]";
+        let diagnostics = validate_config(content);
+        let cdx_026: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-026")
+            .collect();
+        assert!(
+            cdx_026.is_empty(),
+            "Valid permissions.network sub-fields should not trigger CDX-CFG-026"
+        );
+    }
+
+    #[test]
+    fn test_cdx_cfg_026_no_permissions_network_no_diagnostic() {
+        let diagnostics = validate_config("model = \"o4-mini\"");
+        let cdx_026: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-026")
+            .collect();
+        assert!(cdx_026.is_empty());
+    }
+
+    // ===== CDX-CFG-027: Invalid windows.sandbox enum value =====
+
+    #[test]
+    fn test_cdx_cfg_027_invalid_windows_sandbox() {
+        let content = "[windows]\nsandbox = \"permissive\"";
+        let diagnostics = validate_config(content);
+        let cdx_027: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-027")
+            .collect();
+        assert_eq!(cdx_027.len(), 1);
+        assert_eq!(cdx_027[0].level, DiagnosticLevel::Info);
+        assert!(cdx_027[0].message.contains("permissive"));
+    }
+
+    #[test]
+    fn test_cdx_cfg_027_valid_windows_sandbox_elevated() {
+        let content = "[windows]\nsandbox = \"elevated\"";
+        let diagnostics = validate_config(content);
+        let cdx_027: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-027")
+            .collect();
+        assert!(cdx_027.is_empty());
+    }
+
+    #[test]
+    fn test_cdx_cfg_027_valid_windows_sandbox_unelevated() {
+        let content = "[windows]\nsandbox = \"unelevated\"";
+        let diagnostics = validate_config(content);
+        let cdx_027: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-027")
+            .collect();
+        assert!(cdx_027.is_empty());
+    }
+
+    #[test]
+    fn test_cdx_cfg_027_type_error() {
+        let content = "[windows]\nsandbox = 123";
+        let diagnostics = validate_config(content);
+        let cdx_027: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-027")
+            .collect();
+        assert_eq!(cdx_027.len(), 1);
+        assert!(cdx_027[0].message.contains("string"));
     }
 }

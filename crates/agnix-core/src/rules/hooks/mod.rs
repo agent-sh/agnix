@@ -1,4 +1,4 @@
-//! Hooks validation rules (CC-HK-001 to CC-HK-019)
+//! Hooks validation rules (CC-HK-001 to CC-HK-024)
 
 use crate::{
     config::LintConfig,
@@ -32,6 +32,11 @@ const RULE_IDS: &[&str] = &[
     "CC-HK-017",
     "CC-HK-018",
     "CC-HK-019",
+    "CC-HK-020",
+    "CC-HK-021",
+    "CC-HK-022",
+    "CC-HK-023",
+    "CC-HK-024",
 ];
 
 pub struct HooksValidator;
@@ -389,7 +394,7 @@ impl Validator for HooksValidator {
     ///
     /// 1. **Category check** - Early return if hooks category disabled
     /// 2. **JSON parsing** - Parse raw JSON, report CC-HK-012 on failure
-    /// 3. **Pre-parse validation** - Raw JSON checks (CC-HK-005, CC-HK-011, CC-HK-013, CC-HK-014, CC-HK-016)
+    /// 3. **Pre-parse validation** - Raw JSON checks (CC-HK-005, CC-HK-011, CC-HK-013..014, CC-HK-016, CC-HK-020..024)
     /// 4. **Typed parsing** - Parse into SettingsSchema
     /// 5. **Event iteration** - Validate each event and hook (CC-HK-015, CC-HK-017, CC-HK-018)
     fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
@@ -448,6 +453,31 @@ impl Validator for HooksValidator {
         // CC-HK-014: Once outside skill/agent frontmatter
         if config.is_rule_enabled("CC-HK-014") {
             validate_cc_hk_014_once_field(&raw_value, path, &mut diagnostics);
+        }
+
+        // CC-HK-020: HTTP hook missing required url field
+        if config.is_rule_enabled("CC-HK-020") {
+            validate_cc_hk_020_http_missing_url(&raw_value, path, &mut diagnostics);
+        }
+
+        // CC-HK-021: Invalid if field syntax
+        if config.is_rule_enabled("CC-HK-021") {
+            validate_cc_hk_021_invalid_if_field(&raw_value, path, &mut diagnostics);
+        }
+
+        // CC-HK-022: Invalid shell value
+        if config.is_rule_enabled("CC-HK-022") {
+            validate_cc_hk_022_invalid_shell(&raw_value, path, &mut diagnostics);
+        }
+
+        // CC-HK-023: once field must be boolean when present
+        if config.is_rule_enabled("CC-HK-023") {
+            validate_cc_hk_023_once_not_boolean(&raw_value, path, &mut diagnostics);
+        }
+
+        // CC-HK-024: HTTP headers with $VAR but missing allowedEnvVars
+        if config.is_rule_enabled("CC-HK-024") {
+            validate_cc_hk_024_headers_env_vars(&raw_value, path, &mut diagnostics);
         }
 
         let settings: SettingsSchema = match serde_json::from_value(raw_value) {
@@ -700,7 +730,8 @@ impl Validator for HooksValidator {
                         }
                         Hook::Http { .. } => {
                             // HTTP hooks are validated at the raw JSON level
-                            // (CC-HK-005 type check, CC-HK-011 timeout, CC-HK-016 type validation).
+                            // (CC-HK-005 type check, CC-HK-011 timeout, CC-HK-016 type validation,
+                            // CC-HK-020 url, CC-HK-024 headers env vars).
                             // No additional typed validation needed here.
                         }
                     }

@@ -1,4 +1,4 @@
-//! Cursor project rules validation rules (CUR-001 to CUR-016)
+//! Cursor project rules validation rules (CUR-001 to CUR-019)
 //!
 //! Validates:
 //! - CUR-001: Empty .mdc rule file (HIGH) - files must have content
@@ -17,6 +17,9 @@
 //! - CUR-014: Invalid Cursor subagent frontmatter (HIGH)
 //! - CUR-015: Empty Cursor subagent body (MEDIUM)
 //! - CUR-016: Invalid .cursor/environment.json schema (HIGH)
+//! - CUR-017: Invalid hook entry field types (MEDIUM) - timeout/loop_limit/failClosed type checks
+//! - CUR-018: Prompt-type hook missing prompt field (MEDIUM) - type:"prompt" needs prompt key
+//! - CUR-019: Invalid model field on prompt hook (LOW) - model must be a string
 
 use crate::{
     FileType,
@@ -37,6 +40,7 @@ use std::path::Path;
 const RULE_IDS: &[&str] = &[
     "CUR-001", "CUR-002", "CUR-003", "CUR-004", "CUR-005", "CUR-006", "CUR-007", "CUR-008",
     "CUR-009", "CUR-010", "CUR-011", "CUR-012", "CUR-013", "CUR-014", "CUR-015", "CUR-016",
+    "CUR-017", "CUR-018", "CUR-019",
 ];
 
 const CURSOR_HOOK_EVENTS: &[&str] = &[
@@ -394,6 +398,144 @@ fn validate_cursor_hooks_file(path: &Path, content: &str, config: &LintConfig) -
                         )
                         .with_suggestion(t!("rules.cur_012.suggestion")),
                     );
+                }
+            }
+
+            // CUR-017: Invalid hook entry field types
+            if config.is_rule_enabled("CUR-017") {
+                if let Some(timeout) = hook_obj.get("timeout") {
+                    match timeout.as_f64() {
+                        Some(n) if n > 0.0 => {} // valid
+                        Some(n) => {
+                            diagnostics.push(
+                                Diagnostic::warning(
+                                    path.to_path_buf(),
+                                    1,
+                                    0,
+                                    "CUR-017",
+                                    format!(
+                                        "Hook entry {} in '{}' has invalid 'timeout': expected a positive number, got {}",
+                                        index + 1,
+                                        event_name,
+                                        n
+                                    ),
+                                )
+                                .with_suggestion("Set 'timeout' to a positive number (milliseconds).".to_string()),
+                            );
+                        }
+                        None => {
+                            diagnostics.push(
+                                Diagnostic::warning(
+                                    path.to_path_buf(),
+                                    1,
+                                    0,
+                                    "CUR-017",
+                                    format!(
+                                        "Hook entry {} in '{}' has invalid 'timeout': expected a positive number, got {}",
+                                        index + 1,
+                                        event_name,
+                                        json_type_name(timeout)
+                                    ),
+                                )
+                                .with_suggestion("Set 'timeout' to a positive number (milliseconds).".to_string()),
+                            );
+                        }
+                    }
+                }
+
+                if let Some(loop_limit) = hook_obj.get("loop_limit") {
+                    if !loop_limit.is_null() && !loop_limit.is_number() {
+                        diagnostics.push(
+                            Diagnostic::warning(
+                                path.to_path_buf(),
+                                1,
+                                0,
+                                "CUR-017",
+                                format!(
+                                    "Hook entry {} in '{}' has invalid 'loop_limit': expected a number or null, got {}",
+                                    index + 1,
+                                    event_name,
+                                    json_type_name(loop_limit)
+                                ),
+                            )
+                            .with_suggestion("Set 'loop_limit' to a number or null.".to_string()),
+                        );
+                    }
+                }
+
+                if let Some(fail_closed) = hook_obj.get("failClosed") {
+                    if !fail_closed.is_boolean() {
+                        diagnostics.push(
+                            Diagnostic::warning(
+                                path.to_path_buf(),
+                                1,
+                                0,
+                                "CUR-017",
+                                format!(
+                                    "Hook entry {} in '{}' has invalid 'failClosed': expected a boolean, got {}",
+                                    index + 1,
+                                    event_name,
+                                    json_type_name(fail_closed)
+                                ),
+                            )
+                            .with_suggestion("Set 'failClosed' to true or false.".to_string()),
+                        );
+                    }
+                }
+            }
+
+            // CUR-018: Prompt-type hook missing prompt field
+            if config.is_rule_enabled("CUR-018") {
+                let is_prompt_type = hook_obj
+                    .get("type")
+                    .and_then(JsonValue::as_str)
+                    .is_some_and(|t| t == "prompt");
+
+                if is_prompt_type && !hook_obj.contains_key("prompt") {
+                    diagnostics.push(
+                        Diagnostic::warning(
+                            path.to_path_buf(),
+                            1,
+                            0,
+                            "CUR-018",
+                            format!(
+                                "Hook entry {} in '{}' has type 'prompt' but is missing the 'prompt' field",
+                                index + 1,
+                                event_name
+                            ),
+                        )
+                        .with_suggestion("Add a 'prompt' field with the prompt string for this hook.".to_string()),
+                    );
+                }
+            }
+
+            // CUR-019: Invalid model field on prompt hook
+            if config.is_rule_enabled("CUR-019") {
+                let is_prompt_type = hook_obj
+                    .get("type")
+                    .and_then(JsonValue::as_str)
+                    .is_some_and(|t| t == "prompt");
+
+                if is_prompt_type {
+                    if let Some(model) = hook_obj.get("model") {
+                        if !model.is_string() {
+                            diagnostics.push(
+                                Diagnostic::info(
+                                    path.to_path_buf(),
+                                    1,
+                                    0,
+                                    "CUR-019",
+                                    format!(
+                                        "Hook entry {} in '{}' has invalid 'model': expected a string, got {}",
+                                        index + 1,
+                                        event_name,
+                                        json_type_name(model)
+                                    ),
+                                )
+                                .with_suggestion("Set 'model' to a string model identifier.".to_string()),
+                            );
+                        }
+                    }
                 }
             }
         }
@@ -1821,6 +1963,156 @@ Review the diff and suggest improvements."#;
         );
     }
 
+    // ===== CUR-017: Invalid hook entry field types =====
+
+    #[test]
+    fn test_cur_017_timeout_must_be_positive_number() {
+        let diagnostics = validate_cursor_hooks(
+            r#"{"version":1,"hooks":{"sessionStart":[{"type":"command","command":"echo hi","timeout":"slow"}]}}"#,
+        );
+        let cur_017: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CUR-017").collect();
+        assert_eq!(cur_017.len(), 1);
+        assert_eq!(cur_017[0].level, DiagnosticLevel::Warning);
+        assert!(cur_017[0].message.contains("timeout"));
+    }
+
+    #[test]
+    fn test_cur_017_timeout_zero_is_invalid() {
+        let diagnostics = validate_cursor_hooks(
+            r#"{"version":1,"hooks":{"sessionStart":[{"type":"command","command":"echo hi","timeout":0}]}}"#,
+        );
+        let cur_017: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CUR-017").collect();
+        assert_eq!(cur_017.len(), 1);
+        assert!(cur_017[0].message.contains("timeout"));
+    }
+
+    #[test]
+    fn test_cur_017_timeout_negative_is_invalid() {
+        let diagnostics = validate_cursor_hooks(
+            r#"{"version":1,"hooks":{"sessionStart":[{"type":"command","command":"echo hi","timeout":-5}]}}"#,
+        );
+        assert!(diagnostics.iter().any(|d| d.rule == "CUR-017"));
+    }
+
+    #[test]
+    fn test_cur_017_timeout_positive_is_valid() {
+        let diagnostics = validate_cursor_hooks(
+            r#"{"version":1,"hooks":{"sessionStart":[{"type":"command","command":"echo hi","timeout":5000}]}}"#,
+        );
+        let cur_017: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CUR-017").collect();
+        assert!(cur_017.is_empty());
+    }
+
+    #[test]
+    fn test_cur_017_loop_limit_must_be_number_or_null() {
+        let diagnostics = validate_cursor_hooks(
+            r#"{"version":1,"hooks":{"sessionStart":[{"type":"command","command":"echo hi","loop_limit":"many"}]}}"#,
+        );
+        let cur_017: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CUR-017").collect();
+        assert_eq!(cur_017.len(), 1);
+        assert!(cur_017[0].message.contains("loop_limit"));
+    }
+
+    #[test]
+    fn test_cur_017_loop_limit_null_is_valid() {
+        let diagnostics = validate_cursor_hooks(
+            r#"{"version":1,"hooks":{"sessionStart":[{"type":"command","command":"echo hi","loop_limit":null}]}}"#,
+        );
+        let cur_017: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CUR-017").collect();
+        assert!(cur_017.is_empty());
+    }
+
+    #[test]
+    fn test_cur_017_loop_limit_number_is_valid() {
+        let diagnostics = validate_cursor_hooks(
+            r#"{"version":1,"hooks":{"sessionStart":[{"type":"command","command":"echo hi","loop_limit":3}]}}"#,
+        );
+        let cur_017: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CUR-017").collect();
+        assert!(cur_017.is_empty());
+    }
+
+    #[test]
+    fn test_cur_017_fail_closed_must_be_boolean() {
+        let diagnostics = validate_cursor_hooks(
+            r#"{"version":1,"hooks":{"sessionStart":[{"type":"command","command":"echo hi","failClosed":"yes"}]}}"#,
+        );
+        let cur_017: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CUR-017").collect();
+        assert_eq!(cur_017.len(), 1);
+        assert!(cur_017[0].message.contains("failClosed"));
+    }
+
+    #[test]
+    fn test_cur_017_fail_closed_boolean_is_valid() {
+        let diagnostics = validate_cursor_hooks(
+            r#"{"version":1,"hooks":{"sessionStart":[{"type":"command","command":"echo hi","failClosed":true}]}}"#,
+        );
+        let cur_017: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CUR-017").collect();
+        assert!(cur_017.is_empty());
+    }
+
+    // ===== CUR-018: Prompt-type hook missing prompt field =====
+
+    #[test]
+    fn test_cur_018_prompt_type_missing_prompt_field() {
+        let diagnostics = validate_cursor_hooks(
+            r#"{"version":1,"hooks":{"sessionStart":[{"type":"prompt","command":"echo hi"}]}}"#,
+        );
+        let cur_018: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CUR-018").collect();
+        assert_eq!(cur_018.len(), 1);
+        assert_eq!(cur_018[0].level, DiagnosticLevel::Warning);
+        assert!(cur_018[0].message.contains("prompt"));
+    }
+
+    #[test]
+    fn test_cur_018_prompt_type_with_prompt_field() {
+        let diagnostics = validate_cursor_hooks(
+            r#"{"version":1,"hooks":{"sessionStart":[{"type":"prompt","command":"echo hi","prompt":"Summarize the changes"}]}}"#,
+        );
+        let cur_018: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CUR-018").collect();
+        assert!(cur_018.is_empty());
+    }
+
+    #[test]
+    fn test_cur_018_command_type_no_prompt_no_warning() {
+        let diagnostics = validate_cursor_hooks(
+            r#"{"version":1,"hooks":{"sessionStart":[{"type":"command","command":"echo hi"}]}}"#,
+        );
+        let cur_018: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CUR-018").collect();
+        assert!(cur_018.is_empty());
+    }
+
+    // ===== CUR-019: Invalid model field on prompt hook =====
+
+    #[test]
+    fn test_cur_019_model_must_be_string() {
+        let diagnostics = validate_cursor_hooks(
+            r#"{"version":1,"hooks":{"sessionStart":[{"type":"prompt","command":"echo hi","prompt":"test","model":123}]}}"#,
+        );
+        let cur_019: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CUR-019").collect();
+        assert_eq!(cur_019.len(), 1);
+        assert_eq!(cur_019[0].level, DiagnosticLevel::Info);
+        assert!(cur_019[0].message.contains("model"));
+    }
+
+    #[test]
+    fn test_cur_019_model_string_is_valid() {
+        let diagnostics = validate_cursor_hooks(
+            r#"{"version":1,"hooks":{"sessionStart":[{"type":"prompt","command":"echo hi","prompt":"test","model":"gpt-4"}]}}"#,
+        );
+        let cur_019: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CUR-019").collect();
+        assert!(cur_019.is_empty());
+    }
+
+    #[test]
+    fn test_cur_019_model_on_command_type_no_warning() {
+        // CUR-019 only applies to prompt-type hooks
+        let diagnostics = validate_cursor_hooks(
+            r#"{"version":1,"hooks":{"sessionStart":[{"type":"command","command":"echo hi","model":123}]}}"#,
+        );
+        let cur_019: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CUR-019").collect();
+        assert!(cur_019.is_empty());
+    }
+
     // ===== Config Integration =====
 
     #[test]
@@ -2015,6 +2307,7 @@ Body"#;
         let rules = [
             "CUR-001", "CUR-002", "CUR-003", "CUR-004", "CUR-005", "CUR-006", "CUR-007", "CUR-008",
             "CUR-009", "CUR-010", "CUR-011", "CUR-012", "CUR-013", "CUR-014", "CUR-015", "CUR-016",
+            "CUR-017", "CUR-018", "CUR-019",
         ];
 
         for rule in rules {
@@ -2056,6 +2349,18 @@ Body"#;
                     ".cursor/agents/reviewer.md",
                 ),
                 "CUR-016" => ("{}", ".cursor/environment.json"),
+                "CUR-017" => (
+                    r#"{"version":1,"hooks":{"sessionStart":[{"type":"command","command":"echo hi","timeout":"slow"}]}}"#,
+                    ".cursor/hooks.json",
+                ),
+                "CUR-018" => (
+                    r#"{"version":1,"hooks":{"sessionStart":[{"type":"prompt","command":"echo hi"}]}}"#,
+                    ".cursor/hooks.json",
+                ),
+                "CUR-019" => (
+                    r#"{"version":1,"hooks":{"sessionStart":[{"type":"prompt","command":"echo hi","prompt":"test","model":123}]}}"#,
+                    ".cursor/hooks.json",
+                ),
                 _ => ("---\nunknown: value\n---\n", ".cursor/rules/test.mdc"),
             };
 

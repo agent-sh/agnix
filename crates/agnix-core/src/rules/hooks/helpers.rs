@@ -666,6 +666,238 @@ pub(super) fn find_unique_matcher_line_span(
     crate::span_utils::find_unique_json_matcher_line(content, matcher_value)
 }
 
+/// CC-HK-020: HTTP hook missing required `url` field.
+/// When a hook has `type: "http"`, it MUST have a `url` field that is a non-empty string.
+pub(super) fn validate_cc_hk_020_http_missing_url(
+    raw_value: &serde_json::Value,
+    path: &Path,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    for_each_raw_hook(raw_value, |event, matcher_idx, hook_idx, hook| {
+        if let Some(type_val) = hook.get("type").and_then(|t| t.as_str()) {
+            if type_val == "http" {
+                let missing = match hook.get("url") {
+                    None => true,
+                    Some(serde_json::Value::String(s)) => s.is_empty(),
+                    Some(_) => true, // non-string url is invalid
+                };
+                if missing {
+                    let hook_location =
+                        format!("hooks.{}[{}].hooks[{}]", event, matcher_idx, hook_idx);
+                    diagnostics.push(
+                        Diagnostic::error(
+                            path.to_path_buf(),
+                            1,
+                            0,
+                            "CC-HK-020",
+                            format!(
+                                "HTTP hook at {} is missing required 'url' field",
+                                hook_location
+                            ),
+                        )
+                        .with_suggestion(
+                            "Add a 'url' field with a valid HTTP(S) endpoint to the hook"
+                                .to_string(),
+                        ),
+                    );
+                }
+            }
+        }
+    });
+}
+
+/// CC-HK-021: Invalid `if` field syntax.
+/// The `if` field must be a non-empty string and is only valid on tool events.
+pub(super) fn validate_cc_hk_021_invalid_if_field(
+    raw_value: &serde_json::Value,
+    path: &Path,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let tool_events = ["PreToolUse", "PostToolUse", "PostToolUseFailure"];
+    if let Some(hooks_obj) = raw_value.get("hooks").and_then(|h| h.as_object()) {
+        for (event, matchers) in hooks_obj {
+            if let Some(matchers_arr) = matchers.as_array() {
+                for (matcher_idx, matcher) in matchers_arr.iter().enumerate() {
+                    if let Some(hooks_arr) = matcher.get("hooks").and_then(|h| h.as_array()) {
+                        for (hook_idx, hook) in hooks_arr.iter().enumerate() {
+                            if let Some(if_val) = hook.get("if") {
+                                let hook_location = format!(
+                                    "hooks.{}[{}].hooks[{}]",
+                                    event, matcher_idx, hook_idx
+                                );
+
+                                // Check if the event is a tool event
+                                if !tool_events.contains(&event.as_str()) {
+                                    diagnostics.push(
+                                        Diagnostic::warning(
+                                            path.to_path_buf(),
+                                            1,
+                                            0,
+                                            "CC-HK-021",
+                                            format!(
+                                                "Hook at {} has 'if' field on non-tool event '{}'; 'if' is only valid on PreToolUse, PostToolUse, PostToolUseFailure",
+                                                hook_location, event
+                                            ),
+                                        )
+                                        .with_suggestion(
+                                            "Remove the 'if' field or move the hook to a tool event".to_string(),
+                                        ),
+                                    );
+                                    continue;
+                                }
+
+                                // Validate it is a non-empty string
+                                let is_invalid = match if_val {
+                                    serde_json::Value::String(s) => s.is_empty(),
+                                    _ => true,
+                                };
+                                if is_invalid {
+                                    diagnostics.push(
+                                        Diagnostic::warning(
+                                            path.to_path_buf(),
+                                            1,
+                                            0,
+                                            "CC-HK-021",
+                                            format!(
+                                                "Hook at {} has invalid 'if' field; must be a non-empty string",
+                                                hook_location
+                                            ),
+                                        )
+                                        .with_suggestion(
+                                            "Set 'if' to a valid filter expression string".to_string(),
+                                        ),
+                                    );
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// CC-HK-022: Invalid `shell` value.
+/// When present, `shell` must be either "bash" or "powershell".
+pub(super) fn validate_cc_hk_022_invalid_shell(
+    raw_value: &serde_json::Value,
+    path: &Path,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let valid_shells = ["bash", "powershell"];
+    for_each_raw_hook(raw_value, |event, matcher_idx, hook_idx, hook| {
+        if let Some(shell_val) = hook.get("shell") {
+            let is_invalid = match shell_val.as_str() {
+                Some(s) => !valid_shells.contains(&s),
+                None => true, // non-string is invalid
+            };
+            if is_invalid {
+                let hook_location =
+                    format!("hooks.{}[{}].hooks[{}]", event, matcher_idx, hook_idx);
+                let shell_display = shell_val
+                    .as_str()
+                    .map(|s| s.to_string())
+                    .unwrap_or_else(|| shell_val.to_string());
+                diagnostics.push(
+                    Diagnostic::warning(
+                        path.to_path_buf(),
+                        1,
+                        0,
+                        "CC-HK-022",
+                        format!(
+                            "Hook at {} has invalid 'shell' value '{}'; must be 'bash' or 'powershell'",
+                            hook_location, shell_display
+                        ),
+                    )
+                    .with_suggestion(
+                        "Set 'shell' to either 'bash' or 'powershell'".to_string(),
+                    ),
+                );
+            }
+        }
+    });
+}
+
+/// CC-HK-023: `once` field outside skill context.
+/// Validate that `once` is a boolean when present.
+pub(super) fn validate_cc_hk_023_once_not_boolean(
+    raw_value: &serde_json::Value,
+    path: &Path,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    for_each_raw_hook(raw_value, |event, matcher_idx, hook_idx, hook| {
+        if let Some(once_val) = hook.get("once") {
+            if !once_val.is_boolean() {
+                let hook_location =
+                    format!("hooks.{}[{}].hooks[{}]", event, matcher_idx, hook_idx);
+                diagnostics.push(
+                    Diagnostic::info(
+                        path.to_path_buf(),
+                        1,
+                        0,
+                        "CC-HK-023",
+                        format!(
+                            "Hook at {} has non-boolean 'once' field; 'once' must be true or false",
+                            hook_location
+                        ),
+                    )
+                    .with_suggestion(
+                        "Set 'once' to true or false".to_string(),
+                    ),
+                );
+            }
+        }
+    });
+}
+
+/// CC-HK-024: HTTP hook `headers` with `$VAR` but missing `allowedEnvVars`.
+/// When headers contain `$` variable interpolation patterns, warn if `allowedEnvVars` is not set.
+pub(super) fn validate_cc_hk_024_headers_env_vars(
+    raw_value: &serde_json::Value,
+    path: &Path,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    for_each_raw_hook(raw_value, |event, matcher_idx, hook_idx, hook| {
+        if let Some(type_val) = hook.get("type").and_then(|t| t.as_str()) {
+            if type_val == "http" {
+                if let Some(headers) = hook.get("headers").and_then(|h| h.as_object()) {
+                    let has_env_var = headers.values().any(|v| {
+                        v.as_str().map(|s| s.contains('$')).unwrap_or(false)
+                    });
+                    if has_env_var {
+                        let has_allowed = hook
+                            .get("allowedEnvVars")
+                            .and_then(|v| v.as_array())
+                            .map(|a| !a.is_empty())
+                            .unwrap_or(false);
+                        if !has_allowed {
+                            let hook_location = format!(
+                                "hooks.{}[{}].hooks[{}]",
+                                event, matcher_idx, hook_idx
+                            );
+                            diagnostics.push(
+                                Diagnostic::warning(
+                                    path.to_path_buf(),
+                                    1,
+                                    0,
+                                    "CC-HK-024",
+                                    format!(
+                                        "HTTP hook at {} has headers with $VAR interpolation but no 'allowedEnvVars'",
+                                        hook_location
+                                    ),
+                                )
+                                .with_suggestion(
+                                    "Add 'allowedEnvVars' array listing the environment variables used in headers".to_string(),
+                                ),
+                            );
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

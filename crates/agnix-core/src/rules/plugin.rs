@@ -1,4 +1,4 @@
-//! Plugin manifest validation (CC-PL-001 to CC-PL-010).
+//! Plugin manifest validation (CC-PL-001 to CC-PL-014).
 //!
 //! Validates `.claude-plugin/plugin.json` manifests.
 
@@ -21,6 +21,10 @@ const RULE_IDS: &[&str] = &[
     "CC-PL-008",
     "CC-PL-009",
     "CC-PL-010",
+    "CC-PL-011",
+    "CC-PL-012",
+    "CC-PL-013",
+    "CC-PL-014",
 ];
 
 pub struct PluginValidator;
@@ -263,6 +267,193 @@ impl Validator for PluginValidator {
             }
         }
 
+        // CC-PL-011: LSP server missing required fields
+        if config.is_rule_enabled("CC-PL-011") {
+            if let Some(lsp_servers) = raw_value.get("lspServers") {
+                if let Some(obj) = lsp_servers.as_object() {
+                    for (server_name, server_val) in obj {
+                        if let Some(server_obj) = server_val.as_object() {
+                            if !server_obj.contains_key("command") {
+                                diagnostics.push(
+                                    Diagnostic::error(
+                                        path.to_path_buf(),
+                                        1,
+                                        0,
+                                        "CC-PL-011",
+                                        format!(
+                                            "LSP server '{}' is missing required field 'command'",
+                                            server_name
+                                        ),
+                                    )
+                                    .with_suggestion(format!(
+                                        "Add a 'command' string to LSP server '{}'",
+                                        server_name
+                                    )),
+                                );
+                            }
+                            if !server_obj.contains_key("extensionToLanguage") {
+                                diagnostics.push(
+                                    Diagnostic::error(
+                                        path.to_path_buf(),
+                                        1,
+                                        0,
+                                        "CC-PL-011",
+                                        format!(
+                                            "LSP server '{}' is missing required field 'extensionToLanguage'",
+                                            server_name
+                                        ),
+                                    )
+                                    .with_suggestion(format!(
+                                        "Add an 'extensionToLanguage' mapping to LSP server '{}'",
+                                        server_name
+                                    )),
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // CC-PL-012: Invalid userConfig key
+        if config.is_rule_enabled("CC-PL-012") {
+            if let Some(user_config) = raw_value.get("userConfig") {
+                if let Some(obj) = user_config.as_object() {
+                    for key in obj.keys() {
+                        if !is_valid_identifier(key) {
+                            diagnostics.push(
+                                Diagnostic::warning(
+                                    path.to_path_buf(),
+                                    1,
+                                    0,
+                                    "CC-PL-012",
+                                    format!(
+                                        "Invalid userConfig key '{}': must be a valid identifier (alphanumeric and underscores, not starting with a number)",
+                                        key
+                                    ),
+                                )
+                                .with_suggestion(format!(
+                                    "Rename '{}' to a valid identifier (e.g., 'my_config_key')",
+                                    key
+                                )),
+                            );
+                        }
+                    }
+                }
+            }
+        }
+
+        // CC-PL-013: channels entry missing server field
+        if config.is_rule_enabled("CC-PL-013") {
+            if let Some(channels) = raw_value.get("channels") {
+                if let Some(arr) = channels.as_array() {
+                    let mcp_server_keys: Vec<String> = raw_value
+                        .get("mcpServers")
+                        .and_then(|v| v.as_object())
+                        .map(|obj| obj.keys().cloned().collect())
+                        .unwrap_or_default();
+
+                    for (i, entry) in arr.iter().enumerate() {
+                        match entry.get("server").and_then(|v| v.as_str()) {
+                            None => {
+                                diagnostics.push(
+                                    Diagnostic::warning(
+                                        path.to_path_buf(),
+                                        1,
+                                        0,
+                                        "CC-PL-013",
+                                        format!(
+                                            "channels[{}] is missing required 'server' field",
+                                            i
+                                        ),
+                                    )
+                                    .with_suggestion(
+                                        "Add a 'server' field referencing a key in 'mcpServers'"
+                                            .to_string(),
+                                    ),
+                                );
+                            }
+                            Some(server_ref) => {
+                                if !mcp_server_keys.is_empty()
+                                    && !mcp_server_keys.contains(&server_ref.to_string())
+                                {
+                                    diagnostics.push(
+                                        Diagnostic::warning(
+                                            path.to_path_buf(),
+                                            1,
+                                            0,
+                                            "CC-PL-013",
+                                            format!(
+                                                "channels[{}] references server '{}' which is not defined in 'mcpServers'",
+                                                i, server_ref
+                                            ),
+                                        )
+                                        .with_suggestion(format!(
+                                            "Add '{}' to 'mcpServers' or fix the server reference",
+                                            server_ref
+                                        )),
+                                    );
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // CC-PL-014: Plugin agent uses unsupported field
+        if config.is_rule_enabled("CC-PL-014") {
+            if let Some(agents) = raw_value.get("agents") {
+                let unsupported_fields = ["hooks", "mcpServers", "permissionMode"];
+                let agent_entries: Vec<(&str, &serde_json::Value)> =
+                    if let Some(obj) = agents.as_object() {
+                        obj.iter().map(|(k, v)| (k.as_str(), v)).collect()
+                    } else if let Some(arr) = agents.as_array() {
+                        arr.iter()
+                            .map(|v| {
+                                let name = v
+                                    .get("name")
+                                    .and_then(|n| n.as_str())
+                                    .unwrap_or("");
+                                (name, v)
+                            })
+                            .collect()
+                    } else {
+                        vec![]
+                    };
+
+                for (agent_name, agent_val) in agent_entries {
+                    if let Some(agent_obj) = agent_val.as_object() {
+                        for field in unsupported_fields {
+                            if agent_obj.contains_key(field) {
+                                let label = if agent_name.is_empty() {
+                                    "Plugin agent".to_string()
+                                } else {
+                                    format!("Plugin agent '{}'", agent_name)
+                                };
+                                diagnostics.push(
+                                    Diagnostic::warning(
+                                        path.to_path_buf(),
+                                        1,
+                                        0,
+                                        "CC-PL-014",
+                                        format!(
+                                            "{} uses unsupported field '{}' (ignored for plugin agents)",
+                                            label, field
+                                        ),
+                                    )
+                                    .with_suggestion(format!(
+                                        "Remove '{}' from the plugin agent definition",
+                                        field
+                                    )),
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         diagnostics
     }
 }
@@ -484,6 +675,19 @@ fn check_component_inside_claude_plugin(
 /// Check if a URL is valid (http or https scheme).
 fn is_valid_url(url: &str) -> bool {
     url.starts_with("http://") || url.starts_with("https://")
+}
+
+/// Check if a string is a valid identifier (alphanumeric + underscores, not starting with a number).
+fn is_valid_identifier(s: &str) -> bool {
+    if s.is_empty() {
+        return false;
+    }
+    let mut chars = s.chars();
+    match chars.next() {
+        Some(c) if c.is_ascii_alphabetic() || c == '_' => {}
+        _ => return false,
+    }
+    chars.all(|c| c.is_ascii_alphanumeric() || c == '_')
 }
 
 #[cfg(test)]
@@ -1921,5 +2125,404 @@ mod tests {
                 .contains("Validate JSON syntax"),
             "CC-PL-006 suggestion should mention JSON syntax"
         );
+    }
+
+    // ===== CC-PL-011: LSP Server Missing Required Fields =====
+
+    #[test]
+    fn test_cc_pl_011_missing_command() {
+        let temp = TempDir::new().unwrap();
+        let plugin_path = temp.path().join(".claude-plugin").join("plugin.json");
+        write_plugin(
+            &plugin_path,
+            r#"{"name":"test","description":"desc","version":"1.0.0","lspServers":{"myServer":{"extensionToLanguage":{".rs":"rust"}}}}"#,
+        );
+
+        let validator = PluginValidator;
+        let diagnostics = validator.validate(
+            &plugin_path,
+            &fs::read_to_string(&plugin_path).unwrap(),
+            &LintConfig::default(),
+        );
+
+        let pl_011: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-PL-011")
+            .collect();
+        assert_eq!(pl_011.len(), 1);
+        assert!(
+            pl_011[0].message.contains("command"),
+            "Should mention missing 'command'"
+        );
+    }
+
+    #[test]
+    fn test_cc_pl_011_missing_extension_to_language() {
+        let temp = TempDir::new().unwrap();
+        let plugin_path = temp.path().join(".claude-plugin").join("plugin.json");
+        write_plugin(
+            &plugin_path,
+            r#"{"name":"test","description":"desc","version":"1.0.0","lspServers":{"myServer":{"command":"rust-analyzer"}}}"#,
+        );
+
+        let validator = PluginValidator;
+        let diagnostics = validator.validate(
+            &plugin_path,
+            &fs::read_to_string(&plugin_path).unwrap(),
+            &LintConfig::default(),
+        );
+
+        let pl_011: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-PL-011")
+            .collect();
+        assert_eq!(pl_011.len(), 1);
+        assert!(
+            pl_011[0].message.contains("extensionToLanguage"),
+            "Should mention missing 'extensionToLanguage'"
+        );
+    }
+
+    #[test]
+    fn test_cc_pl_011_missing_both_fields() {
+        let temp = TempDir::new().unwrap();
+        let plugin_path = temp.path().join(".claude-plugin").join("plugin.json");
+        write_plugin(
+            &plugin_path,
+            r#"{"name":"test","description":"desc","version":"1.0.0","lspServers":{"myServer":{}}}"#,
+        );
+
+        let validator = PluginValidator;
+        let diagnostics = validator.validate(
+            &plugin_path,
+            &fs::read_to_string(&plugin_path).unwrap(),
+            &LintConfig::default(),
+        );
+
+        let pl_011: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-PL-011")
+            .collect();
+        assert_eq!(pl_011.len(), 2, "Should report both missing fields");
+    }
+
+    #[test]
+    fn test_cc_pl_011_valid_lsp_server_no_error() {
+        let temp = TempDir::new().unwrap();
+        let plugin_path = temp.path().join(".claude-plugin").join("plugin.json");
+        write_plugin(
+            &plugin_path,
+            r#"{"name":"test","description":"desc","version":"1.0.0","lspServers":{"myServer":{"command":"rust-analyzer","extensionToLanguage":{".rs":"rust"}}}}"#,
+        );
+
+        let validator = PluginValidator;
+        let diagnostics = validator.validate(
+            &plugin_path,
+            &fs::read_to_string(&plugin_path).unwrap(),
+            &LintConfig::default(),
+        );
+
+        assert!(!diagnostics.iter().any(|d| d.rule == "CC-PL-011"));
+    }
+
+    #[test]
+    fn test_cc_pl_011_no_lsp_servers_no_error() {
+        let temp = TempDir::new().unwrap();
+        let plugin_path = temp.path().join(".claude-plugin").join("plugin.json");
+        write_plugin(
+            &plugin_path,
+            r#"{"name":"test","description":"desc","version":"1.0.0"}"#,
+        );
+
+        let validator = PluginValidator;
+        let diagnostics = validator.validate(
+            &plugin_path,
+            &fs::read_to_string(&plugin_path).unwrap(),
+            &LintConfig::default(),
+        );
+
+        assert!(!diagnostics.iter().any(|d| d.rule == "CC-PL-011"));
+    }
+
+    // ===== CC-PL-012: Invalid userConfig Key =====
+
+    #[test]
+    fn test_cc_pl_012_key_starts_with_number() {
+        let temp = TempDir::new().unwrap();
+        let plugin_path = temp.path().join(".claude-plugin").join("plugin.json");
+        write_plugin(
+            &plugin_path,
+            r#"{"name":"test","description":"desc","version":"1.0.0","userConfig":{"1invalid":{"type":"string"}}}"#,
+        );
+
+        let validator = PluginValidator;
+        let diagnostics = validator.validate(
+            &plugin_path,
+            &fs::read_to_string(&plugin_path).unwrap(),
+            &LintConfig::default(),
+        );
+
+        let pl_012: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-PL-012")
+            .collect();
+        assert_eq!(pl_012.len(), 1);
+        assert!(
+            pl_012[0].message.contains("1invalid"),
+            "Should mention the invalid key"
+        );
+    }
+
+    #[test]
+    fn test_cc_pl_012_key_with_special_chars() {
+        let temp = TempDir::new().unwrap();
+        let plugin_path = temp.path().join(".claude-plugin").join("plugin.json");
+        write_plugin(
+            &plugin_path,
+            r#"{"name":"test","description":"desc","version":"1.0.0","userConfig":{"my-key":{"type":"string"},"my.key":{"type":"number"}}}"#,
+        );
+
+        let validator = PluginValidator;
+        let diagnostics = validator.validate(
+            &plugin_path,
+            &fs::read_to_string(&plugin_path).unwrap(),
+            &LintConfig::default(),
+        );
+
+        let pl_012: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-PL-012")
+            .collect();
+        assert_eq!(
+            pl_012.len(),
+            2,
+            "Both keys with special characters should be flagged"
+        );
+    }
+
+    #[test]
+    fn test_cc_pl_012_valid_keys_no_error() {
+        let temp = TempDir::new().unwrap();
+        let plugin_path = temp.path().join(".claude-plugin").join("plugin.json");
+        write_plugin(
+            &plugin_path,
+            r#"{"name":"test","description":"desc","version":"1.0.0","userConfig":{"valid_key":{},"_also_valid":{},"camelCase123":{}}}"#,
+        );
+
+        let validator = PluginValidator;
+        let diagnostics = validator.validate(
+            &plugin_path,
+            &fs::read_to_string(&plugin_path).unwrap(),
+            &LintConfig::default(),
+        );
+
+        assert!(!diagnostics.iter().any(|d| d.rule == "CC-PL-012"));
+    }
+
+    #[test]
+    fn test_cc_pl_012_no_user_config_no_error() {
+        let temp = TempDir::new().unwrap();
+        let plugin_path = temp.path().join(".claude-plugin").join("plugin.json");
+        write_plugin(
+            &plugin_path,
+            r#"{"name":"test","description":"desc","version":"1.0.0"}"#,
+        );
+
+        let validator = PluginValidator;
+        let diagnostics = validator.validate(
+            &plugin_path,
+            &fs::read_to_string(&plugin_path).unwrap(),
+            &LintConfig::default(),
+        );
+
+        assert!(!diagnostics.iter().any(|d| d.rule == "CC-PL-012"));
+    }
+
+    // ===== CC-PL-013: Channels Entry Missing Server Field =====
+
+    #[test]
+    fn test_cc_pl_013_missing_server() {
+        let temp = TempDir::new().unwrap();
+        let plugin_path = temp.path().join(".claude-plugin").join("plugin.json");
+        write_plugin(
+            &plugin_path,
+            r#"{"name":"test","description":"desc","version":"1.0.0","mcpServers":{"myMcp":{}},"channels":[{"type":"inject"}]}"#,
+        );
+
+        let validator = PluginValidator;
+        let diagnostics = validator.validate(
+            &plugin_path,
+            &fs::read_to_string(&plugin_path).unwrap(),
+            &LintConfig::default(),
+        );
+
+        let pl_013: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-PL-013")
+            .collect();
+        assert_eq!(pl_013.len(), 1);
+        assert!(
+            pl_013[0].message.contains("missing"),
+            "Should mention missing 'server' field"
+        );
+    }
+
+    #[test]
+    fn test_cc_pl_013_server_not_in_mcp_servers() {
+        let temp = TempDir::new().unwrap();
+        let plugin_path = temp.path().join(".claude-plugin").join("plugin.json");
+        write_plugin(
+            &plugin_path,
+            r#"{"name":"test","description":"desc","version":"1.0.0","mcpServers":{"myMcp":{}},"channels":[{"server":"nonexistent"}]}"#,
+        );
+
+        let validator = PluginValidator;
+        let diagnostics = validator.validate(
+            &plugin_path,
+            &fs::read_to_string(&plugin_path).unwrap(),
+            &LintConfig::default(),
+        );
+
+        let pl_013: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-PL-013")
+            .collect();
+        assert_eq!(pl_013.len(), 1);
+        assert!(
+            pl_013[0].message.contains("nonexistent"),
+            "Should mention the unresolved server reference"
+        );
+    }
+
+    #[test]
+    fn test_cc_pl_013_valid_server_reference_no_error() {
+        let temp = TempDir::new().unwrap();
+        let plugin_path = temp.path().join(".claude-plugin").join("plugin.json");
+        write_plugin(
+            &plugin_path,
+            r#"{"name":"test","description":"desc","version":"1.0.0","mcpServers":{"myMcp":{}},"channels":[{"server":"myMcp"}]}"#,
+        );
+
+        let validator = PluginValidator;
+        let diagnostics = validator.validate(
+            &plugin_path,
+            &fs::read_to_string(&plugin_path).unwrap(),
+            &LintConfig::default(),
+        );
+
+        assert!(!diagnostics.iter().any(|d| d.rule == "CC-PL-013"));
+    }
+
+    #[test]
+    fn test_cc_pl_013_no_channels_no_error() {
+        let temp = TempDir::new().unwrap();
+        let plugin_path = temp.path().join(".claude-plugin").join("plugin.json");
+        write_plugin(
+            &plugin_path,
+            r#"{"name":"test","description":"desc","version":"1.0.0"}"#,
+        );
+
+        let validator = PluginValidator;
+        let diagnostics = validator.validate(
+            &plugin_path,
+            &fs::read_to_string(&plugin_path).unwrap(),
+            &LintConfig::default(),
+        );
+
+        assert!(!diagnostics.iter().any(|d| d.rule == "CC-PL-013"));
+    }
+
+    // ===== CC-PL-014: Plugin Agent Uses Unsupported Field =====
+
+    #[test]
+    fn test_cc_pl_014_agent_with_hooks() {
+        let temp = TempDir::new().unwrap();
+        let plugin_path = temp.path().join(".claude-plugin").join("plugin.json");
+        write_plugin(
+            &plugin_path,
+            r#"{"name":"test","description":"desc","version":"1.0.0","agents":{"myAgent":{"hooks":{"preCommit":"echo test"}}}}"#,
+        );
+
+        let validator = PluginValidator;
+        let diagnostics = validator.validate(
+            &plugin_path,
+            &fs::read_to_string(&plugin_path).unwrap(),
+            &LintConfig::default(),
+        );
+
+        let pl_014: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-PL-014")
+            .collect();
+        assert_eq!(pl_014.len(), 1);
+        assert!(
+            pl_014[0].message.contains("hooks"),
+            "Should mention unsupported 'hooks' field"
+        );
+    }
+
+    #[test]
+    fn test_cc_pl_014_agent_with_multiple_unsupported() {
+        let temp = TempDir::new().unwrap();
+        let plugin_path = temp.path().join(".claude-plugin").join("plugin.json");
+        write_plugin(
+            &plugin_path,
+            r#"{"name":"test","description":"desc","version":"1.0.0","agents":{"myAgent":{"hooks":{},"mcpServers":{},"permissionMode":"full"}}}"#,
+        );
+
+        let validator = PluginValidator;
+        let diagnostics = validator.validate(
+            &plugin_path,
+            &fs::read_to_string(&plugin_path).unwrap(),
+            &LintConfig::default(),
+        );
+
+        let pl_014: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-PL-014")
+            .collect();
+        assert_eq!(
+            pl_014.len(),
+            3,
+            "Should flag all three unsupported fields"
+        );
+    }
+
+    #[test]
+    fn test_cc_pl_014_agent_without_unsupported_no_error() {
+        let temp = TempDir::new().unwrap();
+        let plugin_path = temp.path().join(".claude-plugin").join("plugin.json");
+        write_plugin(
+            &plugin_path,
+            r#"{"name":"test","description":"desc","version":"1.0.0","agents":{"myAgent":{"name":"Agent","description":"A test agent"}}}"#,
+        );
+
+        let validator = PluginValidator;
+        let diagnostics = validator.validate(
+            &plugin_path,
+            &fs::read_to_string(&plugin_path).unwrap(),
+            &LintConfig::default(),
+        );
+
+        assert!(!diagnostics.iter().any(|d| d.rule == "CC-PL-014"));
+    }
+
+    #[test]
+    fn test_cc_pl_014_no_agents_no_error() {
+        let temp = TempDir::new().unwrap();
+        let plugin_path = temp.path().join(".claude-plugin").join("plugin.json");
+        write_plugin(
+            &plugin_path,
+            r#"{"name":"test","description":"desc","version":"1.0.0"}"#,
+        );
+
+        let validator = PluginValidator;
+        let diagnostics = validator.validate(
+            &plugin_path,
+            &fs::read_to_string(&plugin_path).unwrap(),
+            &LintConfig::default(),
+        );
+
+        assert!(!diagnostics.iter().any(|d| d.rule == "CC-PL-014"));
     }
 }

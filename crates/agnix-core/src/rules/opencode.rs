@@ -1021,6 +1021,50 @@ impl Validator for OpenCodeValidator {
                                     }
                                 }
                             }
+
+                            // OC-AG-009: disable must be boolean
+                            if config.is_rule_enabled("OC-AG-009") {
+                                if let Some(disable_val) = ag.get("disable") {
+                                    if !disable_val.is_boolean() && !disable_val.is_null() {
+                                        diagnostics.push(
+                                            Diagnostic::error(
+                                                path.to_path_buf(),
+                                                find_key_line(content, "disable").unwrap_or(1),
+                                                0,
+                                                "OC-AG-009",
+                                                format!(
+                                                    "Agent '{}' has invalid 'disable' type. Must be a boolean",
+                                                    ag_name
+                                                ),
+                                            )
+                                            .with_suggestion(
+                                                "Set disable to true or false".to_string(),
+                                            ),
+                                        );
+                                    }
+                                }
+                            }
+
+                            // OC-DEP-006: maxSteps deprecated in favor of steps
+                            if config.is_rule_enabled("OC-DEP-006") {
+                                if ag.contains_key("maxSteps") && !ag.contains_key("steps") {
+                                    diagnostics.push(
+                                        Diagnostic::warning(
+                                            path.to_path_buf(),
+                                            find_key_line(content, "maxSteps").unwrap_or(1),
+                                            0,
+                                            "OC-DEP-006",
+                                            format!(
+                                                "Agent '{}' uses deprecated 'maxSteps'. Use 'steps' instead",
+                                                ag_name
+                                            ),
+                                        )
+                                        .with_suggestion(
+                                            "Rename 'maxSteps' to 'steps'".to_string(),
+                                        ),
+                                    );
+                                }
+                            }
                         }
                     }
                 }
@@ -1239,6 +1283,27 @@ impl Validator for OpenCodeValidator {
                                     );
                                 }
                             }
+                        }
+                    }
+                }
+
+                // OC-DEP-005: Deprecated TUI keys in opencode.json
+                if config.is_rule_enabled("OC-DEP-005") {
+                    let deprecated_tui_keys = ["theme", "keybinds", "tui"];
+                    for &tui_key in &deprecated_tui_keys {
+                        if obj.contains_key(tui_key) {
+                            diagnostics.push(
+                                Diagnostic::warning(
+                                    path.to_path_buf(),
+                                    find_key_line(content, tui_key).unwrap_or(1),
+                                    0,
+                                    "OC-DEP-005",
+                                    format!("Deprecated top-level key '{}'. TUI settings should be in a separate tui.json file", tui_key),
+                                )
+                                .with_suggestion(
+                                    format!("Move '{}' to tui.json", tui_key),
+                                ),
+                            );
                         }
                     }
                 }
@@ -1508,6 +1573,79 @@ impl Validator for OpenCodeValidator {
                                             ),
                                         );
                                     }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // OC-CFG-013: Invalid server config
+                if config.is_rule_enabled("OC-CFG-013") {
+                    if let Some(server_val) = obj.get("server") {
+                        if let Some(server_obj) = server_val.as_object() {
+                            let server_line = find_key_line(content, "server").unwrap_or(1);
+                            if let Some(port_val) = server_obj.get("port") {
+                                if port_val.as_i64().is_none() && port_val.as_f64().is_none() && !port_val.is_null() {
+                                    diagnostics.push(
+                                        Diagnostic::warning(
+                                            path.to_path_buf(),
+                                            find_key_line(content, "port").unwrap_or(server_line),
+                                            0,
+                                            "OC-CFG-013",
+                                            format!("Invalid server.port type. Expected a number"),
+                                        )
+                                        .with_suggestion(
+                                            "Set port to a number such as 8080".to_string(),
+                                        ),
+                                    );
+                                }
+                            }
+                            if let Some(hostname_val) = server_obj.get("hostname") {
+                                if !hostname_val.is_string() && !hostname_val.is_null() {
+                                    diagnostics.push(
+                                        Diagnostic::warning(
+                                            path.to_path_buf(),
+                                            find_key_line(content, "hostname").unwrap_or(server_line),
+                                            0,
+                                            "OC-CFG-013",
+                                            format!("Invalid server.hostname type. Expected a string"),
+                                        )
+                                        .with_suggestion(
+                                            "Set hostname to a string such as \"localhost\"".to_string(),
+                                        ),
+                                    );
+                                }
+                            }
+                            if let Some(mdns_val) = server_obj.get("mdns") {
+                                if !mdns_val.is_boolean() && !mdns_val.is_null() {
+                                    diagnostics.push(
+                                        Diagnostic::warning(
+                                            path.to_path_buf(),
+                                            find_key_line(content, "mdns").unwrap_or(server_line),
+                                            0,
+                                            "OC-CFG-013",
+                                            format!("Invalid server.mdns type. Expected a boolean"),
+                                        )
+                                        .with_suggestion(
+                                            "Set mdns to true or false".to_string(),
+                                        ),
+                                    );
+                                }
+                            }
+                            if let Some(cors_val) = server_obj.get("cors") {
+                                if !cors_val.is_array() && !cors_val.is_null() {
+                                    diagnostics.push(
+                                        Diagnostic::warning(
+                                            path.to_path_buf(),
+                                            find_key_line(content, "cors").unwrap_or(server_line),
+                                            0,
+                                            "OC-CFG-013",
+                                            format!("Invalid server.cors type. Expected an array"),
+                                        )
+                                        .with_suggestion(
+                                            "Set cors to an array of allowed origins".to_string(),
+                                        ),
+                                    );
                                 }
                             }
                         }
@@ -3447,5 +3585,186 @@ mod tests {
             diagnostics.iter().any(|d| d.rule == "OC-DEP-004"),
             "OC-DEP-004 should fire for case-insensitive match on context.md"
         );
+    }
+
+    // ===== OC-CFG-013: Invalid server config =====
+
+    #[test]
+    fn test_oc_cfg_013_invalid_port_type() {
+        let diagnostics = validate(r#"{"server": {"port": "8080"}}"#);
+        let cfg: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "OC-CFG-013")
+            .collect();
+        assert_eq!(cfg.len(), 1);
+        assert_eq!(cfg[0].level, DiagnosticLevel::Warning);
+        assert!(cfg[0].message.contains("port"));
+    }
+
+    #[test]
+    fn test_oc_cfg_013_valid_port() {
+        let diagnostics = validate(r#"{"server": {"port": 8080}}"#);
+        assert!(!diagnostics.iter().any(|d| d.rule == "OC-CFG-013"));
+    }
+
+    #[test]
+    fn test_oc_cfg_013_invalid_hostname_type() {
+        let diagnostics = validate(r#"{"server": {"hostname": 123}}"#);
+        let cfg: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "OC-CFG-013")
+            .collect();
+        assert_eq!(cfg.len(), 1);
+        assert!(cfg[0].message.contains("hostname"));
+    }
+
+    #[test]
+    fn test_oc_cfg_013_valid_hostname() {
+        let diagnostics = validate(r#"{"server": {"hostname": "localhost"}}"#);
+        assert!(!diagnostics.iter().any(|d| d.rule == "OC-CFG-013"));
+    }
+
+    #[test]
+    fn test_oc_cfg_013_invalid_mdns_type() {
+        let diagnostics = validate(r#"{"server": {"mdns": "yes"}}"#);
+        let cfg: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "OC-CFG-013")
+            .collect();
+        assert_eq!(cfg.len(), 1);
+        assert!(cfg[0].message.contains("mdns"));
+    }
+
+    #[test]
+    fn test_oc_cfg_013_valid_mdns() {
+        let diagnostics = validate(r#"{"server": {"mdns": true}}"#);
+        assert!(!diagnostics.iter().any(|d| d.rule == "OC-CFG-013"));
+    }
+
+    #[test]
+    fn test_oc_cfg_013_invalid_cors_type() {
+        let diagnostics = validate(r#"{"server": {"cors": "all"}}"#);
+        let cfg: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "OC-CFG-013")
+            .collect();
+        assert_eq!(cfg.len(), 1);
+        assert!(cfg[0].message.contains("cors"));
+    }
+
+    #[test]
+    fn test_oc_cfg_013_valid_cors() {
+        let diagnostics = validate(r#"{"server": {"cors": ["http://localhost:3000"]}}"#);
+        assert!(!diagnostics.iter().any(|d| d.rule == "OC-CFG-013"));
+    }
+
+    #[test]
+    fn test_oc_cfg_013_multiple_invalid_fields() {
+        let diagnostics = validate(r#"{"server": {"port": "bad", "mdns": 1}}"#);
+        let cfg: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "OC-CFG-013")
+            .collect();
+        assert_eq!(cfg.len(), 2);
+    }
+
+    // ===== OC-AG-009: Invalid agent disable type =====
+
+    #[test]
+    fn test_oc_ag_009_invalid_disable_type() {
+        let diagnostics = validate(r#"{"agent": {"a": {"disable": "yes"}}}"#);
+        let ag: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "OC-AG-009")
+            .collect();
+        assert_eq!(ag.len(), 1);
+        assert_eq!(ag[0].level, DiagnosticLevel::Error);
+        assert!(ag[0].message.contains("disable"));
+    }
+
+    #[test]
+    fn test_oc_ag_009_valid_disable_true() {
+        let diagnostics = validate(r#"{"agent": {"a": {"disable": true}}}"#);
+        assert!(!diagnostics.iter().any(|d| d.rule == "OC-AG-009"));
+    }
+
+    #[test]
+    fn test_oc_ag_009_valid_disable_false() {
+        let diagnostics = validate(r#"{"agent": {"a": {"disable": false}}}"#);
+        assert!(!diagnostics.iter().any(|d| d.rule == "OC-AG-009"));
+    }
+
+    #[test]
+    fn test_oc_ag_009_disable_number() {
+        let diagnostics = validate(r#"{"agent": {"a": {"disable": 1}}}"#);
+        assert!(diagnostics.iter().any(|d| d.rule == "OC-AG-009"));
+    }
+
+    // ===== OC-DEP-005: Deprecated TUI keys in opencode.json =====
+
+    #[test]
+    fn test_oc_dep_005_theme_deprecated() {
+        let diagnostics = validate(r#"{"theme": "dark"}"#);
+        let dep: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "OC-DEP-005")
+            .collect();
+        assert_eq!(dep.len(), 1);
+        assert_eq!(dep[0].level, DiagnosticLevel::Warning);
+        assert!(dep[0].message.contains("theme"));
+    }
+
+    #[test]
+    fn test_oc_dep_005_keybinds_deprecated() {
+        let diagnostics = validate(r#"{"keybinds": {}}"#);
+        let dep: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "OC-DEP-005")
+            .collect();
+        assert_eq!(dep.len(), 1);
+        assert!(dep[0].message.contains("keybinds"));
+    }
+
+    #[test]
+    fn test_oc_dep_005_tui_deprecated() {
+        let diagnostics = validate(r#"{"tui": {"scroll_speed": 1.0}}"#);
+        assert!(diagnostics.iter().any(|d| d.rule == "OC-DEP-005"));
+    }
+
+    #[test]
+    fn test_oc_dep_005_no_fire_when_absent() {
+        let diagnostics = validate(r#"{"share": "manual"}"#);
+        assert!(!diagnostics.iter().any(|d| d.rule == "OC-DEP-005"));
+    }
+
+    // ===== OC-DEP-006: Deprecated maxSteps =====
+
+    #[test]
+    fn test_oc_dep_006_max_steps_deprecated() {
+        let diagnostics = validate(r#"{"agent": {"a": {"maxSteps": 20}}}"#);
+        let dep: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "OC-DEP-006")
+            .collect();
+        assert_eq!(dep.len(), 1);
+        assert_eq!(dep[0].level, DiagnosticLevel::Warning);
+        assert!(dep[0].message.contains("maxSteps"));
+        assert!(dep[0].message.contains("steps"));
+    }
+
+    #[test]
+    fn test_oc_dep_006_no_fire_with_steps() {
+        // When both steps and maxSteps are present, OC-AG-007 fires instead
+        let diagnostics = validate(r#"{"agent": {"a": {"steps": 10, "maxSteps": 20}}}"#);
+        assert!(
+            !diagnostics.iter().any(|d| d.rule == "OC-DEP-006"),
+            "OC-DEP-006 should not fire when 'steps' is also present"
+        );
+    }
+
+    #[test]
+    fn test_oc_dep_006_no_fire_only_steps() {
+        let diagnostics = validate(r#"{"agent": {"a": {"steps": 10}}}"#);
+        assert!(!diagnostics.iter().any(|d| d.rule == "OC-DEP-006"));
     }
 }

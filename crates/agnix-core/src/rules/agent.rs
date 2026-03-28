@@ -1,7 +1,8 @@
-//! Agent file validation (CC-AG-001 to CC-AG-013)
+//! Agent file validation (CC-AG-001 to CC-AG-019)
 //!
 //! Validates Claude Code subagent definitions in `.claude/agents/*.md`.
-//! Includes structural validation of hooks, tool names, memory, and permissions.
+//! Includes structural validation of hooks, tool names, memory, permissions,
+//! effort, isolation, maxTurns, background, and unknown frontmatter fields.
 
 use crate::{
     config::LintConfig,
@@ -73,6 +74,32 @@ const VALID_PERMISSION_MODES: &[&str] = &[
 /// Valid memory scopes per CC-AG-008
 const VALID_MEMORY_SCOPES: &[&str] = &["user", "project", "local"];
 
+/// Valid effort values per CC-AG-014
+const VALID_EFFORT_VALUES: &[&str] = &["low", "medium", "high", "max"];
+
+/// Valid isolation values per CC-AG-015
+const VALID_ISOLATION_VALUES: &[&str] = &["worktree"];
+
+/// Known agent frontmatter fields per CC-AG-019
+const KNOWN_AGENT_FIELDS: &[&str] = &[
+    "name",
+    "description",
+    "model",
+    "tools",
+    "disallowedTools",
+    "permissionMode",
+    "maxTurns",
+    "effort",
+    "background",
+    "isolation",
+    "initialPrompt",
+    "mcpServers",
+    "memory",
+    "skills",
+    "hooks",
+    "mode",
+];
+
 /// Known Claude Code tools for CC-AG-009 and CC-AG-010
 const KNOWN_AGENT_TOOLS: &[&str] = &[
     "Bash",
@@ -110,6 +137,11 @@ const RULE_IDS: &[&str] = &[
     "CC-AG-011",
     "CC-AG-012",
     "CC-AG-013",
+    "CC-AG-014",
+    "CC-AG-015",
+    "CC-AG-016",
+    "CC-AG-017",
+    "CC-AG-019",
 ];
 
 pub struct AgentValidator;
@@ -872,6 +904,149 @@ impl Validator for AgentValidator {
                         }
 
                         diagnostics.push(diagnostic);
+                    }
+                }
+            }
+        }
+
+        // CC-AG-014: Invalid effort value
+        if config.is_rule_enabled("CC-AG-014") {
+            if let Some(effort) = &schema.effort {
+                if !VALID_EFFORT_VALUES.contains(&effort.as_str()) {
+                    let valid_display = VALID_EFFORT_VALUES.join(", ");
+                    let mut diagnostic = Diagnostic::error(
+                        path.to_path_buf(),
+                        1,
+                        0,
+                        "CC-AG-014",
+                        format!(
+                            "Invalid effort value '{}', must be one of: {}",
+                            effort, valid_display
+                        ),
+                    )
+                    .with_suggestion(format!(
+                        "Use a valid effort value: {}",
+                        valid_display
+                    ));
+
+                    // Unsafe auto-fix: replace with closest valid effort value
+                    if let Some(closest) =
+                        super::find_closest_value(effort.as_str(), VALID_EFFORT_VALUES)
+                    {
+                        if let Some((start, end)) = frontmatter_value_byte_range(content, "effort")
+                        {
+                            diagnostic = diagnostic.with_fix(Fix::replace(
+                                start,
+                                end,
+                                closest,
+                                format!("Replace invalid effort with '{}'", closest),
+                                false,
+                            ));
+                        }
+                    }
+
+                    diagnostics.push(diagnostic);
+                }
+            }
+        }
+
+        // CC-AG-015: Invalid isolation value
+        if config.is_rule_enabled("CC-AG-015") {
+            if let Some(isolation) = &schema.isolation {
+                if !VALID_ISOLATION_VALUES.contains(&isolation.as_str()) {
+                    let valid_display = VALID_ISOLATION_VALUES.join(", ");
+                    let mut diagnostic = Diagnostic::error(
+                        path.to_path_buf(),
+                        1,
+                        0,
+                        "CC-AG-015",
+                        format!(
+                            "Invalid isolation value '{}', must be one of: {}",
+                            isolation, valid_display
+                        ),
+                    )
+                    .with_suggestion(format!(
+                        "Use a valid isolation value: {}",
+                        valid_display
+                    ));
+
+                    // Unsafe auto-fix: replace with 'worktree' (the only valid value)
+                    if let Some((start, end)) =
+                        frontmatter_value_byte_range(content, "isolation")
+                    {
+                        diagnostic = diagnostic.with_fix(Fix::replace(
+                            start,
+                            end,
+                            "worktree",
+                            "Replace invalid isolation with 'worktree'",
+                            false,
+                        ));
+                    }
+
+                    diagnostics.push(diagnostic);
+                }
+            }
+        }
+
+        // CC-AG-016: Invalid background type
+        // Since background is Option<bool> in the schema, serde_yaml will reject
+        // non-boolean values at parse time (CC-AG-007). No additional runtime
+        // validation is needed here - the type system enforces correctness.
+        // See tests: test_cc_ag_016_serde_catches_non_bool
+
+        // CC-AG-017: Invalid maxTurns value (zero)
+        // serde_yaml handles non-integer values at parse time (CC-AG-007).
+        // We only need to check for zero since u32 already prevents negatives.
+        if config.is_rule_enabled("CC-AG-017") {
+            if let Some(max_turns) = schema.max_turns {
+                if max_turns == 0 {
+                    diagnostics.push(
+                        Diagnostic::error(
+                            path.to_path_buf(),
+                            1,
+                            0,
+                            "CC-AG-017",
+                            format!(
+                                "Invalid maxTurns value '0', must be a positive integer (> 0)"
+                            ),
+                        )
+                        .with_suggestion(
+                            "Set maxTurns to a positive integer, e.g. maxTurns: 10".to_string(),
+                        ),
+                    );
+                }
+            }
+        }
+
+        // CC-AG-019: Unknown agent frontmatter field
+        if config.is_rule_enabled("CC-AG-019") {
+            // Re-parse the frontmatter as a generic YAML mapping to detect unknown keys
+            if let Ok(value) = serde_yaml::from_str::<serde_yaml::Value>(&parts.frontmatter) {
+                if let Some(mapping) = value.as_mapping() {
+                    let known_set: HashSet<&str> =
+                        KNOWN_AGENT_FIELDS.iter().copied().collect();
+                    for key in mapping.keys() {
+                        if let Some(key_str) = key.as_str() {
+                            if !known_set.contains(key_str) {
+                                diagnostics.push(
+                                    Diagnostic::warning(
+                                        path.to_path_buf(),
+                                        1,
+                                        0,
+                                        "CC-AG-019",
+                                        format!(
+                                            "Unknown agent frontmatter field '{}'",
+                                            key_str
+                                        ),
+                                    )
+                                    .with_suggestion(format!(
+                                        "Remove or rename '{}' - known fields: {}",
+                                        key_str,
+                                        KNOWN_AGENT_FIELDS.join(", ")
+                                    )),
+                                );
+                            }
+                        }
                     }
                 }
             }
@@ -3681,5 +3856,352 @@ mcpServers:
 Body";
         let d = validate(c);
         assert!(d.iter().filter(|x| x.level == DiagnosticLevel::Error).count() == 0);
+    }
+
+    // ===== CC-AG-014 Tests: Invalid Effort Value =====
+
+    #[test]
+    fn test_cc_ag_014_invalid_effort() {
+        let content = r#"---
+name: my-agent
+description: A test agent
+effort: turbo
+---
+Agent instructions"#;
+
+        let diagnostics = validate(content);
+        let cc_ag_014: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-AG-014")
+            .collect();
+
+        assert_eq!(cc_ag_014.len(), 1);
+        assert_eq!(cc_ag_014[0].level, DiagnosticLevel::Error);
+        assert!(cc_ag_014[0].message.contains("turbo"));
+        assert!(cc_ag_014[0].message.contains("Invalid effort"));
+    }
+
+    #[test]
+    fn test_cc_ag_014_all_valid_effort_values() {
+        for effort in VALID_EFFORT_VALUES {
+            let content = format!(
+                "---\nname: test\ndescription: Test agent\neffort: {}\n---\nBody",
+                effort
+            );
+
+            let diagnostics = validate(&content);
+            let cc_ag_014: Vec<_> = diagnostics
+                .iter()
+                .filter(|d| d.rule == "CC-AG-014")
+                .collect();
+            assert!(
+                cc_ag_014.is_empty(),
+                "Effort value '{}' should be valid",
+                effort
+            );
+        }
+    }
+
+    #[test]
+    fn test_cc_ag_014_no_effort_ok() {
+        let content = r#"---
+name: my-agent
+description: A test agent
+---
+Agent instructions"#;
+
+        let diagnostics = validate(content);
+        let cc_ag_014: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-AG-014")
+            .collect();
+        assert_eq!(cc_ag_014.len(), 0);
+    }
+
+    #[test]
+    fn test_cc_ag_014_autofix_close_match() {
+        let content =
+            "---\nname: my-agent\ndescription: A test agent\neffort: hig\n---\nAgent instructions";
+        let diagnostics = validate(content);
+        let cc_ag_014: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-AG-014")
+            .collect();
+        assert_eq!(cc_ag_014.len(), 1);
+        assert!(
+            cc_ag_014[0].has_fixes(),
+            "CC-AG-014 should have auto-fix for close match"
+        );
+        let fix = &cc_ag_014[0].fixes[0];
+        assert_eq!(fix.replacement, "high", "Fix should suggest 'high'");
+    }
+
+    // ===== CC-AG-015 Tests: Invalid Isolation Value =====
+
+    #[test]
+    fn test_cc_ag_015_invalid_isolation() {
+        let content = r#"---
+name: my-agent
+description: A test agent
+isolation: sandbox
+---
+Agent instructions"#;
+
+        let diagnostics = validate(content);
+        let cc_ag_015: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-AG-015")
+            .collect();
+
+        assert_eq!(cc_ag_015.len(), 1);
+        assert_eq!(cc_ag_015[0].level, DiagnosticLevel::Error);
+        assert!(cc_ag_015[0].message.contains("sandbox"));
+        assert!(cc_ag_015[0].message.contains("Invalid isolation"));
+    }
+
+    #[test]
+    fn test_cc_ag_015_valid_worktree() {
+        let content = r#"---
+name: my-agent
+description: A test agent
+isolation: worktree
+---
+Agent instructions"#;
+
+        let diagnostics = validate(content);
+        let cc_ag_015: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-AG-015")
+            .collect();
+        assert_eq!(cc_ag_015.len(), 0);
+    }
+
+    #[test]
+    fn test_cc_ag_015_no_isolation_ok() {
+        let content = r#"---
+name: my-agent
+description: A test agent
+---
+Agent instructions"#;
+
+        let diagnostics = validate(content);
+        let cc_ag_015: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-AG-015")
+            .collect();
+        assert_eq!(cc_ag_015.len(), 0);
+    }
+
+    #[test]
+    fn test_cc_ag_015_has_autofix() {
+        let content = "---\nname: my-agent\ndescription: A test agent\nisolation: docker\n---\nAgent instructions";
+        let diagnostics = validate(content);
+        let cc_ag_015: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-AG-015")
+            .collect();
+        assert_eq!(cc_ag_015.len(), 1);
+        assert!(cc_ag_015[0].has_fixes(), "CC-AG-015 should have auto-fix");
+        let fix = &cc_ag_015[0].fixes[0];
+        assert_eq!(fix.replacement, "worktree");
+        assert!(!fix.safe, "CC-AG-015 fix should be unsafe");
+    }
+
+    // ===== CC-AG-016 Tests: Invalid Background Type =====
+
+    #[test]
+    fn test_cc_ag_016_serde_catches_non_bool() {
+        // background is Option<bool> in AgentSchema, so serde rejects non-boolean
+        // values at parse time, resulting in CC-AG-007 (parse error).
+        let content = "---\nname: a\ndescription: b\nbackground: yes-please\n---\nBody";
+        let diagnostics = validate(content);
+        let cc_ag_007: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-AG-007")
+            .collect();
+        assert_eq!(
+            cc_ag_007.len(),
+            1,
+            "Non-boolean background should trigger CC-AG-007 parse error"
+        );
+    }
+
+    #[test]
+    fn test_cc_ag_016_valid_booleans() {
+        for val in &["true", "false"] {
+            let content = format!(
+                "---\nname: a\ndescription: b\nbackground: {}\n---\nBody",
+                val
+            );
+            let diagnostics = validate(&content);
+            let errors: Vec<_> = diagnostics
+                .iter()
+                .filter(|d| d.level == DiagnosticLevel::Error)
+                .collect();
+            assert!(
+                errors.is_empty(),
+                "background: {} should not trigger errors",
+                val
+            );
+        }
+    }
+
+    // ===== CC-AG-017 Tests: Invalid maxTurns Value =====
+
+    #[test]
+    fn test_cc_ag_017_zero_max_turns() {
+        let content = r#"---
+name: my-agent
+description: A test agent
+maxTurns: 0
+---
+Agent instructions"#;
+
+        let diagnostics = validate(content);
+        let cc_ag_017: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-AG-017")
+            .collect();
+
+        assert_eq!(cc_ag_017.len(), 1);
+        assert_eq!(cc_ag_017[0].level, DiagnosticLevel::Error);
+        assert!(cc_ag_017[0].message.contains("maxTurns"));
+        assert!(cc_ag_017[0].message.contains("positive integer"));
+    }
+
+    #[test]
+    fn test_cc_ag_017_valid_positive_max_turns() {
+        let content = r#"---
+name: my-agent
+description: A test agent
+maxTurns: 5
+---
+Agent instructions"#;
+
+        let diagnostics = validate(content);
+        let cc_ag_017: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-AG-017")
+            .collect();
+        assert_eq!(cc_ag_017.len(), 0);
+    }
+
+    #[test]
+    fn test_cc_ag_017_no_max_turns_ok() {
+        let content = r#"---
+name: my-agent
+description: A test agent
+---
+Agent instructions"#;
+
+        let diagnostics = validate(content);
+        let cc_ag_017: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-AG-017")
+            .collect();
+        assert_eq!(cc_ag_017.len(), 0);
+    }
+
+    #[test]
+    fn test_cc_ag_017_serde_catches_non_integer() {
+        // maxTurns is Option<u32>, so serde rejects non-integer values
+        let content = "---\nname: a\ndescription: b\nmaxTurns: bad\n---\nBody";
+        let diagnostics = validate(content);
+        let cc_ag_007: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-AG-007")
+            .collect();
+        assert_eq!(
+            cc_ag_007.len(),
+            1,
+            "Non-integer maxTurns should trigger CC-AG-007 parse error"
+        );
+    }
+
+    // ===== CC-AG-019 Tests: Unknown Agent Frontmatter Field =====
+
+    #[test]
+    fn test_cc_ag_019_unknown_field() {
+        let content = r#"---
+name: my-agent
+description: A test agent
+unknownField: some value
+---
+Agent instructions"#;
+
+        let diagnostics = validate(content);
+        let cc_ag_019: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-AG-019")
+            .collect();
+
+        assert_eq!(cc_ag_019.len(), 1);
+        assert_eq!(cc_ag_019[0].level, DiagnosticLevel::Warning);
+        assert!(cc_ag_019[0].message.contains("unknownField"));
+        assert!(cc_ag_019[0].message.contains("Unknown"));
+    }
+
+    #[test]
+    fn test_cc_ag_019_multiple_unknown_fields() {
+        let content = r#"---
+name: my-agent
+description: A test agent
+foo: bar
+baz: qux
+---
+Agent instructions"#;
+
+        let diagnostics = validate(content);
+        let cc_ag_019: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-AG-019")
+            .collect();
+
+        assert_eq!(cc_ag_019.len(), 2);
+        let messages: Vec<&str> = cc_ag_019.iter().map(|d| d.message.as_str()).collect();
+        assert!(messages.iter().any(|m| m.contains("foo")));
+        assert!(messages.iter().any(|m| m.contains("baz")));
+    }
+
+    #[test]
+    fn test_cc_ag_019_all_known_fields_no_warning() {
+        let content = r#"---
+name: my-agent
+description: A test agent
+model: sonnet
+permissionMode: default
+effort: high
+maxTurns: 10
+background: true
+isolation: worktree
+initialPrompt: hello
+memory: user
+---
+Agent instructions"#;
+
+        let diagnostics = validate(content);
+        let cc_ag_019: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-AG-019")
+            .collect();
+        assert_eq!(cc_ag_019.len(), 0);
+    }
+
+    #[test]
+    fn test_cc_ag_019_no_warning_for_mode_field() {
+        // 'mode' is a known field per the spec
+        let content = r#"---
+name: my-agent
+description: A test agent
+mode: plan
+---
+Agent instructions"#;
+
+        let diagnostics = validate(content);
+        let cc_ag_019: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-AG-019")
+            .collect();
+        assert_eq!(cc_ag_019.len(), 0);
     }
 }
