@@ -461,16 +461,7 @@ fn validate_cursor_agent_file(path: &Path, content: &str, config: &LintConfig) -
                         )
                         .with_suggestion(t!("rules.cur_014.suggestion")),
                     ),
-                    None => diagnostics.push(
-                        Diagnostic::error(
-                            path.to_path_buf(),
-                            1,
-                            0,
-                            "CUR-014",
-                            t!("rules.cur_014.missing_name"),
-                        )
-                        .with_suggestion(t!("rules.cur_014.suggestion")),
-                    ),
+                    None => {} // name is optional, defaults to filename
                 }
 
                 match frontmatter_map.get(key("description")) {
@@ -485,16 +476,7 @@ fn validate_cursor_agent_file(path: &Path, content: &str, config: &LintConfig) -
                         )
                         .with_suggestion(t!("rules.cur_014.suggestion")),
                     ),
-                    None => diagnostics.push(
-                        Diagnostic::error(
-                            path.to_path_buf(),
-                            1,
-                            0,
-                            "CUR-014",
-                            t!("rules.cur_014.missing_description"),
-                        )
-                        .with_suggestion(t!("rules.cur_014.suggestion")),
-                    ),
+                    None => {} // description is optional
                 }
 
                 if let Some(model_value) = frontmatter_map.get(key("model")) {
@@ -1554,7 +1536,7 @@ Review changes."#,
     }
 
     #[test]
-    fn test_cur_014_missing_required_fields() {
+    fn test_cur_014_missing_optional_fields_no_error() {
         let diagnostics = validate_cursor_agent(
             r#"---
 model: fast
@@ -1562,8 +1544,8 @@ model: fast
 Review changes."#,
         );
         assert!(
-            diagnostics.iter().any(|d| d.rule == "CUR-014"),
-            "Expected CUR-014 when required fields are missing",
+            !diagnostics.iter().any(|d| d.rule == "CUR-014"),
+            "Missing name/description should not trigger CUR-014 (both are optional)",
         );
     }
 

@@ -4,6 +4,16 @@ description: An agent with all new fields configured correctly
 model: opus
 permissionMode: dontAsk
 memory: project
+maxTurns: 10
+effort: high
+background: true
+isolation: worktree
+initialPrompt: Start by reading the project README
+mcpServers:
+  memory:
+    command: npx
+    args:
+      - "@modelcontextprotocol/server-memory"
 tools:
   - Bash
   - Read

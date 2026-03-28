@@ -348,7 +348,9 @@ pub(super) fn validate_cc_hk_004_matcher_forbidden(
 ) {
     // Skip events handled by CC-HK-018 (matcher silently ignored rather than forbidden)
     const CC_HK_018_EVENTS: &[&str] = &["UserPromptSubmit", "Stop"];
-    if !HooksSchema::is_tool_event(event) && matcher.is_some() && !CC_HK_018_EVENTS.contains(&event)
+    if !HooksSchema::supports_matcher(event)
+        && matcher.is_some()
+        && !CC_HK_018_EVENTS.contains(&event)
     {
         let hook_location = format!("hooks.{}[{}]", event, matcher_idx);
         let mut diagnostic = Diagnostic::error(
@@ -522,7 +524,7 @@ pub(super) fn validate_cc_hk_013_async_field(
     content: &str,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
-    let known_non_command = ["prompt", "agent"];
+    let known_non_command = ["prompt", "agent", "http"];
     for_each_raw_hook(raw_value, |event, matcher_idx, hook_idx, hook| {
         if hook.get("async").is_some() {
             if let Some(hook_type) = hook.get("type").and_then(|t| t.as_str()) {
@@ -595,7 +597,7 @@ pub(super) fn validate_cc_hk_016_unknown_type(
     content: &str,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
-    let valid_types = ["command", "prompt", "agent"];
+    let valid_types = ["command", "prompt", "agent", "http"];
     for_each_raw_hook(raw_value, |event, matcher_idx, hook_idx, hook| {
         if let Some(type_value) = hook.get("type") {
             let hook_type_str;

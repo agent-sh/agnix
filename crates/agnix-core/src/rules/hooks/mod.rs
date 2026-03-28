@@ -551,6 +551,7 @@ impl Validator for HooksValidator {
                             command,
                             timeout,
                             model,
+                            ..
                         } => {
                             // CC-HK-010: Command timeout policy
                             if config.is_rule_enabled("CC-HK-010") {
@@ -696,6 +697,16 @@ impl Validator for HooksValidator {
                                     );
                                 }
                             }
+                        }
+                        Hook::Http { .. } => {
+                            // HTTP hooks are validated at the raw JSON level
+                            // (CC-HK-005 type check, CC-HK-011 timeout, CC-HK-016 type validation).
+                            // No additional typed validation needed here.
+                        }
+                        Hook::Http { .. } => {
+                            // HTTP hooks are validated at the raw JSON level
+                            // (CC-HK-005 type check, CC-HK-011 timeout, CC-HK-016 type validation).
+                            // No additional typed validation needed here.
                         }
                     }
                 }

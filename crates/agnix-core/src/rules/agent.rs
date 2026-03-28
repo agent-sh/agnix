@@ -51,8 +51,20 @@ fn humanize_yaml_error(raw: &str) -> String {
     msg
 }
 
-/// Valid model values per CC-AG-003
+/// Valid model values per CC-AG-003 (short aliases)
 const VALID_MODELS: &[&str] = &["sonnet", "opus", "haiku", "inherit"];
+
+/// Check if a model value is valid: either a known short alias or a full model ID
+/// matching the `claude-*` pattern.
+fn is_valid_model(model: &str) -> bool {
+    VALID_MODELS.contains(&model) || model.starts_with("claude-")
+}
+
+/// Valid effort levels for agent effort field
+const VALID_EFFORT_LEVELS: &[&str] = &["low", "medium", "high", "max"];
+
+/// Valid isolation modes for agent isolation field
+const VALID_ISOLATION_MODES: &[&str] = &["worktree"];
 
 /// Valid permission modes per CC-AG-004
 const VALID_PERMISSION_MODES: &[&str] = &[
@@ -381,7 +393,9 @@ impl Validator for AgentValidator {
         // CC-AG-003: Invalid model value
         if config.is_rule_enabled("CC-AG-003") {
             if let Some(model) = &schema.model {
-                if !VALID_MODELS.contains(&model.as_str()) {
+                if !is_valid_model(model.as_str()) {
+                    let valid_display =
+                        format!("{}, or claude-*", VALID_MODELS.join(", "));
                     let mut diagnostic = Diagnostic::error(
                         path.to_path_buf(),
                         1,
@@ -390,12 +404,12 @@ impl Validator for AgentValidator {
                         t!(
                             "rules.cc_ag_003.message",
                             model = model.as_str(),
-                            valid = VALID_MODELS.join(", ")
+                            valid = valid_display
                         ),
                     )
                     .with_suggestion(t!(
                         "rules.cc_ag_003.suggestion",
-                        valid = VALID_MODELS.join(", ")
+                        valid = valid_display
                     ));
 
                     // Unsafe auto-fix: default invalid model to sonnet.
@@ -3478,5 +3492,200 @@ Agent instructions"#;
             Some("claude-code".to_string()),
             "CC-AG-001 should apply to 'claude-code'"
         );
+    }
+
+
+    // ===== CC-AG-003: Full model IDs (claude-* pattern) =====
+
+    #[test]
+    fn test_cc_ag_003_valid_full_model_id_opus() {
+        let content = "---
+name: a
+description: b
+model: claude-opus-4-6
+---
+Body";
+        let d = validate(content);
+        assert_eq!(d.iter().filter(|x| x.rule == "CC-AG-003").count(), 0);
+    }
+
+    #[test]
+    fn test_cc_ag_003_valid_full_model_id_sonnet() {
+        let content = "---
+name: a
+description: b
+model: claude-sonnet-4-6
+---
+Body";
+        let d = validate(content);
+        assert_eq!(d.iter().filter(|x| x.rule == "CC-AG-003").count(), 0);
+    }
+
+    #[test]
+    fn test_cc_ag_003_valid_full_model_id_with_date() {
+        let content = "---
+name: a
+description: b
+model: claude-haiku-4-5-20251001
+---
+Body";
+        let d = validate(content);
+        assert_eq!(d.iter().filter(|x| x.rule == "CC-AG-003").count(), 0);
+    }
+
+    #[test]
+    fn test_cc_ag_003_rejects_non_claude_prefix() {
+        let content = "---
+name: a
+description: b
+model: gpt-4o
+---
+Body";
+        let d = validate(content);
+        assert_eq!(d.iter().filter(|x| x.rule == "CC-AG-003").count(), 1);
+    }
+
+    #[test]
+    fn test_is_valid_model_short_aliases() {
+        assert!(is_valid_model("sonnet"));
+        assert!(is_valid_model("opus"));
+        assert!(is_valid_model("haiku"));
+        assert!(is_valid_model("inherit"));
+    }
+
+    #[test]
+    fn test_is_valid_model_full_ids() {
+        assert!(is_valid_model("claude-opus-4-6"));
+        assert!(is_valid_model("claude-sonnet-4-6"));
+        assert!(is_valid_model("claude-haiku-4-5-20251001"));
+    }
+
+    #[test]
+    fn test_is_valid_model_invalid() {
+        assert!(!is_valid_model("gpt-4"));
+        assert!(!is_valid_model("gemini-pro"));
+        assert!(!is_valid_model(""));
+    }
+
+    // ===== New fields: no false positives =====
+
+    #[test]
+    fn test_new_fields_no_parse_error() {
+        let c = "---
+name: a
+description: b
+maxTurns: 5
+effort: high
+background: true
+isolation: worktree
+initialPrompt: hi
+mcpServers:
+  m:
+    command: x
+---
+Body";
+        let d = validate(c);
+        let e: Vec<_> = d.iter().filter(|x| x.level == DiagnosticLevel::Error).collect();
+        assert!(e.is_empty(), "New fields should not trigger errors: {:?}", e);
+    }
+
+    #[test]
+    fn test_max_turns_accepts_positive_integer() {
+        let c = "---
+name: a
+description: b
+maxTurns: 10
+---
+Body";
+        let d = validate(c);
+        assert!(d.iter().filter(|x| x.level == DiagnosticLevel::Error).count() == 0);
+    }
+
+    #[test]
+    fn test_max_turns_rejects_string() {
+        let c = "---
+name: a
+description: b
+maxTurns: bad
+---
+Body";
+        let d = validate(c);
+        assert_eq!(d.iter().filter(|x| x.rule == "CC-AG-007").count(), 1);
+    }
+
+    #[test]
+    fn test_effort_valid_values() {
+        for e in &["low", "medium", "high", "max"] {
+            let c = format!("---
+name: a
+description: b
+effort: {}
+---
+Body", e);
+            let d = validate(&c);
+            assert!(d.iter().filter(|x| x.level == DiagnosticLevel::Error).count() == 0);
+        }
+    }
+
+    #[test]
+    fn test_background_accepts_bool() {
+        let c = "---
+name: a
+description: b
+background: false
+---
+Body";
+        let d = validate(c);
+        assert!(d.iter().filter(|x| x.level == DiagnosticLevel::Error).count() == 0);
+    }
+
+    #[test]
+    fn test_background_rejects_string() {
+        let c = "---
+name: a
+description: b
+background: yes-please
+---
+Body";
+        let d = validate(c);
+        assert_eq!(d.iter().filter(|x| x.rule == "CC-AG-007").count(), 1);
+    }
+
+    #[test]
+    fn test_isolation_accepts_worktree() {
+        let c = "---
+name: a
+description: b
+isolation: worktree
+---
+Body";
+        let d = validate(c);
+        assert!(d.iter().filter(|x| x.level == DiagnosticLevel::Error).count() == 0);
+    }
+
+    #[test]
+    fn test_initial_prompt_accepts_string() {
+        let c = "---
+name: a
+description: b
+initialPrompt: Start here
+---
+Body";
+        let d = validate(c);
+        assert!(d.iter().filter(|x| x.level == DiagnosticLevel::Error).count() == 0);
+    }
+
+    #[test]
+    fn test_mcp_servers_accepts_object() {
+        let c = "---
+name: a
+description: b
+mcpServers:
+  m:
+    command: x
+---
+Body";
+        let d = validate(c);
+        assert!(d.iter().filter(|x| x.level == DiagnosticLevel::Error).count() == 0);
     }
 }

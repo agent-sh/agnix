@@ -38,6 +38,9 @@ struct SkillFrontmatter {
     model: Option<String>,
     context: Option<String>,
     agent: Option<String>,
+    effort: Option<String>,
+    paths: Option<String>,
+    shell: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -102,6 +105,9 @@ const KNOWN_FRONTMATTER_FIELDS: &[&str] = &[
     "context",
     "agent",
     "hooks",
+    "effort",
+    "paths",
+    "shell",
 ];
 
 /// Vague skill names that provide little routing signal for invocation
@@ -1637,6 +1643,9 @@ impl Validator for SkillValidator {
                     model: frontmatter.model.clone(),
                     context: frontmatter.context.clone(),
                     agent: frontmatter.agent.clone(),
+                    effort: frontmatter.effort.clone(),
+                    paths: frontmatter.paths.clone(),
+                    shell: frontmatter.shell.clone(),
                 };
 
                 // CC-SK-006 (dangerous auto-invocation) and CC-SK-009 (too many injections)

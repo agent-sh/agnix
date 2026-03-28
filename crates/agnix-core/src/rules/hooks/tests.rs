@@ -1082,11 +1082,12 @@ fn test_cc_hk_004_matcher_on_stop() {
 
 #[test]
 fn test_cc_hk_004_matcher_on_session_start() {
+    // SessionStart now supports matchers - no CC-HK-004
     let content = r#"{
             "hooks": {
                 "SessionStart": [
                     {
-                        "matcher": "Write",
+                        "matcher": "startup",
                         "hooks": [
                             { "type": "command", "command": "echo 'test'" }
                         ]
@@ -1101,7 +1102,7 @@ fn test_cc_hk_004_matcher_on_session_start() {
         .filter(|d| d.rule == "CC-HK-004")
         .collect();
 
-    assert_eq!(cc_hk_004.len(), 1);
+    assert_eq!(cc_hk_004.len(), 0, "SessionStart now supports matchers");
 }
 
 #[test]
@@ -1131,7 +1132,7 @@ fn test_cc_hk_004_no_matcher_on_stop_ok() {
 fn test_cc_hk_004_has_safe_fix_when_unique_matcher_line() {
     let content = r#"{
             "hooks": {
-                "SessionStart": [
+                "TaskCompleted": [
                     {
                         "matcher": "Bash",
                         "hooks": [
@@ -1164,9 +1165,9 @@ fn test_fixture_matcher_on_wrong_event() {
         .iter()
         .filter(|d| d.rule == "CC-HK-004")
         .collect();
-    // SubagentStop and SessionStart trigger CC-HK-004
+    // SubagentStop and SessionStart now support matchers - no CC-HK-004
     // Stop and UserPromptSubmit are handled by CC-HK-018 instead
-    assert_eq!(cc_hk_004.len(), 2);
+    assert_eq!(cc_hk_004.len(), 0);
 
     let cc_hk_018: Vec<_> = diagnostics
         .iter()
@@ -2489,9 +2490,8 @@ fn test_cc_hk_003_all_tool_events_hint_matcher() {
 #[test]
 fn test_cc_hk_004_non_tool_events_reject_matcher() {
     // Stop and UserPromptSubmit are handled by CC-HK-018 instead
+    // SubagentStop, SessionStart, etc. now support matchers via MATCHER_EVENTS
     let non_tool_events = [
-        "SubagentStop",
-        "SessionStart",
         "TeammateIdle",
         "TaskCompleted",
     ];

@@ -1043,6 +1043,7 @@ impl Validator for OpenCodeValidator {
                             "question",
                             "webfetch",
                             "websearch",
+                            "codesearch",
                             "external_directory",
                             "doom_loop",
                         ];

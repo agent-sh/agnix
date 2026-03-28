@@ -55,7 +55,41 @@ pub struct SkillSchema {
     /// Optional: agent type
     #[serde(skip_serializing_if = "Option::is_none")]
     pub agent: Option<String>,
+
+    /// Optional: reasoning effort level (low, medium, high, max)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub effort: Option<String>,
+
+    /// Optional: comma-separated glob patterns or YAML list of file paths
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub paths: Option<String>,
+
+    /// Optional: shell to use (bash, powershell)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shell: Option<String>,
 }
+
+/// Known top-level frontmatter fields for SKILL.md
+pub const KNOWN_SKILL_FRONTMATTER_FIELDS: &[&str] = &[
+    "name", "description", "license", "compatibility", "metadata",
+    "allowed-tools", "argument-hint", "disable-model-invocation",
+    "user-invocable", "model", "context", "agent", "hooks",
+    "effort", "paths", "shell",
+];
+
+/// Valid model aliases for skill frontmatter
+pub const VALID_MODEL_ALIASES: &[&str] = &["sonnet", "opus", "haiku", "inherit"];
+
+/// Check whether a model value is valid.
+pub fn is_valid_skill_model(model: &str) -> bool {
+    VALID_MODEL_ALIASES.contains(&model) || model.starts_with("claude-")
+}
+
+/// Valid effort levels for skill frontmatter
+pub const VALID_EFFORT_LEVELS: &[&str] = &["low", "medium", "high", "max"];
+
+/// Valid shell values for skill frontmatter
+pub const VALID_SHELLS: &[&str] = &["bash", "powershell"];
 
 impl SkillSchema {
     /// Validate skill name format
@@ -119,15 +153,42 @@ impl SkillSchema {
         Ok(())
     }
 
-    /// Validate model value
+    /// Validate model value.
     #[allow(dead_code)] // schema-level API; validation uses Validator trait
     pub fn validate_model(&self) -> Result<(), String> {
         if let Some(model) = &self.model {
-            let valid = ["sonnet", "opus", "haiku", "inherit"];
-            if !valid.contains(&model.as_str()) {
+            if !is_valid_skill_model(model) {
                 return Err(format!(
-                    "Model must be one of: {:?}, got '{}'",
-                    valid, model
+                    "Model must be one of {:?} or a full model ID matching 'claude-*', got '{}'",
+                    VALID_MODEL_ALIASES, model
+                ));
+            }
+        }
+        Ok(())
+    }
+
+    /// Validate effort value
+    #[allow(dead_code)] // schema-level API; validation uses Validator trait
+    pub fn validate_effort(&self) -> Result<(), String> {
+        if let Some(effort) = &self.effort {
+            if !VALID_EFFORT_LEVELS.contains(&effort.as_str()) {
+                return Err(format!(
+                    "Effort must be one of: {:?}, got '{}'",
+                    VALID_EFFORT_LEVELS, effort
+                ));
+            }
+        }
+        Ok(())
+    }
+
+    /// Validate shell value
+    #[allow(dead_code)] // schema-level API; validation uses Validator trait
+    pub fn validate_shell(&self) -> Result<(), String> {
+        if let Some(shell) = &self.shell {
+            if !VALID_SHELLS.contains(&shell.as_str()) {
+                return Err(format!(
+                    "Shell must be one of: {:?}, got '{}'",
+                    VALID_SHELLS, shell
                 ));
             }
         }
@@ -165,6 +226,12 @@ impl SkillSchema {
         if let Err(e) = self.validate_context() {
             errors.push(e);
         }
+        if let Err(e) = self.validate_effort() {
+            errors.push(e);
+        }
+        if let Err(e) = self.validate_shell() {
+            errors.push(e);
+        }
 
         errors
     }
@@ -189,6 +256,9 @@ mod tests {
             model: None,
             context: None,
             agent: None,
+            effort: None,
+            paths: None,
+            shell: None,
         };
         assert!(skill.validate_name().is_ok());
     }
@@ -208,6 +278,9 @@ mod tests {
             model: None,
             context: None,
             agent: None,
+            effort: None,
+            paths: None,
+            shell: None,
         };
         assert!(skill.validate_name().is_err());
     }
@@ -227,6 +300,9 @@ mod tests {
             model: Some("gpt-4".to_string()),
             context: None,
             agent: None,
+            effort: None,
+            paths: None,
+            shell: None,
         };
         assert!(skill.validate_model().is_err());
     }
@@ -245,6 +321,9 @@ mod tests {
             model: None,
             context: None,
             agent: None,
+            effort: None,
+            paths: None,
+            shell: None,
         }
     }
 
@@ -314,5 +393,153 @@ mod tests {
             "Should report errors for both name and description, got: {:?}",
             errors
         );
+    }
+
+    // ===== Model Validation =====
+
+    #[test]
+    fn test_valid_model_aliases() {
+        for model in &["sonnet", "opus", "haiku", "inherit"] {
+            let mut skill = make_skill("test", "Test skill");
+            skill.model = Some(model.to_string());
+            assert!(
+                skill.validate_model().is_ok(),
+                "Model alias '{}' should be valid",
+                model
+            );
+        }
+    }
+
+    #[test]
+    fn test_valid_model_full_ids() {
+        for model in &[
+            "claude-opus-4-6",
+            "claude-sonnet-4-6",
+            "claude-haiku-4-5-20251001",
+            "claude-sonnet-4-5-20250929",
+        ] {
+            let mut skill = make_skill("test", "Test skill");
+            skill.model = Some(model.to_string());
+            assert!(
+                skill.validate_model().is_ok(),
+                "Full model ID '{}' should be valid",
+                model
+            );
+        }
+    }
+
+    #[test]
+    fn test_invalid_model_not_claude_prefix() {
+        let mut skill = make_skill("test", "Test skill");
+        skill.model = Some("gemini-pro".to_string());
+        assert!(skill.validate_model().is_err());
+    }
+
+    #[test]
+    fn test_is_valid_skill_model() {
+        assert!(is_valid_skill_model("sonnet"));
+        assert!(is_valid_skill_model("opus"));
+        assert!(is_valid_skill_model("haiku"));
+        assert!(is_valid_skill_model("inherit"));
+        assert!(is_valid_skill_model("claude-opus-4-6"));
+        assert!(is_valid_skill_model("claude-sonnet-4-5-20250929"));
+        assert!(!is_valid_skill_model("gpt-4"));
+        assert!(!is_valid_skill_model("gemini-pro"));
+    }
+
+    // ===== Effort Validation =====
+
+    #[test]
+    fn test_valid_effort_values() {
+        for effort in &["low", "medium", "high", "max"] {
+            let mut skill = make_skill("test", "Test skill");
+            skill.effort = Some(effort.to_string());
+            assert!(
+                skill.validate_effort().is_ok(),
+                "Effort '{}' should be valid",
+                effort
+            );
+        }
+    }
+
+    #[test]
+    fn test_invalid_effort_value() {
+        let mut skill = make_skill("test", "Test skill");
+        skill.effort = Some("extreme".to_string());
+        assert!(skill.validate_effort().is_err());
+    }
+
+    #[test]
+    fn test_effort_none_ok() {
+        let skill = make_skill("test", "Test skill");
+        assert!(skill.validate_effort().is_ok());
+    }
+
+    // ===== Shell Validation =====
+
+    #[test]
+    fn test_valid_shell_values() {
+        for shell_val in &["bash", "powershell"] {
+            let mut skill = make_skill("test", "Test skill");
+            skill.shell = Some(shell_val.to_string());
+            assert!(
+                skill.validate_shell().is_ok(),
+                "Shell '{}' should be valid",
+                shell_val
+            );
+        }
+    }
+
+    #[test]
+    fn test_invalid_shell_value() {
+        let mut skill = make_skill("test", "Test skill");
+        skill.shell = Some("zsh".to_string());
+        assert!(skill.validate_shell().is_err());
+    }
+
+    #[test]
+    fn test_shell_none_ok() {
+        let skill = make_skill("test", "Test skill");
+        assert!(skill.validate_shell().is_ok());
+    }
+
+    // ===== Paths Field =====
+
+    #[test]
+    fn test_paths_field_stores_value() {
+        let mut skill = make_skill("test", "Test skill");
+        skill.paths = Some("src/**/*.rs, tests/**/*.rs".to_string());
+        assert_eq!(
+            skill.paths.as_deref(),
+            Some("src/**/*.rs, tests/**/*.rs")
+        );
+    }
+
+    // ===== Known Frontmatter Fields =====
+
+    #[test]
+    fn test_known_fields_include_new_fields() {
+        assert!(KNOWN_SKILL_FRONTMATTER_FIELDS.contains(&"effort"));
+        assert!(KNOWN_SKILL_FRONTMATTER_FIELDS.contains(&"paths"));
+        assert!(KNOWN_SKILL_FRONTMATTER_FIELDS.contains(&"shell"));
+    }
+
+    #[test]
+    fn test_known_fields_include_existing_fields() {
+        for field in &[
+            "name",
+            "description",
+            "model",
+            "context",
+            "agent",
+            "hooks",
+            "allowed-tools",
+        ] {
+            assert!(
+                KNOWN_SKILL_FRONTMATTER_FIELDS.contains(field),
+                "Known fields should include '{}'",
+                field
+            );
+        }
     }
 }

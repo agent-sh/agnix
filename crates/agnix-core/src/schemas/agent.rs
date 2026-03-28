@@ -41,6 +41,30 @@ pub struct AgentSchema {
     /// Optional: hooks
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hooks: Option<Value>,
+
+    /// Optional: max turns (positive integer)
+    #[serde(skip_serializing_if = "Option::is_none", rename = "maxTurns")]
+    pub max_turns: Option<u32>,
+
+    /// Optional: reasoning effort level (low, medium, high, max)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub effort: Option<String>,
+
+    /// Optional: run agent in background
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub background: Option<bool>,
+
+    /// Optional: isolation mode (worktree)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub isolation: Option<String>,
+
+    /// Optional: initial prompt for the agent
+    #[serde(skip_serializing_if = "Option::is_none", rename = "initialPrompt")]
+    pub initial_prompt: Option<String>,
+
+    /// Optional: MCP server configurations
+    #[serde(skip_serializing_if = "Option::is_none", rename = "mcpServers")]
+    pub mcp_servers: Option<Value>,
 }
 
 // Validation is performed in rules/agent.rs (AgentValidator)
