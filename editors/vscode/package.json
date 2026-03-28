@@ -31,7 +31,8 @@
     }
   ],
   "engines": {
-    "vscode": "^1.85.0"
+    "vscode": "^1.85.0",
+    "node": ">=20.0.0"
   },
   "categories": [
     "Linters",
@@ -518,9 +519,6 @@
     "test:unit": "mocha ./out/src/test/unit/**/*.test.js",
     "package": "vsce package",
     "publish": "vsce publish"
-  },
-  "engines": {
-    "node": ">=20.0.0"
   },
   "overrides": {
     "serialize-javascript": "^7.0.5"
