@@ -713,7 +713,7 @@ pub(super) fn validate_cc_hk_021_invalid_if_field(
     path: &Path,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
-    let tool_events = ["PreToolUse", "PostToolUse", "PostToolUseFailure"];
+    let tool_events = HooksSchema::TOOL_EVENTS;
     if let Some(hooks_obj) = raw_value.get("hooks").and_then(|h| h.as_object()) {
         for (event, matchers) in hooks_obj {
             if let Some(matchers_arr) = matchers.as_array() {
@@ -733,8 +733,8 @@ pub(super) fn validate_cc_hk_021_invalid_if_field(
                                             0,
                                             "CC-HK-021",
                                             format!(
-                                                "Hook at {} has 'if' field on non-tool event '{}'; 'if' is only valid on PreToolUse, PostToolUse, PostToolUseFailure",
-                                                hook_location, event
+                                                "Hook at {} has 'if' field on non-tool event '{}'; 'if' is only valid on tool events: {}",
+                                                hook_location, event, HooksSchema::TOOL_EVENTS.join(", ")
                                             ),
                                         )
                                         .with_suggestion(

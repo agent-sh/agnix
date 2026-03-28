@@ -735,9 +735,9 @@ impl Validator for HooksValidator {
                             }
                         }
                         Hook::Http { .. } => {
-                            // HTTP hooks are validated at the raw JSON level
-                            // (CC-HK-005 type check, CC-HK-011 timeout, CC-HK-016 type validation,
-                            // CC-HK-020 url, CC-HK-024 headers env vars).
+                            // HTTP hooks are validated at the raw JSON level:
+                            // CC-HK-005 type check, CC-HK-011 timeout, CC-HK-016 type validation,
+                            // CC-HK-020 url validation, CC-HK-024 headers env vars.
                             // No additional typed validation needed here.
                         }
                     }

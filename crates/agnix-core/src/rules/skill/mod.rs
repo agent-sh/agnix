@@ -7,7 +7,7 @@ use crate::{
     regex_util::static_regex,
     rules::{Validator, ValidatorMetadata},
     schemas::hooks::HooksSchema,
-    schemas::skill::{SkillSchema, VALID_EFFORT_LEVELS, VALID_SHELLS},
+    schemas::skill::{SkillSchema, VALID_EFFORT_LEVELS, VALID_SHELLS, is_valid_skill_model},
     validation::is_valid_mcp_tool_format,
 };
 use regex::Regex;
@@ -39,7 +39,7 @@ struct SkillFrontmatter {
     context: Option<String>,
     agent: Option<String>,
     effort: Option<String>,
-    paths: Option<String>,
+    paths: Option<serde_yaml::Value>,
     shell: Option<String>,
 }
 
@@ -60,8 +60,8 @@ static_regex!(fn imperative_verb_regex, r"(?i)\b(run|execute|create|build|deploy
 static_regex!(fn first_second_person_regex, r"(?i)(^\s*(?:i|you|we)\b|\b(?:i will|you can|you should|we can|we should|we will)\b)");
 static_regex!(fn indexed_arguments_regex, r"\$ARGUMENTS\[\d+\]");
 
-/// Valid model values for CC-SK-001
-const VALID_MODELS: &[&str] = &["sonnet", "opus", "haiku", "inherit"];
+/// Valid model description for CC-SK-001 diagnostic messages
+const VALID_MODELS_DESC: &str = "sonnet, opus, haiku, inherit, or claude-*";
 
 /// Built-in agent types for CC-SK-005
 const BUILTIN_AGENTS: &[&str] = &["Explore", "Plan", "general-purpose"];
@@ -708,7 +708,7 @@ impl<'a> ValidationContext<'a> {
         // CC-SK-001: Invalid model value
         if self.config.is_rule_enabled("CC-SK-001") {
             if let Some(model) = &schema.model {
-                if !VALID_MODELS.contains(&model.as_str()) {
+                if !is_valid_skill_model(model.as_str()) {
                     let mut diagnostic = Diagnostic::error(
                         self.path.to_path_buf(),
                         model_line,
@@ -717,13 +717,10 @@ impl<'a> ValidationContext<'a> {
                         t!(
                             "rules.cc_sk_001.message",
                             model = model.as_str(),
-                            valid = VALID_MODELS.join(", ")
+                            valid = VALID_MODELS_DESC
                         ),
                     )
-                    .with_suggestion(t!(
-                        "rules.cc_sk_001.suggestion",
-                        valid = VALID_MODELS.join(", ")
-                    ));
+                    .with_suggestion(t!("rules.cc_sk_001.suggestion", valid = VALID_MODELS_DESC));
 
                     // Unsafe auto-fix: default invalid model to sonnet.
                     if let Some((start, end)) = self.frontmatter_value_byte_range("model") {
@@ -900,7 +897,13 @@ impl<'a> ValidationContext<'a> {
         // CC-SK-019: Invalid paths format
         if self.config.is_rule_enabled("CC-SK-019") {
             if let Some(paths) = &schema.paths {
-                if paths.trim().is_empty() {
+                let is_empty = match paths {
+                    serde_yaml::Value::String(s) => s.trim().is_empty(),
+                    serde_yaml::Value::Sequence(seq) => seq.is_empty(),
+                    serde_yaml::Value::Null => true,
+                    _ => false,
+                };
+                if is_empty {
                     let (paths_line, paths_col) = self.frontmatter_key_line_col("paths");
                     self.diagnostics.push(
                         Diagnostic::info(

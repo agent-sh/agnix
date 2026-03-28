@@ -1,6 +1,7 @@
 use super::*;
 use crate::config::LintConfig;
 use crate::fs::RealFileSystem;
+use crate::schemas::skill::VALID_MODEL_ALIASES;
 use std::fs;
 
 #[test]
@@ -2557,8 +2558,8 @@ fn test_as_012_exactly_500_lines_ok() {
 
 #[test]
 fn test_cc_sk_001_all_valid_models() {
-    // Must match VALID_MODELS constant in skill/mod.rs
-    let valid_models = VALID_MODELS;
+    // Must match VALID_MODEL_ALIASES plus claude-* prefixed IDs
+    let valid_models = VALID_MODEL_ALIASES;
 
     for model in valid_models {
         let content = format!(

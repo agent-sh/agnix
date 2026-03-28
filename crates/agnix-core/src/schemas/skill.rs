@@ -62,7 +62,7 @@ pub struct SkillSchema {
 
     /// Optional: comma-separated glob patterns or YAML list of file paths
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub paths: Option<String>,
+    pub paths: Option<serde_yaml::Value>,
 
     /// Optional: shell to use (bash, powershell)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -519,10 +519,33 @@ mod tests {
     // ===== Paths Field =====
 
     #[test]
-    fn test_paths_field_stores_value() {
+    fn test_paths_field_stores_string_value() {
         let mut skill = make_skill("test", "Test skill");
-        skill.paths = Some("src/**/*.rs, tests/**/*.rs".to_string());
-        assert_eq!(skill.paths.as_deref(), Some("src/**/*.rs, tests/**/*.rs"));
+        skill.paths = Some(serde_yaml::Value::String(
+            "src/**/*.rs, tests/**/*.rs".to_string(),
+        ));
+        assert!(skill.paths.is_some());
+        match &skill.paths {
+            Some(serde_yaml::Value::String(s)) => {
+                assert_eq!(s, "src/**/*.rs, tests/**/*.rs");
+            }
+            _ => panic!("Expected String value"),
+        }
+    }
+
+    #[test]
+    fn test_paths_field_stores_sequence_value() {
+        let mut skill = make_skill("test", "Test skill");
+        skill.paths = Some(serde_yaml::Value::Sequence(vec![
+            serde_yaml::Value::String("src/**/*.rs".to_string()),
+            serde_yaml::Value::String("tests/**/*.rs".to_string()),
+        ]));
+        match &skill.paths {
+            Some(serde_yaml::Value::Sequence(seq)) => {
+                assert_eq!(seq.len(), 2);
+            }
+            _ => panic!("Expected Sequence value"),
+        }
     }
 
     // ===== Known Frontmatter Fields =====

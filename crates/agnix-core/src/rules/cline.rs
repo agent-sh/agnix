@@ -315,9 +315,11 @@ impl ClineValidator {
         }
 
         // CLN-006: Workflow with frontmatter (WARNING)
+        // Use split_frontmatter to distinguish real frontmatter (opening + closing ---)
+        // from a standalone --- which is a valid markdown horizontal rule.
         if config.is_rule_enabled("CLN-006") {
-            let trimmed = content.trim_start();
-            if trimmed.starts_with("---") {
+            let parts = split_frontmatter(content);
+            if parts.has_frontmatter && parts.has_closing {
                 diagnostics.push(
                     Diagnostic::warning(
                         path.to_path_buf(),

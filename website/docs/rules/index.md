@@ -50,7 +50,6 @@ This section contains all `342` validation rules generated from `knowledge-base/
 | [CC-AG-013](./generated/cc-ag-013.md) | Invalid Skill Name Format | MEDIUM | Claude Agents | Yes (unsafe) |
 | [CC-AG-014](./generated/cc-ag-014.md) | Invalid Effort Value | MEDIUM | Claude Agents | No |
 | [CC-AG-015](./generated/cc-ag-015.md) | Invalid Isolation Value | MEDIUM | Claude Agents | No |
-| [CC-AG-016](./generated/cc-ag-016.md) | Invalid Background Type | MEDIUM | Claude Agents | No |
 | [CC-AG-017](./generated/cc-ag-017.md) | Invalid MaxTurns Value | MEDIUM | Claude Agents | No |
 | [CC-AG-019](./generated/cc-ag-019.md) | Unknown Agent Frontmatter Field | LOW | Claude Agents | No |
 | [CC-HK-001](./generated/cc-hk-001.md) | Invalid Hook Event | HIGH | Claude Hooks | Yes (safe/unsafe) |

@@ -139,7 +139,9 @@ const RULE_IDS: &[&str] = &[
     "CC-AG-013",
     "CC-AG-014",
     "CC-AG-015",
-    "CC-AG-016",
+    // CC-AG-016 (invalid background type) is intentionally not listed here.
+    // It is caught by serde at parse time (CC-AG-007) since background is
+    // Option<bool>. No separate runtime diagnostic is needed.
     "CC-AG-017",
     "CC-AG-019",
 ];
