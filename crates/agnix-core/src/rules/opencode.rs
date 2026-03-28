@@ -1592,7 +1592,7 @@ impl Validator for OpenCodeValidator {
                                             find_key_line(content, "port").unwrap_or(server_line),
                                             0,
                                             "OC-CFG-013",
-                                            format!("Invalid server.port type. Expected a number"),
+                                            "Invalid server.port type. Expected a number".to_string(),
                                         )
                                         .with_suggestion(
                                             "Set port to a number such as 8080".to_string(),
@@ -1608,7 +1608,7 @@ impl Validator for OpenCodeValidator {
                                             find_key_line(content, "hostname").unwrap_or(server_line),
                                             0,
                                             "OC-CFG-013",
-                                            format!("Invalid server.hostname type. Expected a string"),
+                                            "Invalid server.hostname type. Expected a string".to_string(),
                                         )
                                         .with_suggestion(
                                             "Set hostname to a string such as \"localhost\"".to_string(),
@@ -1624,7 +1624,7 @@ impl Validator for OpenCodeValidator {
                                             find_key_line(content, "mdns").unwrap_or(server_line),
                                             0,
                                             "OC-CFG-013",
-                                            format!("Invalid server.mdns type. Expected a boolean"),
+                                            "Invalid server.mdns type. Expected a boolean".to_string(),
                                         )
                                         .with_suggestion(
                                             "Set mdns to true or false".to_string(),
@@ -1640,7 +1640,7 @@ impl Validator for OpenCodeValidator {
                                             find_key_line(content, "cors").unwrap_or(server_line),
                                             0,
                                             "OC-CFG-013",
-                                            format!("Invalid server.cors type. Expected an array"),
+                                            "Invalid server.cors type. Expected an array".to_string(),
                                         )
                                         .with_suggestion(
                                             "Set cors to an array of allowed origins".to_string(),

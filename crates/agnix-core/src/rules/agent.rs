@@ -1006,9 +1006,7 @@ impl Validator for AgentValidator {
                             1,
                             0,
                             "CC-AG-017",
-                            format!(
-                                "Invalid maxTurns value '0', must be a positive integer (> 0)"
-                            ),
+                            "Invalid maxTurns value '0', must be a positive integer (> 0)",
                         )
                         .with_suggestion(
                             "Set maxTurns to a positive integer, e.g. maxTurns: 10".to_string(),
