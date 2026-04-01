@@ -1,7 +1,7 @@
 # Rules Reference
 
-This section contains all `385` validation rules generated from `knowledge-base/rules.json`.
-`124` rules have automatic fixes.
+This section contains all `399` validation rules generated from `knowledge-base/rules.json`.
+`126` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
 |------|------|----------|----------|----------|
@@ -163,6 +163,20 @@ This section contains all `385` validation rules generated from `knowledge-base/
 | [CDX-APP-001](./generated/cdx-app-001.md) | Invalid default_tools_approval_mode Value | HIGH | Codex CLI | No |
 | [CDX-APP-002](./generated/cdx-app-002.md) | Invalid skills Configuration | MEDIUM | Codex CLI | No |
 | [CDX-APP-003](./generated/cdx-app-003.md) | Invalid profile Configuration | MEDIUM | Codex CLI | No |
+| [CDX-PL-001](./generated/cdx-pl-001.md) | Codex Plugin Manifest Location | HIGH | Codex CLI | No |
+| [CDX-PL-002](./generated/cdx-pl-002.md) | Invalid JSON in Plugin Manifest | HIGH | Codex CLI | No |
+| [CDX-PL-003](./generated/cdx-pl-003.md) | Missing or Empty Plugin Name | HIGH | Codex CLI | Yes (unsafe) |
+| [CDX-PL-004](./generated/cdx-pl-004.md) | Invalid Plugin Name Characters | HIGH | Codex CLI | No |
+| [CDX-PL-005](./generated/cdx-pl-005.md) | Component Path Missing ./ Prefix | HIGH | Codex CLI | Yes (safe) |
+| [CDX-PL-006](./generated/cdx-pl-006.md) | Component Path Directory Traversal | HIGH | Codex CLI | No |
+| [CDX-PL-007](./generated/cdx-pl-007.md) | Component Path Empty Relative | HIGH | Codex CLI | No |
+| [CDX-PL-008](./generated/cdx-pl-008.md) | Too Many Default Prompts | MEDIUM | Codex CLI | No |
+| [CDX-PL-009](./generated/cdx-pl-009.md) | Default Prompt Too Long | MEDIUM | Codex CLI | No |
+| [CDX-PL-010](./generated/cdx-pl-010.md) | Empty Default Prompt Entry | MEDIUM | Codex CLI | No |
+| [CDX-PL-011](./generated/cdx-pl-011.md) | Invalid Interface URL | MEDIUM | Codex CLI | No |
+| [CDX-PL-012](./generated/cdx-pl-012.md) | Invalid Asset Path | MEDIUM | Codex CLI | No |
+| [CDX-PL-013](./generated/cdx-pl-013.md) | Unsupported Hooks Field | LOW | Codex CLI | No |
+| [CDX-PL-014](./generated/cdx-pl-014.md) | Missing Description | LOW | Codex CLI | No |
 | [CDX-CFG-023](./generated/cdx-cfg-023.md) | Invalid Approval Policy Sub-field | MEDIUM | Codex CLI | Yes (safe) |
 | [CDX-CFG-024](./generated/cdx-cfg-024.md) | Invalid Approvals Reviewer Value | MEDIUM | Codex CLI | Yes (unsafe) |
 | [CDX-CFG-025](./generated/cdx-cfg-025.md) | Invalid Service Tier Value | MEDIUM | Codex CLI | Yes (unsafe) |
