@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Codex CLI plugin manifest validation** (CDX-PL-001 to CDX-PL-014) - 14 new rules for `.codex-plugin/plugin.json` manifests introduced in Codex CLI v0.117.0, covering manifest location, name validation, component paths, defaultPrompt constraints, interface URLs, asset paths, and unsupported fields
+- **New FileType::CodexPlugin** variant with case-insensitive parent directory detection
+
 ## [0.17.0] - 2026-03-28
 
 ### Added

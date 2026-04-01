@@ -94,7 +94,9 @@ impl Validator for CodexPluginValidator {
         // CDX-PL-003: Missing or empty name
         if config.is_rule_enabled("CDX-PL-003") {
             let name_missing = match raw_value.get("name") {
-                Some(v) => !v.is_string() || v.as_str().map(|s| s.trim().is_empty()).unwrap_or(true),
+                Some(v) => {
+                    !v.is_string() || v.as_str().map(|s| s.trim().is_empty()).unwrap_or(true)
+                }
                 None => true,
             };
             if name_missing {
@@ -149,9 +151,7 @@ impl Validator for CodexPluginValidator {
         if path_rules_enabled {
             for field in &["skills", "mcpServers", "apps"] {
                 if let Some(val) = raw_value.get(*field).and_then(|v| v.as_str()) {
-                    validate_component_path(
-                        val, field, path, content, config, &mut diagnostics,
-                    );
+                    validate_component_path(val, field, path, content, config, &mut diagnostics);
                 }
             }
         }
@@ -164,7 +164,14 @@ impl Validator for CodexPluginValidator {
 
             // CDX-PL-011: URL validation
             if config.is_rule_enabled("CDX-PL-011") {
-                for field in &["websiteUrl", "websiteURL", "privacyPolicyUrl", "privacyPolicyURL", "termsOfServiceUrl", "termsOfServiceURL"] {
+                for field in &[
+                    "websiteUrl",
+                    "websiteURL",
+                    "privacyPolicyUrl",
+                    "privacyPolicyURL",
+                    "termsOfServiceUrl",
+                    "termsOfServiceURL",
+                ] {
                     if let Some(url_val) = interface.get(*field) {
                         validate_interface_url(url_val, field, path, &mut diagnostics);
                     }
@@ -206,7 +213,9 @@ impl Validator for CodexPluginValidator {
         // CDX-PL-014: Missing description (recommendation)
         if config.is_rule_enabled("CDX-PL-014") {
             let desc_missing = match raw_value.get("description") {
-                Some(v) => !v.is_string() || v.as_str().map(|s| s.trim().is_empty()).unwrap_or(true),
+                Some(v) => {
+                    !v.is_string() || v.as_str().map(|s| s.trim().is_empty()).unwrap_or(true)
+                }
                 None => true,
             };
             if desc_missing {
@@ -295,9 +304,9 @@ fn validate_component_path(
 
         // Safe autofix: prepend ./
         if !is_absolute_path(trimmed) {
-            if let Some((start, end)) = crate::rules::find_unique_json_string_value_span(
-                content, field, trimmed,
-            ) {
+            if let Some((start, end)) =
+                crate::rules::find_unique_json_string_value_span(content, field, trimmed)
+            {
                 let fixed = format!("./{}", trimmed);
                 diagnostic = diagnostic.with_fix(Fix::replace(
                     start,
@@ -320,7 +329,9 @@ fn has_traversal(p: &str) -> bool {
 
 /// Check if path is absolute.
 fn is_absolute_path(p: &str) -> bool {
-    p.starts_with('/') || p.starts_with('\\') || (p.len() >= 2 && p.as_bytes()[0].is_ascii_alphabetic() && p.as_bytes()[1] == b':')
+    p.starts_with('/')
+        || p.starts_with('\\')
+        || (p.len() >= 2 && p.as_bytes()[0].is_ascii_alphabetic() && p.as_bytes()[1] == b':')
 }
 
 /// Validate defaultPrompt field.
@@ -370,7 +381,8 @@ fn validate_default_prompt(
         }
 
         // CDX-PL-009: Max length
-        if config.is_rule_enabled("CDX-PL-009") && normalized.chars().count() > MAX_DEFAULT_PROMPT_LEN
+        if config.is_rule_enabled("CDX-PL-009")
+            && normalized.chars().count() > MAX_DEFAULT_PROMPT_LEN
         {
             diagnostics.push(
                 Diagnostic::warning(
@@ -398,10 +410,7 @@ fn validate_interface_url(
 ) {
     match value.as_str() {
         Some(url) => {
-            if !url.is_empty()
-                && !url.starts_with("http://")
-                && !url.starts_with("https://")
-            {
+            if !url.is_empty() && !url.starts_with("http://") && !url.starts_with("https://") {
                 diagnostics.push(
                     Diagnostic::warning(
                         path.to_path_buf(),
@@ -422,7 +431,11 @@ fn validate_interface_url(
                     1,
                     0,
                     "CDX-PL-011",
-                    t!("rules.cdx_pl_011.message", url = val_str.as_str(), field = field),
+                    t!(
+                        "rules.cdx_pl_011.message",
+                        url = val_str.as_str(),
+                        field = field
+                    ),
                 )
                 .with_suggestion(t!("rules.cdx_pl_011.suggestion")),
             );
@@ -431,12 +444,7 @@ fn validate_interface_url(
 }
 
 /// Validate an asset path in the interface section.
-fn validate_asset_path(
-    p: &str,
-    field: &str,
-    path: &Path,
-    diagnostics: &mut Vec<Diagnostic>,
-) {
+fn validate_asset_path(p: &str, field: &str, path: &Path, diagnostics: &mut Vec<Diagnostic>) {
     let trimmed = p.trim();
     if trimmed.is_empty() {
         return;
@@ -488,7 +496,10 @@ mod tests {
     fn test_cdx_pl_001_not_in_codex_plugin() {
         let temp = TempDir::new().unwrap();
         let plugin_path = temp.path().join("plugin.json");
-        write_plugin(&plugin_path, r#"{"name":"test-plugin","description":"desc"}"#);
+        write_plugin(
+            &plugin_path,
+            r#"{"name":"test-plugin","description":"desc"}"#,
+        );
 
         let validator = CodexPluginValidator;
         let diagnostics = validator.validate(
@@ -504,7 +515,10 @@ mod tests {
     fn test_cdx_pl_001_valid_location() {
         let temp = TempDir::new().unwrap();
         let plugin_path = temp.path().join(".codex-plugin").join("plugin.json");
-        write_plugin(&plugin_path, r#"{"name":"test-plugin","description":"desc"}"#);
+        write_plugin(
+            &plugin_path,
+            r#"{"name":"test-plugin","description":"desc"}"#,
+        );
 
         let validator = CodexPluginValidator;
         let diagnostics = validator.validate(
@@ -597,7 +611,10 @@ mod tests {
         let validator = CodexPluginValidator;
         let diagnostics = validator.validate(&plugin_path, content, &LintConfig::default());
 
-        let cdx_pl_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-PL-003").collect();
+        let cdx_pl_003: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-PL-003")
+            .collect();
         assert_eq!(cdx_pl_003.len(), 1);
         assert!(cdx_pl_003[0].has_fixes());
         assert!(!cdx_pl_003[0].fixes[0].safe);
@@ -644,10 +661,7 @@ mod tests {
     fn test_cdx_pl_004_dots_in_name() {
         let temp = TempDir::new().unwrap();
         let plugin_path = temp.path().join(".codex-plugin").join("plugin.json");
-        write_plugin(
-            &plugin_path,
-            r#"{"name":"my.plugin","description":"desc"}"#,
-        );
+        write_plugin(&plugin_path, r#"{"name":"my.plugin","description":"desc"}"#);
 
         let validator = CodexPluginValidator;
         let diagnostics = validator.validate(
@@ -696,7 +710,10 @@ mod tests {
             &LintConfig::default(),
         );
 
-        let pl_005: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-PL-005").collect();
+        let pl_005: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-PL-005")
+            .collect();
         assert_eq!(pl_005.len(), 1);
     }
 
@@ -1020,10 +1037,7 @@ mod tests {
     fn test_cdx_pl_013_no_hooks() {
         let temp = TempDir::new().unwrap();
         let plugin_path = temp.path().join(".codex-plugin").join("plugin.json");
-        write_plugin(
-            &plugin_path,
-            r#"{"name":"test","description":"desc"}"#,
-        );
+        write_plugin(&plugin_path, r#"{"name":"test","description":"desc"}"#);
 
         let validator = CodexPluginValidator;
         let diagnostics = validator.validate(
@@ -1050,16 +1064,25 @@ mod tests {
             &LintConfig::default(),
         );
 
-        let cdx_pl_014: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-PL-014").collect();
+        let cdx_pl_014: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-PL-014")
+            .collect();
         assert_eq!(cdx_pl_014.len(), 1);
-        assert_eq!(cdx_pl_014[0].level, crate::diagnostics::DiagnosticLevel::Warning);
+        assert_eq!(
+            cdx_pl_014[0].level,
+            crate::diagnostics::DiagnosticLevel::Warning
+        );
     }
 
     #[test]
     fn test_cdx_pl_014_has_description() {
         let temp = TempDir::new().unwrap();
         let plugin_path = temp.path().join(".codex-plugin").join("plugin.json");
-        write_plugin(&plugin_path, r#"{"name":"test","description":"A great plugin"}"#);
+        write_plugin(
+            &plugin_path,
+            r#"{"name":"test","description":"A great plugin"}"#,
+        );
 
         let validator = CodexPluginValidator;
         let diagnostics = validator.validate(
