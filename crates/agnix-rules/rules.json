@@ -1,8 +1,8 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 385,
-  "last_updated": "2026-03-28",
+  "total_rules": 399,
+  "last_updated": "2026-04-01",
   "schema": {
     "evidence": {
       "source_type": "spec|vendor_docs|vendor_code|paper|community",
@@ -4418,6 +4418,400 @@
       },
       "good_example": "profile = \"default\"",
       "bad_example": "profile = 123"
+    },
+    {
+      "id": "CDX-PL-001",
+      "name": "Codex Plugin Manifest Location",
+      "severity": "HIGH",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs"
+        ],
+        "verified_on": "2026-04-01",
+        "applies_to": {
+          "tool": "codex",
+          "version_range": ">=0.117.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": ".codex-plugin/plugin.json",
+      "bad_example": "plugin.json (at project root)"
+    },
+    {
+      "id": "CDX-PL-002",
+      "name": "Invalid JSON in Plugin Manifest",
+      "severity": "HIGH",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs"
+        ],
+        "verified_on": "2026-04-01",
+        "applies_to": {
+          "tool": "codex",
+          "version_range": ">=0.117.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"name\": \"my-plugin\", \"components\": [{\"path\": \"./src/index.js\"}]}",
+      "bad_example": "{name: my-plugin, components: }"
+    },
+    {
+      "id": "CDX-PL-003",
+      "name": "Missing or Empty Plugin Name",
+      "severity": "HIGH",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs"
+        ],
+        "verified_on": "2026-04-01",
+        "applies_to": {
+          "tool": "codex",
+          "version_range": ">=0.117.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": true,
+        "fix_safety": "unsafe"
+      },
+      "good_example": "{\"name\": \"my-plugin\"}",
+      "bad_example": "{\"name\": \"\"}"
+    },
+    {
+      "id": "CDX-PL-004",
+      "name": "Invalid Plugin Name Characters",
+      "severity": "HIGH",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs"
+        ],
+        "verified_on": "2026-04-01",
+        "applies_to": {
+          "tool": "codex",
+          "version_range": ">=0.117.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"name\": \"my-cool-plugin\"}",
+      "bad_example": "{\"name\": \"my plugin!@#\"}"
+    },
+    {
+      "id": "CDX-PL-005",
+      "name": "Component Path Missing ./ Prefix",
+      "severity": "HIGH",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs"
+        ],
+        "verified_on": "2026-04-01",
+        "applies_to": {
+          "tool": "codex",
+          "version_range": ">=0.117.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": true,
+        "fix_safety": "safe"
+      },
+      "good_example": "{\"components\": [{\"path\": \"./src/index.js\"}]}",
+      "bad_example": "{\"components\": [{\"path\": \"src/index.js\"}]}"
+    },
+    {
+      "id": "CDX-PL-006",
+      "name": "Component Path Directory Traversal",
+      "severity": "HIGH",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs"
+        ],
+        "verified_on": "2026-04-01",
+        "applies_to": {
+          "tool": "codex",
+          "version_range": ">=0.117.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"components\": [{\"path\": \"./src/index.js\"}]}",
+      "bad_example": "{\"components\": [{\"path\": \"./../../../etc/passwd\"}]}"
+    },
+    {
+      "id": "CDX-PL-007",
+      "name": "Component Path Empty Relative",
+      "severity": "HIGH",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs"
+        ],
+        "verified_on": "2026-04-01",
+        "applies_to": {
+          "tool": "codex",
+          "version_range": ">=0.117.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"components\": [{\"path\": \"./src/index.js\"}]}",
+      "bad_example": "{\"components\": [{\"path\": \"./\"}]}"
+    },
+    {
+      "id": "CDX-PL-008",
+      "name": "Too Many Default Prompts",
+      "severity": "MEDIUM",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs"
+        ],
+        "verified_on": "2026-04-01",
+        "applies_to": {
+          "tool": "codex",
+          "version_range": ">=0.117.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"default_prompts\": [\"Fix the bug\", \"Add tests\"]}",
+      "bad_example": "{\"default_prompts\": [\"a\",\"b\",\"c\",\"d\",\"e\",\"f\",\"g\",\"h\",\"i\",\"j\",\"k\",\"l\",\"m\",\"n\",\"o\",\"p\",\"q\",\"r\",\"s\",\"t\",\"u\"]}"
+    },
+    {
+      "id": "CDX-PL-009",
+      "name": "Default Prompt Too Long",
+      "severity": "MEDIUM",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs"
+        ],
+        "verified_on": "2026-04-01",
+        "applies_to": {
+          "tool": "codex",
+          "version_range": ">=0.117.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"default_prompts\": [\"Fix the login bug in auth module\"]}",
+      "bad_example": "{\"default_prompts\": [\"<500+ character prompt string>\"]}"
+    },
+    {
+      "id": "CDX-PL-010",
+      "name": "Empty Default Prompt Entry",
+      "severity": "MEDIUM",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs"
+        ],
+        "verified_on": "2026-04-01",
+        "applies_to": {
+          "tool": "codex",
+          "version_range": ">=0.117.0"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"default_prompts\": [\"Fix the bug\", \"Add tests\"]}",
+      "bad_example": "{\"default_prompts\": [\"Fix the bug\", \"\", \"Add tests\"]}"
+    },
+    {
+      "id": "CDX-PL-011",
+      "name": "Invalid Interface URL",
+      "severity": "MEDIUM",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs"
+        ],
+        "verified_on": "2026-04-01",
+        "applies_to": {
+          "tool": "codex",
+          "version_range": ">=0.117.0"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"interface\": \"https://example.com/plugin-ui\"}",
+      "bad_example": "{\"interface\": \"not a url\"}"
+    },
+    {
+      "id": "CDX-PL-012",
+      "name": "Invalid Asset Path",
+      "severity": "MEDIUM",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs"
+        ],
+        "verified_on": "2026-04-01",
+        "applies_to": {
+          "tool": "codex",
+          "version_range": ">=0.117.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"assets\": [\"./icons/logo.png\", \"./styles/theme.css\"]}",
+      "bad_example": "{\"assets\": [\"icons/logo.png\", \"../outside/file.txt\"]}"
+    },
+    {
+      "id": "CDX-PL-013",
+      "name": "Unsupported Hooks Field",
+      "severity": "LOW",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs"
+        ],
+        "verified_on": "2026-04-01",
+        "applies_to": {
+          "tool": "codex",
+          "version_range": ">=0.117.0"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"name\": \"my-plugin\", \"components\": [{\"path\": \"./src/index.js\"}]}",
+      "bad_example": "{\"name\": \"my-plugin\", \"hooks\": {\"on_load\": \"./init.js\"}}"
+    },
+    {
+      "id": "CDX-PL-014",
+      "name": "Missing Description",
+      "severity": "LOW",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs"
+        ],
+        "verified_on": "2026-04-01",
+        "applies_to": {
+          "tool": "codex",
+          "version_range": ">=0.117.0"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"name\": \"my-plugin\", \"description\": \"Adds code review capabilities\"}",
+      "bad_example": "{\"name\": \"my-plugin\"}"
     },
     {
       "id": "CDX-CFG-023",
