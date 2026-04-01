@@ -329,7 +329,11 @@ pub fn detect_file_type(path: &Path) -> FileType {
             FileType::GeminiSettings
         }
         "settings.json" | "settings.local.json" => FileType::Hooks,
-        // Classify any plugin.json as Plugin - validator checks location constraint (CC-PL-001)
+        // Codex CLI plugin manifest (.codex-plugin/plugin.json)
+        "plugin.json" if parent_eq_ignore_ascii_case(parent, ".codex-plugin") => {
+            FileType::CodexPlugin
+        }
+        // Classify any other plugin.json as Plugin - validator checks .claude-plugin/ constraint (CC-PL-001)
         "plugin.json" => FileType::Plugin,
         // Roo Code MCP configuration (.roo/mcp.json) - must be before generic mcp.json
         "mcp.json" if parent_eq_ignore_ascii_case(parent, ".roo") => FileType::RooMcp,
@@ -752,6 +756,27 @@ mod tests {
     #[test]
     fn detect_plugin() {
         assert_eq!(detect_file_type(Path::new("plugin.json")), FileType::Plugin);
+        assert_eq!(
+            detect_file_type(Path::new(".claude-plugin/plugin.json")),
+            FileType::Plugin
+        );
+    }
+
+    #[test]
+    fn detect_codex_plugin() {
+        assert_eq!(
+            detect_file_type(Path::new(".codex-plugin/plugin.json")),
+            FileType::CodexPlugin
+        );
+        assert_eq!(
+            detect_file_type(Path::new("project/.codex-plugin/plugin.json")),
+            FileType::CodexPlugin
+        );
+        // Case-insensitive parent
+        assert_eq!(
+            detect_file_type(Path::new(".CODEX-PLUGIN/plugin.json")),
+            FileType::CodexPlugin
+        );
     }
 
     #[test]

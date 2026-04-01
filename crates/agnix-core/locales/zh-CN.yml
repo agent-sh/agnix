@@ -626,6 +626,50 @@ rules:
     message: "Kiro MCP 服务 '%{server}' 在 env '%{env_key}' 中存在潜在硬编码密钥"
     suggestion: "使用 ${VAR_NAME} 形式的环境变量引用，避免明文密钥"
 
+  # --- Codex Plugin (codex_plugin.rs) ---
+  cdx_pl_001:
+    message: "plugin.json 必须位于 .codex-plugin/ 目录中"
+    suggestion: "将 plugin.json 移至 .codex-plugin/plugin.json"
+  cdx_pl_002:
+    message: "解析 plugin.json 失败: %{error}"
+    suggestion: "验证 plugin.json 中的 JSON 语法 - 检查是否缺少逗号、括号或不带引号的键"
+  cdx_pl_003:
+    message: "缺少或为空的插件名称"
+    suggestion: "在 plugin.json 中添加一个非空字符串的 'name' 字段"
+  cdx_pl_004:
+    message: "无效的插件名称 '%{name}' - 必须仅包含 ASCII 字母数字、连字符或下划线"
+    suggestion: "重命名为仅使用 ASCII 字母、数字、连字符和下划线"
+  cdx_pl_005:
+    message: "'%{field}' 中的组件路径 '%{path}' 必须以 ./ 开头"
+    suggestion: "在路径前添加 './'"
+  cdx_pl_006:
+    message: "'%{field}' 中的组件路径 '%{path}' 使用了 '..' 遍历"
+    suggestion: "从路径中移除目录遍历"
+  cdx_pl_007:
+    message: "'%{field}' 中的组件路径 '%{path}' 是单独的 './'（空相对路径）"
+    suggestion: "在 './' 后指定非空的相对路径"
+  cdx_pl_008:
+    message: "defaultPrompt 有 %{count} 个条目，但最多允许 3 个"
+    suggestion: "移除多余的 defaultPrompt 条目（最多允许 3 个）"
+  cdx_pl_009:
+    message: "defaultPrompt 条目超过 128 个字符（%{length} 个字符）"
+    suggestion: "将提示缩短到 128 个字符或更少"
+  cdx_pl_010:
+    message: "defaultPrompt 条目在空白规范化后为空"
+    suggestion: "移除空的 defaultPrompt 条目或添加内容"
+  cdx_pl_011:
+    message: "interface.%{field} 中的 URL '%{url}' 无效"
+    suggestion: "使用有效的 http:// 或 https:// URL"
+  cdx_pl_012:
+    message: "interface.%{field} 中的资源路径 '%{path}' 必须以 ./ 开头且不使用 '..' 遍历"
+    suggestion: "使用以 './' 开头的相对路径，且在插件根目录内"
+  cdx_pl_013:
+    message: "Codex 插件清单不支持 'hooks' 字段"
+    suggestion: "从 plugin.json 中移除 'hooks' 字段"
+  cdx_pl_014:
+    message: "缺少 'description' 字段 - 建议添加以提高市场可见性"
+    suggestion: "在 plugin.json 中添加 'description' 字符串以提高可发现性"
+
   # --- Prompt engineering (prompt.rs) ---
   pe_001:
     message: "关键词 '%{keyword}' 在文档的 %{percent} 百分比处（40-60 百分比是'中间遗忘'区域）"

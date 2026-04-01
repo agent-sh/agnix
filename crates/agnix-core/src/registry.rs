@@ -398,7 +398,7 @@ impl ValidatorRegistryBuilder {
 ///
 /// Used by `BuiltinProvider` (via `debug_assert_eq!`) and tests to catch
 /// accidental additions or removals without updating all providers.
-const EXPECTED_BUILTIN_COUNT: usize = 72;
+const EXPECTED_BUILTIN_COUNT: usize = 73;
 
 // -- Category providers -----------------------------------------------------
 //
@@ -749,6 +749,11 @@ impl ValidatorProvider for MiscProvider {
                 codex_config_validator,
             ),
             (
+                FileType::CodexPlugin,
+                Some("CodexPluginValidator"),
+                codex_plugin_validator,
+            ),
+            (
                 FileType::KiroSteering,
                 Some("KiroSteeringValidator"),
                 kiro_steering_validator,
@@ -915,6 +920,10 @@ fn codex_validator() -> Box<dyn Validator> {
 
 fn codex_config_validator() -> Box<dyn Validator> {
     Box::new(crate::rules::codex::CodexConfigValidator)
+}
+
+fn codex_plugin_validator() -> Box<dyn Validator> {
+    Box::new(crate::rules::codex_plugin::CodexPluginValidator)
 }
 
 fn roo_validator() -> Box<dyn Validator> {
@@ -1346,7 +1355,7 @@ mod tests {
 
     #[test]
     fn every_validatable_file_type_has_at_least_one_validator() {
-        let validatable_types: [FileType; 41] = [
+        let validatable_types: [FileType; 42] = [
             FileType::Skill,
             FileType::ClaudeMd,
             FileType::Agent,
@@ -1374,6 +1383,7 @@ mod tests {
             FileType::GeminiExtension,
             FileType::GeminiIgnore,
             FileType::CodexConfig,
+            FileType::CodexPlugin,
             FileType::RooRules,
             FileType::RooModes,
             FileType::RooIgnore,
@@ -1421,6 +1431,7 @@ mod tests {
                 | FileType::GeminiExtension
                 | FileType::GeminiIgnore
                 | FileType::CodexConfig
+                | FileType::CodexPlugin
                 | FileType::RooRules
                 | FileType::RooModes
                 | FileType::RooIgnore
@@ -1922,7 +1933,7 @@ mod tests {
 
     #[test]
     fn misc_provider_count() {
-        assert_eq!(MiscProvider.named_validators().len(), 23);
+        assert_eq!(MiscProvider.named_validators().len(), 24);
     }
 
     #[test]

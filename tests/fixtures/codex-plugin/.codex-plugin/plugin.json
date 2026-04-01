@@ -1,0 +1,16 @@
+{
+  "name": "sample-codex-plugin",
+  "description": "A sample Codex CLI plugin for testing",
+  "skills": "./skills",
+  "mcpServers": "./mcp-servers",
+  "apps": "./apps",
+  "interface": {
+    "displayName": "Sample Plugin",
+    "shortDescription": "A test plugin",
+    "developerName": "Test Author",
+    "websiteUrl": "https://example.com",
+    "defaultPrompt": ["Summarize my inbox", "Draft a reply"],
+    "logo": "./assets/logo.png",
+    "screenshots": ["./assets/screenshot1.png"]
+  }
+}

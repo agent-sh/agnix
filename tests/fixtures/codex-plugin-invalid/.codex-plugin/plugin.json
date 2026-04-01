@@ -1,0 +1,13 @@
+{
+  "name": "my plugin!",
+  "skills": "skills/",
+  "mcpServers": "../escape",
+  "apps": "./",
+  "hooks": {"preStart": "echo hi"},
+  "interface": {
+    "websiteUrl": "not-a-url",
+    "defaultPrompt": ["a", "b", "c", "d"],
+    "logo": "assets/logo.png",
+    "screenshots": ["../bad.png"]
+  }
+}

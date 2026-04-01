@@ -2391,6 +2391,106 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Fix**: No auto-fix (set to a valid profile name string)
 **Source**: developers.openai.com/codex/config-reference, developers.openai.com/codex/config-schema.json
 
+### Codex Plugin Rules (CDX-PL)
+
+<a id="cdx-pl-001"></a>
+### CDX-PL-001 [HIGH] Codex Plugin Manifest Location
+**Requirement**: plugin.json MUST be in `.codex-plugin/` directory
+**Detection**: Parent directory is not `.codex-plugin/`
+**Fix**: Move to `.codex-plugin/plugin.json`
+**Source**: github.com/openai/codex (codex-rs/core/src/plugins/manifest.rs)
+
+<a id="cdx-pl-002"></a>
+### CDX-PL-002 [HIGH] Invalid JSON in Plugin Manifest
+**Requirement**: `.codex-plugin/plugin.json` MUST contain valid JSON
+**Detection**: Attempt to parse as JSON; report parse errors with position
+**Fix**: Correct the JSON syntax
+**Source**: github.com/openai/codex (codex-rs/core/src/plugins/manifest.rs)
+
+<a id="cdx-pl-003"></a>
+### CDX-PL-003 [HIGH] Missing or Empty Plugin Name
+**Requirement**: Plugin manifest MUST have a non-empty `name` field
+**Detection**: Check `name` field is present and non-empty after trimming
+**Fix**: Auto-fix (unsafe) - derive name from directory or parent project
+**Source**: github.com/openai/codex (codex-rs/core/src/plugins/manifest.rs)
+
+<a id="cdx-pl-004"></a>
+### CDX-PL-004 [HIGH] Invalid Plugin Name Characters
+**Requirement**: Plugin `name` MUST contain only ASCII alphanumeric characters, hyphens, and underscores
+**Detection**: Validate name against allowed character set pattern
+**Fix**: No auto-fix (rename to a valid plugin name)
+**Source**: github.com/openai/codex (codex-rs/core/src/plugins/manifest.rs)
+
+<a id="cdx-pl-005"></a>
+### CDX-PL-005 [HIGH] Component Path Missing ./ Prefix
+**Requirement**: Component `path` values MUST start with `./`
+**Detection**: Check that each component path begins with `./`
+**Fix**: Auto-fix (safe) - prepend `./` to the path
+**Source**: github.com/openai/codex (codex-rs/core/src/plugins/manifest.rs)
+
+<a id="cdx-pl-006"></a>
+### CDX-PL-006 [HIGH] Component Path Directory Traversal
+**Requirement**: Component `path` MUST NOT contain `..` segments
+**Detection**: Check for `..` in normalized path components
+**Fix**: No auto-fix (restructure paths to stay within plugin directory)
+**Source**: github.com/openai/codex (codex-rs/core/src/plugins/manifest.rs)
+
+<a id="cdx-pl-007"></a>
+### CDX-PL-007 [HIGH] Component Path Empty Relative
+**Requirement**: Component `path` MUST reference a file, not just `./`
+**Detection**: Check that path has content beyond the `./` prefix
+**Fix**: No auto-fix (provide a specific file path)
+**Source**: github.com/openai/codex (codex-rs/core/src/plugins/manifest.rs)
+
+<a id="cdx-pl-008"></a>
+### CDX-PL-008 [MEDIUM] Too Many Default Prompts
+**Requirement**: `default_prompts` array MUST NOT exceed the maximum entry count
+**Detection**: Count entries in `default_prompts` array
+**Fix**: No auto-fix (remove excess prompts)
+**Source**: github.com/openai/codex (codex-rs/core/src/plugins/manifest.rs)
+
+<a id="cdx-pl-009"></a>
+### CDX-PL-009 [MEDIUM] Default Prompt Too Long
+**Requirement**: Each entry in `default_prompts` MUST NOT exceed the maximum character length
+**Detection**: Check string length of each prompt entry
+**Fix**: No auto-fix (shorten prompt text)
+**Source**: github.com/openai/codex (codex-rs/core/src/plugins/manifest.rs)
+
+<a id="cdx-pl-010"></a>
+### CDX-PL-010 [MEDIUM] Empty Default Prompt Entry
+**Requirement**: Entries in `default_prompts` SHOULD NOT be empty or whitespace-only
+**Detection**: Check each prompt entry is non-empty after trimming
+**Fix**: No auto-fix (remove empty entries or add content)
+**Source**: github.com/openai/codex (codex-rs/core/src/plugins/manifest.rs)
+
+<a id="cdx-pl-011"></a>
+### CDX-PL-011 [MEDIUM] Invalid Interface URL
+**Requirement**: URL fields within `interface` (websiteUrl, privacyPolicyUrl, termsOfServiceUrl) SHOULD contain valid http/https URLs
+**Detection**: Validate URL format of each URL field in the `interface` object
+**Fix**: No auto-fix (provide a valid URL)
+**Source**: github.com/openai/codex (codex-rs/core/src/plugins/manifest.rs)
+
+<a id="cdx-pl-012"></a>
+### CDX-PL-012 [MEDIUM] Invalid Asset Path
+**Requirement**: Asset paths in `interface` (composerIcon, logo, screenshots) MUST start with `./` and MUST NOT contain directory traversal
+**Detection**: Validate each asset path for `./` prefix and absence of `..`
+**Fix**: No auto-fix
+**Source**: github.com/openai/codex (codex-rs/core/src/plugins/manifest.rs)
+
+<a id="cdx-pl-013"></a>
+### CDX-PL-013 [LOW] Unsupported Hooks Field
+**Requirement**: Plugin manifest SHOULD NOT contain a `hooks` field (not yet supported)
+**Detection**: Check for presence of `hooks` key in manifest
+**Fix**: No auto-fix (remove the `hooks` field)
+**Source**: github.com/openai/codex (codex-rs/core/src/plugins/manifest.rs)
+
+<a id="cdx-pl-014"></a>
+### CDX-PL-014 [LOW] Missing Description
+**Requirement**: Plugin manifest SHOULD include a `description` field for discoverability
+**Detection**: Check for presence and non-emptiness of `description` field
+**Fix**: No auto-fix (add a meaningful description)
+**Source**: github.com/openai/codex (codex-rs/core/src/plugins/manifest.rs)
+
 ---
 
 ## ROO CODE RULES

@@ -68,6 +68,8 @@ pub enum FileType {
     GeminiIgnore,
     /// Codex CLI configuration (.codex/config.toml, .codex/config.json, .codex/config.yaml/.yml)
     CodexConfig,
+    /// Codex CLI plugin manifest (.codex-plugin/plugin.json)
+    CodexPlugin,
     /// Roo Code rules files (.roorules, .roo/rules/*.md)
     RooRules,
     /// Roo Code custom modes configuration (.roomodes)
@@ -153,6 +155,7 @@ impl fmt::Display for FileType {
             FileType::GeminiExtension => "GeminiExtension",
             FileType::GeminiIgnore => "GeminiIgnore",
             FileType::CodexConfig => "CodexConfig",
+            FileType::CodexPlugin => "CodexPlugin",
             FileType::RooRules => "RooRules",
             FileType::RooModes => "RooModes",
             FileType::RooIgnore => "RooIgnore",
@@ -207,6 +210,7 @@ mod tests {
             (FileType::GeminiExtension, "GeminiExtension"),
             (FileType::GeminiIgnore, "GeminiIgnore"),
             (FileType::CodexConfig, "CodexConfig"),
+            (FileType::CodexPlugin, "CodexPlugin"),
             (FileType::RooRules, "RooRules"),
             (FileType::RooModes, "RooModes"),
             (FileType::RooIgnore, "RooIgnore"),
@@ -260,6 +264,7 @@ mod tests {
             FileType::GeminiExtension,
             FileType::GeminiIgnore,
             FileType::CodexConfig,
+            FileType::CodexPlugin,
             FileType::RooRules,
             FileType::RooModes,
             FileType::RooIgnore,
@@ -327,6 +332,7 @@ mod tests {
             FileType::GeminiExtension,
             FileType::GeminiIgnore,
             FileType::CodexConfig,
+            FileType::CodexPlugin,
             FileType::RooRules,
             FileType::RooModes,
             FileType::RooIgnore,

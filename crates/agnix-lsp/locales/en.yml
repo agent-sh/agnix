@@ -898,6 +898,50 @@ rules:
     message: "Invalid homepage URL: '%{url}' must use http:// or https:// scheme"
     suggestion: "Use a valid URL with http:// or https:// scheme"
 
+  # --- Codex Plugin (codex_plugin.rs) ---
+  cdx_pl_001:
+    message: "plugin.json must be located in .codex-plugin/ directory"
+    suggestion: "Move plugin.json to .codex-plugin/plugin.json"
+  cdx_pl_002:
+    message: "Failed to parse plugin.json: %{error}"
+    suggestion: "Validate JSON syntax in plugin.json - check for missing commas, brackets, or unquoted keys"
+  cdx_pl_003:
+    message: "Missing or empty plugin name"
+    suggestion: "Add a 'name' field with a non-empty string to plugin.json"
+  cdx_pl_004:
+    message: "Invalid plugin name '%{name}' - must be ASCII alphanumeric, hyphens, or underscores only"
+    suggestion: "Rename to use only ASCII letters, digits, hyphens, and underscores"
+  cdx_pl_005:
+    message: "Component path '%{path}' in '%{field}' must start with ./"
+    suggestion: "Prepend './' to the path"
+  cdx_pl_006:
+    message: "Component path '%{path}' in '%{field}' uses '..' traversal"
+    suggestion: "Remove directory traversal from the path"
+  cdx_pl_007:
+    message: "Component path '%{path}' in '%{field}' is bare './' (empty relative path)"
+    suggestion: "Specify a non-empty relative path after './'"
+  cdx_pl_008:
+    message: "defaultPrompt has %{count} entries but maximum is 3"
+    suggestion: "Remove excess defaultPrompt entries (maximum 3 allowed)"
+  cdx_pl_009:
+    message: "defaultPrompt entry exceeds 128 characters (%{length} chars)"
+    suggestion: "Shorten the prompt to 128 characters or fewer"
+  cdx_pl_010:
+    message: "defaultPrompt entry is empty after whitespace normalization"
+    suggestion: "Remove empty defaultPrompt entries or add content"
+  cdx_pl_011:
+    message: "Invalid URL '%{url}' in interface.%{field}"
+    suggestion: "Use a valid http:// or https:// URL"
+  cdx_pl_012:
+    message: "Asset path '%{path}' in interface.%{field} must start with ./ and not use '..' traversal"
+    suggestion: "Use a relative path starting with './' within the plugin root"
+  cdx_pl_013:
+    message: "'hooks' field is not supported in Codex plugin manifests"
+    suggestion: "Remove the 'hooks' field from plugin.json"
+  cdx_pl_014:
+    message: "Missing 'description' field - recommended for marketplace visibility"
+    suggestion: "Add a 'description' string to plugin.json for better discoverability"
+
   # --- Roo Code (roo.rs) ---
   roo_001:
     message: "Roo Code rule file is empty"

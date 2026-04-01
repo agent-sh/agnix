@@ -626,6 +626,50 @@ rules:
     message: "El servidor MCP Kiro '%{server}' tiene un posible secreto hardcodeado en env '%{env_key}'"
     suggestion: "Usa referencias de variables de entorno como ${VAR_NAME} en lugar de secretos en texto plano"
 
+  # --- Codex Plugin (codex_plugin.rs) ---
+  cdx_pl_001:
+    message: "plugin.json debe estar ubicado en el directorio .codex-plugin/"
+    suggestion: "Mueve plugin.json a .codex-plugin/plugin.json"
+  cdx_pl_002:
+    message: "Error al analizar plugin.json: %{error}"
+    suggestion: "Valida la sintaxis JSON en plugin.json - verifica comas faltantes, corchetes o claves sin comillas"
+  cdx_pl_003:
+    message: "Falta o esta vacio el nombre del plugin"
+    suggestion: "Agrega un campo 'name' con una cadena no vacia a plugin.json"
+  cdx_pl_004:
+    message: "Nombre de plugin invalido '%{name}' - debe ser alfanumerico ASCII, guiones o guiones bajos"
+    suggestion: "Renombra usando solo letras ASCII, digitos, guiones y guiones bajos"
+  cdx_pl_005:
+    message: "La ruta del componente '%{path}' en '%{field}' debe comenzar con ./"
+    suggestion: "Antepone './' a la ruta"
+  cdx_pl_006:
+    message: "La ruta del componente '%{path}' en '%{field}' usa recorrido '..'"
+    suggestion: "Elimina el recorrido de directorios de la ruta"
+  cdx_pl_007:
+    message: "La ruta del componente '%{path}' en '%{field}' es './' simple (ruta relativa vacia)"
+    suggestion: "Especifica una ruta relativa no vacia despues de './'"
+  cdx_pl_008:
+    message: "defaultPrompt tiene %{count} entradas pero el maximo es 3"
+    suggestion: "Elimina las entradas excedentes de defaultPrompt (maximo 3 permitidas)"
+  cdx_pl_009:
+    message: "La entrada de defaultPrompt excede 128 caracteres (%{length} caracteres)"
+    suggestion: "Acorta el prompt a 128 caracteres o menos"
+  cdx_pl_010:
+    message: "La entrada de defaultPrompt esta vacia despues de normalizar espacios"
+    suggestion: "Elimina las entradas vacias de defaultPrompt o agrega contenido"
+  cdx_pl_011:
+    message: "URL invalida '%{url}' en interface.%{field}"
+    suggestion: "Usa una URL valida con http:// o https://"
+  cdx_pl_012:
+    message: "La ruta de recurso '%{path}' en interface.%{field} debe comenzar con ./ y no usar recorrido '..'"
+    suggestion: "Usa una ruta relativa que comience con './' dentro de la raiz del plugin"
+  cdx_pl_013:
+    message: "El campo 'hooks' no es compatible en manifiestos de plugin de Codex"
+    suggestion: "Elimina el campo 'hooks' de plugin.json"
+  cdx_pl_014:
+    message: "Falta el campo 'description' - recomendado para visibilidad en el marketplace"
+    suggestion: "Agrega una cadena 'description' a plugin.json para mejor descubrimiento"
+
   # --- Prompt engineering (prompt.rs) ---
   pe_001:
     message: "Palabra clave critica '%{keyword}' al %{percent} por ciento del documento (40-60 por ciento es la zona 'perdido en el medio')"
