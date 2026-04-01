@@ -452,7 +452,7 @@ fn validate_asset_path(p: &str, field: &str, path: &Path, diagnostics: &mut Vec<
 
     if has_traversal(trimmed) {
         diagnostics.push(
-            Diagnostic::error(
+            Diagnostic::warning(
                 path.to_path_buf(),
                 1,
                 0,
@@ -466,7 +466,7 @@ fn validate_asset_path(p: &str, field: &str, path: &Path, diagnostics: &mut Vec<
 
     if !trimmed.starts_with("./") && !trimmed.starts_with(".\\") {
         diagnostics.push(
-            Diagnostic::error(
+            Diagnostic::warning(
                 path.to_path_buf(),
                 1,
                 0,

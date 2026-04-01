@@ -4558,8 +4558,8 @@
         "autofix": true,
         "fix_safety": "safe"
       },
-      "good_example": "{\"components\": [{\"path\": \"./src/index.js\"}]}",
-      "bad_example": "{\"components\": [{\"path\": \"src/index.js\"}]}"
+      "good_example": "{\"name\": \"my-plugin\", \"skills\": \"./src\"}",
+      "bad_example": "{\"name\": \"my-plugin\", \"skills\": \"src\"}"
     },
     {
       "id": "CDX-PL-006",
@@ -4586,8 +4586,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\"components\": [{\"path\": \"./src/index.js\"}]}",
-      "bad_example": "{\"components\": [{\"path\": \"./../../../etc/passwd\"}]}"
+      "good_example": "{\"name\": \"my-plugin\", \"mcpServers\": \"./servers\"}",
+      "bad_example": "{\"name\": \"my-plugin\", \"mcpServers\": \"./../../../etc/passwd\"}"
     },
     {
       "id": "CDX-PL-007",
@@ -4614,8 +4614,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\"components\": [{\"path\": \"./src/index.js\"}]}",
-      "bad_example": "{\"components\": [{\"path\": \"./\"}]}"
+      "good_example": "{\"name\": \"my-plugin\", \"apps\": \"./apps\"}",
+      "bad_example": "{\"name\": \"my-plugin\", \"apps\": \"./\"}"
     },
     {
       "id": "CDX-PL-008",
@@ -4642,8 +4642,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\"default_prompts\": [\"Fix the bug\", \"Add tests\"]}",
-      "bad_example": "{\"default_prompts\": [\"a\",\"b\",\"c\",\"d\",\"e\",\"f\",\"g\",\"h\",\"i\",\"j\",\"k\",\"l\",\"m\",\"n\",\"o\",\"p\",\"q\",\"r\",\"s\",\"t\",\"u\"]}"
+      "good_example": "{\"name\": \"my-plugin\", \"interface\": {\"defaultPrompt\": [\"Fix the bug\", \"Add tests\"]}}",
+      "bad_example": "{\"name\": \"my-plugin\", \"interface\": {\"defaultPrompt\": [\"a\", \"b\", \"c\", \"d\"]}}"
     },
     {
       "id": "CDX-PL-009",
@@ -4670,8 +4670,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\"default_prompts\": [\"Fix the login bug in auth module\"]}",
-      "bad_example": "{\"default_prompts\": [\"<500+ character prompt string>\"]}"
+      "good_example": "{\"name\": \"my-plugin\", \"interface\": {\"defaultPrompt\": [\"Fix the login bug\"]}}",
+      "bad_example": "{\"name\": \"my-plugin\", \"interface\": {\"defaultPrompt\": [\"<500+ character prompt string>\"]}}"
     },
     {
       "id": "CDX-PL-010",
@@ -4698,8 +4698,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\"default_prompts\": [\"Fix the bug\", \"Add tests\"]}",
-      "bad_example": "{\"default_prompts\": [\"Fix the bug\", \"\", \"Add tests\"]}"
+      "good_example": "{\"name\": \"my-plugin\", \"interface\": {\"defaultPrompt\": [\"Fix the bug\", \"Add tests\"]}}",
+      "bad_example": "{\"name\": \"my-plugin\", \"interface\": {\"defaultPrompt\": [\"Fix the bug\", \"\", \"Add tests\"]}}"
     },
     {
       "id": "CDX-PL-011",
@@ -4726,8 +4726,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\"interface\": \"https://example.com/plugin-ui\"}",
-      "bad_example": "{\"interface\": \"not a url\"}"
+      "good_example": "{\"name\": \"my-plugin\", \"interface\": {\"websiteUrl\": \"https://example.com\"}}",
+      "bad_example": "{\"name\": \"my-plugin\", \"interface\": {\"websiteUrl\": \"not a url\"}}"
     },
     {
       "id": "CDX-PL-012",
@@ -4754,8 +4754,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\"assets\": [\"./icons/logo.png\", \"./styles/theme.css\"]}",
-      "bad_example": "{\"assets\": [\"icons/logo.png\", \"../outside/file.txt\"]}"
+      "good_example": "{\"name\": \"my-plugin\", \"interface\": {\"logo\": \"./assets/logo.png\"}}",
+      "bad_example": "{\"name\": \"my-plugin\", \"interface\": {\"logo\": \"assets/logo.png\"}}"
     },
     {
       "id": "CDX-PL-013",
@@ -4782,8 +4782,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\"name\": \"my-plugin\", \"components\": [{\"path\": \"./src/index.js\"}]}",
-      "bad_example": "{\"name\": \"my-plugin\", \"hooks\": {\"on_load\": \"./init.js\"}}"
+      "good_example": "{\"name\": \"my-plugin\", \"skills\": \"./skills\"}",
+      "bad_example": "{\"name\": \"my-plugin\", \"hooks\": {\"preStart\": \"echo hi\"}}"
     },
     {
       "id": "CDX-PL-014",
