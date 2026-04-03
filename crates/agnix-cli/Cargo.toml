@@ -29,7 +29,7 @@ anyhow.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 toml = "1.0"
-similar = "2"
+similar = "3"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 notify = { version = "8", features = ["macos_fsevent"] }
