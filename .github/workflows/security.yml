@@ -48,7 +48,7 @@ jobs:
         with:
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: Install cargo-audit
-        uses: taiki-e/install-action@704f92c11daa75bff5b4e01fcb083350c16c47b9 # v2.69.13
+        uses: taiki-e/install-action@d858f8113943481093e02986a7586a4819a3bfd6 # v2.71.2
         with:
           tool: cargo-audit@0.22.1
       - name: Run security audit
