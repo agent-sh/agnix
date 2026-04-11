@@ -374,6 +374,7 @@ fn make_invalid_params(msg: String) -> McpError {
 
 #[derive(Debug, Clone)]
 pub struct AgnixServer {
+    #[allow(dead_code)] // used by #[tool_router] macro expansion
     tool_router: ToolRouter<AgnixServer>,
 }
 
