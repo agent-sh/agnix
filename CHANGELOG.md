@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **Docs site versioning** - `/docs/` now serves the latest released version (0.18.0) instead of unreleased dev content, and dev docs moved to `/docs/next/` with an unreleased banner. Snapshotted `docs/` as `version-0.18.0` (lossless - no commits touched `docs/` after the v0.18.0 tag).
+- **Release automation** - the `version-docs` job in `release.yml` now bumps `lastVersion` in `docusaurus.config.js` and includes the config change in the auto-opened docs PR, so `/docs/` automatically flips to point at the newly released version. Previously the snapshot was created but `lastVersion` stayed stale, which caused the v0.18.0 drift.
 
 ## [0.18.0] - 2026-04-02
 
