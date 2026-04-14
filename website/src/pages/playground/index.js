@@ -203,27 +203,33 @@ function useTheme() {
 function PlaygroundInner() {
   const colorMode = useTheme();
 
-  // Initial state read from URL params (?file=..., ?tool=..., ?code=...).
-  // Falls back to defaults + preset content when params missing or invalid.
-  const initialState = useMemo(() => {
+  // Lazy useState initializers read URL params once on mount.
+  // BrowserOnly wraps this component, so `window` is guaranteed defined; no
+  // SSR path executes here. Each initializer parses URLSearchParams once -
+  // O(small) and trivially cheap.
+  const [filename, setFilename] = useState(() => {
+    const v = new URLSearchParams(window.location.search).get('file');
+    return v && v.length < 256 ? v : DEFAULT_FILENAME;
+  });
+  const [editorFilename, setEditorFilename] = useState(() => {
+    const v = new URLSearchParams(window.location.search).get('file');
+    return v && v.length < 256 ? v : DEFAULT_FILENAME;
+  });
+  const [tool, setTool] = useState(() => {
+    const v = new URLSearchParams(window.location.search).get('tool');
+    return v && TOOLS.some((t) => t.value === v) ? v : '';
+  });
+  const [content, setContent] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     const urlFile = params.get('file');
-    const urlTool = params.get('tool');
     const urlCode = params.get('code');
-    const validTool = urlTool && TOOLS.some((t) => t.value === urlTool) ? urlTool : '';
-    const validFile = urlFile && urlFile.length < 256 ? urlFile : DEFAULT_FILENAME;
-    let initialContent = PRESETS[validFile] ?? '';
+    const initFile = urlFile && urlFile.length < 256 ? urlFile : DEFAULT_FILENAME;
     if (urlCode) {
       const decoded = decodeCode(urlCode);
-      if (decoded !== null) initialContent = decoded;
+      if (decoded !== null) return decoded;
     }
-    return {file: validFile, tool: validTool, content: initialContent};
-  }, []);
-
-  const [filename, setFilename] = useState(initialState.file);
-  const [editorFilename, setEditorFilename] = useState(initialState.file);
-  const [tool, setTool] = useState(initialState.tool);
-  const [content, setContent] = useState(initialState.content);
+    return PRESETS[initFile] ?? '';
+  });
   const [diagnostics, setDiagnostics] = useState(
     /** @type {WasmDiagnostic[]} */ ([]),
   );
@@ -260,9 +266,15 @@ function PlaygroundInner() {
       // keeps URLs short for "just clicked a preset" state.
       const presetContent = PRESETS[filename];
       if (content && content !== presetContent) {
-        const encoded = encodeCode(content);
-        if (encoded && encoded.length <= MAX_URL_CODE_LENGTH) {
-          params.set('code', encoded);
+        // Short-circuit before encoding: if the raw string alone is already
+        // larger than the URL cap, the base64 output (at least 4/3 of the
+        // UTF-8 byte length) is guaranteed to overflow. Skip the TextEncoder
+        // + btoa work entirely for large pastes.
+        if (content.length <= MAX_URL_CODE_LENGTH) {
+          const encoded = encodeCode(content);
+          if (encoded && encoded.length <= MAX_URL_CODE_LENGTH) {
+            params.set('code', encoded);
+          }
         }
       }
       const qs = params.toString();
