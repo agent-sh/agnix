@@ -105,6 +105,8 @@ const config = {
         language: ['en'],
         hashed: true,
         highlightSearchTermsOnTargetPage: true,
+        searchResultLimits: 8,
+        searchResultContextMaxLength: 50,
       },
     ],
     require.resolve('./plugins/wasm-plugin'),

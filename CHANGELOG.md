@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Playground state in URL** - playground configs are now shareable by link via `?file=`, `?tool=`, and `?code=` querystring params (URL-safe base64 for UTF-8 content, debounced writes, capped at 6 KB to stay URL-safe).
+
+### Changed
+- **Search UX** - the top-right search now shows 8 inline preview hits as you type (via `searchResultLimits` on `docusaurus-search-local`) instead of only a "See all results" link.
+- **Docs drift** - updated validation rule count from 385 to 399 in `CLAUDE.md`, `AGENTS.md`, `crates/agnix-lsp/README.md`, `docs/EDITOR-SETUP.md`, and the Neovim and VS Code editor READMEs. `rules.json` is the source of truth; these human-written references had drifted.
+- **Docusaurus** - bumped `@docusaurus/core` and `@docusaurus/preset-classic` from 3.9.2 to 3.10.0.
+
 ### Fixed
 - **Docs site versioning** - `/docs/` now serves the latest released version (0.18.0) instead of unreleased dev content, and dev docs moved to `/docs/next/` with an unreleased banner. Snapshotted `docs/` as `version-0.18.0` (lossless - no commits touched `docs/` after the v0.18.0 tag).
 - **Release automation** - the `version-docs` job in `release.yml` now bumps `lastVersion` in `docusaurus.config.js` and includes the config change in the auto-opened docs PR, so `/docs/` automatically flips to point at the newly released version. Previously the snapshot was created but `lastVersion` stayed stale, which caused the v0.18.0 drift.
