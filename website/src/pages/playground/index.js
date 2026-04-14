@@ -113,6 +113,36 @@ const TOOLS = [
 
 const DEFAULT_FILENAME = 'CLAUDE.md';
 
+// Limit URL-encoded content to avoid browser/proxy issues with long URLs.
+// 6000 chars of URL-safe base64 ~= 4.5 KB of source.
+const MAX_URL_CODE_LENGTH = 6000;
+
+// URL-safe base64 encode/decode for arbitrary UTF-8 content. Used to persist
+// playground state in the querystring so configs can be shared by link.
+function encodeCode(str) {
+  try {
+    const bytes = new TextEncoder().encode(str);
+    let binary = '';
+    for (const b of bytes) binary += String.fromCharCode(b);
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  } catch {
+    return null;
+  }
+}
+
+function decodeCode(s) {
+  try {
+    const b64 = s.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = b64 + '='.repeat((4 - (b64.length % 4)) % 4);
+    const binary = atob(padded);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+  } catch {
+    return null;
+  }
+}
+
 /**
  * @typedef {{
  *   start_byte: number,
@@ -173,10 +203,27 @@ function useTheme() {
 function PlaygroundInner() {
   const colorMode = useTheme();
 
-  const [filename, setFilename] = useState(DEFAULT_FILENAME);
-  const [editorFilename, setEditorFilename] = useState(DEFAULT_FILENAME);
-  const [tool, setTool] = useState('');
-  const [content, setContent] = useState(PRESETS[DEFAULT_FILENAME]);
+  // Initial state read from URL params (?file=..., ?tool=..., ?code=...).
+  // Falls back to defaults + preset content when params missing or invalid.
+  const initialState = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlFile = params.get('file');
+    const urlTool = params.get('tool');
+    const urlCode = params.get('code');
+    const validTool = urlTool && TOOLS.some((t) => t.value === urlTool) ? urlTool : '';
+    const validFile = urlFile && urlFile.length < 256 ? urlFile : DEFAULT_FILENAME;
+    let initialContent = PRESETS[validFile] ?? '';
+    if (urlCode) {
+      const decoded = decodeCode(urlCode);
+      if (decoded !== null) initialContent = decoded;
+    }
+    return {file: validFile, tool: validTool, content: initialContent};
+  }, []);
+
+  const [filename, setFilename] = useState(initialState.file);
+  const [editorFilename, setEditorFilename] = useState(initialState.file);
+  const [tool, setTool] = useState(initialState.tool);
+  const [content, setContent] = useState(initialState.content);
   const [diagnostics, setDiagnostics] = useState(
     /** @type {WasmDiagnostic[]} */ ([]),
   );
@@ -201,6 +248,33 @@ function PlaygroundInner() {
     const timer = setTimeout(() => setEditorFilename(filename), 500);
     return () => clearTimeout(timer);
   }, [filename]);
+
+  // Persist playground state in the URL querystring so configs are shareable.
+  // Debounced so typing in the editor doesn't spam history or TextEncoder.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const params = new URLSearchParams();
+      if (filename && filename !== DEFAULT_FILENAME) params.set('file', filename);
+      if (tool) params.set('tool', tool);
+      // Skip the code param when content matches the preset for this file -
+      // keeps URLs short for "just clicked a preset" state.
+      const presetContent = PRESETS[filename];
+      if (content && content !== presetContent) {
+        const encoded = encodeCode(content);
+        if (encoded && encoded.length <= MAX_URL_CODE_LENGTH) {
+          params.set('code', encoded);
+        }
+      }
+      const qs = params.toString();
+      const nextSearch = qs ? `?${qs}` : '';
+      const nextUrl = `${window.location.pathname}${nextSearch}${window.location.hash}`;
+      const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+      if (nextUrl !== currentUrl) {
+        window.history.replaceState(null, '', nextUrl);
+      }
+    }, 750);
+    return () => clearTimeout(timer);
+  }, [filename, tool, content]);
 
   // Convert a UTF-8 byte offset to a JavaScript string index (UTF-16).
   // Iterates by code point to correctly handle characters outside BMP
