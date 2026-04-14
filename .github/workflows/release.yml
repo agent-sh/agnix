@@ -548,6 +548,18 @@ jobs:
       - name: Cut versioned docs snapshot
         run: npm --prefix website run version:cut -- "${{ steps.version.outputs.version }}"
 
+      - name: Update lastVersion in Docusaurus config
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.version }}"
+          sed -i "s/lastVersion: '[^']*'/lastVersion: '$VERSION'/" website/docusaurus.config.js
+          if ! grep -q "lastVersion: '$VERSION'" website/docusaurus.config.js; then
+            echo "Failed to update lastVersion to $VERSION in docusaurus.config.js"
+            grep -n "lastVersion:" website/docusaurus.config.js
+            exit 1
+          fi
+          echo "Updated lastVersion to $VERSION"
+
       - name: Commit and push versioned docs
         env:
           GH_TOKEN: ${{ secrets.COMMITTER_TOKEN }}
@@ -555,7 +567,7 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add website/src/data/siteData.json website/docs/rules/ website/versioned_docs/ website/versioned_sidebars/ website/versions.json
+          git add website/src/data/siteData.json website/docs/rules/ website/versioned_docs/ website/versioned_sidebars/ website/versions.json website/docusaurus.config.js
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
