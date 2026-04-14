@@ -121,7 +121,7 @@ Current tier assignments are documented in [`knowledge-base/RESEARCH-TRACKING.md
 
 ## Community Feedback
 
-We welcome community input through several channels:
+I welcome community input through several channels:
 
 - **GitHub Issues** - Use the issue templates for structured feedback:
   - [Bug Report](.github/ISSUE_TEMPLATE/bug_report.md) - Report validation errors

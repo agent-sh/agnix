@@ -12,7 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - **Search UX** - the top-right search now shows 8 inline preview hits as you type (via `searchResultLimits` on `docusaurus-search-local`) instead of only a "See all results" link.
-- **Docs drift** - updated validation rule count from 385 to 399 in `CLAUDE.md`, `AGENTS.md`, `crates/agnix-lsp/README.md`, `docs/EDITOR-SETUP.md`, and the Neovim and VS Code editor READMEs. `rules.json` is the source of truth; these human-written references had drifted.
+- **Docs drift** - updated validation rule count from 385 to 399 across 20+ user-facing locations: `CLAUDE.md`, `AGENTS.md`, `README.md`, `SPEC.md`, `npm/README.md`, `crates/agnix-lsp/README.md`, `docs/EDITOR-SETUP.md`, Neovim and VS Code editor READMEs, `editors/vscode/package.json`, `editors/zed/README.md`, `knowledge-base/INDEX.md` (5 places), `knowledge-base/README.md`, `plugin/.claude-plugin/plugin.json`, `plugin/commands/agnix.md`, `plugin/skills/agnix/SKILL.md`, `skills/agnix/SKILL.md`, `crates/agnix-mcp/src/main.rs` server instructions (3 places), and website docs (intro, getting-started, contributing). `rules.json` is the source of truth; these human-written references had drifted.
+- **CONTRIBUTING tone** - `CONTRIBUTING.md` and `website/docs/contributing.md` use first-person singular ("I welcome", "I want to know") since agnix is single-maintainer. Previously used "we" which implied a team.
 - **Docusaurus** - bumped `@docusaurus/core` and `@docusaurus/preset-classic` from 3.9.2 to 3.10.0.
 
 ### Fixed
