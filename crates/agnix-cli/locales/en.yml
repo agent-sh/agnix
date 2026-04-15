@@ -1188,6 +1188,7 @@ cli:
   fixable: "[fixable]"
   watch_error_text_only: "Watch mode is only supported with text output."
   watch_error_fix: "Watch mode cannot be combined with fix flags."
+  watch_error_single_path: "Watch mode requires a single path."
   fix_error_text_only: "Fix flags are only supported with text output. Remove --format or use --format text."
   evaluating: "Evaluating:"
   filter_label: "  filter:"
