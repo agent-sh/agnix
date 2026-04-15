@@ -3406,3 +3406,48 @@ fn test_cli_nonexistent_path_returns_error() {
         .stderr(predicate::str::contains("Validation root not found"))
         .stderr(predicate::str::contains(missing.to_str().unwrap()));
 }
+
+// Regression test for #723: pre-commit passes the list of changed files as
+// positional args. The CLI must accept multiple paths and validate only those
+// files rather than rescanning the whole repo.
+#[test]
+fn test_cli_accepts_multiple_file_paths() {
+    let f1 = workspace_path("tests/fixtures/valid/skills/code-review/SKILL.md");
+    let f2 = workspace_path("tests/fixtures/valid/skills/deploy-prod/SKILL.md");
+
+    let mut cmd = agnix();
+    cmd.arg(f1.to_str().unwrap())
+        .arg(f2.to_str().unwrap())
+        .arg("--format")
+        .arg("json")
+        .assert()
+        .success();
+}
+
+// When multiple file paths are passed we should only validate those files,
+// not every matching file under the workspace root.
+#[test]
+fn test_cli_multiple_paths_scope_to_listed_files() {
+    let f1 = workspace_path("tests/fixtures/valid/skills/code-review/SKILL.md");
+    let f2 = workspace_path("tests/fixtures/valid/skills/deploy-prod/SKILL.md");
+
+    let mut cmd = agnix();
+    let output = cmd
+        .arg(f1.to_str().unwrap())
+        .arg(f2.to_str().unwrap())
+        .arg("--format")
+        .arg("json")
+        .output()
+        .unwrap();
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let json: serde_json::Value = serde_json::from_str(&stdout).unwrap();
+
+    // Exactly two files checked -- not a full project walk.
+    assert_eq!(
+        json["files_checked"].as_u64(),
+        Some(2),
+        "expected exactly the two passed files to be checked, got: {}",
+        stdout
+    );
+}

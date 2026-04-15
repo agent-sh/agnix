@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Docusaurus** - bumped `@docusaurus/core` and `@docusaurus/preset-classic` from 3.9.2 to 3.10.0.
 
 ### Fixed
+- **Pre-commit hook rescanned the whole repo** (#723) - `agnix` now accepts multiple positional paths, and `.pre-commit-hooks.yaml` no longer forces `pass_filenames: false` + trailing `.`. pre-commit's built-in optimisation works again: only the changed files get checked, not every eligible file in the repo.
 - **Docs site versioning** - `/docs/` now serves the latest released version (0.18.0) instead of unreleased dev content, and dev docs moved to `/docs/next/` with an unreleased banner. Snapshotted `docs/` as `version-0.18.0` (lossless - no commits touched `docs/` after the v0.18.0 tag).
 - **Release automation** - the `version-docs` job in `release.yml` now bumps `lastVersion` in `docusaurus.config.js` and includes the config change in the auto-opened docs PR, so `/docs/` automatically flips to point at the newly released version. Previously the snapshot was created but `lastVersion` stayed stale, which caused the v0.18.0 drift.
 

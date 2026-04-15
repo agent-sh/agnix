@@ -15,12 +15,12 @@ mod watch;
 use telemetry_stub as telemetry;
 
 use agnix_core::{
-    ValidationResult, apply_fixes_with_options,
+    ValidationOutcome, ValidationResult, ValidatorRegistry, apply_fixes_with_options,
     config::{LintConfig, TargetTool},
     diagnostics::{Diagnostic, DiagnosticLevel, FixConfidenceTier},
     eval::{EvalFormat, evaluate_manifest_file},
     fixes::{FixApplyMode, FixApplyOptions},
-    generate_schema, validate_project,
+    generate_schema, validate_file_with_registry, validate_project, validate_project_with_registry,
 };
 use clap::{Parser, Subcommand, ValueEnum};
 use colored::*;
@@ -76,9 +76,13 @@ struct Cli {
     #[command(subcommand)]
     command: Option<Commands>,
 
-    /// Path to validate (defaults to current directory)
-    #[arg(default_value = ".")]
-    path: PathBuf,
+    /// Paths to validate (defaults to current directory).
+    ///
+    /// Accepts one or more files or directories. When multiple files are
+    /// passed (e.g. from a pre-commit hook), only those files are checked;
+    /// project-wide rules still run against the workspace root.
+    #[arg(default_value = ".", num_args = 1..)]
+    paths: Vec<PathBuf>,
 
     /// Strict mode (treat warnings as errors)
     #[arg(short, long)]
@@ -173,9 +177,9 @@ pub enum TelemetryAction {
 enum Commands {
     /// Validate agent configs
     Validate {
-        /// Path to validate
-        #[arg(default_value = ".")]
-        path: PathBuf,
+        /// Paths to validate (one or more files/directories)
+        #[arg(default_value = ".", num_args = 1..)]
+        paths: Vec<PathBuf>,
     },
 
     /// Initialize config file
@@ -254,7 +258,8 @@ fn main() {
     // Load config early for watch mode to apply config-based locale
     // Watch mode doesn't allow format or fix flags, so we can safely load config here
     if cli.watch {
-        let config_path = resolve_config_path(&cli.path, cli.config.as_ref());
+        let primary = primary_path(&cli.paths);
+        let config_path = resolve_config_path(primary, cli.config.as_ref());
         let (config, _) = LintConfig::load_or_default(config_path.as_ref());
 
         // Re-initialize locale if config specifies one and no --locale flag was given
@@ -266,7 +271,7 @@ fn main() {
     }
 
     let result = match &cli.command {
-        Some(Commands::Validate { path }) => validate_command(path, &cli),
+        Some(Commands::Validate { paths }) => validate_command(paths, &cli),
         Some(Commands::Init { output }) => init_command(output),
         Some(Commands::Eval {
             path,
@@ -276,13 +281,97 @@ fn main() {
         }) => eval_command(path, *format, filter.as_deref(), *verbose),
         Some(Commands::Telemetry { action }) => telemetry_command(*action),
         Some(Commands::Schema { output }) => schema_command(output.as_ref()),
-        None => validate_command(&cli.path, &cli),
+        None => validate_command(&cli.paths, &cli),
     };
 
     if let Err(e) = result {
         eprintln!("{} {}", t!("cli.error_label").red().bold(), e);
         process::exit(1);
     }
+}
+
+/// Pick a representative path for config resolution, SARIF roots, etc.
+///
+/// When the user passes multiple paths (common with pre-commit, which expands
+/// the changed files into positional args), we still need a single path for
+/// things like finding `.agnix.toml` or the git root. The first path is a
+/// reasonable default; when no paths are given we fall back to `.`.
+fn primary_path(paths: &[PathBuf]) -> &Path {
+    paths
+        .first()
+        .map(PathBuf::as_path)
+        .unwrap_or_else(|| Path::new("."))
+}
+
+fn format_paths_for_display(paths: &[PathBuf]) -> String {
+    match paths.len() {
+        0 => ".".to_string(),
+        1 => paths[0].display().to_string(),
+        _ => format!("{} files", paths.len()),
+    }
+}
+
+/// Dispatch validation across one or more paths.
+///
+/// - A single directory path uses the full project walk (`validate_project`).
+/// - Otherwise each path is handled individually: files run through
+///   `validate_file_with_registry`, directories fall back to the project walk.
+///
+/// This lets pre-commit style invocations like
+/// `agnix --strict AGENTS.md CLAUDE.md` check only the changed files instead
+/// of rescanning the entire repo.
+fn run_validation(
+    paths: &[PathBuf],
+    config: &LintConfig,
+) -> agnix_core::LintResult<ValidationResult> {
+    use agnix_core::{CoreError, ValidationError};
+
+    // Surface the same RootNotFound error as validate_project for paths that
+    // don't exist, so CLI behaviour stays consistent.
+    for path in paths {
+        if !path.exists() {
+            return Err(CoreError::Validation(ValidationError::RootNotFound {
+                path: path.clone(),
+            }));
+        }
+    }
+
+    if paths.len() == 1 && paths[0].is_dir() {
+        return validate_project(&paths[0], config);
+    }
+
+    let mut registry = ValidatorRegistry::with_defaults();
+    for name in &config.rules().disabled_validators {
+        registry.disable_validator_owned(name);
+    }
+
+    let mut diagnostics = Vec::new();
+    let mut files_checked = 0usize;
+    for path in paths {
+        if path.is_dir() {
+            let r = validate_project_with_registry(path, config, &registry)?;
+            files_checked += r.files_checked;
+            diagnostics.extend(r.diagnostics);
+            continue;
+        }
+        match validate_file_with_registry(path, config, &registry)? {
+            ValidationOutcome::Success(d) => {
+                files_checked += 1;
+                diagnostics.extend(d);
+            }
+            ValidationOutcome::Skipped => {}
+            ValidationOutcome::IoError(err) => {
+                eprintln!(
+                    "{} {}: {}",
+                    t!("cli.warning_label").yellow().bold(),
+                    path.display(),
+                    err
+                );
+            }
+            _ => {}
+        }
+    }
+    Ok(ValidationResult::new(diagnostics, files_checked))
 }
 
 fn count_errors_warnings(diagnostics: &[Diagnostic]) -> (usize, usize) {
@@ -297,8 +386,8 @@ fn count_errors_warnings(diagnostics: &[Diagnostic]) -> (usize, usize) {
     (errors, warnings)
 }
 
-#[tracing::instrument(skip(cli), fields(path = %path.display()))]
-fn validate_command(path: &Path, cli: &Cli) -> anyhow::Result<()> {
+#[tracing::instrument(skip(cli), fields(paths_count = paths.len()))]
+fn validate_command(paths: &[PathBuf], cli: &Cli) -> anyhow::Result<()> {
     tracing::debug!("Starting validation");
 
     // Watch mode validation
@@ -310,8 +399,11 @@ fn validate_command(path: &Path, cli: &Cli) -> anyhow::Result<()> {
         if should_fix {
             return Err(anyhow::anyhow!("{}", t!("cli.watch_error_fix")));
         }
+        if paths.len() > 1 {
+            return Err(anyhow::anyhow!("--watch requires a single path"));
+        }
 
-        let path = path.to_path_buf();
+        let path = primary_path(paths).to_path_buf();
         let path_for_watch = path.clone();
         let strict = cli.strict;
         let verbose = cli.verbose;
@@ -323,7 +415,8 @@ fn validate_command(path: &Path, cli: &Cli) -> anyhow::Result<()> {
         });
     }
 
-    let config_path = resolve_config_path(path, cli.config.as_ref());
+    let primary = primary_path(paths);
+    let config_path = resolve_config_path(primary, cli.config.as_ref());
     tracing::debug!(config_path = ?config_path, "Resolved config path");
 
     let (mut config, config_warning) = LintConfig::load_or_default(config_path.as_ref());
@@ -391,7 +484,7 @@ fn validate_command(path: &Path, cli: &Cli) -> anyhow::Result<()> {
     // SARIF uses the git repository root so artifact URIs are relative to the
     // workspace root, which IDEs expect. Text/JSON use CWD for backwards compatibility.
     let base_path = if matches!(cli.format, OutputFormat::Sarif) {
-        sarif::find_git_root(path)
+        sarif::find_git_root(primary)
             .unwrap_or_else(|| std::fs::canonicalize(".").unwrap_or_else(|_| PathBuf::from(".")))
     } else {
         std::fs::canonicalize(".").unwrap_or_else(|_| PathBuf::from("."))
@@ -417,7 +510,7 @@ fn validate_command(path: &Path, cli: &Cli) -> anyhow::Result<()> {
         diagnostics,
         files_checked,
         ..
-    } = validate_project(path, &config)?;
+    } = run_validation(paths, &config)?;
 
     // Restore user locale after validation so stderr messages use their language
     if let Some(ref locale) = saved_locale {
@@ -469,7 +562,11 @@ fn validate_command(path: &Path, cli: &Cli) -> anyhow::Result<()> {
     }
 
     // Text output format
-    println!("{} {}", t!("cli.validating").cyan().bold(), path.display());
+    println!(
+        "{} {}",
+        t!("cli.validating").cyan().bold(),
+        format_paths_for_display(paths)
+    );
     println!();
 
     if diagnostics.is_empty() {
@@ -681,7 +778,7 @@ fn validate_command(path: &Path, cli: &Cli) -> anyhow::Result<()> {
                 diagnostics: post_fix_diagnostics,
                 files_checked: _,
                 ..
-            } = validate_project(path, &config)?;
+            } = run_validation(paths, &config)?;
 
             (final_errors, final_warnings) = count_errors_warnings(&post_fix_diagnostics);
         }

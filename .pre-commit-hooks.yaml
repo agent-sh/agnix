@@ -19,8 +19,7 @@
       \.github/copilot-instructions\.md|
       \.cursor/rules/.*\.mdc
     )$
-  pass_filenames: false
-  args: [--strict, .]
+  args: [--strict]
 
 - id: agnix-fix
   name: agnix (with auto-fix)
@@ -43,5 +42,4 @@
       \.github/copilot-instructions\.md|
       \.cursor/rules/.*\.mdc
     )$
-  pass_filenames: false
-  args: [--fix, .]
+  args: [--fix]
