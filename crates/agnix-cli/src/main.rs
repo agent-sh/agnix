@@ -78,9 +78,9 @@ struct Cli {
 
     /// Paths to validate (defaults to current directory).
     ///
-    /// Accepts one or more files or directories. When multiple files are
-    /// passed (e.g. from a pre-commit hook), only those files are checked;
-    /// project-wide rules still run against the workspace root.
+    /// Accepts one or more files or directories. When multiple paths are
+    /// passed (e.g. from a pre-commit hook), only those paths are checked
+    /// instead of the full project walk.
     #[arg(default_value = ".", num_args = 1..)]
     paths: Vec<PathBuf>,
 
@@ -307,7 +307,7 @@ fn format_paths_for_display(paths: &[PathBuf]) -> String {
     match paths.len() {
         0 => ".".to_string(),
         1 => paths[0].display().to_string(),
-        _ => format!("{} files", paths.len()),
+        _ => format!("{} paths", paths.len()),
     }
 }
 
@@ -320,6 +320,12 @@ fn format_paths_for_display(paths: &[PathBuf]) -> String {
 /// This lets pre-commit style invocations like
 /// `agnix --strict AGENTS.md CLAUDE.md` check only the changed files instead
 /// of rescanning the entire repo.
+///
+/// Before iterating we resolve a workspace root and set it on a cloned
+/// `LintConfig` so per-file validators see the same `[files]` include/exclude
+/// semantics they'd see during a full project walk. The aggregate
+/// `files_checked` count is also bounded by `max_files_to_validate` so a large
+/// file list from pre-commit can't bypass the DoS guard.
 fn run_validation(
     paths: &[PathBuf],
     config: &LintConfig,
@@ -340,33 +346,60 @@ fn run_validation(
         return validate_project(&paths[0], config);
     }
 
+    // Resolve a workspace root so per-file validators can apply relative
+    // `[files]` patterns and so diagnostics use a stable base path. Use the
+    // parent of the first file path, or the first directory path, or cwd.
+    let root_dir = paths
+        .first()
+        .map(|p| {
+            if p.is_dir() {
+                p.clone()
+            } else {
+                p.parent()
+                    .map(Path::to_path_buf)
+                    .unwrap_or_else(|| PathBuf::from("."))
+            }
+        })
+        .and_then(|p| std::fs::canonicalize(&p).ok())
+        .unwrap_or_else(|| std::fs::canonicalize(".").unwrap_or_else(|_| PathBuf::from(".")));
+
+    let mut config = config.clone();
+    config.set_root_dir(root_dir);
+
     let mut registry = ValidatorRegistry::with_defaults();
     for name in &config.rules().disabled_validators {
         registry.disable_validator_owned(name);
     }
 
+    let max_files = config.max_files_to_validate();
     let mut diagnostics = Vec::new();
     let mut files_checked = 0usize;
     for path in paths {
+        if let Some(limit) = max_files {
+            if files_checked >= limit {
+                return Err(CoreError::Validation(ValidationError::TooManyFiles {
+                    count: files_checked,
+                    limit,
+                }));
+            }
+        }
         if path.is_dir() {
-            let r = validate_project_with_registry(path, config, &registry)?;
+            let r = validate_project_with_registry(path, &config, &registry)?;
             files_checked += r.files_checked;
             diagnostics.extend(r.diagnostics);
             continue;
         }
-        match validate_file_with_registry(path, config, &registry)? {
+        match validate_file_with_registry(path, &config, &registry)? {
             ValidationOutcome::Success(d) => {
                 files_checked += 1;
                 diagnostics.extend(d);
             }
             ValidationOutcome::Skipped => {}
             ValidationOutcome::IoError(err) => {
-                eprintln!(
-                    "{} {}: {}",
-                    t!("cli.warning_label").yellow().bold(),
-                    path.display(),
-                    err
-                );
+                // Propagate so JSON/SARIF consumers see the failure in exit
+                // code and text consumers get a clear error instead of a
+                // silent warning that still exits 0.
+                return Err(CoreError::File(err));
             }
             _ => {}
         }
@@ -400,7 +433,7 @@ fn validate_command(paths: &[PathBuf], cli: &Cli) -> anyhow::Result<()> {
             return Err(anyhow::anyhow!("{}", t!("cli.watch_error_fix")));
         }
         if paths.len() > 1 {
-            return Err(anyhow::anyhow!("--watch requires a single path"));
+            return Err(anyhow::anyhow!("{}", t!("cli.watch_error_single_path")));
         }
 
         let path = primary_path(paths).to_path_buf();

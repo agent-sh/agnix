@@ -778,6 +778,7 @@ cli:
   fixable: "[corregible]"
   watch_error_text_only: "El modo observador solo es compatible con salida de texto."
   watch_error_fix: "El modo observador no puede combinarse con opciones de correccion."
+  watch_error_single_path: "El modo observador requiere una sola ruta."
   fix_error_text_only: "Las opciones de correccion solo son compatibles con salida de texto. Elimina --format o usa --format text."
   evaluating: "Evaluando:"
   filter_label: "  filtro:"

@@ -3451,3 +3451,40 @@ fn test_cli_multiple_paths_scope_to_listed_files() {
         stdout
     );
 }
+
+// --watch with more than one path should be rejected with the localized error,
+// not silently pick one. Ensures we don't regress the ergonomics when someone
+// combines --watch with a pre-commit style invocation.
+#[test]
+fn test_cli_watch_rejects_multiple_paths() {
+    let f1 = workspace_path("tests/fixtures/valid/skills/code-review/SKILL.md");
+    let f2 = workspace_path("tests/fixtures/valid/skills/deploy-prod/SKILL.md");
+
+    let mut cmd = agnix();
+    cmd.arg("--watch")
+        .arg(f1.to_str().unwrap())
+        .arg(f2.to_str().unwrap())
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("single path"));
+}
+
+// Passing more files than `--max-files` should surface the same TooManyFiles
+// error the full project walk emits, so a long pre-commit file list can't
+// bypass the DoS guard.
+#[test]
+fn test_cli_multiple_paths_respect_max_files_limit() {
+    let f1 = workspace_path("tests/fixtures/valid/skills/code-review/SKILL.md");
+    let f2 = workspace_path("tests/fixtures/valid/skills/deploy-prod/SKILL.md");
+    let f3 = workspace_path("tests/fixtures/valid/skills/with-model/SKILL.md");
+
+    let mut cmd = agnix();
+    cmd.arg("--max-files")
+        .arg("1")
+        .arg(f1.to_str().unwrap())
+        .arg(f2.to_str().unwrap())
+        .arg(f3.to_str().unwrap())
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Too many files"));
+}

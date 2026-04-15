@@ -778,6 +778,7 @@ cli:
   fixable: "[可修复]"
   watch_error_text_only: "监视模式仅支持文本输出。"
   watch_error_fix: "监视模式不能与修复标志组合使用。"
+  watch_error_single_path: "监视模式需要单个路径。"
   fix_error_text_only: "修复标志仅支持文本输出。删除 --format 或使用 --format text。"
   evaluating: "正在评估:"
   filter_label: "  筛选:"
