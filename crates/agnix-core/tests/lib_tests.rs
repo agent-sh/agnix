@@ -4198,6 +4198,33 @@ fn test_validate_project_rules_agm006() {
     );
 }
 
+// Regression for PR #725 review: validate_project_rules is the LSP
+// lightweight path. It must surface Warning diagnostics for invalid
+// `[files].exclude` patterns so editor users aren't silently ignored, matching
+// `validate_project_with_registry`'s behaviour.
+#[test]
+fn test_validate_project_rules_warns_on_invalid_files_exclude() {
+    let temp_dir = tempfile::tempdir().unwrap();
+    std::fs::write(temp_dir.path().join("CLAUDE.md"), "# Project\n").unwrap();
+
+    let mut config = LintConfig::default();
+    config.files_mut().exclude = vec!["[bad-exclude".to_string()];
+
+    let diagnostics = validate_project_rules(temp_dir.path(), &config).unwrap();
+
+    let bad_pattern: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "config::glob" && d.message.contains("[bad-exclude"))
+        .collect();
+    assert_eq!(
+        bad_pattern.len(),
+        1,
+        "expected exactly one warning for the invalid [files].exclude in the LSP path, got {}: {:?}",
+        bad_pattern.len(),
+        bad_pattern.iter().map(|d| &d.message).collect::<Vec<_>>()
+    );
+}
+
 #[test]
 fn test_validate_project_rules_empty_dir() {
     let temp_dir = tempfile::tempdir().unwrap();

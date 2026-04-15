@@ -537,6 +537,14 @@ pub fn validate_project_rules(root: &Path, config: &LintConfig) -> LintResult<Ve
     ));
     let exclude_patterns = Arc::new(exclude_patterns);
 
+    // Surface Warning diagnostics for invalid `[files]` patterns. This mirrors
+    // what `validate_project_with_registry` does via the same function; the
+    // compiled include patterns are discarded because this lightweight path
+    // does no per-file type resolution.
+    let config_file = root_dir.join(".agnix.toml");
+    let (_, files_config_diags) =
+        compile_files_config_with_diagnostics(config.files_config(), &config_file);
+
     let walk_root = std::fs::canonicalize(root).unwrap_or_else(|_| root.to_path_buf());
     let root_path = root_dir.clone();
 
@@ -603,12 +611,14 @@ pub fn validate_project_rules(root: &Path, config: &LintConfig) -> LintResult<Ve
     agents_md_paths.sort();
     instruction_file_paths.sort();
 
-    Ok(run_project_level_checks(
+    let mut diagnostics = files_config_diags;
+    diagnostics.extend(run_project_level_checks(
         &agents_md_paths,
         &instruction_file_paths,
         &config,
         &root_dir,
-    ))
+    ));
+    Ok(diagnostics)
 }
 
 /// Main entry point for validating a project with a custom validator registry
