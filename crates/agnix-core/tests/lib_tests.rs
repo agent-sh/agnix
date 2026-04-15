@@ -3984,6 +3984,40 @@ fn test_validate_project_with_invalid_files_pattern() {
     );
 }
 
+// The walker-side compile of `[files].exclude` must not emit its own
+// invalid-pattern warnings, because `compile_files_config_with_diagnostics`
+// already emits them. Previously we merged both warning sets and tried to
+// dedupe with `dedup_by`, but non-adjacent duplicates slipped through.
+#[test]
+fn test_invalid_files_exclude_pattern_warns_once() {
+    let temp = tempfile::TempDir::new().unwrap();
+    let root = temp.path();
+
+    std::fs::write(root.join("CLAUDE.md"), "# Project\n").unwrap();
+
+    let mut config = LintConfig::default();
+    config.files_mut().include_as_generic = vec!["[bad-generic".to_string()];
+    config.files_mut().exclude = vec!["[bad-exclude".to_string()];
+
+    let result = validate_project(root, &config).unwrap();
+
+    let bad_exclude_warnings: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.rule == "config::glob" && d.message.contains("[bad-exclude"))
+        .collect();
+    assert_eq!(
+        bad_exclude_warnings.len(),
+        1,
+        "expected exactly one warning for the invalid [files].exclude pattern, got {}: {:?}",
+        bad_exclude_warnings.len(),
+        bad_exclude_warnings
+            .iter()
+            .map(|d| &d.message)
+            .collect::<Vec<_>>()
+    );
+}
+
 // Regression for #722: previously, `[files].exclude` only skipped per-file
 // validators (via FileType::Unknown) while project-level rules like AGM-006
 // collected paths by filename during the walk. A vendored AGENTS.md would
