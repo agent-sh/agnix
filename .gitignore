@@ -34,6 +34,7 @@ IMPLEMENTATION-NEXT-STEPS.md
 STATUS.md
 
 .claude/plan.md
+.claude/scheduled_tasks.lock
 .claude/settings.local.json
 .claude/skillers/
 .claude/state/*

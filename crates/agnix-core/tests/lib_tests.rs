@@ -3984,6 +3984,95 @@ fn test_validate_project_with_invalid_files_pattern() {
     );
 }
 
+// The walker-side compile of `[files].exclude` must not emit its own
+// invalid-pattern warnings, because `compile_files_config_with_diagnostics`
+// already emits them. Previously we merged both warning sets and tried to
+// dedupe with `dedup_by`, but non-adjacent duplicates slipped through.
+#[test]
+fn test_invalid_files_exclude_pattern_warns_once() {
+    let temp = tempfile::TempDir::new().unwrap();
+    let root = temp.path();
+
+    std::fs::write(root.join("CLAUDE.md"), "# Project\n").unwrap();
+
+    let mut config = LintConfig::default();
+    config.files_mut().include_as_generic = vec!["[bad-generic".to_string()];
+    config.files_mut().exclude = vec!["[bad-exclude".to_string()];
+
+    let result = validate_project(root, &config).unwrap();
+
+    let bad_exclude_warnings: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.rule == "config::glob" && d.message.contains("[bad-exclude"))
+        .collect();
+    assert_eq!(
+        bad_exclude_warnings.len(),
+        1,
+        "expected exactly one warning for the invalid [files].exclude pattern, got {}: {:?}",
+        bad_exclude_warnings.len(),
+        bad_exclude_warnings
+            .iter()
+            .map(|d| &d.message)
+            .collect::<Vec<_>>()
+    );
+}
+
+// Regression for #722: previously, `[files].exclude` only skipped per-file
+// validators (via FileType::Unknown) while project-level rules like AGM-006
+// collected paths by filename during the walk. A vendored AGENTS.md would
+// silently trigger AGM-006 "Nested AGENTS.md" despite being excluded.
+// After the fix, `[files].exclude` joins the walker filter so excluded paths
+// don't feed cross-file rule collection either.
+#[test]
+fn test_files_config_exclude_also_filters_project_level_rules() {
+    let temp = tempfile::TempDir::new().unwrap();
+    let root = temp.path();
+
+    std::fs::write(
+        root.join("AGENTS.md"),
+        "# Project\n\nRoot agent instructions.\n",
+    )
+    .unwrap();
+
+    let vendor = root.join("vendor").join("other-repo");
+    std::fs::create_dir_all(&vendor).unwrap();
+    std::fs::write(
+        vendor.join("AGENTS.md"),
+        "# Vendored\n\nThird-party content.\n",
+    )
+    .unwrap();
+
+    let mut config = LintConfig::default();
+    config.files_mut().exclude = vec!["**/vendor/**".to_string()];
+
+    let result = validate_project(root, &config).unwrap();
+
+    // Project-level rules should not see the vendored AGENTS.md, so AGM-006
+    // (nested AGENTS.md) must not fire.
+    let agm_006: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.rule == "AGM-006")
+        .collect();
+    assert!(
+        agm_006.is_empty(),
+        "[files].exclude should prevent AGM-006 on vendored AGENTS.md, got: {:?}",
+        agm_006.iter().map(|d| &d.message).collect::<Vec<_>>()
+    );
+
+    // And the vendored file must not show up in any diagnostic path.
+    let mentions_vendor = result
+        .diagnostics
+        .iter()
+        .any(|d| d.file.to_string_lossy().contains("vendor") || d.message.contains("vendor"));
+    assert!(
+        !mentions_vendor,
+        "no diagnostic should reference vendored paths, got: {:?}",
+        result.diagnostics
+    );
+}
+
 #[test]
 fn test_validate_file_respects_files_config_exclude() {
     let temp = tempfile::TempDir::new().unwrap();
@@ -4106,6 +4195,33 @@ fn test_validate_project_rules_agm006() {
         agm006.len() >= 2,
         "Expected AGM-006 for both AGENTS.md files, got {} diagnostics",
         agm006.len()
+    );
+}
+
+// Regression for PR #725 review: validate_project_rules is the LSP
+// lightweight path. It must surface Warning diagnostics for invalid
+// `[files].exclude` patterns so editor users aren't silently ignored, matching
+// `validate_project_with_registry`'s behaviour.
+#[test]
+fn test_validate_project_rules_warns_on_invalid_files_exclude() {
+    let temp_dir = tempfile::tempdir().unwrap();
+    std::fs::write(temp_dir.path().join("CLAUDE.md"), "# Project\n").unwrap();
+
+    let mut config = LintConfig::default();
+    config.files_mut().exclude = vec!["[bad-exclude".to_string()];
+
+    let diagnostics = validate_project_rules(temp_dir.path(), &config).unwrap();
+
+    let bad_pattern: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "config::glob" && d.message.contains("[bad-exclude"))
+        .collect();
+    assert_eq!(
+        bad_pattern.len(),
+        1,
+        "expected exactly one warning for the invalid [files].exclude in the LSP path, got {}: {:?}",
+        bad_pattern.len(),
+        bad_pattern.iter().map(|d| &d.message).collect::<Vec<_>>()
     );
 }
 
