@@ -3984,6 +3984,61 @@ fn test_validate_project_with_invalid_files_pattern() {
     );
 }
 
+// Regression for #722: previously, `[files].exclude` only skipped per-file
+// validators (via FileType::Unknown) while project-level rules like AGM-006
+// collected paths by filename during the walk. A vendored AGENTS.md would
+// silently trigger AGM-006 "Nested AGENTS.md" despite being excluded.
+// After the fix, `[files].exclude` joins the walker filter so excluded paths
+// don't feed cross-file rule collection either.
+#[test]
+fn test_files_config_exclude_also_filters_project_level_rules() {
+    let temp = tempfile::TempDir::new().unwrap();
+    let root = temp.path();
+
+    std::fs::write(
+        root.join("AGENTS.md"),
+        "# Project\n\nRoot agent instructions.\n",
+    )
+    .unwrap();
+
+    let vendor = root.join("vendor").join("other-repo");
+    std::fs::create_dir_all(&vendor).unwrap();
+    std::fs::write(
+        vendor.join("AGENTS.md"),
+        "# Vendored\n\nThird-party content.\n",
+    )
+    .unwrap();
+
+    let mut config = LintConfig::default();
+    config.files_mut().exclude = vec!["**/vendor/**".to_string()];
+
+    let result = validate_project(root, &config).unwrap();
+
+    // Project-level rules should not see the vendored AGENTS.md, so AGM-006
+    // (nested AGENTS.md) must not fire.
+    let agm_006: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.rule == "AGM-006")
+        .collect();
+    assert!(
+        agm_006.is_empty(),
+        "[files].exclude should prevent AGM-006 on vendored AGENTS.md, got: {:?}",
+        agm_006.iter().map(|d| &d.message).collect::<Vec<_>>()
+    );
+
+    // And the vendored file must not show up in any diagnostic path.
+    let mentions_vendor = result
+        .diagnostics
+        .iter()
+        .any(|d| d.file.to_string_lossy().contains("vendor") || d.message.contains("vendor"));
+    assert!(
+        !mentions_vendor,
+        "no diagnostic should reference vendored paths, got: {:?}",
+        result.diagnostics
+    );
+}
+
 #[test]
 fn test_validate_file_respects_files_config_exclude() {
     let temp = tempfile::TempDir::new().unwrap();

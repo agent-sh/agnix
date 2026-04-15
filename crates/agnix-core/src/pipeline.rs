@@ -442,30 +442,69 @@ fn normalize_rel_path(entry_path: &Path, root: &Path) -> String {
 }
 
 #[cfg(feature = "filesystem")]
+fn compile_single_exclude_pattern(pattern: &str) -> Result<ExcludePattern, String> {
+    let normalized = pattern.replace('\\', "/");
+    let (glob_str, dir_only_prefix) = if let Some(prefix) = normalized.strip_suffix('/') {
+        (format!("{}/**", prefix), Some(prefix.to_string()))
+    } else {
+        (normalized.clone(), None)
+    };
+    let allow_probe = dir_only_prefix.is_some() || glob_str.contains("**");
+    let compiled = glob::Pattern::new(&glob_str).map_err(|e| e.to_string())?;
+    Ok(ExcludePattern {
+        pattern: compiled,
+        dir_only_prefix,
+        allow_probe,
+    })
+}
+
+#[cfg(feature = "filesystem")]
 fn compile_exclude_patterns(excludes: &[String]) -> LintResult<Vec<ExcludePattern>> {
     excludes
         .iter()
         .map(|pattern| {
-            let normalized = pattern.replace('\\', "/");
-            let (glob_str, dir_only_prefix) = if let Some(prefix) = normalized.strip_suffix('/') {
-                (format!("{}/**", prefix), Some(prefix.to_string()))
-            } else {
-                (normalized.clone(), None)
-            };
-            let allow_probe = dir_only_prefix.is_some() || glob_str.contains("**");
-            let compiled = glob::Pattern::new(&glob_str).map_err(|e| {
+            compile_single_exclude_pattern(pattern).map_err(|message| {
                 CoreError::Config(ConfigError::InvalidExcludePattern {
                     pattern: pattern.clone(),
-                    message: e.to_string(),
+                    message,
                 })
-            })?;
-            Ok(ExcludePattern {
-                pattern: compiled,
-                dir_only_prefix,
-                allow_probe,
             })
         })
         .collect()
+}
+
+/// Compile `[files].exclude` patterns into the walker's `ExcludePattern` form,
+/// collecting invalid patterns as Diagnostic warnings instead of failing.
+///
+/// Top-level `exclude` entries fail loudly on bad patterns (see
+/// [`compile_exclude_patterns`]). `[files]` patterns are compiled leniently
+/// to match the rest of `[files]` handling
+/// (see [`compile_patterns_with_diagnostics`]).
+#[cfg(feature = "filesystem")]
+fn compile_files_exclude_for_walker(
+    excludes: &[String],
+    config_file: &Path,
+) -> (Vec<ExcludePattern>, Vec<Diagnostic>) {
+    let mut compiled = Vec::with_capacity(excludes.len());
+    let mut diagnostics = Vec::new();
+    for p in excludes {
+        match compile_single_exclude_pattern(p) {
+            Ok(pat) => compiled.push(pat),
+            Err(message) => {
+                diagnostics.push(
+                    Diagnostic::warning(
+                        config_file.to_path_buf(),
+                        1,
+                        0,
+                        "config::glob",
+                        t!("rules.invalid_glob_pattern", pattern = p, error = message),
+                    )
+                    .with_suggestion(t!("rules.invalid_glob_pattern_suggestion")),
+                );
+            }
+        }
+    }
+    (compiled, diagnostics)
 }
 
 #[cfg(feature = "filesystem")]
@@ -506,8 +545,16 @@ pub fn validate_project_rules(root: &Path, config: &LintConfig) -> LintResult<Ve
     let mut config = config.clone();
     config.set_root_dir(root_dir.clone());
 
-    // Pre-compile exclude patterns once (Arc for filter_entry 'static bound)
-    let exclude_patterns = Arc::new(compile_exclude_patterns(config.exclude())?);
+    // Pre-compile exclude patterns once (Arc for filter_entry 'static bound).
+    // `[files].exclude` joins the walker-level filter alongside top-level `exclude`
+    // so cross-file project-level rules (AGM-006, XP-004/005/006) don't collect
+    // vendored paths the user asked to ignore.
+    let mut exclude_patterns = compile_exclude_patterns(config.exclude())?;
+    let config_file = root_dir.join(".agnix.toml");
+    let (files_exclude, project_diagnostics) =
+        compile_files_exclude_for_walker(&config.files_config().exclude, &config_file);
+    exclude_patterns.extend(files_exclude);
+    let exclude_patterns = Arc::new(exclude_patterns);
 
     let walk_root = std::fs::canonicalize(root).unwrap_or_else(|_| root.to_path_buf());
     let root_path = root_dir.clone();
@@ -575,12 +622,14 @@ pub fn validate_project_rules(root: &Path, config: &LintConfig) -> LintResult<Ve
     agents_md_paths.sort();
     instruction_file_paths.sort();
 
-    Ok(run_project_level_checks(
+    let mut diagnostics = project_diagnostics;
+    diagnostics.extend(run_project_level_checks(
         &agents_md_paths,
         &instruction_file_paths,
         &config,
         &root_dir,
-    ))
+    ));
+    Ok(diagnostics)
 }
 
 /// Main entry point for validating a project with a custom validator registry
@@ -609,15 +658,27 @@ pub fn validate_project_with_registry(
         config.set_import_cache(import_cache);
     }
 
-    // Pre-compile exclude patterns once (avoids N+1 pattern compilation)
-    let exclude_patterns = compile_exclude_patterns(config.exclude())?;
+    // Pre-compile exclude patterns once (avoids N+1 pattern compilation).
+    // Top-level `exclude` and `[files].exclude` both feed the walker filter so
+    // the two filters share a single "don't look at this path" semantic - per-file
+    // rules AND project-level rules see the same excluded set.
+    let mut exclude_patterns = compile_exclude_patterns(config.exclude())?;
+    let config_file = root_dir.join(".agnix.toml");
+    let (files_exclude_for_walker, mut walker_exclude_diags) =
+        compile_files_exclude_for_walker(&config.files_config().exclude, &config_file);
+    exclude_patterns.extend(files_exclude_for_walker);
     let exclude_patterns = Arc::new(exclude_patterns);
 
     // Pre-compile files config patterns once for the parallel walk.
     // Invalid patterns produce Warning diagnostics that are prepended to results.
-    let config_file = root_dir.join(".agnix.toml");
-    let (compiled_files_inner, config_diags) =
+    let (compiled_files_inner, mut config_diags) =
         compile_files_config_with_diagnostics(config.files_config(), &config_file);
+    // Surface walker-side invalid-pattern warnings alongside the existing
+    // file-type-resolution warnings so users see each bad pattern once.
+    config_diags.append(&mut walker_exclude_diags);
+    // Dedupe: compile_files_config_with_diagnostics also walks `[files].exclude`,
+    // so an invalid pattern would otherwise produce two identical warnings.
+    config_diags.dedup_by(|a, b| a.file == b.file && a.message == b.message);
     let compiled_files = Arc::new(compiled_files_inner);
 
     let root_path = root_dir.clone();
