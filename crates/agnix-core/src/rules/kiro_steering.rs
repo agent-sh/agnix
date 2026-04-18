@@ -329,19 +329,17 @@ impl Validator for KiroSteeringValidator {
                             );
                         }
                     }
-                    "fileMatch" => {
-                        if !mapping.contains_key(&key_file_match_pattern) {
-                            diagnostics.push(
-                                Diagnostic::error(
-                                    path.to_path_buf(),
-                                    1,
-                                    0,
-                                    "KIRO-002",
-                                    t!("rules.kiro_002_filematch.message"),
-                                )
-                                .with_suggestion(t!("rules.kiro_002_filematch.suggestion")),
-                            );
-                        }
+                    "fileMatch" if !mapping.contains_key(&key_file_match_pattern) => {
+                        diagnostics.push(
+                            Diagnostic::error(
+                                path.to_path_buf(),
+                                1,
+                                0,
+                                "KIRO-002",
+                                t!("rules.kiro_002_filematch.message"),
+                            )
+                            .with_suggestion(t!("rules.kiro_002_filematch.suggestion")),
+                        );
                     }
                     _ => {} // always and manual have no extra required fields
                 }

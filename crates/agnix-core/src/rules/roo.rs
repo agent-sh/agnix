@@ -553,36 +553,32 @@ impl RooCodeValidator {
             let server_type = server.server_type.as_deref().unwrap_or("stdio");
 
             match server_type {
-                "stdio" => {
-                    if !server.has_command {
-                        diagnostics.push(
-                            Diagnostic::error(
-                                path.to_path_buf(),
-                                1,
-                                0,
-                                "ROO-005",
-                                t!(
-                                    "rules.roo_005.missing_command",
-                                    server = server.name.as_str()
-                                ),
-                            )
-                            .with_suggestion(t!("rules.roo_005.suggestion")),
-                        );
-                    }
+                "stdio" if !server.has_command => {
+                    diagnostics.push(
+                        Diagnostic::error(
+                            path.to_path_buf(),
+                            1,
+                            0,
+                            "ROO-005",
+                            t!(
+                                "rules.roo_005.missing_command",
+                                server = server.name.as_str()
+                            ),
+                        )
+                        .with_suggestion(t!("rules.roo_005.suggestion")),
+                    );
                 }
-                "http" | "sse" => {
-                    if !server.has_url {
-                        diagnostics.push(
-                            Diagnostic::error(
-                                path.to_path_buf(),
-                                1,
-                                0,
-                                "ROO-005",
-                                t!("rules.roo_005.missing_url", server = server.name.as_str()),
-                            )
-                            .with_suggestion(t!("rules.roo_005.suggestion")),
-                        );
-                    }
+                "http" | "sse" if !server.has_url => {
+                    diagnostics.push(
+                        Diagnostic::error(
+                            path.to_path_buf(),
+                            1,
+                            0,
+                            "ROO-005",
+                            t!("rules.roo_005.missing_url", server = server.name.as_str()),
+                        )
+                        .with_suggestion(t!("rules.roo_005.suggestion")),
+                    );
                 }
                 _ => {}
             }

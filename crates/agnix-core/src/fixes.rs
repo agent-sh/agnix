@@ -153,7 +153,7 @@ pub fn apply_fixes_with_fs_options(
         }
 
         // Sort descending to apply from end (preserves earlier positions)
-        fixes.sort_by(|a, b| b.start_byte.cmp(&a.start_byte));
+        fixes.sort_by_key(|f| std::cmp::Reverse(f.start_byte));
 
         let (fixed, applied) = apply_fixes_to_content(&original, &fixes);
 

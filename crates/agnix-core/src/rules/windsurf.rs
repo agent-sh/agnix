@@ -64,52 +64,48 @@ impl Validator for WindsurfValidator {
                     );
                 }
             }
-            FileType::WindsurfWorkflow => {
+            FileType::WindsurfWorkflow if config.is_rule_enabled("WS-003") => {
                 // WS-003: Empty or oversized Windsurf workflow file (WARNING)
-                if config.is_rule_enabled("WS-003") {
-                    if content.trim().is_empty() {
-                        diagnostics.push(
-                            Diagnostic::warning(
-                                path.to_path_buf(),
-                                1,
-                                0,
-                                "WS-003",
-                                t!("rules.ws_003_empty.message"),
-                            )
-                            .with_suggestion(t!("rules.ws_003_empty.suggestion")),
-                        );
-                    } else if content.len() > WINDSURF_CHAR_LIMIT {
-                        diagnostics.push(
-                            Diagnostic::warning(
-                                path.to_path_buf(),
-                                1,
-                                0,
-                                "WS-003",
-                                t!(
-                                    "rules.ws_003_too_long.message",
-                                    limit = WINDSURF_CHAR_LIMIT,
-                                    len = content.len()
-                                ),
-                            )
-                            .with_suggestion(t!("rules.ws_003_too_long.suggestion")),
-                        );
-                    }
-                }
-            }
-            FileType::WindsurfRulesLegacy => {
-                // WS-004: Legacy .windsurfrules detected (INFO)
-                if config.is_rule_enabled("WS-004") {
+                if content.trim().is_empty() {
                     diagnostics.push(
-                        Diagnostic::info(
+                        Diagnostic::warning(
                             path.to_path_buf(),
                             1,
                             0,
-                            "WS-004",
-                            t!("rules.ws_004.message"),
+                            "WS-003",
+                            t!("rules.ws_003_empty.message"),
                         )
-                        .with_suggestion(t!("rules.ws_004.suggestion")),
+                        .with_suggestion(t!("rules.ws_003_empty.suggestion")),
+                    );
+                } else if content.len() > WINDSURF_CHAR_LIMIT {
+                    diagnostics.push(
+                        Diagnostic::warning(
+                            path.to_path_buf(),
+                            1,
+                            0,
+                            "WS-003",
+                            t!(
+                                "rules.ws_003_too_long.message",
+                                limit = WINDSURF_CHAR_LIMIT,
+                                len = content.len()
+                            ),
+                        )
+                        .with_suggestion(t!("rules.ws_003_too_long.suggestion")),
                     );
                 }
+            }
+            FileType::WindsurfRulesLegacy if config.is_rule_enabled("WS-004") => {
+                // WS-004: Legacy .windsurfrules detected (INFO)
+                diagnostics.push(
+                    Diagnostic::info(
+                        path.to_path_buf(),
+                        1,
+                        0,
+                        "WS-004",
+                        t!("rules.ws_004.message"),
+                    )
+                    .with_suggestion(t!("rules.ws_004.suggestion")),
+                );
             }
             _ => {}
         }
