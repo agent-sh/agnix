@@ -1,13 +1,24 @@
 #!/usr/bin/env bash
-# Polls GitHub releases for every tracked tool in .github/tool-release-baselines.json
+# Polls release feeds for every tracked tool in .github/tool-release-baselines.json
 # and opens (or comments on) a per-tool issue when a new release is detected.
 #
+# Per-tool source type is declared in the baselines file:
+#   - github_repo                       -> GitHub releases API (latest stable, tag fallback)
+#   - html_url + version_regex          -> HTTP GET + first regex match (HTML/JSON/RSS)
+# Optional release-notes upgrade (when [NEW] fires):
+#   - notes_extractor: "glm"            -> GLM chat completion via scripts/glm-extract.js
+#   - notes_extractor: "rss_cdata"      -> first <item><description> CDATA via python3
+#   - notes_extractor: "stub" (default) -> link-only body
+#
 # Environment:
-#   GH_TOKEN          - required (passed implicitly by gh CLI)
-#   UPDATE_BASELINES  - "true" to skip issue creation and emit the JSON snippet only
-#   TOOL_FILTER       - optional: limit run to one tool id from the baselines file
+#   GH_TOKEN            - required (passed implicitly by gh CLI)
+#   GLM_API_KEY         - optional; enables notes_extractor=glm tools
+#   UPDATE_BASELINES    - "true" to skip issue creation and emit JSON snippet only
+#   TOOL_FILTER         - optional: limit run to one tool id from the baselines file
+#   GITHUB_REPOSITORY   - owner/repo for absolute-URL construction (Actions sets this);
+#                         falls back to agent-sh/agnix when unset
 #   GITHUB_STEP_SUMMARY - optional: workflow summary file (set by GitHub Actions)
-#   RUN_URL           - optional: URL to include in issue footers
+#   RUN_URL             - optional: URL to include in issue footers
 #
 # Exit codes:
 #   0 - completed successfully (whether or not new releases were found)
@@ -112,7 +123,12 @@ for raw_id in "${TOOL_IDS[@]}"; do
       release_url="$html_url"
     fi
     published_at=""
-    release_body="_Auto-detected via scrape of [$html_url]($html_url). See the linked page for full release notes - they are not machine-extractable from this source._"
+    # Default body for the html_url branch. Tools with notes_extractor=glm or
+    # rss_cdata replace this below with extracted content. The notes_extractor=stub
+    # tools (e.g. cursor's JSON update endpoint) keep this neutral fallback - no
+    # claim that the source is unscrapable, since some sources are intentionally
+    # link-only.
+    release_body="_This source provides a version marker only. See [$release_url]($release_url) for the full release notes._"
   else
     echo "  ERROR: $tool_id is marked tracked but has neither github_repo nor (html_url + version_regex)" >&2
     continue
@@ -149,8 +165,9 @@ for raw_id in "${TOOL_IDS[@]}"; do
         echo "  WARN: notes_extractor=glm but no page_content captured - using stub"
       else
         glm_stderr=$(mktemp)
-        extracted=$(printf '%s' "$page_content" \
-          | node "$script_dir/glm-extract.js" "$display_name" "$latest_version" "$release_url" 2>"$glm_stderr" || true)
+        # Here-string instead of `printf|cmd` so large $page_content does not
+        # hit shell ARG_MAX during pipeline expansion.
+        extracted=$(node "$script_dir/glm-extract.js" "$display_name" "$latest_version" "$release_url" 2>"$glm_stderr" <<< "$page_content" || true)
         if [[ -n "$extracted" ]]; then
           release_body="${extracted}"$'\n\n---\n*Notes auto-extracted via GLM from ['"$release_url"']('"$release_url"').*'
           echo "  [glm] extracted $(echo "$extracted" | wc -c) chars of release notes"
@@ -166,12 +183,13 @@ for raw_id in "${TOOL_IDS[@]}"; do
       elif [[ -z "${page_content:-}" ]]; then
         echo "  WARN: notes_extractor=rss_cdata but no page_content captured - using stub"
       else
-        extracted=$(printf '%s' "$page_content" | python3 -c '
+        # Here-string keeps large RSS payloads out of the command line.
+        extracted=$(python3 -c '
 import re, sys
 content = sys.stdin.read()
 m = re.search(r"<item>.*?<description>\s*<!\[CDATA\[(.*?)\]\]>\s*</description>", content, re.DOTALL)
 sys.stdout.write(m.group(1).strip() if m else "")
-')
+' <<< "$page_content")
         if [[ -n "$extracted" ]]; then
           release_body="${extracted}"$'\n\n---\n*Notes extracted from the first `<item>` description in ['"$release_url"']('"$release_url"').*'
           echo "  [rss_cdata] extracted $(echo "$extracted" | wc -c) chars of release notes"
@@ -190,13 +208,24 @@ sys.stdout.write(m.group(1).strip() if m else "")
     release_body="${release_body:0:$ISSUE_BODY_LIMIT}"$'\n\n'"_(release notes truncated at ${ISSUE_BODY_LIMIT} characters; see ${release_url} for the full text)_"
   fi
 
-  # Compose issue body
+  # Compose issue body. Use absolute file links keyed off GITHUB_REPOSITORY so
+  # they resolve correctly inside an issue (relative `../blob/main/...` resolves
+  # against the issue URL and 404s).
+  agnix_repo="${GITHUB_REPOSITORY:-agent-sh/agnix}"
+  file_base="https://github.com/${agnix_repo}/blob/main"
+  meta_line="**Tier**: \`$tier\` &nbsp;&nbsp; **Previous baseline**: \`$baseline_version\`"
+  if [[ -n "$published_at" ]]; then
+    meta_line="$meta_line &nbsp;&nbsp; **Published**: $published_at"
+  fi
+  source_line="**Source**: $release_url"
+  if [[ -n "$repo" ]]; then
+    source_line="$source_line"$'\n'"**Repository**: https://github.com/$repo"
+  fi
   issue_body=$(cat <<BODY
 ## $display_name $latest_version
 
-**Tier**: \`$tier\` &nbsp;&nbsp; **Previous baseline**: \`$baseline_version\` &nbsp;&nbsp; **Published**: $published_at
-**Release**: $release_url
-**Repository**: https://github.com/$repo
+$meta_line
+$source_line
 
 ---
 
@@ -209,9 +238,9 @@ $release_body
 ### Action required
 
 1. Review the release notes for changes that may affect agnix validation rules.
-2. Update [\`crates/agnix-core/src/config.rs\`](../blob/main/crates/agnix-core/src/config.rs) (\`ToolVersions\` / \`SpecRevisions\`) if the new version changes a validated field.
-3. Update [\`knowledge-base/RESEARCH-TRACKING.md\`](../blob/main/knowledge-base/RESEARCH-TRACKING.md) "Last Reviewed" for $display_name.
-4. After triage, run the workflow with \`update_baselines: true\` (and optionally \`tool: $tool_id\`) and copy the JSON snippet from the job summary into [\`.github/tool-release-baselines.json\`](../blob/main/.github/tool-release-baselines.json).
+2. Update [\`crates/agnix-core/src/config.rs\`](${file_base}/crates/agnix-core/src/config.rs) (\`ToolVersions\` / \`SpecRevisions\`) if the new version changes a validated field.
+3. Update [\`knowledge-base/RESEARCH-TRACKING.md\`](${file_base}/knowledge-base/RESEARCH-TRACKING.md) "Last Reviewed" for $display_name.
+4. After triage, run the workflow with \`update_baselines: true\` (and optionally \`tool: $tool_id\`) and copy the JSON snippet from the job summary into [\`.github/tool-release-baselines.json\`](${file_base}/.github/tool-release-baselines.json).
 
 ---
 *Auto-opened by \`.github/workflows/tool-release-watch.yml\`.${RUN_URL:+ Run: $RUN_URL}*
@@ -229,15 +258,15 @@ BODY
 
   if [[ -n "$existing_issue" ]]; then
     echo "  Updating existing issue #$existing_issue"
-    echo "$issue_body" | gh issue comment "$existing_issue" --body-file -
+    gh issue comment "$existing_issue" --body-file - <<< "$issue_body"
   else
     issue_title="Tool release: $display_name $latest_version (was $baseline_version)"
     echo "  Creating new issue: $issue_title"
-    echo "$issue_body" | gh issue create \
+    gh issue create \
       --title "$issue_title" \
       --label "$GENERAL_LABEL" \
       --label "$tool_label" \
-      --body-file -
+      --body-file - <<< "$issue_body"
   fi
 done
 

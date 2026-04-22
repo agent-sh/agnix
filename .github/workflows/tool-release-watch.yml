@@ -1,10 +1,14 @@
 # Tool Release Watcher
-# Polls GitHub releases for every tracked tool in .github/tool-release-baselines.json
+# Polls release feeds for every tracked tool in .github/tool-release-baselines.json
 # and opens (or comments on) a per-tool issue when a new release is detected.
+# Sources include GitHub releases, JSON update endpoints, HTML scrape, and RSS
+# feeds - see scripts/check-tool-releases.sh for the per-source dispatch logic.
 #
-# Untracked tools (proprietary, no public GitHub releases) are skipped silently.
-# Issue dedup is keyed by label `tool-release:<tool_id>` so each tool gets at most
-# one open issue at a time.
+# Tools marked `tracked: false` log a `[skip] <id>: <reason>` line in the workflow
+# output and are not polled (no API call, no issue created). Issue dedup is keyed
+# by label `tool-release:<tool_id>` so each tool gets at most one open issue at
+# a time - re-runs comment on the existing open issue rather than spawning a
+# duplicate.
 #
 # Implementation lives in scripts/check-tool-releases.sh so the same logic can be
 # dry-run locally with: UPDATE_BASELINES=true bash scripts/check-tool-releases.sh
