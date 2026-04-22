@@ -71,6 +71,10 @@ pub struct AgentSchema {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mode: Option<String>,
 
+    /// Optional: display color in task list and transcript
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub color: Option<String>,
+
     /// Catch-all for unknown frontmatter fields (used by CC-AG-019)
     #[serde(flatten)]
     pub extra: HashMap<String, serde_yaml::Value>,

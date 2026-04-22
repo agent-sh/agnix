@@ -4046,7 +4046,7 @@ Body"#;
 
 #[test]
 fn test_cc_sk_018_valid_effort_values() {
-    for effort in &["low", "medium", "high", "max"] {
+    for effort in &["low", "medium", "high", "xhigh", "max"] {
         let content = format!(
             "---\nname: test-skill\ndescription: Use when testing effort\neffort: {}\n---\nBody",
             effort

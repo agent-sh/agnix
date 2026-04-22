@@ -354,7 +354,7 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 
 <a id="cc-sk-018"></a>
 ### CC-SK-018 [MEDIUM] Invalid Effort Value
-**Requirement**: effort SHOULD be low, medium, high, or max
+**Requirement**: effort SHOULD be low, medium, high, xhigh, or max
 **Detection**: Check effort field value
 **Fix**: Manual
 **Source**: code.claude.com/docs/en/skills
@@ -835,7 +835,7 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 
 <a id="cc-ag-011"></a>
 ### CC-AG-011 [HIGH] Invalid Hooks in Agent Frontmatter
-**Requirement**: `hooks` object MUST follow the same schema as settings.json hooks
+**Requirement**: `hooks` object MUST follow the same schema as settings.json hooks. As of Claude Code v2.1.116, agent-frontmatter hooks also fire when the agent runs as the main thread via `--agent`, in addition to subagent spawning.
 **Detection**: Validate hooks object structure (event names, hook types, required fields)
 **Fix**: Ensure hooks follow the settings.json hooks schema
 **Source**: code.claude.com/docs/en/sub-agents
@@ -856,7 +856,7 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 
 <a id="cc-ag-014"></a>
 ### CC-AG-014 [MEDIUM] Invalid Effort Value
-**Requirement**: effort SHOULD be low, medium, high, or max
+**Requirement**: effort SHOULD be low, medium, high, xhigh, or max
 **Detection**: Check effort field value
 **Fix**: Manual
 **Source**: code.claude.com/docs/en/sub-agents
@@ -884,7 +884,7 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 
 <a id="cc-ag-019"></a>
 ### CC-AG-019 [LOW] Unknown Agent Frontmatter Field
-**Requirement**: Agent frontmatter fields MAY be validated against known set
+**Requirement**: Agent frontmatter fields MAY be validated against known set. As of Claude Code v2.1.117, agent-frontmatter `mcpServers` is also loaded for main-thread sessions launched via `--agent`, in addition to subagent spawning.
 **Detection**: Check for keys not in known agent fields
 **Fix**: Manual - remove or fix typo
 **Source**: code.claude.com/docs/en/sub-agents

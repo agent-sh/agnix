@@ -75,7 +75,7 @@ const VALID_PERMISSION_MODES: &[&str] = &[
 const VALID_MEMORY_SCOPES: &[&str] = &["user", "project", "local"];
 
 /// Valid effort values per CC-AG-014
-const VALID_EFFORT_VALUES: &[&str] = &["low", "medium", "high", "max"];
+const VALID_EFFORT_VALUES: &[&str] = &["low", "medium", "high", "xhigh", "max"];
 
 /// Valid isolation values per CC-AG-015
 const VALID_ISOLATION_VALUES: &[&str] = &["worktree"];
@@ -98,6 +98,7 @@ const KNOWN_AGENT_FIELDS: &[&str] = &[
     "skills",
     "hooks",
     "mode",
+    "color",
 ];
 
 /// Known Claude Code tools for CC-AG-009 and CC-AG-010
@@ -121,6 +122,7 @@ const KNOWN_AGENT_TOOLS: &[&str] = &[
     "Skill",
     "StatusBarMessageTool",
     "TaskOutput",
+    "Monitor",
 ];
 
 const RULE_IDS: &[&str] = &[
@@ -3775,7 +3777,7 @@ Body";
 
     #[test]
     fn test_effort_valid_values() {
-        for e in &["low", "medium", "high", "max"] {
+        for e in &["low", "medium", "high", "xhigh", "max"] {
             let c = format!(
                 "---
 name: a
@@ -3793,6 +3795,38 @@ Body",
                 e
             );
         }
+    }
+
+    #[test]
+    fn test_monitor_tool_accepted() {
+        let c = "---
+name: a
+description: b
+tools: [Monitor]
+---
+Body";
+        let d = validate(c);
+        assert_eq!(
+            d.iter().filter(|x| x.rule == "CC-AG-009").count(),
+            0,
+            "Monitor tool should not trigger CC-AG-009 (added in Claude Code v2.1.98)"
+        );
+    }
+
+    #[test]
+    fn test_color_field_accepted() {
+        let c = "---
+name: a
+description: b
+color: blue
+---
+Body";
+        let d = validate(c);
+        assert_eq!(
+            d.iter().filter(|x| x.rule == "CC-AG-019").count(),
+            0,
+            "color field should not trigger CC-AG-019 unknown-field"
+        );
     }
 
     #[test]
