@@ -151,14 +151,9 @@ impl Validator for OutputStyleValidator {
                         unknown.line,
                         unknown.column,
                         "CC-OS-003",
-                        format!(
-                            "Output style frontmatter has unknown key '{}'",
-                            unknown.key
-                        ),
+                        format!("Output style frontmatter has unknown key '{}'", unknown.key),
                     )
-                    .with_suggestion(
-                        "Allowed keys: name, description, keep-coding-instructions.",
-                    ),
+                    .with_suggestion("Allowed keys: name, description, keep-coding-instructions."),
                 );
             }
         }
@@ -258,7 +253,10 @@ mod tests {
     fn test_cc_os_001_missing_description() {
         let content = "---\nname: Concise\n---\nBody";
         let diagnostics = validate(content);
-        let hits: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CC-OS-001").collect();
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-OS-001")
+            .collect();
         assert_eq!(hits.len(), 1);
         assert_eq!(hits[0].level, DiagnosticLevel::Info);
     }
@@ -283,7 +281,10 @@ mod tests {
     fn test_cc_os_002_string_value() {
         let content = "---\nname: X\ndescription: y\nkeep-coding-instructions: \"yes\"\n---\nBody";
         let diagnostics = validate(content);
-        let hits: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CC-OS-002").collect();
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-OS-002")
+            .collect();
         assert_eq!(hits.len(), 1);
         assert_eq!(hits[0].level, DiagnosticLevel::Error);
         assert!(hits[0].message.contains("string"));
@@ -305,8 +306,7 @@ mod tests {
 
     #[test]
     fn test_cc_os_002_bool_value_ok() {
-        let content =
-            "---\nname: X\ndescription: y\nkeep-coding-instructions: true\n---\nBody";
+        let content = "---\nname: X\ndescription: y\nkeep-coding-instructions: true\n---\nBody";
         let diagnostics = validate(content);
         assert!(!diagnostics.iter().any(|d| d.rule == "CC-OS-002"));
     }
@@ -315,7 +315,10 @@ mod tests {
     fn test_cc_os_002_no_autofix() {
         let content = "---\nname: X\ndescription: y\nkeep-coding-instructions: \"yes\"\n---\nBody";
         let diagnostics = validate(content);
-        let hits: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CC-OS-002").collect();
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-OS-002")
+            .collect();
         assert_eq!(hits.len(), 1);
         assert!(!hits[0].has_fixes());
     }
@@ -326,15 +329,17 @@ mod tests {
     fn test_cc_os_003_unknown_key() {
         let content = "---\nname: X\ndescription: y\nfoo: bar\n---\nBody";
         let diagnostics = validate(content);
-        let hits: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CC-OS-003").collect();
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-OS-003")
+            .collect();
         assert_eq!(hits.len(), 1);
         assert!(hits[0].message.contains("foo"));
     }
 
     #[test]
     fn test_cc_os_003_known_keys_ok() {
-        let content =
-            "---\nname: X\ndescription: y\nkeep-coding-instructions: false\n---\nBody";
+        let content = "---\nname: X\ndescription: y\nkeep-coding-instructions: false\n---\nBody";
         let diagnostics = validate(content);
         assert!(!diagnostics.iter().any(|d| d.rule == "CC-OS-003"));
     }
@@ -343,7 +348,10 @@ mod tests {
     fn test_cc_os_003_no_autofix() {
         let content = "---\nname: X\ndescription: y\nfoo: bar\n---\nBody";
         let diagnostics = validate(content);
-        let hits: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CC-OS-003").collect();
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-OS-003")
+            .collect();
         assert_eq!(hits.len(), 1);
         assert!(!hits[0].has_fixes(), "CC-OS-003 must not auto-fix");
     }
@@ -378,7 +386,10 @@ mod tests {
         let long = "a".repeat(65);
         let content = format!("---\nname: {}\ndescription: y\n---\nBody", long);
         let diagnostics = validate(&content);
-        let hits: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CC-OS-005").collect();
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-OS-005")
+            .collect();
         assert_eq!(hits.len(), 1);
         assert_eq!(hits[0].level, DiagnosticLevel::Info);
     }
@@ -402,7 +413,13 @@ mod tests {
 
     #[test]
     fn test_config_disabled_specific_rules() {
-        let rules = ["CC-OS-001", "CC-OS-002", "CC-OS-003", "CC-OS-004", "CC-OS-005"];
+        let rules = [
+            "CC-OS-001",
+            "CC-OS-002",
+            "CC-OS-003",
+            "CC-OS-004",
+            "CC-OS-005",
+        ];
 
         let long = "a".repeat(65);
         let content = format!(
@@ -427,8 +444,7 @@ mod tests {
 
     #[test]
     fn test_valid_output_style_no_issues() {
-        let content =
-            "---\nname: Concise\ndescription: Short replies\nkeep-coding-instructions: true\n---\nBe brief and direct.";
+        let content = "---\nname: Concise\ndescription: Short replies\nkeep-coding-instructions: true\n---\nBe brief and direct.";
         let diagnostics = validate(content);
         assert!(
             diagnostics.is_empty(),

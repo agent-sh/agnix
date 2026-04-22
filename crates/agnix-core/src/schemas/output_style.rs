@@ -269,8 +269,7 @@ mod tests {
 
     #[test]
     fn test_known_keys_not_flagged() {
-        let content =
-            "---\nname: X\ndescription: y\nkeep-coding-instructions: false\n---\nbody";
+        let content = "---\nname: X\ndescription: y\nkeep-coding-instructions: false\n---\nbody";
         let result = parse_frontmatter(content).unwrap();
         assert!(result.unknown_keys.is_empty());
     }
