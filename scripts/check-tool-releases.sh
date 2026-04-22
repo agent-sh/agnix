@@ -109,7 +109,9 @@ for raw_id in "${TOOL_IDS[@]}"; do
       echo "  WARN: failed to fetch $html_url (will retry on next run)"
       continue
     fi
-    latest_version=$(echo "$page_content" | grep -oE "$version_regex" | head -1)
+    # `|| true` rescues the pipeline when grep matches nothing (exit 1 under
+    # pipefail would abort the whole script before the WARN/continue below).
+    latest_version=$(echo "$page_content" | grep -oE "$version_regex" | head -1 || true)
     if [[ -z "$latest_version" ]]; then
       echo "  WARN: regex '$version_regex' matched nothing on $html_url (page format may have changed - update version_regex in baselines)"
       continue
@@ -191,7 +193,10 @@ m = re.search(r"<item>.*?<description>\s*<!\[CDATA\[(.*?)\]\]>\s*</description>"
 sys.stdout.write(m.group(1).strip() if m else "")
 ' <<< "$page_content")
         if [[ -n "$extracted" ]]; then
-          release_body="${extracted}"$'\n\n---\n*Notes extracted from the first `<item>` description in ['"$release_url"']('"$release_url"').*'
+          # Attribute to html_url (the RSS feed - where extraction happened),
+          # not release_url (the per-article URL that the version_regex pulled
+          # out and rewrote earlier). The two differ for amp.
+          release_body="${extracted}"$'\n\n---\n*Notes extracted from the first `<item>` description in ['"$html_url"']('"$html_url"').*'
           echo "  [rss_cdata] extracted $(echo "$extracted" | wc -c) chars of release notes"
         else
           echo "  WARN: rss_cdata regex matched nothing in $html_url - using stub"

@@ -48,6 +48,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
+      # Pin Node so notes_extractor=glm tools (kiro, windsurf) keep working
+      # even if ubuntu-latest's preinstalled Node version changes. The script
+      # uses built-in fetch() and AbortSignal.timeout(), both Node >= 18.
+      - name: Setup Node 20
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '20'
+
       - name: Check tracked tools for new releases
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
