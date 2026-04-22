@@ -12,6 +12,7 @@ use crate::{
     rules::{Validator, ValidatorMetadata},
     schemas::agent::AgentSchema,
     schemas::hooks::HooksSchema,
+    schemas::skill::VALID_EFFORT_LEVELS,
     validation::is_valid_mcp_tool_format,
 };
 use rust_i18n::t;
@@ -74,8 +75,9 @@ const VALID_PERMISSION_MODES: &[&str] = &[
 /// Valid memory scopes per CC-AG-008
 const VALID_MEMORY_SCOPES: &[&str] = &["user", "project", "local"];
 
-/// Valid effort values per CC-AG-014
-const VALID_EFFORT_VALUES: &[&str] = &["low", "medium", "high", "xhigh", "max"];
+// Valid effort values per CC-AG-014: shared with CC-SK-018 via
+// schemas::skill::VALID_EFFORT_LEVELS so agent and skill effort lists
+// stay in lock-step (Claude Code uses the same set for both).
 
 /// Valid isolation values per CC-AG-015
 const VALID_ISOLATION_VALUES: &[&str] = &["worktree"];
@@ -917,8 +919,8 @@ impl Validator for AgentValidator {
         // CC-AG-014: Invalid effort value
         if config.is_rule_enabled("CC-AG-014") {
             if let Some(effort) = &schema.effort {
-                if !VALID_EFFORT_VALUES.contains(&effort.as_str()) {
-                    let valid_display = VALID_EFFORT_VALUES.join(", ");
+                if !VALID_EFFORT_LEVELS.contains(&effort.as_str()) {
+                    let valid_display = VALID_EFFORT_LEVELS.join(", ");
                     let mut diagnostic = Diagnostic::error(
                         path.to_path_buf(),
                         1,
@@ -933,7 +935,7 @@ impl Validator for AgentValidator {
 
                     // Unsafe auto-fix: replace with closest valid effort value
                     if let Some(closest) =
-                        super::find_closest_value(effort.as_str(), VALID_EFFORT_VALUES)
+                        super::find_closest_value(effort.as_str(), VALID_EFFORT_LEVELS)
                     {
                         if let Some((start, end)) =
                             frontmatter_value_byte_range_from_parts(&parts, "effort")
@@ -3776,29 +3778,8 @@ Body";
     }
 
     #[test]
-    fn test_effort_valid_values() {
-        for e in &["low", "medium", "high", "xhigh", "max"] {
-            let c = format!(
-                "---
-name: a
-description: b
-effort: {}
----
-Body",
-                e
-            );
-            let d = validate(&c);
-            assert_eq!(
-                d.iter().filter(|x| x.rule == "CC-AG-014").count(),
-                0,
-                "Valid effort '{}' should not trigger CC-AG-014",
-                e
-            );
-        }
-    }
-
-    #[test]
     fn test_monitor_tool_accepted() {
+        // tools: list (CC-AG-009)
         let c = "---
 name: a
 description: b
@@ -3810,6 +3791,20 @@ Body";
             d.iter().filter(|x| x.rule == "CC-AG-009").count(),
             0,
             "Monitor tool should not trigger CC-AG-009 (added in Claude Code v2.1.98)"
+        );
+
+        // disallowedTools list (CC-AG-010) - same KNOWN_AGENT_TOOLS list
+        let c2 = "---
+name: a
+description: b
+disallowedTools: [Monitor]
+---
+Body";
+        let d2 = validate(c2);
+        assert_eq!(
+            d2.iter().filter(|x| x.rule == "CC-AG-010").count(),
+            0,
+            "Monitor tool should not trigger CC-AG-010 in disallowedTools"
         );
     }
 
@@ -3932,7 +3927,7 @@ Agent instructions"#;
 
     #[test]
     fn test_cc_ag_014_all_valid_effort_values() {
-        for effort in VALID_EFFORT_VALUES {
+        for effort in VALID_EFFORT_LEVELS {
             let content = format!(
                 "---\nname: test\ndescription: Test agent\neffort: {}\n---\nBody",
                 effort

@@ -763,6 +763,8 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 
 ## CLAUDE CODE RULES (SUBAGENTS)
 
+> **Scope note (Claude Code v2.1.116 / v2.1.117)**: agent-frontmatter `hooks` and `mcpServers` fields are loaded both for subagent spawning and for main-thread sessions launched via `claude --agent <name>`. The validators below check the structure of those fields regardless of which execution mode loads them.
+
 <a id="cc-ag-001"></a>
 ### CC-AG-001 [HIGH] Missing Name Field
 **Requirement**: Agent frontmatter REQUIRES `name` field
@@ -835,7 +837,7 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 
 <a id="cc-ag-011"></a>
 ### CC-AG-011 [HIGH] Invalid Hooks in Agent Frontmatter
-**Requirement**: `hooks` object MUST follow the same schema as settings.json hooks. As of Claude Code v2.1.116, agent-frontmatter hooks also fire when the agent runs as the main thread via `--agent`, in addition to subagent spawning.
+**Requirement**: `hooks` object MUST follow the same schema as settings.json hooks
 **Detection**: Validate hooks object structure (event names, hook types, required fields)
 **Fix**: Ensure hooks follow the settings.json hooks schema
 **Source**: code.claude.com/docs/en/sub-agents
@@ -884,7 +886,7 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 
 <a id="cc-ag-019"></a>
 ### CC-AG-019 [LOW] Unknown Agent Frontmatter Field
-**Requirement**: Agent frontmatter fields MAY be validated against known set. As of Claude Code v2.1.117, agent-frontmatter `mcpServers` is also loaded for main-thread sessions launched via `--agent`, in addition to subagent spawning.
+**Requirement**: Agent frontmatter fields MAY be validated against known set
 **Detection**: Check for keys not in known agent fields
 **Fix**: Manual - remove or fix typo
 **Source**: code.claude.com/docs/en/sub-agents
