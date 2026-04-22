@@ -389,7 +389,7 @@ mod tests {
 
         // Sort descending by start_byte (as apply_fixes does)
         let mut sorted = fix_refs.clone();
-        sorted.sort_by(|a, b| b.start_byte.cmp(&a.start_byte));
+        sorted.sort_by_key(|b| std::cmp::Reverse(b.start_byte));
 
         let (result, applied) = apply_fixes_to_content(content, &sorted);
 
@@ -409,7 +409,7 @@ mod tests {
 
         // Sort descending (8-11 first, then 0-3)
         let mut sorted: Vec<&Fix> = fixes.iter().collect();
-        sorted.sort_by(|a, b| b.start_byte.cmp(&a.start_byte));
+        sorted.sort_by_key(|b| std::cmp::Reverse(b.start_byte));
 
         let (result, _) = apply_fixes_to_content(content, &sorted);
 
@@ -511,7 +511,7 @@ mod tests {
         let diagnostics = [&diagnostic];
         let selected = select_fixes(&diagnostics, FixApplyMode::All);
         let mut refs = selected;
-        refs.sort_by(|a, b| b.start_byte.cmp(&a.start_byte));
+        refs.sort_by_key(|b| std::cmp::Reverse(b.start_byte));
         let (selected_fixed, selected_applied) = apply_fixes_to_content(content, &refs);
 
         assert_eq!(fixed, "hello?!");
@@ -528,13 +528,13 @@ mod tests {
         let orphan = Fix::replace(0, 3, "XXX", "orphan", true).with_dependency("missing");
 
         let mut refs = vec![&prerequisite, &dependent];
-        refs.sort_by(|a, b| b.start_byte.cmp(&a.start_byte));
+        refs.sort_by_key(|b| std::cmp::Reverse(b.start_byte));
         let (fixed, applied) = apply_fixes_to_content(content, &refs);
         assert_eq!(fixed, "FOO BAR");
         assert_eq!(applied, vec!["normalize-head", "normalize-tail"]);
 
         let mut orphan_refs = vec![&orphan];
-        orphan_refs.sort_by(|a, b| b.start_byte.cmp(&a.start_byte));
+        orphan_refs.sort_by_key(|b| std::cmp::Reverse(b.start_byte));
         let (orphan_fixed, orphan_applied) = apply_fixes_to_content(content, &orphan_refs);
         assert_eq!(orphan_fixed, content);
         assert!(orphan_applied.is_empty());
@@ -548,7 +548,7 @@ mod tests {
 
         // Descending sort puts dependent first, but dependency should still be satisfied.
         let mut refs = vec![&prerequisite, &dependent];
-        refs.sort_by(|a, b| b.start_byte.cmp(&a.start_byte));
+        refs.sort_by_key(|b| std::cmp::Reverse(b.start_byte));
         let (fixed, applied) = apply_fixes_to_content(content, &refs);
 
         assert_eq!(fixed, "FOO BAR");
@@ -563,7 +563,7 @@ mod tests {
             Fix::replace(4, 7, "BAR", "normalize-tail", true).with_dependency("normalize-head");
 
         let mut refs = vec![&prerequisite, &dependent];
-        refs.sort_by(|a, b| b.start_byte.cmp(&a.start_byte));
+        refs.sort_by_key(|b| std::cmp::Reverse(b.start_byte));
         let (fixed, applied) = apply_fixes_to_content(content, &refs);
 
         assert_eq!(fixed, "FOO BAR");
@@ -578,7 +578,7 @@ mod tests {
         let dependent = Fix::replace(4, 7, "BAR", "normalize-tail", true).with_dependency("step1");
 
         let mut refs = vec![&prerequisite, &dependent];
-        refs.sort_by(|a, b| b.start_byte.cmp(&a.start_byte));
+        refs.sort_by_key(|b| std::cmp::Reverse(b.start_byte));
         let (fixed, applied) = apply_fixes_to_content(content, &refs);
 
         assert_eq!(fixed, content);
@@ -715,7 +715,7 @@ mod tests {
         ];
 
         let mut sorted: Vec<&Fix> = fixes.iter().collect();
-        sorted.sort_by(|a, b| b.start_byte.cmp(&a.start_byte));
+        sorted.sort_by_key(|b| std::cmp::Reverse(b.start_byte));
 
         let (result, applied) = apply_fixes_to_content(content, &sorted);
 
@@ -975,7 +975,7 @@ mod tests {
         ];
         let mut fix_refs: Vec<&Fix> = fixes.iter().collect();
         // `apply_fixes_to_content` expects fixes to be sorted descending by start_byte.
-        fix_refs.sort_by(|a, b| b.start_byte.cmp(&a.start_byte));
+        fix_refs.sort_by_key(|b| std::cmp::Reverse(b.start_byte));
 
         let (result, applied) = apply_fixes_to_content(content, &fix_refs);
 

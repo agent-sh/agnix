@@ -346,7 +346,7 @@ mod tests {
 
         // Collect fixes and sort descending by position (like fixes.rs does)
         let mut fixes: Vec<_> = diagnostics.iter().flat_map(|d| &d.fixes).collect();
-        fixes.sort_by(|a, b| b.start_byte.cmp(&a.start_byte));
+        fixes.sort_by_key(|b| std::cmp::Reverse(b.start_byte));
 
         // Apply fixes manually (simulating apply_fixes_to_content)
         let mut result = content.to_string();
