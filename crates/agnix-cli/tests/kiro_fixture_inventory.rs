@@ -138,7 +138,7 @@ fn run_agnix_json(target: &Path) -> Value {
     })
 }
 
-fn json_u64<'a>(json: &'a Value, key: &str, fixture_path: &Path) -> u64 {
+fn json_u64(json: &Value, key: &str, fixture_path: &Path) -> u64 {
     json.get(key).and_then(Value::as_u64).unwrap_or_else(|| {
         panic!(
             "Expected numeric {} in JSON output for {}",

@@ -440,14 +440,14 @@ mod tests {
         assert!(
             nested_diag
                 .message
-                .contains(&root_agents.to_string_lossy().as_ref()),
+                .contains(root_agents.to_string_lossy().as_ref()),
             "Nested file's message should list the root AGENTS.md path, got: {}",
             nested_diag.message
         );
         assert!(
             root_diag
                 .message
-                .contains(&nested_agents.to_string_lossy().as_ref()),
+                .contains(nested_agents.to_string_lossy().as_ref()),
             "Root file's message should list the nested AGENTS.md path, got: {}",
             root_diag.message
         );

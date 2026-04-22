@@ -1038,7 +1038,7 @@ Use context: fork for subagents.
         let content = "# Project\n\nShort content.";
         let validator = CrossPlatformValidator;
         let diagnostics =
-            validator.validate(Path::new("AGENTS.md"), &content, &LintConfig::default());
+            validator.validate(Path::new("AGENTS.md"), content, &LintConfig::default());
 
         let xp_007: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-007").collect();
         assert!(xp_007.is_empty());

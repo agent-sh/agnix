@@ -1286,7 +1286,6 @@ unknownfield: value
 /// These tests pin that contract so that LSP position mapping (which converts
 /// 1-indexed `Diagnostic.line` to 0-indexed LSP positions) cannot regress.
 mod lsp_io_error_outcome_tests {
-    use agnix_core::{DiagnosticLevel, LintConfig};
 
     /// Unix-only: make a SKILL.md unreadable, call `validate_file`, assert
     /// `IoError`, then assert `into_diagnostics()` produces a single

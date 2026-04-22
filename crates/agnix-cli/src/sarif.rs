@@ -335,8 +335,8 @@ mod tests {
     fn test_find_git_root_none_fallback_to_cwd() {
         // When find_git_root returns None (no git repo), callers fall back
         // to CWD canonicalization. Verify the fallback pattern works.
-        let result: Option<PathBuf> = None;
-        let fallback = result
+        #[allow(clippy::unnecessary_literal_unwrap)] // intentional: pinning the fallback shape
+        let fallback: PathBuf = Option::<PathBuf>::None
             .unwrap_or_else(|| std::fs::canonicalize(".").unwrap_or_else(|_| PathBuf::from(".")));
         assert!(
             fallback.is_absolute(),
