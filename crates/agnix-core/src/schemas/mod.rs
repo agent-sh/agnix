@@ -27,6 +27,7 @@ pub mod kiro_mcp;
 pub mod kiro_power;
 pub mod mcp;
 pub mod opencode;
+pub mod output_style;
 pub mod plugin;
 pub mod prompt;
 pub mod roo;

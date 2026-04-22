@@ -38,11 +38,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{"default_prompts": ["<500+ character prompt string>"]}
+{"name": "my-plugin", "interface": {"defaultPrompt": ["<500+ character prompt string>"]}}
 ```
 
 ### Valid
 
 ```json
-{"default_prompts": ["Fix the login bug in auth module"]}
+{"name": "my-plugin", "interface": {"defaultPrompt": ["Fix the login bug"]}}
 ```

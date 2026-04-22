@@ -13,7 +13,7 @@ keywords: ["CC-AG-019", "unknown agent frontmatter field", "claude agents", "val
 - **Category**: `Claude Agents`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `Yes (unsafe)`
-- **Verified On**: `2026-03-28`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

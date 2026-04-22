@@ -24,6 +24,7 @@ pub mod kiro_power;
 pub mod kiro_steering;
 pub mod mcp;
 pub mod opencode;
+pub mod output_style;
 pub mod per_client_skill;
 pub mod plugin;
 pub mod project_level;

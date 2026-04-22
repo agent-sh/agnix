@@ -98,6 +98,7 @@ impl<'a> DefaultRuleFilter<'a> {
             s if s.starts_with("CC-HK-") => self.rules.hooks,
             s if s.starts_with("CC-AG-") => self.rules.agents,
             s if s.starts_with("CC-MEM-") => self.rules.memory,
+            s if s.starts_with("CC-OS-") => self.rules.output_styles,
             s if s.starts_with("CC-PL-") => self.rules.plugins,
             s if s.starts_with("XML-") => self.rules.xml,
             s if s.starts_with("MCP-") => self.rules.mcp,

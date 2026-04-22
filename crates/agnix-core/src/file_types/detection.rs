@@ -384,6 +384,13 @@ pub fn detect_file_type(path: &Path) -> FileType {
         {
             FileType::ClaudeRule
         }
+        // Claude Code output styles (.claude/output-styles/*.md)
+        name if name.ends_with(".md")
+            && parent == Some("output-styles")
+            && grandparent == Some(".claude") =>
+        {
+            FileType::ClaudeOutputStyle
+        }
         // Cursor project rules (.cursor/rules/**/*.md and .mdc)
         name if (name.ends_with(".md") || name.ends_with(".mdc"))
             && is_under_cursor_rules(path) =>
@@ -781,6 +788,23 @@ mod tests {
 
     #[test]
     fn detect_claude_rule() {
+        assert_eq!(
+            detect_file_type(Path::new(".claude/rules/custom.md")),
+            FileType::ClaudeRule
+        );
+    }
+
+    #[test]
+    fn detect_claude_output_style() {
+        assert_eq!(
+            detect_file_type(Path::new(".claude/output-styles/concise.md")),
+            FileType::ClaudeOutputStyle
+        );
+    }
+
+    #[test]
+    fn detect_claude_output_style_not_rules_dir() {
+        // .claude/rules/*.md must remain ClaudeRule, NOT ClaudeOutputStyle.
         assert_eq!(
             detect_file_type(Path::new(".claude/rules/custom.md")),
             FileType::ClaudeRule

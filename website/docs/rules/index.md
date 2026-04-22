@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `399` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `405` validation rules generated from `knowledge-base/rules.json`.
 `126` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -89,6 +89,12 @@ This section contains all `399` validation rules generated from `knowledge-base/
 | [CC-MEM-010](./generated/cc-mem-010.md) | README Duplication | MEDIUM | Claude Memory | No |
 | [CC-MEM-011](./generated/cc-mem-011.md) | Invalid Paths Glob in Rules | HIGH | Claude Memory | No |
 | [CC-MEM-012](./generated/cc-mem-012.md) | Rules File Unknown Frontmatter Key | MEDIUM | Claude Memory | Yes (unsafe) |
+| [CC-OS-001](./generated/cc-os-001.md) | Output Style Missing Description | LOW | claude-output-styles | No |
+| [CC-OS-002](./generated/cc-os-002.md) | Output Style Invalid keep-coding-instructions Type | HIGH | claude-output-styles | No |
+| [CC-OS-003](./generated/cc-os-003.md) | Output Style Unknown Frontmatter Key | MEDIUM | claude-output-styles | No |
+| [CC-OS-004](./generated/cc-os-004.md) | Output Style Empty Body | MEDIUM | claude-output-styles | No |
+| [CC-OS-005](./generated/cc-os-005.md) | Output Style Name Exceeds Length | LOW | claude-output-styles | No |
+| [CC-OS-006](./generated/cc-os-006.md) | Invalid Output Style Frontmatter Syntax | HIGH | claude-output-styles | No |
 | [CC-MEM-014](./generated/cc-mem-014.md) | CLAUDE.md Exceeds Line Limit | MEDIUM | Claude Memory | No |
 | [CC-PL-001](./generated/cc-pl-001.md) | Plugin Manifest Not in .claude-plugin/ | HIGH | Claude Plugins | No |
 | [CC-PL-002](./generated/cc-pl-002.md) | Components in .claude-plugin/ | HIGH | Claude Plugins | No |

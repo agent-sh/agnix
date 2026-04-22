@@ -1,0 +1,27 @@
+{
+  "version": "1.0.0",
+  "task": {
+    "id": "output-style-validator",
+    "source": "manual",
+    "title": "PR2: output-style validator (post-#745 follow-on)"
+  },
+  "workflow": {
+    "id": "output-style-validator",
+    "status": "active",
+    "currentPhase": "setup",
+    "createdAt": "2026-04-22T00:00:00Z",
+    "updatedAt": "2026-04-22T00:00:00Z"
+  },
+  "git": {
+    "branch": "feat/output-style-validator",
+    "baseBranch": "main",
+    "baseSha": "3c4a3a9",
+    "mainRepoPath": "C:/Users/avife/agent-sh/agnix",
+    "isWorktree": true
+  },
+  "context": {
+    "description": "Add output-style validator for Claude Code output-style files (.claude/output-styles/*.md) - new FileType in agnix-core. Follow-on from triage of issue #745 which merged as PR #756. The keep-coding-instructions field was surfaced during #745 triage.",
+    "relatedIssue": "#745",
+    "relatedMergedPR": "#756"
+  }
+}

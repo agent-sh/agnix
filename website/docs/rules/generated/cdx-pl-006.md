@@ -38,11 +38,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{"components": [{"path": "./../../../etc/passwd"}]}
+{"name": "my-plugin", "mcpServers": "./../../../etc/passwd"}
 ```
 
 ### Valid
 
 ```json
-{"components": [{"path": "./src/index.js"}]}
+{"name": "my-plugin", "mcpServers": "./servers"}
 ```

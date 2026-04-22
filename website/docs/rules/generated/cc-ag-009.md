@@ -13,7 +13,7 @@ keywords: ["CC-AG-009", "invalid tool name in tools list", "claude agents", "val
 - **Category**: `Claude Agents`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-02-07`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

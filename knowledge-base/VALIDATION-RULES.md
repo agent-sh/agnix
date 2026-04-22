@@ -893,6 +893,54 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 
 ---
 
+## CLAUDE CODE RULES (OUTPUT STYLES)
+
+Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.md`) customise Claude's response tone/format. The `keep-coding-instructions` frontmatter field was added in Claude Code v2.1.94. Frontmatter has 3 known optional fields: `name`, `description`, `keep-coding-instructions`.
+
+<a id="cc-os-001"></a>
+### CC-OS-001 [LOW] Output Style Missing Description
+**Requirement**: `description` SHOULD be present and non-empty
+**Detection**: Frontmatter parse - flag if `description` absent or whitespace-only
+**Fix**: Manual - add a one-sentence summary
+**Source**: code.claude.com/docs/en/output-styles
+
+<a id="cc-os-002"></a>
+### CC-OS-002 [HIGH] Output Style Invalid keep-coding-instructions Type
+**Requirement**: `keep-coding-instructions` MUST be a YAML boolean (`true` or `false`)
+**Detection**: Frontmatter parse - reject string `"yes"`, number `1`, `null`, etc.
+**Fix**: Manual - use `keep-coding-instructions: true` or `false`
+**Source**: code.claude.com/docs/en/output-styles
+
+<a id="cc-os-003"></a>
+### CC-OS-003 [MEDIUM] Output Style Unknown Frontmatter Key
+**Requirement**: Top-level frontmatter keys SHOULD be one of `name`, `description`, `keep-coding-instructions`
+**Detection**: Line scan - flag any other top-level key
+**Fix**: Manual - remove or rename
+**Source**: code.claude.com/docs/en/output-styles
+
+<a id="cc-os-004"></a>
+### CC-OS-004 [MEDIUM] Output Style Empty Body
+**Requirement**: Output styles SHOULD have a non-empty body after the closing `---`
+**Detection**: Body lines after frontmatter are all whitespace
+**Fix**: Manual - add the system-prompt instructions
+**Source**: code.claude.com/docs/en/output-styles
+
+<a id="cc-os-005"></a>
+### CC-OS-005 [LOW] Output Style Name Exceeds Length
+**Requirement**: `name` SHOULD be 64 characters or fewer
+**Detection**: Count characters in `name` value
+**Fix**: Manual - shorten the name
+**Source**: code.claude.com/docs/en/output-styles
+
+<a id="cc-os-006"></a>
+### CC-OS-006 [HIGH] Invalid Output Style Frontmatter Syntax
+**Requirement**: Output-style frontmatter MUST be valid YAML between two `---` delimiters
+**Detection**: YAML parse error or unclosed frontmatter
+**Fix**: Manual - fix the YAML syntax (close frontmatter, escape special chars, etc.)
+**Source**: code.claude.com/docs/en/output-styles
+
+---
+
 ## CLAUDE CODE RULES (MEMORY)
 
 <a id="cc-mem-001"></a>

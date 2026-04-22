@@ -38,11 +38,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{"interface": "not a url"}
+{"name": "my-plugin", "interface": {"websiteUrl": "not a url"}}
 ```
 
 ### Valid
 
 ```json
-{"interface": "https://example.com/plugin-ui"}
+{"name": "my-plugin", "interface": {"websiteUrl": "https://example.com"}}
 ```
