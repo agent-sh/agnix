@@ -99,7 +99,7 @@ pub fn is_valid_skill_model(model: &str) -> bool {
 }
 
 /// Valid effort levels for skill frontmatter
-pub const VALID_EFFORT_LEVELS: &[&str] = &["low", "medium", "high", "max"];
+pub const VALID_EFFORT_LEVELS: &[&str] = &["low", "medium", "high", "xhigh", "max"];
 
 /// Valid shell values for skill frontmatter
 pub const VALID_SHELLS: &[&str] = &["bash", "powershell"];

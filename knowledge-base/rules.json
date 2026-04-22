@@ -1084,7 +1084,7 @@
         "source_urls": [
           "https://code.claude.com/docs/en/sub-agents"
         ],
-        "verified_on": "2026-02-07",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -1111,7 +1111,7 @@
         "source_urls": [
           "https://code.claude.com/docs/en/sub-agents"
         ],
-        "verified_on": "2026-02-07",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -1138,7 +1138,7 @@
         "source_urls": [
           "https://code.claude.com/docs/en/sub-agents"
         ],
-        "verified_on": "2026-02-07",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -1221,7 +1221,7 @@
         "source_urls": [
           "https://code.claude.com/docs/en/sub-agents"
         ],
-        "verified_on": "2026-03-28",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -1304,7 +1304,7 @@
         "source_urls": [
           "https://code.claude.com/docs/en/sub-agents"
         ],
-        "verified_on": "2026-03-28",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -3252,7 +3252,7 @@
         "source_urls": [
           "https://code.claude.com/docs/en/skills"
         ],
-        "verified_on": "2026-03-28",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "claude-code"
         },

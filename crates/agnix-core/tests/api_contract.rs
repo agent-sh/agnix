@@ -1215,7 +1215,9 @@ fn lint_result_is_sole_result_alias() {
 
     // LintResult<T> must accept Ok values.
     let ok: LintResult<u32> = Ok(42);
-    assert_eq!(ok.unwrap(), 42);
+    #[allow(clippy::unnecessary_literal_unwrap)] // intentional: contract test pinning the alias
+    let ok_value = ok.unwrap();
+    assert_eq!(ok_value, 42);
 
     // LintResult<T> must accept Err values constructed from a concrete CoreError variant.
     // This verifies LintResult<T> = Result<T, LintError> = Result<T, CoreError> end-to-end.

@@ -5,5 +5,5 @@
 cd "$(git rev-parse --show-toplevel)" || exit 1
 
 echo "[INFO] Running pre-push checks..."
-cargo clippy --workspace --all-features -- -D warnings && cargo test --workspace
+cargo clippy --workspace --all-targets --all-features -- -D warnings && cargo test --workspace
 exit $?

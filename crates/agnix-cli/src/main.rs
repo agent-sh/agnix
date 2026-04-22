@@ -962,47 +962,6 @@ fn resolve_fix_mode(cli: &Cli) -> FixApplyMode {
     }
 }
 
-#[cfg(test)]
-mod resolve_fix_mode_tests {
-    use super::*;
-
-    #[test]
-    fn fix_safe_selects_safe_only_mode() {
-        let cli = Cli::parse_from(["agnix", "--fix-safe"]);
-        assert_eq!(resolve_fix_mode(&cli), FixApplyMode::SafeOnly);
-    }
-
-    #[test]
-    fn fix_unsafe_selects_all_mode() {
-        let cli = Cli::parse_from(["agnix", "--fix-unsafe"]);
-        assert_eq!(resolve_fix_mode(&cli), FixApplyMode::All);
-    }
-
-    #[test]
-    fn fix_selects_safe_and_medium_mode() {
-        let cli = Cli::parse_from(["agnix", "--fix"]);
-        assert_eq!(resolve_fix_mode(&cli), FixApplyMode::SafeAndMedium);
-    }
-
-    #[test]
-    fn dry_run_selects_safe_and_medium_mode() {
-        let cli = Cli::parse_from(["agnix", "--dry-run"]);
-        assert_eq!(resolve_fix_mode(&cli), FixApplyMode::SafeAndMedium);
-    }
-
-    #[test]
-    fn dry_run_with_fix_safe_selects_safe_only_mode() {
-        let cli = Cli::parse_from(["agnix", "--dry-run", "--fix-safe"]);
-        assert_eq!(resolve_fix_mode(&cli), FixApplyMode::SafeOnly);
-    }
-
-    #[test]
-    fn dry_run_with_fix_unsafe_selects_all_mode() {
-        let cli = Cli::parse_from(["agnix", "--dry-run", "--fix-unsafe"]);
-        assert_eq!(resolve_fix_mode(&cli), FixApplyMode::All);
-    }
-}
-
 fn confidence_tier_label(tier: FixConfidenceTier) -> &'static str {
     match tier {
         FixConfidenceTier::High => "HIGH",
@@ -1320,4 +1279,45 @@ fn telemetry_command(action: TelemetryAction) -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod resolve_fix_mode_tests {
+    use super::*;
+
+    #[test]
+    fn fix_safe_selects_safe_only_mode() {
+        let cli = Cli::parse_from(["agnix", "--fix-safe"]);
+        assert_eq!(resolve_fix_mode(&cli), FixApplyMode::SafeOnly);
+    }
+
+    #[test]
+    fn fix_unsafe_selects_all_mode() {
+        let cli = Cli::parse_from(["agnix", "--fix-unsafe"]);
+        assert_eq!(resolve_fix_mode(&cli), FixApplyMode::All);
+    }
+
+    #[test]
+    fn fix_selects_safe_and_medium_mode() {
+        let cli = Cli::parse_from(["agnix", "--fix"]);
+        assert_eq!(resolve_fix_mode(&cli), FixApplyMode::SafeAndMedium);
+    }
+
+    #[test]
+    fn dry_run_selects_safe_and_medium_mode() {
+        let cli = Cli::parse_from(["agnix", "--dry-run"]);
+        assert_eq!(resolve_fix_mode(&cli), FixApplyMode::SafeAndMedium);
+    }
+
+    #[test]
+    fn dry_run_with_fix_safe_selects_safe_only_mode() {
+        let cli = Cli::parse_from(["agnix", "--dry-run", "--fix-safe"]);
+        assert_eq!(resolve_fix_mode(&cli), FixApplyMode::SafeOnly);
+    }
+
+    #[test]
+    fn dry_run_with_fix_unsafe_selects_all_mode() {
+        let cli = Cli::parse_from(["agnix", "--dry-run", "--fix-unsafe"]);
+        assert_eq!(resolve_fix_mode(&cli), FixApplyMode::All);
+    }
 }

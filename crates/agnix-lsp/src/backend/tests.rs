@@ -3276,7 +3276,7 @@ async fn test_stress_concurrent_hover_during_validation() {
                     .did_change(DidChangeTextDocumentParams {
                         text_document: VersionedTextDocumentIdentifier {
                             uri,
-                            version: (i + 2) as i32,
+                            version: i + 2,
                         },
                         content_changes: vec![TextDocumentContentChangeEvent {
                             range: None,

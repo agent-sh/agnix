@@ -1,7 +1,7 @@
 use super::*;
 use crate::config::LintConfig;
 use crate::fs::RealFileSystem;
-use crate::schemas::skill::VALID_MODEL_ALIASES;
+use crate::schemas::skill::{VALID_EFFORT_LEVELS, VALID_MODEL_ALIASES};
 use std::fs;
 
 #[test]
@@ -4046,7 +4046,7 @@ Body"#;
 
 #[test]
 fn test_cc_sk_018_valid_effort_values() {
-    for effort in &["low", "medium", "high", "max"] {
+    for effort in VALID_EFFORT_LEVELS {
         let content = format!(
             "---\nname: test-skill\ndescription: Use when testing effort\neffort: {}\n---\nBody",
             effort

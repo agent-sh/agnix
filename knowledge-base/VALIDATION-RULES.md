@@ -354,7 +354,7 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 
 <a id="cc-sk-018"></a>
 ### CC-SK-018 [MEDIUM] Invalid Effort Value
-**Requirement**: effort SHOULD be low, medium, high, or max
+**Requirement**: effort SHOULD be low, medium, high, xhigh, or max
 **Detection**: Check effort field value
 **Fix**: Manual
 **Source**: code.claude.com/docs/en/skills
@@ -763,6 +763,8 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 
 ## CLAUDE CODE RULES (SUBAGENTS)
 
+> **Scope note (Claude Code v2.1.116 / v2.1.117)**: agent-frontmatter `hooks` and `mcpServers` fields are loaded both for subagent spawning and for main-thread sessions launched via `claude --agent <name>`. The validators below check the structure of those fields regardless of which execution mode loads them.
+
 <a id="cc-ag-001"></a>
 ### CC-AG-001 [HIGH] Missing Name Field
 **Requirement**: Agent frontmatter REQUIRES `name` field
@@ -856,7 +858,7 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 
 <a id="cc-ag-014"></a>
 ### CC-AG-014 [MEDIUM] Invalid Effort Value
-**Requirement**: effort SHOULD be low, medium, high, or max
+**Requirement**: effort SHOULD be low, medium, high, xhigh, or max
 **Detection**: Check effort field value
 **Fix**: Manual
 **Source**: code.claude.com/docs/en/sub-agents
