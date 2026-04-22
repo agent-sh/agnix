@@ -895,7 +895,7 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 
 ## CLAUDE CODE RULES (OUTPUT STYLES)
 
-Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.md`) were added in Claude Code v2.1.94. Frontmatter has 3 known optional fields: `name`, `description`, `keep-coding-instructions`.
+Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.md`) customise Claude's response tone/format. The `keep-coding-instructions` frontmatter field was added in Claude Code v2.1.94. Frontmatter has 3 known optional fields: `name`, `description`, `keep-coding-instructions`.
 
 <a id="cc-os-001"></a>
 ### CC-OS-001 [LOW] Output Style Missing Description
@@ -930,6 +930,13 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 **Requirement**: `name` SHOULD be 64 characters or fewer
 **Detection**: Count characters in `name` value
 **Fix**: Manual - shorten the name
+**Source**: code.claude.com/docs/en/output-styles
+
+<a id="cc-os-006"></a>
+### CC-OS-006 [HIGH] Invalid Output Style Frontmatter Syntax
+**Requirement**: Output-style frontmatter MUST be valid YAML between two `---` delimiters
+**Detection**: YAML parse error or unclosed frontmatter
+**Fix**: Manual - fix the YAML syntax (close frontmatter, escape special chars, etc.)
 **Source**: code.claude.com/docs/en/output-styles
 
 ---

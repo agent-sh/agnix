@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `404` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `405` validation rules generated from `knowledge-base/rules.json`.
 `126` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -94,6 +94,7 @@ This section contains all `404` validation rules generated from `knowledge-base/
 | [CC-OS-003](./generated/cc-os-003.md) | Output Style Unknown Frontmatter Key | MEDIUM | claude-output-styles | No |
 | [CC-OS-004](./generated/cc-os-004.md) | Output Style Empty Body | MEDIUM | claude-output-styles | No |
 | [CC-OS-005](./generated/cc-os-005.md) | Output Style Name Exceeds Length | LOW | claude-output-styles | No |
+| [CC-OS-006](./generated/cc-os-006.md) | Invalid Output Style Frontmatter Syntax | HIGH | claude-output-styles | No |
 | [CC-MEM-014](./generated/cc-mem-014.md) | CLAUDE.md Exceeds Line Limit | MEDIUM | Claude Memory | No |
 | [CC-PL-001](./generated/cc-pl-001.md) | Plugin Manifest Not in .claude-plugin/ | HIGH | Claude Plugins | No |
 | [CC-PL-002](./generated/cc-pl-002.md) | Components in .claude-plugin/ | HIGH | Claude Plugins | No |

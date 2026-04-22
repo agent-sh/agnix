@@ -6,6 +6,7 @@
 //!
 //! Spec: https://code.claude.com/docs/en/output-styles (verified 2026-04-22)
 
+use serde::{Deserialize, Deserializer};
 use std::collections::HashSet;
 
 /// Known valid keys for `.claude/output-styles/*.md` frontmatter
@@ -16,11 +17,32 @@ pub(crate) const KNOWN_KEYS: &[&str] = &["name", "description", "keep-coding-ins
 /// `keep_coding_instructions` is kept as a raw `serde_yaml::Value` so the
 /// validator can distinguish "missing" from "present but wrong type"
 /// (CC-OS-002 requires rejecting non-bool values like `"yes"`, `1`, `null`).
-#[derive(Debug, Clone, Default)]
+/// The hyphenated YAML key is mapped to a Rust-snake-case field via
+/// `#[serde(rename)]`.
+///
+/// A custom deserializer wraps the value in `Some(_)` even when YAML is `null`,
+/// so CC-OS-002 can detect `keep-coding-instructions: null` (which serde would
+/// otherwise collapse into `None`, indistinguishable from "field absent").
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(default)]
 pub struct OutputStyleSchema {
     pub name: Option<String>,
     pub description: Option<String>,
+    #[serde(
+        rename = "keep-coding-instructions",
+        deserialize_with = "deserialize_present_value"
+    )]
     pub keep_coding_instructions: Option<serde_yaml::Value>,
+}
+
+/// Deserialize a value while preserving `null` as `Some(Value::Null)` (absent fields
+/// get `None` via `#[serde(default)]`, never via this function).
+fn deserialize_present_value<'de, D>(d: D) -> Result<Option<serde_yaml::Value>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let v = serde_yaml::Value::deserialize(d)?;
+    Ok(Some(v))
 }
 
 /// Result of parsing output-style frontmatter
@@ -125,45 +147,22 @@ pub fn parse_frontmatter(content: &str) -> Option<ParsedOutputStyleFrontmatter> 
 
 /// Parse the schema from raw YAML frontmatter.
 ///
-/// The hyphenated key `keep-coding-instructions` is extracted manually from
-/// the `serde_yaml::Mapping` because `#[derive(Deserialize)]` field names can
-/// not contain hyphens.
+/// Uses `serde_yaml` deserialization directly into [`OutputStyleSchema`].
+/// The hyphenated YAML key `keep-coding-instructions` maps to
+/// `keep_coding_instructions` via `#[serde(rename)]` on the struct field.
+/// `keep_coding_instructions` deserializes as `serde_yaml::Value` so the
+/// validator can detect non-bool values (string `"yes"`, number `1`, `null`)
+/// in CC-OS-002 — using `Option<bool>` would silently coerce or fail the
+/// whole struct.
 fn parse_schema(raw: &str) -> (Option<OutputStyleSchema>, Option<String>) {
     if raw.trim().is_empty() {
         return (Some(OutputStyleSchema::default()), None);
     }
 
-    let value: serde_yaml::Value = match serde_yaml::from_str(raw) {
-        Ok(v) => v,
-        Err(e) => return (None, Some(e.to_string())),
-    };
-
-    let mapping = match value.as_mapping() {
-        Some(m) => m,
-        None => return (Some(OutputStyleSchema::default()), None),
-    };
-
-    let mut schema = OutputStyleSchema::default();
-
-    if let Some(v) = mapping.get(serde_yaml::Value::String("name".to_string())) {
-        if let Some(s) = v.as_str() {
-            schema.name = Some(s.to_string());
-        }
+    match serde_yaml::from_str::<OutputStyleSchema>(raw) {
+        Ok(schema) => (Some(schema), None),
+        Err(e) => (None, Some(e.to_string())),
     }
-
-    if let Some(v) = mapping.get(serde_yaml::Value::String("description".to_string())) {
-        if let Some(s) = v.as_str() {
-            schema.description = Some(s.to_string());
-        }
-    }
-
-    if let Some(v) = mapping.get(serde_yaml::Value::String(
-        "keep-coding-instructions".to_string(),
-    )) {
-        schema.keep_coding_instructions = Some(v.clone());
-    }
-
-    (Some(schema), None)
 }
 
 /// Find unknown keys in frontmatter YAML by line scanning.

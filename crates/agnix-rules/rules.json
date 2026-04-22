@@ -1,7 +1,7 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 404,
+  "total_rules": 405,
   "last_updated": "2026-04-01",
   "schema": {
     "evidence": {
@@ -2497,6 +2497,33 @@
       },
       "good_example": "---\nname: Concise\ndescription: Short replies\n---\nBe brief.",
       "bad_example": "---\nname: A very very very very very very very very very very long output style name\ndescription: Short\n---\nBe brief."
+    },
+    {
+      "id": "CC-OS-006",
+      "name": "Invalid Output Style Frontmatter Syntax",
+      "severity": "HIGH",
+      "category": "claude-output-styles",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/output-styles"
+        ],
+        "verified_on": "2026-04-22",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: Concise\ndescription: Short replies\n---\nBe brief.",
+      "bad_example": "---\nname: Concise\ndescription: Short replies"
     },
     {
       "id": "CC-MEM-014",
@@ -11166,6 +11193,11 @@
       "prefix": "CC-MEM",
       "count": 13,
       "description": "Claude Code Memory rules"
+    },
+    "claude-output-styles": {
+      "prefix": "CC-OS",
+      "count": 6,
+      "description": "Claude Code Output Styles rules"
     },
     "agents-md": {
       "prefix": "AGM",

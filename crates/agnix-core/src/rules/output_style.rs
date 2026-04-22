@@ -8,6 +8,7 @@
 //! - CC-OS-003 (MEDIUM) : unknown top-level frontmatter key
 //! - CC-OS-004 (MEDIUM) : body after closing `---` is empty/whitespace-only
 //! - CC-OS-005 (LOW)    : `name` value exceeds 64 characters
+//! - CC-OS-006 (HIGH)   : invalid output-style frontmatter syntax (YAML parse error)
 //!
 //! All rules are non-autofix.
 
@@ -25,6 +26,7 @@ const RULE_IDS: &[&str] = &[
     "CC-OS-003",
     "CC-OS-004",
     "CC-OS-005",
+    "CC-OS-006",
 ];
 
 const NAME_MAX_LEN: usize = 64;
@@ -76,18 +78,22 @@ impl Validator for OutputStyleValidator {
             None => return diagnostics,
         };
 
-        // Surface YAML parse errors before per-rule checks.
+        // CC-OS-006: surface YAML parse errors before per-rule checks.
         if let Some(ref parse_error) = parsed.parse_error {
-            diagnostics.push(
-                Diagnostic::error(
-                    path.to_path_buf(),
-                    parsed.start_line,
-                    0,
-                    "CC-OS-002",
-                    format!("Invalid output-style frontmatter: {}", parse_error),
-                )
-                .with_suggestion("Close frontmatter with a line containing only `---`."),
-            );
+            if config.is_rule_enabled("CC-OS-006") {
+                diagnostics.push(
+                    Diagnostic::error(
+                        path.to_path_buf(),
+                        parsed.start_line,
+                        0,
+                        "CC-OS-006",
+                        format!("Invalid output-style frontmatter: {}", parse_error),
+                    )
+                    .with_suggestion(
+                        "Fix the YAML syntax (close frontmatter with a line containing only `---`, escape special characters, etc).",
+                    ),
+                );
+            }
             return diagnostics;
         }
 
@@ -409,6 +415,38 @@ mod tests {
         assert!(!diagnostics.iter().any(|d| d.rule == "CC-OS-005"));
     }
 
+    // ===== CC-OS-006 =====
+
+    #[test]
+    fn test_cc_os_006_unclosed_frontmatter() {
+        let content = "---\nname: X\ndescription: y";
+        let diagnostics = validate(content);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-OS-006")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].level, DiagnosticLevel::Error);
+        assert!(hits[0].message.contains("missing closing ---"));
+    }
+
+    #[test]
+    fn test_cc_os_006_invalid_yaml() {
+        // Tab-indented sequence is invalid YAML
+        let content = "---\nname: X\nkey:\n\t- bad\n---\nBody";
+        let diagnostics = validate(content);
+        assert!(diagnostics.iter().any(|d| d.rule == "CC-OS-006"));
+    }
+
+    #[test]
+    fn test_cc_os_006_does_not_use_cc_os_002() {
+        // Parse-error path must use CC-OS-006, not the overloaded CC-OS-002.
+        let content = "---\nname: X";
+        let diagnostics = validate(content);
+        assert!(!diagnostics.iter().any(|d| d.rule == "CC-OS-002"));
+        assert!(diagnostics.iter().any(|d| d.rule == "CC-OS-006"));
+    }
+
     // ===== Per-rule disable =====
 
     #[test]
@@ -419,19 +457,28 @@ mod tests {
             "CC-OS-003",
             "CC-OS-004",
             "CC-OS-005",
+            "CC-OS-006",
         ];
 
+        // Triggers CC-OS-001..005 (long name, non-bool keep, unknown key, empty body)
         let long = "a".repeat(65);
-        let content = format!(
+        let content_005 = format!(
             "---\nname: {}\nkeep-coding-instructions: \"yes\"\nfoo: bar\n---\n   \n",
             long
         );
+        // Triggers CC-OS-006 only (unclosed frontmatter)
+        let content_006 = "---\nname: x".to_string();
 
         for rule in rules {
             let mut config = LintConfig::default();
             config.rules_mut().disabled_rules = vec![rule.to_string()];
 
-            let diagnostics = validate_with_config(&content, &config);
+            let content = if rule == "CC-OS-006" {
+                &content_006
+            } else {
+                &content_005
+            };
+            let diagnostics = validate_with_config(content, &config);
             assert!(
                 !diagnostics.iter().any(|d| d.rule == rule),
                 "Rule {} should be disabled but was emitted",
