@@ -198,12 +198,23 @@ Format: `[CATEGORY]-[NUMBER]` (AS-004, CC-HK-001, etc.)
 
 ## Tool Support Tiers
 
+agnix validates 11 tools today - those with a per-tool validator in `crates/agnix-core/src/rules/`. Tier indicates support priority (higher = stricter testing and release tracking).
+
+**Validated** (have a validator in agnix):
+
 - **S** (test always): Claude Code, Codex CLI, OpenCode, Kiro CLI
 - **A** (test on major changes): GitHub Copilot, Cline, Cursor
-- **B** (test if time permits): Roo Code, amp, pi
-- **C** (community reports only): gemini cli, continue, Antigravity
-- **D** (nice to have): Tabnine, Codeium, Amazon Q, Windsurf, Aider, SourceGraph Cody
-- **E** (no support, community contributions): Everything else
+- **B** (test if time permits): Roo Code, amp
+- **C** (community reports only): Gemini CLI
+- **D** (nice to have): Windsurf
+
+Release tracking for these is automated where the upstream publishes to GitHub: see `.github/tool-release-baselines.json` and `.github/workflows/tool-release-watch.yml`.
+
+**Watchlist** (no validator yet; tracked manually in `knowledge-base/RESEARCH-TRACKING.md`):
+
+- continue, Antigravity, Tabnine, Codeium, Amazon Q, Aider, SourceGraph Cody, pi
+
+**E** (no support): Everything else - community contributions welcome via the Tool Support Request issue template.
 
 ## References
 

@@ -1,0 +1,57 @@
+# Tool Release Watcher
+# Polls GitHub releases for every tracked tool in .github/tool-release-baselines.json
+# and opens (or comments on) a per-tool issue when a new release is detected.
+#
+# Untracked tools (proprietary, no public GitHub releases) are skipped silently.
+# Issue dedup is keyed by label `tool-release:<tool_id>` so each tool gets at most
+# one open issue at a time.
+#
+# Implementation lives in scripts/check-tool-releases.sh so the same logic can be
+# dry-run locally with: UPDATE_BASELINES=true bash scripts/check-tool-releases.sh
+
+name: Tool Release Watch
+
+on:
+  schedule:
+    # Daily at 7am UTC (offset from mcp-release-watch which runs at 6am)
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+    inputs:
+      update_baselines:
+        description: 'After triaging open issues, set true to write current versions back to the baselines file (output via job summary).'
+        required: false
+        type: boolean
+        default: false
+      tool:
+        description: 'Limit to one tool id (matches a key in tool-release-baselines.json). Leave blank for all.'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+  issues: write
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  check-releases:
+    name: Check for new tool releases
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Check tracked tools for new releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          UPDATE_BASELINES: ${{ inputs.update_baselines || 'false' }}
+          TOOL_FILTER: ${{ inputs.tool || '' }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          # Optional - when set, scripts/glm-extract.js upgrades the stub
+          # release-notes body for tools with notes_extractor=glm (kiro,
+          # windsurf). Other tools are unaffected.
+          GLM_API_KEY: ${{ secrets.GLM_API_KEY }}
+        run: bash scripts/check-tool-releases.sh
