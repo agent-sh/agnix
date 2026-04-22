@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "last_updated": "2026-04-01",
+  "last_updated": "2026-04-22",
   "description": "Tracks the latest release of every tool agnix validates (one entry per tool with a validator in crates/agnix-core/src/rules/). Used by .github/workflows/tool-release-watch.yml to open per-tool issues when a new release is published. Untracked tools include the precise publication URL in untracked_reason so a maintainer can monitor manually.",
   "tools": {
     "claude-code": {
@@ -16,7 +16,7 @@
         "mcp"
       ],
       "github_repo": "anthropics/claude-code",
-      "last_known_version": "v2.1.90",
+      "last_known_version": "v2.1.117",
       "tracked": true
     },
     "codex": {
@@ -28,7 +28,7 @@
         "agents_md"
       ],
       "github_repo": "openai/codex",
-      "last_known_version": "rust-v0.118.0",
+      "last_known_version": "rust-v0.122.0",
       "tracked": true
     },
     "opencode": {
@@ -39,7 +39,7 @@
         "agents_md"
       ],
       "github_repo": "sst/opencode",
-      "last_known_version": "v1.3.13",
+      "last_known_version": "v1.14.20",
       "tracked": true
     },
     "kiro": {
@@ -56,7 +56,7 @@
       "html_url": "https://kiro.dev/changelog/cli/",
       "version_regex": "[0-9]+\\.[0-9]+\\.[0-9]+",
       "notes_extractor": "glm",
-      "last_known_version": "1.28.3",
+      "last_known_version": "2.0.1",
       "tracked": true,
       "notes": "Proprietary CLI; no GH releases. Tracked via HTML scrape of kiro.dev/changelog/cli/ - the first NN.NN.NN version on the page is the latest. Release-note body is upgraded via GLM (scripts/glm-extract.js). The CLI itself exposes `kiro-cli version --changelog`. IDE has a separate changelog at https://kiro.dev/changelog/ide/ (not tracked here; could be added as a separate kiro-ide entry if needed)."
     },
@@ -67,7 +67,7 @@
         "copilot"
       ],
       "github_repo": "microsoft/vscode-copilot-chat",
-      "last_known_version": "v0.42.2",
+      "last_known_version": "v0.43.0",
       "tracked": true,
       "notes": "Tracks the canonical VS Code Copilot Chat extension - the surface where new instruction-file features and schema changes typically land first. Note: the spec docs at https://docs.github.com/en/copilot/customizing-copilot can change independently of extension releases; spec-drift.yml covers that path. The intermediate v0.43.{timestamp} CI tags are not flagged because the GitHub releases API returns the marked-latest stable tag."
     },
@@ -78,7 +78,7 @@
         "cline"
       ],
       "github_repo": "cline/cline",
-      "last_known_version": "v3.77.0",
+      "last_known_version": "v3.80.0",
       "tracked": true
     },
     "cursor": {
@@ -90,7 +90,7 @@
       "github_repo": null,
       "html_url": "https://api2.cursor.sh/updates/api/update/darwin/cursor/0.0.1/stable",
       "version_regex": "[0-9]+\\.[0-9]+\\.[0-9]+",
-      "last_known_version": "3.0.0",
+      "last_known_version": "3.1.17",
       "tracked": true,
       "notes": "Tracked via Cursor's stable update endpoint (the same one the desktop app polls). Returns JSON like {\"url\":\"...\",\"name\":\"3.1.17\"}. Channel is hardcoded to 'stable' for darwin; the version is platform-agnostic (same release ships across darwin/linux/win32). Prose changelog at https://cursor.com/changelog (Next.js SPA - not scrapeable from raw HTML)."
     },
@@ -101,7 +101,7 @@
         "roo"
       ],
       "github_repo": "RooCodeInc/Roo-Code",
-      "last_known_version": "v3.51.1",
+      "last_known_version": "v3.52.1",
       "tracked": true,
       "notes": "Repo moved from RooVetGit/Roo-Code (still referenced in some docs) to RooCodeInc/Roo-Code."
     },
@@ -115,7 +115,7 @@
       "html_url": "https://ampcode.com/news.rss",
       "version_regex": "https://ampcode\\.com/news/[a-zA-Z0-9._-]+",
       "notes_extractor": "rss_cdata",
-      "last_known_version": "gpt-5.4",
+      "last_known_version": "amp-free-is-ad-free",
       "tracked": true,
       "notes": "Tracked via the amp news RSS feed; the 'version' is the slug of the latest /news/ post (e.g., amp-free-is-ad-free). Source is not on GitHub; npm @sourcegraph/amp publishes per-commit (no semver gates) so npm version-bump tracking would be noise. Issue body uses the first <item><description> CDATA from the RSS feed (already structured HTML - no LLM needed)."
     },
@@ -129,7 +129,7 @@
         "gemini_ignore"
       ],
       "github_repo": "google-gemini/gemini-cli",
-      "last_known_version": "v0.36.0",
+      "last_known_version": "v0.38.2",
       "tracked": true
     },
     "windsurf": {
@@ -142,7 +142,7 @@
       "html_url": "https://windsurf.com/changelog",
       "version_regex": "Wave [0-9]+(\\.[0-9]+)?",
       "notes_extractor": "glm",
-      "last_known_version": "Wave 13",
+      "last_known_version": "Wave 14",
       "tracked": true,
       "notes": "Proprietary IDE (Codeium/Exafunction); no GH releases. Tracked via HTML scrape of windsurf.com/changelog - the first 'Wave NN' marker on the page is the latest. Release-note body is upgraded via GLM (scripts/glm-extract.js). Wave is the marketing release event; underlying VS Code-fork build version (e.g., 1.9544.24) bumps more often but is not the agnix-relevant signal. Separate /vscode, /jetbrains, /windsurf-next channels are not tracked."
     }
