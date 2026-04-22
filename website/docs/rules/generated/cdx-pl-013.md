@@ -38,11 +38,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{"name": "my-plugin", "hooks": {"on_load": "./init.js"}}
+{"name": "my-plugin", "hooks": {"preStart": "echo hi"}}
 ```
 
 ### Valid
 
 ```json
-{"name": "my-plugin", "components": [{"path": "./src/index.js"}]}
+{"name": "my-plugin", "skills": "./skills"}
 ```

@@ -398,7 +398,7 @@ impl ValidatorRegistryBuilder {
 ///
 /// Used by `BuiltinProvider` (via `debug_assert_eq!`) and tests to catch
 /// accidental additions or removals without updating all providers.
-const EXPECTED_BUILTIN_COUNT: usize = 73;
+const EXPECTED_BUILTIN_COUNT: usize = 74;
 
 // -- Category providers -----------------------------------------------------
 //
@@ -481,6 +481,11 @@ impl ValidatorProvider for ClaudeProvider {
                 FileType::ClaudeRule,
                 Some("ClaudeRulesValidator"),
                 claude_rules_validator,
+            ),
+            (
+                FileType::ClaudeOutputStyle,
+                Some("OutputStyleValidator"),
+                output_style_validator,
             ),
         ]
     }
@@ -880,6 +885,10 @@ fn copilot_validator() -> Box<dyn Validator> {
 
 fn claude_rules_validator() -> Box<dyn Validator> {
     Box::new(crate::rules::claude_rules::ClaudeRulesValidator)
+}
+
+fn output_style_validator() -> Box<dyn Validator> {
+    Box::new(crate::rules::output_style::OutputStyleValidator)
 }
 
 fn cursor_validator() -> Box<dyn Validator> {
@@ -1355,7 +1364,7 @@ mod tests {
 
     #[test]
     fn every_validatable_file_type_has_at_least_one_validator() {
-        let validatable_types: [FileType; 42] = [
+        let validatable_types: [FileType; 43] = [
             FileType::Skill,
             FileType::ClaudeMd,
             FileType::Agent,
@@ -1369,6 +1378,7 @@ mod tests {
             FileType::CopilotPrompt,
             FileType::CopilotHooks,
             FileType::ClaudeRule,
+            FileType::ClaudeOutputStyle,
             FileType::CursorRule,
             FileType::CursorHooks,
             FileType::CursorAgent,
@@ -1417,6 +1427,7 @@ mod tests {
                 | FileType::CopilotPrompt
                 | FileType::CopilotHooks
                 | FileType::ClaudeRule
+                | FileType::ClaudeOutputStyle
                 | FileType::CursorRule
                 | FileType::CursorHooks
                 | FileType::CursorAgent
@@ -1903,7 +1914,7 @@ mod tests {
 
     #[test]
     fn claude_provider_count() {
-        assert_eq!(ClaudeProvider.named_validators().len(), 11);
+        assert_eq!(ClaudeProvider.named_validators().len(), 12);
     }
 
     #[test]

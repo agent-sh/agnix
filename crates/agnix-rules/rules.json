@@ -1,7 +1,7 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 399,
+  "total_rules": 404,
   "last_updated": "2026-04-01",
   "schema": {
     "evidence": {
@@ -2362,6 +2362,141 @@
       },
       "good_example": "---\npaths:\n  - \"src/**/*.ts\"\n---\n# TypeScript Guidelines\n\nAlways use strict mode.",
       "bad_example": "---\npaths:\n  - \"src/**/*.ts\"\ndescription: \"some rule\"\nalwaysApply: true\n---\n# TypeScript Guidelines\n\nAlways use strict mode."
+    },
+    {
+      "id": "CC-OS-001",
+      "name": "Output Style Missing Description",
+      "severity": "LOW",
+      "category": "claude-output-styles",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/output-styles"
+        ],
+        "verified_on": "2026-04-22",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: Concise\ndescription: Short, direct replies\n---\nBe brief.",
+      "bad_example": "---\nname: Concise\n---\nBe brief."
+    },
+    {
+      "id": "CC-OS-002",
+      "name": "Output Style Invalid keep-coding-instructions Type",
+      "severity": "HIGH",
+      "category": "claude-output-styles",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/output-styles"
+        ],
+        "verified_on": "2026-04-22",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: Concise\ndescription: Short replies\nkeep-coding-instructions: true\n---\nBe brief.",
+      "bad_example": "---\nname: Concise\ndescription: Short replies\nkeep-coding-instructions: \"yes\"\n---\nBe brief."
+    },
+    {
+      "id": "CC-OS-003",
+      "name": "Output Style Unknown Frontmatter Key",
+      "severity": "MEDIUM",
+      "category": "claude-output-styles",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/output-styles"
+        ],
+        "verified_on": "2026-04-22",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: Concise\ndescription: Short replies\nkeep-coding-instructions: false\n---\nBe brief.",
+      "bad_example": "---\nname: Concise\ndescription: Short replies\nalwaysApply: true\n---\nBe brief."
+    },
+    {
+      "id": "CC-OS-004",
+      "name": "Output Style Empty Body",
+      "severity": "MEDIUM",
+      "category": "claude-output-styles",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/output-styles"
+        ],
+        "verified_on": "2026-04-22",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: Concise\ndescription: Short replies\n---\nBe brief and direct.",
+      "bad_example": "---\nname: Concise\ndescription: Short replies\n---\n"
+    },
+    {
+      "id": "CC-OS-005",
+      "name": "Output Style Name Exceeds Length",
+      "severity": "LOW",
+      "category": "claude-output-styles",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/output-styles"
+        ],
+        "verified_on": "2026-04-22",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: Concise\ndescription: Short replies\n---\nBe brief.",
+      "bad_example": "---\nname: A very very very very very very very very very very long output style name\ndescription: Short\n---\nBe brief."
     },
     {
       "id": "CC-MEM-014",

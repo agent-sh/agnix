@@ -529,6 +529,11 @@ pub struct RuleConfig {
     #[schemars(description = "Enable Claude Code memory validation rules (CC-MEM-*)")]
     pub memory: bool,
 
+    /// Enable output-styles validation (CC-OS-*)
+    #[serde(default = "default_true")]
+    #[schemars(description = "Enable Claude Code output-style validation rules (CC-OS-*)")]
+    pub output_styles: bool,
+
     /// Enable plugins validation (CC-PL-*)
     #[serde(default = "default_true")]
     #[schemars(description = "Enable Claude Code plugins validation rules (CC-PL-*)")]
@@ -661,6 +666,7 @@ impl Default for RuleConfig {
             hooks: true,
             agents: true,
             memory: true,
+            output_styles: true,
             plugins: true,
             xml: true,
             mcp: true,

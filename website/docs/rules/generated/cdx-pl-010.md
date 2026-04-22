@@ -38,11 +38,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{"default_prompts": ["Fix the bug", "", "Add tests"]}
+{"name": "my-plugin", "interface": {"defaultPrompt": ["Fix the bug", "", "Add tests"]}}
 ```
 
 ### Valid
 
 ```json
-{"default_prompts": ["Fix the bug", "Add tests"]}
+{"name": "my-plugin", "interface": {"defaultPrompt": ["Fix the bug", "Add tests"]}}
 ```

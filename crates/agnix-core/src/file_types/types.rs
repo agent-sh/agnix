@@ -40,6 +40,8 @@ pub enum FileType {
     CopilotHooks,
     /// Claude Code rules (.claude/rules/*.md)
     ClaudeRule,
+    /// Claude Code output style files (.claude/output-styles/*.md)
+    ClaudeOutputStyle,
     /// Cursor project rules (.cursor/rules/*.md, .cursor/rules/*.mdc, including nested dirs)
     CursorRule,
     /// Cursor hooks configuration (.cursor/hooks.json)
@@ -141,6 +143,7 @@ impl fmt::Display for FileType {
             FileType::CopilotPrompt => "CopilotPrompt",
             FileType::CopilotHooks => "CopilotHooks",
             FileType::ClaudeRule => "ClaudeRule",
+            FileType::ClaudeOutputStyle => "ClaudeOutputStyle",
             FileType::CursorRule => "CursorRule",
             FileType::CursorHooks => "CursorHooks",
             FileType::CursorAgent => "CursorAgent",
@@ -196,6 +199,7 @@ mod tests {
             (FileType::CopilotPrompt, "CopilotPrompt"),
             (FileType::CopilotHooks, "CopilotHooks"),
             (FileType::ClaudeRule, "ClaudeRule"),
+            (FileType::ClaudeOutputStyle, "ClaudeOutputStyle"),
             (FileType::CursorRule, "CursorRule"),
             (FileType::CursorHooks, "CursorHooks"),
             (FileType::CursorAgent, "CursorAgent"),
@@ -250,6 +254,7 @@ mod tests {
             FileType::CopilotPrompt,
             FileType::CopilotHooks,
             FileType::ClaudeRule,
+            FileType::ClaudeOutputStyle,
             FileType::CursorRule,
             FileType::CursorHooks,
             FileType::CursorAgent,
@@ -318,6 +323,7 @@ mod tests {
             FileType::CopilotPrompt,
             FileType::CopilotHooks,
             FileType::ClaudeRule,
+            FileType::ClaudeOutputStyle,
             FileType::CursorRule,
             FileType::CursorHooks,
             FileType::CursorAgent,

@@ -38,11 +38,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{"assets": ["icons/logo.png", "../outside/file.txt"]}
+{"name": "my-plugin", "interface": {"logo": "assets/logo.png"}}
 ```
 
 ### Valid
 
 ```json
-{"assets": ["./icons/logo.png", "./styles/theme.css"]}
+{"name": "my-plugin", "interface": {"logo": "./assets/logo.png"}}
 ```
