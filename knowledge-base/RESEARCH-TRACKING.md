@@ -16,49 +16,41 @@ Tools are organized by support tier (see [../CONTRIBUTING.md#tool-tier-system](.
 
 | Tool | Config Format | Documentation URL | Monitoring | Frequency | Last Reviewed | Rule Prefix |
 |------|---------------|-------------------|------------|-----------|---------------|-------------|
-| Claude Code | `CLAUDE.md`, `.claude/settings.json` | https://code.claude.com/docs/en | Automated (spec-drift.yml) | Weekly | 2026-02-05 | CC-SK, CC-HK, CC-MEM, CC-AG, CC-PL |
-| Codex CLI | `AGENTS.md`, `codex.toml` | https://developers.openai.com/codex/ | Automated (spec-drift.yml) | Weekly | 2026-02-05 | AGM, XP |
-| OpenCode | `AGENTS.md`, `.opencode/config.json` | https://opencode.ai/docs/ | Automated (spec-drift.yml) | Weekly | 2026-02-05 | AGM, XP |
+| Claude Code | `CLAUDE.md`, `.claude/settings.json` | https://code.claude.com/docs/en | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-02-05 | CC-SK, CC-HK, CC-MEM, CC-AG, CC-PL |
+| Codex CLI | `AGENTS.md`, `codex.toml` | https://developers.openai.com/codex/ | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-02-05 | AGM, XP |
+| OpenCode | `AGENTS.md`, `.opencode/config.json` | https://opencode.ai/docs/ | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-02-05 | AGM, XP |
+| Kiro CLI | `.kiro/steering/*.md`, `.kiro/agents/*.json`, `.kiro/hooks/*.kiro.hook`, `.kiro/settings/mcp.json` | https://kiro.dev/changelog/cli/ | Automated (tool-release-watch.yml via HTML scrape) | Quarterly | 2026-02-05 | -- |
 
 ### A Tier (test on major changes)
 
 | Tool | Config Format | Documentation URL | Monitoring | Frequency | Last Reviewed | Rule Prefix |
 |------|---------------|-------------------|------------|-----------|---------------|-------------|
-| GitHub Copilot | `.github/copilot-instructions.md`, `.github/instructions/*.instructions.md` | https://docs.github.com/en/copilot/customizing-copilot | Automated (spec-drift.yml) | Monthly | 2026-02-05 | COP |
-| Cline | `.clinerules`, `.cline/rules/*.md` | https://docs.cline.bot/features/cline-rules/overview | Automated (spec-drift.yml) | Monthly | 2026-02-05 | -- |
-| Cursor | `.cursor/rules/*.mdc`, `.cursorrules` | https://cursor.com/docs/context/rules | Automated (spec-drift.yml) | Monthly | 2026-02-26 | CUR |
+| GitHub Copilot | `.github/copilot-instructions.md`, `.github/instructions/*.instructions.md` | https://docs.github.com/en/copilot/customizing-copilot | Automated (spec-drift.yml + tool-release-watch.yml via microsoft/vscode-copilot-chat) | Monthly | 2026-02-05 | COP |
+| Cline | `.clinerules`, `.cline/rules/*.md` | https://docs.cline.bot/features/cline-rules/overview | Automated (spec-drift.yml + tool-release-watch.yml) | Monthly | 2026-02-05 | -- |
+| Cursor | `.cursor/rules/*.mdc`, `.cursorrules` | https://cursor.com/docs/context/rules | Automated (spec-drift.yml + tool-release-watch.yml via api2.cursor.sh stable update endpoint) | Monthly | 2026-02-26 | CUR |
 
 ### B Tier (test on significant changes if time permits)
 
 | Tool | Config Format | Documentation URL | Monitoring | Frequency | Last Reviewed | Rule Prefix |
 |------|---------------|-------------------|------------|-----------|---------------|-------------|
-| Roo Code | `.roo/rules/*.md` | https://github.com/RooVetGit/Roo-Code | Manual | Quarterly | 2026-02-05 | -- |
-| Kiro CLI | `kiro.md` | https://kiro.dev/ | Manual | Quarterly | 2026-02-05 | -- |
-| amp | `.amp/rules.md` | https://amp.dev/ | Manual | Quarterly | 2026-02-05 | -- |
-| pi | `.pi/config.json` | TBD | Manual | Quarterly | 2026-02-05 | -- |
+| Roo Code | `.roo/rules/*.md` | https://github.com/RooCodeInc/Roo-Code | Automated (tool-release-watch.yml) | Quarterly | 2026-02-05 | -- |
+| amp | `.amp/settings.json`, `.agents/checks/*.md` | https://ampcode.com/news | Automated (tool-release-watch.yml via ampcode.com/news.rss; tracks latest news-post slug as the release marker) | Quarterly | 2026-02-05 | -- |
 
 ### C Tier (community reports fixes only)
 
 | Tool | Config Format | Documentation URL | Monitoring | Frequency | Last Reviewed | Rule Prefix |
 |------|---------------|-------------------|------------|-----------|---------------|-------------|
-| gemini cli | `GEMINI.md` | https://github.com/google-gemini/gemini-cli | Manual | As reported | 2026-02-05 | GM- |
-| continue | `.continue/config.json` | https://docs.continue.dev/ | Manual | As reported | 2026-02-05 | -- |
-| Antigravity | `.antigravity/config.yml` | TBD | Manual | As reported | 2026-02-05 | -- |
+| gemini cli | `GEMINI.md`, `.gemini/settings.json`, `.geminiignore`, `gemini-extension.json` | https://github.com/google-gemini/gemini-cli | Automated (tool-release-watch.yml) | As reported | 2026-02-05 | GM- |
 
 ### D Tier (no support, nice to have)
 
 | Tool | Config Format | Documentation URL | Monitoring | Frequency | Last Reviewed | Rule Prefix |
 |------|---------------|-------------------|------------|-----------|---------------|-------------|
-| Tabnine | `.tabnine.json` | https://docs.tabnine.com/ | None | Ad hoc | -- | -- |
-| Codeium | `.codeium/config.json` | https://codeium.com/docs/ | None | Ad hoc | -- | -- |
-| Amazon Q | `.aws/q/config.json` | https://docs.aws.amazon.com/q/ | None | Ad hoc | -- | -- |
-| Windsurf | `.windsurfrules` | https://windsurf.com/docs/ | None | Ad hoc | -- | -- |
-| Aider | `.aider.conf.yml` | https://aider.chat/docs/ | None | Ad hoc | -- | -- |
-| SourceGraph Cody | `.sourcegraph/config.json` | https://sourcegraph.com/docs/cody/ | None | Ad hoc | -- | -- |
+| Windsurf | `.windsurf/rules/*.md`, `.windsurf/workflows/*.md`, `.windsurfrules` | https://windsurf.com/changelog | Automated (tool-release-watch.yml via HTML scrape; Wave-level granularity) | Ad hoc | 2026-02-05 | -- |
 
 ### E Tier (no support, community only)
 
-All other AI coding tools. Community contributions welcome via the Tool Support Request issue template.
+All other AI coding tools - including continue, Antigravity, Tabnine, Codeium, Amazon Q, Aider, SourceGraph Cody, pi, and others. These tools do **not** have validators in `crates/agnix-core/src/rules/` and are not currently supported by agnix. Community contributions welcome via the Tool Support Request issue template.
 
 ---
 
