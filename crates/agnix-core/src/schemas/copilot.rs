@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
 /// Known valid keys for scoped instruction frontmatter
-const KNOWN_KEYS: &[&str] = &["applyTo", "excludeAgent"];
+const KNOWN_KEYS: &[&str] = &["applyTo", "description", "excludeAgent"];
 
 /// Frontmatter schema for scoped Copilot instructions
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -20,6 +20,11 @@ pub struct CopilotScopedSchema {
     /// Glob patterns specifying which files this instruction applies to
     #[serde(default)]
     pub apply_to: Option<String>,
+
+    /// Human-readable description shown in the VS Code Copilot Chat
+    /// Customizations UI (became user-visible in v0.43.0 via PR #4964).
+    #[serde(default)]
+    pub description: Option<String>,
 
     /// Agent exclusion filter (e.g., "code-review" or "coding-agent")
     #[serde(default)]
@@ -410,6 +415,45 @@ unknownKey: value
         assert_eq!(result.unknown_keys.len(), 1);
         // unknownKey is on line 3 (line 1 is ---, line 2 is applyTo, line 3 is unknownKey)
         assert_eq!(result.unknown_keys[0].line, 3);
+    }
+
+    // ===== description Parsing (Copilot v0.43.0) =====
+
+    #[test]
+    fn test_parse_description() {
+        let content = r#"---
+applyTo: "**/*.ts"
+description: "TypeScript style rules"
+---
+# Body
+"#;
+        let result = parse_frontmatter(content).unwrap();
+        let schema = result.schema.unwrap();
+        assert_eq!(
+            schema.description,
+            Some("TypeScript style rules".to_string())
+        );
+        assert!(result.parse_error.is_none());
+    }
+
+    #[test]
+    fn test_description_not_unknown_key() {
+        // Copilot v0.43.0 (PR #4964) made `description` a user-visible
+        // frontmatter field in the Chat Customizations UI. Without this key
+        // in KNOWN_KEYS, COP-004 false-positives on every v0.43.0+ user that
+        // followed the docs.
+        let content = r#"---
+applyTo: "**/*.ts"
+description: "TypeScript style rules"
+---
+# Body
+"#;
+        let result = parse_frontmatter(content).unwrap();
+        assert!(
+            result.unknown_keys.is_empty(),
+            "description should not be reported as unknown key (Copilot v0.43.0+), got: {:?}",
+            result.unknown_keys
+        );
     }
 
     // ===== excludeAgent Parsing =====
