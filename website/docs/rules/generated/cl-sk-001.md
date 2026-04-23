@@ -13,7 +13,7 @@ keywords: ["CL-SK-001", "cline skill uses unsupported field", "cline skills", "v
 - **Category**: `Cline Skills`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `Yes (safe/unsafe)`
-- **Verified On**: `2026-02-09`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

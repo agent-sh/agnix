@@ -5125,7 +5125,7 @@
         "source_urls": [
           "https://docs.cline.bot/prompting/cline-memory-bank#cline-memory-bank-custom-instructions-[copy-this]"
         ],
-        "verified_on": "2026-02-09",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "cline"
         },
@@ -5153,7 +5153,7 @@
         "source_urls": [
           "https://docs.cline.bot/features/cline-rules/overview"
         ],
-        "verified_on": "2026-03-28",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "cline"
         },
@@ -5181,7 +5181,7 @@
         "source_urls": [
           "https://docs.cline.bot/features/cline-rules/overview"
         ],
-        "verified_on": "2026-03-28",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "cline"
         },
@@ -5208,7 +5208,7 @@
         "source_urls": [
           "https://docs.cline.bot/features/cline-rules/overview"
         ],
-        "verified_on": "2026-02-09",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "cline"
         },
@@ -5235,7 +5235,7 @@
         "source_urls": [
           "https://docs.cline.bot/features/cline-rules/overview"
         ],
-        "verified_on": "2026-02-09",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "cline"
         },
@@ -5262,7 +5262,7 @@
         "source_urls": [
           "https://docs.cline.bot/features/cline-rules/overview"
         ],
-        "verified_on": "2026-02-09",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "cline"
         },
@@ -5290,7 +5290,7 @@
         "source_urls": [
           "https://docs.cline.bot/features/cline-rules"
         ],
-        "verified_on": "2026-02-13",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "cline"
         },
@@ -5318,7 +5318,7 @@
         "source_urls": [
           "https://docs.cline.bot/features/cline-rules/overview"
         ],
-        "verified_on": "2026-03-28",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "cline"
         },
@@ -5345,7 +5345,7 @@
         "source_urls": [
           "https://docs.cline.bot/features/cline-rules/overview"
         ],
-        "verified_on": "2026-03-28",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "cline"
         },
@@ -5373,7 +5373,7 @@
         "source_urls": [
           "https://docs.cline.bot/features/cline-rules/overview"
         ],
-        "verified_on": "2026-03-28",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "cline"
         },
