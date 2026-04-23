@@ -13,7 +13,7 @@ keywords: ["CC-HK-021", "invalid if field", "claude hooks", "validation", "agnix
 - **Category**: `Claude Hooks`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-28`
+- **Verified On**: `2026-04-23`
 
 ## Applicability
 

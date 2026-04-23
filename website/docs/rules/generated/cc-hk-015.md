@@ -13,7 +13,7 @@ keywords: ["CC-HK-015", "model on command hook", "claude hooks", "validation", "
 - **Category**: `Claude Hooks`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `Yes (safe)`
-- **Verified On**: `2026-02-07`
+- **Verified On**: `2026-04-23`
 
 ## Applicability
 

@@ -13,7 +13,7 @@ keywords: ["CC-HK-004", "matcher on non-tool event", "claude hooks", "validation
 - **Category**: `Claude Hooks`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `Yes (safe)`
-- **Verified On**: `2026-02-04`
+- **Verified On**: `2026-04-23`
 
 ## Applicability
 

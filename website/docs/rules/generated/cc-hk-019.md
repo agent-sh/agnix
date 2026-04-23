@@ -13,7 +13,7 @@ keywords: ["CC-HK-019", "deprecated setup event", "claude hooks", "validation", 
 - **Category**: `Claude Hooks`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `Yes (unsafe)`
-- **Verified On**: `2026-02-14`
+- **Verified On**: `2026-04-23`
 
 ## Applicability
 

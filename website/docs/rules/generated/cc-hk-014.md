@@ -13,7 +13,7 @@ keywords: ["CC-HK-014", "once outside skill/agent frontmatter", "claude hooks", 
 - **Category**: `Claude Hooks`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `Yes (safe)`
-- **Verified On**: `2026-02-07`
+- **Verified On**: `2026-04-23`
 
 ## Applicability
 

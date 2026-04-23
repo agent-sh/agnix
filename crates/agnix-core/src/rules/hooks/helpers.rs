@@ -529,7 +529,7 @@ pub(super) fn validate_cc_hk_013_async_field(
     content: &str,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
-    let known_non_command = ["prompt", "agent", "http"];
+    let known_non_command = ["prompt", "agent", "http", "mcp_tool"];
     for_each_raw_hook(raw_value, |event, matcher_idx, hook_idx, hook| {
         if hook.get("async").is_some() {
             if let Some(hook_type) = hook.get("type").and_then(|t| t.as_str()) {
@@ -604,7 +604,7 @@ pub(super) fn validate_cc_hk_016_unknown_type(
     content: &str,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
-    let valid_types = ["command", "prompt", "agent", "http"];
+    let valid_types = ["command", "prompt", "agent", "http", "mcp_tool"];
     for_each_raw_hook(raw_value, |event, matcher_idx, hook_idx, hook| {
         if let Some(type_value) = hook.get("type") {
             let hook_type_str;
@@ -970,8 +970,8 @@ pub(super) fn validate_all_raw_hooks(
     let check_024 = config.is_rule_enabled("CC-HK-024");
     let check_025 = config.is_rule_enabled("CC-HK-025");
 
-    let valid_types = ["command", "prompt", "agent", "http"];
-    let known_non_command = ["prompt", "agent", "http"];
+    let valid_types = ["command", "prompt", "agent", "http", "mcp_tool"];
+    let known_non_command = ["prompt", "agent", "http", "mcp_tool"];
     let valid_shells = ["bash", "powershell"];
     let tool_events = HooksSchema::TOOL_EVENTS;
 

@@ -13,7 +13,7 @@ keywords: ["CC-HK-018", "matcher on userpromptsubmit/stop", "claude hooks", "val
 - **Category**: `Claude Hooks`
 - **Normative Level**: `BEST_PRACTICE`
 - **Auto-Fix**: `Yes (safe)`
-- **Verified On**: `2026-02-07`
+- **Verified On**: `2026-04-23`
 
 ## Applicability
 

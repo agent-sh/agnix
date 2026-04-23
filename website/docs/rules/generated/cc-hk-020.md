@@ -13,7 +13,7 @@ keywords: ["CC-HK-020", "http hook missing url", "claude hooks", "validation", "
 - **Category**: `Claude Hooks`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-28`
+- **Verified On**: `2026-04-23`
 
 ## Applicability
 

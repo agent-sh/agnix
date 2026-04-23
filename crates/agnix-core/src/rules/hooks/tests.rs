@@ -2951,6 +2951,33 @@ fn test_cc_hk_016_agent_type_valid() {
 }
 
 #[test]
+fn test_cc_hk_016_mcp_tool_type_valid() {
+    // Claude Code v2.1.118 added `type: "mcp_tool"` so hooks can invoke
+    // MCP tools directly. Without this fix, agnix would false-positive
+    // CC-HK-016 (unknown hook type) on every v2.1.118+ user that follows
+    // the docs.
+    let content = r#"{
+            "hooks": {
+                "PostToolUse": [
+                    {
+                        "hooks": [
+                            { "type": "mcp_tool", "tool": "mcp__server__do_thing" }
+                        ]
+                    }
+                ]
+            }
+        }"#;
+
+    let diagnostics = validate(content);
+    let cc_hk_016: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-HK-016")
+        .collect();
+
+    assert_eq!(cc_hk_016.len(), 0, "mcp_tool should be a valid hook type (Claude Code v2.1.118+)");
+}
+
+#[test]
 fn test_cc_hk_016_unknown_type() {
     let content = r#"{
             "hooks": {
