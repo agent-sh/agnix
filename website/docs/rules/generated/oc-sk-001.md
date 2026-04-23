@@ -13,7 +13,7 @@ keywords: ["OC-SK-001", "opencode skill uses unsupported field", "opencode skill
 - **Category**: `OpenCode Skills`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `Yes (safe/unsafe)`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-04-23`
 
 ## Applicability
 

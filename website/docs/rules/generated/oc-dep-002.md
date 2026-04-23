@@ -13,7 +13,7 @@ keywords: ["OC-DEP-002", "deprecated tools field", "opencode", "validation", "ag
 - **Category**: `OpenCode`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `Yes (safe)`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-04-23`
 
 ## Applicability
 

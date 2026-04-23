@@ -13,7 +13,7 @@ keywords: ["OC-AG-003", "temperature out of range", "opencode", "validation", "a
 - **Category**: `OpenCode`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-04-23`
 
 ## Applicability
 

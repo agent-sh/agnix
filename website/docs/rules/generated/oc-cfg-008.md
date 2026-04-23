@@ -13,7 +13,7 @@ keywords: ["OC-CFG-008", "invalid log level", "opencode", "validation", "agnix",
 - **Category**: `OpenCode`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `Yes (unsafe)`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-04-23`
 
 ## Applicability
 

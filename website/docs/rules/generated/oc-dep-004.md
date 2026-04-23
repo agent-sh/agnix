@@ -13,7 +13,7 @@ keywords: ["OC-DEP-004", "deprecated context.md filename", "opencode", "validati
 - **Category**: `OpenCode`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-04-23`
 
 ## Applicability
 
