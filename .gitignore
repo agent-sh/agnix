@@ -33,6 +33,10 @@ dist/
 IMPLEMENTATION-NEXT-STEPS.md
 STATUS.md
 
+# Triage exploration reports (working memory for /next-task triage workflow)
+.triage-report-*.md
+.exploration-report-*.md
+
 .claude/plan.md
 .claude/scheduled_tasks.lock
 .claude/settings.local.json
