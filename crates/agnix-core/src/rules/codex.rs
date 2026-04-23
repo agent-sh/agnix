@@ -2205,6 +2205,15 @@ mod tests {
         )
     }
 
+    fn validate_config_json(content: &str) -> Vec<Diagnostic> {
+        let validator = CodexValidator;
+        validator.validate(
+            Path::new(".codex/config.json"),
+            content,
+            &LintConfig::default(),
+        )
+    }
+
     fn validate_config_with_config(content: &str, config: &LintConfig) -> Vec<Diagnostic> {
         let validator = CodexValidator;
         validator.validate(Path::new(".codex/config.toml"), content, config)
@@ -3156,14 +3165,18 @@ url = "https://example.com/marketplace"
     }
 
     #[test]
-    fn test_codex_v0_123_top_level_keys_accepted() {
+    fn test_codex_v0_123_top_level_keys_accepted_toml() {
         // Codex CLI rust-v0.123.0 added 1 new top-level config key
         // (verified against config-schema.json on 2026-04-23):
         //   - experimental_thread_store_endpoint
         //
+        // TOML path: CDX-004 fires for unknown top-level keys; the same key
+        // is also added to KNOWN_CONFIG_TOP_LEVEL_KEYS (see _json variant
+        // below) so the JSON/YAML path (CDX-CFG-006) is also covered.
+        //
         // (release notes also mentioned `remote_sandbox_config` but it does
         // not appear as a top-level key in the published schema; likely a
-        // sub-key under `sandbox_workspace_write` or experimental).
+        // sub-key under `sandbox_workspace_write` or experimental.)
         let toml = r#"
 experimental_thread_store_endpoint = "https://thread-store.example"
 "#;
@@ -3172,6 +3185,29 @@ experimental_thread_store_endpoint = "https://thread-store.example"
         assert!(
             unknown.is_empty(),
             "experimental_thread_store_endpoint should not trigger CDX-004 (Codex v0.123+), got: {:?}",
+            unknown
+        );
+    }
+
+    #[test]
+    fn test_codex_v0_123_top_level_keys_accepted_json() {
+        // JSON/YAML path: CDX-CFG-006 fires for unknown top-level keys when
+        // the file is JSON/YAML (NOT TOML, where CDX-004 takes over via
+        // skip_top_level). The fix in rules/codex.rs::KNOWN_CONFIG_TOP_LEVEL_KEYS
+        // must include `experimental_thread_store_endpoint` for CDX-CFG-006
+        // to accept it. Without that arm of the fix, this test fails even if
+        // the TOML schema allow-list (schemas/codex.rs) is updated.
+        let json = r#"{
+  "experimental_thread_store_endpoint": "https://thread-store.example"
+}"#;
+        let diagnostics = validate_config_json(json);
+        let unknown: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-006")
+            .collect();
+        assert!(
+            unknown.is_empty(),
+            "experimental_thread_store_endpoint should not trigger CDX-CFG-006 (Codex v0.123+), got: {:?}",
             unknown
         );
     }
