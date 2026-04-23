@@ -13,7 +13,7 @@ keywords: ["CC-HK-017", "prompt/agent hook missing $arguments", "claude hooks", 
 - **Category**: `Claude Hooks`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `Yes (safe)`
-- **Verified On**: `2026-02-07`
+- **Verified On**: `2026-04-23`
 
 ## Applicability
 

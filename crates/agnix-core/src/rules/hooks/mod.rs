@@ -684,6 +684,14 @@ impl Validator for HooksValidator {
                             // CC-HK-020 url validation, CC-HK-024 headers env vars.
                             // No additional typed validation needed here.
                         }
+                        Hook::McpTool { .. } => {
+                            // MCP tool hooks (added Claude Code v2.1.118) are
+                            // validated at the raw JSON level via CC-HK-016
+                            // (string allow-list). Schema details for required
+                            // fields are not yet documented at
+                            // code.claude.com/docs/en/hooks (as of 2026-04-23);
+                            // re-tighten when upstream docs land.
+                        }
                     }
                 }
             }

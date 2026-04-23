@@ -13,7 +13,7 @@ keywords: ["CC-HK-003", "matcher hint for tool events", "claude hooks", "validat
 - **Category**: `Claude Hooks`
 - **Normative Level**: `BEST_PRACTICE`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-02-04`
+- **Verified On**: `2026-04-23`
 
 ## Applicability
 

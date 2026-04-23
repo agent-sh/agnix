@@ -85,6 +85,23 @@ pub enum Hook {
         #[serde(skip_serializing_if = "Option::is_none")]
         timeout: Option<u64>,
     },
+    /// MCP tool hook: invoke an MCP tool directly (Claude Code v2.1.118+).
+    /// Schema details for required/optional fields are not yet documented at
+    /// `code.claude.com/docs/en/hooks` (as of 2026-04-23); the typed schema
+    /// here uses `serde(other)` semantics so unknown future fields are
+    /// tolerated. Re-tighten when upstream docs land.
+    #[serde(rename = "mcp_tool")]
+    McpTool {
+        /// MCP tool reference, e.g. `mcp__<server>__<tool>` (per release notes)
+        #[serde(skip_serializing_if = "Option::is_none")]
+        tool: Option<String>,
+        /// Optional `if` filter (same as other types)
+        #[serde(skip_serializing_if = "Option::is_none")]
+        r#if: Option<String>,
+        /// Request timeout in seconds
+        #[serde(skip_serializing_if = "Option::is_none")]
+        timeout: Option<u64>,
+    },
 }
 
 impl SettingsSchema {
@@ -106,7 +123,9 @@ impl Hook {
     pub fn command(&self) -> Option<&str> {
         match self {
             Hook::Command { command, .. } => command.as_deref(),
-            Hook::Prompt { .. } | Hook::Agent { .. } | Hook::Http { .. } => None,
+            Hook::Prompt { .. } | Hook::Agent { .. } | Hook::Http { .. } | Hook::McpTool { .. } => {
+                None
+            }
         }
     }
 
@@ -114,7 +133,7 @@ impl Hook {
     pub fn prompt(&self) -> Option<&str> {
         match self {
             Hook::Prompt { prompt, .. } | Hook::Agent { prompt, .. } => prompt.as_deref(),
-            Hook::Command { .. } | Hook::Http { .. } => None,
+            Hook::Command { .. } | Hook::Http { .. } | Hook::McpTool { .. } => None,
         }
     }
 
@@ -145,7 +164,13 @@ impl Hook {
             Hook::Prompt { .. } => "prompt",
             Hook::Agent { .. } => "agent",
             Hook::Http { .. } => "http",
+            Hook::McpTool { .. } => "mcp_tool",
         }
+    }
+
+    #[allow(dead_code)] // schema-level API; validation uses Validator trait
+    pub fn is_mcp_tool(&self) -> bool {
+        matches!(self, Hook::McpTool { .. })
     }
 }
 

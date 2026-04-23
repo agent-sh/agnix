@@ -13,7 +13,7 @@ keywords: ["CC-HK-024", "headers missing allowedenvvars", "claude hooks", "valid
 - **Category**: `Claude Hooks`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `Yes (safe)`
-- **Verified On**: `2026-03-28`
+- **Verified On**: `2026-04-23`
 
 ## Applicability
 

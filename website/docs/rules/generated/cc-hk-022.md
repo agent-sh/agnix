@@ -13,7 +13,7 @@ keywords: ["CC-HK-022", "invalid shell value", "claude hooks", "validation", "ag
 - **Category**: `Claude Hooks`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `Yes (unsafe)`
-- **Verified On**: `2026-03-28`
+- **Verified On**: `2026-04-23`
 
 ## Applicability
 
