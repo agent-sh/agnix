@@ -13,7 +13,7 @@ keywords: ["KR-MCP-004", "invalid mcp url", "kiro mcp", "validation", "agnix", "
 - **Category**: `Kiro MCP`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-06`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

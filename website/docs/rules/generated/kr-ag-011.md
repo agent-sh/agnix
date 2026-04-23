@@ -13,7 +13,7 @@ keywords: ["KR-AG-011", "empty tools array", "kiro agents", "validation", "agnix
 - **Category**: `Kiro Agents`
 - **Normative Level**: `BEST_PRACTICE`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-06`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

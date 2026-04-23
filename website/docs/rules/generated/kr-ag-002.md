@@ -13,7 +13,7 @@ keywords: ["KR-AG-002", "invalid kiro agent resource protocol", "kiro agents", "
 - **Category**: `Kiro Agents`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-02`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

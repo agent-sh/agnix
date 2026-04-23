@@ -13,7 +13,7 @@ keywords: ["KR-AG-004", "invalid kiro agent model value", "kiro agents", "valida
 - **Category**: `Kiro Agents`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-02`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

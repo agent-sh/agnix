@@ -13,7 +13,7 @@ keywords: ["KR-PW-004", "invalid adjacent power mcp.json structure", "kiro power
 - **Category**: `Kiro Powers`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-02`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

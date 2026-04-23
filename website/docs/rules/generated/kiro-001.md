@@ -13,7 +13,7 @@ keywords: ["KIRO-001", "invalid steering file inclusion mode", "kiro steering", 
 - **Category**: `Kiro Steering`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `Yes (safe)`
-- **Verified On**: `2026-02-14`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

@@ -13,7 +13,7 @@ keywords: ["KIRO-007", "filematchpattern without filematch inclusion", "kiro ste
 - **Category**: `Kiro Steering`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-02`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

@@ -13,7 +13,7 @@ keywords: ["KR-HK-007", "hook timeout out of range", "kiro hooks", "validation",
 - **Category**: `Kiro Hooks`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-06`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

@@ -13,7 +13,7 @@ keywords: ["KIRO-009", "broken inline file reference in steering", "kiro steerin
 - **Category**: `Kiro Steering`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-02`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

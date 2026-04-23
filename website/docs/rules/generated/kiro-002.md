@@ -13,7 +13,7 @@ keywords: ["KIRO-002", "missing required fields for inclusion mode", "kiro steer
 - **Category**: `Kiro Steering`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-02-14`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

@@ -13,7 +13,7 @@ keywords: ["KR-HK-004", "kiro tool hook missing tooltypes filter", "kiro hooks",
 - **Category**: `Kiro Hooks`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-02`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 
