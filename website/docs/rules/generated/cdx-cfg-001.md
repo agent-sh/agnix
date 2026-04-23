@@ -13,7 +13,7 @@ keywords: ["CDX-CFG-001", "invalid approval_policy value", "codex cli", "validat
 - **Category**: `Codex CLI`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-03`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

@@ -147,9 +147,11 @@ const KNOWN_CONFIG_TOP_LEVEL_KEYS: &[&str] = &[
     "developer_instructions",
     "disable_paste_burst",
     "experimental_compact_prompt_file",
+    "experimental_realtime_start_instructions",
     "experimental_realtime_ws_backend_prompt",
     "experimental_realtime_ws_base_url",
     "experimental_realtime_ws_model",
+    "experimental_realtime_ws_startup_context",
     "experimental_use_freeform_apply_patch",
     "experimental_use_unified_exec_tool",
     "features",
@@ -160,10 +162,14 @@ const KNOWN_CONFIG_TOP_LEVEL_KEYS: &[&str] = &[
     "ghost_snapshot",
     "hide_agent_reasoning",
     "history",
+    "include_apps_instructions",
+    "include_environment_context",
+    "include_permissions_instructions",
     "instructions",
     "js_repl_node_module_dirs",
     "js_repl_node_path",
     "log_dir",
+    "marketplaces",
     "mcp_oauth_callback_port",
     "mcp_oauth_callback_url",
     "mcp_oauth_credentials_store",
@@ -195,6 +201,7 @@ const KNOWN_CONFIG_TOP_LEVEL_KEYS: &[&str] = &[
     "project_doc_max_bytes",
     "project_root_markers",
     "projects",
+    "realtime",
     "review_model",
     "sandbox_mode",
     "sandbox_workspace_write",
@@ -205,6 +212,7 @@ const KNOWN_CONFIG_TOP_LEVEL_KEYS: &[&str] = &[
     "sqlite_home",
     "suppress_unstable_features_warning",
     "tool_output_token_limit",
+    "tool_suggest",
     "tools",
     "tui",
     "web_search",
@@ -3099,6 +3107,51 @@ name = "test"
     fn test_cdx_cfg_006_unknown_nested_key() {
         let diagnostics = validate_config("[features]\nunknown_flag = true");
         assert!(diagnostics.iter().any(|d| d.rule == "CDX-CFG-006"));
+    }
+
+    #[test]
+    fn test_codex_v0_122_top_level_keys_accepted() {
+        // 8 top-level keys present in upstream config-schema.json (verified
+        // 2026-04-22) but missing from agnix's TOML allow-list before this
+        // change. CDX-004 is the rule that fires for unknown TOML top-level
+        // keys (CDX-CFG-006 explicitly skips top-level keys when CDX-004 is
+        // enabled, so asserting against CDX-CFG-006 here would be vacuous).
+        // Two of the keys (marketplaces, realtime) can also appear as TOML
+        // tables; covered by the second config below.
+        let toml_inline = r#"
+experimental_realtime_start_instructions = "hi"
+experimental_realtime_ws_startup_context = "ctx"
+include_apps_instructions = true
+include_environment_context = true
+include_permissions_instructions = false
+marketplaces = []
+realtime = {}
+tool_suggest = "off"
+"#;
+        let diagnostics = validate_config(toml_inline);
+        let unknown: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-004").collect();
+        assert!(
+            unknown.is_empty(),
+            "v0.122 top-level keys should not trigger CDX-004, got: {:?}",
+            unknown
+        );
+
+        // Section variants: [realtime] and [[marketplaces]] tables
+        let toml_tables = r#"
+[realtime]
+ws_url = "wss://example"
+
+[[marketplaces]]
+name = "official"
+url = "https://example.com/marketplace"
+"#;
+        let diagnostics = validate_config(toml_tables);
+        let unknown: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-004").collect();
+        assert!(
+            unknown.is_empty(),
+            "v0.122 [realtime] and [[marketplaces]] tables should not trigger CDX-004, got: {:?}",
+            unknown
+        );
     }
 
     #[test]

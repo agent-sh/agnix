@@ -3497,7 +3497,7 @@
         "source_urls": [
           "https://developers.openai.com/codex/"
         ],
-        "verified_on": "2026-02-09",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },
@@ -3524,7 +3524,7 @@
         "source_urls": [
           "https://developers.openai.com/codex/"
         ],
-        "verified_on": "2026-02-07",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },
@@ -3552,7 +3552,7 @@
         "source_urls": [
           "https://developers.openai.com/codex/"
         ],
-        "verified_on": "2026-02-07",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },
@@ -3580,7 +3580,7 @@
         "source_urls": [
           "https://developers.openai.com/codex/"
         ],
-        "verified_on": "2026-02-07",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },
@@ -3607,7 +3607,7 @@
         "source_urls": [
           "https://developers.openai.com/codex/"
         ],
-        "verified_on": "2026-02-14",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },
@@ -3635,7 +3635,7 @@
         "source_urls": [
           "https://developers.openai.com/codex/"
         ],
-        "verified_on": "2026-02-14",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },
@@ -3662,7 +3662,7 @@
         "source_urls": [
           "https://developers.openai.com/codex/guides/agents-md/"
         ],
-        "verified_on": "2026-02-26",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },
@@ -3691,7 +3691,7 @@
           "https://developers.openai.com/codex/config-schema.json",
           "https://developers.openai.com/codex/enterprise/managed-configuration"
         ],
-        "verified_on": "2026-03-03",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },
@@ -3720,7 +3720,7 @@
           "https://developers.openai.com/codex/config-schema.json",
           "https://developers.openai.com/codex/enterprise/managed-configuration"
         ],
-        "verified_on": "2026-03-03",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },
@@ -3749,7 +3749,7 @@
           "https://developers.openai.com/codex/config-schema.json",
           "https://developers.openai.com/codex/enterprise/managed-configuration"
         ],
-        "verified_on": "2026-03-03",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },
@@ -3778,7 +3778,7 @@
           "https://developers.openai.com/codex/config-schema.json",
           "https://developers.openai.com/codex/enterprise/managed-configuration"
         ],
-        "verified_on": "2026-03-03",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },
@@ -3807,7 +3807,7 @@
           "https://developers.openai.com/codex/config-schema.json",
           "https://developers.openai.com/codex/enterprise/managed-configuration"
         ],
-        "verified_on": "2026-03-03",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },
@@ -3836,7 +3836,7 @@
           "https://developers.openai.com/codex/config-schema.json",
           "https://developers.openai.com/codex/enterprise/managed-configuration"
         ],
-        "verified_on": "2026-03-03",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },
@@ -3865,7 +3865,7 @@
           "https://developers.openai.com/codex/config-schema.json",
           "https://developers.openai.com/codex/enterprise/managed-configuration"
         ],
-        "verified_on": "2026-03-03",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },
@@ -3894,7 +3894,7 @@
           "https://developers.openai.com/codex/config-schema.json",
           "https://developers.openai.com/codex/enterprise/managed-configuration"
         ],
-        "verified_on": "2026-03-03",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },
@@ -3923,7 +3923,7 @@
           "https://developers.openai.com/codex/config-schema.json",
           "https://developers.openai.com/codex/enterprise/managed-configuration"
         ],
-        "verified_on": "2026-03-03",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },
@@ -3952,7 +3952,7 @@
           "https://developers.openai.com/codex/config-schema.json",
           "https://developers.openai.com/codex/enterprise/managed-configuration"
         ],
-        "verified_on": "2026-03-03",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },
@@ -3981,7 +3981,7 @@
           "https://developers.openai.com/codex/config-schema.json",
           "https://developers.openai.com/codex/enterprise/managed-configuration"
         ],
-        "verified_on": "2026-03-03",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },
@@ -4010,7 +4010,7 @@
           "https://developers.openai.com/codex/config-schema.json",
           "https://developers.openai.com/codex/enterprise/managed-configuration"
         ],
-        "verified_on": "2026-03-03",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },
@@ -4038,7 +4038,7 @@
           "https://developers.openai.com/codex/config-reference",
           "https://developers.openai.com/codex/config-schema.json"
         ],
-        "verified_on": "2026-03-06",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },
@@ -4066,7 +4066,7 @@
           "https://developers.openai.com/codex/config-reference",
           "https://developers.openai.com/codex/config-schema.json"
         ],
-        "verified_on": "2026-03-06",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },
@@ -4094,7 +4094,7 @@
           "https://developers.openai.com/codex/config-reference",
           "https://developers.openai.com/codex/config-schema.json"
         ],
-        "verified_on": "2026-03-06",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },
@@ -4122,7 +4122,7 @@
           "https://developers.openai.com/codex/config-reference",
           "https://developers.openai.com/codex/config-schema.json"
         ],
-        "verified_on": "2026-03-06",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },
@@ -4150,7 +4150,7 @@
           "https://developers.openai.com/codex/config-reference",
           "https://developers.openai.com/codex/config-schema.json"
         ],
-        "verified_on": "2026-03-06",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },
@@ -4178,7 +4178,7 @@
           "https://developers.openai.com/codex/config-reference",
           "https://developers.openai.com/codex/config-schema.json"
         ],
-        "verified_on": "2026-03-06",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },
@@ -4206,7 +4206,7 @@
           "https://developers.openai.com/codex/config-reference",
           "https://developers.openai.com/codex/config-schema.json"
         ],
-        "verified_on": "2026-03-06",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },
@@ -4234,7 +4234,7 @@
           "https://developers.openai.com/codex/config-reference",
           "https://developers.openai.com/codex/config-schema.json"
         ],
-        "verified_on": "2026-03-06",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },
@@ -4262,7 +4262,7 @@
           "https://developers.openai.com/codex/config-reference",
           "https://developers.openai.com/codex/config-schema.json"
         ],
-        "verified_on": "2026-03-06",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },
@@ -4290,7 +4290,7 @@
           "https://developers.openai.com/codex/config-reference",
           "https://developers.openai.com/codex/config-schema.json"
         ],
-        "verified_on": "2026-03-06",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },
@@ -4317,7 +4317,7 @@
         "source_urls": [
           "https://developers.openai.com/codex/guides/agents-md"
         ],
-        "verified_on": "2026-03-03",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },
@@ -4344,7 +4344,7 @@
         "source_urls": [
           "https://developers.openai.com/codex/guides/agents-md"
         ],
-        "verified_on": "2026-03-03",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },
@@ -4371,7 +4371,7 @@
         "source_urls": [
           "https://developers.openai.com/codex/guides/agents-md"
         ],
-        "verified_on": "2026-03-03",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },
@@ -4398,7 +4398,7 @@
         "source_urls": [
           "https://developers.openai.com/codex/guides/agents-md"
         ],
-        "verified_on": "2026-03-06",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },
@@ -4425,7 +4425,7 @@
         "source_urls": [
           "https://developers.openai.com/codex/guides/agents-md"
         ],
-        "verified_on": "2026-03-06",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },
@@ -4452,7 +4452,7 @@
         "source_urls": [
           "https://developers.openai.com/codex/guides/agents-md"
         ],
-        "verified_on": "2026-03-06",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },
@@ -4479,7 +4479,7 @@
         "source_urls": [
           "https://developers.openai.com/codex/guides/agents-md"
         ],
-        "verified_on": "2026-03-06",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },
@@ -4508,7 +4508,7 @@
           "https://developers.openai.com/codex/config-schema.json",
           "https://developers.openai.com/codex/enterprise/managed-configuration"
         ],
-        "verified_on": "2026-03-03",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },
@@ -4536,7 +4536,7 @@
           "https://developers.openai.com/codex/config-reference",
           "https://developers.openai.com/codex/config-schema.json"
         ],
-        "verified_on": "2026-03-06",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },
@@ -4564,7 +4564,7 @@
           "https://developers.openai.com/codex/config-reference",
           "https://developers.openai.com/codex/config-schema.json"
         ],
-        "verified_on": "2026-03-06",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },
@@ -4591,7 +4591,7 @@
         "source_urls": [
           "https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs"
         ],
-        "verified_on": "2026-04-01",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex",
           "version_range": ">=0.117.0"
@@ -4619,7 +4619,7 @@
         "source_urls": [
           "https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs"
         ],
-        "verified_on": "2026-04-01",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex",
           "version_range": ">=0.117.0"
@@ -4647,7 +4647,7 @@
         "source_urls": [
           "https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs"
         ],
-        "verified_on": "2026-04-01",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex",
           "version_range": ">=0.117.0"
@@ -4676,7 +4676,7 @@
         "source_urls": [
           "https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs"
         ],
-        "verified_on": "2026-04-01",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex",
           "version_range": ">=0.117.0"
@@ -4704,7 +4704,7 @@
         "source_urls": [
           "https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs"
         ],
-        "verified_on": "2026-04-01",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex",
           "version_range": ">=0.117.0"
@@ -4733,7 +4733,7 @@
         "source_urls": [
           "https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs"
         ],
-        "verified_on": "2026-04-01",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex",
           "version_range": ">=0.117.0"
@@ -4761,7 +4761,7 @@
         "source_urls": [
           "https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs"
         ],
-        "verified_on": "2026-04-01",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex",
           "version_range": ">=0.117.0"
@@ -4789,7 +4789,7 @@
         "source_urls": [
           "https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs"
         ],
-        "verified_on": "2026-04-01",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex",
           "version_range": ">=0.117.0"
@@ -4817,7 +4817,7 @@
         "source_urls": [
           "https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs"
         ],
-        "verified_on": "2026-04-01",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex",
           "version_range": ">=0.117.0"
@@ -4845,7 +4845,7 @@
         "source_urls": [
           "https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs"
         ],
-        "verified_on": "2026-04-01",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex",
           "version_range": ">=0.117.0"
@@ -4873,7 +4873,7 @@
         "source_urls": [
           "https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs"
         ],
-        "verified_on": "2026-04-01",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex",
           "version_range": ">=0.117.0"
@@ -4901,7 +4901,7 @@
         "source_urls": [
           "https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs"
         ],
-        "verified_on": "2026-04-01",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex",
           "version_range": ">=0.117.0"
@@ -4929,7 +4929,7 @@
         "source_urls": [
           "https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs"
         ],
-        "verified_on": "2026-04-01",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex",
           "version_range": ">=0.117.0"
@@ -4957,7 +4957,7 @@
         "source_urls": [
           "https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs"
         ],
-        "verified_on": "2026-04-01",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex",
           "version_range": ">=0.117.0"
@@ -4985,7 +4985,7 @@
         "source_urls": [
           "https://developers.openai.com/codex/"
         ],
-        "verified_on": "2026-03-28",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },
@@ -5013,7 +5013,7 @@
         "source_urls": [
           "https://developers.openai.com/codex/"
         ],
-        "verified_on": "2026-03-28",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },
@@ -5041,7 +5041,7 @@
         "source_urls": [
           "https://developers.openai.com/codex/"
         ],
-        "verified_on": "2026-03-28",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },
@@ -5069,7 +5069,7 @@
         "source_urls": [
           "https://developers.openai.com/codex/"
         ],
-        "verified_on": "2026-03-28",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },
@@ -5097,7 +5097,7 @@
         "source_urls": [
           "https://developers.openai.com/codex/"
         ],
-        "verified_on": "2026-03-28",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "codex"
         },

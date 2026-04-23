@@ -13,7 +13,7 @@ keywords: ["CDX-AG-002", "secrets in agents.md for codex", "codex cli", "validat
 - **Category**: `Codex CLI`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-03`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

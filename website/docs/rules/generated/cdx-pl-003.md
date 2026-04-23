@@ -13,7 +13,7 @@ keywords: ["CDX-PL-003", "missing or empty plugin name", "codex cli", "validatio
 - **Category**: `Codex CLI`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `Yes (unsafe)`
-- **Verified On**: `2026-04-01`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

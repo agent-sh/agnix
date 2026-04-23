@@ -13,7 +13,7 @@ keywords: ["CDX-CFG-014", "invalid model value", "codex cli", "validation", "agn
 - **Category**: `Codex CLI`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-06`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

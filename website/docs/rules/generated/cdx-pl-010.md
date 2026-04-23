@@ -13,7 +13,7 @@ keywords: ["CDX-PL-010", "empty default prompt entry", "codex cli", "validation"
 - **Category**: `Codex CLI`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-01`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

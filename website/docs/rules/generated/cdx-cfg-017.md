@@ -13,7 +13,7 @@ keywords: ["CDX-CFG-017", "invalid history configuration", "codex cli", "validat
 - **Category**: `Codex CLI`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-06`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 
