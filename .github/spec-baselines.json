@@ -7,80 +7,188 @@
       "agent-skills-spec": {
         "url": "https://agentskills.io/specification",
         "hash": "07eb3bfba81db490030345a8c7bfed3683207205dae290300318279c30106de2",
-        "rules": ["AS-001", "AS-002", "AS-003", "AS-004", "AS-005", "AS-006", "AS-008", "AS-011", "AS-013", "AS-014", "AS-015", "AS-016"]
+        "rules": [
+          "AS-001",
+          "AS-002",
+          "AS-003",
+          "AS-004",
+          "AS-005",
+          "AS-006",
+          "AS-008",
+          "AS-011",
+          "AS-013",
+          "AS-014",
+          "AS-015",
+          "AS-016"
+        ]
       },
       "mcp-spec": {
         "url": "https://modelcontextprotocol.io/specification/2025-11-25",
         "hash": "45eed48714317ebca887c021e5a2a46f56b0dabbae14c399dcccd73100358934",
         "github_repo": "modelcontextprotocol/specification",
-        "rules": ["MCP-001", "MCP-002", "MCP-003", "MCP-004", "MCP-005", "MCP-006", "MCP-007", "MCP-008"]
+        "rules": [
+          "MCP-001",
+          "MCP-002",
+          "MCP-003",
+          "MCP-004",
+          "MCP-005",
+          "MCP-006",
+          "MCP-007",
+          "MCP-008"
+        ]
       },
       "claude-code-memory": {
         "url": "https://code.claude.com/docs/en/memory",
         "hash": "afcbf2219b2f9f72f3d8932ef5049278833627a09b2fd2955406e82b9ae312e2",
-        "rules": ["CC-MEM-001", "CC-MEM-002", "CC-MEM-003", "CC-MEM-004"]
+        "rules": [
+          "CC-MEM-001",
+          "CC-MEM-002",
+          "CC-MEM-003",
+          "CC-MEM-004"
+        ]
       },
       "claude-code-hooks": {
         "url": "https://code.claude.com/docs/en/hooks",
         "hash": "404c38e161c8b9cf8daabd455776ae078a0dc29314cbaa682e0a17c2ce24ac1a",
-        "rules": ["CC-HK-001", "CC-HK-002", "CC-HK-003", "CC-HK-004", "CC-HK-005", "CC-HK-006", "CC-HK-007", "CC-HK-008", "CC-HK-010", "CC-HK-011", "CC-HK-012"]
+        "rules": [
+          "CC-HK-001",
+          "CC-HK-002",
+          "CC-HK-003",
+          "CC-HK-004",
+          "CC-HK-005",
+          "CC-HK-006",
+          "CC-HK-007",
+          "CC-HK-008",
+          "CC-HK-010",
+          "CC-HK-011",
+          "CC-HK-012"
+        ]
       },
       "claude-code-skills": {
         "url": "https://code.claude.com/docs/en/skills",
         "hash": "aa304d51b31be37a59f35e81c315e9b298894508857295c71a6b56e7a25c8cd9",
-        "rules": ["CC-SK-001", "CC-SK-002", "CC-SK-003", "CC-SK-004", "CC-SK-006"]
+        "rules": [
+          "CC-SK-001",
+          "CC-SK-002",
+          "CC-SK-003",
+          "CC-SK-004",
+          "CC-SK-006"
+        ]
       },
       "claude-code-plugins": {
         "url": "https://code.claude.com/docs/en/plugins-reference",
         "hash": "af4d216303304bf0ffd1de74a9a1f71ffb0e44d5323306a80a30cf89bbbcb769",
-        "rules": ["CC-PL-002", "CC-PL-003", "CC-PL-004", "CC-PL-005", "CC-PL-006"]
+        "rules": [
+          "CC-PL-002",
+          "CC-PL-003",
+          "CC-PL-004",
+          "CC-PL-005",
+          "CC-PL-006"
+        ]
       },
       "claude-code-subagents": {
         "url": "https://code.claude.com/docs/en/sub-agents",
         "hash": "b17ed99452ce65f18804fff1ed945414d9e42ae862d295ad49be6b13dd93210c",
-        "rules": ["CC-SA-001", "CC-SA-002", "CC-SA-003", "CC-SA-004", "CC-SA-005", "CC-SA-006", "CC-SA-007"]
+        "rules": [
+          "CC-SA-001",
+          "CC-SA-002",
+          "CC-SA-003",
+          "CC-SA-004",
+          "CC-SA-005",
+          "CC-SA-006",
+          "CC-SA-007"
+        ]
       },
       "codex-cli-agents-md": {
         "url": "https://developers.openai.com/codex/guides/agents-md/",
         "hash": "7ff43344ded3bb80b7c8f3dc37f40dec948a331719c1c7a0125384338f87c15c",
-        "rules": ["AGM-001", "AGM-002", "AGM-003", "AGM-004", "AGM-005", "AGM-006", "XP-001", "XP-002", "XP-003", "XP-004", "XP-005", "XP-006"]
+        "rules": [
+          "AGM-001",
+          "AGM-002",
+          "AGM-003",
+          "AGM-004",
+          "AGM-005",
+          "AGM-006",
+          "XP-001",
+          "XP-002",
+          "XP-003",
+          "XP-004",
+          "XP-005",
+          "XP-006"
+        ]
       },
       "opencode-rules": {
         "url": "https://opencode.ai/docs/rules/",
         "hash": "622315eb04b6dacc551537a4298b02cef15078e2b041cc79945cefce7e607c4a",
-        "rules": ["XP-001", "XP-002", "XP-003", "XP-004", "XP-005", "XP-006"]
+        "rules": [
+          "XP-001",
+          "XP-002",
+          "XP-003",
+          "XP-004",
+          "XP-005",
+          "XP-006"
+        ]
       }
     },
     "a-tier": {
       "cursor-rules": {
-        "url": "https://cursor.com/docs/context/rules",
+        "url": "https://cursor.com/docs/rules",
         "hash": "24529507938b37d3e3815e86b8c1c87cbaf78230c899854f0d74b2d5356c676a",
-        "rules": ["CUR-001", "CUR-002", "CUR-003", "CUR-004", "CUR-005", "CUR-006", "CUR-007", "CUR-008", "CUR-009"]
+        "rules": [
+          "CUR-001",
+          "CUR-002",
+          "CUR-003",
+          "CUR-004",
+          "CUR-005",
+          "CUR-006",
+          "CUR-007",
+          "CUR-008",
+          "CUR-009"
+        ]
       },
       "cursor-hooks": {
-        "url": "https://cursor.com/docs/agent/hooks",
+        "url": "https://cursor.com/docs/hooks",
         "hash": "4f55df64b01fe7d2c55a9d544eafdda070e35d7f84045c021f4a5ea9fcdd05d8",
-        "rules": ["CUR-010", "CUR-011", "CUR-012", "CUR-013"]
+        "rules": [
+          "CUR-010",
+          "CUR-011",
+          "CUR-012",
+          "CUR-013"
+        ]
       },
       "cursor-subagents": {
-        "url": "https://cursor.com/docs/context/subagents",
+        "url": "https://cursor.com/docs/subagents",
         "hash": "f849221f0342190122e8411587e47f129c915902077da6995753f26c8a03cc9a",
-        "rules": ["CUR-014", "CUR-015"]
+        "rules": [
+          "CUR-014",
+          "CUR-015"
+        ]
       },
       "cursor-environment": {
         "url": "https://cursor.com/docs/cloud-agent/setup",
         "hash": "326a48176a4541dc5e1d94d7f1ef94c50a007dc4798b85e97e8ada5ec75e8a9e",
-        "rules": ["CUR-016"]
+        "rules": [
+          "CUR-016"
+        ]
       },
       "github-copilot": {
         "url": "https://docs.github.com/en/copilot/customizing-copilot",
         "hash": "668c75acb7948484e1334aeb040332961836fbe187561fa830219afcde8ae289",
-        "rules": ["GH-001", "GH-002", "GH-003", "GH-004"]
+        "rules": [
+          "GH-001",
+          "GH-002",
+          "GH-003",
+          "GH-004"
+        ]
       },
       "cline-rules": {
         "url": "https://docs.cline.bot/features/cline-rules/overview",
         "hash": "3a42acacd88e62655c440c04214bed9e622793007489f1d9ef68a2ea85360063",
-        "rules": ["CLINE-001", "CLINE-002", "CLINE-003"]
+        "rules": [
+          "CLINE-001",
+          "CLINE-002",
+          "CLINE-003"
+        ]
       }
     }
   }

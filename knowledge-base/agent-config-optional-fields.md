@@ -544,7 +544,7 @@ Supported syntax in `.mcp.json`:
 | [Claude Code Memory](https://code.claude.com/docs/en/memory) | Official Docs | CLAUDE.md and .claude/rules/ reference |
 | [Agent Skills Specification](https://agentskills.io/specification) | Spec | Cross-tool skill standard |
 | [GitHub Copilot Custom Instructions](https://docs.github.com/en/copilot/customizing-copilot/adding-repository-custom-instructions-for-github-copilot) | Vendor Docs | Copilot instruction file schema |
-| [Cursor Rules](https://cursor.com/docs/context/rules) | Vendor Docs | .mdc file format reference |
+| [Cursor Rules](https://cursor.com/docs/rules) | Vendor Docs | .mdc file format reference |
 | [Cline Rules](https://docs.cline.bot/features/cline-rules) | Vendor Docs | .clinerules format reference |
 | [OpenCode Configuration](https://opencode.ai/docs/config) | Vendor Docs | opencode.json schema reference |
 | [Codex CLI Documentation](https://developers.openai.com/codex/guides/agents-md) | Vendor Docs | AGENTS.md discovery and config.yaml |
