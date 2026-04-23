@@ -13,7 +13,7 @@ keywords: ["OC-CFG-013", "invalid server config", "opencode", "validation", "agn
 - **Category**: `OpenCode`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-28`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

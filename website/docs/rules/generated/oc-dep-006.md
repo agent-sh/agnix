@@ -13,7 +13,7 @@ keywords: ["OC-DEP-006", "deprecated maxsteps field", "opencode", "validation", 
 - **Category**: `OpenCode`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `Yes (safe)`
-- **Verified On**: `2026-03-28`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

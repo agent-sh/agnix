@@ -3420,6 +3420,24 @@ mod tests {
         assert!(!diagnostics.iter().any(|d| d.rule == "OC-TUI-001"));
     }
 
+    // OpenCode v1.3.16 added `mouse: bool` to disable mouse capture.
+    // Without this entry in KNOWN_TUI_KEYS, OC-TUI-001 false-positives on
+    // valid v1.3.16+ configs.
+    #[test]
+    fn test_oc_tui_001_mouse_false_not_flagged() {
+        let diagnostics = validate(r#"{"tui": {"mouse": false}}"#);
+        assert!(
+            !diagnostics.iter().any(|d| d.rule == "OC-TUI-001"),
+            "tui.mouse is a valid key since OpenCode v1.3.16"
+        );
+    }
+
+    #[test]
+    fn test_oc_tui_001_mouse_true_not_flagged() {
+        let diagnostics = validate(r#"{"tui": {"mouse": true}}"#);
+        assert!(!diagnostics.iter().any(|d| d.rule == "OC-TUI-001"));
+    }
+
     // ===== OC-TUI-002: Invalid scroll_speed =====
 
     #[test]

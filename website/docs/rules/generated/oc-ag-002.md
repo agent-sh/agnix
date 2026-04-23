@@ -13,7 +13,7 @@ keywords: ["OC-AG-002", "invalid color format", "opencode", "validation", "agnix
 - **Category**: `OpenCode`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-02`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

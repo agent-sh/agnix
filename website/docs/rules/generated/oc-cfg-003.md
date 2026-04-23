@@ -13,7 +13,7 @@ keywords: ["OC-CFG-003", "unknown top-level config field", "opencode", "validati
 - **Category**: `OpenCode`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-03`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

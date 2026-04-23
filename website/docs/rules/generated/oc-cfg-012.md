@@ -13,7 +13,7 @@ keywords: ["OC-CFG-012", "invalid mcp oauth config", "opencode", "validation", "
 - **Category**: `OpenCode`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-06`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

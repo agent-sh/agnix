@@ -13,7 +13,7 @@ keywords: ["OC-PM-002", "unknown permission key", "opencode", "validation", "agn
 - **Category**: `OpenCode`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-02`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

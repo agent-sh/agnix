@@ -13,7 +13,7 @@ keywords: ["OC-TUI-003", "invalid diff_style", "opencode", "validation", "agnix"
 - **Category**: `OpenCode`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `Yes (unsafe)`
-- **Verified On**: `2026-03-06`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

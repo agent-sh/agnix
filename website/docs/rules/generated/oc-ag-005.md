@@ -13,7 +13,7 @@ keywords: ["OC-AG-005", "top_p out of range", "opencode", "validation", "agnix",
 - **Category**: `OpenCode`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-06`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

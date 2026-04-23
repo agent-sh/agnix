@@ -13,7 +13,7 @@ keywords: ["OC-DEP-005", "deprecated tui keys", "opencode", "validation", "agnix
 - **Category**: `OpenCode`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-28`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 
