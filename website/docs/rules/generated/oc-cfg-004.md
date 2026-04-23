@@ -13,7 +13,7 @@ keywords: ["OC-CFG-004", "invalid default agent", "opencode", "validation", "agn
 - **Category**: `OpenCode`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-04-23`
 
 ## Applicability
 
