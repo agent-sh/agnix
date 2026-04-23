@@ -13,7 +13,7 @@ keywords: ["CDX-PL-007", "component path empty relative", "codex cli", "validati
 - **Category**: `Codex CLI`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-01`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

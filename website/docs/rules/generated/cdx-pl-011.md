@@ -13,7 +13,7 @@ keywords: ["CDX-PL-011", "invalid interface url", "codex cli", "validation", "ag
 - **Category**: `Codex CLI`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-01`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

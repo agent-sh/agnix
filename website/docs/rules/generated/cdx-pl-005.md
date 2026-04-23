@@ -13,7 +13,7 @@ keywords: ["CDX-PL-005", "component path missing ./ prefix", "codex cli", "valid
 - **Category**: `Codex CLI`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `Yes (safe)`
-- **Verified On**: `2026-04-01`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

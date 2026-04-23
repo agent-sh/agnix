@@ -13,7 +13,7 @@ keywords: ["CDX-CFG-012", "invalid cli_auth_credentials_store value", "codex cli
 - **Category**: `Codex CLI`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-03`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

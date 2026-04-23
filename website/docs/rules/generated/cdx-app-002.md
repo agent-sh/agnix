@@ -13,7 +13,7 @@ keywords: ["CDX-APP-002", "invalid skills configuration", "codex cli", "validati
 - **Category**: `Codex CLI`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-06`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

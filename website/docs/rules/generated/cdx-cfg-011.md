@@ -13,7 +13,7 @@ keywords: ["CDX-CFG-011", "invalid feature flag name", "codex cli", "validation"
 - **Category**: `Codex CLI`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-03`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

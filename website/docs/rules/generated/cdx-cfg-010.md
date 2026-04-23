@@ -13,7 +13,7 @@ keywords: ["CDX-CFG-010", "hardcoded secret in codex config", "codex cli", "vali
 - **Category**: `Codex CLI`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-03`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

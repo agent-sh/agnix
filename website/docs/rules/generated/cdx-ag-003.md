@@ -13,7 +13,7 @@ keywords: ["CDX-AG-003", "generic agents.md guidance for codex", "codex cli", "v
 - **Category**: `Codex CLI`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-03`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

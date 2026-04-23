@@ -13,7 +13,7 @@ keywords: ["CDX-CFG-008", "invalid shell_environment_policy.inherit value", "cod
 - **Category**: `Codex CLI`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-03`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

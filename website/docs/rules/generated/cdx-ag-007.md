@@ -13,7 +13,7 @@ keywords: ["CDX-AG-007", "agents.md contradicts config.toml", "codex cli", "vali
 - **Category**: `Codex CLI`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-06`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

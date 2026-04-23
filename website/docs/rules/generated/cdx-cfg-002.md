@@ -13,7 +13,7 @@ keywords: ["CDX-CFG-002", "invalid sandbox_mode value", "codex cli", "validation
 - **Category**: `Codex CLI`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-03`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

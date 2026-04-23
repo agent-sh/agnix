@@ -13,7 +13,7 @@ keywords: ["CDX-CFG-020", "invalid mcp oauth config", "codex cli", "validation",
 - **Category**: `Codex CLI`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-06`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

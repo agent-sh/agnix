@@ -13,7 +13,7 @@ keywords: ["CDX-PL-012", "invalid asset path", "codex cli", "validation", "agnix
 - **Category**: `Codex CLI`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-01`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 
