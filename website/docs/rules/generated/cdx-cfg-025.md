@@ -13,7 +13,7 @@ keywords: ["CDX-CFG-025", "invalid service tier value", "codex cli", "validation
 - **Category**: `Codex CLI`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `Yes (unsafe)`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-04-23`
 
 ## Applicability
 

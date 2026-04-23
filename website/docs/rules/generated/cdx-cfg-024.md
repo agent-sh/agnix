@@ -13,7 +13,7 @@ keywords: ["CDX-CFG-024", "invalid approvals reviewer value", "codex cli", "vali
 - **Category**: `Codex CLI`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `Yes (unsafe)`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-04-23`
 
 ## Applicability
 

@@ -13,7 +13,7 @@ keywords: ["CDX-APP-001", "invalid default_tools_approval_mode value", "codex cl
 - **Category**: `Codex CLI`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-04-23`
 
 ## Applicability
 

@@ -13,7 +13,7 @@ keywords: ["CDX-CFG-018", "invalid tui configuration", "codex cli", "validation"
 - **Category**: `Codex CLI`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-04-23`
 
 ## Applicability
 
