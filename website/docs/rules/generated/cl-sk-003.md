@@ -13,7 +13,7 @@ keywords: ["CL-SK-003", "missing skill description", "cline skills", "validation
 - **Category**: `Cline Skills`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-28`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 
