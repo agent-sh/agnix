@@ -3110,12 +3110,15 @@ name = "test"
     }
 
     #[test]
-    fn test_cdx_cfg_006_codex_v0_122_keys_accepted() {
+    fn test_codex_v0_122_top_level_keys_accepted() {
         // 8 top-level keys present in upstream config-schema.json (verified
-        // 2026-04-22) but missing from KNOWN_CONFIG_TOP_LEVEL_KEYS before this
-        // change. Ensure agnix doesn't false-positive on a config that uses
-        // every one of them.
-        let toml = r#"
+        // 2026-04-22) but missing from agnix's TOML allow-list before this
+        // change. CDX-004 is the rule that fires for unknown TOML top-level
+        // keys (CDX-CFG-006 explicitly skips top-level keys when CDX-004 is
+        // enabled, so asserting against CDX-CFG-006 here would be vacuous).
+        // Two of the keys (marketplaces, realtime) can also appear as TOML
+        // tables; covered by the second config below.
+        let toml_inline = r#"
 experimental_realtime_start_instructions = "hi"
 experimental_realtime_ws_startup_context = "ctx"
 include_apps_instructions = true
@@ -3125,14 +3128,34 @@ marketplaces = []
 realtime = {}
 tool_suggest = "off"
 "#;
-        let diagnostics = validate_config(toml);
+        let diagnostics = validate_config(toml_inline);
         let unknown: Vec<_> = diagnostics
             .iter()
-            .filter(|d| d.rule == "CDX-CFG-006")
+            .filter(|d| d.rule == "CDX-004")
             .collect();
         assert!(
             unknown.is_empty(),
-            "v0.122 top-level keys should not trigger CDX-CFG-006, got: {:?}",
+            "v0.122 top-level keys should not trigger CDX-004, got: {:?}",
+            unknown
+        );
+
+        // Section variants: [realtime] and [[marketplaces]] tables
+        let toml_tables = r#"
+[realtime]
+ws_url = "wss://example"
+
+[[marketplaces]]
+name = "official"
+url = "https://example.com/marketplace"
+"#;
+        let diagnostics = validate_config(toml_tables);
+        let unknown: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-004")
+            .collect();
+        assert!(
+            unknown.is_empty(),
+            "v0.122 [realtime] and [[marketplaces]] tables should not trigger CDX-004, got: {:?}",
             unknown
         );
     }

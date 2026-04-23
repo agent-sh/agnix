@@ -84,6 +84,20 @@ pub const KNOWN_TOP_LEVEL_KEYS: &[&str] = &[
     // Experimental
     "experimental_use_unified_exec_tool",
     "experimental_use_freeform_apply_patch",
+    "experimental_realtime_start_instructions",
+    "experimental_realtime_ws_startup_context",
+    // Instruction-section toggles (added in Codex rust-v0.122.0 catch-up)
+    "include_apps_instructions",
+    "include_environment_context",
+    "include_permissions_instructions",
+    // Plugin marketplaces (added in Codex rust-v0.122.0 catch-up; can also be
+    // present as a TOML table)
+    "marketplaces",
+    // Realtime config (added in Codex rust-v0.122.0 catch-up; can also be
+    // present as a TOML table)
+    "realtime",
+    // Tool suggestions toggle (added in Codex rust-v0.122.0 catch-up)
+    "tool_suggest",
     // Legacy camelCase keys (backwards compat)
     "approvalMode",
     "fullAutoErrorMode",
@@ -104,6 +118,10 @@ pub const KNOWN_TABLE_KEYS: &[&str] = &[
     "skills",
     "feedback",
     "notice",
+    // Added in Codex rust-v0.122.0 catch-up - both can appear as TOML tables
+    // ([realtime] / [[marketplaces]]) in addition to inline values.
+    "realtime",
+    "marketplaces",
 ];
 
 /// An unknown key found in config
