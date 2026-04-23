@@ -13,7 +13,7 @@ keywords: ["KR-AG-001", "unknown field in kiro agent json", "kiro agents", "vali
 - **Category**: `Kiro Agents`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-02`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

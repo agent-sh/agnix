@@ -13,7 +13,7 @@ keywords: ["KR-HK-006", "kiro cli hook missing command", "kiro hooks", "validati
 - **Category**: `Kiro Hooks`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-02`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

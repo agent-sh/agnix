@@ -13,7 +13,7 @@ keywords: ["KR-AG-010", "duplicate tool entries", "kiro agents", "validation", "
 - **Category**: `Kiro Agents`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-06`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

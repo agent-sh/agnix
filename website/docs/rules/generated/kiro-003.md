@@ -13,7 +13,7 @@ keywords: ["KIRO-003", "invalid filematchpattern glob", "kiro steering", "valida
 - **Category**: `Kiro Steering`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-02-14`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

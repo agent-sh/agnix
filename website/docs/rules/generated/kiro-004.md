@@ -13,7 +13,7 @@ keywords: ["KIRO-004", "empty kiro steering file", "kiro steering", "validation"
 - **Category**: `Kiro Steering`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-02-14`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

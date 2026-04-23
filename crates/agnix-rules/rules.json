@@ -6954,7 +6954,7 @@
         "source_urls": [
           "https://kiro.dev/docs/steering/"
         ],
-        "verified_on": "2026-02-14",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -6982,7 +6982,7 @@
         "source_urls": [
           "https://kiro.dev/docs/steering/"
         ],
-        "verified_on": "2026-02-14",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -7009,7 +7009,7 @@
         "source_urls": [
           "https://kiro.dev/docs/steering/"
         ],
-        "verified_on": "2026-02-14",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -7036,7 +7036,7 @@
         "source_urls": [
           "https://kiro.dev/docs/steering/"
         ],
-        "verified_on": "2026-02-14",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -7063,7 +7063,7 @@
         "source_urls": [
           "https://kiro.dev/docs/steering/"
         ],
-        "verified_on": "2026-03-02",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -7090,7 +7090,7 @@
         "source_urls": [
           "https://kiro.dev/docs/steering/"
         ],
-        "verified_on": "2026-03-02",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -7117,7 +7117,7 @@
         "source_urls": [
           "https://kiro.dev/docs/steering/"
         ],
-        "verified_on": "2026-03-02",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -7144,7 +7144,7 @@
         "source_urls": [
           "https://kiro.dev/docs/steering/"
         ],
-        "verified_on": "2026-03-02",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -7171,7 +7171,7 @@
         "source_urls": [
           "https://kiro.dev/docs/steering/"
         ],
-        "verified_on": "2026-03-02",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -7198,7 +7198,7 @@
         "source_urls": [
           "https://kiro.dev/docs/steering"
         ],
-        "verified_on": "2026-03-06",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -7225,7 +7225,7 @@
         "source_urls": [
           "https://kiro.dev/docs/steering"
         ],
-        "verified_on": "2026-03-06",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -7252,7 +7252,7 @@
         "source_urls": [
           "https://kiro.dev/docs/steering"
         ],
-        "verified_on": "2026-03-06",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -7279,7 +7279,7 @@
         "source_urls": [
           "https://kiro.dev/docs/steering"
         ],
-        "verified_on": "2026-03-06",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -7306,7 +7306,7 @@
         "source_urls": [
           "https://kiro.dev/docs/steering"
         ],
-        "verified_on": "2026-03-06",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -7333,7 +7333,7 @@
         "source_urls": [
           "https://kiro.dev/docs/steering/"
         ],
-        "verified_on": "2026-02-09",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -7361,7 +7361,7 @@
         "source_urls": [
           "https://kiro.dev/docs/cli/custom-agents/configuration-reference"
         ],
-        "verified_on": "2026-03-02",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -7388,7 +7388,7 @@
         "source_urls": [
           "https://kiro.dev/docs/cli/custom-agents/creating"
         ],
-        "verified_on": "2026-03-02",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -7415,7 +7415,7 @@
         "source_urls": [
           "https://kiro.dev/docs/cli/custom-agents/configuration-reference"
         ],
-        "verified_on": "2026-03-02",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -7442,7 +7442,7 @@
         "source_urls": [
           "https://kiro.dev/docs/cli/custom-agents/configuration-reference"
         ],
-        "verified_on": "2026-03-02",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -7469,7 +7469,7 @@
         "source_urls": [
           "https://kiro.dev/docs/cli/custom-agents/configuration-reference"
         ],
-        "verified_on": "2026-03-02",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -7497,7 +7497,7 @@
           "https://github.com/kirodotdev/kiro/issues/5743",
           "https://github.com/kirodotdev/kiro/issues/4262"
         ],
-        "verified_on": "2026-03-02",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -7525,7 +7525,7 @@
           "https://github.com/kirodotdev/kiro/issues/5071",
           "https://github.com/kirodotdev/kiro/issues/5449"
         ],
-        "verified_on": "2026-03-02",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -7553,7 +7553,7 @@
           "https://kiro.dev/docs/agents",
           "https://kiro.dev/docs/configuration"
         ],
-        "verified_on": "2026-03-06",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -7581,7 +7581,7 @@
           "https://kiro.dev/docs/agents",
           "https://kiro.dev/docs/configuration"
         ],
-        "verified_on": "2026-03-06",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -7609,7 +7609,7 @@
           "https://kiro.dev/docs/agents",
           "https://kiro.dev/docs/configuration"
         ],
-        "verified_on": "2026-03-06",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -7637,7 +7637,7 @@
           "https://kiro.dev/docs/agents",
           "https://kiro.dev/docs/configuration"
         ],
-        "verified_on": "2026-03-06",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -7665,7 +7665,7 @@
           "https://kiro.dev/docs/agents",
           "https://kiro.dev/docs/configuration"
         ],
-        "verified_on": "2026-03-06",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -7693,7 +7693,7 @@
           "https://kiro.dev/docs/agents",
           "https://kiro.dev/docs/configuration"
         ],
-        "verified_on": "2026-03-06",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -7720,7 +7720,7 @@
         "source_urls": [
           "https://kiro.dev/docs/hooks/types"
         ],
-        "verified_on": "2026-03-02",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -7747,7 +7747,7 @@
         "source_urls": [
           "https://kiro.dev/docs/hooks/types"
         ],
-        "verified_on": "2026-03-02",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -7774,7 +7774,7 @@
         "source_urls": [
           "https://kiro.dev/docs/hooks/actions"
         ],
-        "verified_on": "2026-03-02",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -7801,7 +7801,7 @@
         "source_urls": [
           "https://kiro.dev/docs/hooks/types"
         ],
-        "verified_on": "2026-03-02",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -7828,7 +7828,7 @@
         "source_urls": [
           "https://kiro.dev/docs/cli/hooks"
         ],
-        "verified_on": "2026-03-02",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -7855,7 +7855,7 @@
         "source_urls": [
           "https://kiro.dev/docs/cli/hooks"
         ],
-        "verified_on": "2026-03-02",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -7882,7 +7882,7 @@
         "source_urls": [
           "https://kiro.dev/docs/hooks"
         ],
-        "verified_on": "2026-03-06",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -7909,7 +7909,7 @@
         "source_urls": [
           "https://kiro.dev/docs/hooks"
         ],
-        "verified_on": "2026-03-06",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -7936,7 +7936,7 @@
         "source_urls": [
           "https://kiro.dev/docs/hooks"
         ],
-        "verified_on": "2026-03-06",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -7963,7 +7963,7 @@
         "source_urls": [
           "https://kiro.dev/docs/hooks"
         ],
-        "verified_on": "2026-03-06",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -7990,7 +7990,7 @@
         "source_urls": [
           "https://kiro.dev/docs/mcp/configuration"
         ],
-        "verified_on": "2026-03-02",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -8017,7 +8017,7 @@
         "source_urls": [
           "https://kiro.dev/docs/mcp/configuration"
         ],
-        "verified_on": "2026-03-02",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -8044,7 +8044,7 @@
         "source_urls": [
           "https://kiro.dev/docs/mcp"
         ],
-        "verified_on": "2026-03-06",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -8071,7 +8071,7 @@
         "source_urls": [
           "https://kiro.dev/docs/mcp"
         ],
-        "verified_on": "2026-03-06",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -8098,7 +8098,7 @@
         "source_urls": [
           "https://kiro.dev/docs/mcp"
         ],
-        "verified_on": "2026-03-06",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -8125,7 +8125,7 @@
         "source_urls": [
           "https://kiro.dev/docs/powers/create"
         ],
-        "verified_on": "2026-03-02",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -8152,7 +8152,7 @@
         "source_urls": [
           "https://kiro.dev/docs/powers/"
         ],
-        "verified_on": "2026-03-02",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -8179,7 +8179,7 @@
         "source_urls": [
           "https://kiro.dev/docs/powers/create"
         ],
-        "verified_on": "2026-03-02",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -8206,7 +8206,7 @@
         "source_urls": [
           "https://kiro.dev/docs/powers/"
         ],
-        "verified_on": "2026-03-02",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -8233,7 +8233,7 @@
         "source_urls": [
           "https://kiro.dev/docs/powers"
         ],
-        "verified_on": "2026-03-06",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -8260,7 +8260,7 @@
         "source_urls": [
           "https://kiro.dev/docs/powers"
         ],
-        "verified_on": "2026-03-06",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -8287,7 +8287,7 @@
         "source_urls": [
           "https://kiro.dev/docs/powers"
         ],
-        "verified_on": "2026-03-06",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },
@@ -8314,7 +8314,7 @@
         "source_urls": [
           "https://kiro.dev/docs/powers"
         ],
-        "verified_on": "2026-03-06",
+        "verified_on": "2026-04-22",
         "applies_to": {
           "tool": "kiro"
         },

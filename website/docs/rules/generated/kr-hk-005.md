@@ -13,7 +13,7 @@ keywords: ["KR-HK-005", "invalid kiro cli hook event key", "kiro hooks", "valida
 - **Category**: `Kiro Hooks`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-02`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

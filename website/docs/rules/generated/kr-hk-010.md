@@ -13,7 +13,7 @@ keywords: ["KR-HK-010", "secrets in hook command", "kiro hooks", "validation", "
 - **Category**: `Kiro Hooks`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-06`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

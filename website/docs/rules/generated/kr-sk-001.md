@@ -13,7 +13,7 @@ keywords: ["KR-SK-001", "kiro skill uses unsupported field", "kiro skills", "val
 - **Category**: `Kiro Skills`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `Yes (safe/unsafe)`
-- **Verified On**: `2026-02-09`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

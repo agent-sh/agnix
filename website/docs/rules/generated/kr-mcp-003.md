@@ -13,7 +13,7 @@ keywords: ["KR-MCP-003", "missing required args", "kiro mcp", "validation", "agn
 - **Category**: `Kiro MCP`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-06`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

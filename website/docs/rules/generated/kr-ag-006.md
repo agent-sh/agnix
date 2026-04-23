@@ -13,7 +13,7 @@ keywords: ["KR-AG-006", "kiro agent references unknown subagent", "kiro agents",
 - **Category**: `Kiro Agents`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-02`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

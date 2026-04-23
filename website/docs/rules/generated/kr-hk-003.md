@@ -13,7 +13,7 @@ keywords: ["KR-HK-003", "kiro ide hook missing action", "kiro hooks", "validatio
 - **Category**: `Kiro Hooks`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-02`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

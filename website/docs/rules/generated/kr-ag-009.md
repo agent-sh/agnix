@@ -13,7 +13,7 @@ keywords: ["KR-AG-009", "agent missing prompt", "kiro agents", "validation", "ag
 - **Category**: `Kiro Agents`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-06`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

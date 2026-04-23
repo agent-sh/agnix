@@ -13,7 +13,7 @@ keywords: ["KR-AG-005", "kiro agent has no mcp access", "kiro agents", "validati
 - **Category**: `Kiro Agents`
 - **Normative Level**: `BEST_PRACTICE`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-02`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

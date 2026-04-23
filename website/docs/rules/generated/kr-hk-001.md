@@ -13,7 +13,7 @@ keywords: ["KR-HK-001", "invalid kiro ide hook event type", "kiro hooks", "valid
 - **Category**: `Kiro Hooks`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-02`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 
