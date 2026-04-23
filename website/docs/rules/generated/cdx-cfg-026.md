@@ -13,7 +13,7 @@ keywords: ["CDX-CFG-026", "invalid network permission field", "codex cli", "vali
 - **Category**: `Codex CLI`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `Yes (safe)`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-04-23`
 
 ## Applicability
 

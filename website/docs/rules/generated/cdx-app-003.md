@@ -13,7 +13,7 @@ keywords: ["CDX-APP-003", "invalid profile configuration", "codex cli", "validat
 - **Category**: `Codex CLI`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-04-23`
 
 ## Applicability
 

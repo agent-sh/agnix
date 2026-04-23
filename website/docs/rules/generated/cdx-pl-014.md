@@ -13,7 +13,7 @@ keywords: ["CDX-PL-014", "missing description", "codex cli", "validation", "agni
 - **Category**: `Codex CLI`
 - **Normative Level**: `BEST_PRACTICE`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-04-23`
 
 ## Applicability
 

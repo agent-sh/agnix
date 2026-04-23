@@ -86,6 +86,7 @@ pub const KNOWN_TOP_LEVEL_KEYS: &[&str] = &[
     "experimental_use_freeform_apply_patch",
     "experimental_realtime_start_instructions",
     "experimental_realtime_ws_startup_context",
+    "experimental_thread_store_endpoint",
     // Instruction-section toggles (added in Codex rust-v0.122.0 catch-up)
     "include_apps_instructions",
     "include_environment_context",
