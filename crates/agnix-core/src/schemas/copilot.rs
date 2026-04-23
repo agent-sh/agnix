@@ -428,12 +428,15 @@ description: "TypeScript style rules"
 # Body
 "#;
         let result = parse_frontmatter(content).unwrap();
+        assert!(result.parse_error.is_none());
         let schema = result.schema.unwrap();
+        // Verify both fields parse correctly: apply_to confirms the camelCase
+        // -> snake_case rename, description confirms the new field works.
+        assert_eq!(schema.apply_to, Some("**/*.ts".to_string()));
         assert_eq!(
             schema.description,
             Some("TypeScript style rules".to_string())
         );
-        assert!(result.parse_error.is_none());
     }
 
     #[test]
@@ -449,6 +452,11 @@ description: "TypeScript style rules"
 # Body
 "#;
         let result = parse_frontmatter(content).unwrap();
+        assert!(
+            result.parse_error.is_none(),
+            "frontmatter should parse cleanly, got error: {:?}",
+            result.parse_error
+        );
         assert!(
             result.unknown_keys.is_empty(),
             "description should not be reported as unknown key (Copilot v0.43.0+), got: {:?}",
