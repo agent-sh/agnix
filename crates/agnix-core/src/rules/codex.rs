@@ -152,6 +152,7 @@ const KNOWN_CONFIG_TOP_LEVEL_KEYS: &[&str] = &[
     "experimental_realtime_ws_base_url",
     "experimental_realtime_ws_model",
     "experimental_realtime_ws_startup_context",
+    "experimental_thread_store_endpoint",
     "experimental_use_freeform_apply_patch",
     "experimental_use_unified_exec_tool",
     "features",
@@ -3150,6 +3151,27 @@ url = "https://example.com/marketplace"
         assert!(
             unknown.is_empty(),
             "v0.122 [realtime] and [[marketplaces]] tables should not trigger CDX-004, got: {:?}",
+            unknown
+        );
+    }
+
+    #[test]
+    fn test_codex_v0_123_top_level_keys_accepted() {
+        // Codex CLI rust-v0.123.0 added 1 new top-level config key
+        // (verified against config-schema.json on 2026-04-23):
+        //   - experimental_thread_store_endpoint
+        //
+        // (release notes also mentioned `remote_sandbox_config` but it does
+        // not appear as a top-level key in the published schema; likely a
+        // sub-key under `sandbox_workspace_write` or experimental).
+        let toml = r#"
+experimental_thread_store_endpoint = "https://thread-store.example"
+"#;
+        let diagnostics = validate_config(toml);
+        let unknown: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-004").collect();
+        assert!(
+            unknown.is_empty(),
+            "experimental_thread_store_endpoint should not trigger CDX-004 (Codex v0.123+), got: {:?}",
             unknown
         );
     }
