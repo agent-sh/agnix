@@ -10,7 +10,7 @@ Provides real-time validation of AI agent configuration files (CLAUDE.md, AGENTS
 - Real-time diagnostics as you type
 - Quick-fix code actions for auto-fixable issues
 - Hover documentation for configuration fields
-- 399 validation rules across 36 categories
+- 405 validation rules across 36 categories
 - MDC file type support for Cursor rules
 
 ## Requirements
