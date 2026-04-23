@@ -200,7 +200,7 @@
         "source_urls": [
           "https://ampcode.com/manual#code-review-checks"
         ],
-        "verified_on": "2026-02-14",
+        "verified_on": "2026-04-23",
         "applies_to": {
           "tool": "amp"
         },
@@ -228,7 +228,7 @@
         "source_urls": [
           "https://ampcode.com/manual#code-review-checks"
         ],
-        "verified_on": "2026-02-14",
+        "verified_on": "2026-04-23",
         "applies_to": {
           "tool": "amp"
         },
@@ -256,7 +256,7 @@
         "source_urls": [
           "https://ampcode.com/manual#settings"
         ],
-        "verified_on": "2026-02-14",
+        "verified_on": "2026-04-23",
         "applies_to": {
           "tool": "amp"
         },
@@ -283,7 +283,7 @@
         "source_urls": [
           "https://ampcode.com/manual#settings"
         ],
-        "verified_on": "2026-02-14",
+        "verified_on": "2026-04-23",
         "applies_to": {
           "tool": "amp"
         },
@@ -311,7 +311,7 @@
         "source_urls": [
           "https://ampcode.com/manual#agent-skills"
         ],
-        "verified_on": "2026-02-09",
+        "verified_on": "2026-04-23",
         "applies_to": {
           "tool": "amp"
         },
