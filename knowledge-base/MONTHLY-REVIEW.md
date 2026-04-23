@@ -49,9 +49,9 @@ These tools have automated monthly monitoring. Review confirms accuracy and chec
 **Sources to check**:
 - https://docs.github.com/en/copilot/customizing-copilot
 - https://docs.cline.bot/features/cline-rules/overview
-- https://cursor.com/docs/context/rules
-- https://cursor.com/docs/agent/hooks
-- https://cursor.com/docs/context/subagents
+- https://cursor.com/docs/rules
+- https://cursor.com/docs/hooks
+- https://cursor.com/docs/subagents
 - https://cursor.com/docs/cloud-agent/setup
 
 ### B/C Tier: Roo Code, Kiro CLI, amp, pi, gemini cli, continue, Antigravity

@@ -1,27 +1,26 @@
 {
   "version": "1.0.0",
   "task": {
-    "id": "output-style-validator",
-    "source": "manual",
-    "title": "PR2: output-style validator (post-#745 follow-on)"
+    "id": "749",
+    "title": "Tool release: Cursor 3.1.17 (was 3.0.0)",
+    "description": "PR for issue #749: Cursor 3.0.0 → 3.1.17 triage",
+    "tier": "A",
+    "category": "tool-release-triage",
+    "issue_url": "https://github.com/agent-sh/agnix/issues/749"
   },
   "workflow": {
-    "id": "output-style-validator",
-    "status": "active",
-    "currentPhase": "setup",
-    "createdAt": "2026-04-22T00:00:00Z",
-    "updatedAt": "2026-04-22T00:00:00Z"
+    "status": "in-progress",
+    "currentPhase": "worktree-setup",
+    "startedAt": "2026-04-22T00:00:00Z"
   },
   "git": {
-    "branch": "feat/output-style-validator",
+    "branch": "chore/triage-cursor-3-1-17",
     "baseBranch": "main",
-    "baseSha": "3c4a3a9",
-    "mainRepoPath": "C:/Users/avife/agent-sh/agnix",
-    "isWorktree": true
+    "baseSha": "1326467",
+    "mainRepoPath": "C:/Users/avife/agent-sh/agnix"
   },
-  "context": {
-    "description": "Add output-style validator for Claude Code output-style files (.claude/output-styles/*.md) - new FileType in agnix-core. Follow-on from triage of issue #745 which merged as PR #756. The keep-coding-instructions field was surfaced during #745 triage.",
-    "relatedIssue": "#745",
-    "relatedMergedPR": "#756"
+  "resume": {
+    "canResume": true,
+    "resumeFromStep": "exploration"
   }
 }

@@ -39,7 +39,7 @@
         "source_type": "community",
         "source_urls": [
           "https://developers.openai.com/codex/guides/agents-md",
-          "https://cursor.com/docs/context/rules",
+          "https://cursor.com/docs/rules",
           "https://docs.cline.bot/prompting/cline-memory-bank#cline-memory-bank-custom-instructions-[copy-this]"
         ],
         "verified_on": "2026-02-09",
@@ -66,7 +66,7 @@
       "evidence": {
         "source_type": "community",
         "source_urls": [
-          "https://cursor.com/docs/context/rules",
+          "https://cursor.com/docs/rules",
           "https://docs.cline.bot/prompting/cline-memory-bank#cline-memory-bank-custom-instructions-[copy-this]"
         ],
         "verified_on": "2026-02-09",
@@ -120,7 +120,7 @@
         "source_type": "community",
         "source_urls": [
           "https://developers.openai.com/codex/guides/agents-md",
-          "https://cursor.com/docs/context/rules"
+          "https://cursor.com/docs/rules"
         ],
         "verified_on": "2026-02-04",
         "applies_to": {},
@@ -146,7 +146,7 @@
         "source_type": "community",
         "source_urls": [
           "https://developers.openai.com/codex/guides/agents-md",
-          "https://cursor.com/docs/context/rules"
+          "https://cursor.com/docs/rules"
         ],
         "verified_on": "2026-02-04",
         "applies_to": {},
@@ -9929,7 +9929,7 @@
         "source_type": "community",
         "source_urls": [
           "https://developers.openai.com/codex/guides/agents-md",
-          "https://cursor.com/docs/context/rules"
+          "https://cursor.com/docs/rules"
         ],
         "verified_on": "2026-02-04",
         "applies_to": {},
@@ -9956,7 +9956,7 @@
         "source_urls": [
           "https://developers.openai.com/codex/guides/agents-md",
           "https://opencode.ai/docs/rules",
-          "https://cursor.com/docs/context/rules",
+          "https://cursor.com/docs/rules",
           "https://docs.cline.bot/prompting/cline-memory-bank#cline-memory-bank-custom-instructions-[copy-this]",
           "https://github.blog/changelog/2025-08-28-copilot-coding-agent-now-supports-agents-md-custom-instructions/"
         ],
@@ -9984,7 +9984,7 @@
         "source_type": "community",
         "source_urls": [
           "https://developers.openai.com/codex/guides/agents-md",
-          "https://cursor.com/docs/context/rules"
+          "https://cursor.com/docs/rules"
         ],
         "verified_on": "2026-02-04",
         "applies_to": {},
@@ -10010,7 +10010,7 @@
         "source_type": "community",
         "source_urls": [
           "https://developers.openai.com/codex/guides/agents-md",
-          "https://cursor.com/docs/context/rules"
+          "https://cursor.com/docs/rules"
         ],
         "verified_on": "2026-02-04",
         "applies_to": {},
@@ -10036,7 +10036,7 @@
         "source_type": "community",
         "source_urls": [
           "https://developers.openai.com/codex/guides/agents-md",
-          "https://cursor.com/docs/context/rules"
+          "https://cursor.com/docs/rules"
         ],
         "verified_on": "2026-02-04",
         "applies_to": {},
@@ -10062,7 +10062,7 @@
         "source_type": "community",
         "source_urls": [
           "https://developers.openai.com/codex/guides/agents-md",
-          "https://cursor.com/docs/context/rules"
+          "https://cursor.com/docs/rules"
         ],
         "verified_on": "2026-02-04",
         "applies_to": {},

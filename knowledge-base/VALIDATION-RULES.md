@@ -1546,105 +1546,105 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 **Requirement**: Cursor .mdc rule files MUST have non-empty content
 **Detection**: `content.trim().is_empty()` after stripping frontmatter
 **Fix**: Add meaningful rules content
-**Source**: cursor.com/docs/context/rules
+**Source**: cursor.com/docs/rules
 
 <a id="cur-002"></a>
 ### CUR-002 [MEDIUM] Missing Frontmatter in .mdc File
 **Requirement**: Cursor .mdc files SHOULD have YAML frontmatter with metadata
 **Detection**: File doesn't start with `---` markers
 **Fix**: Auto-fix (unsafe) - insert template frontmatter with description and globs fields
-**Source**: cursor.com/docs/context/rules
+**Source**: cursor.com/docs/rules
 
 <a id="cur-003"></a>
 ### CUR-003 [HIGH] Invalid YAML Frontmatter
 **Requirement**: .mdc file frontmatter MUST be valid YAML
 **Detection**: YAML parse error on frontmatter content
 **Fix**: Fix YAML syntax errors in frontmatter
-**Source**: cursor.com/docs/context/rules
+**Source**: cursor.com/docs/rules
 
 <a id="cur-004"></a>
 ### CUR-004 [HIGH] Invalid Glob Pattern in globs Field
 **Requirement**: `globs` field MUST contain valid glob patterns
 **Detection**: Attempt to parse as glob pattern
 **Fix**: Correct the glob syntax
-**Source**: cursor.com/docs/context/rules
+**Source**: cursor.com/docs/rules
 
 <a id="cur-005"></a>
 ### CUR-005 [MEDIUM] Unknown Frontmatter Keys
 **Requirement**: .mdc frontmatter SHOULD only contain known keys (description, globs, alwaysApply)
 **Detection**: Check for keys other than known keys in frontmatter
 **Fix**: Remove unknown keys
-**Source**: cursor.com/docs/context/rules
+**Source**: cursor.com/docs/rules
 
 <a id="cur-006"></a>
 ### CUR-006 [MEDIUM] Legacy .cursorrules File Detected
 **Requirement**: Projects SHOULD migrate from .cursorrules to .cursor/rules/*.mdc format
 **Detection**: File named `.cursorrules`
 **Fix**: Create `.cursor/rules/` directory and migrate rules to .mdc files
-**Source**: cursor.com/docs/context/rules
+**Source**: cursor.com/docs/rules
 
 <a id="cur-007"></a>
 ### CUR-007 [MEDIUM] alwaysApply with Redundant globs
 **Requirement**: When `alwaysApply: true`, the `globs` field SHOULD NOT be set (it is redundant)
 **Detection**: Frontmatter has both `alwaysApply: true` and a `globs` field
 **Fix**: [AUTO-FIX] Remove the `globs` field (safe)
-**Source**: cursor.com/docs/context/rules
+**Source**: cursor.com/docs/rules
 
 <a id="cur-008"></a>
 ### CUR-008 [HIGH] Invalid alwaysApply Type
 **Requirement**: `alwaysApply` MUST be a boolean (`true`/`false`), not a quoted string
 **Detection**: `alwaysApply` value is a string (e.g., `"true"` or `"false"`) instead of a boolean
 **Fix**: Auto-fix (safe) - convert quoted string to unquoted boolean
-**Source**: cursor.com/docs/context/rules
+**Source**: cursor.com/docs/rules
 
 <a id="cur-009"></a>
 ### CUR-009 [MEDIUM] Missing Description for Agent-Requested Rule
 **Requirement**: Rules with no `alwaysApply` and no `globs` (agent-requested rules) SHOULD have a `description`
 **Detection**: Frontmatter has no `alwaysApply`, no `globs`, and no `description` (or empty description)
 **Fix**: Add a `description` field explaining when the rule should apply
-**Source**: cursor.com/docs/context/rules
+**Source**: cursor.com/docs/rules
 
 <a id="cur-010"></a>
 ### CUR-010 [HIGH] Invalid .cursor/hooks.json Schema
 **Requirement**: `.cursor/hooks.json` MUST define an integer `version` and object `hooks` map
 **Detection**: Parse JSON and validate top-level shape and required fields
 **Fix**: Add required fields and correct schema types for `version` and `hooks`
-**Source**: cursor.com/docs/agent/hooks
+**Source**: cursor.com/docs/hooks
 
 <a id="cur-011"></a>
 ### CUR-011 [MEDIUM] Unknown Cursor Hook Event Name
 **Requirement**: Hook event names in `.cursor/hooks.json` SHOULD use documented Cursor events
 **Detection**: Validate each `hooks.<event>` key against allowlisted event names
 **Fix**: [AUTO-FIX] Rename event keys to supported Cursor hook events
-**Source**: cursor.com/docs/agent/hooks
+**Source**: cursor.com/docs/hooks
 
 <a id="cur-012"></a>
 ### CUR-012 [HIGH] Hook Entry Missing Required Command Field
 **Requirement**: Each hook entry MUST include a `command` field
 **Detection**: Parse `hooks.<event>[]` objects and check for missing `command`
 **Fix**: Add a non-empty command to each hook object
-**Source**: cursor.com/docs/agent/hooks
+**Source**: cursor.com/docs/hooks
 
 <a id="cur-013"></a>
 ### CUR-013 [HIGH] Invalid Cursor Hook Type Value
 **Requirement**: Hook `type` MUST be `command` or `prompt` when present
 **Detection**: Parse hook entries and validate `type` values
 **Fix**: [AUTO-FIX] Change invalid `type` values to supported values
-**Source**: cursor.com/docs/agent/hooks
+**Source**: cursor.com/docs/hooks
 
 <a id="cur-014"></a>
 ### CUR-014 [HIGH] Invalid Cursor Subagent Frontmatter
 **Requirement**: `.cursor/agents/**/*.md` files MUST have valid YAML frontmatter with required fields and valid optional field types
 **Detection**: Parse frontmatter and validate required keys (`name`, `description`), plus optional typed fields (`model`, `readonly`, `is_background`) when present
 **Fix**: Correct frontmatter keys, naming format, and value types
-**Source**: cursor.com/docs/context/subagents
+**Source**: cursor.com/docs/subagents
 
 <a id="cur-015"></a>
 ### CUR-015 [MEDIUM] Empty Cursor Subagent Body
 **Requirement**: `.cursor/agents/**/*.md` Cursor subagent markdown files SHOULD include body instructions after frontmatter
 **Detection**: Parse file and check that body content is non-empty after frontmatter
 **Fix**: Add clear subagent instructions below frontmatter
-**Source**: cursor.com/docs/context/subagents
+**Source**: cursor.com/docs/subagents
 
 <a id="cur-016"></a>
 ### CUR-016 [HIGH] Invalid .cursor/environment.json Schema
@@ -1658,21 +1658,21 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 **Requirement**: Hook entry fields SHOULD have correct types (timeout: number, loop_limit: number|null, failClosed: boolean)
 **Detection**: Check field types in hook entries
 **Fix**: Manual
-**Source**: cursor.com/docs/agent/hooks
+**Source**: cursor.com/docs/hooks
 
 <a id="cur-018"></a>
 ### CUR-018 [MEDIUM] Prompt Hook Missing Prompt Field
 **Requirement**: Prompt-type hooks SHOULD have a prompt field
 **Detection**: Check for type:"prompt" without prompt key
 **Fix**: Manual
-**Source**: cursor.com/docs/agent/hooks
+**Source**: cursor.com/docs/hooks
 
 <a id="cur-019"></a>
 ### CUR-019 [LOW] Invalid Prompt Hook Model Type
 **Requirement**: model field on prompt hooks MAY be validated as string
 **Detection**: Check model field type
 **Fix**: Manual
-**Source**: cursor.com/docs/agent/hooks
+**Source**: cursor.com/docs/hooks
 
 ---
 
