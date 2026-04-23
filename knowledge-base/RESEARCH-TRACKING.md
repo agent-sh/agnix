@@ -2,7 +2,7 @@
 
 > Master document for tracking AI tool ecosystem changes, research updates, and community feedback.
 
-**Last Updated**: 2026-02-05
+**Last Updated**: 2026-04-22
 **Review Cadence**: Monthly (1st week of each month)
 **Related**: [MONTHLY-REVIEW.md](./MONTHLY-REVIEW.md) | [VALIDATION-RULES.md](./VALIDATION-RULES.md) | [INDEX.md](./INDEX.md)
 
@@ -25,7 +25,7 @@ Tools are organized by support tier (see [../CONTRIBUTING.md#tool-tier-system](.
 
 | Tool | Config Format | Documentation URL | Monitoring | Frequency | Last Reviewed | Rule Prefix |
 |------|---------------|-------------------|------------|-----------|---------------|-------------|
-| GitHub Copilot | `.github/copilot-instructions.md`, `.github/instructions/*.instructions.md` | https://docs.github.com/en/copilot/customizing-copilot | Automated (spec-drift.yml + tool-release-watch.yml via microsoft/vscode-copilot-chat) | Monthly | 2026-02-05 | COP |
+| GitHub Copilot | `.github/copilot-instructions.md`, `.github/instructions/*.instructions.md` | https://docs.github.com/en/copilot/customizing-copilot | Automated (spec-drift.yml + tool-release-watch.yml via microsoft/vscode-copilot-chat) | Monthly | 2026-04-22 | COP |
 | Cline | `.clinerules`, `.cline/rules/*.md` | https://docs.cline.bot/features/cline-rules/overview | Automated (spec-drift.yml + tool-release-watch.yml) | Monthly | 2026-02-05 | -- |
 | Cursor | `.cursor/rules/*.mdc`, `.cursorrules` | https://cursor.com/docs/context/rules | Automated (spec-drift.yml + tool-release-watch.yml via api2.cursor.sh stable update endpoint) | Monthly | 2026-02-26 | CUR |
 

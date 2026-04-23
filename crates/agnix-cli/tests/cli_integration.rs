@@ -3195,9 +3195,13 @@ fn test_fix_copilot_scoped_missing_applyto() {
     fs::create_dir_all(&instructions_dir).unwrap();
 
     let instr_path = instructions_dir.join("typescript.instructions.md");
+    // Use an unknown frontmatter key (`someUnknownKey`) to trip COP-004's
+    // delete-line fix. `description` was previously used here but became a
+    // recognised key in the v0.43.0 catch-up (PR #748), so it no longer
+    // triggers an unknown-key diagnostic.
     fs::write(
         &instr_path,
-        "---\ndescription: TypeScript rules\n---\nUse strict TypeScript.",
+        "---\nsomeUnknownKey: TypeScript rules\n---\nUse strict TypeScript.",
     )
     .unwrap();
 
