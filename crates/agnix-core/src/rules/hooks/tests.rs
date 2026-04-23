@@ -2954,12 +2954,16 @@ fn test_cc_hk_016_agent_type_valid() {
 fn test_cc_hk_016_mcp_tool_type_valid() {
     // Claude Code v2.1.118 added `type: "mcp_tool"` so hooks can invoke
     // MCP tools directly. Without this fix, agnix would false-positive
-    // CC-HK-016 (unknown hook type) on every v2.1.118+ user that follows
-    // the docs.
+    // CC-HK-016 (unknown hook type) AND CC-HK-012 (typed-schema mismatch)
+    // on every v2.1.118+ user that uses the new type per the release notes.
+    // (As of 2026-04-23 the docs page at code.claude.com/docs/en/hooks
+    // still lists only 4 types; the release notes are authoritative until
+    // the docs catch up.)
     let content = r#"{
             "hooks": {
                 "PostToolUse": [
                     {
+                        "matcher": "Bash",
                         "hooks": [
                             { "type": "mcp_tool", "tool": "mcp__server__do_thing" }
                         ]
@@ -2969,12 +2973,15 @@ fn test_cc_hk_016_mcp_tool_type_valid() {
         }"#;
 
     let diagnostics = validate(content);
-    let cc_hk_016: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-HK-016")
-        .collect();
-
-    assert_eq!(cc_hk_016.len(), 0, "mcp_tool should be a valid hook type (Claude Code v2.1.118+)");
+    // Strict assertion: NO diagnostics should fire on a valid mcp_tool hook.
+    // This catches both CC-HK-016 (string allow-list) and CC-HK-012
+    // (typed Hook enum schema match) -- without the typed-enum addition the
+    // raw JSON allow-list fix alone would not be enough.
+    assert!(
+        diagnostics.is_empty(),
+        "valid mcp_tool hook should produce zero diagnostics, got: {:?}",
+        diagnostics
+    );
 }
 
 #[test]
