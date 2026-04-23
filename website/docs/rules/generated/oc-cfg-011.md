@@ -13,7 +13,7 @@ keywords: ["OC-CFG-011", "invalid mcp timeout", "opencode", "validation", "agnix
 - **Category**: `OpenCode`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-06`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

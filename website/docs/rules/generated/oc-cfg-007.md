@@ -13,7 +13,7 @@ keywords: ["OC-CFG-007", "mcp server missing command or url", "opencode", "valid
 - **Category**: `OpenCode`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-02`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

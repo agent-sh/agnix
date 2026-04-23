@@ -13,7 +13,7 @@ keywords: ["OC-DEP-001", "deprecated mode field", "opencode", "validation", "agn
 - **Category**: `OpenCode`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `Yes (safe)`
-- **Verified On**: `2026-03-06`
+- **Verified On**: `2026-04-22`
 
 ## Applicability
 

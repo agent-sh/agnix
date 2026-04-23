@@ -79,6 +79,7 @@ pub const KNOWN_TUI_KEYS: &[&str] = &[
     "$schema",
     "theme",
     "keybinds",
+    "mouse",
     "scroll_speed",
     "scroll_acceleration",
     "diff_style",
