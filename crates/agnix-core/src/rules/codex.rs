@@ -3129,10 +3129,7 @@ realtime = {}
 tool_suggest = "off"
 "#;
         let diagnostics = validate_config(toml_inline);
-        let unknown: Vec<_> = diagnostics
-            .iter()
-            .filter(|d| d.rule == "CDX-004")
-            .collect();
+        let unknown: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-004").collect();
         assert!(
             unknown.is_empty(),
             "v0.122 top-level keys should not trigger CDX-004, got: {:?}",
@@ -3149,10 +3146,7 @@ name = "official"
 url = "https://example.com/marketplace"
 "#;
         let diagnostics = validate_config(toml_tables);
-        let unknown: Vec<_> = diagnostics
-            .iter()
-            .filter(|d| d.rule == "CDX-004")
-            .collect();
+        let unknown: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-004").collect();
         assert!(
             unknown.is_empty(),
             "v0.122 [realtime] and [[marketplaces]] tables should not trigger CDX-004, got: {:?}",
