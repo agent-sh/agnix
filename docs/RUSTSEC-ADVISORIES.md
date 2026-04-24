@@ -58,6 +58,46 @@ Related: [Issue #346](https://github.com/agent-sh/agnix/issues/346) (this tracki
 - Advisory: https://rustsec.org/advisories/RUSTSEC-2025-0141
 - iai-callgrind repository: https://github.com/iai-callgrind/iai-callgrind
 
+### RUSTSEC-2025-0067 — `libyml` (via `rust-i18n-macro`)
+
+**Status**: Waiting for `rust-i18n` to migrate off `serde_yml` / `libyml`
+
+**Details**:
+- `libyml` is unmaintained and contains an unsound `yaml_string_extend` function
+- Pulled in transitively through `rust-i18n-macro 3.1.2` and `rust-i18n-support 3.1.2`
+- agnix uses `rust-i18n` for CLI message localization only; no YAML parsing happens at runtime inside `libyml`'s unsafe surface
+
+**Risk Level**: Low
+- Unsafe code lives in a macro-time code path (i18n string compilation at build) and is not reachable at runtime from agnix
+- No known exploit vector given our usage pattern
+- rust-i18n upstream is aware of the advisory; migration path is likely to `serde_yaml_ng` or `saphyr`
+
+**Action Items**:
+- Monitor `rust-i18n` releases for a version that drops `serde_yml` / `libyml`
+- Consider replacing `rust-i18n` with a simpler translation table if upstream stalls
+- Remove the ignore from `.github/workflows/security.yml` and (if present) `deny.toml` once the transitive dependency is gone
+
+**References**:
+- Advisory: https://rustsec.org/advisories/RUSTSEC-2025-0067
+- rust-i18n repository: https://github.com/longbridge/rust-i18n
+
+### RUSTSEC-2025-0068 — `serde_yml` (via `rust-i18n-macro`)
+
+**Status**: Waiting for `rust-i18n` to migrate off `serde_yml`
+
+**Details**:
+- `serde_yml` is unmaintained and unsound (the upstream fork of `serde_yaml` was abandoned)
+- Same transitive chain as RUSTSEC-2025-0067: `rust-i18n-macro 3.1.2` and `rust-i18n-support 3.1.2`
+
+**Risk Level**: Low
+- Same build-time reachability caveat as RUSTSEC-2025-0067
+
+**Action Items**:
+- Same as RUSTSEC-2025-0067; resolving that advisory will also resolve this one since both crates share the dependency chain
+
+**References**:
+- Advisory: https://rustsec.org/advisories/RUSTSEC-2025-0068
+
 ---
 
 ## Review Schedule

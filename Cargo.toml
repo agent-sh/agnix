@@ -52,7 +52,7 @@ ignore = "0.4"
 glob = "0.3"
 
 # Parallelism
-rayon = "1.10"
+rayon = "1.12"
 
 # Lock-free concurrency
 arc-swap = "1"
@@ -79,7 +79,7 @@ agnix-core = { path = "crates/agnix-core", features = ["__internal_unchecked", "
 agnix-rules = { path = "crates/agnix-rules" }
 serde_json = "1"
 tempfile = "3"
-toml = "0.8"
+toml = "1.0"
 
 [profile.release]
 lto = "fat"
