@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Dependency bumps (dependabot queue drain)**: consolidated 8 open dependabot PRs (#783-#790) into a single verified branch. Rust: `rayon 1.10 -> 1.12`, `toml 0.8 -> 1.0.1+spec-1.1.0` (workspace dev-dep; coexists with `rust-i18n-support`'s pinned `0.7.x`), `rmcp 1.4 -> 1.5`, `similar 3.0 -> 3.1`, `uuid 1.23.0 -> 1.23.1`. CI actions: `actions/setup-node` in `tool-release-watch.yml` bumped `v4.4.0 -> v6.4.0`; all other `setup-node` callers bumped `v6.3.0 -> v6.4.0`; `taiki-e/install-action 2.75.17 -> 2.75.21`; `anthropics/claude-code-action@v1` SHA updated to `e58dfa5` (v1.0.101 -> v1.0.105). Full workspace build + `cargo test` + `cargo clippy --workspace --all-targets -- -D warnings` all pass after the bump.
+
 ## [0.19.0] - 2026-04-23
 
 ### Added
