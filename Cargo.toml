@@ -52,7 +52,7 @@ ignore = "0.4"
 glob = "0.3"
 
 # Parallelism
-rayon = "1.10"
+rayon = "1.12"
 
 # Lock-free concurrency
 arc-swap = "1"
