@@ -74,32 +74,36 @@ skip = [
     { name = "windows-sys", version = "=0.48.0" },
     { name = "windows-sys", version = "=0.52.0" },
     { name = "windows-sys", version = "=0.60.2" },
-    # windows-targets and arch crates: match windows-sys versions
+    # windows-targets and arch crates: match windows-sys versions.
+    # Post-deps-bump (PR #791), some arch crates dropped 0.48.5 (now
+    # covered by transitive 0.53.1 from newer tokio/notify), so the
+    # skip list tracks 0.42.2, 0.52.6, and 0.53.1 for each arch.
     { name = "windows-targets", version = "=0.42.2" },
-    { name = "windows-targets", version = "=0.48.5" },
     { name = "windows-targets", version = "=0.52.6" },
+    { name = "windows-targets", version = "=0.53.1" },
     { name = "windows_aarch64_gnullvm", version = "=0.42.2" },
-    { name = "windows_aarch64_gnullvm", version = "=0.48.5" },
     { name = "windows_aarch64_gnullvm", version = "=0.52.6" },
+    { name = "windows_aarch64_gnullvm", version = "=0.53.1" },
     { name = "windows_aarch64_msvc", version = "=0.42.2" },
-    { name = "windows_aarch64_msvc", version = "=0.48.5" },
     { name = "windows_aarch64_msvc", version = "=0.52.6" },
+    { name = "windows_aarch64_msvc", version = "=0.53.1" },
     { name = "windows_i686_gnu", version = "=0.42.2" },
-    { name = "windows_i686_gnu", version = "=0.48.5" },
     { name = "windows_i686_gnu", version = "=0.52.6" },
+    { name = "windows_i686_gnu", version = "=0.53.1" },
     { name = "windows_i686_gnullvm", version = "=0.52.6" },
+    { name = "windows_i686_gnullvm", version = "=0.53.1" },
     { name = "windows_i686_msvc", version = "=0.42.2" },
-    { name = "windows_i686_msvc", version = "=0.48.5" },
     { name = "windows_i686_msvc", version = "=0.52.6" },
+    { name = "windows_i686_msvc", version = "=0.53.1" },
     { name = "windows_x86_64_gnu", version = "=0.42.2" },
-    { name = "windows_x86_64_gnu", version = "=0.48.5" },
     { name = "windows_x86_64_gnu", version = "=0.52.6" },
+    { name = "windows_x86_64_gnu", version = "=0.53.1" },
     { name = "windows_x86_64_gnullvm", version = "=0.42.2" },
-    { name = "windows_x86_64_gnullvm", version = "=0.48.5" },
     { name = "windows_x86_64_gnullvm", version = "=0.52.6" },
+    { name = "windows_x86_64_gnullvm", version = "=0.53.1" },
     { name = "windows_x86_64_msvc", version = "=0.42.2" },
-    { name = "windows_x86_64_msvc", version = "=0.48.5" },
     { name = "windows_x86_64_msvc", version = "=0.52.6" },
+    { name = "windows_x86_64_msvc", version = "=0.53.1" },
 ]
 # List of crates to skip when checking for duplicates (tree-wide)
 skip-tree = []
