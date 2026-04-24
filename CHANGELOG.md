@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - **Dependency bumps (dependabot queue drain)**: consolidated 8 open dependabot PRs (#783-#790) into a single verified branch:
-  - Rust crates: `rayon 1.10 -> 1.12`, `toml 0.8 -> 1.0.1+spec-1.1.0` (workspace dev-dep; coexists with `rust-i18n-support`'s pinned `0.7.x`), `rmcp 1.4 -> 1.5`, `similar 3.0 -> 3.1`, `uuid 1.23.0 -> 1.23.1`.
+  - Rust crates: `rayon 1.10 -> 1.12`, `toml 0.8 -> 1.x` (the clean `cargo update` resolved to the latest 1.x release at merge time; coexists with `rust-i18n-support`'s `0.8.x`), `rmcp 1.4 -> 1.5`, `similar 3.0 -> 3.1`, `uuid 1.23.0 -> 1.23.1`.
   - CI actions: `actions/setup-node` in `tool-release-watch.yml` bumped `v4.4.0 -> v6.4.0`; other `setup-node` callers bumped `v6.3.0 -> v6.4.0`; `taiki-e/install-action 2.75.17 -> 2.75.21`; `anthropics/claude-code-action@v1` SHA updated to `e58dfa5` (v1.0.101 -> v1.0.105).
   - `deny.toml` skip list updated: the post-bump dep tree dropped `0.48.5` from several `windows_*` arch crates and added a new `0.53.1` family (transitive via newer tokio/notify).
   - `cargo audit` ignores two new transitive advisories from `rust-i18n-macro 3.1.2` → `libyml` (RUSTSEC-2025-0067) and `serde_yml` (RUSTSEC-2025-0068); both tracked in `docs/RUSTSEC-ADVISORIES.md` for removal when rust-i18n migrates off `serde_yml`.
