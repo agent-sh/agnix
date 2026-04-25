@@ -1,7 +1,7 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 406,
+  "total_rules": 407,
   "last_updated": "2026-04-01",
   "schema": {
     "evidence": {
@@ -5142,6 +5142,33 @@
       },
       "good_example": "[mcp_servers.myserver]\nurl = \"https://api.example.com\"\nbearer_token_env_var = \"MY_API_TOKEN\"",
       "bad_example": "[mcp_servers.myserver]\nurl = \"https://api.example.com\"\nbearer_token = \"sk-live-...\""
+    },
+    {
+      "id": "CDX-CFG-029",
+      "name": "Incompatible agents.max_threads with multi_agent_v2",
+      "severity": "HIGH",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/openai/codex/pull/19129"
+        ],
+        "verified_on": "2026-04-26",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "[agents]\nmax_threads = 4\n\n[features]\n# multi_agent_v2 omitted or false",
+      "bad_example": "[agents]\nmax_threads = 4\n\n[features]\nmulti_agent_v2 = true"
     },
     {
       "id": "CL-SK-001",

@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **CDX-CFG-029: agents.max_threads incompatible with multi_agent_v2 (#806)**. In rust-v0.125.0 Codex rejects the config at load time with "agents.max_threads cannot be set when multi_agent_v2 is enabled" - the v2 agent lifecycle manages threading internally and accepting the legacy limit alongside creates conflicting semantics (openai/codex#19129). CDX-CFG-029 detects the feature in either shape Codex accepts (flat `[features] multi_agent_v2 = true` or table `[features.multi_agent_v2] enabled = true`) and errors when `[agents] max_threads` is also set. Closes #806.
 - **CDX-CFG-028: Reject unsupported inline MCP `bearer_token` field (#805)**. In rust-v0.125.0 Codex runtime rejects `mcp_servers.<name>.bearer_token` and requires `bearer_token_env_var` instead; schemars generation also dropped the field (openai/codex#19294). agnix now emits a HIGH-severity diagnostic pointing users at the correct replacement, with a specific suggestion that keeps secrets out of the config file. Removed `bearer_token` from `KNOWN_MCP_SERVER_KEYS` and suppressed it from the generic CDX-CFG-006 (nested unknown-key) path when CDX-CFG-028 is enabled, so users get one specific diagnostic rather than two. Disabling CDX-CFG-028 intentionally falls through to CDX-CFG-006 so the field is never silently accepted. Closes #805.
 
 ### Changed
