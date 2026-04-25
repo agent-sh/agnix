@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **#799 Codex-rule diagnostics render i18n keys instead of text** - CDX-AG-004, -005, -006, -007 rules were emitting lookup keys (e.g. `rules.cdx_ag_005.message`) instead of resolved English. Added four missing entries to `locales/en.yml`. Expanded `i18n_tests::all_keys_resolve` to cover every `cdx_ag_*` rule explicitly so the class can't drift silently again.
+- **#798 XML-balance false positive on `list<string>`** - bare lowercase primitive-type names in `<...>` inside Markdown tables or prose (`list<string>`, `map<string,int>`, `Vec<&str>`) were flagged as unclosed XML tags. Extended `is_likely_type_parameter` with a lowercase-primitive allowlist (`str`, `string`, `int`, `bool`, `float`, `char`, `byte`, `list`, `map`, `vec`, `slice`, etc) plus Rust sized int/float pattern (`i32`, `u64`, `f32`). Guardrail test ensures non-primitive lowercase tags (e.g. `<custom>`) still flag.
+
 ## [0.20.0] - 2026-04-24
 
 ### Changed
