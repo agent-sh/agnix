@@ -100,9 +100,12 @@ pub enum Hook {
         /// Name of the tool to call on the server
         #[serde(skip_serializing_if = "Option::is_none")]
         tool: Option<String>,
-        /// Arguments passed to the tool (object with arbitrary keys)
+        /// Arguments passed to the tool. The docs describe this as an
+        /// object; we use `serde_json::Map` so strict deserialize rejects
+        /// non-object shapes (string/array/number) with a schema error
+        /// instead of silently accepting them.
         #[serde(skip_serializing_if = "Option::is_none")]
-        input: Option<serde_json::Value>,
+        input: Option<serde_json::Map<String, serde_json::Value>>,
         /// Optional `if` filter (same as other types)
         #[serde(skip_serializing_if = "Option::is_none")]
         r#if: Option<String>,
