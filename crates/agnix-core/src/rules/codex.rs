@@ -3832,8 +3832,7 @@ skill_approval = "never"
 
     #[test]
     fn test_cdx_cfg_028_flags_inline_bearer_token() {
-        let content =
-            "[mcp_servers.myserver]\nurl = \"https://api.example.com\"\nbearer_token = \"sk-live-...\"";
+        let content = "[mcp_servers.myserver]\nurl = \"https://api.example.com\"\nbearer_token = \"sk-live-...\"";
         let diagnostics = validate_config(content);
         let cdx_028: Vec<_> = diagnostics
             .iter()
@@ -3847,8 +3846,7 @@ skill_approval = "never"
 
     #[test]
     fn test_cdx_cfg_028_bearer_token_env_var_is_fine() {
-        let content =
-            "[mcp_servers.myserver]\nurl = \"https://api.example.com\"\nbearer_token_env_var = \"MY_API_TOKEN\"";
+        let content = "[mcp_servers.myserver]\nurl = \"https://api.example.com\"\nbearer_token_env_var = \"MY_API_TOKEN\"";
         let diagnostics = validate_config(content);
         let cdx_028: Vec<_> = diagnostics
             .iter()
@@ -3911,11 +3909,9 @@ bearer_token_env_var = \"S3_TOKEN\"
         use crate::config::LintConfig;
         let mut config = LintConfig::default();
         config.rules_mut().disabled_rules = vec!["CDX-CFG-028".to_string()];
-        let content =
-            "[mcp_servers.myserver]\nurl = \"https://api.example.com\"\nbearer_token = \"sk-live-...\"";
+        let content = "[mcp_servers.myserver]\nurl = \"https://api.example.com\"\nbearer_token = \"sk-live-...\"";
         let validator = CodexConfigValidator;
-        let diagnostics =
-            validator.validate(std::path::Path::new("config.toml"), content, &config);
+        let diagnostics = validator.validate(std::path::Path::new("config.toml"), content, &config);
         let cdx_028: Vec<_> = diagnostics
             .iter()
             .filter(|d| d.rule == "CDX-CFG-028")
