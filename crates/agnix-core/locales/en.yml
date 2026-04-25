@@ -745,6 +745,18 @@ rules:
   cdx_ag_003:
     message: "AGENTS.md appears overly generic and may not provide actionable project guidance"
     suggestion: "Add repository-specific commands, paths, and guardrails"
+  cdx_ag_004:
+    message: "AGENTS.md exceeds recommended size limit (%{size} bytes; limit is %{limit})"
+    suggestion: "Trim AGENTS.md by moving detailed sections into linked docs, or split by concern (setup, commands, guardrails)"
+  cdx_ag_005:
+    message: "AGENTS.md references missing file `%{reference}`"
+    suggestion: "Remove the reference or create the file - Codex will fail to open it during a session"
+  cdx_ag_006:
+    message: "AGENTS.md missing project context (no headings, no commands, no paths)"
+    suggestion: "Add at least one heading, one command example, or a project-structure section so Codex has anchors to follow"
+  cdx_ag_007:
+    message: "AGENTS.md contradicts .codex/config.toml"
+    suggestion: "Reconcile the documented guidance in AGENTS.md with the declared config values (approval modes, tool policy, etc.)"
   cdx_app_001:
     message: "Invalid default_tools_approval_mode '%{value}' for app '%{app}'. Valid values: 'auto', 'prompt', 'approve'"
     type_error: "default_tools_approval_mode for app '%{app}' must be a string"

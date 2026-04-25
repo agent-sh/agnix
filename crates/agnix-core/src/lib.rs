@@ -346,6 +346,23 @@ mod i18n_tests {
         assert_key_resolves!("rules.cc_pl_006.suggestion");
         assert_key_resolves!("rules.cc_ag_007.parse_error_suggestion");
         assert_key_resolves!("rules.cdx_000.suggestion");
+        // CDX-AG-004..007 were missing from en.yml in v0.20.0
+        // (regression #799). Cover every CDX-AG-* rule explicitly
+        // so the class can't drift again.
+        assert_key_resolves!("rules.cdx_ag_001.message");
+        assert_key_resolves!("rules.cdx_ag_001.suggestion");
+        assert_key_resolves!("rules.cdx_ag_002.message");
+        assert_key_resolves!("rules.cdx_ag_002.suggestion");
+        assert_key_resolves!("rules.cdx_ag_003.message");
+        assert_key_resolves!("rules.cdx_ag_003.suggestion");
+        assert_key_resolves!("rules.cdx_ag_004.message");
+        assert_key_resolves!("rules.cdx_ag_004.suggestion");
+        assert_key_resolves!("rules.cdx_ag_005.message");
+        assert_key_resolves!("rules.cdx_ag_005.suggestion");
+        assert_key_resolves!("rules.cdx_ag_006.message");
+        assert_key_resolves!("rules.cdx_ag_006.suggestion");
+        assert_key_resolves!("rules.cdx_ag_007.message");
+        assert_key_resolves!("rules.cdx_ag_007.suggestion");
         assert_key_resolves!("rules.file_read_error_suggestion");
         assert_key_resolves!("rules.xp_004_read_error_suggestion");
 

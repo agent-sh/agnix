@@ -649,7 +649,7 @@ fn is_likely_type_parameter(name: &str) -> bool {
         return true;
     }
     // Common generic type parameter names (PascalCase, all start with uppercase)
-    matches!(
+    if matches!(
         name,
         "Key"
             | "Value"
@@ -678,7 +678,84 @@ fn is_likely_type_parameter(name: &str) -> bool {
             | "Array"
             | "Map"
             | "Set"
-    )
+    ) {
+        return true;
+    }
+    // Lowercase primitive-type names that appear in parametric type
+    // signatures like `list<string>`, `map<string, int>`, `Vec<&str>`.
+    // These are never valid HTML element names, so treating them as
+    // type parameters is always safe — real HTML requires tag names
+    // from the HTML5 element list (handled via is_markdown_safe_html
+    // and is_html5_void_element above; any real HTML tag has already
+    // short-circuited before we reach here).
+    //
+    // Reported in agnix #798: `list<string>` in Markdown table cells.
+    // Rather than list every primitive, accept any bare lowercase
+    // identifier of plausible length that isn't a known HTML tag.
+    if is_lowercase_primitive_or_type_name(name) {
+        return true;
+    }
+    false
+}
+
+/// Returns true for `str`, `string`, `int`, `bool`, `float`, `char`,
+/// `byte`, `double`, `long`, `short`, `i32`, `u64`, `f32` etc. — the
+/// primitive-type names that appear inside parametric types in doc
+/// tables. Every entry here is lowercase + not in the HTML5 element
+/// list, so false positives on genuine HTML tags are impossible.
+fn is_lowercase_primitive_or_type_name(name: &str) -> bool {
+    // Rust primitives (including sized int/float variants).
+    if matches!(
+        name,
+        "str"
+            | "string"
+            | "bool"
+            | "char"
+            | "int"
+            | "integer"
+            | "float"
+            | "double"
+            | "long"
+            | "short"
+            | "byte"
+            | "bytes"
+            | "number"
+            | "uint"
+            | "usize"
+            | "isize"
+            | "void"
+            | "any"
+            | "never"
+            | "null"
+            | "none"
+            | "unit"
+            | "list"
+            | "map"
+            | "dict"
+            | "set"
+            | "tuple"
+            | "array"
+            | "vec"
+            | "slice"
+            | "ref"
+            | "box"
+            | "arc"
+            | "rc"
+            | "cell"
+            | "mutex"
+            | "rwlock"
+    ) {
+        return true;
+    }
+    // Rust sized integer/float: i8/i16/i32/i64/i128 / u8..u128 / f32/f64
+    if (name.starts_with('i') || name.starts_with('u') || name.starts_with('f'))
+        && name.len() >= 2
+        && name.len() <= 4
+        && name[1..].chars().all(|c| c.is_ascii_digit())
+    {
+        return true;
+    }
+    false
 }
 
 /// Returns true if the HTML element is commonly used in markdown

@@ -178,6 +178,71 @@ mod tests {
     }
 
     #[test]
+    fn test_parametric_type_in_table_cell_not_flagged() {
+        // Issue #798: `list<string>` in a Markdown table cell was
+        // flagged as an unclosed `<string>` tag in v0.20.0. Any
+        // bare lowercase primitive-type name inside `<...>` should
+        // be treated as a type parameter, not XML.
+        let content = "\
+| Parameter | Type | Default |
+|---|---|---|
+| `custom_intensifiers_en` | list<string> | `[]` |
+| `keys` | map<string, int> | `{}` |
+| `refs` | Vec<&str> | `[]` |
+";
+        let validator = XmlValidator;
+        let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
+        assert!(
+            diagnostics.is_empty(),
+            "parametric types should not flag; got {:?}",
+            diagnostics
+        );
+    }
+
+    #[test]
+    fn test_lowercase_primitive_type_parameter_not_flagged() {
+        // Same root cause as #798 but outside a table — `list<int>`
+        // appearing in inline prose should also pass.
+        let content = "The `list<int>` parameter controls …";
+        let validator = XmlValidator;
+        let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
+        assert!(
+            diagnostics.is_empty(),
+            "primitive type name should not flag; got {:?}",
+            diagnostics
+        );
+    }
+
+    #[test]
+    fn test_sized_int_type_parameter_not_flagged() {
+        // Rust sized types `i32`, `u64`, `f32` etc. should be treated
+        // as type parameters.
+        let content = "Works with `Option<i32>`, `Vec<u64>`, and `HashMap<String, f32>`.";
+        let validator = XmlValidator;
+        let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
+        assert!(
+            diagnostics.is_empty(),
+            "sized int/float types should not flag; got {:?}",
+            diagnostics
+        );
+    }
+
+    #[test]
+    fn test_genuine_unclosed_lowercase_tag_still_flagged() {
+        // Guardrail: the type-parameter escape hatch is deliberately
+        // narrow. `<custom>` (not a primitive, not in the allowlist,
+        // and not a known HTML element) still needs to be flagged
+        // because that's what the XML-balance rule is for.
+        let content = "<custom>missing close";
+        let validator = XmlValidator;
+        let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
+        assert!(
+            !diagnostics.is_empty(),
+            "non-primitive unclosed tag should still flag"
+        );
+    }
+
+    #[test]
     fn test_config_disabled_xml_category() {
         let mut config = LintConfig::default();
         config.rules_mut().xml = false;
