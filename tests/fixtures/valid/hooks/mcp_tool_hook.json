@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "mcp_tool",
+            "server": "my_server",
+            "tool": "security_scan",
+            "input": { "file_path": "${tool_input.file_path}" }
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `408` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `410` validation rules generated from `knowledge-base/rules.json`.
 `126` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -77,6 +77,8 @@ This section contains all `408` validation rules generated from `knowledge-base/
 | [CC-HK-023](./generated/cc-hk-023.md) | Once Field Not Boolean | LOW | Claude Hooks | Yes (unsafe) |
 | [CC-HK-024](./generated/cc-hk-024.md) | Headers Missing AllowedEnvVars | MEDIUM | Claude Hooks | Yes (safe) |
 | [CC-HK-025](./generated/cc-hk-025.md) | Invalid Matcher Value | LOW | Claude Hooks | Yes (unsafe) |
+| [CC-HK-026](./generated/cc-hk-026.md) | MCP Tool Hook Missing Server | HIGH | Claude Hooks | No |
+| [CC-HK-027](./generated/cc-hk-027.md) | MCP Tool Hook Missing Tool | HIGH | Claude Hooks | No |
 | [CC-MEM-001](./generated/cc-mem-001.md) | Invalid Import Path | HIGH | Claude Memory | No |
 | [CC-MEM-002](./generated/cc-mem-002.md) | Circular Import | HIGH | Claude Memory | No |
 | [CC-MEM-003](./generated/cc-mem-003.md) | Import Depth Exceeds 5 | HIGH | Claude Memory | No |

@@ -969,6 +969,8 @@ pub(super) fn validate_all_raw_hooks(
     let check_023 = config.is_rule_enabled("CC-HK-023");
     let check_024 = config.is_rule_enabled("CC-HK-024");
     let check_025 = config.is_rule_enabled("CC-HK-025");
+    let check_026 = config.is_rule_enabled("CC-HK-026");
+    let check_027 = config.is_rule_enabled("CC-HK-027");
 
     let valid_types = ["command", "prompt", "agent", "http", "mcp_tool"];
     let known_non_command = ["prompt", "agent", "http", "mcp_tool"];
@@ -1222,6 +1224,66 @@ pub(super) fn validate_all_raw_hooks(
                                                     .to_string(),
                                             ),
                                         );
+                                    }
+                                }
+                            }
+                        }
+
+                        // CC-HK-026/CC-HK-027: MCP tool hook required fields.
+                        // Documented at code.claude.com/docs/en/hooks#mcp-tool-hook-fields:
+                        // `server` (required string) and `tool` (required string) identify
+                        // an already-connected MCP server + the tool to invoke. `input`
+                        // (optional object) carries tool arguments.
+                        if check_026 || check_027 {
+                            if let Some(type_val) = hook.get("type").and_then(|t| t.as_str()) {
+                                if type_val == "mcp_tool" {
+                                    if check_026 {
+                                        let server_missing = match hook.get("server") {
+                                            None => true,
+                                            Some(serde_json::Value::String(s)) => s.is_empty(),
+                                            Some(_) => true,
+                                        };
+                                        if server_missing {
+                                            conditional_diags.push(
+                                                Diagnostic::error(
+                                                    path.to_path_buf(),
+                                                    1,
+                                                    0,
+                                                    "CC-HK-026",
+                                                    format!(
+                                                        "MCP tool hook at {} is missing required 'server' field",
+                                                        hook_location
+                                                    ),
+                                                )
+                                                .with_suggestion(
+                                                    "Add a 'server' field naming an already-connected MCP server (e.g. \"server\": \"my_server\")".to_string(),
+                                                ),
+                                            );
+                                        }
+                                    }
+                                    if check_027 {
+                                        let tool_missing = match hook.get("tool") {
+                                            None => true,
+                                            Some(serde_json::Value::String(s)) => s.is_empty(),
+                                            Some(_) => true,
+                                        };
+                                        if tool_missing {
+                                            conditional_diags.push(
+                                                Diagnostic::error(
+                                                    path.to_path_buf(),
+                                                    1,
+                                                    0,
+                                                    "CC-HK-027",
+                                                    format!(
+                                                        "MCP tool hook at {} is missing required 'tool' field",
+                                                        hook_location
+                                                    ),
+                                                )
+                                                .with_suggestion(
+                                                    "Add a 'tool' field naming the MCP tool to invoke (e.g. \"tool\": \"security_scan\")".to_string(),
+                                                ),
+                                            );
+                                        }
                                     }
                                 }
                             }
