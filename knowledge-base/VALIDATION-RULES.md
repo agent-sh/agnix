@@ -373,6 +373,13 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Fix**: Manual
 **Source**: code.claude.com/docs/en/skills
 
+<a id="cc-set-001"></a>
+### CC-SET-001 [MEDIUM] Invalid prUrlTemplate Setting
+**Requirement**: `prUrlTemplate` in `.claude/settings.json` (and `.local.json`/`managed-settings.json`) SHOULD be a non-empty string containing at least one of the documented placeholders: `{host}`, `{owner}`, `{repo}`, `{number}`, `{url}`. A template with no placeholder will render the same static URL for every PR badge.
+**Detection**: Parse settings.json; look up top-level `prUrlTemplate`; flag (error) non-string types and empty strings, flag (warning) strings that substring-match none of the documented placeholders.
+**Fix**: Manual - set `prUrlTemplate` to a URL template like `https://reviews.example.com/{owner}/{repo}/pull/{number}`
+**Source**: code.claude.com/docs/en/settings (added in Claude Code v2.1.119)
+
 ---
 
 ## PER-CLIENT SKILL RULES

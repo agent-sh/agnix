@@ -165,7 +165,7 @@ fn extract_implemented_rule_ids() -> BTreeSet<String> {
 
     // Known rule ID prefixes to filter out false positives
     let valid_prefixes = [
-        "AS-", "CC-SK-", "CC-HK-", "CC-AG-", "CC-MEM-", "CC-OS-", "CC-PL-", "AGM-", "MCP-", "COP-",
+        "AS-", "CC-SK-", "CC-HK-", "CC-AG-", "CC-MEM-", "CC-OS-", "CC-PL-", "CC-SET-", "AGM-", "MCP-", "COP-",
         "CUR-", "CLN-", "CDX-", "OC-", "GM-", "XML-", "REF-", "PE-", "XP-", "VER-", "WS-",
         "CR-SK-", "CL-SK-", "CP-SK-", "CX-SK-", "OC-SK-", "WS-SK-", "KR-SK-", "KR-AG-", "KR-HK-",
         "KR-PW-", "KR-MCP-", "KIRO-", "AMP-SK-", "AMP-", "RC-SK-", "ROO-",
@@ -289,6 +289,10 @@ fn infer_fixture_coverage(rules: &[RuleEntry]) -> HashMap<String, Vec<String>> {
         ("claude-hooks", vec!["valid/hooks", "invalid/hooks"]),
         ("claude-agents", vec!["valid/agents", "invalid/agents"]),
         ("claude-memory", vec!["valid/memory", "invalid/memory"]),
+        (
+            "claude-settings",
+            vec!["valid/claude-settings", "invalid/claude-settings"],
+        ),
         (
             "claude-output-styles",
             vec!["valid/output-styles", "invalid/output-styles"],
@@ -517,6 +521,7 @@ fn test_rules_json_integrity() {
         "claude-agents",
         "claude-memory",
         "claude-output-styles",
+        "claude-settings",
         "agents-md",
         "claude-plugins",
         "mcp",
