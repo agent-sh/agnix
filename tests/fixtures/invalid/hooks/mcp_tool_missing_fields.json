@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "mcp_tool"
+          }
+        ]
+      }
+    ]
+  }
+}

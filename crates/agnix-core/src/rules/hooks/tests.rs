@@ -7,6 +7,11 @@ fn validate(content: &str) -> Vec<Diagnostic> {
     validator.validate(Path::new("settings.json"), content, &LintConfig::default())
 }
 
+fn validate_with_config(content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+    let validator = HooksValidator;
+    validator.validate(Path::new("settings.json"), content, config)
+}
+
 #[test]
 fn test_cc_hk_006_command_hook_missing_command() {
     let content = r#"{
@@ -2953,19 +2958,21 @@ fn test_cc_hk_016_agent_type_valid() {
 #[test]
 fn test_cc_hk_016_mcp_tool_type_valid() {
     // Claude Code v2.1.118 added `type: "mcp_tool"` so hooks can invoke
-    // MCP tools directly. Without this fix, agnix would false-positive
-    // CC-HK-016 (unknown hook type) AND CC-HK-012 (typed-schema mismatch)
-    // on every v2.1.118+ user that uses the new type per the release notes.
-    // (As of 2026-04-23 the docs page at code.claude.com/docs/en/hooks
-    // still lists only 4 types; the release notes are authoritative until
-    // the docs catch up.)
+    // MCP tools directly. Without the scaffolding added in that fix,
+    // agnix would false-positive CC-HK-016 (unknown hook type) AND
+    // CC-HK-012 (typed-schema mismatch).
+    //
+    // Since #804 we also know the full schema from the upstream docs
+    // (code.claude.com/docs/en/hooks#mcp-tool-hook-fields) and validate
+    // that `server` + `tool` are both required strings. So the fixture
+    // here now includes both.
     let content = r#"{
             "hooks": {
                 "PostToolUse": [
                     {
                         "matcher": "Bash",
                         "hooks": [
-                            { "type": "mcp_tool", "tool": "mcp__server__do_thing" }
+                            { "type": "mcp_tool", "server": "my_server", "tool": "do_thing" }
                         ]
                     }
                 ]
@@ -2974,9 +2981,9 @@ fn test_cc_hk_016_mcp_tool_type_valid() {
 
     let diagnostics = validate(content);
     // Strict assertion: NO diagnostics should fire on a valid mcp_tool hook.
-    // This catches both CC-HK-016 (string allow-list) and CC-HK-012
-    // (typed Hook enum schema match) -- without the typed-enum addition the
-    // raw JSON allow-list fix alone would not be enough.
+    // Covers CC-HK-016 (string allow-list), CC-HK-012 (typed Hook enum
+    // schema match), CC-HK-026 (server required), and CC-HK-027 (tool
+    // required).
     assert!(
         diagnostics.is_empty(),
         "valid mcp_tool hook should produce zero diagnostics, got: {:?}",
@@ -4608,4 +4615,277 @@ fn test_cc_hk_024_env_var_in_url_only_no_fire() {
         .collect();
 
     assert_eq!(cc_hk_024.len(), 0);
+}
+
+// =============================================================================
+// CC-HK-026 / CC-HK-027: MCP tool hook required fields
+// Upstream: Claude Code v2.1.118 added `type: "mcp_tool"` hook action.
+// Documented at code.claude.com/docs/en/hooks#mcp-tool-hook-fields with
+// required fields `server` (string) and `tool` (string), plus optional
+// `input` (object).
+// =============================================================================
+
+#[test]
+fn test_cc_hk_026_missing_server_flags() {
+    let content = r#"{
+        "hooks": {
+            "PreToolUse": [
+                {
+                    "matcher": "Bash",
+                    "hooks": [
+                        { "type": "mcp_tool", "tool": "security_scan" }
+                    ]
+                }
+            ]
+        }
+    }"#;
+    let diagnostics = validate(content);
+    let hits: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-HK-026")
+        .collect();
+    assert_eq!(hits.len(), 1);
+    assert_eq!(hits[0].level, DiagnosticLevel::Error);
+    assert!(hits[0].message.contains("missing required 'server' field"));
+}
+
+#[test]
+fn test_cc_hk_026_empty_server_flags() {
+    let content = r#"{
+        "hooks": {
+            "PreToolUse": [
+                {
+                    "matcher": "Bash",
+                    "hooks": [
+                        { "type": "mcp_tool", "server": "", "tool": "x" }
+                    ]
+                }
+            ]
+        }
+    }"#;
+    let diagnostics = validate(content);
+    let hits: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-HK-026")
+        .collect();
+    assert_eq!(hits.len(), 1);
+}
+
+#[test]
+fn test_cc_hk_026_non_string_server_flags() {
+    let content = r#"{
+        "hooks": {
+            "PreToolUse": [
+                {
+                    "matcher": "Bash",
+                    "hooks": [
+                        { "type": "mcp_tool", "server": 123, "tool": "x" }
+                    ]
+                }
+            ]
+        }
+    }"#;
+    let diagnostics = validate(content);
+    let hits: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-HK-026")
+        .collect();
+    assert_eq!(hits.len(), 1);
+}
+
+#[test]
+fn test_cc_hk_027_missing_tool_flags() {
+    let content = r#"{
+        "hooks": {
+            "PreToolUse": [
+                {
+                    "matcher": "Bash",
+                    "hooks": [
+                        { "type": "mcp_tool", "server": "my_server" }
+                    ]
+                }
+            ]
+        }
+    }"#;
+    let diagnostics = validate(content);
+    let hits: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-HK-027")
+        .collect();
+    assert_eq!(hits.len(), 1);
+    assert!(hits[0].message.contains("missing required 'tool' field"));
+}
+
+#[test]
+fn test_cc_hk_027_empty_tool_flags() {
+    let content = r#"{
+        "hooks": {
+            "PreToolUse": [
+                {
+                    "matcher": "Bash",
+                    "hooks": [
+                        { "type": "mcp_tool", "server": "my_server", "tool": "" }
+                    ]
+                }
+            ]
+        }
+    }"#;
+    let diagnostics = validate(content);
+    let hits: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-HK-027")
+        .collect();
+    assert_eq!(hits.len(), 1);
+}
+
+#[test]
+fn test_cc_hk_mcp_tool_valid_hook_does_not_flag() {
+    // Full valid mcp_tool hook from the upstream docs example.
+    let content = r#"{
+        "hooks": {
+            "PreToolUse": [
+                {
+                    "matcher": "Edit",
+                    "hooks": [
+                        {
+                            "type": "mcp_tool",
+                            "server": "my_server",
+                            "tool": "security_scan",
+                            "input": { "file_path": "${tool_input.file_path}" }
+                        }
+                    ]
+                }
+            ]
+        }
+    }"#;
+    let diagnostics = validate(content);
+    let hits: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-HK-026" || d.rule == "CC-HK-027")
+        .collect();
+    assert!(
+        hits.is_empty(),
+        "valid mcp_tool hook must not flag, got {:?}",
+        hits.iter()
+            .map(|d| (&d.rule, &d.message))
+            .collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn test_cc_hk_mcp_tool_does_not_trigger_on_command_hook() {
+    // Guardrail: CC-HK-026/027 must only fire on type:mcp_tool hooks,
+    // not on command/http/prompt/agent types.
+    let content = r#"{
+        "hooks": {
+            "PreToolUse": [
+                {
+                    "matcher": "Bash",
+                    "hooks": [
+                        { "type": "command", "command": "echo hi" }
+                    ]
+                }
+            ]
+        }
+    }"#;
+    let diagnostics = validate(content);
+    let hits: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-HK-026" || d.rule == "CC-HK-027")
+        .collect();
+    assert!(hits.is_empty());
+}
+
+#[test]
+fn test_cc_hk_026_can_be_disabled_independently_of_027() {
+    let mut config = LintConfig::default();
+    config.rules_mut().disabled_rules = vec!["CC-HK-026".to_string()];
+    // Only server is missing AND tool is missing - both would normally fire.
+    // With CC-HK-026 disabled, only CC-HK-027 should fire.
+    let content = r#"{
+        "hooks": {
+            "PreToolUse": [
+                {
+                    "matcher": "Edit",
+                    "hooks": [
+                        { "type": "mcp_tool" }
+                    ]
+                }
+            ]
+        }
+    }"#;
+    let diagnostics = validate_with_config(content, &config);
+    let cc_026: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-HK-026")
+        .collect();
+    let cc_027: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-HK-027")
+        .collect();
+    assert!(
+        cc_026.is_empty(),
+        "CC-HK-026 disabled - no diagnostic expected"
+    );
+    assert_eq!(
+        cc_027.len(),
+        1,
+        "CC-HK-027 still enabled - 'tool missing' diagnostic expected"
+    );
+}
+
+#[test]
+fn test_cc_hk_027_can_be_disabled_independently_of_026() {
+    let mut config = LintConfig::default();
+    config.rules_mut().disabled_rules = vec!["CC-HK-027".to_string()];
+    let content = r#"{
+        "hooks": {
+            "PreToolUse": [
+                {
+                    "matcher": "Edit",
+                    "hooks": [
+                        { "type": "mcp_tool" }
+                    ]
+                }
+            ]
+        }
+    }"#;
+    let diagnostics = validate_with_config(content, &config);
+    let cc_026: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-HK-026")
+        .collect();
+    let cc_027: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-HK-027")
+        .collect();
+    assert_eq!(cc_026.len(), 1);
+    assert!(cc_027.is_empty());
+}
+
+#[test]
+fn test_cc_hk_mcp_tool_both_missing_flags_both() {
+    let content = r#"{
+        "hooks": {
+            "PreToolUse": [
+                {
+                    "matcher": "Edit",
+                    "hooks": [
+                        { "type": "mcp_tool" }
+                    ]
+                }
+            ]
+        }
+    }"#;
+    let diagnostics = validate(content);
+    let cc_026: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-HK-026")
+        .collect();
+    let cc_027: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-HK-027")
+        .collect();
+    assert_eq!(cc_026.len(), 1);
+    assert_eq!(cc_027.len(), 1);
 }

@@ -1,8 +1,8 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 408,
-  "last_updated": "2026-04-01",
+  "total_rules": 410,
+  "last_updated": "2026-04-26",
   "schema": {
     "evidence": {
       "source_type": "spec|vendor_docs|vendor_code|paper|community",
@@ -2040,6 +2040,68 @@
       },
       "good_example": "{ \"matcher\": \"Bash\", \"hooks\": [{ \"type\": \"command\", \"command\": \"echo ok\" }] }",
       "bad_example": "{ \"matcher\": 123, \"hooks\": [{ \"type\": \"command\", \"command\": \"echo ok\" }] }"
+    },
+    {
+      "id": "CC-HK-026",
+      "name": "MCP Tool Hook Missing Server",
+      "severity": "HIGH",
+      "category": "claude-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/hooks"
+        ],
+        "verified_on": "2026-04-26",
+        "applies_to": {
+          "tool": "claude-code",
+          "file_types": [
+            "settings-json",
+            "hooks-json"
+          ]
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{ \"type\": \"mcp_tool\", \"server\": \"my_server\", \"tool\": \"security_scan\" }",
+      "bad_example": "{ \"type\": \"mcp_tool\", \"tool\": \"security_scan\" }"
+    },
+    {
+      "id": "CC-HK-027",
+      "name": "MCP Tool Hook Missing Tool",
+      "severity": "HIGH",
+      "category": "claude-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/hooks"
+        ],
+        "verified_on": "2026-04-26",
+        "applies_to": {
+          "tool": "claude-code",
+          "file_types": [
+            "settings-json",
+            "hooks-json"
+          ]
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{ \"type\": \"mcp_tool\", \"server\": \"my_server\", \"tool\": \"security_scan\" }",
+      "bad_example": "{ \"type\": \"mcp_tool\", \"server\": \"my_server\" }"
     },
     {
       "id": "CC-MEM-001",

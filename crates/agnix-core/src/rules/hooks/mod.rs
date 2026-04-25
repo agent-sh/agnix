@@ -1,4 +1,4 @@
-//! Hooks validation rules (CC-HK-001 to CC-HK-025)
+//! Hooks validation rules (CC-HK-001 to CC-HK-027)
 
 use crate::{
     config::LintConfig,
@@ -38,6 +38,8 @@ const RULE_IDS: &[&str] = &[
     "CC-HK-023",
     "CC-HK-024",
     "CC-HK-025",
+    "CC-HK-026",
+    "CC-HK-027",
 ];
 
 pub struct HooksValidator;

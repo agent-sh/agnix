@@ -800,6 +800,12 @@ rules:
   cdx_cfg_029:
     message: "'agents.max_threads' cannot be set when 'multi_agent_v2' is enabled - these use different agent lifecycles and Codex will fail to load this config"
     suggestion: "Remove 'agents.max_threads' (the v2 lifecycle manages threading internally), or disable 'multi_agent_v2' if you need the legacy thread limit. Rationale: openai/codex#19129 - Codex rejects this combination at config-load time in rust-v0.125.0"
+  cc_hk_026:
+    message: "MCP tool hook at %{location} is missing required 'server' field"
+    suggestion: "Add a 'server' field naming an already-connected MCP server (e.g. \"server\": \"my_server\")"
+  cc_hk_027:
+    message: "MCP tool hook at %{location} is missing required 'tool' field"
+    suggestion: "Add a 'tool' field naming the MCP tool to invoke (e.g. \"tool\": \"security_scan\")"
   cc_set_001:
     type_error: "prUrlTemplate must be a string"
     empty: "prUrlTemplate is set but empty - Claude Code will render no PR badge"

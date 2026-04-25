@@ -766,6 +766,20 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Fix**: Manual
 **Source**: code.claude.com/docs/en/hooks
 
+<a id="cc-hk-026"></a>
+### CC-HK-026 [HIGH] MCP Tool Hook Missing Server
+**Requirement**: A hook with `type: "mcp_tool"` MUST include a `server` field that is a non-empty string naming an already-connected MCP server
+**Detection**: Walk `hooks.*[*].hooks[*]`; for entries with `type == "mcp_tool"`, flag when `server` is absent, not a string, or the empty string
+**Fix**: Manual (add `"server": "<configured-server-name>"`)
+**Source**: code.claude.com/docs/en/hooks#mcp-tool-hook-fields (Claude Code v2.1.118+)
+
+<a id="cc-hk-027"></a>
+### CC-HK-027 [HIGH] MCP Tool Hook Missing Tool
+**Requirement**: A hook with `type: "mcp_tool"` MUST include a `tool` field that is a non-empty string naming the tool to invoke on the server
+**Detection**: Walk `hooks.*[*].hooks[*]`; for entries with `type == "mcp_tool"`, flag when `tool` is absent, not a string, or the empty string
+**Fix**: Manual (add `"tool": "<tool-name>"`)
+**Source**: code.claude.com/docs/en/hooks#mcp-tool-hook-fields (Claude Code v2.1.118+)
+
 ---
 
 ## CLAUDE CODE RULES (SUBAGENTS)
