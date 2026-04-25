@@ -1163,7 +1163,8 @@ fn validate_codex_config_rules(
             .and_then(OsStr::to_str)
             .is_some_and(|ext| ext.eq_ignore_ascii_case("toml"));
         let skip_top_level = is_toml && config.is_rule_enabled("CDX-004");
-        for path_key in collect_unknown_codex_keys(&root) {
+        let cdx_cfg_028_active = config.is_rule_enabled("CDX-CFG-028");
+        for path_key in collect_unknown_codex_keys(&root, cdx_cfg_028_active) {
             if skip_top_level && !path_key.contains('.') {
                 continue;
             }
@@ -1808,11 +1809,11 @@ fn validate_codex_config_rules(
             if let Some(server_obj) = server_cfg.as_object()
                 && server_obj.contains_key("bearer_token")
             {
-                let field_key = format!("mcp_servers.{server_name}.bearer_token");
+                let line = find_bearer_token_line(content, server_name).unwrap_or(1);
                 diagnostics.push(
                     Diagnostic::error(
                         path.to_path_buf(),
-                        line_for(&field_key),
+                        line,
                         0,
                         "CDX-CFG-028",
                         t!("rules.cdx_cfg_028.message", server = server_name.as_str()),
@@ -1993,7 +1994,11 @@ fn bool_at_path(root: &Value, path: &[&str]) -> Option<bool> {
     value_at_path(root, path).and_then(Value::as_bool)
 }
 
-fn collect_unknown_codex_keys(root: &Value) -> Vec<String> {
+/// When `cdx_cfg_028_active` is true, `bearer_token` inside `mcp_servers.*`
+/// is suppressed here because CDX-CFG-028 emits a more specific diagnostic.
+/// When the user has disabled CDX-CFG-028, fall back to reporting it via the
+/// generic unknown-key path so the field doesn't silently pass.
+fn collect_unknown_codex_keys(root: &Value, cdx_cfg_028_active: bool) -> Vec<String> {
     let mut unknown = Vec::new();
     let Some(root_obj) = root.as_object() else {
         return unknown;
@@ -2038,8 +2043,10 @@ fn collect_unknown_codex_keys(root: &Value) -> Vec<String> {
                 for key in server_obj.keys() {
                     // `bearer_token` is handled by CDX-CFG-028 with a more
                     // specific "use bearer_token_env_var" message - skip it
-                    // here to avoid double-reporting the same line.
-                    if key == "bearer_token" {
+                    // here to avoid double-reporting the same line. If the
+                    // user has disabled CDX-CFG-028 we fall through so the
+                    // generic unknown-key path still flags it.
+                    if key == "bearer_token" && cdx_cfg_028_active {
                         continue;
                     }
                     if !KNOWN_MCP_SERVER_KEYS.contains(&key.as_str()) {
@@ -2165,6 +2172,44 @@ fn is_windows_absolute_path(value: &str) -> bool {
         && bytes[0].is_ascii_alphabetic()
         && bytes[1] == b':'
         && (bytes[2] == b'\\' || bytes[2] == b'/')
+}
+
+/// Find the 1-indexed line of `bearer_token =` under `[mcp_servers.<name>]`.
+///
+/// CDX-CFG-028 needs a line number that points at the offending line rather than
+/// line 1. The flat `build_key_line_map` cannot distinguish between multiple
+/// servers (multiple `bearer_token` keys collide), so this scanner walks the
+/// content, finds the `[mcp_servers.<server_name>]` table header, and returns
+/// the line of the first `bearer_token =` before the next `[` section header or
+/// EOF. Returns `None` if the table header or the key can't be located.
+fn find_bearer_token_line(content: &str, server_name: &str) -> Option<usize> {
+    // Accept either `[mcp_servers.foo]` or `[mcp_servers."foo"]`.
+    // Be strict about the boundary so `mcp_servers.foo_bar` doesn't match when
+    // looking for `foo`.
+    let header_plain = format!("[mcp_servers.{server_name}]");
+    let header_quoted = format!("[mcp_servers.\"{server_name}\"]");
+    let mut in_section = false;
+    for (idx, line) in content.lines().enumerate() {
+        let trimmed = line.trim_start();
+        if trimmed.starts_with('[') {
+            let trimmed_no_ws = trimmed.trim();
+            in_section =
+                trimmed_no_ws == header_plain.as_str() || trimmed_no_ws == header_quoted.as_str();
+            continue;
+        }
+        if in_section {
+            // Match `bearer_token` key (optionally preceded by whitespace), not
+            // `bearer_token_env_var` or any other extension.
+            let stripped = trimmed.trim_end();
+            if let Some(rest) = stripped.strip_prefix("bearer_token") {
+                let after = rest.trim_start();
+                if after.starts_with('=') {
+                    return Some(idx + 1);
+                }
+            }
+        }
+    }
+    None
 }
 
 /// Build a map of TOML key names to their 1-indexed line numbers in a single pass.
@@ -3886,22 +3931,103 @@ bearer_token_env_var = \"S3_TOKEN\"
     }
 
     #[test]
-    fn test_cdx_cfg_028_does_not_double_report_with_cdx_004() {
-        // Guardrail: bearer_token is suppressed from the CDX-004 unknown-key
-        // path when CDX-CFG-028 is active, otherwise users would get two
-        // diagnostics for the same line (generic "unknown key" warning +
-        // specific "use bearer_token_env_var" error).
+    fn test_cdx_cfg_028_does_not_double_report_with_cdx_cfg_006() {
+        // Guardrail: bearer_token is suppressed from the CDX-CFG-006 unknown-key
+        // path (which DOES walk nested keys like mcp_servers.*.x) when
+        // CDX-CFG-028 is active. Otherwise users would get two diagnostics for
+        // the same line - generic "unknown key" warning + specific
+        // "use bearer_token_env_var" error.
         let content =
             "[mcp_servers.myserver]\nurl = \"https://api.example.com\"\nbearer_token = \"secret\"";
         let diagnostics = validate_config(content);
-        let cdx_004_for_bearer: Vec<_> = diagnostics
+        let cfg_006_for_bearer: Vec<_> = diagnostics
             .iter()
-            .filter(|d| d.rule == "CDX-004" && d.message.contains("bearer_token"))
+            .filter(|d| d.rule == "CDX-CFG-006" && d.message.contains("bearer_token"))
             .collect();
         assert!(
-            cdx_004_for_bearer.is_empty(),
-            "bearer_token must not trigger the generic unknown-key warning"
+            cfg_006_for_bearer.is_empty(),
+            "bearer_token must not trigger CDX-CFG-006 when CDX-CFG-028 is handling it, got {:?}",
+            cfg_006_for_bearer
         );
+    }
+
+    #[test]
+    fn test_cdx_cfg_028_disabled_falls_through_to_cdx_cfg_006() {
+        // Contract: if the user disables CDX-CFG-028, bearer_token must NOT be
+        // silently accepted - it still falls through to the generic unknown-key
+        // path (CDX-CFG-006) so the diagnosis surfaces one way or another.
+        use crate::config::LintConfig;
+        let mut config = LintConfig::default();
+        config.rules_mut().disabled_rules = vec!["CDX-CFG-028".to_string()];
+        let content =
+            "[mcp_servers.myserver]\nurl = \"https://api.example.com\"\nbearer_token = \"secret\"";
+        let validator = CodexConfigValidator;
+        let diagnostics = validator.validate(std::path::Path::new("config.toml"), content, &config);
+        let cfg_006_for_bearer: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-006" && d.message.contains("bearer_token"))
+            .collect();
+        assert_eq!(
+            cfg_006_for_bearer.len(),
+            1,
+            "with CDX-CFG-028 disabled, bearer_token must fall through to the generic unknown-key path"
+        );
+    }
+
+    #[test]
+    fn test_cdx_cfg_028_line_points_at_bearer_token_not_line_1() {
+        // Contract: the diagnostic line number points at the actual
+        // `bearer_token =` line, not line 1 (which was the bug in the first
+        // draft - line_for with a dotted path misses the flat key_lines map).
+        let content = "\
+# leading comment line 1
+# another comment line 2
+
+[mcp_servers.myserver]
+url = \"https://api.example.com\"
+bearer_token = \"secret\"
+";
+        let diagnostics = validate_config(content);
+        let cdx_028: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-028")
+            .collect();
+        assert_eq!(cdx_028.len(), 1);
+        assert_eq!(
+            cdx_028[0].line, 6,
+            "diagnostic must point at the bearer_token line, not line 1"
+        );
+    }
+
+    #[test]
+    fn test_cdx_cfg_028_distinct_lines_for_distinct_servers() {
+        // Contract: with two servers both setting bearer_token, each diagnostic
+        // must get its own line - not both reporting the same first-match line.
+        let content = "\
+[mcp_servers.s1]
+url = \"https://a.example.com\"
+bearer_token = \"t1\"
+
+[mcp_servers.s2]
+url = \"https://b.example.com\"
+bearer_token = \"t2\"
+";
+        let diagnostics = validate_config(content);
+        let cdx_028: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-028")
+            .collect();
+        assert_eq!(cdx_028.len(), 2);
+        let s1 = cdx_028
+            .iter()
+            .find(|d| d.message.contains("s1"))
+            .expect("s1 diag");
+        let s2 = cdx_028
+            .iter()
+            .find(|d| d.message.contains("s2"))
+            .expect("s2 diag");
+        assert_eq!(s1.line, 3, "s1 bearer_token should be line 3");
+        assert_eq!(s2.line, 7, "s2 bearer_token should be line 7");
     }
 
     #[test]
