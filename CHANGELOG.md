@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-04-24
+
 ### Changed
 - **Dependency bumps (dependabot queue drain)**: consolidated 8 open dependabot PRs (#783-#790) into a single verified branch:
   - Rust crates: `rayon 1.10 -> 1.12`, `toml 0.8 -> 1.x` (the clean `cargo update` resolved to the latest 1.x release at merge time; coexists with `rust-i18n-support`'s `0.8.x`), `rmcp 1.4 -> 1.5`, `similar 3.0 -> 3.1`, `uuid 1.23.0 -> 1.23.1`.
