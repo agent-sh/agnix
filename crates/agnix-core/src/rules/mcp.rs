@@ -430,20 +430,13 @@ fn extract_mcp_servers(raw_value: &serde_json::Value) -> Vec<(String, McpServerC
     // Primary shape: `{ "mcpServers": { "name": {...}, ... } }`.
     // This is what Claude Code, Cursor, Windsurf, and the MCP spec use.
     if let Some(servers_obj) = raw_value.get("mcpServers").and_then(|v| v.as_object()) {
-        return servers_obj
-            .iter()
-            .map(|(name, server_value)| {
-                let server = serde_json::from_value::<McpServerConfig>(server_value.clone())
-                    .unwrap_or_else(|_| parse_mcp_server_lenient(server_value));
-                (name.clone(), server)
-            })
-            .collect();
+        return parse_server_map(servers_obj);
     }
 
     // Fallback shape: flat top-level server map `{ "name": {...}, ... }`.
     // Accepted by Codex plugin MCP loading as of rust-v0.123.0 (openai/codex
-    // commit "Make plugin MCP loading accept both mcpServers and top-level
-    // server maps"). The plain MCP spec and other tools use `mcpServers`.
+    // "Make plugin MCP loading accept both mcpServers and top-level server
+    // maps"). The plain MCP spec and other tools use `mcpServers`.
     //
     // To avoid misreading a Claude Code `.mcp.json` typo as flat-form, gate
     // this fallback strictly: every top-level value MUST look like a server
@@ -456,17 +449,26 @@ fn extract_mcp_servers(raw_value: &serde_json::Value) -> Vec<(String, McpServerC
         && !root_obj.is_empty()
         && root_obj.values().all(looks_like_mcp_server_config)
     {
-        return root_obj
-            .iter()
-            .map(|(name, server_value)| {
-                let server = serde_json::from_value::<McpServerConfig>(server_value.clone())
-                    .unwrap_or_else(|_| parse_mcp_server_lenient(server_value));
-                (name.clone(), server)
-            })
-            .collect();
+        return parse_server_map(root_obj);
     }
 
     Vec::new()
+}
+
+/// Parse a JSON object into `(name, McpServerConfig)` entries. Strict
+/// deserialize first; falls back to lenient parsing (preserving what we
+/// can) when strict fails so partial configs still surface per-server
+/// diagnostics rather than dropping the entry entirely.
+fn parse_server_map(
+    obj: &serde_json::Map<String, serde_json::Value>,
+) -> Vec<(String, McpServerConfig)> {
+    obj.iter()
+        .map(|(name, server_value)| {
+            let server = serde_json::from_value::<McpServerConfig>(server_value.clone())
+                .unwrap_or_else(|_| parse_mcp_server_lenient(server_value));
+            (name.clone(), server)
+        })
+        .collect()
 }
 
 /// Conservative classifier: does this JSON value look like an MCP server
@@ -3525,16 +3527,14 @@ mod tests {
 
     #[test]
     fn test_flat_shape_server_validation_now_fires() {
-        // End-to-end: with the flat shape, a server that's missing BOTH
-        // `command` and `url` (well, it has command here but let's test a
-        // known-invalid shape through the validator) should still surface
-        // per-server diagnostics. This is the main user-visible win of
-        // the dual-shape support.
+        // End-to-end: the main user-visible win of dual-shape support is
+        // that per-server diagnostics actually run on flat-shape files.
+        // Before, extract_mcp_servers returned empty when mcpServers was
+        // absent, so any invalid server config silently passed.
         //
-        // Use a flat-shape file with a server that has `command` but
-        // empty args - triggers MCP-009 "empty command" if enabled.
-        // Actually we just want to confirm the validator *sees* the
-        // server; pick a shape that at minimum emits something.
+        // This fixture is flat-shape with an empty-string command. With
+        // the dual-shape support, the validator now sees the server and
+        // per-server rules (MCP-009 empty command, or similar) fire.
         let content = r#"{
             "fs": {
                 "command": "",
@@ -3542,8 +3542,8 @@ mod tests {
             }
         }"#;
         let diagnostics = validate(content);
-        // With the old behavior (no flat-shape support), diagnostics would
-        // be empty. Now we expect MCP-009 or similar per-server diagnostic.
+        // Before this change: no diagnostics would fire (empty extraction).
+        // After: per-server rules see the flat-shape server and fire.
         let per_server: Vec<_> = diagnostics
             .iter()
             .filter(|d| d.rule.starts_with("MCP-"))
