@@ -98,6 +98,8 @@ pub enum FileType {
     KiroHook,
     /// Kiro MCP settings (.kiro/settings/mcp.json)
     KiroMcp,
+    /// Kiro CLI settings (.kiro/settings.json or ~/.kiro/settings.json)
+    KiroSettings,
     /// Other .md files (for XML/import checks)
     GenericMarkdown,
     /// Skip validation
@@ -172,6 +174,7 @@ impl fmt::Display for FileType {
             FileType::KiroAgent => "KiroAgent",
             FileType::KiroHook => "KiroHook",
             FileType::KiroMcp => "KiroMcp",
+            FileType::KiroSettings => "KiroSettings",
             FileType::GenericMarkdown => "GenericMarkdown",
             FileType::Unknown => "Unknown",
         })

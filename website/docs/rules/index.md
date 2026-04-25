@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `410` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `413` validation rules generated from `knowledge-base/rules.json`.
 `126` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -310,6 +310,9 @@ This section contains all `410` validation rules generated from `knowledge-base/
 | [KR-PW-006](./generated/kr-pw-006.md) | Duplicate Keywords | LOW | Kiro Powers | No |
 | [KR-PW-007](./generated/kr-pw-007.md) | Name Invalid Characters | MEDIUM | Kiro Powers | No |
 | [KR-PW-008](./generated/kr-pw-008.md) | Secrets in Power Body | HIGH | Kiro Powers | No |
+| [KR-SET-001](./generated/kr-set-001.md) | Invalid toolSearch.enabled Value | HIGH | Kiro Settings | No |
+| [KR-SET-002](./generated/kr-set-002.md) | Invalid toolSearch.minPct Value | MEDIUM | Kiro Settings | No |
+| [KR-SET-003](./generated/kr-set-003.md) | Invalid toolSearch.minTokens Value | MEDIUM | Kiro Settings | No |
 | [MCP-001](./generated/mcp-001.md) | Invalid JSON-RPC Version | HIGH | MCP | Yes (safe) |
 | [MCP-002](./generated/mcp-002.md) | Missing Required Tool Field | HIGH | MCP | No |
 | [MCP-003](./generated/mcp-003.md) | Invalid JSON Schema | HIGH | MCP | No |

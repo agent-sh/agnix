@@ -398,7 +398,7 @@ impl ValidatorRegistryBuilder {
 ///
 /// Used by `BuiltinProvider` (via `debug_assert_eq!`) and tests to catch
 /// accidental additions or removals without updating all providers.
-const EXPECTED_BUILTIN_COUNT: usize = 75;
+const EXPECTED_BUILTIN_COUNT: usize = 76;
 
 // -- Category providers -----------------------------------------------------
 //
@@ -810,6 +810,11 @@ impl ValidatorProvider for MiscProvider {
                 kiro_mcp_validator,
             ),
             (
+                FileType::KiroSettings,
+                Some("KiroSettingsValidator"),
+                kiro_settings_validator,
+            ),
+            (
                 FileType::GenericMarkdown,
                 Some("CrossPlatformValidator"),
                 cross_platform_validator,
@@ -966,6 +971,10 @@ fn kiro_power_validator() -> Box<dyn Validator> {
 
 fn kiro_hook_validator() -> Box<dyn Validator> {
     Box::new(crate::rules::kiro_hook::KiroHookValidator)
+}
+
+fn kiro_settings_validator() -> Box<dyn Validator> {
+    Box::new(crate::rules::kiro_settings::KiroSettingsValidator)
 }
 
 fn kiro_mcp_validator() -> Box<dyn Validator> {
@@ -1465,6 +1474,7 @@ mod tests {
                 | FileType::KiroAgent
                 | FileType::KiroHook
                 | FileType::KiroMcp
+                | FileType::KiroSettings
                 | FileType::GenericMarkdown => (),
                 FileType::Unknown => {
                     panic!("Unknown must not appear in validatable_types")
@@ -1953,7 +1963,7 @@ mod tests {
 
     #[test]
     fn misc_provider_count() {
-        assert_eq!(MiscProvider.named_validators().len(), 25);
+        assert_eq!(MiscProvider.named_validators().len(), 26);
     }
 
     #[test]
