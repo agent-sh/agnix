@@ -2198,14 +2198,16 @@ fn find_bearer_token_line(content: &str, server_name: &str) -> Option<usize> {
             continue;
         }
         if in_section {
-            // Match `bearer_token` key (optionally preceded by whitespace), not
-            // `bearer_token_env_var` or any other extension.
+            // Match bare `bearer_token = ...` or quoted `"bearer_token" = ...`.
+            // Reject `bearer_token_env_var` and any other extension.
             let stripped = trimmed.trim_end();
-            if let Some(rest) = stripped.strip_prefix("bearer_token") {
-                let after = rest.trim_start();
-                if after.starts_with('=') {
-                    return Some(idx + 1);
-                }
+            let rest = stripped
+                .strip_prefix("bearer_token")
+                .or_else(|| stripped.strip_prefix("\"bearer_token\""));
+            if let Some(rest) = rest
+                && rest.trim_start().starts_with('=')
+            {
+                return Some(idx + 1);
             }
         }
     }
@@ -3996,6 +3998,29 @@ bearer_token = \"secret\"
         assert_eq!(
             cdx_028[0].line, 6,
             "diagnostic must point at the bearer_token line, not line 1"
+        );
+    }
+
+    #[test]
+    fn test_cdx_cfg_028_matches_quoted_bearer_token_key() {
+        // TOML allows quoted keys, and the config parser will normalize both
+        // `bearer_token = ...` and `"bearer_token" = ...` to the same map key.
+        // The line scanner must handle both forms so users don't get line 1
+        // fallback on the quoted form.
+        let content = "\
+[mcp_servers.myserver]
+url = \"https://api.example.com\"
+\"bearer_token\" = \"secret\"
+";
+        let diagnostics = validate_config(content);
+        let cdx_028: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-028")
+            .collect();
+        assert_eq!(cdx_028.len(), 1);
+        assert_eq!(
+            cdx_028[0].line, 3,
+            "quoted bearer_token key must report its actual line, not line 1"
         );
     }
 
