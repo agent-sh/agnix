@@ -474,29 +474,52 @@ mod i18n_tests {
                     walk(&p, keys);
                 } else if p.extension().and_then(|s| s.to_str()) == Some("rs") {
                     if let Ok(text) = std::fs::read_to_string(&p) {
-                        // Match t!( "rules.X.Y" — no fancy parsing;
-                        // locales are snake_case [a-z0-9_] between dots.
+                        // Match t!( with a word boundary (preceding
+                        // byte must NOT be an identifier char) so we
+                        // don't capture `format!(` or `assert!(` as
+                        // "t!(". Then scan the immediate call for a
+                        // `"rules.X.Y"` literal. We bound the search
+                        // to the same line group to avoid picking up
+                        // a `rules.*` string from an unrelated later
+                        // macro call.
                         let mut i = 0;
                         let bytes = text.as_bytes();
                         while i + 10 < bytes.len() {
                             if &bytes[i..i + 3] == b"t!(" {
-                                // Find the first "rules. quoted literal
-                                // after this call.
-                                let rest = &text[i..];
-                                if let Some(q) = rest.find(r#""rules."#)
-                                    && let Some(end) = rest[q + 1..].find('"')
-                                {
-                                    let key = &rest[q + 1..q + 1 + end];
-                                    // Only accept strict rules.a_b.c shape
-                                    if key.matches('.').count() == 2
-                                        && key.chars().all(|c| {
-                                            c.is_ascii_lowercase()
-                                                || c.is_ascii_digit()
-                                                || c == '.'
-                                                || c == '_'
-                                        })
+                                let prev_is_ident = i > 0
+                                    && (bytes[i - 1].is_ascii_alphanumeric()
+                                        || bytes[i - 1] == b'_');
+                                if !prev_is_ident {
+                                    // Search only within this macro
+                                    // call — stop at the matching `)`
+                                    // (approximate: stop at the next
+                                    // unescaped `)` after the first
+                                    // literal). For our purposes —
+                                    // literal keys, no nested calls —
+                                    // scanning up to 300 chars ahead
+                                    // is plenty and avoids grabbing
+                                    // strings from a later call.
+                                    let end_pos = bytes
+                                        .get(i..(i + 300).min(bytes.len()))
+                                        .and_then(|s| s.iter().position(|&b| b == b')'))
+                                        .map(|p| p + i)
+                                        .unwrap_or(bytes.len().min(i + 300));
+                                    let rest = &text[i..end_pos];
+                                    if let Some(q) = rest.find(r#""rules."#)
+                                        && let Some(endq) = rest[q + 1..].find('"')
                                     {
-                                        keys.insert(key.to_string());
+                                        let key = &rest[q + 1..q + 1 + endq];
+                                        // Only accept strict rules.a_b.c shape
+                                        if key.matches('.').count() == 2
+                                            && key.chars().all(|c| {
+                                                c.is_ascii_lowercase()
+                                                    || c.is_ascii_digit()
+                                                    || c == '.'
+                                                    || c == '_'
+                                            })
+                                        {
+                                            keys.insert(key.to_string());
+                                        }
                                     }
                                 }
                             }

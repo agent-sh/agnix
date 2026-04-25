@@ -701,10 +701,17 @@ fn is_likely_type_parameter(name: &str) -> bool {
 /// Returns true for `str`, `string`, `int`, `bool`, `float`, `char`,
 /// `byte`, `double`, `long`, `short`, `i32`, `u64`, `f32` etc. — the
 /// primitive-type names that appear inside parametric types in doc
-/// tables. Every entry here is lowercase + not in the HTML5 element
-/// list, so false positives on genuine HTML tags are impossible.
+/// tables.
+///
+/// Deliberately EXCLUDES names that collide with real HTML elements.
+/// For example, `map` is `<map>` in HTML (image maps) and `set` is a
+/// valid SVG element; adding them would false-positive on balanced
+/// `<map>...</map>` tags because the type-parameter short-circuit
+/// only applies to opening tags, leaving the closer as an
+/// `UnmatchedClosing` (XML-003). So `map` / `set` / `var` / `output`
+/// / etc. stay off this list even though they appear in generic-type
+/// signatures sometimes.
 fn is_lowercase_primitive_or_type_name(name: &str) -> bool {
-    // Rust primitives (including sized int/float variants).
     if matches!(
         name,
         "str"
@@ -730,9 +737,7 @@ fn is_lowercase_primitive_or_type_name(name: &str) -> bool {
             | "none"
             | "unit"
             | "list"
-            | "map"
             | "dict"
-            | "set"
             | "tuple"
             | "array"
             | "vec"
