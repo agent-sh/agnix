@@ -427,18 +427,58 @@ fn extract_tools(
 }
 
 fn extract_mcp_servers(raw_value: &serde_json::Value) -> Vec<(String, McpServerConfig)> {
-    let Some(servers_obj) = raw_value.get("mcpServers").and_then(|v| v.as_object()) else {
-        return Vec::new();
-    };
+    // Primary shape: `{ "mcpServers": { "name": {...}, ... } }`.
+    // This is what Claude Code, Cursor, Windsurf, and the MCP spec use.
+    if let Some(servers_obj) = raw_value.get("mcpServers").and_then(|v| v.as_object()) {
+        return servers_obj
+            .iter()
+            .map(|(name, server_value)| {
+                let server = serde_json::from_value::<McpServerConfig>(server_value.clone())
+                    .unwrap_or_else(|_| parse_mcp_server_lenient(server_value));
+                (name.clone(), server)
+            })
+            .collect();
+    }
 
-    servers_obj
-        .iter()
-        .map(|(name, server_value)| {
-            let server = serde_json::from_value::<McpServerConfig>(server_value.clone())
-                .unwrap_or_else(|_| parse_mcp_server_lenient(server_value));
-            (name.clone(), server)
-        })
-        .collect()
+    // Fallback shape: flat top-level server map `{ "name": {...}, ... }`.
+    // Accepted by Codex plugin MCP loading as of rust-v0.123.0 (openai/codex
+    // commit "Make plugin MCP loading accept both mcpServers and top-level
+    // server maps"). The plain MCP spec and other tools use `mcpServers`.
+    //
+    // To avoid misreading a Claude Code `.mcp.json` typo as flat-form, gate
+    // this fallback strictly: every top-level value MUST look like a server
+    // config (object with `command` or `url`). That excludes generic MCP
+    // payloads (which have `jsonrpc`, `tools`, `resources`, etc.) and random
+    // JSON. A file with a single `mcpServers` typo like `mcpServersx` won't
+    // match because the value of that key is itself a server map, not a
+    // server config.
+    if let Some(root_obj) = raw_value.as_object()
+        && !root_obj.is_empty()
+        && root_obj.values().all(looks_like_mcp_server_config)
+    {
+        return root_obj
+            .iter()
+            .map(|(name, server_value)| {
+                let server = serde_json::from_value::<McpServerConfig>(server_value.clone())
+                    .unwrap_or_else(|_| parse_mcp_server_lenient(server_value));
+                (name.clone(), server)
+            })
+            .collect();
+    }
+
+    Vec::new()
+}
+
+/// Conservative classifier: does this JSON value look like an MCP server
+/// config? A server config is an object with at least one of `command` (for
+/// stdio servers) or `url` (for HTTP/SSE/WebSocket servers). We intentionally
+/// do NOT accept bare objects with just `args` or just `env` - those could
+/// easily be non-server data.
+fn looks_like_mcp_server_config(value: &serde_json::Value) -> bool {
+    let Some(obj) = value.as_object() else {
+        return false;
+    };
+    obj.contains_key("command") || obj.contains_key("url")
 }
 
 fn parse_mcp_server_lenient(value: &serde_json::Value) -> McpServerConfig {
@@ -3368,6 +3408,149 @@ mod tests {
             suggestion.contains("malicious"),
             "MCP-006 suggestion should warn about potential malicious annotations, got: {}",
             suggestion
+        );
+    }
+
+    // ===== Flat top-level server-map shape (Codex rust-v0.123.0) =====
+    //
+    // Upstream openai/codex made plugin MCP loading accept both shapes.
+    // agnix's MCP validator mirrors that compatibility so per-server rules
+    // (MCP-009..012, MCP-024) fire on the flat form too - previously they
+    // silently no-oped when `mcpServers` was missing.
+
+    #[test]
+    fn test_extract_mcp_servers_flat_shape_stdio_server() {
+        let content = r#"{
+            "fs": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"] }
+        }"#;
+        let v: serde_json::Value = serde_json::from_str(content).unwrap();
+        let servers = extract_mcp_servers(&v);
+        assert_eq!(servers.len(), 1);
+        assert_eq!(servers[0].0, "fs");
+        assert_eq!(
+            servers[0].1.command.as_ref().and_then(|v| v.as_str()),
+            Some("npx")
+        );
+    }
+
+    #[test]
+    fn test_extract_mcp_servers_flat_shape_http_server() {
+        let content = r#"{
+            "remote": { "url": "https://api.example.com/mcp" }
+        }"#;
+        let v: serde_json::Value = serde_json::from_str(content).unwrap();
+        let servers = extract_mcp_servers(&v);
+        assert_eq!(servers.len(), 1);
+        assert_eq!(servers[0].0, "remote");
+        assert_eq!(
+            servers[0].1.url.as_deref(),
+            Some("https://api.example.com/mcp")
+        );
+    }
+
+    #[test]
+    fn test_extract_mcp_servers_flat_shape_multi_server() {
+        let content = r#"{
+            "fs": { "command": "npx", "args": ["-y", "server-fs"] },
+            "remote": { "url": "https://api.example.com/mcp" }
+        }"#;
+        let v: serde_json::Value = serde_json::from_str(content).unwrap();
+        let mut servers = extract_mcp_servers(&v);
+        servers.sort_by(|a, b| a.0.cmp(&b.0));
+        assert_eq!(servers.len(), 2);
+        assert_eq!(servers[0].0, "fs");
+        assert_eq!(servers[1].0, "remote");
+    }
+
+    #[test]
+    fn test_extract_mcp_servers_mcpservers_shape_still_preferred() {
+        // If both shapes somehow coexist (pathological), the explicit
+        // `mcpServers` key wins. The flat-shape fallback is ONLY used when
+        // no `mcpServers` key is present.
+        let content = r#"{
+            "mcpServers": { "real": { "command": "npx" } },
+            "other": { "command": "should-not-be-extracted" }
+        }"#;
+        let v: serde_json::Value = serde_json::from_str(content).unwrap();
+        let servers = extract_mcp_servers(&v);
+        assert_eq!(servers.len(), 1);
+        assert_eq!(servers[0].0, "real");
+    }
+
+    #[test]
+    fn test_extract_mcp_servers_rejects_jsonrpc_payload_as_flat_shape() {
+        // Guardrail: a generic JSON-RPC MCP response payload must NOT be
+        // misread as a flat server map. These have `jsonrpc`, `result`,
+        // `id`, etc. - none of which have `command` or `url`.
+        let content = r#"{
+            "jsonrpc": "2.0",
+            "result": { "tools": [] },
+            "id": 1
+        }"#;
+        let v: serde_json::Value = serde_json::from_str(content).unwrap();
+        let servers = extract_mcp_servers(&v);
+        assert!(
+            servers.is_empty(),
+            "JSON-RPC response payload must not be read as flat server map, got {:?}",
+            servers.iter().map(|(n, _)| n).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn test_extract_mcp_servers_rejects_mixed_flat_and_non_server_values() {
+        // Guardrail: if a top-level key's value doesn't have `command` or
+        // `url`, we can't confidently treat ANY top-level key as a server.
+        // This prevents misreading a user's typo of `mcpServersx` (where
+        // the value IS a server map but the outer key is wrong) as if
+        // the server-map's children were themselves flat-shape entries.
+        let content = r#"{
+            "mcpServersx": {
+                "fs": { "command": "npx" }
+            }
+        }"#;
+        let v: serde_json::Value = serde_json::from_str(content).unwrap();
+        let servers = extract_mcp_servers(&v);
+        assert!(
+            servers.is_empty(),
+            "typo of mcpServers (mcpServersx) must not be read as flat server map"
+        );
+    }
+
+    #[test]
+    fn test_extract_mcp_servers_rejects_empty_object() {
+        let v: serde_json::Value = serde_json::from_str("{}").unwrap();
+        let servers = extract_mcp_servers(&v);
+        assert!(servers.is_empty());
+    }
+
+    #[test]
+    fn test_flat_shape_server_validation_now_fires() {
+        // End-to-end: with the flat shape, a server that's missing BOTH
+        // `command` and `url` (well, it has command here but let's test a
+        // known-invalid shape through the validator) should still surface
+        // per-server diagnostics. This is the main user-visible win of
+        // the dual-shape support.
+        //
+        // Use a flat-shape file with a server that has `command` but
+        // empty args - triggers MCP-009 "empty command" if enabled.
+        // Actually we just want to confirm the validator *sees* the
+        // server; pick a shape that at minimum emits something.
+        let content = r#"{
+            "fs": {
+                "command": "",
+                "args": []
+            }
+        }"#;
+        let diagnostics = validate(content);
+        // With the old behavior (no flat-shape support), diagnostics would
+        // be empty. Now we expect MCP-009 or similar per-server diagnostic.
+        let per_server: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule.starts_with("MCP-"))
+            .collect();
+        assert!(
+            !per_server.is_empty(),
+            "flat-shape server must surface per-server diagnostics, got none"
         );
     }
 }
