@@ -346,23 +346,6 @@ mod i18n_tests {
         assert_key_resolves!("rules.cc_pl_006.suggestion");
         assert_key_resolves!("rules.cc_ag_007.parse_error_suggestion");
         assert_key_resolves!("rules.cdx_000.suggestion");
-        // CDX-AG-004..007 were missing from en.yml in v0.20.0
-        // (regression #799). Cover every CDX-AG-* rule explicitly
-        // so the class can't drift again.
-        assert_key_resolves!("rules.cdx_ag_001.message");
-        assert_key_resolves!("rules.cdx_ag_001.suggestion");
-        assert_key_resolves!("rules.cdx_ag_002.message");
-        assert_key_resolves!("rules.cdx_ag_002.suggestion");
-        assert_key_resolves!("rules.cdx_ag_003.message");
-        assert_key_resolves!("rules.cdx_ag_003.suggestion");
-        assert_key_resolves!("rules.cdx_ag_004.message");
-        assert_key_resolves!("rules.cdx_ag_004.suggestion");
-        assert_key_resolves!("rules.cdx_ag_005.message");
-        assert_key_resolves!("rules.cdx_ag_005.suggestion");
-        assert_key_resolves!("rules.cdx_ag_006.message");
-        assert_key_resolves!("rules.cdx_ag_006.suggestion");
-        assert_key_resolves!("rules.cdx_ag_007.message");
-        assert_key_resolves!("rules.cdx_ag_007.suggestion");
         assert_key_resolves!("rules.file_read_error_suggestion");
         assert_key_resolves!("rules.xp_004_read_error_suggestion");
 
@@ -459,5 +442,165 @@ mod i18n_tests {
 
         // Core section
         assert_not_raw_key!("core.error.file_read", path = "/tmp/test");
+    }
+
+    /// Regression guard for v0.20.0 #799. Walks `src/**/*.rs`,
+    /// extracts every literal `t!("rules.X.Y")` reference, and asserts
+    /// the key resolves to real text (not the key path). Catches new
+    /// rules added to code without matching locale entries before they
+    /// reach a release.
+    ///
+    /// Runs at test time only; reads `CARGO_MANIFEST_DIR` so it works
+    /// from any worktree. If Windows path handling ever breaks this,
+    /// it's also runnable via `cargo test` from CI which uses Linux.
+    #[test]
+    fn test_every_rule_locale_key_referenced_in_source_resolves() {
+        let _lock = LOCALE_MUTEX.lock().unwrap();
+        rust_i18n::set_locale("en");
+
+        let manifest_dir =
+            std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR set by cargo");
+        let src_dir = std::path::Path::new(&manifest_dir).join("src");
+
+        // Walk src/** and collect t!("rules.X.Y") refs.
+        let mut keys: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+        fn walk(dir: &std::path::Path, keys: &mut std::collections::BTreeSet<String>) {
+            let Ok(rd) = std::fs::read_dir(dir) else {
+                return;
+            };
+            for e in rd.flatten() {
+                let p = e.path();
+                if p.is_dir() {
+                    walk(&p, keys);
+                } else if p.extension().and_then(|s| s.to_str()) == Some("rs") {
+                    if let Ok(text) = std::fs::read_to_string(&p) {
+                        // Match t!( "rules.X.Y" — no fancy parsing;
+                        // locales are snake_case [a-z0-9_] between dots.
+                        let mut i = 0;
+                        let bytes = text.as_bytes();
+                        while i + 10 < bytes.len() {
+                            if &bytes[i..i + 3] == b"t!(" {
+                                // Find the first "rules. quoted literal
+                                // after this call.
+                                let rest = &text[i..];
+                                if let Some(q) = rest.find(r#""rules."#)
+                                    && let Some(end) = rest[q + 1..].find('"')
+                                {
+                                    let key = &rest[q + 1..q + 1 + end];
+                                    // Only accept strict rules.a_b.c shape
+                                    if key.matches('.').count() == 2
+                                        && key.chars().all(|c| {
+                                            c.is_ascii_lowercase()
+                                                || c.is_ascii_digit()
+                                                || c == '.'
+                                                || c == '_'
+                                        })
+                                    {
+                                        keys.insert(key.to_string());
+                                    }
+                                }
+                            }
+                            i += 1;
+                        }
+                    }
+                }
+            }
+        }
+        walk(&src_dir, &mut keys);
+
+        assert!(
+            !keys.is_empty(),
+            "scanner found no t!(\"rules.*.*\") calls under {}; check the walker",
+            src_dir.display()
+        );
+
+        // Load the compiled en.yml at test time and check membership.
+        // Using the YAML directly (rather than rust_i18n::t!, which
+        // requires static string literals) lets us iterate over the
+        // collected keys at runtime.
+        let locale_path = std::path::Path::new(&manifest_dir)
+            .join("locales")
+            .join("en.yml");
+        let locale_text = std::fs::read_to_string(&locale_path).unwrap_or_else(|e| {
+            panic!("read {}: {}", locale_path.display(), e);
+        });
+        // Parse — we only need key membership, not interpolation.
+        // Extracting via a simple manual parse avoids adding a test-
+        // only serde_yaml dependency: we just ask "does the indented
+        // structure contain a node for rules.X.Y.message?". Since
+        // locale keys are snake_case with no colons inside them,
+        // scanning for a `X:\n    Y:\n        Z:` pattern is enough.
+        // Simpler still: since every key we produce lives under
+        // `rules: / <rule_id>: / <field>:`, we can just split on
+        // "\n  <rule_id>:\n" and "\n    <field>:" marker pairs.
+
+        // Build a flat set of "rules.X.Y" keys from the YAML text.
+        let mut available: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+        let mut current_rule: Option<String> = None;
+        let mut inside_rules = false;
+        for line in locale_text.lines() {
+            if line.starts_with("rules:") {
+                inside_rules = true;
+                continue;
+            }
+            // A 1-indented root key (no leading space) after `rules:`
+            // ends the block.
+            if inside_rules
+                && !line.is_empty()
+                && !line.starts_with(' ')
+                && !line.starts_with('#')
+                && !line.starts_with("rules:")
+            {
+                inside_rules = false;
+            }
+            if !inside_rules {
+                continue;
+            }
+            // `  rule_id:` at 2-space indent
+            if let Some(tail) = line.strip_prefix("  ")
+                && !tail.starts_with(' ')
+                && !tail.starts_with('#')
+                && let Some(name) = tail.strip_suffix(':')
+                && name
+                    .chars()
+                    .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')
+            {
+                current_rule = Some(name.to_string());
+                continue;
+            }
+            // `    field:` or `    field: "…"` at 4-space indent
+            if let Some(tail) = line.strip_prefix("    ")
+                && !tail.starts_with(' ')
+                && !tail.starts_with('#')
+                && let Some(colon) = tail.find(':')
+                && let Some(rule) = &current_rule
+            {
+                let field = &tail[..colon];
+                if field
+                    .chars()
+                    .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')
+                {
+                    available.insert(format!("rules.{rule}.{field}"));
+                }
+            }
+        }
+
+        let mut missing: Vec<String> = Vec::new();
+        for k in &keys {
+            if !available.contains(k) {
+                missing.push(k.clone());
+            }
+        }
+
+        if !missing.is_empty() {
+            let mut msg = format!(
+                "{} rule-locale keys are referenced in source but missing from locales/en.yml:\n",
+                missing.len()
+            );
+            for k in &missing {
+                msg.push_str(&format!("  {}\n", k));
+            }
+            panic!("{}", msg);
+        }
     }
 }
