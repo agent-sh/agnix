@@ -1250,14 +1250,12 @@ pub(super) fn validate_all_raw_hooks(
                                                     1,
                                                     0,
                                                     "CC-HK-026",
-                                                    format!(
-                                                        "MCP tool hook at {} is missing required 'server' field",
-                                                        hook_location
+                                                    t!(
+                                                        "rules.cc_hk_026.message",
+                                                        location = hook_location.as_str()
                                                     ),
                                                 )
-                                                .with_suggestion(
-                                                    "Add a 'server' field naming an already-connected MCP server (e.g. \"server\": \"my_server\")".to_string(),
-                                                ),
+                                                .with_suggestion(t!("rules.cc_hk_026.suggestion")),
                                             );
                                         }
                                     }
@@ -1274,14 +1272,12 @@ pub(super) fn validate_all_raw_hooks(
                                                     1,
                                                     0,
                                                     "CC-HK-027",
-                                                    format!(
-                                                        "MCP tool hook at {} is missing required 'tool' field",
-                                                        hook_location
+                                                    t!(
+                                                        "rules.cc_hk_027.message",
+                                                        location = hook_location.as_str()
                                                     ),
                                                 )
-                                                .with_suggestion(
-                                                    "Add a 'tool' field naming the MCP tool to invoke (e.g. \"tool\": \"security_scan\")".to_string(),
-                                                ),
+                                                .with_suggestion(t!("rules.cc_hk_027.suggestion")),
                                             );
                                         }
                                     }

@@ -85,8 +85,6 @@ pub enum Hook {
         #[serde(skip_serializing_if = "Option::is_none")]
         timeout: Option<u64>,
     },
-    /// MCP tool hook: invoke an MCP tool directly (Claude Code v2.1.118+).
-    /// Schema details for required/optional fields are not yet documented at
     /// MCP tool hook (Claude Code v2.1.118+). Calls a tool on an
     /// already-connected MCP server. Documented at
     /// <https://code.claude.com/docs/en/hooks#mcp-tool-hook-fields>:
