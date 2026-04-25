@@ -794,6 +794,9 @@ rules:
     message: "Invalid model_auto_compact_token_limit '%{value}'. Must be a positive integer less than model_context_window"
     type_error: "Field 'model_auto_compact_token_limit' must be a positive integer"
     suggestion: "Set 'model_auto_compact_token_limit' to a positive integer smaller than your model_context_window"
+  cdx_cfg_028:
+    message: "MCP server '%{server}' uses unsupported inline 'bearer_token' field. Codex runtime rejects this - use 'bearer_token_env_var' to reference an env var instead"
+    suggestion: "Replace 'bearer_token = \"...\"' with 'bearer_token_env_var = \"YOUR_ENV_VAR_NAME\"' and set the token in that env var. Rationale: openai/codex#19294 - the field was removed from the config schema in rust-v0.125.0"
   cdx_ag_001:
     message: "AGENTS.md is empty"
     suggestion: "Add concrete repository-specific operating instructions"

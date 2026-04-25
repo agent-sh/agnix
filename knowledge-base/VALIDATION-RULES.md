@@ -2399,6 +2399,13 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 **Fix**: Manual
 **Source**: developers.openai.com/codex/
 
+<a id="cdx-cfg-028"></a>
+### CDX-CFG-028 [HIGH] Unsupported Inline MCP bearer_token Field
+**Requirement**: `mcp_servers.<name>.bearer_token` inline field MUST NOT be used - Codex runtime rejects it and requires `bearer_token_env_var` to reference an environment variable instead
+**Detection**: Walk `mcp_servers.*` tables in config.toml; error when any table contains a `bearer_token` key
+**Fix**: Manual - rewrite as `bearer_token_env_var = "MY_ENV_VAR"` and set the token in the named env var (keeps secret out of the config file)
+**Source**: openai/codex#19294 (removed from schema in rust-v0.125.0), openai/codex#19275 (original bug)
+
 <a id="cdx-ag-004"></a>
 ### CDX-AG-004 [MEDIUM] AGENTS.md Exceeds Size Limit
 **Requirement**: AGENTS.md SHOULD not exceed 100,000 bytes

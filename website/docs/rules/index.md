@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `405` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `406` validation rules generated from `knowledge-base/rules.json`.
 `126` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -188,6 +188,7 @@ This section contains all `405` validation rules generated from `knowledge-base/
 | [CDX-CFG-025](./generated/cdx-cfg-025.md) | Invalid Service Tier Value | MEDIUM | Codex CLI | Yes (unsafe) |
 | [CDX-CFG-026](./generated/cdx-cfg-026.md) | Invalid Network Permission Field | LOW | Codex CLI | Yes (safe) |
 | [CDX-CFG-027](./generated/cdx-cfg-027.md) | Invalid Windows Sandbox Value | LOW | Codex CLI | Yes (unsafe) |
+| [CDX-CFG-028](./generated/cdx-cfg-028.md) | Unsupported Inline MCP bearer_token Field | HIGH | Codex CLI | No |
 | [CL-SK-001](./generated/cl-sk-001.md) | Cline Skill Uses Unsupported Field | MEDIUM | Cline Skills | Yes (safe/unsafe) |
 | [CL-SK-002](./generated/cl-sk-002.md) | Missing Skill Name | HIGH | Cline Skills | Yes (safe) |
 | [CL-SK-003](./generated/cl-sk-003.md) | Missing Skill Description | HIGH | Cline Skills | No |
