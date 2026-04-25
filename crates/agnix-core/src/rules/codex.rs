@@ -88,6 +88,7 @@ const CODEX_CONFIG_RULE_IDS: &[&str] = &[
     "CDX-CFG-026",
     "CDX-CFG-027",
     "CDX-CFG-028",
+    "CDX-CFG-029",
     "CDX-APP-001",
     "CDX-APP-002",
     "CDX-APP-003",
@@ -1824,6 +1825,32 @@ fn validate_codex_config_rules(
         }
     }
 
+    // CDX-CFG-029: agents.max_threads cannot be set when multi_agent_v2 is
+    // enabled. Upstream: openai/codex#19129 - multi_agent_v2 uses the v2 agent
+    // lifecycle; accepting the legacy `agents.max_threads` limit alongside it
+    // creates conflicting configuration semantics. Codex now fails config
+    // load with "agents.max_threads cannot be set when multi_agent_v2 is
+    // enabled".
+    if config.is_rule_enabled("CDX-CFG-029")
+        && value_at_path(&root, &["agents", "max_threads"]).is_some()
+        && is_multi_agent_v2_enabled(&root)
+    {
+        let line = key_lines
+            .get("max_threads")
+            .copied()
+            .unwrap_or_else(|| key_lines.get("multi_agent_v2").copied().unwrap_or(1));
+        diagnostics.push(
+            Diagnostic::error(
+                path.to_path_buf(),
+                line,
+                0,
+                "CDX-CFG-029",
+                t!("rules.cdx_cfg_029.message"),
+            )
+            .with_suggestion(t!("rules.cdx_cfg_029.suggestion")),
+        );
+    }
+
     if config.is_rule_enabled("CDX-APP-001")
         && let Some(apps) = value_at_path(&root, &["apps"])
     {
@@ -2172,6 +2199,31 @@ fn is_windows_absolute_path(value: &str) -> bool {
         && bytes[0].is_ascii_alphabetic()
         && bytes[1] == b':'
         && (bytes[2] == b'\\' || bytes[2] == b'/')
+}
+
+/// Return true when the `multi_agent_v2` feature is enabled in either shape
+/// that the Codex config parser accepts:
+///
+/// - `[features] multi_agent_v2 = true` - flat boolean form (FeatureToml::Enabled)
+/// - `[features.multi_agent_v2] enabled = true` - table form (FeatureToml::Config)
+///
+/// Returns false when the feature is missing, explicitly false, or set to any
+/// non-boolean value (which Codex would reject earlier during TOML deserialize,
+/// so we don't need to re-diagnose it here).
+fn is_multi_agent_v2_enabled(root: &Value) -> bool {
+    let Some(feature) = value_at_path(root, &["features", "multi_agent_v2"]) else {
+        return false;
+    };
+    // Flat form: features.multi_agent_v2 = true
+    if let Some(b) = feature.as_bool() {
+        return b;
+    }
+    // Table form: [features.multi_agent_v2] enabled = true
+    // The table may exist without `enabled`; upstream defaults that to false.
+    if let Some(obj) = feature.as_object() {
+        return obj.get("enabled").and_then(Value::as_bool).unwrap_or(false);
+    }
+    false
 }
 
 /// Find the 1-indexed line of `bearer_token =` under `[mcp_servers.<name>]`.
@@ -4053,6 +4105,138 @@ bearer_token = \"t2\"
             .expect("s2 diag");
         assert_eq!(s1.line, 3, "s1 bearer_token should be line 3");
         assert_eq!(s2.line, 7, "s2 bearer_token should be line 7");
+    }
+
+    // ===== CDX-CFG-029: agents.max_threads incompatible with multi_agent_v2 =====
+
+    #[test]
+    fn test_cdx_cfg_029_flat_form_flags_conflict() {
+        // [features] multi_agent_v2 = true + [agents] max_threads = N
+        let content = "\
+[agents]
+max_threads = 4
+
+[features]
+multi_agent_v2 = true
+";
+        let diagnostics = validate_config(content);
+        let cdx_029: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-029")
+            .collect();
+        assert_eq!(cdx_029.len(), 1);
+        assert_eq!(cdx_029[0].level, DiagnosticLevel::Error);
+        assert!(
+            cdx_029[0]
+                .message
+                .contains("'agents.max_threads' cannot be set when 'multi_agent_v2' is enabled")
+        );
+    }
+
+    #[test]
+    fn test_cdx_cfg_029_table_form_flags_conflict() {
+        // [features.multi_agent_v2] enabled = true + [agents] max_threads = N
+        let content = "\
+[agents]
+max_threads = 2
+
+[features.multi_agent_v2]
+enabled = true
+";
+        let diagnostics = validate_config(content);
+        let cdx_029: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-029")
+            .collect();
+        assert_eq!(
+            cdx_029.len(),
+            1,
+            "table form [features.multi_agent_v2] enabled=true must also trigger"
+        );
+    }
+
+    #[test]
+    fn test_cdx_cfg_029_table_form_without_enabled_does_not_flag() {
+        // [features.multi_agent_v2] exists but `enabled` is not set - upstream
+        // defaults that to false, so CDX-CFG-029 must not fire.
+        let content = "\
+[agents]
+max_threads = 2
+
+[features.multi_agent_v2]
+usage_hint_enabled = true
+";
+        let diagnostics = validate_config(content);
+        let cdx_029: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-029")
+            .collect();
+        assert!(
+            cdx_029.is_empty(),
+            "[features.multi_agent_v2] without explicit enabled=true must not flag, got {:?}",
+            cdx_029
+        );
+    }
+
+    #[test]
+    fn test_cdx_cfg_029_table_form_enabled_false_does_not_flag() {
+        let content = "\
+[agents]
+max_threads = 2
+
+[features.multi_agent_v2]
+enabled = false
+";
+        let diagnostics = validate_config(content);
+        let cdx_029: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-029")
+            .collect();
+        assert!(cdx_029.is_empty());
+    }
+
+    #[test]
+    fn test_cdx_cfg_029_max_threads_alone_is_fine() {
+        let content = "[agents]\nmax_threads = 4\n";
+        let diagnostics = validate_config(content);
+        let cdx_029: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-029")
+            .collect();
+        assert!(cdx_029.is_empty());
+    }
+
+    #[test]
+    fn test_cdx_cfg_029_multi_agent_v2_alone_is_fine() {
+        // Only multi_agent_v2, no agents.max_threads - perfectly valid
+        let content = "[features]\nmulti_agent_v2 = true\n";
+        let diagnostics = validate_config(content);
+        let cdx_029: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-029")
+            .collect();
+        assert!(cdx_029.is_empty());
+    }
+
+    #[test]
+    fn test_cdx_cfg_029_can_be_disabled() {
+        use crate::config::LintConfig;
+        let mut config = LintConfig::default();
+        config.rules_mut().disabled_rules = vec!["CDX-CFG-029".to_string()];
+        let content = "\
+[agents]
+max_threads = 4
+
+[features]
+multi_agent_v2 = true
+";
+        let validator = CodexConfigValidator;
+        let diagnostics = validator.validate(std::path::Path::new("config.toml"), content, &config);
+        let cdx_029: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-029")
+            .collect();
+        assert!(cdx_029.is_empty());
     }
 
     #[test]

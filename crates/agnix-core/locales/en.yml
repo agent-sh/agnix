@@ -797,6 +797,9 @@ rules:
   cdx_cfg_028:
     message: "MCP server '%{server}' uses unsupported inline 'bearer_token' field. Codex runtime rejects this - use 'bearer_token_env_var' to reference an env var instead"
     suggestion: "Replace 'bearer_token = \"...\"' with 'bearer_token_env_var = \"YOUR_ENV_VAR_NAME\"' and set the token in that env var. Rationale: openai/codex#19294 - the field was removed from the config schema in rust-v0.125.0"
+  cdx_cfg_029:
+    message: "'agents.max_threads' cannot be set when 'multi_agent_v2' is enabled - these use different agent lifecycles and Codex will fail to load this config"
+    suggestion: "Remove 'agents.max_threads' (the v2 lifecycle manages threading internally), or disable 'multi_agent_v2' if you need the legacy thread limit. Rationale: openai/codex#19129 - Codex rejects this combination at config-load time in rust-v0.125.0"
   cdx_ag_001:
     message: "AGENTS.md is empty"
     suggestion: "Add concrete repository-specific operating instructions"
