@@ -318,6 +318,17 @@ pub fn detect_file_type(path: &Path) -> FileType {
         return FileType::KiroSettings;
     }
 
+    // Gemini CLI local agent markdown files live under `.gemini/agents/`.
+    // They have YAML frontmatter with `kind: local`, a `mcp_servers` map,
+    // and a system_prompt. Schema documented via the gemini-cli source at
+    // packages/core/src/agents/agentLoader.ts.
+    if ends_with_ignore_ascii_case(filename, ".md")
+        && parent_eq_ignore_ascii_case(parent, "agents")
+        && parent_eq_ignore_ascii_case(grandparent, ".gemini")
+    {
+        return FileType::GeminiAgent;
+    }
+
     match filename {
         // Amp code review checks (.agents/checks/**/*.md), excluding AGENTS
         // variants so AGENTS.md keeps ClaudeMd validator coverage.

@@ -1,7 +1,7 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 413,
+  "total_rules": 414,
   "last_updated": "2026-04-26",
   "schema": {
     "evidence": {
@@ -7087,6 +7087,33 @@
       },
       "good_example": "{\"general\":{},\"model\":{}}",
       "bad_example": "{ invalid json }"
+    },
+    {
+      "id": "GM-AG-001",
+      "name": "Invalid auth Block in Agent MCP Server",
+      "severity": "HIGH",
+      "category": "gemini-agents",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/google-gemini/gemini-cli/pull/24770"
+        ],
+        "verified_on": "2026-04-26",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nkind: local\nname: spanner-agent\nmcp_servers:\n  spanner:\n    url: https://spanner.googleapis.com/mcp\n    type: http\n    auth:\n      type: google-credentials\n      scopes:\n        - https://www.googleapis.com/auth/cloud-platform\nsystem_prompt: Example\n---\n",
+      "bad_example": "---\nkind: local\nname: spanner-agent\nmcp_servers:\n  spanner:\n    auth:\n      type: basic-auth\nsystem_prompt: Example\n---\n"
     },
     {
       "id": "KIRO-001",

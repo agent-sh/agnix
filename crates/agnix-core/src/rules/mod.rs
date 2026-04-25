@@ -12,6 +12,7 @@ pub mod codex_plugin;
 pub mod copilot;
 pub mod cross_platform;
 pub mod cursor;
+pub mod gemini_agent;
 pub mod gemini_extension;
 pub mod gemini_ignore;
 pub mod gemini_md;

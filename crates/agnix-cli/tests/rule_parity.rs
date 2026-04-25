@@ -166,9 +166,10 @@ fn extract_implemented_rule_ids() -> BTreeSet<String> {
     // Known rule ID prefixes to filter out false positives
     let valid_prefixes = [
         "AS-", "CC-SK-", "CC-HK-", "CC-AG-", "CC-MEM-", "CC-OS-", "CC-PL-", "CC-SET-", "AGM-",
-        "MCP-", "COP-", "CUR-", "CLN-", "CDX-", "OC-", "GM-", "XML-", "REF-", "PE-", "XP-", "VER-",
-        "WS-", "CR-SK-", "CL-SK-", "CP-SK-", "CX-SK-", "OC-SK-", "WS-SK-", "KR-SK-", "KR-AG-",
-        "KR-HK-", "KR-PW-", "KR-MCP-", "KR-SET-", "KIRO-", "AMP-SK-", "AMP-", "RC-SK-", "ROO-",
+        "MCP-", "COP-", "CUR-", "CLN-", "CDX-", "OC-", "GM-", "GM-AG-", "XML-", "REF-", "PE-",
+        "XP-", "VER-", "WS-", "CR-SK-", "CL-SK-", "CP-SK-", "CX-SK-", "OC-SK-", "WS-SK-", "KR-SK-",
+        "KR-AG-", "KR-HK-", "KR-PW-", "KR-MCP-", "KR-SET-", "KIRO-", "AMP-SK-", "AMP-", "RC-SK-",
+        "ROO-",
     ];
 
     fn extract_from_file(
@@ -336,6 +337,10 @@ fn infer_fixture_coverage(rules: &[RuleEntry]) -> HashMap<String, Vec<String>> {
         ("amp-checks", vec!["amp-checks"]),
         ("roo-code-skills", vec!["per_client_skills"]),
         ("gemini-cli", vec!["gemini_md", "gemini_md-invalid"]),
+        (
+            "gemini-agents",
+            vec!["valid/gemini-agents", "invalid/gemini-agents"],
+        ),
         ("codex", vec!["codex", "codex-invalid"]),
         ("roo-code", vec!["roo-code"]),
         ("windsurf", vec!["windsurf", "windsurf-legacy"]),
@@ -526,6 +531,7 @@ fn test_rules_json_integrity() {
         "claude-memory",
         "claude-output-styles",
         "claude-settings",
+        "gemini-agents",
         "agents-md",
         "claude-plugins",
         "mcp",
