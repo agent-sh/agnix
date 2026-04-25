@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "last_updated": "2026-04-22",
+  "last_updated": "2026-04-25",
   "description": "Tracks the latest release of every tool agnix validates (one entry per tool with a validator in crates/agnix-core/src/rules/). Used by .github/workflows/tool-release-watch.yml to open per-tool issues when a new release is published. Untracked tools include the precise publication URL in untracked_reason so a maintainer can monitor manually.",
   "tools": {
     "claude-code": {
@@ -16,7 +16,7 @@
         "mcp"
       ],
       "github_repo": "anthropics/claude-code",
-      "last_known_version": "v2.1.117",
+      "last_known_version": "v2.1.119",
       "tracked": true
     },
     "codex": {
@@ -28,7 +28,7 @@
         "agents_md"
       ],
       "github_repo": "openai/codex",
-      "last_known_version": "rust-v0.122.0",
+      "last_known_version": "rust-v0.125.0",
       "tracked": true
     },
     "opencode": {
@@ -39,7 +39,7 @@
         "agents_md"
       ],
       "github_repo": "sst/opencode",
-      "last_known_version": "v1.14.20",
+      "last_known_version": "v1.14.24",
       "tracked": true
     },
     "kiro": {
@@ -56,7 +56,7 @@
       "html_url": "https://kiro.dev/changelog/cli/",
       "version_regex": "[0-9]+\\.[0-9]+\\.[0-9]+",
       "notes_extractor": "glm",
-      "last_known_version": "2.0.1",
+      "last_known_version": "2.1.1",
       "tracked": true,
       "notes": "Proprietary CLI; no GH releases. Tracked via HTML scrape of kiro.dev/changelog/cli/ - the first NN.NN.NN version on the page is the latest. Release-note body is upgraded via GLM (scripts/glm-extract.js). The CLI itself exposes `kiro-cli version --changelog`. IDE has a separate changelog at https://kiro.dev/changelog/ide/ (not tracked here; could be added as a separate kiro-ide entry if needed)."
     },
@@ -78,7 +78,7 @@
         "cline"
       ],
       "github_repo": "cline/cline",
-      "last_known_version": "v3.80.0",
+      "last_known_version": "v3.81.0",
       "tracked": true
     },
     "cursor": {
@@ -90,7 +90,7 @@
       "github_repo": null,
       "html_url": "https://api2.cursor.sh/updates/api/update/darwin/cursor/0.0.1/stable",
       "version_regex": "[0-9]+\\.[0-9]+\\.[0-9]+",
-      "last_known_version": "3.1.17",
+      "last_known_version": "3.2.11",
       "tracked": true,
       "notes": "Tracked via Cursor's stable update endpoint (the same one the desktop app polls). Returns JSON like {\"url\":\"...\",\"name\":\"3.1.17\"}. Channel is hardcoded to 'stable' for darwin; the version is platform-agnostic (same release ships across darwin/linux/win32). Prose changelog at https://cursor.com/changelog (Next.js SPA - not scrapeable from raw HTML)."
     },
@@ -101,7 +101,7 @@
         "roo"
       ],
       "github_repo": "RooCodeInc/Roo-Code",
-      "last_known_version": "v3.52.1",
+      "last_known_version": "v3.53.0",
       "tracked": true,
       "notes": "Repo moved from RooVetGit/Roo-Code (still referenced in some docs) to RooCodeInc/Roo-Code."
     },
@@ -129,7 +129,7 @@
         "gemini_ignore"
       ],
       "github_repo": "google-gemini/gemini-cli",
-      "last_known_version": "v0.38.2",
+      "last_known_version": "v0.39.1",
       "tracked": true
     },
     "windsurf": {
