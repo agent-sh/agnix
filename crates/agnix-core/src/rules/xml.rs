@@ -178,6 +178,96 @@ mod tests {
     }
 
     #[test]
+    fn test_parametric_type_in_table_cell_not_flagged() {
+        // Issue #798: `list<string>` in a Markdown table cell was
+        // flagged as an unclosed `<string>` tag in v0.20.0. Any
+        // bare lowercase primitive-type name inside `<...>` should
+        // be treated as a type parameter, not XML.
+        //
+        // NOTE: table-cell content is not inside backticks here —
+        // extract_xml_tags skips fenced code blocks and backtick
+        // inline spans via scan_non_code_spans, so wrapping with
+        // backticks would cause the test to pass trivially without
+        // actually exercising is_likely_type_parameter.
+        let content = "\
+| Parameter | Type | Default |
+|---|---|---|
+| custom_intensifiers_en | list<string> | [] |
+| keys | dict<string, int> | {} |
+| refs | Vec<str> | [] |
+";
+        let validator = XmlValidator;
+        let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
+        assert!(
+            diagnostics.is_empty(),
+            "parametric types should not flag; got {:?}",
+            diagnostics
+        );
+    }
+
+    #[test]
+    fn test_lowercase_primitive_type_parameter_not_flagged() {
+        // #798 root cause in inline prose. Example is OUTSIDE
+        // backticks so extract_xml_tags actually sees the
+        // `<int>` token and applies the heuristic.
+        let content = "The list<int> parameter controls something.";
+        let validator = XmlValidator;
+        let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
+        assert!(
+            diagnostics.is_empty(),
+            "primitive type name should not flag; got {:?}",
+            diagnostics
+        );
+    }
+
+    #[test]
+    fn test_sized_int_type_parameter_not_flagged() {
+        // Rust sized types i32, u64, f32 should be treated as type
+        // parameters. Example is outside backticks so the XML
+        // extractor actually scans the angle-bracket tokens.
+        let content = "Works with Option<i32>, Vec<u64>, and HashMap<str, f32>.";
+        let validator = XmlValidator;
+        let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
+        assert!(
+            diagnostics.is_empty(),
+            "sized int/float types should not flag; got {:?}",
+            diagnostics
+        );
+    }
+
+    #[test]
+    fn test_html_map_element_still_balanced() {
+        // Guardrail after the #798 fix: `map` is a valid HTML5
+        // element (image maps). It must NOT be on the lowercase
+        // primitive allowlist — otherwise the opener would short-
+        // circuit while the closer still records, triggering a
+        // spurious UnmatchedClosing (XML-003).
+        let content = "<map>content</map>";
+        let validator = XmlValidator;
+        let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
+        assert!(
+            diagnostics.is_empty(),
+            "balanced HTML <map>...</map> must not flag; got {:?}",
+            diagnostics
+        );
+    }
+
+    #[test]
+    fn test_genuine_unclosed_lowercase_tag_still_flagged() {
+        // Guardrail: the type-parameter escape hatch is deliberately
+        // narrow. `<custom>` (not a primitive, not in the allowlist,
+        // and not a known HTML element) still needs to be flagged
+        // because that's what the XML-balance rule is for.
+        let content = "<custom>missing close";
+        let validator = XmlValidator;
+        let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
+        assert!(
+            !diagnostics.is_empty(),
+            "non-primitive unclosed tag should still flag"
+        );
+    }
+
+    #[test]
     fn test_config_disabled_xml_category() {
         let mut config = LintConfig::default();
         config.rules_mut().xml = false;

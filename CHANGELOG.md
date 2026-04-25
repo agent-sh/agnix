@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **#799 + full i18n audit: 84 missing rule-locale keys across 37 rules** - a comprehensive audit of every `t!("rules.X.Y")` call against `locales/en.yml` surfaced 84 missing entries, spanning Codex (CDX-CFG-013..022, CDX-APP-002/003), Kiro (KIRO-010/011/013/014, KR-AG-008..013, KR-HK-007/009/010, KR-MCP-003/004, KR-PW-005..008), and OpenCode (OC-AG-001/002, OC-CFG-001/005/006/007). Every one would have rendered the lookup key to users instead of the diagnostic text — same regression class as #799 but much wider. Added complete entries (message + suggestion, plus type_error/local_missing/etc where the code expects them). New automated regression guard `i18n_tests::test_every_rule_locale_key_referenced_in_source_resolves` walks `src/**/*.rs` at test time, extracts every literal `t!("rules.X.Y")` reference (word-boundary match so `format!(...t!(...)...)` calls within other macros are handled correctly), and fails CI if any key is missing from `locales/en.yml` — so this class of bug can never ship silently again.
+- **#798 XML-balance false positive on `list<string>`** - bare lowercase primitive-type names in `<...>` inside Markdown tables or prose (`list<string>`, `map<string,int>`, `Vec<&str>`) were flagged as unclosed XML tags. Extended `is_likely_type_parameter` with a lowercase-primitive allowlist (`str`, `string`, `int`, `bool`, `float`, `char`, `byte`, `list`, `map`, `vec`, `slice`, etc) plus Rust sized int/float pattern (`i32`, `u64`, `f32`). Guardrail test ensures non-primitive lowercase tags (e.g. `<custom>`) still flag.
+
 ## [0.20.0] - 2026-04-24
 
 ### Changed

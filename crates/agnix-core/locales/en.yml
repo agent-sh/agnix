@@ -648,12 +648,35 @@ rules:
   oc_009:
     message: "Invalid variable substitution '%{pattern}' - %{reason}"
     suggestion: "Use {env:VARIABLE_NAME} or {file:path/to/file} syntax for variable substitution"
+  oc_cfg_001:
+    message: "Invalid model format '%{value}'; expected 'provider/model-id' (e.g. 'anthropic/claude-sonnet-4-5')"
+    type_error: "Field 'model' must be a string"
+    suggestion: "Use 'provider/model-id' format — 'anthropic/claude-sonnet-4-5', 'openai/gpt-5', etc."
   oc_cfg_002:
     message: "Invalid autoupdate value. Use boolean true/false or string 'notify'"
     suggestion: "Set autoupdate to true, false, or 'notify'"
   oc_cfg_003:
     message: "Unknown top-level config key '%{key}' in opencode.json"
     suggestion: "Remove unsupported top-level keys or verify spelling against OpenCode docs"
+  oc_cfg_005:
+    message: "Potential hardcoded API key detected in opencode.json"
+    suggestion: "Replace plaintext keys with environment variable references ({env:ANTHROPIC_API_KEY}) or use opencode auth login"
+  oc_cfg_006:
+    message: "Invalid MCP server entry '%{server}' — each server must be an object"
+    type_error: "Field 'mcp' must be an object mapping server names to server configs"
+    suggestion_type: "Each server value must be an object (not a string, array, or primitive)"
+    suggestion: "Shape each mcp server entry as an object with a 'type' and either 'command' or 'url'"
+  oc_cfg_007:
+    local_missing: "MCP server '%{server}' has type 'local' but no command"
+    remote_missing: "MCP server '%{server}' has type 'remote' but no url"
+    suggestion_local: "Add a 'command' array for local servers (e.g. command = [\"npx\", \"my-server\"])"
+    suggestion_remote: "Add a 'url' for remote servers (e.g. url = \"https://…\")"
+  oc_ag_001:
+    message: "Invalid OpenCode agent mode '%{value}' — valid modes: 'all', 'read-only', 'custom'"
+    suggestion: "Set mode to 'all' (default), 'read-only', or 'custom'"
+  oc_ag_002:
+    message: "Invalid color format '%{value}' — expected a hex color (#RRGGBB) or a named color"
+    suggestion: "Use a hex color like '#FF5733' or one of the named colors (red, green, blue, yellow, purple, cyan)"
   oc_pm_001:
     message: "Invalid permission action '%{value}' for '%{tool}'. Valid values: 'allow', 'ask', 'deny'"
     type_error: "Permission values must be strings ('allow', 'ask', 'deny') or nested maps of those strings"
@@ -736,6 +759,41 @@ rules:
     message: "Invalid cli_auth_credentials_store '%{value}'. Valid values: 'file', 'keyring', 'auto', 'ephemeral'"
     type_error: "Field 'cli_auth_credentials_store' must be a string"
     suggestion: "Use one of: 'file', 'keyring', 'auto', 'ephemeral'"
+  cdx_cfg_013:
+    message: "Invalid sandbox_workspace_write mode '%{value}'. Valid values: 'read-only', 'read-write', 'interactive'"
+    type_error: "Field 'sandbox_workspace_write' must be a string"
+    suggestion: "Use one of: 'read-only', 'read-write', 'interactive'"
+  cdx_cfg_014:
+    type_error: "Field 'model' must be a string"
+    suggestion: "Set 'model' to a valid Codex model identifier (e.g. 'gpt-5', 'claude-sonnet-4-5')"
+  cdx_cfg_015:
+    type_error: "Field 'model_provider' must be a string"
+    suggestion: "Set 'model_provider' to a valid provider name (e.g. 'openai', 'anthropic')"
+  cdx_cfg_016:
+    message: "Invalid model_reasoning_summary '%{value}'. Valid values: 'auto', 'concise', 'detailed', 'none'"
+    type_error: "Field 'model_reasoning_summary' must be a string"
+    suggestion: "Use one of: 'auto', 'concise', 'detailed', 'none'"
+  cdx_cfg_017:
+    type_error: "Field 'history' must be an object"
+    suggestion: "Shape the history field as an object (e.g., `[history]` table in TOML)"
+  cdx_cfg_018:
+    type_error: "Field 'tui' must be an object"
+    suggestion: "Shape the tui field as an object (e.g., `[tui]` table in TOML)"
+  cdx_cfg_019:
+    type_error: "Field 'file_opener' must be a string"
+    suggestion: "Set 'file_opener' to a valid command name (e.g. 'code', 'vim', 'nano')"
+  cdx_cfg_020:
+    message: "Invalid OAuth credentials_store '%{value}' for MCP server. Valid values: 'file', 'keyring', 'auto', 'ephemeral'"
+    type_error: "Field 'oauth.credentials_store' must be a string"
+    suggestion: "Use one of: 'file', 'keyring', 'auto', 'ephemeral'"
+  cdx_cfg_021:
+    message: "Invalid model_context_window '%{value}'. Must be a positive integer (typically 4096-1000000)"
+    type_error: "Field 'model_context_window' must be a positive integer"
+    suggestion: "Set 'model_context_window' to a positive integer matching your model's context limit"
+  cdx_cfg_022:
+    message: "Invalid model_auto_compact_token_limit '%{value}'. Must be a positive integer less than model_context_window"
+    type_error: "Field 'model_auto_compact_token_limit' must be a positive integer"
+    suggestion: "Set 'model_auto_compact_token_limit' to a positive integer smaller than your model_context_window"
   cdx_ag_001:
     message: "AGENTS.md is empty"
     suggestion: "Add concrete repository-specific operating instructions"
@@ -745,10 +803,28 @@ rules:
   cdx_ag_003:
     message: "AGENTS.md appears overly generic and may not provide actionable project guidance"
     suggestion: "Add repository-specific commands, paths, and guardrails"
+  cdx_ag_004:
+    message: "AGENTS.md exceeds recommended size limit (%{size} bytes; limit is %{limit})"
+    suggestion: "Trim AGENTS.md by moving detailed sections into linked docs, or split by concern (setup, commands, guardrails)"
+  cdx_ag_005:
+    message: "AGENTS.md references missing file `%{reference}`"
+    suggestion: "Remove the reference or create the file - Codex will fail to open it during a session"
+  cdx_ag_006:
+    message: "AGENTS.md missing project context (no headings, no commands, no paths)"
+    suggestion: "Add at least one heading, one command example, or a project-structure section so Codex has anchors to follow"
+  cdx_ag_007:
+    message: "AGENTS.md contradicts .codex/config.toml"
+    suggestion: "Reconcile the documented guidance in AGENTS.md with the declared config values (approval modes, tool policy, etc.)"
   cdx_app_001:
     message: "Invalid default_tools_approval_mode '%{value}' for app '%{app}'. Valid values: 'auto', 'prompt', 'approve'"
     type_error: "default_tools_approval_mode for app '%{app}' must be a string"
     suggestion: "Use one of: 'auto', 'prompt', 'approve'"
+  cdx_app_002:
+    type_error: "Field 'skills' for app '%{app}' must be an array of strings"
+    suggestion: "Set 'skills' to an array of skill names (e.g. skills = [\"my-skill\"])"
+  cdx_app_003:
+    type_error: "Field 'profile' for app '%{app}' must be a string"
+    suggestion: "Set 'profile' to a profile name defined in your Codex config"
 
   # --- Windsurf (windsurf.rs) ---
   ws_001:
@@ -798,6 +874,18 @@ rules:
   kiro_009:
     message: "Inline file reference points to a missing file: %{reference}"
     suggestion: "Fix the reference path or create the referenced file"
+  kiro_010:
+    message: "Kiro steering file has no inclusion mode declared"
+    suggestion: "Add an `inclusion:` field with one of: always, fileMatch, manual, auto"
+  kiro_011:
+    message: "Kiro steering file is excessively long (%{len} chars; recommended under %{limit})"
+    suggestion: "Split oversized steering docs by concern or move detail into linked files"
+  kiro_013:
+    message: "Conflicting inclusion modes detected in Kiro steering files"
+    suggestion: "Choose a single inclusion strategy (always, fileMatch, manual, or auto) for overlapping scopes"
+  kiro_014:
+    message: "Kiro steering file has markdown structure issues (headings out of order or missing)"
+    suggestion: "Ensure headings follow a consistent hierarchy (h1 -> h2 -> h3) and the file starts with a title heading"
   kr_pw_001:
     message: "POWER.md is missing required frontmatter fields: %{fields}"
     suggestion: "Add required frontmatter fields: name, description, keywords"
@@ -813,6 +901,18 @@ rules:
   kr_pw_004:
     message: "Adjacent power mcp.json has invalid mcpServers structure"
     suggestion: "Ensure mcp.json uses an object mcpServers map with valid server entries"
+  kr_pw_005:
+    message: "POWER.md step #%{index} is missing a description"
+    suggestion: "Add a short description below each step heading so agents know what the step does"
+  kr_pw_006:
+    message: "POWER.md has duplicate keywords: %{duplicates}"
+    suggestion: "Deduplicate the keywords array so each activation keyword is unique"
+  kr_pw_007:
+    message: "POWER.md name '%{name}' contains invalid characters"
+    suggestion: "Use lowercase letters, digits, and hyphens only (e.g. 'my-power')"
+  kr_pw_008:
+    message: "Potential hardcoded secret detected in POWER.md body"
+    suggestion: "Remove hardcoded credentials from the power body; reference environment variables instead"
   kr_ag_001:
     message: "Unknown field '%{field}' in Kiro agent JSON"
     suggestion: "Remove unsupported fields or use documented Kiro agent keys"
@@ -834,6 +934,24 @@ rules:
   kr_ag_007:
     message: "Kiro agent has broader tools than referenced subagent '@%{agent}' (extra tools: %{extra_tools})"
     suggestion: "Narrow this agent's tool scope or align '@%{agent}' tool permissions"
+  kr_ag_008:
+    message: "Kiro agent is missing required 'name' field"
+    suggestion: "Add a 'name' field at the top level of the agent JSON"
+  kr_ag_009:
+    message: "Kiro agent is missing required 'prompt' field"
+    suggestion: "Add a non-empty 'prompt' string defining the agent's behavior"
+  kr_ag_010:
+    message: "Kiro agent has duplicate tool entries: '%{tool}'"
+    suggestion: "Remove duplicate tool names from the 'tools' array"
+  kr_ag_011:
+    message: "Kiro agent 'tools' array is empty"
+    suggestion: "Add at least one tool or remove the 'tools' field to inherit defaults"
+  kr_ag_012:
+    message: "Kiro agent toolAliases maps '%{alias}' to unknown tool '%{tool}'"
+    suggestion: "Alias a tool that's present in the 'tools' array, or add the target to 'tools'"
+  kr_ag_013:
+    message: "Potential hardcoded secret detected in Kiro agent prompt"
+    suggestion: "Remove hardcoded credentials from the prompt; reference environment variables instead"
   kr_hk_001:
     message: "Invalid Kiro IDE hook event '%{event}'"
     suggestion: "Use one of: fileEdited, fileCreate, fileDelete, promptSubmit, agentStop, preToolUse, postToolUse, manual"
@@ -855,6 +973,15 @@ rules:
   kr_hk_006:
     message: "Kiro CLI hook entry at %{event}[%{index}] is missing required command"
     suggestion: "Add a non-empty command to each CLI hook entry"
+  kr_hk_007:
+    message: "Kiro hook timeout is out of range (0 or > 300s)"
+    suggestion: "Set 'timeout' between 1 and 300 seconds"
+  kr_hk_009:
+    message: "Kiro hook command uses an absolute path"
+    suggestion: "Use a relative path or a tool on PATH to keep hooks portable across machines"
+  kr_hk_010:
+    message: "Potential hardcoded secret detected in Kiro hook command"
+    suggestion: "Remove hardcoded credentials from the hook command; reference environment variables (e.g. ${API_KEY}) instead"
   kr_mcp_001:
     message: "Kiro MCP server '%{server}' is missing both command and url"
     suggestion: "Set command for local servers or url for remote servers"
@@ -867,6 +994,12 @@ rules:
   kr_mcp_002:
     message: "Kiro MCP server '%{server}' has potential hardcoded secret in env '%{env_key}'"
     suggestion: "Use environment variable indirection such as ${VAR_NAME} instead of plaintext secrets"
+  kr_mcp_003:
+    message: "Kiro MCP server '%{server}' is missing required 'args' field"
+    suggestion: "Add an 'args' array (even if empty) alongside 'command', or switch to 'url' for remote servers"
+  kr_mcp_004:
+    message: "Kiro MCP server '%{server}' has invalid URL '%{url}'"
+    suggestion: "Provide a valid URL with http:// or https:// (or ws:// / wss://) scheme for remote MCP servers"
 
   # --- Prompt engineering (prompt.rs) ---
   pe_001:
