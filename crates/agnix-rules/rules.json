@@ -1,7 +1,7 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 410,
+  "total_rules": 413,
   "last_updated": "2026-04-26",
   "schema": {
     "evidence": {
@@ -8474,6 +8474,87 @@
       },
       "good_example": "---\nname: test\ndescription: desc\nkeywords: [test]\n---\nUse ${API_KEY}",
       "bad_example": "---\nname: test\ndescription: desc\nkeywords: [test]\n---\nAPI_KEY=sk-live-secret123"
+    },
+    {
+      "id": "KR-SET-001",
+      "name": "Invalid toolSearch.enabled Value",
+      "severity": "HIGH",
+      "category": "kiro-settings",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/cli/mcp/tool-search/"
+        ],
+        "verified_on": "2026-04-26",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"toolSearch.enabled\": true\n}",
+      "bad_example": "{\n  \"toolSearch.enabled\": \"true\"\n}"
+    },
+    {
+      "id": "KR-SET-002",
+      "name": "Invalid toolSearch.minPct Value",
+      "severity": "MEDIUM",
+      "category": "kiro-settings",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/cli/mcp/tool-search/"
+        ],
+        "verified_on": "2026-04-26",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"toolSearch.minPct\": 5\n}",
+      "bad_example": "{\n  \"toolSearch.minPct\": -5\n}"
+    },
+    {
+      "id": "KR-SET-003",
+      "name": "Invalid toolSearch.minTokens Value",
+      "severity": "MEDIUM",
+      "category": "kiro-settings",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/cli/mcp/tool-search/"
+        ],
+        "verified_on": "2026-04-26",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"toolSearch.minTokens\": 50000\n}",
+      "bad_example": "{\n  \"toolSearch.minTokens\": -1\n}"
     },
     {
       "id": "MCP-001",

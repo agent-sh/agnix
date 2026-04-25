@@ -806,6 +806,19 @@ rules:
   cc_hk_027:
     message: "MCP tool hook at %{location} is missing required 'tool' field"
     suggestion: "Add a 'tool' field naming the MCP tool to invoke (e.g. \"tool\": \"security_scan\")"
+  kr_set_001:
+    type_error: "toolSearch.enabled must be a boolean (true or false)"
+    suggestion: "Set toolSearch.enabled to true or false. Example: {\"toolSearch.enabled\": true}. See https://kiro.dev/docs/cli/mcp/tool-search/"
+  kr_set_002:
+    type_error: "toolSearch.minPct must be a number (percentage of the context window)"
+    negative: "toolSearch.minPct must be non-negative (0 means 'always active')"
+    over_100: "toolSearch.minPct is above 100% - Tool Search will never activate because MCP tool specs cannot exceed the context window"
+    suggestion: "Set toolSearch.minPct to a non-negative number (default 5). Use 0 to make Tool Search always active. See https://kiro.dev/docs/cli/mcp/tool-search/"
+  kr_set_003:
+    type_error: "toolSearch.minTokens must be a number (token count threshold)"
+    negative: "toolSearch.minTokens must be non-negative (0 means 'always active')"
+    not_integer: "toolSearch.minTokens must be an integer (token counts are whole numbers)"
+    suggestion: "Set toolSearch.minTokens to a non-negative integer (default 50000). Use 0 to make Tool Search always active. See https://kiro.dev/docs/cli/mcp/tool-search/"
   cc_set_001:
     type_error: "prUrlTemplate must be a string"
     empty: "prUrlTemplate is set but empty - Claude Code will render no PR badge"

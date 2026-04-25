@@ -306,6 +306,18 @@ pub fn detect_file_type(path: &Path) -> FileType {
         return FileType::KiroMcp;
     }
 
+    // .kiro/settings.json - global CLI preferences written by
+    // `kiro-cli settings <key> <value>`. Documented at
+    // https://kiro.dev/docs/cli/mcp/tool-search/ for toolSearch.* keys
+    // and elsewhere for other CLI preferences. Kiro writes this to
+    // ~/.kiro/settings.json globally; matching on the parent-directory
+    // name also covers project-local overrides if the user opts in.
+    if filename.eq_ignore_ascii_case("settings.json")
+        && parent_eq_ignore_ascii_case(parent, ".kiro")
+    {
+        return FileType::KiroSettings;
+    }
+
     match filename {
         // Amp code review checks (.agents/checks/**/*.md), excluding AGENTS
         // variants so AGENTS.md keeps ClaudeMd validator coverage.

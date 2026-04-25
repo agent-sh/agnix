@@ -2917,6 +2917,33 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 ---
 
+## KIRO CLI SETTINGS RULES
+
+Rules for `.kiro/settings.json` (and `~/.kiro/settings.json`) - the flat-key JSON that Kiro's `kiro-cli settings <key> <value>` command writes to. Today covers the Tool Search feature added in Kiro CLI 2.1.
+
+<a id="kr-set-001"></a>
+### KR-SET-001 [HIGH] Invalid toolSearch.enabled Value
+**Requirement**: `toolSearch.enabled` MUST be a boolean (true or false) when present. Non-boolean values will cause Kiro CLI to fail to apply the setting.
+**Detection**: Parse settings.json; look up top-level `toolSearch.enabled`; flag non-boolean types (string, number, array, object, null)
+**Fix**: Manual - set to `true` or `false` without quotes
+**Source**: kiro.dev/docs/cli/mcp/tool-search/ (Kiro CLI 2.1+)
+
+<a id="kr-set-002"></a>
+### KR-SET-002 [MEDIUM] Invalid toolSearch.minPct Value
+**Requirement**: `toolSearch.minPct` SHOULD be a non-negative number representing the percentage-of-context-window threshold that activates Tool Search. Default 5. Value 0 means "always active". Values above 100 will never trigger Tool Search because MCP tool specs cannot exceed the context window.
+**Detection**: Parse settings.json; type-check top-level `toolSearch.minPct`; flag non-numbers and negative numbers (ERROR), warn on values above 100 (WARNING)
+**Fix**: Manual - set to a non-negative number (default 5), or 0 for always-active
+**Source**: kiro.dev/docs/cli/mcp/tool-search/
+
+<a id="kr-set-003"></a>
+### KR-SET-003 [MEDIUM] Invalid toolSearch.minTokens Value
+**Requirement**: `toolSearch.minTokens` SHOULD be a non-negative integer representing the token-count threshold that activates Tool Search. Default 50000. Value 0 means "always active".
+**Detection**: Parse settings.json; type-check top-level `toolSearch.minTokens`; flag non-numbers, negative numbers, and fractional values (ERROR)
+**Fix**: Manual - set to a non-negative integer (default 50000), or 0 for always-active
+**Source**: kiro.dev/docs/cli/mcp/tool-search/
+
+---
+
 ## UNIVERSAL RULES (XML)
 
 <a id="xml-001"></a>
