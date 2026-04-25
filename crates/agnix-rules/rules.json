@@ -1,7 +1,7 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 407,
+  "total_rules": 408,
   "last_updated": "2026-04-01",
   "schema": {
     "evidence": {
@@ -3486,6 +3486,33 @@
       },
       "good_example": "---\nname: my-skill\nshell: bash\n---\nSkill instructions.",
       "bad_example": "---\nname: my-skill\nshell: zsh\n---\nSkill instructions."
+    },
+    {
+      "id": "CC-SET-001",
+      "name": "Invalid prUrlTemplate Setting",
+      "severity": "MEDIUM",
+      "category": "claude-settings",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/settings"
+        ],
+        "verified_on": "2026-04-26",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"prUrlTemplate\": \"https://reviews.example.com/{owner}/{repo}/pull/{number}\"\n}",
+      "bad_example": "{\n  \"prUrlTemplate\": \"https://reviews.example.com/\"\n}"
     },
     {
       "id": "CDX-000",

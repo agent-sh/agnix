@@ -398,7 +398,7 @@ impl ValidatorRegistryBuilder {
 ///
 /// Used by `BuiltinProvider` (via `debug_assert_eq!`) and tests to catch
 /// accidental additions or removals without updating all providers.
-const EXPECTED_BUILTIN_COUNT: usize = 74;
+const EXPECTED_BUILTIN_COUNT: usize = 75;
 
 // -- Category providers -----------------------------------------------------
 //
@@ -725,6 +725,11 @@ impl ValidatorProvider for MiscProvider {
         vec![
             (FileType::AmpCheck, Some("AmpValidator"), amp_validator),
             (FileType::Hooks, Some("HooksValidator"), hooks_validator),
+            (
+                FileType::Hooks,
+                Some("ClaudeSettingsValidator"),
+                claude_settings_validator,
+            ),
             (FileType::Plugin, Some("PluginValidator"), plugin_validator),
             (FileType::Mcp, Some("McpValidator"), mcp_validator),
             (
@@ -853,6 +858,10 @@ fn agent_validator() -> Box<dyn Validator> {
 
 fn hooks_validator() -> Box<dyn Validator> {
     Box::new(crate::rules::hooks::HooksValidator)
+}
+
+fn claude_settings_validator() -> Box<dyn Validator> {
+    Box::new(crate::rules::claude_settings::ClaudeSettingsValidator)
 }
 
 fn plugin_validator() -> Box<dyn Validator> {
@@ -1944,7 +1953,7 @@ mod tests {
 
     #[test]
     fn misc_provider_count() {
-        assert_eq!(MiscProvider.named_validators().len(), 24);
+        assert_eq!(MiscProvider.named_validators().len(), 25);
     }
 
     #[test]

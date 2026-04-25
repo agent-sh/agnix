@@ -5,6 +5,7 @@ pub mod agents_md;
 pub mod amp;
 pub mod claude_md;
 pub mod claude_rules;
+pub mod claude_settings;
 pub mod cline;
 pub mod codex;
 pub mod codex_plugin;
