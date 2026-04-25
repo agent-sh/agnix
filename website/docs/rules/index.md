@@ -130,7 +130,7 @@ This section contains all `408` validation rules generated from `knowledge-base/
 | [CC-SK-018](./generated/cc-sk-018.md) | Invalid Effort Value | MEDIUM | Claude Skills | Yes (unsafe) |
 | [CC-SK-019](./generated/cc-sk-019.md) | Invalid Paths Format | LOW | Claude Skills | No |
 | [CC-SK-020](./generated/cc-sk-020.md) | Invalid Shell Value | MEDIUM | Claude Skills | Yes (unsafe) |
-| [CC-SET-001](./generated/cc-set-001.md) | Invalid prUrlTemplate Setting | MEDIUM | claude-settings | No |
+| [CC-SET-001](./generated/cc-set-001.md) | Invalid prUrlTemplate Setting | MEDIUM | Claude Settings | No |
 | [CDX-000](./generated/cdx-000.md) | TOML Parse Error | HIGH | Codex CLI | No |
 | [CDX-001](./generated/cdx-001.md) | Invalid Approval Mode | HIGH | Codex CLI | Yes (unsafe) |
 | [CDX-002](./generated/cdx-002.md) | Invalid Full Auto Error Mode | HIGH | Codex CLI | Yes (unsafe) |

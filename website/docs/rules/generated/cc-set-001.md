@@ -1,16 +1,16 @@
 ---
 id: cc-set-001
-title: "CC-SET-001: Invalid prUrlTemplate Setting - claude-settings"
+title: "CC-SET-001: Invalid prUrlTemplate Setting - Claude Settings"
 sidebar_label: "CC-SET-001"
-description: "agnix rule CC-SET-001 checks for invalid prurltemplate setting in claude-settings files. Severity: MEDIUM. See examples and fix guidance."
-keywords: ["CC-SET-001", "invalid prurltemplate setting", "claude-settings", "validation", "agnix", "linter"]
+description: "agnix rule CC-SET-001 checks for invalid prurltemplate setting in claude settings files. Severity: MEDIUM. See examples and fix guidance."
+keywords: ["CC-SET-001", "invalid prurltemplate setting", "claude settings", "validation", "agnix", "linter"]
 ---
 
 ## Summary
 
 - **Rule ID**: `CC-SET-001`
 - **Severity**: `MEDIUM`
-- **Category**: `claude-settings`
+- **Category**: `Claude Settings`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
 - **Verified On**: `2026-04-26`
@@ -28,7 +28,7 @@ keywords: ["CC-SET-001", "invalid prurltemplate setting", "claude-settings", "va
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples

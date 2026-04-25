@@ -41,8 +41,9 @@ impl Validator for ClaudeSettingsValidator {
             return diagnostics;
         }
 
-        // Parse JSON once; bail silently on parse errors (hooks validator
-        // already emits CC-HK-000 for malformed settings.json).
+        // Parse JSON once; bail silently on parse errors. The hooks
+        // validator already surfaces malformed settings.json through its
+        // own parse-error path, so we don't duplicate that diagnostic here.
         let Ok(value) = serde_json::from_str::<serde_json::Value>(content) else {
             return diagnostics;
         };
@@ -146,16 +147,33 @@ fn validate_pr_url_template(
     }
 }
 
-/// 1-indexed line of the first occurrence of `"<key>"` in a JSON document,
+/// 1-indexed line of the first occurrence of `"<key>":` in a JSON document,
 /// skipping matches inside string literals. Returns None if the key isn't
-/// found. We look for the quoted key followed by optional whitespace and
-/// `:` so `"prUrlTemplateX"` doesn't accidentally match when searching
-/// for `prUrlTemplate`.
+/// found. We look for the quoted key followed by JSON whitespace and `:`
+/// so `"prUrlTemplateX"` doesn't accidentally match when searching for
+/// `prUrlTemplate`, and so that a key-looking fragment inside a prose
+/// value (like `"note": "prUrlTemplate in prose"`) is ignored.
+///
+/// Byte-slice comparison against the needle keeps the scanner safe across
+/// UTF-8 content: `bytes[i..j] == needle_bytes` cannot panic mid-codepoint
+/// the way `content[i..j] == needle` can when the tail lands inside a
+/// multi-byte char.
+///
+/// Only ASCII keys are supported (the needle contains a bare `"` prefix/
+/// suffix with no JSON-string escaping). That's fine for the documented
+/// Claude Code settings keys, which are all ASCII identifiers. If future
+/// rules need keys with escapes, build the needle with proper escaping.
 fn find_key_line(content: &str, key: &str) -> Option<usize> {
+    debug_assert!(
+        key.is_ascii() && !key.contains('"') && !key.contains('\\'),
+        "find_key_line expects ASCII key without quotes or backslashes"
+    );
     let needle = format!("\"{key}\"");
+    let needle_bytes = needle.as_bytes();
+    let needle_len = needle_bytes.len();
+    let bytes = content.as_bytes();
     let mut in_string = false;
     let mut escape = false;
-    let bytes = content.as_bytes();
     let mut line = 1usize;
     let mut i = 0;
     while i < bytes.len() {
@@ -176,14 +194,18 @@ fn find_key_line(content: &str, key: &str) -> Option<usize> {
             continue;
         }
         if b == b'"' {
-            // Tentatively try to match "<key>": starting at this position.
+            // Tentatively match "<key>": at this position.
             if !in_string
-                && i + needle.len() <= bytes.len()
-                && content[i..i + needle.len()] == needle
+                && i + needle_len <= bytes.len()
+                && &bytes[i..i + needle_len] == needle_bytes
             {
-                // Check the char after the key is `:` (optionally with whitespace).
-                let mut j = i + needle.len();
-                while j < bytes.len() && (bytes[j] == b' ' || bytes[j] == b'\t') {
+                // Skip JSON whitespace (space, tab, CR, LF) between the key
+                // and `:`. JSON RFC 8259 section 2 defines these four.
+                // The returned line is the line where the key opens, so we
+                // don't need to track newlines past i - we just need to
+                // know the colon is reachable.
+                let mut j = i + needle_len;
+                while j < bytes.len() && matches!(bytes[j], b' ' | b'\t' | b'\n' | b'\r') {
                     j += 1;
                 }
                 if j < bytes.len() && bytes[j] == b':' {
@@ -398,6 +420,36 @@ mod tests {
             hit.line, 3,
             "scanner must ignore \"prUrlTemplate\" mentions inside string values"
         );
+    }
+
+    #[test]
+    fn test_does_not_panic_on_non_ascii_json_content() {
+        // Regression: byte-slice comparison keeps find_key_line safe when
+        // string values contain multi-byte UTF-8. A &str slice over an
+        // arbitrary byte window could panic mid-codepoint.
+        let content = "{\n  \"note\": \"\u{1F525} prUrlTemplate mentioned in UTF-8 value \u{4e2d}\u{6587}\",\n  \"prUrlTemplate\": 123\n}";
+        let diagnostics = validate(content);
+        let hit = diagnostics
+            .iter()
+            .find(|d| d.rule == "CC-SET-001")
+            .expect("CC-SET-001 diagnostic");
+        assert_eq!(hit.line, 3);
+    }
+
+    #[test]
+    fn test_accepts_newline_between_key_and_colon() {
+        // JSON permits any whitespace (space, tab, CR, LF) between a key
+        // and its colon. The scanner must handle newlines in that gap or
+        // it'll fall back to line 1 on pretty-printed configs.
+        let content = "{\n  \"prUrlTemplate\"\n    : 123\n}";
+        let diagnostics = validate(content);
+        let hit = diagnostics
+            .iter()
+            .find(|d| d.rule == "CC-SET-001")
+            .expect("CC-SET-001 diagnostic");
+        // The diagnostic line is where the key opens (line 2), which is
+        // the most useful target for editor squigglies.
+        assert_eq!(hit.line, 2);
     }
 
     #[test]

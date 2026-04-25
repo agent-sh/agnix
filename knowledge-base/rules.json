@@ -3504,7 +3504,7 @@
         "normative_level": "SHOULD",
         "tests": {
           "unit": true,
-          "fixtures": false,
+          "fixtures": true,
           "e2e": false
         }
       },
