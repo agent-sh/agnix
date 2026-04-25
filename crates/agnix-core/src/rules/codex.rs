@@ -87,6 +87,7 @@ const CODEX_CONFIG_RULE_IDS: &[&str] = &[
     "CDX-CFG-025",
     "CDX-CFG-026",
     "CDX-CFG-027",
+    "CDX-CFG-028",
     "CDX-APP-001",
     "CDX-APP-002",
     "CDX-APP-003",
@@ -300,7 +301,6 @@ const KNOWN_SHELL_ENVIRONMENT_POLICY_KEYS: &[&str] = &[
 
 const KNOWN_MCP_SERVER_KEYS: &[&str] = &[
     "args",
-    "bearer_token",
     "bearer_token_env_var",
     "command",
     "cwd",
@@ -1796,6 +1796,33 @@ fn validate_codex_config_rules(
         }
     }
 
+    // CDX-CFG-028: Reject unsupported `bearer_token` inline field in mcp_servers.
+    // Upstream: openai/codex#19294 - Codex runtime rejects inline bearer_token and
+    // requires users to configure `bearer_token_env_var` instead. The field was
+    // removed from the generated config schema in rust-v0.125.0.
+    if config.is_rule_enabled("CDX-CFG-028")
+        && let Some(mcp_servers) = value_at_path(&root, &["mcp_servers"])
+        && let Some(servers) = mcp_servers.as_object()
+    {
+        for (server_name, server_cfg) in servers {
+            if let Some(server_obj) = server_cfg.as_object()
+                && server_obj.contains_key("bearer_token")
+            {
+                let field_key = format!("mcp_servers.{server_name}.bearer_token");
+                diagnostics.push(
+                    Diagnostic::error(
+                        path.to_path_buf(),
+                        line_for(&field_key),
+                        0,
+                        "CDX-CFG-028",
+                        t!("rules.cdx_cfg_028.message", server = server_name.as_str()),
+                    )
+                    .with_suggestion(t!("rules.cdx_cfg_028.suggestion")),
+                );
+            }
+        }
+    }
+
     if config.is_rule_enabled("CDX-APP-001")
         && let Some(apps) = value_at_path(&root, &["apps"])
     {
@@ -2009,6 +2036,12 @@ fn collect_unknown_codex_keys(root: &Value) -> Vec<String> {
         for (server_name, server_cfg) in mcp_servers {
             if let Some(server_obj) = server_cfg.as_object() {
                 for key in server_obj.keys() {
+                    // `bearer_token` is handled by CDX-CFG-028 with a more
+                    // specific "use bearer_token_env_var" message - skip it
+                    // here to avoid double-reporting the same line.
+                    if key == "bearer_token" {
+                        continue;
+                    }
                     if !KNOWN_MCP_SERVER_KEYS.contains(&key.as_str()) {
                         unknown.push(format!("mcp_servers.{server_name}.{key}"));
                     }
@@ -3793,5 +3826,100 @@ skill_approval = "never"
             .collect();
         assert_eq!(cdx_027.len(), 1);
         assert!(cdx_027[0].message.contains("string"));
+    }
+
+    // ===== CDX-CFG-028: Unsupported inline MCP bearer_token field =====
+
+    #[test]
+    fn test_cdx_cfg_028_flags_inline_bearer_token() {
+        let content =
+            "[mcp_servers.myserver]\nurl = \"https://api.example.com\"\nbearer_token = \"sk-live-...\"";
+        let diagnostics = validate_config(content);
+        let cdx_028: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-028")
+            .collect();
+        assert_eq!(cdx_028.len(), 1);
+        assert_eq!(cdx_028[0].level, DiagnosticLevel::Error);
+        assert!(cdx_028[0].message.contains("myserver"));
+        assert!(cdx_028[0].message.contains("bearer_token_env_var"));
+    }
+
+    #[test]
+    fn test_cdx_cfg_028_bearer_token_env_var_is_fine() {
+        let content =
+            "[mcp_servers.myserver]\nurl = \"https://api.example.com\"\nbearer_token_env_var = \"MY_API_TOKEN\"";
+        let diagnostics = validate_config(content);
+        let cdx_028: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-028")
+            .collect();
+        assert!(
+            cdx_028.is_empty(),
+            "bearer_token_env_var is the documented replacement and must not flag"
+        );
+    }
+
+    #[test]
+    fn test_cdx_cfg_028_flags_each_server_independently() {
+        let content = "\
+[mcp_servers.s1]
+url = \"https://a.example.com\"
+bearer_token = \"t1\"
+
+[mcp_servers.s2]
+url = \"https://b.example.com\"
+bearer_token = \"t2\"
+
+[mcp_servers.s3]
+url = \"https://c.example.com\"
+bearer_token_env_var = \"S3_TOKEN\"
+";
+        let diagnostics = validate_config(content);
+        let cdx_028: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-028")
+            .collect();
+        assert_eq!(cdx_028.len(), 2, "only s1 and s2 should flag, not s3");
+        let names: Vec<String> = cdx_028.iter().map(|d| d.message.clone()).collect();
+        assert!(names.iter().any(|m| m.contains("s1")));
+        assert!(names.iter().any(|m| m.contains("s2")));
+        assert!(!names.iter().any(|m| m.contains("'s3'")));
+    }
+
+    #[test]
+    fn test_cdx_cfg_028_does_not_double_report_with_cdx_004() {
+        // Guardrail: bearer_token is suppressed from the CDX-004 unknown-key
+        // path when CDX-CFG-028 is active, otherwise users would get two
+        // diagnostics for the same line (generic "unknown key" warning +
+        // specific "use bearer_token_env_var" error).
+        let content =
+            "[mcp_servers.myserver]\nurl = \"https://api.example.com\"\nbearer_token = \"secret\"";
+        let diagnostics = validate_config(content);
+        let cdx_004_for_bearer: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-004" && d.message.contains("bearer_token"))
+            .collect();
+        assert!(
+            cdx_004_for_bearer.is_empty(),
+            "bearer_token must not trigger the generic unknown-key warning"
+        );
+    }
+
+    #[test]
+    fn test_cdx_cfg_028_can_be_disabled() {
+        use crate::config::LintConfig;
+        let mut config = LintConfig::default();
+        config.rules_mut().disabled_rules = vec!["CDX-CFG-028".to_string()];
+        let content =
+            "[mcp_servers.myserver]\nurl = \"https://api.example.com\"\nbearer_token = \"sk-live-...\"";
+        let validator = CodexConfigValidator;
+        let diagnostics =
+            validator.validate(std::path::Path::new("config.toml"), content, &config);
+        let cdx_028: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-028")
+            .collect();
+        assert!(cdx_028.is_empty());
     }
 }
