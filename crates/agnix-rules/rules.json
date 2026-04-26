@@ -7090,7 +7090,7 @@
     },
     {
       "id": "GM-AG-001",
-      "name": "Invalid auth Block in Agent MCP Server",
+      "name": "Invalid auth block in Gemini agent MCP server",
       "severity": "HIGH",
       "category": "gemini-agents",
       "evidence": {

@@ -2154,7 +2154,7 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These define `kind: local` agents with YAML frontmatter containing `name`, `description`, `tools`, `mcp_servers`, and `system_prompt`. Schema documented in the gemini-cli source at `packages/core/src/agents/agentLoader.ts`.
 
 <a id="gm-ag-001"></a>
-### GM-AG-001 [HIGH] Invalid auth Block in Agent MCP Server
+### GM-AG-001 [HIGH] Invalid auth block in Gemini agent MCP server
 **Requirement**: The `auth` block inside `mcp_servers.<name>` MUST follow the schema added in gemini-cli v0.39.0 (google-gemini/gemini-cli#24770):
 - Variant `type: "google-credentials"` - only `scopes` (optional array of strings) is accepted
 - Variant `type: "oauth"` - `client_id`, `client_secret`, `scopes`, `authorization_url`, `token_url` are all optional; URLs must be valid http(s); scopes must be an array of strings

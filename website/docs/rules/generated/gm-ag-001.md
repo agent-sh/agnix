@@ -1,9 +1,9 @@
 ---
 id: gm-ag-001
-title: "GM-AG-001: Invalid auth Block in Agent MCP Server"
+title: "GM-AG-001: Invalid auth block in Gemini agent MCP server"
 sidebar_label: "GM-AG-001"
-description: "agnix rule GM-AG-001 checks for invalid auth block in agent mcp server in gemini agents files. Severity: HIGH. See examples and fix guidance."
-keywords: ["GM-AG-001", "invalid auth block in agent mcp server", "gemini agents", "validation", "agnix", "linter"]
+description: "agnix rule GM-AG-001 checks for invalid auth block in gemini agent mcp server in gemini agents files. Severity: HIGH. See examples and fix guidance."
+keywords: ["GM-AG-001", "invalid auth block in gemini agent mcp server", "gemini agents", "validation", "agnix", "linter"]
 ---
 
 ## Summary
