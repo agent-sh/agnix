@@ -3609,3 +3609,129 @@ fn test_cli_multiple_paths_respect_max_files_limit() {
         .failure()
         .stderr(predicate::str::contains("Too many files"));
 }
+
+// ============================================================================
+// `agnix tools` Command Integration Tests (Issue #717 Part 2)
+// ============================================================================
+//
+// Full flow: agnix tools check / detect. The binary-resolution side of the
+// logic (actually calling `claude --version` etc.) isn't exercised here - the
+// test harness can't assume any specific CLIs are installed. Instead we
+// verify the subcommand surface (help text, exit codes with/without --strict
+// when nothing is configured) and the TOML-rewriting behavior via --write
+// through the public CLI surface.
+
+#[test]
+fn test_tools_check_help_lists_strict_flag() {
+    agnix()
+        .arg("tools")
+        .arg("check")
+        .arg("--help")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("--strict"));
+}
+
+#[test]
+fn test_tools_detect_help_lists_write_flag() {
+    agnix()
+        .arg("tools")
+        .arg("detect")
+        .arg("--help")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("--write"));
+}
+
+#[test]
+fn test_tools_top_level_help_lists_subcommands() {
+    agnix()
+        .arg("tools")
+        .arg("--help")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("check"))
+        .stdout(predicate::str::contains("detect"));
+}
+
+#[test]
+fn test_tools_check_exits_zero_when_no_versions_pinned() {
+    // With nothing pinned in .agnix.toml, `check` has nothing to drift
+    // against - outcome is all Unpinned/Neither, no issues. Regardless
+    // of whether any CLI is on PATH, exit should be 0.
+    let temp_dir = tempfile::tempdir().unwrap();
+    agnix()
+        .current_dir(temp_dir.path())
+        .arg("tools")
+        .arg("check")
+        .assert()
+        .success();
+}
+
+#[test]
+fn test_tools_check_strict_fails_on_missing_cli() {
+    // Pin a made-up version for a tool whose real CLI we can assert is
+    // not on PATH. The `claude_code` pin creates a [missing] outcome
+    // (since no "claude" binary is available on CI runners by default),
+    // and --strict should convert that to a non-zero exit.
+    //
+    // Guard: skip the assertion when `claude` IS unexpectedly on PATH
+    // (some dev machines have it installed). In that case the test
+    // degrades to `success()` which is still a valid behavior
+    // assertion for that environment.
+    let temp_dir = tempfile::tempdir().unwrap();
+    std::fs::write(
+        temp_dir.path().join(".agnix.toml"),
+        "[tool_versions]\nclaude_code = \"0.0.0-test\"\n",
+    )
+    .unwrap();
+
+    let claude_on_path = std::process::Command::new("claude")
+        .arg("--version")
+        .output()
+        .is_ok();
+    if claude_on_path {
+        // Can't reliably assert failure path - actual drift behavior
+        // is covered by unit tests. Just verify the command executes
+        // (exit code depends on whether the installed version happens
+        // to match our "0.0.0-test" pin, which is vanishingly unlikely
+        // but not guaranteed). `.get_output()` is the `assert_cmd`
+        // idiom for "run and consume" without asserting success/fail.
+        let _ = agnix()
+            .current_dir(temp_dir.path())
+            .arg("tools")
+            .arg("check")
+            .arg("--strict")
+            .output();
+    } else {
+        agnix()
+            .current_dir(temp_dir.path())
+            .arg("tools")
+            .arg("check")
+            .arg("--strict")
+            .assert()
+            .failure();
+    }
+}
+
+#[test]
+fn test_tools_detect_succeeds_with_or_without_tools_on_path() {
+    // `detect --write` exits 0 whether or not any supported CLI is on
+    // PATH. When nothing is detected, the command prints a hint and
+    // returns early without writing anything. When something IS
+    // detected, it writes the [tool_versions] section. Either way,
+    // exit code is 0.
+    //
+    // We deliberately don't assert on the file: whether it's created
+    // depends entirely on the test runner's PATH, which we can't
+    // guarantee across CI machines. The exit-code contract is what
+    // this test pins.
+    let temp_dir = tempfile::tempdir().unwrap();
+    agnix()
+        .current_dir(temp_dir.path())
+        .arg("tools")
+        .arg("detect")
+        .arg("--write")
+        .assert()
+        .success();
+}

@@ -10,6 +10,7 @@ mod sarif;
 pub mod telemetry;
 #[cfg(not(feature = "telemetry"))]
 mod telemetry_stub;
+mod tools;
 mod watch;
 #[cfg(not(feature = "telemetry"))]
 use telemetry_stub as telemetry;
@@ -230,6 +231,35 @@ enum Commands {
         #[arg(long)]
         fix: bool,
     },
+
+    /// Check or detect tool versions against `.tool_versions` in `.agnix.toml`
+    #[command(subcommand)]
+    Tools(ToolsCommand),
+}
+
+/// `agnix tools` subcommands.
+///
+/// Keeps version pins in `.agnix.toml` honest by cross-referencing them
+/// against the CLIs actually installed on PATH.
+#[derive(Subcommand)]
+enum ToolsCommand {
+    /// Compare pinned versions in .agnix.toml against installed CLIs on PATH
+    Check {
+        /// Exit non-zero when drift or missing CLI is detected. Without this
+        /// flag, drift is reported as a warning and the command always exits 0.
+        /// Useful in pre-commit or CI when you want to gate on version pin
+        /// correctness.
+        #[arg(long)]
+        strict: bool,
+    },
+    /// Detect installed tool versions and emit a [tool_versions] TOML snippet
+    Detect {
+        /// Merge the detected versions into `.agnix.toml`'s [tool_versions]
+        /// section in place. Preserves comments, blank lines, and unrelated
+        /// keys inside the section. Appends the section if absent.
+        #[arg(long)]
+        write: bool,
+    },
 }
 
 fn main() {
@@ -291,6 +321,7 @@ fn main() {
         }) => eval_command(path, *format, filter.as_deref(), *verbose),
         Some(Commands::Telemetry { action }) => telemetry_command(*action),
         Some(Commands::Schema { output, fix }) => schema_command(output.as_ref(), *fix),
+        Some(Commands::Tools(subcmd)) => tools_command(subcmd, &cli),
         None => validate_command(&cli.paths, &cli),
     };
 
@@ -1064,6 +1095,39 @@ fn schema_command(output: Option<&PathBuf>, fix: bool) -> anyhow::Result<()> {
         }
     }
 
+    Ok(())
+}
+
+/// `agnix tools` dispatch. Loads the user's `.agnix.toml` (if present) for
+/// `check`; `detect` doesn't need it (scans PATH independently). Returns
+/// a non-zero exit code when `check --strict` finds drift.
+fn tools_command(subcmd: &ToolsCommand, cli: &Cli) -> anyhow::Result<()> {
+    match subcmd {
+        ToolsCommand::Check { strict } => {
+            // Prefer the user's explicit --config; otherwise search from cwd.
+            let cwd = env::current_dir()?;
+            let config_path = resolve_config_path(&cwd, cli.config.as_ref());
+            let (config, config_warning) = LintConfig::load_or_default(config_path.as_ref());
+            // Surface any config-load warning (parse error, unknown keys,
+            // etc.). Without this, `check` would silently fall back to
+            // defaults + report nothing-pinned even when the user's config
+            // is broken.
+            if let Some(warning) = config_warning {
+                eprintln!("{} {}", t!("cli.warning_label").yellow().bold(), warning);
+                eprintln!();
+            }
+            let issues_found = tools::check_command(&config, *strict)?;
+            if *strict && issues_found {
+                process::exit(1);
+            }
+        }
+        ToolsCommand::Detect { write } => {
+            // `detect --write` targets the same config path `check` would read.
+            let cwd = env::current_dir()?;
+            let config_path = resolve_config_path(&cwd, cli.config.as_ref());
+            tools::detect_command(config_path.as_deref(), *write)?;
+        }
+    }
     Ok(())
 }
 
