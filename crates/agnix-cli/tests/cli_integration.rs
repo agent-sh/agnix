@@ -2293,6 +2293,118 @@ fn test_schema_command_help_shows_output_option() {
         .stdout(predicate::str::contains("--output"));
 }
 
+// ---- --fix mode tests (Issue #716) ----
+//
+// Pete wanted a pre-commit-friendly regeneration flow where the schema file
+// is only overwritten when it's actually stale. These tests lock in the
+// three behaviors: create-missing, update-on-drift, silent-on-clean, plus
+// the default-path + nested-path coverage.
+
+#[test]
+fn test_schema_fix_creates_default_path_when_missing() {
+    let temp_dir = tempfile::tempdir().unwrap();
+
+    let mut cmd = agnix();
+    cmd.current_dir(temp_dir.path())
+        .arg("schema")
+        .arg("--fix")
+        .assert()
+        .success();
+
+    let default = temp_dir.path().join("schemas/agnix.json");
+    assert!(
+        default.exists(),
+        "--fix should create default schemas/agnix.json"
+    );
+    let content = std::fs::read_to_string(&default).unwrap();
+    assert!(
+        content.ends_with('\n'),
+        "file should end with trailing newline"
+    );
+    let _: serde_json::Value = serde_json::from_str(&content).unwrap();
+}
+
+#[test]
+fn test_schema_fix_silent_when_already_in_sync() {
+    let temp_dir = tempfile::tempdir().unwrap();
+
+    // First run creates the file.
+    agnix()
+        .current_dir(temp_dir.path())
+        .arg("schema")
+        .arg("--fix")
+        .assert()
+        .success();
+
+    // Second run should be silent on stdout (pre-commit contract: quiet on
+    // clean, loud on writes).
+    let output = agnix()
+        .current_dir(temp_dir.path())
+        .arg("schema")
+        .arg("--fix")
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    assert!(
+        output.stdout.is_empty(),
+        "no-op --fix must be silent on stdout, got: {:?}",
+        String::from_utf8_lossy(&output.stdout)
+    );
+}
+
+#[test]
+fn test_schema_fix_updates_when_content_differs() {
+    let temp_dir = tempfile::tempdir().unwrap();
+    let target = temp_dir.path().join("schemas/agnix.json");
+
+    // Pre-seed with wrong content so --fix sees drift.
+    std::fs::create_dir_all(target.parent().unwrap()).unwrap();
+    std::fs::write(&target, "this is stale\n").unwrap();
+
+    agnix()
+        .current_dir(temp_dir.path())
+        .arg("schema")
+        .arg("--fix")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("schemas/agnix.json"));
+
+    // Verify it now contains valid JSON (not the stale text).
+    let content = std::fs::read_to_string(&target).unwrap();
+    assert!(
+        content.contains("$schema") || content.contains("LintConfig"),
+        "expected valid schema after --fix, got: {}",
+        &content[..content.len().min(200)]
+    );
+}
+
+#[test]
+fn test_schema_fix_custom_output_path_creates_parent_dirs() {
+    let temp_dir = tempfile::tempdir().unwrap();
+    let target = temp_dir.path().join("nested/deep/schema.json");
+
+    agnix()
+        .current_dir(temp_dir.path())
+        .arg("schema")
+        .arg("--output")
+        .arg(&target)
+        .arg("--fix")
+        .assert()
+        .success();
+
+    assert!(target.exists());
+}
+
+#[test]
+fn test_schema_fix_help_shows_fix_flag() {
+    agnix()
+        .arg("schema")
+        .arg("--help")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("--fix"));
+}
+
 // ============================================================================
 // Config Validation Warning Display Integration Tests (Issue #206)
 // ============================================================================

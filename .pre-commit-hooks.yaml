@@ -43,3 +43,17 @@
       \.cursor/rules/.*\.mdc
     )$
   args: [--fix]
+
+- id: agnix-schema
+  name: agnix-schema
+  description: |
+    Keep the source-controlled `schemas/agnix.json` in sync with the installed
+    agnix version. The hook regenerates the schema in place only when it
+    differs from what the current agnix binary produces; pre-commit then
+    fails the commit if the working tree is dirty afterward. Override the
+    target path with `args: [--output=<path>, --fix]`.
+  entry: agnix schema
+  language: system
+  pass_filenames: false
+  always_run: true
+  args: [--fix]

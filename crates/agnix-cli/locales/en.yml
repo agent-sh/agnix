@@ -1170,6 +1170,8 @@ cli:
   safe_only: " (safe only)"
   created: "Created:"
   schema_written: "Schema written to:"
+  schema_updated: "Schema updated:"
+  schema_created: "Schema created:"
   error_label: "Error:"
   warning_label: "Warning:"
   config_warning_label: "Config warning:"
