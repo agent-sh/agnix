@@ -80,9 +80,9 @@ fn validate_tool_search_enabled(
 
         // Auto-fix: when the user wrote "true" / "false" / "True" / "FALSE"
         // as a quoted string, strip the quotes + normalize case. Safe
-        // because the fix preserves the user's clearly-intended value
-        // (quoted JSON booleans are invalid per RFC 8259 and Kiro would
-        // reject the config at load time).
+        // because the fix preserves the user's clearly-intended value:
+        // Kiro's toolSearch.enabled field expects a boolean, not a string,
+        // so the quoted form would be rejected at config load anyway.
         if let Some(s) = field.as_str()
             && let Some(parsed) = parse_string_as_bool(s)
             && let Some((start, end)) = find_value_span(content, "toolSearch.enabled")

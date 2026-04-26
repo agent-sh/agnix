@@ -11436,12 +11436,12 @@
     },
     "claude-hooks": {
       "prefix": "CC-HK",
-      "count": 25,
+      "count": 27,
       "description": "Claude Code Hooks rules"
     },
     "claude-agents": {
       "prefix": "CC-AG",
-      "count": 18,
+      "count": 17,
       "description": "Claude Code Subagents rules"
     },
     "claude-memory": {
@@ -11496,7 +11496,7 @@
     },
     "codex": {
       "prefix": "CDX",
-      "count": 23,
+      "count": 60,
       "description": "Codex CLI configuration validation"
     },
     "roo-code": {
@@ -11566,7 +11566,7 @@
     },
     "kiro-agents": {
       "prefix": "KR-AG",
-      "count": 7,
+      "count": 13,
       "description": "Kiro agent configuration and invocation rules"
     },
     "amp-skills": {
@@ -11591,23 +11591,38 @@
     },
     "kiro-steering": {
       "prefix": "KIRO",
-      "count": 9,
+      "count": 14,
       "description": "Kiro steering file validation rules"
     },
     "kiro-hooks": {
       "prefix": "KR-HK",
-      "count": 6,
+      "count": 10,
       "description": "Kiro IDE and CLI hook rules"
     },
     "kiro-mcp": {
       "prefix": "KR-MCP",
-      "count": 2,
+      "count": 5,
       "description": "Kiro MCP configuration rules"
     },
     "kiro-powers": {
       "prefix": "KR-PW",
-      "count": 4,
+      "count": 8,
       "description": "Kiro power configuration rules"
+    },
+    "kiro-settings": {
+      "prefix": "KR-SET",
+      "count": 3,
+      "description": "Kiro CLI settings (.kiro/settings.json) rules"
+    },
+    "claude-settings": {
+      "prefix": "CC-SET",
+      "count": 1,
+      "description": "Claude Code settings (.claude/settings.json) rules"
+    },
+    "gemini-agents": {
+      "prefix": "GM-AG",
+      "count": 1,
+      "description": "Gemini CLI local agent (.gemini/agents/*.md) rules"
     }
   },
   "authoring": {

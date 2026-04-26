@@ -149,6 +149,13 @@ if (rulesJson.total_rules !== actualRuleCount) {
   }
 }
 
+// Sync per-category counts in the top-level categories map. New
+// categories used by rules but not declared in the map are flagged as
+// drift so the maintainer can add the prefix + description entry.
+if (syncCategoryCounts(rulesJson)) {
+  rulesJsonDirty = true;
+}
+
 // last_updated: bump if explicitly requested OR if we're already changing
 // total_rules (meaning a rule was added/removed).
 if (bumpDate || rulesJsonDirty) {
@@ -230,10 +237,15 @@ for (const file of COUNT_FILES) {
 
 const VALIDATION_RULES_MD = path.join(ROOT, 'knowledge-base', 'VALIDATION-RULES.md');
 
-function computeRuleStats(rules) {
+function computeRuleStats(rulesJson) {
+  const rules = rulesJson.rules;
   const autofixCount = rules.filter((r) => r.fix && r.fix.autofix === true).length;
   const autofixPct = Math.round((autofixCount / rules.length) * 100);
-  const categories = new Set(rules.map((r) => r.category));
+  // Category count comes from the structured `categories` map which is the
+  // source of truth used by the docs generator (scripts/generate-docs-rules.py).
+  // Using distinct rule.category values here would drift from the website.
+  const categoriesMap = rulesJson.categories || {};
+  const categoryCount = Object.keys(categoriesMap).length;
   const severityCounts = { HIGH: 0, MEDIUM: 0, LOW: 0 };
   for (const r of rules) {
     if (severityCounts[r.severity] !== undefined) {
@@ -242,7 +254,7 @@ function computeRuleStats(rules) {
   }
   return {
     total: rules.length,
-    categoryCount: categories.size,
+    categoryCount,
     high: severityCounts.HIGH,
     medium: severityCounts.MEDIUM,
     low: severityCounts.LOW,
@@ -251,9 +263,50 @@ function computeRuleStats(rules) {
   };
 }
 
+/// Update per-category `count` fields in rulesJson.categories from the
+/// live rule entries. Also notes any rules whose `category` value isn't
+/// in the top-level map so the maintainer can add it.
+/// Returns true if any count changed.
+function syncCategoryCounts(rulesJson) {
+  const rules = rulesJson.rules;
+  const categoriesMap = rulesJson.categories;
+  if (!categoriesMap) {
+    note('knowledge-base/rules.json has no top-level `categories` map - skipping per-category count sync');
+    return false;
+  }
+  // Tally categories from live rules.
+  const observed = {};
+  for (const r of rules) {
+    observed[r.category] = (observed[r.category] || 0) + 1;
+  }
+  // Flag rules whose category isn't declared.
+  for (const cat of Object.keys(observed)) {
+    if (!categoriesMap[cat]) {
+      note(
+        `rules.json rule uses category "${cat}" that is not declared in the top-level categories map - add it with a prefix + description`
+      );
+    }
+  }
+  // Sync declared-category counts.
+  let dirty = false;
+  for (const [cat, meta] of Object.entries(categoriesMap)) {
+    const expected = observed[cat] || 0;
+    if (meta.count !== expected) {
+      note(
+        `rules.json categories.${cat}.count is ${meta.count}, actual is ${expected}`
+      );
+      if (!checkMode) {
+        meta.count = expected;
+        dirty = true;
+      }
+    }
+  }
+  return dirty;
+}
+
 if (fs.existsSync(VALIDATION_RULES_MD)) {
   const original = readText(VALIDATION_RULES_MD);
-  const stats = computeRuleStats(rulesJson.rules);
+  const stats = computeRuleStats(rulesJson);
 
   // Three footer lines. Each has a fixed `**Label**:` prefix so we can
   // rewrite them in place without touching surrounding prose.
