@@ -14,12 +14,18 @@
 //! 3. **Memory Limit**: The entire file is bounded at 1 MiB, limiting total
 //!    memory consumption regardless of structure complexity.
 //!
-//! **Known Limitation**: Within the 1 MiB file size, deeply nested YAML (e.g.,
-//! 10,000 levels of nesting) could cause high memory usage or slow parsing.
-//! This is acceptable for a local linter with bounded input size.
+//! 4. **Explicit Depth Check**: `check_yaml_depth` rejects frontmatter whose
+//!    structural nesting (flow-style `[`/`{` or block-style leading `- ` /
+//!    leading whitespace) exceeds [`MAX_YAML_DEPTH`]. This runs before
+//!    `serde_yaml::from_str` so pathological inputs are refused cheaply
+//!    without building the intermediate deserialization tree.
 //!
-//! **Future Enhancement**: Consider adding explicit depth tracking if memory
-//! profiling reveals issues with pathological YAML structures.
+//! **Known Limitation**: `check_yaml_depth` is a conservative syntactic
+//! approximation, not a full YAML parser. It uses the maximum of three
+//! signals (flow bracket depth, block dash-list depth, leading-whitespace
+//! indent depth in 2-space units) and rejects anything above 32. False
+//! positives are possible on extreme but legitimate inputs; in that case
+//! raise `MAX_YAML_DEPTH` rather than disabling the check.
 
 use std::borrow::Cow;
 
@@ -50,6 +56,110 @@ pub fn normalize_line_endings(s: &str) -> Cow<'_, str> {
     Cow::Owned(out)
 }
 
+/// Maximum allowed YAML structural nesting depth.
+///
+/// Realistic agent-config frontmatter is almost never deeper than 5 - 6
+/// levels; 32 leaves plenty of headroom for unusual-but-legitimate inputs
+/// while still bounding pathological "YAML bomb" nesting that can cost
+/// disproportionate memory in `serde_yaml`.
+pub const MAX_YAML_DEPTH: usize = 32;
+
+/// Reject YAML frontmatter whose structural nesting depth exceeds
+/// [`MAX_YAML_DEPTH`]. Runs in O(n) over the input without allocating.
+///
+/// This is a conservative pre-parse guard: we track three independent
+/// approximations of depth and reject if any of them exceeds the limit.
+///
+/// 1. **Flow-style bracket depth**: max concurrent `[` / `{` open.
+/// 2. **Block-style dash depth**: max consecutive `- ` prefixes on one line
+///    (e.g. `- - - - value` opens four list levels).
+/// 3. **Indentation depth**: deepest leading-whitespace indent on any
+///    non-blank line, measured in 2-space units (tabs count as one unit).
+///
+/// # Errors
+///
+/// Returns `ValidationError::Other` with a descriptive message if depth
+/// exceeds the limit.
+pub(crate) fn check_yaml_depth(yaml: &str) -> LintResult<()> {
+    let mut flow_depth: usize = 0;
+    let mut max_flow: usize = 0;
+    let mut max_dash: usize = 0;
+    let mut max_indent_units: usize = 0;
+    let mut in_single: bool = false;
+    let mut in_double: bool = false;
+
+    for line in yaml.lines() {
+        // Count leading whitespace as indentation units (2 spaces = 1 unit,
+        // tab = 1 unit). Skip blank lines.
+        let leading_ws = line
+            .bytes()
+            .take_while(|b| *b == b' ' || *b == b'\t')
+            .count();
+        let trimmed = &line[leading_ws..];
+        if trimmed.is_empty() || trimmed.starts_with('#') {
+            continue;
+        }
+
+        // Convert leading spaces to 2-space units; tabs contribute 1 unit each.
+        let spaces = line.bytes().take_while(|b| *b == b' ').count();
+        let tabs = line[spaces..]
+            .bytes()
+            .take_while(|b| *b == b'\t')
+            .count();
+        let indent_units = spaces / 2 + tabs;
+        if indent_units > max_indent_units {
+            max_indent_units = indent_units;
+        }
+
+        // Count consecutive "- " dash-list prefixes at the start of the
+        // content (after indentation). Example: "- - - value" = 3 levels.
+        let mut rest = trimmed;
+        let mut dashes: usize = 0;
+        while let Some(after) = rest.strip_prefix("- ") {
+            dashes += 1;
+            rest = after;
+        }
+        if dashes > max_dash {
+            max_dash = dashes;
+        }
+
+        // Track flow-style bracket depth, respecting single/double quoted
+        // strings so brackets inside quotes don't inflate the count.
+        for b in rest.bytes() {
+            match b {
+                b'\'' if !in_double => in_single = !in_single,
+                b'"' if !in_single => in_double = !in_double,
+                b'[' | b'{' if !in_single && !in_double => {
+                    flow_depth += 1;
+                    if flow_depth > max_flow {
+                        max_flow = flow_depth;
+                    }
+                }
+                b']' | b'}' if !in_single && !in_double => {
+                    flow_depth = flow_depth.saturating_sub(1);
+                }
+                _ => {}
+            }
+        }
+        // Unterminated quotes don't carry across lines in YAML frontmatter
+        // (unlike block scalars); reset per line to avoid cascading errors.
+        in_single = false;
+        in_double = false;
+    }
+
+    let observed = max_flow.max(max_dash).max(max_indent_units);
+    if observed > MAX_YAML_DEPTH {
+        return Err(CoreError::Validation(ValidationError::Other(
+            anyhow::anyhow!(
+                "YAML frontmatter nesting depth {} exceeds maximum {} (possible YAML bomb)",
+                observed,
+                MAX_YAML_DEPTH
+            ),
+        )));
+    }
+    Ok(())
+}
+
 /// Parse YAML frontmatter from markdown content
 ///
 /// Expects content in format:
@@ -67,6 +177,8 @@ pub fn normalize_line_endings(s: &str) -> Cow<'_, str> {
 #[allow(dead_code)] // used in cfg(test) and __internal; not yet used by production validators
 pub fn parse_frontmatter<T: DeserializeOwned>(content: &str) -> LintResult<(T, String)> {
     let parts = split_frontmatter(content);
+    // Pre-parse depth check to bound memory use on pathological inputs.
+    check_yaml_depth(&parts.frontmatter)?;
     let parsed: T = serde_yaml::from_str(&parts.frontmatter)
         .map_err(|e| CoreError::Validation(ValidationError::Other(e.into())))?;
     Ok((parsed, parts.body.trim_start().to_string()))
@@ -451,6 +563,73 @@ Body content here"#;
             "Empty string should return Cow::Borrowed"
         );
         assert_eq!(&*result, "");
+    }
+
+    #[test]
+    fn test_check_yaml_depth_accepts_typical_frontmatter() {
+        let yaml = "name: foo\ndescription: bar\ntags: [a, b, c]\n";
+        assert!(check_yaml_depth(yaml).is_ok());
+    }
+
+    #[test]
+    fn test_check_yaml_depth_accepts_realistic_nesting() {
+        // Five levels of nesting, well under the 32 cap.
+        let yaml = "a:\n  b:\n    c:\n      d:\n        e: value\n";
+        assert!(check_yaml_depth(yaml).is_ok());
+    }
+
+    #[test]
+    fn test_check_yaml_depth_rejects_deep_flow_brackets() {
+        // 100 nested flow-style lists: [[[[...]]]]
+        let depth = 100;
+        let open = "[".repeat(depth);
+        let close = "]".repeat(depth);
+        let yaml = format!("data: {}v{}\n", open, close);
+        let err = check_yaml_depth(&yaml).expect_err("deep nesting must be rejected");
+        let msg = format!("{}", err);
+        assert!(
+            msg.contains("nesting depth") && msg.contains("exceeds maximum"),
+            "unexpected error message: {msg}"
+        );
+    }
+
+    #[test]
+    fn test_check_yaml_depth_rejects_deep_indent() {
+        // Build 100 levels of indented mappings (2 spaces per level).
+        let mut yaml = String::new();
+        for i in 0..100 {
+            for _ in 0..i {
+                yaml.push_str("  ");
+            }
+            yaml.push_str(&format!("k{}:\n", i));
+        }
+        assert!(check_yaml_depth(&yaml).is_err());
+    }
+
+    #[test]
+    fn test_check_yaml_depth_ignores_brackets_in_quotes() {
+        // The flow-depth counter must not be tricked by brackets in strings.
+        let yaml = "note: \"[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[not real]]]]\"\n";
+        assert!(check_yaml_depth(yaml).is_ok());
+    }
+
+    #[test]
+    fn test_parse_frontmatter_rejects_yaml_bomb() {
+        #[derive(Debug, serde::Deserialize)]
+        struct Any {
+            #[allow(dead_code)]
+            data: serde_yaml::Value,
+        }
+
+        let open = "[".repeat(100);
+        let close = "]".repeat(100);
+        let content = format!("---\ndata: {}v{}\n---\nbody\n", open, close);
+
+        let result: LintResult<(Any, String)> = parse_frontmatter(&content);
+        assert!(
+            result.is_err(),
+            "pathologically nested YAML must be rejected before serde_yaml"
+        );
     }
 }
 
