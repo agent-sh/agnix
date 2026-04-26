@@ -114,14 +114,11 @@ fn validate_auth_block(
         return;
     };
 
-    // Discriminator check: `type` must be present and one of the valid
-    // literals. Other fields depend on the type variant.
-    let type_val = auth_obj
-        .get("type")
-        .and_then(serde_yaml::Value::as_str)
-        .map(str::to_string);
-
-    let Some(type_str) = type_val else {
+    // Discriminator check: `type` must be present, a string, and one of
+    // the valid literals. Non-string and missing get different diagnostics
+    // because "type is a number" is a different mistake from "type is
+    // absent entirely".
+    let Some(type_entry) = auth_obj.get("type") else {
         diagnostics.push(
             Diagnostic::error(
                 path.to_path_buf(),
@@ -129,6 +126,23 @@ fn validate_auth_block(
                 0,
                 "GM-AG-001",
                 t!("rules.gm_ag_001.missing_type", server = server),
+            )
+            .with_suggestion(t!("rules.gm_ag_001.suggestion")),
+        );
+        return;
+    };
+    let Some(type_str) = type_entry.as_str().map(str::to_string) else {
+        diagnostics.push(
+            Diagnostic::error(
+                path.to_path_buf(),
+                line,
+                0,
+                "GM-AG-001",
+                t!(
+                    "rules.gm_ag_001.not_string",
+                    server = server,
+                    field = "type"
+                ),
             )
             .with_suggestion(t!("rules.gm_ag_001.suggestion")),
         );
@@ -340,18 +354,20 @@ fn looks_like_url(s: &str) -> bool {
 
 /// Extract the YAML frontmatter block (between the first two `---` lines).
 /// Returns the YAML body only; returns None if no frontmatter is present.
+///
+/// Walks lines once tracking a running byte offset, so locating the closing
+/// marker is O(N) rather than O(N²) from re-splitting + summing on each hit.
 fn extract_frontmatter(content: &str) -> Option<&str> {
     let stripped = content.strip_prefix('\u{FEFF}').unwrap_or(content);
     let rest = stripped
         .strip_prefix("---\n")
         .or_else(|| stripped.strip_prefix("---\r\n"))?;
-    // Find the closing `---` on its own line.
-    for (idx, line) in rest.split_inclusive('\n').enumerate() {
-        let trimmed = line.trim_end();
-        if trimmed == "---" {
-            let end_byte: usize = rest.split_inclusive('\n').take(idx).map(|s| s.len()).sum();
-            return Some(&rest[..end_byte]);
+    let mut offset = 0usize;
+    for line in rest.split_inclusive('\n') {
+        if line.trim_end() == "---" {
+            return Some(&rest[..offset]);
         }
+        offset += line.len();
     }
     None
 }
@@ -503,6 +519,27 @@ mod tests {
             .collect();
         assert_eq!(hits.len(), 1);
         assert!(hits[0].message.to_lowercase().contains("missing"));
+    }
+
+    #[test]
+    fn test_non_string_type_flags_as_type_not_string() {
+        // Regression: cursor caught that non-string type was being reported
+        // as "missing" because and_then(as_str) collapses both cases. The
+        // validator now emits a distinct "type must be a string" message.
+        let content = wrap_mcp("  myserver:\n    auth:\n      type: 12345\n");
+        let diagnostics = validate(&content);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "GM-AG-001")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        let msg = hits[0].message.to_lowercase();
+        assert!(
+            msg.contains("auth.type") && msg.contains("string"),
+            "expected 'auth.type must be a string' style message, got: {}",
+            hits[0].message
+        );
+        assert!(!msg.contains("missing"));
     }
 
     #[test]
