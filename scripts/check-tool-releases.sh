@@ -152,13 +152,16 @@ for raw_id in "${TOOL_IDS[@]}"; do
   echo "  [NEW] $latest_version (was $baseline_version)"
   NEW_COUNT=$((NEW_COUNT+1))
 
+  # Script directory - used by notes_extractor=glm (to find glm-extract.js)
+  # and by the later agnix-triage step. Hoisted here so both branches share it.
+  script_dir=$(dirname "$0")
+
   # Optional release-notes upgrade: replace the stub release_body with extracted
   # content when the tool defines a notes_extractor (glm | rss_cdata). Failures
   # log a warning and fall back to whatever release_body was already set to.
   notes_extractor=$(jq -r --arg id "$tool_id" '.tools[$id].notes_extractor // "stub"' "$BASELINES_FILE")
   case "$notes_extractor" in
     glm)
-      script_dir=$(dirname "$0")
       if ! command -v node >/dev/null 2>&1; then
         echo "  WARN: notes_extractor=glm but node is not on PATH - using stub"
       elif [[ -z "${GLM_API_KEY:-}" ]]; then
@@ -213,6 +216,41 @@ sys.stdout.write(m.group(1).strip() if m else "")
     release_body="${release_body:0:$ISSUE_BODY_LIMIT}"$'\n\n'"_(release notes truncated at ${ISSUE_BODY_LIMIT} characters; see ${release_url} for the full text)_"
   fi
 
+  # Optional agnix-focused triage: when the tool declares changes_of_interest
+  # and GLM_API_KEY is available, run glm-extract.js --mode=agnix-triage on
+  # the release notes. The LLM filters changes down to validator-relevant
+  # items + rule candidates. Result is prepended as ## Agnix Triage so a
+  # human reviewer sees the filtered summary first and the full changelog
+  # below. On any failure (missing key, empty result, HTTP error), behavior
+  # is identical to before this flag existed.
+  agnix_triage=""
+  interests_json=$(jq -c --arg id "$tool_id" '.tools[$id].changes_of_interest // empty' "$BASELINES_FILE")
+  if [[ -n "$interests_json" ]]; then
+    if ! command -v node >/dev/null 2>&1; then
+      echo "  [triage] changes_of_interest set but node is not on PATH - skipping LLM triage"
+    elif [[ -z "${GLM_API_KEY:-}" ]]; then
+      echo "  [triage] changes_of_interest set but GLM_API_KEY env var is unset - skipping LLM triage"
+    elif [[ -z "${release_body:-}" ]]; then
+      echo "  [triage] no release_body to triage - skipping"
+    else
+      interests_tmp=$(mktemp)
+      printf '%s' "$interests_json" > "$interests_tmp"
+      triage_stderr=$(mktemp)
+      triage_out=$(node "$script_dir/glm-extract.js" \
+        "--mode=agnix-triage" \
+        "--interests-json=$interests_tmp" \
+        "$display_name" "$latest_version" "$release_url" \
+        2>"$triage_stderr" <<< "$release_body" || true)
+      if [[ -n "$triage_out" ]]; then
+        agnix_triage="$triage_out"
+        echo "  [triage] produced $(echo "$triage_out" | wc -c) chars of agnix-focused summary"
+      else
+        echo "  WARN: GLM triage returned empty (stderr: $(head -1 "$triage_stderr" 2>/dev/null)) - posting raw changelog only"
+      fi
+      rm -f "$interests_tmp" "$triage_stderr"
+    fi
+  fi
+
   # Compose issue body. Use absolute file links keyed off GITHUB_REPOSITORY so
   # they resolve correctly inside an issue (relative `../blob/main/...` resolves
   # against the issue URL and 404s).
@@ -226,6 +264,33 @@ sys.stdout.write(m.group(1).strip() if m else "")
   if [[ -n "$repo" ]]; then
     source_line="$source_line"$'\n'"**Repository**: https://github.com/$repo"
   fi
+  if [[ -n "$agnix_triage" ]]; then
+    # Triage succeeded: show the LLM summary first, collapse the raw
+    # changelog under <details> so maintainers read filtered items up top
+    # but still have the full text one click away for verification.
+    release_section=$(cat <<RELEASE_NOTES
+### Agnix Triage (auto-filtered)
+
+$agnix_triage
+
+<details><summary>Full upstream release notes</summary>
+
+$release_body
+
+</details>
+RELEASE_NOTES
+)
+  else
+    # No triage (tool has no changes_of_interest, or LLM failed). Keep
+    # the original layout.
+    release_section=$(cat <<RELEASE_NOTES
+### Release notes
+
+$release_body
+RELEASE_NOTES
+)
+  fi
+
   issue_body=$(cat <<BODY
 ## $display_name $latest_version
 
@@ -234,9 +299,7 @@ $source_line
 
 ---
 
-### Release notes
-
-$release_body
+$release_section
 
 ---
 
