@@ -1107,7 +1107,15 @@ fn tools_command(subcmd: &ToolsCommand, cli: &Cli) -> anyhow::Result<()> {
             // Prefer the user's explicit --config; otherwise search from cwd.
             let cwd = env::current_dir()?;
             let config_path = resolve_config_path(&cwd, cli.config.as_ref());
-            let (config, _warning) = LintConfig::load_or_default(config_path.as_ref());
+            let (config, config_warning) = LintConfig::load_or_default(config_path.as_ref());
+            // Surface any config-load warning (parse error, unknown keys,
+            // etc.). Without this, `check` would silently fall back to
+            // defaults + report nothing-pinned even when the user's config
+            // is broken.
+            if let Some(warning) = config_warning {
+                eprintln!("{} {}", t!("cli.warning_label").yellow().bold(), warning);
+                eprintln!();
+            }
             let issues_found = tools::check_command(&config, *strict)?;
             if *strict && issues_found {
                 process::exit(1);
