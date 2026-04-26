@@ -2369,11 +2369,15 @@ fn test_schema_fix_updates_when_content_differs() {
         .success()
         .stdout(predicate::str::contains("schemas/agnix.json"));
 
-    // Verify it now contains valid JSON (not the stale text).
+    // Verify the post-fix file parses as JSON and shape-checks as a JSON
+    // Schema (not the stale `this is stale` text). Substring-only checks
+    // could false-positive on partially-valid output; parse first.
     let content = std::fs::read_to_string(&target).unwrap();
+    let parsed: serde_json::Value = serde_json::from_str(&content)
+        .expect("post-fix file must be valid JSON, not stale text");
     assert!(
-        content.contains("$schema") || content.contains("LintConfig"),
-        "expected valid schema after --fix, got: {}",
+        parsed["$schema"].is_string(),
+        "post-fix file should have a $schema string, got: {}",
         &content[..content.len().min(200)]
     );
 }
