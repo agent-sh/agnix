@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
@@ -31,10 +32,13 @@ const execAsync = promisify(exec);
 function spawnAsync(
   command: string,
   args: string[],
-  options: { timeout?: number } = {}
+  options: { timeout?: number; env?: NodeJS.ProcessEnv } = {}
 ): Promise<{ stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { shell: false });
+    const child = spawn(command, args, {
+      shell: false,
+      env: options.env ?? process.env,
+    });
     let stdout = '';
     let stderr = '';
     let timedOut = false;
@@ -416,24 +420,51 @@ async function downloadAndInstallLsp(version?: string): Promise<string | null> {
         outputChannel.appendLine(`Extracting to: ${storageUri.fsPath}`);
 
         if (process.platform === 'win32') {
-          // PowerShell extraction for .zip - use spawn with argv (no shell
-          // interpolation) and -LiteralPath (no globbing) to avoid injection
-          // if the storage path contains quotes or special characters.
-          await spawnAsync(
-            'powershell.exe',
-            [
-              '-NoProfile',
-              '-NonInteractive',
-              '-Command',
-              'Expand-Archive',
-              '-LiteralPath',
-              downloadPath,
-              '-DestinationPath',
-              storageUri.fsPath,
-              '-Force',
-            ],
-            { timeout: 60000 }
+          // PowerShell extraction for .zip. We cannot pass the cmdlet and its
+          // named parameters as separate argv entries with `-Command`:
+          // PowerShell concatenates everything after `-Command` into a single
+          // string and re-parses it, so `-LiteralPath` would be bound to
+          // `$args[0]` instead of being recognized as a named parameter.
+          //
+          // Robust fix: write a tiny .ps1 script, read paths from env vars
+          // (so nothing is interpolated into the script body), and invoke
+          // via `-File`. This keeps both sides injection-free.
+          const scriptContent =
+            "$ErrorActionPreference = 'Stop'\n" +
+            'Expand-Archive -LiteralPath $env:AGNIX_SRC_ZIP ' +
+            '-DestinationPath $env:AGNIX_DEST_DIR -Force\n';
+          const scriptPath = path.join(
+            os.tmpdir(),
+            `agnix-extract-${Date.now()}-${process.pid}.ps1`
           );
+          fs.writeFileSync(scriptPath, scriptContent);
+          try {
+            await spawnAsync(
+              'powershell.exe',
+              [
+                '-NoProfile',
+                '-NonInteractive',
+                '-ExecutionPolicy',
+                'Bypass',
+                '-File',
+                scriptPath,
+              ],
+              {
+                timeout: 60000,
+                env: {
+                  ...process.env,
+                  AGNIX_SRC_ZIP: downloadPath,
+                  AGNIX_DEST_DIR: storageUri.fsPath,
+                },
+              }
+            );
+          } finally {
+            try {
+              fs.unlinkSync(scriptPath);
+            } catch {
+              // Best-effort cleanup of the temp script.
+            }
+          }
         } else {
           // tar extraction for .tar.gz - use spawn with argv to avoid shell
           // interpolation (see matching comment on the PowerShell branch).

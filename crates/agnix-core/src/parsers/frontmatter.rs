@@ -2,8 +2,8 @@
 //!
 //! ## Security: YAML Bomb Protection
 //!
-//! While this module doesn't implement explicit depth limits, YAML bombs (deeply
-//! nested structures) are mitigated by:
+//! YAML bombs (deeply nested structures that expand to disproportionate memory
+//! use in `serde_yaml`) are mitigated by a layered defense:
 //!
 //! 1. **File Size Limit**: DEFAULT_MAX_FILE_SIZE (1 MiB) in file_utils.rs prevents
 //!    extremely large YAML payloads from being read.
@@ -23,9 +23,15 @@
 //! **Known Limitation**: `check_yaml_depth` is a conservative syntactic
 //! approximation, not a full YAML parser. It uses the maximum of three
 //! signals (flow bracket depth, block dash-list depth, leading-whitespace
-//! indent depth in 2-space units) and rejects anything above 32. False
-//! positives are possible on extreme but legitimate inputs; in that case
-//! raise `MAX_YAML_DEPTH` rather than disabling the check.
+//! indent depth in 2-space units) and rejects anything above 32. Quoted
+//! scalars (single- and double-quoted) are tracked across line boundaries
+//! so brackets/dashes inside multi-line quoted strings are not miscounted
+//! as structural depth. Block scalars (`|` / `>`) are not modeled; because
+//! their contents are indented at or below the key's indent, they at worst
+//! contribute to `max_indent_units` and cannot induce false positives
+//! below the 32-unit cap on realistic frontmatter. False positives remain
+//! possible on extreme but legitimate inputs; in that case raise
+//! `MAX_YAML_DEPTH` rather than disabling the check.
 
 use std::borrow::Cow;
 
@@ -85,10 +91,48 @@ pub(crate) fn check_yaml_depth(yaml: &str) -> LintResult<()> {
     let mut max_flow: usize = 0;
     let mut max_dash: usize = 0;
     let mut max_indent_units: usize = 0;
+    // Quote state is tracked ACROSS lines: YAML single- and double-quoted
+    // scalars are permitted to span multiple lines, so brackets inside a
+    // multi-line quoted scalar must not be counted as structural depth.
     let mut in_single: bool = false;
     let mut in_double: bool = false;
 
     for line in yaml.lines() {
+        // When we're mid quoted-scalar (carried over from a previous line),
+        // the whole line is part of the scalar value until the closing quote;
+        // indent/dash-list signals don't apply. Scan only for the quote
+        // terminator (and bracket chars, which we ignore inside quotes).
+        if in_single || in_double {
+            let bytes = line.as_bytes();
+            let mut i = 0;
+            while i < bytes.len() {
+                let b = bytes[i];
+                if in_single {
+                    if b == b'\'' {
+                        // '' inside a single-quoted string is a literal apostrophe (escape).
+                        if i + 1 < bytes.len() && bytes[i + 1] == b'\'' {
+                            i += 2;
+                            continue;
+                        }
+                        in_single = false;
+                    }
+                } else if in_double {
+                    if b == b'\\' {
+                        // Skip escaped char in double-quoted scalar.
+                        i += 2;
+                        continue;
+                    }
+                    if b == b'"' {
+                        in_double = false;
+                    }
+                }
+                i += 1;
+            }
+            // Line was (wholly or partly) a scalar continuation; no
+            // structural accounting for this line.
+            continue;
+        }
+
         // Count leading whitespace as indentation units (2 spaces = 1 unit,
         // tab = 1 unit). Skip blank lines.
         let leading_ws = line
@@ -121,27 +165,49 @@ pub(crate) fn check_yaml_depth(yaml: &str) -> LintResult<()> {
         }
 
         // Track flow-style bracket depth, respecting single/double quoted
-        // strings so brackets inside quotes don't inflate the count.
-        for b in rest.bytes() {
-            match b {
-                b'\'' if !in_double => in_single = !in_single,
-                b'"' if !in_single => in_double = !in_double,
-                b'[' | b'{' if !in_single && !in_double => {
-                    flow_depth += 1;
-                    if flow_depth > max_flow {
-                        max_flow = flow_depth;
+        // strings so brackets inside quotes don't inflate the count. Quote
+        // state can persist to the next line if a scalar is unterminated.
+        let bytes = rest.as_bytes();
+        let mut i = 0;
+        while i < bytes.len() {
+            let b = bytes[i];
+            if in_single {
+                if b == b'\'' {
+                    if i + 1 < bytes.len() && bytes[i + 1] == b'\'' {
+                        i += 2;
+                        continue;
                     }
+                    in_single = false;
                 }
-                b']' | b'}' if !in_single && !in_double => {
-                    flow_depth = flow_depth.saturating_sub(1);
+            } else if in_double {
+                if b == b'\\' {
+                    i += 2;
+                    continue;
                 }
-                _ => {}
+                if b == b'"' {
+                    in_double = false;
+                }
+            } else {
+                match b {
+                    b'\'' => in_single = true,
+                    b'"' => in_double = true,
+                    b'#' => break, // YAML line comment
+                    b'[' | b'{' => {
+                        flow_depth += 1;
+                        if flow_depth > max_flow {
+                            max_flow = flow_depth;
+                        }
+                    }
+                    b']' | b'}' => {
+                        flow_depth = flow_depth.saturating_sub(1);
+                    }
+                    _ => {}
+                }
             }
+            i += 1;
         }
-        // Unterminated quotes don't carry across lines in YAML frontmatter
-        // (unlike block scalars); reset per line to avoid cascading errors.
-        in_single = false;
-        in_double = false;
+        // Quote state intentionally persists to the next line so multi-line
+        // quoted scalars are handled correctly.
     }
 
     let observed = max_flow.max(max_dash).max(max_indent_units);
@@ -169,8 +235,10 @@ pub(crate) fn check_yaml_depth(yaml: &str) -> LintResult<()> {
 ///
 /// # Security
 ///
-/// Protected against YAML bombs by file size limit (1 MiB) and serde_yaml's
-/// internal protections. See module documentation for details.
+/// Protected against YAML bombs by a layered defense: the 1 MiB file size
+/// cap, an explicit pre-parse depth check ([`check_yaml_depth`], limit
+/// [`MAX_YAML_DEPTH`]), and `serde_yaml`'s internal protections. See module
+/// documentation for details.
 #[allow(dead_code)] // used in cfg(test) and __internal; not yet used by production validators
 pub fn parse_frontmatter<T: DeserializeOwned>(content: &str) -> LintResult<(T, String)> {
     let parts = split_frontmatter(content);
@@ -608,6 +676,49 @@ Body content here"#;
         // The flow-depth counter must not be tricked by brackets in strings.
         let yaml = "note: \"[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[not real]]]]\"\n";
         assert!(check_yaml_depth(yaml).is_ok());
+    }
+
+    #[test]
+    fn test_check_yaml_depth_multiline_double_quoted_scalar_with_brackets() {
+        // A double-quoted scalar that spans multiple lines and contains many
+        // '[' / '{' characters inside its value. Brackets inside the scalar
+        // must NOT count as structural depth. Real structural depth here is
+        // 1 (top-level mapping), well under MAX_YAML_DEPTH.
+        let yaml = "description: \"line one with [[[[ brackets\n\
+                    still quoted [[[[ on line two\n\
+                    and [[[[ line three ending here\"\n\
+                    name: ok\n";
+        assert!(
+            check_yaml_depth(yaml).is_ok(),
+            "multi-line double-quoted scalar containing '[' must not be rejected"
+        );
+    }
+
+    #[test]
+    fn test_check_yaml_depth_multiline_single_quoted_scalar_with_brackets() {
+        // Single-quoted multi-line scalar; '' is the escape for a literal
+        // apostrophe and must not prematurely close the quote.
+        let yaml = "description: 'line one with [[[[ brackets and it''s fine\n\
+                    still quoted [[[[ on line two\n\
+                    and [[[[ line three'\n\
+                    name: ok\n";
+        assert!(
+            check_yaml_depth(yaml).is_ok(),
+            "multi-line single-quoted scalar containing '[' must not be rejected"
+        );
+    }
+
+    #[test]
+    fn test_check_yaml_depth_multiline_scalar_ignores_dash_list_prefix() {
+        // Inside a quoted scalar continuation, a line starting with "- " is
+        // literal text, not a block-list entry, so max_dash should stay 0.
+        let yaml = "note: \"start\n\
+                    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - end\"\n\
+                    name: ok\n";
+        assert!(
+            check_yaml_depth(yaml).is_ok(),
+            "dashes inside a multi-line quoted scalar must not count as list depth"
+        );
     }
 
     #[test]
