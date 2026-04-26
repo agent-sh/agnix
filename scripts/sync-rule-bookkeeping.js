@@ -157,7 +157,11 @@ if (bumpDate || rulesJsonDirty) {
   }
 }
 
-if (rulesJsonDirty) {
+if (rulesJsonDirty && !checkMode) {
+  // Defense-in-depth: --check is guaranteed read-only. The explicit
+  // `!checkMode` guard here backs up the early exit on `--check + --bump-date`
+  // so any future code path that sets rulesJsonDirty in check mode can't
+  // accidentally mutate the file.
   writeJSONPretty(KNOWLEDGE_RULES, rulesJson);
   console.log(`[OK] Updated knowledge-base/rules.json (total_rules=${actualRuleCount}, last_updated=${rulesJson.last_updated})`);
 }
@@ -217,16 +221,35 @@ for (const file of COUNT_FILES) {
 // ---- 4. Regenerate website docs ----
 
 if (!skipDocs && !checkMode) {
-  try {
-    const output = execFileSync('python', [path.join(ROOT, 'scripts', 'generate-docs-rules.py')], {
-      cwd: ROOT,
-      encoding: 'utf8',
-    });
-    console.log('[OK] Regenerated website docs:');
-    console.log(output.trim().split('\n').map((l) => `     ${l}`).join('\n'));
-  } catch (err) {
-    console.error('[WARN] Could not regenerate docs (python unavailable?):', err.message);
-    // Not a hard failure - the docs test will catch drift separately.
+  // generate-docs-rules.py shebang is `#!/usr/bin/env python3`, so
+  // python3 is the canonical interpreter. Fall back to `python` on
+  // systems (typically Windows) where python3 isn't available but
+  // `python` points at Python 3.
+  const pythonCandidates = ['python3', 'python'];
+  let regenerated = false;
+  let lastErr = null;
+  for (const bin of pythonCandidates) {
+    try {
+      const output = execFileSync(
+        bin,
+        [path.join(ROOT, 'scripts', 'generate-docs-rules.py')],
+        { cwd: ROOT, encoding: 'utf8' }
+      );
+      console.log(`[OK] Regenerated website docs (via ${bin}):`);
+      console.log(output.trim().split('\n').map((l) => `     ${l}`).join('\n'));
+      regenerated = true;
+      break;
+    } catch (err) {
+      lastErr = err;
+      // Try next candidate.
+    }
+  }
+  if (!regenerated) {
+    console.error(
+      '[WARN] Could not regenerate docs (python3/python unavailable?):',
+      lastErr ? lastErr.message : 'unknown error'
+    );
+    // Not a hard failure - the docs_website_parity test catches drift.
   }
 }
 
