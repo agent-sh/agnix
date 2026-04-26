@@ -53,7 +53,9 @@
 
 const fs = require('fs');
 
-const HTML_BUDGET = 80_000; // chars of input HTML to send to GLM
+// Char budget for stdin payload sent to GLM - applies to both HTML
+// (extract mode) and markdown release notes (agnix-triage mode).
+const INPUT_BUDGET = 80_000;
 const MAX_TOKENS = 4096;
 const TEMPERATURE = 0.3; // extraction task, prefer determinism
 
@@ -105,14 +107,18 @@ const baseUrl = (process.env.GLM_BASE_URL || 'https://api.z.ai/api/coding/paas/v
  * tool without editing this script.
  */
 function loadInterests() {
-  if (!flags['interests-json']) {
-    console.error('--mode=agnix-triage requires --interests-json=<path>');
+  const raw = flags['interests-json'];
+  // Must be a non-empty string path. Bare `--interests-json` with no `=`
+  // would parse to boolean `true`; reject that so we fail loudly instead
+  // of letting `fs.readFileSync(true)` crash with an obscure error.
+  if (!raw || typeof raw !== 'string') {
+    console.error('--mode=agnix-triage requires --interests-json=<path> with a file path value');
     process.exit(2);
   }
   try {
-    return JSON.parse(fs.readFileSync(flags['interests-json'], 'utf8'));
+    return JSON.parse(fs.readFileSync(raw, 'utf8'));
   } catch (err) {
-    console.error(`failed to read ${flags['interests-json']}: ${err.message}`);
+    console.error(`failed to read ${raw}: ${err.message}`);
     process.exit(2);
   }
 }
@@ -161,15 +167,15 @@ function buildAgnixTriagePrompt(notes, interests) {
     'Items that do NOT matter to agnix (safe to ignore):',
     irrelevant,
     '',
-    'Read the release notes below and classify each bullet point. Reply as concise markdown with these sections in order:',
+    'Read the release notes below and classify each bullet point. Reply as concise markdown with these sections in order. Use #### (four hashes) for section headers so they nest under the outer ### Agnix Triage section that wraps this output in the GitHub issue body:',
     '',
-    '## Agnix-relevant changes',
+    '#### Agnix-relevant changes',
     'List each change-type relevant item as a single bullet. Quote the exact phrase from the notes in backticks. If none, write `_None - this release is agnix-irrelevant._`.',
     '',
-    '## Rule candidates',
+    '#### Rule candidates',
     'If any relevant change suggests a new validation rule, propose it as `- <rule name>: <one-line description>`. If none, write `_None._`.',
     '',
-    '## Irrelevant changes (not reviewed)',
+    '#### Irrelevant changes (not reviewed)',
     'One-line summary like `5 items: model additions, UI polish, bug fixes`. Do not enumerate.',
     '',
     'Rules: no preamble, no commentary about extraction, be strict about relevance - when in doubt, classify as irrelevant. Do not fabricate items that are not in the notes.',
@@ -182,7 +188,7 @@ function buildAgnixTriagePrompt(notes, interests) {
 }
 
 (async () => {
-  const stdin = (await readStdin()).slice(0, HTML_BUDGET);
+  const stdin = (await readStdin()).slice(0, INPUT_BUDGET);
   if (!stdin.trim()) {
     console.error('stdin was empty - nothing to process');
     process.exit(2);

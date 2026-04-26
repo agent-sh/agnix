@@ -153,8 +153,10 @@ for raw_id in "${TOOL_IDS[@]}"; do
   NEW_COUNT=$((NEW_COUNT+1))
 
   # Script directory - used by notes_extractor=glm (to find glm-extract.js)
-  # and by the later agnix-triage step. Hoisted here so both branches share it.
-  script_dir=$(dirname "$0")
+  # and by the later agnix-triage step. Resolve to an absolute path so
+  # `node "$script_dir/glm-extract.js"` works even when this script is
+  # invoked via a relative path from another working directory.
+  script_dir=$(cd "$(dirname "$0")" && pwd)
 
   # Optional release-notes upgrade: replace the stub release_body with extracted
   # content when the tool defines a notes_extractor (glm | rss_cdata). Failures
@@ -211,11 +213,6 @@ sys.stdout.write(m.group(1).strip() if m else "")
       ;;
   esac
 
-  # Truncate release notes if too long
-  if [[ ${#release_body} -gt $ISSUE_BODY_LIMIT ]]; then
-    release_body="${release_body:0:$ISSUE_BODY_LIMIT}"$'\n\n'"_(release notes truncated at ${ISSUE_BODY_LIMIT} characters; see ${release_url} for the full text)_"
-  fi
-
   # Optional agnix-focused triage: when the tool declares changes_of_interest
   # and GLM_API_KEY is available, run glm-extract.js --mode=agnix-triage on
   # the release notes. The LLM filters changes down to validator-relevant
@@ -223,19 +220,38 @@ sys.stdout.write(m.group(1).strip() if m else "")
   # human reviewer sees the filtered summary first and the full changelog
   # below. On any failure (missing key, empty result, HTTP error), behavior
   # is identical to before this flag existed.
+  #
+  # Runs BEFORE truncation so the LLM sees the complete changelog, not a
+  # half-sentence stub. Skips when release_body is itself a stub link (no
+  # meaningful content to classify) to avoid wasting GLM quota.
   agnix_triage=""
   interests_json=$(jq -c --arg id "$tool_id" '.tools[$id].changes_of_interest // empty' "$BASELINES_FILE")
   if [[ -n "$interests_json" ]]; then
+    # Skip triage on stub-shaped bodies (the fallback shapes in the
+    # html_url branch and the tags-fallback branch both produce
+    # marker-only text that LLM has nothing to filter).
+    is_stub_body=false
+    if [[ "$release_body" == *"This source provides a version marker only"* ]] \
+       || [[ "$release_body" == *"No release notes available"* ]]; then
+      is_stub_body=true
+    fi
+
     if ! command -v node >/dev/null 2>&1; then
       echo "  [triage] changes_of_interest set but node is not on PATH - skipping LLM triage"
     elif [[ -z "${GLM_API_KEY:-}" ]]; then
       echo "  [triage] changes_of_interest set but GLM_API_KEY env var is unset - skipping LLM triage"
     elif [[ -z "${release_body:-}" ]]; then
       echo "  [triage] no release_body to triage - skipping"
+    elif [[ "$is_stub_body" == "true" ]]; then
+      echo "  [triage] release_body is a stub marker - nothing to classify, skipping LLM call"
     else
+      # Use a trap to guarantee cleanup of temp files even if the command
+      # below fails mid-way (CI interruption, SIGTERM, etc.).
       interests_tmp=$(mktemp)
-      printf '%s' "$interests_json" > "$interests_tmp"
       triage_stderr=$(mktemp)
+      # shellcheck disable=SC2064  # intentional early expansion of tmp paths
+      trap "rm -f '$interests_tmp' '$triage_stderr'" EXIT INT TERM
+      printf '%s' "$interests_json" > "$interests_tmp"
       triage_out=$(node "$script_dir/glm-extract.js" \
         "--mode=agnix-triage" \
         "--interests-json=$interests_tmp" \
@@ -248,7 +264,26 @@ sys.stdout.write(m.group(1).strip() if m else "")
         echo "  WARN: GLM triage returned empty (stderr: $(head -1 "$triage_stderr" 2>/dev/null)) - posting raw changelog only"
       fi
       rm -f "$interests_tmp" "$triage_stderr"
+      trap - EXIT INT TERM
     fi
+  fi
+
+  # Truncate release notes if too long. When triage produced content, share
+  # the ISSUE_BODY_LIMIT budget between triage and raw body so the composed
+  # issue fits under GitHub's ~65KB issue-body cap. The triage summary is
+  # the more important view; budget it first and fit raw body into the
+  # remainder.
+  if [[ -n "$agnix_triage" ]]; then
+    triage_limit=$((ISSUE_BODY_LIMIT / 2))
+    if [[ ${#agnix_triage} -gt $triage_limit ]]; then
+      agnix_triage="${agnix_triage:0:$triage_limit}"$'\n\n'"_(triage truncated)_"
+    fi
+    remaining=$((ISSUE_BODY_LIMIT - ${#agnix_triage}))
+    if [[ ${#release_body} -gt $remaining ]]; then
+      release_body="${release_body:0:$remaining}"$'\n\n'"_(release notes truncated to fit; see ${release_url} for the full text)_"
+    fi
+  elif [[ ${#release_body} -gt $ISSUE_BODY_LIMIT ]]; then
+    release_body="${release_body:0:$ISSUE_BODY_LIMIT}"$'\n\n'"_(release notes truncated at ${ISSUE_BODY_LIMIT} characters; see ${release_url} for the full text)_"
   fi
 
   # Compose issue body. Use absolute file links keyed off GITHUB_REPOSITORY so
