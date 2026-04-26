@@ -102,10 +102,7 @@ pub(crate) fn check_yaml_depth(yaml: &str) -> LintResult<()> {
 
         // Convert leading spaces to 2-space units; tabs contribute 1 unit each.
         let spaces = line.bytes().take_while(|b| *b == b' ').count();
-        let tabs = line[spaces..]
-            .bytes()
-            .take_while(|b| *b == b'\t')
-            .count();
+        let tabs = line[spaces..].bytes().take_while(|b| *b == b'\t').count();
         let indent_units = spaces / 2 + tabs;
         if indent_units > max_indent_units {
             max_indent_units = indent_units;
