@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-04-26
+
+Shipped via PRs #810-#819 (v0.21 rule-candidates sprint: 9 new rules, 3 new validators, rule-bookkeeping automation, safe auto-fixes for Kiro toolSearch).
+
 ### Changed
 - **Auto-fix for KR-SET-001/002/003 type coercion**. The three Kiro settings rules now ship safe auto-fixes for the common case of "user wrote a string when the docs say bool/number". KR-SET-001 strips quotes + normalizes case on `"true"` / `"False"` / `"TRUE"` → `true`/`false`; KR-SET-002/003 strip quotes on numeric strings (KR-SET-003 only accepts integer strings since minTokens must be whole). Fixes are marked `safe: true` - Kiro rejects quoted booleans/numbers anyway, so unquoting preserves user intent exactly. Other paths (negative values, fractional tokens, non-bool-ambiguous strings like "yes") stay manual. Audit of all 9 rules from the sprint found only these 3 to be mechanically fixable - the others require user-specific values (API tokens, server names, URL templates) that can't be guessed. 19 new unit tests covering autofix paths + `find_value_span` JSON-value-slicing helper.
 - **Rule bookkeeping: extend automation to VALIDATION-RULES.md footer stats**. `scripts/sync-rule-bookkeeping.js` now also syncs the three derived lines at the end of `knowledge-base/VALIDATION-RULES.md`: **Total Coverage** (N rules across M categories), **Certainty** (HIGH/MEDIUM/LOW counts), and **Auto-Fixable** (count + percentage). Previously these drifted whenever a rule was added or a rule's `autofix` flag flipped - now they're derived from the rules.json source of truth on every sync run.
