@@ -144,10 +144,16 @@ pub(crate) fn check_yaml_depth(yaml: &str) -> LintResult<()> {
             continue;
         }
 
-        // Convert leading spaces to 2-space units; tabs contribute 1 unit each.
+        // Count each leading space and each leading tab as one indent unit.
+        // A previous draft used `spaces / 2 + tabs` to match YAML's typical
+        // 2-space indent convention, but that lets 1-space-indented YAML
+        // (still valid) hide from the cap — 63 nested maps at 1 space each
+        // yield `indent_units == 63 / 2 == 31` and slip past `MAX_YAML_DEPTH`.
+        // Counting raw columns guarantees pathological depth is flagged no
+        // matter which indent width the attacker chose.
         let spaces = line.bytes().take_while(|b| *b == b' ').count();
         let tabs = line[spaces..].bytes().take_while(|b| *b == b'\t').count();
-        let indent_units = spaces / 2 + tabs;
+        let indent_units = spaces + tabs;
         if indent_units > max_indent_units {
             max_indent_units = indent_units;
         }
@@ -665,6 +671,22 @@ Body content here"#;
         for i in 0..100 {
             for _ in 0..i {
                 yaml.push_str("  ");
+            }
+            yaml.push_str(&format!("k{}:\n", i));
+        }
+        assert!(check_yaml_depth(&yaml).is_err());
+    }
+
+    #[test]
+    fn test_check_yaml_depth_rejects_deep_one_space_indent() {
+        // Regression: previously `spaces / 2 + tabs` let 1-space-indented YAML
+        // bypass the cap (63 levels would yield units=31 <= MAX_YAML_DEPTH).
+        // Now each leading space counts as one indent unit, so pathological
+        // 1-space nesting is flagged.
+        let mut yaml = String::new();
+        for i in 0..60 {
+            for _ in 0..i {
+                yaml.push(' ');
             }
             yaml.push_str(&format!("k{}:\n", i));
         }

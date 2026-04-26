@@ -4,8 +4,9 @@ use super::*;
 
 impl Backend {
     /// Reject a document that exceeds [`MAX_LSP_DOCUMENT_BYTES`]: log a warning,
-    /// drop any cached state for the URI, and publish an empty diagnostic set
-    /// so the editor doesn't show stale results for this version.
+    /// drop any cached state for the URI, and publish a single diagnostic at
+    /// the file head so the user sees *why* validation was skipped rather
+    /// than just "no diagnostics".
     async fn reject_oversized_document(&self, uri: Url, size: usize, version: Option<i32>) {
         self.client
             .log_message(
@@ -22,7 +23,19 @@ impl Backend {
             docs.remove(&uri);
             versions.remove(&uri);
         }
-        self.client.publish_diagnostics(uri, vec![], version).await;
+        let diag = Diagnostic {
+            range: Range::new(Position::new(0, 0), Position::new(0, 0)),
+            severity: Some(DiagnosticSeverity::WARNING),
+            source: Some("agnix-lsp".to_string()),
+            message: format!(
+                "agnix-lsp skipped this document: {} bytes exceeds the {} byte limit.",
+                size, MAX_LSP_DOCUMENT_BYTES
+            ),
+            ..Default::default()
+        };
+        self.client
+            .publish_diagnostics(uri, vec![diag], version)
+            .await;
     }
 
     pub(crate) async fn handle_did_open(&self, params: DidOpenTextDocumentParams) {
