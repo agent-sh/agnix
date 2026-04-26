@@ -21,6 +21,15 @@ use std::io::{self, Write};
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+/// Maximum in-memory document size accepted by the LSP server (5 MiB).
+///
+/// This is higher than [`DEFAULT_MAX_FILE_SIZE`] because editors legitimately
+/// open large files (the linter itself would skip them during directory walks,
+/// but a user may still open them in a buffer). 5 MiB covers any realistic
+/// SKILL.md/CLAUDE.md while still preventing a malicious/huge `didOpen`
+/// payload from exhausting memory in the LSP process.
+pub const MAX_LSP_DOCUMENT_BYTES: usize = 5 * 1024 * 1024;
+
 /// Default maximum file size (1 MiB = 1,048,576 bytes = 2^20 bytes)
 ///
 /// **Design Decision**: 1 MiB was chosen as a balance between:

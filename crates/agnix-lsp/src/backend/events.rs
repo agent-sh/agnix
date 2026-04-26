@@ -1,15 +1,55 @@
-use agnix_core::normalize_line_endings;
+use agnix_core::{MAX_LSP_DOCUMENT_BYTES, normalize_line_endings};
 
 use super::*;
 
 impl Backend {
+    /// Reject a document that exceeds [`MAX_LSP_DOCUMENT_BYTES`]: log a warning,
+    /// drop any cached state for the URI, and publish a single diagnostic at
+    /// the file head so the user sees *why* validation was skipped rather
+    /// than just "no diagnostics".
+    async fn reject_oversized_document(&self, uri: Url, size: usize, version: Option<i32>) {
+        self.client
+            .log_message(
+                MessageType::WARNING,
+                format!(
+                    "agnix-lsp: skipping validation of {} ({} bytes > {} byte limit)",
+                    uri, size, MAX_LSP_DOCUMENT_BYTES
+                ),
+            )
+            .await;
+        {
+            let mut docs = self.documents.write().await;
+            let mut versions = self.document_versions.write().await;
+            docs.remove(&uri);
+            versions.remove(&uri);
+        }
+        let diag = Diagnostic {
+            range: Range::new(Position::new(0, 0), Position::new(0, 0)),
+            severity: Some(DiagnosticSeverity::WARNING),
+            source: Some("agnix-lsp".to_string()),
+            message: format!(
+                "agnix-lsp skipped this document: {} bytes exceeds the {} byte limit.",
+                size, MAX_LSP_DOCUMENT_BYTES
+            ),
+            ..Default::default()
+        };
+        self.client
+            .publish_diagnostics(uri, vec![diag], version)
+            .await;
+    }
+
     pub(crate) async fn handle_did_open(&self, params: DidOpenTextDocumentParams) {
         let version = params.text_document.version;
         let uri = params.text_document.uri;
+        let raw = params.text_document.text;
+        if raw.len() > MAX_LSP_DOCUMENT_BYTES {
+            self.reject_oversized_document(uri, raw.len(), Some(version))
+                .await;
+            return;
+        }
         // Normalize CRLF so the cached content matches the LF-relative byte offsets
         // produced by validate_content and used by code actions for fix ranges.
         // Match on the Cow to reuse the original String for LF-only documents.
-        let raw = params.text_document.text;
         let text = match normalize_line_endings(&raw) {
             std::borrow::Cow::Borrowed(_) => raw,
             std::borrow::Cow::Owned(normalized) => normalized,
@@ -31,10 +71,15 @@ impl Backend {
         let version = params.text_document.version;
         let uri = params.text_document.uri;
         if let Some(change) = params.content_changes.into_iter().next() {
+            let raw = change.text;
+            if raw.len() > MAX_LSP_DOCUMENT_BYTES {
+                self.reject_oversized_document(uri, raw.len(), Some(version))
+                    .await;
+                return;
+            }
             // Normalize CRLF so the cached content matches the LF-relative byte offsets
             // produced by validate_content and used by code actions for fix ranges.
             // Match on the Cow to reuse the original String for LF-only documents.
-            let raw = change.text;
             let text = match normalize_line_endings(&raw) {
                 std::borrow::Cow::Borrowed(_) => raw,
                 std::borrow::Cow::Owned(normalized) => normalized,

@@ -3730,3 +3730,82 @@ async fn test_document_version_lifecycle_through_events() {
 
     assert_eq!(backend.get_document_version(&uri).await, Some(1));
 }
+
+/// Oversized didOpen payloads must be rejected without caching any state.
+/// Prevents memory exhaustion from malicious or pathologically large documents.
+#[tokio::test]
+async fn test_oversized_did_open_is_rejected() {
+    use agnix_core::MAX_LSP_DOCUMENT_BYTES;
+
+    let (service, _socket) = LspService::new(Backend::new);
+    let backend = service.inner();
+
+    let temp_dir = tempfile::tempdir().unwrap();
+    let skill_path = temp_dir.path().join("huge.md");
+    let uri = Url::from_file_path(&skill_path).unwrap();
+
+    // One byte past the limit is enough - we don't need to actually write the
+    // file, since the size check is purely on the in-memory string.
+    let oversized = "x".repeat(MAX_LSP_DOCUMENT_BYTES + 1);
+
+    backend
+        .handle_did_open(DidOpenTextDocumentParams {
+            text_document: TextDocumentItem {
+                uri: uri.clone(),
+                language_id: "markdown".to_string(),
+                version: 1,
+                text: oversized,
+            },
+        })
+        .await;
+
+    // Nothing should be cached for the rejected document.
+    assert!(backend.get_document_content(&uri).await.is_none());
+    assert_eq!(backend.get_document_version(&uri).await, None);
+}
+
+/// Oversized didChange payloads must be rejected and clear any prior state.
+#[tokio::test]
+async fn test_oversized_did_change_is_rejected() {
+    use agnix_core::MAX_LSP_DOCUMENT_BYTES;
+
+    let (service, _socket) = LspService::new(Backend::new);
+    let backend = service.inner();
+
+    let temp_dir = tempfile::tempdir().unwrap();
+    let skill_path = temp_dir.path().join("grows.md");
+    std::fs::write(&skill_path, "---\nname: grows\n---\n").unwrap();
+    let uri = Url::from_file_path(&skill_path).unwrap();
+
+    // First open a small document (within the cap) so we have cached state.
+    backend
+        .handle_did_open(DidOpenTextDocumentParams {
+            text_document: TextDocumentItem {
+                uri: uri.clone(),
+                language_id: "markdown".to_string(),
+                version: 1,
+                text: "---\nname: grows\n---\n".to_string(),
+            },
+        })
+        .await;
+    assert_eq!(backend.get_document_version(&uri).await, Some(1));
+
+    // Then push an oversized change; cached state should be dropped.
+    let oversized = "y".repeat(MAX_LSP_DOCUMENT_BYTES + 1);
+    backend
+        .handle_did_change(DidChangeTextDocumentParams {
+            text_document: VersionedTextDocumentIdentifier {
+                uri: uri.clone(),
+                version: 2,
+            },
+            content_changes: vec![TextDocumentContentChangeEvent {
+                range: None,
+                range_length: None,
+                text: oversized,
+            }],
+        })
+        .await;
+
+    assert!(backend.get_document_content(&uri).await.is_none());
+    assert_eq!(backend.get_document_version(&uri).await, None);
+}

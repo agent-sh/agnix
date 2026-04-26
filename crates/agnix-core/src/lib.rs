@@ -97,6 +97,7 @@ pub use diagnostics::{
 };
 pub use file_types::{FileType, detect_file_type};
 pub use file_types::{FileTypeDetector, FileTypeDetectorChain};
+pub use file_utils::MAX_LSP_DOCUMENT_BYTES;
 pub use fixes::{
     FixApplyMode, FixApplyOptions, FixResult, apply_fixes, apply_fixes_with_fs,
     apply_fixes_with_fs_options, apply_fixes_with_options,
