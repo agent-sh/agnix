@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-04-26
+
+Shipped via PRs #820-#823 (`agnix tools check/detect`, `agnix schema --fix`, LLM changelog triage CI).
+
 ### Added
 - **`agnix tools check` + `agnix tools detect` for version-pin drift (#717)**. Two new subcommands for keeping `.tool_versions` in `.agnix.toml` honest against what's actually installed on PATH:
   - **`agnix tools check`** walks every pinned/installed pair, classifies the outcome (`[ok]`, `[drift]`, `[unpinned]`, `[missing]`), prints a report, and exits 0 by default. With `--strict` it exits 1 on any `[drift]` or `[missing]` - fits pre-commit and CI.
