@@ -8524,7 +8524,8 @@
         }
       },
       "fix": {
-        "autofix": false
+        "autofix": true,
+        "fix_safety": "safe"
       },
       "good_example": "{\n  \"toolSearch.enabled\": true\n}",
       "bad_example": "{\n  \"toolSearch.enabled\": \"true\"\n}"
@@ -8551,7 +8552,8 @@
         }
       },
       "fix": {
-        "autofix": false
+        "autofix": true,
+        "fix_safety": "safe"
       },
       "good_example": "{\n  \"toolSearch.minPct\": 5\n}",
       "bad_example": "{\n  \"toolSearch.minPct\": -5\n}"
@@ -8578,7 +8580,8 @@
         }
       },
       "fix": {
-        "autofix": false
+        "autofix": true,
+        "fix_safety": "safe"
       },
       "good_example": "{\n  \"toolSearch.minTokens\": 50000\n}",
       "bad_example": "{\n  \"toolSearch.minTokens\": -1\n}"

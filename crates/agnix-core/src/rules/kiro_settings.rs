@@ -16,7 +16,7 @@
 
 use crate::{
     config::LintConfig,
-    diagnostics::Diagnostic,
+    diagnostics::{Diagnostic, Fix},
     rules::{Validator, ValidatorMetadata},
 };
 use rust_i18n::t;
@@ -69,17 +69,79 @@ fn validate_tool_search_enabled(
     };
     if field.as_bool().is_none() {
         let line = find_key_line(content, "toolSearch.enabled").unwrap_or(1);
-        diagnostics.push(
-            Diagnostic::error(
-                path.to_path_buf(),
-                line,
-                0,
-                "KR-SET-001",
-                t!("rules.kr_set_001.type_error"),
-            )
-            .with_suggestion(t!("rules.kr_set_001.suggestion")),
-        );
+        let mut diagnostic = Diagnostic::error(
+            path.to_path_buf(),
+            line,
+            0,
+            "KR-SET-001",
+            t!("rules.kr_set_001.type_error"),
+        )
+        .with_suggestion(t!("rules.kr_set_001.suggestion"));
+
+        // Auto-fix: when the user wrote "true" / "false" / "True" / "FALSE"
+        // as a quoted string, strip the quotes + normalize case. Safe
+        // because the fix preserves the user's clearly-intended value
+        // (quoted JSON booleans are invalid per RFC 8259 and Kiro would
+        // reject the config at load time).
+        if let Some(s) = field.as_str()
+            && let Some(parsed) = parse_string_as_bool(s)
+            && let Some((start, end)) = find_value_span(content, "toolSearch.enabled")
+        {
+            diagnostic = diagnostic.with_fix(Fix::replace(
+                start,
+                end,
+                if parsed { "true" } else { "false" }.to_string(),
+                format!("Remove quotes: \"{s}\" -> {parsed}"),
+                true,
+            ));
+        }
+
+        diagnostics.push(diagnostic);
     }
+}
+
+/// Parse a string like "true"/"True"/"false"/"FALSE" as a boolean.
+/// Returns None for anything ambiguous ("1"/"0"/"yes"/"no" etc.) to keep
+/// the auto-fix conservative.
+fn parse_string_as_bool(s: &str) -> Option<bool> {
+    match s.to_lowercase().as_str() {
+        "true" => Some(true),
+        "false" => Some(false),
+        _ => None,
+    }
+}
+
+/// Parse a string as a number (integer or float). Returns the canonical
+/// JSON representation without leading/trailing whitespace so the auto-fix
+/// rewrites exactly what Kiro would have accepted if the quotes weren't
+/// there. Returns None if the string isn't a valid number (e.g., "abc",
+/// "5px", empty) or looks ambiguous.
+fn parse_string_as_number(s: &str) -> Option<String> {
+    let trimmed = s.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    // serde_json::Number::from_str would be ideal but the public API is
+    // `f64::from_str`. That's fine for this use: Kiro's minPct allows
+    // fractional values, so we accept the same shape.
+    if trimmed.parse::<f64>().is_err() {
+        return None;
+    }
+    Some(trimmed.to_string())
+}
+
+/// Parse a string as an integer. Stricter than `parse_string_as_number`
+/// because `toolSearch.minTokens` must be a whole number - we don't want
+/// to auto-fix "5.5" to a value that another rule will immediately flag.
+fn parse_string_as_integer(s: &str) -> Option<String> {
+    let trimmed = s.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    if trimmed.parse::<i64>().is_err() {
+        return None;
+    }
+    Some(trimmed.to_string())
 }
 
 /// KR-SET-002: `toolSearch.minPct` must be a non-negative number when present.
@@ -98,16 +160,32 @@ fn validate_tool_search_min_pct(
     let line = find_key_line(content, "toolSearch.minPct").unwrap_or(1);
     match field.as_f64() {
         None => {
-            diagnostics.push(
-                Diagnostic::error(
-                    path.to_path_buf(),
-                    line,
-                    0,
-                    "KR-SET-002",
-                    t!("rules.kr_set_002.type_error"),
-                )
-                .with_suggestion(t!("rules.kr_set_002.suggestion")),
-            );
+            let mut diagnostic = Diagnostic::error(
+                path.to_path_buf(),
+                line,
+                0,
+                "KR-SET-002",
+                t!("rules.kr_set_002.type_error"),
+            )
+            .with_suggestion(t!("rules.kr_set_002.suggestion"));
+
+            // Auto-fix: string-that-parses-as-number -> bare number. Safe
+            // because the user's numeric intent is clearly preserved and
+            // Kiro rejects quoted numbers anyway.
+            if let Some(s) = field.as_str()
+                && let Some(parsed) = parse_string_as_number(s)
+                && let Some((start, end)) = find_value_span(content, "toolSearch.minPct")
+            {
+                diagnostic = diagnostic.with_fix(Fix::replace(
+                    start,
+                    end,
+                    parsed.clone(),
+                    format!("Remove quotes: \"{s}\" -> {parsed}"),
+                    true,
+                ));
+            }
+
+            diagnostics.push(diagnostic);
         }
         Some(n) if n < 0.0 => {
             diagnostics.push(
@@ -155,16 +233,32 @@ fn validate_tool_search_min_tokens(
     let line = find_key_line(content, "toolSearch.minTokens").unwrap_or(1);
     match field.as_f64() {
         None => {
-            diagnostics.push(
-                Diagnostic::error(
-                    path.to_path_buf(),
-                    line,
-                    0,
-                    "KR-SET-003",
-                    t!("rules.kr_set_003.type_error"),
-                )
-                .with_suggestion(t!("rules.kr_set_003.suggestion")),
-            );
+            let mut diagnostic = Diagnostic::error(
+                path.to_path_buf(),
+                line,
+                0,
+                "KR-SET-003",
+                t!("rules.kr_set_003.type_error"),
+            )
+            .with_suggestion(t!("rules.kr_set_003.suggestion"));
+
+            // Auto-fix: string-that-parses-as-integer -> bare integer. Only
+            // integers qualify here since minTokens is a token count; a
+            // fractional string like "1.5" falls through to manual fix.
+            if let Some(s) = field.as_str()
+                && let Some(parsed) = parse_string_as_integer(s)
+                && let Some((start, end)) = find_value_span(content, "toolSearch.minTokens")
+            {
+                diagnostic = diagnostic.with_fix(Fix::replace(
+                    start,
+                    end,
+                    parsed.clone(),
+                    format!("Remove quotes: \"{s}\" -> {parsed}"),
+                    true,
+                ));
+            }
+
+            diagnostics.push(diagnostic);
         }
         Some(n) if n < 0.0 => {
             diagnostics.push(
@@ -191,6 +285,124 @@ fn validate_tool_search_min_tokens(
             );
         }
         _ => {}
+    }
+}
+
+/// Locate the byte span of the JSON *value* that follows `"<key>":`.
+///
+/// Returns `(start, end)` covering the value token exactly - no leading or
+/// trailing whitespace and no comma. For a string value `"abc"` the span
+/// includes both surrounding quotes. This drives auto-fix replacements like
+/// `"true"` -> `true` where we want to swap the whole token.
+///
+/// Returns `None` when the key isn't present, when the value is an object/
+/// array (which would need bracket-matching), or when parsing ambiguity
+/// would make the span unsafe to rewrite. Callers fall back to "manual fix"
+/// in that case.
+fn find_value_span(content: &str, key: &str) -> Option<(usize, usize)> {
+    debug_assert!(
+        key.is_ascii() && !key.contains('"') && !key.contains('\\'),
+        "find_value_span expects ASCII key without quotes or backslashes"
+    );
+    let needle = format!("\"{key}\"");
+    let needle_bytes = needle.as_bytes();
+    let needle_len = needle_bytes.len();
+    let bytes = content.as_bytes();
+    let mut in_string = false;
+    let mut escape = false;
+    let mut i = 0;
+
+    // Phase 1: walk to the `:` after the key.
+    let mut colon_pos: Option<usize> = None;
+    while i < bytes.len() {
+        let b = bytes[i];
+        if escape {
+            escape = false;
+            i += 1;
+            continue;
+        }
+        if b == b'\\' && in_string {
+            escape = true;
+            i += 1;
+            continue;
+        }
+        if b == b'"' {
+            if !in_string
+                && i + needle_len <= bytes.len()
+                && &bytes[i..i + needle_len] == needle_bytes
+            {
+                let mut j = i + needle_len;
+                while j < bytes.len() && matches!(bytes[j], b' ' | b'\t' | b'\n' | b'\r') {
+                    j += 1;
+                }
+                if j < bytes.len() && bytes[j] == b':' {
+                    colon_pos = Some(j);
+                    break;
+                }
+            }
+            in_string = !in_string;
+        }
+        i += 1;
+    }
+    let colon = colon_pos?;
+
+    // Phase 2: skip whitespace after `:` to find the value start.
+    let mut start = colon + 1;
+    while start < bytes.len() && matches!(bytes[start], b' ' | b'\t' | b'\n' | b'\r') {
+        start += 1;
+    }
+    if start >= bytes.len() {
+        return None;
+    }
+
+    // Phase 3: scan the value token. We only handle string, number, true,
+    // false, null - the shapes the type-coercion fixes care about.
+    // Objects and arrays would need bracket-matching; return None so callers
+    // skip auto-fix rather than guessing.
+    match bytes[start] {
+        b'"' => {
+            // String literal. Walk until closing `"` respecting escapes.
+            let mut k = start + 1;
+            let mut esc = false;
+            while k < bytes.len() {
+                let b = bytes[k];
+                if esc {
+                    esc = false;
+                } else if b == b'\\' {
+                    esc = true;
+                } else if b == b'"' {
+                    return Some((start, k + 1));
+                }
+                k += 1;
+            }
+            None // unterminated string
+        }
+        b't' | b'f' | b'n' => {
+            // true / false / null literal. Match the canonical spelling.
+            for lit in ["true", "false", "null"] {
+                let lit_bytes = lit.as_bytes();
+                if start + lit_bytes.len() <= bytes.len()
+                    && &bytes[start..start + lit_bytes.len()] == lit_bytes
+                {
+                    return Some((start, start + lit_bytes.len()));
+                }
+            }
+            None
+        }
+        b'-' | b'+' | b'0'..=b'9' => {
+            // Number token. Walk while the next byte is a valid number
+            // character (JSON number grammar: digits, ., e, +, -). This is
+            // a lenient scan - good enough for rewriting a string back to
+            // a bare number form.
+            let mut k = start + 1;
+            while k < bytes.len()
+                && matches!(bytes[k], b'0'..=b'9' | b'.' | b'e' | b'E' | b'+' | b'-')
+            {
+                k += 1;
+            }
+            Some((start, k))
+        }
+        _ => None, // object, array, or other unhandled shape
     }
 }
 
@@ -519,5 +731,215 @@ mod tests {
             .find(|d| d.rule == "KR-SET-001")
             .expect("KR-SET-001 diagnostic");
         assert_eq!(hit.line, 3);
+    }
+
+    // ===== Auto-fix: string-to-typed coercion =====
+
+    /// Apply the first fix on the first matching diagnostic to `content`
+    /// and return the new string. Panics if no matching diagnostic or fix
+    /// exists so failing tests point at the missing autofix.
+    fn apply_first_fix(content: &str, rule: &str) -> String {
+        let diagnostics = validate(content);
+        let diag = diagnostics
+            .iter()
+            .find(|d| d.rule == rule)
+            .unwrap_or_else(|| panic!("expected {rule} diagnostic, got {:?}", diagnostics));
+        let fix = diag
+            .fixes
+            .first()
+            .unwrap_or_else(|| panic!("{rule} diagnostic had no fix attached: {:?}", diag));
+        let mut out = content.to_string();
+        out.replace_range(fix.start_byte..fix.end_byte, &fix.replacement);
+        out
+    }
+
+    #[test]
+    fn test_kr_set_001_autofix_string_true_to_bool() {
+        let content = r#"{"toolSearch.enabled": "true"}"#;
+        let fixed = apply_first_fix(content, "KR-SET-001");
+        assert_eq!(fixed, r#"{"toolSearch.enabled": true}"#);
+        // And re-validation of the fixed output should be clean.
+        assert!(validate(&fixed).iter().all(|d| d.rule != "KR-SET-001"));
+    }
+
+    #[test]
+    fn test_kr_set_001_autofix_string_false_to_bool() {
+        let content = r#"{"toolSearch.enabled": "false"}"#;
+        let fixed = apply_first_fix(content, "KR-SET-001");
+        assert_eq!(fixed, r#"{"toolSearch.enabled": false}"#);
+    }
+
+    #[test]
+    fn test_kr_set_001_autofix_case_insensitive() {
+        // "True" / "FALSE" / "TRUE" etc. should all normalize to lowercase bool.
+        let content = r#"{"toolSearch.enabled": "TRUE"}"#;
+        let fixed = apply_first_fix(content, "KR-SET-001");
+        assert_eq!(fixed, r#"{"toolSearch.enabled": true}"#);
+    }
+
+    #[test]
+    fn test_kr_set_001_no_autofix_for_ambiguous_string() {
+        // "1" / "yes" / "on" are NOT unambiguously bool - no fix offered.
+        let content = r#"{"toolSearch.enabled": "yes"}"#;
+        let diagnostics = validate(content);
+        let diag = diagnostics
+            .iter()
+            .find(|d| d.rule == "KR-SET-001")
+            .expect("KR-SET-001");
+        assert!(
+            diag.fixes.is_empty(),
+            "ambiguous string must not get an auto-fix, got {:?}",
+            diag.fixes
+        );
+    }
+
+    #[test]
+    fn test_kr_set_001_no_autofix_for_non_string_type() {
+        // Number/array/object get the diagnostic but no auto-fix - we
+        // can't guess what value the user meant.
+        for fixture in [
+            r#"{"toolSearch.enabled": 1}"#,
+            r#"{"toolSearch.enabled": 0}"#,
+            r#"{"toolSearch.enabled": null}"#,
+            r#"{"toolSearch.enabled": []}"#,
+        ] {
+            let diagnostics = validate(fixture);
+            let diag = diagnostics
+                .iter()
+                .find(|d| d.rule == "KR-SET-001")
+                .unwrap_or_else(|| panic!("fixture {fixture} did not flag"));
+            assert!(
+                diag.fixes.is_empty(),
+                "no fix expected for {fixture}, got {:?}",
+                diag.fixes
+            );
+        }
+    }
+
+    #[test]
+    fn test_kr_set_002_autofix_string_to_number() {
+        let content = r#"{"toolSearch.minPct": "5"}"#;
+        let fixed = apply_first_fix(content, "KR-SET-002");
+        assert_eq!(fixed, r#"{"toolSearch.minPct": 5}"#);
+    }
+
+    #[test]
+    fn test_kr_set_002_autofix_string_float_to_number() {
+        let content = r#"{"toolSearch.minPct": "2.5"}"#;
+        let fixed = apply_first_fix(content, "KR-SET-002");
+        assert_eq!(fixed, r#"{"toolSearch.minPct": 2.5}"#);
+    }
+
+    #[test]
+    fn test_kr_set_002_no_autofix_for_non_numeric_string() {
+        let content = r#"{"toolSearch.minPct": "five"}"#;
+        let diagnostics = validate(content);
+        let diag = diagnostics
+            .iter()
+            .find(|d| d.rule == "KR-SET-002")
+            .expect("KR-SET-002");
+        assert!(diag.fixes.is_empty());
+    }
+
+    #[test]
+    fn test_kr_set_002_no_autofix_for_negative_number() {
+        // Negative gets the rule but not type_error - no fix path (negative
+        // is a semantic mistake, can't mechanically correct).
+        let content = r#"{"toolSearch.minPct": -5}"#;
+        let diagnostics = validate(content);
+        let diag = diagnostics
+            .iter()
+            .find(|d| d.rule == "KR-SET-002")
+            .expect("KR-SET-002");
+        assert!(diag.fixes.is_empty());
+    }
+
+    #[test]
+    fn test_kr_set_003_autofix_string_to_integer() {
+        let content = r#"{"toolSearch.minTokens": "50000"}"#;
+        let fixed = apply_first_fix(content, "KR-SET-003");
+        assert_eq!(fixed, r#"{"toolSearch.minTokens": 50000}"#);
+    }
+
+    #[test]
+    fn test_kr_set_003_no_autofix_for_fractional_string() {
+        // Integer parser rejects "50000.5" so no fix - and the "not_integer"
+        // rule message would immediately re-flag anyway.
+        let content = r#"{"toolSearch.minTokens": "50000.5"}"#;
+        let diagnostics = validate(content);
+        let diag = diagnostics
+            .iter()
+            .find(|d| d.rule == "KR-SET-003")
+            .expect("KR-SET-003");
+        assert!(diag.fixes.is_empty());
+    }
+
+    #[test]
+    fn test_autofix_line_reporting_stays_intact() {
+        // Autofix replaces only the value span - the line number of the
+        // diagnostic should still point at the key line.
+        let content = "{\n  \"chat.ui\": \"prose\",\n  \"toolSearch.enabled\": \"true\"\n}";
+        let diagnostics = validate(content);
+        let diag = diagnostics
+            .iter()
+            .find(|d| d.rule == "KR-SET-001")
+            .expect("KR-SET-001");
+        assert_eq!(diag.line, 3);
+        let fix = diag.fixes.first().expect("fix attached");
+        // The fix replacement points at the value on line 3, not the key.
+        assert_eq!(&content[fix.start_byte..fix.end_byte], "\"true\"");
+        assert_eq!(fix.replacement, "true");
+    }
+
+    // ===== find_value_span unit tests =====
+
+    #[test]
+    fn test_find_value_span_string() {
+        let content = r#"{"k": "v"}"#;
+        let (s, e) = find_value_span(content, "k").unwrap();
+        assert_eq!(&content[s..e], r#""v""#);
+    }
+
+    #[test]
+    fn test_find_value_span_number() {
+        let content = r#"{"k": 42}"#;
+        let (s, e) = find_value_span(content, "k").unwrap();
+        assert_eq!(&content[s..e], "42");
+    }
+
+    #[test]
+    fn test_find_value_span_bool() {
+        let content = r#"{"k": true}"#;
+        let (s, e) = find_value_span(content, "k").unwrap();
+        assert_eq!(&content[s..e], "true");
+    }
+
+    #[test]
+    fn test_find_value_span_null() {
+        let content = r#"{"k": null}"#;
+        let (s, e) = find_value_span(content, "k").unwrap();
+        assert_eq!(&content[s..e], "null");
+    }
+
+    #[test]
+    fn test_find_value_span_object_returns_none() {
+        // Object/array need bracket-matching; return None so callers skip
+        // auto-fix rather than mis-slicing.
+        let content = r#"{"k": {"nested": 1}}"#;
+        assert!(find_value_span(content, "k").is_none());
+    }
+
+    #[test]
+    fn test_find_value_span_missing_key() {
+        let content = r#"{"k": 1}"#;
+        assert!(find_value_span(content, "other").is_none());
+    }
+
+    #[test]
+    fn test_find_value_span_key_inside_string_literal_ignored() {
+        // "k" mentioned in a prose value must not be treated as the key.
+        let content = r#"{"note": "k is an important key", "k": 42}"#;
+        let (s, e) = find_value_span(content, "k").unwrap();
+        assert_eq!(&content[s..e], "42");
     }
 }

@@ -2938,21 +2938,21 @@ Rules for `.kiro/settings.json` (and `~/.kiro/settings.json`) - the flat-key JSO
 ### KR-SET-001 [HIGH] Invalid toolSearch.enabled Value
 **Requirement**: `toolSearch.enabled` MUST be a boolean (true or false) when present. Non-boolean values will cause Kiro CLI to fail to apply the setting.
 **Detection**: Parse settings.json; look up top-level `toolSearch.enabled`; flag non-boolean types (string, number, array, object, null)
-**Fix**: Manual - set to `true` or `false` without quotes
+**Fix**: [AUTO-FIX, safe] When the value is a quoted string that's unambiguously boolean (`"true"`/`"True"`/`"false"`/`"FALSE"` etc.), strip the quotes + normalize case. Other non-boolean types (number/array/null) remain manual since the user's intent isn't mechanically recoverable.
 **Source**: kiro.dev/docs/cli/mcp/tool-search/ (Kiro CLI 2.1+)
 
 <a id="kr-set-002"></a>
 ### KR-SET-002 [MEDIUM] Invalid toolSearch.minPct Value
 **Requirement**: `toolSearch.minPct` SHOULD be a non-negative number representing the percentage-of-context-window threshold that activates Tool Search. Default 5. Value 0 means "always active". Values above 100 will never trigger Tool Search because MCP tool specs cannot exceed the context window.
 **Detection**: Parse settings.json; type-check top-level `toolSearch.minPct`; flag non-numbers and negative numbers (ERROR), warn on values above 100 (WARNING)
-**Fix**: Manual - set to a non-negative number (default 5), or 0 for always-active
+**Fix**: [AUTO-FIX, safe] When the value is a quoted numeric string (`"5"`, `"2.5"`), strip the quotes. Negative and >100 warnings remain manual since they're semantic intent problems.
 **Source**: kiro.dev/docs/cli/mcp/tool-search/
 
 <a id="kr-set-003"></a>
 ### KR-SET-003 [MEDIUM] Invalid toolSearch.minTokens Value
 **Requirement**: `toolSearch.minTokens` SHOULD be a non-negative integer representing the token-count threshold that activates Tool Search. Default 50000. Value 0 means "always active".
 **Detection**: Parse settings.json; type-check top-level `toolSearch.minTokens`; flag non-numbers, negative numbers, and fractional values (ERROR)
-**Fix**: Manual - set to a non-negative integer (default 50000), or 0 for always-active
+**Fix**: [AUTO-FIX, safe] When the value is a quoted integer string (`"50000"`), strip the quotes. Fractional strings, negatives, and fractional numbers remain manual.
 **Source**: kiro.dev/docs/cli/mcp/tool-search/
 
 ---
@@ -3387,8 +3387,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 405 validation rules across 36 categories
+**Total Coverage**: 414 validation rules across 40 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 197 HIGH, 143 MEDIUM, 16 LOW
-**Auto-Fixable**: 126 rules (32%)
+**Certainty**: 214 HIGH, 172 MEDIUM, 28 LOW
+**Auto-Fixable**: 129 rules (31%)
