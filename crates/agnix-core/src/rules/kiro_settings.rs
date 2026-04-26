@@ -111,37 +111,112 @@ fn parse_string_as_bool(s: &str) -> Option<bool> {
     }
 }
 
-/// Parse a string as a number (integer or float). Returns the canonical
-/// JSON representation without leading/trailing whitespace so the auto-fix
-/// rewrites exactly what Kiro would have accepted if the quotes weren't
-/// there. Returns None if the string isn't a valid number (e.g., "abc",
-/// "5px", empty) or looks ambiguous.
+/// Parse a string as a JSON number (integer or float) per RFC 8259
+/// section 6. Stricter than `f64::from_str` - rejects leading `+`,
+/// leading zeros on multi-digit integers, leading/trailing `.`, and
+/// negative values (since KR-SET-002/003 both expect non-negative).
+///
+/// Returns the canonical JSON representation so the auto-fix rewrites
+/// exactly what Kiro would have accepted. Returns None if the string
+/// isn't a valid non-negative JSON number. This prevents auto-fix from
+/// emitting invalid JSON like `05` or from auto-correcting a negative
+/// string that would just re-flag on the negative rule.
 fn parse_string_as_number(s: &str) -> Option<String> {
     let trimmed = s.trim();
-    if trimmed.is_empty() {
-        return None;
-    }
-    // serde_json::Number::from_str would be ideal but the public API is
-    // `f64::from_str`. That's fine for this use: Kiro's minPct allows
-    // fractional values, so we accept the same shape.
-    if trimmed.parse::<f64>().is_err() {
+    if !is_json_nonneg_number(trimmed) {
         return None;
     }
     Some(trimmed.to_string())
 }
 
-/// Parse a string as an integer. Stricter than `parse_string_as_number`
-/// because `toolSearch.minTokens` must be a whole number - we don't want
-/// to auto-fix "5.5" to a value that another rule will immediately flag.
+/// Parse a string as a JSON non-negative integer. Rejects everything
+/// `parse_string_as_number` rejects plus any fractional/exponent form.
 fn parse_string_as_integer(s: &str) -> Option<String> {
     let trimmed = s.trim();
-    if trimmed.is_empty() {
-        return None;
-    }
-    if trimmed.parse::<i64>().is_err() {
+    if !is_json_nonneg_integer(trimmed) {
         return None;
     }
     Some(trimmed.to_string())
+}
+
+/// JSON RFC 8259 number grammar, restricted to non-negative values:
+///   number = int [ frac ] [ exp ]
+///   int    = "0" | ( digit1-9 *DIGIT )       ; no leading zeros on multi-digit
+///   frac   = "." 1*DIGIT                     ; requires digits after .
+///   exp    = ("e"|"E") [ "+" | "-" ] 1*DIGIT
+/// Rejects negative numbers, leading `+`, `.5`, `5.`, `05`, empty string.
+fn is_json_nonneg_number(s: &str) -> bool {
+    let bytes = s.as_bytes();
+    if bytes.is_empty() {
+        return false;
+    }
+    let mut i;
+    // int part
+    match bytes.first() {
+        Some(b'0') => {
+            i = 1;
+            // Must be followed by end, `.`, or exponent - not another digit.
+            if let Some(b) = bytes.get(i)
+                && b.is_ascii_digit()
+            {
+                return false; // leading zero
+            }
+        }
+        Some(b) if (b'1'..=b'9').contains(b) => {
+            i = 1;
+            while let Some(c) = bytes.get(i)
+                && c.is_ascii_digit()
+            {
+                i += 1;
+            }
+        }
+        _ => return false, // empty, `-`, `+`, `.`, or other
+    }
+    // frac part
+    if bytes.get(i) == Some(&b'.') {
+        i += 1;
+        let frac_start = i;
+        while let Some(c) = bytes.get(i)
+            && c.is_ascii_digit()
+        {
+            i += 1;
+        }
+        if i == frac_start {
+            return false; // `5.` with no fraction digits
+        }
+    }
+    // exp part
+    if let Some(c) = bytes.get(i)
+        && (*c == b'e' || *c == b'E')
+    {
+        i += 1;
+        if let Some(s) = bytes.get(i)
+            && (*s == b'+' || *s == b'-')
+        {
+            i += 1;
+        }
+        let exp_start = i;
+        while let Some(c) = bytes.get(i)
+            && c.is_ascii_digit()
+        {
+            i += 1;
+        }
+        if i == exp_start {
+            return false; // `5e` with no exponent digits
+        }
+    }
+    i == bytes.len()
+}
+
+/// Non-negative JSON integer: digits only, no leading zeros on multi-digit,
+/// no fraction, no exponent.
+fn is_json_nonneg_integer(s: &str) -> bool {
+    let bytes = s.as_bytes();
+    match bytes.first() {
+        Some(b'0') => bytes.len() == 1,
+        Some(b) if (b'1'..=b'9').contains(b) => bytes.iter().all(|c| c.is_ascii_digit()),
+        _ => false,
+    }
 }
 
 /// KR-SET-002: `toolSearch.minPct` must be a non-negative number when present.
@@ -941,5 +1016,108 @@ mod tests {
         let content = r#"{"note": "k is an important key", "k": 42}"#;
         let (s, e) = find_value_span(content, "k").unwrap();
         assert_eq!(&content[s..e], "42");
+    }
+
+    // ===== JSON number grammar (is_json_nonneg_number / _integer) =====
+
+    #[test]
+    fn test_json_number_accepts_valid_forms() {
+        for v in [
+            "0", "5", "42", "100", "2.5", "0.5", "1e10", "1E10", "1.5e-3", "1.5E+3",
+        ] {
+            assert!(is_json_nonneg_number(v), "should accept {v}");
+        }
+    }
+
+    #[test]
+    fn test_json_number_rejects_leading_zero() {
+        // "05" is invalid JSON per RFC 8259. Auto-fix must not emit it.
+        for v in ["05", "05.5", "007", "00"] {
+            assert!(!is_json_nonneg_number(v), "should reject {v}");
+        }
+    }
+
+    #[test]
+    fn test_json_number_rejects_negative_and_leading_plus() {
+        // Rust parses these fine but JSON doesn't accept `+`, and
+        // negatives re-flag on the .negative rule so auto-fix shouldn't
+        // produce them.
+        for v in ["-5", "+5", "-0.5", "+100"] {
+            assert!(!is_json_nonneg_number(v), "should reject {v}");
+        }
+    }
+
+    #[test]
+    fn test_json_number_rejects_malformed_fraction_or_exponent() {
+        for v in [".5", "5.", "5.e3", "5e", "5e+", "5.e", ""] {
+            assert!(!is_json_nonneg_number(v), "should reject {v}");
+        }
+    }
+
+    #[test]
+    fn test_json_integer_accepts_valid_forms() {
+        for v in ["0", "5", "42", "50000", "9999999"] {
+            assert!(is_json_nonneg_integer(v), "should accept {v}");
+        }
+    }
+
+    #[test]
+    fn test_json_integer_rejects_fractional_and_exponent_and_leading_zero() {
+        for v in ["5.5", "1e10", "05", "00", "-5", "+5", "", "5."] {
+            assert!(!is_json_nonneg_integer(v), "should reject {v}");
+        }
+    }
+
+    // ===== Regression: parse_string_as_* declines shapes that would
+    //       break the invariant "autofix produces valid JSON" =====
+
+    #[test]
+    fn test_parse_string_as_number_declines_leading_zero() {
+        assert!(parse_string_as_number("050").is_none());
+        assert!(parse_string_as_number("007.5").is_none());
+    }
+
+    #[test]
+    fn test_parse_string_as_number_declines_negative() {
+        // Negative strings on minPct would auto-fix to a negative number
+        // and immediately re-flag on .negative. Better to stay manual.
+        assert!(parse_string_as_number("-5").is_none());
+        assert!(parse_string_as_number("+5").is_none());
+    }
+
+    #[test]
+    fn test_parse_string_as_integer_declines_fractional_string() {
+        assert!(parse_string_as_integer("5.5").is_none());
+        assert!(parse_string_as_integer("1e10").is_none());
+    }
+
+    #[test]
+    fn test_kr_set_002_no_autofix_for_leading_zero_string() {
+        // Even though "05" looks number-ish, emitting it as bare `05`
+        // would produce invalid JSON. Stay manual.
+        let content = r#"{"toolSearch.minPct": "05"}"#;
+        let diagnostics = validate(content);
+        let diag = diagnostics
+            .iter()
+            .find(|d| d.rule == "KR-SET-002")
+            .expect("KR-SET-002");
+        assert!(
+            diag.fixes.is_empty(),
+            "leading-zero string must not auto-fix to invalid JSON, got {:?}",
+            diag.fixes
+        );
+    }
+
+    #[test]
+    fn test_kr_set_002_no_autofix_for_negative_string() {
+        // Auto-fixing "-5" to `-5` would immediately re-flag on the
+        // negative rule. Keep it manual.
+        let content = r#"{"toolSearch.minPct": "-5"}"#;
+        let diagnostics = validate(content);
+        let diag = diagnostics
+            .iter()
+            .find(|d| d.rule == "KR-SET-002")
+            .expect("KR-SET-002");
+        assert!(diag.fixes.is_empty());
     }
 }
