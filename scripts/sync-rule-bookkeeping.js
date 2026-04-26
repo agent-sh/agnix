@@ -17,8 +17,10 @@
  *    - Byte-identical mirror of `knowledge-base/rules.json`.
  *
  * 3. `CLAUDE.md`, `AGENTS.md`, `README.md`
- *    - Count phrases like "N rules", "N validation rules", "N rule"
- *      are updated to match `rules.length`.
+ *    - "N rules" and "N validation rules" phrases are updated to match
+ *      `rules.length`. Singular forms ("N rule sourced/across") are not
+ *      currently used anywhere in these files; if they appear in future
+ *      prose, add the pattern to `countPatterns` below.
  *    - Validator count phrase "N validators" is updated when --validators N
  *      is passed (the count isn't automatically derivable without parsing
  *      Rust source).
@@ -66,12 +68,30 @@ const checkMode = args.includes('--check');
 const bumpDate = args.includes('--bump-date');
 const skipDocs = args.includes('--skip-docs');
 const validatorArg = args.find((a) => a.startsWith('--validators='));
-const requestedValidatorCount = validatorArg
-  ? parseInt(validatorArg.slice('--validators='.length), 10)
-  : null;
+let requestedValidatorCount = null;
+if (validatorArg) {
+  const raw = validatorArg.slice('--validators='.length);
+  // Strict: digits only, no sign, no trailing garbage, at least 1.
+  if (!/^\d+$/.test(raw)) {
+    console.error(
+      `[ERROR] --validators= must be a positive integer (digits only), got '${raw}'`
+    );
+    process.exit(2);
+  }
+  requestedValidatorCount = parseInt(raw, 10);
+  if (requestedValidatorCount < 1) {
+    console.error(`[ERROR] --validators= must be at least 1, got ${requestedValidatorCount}`);
+    process.exit(2);
+  }
+}
 
-if (validatorArg && !Number.isFinite(requestedValidatorCount)) {
-  console.error(`[ERROR] --validators= must be a positive integer, got ${validatorArg}`);
+// --check is read-only by contract. --bump-date would write to rules.json,
+// which contradicts that. Reject the combination rather than silently
+// ignoring --bump-date, so CI doesn't accidentally side-effect.
+if (checkMode && bumpDate) {
+  console.error(
+    '[ERROR] --check is read-only; --bump-date would mutate rules.json. Pick one.'
+  );
   process.exit(2);
 }
 
@@ -157,13 +177,11 @@ if (!crateContent || !knowledgeContent.equals(crateContent)) {
 // ---- 3. Count phrases in CLAUDE.md / AGENTS.md / README.md ----
 
 // Patterns to update. The pattern must be specific enough that we don't
-// match unrelated numbers. We look for " <N> rules", " <N> rule\b", and
-// " <N> validation rules" with non-digit boundaries.
+// match unrelated numbers. We look for " <N> rules" and
+// " <N> validation rules" with word-boundary anchoring.
 const countPatterns = [
   { re: /(\b)(\d+)( rules\b)/g },
   { re: /(\b)(\d+)( validation rules\b)/g },
-  // "N rule sourced" / "N rule across" - README uses phrases like
-  // "N rules across" and "N rules sourced".
 ];
 
 for (const file of COUNT_FILES) {
