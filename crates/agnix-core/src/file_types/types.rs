@@ -100,6 +100,8 @@ pub enum FileType {
     KiroMcp,
     /// Kiro CLI settings (.kiro/settings.json or ~/.kiro/settings.json)
     KiroSettings,
+    /// Gemini CLI agent definition (.gemini/agents/*.md)
+    GeminiAgent,
     /// Other .md files (for XML/import checks)
     GenericMarkdown,
     /// Skip validation
@@ -175,6 +177,7 @@ impl fmt::Display for FileType {
             FileType::KiroHook => "KiroHook",
             FileType::KiroMcp => "KiroMcp",
             FileType::KiroSettings => "KiroSettings",
+            FileType::GeminiAgent => "GeminiAgent",
             FileType::GenericMarkdown => "GenericMarkdown",
             FileType::Unknown => "Unknown",
         })
@@ -231,6 +234,8 @@ mod tests {
             (FileType::KiroAgent, "KiroAgent"),
             (FileType::KiroHook, "KiroHook"),
             (FileType::KiroMcp, "KiroMcp"),
+            (FileType::KiroSettings, "KiroSettings"),
+            (FileType::GeminiAgent, "GeminiAgent"),
             (FileType::GenericMarkdown, "GenericMarkdown"),
             (FileType::Unknown, "Unknown"),
         ];
@@ -286,6 +291,8 @@ mod tests {
             FileType::KiroAgent,
             FileType::KiroHook,
             FileType::KiroMcp,
+            FileType::KiroSettings,
+            FileType::GeminiAgent,
             FileType::GenericMarkdown,
         ];
 
@@ -355,6 +362,8 @@ mod tests {
             FileType::KiroAgent,
             FileType::KiroHook,
             FileType::KiroMcp,
+            FileType::KiroSettings,
+            FileType::GeminiAgent,
             FileType::Unknown,
         ];
 

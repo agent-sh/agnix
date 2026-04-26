@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `413` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `414` validation rules generated from `knowledge-base/rules.json`.
 `126` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -259,6 +259,7 @@ This section contains all `413` validation rules generated from `knowledge-base/
 | [GM-007](./generated/gm-007.md) | @import File Not Found in GEMINI.md | MEDIUM | Gemini CLI | No |
 | [GM-008](./generated/gm-008.md) | Invalid Context File Name Configuration | LOW | Gemini CLI | Yes (safe) |
 | [GM-009](./generated/gm-009.md) | Settings.json Parse Error | HIGH | Gemini CLI | Yes (safe) |
+| [GM-AG-001](./generated/gm-ag-001.md) | Invalid auth block in Gemini agent MCP server | HIGH | Gemini Agents | No |
 | [KIRO-001](./generated/kiro-001.md) | Invalid Steering File Inclusion Mode | HIGH | Kiro Steering | Yes (safe) |
 | [KIRO-002](./generated/kiro-002.md) | Missing Required Fields for Inclusion Mode | HIGH | Kiro Steering | No |
 | [KIRO-003](./generated/kiro-003.md) | Invalid fileMatchPattern Glob | MEDIUM | Kiro Steering | No |

@@ -2149,6 +2149,19 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 **Fix**: [AUTO-FIX] No auto-fix (correct the JSON syntax)
 **Source**: geminicli.com/docs/cli/settings
 
+## GEMINI CLI AGENT RULES
+
+Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These define `kind: local` agents with YAML frontmatter containing `name`, `description`, `tools`, `mcp_servers`, and `system_prompt`. Schema documented in the gemini-cli source at `packages/core/src/agents/agentLoader.ts`.
+
+<a id="gm-ag-001"></a>
+### GM-AG-001 [HIGH] Invalid auth block in Gemini agent MCP server
+**Requirement**: The `auth` block inside `mcp_servers.<name>` MUST follow the schema added in gemini-cli v0.39.0 (google-gemini/gemini-cli#24770):
+- Variant `type: "google-credentials"` - only `scopes` (optional array of strings) is accepted
+- Variant `type: "oauth"` - `client_id`, `client_secret`, `scopes`, `authorization_url`, `token_url` are all optional; URLs must be valid http(s); scopes must be an array of strings
+**Detection**: Parse YAML frontmatter; walk `mcp_servers.*.auth`; enforce discriminator, reject unknown fields per variant, type-check string/array values, validate URL shape for `authorization_url` and `token_url`
+**Fix**: Manual - align the auth block with the documented variant schema
+**Source**: google-gemini/gemini-cli#24770 (gemini-cli v0.39.0+)
+
 ---
 
 ## CODEX CLI RULES

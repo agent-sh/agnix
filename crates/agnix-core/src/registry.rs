@@ -398,7 +398,7 @@ impl ValidatorRegistryBuilder {
 ///
 /// Used by `BuiltinProvider` (via `debug_assert_eq!`) and tests to catch
 /// accidental additions or removals without updating all providers.
-const EXPECTED_BUILTIN_COUNT: usize = 76;
+const EXPECTED_BUILTIN_COUNT: usize = 80;
 
 // -- Category providers -----------------------------------------------------
 //
@@ -815,6 +815,26 @@ impl ValidatorProvider for MiscProvider {
                 kiro_settings_validator,
             ),
             (
+                FileType::GeminiAgent,
+                Some("GeminiAgentValidator"),
+                gemini_agent_validator,
+            ),
+            // .gemini/agents/*.md previously matched GenericMarkdown and
+            // ran CrossPlatformValidator/XmlValidator/ImportsValidator.
+            // Keep that behavior now that it has a specific FileType so
+            // agent markdown bodies still benefit from those checks.
+            (
+                FileType::GeminiAgent,
+                Some("CrossPlatformValidator"),
+                cross_platform_validator,
+            ),
+            (FileType::GeminiAgent, Some("XmlValidator"), xml_validator),
+            (
+                FileType::GeminiAgent,
+                Some("ImportsValidator"),
+                imports_validator,
+            ),
+            (
                 FileType::GenericMarkdown,
                 Some("CrossPlatformValidator"),
                 cross_platform_validator,
@@ -975,6 +995,10 @@ fn kiro_hook_validator() -> Box<dyn Validator> {
 
 fn kiro_settings_validator() -> Box<dyn Validator> {
     Box::new(crate::rules::kiro_settings::KiroSettingsValidator)
+}
+
+fn gemini_agent_validator() -> Box<dyn Validator> {
+    Box::new(crate::rules::gemini_agent::GeminiAgentValidator)
 }
 
 fn kiro_mcp_validator() -> Box<dyn Validator> {
@@ -1475,6 +1499,7 @@ mod tests {
                 | FileType::KiroHook
                 | FileType::KiroMcp
                 | FileType::KiroSettings
+                | FileType::GeminiAgent
                 | FileType::GenericMarkdown => (),
                 FileType::Unknown => {
                     panic!("Unknown must not appear in validatable_types")
@@ -1612,17 +1637,18 @@ mod tests {
             "XmlValidator should be removed from all file types"
         );
 
-        // XmlValidator appears in 10 file types across built-in providers. Count
+        // XmlValidator appears in N file types across built-in providers. Count
         // via the static names and verify the total decreases by exactly that
-        // amount.
+        // amount. The exact count floats as file types are added; the assertion
+        // here is that *disabling* removes exactly as many instances as appear.
         let xml_occurrences = BuiltinProvider
             .named_validators()
             .iter()
             .filter(|(_, name, _)| *name == Some("XmlValidator"))
             .count();
         assert_eq!(
-            xml_occurrences, 10,
-            "Expected XmlValidator in 10 BuiltinProvider entries"
+            xml_occurrences, 11,
+            "Expected XmlValidator in 11 BuiltinProvider entries"
         );
         let total_after = registry.total_validator_count();
         assert_eq!(
@@ -1963,7 +1989,7 @@ mod tests {
 
     #[test]
     fn misc_provider_count() {
-        assert_eq!(MiscProvider.named_validators().len(), 26);
+        assert_eq!(MiscProvider.named_validators().len(), 30);
     }
 
     #[test]

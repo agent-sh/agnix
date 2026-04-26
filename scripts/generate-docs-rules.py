@@ -33,6 +33,7 @@ CATEGORY_LABELS: Dict[str, str] = {
     "cline": "Cline",
     "codex": "Codex CLI",
     "gemini-cli": "Gemini CLI",
+    "gemini-agents": "Gemini Agents",
     "opencode": "OpenCode",
     "roo-code": "Roo Code",
     "version-awareness": "Version Awareness",

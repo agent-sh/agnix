@@ -806,6 +806,17 @@ rules:
   cc_hk_027:
     message: "MCP tool hook at %{location} is missing required 'tool' field"
     suggestion: "Add a 'tool' field naming the MCP tool to invoke (e.g. \"tool\": \"security_scan\")"
+  gm_ag_001:
+    not_object: "MCP server '%{server}': 'auth' block must be a mapping (type + fields)"
+    missing_type: "MCP server '%{server}': 'auth' block is missing required 'type' discriminator"
+    invalid_type: "MCP server '%{server}': 'auth.type' is '%{value}', must be one of: %{valid}"
+    unknown_field_google: "MCP server '%{server}': auth.type is 'google-credentials' - field '%{field}' is not supported for this variant (only 'scopes' is)"
+    unknown_field_oauth: "MCP server '%{server}': auth.type is 'oauth' - field '%{field}' is not part of the oauth schema"
+    not_string: "MCP server '%{server}': 'auth.%{field}' must be a string"
+    invalid_url: "MCP server '%{server}': 'auth.%{field}' is '%{value}', must be a valid http(s) URL"
+    scopes_not_array: "MCP server '%{server}': 'auth.scopes' must be an array of strings"
+    scope_not_string: "MCP server '%{server}': 'auth.scopes[%{index}]' must be a string"
+    suggestion: "Align the auth block with the schema documented at google-gemini/gemini-cli#24770. For google-credentials: {type: google-credentials, scopes?: [...]}. For oauth: {type: oauth, client_id?, client_secret?, scopes?, authorization_url?, token_url?}"
   kr_set_001:
     type_error: "toolSearch.enabled must be a boolean (true or false)"
     suggestion: "Set toolSearch.enabled to true or false. Example: {\"toolSearch.enabled\": true}. See https://kiro.dev/docs/cli/mcp/tool-search/"
