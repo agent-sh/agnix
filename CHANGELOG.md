@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **LLM-assisted changelog triage in tool-release-watch (#802)**. When `GLM_API_KEY` is set and a tool declares `changes_of_interest` in `.github/tool-release-baselines.json`, the watcher now runs `scripts/glm-extract.js --mode=agnix-triage` after fetching the release notes. The LLM filters the notes down to validator-relevant items + rule candidates using the per-tool descriptor (`config_surfaces`, `relevant`, `irrelevant`). The filtered summary is posted as `## Agnix Triage (auto-filtered)` at the top of the issue body, with the full upstream changelog preserved in a `<details>` block below. Gracefully falls back to raw changelog on any LLM failure (missing key, empty response, HTTP error, node unavailable) - zero regressions vs. prior behavior. `changes_of_interest` descriptors authored for 10 of 11 tracked tools (all except amp, which is already filtered via RSS CDATA). Closes #802.
+
 ## [0.21.0] - 2026-04-26
 
 Shipped via PRs #810-#819 (v0.21 rule-candidates sprint: 9 new rules, 3 new validators, rule-bookkeeping automation, safe auto-fixes for Kiro toolSearch).

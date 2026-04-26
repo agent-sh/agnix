@@ -1,7 +1,7 @@
 {
-  "version": "1.0",
-  "last_updated": "2026-04-25",
-  "description": "Tracks the latest release of every tool agnix validates (one entry per tool with a validator in crates/agnix-core/src/rules/). Used by .github/workflows/tool-release-watch.yml to open per-tool issues when a new release is published. Untracked tools include the precise publication URL in untracked_reason so a maintainer can monitor manually.",
+  "version": "1.1",
+  "last_updated": "2026-04-26",
+  "description": "Tracks the latest release of every tool agnix validates (one entry per tool with a validator in crates/agnix-core/src/rules/). Used by .github/workflows/tool-release-watch.yml to open per-tool issues when a new release is published. Untracked tools include the precise publication URL in untracked_reason so a maintainer can monitor manually.\n\nOptional `changes_of_interest` per tool describes what agnix cares about: `config_surfaces` (files agnix validates), `relevant` (change-types that likely affect a validator), `irrelevant` (safe to skip). When set and GLM_API_KEY is available, the watcher runs scripts/glm-extract.js --mode=agnix-triage to produce a pre-filtered summary at the top of the issue body. Falls back gracefully to the full changelog on any LLM failure.",
   "tools": {
     "claude-code": {
       "tier": "s",
@@ -17,7 +17,39 @@
       ],
       "github_repo": "anthropics/claude-code",
       "last_known_version": "v2.1.119",
-      "tracked": true
+      "tracked": true,
+      "changes_of_interest": {
+        "config_surfaces": [
+          "CLAUDE.md",
+          ".claude/settings.json",
+          ".claude/settings.local.json",
+          ".claude/managed-settings.json",
+          ".claude/agents/*.md",
+          ".claude/skills/*/SKILL.md",
+          ".claude/hooks configuration",
+          ".mcp.json",
+          ".claude-plugin/plugin.json",
+          ".claude/rules.yaml"
+        ],
+        "relevant": [
+          "New or renamed top-level keys in settings.json / managed-settings.json",
+          "New hook event names, hook action types (command/http/prompt/agent/mcp_tool/...), or required fields per type",
+          "Changes to skill/agent frontmatter fields or validation rules",
+          "Changes to CLAUDE.md import syntax, directives, or size limits",
+          "Plugin manifest schema changes in .claude-plugin/plugin.json",
+          "MCP server config schema changes (fields, auth shapes, placeholders)",
+          "New built-in tool names (affecting the allow-list validator)",
+          "Output-style or rules-file schema changes"
+        ],
+        "irrelevant": [
+          "Model additions or model-selection UI",
+          "Performance improvements, bug fixes that don't change config schema",
+          "Telemetry / analytics / billing changes",
+          "CLI startup flags that don't touch files agnix reads",
+          "Thinking-block presentation and streaming UX",
+          "Error message wording changes"
+        ]
+      }
     },
     "codex": {
       "tier": "s",
@@ -29,7 +61,32 @@
       ],
       "github_repo": "openai/codex",
       "last_known_version": "rust-v0.125.0",
-      "tracked": true
+      "tracked": true,
+      "changes_of_interest": {
+        "config_surfaces": [
+          "AGENTS.md",
+          "codex-rs/core/config.toml (project + ~/.codex/config.toml)",
+          ".codex-plugin/plugin.json (plugin manifest)",
+          ".mcp.json or [mcp_servers.*] TOML blocks referenced from config.toml",
+          "requirements.toml (managed environment config)"
+        ],
+        "relevant": [
+          "New / renamed / removed keys in config.toml ([app], [agents], [features], [mcp_servers.*], [permissions], [sandbox], [windows], etc.)",
+          "Changes to MCP server schema (auth fields, bearer_token/env_var, allow-listed keys)",
+          "Feature toggles in [features] - new features, flag shapes (flat bool vs nested {enabled})",
+          "Plugin manifest schema changes in .codex-plugin/plugin.json",
+          "Apps config shape ([apps.*], tool-approval modes, default_tools_* keys)",
+          "Hook configuration schema (config.toml hooks block stabilized in 0.124)",
+          "AGENTS.md size limits, required sections, or directive grammar"
+        ],
+        "irrelevant": [
+          "Model additions, reasoning presets, context-length bumps",
+          "TUI keyboard shortcuts and display tweaks",
+          "App-server plumbing, Unix socket transport, remote thread config",
+          "Permission-profile UX",
+          "Dependency bumps without config-schema effects"
+        ]
+      }
     },
     "opencode": {
       "tier": "s",
@@ -40,7 +97,28 @@
       ],
       "github_repo": "sst/opencode",
       "last_known_version": "v1.14.25",
-      "tracked": true
+      "tracked": true,
+      "changes_of_interest": {
+        "config_surfaces": [
+          "AGENTS.md",
+          ".opencode/config.json",
+          "opencode agent definitions",
+          "opencode MCP config (inside .opencode/config.json or referenced .mcp.json)"
+        ],
+        "relevant": [
+          "New / renamed / removed top-level keys in .opencode/config.json",
+          "Permission config schema (including rule ordering semantics)",
+          "LSP config shape (request keys, permission-prompt payload)",
+          "MCP server definition shape / auth / env-var substitution rules",
+          "AGENTS.md grammar or size limits"
+        ],
+        "irrelevant": [
+          "Model additions, provider plumbing, OAuth flow UI",
+          "Desktop app icon/session UX",
+          "npmrc / build-tool fixes",
+          "Experimental HTTP API endpoints that don't change config files"
+        ]
+      }
     },
     "kiro": {
       "tier": "s",
@@ -58,7 +136,34 @@
       "notes_extractor": "glm",
       "last_known_version": "2.1.1",
       "tracked": true,
-      "notes": "Proprietary CLI; no GH releases. Tracked via HTML scrape of kiro.dev/changelog/cli/ - the first NN.NN.NN version on the page is the latest. Release-note body is upgraded via GLM (scripts/glm-extract.js). The CLI itself exposes `kiro-cli version --changelog`. IDE has a separate changelog at https://kiro.dev/changelog/ide/ (not tracked here; could be added as a separate kiro-ide entry if needed)."
+      "notes": "Proprietary CLI; no GH releases. Tracked via HTML scrape of kiro.dev/changelog/cli/ - the first NN.NN.NN version on the page is the latest. Release-note body is upgraded via GLM (scripts/glm-extract.js). The CLI itself exposes `kiro-cli version --changelog`. IDE has a separate changelog at https://kiro.dev/changelog/ide/ (not tracked here; could be added as a separate kiro-ide entry if needed).",
+      "changes_of_interest": {
+        "config_surfaces": [
+          ".kiro/steering/*.md",
+          ".kiro/agents/*.json",
+          ".kiro/hooks/*.kiro.hook",
+          ".kiro/settings/mcp.json",
+          ".kiro/settings.json (CLI preferences)",
+          ".kiro/powers/*/POWER.md",
+          ".kiro/skills/*/SKILL.md (surfaced as slash commands in 2.1)"
+        ],
+        "relevant": [
+          "New / renamed CLI settings keys (writable via `kiro-cli settings <k> <v>`)",
+          "Steering file inclusion-mode or format changes",
+          "Agent definition schema (tools, permissions, auth)",
+          "Hook event names, payload shapes, required fields",
+          "MCP server config shape (auth, env substitution, tool filtering)",
+          "Power manifest schema",
+          "Skills directory layout or slash-command naming rules"
+        ],
+        "irrelevant": [
+          "IDE UX (image-maps, previews, theming)",
+          "Model / inference changes",
+          "Device-flow auth UX",
+          "TUI keyboard shortcuts",
+          "Remote environment / devcontainer orchestration"
+        ]
+      }
     },
     "copilot": {
       "tier": "a",
@@ -69,7 +174,25 @@
       "github_repo": "microsoft/vscode-copilot-chat",
       "last_known_version": "v0.43.0",
       "tracked": true,
-      "notes": "Tracks the canonical VS Code Copilot Chat extension - the surface where new instruction-file features and schema changes typically land first. Note: the spec docs at https://docs.github.com/en/copilot/customizing-copilot can change independently of extension releases; spec-drift.yml covers that path. The intermediate v0.43.{timestamp} CI tags are not flagged because the GitHub releases API returns the marked-latest stable tag."
+      "notes": "Tracks the canonical VS Code Copilot Chat extension - the surface where new instruction-file features and schema changes typically land first. Note: the spec docs at https://docs.github.com/en/copilot/customizing-copilot can change independently of extension releases; spec-drift.yml covers that path. The intermediate v0.43.{timestamp} CI tags are not flagged because the GitHub releases API returns the marked-latest stable tag.",
+      "changes_of_interest": {
+        "config_surfaces": [
+          ".github/copilot-instructions.md",
+          ".github/instructions/*.instructions.md"
+        ],
+        "relevant": [
+          "Changes to instruction-file frontmatter, globs, or resolution order",
+          "New instruction-file naming conventions or scope rules",
+          "Additions to the supported instruction-file markdown directives"
+        ],
+        "irrelevant": [
+          "Chat UX / conversation history",
+          "Model picker and provider integrations",
+          "Inline-completion tuning",
+          "MCP / agent-mode features that don't touch the instruction-file surface",
+          "Workbench keybindings and UI"
+        ]
+      }
     },
     "cline": {
       "tier": "a",
@@ -79,7 +202,28 @@
       ],
       "github_repo": "cline/cline",
       "last_known_version": "v3.81.0",
-      "tracked": true
+      "tracked": true,
+      "changes_of_interest": {
+        "config_surfaces": [
+          ".clinerules (file or dir)",
+          ".clinerules/workflows/*.md",
+          ".clinerules/hooks/*",
+          ".clinerules/skills/*/SKILL.md",
+          ".cline/skills/*/SKILL.md"
+        ],
+        "relevant": [
+          "Changes to .clinerules parsing (file vs dir, precedence)",
+          "New workflow/hook/skill file layouts",
+          "Skill frontmatter schema changes",
+          "Memory-bank format changes"
+        ],
+        "irrelevant": [
+          "Model additions",
+          "Webview UI updates",
+          "cline-core internal diagnostics and memory tuning",
+          "Provider plumbing (OpenAI Codex subscription etc.)"
+        ]
+      }
     },
     "cursor": {
       "tier": "a",
@@ -92,7 +236,30 @@
       "version_regex": "[0-9]+\\.[0-9]+\\.[0-9]+",
       "last_known_version": "3.2.11",
       "tracked": true,
-      "notes": "Tracked via Cursor's stable update endpoint (the same one the desktop app polls). Returns JSON like {\"url\":\"...\",\"name\":\"3.1.17\"}. Channel is hardcoded to 'stable' for darwin; the version is platform-agnostic (same release ships across darwin/linux/win32). Prose changelog at https://cursor.com/changelog (Next.js SPA - not scrapeable from raw HTML)."
+      "notes": "Tracked via Cursor's stable update endpoint (the same one the desktop app polls). Returns JSON like {\"url\":\"...\",\"name\":\"3.1.17\"}. Channel is hardcoded to 'stable' for darwin; the version is platform-agnostic (same release ships across darwin/linux/win32). Prose changelog at https://cursor.com/changelog (Next.js SPA - not scrapeable from raw HTML).",
+      "changes_of_interest": {
+        "config_surfaces": [
+          ".cursor/rules/*.mdc",
+          ".cursorrules (legacy)",
+          ".cursor/hooks.json",
+          ".cursor/agents/*.md",
+          ".cursor/environment.json",
+          ".cursor/mcp.json"
+        ],
+        "relevant": [
+          "Changes to .cursor/rules/*.mdc frontmatter (globs, description, alwaysApply)",
+          "New hook shapes in .cursor/hooks.json",
+          "Agent frontmatter schema in .cursor/agents/*.md",
+          "environment.json schema changes",
+          "MCP config shape inside .cursor/mcp.json"
+        ],
+        "irrelevant": [
+          "Agents Window UX (worktrees, multitask, subagents orchestration)",
+          "CLI /config panel behavior",
+          "Bugbot internal config",
+          "Model additions, editor UI tweaks"
+        ]
+      }
     },
     "roo-code": {
       "tier": "b",
@@ -103,7 +270,27 @@
       "github_repo": "RooCodeInc/Roo-Code",
       "last_known_version": "v3.53.0",
       "tracked": true,
-      "notes": "Repo moved from RooVetGit/Roo-Code (still referenced in some docs) to RooCodeInc/Roo-Code."
+      "notes": "Repo moved from RooVetGit/Roo-Code (still referenced in some docs) to RooCodeInc/Roo-Code.",
+      "changes_of_interest": {
+        "config_surfaces": [
+          ".roomodes",
+          ".rooignore",
+          ".roorules",
+          ".roo/rules/*.md",
+          ".roo/rules-{slug}/*.md",
+          ".roo/mcp.json"
+        ],
+        "relevant": [
+          "Schema changes in .roomodes (mode definitions, permissions, custom instructions)",
+          "Rules resolution order between .roorules and .roo/rules/*",
+          "MCP config shape changes"
+        ],
+        "irrelevant": [
+          "Model provider additions (GPT-5.5, Vertex, etc.)",
+          "Checkpoint navigation UI",
+          "Webview / activity bar tweaks"
+        ]
+      }
     },
     "amp": {
       "tier": "b",
@@ -130,7 +317,29 @@
       ],
       "github_repo": "google-gemini/gemini-cli",
       "last_known_version": "v0.39.1",
-      "tracked": true
+      "tracked": true,
+      "changes_of_interest": {
+        "config_surfaces": [
+          "GEMINI.md",
+          ".gemini/settings.json",
+          ".geminiignore",
+          "gemini-extension.json",
+          ".gemini/agents/*.md (local agent definitions, validated by GeminiAgentValidator)"
+        ],
+        "relevant": [
+          "Changes to .gemini/settings.json top-level keys",
+          "Agent markdown frontmatter schema (kind, mcp_servers block, auth variants, system_prompt)",
+          "gemini-extension.json manifest shape",
+          "GEMINI.md grammar / size limits / import syntax",
+          "Hook env vars and plan-mode directives that affect agent files"
+        ],
+        "irrelevant": [
+          "Model additions / Gemini 2.x version bumps",
+          "Tool call performance and caching",
+          "/memory inbox UX and skill-extraction ergonomics",
+          "Provider plumbing"
+        ]
+      }
     },
     "windsurf": {
       "tier": "d",
@@ -144,7 +353,25 @@
       "notes_extractor": "glm",
       "last_known_version": "Wave 14",
       "tracked": true,
-      "notes": "Proprietary IDE (Codeium/Exafunction); no GH releases. Tracked via HTML scrape of windsurf.com/changelog - the first 'Wave NN' marker on the page is the latest. Release-note body is upgraded via GLM (scripts/glm-extract.js). Wave is the marketing release event; underlying VS Code-fork build version (e.g., 1.9544.24) bumps more often but is not the agnix-relevant signal. Separate /vscode, /jetbrains, /windsurf-next channels are not tracked."
+      "notes": "Proprietary IDE (Codeium/Exafunction); no GH releases. Tracked via HTML scrape of windsurf.com/changelog - the first 'Wave NN' marker on the page is the latest. Release-note body is upgraded via GLM (scripts/glm-extract.js). Wave is the marketing release event; underlying VS Code-fork build version (e.g., 1.9544.24) bumps more often but is not the agnix-relevant signal. Separate /vscode, /jetbrains, /windsurf-next channels are not tracked.",
+      "changes_of_interest": {
+        "config_surfaces": [
+          ".windsurf/rules/*.md",
+          ".windsurf/workflows/*.md",
+          ".windsurfrules (legacy)"
+        ],
+        "relevant": [
+          "New rules or workflows file layout / frontmatter",
+          "Legacy .windsurfrules deprecation status",
+          "Any new per-project config file under .windsurf/"
+        ],
+        "irrelevant": [
+          "Cascade / agent UX",
+          "Model additions and context-management policy",
+          "IDE base version bumps",
+          "Billing / credits"
+        ]
+      }
     }
   }
 }

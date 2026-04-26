@@ -62,8 +62,12 @@ jobs:
           UPDATE_BASELINES: ${{ inputs.update_baselines || 'false' }}
           TOOL_FILTER: ${{ inputs.tool || '' }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          # Optional - when set, scripts/glm-extract.js upgrades the stub
-          # release-notes body for tools with notes_extractor=glm (kiro,
-          # windsurf). Other tools are unaffected.
+          # Optional - when set, scripts/glm-extract.js:
+          # 1. Upgrades the stub release-notes body for tools with
+          #    notes_extractor=glm (kiro, windsurf). Other tools are unaffected.
+          # 2. Runs --mode=agnix-triage on tools that declare
+          #    `changes_of_interest` in tool-release-baselines.json to
+          #    prepend an agnix-focused summary to the issue body. Falls back
+          #    to the raw changelog if the call fails.
           GLM_API_KEY: ${{ secrets.GLM_API_KEY }}
         run: bash scripts/check-tool-releases.sh
