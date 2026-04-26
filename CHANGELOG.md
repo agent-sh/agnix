@@ -7,10 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.1] - 2026-04-26
+
+Security-only patch release shipped via PR #826. No user-visible feature changes.
+
 ### Security
-- **VS Code extension archive extraction uses argv-only spawn** (#826). Replaced shell-string `execAsync` with `child_process.spawn`-based wrapper using PowerShell `-LiteralPath` on Windows and `tar` argv on POSIX. Closes the audit finding that a single quote in a user's home directory path could break command quoting.
-- **LSP caps `textDocument/didOpen` + `didChange` content at 5 MiB** (#826). Previously any editor could push arbitrary-size documents that were cached in `self.documents`. Oversized docs are now rejected with a diagnostic and dropped from cache.
-- **YAML frontmatter rejects pathological nesting > 32 levels** (#826). `serde_yaml` (unmaintained upstream) is still used but guarded by a pre-parse depth check to prevent YAML-bomb memory blowup within the 1 MiB file cap.
+- **VS Code extension archive extraction uses argv-only spawn** (#826). Replaced shell-string `execAsync` with a `child_process.spawn`-based wrapper using PowerShell `-LiteralPath` on Windows and `tar` argv on POSIX. Closes the audit finding that a single quote in a user's home directory path could break command quoting.
+- **LSP caps `textDocument/didOpen` + `didChange` content at 5 MiB** (#826). Previously any editor could push arbitrary-size documents that were cached in `self.documents`. Oversized docs are now rejected and dropped from cache. The reject is surfaced to the user as a visible WARNING diagnostic so the editor shows *why* validation was skipped instead of silently presenting an empty diagnostic set that looks identical to "no issues".
+- **YAML frontmatter rejects pathological nesting > 32 levels** (#826). `serde_yaml` (unmaintained upstream) is still used but guarded by a pre-parse depth check to prevent YAML-bomb memory blowup within the 1 MiB file cap. The depth counter uses raw column positions (not `spaces/2 + tabs`) so 1-space-indented YAML bombs cannot bypass the cap by widening the file rather than deepening it.
 
 ## [0.22.0] - 2026-04-26
 
