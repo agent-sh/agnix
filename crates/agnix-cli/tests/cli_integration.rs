@@ -2373,8 +2373,8 @@ fn test_schema_fix_updates_when_content_differs() {
     // Schema (not the stale `this is stale` text). Substring-only checks
     // could false-positive on partially-valid output; parse first.
     let content = std::fs::read_to_string(&target).unwrap();
-    let parsed: serde_json::Value = serde_json::from_str(&content)
-        .expect("post-fix file must be valid JSON, not stale text");
+    let parsed: serde_json::Value =
+        serde_json::from_str(&content).expect("post-fix file must be valid JSON, not stale text");
     assert!(
         parsed["$schema"].is_string(),
         "post-fix file should have a $schema string, got: {}",
