@@ -73,7 +73,7 @@ const config = {
           sidebarPath: require.resolve('./sidebars.js'),
           editUrl: 'https://github.com/agent-sh/agnix/tree/main/website/',
           showLastUpdateTime: true,
-          lastVersion: '0.21.0',
+          lastVersion: '0.22.0',
           versions: {
             current: {
               label: 'next',
