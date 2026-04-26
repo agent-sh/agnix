@@ -12,7 +12,7 @@ keywords: ["KR-SET-001", "invalid toolsearch.enabled value", "kiro settings", "v
 - **Severity**: `HIGH`
 - **Category**: `Kiro Settings`
 - **Normative Level**: `MUST`
-- **Auto-Fix**: `No`
+- **Auto-Fix**: `Yes (safe)`
 - **Verified On**: `2026-04-26`
 
 ## Applicability

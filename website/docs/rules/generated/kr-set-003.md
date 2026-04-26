@@ -12,7 +12,7 @@ keywords: ["KR-SET-003", "invalid toolsearch.mintokens value", "kiro settings", 
 - **Severity**: `MEDIUM`
 - **Category**: `Kiro Settings`
 - **Normative Level**: `SHOULD`
-- **Auto-Fix**: `No`
+- **Auto-Fix**: `Yes (safe)`
 - **Verified On**: `2026-04-26`
 
 ## Applicability
