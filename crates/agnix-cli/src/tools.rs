@@ -32,21 +32,19 @@ use std::process::Command;
 
 use agnix_core::config::LintConfig;
 
-/// Mapping from agnix's ToolVersions field -> CLI binary + human-readable name.
+/// Mapping from agnix's ToolVersions field -> one or more CLI invocations.
 ///
-/// The CLI binary is looked up on PATH and invoked with `--version`. The
-/// version extractor parses the output with a shared semver-ish regex, but
-/// each entry can override it if a CLI prints a non-standard format.
+/// Each entry in `invocations` is tried in order; the first that produces
+/// a semver-shaped token wins. Needed because some tools have multiple
+/// installation paths (e.g., GitHub Copilot ships as both a standalone
+/// `copilot` npm shim and as a `gh copilot` extension).
 struct ToolDescriptor {
     /// `ToolVersions` field name as it appears in `.agnix.toml`.
     toml_key: &'static str,
     /// Display name for UI (e.g., "Claude Code").
     display: &'static str,
-    /// Binary name on PATH (e.g., "claude" for Claude Code).
-    binary: &'static str,
-    /// Args to pass to the binary for a version dump. Most CLIs accept
-    /// `--version`; some want `version`.
-    version_args: &'static [&'static str],
+    /// Ordered list of (binary, args) pairs to try. First hit wins.
+    invocations: &'static [(&'static str, &'static [&'static str])],
 }
 
 /// Supported tools for `agnix tools check` / `detect`. Deliberately scoped
@@ -58,28 +56,28 @@ const DESCRIPTORS: &[ToolDescriptor] = &[
     ToolDescriptor {
         toml_key: "claude_code",
         display: "Claude Code",
-        binary: "claude",
-        version_args: &["--version"],
+        invocations: &[("claude", &["--version"])],
     },
     ToolDescriptor {
         toml_key: "codex",
         display: "Codex CLI",
-        binary: "codex",
-        version_args: &["--version"],
+        invocations: &[("codex", &["--version"])],
     },
     ToolDescriptor {
         toml_key: "cursor",
         display: "Cursor",
-        binary: "cursor",
-        version_args: &["--version"],
+        invocations: &[("cursor", &["--version"])],
     },
     ToolDescriptor {
         toml_key: "copilot",
         display: "GitHub Copilot",
-        // `gh copilot` is the CLI extension; also try bare `copilot` (npm
-        // package shim) as a fallback.
-        binary: "copilot",
-        version_args: &["--version"],
+        // Try the standalone npm shim first, then fall back to the
+        // `gh copilot` extension that many users install via
+        // `gh extension install github/gh-copilot`.
+        invocations: &[
+            ("copilot", &["--version"]),
+            ("gh", &["copilot", "--version"]),
+        ],
     },
 ];
 
@@ -95,34 +93,42 @@ fn config_version_for(config: &LintConfig, key: &str) -> Option<String> {
     }
 }
 
-/// Invoke `<binary> <args...>` and extract the first semver-shaped token
-/// from its combined stdout+stderr. Returns None when the binary isn't on
-/// PATH, the invocation errors, or no version-shaped token appears.
+/// Try each `(binary, args)` pair in `invocations` in order. The first
+/// one that runs successfully AND produces a semver-shaped token wins.
+/// Returns None when every invocation fails (binary not on PATH or
+/// command error) or when no output contains a version token.
 ///
-/// Separating stdout and stderr matters for tools like `claude --version`
-/// that print to one, and potentially logs to the other; combining them
-/// keeps the scan robust.
-fn detect_installed(binary: &str, args: &[&str]) -> Option<String> {
-    let out = Command::new(binary).args(args).output().ok()?;
-    let combined = format!(
-        "{}\n{}",
-        String::from_utf8_lossy(&out.stdout),
-        String::from_utf8_lossy(&out.stderr)
-    );
-    extract_version(&combined)
+/// Combining stdout and stderr matters for tools like `claude --version`
+/// that print to one, and potentially logs to the other.
+fn detect_installed(invocations: &[(&'static str, &'static [&'static str])]) -> Option<String> {
+    for (binary, args) in invocations {
+        let Ok(out) = Command::new(binary).args(*args).output() else {
+            continue;
+        };
+        let combined = format!(
+            "{}\n{}",
+            String::from_utf8_lossy(&out.stdout),
+            String::from_utf8_lossy(&out.stderr)
+        );
+        if let Some(v) = extract_version(&combined) {
+            return Some(v);
+        }
+    }
+    None
 }
 
 /// Extract the first SemVer-ish token from arbitrary output.
 ///
-/// Matches `<digits>.<digits>.<digits>` with optional pre-release +
-/// build-metadata suffix. Anchored to word boundaries so "v2.1.119" yields
-/// "2.1.119" and "gh copilot 1.0.23" yields "1.0.23".
+/// Matches `<digits>.<digits>.<digits>` with optional pre-release AND
+/// build-metadata suffix per SemVer 2.0.0:
+///   version = core [ "-" pre-release ] [ "+" build ]
+/// So `1.2.3-alpha+build` captures the full string. Either suffix is
+/// optional; both can appear in order.
+///
+/// Deliberately lenient about the pre-release/build grammar itself
+/// (accepting `[0-9A-Za-z.-]+` / `[0-9A-Za-z.+-]+`) - CLIs play fast and
+/// loose with these.
 fn extract_version(s: &str) -> Option<String> {
-    // Deliberately simple, deliberately lenient: capture the first group of
-    // `N.N.N[-suffix]` anywhere in the text. We don't try to enforce
-    // full SemVer 2.0.0 conformance - CLIs play fast and loose with the
-    // suffix grammar, and the user is the one ultimately checking the
-    // number against their intent.
     let bytes = s.as_bytes();
     let mut i = 0;
     while i < bytes.len() {
@@ -153,8 +159,20 @@ fn extract_version(s: &str) -> Option<String> {
             if i == patch_start {
                 continue;
             }
-            // Optionally consume pre-release / build-metadata: `[-+][0-9A-Za-z.-]+`.
-            if i < bytes.len() && (bytes[i] == b'-' || bytes[i] == b'+') {
+            // Pre-release: `-` followed by `[0-9A-Za-z.-]+`. SemVer 2.0.0
+            // forbids `+` inside the pre-release identifier (that's where
+            // build metadata starts), so stop the pre-release scan at `+`.
+            if i < bytes.len() && bytes[i] == b'-' {
+                i += 1;
+                while i < bytes.len()
+                    && (bytes[i].is_ascii_alphanumeric() || bytes[i] == b'.' || bytes[i] == b'-')
+                {
+                    i += 1;
+                }
+            }
+            // Build metadata: `+` followed by `[0-9A-Za-z.-]+`. Can follow
+            // pre-release or stand alone (e.g., `1.2.3+build.5`).
+            if i < bytes.len() && bytes[i] == b'+' {
                 i += 1;
                 while i < bytes.len()
                     && (bytes[i].is_ascii_alphanumeric() || bytes[i] == b'.' || bytes[i] == b'-')
@@ -278,7 +296,7 @@ fn run_check(config: &LintConfig) -> CheckReport {
     let mut has_issues = false;
     for desc in DESCRIPTORS {
         let pinned = config_version_for(config, desc.toml_key);
-        let installed = detect_installed(desc.binary, desc.version_args);
+        let installed = detect_installed(desc.invocations);
         let outcome = classify(pinned, installed);
         if matches!(
             outcome,
@@ -301,7 +319,7 @@ pub fn detect_command(config_path: Option<&Path>, write: bool) -> Result<()> {
     // user's current config, `detect` only cares about what's installed.
     let mut detected: Vec<(&ToolDescriptor, String)> = Vec::new();
     for desc in DESCRIPTORS {
-        match detect_installed(desc.binary, desc.version_args) {
+        match detect_installed(desc.invocations) {
             Some(version) => {
                 println!(
                     "  {} {} = {}",
@@ -352,15 +370,24 @@ pub fn detect_command(config_path: Option<&Path>, write: bool) -> Result<()> {
     Ok(())
 }
 
-/// Write detected versions into `.agnix.toml`'s `[tool_versions]` section,
-/// preserving the rest of the file byte-for-byte. If the section doesn't
-/// exist, append it. If it exists, rewrite only the fields we detected -
-/// other fields inside `[tool_versions]` are left alone.
+/// Write detected versions into `.agnix.toml`'s `[tool_versions]` section.
 ///
-/// This is deliberately a light string-level edit rather than a toml
-/// round-trip: `toml` crate round-trips lose comments, re-order keys, and
-/// sometimes re-quote strings. Users keep comments in `.agnix.toml`
-/// explaining their pins; we want to preserve those.
+/// Preservation guarantees (line-based, not strictly byte-for-byte):
+/// - Dominant line ending (LF vs CRLF) is re-emitted as detected.
+/// - Comments (including inline `[section] # comment` headers), blank
+///   lines, and every key inside `[tool_versions]` that wasn't detected
+///   are kept as-is.
+/// - Sections before and after `[tool_versions]` are untouched; the rewrite
+///   only touches lines from the section header through its terminator.
+///
+/// Not preserved:
+/// - Trailing whitespace on lines (`lines()` strips it on read).
+/// - Mixed line endings (normalized to the dominant one).
+///
+/// Deliberately a string-level edit rather than a toml round-trip: the
+/// `toml` crate loses comments, re-orders keys, and sometimes re-quotes
+/// strings. Users keep comments in `.agnix.toml` explaining their pins;
+/// we want to preserve those.
 fn write_tool_versions(path: &Path, detected: &[(&ToolDescriptor, String)]) -> Result<()> {
     let existing = if path.exists() {
         std::fs::read_to_string(path)
@@ -385,80 +412,116 @@ fn write_tool_versions(path: &Path, detected: &[(&ToolDescriptor, String)]) -> R
     Ok(())
 }
 
+/// Strip an inline `# comment` tail from a line and trim whitespace.
+/// TOML allows comments anywhere on a key-value or section-header line
+/// outside of quoted strings; our inputs here are either section headers
+/// or simple key=value, neither of which contains `#` inside a string
+/// value we'd need to preserve. Good enough for this narrow use.
+fn strip_inline_comment(line: &str) -> &str {
+    match line.find('#') {
+        Some(idx) => line[..idx].trim_end(),
+        None => line.trim_end(),
+    }
+    .trim_start()
+}
+
+/// Does this line contain a section header with the given exact name?
+/// Tolerates trailing comments and whitespace: `[tool_versions] # pins`
+/// and `[tool_versions]   ` both match `"[tool_versions]"`.
+fn is_section_header(line: &str, expected: &str) -> bool {
+    strip_inline_comment(line) == expected
+}
+
+/// Does this line start any TOML section header at all? Used to detect the
+/// end of the `[tool_versions]` section so we don't accidentally consume
+/// subsequent ones. Handles `[foo]` with trailing comments.
+fn is_any_section_header(line: &str) -> bool {
+    let stripped = strip_inline_comment(line);
+    stripped.starts_with('[') && stripped.ends_with(']') && stripped.len() >= 2
+}
+
+/// Detect the dominant line ending in the content. Returns "\r\n" when
+/// more than half of the line breaks are CRLF, "\n" otherwise. Preserves
+/// the user's line-ending style on write - Windows developers with CRLF-
+/// configured git don't want us rewriting their config to LF.
+fn detect_line_ending(content: &str) -> &'static str {
+    let crlf = content.matches("\r\n").count();
+    let total = content.matches('\n').count();
+    if total > 0 && crlf * 2 >= total {
+        "\r\n"
+    } else {
+        "\n"
+    }
+}
+
 /// Pure string transformation that replaces or inserts the `[tool_versions]`
 /// section. Extracted so it's unit-testable without filesystem I/O.
+///
+/// Preserves the dominant line ending of the input (CRLF vs LF), comments
+/// (including inline comments on section headers), blank lines, and any
+/// keys inside `[tool_versions]` that weren't detected. Section end is
+/// detected by the next `[section]` header on its own line (tolerating
+/// trailing inline comments); everything after is left untouched.
 fn apply_tool_versions_section(content: &str, detected: &[(&ToolDescriptor, String)]) -> String {
-    let mut lines: Vec<String> = content.lines().map(|s| s.to_string()).collect();
+    let line_ending = detect_line_ending(content);
+    let lines: Vec<&str> = content.lines().collect();
 
-    // Locate the existing `[tool_versions]` section, if any. Section header
-    // must be on its own line (possibly with trailing whitespace).
-    let section_start = lines.iter().position(|line| {
-        let t = line.trim();
-        t == "[tool_versions]"
+    // Locate the existing `[tool_versions]` section, tolerating trailing
+    // inline comments on the header line.
+    let section_start = lines
+        .iter()
+        .position(|line| is_section_header(line, "[tool_versions]"));
+
+    // Compute section bounds once in the existing-section branch - used by
+    // both the block builder (to preserve non-matching lines) and the
+    // splice. Avoids recomputing the same end index twice.
+    let section_end = section_start.map(|start| {
+        lines[start + 1..]
+            .iter()
+            .position(|line| is_any_section_header(line))
+            .map(|offset| start + 1 + offset)
+            .unwrap_or(lines.len())
     });
 
-    let new_block: Vec<String> = {
-        // Collect the existing fields in the section we're NOT overwriting.
-        // Any `key = value` whose key is in our detected list gets replaced;
-        // everything else is preserved as-is.
-        let detected_keys: std::collections::HashSet<&str> =
-            detected.iter().map(|(d, _)| d.toml_key).collect();
+    let detected_keys: std::collections::HashSet<&str> =
+        detected.iter().map(|(d, _)| d.toml_key).collect();
 
-        let mut block = vec!["[tool_versions]".to_string()];
-
-        // If the section existed, preserve non-matching lines from it.
-        if let Some(start) = section_start {
-            let end = lines[start + 1..]
-                .iter()
-                .position(|line| {
-                    let t = line.trim();
-                    t.starts_with('[') && t.ends_with(']')
-                })
-                .map(|offset| start + 1 + offset)
-                .unwrap_or(lines.len());
-            for line in &lines[start + 1..end] {
-                if let Some((k, _)) = parse_toml_key(line)
-                    && detected_keys.contains(k.as_str())
-                {
-                    // Replacing this key with the detected version below.
-                    continue;
-                }
-                // Preserve comments, blanks, and other keys as-is.
-                block.push(line.clone());
+    // Build the new `[tool_versions]` block: preserve everything inside the
+    // old section except keys we're replacing; append detected keys last.
+    let mut block: Vec<String> = vec!["[tool_versions]".to_string()];
+    if let (Some(start), Some(end)) = (section_start, section_end) {
+        for line in &lines[start + 1..end] {
+            if let Some((k, _)) = parse_toml_key(line)
+                && detected_keys.contains(k.as_str())
+            {
+                continue; // Will be rewritten below with the detected version.
             }
+            block.push((*line).to_string());
         }
+    }
+    for (desc, version) in detected {
+        block.push(format!("{} = \"{}\"", desc.toml_key, version));
+    }
 
-        // Append the detected keys in descriptor order (stable), skipping
-        // any we already preserved (we didn't preserve any; we skipped
-        // matching ones above).
-        for (desc, version) in detected {
-            block.push(format!("{} = \"{}\"", desc.toml_key, version));
+    match (section_start, section_end) {
+        (Some(start), Some(end)) => {
+            // Splice the new block over the old section.
+            let mut out_lines: Vec<&str> = lines[..start].to_vec();
+            let block_refs: Vec<&str> = block.iter().map(|s| s.as_str()).collect();
+            out_lines.extend(block_refs);
+            out_lines.extend(&lines[end..]);
+            out_lines.join(line_ending)
         }
-
-        block
-    };
-
-    match section_start {
-        Some(start) => {
-            let end = lines[start + 1..]
-                .iter()
-                .position(|line| {
-                    let t = line.trim();
-                    t.starts_with('[') && t.ends_with(']')
-                })
-                .map(|offset| start + 1 + offset)
-                .unwrap_or(lines.len());
-            lines.splice(start..end, new_block);
-            lines.join("\n")
-        }
-        None => {
-            // Append, preceded by a blank line if the file has content.
-            let mut out = content.trim_end().to_string();
+        _ => {
+            // No existing section - append. Preserve a blank separator if
+            // the file has content, preserve the file's line ending.
+            let mut out = content.trim_end_matches(&['\r', '\n'][..]).to_string();
             if !out.is_empty() {
-                out.push_str("\n\n");
+                out.push_str(line_ending);
+                out.push_str(line_ending);
             }
-            out.push_str(&new_block.join("\n"));
-            out.push('\n');
+            out.push_str(&block.join(line_ending));
+            out.push_str(line_ending);
             out
         }
     }
@@ -644,5 +707,125 @@ xml = true
         assert_eq!(parse_toml_key("# comment"), None);
         assert_eq!(parse_toml_key("[section]"), None);
         assert_eq!(parse_toml_key(""), None);
+    }
+
+    // Review #823 - extract_version was truncating at `+` when both
+    // pre-release and build-metadata were present. SemVer 2.0.0 grammar
+    // allows "1.2.3-alpha+build"; the extractor must capture the full
+    // string.
+    #[test]
+    fn extract_version_accepts_prerelease_plus_build_metadata() {
+        assert_eq!(
+            extract_version("1.2.3-alpha+build").as_deref(),
+            Some("1.2.3-alpha+build")
+        );
+        assert_eq!(
+            extract_version("release v1.2.3-rc.1+sha.5114f85").as_deref(),
+            Some("1.2.3-rc.1+sha.5114f85")
+        );
+    }
+
+    // Review #823 - section header parser had two bugs: it would miss a
+    // `[tool_versions]` header that had an inline `# pin-rationale`
+    // comment, AND it would miss a later `[rules] # comment` as a
+    // section terminator, so the rewrite could accidentally consume the
+    // following section. Both fixed by strip_inline_comment.
+
+    #[test]
+    fn is_section_header_tolerates_inline_comment_on_target() {
+        assert!(is_section_header("[tool_versions]", "[tool_versions]"));
+        assert!(is_section_header(
+            "[tool_versions] # pinned per team",
+            "[tool_versions]"
+        ));
+        assert!(is_section_header("  [tool_versions]  ", "[tool_versions]"));
+        assert!(!is_section_header("[tools]", "[tool_versions]"));
+    }
+
+    #[test]
+    fn is_any_section_header_tolerates_inline_comment() {
+        assert!(is_any_section_header("[rules]"));
+        assert!(is_any_section_header("[rules] # category block"));
+        assert!(!is_any_section_header("key = \"value\""));
+        assert!(!is_any_section_header("# just a comment"));
+        assert!(!is_any_section_header(""));
+    }
+
+    #[test]
+    fn apply_tool_versions_section_handles_inline_comment_on_header() {
+        // Header line has an inline comment - must still be recognized
+        // as the existing section and updated in place (not appended as
+        // a duplicate).
+        let existing = "\
+[tool_versions] # pinned per team
+claude_code = \"1.0.0\"
+";
+        let detected: Vec<(&ToolDescriptor, String)> = vec![(&DESCRIPTORS[0], "2.1.119".into())];
+        let result = apply_tool_versions_section(existing, &detected);
+        // Only one [tool_versions] - no duplicate appended.
+        assert_eq!(
+            result.matches("[tool_versions]").count(),
+            1,
+            "must not append duplicate section, got: {result}"
+        );
+        assert!(result.contains("claude_code = \"2.1.119\""));
+    }
+
+    #[test]
+    fn apply_tool_versions_section_stops_at_trailing_section_with_inline_comment() {
+        // If the section after [tool_versions] has an inline comment, the
+        // parser must still see it as a terminator so the rewrite doesn't
+        // eat the following section's keys.
+        let existing = "\
+[tool_versions]
+claude_code = \"1.0.0\"
+
+[rules] # category gate
+xml = true
+";
+        let detected: Vec<(&ToolDescriptor, String)> = vec![(&DESCRIPTORS[0], "2.1.119".into())];
+        let result = apply_tool_versions_section(existing, &detected);
+        assert!(
+            result.contains("[rules] # category gate"),
+            "trailing section with inline comment must survive, got: {result}"
+        );
+        assert!(
+            result.contains("xml = true"),
+            "keys after the trailing section must survive, got: {result}"
+        );
+    }
+
+    // Review #823 - line-ending preservation. Windows users with CRLF
+    // git config shouldn't have their .agnix.toml normalized to LF on
+    // --write.
+
+    #[test]
+    fn detect_line_ending_prefers_crlf_when_dominant() {
+        let crlf = "a = 1\r\nb = 2\r\n";
+        assert_eq!(detect_line_ending(crlf), "\r\n");
+    }
+
+    #[test]
+    fn detect_line_ending_prefers_lf_when_dominant() {
+        let lf = "a = 1\nb = 2\n";
+        assert_eq!(detect_line_ending(lf), "\n");
+    }
+
+    #[test]
+    fn detect_line_ending_defaults_to_lf_on_empty() {
+        assert_eq!(detect_line_ending(""), "\n");
+        assert_eq!(detect_line_ending("no newline at all"), "\n");
+    }
+
+    #[test]
+    fn apply_tool_versions_section_preserves_crlf() {
+        let existing = "[tool_versions]\r\nclaude_code = \"1.0.0\"\r\n";
+        let detected: Vec<(&ToolDescriptor, String)> = vec![(&DESCRIPTORS[0], "2.1.119".into())];
+        let result = apply_tool_versions_section(existing, &detected);
+        assert!(
+            result.contains("\r\n"),
+            "CRLF input must produce CRLF output, got: {result:?}"
+        );
+        assert!(result.contains("claude_code = \"2.1.119\""));
     }
 }
