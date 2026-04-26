@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { exec } from 'child_process';
+import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
 import {
   LanguageClient,
@@ -20,6 +20,62 @@ import {
 } from './version-check';
 
 const execAsync = promisify(exec);
+
+/**
+ * Run a command with explicit argv (no shell), returning a promise that
+ * resolves on exit code 0 and rejects with stderr/exit code otherwise.
+ *
+ * This avoids shell-injection risks from interpolated paths (e.g. a single
+ * quote in the user's home directory path would break shell quoting).
+ */
+function spawnAsync(
+  command: string,
+  args: string[],
+  options: { timeout?: number } = {}
+): Promise<{ stdout: string; stderr: string }> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, { shell: false });
+    let stdout = '';
+    let stderr = '';
+    let timedOut = false;
+
+    const timer = options.timeout
+      ? setTimeout(() => {
+          timedOut = true;
+          child.kill();
+        }, options.timeout)
+      : null;
+
+    child.stdout?.on('data', (d) => {
+      stdout += d.toString();
+    });
+    child.stderr?.on('data', (d) => {
+      stderr += d.toString();
+    });
+    child.on('error', (err) => {
+      if (timer) {
+        clearTimeout(timer);
+      }
+      reject(err);
+    });
+    child.on('close', (code) => {
+      if (timer) {
+        clearTimeout(timer);
+      }
+      if (timedOut) {
+        reject(new Error(`Command timed out: ${command}`));
+      } else if (code === 0) {
+        resolve({ stdout, stderr });
+      } else {
+        reject(
+          new Error(
+            `Command failed (${command}, exit ${code}): ${stderr || stdout}`
+          )
+        );
+      }
+    });
+  });
+}
 
 let client: LanguageClient | undefined;
 let lifecycleController: ClientLifecycleController<LanguageClient> | undefined;
@@ -360,15 +416,30 @@ async function downloadAndInstallLsp(version?: string): Promise<string | null> {
         outputChannel.appendLine(`Extracting to: ${storageUri.fsPath}`);
 
         if (process.platform === 'win32') {
-          // PowerShell extraction for .zip
-          await execAsync(
-            `powershell -Command "Expand-Archive -Path '${downloadPath}' -DestinationPath '${storageUri.fsPath}' -Force"`,
+          // PowerShell extraction for .zip - use spawn with argv (no shell
+          // interpolation) and -LiteralPath (no globbing) to avoid injection
+          // if the storage path contains quotes or special characters.
+          await spawnAsync(
+            'powershell.exe',
+            [
+              '-NoProfile',
+              '-NonInteractive',
+              '-Command',
+              'Expand-Archive',
+              '-LiteralPath',
+              downloadPath,
+              '-DestinationPath',
+              storageUri.fsPath,
+              '-Force',
+            ],
             { timeout: 60000 }
           );
         } else {
-          // tar extraction for .tar.gz
-          await execAsync(
-            `tar -xzf "${downloadPath}" -C "${storageUri.fsPath}"`,
+          // tar extraction for .tar.gz - use spawn with argv to avoid shell
+          // interpolation (see matching comment on the PowerShell branch).
+          await spawnAsync(
+            'tar',
+            ['-xzf', downloadPath, '-C', storageUri.fsPath],
             { timeout: 60000 }
           );
 
