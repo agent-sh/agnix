@@ -39,6 +39,12 @@ jobs:
       - name: Kiro S-tier Gate
         run: cargo test -p agnix-cli --test kiro_ci_gate -- --include-ignored
 
+      - name: Rule bookkeeping sync check
+        # Fails if total_rules, count phrases, or the agnix-rules mirror
+        # drifted from knowledge-base/rules.json. Fix by running
+        # `node scripts/sync-rule-bookkeeping.js` locally.
+        run: node scripts/sync-rule-bookkeeping.js --check --skip-docs
+
   agnix:
     runs-on: ubuntu-latest
     steps:

@@ -185,7 +185,7 @@ Human-readable docs: `knowledge-base/VALIDATION-RULES.md`
 
 Format: `[CATEGORY]-[NUMBER]` (AS-004, CC-HK-001, etc.)
 
-**Adding a new rule**: Add to BOTH `rules.json` AND `VALIDATION-RULES.md`. CI parity tests will fail if they drift. Each rule in `rules.json` must include complete `evidence` metadata (source_type, source_urls, verified_on, applies_to, normative_level, tests). See VALIDATION-RULES.md for the evidence schema reference.
+**Adding a new rule**: Add to BOTH `rules.json` AND `VALIDATION-RULES.md`. CI parity tests will fail if they drift. Each rule in `rules.json` must include complete `evidence` metadata (source_type, source_urls, verified_on, applies_to, normative_level, tests). See VALIDATION-RULES.md for the evidence schema reference. Then run `node scripts/sync-rule-bookkeeping.js` (add `--validators=N` if a new validator was registered) to update the derived locations: `total_rules` + `last_updated` in rules.json, count phrases in CLAUDE.md/AGENTS.md/README.md, the `crates/agnix-rules/rules.json` mirror, and the website docs. CI enforces this with `--check` mode.
 
 ## Current State
 
