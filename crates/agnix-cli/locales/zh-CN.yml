@@ -765,6 +765,8 @@ cli:
   safe_only: "（仅安全的）"
   created: "已创建:"
   schema_written: "Schema 已写入:"
+  schema_updated: "Schema 已更新:"
+  schema_created: "Schema 已创建:"
   error_label: "错误:"
   warning_label: "警告:"
   config_warning_label: "配置警告:"

@@ -216,9 +216,19 @@ enum Commands {
 
     /// Output JSON Schema for configuration files
     Schema {
-        /// Output file path (defaults to stdout)
+        /// Output file path (defaults to stdout, or `schemas/agnix.json` with --fix)
         #[arg(short, long)]
         output: Option<PathBuf>,
+
+        /// Regenerate the schema file in place iff it differs from the current
+        /// binary's output. Silent when unchanged, prints a notice when it writes.
+        ///
+        /// Designed for pre-commit hooks: the hook calls `agnix schema --fix`,
+        /// pre-commit fails automatically if the working tree has a post-hook
+        /// diff. Defaults `--output` to `schemas/agnix.json` when that flag is
+        /// absent.
+        #[arg(long)]
+        fix: bool,
     },
 }
 
@@ -280,7 +290,7 @@ fn main() {
             verbose,
         }) => eval_command(path, *format, filter.as_deref(), *verbose),
         Some(Commands::Telemetry { action }) => telemetry_command(*action),
-        Some(Commands::Schema { output }) => schema_command(output.as_ref()),
+        Some(Commands::Schema { output, fix }) => schema_command(output.as_ref(), *fix),
         None => validate_command(&cli.paths, &cli),
     };
 
@@ -992,21 +1002,65 @@ fn init_command(output: &PathBuf) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn schema_command(output: Option<&PathBuf>) -> anyhow::Result<()> {
-    let schema = generate_schema();
-    let json = serde_json::to_string_pretty(&schema)?;
+/// Default schema file path when `--fix` is passed without `--output`.
+const DEFAULT_SCHEMA_PATH: &str = "schemas/agnix.json";
 
-    match output {
+fn schema_command(output: Option<&PathBuf>, fix: bool) -> anyhow::Result<()> {
+    let schema = generate_schema();
+    // `schema_for!` emits a trailing newline-less JSON object. Add a trailing
+    // newline so the on-disk file looks like any other text file the user's
+    // editor/formatter would produce - avoids spurious diffs.
+    let json = format!("{}\n", serde_json::to_string_pretty(&schema)?);
+
+    // Resolve the target path: explicit --output wins, otherwise --fix implies
+    // the default path. Without either, we stream to stdout.
+    let target: Option<PathBuf> = match (output, fix) {
+        (Some(path), _) => Some(path.clone()),
+        (None, true) => Some(PathBuf::from(DEFAULT_SCHEMA_PATH)),
+        (None, false) => None,
+    };
+
+    match target {
         Some(path) => {
-            std::fs::write(path, &json)?;
-            println!(
-                "{} {}",
-                t!("cli.schema_written").green().bold(),
-                path.display()
-            );
+            if fix {
+                // Conditional overwrite: read the current file, compare. Only
+                // write when it differs. Pre-commit's contract ("fail if the
+                // tree is dirty after hooks") handles the drift detection for
+                // us - we just make sure the write is idempotent-in-effect.
+                let current = std::fs::read_to_string(&path).ok();
+                if current.as_deref() == Some(json.as_str()) {
+                    // Silent on no-op so the hook stays quiet on clean runs.
+                    return Ok(());
+                }
+                // Ensure parent directory exists so a fresh checkout with no
+                // `schemas/` folder still succeeds on the first `--fix`.
+                if let Some(parent) = path.parent()
+                    && !parent.as_os_str().is_empty()
+                {
+                    std::fs::create_dir_all(parent)?;
+                }
+                std::fs::write(&path, &json)?;
+                let action_label = if current.is_some() {
+                    t!("cli.schema_updated")
+                } else {
+                    t!("cli.schema_created")
+                };
+                println!("{} {}", action_label.green().bold(), path.display());
+            } else {
+                // Legacy behavior for `agnix schema --output <path>`:
+                // always write, print "Schema written to: path".
+                std::fs::write(&path, &json)?;
+                println!(
+                    "{} {}",
+                    t!("cli.schema_written").green().bold(),
+                    path.display()
+                );
+            }
         }
         None => {
-            println!("{}", json);
+            // stdout is not newline-terminated twice - println! adds one, and
+            // json already ends with \n. Use print! to avoid a double newline.
+            print!("{}", json);
         }
     }
 

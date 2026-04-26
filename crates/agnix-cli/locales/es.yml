@@ -765,6 +765,8 @@ cli:
   safe_only: " (solo seguras)"
   created: "Creado:"
   schema_written: "Esquema escrito en:"
+  schema_updated: "Esquema actualizado:"
+  schema_created: "Esquema creado:"
   error_label: "Error:"
   warning_label: "Advertencia:"
   config_warning_label: "Advertencia de config:"
