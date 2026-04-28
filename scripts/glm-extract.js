@@ -17,12 +17,23 @@
  *     a `--interests-json=<file>` that describes what agnix cares about
  *     for this tool (which config files, which change-types matter).
  *     Asks GLM to filter the notes down to just validator-relevant items
- *     + rule candidates. Output is markdown with:
- *       ## Agnix-relevant changes
- *       ## Rule candidates (if any)
- *       ## Irrelevant (UI, perf, telemetry, etc.)
+ *     + rule candidates. Output is markdown nested under the outer
+ *     `### Agnix Triage` heading that the workflow wraps around this
+ *     stdout; the builder uses `#### ...` so nesting stays correct:
+ *       #### Agnix-relevant changes  (each bullet cites the matching interest)
+ *       #### Already-covered changes (only when --rules-manifest is provided)
+ *       #### Rule candidates (if any)
+ *       #### Irrelevant changes (not reviewed)
  *     Used by tool-release-watch.yml to pre-triage the per-tool issue so
  *     a human reads a summary instead of the full changelog.
+ *
+ *     Optional `--rules-manifest=<file>` passes a compact rule catalog
+ *     (built by scripts/build-rule-manifest.js) so GLM can (a) classify
+ *     changes as already-covered instead of listing them as new, and
+ *     (b) propose next-in-sequence rule ids (e.g. MCP-025 after
+ *     MCP-001..024) instead of inventing freeform names. The workflow
+ *     builds this manifest per-tool and passes it automatically; the
+ *     prompt degrades gracefully to the un-grounded form when absent.
  *
  * Surface and defaults distilled from github.com/avifenesh/cairn
  * internal/llm/glm.go (z.ai coding-paas endpoint, Bearer auth, OpenAI-
@@ -30,7 +41,7 @@
  *
  * Usage:
  *   echo "<html>" | node scripts/glm-extract.js <tool_display_name> <version> <source_url>
- *   echo "<notes>" | node scripts/glm-extract.js --mode=agnix-triage --interests-json=/tmp/interests.json <tool_display_name> <version> <source_url>
+ *   echo "<notes>" | node scripts/glm-extract.js --mode=agnix-triage --interests-json=/tmp/interests.json [--rules-manifest=/tmp/rules.json] <tool_display_name> <version> <source_url>
  *
  * Env:
  *   GLM_API_KEY  required - z.ai key in "id.secret" format
@@ -59,42 +70,19 @@ const INPUT_BUDGET = 80_000;
 const MAX_TOKENS = 4096;
 const TEMPERATURE = 0.3; // extraction task, prefer determinism
 
-// Parse argv: collect flags into an options object + leave positional args.
-const argv = process.argv.slice(2);
-const flags = {};
-const positional = [];
-for (const arg of argv) {
-  if (arg.startsWith('--')) {
-    const eq = arg.indexOf('=');
-    if (eq >= 0) {
-      flags[arg.slice(2, eq)] = arg.slice(eq + 1);
-    } else {
-      flags[arg.slice(2)] = true;
-    }
-  } else {
-    positional.push(arg);
-  }
-}
-
-const mode = flags.mode || 'extract';
-const [toolDisplay, version, sourceUrl] = positional;
-if (!toolDisplay || !version || !sourceUrl) {
-  console.error('usage: glm-extract.js [--mode=extract|agnix-triage] [--interests-json=<path>] <tool_display_name> <version> <source_url>');
-  process.exit(2);
-}
-if (!['extract', 'agnix-triage'].includes(mode)) {
-  console.error(`unknown --mode=${mode}; expected 'extract' or 'agnix-triage'`);
-  process.exit(2);
-}
-
-const apiKey = process.env.GLM_API_KEY;
-if (!apiKey) {
-  console.error('GLM_API_KEY env var is required');
-  process.exit(2);
-}
-
-const model = process.env.GLM_MODEL || 'glm-5';
-const baseUrl = (process.env.GLM_BASE_URL || 'https://api.z.ai/api/coding/paas/v4').replace(/\/$/, '');
+// Module-scoped argv/env holders. Populated by runCli() when invoked
+// directly; left undefined when required as a library (so the prompt
+// builders can be unit-tested without triggering the CLI's process.exit
+// on "missing positional arg"). Builders default their `ctx` param to
+// these so the CLI path stays a one-liner.
+let flags = {};
+let toolDisplay;
+let version;
+let sourceUrl;
+let mode;
+let apiKey;
+let model;
+let baseUrl;
 
 /**
  * Load the changes_of_interest descriptor for the target tool. Schema:
@@ -123,6 +111,34 @@ function loadInterests() {
   }
 }
 
+/**
+ * Load the compact rule manifest produced by
+ * `scripts/build-rule-manifest.js`. Optional - when absent the prompt
+ * still works but the model has no grounding for rule-id proposals or
+ * "already covered by MCP-*" reasoning.
+ *
+ * Returns `null` when the flag is unset or the file can't be read
+ * (non-fatal: we'd rather produce a degraded triage than lose the
+ * release notes entirely). Invalid JSON is also non-fatal but logged.
+ */
+function loadRulesManifest() {
+  const raw = flags['rules-manifest'];
+  if (!raw || typeof raw !== 'string') {
+    return null;
+  }
+  try {
+    const data = JSON.parse(fs.readFileSync(raw, 'utf8'));
+    if (!Array.isArray(data)) {
+      console.error(`rules manifest at ${raw} is not a JSON array - ignoring`);
+      return null;
+    }
+    return data;
+  } catch (err) {
+    console.error(`failed to read rules manifest ${raw}: ${err.message} - ignoring`);
+    return null;
+  }
+}
+
 async function readStdin() {
   return new Promise((resolve, reject) => {
     let buf = '';
@@ -133,32 +149,56 @@ async function readStdin() {
   });
 }
 
-function buildExtractPrompt(html) {
+function buildExtractPrompt(html, ctx = { toolDisplay, version, sourceUrl }) {
   return [
-    `Extract the release notes for ${toolDisplay} ${version} from the page below.`,
+    `Extract the release notes for ${ctx.toolDisplay} ${ctx.version} from the page below.`,
     '',
     'Reply as concise markdown with these sections:',
     '## What changed',
     '## Likely impact on agnix rules (one line; "none likely" if unclear)',
     '',
-    `If the exact version is not on the page, summarize the most recent release instead and note that ${version} was not present.`,
+    `If the exact version is not on the page, summarize the most recent release instead and note that ${ctx.version} was not present.`,
     'No preamble, no commentary about the HTML structure or extraction process.',
     '',
-    `Source URL: ${sourceUrl}`,
+    `Source URL: ${ctx.sourceUrl}`,
     '',
     'Page content:',
     html,
   ].join('\n');
 }
 
-function buildAgnixTriagePrompt(notes, interests) {
+function buildAgnixTriagePrompt(notes, interests, rulesManifest, ctx = { toolDisplay, version, sourceUrl }) {
   const surfaces = (interests.config_surfaces || []).map((s) => `- \`${s}\``).join('\n') || '- (none declared)';
   const relevant = (interests.relevant || []).map((s) => `- ${s}`).join('\n') || '- (none declared)';
   const irrelevant = (interests.irrelevant || []).map((s) => `- ${s}`).join('\n') || '- (none declared)';
-  return [
-    `You are triaging release notes for ${toolDisplay} ${version} from the perspective of agnix, a linter for AI coding-tool config files.`,
+
+  // Rule-catalog grounding: give GLM the existing rule manifest so its
+  // "Rule candidates" section proposes real next-in-sequence ids
+  // (e.g., MCP-025 after MCP-001..024) instead of inventing freeform
+  // names, and its "Agnix-relevant changes" section can recognize when
+  // an existing rule already covers the change.
+  //
+  // When the manifest is absent (no --rules-manifest flag or load
+  // failed) we fall back to the un-grounded prompt - the workflow
+  // keeps working, just with the same quality as before.
+  const rulesBlock = rulesManifest
+    ? [
+        '',
+        'Agnix already ships these validation rules (trimmed to id + name + category + scope for brevity). When a release note describes behavior these rules already cover, classify the change as irrelevant and name the covering rule id. When it describes new behavior in an existing family, the next-free id in that family is a natural rule candidate - use the exact prefix and the next sequential number.',
+        '',
+        '```json',
+        JSON.stringify(rulesManifest),
+        '```',
+      ].join('\n')
+    : '';
+
+  // Use `null` as a sentinel for "skip this line" (a conditional line
+  // whose condition was false). Empty strings are meaningful paragraph
+  // separators and must survive the join.
+  const lines = [
+    `You are triaging release notes for ${ctx.toolDisplay} ${ctx.version} from the perspective of agnix, a linter for AI coding-tool config files.`,
     '',
-    `Agnix validates these ${toolDisplay} config surfaces:`,
+    `Agnix validates these ${ctx.toolDisplay} config surfaces:`,
     surfaces,
     '',
     'Items that matter to agnix (would likely require a validator update):',
@@ -166,28 +206,85 @@ function buildAgnixTriagePrompt(notes, interests) {
     '',
     'Items that do NOT matter to agnix (safe to ignore):',
     irrelevant,
+    rulesBlock || null,
     '',
     'Read the release notes below and classify each bullet point. Reply as concise markdown with these sections in order. Use #### (four hashes) for section headers so they nest under the outer ### Agnix Triage section that wraps this output in the GitHub issue body:',
     '',
     '#### Agnix-relevant changes',
-    'List each change-type relevant item as a single bullet. Quote the exact phrase from the notes in backticks. If none, write `_None - this release is agnix-irrelevant._`.',
+    'List each change-type relevant item as ONE bullet shaped exactly like:',
+    '  - `<exact phrase from notes>` -- matches: `<verbatim line from "Items that matter">`',
+    'The double-dash ` -- ` separator and the `matches:` label are required so a human reviewer can audit the mapping. If no item matches ANY "Items that matter" line, write `_None - this release is agnix-irrelevant._`. Never list an item without naming a matching interest; never invent a new interest that is not in the list above.',
+    rulesManifest
+      ? 'If a change is already covered by an existing rule from the manifest above, do NOT list it here; mention it in the "Already-covered" section below instead.'
+      : null,
     '',
+    rulesManifest ? '#### Already-covered changes' : null,
+    rulesManifest
+      ? 'List each change whose behavior is already enforced by an existing rule, shaped `- <exact phrase from notes> -- covered by <RULE-ID>`. If none, write `_None._`.'
+      : null,
+    rulesManifest ? '' : null,
     '#### Rule candidates',
-    'If any relevant change suggests a new validation rule, propose it as `- <rule name>: <one-line description>`. If none, write `_None._`.',
+    rulesManifest
+      ? 'If any relevant change suggests a NEW validation rule (not already in the manifest above), propose it as `- <NEXT-FREE-ID>: <one-line description>`. Pick the id by finding the highest existing number for the matching category prefix in the manifest and adding 1 (e.g., if the manifest ends at MCP-024, propose MCP-025). If none, write `_None._`.'
+      : 'If any relevant change suggests a new validation rule, propose it as `- <rule name>: <one-line description>`. If none, write `_None._`.',
     '',
     '#### Irrelevant changes (not reviewed)',
     'One-line summary like `5 items: model additions, UI polish, bug fixes`. Do not enumerate.',
     '',
-    'Rules: no preamble, no commentary about extraction, be strict about relevance - when in doubt, classify as irrelevant. Do not fabricate items that are not in the notes.',
+    rulesManifest
+      ? 'Rules: no preamble, no commentary about extraction, be strict about relevance - when in doubt, classify as irrelevant. Do not fabricate items that are not in the notes. Do not cite manifest rule ids that are not in the manifest above.'
+      : 'Rules: no preamble, no commentary about extraction, be strict about relevance - when in doubt, classify as irrelevant. Do not fabricate items that are not in the notes.',
     '',
-    `Source URL: ${sourceUrl}`,
+    `Source URL: ${ctx.sourceUrl}`,
     '',
     'Release notes:',
     notes,
-  ].join('\n');
+  ];
+  return lines.filter((line) => line !== null).join('\n');
 }
 
-(async () => {
+function parseArgv(argv) {
+  const parsedFlags = {};
+  const positional = [];
+  for (const arg of argv) {
+    if (arg.startsWith('--')) {
+      const eq = arg.indexOf('=');
+      if (eq >= 0) {
+        parsedFlags[arg.slice(2, eq)] = arg.slice(eq + 1);
+      } else {
+        parsedFlags[arg.slice(2)] = true;
+      }
+    } else {
+      positional.push(arg);
+    }
+  }
+  return { flags: parsedFlags, positional };
+}
+
+async function runCli() {
+  const parsed = parseArgv(process.argv.slice(2));
+  flags = parsed.flags;
+  [toolDisplay, version, sourceUrl] = parsed.positional;
+  mode = flags.mode || 'extract';
+
+  if (!toolDisplay || !version || !sourceUrl) {
+    console.error('usage: glm-extract.js [--mode=extract|agnix-triage] [--interests-json=<path>] [--rules-manifest=<path>] <tool_display_name> <version> <source_url>');
+    process.exit(2);
+  }
+  if (!['extract', 'agnix-triage'].includes(mode)) {
+    console.error(`unknown --mode=${mode}; expected 'extract' or 'agnix-triage'`);
+    process.exit(2);
+  }
+
+  apiKey = process.env.GLM_API_KEY;
+  if (!apiKey) {
+    console.error('GLM_API_KEY env var is required');
+    process.exit(2);
+  }
+
+  model = process.env.GLM_MODEL || 'glm-5';
+  baseUrl = (process.env.GLM_BASE_URL || 'https://api.z.ai/api/coding/paas/v4').replace(/\/$/, '');
+
   const stdin = (await readStdin()).slice(0, INPUT_BUDGET);
   if (!stdin.trim()) {
     console.error('stdin was empty - nothing to process');
@@ -199,7 +296,8 @@ function buildAgnixTriagePrompt(notes, interests) {
     prompt = buildExtractPrompt(stdin);
   } else {
     const interests = loadInterests();
-    prompt = buildAgnixTriagePrompt(stdin, interests);
+    const rulesManifest = loadRulesManifest();
+    prompt = buildAgnixTriagePrompt(stdin, interests, rulesManifest);
   }
 
   let res;
@@ -244,4 +342,24 @@ function buildAgnixTriagePrompt(notes, interests) {
     process.exit(1);
   }
   process.stdout.write(content);
-})();
+}
+
+// Export the prompt builders for unit tests. `ctx` lets tests pass
+// tool/version/source without triggering the CLI's argv parsing.
+module.exports = {
+  buildExtractPrompt,
+  buildAgnixTriagePrompt,
+  parseArgv,
+};
+
+if (require.main === module) {
+  // Attach a .catch() so any exception that escapes runCli() (e.g. a
+  // future refactor that adds a throw outside an existing try/catch)
+  // surfaces as an intelligible error + deterministic exit 1, not as
+  // an unhandled promise rejection with Node's default behavior.
+  void runCli().catch((err) => {
+    const msg = err && err.message ? err.message : String(err);
+    console.error(`Unexpected error: ${msg}`);
+    process.exit(1);
+  });
+}

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Tool-release triage is now grounded in the rule catalog** (#837). `scripts/glm-extract.js --mode=agnix-triage` used to ask GLM to classify release notes against a `changes_of_interest` list without any knowledge of existing rules, so its "Rule candidates" invented freeform names (e.g. `mcp-server-always-load-type`) and its "Agnix-relevant changes" never explained *why* a bullet was surfaced. Two changes:
+  1. **Citation requirement**: every Agnix-relevant bullet must cite the `changes_of_interest.relevant` line it matched, shaped `- <phrase> -- matches: <interest>`. Makes the triage auditable and tightens the hallucination guard.
+  2. **Rule-catalog grounding**: `scripts/check-tool-releases.sh` now builds a compact per-tool rule manifest (via the new `scripts/build-rule-manifest.js`) and passes it to the triage prompt via a new `--rules-manifest` flag. GLM can now reclassify changes as "already covered by MCP-024" and propose real next-in-sequence ids (MCP-025 not `mcp-server-always-load-type`). A new `#### Already-covered changes` section surfaces rules that already cover a change so maintainers can close the tracker issue without adding a new rule. Prompt degrades gracefully to the un-grounded form when the manifest is absent.
+- Covered by 18 new unit tests (`node --test scripts/*.test.js`), including prompt-structure regression guards so future prompt edits can't silently drop the citation requirement or the Already-covered section.
+
 ### Added
 - **MCP-025: non-boolean `alwaysLoad` in MCP server config** (#836). Claude Code 2.1.121 introduced an `alwaysLoad: boolean` field on MCP server entries - when `true`, every tool from that server skips tool-search deferral and is always available. A typo like `"alwaysLoad": "true"` (quoted string) is a silent footgun: Claude Code treats it as truthy in some code paths and ignores it in others, so the user's intent silently fails. MCP-025 (MEDIUM) flags non-boolean values before they reach Claude Code. Also teaches MCP-024 that `{ "alwaysLoad": true }` is a deliberate field, not an "empty server" false positive.
 - **Tool baseline**: `claude-code` bumped from v2.1.119 to v2.1.121 in `.github/tool-release-baselines.json` and `knowledge-base/RESEARCH-TRACKING.md`.
