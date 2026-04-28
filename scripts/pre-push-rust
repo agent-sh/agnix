@@ -1,7 +1,7 @@
 #!/bin/sh
 # Pre-push hook for Rust projects.
 # Runs clippy + tests before allowing push, and also gates on rule-
-# bookkeeping drift so "415 rules" phrases, plugin.json version, and
+# bookkeeping drift so rule-count phrases, plugin.json version, and
 # npm/package.json version can never ship behind Cargo.toml.
 #
 # Bookkeeping runs FIRST because it's 2-second read-only JSON/regex

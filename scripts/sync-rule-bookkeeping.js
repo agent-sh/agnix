@@ -26,7 +26,8 @@
  *    "N rules" and "N validation rules" phrases are updated to match
  *    `rules.length`. Singular forms ("N rule sourced/across") are not
  *    currently used anywhere in these files; if they appear in future
- *    prose, add the pattern to `countPatterns` below.
+ *    prose, add the pattern to `DEFAULT_COUNT_PATTERNS` (or a per-file
+ *    `patterns` override in `COUNT_FILES`) below.
  *    Validator count phrase "N validators" is updated when --validators N
  *    is passed (the count isn't automatically derivable without parsing
  *    Rust source).
@@ -117,13 +118,23 @@ const INDEX_MD_PATTERNS = [
   { re: /(\b)(\d+)( rules with detection logic\b)/g },
   { re: /(Master validation reference \()(\d+)( rules\))/g },
   { re: /(\b)(\d+)( rules with rule IDs\b)/g },
-  // Total row: `| **Total** | ... | **N rules** |`. Anchor on the `**N rules**`
-  // bold pair (unique to the Total row; per-category rows don't bold their
-  // count) rather than the column layout, so adding/removing sibling columns
-  // doesn't break the match. The preceding `**` is the closing wrapper of
-  // whatever came in the cell before - required to avoid matching any
-  // `**405 rules**` bold span outside a table.
+  // "Size by Category" Total row: `| **Total** | ... | **N rules** |`.
+  // Anchor on the `**N rules**` bold pair (unique to this row;
+  // per-category rows don't bold their count) rather than the column
+  // layout, so adding/removing sibling columns doesn't break the match.
+  // The preceding `**` is the closing wrapper of whatever came in the
+  // cell before - required to avoid matching any `**N rules**` bold
+  // span outside a table.
   { re: /(\*\*)(\d+)( rules\*\*)/g },
+  // "Validation Rules by Category" TOTAL row: `| **TOTAL** | **N** | ... |`
+  // where N is the sum of the category-level rule counts in the
+  // preceding rows. Anchor on `**TOTAL** | **` (uppercase + bold +
+  // pipe) to disambiguate from the `**Total**` Size-by-Category row
+  // above and from any other bold number in the file. Only the
+  // first column (total rule count) is synced here - the HIGH /
+  // MEDIUM / LOW / Auto-Fix totals in the other columns are derived
+  // aggregates and left for a follow-up pass.
+  { re: /(\*\*TOTAL\*\*\s*\|\s*\*\*)(\d+)(\*\*)/g },
   { re: /(Validation Rules:\s+)(\d+)( rules\b)/g },
   { re: /(\b)(\d+)( validation rules across\b)/g },
 ];
