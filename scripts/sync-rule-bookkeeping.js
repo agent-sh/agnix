@@ -117,7 +117,13 @@ const INDEX_MD_PATTERNS = [
   { re: /(\b)(\d+)( rules with detection logic\b)/g },
   { re: /(Master validation reference \()(\d+)( rules\))/g },
   { re: /(\b)(\d+)( rules with rule IDs\b)/g },
-  { re: /(\*\*Total\*\*[^|]*\|\s*\*\*)(\d+)( rules\*\*\s*\|)/g },
+  // Total row: `| **Total** | ... | **N rules** |`. Anchor on the `**N rules**`
+  // bold pair (unique to the Total row; per-category rows don't bold their
+  // count) rather than the column layout, so adding/removing sibling columns
+  // doesn't break the match. The preceding `**` is the closing wrapper of
+  // whatever came in the cell before - required to avoid matching any
+  // `**405 rules**` bold span outside a table.
+  { re: /(\*\*)(\d+)( rules\*\*)/g },
   { re: /(Validation Rules:\s+)(\d+)( rules\b)/g },
   { re: /(\b)(\d+)( validation rules across\b)/g },
 ];
@@ -325,9 +331,14 @@ for (const entry of COUNT_FILES) {
 
 function readCargoWorkspaceVersion() {
   const toml = readText(WORKSPACE_CARGO_TOML);
-  // Match the `[workspace.package]` section then the first `version = "..."`
-  // inside it. The `[^[]*` runs to the next section header.
-  const m = toml.match(/\[workspace\.package\][^[]*?^\s*version\s*=\s*"([^"]+)"/m);
+  // Match the `[workspace.package]` section then the first
+  // `version = "..."` inside it. Use a negative lookahead for
+  // line-start `[` as the section boundary rather than `[^[]*`,
+  // which would stop prematurely at a `[` byte inside an array
+  // value like `authors = ["..."]` if the key order ever changed.
+  const m = toml.match(
+    /\[workspace\.package\](?:(?!^\s*\[)[\s\S])*?^\s*version\s*=\s*"([^"]+)"/m
+  );
   if (!m) {
     console.error(
       '[ERROR] Could not find `version = "..."` under [workspace.package] in Cargo.toml'

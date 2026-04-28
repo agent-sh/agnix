@@ -81,7 +81,7 @@ knowledge-base/
 | **AGENTS.md** | 5 | - | - | 6 rules |
 | **Cursor** | 2 | - | - | 9 rules |
 | **agentsys** | 12 | - | - | 70 patterns |
-| **Total** | **75+** | **117KB** | **160KB** | **405 rules** |
+| **Total** | **75+** | **117KB** | **160KB** | **415 rules** |
 
 
 ### Validation Rules by Category
