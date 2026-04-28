@@ -1680,7 +1680,7 @@ fn validate_server(
                 ),
             )
             .with_suggestion(
-                "Set alwaysLoad to true or false (unquoted). Strings like \"true\" are silently ignored by Claude Code.",
+                "Set alwaysLoad to true or false (unquoted). Non-boolean values are not consistently applied by Claude Code - they may be treated as truthy in some code paths and ignored in others.",
             ),
         );
     }

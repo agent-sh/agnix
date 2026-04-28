@@ -9254,7 +9254,7 @@
         "verified_on": "2026-04-28",
         "applies_to": {
           "tool": "claude-code",
-          "tool_version": ">=2.1.121"
+          "version_range": ">=2.1.121"
         },
         "normative_level": "MUST",
         "tests": {
