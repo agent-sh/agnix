@@ -513,10 +513,7 @@ fn parse_mcp_server_lenient(value: &serde_json::Value) -> McpServerConfig {
         // into `None` for `Option<Value>`. Without this, MCP-025 would
         // false-positive on `alwaysLoad: null` whenever some other field
         // forces the fallback.
-        always_load: obj
-            .get("alwaysLoad")
-            .filter(|v| !v.is_null())
-            .cloned(),
+        always_load: obj.get("alwaysLoad").filter(|v| !v.is_null()).cloned(),
     }
 }
 
