@@ -1383,7 +1383,7 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 ### MCP-025 [MEDIUM] Non-boolean alwaysLoad in MCP Server Config
 **Requirement**: `mcpServers.*.alwaysLoad` MUST be a boolean when present (Claude Code 2.1.121+)
 **Detection**: Validate `mcpServers.*.alwaysLoad` type; flag string / number / array / object values
-**Fix**: Replace the value with an unquoted `true` or `false` (strings like `"true"` are silently ignored)
+**Fix**: Replace the value with an unquoted `true` or `false` (non-boolean values are not consistently applied by Claude Code - they may be treated as truthy in some code paths and ignored in others)
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.121
 
 ---
