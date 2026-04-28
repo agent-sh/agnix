@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["./mcp-fs-server.js"],
+      "alwaysLoad": "true"
+    }
+  }
+}
