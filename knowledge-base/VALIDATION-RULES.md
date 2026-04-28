@@ -1379,6 +1379,13 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 **Fix**: Add at least one meaningful field (`type`, `command`, `url`, `args`, `env`)
 **Source**: modelcontextprotocol.io/specification/2025-11-25/basic/transports
 
+<a id="mcp-025"></a>
+### MCP-025 [MEDIUM] Non-boolean alwaysLoad in MCP Server Config
+**Requirement**: `mcpServers.*.alwaysLoad` MUST be a boolean when present (Claude Code 2.1.121+)
+**Detection**: Validate `mcpServers.*.alwaysLoad` type; flag string / number / array / object values
+**Fix**: Replace the value with an unquoted `true` or `false` (non-boolean values are not consistently applied by Claude Code - they may be treated as truthy in some code paths and ignored in others)
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.121
+
 ---
 
 ## GITHUB COPILOT RULES
@@ -3387,8 +3394,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 414 validation rules across 40 categories
+**Total Coverage**: 415 validation rules across 40 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 214 HIGH, 172 MEDIUM, 28 LOW
+**Certainty**: 214 HIGH, 173 MEDIUM, 28 LOW
 **Auto-Fixable**: 129 rules (31%)

@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **MCP-025: non-boolean `alwaysLoad` in MCP server config** (#836). Claude Code 2.1.121 introduced an `alwaysLoad: boolean` field on MCP server entries - when `true`, every tool from that server skips tool-search deferral and is always available. A typo like `"alwaysLoad": "true"` (quoted string) is a silent footgun: Claude Code treats it as truthy in some code paths and ignores it in others, so the user's intent silently fails. MCP-025 (MEDIUM) flags non-boolean values before they reach Claude Code. Also teaches MCP-024 that `{ "alwaysLoad": true }` is a deliberate field, not an "empty server" false positive.
+- **Tool baseline**: `claude-code` bumped from v2.1.119 to v2.1.121 in `.github/tool-release-baselines.json` and `knowledge-base/RESEARCH-TRACKING.md`.
+- **Rule count**: 414 -> 415 across all derived locations (rules.json, CLAUDE.md, AGENTS.md, README.md, website docs) via `scripts/sync-rule-bookkeeping.js`.
+
 ## [0.22.1] - 2026-04-26
 
 Security-only patch release shipped via PR #826. No user-visible feature changes.

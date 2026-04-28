@@ -1,4 +1,4 @@
-//! MCP (Model Context Protocol) validation (MCP-001 to MCP-024)
+//! MCP (Model Context Protocol) validation (MCP-001 to MCP-025)
 
 use crate::{
     config::LintConfig,
@@ -233,6 +233,7 @@ const RULE_IDS: &[&str] = &[
     "MCP-001", "MCP-002", "MCP-003", "MCP-004", "MCP-005", "MCP-006", "MCP-007", "MCP-008",
     "MCP-009", "MCP-010", "MCP-011", "MCP-012", "MCP-013", "MCP-014", "MCP-015", "MCP-016",
     "MCP-017", "MCP-018", "MCP-019", "MCP-020", "MCP-021", "MCP-022", "MCP-023", "MCP-024",
+    "MCP-025",
 ];
 
 pub struct McpValidator;
@@ -491,6 +492,7 @@ fn parse_mcp_server_lenient(value: &serde_json::Value) -> McpServerConfig {
             args: None,
             env: None,
             url: None,
+            always_load: None,
         };
     };
 
@@ -506,6 +508,14 @@ fn parse_mcp_server_lenient(value: &serde_json::Value) -> McpServerConfig {
             .get("url")
             .and_then(|v| v.as_str())
             .map(ToOwned::to_owned),
+        // Map explicit `null` to absent so the lenient path matches the
+        // strict serde path. For `Option<Value>`, serde's `Option` impl
+        // already treats explicit `null` as `None` (independent of
+        // `#[serde(default)]`, which only affects missing keys). Without
+        // this filter the lenient branch would clone `Value::Null` and
+        // MCP-025 would false-positive on `alwaysLoad: null` whenever
+        // some sibling field forces the fallback.
+        always_load: obj.get("alwaysLoad").filter(|v| !v.is_null()).cloned(),
     }
 }
 
@@ -1319,10 +1329,17 @@ fn has_meaningful_server_config(server: &McpServerConfig) -> bool {
         .as_deref()
         .is_some_and(|value| !value.trim().is_empty());
     let has_env = server.env.as_ref().is_some_and(|env| !env.is_empty());
-    has_type || has_command || has_args || has_url || has_env
+    // Explicit JSON `null` is conventionally "field absent" - match that for
+    // alwaysLoad so `{ "alwaysLoad": null }` is still flagged as an empty
+    // server by MCP-024 instead of masquerading as meaningful config.
+    let has_always_load = server
+        .always_load
+        .as_ref()
+        .is_some_and(|value| !value.is_null());
+    has_type || has_command || has_args || has_url || has_env || has_always_load
 }
 
-/// Validate a single MCP server configuration entry (MCP-009 to MCP-012, MCP-017 to MCP-022, MCP-024)
+/// Validate a single MCP server configuration entry (MCP-009 to MCP-012, MCP-017 to MCP-022, MCP-024, MCP-025)
 fn validate_server(
     name: &str,
     server: &McpServerConfig,
@@ -1606,6 +1623,64 @@ fn validate_server(
             )
             .with_suggestion(
                 "Define at least one meaningful field such as type, command, url, args, or env",
+            ),
+        );
+    }
+
+    // MCP-025: Claude Code 2.1.121+ introduced an `alwaysLoad` MCP server
+    // field. When `true`, every tool from that server skips tool-search
+    // deferral. The key is declared as boolean; a string like "true" is a
+    // silent footgun - Claude Code treats it as truthy in some code paths
+    // and ignores it in others. Flag non-boolean values so the typo is
+    // caught before it silently disables the intended always-available
+    // behavior.
+    //
+    // Severity is MEDIUM and we emit `Diagnostic::warning` to match
+    // MCP-021 and the other MEDIUM MCP rules. An incorrect alwaysLoad
+    // value fails safe-by-default - Claude Code just uses on-demand
+    // tool search - so this is a config smell, not a breakage.
+    //
+    // Explicit JSON `null` is treated as field-absent, matching JSON
+    // convention and `has_meaningful_server_config` above. For
+    // `Option<Value>`, serde's own `Option` impl collapses an explicit
+    // `null` into `None` (independent of `#[serde(default)]`, which
+    // only affects missing keys). `parse_mcp_server_lenient` filters
+    // `null` before cloning so the two paths agree. The
+    // `!value.is_null()` guard here is defense-in-depth against a
+    // future caller that constructs `McpServerConfig` with
+    // `Some(Value::Null)` directly.
+    //
+    // The diagnostic points at the server-header `(line, col)` used by
+    // all other per-server rules. A precise per-field location would
+    // require a server-span collector (like `collect_tools_array_object_spans`
+    // for tools); left as a future enhancement so every per-server rule
+    // can benefit together rather than MCP-025 inventing its own.
+    if config.is_rule_enabled("MCP-025")
+        && let Some(value) = &server.always_load
+        && !value.is_boolean()
+        && !value.is_null()
+    {
+        let actual_type = match value {
+            serde_json::Value::String(_) => "string",
+            serde_json::Value::Number(_) => "number",
+            serde_json::Value::Array(_) => "array",
+            serde_json::Value::Object(_) => "object",
+            // Bool and Null are excluded by the guards above.
+            serde_json::Value::Bool(_) | serde_json::Value::Null => unreachable!(),
+        };
+        diagnostics.push(
+            Diagnostic::warning(
+                path.to_path_buf(),
+                line,
+                col,
+                "MCP-025",
+                format!(
+                    "Server '{}' has non-boolean 'alwaysLoad' value (got {})",
+                    name, actual_type
+                ),
+            )
+            .with_suggestion(
+                "Set alwaysLoad to true or false (unquoted). Non-boolean values are not consistently applied by Claude Code - they may be treated as truthy in some code paths and ignored in others.",
             ),
         );
     }
@@ -2521,6 +2596,7 @@ mod tests {
             "MCP-001", "MCP-002", "MCP-003", "MCP-004", "MCP-005", "MCP-006", "MCP-007", "MCP-008",
             "MCP-009", "MCP-010", "MCP-011", "MCP-012", "MCP-013", "MCP-014", "MCP-015", "MCP-016",
             "MCP-017", "MCP-018", "MCP-019", "MCP-020", "MCP-021", "MCP-022", "MCP-023", "MCP-024",
+            "MCP-025",
         ];
 
         for rule in rules {
@@ -2563,6 +2639,9 @@ mod tests {
                     r#"{"mcpServers":{"dup":{"type":"stdio","command":"node"},"dup":{"type":"stdio","command":"node"}}}"#
                 }
                 "MCP-024" => r#"{"mcpServers":{"empty":{}}}"#,
+                "MCP-025" => {
+                    r#"{"mcpServers":{"s":{"type":"stdio","command":"node","alwaysLoad":"true"}}}"#
+                }
                 _ => r#"{"tools": [{"name": "t"}]}"#,
             };
 
@@ -3277,6 +3356,211 @@ mod tests {
         }"#;
         let diagnostics = validate(content);
         assert!(diagnostics.iter().any(|d| d.rule == "MCP-024"));
+    }
+
+    #[test]
+    fn test_mcp_024_not_triggered_by_always_load_only() {
+        // MCP-024 flags "empty" servers. An `alwaysLoad` boolean alone is
+        // still meaningless without a type/command/url, but it IS a
+        // deliberate field so we should NOT report MCP-024 here. MCP-009
+        // (missing command for the default stdio transport) IS the right
+        // diagnostic for this case - assert it fires so the test doesn't
+        // silently become vacuous if validation behavior changes.
+        let content = r#"{
+            "mcpServers": {
+                "partial": { "alwaysLoad": true }
+            }
+        }"#;
+        let diagnostics = validate(content);
+        assert!(
+            !diagnostics.iter().any(|d| d.rule == "MCP-024"),
+            "MCP-024 should not fire when alwaysLoad is set"
+        );
+        assert!(
+            diagnostics.iter().any(|d| d.rule == "MCP-009"),
+            "MCP-009 (missing command for stdio) should fire instead"
+        );
+    }
+
+    #[test]
+    fn test_mcp_024_triggers_when_only_field_is_null_always_load() {
+        // An explicit JSON `null` for alwaysLoad is conventionally "absent";
+        // it should NOT save the server from MCP-024. This guards against
+        // Some(Value::Null) masquerading as a meaningful field.
+        let content = r#"{
+            "mcpServers": {
+                "empty-ish": { "alwaysLoad": null }
+            }
+        }"#;
+        let diagnostics = validate(content);
+        assert!(
+            diagnostics.iter().any(|d| d.rule == "MCP-024"),
+            "MCP-024 should fire when alwaysLoad is the only field and it's null"
+        );
+    }
+
+    // ===== MCP-025 Tests =====
+
+    #[test]
+    fn test_mcp_025_accepts_boolean_true() {
+        let content = r#"{
+            "mcpServers": {
+                "fs": { "type": "stdio", "command": "node", "alwaysLoad": true }
+            }
+        }"#;
+        let diagnostics = validate(content);
+        assert!(
+            !diagnostics.iter().any(|d| d.rule == "MCP-025"),
+            "MCP-025 should not fire on a real boolean"
+        );
+    }
+
+    #[test]
+    fn test_mcp_025_accepts_boolean_false() {
+        let content = r#"{
+            "mcpServers": {
+                "fs": { "type": "stdio", "command": "node", "alwaysLoad": false }
+            }
+        }"#;
+        let diagnostics = validate(content);
+        assert!(!diagnostics.iter().any(|d| d.rule == "MCP-025"));
+    }
+
+    #[test]
+    fn test_mcp_025_accepts_missing_field() {
+        let content = r#"{
+            "mcpServers": {
+                "fs": { "type": "stdio", "command": "node" }
+            }
+        }"#;
+        let diagnostics = validate(content);
+        assert!(!diagnostics.iter().any(|d| d.rule == "MCP-025"));
+    }
+
+    #[test]
+    fn test_mcp_025_flags_string_value() {
+        let content = r#"{
+            "mcpServers": {
+                "fs": { "type": "stdio", "command": "node", "alwaysLoad": "true" }
+            }
+        }"#;
+        let diagnostics = validate(content);
+        let mcp_025: Vec<_> = diagnostics.iter().filter(|d| d.rule == "MCP-025").collect();
+        assert_eq!(mcp_025.len(), 1);
+        assert!(
+            mcp_025[0].message.contains("string"),
+            "diagnostic should mention the actual type, got: {}",
+            mcp_025[0].message
+        );
+    }
+
+    #[test]
+    fn test_mcp_025_flags_number_value() {
+        let content = r#"{
+            "mcpServers": {
+                "fs": { "type": "stdio", "command": "node", "alwaysLoad": 1 }
+            }
+        }"#;
+        let diagnostics = validate(content);
+        let mcp_025: Vec<_> = diagnostics.iter().filter(|d| d.rule == "MCP-025").collect();
+        assert_eq!(mcp_025.len(), 1);
+        assert!(mcp_025[0].message.contains("number"));
+    }
+
+    #[test]
+    fn test_mcp_025_null_is_treated_as_absent() {
+        // serde collapses an explicit JSON `null` into "field absent" when
+        // the target is `Option<Value>`, matching the usual JSON convention.
+        // MCP-025 should therefore NOT fire on `alwaysLoad: null` - the
+        // user clearly didn't intend to enable always-load.
+        let content = r#"{
+            "mcpServers": {
+                "fs": { "type": "stdio", "command": "node", "alwaysLoad": null }
+            }
+        }"#;
+        let diagnostics = validate(content);
+        assert!(!diagnostics.iter().any(|d| d.rule == "MCP-025"));
+    }
+
+    #[test]
+    fn test_mcp_025_flags_array_value() {
+        let content = r#"{
+            "mcpServers": {
+                "fs": { "type": "stdio", "command": "node", "alwaysLoad": [true] }
+            }
+        }"#;
+        let diagnostics = validate(content);
+        let mcp_025: Vec<_> = diagnostics.iter().filter(|d| d.rule == "MCP-025").collect();
+        assert_eq!(mcp_025.len(), 1);
+        assert!(mcp_025[0].message.contains("array"));
+    }
+
+    #[test]
+    fn test_mcp_025_flags_object_value() {
+        // Covers the `object` branch of the type-name match arm so no
+        // arm is silently untested - a user might imagine alwaysLoad as
+        // a structured config like `{ "enabled": true, "scope": "all" }`.
+        let content = r#"{
+            "mcpServers": {
+                "fs": {
+                    "type": "stdio",
+                    "command": "node",
+                    "alwaysLoad": { "enabled": true }
+                }
+            }
+        }"#;
+        let diagnostics = validate(content);
+        let mcp_025: Vec<_> = diagnostics.iter().filter(|d| d.rule == "MCP-025").collect();
+        assert_eq!(mcp_025.len(), 1);
+        assert!(
+            mcp_025[0].message.contains("object"),
+            "diagnostic should name the object type, got: {}",
+            mcp_025[0].message
+        );
+    }
+
+    #[test]
+    fn test_mcp_025_emits_warning_not_error() {
+        // Severity is MEDIUM, so the diagnostic level must match the
+        // MEDIUM convention used by MCP-021 and other MEDIUM MCP rules.
+        use crate::diagnostics::DiagnosticLevel;
+        let content = r#"{
+            "mcpServers": {
+                "fs": { "type": "stdio", "command": "node", "alwaysLoad": "true" }
+            }
+        }"#;
+        let diagnostics = validate(content);
+        let mcp_025: Vec<_> = diagnostics.iter().filter(|d| d.rule == "MCP-025").collect();
+        assert_eq!(mcp_025.len(), 1);
+        assert_eq!(
+            mcp_025[0].level,
+            DiagnosticLevel::Warning,
+            "MCP-025 is MEDIUM severity; diagnostic level must be Warning (not Error)"
+        );
+    }
+
+    #[test]
+    fn test_mcp_025_null_ignored_via_lenient_parser_fallback() {
+        // This exercises `parse_mcp_server_lenient` - when a sibling field
+        // forces the fallback (here `args: "oops"` breaks strict parsing),
+        // `alwaysLoad: null` must still be treated as absent rather than
+        // flagged as a non-boolean. Regression guard for Copilot's finding
+        // that the lenient parser was cloning null into Some(Value::Null).
+        let content = r#"{
+            "mcpServers": {
+                "fs": {
+                    "type": "stdio",
+                    "command": "node",
+                    "args": "not-an-array-so-strict-parse-fails",
+                    "alwaysLoad": null
+                }
+            }
+        }"#;
+        let diagnostics = validate(content);
+        assert!(
+            !diagnostics.iter().any(|d| d.rule == "MCP-025"),
+            "MCP-025 must not fire on alwaysLoad: null even through the lenient parser"
+        );
     }
 
     // ===== Multiple servers test =====

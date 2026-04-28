@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `414` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `415` validation rules generated from `knowledge-base/rules.json`.
 `129` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -338,6 +338,7 @@ This section contains all `414` validation rules generated from `knowledge-base/
 | [MCP-022](./generated/mcp-022.md) | Invalid args Array Type | HIGH | MCP | No |
 | [MCP-023](./generated/mcp-023.md) | Duplicate MCP Server Names | HIGH | MCP | No |
 | [MCP-024](./generated/mcp-024.md) | Empty MCP Server Configuration | HIGH | MCP | No |
+| [MCP-025](./generated/mcp-025.md) | Non-boolean alwaysLoad in MCP Server Config | MEDIUM | MCP | No |
 | [OC-001](./generated/oc-001.md) | Invalid Share Mode | HIGH | OpenCode | Yes (unsafe) |
 | [OC-002](./generated/oc-002.md) | Invalid Instruction Path | HIGH | OpenCode | No |
 | [OC-003](./generated/oc-003.md) | opencode.json Parse Error | HIGH | OpenCode | No |

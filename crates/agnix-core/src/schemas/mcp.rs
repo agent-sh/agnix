@@ -182,6 +182,13 @@ pub struct McpServerConfig {
 
     /// Server endpoint URL (required for http/sse)
     pub url: Option<String>,
+
+    /// Claude Code 2.1.121+: when `true`, all tools from this server skip
+    /// tool-search deferral and are always available. Must be a boolean
+    /// when present (MCP-025). Deserialized as `serde_json::Value` so we
+    /// can diagnose wrong types rather than failing the whole parse.
+    #[serde(rename = "alwaysLoad", default)]
+    pub always_load: Option<serde_json::Value>,
 }
 
 /// MCP configuration file schema (standalone .mcp.json)
