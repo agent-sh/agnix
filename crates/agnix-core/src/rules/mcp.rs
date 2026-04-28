@@ -1634,7 +1634,11 @@ fn validate_server(
             serde_json::Value::Bool(_) => unreachable!(),
         };
         let (al_line, al_col) = find_json_field_location(content, "alwaysLoad");
-        let (diag_line, diag_col) = if al_line > 0 { (al_line, al_col) } else { (line, col) };
+        let (diag_line, diag_col) = if al_line > 0 {
+            (al_line, al_col)
+        } else {
+            (line, col)
+        };
         diagnostics.push(
             Diagnostic::error(
                 path.to_path_buf(),
