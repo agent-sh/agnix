@@ -508,7 +508,15 @@ fn parse_mcp_server_lenient(value: &serde_json::Value) -> McpServerConfig {
             .get("url")
             .and_then(|v| v.as_str())
             .map(ToOwned::to_owned),
-        always_load: obj.get("alwaysLoad").cloned(),
+        // Map explicit `null` to absent so the lenient path matches the
+        // strict serde path, where `#[serde(default)]` collapses `null`
+        // into `None` for `Option<Value>`. Without this, MCP-025 would
+        // false-positive on `alwaysLoad: null` whenever some other field
+        // forces the fallback.
+        always_load: obj
+            .get("alwaysLoad")
+            .filter(|v| !v.is_null())
+            .cloned(),
     }
 }
 
@@ -1322,7 +1330,13 @@ fn has_meaningful_server_config(server: &McpServerConfig) -> bool {
         .as_deref()
         .is_some_and(|value| !value.trim().is_empty());
     let has_env = server.env.as_ref().is_some_and(|env| !env.is_empty());
-    let has_always_load = server.always_load.is_some();
+    // Explicit JSON `null` is conventionally "field absent" - match that for
+    // alwaysLoad so `{ "alwaysLoad": null }` is still flagged as an empty
+    // server by MCP-024 instead of masquerading as meaningful config.
+    let has_always_load = server
+        .always_load
+        .as_ref()
+        .is_some_and(|value| !value.is_null());
     has_type || has_command || has_args || has_url || has_env || has_always_load
 }
 
@@ -1618,32 +1632,45 @@ fn validate_server(
     // field. When `true`, every tool from that server skips tool-search
     // deferral. The key is declared as boolean; a string like "true" is a
     // silent footgun - Claude Code treats it as truthy in some code paths
-    // and ignores it in others. Flag any non-boolean value so the typo is
+    // and ignores it in others. Flag non-boolean values so the typo is
     // caught before it silently disables the intended always-available
     // behavior.
+    //
+    // Severity is MEDIUM and we emit `Diagnostic::warning` to match
+    // MCP-021 and the other MEDIUM MCP rules. An incorrect alwaysLoad
+    // value fails safe-by-default - Claude Code just uses on-demand
+    // tool search - so this is a config smell, not a breakage.
+    //
+    // Explicit JSON `null` is treated as field-absent, matching JSON
+    // convention and `has_meaningful_server_config` above. The strict
+    // serde path collapses `null` into `None` via `#[serde(default)]`;
+    // `parse_mcp_server_lenient` now mirrors that. The `!value.is_null()`
+    // guard here is defense-in-depth against a future caller that
+    // constructs `McpServerConfig` with `Some(Value::Null)` directly.
+    //
+    // The diagnostic points at the server-header `(line, col)` used by
+    // all other per-server rules. A precise per-field location would
+    // require a server-span collector (like `collect_tools_array_object_spans`
+    // for tools); left as a future enhancement so every per-server rule
+    // can benefit together rather than MCP-025 inventing its own.
     if config.is_rule_enabled("MCP-025")
         && let Some(value) = &server.always_load
         && !value.is_boolean()
+        && !value.is_null()
     {
         let actual_type = match value {
             serde_json::Value::String(_) => "string",
             serde_json::Value::Number(_) => "number",
-            serde_json::Value::Null => "null",
             serde_json::Value::Array(_) => "array",
             serde_json::Value::Object(_) => "object",
-            serde_json::Value::Bool(_) => unreachable!(),
-        };
-        let (al_line, al_col) = find_json_field_location(content, "alwaysLoad");
-        let (diag_line, diag_col) = if al_line > 0 {
-            (al_line, al_col)
-        } else {
-            (line, col)
+            // Bool and Null are excluded by the guards above.
+            serde_json::Value::Bool(_) | serde_json::Value::Null => unreachable!(),
         };
         diagnostics.push(
-            Diagnostic::error(
+            Diagnostic::warning(
                 path.to_path_buf(),
-                diag_line,
-                diag_col,
+                line,
+                col,
                 "MCP-025",
                 format!(
                     "Server '{}' has non-boolean 'alwaysLoad' value (got {})",
@@ -3348,6 +3375,23 @@ mod tests {
         );
     }
 
+    #[test]
+    fn test_mcp_024_triggers_when_only_field_is_null_always_load() {
+        // An explicit JSON `null` for alwaysLoad is conventionally "absent";
+        // it should NOT save the server from MCP-024. This guards against
+        // Some(Value::Null) masquerading as a meaningful field.
+        let content = r#"{
+            "mcpServers": {
+                "empty-ish": { "alwaysLoad": null }
+            }
+        }"#;
+        let diagnostics = validate(content);
+        assert!(
+            diagnostics.iter().any(|d| d.rule == "MCP-024"),
+            "MCP-024 should fire when alwaysLoad is the only field and it's null"
+        );
+    }
+
     // ===== MCP-025 Tests =====
 
     #[test]
@@ -3442,6 +3486,50 @@ mod tests {
         let mcp_025: Vec<_> = diagnostics.iter().filter(|d| d.rule == "MCP-025").collect();
         assert_eq!(mcp_025.len(), 1);
         assert!(mcp_025[0].message.contains("array"));
+    }
+
+    #[test]
+    fn test_mcp_025_emits_warning_not_error() {
+        // Severity is MEDIUM, so the diagnostic level must match the
+        // MEDIUM convention used by MCP-021 and other MEDIUM MCP rules.
+        use crate::diagnostics::DiagnosticLevel;
+        let content = r#"{
+            "mcpServers": {
+                "fs": { "type": "stdio", "command": "node", "alwaysLoad": "true" }
+            }
+        }"#;
+        let diagnostics = validate(content);
+        let mcp_025: Vec<_> = diagnostics.iter().filter(|d| d.rule == "MCP-025").collect();
+        assert_eq!(mcp_025.len(), 1);
+        assert_eq!(
+            mcp_025[0].level,
+            DiagnosticLevel::Warning,
+            "MCP-025 is MEDIUM severity; diagnostic level must be Warning (not Error)"
+        );
+    }
+
+    #[test]
+    fn test_mcp_025_null_ignored_via_lenient_parser_fallback() {
+        // This exercises `parse_mcp_server_lenient` - when a sibling field
+        // forces the fallback (here `args: "oops"` breaks strict parsing),
+        // `alwaysLoad: null` must still be treated as absent rather than
+        // flagged as a non-boolean. Regression guard for Copilot's finding
+        // that the lenient parser was cloning null into Some(Value::Null).
+        let content = r#"{
+            "mcpServers": {
+                "fs": {
+                    "type": "stdio",
+                    "command": "node",
+                    "args": "not-an-array-so-strict-parse-fails",
+                    "alwaysLoad": null
+                }
+            }
+        }"#;
+        let diagnostics = validate(content);
+        assert!(
+            !diagnostics.iter().any(|d| d.rule == "MCP-025"),
+            "MCP-025 must not fire on alwaysLoad: null even through the lenient parser"
+        );
     }
 
     // ===== Multiple servers test =====
