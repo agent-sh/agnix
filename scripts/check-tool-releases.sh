@@ -249,12 +249,32 @@ sys.stdout.write(m.group(1).strip() if m else "")
       # below fails mid-way (CI interruption, SIGTERM, etc.).
       interests_tmp=$(mktemp)
       triage_stderr=$(mktemp)
+      rules_manifest_tmp=$(mktemp)
       # shellcheck disable=SC2064  # intentional early expansion of tmp paths
-      trap "rm -f '$interests_tmp' '$triage_stderr'" EXIT INT TERM
+      trap "rm -f '$interests_tmp' '$triage_stderr' '$rules_manifest_tmp'" EXIT INT TERM
       printf '%s' "$interests_json" > "$interests_tmp"
+
+      # Build a tool-scoped rule manifest so GLM can (a) classify
+      # changes as already-covered by existing rules, and (b) propose
+      # next-in-sequence rule ids (e.g. MCP-026 after MCP-025).
+      # Manifest is tool-scoped + keeps unscoped rules so cross-tool
+      # families (MCP, AGENTS.md) are always visible. On build failure
+      # we omit the --rules-manifest flag entirely and the prompt
+      # degrades to the un-grounded form.
+      rules_manifest_flag=""
+      if node "$script_dir/build-rule-manifest.js" \
+           --tool="$tool_id" --out="$rules_manifest_tmp" 2>/dev/null; then
+        rules_manifest_flag="--rules-manifest=$rules_manifest_tmp"
+        echo "  [triage] rule manifest built ($(wc -c <"$rules_manifest_tmp") bytes, tool=$tool_id)"
+      else
+        echo "  WARN: build-rule-manifest.js failed - triage will run without rule grounding"
+      fi
+
+      # shellcheck disable=SC2086  # $rules_manifest_flag is intentionally unquoted so the empty-string case drops the flag entirely
       triage_out=$(node "$script_dir/glm-extract.js" \
         "--mode=agnix-triage" \
         "--interests-json=$interests_tmp" \
+        $rules_manifest_flag \
         "$display_name" "$latest_version" "$release_url" \
         2>"$triage_stderr" <<< "$release_body" || true)
       if [[ -n "$triage_out" ]]; then
@@ -263,7 +283,7 @@ sys.stdout.write(m.group(1).strip() if m else "")
       else
         echo "  WARN: GLM triage returned empty (stderr: $(head -1 "$triage_stderr" 2>/dev/null)) - posting raw changelog only"
       fi
-      rm -f "$interests_tmp" "$triage_stderr"
+      rm -f "$interests_tmp" "$triage_stderr" "$rules_manifest_tmp"
       trap - EXIT INT TERM
     fi
   fi
