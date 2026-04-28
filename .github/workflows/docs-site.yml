@@ -67,6 +67,11 @@ jobs:
       - name: Install website dependencies
         run: npm --prefix website ci
       - name: Generate rule docs and build site
+        # 415+ generated rule pages push webpack's server-side compile past
+        # Node's default ~4 GB heap; raise it to 6 GB (GitHub runners have
+        # ~7 GB). Pre-existing OOM observed on main's 2026-04-26 run.
+        env:
+          NODE_OPTIONS: '--max-old-space-size=6144'
         run: npm --prefix website run build
       - name: Run docs parity test
         run: cargo test -p agnix-cli --test docs_website_parity
