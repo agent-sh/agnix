@@ -131,3 +131,52 @@ test('parseArgs accepts known flags and returns defaults for the rest', () => {
   assert.equal(parsed.pretty, true);
   assert.equal(parsed.out, null);
 });
+
+test('parseArgs rejects bare --tool (no value) with exit(2)', () => {
+  // Regression guard: a bare `--tool` used to silently become the
+  // unfiltered manifest, masking operator typos. Must now fail fast.
+  const origExit = process.exit;
+  const origErr = console.error;
+  let exitCode = null;
+  process.exit = (c) => { exitCode = c; throw new Error('exit_trap'); };
+  console.error = () => {};
+  try {
+    assert.throws(() => parseArgs(['--tool']), /exit_trap/);
+    assert.equal(exitCode, 2);
+  } finally {
+    process.exit = origExit;
+    console.error = origErr;
+  }
+});
+
+test('parseArgs rejects bare --out (no value) with exit(2)', () => {
+  const origExit = process.exit;
+  const origErr = console.error;
+  let exitCode = null;
+  process.exit = (c) => { exitCode = c; throw new Error('exit_trap'); };
+  console.error = () => {};
+  try {
+    assert.throws(() => parseArgs(['--out']), /exit_trap/);
+    assert.equal(exitCode, 2);
+  } finally {
+    process.exit = origExit;
+    console.error = origErr;
+  }
+});
+
+test('parseArgs rejects empty string --tool= with exit(2)', () => {
+  // Edge case: `--tool=` (trailing equals, no value) parses `value`
+  // as "". That's still ambiguous operator intent, so reject.
+  const origExit = process.exit;
+  const origErr = console.error;
+  let exitCode = null;
+  process.exit = (c) => { exitCode = c; throw new Error('exit_trap'); };
+  console.error = () => {};
+  try {
+    assert.throws(() => parseArgs(['--tool=']), /exit_trap/);
+    assert.equal(exitCode, 2);
+  } finally {
+    process.exit = origExit;
+    console.error = origErr;
+  }
+});

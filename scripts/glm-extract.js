@@ -17,11 +17,13 @@
  *     a `--interests-json=<file>` that describes what agnix cares about
  *     for this tool (which config files, which change-types matter).
  *     Asks GLM to filter the notes down to just validator-relevant items
- *     + rule candidates. Output is markdown with:
- *       ## Agnix-relevant changes  (each bullet cites the matching interest)
- *       ## Already-covered changes (when --rules-manifest is provided)
- *       ## Rule candidates (if any)
- *       ## Irrelevant (UI, perf, telemetry, etc.)
+ *     + rule candidates. Output is markdown nested under the outer
+ *     `### Agnix Triage` heading that the workflow wraps around this
+ *     stdout; the builder uses `#### ...` so nesting stays correct:
+ *       #### Agnix-relevant changes  (each bullet cites the matching interest)
+ *       #### Already-covered changes (only when --rules-manifest is provided)
+ *       #### Rule candidates (if any)
+ *       #### Irrelevant changes (not reviewed)
  *     Used by tool-release-watch.yml to pre-triage the per-tool issue so
  *     a human reads a summary instead of the full changelog.
  *
@@ -351,5 +353,13 @@ module.exports = {
 };
 
 if (require.main === module) {
-  runCli();
+  // Attach a .catch() so any exception that escapes runCli() (e.g. a
+  // future refactor that adds a throw outside an existing try/catch)
+  // surfaces as an intelligible error + deterministic exit 1, not as
+  // an unhandled promise rejection with Node's default behavior.
+  void runCli().catch((err) => {
+    const msg = err && err.message ? err.message : String(err);
+    console.error(`Unexpected error: ${msg}`);
+    process.exit(1);
+  });
 }

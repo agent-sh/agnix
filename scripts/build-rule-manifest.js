@@ -53,10 +53,27 @@ function parseArgs(argv) {
     const eq = raw.indexOf('=');
     const key = eq >= 0 ? raw.slice(2, eq) : raw.slice(2);
     const value = eq >= 0 ? raw.slice(eq + 1) : true;
-    if (key === 'tool') out.tool = typeof value === 'string' ? value : null;
-    else if (key === 'out') out.out = typeof value === 'string' ? value : null;
-    else if (key === 'pretty') out.pretty = true;
-    else {
+    // `--tool` / `--out` take a required non-empty string value. A bare
+    // `--tool` with no `=value` parses `value` as `true` (boolean) which
+    // would silently fall back to "unfiltered manifest" or "write to
+    // stdout" - both plausible defaults but dangerous coincidences that
+    // would mask typos. Fail fast the same way glm-extract.js rejects a
+    // bare `--interests-json`.
+    if (key === 'tool') {
+      if (typeof value !== 'string' || value.length === 0) {
+        console.error('`--tool` requires a non-empty string value, e.g. --tool=claude-code');
+        process.exit(2);
+      }
+      out.tool = value;
+    } else if (key === 'out') {
+      if (typeof value !== 'string' || value.length === 0) {
+        console.error('`--out` requires a non-empty string value, e.g. --out=path/to/manifest.json');
+        process.exit(2);
+      }
+      out.out = value;
+    } else if (key === 'pretty') {
+      out.pretty = true;
+    } else {
       console.error(`unknown flag: --${key}`);
       process.exit(2);
     }

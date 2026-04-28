@@ -250,8 +250,9 @@ sys.stdout.write(m.group(1).strip() if m else "")
       interests_tmp=$(mktemp)
       triage_stderr=$(mktemp)
       rules_manifest_tmp=$(mktemp)
+      rules_manifest_stderr=$(mktemp)
       # shellcheck disable=SC2064  # intentional early expansion of tmp paths
-      trap "rm -f '$interests_tmp' '$triage_stderr' '$rules_manifest_tmp'" EXIT INT TERM
+      trap "rm -f '$interests_tmp' '$triage_stderr' '$rules_manifest_tmp' '$rules_manifest_stderr'" EXIT INT TERM
       printf '%s' "$interests_json" > "$interests_tmp"
 
       # Build a tool-scoped rule manifest so GLM can (a) classify
@@ -259,22 +260,31 @@ sys.stdout.write(m.group(1).strip() if m else "")
       # next-in-sequence rule ids (e.g. MCP-026 after MCP-025).
       # Manifest is tool-scoped + keeps unscoped rules so cross-tool
       # families (MCP, AGENTS.md) are always visible. On build failure
-      # we omit the --rules-manifest flag entirely and the prompt
-      # degrades to the un-grounded form.
-      rules_manifest_flag=""
+      # we drop the --rules-manifest flag entirely and the prompt
+      # degrades to the un-grounded form. Stderr is captured (not
+      # silenced) so the WARN message carries enough detail to debug
+      # a regression in CI without needing to re-run with more logging.
+      #
+      # Use a bash array for the optional flag rather than an unquoted
+      # string splat so a space in $rules_manifest_tmp (unlikely but
+      # possible if TMPDIR is user-configured) can't word-split into
+      # extra argv entries. The empty-array expansion contributes no
+      # tokens to the command line at all.
+      rules_manifest_args=()
       if node "$script_dir/build-rule-manifest.js" \
-           --tool="$tool_id" --out="$rules_manifest_tmp" 2>/dev/null; then
-        rules_manifest_flag="--rules-manifest=$rules_manifest_tmp"
+           --tool="$tool_id" --out="$rules_manifest_tmp" 2>"$rules_manifest_stderr"; then
+        rules_manifest_args=("--rules-manifest=$rules_manifest_tmp")
         echo "  [triage] rule manifest built ($(wc -c <"$rules_manifest_tmp") bytes, tool=$tool_id)"
       else
-        echo "  WARN: build-rule-manifest.js failed - triage will run without rule grounding"
+        first_error_line=$(head -1 "$rules_manifest_stderr" 2>/dev/null)
+        [[ -z "$first_error_line" ]] && first_error_line="(no error details)"
+        echo "  WARN: build-rule-manifest.js failed ($first_error_line) - triage will run without rule grounding"
       fi
 
-      # shellcheck disable=SC2086  # $rules_manifest_flag is intentionally unquoted so the empty-string case drops the flag entirely
       triage_out=$(node "$script_dir/glm-extract.js" \
         "--mode=agnix-triage" \
         "--interests-json=$interests_tmp" \
-        $rules_manifest_flag \
+        "${rules_manifest_args[@]}" \
         "$display_name" "$latest_version" "$release_url" \
         2>"$triage_stderr" <<< "$release_body" || true)
       if [[ -n "$triage_out" ]]; then
@@ -283,7 +293,7 @@ sys.stdout.write(m.group(1).strip() if m else "")
       else
         echo "  WARN: GLM triage returned empty (stderr: $(head -1 "$triage_stderr" 2>/dev/null)) - posting raw changelog only"
       fi
-      rm -f "$interests_tmp" "$triage_stderr" "$rules_manifest_tmp"
+      rm -f "$interests_tmp" "$triage_stderr" "$rules_manifest_tmp" "$rules_manifest_stderr"
       trap - EXIT INT TERM
     fi
   fi
