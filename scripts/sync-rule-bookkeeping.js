@@ -16,14 +16,31 @@
  * 2. `crates/agnix-rules/rules.json`
  *    - Byte-identical mirror of `knowledge-base/rules.json`.
  *
- * 3. `CLAUDE.md`, `AGENTS.md`, `README.md`
- *    - "N rules" and "N validation rules" phrases are updated to match
- *      `rules.length`. Singular forms ("N rule sourced/across") are not
- *      currently used anywhere in these files; if they appear in future
- *      prose, add the pattern to `countPatterns` below.
- *    - Validator count phrase "N validators" is updated when --validators N
- *      is passed (the count isn't automatically derivable without parsing
- *      Rust source).
+ * 3. Count phrases in every file in `COUNT_FILES`:
+ *    - `CLAUDE.md`, `AGENTS.md`, `README.md`
+ *    - `knowledge-base/README.md`, `knowledge-base/INDEX.md`
+ *    - `plugin/commands/agnix.md`, `plugin/skills/agnix/SKILL.md`,
+ *      `skills/agnix/SKILL.md`
+ *    - `plugin/.claude-plugin/plugin.json` (description string)
+ *
+ *    "N rules" and "N validation rules" phrases are updated to match
+ *    `rules.length`. Singular forms ("N rule sourced/across") are not
+ *    currently used anywhere in these files; if they appear in future
+ *    prose, add the pattern to `countPatterns` below.
+ *    Validator count phrase "N validators" is updated when --validators N
+ *    is passed (the count isn't automatically derivable without parsing
+ *    Rust source).
+ *
+ *    CHANGELOG.md is intentionally excluded - its "N rules at release"
+ *    phrases are historical and must stay frozen per-version.
+ *
+ * 3b. Package versions synced from `Cargo.toml` workspace version:
+ *    - `plugin/.claude-plugin/plugin.json`
+ *    - `npm/package.json`
+ *
+ *    The Rust workspace version is the single source of truth. Release
+ *    commits bump Cargo.toml; this script pushes the new version into
+ *    the plugin manifest and the npm wrapper so they can't drift behind.
  *
  * 4. `knowledge-base/VALIDATION-RULES.md` footer stats
  *    - `**Total Coverage**: N validation rules across M categories`
@@ -65,11 +82,74 @@ const ROOT = path.resolve(__dirname, '..');
 const KNOWLEDGE_RULES = path.join(ROOT, 'knowledge-base', 'rules.json');
 const CRATE_RULES = path.join(ROOT, 'crates', 'agnix-rules', 'rules.json');
 
-const COUNT_FILES = [
-  path.join(ROOT, 'CLAUDE.md'),
-  path.join(ROOT, 'AGENTS.md'),
-  path.join(ROOT, 'README.md'),
+// Files whose "N rules" / "N validation rules" phrases must track
+// `rules.length`. Some files (notably `knowledge-base/INDEX.md`) also
+// contain per-category counts like `| Agent Skills | 12 | ... | 15 rules |`
+// that would false-positive under a naive `\d+ rules` regex, so we
+// specify per-file patterns instead of globbing.
+//
+// Every entry describes:
+//   - `path`: file location
+//   - `patterns`: regexes to rewrite. If omitted, defaults to the
+//     historical `(\b)(\d+)( rules\b)` + `(\b)(\d+)( validation rules\b)`
+//     pair (safe for files that only mention the total count).
+//
+// CHANGELOG.md is intentionally NOT here because its "N rules at
+// release" phrases are deliberately frozen per-version.
+const DEFAULT_COUNT_PATTERNS = [
+  { re: /(\b)(\d+)( rules\b)/g },
+  { re: /(\b)(\d+)( validation rules\b)/g },
 ];
+
+// Precise patterns for files that embed per-category counts or other
+// unrelated N-rules mentions. Each pattern must include exactly three
+// capture groups: (prefix, number, suffix) so the rewrite logic is
+// identical to DEFAULT_COUNT_PATTERNS.
+//
+// knowledge-base/INDEX.md anchors:
+//   - "N rules with detection logic" (in headline text)
+//   - "Master validation reference (N rules)"
+//   - "N rules with rule IDs"
+//   - "**Total** ... **N rules**" (the totals row in the category table)
+//   - "Validation Rules:  N rules" (in the stats block)
+//   - "N validation rules across M categories" (tagline)
+const INDEX_MD_PATTERNS = [
+  { re: /(\b)(\d+)( rules with detection logic\b)/g },
+  { re: /(Master validation reference \()(\d+)( rules\))/g },
+  { re: /(\b)(\d+)( rules with rule IDs\b)/g },
+  { re: /(\*\*Total\*\*[^|]*\|\s*\*\*)(\d+)( rules\*\*\s*\|)/g },
+  { re: /(Validation Rules:\s+)(\d+)( rules\b)/g },
+  { re: /(\b)(\d+)( validation rules across\b)/g },
+];
+
+const COUNT_FILES = [
+  { path: path.join(ROOT, 'CLAUDE.md') },
+  { path: path.join(ROOT, 'AGENTS.md') },
+  { path: path.join(ROOT, 'README.md') },
+  { path: path.join(ROOT, 'knowledge-base', 'README.md') },
+  { path: path.join(ROOT, 'knowledge-base', 'INDEX.md'), patterns: INDEX_MD_PATTERNS },
+  // Plugin + standalone skill/command files. These are the user-
+  // facing descriptions that Claude Code, Codex, and the marketplace
+  // index serve. They were the source of repeated drift audits (#828,
+  // #829, #831) because no automation covered them. Each has a single
+  // "validates ... N rules" tagline so default patterns are safe.
+  { path: path.join(ROOT, 'plugin', 'commands', 'agnix.md') },
+  { path: path.join(ROOT, 'plugin', 'skills', 'agnix', 'SKILL.md') },
+  { path: path.join(ROOT, 'skills', 'agnix', 'SKILL.md') },
+  { path: path.join(ROOT, 'plugin', '.claude-plugin', 'plugin.json') },
+];
+
+// Files whose top-level `version` field must track the Cargo.toml
+// workspace version. We rewrite JSON in place - minimal diff, preserves
+// everything else verbatim via JSON.stringify(data, null, 2).
+// `plugin/.claude-plugin/plugin.json` is ALSO in COUNT_FILES above for
+// its description-string count phrase; the two passes are independent.
+const VERSION_SYNC_JSON_FILES = [
+  path.join(ROOT, 'plugin', '.claude-plugin', 'plugin.json'),
+  path.join(ROOT, 'npm', 'package.json'),
+];
+
+const WORKSPACE_CARGO_TOML = path.join(ROOT, 'Cargo.toml');
 
 const args = process.argv.slice(2);
 const checkMode = args.includes('--check');
@@ -193,26 +273,20 @@ if (!crateContent || !knowledgeContent.equals(crateContent)) {
   }
 }
 
-// ---- 3. Count phrases in CLAUDE.md / AGENTS.md / README.md ----
+// ---- 3. Count phrases in COUNT_FILES ----
 
-// Patterns to update. The pattern must be specific enough that we don't
-// match unrelated numbers. We look for " <N> rules" and
-// " <N> validation rules" with word-boundary anchoring.
-const countPatterns = [
-  { re: /(\b)(\d+)( rules\b)/g },
-  { re: /(\b)(\d+)( validation rules\b)/g },
-];
-
-for (const file of COUNT_FILES) {
+for (const entry of COUNT_FILES) {
+  const file = entry.path;
   if (!fs.existsSync(file)) continue;
   const original = readText(file);
+  const patterns = entry.patterns || DEFAULT_COUNT_PATTERNS;
   let updated = original;
-  for (const { re } of countPatterns) {
+  for (const { re } of patterns) {
     updated = updated.replace(re, (match, pre, num, post) => {
       const current = parseInt(num, 10);
       if (current === actualRuleCount) return match;
       note(
-        `${path.relative(ROOT, file)}: "${current}${post}" should be "${actualRuleCount}${post}"`
+        `${path.relative(ROOT, file)}: "${current}${post.trimEnd()}" should be "${actualRuleCount}${post.trimEnd()}"`
       );
       return `${pre}${actualRuleCount}${post}`;
     });
@@ -230,6 +304,52 @@ for (const file of COUNT_FILES) {
   if (updated !== original && !checkMode) {
     writeText(file, updated);
     console.log(`[OK] Updated count phrases in ${path.relative(ROOT, file)}`);
+  }
+}
+
+// ---- 3b. Package versions synced from Cargo.toml workspace version ----
+//
+// The Rust workspace version in `Cargo.toml` is the single source of
+// truth for the binary. Release commits bump it (see v0.22.1, v0.22.0
+// etc.) but historically missed `plugin/.claude-plugin/plugin.json`
+// and `npm/package.json`, which drifted 4+ minor versions behind
+// before the structural fix in this script landed. Now both are
+// derived from Cargo.toml and enforced in --check mode so CI + the
+// pre-push hook catch the drift before shipping.
+//
+// We parse Cargo.toml with a targeted regex rather than pulling in
+// @iarna/toml - the workspace version line is consistently shaped
+// (`version = "X.Y.Z"` at top level inside `[workspace.package]`)
+// and adding a npm dep for one line of parsing is not worth the
+// supply-chain surface.
+
+function readCargoWorkspaceVersion() {
+  const toml = readText(WORKSPACE_CARGO_TOML);
+  // Match the `[workspace.package]` section then the first `version = "..."`
+  // inside it. The `[^[]*` runs to the next section header.
+  const m = toml.match(/\[workspace\.package\][^[]*?^\s*version\s*=\s*"([^"]+)"/m);
+  if (!m) {
+    console.error(
+      '[ERROR] Could not find `version = "..."` under [workspace.package] in Cargo.toml'
+    );
+    process.exit(2);
+  }
+  return m[1];
+}
+
+const workspaceVersion = readCargoWorkspaceVersion();
+
+for (const file of VERSION_SYNC_JSON_FILES) {
+  if (!fs.existsSync(file)) continue;
+  const json = readJSON(file);
+  if (json.version === workspaceVersion) continue;
+  note(
+    `${path.relative(ROOT, file)}: version is "${json.version}", Cargo.toml workspace version is "${workspaceVersion}"`
+  );
+  if (!checkMode) {
+    json.version = workspaceVersion;
+    writeJSONPretty(file, json);
+    console.log(`[OK] Synced ${path.relative(ROOT, file)} version to ${workspaceVersion}`);
   }
 }
 
