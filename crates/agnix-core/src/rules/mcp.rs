@@ -509,10 +509,12 @@ fn parse_mcp_server_lenient(value: &serde_json::Value) -> McpServerConfig {
             .and_then(|v| v.as_str())
             .map(ToOwned::to_owned),
         // Map explicit `null` to absent so the lenient path matches the
-        // strict serde path, where `#[serde(default)]` collapses `null`
-        // into `None` for `Option<Value>`. Without this, MCP-025 would
-        // false-positive on `alwaysLoad: null` whenever some other field
-        // forces the fallback.
+        // strict serde path. For `Option<Value>`, serde's `Option` impl
+        // already treats explicit `null` as `None` (independent of
+        // `#[serde(default)]`, which only affects missing keys). Without
+        // this filter the lenient branch would clone `Value::Null` and
+        // MCP-025 would false-positive on `alwaysLoad: null` whenever
+        // some sibling field forces the fallback.
         always_load: obj.get("alwaysLoad").filter(|v| !v.is_null()).cloned(),
     }
 }
@@ -1639,11 +1641,14 @@ fn validate_server(
     // tool search - so this is a config smell, not a breakage.
     //
     // Explicit JSON `null` is treated as field-absent, matching JSON
-    // convention and `has_meaningful_server_config` above. The strict
-    // serde path collapses `null` into `None` via `#[serde(default)]`;
-    // `parse_mcp_server_lenient` now mirrors that. The `!value.is_null()`
-    // guard here is defense-in-depth against a future caller that
-    // constructs `McpServerConfig` with `Some(Value::Null)` directly.
+    // convention and `has_meaningful_server_config` above. For
+    // `Option<Value>`, serde's own `Option` impl collapses an explicit
+    // `null` into `None` (independent of `#[serde(default)]`, which
+    // only affects missing keys). `parse_mcp_server_lenient` filters
+    // `null` before cloning so the two paths agree. The
+    // `!value.is_null()` guard here is defense-in-depth against a
+    // future caller that constructs `McpServerConfig` with
+    // `Some(Value::Null)` directly.
     //
     // The diagnostic points at the server-header `(line, col)` used by
     // all other per-server rules. A precise per-field location would
@@ -3358,8 +3363,9 @@ mod tests {
         // MCP-024 flags "empty" servers. An `alwaysLoad` boolean alone is
         // still meaningless without a type/command/url, but it IS a
         // deliberate field so we should NOT report MCP-024 here. MCP-009
-        // (missing command for the default stdio transport) is the right
-        // diagnostic for this case.
+        // (missing command for the default stdio transport) IS the right
+        // diagnostic for this case - assert it fires so the test doesn't
+        // silently become vacuous if validation behavior changes.
         let content = r#"{
             "mcpServers": {
                 "partial": { "alwaysLoad": true }
@@ -3369,6 +3375,10 @@ mod tests {
         assert!(
             !diagnostics.iter().any(|d| d.rule == "MCP-024"),
             "MCP-024 should not fire when alwaysLoad is set"
+        );
+        assert!(
+            diagnostics.iter().any(|d| d.rule == "MCP-009"),
+            "MCP-009 (missing command for stdio) should fire instead"
         );
     }
 
@@ -3483,6 +3493,30 @@ mod tests {
         let mcp_025: Vec<_> = diagnostics.iter().filter(|d| d.rule == "MCP-025").collect();
         assert_eq!(mcp_025.len(), 1);
         assert!(mcp_025[0].message.contains("array"));
+    }
+
+    #[test]
+    fn test_mcp_025_flags_object_value() {
+        // Covers the `object` branch of the type-name match arm so no
+        // arm is silently untested - a user might imagine alwaysLoad as
+        // a structured config like `{ "enabled": true, "scope": "all" }`.
+        let content = r#"{
+            "mcpServers": {
+                "fs": {
+                    "type": "stdio",
+                    "command": "node",
+                    "alwaysLoad": { "enabled": true }
+                }
+            }
+        }"#;
+        let diagnostics = validate(content);
+        let mcp_025: Vec<_> = diagnostics.iter().filter(|d| d.rule == "MCP-025").collect();
+        assert_eq!(mcp_025.len(), 1);
+        assert!(
+            mcp_025[0].message.contains("object"),
+            "diagnostic should name the object type, got: {}",
+            mcp_025[0].message
+        );
     }
 
     #[test]
