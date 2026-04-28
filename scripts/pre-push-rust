@@ -1,9 +1,33 @@
 #!/bin/sh
-# Pre-push hook for Rust projects
-# Runs clippy and tests before allowing push
+# Pre-push hook for Rust projects.
+# Runs clippy + tests before allowing push, and also gates on rule-
+# bookkeeping drift so rule-count phrases, plugin.json version, and
+# npm/package.json version can never ship behind Cargo.toml.
+#
+# Bookkeeping runs FIRST because it's 2-second read-only JSON/regex
+# work, while clippy+test take minutes. Fast-fail if the cheap check
+# catches anything.
+
+set -e
 
 cd "$(git rev-parse --show-toplevel)" || exit 1
 
 echo "[INFO] Running pre-push checks..."
-cargo clippy --workspace --all-targets --all-features -- -D warnings && cargo test --workspace
-exit $?
+
+# Rule bookkeeping drift: fails if rule counts or Cargo-derived
+# versions drifted. Matches the --check step in .github/workflows/ci.yml
+# so local pushes see the same gate CI would.
+if command -v node >/dev/null 2>&1; then
+  echo "[INFO] Checking rule-bookkeeping sync..."
+  node scripts/sync-rule-bookkeeping.js --check --skip-docs || {
+    echo "[ERROR] Rule bookkeeping drift detected."
+    echo "[ERROR] Fix with: node scripts/sync-rule-bookkeeping.js"
+    exit 1
+  }
+else
+  echo "[WARN] node not on PATH; skipping rule-bookkeeping check"
+fi
+
+echo "[INFO] Running clippy + tests..."
+cargo clippy --workspace --all-targets --all-features -- -D warnings \
+  && cargo test --workspace
