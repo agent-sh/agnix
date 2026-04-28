@@ -119,12 +119,13 @@ const INDEX_MD_PATTERNS = [
   { re: /(Master validation reference \()(\d+)( rules\))/g },
   { re: /(\b)(\d+)( rules with rule IDs\b)/g },
   // "Size by Category" Total row: `| **Total** | ... | **N rules** |`.
-  // Anchor on the `**N rules**` bold pair (unique to this row;
-  // per-category rows don't bold their count) rather than the column
-  // layout, so adding/removing sibling columns doesn't break the match.
-  // The preceding `**` is the closing wrapper of whatever came in the
-  // cell before - required to avoid matching any `**N rules**` bold
-  // span outside a table.
+  // Anchor on the `**N rules**` bold-number-rules triple. In the
+  // current tree this is unique to the Total row in that table
+  // (per-category rows don't bold their counts and no other prose in
+  // INDEX.md has a bold `N rules` span), so the pattern is specific
+  // enough in practice. If prose is later added that contains
+  // `**N rules**` outside this table, the regex will false-positive
+  // and need to be tightened to include a `|` table-row anchor.
   { re: /(\*\*)(\d+)( rules\*\*)/g },
   // "Validation Rules by Category" TOTAL row: `| **TOTAL** | **N** | ... |`
   // where N is the sum of the category-level rule counts in the
@@ -157,8 +158,15 @@ const COUNT_FILES = [
 ];
 
 // Files whose top-level `version` field must track the Cargo.toml
-// workspace version. We rewrite JSON in place - minimal diff, preserves
-// everything else verbatim via JSON.stringify(data, null, 2).
+// workspace version. The rewrite uses `JSON.stringify(data, null, 2)`
+// which re-pretty-prints the whole file (2-space indent, trailing
+// newline) - key order is preserved by Node's JSON.parse/stringify
+// but any non-2-space indent, trailing-comma noise, or unusual
+// whitespace in the source would be normalized. Both current files
+// already use the 2-space convention so the diff stays minimal. If
+// you need true verbatim preservation for these, switch to a
+// targeted "version": "x.y.z" string patch.
+//
 // `plugin/.claude-plugin/plugin.json` is ALSO in COUNT_FILES above for
 // its description-string count phrase; the two passes are independent.
 const VERSION_SYNC_JSON_FILES = [
