@@ -18,7 +18,7 @@ Tools are organized by support tier (see [../CONTRIBUTING.md#tool-tier-system](.
 |------|---------------|-------------------|------------|-----------|---------------|-------------|
 | Claude Code | `CLAUDE.md`, `.claude/settings.json` | https://code.claude.com/docs/en | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-04-25 | CC-SK, CC-HK, CC-MEM, CC-AG, CC-PL |
 | Codex CLI | `AGENTS.md`, `codex.toml` | https://developers.openai.com/codex/ | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-04-25 | AGM, XP |
-| OpenCode | `AGENTS.md`, `.opencode/config.json` | https://opencode.ai/docs/ | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-04-25 | AGM, XP, OC |
+| OpenCode | `AGENTS.md`, `.opencode/config.json` | https://opencode.ai/docs/ | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-04-28 | AGM, XP, OC |
 | Kiro CLI | `.kiro/steering/*.md`, `.kiro/agents/*.json`, `.kiro/hooks/*.kiro.hook`, `.kiro/settings/mcp.json`, `.kiro/powers/*/POWER.md` | https://kiro.dev/changelog/cli/ | Automated (tool-release-watch.yml via HTML scrape) | Quarterly | 2026-04-25 | KIRO, KR-AG, KR-HK, KR-MCP, KR-PW, KR-SK |
 
 ### A Tier (test on major changes)
@@ -34,7 +34,7 @@ Tools are organized by support tier (see [../CONTRIBUTING.md#tool-tier-system](.
 | Tool | Config Format | Documentation URL | Monitoring | Frequency | Last Reviewed | Rule Prefix |
 |------|---------------|-------------------|------------|-----------|---------------|-------------|
 | Roo Code | `.roomodes`, `.rooignore`, `.roorules`, `.roo/rules/*.md`, `.roo/rules-{slug}/*.md`, `.roo/mcp.json` | https://github.com/RooCodeInc/Roo-Code | Automated (tool-release-watch.yml) | Quarterly | 2026-04-25 | ROO |
-| amp | `.amp/settings.json`, `.agents/checks/*.md` | https://ampcode.com/news | Automated (tool-release-watch.yml via ampcode.com/news.rss; tracks latest news-post slug as the release marker) | Quarterly | 2026-04-23 | AMP, AMP-SK |
+| amp | `.amp/settings.json`, `.agents/checks/*.md` | https://ampcode.com/news | Automated (tool-release-watch.yml via ampcode.com/news.rss; tracks latest news-post slug as the release marker) | Quarterly | 2026-04-28 | AMP, AMP-SK |
 
 ### C Tier (community reports fixes only)
 
