@@ -13,6 +13,7 @@
 //! input.
 
 use regex::Regex;
+#[cfg(feature = "filesystem")]
 use std::path::Path;
 
 use crate::parsers::markdown::MAX_REGEX_INPUT_SIZE;
@@ -30,13 +31,17 @@ static_regex!(fn claude_section_guard_pattern, r"(?im)^(?:#+\s*|<!--\s*)claude(?
 static_regex!(fn markdown_header_pattern, r"^#+\s+.+");
 
 // XP-004: Build command patterns
+#[cfg(feature = "filesystem")]
 static_regex!(fn build_command_pattern, r"(?m)(?:^|\s|`)((?:npm|pnpm|yarn|bun)\s+(?:install|i|add|build|test|run|exec|ci)\b[^\n`]*)");
 
 // XP-005: Tool constraint patterns
+#[cfg(feature = "filesystem")]
 static_regex!(fn tool_allow_pattern, r"(?im)(?:allowed[-_]?tools\s*:|tools\s*:\s*\[|\ballways?\s+allow\s+(\w+)\b|\bcan\s+use\s+(\w+)\b|\bmay\s+use\s+(\w+)\b)");
+#[cfg(feature = "filesystem")]
 static_regex!(fn tool_disallow_pattern, r"(?im)(?:disallowed[-_]?tools\s*:|\bnever\s+use\s+(\w+)\b|\bdon'?t\s+use\s+(\w+)\b|\bdo\s+not\s+use\s+(\w+)\b|\bforbidden\s*:\s*(\w+)\b|\bprohibited\s*:\s*(\w+)\b|\bno\s+(\w+)\s+tool\b)");
 
 // XP-006: Layer type patterns
+#[cfg(feature = "filesystem")]
 static_regex!(fn layer_precedence_pattern, r"(?im)(?:precedence|priority|override|hierarchy|takes?\s+precedence|supersede|primary\s+source|authoritative)");
 
 // ============================================================================
@@ -327,6 +332,7 @@ pub fn find_hard_coded_paths(content: &str) -> Vec<HardCodedPath> {
 // XP-004: Conflicting Build/Test Commands Detection
 // ============================================================================
 
+#[cfg(feature = "filesystem")]
 /// Package manager type for build commands
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum PackageManager {
@@ -336,6 +342,7 @@ pub enum PackageManager {
     Bun,
 }
 
+#[cfg(feature = "filesystem")]
 impl PackageManager {
     /// Get the display name for this package manager
     pub fn as_str(&self) -> &'static str {
@@ -348,6 +355,7 @@ impl PackageManager {
     }
 }
 
+#[cfg(feature = "filesystem")]
 /// Command type (build, test, install, etc.)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum CommandType {
@@ -358,6 +366,7 @@ pub enum CommandType {
     Other,
 }
 
+#[cfg(feature = "filesystem")]
 /// A build command extracted from content
 #[derive(Debug, Clone)]
 pub struct BuildCommand {
@@ -369,6 +378,7 @@ pub struct BuildCommand {
     pub raw_command: String,
 }
 
+#[cfg(feature = "filesystem")]
 /// Extract build commands from content (for XP-004)
 ///
 /// Detects npm, pnpm, yarn, and bun commands in instruction files
@@ -440,6 +450,7 @@ pub fn extract_build_commands(content: &str) -> Vec<BuildCommand> {
     results
 }
 
+#[cfg(feature = "filesystem")]
 /// Conflict between build commands across files
 #[derive(Debug, Clone)]
 pub struct BuildConflict {
@@ -457,6 +468,7 @@ pub struct BuildConflict {
     pub command_type: CommandType,
 }
 
+#[cfg(feature = "filesystem")]
 /// Detect conflicting build commands across instruction files (for XP-004)
 ///
 /// Returns conflicts when different package managers are used for the same command type.
@@ -538,6 +550,7 @@ pub fn detect_build_conflicts(
 // XP-005: Conflicting Tool Constraints Detection
 // ============================================================================
 
+#[cfg(feature = "filesystem")]
 /// Type of tool constraint
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ConstraintType {
@@ -545,6 +558,7 @@ pub enum ConstraintType {
     Disallow,
 }
 
+#[cfg(feature = "filesystem")]
 /// A tool constraint extracted from content
 #[derive(Debug, Clone)]
 pub struct ToolConstraint {
@@ -556,6 +570,7 @@ pub struct ToolConstraint {
     pub source_context: String,
 }
 
+#[cfg(feature = "filesystem")]
 /// Extract tool constraints from content (for XP-005)
 ///
 /// Detects tool allow/disallow patterns in instruction files
@@ -648,6 +663,7 @@ pub fn extract_tool_constraints(content: &str) -> Vec<ToolConstraint> {
     results
 }
 
+#[cfg(feature = "filesystem")]
 /// Extract tool names from a line after a given position
 ///
 /// Uses word boundary matching to avoid false positives (e.g., 'Bash' in 'Bashful').
@@ -681,12 +697,14 @@ fn extract_tool_names_from_line(line: &str, start_pos: usize) -> Vec<String> {
     tools
 }
 
+#[cfg(feature = "filesystem")]
 /// Check if a byte is a word character (alphanumeric or underscore)
 #[inline]
 fn is_word_char(b: u8) -> bool {
     b.is_ascii_alphanumeric() || b == b'_'
 }
 
+#[cfg(feature = "filesystem")]
 /// Known tool names for normalization
 const KNOWN_TOOLS: &[&str] = &[
     "Bash",
@@ -713,6 +731,7 @@ const KNOWN_TOOLS: &[&str] = &[
     "execute",
 ];
 
+#[cfg(feature = "filesystem")]
 /// Normalize a tool name to its canonical form if it matches a known tool
 fn normalize_tool_name(name: &str) -> Option<String> {
     let name_lower = name.to_lowercase();
@@ -724,6 +743,7 @@ fn normalize_tool_name(name: &str) -> Option<String> {
     None
 }
 
+#[cfg(feature = "filesystem")]
 /// Conflict between tool constraints across files
 #[derive(Debug, Clone)]
 pub struct ToolConflict {
@@ -739,6 +759,7 @@ pub struct ToolConflict {
     pub disallow_context: String,
 }
 
+#[cfg(feature = "filesystem")]
 /// Detect conflicting tool constraints across instruction files (for XP-005)
 ///
 /// Returns conflicts when one file allows a tool and another disallows it.
@@ -820,6 +841,7 @@ pub fn detect_tool_conflicts(
 // XP-006: Multiple Layers Without Documented Precedence
 // ============================================================================
 
+#[cfg(feature = "filesystem")]
 /// Type of instruction layer
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LayerType {
@@ -841,6 +863,7 @@ pub enum LayerType {
     Other,
 }
 
+#[cfg(feature = "filesystem")]
 impl LayerType {
     /// Get the display name for this layer type
     pub fn as_str(&self) -> &'static str {
@@ -857,6 +880,7 @@ impl LayerType {
     }
 }
 
+#[cfg(feature = "filesystem")]
 /// An instruction layer in the project
 #[derive(Debug, Clone)]
 pub struct InstructionLayer {
@@ -865,6 +889,7 @@ pub struct InstructionLayer {
     pub has_precedence_doc: bool,
 }
 
+#[cfg(feature = "filesystem")]
 /// Categorize a file path as an instruction layer (for XP-006)
 ///
 /// # Security
@@ -910,6 +935,7 @@ pub fn categorize_layer(path: &Path, content: &str) -> InstructionLayer {
     }
 }
 
+#[cfg(feature = "filesystem")]
 /// Issue when multiple instruction layers exist without documented precedence
 #[derive(Debug, Clone)]
 pub struct LayerPrecedenceIssue {
@@ -917,6 +943,7 @@ pub struct LayerPrecedenceIssue {
     pub description: String,
 }
 
+#[cfg(feature = "filesystem")]
 /// Detect precedence issues when multiple instruction layers exist (for XP-006)
 ///
 /// Returns an issue if multiple layers exist and none document precedence
@@ -953,6 +980,7 @@ pub fn detect_precedence_issues(layers: &[InstructionLayer]) -> Option<LayerPrec
     }
 }
 
+#[cfg(feature = "filesystem")]
 /// Check if a file is an instruction file (for cross-layer detection).
 ///
 /// This implementation is allocation-free: it uses `eq_ignore_ascii_case` for
@@ -1041,6 +1069,7 @@ pub fn is_instruction_file(path: &Path) -> bool {
     false
 }
 
+#[cfg(feature = "filesystem")]
 /// Case-insensitive ASCII substring search without allocating.
 fn ascii_contains_ignore_case(haystack: &str, needle: &str) -> bool {
     if needle.is_empty() {

@@ -10,6 +10,7 @@
 
 use regex::Regex;
 use std::collections::HashSet;
+#[cfg(feature = "filesystem")]
 use std::path::Path;
 
 use crate::regex_util::static_regex;
@@ -388,7 +389,11 @@ pub fn find_nested_agents_md(paths: &[std::path::PathBuf]) -> Vec<NestedAgentsMd
 
 /// Check if an AGENTS.md file has parent AGENTS.md files in its ancestry
 ///
-/// Returns the paths of parent AGENTS.md files if they exist
+/// Returns the paths of parent AGENTS.md files if they exist.
+///
+/// Only used by `rules::project_level`, which is `#![cfg(feature = "filesystem")]`;
+/// mirror the gate here so non-filesystem builds do not warn about dead code.
+#[cfg(feature = "filesystem")]
 pub fn check_agents_md_hierarchy(
     current_path: &Path,
     all_paths: &[std::path::PathBuf],
