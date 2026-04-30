@@ -485,7 +485,11 @@ mod tests {
 }"#;
         let diagnostics = validate(content);
         let gm_010: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-010").collect();
-        assert_eq!(gm_010.len(), 1, "GM-010 should fire when only memoryManager is true");
+        assert_eq!(
+            gm_010.len(),
+            1,
+            "GM-010 should fire when only memoryManager is true"
+        );
         assert_eq!(gm_010[0].level, DiagnosticLevel::Warning);
     }
 
@@ -516,7 +520,10 @@ mod tests {
 }"#;
         let diagnostics = validate(content);
         let gm_010: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-010").collect();
-        assert!(gm_010.is_empty(), "GM-010 should not fire when both flags are true");
+        assert!(
+            gm_010.is_empty(),
+            "GM-010 should not fire when both flags are true"
+        );
     }
 
     #[test]
