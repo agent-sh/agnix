@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **GM-010: memoryManager without autoMemory after v0.40 split** (#846). Gemini CLI v0.40 (PR google-gemini/gemini-cli#25601) split the combined `experimental.memoryManager` flag. Pre-v0.40 it gated both the Memory Manager subagent and background skill extraction + `/memory inbox`. Post-v0.40 `memoryManager` gates only the subagent; extraction and the inbox move to the new `autoMemory` flag. Users carrying forward only `memoryManager: true` lose the inbox silently. GM-010 (MEDIUM) warns when `memoryManager` is true and `autoMemory` is missing or false, suggesting setting both to preserve pre-v0.40 behavior. Covered by 6 comprehensive tests plus 3 schema parsing tests.
+- **Tool baselines**: Updated via `.github/tool-release-baselines.json` for four tools:
+  - `claude-code`: v2.1.121 -> v2.1.123 (closes #842) - OAuth 401 retry-loop fix under `CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS=1`; no config surface.
+  - `cursor`: 3.2.11 -> 3.2.16 (closes #843) - 3.2 line ships Multitask / Worktrees / Multi-root Workspaces (agent-window UX, on Cursor's explicit irrelevant list).
+  - `gemini-cli`: v0.39.1 -> v0.40.0 (closes #844) - `memoryManager` split covered by GM-010; remaining changes are model/provider/UX.
+  - `opencode`: v1.14.28 -> v1.14.29 (closes #845) - sole validator-adjacent item (`opencode agent create` writing valid `permissions.deny`) already enforced by OC-008.
+- **Rule count**: 415 -> 416 across all derived locations (rules.json, CLAUDE.md, AGENTS.md, README.md, plugin.json, SKILL.md files, website docs) via `scripts/sync-rule-bookkeeping.js`.
+
 ## [0.23.0] - 2026-04-28
 
 ### Added

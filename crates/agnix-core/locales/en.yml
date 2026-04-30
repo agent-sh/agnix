@@ -615,6 +615,9 @@ rules:
     message: "Failed to parse .gemini/settings.json: %{error}"
     suggestion: "Fix the JSON syntax error in .gemini/settings.json"
     unknown_key: "Unknown top-level key '%{key}' in .gemini/settings.json"
+  gm_010:
+    message: "experimental.memoryManager is enabled without experimental.autoMemory (Gemini CLI v0.40+ split these flags)"
+    suggestion: "Set experimental.autoMemory: true alongside memoryManager to keep background skill extraction and /memory inbox working after v0.40 (see https://github.com/google-gemini/gemini-cli/pull/25601)"
 
   # --- OpenCode (opencode.rs) ---
   oc_001:

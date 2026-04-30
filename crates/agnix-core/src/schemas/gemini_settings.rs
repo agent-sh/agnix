@@ -65,6 +65,28 @@ pub struct GeminiSettingsSchema {
     /// Hooks configuration object
     #[serde(rename = "hooksConfig")]
     pub hooks_config: Option<serde_json::Value>,
+    /// Experimental feature flags (nested object).
+    /// Only the flags agnix validates are modeled; unknown flags under `experimental`
+    /// are dropped from the typed result and not accessible via this struct.
+    #[serde(default)]
+    pub experimental: Option<GeminiExperimentalFlags>,
+}
+
+/// The subset of `experimental.*` flags agnix tracks.
+///
+/// Gemini CLI v0.40 (PR google-gemini/gemini-cli#25601) split the combined
+/// `experimental.memoryManager` flag. `memoryManager` now gates ONLY the
+/// Memory Manager subagent + `save_memory` tool swap, while a new
+/// `experimental.autoMemory` flag gates background skill extraction and the
+/// `/memory inbox` UI. Users who upgrade with only `memoryManager: true` lose
+/// the inbox/extraction silently. GM-010 enforces setting both to preserve
+/// pre-v0.40 behavior.
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct GeminiExperimentalFlags {
+    #[serde(rename = "memoryManager", default)]
+    pub memory_manager: Option<bool>,
+    #[serde(rename = "autoMemory", default)]
+    pub auto_memory: Option<bool>,
 }
 
 /// A single hook definition in hooksConfig
@@ -86,8 +108,12 @@ pub struct GeminiHook {
     pub description: Option<String>,
 }
 
-/// Strip single-line (//) and multi-line (/* */) comments from JSONC content
-fn strip_jsonc_comments(input: &str) -> String {
+/// Strip single-line (//) and multi-line (/* */) comments from JSONC content.
+///
+/// Preserves newlines inside block comments so byte-line counts stay aligned
+/// with the original input - useful when callers want to search the stripped
+/// buffer but still report a line number matching the raw file.
+pub fn strip_jsonc_comments(input: &str) -> String {
     let mut result = String::with_capacity(input.len());
     let chars: Vec<char> = input.chars().collect();
     let len = chars.len();
@@ -181,9 +207,19 @@ pub fn parse_gemini_settings(content: &str) -> ParsedGeminiSettings {
     // Extract hooks_config
     let hooks_config = value.get("hooksConfig").cloned();
 
+    // Extract experimental.* flags agnix tracks. Unknown flags under
+    // `experimental` are not returned; only the modeled flags in
+    // GeminiExperimentalFlags are extracted.
+    let experimental = value
+        .get("experimental")
+        .and_then(|v| serde_json::from_value::<GeminiExperimentalFlags>(v.clone()).ok());
+
     ParsedGeminiSettings {
         parse_error: None,
-        schema: Some(GeminiSettingsSchema { hooks_config }),
+        schema: Some(GeminiSettingsSchema {
+            hooks_config,
+            experimental,
+        }),
         unknown_top_keys,
     }
 }
@@ -315,5 +351,36 @@ mod tests {
     #[test]
     fn test_valid_top_level_keys_count() {
         assert_eq!(VALID_TOP_LEVEL_KEYS.len(), 12);
+    }
+
+    #[test]
+    fn test_experimental_flags_parsed() {
+        let content = r#"{
+  "experimental": {
+    "memoryManager": true,
+    "autoMemory": false
+  }
+}"#;
+        let result = parse_gemini_settings(content);
+        let schema = result.schema.unwrap();
+        let exp = schema.experimental.expect("experimental block parsed");
+        assert_eq!(exp.memory_manager, Some(true));
+        assert_eq!(exp.auto_memory, Some(false));
+    }
+
+    #[test]
+    fn test_experimental_missing_flags_are_none() {
+        let content = r#"{"experimental": {}}"#;
+        let result = parse_gemini_settings(content);
+        let exp = result.schema.unwrap().experimental.unwrap();
+        assert!(exp.memory_manager.is_none());
+        assert!(exp.auto_memory.is_none());
+    }
+
+    #[test]
+    fn test_experimental_absent() {
+        let content = r#"{"general": {}}"#;
+        let result = parse_gemini_settings(content);
+        assert!(result.schema.unwrap().experimental.is_none());
     }
 }

@@ -2156,6 +2156,14 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 **Fix**: [AUTO-FIX] No auto-fix (correct the JSON syntax)
 **Source**: geminicli.com/docs/cli/settings
 
+<a id="gm-010"></a>
+### GM-010 [MEDIUM] memoryManager Without autoMemory After v0.40 Split
+**Requirement**: Users who set `experimental.memoryManager: true` SHOULD also set `experimental.autoMemory: true` on Gemini CLI v0.40+
+**Detection**: Parse `.gemini/settings.json`; warn when `experimental.memoryManager === true` and `experimental.autoMemory` is missing or false
+**Fix**: No auto-fix (upstream declined to ship a migration shim - users may legitimately want only the subagent)
+**Rationale**: Gemini CLI v0.40 (PR #25601) split the combined `memoryManager` flag. Pre-v0.40 it gated both the Memory Manager subagent and background skill extraction + `/memory inbox`. Post-v0.40 `memoryManager` gates only the subagent; extraction and the inbox move to the new `autoMemory` flag. Users carrying forward only `memoryManager: true` lose the inbox silently.
+**Source**: github.com/google-gemini/gemini-cli/pull/25601
+
 ## GEMINI CLI AGENT RULES
 
 Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These define `kind: local` agents with YAML frontmatter containing `name`, `description`, `tools`, `mcp_servers`, and `system_prompt`. Schema documented in the gemini-cli source at `packages/core/src/agents/agentLoader.ts`.
@@ -3394,8 +3402,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 415 validation rules across 40 categories
+**Total Coverage**: 416 validation rules across 40 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 214 HIGH, 173 MEDIUM, 28 LOW
+**Certainty**: 214 HIGH, 174 MEDIUM, 28 LOW
 **Auto-Fixable**: 129 rules (31%)

@@ -469,6 +469,9 @@ rules:
     message: "Error al analizar .gemini/settings.json: %{error}"
     suggestion: "Corrige el error de sintaxis JSON en .gemini/settings.json"
     unknown_key: "Clave de nivel superior desconocida '%{key}' en .gemini/settings.json"
+  gm_010:
+    message: "experimental.memoryManager está habilitado sin experimental.autoMemory (Gemini CLI v0.40+ dividió estas banderas)"
+    suggestion: "Establece experimental.autoMemory: true junto a memoryManager para mantener la extracción de habilidades en segundo plano y /memory inbox después de v0.40 (ver https://github.com/google-gemini/gemini-cli/pull/25601)"
 
   # --- OpenCode (opencode.rs) ---
   oc_001:

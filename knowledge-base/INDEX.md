@@ -1,6 +1,6 @@
 # agnix Knowledge Base - Master Index
 
-> 415 validation rules across 36 categories, sourced from 75+ references
+> 416 validation rules across 40 categories, sourced from 75+ references
 
 
 ---
@@ -9,7 +9,7 @@
 
 | What You Need | Start Here |
 |---------------|------------|
-| **Implement validator** | [VALIDATION-RULES.md](./VALIDATION-RULES.md) - 415 rules with detection logic |
+| **Implement validator** | [VALIDATION-RULES.md](./VALIDATION-RULES.md) - 416 rules with detection logic |
 
 | **Understand a standard** | [standards/](#standards) - HARD-RULES files |
 | **Learn best practices** | [standards/](#standards) - OPINIONS files |
@@ -28,7 +28,7 @@
 knowledge-base/
 ├── INDEX.md                        # This file
 ├── README.md                       # Detailed navigation guide
-├── VALIDATION-RULES.md             # Master validation reference (415 rules)
+├── VALIDATION-RULES.md             # Master validation reference (416 rules)
 
 ├── PATTERNS-CATALOG.md             # 70 production-tested patterns
 ├── RESEARCH-TRACKING.md            # Tool inventory and monitoring process
@@ -81,7 +81,7 @@ knowledge-base/
 | **AGENTS.md** | 5 | - | - | 6 rules |
 | **Cursor** | 2 | - | - | 9 rules |
 | **agentsys** | 12 | - | - | 70 patterns |
-| **Total** | **75+** | **117KB** | **160KB** | **415 rules** |
+| **Total** | **75+** | **117KB** | **160KB** | **416 rules** |
 
 
 ### Validation Rules by Category
@@ -89,42 +89,46 @@ knowledge-base/
 | Category | Rules | HIGH | MEDIUM | LOW | Auto-Fix |
 |----------|-------|------|--------|-----|----------|
 | Agent Skills | 19 | 15 | 4 | 0 | 9 |
-| Claude Skills | 20 | 11 | 8 | 1 | 13 |
-| Claude Hooks | 25 | 13 | 8 | 4 | 16 |
-| Claude Agents | 17 | 12 | 4 | 1 | 10 |
-| Claude Memory | 13 | 8 | 5 | 0 | 3 |
 | AGENTS.md | 6 | 1 | 5 | 0 | 1 |
+| Amp Checks | 4 | 2 | 2 | 0 | 3 |
+| Amp Skills | 1 | 0 | 1 | 0 | 1 |
+| Claude Agents | 17 | 12 | 4 | 1 | 10 |
+| Claude Hooks | 27 | 15 | 8 | 4 | 16 |
+| Claude Memory | 13 | 8 | 5 | 0 | 3 |
+| Claude Output Styles | 6 | 2 | 2 | 2 | 0 |
 | Claude Plugins | 14 | 9 | 5 | 0 | 4 |
+| Claude Settings | 1 | 0 | 1 | 0 | 0 |
+| Claude Skills | 20 | 11 | 8 | 1 | 13 |
+| Cline | 7 | 4 | 3 | 0 | 3 |
+| Cline Skills | 3 | 2 | 1 | 0 | 2 |
+| Codex CLI | 60 | 30 | 25 | 5 | 10 |
+| Codex Skills | 1 | 0 | 1 | 0 | 1 |
 | GitHub Copilot | 25 | 13 | 9 | 3 | 11 |
-| MCP | 24 | 19 | 5 | 0 | 7 |
-| XML | 3 | 3 | 0 | 0 | 3 |
-| References | 4 | 2 | 2 | 0 | 1 |
-| Prompt Eng | 6 | 0 | 6 | 0 | 2 |
+| Copilot Skills | 1 | 0 | 1 | 0 | 1 |
 | Cross-Platform | 9 | 2 | 6 | 1 | 0 |
 | Cursor | 19 | 9 | 9 | 1 | 6 |
 | Cursor Skills | 1 | 0 | 1 | 0 | 1 |
-| Cline | 7 | 4 | 3 | 0 | 3 |
-| Cline Skills | 3 | 2 | 1 | 0 | 2 |
-| OpenCode | 45 | 28 | 16 | 1 | 10 |
-| OpenCode Skills | 1 | 0 | 1 | 0 | 1 |
-| Gemini CLI | 9 | 3 | 4 | 2 | 3 |
-| Version Awareness | 1 | 0 | 0 | 1 | 0 |
-| Codex CLI | 58 | 28 | 25 | 5 | 10 |
-| Copilot Skills | 1 | 0 | 1 | 0 | 1 |
-| Codex Skills | 1 | 0 | 1 | 0 | 1 |
-| Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
-| Kiro Skills | 1 | 0 | 1 | 0 | 1 |
+| Gemini Agents | 1 | 1 | 0 | 0 | 0 |
+| Gemini CLI | 10 | 3 | 5 | 2 | 3 |
 | Kiro Agents | 13 | 4 | 7 | 2 | 0 |
 | Kiro Hooks | 10 | 6 | 4 | 0 | 0 |
 | Kiro MCP | 5 | 2 | 3 | 0 | 0 |
 | Kiro Powers | 8 | 3 | 4 | 1 | 0 |
-| Amp Skills | 1 | 0 | 1 | 0 | 1 |
-| Amp Checks | 4 | 2 | 2 | 0 | 3 |
-| Roo Code Skills | 1 | 0 | 1 | 0 | 1 |
-| Roo Code | 6 | 3 | 3 | 0 | 0 |
-| Windsurf | 4 | 1 | 2 | 1 | 0 |
+| Kiro Settings | 3 | 1 | 2 | 0 | 3 |
+| Kiro Skills | 1 | 0 | 1 | 0 | 1 |
 | Kiro Steering | 14 | 3 | 9 | 2 | 1 |
-| **TOTAL** | **415** | **206** | **167** | **26** | **126** |
+| MCP | 25 | 19 | 6 | 0 | 7 |
+| OpenCode | 45 | 28 | 16 | 1 | 10 |
+| OpenCode Skills | 1 | 0 | 1 | 0 | 1 |
+| Prompt Eng | 6 | 0 | 6 | 0 | 2 |
+| References | 4 | 2 | 2 | 0 | 1 |
+| Roo Code | 6 | 3 | 3 | 0 | 0 |
+| Roo Code Skills | 1 | 0 | 1 | 0 | 1 |
+| Version Awareness | 1 | 0 | 0 | 1 | 0 |
+| Windsurf | 4 | 1 | 2 | 1 | 0 |
+| Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
+| XML | 3 | 3 | 0 | 0 | 3 |
+| **TOTAL** | **416** | **214** | **174** | **28** | **129** |
 
 
 ---
@@ -162,7 +166,7 @@ knowledge-base/
 
 ### For Implementation
 
-**Start here**: [VALIDATION-RULES.md](./VALIDATION-RULES.md) - 415 rules with rule IDs (AS-001, CC-HK-001, etc.)
+**Start here**: [VALIDATION-RULES.md](./VALIDATION-RULES.md) - 416 rules with rule IDs (AS-001, CC-HK-001, etc.)
 
 - Detection pseudocode
 - Auto-fix implementations
@@ -288,7 +292,7 @@ Total Size:           650KB
 Standards Covered:     5 (Agent Skills, MCP, Claude Code, Multi-Platform, Prompt Eng)
 Sources Consulted:    75+ (specs, docs, research papers, repos)
 Research Agents:       5 (10+ sources each)
-Validation Rules:     415 rules
+Validation Rules:     416 rules
 Auto-Fixable Rules:   96 rules
 
 Test Fixtures:        116 files
