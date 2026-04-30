@@ -2281,6 +2281,7 @@ Use pnpm install for dependencies.
 
     // ===== Short-form package manager command detection (issue fix) =====
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_npm_i_without_trailing_space() {
         // "npm i" at end of line should be detected as Install
@@ -2295,6 +2296,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_yarn_i_at_end_of_content() {
         // "yarn i\n" at end of content should be detected as Install
@@ -2309,6 +2311,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_pnpm_i_standalone() {
         // "pnpm i" as standalone command
@@ -2323,6 +2326,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_bun_i_end_of_line() {
         // "bun i" at end of line in multi-line content
@@ -2337,6 +2341,7 @@ Use pnpm install for dependencies.
 
     // ===== Backup file exclusion tests (issue fix) =====
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_backup_file_claude_md_bak() {
         use std::path::PathBuf;
@@ -2346,6 +2351,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_backup_file_agents_md_old() {
         use std::path::PathBuf;
@@ -2355,6 +2361,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_backup_file_cursor_rules_tmp() {
         use std::path::PathBuf;
@@ -2364,6 +2371,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_backup_file_swp() {
         use std::path::PathBuf;
@@ -2373,6 +2381,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_backup_file_tilde() {
         use std::path::PathBuf;
@@ -2382,6 +2391,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_valid_instruction_files_still_work() {
         use std::path::PathBuf;
@@ -2398,6 +2408,7 @@ Use pnpm install for dependencies.
 
     // ===== is_instruction_file edge case tests (issue #470) =====
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_instruction_file_case_variations() {
         use std::path::PathBuf;
@@ -2424,6 +2435,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_instruction_file_no_false_positive_cursor_substring() {
         use std::path::PathBuf;
@@ -2439,6 +2451,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_instruction_file_deeply_nested_cursor() {
         use std::path::PathBuf;
@@ -2458,6 +2471,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_instruction_file_opencode_directory() {
         use std::path::PathBuf;
@@ -2471,6 +2485,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_instruction_file_github_copilot_variants() {
         use std::path::PathBuf;
@@ -2489,6 +2504,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_instruction_file_bare_filename_no_path() {
         use std::path::PathBuf;
@@ -2503,6 +2519,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_instruction_file_empty_and_special_paths() {
         use std::path::PathBuf;
@@ -2550,6 +2567,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_extract_build_commands_oversized_input() {
         // Create content larger than MAX_REGEX_INPUT_SIZE
@@ -2562,6 +2580,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_extract_tool_constraints_oversized_input() {
         // Create content larger than MAX_REGEX_INPUT_SIZE
@@ -2574,6 +2593,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_categorize_layer_oversized_input_precedence_doc() {
         use std::path::PathBuf;
@@ -2666,6 +2686,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_extract_build_commands_exactly_at_64kb_limit() {
         let base = "npm install\n";
@@ -2683,6 +2704,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_extract_build_commands_one_byte_over_limit() {
         let base = "npm install\n";
@@ -2700,6 +2722,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_extract_tool_constraints_exactly_at_64kb_limit() {
         // 'bash' matches KNOWN_TOOLS 'Bash' via case-insensitive comparison
@@ -2719,6 +2742,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_extract_tool_constraints_one_byte_over_limit() {
         let base = "allowed-tools: bash\n";
@@ -2736,6 +2760,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_categorize_layer_exactly_at_64kb_limit() {
         use std::path::PathBuf;
@@ -2755,6 +2780,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_categorize_layer_one_byte_over_limit() {
         use std::path::PathBuf;
@@ -2792,6 +2818,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_categorize_gemini_md_variants() {
         use std::path::PathBuf;
