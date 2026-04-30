@@ -305,7 +305,6 @@ fn find_line_comment_start(line: &str) -> Option<usize> {
     None
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
