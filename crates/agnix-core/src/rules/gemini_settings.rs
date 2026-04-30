@@ -253,11 +253,19 @@ impl Validator for GeminiSettingsValidator {
 
 /// Find the 1-indexed line number of a JSON key in the content.
 /// Checks for a colon after the quoted key to avoid matching string values.
+/// Skips matches that appear in comments (after // to end of line).
 fn find_key_line(content: &str, key: &str) -> Option<usize> {
     let needle = format!("\"{}\"", key);
     for (i, line) in content.lines().enumerate() {
-        if let Some(pos) = line.find(&needle) {
-            let after = &line[pos + needle.len()..];
+        // Strip inline comments to avoid false matches in comments
+        let line_no_comment = if let Some(comment_pos) = line.find("//") {
+            &line[..comment_pos]
+        } else {
+            line
+        };
+
+        if let Some(pos) = line_no_comment.find(&needle) {
+            let after = &line_no_comment[pos + needle.len()..];
             if after.trim_start().starts_with(':') {
                 return Some(i + 1);
             }

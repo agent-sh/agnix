@@ -66,8 +66,8 @@ pub struct GeminiSettingsSchema {
     #[serde(rename = "hooksConfig")]
     pub hooks_config: Option<serde_json::Value>,
     /// Experimental feature flags (nested object).
-    /// Only the flags agnix validates are modeled; unknown flags are preserved
-    /// in the raw JSON value and ignored by the typed view.
+    /// Only the flags agnix validates are modeled; unknown flags under `experimental`
+    /// are dropped from the typed result and not accessible via this struct.
     #[serde(default)]
     pub experimental: Option<GeminiExperimentalFlags>,
 }
@@ -204,8 +204,8 @@ pub fn parse_gemini_settings(content: &str) -> ParsedGeminiSettings {
     let hooks_config = value.get("hooksConfig").cloned();
 
     // Extract experimental.* flags agnix tracks. Unknown flags under
-    // `experimental` are preserved in the raw JSON but not surfaced here;
-    // see GeminiExperimentalFlags for the list of modeled flags.
+    // `experimental` are not returned; only the modeled flags in
+    // GeminiExperimentalFlags are extracted.
     let experimental = value
         .get("experimental")
         .and_then(|v| serde_json::from_value::<GeminiExperimentalFlags>(v.clone()).ok());
