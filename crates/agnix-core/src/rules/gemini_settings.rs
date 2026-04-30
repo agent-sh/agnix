@@ -1,8 +1,9 @@
-//! Gemini CLI settings validation rules (GM-004, GM-009)
+//! Gemini CLI settings validation rules (GM-004, GM-009, GM-010)
 //!
 //! Validates:
 //! - GM-009: Settings.json parse error (HIGH) - must be valid JSON/JSONC
 //! - GM-004: Invalid hooks configuration (MEDIUM) - unknown events, missing fields
+//! - GM-010: memoryManager without autoMemory (MEDIUM) - behavior split in v0.40
 
 use crate::{
     config::LintConfig,
@@ -13,7 +14,7 @@ use crate::{
 use rust_i18n::t;
 use std::path::Path;
 
-const RULE_IDS: &[&str] = &["GM-004", "GM-009"];
+const RULE_IDS: &[&str] = &["GM-004", "GM-009", "GM-010"];
 
 pub struct GeminiSettingsValidator;
 
@@ -78,6 +79,37 @@ impl Validator for GeminiSettingsValidator {
                 }
 
                 diagnostics.push(diagnostic);
+            }
+        }
+
+        // GM-010: memoryManager without autoMemory (WARNING)
+        //
+        // Gemini CLI v0.40 split the combined `experimental.memoryManager`
+        // flag (PR google-gemini/gemini-cli#25601). Before the split, setting
+        // `memoryManager: true` gave the user BOTH the Memory Manager
+        // subagent AND background skill extraction + `/memory inbox`. After
+        // the split, `memoryManager` gates only the subagent; the inbox and
+        // background extraction move to the new `experimental.autoMemory`
+        // flag. Users who carried forward only `memoryManager: true` lose
+        // the inbox silently. This rule fires whenever `memoryManager` is
+        // explicitly true and `autoMemory` is missing or false - setting
+        // both is safe on older versions (they ignore unknown flags), so no
+        // version gate is applied.
+        if config.is_rule_enabled("GM-010") {
+            if let Some(exp) = schema.experimental.as_ref() {
+                if exp.memory_manager == Some(true) && exp.auto_memory != Some(true) {
+                    let line = find_key_line(content, "memoryManager").unwrap_or(1);
+                    diagnostics.push(
+                        Diagnostic::warning(
+                            path_buf.clone(),
+                            line,
+                            0,
+                            "GM-010",
+                            t!("rules.gm_010.message"),
+                        )
+                        .with_suggestion(t!("rules.gm_010.suggestion")),
+                    );
+                }
             }
         }
 
@@ -440,6 +472,99 @@ mod tests {
             !gm_004.is_empty(),
             "GM-004 should fire for empty command field"
         );
+    }
+
+    // ===== GM-010: memoryManager without autoMemory =====
+
+    #[test]
+    fn test_gm_010_memory_manager_without_auto_memory() {
+        let content = r#"{
+  "experimental": {
+    "memoryManager": true
+  }
+}"#;
+        let diagnostics = validate(content);
+        let gm_010: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-010").collect();
+        assert_eq!(gm_010.len(), 1, "GM-010 should fire when only memoryManager is true");
+        assert_eq!(gm_010[0].level, DiagnosticLevel::Warning);
+    }
+
+    #[test]
+    fn test_gm_010_memory_manager_with_auto_memory_false() {
+        let content = r#"{
+  "experimental": {
+    "memoryManager": true,
+    "autoMemory": false
+  }
+}"#;
+        let diagnostics = validate(content);
+        let gm_010: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-010").collect();
+        assert_eq!(
+            gm_010.len(),
+            1,
+            "GM-010 should fire when autoMemory is explicitly false"
+        );
+    }
+
+    #[test]
+    fn test_gm_010_both_flags_true_no_diagnostic() {
+        let content = r#"{
+  "experimental": {
+    "memoryManager": true,
+    "autoMemory": true
+  }
+}"#;
+        let diagnostics = validate(content);
+        let gm_010: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-010").collect();
+        assert!(gm_010.is_empty(), "GM-010 should not fire when both flags are true");
+    }
+
+    #[test]
+    fn test_gm_010_memory_manager_false_no_diagnostic() {
+        let content = r#"{
+  "experimental": {
+    "memoryManager": false
+  }
+}"#;
+        let diagnostics = validate(content);
+        let gm_010: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-010").collect();
+        assert!(
+            gm_010.is_empty(),
+            "GM-010 should not fire when memoryManager is false"
+        );
+    }
+
+    #[test]
+    fn test_gm_010_auto_memory_only_no_diagnostic() {
+        let content = r#"{
+  "experimental": {
+    "autoMemory": true
+  }
+}"#;
+        let diagnostics = validate(content);
+        let gm_010: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-010").collect();
+        assert!(
+            gm_010.is_empty(),
+            "GM-010 should not fire when only autoMemory is set"
+        );
+    }
+
+    #[test]
+    fn test_gm_010_no_experimental_block_no_diagnostic() {
+        let diagnostics = validate(r#"{"general": {}}"#);
+        let gm_010: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-010").collect();
+        assert!(gm_010.is_empty());
+    }
+
+    #[test]
+    fn test_gm_010_disabled_by_config() {
+        let mut config = LintConfig::default();
+        config.rules_mut().disabled_rules = vec!["GM-010".to_string()];
+
+        let content = r#"{"experimental": {"memoryManager": true}}"#;
+        let diagnostics = validate_with_config(content, &config);
+        let gm_010: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-010").collect();
+        assert!(gm_010.is_empty());
     }
 
     // ===== Autofix Tests =====

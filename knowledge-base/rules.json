@@ -1,8 +1,8 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 415,
-  "last_updated": "2026-04-28",
+  "total_rules": 416,
+  "last_updated": "2026-04-29",
   "schema": {
     "evidence": {
       "source_type": "spec|vendor_docs|vendor_code|paper|community",
@@ -7089,6 +7089,36 @@
       "bad_example": "{ invalid json }"
     },
     {
+      "id": "GM-010",
+      "name": "memoryManager Without autoMemory After v0.40 Split",
+      "severity": "MEDIUM",
+      "category": "gemini-cli",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/google-gemini/gemini-cli/pull/25601",
+          "https://github.com/google-gemini/gemini-cli/blob/v0.40.0/packages/cli/src/config/settingsSchema.ts",
+          "https://github.com/google-gemini/gemini-cli/blob/v0.40.0/docs/cli/auto-memory.md"
+        ],
+        "verified_on": "2026-04-29",
+        "applies_to": {
+          "tool": "gemini-cli",
+          "version_range": ">=0.40.0"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"experimental\":{\"memoryManager\":true,\"autoMemory\":true}}",
+      "bad_example": "{\"experimental\":{\"memoryManager\":true}}"
+    },
+    {
       "id": "GM-AG-001",
       "name": "Invalid auth block in Gemini agent MCP server",
       "severity": "HIGH",
@@ -11519,7 +11549,7 @@
     },
     "gemini-cli": {
       "prefix": "GM",
-      "count": 9,
+      "count": 10,
       "description": "Gemini CLI instruction file rules"
     },
     "codex": {

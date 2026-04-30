@@ -469,6 +469,9 @@ rules:
     message: "解析 .gemini/settings.json 失败: %{error}"
     suggestion: "修复 .gemini/settings.json 中的 JSON 语法错误"
     unknown_key: ".gemini/settings.json 中未知的顶级键 '%{key}'"
+  gm_010:
+    message: "experimental.memoryManager 已启用但未设置 experimental.autoMemory（Gemini CLI v0.40+ 已拆分这两个标志）"
+    suggestion: "在 memoryManager 旁同时设置 experimental.autoMemory: true，以保持 v0.40 之后后台技能提取和 /memory inbox 正常工作（参见 https://github.com/google-gemini/gemini-cli/pull/25601）"
 
   # --- OpenCode (opencode.rs) ---
   oc_001:
