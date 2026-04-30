@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Internal**: Gated XP-004/005/006 schema helpers in `agnix-core` behind the `filesystem` feature (#848). These helpers are only consumed by `rules::project_level`, which is itself feature-gated, but they were unconditionally compiled - which made every `agnix-wasm` build (no default features) emit 29 dead_code warnings. Mirrors the gate on 28 items in `schemas/cross_platform.rs` and `check_agents_md_hierarchy` in `schemas/agents_md.rs`, plus the corresponding `std::path::Path` imports. Warnings-only fix; no rule or API changes.
+
 ## [0.24.0] - 2026-04-30
 
 ### Added
