@@ -770,6 +770,7 @@ agent: something
         assert_eq!(results.len(), 2);
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_check_hierarchy_has_parent() {
         let current = PathBuf::from("project/subdir/AGENTS.md");
@@ -782,6 +783,7 @@ agent: something
         assert_eq!(parents[0], PathBuf::from("project/AGENTS.md"));
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_check_hierarchy_no_parent() {
         let current = PathBuf::from("project/AGENTS.md");

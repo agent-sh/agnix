@@ -1126,10 +1126,13 @@ mod tests {
         let _ = claude_section_guard_pattern();
         let _ = markdown_header_pattern();
         let _ = hard_coded_path_pattern();
-        let _ = build_command_pattern();
-        let _ = tool_allow_pattern();
-        let _ = tool_disallow_pattern();
-        let _ = layer_precedence_pattern();
+        #[cfg(feature = "filesystem")]
+        {
+            let _ = build_command_pattern();
+            let _ = tool_allow_pattern();
+            let _ = tool_disallow_pattern();
+            let _ = layer_precedence_pattern();
+        }
     }
 
     // ===== XP-001: Claude-Specific Features =====
@@ -1709,6 +1712,7 @@ Files are at:
 
     // ===== XP-004: Build Command Conflicts =====
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_extract_npm_commands() {
         let content = r#"# Build
@@ -1724,6 +1728,7 @@ Then `npm run build` to build the project.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_extract_pnpm_commands() {
         let content = r#"# Install
@@ -1735,6 +1740,7 @@ Use pnpm install for dependencies.
         assert_eq!(results[0].command_type, CommandType::Install);
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_extract_yarn_commands() {
         let content = "yarn add express\nyarn test";
@@ -1747,6 +1753,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_extract_bun_commands() {
         let content = "bun install\nbun run build";
@@ -1759,6 +1766,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_detect_build_conflicts() {
         use std::path::PathBuf;
@@ -1795,6 +1803,7 @@ Use pnpm install for dependencies.
         assert!(managers.contains(&PackageManager::Pnpm));
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_no_conflict_same_package_manager() {
         use std::path::PathBuf;
@@ -1827,6 +1836,7 @@ Use pnpm install for dependencies.
 
     // ===== XP-005: Tool Constraint Conflicts =====
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_extract_tool_allow_constraint() {
         let content = "allowed-tools: Read Write Bash";
@@ -1840,6 +1850,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_extract_tool_disallow_constraint() {
         let content = "Never use Bash for this task.";
@@ -1853,6 +1864,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_detect_tool_conflicts() {
         use std::path::PathBuf;
@@ -1883,6 +1895,7 @@ Use pnpm install for dependencies.
         assert_eq!(conflicts[0].tool_name, "Bash");
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_no_tool_conflict_same_constraint_type() {
         use std::path::PathBuf;
@@ -1914,6 +1927,7 @@ Use pnpm install for dependencies.
 
     // ===== XP-006: Layer Precedence =====
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_categorize_claude_md() {
         use std::path::PathBuf;
@@ -1921,6 +1935,7 @@ Use pnpm install for dependencies.
         assert_eq!(layer.layer_type, LayerType::ClaudeMd);
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_categorize_agents_md() {
         use std::path::PathBuf;
@@ -1928,6 +1943,7 @@ Use pnpm install for dependencies.
         assert_eq!(layer.layer_type, LayerType::AgentsMd);
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_categorize_cursor_rules() {
         use std::path::PathBuf;
@@ -1935,6 +1951,7 @@ Use pnpm install for dependencies.
         assert_eq!(layer.layer_type, LayerType::CursorRules);
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_precedence_detected() {
         use std::path::PathBuf;
@@ -1945,6 +1962,7 @@ Use pnpm install for dependencies.
         assert!(layer.has_precedence_doc);
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_precedence_not_detected() {
         use std::path::PathBuf;
@@ -1952,6 +1970,7 @@ Use pnpm install for dependencies.
         assert!(!layer.has_precedence_doc);
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_detect_precedence_issues_multiple_layers() {
         use std::path::PathBuf;
@@ -1979,6 +1998,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_no_precedence_issue_with_docs() {
         use std::path::PathBuf;
@@ -2000,6 +2020,7 @@ Use pnpm install for dependencies.
         assert!(issue.is_none());
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_no_precedence_issue_single_layer() {
         use std::path::PathBuf;
@@ -2014,6 +2035,7 @@ Use pnpm install for dependencies.
         assert!(issue.is_none());
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_is_instruction_file() {
         use std::path::PathBuf;
@@ -2034,6 +2056,7 @@ Use pnpm install for dependencies.
 
     // ===== Tool Extraction Word Boundary Tests (review findings) =====
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_tool_extraction_case_insensitive() {
         // "Never use BASH" should detect 'Bash' tool (case-insensitive)
@@ -2045,6 +2068,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_tool_extraction_word_boundaries() {
         // "never use subash" should NOT detect Bash (word boundary check)
@@ -2056,6 +2080,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_tool_extraction_no_false_positive_bashful() {
         // "Bashful developer" should NOT detect Bash
@@ -2072,6 +2097,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_tool_extraction_no_false_positive_reader() {
         // "Reader mode" should NOT detect Read
@@ -2083,6 +2109,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_tool_extraction_valid_word_boundary() {
         // "Read, Write, Bash" should detect all three
@@ -2095,6 +2122,7 @@ Use pnpm install for dependencies.
 
     // ===== Three-file conflict tests (review findings) =====
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_detect_build_conflicts_three_files() {
         use std::path::PathBuf;
@@ -2138,6 +2166,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_detect_tool_conflicts_three_files() {
         use std::path::PathBuf;
@@ -2190,6 +2219,7 @@ Use pnpm install for dependencies.
 
     // ===== Empty file tests (review findings) =====
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_extract_build_commands_empty_file() {
         let content = "";
@@ -2200,6 +2230,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_extract_tool_constraints_empty_file() {
         let content = "";
@@ -2210,6 +2241,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_detect_build_conflicts_empty_commands() {
         use std::path::PathBuf;
@@ -2228,6 +2260,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_detect_tool_conflicts_empty_constraints() {
         use std::path::PathBuf;
