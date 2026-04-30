@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-04-30
+
 ### Added
 - **GM-010: memoryManager without autoMemory after v0.40 split** (#846). Gemini CLI v0.40 (PR google-gemini/gemini-cli#25601) split the combined `experimental.memoryManager` flag. Pre-v0.40 it gated both the Memory Manager subagent and background skill extraction + `/memory inbox`. Post-v0.40 `memoryManager` gates only the subagent; extraction and the inbox move to the new `autoMemory` flag. Users carrying forward only `memoryManager: true` lose the inbox silently. GM-010 (MEDIUM) warns when `memoryManager` is true and `autoMemory` is missing or false, suggesting setting both to preserve pre-v0.40 behavior. Covered by 6 comprehensive tests plus 3 schema parsing tests.
 - **Tool baselines**: Updated via `.github/tool-release-baselines.json` for four tools:
