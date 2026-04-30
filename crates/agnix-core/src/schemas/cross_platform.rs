@@ -13,6 +13,7 @@
 //! input.
 
 use regex::Regex;
+#[cfg(feature = "filesystem")]
 use std::path::Path;
 
 use crate::parsers::markdown::MAX_REGEX_INPUT_SIZE;
@@ -30,13 +31,17 @@ static_regex!(fn claude_section_guard_pattern, r"(?im)^(?:#+\s*|<!--\s*)claude(?
 static_regex!(fn markdown_header_pattern, r"^#+\s+.+");
 
 // XP-004: Build command patterns
+#[cfg(feature = "filesystem")]
 static_regex!(fn build_command_pattern, r"(?m)(?:^|\s|`)((?:npm|pnpm|yarn|bun)\s+(?:install|i|add|build|test|run|exec|ci)\b[^\n`]*)");
 
 // XP-005: Tool constraint patterns
+#[cfg(feature = "filesystem")]
 static_regex!(fn tool_allow_pattern, r"(?im)(?:allowed[-_]?tools\s*:|tools\s*:\s*\[|\ballways?\s+allow\s+(\w+)\b|\bcan\s+use\s+(\w+)\b|\bmay\s+use\s+(\w+)\b)");
+#[cfg(feature = "filesystem")]
 static_regex!(fn tool_disallow_pattern, r"(?im)(?:disallowed[-_]?tools\s*:|\bnever\s+use\s+(\w+)\b|\bdon'?t\s+use\s+(\w+)\b|\bdo\s+not\s+use\s+(\w+)\b|\bforbidden\s*:\s*(\w+)\b|\bprohibited\s*:\s*(\w+)\b|\bno\s+(\w+)\s+tool\b)");
 
 // XP-006: Layer type patterns
+#[cfg(feature = "filesystem")]
 static_regex!(fn layer_precedence_pattern, r"(?im)(?:precedence|priority|override|hierarchy|takes?\s+precedence|supersede|primary\s+source|authoritative)");
 
 // ============================================================================
@@ -327,6 +332,7 @@ pub fn find_hard_coded_paths(content: &str) -> Vec<HardCodedPath> {
 // XP-004: Conflicting Build/Test Commands Detection
 // ============================================================================
 
+#[cfg(feature = "filesystem")]
 /// Package manager type for build commands
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum PackageManager {
@@ -336,6 +342,7 @@ pub enum PackageManager {
     Bun,
 }
 
+#[cfg(feature = "filesystem")]
 impl PackageManager {
     /// Get the display name for this package manager
     pub fn as_str(&self) -> &'static str {
@@ -348,6 +355,7 @@ impl PackageManager {
     }
 }
 
+#[cfg(feature = "filesystem")]
 /// Command type (build, test, install, etc.)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum CommandType {
@@ -358,6 +366,7 @@ pub enum CommandType {
     Other,
 }
 
+#[cfg(feature = "filesystem")]
 /// A build command extracted from content
 #[derive(Debug, Clone)]
 pub struct BuildCommand {
@@ -369,6 +378,7 @@ pub struct BuildCommand {
     pub raw_command: String,
 }
 
+#[cfg(feature = "filesystem")]
 /// Extract build commands from content (for XP-004)
 ///
 /// Detects npm, pnpm, yarn, and bun commands in instruction files
@@ -440,6 +450,7 @@ pub fn extract_build_commands(content: &str) -> Vec<BuildCommand> {
     results
 }
 
+#[cfg(feature = "filesystem")]
 /// Conflict between build commands across files
 #[derive(Debug, Clone)]
 pub struct BuildConflict {
@@ -457,6 +468,7 @@ pub struct BuildConflict {
     pub command_type: CommandType,
 }
 
+#[cfg(feature = "filesystem")]
 /// Detect conflicting build commands across instruction files (for XP-004)
 ///
 /// Returns conflicts when different package managers are used for the same command type.
@@ -538,6 +550,7 @@ pub fn detect_build_conflicts(
 // XP-005: Conflicting Tool Constraints Detection
 // ============================================================================
 
+#[cfg(feature = "filesystem")]
 /// Type of tool constraint
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ConstraintType {
@@ -545,6 +558,7 @@ pub enum ConstraintType {
     Disallow,
 }
 
+#[cfg(feature = "filesystem")]
 /// A tool constraint extracted from content
 #[derive(Debug, Clone)]
 pub struct ToolConstraint {
@@ -556,6 +570,7 @@ pub struct ToolConstraint {
     pub source_context: String,
 }
 
+#[cfg(feature = "filesystem")]
 /// Extract tool constraints from content (for XP-005)
 ///
 /// Detects tool allow/disallow patterns in instruction files
@@ -648,6 +663,7 @@ pub fn extract_tool_constraints(content: &str) -> Vec<ToolConstraint> {
     results
 }
 
+#[cfg(feature = "filesystem")]
 /// Extract tool names from a line after a given position
 ///
 /// Uses word boundary matching to avoid false positives (e.g., 'Bash' in 'Bashful').
@@ -681,12 +697,14 @@ fn extract_tool_names_from_line(line: &str, start_pos: usize) -> Vec<String> {
     tools
 }
 
+#[cfg(feature = "filesystem")]
 /// Check if a byte is a word character (alphanumeric or underscore)
 #[inline]
 fn is_word_char(b: u8) -> bool {
     b.is_ascii_alphanumeric() || b == b'_'
 }
 
+#[cfg(feature = "filesystem")]
 /// Known tool names for normalization
 const KNOWN_TOOLS: &[&str] = &[
     "Bash",
@@ -713,6 +731,7 @@ const KNOWN_TOOLS: &[&str] = &[
     "execute",
 ];
 
+#[cfg(feature = "filesystem")]
 /// Normalize a tool name to its canonical form if it matches a known tool
 fn normalize_tool_name(name: &str) -> Option<String> {
     let name_lower = name.to_lowercase();
@@ -724,6 +743,7 @@ fn normalize_tool_name(name: &str) -> Option<String> {
     None
 }
 
+#[cfg(feature = "filesystem")]
 /// Conflict between tool constraints across files
 #[derive(Debug, Clone)]
 pub struct ToolConflict {
@@ -739,6 +759,7 @@ pub struct ToolConflict {
     pub disallow_context: String,
 }
 
+#[cfg(feature = "filesystem")]
 /// Detect conflicting tool constraints across instruction files (for XP-005)
 ///
 /// Returns conflicts when one file allows a tool and another disallows it.
@@ -820,6 +841,7 @@ pub fn detect_tool_conflicts(
 // XP-006: Multiple Layers Without Documented Precedence
 // ============================================================================
 
+#[cfg(feature = "filesystem")]
 /// Type of instruction layer
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LayerType {
@@ -841,6 +863,7 @@ pub enum LayerType {
     Other,
 }
 
+#[cfg(feature = "filesystem")]
 impl LayerType {
     /// Get the display name for this layer type
     pub fn as_str(&self) -> &'static str {
@@ -857,6 +880,7 @@ impl LayerType {
     }
 }
 
+#[cfg(feature = "filesystem")]
 /// An instruction layer in the project
 #[derive(Debug, Clone)]
 pub struct InstructionLayer {
@@ -865,6 +889,7 @@ pub struct InstructionLayer {
     pub has_precedence_doc: bool,
 }
 
+#[cfg(feature = "filesystem")]
 /// Categorize a file path as an instruction layer (for XP-006)
 ///
 /// # Security
@@ -910,6 +935,7 @@ pub fn categorize_layer(path: &Path, content: &str) -> InstructionLayer {
     }
 }
 
+#[cfg(feature = "filesystem")]
 /// Issue when multiple instruction layers exist without documented precedence
 #[derive(Debug, Clone)]
 pub struct LayerPrecedenceIssue {
@@ -917,6 +943,7 @@ pub struct LayerPrecedenceIssue {
     pub description: String,
 }
 
+#[cfg(feature = "filesystem")]
 /// Detect precedence issues when multiple instruction layers exist (for XP-006)
 ///
 /// Returns an issue if multiple layers exist and none document precedence
@@ -953,6 +980,7 @@ pub fn detect_precedence_issues(layers: &[InstructionLayer]) -> Option<LayerPrec
     }
 }
 
+#[cfg(feature = "filesystem")]
 /// Check if a file is an instruction file (for cross-layer detection).
 ///
 /// This implementation is allocation-free: it uses `eq_ignore_ascii_case` for
@@ -1041,6 +1069,7 @@ pub fn is_instruction_file(path: &Path) -> bool {
     false
 }
 
+#[cfg(feature = "filesystem")]
 /// Case-insensitive ASCII substring search without allocating.
 fn ascii_contains_ignore_case(haystack: &str, needle: &str) -> bool {
     if needle.is_empty() {
@@ -1097,10 +1126,13 @@ mod tests {
         let _ = claude_section_guard_pattern();
         let _ = markdown_header_pattern();
         let _ = hard_coded_path_pattern();
-        let _ = build_command_pattern();
-        let _ = tool_allow_pattern();
-        let _ = tool_disallow_pattern();
-        let _ = layer_precedence_pattern();
+        #[cfg(feature = "filesystem")]
+        {
+            let _ = build_command_pattern();
+            let _ = tool_allow_pattern();
+            let _ = tool_disallow_pattern();
+            let _ = layer_precedence_pattern();
+        }
     }
 
     // ===== XP-001: Claude-Specific Features =====
@@ -1680,6 +1712,7 @@ Files are at:
 
     // ===== XP-004: Build Command Conflicts =====
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_extract_npm_commands() {
         let content = r#"# Build
@@ -1695,6 +1728,7 @@ Then `npm run build` to build the project.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_extract_pnpm_commands() {
         let content = r#"# Install
@@ -1706,6 +1740,7 @@ Use pnpm install for dependencies.
         assert_eq!(results[0].command_type, CommandType::Install);
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_extract_yarn_commands() {
         let content = "yarn add express\nyarn test";
@@ -1718,6 +1753,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_extract_bun_commands() {
         let content = "bun install\nbun run build";
@@ -1730,6 +1766,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_detect_build_conflicts() {
         use std::path::PathBuf;
@@ -1766,6 +1803,7 @@ Use pnpm install for dependencies.
         assert!(managers.contains(&PackageManager::Pnpm));
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_no_conflict_same_package_manager() {
         use std::path::PathBuf;
@@ -1798,6 +1836,7 @@ Use pnpm install for dependencies.
 
     // ===== XP-005: Tool Constraint Conflicts =====
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_extract_tool_allow_constraint() {
         let content = "allowed-tools: Read Write Bash";
@@ -1811,6 +1850,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_extract_tool_disallow_constraint() {
         let content = "Never use Bash for this task.";
@@ -1824,6 +1864,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_detect_tool_conflicts() {
         use std::path::PathBuf;
@@ -1854,6 +1895,7 @@ Use pnpm install for dependencies.
         assert_eq!(conflicts[0].tool_name, "Bash");
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_no_tool_conflict_same_constraint_type() {
         use std::path::PathBuf;
@@ -1885,6 +1927,7 @@ Use pnpm install for dependencies.
 
     // ===== XP-006: Layer Precedence =====
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_categorize_claude_md() {
         use std::path::PathBuf;
@@ -1892,6 +1935,7 @@ Use pnpm install for dependencies.
         assert_eq!(layer.layer_type, LayerType::ClaudeMd);
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_categorize_agents_md() {
         use std::path::PathBuf;
@@ -1899,6 +1943,7 @@ Use pnpm install for dependencies.
         assert_eq!(layer.layer_type, LayerType::AgentsMd);
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_categorize_cursor_rules() {
         use std::path::PathBuf;
@@ -1906,6 +1951,7 @@ Use pnpm install for dependencies.
         assert_eq!(layer.layer_type, LayerType::CursorRules);
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_precedence_detected() {
         use std::path::PathBuf;
@@ -1916,6 +1962,7 @@ Use pnpm install for dependencies.
         assert!(layer.has_precedence_doc);
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_precedence_not_detected() {
         use std::path::PathBuf;
@@ -1923,6 +1970,7 @@ Use pnpm install for dependencies.
         assert!(!layer.has_precedence_doc);
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_detect_precedence_issues_multiple_layers() {
         use std::path::PathBuf;
@@ -1950,6 +1998,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_no_precedence_issue_with_docs() {
         use std::path::PathBuf;
@@ -1971,6 +2020,7 @@ Use pnpm install for dependencies.
         assert!(issue.is_none());
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_no_precedence_issue_single_layer() {
         use std::path::PathBuf;
@@ -1985,6 +2035,7 @@ Use pnpm install for dependencies.
         assert!(issue.is_none());
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_is_instruction_file() {
         use std::path::PathBuf;
@@ -2005,6 +2056,7 @@ Use pnpm install for dependencies.
 
     // ===== Tool Extraction Word Boundary Tests (review findings) =====
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_tool_extraction_case_insensitive() {
         // "Never use BASH" should detect 'Bash' tool (case-insensitive)
@@ -2016,6 +2068,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_tool_extraction_word_boundaries() {
         // "never use subash" should NOT detect Bash (word boundary check)
@@ -2027,6 +2080,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_tool_extraction_no_false_positive_bashful() {
         // "Bashful developer" should NOT detect Bash
@@ -2043,6 +2097,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_tool_extraction_no_false_positive_reader() {
         // "Reader mode" should NOT detect Read
@@ -2054,6 +2109,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_tool_extraction_valid_word_boundary() {
         // "Read, Write, Bash" should detect all three
@@ -2066,6 +2122,7 @@ Use pnpm install for dependencies.
 
     // ===== Three-file conflict tests (review findings) =====
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_detect_build_conflicts_three_files() {
         use std::path::PathBuf;
@@ -2109,6 +2166,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_detect_tool_conflicts_three_files() {
         use std::path::PathBuf;
@@ -2161,6 +2219,7 @@ Use pnpm install for dependencies.
 
     // ===== Empty file tests (review findings) =====
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_extract_build_commands_empty_file() {
         let content = "";
@@ -2171,6 +2230,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_extract_tool_constraints_empty_file() {
         let content = "";
@@ -2181,6 +2241,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_detect_build_conflicts_empty_commands() {
         use std::path::PathBuf;
@@ -2199,6 +2260,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_detect_tool_conflicts_empty_constraints() {
         use std::path::PathBuf;
@@ -2219,6 +2281,7 @@ Use pnpm install for dependencies.
 
     // ===== Short-form package manager command detection (issue fix) =====
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_npm_i_without_trailing_space() {
         // "npm i" at end of line should be detected as Install
@@ -2233,6 +2296,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_yarn_i_at_end_of_content() {
         // "yarn i\n" at end of content should be detected as Install
@@ -2247,6 +2311,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_pnpm_i_standalone() {
         // "pnpm i" as standalone command
@@ -2261,6 +2326,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_bun_i_end_of_line() {
         // "bun i" at end of line in multi-line content
@@ -2275,6 +2341,7 @@ Use pnpm install for dependencies.
 
     // ===== Backup file exclusion tests (issue fix) =====
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_backup_file_claude_md_bak() {
         use std::path::PathBuf;
@@ -2284,6 +2351,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_backup_file_agents_md_old() {
         use std::path::PathBuf;
@@ -2293,6 +2361,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_backup_file_cursor_rules_tmp() {
         use std::path::PathBuf;
@@ -2302,6 +2371,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_backup_file_swp() {
         use std::path::PathBuf;
@@ -2311,6 +2381,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_backup_file_tilde() {
         use std::path::PathBuf;
@@ -2320,6 +2391,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_valid_instruction_files_still_work() {
         use std::path::PathBuf;
@@ -2336,6 +2408,7 @@ Use pnpm install for dependencies.
 
     // ===== is_instruction_file edge case tests (issue #470) =====
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_instruction_file_case_variations() {
         use std::path::PathBuf;
@@ -2362,6 +2435,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_instruction_file_no_false_positive_cursor_substring() {
         use std::path::PathBuf;
@@ -2377,6 +2451,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_instruction_file_deeply_nested_cursor() {
         use std::path::PathBuf;
@@ -2396,6 +2471,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_instruction_file_opencode_directory() {
         use std::path::PathBuf;
@@ -2409,6 +2485,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_instruction_file_github_copilot_variants() {
         use std::path::PathBuf;
@@ -2427,6 +2504,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_instruction_file_bare_filename_no_path() {
         use std::path::PathBuf;
@@ -2441,6 +2519,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_instruction_file_empty_and_special_paths() {
         use std::path::PathBuf;
@@ -2488,6 +2567,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_extract_build_commands_oversized_input() {
         // Create content larger than MAX_REGEX_INPUT_SIZE
@@ -2500,6 +2580,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_extract_tool_constraints_oversized_input() {
         // Create content larger than MAX_REGEX_INPUT_SIZE
@@ -2512,6 +2593,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_categorize_layer_oversized_input_precedence_doc() {
         use std::path::PathBuf;
@@ -2604,6 +2686,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_extract_build_commands_exactly_at_64kb_limit() {
         let base = "npm install\n";
@@ -2621,6 +2704,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_extract_build_commands_one_byte_over_limit() {
         let base = "npm install\n";
@@ -2638,6 +2722,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_extract_tool_constraints_exactly_at_64kb_limit() {
         // 'bash' matches KNOWN_TOOLS 'Bash' via case-insensitive comparison
@@ -2657,6 +2742,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_extract_tool_constraints_one_byte_over_limit() {
         let base = "allowed-tools: bash\n";
@@ -2674,6 +2760,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_categorize_layer_exactly_at_64kb_limit() {
         use std::path::PathBuf;
@@ -2693,6 +2780,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_categorize_layer_one_byte_over_limit() {
         use std::path::PathBuf;
@@ -2730,6 +2818,7 @@ Use pnpm install for dependencies.
         );
     }
 
+    #[cfg(feature = "filesystem")]
     #[test]
     fn test_categorize_gemini_md_variants() {
         use std::path::PathBuf;
