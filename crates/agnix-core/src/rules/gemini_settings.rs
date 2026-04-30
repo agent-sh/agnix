@@ -9,7 +9,9 @@ use crate::{
     config::LintConfig,
     diagnostics::{Diagnostic, Fix},
     rules::{Validator, ValidatorMetadata},
-    schemas::gemini_settings::{GeminiHook, VALID_HOOK_EVENTS, parse_gemini_settings},
+    schemas::gemini_settings::{
+        GeminiHook, VALID_HOOK_EVENTS, parse_gemini_settings, strip_jsonc_comments,
+    },
 };
 use rust_i18n::t;
 use std::path::Path;
@@ -79,37 +81,6 @@ impl Validator for GeminiSettingsValidator {
                 }
 
                 diagnostics.push(diagnostic);
-            }
-        }
-
-        // GM-010: memoryManager without autoMemory (WARNING)
-        //
-        // Gemini CLI v0.40 split the combined `experimental.memoryManager`
-        // flag (PR google-gemini/gemini-cli#25601). Before the split, setting
-        // `memoryManager: true` gave the user BOTH the Memory Manager
-        // subagent AND background skill extraction + `/memory inbox`. After
-        // the split, `memoryManager` gates only the subagent; the inbox and
-        // background extraction move to the new `experimental.autoMemory`
-        // flag. Users who carried forward only `memoryManager: true` lose
-        // the inbox silently. This rule fires whenever `memoryManager` is
-        // explicitly true and `autoMemory` is missing or false - setting
-        // both is safe on older versions (they ignore unknown flags), so no
-        // version gate is applied.
-        if config.is_rule_enabled("GM-010") {
-            if let Some(exp) = schema.experimental.as_ref() {
-                if exp.memory_manager == Some(true) && exp.auto_memory != Some(true) {
-                    let line = find_key_line(content, "memoryManager").unwrap_or(1);
-                    diagnostics.push(
-                        Diagnostic::warning(
-                            path_buf.clone(),
-                            line,
-                            0,
-                            "GM-010",
-                            t!("rules.gm_010.message"),
-                        )
-                        .with_suggestion(t!("rules.gm_010.suggestion")),
-                    );
-                }
             }
         }
 
@@ -247,58 +218,56 @@ impl Validator for GeminiSettingsValidator {
             }
         }
 
+        // GM-010: memoryManager without autoMemory (WARNING)
+        //
+        // Gemini CLI v0.40 split the combined `experimental.memoryManager`
+        // flag (PR google-gemini/gemini-cli#25601). Before the split, setting
+        // `memoryManager: true` gave the user BOTH the Memory Manager
+        // subagent AND background skill extraction + `/memory inbox`. After
+        // the split, `memoryManager` gates only the subagent; the inbox and
+        // background extraction move to the new `experimental.autoMemory`
+        // flag. Users who carried forward only `memoryManager: true` lose
+        // the inbox silently. This rule fires whenever `memoryManager` is
+        // explicitly true and `autoMemory` is missing or false - setting
+        // both is safe on older versions (they ignore unknown flags), so no
+        // version gate is applied.
+        if config.is_rule_enabled("GM-010") {
+            if let Some(exp) = schema.experimental.as_ref() {
+                if exp.memory_manager == Some(true) && exp.auto_memory != Some(true) {
+                    let line = find_key_line(content, "memoryManager").unwrap_or(1);
+                    diagnostics.push(
+                        Diagnostic::warning(
+                            path_buf.clone(),
+                            line,
+                            0,
+                            "GM-010",
+                            t!("rules.gm_010.message"),
+                        )
+                        .with_suggestion(t!("rules.gm_010.suggestion")),
+                    );
+                }
+            }
+        }
+
         diagnostics
     }
 }
 
 /// Find the 1-indexed line number of a JSON key in the content.
-/// Checks for a colon after the quoted key to avoid matching string values.
-/// Skips matches that appear in comments (handling // while respecting strings).
+///
+/// Uses the shared `strip_jsonc_comments` helper so both `//` line comments
+/// and `/* ... */` block comments are skipped without affecting line counts
+/// (newlines inside comments are preserved). This mirrors what the parser
+/// sees, so a key that only appears inside a comment will not produce a
+/// diagnostic line number.
 fn find_key_line(content: &str, key: &str) -> Option<usize> {
+    let stripped = strip_jsonc_comments(content);
     let needle = format!("\"{}\"", key);
-    for (i, line) in content.lines().enumerate() {
-        // Strip line comments (// to EOL) while respecting strings
-        let line_no_comment = if let Some(comment_pos) = find_line_comment_start(line) {
-            &line[..comment_pos]
-        } else {
-            line
-        };
-
-        if let Some(pos) = line_no_comment.find(&needle) {
-            let after = &line_no_comment[pos + needle.len()..];
+    for (i, line) in stripped.lines().enumerate() {
+        if let Some(pos) = line.find(&needle) {
+            let after = &line[pos + needle.len()..];
             if after.trim_start().starts_with(':') {
                 return Some(i + 1);
-            }
-        }
-    }
-    None
-}
-
-/// Find the start of a line comment (//) in a line, respecting string boundaries.
-/// Returns the index of the first / in //, or None if no // found outside strings.
-fn find_line_comment_start(line: &str) -> Option<usize> {
-    let chars: Vec<char> = line.chars().collect();
-    let mut in_string = false;
-    let mut i = 0;
-
-    while i < chars.len() {
-        if in_string {
-            if chars[i] == '\\' && i + 1 < chars.len() {
-                i += 2; // Skip escaped character
-            } else if chars[i] == '"' {
-                in_string = false;
-                i += 1;
-            } else {
-                i += 1;
-            }
-        } else {
-            if chars[i] == '"' {
-                in_string = true;
-                i += 1;
-            } else if chars[i] == '/' && i + 1 < chars.len() && chars[i + 1] == '/' {
-                return Some(i);
-            } else {
-                i += 1;
             }
         }
     }
@@ -598,6 +567,36 @@ mod tests {
     #[test]
     fn test_gm_010_no_experimental_block_no_diagnostic() {
         let diagnostics = validate(r#"{"general": {}}"#);
+        let gm_010: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-010").collect();
+        assert!(gm_010.is_empty());
+    }
+
+    #[test]
+    fn test_gm_010_ignores_key_inside_block_comment() {
+        // The string "memoryManager" appears inside a /* ... */ block comment.
+        // find_key_line must not report the comment line; since there is no
+        // real `experimental.memoryManager` key, GM-010 must not fire.
+        let content = r#"{
+  /* note: experimental.memoryManager was deprecated in v0.40,
+     see https://github.com/google-gemini/gemini-cli/pull/25601 */
+  "experimental": {}
+}"#;
+        let diagnostics = validate(content);
+        let gm_010: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-010").collect();
+        assert!(
+            gm_010.is_empty(),
+            "GM-010 must not fire when memoryManager only appears in a block comment"
+        );
+    }
+
+    #[test]
+    fn test_gm_010_ignores_key_inside_line_comment() {
+        // Same check for `//` comments on the same line as a URL-like string.
+        let content = r#"{
+  // doc: https://example.com/gemini-cli/experimental.memoryManager
+  "experimental": {}
+}"#;
+        let diagnostics = validate(content);
         let gm_010: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-010").collect();
         assert!(gm_010.is_empty());
     }

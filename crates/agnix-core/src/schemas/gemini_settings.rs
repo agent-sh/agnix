@@ -108,8 +108,12 @@ pub struct GeminiHook {
     pub description: Option<String>,
 }
 
-/// Strip single-line (//) and multi-line (/* */) comments from JSONC content
-fn strip_jsonc_comments(input: &str) -> String {
+/// Strip single-line (//) and multi-line (/* */) comments from JSONC content.
+///
+/// Preserves newlines inside block comments so byte-line counts stay aligned
+/// with the original input - useful when callers want to search the stripped
+/// buffer but still report a line number matching the raw file.
+pub fn strip_jsonc_comments(input: &str) -> String {
     let mut result = String::with_capacity(input.len());
     let chars: Vec<char> = input.chars().collect();
     let len = chars.len();
