@@ -253,12 +253,12 @@ impl Validator for GeminiSettingsValidator {
 
 /// Find the 1-indexed line number of a JSON key in the content.
 /// Checks for a colon after the quoted key to avoid matching string values.
-/// Skips matches that appear in comments (after // to end of line).
+/// Skips matches that appear in comments (handling // while respecting strings).
 fn find_key_line(content: &str, key: &str) -> Option<usize> {
     let needle = format!("\"{}\"", key);
     for (i, line) in content.lines().enumerate() {
-        // Strip inline comments to avoid false matches in comments
-        let line_no_comment = if let Some(comment_pos) = line.find("//") {
+        // Strip line comments (// to EOL) while respecting strings
+        let line_no_comment = if let Some(comment_pos) = find_line_comment_start(line) {
             &line[..comment_pos]
         } else {
             line
@@ -273,6 +273,38 @@ fn find_key_line(content: &str, key: &str) -> Option<usize> {
     }
     None
 }
+
+/// Find the start of a line comment (//) in a line, respecting string boundaries.
+/// Returns the index of the first / in //, or None if no // found outside strings.
+fn find_line_comment_start(line: &str) -> Option<usize> {
+    let chars: Vec<char> = line.chars().collect();
+    let mut in_string = false;
+    let mut i = 0;
+
+    while i < chars.len() {
+        if in_string {
+            if chars[i] == '\\' && i + 1 < chars.len() {
+                i += 2; // Skip escaped character
+            } else if chars[i] == '"' {
+                in_string = false;
+                i += 1;
+            } else {
+                i += 1;
+            }
+        } else {
+            if chars[i] == '"' {
+                in_string = true;
+                i += 1;
+            } else if chars[i] == '/' && i + 1 < chars.len() && chars[i + 1] == '/' {
+                return Some(i);
+            } else {
+                i += 1;
+            }
+        }
+    }
+    None
+}
+
 
 #[cfg(test)]
 mod tests {
