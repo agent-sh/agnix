@@ -252,17 +252,17 @@ mod i18n_tests {
     fn test_available_locales() {
         let locales = rust_i18n::available_locales!();
         assert!(
-            locales.contains(&"en"),
+            locales.iter().any(|l| l == "en"),
             "English locale must be available, found: {:?}",
             locales
         );
         assert!(
-            locales.contains(&"es"),
+            locales.iter().any(|l| l == "es"),
             "Spanish locale must be available, found: {:?}",
             locales
         );
         assert!(
-            locales.contains(&"zh-CN"),
+            locales.iter().any(|l| l == "zh-CN"),
             "Chinese locale must be available, found: {:?}",
             locales
         );
