@@ -5240,9 +5240,12 @@
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/openai/codex/pull/19129"
+          "https://github.com/openai/codex/pull/19129",
+          "https://github.com/openai/codex/pull/19733",
+          "https://github.com/openai/codex/pull/19792",
+          "https://github.com/openai/codex/blob/rust-v0.128.0/codex-rs/core/src/config/mod.rs"
         ],
-        "verified_on": "2026-04-26",
+        "verified_on": "2026-05-04",
         "applies_to": {
           "tool": "codex"
         },
