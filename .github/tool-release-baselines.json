@@ -16,7 +16,7 @@
         "mcp"
       ],
       "github_repo": "anthropics/claude-code",
-      "last_known_version": "v2.1.123",
+      "last_known_version": "v2.1.126",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
