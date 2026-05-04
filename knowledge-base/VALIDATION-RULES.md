@@ -2460,7 +2460,7 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 **Requirement**: `agents.max_threads` MUST NOT be set when `multi_agent_v2` is enabled - the v2 lifecycle manages threading internally, and Codex fails config load with "agents.max_threads cannot be set when multi_agent_v2 is enabled"
 **Detection**: Detect `multi_agent_v2` enabled in either the flat form (`[features] multi_agent_v2 = true`) or the table form (`[features.multi_agent_v2] enabled = true`); error when the feature is active AND `[agents] max_threads` is explicitly set
 **Fix**: Manual - remove `agents.max_threads` (v2 manages threading) or disable `multi_agent_v2` if the legacy limit is needed
-**Source**: openai/codex#19129 (rejected at config-load time in rust-v0.125.0)
+**Source**: openai/codex#19129 (introduced), openai/codex#19733 (briefly removed), openai/codex#19792 (restored, with cap moved to `[features.multi_agent_v2].max_concurrent_threads_per_session`). Verified against rust-v0.128.0.
 
 <a id="cdx-ag-004"></a>
 ### CDX-AG-004 [MEDIUM] AGENTS.md Exceeds Size Limit

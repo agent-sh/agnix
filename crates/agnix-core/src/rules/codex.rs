@@ -1826,11 +1826,13 @@ fn validate_codex_config_rules(
     }
 
     // CDX-CFG-029: agents.max_threads cannot be set when multi_agent_v2 is
-    // enabled. Upstream: openai/codex#19129 - multi_agent_v2 uses the v2 agent
-    // lifecycle; accepting the legacy `agents.max_threads` limit alongside it
-    // creates conflicting configuration semantics. Codex now fails config
-    // load with "agents.max_threads cannot be set when multi_agent_v2 is
-    // enabled".
+    // enabled. Upstream: openai/codex#19129 introduced the check;
+    // openai/codex#19733 briefly removed it; openai/codex#19792 restored it
+    // while moving the cap into `[features.multi_agent_v2].max_concurrent_threads_per_session`.
+    // multi_agent_v2 uses the v2 agent lifecycle and rejects the legacy
+    // `agents.max_threads` limit at config load with "agents.max_threads
+    // cannot be set when multi_agent_v2 is enabled". Verified against the
+    // rust-v0.128.0 source tag.
     if config.is_rule_enabled("CDX-CFG-029")
         && value_at_path(&root, &["agents", "max_threads"]).is_some()
         && is_multi_agent_v2_enabled(&root)

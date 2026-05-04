@@ -13,7 +13,7 @@ keywords: ["CDX-CFG-029", "incompatible agents.max_threads with multi_agent_v2",
 - **Category**: `Codex CLI`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-26`
+- **Verified On**: `2026-05-04`
 
 ## Applicability
 
@@ -24,6 +24,9 @@ keywords: ["CDX-CFG-029", "incompatible agents.max_threads with multi_agent_v2",
 ## Evidence Sources
 
 - https://github.com/openai/codex/pull/19129
+- https://github.com/openai/codex/pull/19733
+- https://github.com/openai/codex/pull/19792
+- https://github.com/openai/codex/blob/rust-v0.128.0/codex-rs/core/src/config/mod.rs
 
 ## Test Coverage Metadata
 

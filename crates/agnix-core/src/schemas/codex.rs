@@ -31,7 +31,13 @@ pub const VALID_MCP_OAUTH_STORES: &[&str] = &["file", "keyring", "auto", "epheme
 pub const AGENTS_MD_MAX_SIZE: usize = 100_000;
 
 /// Known valid top-level keys for .codex/config.toml
-/// Sourced from <https://developers.openai.com/codex/> sample config
+///
+/// Sourced from the upstream JSON schema at
+/// <https://github.com/openai/codex/blob/rust-v0.128.0/codex-rs/core/config.schema.json>
+/// (see also <https://developers.openai.com/codex/> for the prose overview).
+///
+/// When catching up to a new Codex release, regenerate this list by diffing
+/// `codex-rs/core/config.schema.json` against these constants.
 pub const KNOWN_TOP_LEVEL_KEYS: &[&str] = &[
     // Core model settings
     "model",
@@ -47,6 +53,8 @@ pub const KNOWN_TOP_LEVEL_KEYS: &[&str] = &[
     "model_reasoning_summary",
     "model_verbosity",
     "model_supports_reasoning_summaries",
+    "plan_mode_reasoning_effort",
+    "model_catalog_json",
     // Instructions
     "developer_instructions",
     "instructions",
@@ -59,6 +67,7 @@ pub const KNOWN_TOP_LEVEL_KEYS: &[&str] = &[
     // Approval & sandbox
     "approval_policy",
     "sandbox_mode",
+    "default_permissions",
     // Authentication
     "cli_auth_credentials_store",
     "chatgpt_base_url",
@@ -66,6 +75,8 @@ pub const KNOWN_TOP_LEVEL_KEYS: &[&str] = &[
     "forced_login_method",
     "mcp_oauth_credentials_store",
     "mcp_oauth_callback_port",
+    "mcp_oauth_callback_url",
+    "openai_base_url",
     // Project docs
     "project_doc_max_bytes",
     "project_doc_fallback_filenames",
@@ -81,12 +92,25 @@ pub const KNOWN_TOP_LEVEL_KEYS: &[&str] = &[
     "web_search",
     // Profiles
     "profile",
+    // Shell / system
+    "allow_login_shell",
+    "zsh_path",
+    "sqlite_home",
+    "background_terminal_max_timeout",
+    // Telemetry / attribution
+    "commit_attribution",
+    "service_tier",
+    "suppress_unstable_features_warning",
     // Experimental
     "experimental_use_unified_exec_tool",
     "experimental_use_freeform_apply_patch",
     "experimental_realtime_start_instructions",
     "experimental_realtime_ws_startup_context",
+    "experimental_realtime_ws_backend_prompt",
+    "experimental_realtime_ws_base_url",
+    "experimental_realtime_ws_model",
     "experimental_thread_store_endpoint",
+    "experimental_thread_config_endpoint",
     // Instruction-section toggles (added in Codex rust-v0.122.0 catch-up)
     "include_apps_instructions",
     "include_environment_context",
@@ -123,6 +147,21 @@ pub const KNOWN_TABLE_KEYS: &[&str] = &[
     // ([realtime] / [[marketplaces]]) in addition to inline values.
     "realtime",
     "marketplaces",
+    // Added in Codex rust-v0.128.0 catch-up (sourced from upstream config.schema.json)
+    "agents",
+    "analytics",
+    "apps",
+    "audio",
+    "auto_review",
+    "approvals_reviewer",
+    "experimental_thread_store",
+    "ghost_snapshot",
+    "hooks",
+    "memories",
+    "permissions",
+    "plugins",
+    "tools",
+    "windows",
 ];
 
 /// An unknown key found in config
@@ -538,6 +577,90 @@ name = "test"
         assert!(
             result.unknown_keys.is_empty(),
             "Known table keys should not be flagged"
+        );
+    }
+
+    #[test]
+    fn test_codex_0_128_0_new_scalar_keys_not_flagged() {
+        // Scalar keys introduced (or surfaced) in Codex rust-v0.128.0's upstream
+        // JSON schema. Regression guard: if any of these ever get removed from
+        // KNOWN_TOP_LEVEL_KEYS by mistake, CDX-004 starts false-positive-ing on
+        // valid 0.128 configs.
+        let content = r#"
+plan_mode_reasoning_effort = "low"
+model_catalog_json = "/tmp/catalog.json"
+default_permissions = "strict"
+mcp_oauth_callback_url = "http://localhost:7711/callback"
+openai_base_url = "https://api.openai.com/v1"
+allow_login_shell = true
+zsh_path = "/usr/local/bin/zsh"
+sqlite_home = "/var/lib/codex"
+background_terminal_max_timeout = 60
+commit_attribution = "codex"
+service_tier = "fast"
+suppress_unstable_features_warning = false
+experimental_realtime_ws_backend_prompt = "hello"
+experimental_realtime_ws_base_url = "wss://example.com/rt"
+experimental_realtime_ws_model = "gpt-realtime"
+experimental_thread_config_endpoint = "https://example.com/threads"
+"#;
+        let result = parse_codex_toml(content);
+        assert!(result.parse_error.is_none());
+        assert!(
+            result.unknown_keys.is_empty(),
+            "0.128 top-level keys should not be flagged as unknown, got: {:?}",
+            result
+                .unknown_keys
+                .iter()
+                .map(|u| u.key.as_str())
+                .collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn test_codex_0_128_0_new_table_keys_not_flagged() {
+        // Table sections introduced (or surfaced) in Codex rust-v0.128.0's upstream
+        // JSON schema. Each one is a `[section]` header.
+        let content = r#"
+[agents]
+max_threads = 4
+
+[analytics]
+
+[apps]
+
+[audio]
+
+[auto_review]
+
+[approvals_reviewer]
+
+[experimental_thread_store]
+
+[ghost_snapshot]
+
+[hooks]
+
+[memories]
+
+[permissions]
+
+[plugins]
+
+[tools]
+
+[windows]
+"#;
+        let result = parse_codex_toml(content);
+        assert!(result.parse_error.is_none());
+        assert!(
+            result.unknown_keys.is_empty(),
+            "0.128 table sections should not be flagged as unknown, got: {:?}",
+            result
+                .unknown_keys
+                .iter()
+                .map(|u| u.key.as_str())
+                .collect::<Vec<_>>()
         );
     }
 
