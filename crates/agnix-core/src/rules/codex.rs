@@ -131,6 +131,11 @@ const KNOWN_PERMISSIONS_NETWORK_KEYS: &[&str] = &[
 
 const VALID_WINDOWS_SANDBOX_VALUES: &[&str] = &["elevated", "unelevated"];
 
+// KNOWN_CONFIG_TOP_LEVEL_KEYS is the parallel allow-list used for .codex/config.{json,yaml}
+// unknown-top-level-key detection. Keep it in sync with KNOWN_TOP_LEVEL_KEYS ∪ KNOWN_TABLE_KEYS
+// in schemas/codex.rs (this set represents the flat union - the JSON/YAML backends don't
+// distinguish scalar top-level keys from TOML `[section]` tables).
+// Sourced from upstream codex-rs/core/config.schema.json @ rust-v0.128.0. Alphabetized.
 const KNOWN_CONFIG_TOP_LEVEL_KEYS: &[&str] = &[
     "agents",
     "allow_login_shell",
@@ -139,6 +144,7 @@ const KNOWN_CONFIG_TOP_LEVEL_KEYS: &[&str] = &[
     "approvals_reviewer",
     "apps",
     "audio",
+    "auto_review",
     "background_terminal_max_timeout",
     "chatgpt_base_url",
     "check_for_update_on_startup",
@@ -154,6 +160,8 @@ const KNOWN_CONFIG_TOP_LEVEL_KEYS: &[&str] = &[
     "experimental_realtime_ws_base_url",
     "experimental_realtime_ws_model",
     "experimental_realtime_ws_startup_context",
+    "experimental_thread_config_endpoint",
+    "experimental_thread_store",
     "experimental_thread_store_endpoint",
     "experimental_use_freeform_apply_patch",
     "experimental_use_unified_exec_tool",
@@ -165,6 +173,7 @@ const KNOWN_CONFIG_TOP_LEVEL_KEYS: &[&str] = &[
     "ghost_snapshot",
     "hide_agent_reasoning",
     "history",
+    "hooks",
     "include_apps_instructions",
     "include_environment_context",
     "include_permissions_instructions",
@@ -3664,6 +3673,41 @@ hide_full_access_warning = true
         let yaml = "approval_policy: always\n";
         let yaml_diags = validate_config_at_path(".codex/config.yaml", yaml);
         assert!(yaml_diags.iter().any(|d| d.rule == "CDX-CFG-001"));
+    }
+
+    #[test]
+    fn test_codex_0_128_0_new_json_yaml_keys_not_flagged() {
+        // Regression guard for the JSON/YAML unknown-top-level-key path
+        // (KNOWN_CONFIG_TOP_LEVEL_KEYS). Mirror of the TOML-side tests in
+        // schemas/codex.rs; the two allow-lists are deliberately separate
+        // because the JSON/YAML path treats top-level scalars and objects
+        // uniformly while the TOML path splits scalar vs `[table]`.
+        let json = r#"{
+            "auto_review": {},
+            "experimental_thread_store": {},
+            "experimental_thread_config_endpoint": "https://example.com/threads",
+            "hooks": {}
+        }"#;
+        let json_diags = validate_config_at_path(".codex/config.json", json);
+        assert!(
+            json_diags.iter().all(|d| d.rule != "CDX-004"),
+            "0.128 JSON keys should not trigger CDX-004, got: {:?}",
+            json_diags
+                .iter()
+                .filter(|d| d.rule == "CDX-004")
+                .collect::<Vec<_>>()
+        );
+
+        let yaml = "auto_review: {}\nhooks: {}\nexperimental_thread_store: {}\n";
+        let yaml_diags = validate_config_at_path(".codex/config.yaml", yaml);
+        assert!(
+            yaml_diags.iter().all(|d| d.rule != "CDX-004"),
+            "0.128 YAML keys should not trigger CDX-004, got: {:?}",
+            yaml_diags
+                .iter()
+                .filter(|d| d.rule == "CDX-004")
+                .collect::<Vec<_>>()
+        );
     }
 
     #[test]

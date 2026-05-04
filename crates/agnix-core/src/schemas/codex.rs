@@ -39,78 +39,78 @@ pub const AGENTS_MD_MAX_SIZE: usize = 100_000;
 /// When catching up to a new Codex release, regenerate this list by diffing
 /// `codex-rs/core/config.schema.json` against these constants.
 pub const KNOWN_TOP_LEVEL_KEYS: &[&str] = &[
-    // Core model settings
-    "model",
-    "personality",
-    "review_model",
-    "model_provider",
-    "oss_provider",
-    "model_context_window",
-    "model_auto_compact_token_limit",
-    "tool_output_token_limit",
+    // Core model settings (alphabetized within block)
     "log_dir",
+    "model",
+    "model_auto_compact_token_limit",
+    "model_catalog_json",
+    "model_context_window",
+    "model_provider",
     "model_reasoning_effort",
     "model_reasoning_summary",
-    "model_verbosity",
     "model_supports_reasoning_summaries",
+    "model_verbosity",
+    "oss_provider",
+    "personality",
     "plan_mode_reasoning_effort",
-    "model_catalog_json",
+    "review_model",
+    "tool_output_token_limit",
     // Instructions
-    "developer_instructions",
-    "instructions",
     "compact_prompt",
-    "model_instructions_file",
+    "developer_instructions",
     "experimental_compact_prompt_file",
     "include_apply_patch_tool",
+    "instructions",
+    "model_instructions_file",
     // Notifications
     "notify",
     // Approval & sandbox
     "approval_policy",
-    "sandbox_mode",
     "default_permissions",
+    "sandbox_mode",
     // Authentication
-    "cli_auth_credentials_store",
     "chatgpt_base_url",
+    "cli_auth_credentials_store",
     "forced_chatgpt_workspace_id",
     "forced_login_method",
-    "mcp_oauth_credentials_store",
     "mcp_oauth_callback_port",
     "mcp_oauth_callback_url",
+    "mcp_oauth_credentials_store",
     "openai_base_url",
     // Project docs
-    "project_doc_max_bytes",
     "project_doc_fallback_filenames",
+    "project_doc_max_bytes",
     "project_root_markers",
     // UI
+    "check_for_update_on_startup",
+    "disable_paste_burst",
     "file_opener",
     "hide_agent_reasoning",
     "show_raw_agent_reasoning",
-    "disable_paste_burst",
     "windows_wsl_setup_acknowledged",
-    "check_for_update_on_startup",
     // Web search
     "web_search",
     // Profiles
     "profile",
-    // Shell / system
+    // Shell / system (alphabetized within block; added in rust-v0.128.0 catch-up)
     "allow_login_shell",
-    "zsh_path",
-    "sqlite_home",
     "background_terminal_max_timeout",
-    // Telemetry / attribution
+    "sqlite_home",
+    "zsh_path",
+    // Telemetry / attribution (added in rust-v0.128.0 catch-up)
     "commit_attribution",
     "service_tier",
     "suppress_unstable_features_warning",
-    // Experimental
-    "experimental_use_unified_exec_tool",
-    "experimental_use_freeform_apply_patch",
+    // Experimental (alphabetized)
     "experimental_realtime_start_instructions",
-    "experimental_realtime_ws_startup_context",
     "experimental_realtime_ws_backend_prompt",
     "experimental_realtime_ws_base_url",
     "experimental_realtime_ws_model",
-    "experimental_thread_store_endpoint",
+    "experimental_realtime_ws_startup_context",
     "experimental_thread_config_endpoint",
+    "experimental_thread_store_endpoint",
+    "experimental_use_freeform_apply_patch",
+    "experimental_use_unified_exec_tool",
     // Instruction-section toggles (added in Codex rust-v0.122.0 catch-up)
     "include_apps_instructions",
     "include_environment_context",
@@ -147,13 +147,14 @@ pub const KNOWN_TABLE_KEYS: &[&str] = &[
     // ([realtime] / [[marketplaces]]) in addition to inline values.
     "realtime",
     "marketplaces",
-    // Added in Codex rust-v0.128.0 catch-up (sourced from upstream config.schema.json)
+    // Added in Codex rust-v0.128.0 catch-up (sourced from upstream
+    // codex-rs/core/config.schema.json). Alphabetized within block.
     "agents",
     "analytics",
+    "approvals_reviewer",
     "apps",
     "audio",
     "auto_review",
-    "approvals_reviewer",
     "experimental_thread_store",
     "ghost_snapshot",
     "hooks",
