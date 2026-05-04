@@ -248,9 +248,9 @@
           ".cursor/mcp.json"
         ],
         "relevant": [
-          "Changes to .cursor/rules/*.mdc frontmatter (globs, description, alwaysApply)",
+          "Changes to .cursor/rules/**/*.{md,mdc} frontmatter (globs, description, alwaysApply)",
           "New hook shapes in .cursor/hooks.json",
-          "Agent frontmatter schema in .cursor/agents/*.md",
+          "Agent frontmatter schema in .cursor/agents/**/*.md",
           "environment.json schema changes",
           "MCP config shape inside .cursor/mcp.json"
         ],
