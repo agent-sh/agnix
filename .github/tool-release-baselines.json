@@ -229,7 +229,8 @@
       "tier": "a",
       "display_name": "Cursor",
       "validators": [
-        "cursor"
+        "cursor",
+        "mcp"
       ],
       "github_repo": null,
       "html_url": "https://api2.cursor.sh/updates/api/update/darwin/cursor/0.0.1/stable",
@@ -239,10 +240,10 @@
       "notes": "Tracked via Cursor's stable update endpoint (the same one the desktop app polls). Returns JSON like {\"url\":\"...\",\"name\":\"3.1.17\"}. Channel is hardcoded to 'stable' for darwin; the version is platform-agnostic (same release ships across darwin/linux/win32). Prose changelog at https://cursor.com/changelog (Next.js SPA - not scrapeable from raw HTML).",
       "changes_of_interest": {
         "config_surfaces": [
-          ".cursor/rules/*.mdc",
+          ".cursor/rules/**/*.{md,mdc}",
           ".cursorrules (legacy)",
           ".cursor/hooks.json",
-          ".cursor/agents/*.md",
+          ".cursor/agents/**/*.md",
           ".cursor/environment.json",
           ".cursor/mcp.json"
         ],
