@@ -1,6 +1,6 @@
 {
   "version": "1.1",
-  "last_updated": "2026-05-04",
+  "last_updated": "2026-05-06",
   "description": "Tracks the latest release of every tool agnix validates (one entry per tool with a validator in crates/agnix-core/src/rules/). Used by .github/workflows/tool-release-watch.yml to open per-tool issues when a new release is published. Untracked tools include the precise publication URL in untracked_reason so a maintainer can monitor manually.\n\nOptional `changes_of_interest` per tool describes what agnix cares about: `config_surfaces` (files agnix validates), `relevant` (change-types that likely affect a validator), `irrelevant` (safe to skip). When set and GLM_API_KEY is available, the watcher runs scripts/glm-extract.js --mode=agnix-triage to produce a pre-filtered summary at the top of the issue body. Falls back gracefully to the full changelog on any LLM failure.",
   "tools": {
     "claude-code": {
@@ -303,9 +303,27 @@
       "html_url": "https://ampcode.com/news.rss",
       "version_regex": "https://ampcode\\.com/news/[a-zA-Z0-9._-]+",
       "notes_extractor": "rss_cdata",
-      "last_known_version": "opus-4.7",
+      "last_known_version": "gpt-5.5",
       "tracked": true,
-      "notes": "Tracked via the amp news RSS feed; the 'version' is the slug of the latest /news/ post (e.g., amp-free-is-ad-free). Source is not on GitHub; npm @sourcegraph/amp publishes per-commit (no semver gates) so npm version-bump tracking would be noise. Issue body uses the first <item><description> CDATA from the RSS feed (already structured HTML - no LLM needed)."
+      "notes": "Tracked via the amp news RSS feed; the 'version' is the slug of the latest /news/ post (e.g., amp-free-is-ad-free). Source is not on GitHub; npm @sourcegraph/amp publishes per-commit (no semver gates) so npm version-bump tracking would be noise. Issue body uses the first <item><description> CDATA from the RSS feed (already structured HTML - no LLM needed).",
+      "changes_of_interest": {
+        "config_surfaces": [
+          ".amp/settings.json",
+          ".agents/checks/*.md",
+          "AGENTS.md"
+        ],
+        "relevant": [
+          "New or renamed keys in .amp/settings.json",
+          "Changes to check frontmatter schema (name, description, severity-default, tools)",
+          "Changes to AGENTS.md glob pattern parsing or frontmatter"
+        ],
+        "irrelevant": [
+          "Model additions (e.g. GPT-5.5, Opus 4.x)",
+          "Performance improvements and bug fixes",
+          "TUI/Vim/WSL integration tweaks",
+          "Theme or notification changes"
+        ]
+      }
     },
     "gemini-cli": {
       "tier": "c",
