@@ -1,4 +1,4 @@
-//! MCP (Model Context Protocol) validation (MCP-001 to MCP-025)
+//! MCP (Model Context Protocol) validation (MCP-001 to MCP-026)
 
 use crate::{
     config::LintConfig,
@@ -233,7 +233,7 @@ const RULE_IDS: &[&str] = &[
     "MCP-001", "MCP-002", "MCP-003", "MCP-004", "MCP-005", "MCP-006", "MCP-007", "MCP-008",
     "MCP-009", "MCP-010", "MCP-011", "MCP-012", "MCP-013", "MCP-014", "MCP-015", "MCP-016",
     "MCP-017", "MCP-018", "MCP-019", "MCP-020", "MCP-021", "MCP-022", "MCP-023", "MCP-024",
-    "MCP-025",
+    "MCP-025", "MCP-026",
 ];
 
 pub struct McpValidator;
@@ -320,6 +320,9 @@ impl Validator for McpValidator {
         validate_capability_keys(&raw_value, path, content, config, &mut diagnostics);
         if config.is_rule_enabled("MCP-023") {
             validate_duplicate_server_names(path, content, &mut diagnostics);
+        }
+        if config.is_rule_enabled("MCP-026") {
+            validate_reserved_server_names(path, content, &mut diagnostics);
         }
 
         // Validate MCP server configurations (MCP-009 to MCP-012, MCP-024)
@@ -688,26 +691,77 @@ fn validate_capability_keys(
 }
 
 fn validate_duplicate_server_names(path: &Path, content: &str, diagnostics: &mut Vec<Diagnostic>) {
+    use std::collections::HashSet;
+
+    let line_starts = compute_line_starts(content);
+    let mut seen: HashSet<String> = HashSet::new();
+
+    for (name, offset) in collect_mcp_server_name_offsets(content) {
+        if !seen.insert(name.clone()) {
+            let (line, col) = line_col_at(offset, &line_starts);
+            diagnostics.push(
+                Diagnostic::error(
+                    path.to_path_buf(),
+                    line,
+                    col,
+                    "MCP-023",
+                    format!("Duplicate MCP server name '{}'", name),
+                )
+                .with_suggestion("Rename duplicate mcpServers keys so each server name is unique"),
+            );
+        }
+    }
+}
+
+/// MCP-026: flag MCP server names that Claude Code reserves for internal use.
+/// As of Claude Code 2.1.128, `workspace` is a reserved server name - existing
+/// servers with that name are skipped at load with only a warning in Claude
+/// Code's own logs, which is easy for users to miss. Surface it as a hard
+/// config error so the silent-skip footgun is caught before deployment.
+///
+/// Reserved names are compared case-sensitively to match Claude Code's own
+/// comparison - the upstream release note uses the lowercase literal
+/// `workspace`, and MCP server maps elsewhere in the config are
+/// case-sensitive JSON keys.
+fn validate_reserved_server_names(path: &Path, content: &str, diagnostics: &mut Vec<Diagnostic>) {
     let line_starts = compute_line_starts(content);
 
-    for (duplicate, duplicate_offset) in collect_duplicate_mcp_server_name_offsets(content) {
-        let (line, col) = line_col_at(duplicate_offset, &line_starts);
+    for (name, offset) in collect_mcp_server_name_offsets(content) {
+        if !RESERVED_MCP_SERVER_NAMES.contains(&name.as_str()) {
+            continue;
+        }
+        let (line, col) = line_col_at(offset, &line_starts);
         diagnostics.push(
             Diagnostic::error(
                 path.to_path_buf(),
                 line,
                 col,
-                "MCP-023",
-                format!("Duplicate MCP server name '{}'", duplicate),
+                "MCP-026",
+                format!(
+                    "MCP server name '{}' is reserved by Claude Code and will be skipped at load",
+                    name
+                ),
             )
-            .with_suggestion("Rename duplicate mcpServers keys so each server name is unique"),
+            .with_suggestion(
+                "Rename the server to something unique - Claude Code reserves 'workspace' as of v2.1.128 and silently skips servers with reserved names at startup",
+            ),
         );
     }
 }
 
-fn collect_duplicate_mcp_server_name_offsets(content: &str) -> Vec<(String, usize)> {
-    use std::collections::HashSet;
+/// Names Claude Code treats as reserved for internal use. Kept as a
+/// `&[&str]` so future reservations (if upstream adds more) just append
+/// here; the scanner stays size-agnostic.
+///
+/// Evidence: anthropics/claude-code release notes for v2.1.128
+/// ("MCP: `workspace` is now a reserved server name").
+const RESERVED_MCP_SERVER_NAMES: &[&str] = &["workspace"];
 
+/// Walks the top-level keys of the `mcpServers` object and yields each
+/// `(name, quote_start_offset)` pair in source order. Used by MCP-023
+/// (duplicates) and MCP-026 (reserved names). Shared so we only pay
+/// one JSON walk per file regardless of how many name-based rules exist.
+fn collect_mcp_server_name_offsets(content: &str) -> Vec<(String, usize)> {
     let bytes = content.as_bytes();
     let Some(object_start) = find_json_object_start_for_key(content, "mcpServers") else {
         return Vec::new();
@@ -716,17 +770,14 @@ fn collect_duplicate_mcp_server_name_offsets(content: &str) -> Vec<(String, usiz
 
     let mut depth = 1usize;
     let mut expecting_key = true;
-    let mut seen = HashSet::new();
-    let mut duplicates = Vec::new();
+    let mut names = Vec::new();
 
     while idx < bytes.len() && depth > 0 {
         let ch = bytes[idx] as char;
         if ch == '"' {
             let (raw, next_idx) = read_json_string_literal(content, idx);
             if depth == 1 && expecting_key {
-                if !seen.insert(raw.clone()) {
-                    duplicates.push((raw, idx));
-                }
+                names.push((raw, idx));
                 expecting_key = false;
             }
             idx = next_idx;
@@ -744,7 +795,7 @@ fn collect_duplicate_mcp_server_name_offsets(content: &str) -> Vec<(String, usiz
         idx += 1;
     }
 
-    duplicates
+    names
 }
 
 fn read_json_string_literal(content: &str, start_quote_idx: usize) -> (String, usize) {
@@ -2596,7 +2647,7 @@ mod tests {
             "MCP-001", "MCP-002", "MCP-003", "MCP-004", "MCP-005", "MCP-006", "MCP-007", "MCP-008",
             "MCP-009", "MCP-010", "MCP-011", "MCP-012", "MCP-013", "MCP-014", "MCP-015", "MCP-016",
             "MCP-017", "MCP-018", "MCP-019", "MCP-020", "MCP-021", "MCP-022", "MCP-023", "MCP-024",
-            "MCP-025",
+            "MCP-025", "MCP-026",
         ];
 
         for rule in rules {
@@ -2641,6 +2692,9 @@ mod tests {
                 "MCP-024" => r#"{"mcpServers":{"empty":{}}}"#,
                 "MCP-025" => {
                     r#"{"mcpServers":{"s":{"type":"stdio","command":"node","alwaysLoad":"true"}}}"#
+                }
+                "MCP-026" => {
+                    r#"{"mcpServers":{"workspace":{"type":"stdio","command":"node"}}}"#
                 }
                 _ => r#"{"tools": [{"name": "t"}]}"#,
             };
@@ -3835,6 +3889,122 @@ mod tests {
         assert!(
             !per_server.is_empty(),
             "flat-shape server must surface per-server diagnostics, got none"
+        );
+    }
+
+    // ===== MCP-026 Tests =====
+
+    #[test]
+    fn test_mcp_026_flags_workspace_server_name() {
+        let content = r#"{
+            "mcpServers": {
+                "workspace": { "type": "stdio", "command": "node" }
+            }
+        }"#;
+        let diagnostics = validate(content);
+        let mcp_026: Vec<_> = diagnostics.iter().filter(|d| d.rule == "MCP-026").collect();
+        assert_eq!(
+            mcp_026.len(),
+            1,
+            "MCP-026 should fire exactly once on a 'workspace' server"
+        );
+
+        let key_offset = content
+            .find(r#""workspace""#)
+            .expect("expected reserved key occurrence");
+        let (expected_line, expected_col) =
+            line_col_at(key_offset, &compute_line_starts(content));
+
+        assert_eq!(mcp_026[0].line, expected_line);
+        assert_eq!(mcp_026[0].column, expected_col);
+        assert!(
+            mcp_026[0].message.contains("workspace"),
+            "diagnostic should name the reserved server, got: {}",
+            mcp_026[0].message
+        );
+    }
+
+    #[test]
+    fn test_mcp_026_ignores_non_reserved_names() {
+        let content = r#"{
+            "mcpServers": {
+                "fs": { "type": "stdio", "command": "node" },
+                "remote": { "type": "http", "url": "https://api.example.com/mcp" }
+            }
+        }"#;
+        let diagnostics = validate(content);
+        assert!(
+            !diagnostics.iter().any(|d| d.rule == "MCP-026"),
+            "MCP-026 must not fire on non-reserved server names"
+        );
+    }
+
+    #[test]
+    fn test_mcp_026_is_case_sensitive() {
+        // Claude Code compares server names as raw JSON keys (case-sensitive).
+        // Uppercase 'Workspace' is NOT reserved - don't false-positive.
+        let content = r#"{
+            "mcpServers": {
+                "Workspace": { "type": "stdio", "command": "node" }
+            }
+        }"#;
+        let diagnostics = validate(content);
+        assert!(
+            !diagnostics.iter().any(|d| d.rule == "MCP-026"),
+            "MCP-026 must be case-sensitive - 'Workspace' != 'workspace'"
+        );
+    }
+
+    #[test]
+    fn test_mcp_026_ignores_workspace_mention_in_string_literal() {
+        // 'workspace' appearing as a string value (not a key) must not trip
+        // the scanner. Shares the same JSON-key walker as MCP-023 so the
+        // test is deliberately structural.
+        let content = r#"{
+            "note": "the 'workspace' name is reserved",
+            "mcpServers": {
+                "fs": { "type": "stdio", "command": "node" }
+            }
+        }"#;
+        let diagnostics = validate(content);
+        assert!(
+            !diagnostics.iter().any(|d| d.rule == "MCP-026"),
+            "MCP-026 must only match top-level mcpServers keys"
+        );
+    }
+
+    #[test]
+    fn test_mcp_026_fires_alongside_siblings() {
+        // A 'workspace' server in the same map as valid servers must still
+        // be flagged without affecting the siblings.
+        let content = r#"{
+            "mcpServers": {
+                "fs": { "type": "stdio", "command": "node" },
+                "workspace": { "type": "stdio", "command": "python" },
+                "remote": { "type": "http", "url": "https://api.example.com/mcp" }
+            }
+        }"#;
+        let diagnostics = validate(content);
+        let mcp_026: Vec<_> = diagnostics.iter().filter(|d| d.rule == "MCP-026").collect();
+        assert_eq!(mcp_026.len(), 1);
+    }
+
+    #[test]
+    fn test_mcp_026_suggestion_mentions_claude_code() {
+        // The suggestion text is what users see in the editor hover. It
+        // must make clear the name is Claude-Code-specific so a user
+        // migrating from another MCP host isn't confused.
+        let content = r#"{"mcpServers":{"workspace":{"type":"stdio","command":"node"}}}"#;
+        let diagnostics = validate(content);
+        let mcp_026 = diagnostics
+            .iter()
+            .find(|d| d.rule == "MCP-026")
+            .expect("MCP-026 diagnostic");
+        let suggestion = mcp_026.suggestion.as_deref().unwrap_or("");
+        assert!(
+            suggestion.contains("Claude Code"),
+            "suggestion should identify Claude Code as the source of the reservation, got: {}",
+            suggestion
         );
     }
 }

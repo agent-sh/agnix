@@ -380,6 +380,13 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Fix**: Manual - set `prUrlTemplate` to a URL template like `https://reviews.example.com/{owner}/{repo}/pull/{number}`
 **Source**: code.claude.com/docs/en/settings (added in Claude Code v2.1.119)
 
+<a id="cc-set-002"></a>
+### CC-SET-002 [MEDIUM] Non-boolean channelsEnabled Setting
+**Requirement**: `channelsEnabled` in `.claude/settings.json` / `.local.json` / `managed-settings.json` MUST be a boolean when present (Claude Code 2.1.128+). A quoted `"true"` or numeric value leaves Channels silently disabled - same footgun shape as MCP-025 `alwaysLoad`.
+**Detection**: Parse settings.json; look up top-level `channelsEnabled`; flag (warning) string / number / array / object values. Explicit `false` and `null` are not flagged.
+**Fix**: Manual - replace the value with an unquoted `true` or `false`.
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.128 (introduced `--channels` support for console API-key auth; console orgs with managed settings must opt in via `channelsEnabled: true`)
+
 ---
 
 ## PER-CLIENT SKILL RULES
@@ -1385,6 +1392,13 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 **Detection**: Validate `mcpServers.*.alwaysLoad` type; flag string / number / array / object values
 **Fix**: Replace the value with an unquoted `true` or `false` (non-boolean values are not consistently applied by Claude Code - they may be treated as truthy in some code paths and ignored in others)
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.121
+
+<a id="mcp-026"></a>
+### MCP-026 [HIGH] Reserved MCP Server Name
+**Requirement**: MCP server names in `mcpServers` MUST NOT collide with names Claude Code reserves for internal use. As of Claude Code 2.1.128, `workspace` is reserved - servers registered under that key are silently skipped at startup with only a Claude Code log warning.
+**Detection**: Walk top-level `mcpServers` keys (case-sensitive); flag any that match the reserved list (`workspace` today).
+**Fix**: Manual - rename the server to something unique.
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.128
 
 ---
 
@@ -3402,8 +3416,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 416 validation rules across 40 categories
+**Total Coverage**: 418 validation rules across 40 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 214 HIGH, 174 MEDIUM, 28 LOW
+**Certainty**: 215 HIGH, 175 MEDIUM, 28 LOW
 **Auto-Fixable**: 129 rules (31%)
