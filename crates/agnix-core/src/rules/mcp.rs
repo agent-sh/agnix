@@ -316,13 +316,35 @@ impl Validator for McpValidator {
         validate_resource_definitions(&raw_value, path, content, config, &mut diagnostics);
         validate_prompt_definitions(&raw_value, path, content, config, &mut diagnostics);
 
-        // Validate capability keys and duplicate server names.
+        // Validate capability keys and server-name rules (MCP-023 + MCP-026).
+        // Both rules walk the same top-level mcpServers key list; compute
+        // once and hand the precomputed offsets + the already-built
+        // line_starts to each rule so a file with both rules enabled pays
+        // exactly one JSON walk.
         validate_capability_keys(&raw_value, path, content, config, &mut diagnostics);
+
+        let server_name_offsets =
+            if config.is_rule_enabled("MCP-023") || config.is_rule_enabled("MCP-026") {
+                collect_mcp_server_name_offsets(content)
+            } else {
+                Vec::new()
+            };
+
         if config.is_rule_enabled("MCP-023") {
-            validate_duplicate_server_names(path, content, &mut diagnostics);
+            validate_duplicate_server_names(
+                path,
+                &server_name_offsets,
+                &line_starts,
+                &mut diagnostics,
+            );
         }
         if config.is_rule_enabled("MCP-026") {
-            validate_reserved_server_names(path, content, &mut diagnostics);
+            validate_reserved_server_names(
+                path,
+                &server_name_offsets,
+                &line_starts,
+                &mut diagnostics,
+            );
         }
 
         // Validate MCP server configurations (MCP-009 to MCP-012, MCP-024)
@@ -690,15 +712,19 @@ fn validate_capability_keys(
     }
 }
 
-fn validate_duplicate_server_names(path: &Path, content: &str, diagnostics: &mut Vec<Diagnostic>) {
+fn validate_duplicate_server_names(
+    path: &Path,
+    server_name_offsets: &[(String, usize)],
+    line_starts: &[usize],
+    diagnostics: &mut Vec<Diagnostic>,
+) {
     use std::collections::HashSet;
 
-    let line_starts = compute_line_starts(content);
-    let mut seen: HashSet<String> = HashSet::new();
+    let mut seen: HashSet<&str> = HashSet::new();
 
-    for (name, offset) in collect_mcp_server_name_offsets(content) {
-        if !seen.insert(name.clone()) {
-            let (line, col) = line_col_at(offset, &line_starts);
+    for (name, offset) in server_name_offsets {
+        if !seen.insert(name.as_str()) {
+            let (line, col) = line_col_at(*offset, line_starts);
             diagnostics.push(
                 Diagnostic::error(
                     path.to_path_buf(),
@@ -723,14 +749,17 @@ fn validate_duplicate_server_names(path: &Path, content: &str, diagnostics: &mut
 /// comparison - the upstream release note uses the lowercase literal
 /// `workspace`, and MCP server maps elsewhere in the config are
 /// case-sensitive JSON keys.
-fn validate_reserved_server_names(path: &Path, content: &str, diagnostics: &mut Vec<Diagnostic>) {
-    let line_starts = compute_line_starts(content);
-
-    for (name, offset) in collect_mcp_server_name_offsets(content) {
+fn validate_reserved_server_names(
+    path: &Path,
+    server_name_offsets: &[(String, usize)],
+    line_starts: &[usize],
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    for (name, offset) in server_name_offsets {
         if !RESERVED_MCP_SERVER_NAMES.contains(&name.as_str()) {
             continue;
         }
-        let (line, col) = line_col_at(offset, &line_starts);
+        let (line, col) = line_col_at(*offset, line_starts);
         diagnostics.push(
             Diagnostic::error(
                 path.to_path_buf(),

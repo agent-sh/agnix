@@ -208,14 +208,18 @@ fn validate_channels_enabled(
     );
 }
 
+/// Renders a `serde_json::Value` variant as a short human-readable type
+/// name for diagnostic messages. The CC-SET-002 caller filters `Bool` and
+/// `Null` before reaching this, but every variant is covered so the
+/// helper stays useful for future reuse.
 fn describe_json_type(value: &serde_json::Value) -> &'static str {
     match value {
         serde_json::Value::String(_) => "string",
         serde_json::Value::Number(_) => "number",
         serde_json::Value::Array(_) => "array",
         serde_json::Value::Object(_) => "object",
-        // Bool and Null are handled by the caller.
-        serde_json::Value::Bool(_) | serde_json::Value::Null => "other",
+        serde_json::Value::Bool(_) => "boolean",
+        serde_json::Value::Null => "null",
     }
 }
 
