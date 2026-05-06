@@ -128,7 +128,8 @@
         "kiro_power",
         "kiro_agent",
         "kiro_hook",
-        "kiro_mcp"
+        "kiro_mcp",
+        "kiro_settings"
       ],
       "github_repo": null,
       "html_url": "https://kiro.dev/changelog/cli/",
