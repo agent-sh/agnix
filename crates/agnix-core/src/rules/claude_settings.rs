@@ -658,8 +658,7 @@ mod tests {
 
     #[test]
     fn test_channels_enabled_line_points_at_key() {
-        let content =
-            "{\n  \"model\": \"claude-sonnet-4\",\n  \"channelsEnabled\": \"true\"\n}";
+        let content = "{\n  \"model\": \"claude-sonnet-4\",\n  \"channelsEnabled\": \"true\"\n}";
         let diagnostics = validate(content);
         let hit = diagnostics
             .iter()
@@ -674,8 +673,7 @@ mod tests {
         config.rules_mut().disabled_rules = vec!["CC-SET-002".to_string()];
         let validator = ClaudeSettingsValidator;
         let path = PathBuf::from(".claude/settings.json");
-        let diagnostics =
-            validator.validate(&path, r#"{"channelsEnabled": "true"}"#, &config);
+        let diagnostics = validator.validate(&path, r#"{"channelsEnabled": "true"}"#, &config);
         assert!(diagnostics.is_empty());
     }
 

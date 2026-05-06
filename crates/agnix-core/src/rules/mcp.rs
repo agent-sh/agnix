@@ -2693,9 +2693,7 @@ mod tests {
                 "MCP-025" => {
                     r#"{"mcpServers":{"s":{"type":"stdio","command":"node","alwaysLoad":"true"}}}"#
                 }
-                "MCP-026" => {
-                    r#"{"mcpServers":{"workspace":{"type":"stdio","command":"node"}}}"#
-                }
+                "MCP-026" => r#"{"mcpServers":{"workspace":{"type":"stdio","command":"node"}}}"#,
                 _ => r#"{"tools": [{"name": "t"}]}"#,
             };
 
@@ -3912,8 +3910,7 @@ mod tests {
         let key_offset = content
             .find(r#""workspace""#)
             .expect("expected reserved key occurrence");
-        let (expected_line, expected_col) =
-            line_col_at(key_offset, &compute_line_starts(content));
+        let (expected_line, expected_col) = line_col_at(key_offset, &compute_line_starts(content));
 
         assert_eq!(mcp_026[0].line, expected_line);
         assert_eq!(mcp_026[0].column, expected_col);
