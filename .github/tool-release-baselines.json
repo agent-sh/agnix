@@ -201,7 +201,7 @@
         "cline"
       ],
       "github_repo": "cline/cline",
-      "last_known_version": "v3.81.0",
+      "last_known_version": "v3.82.0",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
