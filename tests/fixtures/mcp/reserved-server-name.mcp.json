@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "workspace": {
+      "type": "stdio",
+      "command": "node"
+    },
+    "fs": {
+      "type": "stdio",
+      "command": "python"
+    }
+  }
+}

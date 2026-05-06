@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `416` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `418` validation rules generated from `knowledge-base/rules.json`.
 `129` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -133,6 +133,7 @@ This section contains all `416` validation rules generated from `knowledge-base/
 | [CC-SK-019](./generated/cc-sk-019.md) | Invalid Paths Format | LOW | Claude Skills | No |
 | [CC-SK-020](./generated/cc-sk-020.md) | Invalid Shell Value | MEDIUM | Claude Skills | Yes (unsafe) |
 | [CC-SET-001](./generated/cc-set-001.md) | Invalid prUrlTemplate Setting | MEDIUM | Claude Settings | No |
+| [CC-SET-002](./generated/cc-set-002.md) | Non-boolean channelsEnabled Setting | MEDIUM | Claude Settings | No |
 | [CDX-000](./generated/cdx-000.md) | TOML Parse Error | HIGH | Codex CLI | No |
 | [CDX-001](./generated/cdx-001.md) | Invalid Approval Mode | HIGH | Codex CLI | Yes (unsafe) |
 | [CDX-002](./generated/cdx-002.md) | Invalid Full Auto Error Mode | HIGH | Codex CLI | Yes (unsafe) |
@@ -340,6 +341,7 @@ This section contains all `416` validation rules generated from `knowledge-base/
 | [MCP-023](./generated/mcp-023.md) | Duplicate MCP Server Names | HIGH | MCP | No |
 | [MCP-024](./generated/mcp-024.md) | Empty MCP Server Configuration | HIGH | MCP | No |
 | [MCP-025](./generated/mcp-025.md) | Non-boolean alwaysLoad in MCP Server Config | MEDIUM | MCP | No |
+| [MCP-026](./generated/mcp-026.md) | Reserved MCP Server Name | HIGH | MCP | No |
 | [OC-001](./generated/oc-001.md) | Invalid Share Mode | HIGH | OpenCode | Yes (unsafe) |
 | [OC-002](./generated/oc-002.md) | Invalid Instruction Path | HIGH | OpenCode | No |
 | [OC-003](./generated/oc-003.md) | opencode.json Parse Error | HIGH | OpenCode | No |

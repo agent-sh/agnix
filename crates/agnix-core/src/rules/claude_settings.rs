@@ -4,7 +4,9 @@
 //! checking top-level settings fields documented at
 //! <https://code.claude.com/docs/en/settings>.
 //!
-//! Today: `prUrlTemplate` (CC-SET-001, added in Claude Code v2.1.119).
+//! Rules:
+//! - `prUrlTemplate` (CC-SET-001, added in Claude Code v2.1.119).
+//! - `channelsEnabled` boolean check (CC-SET-002, added in Claude Code v2.1.128).
 //!
 //! Runs on FileType::Hooks (which covers `.claude/settings.json` -
 //! see `file_types/detection.rs`). Skips non-Claude Code settings paths
@@ -18,7 +20,7 @@ use crate::{
 use rust_i18n::t;
 use std::path::Path;
 
-const RULE_IDS: &[&str] = &["CC-SET-001"];
+const RULE_IDS: &[&str] = &["CC-SET-001", "CC-SET-002"];
 
 /// Placeholders documented for `prUrlTemplate` at
 /// <https://code.claude.com/docs/en/settings>.
@@ -50,6 +52,10 @@ impl Validator for ClaudeSettingsValidator {
 
         if config.is_rule_enabled("CC-SET-001") {
             validate_pr_url_template(path, content, &value, &mut diagnostics);
+        }
+
+        if config.is_rule_enabled("CC-SET-002") {
+            validate_channels_enabled(path, content, &value, &mut diagnostics);
         }
 
         diagnostics
@@ -144,6 +150,76 @@ fn validate_pr_url_template(
             )
             .with_suggestion(t!("rules.cc_set_001.suggestion")),
         );
+    }
+}
+
+/// CC-SET-002: Validate `channelsEnabled`. Claude Code 2.1.128 made
+/// `--channels` work with console (API-key) authentication, but console
+/// organisations with managed settings must opt in explicitly by setting
+/// `channelsEnabled: true`. When present, the field MUST be a boolean -
+/// a quoted `"true"` or a truthy number leaves Channels silently disabled
+/// (same shape as the MCP-025 `alwaysLoad` footgun).
+///
+/// Missing field is fine: Channels just stays disabled (the pre-v2.1.128
+/// default for console orgs). We only flag explicitly-set non-boolean
+/// values. A literal `false` is also fine - an explicit opt-out matches
+/// the documented behavior.
+///
+/// While the release note calls out "console orgs with managed settings",
+/// we intentionally validate the key across all three Claude Code
+/// settings paths (`settings.json`, `settings.local.json`,
+/// `managed-settings.json`). If a user puts it in the wrong file, the
+/// mis-typed *value* is still wrong; flagging consistently is more
+/// useful than trying to infer org-type here.
+fn validate_channels_enabled(
+    path: &Path,
+    content: &str,
+    value: &serde_json::Value,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(field_value) = value.get("channelsEnabled") else {
+        return;
+    };
+
+    // Boolean is the one legal shape. `null` is treated as "field-absent"
+    // by JSON convention - we don't flag it to avoid doubling up with any
+    // future "no explicit value" rule.
+    if field_value.is_boolean() || field_value.is_null() {
+        return;
+    }
+
+    let actual = describe_json_type(field_value);
+    let line = find_key_line(content, "channelsEnabled").unwrap_or(1);
+
+    diagnostics.push(
+        Diagnostic::warning(
+            path.to_path_buf(),
+            line,
+            0,
+            "CC-SET-002",
+            format!(
+                "channelsEnabled must be a boolean when present (got {}); Claude Code leaves Channels disabled when the value is not strictly true/false",
+                actual
+            ),
+        )
+        .with_suggestion(
+            "Set channelsEnabled to an unquoted true or false. Quoted strings and numbers are not treated as opt-in by Claude Code 2.1.128+.",
+        ),
+    );
+}
+
+/// Renders a `serde_json::Value` variant as a short human-readable type
+/// name for diagnostic messages. The CC-SET-002 caller filters `Bool` and
+/// `Null` before reaching this, but every variant is covered so the
+/// helper stays useful for future reuse.
+fn describe_json_type(value: &serde_json::Value) -> &'static str {
+    match value {
+        serde_json::Value::String(_) => "string",
+        serde_json::Value::Number(_) => "number",
+        serde_json::Value::Array(_) => "array",
+        serde_json::Value::Object(_) => "object",
+        serde_json::Value::Bool(_) => "boolean",
+        serde_json::Value::Null => "null",
     }
 }
 
@@ -483,5 +559,136 @@ mod tests {
         let content = r#"{"prUrlTemplate": not valid json"#;
         let diagnostics = validate(content);
         assert!(diagnostics.is_empty());
+    }
+
+    // ===== CC-SET-002 =====
+
+    #[test]
+    fn test_channels_enabled_absent_is_fine() {
+        let content = r#"{"model": "claude-sonnet-4"}"#;
+        let diagnostics = validate(content);
+        assert!(
+            !diagnostics.iter().any(|d| d.rule == "CC-SET-002"),
+            "CC-SET-002 must not fire when channelsEnabled is absent"
+        );
+    }
+
+    #[test]
+    fn test_channels_enabled_true_is_fine() {
+        let content = r#"{"channelsEnabled": true}"#;
+        let diagnostics = validate(content);
+        assert!(!diagnostics.iter().any(|d| d.rule == "CC-SET-002"));
+    }
+
+    #[test]
+    fn test_channels_enabled_false_is_fine() {
+        // Explicit opt-out is a valid configuration.
+        let content = r#"{"channelsEnabled": false}"#;
+        let diagnostics = validate(content);
+        assert!(!diagnostics.iter().any(|d| d.rule == "CC-SET-002"));
+    }
+
+    #[test]
+    fn test_channels_enabled_null_is_not_flagged() {
+        // null is conventionally "field-absent" - don't double up with any
+        // future no-explicit-value rule.
+        let content = r#"{"channelsEnabled": null}"#;
+        let diagnostics = validate(content);
+        assert!(!diagnostics.iter().any(|d| d.rule == "CC-SET-002"));
+    }
+
+    #[test]
+    fn test_channels_enabled_quoted_string_flags() {
+        // The documented footgun: "true" as a string leaves Channels
+        // silently disabled.
+        let content = r#"{"channelsEnabled": "true"}"#;
+        let diagnostics = validate(content);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-002")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        assert_eq!(
+            hits[0].level,
+            crate::diagnostics::DiagnosticLevel::Warning,
+            "CC-SET-002 is a warning, not a hard error"
+        );
+        assert!(
+            hits[0].message.to_lowercase().contains("boolean"),
+            "message should mention the required type"
+        );
+        assert!(
+            hits[0].message.to_lowercase().contains("string"),
+            "message should name the actual type seen"
+        );
+    }
+
+    #[test]
+    fn test_channels_enabled_number_flags() {
+        let content = r#"{"channelsEnabled": 1}"#;
+        let diagnostics = validate(content);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-002")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        assert!(hits[0].message.to_lowercase().contains("number"));
+    }
+
+    #[test]
+    fn test_channels_enabled_array_flags() {
+        let content = r#"{"channelsEnabled": [true]}"#;
+        let diagnostics = validate(content);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-002")
+            .collect();
+        assert_eq!(hits.len(), 1);
+    }
+
+    #[test]
+    fn test_channels_enabled_runs_on_managed_settings() {
+        // This is the documented target (console orgs with managed
+        // settings), but we validate the key on every Claude Code
+        // settings path - mis-typed values are equally wrong anywhere.
+        let content = r#"{"channelsEnabled": "true"}"#;
+        let diagnostics = validate_at(".claude/managed-settings.json", content);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-002")
+            .collect();
+        assert_eq!(hits.len(), 1);
+    }
+
+    #[test]
+    fn test_channels_enabled_line_points_at_key() {
+        let content = "{\n  \"model\": \"claude-sonnet-4\",\n  \"channelsEnabled\": \"true\"\n}";
+        let diagnostics = validate(content);
+        let hit = diagnostics
+            .iter()
+            .find(|d| d.rule == "CC-SET-002")
+            .expect("CC-SET-002 diagnostic");
+        assert_eq!(hit.line, 3);
+    }
+
+    #[test]
+    fn test_channels_enabled_can_be_disabled() {
+        let mut config = LintConfig::default();
+        config.rules_mut().disabled_rules = vec!["CC-SET-002".to_string()];
+        let validator = ClaudeSettingsValidator;
+        let path = PathBuf::from(".claude/settings.json");
+        let diagnostics = validator.validate(&path, r#"{"channelsEnabled": "true"}"#, &config);
+        assert!(diagnostics.is_empty());
+    }
+
+    #[test]
+    fn test_channels_enabled_and_pr_url_template_coexist() {
+        // Both rules fire independently when both fields are wrong; each
+        // diagnostic must carry its own rule id so suppressing one does
+        // not silence the other.
+        let content = r#"{"channelsEnabled": "true", "prUrlTemplate": 123}"#;
+        let diagnostics = validate(content);
+        assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-001"));
+        assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-002"));
     }
 }
