@@ -316,13 +316,15 @@ impl Validator for McpValidator {
         validate_resource_definitions(&raw_value, path, content, config, &mut diagnostics);
         validate_prompt_definitions(&raw_value, path, content, config, &mut diagnostics);
 
-        // Validate capability keys and server-name rules (MCP-023 + MCP-026).
-        // Both rules walk the same top-level mcpServers key list; compute
-        // once and hand the precomputed offsets + the already-built
-        // line_starts to each rule so a file with both rules enabled pays
-        // exactly one JSON walk.
+        // MCP-020: validate capability keys (walks `capabilities`, not
+        // `mcpServers` - kept adjacent to the server-name rules only by
+        // historical grouping).
         validate_capability_keys(&raw_value, path, content, config, &mut diagnostics);
 
+        // MCP-023 + MCP-026 both walk the top-level `mcpServers` key list.
+        // Hoist the walk here so a file with both rules enabled pays
+        // exactly one JSON scan instead of two; the gated `if` also means
+        // files where neither rule is enabled pay nothing.
         let server_name_offsets =
             if config.is_rule_enabled("MCP-023") || config.is_rule_enabled("MCP-026") {
                 collect_mcp_server_name_offsets(content)
@@ -827,6 +829,30 @@ fn collect_mcp_server_name_offsets(content: &str) -> Vec<(String, usize)> {
     names
 }
 
+/// Best-effort JSON string decoder for the sole purpose of extracting
+/// `mcpServers` keys for MCP-023 (duplicate detection) and MCP-026
+/// (reserved names). Handles the common `\"` and `\\` escape pairs by
+/// emitting the next character literally; does NOT decode `\uXXXX` unicode
+/// escapes, `\n` / `\t` / `\r`, or the other JSON escape sequences.
+///
+/// Practical impact: a hypothetical server name written with a `\uXXXX`
+/// escape in its JSON key (e.g. `"workspace"` for `workspace`) will
+/// be read back as the literal characters `u`, `0`, `0`, `6`, `f`, ... and
+/// will not match the reserved list. This is accepted because:
+///
+/// 1. Real `mcpServers` keys are ASCII identifiers in every config we've
+///    observed - no one writes `o` for an `o` inside an identifier.
+/// 2. MCP-023 has the same limitation, so MCP-026 is not a regression.
+/// 3. A full JSON decoder would require threading `serde_json::Value`
+///    positions through the walker, which isn't justified by the
+///    evasion vector (deliberately escaping a reserved name to hide it
+///    from the linter while keeping it functional - the linter user is
+///    themselves).
+///
+/// If this ever matters (a validator ingesting third-party / untrusted
+/// MCP configs), the `serde_json::Value::as_object()` pass later in
+/// `validate()` already sees fully-decoded keys - route name-based
+/// rules through there instead of this walker.
 fn read_json_string_literal(content: &str, start_quote_idx: usize) -> (String, usize) {
     let bytes = content.as_bytes();
     let mut idx = start_quote_idx + 1;
@@ -3943,6 +3969,11 @@ mod tests {
 
         assert_eq!(mcp_026[0].line, expected_line);
         assert_eq!(mcp_026[0].column, expected_col);
+        assert_eq!(
+            mcp_026[0].level,
+            crate::diagnostics::DiagnosticLevel::Error,
+            "MCP-026 is HIGH severity - must be an error, not a warning"
+        );
         assert!(
             mcp_026[0].message.contains("workspace"),
             "diagnostic should name the reserved server, got: {}",
