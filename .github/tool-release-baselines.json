@@ -96,7 +96,7 @@
         "agents_md"
       ],
       "github_repo": "sst/opencode",
-      "last_known_version": "v1.14.33",
+      "last_known_version": "v1.14.37",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
