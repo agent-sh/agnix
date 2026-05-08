@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Rule count**: 416 -> 418 across all derived locations (rules.json, CLAUDE.md, AGENTS.md, README.md, plugin.json, SKILL.md files, website docs) via `scripts/sync-rule-bookkeeping.js`.
 
 ### Changed
+- **Tool baseline**: `cursor` bumped from `3.2.21` to `3.3.27` (closes #884). The api2.cursor.sh stable-update endpoint only exposes a version marker; spot-checked cursor.com/changelog for the 3.3 line.
+  - Notable 3.3 features: parallel "Build in Parallel" execution via async subagents, Explore subagent behavior controls (`model: opus` and similar generic model names), Security Reviewer and Vulnerability Scanner agents for PR checks / scheduled codebase scans, context-usage breakdown across rules/skills/MCPs/subagents, enterprise model-access and spend controls.
+  - Triage: none of these changes touch validated config surfaces - `.cursor/rules/**/*.{md,mdc}` frontmatter (CUR-001-009), `.cursor/hooks.json` schema (CUR-010-013, CUR-017-019), `.cursor/agents/**/*.md` subagent frontmatter (CUR-014-015, which already accepts generic model names like `opus` via the alphanumeric id validator), `.cursor/environment.json` (CUR-016), or `.cursor/mcp.json`.
+  - No validator, `ToolVersions`, or `SpecRevisions` update required. `.github/tool-release-baselines.json` and `knowledge-base/RESEARCH-TRACKING.md` ("Last Reviewed" for Cursor) updated.
 - **Tool baseline**: `amp` bumped from `gpt-5.5` to `neo` (closes #882). Major upstream "Neo" rebuild of the Amp CLI.
   - **New**: Plugin system (`.amp/plugins/*.ts`), remote control from ampcode.com, auto-compaction (replacing Handoff), queuing/steering, large performance improvements.
   - **Changed**: Default permission model no longer prompts before tool calls; users who opt back in via `amp.permissions`, `amp.dangerouslyAllowAll: false`, or `amp.guardedFiles.allowlist` keep the old behavior via a built-in permissions plugin.
