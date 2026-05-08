@@ -60,7 +60,7 @@
         "agents_md"
       ],
       "github_repo": "openai/codex",
-      "last_known_version": "rust-v0.128.0",
+      "last_known_version": "rust-v0.129.0",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [

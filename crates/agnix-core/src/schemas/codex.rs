@@ -163,6 +163,11 @@ pub const KNOWN_TABLE_KEYS: &[&str] = &[
     "plugins",
     "tools",
     "windows",
+    // Added in Codex rust-v0.129.0 catch-up - `[debug]` table for config
+    // lockfile debugging (nested `[debug.config_lockfile]` carries
+    // `allow_codex_version_mismatch`, `export_dir`, `load_path`, and
+    // `save_fields_resolved_from_model_catalog`).
+    "debug",
 ];
 
 /// An unknown key found in config
@@ -657,6 +662,34 @@ max_threads = 4
         assert!(
             result.unknown_keys.is_empty(),
             "0.128 table sections should not be flagged as unknown, got: {:?}",
+            result
+                .unknown_keys
+                .iter()
+                .map(|u| u.key.as_str())
+                .collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn test_codex_0_129_0_new_table_keys_not_flagged() {
+        // Table section introduced in Codex rust-v0.129.0 - `[debug]` and
+        // its nested `[debug.config_lockfile]` sub-table. Regression guard:
+        // if `debug` ever gets removed from KNOWN_TABLE_KEYS by mistake,
+        // CDX-004 starts false-positive-ing on valid 0.129 configs.
+        let content = r#"
+[debug]
+
+[debug.config_lockfile]
+allow_codex_version_mismatch = true
+export_dir = "/tmp/codex-locks"
+load_path = "/tmp/codex-locks/session.lock"
+save_fields_resolved_from_model_catalog = true
+"#;
+        let result = parse_codex_toml(content);
+        assert!(result.parse_error.is_none());
+        assert!(
+            result.unknown_keys.is_empty(),
+            "0.129 `debug` table should not be flagged as unknown, got: {:?}",
             result
                 .unknown_keys
                 .iter()
