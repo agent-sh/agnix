@@ -422,7 +422,8 @@ pub(super) fn extract_script_paths(command: &str) -> Vec<String> {
 }
 
 pub(super) fn resolve_script_path(script_path: &str, project_dir: &Path) -> std::path::PathBuf {
-    let resolved = script_path
+    let expanded = expand_tilde_prefix(script_path);
+    let resolved = expanded
         .replace("$CLAUDE_PROJECT_DIR", &project_dir.display().to_string())
         .replace("${CLAUDE_PROJECT_DIR}", &project_dir.display().to_string());
 
@@ -439,7 +440,70 @@ pub(super) fn has_unresolved_env_vars(path: &str) -> bool {
     let after_claude = path
         .replace("$CLAUDE_PROJECT_DIR", "")
         .replace("${CLAUDE_PROJECT_DIR}", "");
-    after_claude.contains('$')
+    if after_claude.contains('$') {
+        return true;
+    }
+    // A `~user/...` form is considered unresolved because we can't look
+    // up arbitrary users without nss, and Claude Code hands the whole
+    // string to the shell at runtime. A bare `~/...` is handled by the
+    // expansion in `resolve_script_path` - if HOME can be read, the path
+    // is considered resolved and CC-HK-008 runs the existence check
+    // against $HOME/...; otherwise we treat it as unresolved here to
+    // avoid false-positives on machines without a discoverable HOME.
+    if is_tilde_user_path(path) {
+        return true;
+    }
+    if path.starts_with("~/") || path.starts_with("~\\") || path == "~" {
+        #[cfg(feature = "filesystem")]
+        {
+            return dirs::home_dir().is_none();
+        }
+        #[cfg(not(feature = "filesystem"))]
+        {
+            return true;
+        }
+    }
+    false
+}
+
+/// Expand a leading `~/` or `~\` (POSIX or Windows) to `$HOME/...` when
+/// `dirs::home_dir()` is available. `~user/...` forms are left untouched
+/// (caller treats them as unresolved via `has_unresolved_env_vars`).
+/// Any `~` not at the very start of the string is left untouched - the
+/// shell only special-cases a literal leading tilde, and Claude Code
+/// passes the command to the shell verbatim.
+fn expand_tilde_prefix(path: &str) -> String {
+    if path == "~" || path.starts_with("~/") || path.starts_with("~\\") {
+        #[cfg(feature = "filesystem")]
+        {
+            if let Some(home) = dirs::home_dir() {
+                let home_str = home.display().to_string();
+                if path == "~" {
+                    return home_str;
+                }
+                // Strip the `~` and keep the separator so join semantics
+                // match what the shell would do on either platform.
+                return format!("{}{}", home_str, &path[1..]);
+            }
+        }
+    }
+    path.to_string()
+}
+
+/// Detect the `~user/...` form (tilde immediately followed by a non-slash
+/// character). agnix does not resolve these because it would require
+/// reading arbitrary user home directories via nss/passwd, and the
+/// signal-to-noise tradeoff doesn't justify the platform complexity.
+fn is_tilde_user_path(path: &str) -> bool {
+    let bytes = path.as_bytes();
+    if bytes.first() != Some(&b'~') {
+        return false;
+    }
+    match bytes.get(1) {
+        None => false,                     // bare "~"
+        Some(b'/') | Some(b'\\') => false, // "~/..." or "~\..."
+        Some(_) => true,                   // "~user..."
+    }
 }
 
 pub(super) struct ClosestEventMatch {
@@ -1764,6 +1828,115 @@ mod tests {
         assert!(
             diagnostics.is_empty(),
             "CC-HK-025 should not check PreToolUse matchers"
+        );
+    }
+
+    // ===== Tilde-path handling (CC-HK-008 false-positive fix) =====
+
+    #[test]
+    fn test_is_tilde_user_path_detects_user_form() {
+        assert!(is_tilde_user_path("~alice/bin/hook.sh"));
+        assert!(is_tilde_user_path("~root/hook.py"));
+    }
+
+    #[test]
+    fn test_is_tilde_user_path_rejects_bare_home() {
+        assert!(!is_tilde_user_path("~"));
+        assert!(!is_tilde_user_path("~/.claude/hooks/hook.py"));
+        assert!(!is_tilde_user_path("~\\claude\\hooks\\hook.py"));
+    }
+
+    #[test]
+    fn test_is_tilde_user_path_rejects_non_tilde_prefix() {
+        assert!(!is_tilde_user_path("/abs/path"));
+        assert!(!is_tilde_user_path("./relative/path"));
+        assert!(!is_tilde_user_path("path/with/~tilde/inside"));
+    }
+
+    #[test]
+    #[cfg(feature = "filesystem")]
+    fn test_expand_tilde_prefix_replaces_home() {
+        let home = dirs::home_dir().expect("test environment has HOME");
+        let home_str = home.display().to_string();
+
+        let expanded = expand_tilde_prefix("~/.claude/hooks/hook.py");
+        assert_eq!(expanded, format!("{}/.claude/hooks/hook.py", home_str));
+
+        let bare = expand_tilde_prefix("~");
+        assert_eq!(bare, home_str);
+    }
+
+    #[test]
+    #[cfg(feature = "filesystem")]
+    fn test_expand_tilde_prefix_leaves_user_form_untouched() {
+        // ~user/... is not expanded - we don't resolve arbitrary user homes.
+        assert_eq!(expand_tilde_prefix("~alice/hook.sh"), "~alice/hook.sh");
+    }
+
+    #[test]
+    fn test_expand_tilde_prefix_leaves_mid_string_tilde_alone() {
+        // The shell only special-cases a *leading* tilde; a tilde mid-path
+        // is literal. Preserve both to match Claude Code's pass-through
+        // semantics.
+        assert_eq!(
+            expand_tilde_prefix("/opt/x/~backup/hook.sh"),
+            "/opt/x/~backup/hook.sh"
+        );
+        assert_eq!(expand_tilde_prefix("no-tilde"), "no-tilde");
+    }
+
+    #[test]
+    #[cfg(feature = "filesystem")]
+    fn test_has_unresolved_env_vars_skips_resolvable_tilde() {
+        // On a machine with HOME, `~/...` is resolvable -> NOT unresolved.
+        if dirs::home_dir().is_some() {
+            assert!(!has_unresolved_env_vars("~/.claude/hooks/hook.py"));
+        }
+    }
+
+    #[test]
+    fn test_has_unresolved_env_vars_flags_user_form() {
+        // `~user/...` is always treated as unresolved: we don't look up
+        // arbitrary user home directories. CC-HK-008 will skip these.
+        assert!(has_unresolved_env_vars("~alice/.local/bin/hook.sh"));
+        assert!(has_unresolved_env_vars("~root/hook.py"));
+    }
+
+    #[test]
+    fn test_has_unresolved_env_vars_flags_dollar_vars_unchanged() {
+        // Regression guard for the existing `$FOO` behavior - must not
+        // regress now that the helper also considers `~`.
+        assert!(has_unresolved_env_vars("$HOME/.claude/hook.sh"));
+        assert!(has_unresolved_env_vars("/opt/$PROJECT/hook.sh"));
+        assert!(!has_unresolved_env_vars("$CLAUDE_PROJECT_DIR/hook.sh"));
+        assert!(!has_unresolved_env_vars("${CLAUDE_PROJECT_DIR}/hook.sh"));
+    }
+
+    #[test]
+    #[cfg(feature = "filesystem")]
+    fn test_resolve_script_path_expands_tilde() {
+        let home = dirs::home_dir().expect("test environment has HOME");
+        let resolved = resolve_script_path("~/.claude/hooks/hook.py", Path::new("/workspace"));
+        // resolve_script_path returns absolute; compare via PathBuf so we
+        // don't hard-code the separator across platforms.
+        let expected = home.join(".claude").join("hooks").join("hook.py");
+        assert_eq!(resolved, expected);
+    }
+
+    #[test]
+    fn test_resolve_script_path_leaves_non_tilde_absolute_unchanged() {
+        let resolved = resolve_script_path("/usr/local/bin/hook.sh", Path::new("/workspace"));
+        assert_eq!(resolved, std::path::PathBuf::from("/usr/local/bin/hook.sh"));
+    }
+
+    #[test]
+    fn test_resolve_script_path_joins_relative_paths() {
+        // Regression guard: relative paths still resolve under project_dir,
+        // not under $HOME, after the tilde fix.
+        let resolved = resolve_script_path(".claude/hooks/hook.sh", Path::new("/workspace"));
+        assert_eq!(
+            resolved,
+            std::path::PathBuf::from("/workspace/.claude/hooks/hook.sh")
         );
     }
 }
