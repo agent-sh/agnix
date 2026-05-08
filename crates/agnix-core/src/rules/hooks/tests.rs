@@ -266,6 +266,82 @@ fn test_cc_hk_008_python_script_not_found() {
 }
 
 #[test]
+fn test_cc_hk_008_tilde_home_path_does_not_false_positive() {
+    // Regression for #894: Claude Code passes hook commands to the shell,
+    // which expands ~/... to $HOME/... at runtime. agnix previously
+    // resolved ~/.claude/hooks/hook.py against the project dir and flagged
+    // it as "not found (resolved to /cwd/~/.claude/hooks/hook.py)".
+    // After the fix, CC-HK-008 either (a) expands ~/ to the actual HOME
+    // and checks there, or (b) treats it as unresolved if HOME isn't
+    // readable - neither path should emit a spurious "file not found"
+    // for the ~/... prefix on a machine where HOME is available but the
+    // expanded path may or may not exist.
+    let content = r#"{
+            "hooks": {
+                "PostToolUse": [
+                    {
+                        "matcher": "Edit",
+                        "hooks": [
+                            { "type": "command", "command": "~/.claude/hooks/dippy-hook.py", "timeout": 5 }
+                        ]
+                    }
+                ]
+            }
+        }"#;
+
+    let diagnostics = validate(content);
+    let cc_hk_008: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-HK-008")
+        .collect();
+
+    // The diagnostic, if any, must not reference the literal "~" prefix
+    // in the resolved path - that's the exact false-positive shape from
+    // the bug report. With a reachable $HOME the path will either resolve
+    // under $HOME or be skipped; without one the whole path is treated as
+    // unresolved and no diagnostic fires.
+    for d in &cc_hk_008 {
+        assert!(
+            !d.message.contains("/~/"),
+            "CC-HK-008 must not emit a diagnostic that concatenates cwd with literal `~/`; got: {}",
+            d.message
+        );
+    }
+}
+
+#[test]
+fn test_cc_hk_008_tilde_user_path_is_skipped() {
+    // `~user/...` forms require resolving arbitrary user home directories
+    // via nss/passwd, which agnix does not do. Skip the existence check
+    // to avoid false-positives on shared-infra setups where a hook runs
+    // as a different user.
+    let content = r#"{
+            "hooks": {
+                "SessionStart": [
+                    {
+                        "hooks": [
+                            { "type": "command", "command": "~alice/.local/bin/setup.sh" }
+                        ]
+                    }
+                ]
+            }
+        }"#;
+
+    let diagnostics = validate(content);
+    let cc_hk_008: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-HK-008")
+        .collect();
+
+    assert_eq!(
+        cc_hk_008.len(),
+        0,
+        "CC-HK-008 must not fire on ~user/... paths (got: {:?})",
+        cc_hk_008.iter().map(|d| &d.message).collect::<Vec<_>>()
+    );
+}
+
+#[test]
 fn test_cc_hk_008_url_not_treated_as_script() {
     let content = r#"{
             "hooks": {
