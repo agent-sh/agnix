@@ -19,6 +19,7 @@ impl LintConfig {
             "CC-AG-",
             "CC-MEM-",
             "CC-PL-",
+            "CC-SET-",
             "CDX-",
             "XML-",
             "MCP-",
