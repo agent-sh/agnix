@@ -274,9 +274,8 @@ fn validate_worktree_base_ref(
         return;
     }
 
-    let line = find_key_line(content, "baseRef").unwrap_or_else(|| {
-        find_key_line(content, "worktree").unwrap_or(1)
-    });
+    let line = find_key_line(content, "baseRef")
+        .unwrap_or_else(|| find_key_line(content, "worktree").unwrap_or(1));
 
     match base_ref.as_str() {
         Some(s) if WORKTREE_BASE_REF_ALLOWED.contains(&s) => {}
@@ -309,9 +308,7 @@ fn validate_worktree_base_ref(
                         describe_json_type(base_ref)
                     ),
                 )
-                .with_suggestion(
-                    "Set worktree.baseRef to \"fresh\" or \"head\".",
-                ),
+                .with_suggestion("Set worktree.baseRef to \"fresh\" or \"head\"."),
             );
         }
     }
@@ -454,9 +451,7 @@ fn validate_parent_settings_behavior(
                         describe_json_type(field_value)
                     ),
                 )
-                .with_suggestion(
-                    "Set parentSettingsBehavior to \"first-wins\" or \"merge\".",
-                ),
+                .with_suggestion("Set parentSettingsBehavior to \"first-wins\" or \"merge\"."),
             );
         }
     }
@@ -951,40 +946,35 @@ mod tests {
     #[test]
     fn test_worktree_base_ref_fresh_is_fine() {
         let content = r#"{"worktree": {"baseRef": "fresh"}}"#;
-        assert!(validate(content)
-            .iter()
-            .all(|d| d.rule != "CC-SET-003"));
+        assert!(validate(content).iter().all(|d| d.rule != "CC-SET-003"));
     }
 
     #[test]
     fn test_worktree_base_ref_head_is_fine() {
         let content = r#"{"worktree": {"baseRef": "head"}}"#;
-        assert!(validate(content)
-            .iter()
-            .all(|d| d.rule != "CC-SET-003"));
+        assert!(validate(content).iter().all(|d| d.rule != "CC-SET-003"));
     }
 
     #[test]
     fn test_worktree_base_ref_absent_is_fine() {
         let content = r#"{"worktree": {}}"#;
-        assert!(validate(content)
-            .iter()
-            .all(|d| d.rule != "CC-SET-003"));
+        assert!(validate(content).iter().all(|d| d.rule != "CC-SET-003"));
     }
 
     #[test]
     fn test_worktree_base_ref_null_is_fine() {
         let content = r#"{"worktree": {"baseRef": null}}"#;
-        assert!(validate(content)
-            .iter()
-            .all(|d| d.rule != "CC-SET-003"));
+        assert!(validate(content).iter().all(|d| d.rule != "CC-SET-003"));
     }
 
     #[test]
     fn test_worktree_base_ref_invalid_enum_flags() {
         let content = r#"{"worktree": {"baseRef": "main"}}"#;
         let diagnostics = validate(content);
-        let cc003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CC-SET-003").collect();
+        let cc003: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-003")
+            .collect();
         assert_eq!(cc003.len(), 1);
         assert!(cc003[0].message.contains("fresh"));
         assert!(cc003[0].message.contains("head"));
@@ -995,7 +985,10 @@ mod tests {
         let content = r#"{"worktree": {"baseRef": "FRESH"}}"#;
         let diagnostics = validate(content);
         assert_eq!(
-            diagnostics.iter().filter(|d| d.rule == "CC-SET-003").count(),
+            diagnostics
+                .iter()
+                .filter(|d| d.rule == "CC-SET-003")
+                .count(),
             1,
             "enum check must be case-sensitive - Claude Code parses the value exactly"
         );
@@ -1005,7 +998,10 @@ mod tests {
     fn test_worktree_base_ref_non_string_flags() {
         let content = r#"{"worktree": {"baseRef": true}}"#;
         let diagnostics = validate(content);
-        let cc003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CC-SET-003").collect();
+        let cc003: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-003")
+            .collect();
         assert_eq!(cc003.len(), 1);
         assert!(cc003[0].message.contains("string"));
     }
@@ -1035,32 +1031,30 @@ mod tests {
     #[test]
     fn test_sandbox_paths_absent_is_fine() {
         let content = r#"{}"#;
-        assert!(validate(content)
-            .iter()
-            .all(|d| d.rule != "CC-SET-004"));
+        assert!(validate(content).iter().all(|d| d.rule != "CC-SET-004"));
     }
 
     #[test]
     fn test_sandbox_paths_valid_strings_are_fine() {
-        let content = r#"{"sandbox": {"bwrapPath": "/usr/local/bin/bwrap", "socatPath": "/usr/bin/socat"}}"#;
-        assert!(validate(content)
-            .iter()
-            .all(|d| d.rule != "CC-SET-004"));
+        let content =
+            r#"{"sandbox": {"bwrapPath": "/usr/local/bin/bwrap", "socatPath": "/usr/bin/socat"}}"#;
+        assert!(validate(content).iter().all(|d| d.rule != "CC-SET-004"));
     }
 
     #[test]
     fn test_sandbox_paths_null_is_fine() {
         let content = r#"{"sandbox": {"bwrapPath": null, "socatPath": null}}"#;
-        assert!(validate(content)
-            .iter()
-            .all(|d| d.rule != "CC-SET-004"));
+        assert!(validate(content).iter().all(|d| d.rule != "CC-SET-004"));
     }
 
     #[test]
     fn test_sandbox_bwrap_path_empty_string_flags() {
         let content = r#"{"sandbox": {"bwrapPath": ""}}"#;
         let diagnostics = validate(content);
-        let cc004: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CC-SET-004").collect();
+        let cc004: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-004")
+            .collect();
         assert_eq!(cc004.len(), 1);
         assert!(cc004[0].message.contains("bwrapPath"));
         assert!(cc004[0].message.contains("empty"));
@@ -1070,7 +1064,10 @@ mod tests {
     fn test_sandbox_socat_path_non_string_flags() {
         let content = r#"{"sandbox": {"socatPath": 42}}"#;
         let diagnostics = validate(content);
-        let cc004: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CC-SET-004").collect();
+        let cc004: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-004")
+            .collect();
         assert_eq!(cc004.len(), 1);
         assert!(cc004[0].message.contains("socatPath"));
         assert!(cc004[0].message.contains("string"));
@@ -1082,7 +1079,10 @@ mod tests {
         let content = r#"{"sandbox": {"bwrapPath": "", "socatPath": 0}}"#;
         let diagnostics = validate(content);
         assert_eq!(
-            diagnostics.iter().filter(|d| d.rule == "CC-SET-004").count(),
+            diagnostics
+                .iter()
+                .filter(|d| d.rule == "CC-SET-004")
+                .count(),
             2
         );
     }
@@ -1123,40 +1123,35 @@ mod tests {
     #[test]
     fn test_parent_settings_behavior_first_wins_is_fine() {
         let content = r#"{"parentSettingsBehavior": "first-wins"}"#;
-        assert!(validate(content)
-            .iter()
-            .all(|d| d.rule != "CC-SET-005"));
+        assert!(validate(content).iter().all(|d| d.rule != "CC-SET-005"));
     }
 
     #[test]
     fn test_parent_settings_behavior_merge_is_fine() {
         let content = r#"{"parentSettingsBehavior": "merge"}"#;
-        assert!(validate(content)
-            .iter()
-            .all(|d| d.rule != "CC-SET-005"));
+        assert!(validate(content).iter().all(|d| d.rule != "CC-SET-005"));
     }
 
     #[test]
     fn test_parent_settings_behavior_absent_is_fine() {
         let content = r#"{}"#;
-        assert!(validate(content)
-            .iter()
-            .all(|d| d.rule != "CC-SET-005"));
+        assert!(validate(content).iter().all(|d| d.rule != "CC-SET-005"));
     }
 
     #[test]
     fn test_parent_settings_behavior_null_is_fine() {
         let content = r#"{"parentSettingsBehavior": null}"#;
-        assert!(validate(content)
-            .iter()
-            .all(|d| d.rule != "CC-SET-005"));
+        assert!(validate(content).iter().all(|d| d.rule != "CC-SET-005"));
     }
 
     #[test]
     fn test_parent_settings_behavior_invalid_enum_flags() {
         let content = r#"{"parentSettingsBehavior": "override"}"#;
         let diagnostics = validate(content);
-        let cc005: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CC-SET-005").collect();
+        let cc005: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-005")
+            .collect();
         assert_eq!(cc005.len(), 1);
         assert!(cc005[0].message.contains("first-wins"));
         assert!(cc005[0].message.contains("merge"));
@@ -1167,7 +1162,10 @@ mod tests {
         let content = r#"{"parentSettingsBehavior": "Merge"}"#;
         let diagnostics = validate(content);
         assert_eq!(
-            diagnostics.iter().filter(|d| d.rule == "CC-SET-005").count(),
+            diagnostics
+                .iter()
+                .filter(|d| d.rule == "CC-SET-005")
+                .count(),
             1,
             "enum check must be case-sensitive"
         );
@@ -1177,7 +1175,10 @@ mod tests {
     fn test_parent_settings_behavior_non_string_flags() {
         let content = r#"{"parentSettingsBehavior": true}"#;
         let diagnostics = validate(content);
-        let cc005: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CC-SET-005").collect();
+        let cc005: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-005")
+            .collect();
         assert_eq!(cc005.len(), 1);
         assert!(cc005[0].message.contains("string"));
     }
