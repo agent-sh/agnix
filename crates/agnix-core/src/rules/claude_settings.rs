@@ -248,7 +248,9 @@ fn validate_channels_enabled(
 ///
 /// Missing field, missing `worktree` key, or `worktree.baseRef == null`
 /// are all fine - Claude Code falls through to the `"fresh"` default.
-/// Non-object `worktree` is flagged (array/string/number/bool).
+/// Non-object `worktree` (array/string/number/bool) is intentionally
+/// ignored here - a future CC-SET rule may cover that class of bug,
+/// and we don't want this rule to false-positive on schema extensions.
 fn validate_worktree_base_ref(
     path: &Path,
     content: &str,
