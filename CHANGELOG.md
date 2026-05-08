@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-05-09
+
 ### Added
 - **CC-SET-003: Invalid `worktree.baseRef` value** (closes #883). Claude Code 2.1.133 added the `worktree` nested object with a `baseRef` enum. Allowed values: `"fresh"` (branch from `origin/<default>`, the v2.1.133 default) or `"head"` (branch from local `HEAD`, the pre-v2.1.133 `EnterWorktree` behavior). Any other string value silently falls back to the default with no warning. CC-SET-003 (MEDIUM, WARNING) parses `.claude/settings.json` / `.local.json` / `managed-settings.json`, walks `worktree.baseRef`, and flags non-enum string values and non-string types. Missing field, missing `worktree`, and `baseRef: null` are not flagged. Case-sensitive (`"FRESH"` is not accepted). Non-object `worktree` is intentionally not flagged to avoid false-positiving on future schema extensions. Covered by 8 unit tests including case-sensitivity, null handling, disabled-rule path, and line-position pinning.
 - **CC-SET-004: Invalid sandbox path setting** (closes #883). Claude Code 2.1.133 added `sandbox.bwrapPath` and `sandbox.socatPath` managed settings (Linux/WSL) so admins can point the sandbox at custom bubblewrap/socat binaries. CC-SET-004 (MEDIUM, WARNING) walks both fields under `sandbox`, flags empty strings and non-string values independently (both fields fire their own diagnostic when both are wrong), and does not stat the path (agnix validates files, not filesystem state). `null` and absent are not flagged. Non-object `sandbox` is intentionally tolerated. Covered by 9 unit tests including independent-firing and managed-settings-path coverage.
