@@ -336,7 +336,7 @@
         "gemini_ignore"
       ],
       "github_repo": "google-gemini/gemini-cli",
-      "last_known_version": "v0.41.1",
+      "last_known_version": "v0.41.2",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
