@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `418` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `421` validation rules generated from `knowledge-base/rules.json`.
 `129` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -134,6 +134,9 @@ This section contains all `418` validation rules generated from `knowledge-base/
 | [CC-SK-020](./generated/cc-sk-020.md) | Invalid Shell Value | MEDIUM | Claude Skills | Yes (unsafe) |
 | [CC-SET-001](./generated/cc-set-001.md) | Invalid prUrlTemplate Setting | MEDIUM | Claude Settings | No |
 | [CC-SET-002](./generated/cc-set-002.md) | Non-boolean channelsEnabled Setting | MEDIUM | Claude Settings | No |
+| [CC-SET-003](./generated/cc-set-003.md) | Invalid worktree.baseRef Value | MEDIUM | Claude Settings | No |
+| [CC-SET-004](./generated/cc-set-004.md) | Invalid Sandbox Path Setting | MEDIUM | Claude Settings | No |
+| [CC-SET-005](./generated/cc-set-005.md) | Invalid parentSettingsBehavior Value | MEDIUM | Claude Settings | No |
 | [CDX-000](./generated/cdx-000.md) | TOML Parse Error | HIGH | Codex CLI | No |
 | [CDX-001](./generated/cdx-001.md) | Invalid Approval Mode | HIGH | Codex CLI | Yes (unsafe) |
 | [CDX-002](./generated/cdx-002.md) | Invalid Full Auto Error Mode | HIGH | Codex CLI | Yes (unsafe) |

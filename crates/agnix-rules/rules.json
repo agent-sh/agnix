@@ -1,8 +1,8 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 418,
-  "last_updated": "2026-05-06",
+  "total_rules": 421,
+  "last_updated": "2026-05-08",
   "schema": {
     "evidence": {
       "source_type": "spec|vendor_docs|vendor_code|paper|community",
@@ -3603,6 +3603,91 @@
       },
       "good_example": "{\n  \"channelsEnabled\": true\n}",
       "bad_example": "{\n  \"channelsEnabled\": \"true\"\n}"
+    },
+    {
+      "id": "CC-SET-003",
+      "name": "Invalid worktree.baseRef Value",
+      "severity": "MEDIUM",
+      "category": "claude-settings",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.133"
+        ],
+        "verified_on": "2026-05-08",
+        "applies_to": {
+          "tool": "claude-code",
+          "version_range": ">=2.1.133"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"worktree\": {\"baseRef\": \"fresh\"}\n}",
+      "bad_example": "{\n  \"worktree\": {\"baseRef\": \"main\"}\n}"
+    },
+    {
+      "id": "CC-SET-004",
+      "name": "Invalid Sandbox Path Setting",
+      "severity": "MEDIUM",
+      "category": "claude-settings",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.133"
+        ],
+        "verified_on": "2026-05-08",
+        "applies_to": {
+          "tool": "claude-code",
+          "version_range": ">=2.1.133",
+          "platform": "linux/wsl"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"sandbox\": {\"bwrapPath\": \"/usr/local/bin/bwrap\", \"socatPath\": \"/usr/bin/socat\"}\n}",
+      "bad_example": "{\n  \"sandbox\": {\"bwrapPath\": \"\", \"socatPath\": 42}\n}"
+    },
+    {
+      "id": "CC-SET-005",
+      "name": "Invalid parentSettingsBehavior Value",
+      "severity": "MEDIUM",
+      "category": "claude-settings",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.133"
+        ],
+        "verified_on": "2026-05-08",
+        "applies_to": {
+          "tool": "claude-code",
+          "version_range": ">=2.1.133"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"parentSettingsBehavior\": \"first-wins\"\n}",
+      "bad_example": "{\n  \"parentSettingsBehavior\": \"override\"\n}"
     },
     {
       "id": "CDX-000",
@@ -11733,7 +11818,7 @@
     },
     "claude-settings": {
       "prefix": "CC-SET",
-      "count": 2,
+      "count": 5,
       "description": "Claude Code settings (.claude/settings.json) rules"
     },
     "gemini-agents": {

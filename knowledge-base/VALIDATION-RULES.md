@@ -387,6 +387,27 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Fix**: Manual - replace the value with an unquoted `true` or `false`.
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.128 (introduced `--channels` support for console API-key auth; console orgs with managed settings must opt in via `channelsEnabled: true`)
 
+<a id="cc-set-003"></a>
+### CC-SET-003 [MEDIUM] Invalid worktree.baseRef Value
+**Requirement**: `worktree.baseRef` in `.claude/settings.json` / `.local.json` / `managed-settings.json` MUST be one of the strings `"fresh"` or `"head"` when present (Claude Code 2.1.133+). `"fresh"` branches from `origin/<default>` (the v2.1.133 default); `"head"` branches from local `HEAD` (the pre-v2.1.133 `EnterWorktree` behavior). Any other value silently falls back to the default.
+**Detection**: Parse settings.json; walk `worktree.baseRef`; flag (warning) non-string types and strings that don't match the `{fresh, head}` enum. Case-sensitive. `null` values and absent keys are not flagged.
+**Fix**: Manual - set `worktree.baseRef` to `"fresh"` or `"head"`.
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.133 (added `worktree.baseRef` setting; default changed back to `fresh` from the `head` behavior that shipped in v2.1.128)
+
+<a id="cc-set-004"></a>
+### CC-SET-004 [MEDIUM] Invalid Sandbox Path Setting
+**Requirement**: `sandbox.bwrapPath` and `sandbox.socatPath` in `.claude/settings.json` / `.local.json` / `managed-settings.json` MUST be non-empty strings when present (Claude Code 2.1.133+, Linux/WSL only). These override the default bubblewrap / socat binary lookup; an empty string or non-string value means Claude Code cannot locate the sandbox helper.
+**Detection**: Parse settings.json; walk `sandbox.bwrapPath` and `sandbox.socatPath`; flag (warning) empty strings and non-string types independently (both fields fire their own diagnostic when wrong). `null` values and absent keys are not flagged. Path existence is NOT checked (agnix validates files, not filesystem state).
+**Fix**: Manual - set the field to an absolute path string, or remove it to use Claude Code's default lookup.
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.133 (added `sandbox.bwrapPath` and `sandbox.socatPath` managed settings for Linux/WSL)
+
+<a id="cc-set-005"></a>
+### CC-SET-005 [MEDIUM] Invalid parentSettingsBehavior Value
+**Requirement**: `parentSettingsBehavior` in `.claude/settings.json` / `.local.json` / `managed-settings.json` MUST be one of the strings `"first-wins"` or `"merge"` when present (Claude Code 2.1.133+). `"first-wins"` preserves existing behavior; `"merge"` opts SDK `managedSettings` (the parent tier) into the policy merge.
+**Detection**: Parse settings.json; look up top-level `parentSettingsBehavior`; flag (warning) non-string types and strings that don't match the `{first-wins, merge}` enum. Case-sensitive. `null` values and absent keys are not flagged.
+**Fix**: Manual - set `parentSettingsBehavior` to `"first-wins"` or `"merge"`.
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.133 (added `parentSettingsBehavior` admin-tier key)
+
 ---
 
 ## PER-CLIENT SKILL RULES
@@ -3416,8 +3437,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 418 validation rules across 40 categories
+**Total Coverage**: 421 validation rules across 40 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 215 HIGH, 175 MEDIUM, 28 LOW
+**Certainty**: 215 HIGH, 178 MEDIUM, 28 LOW
 **Auto-Fixable**: 129 rules (31%)

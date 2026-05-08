@@ -7,6 +7,9 @@
 //! Rules:
 //! - `prUrlTemplate` (CC-SET-001, added in Claude Code v2.1.119).
 //! - `channelsEnabled` boolean check (CC-SET-002, added in Claude Code v2.1.128).
+//! - `worktree.baseRef` enum check (CC-SET-003, added in Claude Code v2.1.133).
+//! - `sandbox.bwrapPath`/`sandbox.socatPath` type check (CC-SET-004, added in Claude Code v2.1.133).
+//! - `parentSettingsBehavior` enum check (CC-SET-005, added in Claude Code v2.1.133).
 //!
 //! Runs on FileType::Hooks (which covers `.claude/settings.json` -
 //! see `file_types/detection.rs`). Skips non-Claude Code settings paths
@@ -20,7 +23,22 @@ use crate::{
 use rust_i18n::t;
 use std::path::Path;
 
-const RULE_IDS: &[&str] = &["CC-SET-001", "CC-SET-002"];
+const RULE_IDS: &[&str] = &[
+    "CC-SET-001",
+    "CC-SET-002",
+    "CC-SET-003",
+    "CC-SET-004",
+    "CC-SET-005",
+];
+
+/// Allowed values for `worktree.baseRef` per Claude Code v2.1.133 release notes.
+const WORKTREE_BASE_REF_ALLOWED: &[&str] = &["fresh", "head"];
+
+/// Allowed values for `parentSettingsBehavior` per Claude Code v2.1.133 release notes.
+const PARENT_SETTINGS_BEHAVIOR_ALLOWED: &[&str] = &["first-wins", "merge"];
+
+/// Documented `sandbox.*` string-valued path settings added in v2.1.133.
+const SANDBOX_PATH_FIELDS: &[&str] = &["bwrapPath", "socatPath"];
 
 /// Placeholders documented for `prUrlTemplate` at
 /// <https://code.claude.com/docs/en/settings>.
@@ -56,6 +74,18 @@ impl Validator for ClaudeSettingsValidator {
 
         if config.is_rule_enabled("CC-SET-002") {
             validate_channels_enabled(path, content, &value, &mut diagnostics);
+        }
+
+        if config.is_rule_enabled("CC-SET-003") {
+            validate_worktree_base_ref(path, content, &value, &mut diagnostics);
+        }
+
+        if config.is_rule_enabled("CC-SET-004") {
+            validate_sandbox_paths(path, content, &value, &mut diagnostics);
+        }
+
+        if config.is_rule_enabled("CC-SET-005") {
+            validate_parent_settings_behavior(path, content, &value, &mut diagnostics);
         }
 
         diagnostics
@@ -206,6 +236,227 @@ fn validate_channels_enabled(
             "Set channelsEnabled to an unquoted true or false. Quoted strings and numbers are not treated as opt-in by Claude Code 2.1.128+.",
         ),
     );
+}
+
+/// CC-SET-003: Validate `worktree.baseRef`. Claude Code 2.1.133 added
+/// the `worktree` nested object with a `baseRef` enum - allowed values
+/// are `"fresh"` (branch from `origin/<default>`, the v2.1.133 default)
+/// and `"head"` (branch from local `HEAD`, the pre-2.1.133 default for
+/// `EnterWorktree`). Any other value leaves the user in an ambiguous
+/// state - the release note is explicit that only these two strings
+/// are recognized.
+///
+/// Missing field, missing `worktree` key, or `worktree.baseRef == null`
+/// are all fine - Claude Code falls through to the `"fresh"` default.
+/// Non-object `worktree` (array/string/number/bool) is intentionally
+/// ignored here - a future CC-SET rule may cover that class of bug,
+/// and we don't want this rule to false-positive on schema extensions.
+fn validate_worktree_base_ref(
+    path: &Path,
+    content: &str,
+    value: &serde_json::Value,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(worktree) = value.get("worktree") else {
+        return;
+    };
+    // Null worktree = field absent. Non-object worktree is a separate
+    // class of bug we don't want to false-positive on (a CC-SET-006-style
+    // rule might cover it later); leave it alone for now.
+    if worktree.is_null() {
+        return;
+    }
+    let Some(worktree_obj) = worktree.as_object() else {
+        return;
+    };
+    let Some(base_ref) = worktree_obj.get("baseRef") else {
+        return;
+    };
+    if base_ref.is_null() {
+        return;
+    }
+
+    let line = find_key_line(content, "baseRef")
+        .unwrap_or_else(|| find_key_line(content, "worktree").unwrap_or(1));
+
+    match base_ref.as_str() {
+        Some(s) if WORKTREE_BASE_REF_ALLOWED.contains(&s) => {}
+        Some(other) => {
+            diagnostics.push(
+                Diagnostic::warning(
+                    path.to_path_buf(),
+                    line,
+                    0,
+                    "CC-SET-003",
+                    format!(
+                        "worktree.baseRef must be \"fresh\" or \"head\" (got \"{}\"); Claude Code 2.1.133+ only recognizes these two values",
+                        other
+                    ),
+                )
+                .with_suggestion(
+                    "Set worktree.baseRef to \"fresh\" (branch from origin/<default>) or \"head\" (branch from local HEAD).",
+                ),
+            );
+        }
+        None => {
+            diagnostics.push(
+                Diagnostic::warning(
+                    path.to_path_buf(),
+                    line,
+                    0,
+                    "CC-SET-003",
+                    format!(
+                        "worktree.baseRef must be a string (got {})",
+                        describe_json_type(base_ref)
+                    ),
+                )
+                .with_suggestion("Set worktree.baseRef to \"fresh\" or \"head\"."),
+            );
+        }
+    }
+}
+
+/// CC-SET-004: Validate `sandbox.bwrapPath` and `sandbox.socatPath`.
+/// Claude Code 2.1.133 added these two Linux/WSL managed-settings fields
+/// so admins can point the sandbox at a non-system bubblewrap/socat
+/// binary. Values must be strings and must not be empty. We do not
+/// stat the path (agnix validates files, not filesystem state) and we
+/// do not check platform - the setting being Linux-only means a macOS/
+/// Windows user writing it has a typo or a misconfiguration, but the
+/// shape check is what we can enforce.
+///
+/// Null values are treated as "field absent" by JSON convention.
+fn validate_sandbox_paths(
+    path: &Path,
+    content: &str,
+    value: &serde_json::Value,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(sandbox) = value.get("sandbox") else {
+        return;
+    };
+    if sandbox.is_null() {
+        return;
+    }
+    let Some(sandbox_obj) = sandbox.as_object() else {
+        return;
+    };
+
+    for field in SANDBOX_PATH_FIELDS {
+        let Some(field_value) = sandbox_obj.get(*field) else {
+            continue;
+        };
+        if field_value.is_null() {
+            continue;
+        }
+
+        let line = find_key_line(content, field)
+            .or_else(|| find_key_line(content, "sandbox"))
+            .unwrap_or(1);
+
+        match field_value.as_str() {
+            Some(s) if !s.is_empty() => {}
+            Some(_) => {
+                diagnostics.push(
+                    Diagnostic::warning(
+                        path.to_path_buf(),
+                        line,
+                        0,
+                        "CC-SET-004",
+                        format!(
+                            "sandbox.{} must not be an empty string; Claude Code uses this path to locate the sandbox helper binary",
+                            field
+                        ),
+                    )
+                    .with_suggestion(format!(
+                        "Remove sandbox.{} to fall back to Claude Code's default lookup, or set it to an absolute path to a {} binary.",
+                        field,
+                        if *field == "bwrapPath" { "bwrap" } else { "socat" }
+                    )),
+                );
+            }
+            None => {
+                diagnostics.push(
+                    Diagnostic::warning(
+                        path.to_path_buf(),
+                        line,
+                        0,
+                        "CC-SET-004",
+                        format!(
+                            "sandbox.{} must be a string (got {})",
+                            field,
+                            describe_json_type(field_value)
+                        ),
+                    )
+                    .with_suggestion(format!(
+                        "Set sandbox.{} to an absolute path string, or remove it to use Claude Code's default lookup.",
+                        field
+                    )),
+                );
+            }
+        }
+    }
+}
+
+/// CC-SET-005: Validate `parentSettingsBehavior`. Claude Code 2.1.133
+/// added this admin-tier top-level key to let admins opt SDK
+/// `managedSettings` (the parent tier) into the policy merge. Allowed
+/// values are `"first-wins"` (preserve existing behavior) and `"merge"`
+/// (include parent-tier managedSettings in the merge).
+///
+/// Missing / null -> field absent (default behavior). Any other
+/// non-enum string, or a non-string type, is a silent misconfiguration
+/// because Claude Code falls back to the default with no warning.
+fn validate_parent_settings_behavior(
+    path: &Path,
+    content: &str,
+    value: &serde_json::Value,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(field_value) = value.get("parentSettingsBehavior") else {
+        return;
+    };
+    if field_value.is_null() {
+        return;
+    }
+
+    let line = find_key_line(content, "parentSettingsBehavior").unwrap_or(1);
+
+    match field_value.as_str() {
+        Some(s) if PARENT_SETTINGS_BEHAVIOR_ALLOWED.contains(&s) => {}
+        Some(other) => {
+            diagnostics.push(
+                Diagnostic::warning(
+                    path.to_path_buf(),
+                    line,
+                    0,
+                    "CC-SET-005",
+                    format!(
+                        "parentSettingsBehavior must be \"first-wins\" or \"merge\" (got \"{}\"); Claude Code 2.1.133+ only recognizes these two values",
+                        other
+                    ),
+                )
+                .with_suggestion(
+                    "Set parentSettingsBehavior to \"first-wins\" (preserve existing behavior) or \"merge\" (include SDK managedSettings in the policy merge).",
+                ),
+            );
+        }
+        None => {
+            diagnostics.push(
+                Diagnostic::warning(
+                    path.to_path_buf(),
+                    line,
+                    0,
+                    "CC-SET-005",
+                    format!(
+                        "parentSettingsBehavior must be a string (got {})",
+                        describe_json_type(field_value)
+                    ),
+                )
+                .with_suggestion("Set parentSettingsBehavior to \"first-wins\" or \"merge\"."),
+            );
+        }
+    }
 }
 
 /// Renders a `serde_json::Value` variant as a short human-readable type
@@ -690,5 +941,285 @@ mod tests {
         let diagnostics = validate(content);
         assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-001"));
         assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-002"));
+    }
+
+    // ===== CC-SET-003: worktree.baseRef =====
+
+    #[test]
+    fn test_worktree_base_ref_fresh_is_fine() {
+        let content = r#"{"worktree": {"baseRef": "fresh"}}"#;
+        assert!(validate(content).iter().all(|d| d.rule != "CC-SET-003"));
+    }
+
+    #[test]
+    fn test_worktree_base_ref_head_is_fine() {
+        let content = r#"{"worktree": {"baseRef": "head"}}"#;
+        assert!(validate(content).iter().all(|d| d.rule != "CC-SET-003"));
+    }
+
+    #[test]
+    fn test_worktree_base_ref_absent_is_fine() {
+        let content = r#"{"worktree": {}}"#;
+        assert!(validate(content).iter().all(|d| d.rule != "CC-SET-003"));
+    }
+
+    #[test]
+    fn test_worktree_base_ref_null_is_fine() {
+        let content = r#"{"worktree": {"baseRef": null}}"#;
+        assert!(validate(content).iter().all(|d| d.rule != "CC-SET-003"));
+    }
+
+    #[test]
+    fn test_worktree_base_ref_invalid_enum_flags() {
+        let content = r#"{"worktree": {"baseRef": "main"}}"#;
+        let diagnostics = validate(content);
+        let cc003: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-003")
+            .collect();
+        assert_eq!(cc003.len(), 1);
+        assert!(cc003[0].message.contains("fresh"));
+        assert!(cc003[0].message.contains("head"));
+    }
+
+    #[test]
+    fn test_worktree_base_ref_is_case_sensitive() {
+        let content = r#"{"worktree": {"baseRef": "FRESH"}}"#;
+        let diagnostics = validate(content);
+        assert_eq!(
+            diagnostics
+                .iter()
+                .filter(|d| d.rule == "CC-SET-003")
+                .count(),
+            1,
+            "enum check must be case-sensitive - Claude Code parses the value exactly"
+        );
+    }
+
+    #[test]
+    fn test_worktree_base_ref_non_string_flags() {
+        let content = r#"{"worktree": {"baseRef": true}}"#;
+        let diagnostics = validate(content);
+        let cc003: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-003")
+            .collect();
+        assert_eq!(cc003.len(), 1);
+        assert!(cc003[0].message.contains("string"));
+    }
+
+    #[test]
+    fn test_worktree_base_ref_line_points_at_key() {
+        let content = "{\n  \"worktree\": {\n    \"baseRef\": \"main\"\n  }\n}";
+        let diagnostics = validate(content);
+        let d = diagnostics.iter().find(|d| d.rule == "CC-SET-003").unwrap();
+        assert_eq!(d.line, 3, "should point at the baseRef line, not worktree");
+    }
+
+    #[test]
+    fn test_worktree_base_ref_can_be_disabled() {
+        let mut builder = LintConfig::builder();
+        builder.disable_rule("CC-SET-003");
+        let config = builder.build().unwrap();
+        let validator = ClaudeSettingsValidator;
+        let path = PathBuf::from(".claude/settings.json");
+        let content = r#"{"worktree": {"baseRef": "main"}}"#;
+        let diagnostics = validator.validate(&path, content, &config);
+        assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-003"));
+    }
+
+    // ===== CC-SET-004: sandbox.bwrapPath / sandbox.socatPath =====
+
+    #[test]
+    fn test_sandbox_paths_absent_is_fine() {
+        let content = r#"{}"#;
+        assert!(validate(content).iter().all(|d| d.rule != "CC-SET-004"));
+    }
+
+    #[test]
+    fn test_sandbox_paths_valid_strings_are_fine() {
+        let content =
+            r#"{"sandbox": {"bwrapPath": "/usr/local/bin/bwrap", "socatPath": "/usr/bin/socat"}}"#;
+        assert!(validate(content).iter().all(|d| d.rule != "CC-SET-004"));
+    }
+
+    #[test]
+    fn test_sandbox_paths_null_is_fine() {
+        let content = r#"{"sandbox": {"bwrapPath": null, "socatPath": null}}"#;
+        assert!(validate(content).iter().all(|d| d.rule != "CC-SET-004"));
+    }
+
+    #[test]
+    fn test_sandbox_bwrap_path_empty_string_flags() {
+        let content = r#"{"sandbox": {"bwrapPath": ""}}"#;
+        let diagnostics = validate(content);
+        let cc004: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-004")
+            .collect();
+        assert_eq!(cc004.len(), 1);
+        assert!(cc004[0].message.contains("bwrapPath"));
+        assert!(cc004[0].message.contains("empty"));
+    }
+
+    #[test]
+    fn test_sandbox_socat_path_non_string_flags() {
+        let content = r#"{"sandbox": {"socatPath": 42}}"#;
+        let diagnostics = validate(content);
+        let cc004: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-004")
+            .collect();
+        assert_eq!(cc004.len(), 1);
+        assert!(cc004[0].message.contains("socatPath"));
+        assert!(cc004[0].message.contains("string"));
+    }
+
+    #[test]
+    fn test_sandbox_paths_both_flag_independently() {
+        // Two bad fields should produce two diagnostics, not one.
+        let content = r#"{"sandbox": {"bwrapPath": "", "socatPath": 0}}"#;
+        let diagnostics = validate(content);
+        assert_eq!(
+            diagnostics
+                .iter()
+                .filter(|d| d.rule == "CC-SET-004")
+                .count(),
+            2
+        );
+    }
+
+    #[test]
+    fn test_sandbox_non_object_does_not_crash() {
+        // Array-typed sandbox is a distinct class of bug; CC-SET-004
+        // intentionally does not false-positive on it (might be covered
+        // by a future CC-SET rule).
+        let content = r#"{"sandbox": []}"#;
+        let diagnostics = validate(content);
+        assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-004"));
+    }
+
+    #[test]
+    fn test_sandbox_paths_runs_on_managed_settings() {
+        // This is the primary deployment target per the release note
+        // ("managed settings (Linux/WSL)").
+        let content = r#"{"sandbox": {"bwrapPath": 0}}"#;
+        let diagnostics = validate_at(".claude/managed-settings.json", content);
+        assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-004"));
+    }
+
+    #[test]
+    fn test_sandbox_paths_can_be_disabled() {
+        let mut builder = LintConfig::builder();
+        builder.disable_rule("CC-SET-004");
+        let config = builder.build().unwrap();
+        let validator = ClaudeSettingsValidator;
+        let path = PathBuf::from(".claude/settings.json");
+        let content = r#"{"sandbox": {"bwrapPath": ""}}"#;
+        let diagnostics = validator.validate(&path, content, &config);
+        assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-004"));
+    }
+
+    // ===== CC-SET-005: parentSettingsBehavior =====
+
+    #[test]
+    fn test_parent_settings_behavior_first_wins_is_fine() {
+        let content = r#"{"parentSettingsBehavior": "first-wins"}"#;
+        assert!(validate(content).iter().all(|d| d.rule != "CC-SET-005"));
+    }
+
+    #[test]
+    fn test_parent_settings_behavior_merge_is_fine() {
+        let content = r#"{"parentSettingsBehavior": "merge"}"#;
+        assert!(validate(content).iter().all(|d| d.rule != "CC-SET-005"));
+    }
+
+    #[test]
+    fn test_parent_settings_behavior_absent_is_fine() {
+        let content = r#"{}"#;
+        assert!(validate(content).iter().all(|d| d.rule != "CC-SET-005"));
+    }
+
+    #[test]
+    fn test_parent_settings_behavior_null_is_fine() {
+        let content = r#"{"parentSettingsBehavior": null}"#;
+        assert!(validate(content).iter().all(|d| d.rule != "CC-SET-005"));
+    }
+
+    #[test]
+    fn test_parent_settings_behavior_invalid_enum_flags() {
+        let content = r#"{"parentSettingsBehavior": "override"}"#;
+        let diagnostics = validate(content);
+        let cc005: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-005")
+            .collect();
+        assert_eq!(cc005.len(), 1);
+        assert!(cc005[0].message.contains("first-wins"));
+        assert!(cc005[0].message.contains("merge"));
+    }
+
+    #[test]
+    fn test_parent_settings_behavior_is_case_sensitive() {
+        let content = r#"{"parentSettingsBehavior": "Merge"}"#;
+        let diagnostics = validate(content);
+        assert_eq!(
+            diagnostics
+                .iter()
+                .filter(|d| d.rule == "CC-SET-005")
+                .count(),
+            1,
+            "enum check must be case-sensitive"
+        );
+    }
+
+    #[test]
+    fn test_parent_settings_behavior_non_string_flags() {
+        let content = r#"{"parentSettingsBehavior": true}"#;
+        let diagnostics = validate(content);
+        let cc005: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-005")
+            .collect();
+        assert_eq!(cc005.len(), 1);
+        assert!(cc005[0].message.contains("string"));
+    }
+
+    #[test]
+    fn test_parent_settings_behavior_runs_on_managed_settings() {
+        // Release note scopes this to admin tier but we validate across
+        // all three files; a mis-typed value is still wrong wherever it
+        // lands.
+        let content = r#"{"parentSettingsBehavior": "override"}"#;
+        let diagnostics = validate_at(".claude/managed-settings.json", content);
+        assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-005"));
+    }
+
+    #[test]
+    fn test_parent_settings_behavior_can_be_disabled() {
+        let mut builder = LintConfig::builder();
+        builder.disable_rule("CC-SET-005");
+        let config = builder.build().unwrap();
+        let validator = ClaudeSettingsValidator;
+        let path = PathBuf::from(".claude/settings.json");
+        let content = r#"{"parentSettingsBehavior": "override"}"#;
+        let diagnostics = validator.validate(&path, content, &config);
+        assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-005"));
+    }
+
+    #[test]
+    fn test_v2_1_133_rules_coexist() {
+        // All three new v2.1.133 rules fire independently when all
+        // three fields are wrong; suppressing one must not silence
+        // the others.
+        let content = r#"{
+            "worktree": {"baseRef": "main"},
+            "sandbox": {"bwrapPath": ""},
+            "parentSettingsBehavior": "override"
+        }"#;
+        let diagnostics = validate(content);
+        assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-003"));
+        assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-004"));
+        assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-005"));
     }
 }
