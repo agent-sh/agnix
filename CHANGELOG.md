@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Rule count**: 416 -> 418 across all derived locations (rules.json, CLAUDE.md, AGENTS.md, README.md, plugin.json, SKILL.md files, website docs) via `scripts/sync-rule-bookkeeping.js`.
 
 ### Changed
+- **Tool baseline**: `gemini-cli` bumped from `v0.41.1` to `v0.41.2` (closes #885). Upstream v0.41.2 is a single-commit cherry-pick patch on top of v0.41.1 (`cherry-pick 02995ba to release/v0.41.1-pr-26568`, google-gemini/gemini-cli#26589) - no substantive config-surface changes. No existing GM rule (GM-004, GM-009, GM-010) is affected; no validator, `ToolVersions`, or `SpecRevisions` update required. Refreshes gemini cli "Last Reviewed" in `knowledge-base/RESEARCH-TRACKING.md` to 2026-05-08 and updates `.github/tool-release-baselines.json`.
 - **Tool baseline**: `opencode` bumped from `v1.14.37` to `v1.14.41` (closes #886). Four upstream releases span the jump (v1.14.38, v1.14.39, v1.14.40, v1.14.41).
   - Runtime bugfixes: reasoning-block preservation, missing-session errors, CORS-before-auth ordering, ACP/serve/web re-entry, web-terminal CSP, surrogate sanitization, Cloudflare AI Gateway provider options, `/new` workspace handling, editor selection stability, server-overload retries, Mistral Medium 3.5 restoration, compaction-summary ordering.
   - New `.well-known/opencode` config-discovery mechanism (pointer to a remote config file - does not change OpenCode's config schema, only how the file is located).

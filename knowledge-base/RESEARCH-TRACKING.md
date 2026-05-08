@@ -40,7 +40,7 @@ Tools are organized by support tier (see [../CONTRIBUTING.md#tool-tier-system](.
 
 | Tool | Config Format | Documentation URL | Monitoring | Frequency | Last Reviewed | Rule Prefix |
 |------|---------------|-------------------|------------|-----------|---------------|-------------|
-| gemini cli | `GEMINI.md`, `.gemini/settings.json`, `.geminiignore`, `gemini-extension.json` | https://github.com/google-gemini/gemini-cli | Automated (tool-release-watch.yml) | As reported | 2026-05-06 | GM |
+| gemini cli | `GEMINI.md`, `.gemini/settings.json`, `.geminiignore`, `gemini-extension.json` | https://github.com/google-gemini/gemini-cli | Automated (tool-release-watch.yml) | As reported | 2026-05-08 | GM |
 
 ### D Tier (no support, nice to have)
 
