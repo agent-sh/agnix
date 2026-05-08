@@ -2612,7 +2612,7 @@
         "autofix": false
       },
       "good_example": "# Project\n\nKeep CLAUDE.md concise and focused.",
-      "bad_example": "# Project\n\n(500+ lines of instructions that exceed recommended limits)"
+      "bad_example": "# Project\n\n(200+ lines of instructions that exceed recommended limits)"
     },
     {
       "id": "CC-PL-001",
