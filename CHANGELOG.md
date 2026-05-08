@@ -13,6 +13,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Rule count**: 416 -> 418 across all derived locations (rules.json, CLAUDE.md, AGENTS.md, README.md, plugin.json, SKILL.md files, website docs) via `scripts/sync-rule-bookkeeping.js`.
 
 ### Changed
+- **Tool baseline**: `opencode` bumped from `v1.14.37` to `v1.14.41` (closes #886). Four upstream releases span the jump (v1.14.38, v1.14.39, v1.14.40, v1.14.41).
+  - Runtime bugfixes: reasoning-block preservation, missing-session errors, CORS-before-auth ordering, ACP/serve/web re-entry, web-terminal CSP, surrogate sanitization, Cloudflare AI Gateway provider options, `/new` workspace handling, editor selection stability, server-overload retries, Mistral Medium 3.5 restoration, compaction-summary ordering.
+  - New `.well-known/opencode` config-discovery mechanism (pointer to a remote config file - does not change OpenCode's config schema, only how the file is located).
+  - TUI fixes: model-refresh selection, `/agent` -> `/agents` path, `/connect` custom provider setup.
+  - Desktop polish: clipboard permission, EPIPE logging, no-auto-install on quit, Sentry noise, sync bootstrap, macOS Settings menu, utility-process server split, uncommitted-changes carry on warp.
+  - ACP clients now restore last model/mode/effort on session load.
+  - Triage: agnix-irrelevant. None touch the config surfaces agnix validates (`.opencode/config.json` top-level keys, permission config, LSP config, MCP server definition shape, AGENTS.md grammar).
+  - No OC / AGM / XP validator, `ToolVersions`, or `SpecRevisions` update required. `.github/tool-release-baselines.json` and `knowledge-base/RESEARCH-TRACKING.md` ("Last Reviewed" for OpenCode) updated.
 - **Tool baseline**: `claude-code` bumped from `v2.1.126` to `v2.1.128` (closes #869). Upstream v2.1.127 was skipped; v2.1.128 is the single bridge release. Ships two config-affecting items that land as MCP-026 and CC-SET-002 above (both documented via upstream release notes at <https://github.com/anthropics/claude-code/releases/tag/v2.1.128>). The other 35 items in the release notes are triaged as agnix-irrelevant: UI/display fixes, CLI flag extensions that do not touch settings.json, model picker changes, OTEL env handling at subprocess spawn, piping/resume/vim/clipboard/progress/crashes, error message wording, streaming output. Also refreshes Claude Code "Last Reviewed" in `knowledge-base/RESEARCH-TRACKING.md` to 2026-05-06 and adds the `CC-SET` rule prefix to the row (was missing - pre-existing gap now that CC-SET is a two-rule family).
 - **MCP-023 / MCP-026 shared JSON-key walker**. Extracted `collect_mcp_server_name_offsets` as a single top-level `mcpServers` key walker, then had MCP-023 (duplicates) and MCP-026 (reserved names) consume it via different predicates. One JSON walk per file regardless of how many name-based rules exist; further server-name rules can reuse the same iterator.
 
