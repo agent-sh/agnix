@@ -40,7 +40,7 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ```markdown
 # Project
 
-(500+ lines of instructions that exceed recommended limits)
+(200+ lines of instructions that exceed recommended limits)
 ```
 
 ### Valid
