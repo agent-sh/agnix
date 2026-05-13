@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "start": "npm run build:wasm && docusaurus start",
-    "build": "npm run build:wasm && npm run generate:rules && docusaurus build",
+    "build": "npm run build:wasm && npm run generate:rules && npm run build:site",
+    "build:site": "docusaurus build",
     "build:wasm": "wasm-pack build ../crates/agnix-wasm --target web --out-dir ../../website/src/wasm --out-name agnix_wasm",
     "serve": "docusaurus serve",
     "generate:rules": "python3 ../scripts/generate-docs-rules.py",

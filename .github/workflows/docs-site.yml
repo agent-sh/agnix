@@ -65,13 +65,20 @@ jobs:
         run: cargo install wasm-pack --version 0.13.1 --locked
       - name: Install website dependencies
         run: npm --prefix website ci
-      - name: Generate rule docs and build site
+      - name: Build WASM package
+        run: npm --prefix website run build:wasm
+      - name: Generate rule docs
+        run: npm --prefix website run generate:rules
+      - name: Build Docusaurus site
         # 415+ generated rule pages push webpack's server-side compile past
-        # Node's default ~4 GB heap; raise it to 6 GB (GitHub runners have
-        # ~7 GB). Pre-existing OOM observed on main's 2026-04-26 run.
+        # Node's default ~4 GB heap; raise it to 6 GB and keep terser/SSG
+        # concurrency bounded so the generated rules reference does not
+        # exhaust memory as the catalog grows.
         env:
           NODE_OPTIONS: '--max-old-space-size=6144'
-        run: npm --prefix website run build
+          TERSER_PARALLEL: '2'
+          DOCUSAURUS_SSR_CONCURRENCY: '4'
+        run: npm --prefix website run build:site
       - name: Run docs parity test
         run: cargo test -p agnix-cli --test docs_website_parity
       - name: Upload site artifact
