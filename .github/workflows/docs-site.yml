@@ -61,9 +61,8 @@ jobs:
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2
         with:
           save-if: ${{ github.ref == 'refs/heads/main' }}
-      - uses: taiki-e/install-action@3fa6878dc4ae603f73960271565a082bf196ab96 # v2.77.2
-        with:
-          tool: wasm-pack@0.13.1
+      - name: Install wasm-pack
+        run: cargo install wasm-pack --version 0.13.1 --locked
       - name: Install website dependencies
         run: npm --prefix website ci
       - name: Generate rule docs and build site
