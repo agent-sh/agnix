@@ -1232,6 +1232,13 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 **Fix**: Manual - remove unsupported fields
 **Source**: code.claude.com/docs/en/plugins-reference
 
+<a id="cc-pl-015"></a>
+### CC-PL-015 [MEDIUM] Default Component Folder Shadowed by Manifest
+**Requirement**: If a root default component folder (`commands/`, `agents/`, `skills/`, or `hooks/`) exists, `plugin.json` SHOULD include that folder in the matching manifest field or avoid overriding that field.
+**Detection**: Check `.claude-plugin/plugin.json` for a component field while the matching root folder exists and is not one of the configured paths.
+**Fix**: Manual - add `./<component>` to the manifest field, or move the files into a configured component path.
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.140
+
 ---
 
 ## MCP RULES
@@ -2978,6 +2985,13 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 **Fix**: No auto-fix (rename servers)
 **Source**: kiro.dev/docs/mcp
 
+<a id="kr-mcp-006"></a>
+### KR-MCP-006 [MEDIUM] Invalid OAuth Client ID Configuration
+**Requirement**: `oauth.clientId` SHOULD be a non-empty string and only be used with HTTP(S) remote MCP server URLs.
+**Detection**: Check each MCP server `oauth` block for a non-empty string `clientId`, then require the same server to use an `http://` or `https://` URL.
+**Fix**: No auto-fix (set `oauth.clientId` on an HTTP(S) remote MCP server, or remove the OAuth block).
+**Source**: kiro.dev/changelog/cli/2-3/
+
 ---
 
 ## KIRO CLI SETTINGS RULES
@@ -3437,8 +3451,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 421 validation rules across 40 categories
+**Total Coverage**: 423 validation rules across 40 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 215 HIGH, 178 MEDIUM, 28 LOW
-**Auto-Fixable**: 129 rules (31%)
+**Certainty**: 215 HIGH, 180 MEDIUM, 28 LOW
+**Auto-Fixable**: 129 rules (30%)

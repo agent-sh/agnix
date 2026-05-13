@@ -1,4 +1,4 @@
-//! Kiro MCP validation rules (KR-MCP-001 to KR-MCP-005).
+//! Kiro MCP validation rules (KR-MCP-001 to KR-MCP-006).
 //!
 //! Validates `.kiro/settings/mcp.json`:
 //! - KR-MCP-001: Server missing both command and url
@@ -6,6 +6,7 @@
 //! - KR-MCP-003: Missing required args
 //! - KR-MCP-004: Invalid MCP URL
 //! - KR-MCP-005: Duplicate MCP server names
+//! - KR-MCP-006: Invalid OAuth client ID configuration
 
 use crate::{
     config::LintConfig,
@@ -22,6 +23,7 @@ const RULE_IDS: &[&str] = &[
     "KR-MCP-003",
     "KR-MCP-004",
     "KR-MCP-005",
+    "KR-MCP-006",
 ];
 
 pub struct KiroMcpValidator;
@@ -171,6 +173,26 @@ impl Validator for KiroMcpValidator {
                     }
                 }
             }
+
+            // KR-MCP-006: oauth.clientId is only meaningful on HTTP(S) remote servers
+            if config.is_rule_enabled("KR-MCP-006")
+                && let Some(reason) = invalid_oauth_client_id_reason(&server)
+            {
+                diagnostics.push(
+                    Diagnostic::warning(
+                        path.to_path_buf(),
+                        1,
+                        0,
+                        "KR-MCP-006",
+                        t!(
+                            "rules.kr_mcp_006.message",
+                            server = server_name.as_str(),
+                            reason = reason.as_str()
+                        ),
+                    )
+                    .with_suggestion(t!("rules.kr_mcp_006.suggestion")),
+                );
+            }
         }
 
         // Note: KR-MCP-005 (duplicate MCP server names) is a project-level check
@@ -179,6 +201,38 @@ impl Validator for KiroMcpValidator {
 
         diagnostics
     }
+}
+
+fn invalid_oauth_client_id_reason(
+    server: &crate::schemas::kiro_mcp::KiroMcpServerConfig,
+) -> Option<String> {
+    let oauth = server.extra.get("oauth")?;
+    let Some(oauth) = oauth.as_object() else {
+        return Some("'oauth' must be an object".to_string());
+    };
+
+    let Some(client_id) = oauth.get("clientId") else {
+        return Some("'oauth.clientId' is required when 'oauth' is configured".to_string());
+    };
+    let Some(client_id) = client_id.as_str() else {
+        return Some("'oauth.clientId' must be a string".to_string());
+    };
+    if client_id.trim().is_empty() {
+        return Some("'oauth.clientId' must not be empty".to_string());
+    }
+
+    let is_http_url = server
+        .url
+        .as_deref()
+        .map(str::trim)
+        .is_some_and(|url| url.starts_with("http://") || url.starts_with("https://"));
+    if !is_http_url {
+        return Some(
+            "'oauth.clientId' can only be used with HTTP(S) remote MCP server URLs".to_string(),
+        );
+    }
+
+    None
 }
 
 #[cfg(test)]
@@ -305,6 +359,105 @@ mod tests {
         assert!(metadata.rule_ids.contains(&"KR-MCP-005"));
     }
 
+    #[test]
+    fn test_kr_mcp_006_http_oauth_client_id_allowed() {
+        let diagnostics = validate(
+            r#"{
+  "mcpServers": {
+    "remote": {
+      "url": "https://example.com/mcp",
+      "oauth": {
+        "clientId": "registered-client"
+      }
+    }
+  }
+}"#,
+        );
+        assert!(diagnostics.iter().all(|d| d.rule != "KR-MCP-006"));
+    }
+
+    #[test]
+    fn test_kr_mcp_006_oauth_must_be_object() {
+        let diagnostics = validate(
+            r#"{
+  "mcpServers": {
+    "remote": {
+      "url": "https://example.com/mcp",
+      "oauth": "registered-client"
+    }
+  }
+}"#,
+        );
+        assert!(diagnostics.iter().any(|d| d.rule == "KR-MCP-006"));
+    }
+
+    #[test]
+    fn test_kr_mcp_006_requires_non_empty_client_id() {
+        let diagnostics = validate(
+            r#"{
+  "mcpServers": {
+    "remote": {
+      "url": "https://example.com/mcp",
+      "oauth": {
+        "clientId": ""
+      }
+    }
+  }
+}"#,
+        );
+        assert!(diagnostics.iter().any(|d| d.rule == "KR-MCP-006"));
+    }
+
+    #[test]
+    fn test_kr_mcp_006_missing_client_id() {
+        let diagnostics = validate(
+            r#"{
+  "mcpServers": {
+    "remote": {
+      "url": "https://example.com/mcp",
+      "oauth": {}
+    }
+  }
+}"#,
+        );
+        assert!(diagnostics.iter().any(|d| d.rule == "KR-MCP-006"));
+    }
+
+    #[test]
+    fn test_kr_mcp_006_oauth_on_command_server() {
+        let diagnostics = validate(
+            r#"{
+  "mcpServers": {
+    "local": {
+      "command": "node",
+      "args": ["server.js"],
+      "oauth": {
+        "clientId": "registered-client"
+      }
+    }
+  }
+}"#,
+        );
+        assert!(diagnostics.iter().any(|d| d.rule == "KR-MCP-006"));
+    }
+
+    #[test]
+    fn test_kr_mcp_006_oauth_on_non_http_url() {
+        let diagnostics = validate(
+            r#"{
+  "mcpServers": {
+    "remote": {
+      "url": "sse://example.com/mcp",
+      "oauth": {
+        "clientId": "registered-client"
+      }
+    }
+  }
+}"#,
+        );
+        assert!(diagnostics.iter().any(|d| d.rule == "KR-MCP-006"));
+    }
+
     // M16: KR-MCP-001 fires on malformed JSON
     #[test]
     fn test_kr_mcp_001_malformed_json() {
@@ -372,7 +525,8 @@ mod tests {
                 "KR-MCP-002",
                 "KR-MCP-003",
                 "KR-MCP-004",
-                "KR-MCP-005"
+                "KR-MCP-005",
+                "KR-MCP-006"
             ]
         );
     }

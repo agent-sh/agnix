@@ -845,6 +845,9 @@ rules:
   kr_mcp_002:
     message: "Kiro MCP server '%{server}' has potential hardcoded secret in env '%{env_key}'"
     suggestion: "Use environment variable indirection such as ${VAR_NAME} instead of plaintext secrets"
+  kr_mcp_006:
+    message: "Kiro MCP server '%{server}' has invalid oauth.clientId configuration: %{reason}"
+    suggestion: "Use oauth.clientId as a non-empty string only on HTTP(S) remote MCP servers, or remove the oauth block"
 
   # --- Prompt engineering (prompt.rs) ---
   pe_001:

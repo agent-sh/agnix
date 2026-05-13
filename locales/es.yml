@@ -613,6 +613,9 @@ rules:
   kr_mcp_002:
     message: "El servidor MCP Kiro '%{server}' tiene un posible secreto hardcodeado en env '%{env_key}'"
     suggestion: "Usa referencias de variables de entorno como ${VAR_NAME} en lugar de secretos en texto plano"
+  kr_mcp_006:
+    message: "El servidor MCP Kiro '%{server}' tiene una configuracion oauth.clientId invalida: %{reason}"
+    suggestion: "Usa oauth.clientId como cadena no vacia solo en servidores MCP remotos HTTP(S), o elimina el bloque oauth"
 
   # --- Codex Plugin (codex_plugin.rs) ---
   cdx_pl_001:

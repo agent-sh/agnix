@@ -613,6 +613,9 @@ rules:
   kr_mcp_002:
     message: "Kiro MCP 服务 '%{server}' 在 env '%{env_key}' 中存在潜在硬编码密钥"
     suggestion: "使用 ${VAR_NAME} 形式的环境变量引用，避免明文密钥"
+  kr_mcp_006:
+    message: "Kiro MCP 服务 '%{server}' 的 oauth.clientId 配置无效：%{reason}"
+    suggestion: "仅在 HTTP(S) 远程 MCP 服务上使用非空字符串 oauth.clientId，或移除 oauth 块"
 
   # --- Codex Plugin (codex_plugin.rs) ---
   cdx_pl_001:

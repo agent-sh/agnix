@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **CC-PL-015: Default component folder shadowed by manifest** (closes #905). Claude Code v2.1.140 now warns when default plugin component folders are ignored because `plugin.json` overrides the matching component path. CC-PL-015 mirrors that behavior for `.claude-plugin/plugin.json`: if a root `commands/`, `agents/`, `skills/`, or `hooks/` folder exists and the matching manifest field is set without including `./<component>`, agnix emits a MEDIUM warning. Covered by 4 unit tests for shadowing, explicit inclusion, absent default folder, and disabled-rule behavior.
+- **KR-MCP-006: Invalid OAuth client ID configuration** (closes #912). Kiro CLI 2.3.0 added pre-registered `oauth.clientId` support for HTTP-based MCP servers that do not support Dynamic Client Registration. KR-MCP-006 warns when `oauth` is not an object, `oauth.clientId` is missing/non-string/empty, or the OAuth block is attached to a command, `sse://`, `ws://`, or otherwise non-HTTP(S) MCP server. Covered by 6 unit tests.
+- **Rule count**: 421 -> 423 across all derived locations via `scripts/sync-rule-bookkeeping.js`, including `crates/agnix-rules/rules.json`, CLAUDE.md/AGENTS.md, README/docs counts, plugin/skill metadata, and generated website rule pages.
+
+### Changed
+- **Tool baselines**: refreshed every open tool-release issue from the release watcher. `claude-code` `v2.1.133` -> `v2.1.140` (#905), `codex` `rust-v0.129.0` -> `rust-v0.130.0` (#906), `cursor` `3.3.27` -> `3.4.16` (#907), `opencode` `v1.14.41` -> `v1.14.48` (#908), `cline` `v3.82.0` -> `v3.83.0` (#910), `gemini-cli` `v0.41.2` -> `v0.42.0` (#911), and `kiro` `2.2.0` -> `2.3.0` (#912). Codex, Cursor, OpenCode, Cline, and Gemini changes were triaged as already covered or runtime-only for currently validated surfaces. `.github/tool-release-baselines.json` and `knowledge-base/RESEARCH-TRACKING.md` were updated.
+
 ## [0.25.0] - 2026-05-09
 
 ### Added
