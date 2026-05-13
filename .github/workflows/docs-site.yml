@@ -73,11 +73,13 @@ jobs:
         # 415+ generated rule pages push webpack's server-side compile past
         # Node's default ~4 GB heap; raise it to 6 GB and keep SSG
         # concurrency bounded so the generated rules reference does not
-        # exhaust memory as the catalog grows. CI skips JS minification while
-        # still rendering every page; `npm run build` remains minified.
+        # exhaust memory as the catalog grows. CI skips JS minification and
+        # local-search indexing while still rendering every page; `npm run
+        # build` remains minified with search enabled.
         env:
           NODE_OPTIONS: '--max-old-space-size=6144'
           DOCUSAURUS_SSR_CONCURRENCY: '2'
+          AGNIX_DOCS_DISABLE_SEARCH: '1'
         run: npm --prefix website run build:site:ci
       - name: Run docs parity test
         run: cargo test -p agnix-cli --test docs_website_parity

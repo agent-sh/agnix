@@ -1,6 +1,7 @@
 // @ts-check
 
 const siteData = require('./src/data/siteData.json');
+const enableLocalSearch = process.env.AGNIX_DOCS_DISABLE_SEARCH !== '1';
 
 const config = {
   title: 'agnix',
@@ -97,18 +98,22 @@ const config = {
   ],
 
   plugins: [
-    [
-      require.resolve('@easyops-cn/docusaurus-search-local'),
-      {
-        indexDocs: true,
-        docsRouteBasePath: '/docs',
-        language: ['en'],
-        hashed: true,
-        highlightSearchTermsOnTargetPage: true,
-        searchResultLimits: 8,
-        searchResultContextMaxLength: 50,
-      },
-    ],
+    ...(enableLocalSearch
+      ? [
+          [
+            require.resolve('@easyops-cn/docusaurus-search-local'),
+            {
+              indexDocs: true,
+              docsRouteBasePath: '/docs',
+              language: ['en'],
+              hashed: true,
+              highlightSearchTermsOnTargetPage: true,
+              searchResultLimits: 8,
+              searchResultContextMaxLength: 50,
+            },
+          ],
+        ]
+      : []),
     require.resolve('./plugins/wasm-plugin'),
   ],
 
