@@ -71,14 +71,14 @@ jobs:
         run: npm --prefix website run generate:rules
       - name: Build Docusaurus site
         # 415+ generated rule pages push webpack's server-side compile past
-        # Node's default ~4 GB heap; raise it to 6 GB and keep terser/SSG
+        # Node's default ~4 GB heap; raise it to 6 GB and keep SSG
         # concurrency bounded so the generated rules reference does not
-        # exhaust memory as the catalog grows.
+        # exhaust memory as the catalog grows. CI skips JS minification while
+        # still rendering every page; `npm run build` remains minified.
         env:
           NODE_OPTIONS: '--max-old-space-size=6144'
-          TERSER_PARALLEL: '2'
-          DOCUSAURUS_SSR_CONCURRENCY: '4'
-        run: npm --prefix website run build:site
+          DOCUSAURUS_SSR_CONCURRENCY: '2'
+        run: npm --prefix website run build:site:ci
       - name: Run docs parity test
         run: cargo test -p agnix-cli --test docs_website_parity
       - name: Upload site artifact
