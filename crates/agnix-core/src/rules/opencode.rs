@@ -11,7 +11,7 @@
 //! - OC-009: Invalid variable substitution (MEDIUM) - must use {env:...} or {file:...}
 
 use crate::{
-    config::LintConfig,
+    config::PerFileLintConfig,
     diagnostics::{Diagnostic, Fix},
     rules::{Validator, ValidatorMetadata},
     schemas::opencode::{
@@ -92,7 +92,12 @@ impl Validator for OpenCodeValidator {
         }
     }
 
-    fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+    fn validate_per_file(
+        &self,
+        path: &Path,
+        content: &str,
+        config: &PerFileLintConfig<'_>,
+    ) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
 
         // OC-003: Parse error (ERROR)

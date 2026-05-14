@@ -4,7 +4,7 @@
 //! plugin system introduced in v0.117.0.
 
 use crate::{
-    config::LintConfig,
+    config::PerFileLintConfig,
     diagnostics::{Diagnostic, Fix},
     rules::{Validator, ValidatorMetadata},
 };
@@ -43,7 +43,12 @@ impl Validator for CodexPluginValidator {
         }
     }
 
-    fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+    fn validate_per_file(
+        &self,
+        path: &Path,
+        content: &str,
+        config: &PerFileLintConfig<'_>,
+    ) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
 
         if !config.rules().codex {
@@ -250,7 +255,7 @@ fn validate_component_path(
     field: &str,
     path: &Path,
     content: &str,
-    config: &LintConfig,
+    config: &PerFileLintConfig<'_>,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
     let trimmed = p.trim();
@@ -338,7 +343,7 @@ fn is_absolute_path(p: &str) -> bool {
 fn validate_default_prompt(
     value: &serde_json::Value,
     path: &Path,
-    config: &LintConfig,
+    config: &PerFileLintConfig<'_>,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
     let entries: Vec<&str> = match value {

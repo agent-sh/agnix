@@ -6,7 +6,7 @@
 //! - GM-010: memoryManager without autoMemory (MEDIUM) - behavior split in v0.40
 
 use crate::{
-    config::LintConfig,
+    config::PerFileLintConfig,
     diagnostics::{Diagnostic, Fix},
     rules::{Validator, ValidatorMetadata},
     schemas::gemini_settings::{
@@ -28,7 +28,12 @@ impl Validator for GeminiSettingsValidator {
         }
     }
 
-    fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+    fn validate_per_file(
+        &self,
+        path: &Path,
+        content: &str,
+        config: &PerFileLintConfig<'_>,
+    ) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
         let path_buf = path.to_path_buf();
 

@@ -8,7 +8,7 @@
 
 use crate::{
     FileType,
-    config::LintConfig,
+    config::PerFileLintConfig,
     diagnostics::{Diagnostic, Fix},
     parsers::frontmatter::split_frontmatter,
     rules::{Validator, ValidatorMetadata, line_byte_range},
@@ -69,7 +69,12 @@ impl Validator for AmpValidator {
         }
     }
 
-    fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+    fn validate_per_file(
+        &self,
+        path: &Path,
+        content: &str,
+        config: &PerFileLintConfig<'_>,
+    ) -> Vec<Diagnostic> {
         match crate::file_types::detect_file_type(path) {
             FileType::AmpCheck => validate_amp_check(path, content, config),
             FileType::AmpSettings => validate_amp_settings(path, content, config),
@@ -79,7 +84,11 @@ impl Validator for AmpValidator {
     }
 }
 
-fn validate_amp_check(path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+fn validate_amp_check(
+    path: &Path,
+    content: &str,
+    config: &PerFileLintConfig<'_>,
+) -> Vec<Diagnostic> {
     let mut diagnostics = Vec::new();
     let amp_001_enabled = config.is_rule_enabled("AMP-001");
     let amp_002_enabled = config.is_rule_enabled("AMP-002");
@@ -305,7 +314,11 @@ fn validate_amp_check(path: &Path, content: &str, config: &LintConfig) -> Vec<Di
     diagnostics
 }
 
-fn validate_amp_agents_globs(path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+fn validate_amp_agents_globs(
+    path: &Path,
+    content: &str,
+    config: &PerFileLintConfig<'_>,
+) -> Vec<Diagnostic> {
     if !config.is_rule_enabled("AMP-003") {
         return Vec::new();
     }
@@ -392,7 +405,11 @@ fn validate_amp_agents_globs(path: &Path, content: &str, config: &LintConfig) ->
     diagnostics
 }
 
-fn validate_amp_settings(path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+fn validate_amp_settings(
+    path: &Path,
+    content: &str,
+    config: &PerFileLintConfig<'_>,
+) -> Vec<Diagnostic> {
     if !config.is_rule_enabled("AMP-004") {
         return Vec::new();
     }

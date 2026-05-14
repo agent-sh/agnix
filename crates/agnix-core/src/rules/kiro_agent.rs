@@ -18,7 +18,7 @@
 //! - KR-HK-006: CLI hook entry missing required command.
 
 use crate::{
-    config::LintConfig,
+    config::PerFileLintConfig,
     diagnostics::Diagnostic,
     rules::{Validator, ValidatorMetadata, line_col_at_offset},
     schemas::kiro_agent::VALID_KIRO_AGENT_MODELS,
@@ -222,7 +222,7 @@ fn is_valid_resource_entry(resource: &Value) -> bool {
 fn validate_cli_hook_rules(
     path: &Path,
     current_agent: &Value,
-    config: &LintConfig,
+    config: &PerFileLintConfig<'_>,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
     let check_invalid_event = config.is_rule_enabled("KR-HK-005");
@@ -297,7 +297,7 @@ fn validate_cli_hook_rules(
 fn validate_agent_schema_rules(
     path: &Path,
     current_agent: &Value,
-    config: &LintConfig,
+    config: &PerFileLintConfig<'_>,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
     let check_unknown_fields = config.is_rule_enabled("KR-AG-001");
@@ -587,7 +587,7 @@ fn is_reserved_kiro_agent_filename(filename: &str) -> bool {
         || lowered.ends_with(".mcp.json")
 }
 
-fn find_kiro_agents_dir(path: &Path, config: &LintConfig) -> Option<PathBuf> {
+fn find_kiro_agents_dir(path: &Path, config: &PerFileLintConfig<'_>) -> Option<PathBuf> {
     let fs = config.fs();
 
     if let Some(parent) = path.parent() {
@@ -652,7 +652,10 @@ fn find_kiro_agents_dir(path: &Path, config: &LintConfig) -> Option<PathBuf> {
     None
 }
 
-fn load_agent_index(agents_dir: &Path, config: &LintConfig) -> HashMap<String, AgentInfo> {
+fn load_agent_index(
+    agents_dir: &Path,
+    config: &PerFileLintConfig<'_>,
+) -> HashMap<String, AgentInfo> {
     let fs = config.fs();
     let Ok(mut entries) = fs.read_dir(agents_dir) else {
         return HashMap::new();
@@ -721,7 +724,12 @@ impl Validator for KiroAgentValidator {
         }
     }
 
-    fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+    fn validate_per_file(
+        &self,
+        path: &Path,
+        content: &str,
+        config: &PerFileLintConfig<'_>,
+    ) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
 
         let check_missing_reference = config.is_rule_enabled("KR-AG-006");
@@ -831,6 +839,7 @@ impl Validator for KiroAgentValidator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::LintConfig;
     use std::fs;
 
     fn write_agent(path: &Path, content: &str) {

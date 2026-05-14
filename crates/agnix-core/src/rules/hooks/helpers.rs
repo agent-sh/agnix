@@ -1,4 +1,4 @@
-use crate::config::LintConfig;
+use crate::config::PerFileLintConfig;
 use crate::diagnostics::{Diagnostic, Fix};
 use crate::rules::find_closest_value;
 use crate::schemas::hooks::HooksSchema;
@@ -979,7 +979,7 @@ pub(super) fn validate_all_raw_hooks(
     raw_value: &serde_json::Value,
     path: &Path,
     content: &str,
-    config: &LintConfig,
+    config: &PerFileLintConfig<'_>,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> bool {
     let hooks_obj = match raw_value.get("hooks").and_then(|h| h.as_object()) {

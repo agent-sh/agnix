@@ -9,7 +9,7 @@
 //! - PE-006: Negative-only instructions without positive alternative
 
 use crate::{
-    config::LintConfig,
+    config::PerFileLintConfig,
     diagnostics::{Diagnostic, Fix},
     rules::{Validator, ValidatorMetadata, line_byte_range},
     schemas::prompt::{
@@ -33,7 +33,12 @@ impl Validator for PromptValidator {
         }
     }
 
-    fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+    fn validate_per_file(
+        &self,
+        path: &Path,
+        content: &str,
+        config: &PerFileLintConfig<'_>,
+    ) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
 
         // PE-001: Critical content in middle ("lost in the middle")

@@ -15,7 +15,7 @@
 //! `kiro-cli settings toolSearch.enabled true` writes them.
 
 use crate::{
-    config::LintConfig,
+    config::PerFileLintConfig,
     diagnostics::{Diagnostic, Fix},
     rules::{Validator, ValidatorMetadata},
 };
@@ -34,7 +34,12 @@ impl Validator for KiroSettingsValidator {
         }
     }
 
-    fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+    fn validate_per_file(
+        &self,
+        path: &Path,
+        content: &str,
+        config: &PerFileLintConfig<'_>,
+    ) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
 
         // Parse JSON; bail silently on parse errors (other validators in the

@@ -1,7 +1,7 @@
 //! XML tag balance validation
 
 use crate::{
-    config::LintConfig,
+    config::PerFileLintConfig,
     diagnostics::{Diagnostic, Fix},
     parsers::markdown::{
         XmlBalanceError, XmlTag, check_xml_balance_with_content_end, extract_xml_tags,
@@ -39,7 +39,12 @@ impl Validator for XmlValidator {
         }
     }
 
-    fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+    fn validate_per_file(
+        &self,
+        path: &Path,
+        content: &str,
+        config: &PerFileLintConfig<'_>,
+    ) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
 
         // Early return if XML category is disabled or legacy flag is disabled

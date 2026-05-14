@@ -4,7 +4,7 @@
 //! - GM-006: Invalid .geminiignore file (LOW) - empty content, syntax errors
 
 use crate::{
-    config::LintConfig,
+    config::PerFileLintConfig,
     diagnostics::Diagnostic,
     rules::{Validator, ValidatorMetadata},
     schemas::gemini_ignore::validate_geminiignore,
@@ -24,7 +24,12 @@ impl Validator for GeminiIgnoreValidator {
         }
     }
 
-    fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+    fn validate_per_file(
+        &self,
+        path: &Path,
+        content: &str,
+        config: &PerFileLintConfig<'_>,
+    ) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
 
         if !config.is_rule_enabled("GM-006") {

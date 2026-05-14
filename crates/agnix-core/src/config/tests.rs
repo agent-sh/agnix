@@ -3908,3 +3908,70 @@ fn test_overrides_build_lenient_skips_unknown_rule_prefix() {
         .expect("lenient build should accept unknown rule prefix");
     assert_eq!(config.overrides().len(), 1);
 }
+
+// =============================================================================
+// Per-file `for_path` wiring (M7): a few smoke tests that verify the view
+// wrapper consults `[[overrides]]` correctly. Exhaustive matching coverage
+// is in M8.
+// =============================================================================
+
+#[test]
+fn test_for_path_no_overrides_matches_global() {
+    let config = LintConfig::default();
+    let view = config.for_path(std::path::Path::new("anything.md"));
+    // PE-001 is enabled in defaults; with no overrides the view should
+    // return the same answer as the underlying global config.
+    assert_eq!(
+        view.is_rule_enabled("PE-001"),
+        config.is_rule_enabled("PE-001")
+    );
+    assert!(view.is_rule_enabled("PE-001"));
+}
+
+#[test]
+fn test_for_path_single_match_disables_rule() {
+    // root_dir must be set so override globs match against project-relative paths.
+    let config = LintConfig::builder()
+        .root_dir(std::path::PathBuf::from("/project"))
+        .overrides(vec![OverrideConfig {
+            paths: vec!["docs/**/*.md".to_string()],
+            disabled_rules: vec!["PE-001".to_string()],
+        }])
+        .build()
+        .expect("valid");
+
+    // Matching path: PE-001 disabled
+    let view_match = config.for_path(std::path::Path::new("/project/docs/guide.md"));
+    assert!(!view_match.is_rule_enabled("PE-001"));
+    // Other rules unaffected
+    assert!(view_match.is_rule_enabled("XML-001"));
+
+    // Non-matching path: PE-001 still enabled
+    let view_no_match = config.for_path(std::path::Path::new("/project/src/main.rs"));
+    assert!(view_no_match.is_rule_enabled("PE-001"));
+}
+
+#[test]
+fn test_for_path_multi_match_unions_disabled_rules() {
+    let config = LintConfig::builder()
+        .root_dir(std::path::PathBuf::from("/project"))
+        .overrides(vec![
+            OverrideConfig {
+                paths: vec![".claude/CLAUDE.md".to_string()],
+                disabled_rules: vec!["PE-001".to_string()],
+            },
+            OverrideConfig {
+                paths: vec!["**/*.md".to_string()],
+                disabled_rules: vec!["XML-001".to_string()],
+            },
+        ])
+        .build()
+        .expect("valid");
+
+    // Both blocks match `.claude/CLAUDE.md` → both rules disabled (union).
+    let view = config.for_path(std::path::Path::new("/project/.claude/CLAUDE.md"));
+    assert!(!view.is_rule_enabled("PE-001"));
+    assert!(!view.is_rule_enabled("XML-001"));
+    // Untouched rule still enabled
+    assert!(view.is_rule_enabled("AS-001"));
+}

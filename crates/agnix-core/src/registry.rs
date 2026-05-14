@@ -1134,11 +1134,11 @@ mod tests {
     struct SkipCountingValidator;
 
     impl Validator for SkipCountingValidator {
-        fn validate(
+        fn validate_per_file(
             &self,
             _path: &std::path::Path,
             _content: &str,
-            _config: &crate::config::LintConfig,
+            _config: &crate::config::PerFileLintConfig<'_>,
         ) -> Vec<crate::diagnostics::Diagnostic> {
             Vec::new()
         }
@@ -1159,11 +1159,11 @@ mod tests {
     struct OnceCountingValidator;
 
     impl Validator for OnceCountingValidator {
-        fn validate(
+        fn validate_per_file(
             &self,
             _path: &std::path::Path,
             _content: &str,
-            _config: &crate::config::LintConfig,
+            _config: &crate::config::PerFileLintConfig<'_>,
         ) -> Vec<crate::diagnostics::Diagnostic> {
             Vec::new()
         }
@@ -1184,11 +1184,11 @@ mod tests {
     struct BuilderCountingValidator;
 
     impl Validator for BuilderCountingValidator {
-        fn validate(
+        fn validate_per_file(
             &self,
             _path: &std::path::Path,
             _content: &str,
-            _config: &crate::config::LintConfig,
+            _config: &crate::config::PerFileLintConfig<'_>,
         ) -> Vec<crate::diagnostics::Diagnostic> {
             Vec::new()
         }
@@ -1702,11 +1702,11 @@ mod tests {
     struct NamedSkipCountingValidator;
 
     impl Validator for NamedSkipCountingValidator {
-        fn validate(
+        fn validate_per_file(
             &self,
             _path: &std::path::Path,
             _content: &str,
-            _config: &crate::config::LintConfig,
+            _config: &crate::config::PerFileLintConfig<'_>,
         ) -> Vec<crate::diagnostics::Diagnostic> {
             Vec::new()
         }
@@ -1817,11 +1817,11 @@ mod tests {
     struct MismatchedValidator;
 
     impl Validator for MismatchedValidator {
-        fn validate(
+        fn validate_per_file(
             &self,
             _path: &std::path::Path,
             _content: &str,
-            _config: &crate::config::LintConfig,
+            _config: &crate::config::PerFileLintConfig<'_>,
         ) -> Vec<crate::diagnostics::Diagnostic> {
             vec![]
         }

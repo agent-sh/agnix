@@ -386,7 +386,12 @@ fn test_validate_file_with_custom_registry() {
     struct DummyValidator;
 
     impl Validator for DummyValidator {
-        fn validate(&self, path: &Path, _content: &str, _config: &LintConfig) -> Vec<Diagnostic> {
+        fn validate_per_file(
+            &self,
+            path: &Path,
+            _content: &str,
+            _config: &PerFileLintConfig<'_>,
+        ) -> Vec<Diagnostic> {
             vec![Diagnostic::error(
                 path.to_path_buf(),
                 1,

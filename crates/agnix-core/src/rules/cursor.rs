@@ -23,7 +23,7 @@
 
 use crate::{
     FileType,
-    config::LintConfig,
+    config::PerFileLintConfig,
     diagnostics::{Diagnostic, Fix},
     parsers::frontmatter::split_frontmatter,
     rules::{Validator, ValidatorMetadata, json_type_name},
@@ -154,7 +154,11 @@ fn is_valid_cursor_model_id(model: &str) -> bool {
             .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.' | ':' | '/'))
 }
 
-fn validate_cursor_hooks_file(path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+fn validate_cursor_hooks_file(
+    path: &Path,
+    content: &str,
+    config: &PerFileLintConfig<'_>,
+) -> Vec<Diagnostic> {
     let mut diagnostics = Vec::new();
 
     let parsed = match serde_json::from_str::<JsonValue>(content) {
@@ -533,7 +537,11 @@ fn validate_cursor_hooks_file(path: &Path, content: &str, config: &LintConfig) -
     diagnostics
 }
 
-fn validate_cursor_agent_file(path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+fn validate_cursor_agent_file(
+    path: &Path,
+    content: &str,
+    config: &PerFileLintConfig<'_>,
+) -> Vec<Diagnostic> {
     let mut diagnostics = Vec::new();
     let parts = split_frontmatter(content);
 
@@ -706,7 +714,7 @@ fn validate_cursor_agent_file(path: &Path, content: &str, config: &LintConfig) -
 fn validate_cursor_environment_file(
     path: &Path,
     content: &str,
-    config: &LintConfig,
+    config: &PerFileLintConfig<'_>,
 ) -> Vec<Diagnostic> {
     let mut diagnostics = Vec::new();
 
@@ -911,7 +919,12 @@ impl Validator for CursorValidator {
         }
     }
 
-    fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+    fn validate_per_file(
+        &self,
+        path: &Path,
+        content: &str,
+        config: &PerFileLintConfig<'_>,
+    ) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
 
         let file_type = crate::detect_file_type(path);

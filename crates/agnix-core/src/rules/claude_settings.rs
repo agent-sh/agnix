@@ -16,7 +16,7 @@
 //! (e.g. `.amp/settings.json`) via a parent-directory check.
 
 use crate::{
-    config::LintConfig,
+    config::PerFileLintConfig,
     diagnostics::Diagnostic,
     rules::{Validator, ValidatorMetadata},
 };
@@ -54,7 +54,12 @@ impl Validator for ClaudeSettingsValidator {
         }
     }
 
-    fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+    fn validate_per_file(
+        &self,
+        path: &Path,
+        content: &str,
+        config: &PerFileLintConfig<'_>,
+    ) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
 
         if !is_claude_settings_path(path) {

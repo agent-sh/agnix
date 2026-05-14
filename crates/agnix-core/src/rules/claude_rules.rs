@@ -5,7 +5,7 @@
 //! - CC-MEM-012: Rules file unknown frontmatter key (MEDIUM) - only `paths` is known
 
 use crate::{
-    config::LintConfig,
+    config::PerFileLintConfig,
     diagnostics::{Diagnostic, Fix},
     rules::{Validator, ValidatorMetadata},
     schemas::claude_rules::{parse_frontmatter, validate_glob_pattern},
@@ -50,7 +50,12 @@ impl Validator for ClaudeRulesValidator {
         }
     }
 
-    fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+    fn validate_per_file(
+        &self,
+        path: &Path,
+        content: &str,
+        config: &PerFileLintConfig<'_>,
+    ) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
 
         // Only validate .claude/rules/*.md files

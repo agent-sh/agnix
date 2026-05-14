@@ -5,7 +5,7 @@
 //! - GM-008: Invalid context file name configuration (LOW) - questionable contextFileName values
 
 use crate::{
-    config::LintConfig,
+    config::PerFileLintConfig,
     diagnostics::{Diagnostic, Fix},
     rules::{Validator, ValidatorMetadata},
     schemas::gemini_extension::{REQUIRED_FIELDS, is_valid_extension_name, parse_gemini_extension},
@@ -25,7 +25,12 @@ impl Validator for GeminiExtensionValidator {
         }
     }
 
-    fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+    fn validate_per_file(
+        &self,
+        path: &Path,
+        content: &str,
+        config: &PerFileLintConfig<'_>,
+    ) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
         let path_buf = path.to_path_buf();
 

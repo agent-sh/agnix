@@ -316,9 +316,14 @@ impl LintConfigBuilder {
                 .unwrap_or(defaults.max_files_to_validate),
         };
 
+        let runtime = RuntimeContext {
+            compiled_overrides: Arc::new(compile_overrides(&config_data.overrides)),
+            ..RuntimeContext::default()
+        };
+
         let mut config = LintConfig {
             data: Arc::new(config_data),
-            runtime: RuntimeContext::default(),
+            runtime,
         };
 
         // Apply runtime state

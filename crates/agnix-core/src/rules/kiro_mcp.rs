@@ -9,7 +9,7 @@
 //! - KR-MCP-006: Invalid OAuth client ID configuration
 
 use crate::{
-    config::LintConfig,
+    config::PerFileLintConfig,
     diagnostics::Diagnostic,
     rules::{Validator, ValidatorMetadata, seems_plaintext_secret},
     schemas::kiro_mcp::parse_kiro_mcp_config,
@@ -36,7 +36,12 @@ impl Validator for KiroMcpValidator {
         }
     }
 
-    fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+    fn validate_per_file(
+        &self,
+        path: &Path,
+        content: &str,
+        config: &PerFileLintConfig<'_>,
+    ) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
         let parsed = parse_kiro_mcp_config(content);
 
@@ -260,6 +265,7 @@ impl OauthClientIdIssue {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::LintConfig;
 
     fn validate(content: &str) -> Vec<Diagnostic> {
         let validator = KiroMcpValidator;

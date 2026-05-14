@@ -1,7 +1,7 @@
 //! MCP (Model Context Protocol) validation (MCP-001 to MCP-026)
 
 use crate::{
-    config::LintConfig,
+    config::PerFileLintConfig,
     diagnostics::{Diagnostic, Fix},
     rules::{Validator, ValidatorMetadata},
     schemas::mcp::{
@@ -246,7 +246,12 @@ impl Validator for McpValidator {
         }
     }
 
-    fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+    fn validate_per_file(
+        &self,
+        path: &Path,
+        content: &str,
+        config: &PerFileLintConfig<'_>,
+    ) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
 
         // Early return if MCP category is disabled
@@ -599,7 +604,7 @@ fn validate_resource_definitions(
     value: &serde_json::Value,
     path: &Path,
     content: &str,
-    config: &LintConfig,
+    config: &PerFileLintConfig<'_>,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
     for resources in iter_root_or_result_array(value, "resources") {
@@ -645,7 +650,7 @@ fn validate_prompt_definitions(
     value: &serde_json::Value,
     path: &Path,
     content: &str,
-    config: &LintConfig,
+    config: &PerFileLintConfig<'_>,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
     for prompts in iter_root_or_result_array(value, "prompts") {
@@ -677,7 +682,7 @@ fn validate_capability_keys(
     value: &serde_json::Value,
     path: &Path,
     content: &str,
-    config: &LintConfig,
+    config: &PerFileLintConfig<'_>,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
     if !config.is_rule_enabled("MCP-020") {
@@ -949,7 +954,7 @@ fn validate_protocol_version(
     value: &serde_json::Value,
     path: &Path,
     content: &str,
-    config: &LintConfig,
+    config: &PerFileLintConfig<'_>,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
     let expected_version = config.get_mcp_protocol_version();
@@ -1062,7 +1067,7 @@ struct ToolLookupContext<'a> {
 fn validate_tool(
     tool: &McpToolSchema,
     path: &Path,
-    config: &LintConfig,
+    config: &PerFileLintConfig<'_>,
     diagnostics: &mut Vec<Diagnostic>,
     lookup: ToolLookupContext<'_>,
 ) {
@@ -1451,7 +1456,7 @@ fn validate_server(
     server: &McpServerConfig,
     path: &Path,
     content: &str,
-    config: &LintConfig,
+    config: &PerFileLintConfig<'_>,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
     let (line, col) = find_json_field_location(content, name);

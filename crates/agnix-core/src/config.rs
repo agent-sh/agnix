@@ -18,6 +18,7 @@ mod rule_filter;
 mod schema;
 
 pub use builder::LintConfigBuilder;
+pub use rule_filter::PerFileLintConfig;
 pub use schema::{ConfigWarning, generate_schema};
 /// Tool version pinning for version-aware validation
 ///
@@ -265,6 +266,47 @@ struct RuntimeContext {
     /// Validators use this to perform file system operations. Defaults to
     /// `RealFileSystem` which delegates to `std::fs` and `file_utils`.
     fs: Arc<dyn FileSystem>,
+
+    /// Pre-compiled glob patterns for `[[overrides]]`.
+    ///
+    /// Built once when the config is loaded (via `Deserialize` or
+    /// `LintConfigBuilder::build_inner`) and consulted by `for_path` to
+    /// compute the per-file disabled-rule set. Indices align with
+    /// `ConfigData::overrides`. Wrapped in `Arc` for cheap `Clone`.
+    compiled_overrides: Arc<Vec<CompiledOverride>>,
+}
+
+/// Pre-compiled form of an `OverrideConfig` for fast per-file matching.
+///
+/// Holds only the compiled glob patterns; the matching `disabled_rules`
+/// list is read from the parallel `OverrideConfig` at lookup time
+/// (indices align with `ConfigData::overrides`).
+#[derive(Debug, Clone)]
+pub(in crate::config) struct CompiledOverride {
+    /// Compiled glob patterns (mirrors `OverrideConfig::paths`).
+    pub patterns: Vec<glob::Pattern>,
+}
+
+/// Compile `[[overrides]]` glob patterns leniently.
+///
+/// Invalid globs are silently dropped, mirroring `compile_patterns_lenient`
+/// in the pipeline. Builder-path callers run `validate_patterns` first so
+/// bad globs surface as errors; deserialize-path callers tolerate them.
+pub(in crate::config) fn compile_overrides(overrides: &[OverrideConfig]) -> Vec<CompiledOverride> {
+    overrides
+        .iter()
+        .map(|ov| {
+            let patterns = ov
+                .paths
+                .iter()
+                .filter_map(|p| {
+                    let normalized = p.replace('\\', "/");
+                    glob::Pattern::new(&normalized).ok()
+                })
+                .collect();
+            CompiledOverride { patterns }
+        })
+        .collect()
 }
 
 impl Default for RuntimeContext {
@@ -273,6 +315,7 @@ impl Default for RuntimeContext {
             root_dir: None,
             import_cache: None,
             fs: Arc::new(RealFileSystem),
+            compiled_overrides: Arc::new(Vec::new()),
         }
     }
 }
@@ -286,6 +329,10 @@ impl std::fmt::Debug for RuntimeContext {
                 &self.import_cache.as_ref().map(|_| "ImportCache(...)"),
             )
             .field("fs", &"Arc<dyn FileSystem>")
+            .field(
+                "compiled_overrides",
+                &format!("[{} compiled]", self.compiled_overrides.len()),
+            )
             .finish()
     }
 }
@@ -471,9 +518,13 @@ impl Serialize for LintConfig {
 impl<'de> Deserialize<'de> for LintConfig {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let data = ConfigData::deserialize(deserializer)?;
+        let runtime = RuntimeContext {
+            compiled_overrides: Arc::new(compile_overrides(&data.overrides)),
+            ..RuntimeContext::default()
+        };
         Ok(Self {
             data: Arc::new(data),
-            runtime: RuntimeContext::default(),
+            runtime,
         })
     }
 }

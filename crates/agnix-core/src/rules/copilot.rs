@@ -22,7 +22,7 @@
 
 use crate::{
     FileType,
-    config::LintConfig,
+    config::PerFileLintConfig,
     diagnostics::{Diagnostic, Fix},
     rules::{Validator, ValidatorMetadata, json_type_name},
     schemas::{
@@ -97,7 +97,11 @@ fn is_setup_steps_workflow(path: &Path) -> bool {
     )
 }
 
-fn validate_custom_agent(path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+fn validate_custom_agent(
+    path: &Path,
+    content: &str,
+    config: &PerFileLintConfig<'_>,
+) -> Vec<Diagnostic> {
     let mut diagnostics = Vec::new();
     let parsed = parse_agent_frontmatter(content);
     let body = parsed.as_ref().map_or(content, |p| p.body.as_str());
@@ -436,7 +440,11 @@ fn validate_custom_agent(path: &Path, content: &str, config: &LintConfig) -> Vec
     diagnostics
 }
 
-fn validate_reusable_prompt(path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+fn validate_reusable_prompt(
+    path: &Path,
+    content: &str,
+    config: &PerFileLintConfig<'_>,
+) -> Vec<Diagnostic> {
     let mut diagnostics = Vec::new();
     let parsed = parse_prompt_frontmatter(content);
 
@@ -559,7 +567,11 @@ fn validate_reusable_prompt(path: &Path, content: &str, config: &LintConfig) -> 
     diagnostics
 }
 
-fn validate_hooks_file(path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+fn validate_hooks_file(
+    path: &Path,
+    content: &str,
+    config: &PerFileLintConfig<'_>,
+) -> Vec<Diagnostic> {
     let mut diagnostics = Vec::new();
 
     if is_setup_steps_workflow(path) {
@@ -634,7 +646,11 @@ fn is_copilot_plugin_manifest(path: &Path) -> bool {
     path.file_name().and_then(|n| n.to_str()) == Some("plugin.json")
 }
 
-fn validate_plugin_manifest(path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+fn validate_plugin_manifest(
+    path: &Path,
+    content: &str,
+    config: &PerFileLintConfig<'_>,
+) -> Vec<Diagnostic> {
     let mut diagnostics = Vec::new();
 
     let value: serde_json::Value = match serde_json::from_str(content) {
@@ -723,7 +739,11 @@ fn is_copilot_skill_md(path: &Path) -> bool {
         || path_contains_consecutive_components(path, ".agents", "skills")
 }
 
-fn validate_copilot_skill(path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+fn validate_copilot_skill(
+    path: &Path,
+    content: &str,
+    config: &PerFileLintConfig<'_>,
+) -> Vec<Diagnostic> {
     let mut diagnostics = Vec::new();
 
     let parsed = parse_agent_frontmatter(content);
@@ -906,7 +926,7 @@ const KNOWN_SKILL_FRONTMATTER_KEYS: &[&str] = &["name", "description", "license"
 /// COP-025: CLI `.agent.md` in wrong location.
 /// When a file ends with `.agent.md` but is not under `.github/agents/` or `~/.copilot/agents/`,
 /// emit an info diagnostic suggesting the correct location.
-fn validate_agent_md_location(path: &Path, config: &LintConfig) -> Vec<Diagnostic> {
+fn validate_agent_md_location(path: &Path, config: &PerFileLintConfig<'_>) -> Vec<Diagnostic> {
     let mut diagnostics = Vec::new();
 
     if !config.is_rule_enabled("COP-025") {
@@ -948,7 +968,11 @@ fn validate_agent_md_location(path: &Path, config: &LintConfig) -> Vec<Diagnosti
 /// COP-026: Deprecated SSE transport in MCP config.
 /// When an mcp-config.json server entry has `"type": "sse"`, warn that SSE transport
 /// is deprecated in favor of HTTP/Streamable HTTP.
-fn validate_mcp_config_sse(path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+fn validate_mcp_config_sse(
+    path: &Path,
+    content: &str,
+    config: &PerFileLintConfig<'_>,
+) -> Vec<Diagnostic> {
     let mut diagnostics = Vec::new();
 
     if !config.is_rule_enabled("COP-026") {
@@ -1028,7 +1052,12 @@ impl Validator for CopilotValidator {
         }
     }
 
-    fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+    fn validate_per_file(
+        &self,
+        path: &Path,
+        content: &str,
+        config: &PerFileLintConfig<'_>,
+    ) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
 
         // COP-026: Deprecated SSE transport in MCP config

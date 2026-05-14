@@ -11,7 +11,7 @@
 //! - KR-HK-010: Secrets in hook command
 
 use crate::{
-    config::LintConfig,
+    config::PerFileLintConfig,
     diagnostics::Diagnostic,
     rules::{Validator, ValidatorMetadata},
     schemas::kiro_hook::{VALID_KIRO_HOOK_EVENTS, parse_kiro_hook},
@@ -54,7 +54,12 @@ impl Validator for KiroHookValidator {
         }
     }
 
-    fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+    fn validate_per_file(
+        &self,
+        path: &Path,
+        content: &str,
+        config: &PerFileLintConfig<'_>,
+    ) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
         let parsed = parse_kiro_hook(content);
 
@@ -279,6 +284,7 @@ impl Validator for KiroHookValidator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::LintConfig;
 
     fn validate(content: &str) -> Vec<Diagnostic> {
         let validator = KiroHookValidator;
