@@ -48,9 +48,14 @@ pub(crate) fn run_project_level_checks(
 ) -> Vec<Diagnostic> {
     let mut diagnostics = Vec::new();
 
-    // AGM-006: Check for multiple AGENTS.md files in the directory tree
+    // AGM-006: Check for multiple AGENTS.md files in the directory tree.
+    // Per-file `[[overrides]]` gating happens at the push site so a carve-out
+    // on one AGENTS.md does not silence the others.
     if config.is_rule_enabled("AGM-006") && agents_md_paths.len() > 1 {
         for agents_file in agents_md_paths.iter() {
+            if !config.for_path(agents_file).is_rule_enabled("AGM-006") {
+                continue;
+            }
             let parent_files =
                 schemas::agents_md::check_agents_md_hierarchy(agents_file, agents_md_paths);
             let description = if !parent_files.is_empty() {
@@ -109,7 +114,7 @@ pub(crate) fn run_project_level_checks(
                     file_contents.push((file_path.clone(), content));
                 }
                 Err(e) => {
-                    if xp004_enabled {
+                    if xp004_enabled && config.for_path(file_path).is_rule_enabled("XP-004") {
                         diagnostics.push(
                             Diagnostic::error(
                                 file_path.clone(),
@@ -143,6 +148,9 @@ pub(crate) fn run_project_level_checks(
 
             let build_conflicts = schemas::cross_platform::detect_build_conflicts(&file_commands);
             for conflict in build_conflicts {
+                if !config.for_path(&conflict.file1).is_rule_enabled("XP-004") {
+                    continue;
+                }
                 diagnostics.push(
                     Diagnostic::warning(
                         conflict.file1.clone(),
@@ -185,6 +193,12 @@ pub(crate) fn run_project_level_checks(
 
             let tool_conflicts = schemas::cross_platform::detect_tool_conflicts(&file_constraints);
             for conflict in tool_conflicts {
+                if !config
+                    .for_path(&conflict.allow_file)
+                    .is_rule_enabled("XP-005")
+                {
+                    continue;
+                }
                 diagnostics.push(
                     Diagnostic::error(
                         conflict.allow_file.clone(),
@@ -224,16 +238,18 @@ pub(crate) fn run_project_level_checks(
             if let Some(issue) = schemas::cross_platform::detect_precedence_issues(&layers) {
                 // Report on the first layer file
                 if let Some(first_layer) = issue.layers.first() {
-                    diagnostics.push(
-                        Diagnostic::warning(
-                            first_layer.path.clone(),
-                            1,
-                            0,
-                            "XP-006",
-                            issue.description,
-                        )
-                        .with_suggestion(t!("rules.xp_006.suggestion")),
-                    );
+                    if config.for_path(&first_layer.path).is_rule_enabled("XP-006") {
+                        diagnostics.push(
+                            Diagnostic::warning(
+                                first_layer.path.clone(),
+                                1,
+                                0,
+                                "XP-006",
+                                issue.description,
+                            )
+                            .with_suggestion(t!("rules.xp_006.suggestion")),
+                        );
+                    }
                 }
             }
         }
@@ -258,10 +274,14 @@ pub(crate) fn run_project_level_checks(
                 root_dir.to_path_buf()
             };
 
-            diagnostics.push(
-                Diagnostic::info(report_path, 1, 0, "VER-001", t!("rules.ver_001.message"))
-                    .with_suggestion(t!("rules.ver_001.suggestion")),
-            );
+            // Honor `[[overrides]]` carve-outs targeting `.agnix.toml` (or the
+            // project root). Per-file gating runs after the global guard above.
+            if config.for_path(&report_path).is_rule_enabled("VER-001") {
+                diagnostics.push(
+                    Diagnostic::info(report_path, 1, 0, "VER-001", t!("rules.ver_001.message"))
+                        .with_suggestion(t!("rules.ver_001.suggestion")),
+                );
+            }
         }
     }
 
