@@ -208,8 +208,8 @@ impl LintConfig {
     /// retains a symlink prefix (e.g., `~/.claude/CLAUDE.md` where
     /// `~/.claude` is a dotfile-manager symlink), the direct
     /// `strip_prefix` would fail. `for_path` detects this and retries
-    /// once with `std::fs::canonicalize(path)` so overrides still match.
-    /// Non-symlinked paths pay no syscall cost.
+    /// once via the configured [`FileSystem::canonicalize`] so overrides
+    /// still match. Non-symlinked paths pay no syscall cost.
     pub fn for_path(&self, path: &Path) -> PerFileLintConfig<'_> {
         // Empty fast-path: skip matching entirely when there are no overrides.
         if self.runtime.compiled_overrides.is_empty() {
@@ -229,7 +229,7 @@ impl LintConfig {
             // `chezmoi` store). Retry once with `path` canonicalized so the
             // override actually matches in that case.
             if std::path::Path::new(&direct).is_absolute() {
-                match std::fs::canonicalize(path) {
+                match self.runtime.fs.canonicalize(path) {
                     Ok(canonical) => normalize_rel_path(&canonical, root),
                     Err(_) => direct,
                 }
