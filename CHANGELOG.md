@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.26.0] - 2026-05-14
+
 ### Added
 - **CC-PL-015: Default component folder shadowed by manifest** (closes #905). Claude Code v2.1.140 now warns when default plugin component folders are ignored because `plugin.json` overrides the matching component path. CC-PL-015 mirrors that behavior for `.claude-plugin/plugin.json`: if a root `commands/`, `agents/`, `skills/`, or `hooks/` folder exists and the matching manifest field is set without including `./<component>`, agnix emits a MEDIUM warning. Covered by 6 unit tests for shadowing, explicit inclusion, absent default folder, file-vs-directory false positives, invalid manifest path shapes, and disabled-rule behavior.
 - **KR-MCP-006: Invalid OAuth client ID configuration** (closes #912). Kiro CLI 2.3.0 added pre-registered `oauth.clientId` support for HTTP-based MCP servers that do not support Dynamic Client Registration. KR-MCP-006 warns when `oauth` is not an object, `oauth.clientId` is missing/non-string/empty, or the OAuth block is attached to a command, `sse://`, `ws://`, or otherwise non-HTTP(S) MCP server. Covered by 6 unit tests.
