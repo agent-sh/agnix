@@ -24,8 +24,8 @@ const TRIGGER_CONTENT: &str = "\
 /// Project layout used by both tests:
 ///
 /// ```text
-/// <root>/CLAUDE.md            (top-level — override pattern targets this)
-/// <root>/nested/CLAUDE.md     (sub-directory — override pattern does NOT match)
+/// <root>/CLAUDE.md            (top-level - override pattern targets this)
+/// <root>/nested/CLAUDE.md     (sub-directory - override pattern does NOT match)
 /// ```
 fn setup_project(temp: &tempfile::TempDir) {
     fs::write(temp.path().join("CLAUDE.md"), TRIGGER_CONTENT).unwrap();
@@ -111,7 +111,7 @@ fn overrides_suppress_rule_on_matching_path_only() {
     );
     assert!(
         nested_hits > 0,
-        "override pattern `CLAUDE.md` must NOT recurse — expected CC-MEM-005 still on nested/CLAUDE.md, got hits on: {:?}",
+        "override pattern `CLAUDE.md` must NOT recurse - expected CC-MEM-005 still on nested/CLAUDE.md, got hits on: {:?}",
         hits.iter().map(|d| &d.file).collect::<Vec<_>>()
     );
 }
@@ -274,7 +274,7 @@ fn overrides_partial_xp004_deterministic_suppression() {
 
     // Override ONLY CLAUDE.md. AGENTS.md continues to participate fully.
     // With CLAUDE.md filtered out of the candidate set, no two files remain
-    // to conflict — XP-004 must produce zero diagnostics deterministically.
+    // to conflict - XP-004 must produce zero diagnostics deterministically.
     let config = LintConfig::builder()
         .overrides(vec![OverrideConfig {
             paths: vec!["CLAUDE.md".to_string()],
@@ -297,7 +297,7 @@ fn overrides_partial_xp004_deterministic_suppression() {
 }
 
 /// Regression for AGM-006 partial-override semantics: a file that disables
-/// AGM-006 is invisible to the rule — it neither fires nor appears in
+/// AGM-006 is invisible to the rule - it neither fires nor appears in
 /// other files' "other AGENTS.md files exist at:" listings. When the only
 /// remaining unfiltered AGENTS.md leaves the participating set below the
 /// `len() > 1` threshold, AGM-006 is fully suppressed.
@@ -309,7 +309,7 @@ fn overrides_partial_agm006_no_cross_mention() {
     fs::write(temp.path().join("nested").join("AGENTS.md"), "# Nested\n").unwrap();
 
     // Override ONLY the nested AGENTS.md. After filtering, the root file is
-    // the only AGM-006 participant — `len() > 1` fails, so AGM-006 produces
+    // the only AGM-006 participant - `len() > 1` fails, so AGM-006 produces
     // zero diagnostics. Crucially, the root file must NOT fire AGM-006 with
     // a message that mentions the (filtered-out) nested file.
     let config = LintConfig::builder()
@@ -329,7 +329,7 @@ fn overrides_partial_agm006_no_cross_mention() {
         .collect();
     assert!(
         agm006_hits.is_empty(),
-        "partial override on nested/AGENTS.md must remove it from the AGM-006 participating set, dropping below len() > 1 — got: {agm006_hits:?}"
+        "partial override on nested/AGENTS.md must remove it from the AGM-006 participating set, dropping below len() > 1 - got: {agm006_hits:?}"
     );
 }
 
@@ -343,7 +343,7 @@ fn overrides_suppress_ver001_on_agnix_toml() {
     let temp = tempfile::TempDir::new().unwrap();
     // `.agnix.toml` must exist on disk so `run_project_level_checks`
     // picks it as the report path (vs. falling back to the project root).
-    // Content is irrelevant here — config is built via the builder below.
+    // Content is irrelevant here - config is built via the builder below.
     fs::write(temp.path().join(".agnix.toml"), "# placeholder\n").unwrap();
 
     // Baseline: with no tool versions pinned and no override, VER-001
