@@ -31,6 +31,18 @@ include_as_memory = ["docs/ai-rules/*.md"]
 exclude = ["vendor/**"]
 ```
 
+### Carve Out Rules for Specific Files
+
+Disable a rule on specific files only, without disabling it globally. Useful when a file legitimately contains patterns that would otherwise trip a rule (e.g., a CLAUDE.md that documents quoted-example triggers):
+
+```toml
+[[overrides]]
+paths = ["CLAUDE.md", "AGENTS.md"]
+disabled_rules = ["CC-MEM-005"]
+```
+
+See the [Per-File Rule Overrides](#per-file-rule-overrides) section below for full semantics.
+
 ## Full Reference
 
 ```toml
@@ -83,15 +95,24 @@ disabled_rules = ["CC-MEM-006", "PE-003"]
 
 # Exclude from validation entirely (even built-in file types)
 # exclude = ["vendor/**", "generated/**"]
+
+# Per-file rule suppression (see "Per-file rule overrides" below).
+# Each [[overrides]] block disables `disabled_rules` for files matching
+# any pattern in `paths`. Multiple blocks stack (set union); ordering
+# does not matter.
+# [[overrides]]
+# paths = ["CLAUDE.md", "AGENTS.md"]
+# disabled_rules = ["CC-MEM-005"]
 ```
 
 ## Schema Validation
 
 agnix automatically validates `.agnix.toml` files for:
 
-- **Invalid rule IDs**: Warns if `disabled_rules` contains IDs that don't match known patterns (AS-, CC-SK-, CC-HK-, CC-AG-, CC-MEM-, CC-PL-, XML-, MCP-, REF-, XP-, AGM-, COP-, CUR-, PE-, VER-, imports::)
+- **Invalid rule IDs**: Warns if `disabled_rules` (in `[rules]` or `[[overrides]]`) contains IDs that don't match known patterns (AS-, CC-SK-, CC-HK-, CC-AG-, CC-MEM-, CC-PL-, XML-, MCP-, REF-, XP-, AGM-, COP-, CUR-, PE-, VER-, imports::)
 - **Unknown tools**: Warns if `tools` array contains tool names that aren't recognized
-- **Invalid file patterns**: Warns if `[files]` glob patterns have invalid syntax
+- **Invalid file patterns**: Warns if `[files]` or `[[overrides]].paths` glob patterns have invalid syntax. The invalid pattern is dropped at config-load (it can't match anything) and the warning surfaces it so you know which one was ignored.
+- **Unsafe override paths**: Warns if `[[overrides]].paths` entries are absolute (`/foo/...`) or contain `..` traversal. These patterns can never match a project-relative file path, so the override is a no-op even though it parses. (SDK consumers using `LintConfigBuilder::build()` get a hard error for these patterns instead.)
 - **Deprecated fields**: Warns when using `mcp_protocol_version` (use `spec_revisions.mcp_protocol` instead)
 
 These warnings appear before validation output and include suggestions for fixes.
@@ -109,6 +130,63 @@ agnix schema --output schemas/agnix.json
 ```
 
 The VS Code extension automatically uses this schema for autocomplete and validation.
+
+## Per-File Rule Overrides
+
+`[[overrides]]` lets you disable specific rules on specific files, without disabling them everywhere. Use it when a file legitimately contains patterns that trip a rule (for example, a `CLAUDE.md` that documents quoted-example triggers, or a generated file that uses constructs the rule discourages).
+
+### Schema
+
+```toml
+[[overrides]]
+paths = ["CLAUDE.md", "docs/agents/**/*.md"]
+disabled_rules = ["CC-MEM-005", "PE-003"]
+
+[[overrides]]
+paths = ["AGENTS.md"]
+disabled_rules = ["CC-MEM-007"]
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `paths` | `[String]` | Glob patterns matched against project-relative paths. If any pattern matches a file, the block applies. |
+| `disabled_rules` | `[String]` | Rule IDs to disable for matching files. Same ID format as `[rules].disabled_rules`. |
+
+### Semantics
+
+- **Union, never subtractive.** For each file, the effective disabled-rules set is `[rules].disabled_rules` ∪ (every `[[overrides]]` block whose `paths` matched). Overrides can only *add* to what is disabled; they cannot re-enable a rule that is globally disabled (via `[rules].disabled_rules`) or disabled by a category toggle (e.g., `[rules].skills = false`).
+- **Multiple blocks stack.** If two `[[overrides]]` blocks both match a file, both contribute their `disabled_rules`. Ordering does not matter.
+- **No effect on non-matching files.** A file not matched by any block sees only the global config.
+- **`[files].exclude` wins.** If a file is excluded entirely via `[files].exclude`, it is skipped before any rule runs, so `[[overrides]]` on excluded paths is moot.
+- **Empty `paths = []` matches nothing.** A block with no patterns has no effect; the `disabled_rules` it carries never apply to any file.
+
+### Glob semantics
+
+Patterns use the same matcher as `[files].exclude` (Rust [`glob`](https://docs.rs/glob/) with `require_literal_separator = true`):
+
+- `*` matches within a single path component. `*.md` matches `README.md` but **not** `docs/README.md`.
+- `**` matches across directories. `**/*.md` matches `README.md` and `docs/nested/page.md`.
+- Exact paths match only themselves. `.claude/CLAUDE.md` matches that one file.
+
+Paths are matched relative to the project root (where `.agnix.toml` lives). When invoked without a project root (e.g., single-file mode), patterns are matched against the file name only.
+
+### Validation
+
+- Invalid glob syntax in `paths` → warning (pattern is dropped at config-load; SDK `LintConfigBuilder::build()` rejects as error).
+- Absolute paths (`/etc/...`) or `..` traversal in `paths` → warning (pattern is kept but can never match a project-relative path, so the override is a silent no-op; SDK `LintConfigBuilder::build()` and `build_lenient()` both reject as error).
+- Unknown rule-ID prefixes in `disabled_rules` → warning.
+
+### Example: CLAUDE.md carve-out
+
+A project-level `CLAUDE.md` that documents Claude trigger phrases would normally trip CC-MEM-005 (generic-instruction detection) on its own example text. Carve it out without losing the rule everywhere else:
+
+```toml
+[[overrides]]
+paths = ["CLAUDE.md", "AGENTS.md"]
+disabled_rules = ["CC-MEM-005"]
+```
+
+CC-MEM-005 still fires on every other memory file in the repo.
 
 ## Rule Categories
 
