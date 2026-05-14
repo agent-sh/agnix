@@ -114,6 +114,40 @@ pub struct FilesConfig {
     pub exclude: Vec<String>,
 }
 
+/// Per-file rule suppression override.
+///
+/// Each `[[overrides]]` block carves a set of rule IDs out of validation for
+/// files matching any of its `paths` globs. Multiple blocks stack (set union)
+/// on top of the global `rules.disabled_rules`. Absent or empty `overrides`
+/// preserves the existing behavior (backwards compatible).
+///
+/// # Example
+///
+/// ```toml
+/// [[overrides]]
+/// paths = [".claude/CLAUDE.md", "docs/agents/**/*.md"]
+/// disabled_rules = ["PE-001"]
+/// ```
+#[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
+pub struct OverrideConfig {
+    /// Glob patterns for files this override applies to.
+    ///
+    /// Paths are matched relative to the project root, using the same glob
+    /// semantics as `files.exclude`.
+    #[serde(default)]
+    #[schemars(description = "Glob patterns for files this override applies to")]
+    pub paths: Vec<String>,
+
+    /// Rule IDs to disable for the matched files (e.g., `["PE-001"]`).
+    ///
+    /// Stacks with the global `rules.disabled_rules` for the matched files.
+    #[serde(default)]
+    #[schemars(
+        description = "Rule IDs to disable for files matching `paths` (e.g., [\"PE-001\"])"
+    )]
+    pub disabled_rules: Vec<String>,
+}
+
 // =============================================================================
 // Internal Composition Types (Facade Pattern)
 // =============================================================================
@@ -325,6 +359,13 @@ pub(in crate::config) struct ConfigData {
     )]
     files: FilesConfig,
 
+    /// Per-file rule suppression overrides
+    #[serde(default)]
+    #[schemars(
+        description = "Per-file rule suppression overrides (rules disabled for matching paths only)"
+    )]
+    overrides: Vec<OverrideConfig>,
+
     /// Output locale for translated messages (e.g., "en", "es", "zh-CN").
     /// When not set, the CLI locale detection is used.
     #[serde(default)]
@@ -360,6 +401,7 @@ impl Default for ConfigData {
             tool_versions: ToolVersions::default(),
             spec_revisions: SpecRevisions::default(),
             files: FilesConfig::default(),
+            overrides: Vec::new(),
             locale: None,
             max_files_to_validate: Some(DEFAULT_MAX_FILES),
         }
@@ -411,6 +453,7 @@ impl std::fmt::Debug for LintConfig {
             .field("tool_versions", &self.data.tool_versions)
             .field("spec_revisions", &self.data.spec_revisions)
             .field("files", &self.data.files)
+            .field("overrides", &self.data.overrides)
             .field("locale", &self.data.locale)
             .field("max_files_to_validate", &self.data.max_files_to_validate)
             .field("runtime", &self.runtime)
@@ -864,6 +907,16 @@ impl LintConfig {
     #[inline]
     pub fn files_config(&self) -> &FilesConfig {
         &self.data.files
+    }
+
+    /// Get the per-file rule suppression overrides.
+    ///
+    /// Returns the raw, source-order list of `[[overrides]]` blocks as parsed
+    /// from the configuration. Per-file filtering logic lives elsewhere in the
+    /// pipeline; this accessor only exposes the schema.
+    #[inline]
+    pub fn overrides(&self) -> &[OverrideConfig] {
+        &self.data.overrides
     }
 
     /// Get the locale, if set.

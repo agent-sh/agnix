@@ -30,6 +30,7 @@ pub struct LintConfigBuilder {
     tool_versions: Option<ToolVersions>,
     spec_revisions: Option<SpecRevisions>,
     files: Option<FilesConfig>,
+    overrides: Option<Vec<OverrideConfig>>,
     locale: Option<Option<String>>,
     max_files_to_validate: Option<Option<usize>>,
     // Runtime
@@ -65,6 +66,7 @@ impl LintConfigBuilder {
             tool_versions: None,
             spec_revisions: None,
             files: None,
+            overrides: None,
             locale: None,
             max_files_to_validate: None,
             root_dir: None,
@@ -126,6 +128,12 @@ impl LintConfigBuilder {
     /// Set the files configuration.
     pub fn files(&mut self, files: FilesConfig) -> &mut Self {
         self.files = Some(files);
+        self
+    }
+
+    /// Set the per-file rule suppression overrides.
+    pub fn overrides(&mut self, overrides: Vec<OverrideConfig>) -> &mut Self {
+        self.overrides = Some(overrides);
         self
     }
 
@@ -216,9 +224,9 @@ impl LintConfigBuilder {
         self.build_inner()
     }
 
-    /// Validate all glob pattern lists (exclude + files config) for syntax
-    /// and path traversal. This is the security-critical subset of validation
-    /// that `build_lenient()` and `build()` both enforce.
+    /// Validate all glob pattern lists (exclude + files config + overrides)
+    /// for syntax and path traversal. This is the security-critical subset
+    /// of validation that `build_lenient()` and `build()` both enforce.
     fn validate_patterns(config: &LintConfig) -> Result<(), ConfigError> {
         let pattern_lists: &[(&str, &[String])] = &[
             ("exclude", &config.data.exclude),
@@ -233,28 +241,39 @@ impl LintConfigBuilder {
             ("files.exclude", &config.data.files.exclude),
         ];
         for &(field, patterns) in pattern_lists {
-            for pattern in patterns {
-                let normalized = pattern.replace('\\', "/");
-                if let Err(e) = glob::Pattern::new(&normalized) {
-                    return Err(ConfigError::InvalidGlobPattern {
-                        pattern: pattern.clone(),
-                        error: format!("{} (in {})", e, field),
-                    });
-                }
-                if has_path_traversal(&normalized) {
-                    return Err(ConfigError::PathTraversal {
-                        pattern: pattern.clone(),
-                    });
-                }
-                if normalized.starts_with('/')
-                    || (normalized.len() >= 3
-                        && normalized.as_bytes()[0].is_ascii_alphabetic()
-                        && normalized.as_bytes().get(1..3) == Some(b":/"))
-                {
-                    return Err(ConfigError::AbsolutePathPattern {
-                        pattern: pattern.clone(),
-                    });
-                }
+            Self::validate_glob_list(field, patterns)?;
+        }
+        for (idx, ov) in config.data.overrides.iter().enumerate() {
+            let field = format!("overrides[{}].paths", idx);
+            Self::validate_glob_list(&field, &ov.paths)?;
+        }
+        Ok(())
+    }
+
+    /// Validate a single list of glob patterns: syntax, path traversal,
+    /// and absolute-path rejection. Returns the first error encountered.
+    fn validate_glob_list(field: &str, patterns: &[String]) -> Result<(), ConfigError> {
+        for pattern in patterns {
+            let normalized = pattern.replace('\\', "/");
+            if let Err(e) = glob::Pattern::new(&normalized) {
+                return Err(ConfigError::InvalidGlobPattern {
+                    pattern: pattern.clone(),
+                    error: format!("{} (in {})", e, field),
+                });
+            }
+            if has_path_traversal(&normalized) {
+                return Err(ConfigError::PathTraversal {
+                    pattern: pattern.clone(),
+                });
+            }
+            if normalized.starts_with('/')
+                || (normalized.len() >= 3
+                    && normalized.as_bytes()[0].is_ascii_alphabetic()
+                    && normalized.as_bytes().get(1..3) == Some(b":/"))
+            {
+                return Err(ConfigError::AbsolutePathPattern {
+                    pattern: pattern.clone(),
+                });
             }
         }
         Ok(())
@@ -289,6 +308,7 @@ impl LintConfigBuilder {
                 .take()
                 .unwrap_or(defaults.spec_revisions),
             files: self.files.take().unwrap_or(defaults.files),
+            overrides: self.overrides.take().unwrap_or(defaults.overrides),
             locale: self.locale.take().unwrap_or(defaults.locale),
             max_files_to_validate: self
                 .max_files_to_validate

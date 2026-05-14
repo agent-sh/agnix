@@ -3700,3 +3700,211 @@ fn test_build_lenient_rejects_path_traversal() {
         other => panic!("Expected PathTraversal, got: {:?}", other),
     }
 }
+
+// =============================================================================
+// Per-file overrides (M6: schema parsing + validation only; matching is M7)
+// =============================================================================
+
+#[test]
+fn test_overrides_default_empty() {
+    let config = LintConfig::default();
+    assert!(config.overrides().is_empty());
+}
+
+#[test]
+fn test_overrides_parse_from_toml() {
+    let toml = r#"
+[[overrides]]
+paths = ["docs/**/*.md"]
+disabled_rules = ["PE-001"]
+
+[[overrides]]
+paths = [".claude/CLAUDE.md", "docs/agents/**/*.md"]
+disabled_rules = ["PE-001", "AS-005"]
+"#;
+    let config: LintConfig = toml::from_str(toml).expect("parses");
+    assert_eq!(config.overrides().len(), 2);
+    assert_eq!(
+        config.overrides()[0].paths,
+        vec!["docs/**/*.md".to_string()]
+    );
+    assert_eq!(
+        config.overrides()[0].disabled_rules,
+        vec!["PE-001".to_string()]
+    );
+    assert_eq!(
+        config.overrides()[1].paths,
+        vec![
+            ".claude/CLAUDE.md".to_string(),
+            "docs/agents/**/*.md".to_string()
+        ]
+    );
+    assert_eq!(
+        config.overrides()[1].disabled_rules,
+        vec!["PE-001".to_string(), "AS-005".to_string()]
+    );
+}
+
+#[test]
+fn test_overrides_parse_empty_block() {
+    let toml = r#"
+[[overrides]]
+paths = []
+disabled_rules = []
+"#;
+    let config: LintConfig = toml::from_str(toml).expect("parses");
+    assert_eq!(config.overrides().len(), 1);
+    assert!(config.overrides()[0].paths.is_empty());
+    assert!(config.overrides()[0].disabled_rules.is_empty());
+    let warnings = config.validate();
+    assert!(
+        warnings.is_empty(),
+        "empty override should not warn, got: {:?}",
+        warnings
+    );
+}
+
+#[test]
+fn test_overrides_round_trip_serialize() {
+    let mut config = LintConfig::default();
+    dm(&mut config).overrides = vec![OverrideConfig {
+        paths: vec![".claude/CLAUDE.md".to_string()],
+        disabled_rules: vec!["PE-001".to_string()],
+    }];
+
+    let toml = toml::to_string(&config).expect("serializes");
+    let round_trip: LintConfig = toml::from_str(&toml).expect("re-parses");
+    assert_eq!(round_trip.overrides().len(), 1);
+    assert_eq!(
+        round_trip.overrides()[0].paths,
+        vec![".claude/CLAUDE.md".to_string()]
+    );
+    assert_eq!(
+        round_trip.overrides()[0].disabled_rules,
+        vec!["PE-001".to_string()]
+    );
+}
+
+#[test]
+fn test_overrides_builder_setter() {
+    let config = LintConfig::builder()
+        .overrides(vec![OverrideConfig {
+            paths: vec!["docs/**/*.md".to_string()],
+            disabled_rules: vec!["PE-001".to_string()],
+        }])
+        .build()
+        .expect("valid");
+    assert_eq!(config.overrides().len(), 1);
+    assert_eq!(config.overrides()[0].disabled_rules, vec!["PE-001"]);
+}
+
+#[test]
+fn test_overrides_validate_warns_on_unknown_rule_prefix() {
+    let mut config = LintConfig::default();
+    dm(&mut config).overrides = vec![OverrideConfig {
+        paths: vec!["docs/**/*.md".to_string()],
+        disabled_rules: vec!["NOPE-001".to_string()],
+    }];
+    let warnings = config.validate();
+    assert!(
+        warnings
+            .iter()
+            .any(|w| w.field == "overrides[0].disabled_rules" && w.message.contains("NOPE-001")),
+        "expected unknown-prefix warning, got: {:?}",
+        warnings
+    );
+}
+
+#[test]
+fn test_overrides_validate_warns_on_invalid_glob() {
+    let mut config = LintConfig::default();
+    dm(&mut config).overrides = vec![OverrideConfig {
+        paths: vec!["docs/[abc".to_string()],
+        disabled_rules: vec![],
+    }];
+    let warnings = config.validate();
+    assert!(
+        warnings.iter().any(|w| w.field == "overrides[0].paths"),
+        "expected invalid-glob warning on overrides[0].paths, got: {:?}",
+        warnings
+    );
+}
+
+#[test]
+fn test_overrides_build_rejects_invalid_glob() {
+    let result = LintConfig::builder()
+        .overrides(vec![OverrideConfig {
+            paths: vec!["docs/[abc".to_string()],
+            disabled_rules: vec![],
+        }])
+        .build();
+
+    match result.unwrap_err() {
+        ConfigError::InvalidGlobPattern { pattern, error } => {
+            assert_eq!(pattern, "docs/[abc");
+            assert!(
+                error.contains("overrides[0].paths"),
+                "error should mention field, got: {}",
+                error
+            );
+        }
+        other => panic!("Expected InvalidGlobPattern, got: {:?}", other),
+    }
+}
+
+#[test]
+fn test_overrides_build_rejects_path_traversal() {
+    let result = LintConfig::builder()
+        .overrides(vec![OverrideConfig {
+            paths: vec!["../secret/**".to_string()],
+            disabled_rules: vec![],
+        }])
+        .build();
+
+    match result.unwrap_err() {
+        ConfigError::PathTraversal { pattern } => {
+            assert_eq!(pattern, "../secret/**");
+        }
+        other => panic!("Expected PathTraversal, got: {:?}", other),
+    }
+}
+
+#[test]
+fn test_overrides_build_rejects_absolute_path() {
+    let result = LintConfig::builder()
+        .overrides(vec![OverrideConfig {
+            paths: vec!["/etc/passwd".to_string()],
+            disabled_rules: vec![],
+        }])
+        .build();
+
+    match result.unwrap_err() {
+        ConfigError::AbsolutePathPattern { pattern } => {
+            assert_eq!(pattern, "/etc/passwd");
+        }
+        other => panic!("Expected AbsolutePathPattern, got: {:?}", other),
+    }
+}
+
+#[test]
+fn test_overrides_build_lenient_still_enforces_glob_safety() {
+    let result = LintConfig::builder()
+        .overrides(vec![OverrideConfig {
+            paths: vec!["../escape".to_string()],
+            disabled_rules: vec!["NOPE-001".to_string()],
+        }])
+        .build_lenient();
+    assert!(matches!(result, Err(ConfigError::PathTraversal { .. })));
+}
+
+#[test]
+fn test_overrides_build_lenient_skips_unknown_rule_prefix() {
+    let config = LintConfig::builder()
+        .overrides(vec![OverrideConfig {
+            paths: vec!["docs/**/*.md".to_string()],
+            disabled_rules: vec!["NOPE-001".to_string()],
+        }])
+        .build_lenient()
+        .expect("lenient build should accept unknown rule prefix");
+    assert_eq!(config.overrides().len(), 1);
+}

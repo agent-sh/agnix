@@ -1,5 +1,39 @@
 use super::*;
 
+/// Known rule-ID prefixes used to validate `disabled_rules` entries.
+///
+/// A rule ID is considered known if it starts with any of these prefixes.
+/// Note: `imports::` is a legacy prefix used in some internal diagnostics.
+pub(in crate::config) const KNOWN_RULE_PREFIXES: &[&str] = &[
+    "AS-",
+    "CC-SK-",
+    "CC-HK-",
+    "CC-AG-",
+    "CC-MEM-",
+    "CC-PL-",
+    "CC-SET-",
+    "CDX-",
+    "XML-",
+    "MCP-",
+    "REF-",
+    "XP-",
+    "AGM-",
+    "COP-",
+    "CUR-",
+    "CLN-",
+    "OC-",
+    "GM-",
+    "PE-",
+    "VER-",
+    "ROO-",
+    "AMP-",
+    "WS-",
+    "WS-SK-",
+    "KIRO-",
+    "KR-SK-",
+    "imports::",
+];
+
 impl LintConfig {
     /// Validate the configuration and return any warnings.
     ///
@@ -11,38 +45,8 @@ impl LintConfig {
         let mut warnings = Vec::new();
 
         // Validate disabled_rules match known patterns
-        // Note: imports:: is a legacy prefix used in some internal diagnostics
-        let known_prefixes = [
-            "AS-",
-            "CC-SK-",
-            "CC-HK-",
-            "CC-AG-",
-            "CC-MEM-",
-            "CC-PL-",
-            "CC-SET-",
-            "CDX-",
-            "XML-",
-            "MCP-",
-            "REF-",
-            "XP-",
-            "AGM-",
-            "COP-",
-            "CUR-",
-            "CLN-",
-            "OC-",
-            "GM-",
-            "PE-",
-            "VER-",
-            "ROO-",
-            "AMP-",
-            "WS-",
-            "WS-SK-",
-            "KIRO-",
-            "KR-SK-",
-            "imports::",
-        ];
         for rule_id in &self.data.rules.disabled_rules {
-            let matches_known = known_prefixes
+            let matches_known = KNOWN_RULE_PREFIXES
                 .iter()
                 .any(|prefix| rule_id.starts_with(prefix));
             if !matches_known {
@@ -51,7 +55,7 @@ impl LintConfig {
                     message: t!(
                         "core.config.unknown_rule",
                         rule = rule_id.as_str(),
-                        prefixes = known_prefixes.join(", ")
+                        prefixes = KNOWN_RULE_PREFIXES.join(", ")
                     )
                     .to_string(),
                     suggestion: Some(t!("core.config.unknown_rule_suggestion").to_string()),
@@ -113,86 +117,113 @@ impl LintConfig {
         }
 
         // Validate files config glob patterns
-        let pattern_lists = [
-            (
-                "files.include_as_memory",
-                &self.data.files.include_as_memory,
-            ),
-            (
-                "files.include_as_generic",
-                &self.data.files.include_as_generic,
-            ),
-            ("files.exclude", &self.data.files.exclude),
-        ];
-        for (field, patterns) in &pattern_lists {
-            // Warn if pattern count exceeds recommended limit
-            if patterns.len() > MAX_FILE_PATTERNS {
-                warnings.push(ConfigWarning {
-                    field: field.to_string(),
-                    message: t!(
-                        "core.config.files_pattern_count_limit",
-                        field = *field,
-                        count = patterns.len(),
-                        limit = MAX_FILE_PATTERNS
-                    )
-                    .to_string(),
-                    suggestion: Some(
-                        t!("core.config.files_pattern_count_limit_suggestion").to_string(),
-                    ),
-                });
-            }
-            for pattern in *patterns {
-                let normalized = pattern.replace('\\', "/");
-                if let Err(e) = glob::Pattern::new(&normalized) {
+        validate_pattern_list(
+            "files.include_as_memory",
+            &self.data.files.include_as_memory,
+            &mut warnings,
+        );
+        validate_pattern_list(
+            "files.include_as_generic",
+            &self.data.files.include_as_generic,
+            &mut warnings,
+        );
+        validate_pattern_list("files.exclude", &self.data.files.exclude, &mut warnings);
+
+        // Validate per-file overrides: glob patterns and disabled-rule prefixes.
+        for (idx, ov) in self.data.overrides.iter().enumerate() {
+            let paths_field = format!("overrides[{}].paths", idx);
+            validate_pattern_list(&paths_field, &ov.paths, &mut warnings);
+
+            let rules_field = format!("overrides[{}].disabled_rules", idx);
+            for rule_id in &ov.disabled_rules {
+                let matches_known = KNOWN_RULE_PREFIXES
+                    .iter()
+                    .any(|prefix| rule_id.starts_with(prefix));
+                if !matches_known {
                     warnings.push(ConfigWarning {
-                        field: field.to_string(),
+                        field: rules_field.clone(),
                         message: t!(
-                            "core.config.invalid_files_pattern",
-                            pattern = pattern.as_str(),
-                            message = e.to_string()
+                            "core.config.unknown_rule",
+                            rule = rule_id.as_str(),
+                            prefixes = KNOWN_RULE_PREFIXES.join(", ")
                         )
                         .to_string(),
-                        suggestion: Some(
-                            t!("core.config.invalid_files_pattern_suggestion").to_string(),
-                        ),
-                    });
-                }
-                // Reject path traversal patterns
-                if has_path_traversal(&normalized) {
-                    warnings.push(ConfigWarning {
-                        field: field.to_string(),
-                        message: t!(
-                            "core.config.files_path_traversal",
-                            pattern = pattern.as_str()
-                        )
-                        .to_string(),
-                        suggestion: Some(
-                            t!("core.config.files_path_traversal_suggestion").to_string(),
-                        ),
-                    });
-                }
-                // Reject absolute paths (Unix-style leading slash or Windows drive letter)
-                if normalized.starts_with('/')
-                    || (normalized.len() >= 3
-                        && normalized.as_bytes()[0].is_ascii_alphabetic()
-                        && normalized.as_bytes().get(1..3) == Some(b":/"))
-                {
-                    warnings.push(ConfigWarning {
-                        field: field.to_string(),
-                        message: t!(
-                            "core.config.files_absolute_path",
-                            pattern = pattern.as_str()
-                        )
-                        .to_string(),
-                        suggestion: Some(
-                            t!("core.config.files_absolute_path_suggestion").to_string(),
-                        ),
+                        suggestion: Some(t!("core.config.unknown_rule_suggestion").to_string()),
                     });
                 }
             }
         }
 
         warnings
+    }
+}
+
+/// Validate a list of glob patterns (count limit, syntax, traversal, absolute paths).
+///
+/// Used by [`LintConfig::validate`] to check `files.*` lists and
+/// `overrides[*].paths`. The `field` argument is propagated into each
+/// emitted [`ConfigWarning`] so callers can identify the source location.
+pub(in crate::config) fn validate_pattern_list(
+    field: &str,
+    patterns: &[String],
+    warnings: &mut Vec<ConfigWarning>,
+) {
+    // Warn if pattern count exceeds recommended limit
+    if patterns.len() > MAX_FILE_PATTERNS {
+        warnings.push(ConfigWarning {
+            field: field.to_string(),
+            message: t!(
+                "core.config.files_pattern_count_limit",
+                field = field,
+                count = patterns.len(),
+                limit = MAX_FILE_PATTERNS
+            )
+            .to_string(),
+            suggestion: Some(t!("core.config.files_pattern_count_limit_suggestion").to_string()),
+        });
+    }
+    for pattern in patterns {
+        let normalized = pattern.replace('\\', "/");
+        if let Err(e) = glob::Pattern::new(&normalized) {
+            warnings.push(ConfigWarning {
+                field: field.to_string(),
+                message: t!(
+                    "core.config.invalid_files_pattern",
+                    pattern = pattern.as_str(),
+                    message = e.to_string()
+                )
+                .to_string(),
+                suggestion: Some(t!("core.config.invalid_files_pattern_suggestion").to_string()),
+            });
+        }
+        // Reject path traversal patterns
+        if has_path_traversal(&normalized) {
+            warnings.push(ConfigWarning {
+                field: field.to_string(),
+                message: t!(
+                    "core.config.files_path_traversal",
+                    pattern = pattern.as_str()
+                )
+                .to_string(),
+                suggestion: Some(t!("core.config.files_path_traversal_suggestion").to_string()),
+            });
+        }
+        // Reject absolute paths (Unix-style leading slash or Windows drive letter)
+        if normalized.starts_with('/')
+            || (normalized.len() >= 3
+                && normalized.as_bytes()[0].is_ascii_alphabetic()
+                && normalized.as_bytes().get(1..3) == Some(b":/"))
+        {
+            warnings.push(ConfigWarning {
+                field: field.to_string(),
+                message: t!(
+                    "core.config.files_absolute_path",
+                    pattern = pattern.as_str()
+                )
+                .to_string(),
+                suggestion: Some(t!("core.config.files_absolute_path_suggestion").to_string()),
+            });
+        }
     }
 }
 
