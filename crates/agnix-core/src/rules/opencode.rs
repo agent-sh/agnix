@@ -3,8 +3,8 @@
 //! Validates:
 //! - OC-001: Invalid share mode (HIGH) - must be "manual", "auto", or "disabled"
 //! - OC-002: Invalid instruction path (HIGH) - paths must exist or be valid globs
-//! - OC-003: opencode.json parse error (HIGH) - must be valid JSON/JSONC
-//! - OC-004: Unknown config key (MEDIUM) - unrecognized key in opencode.json
+//! - OC-003: opencode.json/jsonc parse error (HIGH) - must be valid JSON/JSONC
+//! - OC-004: Unknown config key (MEDIUM) - unrecognized key in OpenCode config
 //! - OC-006: Remote URL in instructions (LOW) - may slow startup
 //! - OC-007: Invalid agent definition (MEDIUM/HIGH) - agents must have description
 //! - OC-008: Invalid permission config (HIGH) - must be allow/ask/deny

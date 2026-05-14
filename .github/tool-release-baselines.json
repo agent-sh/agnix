@@ -16,7 +16,7 @@
         "mcp"
       ],
       "github_repo": "anthropics/claude-code",
-      "last_known_version": "v2.1.140",
+      "last_known_version": "v2.1.141",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
@@ -96,17 +96,18 @@
         "agents_md"
       ],
       "github_repo": "sst/opencode",
-      "last_known_version": "v1.14.48",
+      "last_known_version": "v1.14.49",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
           "AGENTS.md",
+          "opencode.json / opencode.jsonc",
           ".opencode/config.json",
           "opencode agent definitions",
           "opencode MCP config (inside .opencode/config.json or referenced .mcp.json)"
         ],
         "relevant": [
-          "New / renamed / removed top-level keys in .opencode/config.json",
+          "New / renamed / removed top-level keys in opencode.json, opencode.jsonc, or .opencode/config.json",
           "Permission config schema (including rule ordering semantics)",
           "LSP config shape (request keys, permission-prompt payload)",
           "MCP server definition shape / auth / env-var substitution rules",

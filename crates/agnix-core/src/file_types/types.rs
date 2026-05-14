@@ -56,7 +56,7 @@ pub enum FileType {
     ClineRules,
     /// Cline rules folder files (.clinerules/*.md, .clinerules/*.txt)
     ClineRulesFolder,
-    /// OpenCode configuration (opencode.json)
+    /// OpenCode configuration (opencode.json, opencode.jsonc)
     OpenCodeConfig,
     /// Gemini CLI instruction files (GEMINI.md, GEMINI.local.md)
     GeminiMd,

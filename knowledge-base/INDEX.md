@@ -96,8 +96,8 @@ knowledge-base/
 | Claude Hooks | 27 | 15 | 8 | 4 | 16 |
 | Claude Memory | 13 | 8 | 5 | 0 | 3 |
 | Claude Output Styles | 6 | 2 | 2 | 2 | 0 |
-| Claude Plugins | 14 | 9 | 5 | 0 | 4 |
-| Claude Settings | 1 | 0 | 1 | 0 | 0 |
+| Claude Plugins | 15 | 9 | 6 | 0 | 4 |
+| Claude Settings | 5 | 0 | 5 | 0 | 0 |
 | Claude Skills | 20 | 11 | 8 | 1 | 13 |
 | Cline | 7 | 4 | 3 | 0 | 3 |
 | Cline Skills | 3 | 2 | 1 | 0 | 2 |
@@ -112,12 +112,12 @@ knowledge-base/
 | Gemini CLI | 10 | 3 | 5 | 2 | 3 |
 | Kiro Agents | 13 | 4 | 7 | 2 | 0 |
 | Kiro Hooks | 10 | 6 | 4 | 0 | 0 |
-| Kiro MCP | 5 | 2 | 3 | 0 | 0 |
+| Kiro MCP | 6 | 2 | 4 | 0 | 0 |
 | Kiro Powers | 8 | 3 | 4 | 1 | 0 |
 | Kiro Settings | 3 | 1 | 2 | 0 | 3 |
 | Kiro Skills | 1 | 0 | 1 | 0 | 1 |
 | Kiro Steering | 14 | 3 | 9 | 2 | 1 |
-| MCP | 25 | 19 | 6 | 0 | 7 |
+| MCP | 26 | 20 | 6 | 0 | 7 |
 | OpenCode | 45 | 28 | 16 | 1 | 10 |
 | OpenCode Skills | 1 | 0 | 1 | 0 | 1 |
 | Prompt Eng | 6 | 0 | 6 | 0 | 2 |
@@ -128,7 +128,7 @@ knowledge-base/
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **423** | **214** | **174** | **28** | **129** |
+| **TOTAL** | **423** | **215** | **180** | **28** | **129** |
 
 
 ---

@@ -609,6 +609,14 @@ fn path_points_to_default_component(p: &str, component: &str) -> bool {
     normalized == component
 }
 
+fn extract_valid_shadowing_paths(value: &serde_json::Value) -> Option<Vec<String>> {
+    match value {
+        serde_json::Value::String(s) => Some(vec![s.clone()]),
+        serde_json::Value::Array(arr) => arr.iter().map(|v| v.as_str().map(String::from)).collect(),
+        _ => None,
+    }
+}
+
 /// CC-PL-015: Detect root default component folders shadowed by manifest paths.
 fn check_default_component_shadowing(
     raw_value: &serde_json::Value,
@@ -628,11 +636,15 @@ fn check_default_component_shadowing(
         let Some(manifest_value) = raw_value.get(component) else {
             continue;
         };
-        if !fs.exists(&plugin_root.join(component)) {
+        if !fs.is_dir(&plugin_root.join(component)) {
             continue;
         }
 
-        let includes_default = extract_paths(manifest_value)
+        let Some(manifest_paths) = extract_valid_shadowing_paths(manifest_value) else {
+            continue;
+        };
+
+        let includes_default = manifest_paths
             .iter()
             .any(|p| path_points_to_default_component(p, component));
         if includes_default {
@@ -645,15 +657,9 @@ fn check_default_component_shadowing(
                 1,
                 0,
                 "CC-PL-015",
-                format!(
-                    "Default component folder '{}' exists but plugin.json overrides '{}' without including './{}'",
-                    component, component, component
-                ),
+                t!("rules.cc_pl_015.message", component = component),
             )
-            .with_suggestion(format!(
-                "Add './{}' to '{}' or move those files into the configured component path",
-                component, component
-            )),
+            .with_suggestion(t!("rules.cc_pl_015.suggestion", component = component)),
         );
     }
 }
@@ -2634,6 +2640,46 @@ mod tests {
             &plugin_path,
             r#"{"name":"test","description":"desc","version":"1.0.0","commands":"./custom-commands"}"#,
         );
+
+        let validator = PluginValidator;
+        let diagnostics = validator.validate(
+            &plugin_path,
+            &fs::read_to_string(&plugin_path).unwrap(),
+            &LintConfig::default(),
+        );
+
+        assert!(!diagnostics.iter().any(|d| d.rule == "CC-PL-015"));
+    }
+
+    #[test]
+    fn test_cc_pl_015_ignores_default_component_file() {
+        let temp = TempDir::new().unwrap();
+        let plugin_path = temp.path().join(".claude-plugin").join("plugin.json");
+        write_plugin(
+            &plugin_path,
+            r#"{"name":"test","description":"desc","version":"1.0.0","commands":"./custom-commands"}"#,
+        );
+        fs::write(temp.path().join("commands"), "").unwrap();
+
+        let validator = PluginValidator;
+        let diagnostics = validator.validate(
+            &plugin_path,
+            &fs::read_to_string(&plugin_path).unwrap(),
+            &LintConfig::default(),
+        );
+
+        assert!(!diagnostics.iter().any(|d| d.rule == "CC-PL-015"));
+    }
+
+    #[test]
+    fn test_cc_pl_015_skips_invalid_manifest_path_shape() {
+        let temp = TempDir::new().unwrap();
+        let plugin_path = temp.path().join(".claude-plugin").join("plugin.json");
+        write_plugin(
+            &plugin_path,
+            r#"{"name":"test","description":"desc","version":"1.0.0","commands":{}}"#,
+        );
+        fs::create_dir_all(temp.path().join("commands")).unwrap();
 
         let validator = PluginValidator;
         let diagnostics = validator.validate(

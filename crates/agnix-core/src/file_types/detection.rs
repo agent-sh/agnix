@@ -465,8 +465,8 @@ pub fn detect_file_type(path: &Path) -> FileType {
         name if name.ends_with(".md") && is_under_windsurf_workflows(path) => {
             FileType::WindsurfWorkflow
         }
-        // OpenCode configuration (opencode.json)
-        "opencode.json" => FileType::OpenCodeConfig,
+        // OpenCode configuration (opencode.json / opencode.jsonc)
+        "opencode.json" | "opencode.jsonc" => FileType::OpenCodeConfig,
         // Gemini CLI extension manifest (gemini-extension.json)
         "gemini-extension.json" => FileType::GeminiExtension,
         // Gemini CLI instruction files (GEMINI.md, GEMINI.local.md)
@@ -1045,6 +1045,10 @@ mod tests {
     fn detect_opencode_config() {
         assert_eq!(
             detect_file_type(Path::new("opencode.json")),
+            FileType::OpenCodeConfig
+        );
+        assert_eq!(
+            detect_file_type(Path::new("opencode.jsonc")),
             FileType::OpenCodeConfig
         );
     }

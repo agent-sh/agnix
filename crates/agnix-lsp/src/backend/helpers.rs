@@ -79,6 +79,7 @@ impl Backend {
             || file_name.to_lowercase().ends_with(".instructions.md")
             || file_name.to_lowercase().ends_with(".mdc")
             || file_name.eq_ignore_ascii_case("opencode.json")
+            || file_name.eq_ignore_ascii_case("opencode.jsonc")
     }
 
     /// Get cached document content for a URI.

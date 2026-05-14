@@ -955,6 +955,12 @@ rules:
   kr_mcp_006:
     message: "Kiro MCP server '%{server}' has invalid oauth.clientId configuration: %{reason}"
     suggestion: "Use oauth.clientId as a non-empty string only on HTTP(S) remote MCP servers, or remove the oauth block"
+    reasons:
+      oauth_object: "'oauth' must be an object"
+      missing_client_id: "'oauth.clientId' is required when 'oauth' is configured"
+      client_id_string: "'oauth.clientId' must be a string"
+      client_id_non_empty: "'oauth.clientId' must not be empty"
+      http_url: "'oauth.clientId' can only be used with HTTP(S) remote MCP server URLs"
   kr_mcp_003:
     message: "Kiro MCP server '%{server}' has a command but no args"
     suggestion: "Add an args array to specify command arguments"
@@ -1019,6 +1025,9 @@ rules:
   cc_pl_010:
     message: "Invalid homepage URL: '%{url}' must use http:// or https:// scheme"
     suggestion: "Use a valid URL with http:// or https:// scheme"
+  cc_pl_015:
+    message: "Default component folder '%{component}' exists but plugin.json overrides '%{component}' without including './%{component}'"
+    suggestion: "Add './%{component}' to '%{component}' or move those files into the configured component path"
 
   # --- Codex Plugin (codex_plugin.rs) ---
   cdx_pl_001:

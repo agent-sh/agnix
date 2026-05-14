@@ -613,6 +613,12 @@ rules:
   kr_mcp_006:
     message: "Kiro MCP 服务 '%{server}' 的 oauth.clientId 配置无效：%{reason}"
     suggestion: "仅在 HTTP(S) 远程 MCP 服务上使用非空字符串 oauth.clientId，或移除 oauth 块"
+    reasons:
+      oauth_object: "'oauth' 必须是对象"
+      missing_client_id: "配置 'oauth' 时必须提供 'oauth.clientId'"
+      client_id_string: "'oauth.clientId' 必须是字符串"
+      client_id_non_empty: "'oauth.clientId' 不能为空"
+      http_url: "'oauth.clientId' 只能用于 HTTP(S) 远程 MCP 服务器 URL"
 
   # --- Codex Plugin (codex_plugin.rs) ---
   cdx_pl_001:
@@ -694,6 +700,9 @@ rules:
   cc_pl_006:
     message: "解析 plugin.json 失败: %{error}"
     suggestion: "验证 plugin.json 中的 JSON 语法 -- 检查是否缺少逗号、括号或不带引号的键"
+  cc_pl_015:
+    message: "默认组件文件夹 '%{component}' 存在，但 plugin.json 覆盖了 '%{component}' 且未包含 './%{component}'"
+    suggestion: "将 './%{component}' 添加到 '%{component}'，或将这些文件移动到配置的组件路径"
 
   # --- Version (lib.rs) ---
   ver_001:

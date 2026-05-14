@@ -176,8 +176,9 @@ impl Validator for KiroMcpValidator {
 
             // KR-MCP-006: oauth.clientId is only meaningful on HTTP(S) remote servers
             if config.is_rule_enabled("KR-MCP-006")
-                && let Some(reason) = invalid_oauth_client_id_reason(&server)
+                && let Some(issue) = invalid_oauth_client_id_issue(&server)
             {
+                let reason = issue.localized_reason();
                 diagnostics.push(
                     Diagnostic::warning(
                         path.to_path_buf(),
@@ -203,22 +204,22 @@ impl Validator for KiroMcpValidator {
     }
 }
 
-fn invalid_oauth_client_id_reason(
+fn invalid_oauth_client_id_issue(
     server: &crate::schemas::kiro_mcp::KiroMcpServerConfig,
-) -> Option<String> {
+) -> Option<OauthClientIdIssue> {
     let oauth = server.extra.get("oauth")?;
     let Some(oauth) = oauth.as_object() else {
-        return Some("'oauth' must be an object".to_string());
+        return Some(OauthClientIdIssue::OauthMustBeObject);
     };
 
     let Some(client_id) = oauth.get("clientId") else {
-        return Some("'oauth.clientId' is required when 'oauth' is configured".to_string());
+        return Some(OauthClientIdIssue::MissingClientId);
     };
     let Some(client_id) = client_id.as_str() else {
-        return Some("'oauth.clientId' must be a string".to_string());
+        return Some(OauthClientIdIssue::ClientIdMustBeString);
     };
     if client_id.trim().is_empty() {
-        return Some("'oauth.clientId' must not be empty".to_string());
+        return Some(OauthClientIdIssue::EmptyClientId);
     }
 
     let is_http_url = server
@@ -227,12 +228,33 @@ fn invalid_oauth_client_id_reason(
         .map(str::trim)
         .is_some_and(|url| url.starts_with("http://") || url.starts_with("https://"));
     if !is_http_url {
-        return Some(
-            "'oauth.clientId' can only be used with HTTP(S) remote MCP server URLs".to_string(),
-        );
+        return Some(OauthClientIdIssue::RequiresHttpUrl);
     }
 
     None
+}
+
+#[derive(Clone, Copy)]
+enum OauthClientIdIssue {
+    OauthMustBeObject,
+    MissingClientId,
+    ClientIdMustBeString,
+    EmptyClientId,
+    RequiresHttpUrl,
+}
+
+impl OauthClientIdIssue {
+    fn localized_reason(self) -> String {
+        match self {
+            Self::OauthMustBeObject => t!("rules.kr_mcp_006.reasons.oauth_object").to_string(),
+            Self::MissingClientId => t!("rules.kr_mcp_006.reasons.missing_client_id").to_string(),
+            Self::ClientIdMustBeString => {
+                t!("rules.kr_mcp_006.reasons.client_id_string").to_string()
+            }
+            Self::EmptyClientId => t!("rules.kr_mcp_006.reasons.client_id_non_empty").to_string(),
+            Self::RequiresHttpUrl => t!("rules.kr_mcp_006.reasons.http_url").to_string(),
+        }
+    }
 }
 
 #[cfg(test)]

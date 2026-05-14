@@ -1,6 +1,6 @@
 //! OpenCode configuration file schema helpers
 //!
-//! Provides parsing and validation for opencode.json configuration files.
+//! Provides parsing and validation for opencode.json/jsonc configuration files.
 //!
 //! Validates:
 //! - `share` field values (manual, auto, disabled)
@@ -17,7 +17,7 @@ use std::collections::HashSet;
 /// Valid values for the `share` field
 pub const VALID_SHARE_MODES: &[&str] = &["manual", "auto", "disabled"];
 
-/// Known valid top-level keys for opencode.json
+/// Known valid top-level keys for opencode.json/jsonc
 pub const KNOWN_TOP_LEVEL_KEYS: &[&str] = &[
     "$schema",
     "agent",
@@ -104,7 +104,7 @@ pub struct UnknownKey {
     pub column: usize,
 }
 
-/// Partial schema for opencode.json (only fields we validate)
+/// Partial schema for opencode.json/jsonc (only fields we validate)
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct OpenCodeSchema {
     /// Conversation sharing mode
@@ -124,7 +124,7 @@ pub struct OpenCodeSchema {
     pub permission: Option<serde_json::Value>,
 }
 
-/// Result of parsing opencode.json
+/// Result of parsing opencode.json/jsonc
 #[derive(Debug, Clone)]
 pub struct ParsedOpenCodeConfig {
     /// The parsed schema (if valid JSON)
@@ -153,7 +153,7 @@ pub struct ParseError {
     pub column: usize,
 }
 
-/// Parse opencode.json content
+/// Parse opencode.json/jsonc content
 ///
 /// Uses a two-pass approach: first validates JSON syntax with `serde_json::Value`,
 /// then extracts the typed schema. This ensures that type mismatches (e.g.,

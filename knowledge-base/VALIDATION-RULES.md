@@ -1817,7 +1817,7 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 <a id="oc-001"></a>
 ### OC-001 [HIGH] Invalid Share Mode
-**Requirement**: The `share` field in `opencode.json` MUST be `"manual"`, `"auto"`, or `"disabled"`
+**Requirement**: The `share` field in `opencode.json` or `opencode.jsonc` MUST be `"manual"`, `"auto"`, or `"disabled"`
 **Detection**: Parse JSON, validate `share` value against allowed set
 **Fix**: Auto-fix (unsafe) - replace with closest valid share mode
 **Source**: opencode.ai/docs/config
@@ -1831,14 +1831,14 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 <a id="oc-003"></a>
 ### OC-003 [HIGH] opencode.json Parse Error
-**Requirement**: `opencode.json` MUST be valid JSON (or JSONC with comments stripped)
+**Requirement**: `opencode.json` and `opencode.jsonc` MUST be valid JSON (or JSONC with comments stripped)
 **Detection**: Attempt JSON parse, report errors with line/column location
 **Fix**: Fix JSON syntax errors
 **Source**: opencode.ai/docs/config
 
 <a id="oc-004"></a>
 ### OC-004 [MEDIUM] Unknown Config Key
-**Requirement**: Top-level keys in `opencode.json` SHOULD be from the known configuration schema
+**Requirement**: Top-level keys in `opencode.json` or `opencode.jsonc` SHOULD be from the known configuration schema
 **Detection**: Parse JSON, compare top-level keys against known key allowlist
 **Fix**: Remove unrecognized keys
 **Source**: opencode.ai/docs/config
@@ -1995,8 +1995,8 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 <a id="oc-dep-005"></a>
 ### OC-DEP-005 [MEDIUM] Deprecated TUI Keys
-**Requirement**: theme, keybinds, tui keys SHOULD be in tui.json, not opencode.json
-**Detection**: Check for deprecated TUI keys in opencode.json
+**Requirement**: theme, keybinds, tui keys SHOULD be in tui.json, not opencode.json/opencode.jsonc
+**Detection**: Check for deprecated TUI keys in opencode.json/opencode.jsonc
 **Fix**: Manual - move to tui.json
 **Source**: opencode.ai/docs/
 
@@ -3386,42 +3386,46 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Category | Total Rules | HIGH | MEDIUM | LOW | Auto-Fixable |
 |----------|-------------|------|--------|-----|--------------|
 | Agent Skills | 19 | 15 | 4 | 0 | 9 |
-| Claude Skills | 17 | 11 | 6 | 0 | 11 |
-| Claude Hooks | 19 | 12 | 5 | 2 | 12 |
-| Claude Agents | 13 | 12 | 1 | 0 | 7 |
-| Claude Memory | 12 | 8 | 4 | 0 | 3 |
 | AGENTS.md | 6 | 1 | 5 | 0 | 1 |
-| Claude Plugins | 10 | 8 | 2 | 0 | 3 |
-| GitHub Copilot | 17 | 11 | 6 | 0 | 8 |
-| Cursor | 16 | 9 | 7 | 0 | 6 |
-| Cline | 4 | 3 | 1 | 0 | 2 |
-| OpenCode | 41 | 26 | 14 | 1 | 8 |
-| Gemini CLI | 9 | 3 | 4 | 2 | 3 |
-| Codex CLI | 39 | 21 | 17 | 1 | 3 |
-| Windsurf | 4 | 1 | 2 | 1 | 0 |
-| MCP | 24 | 19 | 5 | 0 | 7 |
-| XML | 3 | 3 | 0 | 0 | 3 |
-| References | 4 | 2 | 2 | 0 | 1 |
-| Prompt Eng | 6 | 0 | 6 | 0 | 2 |
-| Cross-Platform | 9 | 2 | 6 | 1 | 0 |
-| Cursor Skills | 1 | 0 | 1 | 0 | 1 |
-| Cline Skills | 1 | 0 | 1 | 0 | 1 |
-| Copilot Skills | 1 | 0 | 1 | 0 | 1 |
+| Amp Checks | 4 | 2 | 2 | 0 | 3 |
+| Amp Skills | 1 | 0 | 1 | 0 | 1 |
+| Claude Agents | 17 | 12 | 4 | 1 | 10 |
+| Claude Hooks | 27 | 15 | 8 | 4 | 16 |
+| Claude Memory | 13 | 8 | 5 | 0 | 3 |
+| Claude Output Styles | 6 | 2 | 2 | 2 | 0 |
+| Claude Plugins | 15 | 9 | 6 | 0 | 4 |
+| Claude Settings | 5 | 0 | 5 | 0 | 0 |
+| Claude Skills | 20 | 11 | 8 | 1 | 13 |
+| Cline | 7 | 4 | 3 | 0 | 3 |
+| Cline Skills | 3 | 2 | 1 | 0 | 2 |
+| Codex CLI | 60 | 30 | 25 | 5 | 10 |
 | Codex Skills | 1 | 0 | 1 | 0 | 1 |
-| OpenCode Skills | 1 | 0 | 1 | 0 | 1 |
-| Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
-| Kiro Skills | 1 | 0 | 1 | 0 | 1 |
+| GitHub Copilot | 25 | 13 | 9 | 3 | 11 |
+| Copilot Skills | 1 | 0 | 1 | 0 | 1 |
+| Cross-Platform | 9 | 2 | 6 | 1 | 0 |
+| Cursor | 19 | 9 | 9 | 1 | 6 |
+| Cursor Skills | 1 | 0 | 1 | 0 | 1 |
+| Gemini Agents | 1 | 1 | 0 | 0 | 0 |
+| Gemini CLI | 10 | 3 | 5 | 2 | 3 |
 | Kiro Agents | 13 | 4 | 7 | 2 | 0 |
 | Kiro Hooks | 10 | 6 | 4 | 0 | 0 |
-| Kiro MCP | 5 | 2 | 3 | 0 | 0 |
+| Kiro MCP | 6 | 2 | 4 | 0 | 0 |
 | Kiro Powers | 8 | 3 | 4 | 1 | 0 |
+| Kiro Settings | 3 | 1 | 2 | 0 | 3 |
+| Kiro Skills | 1 | 0 | 1 | 0 | 1 |
 | Kiro Steering | 14 | 3 | 9 | 2 | 1 |
-| Amp Skills | 1 | 0 | 1 | 0 | 1 |
-| Amp Checks | 4 | 2 | 2 | 0 | 3 |
-| Roo Code Skills | 1 | 0 | 1 | 0 | 1 |
+| MCP | 26 | 20 | 6 | 0 | 7 |
+| OpenCode | 45 | 28 | 16 | 1 | 10 |
+| OpenCode Skills | 1 | 0 | 1 | 0 | 1 |
+| Prompt Eng | 6 | 0 | 6 | 0 | 2 |
+| References | 4 | 2 | 2 | 0 | 1 |
 | Roo Code | 6 | 3 | 3 | 0 | 0 |
+| Roo Code Skills | 1 | 0 | 1 | 0 | 1 |
 | Version Awareness | 1 | 0 | 0 | 1 | 0 |
-| **TOTAL** | **342** | **190** | **138** | **14** | **102** |
+| Windsurf | 4 | 1 | 2 | 1 | 0 |
+| Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
+| XML | 3 | 3 | 0 | 0 | 3 |
+| **TOTAL** | **423** | **215** | **180** | **28** | **129** |
 
 
 ---
