@@ -4248,3 +4248,49 @@ fn test_for_path_no_root_dir_falls_back_to_filename() {
     let view_no_match = config.for_path(std::path::Path::new("/anywhere/AGENTS.md"));
     assert!(view_no_match.is_rule_enabled("PE-001"));
 }
+
+#[cfg(unix)]
+#[test]
+fn test_for_path_canonicalize_fallback_for_symlinked_path() {
+    // Simulates the upstream-#909 use case: `~/.claude/CLAUDE.md` where
+    // `~/.claude` is a symlink (mackup / stow / chezmoi). The CLI's
+    // single-file path canonicalizes `root_dir` (the parent) but passes the
+    // symlinked file path through unchanged. Without the canonicalize
+    // fallback in `for_path`, `strip_prefix(root)` would fail and the
+    // pattern `"CLAUDE.md"` would be matched against the full absolute
+    // symlinked path — silently no-op.
+    //
+    // Layout: tempdir/real/CLAUDE.md (real file) + tempdir/link → real
+    // (symlink). Build config with root_dir = canonical real path; call
+    // `for_path` with the symlinked path. Assert the override applies.
+    //
+    // Unix-only: Windows symlink semantics differ and the production bug
+    // pattern (dotfile managers like mackup, stow, chezmoi) is *nix-specific.
+    let temp = tempfile::TempDir::new().unwrap();
+    let real_dir = temp.path().join("real");
+    std::fs::create_dir_all(&real_dir).unwrap();
+    std::fs::write(real_dir.join("CLAUDE.md"), b"x").unwrap();
+    let link_dir = temp.path().join("link");
+    std::os::unix::fs::symlink(&real_dir, &link_dir).unwrap();
+
+    // root_dir = canonical real path (mirrors what the CLI does).
+    let canonical_root = std::fs::canonicalize(&real_dir).unwrap();
+    let config = LintConfig::builder()
+        .root_dir(canonical_root)
+        .overrides(vec![OverrideConfig {
+            paths: vec!["CLAUDE.md".to_string()],
+            disabled_rules: vec!["PE-001".to_string()],
+        }])
+        .build()
+        .expect("valid");
+
+    // Call `for_path` with the SYMLINKED file path (NOT canonicalized).
+    // Without the fallback, strip_prefix would fail and the override
+    // wouldn't apply.
+    let symlinked_path = link_dir.join("CLAUDE.md");
+    let view = config.for_path(&symlinked_path);
+    assert!(
+        !view.is_rule_enabled("PE-001"),
+        "override should apply to symlinked path via canonicalize fallback"
+    );
+}

@@ -202,6 +202,14 @@ impl LintConfig {
     /// behavior: it returns `false` for rule IDs disabled by any matching
     /// override, falling through to [`LintConfig::is_rule_enabled`]
     /// otherwise.
+    ///
+    /// **Symlinked paths**: when `root_dir` has been canonicalized by the
+    /// caller (e.g., the CLI canonicalizes the project root) but `path`
+    /// retains a symlink prefix (e.g., `~/.claude/CLAUDE.md` where
+    /// `~/.claude` is a dotfile-manager symlink), the direct
+    /// `strip_prefix` would fail. `for_path` detects this and retries
+    /// once with `std::fs::canonicalize(path)` so overrides still match.
+    /// Non-symlinked paths pay no syscall cost.
     pub fn for_path(&self, path: &Path) -> PerFileLintConfig<'_> {
         // Empty fast-path: skip matching entirely when there are no overrides.
         if self.runtime.compiled_overrides.is_empty() {
@@ -212,7 +220,22 @@ impl LintConfig {
         }
 
         let rel_path = if let Some(root) = self.runtime.root_dir.as_ref() {
-            normalize_rel_path(path, root)
+            let direct = normalize_rel_path(path, root);
+            // `strip_prefix` failure leaves `direct` absolute. Common cause:
+            // the caller canonicalized `root_dir` (e.g. the CLI canonicalizes
+            // the project root via `std::fs::canonicalize`) but `path` still
+            // carries a symlink prefix — a typical pattern with dotfile
+            // managers (`~/.claude` symlinked into a `mackup` / `stow` /
+            // `chezmoi` store). Retry once with `path` canonicalized so the
+            // override actually matches in that case.
+            if std::path::Path::new(&direct).is_absolute() {
+                match std::fs::canonicalize(path) {
+                    Ok(canonical) => normalize_rel_path(&canonical, root),
+                    Err(_) => direct,
+                }
+            } else {
+                direct
+            }
         } else {
             // No root_dir: match against filename only, like resolve_with_compiled.
             path.file_name()
