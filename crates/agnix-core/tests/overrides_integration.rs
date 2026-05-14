@@ -250,6 +250,89 @@ fn overrides_suppress_xp004_build_conflict() {
     );
 }
 
+/// Regression for the cross-file determinism bug surfaced in PR #915
+/// round-2 review: when only one side of an XP-004 build conflict carries
+/// the override, the previous push-site gate suppressed the diagnostic only
+/// when the detector happened to pick the overridden file as the report
+/// path (~50% of runs due to HashMap iteration order in the conflict
+/// detector). After filtering the candidate set up front, the overridden
+/// file is invisible to the detector, so the result is a deterministic
+/// zero XP-004 diagnostics.
+#[test]
+fn overrides_partial_xp004_deterministic_suppression() {
+    let temp = tempfile::TempDir::new().unwrap();
+    fs::write(
+        temp.path().join("CLAUDE.md"),
+        "# Claude\n\nTo install dependencies, run `npm install`.\n",
+    )
+    .unwrap();
+    fs::write(
+        temp.path().join("AGENTS.md"),
+        "# Agents\n\nTo install dependencies, run `yarn install`.\n",
+    )
+    .unwrap();
+
+    // Override ONLY CLAUDE.md. AGENTS.md continues to participate fully.
+    // With CLAUDE.md filtered out of the candidate set, no two files remain
+    // to conflict — XP-004 must produce zero diagnostics deterministically.
+    let config = LintConfig::builder()
+        .overrides(vec![OverrideConfig {
+            paths: vec!["CLAUDE.md".to_string()],
+            disabled_rules: vec!["XP-004".to_string()],
+        }])
+        .build()
+        .expect("valid config");
+
+    let result = validate_project(temp.path(), &config).expect("validate_project");
+
+    let xp004_hits: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.rule == "XP-004")
+        .collect();
+    assert!(
+        xp004_hits.is_empty(),
+        "partial override on CLAUDE.md must suppress XP-004 build-conflict deterministically (filter-at-input semantics), got: {xp004_hits:?}"
+    );
+}
+
+/// Regression for AGM-006 partial-override semantics: a file that disables
+/// AGM-006 is invisible to the rule — it neither fires nor appears in
+/// other files' "other AGENTS.md files exist at:" listings. When the only
+/// remaining unfiltered AGENTS.md leaves the participating set below the
+/// `len() > 1` threshold, AGM-006 is fully suppressed.
+#[test]
+fn overrides_partial_agm006_no_cross_mention() {
+    let temp = tempfile::TempDir::new().unwrap();
+    fs::write(temp.path().join("AGENTS.md"), "# Root\n").unwrap();
+    fs::create_dir_all(temp.path().join("nested")).unwrap();
+    fs::write(temp.path().join("nested").join("AGENTS.md"), "# Nested\n").unwrap();
+
+    // Override ONLY the nested AGENTS.md. After filtering, the root file is
+    // the only AGM-006 participant — `len() > 1` fails, so AGM-006 produces
+    // zero diagnostics. Crucially, the root file must NOT fire AGM-006 with
+    // a message that mentions the (filtered-out) nested file.
+    let config = LintConfig::builder()
+        .overrides(vec![OverrideConfig {
+            paths: vec!["nested/AGENTS.md".to_string()],
+            disabled_rules: vec!["AGM-006".to_string()],
+        }])
+        .build()
+        .expect("valid config");
+
+    let result = validate_project(temp.path(), &config).expect("validate_project");
+
+    let agm006_hits: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.rule == "AGM-006")
+        .collect();
+    assert!(
+        agm006_hits.is_empty(),
+        "partial override on nested/AGENTS.md must remove it from the AGM-006 participating set, dropping below len() > 1 — got: {agm006_hits:?}"
+    );
+}
+
 /// Regression for project-level rule VER-001: per-file `[[overrides]]`
 /// must suppress VER-001 when the override targets the diagnostic's
 /// report path (`.agnix.toml` when present, project root otherwise).

@@ -49,44 +49,54 @@ pub(crate) fn run_project_level_checks(
     let mut diagnostics = Vec::new();
 
     // AGM-006: Check for multiple AGENTS.md files in the directory tree.
-    // Per-file `[[overrides]]` gating happens at the push site so a carve-out
-    // on one AGENTS.md does not silence the others.
-    if config.is_rule_enabled("AGM-006") && agents_md_paths.len() > 1 {
-        for agents_file in agents_md_paths.iter() {
-            if !config.for_path(agents_file).is_rule_enabled("AGM-006") {
-                continue;
-            }
-            let parent_files =
-                schemas::agents_md::check_agents_md_hierarchy(agents_file, agents_md_paths);
-            let description = if !parent_files.is_empty() {
-                let parent_paths = join_paths(parent_files.iter().map(|p| p.as_path()));
-                format!(
-                    "Nested AGENTS.md detected - parent AGENTS.md files exist at: {parent_paths}",
-                )
-            } else {
-                let other_paths = join_paths(
-                    agents_md_paths
-                        .iter()
-                        .filter(|p| p.as_path() != agents_file.as_path())
-                        .map(|p| p.as_path()),
-                );
-                format!(
-                    "Multiple AGENTS.md files detected - other AGENTS.md files exist at: {other_paths}",
-                )
-            };
+    //
+    // Per-file `[[overrides]]` are applied by filtering the participating
+    // set up front, not by gating at the push site. A file that disables
+    // AGM-006 is invisible to the rule: it neither fires nor appears in
+    // other files' "other AGENTS.md files exist at:" listings. This makes
+    // the suppression deterministic (no dependence on which file the
+    // detector happens to report on) and matches the semantics of the
+    // `per-file override` name.
+    if config.is_rule_enabled("AGM-006") {
+        let agm006_paths: Vec<PathBuf> = agents_md_paths
+            .iter()
+            .filter(|p| config.for_path(p).is_rule_enabled("AGM-006"))
+            .cloned()
+            .collect();
+        if agm006_paths.len() > 1 {
+            for agents_file in agm006_paths.iter() {
+                let parent_files =
+                    schemas::agents_md::check_agents_md_hierarchy(agents_file, &agm006_paths);
+                let description = if !parent_files.is_empty() {
+                    let parent_paths = join_paths(parent_files.iter().map(|p| p.as_path()));
+                    format!(
+                        "Nested AGENTS.md detected - parent AGENTS.md files exist at: {parent_paths}",
+                    )
+                } else {
+                    let other_paths = join_paths(
+                        agm006_paths
+                            .iter()
+                            .filter(|p| p.as_path() != agents_file.as_path())
+                            .map(|p| p.as_path()),
+                    );
+                    format!(
+                        "Multiple AGENTS.md files detected - other AGENTS.md files exist at: {other_paths}",
+                    )
+                };
 
-            diagnostics.push(
-                Diagnostic::warning(
-                    agents_file.clone(),
-                    1,
-                    0,
-                    "AGM-006",
-                    description,
-                )
-                .with_suggestion(
-                    "Some tools load AGENTS.md hierarchically. Document inheritance behavior or consolidate files.".to_string(),
-                ),
-            );
+                diagnostics.push(
+                    Diagnostic::warning(
+                        agents_file.clone(),
+                        1,
+                        0,
+                        "AGM-006",
+                        description,
+                    )
+                    .with_suggestion(
+                        "Some tools load AGENTS.md hierarchically. Document inheritance behavior or consolidate files.".to_string(),
+                    ),
+                );
+            }
         }
     }
 
@@ -132,10 +142,20 @@ pub(crate) fn run_project_level_checks(
             }
         }
 
+        // XP-004/005/006: each detector runs on a per-rule filtered subset
+        // of `file_contents`. A file whose `[[overrides]]` disable the rule
+        // is removed from that rule's candidate set up front, so the
+        // detector never sees it. This makes suppression deterministic and
+        // independent of which file the detector picks as the diagnostic
+        // report path (cross-file detectors group by HashMap, so the report
+        // path is otherwise non-deterministic when only one side of a
+        // conflict carries the override).
+
         // XP-004: Detect conflicting build/test commands
         if xp004_enabled {
             let file_commands: Vec<_> = file_contents
                 .iter()
+                .filter(|(path, _)| config.for_path(path).is_rule_enabled("XP-004"))
                 .filter_map(|(path, content)| {
                     let cmds = schemas::cross_platform::extract_build_commands(content);
                     if cmds.is_empty() {
@@ -148,9 +168,6 @@ pub(crate) fn run_project_level_checks(
 
             let build_conflicts = schemas::cross_platform::detect_build_conflicts(&file_commands);
             for conflict in build_conflicts {
-                if !config.for_path(&conflict.file1).is_rule_enabled("XP-004") {
-                    continue;
-                }
                 diagnostics.push(
                     Diagnostic::warning(
                         conflict.file1.clone(),
@@ -181,6 +198,7 @@ pub(crate) fn run_project_level_checks(
         if xp005_enabled {
             let file_constraints: Vec<_> = file_contents
                 .iter()
+                .filter(|(path, _)| config.for_path(path).is_rule_enabled("XP-005"))
                 .filter_map(|(path, content)| {
                     let constraints = schemas::cross_platform::extract_tool_constraints(content);
                     if constraints.is_empty() {
@@ -193,12 +211,6 @@ pub(crate) fn run_project_level_checks(
 
             let tool_conflicts = schemas::cross_platform::detect_tool_conflicts(&file_constraints);
             for conflict in tool_conflicts {
-                if !config
-                    .for_path(&conflict.allow_file)
-                    .is_rule_enabled("XP-005")
-                {
-                    continue;
-                }
                 diagnostics.push(
                     Diagnostic::error(
                         conflict.allow_file.clone(),
@@ -219,11 +231,17 @@ pub(crate) fn run_project_level_checks(
 
         // XP-006: Detect multiple layers without documented precedence
         if xp006_enabled {
-            // Deduplicate identical-content instruction files (e.g., CLAUDE.md and
-            // AGENTS.md that are intentional byte-for-byte copies). Identical files
-            // are not conflicting layers and should not trigger a precedence warning.
+            // Filter participating files first, then dedupe identical-content
+            // instruction files (e.g., CLAUDE.md and AGENTS.md that are
+            // intentional byte-for-byte copies). Identical files are not
+            // conflicting layers and should not trigger a precedence warning.
+            let xp006_contents: Vec<&(PathBuf, String)> = file_contents
+                .iter()
+                .filter(|(path, _)| config.for_path(path).is_rule_enabled("XP-006"))
+                .collect();
+
             let mut deduped_contents: Vec<&(PathBuf, String)> = Vec::new();
-            for entry in &file_contents {
+            for entry in &xp006_contents {
                 let dominated = deduped_contents.iter().any(|(_, c)| c == &entry.1);
                 if !dominated {
                     deduped_contents.push(entry);
@@ -238,18 +256,16 @@ pub(crate) fn run_project_level_checks(
             if let Some(issue) = schemas::cross_platform::detect_precedence_issues(&layers) {
                 // Report on the first layer file
                 if let Some(first_layer) = issue.layers.first() {
-                    if config.for_path(&first_layer.path).is_rule_enabled("XP-006") {
-                        diagnostics.push(
-                            Diagnostic::warning(
-                                first_layer.path.clone(),
-                                1,
-                                0,
-                                "XP-006",
-                                issue.description,
-                            )
-                            .with_suggestion(t!("rules.xp_006.suggestion")),
-                        );
-                    }
+                    diagnostics.push(
+                        Diagnostic::warning(
+                            first_layer.path.clone(),
+                            1,
+                            0,
+                            "XP-006",
+                            issue.description,
+                        )
+                        .with_suggestion(t!("rules.xp_006.suggestion")),
+                    );
                 }
             }
         }
