@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Symlink resolution**: `for_path` retries `strip_prefix` once via the configured `FileSystem::canonicalize` when the direct path remains absolute (typical for dotfile-manager symlinks like `~/.claude/` → mackup/stow/chezmoi stores). Non-symlinked paths pay no syscall cost.
   - Covered by 27 unit tests (12 schema + 3 wiring + 12 matching + symlink regression) and 8 end-to-end integration tests via `validate_project` (CC-MEM-005 carve-out, AGM-006 full + partial, XP-004 full + partial, VER-001). Documented in `docs/CONFIGURATION.md` and `SPEC.md`.
 
+### Changed
+- **Tool baselines**: triaged the three open release-watch issues and bumped baselines for `amp` `neo` -> `npm-package-changes` (#916), `cursor` `3.4.16` -> `3.4.17` (#917), and `opencode` `v1.14.49` -> `v1.14.50` (#918). All three are agnix-irrelevant for current validated config surfaces: Amp changed npm packaging and package names only, Cursor's stable endpoint exposed only a version marker, and OpenCode v1.14.50 contains runtime/SDK/TUI fixes already covered by existing config validators. No validator, `ToolVersions`, or `SpecRevisions` update required.
+
 ## [0.26.0] - 2026-05-14
 
 ### Added
