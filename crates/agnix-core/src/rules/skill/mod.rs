@@ -1,7 +1,7 @@
 //! Skill file validation
 
 use crate::{
-    config::LintConfig,
+    config::{LintConfig, PerFileLintConfig},
     diagnostics::{Diagnostic, Fix},
     parsers::frontmatter::{FrontmatterParts, split_frontmatter},
     regex_util::static_regex,
@@ -1647,7 +1647,12 @@ impl Validator for SkillValidator {
         }
     }
 
-    fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+    fn validate_per_file(
+        &self,
+        path: &Path,
+        content: &str,
+        config: &PerFileLintConfig<'_>,
+    ) -> Vec<Diagnostic> {
         if !config.rules().frontmatter_validation {
             return Vec::new();
         }

@@ -1,7 +1,7 @@
 //! CLAUDE.md validation
 
 use crate::{
-    config::LintConfig,
+    config::PerFileLintConfig,
     diagnostics::{Diagnostic, Fix},
     file_utils::safe_read_file,
     rules::{Validator, ValidatorMetadata},
@@ -55,7 +55,12 @@ impl Validator for ClaudeMdValidator {
         }
     }
 
-    fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+    fn validate_per_file(
+        &self,
+        path: &Path,
+        content: &str,
+        config: &PerFileLintConfig<'_>,
+    ) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
 
         // Validate CLAUDE.md variants and cursor rule files.

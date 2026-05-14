@@ -243,14 +243,36 @@ disabled_rules = []  # e.g., ["CC-AG-001", "AS-005"]
 disabled_validators = []  # e.g., ["XmlValidator", "ImportsValidator"]
 
 exclude = ["node_modules/**", ".git/**", "target/**"]
+
+# Per-file rule overrides (array of tables).
+# Each block disables `disabled_rules` for files matching any of `paths`.
+# Multiple blocks stack (set union); ordering does not matter.
+[[overrides]]
+paths = ["CLAUDE.md", "AGENTS.md"]
+disabled_rules = ["CC-MEM-005"]
 ```
+
+### Per-File Rule Overrides
+
+`[[overrides]]` is an array of tables. Each entry has two fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `paths` | `[String]` | Glob patterns matched against project-relative paths (forward-slash separators; same matcher as `[files].exclude`, with `require_literal_separator = true`). |
+| `disabled_rules` | `[String]` | Rule IDs to disable for matching files. |
+
+For each file linted, the effective disabled-rule set is the union of `[rules].disabled_rules` and every `[[overrides]].disabled_rules` whose `paths` matched the file. The override mechanism is purely additive: it cannot re-enable a globally disabled rule or override a disabled category (`[rules].skills = false`, etc.).
+
+Files excluded entirely via `[files].exclude` are skipped before any rule runs, so `[[overrides]]` on excluded paths is moot. A block with `paths = []` is a no-op (no file is ever matched). When `.agnix.toml` is loaded without a project root (single-file mode), `paths` patterns are matched against the file name only.
 
 ### Config Validation
 
 agnix validates `.agnix.toml` files semantically before running validation:
 
-- **Rule ID validation**: `disabled_rules` must match known patterns (AS-, CC-SK-, CC-HK-, CC-AG-, CC-MEM-, CC-PL-, XML-, MCP-, REF-, XP-, AGM-, COP-, CUR-, CLN-, OC-, CDX-, PE-, VER-, imports::)
+- **Rule ID validation**: `disabled_rules` (in `[rules]` and `[[overrides]]`) must match known patterns (AS-, CC-SK-, CC-HK-, CC-AG-, CC-MEM-, CC-PL-, XML-, MCP-, REF-, XP-, AGM-, COP-, CUR-, CLN-, OC-, CDX-, PE-, VER-, imports::)
 - **Tool validation**: `tools` array must contain valid tool names (claude-code, cursor, codex, copilot, github-copilot, cline, opencode, generic)
+- **Glob validation**: `[files].*` and `[[overrides]].paths` patterns must be syntactically valid glob expressions. Invalid patterns surface as warnings (CLI flow drops them at load and continues; programmatic `LintConfigBuilder::build()` promotes them to errors).
+- **Override path safety**: `[[overrides]].paths` entries must be project-relative. Absolute paths (`/...`) and traversal segments (`..`) surface as warnings via the CLI (the override becomes a silent no-op because the pattern can never match a project-relative path); programmatic `LintConfigBuilder::build()` and `build_lenient()` both reject these as hard errors at build time.
 - **Deprecation warnings**: `mcp_protocol_version` is deprecated (use `spec_revisions.mcp_protocol`)
 
 Warnings are displayed before validation output with suggestions for fixes.

@@ -11,7 +11,7 @@
 //! - KR-PW-008: Secrets in power body
 
 use crate::{
-    config::LintConfig,
+    config::PerFileLintConfig,
     diagnostics::Diagnostic,
     rules::{Validator, ValidatorMetadata, seems_plaintext_secret},
     schemas::{kiro_mcp::parse_kiro_mcp_config, kiro_power::parse_kiro_power},
@@ -60,7 +60,12 @@ impl Validator for KiroPowerValidator {
         }
     }
 
-    fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+    fn validate_per_file(
+        &self,
+        path: &Path,
+        content: &str,
+        config: &PerFileLintConfig<'_>,
+    ) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
         let parsed = parse_kiro_power(content);
 
@@ -321,6 +326,7 @@ impl Validator for KiroPowerValidator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::LintConfig;
     use std::fs;
 
     fn validate(content: &str) -> Vec<Diagnostic> {

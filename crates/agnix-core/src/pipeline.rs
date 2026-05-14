@@ -203,7 +203,7 @@ fn compile_files_config_with_diagnostics(
 /// `require_literal_separator` is `true` so that `*` only matches within a
 /// single path component. Users must use `**` for recursive matching (e.g.
 /// `dir/**/*.md` instead of `dir/*.md` to match nested files).
-const FILES_MATCH_OPTIONS: glob::MatchOptions = glob::MatchOptions {
+pub(crate) const FILES_MATCH_OPTIONS: glob::MatchOptions = glob::MatchOptions {
     case_sensitive: true,
     require_literal_separator: true,
     require_literal_leading_dot: false,
@@ -352,10 +352,11 @@ fn validate_file_with_type(
     let validators = registry.validators_for(file_type);
     let disabled = &config.rules().disabled_validators;
     let mut diagnostics = Vec::new();
+    let view = config.for_path(path);
 
     if disabled.is_empty() {
         for validator in validators {
-            diagnostics.extend(validator.validate(path, &content, config));
+            diagnostics.extend(validator.validate_per_file(path, &content, &view));
         }
     } else {
         let disabled_set: HashSet<&str> = disabled.iter().map(|s| s.as_str()).collect();
@@ -363,7 +364,7 @@ fn validate_file_with_type(
             if disabled_set.contains(validator.name()) {
                 continue;
             }
-            diagnostics.extend(validator.validate(path, &content, config));
+            diagnostics.extend(validator.validate_per_file(path, &content, &view));
         }
     }
 
@@ -393,6 +394,7 @@ pub fn validate_content(
     let validators = registry.validators_for(file_type);
     let disabled = &config.rules().disabled_validators;
     let mut diagnostics = Vec::new();
+    let view = config.for_path(path);
 
     // Runtime disabled_validators check: honours per-config disabled_validators
     // without requiring them to be pre-applied to the registry. The LSP creates
@@ -400,7 +402,7 @@ pub fn validate_content(
     // respect per-workspace disabled_validators from the user's LintConfig.
     if disabled.is_empty() {
         for validator in validators {
-            diagnostics.extend(validator.validate(path, &content, config));
+            diagnostics.extend(validator.validate_per_file(path, &content, &view));
         }
     } else {
         let disabled_set: HashSet<&str> = disabled.iter().map(|s| s.as_str()).collect();
@@ -408,7 +410,7 @@ pub fn validate_content(
             if disabled_set.contains(validator.name()) {
                 continue;
             }
-            diagnostics.extend(validator.validate(path, &content, config));
+            diagnostics.extend(validator.validate_per_file(path, &content, &view));
         }
     }
 
@@ -432,7 +434,7 @@ struct ExcludePattern {
     allow_probe: bool,
 }
 
-fn normalize_rel_path(entry_path: &Path, root: &Path) -> String {
+pub(crate) fn normalize_rel_path(entry_path: &Path, root: &Path) -> String {
     let rel_path = entry_path.strip_prefix(root).unwrap_or(entry_path);
     let path_str = rel_path.to_string_lossy().replace('\\', "/");
     match path_str.strip_prefix("./") {

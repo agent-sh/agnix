@@ -9,7 +9,7 @@
 //! - ROO-006: Mode slug not recognized (MEDIUM/WARNING) - slug in mode-specific SKILL.md paths
 
 use crate::{
-    config::LintConfig,
+    config::PerFileLintConfig,
     diagnostics::Diagnostic,
     rules::{Validator, ValidatorMetadata},
     schemas::roo::{
@@ -35,7 +35,12 @@ impl Validator for RooCodeValidator {
         }
     }
 
-    fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+    fn validate_per_file(
+        &self,
+        path: &Path,
+        content: &str,
+        config: &PerFileLintConfig<'_>,
+    ) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
         let filename = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
         let parent = path
@@ -83,7 +88,7 @@ impl RooCodeValidator {
         &self,
         path: &Path,
         content: &str,
-        config: &LintConfig,
+        config: &PerFileLintConfig<'_>,
         diagnostics: &mut Vec<Diagnostic>,
     ) {
         if !config.is_rule_enabled("ROO-001") {
@@ -109,7 +114,7 @@ impl RooCodeValidator {
         &self,
         path: &Path,
         content: &str,
-        config: &LintConfig,
+        config: &PerFileLintConfig<'_>,
         diagnostics: &mut Vec<Diagnostic>,
     ) {
         if !config.is_rule_enabled("ROO-002") {
@@ -315,7 +320,7 @@ impl RooCodeValidator {
         &self,
         path: &Path,
         content: &str,
-        config: &LintConfig,
+        config: &PerFileLintConfig<'_>,
         diagnostics: &mut Vec<Diagnostic>,
     ) {
         if !config.is_rule_enabled("ROO-003") {
@@ -380,7 +385,7 @@ impl RooCodeValidator {
         &self,
         path: &Path,
         content: &str,
-        config: &LintConfig,
+        config: &PerFileLintConfig<'_>,
         diagnostics: &mut Vec<Diagnostic>,
     ) {
         // ROO-004: Validate slug format
@@ -432,7 +437,7 @@ impl RooCodeValidator {
     }
 
     /// Check if a slug exists in custom modes defined in .roomodes
-    fn check_custom_mode(&self, path: &Path, slug: &str, config: &LintConfig) -> bool {
+    fn check_custom_mode(&self, path: &Path, slug: &str, config: &PerFileLintConfig<'_>) -> bool {
         // Navigate from the file path to find .roomodes
         // For a path like .roo/rules-custom-mode/SKILL.md:
         // 1. Get the .roo directory (grandparent of the file)
@@ -465,7 +470,7 @@ impl RooCodeValidator {
         &self,
         path: &Path,
         content: &str,
-        config: &LintConfig,
+        config: &PerFileLintConfig<'_>,
         diagnostics: &mut Vec<Diagnostic>,
     ) {
         if !config.is_rule_enabled("ROO-005") {

@@ -90,7 +90,9 @@ pub(crate) mod span_utils;
 /// **Stability: unstable** -- interface may change on minor releases.
 pub mod validation;
 
-pub use config::{ConfigWarning, FilesConfig, LintConfig, generate_schema};
+pub use config::{
+    ConfigWarning, FilesConfig, LintConfig, OverrideConfig, PerFileLintConfig, generate_schema,
+};
 pub use diagnostics::{
     ConfigError, CoreError, Diagnostic, DiagnosticLevel, FileError, Fix, FixConfidenceTier,
     LintError, LintResult, RuleMetadata, ValidationError, ValidationOutcome,

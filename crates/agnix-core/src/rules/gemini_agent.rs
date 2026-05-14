@@ -25,7 +25,7 @@
 //! future expansion so #809 can ship as a focused rule.
 
 use crate::{
-    config::LintConfig,
+    config::PerFileLintConfig,
     diagnostics::Diagnostic,
     rules::{Validator, ValidatorMetadata},
 };
@@ -47,7 +47,12 @@ impl Validator for GeminiAgentValidator {
         }
     }
 
-    fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+    fn validate_per_file(
+        &self,
+        path: &Path,
+        content: &str,
+        config: &PerFileLintConfig<'_>,
+    ) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
 
         if !config.is_rule_enabled("GM-AG-001") {

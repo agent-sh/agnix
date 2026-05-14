@@ -37,7 +37,10 @@ pub mod skill;
 pub mod windsurf;
 pub mod xml;
 
-use crate::{config::LintConfig, diagnostics::Diagnostic};
+use crate::{
+    config::{LintConfig, PerFileLintConfig},
+    diagnostics::Diagnostic,
+};
 use std::path::Path;
 
 /// Shared secret-detection helper used by kiro_steering, kiro_power, kiro_mcp,
@@ -121,8 +124,53 @@ pub struct ValidatorMetadata {
 /// (e.g., via `Arc<ValidatorRegistry>` in the LSP server). Implementations
 /// must not hold non-static references or non-thread-safe interior mutability.
 pub trait Validator: Send + Sync + 'static {
-    /// Validate the given file content and return any diagnostics.
-    fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic>;
+    /// Validate the given file content with a per-file config view applied.
+    ///
+    /// New implementors should prefer overriding this method. The `config`
+    /// is a [`PerFileLintConfig`] view bound to `path`, so
+    /// `config.is_rule_enabled(rule_id)` returns `false` for rules
+    /// disabled by any matching `[[overrides]]` block. All other
+    /// [`LintConfig`] accessors are available unchanged via `Deref`.
+    ///
+    /// The default implementation falls back to
+    /// [`validate`](Validator::validate) with the underlying
+    /// `&LintConfig` (no per-file override layer). This preserves
+    /// backwards compatibility for pre-existing implementors that only
+    /// override `validate`: they keep compiling and running unchanged,
+    /// but do not honor `[[overrides]]`. Override `validate_per_file`
+    /// to opt in.
+    ///
+    /// **Note**: implementors must override **at least one** of
+    /// [`validate`](Validator::validate) or
+    /// [`validate_per_file`](Validator::validate_per_file). Overriding
+    /// neither produces infinite recursion at runtime.
+    fn validate_per_file(
+        &self,
+        path: &Path,
+        content: &str,
+        config: &PerFileLintConfig<'_>,
+    ) -> Vec<Diagnostic> {
+        // Deref coercion: &PerFileLintConfig<'_> → &LintConfig.
+        self.validate(path, content, config)
+    }
+
+    /// Validate using a [`LintConfig`] directly.
+    ///
+    /// Default implementation: builds a [`PerFileLintConfig`] view via
+    /// [`LintConfig::for_path`] and dispatches to
+    /// [`validate_per_file`](Validator::validate_per_file). Production
+    /// dispatch (`pipeline::validate_file*`) calls
+    /// [`validate_per_file`](Validator::validate_per_file) directly so
+    /// the view is constructed once per file and shared across validators.
+    ///
+    /// Pre-existing implementors that override this method keep working;
+    /// the recommended migration is to move the body to
+    /// [`validate_per_file`](Validator::validate_per_file) so the
+    /// validator honors `[[overrides]]`.
+    fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+        let view = config.for_path(path);
+        self.validate_per_file(path, content, &view)
+    }
 
     /// Return a short, human-readable name for this validator.
     ///
@@ -407,7 +455,12 @@ mod tests {
     fn test_validator_metadata_default_has_empty_rule_ids() {
         struct DummyValidator;
         impl Validator for DummyValidator {
-            fn validate(&self, _: &Path, _: &str, _: &LintConfig) -> Vec<Diagnostic> {
+            fn validate_per_file(
+                &self,
+                _: &Path,
+                _: &str,
+                _: &PerFileLintConfig<'_>,
+            ) -> Vec<Diagnostic> {
                 vec![]
             }
         }
@@ -422,7 +475,12 @@ mod tests {
         const IDS: &[&str] = &["TEST-001", "TEST-002"];
         struct CustomValidator;
         impl Validator for CustomValidator {
-            fn validate(&self, _: &Path, _: &str, _: &LintConfig) -> Vec<Diagnostic> {
+            fn validate_per_file(
+                &self,
+                _: &Path,
+                _: &str,
+                _: &PerFileLintConfig<'_>,
+            ) -> Vec<Diagnostic> {
                 vec![]
             }
             fn metadata(&self) -> ValidatorMetadata {

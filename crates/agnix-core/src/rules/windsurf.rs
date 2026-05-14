@@ -8,7 +8,7 @@
 
 use crate::{
     FileType,
-    config::LintConfig,
+    config::PerFileLintConfig,
     diagnostics::Diagnostic,
     rules::{Validator, ValidatorMetadata},
     schemas::agents_md::WINDSURF_CHAR_LIMIT,
@@ -28,7 +28,12 @@ impl Validator for WindsurfValidator {
         }
     }
 
-    fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+    fn validate_per_file(
+        &self,
+        path: &Path,
+        content: &str,
+        config: &PerFileLintConfig<'_>,
+    ) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
         let file_type = crate::detect_file_type(path);
 

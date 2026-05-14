@@ -4,7 +4,7 @@
 //! client directory they reside in. For example, a skill in `.cursor/skills/`
 //! should not use fields that Cursor does not support.
 
-use crate::config::LintConfig;
+use crate::config::PerFileLintConfig;
 use crate::diagnostics::{Diagnostic, Fix};
 use crate::parsers::frontmatter::split_frontmatter;
 use crate::rules::{Validator, ValidatorMetadata};
@@ -211,7 +211,12 @@ impl Validator for PerClientSkillValidator {
         }
     }
 
-    fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+    fn validate_per_file(
+        &self,
+        path: &Path,
+        content: &str,
+        config: &PerFileLintConfig<'_>,
+    ) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
 
         let parts = split_frontmatter(content);

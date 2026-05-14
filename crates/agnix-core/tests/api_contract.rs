@@ -789,11 +789,11 @@ fn named_validators_default_yields_none_names() {
             fn dummy_factory() -> Box<dyn agnix_core::Validator> {
                 struct Dummy;
                 impl agnix_core::Validator for Dummy {
-                    fn validate(
+                    fn validate_per_file(
                         &self,
                         _: &std::path::Path,
                         _: &str,
-                        _: &agnix_core::LintConfig,
+                        _: &agnix_core::PerFileLintConfig<'_>,
                     ) -> Vec<agnix_core::Diagnostic> {
                         vec![]
                     }
@@ -832,11 +832,11 @@ fn builder_with_named_provider_skips_factory_for_disabled_validator() {
         CALL_COUNT.fetch_add(1, Ordering::SeqCst);
         struct NoopValidator;
         impl agnix_core::Validator for NoopValidator {
-            fn validate(
+            fn validate_per_file(
                 &self,
                 _: &std::path::Path,
                 _: &str,
-                _: &agnix_core::LintConfig,
+                _: &agnix_core::PerFileLintConfig<'_>,
             ) -> Vec<agnix_core::Diagnostic> {
                 vec![]
             }
@@ -1064,11 +1064,11 @@ fn named_validators_matching_name_registers_successfully() {
     // triggering the debug_assert_eq! in register_named().
     struct MatchingValidator;
     impl agnix_core::Validator for MatchingValidator {
-        fn validate(
+        fn validate_per_file(
             &self,
             _: &std::path::Path,
             _: &str,
-            _: &agnix_core::LintConfig,
+            _: &agnix_core::PerFileLintConfig<'_>,
         ) -> Vec<agnix_core::Diagnostic> {
             vec![]
         }

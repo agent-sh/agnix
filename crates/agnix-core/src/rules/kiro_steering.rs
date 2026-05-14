@@ -12,7 +12,7 @@
 //! - KIRO-009: Inline file reference points to missing file (MEDIUM/WARNING)
 
 use crate::{
-    config::LintConfig,
+    config::PerFileLintConfig,
     diagnostics::{Diagnostic, Fix},
     parsers::frontmatter::split_frontmatter,
     rules::{Validator, ValidatorMetadata, line_col_at_offset, seems_plaintext_secret},
@@ -90,7 +90,12 @@ impl Validator for KiroSteeringValidator {
         }
     }
 
-    fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+    fn validate_per_file(
+        &self,
+        path: &Path,
+        content: &str,
+        config: &PerFileLintConfig<'_>,
+    ) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
 
         // KIRO-004: Empty steering file (check first, return early)

@@ -13,7 +13,7 @@
 
 use crate::{
     FileType,
-    config::LintConfig,
+    config::PerFileLintConfig,
     diagnostics::{Diagnostic, Fix},
     parsers::frontmatter::split_frontmatter,
     rules::{Validator, ValidatorMetadata},
@@ -109,7 +109,12 @@ impl Validator for ClineValidator {
         }
     }
 
-    fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+    fn validate_per_file(
+        &self,
+        path: &Path,
+        content: &str,
+        config: &PerFileLintConfig<'_>,
+    ) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
 
         let file_type = crate::detect_file_type(path);
@@ -297,7 +302,7 @@ impl ClineValidator {
         &self,
         path: &Path,
         content: &str,
-        config: &LintConfig,
+        config: &PerFileLintConfig<'_>,
         diagnostics: &mut Vec<Diagnostic>,
     ) {
         // CLN-005: Empty workflow file (ERROR)
@@ -335,7 +340,12 @@ impl ClineValidator {
     }
 
     /// Hook-specific rules (CLN-009).
-    fn validate_hook(&self, path: &Path, config: &LintConfig, diagnostics: &mut Vec<Diagnostic>) {
+    fn validate_hook(
+        &self,
+        path: &Path,
+        config: &PerFileLintConfig<'_>,
+        diagnostics: &mut Vec<Diagnostic>,
+    ) {
         // CLN-009: Unknown hook event name (WARNING)
         if config.is_rule_enabled("CLN-009") {
             if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
@@ -372,7 +382,12 @@ impl Validator for ClineSkillValidator {
         }
     }
 
-    fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+    fn validate_per_file(
+        &self,
+        path: &Path,
+        content: &str,
+        config: &PerFileLintConfig<'_>,
+    ) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
 
         // Only applies to Cline skill SKILL.md files

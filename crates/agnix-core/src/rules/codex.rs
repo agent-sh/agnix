@@ -13,7 +13,7 @@
 //! - CDX-APP-001..003: App and plugin configuration validation
 
 use crate::{
-    config::LintConfig,
+    config::PerFileLintConfig,
     diagnostics::{Diagnostic, Fix},
     rules::{Validator, ValidatorMetadata},
     schemas::claude_md::find_generic_instructions,
@@ -349,7 +349,12 @@ impl Validator for CodexValidator {
         }
     }
 
-    fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+    fn validate_per_file(
+        &self,
+        path: &Path,
+        content: &str,
+        config: &PerFileLintConfig<'_>,
+    ) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
 
         // Determine whether this is a .md file (ClaudeMd) or a .toml file (CodexConfig)
@@ -712,7 +717,12 @@ impl Validator for CodexConfigValidator {
         }
     }
 
-    fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+    fn validate_per_file(
+        &self,
+        path: &Path,
+        content: &str,
+        config: &PerFileLintConfig<'_>,
+    ) -> Vec<Diagnostic> {
         let validator = CodexValidator;
         validator.validate(path, content, config)
     }
@@ -721,7 +731,7 @@ impl Validator for CodexConfigValidator {
 fn validate_codex_markdown_rules(
     path: &Path,
     content: &str,
-    config: &LintConfig,
+    config: &PerFileLintConfig<'_>,
 ) -> Vec<Diagnostic> {
     let mut diagnostics = Vec::new();
     let filename = path
@@ -992,7 +1002,7 @@ fn has_sk_token_prefix(line: &str) -> bool {
 fn validate_codex_config_rules(
     path: &Path,
     content: &str,
-    config: &LintConfig,
+    config: &PerFileLintConfig<'_>,
     key_lines: &HashMap<String, usize>,
 ) -> Vec<Diagnostic> {
     let mut diagnostics = Vec::new();

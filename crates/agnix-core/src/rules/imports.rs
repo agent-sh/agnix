@@ -10,7 +10,7 @@
 //! - REF-004: Non-markdown @import detection
 
 use crate::{
-    config::LintConfig,
+    config::PerFileLintConfig,
     diagnostics::{Diagnostic, Fix},
     fs::FileSystem,
     parsers::markdown::{extract_imports, extract_markdown_links},
@@ -88,7 +88,12 @@ impl Validator for ImportsValidator {
         }
     }
 
-    fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+    fn validate_per_file(
+        &self,
+        path: &Path,
+        content: &str,
+        config: &PerFileLintConfig<'_>,
+    ) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
 
         // Check both new category flag and legacy flag for backward compatibility
@@ -251,7 +256,7 @@ fn visit_imports(
     stack: &mut Vec<PathBuf>,
     diagnostics: &mut Vec<Diagnostic>,
     seen_diagnostics: &mut HashSet<DiagnosticKey>,
-    config: &LintConfig,
+    config: &PerFileLintConfig<'_>,
     root_is_claude_md: bool,
     project_root: &Path,
     fs: &dyn FileSystem,
@@ -622,7 +627,11 @@ fn normalize_existing_path(path: &Path, fs: &dyn FileSystem) -> PathBuf {
     fs.canonicalize(path).unwrap_or_else(|_| path.to_path_buf())
 }
 
-fn resolve_project_root(path: &Path, config: &LintConfig, fs: &dyn FileSystem) -> PathBuf {
+fn resolve_project_root(
+    path: &Path,
+    config: &PerFileLintConfig<'_>,
+    fs: &dyn FileSystem,
+) -> PathBuf {
     if let Some(root) = config.get_root_dir() {
         return normalize_existing_path(root, fs);
     }
@@ -665,7 +674,7 @@ fn format_cycle(stack: &[PathBuf], target: &Path) -> String {
 fn validate_markdown_links(
     path: &Path,
     content: &str,
-    config: &LintConfig,
+    config: &PerFileLintConfig<'_>,
     diagnostics: &mut Vec<Diagnostic>,
     fs: &dyn FileSystem,
 ) {

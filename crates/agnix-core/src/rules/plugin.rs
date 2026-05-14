@@ -3,7 +3,7 @@
 //! Validates `.claude-plugin/plugin.json` manifests.
 
 use crate::{
-    config::LintConfig,
+    config::PerFileLintConfig,
     diagnostics::{Diagnostic, Fix},
     rules::{Validator, ValidatorMetadata},
 };
@@ -38,7 +38,12 @@ impl Validator for PluginValidator {
         }
     }
 
-    fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+    fn validate_per_file(
+        &self,
+        path: &Path,
+        content: &str,
+        config: &PerFileLintConfig<'_>,
+    ) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
 
         if !config.rules().plugins {
@@ -621,7 +626,7 @@ fn extract_valid_shadowing_paths(value: &serde_json::Value) -> Option<Vec<String
 fn check_default_component_shadowing(
     raw_value: &serde_json::Value,
     path: &Path,
-    config: &LintConfig,
+    config: &PerFileLintConfig<'_>,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
     let Some(plugin_dir) = path.parent() else {

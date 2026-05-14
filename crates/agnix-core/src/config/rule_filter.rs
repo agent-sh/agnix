@@ -1,4 +1,6 @@
 use super::*;
+use crate::pipeline::{FILES_MATCH_OPTIONS, normalize_rel_path};
+use std::ops::Deref;
 
 /// Rule filtering logic encapsulated for clarity.
 ///
@@ -188,5 +190,117 @@ impl LintConfig {
     /// handled by the direct eq_ignore_ascii_case comparison in is_rule_for_tools().
     pub fn is_tool_alias(user_tool: &str, canonical_tool: &str) -> bool {
         DefaultRuleFilter::is_tool_alias(user_tool, canonical_tool)
+    }
+
+    /// Build a per-file view of this config, applying `[[overrides]]`
+    /// whose `paths` globs match `path`.
+    ///
+    /// The returned [`PerFileLintConfig`] dereferences to `&LintConfig`,
+    /// so all `LintConfig` accessors (e.g., `rules()`, `target()`,
+    /// `fs()`, `root_dir()`) are available unchanged. Only
+    /// [`PerFileLintConfig::is_rule_enabled`] differs from the global
+    /// behavior: it returns `false` for rule IDs disabled by any matching
+    /// override, falling through to [`LintConfig::is_rule_enabled`]
+    /// otherwise.
+    ///
+    /// **Symlinked paths**: when `root_dir` has been canonicalized by the
+    /// caller (e.g., the CLI canonicalizes the project root) but `path`
+    /// retains a symlink prefix (e.g., `~/.claude/CLAUDE.md` where
+    /// `~/.claude` is a dotfile-manager symlink), the direct
+    /// `strip_prefix` would fail. `for_path` detects this and retries
+    /// once via the configured [`FileSystem::canonicalize`] so overrides
+    /// still match. Non-symlinked paths pay no syscall cost.
+    pub fn for_path(&self, path: &Path) -> PerFileLintConfig<'_> {
+        // Empty fast-path: skip matching entirely when there are no overrides.
+        if self.runtime.compiled_overrides.is_empty() {
+            return PerFileLintConfig {
+                config: self,
+                extra_disabled: Vec::new(),
+            };
+        }
+
+        let rel_path = if let Some(root) = self.runtime.root_dir.as_ref() {
+            let direct = normalize_rel_path(path, root);
+            // `strip_prefix` failure leaves `direct` absolute. Common cause:
+            // the caller canonicalized `root_dir` (e.g. the CLI canonicalizes
+            // the project root via `std::fs::canonicalize`) but `path` still
+            // carries a symlink prefix — a typical pattern with dotfile
+            // managers (`~/.claude` symlinked into a `mackup` / `stow` /
+            // `chezmoi` store). Retry once with `path` canonicalized so the
+            // override actually matches in that case.
+            if std::path::Path::new(&direct).is_absolute() {
+                match self.runtime.fs.canonicalize(path) {
+                    Ok(canonical) => normalize_rel_path(&canonical, root),
+                    Err(_) => direct,
+                }
+            } else {
+                direct
+            }
+        } else {
+            // No root_dir: match against filename only, like resolve_with_compiled.
+            path.file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("")
+                .to_string()
+        };
+
+        let mut extra_disabled: Vec<&str> = Vec::new();
+        for (compiled, src) in self
+            .runtime
+            .compiled_overrides
+            .iter()
+            .zip(self.data.overrides.iter())
+        {
+            let matched = compiled
+                .patterns
+                .iter()
+                .any(|p| p.matches_with(&rel_path, FILES_MATCH_OPTIONS));
+            if matched {
+                extra_disabled.extend(src.disabled_rules.iter().map(String::as_str));
+            }
+        }
+
+        PerFileLintConfig {
+            config: self,
+            extra_disabled,
+        }
+    }
+}
+
+/// Per-file view of a [`LintConfig`] with `[[overrides]]` applied.
+///
+/// Validators receive `&PerFileLintConfig<'_>` instead of `&LintConfig`.
+/// It [`Deref`]s to `&LintConfig`, so all existing accessor calls
+/// (`config.rules()`, `config.fs()`, `config.root_dir()`, …) continue to
+/// work unchanged. Only [`Self::is_rule_enabled`] is overridden, layering
+/// per-file disabled rules on top of the global rule filter.
+///
+/// Construct via [`LintConfig::for_path`].
+pub struct PerFileLintConfig<'a> {
+    config: &'a LintConfig,
+    /// Rule IDs disabled by matching `[[overrides]]`, borrowed from the
+    /// parent config's `overrides[*].disabled_rules`.
+    extra_disabled: Vec<&'a str>,
+}
+
+impl<'a> Deref for PerFileLintConfig<'a> {
+    type Target = LintConfig;
+
+    fn deref(&self) -> &LintConfig {
+        self.config
+    }
+}
+
+impl PerFileLintConfig<'_> {
+    /// Check if a rule is enabled for this file.
+    ///
+    /// Returns `false` if the rule is listed in any `[[overrides]]` block
+    /// whose `paths` matched this file; otherwise delegates to
+    /// [`LintConfig::is_rule_enabled`].
+    pub fn is_rule_enabled(&self, rule_id: &str) -> bool {
+        if self.extra_disabled.contains(&rule_id) {
+            return false;
+        }
+        self.config.is_rule_enabled(rule_id)
     }
 }

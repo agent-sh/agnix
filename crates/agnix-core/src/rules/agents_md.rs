@@ -9,7 +9,7 @@
 //! - AGM-006: Nested AGENTS.md Hierarchy (MEDIUM) - project-level check
 
 use crate::{
-    config::LintConfig,
+    config::PerFileLintConfig,
     diagnostics::{Diagnostic, Fix},
     rules::{Validator, ValidatorMetadata},
     schemas::agents_md::{
@@ -40,7 +40,12 @@ impl Validator for AgentsMdValidator {
         }
     }
 
-    fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+    fn validate_per_file(
+        &self,
+        path: &Path,
+        content: &str,
+        config: &PerFileLintConfig<'_>,
+    ) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
 
         // Only validate AGENTS.md variants (not CLAUDE.md files)

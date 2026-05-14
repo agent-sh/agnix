@@ -1,7 +1,7 @@
 //! Hooks validation rules (CC-HK-001 to CC-HK-027)
 
 use crate::{
-    config::LintConfig,
+    config::PerFileLintConfig,
     diagnostics::{Diagnostic, Fix},
     rules::{Validator, ValidatorMetadata},
     schemas::hooks::{Hook, HooksSchema, SettingsSchema},
@@ -73,7 +73,7 @@ fn validate_cc_hk_006_command_field(
 fn validate_cc_hk_008_script_exists(
     command: &str,
     project_dir: &Path,
-    config: &LintConfig,
+    config: &PerFileLintConfig<'_>,
     path: &Path,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
@@ -400,7 +400,12 @@ impl Validator for HooksValidator {
     /// 3. **Pre-parse validation** - Raw JSON checks (CC-HK-005, CC-HK-011, CC-HK-013..014, CC-HK-016, CC-HK-020..024)
     /// 4. **Typed parsing** - Parse into SettingsSchema
     /// 5. **Event iteration** - Validate each event and hook (CC-HK-015, CC-HK-017, CC-HK-018)
-    fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+    fn validate_per_file(
+        &self,
+        path: &Path,
+        content: &str,
+        config: &PerFileLintConfig<'_>,
+    ) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
 
         if !config.rules().hooks {

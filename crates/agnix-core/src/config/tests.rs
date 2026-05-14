@@ -3700,3 +3700,597 @@ fn test_build_lenient_rejects_path_traversal() {
         other => panic!("Expected PathTraversal, got: {:?}", other),
     }
 }
+
+// =============================================================================
+// Per-file overrides (M6: schema parsing + validation only; matching is M7)
+// =============================================================================
+
+#[test]
+fn test_overrides_default_empty() {
+    let config = LintConfig::default();
+    assert!(config.overrides().is_empty());
+}
+
+#[test]
+fn test_overrides_parse_from_toml() {
+    let toml = r#"
+[[overrides]]
+paths = ["docs/**/*.md"]
+disabled_rules = ["PE-001"]
+
+[[overrides]]
+paths = [".claude/CLAUDE.md", "docs/agents/**/*.md"]
+disabled_rules = ["PE-001", "AS-005"]
+"#;
+    let config: LintConfig = toml::from_str(toml).expect("parses");
+    assert_eq!(config.overrides().len(), 2);
+    assert_eq!(
+        config.overrides()[0].paths,
+        vec!["docs/**/*.md".to_string()]
+    );
+    assert_eq!(
+        config.overrides()[0].disabled_rules,
+        vec!["PE-001".to_string()]
+    );
+    assert_eq!(
+        config.overrides()[1].paths,
+        vec![
+            ".claude/CLAUDE.md".to_string(),
+            "docs/agents/**/*.md".to_string()
+        ]
+    );
+    assert_eq!(
+        config.overrides()[1].disabled_rules,
+        vec!["PE-001".to_string(), "AS-005".to_string()]
+    );
+}
+
+#[test]
+fn test_overrides_parse_empty_block() {
+    let toml = r#"
+[[overrides]]
+paths = []
+disabled_rules = []
+"#;
+    let config: LintConfig = toml::from_str(toml).expect("parses");
+    assert_eq!(config.overrides().len(), 1);
+    assert!(config.overrides()[0].paths.is_empty());
+    assert!(config.overrides()[0].disabled_rules.is_empty());
+    let warnings = config.validate();
+    assert!(
+        warnings.is_empty(),
+        "empty override should not warn, got: {:?}",
+        warnings
+    );
+}
+
+#[test]
+fn test_overrides_round_trip_serialize() {
+    let mut config = LintConfig::default();
+    dm(&mut config).overrides = vec![OverrideConfig {
+        paths: vec![".claude/CLAUDE.md".to_string()],
+        disabled_rules: vec!["PE-001".to_string()],
+    }];
+
+    let toml = toml::to_string(&config).expect("serializes");
+    let round_trip: LintConfig = toml::from_str(&toml).expect("re-parses");
+    assert_eq!(round_trip.overrides().len(), 1);
+    assert_eq!(
+        round_trip.overrides()[0].paths,
+        vec![".claude/CLAUDE.md".to_string()]
+    );
+    assert_eq!(
+        round_trip.overrides()[0].disabled_rules,
+        vec!["PE-001".to_string()]
+    );
+}
+
+#[test]
+fn test_overrides_builder_setter() {
+    let config = LintConfig::builder()
+        .overrides(vec![OverrideConfig {
+            paths: vec!["docs/**/*.md".to_string()],
+            disabled_rules: vec!["PE-001".to_string()],
+        }])
+        .build()
+        .expect("valid");
+    assert_eq!(config.overrides().len(), 1);
+    assert_eq!(config.overrides()[0].disabled_rules, vec!["PE-001"]);
+}
+
+#[test]
+fn test_overrides_validate_warns_on_unknown_rule_prefix() {
+    let mut config = LintConfig::default();
+    dm(&mut config).overrides = vec![OverrideConfig {
+        paths: vec!["docs/**/*.md".to_string()],
+        disabled_rules: vec!["NOPE-001".to_string()],
+    }];
+    let warnings = config.validate();
+    assert!(
+        warnings
+            .iter()
+            .any(|w| w.field == "overrides[0].disabled_rules" && w.message.contains("NOPE-001")),
+        "expected unknown-prefix warning, got: {:?}",
+        warnings
+    );
+}
+
+#[test]
+fn test_overrides_validate_warns_on_invalid_glob() {
+    let mut config = LintConfig::default();
+    dm(&mut config).overrides = vec![OverrideConfig {
+        paths: vec!["docs/[abc".to_string()],
+        disabled_rules: vec![],
+    }];
+    let warnings = config.validate();
+    assert!(
+        warnings.iter().any(|w| w.field == "overrides[0].paths"),
+        "expected invalid-glob warning on overrides[0].paths, got: {:?}",
+        warnings
+    );
+}
+
+#[test]
+fn test_overrides_build_rejects_invalid_glob() {
+    let result = LintConfig::builder()
+        .overrides(vec![OverrideConfig {
+            paths: vec!["docs/[abc".to_string()],
+            disabled_rules: vec![],
+        }])
+        .build();
+
+    match result.unwrap_err() {
+        ConfigError::InvalidGlobPattern { pattern, error } => {
+            assert_eq!(pattern, "docs/[abc");
+            assert!(
+                error.contains("overrides[0].paths"),
+                "error should mention field, got: {}",
+                error
+            );
+        }
+        other => panic!("Expected InvalidGlobPattern, got: {:?}", other),
+    }
+}
+
+#[test]
+fn test_overrides_build_rejects_path_traversal() {
+    let result = LintConfig::builder()
+        .overrides(vec![OverrideConfig {
+            paths: vec!["../secret/**".to_string()],
+            disabled_rules: vec![],
+        }])
+        .build();
+
+    match result.unwrap_err() {
+        ConfigError::PathTraversal { pattern } => {
+            assert_eq!(pattern, "../secret/**");
+        }
+        other => panic!("Expected PathTraversal, got: {:?}", other),
+    }
+}
+
+#[test]
+fn test_overrides_build_rejects_absolute_path() {
+    let result = LintConfig::builder()
+        .overrides(vec![OverrideConfig {
+            paths: vec!["/etc/passwd".to_string()],
+            disabled_rules: vec![],
+        }])
+        .build();
+
+    match result.unwrap_err() {
+        ConfigError::AbsolutePathPattern { pattern } => {
+            assert_eq!(pattern, "/etc/passwd");
+        }
+        other => panic!("Expected AbsolutePathPattern, got: {:?}", other),
+    }
+}
+
+#[test]
+fn test_overrides_build_lenient_still_enforces_glob_safety() {
+    let result = LintConfig::builder()
+        .overrides(vec![OverrideConfig {
+            paths: vec!["../escape".to_string()],
+            disabled_rules: vec!["NOPE-001".to_string()],
+        }])
+        .build_lenient();
+    assert!(matches!(result, Err(ConfigError::PathTraversal { .. })));
+}
+
+#[test]
+fn test_overrides_build_lenient_skips_unknown_rule_prefix() {
+    let config = LintConfig::builder()
+        .overrides(vec![OverrideConfig {
+            paths: vec!["docs/**/*.md".to_string()],
+            disabled_rules: vec!["NOPE-001".to_string()],
+        }])
+        .build_lenient()
+        .expect("lenient build should accept unknown rule prefix");
+    assert_eq!(config.overrides().len(), 1);
+}
+
+// =============================================================================
+// Per-file `for_path` wiring (M7): a few smoke tests that verify the view
+// wrapper consults `[[overrides]]` correctly. Exhaustive matching coverage
+// is in M8.
+// =============================================================================
+
+#[test]
+fn test_for_path_no_overrides_matches_global() {
+    let config = LintConfig::default();
+    let view = config.for_path(std::path::Path::new("anything.md"));
+    // PE-001 is enabled in defaults; with no overrides the view should
+    // return the same answer as the underlying global config.
+    assert_eq!(
+        view.is_rule_enabled("PE-001"),
+        config.is_rule_enabled("PE-001")
+    );
+    assert!(view.is_rule_enabled("PE-001"));
+}
+
+#[test]
+fn test_for_path_single_match_disables_rule() {
+    // root_dir must be set so override globs match against project-relative paths.
+    let config = LintConfig::builder()
+        .root_dir(std::path::PathBuf::from("/project"))
+        .overrides(vec![OverrideConfig {
+            paths: vec!["docs/**/*.md".to_string()],
+            disabled_rules: vec!["PE-001".to_string()],
+        }])
+        .build()
+        .expect("valid");
+
+    // Matching path: PE-001 disabled
+    let view_match = config.for_path(std::path::Path::new("/project/docs/guide.md"));
+    assert!(!view_match.is_rule_enabled("PE-001"));
+    // Other rules unaffected
+    assert!(view_match.is_rule_enabled("XML-001"));
+
+    // Non-matching path: PE-001 still enabled
+    let view_no_match = config.for_path(std::path::Path::new("/project/src/main.rs"));
+    assert!(view_no_match.is_rule_enabled("PE-001"));
+}
+
+#[test]
+fn test_for_path_multi_match_unions_disabled_rules() {
+    let config = LintConfig::builder()
+        .root_dir(std::path::PathBuf::from("/project"))
+        .overrides(vec![
+            OverrideConfig {
+                paths: vec![".claude/CLAUDE.md".to_string()],
+                disabled_rules: vec!["PE-001".to_string()],
+            },
+            OverrideConfig {
+                paths: vec!["**/*.md".to_string()],
+                disabled_rules: vec!["XML-001".to_string()],
+            },
+        ])
+        .build()
+        .expect("valid");
+
+    // Both blocks match `.claude/CLAUDE.md` → both rules disabled (union).
+    let view = config.for_path(std::path::Path::new("/project/.claude/CLAUDE.md"));
+    assert!(!view.is_rule_enabled("PE-001"));
+    assert!(!view.is_rule_enabled("XML-001"));
+    // Untouched rule still enabled
+    assert!(view.is_rule_enabled("AS-001"));
+}
+
+// =============================================================================
+// Per-file overrides — M8: exhaustive matching coverage.
+//
+// Layered on top of M7's three smoke tests (no-overrides / single-match /
+// multi-match union). M8 fills in:
+//   - global × override interaction (union-only, never subtractive)
+//   - partial / selective matching across multiple override blocks
+//   - glob semantics (`*` vs `**` vs exact path)
+//   - edge cases (empty `paths`, empty `disabled_rules`, no `root_dir`)
+// =============================================================================
+
+// ----- Global × override interaction -----
+
+#[test]
+fn test_for_path_global_disabled_rule_stays_disabled() {
+    // Rule globally disabled, no override matches → still disabled via the global path.
+    let config = LintConfig::builder()
+        .root_dir(std::path::PathBuf::from("/project"))
+        .disable_rule("PE-001")
+        .overrides(vec![OverrideConfig {
+            paths: vec!["docs/**/*.md".to_string()],
+            disabled_rules: vec!["XML-001".to_string()],
+        }])
+        .build()
+        .expect("valid");
+
+    let view = config.for_path(std::path::Path::new("/project/src/main.rs"));
+    assert!(!view.is_rule_enabled("PE-001"));
+}
+
+#[test]
+fn test_for_path_override_cannot_reenable_globally_disabled_rule() {
+    // Override is union-only — listing a rule in an override that *isn't* in the
+    // override's disabled_rules does NOT re-enable a globally disabled rule.
+    let config = LintConfig::builder()
+        .root_dir(std::path::PathBuf::from("/project"))
+        .disable_rule("PE-001")
+        .overrides(vec![OverrideConfig {
+            paths: vec!["docs/**/*.md".to_string()],
+            disabled_rules: vec!["XML-001".to_string()],
+        }])
+        .build()
+        .expect("valid");
+
+    let view = config.for_path(std::path::Path::new("/project/docs/guide.md"));
+    assert!(!view.is_rule_enabled("PE-001"));
+    assert!(!view.is_rule_enabled("XML-001"));
+}
+
+#[test]
+fn test_for_path_override_redundant_with_global_is_idempotent() {
+    // Rule globally disabled AND listed in a matching override → still disabled, no panic.
+    let config = LintConfig::builder()
+        .root_dir(std::path::PathBuf::from("/project"))
+        .disable_rule("PE-001")
+        .overrides(vec![OverrideConfig {
+            paths: vec!["docs/**/*.md".to_string()],
+            disabled_rules: vec!["PE-001".to_string()],
+        }])
+        .build()
+        .expect("valid");
+
+    let view = config.for_path(std::path::Path::new("/project/docs/guide.md"));
+    assert!(!view.is_rule_enabled("PE-001"));
+}
+
+#[test]
+fn test_for_path_category_disabled_rule_unaffected_by_override() {
+    // Category gate (rules.skills = false) sits below override layering — disabling a
+    // category-gated rule via override is a no-op observably, and a matching override
+    // that DOESN'T list the rule still leaves it disabled because the category killed it.
+    let mut rules = RuleConfig::default();
+    rules.skills = false;
+    let config = LintConfig::builder()
+        .root_dir(std::path::PathBuf::from("/project"))
+        .rules(rules)
+        .overrides(vec![OverrideConfig {
+            paths: vec!["docs/**/*.md".to_string()],
+            disabled_rules: vec!["XML-001".to_string()],
+        }])
+        .build()
+        .expect("valid");
+
+    // AS-001 is a skills-category rule; disabled by category regardless of override match.
+    let view_match = config.for_path(std::path::Path::new("/project/docs/guide.md"));
+    assert!(!view_match.is_rule_enabled("AS-001"));
+    let view_no_match = config.for_path(std::path::Path::new("/project/src/main.rs"));
+    assert!(!view_no_match.is_rule_enabled("AS-001"));
+}
+
+// ----- Partial / selective matching -----
+
+#[test]
+fn test_for_path_partial_overrides_only_matching_apply() {
+    // Three override blocks: A matches, B doesn't, C matches.
+    // Union should be A's rules ∪ C's rules; B's rules must NOT be disabled.
+    let config = LintConfig::builder()
+        .root_dir(std::path::PathBuf::from("/project"))
+        .overrides(vec![
+            OverrideConfig {
+                paths: vec!["docs/**/*.md".to_string()],
+                disabled_rules: vec!["PE-001".to_string()],
+            },
+            OverrideConfig {
+                paths: vec!["src/**/*.rs".to_string()],
+                disabled_rules: vec!["AS-001".to_string()],
+            },
+            OverrideConfig {
+                paths: vec!["**/*.md".to_string()],
+                disabled_rules: vec!["XML-001".to_string()],
+            },
+        ])
+        .build()
+        .expect("valid");
+
+    let view = config.for_path(std::path::Path::new("/project/docs/guide.md"));
+    assert!(!view.is_rule_enabled("PE-001")); // from A
+    assert!(!view.is_rule_enabled("XML-001")); // from C
+    assert!(view.is_rule_enabled("AS-001")); // B did NOT match
+}
+
+#[test]
+fn test_for_path_rule_not_in_override_still_enabled() {
+    // Matching override disables PE-001 only; XML-001 in the same file must stay enabled.
+    let config = LintConfig::builder()
+        .root_dir(std::path::PathBuf::from("/project"))
+        .overrides(vec![OverrideConfig {
+            paths: vec!["docs/**/*.md".to_string()],
+            disabled_rules: vec!["PE-001".to_string()],
+        }])
+        .build()
+        .expect("valid");
+
+    let view = config.for_path(std::path::Path::new("/project/docs/guide.md"));
+    assert!(!view.is_rule_enabled("PE-001"));
+    assert!(view.is_rule_enabled("XML-001"));
+    assert!(view.is_rule_enabled("AS-001"));
+}
+
+// ----- Glob semantics -----
+
+#[test]
+fn test_for_path_glob_single_star_no_recursion() {
+    // `*.md` matches a single path component; should NOT match nested files
+    // (FILES_MATCH_OPTIONS sets require_literal_separator = true).
+    let config = LintConfig::builder()
+        .root_dir(std::path::PathBuf::from("/project"))
+        .overrides(vec![OverrideConfig {
+            paths: vec!["*.md".to_string()],
+            disabled_rules: vec!["PE-001".to_string()],
+        }])
+        .build()
+        .expect("valid");
+
+    // Top-level .md → match
+    let view_top = config.for_path(std::path::Path::new("/project/README.md"));
+    assert!(!view_top.is_rule_enabled("PE-001"));
+    // Nested .md → no match
+    let view_nested = config.for_path(std::path::Path::new("/project/docs/guide.md"));
+    assert!(view_nested.is_rule_enabled("PE-001"));
+}
+
+#[test]
+fn test_for_path_glob_double_star_recurses() {
+    // `**/*.md` matches at any depth.
+    let config = LintConfig::builder()
+        .root_dir(std::path::PathBuf::from("/project"))
+        .overrides(vec![OverrideConfig {
+            paths: vec!["**/*.md".to_string()],
+            disabled_rules: vec!["PE-001".to_string()],
+        }])
+        .build()
+        .expect("valid");
+
+    for p in &[
+        "/project/README.md",
+        "/project/docs/guide.md",
+        "/project/docs/nested/deep/page.md",
+    ] {
+        let view = config.for_path(std::path::Path::new(p));
+        assert!(!view.is_rule_enabled("PE-001"), "expected match for {}", p);
+    }
+    // Non-.md still enabled
+    let view_rs = config.for_path(std::path::Path::new("/project/src/main.rs"));
+    assert!(view_rs.is_rule_enabled("PE-001"));
+}
+
+#[test]
+fn test_for_path_glob_exact_path_only_matches_self() {
+    // Exact path pattern matches only that one file.
+    let config = LintConfig::builder()
+        .root_dir(std::path::PathBuf::from("/project"))
+        .overrides(vec![OverrideConfig {
+            paths: vec![".claude/CLAUDE.md".to_string()],
+            disabled_rules: vec!["PE-001".to_string()],
+        }])
+        .build()
+        .expect("valid");
+
+    let view_match = config.for_path(std::path::Path::new("/project/.claude/CLAUDE.md"));
+    assert!(!view_match.is_rule_enabled("PE-001"));
+    // Sibling under same dir → no match
+    let view_sibling = config.for_path(std::path::Path::new("/project/.claude/AGENTS.md"));
+    assert!(view_sibling.is_rule_enabled("PE-001"));
+    // Same filename in different dir → no match
+    let view_other_dir = config.for_path(std::path::Path::new("/project/docs/CLAUDE.md"));
+    assert!(view_other_dir.is_rule_enabled("PE-001"));
+}
+
+// ----- Edge cases -----
+
+#[test]
+fn test_for_path_empty_paths_never_matches() {
+    // Override with paths = [] cannot match anything, so disabled_rules has no effect.
+    let mut config = LintConfig::builder()
+        .root_dir(std::path::PathBuf::from("/project"))
+        .build()
+        .expect("valid");
+    // Inject directly: builder's validate_pattern_list trivially accepts an empty list.
+    dm(&mut config).overrides = vec![OverrideConfig {
+        paths: vec![],
+        disabled_rules: vec!["PE-001".to_string()],
+    }];
+
+    let view = config.for_path(std::path::Path::new("/project/anywhere.md"));
+    // Note: compiled_overrides was set when the builder ran (empty); mutating data
+    // after build leaves runtime in sync for the empty case because the fast-path
+    // at `for_path` early-returns when `compiled_overrides.is_empty()`. This test
+    // documents the desired behavior — empty `paths` = never match.
+    assert!(view.is_rule_enabled("PE-001"));
+}
+
+#[test]
+fn test_for_path_empty_disabled_rules_matching_is_noop() {
+    // Override paths match the file but disabled_rules = [] → no rule disabled.
+    let config = LintConfig::builder()
+        .root_dir(std::path::PathBuf::from("/project"))
+        .overrides(vec![OverrideConfig {
+            paths: vec!["docs/**/*.md".to_string()],
+            disabled_rules: vec![],
+        }])
+        .build()
+        .expect("valid");
+
+    let view = config.for_path(std::path::Path::new("/project/docs/guide.md"));
+    // No rules added to extra_disabled → view matches global config.
+    assert_eq!(
+        view.is_rule_enabled("PE-001"),
+        config.is_rule_enabled("PE-001")
+    );
+    assert!(view.is_rule_enabled("PE-001"));
+}
+
+#[test]
+fn test_for_path_no_root_dir_falls_back_to_filename() {
+    // Without root_dir, `for_path` matches the override pattern against the bare filename.
+    // (See rule_filter.rs `for_path`: filename fallback branch.)
+    let config = LintConfig::builder()
+        .overrides(vec![OverrideConfig {
+            paths: vec!["CLAUDE.md".to_string()],
+            disabled_rules: vec!["PE-001".to_string()],
+        }])
+        .build()
+        .expect("valid");
+
+    // Absolute path with no root_dir → filename "CLAUDE.md" → matches pattern.
+    let view_match = config.for_path(std::path::Path::new("/anywhere/at/all/CLAUDE.md"));
+    assert!(!view_match.is_rule_enabled("PE-001"));
+    // Different filename → no match.
+    let view_no_match = config.for_path(std::path::Path::new("/anywhere/AGENTS.md"));
+    assert!(view_no_match.is_rule_enabled("PE-001"));
+}
+
+#[cfg(unix)]
+#[test]
+fn test_for_path_canonicalize_fallback_for_symlinked_path() {
+    // Simulates the upstream-#909 use case: `~/.claude/CLAUDE.md` where
+    // `~/.claude` is a symlink (mackup / stow / chezmoi). The CLI's
+    // single-file path canonicalizes `root_dir` (the parent) but passes the
+    // symlinked file path through unchanged. Without the canonicalize
+    // fallback in `for_path`, `strip_prefix(root)` would fail and the
+    // pattern `"CLAUDE.md"` would be matched against the full absolute
+    // symlinked path — silently no-op.
+    //
+    // Layout: tempdir/real/CLAUDE.md (real file) + tempdir/link → real
+    // (symlink). Build config with root_dir = canonical real path; call
+    // `for_path` with the symlinked path. Assert the override applies.
+    //
+    // Unix-only: Windows symlink semantics differ and the production bug
+    // pattern (dotfile managers like mackup, stow, chezmoi) is *nix-specific.
+    let temp = tempfile::TempDir::new().unwrap();
+    let real_dir = temp.path().join("real");
+    std::fs::create_dir_all(&real_dir).unwrap();
+    std::fs::write(real_dir.join("CLAUDE.md"), b"x").unwrap();
+    let link_dir = temp.path().join("link");
+    std::os::unix::fs::symlink(&real_dir, &link_dir).unwrap();
+
+    // root_dir = canonical real path (mirrors what the CLI does).
+    let canonical_root = std::fs::canonicalize(&real_dir).unwrap();
+    let config = LintConfig::builder()
+        .root_dir(canonical_root)
+        .overrides(vec![OverrideConfig {
+            paths: vec!["CLAUDE.md".to_string()],
+            disabled_rules: vec!["PE-001".to_string()],
+        }])
+        .build()
+        .expect("valid");
+
+    // Call `for_path` with the SYMLINKED file path (NOT canonicalized).
+    // Without the fallback, strip_prefix would fail and the override
+    // wouldn't apply.
+    let symlinked_path = link_dir.join("CLAUDE.md");
+    let view = config.for_path(&symlinked_path);
+    assert!(
+        !view.is_rule_enabled("PE-001"),
+        "override should apply to symlinked path via canonicalize fallback"
+    );
+}

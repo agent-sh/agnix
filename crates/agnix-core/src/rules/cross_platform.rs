@@ -8,7 +8,7 @@
 //! - XP-008: Claude-specific features in CLAUDE.md for Cursor users (warning)
 
 use crate::{
-    config::{LintConfig, TargetTool},
+    config::{PerFileLintConfig, TargetTool},
     diagnostics::Diagnostic,
     rules::{Validator, ValidatorMetadata},
     schemas::cross_platform::{
@@ -31,7 +31,12 @@ impl Validator for CrossPlatformValidator {
         }
     }
 
-    fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+    fn validate_per_file(
+        &self,
+        path: &Path,
+        content: &str,
+        config: &PerFileLintConfig<'_>,
+    ) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
 
         let filename = path.file_name().and_then(|n| n.to_str()).unwrap_or("");

@@ -5,7 +5,7 @@
 //! effort, isolation, maxTurns, background, and unknown frontmatter fields.
 
 use crate::{
-    config::LintConfig,
+    config::PerFileLintConfig,
     diagnostics::{Diagnostic, Fix},
     fs::FileSystem,
     parsers::frontmatter::{FrontmatterParts, split_frontmatter},
@@ -306,7 +306,12 @@ impl Validator for AgentValidator {
         }
     }
 
-    fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+    fn validate_per_file(
+        &self,
+        path: &Path,
+        content: &str,
+        config: &PerFileLintConfig<'_>,
+    ) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
 
         // Check if content has frontmatter
