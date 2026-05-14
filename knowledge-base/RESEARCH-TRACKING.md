@@ -16,18 +16,18 @@ Tools are organized by support tier (see [../CONTRIBUTING.md#tool-tier-system](.
 
 | Tool | Config Format | Documentation URL | Monitoring | Frequency | Last Reviewed | Rule Prefix |
 |------|---------------|-------------------|------------|-----------|---------------|-------------|
-| Claude Code | `CLAUDE.md`, `.claude/settings.json` | https://code.claude.com/docs/en | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-05-08 | CC-SK, CC-HK, CC-MEM, CC-AG, CC-PL, CC-SET |
-| Codex CLI | `AGENTS.md`, `.codex/config.toml` (also `.codex/config.json`/`.yaml`), `.codex-plugin/plugin.json` | https://developers.openai.com/codex/ | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-05-08 | AGM, XP |
-| OpenCode | `AGENTS.md`, `.opencode/config.json` | https://opencode.ai/docs/ | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-05-08 | AGM, XP, OC |
-| Kiro CLI | `.kiro/steering/*.md`, `.kiro/agents/*.json`, `.kiro/hooks/*.kiro.hook`, `.kiro/settings/mcp.json`, `.kiro/settings.json`, `.kiro/powers/*/POWER.md`, `.kiro/skills/*/SKILL.md` | https://kiro.dev/changelog/cli/ | Automated (tool-release-watch.yml via HTML scrape) | Quarterly | 2026-05-06 | KIRO, KR-AG, KR-HK, KR-MCP, KR-PW, KR-SK, KR-SET |
+| Claude Code | `CLAUDE.md`, `.claude/settings.json` | https://code.claude.com/docs/en | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-05-14 | CC-SK, CC-HK, CC-MEM, CC-AG, CC-PL, CC-SET |
+| Codex CLI | `AGENTS.md`, `.codex/config.toml` (also `.codex/config.json`/`.yaml`), `.codex-plugin/plugin.json` | https://developers.openai.com/codex/ | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-05-14 | AGM, XP |
+| OpenCode | `AGENTS.md`, `opencode.json`, `opencode.jsonc`, `.opencode/config.json` | https://opencode.ai/docs/ | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-05-14 | AGM, XP, OC |
+| Kiro CLI | `.kiro/steering/*.md`, `.kiro/agents/*.json`, `.kiro/hooks/*.kiro.hook`, `.kiro/settings/mcp.json`, `.kiro/settings.json`, `.kiro/powers/*/POWER.md`, `.kiro/skills/*/SKILL.md` | https://kiro.dev/changelog/cli/ | Automated (tool-release-watch.yml via HTML scrape) | Quarterly | 2026-05-14 | KIRO, KR-AG, KR-HK, KR-MCP, KR-PW, KR-SK, KR-SET |
 
 ### A Tier (test on major changes)
 
 | Tool | Config Format | Documentation URL | Monitoring | Frequency | Last Reviewed | Rule Prefix |
 |------|---------------|-------------------|------------|-----------|---------------|-------------|
 | GitHub Copilot | `.github/copilot-instructions.md`, `.github/instructions/*.instructions.md` | https://docs.github.com/en/copilot/customizing-copilot | Automated (spec-drift.yml + tool-release-watch.yml via microsoft/vscode-copilot-chat) | Monthly | 2026-04-22 | COP |
-| Cline | `.clinerules` (file or dir), `.clinerules/workflows/*.md`, `.clinerules/hooks/*`, `.clinerules/skills/*/SKILL.md`, `.cline/skills/*/SKILL.md` | https://docs.cline.bot/features/cline-rules/overview | Automated (spec-drift.yml + tool-release-watch.yml) | Monthly | 2026-05-06 | CLN, CL-SK |
-| Cursor | `.cursor/rules/**/*.{md,mdc}`, `.cursorrules` (legacy), `.cursor/hooks.json`, `.cursor/agents/**/*.md`, `.cursor/environment.json`, `.cursor/mcp.json` | https://cursor.com/docs/rules | Automated (spec-drift.yml + tool-release-watch.yml via api2.cursor.sh stable update endpoint) | Monthly | 2026-05-08 | CUR |
+| Cline | `.clinerules` (file or dir), `.clinerules/workflows/*.md`, `.clinerules/hooks/*`, `.clinerules/skills/*/SKILL.md`, `.cline/skills/*/SKILL.md` | https://docs.cline.bot/features/cline-rules/overview | Automated (spec-drift.yml + tool-release-watch.yml) | Monthly | 2026-05-14 | CLN, CL-SK |
+| Cursor | `.cursor/rules/**/*.{md,mdc}`, `.cursorrules` (legacy), `.cursor/hooks.json`, `.cursor/agents/**/*.md`, `.cursor/environment.json`, `.cursor/mcp.json` | https://cursor.com/docs/rules | Automated (spec-drift.yml + tool-release-watch.yml via api2.cursor.sh stable update endpoint) | Monthly | 2026-05-14 | CUR |
 
 ### B Tier (test on significant changes if time permits)
 
@@ -73,7 +73,7 @@ Authoritative sources monitored for changes that may affect validation rules.
 | Claude Code - Memory | https://code.claude.com/docs/en/memory | spec-drift.yml (weekly) | CC-MEM-001 through CC-MEM-010 |
 | Claude Code - Hooks | https://code.claude.com/docs/en/hooks | spec-drift.yml (weekly) | CC-HK-001 through CC-HK-012 |
 | Claude Code - Skills | https://code.claude.com/docs/en/skills | spec-drift.yml (weekly) | CC-SK-001 through CC-SK-009 |
-| Claude Code - Plugins | https://code.claude.com/docs/en/plugins-reference | spec-drift.yml (weekly) | CC-PL-001 through CC-PL-006 |
+| Claude Code - Plugins | https://code.claude.com/docs/en/plugins-reference | spec-drift.yml (weekly) | CC-PL-001 through CC-PL-015 |
 | Claude Code - Sub-agents | https://code.claude.com/docs/en/sub-agents | spec-drift.yml (weekly) | CC-AG-001 through CC-AG-007 |
 | Codex CLI - AGENTS.md | https://developers.openai.com/codex/guides/agents-md/ | spec-drift.yml (weekly) | AGM-001 through AGM-006, XP-001 through XP-006 |
 | OpenCode - Rules | https://opencode.ai/docs/rules/ | spec-drift.yml (weekly) | XP-001 through XP-006 |

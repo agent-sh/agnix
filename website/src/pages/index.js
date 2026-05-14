@@ -78,7 +78,7 @@ const tools = [
   {name: 'Codex CLI', config: '.codex/config.toml, AGENTS.md'},
   {name: 'MCP', config: '*.mcp.json, JSON-RPC schemas'},
   {name: 'Cline', config: '.clinerules, .clinerules/*.md'},
-  {name: 'OpenCode', config: 'opencode.json'},
+  {name: 'OpenCode', config: 'opencode.json/jsonc'},
   {name: 'Gemini CLI', config: 'GEMINI.md'},
   {name: 'Roo Code', config: '.roo/rules/'},
   {name: 'Kiro CLI', config: 'kiro.md'},

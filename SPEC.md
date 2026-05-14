@@ -8,22 +8,25 @@
 | Type | Files | Rules |
 |------|-------|-------|
 | Skills | SKILL.md | 39 |
-| Hooks | settings.json | 25 |
+| Hooks | settings.json | 27 |
 | Memory (Claude Code) | CLAUDE.md, CLAUDE.local.md, .claude/rules/*.md | 13 |
 | Instructions (Cross-Tool) | AGENTS.md, AGENTS.local.md, AGENTS.override.md | 6 |
 | Agents | agents/*.md | 17 |
-| Plugins | plugin.json | 14 |
+| Plugins | plugin.json | 15 |
+| Claude Output Styles | .claude/output-styles/*.md | 6 |
+| Claude Settings | .claude/settings.json | 5 |
 | Prompt Engineering | CLAUDE.md, AGENTS.md | 6 |
 | Cross-Platform | AGENTS.md | 9 |
-| MCP | tool definitions | 24 |
+| MCP | tool definitions | 26 |
 | XML | all .md files | 3 |
 | References | @imports | 4 |
 | GitHub Copilot | .github/copilot-instructions.md, .github/instructions/*.instructions.md, .github/agents/*.agent.md, .github/prompts/*.prompt.md, .github/hooks/hooks.json, .github/workflows/copilot-setup-steps.yml | 25 |
 | Cursor Project Rules | .cursor/rules/*.mdc, .cursorrules, .cursor/hooks.json, .cursor/agents/**/*.md, .cursor/environment.json | 19 |
 | Cline | .clinerules, .clinerules/*.md, .clinerules/*.txt | 7 |
-| OpenCode | opencode.json | 45 |
-| Gemini CLI | GEMINI.md, GEMINI.local.md, .gemini/settings.json (hooks), gemini-extension.json (extensions), .geminiignore | 9 |
-| Codex CLI | .codex/config.toml/.json/.yaml | 44 |
+| OpenCode | opencode.json, opencode.jsonc | 45 |
+| Gemini Agents | .gemini/agents/*.json | 1 |
+| Gemini CLI | GEMINI.md, GEMINI.local.md, .gemini/settings.json (hooks), gemini-extension.json (extensions), .geminiignore | 10 |
+| Codex CLI | .codex/config.toml/.json/.yaml | 60 |
 | Version Awareness | .agnix.toml | 1 |
 | Cursor Skills | .cursor/skills/*/SKILL.md | 1 |
 | Cline Skills | .cline/skills/*/SKILL.md | 3 |
@@ -36,8 +39,9 @@
 | Kiro Skills | .kiro/skills/*/SKILL.md | 1 |
 | Kiro Agents | .kiro/agents/*.json | 13 |
 | Kiro Hooks | .kiro/hooks/*.kiro.hook | 10 |
-| Kiro MCP | .kiro/settings/mcp.json | 5 |
+| Kiro MCP | .kiro/settings/mcp.json | 6 |
 | Kiro Powers | .kiro/powers/*/POWER.md | 8 |
+| Kiro Settings | .kiro/settings/*.json | 3 |
 | Amp Skills | .agents/skills/*/SKILL.md | 1 |
 | Amp Checks | .agents/checks/*.md, .amp/settings*.json | 4 |
 | Roo Code Skills | .roo/skills/*/SKILL.md | 1 |
@@ -58,7 +62,7 @@ agnix/
 │   ├── agnix-mcp/      # MCP server
 │   └── agnix-wasm/     # WebAssembly bindings
 ├── editors/            # Neovim, VS Code, JetBrains, Zed integrations
-├── knowledge-base/     # 405 rules documented
+├── knowledge-base/     # 423 rules documented
 
 ├── scripts/            # Build/dev automation scripts
 ├── website/            # Docusaurus documentation website

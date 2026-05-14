@@ -1232,6 +1232,13 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 **Fix**: Manual - remove unsupported fields
 **Source**: code.claude.com/docs/en/plugins-reference
 
+<a id="cc-pl-015"></a>
+### CC-PL-015 [MEDIUM] Default Component Folder Shadowed by Manifest
+**Requirement**: If a root default component folder (`commands/`, `agents/`, `skills/`, or `hooks/`) exists, `plugin.json` SHOULD include that folder in the matching manifest field or avoid overriding that field.
+**Detection**: Check `.claude-plugin/plugin.json` for a component field while the matching root folder exists and is not one of the configured paths.
+**Fix**: Manual - add `./<component>` to the manifest field, or move the files into a configured component path.
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.140
+
 ---
 
 ## MCP RULES
@@ -1810,7 +1817,7 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 <a id="oc-001"></a>
 ### OC-001 [HIGH] Invalid Share Mode
-**Requirement**: The `share` field in `opencode.json` MUST be `"manual"`, `"auto"`, or `"disabled"`
+**Requirement**: The `share` field in `opencode.json` or `opencode.jsonc` MUST be `"manual"`, `"auto"`, or `"disabled"`
 **Detection**: Parse JSON, validate `share` value against allowed set
 **Fix**: Auto-fix (unsafe) - replace with closest valid share mode
 **Source**: opencode.ai/docs/config
@@ -1824,14 +1831,14 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 <a id="oc-003"></a>
 ### OC-003 [HIGH] opencode.json Parse Error
-**Requirement**: `opencode.json` MUST be valid JSON (or JSONC with comments stripped)
+**Requirement**: `opencode.json` and `opencode.jsonc` MUST be valid JSON (or JSONC with comments stripped)
 **Detection**: Attempt JSON parse, report errors with line/column location
 **Fix**: Fix JSON syntax errors
 **Source**: opencode.ai/docs/config
 
 <a id="oc-004"></a>
 ### OC-004 [MEDIUM] Unknown Config Key
-**Requirement**: Top-level keys in `opencode.json` SHOULD be from the known configuration schema
+**Requirement**: Top-level keys in `opencode.json` or `opencode.jsonc` SHOULD be from the known configuration schema
 **Detection**: Parse JSON, compare top-level keys against known key allowlist
 **Fix**: Remove unrecognized keys
 **Source**: opencode.ai/docs/config
@@ -1988,8 +1995,8 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 <a id="oc-dep-005"></a>
 ### OC-DEP-005 [MEDIUM] Deprecated TUI Keys
-**Requirement**: theme, keybinds, tui keys SHOULD be in tui.json, not opencode.json
-**Detection**: Check for deprecated TUI keys in opencode.json
+**Requirement**: theme, keybinds, tui keys SHOULD be in tui.json, not opencode.json/opencode.jsonc
+**Detection**: Check for deprecated TUI keys in opencode.json/opencode.jsonc
 **Fix**: Manual - move to tui.json
 **Source**: opencode.ai/docs/
 
@@ -2978,6 +2985,13 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 **Fix**: No auto-fix (rename servers)
 **Source**: kiro.dev/docs/mcp
 
+<a id="kr-mcp-006"></a>
+### KR-MCP-006 [MEDIUM] Invalid OAuth Client ID Configuration
+**Requirement**: `oauth.clientId` SHOULD be a non-empty string and only be used with HTTP(S) remote MCP server URLs.
+**Detection**: Check each MCP server `oauth` block for a non-empty string `clientId`, then require the same server to use an `http://` or `https://` URL.
+**Fix**: No auto-fix (set `oauth.clientId` on an HTTP(S) remote MCP server, or remove the OAuth block).
+**Source**: kiro.dev/changelog/cli/2-3/
+
 ---
 
 ## KIRO CLI SETTINGS RULES
@@ -3372,42 +3386,46 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Category | Total Rules | HIGH | MEDIUM | LOW | Auto-Fixable |
 |----------|-------------|------|--------|-----|--------------|
 | Agent Skills | 19 | 15 | 4 | 0 | 9 |
-| Claude Skills | 17 | 11 | 6 | 0 | 11 |
-| Claude Hooks | 19 | 12 | 5 | 2 | 12 |
-| Claude Agents | 13 | 12 | 1 | 0 | 7 |
-| Claude Memory | 12 | 8 | 4 | 0 | 3 |
 | AGENTS.md | 6 | 1 | 5 | 0 | 1 |
-| Claude Plugins | 10 | 8 | 2 | 0 | 3 |
-| GitHub Copilot | 17 | 11 | 6 | 0 | 8 |
-| Cursor | 16 | 9 | 7 | 0 | 6 |
-| Cline | 4 | 3 | 1 | 0 | 2 |
-| OpenCode | 41 | 26 | 14 | 1 | 8 |
-| Gemini CLI | 9 | 3 | 4 | 2 | 3 |
-| Codex CLI | 39 | 21 | 17 | 1 | 3 |
-| Windsurf | 4 | 1 | 2 | 1 | 0 |
-| MCP | 24 | 19 | 5 | 0 | 7 |
-| XML | 3 | 3 | 0 | 0 | 3 |
-| References | 4 | 2 | 2 | 0 | 1 |
-| Prompt Eng | 6 | 0 | 6 | 0 | 2 |
-| Cross-Platform | 9 | 2 | 6 | 1 | 0 |
-| Cursor Skills | 1 | 0 | 1 | 0 | 1 |
-| Cline Skills | 1 | 0 | 1 | 0 | 1 |
-| Copilot Skills | 1 | 0 | 1 | 0 | 1 |
+| Amp Checks | 4 | 2 | 2 | 0 | 3 |
+| Amp Skills | 1 | 0 | 1 | 0 | 1 |
+| Claude Agents | 17 | 12 | 4 | 1 | 10 |
+| Claude Hooks | 27 | 15 | 8 | 4 | 16 |
+| Claude Memory | 13 | 8 | 5 | 0 | 3 |
+| Claude Output Styles | 6 | 2 | 2 | 2 | 0 |
+| Claude Plugins | 15 | 9 | 6 | 0 | 4 |
+| Claude Settings | 5 | 0 | 5 | 0 | 0 |
+| Claude Skills | 20 | 11 | 8 | 1 | 13 |
+| Cline | 7 | 4 | 3 | 0 | 3 |
+| Cline Skills | 3 | 2 | 1 | 0 | 2 |
+| Codex CLI | 60 | 30 | 25 | 5 | 10 |
 | Codex Skills | 1 | 0 | 1 | 0 | 1 |
-| OpenCode Skills | 1 | 0 | 1 | 0 | 1 |
-| Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
-| Kiro Skills | 1 | 0 | 1 | 0 | 1 |
+| GitHub Copilot | 25 | 13 | 9 | 3 | 11 |
+| Copilot Skills | 1 | 0 | 1 | 0 | 1 |
+| Cross-Platform | 9 | 2 | 6 | 1 | 0 |
+| Cursor | 19 | 9 | 9 | 1 | 6 |
+| Cursor Skills | 1 | 0 | 1 | 0 | 1 |
+| Gemini Agents | 1 | 1 | 0 | 0 | 0 |
+| Gemini CLI | 10 | 3 | 5 | 2 | 3 |
 | Kiro Agents | 13 | 4 | 7 | 2 | 0 |
 | Kiro Hooks | 10 | 6 | 4 | 0 | 0 |
-| Kiro MCP | 5 | 2 | 3 | 0 | 0 |
+| Kiro MCP | 6 | 2 | 4 | 0 | 0 |
 | Kiro Powers | 8 | 3 | 4 | 1 | 0 |
+| Kiro Settings | 3 | 1 | 2 | 0 | 3 |
+| Kiro Skills | 1 | 0 | 1 | 0 | 1 |
 | Kiro Steering | 14 | 3 | 9 | 2 | 1 |
-| Amp Skills | 1 | 0 | 1 | 0 | 1 |
-| Amp Checks | 4 | 2 | 2 | 0 | 3 |
-| Roo Code Skills | 1 | 0 | 1 | 0 | 1 |
+| MCP | 26 | 20 | 6 | 0 | 7 |
+| OpenCode | 45 | 28 | 16 | 1 | 10 |
+| OpenCode Skills | 1 | 0 | 1 | 0 | 1 |
+| Prompt Eng | 6 | 0 | 6 | 0 | 2 |
+| References | 4 | 2 | 2 | 0 | 1 |
 | Roo Code | 6 | 3 | 3 | 0 | 0 |
+| Roo Code Skills | 1 | 0 | 1 | 0 | 1 |
 | Version Awareness | 1 | 0 | 0 | 1 | 0 |
-| **TOTAL** | **342** | **190** | **138** | **14** | **102** |
+| Windsurf | 4 | 1 | 2 | 1 | 0 |
+| Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
+| XML | 3 | 3 | 0 | 0 | 3 |
+| **TOTAL** | **423** | **215** | **180** | **28** | **129** |
 
 
 ---
@@ -3437,8 +3455,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 421 validation rules across 40 categories
+**Total Coverage**: 423 validation rules across 40 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 215 HIGH, 178 MEDIUM, 28 LOW
-**Auto-Fixable**: 129 rules (31%)
+**Certainty**: 215 HIGH, 180 MEDIUM, 28 LOW
+**Auto-Fixable**: 129 rules (30%)

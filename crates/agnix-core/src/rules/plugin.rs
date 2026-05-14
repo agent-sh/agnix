@@ -1,4 +1,4 @@
-//! Plugin manifest validation (CC-PL-001 to CC-PL-014).
+//! Plugin manifest validation (CC-PL-001 to CC-PL-015).
 //!
 //! Validates `.claude-plugin/plugin.json` manifests.
 
@@ -25,6 +25,7 @@ const RULE_IDS: &[&str] = &[
     "CC-PL-012",
     "CC-PL-013",
     "CC-PL-014",
+    "CC-PL-015",
 ];
 
 pub struct PluginValidator;
@@ -154,6 +155,11 @@ impl Validator for PluginValidator {
                     check_component_inside_claude_plugin(&raw_value, field, path, &mut diagnostics);
                 }
             }
+        }
+
+        // CC-PL-015: A manifest path override shadows the matching default folder.
+        if config.is_rule_enabled("CC-PL-015") && is_in_claude_plugin {
+            check_default_component_shadowing(&raw_value, path, config, &mut diagnostics);
         }
 
         // CC-PL-009: Invalid author object
@@ -590,6 +596,71 @@ fn extract_paths(value: &serde_json::Value) -> Vec<String> {
             .filter_map(|v| v.as_str().map(String::from))
             .collect(),
         _ => vec![],
+    }
+}
+
+fn path_points_to_default_component(p: &str, component: &str) -> bool {
+    let normalized = p
+        .trim()
+        .replace('\\', "/")
+        .trim_start_matches("./")
+        .trim_end_matches('/')
+        .to_string();
+    normalized == component
+}
+
+fn extract_valid_shadowing_paths(value: &serde_json::Value) -> Option<Vec<String>> {
+    match value {
+        serde_json::Value::String(s) => Some(vec![s.clone()]),
+        serde_json::Value::Array(arr) => arr.iter().map(|v| v.as_str().map(String::from)).collect(),
+        _ => None,
+    }
+}
+
+/// CC-PL-015: Detect root default component folders shadowed by manifest paths.
+fn check_default_component_shadowing(
+    raw_value: &serde_json::Value,
+    path: &Path,
+    config: &LintConfig,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(plugin_dir) = path.parent() else {
+        return;
+    };
+    let Some(plugin_root) = plugin_dir.parent() else {
+        return;
+    };
+
+    let fs = config.fs();
+    for component in ["commands", "agents", "skills", "hooks"] {
+        let Some(manifest_value) = raw_value.get(component) else {
+            continue;
+        };
+        if !fs.is_dir(&plugin_root.join(component)) {
+            continue;
+        }
+
+        let Some(manifest_paths) = extract_valid_shadowing_paths(manifest_value) else {
+            continue;
+        };
+
+        let includes_default = manifest_paths
+            .iter()
+            .any(|p| path_points_to_default_component(p, component));
+        if includes_default {
+            continue;
+        }
+
+        diagnostics.push(
+            Diagnostic::warning(
+                path.to_path_buf(),
+                1,
+                0,
+                "CC-PL-015",
+                t!("rules.cc_pl_015.message", component = component),
+            )
+            .with_suggestion(t!("rules.cc_pl_015.suggestion", component = component)),
+        );
     }
 }
 
@@ -2517,5 +2588,129 @@ mod tests {
         );
 
         assert!(!diagnostics.iter().any(|d| d.rule == "CC-PL-014"));
+    }
+
+    // ===== CC-PL-015: Default Component Folder Shadowed by Manifest =====
+
+    #[test]
+    fn test_cc_pl_015_default_component_folder_shadowed() {
+        let temp = TempDir::new().unwrap();
+        let plugin_path = temp.path().join(".claude-plugin").join("plugin.json");
+        write_plugin(
+            &plugin_path,
+            r#"{"name":"test","description":"desc","version":"1.0.0","commands":"./custom-commands"}"#,
+        );
+        fs::create_dir_all(temp.path().join("commands")).unwrap();
+
+        let validator = PluginValidator;
+        let diagnostics = validator.validate(
+            &plugin_path,
+            &fs::read_to_string(&plugin_path).unwrap(),
+            &LintConfig::default(),
+        );
+
+        assert!(diagnostics.iter().any(|d| d.rule == "CC-PL-015"));
+    }
+
+    #[test]
+    fn test_cc_pl_015_manifest_includes_default_component() {
+        let temp = TempDir::new().unwrap();
+        let plugin_path = temp.path().join(".claude-plugin").join("plugin.json");
+        write_plugin(
+            &plugin_path,
+            r#"{"name":"test","description":"desc","version":"1.0.0","commands":["./custom-commands","./commands"]}"#,
+        );
+        fs::create_dir_all(temp.path().join("commands")).unwrap();
+
+        let validator = PluginValidator;
+        let diagnostics = validator.validate(
+            &plugin_path,
+            &fs::read_to_string(&plugin_path).unwrap(),
+            &LintConfig::default(),
+        );
+
+        assert!(!diagnostics.iter().any(|d| d.rule == "CC-PL-015"));
+    }
+
+    #[test]
+    fn test_cc_pl_015_no_default_component_folder() {
+        let temp = TempDir::new().unwrap();
+        let plugin_path = temp.path().join(".claude-plugin").join("plugin.json");
+        write_plugin(
+            &plugin_path,
+            r#"{"name":"test","description":"desc","version":"1.0.0","commands":"./custom-commands"}"#,
+        );
+
+        let validator = PluginValidator;
+        let diagnostics = validator.validate(
+            &plugin_path,
+            &fs::read_to_string(&plugin_path).unwrap(),
+            &LintConfig::default(),
+        );
+
+        assert!(!diagnostics.iter().any(|d| d.rule == "CC-PL-015"));
+    }
+
+    #[test]
+    fn test_cc_pl_015_ignores_default_component_file() {
+        let temp = TempDir::new().unwrap();
+        let plugin_path = temp.path().join(".claude-plugin").join("plugin.json");
+        write_plugin(
+            &plugin_path,
+            r#"{"name":"test","description":"desc","version":"1.0.0","commands":"./custom-commands"}"#,
+        );
+        fs::write(temp.path().join("commands"), "").unwrap();
+
+        let validator = PluginValidator;
+        let diagnostics = validator.validate(
+            &plugin_path,
+            &fs::read_to_string(&plugin_path).unwrap(),
+            &LintConfig::default(),
+        );
+
+        assert!(!diagnostics.iter().any(|d| d.rule == "CC-PL-015"));
+    }
+
+    #[test]
+    fn test_cc_pl_015_skips_invalid_manifest_path_shape() {
+        let temp = TempDir::new().unwrap();
+        let plugin_path = temp.path().join(".claude-plugin").join("plugin.json");
+        write_plugin(
+            &plugin_path,
+            r#"{"name":"test","description":"desc","version":"1.0.0","commands":{}}"#,
+        );
+        fs::create_dir_all(temp.path().join("commands")).unwrap();
+
+        let validator = PluginValidator;
+        let diagnostics = validator.validate(
+            &plugin_path,
+            &fs::read_to_string(&plugin_path).unwrap(),
+            &LintConfig::default(),
+        );
+
+        assert!(!diagnostics.iter().any(|d| d.rule == "CC-PL-015"));
+    }
+
+    #[test]
+    fn test_cc_pl_015_disabled() {
+        let temp = TempDir::new().unwrap();
+        let plugin_path = temp.path().join(".claude-plugin").join("plugin.json");
+        write_plugin(
+            &plugin_path,
+            r#"{"name":"test","description":"desc","version":"1.0.0","commands":"./custom-commands"}"#,
+        );
+        fs::create_dir_all(temp.path().join("commands")).unwrap();
+
+        let mut config = LintConfig::default();
+        config.rules_mut().disabled_rules = vec!["CC-PL-015".to_string()];
+
+        let validator = PluginValidator;
+        let diagnostics = validator.validate(
+            &plugin_path,
+            &fs::read_to_string(&plugin_path).unwrap(),
+            &config,
+        );
+
+        assert!(!diagnostics.iter().any(|d| d.rule == "CC-PL-015"));
     }
 }

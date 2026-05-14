@@ -1,8 +1,8 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 421,
-  "last_updated": "2026-05-08",
+  "total_rules": 423,
+  "last_updated": "2026-05-13",
   "schema": {
     "evidence": {
       "source_type": "spec|vendor_docs|vendor_code|paper|community",
@@ -2995,6 +2995,34 @@
       },
       "good_example": "{\n  \"agents\": [{ \"name\": \"helper\", \"description\": \"Assists with code\" }]\n}",
       "bad_example": "{\n  \"agents\": [{ \"name\": \"helper\", \"priority\": 1 }]\n}"
+    },
+    {
+      "id": "CC-PL-015",
+      "name": "Default Component Folder Shadowed by Manifest",
+      "severity": "MEDIUM",
+      "category": "claude-plugins",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.140"
+        ],
+        "verified_on": "2026-05-14",
+        "applies_to": {
+          "tool": "claude-code",
+          "version_range": ">=2.1.140"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"commands\": [\"./custom-commands\", \"./commands\"]\n}",
+      "bad_example": "{\n  \"commands\": \"./custom-commands\"\n}\n# commands/ also exists at the plugin root"
     },
     {
       "id": "CC-SK-001",
@@ -8433,6 +8461,34 @@
       "bad_example": "# Two servers with same name in different config files"
     },
     {
+      "id": "KR-MCP-006",
+      "name": "Invalid OAuth Client ID Configuration",
+      "severity": "MEDIUM",
+      "category": "kiro-mcp",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/changelog/cli/2-3/"
+        ],
+        "verified_on": "2026-05-14",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.3.0"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"mcpServers\": {\"remote\": {\"url\": \"https://example.com/mcp\", \"oauth\": {\"clientId\": \"registered-client\"}}}}",
+      "bad_example": "{\"mcpServers\": {\"local\": {\"command\": \"node\", \"args\": [\"server.js\"], \"oauth\": {\"clientId\": \"registered-client\"}}}}"
+    },
+    {
       "id": "KR-PW-001",
       "name": "Missing Required POWER.md Frontmatter Fields",
       "severity": "HIGH",
@@ -11663,7 +11719,7 @@
     },
     "claude-plugins": {
       "prefix": "CC-PL",
-      "count": 14,
+      "count": 15,
       "description": "Claude Code Plugins rules"
     },
     "mcp": {
@@ -11803,7 +11859,7 @@
     },
     "kiro-mcp": {
       "prefix": "KR-MCP",
-      "count": 5,
+      "count": 6,
       "description": "Kiro MCP configuration rules"
     },
     "kiro-powers": {

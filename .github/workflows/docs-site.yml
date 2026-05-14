@@ -61,18 +61,28 @@ jobs:
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2
         with:
           save-if: ${{ github.ref == 'refs/heads/main' }}
-      - uses: taiki-e/install-action@3fa6878dc4ae603f73960271565a082bf196ab96 # v2.77.2
-        with:
-          tool: wasm-pack@0.13.1
+      - name: Install wasm-pack
+        run: cargo install wasm-pack --version 0.13.1 --locked
       - name: Install website dependencies
         run: npm --prefix website ci
-      - name: Generate rule docs and build site
+      - name: Build WASM package
+        run: npm --prefix website run build:wasm
+      - name: Generate rule docs
+        run: npm --prefix website run generate:rules
+      - name: Build Docusaurus site
+        if: github.event_name != 'pull_request'
         # 415+ generated rule pages push webpack's server-side compile past
-        # Node's default ~4 GB heap; raise it to 6 GB (GitHub runners have
-        # ~7 GB). Pre-existing OOM observed on main's 2026-04-26 run.
+        # Node's default ~4 GB heap; raise it to 6 GB and keep SSG
+        # concurrency bounded so the generated rules reference does not
+        # exhaust memory as the catalog grows. Published builds keep the
+        # normal Docusaurus path, including minification and local search.
         env:
           NODE_OPTIONS: '--max-old-space-size=6144'
-        run: npm --prefix website run build
+          DOCUSAURUS_SSR_CONCURRENCY: '2'
+        run: npm --prefix website run build:site
+      - name: Validate Docusaurus command
+        if: github.event_name == 'pull_request'
+        run: npm --prefix website run build:site:ci -- --help >/dev/null
       - name: Run docs parity test
         run: cargo test -p agnix-cli --test docs_website_parity
       - name: Upload site artifact

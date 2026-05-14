@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **CC-PL-015: Default component folder shadowed by manifest** (closes #905). Claude Code v2.1.140 now warns when default plugin component folders are ignored because `plugin.json` overrides the matching component path. CC-PL-015 mirrors that behavior for `.claude-plugin/plugin.json`: if a root `commands/`, `agents/`, `skills/`, or `hooks/` folder exists and the matching manifest field is set without including `./<component>`, agnix emits a MEDIUM warning. Covered by 6 unit tests for shadowing, explicit inclusion, absent default folder, file-vs-directory false positives, invalid manifest path shapes, and disabled-rule behavior.
+- **KR-MCP-006: Invalid OAuth client ID configuration** (closes #912). Kiro CLI 2.3.0 added pre-registered `oauth.clientId` support for HTTP-based MCP servers that do not support Dynamic Client Registration. KR-MCP-006 warns when `oauth` is not an object, `oauth.clientId` is missing/non-string/empty, or the OAuth block is attached to a command, `sse://`, `ws://`, or otherwise non-HTTP(S) MCP server. Covered by 6 unit tests.
+- **Rule count**: 421 -> 423 across all derived locations via `scripts/sync-rule-bookkeeping.js`, including `crates/agnix-rules/rules.json`, CLAUDE.md/AGENTS.md, README/docs counts, plugin/skill metadata, and generated website rule pages.
+
+### Changed
+- **OpenCode JSONC config detection** (closes #908). OpenCode v1.14.49 now creates a global `opencode.jsonc` when no config exists. agnix already parses JSONC comments, and now file type detection plus LSP project-change triggering recognize `opencode.jsonc` alongside `opencode.json`.
+- **Tool baselines**: refreshed every open tool-release issue from the release watcher. `claude-code` `v2.1.133` -> `v2.1.141` (#905), `codex` `rust-v0.129.0` -> `rust-v0.130.0` (#906), `cursor` `3.3.27` -> `3.4.16` (#907), `opencode` `v1.14.41` -> `v1.14.49` (#908), `cline` `v3.82.0` -> `v3.83.0` (#910), `gemini-cli` `v0.41.2` -> `v0.42.0` (#911), and `kiro` `2.2.0` -> `2.3.0` (#912). Codex, Cursor, Cline, Gemini, and Claude Code v2.1.141 changes were triaged as already covered or runtime-only for currently validated surfaces. OpenCode v1.14.49 only required the `opencode.jsonc` file-detection update above. `.github/tool-release-baselines.json` and `knowledge-base/RESEARCH-TRACKING.md` were updated.
+- **Docs release checks**: `scripts/check-rule-counts.py` now covers all current rule categories in the knowledge-base tables and SPEC count sum. The docs-site workflow keeps PR validation lightweight, while non-PR deploy builds use the normal searchable/minified Docusaurus build.
+
 ## [0.25.0] - 2026-05-09
 
 ### Added
@@ -916,7 +926,7 @@ Shipped via PR #800.
   - Quick-fix code actions from Fix objects
   - Hover documentation for frontmatter fields
   - Document content caching for performance
-  - Supports all 342 agnix validation rules with severity mapping
+  - Supports all 423 agnix validation rules with severity mapping
 
   - Workspace boundary validation for security (prevents path traversal)
   - Config caching optimization for performance
@@ -932,7 +942,7 @@ Shipped via PR #800.
   - Case-insensitive tool name matching
   - Takes precedence over legacy `target` field for flexibility
 - VS Code extension with full LSP integration (#22)
-  - Real-time diagnostics for all 342 validation rules
+  - Real-time diagnostics for all 423 validation rules
 
   - Status bar indicator showing agnix validation status
   - Syntax highlighting for SKILL.md YAML frontmatter

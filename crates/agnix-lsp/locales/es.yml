@@ -610,6 +610,15 @@ rules:
   kr_mcp_002:
     message: "El servidor MCP Kiro '%{server}' tiene un posible secreto hardcodeado en env '%{env_key}'"
     suggestion: "Usa referencias de variables de entorno como ${VAR_NAME} en lugar de secretos en texto plano"
+  kr_mcp_006:
+    message: "El servidor MCP Kiro '%{server}' tiene una configuración oauth.clientId inválida: %{reason}"
+    suggestion: "Usa oauth.clientId como cadena no vacía solo en servidores MCP remotos HTTP(S), o elimina el bloque oauth"
+    reasons:
+      oauth_object: "'oauth' debe ser un objeto"
+      missing_client_id: "'oauth.clientId' es obligatorio cuando 'oauth' está configurado"
+      client_id_string: "'oauth.clientId' debe ser una cadena"
+      client_id_non_empty: "'oauth.clientId' no debe estar vacío"
+      http_url: "'oauth.clientId' solo puede usarse con URLs de servidor MCP remoto HTTP(S)"
 
   # --- Codex Plugin (codex_plugin.rs) ---
   cdx_pl_001:
@@ -691,6 +700,9 @@ rules:
   cc_pl_006:
     message: "Error al analizar plugin.json: %{error}"
     suggestion: "Valida la sintaxis JSON en plugin.json -- verifica comas faltantes, corchetes o claves sin comillas"
+  cc_pl_015:
+    message: "La carpeta de componente predeterminada '%{component}' existe, pero plugin.json sobrescribe '%{component}' sin incluir './%{component}'"
+    suggestion: "Agrega './%{component}' a '%{component}' o mueve esos archivos a la ruta de componente configurada"
 
   # --- Version (lib.rs) ---
   ver_001:
