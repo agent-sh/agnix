@@ -45,23 +45,11 @@ impl LintConfig {
         let mut warnings = Vec::new();
 
         // Validate disabled_rules match known patterns
-        for rule_id in &self.data.rules.disabled_rules {
-            let matches_known = KNOWN_RULE_PREFIXES
-                .iter()
-                .any(|prefix| rule_id.starts_with(prefix));
-            if !matches_known {
-                warnings.push(ConfigWarning {
-                    field: "rules.disabled_rules".to_string(),
-                    message: t!(
-                        "core.config.unknown_rule",
-                        rule = rule_id.as_str(),
-                        prefixes = KNOWN_RULE_PREFIXES.join(", ")
-                    )
-                    .to_string(),
-                    suggestion: Some(t!("core.config.unknown_rule_suggestion").to_string()),
-                });
-            }
-        }
+        validate_rule_ids(
+            "rules.disabled_rules",
+            &self.data.rules.disabled_rules,
+            &mut warnings,
+        );
 
         // Validate tools array contains known tools
         let known_tools = [
@@ -135,26 +123,37 @@ impl LintConfig {
             validate_pattern_list(&paths_field, &ov.paths, &mut warnings);
 
             let rules_field = format!("overrides[{}].disabled_rules", idx);
-            for rule_id in &ov.disabled_rules {
-                let matches_known = KNOWN_RULE_PREFIXES
-                    .iter()
-                    .any(|prefix| rule_id.starts_with(prefix));
-                if !matches_known {
-                    warnings.push(ConfigWarning {
-                        field: rules_field.clone(),
-                        message: t!(
-                            "core.config.unknown_rule",
-                            rule = rule_id.as_str(),
-                            prefixes = KNOWN_RULE_PREFIXES.join(", ")
-                        )
-                        .to_string(),
-                        suggestion: Some(t!("core.config.unknown_rule_suggestion").to_string()),
-                    });
-                }
-            }
+            validate_rule_ids(&rules_field, &ov.disabled_rules, &mut warnings);
         }
 
         warnings
+    }
+}
+
+/// Validate rule IDs against known prefixes, emitting a `ConfigWarning`
+/// per unknown ID.
+///
+/// Used by [`LintConfig::validate`] to check both `[rules].disabled_rules`
+/// and `[[overrides]].disabled_rules`. The `field` argument is propagated
+/// into each emitted [`ConfigWarning`] so callers can identify the source
+/// location (`"rules.disabled_rules"` vs `"overrides[N].disabled_rules"`).
+fn validate_rule_ids(field: &str, rule_ids: &[String], warnings: &mut Vec<ConfigWarning>) {
+    for rule_id in rule_ids {
+        let matches_known = KNOWN_RULE_PREFIXES
+            .iter()
+            .any(|prefix| rule_id.starts_with(prefix));
+        if !matches_known {
+            warnings.push(ConfigWarning {
+                field: field.to_string(),
+                message: t!(
+                    "core.config.unknown_rule",
+                    rule = rule_id.as_str(),
+                    prefixes = KNOWN_RULE_PREFIXES.join(", ")
+                )
+                .to_string(),
+                suggestion: Some(t!("core.config.unknown_rule_suggestion").to_string()),
+            });
+        }
     }
 }
 
