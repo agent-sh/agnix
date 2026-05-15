@@ -298,11 +298,24 @@ sys.stdout.write(m.group(1).strip() if m else "")
     fi
   fi
 
+  escape_github_mentions_in_markdown() {
+    perl -0pe '
+      my $zwsp = "\x{200B}";
+      my $protected = qr/(```[\s\S]*?```|`[^`\n]*`|https?:\/\/[^\s<>()]+|www\.[^\s<>()]+)/;
+      my @parts = split(/($protected)/, $_, -1);
+      for (my $i = 0; $i < @parts; $i++) {
+        next if $parts[$i] =~ /^$protected$/s;
+        $parts[$i] =~ s/(^|[^A-Za-z0-9_])@([A-Za-z0-9][A-Za-z0-9-]*[A-Za-z0-9]?)/$1 . "@" . $zwsp . $2/ge;
+      }
+      $_ = join("", @parts);
+    '
+  }
+
   # Escape GitHub user mentions (@username) in release body to prevent unwanted
-  # notifications when the issue body is rendered by GitHub.
+  # notifications when the issue body is rendered by GitHub, while preserving
+  # URLs and Markdown code spans/blocks.
   if [[ -n "$release_body" ]]; then
-    zwsp=$'\u200b'
-    release_body=$(sed -E 's/(^|[^a-zA-Z0-9_])@([a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]?)/\1@'"${zwsp}"'\2/g' <<< "$release_body")
+    release_body=$(escape_github_mentions_in_markdown <<< "$release_body")
   fi
 
   # Truncate release notes if too long. When triage produced content, share
