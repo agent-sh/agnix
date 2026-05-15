@@ -298,6 +298,13 @@ sys.stdout.write(m.group(1).strip() if m else "")
     fi
   fi
 
+  # Escape GitHub user mentions (@username) in release body to prevent unwanted
+  # notifications when the issue body is rendered by GitHub.
+  if [[ -n "$release_body" ]]; then
+    zwsp=$'\u200b'
+    release_body=$(sed -E 's/(^|[^a-zA-Z0-9_])@([a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]?)/\1@'"${zwsp}"'\2/g' <<< "$release_body")
+  fi
+
   # Truncate release notes if too long. When triage produced content, share
   # the ISSUE_BODY_LIMIT budget between triage and raw body so the composed
   # issue fits under GitHub's ~65KB issue-body cap. The triage summary is
