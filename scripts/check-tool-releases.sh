@@ -311,11 +311,14 @@ sys.stdout.write(m.group(1).strip() if m else "")
     '
   }
 
-  # Escape GitHub user mentions (@username) in release body to prevent unwanted
-  # notifications when the issue body is rendered by GitHub, while preserving
-  # URLs and Markdown code spans/blocks.
+  # Escape GitHub user mentions (@username) in release body and triage summary
+  # to prevent unwanted notifications when the issue body is rendered by GitHub.
+  zwsp=$'\u200b'
   if [[ -n "$release_body" ]]; then
-    release_body=$(escape_github_mentions_in_markdown <<< "$release_body")
+    release_body=$(sed -E 's/(^|[^a-zA-Z0-9_])@([a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]?)/\1@'"${zwsp}"'\2/g' <<< "$release_body")
+  fi
+  if [[ -n "$agnix_triage" ]]; then
+    agnix_triage=$(sed -E 's/(^|[^a-zA-Z0-9_])@([a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]?)/\1@'"${zwsp}"'\2/g' <<< "$agnix_triage")
   fi
 
   # Truncate release notes if too long. When triage produced content, share
