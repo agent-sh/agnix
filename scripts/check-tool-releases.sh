@@ -298,6 +298,29 @@ sys.stdout.write(m.group(1).strip() if m else "")
     fi
   fi
 
+  escape_github_mentions_in_markdown() {
+    perl -0pe '
+      my $zwsp = "\x{200B}";
+      my $protected = qr/(```[\s\S]*?```|`[^`\n]*`|https?:\/\/[^\s<>()]+|www\.[^\s<>()]+)/;
+      my @parts = split(/($protected)/, $_, -1);
+      for (my $i = 0; $i < @parts; $i++) {
+        next if $parts[$i] =~ /^$protected$/s;
+        $parts[$i] =~ s/(^|[^A-Za-z0-9_])@([A-Za-z0-9][A-Za-z0-9-]*[A-Za-z0-9]?)/$1 . "@" . $zwsp . $2/ge;
+      }
+      $_ = join("", @parts);
+    '
+  }
+
+  # Escape GitHub user mentions (@username) in release body and triage summary
+  # to prevent unwanted notifications when the issue body is rendered by GitHub.
+  zwsp=$'\u200b'
+  if [[ -n "$release_body" ]]; then
+    release_body=$(sed -E 's/(^|[^a-zA-Z0-9_])@([a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]?)/\1@'"${zwsp}"'\2/g' <<< "$release_body")
+  fi
+  if [[ -n "$agnix_triage" ]]; then
+    agnix_triage=$(sed -E 's/(^|[^a-zA-Z0-9_])@([a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]?)/\1@'"${zwsp}"'\2/g' <<< "$agnix_triage")
+  fi
+
   # Truncate release notes if too long. When triage produced content, share
   # the ISSUE_BODY_LIMIT budget between triage and raw body so the composed
   # issue fits under GitHub's ~65KB issue-body cap. The triage summary is
