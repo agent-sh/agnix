@@ -393,6 +393,14 @@ $release_section
 
 ### Action required
 
+  # Conservative skip: if the agnix-triage section exists but has no bullet points under
+  # "Agnix-relevant changes", skip creating the issue (update baseline only).
+  if echo "$issue_body" | grep -q "#### Agnix-relevant changes" && ! echo "$issue_body" | grep -A 30 "#### Agnix-relevant changes" | grep -qE "^- "; then
+    echo "  [skip] No relevant changes to agnix (triage found only irrelevant updates) — updating baseline only"
+    SKIP_COUNT=$((SKIP_COUNT+1))
+    continue
+  fi
+
 1. Review the release notes for changes that may affect agnix validation rules.
 2. Update [\`crates/agnix-core/src/config.rs\`](${file_base}/crates/agnix-core/src/config.rs) (\`ToolVersions\` / \`SpecRevisions\`) if the new version changes a validated field.
 3. Update [\`knowledge-base/RESEARCH-TRACKING.md\`](${file_base}/knowledge-base/RESEARCH-TRACKING.md) "Last Reviewed" for $display_name.
