@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-05-17
+
 ### Added
 - **`[[overrides]]` per-file rule suppression** (closes #909). New `.agnix.toml` array-of-tables lets users disable specific rules for files matching a glob list without losing the rule globally. Each entry has `paths` (glob list, matched with `require_literal_separator = true` to mirror `[files].exclude` semantics) and `disabled_rules` (rule IDs). Multiple blocks stack as a set union; the layer is additive only - overrides can never re-enable a globally or category-disabled rule. Targets the original use case from #909: `~/.claude/CLAUDE.md`-style memory files that legitimately contain quoted-example patterns (`"in the future we should..."`, `"make sure to verify ..."`) which would otherwise trip CC-MEM-005 / CC-MEM-007.
   - **Schema validation**: glob syntax, traversal (`..`), and absolute paths are rejected at config load; unknown rule-ID prefixes warn via the same code path as `[rules].disabled_rules` (`validate_rule_ids` helper).
