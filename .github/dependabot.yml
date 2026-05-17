@@ -9,6 +9,7 @@ updates:
       - "avifenesh"
     labels:
       - "dependencies"
+      - "skip-changelog"
     commit-message:
       prefix: "chore(deps):"
 
@@ -21,5 +22,6 @@ updates:
       - "avifenesh"
     labels:
       - "dependencies"
+      - "skip-changelog"
     commit-message:
       prefix: "chore(deps):"
