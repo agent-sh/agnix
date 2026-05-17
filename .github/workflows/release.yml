@@ -586,6 +586,7 @@ jobs:
                 --head "$BRANCH" \
                 --title "docs: version ${{ steps.version.outputs.version }} docs" \
                 --body "Auto-generated versioned docs snapshot for v${{ steps.version.outputs.version }}, including updated rule docs and site data." \
-                --label "documentation"
+                --label "documentation" \
+                --label "skip-changelog"
             fi
           fi
