@@ -355,12 +355,13 @@ pub fn sanitize_for_pulldown_cmark(s: &str) -> std::borrow::Cow<'_, str> {
 /// * **Inline code spans** – backtick-delimited spans inside a non-fenced line
 ///   are skipped.  We match the opening backtick run and look for the same-
 ///   length closing run to stay correct for ` ``double`` ` spans.
+/// * **Indented code blocks** – lines indented to four or more columns are
+///   skipped when they start at the beginning of a document, follow a blank
+///   line, or continue an existing indented code block. Tabs expand to the next
+///   four-column stop.
 ///
 /// ### What we do NOT handle
 ///
-/// * Indented code blocks (4-space / tab indent).  These are uncommon in real
-///   agent-config files; omitting them is an acceptable trade-off for
-///   simplicity.
 /// * HTML block scanning.  All non-fenced, non-backtick content is yielded.
 fn scan_non_code_spans(content: &str, mut callback: impl FnMut(&str, usize)) {
     let bytes = content.as_bytes();
@@ -371,6 +372,8 @@ fn scan_non_code_spans(content: &str, mut callback: impl FnMut(&str, usize)) {
     let mut in_fence = false;
     let mut fence_char: u8 = b'`';
     let mut fence_min_len: usize = 3;
+    let mut in_indented_code = false;
+    let mut can_start_indented_code = true;
 
     while pos < len {
         // Find the end of the current line (pos..line_end) where line_end points
@@ -389,7 +392,7 @@ fn scan_non_code_spans(content: &str, mut callback: impl FnMut(&str, usize)) {
             // Check whether this line closes the fence.
             // A closing fence is: up to 3 optional spaces, then ≥ fence_min_len
             // fence_char bytes, then optional spaces, then end-of-line.
-            let line_trimmed = line.trim_end_matches('\n');
+            let line_trimmed = trim_line_ending(line);
             let n_leading = line_trimmed.bytes().take_while(|&b| b == b' ').count();
             if n_leading <= 3 {
                 let after = &line_trimmed[n_leading..];
@@ -397,8 +400,9 @@ fn scan_non_code_spans(content: &str, mut callback: impl FnMut(&str, usize)) {
                 if run >= fence_min_len {
                     let rest = &after[run..];
                     if rest.bytes().all(|b| b == b' ') {
-                        // Closing fence found – exit fenced mode
+                        // Closing fence found - exit fenced mode
                         in_fence = false;
+                        can_start_indented_code = true;
                         pos = line_end;
                         continue;
                     }
@@ -409,9 +413,29 @@ fn scan_non_code_spans(content: &str, mut callback: impl FnMut(&str, usize)) {
             continue;
         }
 
+        let is_blank_line = is_markdown_blank_line(line);
+        let is_indented_line = is_indented_code_line(line);
+
+        if in_indented_code {
+            if is_blank_line || is_indented_line {
+                can_start_indented_code = true;
+                pos = line_end;
+                continue;
+            }
+
+            in_indented_code = false;
+        }
+
+        if can_start_indented_code && is_indented_line {
+            in_indented_code = true;
+            can_start_indented_code = true;
+            pos = line_end;
+            continue;
+        }
+
         // Not in a fenced block.  Check if this line opens a fence.
         {
-            let line_trimmed = line.trim_end_matches('\n');
+            let line_trimmed = trim_line_ending(line);
             let n_leading = line_trimmed.bytes().take_while(|&b| b == b' ').count();
             if n_leading <= 3 {
                 let after = &line_trimmed[n_leading..];
@@ -479,8 +503,30 @@ fn scan_non_code_spans(content: &str, mut callback: impl FnMut(&str, usize)) {
             callback(&content[cursor..line_end], cursor);
         }
 
+        can_start_indented_code = is_blank_line;
         pos = line_end;
     }
+}
+
+fn trim_line_ending(line: &str) -> &str {
+    line.trim_end_matches(['\n', '\r'])
+}
+
+fn is_markdown_blank_line(line: &str) -> bool {
+    trim_line_ending(line)
+        .bytes()
+        .all(|b| matches!(b, b' ' | b'\t'))
+}
+
+fn is_indented_code_line(line: &str) -> bool {
+    let mut width = 0;
+    for b in line.bytes().take_while(|&b| b == b' ' || b == b'\t') {
+        width += if b == b' ' { 1 } else { 4 - (width % 4) };
+        if width >= 4 {
+            return true;
+        }
+    }
+    false
 }
 
 /// Return the byte position of the start of the first backtick run of exactly
@@ -977,6 +1023,45 @@ mod tests {
         let content = "```\n<example>test</example>\n```\n";
         let tags = extract_xml_tags(content);
         assert!(tags.is_empty());
+    }
+
+    #[test]
+    fn test_xml_ignores_indented_code_block() {
+        let content = "    {\n      \"feature_directory\": \"<resolved feature dir>\"\n    }\n";
+        let tags = extract_xml_tags(content);
+        assert!(tags.is_empty());
+    }
+
+    #[test]
+    fn test_xml_ignores_tab_indented_code_block() {
+        let content = "\t<resolved feature dir>\n<example>real";
+        let tags = extract_xml_tags(content);
+        assert_eq!(tags.len(), 1);
+        assert_eq!(tags[0].name, "example");
+    }
+
+    #[test]
+    fn test_xml_ignores_mixed_space_tab_indented_code_block() {
+        let content = " \t<resolved feature dir>\n<example>real";
+        let tags = extract_xml_tags(content);
+        assert_eq!(tags.len(), 1);
+        assert_eq!(tags[0].name, "example");
+    }
+
+    #[test]
+    fn test_xml_scans_indented_paragraph_continuation() {
+        let content = "A paragraph wraps onto\n    <example>real";
+        let tags = extract_xml_tags(content);
+        assert_eq!(tags.len(), 1);
+        assert_eq!(tags[0].name, "example");
+    }
+
+    #[test]
+    fn test_xml_scans_indented_list_item_continuation() {
+        let content = "- A list item continues with\n    <example>real";
+        let tags = extract_xml_tags(content);
+        assert_eq!(tags.len(), 1);
+        assert_eq!(tags[0].name, "example");
     }
 
     #[test]
