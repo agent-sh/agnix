@@ -189,7 +189,7 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 <a id="as-014"></a>
 ### AS-014 [HIGH] Windows Path Separator
 **Requirement**: Paths MUST use forward slashes, even on Windows
-**Detection**: `path.contains("\\")`
+**Detection**: Path-shaped body tokens containing `\`, excluding standalone regex escapes and non-path prose
 **Fix**: Replace `\\` with `/`
 **Source**: agentskills.io/specification
 
