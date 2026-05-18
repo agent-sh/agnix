@@ -50,27 +50,44 @@ pub(super) fn is_regex_escape(s: &str) -> bool {
         return false;
     }
 
-    // If most backslash-prefixed parts start with regex metacharacters, it's likely a regex
+    // If most backslash-prefixed parts are standalone regex metacharacter
+    // escapes, it's likely a regex. Do not treat longer path-like segments
+    // such as `\bar` as regex escapes merely because they start with `b`.
     let regex_like_count = parts[1..]
         .iter()
-        .filter(|part| {
-            part.chars()
-                .next()
-                .map(|c| REGEX_ESCAPE_CHARS.contains(&c))
-                .unwrap_or(false)
-        })
+        .filter(|part| is_standalone_regex_escape(part, REGEX_ESCAPE_CHARS))
         .count();
 
     // If more than half of the backslash sequences look like regex escapes, skip it
     regex_like_count > 0 && regex_like_count >= (parts.len() - 1) / 2
 }
 
+fn is_standalone_regex_escape(part: &str, regex_escape_chars: &[char]) -> bool {
+    let mut chars = part.chars();
+    let Some(first) = chars.next() else {
+        return false;
+    };
+    if !regex_escape_chars.contains(&first) {
+        return false;
+    }
+    chars
+        .next()
+        .is_none_or(|next| !is_path_segment_continuation(next))
+}
+
+fn is_path_segment_continuation(c: char) -> bool {
+    c.is_ascii_alphanumeric() || c == '_' || c == '.' || (c as u32) >= 128
+}
+
 fn is_path_segment_char(b: u8) -> bool {
-    b.is_ascii_alphanumeric() || matches!(b, b'.' | b'_' | b'-')
+    b >= 128
+        || b.is_ascii_alphanumeric()
+        || matches!(b, b'.' | b'_' | b'-' | b'+' | b'~' | b'@' | b'$' | b'%')
 }
 
 /// Check that every backslash in `token` sits between path-segment characters
-/// (alphanumeric, `.`, `_`, `-`, or `:` immediately before for drive letters).
+/// (including alphanumeric, `.`, `_`, `-`, common filename symbols, non-ASCII
+/// bytes, or `:` immediately before the separator for Windows-style prefixes).
 /// Rejects shell-escape syntax like `'I'\''m` and backtick-wrapped backslashes
 /// like `` `\` `` where the backslash is bordered by quote characters.
 pub(super) fn is_path_shaped(token: &str) -> bool {
