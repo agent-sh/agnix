@@ -226,6 +226,24 @@ mod tests {
     }
 
     #[test]
+    fn test_xml_001_ignores_indented_code_block_placeholder() {
+        let content = "\
+Persist the resolved path to a file:
+
+    {
+      \"feature_directory\": \"<resolved feature dir>\"
+    }
+";
+        let validator = XmlValidator;
+        let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
+        assert!(
+            diagnostics.is_empty(),
+            "XML placeholders inside indented code blocks should not flag; got {:?}",
+            diagnostics
+        );
+    }
+
+    #[test]
     fn test_sized_int_type_parameter_not_flagged() {
         // Rust sized types i32, u64, f32 should be treated as type
         // parameters. Example is outside backticks so the XML
