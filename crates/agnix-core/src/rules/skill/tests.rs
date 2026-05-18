@@ -389,6 +389,38 @@ fn test_as_014_still_fires_on_plain_backslash_path() {
 }
 
 #[test]
+fn test_as_014_still_fires_on_hyphenated_regex_like_segment_path() {
+    let content = "---\nname: hyphen-path\ndescription: Use when validating a hyphenated windows-style path segment\n---\n\nSee foo\\b-bar\\baz for details.";
+
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(Path::new("SKILL.md"), content, &LintConfig::default());
+
+    let as_014_errors: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-014").collect();
+    assert_eq!(
+        as_014_errors.len(),
+        1,
+        "AS-014 should fire on hyphenated path segments that start with regex metachar letters"
+    );
+}
+
+#[test]
+fn test_as_014_still_fires_on_unc_path() {
+    let content = "---\nname: unc-path\ndescription: Use when validating a UNC path\n---\n\nOpen \\\\server\\share\\file.txt to continue.";
+
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(Path::new("SKILL.md"), content, &LintConfig::default());
+
+    let as_014_errors: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-014").collect();
+    assert!(
+        as_014_errors
+            .iter()
+            .any(|d| d.message.contains("\\\\server\\share\\file.txt")),
+        "AS-014 should still fire on the full Windows UNC path, got: {:?}",
+        as_014_errors
+    );
+}
+
+#[test]
 fn test_as_014_still_fires_on_non_ascii_path() {
     let content = "---\nname: unicode-path\ndescription: Use when validating a windows path with unicode\n---\n\nOpen C:\\Users\\用户\\file.txt to continue.";
 

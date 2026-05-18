@@ -76,7 +76,9 @@ fn is_standalone_regex_escape(part: &str, regex_escape_chars: &[char]) -> bool {
 }
 
 fn is_path_segment_continuation(c: char) -> bool {
-    c.is_ascii_alphanumeric() || c == '_' || c == '.' || (c as u32) >= 128
+    c.is_ascii_alphanumeric()
+        || matches!(c, '_' | '.' | '-' | '+' | '~' | '@' | '$' | '%')
+        || (c as u32) >= 128
 }
 
 fn is_path_segment_char(b: u8) -> bool {
@@ -85,26 +87,39 @@ fn is_path_segment_char(b: u8) -> bool {
         || matches!(b, b'.' | b'_' | b'-' | b'+' | b'~' | b'@' | b'$' | b'%')
 }
 
-/// Check that every backslash in `token` sits between path-segment characters
+/// Check that path separators in `token` sit between path-segment characters
 /// (including alphanumeric, `.`, `_`, `-`, common filename symbols, non-ASCII
 /// bytes, or `:` immediately before the separator for Windows-style prefixes).
-/// Rejects shell-escape syntax like `'I'\''m` and backtick-wrapped backslashes
-/// like `` `\` `` where the backslash is bordered by quote characters.
+/// Also accepts a leading UNC prefix such as `\\server\share`. Rejects
+/// shell-escape syntax like `'I'\''m` and backtick-wrapped backslashes like
+/// `` `\` `` where the backslash is bordered by quote characters.
 pub(super) fn is_path_shaped(token: &str) -> bool {
     let bytes = token.as_bytes();
-    let mut has_backslash = false;
-    for (i, &b) in bytes.iter().enumerate() {
-        if b != b'\\' {
+    let mut has_path_separator = false;
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] != b'\\' {
+            i += 1;
             continue;
         }
-        has_backslash = true;
+
+        if i == 0
+            && bytes.get(1) == Some(&b'\\')
+            && bytes.get(2).is_some_and(|&c| is_path_segment_char(c))
+        {
+            i += 2;
+            continue;
+        }
+
         let prev_ok = i > 0 && (is_path_segment_char(bytes[i - 1]) || bytes[i - 1] == b':');
         let next_ok = bytes.get(i + 1).is_some_and(|&c| is_path_segment_char(c));
         if !prev_ok || !next_ok {
             return false;
         }
+        has_path_separator = true;
+        i += 1;
     }
-    has_backslash
+    has_path_separator
 }
 
 pub(super) fn extract_windows_paths(body: &str) -> Vec<PathMatch> {
