@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.27.1] - 2026-05-18
+
 ### Fixed
 - **XML-001 false positives inside indented Markdown code blocks** (related to #942). The shared Markdown scanner now skips 4-space and tab-indented code blocks before extracting XML tags, so placeholder syntax such as `<resolved feature dir>` inside indented JSON/YAML examples no longer triggers XML balance diagnostics or safe-fix suggestions. Fenced code blocks and inline code remain skipped as before, and document-level XML is still validated outside code.
 - **AS-014 false positives on shell-escape syntax and backtick-wrapped backslashes** (closes #940). The Windows path-separator detector's loose token regex previously matched any non-whitespace run containing a `\`, so prose like `'I'\''m Groot'` (single-quote shell-escape) and `` `\` `` (markdown documenting the backslash character) tripped a HIGH-confidence safe autofix that rewrote `\` → `/` and corrupted the content. `extract_windows_paths` now requires matched tokens to be path-shaped and keeps standalone regex escapes out of the rule. Plain Windows paths (`foo\bar\baz`, `references\guide.md`, `C:\Users\me\file.txt`) and quoted Windows paths still fire as before. Covered by regression tests; existing AS-014 fixture and safe-fix tests unchanged.
