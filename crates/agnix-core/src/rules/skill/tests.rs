@@ -375,7 +375,9 @@ fn test_as_014_still_fires_on_drive_letter_path() {
 
 #[test]
 fn test_as_014_still_fires_on_plain_backslash_path() {
-    let content = "---\nname: plain-path\ndescription: Use when validating a plain windows-style relative path\n---\n\nSee foo\\bar\\baz for details.";
+    // Segments start with non-regex-metacharacter letters so `is_regex_escape`
+    // does not pre-filter the match.
+    let content = "---\nname: plain-path\ndescription: Use when validating a plain windows-style relative path\n---\n\nSee lib\\config\\app.json for details.";
 
     let validator = SkillValidator;
     let diagnostics = validator.validate(Path::new("SKILL.md"), content, &LintConfig::default());

@@ -82,9 +82,7 @@ pub(super) fn is_path_shaped(token: &str) -> bool {
         }
         has_backslash = true;
         let prev_ok = i > 0 && (is_path_segment_char(bytes[i - 1]) || bytes[i - 1] == b':');
-        let next_ok = bytes
-            .get(i + 1)
-            .is_some_and(|&c| is_path_segment_char(c));
+        let next_ok = bytes.get(i + 1).is_some_and(|&c| is_path_segment_char(c));
         if !prev_ok || !next_ok {
             return false;
         }
