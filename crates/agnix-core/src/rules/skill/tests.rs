@@ -321,6 +321,74 @@ fn test_as_014_windows_path_separator() {
 }
 
 #[test]
+fn test_as_014_ignores_shell_escape_syntax() {
+    // Regression for issue #940: `'I'\''m Groot'` is the canonical shell trick
+    // for embedding a single quote inside single-quoted args, not a path.
+    let content = r#"---
+name: shell-escape
+description: Use when documenting shell escape syntax
+---
+
+For single quotes in args like "I'm Groot", use escape syntax: e.g `'I'\''m Groot'`."#;
+
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(Path::new("SKILL.md"), content, &LintConfig::default());
+
+    let as_014_errors: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-014").collect();
+    assert!(
+        as_014_errors.is_empty(),
+        "AS-014 should not fire on shell-escape syntax, got: {:?}",
+        as_014_errors
+    );
+}
+
+#[test]
+fn test_as_014_ignores_backtick_wrapped_backslash() {
+    // Regression for issue #940: a single backslash inside backticks
+    // (documenting the backslash character itself) is not a path.
+    let content = "---\nname: backtick-bs\ndescription: Use when documenting the backslash character\n---\n\nThe backslash character: `\\`.";
+
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(Path::new("SKILL.md"), content, &LintConfig::default());
+
+    let as_014_errors: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-014").collect();
+    assert!(
+        as_014_errors.is_empty(),
+        "AS-014 should not fire on backtick-wrapped backslash, got: {:?}",
+        as_014_errors
+    );
+}
+
+#[test]
+fn test_as_014_still_fires_on_drive_letter_path() {
+    let content = "---\nname: drive\ndescription: Use when validating a windows drive path\n---\n\nOpen C:\\Users\\me\\file.txt to continue.";
+
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(Path::new("SKILL.md"), content, &LintConfig::default());
+
+    let as_014_errors: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-014").collect();
+    assert!(
+        !as_014_errors.is_empty(),
+        "AS-014 should still fire on Windows drive-letter paths"
+    );
+}
+
+#[test]
+fn test_as_014_still_fires_on_plain_backslash_path() {
+    let content = "---\nname: plain-path\ndescription: Use when validating a plain windows-style relative path\n---\n\nSee foo\\bar\\baz for details.";
+
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(Path::new("SKILL.md"), content, &LintConfig::default());
+
+    let as_014_errors: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-014").collect();
+    assert_eq!(
+        as_014_errors.len(),
+        1,
+        "AS-014 should fire exactly once on a plain backslash-separated path"
+    );
+}
+
+#[test]
 fn test_as_015_directory_size_exceeds() {
     use std::io::Write;
 

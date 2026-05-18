@@ -65,6 +65,33 @@ pub(super) fn is_regex_escape(s: &str) -> bool {
     regex_like_count > 0 && regex_like_count >= (parts.len() - 1) / 2
 }
 
+fn is_path_segment_char(b: u8) -> bool {
+    b.is_ascii_alphanumeric() || matches!(b, b'.' | b'_' | b'-')
+}
+
+/// Check that every backslash in `token` sits between path-segment characters
+/// (alphanumeric, `.`, `_`, `-`, or `:` immediately before for drive letters).
+/// Rejects shell-escape syntax like `'I'\''m` and backtick-wrapped backslashes
+/// like `` `\` `` where the backslash is bordered by quote characters.
+pub(super) fn is_path_shaped(token: &str) -> bool {
+    let bytes = token.as_bytes();
+    let mut has_backslash = false;
+    for (i, &b) in bytes.iter().enumerate() {
+        if b != b'\\' {
+            continue;
+        }
+        has_backslash = true;
+        let prev_ok = i > 0 && (is_path_segment_char(bytes[i - 1]) || bytes[i - 1] == b':');
+        let next_ok = bytes
+            .get(i + 1)
+            .is_some_and(|&c| is_path_segment_char(c));
+        if !prev_ok || !next_ok {
+            return false;
+        }
+    }
+    has_backslash
+}
+
 pub(super) fn extract_windows_paths(body: &str) -> Vec<PathMatch> {
     let re = windows_path_regex();
     let token_re = windows_path_token_regex();
@@ -72,8 +99,7 @@ pub(super) fn extract_windows_paths(body: &str) -> Vec<PathMatch> {
     let mut seen = HashSet::new();
     for m in re.find_iter(body) {
         if let Some((trimmed, delta)) = trim_path_token_with_offset(m.as_str()) {
-            // Skip regex escape sequences
-            if is_regex_escape(&trimmed) {
+            if is_regex_escape(&trimmed) || !is_path_shaped(&trimmed) {
                 continue;
             }
             if seen.insert(trimmed.clone()) {
@@ -86,8 +112,7 @@ pub(super) fn extract_windows_paths(body: &str) -> Vec<PathMatch> {
     }
     for m in token_re.find_iter(body) {
         if let Some((trimmed, delta)) = trim_path_token_with_offset(m.as_str()) {
-            // Skip regex escape sequences
-            if is_regex_escape(&trimmed) {
+            if is_regex_escape(&trimmed) || !is_path_shaped(&trimmed) {
                 continue;
             }
             if seen.insert(trimmed.clone()) {
