@@ -15,8 +15,12 @@ jobs:
   changelog:
     name: Verify Changelog
     runs-on: ubuntu-latest
-    # Skip if PR has [skip changelog] in title or the skip-changelog label
+    # Skip for any dependabot PR - the label-based skip is not reliable
+    # (security PRs in particular open without honoring dependabot.yml
+    # labels) - and for PRs with [skip changelog] in the title or the
+    # skip-changelog label.
     if: |
+      github.event.pull_request.user.login != 'dependabot[bot]' &&
       !contains(github.event.pull_request.title, '[skip changelog]') &&
       !contains(github.event.pull_request.labels.*.name, 'skip-changelog')
     steps:
