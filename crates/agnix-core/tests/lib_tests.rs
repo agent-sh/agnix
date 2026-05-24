@@ -1876,14 +1876,6 @@ fn test_validate_fixtures_directory() {
         "Expected AS-001 from missing-frontmatter/SKILL.md fixture"
     );
 
-    // windows-path/SKILL.md should trigger AS-014 (windows path separator)
-    assert!(
-        skill_diagnostics
-            .iter()
-            .any(|d| d.rule == "AS-014" && d.file.to_string_lossy().contains("windows-path")),
-        "Expected AS-014 from windows-path/SKILL.md fixture"
-    );
-
     // Verify MCP fixtures trigger expected MCP-* rules
     let mcp_diagnostics: Vec<_> = result
         .diagnostics

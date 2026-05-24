@@ -22,19 +22,12 @@ rules:
   as_006:
     message: "El nombre '%{name}' no puede contener guiones consecutivos"
     suggestion: "Reemplaza '--' con '-' en el nombre"
-  as_007:
-    message: "El nombre '%{name}' esta reservado y no puede usarse"
-    suggestion: "Elige un nombre de skill diferente"
   as_008:
     message: "La descripción debe tener 1-%{max} caracteres, tiene %{len}"
     suggestion: "Recorta la descripción a %{max} caracteres o menos"
   as_009:
     message: "La descripción no debe contener etiquetas XML"
     suggestion: "Elimina las etiquetas XML de la descripción"
-  as_010:
-    message: "La descripción deberia incluir una frase de activación 'Use when...'"
-    suggestion: "Agrega 'Use when [condición]' para ayudar a Claude a entender cuando invocar este skill"
-    fix: "Anteponer 'Use when user wants to ' a la descripción"
   as_011:
     message: "La compatibilidad debe tener 1-500 caracteres, tiene %{len}"
     suggestion: "Recorta la compatibilidad a 500 caracteres o menos"
@@ -44,9 +37,6 @@ rules:
   as_013:
     message: "La referencia de archivo '%{path}' tiene mas de un nivel de profundidad"
     suggestion: "Aplana la estructura del directorio references/"
-  as_014:
-    message: "Se detecto separador de ruta de Windows en '%{path}'; usa barras diagonales"
-    suggestion: "Reemplaza '\\\\' con '/' en las rutas de archivo"
   as_015:
     message: "El directorio del skill excede 8MB (%{size} bytes)"
     suggestion: "Elimina recursos grandes o divide el skill en partes mas pequenas"
@@ -56,12 +46,6 @@ rules:
   as_017:
     message: "El nombre del skill '%{name}' debe coincidir con el directorio padre '%{directory}'"
     suggestion: "Renombra el directorio del skill o actualiza el campo name para que coincidan"
-  as_018:
-    message: "La descripcion no deberia usar primera o segunda persona"
-    suggestion: "Reescribe la descripcion en tercera persona"
-  as_019:
-    message: "El nombre del skill '%{name}' es demasiado vago para enrutamiento confiable"
-    suggestion: "Usa un nombre kebab-case especifico que describa el proposito del skill"
 
   # --- Claude Code Skills (skill/mod.rs) ---
   cc_sk_001:

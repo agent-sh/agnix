@@ -1,7 +1,7 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 425,
+  "total_rules": 420,
   "last_updated": "2026-05-24",
   "schema": {
     "evidence": {
@@ -498,33 +498,6 @@
       "bad_example": "---\nname: format--code\ndescription: Use when formatting source code\n---\nRun prettier on all files."
     },
     {
-      "id": "AS-007",
-      "name": "Reserved Name",
-      "severity": "HIGH",
-      "category": "agent-skills",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://platform.claude.com/docs"
-        ],
-        "verified_on": "2026-02-04",
-        "applies_to": {
-          "tool": "claude-code"
-        },
-        "normative_level": "MUST",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": false
-      },
-      "good_example": "---\nname: my-helper\ndescription: Use when the user needs help with tasks\n---\nProvide assistance.",
-      "bad_example": "---\nname: claude\ndescription: Use when the user needs help with tasks\n---\nProvide assistance."
-    },
-    {
       "id": "AS-008",
       "name": "Description Too Short",
       "severity": "HIGH",
@@ -578,35 +551,6 @@
       },
       "good_example": "---\nname: review-pr\ndescription: Use when reviewing a pull request for issues\n---\nCheck the PR for bugs.",
       "bad_example": "---\nname: review-pr\ndescription: Use when reviewing a <pull-request> for <issues>\n---\nCheck the PR for bugs."
-    },
-    {
-      "id": "AS-010",
-      "name": "Missing Trigger Phrase",
-      "severity": "MEDIUM",
-      "category": "agent-skills",
-      "evidence": {
-        "source_type": "community",
-        "source_urls": [
-          "https://github.com/anthropics/claude-code/tree/main/.claude/commands",
-          "https://platform.claude.com/docs"
-        ],
-        "verified_on": "2026-02-09",
-        "applies_to": {
-          "tool": "claude-code"
-        },
-        "normative_level": "SHOULD",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": true,
-        "fix_safety": "unsafe"
-      },
-      "good_example": "---\nname: gen-docs\ndescription: Use when generating API documentation from source\n---\nRun typedoc on the project.",
-      "bad_example": "---\nname: gen-docs\ndescription: Generates API documentation from source\n---\nRun typedoc on the project."
     },
     {
       "id": "AS-011",
@@ -665,18 +609,18 @@
     {
       "id": "AS-013",
       "name": "File Reference Too Deep",
-      "severity": "HIGH",
+      "severity": "MEDIUM",
       "category": "agent-skills",
       "evidence": {
         "source_type": "spec",
         "source_urls": [
           "https://agentskills.io/specification"
         ],
-        "verified_on": "2026-02-04",
+        "verified_on": "2026-05-24",
         "applies_to": {
           "spec_revision": "1.0"
         },
-        "normative_level": "MUST",
+        "normative_level": "SHOULD",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -688,34 +632,6 @@
       },
       "good_example": "---\nname: read-config\ndescription: Use when reading project configuration\n---\nSee references/config.md for details.",
       "bad_example": "---\nname: read-config\ndescription: Use when reading project configuration\n---\nSee references/deep/nested/config.md for details."
-    },
-    {
-      "id": "AS-014",
-      "name": "Windows Path Separator",
-      "severity": "HIGH",
-      "category": "agent-skills",
-      "evidence": {
-        "source_type": "spec",
-        "source_urls": [
-          "https://agentskills.io/specification"
-        ],
-        "verified_on": "2026-02-04",
-        "applies_to": {
-          "spec_revision": "1.0"
-        },
-        "normative_level": "MUST",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": true,
-        "fix_safety": "safe"
-      },
-      "good_example": "---\nname: check-paths\ndescription: Use when validating file paths\n---\nCheck src/utils/helper.ts for the implementation.",
-      "bad_example": "---\nname: check-paths\ndescription: Use when validating file paths\n---\nCheck src\\utils\\helper.ts for the implementation."
     },
     {
       "id": "AS-015",
@@ -797,60 +713,6 @@
       },
       "good_example": "---\nname: code-review\ndescription: Use when reviewing pull requests\n---\nReview changed files and report findings.",
       "bad_example": "---\nname: deploy-helper\ndescription: Use when validating deployment checks\n---\nThis file is stored in code-review/SKILL.md."
-    },
-    {
-      "id": "AS-018",
-      "name": "Description Uses First or Second Person",
-      "severity": "MEDIUM",
-      "category": "agent-skills",
-      "evidence": {
-        "source_type": "spec",
-        "source_urls": [
-          "https://agentskills.io/specification"
-        ],
-        "verified_on": "2026-02-14",
-        "applies_to": {
-          "spec_revision": "1.0"
-        },
-        "normative_level": "SHOULD",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": false
-      },
-      "good_example": "---\nname: code-review\ndescription: Use when reviewing pull requests for defects\n---\nReview code and summarize critical findings.",
-      "bad_example": "---\nname: code-review\ndescription: You can use this skill when reviewing pull requests\n---\nReview code and summarize critical findings."
-    },
-    {
-      "id": "AS-019",
-      "name": "Vague Skill Name",
-      "severity": "MEDIUM",
-      "category": "agent-skills",
-      "evidence": {
-        "source_type": "spec",
-        "source_urls": [
-          "https://agentskills.io/specification"
-        ],
-        "verified_on": "2026-02-14",
-        "applies_to": {
-          "spec_revision": "1.0"
-        },
-        "normative_level": "SHOULD",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": false
-      },
-      "good_example": "---\nname: postgres-query-planner\ndescription: Use when optimizing PostgreSQL queries\n---\nAnalyze query plans and suggest improvements.",
-      "bad_example": "---\nname: helper\ndescription: Use when handling tasks\n---\nExecute helper routines."
     },
     {
       "id": "CC-AG-001",
@@ -11741,7 +11603,7 @@
   "categories": {
     "agent-skills": {
       "prefix": "AS",
-      "count": 19,
+      "count": 14,
       "description": "Agent Skills specification rules"
     },
     "claude-skills": {

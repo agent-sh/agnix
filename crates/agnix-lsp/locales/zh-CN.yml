@@ -22,19 +22,12 @@ rules:
   as_006:
     message: "名称 '%{name}' 不能包含连续连字符"
     suggestion: "将名称中的 '--' 替换为 '-'"
-  as_007:
-    message: "名称 '%{name}' 是保留名称，不能使用"
-    suggestion: "选择其他 skill 名称"
   as_008:
     message: "描述必须为1-%{max}个字符，当前为 %{len}"
     suggestion: "将描述修剪为%{max}个字符或更少"
   as_009:
     message: "描述不得包含 XML 标签"
     suggestion: "从描述中删除 XML 标签"
-  as_010:
-    message: "描述应包含 'Use when...' 触发短语"
-    suggestion: "添加 'Use when [condition]' 以帮助 Claude 理解何时调用此 skill"
-    fix: "在描述前添加 'Use when user wants to '"
   as_011:
     message: "兼容性必须为1-500个字符，当前为 %{len}"
     suggestion: "将兼容性修剪为500个字符或更少"
@@ -44,9 +37,6 @@ rules:
   as_013:
     message: "文件引用 '%{path}' 深度超过一级"
     suggestion: "扁平化 references/ 目录结构"
-  as_014:
-    message: "在 '%{path}' 中检测到 Windows 路径分隔符；请使用正斜杠"
-    suggestion: "将文件路径中的 '\\\\' 替换为 '/'"
   as_015:
     message: "Skill 目录超过 8MB（%{size} 字节）"
     suggestion: "删除大型资源或将 skill 拆分为更小的部分"
@@ -56,12 +46,6 @@ rules:
   as_017:
     message: "Skill 名称 '%{name}' 必须与父目录 '%{directory}' 匹配"
     suggestion: "重命名 skill 目录或更新 name 字段以保持一致"
-  as_018:
-    message: "描述应避免使用第一人称或第二人称措辞"
-    suggestion: "将描述改写为第三人称"
-  as_019:
-    message: "Skill 名称 '%{name}' 过于笼统，不利于可靠路由"
-    suggestion: "使用能描述技能用途的具体 kebab-case 名称"
 
   # --- Claude Code Skills (skill/mod.rs) ---
   cc_sk_001:

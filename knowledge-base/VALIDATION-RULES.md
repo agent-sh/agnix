@@ -137,13 +137,6 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Fix**: Replace `--` with `-`
 **Source**: agentskills.io/specification
 
-<a id="as-007"></a>
-### AS-007 [HIGH] Reserved Name
-**Requirement**: name MUST NOT be a reserved word (anthropic, claude, skill). **Claude/platform-specific** - not in the agentskills.io spec, so scoped to Claude Code (and unscoped) skills, suppressed for known non-Claude clients.
-**Detection**: skill client allows Claude rules AND the lowercased name is in `["anthropic", "claude", "skill"]` (case-insensitive)
-**Fix**: Suggest alternative name
-**Source**: platform.claude.com/docs (Claude-specific; absent from agentskills.io)
-
 <a id="as-008"></a>
 ### AS-008 [HIGH] Description Too Short
 **Requirement**: description MUST be 1-1024 characters (agentskills.io baseline, matched by Codex/OpenCode/Kiro). **Claude Code skills**: 1-1536 (Claude truncates at 1536), resolved per owning client.
@@ -157,13 +150,6 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Detection**: skill client is Codex AND `description` contains any `<` or `>` (matches Codex's `if "<" in description or ">" in description`)
 **Fix**: [AUTO-FIX] Strip all `<` and `>` characters
 **Source**: openai/codex codex-rs/skills/.../quick_validate.py
-
-<a id="as-010"></a>
-### AS-010 [MEDIUM] Missing Trigger Phrase
-**Requirement**: description SHOULD include a "Use when" trigger. **Claude Code authoring guideline** - agentskills.io endorses the intent ("describe when to use it") but not the literal phrase, so scoped to Claude Code (and unscoped) skills.
-**Detection**: skill client allows Claude rules AND `!description.to_lowercase().contains("use when")`
-**Fix**: [AUTO-FIX] Prepend "Use when user wants to " to description
-**Source**: code.claude.com/docs/en/skills (Claude authoring guideline)
 
 <a id="as-011"></a>
 ### AS-011 [HIGH] Compatibility Too Long
@@ -180,17 +166,10 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Source**: agentskills.io/specification (progressive disclosure)
 
 <a id="as-013"></a>
-### AS-013 [HIGH] File Reference Too Deep
-**Requirement**: File references MUST be one level deep
+### AS-013 [MEDIUM] File Reference Too Deep
+**Requirement**: File references SHOULD be one level deep ("Keep file references one level deep from `SKILL.md`") - a SHOULD-level agentskills.io guideline, emitted as a warning.
 **Detection**: Check references like `references/guide.md` vs `refs/deep/nested/file.md`
 **Fix**: Flatten directory structure
-**Source**: agentskills.io/specification
-
-<a id="as-014"></a>
-### AS-014 [HIGH] Windows Path Separator
-**Requirement**: Paths MUST use forward slashes, even on Windows
-**Detection**: Path-shaped body tokens containing `\`, excluding standalone regex escapes and non-path prose
-**Fix**: Replace `\\` with `/`
 **Source**: agentskills.io/specification
 
 <a id="as-015"></a>
@@ -213,22 +192,6 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Detection**: name field does not match directory containing SKILL.md
 **Fix**: Manual fix required - rename directory or update name field
 **Source**: agentskills.io/specification
-
-<a id="as-018"></a>
-### AS-018 [MEDIUM] Description Uses First or Second Person
-**Requirement**: Description SHOULD NOT use first or second person pronouns
-**Detection**: Description contains "I", "we", "you", "your", etc.
-**Fix**: Manual fix required - rewrite description in imperative mood
-**Source**: agentskills.io/specification
-
-<a id="as-019"></a>
-### AS-019 [MEDIUM] Vague Skill Name
-**Requirement**: Skill name SHOULD be descriptive and specific
-**Detection**: Name contains vague terms like "helper", "utility", "handler"
-**Fix**: Manual fix required - use more descriptive name
-**Source**: agentskills.io/specification
-
----
 
 ## CLAUDE CODE RULES (SKILLS)
 
@@ -3405,7 +3368,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 | Category | Total Rules | HIGH | MEDIUM | LOW | Auto-Fixable |
 |----------|-------------|------|--------|-----|--------------|
-| Agent Skills | 19 | 15 | 4 | 0 | 9 |
+| Agent Skills | 14 | 12 | 2 | 0 | 7 |
 | AGENTS.md | 6 | 1 | 5 | 0 | 1 |
 | Amp Checks | 4 | 2 | 2 | 0 | 3 |
 | Amp Skills | 1 | 0 | 1 | 0 | 1 |
@@ -3445,7 +3408,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **425** | **216** | **181** | **28** | **129** |
+| **TOTAL** | **420** | **213** | **179** | **28** | **127** |
 
 
 ---
@@ -3475,8 +3438,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 425 validation rules across 40 categories
+**Total Coverage**: 420 validation rules across 40 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 216 HIGH, 181 MEDIUM, 28 LOW
-**Auto-Fixable**: 129 rules (30%)
+**Certainty**: 213 HIGH, 179 MEDIUM, 28 LOW
+**Auto-Fixable**: 127 rules (30%)

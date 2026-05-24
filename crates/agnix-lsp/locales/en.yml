@@ -22,19 +22,12 @@ rules:
   as_006:
     message: "Name '%{name}' cannot contain consecutive hyphens"
     suggestion: "Replace '--' with '-' in the name"
-  as_007:
-    message: "Name '%{name}' is reserved and cannot be used"
-    suggestion: "Choose a different skill name"
   as_008:
     message: "Description must be 1-%{max} characters, got %{len}"
     suggestion: "Trim the description to %{max} characters or fewer"
   as_009:
     message: "Description must not contain XML tags"
     suggestion: "Remove XML tags from the description"
-  as_010:
-    message: "Description should include a 'Use when...' trigger phrase"
-    suggestion: "Add 'Use when [condition]' to help Claude understand when to invoke this skill"
-    fix: "Prepend 'Use when user wants to ' to description"
   as_011:
     message: "Compatibility must be 1-500 characters, got %{len}"
     suggestion: "Trim compatibility to 500 characters or fewer"
@@ -44,9 +37,6 @@ rules:
   as_013:
     message: "File reference '%{path}' is deeper than one level"
     suggestion: "Flatten the references/ directory structure"
-  as_014:
-    message: "Windows path separator detected in '%{path}'; use forward slashes"
-    suggestion: "Replace '\\\\' with '/' in file paths"
   as_015:
     message: "Skill directory exceeds 8MB (%{size} bytes)"
     suggestion: "Remove large assets or split the skill into smaller parts"
@@ -56,12 +46,6 @@ rules:
   as_017:
     message: "Skill name '%{name}' must match parent directory '%{directory}'"
     suggestion: "Rename the skill directory or update the name field so they match"
-  as_018:
-    message: "Description should avoid first/second person phrasing"
-    suggestion: "Rewrite the description in third person (for example: 'Use when reviewing code quality')"
-  as_019:
-    message: "Skill name '%{name}' is too vague for reliable routing"
-    suggestion: "Use a specific kebab-case name that describes the skill purpose"
 
   # --- Claude Code Skills (skill/mod.rs) ---
   cc_sk_001:
