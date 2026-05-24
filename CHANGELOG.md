@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.28.1] - 2026-05-24
+
 ### Changed
 - **Codex config allow-list audited against the upstream schema** (closes #969). Audited the Codex top-level allow-list against `codex-rs/core/config.schema.json` (rust-v0.129.0 through rust-v0.134.0-alpha.3); no valid upstream key was missing, so there are no new false positives.
   - Dropped three keys that appear in no audited schema and are not `[features]` sub-keys: `include_apply_patch_tool` (also removed from the feature-key list), `js_repl_node_path`, and `js_repl_node_module_dirs`.

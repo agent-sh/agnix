@@ -189,7 +189,7 @@ Format: `[CATEGORY]-[NUMBER]` (AS-004, CC-HK-001, etc.)
 
 ## Current State
 
-- v0.28.0 - Production-ready with full validation pipeline
+- v0.28.1 - Production-ready with full validation pipeline
 - 420 validation rules across 43 validators
 
 - 4200+ passing tests
