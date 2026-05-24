@@ -3703,6 +3703,37 @@ Body"#;
 }
 
 #[test]
+fn test_cc_sk_gate_respects_ambiguous_multi_tool_scope() {
+    // An explicit multi-tool scope that excludes claude-code rules Claude out,
+    // so CC-SK must not fire even though the path has no client marker (both
+    // "unscoped" and "ambiguous multi-tool" resolve to Unknown).
+    let content = r#"---
+name: test-skill
+description: Use when testing model validation
+model: not-a-real-model
+---
+Body"#;
+    let validator = SkillValidator;
+
+    let mut multi_non_claude = LintConfig::default();
+    multi_non_claude.set_tools(vec!["codex".to_string(), "cursor".to_string()]);
+    let diags = validator.validate(Path::new("test.md"), content, &multi_non_claude);
+    assert!(
+        diags.iter().all(|d| d.rule != "CC-SK-001"),
+        "CC-SK-001 must not fire when tools scope excludes claude-code"
+    );
+
+    // The same scope WITH claude-code keeps Claude rules on.
+    let mut with_claude = LintConfig::default();
+    with_claude.set_tools(vec!["claude-code".to_string(), "cursor".to_string()]);
+    let diags2 = validator.validate(Path::new("test.md"), content, &with_claude);
+    assert!(
+        diags2.iter().any(|d| d.rule == "CC-SK-001"),
+        "CC-SK-001 should fire when claude-code is in the tools scope"
+    );
+}
+
+#[test]
 fn test_cc_sk_017_known_frontmatter_field_ok() {
     let content = r#"---
 name: test-skill

@@ -5,7 +5,7 @@ use crate::{
     diagnostics::{Diagnostic, Fix},
     parsers::frontmatter::{FrontmatterParts, split_frontmatter},
     regex_util::static_regex,
-    rules::per_client_skill::{SkillClient, resolve_skill_client},
+    rules::per_client_skill::{SkillClient, claude_skill_rules_apply, resolve_skill_client},
     rules::{Validator, ValidatorMetadata},
     schemas::hooks::HooksSchema,
     schemas::skill::{SkillSchema, VALID_EFFORT_LEVELS, VALID_SHELLS, is_valid_skill_model},
@@ -1743,7 +1743,7 @@ impl Validator for SkillValidator {
         // Run before serde parsing since string booleans cause parse failures
         if ctx.parts.has_frontmatter
             && ctx.parts.has_closing
-            && ctx.client.applies_claude_skill_rules()
+            && claude_skill_rules_apply(ctx.client, ctx.config)
         {
             ctx.validate_cc_boolean_types();
         }
@@ -1779,7 +1779,7 @@ impl Validator for SkillValidator {
         // for unscoped skills (Unknown client), but are suppressed for skills
         // owned by another known tool (Codex/OpenCode/…), which are covered by
         // the generic AS-* rules above and the per-client skill validator.
-        if ctx.client.applies_claude_skill_rules() {
+        if claude_skill_rules_apply(ctx.client, ctx.config) {
             // Phase 6: CC-SK-010 (hooks in frontmatter)
             ctx.validate_cc_hooks();
 
