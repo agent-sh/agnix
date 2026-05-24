@@ -132,6 +132,10 @@ pub const KNOWN_TOP_LEVEL_KEYS: &[&str] = &[
     "apps_mcp_product_sku",
     "include_collaboration_mode_instructions",
     "model_auto_compact_token_limit_scope",
+    // Unified from the former rules/codex.rs JSON/YAML allow-list (js_repl
+    // node-resolution scalars) so the TOML and JSON/YAML backends agree.
+    "js_repl_node_module_dirs",
+    "js_repl_node_path",
     // Legacy camelCase keys (backwards compat)
     "approvalMode",
     "fullAutoErrorMode",
@@ -183,6 +187,18 @@ pub const KNOWN_TABLE_KEYS: &[&str] = &[
     // enumerated).
     "desktop",
 ];
+
+/// Single source of truth for whether a Codex config top-level key is known.
+///
+/// Both backends consult this: the TOML path (`detect_unknown_keys` here) and
+/// the JSON/YAML path (`rules::codex::collect_unknown_codex_keys`). Keeping one
+/// predicate prevents the two from drifting (a key valid as TOML but flagged as
+/// JSON, or vice versa). A top-level key may be either a scalar
+/// (`KNOWN_TOP_LEVEL_KEYS`) or a `[section]` table (`KNOWN_TABLE_KEYS`).
+#[must_use]
+pub fn is_known_top_level_key(key: &str) -> bool {
+    KNOWN_TOP_LEVEL_KEYS.contains(&key) || KNOWN_TABLE_KEYS.contains(&key)
+}
 
 /// An unknown key found in config
 #[derive(Debug, Clone)]
@@ -396,9 +412,7 @@ fn detect_unknown_keys(
     // and this avoids HashSet allocation on every call.
     let mut unknown = Vec::new();
     for key in table.keys() {
-        if !KNOWN_TOP_LEVEL_KEYS.contains(&key.as_str())
-            && !KNOWN_TABLE_KEYS.contains(&key.as_str())
-        {
+        if !is_known_top_level_key(key.as_str()) {
             unknown.push(UnknownKey {
                 key: key.clone(),
                 line: find_toml_key_line(content, key).unwrap_or(1),
@@ -733,6 +747,28 @@ nested_number = 42
         assert!(
             result.unknown_keys.is_empty(),
             "0.133 top-level keys/`[desktop]` table should not be flagged, got: {:?}",
+            result
+                .unknown_keys
+                .iter()
+                .map(|u| u.key.as_str())
+                .collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn test_codex_unified_allowlist_fixes_toml_drift() {
+        // Drift fix (issue #966): before unifying the top-level allow-list, the
+        // TOML path flagged `js_repl_node_path` / `js_repl_node_module_dirs`
+        // because they lived only in the JSON/YAML list on the rules side.
+        // They are now part of KNOWN_TOP_LEVEL_KEYS, so the TOML path accepts
+        // them too.
+        let content =
+            "js_repl_node_path = \"/usr/bin/node\"\njs_repl_node_module_dirs = [\"/x\"]\n";
+        let result = parse_codex_toml(content);
+        assert!(result.parse_error.is_none());
+        assert!(
+            result.unknown_keys.is_empty(),
+            "js_repl_* keys should not be flagged on the TOML path, got: {:?}",
             result
                 .unknown_keys
                 .iter()
