@@ -177,7 +177,7 @@ cases:
 
   - file: fixtures/agents_md/no-headers/AGENTS.md
     expected: [AGM-002, XP-002, CDX-AG-006]
-    description: "No headers triggers AGM-002 and XP-002 (Codex also flags missing context: CDX-AG-006)"
+    description: "No headers trigger AGM-002 and XP-002 (Codex also flags missing context: CDX-AG-006)"
 
   - file: fixtures/agents_md/too-large/AGENTS.md
     expected: [AGM-003]
