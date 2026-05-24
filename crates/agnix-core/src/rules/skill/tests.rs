@@ -1908,25 +1908,67 @@ fn test_config_cursor_target_disables_cc_sk_rules() {
     let mut config = LintConfig::default();
     config.set_target(TargetTool::Cursor);
 
-    let content = r#"---
-name: deploy-prod
-description: Deploys to production
----
-Body"#;
+    // Over the agentskills.io 1024 baseline so the generic AS-008 control fires.
+    let long_desc = "a".repeat(1100);
+    let content = format!("---\nname: deploy-prod\ndescription: {long_desc}\n---\nBody");
 
     let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("test.md"), content, &config);
+    let diagnostics = validator.validate(Path::new("test.md"), &content, &config);
 
-    // CC-SK-006 should not fire for Cursor target
-    let cc_sk_006: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-SK-006")
-        .collect();
-    assert_eq!(cc_sk_006.len(), 0);
+    // CC-SK rules (Claude-specific) do not fire for a Cursor target.
+    assert_eq!(
+        diagnostics.iter().filter(|d| d.rule == "CC-SK-006").count(),
+        0
+    );
+    // AS-010 (the "Use when..." trigger phrase) is a Claude authoring guideline,
+    // not agentskills.io - also suppressed for a Cursor target.
+    assert_eq!(diagnostics.iter().filter(|d| d.rule == "AS-010").count(), 0);
+    // A genuine agentskills.io rule (AS-008 length, 1024 baseline) still fires.
+    assert_eq!(diagnostics.iter().filter(|d| d.rule == "AS-008").count(), 1);
+}
 
-    // But AS-010 should still fire (it's not CC- prefix)
-    let as_010: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-010").collect();
-    assert_eq!(as_010.len(), 1);
+#[test]
+fn test_claude_specific_as_rules_suppressed_for_known_non_claude() {
+    // AS-007 (reserved name), AS-010 (trigger phrase), AS-015 (8 MB upload)
+    // are Claude/platform-specific, not agentskills.io - suppressed for a skill
+    // owned by another known tool (Codex). AS-012 (500-line body) IS in the
+    // agentskills.io spec, so it stays universal (not asserted here).
+    let content = r#"---
+name: claude
+description: Deploys things
+---
+Body"#;
+    let validator = SkillValidator;
+
+    // Codex skill: AS-007 (name "claude" is reserved) and AS-010 (no "use when")
+    // must NOT fire.
+    let codex = validator.validate(
+        Path::new(".agents/skills/claude/SKILL.md"),
+        content,
+        &LintConfig::default(),
+    );
+    assert!(
+        codex
+            .iter()
+            .all(|d| d.rule != "AS-007" && d.rule != "AS-010"),
+        "AS-007/AS-010 must not fire on a Codex skill, got: {:?}",
+        codex
+            .iter()
+            .filter(|d| d.rule == "AS-007" || d.rule == "AS-010")
+            .map(|d| d.rule.as_str())
+            .collect::<Vec<_>>()
+    );
+
+    // Unscoped: AS-007 fires (name "claude" reserved) - can't rule out Claude.
+    let generic = validator.validate(
+        Path::new("claude/SKILL.md"),
+        content,
+        &LintConfig::default(),
+    );
+    assert!(
+        generic.iter().any(|d| d.rule == "AS-007"),
+        "AS-007 should fire for an unscoped skill named 'claude'"
+    );
 }
 
 #[test]

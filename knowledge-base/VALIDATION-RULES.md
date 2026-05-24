@@ -139,10 +139,10 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 
 <a id="as-007"></a>
 ### AS-007 [HIGH] Reserved Name
-**Requirement**: name MUST NOT be reserved word (anthropic, claude)
-**Detection**: `["anthropic", "claude", "skill"].contains(name.as_str())`
+**Requirement**: name MUST NOT be a reserved word (anthropic, claude, skill). **Claude/platform-specific** - not in the agentskills.io spec, so scoped to Claude Code (and unscoped) skills, suppressed for known non-Claude clients.
+**Detection**: skill client allows Claude rules AND `["anthropic", "claude", "skill"].contains(name)`
 **Fix**: Suggest alternative name
-**Source**: platform.claude.com/docs
+**Source**: platform.claude.com/docs (Claude-specific; absent from agentskills.io)
 
 <a id="as-008"></a>
 ### AS-008 [HIGH] Description Too Short
@@ -160,10 +160,10 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 
 <a id="as-010"></a>
 ### AS-010 [MEDIUM] Missing Trigger Phrase
-**Requirement**: description SHOULD include "Use when" trigger
-**Detection**: `!description.to_lowercase().contains("use when")`
+**Requirement**: description SHOULD include a "Use when" trigger. **Claude Code authoring guideline** - agentskills.io endorses the intent ("describe when to use it") but not the literal phrase, so scoped to Claude Code (and unscoped) skills.
+**Detection**: skill client allows Claude rules AND `!description.to_lowercase().contains("use when")`
 **Fix**: [AUTO-FIX] Prepend "Use when user wants to " to description
-**Source**: agentsys/enhance-skills, platform.claude.com/docs
+**Source**: code.claude.com/docs/en/skills (Claude authoring guideline)
 
 <a id="as-011"></a>
 ### AS-011 [HIGH] Compatibility Too Long
@@ -174,10 +174,10 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 
 <a id="as-012"></a>
 ### AS-012 [MEDIUM] Content Exceeds 500 Lines
-**Requirement**: SKILL.md SHOULD be under 500 lines
+**Requirement**: SKILL.md SHOULD be under 500 lines. **Generic agentskills.io rule** ("Keep your main `SKILL.md` under 500 lines") - applies to all clients, not Claude-specific.
 **Detection**: `body.lines().count() > 500`
 **Fix**: Suggest moving to references/
-**Source**: platform.claude.com/docs, agentskills.io
+**Source**: agentskills.io/specification (progressive disclosure)
 
 <a id="as-013"></a>
 ### AS-013 [HIGH] File Reference Too Deep
@@ -195,10 +195,10 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 
 <a id="as-015"></a>
 ### AS-015 [HIGH] Upload Size Exceeds 8MB
-**Requirement**: Skill directory MUST be under 8MB total
-**Detection**: `directory_size > 8 * 1024 * 1024`
+**Requirement**: Skill directory MUST be under 8MB total. **claude.ai upload-platform limit** - not in the agentskills.io spec (which uses token, not byte, budgets), so scoped to Claude Code (and unscoped) skills.
+**Detection**: skill client allows Claude rules AND `directory_size > 8 * 1024 * 1024`
 **Fix**: Remove large assets or split skill
-**Source**: platform.claude.com/docs
+**Source**: claude.ai upload limit (Claude-specific)
 
 <a id="as-016"></a>
 ### AS-016 [HIGH] Skill Parse Error
