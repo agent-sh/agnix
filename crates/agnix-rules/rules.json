@@ -1,8 +1,8 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 423,
-  "last_updated": "2026-05-13",
+  "total_rules": 425,
+  "last_updated": "2026-05-24",
   "schema": {
     "evidence": {
       "source_type": "spec|vendor_docs|vendor_code|paper|community",
@@ -5402,6 +5402,64 @@
       },
       "good_example": "[agents]\nmax_threads = 4\n\n[features]\n# multi_agent_v2 omitted or false",
       "bad_example": "[agents]\nmax_threads = 4\n\n[features]\nmulti_agent_v2 = true"
+    },
+    {
+      "id": "CDX-REQ-000",
+      "name": "Codex requirements.toml TOML Parse Error",
+      "severity": "HIGH",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/openai/codex/blob/rust-v0.133.0/codex-rs/config/src/config_requirements.rs",
+          "https://github.com/openai/codex/blob/rust-v0.133.0/codex-rs/config/src/loader/mod.rs"
+        ],
+        "verified_on": "2026-05-24",
+        "applies_to": {
+          "tool": "codex",
+          "version_range": ">=0.133.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "allow_managed_hooks_only = true",
+      "bad_example": "allowed_sandbox_modes = [unclosed"
+    },
+    {
+      "id": "CDX-REQ-001",
+      "name": "Unknown Codex requirements.toml Key",
+      "severity": "MEDIUM",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/openai/codex/blob/rust-v0.133.0/codex-rs/config/src/config_requirements.rs",
+          "https://github.com/openai/codex/blob/rust-v0.133.0/docs/config.md"
+        ],
+        "verified_on": "2026-05-24",
+        "applies_to": {
+          "tool": "codex",
+          "version_range": ">=0.133.0"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "allowed_sandbox_modes = [\"read-only\"]",
+      "bad_example": "allowed_sandbox_mode = [\"read-only\"]"
     },
     {
       "id": "CL-SK-001",
@@ -11754,7 +11812,7 @@
     },
     "codex": {
       "prefix": "CDX",
-      "count": 60,
+      "count": 62,
       "description": "Codex CLI configuration validation"
     },
     "roo-code": {

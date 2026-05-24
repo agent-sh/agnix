@@ -9,6 +9,7 @@ pub mod claude_settings;
 pub mod cline;
 pub mod codex;
 pub mod codex_plugin;
+pub mod codex_requirements;
 pub mod copilot;
 pub mod cross_platform;
 pub mod cursor;

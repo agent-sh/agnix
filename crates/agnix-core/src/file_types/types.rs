@@ -72,6 +72,9 @@ pub enum FileType {
     CodexConfig,
     /// Codex CLI plugin manifest (.codex-plugin/plugin.json)
     CodexPlugin,
+    /// Codex CLI managed requirements (system `codex/requirements.toml` -
+    /// `/etc/codex/` on Unix, `%ProgramData%\OpenAI\Codex\` on Windows)
+    CodexRequirements,
     /// Roo Code rules files (.roorules, .roo/rules/*.md)
     RooRules,
     /// Roo Code custom modes configuration (.roomodes)
@@ -163,6 +166,7 @@ impl fmt::Display for FileType {
             FileType::GeminiIgnore => "GeminiIgnore",
             FileType::CodexConfig => "CodexConfig",
             FileType::CodexPlugin => "CodexPlugin",
+            FileType::CodexRequirements => "CodexRequirements",
             FileType::RooRules => "RooRules",
             FileType::RooModes => "RooModes",
             FileType::RooIgnore => "RooIgnore",
@@ -221,6 +225,7 @@ mod tests {
             (FileType::GeminiIgnore, "GeminiIgnore"),
             (FileType::CodexConfig, "CodexConfig"),
             (FileType::CodexPlugin, "CodexPlugin"),
+            (FileType::CodexRequirements, "CodexRequirements"),
             (FileType::RooRules, "RooRules"),
             (FileType::RooModes, "RooModes"),
             (FileType::RooIgnore, "RooIgnore"),
@@ -278,6 +283,7 @@ mod tests {
             FileType::GeminiIgnore,
             FileType::CodexConfig,
             FileType::CodexPlugin,
+            FileType::CodexRequirements,
             FileType::RooRules,
             FileType::RooModes,
             FileType::RooIgnore,
@@ -349,6 +355,7 @@ mod tests {
             FileType::GeminiIgnore,
             FileType::CodexConfig,
             FileType::CodexPlugin,
+            FileType::CodexRequirements,
             FileType::RooRules,
             FileType::RooModes,
             FileType::RooIgnore,

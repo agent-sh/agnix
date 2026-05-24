@@ -287,6 +287,7 @@ fn file_type_enum_covers_all_variants() {
         agnix_core::FileType::GeminiIgnore,
         agnix_core::FileType::CodexConfig,
         agnix_core::FileType::CodexPlugin,
+        agnix_core::FileType::CodexRequirements,
         agnix_core::FileType::RooRules,
         agnix_core::FileType::RooModes,
         agnix_core::FileType::RooIgnore,
@@ -308,7 +309,7 @@ fn file_type_enum_covers_all_variants() {
 
     assert_eq!(
         variants.len(),
-        46,
+        47,
         "A new FileType variant may have been added or removed. Please update this test's variant list and the match statement below."
     );
 
@@ -343,6 +344,7 @@ fn file_type_enum_covers_all_variants() {
             agnix_core::FileType::GeminiIgnore => {}
             agnix_core::FileType::CodexConfig => {}
             agnix_core::FileType::CodexPlugin => {}
+            agnix_core::FileType::CodexRequirements => {}
             agnix_core::FileType::RooRules => {}
             agnix_core::FileType::RooModes => {}
             agnix_core::FileType::RooIgnore => {}
