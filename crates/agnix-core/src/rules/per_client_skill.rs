@@ -4,7 +4,7 @@
 //! client directory they reside in. For example, a skill in `.cursor/skills/`
 //! should not use fields that Cursor does not support.
 
-use crate::config::PerFileLintConfig;
+use crate::config::{LintConfig, PerFileLintConfig, TargetTool};
 use crate::diagnostics::{Diagnostic, Fix};
 use crate::parsers::frontmatter::split_frontmatter;
 use crate::rules::{Validator, ValidatorMetadata};
@@ -17,7 +17,7 @@ use std::path::Path;
 /// but `.agents/` paths are mapped to `Codex` since both clients share that directory.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[allow(dead_code)]
-enum SkillClient {
+pub(crate) enum SkillClient {
     ClaudeCode,
     Cursor,
     Cline,
@@ -61,7 +61,7 @@ fn is_field_supported(client: SkillClient, field: &str) -> bool {
 ///
 /// Iterates path components looking for the `skills` directory name, then
 /// checks the parent component for a known client directory marker.
-fn detect_client(path: &Path) -> SkillClient {
+pub(crate) fn detect_client(path: &Path) -> SkillClient {
     let components: Vec<&str> = path
         .components()
         .filter_map(|c| c.as_os_str().to_str())
@@ -91,6 +91,57 @@ fn detect_client(path: &Path) -> SkillClient {
     }
 
     SkillClient::Unknown
+}
+
+/// Map a `tools = [...]` entry (or `--tools` value) to a [`SkillClient`].
+fn skill_client_from_tool_str(tool: &str) -> Option<SkillClient> {
+    Some(match tool {
+        "claude-code" => SkillClient::ClaudeCode,
+        "codex" => SkillClient::Codex,
+        "opencode" => SkillClient::OpenCode,
+        "kiro" => SkillClient::Kiro,
+        "cursor" => SkillClient::Cursor,
+        "cline" => SkillClient::Cline,
+        "copilot" | "github-copilot" => SkillClient::Copilot,
+        "windsurf" => SkillClient::Windsurf,
+        "amp" => SkillClient::Amp,
+        "roo-code" => SkillClient::RooCode,
+        _ => return None,
+    })
+}
+
+/// Resolve a skill's owning client from its path, falling back to the
+/// configured target when the path carries no client marker (e.g. a bare
+/// `skills/foo/SKILL.md` validated with `tools = ["claude-code"]`).
+///
+/// Returns [`SkillClient::Unknown`] when neither the path nor an unambiguous
+/// config target identifies a client - in that case the generic agentskills.io
+/// baseline applies. A `tools` array naming more than one distinct client is
+/// treated as ambiguous (falls through to `target`, then `Unknown`).
+pub(crate) fn resolve_skill_client(path: &Path, config: &LintConfig) -> SkillClient {
+    let by_path = detect_client(path);
+    if by_path != SkillClient::Unknown {
+        return by_path;
+    }
+
+    let mut from_tools = config
+        .tools()
+        .iter()
+        .filter_map(|t| skill_client_from_tool_str(t));
+    if let Some(first) = from_tools.next() {
+        if from_tools.all(|c| c == first) {
+            return first;
+        }
+        return SkillClient::Unknown; // ambiguous multi-tool scope
+    }
+
+    match config.target() {
+        TargetTool::ClaudeCode => SkillClient::ClaudeCode,
+        TargetTool::Codex => SkillClient::Codex,
+        TargetTool::Cursor => SkillClient::Cursor,
+        TargetTool::Kiro => SkillClient::Kiro,
+        TargetTool::Generic => SkillClient::Unknown,
+    }
 }
 
 /// Return the rule ID for a per-client unsupported-field warning.

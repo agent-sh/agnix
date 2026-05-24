@@ -24,7 +24,7 @@ This section contains all `425` validation rules generated from `knowledge-base/
 | [AS-006](./generated/as-006.md) | Consecutive Hyphens in Name | HIGH | Agent Skills | Yes (safe) |
 | [AS-007](./generated/as-007.md) | Reserved Name | HIGH | Agent Skills | No |
 | [AS-008](./generated/as-008.md) | Description Too Short | HIGH | Agent Skills | No |
-| [AS-009](./generated/as-009.md) | Description Contains XML | HIGH | Agent Skills | Yes (safe) |
+| [AS-009](./generated/as-009.md) | Description Contains Angle Brackets (Codex) | HIGH | Agent Skills | Yes (safe) |
 | [AS-010](./generated/as-010.md) | Missing Trigger Phrase | MEDIUM | Agent Skills | Yes (unsafe) |
 | [AS-011](./generated/as-011.md) | Compatibility Too Long | HIGH | Agent Skills | No |
 | [AS-012](./generated/as-012.md) | Content Exceeds 500 Lines | MEDIUM | Agent Skills | No |

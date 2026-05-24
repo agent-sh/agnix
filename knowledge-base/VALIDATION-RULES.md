@@ -146,17 +146,17 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 
 <a id="as-008"></a>
 ### AS-008 [HIGH] Description Too Short
-**Requirement**: description MUST be 1-1024 characters
-**Detection**: `description.len() < 1 || description.len() > 1024`
+**Requirement**: description MUST be 1-1024 characters (agentskills.io baseline, matched by Codex/OpenCode/Kiro). **Claude Code skills**: 1-1536 (Claude truncates at 1536), resolved per owning client.
+**Detection**: `description.len() < 1 || description.len() > max` where `max` is 1536 for Claude Code skills, 1024 otherwise
 **Fix**: Add minimal description or truncate
-**Source**: agentskills.io/specification
+**Source**: agentskills.io/specification (Claude exception: code.claude.com/docs/en/skills)
 
 <a id="as-009"></a>
-### AS-009 [HIGH] Description Contains XML
-**Requirement**: description MUST NOT contain XML tags
-**Detection**: `Regex::new(r"<[^>]+>").is_match(description)`
-**Fix**: [AUTO-FIX] Remove XML tags
-**Source**: platform.claude.com/docs
+### AS-009 [HIGH] Description Contains Angle Brackets (Codex)
+**Requirement**: Codex skill descriptions MUST NOT contain `<` or `>`. **Codex-only** - agentskills.io and Claude Code impose no such restriction, so this fires only for Codex skills.
+**Detection**: skill client is Codex AND `Regex::new(r"<[^>]+>").is_match(description)`
+**Fix**: [AUTO-FIX] Remove angle-bracket tags
+**Source**: openai/codex codex-rs/skills/.../quick_validate.py
 
 <a id="as-010"></a>
 ### AS-010 [MEDIUM] Missing Trigger Phrase

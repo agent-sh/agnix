@@ -26,8 +26,8 @@ rules:
     message: "Name '%{name}' is reserved and cannot be used"
     suggestion: "Choose a different skill name"
   as_008:
-    message: "Description must be 1-1024 characters, got %{len}"
-    suggestion: "Trim the description to 1024 characters or fewer"
+    message: "Description must be 1-%{max} characters, got %{len}"
+    suggestion: "Trim the description to %{max} characters or fewer"
   as_009:
     message: "Description must not contain XML tags"
     suggestion: "Remove XML tags from the description"

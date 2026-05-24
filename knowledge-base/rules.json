@@ -553,22 +553,22 @@
     },
     {
       "id": "AS-009",
-      "name": "Description Contains XML",
+      "name": "Description Contains Angle Brackets (Codex)",
       "severity": "HIGH",
       "category": "agent-skills",
       "evidence": {
-        "source_type": "vendor_docs",
+        "source_type": "vendor_code",
         "source_urls": [
-          "https://platform.claude.com/docs"
+          "https://github.com/openai/codex/blob/main/codex-rs/skills/src/assets/samples/skill-creator/scripts/quick_validate.py"
         ],
-        "verified_on": "2026-02-04",
+        "verified_on": "2026-05-24",
         "applies_to": {
-          "tool": "claude-code"
+          "tool": "codex"
         },
         "normative_level": "MUST",
         "tests": {
           "unit": true,
-          "fixtures": true,
+          "fixtures": false,
           "e2e": false
         }
       },
