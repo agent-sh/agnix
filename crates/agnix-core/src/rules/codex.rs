@@ -136,7 +136,7 @@ const VALID_WINDOWS_SANDBOX_VALUES: &[&str] = &["elevated", "unelevated"];
 // unknown-top-level-key detection. Keep it in sync with KNOWN_TOP_LEVEL_KEYS ∪ KNOWN_TABLE_KEYS
 // in schemas/codex.rs (this set represents the flat union - the JSON/YAML backends don't
 // distinguish scalar top-level keys from TOML `[section]` tables).
-// Sourced from upstream codex-rs/core/config.schema.json @ rust-v0.128.0. Alphabetized.
+// Sourced from upstream codex-rs/core/config.schema.json; last reconciled @ rust-v0.133.0. Alphabetized.
 const KNOWN_CONFIG_TOP_LEVEL_KEYS: &[&str] = &[
     "agents",
     "allow_login_shell",
