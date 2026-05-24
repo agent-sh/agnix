@@ -4,6 +4,32 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 
+/// Deserialize a tool list from either a YAML list or a comma/space-separated
+/// string (`tools: Read, Glob, Grep`). Claude Code's sub-agent docs show the
+/// string form as canonical and also accept a list, so both must parse without
+/// tripping CC-AG-007 (agent parse error).
+fn de_seq_or_delimited_string<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum SeqOrString {
+        Seq(Vec<String>),
+        Str(String),
+    }
+    let value = Option::<SeqOrString>::deserialize(deserializer)?;
+    Ok(value.map(|v| match v {
+        SeqOrString::Seq(items) => items,
+        SeqOrString::Str(s) => s
+            .split([',', ' ', '\t'])
+            .map(str::trim)
+            .filter(|token| !token.is_empty())
+            .map(String::from)
+            .collect(),
+    }))
+}
+
 /// Agent .md file frontmatter schema
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct AgentSchema {
@@ -15,12 +41,23 @@ pub struct AgentSchema {
     #[serde(default)]
     pub description: Option<String>,
 
-    /// Optional: tools list
-    #[serde(skip_serializing_if = "Option::is_none")]
+    /// Optional: tools list. Claude Code sub-agent docs accept either a
+    /// comma/space-separated string (`tools: Read, Glob, Grep`, the canonical
+    /// form shown in the docs) or a YAML list, so deserialize both.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "de_seq_or_delimited_string"
+    )]
     pub tools: Option<Vec<String>>,
 
-    /// Optional: disallowed tools
-    #[serde(skip_serializing_if = "Option::is_none", rename = "disallowedTools")]
+    /// Optional: disallowed tools (string or YAML list, like `tools`)
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        rename = "disallowedTools",
+        deserialize_with = "de_seq_or_delimited_string"
+    )]
     pub disallowed_tools: Option<Vec<String>>,
 
     /// Optional: model (CC-AG-003)

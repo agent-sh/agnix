@@ -283,11 +283,11 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 
 <a id="cc-sk-008"></a>
 ### CC-SK-008 [HIGH] Unknown Tool Name
-**Requirement**: Tool names MUST match Claude Code tools
-**Known Tools**: Bash, Read, Write, Edit, Grep, Glob, Task, WebFetch, WebSearch, AskUserQuestion, TodoRead, TodoWrite, MultiTool, NotebookEdit, EnterPlanMode, ExitPlanMode, Skill, StatusBarMessageTool, SendMessageTool, TaskOutput
-**Detection**: Check against tool list; MCP tools with lowercase `mcp__<server>__<tool>` format are accepted (case-sensitive prefix)
+**Requirement**: Tool names MUST match Claude Code tools. **Claude Code skills only** - other clients (Codex/OpenCode/…) have their own tool vocabularies, so this is scoped to the owning client.
+**Known Tools**: the current built-in set (code.claude.com/docs/en/tools, verified 2026-05-24) incl. `PowerShell`, `Agent`, `Cron*`, `Team*`, `EnterWorktree`/`ExitWorktree`, `ScheduleWakeup`, `ListMcpResourcesTool`/`ReadMcpResourceTool`, `WaitForMcpServers`, plus legacy names kept for tolerance
+**Detection**: skill client is Claude Code AND tool not in the set; MCP tools with lowercase `mcp__<server>__<tool>` format are accepted (case-sensitive prefix)
 **Fix**: Suggest closest match
-**Source**: code.claude.com/docs/en/settings
+**Source**: code.claude.com/docs/en/tools
 
 <a id="cc-sk-009"></a>
 ### CC-SK-009 [MEDIUM] Too Many Injections
@@ -347,8 +347,8 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 
 <a id="cc-sk-017"></a>
 ### CC-SK-017 [MEDIUM] Unknown Frontmatter Field
-**Requirement**: Skill frontmatter SHOULD only use recognized fields
-**Detection**: Frontmatter contains fields not in the Claude Code skill schema
+**Requirement**: Skill frontmatter SHOULD only use recognized Claude Code fields. **Claude Code skills only** - other clients' field support is checked by the per-client skill validator (CL-SK/CX-SK/OC-SK/WS-SK). Known fields include the documented `when_to_use` and `arguments` (added 2026-05-24).
+**Detection**: skill client is Claude Code AND frontmatter contains a field not in the Claude Code skill schema
 **Fix**: Manual fix required - remove unknown field or correct typo
 **Source**: code.claude.com/docs/en/skills
 
@@ -858,7 +858,7 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 
 <a id="cc-ag-007"></a>
 ### CC-AG-007 [HIGH] Agent Parse Error
-**Requirement**: Agent frontmatter MUST be valid YAML
+**Requirement**: Agent frontmatter MUST be valid YAML. `tools`/`disallowedTools` accept a comma/space-separated **string** (the canonical sub-agent form `tools: Read, Glob, Grep`) **or** a YAML list - both parse without error.
 **Detection**: YAML parse error on agent frontmatter
 **Fix**: Fix YAML syntax errors in agent frontmatter
 **Source**: code.claude.com/docs/en/sub-agents
