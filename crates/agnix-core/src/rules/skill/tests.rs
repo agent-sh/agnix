@@ -88,21 +88,6 @@ Body"#;
 }
 
 #[test]
-fn test_as_007_reserved_name() {
-    let content = r#"---
-name: claude
-description: Use when validating reserved names
----
-Body"#;
-
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
-
-    let as_007_errors: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-007").collect();
-    assert_eq!(as_007_errors.len(), 1);
-}
-
-#[test]
 fn test_as_017_name_directory_mismatch() {
     let content = r#"---
 name: deploy-skill
@@ -138,70 +123,6 @@ Body"#;
 
     let as_017_errors: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-017").collect();
     assert_eq!(as_017_errors.len(), 0);
-}
-
-#[test]
-fn test_as_018_description_first_second_person() {
-    let content = r#"---
-name: review-skill
-description: You can use this when reviewing pull requests
----
-Body"#;
-
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
-
-    let as_018_warnings: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-018").collect();
-    assert_eq!(as_018_warnings.len(), 1);
-    assert_eq!(
-        as_018_warnings[0].level,
-        crate::diagnostics::DiagnosticLevel::Warning
-    );
-}
-
-#[test]
-fn test_as_018_description_third_person_ok() {
-    let content = r#"---
-name: review-skill
-description: Use when reviewing pull requests for quality issues
----
-Body"#;
-
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
-
-    let as_018_warnings: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-018").collect();
-    assert_eq!(as_018_warnings.len(), 0);
-}
-
-#[test]
-fn test_as_019_vague_name() {
-    let content = r#"---
-name: helper
-description: Use when running helper tasks
----
-Body"#;
-
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
-
-    let as_019_warnings: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-019").collect();
-    assert_eq!(as_019_warnings.len(), 1);
-}
-
-#[test]
-fn test_as_019_specific_name_ok() {
-    let content = r#"---
-name: code-review-helper
-description: Use when reviewing code quality
----
-Body"#;
-
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
-
-    let as_019_warnings: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-019").collect();
-    assert_eq!(as_019_warnings.len(), 0);
 }
 
 #[test]
@@ -399,152 +320,6 @@ See reference/deep/guide.md for details."#;
 
     let as_013_errors: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-013").collect();
     assert_eq!(as_013_errors.len(), 1);
-}
-
-#[test]
-fn test_as_014_windows_path_separator() {
-    let content = include_str!("../../../../../tests/fixtures/skills/windows-path/SKILL.md");
-
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("SKILL.md"), content, &LintConfig::default());
-
-    let as_014_errors: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-014").collect();
-    assert_eq!(as_014_errors.len(), 1);
-}
-
-#[test]
-fn test_as_014_ignores_shell_escape_syntax() {
-    // Regression for issue #940: `'I'\''m Groot'` is the canonical shell trick
-    // for embedding a single quote inside single-quoted args, not a path.
-    let content = r#"---
-name: shell-escape
-description: Use when documenting shell escape syntax
----
-
-For single quotes in args like "I'm Groot", use escape syntax: e.g `'I'\''m Groot'`."#;
-
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("SKILL.md"), content, &LintConfig::default());
-
-    let as_014_errors: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-014").collect();
-    assert!(
-        as_014_errors.is_empty(),
-        "AS-014 should not fire on shell-escape syntax, got: {:?}",
-        as_014_errors
-    );
-}
-
-#[test]
-fn test_as_014_ignores_backtick_wrapped_backslash() {
-    // Regression for issue #940: a single backslash inside backticks
-    // (documenting the backslash character itself) is not a path.
-    let content = "---\nname: backtick-bs\ndescription: Use when documenting the backslash character\n---\n\nThe backslash character: `\\`.";
-
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("SKILL.md"), content, &LintConfig::default());
-
-    let as_014_errors: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-014").collect();
-    assert!(
-        as_014_errors.is_empty(),
-        "AS-014 should not fire on backtick-wrapped backslash, got: {:?}",
-        as_014_errors
-    );
-}
-
-#[test]
-fn test_as_014_still_fires_on_drive_letter_path() {
-    let content = "---\nname: drive\ndescription: Use when validating a windows drive path\n---\n\nOpen C:\\Users\\me\\file.txt to continue.";
-
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("SKILL.md"), content, &LintConfig::default());
-
-    let as_014_errors: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-014").collect();
-    assert!(
-        !as_014_errors.is_empty(),
-        "AS-014 should still fire on Windows drive-letter paths"
-    );
-}
-
-#[test]
-fn test_as_014_still_fires_on_plain_backslash_path() {
-    let content = "---\nname: plain-path\ndescription: Use when validating a plain windows-style relative path\n---\n\nSee foo\\bar\\baz for details.";
-
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("SKILL.md"), content, &LintConfig::default());
-
-    let as_014_errors: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-014").collect();
-    assert_eq!(
-        as_014_errors.len(),
-        1,
-        "AS-014 should fire exactly once on a plain backslash-separated path"
-    );
-}
-
-#[test]
-fn test_as_014_still_fires_on_hyphenated_regex_like_segment_path() {
-    let content = "---\nname: hyphen-path\ndescription: Use when validating a hyphenated windows-style path segment\n---\n\nSee foo\\b-bar\\baz for details.";
-
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("SKILL.md"), content, &LintConfig::default());
-
-    let as_014_errors: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-014").collect();
-    assert_eq!(
-        as_014_errors.len(),
-        1,
-        "AS-014 should fire on hyphenated path segments that start with regex metachar letters"
-    );
-}
-
-#[test]
-fn test_as_014_still_fires_on_unc_path() {
-    let content = "---\nname: unc-path\ndescription: Use when validating a UNC path\n---\n\nOpen \\\\server\\share\\file.txt to continue.";
-
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("SKILL.md"), content, &LintConfig::default());
-
-    let as_014_errors: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-014").collect();
-    assert!(
-        as_014_errors
-            .iter()
-            .any(|d| d.message.contains("\\\\server\\share\\file.txt")),
-        "AS-014 should still fire on the full Windows UNC path, got: {:?}",
-        as_014_errors
-    );
-}
-
-#[test]
-fn test_as_014_still_fires_on_non_ascii_path() {
-    let content = "---\nname: unicode-path\ndescription: Use when validating a windows path with unicode\n---\n\nOpen C:\\Users\\用户\\file.txt to continue.";
-
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("SKILL.md"), content, &LintConfig::default());
-
-    let as_014_errors: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-014").collect();
-    assert_eq!(
-        as_014_errors.len(),
-        1,
-        "AS-014 should still fire on Windows paths with non-ASCII segments"
-    );
-}
-
-#[test]
-fn test_as_014_ignores_standalone_regex_escape_syntax() {
-    let content = r#"---
-name: regex-escape
-description: Use when documenting regex escape syntax
----
-
-Regex examples: \bword\b and \d+ should stay literal."#;
-
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("SKILL.md"), content, &LintConfig::default());
-
-    let as_014_errors: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-014").collect();
-    assert!(
-        as_014_errors.is_empty(),
-        "AS-014 should not fire on standalone regex escapes, got: {:?}",
-        as_014_errors
-    );
 }
 
 #[test]
@@ -898,58 +673,6 @@ Body"#;
         as_006_errors[0].level,
         crate::diagnostics::DiagnosticLevel::Error
     );
-}
-
-#[test]
-fn test_as_010_missing_trigger() {
-    let content = r#"---
-name: code-review
-description: Reviews code for quality
----
-Body"#;
-
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
-
-    let as_010_warnings: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-010").collect();
-
-    assert_eq!(as_010_warnings.len(), 1);
-    assert_eq!(
-        as_010_warnings[0].level,
-        crate::diagnostics::DiagnosticLevel::Warning
-    );
-}
-
-#[test]
-fn test_as_010_has_use_when_trigger() {
-    let content = r#"---
-name: code-review
-description: Use when user asks for code review
----
-Body"#;
-
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
-
-    let as_010_warnings: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-010").collect();
-
-    assert_eq!(as_010_warnings.len(), 0);
-}
-
-#[test]
-fn test_as_010_use_this_not_accepted() {
-    let content = r#"---
-name: code-review
-description: Use this skill to review code
----
-Body"#;
-
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
-
-    let as_010_warnings: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-010").collect();
-
-    assert_eq!(as_010_warnings.len(), 1);
 }
 
 // ===== CC-SK-001: Invalid Model Value =====
@@ -1814,26 +1537,6 @@ Body"#;
 }
 
 #[test]
-fn test_as_010_case_insensitive() {
-    let content = r#"---
-name: test-skill
-description: USE WHEN testing
----
-Body"#;
-
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
-
-    let as_010: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-010").collect();
-
-    assert_eq!(
-        as_010.len(),
-        0,
-        "'USE WHEN' should match case-insensitively"
-    );
-}
-
-#[test]
 fn test_parse_error_handling() {
     let content = r#"---
 name: test
@@ -1870,7 +1573,7 @@ Body"#;
     let validator = SkillValidator;
     let diagnostics = validator.validate(Path::new("test.md"), content, &config);
 
-    // AS-005 and AS-010 should not fire when skills category is disabled
+    // No AS-* or CC-SK-* rules should fire when the skills category is disabled
     let skill_rules: Vec<_> = diagnostics
         .iter()
         .filter(|d| d.rule.starts_with("AS-") || d.rule.starts_with("CC-SK-"))
@@ -1896,9 +1599,9 @@ Body"#;
     let as_005: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-005").collect();
     assert_eq!(as_005.len(), 0);
 
-    // But AS-010 should still fire
-    let as_010: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-010").collect();
-    assert_eq!(as_010.len(), 1);
+    // But other rules still fire - AS-004 (invalid name format) for "-bad-name".
+    let as_004: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-004").collect();
+    assert_eq!(as_004.len(), 1);
 }
 
 #[test]
@@ -1920,55 +1623,8 @@ fn test_config_cursor_target_disables_cc_sk_rules() {
         diagnostics.iter().filter(|d| d.rule == "CC-SK-006").count(),
         0
     );
-    // AS-010 (the "Use when..." trigger phrase) is a Claude authoring guideline,
-    // not agentskills.io - also suppressed for a Cursor target.
-    assert_eq!(diagnostics.iter().filter(|d| d.rule == "AS-010").count(), 0);
     // A genuine agentskills.io rule (AS-008 length, 1024 baseline) still fires.
     assert_eq!(diagnostics.iter().filter(|d| d.rule == "AS-008").count(), 1);
-}
-
-#[test]
-fn test_claude_specific_as_rules_suppressed_for_known_non_claude() {
-    // AS-007 (reserved name), AS-010 (trigger phrase), AS-015 (8 MB upload)
-    // are Claude/platform-specific, not agentskills.io - suppressed for a skill
-    // owned by another known tool (Codex). AS-012 (500-line body) IS in the
-    // agentskills.io spec, so it stays universal (not asserted here).
-    let content = r#"---
-name: claude
-description: Deploys things
----
-Body"#;
-    let validator = SkillValidator;
-
-    // Codex skill: AS-007 (name "claude" is reserved) and AS-010 (no "use when")
-    // must NOT fire.
-    let codex = validator.validate(
-        Path::new(".agents/skills/claude/SKILL.md"),
-        content,
-        &LintConfig::default(),
-    );
-    assert!(
-        codex
-            .iter()
-            .all(|d| d.rule != "AS-007" && d.rule != "AS-010"),
-        "AS-007/AS-010 must not fire on a Codex skill, got: {:?}",
-        codex
-            .iter()
-            .filter(|d| d.rule == "AS-007" || d.rule == "AS-010")
-            .map(|d| d.rule.as_str())
-            .collect::<Vec<_>>()
-    );
-
-    // Unscoped: AS-007 fires (name "claude" reserved) - can't rule out Claude.
-    let generic = validator.validate(
-        Path::new("claude/SKILL.md"),
-        content,
-        &LintConfig::default(),
-    );
-    assert!(
-        generic.iter().any(|d| d.rule == "AS-007"),
-        "AS-007 should fire for an unscoped skill named 'claude'"
-    );
 }
 
 #[test]
@@ -2173,105 +1829,6 @@ Body"#;
     assert!(as_004[0].has_fixes());
     // Underscore to hyphen is structural change, not safe
     assert!(!as_004[0].fixes[0].safe);
-}
-
-// ===== AS-010 Auto-fix Tests =====
-
-#[test]
-fn test_as_010_has_fix() {
-    let content = r#"---
-name: code-review
-description: Reviews code for quality
----
-Body"#;
-
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
-
-    let as_010: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-010").collect();
-    assert_eq!(as_010.len(), 1);
-    assert!(as_010[0].has_fixes());
-    assert_eq!(
-        as_010[0].fixes[0].replacement,
-        "Use when user wants to Reviews code for quality"
-    );
-}
-
-#[test]
-fn test_as_010_fix_is_unsafe() {
-    let content = r#"---
-name: code-review
-description: Reviews code for quality
----
-Body"#;
-
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
-
-    let as_010: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-010").collect();
-    assert_eq!(as_010.len(), 1);
-    assert!(as_010[0].has_fixes());
-    // Semantic change is not safe
-    assert!(!as_010[0].fixes[0].safe);
-}
-
-#[test]
-fn test_as_010_fix_byte_position() {
-    let content = r#"---
-name: helper
-description: Helps with tasks
----
-Body"#;
-
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
-
-    let as_010: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-010").collect();
-    assert_eq!(as_010.len(), 1);
-    assert!(as_010[0].has_fixes());
-
-    let fix = &as_010[0].fixes[0];
-    // Apply fix and verify
-    let mut fixed = content.to_string();
-    fixed.replace_range(fix.start_byte..fix.end_byte, &fix.replacement);
-    assert!(fixed.contains("Use when user wants to Helps with tasks"));
-}
-
-#[test]
-fn test_as_010_fix_quoted_value() {
-    let content = r#"---
-name: helper
-description: "Helps with tasks"
----
-Body"#;
-
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
-
-    let as_010: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-010").collect();
-    assert_eq!(as_010.len(), 1);
-    assert!(as_010[0].has_fixes());
-
-    let fix = &as_010[0].fixes[0];
-    // Apply fix and verify
-    let mut fixed = content.to_string();
-    fixed.replace_range(fix.start_byte..fix.end_byte, &fix.replacement);
-    assert!(fixed.contains("Use when user wants to Helps with tasks"));
-}
-
-#[test]
-fn test_as_010_no_fix_when_description_too_long() {
-    // Create a description that would exceed 1024 chars when prepending trigger phrase
-    let long_desc = "a".repeat(1010);
-    let content = format!("---\nname: helper\ndescription: {}\n---\nBody", long_desc);
-
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("test.md"), &content, &LintConfig::default());
-
-    let as_010: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-010").collect();
-    assert_eq!(as_010.len(), 1);
-    // Should have no fix since prepending would exceed limit
-    assert!(!as_010[0].has_fixes());
 }
 
 // ===== frontmatter_value_byte_range Tests =====
@@ -2803,46 +2360,6 @@ Body"#;
 }
 
 #[test]
-fn test_as_007_all_reserved_names() {
-    // Reserved names hardcoded in AS-007 validation logic
-    // No constant exists for these in the codebase
-    let reserved = ["anthropic", "claude", "skill"];
-
-    for name in reserved {
-        let content = format!(
-            "---\nname: {}\ndescription: Use when testing reserved names\n---\nBody",
-            name
-        );
-
-        let validator = SkillValidator;
-        let diagnostics =
-            validator.validate(Path::new("test.md"), &content, &LintConfig::default());
-
-        let as_007: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-007").collect();
-        assert_eq!(
-            as_007.len(),
-            1,
-            "Reserved name '{}' should trigger AS-007",
-            name
-        );
-    }
-}
-
-#[test]
-fn test_as_007_non_reserved_name_ok() {
-    let content = r#"---
-name: my-custom-skill
-description: Use when testing non-reserved names
----
-Body"#;
-
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
-
-    assert!(!diagnostics.iter().any(|d| d.rule == "AS-007"));
-}
-
-#[test]
 fn test_as_011_exactly_500_chars() {
     let long_compat = "a".repeat(500);
     let content = format!(
@@ -3085,27 +2602,6 @@ Body"#;
     assert!(as_006.has_fixes());
     let fix = &as_006.fixes[0];
     assert_eq!(fix.replacement, "bad-name");
-    assert!(fix.safe);
-}
-
-#[test]
-fn test_as_014_has_safe_fix() {
-    let content = r#"---
-name: test-skill
-description: Use when testing
----
-See references\guide.md for details."#;
-
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
-    let as_014 = diagnostics
-        .iter()
-        .find(|d| d.rule == "AS-014")
-        .expect("AS-014 should be reported");
-
-    assert!(as_014.has_fixes());
-    let fix = &as_014.fixes[0];
-    assert_eq!(fix.replacement, "references/guide.md");
     assert!(fix.safe);
 }
 

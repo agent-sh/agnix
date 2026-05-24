@@ -80,11 +80,8 @@ struct PathMatch {
 static_regex!(fn name_format_regex, r"^[a-z0-9]+(-[a-z0-9]+)*$");
 static_regex!(fn consecutive_hyphen_regex, r"-{2,}");
 static_regex!(fn reference_path_regex, "(?i)\\b(?:references?|refs)[/\\\\][^\\s)\\]}>\"']+");
-static_regex!(fn windows_path_regex, r"(?i)\b(?:[a-z]:)?[a-z0-9._-]+(?:\\[a-z0-9._-]+)+\b");
-static_regex!(fn windows_path_token_regex, r"[^\s]+\\[^\s]+");
 static_regex!(fn plain_bash_regex, r"\bBash\b");
 static_regex!(fn imperative_verb_regex, r"(?i)\b(run|execute|create|build|deploy|install|configure|update|delete|remove|add|write|read|check|test|validate|ensure|make|use|call|invoke|start|stop|send|fetch|generate|implement|fix|analyze|review|search|find|move|copy|replace|push|pull|commit|clean|format|lint|parse|process|handle|prepare|download|upload|export|import|open|save|load|connect|verify|apply|enable|disable)\b");
-static_regex!(fn first_second_person_regex, r"(?i)(^\s*(?:i|you|we)\b|\b(?:i will|you can|you should|we can|we should|we will)\b)");
 static_regex!(fn indexed_arguments_regex, r"\$ARGUMENTS\[\d+\]");
 
 /// Valid model description for CC-SK-001 diagnostic messages
@@ -167,11 +164,6 @@ const KNOWN_FRONTMATTER_FIELDS: &[&str] = &[
     "effort",
     "paths",
     "shell",
-];
-
-/// Vague skill names that provide little routing signal for invocation
-const VAGUE_SKILL_NAMES: &[&str] = &[
-    "helper", "utils", "tools", "misc", "general", "common", "base", "main", "default",
 ];
 
 /// Maximum dynamic injections for CC-SK-009
@@ -439,7 +431,7 @@ impl<'a> ValidationContext<'a> {
         }
     }
 
-    /// AS-004, AS-005, AS-006, AS-007, AS-019: Validate name format and rules
+    /// AS-004, AS-005, AS-006: Validate name format and rules
     fn validate_name_rules(&mut self, name: &str) {
         let (name_line, name_col) = self.frontmatter_key_line_col("name");
         let name_trimmed = name.trim();
@@ -549,56 +541,6 @@ impl<'a> ValidationContext<'a> {
 
             self.diagnostics.push(diagnostic);
         }
-
-        // AS-007: Reserved name
-        let name_lower = if (self.config.is_rule_enabled("AS-007")
-            || self.config.is_rule_enabled("AS-019"))
-            && !name_trimmed.is_empty()
-        {
-            Some(name_trimmed.to_lowercase())
-        } else {
-            None
-        };
-
-        // AS-007 (reserved names) is Claude/platform-specific, not part of the
-        // agentskills.io spec - scope it to Claude Code (and unscoped) skills.
-        if claude_skill_rules_apply(self.client, self.config)
-            && self.config.is_rule_enabled("AS-007")
-        {
-            let reserved = ["anthropic", "claude", "skill"];
-            if let Some(name_lower) = name_lower.as_deref() {
-                if reserved.contains(&name_lower) {
-                    self.diagnostics.push(
-                        Diagnostic::error(
-                            self.path.to_path_buf(),
-                            name_line,
-                            name_col,
-                            "AS-007",
-                            t!("rules.as_007.message", name = name_trimmed),
-                        )
-                        .with_suggestion(t!("rules.as_007.suggestion")),
-                    );
-                }
-            }
-        }
-
-        // AS-019: Vague skill name
-        if self.config.is_rule_enabled("AS-019") {
-            if let Some(name_lower) = name_lower.as_deref() {
-                if VAGUE_SKILL_NAMES.contains(&name_lower) {
-                    self.diagnostics.push(
-                        Diagnostic::warning(
-                            self.path.to_path_buf(),
-                            name_line,
-                            name_col,
-                            "AS-019",
-                            t!("rules.as_019.message", name = name_trimmed),
-                        )
-                        .with_suggestion(t!("rules.as_019.suggestion")),
-                    );
-                }
-            }
-        }
     }
 
     /// AS-017: Validate frontmatter name matches parent directory
@@ -643,7 +585,7 @@ impl<'a> ValidationContext<'a> {
         );
     }
 
-    /// AS-008, AS-009, AS-010, AS-018: Validate description format and rules
+    /// AS-008, AS-009: Validate description format and rules
     fn validate_description_rules(&mut self, description: &str) {
         let (description_line, description_col) = self.frontmatter_key_line_col("description");
         let description_trimmed = description.trim();
@@ -705,66 +647,6 @@ impl<'a> ValidationContext<'a> {
             }
 
             self.diagnostics.push(diagnostic);
-        }
-
-        // AS-010 (the "Use when..." trigger phrase) is a Claude Code authoring
-        // guideline, not an agentskills.io requirement - scope to Claude skills.
-        if claude_skill_rules_apply(self.client, self.config)
-            && self.config.is_rule_enabled("AS-010")
-            && !description_trimmed.is_empty()
-        {
-            let desc_lower = description_trimmed.to_lowercase();
-            if !desc_lower.contains("use when") {
-                let mut diagnostic = Diagnostic::warning(
-                    self.path.to_path_buf(),
-                    description_line,
-                    description_col,
-                    "AS-010",
-                    t!("rules.as_010.message"),
-                )
-                .with_suggestion(t!("rules.as_010.suggestion"));
-
-                // Add auto-fix: prepend "Use when user wants to " to description
-                if let Some((start, end)) = self.frontmatter_value_byte_range("description") {
-                    let new_description = format!("Use when user wants to {}", description_trimmed);
-                    // Don't attach the fix if it would push past the AS-008 length
-                    // limit, which is per-client (1536 for Claude Code, else 1024).
-                    let max = if self.client == SkillClient::ClaudeCode {
-                        1536
-                    } else {
-                        1024
-                    };
-                    if new_description.len() <= max {
-                        let fix = Fix::replace(
-                            start,
-                            end,
-                            &new_description,
-                            t!("rules.as_010.fix"),
-                            false, // Not safe - changes semantics
-                        );
-                        diagnostic = diagnostic.with_fix(fix);
-                    }
-                }
-
-                self.diagnostics.push(diagnostic);
-            }
-        }
-
-        // AS-018: Description uses first/second person language
-        if self.config.is_rule_enabled("AS-018")
-            && !description_trimmed.is_empty()
-            && first_second_person_regex().is_match(description_trimmed)
-        {
-            self.diagnostics.push(
-                Diagnostic::warning(
-                    self.path.to_path_buf(),
-                    description_line,
-                    description_col,
-                    "AS-018",
-                    t!("rules.as_018.message"),
-                )
-                .with_suggestion(t!("rules.as_018.suggestion")),
-            );
         }
     }
 
@@ -1576,7 +1458,7 @@ impl<'a> ValidationContext<'a> {
         }
     }
 
-    /// AS-012, AS-013, AS-014: Validate body content
+    /// AS-012, AS-013: Validate body content
     fn validate_body_rules(&mut self) {
         let body_raw = if self.parts.body_start <= self.content.len() {
             &self.content[self.parts.body_start..]
@@ -1603,13 +1485,15 @@ impl<'a> ValidationContext<'a> {
         }
 
         // AS-013: File reference too deep
+        // AS-013 is a SHOULD-level agentskills.io guideline ("Keep file
+        // references one level deep") - emit a warning, not an error.
         if self.config.is_rule_enabled("AS-013") {
             let paths = extract_reference_paths(body_raw);
             for ref_path in paths {
                 if reference_path_too_deep(&ref_path.path) {
                     let (line, col) = self.line_col_at(self.parts.body_start + ref_path.start);
                     self.diagnostics.push(
-                        Diagnostic::error(
+                        Diagnostic::warning(
                             self.path.to_path_buf(),
                             line,
                             col,
@@ -1619,42 +1503,6 @@ impl<'a> ValidationContext<'a> {
                         .with_suggestion(t!("rules.as_013.suggestion")),
                     );
                 }
-            }
-        }
-
-        // AS-014: Windows path separator
-        if self.config.is_rule_enabled("AS-014") {
-            let paths = extract_windows_paths(body_raw);
-            for win_path in paths {
-                let (line, col) = self.line_col_at(self.parts.body_start + win_path.start);
-                let mut diagnostic = Diagnostic::error(
-                    self.path.to_path_buf(),
-                    line,
-                    col,
-                    "AS-014",
-                    t!("rules.as_014.message", path = win_path.path.as_str()),
-                )
-                .with_suggestion(t!("rules.as_014.suggestion"));
-
-                // Safe auto-fix: normalize path separators in-place.
-                let replacement = win_path.path.replace('\\', "/");
-                let abs_start = self.parts.body_start + win_path.start;
-                let abs_end = abs_start + win_path.path.len();
-                if replacement != win_path.path
-                    && abs_end <= self.content.len()
-                    && self.content.is_char_boundary(abs_start)
-                    && self.content.is_char_boundary(abs_end)
-                {
-                    diagnostic = diagnostic.with_fix(Fix::replace(
-                        abs_start,
-                        abs_end,
-                        replacement,
-                        "Normalize Windows path separators to '/'",
-                        true,
-                    ));
-                }
-
-                self.diagnostics.push(diagnostic);
             }
         }
     }
@@ -1696,19 +1544,14 @@ const RULE_IDS: &[&str] = &[
     "AS-004",
     "AS-005",
     "AS-006",
-    "AS-007",
     "AS-008",
     "AS-009",
-    "AS-010",
     "AS-011",
     "AS-012",
     "AS-013",
-    "AS-014",
     "AS-015",
     "AS-016",
     "AS-017",
-    "AS-018",
-    "AS-019",
     "CC-SK-001",
     "CC-SK-002",
     "CC-SK-003",
@@ -1778,13 +1621,13 @@ impl Validator for SkillValidator {
         // Phase 2: Required fields (AS-002, AS-003)
         ctx.validate_required_fields(&frontmatter);
 
-        // Phase 3: Name validation (AS-004, AS-005, AS-006, AS-007, AS-017, AS-019)
+        // Phase 3: Name validation (AS-004, AS-005, AS-006, AS-017)
         if let Some(name) = frontmatter.name.as_deref() {
             ctx.validate_name_rules(name);
             ctx.validate_name_directory_match(name);
         }
 
-        // Phase 4: Description validation (AS-008, AS-009, AS-010, AS-018)
+        // Phase 4: Description validation (AS-008, AS-009)
         if let Some(description) = frontmatter.description.as_deref() {
             ctx.validate_description_rules(description);
         }
@@ -1862,7 +1705,7 @@ impl Validator for SkillValidator {
             }
         } // end Claude Code skill rules (CC-SK-*)
 
-        // Phase 16: Body validation (AS-012, AS-013, AS-014)
+        // Phase 16: Body validation (AS-012, AS-013)
         ctx.validate_body_rules();
 
         // Phase 17: Directory validation (AS-015)

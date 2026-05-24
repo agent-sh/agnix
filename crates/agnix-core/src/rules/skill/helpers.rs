@@ -3,9 +3,7 @@ use crate::parsers::frontmatter::FrontmatterParts;
 use std::collections::HashSet;
 use std::path::Path;
 
-use super::{
-    PathMatch, SkillFrontmatter, reference_path_regex, windows_path_regex, windows_path_token_regex,
-};
+use super::{PathMatch, SkillFrontmatter, reference_path_regex};
 
 pub(super) fn parse_frontmatter_fields(
     frontmatter: &str,
@@ -23,128 +21,6 @@ pub(super) fn extract_reference_paths(body: &str) -> Vec<PathMatch> {
     for m in re.find_iter(body) {
         #[allow(clippy::collapsible_if)]
         if let Some((trimmed, delta)) = trim_path_token_with_offset(m.as_str()) {
-            if seen.insert(trimmed.clone()) {
-                paths.push(PathMatch {
-                    path: trimmed,
-                    start: m.start() + delta,
-                });
-            }
-        }
-    }
-    paths
-}
-
-/// Check if a string looks like a regex escape sequence rather than a Windows path
-pub(super) fn is_regex_escape(s: &str) -> bool {
-    // Common regex metacharacter escapes that aren't Windows paths
-    // \n \s \d \w \t \r \b \| \. \/ \$ \^ \+ \* \? \{ \} \[ \] \( \)
-    static REGEX_ESCAPE_CHARS: &[char] = &[
-        'n', 's', 'd', 'w', 't', 'r', 'b', '|', '.', '/', '$', '^', '+', '*', '?', '{', '}', '[',
-        ']', '(', ')', 'S', 'D', 'W', 'B', // PCRE-specific assertions and features
-        'K', 'A', 'Z', 'z', 'G', 'p', 'P', 'x', 'X',
-    ];
-
-    // Check if this looks like a regex pattern (contains common regex escapes)
-    let parts: Vec<&str> = s.split('\\').collect();
-    if parts.len() < 2 {
-        return false;
-    }
-
-    // If most backslash-prefixed parts are standalone regex metacharacter
-    // escapes, it's likely a regex. Do not treat longer path-like segments
-    // such as `\bar` as regex escapes merely because they start with `b`.
-    let regex_like_count = parts[1..]
-        .iter()
-        .filter(|part| is_standalone_regex_escape(part, REGEX_ESCAPE_CHARS))
-        .count();
-
-    // If more than half of the backslash sequences look like regex escapes, skip it
-    regex_like_count > 0 && regex_like_count >= (parts.len() - 1) / 2
-}
-
-fn is_standalone_regex_escape(part: &str, regex_escape_chars: &[char]) -> bool {
-    let mut chars = part.chars();
-    let Some(first) = chars.next() else {
-        return false;
-    };
-    if !regex_escape_chars.contains(&first) {
-        return false;
-    }
-    chars
-        .next()
-        .is_none_or(|next| !is_path_segment_continuation(next))
-}
-
-fn is_path_segment_continuation(c: char) -> bool {
-    c.is_ascii_alphanumeric()
-        || matches!(c, '_' | '.' | '-' | '+' | '~' | '@' | '$' | '%')
-        || (c as u32) >= 128
-}
-
-fn is_path_segment_char(b: u8) -> bool {
-    b >= 128
-        || b.is_ascii_alphanumeric()
-        || matches!(b, b'.' | b'_' | b'-' | b'+' | b'~' | b'@' | b'$' | b'%')
-}
-
-/// Check that path separators in `token` sit between path-segment characters
-/// (including alphanumeric, `.`, `_`, `-`, common filename symbols, non-ASCII
-/// bytes, or `:` immediately before the separator for Windows-style prefixes).
-/// Also accepts a leading UNC prefix such as `\\server\share`. Rejects
-/// shell-escape syntax like `'I'\''m` and backtick-wrapped backslashes like
-/// `` `\` `` where the backslash is bordered by quote characters.
-pub(super) fn is_path_shaped(token: &str) -> bool {
-    let bytes = token.as_bytes();
-    let mut has_path_separator = false;
-    let mut i = 0;
-    while i < bytes.len() {
-        if bytes[i] != b'\\' {
-            i += 1;
-            continue;
-        }
-
-        if i == 0
-            && bytes.get(1) == Some(&b'\\')
-            && bytes.get(2).is_some_and(|&c| is_path_segment_char(c))
-        {
-            i += 2;
-            continue;
-        }
-
-        let prev_ok = i > 0 && (is_path_segment_char(bytes[i - 1]) || bytes[i - 1] == b':');
-        let next_ok = bytes.get(i + 1).is_some_and(|&c| is_path_segment_char(c));
-        if !prev_ok || !next_ok {
-            return false;
-        }
-        has_path_separator = true;
-        i += 1;
-    }
-    has_path_separator
-}
-
-pub(super) fn extract_windows_paths(body: &str) -> Vec<PathMatch> {
-    let re = windows_path_regex();
-    let token_re = windows_path_token_regex();
-    let mut paths = Vec::new();
-    let mut seen = HashSet::new();
-    for m in re.find_iter(body) {
-        if let Some((trimmed, delta)) = trim_path_token_with_offset(m.as_str()) {
-            if is_regex_escape(&trimmed) || !is_path_shaped(&trimmed) {
-                continue;
-            }
-            if seen.insert(trimmed.clone()) {
-                paths.push(PathMatch {
-                    path: trimmed,
-                    start: m.start() + delta,
-                });
-            }
-        }
-    }
-    for m in token_re.find_iter(body) {
-        if let Some((trimmed, delta)) = trim_path_token_with_offset(m.as_str()) {
-            if is_regex_escape(&trimmed) || !is_path_shaped(&trimmed) {
-                continue;
-            }
             if seen.insert(trimmed.clone()) {
                 paths.push(PathMatch {
                     path: trimmed,

@@ -437,10 +437,10 @@ fn test_format_json_strict_mode_with_warnings() {
 
     let skill_path = skills_dir.join("SKILL.md");
     let mut file = fs::File::create(&skill_path).unwrap();
-    // Valid skill name but missing trigger phrase (AS-010 warning)
+    // Valid skill, but a too-deep file reference triggers AS-013 (warning).
     writeln!(
         file,
-        "---\nname: test-skill-name\ndescription: A test skill for validation\n---\nThis skill does something."
+        "---\nname: test-skill-name\ndescription: A test skill for validation\n---\nSee references/deep/nested/guide.md for details."
     )
     .unwrap();
 
@@ -459,7 +459,7 @@ fn test_format_json_strict_mode_with_warnings() {
     let errors = json["summary"]["errors"].as_u64().unwrap();
 
     assert_eq!(errors, 0, "Should have no errors");
-    assert!(warnings > 0, "Should have at least one warning (AS-010)");
+    assert!(warnings > 0, "Should have at least one warning (AS-013)");
     assert!(
         output.status.success(),
         "Without --strict, warnings should not cause failure"
@@ -1004,10 +1004,10 @@ fn test_format_text_shows_warning_level() {
 
     let skill_path = skills_dir.join("SKILL.md");
     let mut file = fs::File::create(&skill_path).unwrap();
-    // Valid skill name but missing trigger phrase (AS-010 warning)
+    // Valid skill, but a too-deep file reference triggers AS-013 (warning).
     writeln!(
         file,
-        "---\nname: test-skill-name\ndescription: A test skill\n---\nContent"
+        "---\nname: test-skill-name\ndescription: A test skill\n---\nSee references/deep/nested/guide.md"
     )
     .unwrap();
 
@@ -1302,10 +1302,10 @@ fn test_strict_with_sarif_format() {
 
     let skill_path = skills_dir.join("SKILL.md");
     let mut file = fs::File::create(&skill_path).unwrap();
-    // Valid skill name but missing trigger phrase (AS-010 warning)
+    // Valid skill, but a too-deep file reference triggers AS-013 (warning).
     writeln!(
         file,
-        "---\nname: test-skill\ndescription: A test skill\n---\nContent"
+        "---\nname: test-skill\ndescription: A test skill\n---\nSee references/deep/nested/guide.md"
     )
     .unwrap();
 
@@ -1364,8 +1364,8 @@ fn test_target_cursor_disables_cc_rules() {
     let skill_path = skills_dir.join("SKILL.md");
     let mut file = fs::File::create(&skill_path).unwrap();
     // Over the 1024 baseline so AS-008 (a generic agentskills.io rule) fires as
-    // the non-CC control. (AS-010, previously the control here, is now scoped to
-    // Claude and is suppressed for a non-Claude target.)
+    // the non-CC control - confirming generic AS-* rules still run for a
+    // non-Claude target while CC-SK-* are suppressed.
     let long_desc = "a".repeat(1100);
     writeln!(
         file,
@@ -1411,8 +1411,8 @@ fn test_target_kiro_disables_cc_rules() {
     let skill_path = skills_dir.join("SKILL.md");
     let mut file = fs::File::create(&skill_path).unwrap();
     // Over the 1024 baseline so AS-008 (a generic agentskills.io rule) fires as
-    // the non-CC control. (AS-010, previously the control here, is now scoped to
-    // Claude and is suppressed for a non-Claude target.)
+    // the non-CC control - confirming generic AS-* rules still run for a
+    // non-Claude target while CC-SK-* are suppressed.
     let long_desc = "a".repeat(1100);
     writeln!(
         file,
@@ -1857,7 +1857,7 @@ fn test_init_creates_config_file_with_plain_text_output() {
 }
 
 // ============================================================================
-// Auto-Fix Tests for AS-004 and AS-010 (Issue #15)
+// Auto-Fix Tests for AS-004 (Issue #15)
 // ============================================================================
 
 #[test]
@@ -1903,77 +1903,6 @@ fn test_fix_as_004_converts_name_to_kebab_case() {
     assert!(
         stdout.contains("Fixed") || stdout.contains("fix"),
         "Output should mention fix applied"
-    );
-}
-
-#[test]
-fn test_fix_as_010_prepends_trigger_phrase() {
-    use std::fs;
-    use std::io::Write;
-
-    let temp_dir = tempfile::tempdir().unwrap();
-    let skills_dir = temp_dir.path().join("skills").join("code-review");
-    fs::create_dir_all(&skills_dir).unwrap();
-
-    let skill_path = skills_dir.join("SKILL.md");
-    {
-        let mut file = fs::File::create(&skill_path).unwrap();
-        // Valid name but missing trigger phrase
-        write!(
-            file,
-            "---\nname: code-review\ndescription: Reviews code for quality\n---\nBody"
-        )
-        .unwrap();
-    }
-
-    // Run with --fix (not --fix-safe since AS-010 is not a safe fix)
-    let mut cmd = agnix();
-    cmd.arg(temp_dir.path().to_str().unwrap())
-        .arg("--fix")
-        .output()
-        .unwrap();
-
-    // Read the fixed file
-    let fixed_content = fs::read_to_string(&skill_path).unwrap();
-
-    // Should prepend "Use when user wants to " to description
-    assert!(
-        fixed_content.contains("Use when user wants to Reviews code for quality"),
-        "AS-010 fix should prepend trigger phrase, got: {}",
-        fixed_content
-    );
-}
-
-#[test]
-fn test_fix_safe_skips_as_010() {
-    use std::fs;
-    use std::io::Write;
-
-    let temp_dir = tempfile::tempdir().unwrap();
-    let skills_dir = temp_dir.path().join("skills").join("code-review");
-    fs::create_dir_all(&skills_dir).unwrap();
-
-    let skill_path = skills_dir.join("SKILL.md");
-    let original_content = "---\nname: code-review\ndescription: Reviews code\n---\nBody";
-    {
-        let mut file = fs::File::create(&skill_path).unwrap();
-        write!(file, "{}", original_content).unwrap();
-    }
-
-    // Run with --fix-safe (should NOT fix AS-010 since it's not safe)
-    let mut cmd = agnix();
-    cmd.arg(temp_dir.path().to_str().unwrap())
-        .arg("--fix-safe")
-        .output()
-        .unwrap();
-
-    // Read the file
-    let content_after = fs::read_to_string(&skill_path).unwrap();
-
-    // AS-010 fix is NOT safe, so it should NOT be applied
-    assert_eq!(
-        content_after, original_content,
-        "--fix-safe should not apply AS-010 fix"
     );
 }
 
@@ -2051,49 +1980,6 @@ fn test_dry_run_shows_as_004_fix_without_applying() {
     assert!(
         stdout.contains("Would fix") || stdout.contains("dry-run") || stdout.contains("test-skill"),
         "--dry-run should show what would be fixed"
-    );
-}
-
-#[test]
-fn test_fix_both_as_004_and_as_010_simultaneously() {
-    use std::fs;
-    use std::io::Write;
-
-    let temp_dir = tempfile::tempdir().unwrap();
-    let skills_dir = temp_dir.path().join("skills").join("test-skill");
-    fs::create_dir_all(&skills_dir).unwrap();
-
-    let skill_path = skills_dir.join("SKILL.md");
-    {
-        let mut file = fs::File::create(&skill_path).unwrap();
-        // Both AS-004 (invalid name) and AS-010 (missing trigger)
-        write!(
-            file,
-            "---\nname: Test_Skill\ndescription: Does testing\n---\nBody"
-        )
-        .unwrap();
-    }
-
-    // Run with --fix
-    let mut cmd = agnix();
-    cmd.arg(temp_dir.path().to_str().unwrap())
-        .arg("--fix")
-        .output()
-        .unwrap();
-
-    // Read the fixed file
-    let fixed_content = fs::read_to_string(&skill_path).unwrap();
-
-    // Both fixes should be applied
-    assert!(
-        fixed_content.contains("name: test-skill"),
-        "AS-004 fix should be applied, got: {}",
-        fixed_content
-    );
-    assert!(
-        fixed_content.contains("Use when user wants to Does testing"),
-        "AS-010 fix should be applied, got: {}",
-        fixed_content
     );
 }
 

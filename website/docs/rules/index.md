@@ -1,7 +1,7 @@
 # Rules Reference
 
-This section contains all `425` validation rules generated from `knowledge-base/rules.json`.
-`129` rules have automatic fixes.
+This section contains all `420` validation rules generated from `knowledge-base/rules.json`.
+`127` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
 |------|------|----------|----------|----------|
@@ -22,19 +22,14 @@ This section contains all `425` validation rules generated from `knowledge-base/
 | [AS-004](./generated/as-004.md) | Invalid Name Format | HIGH | Agent Skills | Yes (safe/unsafe) |
 | [AS-005](./generated/as-005.md) | Name Starts/Ends with Hyphen | HIGH | Agent Skills | Yes (safe) |
 | [AS-006](./generated/as-006.md) | Consecutive Hyphens in Name | HIGH | Agent Skills | Yes (safe) |
-| [AS-007](./generated/as-007.md) | Reserved Name | HIGH | Agent Skills | No |
 | [AS-008](./generated/as-008.md) | Description Too Short | HIGH | Agent Skills | No |
 | [AS-009](./generated/as-009.md) | Description Contains Angle Brackets (Codex) | HIGH | Agent Skills | Yes (safe) |
-| [AS-010](./generated/as-010.md) | Missing Trigger Phrase | MEDIUM | Agent Skills | Yes (unsafe) |
 | [AS-011](./generated/as-011.md) | Compatibility Too Long | HIGH | Agent Skills | No |
 | [AS-012](./generated/as-012.md) | Content Exceeds 500 Lines | MEDIUM | Agent Skills | No |
-| [AS-013](./generated/as-013.md) | File Reference Too Deep | HIGH | Agent Skills | No |
-| [AS-014](./generated/as-014.md) | Windows Path Separator | HIGH | Agent Skills | Yes (safe) |
+| [AS-013](./generated/as-013.md) | File Reference Too Deep | MEDIUM | Agent Skills | No |
 | [AS-015](./generated/as-015.md) | Upload Size Exceeds 8MB | HIGH | Agent Skills | No |
 | [AS-016](./generated/as-016.md) | Skill Parse Error | HIGH | Agent Skills | No |
 | [AS-017](./generated/as-017.md) | Name Must Match Parent Directory | HIGH | Agent Skills | No |
-| [AS-018](./generated/as-018.md) | Description Uses First or Second Person | MEDIUM | Agent Skills | No |
-| [AS-019](./generated/as-019.md) | Vague Skill Name | MEDIUM | Agent Skills | No |
 | [CC-AG-001](./generated/cc-ag-001.md) | Missing Name Field | HIGH | Claude Agents | Yes (safe) |
 | [CC-AG-002](./generated/cc-ag-002.md) | Missing Description Field | HIGH | Claude Agents | Yes (safe) |
 | [CC-AG-003](./generated/cc-ag-003.md) | Invalid Model Value | HIGH | Claude Agents | Yes (unsafe) |
