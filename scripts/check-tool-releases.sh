@@ -167,8 +167,10 @@ for raw_id in "${TOOL_IDS[@]}"; do
     # "version" is the latest commit SHA touching that path; any change opens
     # an issue so a maintainer can diff the spec against the AS-* rules.
     echo "[check] $tool_id (tier=$tier) commit-path=$commit_repo:$commit_path baseline=$baseline_version"
-    # Pass path/per_page as fields so gh handles URL-encoding (paths contain `/`).
-    commit_json=$(gh api "repos/$commit_repo/commits" -f path="$commit_path" -F per_page=1 2>/dev/null || echo "")
+    # Pass path/per_page as fields so gh handles URL-encoding (paths contain
+    # `/`). `-X GET` is required: gh api otherwise switches to POST when fields
+    # are present, which would hit the wrong method and return an object.
+    commit_json=$(gh api -X GET "repos/$commit_repo/commits" -f path="$commit_path" -F per_page=1 2>/dev/null || echo "")
     if [[ -z "$commit_json" ]]; then
       echo "  WARN: commits API call failed for $commit_repo:$commit_path (will retry on next run)"
       continue
