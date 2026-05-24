@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-05-24
+
 ### Removed
 - **Five `AS-*` rules with no normative origin** (part of #957). A full re-audit of every `AS-*` rule against the current agentskills.io spec and its `skills-ref` reference validator (and, for the platform ones, current Claude Code docs) found five rules with no basis in any spec or vendor doc - they were agnix heuristics producing false positives. Removed: **AS-007** (reserved names - no reserved-name list in spec/validator/Claude docs), **AS-010** ("Use when" literal trigger phrase - spec endorses the *intent* but never the literal phrase), **AS-014** (backslash/Windows path separator - spec is silent on separators), **AS-018** (first/second person in description - spec is silent, and `optimizing-descriptions` actually recommends second-person imperative "Use this skill when…"), and **AS-019** (vague skill name - spec defines name *format* only). Rule count 425 → 420.
 

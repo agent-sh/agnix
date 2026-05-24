@@ -15,16 +15,12 @@ cases:
     expected: [AS-013]
     description: "Deep reference triggers AS-013"
 
-  - file: fixtures/skills/windows-path/SKILL.md
-    expected: [AS-014]
-    description: "Windows path separator triggers AS-014"
-
   - file: fixtures/invalid/skills/invalid-name/SKILL.md
     expected: [AS-004, AS-017, XP-SK-001]
     description: "Invalid skill name (underscores) triggers AS-004"
 
   - file: fixtures/invalid/skills/deploy-prod/SKILL.md
-    expected: [CC-SK-006, CC-SK-007, AS-010]
+    expected: [CC-SK-006, CC-SK-007]
     description: "Dangerous deploy-prod with unknown tools triggers multiple rules"
 
   - file: fixtures/invalid/skills/unknown-tool/SKILL.md
@@ -35,13 +31,9 @@ cases:
     expected: [AS-017]
     description: "Name-directory mismatch triggers AS-017"
 
-  - file: fixtures/invalid/skills/first-person-description/SKILL.md
-    expected: [AS-018]
-    description: "First/second person description triggers AS-018"
-
   - file: fixtures/invalid/skills/vague-name/SKILL.md
-    expected: [AS-017, AS-019]
-    description: "Vague skill name triggers AS-019"
+    expected: [AS-017]
+    description: "Vague skill name with name-directory mismatch triggers AS-017"
 
   - file: fixtures/invalid/skills/indexed-arguments-no-hint/SKILL.md
     expected: [CC-SK-016]

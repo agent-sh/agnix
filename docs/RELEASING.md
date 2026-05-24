@@ -42,11 +42,13 @@ cargo test --doc --workspace
 # Clippy clean
 cargo clippy --workspace -- -D warnings
 
-# Eval passes (41/42 minimum, 1 pre-existing XP-001 failure)
-cargo run --bin agnix -- eval tests/eval.yaml
+# Eval: removed-rule cases must be clean. A set of pre-existing expectation
+# drifts (fixtures frozen at ~v0.10.3) is tracked in #981 - eval is not yet a
+# CI gate. As of v0.28.0 the known-failing baseline is 8/61.
+cargo run -p agnix-cli --bin agnix -- eval tests/eval.yaml
 
 # Self-lint (agnix validates its own config)
-cargo run --bin agnix -- .
+cargo run -p agnix-cli --bin agnix -- .
 
 # Review RUSTSEC advisories (see docs/RUSTSEC-ADVISORIES.md for details)
 # Check if ignored advisories can be removed:
