@@ -52,7 +52,6 @@ struct PathMatch {
 
 static_regex!(fn name_format_regex, r"^[a-z0-9]+(-[a-z0-9]+)*$");
 static_regex!(fn consecutive_hyphen_regex, r"-{2,}");
-static_regex!(fn description_xml_regex, r"<[^>]+>");
 static_regex!(fn reference_path_regex, "(?i)\\b(?:references?|refs)[/\\\\][^\\s)\\]}>\"']+");
 static_regex!(fn windows_path_regex, r"(?i)\b(?:[a-z]:)?[a-z0-9._-]+(?:\\[a-z0-9._-]+)+\b");
 static_regex!(fn windows_path_token_regex, r"[^\s]+\\[^\s]+");
@@ -610,12 +609,14 @@ impl<'a> ValidationContext<'a> {
             }
         }
 
-        // AS-009: angle brackets in description. Only Codex forbids them (its
-        // bundled quick_validate.py rejects `<`/`>`); agentskills.io and Claude
-        // Code impose no such restriction. Fire only for Codex skills.
+        // AS-009: angle brackets in description. Only Codex forbids them, and
+        // its bundled quick_validate.py rejects ANY `<` or `>` (not just
+        // tag-shaped `<...>` pairs) - `if "<" in description or ">" in
+        // description`. agentskills.io and Claude Code impose no such
+        // restriction. Fire only for Codex skills, matching the upstream check.
         if self.client == SkillClient::Codex
             && self.config.is_rule_enabled("AS-009")
-            && description_xml_regex().is_match(description)
+            && description.bytes().any(|b| b == b'<' || b == b'>')
         {
             let mut diagnostic = Diagnostic::error(
                 self.path.to_path_buf(),
@@ -626,18 +627,15 @@ impl<'a> ValidationContext<'a> {
             )
             .with_suggestion(t!("rules.as_009.suggestion"));
 
-            // Strip XML tags from description
-            let stripped = description_xml_regex()
-                .replace_all(description, "")
-                .trim()
-                .to_string();
+            // Strip every angle bracket (matching the upstream prohibition).
+            let stripped = description.replace(['<', '>'], "").trim().to_string();
             if !stripped.is_empty() && stripped != description {
                 if let Some((start, end)) = self.frontmatter_value_byte_range("description") {
                     diagnostic = diagnostic.with_fix(Fix::replace(
                         start,
                         end,
                         &stripped,
-                        "Strip XML tags from description",
+                        "Strip angle brackets from description",
                         false,
                     ));
                 }

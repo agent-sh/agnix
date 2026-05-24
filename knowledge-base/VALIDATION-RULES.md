@@ -154,8 +154,8 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 <a id="as-009"></a>
 ### AS-009 [HIGH] Description Contains Angle Brackets (Codex)
 **Requirement**: Codex skill descriptions MUST NOT contain `<` or `>`. **Codex-only** - agentskills.io and Claude Code impose no such restriction, so this fires only for Codex skills.
-**Detection**: skill client is Codex AND `Regex::new(r"<[^>]+>").is_match(description)`
-**Fix**: [AUTO-FIX] Remove angle-bracket tags
+**Detection**: skill client is Codex AND `description` contains any `<` or `>` (matches Codex's `if "<" in description or ">" in description`)
+**Fix**: [AUTO-FIX] Strip all `<` and `>` characters
 **Source**: openai/codex codex-rs/skills/.../quick_validate.py
 
 <a id="as-010"></a>

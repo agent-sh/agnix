@@ -281,6 +281,17 @@ Body"#;
         0,
         "AS-009 must not fire for a generic skill"
     );
+
+    // Codex rejects ANY angle bracket, not just tag-shaped pairs: a lone `<`
+    // must fire too (matches quick_validate.py's `"<" in description`).
+    let lone = "---\nname: test-skill\ndescription: Use when a < b comparison holds\n---\nBody";
+    let codex_lone =
+        validator.validate(Path::new(".agents/skills/test-skill/SKILL.md"), lone, &cfg);
+    assert_eq!(
+        codex_lone.iter().filter(|d| d.rule == "AS-009").count(),
+        1,
+        "AS-009 must fire on a lone angle bracket for a Codex skill"
+    );
 }
 
 #[test]

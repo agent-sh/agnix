@@ -94,8 +94,9 @@ pub(crate) fn detect_client(path: &Path) -> SkillClient {
 }
 
 /// Map a `tools = [...]` entry (or `--tools` value) to a [`SkillClient`].
+/// Matching is case-insensitive to tolerate configs that use different casing.
 fn skill_client_from_tool_str(tool: &str) -> Option<SkillClient> {
-    Some(match tool {
+    Some(match tool.to_ascii_lowercase().as_str() {
         "claude-code" => SkillClient::ClaudeCode,
         "codex" => SkillClient::Codex,
         "opencode" => SkillClient::OpenCode,
@@ -117,7 +118,8 @@ fn skill_client_from_tool_str(tool: &str) -> Option<SkillClient> {
 /// Returns [`SkillClient::Unknown`] when neither the path nor an unambiguous
 /// config target identifies a client - in that case the generic agentskills.io
 /// baseline applies. A `tools` array naming more than one distinct client is
-/// treated as ambiguous (falls through to `target`, then `Unknown`).
+/// treated as ambiguous and resolves directly to `Unknown` (the deprecated
+/// single-valued `target` is only consulted when `tools` names no client).
 pub(crate) fn resolve_skill_client(path: &Path, config: &LintConfig) -> SkillClient {
     let by_path = detect_client(path);
     if by_path != SkillClient::Unknown {
