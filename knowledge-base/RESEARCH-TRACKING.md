@@ -62,7 +62,7 @@ Authoritative sources monitored for changes that may affect validation rules.
 
 | Source | URL | Watch Method | Rules Affected |
 |--------|-----|-------------|----------------|
-| Agent Skills Spec | https://agentskills.io/specification | spec-drift.yml (weekly) | AS-001 through AS-016 |
+| Agent Skills Spec | https://agentskills.io/specification | spec-drift.yml (weekly) + tool-release-watch.yml (commit-path on agentskills/agentskills `docs/specification.mdx`) | AS-001 through AS-019 |
 | MCP Spec | https://modelcontextprotocol.io/specification/2025-11-25 | spec-drift.yml (weekly) | MCP-001 through MCP-008 |
 | MCP GitHub Repo | https://github.com/modelcontextprotocol/specification | mcp-release-watch.yml | MCP-001 through MCP-008 |
 
