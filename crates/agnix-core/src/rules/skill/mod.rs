@@ -727,8 +727,14 @@ impl<'a> ValidationContext<'a> {
                 // Add auto-fix: prepend "Use when user wants to " to description
                 if let Some((start, end)) = self.frontmatter_value_byte_range("description") {
                     let new_description = format!("Use when user wants to {}", description_trimmed);
-                    // Check if the new description would exceed length limit
-                    if new_description.len() <= 1024 {
+                    // Don't attach the fix if it would push past the AS-008 length
+                    // limit, which is per-client (1536 for Claude Code, else 1024).
+                    let max = if self.client == SkillClient::ClaudeCode {
+                        1536
+                    } else {
+                        1024
+                    };
+                    if new_description.len() <= max {
                         let fix = Fix::replace(
                             start,
                             end,

@@ -140,7 +140,7 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 <a id="as-007"></a>
 ### AS-007 [HIGH] Reserved Name
 **Requirement**: name MUST NOT be a reserved word (anthropic, claude, skill). **Claude/platform-specific** - not in the agentskills.io spec, so scoped to Claude Code (and unscoped) skills, suppressed for known non-Claude clients.
-**Detection**: skill client allows Claude rules AND `["anthropic", "claude", "skill"].contains(name)`
+**Detection**: skill client allows Claude rules AND the lowercased name is in `["anthropic", "claude", "skill"]` (case-insensitive)
 **Fix**: Suggest alternative name
 **Source**: platform.claude.com/docs (Claude-specific; absent from agentskills.io)
 
