@@ -5,6 +5,9 @@
 # Per-tool source type is declared in the baselines file:
 #   - github_repo                       -> GitHub releases API (latest stable, tag fallback)
 #   - html_url + version_regex          -> HTTP GET + first regex match (HTML/JSON/RSS)
+#   - commit_repo + commit_path         -> latest commit SHA touching a file path
+#                                          (for specs published as docs with no
+#                                          releases/tags, e.g. agentskills.io)
 # Optional release-notes upgrade (when [NEW] fires):
 #   - notes_extractor: "glm"            -> GLM chat completion via scripts/glm-extract.js
 #   - notes_extractor: "rss_cdata"      -> first <item><description> CDATA via python3
@@ -102,6 +105,8 @@ for raw_id in "${TOOL_IDS[@]}"; do
   repo=$(jq -r --arg id "$tool_id" '.tools[$id].github_repo // ""' "$BASELINES_FILE")
   html_url=$(jq -r --arg id "$tool_id" '.tools[$id].html_url // ""' "$BASELINES_FILE")
   version_regex=$(jq -r --arg id "$tool_id" '.tools[$id].version_regex // ""' "$BASELINES_FILE")
+  commit_repo=$(jq -r --arg id "$tool_id" '.tools[$id].commit_repo // ""' "$BASELINES_FILE")
+  commit_path=$(jq -r --arg id "$tool_id" '.tools[$id].commit_path // ""' "$BASELINES_FILE")
   baseline_version=$(jq -r --arg id "$tool_id" '.tools[$id].last_known_version' "$BASELINES_FILE")
   tool_label="tool-release:$tool_id"
 
@@ -156,8 +161,33 @@ for raw_id in "${TOOL_IDS[@]}"; do
     # claim that the source is unscrapable, since some sources are intentionally
     # link-only.
     release_body="_This source provides a version marker only. See [$release_url]($release_url) for the full release notes._"
+  elif [[ -n "$commit_repo" && -n "$commit_path" ]]; then
+    # GitHub commit-path tracking - for specs published as plain docs with no
+    # releases or tags (e.g. agentskills.io's docs/specification.mdx). The
+    # "version" is the latest commit SHA touching that path; any change opens
+    # an issue so a maintainer can diff the spec against the AS-* rules.
+    echo "[check] $tool_id (tier=$tier) commit-path=$commit_repo:$commit_path baseline=$baseline_version"
+    # Pass path/per_page as fields so gh handles URL-encoding (paths contain
+    # `/`). `-X GET` is required: gh api otherwise switches to POST when fields
+    # are present, which would hit the wrong method and return an object.
+    commit_json=$(gh api -X GET "repos/$commit_repo/commits" -f path="$commit_path" -F per_page=1 2>/dev/null || echo "")
+    if [[ -z "$commit_json" ]]; then
+      echo "  WARN: commits API call failed for $commit_repo:$commit_path (will retry on next run)"
+      continue
+    fi
+    latest_sha=$(echo "$commit_json" | jq -r '.[0].sha // empty')
+    if [[ -z "$latest_sha" ]]; then
+      echo "  WARN: no commits found for $commit_repo:$commit_path (will retry on next run)"
+      continue
+    fi
+    latest_version="${latest_sha:0:12}"
+    commit_html=$(echo "$commit_json" | jq -r '.[0].html_url // empty')
+    commit_subject=$(echo "$commit_json" | jq -r '.[0].commit.message // ""' | head -1)
+    release_url="https://github.com/$commit_repo/commits/HEAD/$commit_path"
+    published_at=$(echo "$commit_json" | jq -r '.[0].commit.committer.date // ""')
+    release_body=$(printf 'Spec file `%s` changed in `%s`.\n\n**Latest commit:** [`%s`](%s) - %s\n\nDiff the spec against the AS-* rules and bump `SpecRevisions.agent_skills_spec` / `knowledge-base/RESEARCH-TRACKING.md` if it moved.' "$commit_path" "$commit_repo" "$latest_version" "$commit_html" "$commit_subject")
   else
-    echo "  ERROR: $tool_id is marked tracked but has neither github_repo nor (html_url + version_regex)" >&2
+    echo "  ERROR: $tool_id is marked tracked but has none of: github_repo, (html_url + version_regex), or (commit_repo + commit_path)" >&2
     continue
   fi
 

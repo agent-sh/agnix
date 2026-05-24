@@ -393,6 +393,33 @@
           "Billing / credits"
         ]
       }
+    },
+    "agentskills-spec": {
+      "tier": "s",
+      "display_name": "Agent Skills Spec",
+      "validators": [
+        "skill"
+      ],
+      "commit_repo": "agentskills/agentskills",
+      "commit_path": "docs/specification.mdx",
+      "last_known_version": "6868401b64f7",
+      "tracked": true,
+      "notes": "The agentskills.io Skill specification (the generic cross-tool SKILL.md standard) - the source for agnix's AS-* rules. It publishes NO releases or tags, so it is tracked by the latest commit SHA touching docs/specification.mdx in the agentskills/agentskills repo (commit_repo + commit_path source). Any change opens an issue to diff the spec against the AS-* rules. Complements the weekly spec-drift.yml check. last_known_version is the short commit SHA.",
+      "changes_of_interest": {
+        "config_surfaces": [
+          "SKILL.md frontmatter (name, description, license, compatibility, metadata, allowed-tools)"
+        ],
+        "relevant": [
+          "Changed field constraints (description max length, name format, compatibility limit)",
+          "New / renamed / removed frontmatter fields",
+          "allowed-tools value-shape changes (string vs list)",
+          "Body / file-reference rules"
+        ],
+        "irrelevant": [
+          "Prose / example wording edits with no normative change",
+          "Reference-implementation (skills-ref) SDK version bumps"
+        ]
+      }
     }
   }
 }
