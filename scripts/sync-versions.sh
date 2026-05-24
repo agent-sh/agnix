@@ -10,11 +10,15 @@ set -euo pipefail
 if [ -n "${1:-}" ]; then
   VERSION="$1"
 else
-  VERSION=$(grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
+  # Read the [workspace.package] version, not the first `version = ` in the file.
+  # The root [package] (agnix-workspace-tests) is pinned at 0.0.0 and appears
+  # first, so a naive `head -1` would pick that up. Pass an explicit version arg
+  # to skip this (release.yml does: `sync-versions.sh "$TAG_VERSION"`).
+  VERSION=$(awk '/^\[workspace\.package\]/{f=1; next} /^\[/{f=0} f && /^version = /{gsub(/version = "|"/, ""); print; exit}' Cargo.toml)
 fi
 
 if [ -z "$VERSION" ]; then
-  echo "Error: Could not extract version from Cargo.toml"
+  echo "Error: Could not extract version from [workspace.package] in Cargo.toml"
   exit 1
 fi
 
