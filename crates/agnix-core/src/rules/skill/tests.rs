@@ -1448,7 +1448,12 @@ allowed-tools: Read Write UnknownTool
 Body"#;
 
     let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
+    // CC-SK-008 is Claude-only; use a Claude skill path.
+    let diagnostics = validator.validate(
+        Path::new(".claude/skills/test-skill/SKILL.md"),
+        content,
+        &LintConfig::default(),
+    );
 
     let cc_sk_008: Vec<_> = diagnostics
         .iter()
@@ -1513,7 +1518,11 @@ allowed-tools: FakeTool1 Read FakeTool2
 Body"#;
 
     let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
+    let diagnostics = validator.validate(
+        Path::new(".claude/skills/test-skill/SKILL.md"),
+        content,
+        &LintConfig::default(),
+    );
 
     let cc_sk_008: Vec<_> = diagnostics
         .iter()
@@ -1533,7 +1542,11 @@ allowed-tools: FakeTool(scope:*) Read
 Body"#;
 
     let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
+    let diagnostics = validator.validate(
+        Path::new(".claude/skills/test-skill/SKILL.md"),
+        content,
+        &LintConfig::default(),
+    );
 
     let cc_sk_008: Vec<_> = diagnostics
         .iter()
@@ -1709,7 +1722,11 @@ allowed-tools: bash read
 Body"#;
 
     let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
+    let diagnostics = validator.validate(
+        Path::new(".claude/skills/test-skill/SKILL.md"),
+        content,
+        &LintConfig::default(),
+    );
 
     let cc_sk_008: Vec<_> = diagnostics
         .iter()
@@ -1778,7 +1795,11 @@ allowed-tools: MCP__memory__create Mcp__test__tool
 Body"#;
 
     let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
+    let diagnostics = validator.validate(
+        Path::new(".claude/skills/test-skill/SKILL.md"),
+        content,
+        &LintConfig::default(),
+    );
 
     let cc_sk_008: Vec<_> = diagnostics
         .iter()
@@ -3551,7 +3572,12 @@ desription: typo field
 Body"#;
 
     let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
+    // CC-SK-017 is Claude-only; use a Claude skill path.
+    let diagnostics = validator.validate(
+        Path::new(".claude/skills/test-skill/SKILL.md"),
+        content,
+        &LintConfig::default(),
+    );
 
     let cc_sk_017: Vec<_> = diagnostics
         .iter()
@@ -3560,6 +3586,88 @@ Body"#;
 
     assert_eq!(cc_sk_017.len(), 1);
     assert!(cc_sk_017[0].message.contains("desription"));
+}
+
+#[test]
+fn test_cc_sk_017_claude_only_and_new_fields() {
+    let validator = SkillValidator;
+
+    // `when_to_use` and `arguments` are documented Claude skill fields - no
+    // longer flagged (#957).
+    let documented = r#"---
+name: test-skill
+description: Use when reviewing
+when_to_use: reviewing a pull request
+arguments: optional args
+---
+Body"#;
+    let claude = validator.validate(
+        Path::new(".claude/skills/test-skill/SKILL.md"),
+        documented,
+        &LintConfig::default(),
+    );
+    assert!(
+        claude.iter().all(|d| d.rule != "CC-SK-017"),
+        "documented fields when_to_use/arguments must not trip CC-SK-017"
+    );
+
+    // CC-SK-017 is Claude-only: an unknown field on a non-Claude (Codex) skill
+    // is not judged against Claude's field set.
+    let unknown_field = r#"---
+name: test-skill
+description: Use when reviewing
+desription: typo
+---
+Body"#;
+    let codex = validator.validate(
+        Path::new(".agents/skills/test-skill/SKILL.md"),
+        unknown_field,
+        &LintConfig::default(),
+    );
+    assert!(
+        codex.iter().all(|d| d.rule != "CC-SK-017"),
+        "CC-SK-017 must not fire on a non-Claude skill"
+    );
+}
+
+#[test]
+fn test_cc_sk_008_powershell_known_and_claude_only() {
+    let validator = SkillValidator;
+
+    // PowerShell is now a known Claude tool (#957) - no CC-SK-008.
+    let pwsh = r#"---
+name: test-skill
+description: Use when running scripts
+allowed-tools: Bash PowerShell Read
+---
+Body"#;
+    let claude = validator.validate(
+        Path::new(".claude/skills/test-skill/SKILL.md"),
+        pwsh,
+        &LintConfig::default(),
+    );
+    assert!(
+        claude.iter().all(|d| d.rule != "CC-SK-008"),
+        "PowerShell must be recognized as a known tool"
+    );
+
+    // CC-SK-008 is Claude-only: an unknown tool on a Codex skill is not judged
+    // against Claude's tool set.
+    let unknown = r#"---
+name: test-skill
+description: Use when running scripts
+allowed-tools: Read TotallyUnknownTool
+---
+Body"#;
+    let codex = validator.validate(
+        Path::new(".agents/skills/test-skill/SKILL.md"),
+        unknown,
+        &LintConfig::default(),
+    );
+    assert!(
+        codex.iter().all(|d| d.rule != "CC-SK-008"),
+        "CC-SK-008 must not fire on a non-Claude skill"
+    );
 }
 
 #[test]

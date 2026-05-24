@@ -93,34 +93,66 @@ const VALID_MODELS_DESC: &str = "sonnet, opus, haiku, inherit, or claude-*";
 /// Built-in agent types for CC-SK-005
 const BUILTIN_AGENTS: &[&str] = &["Explore", "Plan", "general-purpose"];
 
-/// Known Claude Code tools for CC-SK-008
+/// Known Claude Code tool names for CC-SK-008. Union of the current built-in
+/// tools reference (code.claude.com/docs/en/tools, verified 2026-05-24 - adds
+/// PowerShell, the Cron*/Team*/Worktree/MCP-resource tools, ScheduleWakeup,
+/// etc.) plus legacy/internal names kept for version tolerance. Alphabetized.
 const KNOWN_TOOLS: &[&str] = &[
-    "Bash",
-    "Read",
-    "Write",
-    "Edit",
-    "Grep",
-    "Glob",
-    "Task",
-    "WebFetch",
-    "WebSearch",
+    "Agent",
     "AskUserQuestion",
-    "TodoRead",
-    "TodoWrite",
+    "Bash",
+    "CronCreate",
+    "CronDelete",
+    "CronList",
+    "Edit",
+    "EnterPlanMode",
+    "EnterWorktree",
+    "ExitPlanMode",
+    "ExitWorktree",
+    "Glob",
+    "Grep",
+    "LSP",
+    "ListMcpResourcesTool",
+    "Monitor",
     "MultiTool",
     "NotebookEdit",
-    "EnterPlanMode",
-    "ExitPlanMode",
+    "PowerShell",
+    "PushNotification",
+    "Read",
+    "ReadMcpResourceTool",
+    "RemoteTrigger",
+    "ScheduleWakeup",
+    "SendMessage",
+    "SendMessageTool",
+    "ShareOnboardingGuide",
     "Skill",
     "StatusBarMessageTool",
-    "SendMessageTool",
+    "Task",
+    "TaskCreate",
+    "TaskGet",
+    "TaskList",
     "TaskOutput",
+    "TaskStop",
+    "TaskUpdate",
+    "TeamCreate",
+    "TeamDelete",
+    "TodoRead",
+    "TodoWrite",
+    "ToolSearch",
+    "WaitForMcpServers",
+    "WebFetch",
+    "WebSearch",
+    "Write",
 ];
 
 /// Known top-level frontmatter fields for CC-SK-017
 const KNOWN_FRONTMATTER_FIELDS: &[&str] = &[
     "name",
     "description",
+    // Documented Claude Code skill fields (code.claude.com/docs/en/skills,
+    // verified 2026-05-24): `when_to_use` and `arguments` were missing.
+    "when_to_use",
+    "arguments",
     "license",
     "compatibility",
     "metadata",
@@ -1059,8 +1091,10 @@ impl<'a> ValidationContext<'a> {
             }
         }
 
-        // CC-SK-008: Unknown tool name
-        if self.config.is_rule_enabled("CC-SK-008") {
+        // CC-SK-008: Unknown tool name. KNOWN_TOOLS is Claude Code's tool set,
+        // so only judge Claude Code skills - other clients (Codex, OpenCode,
+        // ...) have their own tool vocabularies.
+        if self.client == SkillClient::ClaudeCode && self.config.is_rule_enabled("CC-SK-008") {
             if let Some(ref tools) = tool_list {
                 // Compute known tools list once outside loop
                 static KNOWN_TOOLS_LIST: OnceLock<String> = OnceLock::new();
@@ -1377,7 +1411,10 @@ impl<'a> ValidationContext<'a> {
 
     /// CC-SK-017: Validate unknown frontmatter keys
     fn validate_cc_unknown_frontmatter_fields(&mut self) {
-        if !self.config.is_rule_enabled("CC-SK-017") {
+        // KNOWN_FRONTMATTER_FIELDS is Claude Code's field set, so only judge
+        // Claude Code skills. Other clients' field support is checked by the
+        // per-client skill validator (CL-SK/CX-SK/OC-SK/WS-SK).
+        if self.client != SkillClient::ClaudeCode || !self.config.is_rule_enabled("CC-SK-017") {
             return;
         }
 

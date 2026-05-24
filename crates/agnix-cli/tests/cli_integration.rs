@@ -1030,8 +1030,11 @@ fn test_format_text_shows_summary() {
 
 #[test]
 fn test_format_text_verbose_shows_rule() {
+    // Use the broader invalid-skills fixture dir so a multi-segment rule code
+    // (e.g. CC-SK-001) appears - the unknown-tool fixture's CC-SK-008 is now
+    // scoped to Claude Code skills and no longer fires on a bare fixture path.
     let mut cmd = agnix();
-    cmd.arg("tests/fixtures/invalid/skills/unknown-tool")
+    cmd.arg("tests/fixtures/invalid/skills")
         .arg("--verbose")
         .assert()
         .failure()

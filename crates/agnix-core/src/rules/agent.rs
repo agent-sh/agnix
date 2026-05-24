@@ -2519,9 +2519,14 @@ Body"#;
     // ===== CC-AG-007 line/column accuracy tests =====
 
     #[test]
-    fn test_cc_ag_007_type_error_reports_error_line() {
-        // tools should be a list, not a string - error should be on the tools line (line 4)
-        let content = "---\nname: test\ndescription: test\ntools: not-a-list\n---\nBody";
+    fn test_cc_ag_007_type_error_still_reported() {
+        // tools accepts a string or a list, but not a bare scalar like an
+        // integer - that type error still surfaces as CC-AG-007. (Because the
+        // field uses a serde untagged enum, the error attributes to the
+        // frontmatter start rather than the exact field line; precise line
+        // reporting for genuine YAML syntax errors is covered by
+        // test_cc_ag_007_invalid_yaml_reports_correct_line.)
+        let content = "---\nname: test\ndescription: test\ntools: 123\n---\nBody";
 
         let diagnostics = validate(content);
         let parse_errors: Vec<_> = diagnostics
@@ -2530,10 +2535,30 @@ Body"#;
             .collect();
 
         assert_eq!(parse_errors.len(), 1);
-        assert_eq!(
-            parse_errors[0].line, 4,
-            "Expected error on line 4 (tools field), got {}",
-            parse_errors[0].line
+        // The untagged enum attributes the type error to the frontmatter start
+        // (line 2 here) rather than the exact field line - guard that it lands
+        // within the frontmatter, not at the missing-frontmatter fallback (1).
+        assert_eq!(parse_errors[0].line, 2);
+    }
+
+    #[test]
+    fn test_cc_ag_007_comma_separated_tools_accepted() {
+        // Reproduces #957: the canonical sub-agent form `tools: Read, Glob, Grep`
+        // (a comma-separated string) must parse without a CC-AG-007 error.
+        let content = "---\nname: code-reviewer\ndescription: Reviews code\ntools: Read, Glob, Grep\nmodel: sonnet\n---\nBody";
+        let diagnostics = validate(content);
+        assert!(
+            diagnostics.iter().all(|d| d.rule != "CC-AG-007"),
+            "comma-separated tools string must not trip CC-AG-007, got: {:?}",
+            diagnostics
+                .iter()
+                .filter(|d| d.rule == "CC-AG-007")
+                .collect::<Vec<_>>()
+        );
+        // The split tools (Read/Glob/Grep) are all valid -> no CC-AG-009 either.
+        assert!(
+            diagnostics.iter().all(|d| d.rule != "CC-AG-009"),
+            "valid tools in string form must not trip CC-AG-009"
         );
     }
 
@@ -2558,8 +2583,8 @@ Body"#;
 
     #[test]
     fn test_cc_ag_007_reports_column() {
-        // tools should be a list, not a string
-        let content = "---\nname: test\ndescription: test\ntools: not-a-list\n---\nBody";
+        // tools as a bare integer is a genuine type error (string/list accepted)
+        let content = "---\nname: test\ndescription: test\ntools: 123\n---\nBody";
 
         let diagnostics = validate(content);
         let parse_errors: Vec<_> = diagnostics
