@@ -11816,9 +11816,7 @@
               "AS-004",
               "AS-005",
               "AS-006",
-              "AS-007",
-              "AS-017",
-              "AS-019"
+              "AS-017"
             ],
             "values": [],
             "snippet": "name: my-skill"
@@ -11828,9 +11826,7 @@
             "docs": "Describe when to use the skill. Include a clear trigger phrase.",
             "rules": [
               "AS-003",
-              "AS-008",
-              "AS-010",
-              "AS-018"
+              "AS-008"
             ],
             "values": [],
             "snippet": "description: Use when user wants to ..."

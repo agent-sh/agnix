@@ -1364,8 +1364,8 @@ fn test_target_cursor_disables_cc_rules() {
     let skill_path = skills_dir.join("SKILL.md");
     let mut file = fs::File::create(&skill_path).unwrap();
     // Over the 1024 baseline so AS-008 (a generic agentskills.io rule) fires as
-    // the non-CC control. (AS-010, previously the control here, is now scoped to
-    // Claude and is suppressed for a non-Claude target.)
+    // the non-CC control - confirming generic AS-* rules still run for a
+    // non-Claude target while CC-SK-* are suppressed.
     let long_desc = "a".repeat(1100);
     writeln!(
         file,
@@ -1411,8 +1411,8 @@ fn test_target_kiro_disables_cc_rules() {
     let skill_path = skills_dir.join("SKILL.md");
     let mut file = fs::File::create(&skill_path).unwrap();
     // Over the 1024 baseline so AS-008 (a generic agentskills.io rule) fires as
-    // the non-CC control. (AS-010, previously the control here, is now scoped to
-    // Claude and is suppressed for a non-Claude target.)
+    // the non-CC control - confirming generic AS-* rules still run for a
+    // non-Claude target while CC-SK-* are suppressed.
     let long_desc = "a".repeat(1100);
     writeln!(
         file,
