@@ -560,7 +560,11 @@ impl<'a> ValidationContext<'a> {
             None
         };
 
-        if self.config.is_rule_enabled("AS-007") {
+        // AS-007 (reserved names) is Claude/platform-specific, not part of the
+        // agentskills.io spec - scope it to Claude Code (and unscoped) skills.
+        if claude_skill_rules_apply(self.client, self.config)
+            && self.config.is_rule_enabled("AS-007")
+        {
             let reserved = ["anthropic", "claude", "skill"];
             if let Some(name_lower) = name_lower.as_deref() {
                 if reserved.contains(&name_lower) {
@@ -703,8 +707,12 @@ impl<'a> ValidationContext<'a> {
             self.diagnostics.push(diagnostic);
         }
 
-        // AS-010: Description should include trigger phrase
-        if self.config.is_rule_enabled("AS-010") && !description_trimmed.is_empty() {
+        // AS-010 (the "Use when..." trigger phrase) is a Claude Code authoring
+        // guideline, not an agentskills.io requirement - scope to Claude skills.
+        if claude_skill_rules_apply(self.client, self.config)
+            && self.config.is_rule_enabled("AS-010")
+            && !description_trimmed.is_empty()
+        {
             let desc_lower = description_trimmed.to_lowercase();
             if !desc_lower.contains("use when") {
                 let mut diagnostic = Diagnostic::warning(
@@ -719,8 +727,14 @@ impl<'a> ValidationContext<'a> {
                 // Add auto-fix: prepend "Use when user wants to " to description
                 if let Some((start, end)) = self.frontmatter_value_byte_range("description") {
                     let new_description = format!("Use when user wants to {}", description_trimmed);
-                    // Check if the new description would exceed length limit
-                    if new_description.len() <= 1024 {
+                    // Don't attach the fix if it would push past the AS-008 length
+                    // limit, which is per-client (1536 for Claude Code, else 1024).
+                    let max = if self.client == SkillClient::ClaudeCode {
+                        1536
+                    } else {
+                        1024
+                    };
+                    if new_description.len() <= max {
                         let fix = Fix::replace(
                             start,
                             end,
@@ -1647,7 +1661,12 @@ impl<'a> ValidationContext<'a> {
 
     /// AS-015: Validate directory size
     fn validate_directory(&mut self) {
-        if self.config.is_rule_enabled("AS-015") && self.path.is_file() {
+        // AS-015 (8 MB) is the claude.ai upload limit, not an agentskills.io
+        // constraint - scope to Claude Code (and unscoped) skills.
+        if claude_skill_rules_apply(self.client, self.config)
+            && self.config.is_rule_enabled("AS-015")
+            && self.path.is_file()
+        {
             if let Some(dir) = self.path.parent() {
                 let (frontmatter_line, frontmatter_col) =
                     self.line_col_at(self.parts.frontmatter_start);

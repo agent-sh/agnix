@@ -641,14 +641,13 @@
       "severity": "MEDIUM",
       "category": "agent-skills",
       "evidence": {
-        "source_type": "vendor_docs",
+        "source_type": "spec",
         "source_urls": [
-          "https://platform.claude.com/docs",
-          "https://agentskills.io"
+          "https://agentskills.io/specification"
         ],
-        "verified_on": "2026-02-04",
+        "verified_on": "2026-05-24",
         "applies_to": {
-          "tool": "claude-code"
+          "spec_revision": "1.0"
         },
         "normative_level": "SHOULD",
         "tests": {
