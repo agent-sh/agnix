@@ -33,19 +33,26 @@ pub const AGENTS_MD_MAX_SIZE: usize = 100_000;
 /// Known valid top-level keys for .codex/config.toml
 ///
 /// Sourced from the upstream JSON schema at
-/// <https://github.com/openai/codex/blob/rust-v0.128.0/codex-rs/core/config.schema.json>
-/// (see also <https://developers.openai.com/codex/> for the prose overview).
+/// `codex-rs/core/config.schema.json`; current baseline is `rust-v0.133.0`
+/// (see `.github/tool-release-baselines.json`). Prose overview:
+/// <https://developers.openai.com/codex/>.
 ///
 /// When catching up to a new Codex release, regenerate this list by diffing
 /// `codex-rs/core/config.schema.json` against these constants.
 ///
-/// The list is intentionally a lenient superset: keys that a real upstream
-/// version once shipped but a newer schema dropped are kept for older-version
-/// tolerance (e.g. `commit_attribution`, `experimental_use_freeform_apply_patch`,
-/// `windows_wsl_setup_acknowledged`, `experimental_thread_store_endpoint` were in
-/// rust-v0.129.0, removed by rust-v0.133.0). Leniency only weakens typo
-/// detection, never false-positives. Keys that no audited schema ever contained
-/// are removed instead (see #969).
+/// The list is intentionally a lenient superset, with two classes of entries
+/// that are *not* in the current schema and are kept deliberately:
+/// 1. Older-version tolerance - keys a real version once shipped but a newer
+///    schema dropped (e.g. `commit_attribution`,
+///    `experimental_use_freeform_apply_patch`, `windows_wsl_setup_acknowledged`,
+///    `experimental_thread_store_endpoint` were in `rust-v0.129.0`, removed by
+///    `rust-v0.133.0`).
+/// 2. Legacy camelCase keys (`approvalMode`, `fullAutoErrorMode`) - never in the
+///    (snake_case) schema, accepted from early Codex configs.
+///
+/// Leniency only weakens typo detection, never false-positives. Keys that no
+/// audited schema ever contained and have no such backwards-compat reason are
+/// removed instead (see #969).
 pub const KNOWN_TOP_LEVEL_KEYS: &[&str] = &[
     // Core model settings (alphabetized within block)
     "log_dir",
@@ -772,14 +779,9 @@ nested_number = 42
             "js_repl_node_path = \"/usr/bin/node\"\njs_repl_node_module_dirs = [\"/x\"]\n";
         let result = parse_codex_toml(content);
         assert!(result.parse_error.is_none());
-        let flagged: Vec<&str> = result
-            .unknown_keys
-            .iter()
-            .map(|u| u.key.as_str())
-            .collect();
+        let flagged: Vec<&str> = result.unknown_keys.iter().map(|u| u.key.as_str()).collect();
         assert!(
-            flagged.contains(&"js_repl_node_path")
-                && flagged.contains(&"js_repl_node_module_dirs"),
+            flagged.contains(&"js_repl_node_path") && flagged.contains(&"js_repl_node_module_dirs"),
             "stale js_repl_* keys should now be flagged on the TOML path, got: {flagged:?}"
         );
     }

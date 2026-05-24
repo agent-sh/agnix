@@ -3697,6 +3697,20 @@ hide_full_access_warning = true
                 .filter(|d| d.rule == "CDX-004" || d.rule == "CDX-CFG-006")
                 .collect::<Vec<_>>()
         );
+
+        // #969: the dropped `include_apply_patch_tool` must now be flagged as
+        // unknown on the JSON backend too, mirroring the TOML-side check in
+        // schemas/codex.rs::test_codex_stale_js_repl_keys_flagged - the two
+        // backends stay in sync (#966), now agreeing on "unknown".
+        let stale = validate_config_at_path(
+            ".codex/config.json",
+            r#"{ "include_apply_patch_tool": true }"#,
+        );
+        assert!(
+            stale.iter().any(|d| d.rule == "CDX-CFG-006"),
+            "dropped include_apply_patch_tool should be flagged (CDX-CFG-006) on the JSON path, got: {:?}",
+            stale.iter().map(|d| d.rule.as_str()).collect::<Vec<_>>()
+        );
     }
 
     #[test]
