@@ -132,115 +132,6 @@ const KNOWN_PERMISSIONS_NETWORK_KEYS: &[&str] = &[
 
 const VALID_WINDOWS_SANDBOX_VALUES: &[&str] = &["elevated", "unelevated"];
 
-// KNOWN_CONFIG_TOP_LEVEL_KEYS is the parallel allow-list used for .codex/config.{json,yaml}
-// unknown-top-level-key detection. Keep it in sync with KNOWN_TOP_LEVEL_KEYS ∪ KNOWN_TABLE_KEYS
-// in schemas/codex.rs (this set represents the flat union - the JSON/YAML backends don't
-// distinguish scalar top-level keys from TOML `[section]` tables).
-// Sourced from upstream codex-rs/core/config.schema.json; last reconciled @ rust-v0.133.0. Alphabetized.
-const KNOWN_CONFIG_TOP_LEVEL_KEYS: &[&str] = &[
-    "agents",
-    "allow_login_shell",
-    "analytics",
-    "approval_policy",
-    "approvals_reviewer",
-    "apps",
-    "apps_mcp_product_sku",
-    "audio",
-    "auto_review",
-    "background_terminal_max_timeout",
-    "chatgpt_base_url",
-    "check_for_update_on_startup",
-    "cli_auth_credentials_store",
-    "commit_attribution",
-    "compact_prompt",
-    "default_permissions",
-    "desktop",
-    "developer_instructions",
-    "disable_paste_burst",
-    "experimental_compact_prompt_file",
-    "experimental_realtime_start_instructions",
-    "experimental_realtime_ws_backend_prompt",
-    "experimental_realtime_ws_base_url",
-    "experimental_realtime_ws_model",
-    "experimental_realtime_ws_startup_context",
-    "experimental_thread_config_endpoint",
-    "experimental_thread_store",
-    "experimental_thread_store_endpoint",
-    "experimental_use_freeform_apply_patch",
-    "experimental_use_unified_exec_tool",
-    "features",
-    "feedback",
-    "file_opener",
-    "forced_chatgpt_workspace_id",
-    "forced_login_method",
-    "ghost_snapshot",
-    "hide_agent_reasoning",
-    "history",
-    "hooks",
-    "include_apps_instructions",
-    "include_collaboration_mode_instructions",
-    "include_environment_context",
-    "include_permissions_instructions",
-    "instructions",
-    "js_repl_node_module_dirs",
-    "js_repl_node_path",
-    "log_dir",
-    "marketplaces",
-    "mcp_oauth_callback_port",
-    "mcp_oauth_callback_url",
-    "mcp_oauth_credentials_store",
-    "mcp_servers",
-    "memories",
-    "model",
-    "model_auto_compact_token_limit",
-    "model_auto_compact_token_limit_scope",
-    "model_catalog_json",
-    "model_context_window",
-    "model_instructions_file",
-    "model_provider",
-    "model_providers",
-    "model_reasoning_effort",
-    "model_reasoning_summary",
-    "model_supports_reasoning_summaries",
-    "model_verbosity",
-    "notice",
-    "notify",
-    "openai_base_url",
-    "oss_provider",
-    "otel",
-    "permissions",
-    "personality",
-    "plan_mode_reasoning_effort",
-    "plugins",
-    "profile",
-    "profiles",
-    "project_doc_fallback_filenames",
-    "project_doc_max_bytes",
-    "project_root_markers",
-    "projects",
-    "realtime",
-    "review_model",
-    "sandbox_mode",
-    "sandbox_workspace_write",
-    "service_tier",
-    "shell_environment_policy",
-    "show_raw_agent_reasoning",
-    "skills",
-    "sqlite_home",
-    "suppress_unstable_features_warning",
-    "tool_output_token_limit",
-    "tool_suggest",
-    "tools",
-    "tui",
-    "web_search",
-    "windows",
-    "windows_wsl_setup_acknowledged",
-    "zsh_path",
-    // Legacy compatibility in existing fixtures/tests.
-    "approvalMode",
-    "fullAutoErrorMode",
-];
-
 const KNOWN_FEATURE_KEYS: &[&str] = &[
     "apply_patch_freeform",
     "apps",
@@ -2062,7 +1953,9 @@ fn collect_unknown_codex_keys(root: &Value, cdx_cfg_028_active: bool) -> Vec<Str
     };
 
     for key in root_obj.keys() {
-        if !KNOWN_CONFIG_TOP_LEVEL_KEYS.contains(&key.as_str()) {
+        // Single source of truth lives in schemas/codex.rs so the TOML and
+        // JSON/YAML backends can never drift on the top-level allow-list.
+        if !crate::schemas::codex::is_known_top_level_key(key.as_str()) {
             unknown.push(key.clone());
         }
     }
@@ -3403,10 +3296,11 @@ experimental_thread_store_endpoint = "https://thread-store.example"
     fn test_codex_v0_123_top_level_keys_accepted_json() {
         // JSON/YAML path: CDX-CFG-006 fires for unknown top-level keys when
         // the file is JSON/YAML (NOT TOML, where CDX-004 takes over via
-        // skip_top_level). The fix in rules/codex.rs::KNOWN_CONFIG_TOP_LEVEL_KEYS
-        // must include `experimental_thread_store_endpoint` for CDX-CFG-006
-        // to accept it. Without that arm of the fix, this test fails even if
-        // the TOML schema allow-list (schemas/codex.rs) is updated.
+        // skip_top_level). The shared allow-list in
+        // schemas/codex.rs::is_known_top_level_key must include
+        // `experimental_thread_store_endpoint` for CDX-CFG-006 to accept it.
+        // Both backends consult the same predicate, so TOML and JSON/YAML
+        // can no longer disagree about it.
         let json = r#"{
   "experimental_thread_store_endpoint": "https://thread-store.example"
 }"#;
@@ -3750,11 +3644,11 @@ hide_full_access_warning = true
 
     #[test]
     fn test_codex_0_128_0_new_json_yaml_keys_not_flagged() {
-        // Regression guard for the JSON/YAML unknown-top-level-key path
-        // (KNOWN_CONFIG_TOP_LEVEL_KEYS). Mirror of the TOML-side tests in
-        // schemas/codex.rs; the two allow-lists are deliberately separate
-        // because the JSON/YAML path treats top-level scalars and objects
-        // uniformly while the TOML path splits scalar vs `[table]`.
+        // Regression guard for the JSON/YAML unknown-top-level-key path,
+        // which now consults schemas/codex.rs::is_known_top_level_key (the
+        // shared predicate over KNOWN_TOP_LEVEL_KEYS ∪ KNOWN_TABLE_KEYS).
+        // Mirror of the TOML-side tests in schemas/codex.rs; the JSON/YAML
+        // path treats top-level scalars and `[table]` keys uniformly.
         let json = r#"{
             "auto_review": {},
             "experimental_thread_store": {},
@@ -3779,6 +3673,27 @@ hide_full_access_warning = true
             yaml_diags
                 .iter()
                 .filter(|d| d.rule == "CDX-004")
+                .collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn test_codex_unified_allowlist_fixes_json_toml_drift() {
+        // Drift fix (issue #966): before unifying the top-level allow-list, the
+        // JSON/YAML path flagged `debug` (a valid TOML `[debug]` table from the
+        // v0.129 catch-up) because it lived only in the TOML schema list.
+        // Both backends now share schemas/codex.rs::is_known_top_level_key, so
+        // `debug` is accepted as JSON/YAML too.
+        let json = r#"{ "debug": {}, "include_apply_patch_tool": true }"#;
+        let diags = validate_config_at_path(".codex/config.json", json);
+        assert!(
+            diags
+                .iter()
+                .all(|d| d.rule != "CDX-004" && d.rule != "CDX-CFG-006"),
+            "unified keys should not be flagged on the JSON path, got: {:?}",
+            diags
+                .iter()
+                .filter(|d| d.rule == "CDX-004" || d.rule == "CDX-CFG-006")
                 .collect::<Vec<_>>()
         );
     }
