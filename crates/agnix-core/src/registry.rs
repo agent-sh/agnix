@@ -398,7 +398,7 @@ impl ValidatorRegistryBuilder {
 ///
 /// Used by `BuiltinProvider` (via `debug_assert_eq!`) and tests to catch
 /// accidental additions or removals without updating all providers.
-const EXPECTED_BUILTIN_COUNT: usize = 80;
+const EXPECTED_BUILTIN_COUNT: usize = 81;
 
 // -- Category providers -----------------------------------------------------
 //
@@ -764,6 +764,11 @@ impl ValidatorProvider for MiscProvider {
                 codex_plugin_validator,
             ),
             (
+                FileType::CodexRequirements,
+                Some("CodexRequirementsValidator"),
+                codex_requirements_validator,
+            ),
+            (
                 FileType::KiroSteering,
                 Some("KiroSteeringValidator"),
                 kiro_steering_validator,
@@ -967,6 +972,10 @@ fn codex_config_validator() -> Box<dyn Validator> {
 
 fn codex_plugin_validator() -> Box<dyn Validator> {
     Box::new(crate::rules::codex_plugin::CodexPluginValidator)
+}
+
+fn codex_requirements_validator() -> Box<dyn Validator> {
+    Box::new(crate::rules::codex_requirements::CodexRequirementsValidator)
 }
 
 fn roo_validator() -> Box<dyn Validator> {
@@ -1485,6 +1494,7 @@ mod tests {
                 | FileType::GeminiIgnore
                 | FileType::CodexConfig
                 | FileType::CodexPlugin
+                | FileType::CodexRequirements
                 | FileType::RooRules
                 | FileType::RooModes
                 | FileType::RooIgnore
@@ -1989,7 +1999,7 @@ mod tests {
 
     #[test]
     fn misc_provider_count() {
-        assert_eq!(MiscProvider.named_validators().len(), 30);
+        assert_eq!(MiscProvider.named_validators().len(), 31);
     }
 
     #[test]

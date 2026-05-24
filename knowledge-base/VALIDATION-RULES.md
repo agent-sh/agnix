@@ -2648,6 +2648,24 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 
 ---
 
+### Codex Requirements Rules (CDX-REQ)
+
+Validates Codex's admin-written managed `requirements.toml` (system location: `/etc/codex/requirements.toml` on Unix, `%ProgramData%\OpenAI\Codex\requirements.toml` on Windows). Codex does not reject unknown keys in this file, so typo'd constraints are silently dropped - hence the unknown-key check.
+
+### CDX-REQ-000 [HIGH] Codex requirements.toml TOML Parse Error
+**Requirement**: `requirements.toml` MUST be syntactically valid TOML
+**Detection**: Parse the file as a TOML table; report the parse error location on failure
+**Fix**: No auto-fix (correct the TOML syntax)
+**Source**: github.com/openai/codex (codex-rs/config/src/config_requirements.rs, codex-rs/config/src/loader/mod.rs @ rust-v0.133.0)
+
+### CDX-REQ-001 [MEDIUM] Unknown Codex requirements.toml Key
+**Requirement**: Top-level keys SHOULD be recognized members of `ConfigRequirementsToml`; Codex silently ignores unknown keys (no `deny_unknown_fields`), so a typo is never enforced
+**Detection**: Compare each top-level key against the known set (`allow_managed_hooks_only`, `allowed_approval_policies`, `allowed_approvals_reviewers`, `allowed_permissions`, `allowed_sandbox_modes`, `allowed_web_search_modes`, `apps`, `computer_use`, `enforce_residency`, `experimental_network`, `features`/`feature_requirements`, `guardian_policy_config`, `hooks`, `mcp_servers`, `permissions`, `plugins`, `remote_sandbox_config`, `rules`)
+**Fix**: No auto-fix (remove or rename the key)
+**Source**: github.com/openai/codex (codex-rs/config/src/config_requirements.rs @ rust-v0.133.0, docs/config.md)
+
+---
+
 ## ROO CODE RULES
 
 <a id="roo-001"></a>
@@ -3455,8 +3473,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 423 validation rules across 40 categories
+**Total Coverage**: 425 validation rules across 40 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 215 HIGH, 180 MEDIUM, 28 LOW
+**Certainty**: 216 HIGH, 181 MEDIUM, 28 LOW
 **Auto-Fixable**: 129 rules (30%)

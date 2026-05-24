@@ -479,6 +479,22 @@ pub fn detect_file_type(path: &Path) -> FileType {
         {
             FileType::CodexConfig
         }
+        // Codex CLI managed requirements (admin-written, system location):
+        // `/etc/codex/requirements.toml` (Unix) or
+        // `%ProgramData%\OpenAI\Codex\requirements.toml` (Windows). The parent
+        // dir is `codex`/`Codex` (case-insensitive); the project `.codex/` dir
+        // is deliberately NOT matched - Codex does not read requirements.toml
+        // from there.
+        //
+        // Accepted trade-off: a project that happens to keep an unrelated
+        // `requirements.toml` under a literal `codex/` directory would be
+        // classified here and linted as Codex requirements. Detection is
+        // path-only (no content peek) by design, and this combination is rare,
+        // so we accept it rather than gate on an absolute system path (which
+        // would defeat linting an explicitly-passed file).
+        "requirements.toml" if parent_eq_ignore_ascii_case(parent, "codex") => {
+            FileType::CodexRequirements
+        }
         name if name.ends_with(".md") => {
             // Agent directories take precedence over filename exclusions.
             // Files like agents/README.md should be validated as agent configs.
@@ -1079,6 +1095,30 @@ mod tests {
         assert_eq!(
             detect_file_type(Path::new(".codex/config.yml")),
             FileType::CodexConfig
+        );
+    }
+
+    #[test]
+    fn detect_codex_requirements() {
+        // System (Unix) location: /etc/codex/requirements.toml
+        assert_eq!(
+            detect_file_type(Path::new("/etc/codex/requirements.toml")),
+            FileType::CodexRequirements
+        );
+        // Windows ProgramData location uses a `Codex` parent (case-insensitive)
+        assert_eq!(
+            detect_file_type(Path::new("OpenAI/Codex/requirements.toml")),
+            FileType::CodexRequirements
+        );
+        // Project `.codex/` must NOT match - Codex never reads requirements.toml there
+        assert_ne!(
+            detect_file_type(Path::new(".codex/requirements.toml")),
+            FileType::CodexRequirements
+        );
+        // A bare requirements.toml with no codex parent is not ours
+        assert_ne!(
+            detect_file_type(Path::new("requirements.toml")),
+            FileType::CodexRequirements
         );
     }
 
