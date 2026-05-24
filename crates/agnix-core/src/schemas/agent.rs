@@ -20,7 +20,11 @@ where
     }
     let value = Option::<SeqOrString>::deserialize(deserializer)?;
     Ok(value.map(|v| match v {
-        SeqOrString::Seq(items) => items,
+        SeqOrString::Seq(items) => items
+            .into_iter()
+            .map(|item| item.trim().to_string())
+            .filter(|item| !item.is_empty())
+            .collect(),
         SeqOrString::Str(s) => s
             .split([',', ' ', '\t'])
             .map(str::trim)

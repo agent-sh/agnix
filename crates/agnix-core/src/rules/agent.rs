@@ -2535,13 +2535,16 @@ Body"#;
             .collect();
 
         assert_eq!(parse_errors.len(), 1);
-        assert!(parse_errors[0].line >= 1);
+        // The untagged enum attributes the type error to the frontmatter start
+        // (line 2 here) rather than the exact field line - guard that it lands
+        // within the frontmatter, not at the missing-frontmatter fallback (1).
+        assert_eq!(parse_errors[0].line, 2);
     }
 
     #[test]
     fn test_cc_ag_007_comma_separated_tools_accepted() {
         // Reproduces #957: the canonical sub-agent form `tools: Read, Glob, Grep`
-        // (a comma-separated string) must parse without an CC-AG-007 error.
+        // (a comma-separated string) must parse without a CC-AG-007 error.
         let content = "---\nname: code-reviewer\ndescription: Reviews code\ntools: Read, Glob, Grep\nmodel: sonnet\n---\nBody";
         let diagnostics = validate(content);
         assert!(
