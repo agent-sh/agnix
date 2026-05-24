@@ -18,7 +18,9 @@ jobs:
     # Skip for any dependabot PR - the label-based skip is not reliable
     # (security PRs in particular open without honoring dependabot.yml
     # labels) - and for PRs with [skip changelog] in the title or the
-    # skip-changelog label.
+    # skip-changelog label. The "[skip changelog] in a commit message"
+    # escape hatch is handled in the step below, since commit messages are
+    # not available in this job-level `if:` expression.
     if: |
       github.event.pull_request.user.login != 'dependabot[bot]' &&
       !contains(github.event.pull_request.title, '[skip changelog]') &&
@@ -29,16 +31,27 @@ jobs:
           fetch-depth: 0
 
       - name: Check CHANGELOG.md modified
+        env:
+          BASE_REF: ${{ github.base_ref }}
         run: |
           set -euo pipefail
-          changed_files=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")
+          range="origin/${BASE_REF}...HEAD"
+          # Commit-message escape hatch: the PR title and label are checked in
+          # the job-level `if:`, but a `[skip changelog]` marker in any commit
+          # on the branch should also skip the gate (matches how it reads in a
+          # commit body, e.g. dependency or CI-only changes).
+          if git log --format='%B' "$range" | grep -qF '[skip changelog]'; then
+            echo "[skip changelog] found in a commit message - skipping changelog check"
+            exit 0
+          fi
+          changed_files=$(git diff --name-only "$range")
           if grep -qF "CHANGELOG.md" <<< "$changed_files"; then
             echo "CHANGELOG.md has been modified"
           else
             echo "::error::CHANGELOG.md was not modified. Please add an entry describing your changes."
             echo ""
             echo "If this PR doesn't require a changelog entry, you can:"
-            echo "  - Add [skip changelog] to the PR title"
+            echo "  - Add [skip changelog] to the PR title or any commit message"
             echo "  - Add the 'skip-changelog' label to the PR"
             exit 1
           fi
