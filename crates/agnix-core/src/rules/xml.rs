@@ -3,6 +3,7 @@
 use crate::{
     config::PerFileLintConfig,
     diagnostics::{Diagnostic, Fix},
+    parsers::frontmatter::split_frontmatter,
     parsers::markdown::{
         XmlBalanceError, XmlTag, check_xml_balance_with_content_end, extract_xml_tags,
     },
@@ -12,6 +13,27 @@ use rust_i18n::t;
 use std::path::Path;
 
 const RULE_IDS: &[&str] = &["XML-001", "XML-002", "XML-003"];
+
+/// Blank out the YAML frontmatter region so the XML balance check only sees the
+/// document body. Frontmatter values are structured metadata (e.g. a skill
+/// `description` may legitimately contain `<placeholder>` text), not body XML.
+/// Each non-newline byte in `[0, body_start)` becomes a space - byte length and
+/// line breaks are preserved, so reported tag line/column/byte offsets stay
+/// accurate. No-op when the file has no frontmatter.
+fn mask_frontmatter(content: &str, body_start: usize) -> String {
+    let masked: Vec<u8> = content
+        .bytes()
+        .enumerate()
+        .map(|(i, b)| {
+            if i < body_start && b != b'\n' && b != b'\r' {
+                b' '
+            } else {
+                b
+            }
+        })
+        .collect();
+    String::from_utf8(masked).unwrap_or_else(|_| content.to_string())
+}
 
 pub struct XmlValidator;
 
@@ -52,7 +74,18 @@ impl Validator for XmlValidator {
             return diagnostics;
         }
 
-        let tags = extract_xml_tags(content);
+        // Skip the YAML frontmatter region: its values are metadata, not body
+        // XML (e.g. a skill `description` with `<name>` placeholders).
+        let parts = split_frontmatter(content);
+        let scan_owned;
+        let scan_content: &str = if parts.has_frontmatter && parts.body_start > 0 {
+            scan_owned = mask_frontmatter(content, parts.body_start);
+            &scan_owned
+        } else {
+            content
+        };
+
+        let tags = extract_xml_tags(scan_content);
         let errors = check_xml_balance_with_content_end(&tags, Some(content.len()));
 
         for error in errors {
@@ -324,6 +357,45 @@ Persist the resolved path to a file:
         assert_eq!(diagnostics.len(), 1);
         assert_eq!(diagnostics[0].rule, "XML-001");
         assert!(diagnostics[0].message.contains("Unclosed XML tag"));
+    }
+
+    #[test]
+    fn test_xml_001_ignores_frontmatter_placeholders() {
+        // Reproduces #957: `<name>`-style placeholders in a skill's frontmatter
+        // `description` are metadata, not body XML, and must not trip XML-001.
+        let content = "---\nname: my-skill\ndescription: Use when handling <name> or <X> placeholders\n---\nClean body.";
+        let validator = XmlValidator;
+        let diagnostics =
+            validator.validate(Path::new("SKILL.md"), content, &LintConfig::default());
+        assert!(
+            diagnostics.iter().all(|d| d.rule != "XML-001"),
+            "frontmatter placeholders must not trip XML-001, got: {:?}",
+            diagnostics
+                .iter()
+                .filter(|d| d.rule == "XML-001")
+                .collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn test_xml_001_still_flags_unclosed_tag_in_body() {
+        // The mask only covers frontmatter - unclosed XML in the body is still
+        // flagged, and the reported line accounts for the frontmatter offset.
+        let content =
+            "---\nname: my-skill\ndescription: A skill\n---\nBody with <thinking>unclosed";
+        let validator = XmlValidator;
+        let diagnostics =
+            validator.validate(Path::new("SKILL.md"), content, &LintConfig::default());
+        let xml_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XML-001").collect();
+        assert_eq!(
+            xml_001.len(),
+            1,
+            "unclosed body tag should still be flagged"
+        );
+        assert_eq!(
+            xml_001[0].line, 5,
+            "line should reflect the frontmatter offset"
+        );
     }
 
     // XML-002: Tag mismatch produces XML-002 rule ID
