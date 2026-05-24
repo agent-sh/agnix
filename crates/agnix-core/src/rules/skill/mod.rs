@@ -21,6 +21,25 @@ use std::sync::OnceLock;
 mod helpers;
 use helpers::*;
 
+/// Deserialize `allowed-tools` from either a space-separated string or a YAML
+/// list (joined with spaces). Returns `None` when the field is absent or null.
+fn de_string_or_space_seq<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum StringOrSeq {
+        Str(String),
+        Seq(Vec<String>),
+    }
+    let value = Option::<StringOrSeq>::deserialize(deserializer)?;
+    Ok(value.map(|v| match v {
+        StringOrSeq::Str(s) => s,
+        StringOrSeq::Seq(items) => items.join(" "),
+    }))
+}
+
 #[derive(Debug, Default, Deserialize)]
 struct SkillFrontmatter {
     name: Option<String>,
@@ -28,7 +47,15 @@ struct SkillFrontmatter {
     license: Option<String>,
     compatibility: Option<String>,
     metadata: Option<HashMap<String, String>>,
-    #[serde(rename = "allowed-tools")]
+    // Claude Code accepts `allowed-tools` as a space-separated string OR a YAML
+    // list; agentskills.io documents a space-separated string. Deserialize both
+    // shapes (a list is joined with spaces) so a list never trips AS-016
+    // (skill parse error). Downstream tool parsing splits on whitespace/commas.
+    #[serde(
+        rename = "allowed-tools",
+        default,
+        deserialize_with = "de_string_or_space_seq"
+    )]
     allowed_tools: Option<String>,
     #[serde(rename = "argument-hint")]
     argument_hint: Option<String>,

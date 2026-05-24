@@ -2582,6 +2582,49 @@ Body content"#;
 }
 
 #[test]
+fn test_as_016_allowed_tools_yaml_list_no_parse_error() {
+    // Reproduces #957: `allowed-tools` as a YAML list previously failed to
+    // deserialize (Option<String>) and tripped AS-016. Claude Code accepts a
+    // list; agentskills.io documents a space-separated string. Both shapes
+    // must now parse without an AS-016 error.
+    let list_form = r#"---
+name: valid-skill
+description: Use when reviewing code for issues
+allowed-tools:
+  - Read
+  - Grep
+  - Glob
+---
+Body content"#;
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(Path::new("test.md"), list_form, &LintConfig::default());
+    assert!(
+        diagnostics.iter().all(|d| d.rule != "AS-016"),
+        "YAML-list allowed-tools must not trip AS-016, got: {:?}",
+        diagnostics
+            .iter()
+            .filter(|d| d.rule == "AS-016")
+            .collect::<Vec<_>>()
+    );
+    // The joined tools (Read Grep Glob) are all known, so no CC-SK-008 either.
+    assert!(
+        diagnostics.iter().all(|d| d.rule != "CC-SK-008"),
+        "valid tools in list form must not trip CC-SK-008"
+    );
+
+    // String form still parses cleanly too.
+    let string_form = r#"---
+name: valid-skill
+description: Use when reviewing code for issues
+allowed-tools: Read Grep Glob
+---
+Body content"#;
+    let string_diags =
+        validator.validate(Path::new("test.md"), string_form, &LintConfig::default());
+    assert!(string_diags.iter().all(|d| d.rule != "AS-016"));
+}
+
+#[test]
 fn test_as_016_disabled() {
     let mut config = LintConfig::default();
     config.rules_mut().disabled_rules = vec!["AS-016".to_string()];
