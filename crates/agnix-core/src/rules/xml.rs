@@ -3,6 +3,7 @@
 use crate::{
     config::PerFileLintConfig,
     diagnostics::{Diagnostic, Fix},
+    parsers::frontmatter::split_frontmatter,
     parsers::markdown::{
         XmlBalanceError, XmlTag, check_xml_balance_with_content_end, extract_xml_tags,
     },
@@ -12,6 +13,40 @@ use rust_i18n::t;
 use std::path::Path;
 
 const RULE_IDS: &[&str] = &["XML-001", "XML-002", "XML-003"];
+
+/// Blank out the YAML frontmatter region (`[0, body_start)`) so the XML balance
+/// check only sees the document body. Frontmatter values are structured
+/// metadata (e.g. a skill `description` may legitimately contain `<placeholder>`
+/// text), not body XML. Each non-newline byte becomes a space - byte length and
+/// line breaks are preserved, so reported tag line/column/byte offsets stay
+/// accurate. Only the frontmatter region is iterated; the body is copied as-is.
+fn mask_frontmatter(content: &str, body_start: usize) -> String {
+    if body_start == 0 || body_start > content.len() || !content.is_char_boundary(body_start) {
+        return content.to_string();
+    }
+    let (front, body) = content.split_at(body_start);
+    let mut result = String::with_capacity(content.len());
+    for &b in front.as_bytes() {
+        // front is the leading frontmatter; replacing each non-newline byte with
+        // a single ASCII space keeps both byte length and line count intact.
+        result.push(if b == b'\n' || b == b'\r' {
+            b as char
+        } else {
+            ' '
+        });
+    }
+    result.push_str(body);
+    result
+}
+
+/// A leading `---`-delimited block is real YAML frontmatter (vs. Markdown
+/// horizontal rules that happen to bracket a section) only if it parses as a
+/// YAML mapping. Used to avoid masking non-frontmatter content.
+fn is_yaml_frontmatter(frontmatter: &str) -> bool {
+    serde_yaml::from_str::<serde_yaml::Value>(frontmatter)
+        .map(|v| v.is_mapping())
+        .unwrap_or(false)
+}
 
 pub struct XmlValidator;
 
@@ -52,7 +87,25 @@ impl Validator for XmlValidator {
             return diagnostics;
         }
 
-        let tags = extract_xml_tags(content);
+        // Skip the YAML frontmatter region: its values are metadata, not body
+        // XML (e.g. a skill `description` with `<name>` placeholders). Only mask
+        // a genuine closed frontmatter block that parses as a YAML mapping, so
+        // Markdown horizontal rules (`---`) bracketing a section are not mistaken
+        // for frontmatter and don't hide real body XML in non-frontmatter docs.
+        let parts = split_frontmatter(content);
+        let scan_owned;
+        let scan_content: &str = if parts.has_frontmatter
+            && parts.has_closing
+            && parts.body_start > 0
+            && is_yaml_frontmatter(&parts.frontmatter)
+        {
+            scan_owned = mask_frontmatter(content, parts.body_start);
+            &scan_owned
+        } else {
+            content
+        };
+
+        let tags = extract_xml_tags(scan_content);
         let errors = check_xml_balance_with_content_end(&tags, Some(content.len()));
 
         for error in errors {
@@ -324,6 +377,60 @@ Persist the resolved path to a file:
         assert_eq!(diagnostics.len(), 1);
         assert_eq!(diagnostics[0].rule, "XML-001");
         assert!(diagnostics[0].message.contains("Unclosed XML tag"));
+    }
+
+    #[test]
+    fn test_xml_001_ignores_frontmatter_placeholders() {
+        // Reproduces #957: `<name>`-style placeholders in a skill's frontmatter
+        // `description` are metadata, not body XML, and must not trip XML-001.
+        let content = "---\nname: my-skill\ndescription: Use when handling <name> or <X> placeholders\n---\nClean body.";
+        let validator = XmlValidator;
+        let diagnostics =
+            validator.validate(Path::new("SKILL.md"), content, &LintConfig::default());
+        assert!(
+            diagnostics.iter().all(|d| d.rule != "XML-001"),
+            "frontmatter placeholders must not trip XML-001, got: {:?}",
+            diagnostics
+                .iter()
+                .filter(|d| d.rule == "XML-001")
+                .collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn test_xml_001_does_not_mask_markdown_horizontal_rules() {
+        // A `---`-bracketed section that is NOT a YAML mapping (Markdown
+        // horizontal rules around a heading) must not be treated as frontmatter
+        // - real XML in that leading region is still balance-checked.
+        let content = "---\n<thinking>unclosed\n---\nbody";
+        let validator = XmlValidator;
+        let diagnostics =
+            validator.validate(Path::new("README.md"), content, &LintConfig::default());
+        assert!(
+            diagnostics.iter().any(|d| d.rule == "XML-001"),
+            "unclosed tag in a non-YAML `---` block must still be flagged"
+        );
+    }
+
+    #[test]
+    fn test_xml_001_still_flags_unclosed_tag_in_body() {
+        // The mask only covers frontmatter - unclosed XML in the body is still
+        // flagged, and the reported line accounts for the frontmatter offset.
+        let content =
+            "---\nname: my-skill\ndescription: A skill\n---\nBody with <thinking>unclosed";
+        let validator = XmlValidator;
+        let diagnostics =
+            validator.validate(Path::new("SKILL.md"), content, &LintConfig::default());
+        let xml_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XML-001").collect();
+        assert_eq!(
+            xml_001.len(),
+            1,
+            "unclosed body tag should still be flagged"
+        );
+        assert_eq!(
+            xml_001[0].line, 5,
+            "line should reflect the frontmatter offset"
+        );
     }
 
     // XML-002: Tag mismatch produces XML-002 rule ID
