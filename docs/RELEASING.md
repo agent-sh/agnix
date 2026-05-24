@@ -42,9 +42,9 @@ cargo test --doc --workspace
 # Clippy clean
 cargo clippy --workspace -- -D warnings
 
-# Eval: removed-rule cases must be clean. A set of pre-existing expectation
-# drifts (fixtures frozen at ~v0.10.3) is tracked in #981 - eval is not yet a
-# CI gate. As of v0.28.0 the known-failing baseline is 8/61.
+# Eval must be fully green (0 failed cases). It is gated in CI (ci.yml,
+# "Rule efficacy eval"), so a red eval blocks merge - this is just a local
+# pre-check.
 cargo run -p agnix-cli --bin agnix -- eval tests/eval.yaml
 
 # Self-lint (agnix validates its own config)

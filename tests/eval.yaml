@@ -40,8 +40,8 @@ cases:
     description: "Indexed $ARGUMENTS[n] without argument-hint triggers CC-SK-016"
 
   - file: fixtures/invalid/skills/unknown-frontmatter-field/SKILL.md
-    expected: [CC-SK-017]
-    description: "Unknown frontmatter field triggers CC-SK-017"
+    expected: [CC-SK-017, XP-SK-001]
+    description: "Unknown frontmatter field triggers CC-SK-017 (and XP-SK-001 for the non-universal field)"
 
   - file: fixtures/invalid/skills/invalid-model/SKILL.md
     expected: [AS-017, CC-SK-001, XP-SK-001]
@@ -68,7 +68,7 @@ cases:
     description: "Valid skill should have no errors"
 
   - file: fixtures/valid/skills/with-context-agent/SKILL.md
-    expected: [AS-017, XP-SK-001]
+    expected: [XP-SK-001]
     description: "Valid skill with context and agent triggers XP-SK-001 (not in client-specific dir)"
 
   # ===== MCP Rules (MCP-*) =====
@@ -122,12 +122,12 @@ cases:
     description: "Valid MCP tool should have no errors"
 
   - file: fixtures/mcp/invalid-tool-name.mcp.json
-    expected: [MCP-013]
-    description: "Invalid tool name format triggers MCP-013"
+    expected: [MCP-013, MCP-005]
+    description: "Invalid tool name format triggers MCP-013 (tool also lacks a consent mechanism: MCP-005)"
 
   - file: fixtures/mcp/invalid-output-schema.mcp.json
-    expected: [MCP-014]
-    description: "Invalid outputSchema triggers MCP-014"
+    expected: [MCP-014, MCP-005]
+    description: "Invalid outputSchema triggers MCP-014 (tool also lacks a consent mechanism: MCP-005)"
 
   - file: fixtures/mcp/missing-resource-required-fields.mcp.json
     expected: [MCP-015]
@@ -154,8 +154,8 @@ cases:
     description: "Unknown capability key triggers MCP-020"
 
   - file: fixtures/mcp/wildcard-http-binding.mcp.json
-    expected: [MCP-021]
-    description: "Wildcard HTTP binding warning triggers MCP-021"
+    expected: [MCP-021, MCP-017]
+    description: "Wildcard HTTP binding triggers MCP-021 (insecure http:// URL also triggers MCP-017)"
 
   - file: fixtures/mcp/invalid-args-type.mcp.json
     expected: [MCP-022]
@@ -166,8 +166,8 @@ cases:
     description: "Duplicate mcpServers keys trigger MCP-023"
 
   - file: fixtures/mcp/empty-server-config.mcp.json
-    expected: [MCP-024]
-    description: "Empty mcpServers entry triggers MCP-024"
+    expected: [MCP-024, MCP-009]
+    description: "Empty mcpServers entry triggers MCP-024 (stdio server also missing its command: MCP-009)"
 
   # ===== AGENTS.md Rules (AGM-*) =====
 
@@ -176,8 +176,8 @@ cases:
     description: "Unclosed code block triggers AGM-001"
 
   - file: fixtures/agents_md/no-headers/AGENTS.md
-    expected: [AGM-002, XP-002]
-    description: "No headers triggers both AGM-002 and XP-002"
+    expected: [AGM-002, XP-002, CDX-AG-006]
+    description: "No headers trigger AGM-002 and XP-002 (Codex also flags missing context: CDX-AG-006)"
 
   - file: fixtures/agents_md/too-large/AGENTS.md
     expected: [AGM-003]
@@ -212,8 +212,8 @@ cases:
 
   # Hard-coded paths file also lacks context section
   - file: fixtures/cross_platform/hard-coded/AGENTS.md
-    expected: [XP-003, AGM-004]
-    description: "Hard-coded paths triggers XP-003 and AGM-004"
+    expected: [XP-003, AGM-004, CDX-AG-005]
+    description: "Hard-coded paths trigger XP-003 and AGM-004 (Codex also flags them: CDX-AG-005)"
 
   - file: fixtures/cross_platform/valid/AGENTS.md
     expected: []
