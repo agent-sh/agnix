@@ -125,6 +125,7 @@ const KNOWN_PERMISSIONS_NETWORK_KEYS: &[&str] = &[
     "denied_domains",
     "enable_socks5",
     "enabled",
+    "mitm",
     "mode",
     "proxy_url",
 ];
@@ -135,7 +136,7 @@ const VALID_WINDOWS_SANDBOX_VALUES: &[&str] = &["elevated", "unelevated"];
 // unknown-top-level-key detection. Keep it in sync with KNOWN_TOP_LEVEL_KEYS ∪ KNOWN_TABLE_KEYS
 // in schemas/codex.rs (this set represents the flat union - the JSON/YAML backends don't
 // distinguish scalar top-level keys from TOML `[section]` tables).
-// Sourced from upstream codex-rs/core/config.schema.json @ rust-v0.128.0. Alphabetized.
+// Sourced from upstream codex-rs/core/config.schema.json; last reconciled @ rust-v0.133.0. Alphabetized.
 const KNOWN_CONFIG_TOP_LEVEL_KEYS: &[&str] = &[
     "agents",
     "allow_login_shell",
@@ -143,6 +144,7 @@ const KNOWN_CONFIG_TOP_LEVEL_KEYS: &[&str] = &[
     "approval_policy",
     "approvals_reviewer",
     "apps",
+    "apps_mcp_product_sku",
     "audio",
     "auto_review",
     "background_terminal_max_timeout",
@@ -152,6 +154,7 @@ const KNOWN_CONFIG_TOP_LEVEL_KEYS: &[&str] = &[
     "commit_attribution",
     "compact_prompt",
     "default_permissions",
+    "desktop",
     "developer_instructions",
     "disable_paste_burst",
     "experimental_compact_prompt_file",
@@ -175,6 +178,7 @@ const KNOWN_CONFIG_TOP_LEVEL_KEYS: &[&str] = &[
     "history",
     "hooks",
     "include_apps_instructions",
+    "include_collaboration_mode_instructions",
     "include_environment_context",
     "include_permissions_instructions",
     "instructions",
@@ -189,6 +193,7 @@ const KNOWN_CONFIG_TOP_LEVEL_KEYS: &[&str] = &[
     "memories",
     "model",
     "model_auto_compact_token_limit",
+    "model_auto_compact_token_limit_scope",
     "model_catalog_json",
     "model_context_window",
     "model_instructions_file",
@@ -259,8 +264,11 @@ const KNOWN_FEATURE_KEYS: &[&str] = &[
     "js_repl_tools_only",
     "memories",
     "memory_tool",
+    "mentions_v2",
     "multi_agent",
+    "network_proxy",
     "personality",
+    "plugin_sharing",
     "plugins",
     "powershell_utf8",
     "prevent_idle_sleep",
@@ -321,6 +329,7 @@ const KNOWN_MCP_SERVER_KEYS: &[&str] = &[
     "env_http_headers",
     "env_vars",
     "http_headers",
+    "oauth",
     "oauth_resource",
     "required",
     "scopes",
@@ -2892,6 +2901,60 @@ name = "test"
         assert!(
             cdx_004.is_empty(),
             "Known table keys should not trigger CDX-004"
+        );
+    }
+
+    #[test]
+    fn test_codex_0_133_0_new_keys_not_flagged() {
+        // Config keys introduced in Codex rust-v0.133.0 (diffed from
+        // codex-rs/core/config.schema.json between rust-v0.129.0 and
+        // rust-v0.133.0). Regression guard against CDX-004 (unknown key) and
+        // CDX-CFG-026 (unknown permissions.network sub-field) false-positives
+        // on valid 0.133 configs. Covers every new allow-list entry:
+        // top-level (apps_mcp_product_sku, desktop, include_collaboration_
+        // mode_instructions, model_auto_compact_token_limit_scope), features
+        // (mentions_v2, network_proxy, plugin_sharing), mcp_servers (oauth),
+        // and permissions.network (mitm). The new [tui] keys (pet/pet_anchor)
+        // are intentionally NOT added - TUI display tweaks are on the codex
+        // changes_of_interest.irrelevant list (matching the v0.129 catch-up).
+        let content = r#"
+apps_mcp_product_sku = "codex-pro"
+include_collaboration_mode_instructions = true
+model_auto_compact_token_limit_scope = "body_after_prefix"
+
+[desktop]
+opaque = "value"
+
+[features]
+mentions_v2 = true
+network_proxy = true
+plugin_sharing = true
+
+[mcp_servers.example]
+command = "example-server"
+oauth = true
+
+[permissions.network]
+mitm = true
+"#;
+        let diagnostics = validate_config(content);
+        let cdx_004: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-004")
+            .map(|d| d.message.as_str())
+            .collect();
+        assert!(
+            cdx_004.is_empty(),
+            "0.133 keys should not trigger CDX-004, got: {cdx_004:?}"
+        );
+        let cdx_cfg_026: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-026")
+            .map(|d| d.message.as_str())
+            .collect();
+        assert!(
+            cdx_cfg_026.is_empty(),
+            "0.133 permissions.network `mitm` should not trigger CDX-CFG-026, got: {cdx_cfg_026:?}"
         );
     }
 

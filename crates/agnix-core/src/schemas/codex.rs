@@ -123,6 +123,15 @@ pub const KNOWN_TOP_LEVEL_KEYS: &[&str] = &[
     "realtime",
     // Tool suggestions toggle (added in Codex rust-v0.122.0 catch-up)
     "tool_suggest",
+    // Added in Codex rust-v0.133.0 catch-up (sourced from upstream
+    // codex-rs/core/config.schema.json). Scalar top-level keys:
+    // `apps_mcp_product_sku` (product SKU forwarded on host-owned Apps MCP
+    // requests), `include_collaboration_mode_instructions` (inject the
+    // <collaboration_mode> developer block), and
+    // `model_auto_compact_token_limit_scope` (enum total|body_after_prefix).
+    "apps_mcp_product_sku",
+    "include_collaboration_mode_instructions",
+    "model_auto_compact_token_limit_scope",
     // Legacy camelCase keys (backwards compat)
     "approvalMode",
     "fullAutoErrorMode",
@@ -168,6 +177,11 @@ pub const KNOWN_TABLE_KEYS: &[&str] = &[
     // `allow_codex_version_mismatch`, `export_dir`, `load_path`, and
     // `save_fields_resolved_from_model_catalog`).
     "debug",
+    // Added in Codex rust-v0.133.0 catch-up - `[desktop]` table for opaque
+    // desktop settings stored alongside the rest of config.toml
+    // (`additionalProperties: true` upstream, so nested keys are not
+    // enumerated).
+    "desktop",
 ];
 
 /// An unknown key found in config
@@ -690,6 +704,35 @@ save_fields_resolved_from_model_catalog = true
         assert!(
             result.unknown_keys.is_empty(),
             "0.129 `debug` table should not be flagged as unknown, got: {:?}",
+            result
+                .unknown_keys
+                .iter()
+                .map(|u| u.key.as_str())
+                .collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn test_codex_0_133_0_new_top_level_keys_not_flagged() {
+        // Top-level keys/table introduced in Codex rust-v0.133.0. Regression
+        // guard: if any of these get dropped from KNOWN_TOP_LEVEL_KEYS /
+        // KNOWN_TABLE_KEYS, CDX-004 starts false-positive-ing on valid 0.133
+        // configs. `[desktop]` is an opaque table (additionalProperties:true
+        // upstream) so its nested keys must not be flagged either.
+        let content = r#"
+apps_mcp_product_sku = "codex-pro"
+include_collaboration_mode_instructions = true
+model_auto_compact_token_limit_scope = "body_after_prefix"
+
+[desktop]
+some_opaque_setting = "value"
+nested_number = 42
+"#;
+        let result = parse_codex_toml(content);
+        assert!(result.parse_error.is_none());
+        assert!(
+            result.unknown_keys.is_empty(),
+            "0.133 top-level keys/`[desktop]` table should not be flagged, got: {:?}",
             result
                 .unknown_keys
                 .iter()
