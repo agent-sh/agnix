@@ -232,6 +232,8 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 
 ## CLAUDE CODE RULES (SKILLS)
 
+> **Scope:** the `CC-SK-*` rules encode Claude Code's skill schema (Claude-only frontmatter fields, tool vocabulary, model values, hooks, fork/argument semantics). They run for Claude Code skills (`.claude/skills/` or a `claude-code` target) and for unscoped skills with no identifiable client, but are **suppressed for skills owned by another known tool** (Codex `.agents/skills/`, OpenCode, Cursor, …), which are covered by the generic `AS-*` rules and the per-client skill validator.
+
 <a id="cc-sk-001"></a>
 ### CC-SK-001 [HIGH] Invalid Model Value
 **Requirement**: model MUST be one of: sonnet, opus, haiku, inherit

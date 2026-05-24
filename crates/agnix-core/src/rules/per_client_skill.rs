@@ -57,6 +57,17 @@ fn is_field_supported(client: SkillClient, field: &str) -> bool {
     }
 }
 
+impl SkillClient {
+    /// Whether the Claude Code skill rules (`CC-SK-*`) should run for this
+    /// client. They apply to Claude Code skills and to skills with no
+    /// identifiable client (`Unknown` - a bare `SKILL.md` that could be a
+    /// Claude skill), but NOT to skills owned by another known tool (Codex,
+    /// OpenCode, Cursor, …), which have their own rule sets / vocabularies.
+    pub(crate) fn applies_claude_skill_rules(self) -> bool {
+        matches!(self, SkillClient::ClaudeCode | SkillClient::Unknown)
+    }
+}
+
 /// Detect which client owns a SKILL.md based on its path components.
 ///
 /// Iterates path components looking for the `skills` directory name, then
