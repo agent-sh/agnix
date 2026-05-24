@@ -36,6 +36,12 @@ jobs:
       - name: Test
         run: cargo test --workspace
 
+      - name: Rule efficacy eval
+        # Exits non-zero if any tests/eval.yaml case's fired rules diverge from
+        # its expected set. Keeps the eval fixtures from silently drifting as
+        # rules are added or rescoped (see #981).
+        run: cargo run -p agnix-cli --bin agnix -- eval tests/eval.yaml
+
       - name: Kiro S-tier Gate
         run: cargo test -p agnix-cli --test kiro_ci_gate -- --include-ignored
 
