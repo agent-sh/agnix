@@ -33,11 +33,26 @@ pub const AGENTS_MD_MAX_SIZE: usize = 100_000;
 /// Known valid top-level keys for .codex/config.toml
 ///
 /// Sourced from the upstream JSON schema at
-/// <https://github.com/openai/codex/blob/rust-v0.128.0/codex-rs/core/config.schema.json>
-/// (see also <https://developers.openai.com/codex/> for the prose overview).
+/// `codex-rs/core/config.schema.json`; current baseline is `rust-v0.133.0`
+/// (see `.github/tool-release-baselines.json`). Prose overview:
+/// <https://developers.openai.com/codex/>.
 ///
 /// When catching up to a new Codex release, regenerate this list by diffing
 /// `codex-rs/core/config.schema.json` against these constants.
+///
+/// The list is intentionally a lenient superset, with two classes of entries
+/// that are *not* in the current schema and are kept deliberately:
+/// 1. Older-version tolerance - keys a real version once shipped but a newer
+///    schema dropped (e.g. `commit_attribution`,
+///    `experimental_use_freeform_apply_patch`, `windows_wsl_setup_acknowledged`,
+///    `experimental_thread_store_endpoint` were in `rust-v0.129.0`, removed by
+///    `rust-v0.133.0`).
+/// 2. Legacy camelCase keys (`approvalMode`, `fullAutoErrorMode`) - never in the
+///    (snake_case) schema, accepted from early Codex configs.
+///
+/// Leniency only weakens typo detection, never false-positives. Keys that no
+/// audited schema ever contained and have no such backwards-compat reason are
+/// removed instead (see #969).
 pub const KNOWN_TOP_LEVEL_KEYS: &[&str] = &[
     // Core model settings (alphabetized within block)
     "log_dir",
@@ -59,7 +74,6 @@ pub const KNOWN_TOP_LEVEL_KEYS: &[&str] = &[
     "compact_prompt",
     "developer_instructions",
     "experimental_compact_prompt_file",
-    "include_apply_patch_tool",
     "instructions",
     "model_instructions_file",
     // Notifications
@@ -132,11 +146,8 @@ pub const KNOWN_TOP_LEVEL_KEYS: &[&str] = &[
     "apps_mcp_product_sku",
     "include_collaboration_mode_instructions",
     "model_auto_compact_token_limit_scope",
-    // Unified from the former rules/codex.rs JSON/YAML allow-list (js_repl
-    // node-resolution scalars) so the TOML and JSON/YAML backends agree.
-    "js_repl_node_module_dirs",
-    "js_repl_node_path",
-    // Legacy camelCase keys (backwards compat)
+    // Legacy camelCase keys: never in `config.schema.json` (which is snake_case)
+    // but accepted from very early Codex configs for backwards compatibility.
     "approvalMode",
     "fullAutoErrorMode",
 ];
@@ -756,24 +767,22 @@ nested_number = 42
     }
 
     #[test]
-    fn test_codex_unified_allowlist_fixes_toml_drift() {
-        // Drift fix (issue #966): before unifying the top-level allow-list, the
-        // TOML path flagged `js_repl_node_path` / `js_repl_node_module_dirs`
-        // because they lived only in the JSON/YAML list on the rules side.
-        // They are now part of KNOWN_TOP_LEVEL_KEYS, so the TOML path accepts
-        // them too.
+    fn test_codex_stale_js_repl_keys_flagged() {
+        // Audit (issue #969): `js_repl_node_path` / `js_repl_node_module_dirs`
+        // were never present in any audited Codex schema (rust-v0.129.0 through
+        // rust-v0.134.0-alpha.3) and are not `[features]` sub-keys - they were a
+        // stale agnix allow-list entry. They were dropped from
+        // KNOWN_TOP_LEVEL_KEYS, so both backends now flag them. (The TOML and
+        // JSON/YAML paths still agree, which was the #966 invariant - they just
+        // agree on "unknown" now.)
         let content =
             "js_repl_node_path = \"/usr/bin/node\"\njs_repl_node_module_dirs = [\"/x\"]\n";
         let result = parse_codex_toml(content);
         assert!(result.parse_error.is_none());
+        let flagged: Vec<&str> = result.unknown_keys.iter().map(|u| u.key.as_str()).collect();
         assert!(
-            result.unknown_keys.is_empty(),
-            "js_repl_* keys should not be flagged on the TOML path, got: {:?}",
-            result
-                .unknown_keys
-                .iter()
-                .map(|u| u.key.as_str())
-                .collect::<Vec<_>>()
+            flagged.contains(&"js_repl_node_path") && flagged.contains(&"js_repl_node_module_dirs"),
+            "stale js_repl_* keys should now be flagged on the TOML path, got: {flagged:?}"
         );
     }
 

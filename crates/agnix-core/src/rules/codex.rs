@@ -150,7 +150,6 @@ const KNOWN_FEATURE_KEYS: &[&str] = &[
     "experimental_use_unified_exec_tool",
     "experimental_windows_sandbox",
     "fast_mode",
-    "include_apply_patch_tool",
     "js_repl",
     "js_repl_tools_only",
     "memories",
@@ -3684,7 +3683,9 @@ hide_full_access_warning = true
         // v0.129 catch-up) because it lived only in the TOML schema list.
         // Both backends now share schemas/codex.rs::is_known_top_level_key, so
         // `debug` is accepted as JSON/YAML too.
-        let json = r#"{ "debug": {}, "include_apply_patch_tool": true }"#;
+        // (`include_apply_patch_tool` was dropped from the allow-list in #969 -
+        // never in any audited schema as a top-level key or `[features]` sub-key.)
+        let json = r#"{ "debug": {} }"#;
         let diags = validate_config_at_path(".codex/config.json", json);
         assert!(
             diags
@@ -3695,6 +3696,20 @@ hide_full_access_warning = true
                 .iter()
                 .filter(|d| d.rule == "CDX-004" || d.rule == "CDX-CFG-006")
                 .collect::<Vec<_>>()
+        );
+
+        // #969: the dropped `include_apply_patch_tool` must now be flagged as
+        // unknown on the JSON backend too, mirroring the TOML-side check in
+        // schemas/codex.rs::test_codex_stale_js_repl_keys_flagged - the two
+        // backends stay in sync (#966), now agreeing on "unknown".
+        let stale = validate_config_at_path(
+            ".codex/config.json",
+            r#"{ "include_apply_patch_tool": true }"#,
+        );
+        assert!(
+            stale.iter().any(|d| d.rule == "CDX-CFG-006"),
+            "dropped include_apply_patch_tool should be flagged (CDX-CFG-006) on the JSON path, got: {:?}",
+            stale.iter().map(|d| d.rule.as_str()).collect::<Vec<_>>()
         );
     }
 

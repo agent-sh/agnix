@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Codex config allow-list audited against the upstream schema** (closes #969). Audited the Codex top-level allow-list against `codex-rs/core/config.schema.json` (rust-v0.129.0 through rust-v0.134.0-alpha.3); no valid upstream key was missing, so there are no new false positives.
+  - Dropped three keys that appear in no audited schema and are not `[features]` sub-keys: `include_apply_patch_tool` (also removed from the feature-key list), `js_repl_node_path`, and `js_repl_node_module_dirs`.
+  - Kept keys that an older Codex version shipped but a newer schema dropped (e.g. `commit_attribution`) for backwards compatibility; the rationale is now documented inline on the list.
+  - Net effect: `CDX-004` / `CDX-CFG-006` now flag the dropped keys as unknown, a small typo-detection improvement.
+
 ## [0.28.0] - 2026-05-24
 
 ### Removed
