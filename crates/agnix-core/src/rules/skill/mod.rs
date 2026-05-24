@@ -5,7 +5,7 @@ use crate::{
     diagnostics::{Diagnostic, Fix},
     parsers::frontmatter::{FrontmatterParts, split_frontmatter},
     regex_util::static_regex,
-    rules::per_client_skill::{SkillClient, resolve_skill_client},
+    rules::per_client_skill::{SkillClient, claude_skill_rules_apply, resolve_skill_client},
     rules::{Validator, ValidatorMetadata},
     schemas::hooks::HooksSchema,
     schemas::skill::{SkillSchema, VALID_EFFORT_LEVELS, VALID_SHELLS, is_valid_skill_model},
@@ -1091,10 +1091,9 @@ impl<'a> ValidationContext<'a> {
             }
         }
 
-        // CC-SK-008: Unknown tool name. KNOWN_TOOLS is Claude Code's tool set,
-        // so only judge Claude Code skills - other clients (Codex, OpenCode,
-        // ...) have their own tool vocabularies.
-        if self.client == SkillClient::ClaudeCode && self.config.is_rule_enabled("CC-SK-008") {
+        // CC-SK-008: Unknown tool name. KNOWN_TOOLS is Claude Code's tool set;
+        // the whole CC-SK family is gated to Claude Code skills at the dispatch.
+        if self.config.is_rule_enabled("CC-SK-008") {
             if let Some(ref tools) = tool_list {
                 // Compute known tools list once outside loop
                 static KNOWN_TOOLS_LIST: OnceLock<String> = OnceLock::new();
@@ -1409,12 +1408,11 @@ impl<'a> ValidationContext<'a> {
         );
     }
 
-    /// CC-SK-017: Validate unknown frontmatter keys
+    /// CC-SK-017: Validate unknown frontmatter keys. KNOWN_FRONTMATTER_FIELDS
+    /// is Claude Code's field set; the CC-SK family is gated to Claude Code
+    /// skills at the dispatch (other clients use the per-client skill validator).
     fn validate_cc_unknown_frontmatter_fields(&mut self) {
-        // KNOWN_FRONTMATTER_FIELDS is Claude Code's field set, so only judge
-        // Claude Code skills. Other clients' field support is checked by the
-        // per-client skill validator (CL-SK/CX-SK/OC-SK/WS-SK).
-        if self.client != SkillClient::ClaudeCode || !self.config.is_rule_enabled("CC-SK-017") {
+        if !self.config.is_rule_enabled("CC-SK-017") {
             return;
         }
 
@@ -1743,7 +1741,10 @@ impl Validator for SkillValidator {
 
         // Phase 0: Raw YAML type checks (CC-SK-014, CC-SK-015)
         // Run before serde parsing since string booleans cause parse failures
-        if ctx.parts.has_frontmatter && ctx.parts.has_closing {
+        if ctx.parts.has_frontmatter
+            && ctx.parts.has_closing
+            && claude_skill_rules_apply(ctx.client, ctx.config)
+        {
             ctx.validate_cc_boolean_types();
         }
 
@@ -1772,67 +1773,75 @@ impl Validator for SkillValidator {
         // Phase 5: Compatibility validation (AS-011)
         ctx.validate_compatibility(&frontmatter);
 
-        // Phase 6: CC-SK-010 (hooks in frontmatter)
-        ctx.validate_cc_hooks();
+        // Phases 6-15: Claude Code skill rules (CC-SK-*). These encode Claude
+        // Code's skill schema (Claude-only fields, tool list, model values,
+        // hooks, fork/argument semantics). They run for Claude Code skills and
+        // for unscoped skills (Unknown client), but are suppressed for skills
+        // owned by another known tool (Codex/OpenCode/…), which are covered by
+        // the generic AS-* rules above and the per-client skill validator.
+        if claude_skill_rules_apply(ctx.client, ctx.config) {
+            // Phase 6: CC-SK-010 (hooks in frontmatter)
+            ctx.validate_cc_hooks();
 
-        // Phase 7: CC-SK-011 (unreachable skill)
-        ctx.validate_cc_unreachable(&frontmatter);
+            // Phase 7: CC-SK-011 (unreachable skill)
+            ctx.validate_cc_unreachable(&frontmatter);
 
-        // Phase 8: CC-SK-012 (argument-hint without $ARGUMENTS)
-        ctx.validate_cc_argument_hint(&frontmatter);
+            // Phase 8: CC-SK-012 (argument-hint without $ARGUMENTS)
+            ctx.validate_cc_argument_hint(&frontmatter);
 
-        // Phase 9: CC-SK-016 ($ARGUMENTS[n] without argument-hint)
-        ctx.validate_cc_indexed_arguments(&frontmatter);
+            // Phase 9: CC-SK-016 ($ARGUMENTS[n] without argument-hint)
+            ctx.validate_cc_indexed_arguments(&frontmatter);
 
-        // Phase 10: CC-SK-013 (fork without actionable instructions)
-        ctx.validate_cc_fork_instructions(&frontmatter);
+            // Phase 10: CC-SK-013 (fork without actionable instructions)
+            ctx.validate_cc_fork_instructions(&frontmatter);
 
-        // Phase 11: CC-SK-017 (unknown frontmatter fields)
-        ctx.validate_cc_unknown_frontmatter_fields();
+            // Phase 11: CC-SK-017 (unknown frontmatter fields)
+            ctx.validate_cc_unknown_frontmatter_fields();
 
-        // Phase 12-15: Claude Code rules (CC-SK-001-009)
-        // These require both name and description to be non-empty
-        if let (Some(name), Some(description)) = (
-            frontmatter.name.as_deref(),
-            frontmatter.description.as_deref(),
-        ) {
-            let name_trimmed = name.trim();
-            let description_trimmed = description.trim();
-            if !name_trimmed.is_empty() && !description_trimmed.is_empty() {
-                let schema = SkillSchema {
-                    name: name_trimmed.to_string(),
-                    description: description_trimmed.to_string(),
-                    license: frontmatter.license.clone(),
-                    compatibility: frontmatter.compatibility.clone(),
-                    metadata: frontmatter.metadata.clone(),
-                    allowed_tools: frontmatter.allowed_tools.clone(),
-                    argument_hint: frontmatter.argument_hint.clone(),
-                    disable_model_invocation: frontmatter.disable_model_invocation,
-                    user_invocable: frontmatter.user_invocable,
-                    model: frontmatter.model.clone(),
-                    context: frontmatter.context.clone(),
-                    agent: frontmatter.agent.clone(),
-                    effort: frontmatter.effort.clone(),
-                    paths: frontmatter.paths.clone(),
-                    shell: frontmatter.shell.clone(),
-                };
+            // Phase 12-15: Claude Code rules (CC-SK-001-009)
+            // These require both name and description to be non-empty
+            if let (Some(name), Some(description)) = (
+                frontmatter.name.as_deref(),
+                frontmatter.description.as_deref(),
+            ) {
+                let name_trimmed = name.trim();
+                let description_trimmed = description.trim();
+                if !name_trimmed.is_empty() && !description_trimmed.is_empty() {
+                    let schema = SkillSchema {
+                        name: name_trimmed.to_string(),
+                        description: description_trimmed.to_string(),
+                        license: frontmatter.license.clone(),
+                        compatibility: frontmatter.compatibility.clone(),
+                        metadata: frontmatter.metadata.clone(),
+                        allowed_tools: frontmatter.allowed_tools.clone(),
+                        argument_hint: frontmatter.argument_hint.clone(),
+                        disable_model_invocation: frontmatter.disable_model_invocation,
+                        user_invocable: frontmatter.user_invocable,
+                        model: frontmatter.model.clone(),
+                        context: frontmatter.context.clone(),
+                        agent: frontmatter.agent.clone(),
+                        effort: frontmatter.effort.clone(),
+                        paths: frontmatter.paths.clone(),
+                        shell: frontmatter.shell.clone(),
+                    };
 
-                // CC-SK-006 (dangerous auto-invocation) and CC-SK-009 (too many injections)
-                ctx.validate_cc_safety(&schema, &frontmatter);
+                    // CC-SK-006 (dangerous auto-invocation) and CC-SK-009 (too many injections)
+                    ctx.validate_cc_safety(&schema, &frontmatter);
 
-                // CC-SK-007 (unrestricted Bash) and CC-SK-008 (unknown tools)
-                ctx.validate_cc_tools(&schema);
+                    // CC-SK-007 (unrestricted Bash) and CC-SK-008 (unknown tools)
+                    ctx.validate_cc_tools(&schema);
 
-                // CC-SK-001-004 (model/context validation)
-                ctx.validate_cc_model_context(&schema);
+                    // CC-SK-001-004 (model/context validation)
+                    ctx.validate_cc_model_context(&schema);
 
-                // CC-SK-005 (agent type)
-                ctx.validate_cc_agent(&schema);
+                    // CC-SK-005 (agent type)
+                    ctx.validate_cc_agent(&schema);
 
-                // CC-SK-018 (effort), CC-SK-019 (paths), CC-SK-020 (shell)
-                ctx.validate_cc_effort_paths_shell(&schema);
+                    // CC-SK-018 (effort), CC-SK-019 (paths), CC-SK-020 (shell)
+                    ctx.validate_cc_effort_paths_shell(&schema);
+                }
             }
-        }
+        } // end Claude Code skill rules (CC-SK-*)
 
         // Phase 16: Body validation (AS-012, AS-013, AS-014)
         ctx.validate_body_rules();

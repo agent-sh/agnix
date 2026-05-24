@@ -57,6 +57,32 @@ fn is_field_supported(client: SkillClient, field: &str) -> bool {
     }
 }
 
+/// Whether the Claude Code skill rules (`CC-SK-*`) should run for a skill with
+/// the given resolved `client` under `config`.
+///
+/// They apply to Claude Code skills and to genuinely unscoped skills (a bare
+/// `SKILL.md` that could be a Claude skill), but NOT to skills owned by another
+/// known tool (Codex, OpenCode, Cursor, …), which have their own rule sets.
+///
+/// `resolve_skill_client` collapses both "unscoped" and "ambiguous multi-tool"
+/// to `Unknown`. Those differ: an explicit `tools = ["codex", "cursor"]` scope
+/// rules Claude *out*, while no scope leaves it plausible. So for `Unknown` we
+/// re-check `config`: Claude rules apply only when the scope is empty or names
+/// `claude-code`.
+pub(crate) fn claude_skill_rules_apply(client: SkillClient, config: &LintConfig) -> bool {
+    match client {
+        SkillClient::ClaudeCode => true,
+        SkillClient::Unknown => {
+            let tools = config.tools();
+            tools.is_empty()
+                || tools
+                    .iter()
+                    .any(|t| skill_client_from_tool_str(t) == Some(SkillClient::ClaudeCode))
+        }
+        _ => false,
+    }
+}
+
 /// Detect which client owns a SKILL.md based on its path components.
 ///
 /// Iterates path components looking for the `skills` directory name, then
