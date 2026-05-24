@@ -26,8 +26,8 @@ rules:
     message: "名称 '%{name}' 是保留名称，不能使用"
     suggestion: "选择其他 skill 名称"
   as_008:
-    message: "描述必须为1-1024个字符，当前为 %{len}"
-    suggestion: "将描述修剪为1024个字符或更少"
+    message: "描述必须为1-%{max}个字符，当前为 %{len}"
+    suggestion: "将描述修剪为%{max}个字符或更少"
   as_009:
     message: "描述不得包含 XML 标签"
     suggestion: "从描述中删除 XML 标签"

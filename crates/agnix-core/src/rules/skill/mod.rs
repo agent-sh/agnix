@@ -5,6 +5,7 @@ use crate::{
     diagnostics::{Diagnostic, Fix},
     parsers::frontmatter::{FrontmatterParts, split_frontmatter},
     regex_util::static_regex,
+    rules::per_client_skill::{SkillClient, resolve_skill_client},
     rules::{Validator, ValidatorMetadata},
     schemas::hooks::HooksSchema,
     schemas::skill::{SkillSchema, VALID_EFFORT_LEVELS, VALID_SHELLS, is_valid_skill_model},
@@ -51,7 +52,6 @@ struct PathMatch {
 
 static_regex!(fn name_format_regex, r"^[a-z0-9]+(-[a-z0-9]+)*$");
 static_regex!(fn consecutive_hyphen_regex, r"-{2,}");
-static_regex!(fn description_xml_regex, r"<[^>]+>");
 static_regex!(fn reference_path_regex, "(?i)\\b(?:references?|refs)[/\\\\][^\\s)\\]}>\"']+");
 static_regex!(fn windows_path_regex, r"(?i)\b(?:[a-z]:)?[a-z0-9._-]+(?:\\[a-z0-9._-]+)+\b");
 static_regex!(fn windows_path_token_regex, r"[^\s]+\\[^\s]+");
@@ -214,12 +214,18 @@ struct ValidationContext<'a> {
     frontmatter_yaml: Option<serde_yaml::Value>,
     /// Accumulated diagnostics (errors, warnings)
     diagnostics: Vec<Diagnostic>,
+    /// Owning client (Claude Code, Codex, ... or Unknown for the generic
+    /// agentskills.io baseline). Resolved from the path + configured target;
+    /// used to scope rules that diverge per client (AS-008 length, AS-009
+    /// angle brackets).
+    client: SkillClient,
 }
 
 impl<'a> ValidationContext<'a> {
     fn new(path: &'a Path, content: &'a str, config: &'a LintConfig) -> Self {
         let parts = split_frontmatter(content);
         let line_starts = compute_line_starts(content);
+        let client = resolve_skill_client(path, config);
         Self {
             path,
             content,
@@ -229,6 +235,7 @@ impl<'a> ValidationContext<'a> {
             frontmatter: None,
             frontmatter_yaml: None,
             diagnostics: Vec::new(),
+            client,
         }
     }
 
@@ -578,25 +585,39 @@ impl<'a> ValidationContext<'a> {
         let (description_line, description_col) = self.frontmatter_key_line_col("description");
         let description_trimmed = description.trim();
 
-        // AS-008: Description length
+        // AS-008: Description length. The agentskills.io baseline caps it at
+        // 1024 (a hard limit, matched by Codex/OpenCode/Kiro); Claude Code
+        // truncates at 1536 instead. Resolve the max per owning client.
         if self.config.is_rule_enabled("AS-008") {
+            let max = if self.client == SkillClient::ClaudeCode {
+                1536
+            } else {
+                1024
+            };
             let len = description_trimmed.len();
-            if !(1..=1024).contains(&len) {
+            if !(1..=max).contains(&len) {
                 self.diagnostics.push(
                     Diagnostic::error(
                         self.path.to_path_buf(),
                         description_line,
                         description_col,
                         "AS-008",
-                        t!("rules.as_008.message", len = len),
+                        t!("rules.as_008.message", len = len, max = max),
                     )
-                    .with_suggestion(t!("rules.as_008.suggestion")),
+                    .with_suggestion(t!("rules.as_008.suggestion", max = max)),
                 );
             }
         }
 
-        // AS-009: Description contains XML tags
-        if self.config.is_rule_enabled("AS-009") && description_xml_regex().is_match(description) {
+        // AS-009: angle brackets in description. Only Codex forbids them, and
+        // its bundled quick_validate.py rejects ANY `<` or `>` (not just
+        // tag-shaped `<...>` pairs) - `if "<" in description or ">" in
+        // description`. agentskills.io and Claude Code impose no such
+        // restriction. Fire only for Codex skills, matching the upstream check.
+        if self.client == SkillClient::Codex
+            && self.config.is_rule_enabled("AS-009")
+            && description.bytes().any(|b| b == b'<' || b == b'>')
+        {
             let mut diagnostic = Diagnostic::error(
                 self.path.to_path_buf(),
                 description_line,
@@ -606,18 +627,15 @@ impl<'a> ValidationContext<'a> {
             )
             .with_suggestion(t!("rules.as_009.suggestion"));
 
-            // Strip XML tags from description
-            let stripped = description_xml_regex()
-                .replace_all(description, "")
-                .trim()
-                .to_string();
+            // Strip every angle bracket (matching the upstream prohibition).
+            let stripped = description.replace(['<', '>'], "").trim().to_string();
             if !stripped.is_empty() && stripped != description {
                 if let Some((start, end)) = self.frontmatter_value_byte_range("description") {
                     diagnostic = diagnostic.with_fix(Fix::replace(
                         start,
                         end,
                         &stripped,
-                        "Strip XML tags from description",
+                        "Strip angle brackets from description",
                         false,
                     ));
                 }

@@ -26,8 +26,8 @@ rules:
     message: "El nombre '%{name}' esta reservado y no puede usarse"
     suggestion: "Elige un nombre de skill diferente"
   as_008:
-    message: "La descripción debe tener 1-1024 caracteres, tiene %{len}"
-    suggestion: "Recorta la descripción a 1024 caracteres o menos"
+    message: "La descripción debe tener 1-%{max} caracteres, tiene %{len}"
+    suggestion: "Recorta la descripción a %{max} caracteres o menos"
   as_009:
     message: "La descripción no debe contener etiquetas XML"
     suggestion: "Elimina las etiquetas XML de la descripción"

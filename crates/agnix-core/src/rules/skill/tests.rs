@@ -238,18 +238,110 @@ Body"#;
 }
 
 #[test]
-fn test_as_009_description_contains_xml() {
+fn test_as_009_angle_brackets_codex_only() {
+    // AS-009 (angle brackets in description) is enforced ONLY by Codex
+    // (its quick_validate.py rejects `<`/`>`). agentskills.io and Claude
+    // Code impose no such restriction.
     let content = r#"---
 name: test-skill
 description: Use when validating <xml> tags
 ---
 Body"#;
-
     let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
+    let cfg = LintConfig::default();
 
-    let as_009_errors: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-009").collect();
-    assert_eq!(as_009_errors.len(), 1);
+    // Codex skill (.agents/skills/) -> fires.
+    let codex = validator.validate(
+        Path::new(".agents/skills/test-skill/SKILL.md"),
+        content,
+        &cfg,
+    );
+    assert_eq!(
+        codex.iter().filter(|d| d.rule == "AS-009").count(),
+        1,
+        "AS-009 should fire for a Codex skill"
+    );
+
+    // Claude skill (.claude/skills/) -> does NOT fire (reporter's false positive).
+    let claude = validator.validate(
+        Path::new(".claude/skills/test-skill/SKILL.md"),
+        content,
+        &cfg,
+    );
+    assert_eq!(
+        claude.iter().filter(|d| d.rule == "AS-009").count(),
+        0,
+        "AS-009 must not fire for a Claude Code skill"
+    );
+
+    // Generic skill (no client marker) -> does NOT fire.
+    let generic = validator.validate(Path::new("skills/test-skill/SKILL.md"), content, &cfg);
+    assert_eq!(
+        generic.iter().filter(|d| d.rule == "AS-009").count(),
+        0,
+        "AS-009 must not fire for a generic skill"
+    );
+
+    // Codex rejects ANY angle bracket, not just tag-shaped pairs: a lone `<`
+    // must fire too (matches quick_validate.py's `"<" in description`).
+    let lone = "---\nname: test-skill\ndescription: Use when a < b comparison holds\n---\nBody";
+    let codex_lone =
+        validator.validate(Path::new(".agents/skills/test-skill/SKILL.md"), lone, &cfg);
+    assert_eq!(
+        codex_lone.iter().filter(|d| d.rule == "AS-009").count(),
+        1,
+        "AS-009 must fire on a lone angle bracket for a Codex skill"
+    );
+}
+
+#[test]
+fn test_as_008_claude_allows_1536() {
+    // agentskills.io caps description at 1024; Claude Code allows up to 1536.
+    // Reproduces the reporter's false positive (#957): a 1025-char description
+    // on a Claude skill was wrongly flagged.
+    let desc_1025 = "a".repeat(1025);
+    let content = format!("---\nname: test-skill\ndescription: {desc_1025}\n---\nBody");
+    let validator = SkillValidator;
+
+    // Claude skill via tools=["claude-code"] scope -> 1025 is fine.
+    let mut claude_cfg = LintConfig::default();
+    claude_cfg.set_tools(vec!["claude-code".to_string()]);
+    let claude = validator.validate(
+        Path::new("skills/test-skill/SKILL.md"),
+        &content,
+        &claude_cfg,
+    );
+    assert_eq!(
+        claude.iter().filter(|d| d.rule == "AS-008").count(),
+        0,
+        "1025-char description must be accepted for a Claude Code skill"
+    );
+
+    // Generic (agentskills.io) -> 1025 exceeds the 1024 baseline, flagged.
+    let generic = validator.validate(
+        Path::new("skills/test-skill/SKILL.md"),
+        &content,
+        &LintConfig::default(),
+    );
+    assert_eq!(
+        generic.iter().filter(|d| d.rule == "AS-008").count(),
+        1,
+        "1025-char description must be flagged for a generic skill"
+    );
+
+    // Claude still rejects beyond 1536.
+    let desc_1537 = "a".repeat(1537);
+    let content2 = format!("---\nname: test-skill\ndescription: {desc_1537}\n---\nBody");
+    let claude_over = validator.validate(
+        Path::new(".claude/skills/test-skill/SKILL.md"),
+        &content2,
+        &LintConfig::default(),
+    );
+    assert_eq!(
+        claude_over.iter().filter(|d| d.rule == "AS-008").count(),
+        1,
+        "1537-char description must be flagged even for Claude"
+    );
 }
 
 #[test]
@@ -4135,9 +4227,14 @@ fn test_as_003_has_fix() {
 
 #[test]
 fn test_as_009_has_fix() {
+    // AS-009 is Codex-only, so use a Codex skill path to trigger it.
     let content = "---\nname: test-skill\ndescription: <b>Use when testing</b>\n---\nBody";
     let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
+    let diagnostics = validator.validate(
+        Path::new(".agents/skills/test-skill/SKILL.md"),
+        content,
+        &LintConfig::default(),
+    );
     let as_009: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-009").collect();
     assert_eq!(as_009.len(), 1);
     assert!(
