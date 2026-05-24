@@ -101,7 +101,7 @@ knowledge-base/
 | Claude Skills | 20 | 11 | 8 | 1 | 13 |
 | Cline | 7 | 4 | 3 | 0 | 3 |
 | Cline Skills | 3 | 2 | 1 | 0 | 2 |
-| Codex CLI | 60 | 30 | 25 | 5 | 10 |
+| Codex CLI | 62 | 31 | 26 | 5 | 10 |
 | Codex Skills | 1 | 0 | 1 | 0 | 1 |
 | GitHub Copilot | 25 | 13 | 9 | 3 | 11 |
 | Copilot Skills | 1 | 0 | 1 | 0 | 1 |
@@ -128,7 +128,7 @@ knowledge-base/
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **425** | **215** | **180** | **28** | **129** |
+| **TOTAL** | **425** | **216** | **181** | **28** | **129** |
 
 
 ---

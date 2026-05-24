@@ -111,11 +111,16 @@ impl Validator for CodexRequirementsValidator {
             }
         }
 
+        // `toml::Table` is a BTreeMap, so `keys()` yields keys in lexical
+        // order rather than file order. Sort so diagnostics read top-to-bottom.
+        diagnostics.sort_by_key(|d| (d.line, d.column));
         diagnostics
     }
 }
 
-/// Convert a `toml` parse error's byte span into a 1-indexed (line, column).
+/// Convert a `toml` parse error's byte span into a (line, column). The line is
+/// 1-indexed and the column 1-indexed when a span is available; the fallback
+/// `(1, 0)` (column 0) is used only when the error carries no span.
 fn toml_error_location(content: &str, error: &toml::de::Error) -> (usize, usize) {
     error
         .span()
@@ -138,35 +143,39 @@ fn toml_error_location(content: &str, error: &toml::de::Error) -> (usize, usize)
         .unwrap_or((1, 0))
 }
 
-/// Find the 1-indexed line of a top-level TOML key, matching both the
-/// `key = ...` form and the `[key]` / `[key.sub]` table-header form.
+/// Find the 1-indexed line of a top-level TOML key. Matches the table-header
+/// form (`[key]`, `[key.sub]`, `[[key]]`), the plain assignment (`key = ...`),
+/// and the dotted-key assignment (`key.sub = ...`). Inline comments are
+/// stripped before matching so a trailing `# ...` cannot interfere.
 fn find_toml_key_line(content: &str, key: &str) -> Option<usize> {
     let quoted = format!("\"{key}\"");
     for (idx, line) in content.lines().enumerate() {
-        let trimmed = line.trim_start();
-        // Table header: [key] or [key.sub] or [[key]]
+        let trimmed = line.split('#').next().unwrap_or("").trim();
+        // Table header: [key], [key.sub], or [[key]]
         let header = trimmed
             .strip_prefix("[[")
             .or_else(|| trimmed.strip_prefix('['));
         if let Some(rest) = header {
             let name = rest.trim_start();
-            if name.strip_prefix(key).is_some_and(|after| {
+            let is_header = |after: &str| {
                 let a = after.trim_start();
                 a.starts_with('.') || a.starts_with(']')
-            }) || name.strip_prefix(&quoted).is_some_and(|after| {
-                let a = after.trim_start();
-                a.starts_with('.') || a.starts_with(']')
-            }) {
+            };
+            if name.strip_prefix(key).is_some_and(is_header)
+                || name.strip_prefix(&quoted).is_some_and(is_header)
+            {
                 return Some(idx + 1);
             }
             continue;
         }
-        // Scalar/array/inline-table assignment: key = ... or "key" = ...
+        // Plain or dotted-key assignment: `key = ...`, `"key" = ...`, or
+        // `key.sub = ...`.
         if let Some(after) = trimmed
             .strip_prefix(key)
             .or_else(|| trimmed.strip_prefix(&quoted))
         {
-            if after.trim_start().starts_with('=') {
+            let a = after.trim_start();
+            if a.starts_with('=') || a.starts_with('.') {
                 return Some(idx + 1);
             }
         }
@@ -277,6 +286,32 @@ description = "locked profile"
             req001[0].line, 3,
             "should point at the [network] header line"
         );
+    }
+
+    #[test]
+    fn unknown_dotted_key_flagged_with_line() {
+        // Dotted-key assignment: `unknown.enabled = true` parses to top-level
+        // key `unknown`. The line-finder must locate the dotted form, not fall
+        // back to line 1.
+        let content = "allow_managed_hooks_only = true\nunknown.enabled = true\n";
+        let diags = validate(content);
+        let req001: Vec<_> = diags.iter().filter(|d| d.rule == "CDX-REQ-001").collect();
+        assert_eq!(req001.len(), 1, "dotted unknown key should be flagged");
+        assert_eq!(req001[0].line, 2, "should point at the dotted-key line");
+    }
+
+    #[test]
+    fn diagnostics_sorted_by_line() {
+        // Keys chosen so BTreeMap order (alpha) differs from file order:
+        // `zzz_unknown` sorts after `aaa_unknown` but appears first in the file.
+        let content = "zzz_unknown = 1\naaa_unknown = 2\n";
+        let diags = validate(content);
+        let lines: Vec<usize> = diags
+            .iter()
+            .filter(|d| d.rule == "CDX-REQ-001")
+            .map(|d| d.line)
+            .collect();
+        assert_eq!(lines, vec![1, 2], "diagnostics should be in file order");
     }
 
     #[test]
