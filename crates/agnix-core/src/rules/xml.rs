@@ -14,25 +14,38 @@ use std::path::Path;
 
 const RULE_IDS: &[&str] = &["XML-001", "XML-002", "XML-003"];
 
-/// Blank out the YAML frontmatter region so the XML balance check only sees the
-/// document body. Frontmatter values are structured metadata (e.g. a skill
-/// `description` may legitimately contain `<placeholder>` text), not body XML.
-/// Each non-newline byte in `[0, body_start)` becomes a space - byte length and
+/// Blank out the YAML frontmatter region (`[0, body_start)`) so the XML balance
+/// check only sees the document body. Frontmatter values are structured
+/// metadata (e.g. a skill `description` may legitimately contain `<placeholder>`
+/// text), not body XML. Each non-newline byte becomes a space - byte length and
 /// line breaks are preserved, so reported tag line/column/byte offsets stay
-/// accurate. No-op when the file has no frontmatter.
+/// accurate. Only the frontmatter region is iterated; the body is copied as-is.
 fn mask_frontmatter(content: &str, body_start: usize) -> String {
-    let masked: Vec<u8> = content
-        .bytes()
-        .enumerate()
-        .map(|(i, b)| {
-            if i < body_start && b != b'\n' && b != b'\r' {
-                b' '
-            } else {
-                b
-            }
-        })
-        .collect();
-    String::from_utf8(masked).unwrap_or_else(|_| content.to_string())
+    if body_start == 0 || body_start > content.len() || !content.is_char_boundary(body_start) {
+        return content.to_string();
+    }
+    let (front, body) = content.split_at(body_start);
+    let mut result = String::with_capacity(content.len());
+    for &b in front.as_bytes() {
+        // front is the leading frontmatter; replacing each non-newline byte with
+        // a single ASCII space keeps both byte length and line count intact.
+        result.push(if b == b'\n' || b == b'\r' {
+            b as char
+        } else {
+            ' '
+        });
+    }
+    result.push_str(body);
+    result
+}
+
+/// A leading `---`-delimited block is real YAML frontmatter (vs. Markdown
+/// horizontal rules that happen to bracket a section) only if it parses as a
+/// YAML mapping. Used to avoid masking non-frontmatter content.
+fn is_yaml_frontmatter(frontmatter: &str) -> bool {
+    serde_yaml::from_str::<serde_yaml::Value>(frontmatter)
+        .map(|v| v.is_mapping())
+        .unwrap_or(false)
 }
 
 pub struct XmlValidator;
@@ -75,10 +88,17 @@ impl Validator for XmlValidator {
         }
 
         // Skip the YAML frontmatter region: its values are metadata, not body
-        // XML (e.g. a skill `description` with `<name>` placeholders).
+        // XML (e.g. a skill `description` with `<name>` placeholders). Only mask
+        // a genuine closed frontmatter block that parses as a YAML mapping, so
+        // Markdown horizontal rules (`---`) bracketing a section are not mistaken
+        // for frontmatter and don't hide real body XML in non-frontmatter docs.
         let parts = split_frontmatter(content);
         let scan_owned;
-        let scan_content: &str = if parts.has_frontmatter && parts.body_start > 0 {
+        let scan_content: &str = if parts.has_frontmatter
+            && parts.has_closing
+            && parts.body_start > 0
+            && is_yaml_frontmatter(&parts.frontmatter)
+        {
             scan_owned = mask_frontmatter(content, parts.body_start);
             &scan_owned
         } else {
@@ -374,6 +394,21 @@ Persist the resolved path to a file:
                 .iter()
                 .filter(|d| d.rule == "XML-001")
                 .collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn test_xml_001_does_not_mask_markdown_horizontal_rules() {
+        // A `---`-bracketed section that is NOT a YAML mapping (Markdown
+        // horizontal rules around a heading) must not be treated as frontmatter
+        // - real XML in that leading region is still balance-checked.
+        let content = "---\n<thinking>unclosed\n---\nbody";
+        let validator = XmlValidator;
+        let diagnostics =
+            validator.validate(Path::new("README.md"), content, &LintConfig::default());
+        assert!(
+            diagnostics.iter().any(|d| d.rule == "XML-001"),
+            "unclosed tag in a non-YAML `---` block must still be flagged"
         );
     }
 
