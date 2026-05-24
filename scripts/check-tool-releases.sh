@@ -33,6 +33,31 @@ UPDATE_BASELINES="${UPDATE_BASELINES:-false}"
 TOOL_FILTER="${TOOL_FILTER:-}"
 RUN_URL="${RUN_URL:-}"
 
+# triage_has_relevant_changes "<agnix_triage markdown>"
+# Exit 0 -> file the issue: triage flagged agnix-relevant bullets, OR no triage
+#           ran (empty input) so we cannot rule the release out.
+# Exit 1 -> skip the issue: triage ran and its "#### Agnix-relevant changes"
+#           section has no "- " bullets, so the release does not touch anything
+#           agnix validates (perf/UI/billing/model-only). Caller advances the
+#           baseline without opening an issue.
+triage_has_relevant_changes() {
+  local triage="$1"
+  [[ -z "$triage" ]] && return 0
+  grep -q "^#### Agnix-relevant changes" <<<"$triage" || return 0
+  awk '
+    /^#### Agnix-relevant changes/ { in_section = 1; next }
+    /^#### /                       { in_section = 0 }
+    in_section && /^- /            { found = 1 }
+    END                            { exit(found ? 0 : 1) }
+  ' <<<"$triage"
+}
+
+# When sourced with CHECK_TOOL_RELEASES_LIB_ONLY set (the test harness), expose
+# the helper functions above without running the live poll below.
+if [[ -n "${CHECK_TOOL_RELEASES_LIB_ONLY:-}" ]]; then
+  return 0
+fi
+
 if ! jq -e '.tools | type == "object"' "$BASELINES_FILE" > /dev/null; then
   echo "ERROR: invalid $BASELINES_FILE (.tools must be an object)" >&2
   exit 1
@@ -393,14 +418,6 @@ $release_section
 
 ### Action required
 
-  # Conservative skip: if the agnix-triage section exists but has no bullet points under
-  # "Agnix-relevant changes", skip creating the issue (update baseline only).
-  if echo "$issue_body" | grep -q "#### Agnix-relevant changes" && ! echo "$issue_body" | grep -A 30 "#### Agnix-relevant changes" | grep -qE "^- "; then
-    echo "  [skip] No relevant changes to agnix (triage found only irrelevant updates) — updating baseline only"
-    SKIP_COUNT=$((SKIP_COUNT+1))
-    continue
-  fi
-
 1. Review the release notes for changes that may affect agnix validation rules.
 2. Update [\`crates/agnix-core/src/config.rs\`](${file_base}/crates/agnix-core/src/config.rs) (\`ToolVersions\` / \`SpecRevisions\`) if the new version changes a validated field.
 3. Update [\`knowledge-base/RESEARCH-TRACKING.md\`](${file_base}/knowledge-base/RESEARCH-TRACKING.md) "Last Reviewed" for $display_name.
@@ -410,6 +427,17 @@ $release_section
 *Auto-opened by \`.github/workflows/tool-release-watch.yml\`.${RUN_URL:+ Run: $RUN_URL}*
 BODY
 )
+
+  # Conservative skip: when agnix-triage ran but flagged nothing agnix
+  # validates, suppress the issue and let the baseline advance. Avoids daily
+  # noise from perf/UI/billing/model-only releases. Decided here (outside the
+  # heredoc above) so the helper can be unit-tested and the body build can't
+  # self-reference an unbound "$issue_body" under set -u.
+  if ! triage_has_relevant_changes "$agnix_triage"; then
+    echo "  [skip] triage found no agnix-relevant changes - no issue (baseline only)"
+    SKIP_COUNT=$((SKIP_COUNT+1))
+    continue
+  fi
 
   if [[ "$UPDATE_BASELINES" == "true" ]]; then
     echo "  (baseline-update mode: not creating/commenting on issues)"
