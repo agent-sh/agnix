@@ -51,7 +51,7 @@ jobs:
           toolchain: nightly-2026-05-03
 
       - name: Install cargo-fuzz
-        uses: taiki-e/install-action@7be9fd86bd1707236395105d6e9329dd1511a7e1 # v2.79.0
+        uses: taiki-e/install-action@e0eafa9a0d485c37f97c0f7beb930a58a2facbac # v2.79.4
         with:
           tool: cargo-fuzz@0.13.1
           fallback: cargo-install
