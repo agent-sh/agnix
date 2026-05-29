@@ -71,7 +71,7 @@ tokio = { version = "1.52.3", features = ["full"] }
 tower-lsp = "0.20"
 
 # i18n
-rust-i18n = "4.0"
+rust-i18n = "4.1"
 sys-locale = "0.3"
 
 [dev-dependencies]
