@@ -17,7 +17,10 @@
   },
   "overrides": {
     "minimatch": "^10.2.1",
-    "serialize-javascript": "^7.0.5"
+    "serialize-javascript": "^7.0.5",
+    "webpack-dev-server": {
+      "ws": "^8.20.1"
+    }
   },
   "dependencies": {
     "@codemirror/lang-json": "^6.0.1",
