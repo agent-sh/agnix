@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.29.0] - 2026-05-30
+
 ### Added
 - **CC-SK-021: Hardcoded User Directory Path** (closes #832). New MEDIUM/SHOULD `claude-skills` rule flagging hardcoded user-home paths (`/Users/<name>/`, `/home/<name>/`, `C:\Users\<name>\`) in bundled skill content - they leak the author's identity and are non-portable. The `SkillValidator` walks the skill directory and scans the `SKILL.md` body, sibling `.md` bodies (frontmatter skipped), and bundled scripts (`.sh`/`.bash`/`.zsh`/`.fish`/`.py`/`.rb`/`.pl`/`.lua`/`.js`/`.ts`/`.mjs`, or any extensionless file with a `#!` shebang - scanned whole, including the shebang). Placeholder names (`user`, `example`, `foo`, ...) and `<name>`/`${...}`/`{{...}}`/`$HOME` forms are not flagged. Manual fix only (`~/`, `$HOME/`, a project-relative path, or `$PROJECT_ROOT`). Covered by 12 unit/integration tests. Rule count 420 -> 421.
 
