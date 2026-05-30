@@ -304,17 +304,35 @@ pub(super) fn frontmatter_key_line_byte_range(
 /// Name segments treated as placeholders rather than a real username
 /// (case-insensitive). Matches with one of these names are not flagged.
 pub(super) const USER_PATH_PLACEHOLDERS: &[&str] = &[
-    "user", "username", "name", "you", "your-name", "yourname", "me", "myname", "someone",
-    "example", "johndoe", "jdoe", "foo", "bar",
+    "user",
+    "username",
+    "name",
+    "you",
+    "your-name",
+    "yourname",
+    "me",
+    "myname",
+    "someone",
+    "example",
+    "johndoe",
+    "jdoe",
+    "foo",
+    "bar",
 ];
 
 /// File extensions treated as bundled scripts (scanned in full, shebang included).
-pub(super) const SCRIPT_EXTENSIONS: &[&str] =
-    &["sh", "bash", "zsh", "fish", "py", "rb", "pl", "lua", "js", "ts", "mjs"];
+pub(super) const SCRIPT_EXTENSIONS: &[&str] = &[
+    "sh", "bash", "zsh", "fish", "py", "rb", "pl", "lua", "js", "ts", "mjs",
+];
 
 /// `.md` filenames that are repo docs, not skill instructions - left out of scope.
-pub(super) const SKIP_MD_FILENAMES: &[&str] =
-    &["readme.md", "changelog.md", "claude.md", "agents.md", "license.md"];
+pub(super) const SKIP_MD_FILENAMES: &[&str] = &[
+    "readme.md",
+    "changelog.md",
+    "claude.md",
+    "agents.md",
+    "license.md",
+];
 
 /// A hardcoded user-home path found while scanning skill content.
 pub(super) struct UserPathHit {

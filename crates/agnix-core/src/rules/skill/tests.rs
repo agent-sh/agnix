@@ -4201,9 +4201,8 @@ Body"#;
 
 #[test]
 fn test_find_hardcoded_user_paths_posix_and_windows() {
-    let hits = find_hardcoded_user_paths(
-        "see /Users/alice/x/y and C:\\Users\\bob.smith\\AppData here",
-    );
+    let hits =
+        find_hardcoded_user_paths("see /Users/alice/x/y and C:\\Users\\bob.smith\\AppData here");
     let texts: Vec<&str> = hits.iter().map(|h| h.text.as_str()).collect();
     assert_eq!(texts, vec!["/Users/alice/", "C:\\Users\\bob.smith\\"]);
 }
@@ -4230,7 +4229,10 @@ fn test_is_script_path() {
     assert!(!is_script_path(Path::new("a/notes.md"), "x"));
     assert!(!is_script_path(Path::new("a/data.txt"), "x"));
     // extensionless: only a script when it starts with a shebang
-    assert!(is_script_path(Path::new("a/runner"), "#!/usr/bin/env bash\n"));
+    assert!(is_script_path(
+        Path::new("a/runner"),
+        "#!/usr/bin/env bash\n"
+    ));
     assert!(!is_script_path(Path::new("a/runner"), "plain text\n"));
 }
 
@@ -4244,8 +4246,7 @@ fn cc_sk_021_for(skill_dir: &Path) -> Vec<Diagnostic> {
         .collect()
 }
 
-const CLEAN_SKILL: &str =
-    "---\nname: demo\ndescription: Use when demoing the rule for testing here.\n---\nRun `cargo build` from the repo root.\n";
+const CLEAN_SKILL: &str = "---\nname: demo\ndescription: Use when demoing the rule for testing here.\n---\nRun `cargo build` from the repo root.\n";
 
 #[test]
 fn test_cc_sk_021_flags_bundled_md() {
@@ -4303,7 +4304,11 @@ fn test_cc_sk_021_flags_extensionless_shebang() {
     let dir = tmp.path().join("demo");
     fs::create_dir_all(dir.join("scripts")).unwrap();
     fs::write(dir.join("SKILL.md"), CLEAN_SKILL).unwrap();
-    fs::write(dir.join("scripts/runner"), "#!/Users/carol/bin/run\necho hi\n").unwrap();
+    fs::write(
+        dir.join("scripts/runner"),
+        "#!/Users/carol/bin/run\necho hi\n",
+    )
+    .unwrap();
 
     let diags = cc_sk_021_for(&dir);
     assert_eq!(diags.len(), 1);
