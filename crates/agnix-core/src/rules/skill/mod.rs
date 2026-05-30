@@ -1645,14 +1645,9 @@ impl<'a> ValidationContext<'a> {
                     line,
                     col,
                     "CC-SK-021",
-                    format!(
-                        "Hardcoded user directory path '{}' leaks author identity and is not portable across machines",
-                        hit.text
-                    ),
+                    t!("rules.cc_sk_021.message", path = hit.text),
                 )
-                .with_suggestion(
-                    "Replace with '~/', '$HOME/', a project-relative path, or an env var like '$PROJECT_ROOT'. For shebangs prefer '#!/usr/bin/env <interpreter>'.",
-                ),
+                .with_suggestion(t!("rules.cc_sk_021.suggestion")),
             );
         }
     }

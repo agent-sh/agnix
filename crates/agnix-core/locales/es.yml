@@ -82,6 +82,9 @@ rules:
   cc_sk_017:
     message: "Campo de frontmatter desconocido '%{field}'"
     suggestion: "Elimina campos no soportados o corrige errores tipograficos en claves del frontmatter"
+  cc_sk_021:
+    message: "La ruta de directorio de usuario codificada '%{path}' revela la identidad del autor y no es portable entre maquinas"
+    suggestion: "Reemplaza con '~/', '$HOME/', una ruta relativa al proyecto, o una variable de entorno como '$PROJECT_ROOT'. Para shebangs, prefiere '#!/usr/bin/env <interprete>'."
 
   # --- Per-Client Skills (per_client_skill.rs) ---
   cr_sk_001:

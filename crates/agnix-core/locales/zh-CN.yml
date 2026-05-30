@@ -82,6 +82,9 @@ rules:
   cc_sk_017:
     message: "未知的 frontmatter 字段 '%{field}'"
     suggestion: "删除不受支持的字段或修正 frontmatter 键名拼写"
+  cc_sk_021:
+    message: "硬编码的用户目录路径 '%{path}' 会泄露作者身份，且在不同机器间不可移植"
+    suggestion: "改用 '~/'、'$HOME/'、相对于项目的路径，或像 '$PROJECT_ROOT' 这样的环境变量。shebang 行建议使用 '#!/usr/bin/env <解释器>'。"
 
   # --- Per-Client Skills (per_client_skill.rs) ---
   cr_sk_001:
