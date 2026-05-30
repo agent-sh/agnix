@@ -20,9 +20,6 @@
     "serialize-javascript": "^7.0.5",
     "webpack-dev-server": {
       "ws": "^8.20.1"
-    },
-    "sockjs": {
-      "uuid": "^11.1.1"
     }
   },
   "dependencies": {

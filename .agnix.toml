@@ -40,5 +40,11 @@ disabled_rules = [
     "CDX-AG-005",  # AGENTS.md uses structured code blocks for API documentation
     "CC-MEM-009",  # CLAUDE.md is intentionally detailed - it's the project memory
     "CC-SK-017",   # Intentional - version is a client-specific frontmatter field
-    "XP-SK-001",   # agnix's own skill is a Claude Code plugin skill; 'argument-hint' is intentional
 ]
+
+# agnix's own plugin skill is a Claude Code skill, so its 'argument-hint'
+# frontmatter is intentional. Suppress XP-SK-001 for that file only rather
+# than globally, so the rule still fires elsewhere.
+[[overrides]]
+paths = ["plugin/skills/agnix/SKILL.md"]
+disabled_rules = ["XP-SK-001"]
