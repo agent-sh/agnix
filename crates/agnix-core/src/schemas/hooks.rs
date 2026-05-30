@@ -193,6 +193,7 @@ impl HooksSchema {
         "PostToolUse",
         "PostToolUseFailure",
         "Notification",
+        "MessageDisplay",
         "UserPromptSubmit",
         "Stop",
         "SubagentStart",

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **`CC-HK-001` no longer flags the `MessageDisplay` hook event** (closes #989). Claude Code v2.1.152 added a `MessageDisplay` hook event (lets hooks transform or hide assistant message text as it is displayed). It was missing from `HooksSchema::VALID_EVENTS`, so a valid `MessageDisplay` hook in `settings.json` tripped `CC-HK-001` "Invalid hook event". Added to the valid-event set; left out of `MATCHER_EVENTS`/`PROMPT_EVENTS` since it is a command-type display hook (so matcher and prompt/agent misuse still flag). Regression-tested in `test_cc_hk_001_message_display_event_valid`.
+
+### Changed
+- **Tool baselines**: triaged the auto-opened release-watch issues and bumped `claude-code` `v2.1.142` -> `v2.1.152` (closes #989), `codex` `rust-v0.133.0` -> `rust-v0.134.0` (closes #990), `opencode` `v1.15.10` -> `v1.15.11` (closes #992), `cline` `cli-v3.0.3` -> `cli-v3.0.13` (closes #988), and `cursor` `3.5.33` -> `3.5.38` (closes #991). Aside from the Claude Code `MessageDisplay` fix above, the changes were agnix-irrelevant: Codex `mcp` `oauth`/`env_vars` keys and `profile` config are already covered; OpenCode `headerTimeout`/`modalities` sit under `provider.*` (not the OC-004 top-level allow-list); Cline was TUI-only; Cursor exposes only a version marker. No further validator, rule, `ToolVersions`, or `SpecRevisions` change required. `.github/tool-release-baselines.json` and `knowledge-base/RESEARCH-TRACKING.md` updated.
+
 ## [0.28.1] - 2026-05-24
 
 ### Changed
