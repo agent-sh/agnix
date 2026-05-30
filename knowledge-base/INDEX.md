@@ -98,7 +98,7 @@ knowledge-base/
 | Claude Output Styles | 6 | 2 | 2 | 2 | 0 |
 | Claude Plugins | 15 | 9 | 6 | 0 | 4 |
 | Claude Settings | 5 | 0 | 5 | 0 | 0 |
-| Claude Skills | 20 | 11 | 8 | 1 | 13 |
+| Claude Skills | 21 | 11 | 9 | 1 | 13 |
 | Cline | 7 | 4 | 3 | 0 | 3 |
 | Cline Skills | 3 | 2 | 1 | 0 | 2 |
 | Codex CLI | 62 | 31 | 26 | 5 | 10 |
@@ -128,7 +128,7 @@ knowledge-base/
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **421** | **213** | **179** | **28** | **127** |
+| **TOTAL** | **421** | **213** | **180** | **28** | **127** |
 
 
 ---

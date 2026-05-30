@@ -4204,14 +4204,29 @@ fn test_find_hardcoded_user_paths_posix_and_windows() {
     let hits =
         find_hardcoded_user_paths("see /Users/alice/x/y and C:\\Users\\bob.smith\\AppData here");
     let texts: Vec<&str> = hits.iter().map(|h| h.text.as_str()).collect();
-    assert_eq!(texts, vec!["/Users/alice/", "C:\\Users\\bob.smith\\"]);
+    assert_eq!(texts, vec!["/Users/alice", "C:\\Users\\bob.smith"]);
 }
 
 #[test]
 fn test_find_hardcoded_user_paths_home() {
     let hits = find_hardcoded_user_paths("data at /home/bob/data.csv");
     assert_eq!(hits.len(), 1);
-    assert_eq!(hits[0].text, "/home/bob/");
+    assert_eq!(hits[0].text, "/home/bob");
+}
+
+#[test]
+fn test_find_hardcoded_user_paths_without_trailing_slash() {
+    // A bare username with no trailing path component is still flagged.
+    let hits = find_hardcoded_user_paths("home is /home/alice");
+    assert_eq!(hits.len(), 1);
+    assert_eq!(hits[0].text, "/home/alice");
+}
+
+#[test]
+fn test_is_script_path_unknown_ext_with_shebang() {
+    // Shebang wins over an unrecognized extension.
+    assert!(is_script_path(Path::new("a/tool.custom"), "#!/bin/sh\n"));
+    assert!(!is_script_path(Path::new("a/data.custom"), "not a script"));
 }
 
 #[test]

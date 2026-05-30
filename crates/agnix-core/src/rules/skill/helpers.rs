@@ -344,8 +344,11 @@ pub(super) struct UserPathHit {
 
 fn posix_user_path_regex() -> &'static Regex {
     static RE: OnceLock<Regex> = OnceLock::new();
+    // No trailing slash required: the name class excludes `/`, so the match
+    // ends at the username whether or not a path component follows. This also
+    // catches a bare `/home/alice` at end of line.
     RE.get_or_init(|| {
-        Regex::new(r"(?:/Users/|/home/)([A-Za-z0-9._-]+)/")
+        Regex::new(r"(?:/Users/|/home/)([A-Za-z0-9._-]+)")
             .expect("posix user path pattern must compile")
     })
 }
@@ -353,7 +356,7 @@ fn posix_user_path_regex() -> &'static Regex {
 fn windows_user_path_regex() -> &'static Regex {
     static RE: OnceLock<Regex> = OnceLock::new();
     RE.get_or_init(|| {
-        Regex::new(r"[Cc]:[\\/]Users[\\/]([A-Za-z0-9._-]+)[\\/]")
+        Regex::new(r"[Cc]:[\\/]Users[\\/]([A-Za-z0-9._-]+)")
             .expect("windows user path pattern must compile")
     })
 }
@@ -386,13 +389,16 @@ pub(super) fn find_hardcoded_user_paths(content: &str) -> Vec<UserPathHit> {
     hits
 }
 
-/// Whether a bundled file is a script: a recognized script extension, or an
-/// extensionless file whose first line is a `#!` shebang.
+/// Whether a bundled file is a script: a `#!` shebang on the first line (any
+/// extension), or a recognized script extension.
 pub(super) fn is_script_path(path: &Path, content: &str) -> bool {
-    match path.extension().and_then(|e| e.to_str()) {
-        Some(ext) => SCRIPT_EXTENSIONS.contains(&ext.to_ascii_lowercase().as_str()),
-        None => content.starts_with("#!"),
+    if content.starts_with("#!") {
+        return true;
     }
+    matches!(
+        path.extension().and_then(|e| e.to_str()),
+        Some(ext) if SCRIPT_EXTENSIONS.contains(&ext.to_ascii_lowercase().as_str())
+    )
 }
 
 pub(super) fn directory_size_until(path: &Path, max_bytes: u64, fs: &dyn FileSystem) -> u64 {

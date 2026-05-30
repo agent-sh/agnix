@@ -1562,7 +1562,17 @@ impl<'a> ValidationContext<'a> {
                     continue;
                 }
                 if entry.metadata.is_dir {
-                    stack.push(entry.path.clone());
+                    // Skip hidden subdirectories (.git, .github, vendored caches)
+                    // to avoid scanning irrelevant files. The skill directory
+                    // itself is the walk root, so it is never filtered here.
+                    let hidden = entry
+                        .path
+                        .file_name()
+                        .and_then(|n| n.to_str())
+                        .is_some_and(|s| s.starts_with('.'));
+                    if !hidden {
+                        stack.push(entry.path.clone());
+                    }
                 } else if entry.metadata.is_file {
                     files.push(entry.path.clone());
                 }
@@ -1587,8 +1597,21 @@ impl<'a> ValidationContext<'a> {
         let content: &str = if file == self.path {
             self.content
         } else {
-            if is_md && SKIP_MD_FILENAMES.contains(&filename.as_str()) {
-                return;
+            if is_md {
+                if SKIP_MD_FILENAMES.contains(&filename.as_str()) {
+                    return;
+                }
+            } else {
+                // Only read recognized scripts or extensionless files (which may
+                // carry a shebang). Skip files with an unrecognized extension
+                // (binaries, datasets, images) without reading them from disk.
+                let readable = match file.extension().and_then(|e| e.to_str()) {
+                    Some(ext) => SCRIPT_EXTENSIONS.contains(&ext.to_ascii_lowercase().as_str()),
+                    None => true,
+                };
+                if !readable {
+                    return;
+                }
             }
             match self.config.fs().read_to_string(file) {
                 Ok(c) => {
