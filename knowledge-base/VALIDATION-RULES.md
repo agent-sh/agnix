@@ -338,6 +338,13 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Fix**: Manual
 **Source**: code.claude.com/docs/en/skills
 
+<a id="cc-sk-021"></a>
+### CC-SK-021 [MEDIUM] Hardcoded User Directory Path
+**Requirement**: Skill content SHOULD NOT contain hardcoded user-home paths (`/Users/<name>/`, `/home/<name>/`, `C:\Users\<name>\`). They leak the author's identity, are non-portable across machines, and rarely resolve for the agent at runtime. Applies to `SKILL.md`, any `.md` file bundled in the same skill directory subtree, and bundled scripts (`.sh`/`.bash`/`.zsh`/`.fish`/`.py`/`.rb`/`.pl`/`.lua`/`.js`/`.ts`/`.mjs`, or any extensionless file with a `#!` shebang).
+**Detection**: For each `SKILL.md`, scan its body and the body of every in-scope file under its containing directory (recursively). For `.md` files skip frontmatter; for scripts scan the whole file including shebangs and comments. Match `(/Users/|/home/)[a-zA-Z0-9._-]+/` and `[Cc]:[\\/]Users[\\/][a-zA-Z0-9._-]+[\\/]`. Skip matches where the name segment is a placeholder: generic words (`user`, `username`, `name`, `you`, `yourname`, `me`, `myname`, `someone`, `example`, `johndoe`, `foo`, `bar`), or any segment wrapped in `<...>`, `${...}`, or `{{...}}` (these never match the name character class).
+**Fix**: Manual - replace with `~/`, `$HOME/`, a project-relative path, or an env var like `$PROJECT_ROOT`. For shebangs, prefer `#!/usr/bin/env <interpreter>`.
+**Source**: code.claude.com/docs/en/skills
+
 <a id="cc-set-001"></a>
 ### CC-SET-001 [MEDIUM] Invalid prUrlTemplate Setting
 **Requirement**: `prUrlTemplate` in `.claude/settings.json` (and `.local.json`/`managed-settings.json`) SHOULD be a non-empty string containing at least one of the documented placeholders: `{host}`, `{owner}`, `{repo}`, `{number}`, `{url}`. A template with no placeholder will render the same static URL for every PR badge.
@@ -3438,8 +3445,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 420 validation rules across 40 categories
+**Total Coverage**: 421 validation rules across 40 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 213 HIGH, 179 MEDIUM, 28 LOW
+**Certainty**: 213 HIGH, 180 MEDIUM, 28 LOW
 **Auto-Fixable**: 127 rules (30%)

@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `420` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `421` validation rules generated from `knowledge-base/rules.json`.
 `127` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -128,6 +128,7 @@ This section contains all `420` validation rules generated from `knowledge-base/
 | [CC-SK-018](./generated/cc-sk-018.md) | Invalid Effort Value | MEDIUM | Claude Skills | Yes (unsafe) |
 | [CC-SK-019](./generated/cc-sk-019.md) | Invalid Paths Format | LOW | Claude Skills | No |
 | [CC-SK-020](./generated/cc-sk-020.md) | Invalid Shell Value | MEDIUM | Claude Skills | Yes (unsafe) |
+| [CC-SK-021](./generated/cc-sk-021.md) | Hardcoded User Directory Path | MEDIUM | Claude Skills | No |
 | [CC-SET-001](./generated/cc-set-001.md) | Invalid prUrlTemplate Setting | MEDIUM | Claude Settings | No |
 | [CC-SET-002](./generated/cc-set-002.md) | Non-boolean channelsEnabled Setting | MEDIUM | Claude Settings | No |
 | [CC-SET-003](./generated/cc-set-003.md) | Invalid worktree.baseRef Value | MEDIUM | Claude Settings | No |

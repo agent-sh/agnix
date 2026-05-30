@@ -4196,3 +4196,187 @@ Body"#;
 
     assert_eq!(cc_sk_020.len(), 0);
 }
+
+// ===== CC-SK-021: Hardcoded User Directory Path =====
+
+#[test]
+fn test_find_hardcoded_user_paths_posix_and_windows() {
+    let hits = find_hardcoded_user_paths(
+        "see /Users/alice/x/y and C:\\Users\\bob.smith\\AppData here",
+    );
+    let texts: Vec<&str> = hits.iter().map(|h| h.text.as_str()).collect();
+    assert_eq!(texts, vec!["/Users/alice/", "C:\\Users\\bob.smith\\"]);
+}
+
+#[test]
+fn test_find_hardcoded_user_paths_home() {
+    let hits = find_hardcoded_user_paths("data at /home/bob/data.csv");
+    assert_eq!(hits.len(), 1);
+    assert_eq!(hits[0].text, "/home/bob/");
+}
+
+#[test]
+fn test_find_hardcoded_user_paths_skips_placeholders() {
+    // Generic placeholder names, angle-bracket, template, and env-var forms.
+    let content =
+        "/Users/user/ /home/example/ /Users/foo/ /Users/<name>/ /home/${USER}/ /home/{{name}}/";
+    assert!(find_hardcoded_user_paths(content).is_empty());
+}
+
+#[test]
+fn test_is_script_path() {
+    assert!(is_script_path(Path::new("a/run.py"), ""));
+    assert!(is_script_path(Path::new("a/run.sh"), ""));
+    assert!(!is_script_path(Path::new("a/notes.md"), "x"));
+    assert!(!is_script_path(Path::new("a/data.txt"), "x"));
+    // extensionless: only a script when it starts with a shebang
+    assert!(is_script_path(Path::new("a/runner"), "#!/usr/bin/env bash\n"));
+    assert!(!is_script_path(Path::new("a/runner"), "plain text\n"));
+}
+
+fn cc_sk_021_for(skill_dir: &Path) -> Vec<Diagnostic> {
+    let skill_path = skill_dir.join("SKILL.md");
+    let content = fs::read_to_string(&skill_path).unwrap();
+    SkillValidator
+        .validate(&skill_path, &content, &LintConfig::default())
+        .into_iter()
+        .filter(|d| d.rule == "CC-SK-021")
+        .collect()
+}
+
+const CLEAN_SKILL: &str =
+    "---\nname: demo\ndescription: Use when demoing the rule for testing here.\n---\nRun `cargo build` from the repo root.\n";
+
+#[test]
+fn test_cc_sk_021_flags_bundled_md() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = tmp.path().join("demo");
+    fs::create_dir_all(dir.join("references")).unwrap();
+    fs::write(dir.join("SKILL.md"), CLEAN_SKILL).unwrap();
+    fs::write(
+        dir.join("references/bad.md"),
+        "# ref\nConfig at /Users/alice/projects/cfg.json\n",
+    )
+    .unwrap();
+
+    let diags = cc_sk_021_for(&dir);
+    assert_eq!(diags.len(), 1, "{diags:?}");
+    assert!(diags[0].file.ends_with("references/bad.md"));
+}
+
+#[test]
+fn test_cc_sk_021_flags_skill_md_itself() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = tmp.path().join("demo");
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(
+        dir.join("SKILL.md"),
+        "---\nname: demo\ndescription: Use when demoing the rule for testing here.\n---\nRun /Users/alice/build.sh now.\n",
+    )
+    .unwrap();
+
+    let diags = cc_sk_021_for(&dir);
+    assert_eq!(diags.len(), 1);
+    assert!(diags[0].file.ends_with("SKILL.md"));
+}
+
+#[test]
+fn test_cc_sk_021_flags_script_shebang_and_body() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = tmp.path().join("demo");
+    fs::create_dir_all(dir.join("scripts")).unwrap();
+    fs::write(dir.join("SKILL.md"), CLEAN_SKILL).unwrap();
+    fs::write(
+        dir.join("scripts/bad.sh"),
+        "#!/Users/alice/.venv/bin/python\n# fixture: /home/bob/data.csv\n",
+    )
+    .unwrap();
+
+    let diags = cc_sk_021_for(&dir);
+    assert_eq!(diags.len(), 2, "{diags:?}");
+    assert!(diags.iter().all(|d| d.file.ends_with("scripts/bad.sh")));
+}
+
+#[test]
+fn test_cc_sk_021_flags_extensionless_shebang() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = tmp.path().join("demo");
+    fs::create_dir_all(dir.join("scripts")).unwrap();
+    fs::write(dir.join("SKILL.md"), CLEAN_SKILL).unwrap();
+    fs::write(dir.join("scripts/runner"), "#!/Users/carol/bin/run\necho hi\n").unwrap();
+
+    let diags = cc_sk_021_for(&dir);
+    assert_eq!(diags.len(), 1);
+    assert!(diags[0].file.ends_with("scripts/runner"));
+}
+
+#[test]
+fn test_cc_sk_021_flags_python_comment() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = tmp.path().join("demo");
+    fs::create_dir_all(dir.join("bundled")).unwrap();
+    fs::write(dir.join("SKILL.md"), CLEAN_SKILL).unwrap();
+    fs::write(
+        dir.join("bundled/example.py"),
+        "import os  # path /Users/alice/data\n",
+    )
+    .unwrap();
+
+    let diags = cc_sk_021_for(&dir);
+    assert_eq!(diags.len(), 1);
+    assert!(diags[0].file.ends_with("bundled/example.py"));
+}
+
+#[test]
+fn test_cc_sk_021_all_three_sources() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = tmp.path().join("demo");
+    fs::create_dir_all(dir.join("scripts")).unwrap();
+    fs::create_dir_all(dir.join("references")).unwrap();
+    fs::write(
+        dir.join("SKILL.md"),
+        "---\nname: demo\ndescription: Use when demoing the rule for testing here.\n---\nRun /Users/alice/build.sh now.\n",
+    )
+    .unwrap();
+    fs::write(dir.join("references/bad.md"), "ref /home/bob/x\n").unwrap();
+    fs::write(dir.join("scripts/bad.sh"), "#!/Users/carol/run\n").unwrap();
+
+    let diags = cc_sk_021_for(&dir);
+    let files: std::collections::BTreeSet<String> = diags
+        .iter()
+        .map(|d| d.file.file_name().unwrap().to_string_lossy().into_owned())
+        .collect();
+    assert_eq!(diags.len(), 3, "{diags:?}");
+    assert_eq!(files.len(), 3);
+}
+
+#[test]
+fn test_cc_sk_021_good_placeholders_clean() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = tmp.path().join("demo");
+    fs::create_dir_all(dir.join("scripts")).unwrap();
+    fs::write(
+        dir.join("SKILL.md"),
+        "---\nname: demo\ndescription: Use when demoing the rule for testing here.\n---\nReplace `/Users/<name>/` with your home. Logs in `$HOME/.cache/`. Template `/home/${USER}/c/`.\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("scripts/ok.sh"),
+        "#!/usr/bin/env bash\noutput=\"${HOME}/.cache/app\"\ncd \"$(git rev-parse --show-toplevel)\"\n",
+    )
+    .unwrap();
+
+    assert!(cc_sk_021_for(&dir).is_empty());
+}
+
+#[test]
+fn test_cc_sk_021_ignores_files_outside_skill_dir() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = tmp.path().join("demo");
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(dir.join("SKILL.md"), CLEAN_SKILL).unwrap();
+    // Sibling of the skill dir, not bundled with the skill.
+    fs::write(tmp.path().join("build.sh"), "#!/Users/alice/run\n").unwrap();
+
+    assert!(cc_sk_021_for(&dir).is_empty());
+}

@@ -15,7 +15,7 @@ use regex::Regex;
 use rust_i18n::t;
 use serde::Deserialize;
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
 mod helpers;
@@ -1535,6 +1535,104 @@ impl<'a> ValidationContext<'a> {
             }
         }
     }
+
+    /// CC-SK-021: Hardcoded user-home paths in bundled skill content. Walks the
+    /// skill directory and scans the SKILL.md body, sibling `.md` bodies, and
+    /// bundled scripts (whole file). Diagnostics attach to the offending file.
+    fn validate_cc_sk_021(&mut self) {
+        if !claude_skill_rules_apply(self.client, self.config)
+            || !self.config.is_rule_enabled("CC-SK-021")
+            || !self.path.is_file()
+        {
+            return;
+        }
+        let Some(dir) = self.path.parent() else {
+            return;
+        };
+
+        // Collect in-scope files first (FS-only), then scan (mutates diagnostics).
+        let mut stack = vec![dir.to_path_buf()];
+        let mut files: Vec<PathBuf> = Vec::new();
+        while let Some(current) = stack.pop() {
+            let Ok(entries) = self.config.fs().read_dir(&current) else {
+                continue;
+            };
+            for entry in entries {
+                if entry.metadata.is_symlink {
+                    continue;
+                }
+                if entry.metadata.is_dir {
+                    stack.push(entry.path.clone());
+                } else if entry.metadata.is_file {
+                    files.push(entry.path.clone());
+                }
+            }
+        }
+        files.sort();
+        for file in files {
+            self.scan_file_for_user_paths(&file);
+        }
+    }
+
+    fn scan_file_for_user_paths(&mut self, file: &Path) {
+        let filename = file
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or_default()
+            .to_ascii_lowercase();
+        let is_md = filename.ends_with(".md");
+
+        // Reuse the in-memory content for the SKILL.md under validation.
+        let owned;
+        let content: &str = if file == self.path {
+            self.content
+        } else {
+            if is_md && SKIP_MD_FILENAMES.contains(&filename.as_str()) {
+                return;
+            }
+            match self.config.fs().read_to_string(file) {
+                Ok(c) => {
+                    owned = c;
+                    &owned
+                }
+                Err(_) => return,
+            }
+        };
+
+        let (region_start, region): (usize, &str) = if is_md {
+            let parts = split_frontmatter(content);
+            let start = parts.body_start.min(content.len());
+            (start, &content[start..])
+        } else if is_script_path(file, content) {
+            (0, content)
+        } else {
+            return;
+        };
+
+        let hits = find_hardcoded_user_paths(region);
+        if hits.is_empty() {
+            return;
+        }
+        let line_starts = compute_line_starts(content);
+        for hit in hits {
+            let (line, col) = line_col_at(region_start + hit.offset, &line_starts);
+            self.diagnostics.push(
+                Diagnostic::warning(
+                    file.to_path_buf(),
+                    line,
+                    col,
+                    "CC-SK-021",
+                    format!(
+                        "Hardcoded user directory path '{}' leaks author identity and is not portable across machines",
+                        hit.text
+                    ),
+                )
+                .with_suggestion(
+                    "Replace with '~/', '$HOME/', a project-relative path, or an env var like '$PROJECT_ROOT'. For shebangs prefer '#!/usr/bin/env <interpreter>'.",
+                ),
+            );
+        }
+    }
 }
 
 const RULE_IDS: &[&str] = &[
@@ -1572,6 +1670,7 @@ const RULE_IDS: &[&str] = &[
     "CC-SK-018",
     "CC-SK-019",
     "CC-SK-020",
+    "CC-SK-021",
 ];
 
 pub struct SkillValidator;
@@ -1710,6 +1809,9 @@ impl Validator for SkillValidator {
 
         // Phase 17: Directory validation (AS-015)
         ctx.validate_directory();
+
+        // Phase 18: Bundled-content scan (CC-SK-021)
+        ctx.validate_cc_sk_021();
 
         ctx.diagnostics
     }
