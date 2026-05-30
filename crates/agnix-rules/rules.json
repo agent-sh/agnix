@@ -1,8 +1,8 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 420,
-  "last_updated": "2026-05-24",
+  "total_rules": 421,
+  "last_updated": "2026-05-30",
   "schema": {
     "evidence": {
       "source_type": "spec|vendor_docs|vendor_code|paper|community",
@@ -3437,6 +3437,33 @@
       },
       "good_example": "---\nname: my-skill\nshell: bash\n---\nSkill instructions.",
       "bad_example": "---\nname: my-skill\nshell: zsh\n---\nSkill instructions."
+    },
+    {
+      "id": "CC-SK-021",
+      "name": "Hardcoded User Directory Path",
+      "severity": "MEDIUM",
+      "category": "claude-skills",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/skills"
+        ],
+        "verified_on": "2026-04-26",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: build-helper\ndescription: Build the project\n---\nRun `cargo build` from the repo root, or set `$BUILD_DIR` to override.",
+      "bad_example": "---\nname: build-helper\ndescription: Build the project\n---\nRun the script at /Users/alice/projects/myrepo/build.sh to compile."
     },
     {
       "id": "CC-SET-001",
@@ -11608,7 +11635,7 @@
     },
     "claude-skills": {
       "prefix": "CC-SK",
-      "count": 20,
+      "count": 21,
       "description": "Claude Code Skills rules"
     },
     "claude-hooks": {

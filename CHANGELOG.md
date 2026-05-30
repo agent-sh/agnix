@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **CC-SK-021: Hardcoded User Directory Path** (closes #832). New MEDIUM/SHOULD `claude-skills` rule flagging hardcoded user-home paths (`/Users/<name>/`, `/home/<name>/`, `C:\Users\<name>\`) in bundled skill content - they leak the author's identity and are non-portable. The `SkillValidator` walks the skill directory and scans the `SKILL.md` body, sibling `.md` bodies (frontmatter skipped), and bundled scripts (`.sh`/`.bash`/`.zsh`/`.fish`/`.py`/`.rb`/`.pl`/`.lua`/`.js`/`.ts`/`.mjs`, or any extensionless file with a `#!` shebang - scanned whole, including the shebang). Placeholder names (`user`, `example`, `foo`, ...) and `<name>`/`${...}`/`{{...}}`/`$HOME` forms are not flagged. Manual fix only (`~/`, `$HOME/`, a project-relative path, or `$PROJECT_ROOT`). Covered by 12 unit/integration tests. Rule count 420 -> 421.
+
 ### Fixed
 - **`CC-HK-001` no longer flags the `MessageDisplay` hook event** (closes #989). Claude Code v2.1.152 added a `MessageDisplay` hook event (lets hooks transform or hide assistant message text as it is displayed). It was missing from `HooksSchema::VALID_EVENTS`, so a valid `MessageDisplay` hook in `settings.json` tripped `CC-HK-001` "Invalid hook event". Added to the valid-event set; left out of `MATCHER_EVENTS`/`PROMPT_EVENTS` since it is a command-type display hook (so matcher and prompt/agent misuse still flag). Regression-tested in `test_cc_hk_001_message_display_event_valid`.
 

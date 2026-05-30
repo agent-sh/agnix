@@ -104,6 +104,9 @@ rules:
   cc_sk_017:
     message: "Unknown frontmatter field '%{field}'"
     suggestion: "Remove unsupported fields or fix typos in frontmatter keys"
+  cc_sk_021:
+    message: "Hardcoded user directory path '%{path}' leaks author identity and is not portable across machines"
+    suggestion: "Replace with '~/', '$HOME/', a project-relative path, or an env var like '$PROJECT_ROOT'. For shebangs prefer '#!/usr/bin/env <interpreter>'."
 
   # --- Per-Client Skills (per_client_skill.rs) ---
   cr_sk_001:

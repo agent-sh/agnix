@@ -1,7 +1,9 @@
 use crate::fs::FileSystem;
 use crate::parsers::frontmatter::FrontmatterParts;
+use regex::Regex;
 use std::collections::HashSet;
 use std::path::Path;
+use std::sync::OnceLock;
 
 use super::{PathMatch, SkillFrontmatter, reference_path_regex};
 
@@ -297,6 +299,106 @@ pub(super) fn frontmatter_key_line_byte_range(
     }
 
     Some((abs_start, end))
+}
+
+/// Name segments treated as placeholders rather than a real username
+/// (case-insensitive). Matches with one of these names are not flagged.
+pub(super) const USER_PATH_PLACEHOLDERS: &[&str] = &[
+    "user",
+    "username",
+    "name",
+    "you",
+    "your-name",
+    "yourname",
+    "me",
+    "myname",
+    "someone",
+    "example",
+    "johndoe",
+    "jdoe",
+    "foo",
+    "bar",
+];
+
+/// File extensions treated as bundled scripts (scanned in full, shebang included).
+pub(super) const SCRIPT_EXTENSIONS: &[&str] = &[
+    "sh", "bash", "zsh", "fish", "py", "rb", "pl", "lua", "js", "ts", "mjs",
+];
+
+/// `.md` filenames that are repo docs, not skill instructions - left out of scope.
+pub(super) const SKIP_MD_FILENAMES: &[&str] = &[
+    "readme.md",
+    "changelog.md",
+    "claude.md",
+    "agents.md",
+    "license.md",
+];
+
+/// A hardcoded user-home path found while scanning skill content.
+pub(super) struct UserPathHit {
+    /// Byte offset of the match start within the scanned region.
+    pub offset: usize,
+    /// The matched path prefix, e.g. `/Users/alice/`.
+    pub text: String,
+}
+
+fn posix_user_path_regex() -> &'static Regex {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    // No trailing slash required: the name class excludes `/`, so the match
+    // ends at the username whether or not a path component follows. This also
+    // catches a bare `/home/alice` at end of line.
+    RE.get_or_init(|| {
+        Regex::new(r"(?:/Users/|/home/)([A-Za-z0-9._-]+)")
+            .expect("posix user path pattern must compile")
+    })
+}
+
+fn windows_user_path_regex() -> &'static Regex {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    RE.get_or_init(|| {
+        Regex::new(r"[Cc]:[\\/]Users[\\/]([A-Za-z0-9._-]+)")
+            .expect("windows user path pattern must compile")
+    })
+}
+
+fn is_placeholder_name(name: &str) -> bool {
+    let lower = name.to_ascii_lowercase();
+    USER_PATH_PLACEHOLDERS.contains(&lower.as_str())
+}
+
+/// Find hardcoded user-home paths (`/Users/<name>/`, `/home/<name>/`,
+/// `C:\Users\<name>\`) in `content`, skipping placeholder names. Angle-bracket
+/// (`<name>`), template (`${...}`, `{{...}}`), and env-var (`$HOME`) forms never
+/// match the name character class, so they are skipped implicitly.
+pub(super) fn find_hardcoded_user_paths(content: &str) -> Vec<UserPathHit> {
+    let mut hits = Vec::new();
+    for re in [posix_user_path_regex(), windows_user_path_regex()] {
+        for caps in re.captures_iter(content) {
+            let whole = caps.get(0).expect("group 0 always present");
+            let name = caps.get(1).map(|m| m.as_str()).unwrap_or_default();
+            if is_placeholder_name(name) {
+                continue;
+            }
+            hits.push(UserPathHit {
+                offset: whole.start(),
+                text: whole.as_str().to_string(),
+            });
+        }
+    }
+    hits.sort_by_key(|h| h.offset);
+    hits
+}
+
+/// Whether a bundled file is a script: a `#!` shebang on the first line (any
+/// extension), or a recognized script extension.
+pub(super) fn is_script_path(path: &Path, content: &str) -> bool {
+    if content.starts_with("#!") {
+        return true;
+    }
+    matches!(
+        path.extension().and_then(|e| e.to_str()),
+        Some(ext) if SCRIPT_EXTENSIONS.contains(&ext.to_ascii_lowercase().as_str())
+    )
 }
 
 pub(super) fn directory_size_until(path: &Path, max_bytes: u64, fs: &dyn FileSystem) -> u64 {
