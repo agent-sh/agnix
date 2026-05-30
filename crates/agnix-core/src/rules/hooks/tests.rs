@@ -832,6 +832,35 @@ fn test_cc_hk_001_valid_event_name() {
 }
 
 #[test]
+fn test_cc_hk_001_message_display_event_valid() {
+    // MessageDisplay hook event added in Claude Code v2.1.152: lets hooks
+    // transform or hide assistant message text as it is displayed.
+    let content = r#"{
+            "hooks": {
+                "MessageDisplay": [
+                    {
+                        "hooks": [
+                            { "type": "command", "command": "echo 'test'" }
+                        ]
+                    }
+                ]
+            }
+        }"#;
+
+    let diagnostics = validate(content);
+    let cc_hk_001: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-HK-001")
+        .collect();
+
+    assert_eq!(
+        cc_hk_001.len(),
+        0,
+        "MessageDisplay is a valid Claude Code hook event and must not flag CC-HK-001"
+    );
+}
+
+#[test]
 fn test_cc_hk_001_multiple_invalid_events() {
     let content = r#"{
             "hooks": {
