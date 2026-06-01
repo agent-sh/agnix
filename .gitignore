@@ -38,6 +38,7 @@ STATUS.md
 .exploration-report-*.md
 
 .claude/plan.md
+.claude/repo-intel.json
 .claude/scheduled_tasks.lock
 .claude/settings.local.json
 .claude/skillers/

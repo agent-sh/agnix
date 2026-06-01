@@ -13,7 +13,7 @@ keywords: ["CDX-CFG-027", "invalid windows sandbox value", "codex cli", "validat
 - **Category**: `Codex CLI`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `Yes (unsafe)`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-06-02`
 
 ## Applicability
 
@@ -23,7 +23,7 @@ keywords: ["CDX-CFG-027", "invalid windows sandbox value", "codex cli", "validat
 
 ## Evidence Sources
 
-- https://developers.openai.com/codex/
+- https://github.com/openai/codex/blob/rust-v0.136.0/codex-rs/core/config.schema.json
 
 ## Test Coverage Metadata
 
@@ -38,13 +38,13 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```toml
-[sandbox]
-windows = "docker"
+[windows]
+sandbox = "docker"
 ```
 
 ### Valid
 
 ```toml
-[sandbox]
-windows = "wsl"
+[windows]
+sandbox = "elevated"
 ```

@@ -134,38 +134,63 @@ const VALID_WINDOWS_SANDBOX_VALUES: &[&str] = &["elevated", "unelevated"];
 
 const KNOWN_FEATURE_KEYS: &[&str] = &[
     "apply_patch_freeform",
+    "apply_patch_streaming_events",
     "apps",
-    "apps_mcp_gateway",
+    "apps_mcp_path_override",
+    "auth_elicitation",
+    "browser_use",
+    "browser_use_external",
     "child_agents_md",
+    "chronicle",
+    "code_mode",
+    "code_mode_only",
     "codex_git_commit",
     "codex_hooks",
     "collab",
     "collaboration_modes",
+    "computer_use",
     "connectors",
     "default_mode_request_user_input",
     "elevated_windows_sandbox",
     "enable_experimental_windows_sandbox",
+    "enable_fanout",
+    "enable_mcp_apps",
     "enable_request_compression",
-    "experimental_use_freeform_apply_patch",
+    "exec_permission_approvals",
     "experimental_use_unified_exec_tool",
     "experimental_windows_sandbox",
+    "external_migration",
     "fast_mode",
+    "goals",
+    "guardian_approval",
+    "hooks",
+    "image_detail_original",
+    "image_generation",
+    "imagegenext",
+    "in_app_browser",
     "js_repl",
     "js_repl_tools_only",
     "memories",
     "memory_tool",
     "mentions_v2",
     "multi_agent",
+    "multi_agent_v2",
     "network_proxy",
+    "non_prefixed_mcp_tool_names",
     "personality",
+    "plugin_hooks",
     "plugin_sharing",
     "plugins",
-    "powershell_utf8",
     "prevent_idle_sleep",
     "realtime_conversation",
+    "remote_compaction_v2",
+    "remote_control",
     "remote_models",
+    "remote_plugin",
     "request_permissions",
+    "request_permissions_tool",
     "request_rule",
+    "responses_websocket_response_processed",
     "responses_websockets",
     "responses_websockets_v2",
     "runtime_metrics",
@@ -175,16 +200,33 @@ const KNOWN_FEATURE_KEYS: &[&str] = &[
     "shell_zsh_fork",
     "skill_env_var_dependency_prompt",
     "skill_mcp_dependency_install",
-    "smart_approvals",
     "sqlite",
+    "standalone_web_search",
     "steer",
+    "telepathy",
+    "terminal_resize_reflow",
+    "tool_call_mcp_elicitation",
+    "tool_search",
+    "tool_search_always_defer_mcp_tools",
+    "tool_suggest",
+    "tui_app_server",
+    "unavailable_dummy_tools",
     "undo",
     "unified_exec",
+    "use_legacy_landlock",
     "use_linux_sandbox_bwrap",
-    "voice_transcription",
     "web_search",
     "web_search_cached",
     "web_search_request",
+    "workspace_dependencies",
+    "workspace_owner_usage_nudge",
+    // Older-version tolerance: these shipped in earlier Codex releases but are
+    // absent from the current rust-v0.136.0 schema.
+    "apps_mcp_gateway",
+    "experimental_use_freeform_apply_patch",
+    "powershell_utf8",
+    "smart_approvals",
+    "voice_transcription",
 ];
 
 const KNOWN_TUI_KEYS: &[&str] = &[
@@ -3348,6 +3390,29 @@ experimental_thread_store_endpoint = "https://thread-store.example"
     fn test_cdx_cfg_011_invalid_feature_flag_name() {
         let diagnostics = validate_config("[features]\nthis_flag_does_not_exist = true");
         assert!(diagnostics.iter().any(|d| d.rule == "CDX-CFG-011"));
+    }
+
+    #[test]
+    fn test_codex_0_136_0_new_feature_flags_not_flagged() {
+        // Feature flags present in upstream rust-v0.136.0
+        // codex-rs/core/config.schema.json. Regression guard against
+        // CDX-CFG-011 false positives on valid current configs.
+        let diagnostics = validate_config(
+            r#"[features]
+imagegenext = true
+non_prefixed_mcp_tool_names = true
+standalone_web_search = true
+"#,
+        );
+        let cdx_cfg_011: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-011")
+            .map(|d| d.message.as_str())
+            .collect();
+        assert!(
+            cdx_cfg_011.is_empty(),
+            "0.136 feature flags should not trigger CDX-CFG-011, got: {cdx_cfg_011:?}"
+        );
     }
 
     #[test]

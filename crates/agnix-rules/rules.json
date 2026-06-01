@@ -4093,13 +4093,12 @@
       "severity": "MEDIUM",
       "category": "codex",
       "evidence": {
-        "source_type": "vendor_docs",
+        "source_type": "vendor_code",
         "source_urls": [
           "https://developers.openai.com/codex/config-reference",
-          "https://developers.openai.com/codex/config-schema.json",
-          "https://developers.openai.com/codex/enterprise/managed-configuration"
+          "https://github.com/openai/codex/blob/rust-v0.136.0/codex-rs/core/config.schema.json"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-06-02",
         "applies_to": {
           "tool": "codex"
         },
@@ -5211,11 +5210,11 @@
       "severity": "LOW",
       "category": "codex",
       "evidence": {
-        "source_type": "vendor_docs",
+        "source_type": "vendor_code",
         "source_urls": [
-          "https://developers.openai.com/codex/"
+          "https://github.com/openai/codex/blob/rust-v0.136.0/codex-rs/core/config.schema.json"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-06-02",
         "applies_to": {
           "tool": "codex"
         },
@@ -5230,8 +5229,8 @@
         "autofix": true,
         "fix_safety": "unsafe"
       },
-      "good_example": "[sandbox]\nwindows = \"wsl\"",
-      "bad_example": "[sandbox]\nwindows = \"docker\""
+      "good_example": "[windows]\nsandbox = \"elevated\"",
+      "bad_example": "[windows]\nsandbox = \"docker\""
     },
     {
       "id": "CDX-CFG-028",
@@ -5299,10 +5298,10 @@
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/openai/codex/blob/rust-v0.133.0/codex-rs/config/src/config_requirements.rs",
-          "https://github.com/openai/codex/blob/rust-v0.133.0/codex-rs/config/src/loader/mod.rs"
+          "https://github.com/openai/codex/blob/rust-v0.136.0/codex-rs/config/src/config_requirements.rs",
+          "https://github.com/openai/codex/blob/rust-v0.136.0/codex-rs/config/src/loader/mod.rs"
         ],
-        "verified_on": "2026-05-24",
+        "verified_on": "2026-06-02",
         "applies_to": {
           "tool": "codex",
           "version_range": ">=0.133.0"
@@ -5328,10 +5327,10 @@
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/openai/codex/blob/rust-v0.133.0/codex-rs/config/src/config_requirements.rs",
-          "https://github.com/openai/codex/blob/rust-v0.133.0/docs/config.md"
+          "https://github.com/openai/codex/blob/rust-v0.136.0/codex-rs/config/src/config_requirements.rs",
+          "https://github.com/openai/codex/blob/rust-v0.136.0/docs/config.md"
         ],
-        "verified_on": "2026-05-24",
+        "verified_on": "2026-06-02",
         "applies_to": {
           "tool": "codex",
           "version_range": ">=0.133.0"
@@ -5346,7 +5345,7 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "allowed_sandbox_modes = [\"read-only\"]",
+      "good_example": "allowed_sandbox_modes = [\"read-only\"]\n[windows]\nallowed_sandbox_implementations = [\"elevated\", \"unelevated\"]",
       "bad_example": "allowed_sandbox_mode = [\"read-only\"]"
     },
     {

@@ -18,11 +18,12 @@ use std::path::Path;
 const RULE_IDS: &[&str] = &["CDX-REQ-000", "CDX-REQ-001"];
 
 /// Known top-level keys of `requirements.toml`, sourced from
-/// `ConfigRequirementsToml` @ openai/codex rust-v0.133.0. Both `features`
+/// `ConfigRequirementsToml` @ openai/codex rust-v0.136.0. Both `features`
 /// (serde rename) and `feature_requirements` (serde alias) are accepted on
 /// disk; the network table is only valid as `experimental_network` (serde
 /// rename - the bare `network` field name is not a valid TOML key).
 const KNOWN_REQUIREMENTS_KEYS: &[&str] = &[
+    "allow_appshots",
     "allow_managed_hooks_only",
     "allowed_approval_policies",
     "allowed_approvals_reviewers",
@@ -42,6 +43,7 @@ const KNOWN_REQUIREMENTS_KEYS: &[&str] = &[
     "plugins",
     "remote_sandbox_config",
     "rules",
+    "windows",
 ];
 
 pub struct CodexRequirementsValidator;
@@ -220,6 +222,7 @@ mod tests {
         // profile sub-table.
         let content = r#"
 allow_managed_hooks_only = true
+allow_appshots = true
 allowed_sandbox_modes = ["read-only", "workspace-write"]
 allowed_permissions = ["locked"]
 enforce_residency = "us"
@@ -245,6 +248,9 @@ enabled = true
 
 [permissions.locked]
 description = "locked profile"
+
+[windows]
+allowed_sandbox_implementations = ["elevated", "unelevated"]
 "#;
         let diags = rules(content, "CDX-REQ-001");
         assert!(
