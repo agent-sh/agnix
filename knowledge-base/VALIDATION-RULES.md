@@ -152,10 +152,10 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Source**: openai/codex codex-rs/skills/.../quick_validate.py
 
 <a id="as-011"></a>
-### AS-011 [HIGH] Compatibility Too Long
+### AS-011 [HIGH] Invalid Compatibility Length
 **Requirement**: compatibility field MUST be 1-500 chars if present
-**Detection**: `compatibility.len() > 500`
-**Fix**: Truncate to 500 chars
+**Detection**: `compatibility.len() == 0 || compatibility.len() > 500`
+**Fix**: Add compatibility text or truncate to 500 chars
 **Source**: agentskills.io/specification
 
 <a id="as-012"></a>
@@ -1517,7 +1517,7 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 **Source**: docs.github.com/en/copilot/concepts/agents/coding-agent/about-hooks
 
 <a id="cop-018"></a>
-### COP-018 [HIGH] Copilot Setup Steps Missing or Invalid copilot-setup-steps Job
+### COP-018 [HIGH] Invalid copilot-setup-steps Job
 **Requirement**: `copilot-setup-steps.yml` MUST define `jobs.copilot-setup-steps` with an Ubuntu runner and non-empty `steps`
 **Detection**: Parse workflow YAML and verify `jobs.copilot-setup-steps` exists, `runs-on` targets Ubuntu (or expression), and `steps` is non-empty
 **Fix**: Add or correct `copilot-setup-steps` job in the workflow

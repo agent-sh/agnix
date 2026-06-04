@@ -4,6 +4,9 @@ exclude = [
   "node_modules/**",
   ".git/**",
   "target/**",
+  # Historical Docusaurus snapshots duplicate generated docs and push the repo
+  # over the default self-lint file cap.
+  "website/versioned_docs/**",
   # Exclude all test fixtures (they intentionally contain invalid configs)
   "tests/fixtures/**",
 ]

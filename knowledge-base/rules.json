@@ -554,7 +554,7 @@
     },
     {
       "id": "AS-011",
-      "name": "Compatibility Too Long",
+      "name": "Invalid Compatibility Length",
       "severity": "HIGH",
       "category": "agent-skills",
       "evidence": {
@@ -2499,8 +2499,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"name\": \"my-plugin\",\n  \"description\": \"A useful plugin\",\n  \"version\": \"1.0.0\"\n}",
-      "bad_example": "{\n  \"name\": \"my-plugin\",\n  \"description\": \"A useful plugin\",\n  \"version\": \"1.0.0\"\n}"
+      "good_example": "{\n  \"manifest_path\": \".claude-plugin/plugin.json\"\n}",
+      "bad_example": "{\n  \"manifest_path\": \"plugin.json\"\n}"
     },
     {
       "id": "CC-PL-002",
@@ -2883,7 +2883,7 @@
         "autofix": false
       },
       "good_example": "{\n  \"commands\": [\"./custom-commands\", \"./commands\"]\n}",
-      "bad_example": "{\n  \"commands\": \"./custom-commands\"\n}\n# commands/ also exists at the plugin root"
+      "bad_example": "{\n  \"commands\": \"./custom-commands\"\n}"
     },
     {
       "id": "CC-SK-001",
@@ -6103,7 +6103,7 @@
     },
     {
       "id": "COP-018",
-      "name": "Copilot Setup Steps Missing or Invalid copilot-setup-steps Job",
+      "name": "Invalid copilot-setup-steps Job",
       "severity": "HIGH",
       "category": "copilot",
       "evidence": {

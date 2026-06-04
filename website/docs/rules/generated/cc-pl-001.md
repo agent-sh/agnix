@@ -39,9 +39,7 @@ The following examples demonstrate what triggers this rule and how to fix it.
 
 ```json
 {
-  "name": "my-plugin",
-  "description": "A useful plugin",
-  "version": "1.0.0"
+  "manifest_path": "plugin.json"
 }
 ```
 
@@ -49,8 +47,6 @@ The following examples demonstrate what triggers this rule and how to fix it.
 
 ```json
 {
-  "name": "my-plugin",
-  "description": "A useful plugin",
-  "version": "1.0.0"
+  "manifest_path": ".claude-plugin/plugin.json"
 }
 ```

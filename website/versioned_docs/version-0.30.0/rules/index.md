@@ -24,7 +24,7 @@ This section contains all `422` validation rules generated from `knowledge-base/
 | [AS-006](./generated/as-006.md) | Consecutive Hyphens in Name | HIGH | Agent Skills | Yes (safe) |
 | [AS-008](./generated/as-008.md) | Description Too Short | HIGH | Agent Skills | No |
 | [AS-009](./generated/as-009.md) | Description Contains Angle Brackets (Codex) | HIGH | Agent Skills | Yes (safe) |
-| [AS-011](./generated/as-011.md) | Compatibility Too Long | HIGH | Agent Skills | No |
+| [AS-011](./generated/as-011.md) | Invalid Compatibility Length | HIGH | Agent Skills | No |
 | [AS-012](./generated/as-012.md) | Content Exceeds 500 Lines | MEDIUM | Agent Skills | No |
 | [AS-013](./generated/as-013.md) | File Reference Too Deep | MEDIUM | Agent Skills | No |
 | [AS-015](./generated/as-015.md) | Upload Size Exceeds 8MB | HIGH | Agent Skills | No |
@@ -223,7 +223,7 @@ This section contains all `422` validation rules generated from `knowledge-base/
 | [COP-014](./generated/cop-014.md) | Prompt File Unknown Frontmatter Field | MEDIUM | GitHub Copilot | Yes (safe) |
 | [COP-015](./generated/cop-015.md) | Prompt File Invalid Agent Mode | HIGH | GitHub Copilot | Yes (safe) |
 | [COP-017](./generated/cop-017.md) | Copilot Hooks Schema Validation | HIGH | GitHub Copilot | No |
-| [COP-018](./generated/cop-018.md) | Copilot Setup Steps Missing or Invalid copilot-setup-steps Job | HIGH | GitHub Copilot | No |
+| [COP-018](./generated/cop-018.md) | Invalid copilot-setup-steps Job | HIGH | GitHub Copilot | No |
 | [COP-019](./generated/cop-019.md) | Plugin Missing Required Fields | HIGH | GitHub Copilot | No |
 | [COP-020](./generated/cop-020.md) | Plugin Invalid Field Types | MEDIUM | GitHub Copilot | No |
 | [COP-022](./generated/cop-022.md) | CLI Skill Missing Frontmatter | HIGH | GitHub Copilot | No |
