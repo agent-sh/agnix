@@ -668,6 +668,9 @@ rules:
   cdx_pl_014:
     message: "Falta el campo 'description' - recomendado para visibilidad en el marketplace"
     suggestion: "Agrega una cadena 'description' a plugin.json para mejor descubrimiento"
+  cdx_pl_015:
+    message: "'skills' debe ser una ruta de cadena, no %{actual}"
+    suggestion: "Establece 'skills' en una ruta relativa como './skills', o elimina el campo"
 
   # --- Prompt engineering (prompt.rs) ---
   pe_001:

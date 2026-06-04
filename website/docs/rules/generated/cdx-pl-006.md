@@ -13,7 +13,7 @@ keywords: ["CDX-PL-006", "component path directory traversal", "codex cli", "val
 - **Category**: `Codex CLI`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-06-04`
 
 ## Applicability
 
@@ -23,7 +23,7 @@ keywords: ["CDX-PL-006", "component path directory traversal", "codex cli", "val
 
 ## Evidence Sources
 
-- https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs
+- https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/core-plugins/src/manifest.rs
 
 ## Test Coverage Metadata
 

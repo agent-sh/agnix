@@ -2320,7 +2320,7 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 **Requirement**: Keys under `[features]` SHOULD use known Codex feature flag names
 **Detection**: Parse config and report unknown keys under `features`
 **Fix**: No auto-fix (remove unsupported flags or rename)
-**Source**: developers.openai.com/codex/config-reference, github.com/openai/codex (codex-rs/core/config.schema.json @ rust-v0.136.0)
+**Source**: developers.openai.com/codex/config-reference, github.com/openai/codex (codex-rs/core/config.schema.json @ rust-v0.137.0)
 
 <a id="cdx-cfg-012"></a>
 ### CDX-CFG-012 [HIGH] Invalid cli_auth_credentials_store Value
@@ -2460,7 +2460,7 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 **Requirement**: windows.sandbox SHOULD be "elevated" or "unelevated"
 **Detection**: Check enum value
 **Fix**: Manual
-**Source**: github.com/openai/codex (codex-rs/core/config.schema.json @ rust-v0.136.0)
+**Source**: github.com/openai/codex (codex-rs/core/config.schema.json @ rust-v0.137.0)
 
 <a id="cdx-cfg-028"></a>
 ### CDX-CFG-028 [HIGH] Unsupported Inline MCP bearer_token Field
@@ -2525,98 +2525,105 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 **Requirement**: plugin.json MUST be in `.codex-plugin/` directory
 **Detection**: Parent directory is not `.codex-plugin/`
 **Fix**: Move to `.codex-plugin/plugin.json`
-**Source**: github.com/openai/codex (codex-rs/core/src/plugins/manifest.rs)
+**Source**: github.com/openai/codex (codex-rs/core-plugins/src/manifest.rs @ rust-v0.137.0)
 
 <a id="cdx-pl-002"></a>
 ### CDX-PL-002 [HIGH] Invalid JSON in Plugin Manifest
 **Requirement**: `.codex-plugin/plugin.json` MUST contain valid JSON
 **Detection**: Attempt to parse as JSON; report parse errors with position
 **Fix**: Correct the JSON syntax
-**Source**: github.com/openai/codex (codex-rs/core/src/plugins/manifest.rs)
+**Source**: github.com/openai/codex (codex-rs/core-plugins/src/manifest.rs @ rust-v0.137.0)
 
 <a id="cdx-pl-003"></a>
 ### CDX-PL-003 [HIGH] Missing or Empty Plugin Name
 **Requirement**: Plugin manifest MUST have a non-empty `name` field
 **Detection**: Check `name` field is present and non-empty after trimming
 **Fix**: Auto-fix (unsafe) - derive name from directory or parent project
-**Source**: github.com/openai/codex (codex-rs/core/src/plugins/manifest.rs)
+**Source**: github.com/openai/codex (codex-rs/core-plugins/src/manifest.rs @ rust-v0.137.0)
 
 <a id="cdx-pl-004"></a>
 ### CDX-PL-004 [HIGH] Invalid Plugin Name Characters
 **Requirement**: Plugin `name` MUST contain only ASCII alphanumeric characters, hyphens, and underscores
 **Detection**: Validate name against allowed character set pattern
 **Fix**: No auto-fix (rename to a valid plugin name)
-**Source**: github.com/openai/codex (codex-rs/core/src/plugins/manifest.rs)
+**Source**: github.com/openai/codex (codex-rs/core-plugins/src/manifest.rs @ rust-v0.137.0)
 
 <a id="cdx-pl-005"></a>
 ### CDX-PL-005 [HIGH] Component Path Missing ./ Prefix
 **Requirement**: Component `path` values MUST start with `./`
 **Detection**: Check that each component path begins with `./`
 **Fix**: Auto-fix (safe) - prepend `./` to the path
-**Source**: github.com/openai/codex (codex-rs/core/src/plugins/manifest.rs)
+**Source**: github.com/openai/codex (codex-rs/core-plugins/src/manifest.rs @ rust-v0.137.0)
 
 <a id="cdx-pl-006"></a>
 ### CDX-PL-006 [HIGH] Component Path Directory Traversal
 **Requirement**: Component `path` MUST NOT contain `..` segments
 **Detection**: Check for `..` in normalized path components
 **Fix**: No auto-fix (restructure paths to stay within plugin directory)
-**Source**: github.com/openai/codex (codex-rs/core/src/plugins/manifest.rs)
+**Source**: github.com/openai/codex (codex-rs/core-plugins/src/manifest.rs @ rust-v0.137.0)
 
 <a id="cdx-pl-007"></a>
 ### CDX-PL-007 [HIGH] Component Path Empty Relative
 **Requirement**: Component `path` MUST reference a file, not just `./`
 **Detection**: Check that path has content beyond the `./` prefix
 **Fix**: No auto-fix (provide a specific file path)
-**Source**: github.com/openai/codex (codex-rs/core/src/plugins/manifest.rs)
+**Source**: github.com/openai/codex (codex-rs/core-plugins/src/manifest.rs @ rust-v0.137.0)
 
 <a id="cdx-pl-008"></a>
 ### CDX-PL-008 [MEDIUM] Too Many Default Prompts
 **Requirement**: `default_prompts` array MUST NOT exceed the maximum entry count
 **Detection**: Count entries in `default_prompts` array
 **Fix**: No auto-fix (remove excess prompts)
-**Source**: github.com/openai/codex (codex-rs/core/src/plugins/manifest.rs)
+**Source**: github.com/openai/codex (codex-rs/core-plugins/src/manifest.rs @ rust-v0.137.0)
 
 <a id="cdx-pl-009"></a>
 ### CDX-PL-009 [MEDIUM] Default Prompt Too Long
 **Requirement**: Each entry in `default_prompts` MUST NOT exceed the maximum character length
 **Detection**: Check string length of each prompt entry
 **Fix**: No auto-fix (shorten prompt text)
-**Source**: github.com/openai/codex (codex-rs/core/src/plugins/manifest.rs)
+**Source**: github.com/openai/codex (codex-rs/core-plugins/src/manifest.rs @ rust-v0.137.0)
 
 <a id="cdx-pl-010"></a>
 ### CDX-PL-010 [MEDIUM] Empty Default Prompt Entry
 **Requirement**: Entries in `default_prompts` SHOULD NOT be empty or whitespace-only
 **Detection**: Check each prompt entry is non-empty after trimming
 **Fix**: No auto-fix (remove empty entries or add content)
-**Source**: github.com/openai/codex (codex-rs/core/src/plugins/manifest.rs)
+**Source**: github.com/openai/codex (codex-rs/core-plugins/src/manifest.rs @ rust-v0.137.0)
 
 <a id="cdx-pl-011"></a>
 ### CDX-PL-011 [MEDIUM] Invalid Interface URL
 **Requirement**: URL fields within `interface` (websiteUrl, privacyPolicyUrl, termsOfServiceUrl) SHOULD contain valid http/https URLs
 **Detection**: Validate URL format of each URL field in the `interface` object
 **Fix**: No auto-fix (provide a valid URL)
-**Source**: github.com/openai/codex (codex-rs/core/src/plugins/manifest.rs)
+**Source**: github.com/openai/codex (codex-rs/core-plugins/src/manifest.rs @ rust-v0.137.0)
 
 <a id="cdx-pl-012"></a>
 ### CDX-PL-012 [MEDIUM] Invalid Asset Path
 **Requirement**: Asset paths in `interface` (composerIcon, logo, screenshots) MUST start with `./` and MUST NOT contain directory traversal
 **Detection**: Validate each asset path for `./` prefix and absence of `..`
 **Fix**: No auto-fix
-**Source**: github.com/openai/codex (codex-rs/core/src/plugins/manifest.rs)
+**Source**: github.com/openai/codex (codex-rs/core-plugins/src/manifest.rs @ rust-v0.137.0)
 
 <a id="cdx-pl-013"></a>
 ### CDX-PL-013 [LOW] Unsupported Hooks Field
 **Requirement**: Plugin manifest SHOULD NOT contain a `hooks` field (not yet supported)
 **Detection**: Check for presence of `hooks` key in manifest
 **Fix**: No auto-fix (remove the `hooks` field)
-**Source**: github.com/openai/codex (codex-rs/core/src/plugins/manifest.rs)
+**Source**: github.com/openai/codex (codex-rs/core-plugins/src/manifest.rs @ rust-v0.137.0)
 
 <a id="cdx-pl-014"></a>
 ### CDX-PL-014 [LOW] Missing Description
 **Requirement**: Plugin manifest SHOULD include a `description` field for discoverability
 **Detection**: Check for presence and non-emptiness of `description` field
 **Fix**: No auto-fix (add a meaningful description)
-**Source**: github.com/openai/codex (codex-rs/core/src/plugins/manifest.rs)
+**Source**: github.com/openai/codex (codex-rs/core-plugins/src/manifest.rs @ rust-v0.137.0)
+
+<a id="cdx-pl-015"></a>
+### CDX-PL-015 [MEDIUM] Invalid Skills Path Type
+**Requirement**: Plugin manifest `skills` SHOULD be a string path; Codex ignores malformed values with a warning
+**Detection**: Check that `skills`, when present, is a JSON string
+**Fix**: No auto-fix (set `skills` to a relative path string such as `./skills`, or remove the field)
+**Source**: github.com/openai/codex (codex-rs/core-plugins/src/manifest.rs @ rust-v0.137.0)
 
 ---
 
@@ -2628,13 +2635,13 @@ Validates Codex's admin-written managed `requirements.toml` (system location: `/
 **Requirement**: `requirements.toml` MUST be syntactically valid TOML
 **Detection**: Parse the file as a TOML table; report the parse error location on failure
 **Fix**: No auto-fix (correct the TOML syntax)
-**Source**: github.com/openai/codex (codex-rs/config/src/config_requirements.rs, codex-rs/config/src/loader/mod.rs @ rust-v0.136.0)
+**Source**: github.com/openai/codex (codex-rs/config/src/config_requirements.rs, codex-rs/config/src/loader/mod.rs @ rust-v0.137.0)
 
 ### CDX-REQ-001 [MEDIUM] Unknown Codex requirements.toml Key
 **Requirement**: Top-level keys SHOULD be recognized members of `ConfigRequirementsToml`; Codex silently ignores unknown keys (no `deny_unknown_fields`), so a typo is never enforced
 **Detection**: Compare each top-level key against the known set (`allow_appshots`, `allow_managed_hooks_only`, `allowed_approval_policies`, `allowed_approvals_reviewers`, `allowed_permissions`, `allowed_sandbox_modes`, `allowed_web_search_modes`, `apps`, `computer_use`, `enforce_residency`, `experimental_network`, `features`/`feature_requirements`, `guardian_policy_config`, `hooks`, `mcp_servers`, `permissions`, `plugins`, `remote_sandbox_config`, `rules`, `windows`)
 **Fix**: No auto-fix (remove or rename the key)
-**Source**: github.com/openai/codex (codex-rs/config/src/config_requirements.rs @ rust-v0.136.0, docs/config.md)
+**Source**: github.com/openai/codex (codex-rs/config/src/config_requirements.rs @ rust-v0.137.0, docs/config.md)
 
 ---
 
@@ -3445,8 +3452,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 421 validation rules across 40 categories
+**Total Coverage**: 422 validation rules across 40 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 213 HIGH, 180 MEDIUM, 28 LOW
+**Certainty**: 213 HIGH, 181 MEDIUM, 28 LOW
 **Auto-Fixable**: 127 rules (30%)

@@ -1,14 +1,14 @@
 ---
-id: cdx-pl-010
-title: "CDX-PL-010: Empty Default Prompt Entry - Codex CLI"
-sidebar_label: "CDX-PL-010"
-description: "agnix rule CDX-PL-010 checks for empty default prompt entry in codex cli files. Severity: MEDIUM. See examples and fix guidance."
-keywords: ["CDX-PL-010", "empty default prompt entry", "codex cli", "validation", "agnix", "linter"]
+id: cdx-pl-015
+title: "CDX-PL-015: Invalid Skills Path Type - Codex CLI"
+sidebar_label: "CDX-PL-015"
+description: "agnix rule CDX-PL-015 checks for invalid skills path type in codex cli files. Severity: MEDIUM. See examples and fix guidance."
+keywords: ["CDX-PL-015", "invalid skills path type", "codex cli", "validation", "agnix", "linter"]
 ---
 
 ## Summary
 
-- **Rule ID**: `CDX-PL-010`
+- **Rule ID**: `CDX-PL-015`
 - **Severity**: `MEDIUM`
 - **Category**: `Codex CLI`
 - **Normative Level**: `SHOULD`
@@ -18,7 +18,7 @@ keywords: ["CDX-PL-010", "empty default prompt entry", "codex cli", "validation"
 ## Applicability
 
 - **Tool**: `codex`
-- **Version Range**: `>=0.117.0`
+- **Version Range**: `>=0.137.0`
 - **Spec Revision**: `unspecified`
 
 ## Evidence Sources
@@ -38,11 +38,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{"name": "my-plugin", "interface": {"defaultPrompt": ["Fix the bug", "", "Add tests"]}}
+{"name": "my-plugin", "skills": ["./skills"]}
 ```
 
 ### Valid
 
 ```json
-{"name": "my-plugin", "interface": {"defaultPrompt": ["Fix the bug", "Add tests"]}}
+{"name": "my-plugin", "skills": "./skills"}
 ```

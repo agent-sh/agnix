@@ -668,6 +668,9 @@ rules:
   cdx_pl_014:
     message: "缺少 'description' 字段 - 建议添加以提高市场可见性"
     suggestion: "在 plugin.json 中添加 'description' 字符串以提高可发现性"
+  cdx_pl_015:
+    message: "'skills' 必须是字符串路径，而不是 %{actual}"
+    suggestion: "将 'skills' 设置为相对路径字符串（如 './skills'），或移除此字段"
 
   # --- Prompt engineering (prompt.rs) ---
   pe_001:
