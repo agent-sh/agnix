@@ -5154,11 +5154,11 @@
       "severity": "MEDIUM",
       "category": "codex",
       "evidence": {
-        "source_type": "vendor_docs",
+        "source_type": "vendor_code",
         "source_urls": [
-          "https://developers.openai.com/codex/"
+          "https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/core/config.schema.json"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-06-04",
         "applies_to": {
           "tool": "codex"
         },
@@ -5173,8 +5173,8 @@
         "autofix": true,
         "fix_safety": "unsafe"
       },
-      "good_example": "[approvals]\nreviewer = \"user\"",
-      "bad_example": "[approvals]\nreviewer = 42"
+      "good_example": "approvals_reviewer = \"auto_review\"\n\n[apps.browser]\napprovals_reviewer = \"user\"",
+      "bad_example": "approvals_reviewer = \"approve\"\n\n[apps.browser]\napprovals_reviewer = 42"
     },
     {
       "id": "CDX-CFG-025",

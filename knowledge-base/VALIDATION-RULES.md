@@ -2436,10 +2436,10 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 
 <a id="cdx-cfg-024"></a>
 ### CDX-CFG-024 [MEDIUM] Invalid Approvals Reviewer Value
-**Requirement**: approvals_reviewer SHOULD be "user" or "guardian_subagent"
-**Detection**: Check enum value
+**Requirement**: `approvals_reviewer` and `apps.<app_id>.approvals_reviewer` SHOULD be one of `user|auto_review|guardian_subagent`
+**Detection**: Parse config and validate top-level and app-level `approvals_reviewer` enum values
 **Fix**: Manual
-**Source**: developers.openai.com/codex/
+**Source**: github.com/openai/codex (codex-rs/core/config.schema.json @ rust-v0.137.0)
 
 <a id="cdx-cfg-025"></a>
 ### CDX-CFG-025 [MEDIUM] Invalid Service Tier Value

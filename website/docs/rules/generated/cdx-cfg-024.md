@@ -13,7 +13,7 @@ keywords: ["CDX-CFG-024", "invalid approvals reviewer value", "codex cli", "vali
 - **Category**: `Codex CLI`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `Yes (unsafe)`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-06-04`
 
 ## Applicability
 
@@ -23,7 +23,7 @@ keywords: ["CDX-CFG-024", "invalid approvals reviewer value", "codex cli", "vali
 
 ## Evidence Sources
 
-- https://developers.openai.com/codex/
+- https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/core/config.schema.json
 
 ## Test Coverage Metadata
 
@@ -38,13 +38,17 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```toml
-[approvals]
-reviewer = 42
+approvals_reviewer = "approve"
+
+[apps.browser]
+approvals_reviewer = 42
 ```
 
 ### Valid
 
 ```toml
-[approvals]
-reviewer = "user"
+approvals_reviewer = "auto_review"
+
+[apps.browser]
+approvals_reviewer = "user"
 ```

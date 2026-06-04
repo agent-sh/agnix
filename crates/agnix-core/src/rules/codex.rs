@@ -115,7 +115,7 @@ const KNOWN_APPROVAL_POLICY_SUB_FIELDS: &[&str] = &[
     "skill_approval",
 ];
 
-const VALID_APPROVALS_REVIEWER: &[&str] = &["guardian_subagent", "user"];
+const VALID_APPROVALS_REVIEWER: &[&str] = &["user", "auto_review", "guardian_subagent"];
 
 const VALID_SERVICE_TIERS: &[&str] = &["fast", "flex"];
 
@@ -1630,9 +1630,10 @@ fn validate_codex_config_rules(
                             VALID_APPROVALS_REVIEWER.join(", ")
                         ),
                     )
-                    .with_suggestion(
-                        "Set approvals_reviewer to 'user' or 'guardian_subagent'.".to_string(),
-                    ),
+                    .with_suggestion(format!(
+                        "Set approvals_reviewer to one of: {}.",
+                        VALID_APPROVALS_REVIEWER.join(", ")
+                    )),
                 );
             }
         } else if !value.is_null() {
@@ -1647,9 +1648,10 @@ fn validate_codex_config_rules(
                         value_type_name(value)
                     ),
                 )
-                .with_suggestion(
-                    "Set approvals_reviewer to 'user' or 'guardian_subagent'.".to_string(),
-                ),
+                .with_suggestion(format!(
+                    "Set approvals_reviewer to one of: {}.",
+                    VALID_APPROVALS_REVIEWER.join(", ")
+                )),
             );
         }
     }
@@ -1855,6 +1857,52 @@ fn validate_codex_config_rules(
                                 t!("rules.cdx_app_001.type_error", app = app_name.as_str()),
                             )
                             .with_suggestion(t!("rules.cdx_app_001.suggestion")),
+                        );
+                    }
+                }
+                if config.is_rule_enabled("CDX-CFG-024")
+                    && let Some(reviewer) = app_obj.get("approvals_reviewer")
+                {
+                    if let Some(reviewer_str) = reviewer.as_str() {
+                        if !VALID_APPROVALS_REVIEWER.contains(&reviewer_str) {
+                            diagnostics.push(
+                                Diagnostic::warning(
+                                    path.to_path_buf(),
+                                    line_for("approvals_reviewer"),
+                                    0,
+                                    "CDX-CFG-024",
+                                    format!(
+                                        "Invalid apps.{}.approvals_reviewer value '{}'. Must be one of: {}",
+                                        app_name,
+                                        reviewer_str,
+                                        VALID_APPROVALS_REVIEWER.join(", ")
+                                    ),
+                                )
+                                .with_suggestion(format!(
+                                    "Set apps.{}.approvals_reviewer to one of: {}.",
+                                    app_name,
+                                    VALID_APPROVALS_REVIEWER.join(", ")
+                                )),
+                            );
+                        }
+                    } else if !reviewer.is_null() {
+                        diagnostics.push(
+                            Diagnostic::warning(
+                                path.to_path_buf(),
+                                line_for("approvals_reviewer"),
+                                0,
+                                "CDX-CFG-024",
+                                format!(
+                                    "apps.{}.approvals_reviewer must be a string, not {}",
+                                    app_name,
+                                    value_type_name(reviewer)
+                                ),
+                            )
+                            .with_suggestion(format!(
+                                "Set apps.{}.approvals_reviewer to one of: {}.",
+                                app_name,
+                                VALID_APPROVALS_REVIEWER.join(", ")
+                            )),
                         );
                     }
                 }
@@ -3477,14 +3525,14 @@ enabled = true
 approvals_reviewer = "guardian_subagent"
 "#,
         );
-        let unknown: Vec<_> = diagnostics
+        let unexpected: Vec<_> = diagnostics
             .iter()
-            .filter(|d| d.rule == "CDX-CFG-006")
+            .filter(|d| d.rule == "CDX-CFG-006" || d.rule == "CDX-CFG-024")
             .map(|d| d.message.as_str())
             .collect();
         assert!(
-            unknown.is_empty(),
-            "apps.*.approvals_reviewer should not trigger CDX-CFG-006, got: {unknown:?}"
+            unexpected.is_empty(),
+            "apps.*.approvals_reviewer should not trigger unknown-key or value diagnostics, got: {unexpected:?}"
         );
     }
 
@@ -3922,8 +3970,67 @@ skill_approval = "never"
     }
 
     #[test]
+    fn test_cdx_cfg_024_valid_approvals_reviewer_auto_review() {
+        let diagnostics = validate_config("approvals_reviewer = \"auto_review\"");
+        let cdx_024: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-024")
+            .collect();
+        assert!(cdx_024.is_empty());
+    }
+
+    #[test]
     fn test_cdx_cfg_024_type_error() {
         let diagnostics = validate_config("approvals_reviewer = 42");
+        let cdx_024: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-024")
+            .collect();
+        assert_eq!(cdx_024.len(), 1);
+        assert!(cdx_024[0].message.contains("string"));
+    }
+
+    #[test]
+    fn test_cdx_cfg_024_valid_app_approvals_reviewer_auto_review() {
+        let diagnostics = validate_config(
+            r#"[apps.browser]
+approvals_reviewer = "auto_review"
+"#,
+        );
+        let cdx_024: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-024")
+            .collect();
+        assert!(cdx_024.is_empty());
+    }
+
+    #[test]
+    fn test_cdx_cfg_024_invalid_app_approvals_reviewer() {
+        let diagnostics = validate_config(
+            r#"[apps.browser]
+approvals_reviewer = "approve"
+"#,
+        );
+        let cdx_024: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-024")
+            .collect();
+        assert_eq!(cdx_024.len(), 1);
+        assert!(
+            cdx_024[0]
+                .message
+                .contains("apps.browser.approvals_reviewer")
+        );
+        assert!(cdx_024[0].message.contains("approve"));
+    }
+
+    #[test]
+    fn test_cdx_cfg_024_app_approvals_reviewer_type_error() {
+        let diagnostics = validate_config(
+            r#"[apps.browser]
+approvals_reviewer = 42
+"#,
+        );
         let cdx_024: Vec<_> = diagnostics
             .iter()
             .filter(|d| d.rule == "CDX-CFG-024")
