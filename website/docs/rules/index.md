@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `421` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `422` validation rules generated from `knowledge-base/rules.json`.
 `127` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -187,6 +187,7 @@ This section contains all `421` validation rules generated from `knowledge-base/
 | [CDX-PL-012](./generated/cdx-pl-012.md) | Invalid Asset Path | MEDIUM | Codex CLI | No |
 | [CDX-PL-013](./generated/cdx-pl-013.md) | Unsupported Hooks Field | LOW | Codex CLI | No |
 | [CDX-PL-014](./generated/cdx-pl-014.md) | Missing Description | LOW | Codex CLI | No |
+| [CDX-PL-015](./generated/cdx-pl-015.md) | Invalid Skills Path Type | MEDIUM | Codex CLI | No |
 | [CDX-CFG-023](./generated/cdx-cfg-023.md) | Invalid Approval Policy Sub-field | MEDIUM | Codex CLI | Yes (safe) |
 | [CDX-CFG-024](./generated/cdx-cfg-024.md) | Invalid Approvals Reviewer Value | MEDIUM | Codex CLI | Yes (unsafe) |
 | [CDX-CFG-025](./generated/cdx-cfg-025.md) | Invalid Service Tier Value | MEDIUM | Codex CLI | Yes (unsafe) |

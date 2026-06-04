@@ -13,7 +13,7 @@ keywords: ["CDX-REQ-001", "unknown codex requirements.toml key", "codex cli", "v
 - **Category**: `Codex CLI`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-06-02`
+- **Verified On**: `2026-06-04`
 
 ## Applicability
 
@@ -23,8 +23,8 @@ keywords: ["CDX-REQ-001", "unknown codex requirements.toml key", "codex cli", "v
 
 ## Evidence Sources
 
-- https://github.com/openai/codex/blob/rust-v0.136.0/codex-rs/config/src/config_requirements.rs
-- https://github.com/openai/codex/blob/rust-v0.136.0/docs/config.md
+- https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/config/src/config_requirements.rs
+- https://github.com/openai/codex/blob/rust-v0.137.0/docs/config.md
 
 ## Test Coverage Metadata
 

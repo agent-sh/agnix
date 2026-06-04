@@ -1,8 +1,8 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 421,
-  "last_updated": "2026-05-30",
+  "total_rules": 422,
+  "last_updated": "2026-06-04",
   "schema": {
     "evidence": {
       "source_type": "spec|vendor_docs|vendor_code|paper|community",
@@ -4096,9 +4096,9 @@
         "source_type": "vendor_code",
         "source_urls": [
           "https://developers.openai.com/codex/config-reference",
-          "https://github.com/openai/codex/blob/rust-v0.136.0/codex-rs/core/config.schema.json"
+          "https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/core/config.schema.json"
         ],
-        "verified_on": "2026-06-02",
+        "verified_on": "2026-06-04",
         "applies_to": {
           "tool": "codex"
         },
@@ -4706,9 +4706,9 @@
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs"
+          "https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/core-plugins/src/manifest.rs"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-06-04",
         "applies_to": {
           "tool": "codex",
           "version_range": ">=0.117.0"
@@ -4734,9 +4734,9 @@
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs"
+          "https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/core-plugins/src/manifest.rs"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-06-04",
         "applies_to": {
           "tool": "codex",
           "version_range": ">=0.117.0"
@@ -4762,9 +4762,9 @@
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs"
+          "https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/core-plugins/src/manifest.rs"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-06-04",
         "applies_to": {
           "tool": "codex",
           "version_range": ">=0.117.0"
@@ -4791,9 +4791,9 @@
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs"
+          "https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/core-plugins/src/manifest.rs"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-06-04",
         "applies_to": {
           "tool": "codex",
           "version_range": ">=0.117.0"
@@ -4819,9 +4819,9 @@
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs"
+          "https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/core-plugins/src/manifest.rs"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-06-04",
         "applies_to": {
           "tool": "codex",
           "version_range": ">=0.117.0"
@@ -4848,9 +4848,9 @@
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs"
+          "https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/core-plugins/src/manifest.rs"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-06-04",
         "applies_to": {
           "tool": "codex",
           "version_range": ">=0.117.0"
@@ -4876,9 +4876,9 @@
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs"
+          "https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/core-plugins/src/manifest.rs"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-06-04",
         "applies_to": {
           "tool": "codex",
           "version_range": ">=0.117.0"
@@ -4904,9 +4904,9 @@
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs"
+          "https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/core-plugins/src/manifest.rs"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-06-04",
         "applies_to": {
           "tool": "codex",
           "version_range": ">=0.117.0"
@@ -4932,9 +4932,9 @@
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs"
+          "https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/core-plugins/src/manifest.rs"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-06-04",
         "applies_to": {
           "tool": "codex",
           "version_range": ">=0.117.0"
@@ -4960,9 +4960,9 @@
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs"
+          "https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/core-plugins/src/manifest.rs"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-06-04",
         "applies_to": {
           "tool": "codex",
           "version_range": ">=0.117.0"
@@ -4988,9 +4988,9 @@
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs"
+          "https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/core-plugins/src/manifest.rs"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-06-04",
         "applies_to": {
           "tool": "codex",
           "version_range": ">=0.117.0"
@@ -5016,9 +5016,9 @@
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs"
+          "https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/core-plugins/src/manifest.rs"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-06-04",
         "applies_to": {
           "tool": "codex",
           "version_range": ">=0.117.0"
@@ -5044,9 +5044,9 @@
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs"
+          "https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/core-plugins/src/manifest.rs"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-06-04",
         "applies_to": {
           "tool": "codex",
           "version_range": ">=0.117.0"
@@ -5072,9 +5072,9 @@
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs"
+          "https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/core-plugins/src/manifest.rs"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-06-04",
         "applies_to": {
           "tool": "codex",
           "version_range": ">=0.117.0"
@@ -5091,6 +5091,34 @@
       },
       "good_example": "{\"name\": \"my-plugin\", \"description\": \"Adds code review capabilities\"}",
       "bad_example": "{\"name\": \"my-plugin\"}"
+    },
+    {
+      "id": "CDX-PL-015",
+      "name": "Invalid Skills Path Type",
+      "severity": "MEDIUM",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/core-plugins/src/manifest.rs"
+        ],
+        "verified_on": "2026-06-04",
+        "applies_to": {
+          "tool": "codex",
+          "version_range": ">=0.137.0"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"name\": \"my-plugin\", \"skills\": \"./skills\"}",
+      "bad_example": "{\"name\": \"my-plugin\", \"skills\": [\"./skills\"]}"
     },
     {
       "id": "CDX-CFG-023",
@@ -5126,11 +5154,11 @@
       "severity": "MEDIUM",
       "category": "codex",
       "evidence": {
-        "source_type": "vendor_docs",
+        "source_type": "vendor_code",
         "source_urls": [
-          "https://developers.openai.com/codex/"
+          "https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/core/config.schema.json"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-06-04",
         "applies_to": {
           "tool": "codex"
         },
@@ -5145,8 +5173,8 @@
         "autofix": true,
         "fix_safety": "unsafe"
       },
-      "good_example": "[approvals]\nreviewer = \"user\"",
-      "bad_example": "[approvals]\nreviewer = 42"
+      "good_example": "approvals_reviewer = \"auto_review\"\n\n[apps.browser]\napprovals_reviewer = \"user\"",
+      "bad_example": "approvals_reviewer = \"approve\"\n\n[apps.browser]\napprovals_reviewer = 42"
     },
     {
       "id": "CDX-CFG-025",
@@ -5212,9 +5240,9 @@
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/openai/codex/blob/rust-v0.136.0/codex-rs/core/config.schema.json"
+          "https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/core/config.schema.json"
         ],
-        "verified_on": "2026-06-02",
+        "verified_on": "2026-06-04",
         "applies_to": {
           "tool": "codex"
         },
@@ -5298,10 +5326,10 @@
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/openai/codex/blob/rust-v0.136.0/codex-rs/config/src/config_requirements.rs",
-          "https://github.com/openai/codex/blob/rust-v0.136.0/codex-rs/config/src/loader/mod.rs"
+          "https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/config/src/config_requirements.rs",
+          "https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/config/src/loader/mod.rs"
         ],
-        "verified_on": "2026-06-02",
+        "verified_on": "2026-06-04",
         "applies_to": {
           "tool": "codex",
           "version_range": ">=0.133.0"
@@ -5327,10 +5355,10 @@
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/openai/codex/blob/rust-v0.136.0/codex-rs/config/src/config_requirements.rs",
-          "https://github.com/openai/codex/blob/rust-v0.136.0/docs/config.md"
+          "https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/config/src/config_requirements.rs",
+          "https://github.com/openai/codex/blob/rust-v0.137.0/docs/config.md"
         ],
-        "verified_on": "2026-06-02",
+        "verified_on": "2026-06-04",
         "applies_to": {
           "tool": "codex",
           "version_range": ">=0.133.0"
@@ -11699,7 +11727,7 @@
     },
     "codex": {
       "prefix": "CDX",
-      "count": 62,
+      "count": 63,
       "description": "Codex CLI configuration validation"
     },
     "roo-code": {

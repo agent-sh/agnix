@@ -1142,6 +1142,9 @@ rules:
   cdx_pl_014:
     message: "Missing 'description' field - recommended for marketplace visibility"
     suggestion: "Add a 'description' string to plugin.json for better discoverability"
+  cdx_pl_015:
+    message: "'skills' must be a string path, not %{actual}"
+    suggestion: "Set 'skills' to a relative path string such as './skills', or remove the field"
 
   # --- Roo Code (roo.rs) ---
   roo_001:

@@ -13,7 +13,7 @@ keywords: ["CDX-CFG-011", "invalid feature flag name", "codex cli", "validation"
 - **Category**: `Codex CLI`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-06-02`
+- **Verified On**: `2026-06-04`
 
 ## Applicability
 
@@ -24,7 +24,7 @@ keywords: ["CDX-CFG-011", "invalid feature flag name", "codex cli", "validation"
 ## Evidence Sources
 
 - https://developers.openai.com/codex/config-reference
-- https://github.com/openai/codex/blob/rust-v0.136.0/codex-rs/core/config.schema.json
+- https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/core/config.schema.json
 
 ## Test Coverage Metadata
 

@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **Tool baseline**: `codex` bumped `rust-v0.136.0` -> `rust-v0.137.0` (closes #1013). Diffed upstream `codex-rs/core/config.schema.json` and refreshed Codex config allow-lists for new `local_thread_store_compression` / `unified_exec_zsh_fork` feature flags plus per-app `approvals_reviewer`, preventing false positives from `CDX-CFG-011` and `CDX-CFG-006`; `CDX-CFG-024` now accepts `auto_review` and validates app-level reviewer overrides. Added `CDX-PL-015` for non-string `.codex-plugin/plugin.json` `skills` fields, which Codex now ignores with a warning. `.github/tool-release-baselines.json` and `knowledge-base/RESEARCH-TRACKING.md` updated.
 - **Tool baselines**: completed the release-watch sweep and bumped `amp` `end-of-public-threads`, `claude-code` `v2.1.159`, `cline` `v3.86.2` (closes #1010), `codex` `rust-v0.136.0`, `cursor` `3.6.31` (closes #1011), `gemini-cli` `v0.44.1`, `kiro` `2.5.0` (closes #1009), `opencode` `v1.15.13`, and `roo-code` `v3.54.0`. Codex v0.136.0 added current config feature flags and managed `requirements.toml` keys, so the Codex allow-lists, rule evidence, generated rule docs, and regression tests were refreshed; the other tool releases were agnix-irrelevant for current validated config surfaces. `.github/tool-release-baselines.json` and `knowledge-base/RESEARCH-TRACKING.md` updated.
 
 ## [0.29.0] - 2026-05-30

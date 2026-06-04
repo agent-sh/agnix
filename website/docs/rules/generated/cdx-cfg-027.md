@@ -13,7 +13,7 @@ keywords: ["CDX-CFG-027", "invalid windows sandbox value", "codex cli", "validat
 - **Category**: `Codex CLI`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `Yes (unsafe)`
-- **Verified On**: `2026-06-02`
+- **Verified On**: `2026-06-04`
 
 ## Applicability
 
@@ -23,7 +23,7 @@ keywords: ["CDX-CFG-027", "invalid windows sandbox value", "codex cli", "validat
 
 ## Evidence Sources
 
-- https://github.com/openai/codex/blob/rust-v0.136.0/codex-rs/core/config.schema.json
+- https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/core/config.schema.json
 
 ## Test Coverage Metadata
 

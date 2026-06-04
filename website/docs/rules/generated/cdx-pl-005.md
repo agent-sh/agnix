@@ -13,7 +13,7 @@ keywords: ["CDX-PL-005", "component path missing ./ prefix", "codex cli", "valid
 - **Category**: `Codex CLI`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `Yes (safe)`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-06-04`
 
 ## Applicability
 
@@ -23,7 +23,7 @@ keywords: ["CDX-PL-005", "component path missing ./ prefix", "codex cli", "valid
 
 ## Evidence Sources
 
-- https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs
+- https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/core-plugins/src/manifest.rs
 
 ## Test Coverage Metadata
 

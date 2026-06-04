@@ -18,7 +18,7 @@ use std::path::Path;
 const RULE_IDS: &[&str] = &["CDX-REQ-000", "CDX-REQ-001"];
 
 /// Known top-level keys of `requirements.toml`, sourced from
-/// `ConfigRequirementsToml` @ openai/codex rust-v0.136.0. Both `features`
+/// `ConfigRequirementsToml` @ openai/codex rust-v0.137.0. Both `features`
 /// (serde rename) and `feature_requirements` (serde alias) are accepted on
 /// disk; the network table is only valid as `experimental_network` (serde
 /// rename - the bare `network` field name is not a valid TOML key).

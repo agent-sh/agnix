@@ -13,7 +13,7 @@ keywords: ["CDX-REQ-000", "codex requirements.toml toml parse error", "codex cli
 - **Category**: `Codex CLI`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-06-02`
+- **Verified On**: `2026-06-04`
 
 ## Applicability
 
@@ -23,8 +23,8 @@ keywords: ["CDX-REQ-000", "codex requirements.toml toml parse error", "codex cli
 
 ## Evidence Sources
 
-- https://github.com/openai/codex/blob/rust-v0.136.0/codex-rs/config/src/config_requirements.rs
-- https://github.com/openai/codex/blob/rust-v0.136.0/codex-rs/config/src/loader/mod.rs
+- https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/config/src/config_requirements.rs
+- https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/config/src/loader/mod.rs
 
 ## Test Coverage Metadata
 

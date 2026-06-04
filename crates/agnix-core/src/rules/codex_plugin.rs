@@ -1,4 +1,4 @@
-//! Codex CLI plugin manifest validation (CDX-PL-001 to CDX-PL-014).
+//! Codex CLI plugin manifest validation (CDX-PL-001 to CDX-PL-015).
 //!
 //! Validates `.codex-plugin/plugin.json` manifests for the Codex CLI
 //! plugin system introduced in v0.117.0.
@@ -26,6 +26,7 @@ const RULE_IDS: &[&str] = &[
     "CDX-PL-012",
     "CDX-PL-013",
     "CDX-PL-014",
+    "CDX-PL-015",
 ];
 
 /// Max number of defaultPrompt entries
@@ -159,6 +160,27 @@ impl Validator for CodexPluginValidator {
                     validate_component_path(val, field, path, content, config, &mut diagnostics);
                 }
             }
+        }
+
+        // CDX-PL-015: skills must be a string path. Codex ignores malformed
+        // values with a warning, which can make bundled skills disappear.
+        if config.is_rule_enabled("CDX-PL-015")
+            && let Some(skills) = raw_value.get("skills")
+            && !skills.is_string()
+        {
+            diagnostics.push(
+                Diagnostic::warning(
+                    path.to_path_buf(),
+                    1,
+                    0,
+                    "CDX-PL-015",
+                    t!(
+                        "rules.cdx_pl_015.message",
+                        actual = json_value_type_name(skills)
+                    ),
+                )
+                .with_suggestion(t!("rules.cdx_pl_015.suggestion")),
+            );
         }
 
         // CDX-PL-008/009/010: defaultPrompt validation
@@ -337,6 +359,17 @@ fn is_absolute_path(p: &str) -> bool {
     p.starts_with('/')
         || p.starts_with('\\')
         || (p.len() >= 2 && p.as_bytes()[0].is_ascii_alphabetic() && p.as_bytes()[1] == b':')
+}
+
+fn json_value_type_name(value: &serde_json::Value) -> &'static str {
+    match value {
+        serde_json::Value::Null => "null",
+        serde_json::Value::Bool(_) => "boolean",
+        serde_json::Value::Number(_) => "number",
+        serde_json::Value::String(_) => "string",
+        serde_json::Value::Array(_) => "array",
+        serde_json::Value::Object(_) => "object",
+    }
 }
 
 /// Validate defaultPrompt field.
@@ -760,6 +793,46 @@ mod tests {
         assert!(!diagnostics.iter().any(|d| d.rule == "CDX-PL-005"));
     }
 
+    // ===== CDX-PL-015: skills field type =====
+
+    #[test]
+    fn test_cdx_pl_015_non_string_skills_warns() {
+        let temp = TempDir::new().unwrap();
+        let plugin_path = temp.path().join(".codex-plugin").join("plugin.json");
+        write_plugin(
+            &plugin_path,
+            r#"{"name":"test","description":"desc","skills":["./skills"]}"#,
+        );
+
+        let validator = CodexPluginValidator;
+        let diagnostics = validator.validate(
+            &plugin_path,
+            &fs::read_to_string(&plugin_path).unwrap(),
+            &LintConfig::default(),
+        );
+
+        assert!(diagnostics.iter().any(|d| d.rule == "CDX-PL-015"));
+    }
+
+    #[test]
+    fn test_cdx_pl_015_string_skills_no_diagnostic() {
+        let temp = TempDir::new().unwrap();
+        let plugin_path = temp.path().join(".codex-plugin").join("plugin.json");
+        write_plugin(
+            &plugin_path,
+            r#"{"name":"test","description":"desc","skills":"./skills"}"#,
+        );
+
+        let validator = CodexPluginValidator;
+        let diagnostics = validator.validate(
+            &plugin_path,
+            &fs::read_to_string(&plugin_path).unwrap(),
+            &LintConfig::default(),
+        );
+
+        assert!(!diagnostics.iter().any(|d| d.rule == "CDX-PL-015"));
+    }
+
     // ===== CDX-PL-006: Path traversal =====
 
     #[test]
@@ -788,6 +861,25 @@ mod tests {
         write_plugin(
             &plugin_path,
             r#"{"name":"test","description":"desc","apps":"./foo/../bar"}"#,
+        );
+
+        let validator = CodexPluginValidator;
+        let diagnostics = validator.validate(
+            &plugin_path,
+            &fs::read_to_string(&plugin_path).unwrap(),
+            &LintConfig::default(),
+        );
+
+        assert!(diagnostics.iter().any(|d| d.rule == "CDX-PL-006"));
+    }
+
+    #[test]
+    fn test_cdx_pl_006_skills_path_traversal() {
+        let temp = TempDir::new().unwrap();
+        let plugin_path = temp.path().join(".codex-plugin").join("plugin.json");
+        write_plugin(
+            &plugin_path,
+            r#"{"name":"test","description":"desc","skills":"./foo/../bar"}"#,
         );
 
         let validator = CodexPluginValidator;

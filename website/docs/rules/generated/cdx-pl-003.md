@@ -13,7 +13,7 @@ keywords: ["CDX-PL-003", "missing or empty plugin name", "codex cli", "validatio
 - **Category**: `Codex CLI`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `Yes (unsafe)`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-06-04`
 
 ## Applicability
 
@@ -23,7 +23,7 @@ keywords: ["CDX-PL-003", "missing or empty plugin name", "codex cli", "validatio
 
 ## Evidence Sources
 
-- https://github.com/openai/codex/blob/main/codex-rs/core/src/plugins/manifest.rs
+- https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/core-plugins/src/manifest.rs
 
 ## Test Coverage Metadata
 
