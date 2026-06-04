@@ -873,6 +873,25 @@ mod tests {
         assert!(diagnostics.iter().any(|d| d.rule == "CDX-PL-006"));
     }
 
+    #[test]
+    fn test_cdx_pl_006_skills_path_traversal() {
+        let temp = TempDir::new().unwrap();
+        let plugin_path = temp.path().join(".codex-plugin").join("plugin.json");
+        write_plugin(
+            &plugin_path,
+            r#"{"name":"test","description":"desc","skills":"./foo/../bar"}"#,
+        );
+
+        let validator = CodexPluginValidator;
+        let diagnostics = validator.validate(
+            &plugin_path,
+            &fs::read_to_string(&plugin_path).unwrap(),
+            &LintConfig::default(),
+        );
+
+        assert!(diagnostics.iter().any(|d| d.rule == "CDX-PL-006"));
+    }
+
     // ===== CDX-PL-007: Bare ./ path =====
 
     #[test]
