@@ -71,14 +71,12 @@ jobs:
         run: npm --prefix website run generate:rules
       - name: Build Docusaurus site
         if: github.event_name != 'pull_request'
-        # 415+ generated rule pages push webpack's server-side compile past
-        # Node's default ~4 GB heap; raise it to 6 GB and keep SSG
-        # concurrency bounded so the generated rules reference does not
-        # exhaust memory as the catalog grows. Published builds keep the
-        # normal Docusaurus path, including minification and local search.
+        # 420+ generated rule pages plus versioned snapshots push webpack/SSG
+        # past Node's default heap. Keep the production build path, but give
+        # it enough heap and serialize SSG so the complete reference ships.
         env:
-          NODE_OPTIONS: '--max-old-space-size=6144'
-          DOCUSAURUS_SSR_CONCURRENCY: '2'
+          NODE_OPTIONS: '--max-old-space-size=12288'
+          DOCUSAURUS_SSR_CONCURRENCY: '1'
         run: npm --prefix website run build:site
       - name: Validate Docusaurus command
         if: github.event_name == 'pull_request'
