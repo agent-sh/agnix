@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Tool baselines**: triaged the release-watch sweep and bumped `cursor` `3.6.31` -> `3.7.12` (closes #1024), `kiro` `2.5.0` -> `2.6.0` (closes #1018), and `gemini-cli` `v0.44.1` -> `v0.45.1` (closes #1017). All three were agnix-irrelevant for current validated config surfaces: Cursor and Gemini publish version markers / patch cherry-picks only, and Kiro 2.6.0's sole config-adjacent change - terminal window titles - is toggled via `/settings display` and is explicitly "not available as a CLI setting" (per the Kiro settings reference), so `.kiro/settings.json` validation is unaffected and the auto-triage `KR-SET-004` candidate was not added. No validator, rule, `ToolVersions`, or `SpecRevisions` change required. `.github/tool-release-baselines.json` and `knowledge-base/RESEARCH-TRACKING.md` updated.
+
 ## [0.30.0] - 2026-06-04
 
 ### Changed
