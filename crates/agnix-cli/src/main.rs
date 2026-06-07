@@ -1,6 +1,10 @@
 #![allow(clippy::collapsible_if, clippy::let_and_return)]
 //! agnix CLI - The nginx of agent configs
 
+#[cfg(target_os = "linux")]
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 rust_i18n::i18n!("locales", fallback = "en");
 
 mod json;

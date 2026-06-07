@@ -11,6 +11,10 @@
 //! - **Error handling**: Proper error messages with context
 //! - **Server metadata**: Provides name, version, and usage instructions
 
+#[cfg(target_os = "linux")]
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 use agnix_core::{
     config::LintConfig,
     diagnostics::{Diagnostic, DiagnosticLevel},

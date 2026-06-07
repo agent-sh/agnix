@@ -43,6 +43,9 @@ sys-locale = { workspace = true }
 # Optional: HTTP client for telemetry submission
 reqwest = { version = "0.13", features = ["blocking", "json"], optional = true }
 
+[target.'cfg(target_os = "linux")'.dependencies]
+mimalloc = { workspace = true }
+
 [dev-dependencies]
 assert_cmd = "2"
 predicates = "3"

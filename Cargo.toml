@@ -31,6 +31,7 @@ keywords = ["agent", "linter", "claude", "skills", "mcp"]
 categories = ["development-tools", "command-line-utilities"]
 
 [workspace.dependencies]
+mimalloc = { version = "0.1", default-features = false }
 # Internal crates - path for local dev, version for crates.io
 agnix-rules = { path = "crates/agnix-rules", version = "0.30.0" }
 agnix-core = { path = "crates/agnix-core", version = "0.30.0" }
