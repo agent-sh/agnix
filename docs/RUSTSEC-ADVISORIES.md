@@ -58,6 +58,30 @@ Related: [Issue #346](https://github.com/agent-sh/agnix/issues/346) (this tracki
 - Advisory: https://rustsec.org/advisories/RUSTSEC-2025-0141
 - iai-callgrind repository: https://github.com/iai-callgrind/iai-callgrind
 
+### RUSTSEC-2026-0173 — `proc-macro-error2` (via `iai-callgrind`)
+
+**Status**: Dev-only dependency used for benchmarks; unmaintained, no safe upgrade
+
+**Details**:
+- Published 2026-06-07. The `proc-macro-error2` author confirmed the crate is unmaintained and recommends migrating away. No patched version exists (`patched = []`).
+- It's only used via `iai-callgrind` -> `iai-callgrind-macros`, which is a dev dependency for benchmarks.
+- Not included in release binaries.
+
+**Risk Level**: Low
+- Dev-only dependency (not in production code)
+- Unmaintained advisory only - no known exploitable vulnerability
+- Not exposed to untrusted input
+
+**Action Items**:
+- Monitor `iai-callgrind` updates for a version that drops `proc-macro-error2` (e.g. migrates to `manyhow` / `proc-macro2-diagnostics`)
+- Remove this advisory ignore from:
+  - `deny.toml` in the `[advisories]` ignore list
+  - `.github/workflows/security.yml` in the `cargo audit` command
+
+**References**:
+- Advisory: https://rustsec.org/advisories/RUSTSEC-2026-0173
+- Announcement: https://github.com/GnomedDev/proc-macro-error-2/issues/17
+
 ### RUSTSEC-2025-0067 — `libyml` (via `rust-i18n-macro`)
 
 **Status**: Waiting for `rust-i18n` to migrate off `serde_yml` / `libyml`
