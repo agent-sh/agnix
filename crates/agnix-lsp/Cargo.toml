@@ -23,5 +23,8 @@ serde_json = { workspace = true }
 rust-i18n = { workspace = true }
 sys-locale = { workspace = true }
 
+[target.'cfg(target_os = "linux")'.dependencies]
+mimalloc = { workspace = true }
+
 [dev-dependencies]
 tempfile = "3"

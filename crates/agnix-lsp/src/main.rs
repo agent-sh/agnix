@@ -1,3 +1,10 @@
+#[cfg(target_os = "linux")]
+use mimalloc::MiMalloc;
+
+#[cfg(target_os = "linux")]
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
+
 #[tokio::main]
 async fn main() {
     let args: Vec<String> = std::env::args().collect();
