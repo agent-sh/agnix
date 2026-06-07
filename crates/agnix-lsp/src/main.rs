@@ -1,9 +1,6 @@
 #[cfg(target_os = "linux")]
-use mimalloc::MiMalloc;
-
-#[cfg(target_os = "linux")]
 #[global_allocator]
-static GLOBAL: MiMalloc = MiMalloc;
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 #[tokio::main]
 async fn main() {

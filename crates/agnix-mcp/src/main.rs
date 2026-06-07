@@ -12,11 +12,8 @@
 //! - **Server metadata**: Provides name, version, and usage instructions
 
 #[cfg(target_os = "linux")]
-use mimalloc::MiMalloc;
-
-#[cfg(target_os = "linux")]
 #[global_allocator]
-static GLOBAL: MiMalloc = MiMalloc;
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 use agnix_core::{
     config::LintConfig,
