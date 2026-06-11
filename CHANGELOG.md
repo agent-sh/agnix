@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.32.0] - 2026-06-12
+
 ### Added
 - **CC-SET-006: Non-boolean disableBundledSkills Setting** (closes #1034). Claude Code v2.1.169 added a `disableBundledSkills` setting (and a `CLAUDE_CODE_DISABLE_BUNDLED_SKILLS` environment variable) that hides bundled skills, workflows, and built-in slash commands from the model. New MEDIUM `claude-settings` rule warns when the key is present with a non-boolean value (quoted `"true"`, numbers, arrays, objects) - only strict `true`/`false` is documented, mirroring the CC-SET-002 `channelsEnabled` shape check. Validated across `settings.json`, `settings.local.json`, and `managed-settings.json`; `null` and absent keys are not flagged. Verified against the v2.1.169 release notes and the code.claude.com settings reference. Covered by 11 unit tests. Rule count 422 -> 423. The other v2.1.169 changes were agnix-irrelevant or already covered (the "CLAUDE.md is too long" threshold now scaling with the model's context window is a Claude Code display change; agnix's CC-MEM-014 200-line SHOULD heuristic is independent of it).
 
