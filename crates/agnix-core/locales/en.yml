@@ -825,6 +825,9 @@ rules:
     empty: "prUrlTemplate is set but empty - Claude Code will render no PR badge"
     no_placeholder: "prUrlTemplate has no documented placeholder - every PR will resolve to the same static URL. Supported placeholders: {host}, {owner}, {repo}, {number}, {url}"
     suggestion: "Set prUrlTemplate to a URL template that includes at least one of {host}, {owner}, {repo}, {number}, or {url}. Example: 'https://reviews.example.com/{owner}/{repo}/pull/{number}'"
+  cc_set_006:
+    message: "disableBundledSkills must be a boolean when present (got %{actual}); Claude Code 2.1.169+ documents only strict true/false for this setting"
+    suggestion: "Set disableBundledSkills to an unquoted true or false, or set the CLAUDE_CODE_DISABLE_BUNDLED_SKILLS environment variable to 1 instead."
   cdx_ag_001:
     message: "AGENTS.md is empty"
     suggestion: "Add concrete repository-specific operating instructions"

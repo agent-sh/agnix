@@ -505,14 +505,9 @@ fn validate_disable_bundled_skills(
             line,
             0,
             "CC-SET-006",
-            format!(
-                "disableBundledSkills must be a boolean when present (got {}); Claude Code 2.1.169+ documents only strict true/false for this setting",
-                actual
-            ),
+            t!("rules.cc_set_006.message", actual = actual),
         )
-        .with_suggestion(
-            "Set disableBundledSkills to an unquoted true or false, or set the CLAUDE_CODE_DISABLE_BUNDLED_SKILLS environment variable to 1 instead.",
-        ),
+        .with_suggestion(t!("rules.cc_set_006.suggestion")),
     );
 }
 

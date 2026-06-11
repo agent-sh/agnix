@@ -712,6 +712,11 @@ rules:
     message: "La carpeta de componente predeterminada '%{component}' existe, pero plugin.json sobrescribe '%{component}' sin incluir './%{component}'"
     suggestion: "Agrega './%{component}' a '%{component}' o mueve esos archivos a la ruta de componente configurada"
 
+  # --- Claude Settings (claude_settings.rs) ---
+  cc_set_006:
+    message: "disableBundledSkills debe ser un booleano cuando esta presente (se obtuvo %{actual}); Claude Code 2.1.169+ solo documenta true/false estrictos para esta configuracion"
+    suggestion: "Establece disableBundledSkills en true o false sin comillas, o en su lugar establece la variable de entorno CLAUDE_CODE_DISABLE_BUNDLED_SKILLS en 1."
+
   # --- Version (lib.rs) ---
   ver_001:
     message: "No hay versiones de herramienta o especificacion fijadas. Las reglas dependientes de version usaran supuestos predeterminados."

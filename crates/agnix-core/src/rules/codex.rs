@@ -1034,14 +1034,15 @@ fn validate_codex_config_rules(
     // enum (none|minimal|low|medium|high|xhigh) with model-defined efforts -
     // the upstream schema now accepts any non-empty string the model
     // advertises (openai/codex#26444). agnix therefore only flags the shapes
-    // that are still always wrong: non-string types and empty strings.
-    // Unknown-but-non-empty values are NOT flagged - agnix cannot know which
-    // efforts a given model advertises.
+    // that are still always wrong: non-string types and empty strings
+    // (whitespace-only counts as empty - it is functionally no effort at
+    // all). Unknown-but-non-empty values are NOT flagged - agnix cannot
+    // know which efforts a given model advertises.
     if config.is_rule_enabled("CDX-CFG-003")
         && let Some(value) = value_at_path(&root, &["model_reasoning_effort"])
     {
         if let Some(effort) = value.as_str() {
-            if effort.is_empty() {
+            if effort.trim().is_empty() {
                 diagnostics.push(
                     Diagnostic::error(
                         path.to_path_buf(),
@@ -3307,6 +3308,14 @@ mitm = true
         // The 0.138+ schema requires minLength 1 - an empty string is the
         // one string shape that is still always wrong.
         let diagnostics = validate_config("model_reasoning_effort = \"\"");
+        assert!(diagnostics.iter().any(|d| d.rule == "CDX-CFG-003"));
+    }
+
+    #[test]
+    fn test_cdx_cfg_003_whitespace_only_reasoning_effort() {
+        // Whitespace-only is functionally empty - it must not bypass the
+        // minLength-1 check the way a bare "" would.
+        let diagnostics = validate_config("model_reasoning_effort = \"   \"");
         assert!(diagnostics.iter().any(|d| d.rule == "CDX-CFG-003"));
     }
 
