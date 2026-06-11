@@ -380,6 +380,13 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Fix**: Manual - set `parentSettingsBehavior` to `"first-wins"` or `"merge"`.
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.133 (added `parentSettingsBehavior` admin-tier key)
 
+<a id="cc-set-006"></a>
+### CC-SET-006 [MEDIUM] Non-boolean disableBundledSkills Setting
+**Requirement**: `disableBundledSkills` in `.claude/settings.json` / `.local.json` / `managed-settings.json` MUST be a boolean when present (Claude Code 2.1.169+). `true` hides the bundled skills, workflows, and built-in slash commands from the model; equivalent to setting the `CLAUDE_CODE_DISABLE_BUNDLED_SKILLS` environment variable to `1`. Only strict `true`/`false` is documented - a quoted `"true"` or a truthy number is not a documented opt-in (same footgun shape as CC-SET-002).
+**Detection**: Parse settings.json; look up top-level `disableBundledSkills`; flag (warning) non-boolean types (string, number, array, object). `null` values and absent keys are not flagged.
+**Fix**: Manual - set `disableBundledSkills` to an unquoted `true` or `false`, or use the `CLAUDE_CODE_DISABLE_BUNDLED_SKILLS` environment variable.
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.169 (added `disableBundledSkills`), code.claude.com/docs/en/settings
+
 ---
 
 ## PER-CLIENT SKILL RULES
@@ -2261,10 +2268,10 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 
 <a id="cdx-cfg-003"></a>
 ### CDX-CFG-003 [HIGH] Invalid model_reasoning_effort Value
-**Requirement**: `model_reasoning_effort` in Codex config MUST be one of `none|minimal|low|medium|high|xhigh`
-**Detection**: Parse `.codex/config.toml|json|yaml` and validate `model_reasoning_effort` enum values
-**Fix**: No auto-fix (set to a supported value)
-**Source**: developers.openai.com/codex/config-reference, developers.openai.com/codex/config-schema.json
+**Requirement**: `model_reasoning_effort` in Codex config MUST be a non-empty string. Codex rust-v0.138.0 replaced the fixed `none|minimal|low|medium|high|xhigh` enum with model-defined reasoning efforts - the upstream schema accepts any non-empty effort the model advertises (openai/codex#26444), so unknown values are no longer flagged.
+**Detection**: Parse `.codex/config.toml|json|yaml`; flag non-string types and empty strings only
+**Fix**: No auto-fix (set to an effort the model advertises; standard values: `none`, `minimal`, `low`, `medium`, `high`, `xhigh`)
+**Source**: developers.openai.com/codex/config-reference, developers.openai.com/codex/config-schema.json, github.com/openai/codex/releases/tag/rust-v0.138.0
 
 <a id="cdx-cfg-004"></a>
 ### CDX-CFG-004 [HIGH] Invalid model_verbosity Value
@@ -3452,8 +3459,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 422 validation rules across 40 categories
+**Total Coverage**: 423 validation rules across 40 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 213 HIGH, 181 MEDIUM, 28 LOW
+**Certainty**: 213 HIGH, 182 MEDIUM, 28 LOW
 **Auto-Fixable**: 127 rules (30%)
