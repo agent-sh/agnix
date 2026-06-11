@@ -10,6 +10,7 @@
 //! - `worktree.baseRef` enum check (CC-SET-003, added in Claude Code v2.1.133).
 //! - `sandbox.bwrapPath`/`sandbox.socatPath` type check (CC-SET-004, added in Claude Code v2.1.133).
 //! - `parentSettingsBehavior` enum check (CC-SET-005, added in Claude Code v2.1.133).
+//! - `disableBundledSkills` boolean check (CC-SET-006, added in Claude Code v2.1.169).
 //!
 //! Runs on FileType::Hooks (which covers `.claude/settings.json` -
 //! see `file_types/detection.rs`). Skips non-Claude Code settings paths
@@ -29,6 +30,7 @@ const RULE_IDS: &[&str] = &[
     "CC-SET-003",
     "CC-SET-004",
     "CC-SET-005",
+    "CC-SET-006",
 ];
 
 /// Allowed values for `worktree.baseRef` per Claude Code v2.1.133 release notes.
@@ -91,6 +93,10 @@ impl Validator for ClaudeSettingsValidator {
 
         if config.is_rule_enabled("CC-SET-005") {
             validate_parent_settings_behavior(path, content, &value, &mut diagnostics);
+        }
+
+        if config.is_rule_enabled("CC-SET-006") {
+            validate_disable_bundled_skills(path, content, &value, &mut diagnostics);
         }
 
         diagnostics
@@ -462,6 +468,52 @@ fn validate_parent_settings_behavior(
             );
         }
     }
+}
+
+/// CC-SET-006: Validate `disableBundledSkills`. Claude Code 2.1.169
+/// added this boolean setting (and the `CLAUDE_CODE_DISABLE_BUNDLED_SKILLS`
+/// environment variable) to hide bundled skills, workflows, and built-in
+/// slash commands from the model. The settings docs document only strict
+/// `true`/`false` for the key - a quoted `"true"` or a truthy number is
+/// not a documented opt-in (same shape as the CC-SET-002 `channelsEnabled`
+/// footgun).
+///
+/// Missing field is fine: bundled skills just stay enabled (the default).
+/// A literal `false` is also fine - an explicit opt-out matches the
+/// documented default. `null` is treated as "field-absent" by JSON
+/// convention, consistent with the other CC-SET rules.
+fn validate_disable_bundled_skills(
+    path: &Path,
+    content: &str,
+    value: &serde_json::Value,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(field_value) = value.get("disableBundledSkills") else {
+        return;
+    };
+
+    if field_value.is_boolean() || field_value.is_null() {
+        return;
+    }
+
+    let actual = describe_json_type(field_value);
+    let line = find_key_line(content, "disableBundledSkills").unwrap_or(1);
+
+    diagnostics.push(
+        Diagnostic::warning(
+            path.to_path_buf(),
+            line,
+            0,
+            "CC-SET-006",
+            format!(
+                "disableBundledSkills must be a boolean when present (got {}); Claude Code 2.1.169+ documents only strict true/false for this setting",
+                actual
+            ),
+        )
+        .with_suggestion(
+            "Set disableBundledSkills to an unquoted true or false, or set the CLAUDE_CODE_DISABLE_BUNDLED_SKILLS environment variable to 1 instead.",
+        ),
+    );
 }
 
 /// Renders a `serde_json::Value` variant as a short human-readable type
@@ -1226,5 +1278,131 @@ mod tests {
         assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-003"));
         assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-004"));
         assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-005"));
+    }
+
+    // ===== CC-SET-006: disableBundledSkills =====
+
+    #[test]
+    fn test_disable_bundled_skills_absent_is_fine() {
+        let content = r#"{"model": "claude-sonnet-4"}"#;
+        assert!(validate(content).iter().all(|d| d.rule != "CC-SET-006"));
+    }
+
+    #[test]
+    fn test_disable_bundled_skills_true_is_fine() {
+        let content = r#"{"disableBundledSkills": true}"#;
+        assert!(validate(content).iter().all(|d| d.rule != "CC-SET-006"));
+    }
+
+    #[test]
+    fn test_disable_bundled_skills_false_is_fine() {
+        // Explicit opt-out matches the documented default.
+        let content = r#"{"disableBundledSkills": false}"#;
+        assert!(validate(content).iter().all(|d| d.rule != "CC-SET-006"));
+    }
+
+    #[test]
+    fn test_disable_bundled_skills_null_is_not_flagged() {
+        // null is conventionally "field-absent" across the CC-SET family.
+        let content = r#"{"disableBundledSkills": null}"#;
+        assert!(validate(content).iter().all(|d| d.rule != "CC-SET-006"));
+    }
+
+    #[test]
+    fn test_disable_bundled_skills_quoted_string_flags() {
+        // The footgun the rule exists for: "true" as a string is not a
+        // documented opt-in.
+        let content = r#"{"disableBundledSkills": "true"}"#;
+        let diagnostics = validate(content);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-006")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        assert_eq!(
+            hits[0].level,
+            crate::diagnostics::DiagnosticLevel::Warning,
+            "CC-SET-006 is a warning, not a hard error"
+        );
+        assert!(
+            hits[0].message.to_lowercase().contains("boolean"),
+            "message should mention the required type"
+        );
+        assert!(
+            hits[0].message.to_lowercase().contains("string"),
+            "message should name the actual type seen"
+        );
+    }
+
+    #[test]
+    fn test_disable_bundled_skills_number_flags() {
+        let content = r#"{"disableBundledSkills": 1}"#;
+        let diagnostics = validate(content);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-006")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        assert!(hits[0].message.to_lowercase().contains("number"));
+    }
+
+    #[test]
+    fn test_disable_bundled_skills_array_flags() {
+        let content = r#"{"disableBundledSkills": [true]}"#;
+        let diagnostics = validate(content);
+        assert_eq!(
+            diagnostics
+                .iter()
+                .filter(|d| d.rule == "CC-SET-006")
+                .count(),
+            1
+        );
+    }
+
+    #[test]
+    fn test_disable_bundled_skills_runs_on_managed_settings() {
+        // Admins hiding bundled skills org-wide is the likely deployment
+        // target; the key is validated across all three settings paths.
+        let content = r#"{"disableBundledSkills": "true"}"#;
+        let diagnostics = validate_at(".claude/managed-settings.json", content);
+        assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-006"));
+    }
+
+    #[test]
+    fn test_disable_bundled_skills_line_points_at_key() {
+        let content =
+            "{\n  \"model\": \"claude-sonnet-4\",\n  \"disableBundledSkills\": \"true\"\n}";
+        let diagnostics = validate(content);
+        let hit = diagnostics
+            .iter()
+            .find(|d| d.rule == "CC-SET-006")
+            .expect("CC-SET-006 diagnostic");
+        assert_eq!(hit.line, 3);
+    }
+
+    #[test]
+    fn test_disable_bundled_skills_can_be_disabled() {
+        let mut builder = LintConfig::builder();
+        builder.disable_rule("CC-SET-006");
+        let config = builder.build().unwrap();
+        let validator = ClaudeSettingsValidator;
+        let path = PathBuf::from(".claude/settings.json");
+        let content = r#"{"disableBundledSkills": "true"}"#;
+        let diagnostics = validator.validate(&path, content, &config);
+        assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-006"));
+    }
+
+    #[test]
+    fn test_disable_bundled_skills_coexists_with_other_cc_set_rules() {
+        // CC-SET-006 fires independently alongside the older rules; each
+        // diagnostic carries its own rule id so suppressing one does not
+        // silence the others.
+        let content = r#"{
+            "channelsEnabled": "true",
+            "disableBundledSkills": "true"
+        }"#;
+        let diagnostics = validate(content);
+        assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-002"));
+        assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-006"));
     }
 }

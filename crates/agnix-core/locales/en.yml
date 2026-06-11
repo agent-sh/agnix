@@ -712,9 +712,9 @@ rules:
     type_error: "Field 'sandbox_mode' must be a string"
     suggestion: "Use one of: 'read-only', 'workspace-write', or 'danger-full-access'"
   cdx_cfg_003:
-    message: "Invalid model_reasoning_effort '%{value}'. Valid values: 'none', 'minimal', 'low', 'medium', 'high', 'xhigh'"
+    empty: "Field 'model_reasoning_effort' must not be an empty string"
     type_error: "Field 'model_reasoning_effort' must be a string"
-    suggestion: "Use one of: 'none', 'minimal', 'low', 'medium', 'high', 'xhigh'"
+    suggestion: "Use a reasoning effort the model advertises - standard values are 'none', 'minimal', 'low', 'medium', 'high', 'xhigh' (Codex 0.138+ accepts any non-empty model-defined effort)"
   cdx_cfg_004:
     message: "Invalid model_verbosity '%{value}'. Valid values: 'low', 'medium', 'high'"
     type_error: "Field 'model_verbosity' must be a string"

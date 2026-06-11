@@ -13,7 +13,7 @@ keywords: ["CDX-CFG-003", "invalid model_reasoning_effort value", "codex cli", "
 - **Category**: `Codex CLI`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-06-11`
 
 ## Applicability
 
@@ -26,6 +26,7 @@ keywords: ["CDX-CFG-003", "invalid model_reasoning_effort value", "codex cli", "
 - https://developers.openai.com/codex/config-reference
 - https://developers.openai.com/codex/config-schema.json
 - https://developers.openai.com/codex/enterprise/managed-configuration
+- https://github.com/openai/codex/releases/tag/rust-v0.138.0
 
 ## Test Coverage Metadata
 
@@ -40,7 +41,7 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```toml
-model_reasoning_effort = "turbo"
+model_reasoning_effort = ""
 ```
 
 ### Valid

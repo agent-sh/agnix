@@ -99,8 +99,6 @@ pub struct CodexConfigValidator;
 
 const VALID_APPROVAL_POLICIES: &[&str] = &["untrusted", "on-request", "never", "on-failure"];
 const VALID_SANDBOX_MODES: &[&str] = &["read-only", "workspace-write", "danger-full-access"];
-const VALID_MODEL_REASONING_EFFORTS: &[&str] =
-    &["none", "minimal", "low", "medium", "high", "xhigh"];
 const VALID_MODEL_VERBOSITY: &[&str] = &["low", "medium", "high"];
 const VALID_PERSONALITIES: &[&str] = &["none", "friendly", "pragmatic"];
 const VALID_SHELL_ENVIRONMENT_INHERIT: &[&str] = &["core", "all", "none"];
@@ -191,7 +189,6 @@ const KNOWN_FEATURE_KEYS: &[&str] = &[
     "request_permissions",
     "request_permissions_tool",
     "request_rule",
-    "responses_websocket_response_processed",
     "responses_websockets",
     "responses_websockets_v2",
     "runtime_metrics",
@@ -206,6 +203,7 @@ const KNOWN_FEATURE_KEYS: &[&str] = &[
     "steer",
     "telepathy",
     "terminal_resize_reflow",
+    "terminal_visualization_instructions",
     "tool_call_mcp_elicitation",
     "tool_search",
     "tool_search_always_defer_mcp_tools",
@@ -223,10 +221,11 @@ const KNOWN_FEATURE_KEYS: &[&str] = &[
     "workspace_dependencies",
     "workspace_owner_usage_nudge",
     // Older-version tolerance: these shipped in earlier Codex releases but are
-    // absent from the current rust-v0.137.0 schema.
+    // absent from the current rust-v0.138.0 schema.
     "apps_mcp_gateway",
     "experimental_use_freeform_apply_patch",
     "powershell_utf8",
+    "responses_websocket_response_processed",
     "smart_approvals",
     "voice_transcription",
 ];
@@ -1031,18 +1030,25 @@ fn validate_codex_config_rules(
         }
     }
 
+    // CDX-CFG-003: Codex rust-v0.138.0 replaced the fixed reasoning-effort
+    // enum (none|minimal|low|medium|high|xhigh) with model-defined efforts -
+    // the upstream schema now accepts any non-empty string the model
+    // advertises (openai/codex#26444). agnix therefore only flags the shapes
+    // that are still always wrong: non-string types and empty strings.
+    // Unknown-but-non-empty values are NOT flagged - agnix cannot know which
+    // efforts a given model advertises.
     if config.is_rule_enabled("CDX-CFG-003")
         && let Some(value) = value_at_path(&root, &["model_reasoning_effort"])
     {
         if let Some(effort) = value.as_str() {
-            if !VALID_MODEL_REASONING_EFFORTS.contains(&effort) {
+            if effort.is_empty() {
                 diagnostics.push(
                     Diagnostic::error(
                         path.to_path_buf(),
                         line_for("model_reasoning_effort"),
                         0,
                         "CDX-CFG-003",
-                        t!("rules.cdx_cfg_003.message", value = effort),
+                        t!("rules.cdx_cfg_003.empty"),
                     )
                     .with_suggestion(t!("rules.cdx_cfg_003.suggestion")),
                 );
@@ -3297,9 +3303,23 @@ mitm = true
     }
 
     #[test]
-    fn test_cdx_cfg_003_invalid_reasoning_effort() {
-        let diagnostics = validate_config("model_reasoning_effort = \"turbo\"");
+    fn test_cdx_cfg_003_empty_reasoning_effort() {
+        // The 0.138+ schema requires minLength 1 - an empty string is the
+        // one string shape that is still always wrong.
+        let diagnostics = validate_config("model_reasoning_effort = \"\"");
         assert!(diagnostics.iter().any(|d| d.rule == "CDX-CFG-003"));
+    }
+
+    #[test]
+    fn test_cdx_cfg_003_non_string_reasoning_effort() {
+        let diagnostics = validate_config("model_reasoning_effort = 3");
+        assert!(diagnostics.iter().any(|d| d.rule == "CDX-CFG-003"));
+    }
+
+    #[test]
+    fn test_cdx_cfg_003_standard_reasoning_effort_not_flagged() {
+        let diagnostics = validate_config("model_reasoning_effort = \"high\"");
+        assert!(diagnostics.iter().all(|d| d.rule != "CDX-CFG-003"));
     }
 
     #[test]
@@ -3465,6 +3485,76 @@ unified_exec_zsh_fork = true
         assert!(
             cdx_cfg_011.is_empty(),
             "0.137 feature flags should not trigger CDX-CFG-011, got: {cdx_cfg_011:?}"
+        );
+    }
+
+    #[test]
+    fn test_codex_0_138_0_new_feature_flag_not_flagged() {
+        // `terminal_visualization_instructions` was added to [features] in
+        // upstream rust-v0.138.0 codex-rs/core/config.schema.json
+        // (openai/codex#26013). Regression guard against CDX-CFG-011 /
+        // CDX-CFG-006 false positives on valid current configs.
+        let diagnostics = validate_config("[features]\nterminal_visualization_instructions = true");
+        let unexpected: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-011" || d.rule == "CDX-CFG-006")
+            .map(|d| d.message.as_str())
+            .collect();
+        assert!(
+            unexpected.is_empty(),
+            "0.138 feature flag should not be flagged, got: {unexpected:?}"
+        );
+    }
+
+    #[test]
+    fn test_codex_0_138_0_removed_websocket_flag_still_tolerated() {
+        // `responses_websocket_response_processed` was removed from the
+        // rust-v0.138.0 schema (openai/codex#26447) but shipped in earlier
+        // releases - kept on the older-version tolerance list so configs
+        // written for those versions don't start flagging.
+        let diagnostics =
+            validate_config("[features]\nresponses_websocket_response_processed = true");
+        assert!(
+            diagnostics
+                .iter()
+                .all(|d| d.rule != "CDX-CFG-011" && d.rule != "CDX-CFG-006"),
+            "older-version feature flag must stay tolerated"
+        );
+    }
+
+    #[test]
+    fn test_codex_0_138_0_code_mode_table_not_flagged() {
+        // rust-v0.138.0 changed `features.code_mode` from a plain bool to
+        // bool-or-table ({ enabled, excluded_tool_namespaces },
+        // openai/codex#26320). The key-name checks must accept the table
+        // form without descending into its value.
+        let diagnostics = validate_config(
+            r#"[features.code_mode]
+enabled = true
+excluded_tool_namespaces = ["browser"]
+"#,
+        );
+        let unexpected: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-011" || d.rule == "CDX-CFG-006")
+            .map(|d| d.message.as_str())
+            .collect();
+        assert!(
+            unexpected.is_empty(),
+            "code_mode table form should not be flagged, got: {unexpected:?}"
+        );
+    }
+
+    #[test]
+    fn test_codex_0_138_0_model_defined_reasoning_effort_not_flagged() {
+        // rust-v0.138.0 replaced the fixed reasoning-effort enum with
+        // model-defined efforts - any non-empty string the model advertises
+        // is valid (openai/codex#26444), so values outside the old
+        // none|minimal|low|medium|high|xhigh set must no longer flag.
+        let diagnostics = validate_config("model_reasoning_effort = \"turbo\"");
+        assert!(
+            diagnostics.iter().all(|d| d.rule != "CDX-CFG-003"),
+            "model-defined reasoning efforts must not trigger CDX-CFG-003"
         );
     }
 
