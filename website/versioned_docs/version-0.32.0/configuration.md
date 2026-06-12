@@ -10,10 +10,9 @@ agnix works with zero configuration. To customize, add `.agnix.toml` to your pro
 ## Example
 
 ```toml
-target = "claude-code"
-strict = false
-max_files = 10000
-locale = "en"
+tools = ["claude-code"]
+
+[rules]
 disabled_rules = []
 ```
 
@@ -21,14 +20,12 @@ disabled_rules = []
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `target` | string | none | Single tool focus: `claude-code`, `cursor`, `codex`, `copilot` |
-| `tools` | string[] | all | Multi-tool targeting. Overrides `target`. |
-| `strict` | bool | `false` | Treat warnings as errors |
-| `fix` | bool | `false` | Apply available auto-fixes |
-| `max_files` | int | `10000` | Maximum files to scan |
-| `locale` | string | `"en"` | Output locale |
-| `disabled_rules` | string[] | `[]` | Rule IDs to skip (e.g. `["CC-MEM-005"]`) |
-| `format` | string | `"text"` | Output format: `text`, `json`, `sarif` |
+| `tools` | string[] | all | Multi-tool targeting: `claude-code`, `cursor`, `codex`, `copilot`, `github-copilot`, `generic` |
+| `target` | string | `"Generic"` | Deprecated single-tool focus. Prefer `tools`. |
+| `exclude` | string[] | built-in defaults | Project-relative glob patterns to skip |
+| `[rules].disabled_rules` | string[] | `[]` | Rule IDs to skip globally (e.g. `["CC-MEM-005"]`) |
+| `[files].include_as_memory` | string[] | `[]` | Extra Markdown files to validate as memory/instruction files |
+| `[[overrides]].disabled_rules` | string[] | `[]` | Rule IDs to skip only for matching override paths |
 
 ## CLI flags
 
@@ -54,5 +51,5 @@ agnix --strict .
 ## Full reference
 
 For the complete configuration specification, see
-[docs/CONFIGURATION.md](https://github.com/agent-sh/agnix/blob/main/docs/CONFIGURATION.md)
+[docs/CONFIGURATION.md](https://github.com/agent-sh/agnix/blob/v0.32.0/docs/CONFIGURATION.md)
 in the repository.

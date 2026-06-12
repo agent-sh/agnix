@@ -17,7 +17,6 @@ agnix [OPTIONS] [PATH]
 |------|-------------|
 | `[PATH]` | Directory or file to validate (default: `.`) |
 | `--target <TOOL>` | Single tool focus (`claude-code`, `cursor`, `codex`, `copilot`) |
-| `--tools <TOOLS>` | Comma-separated tool list |
 | `--fix` | Apply auto-fixes |
 | `--format <FMT>` | Output format: `text` (default), `json`, `sarif` |
 | `--strict` | Treat warnings as errors (exit code 1) |
@@ -30,6 +29,7 @@ agnix [OPTIONS] [PATH]
 | Command | Description |
 |---------|-------------|
 | `agnix schema [--output FILE]` | Output JSON Schema for `.agnix.toml` |
+| `agnix tools` | List supported agent tools |
 | `agnix watch [PATH]` | Watch mode - re-validate on file changes |
 | `agnix telemetry <status\|enable\|disable>` | Manage telemetry settings |
 
@@ -72,5 +72,5 @@ Supported LSP capabilities:
 
 ## References
 
-- [SPEC.md](https://github.com/agent-sh/agnix/blob/main/SPEC.md) - full technical specification
+- [SPEC.md](https://github.com/agent-sh/agnix/blob/v0.32.0/SPEC.md) - full technical specification
 - [MCP Protocol](https://modelcontextprotocol.io) - MCP specification

@@ -9,7 +9,7 @@ Contributions are welcome and appreciated.
 
 ## Found something off?
 
-agnix validates against 405 rules, but the agent config ecosystem moves fast. If a rule is wrong, missing, or too noisy, I want to know.
+agnix validates against 423 rules, but the agent config ecosystem moves fast. If a rule is wrong, missing, or too noisy, I want to know.
 
 - [Report a bug](https://github.com/agent-sh/agnix/issues/new)
 - [Request a rule](https://github.com/agent-sh/agnix/issues/new)
@@ -45,5 +45,5 @@ This website assembles and links that content for navigation and search.
 
 ## References
 
-- [CONTRIBUTING.md](https://github.com/agent-sh/agnix/blob/main/CONTRIBUTING.md) - full contribution guidelines
-- [SECURITY.md](https://github.com/agent-sh/agnix/blob/main/SECURITY.md) - security policy
+- [CONTRIBUTING.md](https://github.com/agent-sh/agnix/blob/v0.32.0/CONTRIBUTING.md) - full contribution guidelines
+- [SECURITY.md](https://github.com/agent-sh/agnix/blob/v0.32.0/SECURITY.md) - security policy
