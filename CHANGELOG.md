@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.33.0] - 2026-06-16
+
 ### Added
 - **CC-SET-007: Non-boolean enforceAvailableModels Setting** (closes #1039). Claude Code v2.1.175 added the managed `enforceAvailableModels` setting for the `availableModels` allowlist. New MEDIUM `claude-settings` rule warns when the key is present with a non-boolean value in `settings.json`, `settings.local.json`, or `managed-settings.json`; strict `true`/`false` values, `null`, and absent keys are accepted. Claude Code v2.1.178 also added parameter-scoped tool examples such as `Agent(model:opus)`, so the Claude agent and skill tool allow-lists now accept the `Agent` tool in those forms. Rule count 423 -> 424.
 
