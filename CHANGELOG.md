@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **CC-SET-007: Non-boolean enforceAvailableModels Setting** (closes #1039). Claude Code v2.1.175 added the managed `enforceAvailableModels` setting for the `availableModels` allowlist. New MEDIUM `claude-settings` rule warns when the key is present with a non-boolean value in `settings.json`, `settings.local.json`, or `managed-settings.json`; strict `true`/`false` values, `null`, and absent keys are accepted. Claude Code v2.1.178 also added parameter-scoped tool examples such as `Agent(model:opus)`, so the Claude agent and skill tool allow-lists now accept the `Agent` tool in those forms. Rule count 423 -> 424.
+
+### Changed
+- **Tool baseline**: `codex` bumped `rust-v0.138.0` -> `rust-v0.140.0` (closes #1048). Diffed upstream `codex-rs/core/config.schema.json`; rust-v0.140.0 added the top-level `experimental_realtime_webrtc_call_base_url` key and `apps._default.approvals_reviewer`. The Codex config allow-list and `CDX-CFG-024` validation now cover both without false positives.
+- **Tool baseline**: `opencode` bumped `v1.15.13` -> `v1.17.7` (closes #1041). OpenCode v1.17.4 added optional local MCP server `cwd`; `OC-CFG-007` now validates that `cwd`, when present, is a non-empty string while keeping the existing local `command` and remote `url` checks.
+- **Tool baselines**: triaged `cline` `v3.88.1` -> `cli-v3.0.24` (closes #1040) and `cursor` `3.7.27` -> `3.7.42` (closes #1047) as agnix-irrelevant for the current validated config surfaces. `.github/tool-release-baselines.json` and `knowledge-base/RESEARCH-TRACKING.md` updated.
+
 ## [0.32.0] - 2026-06-12
 
 ### Added

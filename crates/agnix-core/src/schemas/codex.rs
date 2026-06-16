@@ -117,6 +117,7 @@ pub const KNOWN_TOP_LEVEL_KEYS: &[&str] = &[
     "suppress_unstable_features_warning",
     // Experimental (alphabetized)
     "experimental_realtime_start_instructions",
+    "experimental_realtime_webrtc_call_base_url",
     "experimental_realtime_ws_backend_prompt",
     "experimental_realtime_ws_base_url",
     "experimental_realtime_ws_model",
@@ -758,6 +759,26 @@ nested_number = 42
         assert!(
             result.unknown_keys.is_empty(),
             "0.133 top-level keys/`[desktop]` table should not be flagged, got: {:?}",
+            result
+                .unknown_keys
+                .iter()
+                .map(|u| u.key.as_str())
+                .collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn test_codex_0_140_0_new_top_level_key_not_flagged() {
+        // Top-level key introduced in Codex rust-v0.140.0. Regression guard
+        // against CDX-004 false positives on valid realtime WebRTC configs.
+        let content = r#"
+experimental_realtime_webrtc_call_base_url = "https://realtime.example.com/call"
+"#;
+        let result = parse_codex_toml(content);
+        assert!(result.parse_error.is_none());
+        assert!(
+            result.unknown_keys.is_empty(),
+            "0.140 realtime WebRTC key should not be flagged, got: {:?}",
             result
                 .unknown_keys
                 .iter()

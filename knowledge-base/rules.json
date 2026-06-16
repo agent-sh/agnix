@@ -1,8 +1,8 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 423,
-  "last_updated": "2026-06-11",
+  "total_rules": 424,
+  "last_updated": "2026-06-16",
   "schema": {
     "evidence": {
       "source_type": "spec|vendor_docs|vendor_code|paper|community",
@@ -3635,6 +3635,35 @@
       "bad_example": "{\n  \"disableBundledSkills\": \"true\"\n}"
     },
     {
+      "id": "CC-SET-007",
+      "name": "Non-boolean enforceAvailableModels Setting",
+      "severity": "MEDIUM",
+      "category": "claude-settings",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.175",
+          "https://code.claude.com/docs/en/settings"
+        ],
+        "verified_on": "2026-06-16",
+        "applies_to": {
+          "tool": "claude-code",
+          "version_range": ">=2.1.175"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"enforceAvailableModels\": true\n}",
+      "bad_example": "{\n  \"enforceAvailableModels\": \"true\"\n}"
+    },
+    {
       "id": "CDX-000",
       "name": "TOML Parse Error",
       "severity": "HIGH",
@@ -5186,9 +5215,10 @@
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/core/config.schema.json"
+          "https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/core/config.schema.json",
+          "https://github.com/openai/codex/blob/rust-v0.140.0/codex-rs/core/config.schema.json"
         ],
-        "verified_on": "2026-06-04",
+        "verified_on": "2026-06-16",
         "applies_to": {
           "tool": "codex"
         },
@@ -5203,8 +5233,8 @@
         "autofix": true,
         "fix_safety": "unsafe"
       },
-      "good_example": "approvals_reviewer = \"auto_review\"\n\n[apps.browser]\napprovals_reviewer = \"user\"",
-      "bad_example": "approvals_reviewer = \"approve\"\n\n[apps.browser]\napprovals_reviewer = 42"
+      "good_example": "approvals_reviewer = \"auto_review\"\n\n[apps.browser]\napprovals_reviewer = \"user\"\n\n[apps._default]\napprovals_reviewer = \"guardian_subagent\"",
+      "bad_example": "approvals_reviewer = \"approve\"\n\n[apps.browser]\napprovals_reviewer = 42\n\n[apps._default]\napprovals_reviewer = \"approve\""
     },
     {
       "id": "CDX-CFG-025",
@@ -10840,15 +10870,16 @@
     },
     {
       "id": "OC-CFG-007",
-      "name": "MCP Server Missing Command or URL",
+      "name": "Invalid MCP Server Command, URL, or cwd",
       "severity": "HIGH",
       "category": "opencode",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://opencode.ai/docs/config"
+          "https://opencode.ai/docs/config",
+          "https://github.com/sst/opencode/pull/30676"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-06-16",
         "applies_to": {
           "tool": "opencode"
         },
@@ -10862,8 +10893,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"mcp\": { \"server\": { \"type\": \"local\", \"command\": [\"node\"] } }\n}",
-      "bad_example": "{\n  \"mcp\": { \"server\": { \"type\": \"local\" } }\n}"
+      "good_example": "{\n  \"mcp\": { \"server\": { \"type\": \"local\", \"command\": [\"node\"], \"cwd\": \"plugins/sub\" } }\n}",
+      "bad_example": "{\n  \"mcp\": { \"server\": { \"type\": \"local\", \"command\": [\"node\"], \"cwd\": 42 } }\n}"
     },
     {
       "id": "OC-AG-001",
@@ -11877,7 +11908,7 @@
     },
     "claude-settings": {
       "prefix": "CC-SET",
-      "count": 6,
+      "count": 7,
       "description": "Claude Code settings (.claude/settings.json) rules"
     },
     "gemini-agents": {

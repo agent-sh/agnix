@@ -716,6 +716,9 @@ rules:
   cc_set_006:
     message: "disableBundledSkills 存在时必须是布尔值 (实际为 %{actual}); Claude Code 2.1.169+ 对该设置只记录严格的 true/false"
     suggestion: "将 disableBundledSkills 设置为不带引号的 true 或 false，或改为将环境变量 CLAUDE_CODE_DISABLE_BUNDLED_SKILLS 设置为 1。"
+  cc_set_007:
+    message: "enforceAvailableModels 存在时必须是布尔值 (实际为 %{actual}); Claude Code 2.1.175+ 将该托管设置记录为严格的 true/false 开关"
+    suggestion: "将 enforceAvailableModels 设置为不带引号的 true 或 false，以便可预测地强制执行托管 availableModels 允许列表。"
 
   # --- Version (lib.rs) ---
   ver_001:

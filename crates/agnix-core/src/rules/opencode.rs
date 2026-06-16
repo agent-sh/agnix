@@ -703,6 +703,27 @@ impl Validator for OpenCodeValidator {
                                                     );
                                                 }
                                             }
+                                            if let Some(cwd_val) = srv.get("cwd") {
+                                                let valid_cwd = cwd_val
+                                                    .as_str()
+                                                    .is_some_and(|cwd| !cwd.trim().is_empty());
+
+                                                if !valid_cwd {
+                                                    diagnostics.push(
+                                                        Diagnostic::error(
+                                                            path.to_path_buf(),
+                                                            find_key_line(content, srv_name).unwrap_or(1),
+                                                            0,
+                                                            "OC-CFG-007",
+                                                            "Local MCP server 'cwd' must be a non-empty string when present".to_string(),
+                                                        )
+                                                        .with_suggestion(
+                                                            "Set cwd to a workspace-relative or absolute path string, or remove it"
+                                                                .to_string(),
+                                                        ),
+                                                    );
+                                                }
+                                            }
                                         } else if srv_type == "remote" {
                                             if !srv.contains_key("url") {
                                                 diagnostics.push(
@@ -2929,6 +2950,28 @@ mod tests {
     #[test]
     fn test_oc_cfg_007_local_command_type_check() {
         let diagnostics = validate(r#"{"mcp": {"srv": {"type": "local", "command": "node"}}}"#);
+        assert!(diagnostics.iter().any(|d| d.rule == "OC-CFG-007"));
+    }
+
+    #[test]
+    fn test_oc_cfg_007_local_cwd_string_ok() {
+        let diagnostics = validate(
+            r#"{"mcp": {"srv": {"type": "local", "command": ["node"], "cwd": "plugins/sub"}}}"#,
+        );
+        assert!(!diagnostics.iter().any(|d| d.rule == "OC-CFG-007"));
+    }
+
+    #[test]
+    fn test_oc_cfg_007_local_cwd_empty_flags() {
+        let diagnostics =
+            validate(r#"{"mcp": {"srv": {"type": "local", "command": ["node"], "cwd": ""}}}"#);
+        assert!(diagnostics.iter().any(|d| d.rule == "OC-CFG-007"));
+    }
+
+    #[test]
+    fn test_oc_cfg_007_local_cwd_non_string_flags() {
+        let diagnostics =
+            validate(r#"{"mcp": {"srv": {"type": "local", "command": ["node"], "cwd": 42}}}"#);
         assert!(diagnostics.iter().any(|d| d.rule == "OC-CFG-007"));
     }
 

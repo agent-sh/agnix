@@ -1,9 +1,9 @@
 ---
 id: oc-cfg-007
-title: "OC-CFG-007: MCP Server Missing Command or URL - OpenCode"
+title: "OC-CFG-007: Invalid MCP Server Command, URL, or cwd"
 sidebar_label: "OC-CFG-007"
-description: "agnix rule OC-CFG-007 checks for mcp server missing command or url in opencode files. Severity: HIGH. See examples and fix guidance."
-keywords: ["OC-CFG-007", "mcp server missing command or url", "opencode", "validation", "agnix", "linter"]
+description: "agnix rule OC-CFG-007 checks for invalid mcp server command, url, or cwd in opencode files. Severity: HIGH. See examples and fix guidance."
+keywords: ["OC-CFG-007", "invalid mcp server command, url, or cwd", "opencode", "validation", "agnix", "linter"]
 ---
 
 ## Summary
@@ -13,7 +13,7 @@ keywords: ["OC-CFG-007", "mcp server missing command or url", "opencode", "valid
 - **Category**: `OpenCode`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-06-16`
 
 ## Applicability
 
@@ -24,6 +24,7 @@ keywords: ["OC-CFG-007", "mcp server missing command or url", "opencode", "valid
 ## Evidence Sources
 
 - https://opencode.ai/docs/config
+- https://github.com/sst/opencode/pull/30676
 
 ## Test Coverage Metadata
 
@@ -39,7 +40,7 @@ The following examples demonstrate what triggers this rule and how to fix it.
 
 ```json
 {
-  "mcp": { "server": { "type": "local" } }
+  "mcp": { "server": { "type": "local", "command": ["node"], "cwd": 42 } }
 }
 ```
 
@@ -47,6 +48,6 @@ The following examples demonstrate what triggers this rule and how to fix it.
 
 ```json
 {
-  "mcp": { "server": { "type": "local", "command": ["node"] } }
+  "mcp": { "server": { "type": "local", "command": ["node"], "cwd": "plugins/sub" } }
 }
 ```

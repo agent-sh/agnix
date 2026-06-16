@@ -387,6 +387,13 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Fix**: Manual - set `disableBundledSkills` to an unquoted `true` or `false`, or use the `CLAUDE_CODE_DISABLE_BUNDLED_SKILLS` environment variable.
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.169 (added `disableBundledSkills`), code.claude.com/docs/en/settings
 
+<a id="cc-set-007"></a>
+### CC-SET-007 [MEDIUM] Non-boolean enforceAvailableModels Setting
+**Requirement**: `enforceAvailableModels` in `.claude/settings.json` / `.local.json` / `managed-settings.json` MUST be a boolean when present (Claude Code 2.1.175+). `true` enforces the managed `availableModels` allowlist for users; only strict `true`/`false` is documented.
+**Detection**: Parse settings.json; look up top-level `enforceAvailableModels`; flag (warning) non-boolean types (string, number, array, object). `null` values and absent keys are not flagged.
+**Fix**: Manual - set `enforceAvailableModels` to an unquoted `true` or `false`.
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.175 (added `enforceAvailableModels`), code.claude.com/docs/en/settings
+
 ---
 
 ## PER-CLIENT SKILL RULES
@@ -1896,11 +1903,11 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 **Source**: opencode.ai/docs/config
 
 <a id="oc-cfg-007"></a>
-### OC-CFG-007 [HIGH] MCP Server Missing Command or URL
-**Requirement**: Local MCP servers MUST have `command`, remote MUST have `url`
-**Detection**: Parse JSON, validate `mcp` server requirements
+### OC-CFG-007 [HIGH] Invalid MCP Server Command, URL, or cwd
+**Requirement**: Local MCP servers MUST have `command` as a non-empty array of non-empty strings. When local MCP servers set optional `cwd` (OpenCode v1.17.4+), it MUST be a non-empty string. Remote MCP servers MUST have `url` as a non-empty `http://` or `https://` URL.
+**Detection**: Parse JSON, validate `mcp` server requirements and local `cwd` type
 **Fix**: No auto-fix
-**Source**: opencode.ai/docs/config
+**Source**: opencode.ai/docs/config, github.com/sst/opencode/pull/30676
 
 <a id="oc-ag-001"></a>
 ### OC-AG-001 [HIGH] Invalid Agent Mode Value
@@ -2443,10 +2450,10 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 
 <a id="cdx-cfg-024"></a>
 ### CDX-CFG-024 [MEDIUM] Invalid Approvals Reviewer Value
-**Requirement**: `approvals_reviewer` and `apps.<app_id>.approvals_reviewer` SHOULD be one of `user|auto_review|guardian_subagent`
-**Detection**: Parse config and validate top-level and app-level `approvals_reviewer` enum values
+**Requirement**: `approvals_reviewer`, `apps.<app_id>.approvals_reviewer`, and `apps._default.approvals_reviewer` SHOULD be one of `user|auto_review|guardian_subagent`
+**Detection**: Parse config and validate top-level, app-level, and app-default `approvals_reviewer` enum values
 **Fix**: Manual
-**Source**: github.com/openai/codex (codex-rs/core/config.schema.json @ rust-v0.137.0)
+**Source**: github.com/openai/codex (codex-rs/core/config.schema.json @ rust-v0.137.0 and rust-v0.140.0)
 
 <a id="cdx-cfg-025"></a>
 ### CDX-CFG-025 [MEDIUM] Invalid Service Tier Value
@@ -3459,8 +3466,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 423 validation rules across 40 categories
+**Total Coverage**: 424 validation rules across 40 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 213 HIGH, 182 MEDIUM, 28 LOW
+**Certainty**: 213 HIGH, 183 MEDIUM, 28 LOW
 **Auto-Fixable**: 127 rules (30%)
