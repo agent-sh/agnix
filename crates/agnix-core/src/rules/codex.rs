@@ -272,7 +272,12 @@ const KNOWN_MCP_SERVER_KEYS: &[&str] = &[
     "url",
 ];
 
-const KNOWN_APPS_DEFAULT_KEYS: &[&str] = &["enabled", "destructive_enabled", "open_world_enabled"];
+const KNOWN_APPS_DEFAULT_KEYS: &[&str] = &[
+    "approvals_reviewer",
+    "enabled",
+    "destructive_enabled",
+    "open_world_enabled",
+];
 const KNOWN_APP_CONFIG_KEYS: &[&str] = &[
     "approvals_reviewer",
     "enabled",
@@ -1831,6 +1836,49 @@ fn validate_codex_config_rules(
         if let Some(apps_obj) = apps.as_object() {
             for (app_name, app_value) in apps_obj {
                 if app_name == "_default" {
+                    if config.is_rule_enabled("CDX-CFG-024")
+                        && let Some(default_obj) = app_value.as_object()
+                        && let Some(reviewer) = default_obj.get("approvals_reviewer")
+                    {
+                        if let Some(reviewer_str) = reviewer.as_str() {
+                            if !VALID_APPROVALS_REVIEWER.contains(&reviewer_str) {
+                                diagnostics.push(
+                                    Diagnostic::warning(
+                                        path.to_path_buf(),
+                                        line_for("approvals_reviewer"),
+                                        0,
+                                        "CDX-CFG-024",
+                                        format!(
+                                            "Invalid apps._default.approvals_reviewer value '{}'. Must be one of: {}",
+                                            reviewer_str,
+                                            VALID_APPROVALS_REVIEWER.join(", ")
+                                        ),
+                                    )
+                                    .with_suggestion(format!(
+                                        "Set apps._default.approvals_reviewer to one of: {}.",
+                                        VALID_APPROVALS_REVIEWER.join(", ")
+                                    )),
+                                );
+                            }
+                        } else if !reviewer.is_null() {
+                            diagnostics.push(
+                                Diagnostic::warning(
+                                    path.to_path_buf(),
+                                    line_for("approvals_reviewer"),
+                                    0,
+                                    "CDX-CFG-024",
+                                    format!(
+                                        "apps._default.approvals_reviewer must be a string, not {}",
+                                        value_type_name(reviewer)
+                                    ),
+                                )
+                                .with_suggestion(format!(
+                                    "Set apps._default.approvals_reviewer to one of: {}.",
+                                    VALID_APPROVALS_REVIEWER.join(", ")
+                                )),
+                            );
+                        }
+                    }
                     continue;
                 }
                 let Some(app_obj) = app_value.as_object() else {
@@ -3568,6 +3616,44 @@ excluded_tool_namespaces = ["browser"]
     }
 
     #[test]
+    fn test_codex_0_140_0_new_top_level_key_not_flagged_toml() {
+        // rust-v0.140.0 added `experimental_realtime_webrtc_call_base_url`
+        // to the upstream config schema. The TOML path uses CDX-004 for
+        // unknown top-level keys.
+        let diagnostics = validate_config(
+            "experimental_realtime_webrtc_call_base_url = \"https://realtime.example.com/call\"",
+        );
+        let unexpected: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-004" || d.rule == "CDX-CFG-006")
+            .map(|d| d.message.as_str())
+            .collect();
+        assert!(
+            unexpected.is_empty(),
+            "0.140 realtime WebRTC key should not be flagged on TOML path, got: {unexpected:?}"
+        );
+    }
+
+    #[test]
+    fn test_codex_0_140_0_new_top_level_key_not_flagged_json() {
+        // JSON/YAML path uses CDX-CFG-006 for unknown top-level keys.
+        let diagnostics = validate_config_json(
+            r#"{
+  "experimental_realtime_webrtc_call_base_url": "https://realtime.example.com/call"
+}"#,
+        );
+        let unexpected: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-006")
+            .map(|d| d.message.as_str())
+            .collect();
+        assert!(
+            unexpected.is_empty(),
+            "0.140 realtime WebRTC key should not be flagged on JSON path, got: {unexpected:?}"
+        );
+    }
+
+    #[test]
     fn test_cdx_cfg_012_invalid_cli_auth_store() {
         let diagnostics = validate_config("cli_auth_credentials_store = \"vault\"");
         assert!(diagnostics.iter().any(|d| d.rule == "CDX-CFG-012"));
@@ -4104,6 +4190,24 @@ approvals_reviewer = "auto_review"
     }
 
     #[test]
+    fn test_cdx_cfg_024_valid_app_default_approvals_reviewer_auto_review() {
+        let diagnostics = validate_config(
+            r#"[apps._default]
+approvals_reviewer = "auto_review"
+"#,
+        );
+        let unexpected: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-006" || d.rule == "CDX-CFG-024")
+            .map(|d| d.message.as_str())
+            .collect();
+        assert!(
+            unexpected.is_empty(),
+            "apps._default.approvals_reviewer should not be flagged when valid, got: {unexpected:?}"
+        );
+    }
+
+    #[test]
     fn test_cdx_cfg_024_invalid_app_approvals_reviewer() {
         let diagnostics = validate_config(
             r#"[apps.browser]
@@ -4127,6 +4231,41 @@ approvals_reviewer = "approve"
     fn test_cdx_cfg_024_app_approvals_reviewer_type_error() {
         let diagnostics = validate_config(
             r#"[apps.browser]
+approvals_reviewer = 42
+"#,
+        );
+        let cdx_024: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-024")
+            .collect();
+        assert_eq!(cdx_024.len(), 1);
+        assert!(cdx_024[0].message.contains("string"));
+    }
+
+    #[test]
+    fn test_cdx_cfg_024_invalid_app_default_approvals_reviewer() {
+        let diagnostics = validate_config(
+            r#"[apps._default]
+approvals_reviewer = "approve"
+"#,
+        );
+        let cdx_024: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-024")
+            .collect();
+        assert_eq!(cdx_024.len(), 1);
+        assert!(
+            cdx_024[0]
+                .message
+                .contains("apps._default.approvals_reviewer")
+        );
+        assert!(cdx_024[0].message.contains("approve"));
+    }
+
+    #[test]
+    fn test_cdx_cfg_024_app_default_approvals_reviewer_type_error() {
+        let diagnostics = validate_config(
+            r#"[apps._default]
 approvals_reviewer = 42
 "#,
         );

@@ -105,6 +105,7 @@ const KNOWN_AGENT_FIELDS: &[&str] = &[
 
 /// Known Claude Code tools for CC-AG-009 and CC-AG-010
 const KNOWN_AGENT_TOOLS: &[&str] = &[
+    "Agent",
     "Bash",
     "Read",
     "Write",
@@ -3032,6 +3033,31 @@ Agent instructions"#;
     }
 
     #[test]
+    fn test_cc_ag_010_parameter_scoped_agent_tool_valid() {
+        // Claude Code v2.1.178 added Tool(param:value) permission syntax;
+        // the base tool still needs to be recognized after stripping the
+        // parameter clause.
+        let content = r#"---
+name: my-agent
+description: A test agent
+disallowedTools:
+  - Agent(model:opus)
+---
+Agent instructions"#;
+
+        let diagnostics = validate(content);
+        let cc_ag_010: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-AG-010")
+            .collect();
+        assert_eq!(
+            cc_ag_010.len(),
+            0,
+            "Agent(model:opus) should be accepted in disallowedTools"
+        );
+    }
+
+    #[test]
     fn test_cc_ag_009_mcp_case_sensitive() {
         let content = r#"---
 name: my-agent
@@ -3051,6 +3077,28 @@ Agent instructions"#;
             cc_ag_009.len(),
             2,
             "MCP prefix is case-sensitive: MCP__ and Mcp__ should be rejected"
+        );
+    }
+
+    #[test]
+    fn test_cc_ag_009_parameter_scoped_agent_tool_valid() {
+        let content = r#"---
+name: my-agent
+description: A test agent
+tools:
+  - Agent(model:opus)
+---
+Agent instructions"#;
+
+        let diagnostics = validate(content);
+        let cc_ag_009: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-AG-009")
+            .collect();
+        assert_eq!(
+            cc_ag_009.len(),
+            0,
+            "Agent(model:opus) should be accepted in tools"
         );
     }
 

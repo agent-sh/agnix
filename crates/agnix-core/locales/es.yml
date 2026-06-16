@@ -716,6 +716,9 @@ rules:
   cc_set_006:
     message: "disableBundledSkills debe ser un booleano cuando esta presente (se obtuvo %{actual}); Claude Code 2.1.169+ solo documenta true/false estrictos para esta configuracion"
     suggestion: "Establece disableBundledSkills en true o false sin comillas, o en su lugar establece la variable de entorno CLAUDE_CODE_DISABLE_BUNDLED_SKILLS en 1."
+  cc_set_007:
+    message: "enforceAvailableModels debe ser un booleano cuando esta presente (se obtuvo %{actual}); Claude Code 2.1.175+ documenta esta configuracion administrada como un interruptor true/false estricto"
+    suggestion: "Establece enforceAvailableModels en true o false sin comillas para que la lista administrada availableModels se aplique de forma predecible."
 
   # --- Version (lib.rs) ---
   ver_001:

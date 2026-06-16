@@ -828,6 +828,9 @@ rules:
   cc_set_006:
     message: "disableBundledSkills must be a boolean when present (got %{actual}); Claude Code 2.1.169+ documents only strict true/false for this setting"
     suggestion: "Set disableBundledSkills to an unquoted true or false, or set the CLAUDE_CODE_DISABLE_BUNDLED_SKILLS environment variable to 1 instead."
+  cc_set_007:
+    message: "enforceAvailableModels must be a boolean when present (got %{actual}); Claude Code 2.1.175+ documents this managed setting as a strict true/false toggle"
+    suggestion: "Set enforceAvailableModels to an unquoted true or false so the managed availableModels allowlist is enforced predictably."
   cdx_ag_001:
     message: "AGENTS.md is empty"
     suggestion: "Add concrete repository-specific operating instructions"

@@ -11,6 +11,7 @@
 //! - `sandbox.bwrapPath`/`sandbox.socatPath` type check (CC-SET-004, added in Claude Code v2.1.133).
 //! - `parentSettingsBehavior` enum check (CC-SET-005, added in Claude Code v2.1.133).
 //! - `disableBundledSkills` boolean check (CC-SET-006, added in Claude Code v2.1.169).
+//! - `enforceAvailableModels` boolean check (CC-SET-007, added in Claude Code v2.1.175).
 //!
 //! Runs on FileType::Hooks (which covers `.claude/settings.json` -
 //! see `file_types/detection.rs`). Skips non-Claude Code settings paths
@@ -31,6 +32,7 @@ const RULE_IDS: &[&str] = &[
     "CC-SET-004",
     "CC-SET-005",
     "CC-SET-006",
+    "CC-SET-007",
 ];
 
 /// Allowed values for `worktree.baseRef` per Claude Code v2.1.133 release notes.
@@ -97,6 +99,10 @@ impl Validator for ClaudeSettingsValidator {
 
         if config.is_rule_enabled("CC-SET-006") {
             validate_disable_bundled_skills(path, content, &value, &mut diagnostics);
+        }
+
+        if config.is_rule_enabled("CC-SET-007") {
+            validate_enforce_available_models(path, content, &value, &mut diagnostics);
         }
 
         diagnostics
@@ -508,6 +514,45 @@ fn validate_disable_bundled_skills(
             t!("rules.cc_set_006.message", actual = actual),
         )
         .with_suggestion(t!("rules.cc_set_006.suggestion")),
+    );
+}
+
+/// CC-SET-007: Validate `enforceAvailableModels`. Claude Code 2.1.175
+/// added this managed setting so an admin-provided `availableModels`
+/// allowlist also constrains the Default model and cannot be widened by
+/// user/project settings. The release note documents enablement as a
+/// strict boolean - quoted strings, numbers, arrays, or objects are not
+/// a documented opt-in.
+///
+/// Missing field is fine: Claude Code keeps the existing allowlist
+/// behavior. `null` is treated as "field absent" by JSON convention,
+/// consistent with the other CC-SET boolean rules.
+fn validate_enforce_available_models(
+    path: &Path,
+    content: &str,
+    value: &serde_json::Value,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(field_value) = value.get("enforceAvailableModels") else {
+        return;
+    };
+
+    if field_value.is_boolean() || field_value.is_null() {
+        return;
+    }
+
+    let actual = describe_json_type(field_value);
+    let line = find_key_line(content, "enforceAvailableModels").unwrap_or(1);
+
+    diagnostics.push(
+        Diagnostic::warning(
+            path.to_path_buf(),
+            line,
+            0,
+            "CC-SET-007",
+            t!("rules.cc_set_007.message", actual = actual),
+        )
+        .with_suggestion(t!("rules.cc_set_007.suggestion")),
     );
 }
 
@@ -1399,5 +1444,102 @@ mod tests {
         let diagnostics = validate(content);
         assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-002"));
         assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-006"));
+    }
+
+    // ===== CC-SET-007: enforceAvailableModels =====
+
+    #[test]
+    fn test_enforce_available_models_absent_is_fine() {
+        let content = r#"{"availableModels": ["claude-sonnet-4-5"]}"#;
+        assert!(validate(content).iter().all(|d| d.rule != "CC-SET-007"));
+    }
+
+    #[test]
+    fn test_enforce_available_models_boolean_values_are_fine() {
+        assert!(
+            validate(r#"{"enforceAvailableModels": true}"#)
+                .iter()
+                .all(|d| d.rule != "CC-SET-007")
+        );
+        assert!(
+            validate(r#"{"enforceAvailableModels": false}"#)
+                .iter()
+                .all(|d| d.rule != "CC-SET-007")
+        );
+    }
+
+    #[test]
+    fn test_enforce_available_models_null_is_not_flagged() {
+        let content = r#"{"enforceAvailableModels": null}"#;
+        assert!(validate(content).iter().all(|d| d.rule != "CC-SET-007"));
+    }
+
+    #[test]
+    fn test_enforce_available_models_quoted_string_flags() {
+        let content = r#"{"enforceAvailableModels": "true"}"#;
+        let diagnostics = validate(content);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-007")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].level, crate::diagnostics::DiagnosticLevel::Warning);
+        assert!(hits[0].message.to_lowercase().contains("boolean"));
+        assert!(hits[0].message.to_lowercase().contains("string"));
+    }
+
+    #[test]
+    fn test_enforce_available_models_number_flags() {
+        let content = r#"{"enforceAvailableModels": 1}"#;
+        let diagnostics = validate(content);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-007")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        assert!(hits[0].message.to_lowercase().contains("number"));
+    }
+
+    #[test]
+    fn test_enforce_available_models_object_flags() {
+        let content = r#"{"enforceAvailableModels": {"enabled": true}}"#;
+        let diagnostics = validate(content);
+        assert_eq!(
+            diagnostics
+                .iter()
+                .filter(|d| d.rule == "CC-SET-007")
+                .count(),
+            1
+        );
+    }
+
+    #[test]
+    fn test_enforce_available_models_runs_on_managed_settings() {
+        let content = r#"{"enforceAvailableModels": "true"}"#;
+        let diagnostics = validate_at(".claude/managed-settings.json", content);
+        assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-007"));
+    }
+
+    #[test]
+    fn test_enforce_available_models_line_points_at_key() {
+        let content = "{\n  \"availableModels\": [\"claude-sonnet-4-5\"],\n  \"enforceAvailableModels\": \"true\"\n}";
+        let diagnostics = validate(content);
+        let hit = diagnostics
+            .iter()
+            .find(|d| d.rule == "CC-SET-007")
+            .expect("CC-SET-007 diagnostic");
+        assert_eq!(hit.line, 3);
+    }
+
+    #[test]
+    fn test_enforce_available_models_can_be_disabled() {
+        let mut builder = LintConfig::builder();
+        builder.disable_rule("CC-SET-007");
+        let config = builder.build().unwrap();
+        let validator = ClaudeSettingsValidator;
+        let path = PathBuf::from(".claude/settings.json");
+        let content = r#"{"enforceAvailableModels": "true"}"#;
+        let diagnostics = validator.validate(&path, content, &config);
+        assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-007"));
     }
 }

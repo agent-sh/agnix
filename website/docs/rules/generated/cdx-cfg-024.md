@@ -13,7 +13,7 @@ keywords: ["CDX-CFG-024", "invalid approvals reviewer value", "codex cli", "vali
 - **Category**: `Codex CLI`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `Yes (unsafe)`
-- **Verified On**: `2026-06-04`
+- **Verified On**: `2026-06-16`
 
 ## Applicability
 
@@ -24,6 +24,7 @@ keywords: ["CDX-CFG-024", "invalid approvals reviewer value", "codex cli", "vali
 ## Evidence Sources
 
 - https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/core/config.schema.json
+- https://github.com/openai/codex/blob/rust-v0.140.0/codex-rs/core/config.schema.json
 
 ## Test Coverage Metadata
 
@@ -42,6 +43,9 @@ approvals_reviewer = "approve"
 
 [apps.browser]
 approvals_reviewer = 42
+
+[apps._default]
+approvals_reviewer = "approve"
 ```
 
 ### Valid
@@ -51,4 +55,7 @@ approvals_reviewer = "auto_review"
 
 [apps.browser]
 approvals_reviewer = "user"
+
+[apps._default]
+approvals_reviewer = "guardian_subagent"
 ```

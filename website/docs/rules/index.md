@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `423` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `424` validation rules generated from `knowledge-base/rules.json`.
 `127` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -135,6 +135,7 @@ This section contains all `423` validation rules generated from `knowledge-base/
 | [CC-SET-004](./generated/cc-set-004.md) | Invalid Sandbox Path Setting | MEDIUM | Claude Settings | No |
 | [CC-SET-005](./generated/cc-set-005.md) | Invalid parentSettingsBehavior Value | MEDIUM | Claude Settings | No |
 | [CC-SET-006](./generated/cc-set-006.md) | Non-boolean disableBundledSkills Setting | MEDIUM | Claude Settings | No |
+| [CC-SET-007](./generated/cc-set-007.md) | Non-boolean enforceAvailableModels Setting | MEDIUM | Claude Settings | No |
 | [CDX-000](./generated/cdx-000.md) | TOML Parse Error | HIGH | Codex CLI | No |
 | [CDX-001](./generated/cdx-001.md) | Invalid Approval Mode | HIGH | Codex CLI | Yes (unsafe) |
 | [CDX-002](./generated/cdx-002.md) | Invalid Full Auto Error Mode | HIGH | Codex CLI | Yes (unsafe) |
@@ -397,7 +398,7 @@ This section contains all `423` validation rules generated from `knowledge-base/
 | [OC-CFG-004](./generated/oc-cfg-004.md) | Invalid Default Agent | MEDIUM | OpenCode | No |
 | [OC-CFG-005](./generated/oc-cfg-005.md) | Hardcoded API Key | HIGH | OpenCode | No |
 | [OC-CFG-006](./generated/oc-cfg-006.md) | Invalid MCP Server Structure | HIGH | OpenCode | No |
-| [OC-CFG-007](./generated/oc-cfg-007.md) | MCP Server Missing Command or URL | HIGH | OpenCode | No |
+| [OC-CFG-007](./generated/oc-cfg-007.md) | Invalid MCP Server Command, URL, or cwd | HIGH | OpenCode | No |
 | [OC-AG-001](./generated/oc-ag-001.md) | Invalid Agent Mode Value | HIGH | OpenCode | No |
 | [OC-AG-002](./generated/oc-ag-002.md) | Invalid Color Format | HIGH | OpenCode | No |
 | [OC-AG-003](./generated/oc-ag-003.md) | Temperature Out of Range | HIGH | OpenCode | No |

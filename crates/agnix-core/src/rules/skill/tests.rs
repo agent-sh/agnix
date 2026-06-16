@@ -1232,6 +1232,30 @@ Body"#;
 }
 
 #[test]
+fn test_cc_sk_008_parameter_scoped_agent_tool_valid() {
+    let content = r#"---
+name: test-skill
+description: Use when testing
+allowed-tools: Agent(model:opus) Read
+---
+Body"#;
+
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
+
+    let cc_sk_008: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-SK-008")
+        .collect();
+
+    assert_eq!(
+        cc_sk_008.len(),
+        0,
+        "Agent(model:opus) should be accepted as a scoped Claude tool"
+    );
+}
+
+#[test]
 fn test_cc_sk_008_multiple_unknown_tools() {
     let content = r#"---
 name: test-skill
