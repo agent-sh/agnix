@@ -75,7 +75,8 @@ test('JSON output format', () => {
     const result = agnix.runSync(['--format', 'json', testFile]);
     // Should be valid JSON even if no errors
     const parsed = JSON.parse(result.stdout);
-    assert.ok(parsed.hasOwnProperty('files'), 'Output should have files property');
+    assert.ok(parsed.hasOwnProperty('files_checked'), 'Output should have files_checked property');
+    assert.ok(Array.isArray(parsed.diagnostics), 'Output should have diagnostics array');
     assert.ok(parsed.hasOwnProperty('summary'), 'Output should have summary property');
   } finally {
     fs.unlinkSync(testFile);

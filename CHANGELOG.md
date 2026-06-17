@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.33.1] - 2026-06-17
+
 ### Fixed
 - **CC-SK-008 allowed-tools scoped matcher parsing** (closes #1052). `allowed-tools` tokenization now preserves scoped matchers with spaces inside parentheses, such as `Bash(git add *)`, while still supporting normal comma- and space-separated tool lists. Added regressions for the official Claude Code docs example and a comma-separated scoped matcher.
 
