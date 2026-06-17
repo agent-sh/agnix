@@ -50,7 +50,7 @@ struct SkillFrontmatter {
     // Claude Code accepts `allowed-tools` as a space-separated string OR a YAML
     // list; agentskills.io documents a space-separated string. Deserialize both
     // shapes (a list is joined with spaces) so a list never trips AS-016
-    // (skill parse error). Downstream tool parsing splits on whitespace/commas.
+    // (skill parse error).
     #[serde(
         rename = "allowed-tools",
         default,
@@ -83,6 +83,43 @@ static_regex!(fn reference_path_regex, "(?i)\\b(?:references?|refs)[/\\\\][^\\s)
 static_regex!(fn plain_bash_regex, r"\bBash\b");
 static_regex!(fn imperative_verb_regex, r"(?i)\b(run|execute|create|build|deploy|install|configure|update|delete|remove|add|write|read|check|test|validate|ensure|make|use|call|invoke|start|stop|send|fetch|generate|implement|fix|analyze|review|search|find|move|copy|replace|push|pull|commit|clean|format|lint|parse|process|handle|prepare|download|upload|export|import|open|save|load|connect|verify|apply|enable|disable)\b");
 static_regex!(fn indexed_arguments_regex, r"\$ARGUMENTS\[\d+\]");
+
+fn push_allowed_tool_token<'a>(
+    tokens: &mut Vec<&'a str>,
+    tools: &'a str,
+    start: usize,
+    end: usize,
+) {
+    let token = tools[start..end].trim();
+    if !token.is_empty() {
+        tokens.push(token);
+    }
+}
+
+fn split_allowed_tools(tools: &str) -> Vec<&str> {
+    let mut tokens = Vec::new();
+    let mut start = 0;
+    let mut paren_depth = 0usize;
+
+    for (idx, ch) in tools.char_indices() {
+        match ch {
+            '(' => paren_depth += 1,
+            ')' if paren_depth > 0 => paren_depth -= 1,
+            ',' if paren_depth == 0 => {
+                push_allowed_tool_token(&mut tokens, tools, start, idx);
+                start = idx + ch.len_utf8();
+            }
+            c if c.is_whitespace() && paren_depth == 0 => {
+                push_allowed_tool_token(&mut tokens, tools, start, idx);
+                start = idx + ch.len_utf8();
+            }
+            _ => {}
+        }
+    }
+
+    push_allowed_tool_token(&mut tokens, tools, start, tools.len());
+    tokens
+}
 
 /// Valid model description for CC-SK-001 diagnostic messages
 const VALID_MODELS_DESC: &str = "sonnet, opus, haiku, inherit, or claude-*";
@@ -926,23 +963,13 @@ impl<'a> ValidationContext<'a> {
         let (allowed_tools_line, allowed_tools_col) =
             self.frontmatter_key_line_col("allowed-tools");
 
-        // Parse allowed_tools once for CC-SK-007 and CC-SK-008
-        // Supports both formats:
-        // - Comma-separated: "Bash(git:*), Read, Grep" (preferred)
-        // - Space-separated: "Read Write Grep" (legacy)
-        let tool_list: Option<Vec<&str>> = schema.allowed_tools.as_ref().map(|tools| {
-            if tools.contains(',') {
-                // Comma-separated format
-                tools
-                    .split(',')
-                    .map(|t| t.trim())
-                    .filter(|t| !t.is_empty())
-                    .collect()
-            } else {
-                // Space-separated format (legacy)
-                tools.split_whitespace().collect()
-            }
-        });
+        // Parse allowed_tools once for CC-SK-007 and CC-SK-008. Claude Code
+        // accepts comma- or space-separated entries, and scoped matchers can
+        // contain spaces inside parentheses like `Bash(git add *)`.
+        let tool_list: Option<Vec<&str>> = schema
+            .allowed_tools
+            .as_ref()
+            .map(|tools| split_allowed_tools(tools));
 
         // CC-SK-007: Unrestricted Bash warning
         if self.config.is_rule_enabled("CC-SK-007") {
