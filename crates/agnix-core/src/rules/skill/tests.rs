@@ -1232,6 +1232,58 @@ Body"#;
 }
 
 #[test]
+fn test_cc_sk_008_space_separated_scoped_bash_matchers_allow_internal_spaces() {
+    let content = r#"---
+name: commit
+description: Stage and commit the current changes
+allowed-tools: Bash(git add *) Bash(git commit *) Bash(git status *)
+---
+Body"#;
+
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(
+        Path::new(".claude/skills/commit/SKILL.md"),
+        content,
+        &LintConfig::default(),
+    );
+
+    assert!(
+        diagnostics.iter().all(|d| d.rule != "CC-SK-008"),
+        "scoped Bash matchers with spaces must not trip CC-SK-008: {:?}",
+        diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SK-008")
+            .collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn test_cc_sk_008_comma_separated_scoped_matcher_allows_internal_spaces() {
+    let content = r#"---
+name: test-skill
+description: Use when testing
+allowed-tools: Bash(just playwright-cli:*), Read
+---
+Body"#;
+
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(
+        Path::new(".claude/skills/test-skill/SKILL.md"),
+        content,
+        &LintConfig::default(),
+    );
+
+    assert!(
+        diagnostics.iter().all(|d| d.rule != "CC-SK-008"),
+        "comma-separated scoped matchers with spaces must not trip CC-SK-008: {:?}",
+        diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SK-008")
+            .collect::<Vec<_>>()
+    );
+}
+
+#[test]
 fn test_cc_sk_008_parameter_scoped_agent_tool_valid() {
     let content = r#"---
 name: test-skill
