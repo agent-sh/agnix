@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.33.2] - 2026-06-18
+
+### Added
+- **CC-SET-008: Non-boolean sandbox.allowAppleEvents Setting** (closes #1055). Claude Code v2.1.181 added the macOS `sandbox.allowAppleEvents` opt-in for sandboxed commands that need to send Apple Events. New MEDIUM `claude-settings` rule warns when `sandbox.allowAppleEvents` is present with a non-boolean value in `settings.json`, `settings.local.json`, or `managed-settings.json`; strict `true`/`false` values, `null`, and absent keys are accepted. Rule count 424 -> 425.
+
+### Changed
+- **Tool baselines**: triaged `codex` `rust-v0.140.0` -> `rust-v0.141.0` (closes #1056) as agnix-irrelevant for current validated config surfaces, and `kiro` `2.6.0` -> `2.8.0` (closes #1057) as V3 early-access opt-in without enough stable schema detail for a validator addition. `.github/tool-release-baselines.json` and `knowledge-base/RESEARCH-TRACKING.md` updated.
+- **Documentation**: carried the generated `v0.33.1` versioned docs snapshot into the release range.
+
 ## [0.33.1] - 2026-06-17
 
 ### Fixed
