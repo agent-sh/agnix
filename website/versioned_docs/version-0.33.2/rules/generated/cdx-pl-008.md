@@ -2,7 +2,7 @@
 id: cdx-pl-008
 title: "CDX-PL-008: Too Many Default Prompts - Codex CLI"
 sidebar_label: "CDX-PL-008"
-description: "agnix rule CDX-PL-008 checks for too many default prompts in codex cli files. Severity: MEDIUM. See examples and fix guidance."
+description: "agnix rule CDX-PL-008 checks that Codex CLI plugins define no more than 3 default prompts. Severity: MEDIUM. See examples and fix guidance."
 keywords: ["CDX-PL-008", "too many default prompts", "codex cli", "validation", "agnix", "linter"]
 ---
 

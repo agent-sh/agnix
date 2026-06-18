@@ -72,5 +72,5 @@ Supported LSP capabilities:
 
 ## References
 
-- [SPEC.md](https://github.com/agent-sh/agnix/blob/main/SPEC.md) - full technical specification
+- [SPEC.md](https://github.com/agent-sh/agnix/blob/v0.33.2/SPEC.md) - full technical specification
 - [MCP Protocol](https://modelcontextprotocol.io) - MCP specification

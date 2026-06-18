@@ -2,7 +2,7 @@
 id: cdx-pl-009
 title: "CDX-PL-009: Default Prompt Too Long - Codex CLI"
 sidebar_label: "CDX-PL-009"
-description: "agnix rule CDX-PL-009 checks for default prompt too long in codex cli files. Severity: MEDIUM. See examples and fix guidance."
+description: "agnix rule CDX-PL-009 checks that each Codex CLI plugin default prompt is 500 characters or fewer. Severity: MEDIUM. See examples and fix guidance."
 keywords: ["CDX-PL-009", "default prompt too long", "codex cli", "validation", "agnix", "linter"]
 ---
 
