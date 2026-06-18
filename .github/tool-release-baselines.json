@@ -1,6 +1,6 @@
 {
   "version": "1.1",
-  "last_updated": "2026-06-16",
+  "last_updated": "2026-06-18",
   "description": "Tracks the latest release of every tool agnix validates (one entry per tool with a validator in crates/agnix-core/src/rules/). Used by .github/workflows/tool-release-watch.yml to open per-tool issues when a new release is published. Untracked tools include the precise publication URL in untracked_reason so a maintainer can monitor manually.\n\nOptional `changes_of_interest` per tool describes what agnix cares about: `config_surfaces` (files agnix validates), `relevant` (change-types that likely affect a validator), `irrelevant` (safe to skip). When set and GLM_API_KEY is available, the watcher runs scripts/glm-extract.js --mode=agnix-triage to produce a pre-filtered summary at the top of the issue body. Falls back gracefully to the full changelog on any LLM failure.",
   "tools": {
     "claude-code": {
@@ -16,7 +16,7 @@
         "mcp"
       ],
       "github_repo": "anthropics/claude-code",
-      "last_known_version": "v2.1.178",
+      "last_known_version": "v2.1.181",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
@@ -60,7 +60,7 @@
         "agents_md"
       ],
       "github_repo": "openai/codex",
-      "last_known_version": "rust-v0.140.0",
+      "last_known_version": "rust-v0.141.0",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
@@ -136,7 +136,7 @@
       "html_url": "https://kiro.dev/changelog/cli/",
       "version_regex": "[0-9]+\\.[0-9]+\\.[0-9]+",
       "notes_extractor": "glm",
-      "last_known_version": "2.6.0",
+      "last_known_version": "2.8.0",
       "tracked": true,
       "notes": "Proprietary CLI; no GH releases. Tracked via HTML scrape of kiro.dev/changelog/cli/ - the first NN.NN.NN version on the page is the latest. Release-note body is upgraded via GLM (scripts/glm-extract.js). The CLI itself exposes `kiro-cli version --changelog`. IDE has a separate changelog at https://kiro.dev/changelog/ide/ (not tracked here; could be added as a separate kiro-ide entry if needed).",
       "changes_of_interest": {

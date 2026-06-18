@@ -1,8 +1,8 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 424,
-  "last_updated": "2026-06-16",
+  "total_rules": 425,
+  "last_updated": "2026-06-18",
   "schema": {
     "evidence": {
       "source_type": "spec|vendor_docs|vendor_code|paper|community",
@@ -3662,6 +3662,36 @@
       },
       "good_example": "{\n  \"enforceAvailableModels\": true\n}",
       "bad_example": "{\n  \"enforceAvailableModels\": \"true\"\n}"
+    },
+    {
+      "id": "CC-SET-008",
+      "name": "Non-boolean sandbox.allowAppleEvents Setting",
+      "severity": "MEDIUM",
+      "category": "claude-settings",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.181",
+          "https://code.claude.com/docs/en/settings"
+        ],
+        "verified_on": "2026-06-18",
+        "applies_to": {
+          "tool": "claude-code",
+          "version_range": ">=2.1.181",
+          "platform": "macos"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"sandbox\": {\"allowAppleEvents\": true}\n}",
+      "bad_example": "{\n  \"sandbox\": {\"allowAppleEvents\": \"true\"}\n}"
     },
     {
       "id": "CDX-000",
@@ -11908,7 +11938,7 @@
     },
     "claude-settings": {
       "prefix": "CC-SET",
-      "count": 7,
+      "count": 8,
       "description": "Claude Code settings (.claude/settings.json) rules"
     },
     "gemini-agents": {

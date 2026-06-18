@@ -394,6 +394,13 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Fix**: Manual - set `enforceAvailableModels` to an unquoted `true` or `false`.
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.175 (added `enforceAvailableModels`), code.claude.com/docs/en/settings
 
+<a id="cc-set-008"></a>
+### CC-SET-008 [MEDIUM] Non-boolean sandbox.allowAppleEvents Setting
+**Requirement**: `sandbox.allowAppleEvents` in `.claude/settings.json` / `.local.json` / `managed-settings.json` MUST be a boolean when present (Claude Code 2.1.181+). `true` opts macOS sandboxed commands into sending Apple Events; only strict `true`/`false` is documented.
+**Detection**: Parse settings.json; walk `sandbox.allowAppleEvents`; flag (warning) non-boolean types (string, number, array, object). `null` values and absent keys are not flagged. Non-object `sandbox` values are ignored by this rule to avoid conflating shape errors with the specific boolean opt-in.
+**Fix**: Manual - set `sandbox.allowAppleEvents` to an unquoted `true` or `false`, or remove it to keep Apple Events blocked.
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.181 (added `sandbox.allowAppleEvents`), code.claude.com/docs/en/settings
+
 ---
 
 ## PER-CLIENT SKILL RULES
@@ -3466,8 +3473,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 424 validation rules across 40 categories
+**Total Coverage**: 425 validation rules across 40 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 213 HIGH, 183 MEDIUM, 28 LOW
+**Certainty**: 213 HIGH, 184 MEDIUM, 28 LOW
 **Auto-Fixable**: 127 rules (30%)

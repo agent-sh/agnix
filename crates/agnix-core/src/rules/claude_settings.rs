@@ -12,6 +12,7 @@
 //! - `parentSettingsBehavior` enum check (CC-SET-005, added in Claude Code v2.1.133).
 //! - `disableBundledSkills` boolean check (CC-SET-006, added in Claude Code v2.1.169).
 //! - `enforceAvailableModels` boolean check (CC-SET-007, added in Claude Code v2.1.175).
+//! - `sandbox.allowAppleEvents` boolean check (CC-SET-008, added in Claude Code v2.1.181).
 //!
 //! Runs on FileType::Hooks (which covers `.claude/settings.json` -
 //! see `file_types/detection.rs`). Skips non-Claude Code settings paths
@@ -33,6 +34,7 @@ const RULE_IDS: &[&str] = &[
     "CC-SET-005",
     "CC-SET-006",
     "CC-SET-007",
+    "CC-SET-008",
 ];
 
 /// Allowed values for `worktree.baseRef` per Claude Code v2.1.133 release notes.
@@ -103,6 +105,10 @@ impl Validator for ClaudeSettingsValidator {
 
         if config.is_rule_enabled("CC-SET-007") {
             validate_enforce_available_models(path, content, &value, &mut diagnostics);
+        }
+
+        if config.is_rule_enabled("CC-SET-008") {
+            validate_sandbox_allow_apple_events(path, content, &value, &mut diagnostics);
         }
 
         diagnostics
@@ -553,6 +559,54 @@ fn validate_enforce_available_models(
             t!("rules.cc_set_007.message", actual = actual),
         )
         .with_suggestion(t!("rules.cc_set_007.suggestion")),
+    );
+}
+
+/// CC-SET-008: Validate `sandbox.allowAppleEvents`. Claude Code 2.1.181
+/// added this macOS sandbox opt-in so sandboxed commands can send Apple
+/// Events. The setting is a strict boolean toggle - quoted strings,
+/// numbers, arrays, or objects are not a documented opt-in.
+///
+/// Missing field is fine: Apple Events remain blocked by default. `null`
+/// is treated as "field absent" by JSON convention, consistent with the
+/// other CC-SET boolean rules.
+fn validate_sandbox_allow_apple_events(
+    path: &Path,
+    content: &str,
+    value: &serde_json::Value,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(sandbox) = value.get("sandbox") else {
+        return;
+    };
+    if sandbox.is_null() {
+        return;
+    }
+    let Some(sandbox_obj) = sandbox.as_object() else {
+        return;
+    };
+    let Some(field_value) = sandbox_obj.get("allowAppleEvents") else {
+        return;
+    };
+
+    if field_value.is_boolean() || field_value.is_null() {
+        return;
+    }
+
+    let actual = describe_json_type(field_value);
+    let line = find_key_line(content, "allowAppleEvents")
+        .or_else(|| find_key_line(content, "sandbox"))
+        .unwrap_or(1);
+
+    diagnostics.push(
+        Diagnostic::warning(
+            path.to_path_buf(),
+            line,
+            0,
+            "CC-SET-008",
+            t!("rules.cc_set_008.message", actual = actual),
+        )
+        .with_suggestion(t!("rules.cc_set_008.suggestion")),
     );
 }
 
@@ -1541,5 +1595,97 @@ mod tests {
         let content = r#"{"enforceAvailableModels": "true"}"#;
         let diagnostics = validator.validate(&path, content, &config);
         assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-007"));
+    }
+
+    // ===== CC-SET-008: sandbox.allowAppleEvents =====
+
+    #[test]
+    fn test_sandbox_allow_apple_events_absent_is_fine() {
+        let content = r#"{"sandbox": {"bwrapPath": "/usr/bin/bwrap"}}"#;
+        assert!(validate(content).iter().all(|d| d.rule != "CC-SET-008"));
+    }
+
+    #[test]
+    fn test_sandbox_allow_apple_events_boolean_values_are_fine() {
+        assert!(
+            validate(r#"{"sandbox": {"allowAppleEvents": true}}"#)
+                .iter()
+                .all(|d| d.rule != "CC-SET-008")
+        );
+        assert!(
+            validate(r#"{"sandbox": {"allowAppleEvents": false}}"#)
+                .iter()
+                .all(|d| d.rule != "CC-SET-008")
+        );
+    }
+
+    #[test]
+    fn test_sandbox_allow_apple_events_null_is_not_flagged() {
+        let content = r#"{"sandbox": {"allowAppleEvents": null}}"#;
+        assert!(validate(content).iter().all(|d| d.rule != "CC-SET-008"));
+    }
+
+    #[test]
+    fn test_sandbox_allow_apple_events_quoted_string_flags() {
+        let content = r#"{"sandbox": {"allowAppleEvents": "true"}}"#;
+        let diagnostics = validate(content);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-008")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].level, crate::diagnostics::DiagnosticLevel::Warning);
+        assert!(hits[0].message.to_lowercase().contains("boolean"));
+        assert!(hits[0].message.to_lowercase().contains("string"));
+    }
+
+    #[test]
+    fn test_sandbox_allow_apple_events_number_flags() {
+        let content = r#"{"sandbox": {"allowAppleEvents": 1}}"#;
+        let diagnostics = validate(content);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-008")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        assert!(hits[0].message.to_lowercase().contains("number"));
+    }
+
+    #[test]
+    fn test_sandbox_allow_apple_events_runs_on_managed_settings() {
+        let content = r#"{"sandbox": {"allowAppleEvents": "true"}}"#;
+        let diagnostics = validate_at(".claude/managed-settings.json", content);
+        assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-008"));
+    }
+
+    #[test]
+    fn test_sandbox_allow_apple_events_line_points_at_key() {
+        let content = "{\n  \"sandbox\": {\n    \"allowAppleEvents\": \"true\"\n  }\n}";
+        let diagnostics = validate(content);
+        let hit = diagnostics
+            .iter()
+            .find(|d| d.rule == "CC-SET-008")
+            .expect("CC-SET-008 diagnostic");
+        assert_eq!(hit.line, 3);
+    }
+
+    #[test]
+    fn test_sandbox_allow_apple_events_can_be_disabled() {
+        let mut builder = LintConfig::builder();
+        builder.disable_rule("CC-SET-008");
+        let config = builder.build().unwrap();
+        let validator = ClaudeSettingsValidator;
+        let path = PathBuf::from(".claude/settings.json");
+        let content = r#"{"sandbox": {"allowAppleEvents": "true"}}"#;
+        let diagnostics = validator.validate(&path, content, &config);
+        assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-008"));
+    }
+
+    #[test]
+    fn test_sandbox_allow_apple_events_coexists_with_sandbox_paths() {
+        let content = r#"{"sandbox": {"bwrapPath": "", "allowAppleEvents": "true"}}"#;
+        let diagnostics = validate(content);
+        assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-004"));
+        assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-008"));
     }
 }
