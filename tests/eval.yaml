@@ -67,6 +67,10 @@ cases:
     expected: []
     description: "Valid skill should have no errors"
 
+  - file: fixtures/valid/skills/social-source-evidence/SKILL.md
+    expected: []
+    description: "Valid social source skill should have no errors"
+
   - file: fixtures/valid/skills/with-context-agent/SKILL.md
     expected: [XP-SK-001]
     description: "Valid skill with context and agent triggers XP-SK-001 (not in client-specific dir)"
