@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `425` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `426` validation rules generated from `knowledge-base/rules.json`.
 `127` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -137,6 +137,7 @@ This section contains all `425` validation rules generated from `knowledge-base/
 | [CC-SET-006](./generated/cc-set-006.md) | Non-boolean disableBundledSkills Setting | MEDIUM | Claude Settings | No |
 | [CC-SET-007](./generated/cc-set-007.md) | Non-boolean enforceAvailableModels Setting | MEDIUM | Claude Settings | No |
 | [CC-SET-008](./generated/cc-set-008.md) | Non-boolean sandbox.allowAppleEvents Setting | MEDIUM | Claude Settings | No |
+| [CC-SET-009](./generated/cc-set-009.md) | Non-boolean attribution.sessionUrl Setting | MEDIUM | Claude Settings | No |
 | [CDX-000](./generated/cdx-000.md) | TOML Parse Error | HIGH | Codex CLI | No |
 | [CDX-001](./generated/cdx-001.md) | Invalid Approval Mode | HIGH | Codex CLI | Yes (unsafe) |
 | [CDX-002](./generated/cdx-002.md) | Invalid Full Auto Error Mode | HIGH | Codex CLI | Yes (unsafe) |

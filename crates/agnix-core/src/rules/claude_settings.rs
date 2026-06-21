@@ -13,6 +13,7 @@
 //! - `disableBundledSkills` boolean check (CC-SET-006, added in Claude Code v2.1.169).
 //! - `enforceAvailableModels` boolean check (CC-SET-007, added in Claude Code v2.1.175).
 //! - `sandbox.allowAppleEvents` boolean check (CC-SET-008, added in Claude Code v2.1.181).
+//! - `attribution.sessionUrl` boolean check (CC-SET-009, added in Claude Code v2.1.183).
 //!
 //! Runs on FileType::Hooks (which covers `.claude/settings.json` -
 //! see `file_types/detection.rs`). Skips non-Claude Code settings paths
@@ -35,6 +36,7 @@ const RULE_IDS: &[&str] = &[
     "CC-SET-006",
     "CC-SET-007",
     "CC-SET-008",
+    "CC-SET-009",
 ];
 
 /// Allowed values for `worktree.baseRef` per Claude Code v2.1.133 release notes.
@@ -109,6 +111,10 @@ impl Validator for ClaudeSettingsValidator {
 
         if config.is_rule_enabled("CC-SET-008") {
             validate_sandbox_allow_apple_events(path, content, &value, &mut diagnostics);
+        }
+
+        if config.is_rule_enabled("CC-SET-009") {
+            validate_attribution_session_url(path, content, &value, &mut diagnostics);
         }
 
         diagnostics
@@ -607,6 +613,47 @@ fn validate_sandbox_allow_apple_events(
             t!("rules.cc_set_008.message", actual = actual),
         )
         .with_suggestion(t!("rules.cc_set_008.suggestion")),
+    );
+}
+
+/// CC-SET-009: Validate `attribution.sessionUrl`. Claude Code v2.1.183
+/// added this nested attribution toggle so web and Remote Control sessions
+/// can omit the claude.ai session link from commits and PR descriptions. The
+/// setting is a strict boolean: `true` keeps the default link, `false` omits it.
+///
+/// Missing field is fine: session URLs remain enabled by default. `null` is
+/// treated as "field absent" by JSON convention, consistent with the other
+/// CC-SET boolean rules. Non-object `attribution` values are ignored by this
+/// rule to avoid conflating container-shape errors with the specific boolean
+/// opt-in.
+fn validate_attribution_session_url(
+    path: &Path,
+    content: &str,
+    value: &serde_json::Value,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(field_value) = value.pointer("/attribution/sessionUrl") else {
+        return;
+    };
+
+    if field_value.is_boolean() || field_value.is_null() {
+        return;
+    }
+
+    let actual = describe_json_type(field_value);
+    let line = find_key_line(content, "sessionUrl")
+        .or_else(|| find_key_line(content, "attribution"))
+        .unwrap_or(1);
+
+    diagnostics.push(
+        Diagnostic::warning(
+            path.to_path_buf(),
+            line,
+            0,
+            "CC-SET-009",
+            t!("rules.cc_set_009.message", actual = actual),
+        )
+        .with_suggestion(t!("rules.cc_set_009.suggestion")),
     );
 }
 
@@ -1687,5 +1734,101 @@ mod tests {
         let diagnostics = validate(content);
         assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-004"));
         assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-008"));
+    }
+
+    // ===== CC-SET-009: attribution.sessionUrl =====
+
+    #[test]
+    fn test_attribution_session_url_absent_is_fine() {
+        let content =
+            r#"{"attribution": {"commit": "Co-authored-by: Claude <noreply@anthropic.com>"}}"#;
+        assert!(validate(content).iter().all(|d| d.rule != "CC-SET-009"));
+    }
+
+    #[test]
+    fn test_attribution_session_url_boolean_values_are_fine() {
+        assert!(
+            validate(r#"{"attribution": {"sessionUrl": true}}"#)
+                .iter()
+                .all(|d| d.rule != "CC-SET-009")
+        );
+        assert!(
+            validate(r#"{"attribution": {"sessionUrl": false}}"#)
+                .iter()
+                .all(|d| d.rule != "CC-SET-009")
+        );
+    }
+
+    #[test]
+    fn test_attribution_session_url_null_is_not_flagged() {
+        let content = r#"{"attribution": {"sessionUrl": null}}"#;
+        assert!(validate(content).iter().all(|d| d.rule != "CC-SET-009"));
+    }
+
+    #[test]
+    fn test_attribution_session_url_quoted_string_flags() {
+        let content = r#"{"attribution": {"sessionUrl": "false"}}"#;
+        let diagnostics = validate(content);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-009")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].level, crate::diagnostics::DiagnosticLevel::Warning);
+        assert!(hits[0].message.to_lowercase().contains("boolean"));
+        assert!(hits[0].message.to_lowercase().contains("string"));
+    }
+
+    #[test]
+    fn test_attribution_session_url_number_flags() {
+        let content = r#"{"attribution": {"sessionUrl": 0}}"#;
+        let diagnostics = validate(content);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-009")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        assert!(hits[0].message.to_lowercase().contains("number"));
+    }
+
+    #[test]
+    fn test_attribution_session_url_runs_on_managed_settings() {
+        let content = r#"{"attribution": {"sessionUrl": "false"}}"#;
+        let diagnostics = validate_at(".claude/managed-settings.json", content);
+        assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-009"));
+    }
+
+    #[test]
+    fn test_attribution_session_url_line_points_at_key() {
+        let content = "{\n  \"attribution\": {\n    \"sessionUrl\": \"false\"\n  }\n}";
+        let diagnostics = validate(content);
+        let hit = diagnostics
+            .iter()
+            .find(|d| d.rule == "CC-SET-009")
+            .expect("CC-SET-009 diagnostic");
+        assert_eq!(hit.line, 3);
+    }
+
+    #[test]
+    fn test_attribution_session_url_can_be_disabled() {
+        let mut builder = LintConfig::builder();
+        builder.disable_rule("CC-SET-009");
+        let config = builder.build().unwrap();
+        let validator = ClaudeSettingsValidator;
+        let path = PathBuf::from(".claude/settings.json");
+        let content = r#"{"attribution": {"sessionUrl": "false"}}"#;
+        let diagnostics = validator.validate(&path, content, &config);
+        assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-009"));
+    }
+
+    #[test]
+    fn test_attribution_session_url_coexists_with_other_cc_set_rules() {
+        let content = r#"{
+            "sandbox": {"allowAppleEvents": "true"},
+            "attribution": {"sessionUrl": "false"}
+        }"#;
+        let diagnostics = validate(content);
+        assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-008"));
+        assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-009"));
     }
 }
