@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.34.0] - 2026-06-21
+
 ### Added
 - **CC-SET-009: Non-boolean attribution.sessionUrl Setting** (closes #1060). Claude Code v2.1.183 added the `attribution.sessionUrl` toggle for omitting claude.ai session links from commits and PR descriptions created from web or Remote Control sessions. New MEDIUM `claude-settings` rule warns when `attribution.sessionUrl` is present with a non-boolean value in `settings.json`, `settings.local.json`, or `managed-settings.json`; strict `true`/`false` values, `null`, and absent keys are accepted. Rule count 425 -> 426.
 
