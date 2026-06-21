@@ -1193,6 +1193,11 @@ rules:
       sandbox opt-in as a strict true/false toggle
     suggestion: Set sandbox.allowAppleEvents to an unquoted true or false, or remove it to keep Apple Events blocked in the
       macOS sandbox.
+  cc_set_009:
+    message: attribution.sessionUrl must be a boolean when present (got %{actual}); Claude Code 2.1.183+ documents this
+      attribution toggle as a strict true/false setting
+    suggestion: Set attribution.sessionUrl to an unquoted true or false. Use false to omit claude.ai session links from
+      commits and PR descriptions created from web or Remote Control sessions.
   cdx_pl_015:
     message: '''skills'' must be a string path, not %{actual}'
     suggestion: Set 'skills' to a relative path string such as './skills', or remove the field

@@ -717,6 +717,11 @@ rules:
       documenta esta opcion de sandbox como un interruptor true/false estricto
     suggestion: Establece sandbox.allowAppleEvents en true o false sin comillas, o eliminalo para mantener Apple Events
       bloqueado en el sandbox de macOS.
+  cc_set_009:
+    message: attribution.sessionUrl debe ser un booleano cuando esta presente (se obtuvo %{actual}); Claude Code 2.1.183+
+      documenta esta atribucion como una configuracion true/false estricta
+    suggestion: Establece attribution.sessionUrl en true o false sin comillas. Usa false para omitir enlaces de sesion
+      claude.ai en commits y descripciones de PR creados desde sesiones web o Remote Control.
 
 
 # ===========================================================================

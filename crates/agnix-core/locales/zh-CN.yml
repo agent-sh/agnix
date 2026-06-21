@@ -683,6 +683,9 @@ rules:
   cc_set_008:
     message: sandbox.allowAppleEvents 存在时必须是布尔值 (实际为 %{actual}); Claude Code 2.1.181+ 将该 sandbox 选项记录为严格的 true/false 开关
     suggestion: 将 sandbox.allowAppleEvents 设置为不带引号的 true 或 false，或移除此字段以让 macOS sandbox 继续阻止 Apple Events。
+  cc_set_009:
+    message: attribution.sessionUrl 存在时必须是布尔值 (实际为 %{actual}); Claude Code 2.1.183+ 将该归因选项记录为严格的 true/false 设置
+    suggestion: 将 attribution.sessionUrl 设置为不带引号的 true 或 false。使用 false 可在 Web 或 Remote Control 会话创建的 commit 和 PR 描述中省略 claude.ai 会话链接。
 
 
 # ===========================================================================
