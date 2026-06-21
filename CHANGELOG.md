@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **CC-SET-009: Non-boolean attribution.sessionUrl Setting** (closes #1060). Claude Code v2.1.183 added the `attribution.sessionUrl` toggle for omitting claude.ai session links from commits and PR descriptions created from web or Remote Control sessions. New MEDIUM `claude-settings` rule warns when `attribution.sessionUrl` is present with a non-boolean value in `settings.json`, `settings.local.json`, or `managed-settings.json`; strict `true`/`false` values, `null`, and absent keys are accepted. Rule count 425 -> 426.
 
+### Changed
+- **Tool baseline**: `cursor` bumped `3.7.42` -> `3.8.11` (closes #1061). The stable update endpoint still reports `3.8.11`; Cursor 3.8 changelog entries are Automations, Slack/GitHub triggers, cloud-agent computer use, templates, and UI behavior outside agnix's validated Cursor surfaces. No validator, rule, `ToolVersions`, or `SpecRevisions` change required. `.github/tool-release-baselines.json` and `knowledge-base/RESEARCH-TRACKING.md` updated.
+
 ## [0.33.2] - 2026-06-18
 
 ### Added
