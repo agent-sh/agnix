@@ -80,7 +80,7 @@ Parameters use `%{name}` syntax:
 
 ```yaml
 as_004:
-  message: "Name '%{name}' must be 1-64 characters of lowercase letters, digits, and hyphens"
+  message: "Name '%{name}' must be 1-64 characters per segment using lowercase letters, digits, and hyphens, as a bare skill name or plugin:skill-name"
 ```
 
 Parameters are filled at runtime. Keep the same parameter names across all locales.

@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **AS-004/AS-017 plugin-prefixed skill names**. Skills named with the standard `plugin:skill-name` form now validate each segment independently and compare the parent directory against only the local skill-name segment, eliminating false positives for bundled plugin skills while preserving existing bare-name checks.
+
 ## [0.34.0] - 2026-06-21
 
 ### Added

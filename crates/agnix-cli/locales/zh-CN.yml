@@ -12,8 +12,8 @@ rules:
     message: Skill frontmatter 缺少必需的 'description' 字段
     suggestion: '在 frontmatter 中添加 ''description: Use when...'''
   as_004:
-    message: 名称 '%{name}' 必须是1-64个字符，包含小写字母、数字和连字符
-    suggestion: 转为小写并修剪名称，将空格和 '_' 替换为 '-'，合并多个 '-'，删除无效字符，并截断为64个字符
+    message: 名称 '%{name}' 的每个段必须是1-64个小写字母、数字和连字符，可为 skill-name 或 plugin:skill-name
+    suggestion: 转为小写并修剪每个名称段，将空格和 '_' 替换为 '-'，合并多个 '-'，删除无效字符，并将每个段截断为64个字符
     fix: '将名称转换为 kebab-case: ''%{name}'''
   as_005:
     message: 名称 '%{name}' 不能以连字符开头或结尾

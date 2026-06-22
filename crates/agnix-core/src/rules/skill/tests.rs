@@ -88,6 +88,49 @@ Body"#;
 }
 
 #[test]
+fn test_as_004_plugin_prefixed_name_format_ok() {
+    let content = r#"---
+name: build-web-apps:frontend-app-builder
+description: Use when validating plugin-prefixed skill names
+---
+Body"#;
+
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
+
+    assert!(!diagnostics.iter().any(|d| d.rule == "AS-004"));
+}
+
+#[test]
+fn test_as_004_plugin_prefixed_name_uses_segment_length() {
+    let content = r#"---
+name: very-long-plugin-prefix-for-packaged-skills:frontend-app-builder-with-extra-context
+description: Use when validating plugin-prefixed skill names
+---
+Body"#;
+
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
+
+    assert!(!diagnostics.iter().any(|d| d.rule == "AS-004"));
+}
+
+#[test]
+fn test_as_004_plugin_prefixed_invalid_skill_segment() {
+    let content = r#"---
+name: build-web-apps:Frontend_App_Builder
+description: Use when validating plugin-prefixed skill names
+---
+Body"#;
+
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
+
+    let as_004_errors: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-004").collect();
+    assert_eq!(as_004_errors.len(), 1);
+}
+
+#[test]
 fn test_as_017_name_directory_mismatch() {
     let content = r#"---
 name: deploy-skill
@@ -123,6 +166,43 @@ Body"#;
 
     let as_017_errors: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-017").collect();
     assert_eq!(as_017_errors.len(), 0);
+}
+
+#[test]
+fn test_as_017_plugin_prefixed_name_matches_local_directory() {
+    let content = r#"---
+name: enhance:code-review
+description: Use when validating directory name matching
+---
+Body"#;
+
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(
+        Path::new("code-review/SKILL.md"),
+        content,
+        &LintConfig::default(),
+    );
+
+    assert!(!diagnostics.iter().any(|d| d.rule == "AS-017"));
+}
+
+#[test]
+fn test_as_017_plugin_prefixed_name_still_checks_local_directory() {
+    let content = r#"---
+name: enhance:deploy-skill
+description: Use when validating directory name matching
+---
+Body"#;
+
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(
+        Path::new("code-review/SKILL.md"),
+        content,
+        &LintConfig::default(),
+    );
+
+    let as_017_errors: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-017").collect();
+    assert_eq!(as_017_errors.len(), 1);
 }
 
 #[test]
