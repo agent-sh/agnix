@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.34.2] - 2026-06-22
+
+### Fixed
+- **Security dependency update**. Updated `quinn-proto` to `0.11.15` via `Cargo.lock` to address `RUSTSEC-2026-0185`, which was reported after the `v0.34.1` release workflow completed.
+
 ## [0.34.1] - 2026-06-22
 
 ### Fixed

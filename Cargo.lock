@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "agnix-cli"
-version = "0.34.1"
+version = "0.34.2"
 dependencies = [
  "agnix-core",
  "agnix-rules",
@@ -35,7 +35,7 @@ dependencies = [
 
 [[package]]
 name = "agnix-core"
-version = "0.34.1"
+version = "0.34.2"
 dependencies = [
  "agnix-core",
  "agnix-rules",
@@ -62,7 +62,7 @@ dependencies = [
 
 [[package]]
 name = "agnix-lsp"
-version = "0.34.1"
+version = "0.34.2"
 dependencies = [
  "agnix-core",
  "anyhow",
@@ -79,7 +79,7 @@ dependencies = [
 
 [[package]]
 name = "agnix-mcp"
-version = "0.34.1"
+version = "0.34.2"
 dependencies = [
  "agnix-core",
  "agnix-rules",
@@ -96,14 +96,14 @@ dependencies = [
 
 [[package]]
 name = "agnix-rules"
-version = "0.34.1"
+version = "0.34.2"
 dependencies = [
  "serde_json",
 ]
 
 [[package]]
 name = "agnix-wasm"
-version = "0.34.1"
+version = "0.34.2"
 dependencies = [
  "agnix-core",
  "console_error_panic_hook",
@@ -2029,9 +2029,9 @@ dependencies = [
 
 [[package]]
 name = "quinn-proto"
-version = "0.11.14"
+version = "0.11.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "434b42fec591c96ef50e21e886936e66d3cc3f737104fdb9b737c40ffb94c098"
+checksum = "4fcb935c5bec503c2f0e306bdd3e58bb9029dcb14fa8d9ac76e3a5256ac0763e"
 dependencies = [
  "aws-lc-rs",
  "bytes",
@@ -2811,7 +2811,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.3.4",
+ "getrandom 0.4.2",
  "once_cell",
  "rustix",
  "windows-sys 0.61.2",
