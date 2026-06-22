@@ -29,7 +29,7 @@
 
 | Field | Type | Required | Valid Values | Default | agnix Rule | Gap? |
 |-------|------|----------|-------------|---------|------------|------|
-| `name` | string | No (recommended) | lowercase letters, numbers, hyphens; 1-64 chars; no leading/trailing/consecutive hyphens | directory name | AS-002, AS-004, AS-005, AS-006, AS-007 | No |
+| `name` | string | No (recommended) | bare skill name or `<plugin>:<skill-name>`; each segment lowercase letters, numbers, hyphens; 1-64 chars; no leading/trailing/consecutive hyphens | directory name or local skill-name segment | AS-002, AS-004, AS-005, AS-006, AS-007 | No |
 | `description` | string | Recommended | 1-1024 chars, no XML tags | first paragraph of content | AS-003, AS-008, AS-009, AS-010 | No |
 | `license` | string | No | Free-form license text | none | (none) | LOW |
 | `compatibility` | string | No | 1-500 chars if present | none | AS-011 | No |

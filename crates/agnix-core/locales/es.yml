@@ -12,9 +12,9 @@ rules:
     message: Al frontmatter del skill le falta el campo requerido 'description'
     suggestion: 'Agrega ''description: Usar cuando...'' al frontmatter'
   as_004:
-    message: El nombre '%{name}' debe tener 1-64 caracteres de letras minúsculas, dígitos y guiones
-    suggestion: Convierte a minúsculas, recorta el nombre, reemplaza espacios y '_' con '-', colapsa multiples '-' en uno,
-      elimina caracteres inválidos y trunca a 64 caracteres
+    message: El nombre '%{name}' debe tener 1-64 caracteres por segmento, con letras minúsculas, dígitos y guiones, como skill-name o plugin:skill-name
+    suggestion: Convierte a minúsculas y recorta cada segmento del nombre, reemplaza espacios y '_' con '-', colapsa multiples '-' en uno,
+      elimina caracteres inválidos y trunca cada segmento a 64 caracteres
     fix: 'Convertir nombre a kebab-case: ''%{name}'''
   as_005:
     message: El nombre '%{name}' no puede comenzar ni terminar con guion

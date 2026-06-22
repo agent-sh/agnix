@@ -8,7 +8,10 @@ use crate::{
     rules::per_client_skill::{SkillClient, claude_skill_rules_apply, resolve_skill_client},
     rules::{Validator, ValidatorMetadata},
     schemas::hooks::HooksSchema,
-    schemas::skill::{SkillSchema, VALID_EFFORT_LEVELS, VALID_SHELLS, is_valid_skill_model},
+    schemas::skill::{
+        SkillSchema, VALID_EFFORT_LEVELS, VALID_SHELLS, is_valid_skill_model,
+        parse_skill_name_parts,
+    },
     validation::is_valid_mcp_tool_format,
 };
 use regex::Regex;
@@ -83,6 +86,91 @@ static_regex!(fn reference_path_regex, "(?i)\\b(?:references?|refs)[/\\\\][^\\s)
 static_regex!(fn plain_bash_regex, r"\bBash\b");
 static_regex!(fn imperative_verb_regex, r"(?i)\b(run|execute|create|build|deploy|install|configure|update|delete|remove|add|write|read|check|test|validate|ensure|make|use|call|invoke|start|stop|send|fetch|generate|implement|fix|analyze|review|search|find|move|copy|replace|push|pull|commit|clean|format|lint|parse|process|handle|prepare|download|upload|export|import|open|save|load|connect|verify|apply|enable|disable)\b");
 static_regex!(fn indexed_arguments_regex, r"\$ARGUMENTS\[\d+\]");
+
+fn is_valid_name_segment(segment: &str) -> bool {
+    segment.len() <= 64 && name_format_regex().is_match(segment)
+}
+
+fn is_valid_skill_name(name: &str) -> bool {
+    let Some(parts) = parse_skill_name_parts(name) else {
+        return false;
+    };
+
+    parts.plugin.is_none_or(is_valid_name_segment) && is_valid_name_segment(parts.skill)
+}
+
+fn skill_name_has_edge_hyphen(name: &str) -> bool {
+    let Some(parts) = parse_skill_name_parts(name) else {
+        return name.starts_with('-') || name.ends_with('-');
+    };
+
+    parts
+        .plugin
+        .is_some_and(|plugin| plugin.starts_with('-') || plugin.ends_with('-'))
+        || parts.skill.starts_with('-')
+        || parts.skill.ends_with('-')
+}
+
+fn skill_name_has_consecutive_hyphen(name: &str) -> bool {
+    let Some(parts) = parse_skill_name_parts(name) else {
+        return name.contains("--");
+    };
+
+    parts.plugin.is_some_and(|plugin| plugin.contains("--")) || parts.skill.contains("--")
+}
+
+fn fixed_skill_name(name: &str) -> String {
+    let Some(parts) = parse_skill_name_parts(name) else {
+        return convert_to_kebab_case(name);
+    };
+
+    match parts.plugin {
+        Some(plugin) => {
+            let fixed_plugin = convert_to_kebab_case(plugin);
+            let fixed_skill = convert_to_kebab_case(parts.skill);
+            if fixed_plugin.is_empty() || fixed_skill.is_empty() {
+                String::new()
+            } else {
+                format!("{}:{}", fixed_plugin, fixed_skill)
+            }
+        }
+        None => convert_to_kebab_case(parts.skill),
+    }
+}
+
+fn trim_skill_name_edge_hyphens(name: &str) -> String {
+    let Some(parts) = parse_skill_name_parts(name) else {
+        return name.trim_matches('-').to_string();
+    };
+
+    match parts.plugin {
+        Some(plugin) => format!(
+            "{}:{}",
+            plugin.trim_matches('-'),
+            parts.skill.trim_matches('-')
+        ),
+        None => parts.skill.trim_matches('-').to_string(),
+    }
+}
+
+fn collapse_skill_name_hyphens(name: &str) -> String {
+    let Some(parts) = parse_skill_name_parts(name) else {
+        return consecutive_hyphen_regex()
+            .replace_all(name, "-")
+            .to_string();
+    };
+
+    match parts.plugin {
+        Some(plugin) => format!(
+            "{}:{}",
+            consecutive_hyphen_regex().replace_all(plugin, "-"),
+            consecutive_hyphen_regex().replace_all(parts.skill, "-")
+        ),
+        None => consecutive_hyphen_regex()
+            .replace_all(parts.skill, "-")
+            .to_string(),
+    }
+}
 
 fn push_allowed_tool_token<'a>(
     tokens: &mut Vec<&'a str>,
@@ -475,9 +563,8 @@ impl<'a> ValidationContext<'a> {
 
         // AS-004: Invalid name format
         if self.config.is_rule_enabled("AS-004") {
-            let name_re = name_format_regex();
-            if name_trimmed.len() > 64 || !name_re.is_match(name_trimmed) {
-                let fixed_name = convert_to_kebab_case(name_trimmed);
+            if !is_valid_skill_name(name_trimmed) {
+                let fixed_name = fixed_skill_name(name_trimmed);
                 let mut diagnostic = Diagnostic::error(
                     self.path.to_path_buf(),
                     name_line,
@@ -488,14 +575,14 @@ impl<'a> ValidationContext<'a> {
                 .with_suggestion(t!("rules.as_004.suggestion"));
 
                 // Add auto-fix if we can find the byte range and the fixed name is valid
-                if !fixed_name.is_empty() && name_re.is_match(&fixed_name) {
+                if !fixed_name.is_empty() && is_valid_skill_name(&fixed_name) {
                     if let Some((start, end)) = self.frontmatter_value_byte_range("name") {
                         // Determine if fix is safe: only case changes are safe
                         let has_structural_changes = name_trimmed.contains('_')
                             || name_trimmed.contains(' ')
                             || name_trimmed
                                 .chars()
-                                .any(|c| !c.is_ascii_alphanumeric() && c != '-');
+                                .any(|c| !c.is_ascii_alphanumeric() && c != '-' && c != ':');
                         let is_case_only =
                             !has_structural_changes && name_trimmed.to_lowercase() == fixed_name;
                         let fix = Fix::replace(
@@ -514,9 +601,7 @@ impl<'a> ValidationContext<'a> {
         }
 
         // AS-005: Name cannot start or end with hyphen
-        if self.config.is_rule_enabled("AS-005")
-            && (name_trimmed.starts_with('-') || name_trimmed.ends_with('-'))
-        {
+        if self.config.is_rule_enabled("AS-005") && skill_name_has_edge_hyphen(name_trimmed) {
             let mut diagnostic = Diagnostic::error(
                 self.path.to_path_buf(),
                 name_line,
@@ -528,10 +613,10 @@ impl<'a> ValidationContext<'a> {
 
             // Safe auto-fix: trim leading/trailing hyphens.
             if let Some((start, end)) = self.frontmatter_value_byte_range("name") {
-                let fixed_name = name_trimmed.trim_matches('-').to_string();
+                let fixed_name = trim_skill_name_edge_hyphens(name_trimmed);
                 if !fixed_name.is_empty()
                     && fixed_name != name_trimmed
-                    && name_format_regex().is_match(&fixed_name)
+                    && is_valid_skill_name(&fixed_name)
                 {
                     diagnostic = diagnostic.with_fix(Fix::replace(
                         start,
@@ -547,7 +632,8 @@ impl<'a> ValidationContext<'a> {
         }
 
         // AS-006: Name cannot contain consecutive hyphens
-        if self.config.is_rule_enabled("AS-006") && name_trimmed.contains("--") {
+        if self.config.is_rule_enabled("AS-006") && skill_name_has_consecutive_hyphen(name_trimmed)
+        {
             let mut diagnostic = Diagnostic::error(
                 self.path.to_path_buf(),
                 name_line,
@@ -559,12 +645,10 @@ impl<'a> ValidationContext<'a> {
 
             // Safe auto-fix: collapse repeated hyphens.
             if let Some((start, end)) = self.frontmatter_value_byte_range("name") {
-                let fixed_name = consecutive_hyphen_regex()
-                    .replace_all(name_trimmed, "-")
-                    .to_string();
+                let fixed_name = collapse_skill_name_hyphens(name_trimmed);
                 if !fixed_name.is_empty()
                     && fixed_name != name_trimmed
-                    && name_format_regex().is_match(&fixed_name)
+                    && is_valid_skill_name(&fixed_name)
                 {
                     diagnostic = diagnostic.with_fix(Fix::replace(
                         start,
@@ -601,7 +685,11 @@ impl<'a> ValidationContext<'a> {
         };
 
         let name_trimmed = name.trim();
-        if name_trimmed.is_empty() || parent_name == name_trimmed {
+        let skill_name = parse_skill_name_parts(name_trimmed)
+            .map(|parts| parts.skill)
+            .unwrap_or(name_trimmed);
+
+        if skill_name.is_empty() || parent_name == skill_name {
             return;
         }
 

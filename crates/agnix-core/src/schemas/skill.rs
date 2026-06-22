@@ -6,7 +6,7 @@ use std::collections::HashMap;
 /// SKILL.md frontmatter schema
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SkillSchema {
-    /// Required: skill name (lowercase, hyphens, 1-64 chars)
+    /// Required: skill name, optionally prefixed as `<plugin>:<skill-name>`.
     pub name: String,
 
     /// Required: description (1-1024 chars)
@@ -69,6 +69,35 @@ pub struct SkillSchema {
     pub shell: Option<String>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct SkillNameParts<'a> {
+    pub(crate) plugin: Option<&'a str>,
+    pub(crate) skill: &'a str,
+}
+
+pub(crate) fn parse_skill_name_parts(name: &str) -> Option<SkillNameParts<'_>> {
+    if name.is_empty() {
+        return None;
+    }
+
+    match name.split_once(':') {
+        None => Some(SkillNameParts {
+            plugin: None,
+            skill: name,
+        }),
+        Some((plugin, skill)) => {
+            if plugin.is_empty() || skill.is_empty() || skill.contains(':') {
+                None
+            } else {
+                Some(SkillNameParts {
+                    plugin: Some(plugin),
+                    skill,
+                })
+            }
+        }
+    }
+}
+
 /// Known top-level frontmatter fields for SKILL.md
 #[cfg(test)]
 pub const KNOWN_SKILL_FRONTMATTER_FIELDS: &[&str] = &[
@@ -108,36 +137,51 @@ impl SkillSchema {
     /// Validate skill name format
     #[allow(dead_code)] // schema-level API; validation uses Validator trait
     pub fn validate_name(&self) -> Result<(), String> {
-        let name = &self.name;
+        let Some(parts) = parse_skill_name_parts(&self.name) else {
+            return Err("Name must be a bare skill name or '<plugin>:<skill-name>'".to_string());
+        };
 
-        // Length check
-        if name.is_empty() || name.len() > 64 {
-            return Err(format!("Name must be 1-64 characters, got {}", name.len()));
+        if let Some(plugin) = parts.plugin {
+            validate_name_segment(plugin, "Plugin prefix")?;
         }
+        validate_name_segment(parts.skill, "Skill name")
+    }
+}
 
-        // Character check
-        for ch in name.chars() {
-            if !ch.is_ascii_lowercase() && !ch.is_ascii_digit() && ch != '-' {
-                return Err(format!(
-                    "Name must contain only lowercase letters, digits, and hyphens, found '{}'",
-                    ch
-                ));
-            }
-        }
-
-        // Start/end check
-        if name.starts_with('-') || name.ends_with('-') {
-            return Err("Name cannot start or end with hyphen".to_string());
-        }
-
-        // Consecutive hyphens
-        if name.contains("--") {
-            return Err("Name cannot contain consecutive hyphens".to_string());
-        }
-
-        Ok(())
+fn validate_name_segment(segment: &str, label: &str) -> Result<(), String> {
+    // Length check
+    if segment.is_empty() || segment.len() > 64 {
+        return Err(format!(
+            "{} must be 1-64 characters, got {}",
+            label,
+            segment.len()
+        ));
     }
 
+    // Character check
+    for ch in segment.chars() {
+        if !ch.is_ascii_lowercase() && !ch.is_ascii_digit() && ch != '-' {
+            return Err(format!(
+                "{} must contain only lowercase letters, digits, and hyphens, found '{}'",
+                label, ch
+            ));
+        }
+    }
+
+    // Start/end check
+    if segment.starts_with('-') || segment.ends_with('-') {
+        return Err(format!("{} cannot start or end with hyphen", label));
+    }
+
+    // Consecutive hyphens
+    if segment.contains("--") {
+        return Err(format!("{} cannot contain consecutive hyphens", label));
+    }
+
+    Ok(())
+}
+
+impl SkillSchema {
     /// Validate description length
     #[allow(dead_code)] // schema-level API; validation uses Validator trait
     pub fn validate_description(&self) -> Result<(), String> {
@@ -277,6 +321,12 @@ mod tests {
     }
 
     #[test]
+    fn test_valid_plugin_prefixed_skill_name() {
+        let skill = make_skill("build-web-apps:frontend-app-builder", "Reviews code");
+        assert!(skill.validate_name().is_ok());
+    }
+
+    #[test]
     fn test_invalid_skill_name_uppercase() {
         let skill = SkillSchema {
             name: "Code-Review".to_string(),
@@ -295,6 +345,12 @@ mod tests {
             paths: None,
             shell: None,
         };
+        assert!(skill.validate_name().is_err());
+    }
+
+    #[test]
+    fn test_invalid_plugin_prefixed_skill_name_segment() {
+        let skill = make_skill("build-web-apps:Frontend_App_Builder", "Reviews code");
         assert!(skill.validate_name().is_err());
     }
 

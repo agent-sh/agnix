@@ -114,13 +114,13 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 
 <a id="as-004"></a>
 ### AS-004 [HIGH] Invalid Name Format
-**Requirement**: name MUST be 1-64 chars, lowercase letters/numbers/hyphens only
-**Regex**: `^[a-z0-9]+(-[a-z0-9]+)*$`
+**Requirement**: name MUST be either a bare skill name or `<plugin>:<skill-name>`; each segment MUST be 1-64 chars, lowercase letters/numbers/hyphens only
+**Regex**: `^[a-z0-9]+(-[a-z0-9]+)*(?::[a-z0-9]+(-[a-z0-9]+)*)?$`
 **Detection**:
 ```rust
-!Regex::new(r"^[a-z0-9]+(-[a-z0-9]+)*$").matches(name) || name.len() > 64
+!is_valid_skill_name(name)
 ```
-**Fix**: [AUTO-FIX] Convert name to kebab-case (lowercase, replace `_` with `-`, remove invalid chars, collapse consecutive hyphens, truncate to 64 chars)
+**Fix**: [AUTO-FIX] Convert each name segment to kebab-case (lowercase, replace `_` with `-`, remove invalid chars, collapse consecutive hyphens, truncate to 64 chars)
 **Source**: agentskills.io/specification
 
 <a id="as-005"></a>
@@ -3306,12 +3306,11 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
     }
 
     // AS-004: Check name format
-    let name_re = Regex::new(r"^[a-z0-9]+(-[a-z0-9]+)*$").unwrap();
-    if !name_re.is_match(&frontmatter.name) || frontmatter.name.len() > 64 {
+    if !is_valid_skill_name(&frontmatter.name) {
         diagnostics.push(Diagnostic::error(
             path, 2, 0, "AS-004",
             format!("Invalid name format: {}", frontmatter.name)
-        ).with_suggestion("Use lowercase letters, numbers, hyphens only"));
+        ).with_suggestion("Use a bare skill name or '<plugin>:<skill-name>' with kebab-case segments"));
     }
 
     // Continue with other rules...

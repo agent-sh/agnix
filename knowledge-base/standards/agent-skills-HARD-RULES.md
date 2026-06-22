@@ -89,7 +89,7 @@ description: A description of what this skill does.
 
 **Source**: https://agentskills.io/specification
 
-The `name` field MUST satisfy ALL of the following constraints:
+The `name` field MUST satisfy ALL of the following constraints. For plugin-provided skills named as `<plugin>:<skill-name>`, apply these constraints to each segment and match the parent directory against only `<skill-name>`.
 
 #### Character Length
 - **MUST** be 1-64 characters

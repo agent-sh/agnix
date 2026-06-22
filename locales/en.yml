@@ -12,9 +12,9 @@ rules:
     message: Skill frontmatter is missing required 'description' field
     suggestion: 'Add ''description: Use when...'' to frontmatter'
   as_004:
-    message: Name '%{name}' must be 1-64 characters of lowercase letters, digits, and hyphens
-    suggestion: Lowercase and trim the name, replace spaces and '_' with '-', collapse multiple '-' into one, remove invalid
-      characters, and truncate to 64 characters
+    message: Name '%{name}' must be 1-64 characters per segment using lowercase letters, digits, and hyphens, as a bare skill name or plugin:skill-name
+    suggestion: Lowercase and trim each name segment, replace spaces and '_' with '-', collapse multiple '-' into one, remove invalid
+      characters, and truncate each segment to 64 characters
     fix: 'Convert name to kebab-case: ''%{name}'''
   as_005:
     message: Name '%{name}' cannot start or end with hyphen
