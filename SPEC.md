@@ -7,14 +7,14 @@
 
 | Type | Files | Rules |
 |------|-------|-------|
-| Skills | SKILL.md | 39 |
+| Skills | SKILL.md | 35 |
 | Hooks | settings.json | 27 |
 | Memory (Claude Code) | CLAUDE.md, CLAUDE.local.md, .claude/rules/*.md | 13 |
 | Instructions (Cross-Tool) | AGENTS.md, AGENTS.local.md, AGENTS.override.md | 6 |
 | Agents | agents/*.md | 17 |
 | Plugins | plugin.json | 15 |
 | Claude Output Styles | .claude/output-styles/*.md | 6 |
-| Claude Settings | .claude/settings.json | 5 |
+| Claude Settings | .claude/settings.json | 11 |
 | Prompt Engineering | CLAUDE.md, AGENTS.md | 6 |
 | Cross-Platform | AGENTS.md | 9 |
 | MCP | tool definitions | 26 |
@@ -26,7 +26,7 @@
 | OpenCode | opencode.json, opencode.jsonc | 45 |
 | Gemini Agents | .gemini/agents/*.json | 1 |
 | Gemini CLI | GEMINI.md, GEMINI.local.md, .gemini/settings.json (hooks), gemini-extension.json (extensions), .geminiignore | 10 |
-| Codex CLI | .codex/config.toml/.json/.yaml | 60 |
+| Codex CLI | .codex/config.toml/.json/.yaml | 64 |
 | Version Awareness | .agnix.toml | 1 |
 | Cursor Skills | .cursor/skills/*/SKILL.md | 1 |
 | Cline Skills | .cline/skills/*/SKILL.md | 3 |
@@ -62,7 +62,7 @@ agnix/
 │   ├── agnix-mcp/      # MCP server
 │   └── agnix-wasm/     # WebAssembly bindings
 ├── editors/            # Neovim, VS Code, JetBrains, Zed integrations
-├── knowledge-base/     # 423 rules documented
+├── knowledge-base/     # 429 rules documented
 
 ├── scripts/            # Build/dev automation scripts
 ├── website/            # Docusaurus documentation website

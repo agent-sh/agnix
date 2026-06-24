@@ -408,6 +408,20 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Fix**: Manual - set `attribution.sessionUrl` to an unquoted `true` or `false`.
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.183 (added `attribution.sessionUrl`), code.claude.com/docs/en/settings
 
+<a id="cc-set-010"></a>
+### CC-SET-010 [MEDIUM] Invalid teammateMode Setting
+**Requirement**: `teammateMode` in `.claude/settings.json` / `.local.json` / `managed-settings.json` MUST be one of `"in-process"`, `"auto"`, `"tmux"`, or `"iterm2"` when present (Claude Code 2.1.186+). Invalid strings silently fall back to default behavior in practice, so typos can launch teammates in an unexpected display mode.
+**Detection**: Parse settings.json; look up top-level `teammateMode`; flag (warning) non-string types and strings outside the documented enum. Case-sensitive. `null` values and absent keys are not flagged.
+**Fix**: Manual - set `teammateMode` to `"in-process"`, `"auto"`, `"tmux"`, or `"iterm2"`.
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.186 (added `iterm2` teammate mode), code.claude.com/docs/en/settings, code.claude.com/docs/en/agent-teams
+
+<a id="cc-set-011"></a>
+### CC-SET-011 [MEDIUM] Non-boolean respondToBashCommands Setting
+**Requirement**: `respondToBashCommands` in `.claude/settings.json` / `.local.json` / `managed-settings.json` MUST be a boolean when present (Claude Code 2.1.186+). `false` keeps `!` bash command output context-only; only strict `true`/`false` is documented.
+**Detection**: Parse settings.json; look up top-level `respondToBashCommands`; flag (warning) non-boolean types (string, number, array, object). `null` values and absent keys are not flagged.
+**Fix**: Manual - set `respondToBashCommands` to an unquoted `true` or `false`.
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.186 (added `respondToBashCommands`)
+
 ---
 
 ## PER-CLIENT SKILL RULES
@@ -2504,6 +2518,13 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 **Fix**: Manual - remove `agents.max_threads` (v2 manages threading) or disable `multi_agent_v2` if the legacy limit is needed
 **Source**: openai/codex#19129 (introduced), openai/codex#19733 (briefly removed), openai/codex#19792 (restored, with cap moved to `[features.multi_agent_v2].max_concurrent_threads_per_session`). Verified against rust-v0.128.0.
 
+<a id="cdx-cfg-030"></a>
+### CDX-CFG-030 [MEDIUM] Invalid web_search Mode
+**Requirement**: `web_search` in `.codex/config.toml` / `.json` / `.yaml` MUST be one of `"disabled"`, `"cached"`, `"indexed"`, or `"live"` when present. Codex CLI `rust-v0.142.0` added the `"indexed"` mode alongside the existing modes.
+**Detection**: Parse Codex config files and validate the top-level `web_search` string enum. Case-sensitive. `null` values and absent keys are not flagged.
+**Fix**: Manual - set `web_search` to `"disabled"`, `"cached"`, `"indexed"`, or `"live"`.
+**Source**: github.com/openai/codex/releases/tag/rust-v0.142.0, github.com/openai/codex/blob/rust-v0.142.0/codex-rs/protocol/src/config_types.rs
+
 <a id="cdx-ag-004"></a>
 ### CDX-AG-004 [MEDIUM] AGENTS.md Exceeds Size Limit
 **Requirement**: AGENTS.md SHOULD not exceed 100,000 bytes
@@ -3418,11 +3439,11 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Claude Memory | 13 | 8 | 5 | 0 | 3 |
 | Claude Output Styles | 6 | 2 | 2 | 2 | 0 |
 | Claude Plugins | 15 | 9 | 6 | 0 | 4 |
-| Claude Settings | 5 | 0 | 5 | 0 | 0 |
-| Claude Skills | 20 | 11 | 8 | 1 | 13 |
+| Claude Settings | 11 | 0 | 11 | 0 | 0 |
+| Claude Skills | 21 | 11 | 9 | 1 | 13 |
 | Cline | 7 | 4 | 3 | 0 | 3 |
 | Cline Skills | 3 | 2 | 1 | 0 | 2 |
-| Codex CLI | 62 | 31 | 26 | 5 | 10 |
+| Codex CLI | 64 | 31 | 28 | 5 | 10 |
 | Codex Skills | 1 | 0 | 1 | 0 | 1 |
 | GitHub Copilot | 25 | 13 | 9 | 3 | 11 |
 | Copilot Skills | 1 | 0 | 1 | 0 | 1 |
@@ -3449,7 +3470,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **420** | **213** | **179** | **28** | **127** |
+| **TOTAL** | **429** | **213** | **188** | **28** | **127** |
 
 
 ---
@@ -3479,8 +3500,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 426 validation rules across 40 categories
+**Total Coverage**: 429 validation rules across 40 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 213 HIGH, 185 MEDIUM, 28 LOW
+**Certainty**: 213 HIGH, 188 MEDIUM, 28 LOW
 **Auto-Fixable**: 127 rules (30%)

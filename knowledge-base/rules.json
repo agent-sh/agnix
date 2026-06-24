@@ -1,8 +1,8 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 426,
-  "last_updated": "2026-06-21",
+  "total_rules": 429,
+  "last_updated": "2026-06-24",
   "schema": {
     "evidence": {
       "source_type": "spec|vendor_docs|vendor_code|paper|community",
@@ -3309,9 +3309,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.claude.com/docs/en/skills"
+          "https://code.claude.com/docs/en/skills",
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.186"
         ],
-        "verified_on": "2026-02-14",
+        "verified_on": "2026-06-24",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -3352,7 +3353,7 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "---\nname: lint-config\ndescription: Use when validating configuration files\nallowed-tools: Read, Grep\n---\nLint project configuration files.",
+      "good_example": "---\nname: lint-config\ndescription: Use when validating configuration files\ndisplay-name: Lint Config\ndefault-enabled: true\nfallback: lint-config\nallowed-tools: Read, Grep\n---\nLint project configuration files.",
       "bad_example": "---\nname: lint-config\ndescription: Use when validating configuration files\nallowed_tools: Read, Grep\n---\nLint project configuration files."
     },
     {
@@ -3721,6 +3722,64 @@
       },
       "good_example": "{\n  \"attribution\": {\"sessionUrl\": false}\n}",
       "bad_example": "{\n  \"attribution\": {\"sessionUrl\": \"false\"}\n}"
+    },
+    {
+      "id": "CC-SET-010",
+      "name": "Invalid teammateMode Setting",
+      "severity": "MEDIUM",
+      "category": "claude-settings",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.186",
+          "https://code.claude.com/docs/en/settings",
+          "https://code.claude.com/docs/en/agent-teams"
+        ],
+        "verified_on": "2026-06-24",
+        "applies_to": {
+          "tool": "claude-code",
+          "version_range": ">=2.1.186"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"teammateMode\": \"iterm2\"\n}",
+      "bad_example": "{\n  \"teammateMode\": \"screen\"\n}"
+    },
+    {
+      "id": "CC-SET-011",
+      "name": "Non-boolean respondToBashCommands Setting",
+      "severity": "MEDIUM",
+      "category": "claude-settings",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.186"
+        ],
+        "verified_on": "2026-06-24",
+        "applies_to": {
+          "tool": "claude-code",
+          "version_range": ">=2.1.186"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"respondToBashCommands\": false\n}",
+      "bad_example": "{\n  \"respondToBashCommands\": \"false\"\n}"
     },
     {
       "id": "CDX-000",
@@ -5436,6 +5495,35 @@
       },
       "good_example": "[agents]\nmax_threads = 4\n\n[features]\n# multi_agent_v2 omitted or false",
       "bad_example": "[agents]\nmax_threads = 4\n\n[features]\nmulti_agent_v2 = true"
+    },
+    {
+      "id": "CDX-CFG-030",
+      "name": "Invalid web_search Mode",
+      "severity": "MEDIUM",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/openai/codex/releases/tag/rust-v0.142.0",
+          "https://github.com/openai/codex/blob/rust-v0.142.0/codex-rs/protocol/src/config_types.rs"
+        ],
+        "verified_on": "2026-06-24",
+        "applies_to": {
+          "tool": "codex",
+          "version_range": ">=0.142.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "web_search = \"indexed\"",
+      "bad_example": "web_search = \"server_approved\""
     },
     {
       "id": "CDX-REQ-000",
@@ -11847,7 +11935,7 @@
     },
     "codex": {
       "prefix": "CDX",
-      "count": 63,
+      "count": 64,
       "description": "Codex CLI configuration validation"
     },
     "roo-code": {
@@ -11967,7 +12055,7 @@
     },
     "claude-settings": {
       "prefix": "CC-SET",
-      "count": 9,
+      "count": 11,
       "description": "Claude Code settings (.claude/settings.json) rules"
     },
     "gemini-agents": {

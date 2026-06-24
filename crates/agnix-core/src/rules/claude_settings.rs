@@ -14,6 +14,8 @@
 //! - `enforceAvailableModels` boolean check (CC-SET-007, added in Claude Code v2.1.175).
 //! - `sandbox.allowAppleEvents` boolean check (CC-SET-008, added in Claude Code v2.1.181).
 //! - `attribution.sessionUrl` boolean check (CC-SET-009, added in Claude Code v2.1.183).
+//! - `teammateMode` enum check (CC-SET-010, `iterm2` added in Claude Code v2.1.186).
+//! - `respondToBashCommands` boolean check (CC-SET-011, added in Claude Code v2.1.186).
 //!
 //! Runs on FileType::Hooks (which covers `.claude/settings.json` -
 //! see `file_types/detection.rs`). Skips non-Claude Code settings paths
@@ -37,6 +39,8 @@ const RULE_IDS: &[&str] = &[
     "CC-SET-007",
     "CC-SET-008",
     "CC-SET-009",
+    "CC-SET-010",
+    "CC-SET-011",
 ];
 
 /// Allowed values for `worktree.baseRef` per Claude Code v2.1.133 release notes.
@@ -47,6 +51,9 @@ const PARENT_SETTINGS_BEHAVIOR_ALLOWED: &[&str] = &["first-wins", "merge"];
 
 /// Documented `sandbox.*` string-valued path settings added in v2.1.133.
 const SANDBOX_PATH_FIELDS: &[&str] = &["bwrapPath", "socatPath"];
+
+/// Allowed values for `teammateMode`. Claude Code v2.1.186 added `iterm2`.
+const TEAMMATE_MODE_ALLOWED: &[&str] = &["in-process", "auto", "tmux", "iterm2"];
 
 /// Placeholders documented for `prUrlTemplate` at
 /// <https://code.claude.com/docs/en/settings>.
@@ -115,6 +122,14 @@ impl Validator for ClaudeSettingsValidator {
 
         if config.is_rule_enabled("CC-SET-009") {
             validate_attribution_session_url(path, content, &value, &mut diagnostics);
+        }
+
+        if config.is_rule_enabled("CC-SET-010") {
+            validate_teammate_mode(path, content, &value, &mut diagnostics);
+        }
+
+        if config.is_rule_enabled("CC-SET-011") {
+            validate_respond_to_bash_commands(path, content, &value, &mut diagnostics);
         }
 
         diagnostics
@@ -654,6 +669,100 @@ fn validate_attribution_session_url(
             t!("rules.cc_set_009.message", actual = actual),
         )
         .with_suggestion(t!("rules.cc_set_009.suggestion")),
+    );
+}
+
+/// CC-SET-010: Validate `teammateMode`. Claude Code documents four display
+/// modes for agent-team teammates: `in-process`, `auto`, `tmux`, and `iterm2`
+/// (`iterm2` was added in v2.1.186). Invalid strings silently fall back to
+/// default behavior in practice, so catching typos keeps teams from launching
+/// in an unexpected display mode.
+fn validate_teammate_mode(
+    path: &Path,
+    content: &str,
+    value: &serde_json::Value,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(field_value) = value.get("teammateMode") else {
+        return;
+    };
+    if field_value.is_null() {
+        return;
+    }
+
+    let line = find_key_line(content, "teammateMode").unwrap_or(1);
+
+    match field_value.as_str() {
+        Some(mode) if TEAMMATE_MODE_ALLOWED.contains(&mode) => {}
+        Some(mode) => diagnostics.push(
+            Diagnostic::warning(
+                path.to_path_buf(),
+                line,
+                0,
+                "CC-SET-010",
+                format!(
+                    "teammateMode must be one of: {} (got \"{}\")",
+                    TEAMMATE_MODE_ALLOWED.join(", "),
+                    mode
+                ),
+            )
+            .with_suggestion(
+                "Set teammateMode to \"in-process\", \"auto\", \"tmux\", or \"iterm2\".",
+            ),
+        ),
+        None => diagnostics.push(
+            Diagnostic::warning(
+                path.to_path_buf(),
+                line,
+                0,
+                "CC-SET-010",
+                format!(
+                    "teammateMode must be a string (got {})",
+                    describe_json_type(field_value)
+                ),
+            )
+            .with_suggestion(
+                "Set teammateMode to \"in-process\", \"auto\", \"tmux\", or \"iterm2\".",
+            ),
+        ),
+    }
+}
+
+/// CC-SET-011: Validate `respondToBashCommands`. Claude Code v2.1.186 changed
+/// `!` bash command behavior so Claude automatically responds to the output by
+/// default. The documented opt-out is a strict boolean
+/// `"respondToBashCommands": false`; quoted strings or numbers won't express
+/// that intent reliably.
+fn validate_respond_to_bash_commands(
+    path: &Path,
+    content: &str,
+    value: &serde_json::Value,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(field_value) = value.get("respondToBashCommands") else {
+        return;
+    };
+
+    if field_value.is_boolean() || field_value.is_null() {
+        return;
+    }
+
+    let actual = describe_json_type(field_value);
+    let line = find_key_line(content, "respondToBashCommands").unwrap_or(1);
+
+    diagnostics.push(
+        Diagnostic::warning(
+            path.to_path_buf(),
+            line,
+            0,
+            "CC-SET-011",
+            format!(
+                "respondToBashCommands must be a boolean when present (got {actual}); Claude Code v2.1.186+ documents this as a strict true/false setting"
+            ),
+        )
+        .with_suggestion(
+            "Set respondToBashCommands to an unquoted true or false. Use false to keep ! bash command output context-only.",
+        ),
     );
 }
 
@@ -1830,5 +1939,103 @@ mod tests {
         let diagnostics = validate(content);
         assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-008"));
         assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-009"));
+    }
+
+    // ===== CC-SET-010: teammateMode =====
+
+    #[test]
+    fn test_teammate_mode_documented_values_are_fine() {
+        for mode in ["in-process", "auto", "tmux", "iterm2"] {
+            let content = format!(r#"{{"teammateMode": "{mode}"}}"#);
+            assert!(
+                validate(&content).iter().all(|d| d.rule != "CC-SET-010"),
+                "{mode} must be accepted"
+            );
+        }
+    }
+
+    #[test]
+    fn test_teammate_mode_invalid_string_flags() {
+        let diagnostics = validate(r#"{"teammateMode": "screen"}"#);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-010")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        assert!(hits[0].message.contains("iterm2"));
+    }
+
+    #[test]
+    fn test_teammate_mode_non_string_flags() {
+        let diagnostics = validate(r#"{"teammateMode": true}"#);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-010")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        assert!(hits[0].message.to_lowercase().contains("string"));
+    }
+
+    #[test]
+    fn test_teammate_mode_can_be_disabled() {
+        let mut builder = LintConfig::builder();
+        builder.disable_rule("CC-SET-010");
+        let config = builder.build().unwrap();
+        let validator = ClaudeSettingsValidator;
+        let path = PathBuf::from(".claude/settings.json");
+        let diagnostics = validator.validate(&path, r#"{"teammateMode": "screen"}"#, &config);
+        assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-010"));
+    }
+
+    // ===== CC-SET-011: respondToBashCommands =====
+
+    #[test]
+    fn test_respond_to_bash_commands_boolean_values_are_fine() {
+        assert!(
+            validate(r#"{"respondToBashCommands": true}"#)
+                .iter()
+                .all(|d| d.rule != "CC-SET-011")
+        );
+        assert!(
+            validate(r#"{"respondToBashCommands": false}"#)
+                .iter()
+                .all(|d| d.rule != "CC-SET-011")
+        );
+    }
+
+    #[test]
+    fn test_respond_to_bash_commands_quoted_string_flags() {
+        let diagnostics = validate(r#"{"respondToBashCommands": "false"}"#);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-011")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        assert!(hits[0].message.to_lowercase().contains("boolean"));
+        assert!(hits[0].message.to_lowercase().contains("string"));
+    }
+
+    #[test]
+    fn test_respond_to_bash_commands_line_points_at_key() {
+        let content =
+            "{\n  \"model\": \"claude-sonnet-4\",\n  \"respondToBashCommands\": \"false\"\n}";
+        let diagnostics = validate(content);
+        let hit = diagnostics
+            .iter()
+            .find(|d| d.rule == "CC-SET-011")
+            .expect("CC-SET-011 diagnostic");
+        assert_eq!(hit.line, 3);
+    }
+
+    #[test]
+    fn test_respond_to_bash_commands_can_be_disabled() {
+        let mut builder = LintConfig::builder();
+        builder.disable_rule("CC-SET-011");
+        let config = builder.build().unwrap();
+        let validator = ClaudeSettingsValidator;
+        let path = PathBuf::from(".claude/settings.json");
+        let diagnostics =
+            validator.validate(&path, r#"{"respondToBashCommands": "false"}"#, &config);
+        assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-011"));
     }
 }

@@ -89,6 +89,7 @@ const CODEX_CONFIG_RULE_IDS: &[&str] = &[
     "CDX-CFG-027",
     "CDX-CFG-028",
     "CDX-CFG-029",
+    "CDX-CFG-030",
     "CDX-APP-001",
     "CDX-APP-002",
     "CDX-APP-003",
@@ -104,6 +105,7 @@ const VALID_PERSONALITIES: &[&str] = &["none", "friendly", "pragmatic"];
 const VALID_SHELL_ENVIRONMENT_INHERIT: &[&str] = &["core", "all", "none"];
 const VALID_CLI_AUTH_STORES: &[&str] = &["file", "keyring", "auto", "ephemeral"];
 const VALID_DEFAULT_TOOLS_APPROVAL_MODES: &[&str] = &["auto", "prompt", "approve"];
+const VALID_WEB_SEARCH_MODES: &[&str] = &["disabled", "cached", "indexed", "live"];
 
 const KNOWN_APPROVAL_POLICY_SUB_FIELDS: &[&str] = &[
     "mcp_elicitations",
@@ -136,6 +138,7 @@ const KNOWN_FEATURE_KEYS: &[&str] = &[
     "apps",
     "apps_mcp_path_override",
     "auth_elicitation",
+    "auto_compaction",
     "browser_use",
     "browser_use_external",
     "child_agents_md",
@@ -148,7 +151,9 @@ const KNOWN_FEATURE_KEYS: &[&str] = &[
     "collaboration_modes",
     "computer_use",
     "connectors",
+    "current_time_reminder",
     "default_mode_request_user_input",
+    "deferred_executor",
     "elevated_windows_sandbox",
     "enable_experimental_windows_sandbox",
     "enable_fanout",
@@ -166,6 +171,7 @@ const KNOWN_FEATURE_KEYS: &[&str] = &[
     "image_generation",
     "imagegenext",
     "in_app_browser",
+    "item_ids",
     "js_repl",
     "js_repl_tools_only",
     "local_thread_store_compression",
@@ -173,6 +179,7 @@ const KNOWN_FEATURE_KEYS: &[&str] = &[
     "memory_tool",
     "mentions_v2",
     "multi_agent",
+    "multi_agent_mode",
     "multi_agent_v2",
     "network_proxy",
     "non_prefixed_mcp_tool_names",
@@ -189,8 +196,10 @@ const KNOWN_FEATURE_KEYS: &[&str] = &[
     "request_permissions",
     "request_permissions_tool",
     "request_rule",
+    "respect_system_proxy",
     "responses_websockets",
     "responses_websockets_v2",
+    "rollout_budget",
     "runtime_metrics",
     "search_tool",
     "shell_snapshot",
@@ -204,6 +213,7 @@ const KNOWN_FEATURE_KEYS: &[&str] = &[
     "telepathy",
     "terminal_resize_reflow",
     "terminal_visualization_instructions",
+    "token_budget",
     "tool_call_mcp_elicitation",
     "tool_search",
     "tool_search_always_defer_mcp_tools",
@@ -213,6 +223,7 @@ const KNOWN_FEATURE_KEYS: &[&str] = &[
     "undo",
     "unified_exec",
     "unified_exec_zsh_fork",
+    "use_agent_identity",
     "use_legacy_landlock",
     "use_linux_sandbox_bwrap",
     "web_search",
@@ -1702,6 +1713,51 @@ fn validate_codex_config_rules(
                     ),
                 )
                 .with_suggestion("Set service_tier to 'flex' or 'fast'."),
+            );
+        }
+    }
+
+    // CDX-CFG-030: Invalid web_search mode. Codex rust-v0.142.0 added the
+    // `indexed` mode alongside the existing disabled/cached/live values.
+    if config.is_rule_enabled("CDX-CFG-030")
+        && let Some(value) = value_at_path(&root, &["web_search"])
+    {
+        if let Some(mode) = value.as_str() {
+            if !VALID_WEB_SEARCH_MODES.contains(&mode) {
+                diagnostics.push(
+                    Diagnostic::warning(
+                        path.to_path_buf(),
+                        line_for("web_search"),
+                        0,
+                        "CDX-CFG-030",
+                        format!(
+                            "Invalid web_search value '{}'. Must be one of: {}",
+                            mode,
+                            VALID_WEB_SEARCH_MODES.join(", ")
+                        ),
+                    )
+                    .with_suggestion(format!(
+                        "Set web_search to one of: {}.",
+                        VALID_WEB_SEARCH_MODES.join(", ")
+                    )),
+                );
+            }
+        } else if !value.is_null() {
+            diagnostics.push(
+                Diagnostic::warning(
+                    path.to_path_buf(),
+                    line_for("web_search"),
+                    0,
+                    "CDX-CFG-030",
+                    format!(
+                        "web_search must be a string, not {}",
+                        value_type_name(value)
+                    ),
+                )
+                .with_suggestion(format!(
+                    "Set web_search to one of: {}.",
+                    VALID_WEB_SEARCH_MODES.join(", ")
+                )),
             );
         }
     }
@@ -3600,6 +3656,94 @@ excluded_tool_namespaces = ["browser"]
             unexpected.is_empty(),
             "code_mode table form should not be flagged, got: {unexpected:?}"
         );
+    }
+
+    #[test]
+    fn test_codex_0_142_0_config_surfaces_not_flagged() {
+        // Codex CLI rust-v0.142.0 added `orchestrator`, structured
+        // token/rollout/current-time feature configs, and the indexed
+        // web-search mode. These are schema-facing surfaces from the release
+        // notes/source diff, not app-server-only runtime state.
+        let diagnostics = validate_config(
+            r#"
+web_search = "indexed"
+
+[orchestrator.skills]
+enabled = true
+
+[orchestrator.mcp]
+enabled = false
+
+[features]
+auto_compaction = true
+deferred_executor = true
+item_ids = true
+multi_agent_mode = false
+respect_system_proxy = true
+use_agent_identity = true
+
+[features.token_budget]
+enabled = true
+reminder_threshold_tokens = 2048
+reminder_message_template = "Wrap up soon; {n_remaining} tokens remain."
+
+[features.rollout_budget]
+enabled = true
+limit_tokens = 100000
+reminder_at_remaining_tokens = [25000, 10000]
+sampling_token_weight = 1.0
+prefill_token_weight = 0.5
+
+[features.current_time_reminder]
+enabled = true
+reminder_interval_model_requests = 4
+clock_source = "external"
+"#,
+        );
+        let unexpected: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| {
+                matches!(
+                    d.rule.as_str(),
+                    "CDX-004" | "CDX-CFG-006" | "CDX-CFG-011" | "CDX-CFG-030"
+                )
+            })
+            .map(|d| d.message.as_str())
+            .collect();
+        assert!(
+            unexpected.is_empty(),
+            "0.142 config surfaces should not be flagged, got: {unexpected:?}"
+        );
+    }
+
+    #[test]
+    fn test_cdx_cfg_030_invalid_web_search_mode() {
+        let diagnostics = validate_config("web_search = \"server_approved\"");
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-030")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        assert!(hits[0].message.contains("indexed"));
+    }
+
+    #[test]
+    fn test_cdx_cfg_030_web_search_must_be_string() {
+        let diagnostics = validate_config("web_search = true");
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-030")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        assert!(hits[0].message.to_lowercase().contains("string"));
+    }
+
+    #[test]
+    fn test_cdx_cfg_030_can_be_disabled() {
+        let mut config = LintConfig::default();
+        config.rules_mut().disabled_rules = vec!["CDX-CFG-030".to_string()];
+        let diagnostics = validate_config_with_config("web_search = \"server_approved\"", &config);
+        assert!(diagnostics.iter().all(|d| d.rule != "CDX-CFG-030"));
     }
 
     #[test]

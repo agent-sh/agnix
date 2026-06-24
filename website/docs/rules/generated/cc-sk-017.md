@@ -52,6 +52,9 @@ Lint project configuration files.
 ---
 name: lint-config
 description: Use when validating configuration files
+display-name: Lint Config
+default-enabled: true
+fallback: lint-config
 allowed-tools: Read, Grep
 ---
 Lint project configuration files.

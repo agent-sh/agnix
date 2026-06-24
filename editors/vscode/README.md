@@ -3,7 +3,7 @@
 Real-time validation for AI agent configuration files in VS Code.
 Install from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=avifenesh.agnix).
 
-**423 rules** | **Real-time diagnostics** | **Auto-fix** | **Completion** | **Multi-tool support**
+**429 rules** | **Real-time diagnostics** | **Auto-fix** | **Completion** | **Multi-tool support**
 
 
 ## Features
@@ -11,7 +11,7 @@ Install from the [VS Code Marketplace](https://marketplace.visualstudio.com/item
 - **Real-time validation** - Diagnostics as you type
 - **Context-aware completions** - Frontmatter keys, values, and snippets
 - **JSON Schema validation and autocomplete for `.agnix.toml` config files**
-- **Validates 423 rules** - From official specs and best practices
+- **Validates 429 rules** - From official specs and best practices
 
 - **Diagnostics panel** - Sidebar tree view of all issues by file
 - **CodeLens** - Rule info shown inline above problematic lines

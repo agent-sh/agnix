@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `426` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `429` validation rules generated from `knowledge-base/rules.json`.
 `127` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -138,6 +138,8 @@ This section contains all `426` validation rules generated from `knowledge-base/
 | [CC-SET-007](./generated/cc-set-007.md) | Non-boolean enforceAvailableModels Setting | MEDIUM | Claude Settings | No |
 | [CC-SET-008](./generated/cc-set-008.md) | Non-boolean sandbox.allowAppleEvents Setting | MEDIUM | Claude Settings | No |
 | [CC-SET-009](./generated/cc-set-009.md) | Non-boolean attribution.sessionUrl Setting | MEDIUM | Claude Settings | No |
+| [CC-SET-010](./generated/cc-set-010.md) | Invalid teammateMode Setting | MEDIUM | Claude Settings | No |
+| [CC-SET-011](./generated/cc-set-011.md) | Non-boolean respondToBashCommands Setting | MEDIUM | Claude Settings | No |
 | [CDX-000](./generated/cdx-000.md) | TOML Parse Error | HIGH | Codex CLI | No |
 | [CDX-001](./generated/cdx-001.md) | Invalid Approval Mode | HIGH | Codex CLI | Yes (unsafe) |
 | [CDX-002](./generated/cdx-002.md) | Invalid Full Auto Error Mode | HIGH | Codex CLI | Yes (unsafe) |
@@ -199,6 +201,7 @@ This section contains all `426` validation rules generated from `knowledge-base/
 | [CDX-CFG-027](./generated/cdx-cfg-027.md) | Invalid Windows Sandbox Value | LOW | Codex CLI | Yes (unsafe) |
 | [CDX-CFG-028](./generated/cdx-cfg-028.md) | Unsupported Inline MCP bearer_token Field | HIGH | Codex CLI | No |
 | [CDX-CFG-029](./generated/cdx-cfg-029.md) | Incompatible agents.max_threads with multi_agent_v2 | HIGH | Codex CLI | No |
+| [CDX-CFG-030](./generated/cdx-cfg-030.md) | Invalid web_search Mode | MEDIUM | Codex CLI | No |
 | [CDX-REQ-000](./generated/cdx-req-000.md) | Codex requirements.toml TOML Parse Error | HIGH | Codex CLI | No |
 | [CDX-REQ-001](./generated/cdx-req-001.md) | Unknown Codex requirements.toml Key | MEDIUM | Codex CLI | No |
 | [CL-SK-001](./generated/cl-sk-001.md) | Cline Skill Uses Unsupported Field | MEDIUM | Cline Skills | Yes (safe/unsafe) |

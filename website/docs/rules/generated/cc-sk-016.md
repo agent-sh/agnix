@@ -13,7 +13,7 @@ keywords: ["CC-SK-016", "indexed $arguments without argument-hint", "claude skil
 - **Category**: `Claude Skills`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-02-14`
+- **Verified On**: `2026-06-24`
 
 ## Applicability
 
@@ -24,6 +24,7 @@ keywords: ["CC-SK-016", "indexed $arguments without argument-hint", "claude skil
 ## Evidence Sources
 
 - https://code.claude.com/docs/en/skills
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.186
 
 ## Test Coverage Metadata
 

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.35.0] - 2026-06-24
+
+### Added
+- **CC-SET-010: Invalid teammateMode Setting** and **CC-SET-011: Non-boolean respondToBashCommands Setting** (closes #1075). Claude Code v2.1.186 added `iterm2` teammate display mode support and the `respondToBashCommands` setting. New MEDIUM `claude-settings` rules validate `teammateMode` against `in-process|auto|tmux|iterm2` and require `respondToBashCommands`, when present, to be a strict boolean. Claude skill frontmatter allow-listing also accepts the new v2.1.186 aliases `display-name`, `default-enabled`, and `fallback`. Rule count 426 -> 428.
+- **CDX-CFG-030: Invalid web_search Mode** (closes #1076). Codex CLI `rust-v0.142.0` added the `indexed` web-search mode and new config-facing surfaces around `orchestrator`, token/rollout/current-time feature config, and multi-agent mode. The Codex config allow-lists now cover those surfaces and `CDX-CFG-030` validates `web_search` against `disabled|cached|indexed|live`. Rule count 428 -> 429.
+
+### Changed
+- **Tool baselines**: bumped `claude-code` `v2.1.185` -> `v2.1.186` and `codex` `rust-v0.141.0` -> `rust-v0.142.0` after release-note/source triage. `.github/tool-release-baselines.json`, `knowledge-base/RESEARCH-TRACKING.md`, rule metadata, and generated rule docs were updated.
+
 ## [0.34.2] - 2026-06-22
 
 ### Fixed
@@ -1059,7 +1068,7 @@ Shipped via PR #800.
   - Quick-fix code actions from Fix objects
   - Hover documentation for frontmatter fields
   - Document content caching for performance
-  - Supports all 423 agnix validation rules with severity mapping
+  - Supports all 429 agnix validation rules with severity mapping
 
   - Workspace boundary validation for security (prevents path traversal)
   - Config caching optimization for performance
@@ -1075,7 +1084,7 @@ Shipped via PR #800.
   - Case-insensitive tool name matching
   - Takes precedence over legacy `target` field for flexibility
 - VS Code extension with full LSP integration (#22)
-  - Real-time diagnostics for all 423 validation rules
+  - Real-time diagnostics for all 429 validation rules
 
   - Status bar indicator showing agnix validation status
   - Syntax highlighting for SKILL.md YAML frontmatter

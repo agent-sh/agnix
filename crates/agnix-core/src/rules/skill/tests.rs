@@ -3325,6 +3325,35 @@ Body"#;
 }
 
 #[test]
+fn test_cc_sk_017_claude_v2_1_186_frontmatter_aliases() {
+    let validator = SkillValidator;
+    let content = r#"---
+name: test-skill
+description: Use when validating Claude skill metadata aliases
+display-name: Test Skill
+display_name: Test Skill
+displayName: Test Skill
+default-enabled: true
+default_enabled: true
+defaultEnabled: true
+fallback: test-skill
+metadata:
+  display-name: Nested metadata is intentionally unchecked
+---
+Body"#;
+
+    let diagnostics = validator.validate(
+        Path::new(".claude/skills/test-skill/SKILL.md"),
+        content,
+        &LintConfig::default(),
+    );
+    assert!(
+        diagnostics.iter().all(|d| d.rule != "CC-SK-017"),
+        "Claude v2.1.186 frontmatter aliases must not trip CC-SK-017, got {diagnostics:?}"
+    );
+}
+
+#[test]
 fn test_cc_sk_008_powershell_known_and_claude_only() {
     let validator = SkillValidator;
 

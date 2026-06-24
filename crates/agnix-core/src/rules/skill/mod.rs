@@ -275,6 +275,15 @@ const KNOWN_FRONTMATTER_FIELDS: &[&str] = &[
     // verified 2026-05-24): `when_to_use` and `arguments` were missing.
     "when_to_use",
     "arguments",
+    // Claude Code v2.1.186 accepts kebab-case, snake_case, and camelCase for
+    // these skill metadata fields.
+    "display-name",
+    "display_name",
+    "displayName",
+    "default-enabled",
+    "default_enabled",
+    "defaultEnabled",
+    "fallback",
     "license",
     "compatibility",
     "metadata",
