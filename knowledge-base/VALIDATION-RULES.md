@@ -422,6 +422,13 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Fix**: Manual - set `respondToBashCommands` to an unquoted `true` or `false`.
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.186 (added `respondToBashCommands`)
 
+<a id="cc-set-012"></a>
+### CC-SET-012 [MEDIUM] Invalid sandbox.credentials Setting
+**Requirement**: `sandbox.credentials` in `.claude/settings.json` / `.local.json` / `managed-settings.json` MUST be an object with optional `files` and `envVars` arrays when present (Claude Code 2.1.187+). Each `files` entry MUST be an object with non-empty string `path` and `mode: "deny"`. Each `envVars` entry MUST be an object with non-empty string `name` and `mode: "deny"`. No other `mode` value is documented.
+**Detection**: Parse settings.json; walk `sandbox.credentials`; flag (warning) non-object `credentials`, non-array `files` / `envVars`, non-object entries, missing / non-string / empty `path` or `name`, and missing / non-string / non-`deny` `mode`.
+**Fix**: Manual - set entries to `{ "path": "...", "mode": "deny" }` for credential files and `{ "name": "...", "mode": "deny" }` for credential environment variables, or remove invalid entries.
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.187 (added `sandbox.credentials`), code.claude.com/docs/en/settings, code.claude.com/docs/en/sandboxing
+
 ---
 
 ## PER-CLIENT SKILL RULES
@@ -3500,8 +3507,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 429 validation rules across 40 categories
+**Total Coverage**: 430 validation rules across 40 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 213 HIGH, 188 MEDIUM, 28 LOW
+**Certainty**: 213 HIGH, 189 MEDIUM, 28 LOW
 **Auto-Fixable**: 127 rules (30%)

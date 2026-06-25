@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.36.0] - 2026-06-25
+
+### Added
+- **CC-SET-012: Invalid sandbox.credentials Setting** (closes #1078). Claude Code v2.1.187 added `sandbox.credentials` to block sandboxed commands from reading credential files and secret environment variables. New MEDIUM `claude-settings` rule validates the documented `sandbox.credentials.files[]` and `sandbox.credentials.envVars[]` shapes: file entries require a non-empty string `path` and `mode: "deny"`, env var entries require a non-empty string `name` and `mode: "deny"`, and no other mode is documented. Validated across `settings.json`, `settings.local.json`, and `managed-settings.json`. Rule count 429 -> 430.
+
+### Changed
+- **Tool baseline**: bumped `claude-code` `v2.1.186` -> `v2.1.187` after release-note/source triage. The other v2.1.187 changes are model restrictions, UI behavior, CLI flag/help, runtime bug fixes, and remote-session behavior outside agnix's validated config surfaces. No `ToolVersions` or `SpecRevisions` change required. `.github/tool-release-baselines.json`, `knowledge-base/RESEARCH-TRACKING.md`, rule metadata, and generated rule docs were updated.
+
 ## [0.35.0] - 2026-06-24
 
 ### Added

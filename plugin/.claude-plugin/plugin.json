@@ -1,7 +1,7 @@
 {
   "name": "agnix",
-  "version": "0.35.0",
-  "description": "Lint agent configurations before they break your workflow. 429 rules for Skills, Hooks, MCP, Memory, Plugins.",
+  "version": "0.36.0",
+  "description": "Lint agent configurations before they break your workflow. 430 rules for Skills, Hooks, MCP, Memory, Plugins.",
   "author": {
     "name": "Avi Fenesh",
     "email": "[email protected]",

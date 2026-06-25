@@ -16,6 +16,7 @@
 //! - `attribution.sessionUrl` boolean check (CC-SET-009, added in Claude Code v2.1.183).
 //! - `teammateMode` enum check (CC-SET-010, `iterm2` added in Claude Code v2.1.186).
 //! - `respondToBashCommands` boolean check (CC-SET-011, added in Claude Code v2.1.186).
+//! - `sandbox.credentials` shape check (CC-SET-012, added in Claude Code v2.1.187).
 //!
 //! Runs on FileType::Hooks (which covers `.claude/settings.json` -
 //! see `file_types/detection.rs`). Skips non-Claude Code settings paths
@@ -41,6 +42,7 @@ const RULE_IDS: &[&str] = &[
     "CC-SET-009",
     "CC-SET-010",
     "CC-SET-011",
+    "CC-SET-012",
 ];
 
 /// Allowed values for `worktree.baseRef` per Claude Code v2.1.133 release notes.
@@ -130,6 +132,10 @@ impl Validator for ClaudeSettingsValidator {
 
         if config.is_rule_enabled("CC-SET-011") {
             validate_respond_to_bash_commands(path, content, &value, &mut diagnostics);
+        }
+
+        if config.is_rule_enabled("CC-SET-012") {
+            validate_sandbox_credentials(path, content, &value, &mut diagnostics);
         }
 
         diagnostics
@@ -764,6 +770,212 @@ fn validate_respond_to_bash_commands(
             "Set respondToBashCommands to an unquoted true or false. Use false to keep ! bash command output context-only.",
         ),
     );
+}
+
+/// CC-SET-012: Validate `sandbox.credentials`. Claude Code v2.1.187 added a
+/// dedicated credential-deny block for sandboxed Bash commands. The documented
+/// shape is:
+///
+/// ```json
+/// {
+///   "sandbox": {
+///     "credentials": {
+///       "files": [{"path": "~/.aws/credentials", "mode": "deny"}],
+///       "envVars": [{"name": "GITHUB_TOKEN", "mode": "deny"}]
+///     }
+///   }
+/// }
+/// ```
+///
+/// Both arrays are optional, but when present they must be arrays of objects.
+/// Each entry must name the credential target and carry `"mode": "deny"`; no
+/// other mode is currently supported.
+fn validate_sandbox_credentials(
+    path: &Path,
+    content: &str,
+    value: &serde_json::Value,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(credentials) = value.pointer("/sandbox/credentials") else {
+        return;
+    };
+
+    let credentials_line = find_key_line(content, "credentials")
+        .or_else(|| find_key_line(content, "sandbox"))
+        .unwrap_or(1);
+
+    let Some(credentials_obj) = credentials.as_object() else {
+        diagnostics.push(
+            Diagnostic::warning(
+                path.to_path_buf(),
+                credentials_line,
+                0,
+                "CC-SET-012",
+                format!(
+                    "sandbox.credentials must be an object with optional files and envVars arrays (got {})",
+                    describe_json_type(credentials)
+                ),
+            )
+            .with_suggestion(
+                "Set sandbox.credentials to an object like {\"files\":[{\"path\":\"~/.aws/credentials\",\"mode\":\"deny\"}],\"envVars\":[{\"name\":\"GITHUB_TOKEN\",\"mode\":\"deny\"}]} or remove it.",
+            ),
+        );
+        return;
+    };
+
+    validate_sandbox_credential_entries(
+        path,
+        content,
+        credentials_obj.get("files"),
+        "files",
+        "path",
+        "credential file path",
+        diagnostics,
+    );
+    validate_sandbox_credential_entries(
+        path,
+        content,
+        credentials_obj.get("envVars"),
+        "envVars",
+        "name",
+        "credential environment variable name",
+        diagnostics,
+    );
+}
+
+fn validate_sandbox_credential_entries(
+    path: &Path,
+    content: &str,
+    value: Option<&serde_json::Value>,
+    array_key: &str,
+    required_key: &str,
+    required_label: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(value) = value else {
+        return;
+    };
+
+    let line = find_key_line(content, array_key)
+        .or_else(|| find_key_line(content, "credentials"))
+        .or_else(|| find_key_line(content, "sandbox"))
+        .unwrap_or(1);
+
+    let Some(entries) = value.as_array() else {
+        diagnostics.push(
+            Diagnostic::warning(
+                path.to_path_buf(),
+                line,
+                0,
+                "CC-SET-012",
+                format!(
+                    "sandbox.credentials.{array_key} must be an array (got {})",
+                    describe_json_type(value)
+                ),
+            )
+            .with_suggestion(format!(
+                "Set sandbox.credentials.{array_key} to an array of objects with \"{required_key}\" and \"mode\": \"deny\".",
+            )),
+        );
+        return;
+    };
+
+    for (index, entry) in entries.iter().enumerate() {
+        let Some(entry_obj) = entry.as_object() else {
+            diagnostics.push(
+                Diagnostic::warning(
+                    path.to_path_buf(),
+                    line,
+                    0,
+                    "CC-SET-012",
+                    format!(
+                        "sandbox.credentials.{array_key}[{index}] must be an object (got {})",
+                        describe_json_type(entry)
+                    ),
+                )
+                .with_suggestion(format!(
+                    "Use {{\"{required_key}\": \"...\", \"mode\": \"deny\"}} for each sandbox.credentials.{array_key} entry.",
+                )),
+            );
+            continue;
+        };
+
+        match entry_obj.get(required_key).and_then(|v| v.as_str()) {
+            Some(s) if !s.is_empty() => {}
+            Some(_) => diagnostics.push(
+                Diagnostic::warning(
+                    path.to_path_buf(),
+                    line,
+                    0,
+                    "CC-SET-012",
+                    format!(
+                        "sandbox.credentials.{array_key}[{index}].{required_key} must not be empty"
+                    ),
+                )
+                .with_suggestion(format!(
+                    "Set sandbox.credentials.{array_key}[{index}].{required_key} to a non-empty {required_label}.",
+                )),
+            ),
+            None => {
+                let actual = entry_obj
+                    .get(required_key)
+                    .map(describe_json_type)
+                    .unwrap_or("missing");
+                diagnostics.push(
+                    Diagnostic::warning(
+                        path.to_path_buf(),
+                        line,
+                        0,
+                        "CC-SET-012",
+                        format!(
+                            "sandbox.credentials.{array_key}[{index}].{required_key} must be a string (got {actual})"
+                        ),
+                    )
+                    .with_suggestion(format!(
+                        "Set sandbox.credentials.{array_key}[{index}].{required_key} to a non-empty {required_label}.",
+                    )),
+                );
+            }
+        }
+
+        match entry_obj.get("mode").and_then(|v| v.as_str()) {
+            Some("deny") => {}
+            Some(mode) => diagnostics.push(
+                Diagnostic::warning(
+                    path.to_path_buf(),
+                    line,
+                    0,
+                    "CC-SET-012",
+                    format!(
+                        "sandbox.credentials.{array_key}[{index}].mode must be \"deny\" (got \"{mode}\")"
+                    ),
+                )
+                .with_suggestion(format!(
+                    "Set sandbox.credentials.{array_key}[{index}].mode to \"deny\"; no other mode is documented.",
+                )),
+            ),
+            None => {
+                let actual = entry_obj
+                    .get("mode")
+                    .map(describe_json_type)
+                    .unwrap_or("missing");
+                diagnostics.push(
+                    Diagnostic::warning(
+                        path.to_path_buf(),
+                        line,
+                        0,
+                        "CC-SET-012",
+                        format!(
+                            "sandbox.credentials.{array_key}[{index}].mode must be \"deny\" (got {actual})"
+                        ),
+                    )
+                    .with_suggestion(format!(
+                        "Set sandbox.credentials.{array_key}[{index}].mode to \"deny\".",
+                    )),
+                );
+            }
+        }
+    }
 }
 
 /// Renders a `serde_json::Value` variant as a short human-readable type
@@ -2037,5 +2249,228 @@ mod tests {
         let diagnostics =
             validator.validate(&path, r#"{"respondToBashCommands": "false"}"#, &config);
         assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-011"));
+    }
+
+    // ===== CC-SET-012: sandbox.credentials =====
+
+    #[test]
+    fn test_sandbox_credentials_documented_example_is_fine() {
+        let content = r#"{
+          "sandbox": {
+            "enabled": true,
+            "credentials": {
+              "files": [
+                { "path": "~/.aws/credentials", "mode": "deny" },
+                { "path": "~/.ssh", "mode": "deny" }
+              ],
+              "envVars": [
+                { "name": "GITHUB_TOKEN", "mode": "deny" },
+                { "name": "NPM_TOKEN", "mode": "deny" }
+              ]
+            }
+          }
+        }"#;
+        assert!(validate(content).iter().all(|d| d.rule != "CC-SET-012"));
+    }
+
+    #[test]
+    fn test_sandbox_credentials_absent_is_fine() {
+        let content = r#"{"sandbox": {"enabled": true}}"#;
+        assert!(validate(content).iter().all(|d| d.rule != "CC-SET-012"));
+    }
+
+    #[test]
+    fn test_sandbox_credentials_empty_object_is_fine() {
+        let content = r#"{"sandbox": {"credentials": {}}}"#;
+        assert!(validate(content).iter().all(|d| d.rule != "CC-SET-012"));
+    }
+
+    #[test]
+    fn test_sandbox_credentials_non_object_flags() {
+        let diagnostics = validate(r#"{"sandbox": {"credentials": []}}"#);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-012")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        assert!(hits[0].message.contains("object"));
+    }
+
+    #[test]
+    fn test_sandbox_credentials_files_must_be_array() {
+        let diagnostics = validate(r#"{"sandbox": {"credentials": {"files": true}}}"#);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-012")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        assert!(hits[0].message.contains("files"));
+        assert!(hits[0].message.contains("array"));
+    }
+
+    #[test]
+    fn test_sandbox_credentials_env_vars_must_be_array() {
+        let diagnostics = validate(r#"{"sandbox": {"credentials": {"envVars": "GITHUB_TOKEN"}}}"#);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-012")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        assert!(hits[0].message.contains("envVars"));
+        assert!(hits[0].message.contains("array"));
+    }
+
+    #[test]
+    fn test_sandbox_credentials_entries_must_be_objects() {
+        let diagnostics = validate(r#"{"sandbox": {"credentials": {"files": ["~/.ssh"]}}}"#);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-012")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        assert!(hits[0].message.contains("files[0]"));
+        assert!(hits[0].message.contains("object"));
+    }
+
+    #[test]
+    fn test_sandbox_credentials_file_entry_requires_path() {
+        let diagnostics =
+            validate(r#"{"sandbox": {"credentials": {"files": [{"mode": "deny"}]}}}"#);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-012")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        assert!(hits[0].message.contains(".path"));
+        assert!(hits[0].message.contains("missing"));
+    }
+
+    #[test]
+    fn test_sandbox_credentials_env_var_entry_requires_name() {
+        let diagnostics =
+            validate(r#"{"sandbox": {"credentials": {"envVars": [{"mode": "deny"}]}}}"#);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-012")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        assert!(hits[0].message.contains(".name"));
+        assert!(hits[0].message.contains("missing"));
+    }
+
+    #[test]
+    fn test_sandbox_credentials_empty_path_flags() {
+        let diagnostics =
+            validate(r#"{"sandbox": {"credentials": {"files": [{"path": "", "mode": "deny"}]}}}"#);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-012")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        assert!(hits[0].message.contains("must not be empty"));
+    }
+
+    #[test]
+    fn test_sandbox_credentials_mode_must_be_deny() {
+        let diagnostics = validate(
+            r#"{"sandbox": {"credentials": {"files": [{"path": "~/.aws/credentials", "mode": "allow"}]}}}"#,
+        );
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-012")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        assert!(hits[0].message.contains("mode"));
+        assert!(hits[0].message.contains("deny"));
+    }
+
+    #[test]
+    fn test_sandbox_credentials_mode_is_required() {
+        let diagnostics =
+            validate(r#"{"sandbox": {"credentials": {"envVars": [{"name": "GITHUB_TOKEN"}]}}}"#);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-012")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        assert!(hits[0].message.contains("mode"));
+        assert!(hits[0].message.contains("missing"));
+    }
+
+    #[test]
+    fn test_sandbox_credentials_multiple_bad_entries_flag_independently() {
+        let diagnostics = validate(
+            r#"{
+              "sandbox": {
+                "credentials": {
+                  "files": [
+                    {"path": "~/.ssh", "mode": "allow"},
+                    {"path": 42, "mode": "deny"}
+                  ],
+                  "envVars": [
+                    {"name": "", "mode": "deny"}
+                  ]
+                }
+              }
+            }"#,
+        );
+        assert_eq!(
+            diagnostics
+                .iter()
+                .filter(|d| d.rule == "CC-SET-012")
+                .count(),
+            3
+        );
+    }
+
+    #[test]
+    fn test_sandbox_credentials_runs_on_managed_settings() {
+        let content = r#"{"sandbox": {"credentials": {"files": [{"path": "~/.ssh"}]}}}"#;
+        let diagnostics = validate_at(".claude/managed-settings.json", content);
+        assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-012"));
+    }
+
+    #[test]
+    fn test_sandbox_credentials_line_points_at_array_key() {
+        let content =
+            "{\n  \"sandbox\": {\n    \"credentials\": {\n      \"files\": true\n    }\n  }\n}";
+        let diagnostics = validate(content);
+        let hit = diagnostics
+            .iter()
+            .find(|d| d.rule == "CC-SET-012")
+            .expect("CC-SET-012 diagnostic");
+        assert_eq!(hit.line, 4);
+    }
+
+    #[test]
+    fn test_sandbox_credentials_can_be_disabled() {
+        let mut builder = LintConfig::builder();
+        builder.disable_rule("CC-SET-012");
+        let config = builder.build().unwrap();
+        let validator = ClaudeSettingsValidator;
+        let path = PathBuf::from(".claude/settings.json");
+        let diagnostics = validator.validate(
+            &path,
+            r#"{"sandbox": {"credentials": {"files": [{"path": "~/.ssh"}]}}}"#,
+            &config,
+        );
+        assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-012"));
+    }
+
+    #[test]
+    fn test_sandbox_credentials_coexists_with_other_sandbox_rules() {
+        let content = r#"{
+          "sandbox": {
+            "bwrapPath": "",
+            "allowAppleEvents": "true",
+            "credentials": {
+              "files": [{"path": "~/.ssh", "mode": "allow"}]
+            }
+          }
+        }"#;
+        let diagnostics = validate(content);
+        assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-004"));
+        assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-008"));
+        assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-012"));
     }
 }
