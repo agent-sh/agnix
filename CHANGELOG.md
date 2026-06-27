@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.36.1] - 2026-06-27
+
 ### Added
 - **CC-SET-013: Non-boolean autoMode.classifyAllShell Setting** (closes #1084). Claude Code v2.1.193 added `autoMode.classifyAllShell` to route all Bash/PowerShell commands through the auto-mode classifier. New MEDIUM `claude-settings` rule warns when `autoMode.classifyAllShell` is present with a non-boolean value in `settings.json`, `settings.local.json`, or `managed-settings.json`; strict `true`/`false` values, `null`, and absent keys are accepted.
 - **CDX-PL-016: Invalid Dark-mode Logo Path** (closes #1081). Codex CLI `rust-v0.142.2` added local plugin manifest `interface.logoDark` for dark-mode logo assets. New MEDIUM Codex plugin rule validates that `logoDark` starts with `./` and does not traverse outside the plugin root. Rule count 430 -> 432.
