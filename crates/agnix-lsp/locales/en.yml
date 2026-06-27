@@ -903,6 +903,9 @@ rules:
   cdx_pl_014:
     message: Missing 'description' field - recommended for marketplace visibility
     suggestion: Add a 'description' string to plugin.json for better discoverability
+  cdx_pl_016:
+    message: Dark-mode logo path '%{path}' in interface.logoDark must start with ./ and not use '..' traversal
+    suggestion: Use a relative dark-mode logo asset path such as './assets/logo-dark.png'
   roo_001:
     message: Roo Code rule file is empty
     suggestion: Add rule content to the file
@@ -1198,6 +1201,11 @@ rules:
       attribution toggle as a strict true/false setting
     suggestion: Set attribution.sessionUrl to an unquoted true or false. Use false to omit claude.ai session links from
       commits and PR descriptions created from web or Remote Control sessions.
+  cc_set_013:
+    message: autoMode.classifyAllShell must be a boolean when present (got %{actual}); Claude Code 2.1.193+ documents this
+      auto-mode setting as a strict true/false toggle
+    suggestion: Set autoMode.classifyAllShell to an unquoted true or false, or remove it to keep the default auto-mode
+      classifier scope.
   cdx_pl_015:
     message: '''skills'' must be a string path, not %{actual}'
     suggestion: Set 'skills' to a relative path string such as './skills', or remove the field

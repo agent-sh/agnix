@@ -626,6 +626,9 @@ rules:
   cdx_pl_014:
     message: Falta el campo 'description' - recomendado para visibilidad en el marketplace
     suggestion: Agrega una cadena 'description' a plugin.json para mejor descubrimiento
+  cdx_pl_016:
+    message: La ruta de logo oscuro '%{path}' en interface.logoDark debe comenzar con ./ y no usar recorrido '..'
+    suggestion: Usa una ruta relativa para el logo oscuro, como './assets/logo-dark.png'
   pe_001:
     message: Palabra clave critica '%{keyword}' al %{percent} por ciento del documento (40-60 por ciento es la zona 'perdido
       en el medio')
@@ -722,6 +725,11 @@ rules:
       documenta esta atribucion como una configuracion true/false estricta
     suggestion: Establece attribution.sessionUrl en true o false sin comillas. Usa false para omitir enlaces de sesion
       claude.ai en commits y descripciones de PR creados desde sesiones web o Remote Control.
+  cc_set_013:
+    message: autoMode.classifyAllShell debe ser un booleano cuando esta presente (se obtuvo %{actual}); Claude Code 2.1.193+
+      documenta esta configuracion de auto-mode como un interruptor true/false estricto
+    suggestion: Establece autoMode.classifyAllShell en true o false sin comillas, o quitalo para conservar el alcance
+      predeterminado del clasificador auto-mode.
 
 
 # ===========================================================================
