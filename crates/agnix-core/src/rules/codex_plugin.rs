@@ -229,7 +229,7 @@ impl Validator for CodexPluginValidator {
             if config.is_rule_enabled("CDX-PL-016")
                 && let Some(val) = interface.get("logoDark").and_then(|v| v.as_str())
             {
-                validate_logo_dark_path(val, path, &mut diagnostics);
+                validate_logo_dark_path(val, path, content, &mut diagnostics);
             }
         }
 
@@ -527,17 +527,18 @@ fn validate_asset_path(p: &str, field: &str, path: &Path, diagnostics: &mut Vec<
 }
 
 /// Validate the dark-mode logo asset path in the interface section.
-fn validate_logo_dark_path(p: &str, path: &Path, diagnostics: &mut Vec<Diagnostic>) {
+fn validate_logo_dark_path(p: &str, path: &Path, content: &str, diagnostics: &mut Vec<Diagnostic>) {
     let trimmed = p.trim();
     if trimmed.is_empty() {
         return;
     }
 
     if has_traversal(trimmed) || (!trimmed.starts_with("./") && !trimmed.starts_with(".\\")) {
+        let line = find_json_key_line(content, "logoDark").unwrap_or(1);
         diagnostics.push(
             Diagnostic::warning(
                 path.to_path_buf(),
-                1,
+                line,
                 0,
                 "CDX-PL-016",
                 t!("rules.cdx_pl_016.message", path = trimmed),
@@ -545,6 +546,14 @@ fn validate_logo_dark_path(p: &str, path: &Path, diagnostics: &mut Vec<Diagnosti
             .with_suggestion(t!("rules.cdx_pl_016.suggestion")),
         );
     }
+}
+
+fn find_json_key_line(content: &str, key: &str) -> Option<usize> {
+    let needle = format!("\"{}\"", key);
+    content
+        .lines()
+        .position(|line| line.contains(&needle))
+        .map(|idx| idx + 1)
 }
 
 #[cfg(test)]
@@ -1148,7 +1157,7 @@ mod tests {
         let plugin_path = temp.path().join(".codex-plugin").join("plugin.json");
         write_plugin(
             &plugin_path,
-            r#"{"name":"test","description":"desc","interface":{"logoDark":"assets/logo-dark.png"}}"#,
+            "{\n  \"name\":\"test\",\n  \"description\":\"desc\",\n  \"interface\":{\n    \"logoDark\":\"assets/logo-dark.png\"\n  }\n}",
         );
 
         let validator = CodexPluginValidator;
@@ -1158,7 +1167,11 @@ mod tests {
             &LintConfig::default(),
         );
 
-        assert!(diagnostics.iter().any(|d| d.rule == "CDX-PL-016"));
+        let hit = diagnostics
+            .iter()
+            .find(|d| d.rule == "CDX-PL-016")
+            .expect("CDX-PL-016 diagnostic");
+        assert_eq!(hit.line, 5);
         assert!(!diagnostics.iter().any(|d| d.rule == "CDX-PL-012"));
     }
 
