@@ -23,6 +23,9 @@ object AgnixBinaryResolver {
     const val BINARY_NAME_WINDOWS = "agnix-lsp.exe"
     const val VERSION_MARKER_FILE = ".agnix-lsp-version"
 
+    // Build-time generated resource carrying the plugin version (see build.gradle.kts).
+    private const val VERSION_RESOURCE = "/agnix-plugin-version.properties"
+
     // Cache for resolved binary path - cleared when settings change or binary is downloaded
     @Volatile
     private var cachedBinaryPath: String? = null
@@ -76,9 +79,35 @@ object AgnixBinaryResolver {
     }
 
     /**
-     * Get the current plugin version from the plugin jar manifest.
+     * Get the current plugin version.
+     *
+     * Resolution order, chosen to be IntelliJ Plugin Verifier safe on platform builds up to
+     * 262.* (where the descriptor APIs - PluginManagerCore.getPlugin / PluginManager.getPluginByClass -
+     * are @ApiStatus.Internal and would be flagged):
+     *
+     * 1. A build-time generated resource (`/agnix-plugin-version.properties`). This works
+     *    identically in local development, `runIde`, unit tests, and the installed plugin
+     *    because it ships inside the classpath (jar or exploded build directory).
+     * 2. The plugin jar manifest, as a fallback for the installed plugin if the resource is
+     *    ever missing. (This returns null in dev/runIde where classes load from a directory.)
      */
     fun getPluginVersion(): String? {
+        readPluginVersionFromResource()?.let { return it }
+        return readPluginVersionFromJarLocation()
+    }
+
+    internal fun readPluginVersionFromResource(): String? {
+        return try {
+            AgnixBinaryResolver::class.java.getResourceAsStream(VERSION_RESOURCE)?.use { stream ->
+                val props = java.util.Properties().apply { load(stream) }
+                props.getProperty("plugin.version")?.trim()?.takeIf { it.isNotEmpty() }
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun readPluginVersionFromJarLocation(): String? {
         return try {
             val location = AgnixBinaryResolver::class.java.protectionDomain?.codeSource?.location ?: return null
             readPluginVersionFromJar(File(location.toURI()))
@@ -91,7 +120,7 @@ object AgnixBinaryResolver {
         if (!jarFile.isFile) return null
 
         return JarFile(jarFile).use {
-            it.manifest?.mainAttributes?.getValue("Version")
+            it.manifest?.mainAttributes?.getValue("Version")?.trim()?.takeIf { v -> v.isNotEmpty() }
         }
     }
 

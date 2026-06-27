@@ -149,10 +149,20 @@ class AgnixBinaryResolverTest {
     }
 
     @Test
-    fun `getPluginVersion reads manifest when available`() {
+    fun `getPluginVersion returns non-blank or null`() {
         val version = AgnixBinaryResolver.getPluginVersion()
 
         assertTrue(version == null || version.isNotBlank())
+    }
+
+    @Test
+    fun `readPluginVersionFromResource reads generated version resource`() {
+        // The build generates /agnix-plugin-version.properties onto the classpath; the test
+        // runtime classpath includes it, so this should resolve to the plugin version.
+        val version = AgnixBinaryResolver.readPluginVersionFromResource()
+
+        assertNotNull(version, "generated plugin version resource should be on the test classpath")
+        assertTrue(version!!.isNotBlank())
     }
 
     @Test
@@ -165,6 +175,23 @@ class AgnixBinaryResolverTest {
         JarOutputStream(jarFile.outputStream(), manifest).use {}
 
         assertEquals("1.2.3", AgnixBinaryResolver.readPluginVersionFromJar(jarFile))
+    }
+
+    @Test
+    fun `readPluginVersionFromJar returns null for blank manifest version`(@TempDir tempDir: Path) {
+        val manifest = Manifest().apply {
+            mainAttributes[Attributes.Name.MANIFEST_VERSION] = "1.0"
+            mainAttributes.putValue("Version", "   ")
+        }
+        val jarFile = tempDir.resolve("plugin.jar").toFile()
+        JarOutputStream(jarFile.outputStream(), manifest).use {}
+
+        assertNull(AgnixBinaryResolver.readPluginVersionFromJar(jarFile))
+    }
+
+    @Test
+    fun `readPluginVersionFromJar returns null when path is not a jar`(@TempDir tempDir: Path) {
+        assertNull(AgnixBinaryResolver.readPluginVersionFromJar(tempDir.toFile()))
     }
 
     @Test

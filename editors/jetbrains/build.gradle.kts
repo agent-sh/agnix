@@ -109,3 +109,25 @@ tasks {
         useJUnitPlatform()
     }
 }
+
+// Emit the plugin version as a classpath resource so it can be read at runtime without
+// relying on IntelliJ descriptor APIs (which are @ApiStatus.Internal on platform builds up
+// to 262.* and would be flagged by the plugin verifier). The resource is on the classpath in
+// local development, runIde, unit tests, and the installed plugin alike.
+val generatePluginVersionResource = tasks.register("generatePluginVersionResource") {
+    val outputDir = layout.buildDirectory.dir("generated/pluginVersion")
+    val pluginVersion = version.toString()
+    inputs.property("pluginVersion", pluginVersion)
+    outputs.dir(outputDir)
+    doLast {
+        val file = outputDir.get().file("agnix-plugin-version.properties").asFile
+        file.parentFile.mkdirs()
+        file.writeText("plugin.version=$pluginVersion\n")
+    }
+}
+
+sourceSets {
+    main {
+        resources.srcDir(generatePluginVersionResource.map { it.outputs.files })
+    }
+}
