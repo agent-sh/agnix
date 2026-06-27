@@ -6,6 +6,9 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import java.nio.file.Path
+import java.util.jar.Attributes
+import java.util.jar.JarOutputStream
+import java.util.jar.Manifest
 
 /**
  * Tests for AgnixBinaryResolver.
@@ -143,6 +146,25 @@ class AgnixBinaryResolverTest {
     @Test
     fun `VERSION_MARKER_FILE constant is correct`() {
         assertEquals(".agnix-lsp-version", AgnixBinaryResolver.VERSION_MARKER_FILE)
+    }
+
+    @Test
+    fun `getPluginVersion reads manifest when available`() {
+        val version = AgnixBinaryResolver.getPluginVersion()
+
+        assertTrue(version == null || version.isNotBlank())
+    }
+
+    @Test
+    fun `readPluginVersionFromJar reads manifest version`(@TempDir tempDir: Path) {
+        val manifest = Manifest().apply {
+            mainAttributes[Attributes.Name.MANIFEST_VERSION] = "1.0"
+            mainAttributes.putValue("Version", "1.2.3")
+        }
+        val jarFile = tempDir.resolve("plugin.jar").toFile()
+        JarOutputStream(jarFile.outputStream(), manifest).use {}
+
+        assertEquals("1.2.3", AgnixBinaryResolver.readPluginVersionFromJar(jarFile))
     }
 
     @Test

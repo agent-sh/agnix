@@ -413,6 +413,9 @@ jobs:
           TAG_VERSION="${GITHUB_REF#refs/tags/v}"
           bash scripts/sync-versions.sh "${TAG_VERSION}"
 
+      - name: Verify plugin compatibility
+        run: ./gradlew test verifyPluginProjectConfiguration verifyPlugin
+
       - name: Build and publish plugin
         run: ./gradlew publishPlugin
         env:

@@ -1,10 +1,9 @@
 package io.agnix.jetbrains.binary
 
-import com.intellij.ide.plugins.PluginManagerCore
 import com.intellij.openapi.application.PathManager
 import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.extensions.PluginId
 import java.io.File
+import java.util.jar.JarFile
 
 /**
  * Resolves the location of the agnix-lsp binary.
@@ -23,7 +22,6 @@ object AgnixBinaryResolver {
     const val BINARY_NAME = "agnix-lsp"
     const val BINARY_NAME_WINDOWS = "agnix-lsp.exe"
     const val VERSION_MARKER_FILE = ".agnix-lsp-version"
-    private const val PLUGIN_ID = "io.agnix.jetbrains"
 
     // Cache for resolved binary path - cleared when settings change or binary is downloaded
     @Volatile
@@ -78,10 +76,23 @@ object AgnixBinaryResolver {
     }
 
     /**
-     * Get the current plugin version from the plugin descriptor.
+     * Get the current plugin version from the plugin jar manifest.
      */
     fun getPluginVersion(): String? {
-        return PluginManagerCore.getPlugin(PluginId.getId(PLUGIN_ID))?.version
+        return try {
+            val location = AgnixBinaryResolver::class.java.protectionDomain?.codeSource?.location ?: return null
+            readPluginVersionFromJar(File(location.toURI()))
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    internal fun readPluginVersionFromJar(jarFile: File): String? {
+        if (!jarFile.isFile) return null
+
+        return JarFile(jarFile).use {
+            it.manifest?.mainAttributes?.getValue("Version")
+        }
     }
 
     /**
