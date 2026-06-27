@@ -1,8 +1,8 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 430,
-  "last_updated": "2026-06-25",
+  "total_rules": 432,
+  "last_updated": "2026-06-27",
   "schema": {
     "evidence": {
       "source_type": "spec|vendor_docs|vendor_code|paper|community",
@@ -3812,6 +3812,34 @@
       "bad_example": "{\n  \"sandbox\": {\n    \"credentials\": {\n      \"files\": [\n        {\"path\": \"~/.aws/credentials\", \"mode\": \"allow\"}\n      ],\n      \"envVars\": [\n        {\"name\": \"GITHUB_TOKEN\"}\n      ]\n    }\n  }\n}"
     },
     {
+      "id": "CC-SET-013",
+      "name": "Non-boolean autoMode.classifyAllShell Setting",
+      "severity": "MEDIUM",
+      "category": "claude-settings",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.193"
+        ],
+        "verified_on": "2026-06-27",
+        "applies_to": {
+          "tool": "claude-code",
+          "version_range": ">=2.1.193"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"autoMode\": {\"classifyAllShell\": true}\n}",
+      "bad_example": "{\n  \"autoMode\": {\"classifyAllShell\": \"true\"}\n}"
+    },
+    {
       "id": "CDX-000",
       "name": "TOML Parse Error",
       "severity": "HIGH",
@@ -5326,6 +5354,35 @@
       },
       "good_example": "{\"name\": \"my-plugin\", \"skills\": \"./skills\"}",
       "bad_example": "{\"name\": \"my-plugin\", \"skills\": [\"./skills\"]}"
+    },
+    {
+      "id": "CDX-PL-016",
+      "name": "Invalid Dark-mode Logo Path",
+      "severity": "MEDIUM",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/openai/codex/pull/29488",
+          "https://github.com/openai/codex/blob/rust-v0.142.2/codex-rs/core-plugins/src/manifest.rs"
+        ],
+        "verified_on": "2026-06-27",
+        "applies_to": {
+          "tool": "codex",
+          "version_range": ">=0.142.2"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"name\": \"my-plugin\", \"interface\": {\"logoDark\": \"./assets/logo-dark.png\"}}",
+      "bad_example": "{\"name\": \"my-plugin\", \"interface\": {\"logoDark\": \"assets/logo-dark.png\"}}"
     },
     {
       "id": "CDX-CFG-023",
@@ -11965,7 +12022,7 @@
     },
     "codex": {
       "prefix": "CDX",
-      "count": 64,
+      "count": 65,
       "description": "Codex CLI configuration validation"
     },
     "roo-code": {
@@ -12085,7 +12142,7 @@
     },
     "claude-settings": {
       "prefix": "CC-SET",
-      "count": 12,
+      "count": 13,
       "description": "Claude Code settings (.claude/settings.json) rules"
     },
     "gemini-agents": {

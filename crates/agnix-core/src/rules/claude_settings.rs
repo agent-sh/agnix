@@ -17,6 +17,7 @@
 //! - `teammateMode` enum check (CC-SET-010, `iterm2` added in Claude Code v2.1.186).
 //! - `respondToBashCommands` boolean check (CC-SET-011, added in Claude Code v2.1.186).
 //! - `sandbox.credentials` shape check (CC-SET-012, added in Claude Code v2.1.187).
+//! - `autoMode.classifyAllShell` boolean check (CC-SET-013, added in Claude Code v2.1.193).
 //!
 //! Runs on FileType::Hooks (which covers `.claude/settings.json` -
 //! see `file_types/detection.rs`). Skips non-Claude Code settings paths
@@ -43,6 +44,7 @@ const RULE_IDS: &[&str] = &[
     "CC-SET-010",
     "CC-SET-011",
     "CC-SET-012",
+    "CC-SET-013",
 ];
 
 /// Allowed values for `worktree.baseRef` per Claude Code v2.1.133 release notes.
@@ -136,6 +138,10 @@ impl Validator for ClaudeSettingsValidator {
 
         if config.is_rule_enabled("CC-SET-012") {
             validate_sandbox_credentials(path, content, &value, &mut diagnostics);
+        }
+
+        if config.is_rule_enabled("CC-SET-013") {
+            validate_auto_mode_classify_all_shell(path, content, &value, &mut diagnostics);
         }
 
         diagnostics
@@ -976,6 +982,42 @@ fn validate_sandbox_credential_entries(
             }
         }
     }
+}
+
+/// CC-SET-013: Validate `autoMode.classifyAllShell`. Claude Code v2.1.193
+/// added this nested auto-mode setting so all Bash/PowerShell commands route
+/// through the auto-mode classifier. The release note describes it as an
+/// enabled/disabled setting, so agnix treats it like the other CC-SET boolean
+/// toggles: only strict JSON booleans are valid when present.
+fn validate_auto_mode_classify_all_shell(
+    path: &Path,
+    content: &str,
+    value: &serde_json::Value,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(field_value) = value.pointer("/autoMode/classifyAllShell") else {
+        return;
+    };
+
+    if field_value.is_boolean() || field_value.is_null() {
+        return;
+    }
+
+    let actual = describe_json_type(field_value);
+    let line = find_key_line(content, "classifyAllShell")
+        .or_else(|| find_key_line(content, "autoMode"))
+        .unwrap_or(1);
+
+    diagnostics.push(
+        Diagnostic::warning(
+            path.to_path_buf(),
+            line,
+            0,
+            "CC-SET-013",
+            t!("rules.cc_set_013.message", actual = actual),
+        )
+        .with_suggestion(t!("rules.cc_set_013.suggestion")),
+    );
 }
 
 /// Renders a `serde_json::Value` variant as a short human-readable type
@@ -2472,5 +2514,90 @@ mod tests {
         assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-004"));
         assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-008"));
         assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-012"));
+    }
+
+    // ===== CC-SET-013: autoMode.classifyAllShell =====
+
+    #[test]
+    fn test_auto_mode_classify_all_shell_boolean_values_are_fine() {
+        assert!(
+            validate(r#"{"autoMode": {"classifyAllShell": true}}"#)
+                .iter()
+                .all(|d| d.rule != "CC-SET-013")
+        );
+        assert!(
+            validate(r#"{"autoMode": {"classifyAllShell": false}}"#)
+                .iter()
+                .all(|d| d.rule != "CC-SET-013")
+        );
+    }
+
+    #[test]
+    fn test_auto_mode_classify_all_shell_null_is_not_flagged() {
+        let content = r#"{"autoMode": {"classifyAllShell": null}}"#;
+        assert!(validate(content).iter().all(|d| d.rule != "CC-SET-013"));
+    }
+
+    #[test]
+    fn test_auto_mode_classify_all_shell_quoted_string_flags() {
+        let diagnostics = validate(r#"{"autoMode": {"classifyAllShell": "true"}}"#);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-013")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].level, crate::diagnostics::DiagnosticLevel::Warning);
+        assert!(hits[0].message.to_lowercase().contains("boolean"));
+        assert!(hits[0].message.to_lowercase().contains("string"));
+    }
+
+    #[test]
+    fn test_auto_mode_classify_all_shell_number_flags() {
+        let diagnostics = validate(r#"{"autoMode": {"classifyAllShell": 1}}"#);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-013")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        assert!(hits[0].message.to_lowercase().contains("number"));
+    }
+
+    #[test]
+    fn test_auto_mode_classify_all_shell_ignores_non_object_auto_mode() {
+        let content = r#"{"autoMode": "enabled"}"#;
+        assert!(validate(content).iter().all(|d| d.rule != "CC-SET-013"));
+    }
+
+    #[test]
+    fn test_auto_mode_classify_all_shell_runs_on_managed_settings() {
+        let content = r#"{"autoMode": {"classifyAllShell": "true"}}"#;
+        let diagnostics = validate_at(".claude/managed-settings.json", content);
+        assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-013"));
+    }
+
+    #[test]
+    fn test_auto_mode_classify_all_shell_line_points_at_key() {
+        let content = "{\n  \"autoMode\": {\n    \"classifyAllShell\": \"true\"\n  }\n}";
+        let diagnostics = validate(content);
+        let hit = diagnostics
+            .iter()
+            .find(|d| d.rule == "CC-SET-013")
+            .expect("CC-SET-013 diagnostic");
+        assert_eq!(hit.line, 3);
+    }
+
+    #[test]
+    fn test_auto_mode_classify_all_shell_can_be_disabled() {
+        let mut builder = LintConfig::builder();
+        builder.disable_rule("CC-SET-013");
+        let config = builder.build().unwrap();
+        let validator = ClaudeSettingsValidator;
+        let path = PathBuf::from(".claude/settings.json");
+        let diagnostics = validator.validate(
+            &path,
+            r#"{"autoMode": {"classifyAllShell": "true"}}"#,
+            &config,
+        );
+        assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-013"));
     }
 }

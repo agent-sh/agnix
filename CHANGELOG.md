@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **CC-SET-013: Non-boolean autoMode.classifyAllShell Setting** (closes #1084). Claude Code v2.1.193 added `autoMode.classifyAllShell` to route all Bash/PowerShell commands through the auto-mode classifier. New MEDIUM `claude-settings` rule warns when `autoMode.classifyAllShell` is present with a non-boolean value in `settings.json`, `settings.local.json`, or `managed-settings.json`; strict `true`/`false` values, `null`, and absent keys are accepted.
+- **CDX-PL-016: Invalid Dark-mode Logo Path** (closes #1081). Codex CLI `rust-v0.142.2` added local plugin manifest `interface.logoDark` for dark-mode logo assets. New MEDIUM Codex plugin rule validates that `logoDark` starts with `./` and does not traverse outside the plugin root. Rule count 430 -> 432.
+
+### Changed
+- **Tool baselines**: completed the release-watch sweep and bumped `amp` `end-of-public-threads` -> `custom-agents`, `claude-code` `v2.1.187` -> `v2.1.195`, `cline` `cli-v3.0.24` -> `cli-v3.0.31`, `codex` `rust-v0.142.0` -> `rust-v0.142.3`, `cursor` `3.8.11` -> `3.9.8`, `gemini-cli` `v0.45.1` -> `v0.49.0`, `kiro` `2.8.0` -> `2.10.0`, and `opencode` `v1.17.7` -> `v1.17.11` (closes #1079, #1082, #1083, #1085, #1086, #1087). Aside from the Claude Code and Codex changes above, the releases were triaged as UI/runtime/provider/model/packaging/news changes outside agnix's current validated config surfaces. `.github/tool-release-baselines.json`, `knowledge-base/RESEARCH-TRACKING.md`, rule metadata, and generated rule docs were updated.
+
 ## [0.36.0] - 2026-06-25
 
 ### Added

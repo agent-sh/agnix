@@ -1,4 +1,4 @@
-//! Codex CLI plugin manifest validation (CDX-PL-001 to CDX-PL-015).
+//! Codex CLI plugin manifest validation (CDX-PL-001 to CDX-PL-016).
 //!
 //! Validates `.codex-plugin/plugin.json` manifests for the Codex CLI
 //! plugin system introduced in v0.117.0.
@@ -27,6 +27,7 @@ const RULE_IDS: &[&str] = &[
     "CDX-PL-013",
     "CDX-PL-014",
     "CDX-PL-015",
+    "CDX-PL-016",
 ];
 
 /// Max number of defaultPrompt entries
@@ -220,6 +221,15 @@ impl Validator for CodexPluginValidator {
                         }
                     }
                 }
+            }
+
+            // CDX-PL-016: dark-mode logo asset path validation. Codex
+            // rust-v0.142.2 added interface.logoDark as a separate local
+            // manifest field from remote catalog logoUrlDark values.
+            if config.is_rule_enabled("CDX-PL-016")
+                && let Some(val) = interface.get("logoDark").and_then(|v| v.as_str())
+            {
+                validate_logo_dark_path(val, path, content, &mut diagnostics);
             }
         }
 
@@ -514,6 +524,36 @@ fn validate_asset_path(p: &str, field: &str, path: &Path, diagnostics: &mut Vec<
             .with_suggestion(t!("rules.cdx_pl_012.suggestion")),
         );
     }
+}
+
+/// Validate the dark-mode logo asset path in the interface section.
+fn validate_logo_dark_path(p: &str, path: &Path, content: &str, diagnostics: &mut Vec<Diagnostic>) {
+    let trimmed = p.trim();
+    if trimmed.is_empty() {
+        return;
+    }
+
+    if has_traversal(trimmed) || (!trimmed.starts_with("./") && !trimmed.starts_with(".\\")) {
+        let line = find_json_key_line(content, "logoDark").unwrap_or(1);
+        diagnostics.push(
+            Diagnostic::warning(
+                path.to_path_buf(),
+                line,
+                0,
+                "CDX-PL-016",
+                t!("rules.cdx_pl_016.message", path = trimmed),
+            )
+            .with_suggestion(t!("rules.cdx_pl_016.suggestion")),
+        );
+    }
+}
+
+fn find_json_key_line(content: &str, key: &str) -> Option<usize> {
+    let needle = format!("\"{}\"", key);
+    content
+        .lines()
+        .position(|line| line.contains(&needle))
+        .map(|idx| idx + 1)
 }
 
 #[cfg(test)]
@@ -1107,6 +1147,92 @@ mod tests {
         );
 
         assert!(diagnostics.iter().any(|d| d.rule == "CDX-PL-012"));
+    }
+
+    // ===== CDX-PL-016: Dark-mode logo asset path =====
+
+    #[test]
+    fn test_cdx_pl_016_logo_dark_missing_dot_slash() {
+        let temp = TempDir::new().unwrap();
+        let plugin_path = temp.path().join(".codex-plugin").join("plugin.json");
+        write_plugin(
+            &plugin_path,
+            "{\n  \"name\":\"test\",\n  \"description\":\"desc\",\n  \"interface\":{\n    \"logoDark\":\"assets/logo-dark.png\"\n  }\n}",
+        );
+
+        let validator = CodexPluginValidator;
+        let diagnostics = validator.validate(
+            &plugin_path,
+            &fs::read_to_string(&plugin_path).unwrap(),
+            &LintConfig::default(),
+        );
+
+        let hit = diagnostics
+            .iter()
+            .find(|d| d.rule == "CDX-PL-016")
+            .expect("CDX-PL-016 diagnostic");
+        assert_eq!(hit.line, 5);
+        assert!(!diagnostics.iter().any(|d| d.rule == "CDX-PL-012"));
+    }
+
+    #[test]
+    fn test_cdx_pl_016_logo_dark_valid_path() {
+        let temp = TempDir::new().unwrap();
+        let plugin_path = temp.path().join(".codex-plugin").join("plugin.json");
+        write_plugin(
+            &plugin_path,
+            r#"{"name":"test","description":"desc","interface":{"logoDark":"./assets/logo-dark.png"}}"#,
+        );
+
+        let validator = CodexPluginValidator;
+        let diagnostics = validator.validate(
+            &plugin_path,
+            &fs::read_to_string(&plugin_path).unwrap(),
+            &LintConfig::default(),
+        );
+
+        assert!(!diagnostics.iter().any(|d| d.rule == "CDX-PL-016"));
+    }
+
+    #[test]
+    fn test_cdx_pl_016_logo_dark_traversal() {
+        let temp = TempDir::new().unwrap();
+        let plugin_path = temp.path().join(".codex-plugin").join("plugin.json");
+        write_plugin(
+            &plugin_path,
+            r#"{"name":"test","description":"desc","interface":{"logoDark":"./assets/../secret.png"}}"#,
+        );
+
+        let validator = CodexPluginValidator;
+        let diagnostics = validator.validate(
+            &plugin_path,
+            &fs::read_to_string(&plugin_path).unwrap(),
+            &LintConfig::default(),
+        );
+
+        assert!(diagnostics.iter().any(|d| d.rule == "CDX-PL-016"));
+    }
+
+    #[test]
+    fn test_cdx_pl_016_can_be_disabled() {
+        let temp = TempDir::new().unwrap();
+        let plugin_path = temp.path().join(".codex-plugin").join("plugin.json");
+        write_plugin(
+            &plugin_path,
+            r#"{"name":"test","description":"desc","interface":{"logoDark":"assets/logo-dark.png"}}"#,
+        );
+
+        let mut config = LintConfig::default();
+        config.rules_mut().disabled_rules = vec!["CDX-PL-016".to_string()];
+
+        let validator = CodexPluginValidator;
+        let diagnostics = validator.validate(
+            &plugin_path,
+            &fs::read_to_string(&plugin_path).unwrap(),
+            &config,
+        );
+
+        assert!(!diagnostics.iter().any(|d| d.rule == "CDX-PL-016"));
     }
 
     // ===== CDX-PL-013: hooks not supported =====

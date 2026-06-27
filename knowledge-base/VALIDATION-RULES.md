@@ -429,6 +429,13 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Fix**: Manual - set entries to `{ "path": "...", "mode": "deny" }` for credential files and `{ "name": "...", "mode": "deny" }` for credential environment variables, or remove invalid entries.
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.187 (added `sandbox.credentials`), code.claude.com/docs/en/settings, code.claude.com/docs/en/sandboxing
 
+<a id="cc-set-013"></a>
+### CC-SET-013 [MEDIUM] Non-boolean autoMode.classifyAllShell Setting
+**Requirement**: `autoMode.classifyAllShell` in `.claude/settings.json` / `.local.json` / `managed-settings.json` MUST be a boolean when present (Claude Code 2.1.193+). `true` routes all Bash/PowerShell commands through the auto-mode classifier; only strict `true`/`false` is documented.
+**Detection**: Parse settings.json; walk `autoMode.classifyAllShell`; flag (warning) non-boolean types (string, number, array, object). `null` values and absent keys are not flagged. Non-object `autoMode` values are ignored by this rule to avoid conflating container shape errors with the specific boolean toggle.
+**Fix**: Manual - set `autoMode.classifyAllShell` to an unquoted `true` or `false`.
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.193 (added `autoMode.classifyAllShell`)
+
 ---
 
 ## PER-CLIENT SKILL RULES
@@ -2681,6 +2688,13 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 **Fix**: No auto-fix (set `skills` to a relative path string such as `./skills`, or remove the field)
 **Source**: github.com/openai/codex (codex-rs/core-plugins/src/manifest.rs @ rust-v0.137.0)
 
+<a id="cdx-pl-016"></a>
+### CDX-PL-016 [MEDIUM] Invalid Dark-mode Logo Path
+**Requirement**: Plugin manifest `interface.logoDark` MUST start with `./` and MUST NOT contain directory traversal
+**Detection**: Validate the dark-mode logo asset path for `./` prefix and absence of `..`
+**Fix**: No auto-fix (set `logoDark` to a package-relative asset path such as `./assets/logo-dark.png`)
+**Source**: github.com/openai/codex (openai/codex#29488, codex-rs/core-plugins/src/manifest.rs @ rust-v0.142.2)
+
 ---
 
 ### Codex Requirements Rules (CDX-REQ)
@@ -3507,8 +3521,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 430 validation rules across 40 categories
+**Total Coverage**: 432 validation rules across 40 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 213 HIGH, 189 MEDIUM, 28 LOW
-**Auto-Fixable**: 127 rules (30%)
+**Certainty**: 213 HIGH, 191 MEDIUM, 28 LOW
+**Auto-Fixable**: 127 rules (29%)

@@ -604,6 +604,9 @@ rules:
   cdx_pl_014:
     message: 缺少 'description' 字段 - 建议添加以提高市场可见性
     suggestion: 在 plugin.json 中添加 'description' 字符串以提高可发现性
+  cdx_pl_016:
+    message: interface.logoDark 中的深色模式 logo 路径 '%{path}' 必须以 ./ 开头且不使用 '..' 遍历
+    suggestion: 使用相对深色模式 logo 资源路径，例如 './assets/logo-dark.png'
   pe_001:
     message: 关键词 '%{keyword}' 在文档的 %{percent} 百分比处（40-60 百分比是'中间遗忘'区域）
     suggestion: 将关键内容移到文档的开头或结尾以获得更好的记忆效果
@@ -686,6 +689,9 @@ rules:
   cc_set_009:
     message: attribution.sessionUrl 存在时必须是布尔值 (实际为 %{actual}); Claude Code 2.1.183+ 将该归因选项记录为严格的 true/false 设置
     suggestion: 将 attribution.sessionUrl 设置为不带引号的 true 或 false。使用 false 可在 Web 或 Remote Control 会话创建的 commit 和 PR 描述中省略 claude.ai 会话链接。
+  cc_set_013:
+    message: autoMode.classifyAllShell 存在时必须是布尔值 (实际为 %{actual}); Claude Code 2.1.193+ 将该 auto-mode 设置记录为严格的 true/false 开关
+    suggestion: 将 autoMode.classifyAllShell 设置为不带引号的 true 或 false，或移除此字段以保留默认的 auto-mode 分类器范围。
 
 
 # ===========================================================================

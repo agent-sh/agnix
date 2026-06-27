@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `430` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `432` validation rules generated from `knowledge-base/rules.json`.
 `127` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -141,6 +141,7 @@ This section contains all `430` validation rules generated from `knowledge-base/
 | [CC-SET-010](./generated/cc-set-010.md) | Invalid teammateMode Setting | MEDIUM | Claude Settings | No |
 | [CC-SET-011](./generated/cc-set-011.md) | Non-boolean respondToBashCommands Setting | MEDIUM | Claude Settings | No |
 | [CC-SET-012](./generated/cc-set-012.md) | Invalid sandbox.credentials Setting | MEDIUM | Claude Settings | No |
+| [CC-SET-013](./generated/cc-set-013.md) | Non-boolean autoMode.classifyAllShell Setting | MEDIUM | Claude Settings | No |
 | [CDX-000](./generated/cdx-000.md) | TOML Parse Error | HIGH | Codex CLI | No |
 | [CDX-001](./generated/cdx-001.md) | Invalid Approval Mode | HIGH | Codex CLI | Yes (unsafe) |
 | [CDX-002](./generated/cdx-002.md) | Invalid Full Auto Error Mode | HIGH | Codex CLI | Yes (unsafe) |
@@ -195,6 +196,7 @@ This section contains all `430` validation rules generated from `knowledge-base/
 | [CDX-PL-013](./generated/cdx-pl-013.md) | Unsupported Hooks Field | LOW | Codex CLI | No |
 | [CDX-PL-014](./generated/cdx-pl-014.md) | Missing Description | LOW | Codex CLI | No |
 | [CDX-PL-015](./generated/cdx-pl-015.md) | Invalid Skills Path Type | MEDIUM | Codex CLI | No |
+| [CDX-PL-016](./generated/cdx-pl-016.md) | Invalid Dark-mode Logo Path | MEDIUM | Codex CLI | No |
 | [CDX-CFG-023](./generated/cdx-cfg-023.md) | Invalid Approval Policy Sub-field | MEDIUM | Codex CLI | Yes (safe) |
 | [CDX-CFG-024](./generated/cdx-cfg-024.md) | Invalid Approvals Reviewer Value | MEDIUM | Codex CLI | Yes (unsafe) |
 | [CDX-CFG-025](./generated/cdx-cfg-025.md) | Invalid Service Tier Value | MEDIUM | Codex CLI | Yes (unsafe) |
