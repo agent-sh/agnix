@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.36.2] - 2026-06-27
+
 ### Fixed
 
 - Extend JetBrains IDE compatibility through build `262.*` (upgrade Gradle wrapper to 9.6.1 and the IntelliJ Platform Gradle plugin to 2.17.0).

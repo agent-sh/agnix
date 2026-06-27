@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.36.2] - 2026-06-27
+
+### Fixed
+
+- **JetBrains plugin IDE compatibility through build `262.*`**. Upgraded the plugin build toolchain (Gradle 9.6.1, IntelliJ Platform Gradle plugin 2.17.0), raised `until-build` to `262.*`, and resolve the plugin version from a build-time generated resource (with jar-manifest fallback) so LSP binary version checks work in local development and pass `verifyPlugin` without internal `PluginManagerCore` APIs. Release workflow now runs plugin verification before publish.
+
 ## [0.36.1] - 2026-06-27
 
 ### Added
