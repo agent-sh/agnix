@@ -70,3 +70,34 @@ For each IDE, verify:
 - If `agnix-lsp` is not detected, set `LSP binary path` explicitly.
 - For download issues, verify internet access to GitHub release asset domains.
 - Enable trace logging with `Trace level = Messages` or `Verbose`.
+
+### "agnix-lsp could not be started (access denied)" on locked-down Windows
+
+On managed/corporate machines, the OS or a security policy
+(AppLocker, Windows Defender Application Control, EDR, or antivirus) can
+**block execution** of the auto-downloaded `agnix-lsp.exe` because it lives in a
+user-writable location (`%AppData%\...\plugins\agnix\bin\`). This surfaces as a
+process-launch failure:
+
+```text
+Cannot run program "...\plugins\agnix\bin\agnix-lsp.exe": CreateProcess error=5, Access is denied
+```
+
+`error=5` is the Win32 `ERROR_ACCESS_DENIED` code (the trailing text is localized,
+e.g. Danish "Adgang nægtet"). Note this is *access denied*, not *file not found*
+(`error=2`) — the binary downloaded fine; the OS is refusing to run it.
+**Upgrading the IDE does not fix this** — it is an OS/security-policy decision.
+
+Resolve it by running `agnix-lsp` from an allowed location:
+
+1. Get `agnix-lsp` into an execution-allowed directory — download
+   `agnix-lsp-x86_64-pc-windows-msvc.zip` from the
+   [GitHub releases](https://github.com/agent-sh/agnix/releases) and extract it to
+   a whitelisted path (e.g. `C:\Program Files\agnix\`), or use `%USERPROFILE%\.cargo\bin`.
+   (`cargo install agnix-cli` installs the CLI, not the LSP server, so use the
+   release asset.)
+2. In the IDE: **Tools → agnix → Settings → LSP binary path** → point it at that
+   `agnix-lsp.exe`, then restart the language server (`Tools → agnix → Restart
+   Language Server`). The configured path takes priority over the blocked
+   auto-downloaded copy.
+3. Alternatively, ask IT to allowlist the binary or the `%AppData%` plugin path.

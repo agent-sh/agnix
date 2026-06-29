@@ -227,6 +227,22 @@ cd editors/jetbrains
 4. Confirm manual `LSP binary path` override works.
 5. Confirm `Restart Language Server` action reconnects cleanly.
 
+### Troubleshooting: "access denied" on locked-down Windows
+
+On managed/corporate machines, security policy (AppLocker, Windows Defender
+Application Control, EDR, or antivirus) may block execution of the
+auto-downloaded `agnix-lsp.exe` from its user-writable plugin directory,
+producing `CreateProcess error=5, Access is denied` (`error=5` is Win32
+`ERROR_ACCESS_DENIED`; the trailing text is localized). The binary is present —
+the OS is refusing to run it — so upgrading the IDE does not help. Fix it by
+running the server from an allowed location: download
+`agnix-lsp-x86_64-pc-windows-msvc.zip` from the
+[releases](https://github.com/agent-sh/agnix/releases), extract it somewhere
+whitelisted (e.g. `C:\Program Files\agnix\`), set **Tools → agnix → Settings →
+LSP binary path** to it, and restart the language server — or ask IT to
+allowlist the path. See the
+[JetBrains plugin README](../editors/jetbrains/README.md#troubleshooting) for details.
+
 ## Zed
 
 Zed extension source is in `editors/zed/` and provides automatic LSP binary download.
