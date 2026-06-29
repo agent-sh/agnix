@@ -49,7 +49,7 @@ function M.pick_rules()
           actions.close(prompt_bufnr)
           local selection = action_state.get_selected_entry()
           if selection then
-            local url = 'https://avifenesh.github.io/agnix/docs/rules'
+            local url = 'https://agent-sh.github.io/agnix/docs/rules'
             vim.notify('[agnix] See: ' .. url, vim.log.levels.INFO)
           end
         end)

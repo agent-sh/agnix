@@ -110,7 +110,7 @@ function M.setup()
       vim.notify('[agnix] Invalid rule ID format: ' .. rule_id, vim.log.levels.ERROR)
       return
     end
-    local url = 'https://avifenesh.github.io/agnix/docs/rules/generated/'
+    local url = 'https://agent-sh.github.io/agnix/docs/rules/generated/'
       .. rule_id:lower()
     if vim.ui.open then
       vim.ui.open(url)
@@ -153,7 +153,7 @@ function M._show_rules_fallback()
   end
   vim.ui.select(items, { prompt = 'agnix rule categories:' }, function(choice)
     if choice then
-      local url = 'https://avifenesh.github.io/agnix/docs/rules'
+      local url = 'https://agent-sh.github.io/agnix/docs/rules'
       vim.notify('[agnix] See: ' .. url, vim.log.levels.INFO)
     end
   end)

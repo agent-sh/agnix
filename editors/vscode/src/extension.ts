@@ -1046,7 +1046,7 @@ async function showRules(): Promise<void> {
     // Open documentation
     vscode.env.openExternal(
       vscode.Uri.parse(
-        'https://avifenesh.github.io/agnix/docs/rules'
+        'https://agent-sh.github.io/agnix/docs/rules'
       )
     );
   }
@@ -1688,7 +1688,7 @@ class AgnixDiagnosticsTreeProvider implements vscode.TreeDataProvider<Diagnostic
  * Show documentation for a specific rule.
  */
 async function showRuleDoc(ruleId: string): Promise<void> {
-  const url = `https://avifenesh.github.io/agnix/docs/rules/generated/${ruleId.toLowerCase()}`;
+  const url = `https://agent-sh.github.io/agnix/docs/rules/generated/${ruleId.toLowerCase()}`;
   vscode.env.openExternal(vscode.Uri.parse(url));
 }
 
