@@ -122,6 +122,51 @@ object AgnixNotifications {
     }
 
     /**
+     * Notify that the LSP binary exists but the OS refused to execute it.
+     *
+     * This is the locked-down-Windows / corporate-policy case (AppLocker, WDAC,
+     * EDR, or AV blocking execution from a user-writable location such as
+     * %AppData%), which surfaces as `CreateProcess error=5` (access denied).
+     * Upgrading the IDE does not help; the fix is to run agnix-lsp from an
+     * allowed location and point the plugin at it, or have IT allowlist the path.
+     */
+    fun notifyBinaryAccessDenied(project: Project, binaryPath: String) {
+        val notification = NotificationGroupManager.getInstance()
+            .getNotificationGroup(NOTIFICATION_GROUP_ID)
+            .createNotification(
+                "agnix-lsp could not be started (access denied)",
+                "The OS or a security policy (e.g. AppLocker/WDAC, EDR, or antivirus) " +
+                    "blocked execution of the agnix language server at:\n$binaryPath\n\n" +
+                    "This is common on managed machines where binaries in user-writable " +
+                    "locations cannot run. Place agnix-lsp in an allowed location (or ask " +
+                    "IT to allowlist it), then set its path in agnix settings. Upgrading the " +
+                    "IDE does not resolve this.",
+                NotificationType.ERROR
+            )
+
+        notification.addAction(object : AnAction("Set Binary Path") {
+            override fun actionPerformed(e: AnActionEvent) {
+                ShowSettingsUtil.getInstance().showSettingsDialog(
+                    project,
+                    AgnixSettingsConfigurable::class.java
+                )
+                notification.expire()
+            }
+        })
+
+        notification.addAction(object : AnAction("Troubleshooting") {
+            override fun actionPerformed(e: AnActionEvent) {
+                com.intellij.ide.BrowserUtil.browse(
+                    "https://github.com/agent-sh/agnix/blob/main/editors/jetbrains/README.md#troubleshooting"
+                )
+                notification.expire()
+            }
+        })
+
+        notification.notify(project)
+    }
+
+    /**
      * Notify that the LSP server encountered an error.
      */
     fun notifyServerError(project: Project, error: String) {

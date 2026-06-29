@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Surface an actionable notification when the OS or a security policy blocks execution of `agnix-lsp` (e.g. AppLocker/WDAC, EDR, or antivirus on locked-down Windows producing `CreateProcess error=5, Access is denied`). Previously this only appeared as a raw `CannotStartProcessException` stack trace. The notification explains the cause and offers "Set Binary Path" and "Troubleshooting" actions, since upgrading the IDE does not resolve an OS-level execution block. Access-denied detection is locale-independent (matches the Win32 `error=5` / POSIX `errno=13`/`EACCES` codes, not localized text).
+
 ## [0.36.2] - 2026-06-27
 
 ### Fixed

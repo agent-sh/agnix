@@ -99,7 +99,20 @@ class AgnixLspServerDescriptor(
         }
 
         logger.info("Starting agnix-lsp: ${commandLine.commandLineString}")
-        super.start()
+        try {
+            super.start()
+        } catch (e: Exception) {
+            // On locked-down machines (corporate AppLocker/WDAC/EDR/AV), the OS can
+            // refuse to *execute* the auto-downloaded binary even though it exists,
+            // surfacing as `CreateProcess error=5` (Windows) / EACCES (POSIX). Turn
+            // that opaque stack trace into an actionable hint, then re-throw so
+            // LSP4IJ's own lifecycle handling is unchanged.
+            if (LspProcessErrors.isAccessDenied(e)) {
+                logger.warn("agnix-lsp launch denied by OS/security policy: $binaryPath", e)
+                AgnixNotifications.notifyBinaryAccessDenied(project, binaryPath)
+            }
+            throw e
+        }
     }
 
     override fun stop() {
