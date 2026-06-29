@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Dead documentation host in shipped rule-doc URLs** (refs #1099). The docs site is served at `https://agent-sh.github.io/agnix/` (HTTP 200), but several user-facing rule-doc links still hard-coded the pre-migration `https://avifenesh.github.io/agnix` host, which now returns 404. Updated the live host in the LSP diagnostic `code_description` (clickable rule links in IDEs), the SARIF `helpUri` emitted for every rule (CI integrations), the VS Code `showRules`/`showRuleDoc` actions, the Neovim `AgnixShowRuleDoc` command and rule pickers, the npm/VS Code/`agnix-rules` READMEs, and the Docusaurus `url`/`organizationName`/JSON-LD and `robots.txt` sitemap. Historical `website/versioned_docs/**` snapshots and past changelog entries are intentionally left untouched. This is the same broken-doc-link class as the JetBrains Marketplace **Documentation** resource link in #1099 (that link is corrected in the Marketplace web admin, not in-repo).
+
 ## [0.36.2] - 2026-06-27
 
 ### Fixed

@@ -882,7 +882,7 @@ fn test_format_sarif_rules_have_help_uri() {
         assert!(
             help_uri
                 .unwrap()
-                .contains("avifenesh.github.io/agnix/docs/rules/generated/"),
+                .contains("agent-sh.github.io/agnix/docs/rules/generated/"),
             "helpUri should reference website rule docs"
         );
     }

@@ -266,7 +266,7 @@ local function test_show_rules_fallback_selection()
   assert(#notify_messages > 0, 'should notify with a URL after selection')
   local found_url = false
   for _, msg in ipairs(notify_messages) do
-    if msg:find('avifenesh%.github%.io/agnix/docs/rules') then
+    if msg:find('agent%-sh%.github%.io/agnix/docs/rules') then
       found_url = true
       break
     end

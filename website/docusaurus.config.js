@@ -8,10 +8,10 @@ const config = {
   tagline: 'Lint agent configurations before they break your workflow',
   favicon: 'img/logo.png',
 
-  url: 'https://avifenesh.github.io',
+  url: 'https://agent-sh.github.io',
   baseUrl: '/agnix/',
 
-  organizationName: 'avifenesh',
+  organizationName: 'agent-sh',
   projectName: 'agnix',
 
   onBrokenLinks: 'throw',
@@ -54,7 +54,7 @@ const config = {
           `Linter for AI agent configurations. ${siteData.totalRules} rules across Claude Code, Codex, OpenCode, Kiro, Cursor, Copilot, and more. CLI, LSP, and IDE plugins.`,
         applicationCategory: 'DeveloperApplication',
         operatingSystem: 'Windows, macOS, Linux',
-        url: 'https://avifenesh.github.io/agnix/',
+        url: 'https://agent-sh.github.io/agnix/',
         downloadUrl: 'https://github.com/agent-sh/agnix/releases',
         codeRepository: 'https://github.com/agent-sh/agnix',
         programmingLanguage: 'Rust',

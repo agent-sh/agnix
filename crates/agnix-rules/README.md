@@ -37,7 +37,7 @@ for (prefix, tool) in TOOL_RULE_PREFIXES {
 - **XML-xxx**: XML validation
 - **XP-xxx**: Cross-platform compatibility
 
-For full rule documentation, see the [rules reference](https://avifenesh.github.io/agnix/docs/rules).
+For full rule documentation, see the [rules reference](https://agent-sh.github.io/agnix/docs/rules).
 
 ## License
 

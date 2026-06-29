@@ -90,7 +90,7 @@ pub fn to_lsp_diagnostic(diag: &Diagnostic) -> LspDiagnostic {
     let data = serialize_diagnostic_data(diag);
 
     let code_description = Url::parse(&format!(
-        "https://avifenesh.github.io/agnix/docs/rules/generated/{}",
+        "https://agent-sh.github.io/agnix/docs/rules/generated/{}",
         diag.rule.to_lowercase()
     ))
     .ok()
@@ -257,7 +257,7 @@ mod tests {
             .expect("code_description should be set");
         assert_eq!(
             desc.href.as_str(),
-            "https://avifenesh.github.io/agnix/docs/rules/generated/as-001"
+            "https://agent-sh.github.io/agnix/docs/rules/generated/as-001"
         );
     }
 
@@ -270,7 +270,7 @@ mod tests {
             .expect("code_description should be set");
         assert_eq!(
             desc.href.as_str(),
-            "https://avifenesh.github.io/agnix/docs/rules/generated/cc-sk-001"
+            "https://agent-sh.github.io/agnix/docs/rules/generated/cc-sk-001"
         );
     }
 
