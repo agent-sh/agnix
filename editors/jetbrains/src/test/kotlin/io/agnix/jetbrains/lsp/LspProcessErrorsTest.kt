@@ -47,6 +47,16 @@ class LspProcessErrorsTest {
     }
 
     @Test
+    fun `uppercase access denied phrase is matched`() {
+        // Matching must be case-insensitive and locale-independent (Locale.ROOT),
+        // so an uppercased message still classifies as access-denied even on
+        // Turkish/Azeri default locales where naive lowercasing of 'I' diverges.
+        assertTrue(LspProcessErrors.isAccessDenied(IOException("ACCESS IS DENIED")))
+        assertTrue(LspProcessErrors.isAccessDenied(IOException("PERMISSION DENIED")))
+        assertTrue(LspProcessErrors.isAccessDenied(IOException("spawn EACCES")))
+    }
+
+    @Test
     fun `file not found is not access denied`() {
         // error=2 (ERROR_FILE_NOT_FOUND) is a missing-binary case, not a policy block.
         val e = IOException("CreateProcess error=2, The system cannot find the file specified")

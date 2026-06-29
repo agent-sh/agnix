@@ -1,5 +1,7 @@
 package io.agnix.jetbrains.lsp
 
+import java.util.Locale
+
 /**
  * Pure helpers for classifying agnix-lsp process-launch failures.
  *
@@ -43,7 +45,10 @@ object LspProcessErrors {
 
     private fun messageIndicatesAccessDenied(message: String?): Boolean {
         if (message.isNullOrBlank()) return false
-        val lower = message.lowercase()
+        // Use Locale.ROOT: the default locale would mis-case on Turkish/Azeri
+        // systems (e.g. "I".lowercase() -> dotless "\u0131"), breaking the
+        // "access is denied" match.
+        val lower = message.lowercase(Locale.ROOT)
         return lower.contains("error=5") || // Win32 ERROR_ACCESS_DENIED
             lower.contains("errno=13") || // POSIX EACCES
             lower.contains("eacces") ||
