@@ -13,7 +13,7 @@ keywords: ["CC-HK-002", "prompt hook on wrong event", "claude hooks", "validatio
 - **Category**: `Claude Hooks`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-07-02`
 
 ## Applicability
 
@@ -56,10 +56,10 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ```json
 {
   "hooks": {
-    "Stop": [
+    "PostToolBatch": [
       {
         "hooks": [
-          { "type": "prompt", "prompt": "Summarize the session", "timeout": 30 }
+          { "type": "prompt", "prompt": "Review the completed tool batch: $ARGUMENTS", "timeout": 30 }
         ]
       }
     ]

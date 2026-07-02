@@ -1193,7 +1193,7 @@
         "source_urls": [
           "https://code.claude.com/docs/en/hooks"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-07-02",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -1221,7 +1221,7 @@
         "source_urls": [
           "https://code.claude.com/docs/en/hooks"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-07-02",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -1235,7 +1235,7 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"hooks\": {\n    \"Stop\": [\n      {\n        \"hooks\": [\n          { \"type\": \"prompt\", \"prompt\": \"Summarize the session\", \"timeout\": 30 }\n        ]\n      }\n    ]\n  }\n}",
+      "good_example": "{\n  \"hooks\": {\n    \"PostToolBatch\": [\n      {\n        \"hooks\": [\n          { \"type\": \"prompt\", \"prompt\": \"Review the completed tool batch: $ARGUMENTS\", \"timeout\": 30 }\n        ]\n      }\n    ]\n  }\n}",
       "bad_example": "{\n  \"hooks\": {\n    \"SessionStart\": [\n      {\n        \"hooks\": [\n          { \"type\": \"prompt\", \"prompt\": \"Check session start\", \"timeout\": 30 }\n        ]\n      }\n    ]\n  }\n}"
     },
     {
@@ -1248,7 +1248,7 @@
         "source_urls": [
           "https://code.claude.com/docs/en/hooks"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-07-02",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -1267,19 +1267,19 @@
     },
     {
       "id": "CC-HK-004",
-      "name": "Matcher on Non-Tool Event",
-      "severity": "HIGH",
+      "name": "Matcher on Unsupported Event",
+      "severity": "LOW",
       "category": "claude-hooks",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
           "https://code.claude.com/docs/en/hooks"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-07-02",
         "applies_to": {
           "tool": "claude-code"
         },
-        "normative_level": "MUST",
+        "normative_level": "BEST_PRACTICE",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -1290,8 +1290,8 @@
         "autofix": true,
         "fix_safety": "safe"
       },
-      "good_example": "{\n  \"hooks\": {\n    \"Notification\": [\n      {\n        \"hooks\": [\n          { \"type\": \"command\", \"command\": \"echo notified\", \"timeout\": 30 }\n        ]\n      }\n    ]\n  }\n}",
-      "bad_example": "{\n  \"hooks\": {\n    \"Notification\": [\n      {\n        \"matcher\": \"Bash\",\n        \"hooks\": [\n          { \"type\": \"command\", \"command\": \"echo notified\", \"timeout\": 30 }\n        ]\n      }\n    ]\n  }\n}"
+      "good_example": "{\n  \"hooks\": {\n    \"PostToolBatch\": [\n      {\n        \"hooks\": [\n          { \"type\": \"command\", \"command\": \"echo batch done\", \"timeout\": 30 }\n        ]\n      }\n    ]\n  }\n}",
+      "bad_example": "{\n  \"hooks\": {\n    \"PostToolBatch\": [\n      {\n        \"matcher\": \"Bash\",\n        \"hooks\": [\n          { \"type\": \"command\", \"command\": \"echo batch done\", \"timeout\": 30 }\n        ]\n      }\n    ]\n  }\n}"
     },
     {
       "id": "CC-HK-005",
@@ -1439,7 +1439,7 @@
         "source_urls": [
           "https://code.claude.com/docs/en/hooks"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-07-02",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -1454,8 +1454,8 @@
         "autofix": true,
         "fix_safety": "safe"
       },
-      "good_example": "{\n  \"hooks\": {\n    \"PreToolUse\": [\n      {\n        \"matcher\": \"Bash\",\n        \"hooks\": [\n          { \"type\": \"command\", \"command\": \"echo ok\", \"timeout\": 30 }\n        ]\n      }\n    ]\n  }\n}",
-      "bad_example": "{\n  \"hooks\": {\n    \"PreToolUse\": [\n      {\n        \"matcher\": \"Bash\",\n        \"hooks\": [\n          { \"type\": \"command\", \"command\": \"echo ok\" }\n        ]\n      }\n    ]\n  }\n}"
+      "good_example": "{\n  \"hooks\": {\n    \"Stop\": [\n      {\n        \"hooks\": [\n          { \"type\": \"agent\", \"prompt\": \"Review: $ARGUMENTS\", \"timeout\": 60 }\n        ]\n      }\n    ]\n  }\n}",
+      "bad_example": "{\n  \"hooks\": {\n    \"Stop\": [\n      {\n        \"hooks\": [\n          { \"type\": \"agent\", \"prompt\": \"Review: $ARGUMENTS\", \"timeout\": 120 }\n        ]\n      }\n    ]\n  }\n}"
     },
     {
       "id": "CC-HK-011",
@@ -1654,7 +1654,7 @@
     },
     {
       "id": "CC-HK-018",
-      "name": "Matcher on UserPromptSubmit/Stop",
+      "name": "Matcher on Ignored Event",
       "severity": "LOW",
       "category": "claude-hooks",
       "evidence": {
@@ -1662,7 +1662,7 @@
         "source_urls": [
           "https://code.claude.com/docs/en/hooks"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-07-02",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -1677,8 +1677,8 @@
         "autofix": true,
         "fix_safety": "safe"
       },
-      "good_example": "{\n  \"hooks\": {\n    \"UserPromptSubmit\": [\n      {\n        \"hooks\": [\n          { \"type\": \"command\", \"command\": \"echo submit\", \"timeout\": 30 }\n        ]\n      }\n    ]\n  }\n}",
-      "bad_example": "{\n  \"hooks\": {\n    \"UserPromptSubmit\": [\n      {\n        \"matcher\": \"Bash\",\n        \"hooks\": [\n          { \"type\": \"command\", \"command\": \"echo submit\", \"timeout\": 30 }\n        ]\n      }\n    ]\n  }\n}"
+      "good_example": "{\n  \"hooks\": {\n    \"TaskCompleted\": [\n      {\n        \"hooks\": [\n          { \"type\": \"command\", \"command\": \"echo task complete\", \"timeout\": 30 }\n        ]\n      }\n    ]\n  }\n}",
+      "bad_example": "{\n  \"hooks\": {\n    \"TaskCompleted\": [\n      {\n        \"matcher\": \"Bash\",\n        \"hooks\": [\n          { \"type\": \"command\", \"command\": \"echo task complete\", \"timeout\": 30 }\n        ]\n      }\n    ]\n  }\n}"
     },
     {
       "id": "CC-HK-019",
@@ -1753,7 +1753,7 @@
         "source_urls": [
           "https://code.claude.com/docs/en/hooks"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-07-02",
         "applies_to": {
           "tool": "claude-code",
           "file_types": [
@@ -1771,7 +1771,7 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{ \"type\": \"command\", \"command\": \"npm test\", \"if\": \"tool_name == 'Bash'\" }",
+      "good_example": "{ \"type\": \"command\", \"command\": \"npm test\", \"if\": \"Bash(npm test)\" }",
       "bad_example": "{ \"type\": \"command\", \"command\": \"npm test\", \"if\": \"\" }"
     },
     {
@@ -1880,7 +1880,7 @@
         "source_urls": [
           "https://code.claude.com/docs/en/hooks"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-07-02",
         "applies_to": {
           "tool": "claude-code",
           "file_types": [
@@ -1899,8 +1899,8 @@
         "autofix": true,
         "fix_safety": "unsafe"
       },
-      "good_example": "{ \"matcher\": \"Bash\", \"hooks\": [{ \"type\": \"command\", \"command\": \"echo ok\" }] }",
-      "bad_example": "{ \"matcher\": 123, \"hooks\": [{ \"type\": \"command\", \"command\": \"echo ok\" }] }"
+      "good_example": "{\n  \"hooks\": {\n    \"Notification\": [\n      {\n        \"matcher\": \"agent_completed\",\n        \"hooks\": [\n          { \"type\": \"command\", \"command\": \"echo agent finished\", \"timeout\": 30 }\n        ]\n      }\n    ]\n  }\n}",
+      "bad_example": "{\n  \"hooks\": {\n    \"Notification\": [\n      {\n        \"matcher\": \"unknown_notification\",\n        \"hooks\": [\n          { \"type\": \"command\", \"command\": \"echo agent finished\", \"timeout\": 30 }\n        ]\n      }\n    ]\n  }\n}"
     },
     {
       "id": "CC-HK-026",

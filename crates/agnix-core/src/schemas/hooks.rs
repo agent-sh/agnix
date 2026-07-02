@@ -195,11 +195,13 @@ impl HooksSchema {
         "Notification",
         "MessageDisplay",
         "UserPromptSubmit",
+        "UserPromptExpansion",
         "Stop",
         "SubagentStart",
         "SubagentStop",
         "TeammateIdle",
         "TaskCompleted",
+        "TaskCreated",
         "PreCompact",
         "PostCompact",
         "Setup",
@@ -209,11 +211,12 @@ impl HooksSchema {
         "ConfigChange",
         "CwdChanged",
         "FileChanged",
-        "TaskCreated",
         "WorktreeCreate",
         "WorktreeRemove",
         "Elicitation",
         "ElicitationResult",
+        "PermissionDenied",
+        "PostToolBatch",
         "StopFailure",
     ];
 
@@ -221,6 +224,7 @@ impl HooksSchema {
     pub const TOOL_EVENTS: &'static [&'static str] = &[
         "PreToolUse",
         "PermissionRequest",
+        "PermissionDenied",
         "PostToolUse",
         "PostToolUseFailure",
     ];
@@ -233,8 +237,10 @@ impl HooksSchema {
         "PermissionRequest",
         "PostToolUse",
         "PostToolUseFailure",
+        "PermissionDenied",
         // Lifecycle events with matcher support
         "SessionStart",
+        "Setup",
         "SessionEnd",
         "Notification",
         "SubagentStart",
@@ -245,8 +251,23 @@ impl HooksSchema {
         "FileChanged",
         "StopFailure",
         "InstructionsLoaded",
+        "UserPromptExpansion",
         "Elicitation",
         "ElicitationResult",
+    ];
+
+    /// Valid events where a matcher field is ignored by Claude Code.
+    pub const NO_MATCHER_EVENTS: &'static [&'static str] = &[
+        "UserPromptSubmit",
+        "PostToolBatch",
+        "Stop",
+        "TeammateIdle",
+        "TaskCreated",
+        "TaskCompleted",
+        "WorktreeCreate",
+        "WorktreeRemove",
+        "MessageDisplay",
+        "CwdChanged",
     ];
 
     /// Events that support prompt/agent hooks
@@ -254,11 +275,16 @@ impl HooksSchema {
         "PreToolUse",
         "PostToolUse",
         "PostToolUseFailure",
+        "PostToolBatch",
         "PermissionRequest",
+        "PermissionDenied",
         "UserPromptSubmit",
+        "UserPromptExpansion",
         "Stop",
         "SubagentStop",
+        "TaskCreated",
         "TaskCompleted",
+        "TeammateIdle",
     ];
 
     /// Check if an event is a tool event (matcher recommended)
@@ -269,6 +295,11 @@ impl HooksSchema {
     /// Check if an event supports a matcher field
     pub fn supports_matcher(event: &str) -> bool {
         Self::MATCHER_EVENTS.contains(&event)
+    }
+
+    /// Check if an event ignores a configured matcher field.
+    pub fn ignores_matcher(event: &str) -> bool {
+        Self::NO_MATCHER_EVENTS.contains(&event)
     }
 
     /// Check if an event supports prompt hooks
@@ -431,6 +462,7 @@ mod tests {
     fn test_is_tool_event() {
         assert!(HooksSchema::is_tool_event("PreToolUse"));
         assert!(HooksSchema::is_tool_event("PostToolUse"));
+        assert!(HooksSchema::is_tool_event("PermissionDenied"));
         assert!(!HooksSchema::is_tool_event("Stop"));
         assert!(!HooksSchema::is_tool_event("Notification"));
     }
@@ -441,9 +473,11 @@ mod tests {
         assert!(HooksSchema::supports_matcher("PreToolUse"));
         assert!(HooksSchema::supports_matcher("PostToolUse"));
         assert!(HooksSchema::supports_matcher("PermissionRequest"));
+        assert!(HooksSchema::supports_matcher("PermissionDenied"));
         assert!(HooksSchema::supports_matcher("PostToolUseFailure"));
         // Lifecycle events that now support matchers
         assert!(HooksSchema::supports_matcher("SessionStart"));
+        assert!(HooksSchema::supports_matcher("Setup"));
         assert!(HooksSchema::supports_matcher("SessionEnd"));
         assert!(HooksSchema::supports_matcher("Notification"));
         assert!(HooksSchema::supports_matcher("SubagentStart"));
@@ -454,35 +488,66 @@ mod tests {
         assert!(HooksSchema::supports_matcher("FileChanged"));
         assert!(HooksSchema::supports_matcher("StopFailure"));
         assert!(HooksSchema::supports_matcher("InstructionsLoaded"));
+        assert!(HooksSchema::supports_matcher("UserPromptExpansion"));
         assert!(HooksSchema::supports_matcher("Elicitation"));
         assert!(HooksSchema::supports_matcher("ElicitationResult"));
         // Events that do NOT support matchers
+        assert!(!HooksSchema::supports_matcher("PostToolBatch"));
         assert!(!HooksSchema::supports_matcher("Stop"));
         assert!(!HooksSchema::supports_matcher("UserPromptSubmit"));
         assert!(!HooksSchema::supports_matcher("TaskCompleted"));
+        assert!(!HooksSchema::supports_matcher("TaskCreated"));
         assert!(!HooksSchema::supports_matcher("TeammateIdle"));
+        assert!(!HooksSchema::supports_matcher("WorktreeCreate"));
+        assert!(!HooksSchema::supports_matcher("WorktreeRemove"));
+    }
+
+    #[test]
+    fn test_ignores_matcher() {
+        assert!(HooksSchema::ignores_matcher("UserPromptSubmit"));
+        assert!(HooksSchema::ignores_matcher("PostToolBatch"));
+        assert!(HooksSchema::ignores_matcher("Stop"));
+        assert!(HooksSchema::ignores_matcher("TeammateIdle"));
+        assert!(HooksSchema::ignores_matcher("TaskCreated"));
+        assert!(HooksSchema::ignores_matcher("TaskCompleted"));
+        assert!(HooksSchema::ignores_matcher("WorktreeCreate"));
+        assert!(HooksSchema::ignores_matcher("WorktreeRemove"));
+        assert!(HooksSchema::ignores_matcher("MessageDisplay"));
+        assert!(HooksSchema::ignores_matcher("CwdChanged"));
+        assert!(!HooksSchema::ignores_matcher("PreToolUse"));
+        assert!(!HooksSchema::ignores_matcher("Notification"));
     }
 
     #[test]
     fn test_is_prompt_event() {
-        // All 8 events that support prompt/agent hooks
+        // Events that support all hook types, including prompt/agent hooks.
         assert!(HooksSchema::is_prompt_event("PreToolUse"));
         assert!(HooksSchema::is_prompt_event("PostToolUse"));
         assert!(HooksSchema::is_prompt_event("PostToolUseFailure"));
+        assert!(HooksSchema::is_prompt_event("PostToolBatch"));
         assert!(HooksSchema::is_prompt_event("PermissionRequest"));
+        assert!(HooksSchema::is_prompt_event("PermissionDenied"));
         assert!(HooksSchema::is_prompt_event("UserPromptSubmit"));
+        assert!(HooksSchema::is_prompt_event("UserPromptExpansion"));
         assert!(HooksSchema::is_prompt_event("Stop"));
         assert!(HooksSchema::is_prompt_event("SubagentStop"));
+        assert!(HooksSchema::is_prompt_event("TaskCreated"));
         assert!(HooksSchema::is_prompt_event("TaskCompleted"));
+        assert!(HooksSchema::is_prompt_event("TeammateIdle"));
 
         // Events that do NOT support prompt/agent hooks
         assert!(!HooksSchema::is_prompt_event("SessionStart"));
+        assert!(!HooksSchema::is_prompt_event("Setup"));
         assert!(!HooksSchema::is_prompt_event("SessionEnd"));
         assert!(!HooksSchema::is_prompt_event("Notification"));
         assert!(!HooksSchema::is_prompt_event("SubagentStart"));
         assert!(!HooksSchema::is_prompt_event("PreCompact"));
-        assert!(!HooksSchema::is_prompt_event("TeammateIdle"));
-        assert!(!HooksSchema::is_prompt_event("Setup"));
+        assert!(!HooksSchema::is_prompt_event("PostCompact"));
+        assert!(!HooksSchema::is_prompt_event("ConfigChange"));
+        assert!(!HooksSchema::is_prompt_event("CwdChanged"));
+        assert!(!HooksSchema::is_prompt_event("FileChanged"));
+        assert!(!HooksSchema::is_prompt_event("WorktreeCreate"));
+        assert!(!HooksSchema::is_prompt_event("WorktreeRemove"));
     }
 
     #[test]

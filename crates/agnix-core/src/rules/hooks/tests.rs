@@ -861,6 +861,45 @@ fn test_cc_hk_001_message_display_event_valid() {
 }
 
 #[test]
+fn test_cc_hk_001_new_hook_events_valid() {
+    let content = r#"{
+            "hooks": {
+                "UserPromptExpansion": [
+                    {
+                        "matcher": "review",
+                        "hooks": [
+                            { "type": "command", "command": "echo expansion" }
+                        ]
+                    }
+                ],
+                "PermissionDenied": [
+                    {
+                        "matcher": "Bash",
+                        "hooks": [
+                            { "type": "command", "command": "echo denied" }
+                        ]
+                    }
+                ],
+                "PostToolBatch": [
+                    {
+                        "hooks": [
+                            { "type": "command", "command": "echo batch" }
+                        ]
+                    }
+                ]
+            }
+        }"#;
+
+    let diagnostics = validate(content);
+    let cc_hk_001: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-HK-001")
+        .collect();
+
+    assert_eq!(cc_hk_001.len(), 0);
+}
+
+#[test]
 fn test_cc_hk_001_multiple_invalid_events() {
     let content = r#"{
             "hooks": {
@@ -1239,7 +1278,7 @@ fn test_cc_hk_004_no_matcher_on_stop_ok() {
 }
 
 #[test]
-fn test_cc_hk_004_has_safe_fix_when_unique_matcher_line() {
+fn test_cc_hk_004_no_matcher_event_delegates_to_cc_hk_018() {
     let content = r#"{
             "hooks": {
                 "TaskCompleted": [
@@ -1254,13 +1293,18 @@ fn test_cc_hk_004_has_safe_fix_when_unique_matcher_line() {
         }"#;
 
     let diagnostics = validate(content);
-    let cc_hk_004 = diagnostics
+    let cc_hk_004: Vec<_> = diagnostics
         .iter()
-        .find(|d| d.rule == "CC-HK-004")
-        .expect("CC-HK-004 should be reported");
+        .filter(|d| d.rule == "CC-HK-004")
+        .collect();
+    let cc_hk_018 = diagnostics
+        .iter()
+        .find(|d| d.rule == "CC-HK-018")
+        .expect("CC-HK-018 should report ignored matchers");
 
-    assert!(cc_hk_004.has_fixes());
-    let fix = &cc_hk_004.fixes[0];
+    assert_eq!(cc_hk_004.len(), 0);
+    assert!(cc_hk_018.has_fixes());
+    let fix = &cc_hk_018.fixes[0];
     assert!(fix.safe);
     assert_eq!(fix.replacement, "");
 }
@@ -1663,7 +1707,56 @@ fn test_cc_hk_010_prompt_hook_no_timeout() {
 
     assert_eq!(cc_hk_010.len(), 1);
     assert_eq!(cc_hk_010[0].level, DiagnosticLevel::Warning);
-    assert!(cc_hk_010[0].message.contains("Prompt/agent hook"));
+    assert!(cc_hk_010[0].message.contains("Prompt hook"));
+}
+
+#[test]
+fn test_cc_hk_010_agent_hook_uses_agent_default_timeout() {
+    let content = r#"{
+            "hooks": {
+                "Stop": [
+                    {
+                        "hooks": [
+                            { "type": "agent", "prompt": "Review $ARGUMENTS", "timeout": 61 }
+                        ]
+                    }
+                ]
+            }
+        }"#;
+
+    let diagnostics = validate(content);
+    let cc_hk_010: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-HK-010")
+        .collect();
+
+    assert_eq!(cc_hk_010.len(), 1);
+    assert_eq!(cc_hk_010[0].level, DiagnosticLevel::Warning);
+    assert!(cc_hk_010[0].message.contains("Agent hook"));
+    assert!(cc_hk_010[0].message.contains("exceeding 60s default"));
+}
+
+#[test]
+fn test_cc_hk_010_agent_timeout_at_default_ok() {
+    let content = r#"{
+            "hooks": {
+                "Stop": [
+                    {
+                        "hooks": [
+                            { "type": "agent", "prompt": "Review $ARGUMENTS", "timeout": 60 }
+                        ]
+                    }
+                ]
+            }
+        }"#;
+
+    let diagnostics = validate(content);
+    let cc_hk_010: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-HK-010")
+        .collect();
+
+    assert_eq!(cc_hk_010.len(), 0);
 }
 
 #[test]
@@ -2598,12 +2691,8 @@ fn test_cc_hk_003_all_tool_events_hint_matcher() {
 }
 
 #[test]
-fn test_cc_hk_004_non_tool_events_reject_matcher() {
-    // Stop and UserPromptSubmit are handled by CC-HK-018 instead
-    // SubagentStop, SessionStart, etc. now support matchers via MATCHER_EVENTS
-    let non_tool_events = ["TeammateIdle", "TaskCompleted"];
-
-    for event in non_tool_events {
+fn test_cc_hk_018_no_matcher_events_report_ignored_matcher() {
+    for event in HooksSchema::NO_MATCHER_EVENTS {
         let content = format!(
             r#"{{
                     "hooks": {{
@@ -2623,10 +2712,20 @@ fn test_cc_hk_004_non_tool_events_reject_matcher() {
             .iter()
             .filter(|d| d.rule == "CC-HK-004")
             .collect();
+        let hk_018: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-HK-018")
+            .collect();
         assert_eq!(
             hk_004.len(),
+            0,
+            "Event '{}' should not get a hard CC-HK-004 error",
+            event
+        );
+        assert_eq!(
+            hk_018.len(),
             1,
-            "Event '{}' should reject matcher but didn't get CC-HK-004",
+            "Event '{}' should report an ignored matcher with CC-HK-018",
             event
         );
     }
@@ -2638,8 +2737,8 @@ fn test_cc_hk_002_prompt_allowed_events() {
     let prompt_allowed = HooksSchema::PROMPT_EVENTS;
     assert_eq!(
         prompt_allowed.len(),
-        8,
-        "Expected exactly 8 prompt-allowed events"
+        13,
+        "Expected exactly 13 prompt-allowed events"
     );
 
     for event in prompt_allowed {
@@ -2696,12 +2795,21 @@ fn test_cc_hk_002_prompt_on_task_completed_ok() {
 fn test_cc_hk_002_prompt_disallowed_events() {
     let prompt_disallowed = [
         "SessionStart",
+        "Setup",
         "SessionEnd",
         "Notification",
         "SubagentStart",
         "PreCompact",
-        "Setup",
-        "TeammateIdle",
+        "PostCompact",
+        "ConfigChange",
+        "CwdChanged",
+        "FileChanged",
+        "WorktreeCreate",
+        "WorktreeRemove",
+        "Elicitation",
+        "ElicitationResult",
+        "InstructionsLoaded",
+        "MessageDisplay",
     ];
 
     for event in prompt_disallowed {
@@ -2741,7 +2849,16 @@ fn test_cc_hk_002_agent_disallowed_events() {
         "Notification",
         "SubagentStart",
         "PreCompact",
-        "TeammateIdle",
+        "PostCompact",
+        "ConfigChange",
+        "CwdChanged",
+        "FileChanged",
+        "WorktreeCreate",
+        "WorktreeRemove",
+        "Elicitation",
+        "ElicitationResult",
+        "InstructionsLoaded",
+        "MessageDisplay",
     ];
 
     for event in agent_disallowed {

@@ -1,9 +1,9 @@
 ---
 id: cc-hk-018
-title: "CC-HK-018: Matcher on UserPromptSubmit/Stop - Claude Hooks"
+title: "CC-HK-018: Matcher on Ignored Event - Claude Hooks"
 sidebar_label: "CC-HK-018"
-description: "agnix rule CC-HK-018 checks for matcher on userpromptsubmit/stop in claude hooks files. Severity: LOW. See examples and fix guidance."
-keywords: ["CC-HK-018", "matcher on userpromptsubmit/stop", "claude hooks", "validation", "agnix", "linter"]
+description: "agnix rule CC-HK-018 checks for matcher on ignored event in claude hooks files. Severity: LOW. See examples and fix guidance."
+keywords: ["CC-HK-018", "matcher on ignored event", "claude hooks", "validation", "agnix", "linter"]
 ---
 
 ## Summary
@@ -13,7 +13,7 @@ keywords: ["CC-HK-018", "matcher on userpromptsubmit/stop", "claude hooks", "val
 - **Category**: `Claude Hooks`
 - **Normative Level**: `BEST_PRACTICE`
 - **Auto-Fix**: `Yes (safe)`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-07-02`
 
 ## Applicability
 
@@ -40,11 +40,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ```json
 {
   "hooks": {
-    "UserPromptSubmit": [
+    "TaskCompleted": [
       {
         "matcher": "Bash",
         "hooks": [
-          { "type": "command", "command": "echo submit", "timeout": 30 }
+          { "type": "command", "command": "echo task complete", "timeout": 30 }
         ]
       }
     ]
@@ -57,10 +57,10 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ```json
 {
   "hooks": {
-    "UserPromptSubmit": [
+    "TaskCompleted": [
       {
         "hooks": [
-          { "type": "command", "command": "echo submit", "timeout": 30 }
+          { "type": "command", "command": "echo task complete", "timeout": 30 }
         ]
       }
     ]

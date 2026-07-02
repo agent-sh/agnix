@@ -13,7 +13,7 @@ keywords: ["CC-HK-025", "invalid matcher value", "claude hooks", "validation", "
 - **Category**: `Claude Hooks`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `Yes (unsafe)`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-07-02`
 
 ## Applicability
 
@@ -38,11 +38,33 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{ "matcher": 123, "hooks": [{ "type": "command", "command": "echo ok" }] }
+{
+  "hooks": {
+    "Notification": [
+      {
+        "matcher": "unknown_notification",
+        "hooks": [
+          { "type": "command", "command": "echo agent finished", "timeout": 30 }
+        ]
+      }
+    ]
+  }
+}
 ```
 
 ### Valid
 
 ```json
-{ "matcher": "Bash", "hooks": [{ "type": "command", "command": "echo ok" }] }
+{
+  "hooks": {
+    "Notification": [
+      {
+        "matcher": "agent_completed",
+        "hooks": [
+          { "type": "command", "command": "echo agent finished", "timeout": 30 }
+        ]
+      }
+    ]
+  }
+}
 ```

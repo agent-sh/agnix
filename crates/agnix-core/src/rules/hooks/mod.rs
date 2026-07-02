@@ -47,6 +47,7 @@ pub struct HooksValidator;
 /// Default timeout thresholds per hook type (from official Claude Code docs)
 const COMMAND_HOOK_DEFAULT_TIMEOUT: u64 = 600; // 10 minutes
 const PROMPT_HOOK_DEFAULT_TIMEOUT: u64 = 30; // 30 seconds
+const AGENT_HOOK_DEFAULT_TIMEOUT: u64 = 60; // 60 seconds
 
 /// CC-HK-006: Missing command field
 fn validate_cc_hk_006_command_field(
@@ -221,7 +222,7 @@ fn validate_cc_hk_017_prompt_arguments(
     }
 }
 
-/// CC-HK-018: Matcher on UserPromptSubmit/Stop events (silently ignored)
+/// CC-HK-018: Matcher on events where Claude Code silently ignores it
 fn validate_cc_hk_018_matcher_ignored(
     event: &str,
     matcher: &Option<String>,
@@ -230,8 +231,7 @@ fn validate_cc_hk_018_matcher_ignored(
     content: &str,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
-    let ignored_events = ["UserPromptSubmit", "Stop"];
-    if ignored_events.contains(&event) && matcher.is_some() {
+    if HooksSchema::ignores_matcher(event) && matcher.is_some() {
         let hook_location = format!("hooks.{}[{}]", event, matcher_idx);
         let mut diagnostic = Diagnostic::info(
             path.to_path_buf(),
@@ -352,6 +352,58 @@ fn validate_cc_hk_010_prompt_timeout(
             .with_suggestion(t!(
                 "rules.cc_hk_010.prompt_exceeds_suggestion",
                 default = PROMPT_HOOK_DEFAULT_TIMEOUT
+            ));
+
+            if !version_pinned {
+                diag = diag.with_assumption(t!("rules.cc_hk_010.assumption"));
+            }
+
+            diagnostics.push(diag);
+        }
+    }
+}
+
+/// CC-HK-010: Agent hook timeout policy
+fn validate_cc_hk_010_agent_timeout(
+    timeout: &Option<u64>,
+    hook_location: &str,
+    version_pinned: bool,
+    path: &Path,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    if timeout.is_none() {
+        let mut diag = Diagnostic::warning(
+            path.to_path_buf(),
+            1,
+            0,
+            "CC-HK-010",
+            t!("rules.cc_hk_010.agent_no_timeout", location = hook_location),
+        )
+        .with_suggestion(t!("rules.cc_hk_010.agent_no_timeout_suggestion"));
+
+        if !version_pinned {
+            diag = diag.with_assumption(t!("rules.cc_hk_010.assumption"));
+        }
+
+        diagnostics.push(diag);
+    }
+    if let Some(t) = timeout {
+        if *t > AGENT_HOOK_DEFAULT_TIMEOUT {
+            let mut diag = Diagnostic::warning(
+                path.to_path_buf(),
+                1,
+                0,
+                "CC-HK-010",
+                t!(
+                    "rules.cc_hk_010.agent_exceeds",
+                    location = hook_location,
+                    timeout = t,
+                    default = AGENT_HOOK_DEFAULT_TIMEOUT
+                ),
+            )
+            .with_suggestion(t!(
+                "rules.cc_hk_010.agent_exceeds_suggestion",
+                default = AGENT_HOOK_DEFAULT_TIMEOUT
             ));
 
             if !version_pinned {
@@ -642,9 +694,9 @@ impl Validator for HooksValidator {
                         Hook::Agent {
                             prompt, timeout, ..
                         } => {
-                            // CC-HK-010: Agent timeout policy (same as prompt)
+                            // CC-HK-010: Agent timeout policy
                             if config.is_rule_enabled("CC-HK-010") {
-                                validate_cc_hk_010_prompt_timeout(
+                                validate_cc_hk_010_agent_timeout(
                                     timeout,
                                     &hook_location,
                                     config.is_claude_code_version_pinned(),

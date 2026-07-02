@@ -124,11 +124,11 @@ The `` !`command` `` syntax runs shell commands before skill content is sent. Cu
 
 | Field | Type | Required | Valid Values | Default | agnix Rule | Gap? |
 |-------|------|----------|-------------|---------|------------|------|
-| `type` | string | Yes | `command`, `prompt`, `agent` | none | CC-HK-005 | Partial (only validates command/prompt) |
+| `type` | string | Yes | `command`, `http`, `mcp_tool`, `prompt`, `agent` | none | CC-HK-005, CC-HK-016 | No |
 | `command` | string | For `command` type | shell command string | none | CC-HK-006 | No |
 | `prompt` | string | For `prompt`/`agent` type | prompt text with optional `$ARGUMENTS` | none | CC-HK-007 | Partial |
 | `timeout` | number | No | positive integer (seconds) | 600 (command), 30 (prompt), 60 (agent) | CC-HK-010, CC-HK-011 | No |
-| `matcher` | string | Depends on event | regex pattern for filtering | `*` (all) | CC-HK-003, CC-HK-004 | No |
+| `matcher` | string | Depends on event | regex pattern for filtering | `*` (all) | CC-HK-003, CC-HK-018, CC-HK-025 | No |
 | `async` | boolean | No | `true`/`false` (command type only) | `false` | (none) | YES |
 | `once` | boolean | No | `true`/`false` (skills only) | `false` | (none) | YES |
 | `statusMessage` | string | No | Custom spinner message | none | (none) | LOW |

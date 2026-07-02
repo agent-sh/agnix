@@ -150,6 +150,10 @@ rules:
     prompt_no_timeout_suggestion: Agrega un campo "timeout" (ej., 30 para hooks de prompt)
     prompt_exceeds: Hook de prompt en %{location} tiene timeout %{timeout}s excediendo el predeterminado de %{default}s
     prompt_exceeds_suggestion: Considera timeout <= %{default}s (limite predeterminado de 30 segundos)
+    agent_no_timeout: Hook de agente en %{location} no tiene timeout especificado
+    agent_no_timeout_suggestion: Agrega un campo "timeout" (ej., 60 para hooks de agente)
+    agent_exceeds: Hook de agente en %{location} tiene timeout %{timeout}s excediendo el predeterminado de %{default}s
+    agent_exceeds_suggestion: Considera timeout <= %{default}s (limite predeterminado de 60 segundos)
     assumption: Asume comportamiento de timeout predeterminado de Claude Code. Fija la version de claude_code en .agnix.toml
       [tool_versions] para validacion especifica de version.
   cc_hk_011:

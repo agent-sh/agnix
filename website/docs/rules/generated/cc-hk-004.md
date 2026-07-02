@@ -1,19 +1,19 @@
 ---
 id: cc-hk-004
-title: "CC-HK-004: Matcher on Non-Tool Event - Claude Hooks"
+title: "CC-HK-004: Matcher on Unsupported Event - Claude Hooks"
 sidebar_label: "CC-HK-004"
-description: "agnix rule CC-HK-004 checks for matcher on non-tool event in claude hooks files. Severity: HIGH. See examples and fix guidance."
-keywords: ["CC-HK-004", "matcher on non-tool event", "claude hooks", "validation", "agnix", "linter"]
+description: "agnix rule CC-HK-004 checks for matcher on unsupported event in claude hooks files. Severity: LOW. See examples and fix guidance."
+keywords: ["CC-HK-004", "matcher on unsupported event", "claude hooks", "validation", "agnix", "linter"]
 ---
 
 ## Summary
 
 - **Rule ID**: `CC-HK-004`
-- **Severity**: `HIGH`
+- **Severity**: `LOW`
 - **Category**: `Claude Hooks`
-- **Normative Level**: `MUST`
+- **Normative Level**: `BEST_PRACTICE`
 - **Auto-Fix**: `Yes (safe)`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-07-02`
 
 ## Applicability
 
@@ -40,11 +40,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ```json
 {
   "hooks": {
-    "Notification": [
+    "PostToolBatch": [
       {
         "matcher": "Bash",
         "hooks": [
-          { "type": "command", "command": "echo notified", "timeout": 30 }
+          { "type": "command", "command": "echo batch done", "timeout": 30 }
         ]
       }
     ]
@@ -57,10 +57,10 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ```json
 {
   "hooks": {
-    "Notification": [
+    "PostToolBatch": [
       {
         "hooks": [
-          { "type": "command", "command": "echo notified", "timeout": 30 }
+          { "type": "command", "command": "echo batch done", "timeout": 30 }
         ]
       }
     ]

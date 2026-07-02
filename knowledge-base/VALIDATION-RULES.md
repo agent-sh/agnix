@@ -642,8 +642,8 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 
 <a id="cc-hk-001"></a>
 ### CC-HK-001 [HIGH] Invalid Hook Event
-**Requirement**: Event MUST be one of 15 valid names (case-sensitive)
-**Valid**: SessionStart, UserPromptSubmit, PreToolUse, PermissionRequest, PostToolUse, PostToolUseFailure, SubagentStart, SubagentStop, Stop, PreCompact, Setup, SessionEnd, Notification, TeammateIdle, TaskCompleted
+**Requirement**: Event MUST be one of 30 valid names (case-sensitive)
+**Valid**: PreToolUse, PermissionRequest, PostToolUse, PostToolUseFailure, Notification, MessageDisplay, UserPromptSubmit, UserPromptExpansion, Stop, SubagentStart, SubagentStop, TeammateIdle, TaskCompleted, TaskCreated, PreCompact, PostCompact, Setup, SessionStart, SessionEnd, InstructionsLoaded, ConfigChange, CwdChanged, FileChanged, WorktreeCreate, WorktreeRemove, Elicitation, ElicitationResult, PermissionDenied, PostToolBatch, StopFailure
 **Detection**: `!VALID_EVENTS.contains(event)`
 **Fix**: [AUTO-FIX] Replace with closest matching valid event name
 **Source**: code.claude.com/docs/en/hooks
@@ -651,7 +651,7 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 <a id="cc-hk-002"></a>
 ### CC-HK-002 [HIGH] Prompt Hook on Wrong Event
 **Requirement**: `type: "prompt"` or `type: "agent"` only on supported events
-**Supported**: PreToolUse, PostToolUse, PostToolUseFailure, PermissionRequest, UserPromptSubmit, Stop, SubagentStop, TaskCompleted
+**Supported**: PreToolUse, PostToolUse, PostToolUseFailure, PostToolBatch, PermissionRequest, PermissionDenied, UserPromptSubmit, UserPromptExpansion, Stop, SubagentStop, TaskCreated, TaskCompleted, TeammateIdle
 **Detection**: `hook.type in ["prompt", "agent"] && !PROMPT_EVENTS.contains(event)`
 **Fix**: Change to `type: "command"` for unsupported events
 **Source**: code.claude.com/docs/en/hooks
@@ -659,15 +659,15 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 <a id="cc-hk-003"></a>
 ### CC-HK-003 [LOW] Matcher Hint for Tool Events
 **Requirement**: Tool events support an optional matcher field; omitting it matches all tools
-**Detection**: `["PreToolUse", "PermissionRequest", "PostToolUse", "PostToolUseFailure"].contains(event) && matcher.is_none()`
+**Detection**: `["PreToolUse", "PermissionRequest", "PermissionDenied", "PostToolUse", "PostToolUseFailure"].contains(event) && matcher.is_none()`
 **Fix**: Consider adding `"matcher": "Bash"` or `"*"` to target specific tools
 **Source**: code.claude.com/docs/en/hooks
 
 <a id="cc-hk-004"></a>
-### CC-HK-004 [HIGH] Matcher on Non-Tool Event
-**Requirement**: Stop/SubagentStop/UserPromptSubmit MUST NOT have matcher
-**Detection**: `["Stop", "SubagentStop", "UserPromptSubmit"].contains(event) && matcher.is_some()`
-**Fix**: Remove matcher field
+### CC-HK-004 [LOW] Matcher on Unsupported Event
+**Requirement**: Matchers SHOULD only appear on events that support matcher filtering
+**Detection**: `matcher.is_some() && !MATCHER_EVENTS.contains(event) && !NO_MATCHER_EVENTS.contains(event)`
+**Fix**: Remove matcher field or move the hook to an event with matcher support
 **Source**: code.claude.com/docs/en/hooks
 
 <a id="cc-hk-005"></a>
@@ -713,7 +713,8 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
   - `hook.timeout.is_none()` - missing timeout
   - Command: `timeout > 600` exceeds 10-min default
   - Prompt: `timeout > 30` exceeds 30s default
-**Fix**: [AUTO-FIX] Add explicit timeout within default limits (600s for commands, 30s for prompts)
+  - Agent: `timeout > 60` exceeds 60s default
+**Fix**: [AUTO-FIX] Add explicit timeout within default limits (600s for commands, 30s for prompts, 60s for agents)
 **Source**: code.claude.com/docs/en/hooks
 **Version-Aware**: When Claude Code version is not pinned in `.agnix.toml [tool_versions]`, an assumption note is added indicating default timeout behavior is assumed. Pin the version for version-specific validation.
 
@@ -767,10 +768,11 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Source**: code.claude.com/docs/en/hooks
 
 <a id="cc-hk-018"></a>
-### CC-HK-018 [LOW] Matcher on UserPromptSubmit/Stop
-**Requirement**: Matchers on UserPromptSubmit and Stop events are silently ignored
-**Detection**: Check for matcher field on UserPromptSubmit or Stop events
-**Fix**: Auto-fix (safe) -- remove the `matcher` field line
+### CC-HK-018 [LOW] Matcher on Ignored Event
+**Requirement**: Matchers on no-matcher events are silently ignored
+**Events**: UserPromptSubmit, PostToolBatch, Stop, TeammateIdle, TaskCreated, TaskCompleted, WorktreeCreate, WorktreeRemove, MessageDisplay, CwdChanged
+**Detection**: Check for matcher field on events listed in `NO_MATCHER_EVENTS`
+**Fix**: Auto-fix (safe) - remove the `matcher` field line
 **Source**: code.claude.com/docs/en/hooks
 
 <a id="cc-hk-019"></a>
@@ -790,6 +792,7 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 <a id="cc-hk-021"></a>
 ### CC-HK-021 [MEDIUM] Invalid If Field
 **Requirement**: The if field SHOULD be a non-empty string, only on tool events
+**Tool events**: PreToolUse, PermissionRequest, PermissionDenied, PostToolUse, PostToolUseFailure
 **Detection**: Check if field presence and type
 **Fix**: Manual
 **Source**: code.claude.com/docs/en/hooks
@@ -818,7 +821,8 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 <a id="cc-hk-025"></a>
 ### CC-HK-025 [LOW] Invalid Matcher Value
 **Requirement**: Matcher values MAY be validated against known values per event
-**Detection**: Check matcher values against event-specific allowlists
+**Detection**: Check matcher values against event-specific allowlists for SessionStart, Setup, SessionEnd, Notification, PreCompact, PostCompact, ConfigChange, StopFailure, and InstructionsLoaded
+**Notification values**: permission_prompt, idle_prompt, auth_success, elicitation_dialog, elicitation_complete, elicitation_response, agent_needs_input, agent_completed
 **Fix**: Manual
 **Source**: code.claude.com/docs/en/hooks
 
@@ -3378,7 +3382,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | CC-SK-014 | Convert string to boolean | safe |
 | CC-SK-015 | Convert string to boolean | safe |
 | CC-HK-001 | Correct event name casing/typo | safe/unsafe |
-| CC-HK-004 | Clamp timeout to valid range | safe |
+| CC-HK-004 | Remove matcher field | safe |
 | CC-HK-011 | Remove redundant wildcard matcher | unsafe |
 | CC-HK-013 | Remove async field | safe |
 | CC-HK-015 | Remove model field | safe |
@@ -3524,5 +3528,5 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 **Total Coverage**: 432 validation rules across 40 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 213 HIGH, 191 MEDIUM, 28 LOW
+**Certainty**: 212 HIGH, 191 MEDIUM, 29 LOW
 **Auto-Fixable**: 127 rules (29%)

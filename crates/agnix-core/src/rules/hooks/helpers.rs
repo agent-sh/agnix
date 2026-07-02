@@ -226,6 +226,68 @@ pub(super) fn validate_cc_hk_011_invalid_timeout_values(
 /// Each entry is `(deprecated_name, replacement_name)`.
 pub(super) const DEPRECATED_EVENTS: &[(&str, &str)] = &[("Setup", "SessionStart")];
 
+const SESSION_START_MATCHERS: &[&str] = &["startup", "resume", "clear", "compact"];
+const SETUP_MATCHERS: &[&str] = &["init", "maintenance"];
+const SESSION_END_MATCHERS: &[&str] = &[
+    "clear",
+    "resume",
+    "logout",
+    "prompt_input_exit",
+    "bypass_permissions_disabled",
+    "other",
+];
+const NOTIFICATION_MATCHERS: &[&str] = &[
+    "permission_prompt",
+    "idle_prompt",
+    "auth_success",
+    "elicitation_dialog",
+    "elicitation_complete",
+    "elicitation_response",
+    "agent_needs_input",
+    "agent_completed",
+];
+const COMPACT_MATCHERS: &[&str] = &["manual", "auto"];
+const CONFIG_CHANGE_MATCHERS: &[&str] = &[
+    "user_settings",
+    "project_settings",
+    "local_settings",
+    "policy_settings",
+    "skills",
+];
+const STOP_FAILURE_MATCHERS: &[&str] = &[
+    "rate_limit",
+    "overloaded",
+    "authentication_failed",
+    "oauth_org_not_allowed",
+    "billing_error",
+    "invalid_request",
+    "model_not_found",
+    "server_error",
+    "max_output_tokens",
+    "unknown",
+];
+const INSTRUCTIONS_LOADED_MATCHERS: &[&str] = &[
+    "session_start",
+    "nested_traversal",
+    "path_glob_match",
+    "include",
+    "compact",
+];
+
+fn known_matcher_values(event: &str) -> Option<&'static [&'static str]> {
+    match event {
+        "SessionStart" => Some(SESSION_START_MATCHERS),
+        "Setup" => Some(SETUP_MATCHERS),
+        "SessionEnd" => Some(SESSION_END_MATCHERS),
+        "Notification" => Some(NOTIFICATION_MATCHERS),
+        "PreCompact" | "PostCompact" => Some(COMPACT_MATCHERS),
+        "ConfigChange" => Some(CONFIG_CHANGE_MATCHERS),
+        "StopFailure" => Some(STOP_FAILURE_MATCHERS),
+        "InstructionsLoaded" => Some(INSTRUCTIONS_LOADED_MATCHERS),
+        _ => None,
+    }
+}
+
 /// CC-HK-019: Deprecated event name
 pub(super) fn validate_cc_hk_019_deprecated_event(
     event: &str,
@@ -339,8 +401,9 @@ pub(super) fn validate_cc_hk_003_matcher_hint(
     }
 }
 
-/// CC-HK-004: Matcher on non-tool event
-/// Note: Stop and UserPromptSubmit are handled by CC-HK-018 instead (info-level).
+/// CC-HK-004: Matcher on event without matcher support.
+/// Valid no-matcher events are handled by CC-HK-018 instead (info-level),
+/// because Claude Code silently ignores the matcher at runtime.
 pub(super) fn validate_cc_hk_004_matcher_forbidden(
     event: &str,
     matcher: &Option<String>,
@@ -349,11 +412,9 @@ pub(super) fn validate_cc_hk_004_matcher_forbidden(
     content: &str,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
-    // Skip events handled by CC-HK-018 (matcher silently ignored rather than forbidden)
-    const CC_HK_018_EVENTS: &[&str] = &["UserPromptSubmit", "Stop"];
     if !HooksSchema::supports_matcher(event)
         && matcher.is_some()
-        && !CC_HK_018_EVENTS.contains(&event)
+        && !HooksSchema::ignores_matcher(event)
     {
         let hook_location = format!("hooks.{}[{}]", event, matcher_idx);
         let mut diagnostic = Diagnostic::error(
@@ -1041,17 +1102,6 @@ pub(super) fn validate_all_raw_hooks(
     let valid_shells = ["bash", "powershell"];
     let tool_events = HooksSchema::TOOL_EVENTS;
 
-    const SESSION_START_MATCHERS: &[&str] = &["startup", "resume", "clear", "compact"];
-    const STOP_FAILURE_MATCHERS: &[&str] = &[
-        "rate_limit",
-        "authentication_failed",
-        "billing_error",
-        "invalid_request",
-        "server_error",
-        "max_output_tokens",
-        "unknown",
-    ];
-
     let mut found_016 = false;
     // Diagnostics gated on CC-HK-016 NOT firing (post-016 checks).
     let mut conditional_diags: Vec<Diagnostic> = Vec::new();
@@ -1059,13 +1109,7 @@ pub(super) fn validate_all_raw_hooks(
     for (event, matchers) in hooks_obj {
         // --- CC-HK-025: matcher-level check (not per-hook) ---
         if check_025 {
-            let valid_values: Option<&[&str]> = match event.as_str() {
-                "SessionStart" => Some(SESSION_START_MATCHERS),
-                "StopFailure" => Some(STOP_FAILURE_MATCHERS),
-                _ => None,
-            };
-
-            if let Some(valid_values) = valid_values {
+            if let Some(valid_values) = known_matcher_values(event) {
                 if let Some(matchers_arr) = matchers.as_array() {
                     for (matcher_idx, matcher) in matchers_arr.iter().enumerate() {
                         if let Some(matcher_val) = matcher.get("matcher").and_then(|m| m.as_str()) {
@@ -1503,30 +1547,17 @@ pub(super) fn validate_all_raw_hooks(
 
 /// CC-HK-025: Invalid matcher value for event type.
 /// Events that support matchers have specific valid values.
-/// Validates matcher values on `SessionStart` and `StopFailure`.
+/// Validates matcher values on lifecycle events with documented enum values.
 #[cfg_attr(not(test), allow(dead_code))]
 pub(super) fn validate_cc_hk_025_invalid_matcher_value(
     raw_value: &serde_json::Value,
     path: &Path,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
-    const SESSION_START_MATCHERS: &[&str] = &["startup", "resume", "clear", "compact"];
-    const STOP_FAILURE_MATCHERS: &[&str] = &[
-        "rate_limit",
-        "authentication_failed",
-        "billing_error",
-        "invalid_request",
-        "server_error",
-        "max_output_tokens",
-        "unknown",
-    ];
-
     if let Some(hooks_obj) = raw_value.get("hooks").and_then(|h| h.as_object()) {
         for (event, matchers) in hooks_obj {
-            let valid_values: &[&str] = match event.as_str() {
-                "SessionStart" => SESSION_START_MATCHERS,
-                "StopFailure" => STOP_FAILURE_MATCHERS,
-                _ => continue,
+            let Some(valid_values) = known_matcher_values(event) else {
+                continue;
             };
 
             if let Some(matchers_arr) = matchers.as_array() {
@@ -1771,9 +1802,12 @@ mod tests {
     fn test_cc_hk_025_valid_stop_failure_matchers() {
         let valid_matchers = [
             "rate_limit",
+            "overloaded",
             "authentication_failed",
+            "oauth_org_not_allowed",
             "billing_error",
             "invalid_request",
+            "model_not_found",
             "server_error",
             "max_output_tokens",
             "unknown",
@@ -1802,6 +1836,116 @@ mod tests {
                 diagnostics.is_empty(),
                 "Matcher '{}' should be valid for StopFailure",
                 matcher
+            );
+        }
+    }
+
+    #[test]
+    fn test_cc_hk_025_valid_notification_matchers() {
+        let valid_matchers = [
+            "permission_prompt",
+            "idle_prompt",
+            "auth_success",
+            "elicitation_dialog",
+            "elicitation_complete",
+            "elicitation_response",
+            "agent_needs_input",
+            "agent_completed",
+        ];
+        for matcher in valid_matchers {
+            let content = format!(
+                r#"{{
+  "hooks": {{
+    "Notification": [
+      {{
+        "matcher": "{}",
+        "hooks": [{{ "type": "command", "command": "echo notify" }}]
+      }}
+    ]
+  }}
+}}"#,
+                matcher
+            );
+            let raw_value: serde_json::Value = serde_json::from_str(&content).unwrap();
+            let path = Path::new(".claude/settings.json");
+            let mut diagnostics = Vec::new();
+
+            validate_cc_hk_025_invalid_matcher_value(&raw_value, path, &mut diagnostics);
+
+            assert!(
+                diagnostics.is_empty(),
+                "Matcher '{}' should be valid for Notification",
+                matcher
+            );
+        }
+    }
+
+    #[test]
+    fn test_cc_hk_025_invalid_notification_matcher() {
+        let content = r#"{
+  "hooks": {
+    "Notification": [
+      {
+        "matcher": "unknown_notification",
+        "hooks": [{ "type": "command", "command": "echo notify" }]
+      }
+    ]
+  }
+}"#;
+        let raw_value: serde_json::Value = serde_json::from_str(content).unwrap();
+        let path = Path::new(".claude/settings.json");
+        let mut diagnostics = Vec::new();
+
+        validate_cc_hk_025_invalid_matcher_value(&raw_value, path, &mut diagnostics);
+
+        assert_eq!(diagnostics.len(), 1);
+        assert_eq!(diagnostics[0].rule, "CC-HK-025");
+        assert!(diagnostics[0].message.contains("unknown_notification"));
+        assert!(diagnostics[0].message.contains("Notification"));
+    }
+
+    #[test]
+    fn test_cc_hk_025_valid_setup_and_session_end_matchers() {
+        let cases = [
+            ("Setup", "init"),
+            ("Setup", "maintenance"),
+            ("SessionEnd", "clear"),
+            ("SessionEnd", "resume"),
+            ("SessionEnd", "logout"),
+            ("SessionEnd", "prompt_input_exit"),
+            ("SessionEnd", "bypass_permissions_disabled"),
+            ("SessionEnd", "other"),
+            ("PreCompact", "manual"),
+            ("PostCompact", "auto"),
+            ("ConfigChange", "skills"),
+            ("InstructionsLoaded", "path_glob_match"),
+        ];
+
+        for (event, matcher) in cases {
+            let content = format!(
+                r#"{{
+  "hooks": {{
+    "{}": [
+      {{
+        "matcher": "{}",
+        "hooks": [{{ "type": "command", "command": "echo ok" }}]
+      }}
+    ]
+  }}
+}}"#,
+                event, matcher
+            );
+            let raw_value: serde_json::Value = serde_json::from_str(&content).unwrap();
+            let path = Path::new(".claude/settings.json");
+            let mut diagnostics = Vec::new();
+
+            validate_cc_hk_025_invalid_matcher_value(&raw_value, path, &mut diagnostics);
+
+            assert!(
+                diagnostics.is_empty(),
+                "Matcher '{}' should be valid for {}",
+                matcher,
+                event
             );
         }
     }

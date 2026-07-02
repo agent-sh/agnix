@@ -50,7 +50,7 @@ This section contains all `432` validation rules generated from `knowledge-base/
 | [CC-HK-001](./generated/cc-hk-001.md) | Invalid Hook Event | HIGH | Claude Hooks | Yes (safe/unsafe) |
 | [CC-HK-002](./generated/cc-hk-002.md) | Prompt Hook on Wrong Event | HIGH | Claude Hooks | No |
 | [CC-HK-003](./generated/cc-hk-003.md) | Matcher Hint for Tool Events | LOW | Claude Hooks | No |
-| [CC-HK-004](./generated/cc-hk-004.md) | Matcher on Non-Tool Event | HIGH | Claude Hooks | Yes (safe) |
+| [CC-HK-004](./generated/cc-hk-004.md) | Matcher on Unsupported Event | LOW | Claude Hooks | Yes (safe) |
 | [CC-HK-005](./generated/cc-hk-005.md) | Missing Type Field | HIGH | Claude Hooks | Yes (safe) |
 | [CC-HK-006](./generated/cc-hk-006.md) | Missing Command Field | HIGH | Claude Hooks | No |
 | [CC-HK-007](./generated/cc-hk-007.md) | Missing Prompt Field | HIGH | Claude Hooks | No |
@@ -64,7 +64,7 @@ This section contains all `432` validation rules generated from `knowledge-base/
 | [CC-HK-015](./generated/cc-hk-015.md) | Model on Command Hook | MEDIUM | Claude Hooks | Yes (safe) |
 | [CC-HK-016](./generated/cc-hk-016.md) | Validate Hook Type Agent | HIGH | Claude Hooks | Yes (unsafe) |
 | [CC-HK-017](./generated/cc-hk-017.md) | Prompt/Agent Hook Missing $ARGUMENTS | MEDIUM | Claude Hooks | Yes (safe) |
-| [CC-HK-018](./generated/cc-hk-018.md) | Matcher on UserPromptSubmit/Stop | LOW | Claude Hooks | Yes (safe) |
+| [CC-HK-018](./generated/cc-hk-018.md) | Matcher on Ignored Event | LOW | Claude Hooks | Yes (safe) |
 | [CC-HK-019](./generated/cc-hk-019.md) | Deprecated Setup Event | MEDIUM | Claude Hooks | Yes (unsafe) |
 | [CC-HK-020](./generated/cc-hk-020.md) | HTTP Hook Missing URL | HIGH | Claude Hooks | No |
 | [CC-HK-021](./generated/cc-hk-021.md) | Invalid If Field | MEDIUM | Claude Hooks | No |

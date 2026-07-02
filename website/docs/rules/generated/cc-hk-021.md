@@ -13,7 +13,7 @@ keywords: ["CC-HK-021", "invalid if field", "claude hooks", "validation", "agnix
 - **Category**: `Claude Hooks`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-07-02`
 
 ## Applicability
 
@@ -44,5 +44,5 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Valid
 
 ```json
-{ "type": "command", "command": "npm test", "if": "tool_name == 'Bash'" }
+{ "type": "command", "command": "npm test", "if": "Bash(npm test)" }
 ```

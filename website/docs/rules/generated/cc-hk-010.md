@@ -13,7 +13,7 @@ keywords: ["CC-HK-010", "timeout policy", "claude hooks", "validation", "agnix",
 - **Category**: `Claude Hooks`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `Yes (safe)`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-07-02`
 
 ## Applicability
 
@@ -40,11 +40,10 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ```json
 {
   "hooks": {
-    "PreToolUse": [
+    "Stop": [
       {
-        "matcher": "Bash",
         "hooks": [
-          { "type": "command", "command": "echo ok" }
+          { "type": "agent", "prompt": "Review: $ARGUMENTS", "timeout": 120 }
         ]
       }
     ]
@@ -57,11 +56,10 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ```json
 {
   "hooks": {
-    "PreToolUse": [
+    "Stop": [
       {
-        "matcher": "Bash",
         "hooks": [
-          { "type": "command", "command": "echo ok", "timeout": 30 }
+          { "type": "agent", "prompt": "Review: $ARGUMENTS", "timeout": 60 }
         ]
       }
     ]
