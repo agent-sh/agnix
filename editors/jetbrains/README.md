@@ -96,8 +96,9 @@ Resolve it by running `agnix-lsp` from an allowed location:
    a whitelisted path (e.g. `C:\Program Files\agnix\`), or use `%USERPROFILE%\.cargo\bin`.
    (`cargo install agnix-cli` installs the CLI, not the LSP server, so use the
    release asset.)
-2. In the IDE: **Tools → agnix → Settings → LSP binary path** → point it at that
-   `agnix-lsp.exe`, then restart the language server (`Tools → agnix → Restart
-   Language Server`). The configured path takes priority over the blocked
+2. In the IDE: **Tools → agnix → Settings → LSP binary path** → point it at the
+   full absolute path to that executable, e.g. `C:\Program Files\agnix\agnix-lsp.exe`
+   (not just `agnix-lsp.exe`), then restart the language server (`Tools → agnix →
+   Restart Language Server`). The configured path takes priority over the blocked
    auto-downloaded copy.
 3. Alternatively, ask IT to allowlist the binary or the `%AppData%` plugin path.

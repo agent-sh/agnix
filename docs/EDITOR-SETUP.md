@@ -239,8 +239,9 @@ running the server from an allowed location: download
 `agnix-lsp-x86_64-pc-windows-msvc.zip` from the
 [releases](https://github.com/agent-sh/agnix/releases), extract it somewhere
 whitelisted (e.g. `C:\Program Files\agnix\`), set **Tools → agnix → Settings →
-LSP binary path** to it, and restart the language server — or ask IT to
-allowlist the path. See the
+LSP binary path** to the full absolute executable path (for example
+`C:\Program Files\agnix\agnix-lsp.exe`, not just `agnix-lsp.exe`), and restart
+the language server. Alternatively, ask IT to allowlist the path. See the
 [JetBrains plugin README](../editors/jetbrains/README.md#troubleshooting) for details.
 
 ## Zed

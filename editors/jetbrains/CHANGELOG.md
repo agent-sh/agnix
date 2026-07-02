@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Surface an actionable notification when the OS or a security policy blocks execution of `agnix-lsp` (e.g. AppLocker/WDAC, EDR, or antivirus on locked-down Windows producing `CreateProcess error=5, Access is denied`). Previously this only appeared as a raw `CannotStartProcessException` stack trace. The notification explains the cause and offers "Set Binary Path" and "Troubleshooting" actions, since upgrading the IDE does not resolve an OS-level execution block. Access-denied detection is locale-independent (matches the Win32 `error=5` / POSIX `errno=13`/`EACCES` codes, not localized text).
+- Reject relative values in **LSP binary path** (for example `agnix-lsp.exe`) and tell users to provide the full absolute executable path, preventing the plugin from silently falling back to the blocked downloaded copy.
 
 ## [0.36.2] - 2026-06-27
 

@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **JetBrains plugin LSP binary path validation**. The **LSP binary path** setting now rejects relative values like `agnix-lsp.exe` and tells users to provide the full absolute executable path, so locked-down Windows users do not silently fall back to the blocked auto-downloaded binary.
+
 ## [0.37.0] - 2026-07-02
 
 ### Added
