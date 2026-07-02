@@ -160,6 +160,20 @@ fn docs_site_has_search_and_versioning_configuration() {
         "Docs route base path is missing in {}",
         config_path.display()
     );
+    assert!(
+        config.contains("AGNIX_DOCS_VERSION_LIMIT") && config.contains("onlyIncludeVersions"),
+        "Docs deploy version limit is not configured in {}",
+        config_path.display()
+    );
+
+    let workflow_path = root.join(".github/workflows/docs-site.yml");
+    let workflow = fs::read_to_string(&workflow_path)
+        .unwrap_or_else(|e| panic!("Failed to read {}: {}", workflow_path.display(), e));
+    assert!(
+        workflow.contains("AGNIX_DOCS_VERSION_LIMIT: '6'"),
+        "Docs workflow should limit deployed docs versions in {}",
+        workflow_path.display()
+    );
 
     let versions_path = root.join("website/versions.json");
     assert!(

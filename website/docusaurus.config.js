@@ -1,7 +1,13 @@
 // @ts-check
 
 const siteData = require('./src/data/siteData.json');
+const availableDocVersions = require('./versions.json');
 const enableLocalSearch = process.env.AGNIX_DOCS_DISABLE_SEARCH !== '1';
+const docsVersionLimit = Number.parseInt(process.env.AGNIX_DOCS_VERSION_LIMIT ?? '', 10);
+const includedDocVersions =
+  Number.isFinite(docsVersionLimit) && docsVersionLimit > 0
+    ? availableDocVersions.slice(0, docsVersionLimit)
+    : undefined;
 
 const config = {
   title: 'agnix',
@@ -75,6 +81,7 @@ const config = {
           editUrl: 'https://github.com/agent-sh/agnix/tree/main/website/',
           showLastUpdateTime: true,
           lastVersion: '0.37.0',
+          ...(includedDocVersions ? { onlyIncludeVersions: includedDocVersions } : {}),
           versions: {
             current: {
               label: 'next',
