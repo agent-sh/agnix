@@ -1,6 +1,7 @@
 package io.agnix.jetbrains.settings
 
 import com.intellij.openapi.options.Configurable
+import com.intellij.openapi.options.ConfigurationException
 import io.agnix.jetbrains.binary.AgnixBinaryResolver
 import javax.swing.JComponent
 
@@ -29,7 +30,7 @@ class AgnixSettingsConfigurable : Configurable {
         val component = settingsComponent ?: return false
 
         return component.enabled != settings.enabled ||
-            component.lspPath != settings.lspPath ||
+            component.lspPath.trim() != settings.lspPath ||
             component.autoDownload != settings.autoDownload ||
             component.traceLevel != settings.traceLevel ||
             component.codeLensEnabled != settings.codeLensEnabled
@@ -39,10 +40,15 @@ class AgnixSettingsConfigurable : Configurable {
         val settings = AgnixSettings.getInstance()
         val component = settingsComponent ?: return
 
-        val lspPathChanged = settings.lspPath != component.lspPath
+        val lspPath = component.lspPath.trim()
+        AgnixLspPathValidation.validate(lspPath)?.let { message ->
+            throw ConfigurationException(message)
+        }
+
+        val lspPathChanged = settings.lspPath != lspPath
 
         settings.enabled = component.enabled
-        settings.lspPath = component.lspPath
+        settings.lspPath = lspPath
         settings.autoDownload = component.autoDownload
         settings.traceLevel = component.traceLevel
         settings.codeLensEnabled = component.codeLensEnabled
