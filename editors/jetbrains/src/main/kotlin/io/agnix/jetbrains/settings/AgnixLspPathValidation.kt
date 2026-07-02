@@ -29,7 +29,8 @@ object AgnixLspPathValidation {
 
     internal fun isAbsolutePath(path: String): Boolean {
         val trimmed = path.trim()
-        return File(trimmed).isAbsolute ||
+        return trimmed.startsWith('/') ||
+            File(trimmed).isAbsolute ||
             windowsDriveAbsolutePath.matches(trimmed) ||
             windowsUncAbsolutePath.matches(trimmed)
     }
