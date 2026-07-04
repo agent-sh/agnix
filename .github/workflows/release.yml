@@ -6,7 +6,7 @@ on:
       - 'v*'
 
 permissions:
-  contents: write
+  contents: read
 
 env:
   CARGO_TERM_COLOR: always
@@ -19,6 +19,10 @@ jobs:
   build:
     name: Build (${{ matrix.target }})
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     strategy:
       fail-fast: false
       matrix:
@@ -136,6 +140,13 @@ jobs:
             (Get-FileHash agnix-mcp-${{ matrix.target }}.zip -Algorithm SHA256).Hash.ToLower() + "  agnix-mcp-${{ matrix.target }}.zip" | Out-File -Encoding ASCII agnix-mcp-${{ matrix.target }}.zip.sha256
           }
 
+      - name: Attest build provenance
+        uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1
+        with:
+          subject-path: |
+            agnix-*${{ matrix.target }}.tar.gz
+            agnix-*${{ matrix.target }}.zip
+
       - name: Upload artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -174,6 +185,8 @@ jobs:
     name: Create Release
     needs: [build, test]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
