@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Windows checkout line endings**. Added repository attributes that keep source files LF-normalized across platforms while preserving CRLF for Windows command and PowerShell scripts.
 - **npm installer checksum verification**. The npm postinstall downloader now verifies release archive SHA-256 sidecars before extraction, binds sidecar entries to the expected archive filename, streams archive hashing, and cleans temporary artifacts after failed installs.
 - **Stale version references in documentation**. Updated project instructions and configuration docs to consistently reference v0.37.2, so release guidance and user-facing docs match the current published version.
+- **Security follow-ups** (closes #1149, #1150, #1154, #1155, #1156, #1157, #1158). Hardened MCP validation against handler panics and absolute-path disclosure, extended panic isolation to project-level checks, bound shell checksum parsing to the selected artifact filename, added VS Code release-download redirect host validation, corrected the YAML parser safety comment, and documented the remaining deprecated transitive `serde_yaml` dependency from `rust-i18n`.
 
 ## [0.37.2] - 2026-07-04
 

@@ -32,7 +32,10 @@ use rmcp::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::any::Any;
 use std::collections::HashSet;
+use std::fmt::Display;
+use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::{Path, PathBuf};
 
 const TOOL_ALIASES: &[(&str, &str)] =
@@ -180,8 +183,16 @@ struct DiagnosticOutput {
 
 impl From<&Diagnostic> for DiagnosticOutput {
     fn from(d: &Diagnostic) -> Self {
+        Self::from_diagnostic(d, None)
+    }
+}
+
+impl DiagnosticOutput {
+    fn from_diagnostic(d: &Diagnostic, workspace_root: Option<&Path>) -> Self {
         Self {
-            file: d.file.display().to_string(),
+            file: workspace_root
+                .map(|root| display_path_for_client(&d.file, root))
+                .unwrap_or_else(|| d.file.display().to_string()),
             line: d.line,
             column: d.column,
             level: match d.level {
@@ -342,6 +353,7 @@ fn diagnostics_to_result(
     path: &str,
     diagnostics: Vec<Diagnostic>,
     files_checked: usize,
+    workspace_root: &Path,
 ) -> ValidationResult {
     let errors = diagnostics
         .iter()
@@ -359,7 +371,10 @@ fn diagnostics_to_result(
         errors,
         warnings,
         fixable,
-        diagnostics: diagnostics.iter().map(DiagnosticOutput::from).collect(),
+        diagnostics: diagnostics
+            .iter()
+            .map(|d| DiagnosticOutput::from_diagnostic(d, Some(workspace_root)))
+            .collect(),
     }
 }
 
@@ -395,10 +410,76 @@ fn resolve_path_within_workspace(
     Ok(canonical_candidate)
 }
 
-fn resolve_mcp_path(input_path: &str) -> Result<PathBuf, McpError> {
+struct ResolvedMcpPath {
+    canonical_path: PathBuf,
+    workspace_root: PathBuf,
+}
+
+fn resolve_mcp_path_with_root(input_path: &str) -> Result<ResolvedMcpPath, McpError> {
     let workspace_root = std::env::current_dir()
-        .map_err(|e| make_internal_error(format!("Failed to read current directory: {e}")))?;
-    resolve_path_within_workspace(input_path, &workspace_root).map_err(make_invalid_params)
+        .map_err(|e| make_internal_error(format!("Failed to read current directory: {e}")))?
+        .canonicalize()
+        .map_err(|e| make_internal_error(format!("Failed to resolve current directory: {e}")))?;
+    let canonical_path =
+        resolve_path_within_workspace(input_path, &workspace_root).map_err(make_invalid_params)?;
+
+    Ok(ResolvedMcpPath {
+        canonical_path,
+        workspace_root,
+    })
+}
+
+fn display_path_for_client(path: &Path, workspace_root: &Path) -> String {
+    let display_path = path.strip_prefix(workspace_root).unwrap_or(path);
+    if display_path.as_os_str().is_empty() {
+        ".".to_string()
+    } else {
+        display_path.display().to_string()
+    }
+}
+
+fn sanitize_error_message(error: impl Display, workspace_root: &Path) -> String {
+    let mut message = error.to_string();
+    let root_display = workspace_root.display().to_string();
+    if !root_display.is_empty() {
+        message = message.replace(&root_display, ".");
+    }
+    message
+}
+
+fn panic_payload_message(payload: &(dyn Any + Send)) -> String {
+    if let Some(msg) = payload.downcast_ref::<&str>() {
+        (*msg).to_string()
+    } else if let Some(msg) = payload.downcast_ref::<String>() {
+        msg.clone()
+    } else {
+        "unknown panic payload".to_string()
+    }
+}
+
+fn run_validation_guarded<T, E, F>(
+    operation: &str,
+    input_path: &str,
+    workspace_root: &Path,
+    validate: F,
+) -> Result<T, McpError>
+where
+    E: Display,
+    F: FnOnce() -> Result<T, E>,
+{
+    match catch_unwind(AssertUnwindSafe(validate)) {
+        Ok(Ok(value)) => Ok(value),
+        Ok(Err(error)) => Err(make_invalid_params(format!(
+            "Failed to {operation} '{}': {}",
+            input_path,
+            sanitize_error_message(error, workspace_root)
+        ))),
+        Err(payload) => Err(make_internal_error(format!(
+            "Validation panicked while processing '{}': {}",
+            input_path,
+            panic_payload_message(payload.as_ref())
+        ))),
+    }
 }
 
 /// Agnix MCP Server - validates AI agent configurations
@@ -437,13 +518,18 @@ impl AgnixServer {
         let mut config = LintConfig::default();
         apply_tool_selection(&mut config, input.tools, input.target)?;
 
-        let file_path = resolve_mcp_path(&input.path)?;
+        let resolved_path = resolve_mcp_path_with_root(&input.path)?;
 
-        let outcome = core_validate_file(&file_path, &config)
-            .map_err(|e| make_invalid_params(format!("Failed to validate file: {}", e)))?;
+        let outcome = run_validation_guarded(
+            "validate file",
+            &input.path,
+            &resolved_path.workspace_root,
+            || core_validate_file(&resolved_path.canonical_path, &config),
+        )?;
 
         let diagnostics = outcome.into_diagnostics();
-        let result = diagnostics_to_result(&input.path, diagnostics, 1);
+        let result =
+            diagnostics_to_result(&input.path, diagnostics, 1, &resolved_path.workspace_root);
         let json = serde_json::to_string_pretty(&result)
             .map_err(|e| make_internal_error(format!("Failed to serialize result: {}", e)))?;
 
@@ -461,15 +547,20 @@ impl AgnixServer {
         let mut config = LintConfig::default();
         apply_tool_selection(&mut config, input.tools, input.target)?;
 
-        let project_path = resolve_mcp_path(&input.path)?;
+        let resolved_path = resolve_mcp_path_with_root(&input.path)?;
 
-        let validation_result = core_validate_project(&project_path, &config)
-            .map_err(|e| make_invalid_params(format!("Failed to validate project: {}", e)))?;
+        let validation_result = run_validation_guarded(
+            "validate project",
+            &input.path,
+            &resolved_path.workspace_root,
+            || core_validate_project(&resolved_path.canonical_path, &config),
+        )?;
 
         let result = diagnostics_to_result(
             &input.path,
             validation_result.diagnostics,
             validation_result.files_checked,
+            &resolved_path.workspace_root,
         );
         let json = serde_json::to_string_pretty(&result)
             .map_err(|e| make_internal_error(format!("Failed to serialize result: {}", e)))?;
@@ -583,12 +674,15 @@ async fn main() -> anyhow::Result<()> {
 mod tests {
     use super::{
         ToolsInput, ValidateFileInput, ValidateProjectInput, apply_tool_selection,
-        make_internal_error, make_invalid_params, parse_tools, resolve_path_within_workspace,
+        diagnostics_to_result, display_path_for_client, make_internal_error, make_invalid_params,
+        parse_tools, resolve_path_within_workspace, run_validation_guarded, sanitize_error_message,
     };
     use agnix_core::LintConfig;
     use agnix_core::config::TargetTool;
+    use agnix_core::diagnostics::{Diagnostic, LintError, ValidationError};
     use rmcp::model::ErrorCode;
     use serde_json::json;
+    use std::path::PathBuf;
 
     #[test]
     fn test_parse_tools_csv_trims_and_discards_empty_entries() {
@@ -866,6 +960,85 @@ mod tests {
             .expect_err("absolute outside paths must be rejected");
 
         assert!(err.contains("outside workspace boundary"));
+    }
+
+    #[test]
+    fn test_diagnostics_to_result_relativizes_workspace_paths() {
+        let workspace = tempfile::TempDir::new().unwrap();
+        let skill_path = workspace.path().join("SKILL.md");
+        std::fs::write(&skill_path, "---\nname: test\n---\n").unwrap();
+        let canonical_skill = skill_path.canonicalize().unwrap();
+        let diagnostic = Diagnostic::error(canonical_skill, 1, 1, "AS-001", "test diagnostic");
+
+        let result = diagnostics_to_result(
+            "SKILL.md",
+            vec![diagnostic],
+            1,
+            &workspace.path().canonicalize().unwrap(),
+        );
+
+        assert_eq!(result.path, "SKILL.md");
+        assert_eq!(result.diagnostics[0].file, "SKILL.md");
+    }
+
+    #[test]
+    fn test_display_path_for_client_uses_workspace_relative_path() {
+        let workspace = tempfile::TempDir::new().unwrap();
+        let nested = workspace.path().join("nested").join("SKILL.md");
+        let display = display_path_for_client(&nested, workspace.path());
+
+        assert_eq!(
+            display,
+            PathBuf::from("nested")
+                .join("SKILL.md")
+                .display()
+                .to_string()
+        );
+    }
+
+    #[test]
+    fn test_sanitize_error_message_redacts_workspace_root() {
+        let workspace = tempfile::TempDir::new().unwrap();
+        let message = format!(
+            "failed to read {}",
+            workspace.path().join("secret").join("SKILL.md").display()
+        );
+
+        let sanitized = sanitize_error_message(message, workspace.path());
+
+        assert!(!sanitized.contains(&workspace.path().display().to_string()));
+        assert!(sanitized.contains("."));
+    }
+
+    #[test]
+    fn test_run_validation_guarded_converts_panic_to_mcp_error() {
+        let workspace = tempfile::TempDir::new().unwrap();
+        let err = run_validation_guarded(
+            "validate file",
+            "SKILL.md",
+            workspace.path(),
+            || -> Result<(), String> { panic!("intentional mcp panic") },
+        )
+        .expect_err("panic should be converted to an MCP error");
+
+        assert_eq!(err.code, ErrorCode::INTERNAL_ERROR);
+        assert!(err.message.contains("intentional mcp panic"));
+    }
+
+    #[test]
+    fn test_run_validation_guarded_sanitizes_validation_error() {
+        let workspace = tempfile::TempDir::new().unwrap();
+        let rooted_path = workspace.path().join("secret").join("SKILL.md");
+        let err = run_validation_guarded("validate file", "SKILL.md", workspace.path(), || {
+            Err::<(), LintError>(ValidationError::RootNotFound { path: rooted_path }.into())
+        })
+        .expect_err("validation error should become an MCP invalid params error");
+
+        assert_eq!(err.code, ErrorCode::INVALID_PARAMS);
+        assert!(
+            !err.message
+                .contains(&workspace.path().display().to_string())
+        );
     }
 
     #[test]

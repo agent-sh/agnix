@@ -9,9 +9,9 @@
 //!    extremely large YAML payloads from being read.
 //!
 //! 2. **Parser Library**: agnix's direct `serde_yaml` crate name is backed by
-//!    the maintained `serde_norway` package, which preserves the YAML parser API
-//!    and internal protections against excessive memory usage and stack overflow
-//!    from deeply nested structures.
+//!    the maintained `serde_norway` package, which preserves the YAML parser API.
+//!    The parser is not treated as the nesting or expansion-bomb boundary; agnix's
+//!    own size cap and depth guard below provide that protection.
 //!
 //! 3. **Memory Limit**: The entire file is bounded at 1 MiB, limiting total
 //!    memory consumption regardless of structure complexity.
