@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Release provenance attestations**. Release archive builds now generate GitHub artifact attestations with job-scoped OIDC and attestation permissions, while release publishing keeps write access isolated to the release job.
+
 ### Fixed
 - **Markdown import scanner performance**. Avoided repeated prefix rescans when extracting `@import` references from large non-code spans, keeping dense-at-sign inputs linear while preserving UTF-8 behavior.
 - **Rule suppression config warnings**. Recognized every shipped rule-prefix namespace in `.agnix.toml` validation, avoiding spurious `core.config.unknown_rule` warnings when disabling valid rules.
