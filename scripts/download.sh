@@ -157,6 +157,7 @@ NF {
     hash = tolower($1)
     file = $2
     sub(/^\*/, "", file)
+    sub(/\r$/, "", file)
     n = split(file, parts, /[\\\/]/)
     base = parts[n]
     if (base == expected) {

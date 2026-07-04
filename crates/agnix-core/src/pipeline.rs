@@ -625,12 +625,14 @@ pub fn validate_project_rules(root: &Path, config: &LintConfig) -> LintResult<Ve
     instruction_file_paths.sort();
 
     let mut diagnostics = files_config_diags;
-    diagnostics.extend(run_project_level_checks(
-        &agents_md_paths,
-        &instruction_file_paths,
-        &config,
-        &root_dir,
-    ));
+    diagnostics.extend(run_project_level_checks_with_panic_guard(&root_dir, || {
+        run_project_level_checks(
+            &agents_md_paths,
+            &instruction_file_paths,
+            &config,
+            &root_dir,
+        )
+    }));
     Ok(diagnostics)
 }
 

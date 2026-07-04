@@ -84,6 +84,10 @@ fn action_download_script_verifies_release_checksum() {
         "download script must bind checksum sidecar entries to the downloaded artifact filename"
     );
     assert!(
+        script.contains("sub(/\\r$/, \"\", file)"),
+        "download script must tolerate CRLF checksum sidecar entries"
+    );
+    assert!(
         script.contains("Checksum mismatch"),
         "download script must fail closed on checksum mismatch"
     );
