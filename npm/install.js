@@ -78,6 +78,11 @@ function downloadFile(url, destPath) {
 
       if (response.statusCode !== 200) {
         file.close();
+        try {
+          fs.unlinkSync(destPath);
+        } catch (_) {
+          // best-effort: don't leave a stale/empty file after a failed download
+        }
         reject(new Error(`Download failed with status ${response.statusCode}`));
         return;
       }
@@ -122,33 +127,47 @@ function extractArchive(archivePath, destDir) {
 }
 
 /**
- * Compute the SHA-256 of a file as a lowercase hex string.
+ * Compute the SHA-256 of a file as a lowercase hex string, streaming the file
+ * so large archives are not read fully into memory.
  */
 function sha256File(filePath) {
-  return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
+  return new Promise((resolve, reject) => {
+    const hash = crypto.createHash('sha256');
+    const stream = fs.createReadStream(filePath);
+    stream.on('error', reject);
+    stream.on('data', (chunk) => hash.update(chunk));
+    stream.on('end', () => resolve(hash.digest('hex')));
+  });
 }
 
 /**
- * Download the `.sha256` sidecar for an archive and verify the archive against it.
- * Throws if the sidecar is missing/malformed or the hash does not match, so a
- * tampered download is rejected before extraction (mirrors scripts/download.sh).
+ * Download the `.sha256` sidecar for an archive and verify the archive against
+ * it before extraction, so a tampered download is rejected (mirrors
+ * scripts/download.sh). Throws on a missing/malformed sidecar or hash mismatch.
  */
 async function verifyChecksum(archivePath, checksumUrl) {
   const checksumPath = `${archivePath}.sha256`;
-  await downloadFile(checksumUrl, checksumPath);
-  const raw = fs.readFileSync(checksumPath, 'utf8').trim();
-  fs.unlinkSync(checksumPath);
-  const expected = (raw.split(/\s+/)[0] || '').toLowerCase();
-  if (!/^[0-9a-f]{64}$/.test(expected)) {
-    throw new Error(`Invalid checksum file for ${path.basename(archivePath)}`);
+  try {
+    await downloadFile(checksumUrl, checksumPath);
+    const raw = fs.readFileSync(checksumPath, 'utf8').trim();
+    const expected = (raw.split(/\s+/)[0] || '').toLowerCase();
+    if (!/^[0-9a-f]{64}$/.test(expected)) {
+      throw new Error(`Invalid checksum file for ${path.basename(archivePath)}`);
+    }
+    const actual = (await sha256File(archivePath)).toLowerCase();
+    if (actual !== expected) {
+      throw new Error(
+        `Checksum mismatch for ${path.basename(archivePath)}: expected ${expected}, got ${actual}`
+      );
+    }
+    console.log('Checksum verified.');
+  } finally {
+    try {
+      if (fs.existsSync(checksumPath)) fs.unlinkSync(checksumPath);
+    } catch (_) {
+      // best-effort cleanup of the sidecar
+    }
   }
-  const actual = sha256File(archivePath).toLowerCase();
-  if (actual !== expected) {
-    throw new Error(
-      `Checksum mismatch for ${path.basename(archivePath)}: expected ${expected}, got ${actual}`
-    );
-  }
-  console.log('Checksum verified.');
 }
 
 async function main() {
@@ -156,6 +175,8 @@ async function main() {
   const binDir = path.join(__dirname, 'bin');
   const binaryPath = path.join(binDir, platformInfo.binary);
   const extractedPath = path.join(binDir, platformInfo.extractedName);
+  const wrapperPath = path.join(binDir, 'agnix');
+  const wrapperBackup = path.join(binDir, 'agnix.backup');
 
   // Skip if binary already exists
   if (fs.existsSync(binaryPath)) {
@@ -175,8 +196,6 @@ async function main() {
 
   try {
     // Save wrapper script if it exists (npm places it during install)
-    const wrapperPath = path.join(binDir, 'agnix');
-    const wrapperBackup = path.join(binDir, 'agnix.backup');
     if (fs.existsSync(wrapperPath) && wrapperPath !== binaryPath) {
       fs.copyFileSync(wrapperPath, wrapperBackup);
     }
@@ -185,9 +204,6 @@ async function main() {
     await verifyChecksum(archivePath, `${downloadUrl}.sha256`);
     console.log('Extracting...');
     extractArchive(archivePath, binDir);
-
-    // Clean up archive
-    fs.unlinkSync(archivePath);
 
     // Rename extracted binary to avoid conflict with wrapper script
     if (fs.existsSync(extractedPath) && extractedPath !== binaryPath) {
@@ -215,7 +231,25 @@ async function main() {
     console.error('');
     console.error('You can install manually:');
     console.error('  cargo install agnix-cli');
-    process.exit(1);
+    process.exitCode = 1;
+  } finally {
+    // Best-effort cleanup so a failed install leaves no stale archive or backup.
+    try {
+      if (fs.existsSync(archivePath)) fs.unlinkSync(archivePath);
+    } catch (_) {
+      // ignore
+    }
+    try {
+      if (fs.existsSync(wrapperBackup)) {
+        if (!fs.existsSync(wrapperPath)) {
+          fs.renameSync(wrapperBackup, wrapperPath);
+        } else {
+          fs.unlinkSync(wrapperBackup);
+        }
+      }
+    } catch (_) {
+      // ignore
+    }
   }
 }
 
