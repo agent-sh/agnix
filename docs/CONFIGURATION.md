@@ -243,7 +243,7 @@ agnix --format json . > results.json
 
 ```json
 {
-  "version": "0.37.2",
+  "version": "0.37.3",
   "files_checked": 5,
   "diagnostics": [
     {
@@ -361,7 +361,7 @@ Add to `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/agent-sh/agnix
-    rev: v0.37.2
+    rev: v0.37.3
     hooks:
       - id: agnix
 ```
@@ -378,7 +378,7 @@ repos:
 ```yaml
 repos:
   - repo: https://github.com/agent-sh/agnix
-    rev: v0.37.2
+    rev: v0.37.3
     hooks:
       - id: agnix-fix
 ```
