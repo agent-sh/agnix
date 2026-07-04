@@ -4,9 +4,11 @@
 * text=auto eol=lf
 
 # Windows batch scripts must keep CRLF or cmd.exe can mis-execute them
-# (e.g. editors/jetbrains/gradlew.bat).
+# (e.g. editors/jetbrains/gradlew.bat). Keep PowerShell scripts aligned
+# with the same Windows checkout policy.
 *.bat text eol=crlf
 *.cmd text eol=crlf
+*.ps1 text eol=crlf
 
 # Binary assets git must not touch.
 *.png binary

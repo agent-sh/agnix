@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Windows checkout line endings**. Added repository attributes that keep source files LF-normalized across platforms while preserving CRLF for Windows command and PowerShell scripts.
+
 ## [0.37.2] - 2026-07-04
 
 ### Fixed
