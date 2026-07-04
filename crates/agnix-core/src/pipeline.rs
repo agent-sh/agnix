@@ -764,37 +764,55 @@ pub fn validate_project_with_registry(
 
                     // Validate the file using the pre-resolved file_type to avoid
                     // re-compiling [files] glob patterns for every file.
-                    match validate_file_with_type(&file_path, file_type, &config, registry) {
-                        Ok(ValidationOutcome::Success(file_diagnostics)) => {
-                            diags.extend(file_diagnostics);
-                        }
-                        Ok(ValidationOutcome::IoError(file_error)) => {
-                            diags.push(
-                                Diagnostic::error(
-                                    file_path,
-                                    0,
-                                    0,
-                                    "file::read",
-                                    t!("rules.file_read_error", error = file_error.to_string()),
-                                )
-                                .with_suggestion(t!("rules.file_read_error_suggestion")),
+                    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                        validate_file_with_type(&file_path, file_type, &config, registry)
+                    })) {
+                        Err(_) => {
+                            let panic_diag = Diagnostic::error(
+                                file_path,
+                                0,
+                                0,
+                                "file::panic",
+                                "Validation panicked while processing this file".to_string(),
+                            )
+                            .with_suggestion(
+                                "Please report this as a bug with the file type and rule context"
+                                    .to_string(),
                             );
+                            diags.push(panic_diag);
                         }
-                        Ok(ValidationOutcome::Skipped) => {
-                            // File type unknown - no validation needed
-                        }
-                        Err(e) => {
-                            diags.push(
-                                Diagnostic::error(
-                                    file_path,
-                                    0,
-                                    0,
-                                    "file::read",
-                                    t!("rules.file_read_error", error = e.to_string()),
-                                )
-                                .with_suggestion(t!("rules.file_read_error_suggestion")),
-                            );
-                        }
+                        Ok(result) => match result {
+                            Ok(ValidationOutcome::Success(file_diagnostics)) => {
+                                diags.extend(file_diagnostics);
+                            }
+                            Ok(ValidationOutcome::IoError(file_error)) => {
+                                diags.push(
+                                    Diagnostic::error(
+                                        file_path,
+                                        0,
+                                        0,
+                                        "file::read",
+                                        t!("rules.file_read_error", error = file_error.to_string()),
+                                    )
+                                    .with_suggestion(t!("rules.file_read_error_suggestion")),
+                                );
+                            }
+                            Ok(ValidationOutcome::Skipped) => {
+                                // File type unknown - no validation needed
+                            }
+                            Err(e) => {
+                                diags.push(
+                                    Diagnostic::error(
+                                        file_path,
+                                        0,
+                                        0,
+                                        "file::read",
+                                        t!("rules.file_read_error", error = e.to_string()),
+                                    )
+                                    .with_suggestion(t!("rules.file_read_error_suggestion")),
+                                );
+                            }
+                        },
                     }
 
                     (diags, agents, instructions)
@@ -1341,5 +1359,44 @@ mod tests {
                 lf_d.rule
             );
         }
+    }
+
+    #[test]
+    fn validate_project_converts_file_panic_to_diagnostic() {
+        use crate::config::PerFileLintConfig;
+        use crate::rules::Validator;
+
+        struct PanickingValidator;
+
+        impl Validator for PanickingValidator {
+            fn validate_per_file(
+                &self,
+                _path: &Path,
+                _content: &str,
+                _config: &PerFileLintConfig<'_>,
+            ) -> Vec<Diagnostic> {
+                panic!("intentional validator panic");
+            }
+        }
+
+        let temp = tempfile::TempDir::new().unwrap();
+        let skill_path = temp.path().join("SKILL.md");
+        std::fs::write(&skill_path, "---\nname: test\n---\nBody").unwrap();
+
+        let mut registry = ValidatorRegistry::new();
+        registry.register(FileType::Skill, || Box::new(PanickingValidator));
+
+        let result = validate_project_with_registry(temp.path(), &LintConfig::default(), &registry)
+            .expect("panicking per-file validator should become a diagnostic");
+
+        assert_eq!(result.files_checked, 1);
+        assert!(
+            result
+                .diagnostics
+                .iter()
+                .any(|diag| { diag.rule == "file::panic" && diag.file == skill_path }),
+            "expected file::panic diagnostic, got {:?}",
+            result.diagnostics
+        );
     }
 }

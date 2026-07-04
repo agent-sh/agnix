@@ -33,7 +33,7 @@ use rmcp::{
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashSet;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 const TOOL_ALIASES: &[(&str, &str)] =
     &[("copilot", "github-copilot"), ("claudecode", "claude-code")];
@@ -42,14 +42,14 @@ const COMPAT_TOOL_NAMES: &[&str] = &["generic", "codex"];
 
 /// Input for validate_file tool.
 ///
-/// The `path` field accepts absolute or relative paths. Path safety is enforced
-/// downstream by `safe_read_file()` (symlink rejection, size limits).
+/// The `path` field accepts paths inside the server working directory. Path
+/// safety is enforced before validation and downstream by `safe_read_file()`.
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 #[schemars(description = "Input for validating a single agent configuration file")]
 pub struct ValidateFileInput {
     /// Path to the file to validate
     #[schemars(
-        description = "Absolute or relative path to the agent configuration file (e.g., 'SKILL.md', '.claude/settings.json', 'mcp-config.json')"
+        description = "Path to an agent configuration file inside the server working directory (e.g., 'SKILL.md', '.claude/settings.json', 'mcp-config.json')"
     )]
     pub path: String,
     /// Tools to validate for (preferred over legacy target)
@@ -371,6 +371,36 @@ fn make_invalid_params(msg: String) -> McpError {
     McpError::invalid_params(msg, None::<Value>)
 }
 
+fn resolve_path_within_workspace(
+    input_path: &str,
+    workspace_root: &Path,
+) -> Result<PathBuf, String> {
+    let canonical_root = workspace_root
+        .canonicalize()
+        .map_err(|e| format!("Failed to resolve workspace root: {e}"))?;
+    let requested = Path::new(input_path);
+    let candidate = if requested.is_absolute() {
+        requested.to_path_buf()
+    } else {
+        canonical_root.join(requested)
+    };
+    let canonical_candidate = candidate
+        .canonicalize()
+        .map_err(|e| format!("Failed to resolve path: {e}"))?;
+
+    if !canonical_candidate.starts_with(&canonical_root) {
+        return Err(format!("Path outside workspace boundary: {input_path}"));
+    }
+
+    Ok(canonical_candidate)
+}
+
+fn resolve_mcp_path(input_path: &str) -> Result<PathBuf, McpError> {
+    let workspace_root = std::env::current_dir()
+        .map_err(|e| make_internal_error(format!("Failed to read current directory: {e}")))?;
+    resolve_path_within_workspace(input_path, &workspace_root).map_err(make_invalid_params)
+}
+
 /// Agnix MCP Server - validates AI agent configurations
 ///
 /// Provides tools to validate SKILL.md, CLAUDE.md, AGENTS.md, hooks,
@@ -407,9 +437,9 @@ impl AgnixServer {
         let mut config = LintConfig::default();
         apply_tool_selection(&mut config, input.tools, input.target)?;
 
-        let file_path = Path::new(&input.path);
+        let file_path = resolve_mcp_path(&input.path)?;
 
-        let outcome = core_validate_file(file_path, &config)
+        let outcome = core_validate_file(&file_path, &config)
             .map_err(|e| make_invalid_params(format!("Failed to validate file: {}", e)))?;
 
         let diagnostics = outcome.into_diagnostics();
@@ -431,7 +461,9 @@ impl AgnixServer {
         let mut config = LintConfig::default();
         apply_tool_selection(&mut config, input.tools, input.target)?;
 
-        let validation_result = core_validate_project(Path::new(&input.path), &config)
+        let project_path = resolve_mcp_path(&input.path)?;
+
+        let validation_result = core_validate_project(&project_path, &config)
             .map_err(|e| make_invalid_params(format!("Failed to validate project: {}", e)))?;
 
         let result = diagnostics_to_result(
@@ -551,7 +583,7 @@ async fn main() -> anyhow::Result<()> {
 mod tests {
     use super::{
         ToolsInput, ValidateFileInput, ValidateProjectInput, apply_tool_selection,
-        make_internal_error, make_invalid_params, parse_tools,
+        make_internal_error, make_invalid_params, parse_tools, resolve_path_within_workspace,
     };
     use agnix_core::LintConfig;
     use agnix_core::config::TargetTool;
@@ -794,6 +826,46 @@ mod tests {
             }
             _ => panic!("expected array tools variant"),
         }
+    }
+
+    #[test]
+    fn test_resolve_path_within_workspace_accepts_child_file() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let file = temp.path().join("SKILL.md");
+        std::fs::write(&file, "---\nname: test\n---\n").unwrap();
+
+        let resolved = resolve_path_within_workspace("SKILL.md", temp.path())
+            .expect("workspace child path should resolve");
+
+        assert_eq!(resolved, file.canonicalize().unwrap());
+    }
+
+    #[test]
+    fn test_resolve_path_within_workspace_rejects_parent_traversal() {
+        let workspace = tempfile::TempDir::new().unwrap();
+        let outside = tempfile::TempDir::new().unwrap();
+        let outside_file = outside.path().join("secret.md");
+        std::fs::write(&outside_file, "secret").unwrap();
+        let traversal = format!(
+            "../{}/secret.md",
+            outside.path().file_name().unwrap().to_string_lossy()
+        );
+
+        let err = resolve_path_within_workspace(&traversal, workspace.path())
+            .expect_err("parent traversal must be rejected");
+
+        assert!(err.contains("outside workspace boundary"));
+    }
+
+    #[test]
+    fn test_resolve_path_within_workspace_rejects_absolute_outside_path() {
+        let workspace = tempfile::TempDir::new().unwrap();
+        let outside = tempfile::NamedTempFile::new().unwrap();
+
+        let err = resolve_path_within_workspace(outside.path().to_str().unwrap(), workspace.path())
+            .expect_err("absolute outside paths must be rejected");
+
+        assert!(err.contains("outside workspace boundary"));
     }
 
     #[test]
