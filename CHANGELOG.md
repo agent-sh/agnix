@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.37.2] - 2026-07-04
+
 ### Fixed
 - **Supply-chain hygiene** (closes #1144). Removed stale `cargo audit` ignores for advisories whose crates are no longer in `Cargo.lock`, realigned the audit and `cargo-deny` advisory policies with `docs/RUSTSEC-ADVISORIES.md`, and moved agnix's direct YAML/frontmatter parser dependency to the maintained `serde_norway` fork while keeping the internal `serde_yaml` crate alias stable. Added regression coverage so the advisory lists and YAML parser package cannot drift silently.
 - **Docs website deployment payload**. Reduced the GitHub Pages deploy window from six to three docs versions while keeping all versioned snapshots in the repository, so release docs publish with a smaller Pages artifact and avoid repeated `syncing_files` deployment failures.
