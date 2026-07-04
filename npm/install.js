@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 const os = require('os');
+const crypto = require('crypto');
 
 const GITHUB_REPO = 'agent-sh/agnix';
 const VERSION = require('./package.json').version;
@@ -120,6 +121,36 @@ function extractArchive(archivePath, destDir) {
   }
 }
 
+/**
+ * Compute the SHA-256 of a file as a lowercase hex string.
+ */
+function sha256File(filePath) {
+  return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
+}
+
+/**
+ * Download the `.sha256` sidecar for an archive and verify the archive against it.
+ * Throws if the sidecar is missing/malformed or the hash does not match, so a
+ * tampered download is rejected before extraction (mirrors scripts/download.sh).
+ */
+async function verifyChecksum(archivePath, checksumUrl) {
+  const checksumPath = `${archivePath}.sha256`;
+  await downloadFile(checksumUrl, checksumPath);
+  const raw = fs.readFileSync(checksumPath, 'utf8').trim();
+  fs.unlinkSync(checksumPath);
+  const expected = (raw.split(/\s+/)[0] || '').toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(expected)) {
+    throw new Error(`Invalid checksum file for ${path.basename(archivePath)}`);
+  }
+  const actual = sha256File(archivePath).toLowerCase();
+  if (actual !== expected) {
+    throw new Error(
+      `Checksum mismatch for ${path.basename(archivePath)}: expected ${expected}, got ${actual}`
+    );
+  }
+  console.log('Checksum verified.');
+}
+
 async function main() {
   const platformInfo = getPlatformInfo();
   const binDir = path.join(__dirname, 'bin');
@@ -151,6 +182,7 @@ async function main() {
     }
 
     await downloadFile(downloadUrl, archivePath);
+    await verifyChecksum(archivePath, `${downloadUrl}.sha256`);
     console.log('Extracting...');
     extractArchive(archivePath, binDir);
 
