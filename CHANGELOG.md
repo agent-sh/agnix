@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.37.1] - 2026-07-04
+
 ### Fixed
 - **HetCreep validation issue batch** (closes #1121 through #1140). Fixed LSP UTF-16 position/range handling for non-BMP characters, stricter `.agnix.toml` unknown-key rejection with explicit legacy no-op compatibility, character-based skill length checks, lossy non-ASCII AS-004 fix suppression, deterministic diagnostic ordering, and i18n tests that no longer mutate global locale state. Regenerated `.agnix.toml` schemas, added schema/rule-count CI gates, corrected stale rule/version/package/config docs, updated plugin contact metadata, and made `rules.json` / `VALIDATION-RULES.md` parity bidirectional.
 - **JetBrains plugin LSP binary path validation**. The **LSP binary path** setting now rejects relative values like `agnix-lsp.exe` and tells users to provide the full absolute executable path, so locked-down Windows users do not silently fall back to the blocked auto-downloaded binary.
