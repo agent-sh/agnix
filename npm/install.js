@@ -20,6 +20,20 @@ function removeIfExists(filePath) {
   }
 }
 
+function restoreWrapperBackup(wrapperPath, wrapperBackup, installCompleted) {
+  if (!fs.existsSync(wrapperBackup)) {
+    return;
+  }
+
+  if (installCompleted) {
+    removeIfExists(wrapperBackup);
+    return;
+  }
+
+  removeIfExists(wrapperPath);
+  fs.renameSync(wrapperBackup, wrapperPath);
+}
+
 /**
  * Get platform-specific asset name and binary name.
  */
@@ -222,6 +236,7 @@ async function main() {
   const extractedPath = path.join(binDir, platformInfo.extractedName);
   const wrapperPath = path.join(binDir, 'agnix');
   const wrapperBackup = path.join(binDir, 'agnix.backup');
+  let installCompleted = false;
 
   // Skip if binary already exists
   if (fs.existsSync(binaryPath)) {
@@ -270,6 +285,7 @@ async function main() {
       throw new Error('Binary not found after extraction');
     }
 
+    installCompleted = true;
     console.log('agnix installed successfully');
   } catch (error) {
     console.error(`Failed to install agnix: ${error.message}`);
@@ -281,13 +297,7 @@ async function main() {
     // Best-effort cleanup so a failed install leaves no stale archive or backup.
     removeIfExists(archivePath);
     try {
-      if (fs.existsSync(wrapperBackup)) {
-        if (!fs.existsSync(wrapperPath)) {
-          fs.renameSync(wrapperBackup, wrapperPath);
-        } else {
-          removeIfExists(wrapperBackup);
-        }
-      }
+      restoreWrapperBackup(wrapperPath, wrapperBackup, installCompleted);
     } catch (_) {
       // ignore
     }
@@ -305,6 +315,7 @@ module.exports = {
   main,
   parseSha256Sidecar,
   removeIfExists,
+  restoreWrapperBackup,
   sha256File,
   verifyChecksum,
 };

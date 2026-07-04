@@ -12,6 +12,7 @@ const path = require('path');
 
 const {
   parseSha256Sidecar,
+  restoreWrapperBackup,
   sha256File,
   verifyChecksum,
 } = require('../install');
@@ -125,6 +126,34 @@ async function withTempDir(fn) {
       );
 
       assert.ok(!fs.existsSync(`${archivePath}.sha256`), 'sidecar should be removed');
+    });
+  });
+
+  await test('restoreWrapperBackup restores over partial extraction on failure', async () => {
+    await withTempDir(async (tempDir) => {
+      const wrapperPath = path.join(tempDir, 'agnix');
+      const wrapperBackup = path.join(tempDir, 'agnix.backup');
+      fs.writeFileSync(wrapperPath, 'partial extracted binary');
+      fs.writeFileSync(wrapperBackup, 'npm wrapper');
+
+      restoreWrapperBackup(wrapperPath, wrapperBackup, false);
+
+      assert.strictEqual(fs.readFileSync(wrapperPath, 'utf8'), 'npm wrapper');
+      assert.ok(!fs.existsSync(wrapperBackup), 'backup should be moved back into place');
+    });
+  });
+
+  await test('restoreWrapperBackup removes stale backup after successful install', async () => {
+    await withTempDir(async (tempDir) => {
+      const wrapperPath = path.join(tempDir, 'agnix');
+      const wrapperBackup = path.join(tempDir, 'agnix.backup');
+      fs.writeFileSync(wrapperPath, 'installed wrapper');
+      fs.writeFileSync(wrapperBackup, 'old wrapper backup');
+
+      restoreWrapperBackup(wrapperPath, wrapperBackup, true);
+
+      assert.strictEqual(fs.readFileSync(wrapperPath, 'utf8'), 'installed wrapper');
+      assert.ok(!fs.existsSync(wrapperBackup), 'stale backup should be removed');
     });
   });
 
