@@ -957,12 +957,42 @@ skils = false
 }
 
 #[test]
+fn test_unknown_rules_key_is_rejected_in_json() {
+    let json = r#"
+{
+  "rules": {
+    "skils": false
+  }
+}
+"#;
+
+    let err = serde_json::from_str::<LintConfig>(json).unwrap_err();
+    let msg = err.to_string();
+    assert!(msg.contains("unknown field"));
+    assert!(msg.contains("skils"));
+}
+
+#[test]
 fn test_misplaced_root_disabled_rules_is_rejected() {
     let toml_str = r#"
 disabled_rules = ["AS-004"]
 "#;
 
     let err = toml::from_str::<LintConfig>(toml_str).unwrap_err();
+    let msg = err.to_string();
+    assert!(msg.contains("unknown field"));
+    assert!(msg.contains("disabled_rules"));
+}
+
+#[test]
+fn test_misplaced_root_disabled_rules_is_rejected_in_json() {
+    let json = r#"
+{
+  "disabled_rules": ["AS-004"]
+}
+"#;
+
+    let err = serde_json::from_str::<LintConfig>(json).unwrap_err();
     let msg = err.to_string();
     assert!(msg.contains("unknown field"));
     assert!(msg.contains("disabled_rules"));
