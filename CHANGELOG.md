@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **Markdown import scanner performance**. Avoided repeated prefix rescans when extracting `@import` references from large non-code spans, keeping dense-at-sign inputs linear while preserving UTF-8 behavior.
+- **Rule suppression config warnings**. Recognized every shipped rule-prefix namespace in `.agnix.toml` validation, avoiding spurious `core.config.unknown_rule` warnings when disabling valid rules.
 - **Windows checkout line endings**. Added repository attributes that keep source files LF-normalized across platforms while preserving CRLF for Windows command and PowerShell scripts.
 
 ## [0.37.2] - 2026-07-04
