@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Rule suppression config warnings**. Recognized every shipped rule-prefix namespace in `.agnix.toml` validation, avoiding spurious `core.config.unknown_rule` warnings when disabling valid rules.
+
 ## [0.37.2] - 2026-07-04
 
 ### Fixed
