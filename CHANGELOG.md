@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Stale version references in documentation**. Updated project instructions and configuration docs to consistently reference v0.37.2, so release guidance and user-facing docs match the current published version.
+
 ## [0.37.2] - 2026-07-04
 
 ### Fixed
