@@ -1,5 +1,7 @@
 package io.agnix.jetbrains.binary
 
+import org.junit.jupiter.api.Assertions.assertDoesNotThrow
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -19,6 +21,8 @@ import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream
  * Tests for AgnixBinaryDownloader URL trust validation and archive extraction.
  */
 class AgnixBinaryDownloaderTest {
+
+    private val helloSha256 = "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
 
     // ---- URL trust tests ----
 
@@ -139,6 +143,56 @@ class AgnixBinaryDownloaderTest {
         val dest = tempDir.toFile()
         // Should not throw when outFile is the destination itself
         AgnixBinaryDownloader.verifyPathWithinDestination(dest, dest)
+    }
+
+    // ---- checksum tests ----
+
+    @Test
+    fun `parseSha256Sidecar accepts matching artifact names`() {
+        val parsed = AgnixBinaryDownloader.parseSha256Sidecar(
+            "${helloSha256.uppercase()}  agnix-lsp.tar.gz\n",
+            "agnix-lsp.tar.gz"
+        )
+
+        assertEquals(helloSha256, parsed)
+    }
+
+    @Test
+    fun `parseSha256Sidecar rejects malformed hashes and mismatched artifacts`() {
+        assertThrows(IOException::class.java) {
+            AgnixBinaryDownloader.parseSha256Sidecar("not-a-hash  agnix-lsp.tar.gz", "agnix-lsp.tar.gz")
+        }
+        assertThrows(IOException::class.java) {
+            AgnixBinaryDownloader.parseSha256Sidecar(
+                "$helloSha256  agnix-lsp-linux.tar.gz",
+                "agnix-lsp-macos.tar.gz"
+            )
+        }
+    }
+
+    @Test
+    fun `verifySha256Sidecar accepts matching file content`(@TempDir tempDir: Path) {
+        val file = tempDir.resolve("agnix-lsp.tar.gz").toFile()
+        val sidecar = tempDir.resolve("agnix-lsp.tar.gz.sha256").toFile()
+        file.writeText("hello")
+        sidecar.writeText("$helloSha256  agnix-lsp.tar.gz\n")
+
+        assertEquals(helloSha256, AgnixBinaryDownloader.sha256Hex(file))
+        assertDoesNotThrow {
+            AgnixBinaryDownloader.verifySha256Sidecar(file, sidecar, "agnix-lsp.tar.gz")
+        }
+    }
+
+    @Test
+    fun `verifySha256Sidecar rejects mismatched file content`(@TempDir tempDir: Path) {
+        val file = tempDir.resolve("agnix-lsp.tar.gz").toFile()
+        val sidecar = tempDir.resolve("agnix-lsp.tar.gz.sha256").toFile()
+        file.writeText("tampered")
+        sidecar.writeText("$helloSha256  agnix-lsp.tar.gz\n")
+
+        assertThrows(IOException::class.java) {
+            AgnixBinaryDownloader.verifySha256Sidecar(file, sidecar, "agnix-lsp.tar.gz")
+        }
     }
 
     // ---- extractTarGz tests ----

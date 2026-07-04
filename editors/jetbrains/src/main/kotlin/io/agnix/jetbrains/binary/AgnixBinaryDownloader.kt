@@ -13,6 +13,7 @@ import java.net.HttpURLConnection
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.attribute.PosixFilePermission
+import java.security.MessageDigest
 import java.util.zip.GZIPInputStream
 import java.util.zip.ZipInputStream
 
@@ -37,6 +38,7 @@ class AgnixBinaryDownloader {
             "github-releases.githubusercontent.com"
         )
         private const val GITHUB_USER_CONTENT_SUFFIX = ".githubusercontent.com"
+        private val SHA256_HEX = Regex("^[0-9a-fA-F]{64}$")
 
         internal fun isTrustedDownloadUrl(urlString: String): Boolean {
             val url = try {
@@ -85,6 +87,53 @@ class AgnixBinaryDownloader {
             val normalizedOut = outFile.toPath().toAbsolutePath().normalize()
             if (!normalizedOut.startsWith(normalizedDest)) {
                 throw SecurityException("Output path escapes destination directory: $normalizedOut")
+            }
+        }
+
+        internal fun parseSha256Sidecar(contents: String, expectedFileName: String): String {
+            val line = contents
+                .lineSequence()
+                .map { it.trim() }
+                .firstOrNull { it.isNotEmpty() }
+                ?: throw IOException("Checksum file is empty")
+
+            val parts = line.split(Regex("\\s+"))
+            val hash = parts[0]
+            if (!SHA256_HEX.matches(hash)) {
+                throw IOException("Checksum file does not contain a valid SHA256 hash")
+            }
+
+            val sidecarName = parts.getOrNull(1)
+                ?.removePrefix("*")
+                ?.replace('\\', '/')
+                ?.substringAfterLast('/')
+            if (sidecarName != null && sidecarName != expectedFileName) {
+                throw IOException("Checksum file is for $sidecarName, expected $expectedFileName")
+            }
+
+            return hash.lowercase()
+        }
+
+        internal fun sha256Hex(file: File): String {
+            val digest = MessageDigest.getInstance("SHA-256")
+            FileInputStream(file).use { input ->
+                val buffer = ByteArray(BUFFER_SIZE)
+                while (true) {
+                    val bytesRead = input.read(buffer)
+                    if (bytesRead == -1) break
+                    digest.update(buffer, 0, bytesRead)
+                }
+            }
+            return digest.digest().joinToString("") { byte ->
+                (byte.toInt() and 0xff).toString(16).padStart(2, '0')
+            }
+        }
+
+        internal fun verifySha256Sidecar(file: File, sidecar: File, expectedFileName: String) {
+            val expected = parseSha256Sidecar(sidecar.readText(), expectedFileName)
+            val actual = sha256Hex(file)
+            if (actual != expected) {
+                throw IOException("Checksum mismatch for $expectedFileName: expected $expected, got $actual")
             }
         }
 
@@ -214,12 +263,18 @@ class AgnixBinaryDownloader {
         }
 
         val archivePath = File(storageDir, binaryInfo.assetName)
+        val checksumPath = File(storageDir, "${binaryInfo.assetName}.sha256")
         val binaryPath = File(storageDir, binaryInfo.binaryName)
 
         try {
             // Download archive
             indicator?.text = "Downloading from GitHub..."
             downloadFile(downloadUrl, archivePath, indicator)
+
+            // Verify archive integrity before extraction
+            indicator?.text = "Verifying checksum..."
+            downloadFile("$downloadUrl.sha256", checksumPath, indicator)
+            verifySha256Sidecar(archivePath, checksumPath, binaryInfo.assetName)
 
             // Extract binary
             indicator?.text = "Extracting binary..."
@@ -261,6 +316,9 @@ class AgnixBinaryDownloader {
             // Clean up archive file
             if (archivePath.exists()) {
                 archivePath.delete()
+            }
+            if (checksumPath.exists()) {
+                checksumPath.delete()
             }
         }
     }

@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - **Docs website deployment payload**. Reduced the GitHub Pages deploy window from six to three docs versions while keeping all versioned snapshots in the repository, so release docs publish with a smaller Pages artifact and avoid repeated `syncing_files` deployment failures.
 - **Security: MCP path confinement and panic hardening**. The MCP `validate_file` and `validate_project` tools now reject client-supplied paths that canonicalize outside the server working directory. Completion helpers clamp raw byte offsets to UTF-8 character boundaries before slicing, project validation converts per-file validator panics into diagnostics, and release builds keep unwinding enabled so one bad file cannot abort an entire scan.
+- **Release download integrity and publish gating**. The GitHub Action installer, VS Code extension, JetBrains plugin, and Zed extension now verify release SHA-256 sidecars before using downloaded `agnix`/`agnix-lsp` artifacts. Release tags now run fmt, clippy, and workspace tests before GitHub releases, crates.io publish, or VS Code Marketplace publish can proceed.
 
 ## [0.37.1] - 2026-07-04
 

@@ -85,6 +85,8 @@ jobs:
           set -euo pipefail
           cd target/${{ matrix.target }}/release
           if [ -f agnix-lsp ]; then
+            lsp_hash="$(shasum -a 256 agnix-lsp | awk '{print $1}')"
+            printf '%s  agnix-lsp\n' "$lsp_hash" > ../../../agnix-lsp-${{ matrix.target }}.sha256
             tar czvf ../../../agnix-lsp-${{ matrix.target }}.tar.gz agnix-lsp
             cd ../../..
             shasum -a 256 agnix-lsp-${{ matrix.target }}.tar.gz > agnix-lsp-${{ matrix.target }}.tar.gz.sha256
@@ -105,6 +107,8 @@ jobs:
         run: |
           cd target/${{ matrix.target }}/release
           if (Test-Path agnix-lsp.exe) {
+            $lspHash = (Get-FileHash agnix-lsp.exe -Algorithm SHA256).Hash.ToLower()
+            "$lspHash  agnix-lsp.exe" | Out-File -Encoding ASCII ../../../agnix-lsp-${{ matrix.target }}.sha256
             Compress-Archive -Path agnix-lsp.exe -DestinationPath ../../../agnix-lsp-${{ matrix.target }}.zip
             cd ../../..
             (Get-FileHash agnix-lsp-${{ matrix.target }}.zip -Algorithm SHA256).Hash.ToLower() + "  agnix-lsp-${{ matrix.target }}.zip" | Out-File -Encoding ASCII agnix-lsp-${{ matrix.target }}.zip.sha256
@@ -142,9 +146,33 @@ jobs:
             agnix-mcp-${{ matrix.target }}.*
           if-no-files-found: error
 
+  test:
+    name: Test release commit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@4be9e76fd7c4901c61fb841f559994984270fce7 # stable
+        with:
+          toolchain: stable
+          components: clippy, rustfmt
+
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2
+
+      - name: Format check
+        run: cargo fmt --check --all
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+      - name: Test
+        run: cargo test --workspace
+
   release:
     name: Create Release
-    needs: build
+    needs: [build, test]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -199,7 +227,7 @@ jobs:
 
   publish:
     name: Publish to crates.io
-    needs: build
+    needs: [build, test]
     runs-on: ubuntu-latest
     # Skip prereleases (tags with hyphens like v0.1.0-beta)
     if: ${{ !contains(github.ref, '-') }}
@@ -317,7 +345,7 @@ jobs:
 
   vscode:
     name: Publish VS Code Extension
-    needs: build
+    needs: [build, test]
     runs-on: ubuntu-latest
     # Skip prereleases
     if: ${{ !contains(github.ref, '-') }}

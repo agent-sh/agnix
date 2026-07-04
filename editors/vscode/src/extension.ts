@@ -19,6 +19,7 @@ import {
   buildReleaseUrl,
   parseLspVersionOutput,
 } from './version-check';
+import { verifySha256File } from './checksum';
 
 const execAsync = promisify(exec);
 
@@ -401,6 +402,7 @@ async function downloadAndInstallLsp(version?: string): Promise<string | null> {
   await vscode.workspace.fs.createDirectory(storageUri);
 
   const downloadPath = path.join(storageUri.fsPath, platformInfo.asset);
+  const checksumPath = `${downloadPath}.sha256`;
   const binaryPath = path.join(storageUri.fsPath, platformInfo.binary);
 
   try {
@@ -415,6 +417,11 @@ async function downloadAndInstallLsp(version?: string): Promise<string | null> {
         outputChannel.appendLine(`Downloading from: ${releaseUrl}`);
 
         await downloadFile(releaseUrl, downloadPath);
+
+        progress.report({ message: 'Verifying checksum...' });
+        outputChannel.appendLine(`Downloading checksum from: ${releaseUrl}.sha256`);
+        await downloadFile(`${releaseUrl}.sha256`, checksumPath);
+        verifySha256File(downloadPath, checksumPath, platformInfo.asset);
 
         progress.report({ message: 'Extracting...' });
         outputChannel.appendLine(`Extracting to: ${storageUri.fsPath}`);
@@ -483,11 +490,13 @@ async function downloadAndInstallLsp(version?: string): Promise<string | null> {
           fs.chmodSync(binaryPath, 0o755);
         }
 
-        // Clean up archive
-        try {
-          fs.unlinkSync(downloadPath);
-        } catch {
-          // Error ignored during cleanup
+        // Clean up downloaded release files
+        for (const cleanupPath of [downloadPath, checksumPath]) {
+          try {
+            fs.unlinkSync(cleanupPath);
+          } catch {
+            // Error ignored during cleanup
+          }
         }
       }
     );
@@ -502,6 +511,13 @@ async function downloadAndInstallLsp(version?: string): Promise<string | null> {
       throw new Error('Binary not found after extraction');
     }
   } catch (error) {
+    for (const cleanupPath of [downloadPath, checksumPath]) {
+      try {
+        fs.unlinkSync(cleanupPath);
+      } catch {
+        // Error ignored during cleanup
+      }
+    }
     const message = error instanceof Error ? error.message : String(error);
     outputChannel.appendLine(`Installation failed: ${message}`);
     vscode.window.showErrorMessage(`Failed to install agnix-lsp: ${message}`);

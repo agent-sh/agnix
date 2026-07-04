@@ -140,6 +140,42 @@ if [ "${HTTP_CODE}" != "200" ]; then
     exit 1
 fi
 
+CHECKSUM_URL="${DOWNLOAD_URL}.sha256"
+CHECKSUM_FILE="${TEMP_DIR}/${ARTIFACT_NAME}.sha256"
+
+echo "Downloading checksum from ${CHECKSUM_URL}..."
+HTTP_CODE=$(curl -sL -w "%{http_code}" "${CHECKSUM_URL}" -o "${CHECKSUM_FILE}")
+
+if [ "${HTTP_CODE}" != "200" ]; then
+    echo "Error: Failed to download release checksum (HTTP ${HTTP_CODE})" >&2
+    echo "URL: ${CHECKSUM_URL}" >&2
+    exit 1
+fi
+
+EXPECTED_SHA="$(awk 'NF {print $1; exit}' "${CHECKSUM_FILE}" | tr '[:upper:]' '[:lower:]')"
+if ! printf '%s\n' "${EXPECTED_SHA}" | grep -Eq '^[0-9a-f]{64}$'; then
+    echo "Error: Invalid checksum file for ${ARTIFACT_NAME}" >&2
+    exit 1
+fi
+
+if command -v sha256sum >/dev/null 2>&1; then
+    ACTUAL_SHA="$(sha256sum "${TEMP_DIR}/${ARTIFACT_NAME}" | awk '{print $1}' | tr '[:upper:]' '[:lower:]')"
+elif command -v shasum >/dev/null 2>&1; then
+    ACTUAL_SHA="$(shasum -a 256 "${TEMP_DIR}/${ARTIFACT_NAME}" | awk '{print $1}' | tr '[:upper:]' '[:lower:]')"
+else
+    echo "Error: sha256sum or shasum is required to verify downloads" >&2
+    exit 1
+fi
+
+if [ "${ACTUAL_SHA}" != "${EXPECTED_SHA}" ]; then
+    echo "Error: Checksum mismatch for ${ARTIFACT_NAME}" >&2
+    echo "Expected: ${EXPECTED_SHA}" >&2
+    echo "Actual:   ${ACTUAL_SHA}" >&2
+    exit 1
+fi
+
+echo "Checksum verified."
+
 echo "Extracting..."
 case "${EXT}" in
     tar.gz)

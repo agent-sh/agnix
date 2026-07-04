@@ -10,4 +10,5 @@ description = "Zed extension for agnix - lint agent configurations"
 crate-type = ["cdylib"]
 
 [dependencies]
+sha2 = "0.10"
 zed_extension_api = "0.7.0"
