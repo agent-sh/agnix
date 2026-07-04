@@ -10,7 +10,7 @@ cargo-fuzz = true
 [dependencies]
 libfuzzer-sys = "0.4"
 serde_json = "1"
-serde_yaml = "0.9"
+serde_yaml = { package = "serde_norway", version = "0.9" }
 
 [dependencies.agnix-core]
 path = ".."

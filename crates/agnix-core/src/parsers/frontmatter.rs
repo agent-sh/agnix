@@ -2,14 +2,16 @@
 //!
 //! ## Security: YAML Bomb Protection
 //!
-//! YAML bombs (deeply nested structures that expand to disproportionate memory
-//! use in `serde_yaml`) are mitigated by a layered defense:
+//! YAML bombs (deeply nested structures that expand to disproportionate memory)
+//! are mitigated by a layered defense:
 //!
 //! 1. **File Size Limit**: DEFAULT_MAX_FILE_SIZE (1 MiB) in file_utils.rs prevents
 //!    extremely large YAML payloads from being read.
 //!
-//! 2. **Parser Library**: `serde_yaml` has internal protections against excessive
-//!    memory usage and stack overflow from deeply nested structures.
+//! 2. **Parser Library**: agnix's direct `serde_yaml` crate name is backed by
+//!    the maintained `serde_norway` package, which preserves the YAML parser API
+//!    and internal protections against excessive memory usage and stack overflow
+//!    from deeply nested structures.
 //!
 //! 3. **Memory Limit**: The entire file is bounded at 1 MiB, limiting total
 //!    memory consumption regardless of structure complexity.
@@ -67,7 +69,7 @@ pub fn normalize_line_endings(s: &str) -> Cow<'_, str> {
 /// Realistic agent-config frontmatter is almost never deeper than 5 - 6
 /// levels; 32 leaves plenty of headroom for unusual-but-legitimate inputs
 /// while still bounding pathological "YAML bomb" nesting that can cost
-/// disproportionate memory in `serde_yaml`.
+/// disproportionate memory in the YAML parser.
 pub const MAX_YAML_DEPTH: usize = 32;
 
 /// Reject YAML frontmatter whose structural nesting depth exceeds
@@ -243,7 +245,7 @@ pub(crate) fn check_yaml_depth(yaml: &str) -> LintResult<()> {
 ///
 /// Protected against YAML bombs by a layered defense: the 1 MiB file size
 /// cap, an explicit pre-parse depth check ([`check_yaml_depth`], limit
-/// [`MAX_YAML_DEPTH`]), and `serde_yaml`'s internal protections. See module
+/// [`MAX_YAML_DEPTH`]), and the parser's internal protections. See module
 /// documentation for details.
 #[allow(dead_code)] // used in cfg(test) and __internal; not yet used by production validators
 pub fn parse_frontmatter<T: DeserializeOwned>(content: &str) -> LintResult<(T, String)> {

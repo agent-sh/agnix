@@ -39,7 +39,9 @@ agnix-core = { path = "crates/agnix-core", version = "0.37.1" }
 # Core dependencies
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-serde_yaml = "0.9"
+# Keep the public crate name stable for existing parser code while using the
+# maintained serde-yaml fork for agnix's direct YAML/frontmatter parsing.
+serde_yaml = { package = "serde_norway", version = "0.9" }
 thiserror = "2.0.18"
 anyhow = "1"
 
