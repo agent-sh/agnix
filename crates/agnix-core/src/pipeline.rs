@@ -30,6 +30,17 @@ use crate::rules::project_level::run_project_level_checks;
 #[cfg(feature = "filesystem")]
 use crate::schemas;
 
+#[cfg(feature = "filesystem")]
+fn panic_payload_message(err: &(dyn std::any::Any + Send)) -> String {
+    if let Some(message) = err.downcast_ref::<&str>() {
+        (*message).to_string()
+    } else if let Some(message) = err.downcast_ref::<String>() {
+        message.clone()
+    } else {
+        "unknown panic".to_string()
+    }
+}
+
 /// Result of validating a project, including diagnostics and metadata.
 ///
 /// All fields are public. Use [`ValidationResult::new`] for convenient construction when only
@@ -767,18 +778,16 @@ pub fn validate_project_with_registry(
                     match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                         validate_file_with_type(&file_path, file_type, &config, registry)
                     })) {
-                        Err(_) => {
+                        Err(err) => {
+                            let panic_message = panic_payload_message(err.as_ref());
                             let panic_diag = Diagnostic::error(
                                 file_path,
                                 0,
                                 0,
                                 "file::panic",
-                                "Validation panicked while processing this file".to_string(),
+                                t!("rules.file_panic_error", error = panic_message),
                             )
-                            .with_suggestion(
-                                "Please report this as a bug with the file type and rule context"
-                                    .to_string(),
-                            );
+                            .with_suggestion(t!("rules.file_panic_error_suggestion"));
                             diags.push(panic_diag);
                         }
                         Ok(result) => match result {
@@ -1391,10 +1400,11 @@ mod tests {
 
         assert_eq!(result.files_checked, 1);
         assert!(
-            result
-                .diagnostics
-                .iter()
-                .any(|diag| { diag.rule == "file::panic" && diag.file == skill_path }),
+            result.diagnostics.iter().any(|diag| {
+                diag.rule == "file::panic"
+                    && diag.file == skill_path
+                    && diag.message.contains("intentional validator panic")
+            }),
             "expected file::panic diagnostic, got {:?}",
             result.diagnostics
         );

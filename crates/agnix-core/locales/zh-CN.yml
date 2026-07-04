@@ -285,6 +285,8 @@ rules:
   cache_poison:
     message: 导入缓存锁被先前的验证器崩溃毒化；恢复的数据可能已过期
     suggestion: 验证器在持有导入缓存锁时崩溃。验证将继续使用恢复的数据，但结果可能已过期。
+  file_panic_error: '验证此文件时发生崩溃: %{error}'
+  file_panic_error_suggestion: 请将此作为 bug 报告，并附上文件类型和规则上下文
   xp_001:
     message: '%{filename} 中的 Claude 特有功能 ''%{feature}'': %{description}'
     suggestion: 移至 CLAUDE.md 或包装在 Claude 特定部分中（例如 '## Claude Code Specific'）
