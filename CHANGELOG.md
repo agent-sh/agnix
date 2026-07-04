@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Rule suppression config warnings**. Recognized every shipped rule-prefix namespace in `.agnix.toml` validation, avoiding spurious `core.config.unknown_rule` warnings when disabling valid rules.
 - **Windows checkout line endings**. Added repository attributes that keep source files LF-normalized across platforms while preserving CRLF for Windows command and PowerShell scripts.
 - **npm installer checksum verification**. The npm postinstall downloader now verifies release archive SHA-256 sidecars before extraction, binds sidecar entries to the expected archive filename, streams archive hashing, and cleans temporary artifacts after failed installs.
+- **Stale version references in documentation**. Updated project instructions and configuration docs to consistently reference v0.37.2, so release guidance and user-facing docs match the current published version.
 
 ## [0.37.2] - 2026-07-04
 
