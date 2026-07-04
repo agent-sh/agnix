@@ -89,6 +89,34 @@ cargo tree -i proc-macro-error2 -e dev    # Check if iai-callgrind still depends
 # 5. Close or update the related tracking issue
 ```
 
+## Tracked Non-RUSTSEC Supply-Chain Items
+
+### `serde_yaml` 0.9.34+deprecated - via `rust-i18n`
+
+**Status**: Runtime transitive dependency with no current RUSTSEC advisory ID
+
+**Details**:
+- agnix's direct YAML/frontmatter parser dependency is the maintained `serde_norway` package through the stable internal `serde_yaml` crate alias.
+- `rust-i18n 4.1.0` still pulls the upstream-deprecated `serde_yaml 0.9.34+deprecated` through `rust-i18n-support`.
+- The dependency is linked into release binaries, but agnix uses it for trusted, repository-owned locale data rather than untrusted user input.
+
+**Risk Level**: Low
+- Hygiene and binary-footprint concern, not a known exploitable advisory.
+- Untrusted frontmatter parsing uses agnix's direct `serde_norway` dependency plus local size and depth guards.
+
+**Action Items**:
+- Monitor `rust-i18n` for a release that removes the deprecated `serde_yaml` dependency.
+- Re-check with `cargo tree -e normal -p rust-i18n | grep serde_yaml` before each release.
+- Remove this section once `serde_yaml 0.9.34+deprecated` is absent from `Cargo.lock`.
+
+**References**:
+- rust-i18n: https://crates.io/crates/rust-i18n
+- serde_yaml: https://crates.io/crates/serde_yaml
+
+```bash
+cargo tree -e normal -p rust-i18n | grep serde_yaml
+```
+
 ## Adding New Advisory Ignores
 
 If a new advisory needs to be temporarily ignored:

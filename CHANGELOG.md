@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Security follow-ups** (closes #1149, #1150, #1154, #1155, #1156, #1157, #1158). Hardened MCP validation against handler panics and absolute-path disclosure, extended panic isolation to project-level checks, bound shell checksum parsing to the selected artifact filename, added VS Code release-download redirect host validation, corrected the YAML parser safety comment, and documented the remaining deprecated transitive `serde_yaml` dependency from `rust-i18n`.
+
 ## [0.37.2] - 2026-07-04
 
 ### Fixed

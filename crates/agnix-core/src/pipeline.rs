@@ -852,17 +852,17 @@ pub fn validate_project_with_registry(
     }
 
     // Run project-level checks (AGM-006, XP-004/005/006, VER-001)
-    {
+    diagnostics.extend(run_project_level_checks_with_panic_guard(&root_dir, || {
         agents_md_paths.sort();
         instruction_file_paths.sort();
 
-        diagnostics.extend(run_project_level_checks(
+        run_project_level_checks(
             &agents_md_paths,
             &instruction_file_paths,
             &config,
             &root_dir,
-        ));
-    }
+        )
+    }));
 
     sort_diagnostics(&mut diagnostics);
 
@@ -890,6 +890,28 @@ fn sort_diagnostics(diagnostics: &mut [Diagnostic]) {
             .then_with(|| a.suggestion.cmp(&b.suggestion))
             .then_with(|| a.fixes.len().cmp(&b.fixes.len()))
     });
+}
+
+fn run_project_level_checks_with_panic_guard<F>(root_dir: &Path, checks: F) -> Vec<Diagnostic>
+where
+    F: FnOnce() -> Vec<Diagnostic>,
+{
+    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(checks)) {
+        Ok(diagnostics) => diagnostics,
+        Err(err) => {
+            let panic_message = panic_payload_message(err.as_ref());
+            vec![
+                Diagnostic::error(
+                    root_dir.to_path_buf(),
+                    0,
+                    0,
+                    "project::panic",
+                    t!("rules.file_panic_error", error = panic_message),
+                )
+                .with_suggestion(t!("rules.file_panic_error_suggestion")),
+            ]
+        }
+    }
 }
 
 #[cfg(feature = "filesystem")]
@@ -1407,6 +1429,24 @@ mod tests {
             }),
             "expected file::panic diagnostic, got {:?}",
             result.diagnostics
+        );
+    }
+
+    #[test]
+    fn project_level_panic_becomes_diagnostic() {
+        let temp = tempfile::TempDir::new().unwrap();
+
+        let diagnostics = run_project_level_checks_with_panic_guard(temp.path(), || {
+            panic!("intentional project panic")
+        });
+
+        assert_eq!(diagnostics.len(), 1);
+        assert_eq!(diagnostics[0].rule, "project::panic");
+        assert_eq!(diagnostics[0].file, temp.path());
+        assert!(
+            diagnostics[0].message.contains("intentional project panic"),
+            "expected panic payload in diagnostic: {:?}",
+            diagnostics[0]
         );
     }
 }

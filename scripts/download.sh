@@ -152,7 +152,28 @@ if [ "${HTTP_CODE}" != "200" ]; then
     exit 1
 fi
 
-EXPECTED_SHA="$(awk 'NF {print $1; exit}' "${CHECKSUM_FILE}" | tr '[:upper:]' '[:lower:]')"
+EXPECTED_SHA="$(awk -v expected="${ARTIFACT_NAME}" '
+NF {
+    hash = tolower($1)
+    file = $2
+    sub(/^\*/, "", file)
+    n = split(file, parts, /[\\\/]/)
+    base = parts[n]
+    if (base == expected) {
+        print hash
+        found = 1
+        exit
+    }
+}
+END {
+    if (!found) {
+        exit 1
+    }
+}
+' "${CHECKSUM_FILE}")" || {
+    echo "Error: Checksum file does not contain an entry for ${ARTIFACT_NAME}" >&2
+    exit 1
+}
 if ! printf '%s\n' "${EXPECTED_SHA}" | grep -Eq '^[0-9a-f]{64}$'; then
     echo "Error: Invalid checksum file for ${ARTIFACT_NAME}" >&2
     exit 1
