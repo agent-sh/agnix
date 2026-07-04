@@ -767,6 +767,7 @@ core:
     files_pattern_count_limit: El campo '%{field}' tiene %{count} patrones, lo que excede el limite recomendado de %{limit}.
     files_pattern_count_limit_suggestion: Considera consolidar patrones o usar expresiones glob mas amplias
     load_warning: 'Error al analizar configuracion ''%{path}'': %{error}. Usando valores predeterminados.'
+    load_error: 'Error al analizar configuracion ''%{path}'': %{error}.'
 
 
 # ===========================================================================

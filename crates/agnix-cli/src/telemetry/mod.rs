@@ -63,7 +63,10 @@ pub fn record_validation(
     // Check if telemetry is enabled first (fast path)
     let config = match TelemetryConfig::load() {
         Ok(c) => c,
-        Err(_) => return,
+        Err(error) => {
+            tracing::debug!(%error, "telemetry config load failed; skipping validation event");
+            return;
+        }
     };
 
     if !config.is_enabled() {
@@ -85,19 +88,25 @@ pub fn record_validation(
     // This is a fast file write (~1ms), so it won't noticeably block the CLI.
     let mut queue = match EventQueue::load() {
         Ok(q) => q,
-        Err(_) => return,
+        Err(error) => {
+            tracing::debug!(%error, "telemetry queue load failed; skipping validation event");
+            return;
+        }
     };
 
     // Push event to queue - if this fails, we can't do anything more
-    if queue.push(event).is_ok() {
-        // HTTP submission happens in background thread (only with telemetry feature).
-        // If CLI exits before this completes, events remain safely queued for next run.
-        #[cfg(feature = "telemetry")]
-        {
-            thread::spawn(move || {
-                try_submit_queued_events(&config, &mut queue);
-            });
-        }
+    if let Err(error) = queue.push(event) {
+        tracing::debug!(%error, "telemetry queue push failed; dropping validation event");
+        return;
+    }
+
+    // HTTP submission happens in background thread (only with telemetry feature).
+    // If CLI exits before this completes, events remain safely queued for next run.
+    #[cfg(feature = "telemetry")]
+    {
+        thread::spawn(move || {
+            try_submit_queued_events(&config, &mut queue);
+        });
     }
 }
 
@@ -108,19 +117,30 @@ pub fn record_validation(
 /// accepted as a limitation for best-effort telemetry.
 #[cfg(feature = "telemetry")]
 fn try_submit_queued_events(config: &TelemetryConfig, queue: &mut EventQueue) {
-    if let Ok(client) = TelemetryClient::new(config) {
-        let events = queue.take_batch(10);
-        if !events.is_empty() {
-            match client.submit_batch(&events) {
-                Ok(_) => {
-                    // Successfully submitted, remove events from queue
-                    queue.remove_batch(events.len());
-                    let _ = queue.save();
-                }
-                Err(_) => {
-                    // Failed to submit, events stay in queue for retry on next run
-                }
+    let client = match TelemetryClient::new(config) {
+        Ok(client) => client,
+        Err(error) => {
+            tracing::debug!(%error, "telemetry client initialization failed");
+            return;
+        }
+    };
+
+    let events = queue.take_batch(10);
+    if events.is_empty() {
+        return;
+    }
+
+    match client.submit_batch(&events) {
+        Ok(_) => {
+            // Successfully submitted, remove events from queue
+            queue.remove_batch(events.len());
+            if let Err(error) = queue.save() {
+                tracing::debug!(%error, "telemetry queue save failed after submission");
             }
+        }
+        Err(error) => {
+            // Failed to submit, events stay in queue for retry on next run
+            tracing::debug!(%error, "telemetry submission failed; events remain queued");
         }
     }
 }

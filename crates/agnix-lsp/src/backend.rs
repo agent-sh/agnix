@@ -315,6 +315,7 @@ impl LanguageServer for Backend {
                             self.config.store(Arc::new(config_with_root));
                         }
                         Err(e) => {
+                            tracing::warn!(error = %e, path = %config_path.display(), "failed to load workspace .agnix.toml");
                             // Log error but continue with default config
                             self.client
                                 .log_message(

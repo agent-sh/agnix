@@ -3301,7 +3301,7 @@ Implement these 30 rules first:
 
 ### P1 (Week 4)
 Add these 15 rules:
-- AS-010 through AS-015 (Skills best practices)
+- AS-011 through AS-013 and AS-015 (Skills best practices)
 - CC-MEM-006 through CC-MEM-010 (Memory quality)
 - CC-AG-001 through CC-AG-013 (Agents)
 - CC-PL-001 through CC-PL-010 (Plugins)
@@ -3364,8 +3364,6 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | AS-004 | Convert name to kebab-case | safe/unsafe |
 | AS-005 | Strip leading/trailing hyphens | safe |
 | AS-006 | Collapse consecutive hyphens | safe |
-| AS-010 | Prepend "Use when user wants to " | unsafe |
-| AS-014 | Normalize Windows path separators | safe |
 | CC-SK-001 | Default invalid model to sonnet | unsafe |
 | CC-SK-002 | Normalize context to fork | unsafe |
 | CC-SK-003 | Add default agent for fork context | unsafe |

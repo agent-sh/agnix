@@ -1,5 +1,7 @@
 use crate::fs::FileSystem;
-use crate::parsers::frontmatter::FrontmatterParts;
+use crate::parsers::frontmatter::{
+    FrontmatterParts, check_yaml_depth, check_yaml_duplicate_top_level_keys,
+};
 use regex::Regex;
 use std::collections::HashSet;
 use std::path::Path;
@@ -7,13 +9,13 @@ use std::sync::OnceLock;
 
 use super::{PathMatch, SkillFrontmatter, reference_path_regex};
 
-pub(super) fn parse_frontmatter_fields(
-    frontmatter: &str,
-) -> Result<SkillFrontmatter, serde_yaml::Error> {
+pub(super) fn parse_frontmatter_fields(frontmatter: &str) -> Result<SkillFrontmatter, String> {
     if frontmatter.trim().is_empty() {
         return Ok(SkillFrontmatter::default());
     }
-    serde_yaml::from_str(frontmatter)
+    check_yaml_depth(frontmatter).map_err(|e| e.to_string())?;
+    check_yaml_duplicate_top_level_keys(frontmatter).map_err(|e| e.to_string())?;
+    serde_yaml::from_str(frontmatter).map_err(|e| e.to_string())
 }
 
 pub(super) fn extract_reference_paths(body: &str) -> Vec<PathMatch> {

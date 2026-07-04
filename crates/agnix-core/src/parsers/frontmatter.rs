@@ -36,6 +36,7 @@
 //! `MAX_YAML_DEPTH` rather than disabling the check.
 
 use std::borrow::Cow;
+use std::collections::HashMap;
 
 use crate::diagnostics::{CoreError, LintResult, ValidationError};
 use serde::de::DeserializeOwned;
@@ -231,6 +232,69 @@ pub(crate) fn check_yaml_depth(yaml: &str) -> LintResult<()> {
     Ok(())
 }
 
+/// Reject duplicate top-level YAML mapping keys before serde's default
+/// last-wins behavior can collapse them.
+pub(crate) fn check_yaml_duplicate_top_level_keys(yaml: &str) -> LintResult<()> {
+    let mut seen: HashMap<&str, usize> = HashMap::new();
+
+    for (idx, line) in yaml.lines().enumerate() {
+        let line_no = idx + 1;
+        if line.trim().is_empty() || line.trim_start().starts_with('#') {
+            continue;
+        }
+        if line.starts_with(' ') || line.starts_with('\t') {
+            continue;
+        }
+
+        let Some(key) = top_level_yaml_key(line) else {
+            continue;
+        };
+
+        if let Some(first_line) = seen.insert(key, line_no) {
+            return Err(CoreError::Validation(ValidationError::Other(
+                anyhow::anyhow!(
+                    "Duplicate YAML frontmatter key '{}' at line {} (first defined at line {})",
+                    key,
+                    line_no,
+                    first_line
+                ),
+            )));
+        }
+    }
+
+    Ok(())
+}
+
+fn top_level_yaml_key(line: &str) -> Option<&str> {
+    let trimmed = line.trim();
+    let key = if let Some(stripped) = trimmed.strip_suffix(':') {
+        stripped
+    } else if let Some(idx) = trimmed.find(": ") {
+        &trimmed[..idx]
+    } else {
+        return None;
+    };
+    let key = key.trim();
+    if key.is_empty() || key.starts_with('-') || key.starts_with('?') {
+        return None;
+    }
+    let key = strip_matching_yaml_key_quotes(key);
+    if key.is_empty() {
+        return None;
+    }
+    Some(key)
+}
+
+fn strip_matching_yaml_key_quotes(key: &str) -> &str {
+    let Some(unquoted) = key.strip_prefix('"').and_then(|key| key.strip_suffix('"')) else {
+        return key
+            .strip_prefix('\'')
+            .and_then(|key| key.strip_suffix('\''))
+            .unwrap_or(key);
+    };
+    unquoted
+}
+
 /// Parse YAML frontmatter from markdown content
 ///
 /// Expects content in format:
@@ -252,6 +316,7 @@ pub fn parse_frontmatter<T: DeserializeOwned>(content: &str) -> LintResult<(T, S
     let parts = split_frontmatter(content);
     // Pre-parse depth check to bound memory use on pathological inputs.
     check_yaml_depth(&parts.frontmatter)?;
+    check_yaml_duplicate_top_level_keys(&parts.frontmatter)?;
     let parsed: T = serde_yaml::from_str(&parts.frontmatter)
         .map_err(|e| CoreError::Validation(ValidationError::Other(e.into())))?;
     Ok((parsed, parts.body.trim_start().to_string()))
@@ -350,6 +415,66 @@ Body content here"#;
         assert_eq!(fm.name, "test-skill");
         assert_eq!(fm.description, "A test skill");
         assert_eq!(body, "Body content here");
+    }
+
+    #[test]
+    fn test_duplicate_top_level_frontmatter_key_rejected() {
+        let content = r#"---
+name: first-name
+description: A test skill
+name: second-name
+---
+Body content here"#;
+
+        let result: LintResult<(TestFrontmatter, String)> = parse_frontmatter(content);
+        let err = result.unwrap_err().to_string();
+        assert!(
+            err.contains("Duplicate YAML frontmatter key 'name'"),
+            "expected duplicate-key error, got: {err}"
+        );
+        assert!(err.contains("line 3"));
+    }
+
+    #[test]
+    fn test_nested_same_key_does_not_trip_top_level_duplicate_guard() {
+        let yaml = r#"
+name: test-skill
+description: A test skill
+metadata:
+  name: nested-name
+"#;
+
+        assert!(check_yaml_duplicate_top_level_keys(yaml).is_ok());
+    }
+
+    #[test]
+    fn test_colon_in_top_level_key_does_not_trip_duplicate_guard() {
+        let yaml = r#"
+rdf:type: agent-config
+rdf: namespace
+"http://example.com/schema": value
+http://example.com: bare-url-key
+"#;
+
+        assert!(check_yaml_duplicate_top_level_keys(yaml).is_ok());
+    }
+
+    #[test]
+    fn test_quoted_duplicate_top_level_key_rejected() {
+        let yaml = r#"
+name: first-name
+"name": second-name
+'description': first-description
+description: second-description
+"#;
+
+        let err = check_yaml_duplicate_top_level_keys(yaml)
+            .expect_err("quoted and unquoted copies should be duplicate keys")
+            .to_string();
+        assert!(
+            err.contains("Duplicate YAML frontmatter key 'name'"),
+            "expected normalized duplicate-key error, got: {err}"
+        );
     }
 
     #[test]

@@ -53,11 +53,13 @@ use tower_lsp::{LspService, Server};
 pub async fn start_server() -> anyhow::Result<()> {
     // Initialize locale from environment variables (AGNIX_LOCALE > LANG/LC_ALL > system > "en")
     locale::init_from_env();
+    tracing::debug!("agnix-lsp locale initialized");
 
     let stdin = tokio::io::stdin();
     let stdout = tokio::io::stdout();
 
     let (service, socket) = LspService::new(Backend::new);
+    tracing::info!("agnix-lsp server ready on stdio");
     Server::new(stdin, stdout, socket).serve(service).await;
     Ok(())
 }
