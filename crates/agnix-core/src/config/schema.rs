@@ -31,6 +31,17 @@ pub(in crate::config) const KNOWN_RULE_PREFIXES: &[&str] = &[
     "WS-SK-",
     "KIRO-",
     "KR-SK-",
+    "KR-AG-",
+    "KR-HK-",
+    "KR-MCP-",
+    "KR-PW-",
+    "KR-SET-",
+    "CC-OS-",
+    "RC-SK-",
+    "CR-SK-",
+    "CL-SK-",
+    "CP-SK-",
+    "CX-SK-",
     "imports::",
 ];
 
@@ -256,4 +267,27 @@ pub struct ConfigWarning {
 /// ```
 pub fn generate_schema() -> schemars::Schema {
     schemars::schema_for!(LintConfig)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::KNOWN_RULE_PREFIXES;
+
+    /// Every shipped rule ID must be covered by a `KNOWN_RULE_PREFIXES` entry.
+    /// Otherwise disabling that rule in `.agnix.toml` emits a spurious
+    /// `core.config.unknown_rule` warning even though the suppression works.
+    /// This guards the prefix list against drifting behind
+    /// `knowledge-base/rules.json`.
+    #[test]
+    fn known_rule_prefixes_cover_all_shipped_rules() {
+        for &(id, _name) in agnix_rules::RULES_DATA {
+            assert!(
+                KNOWN_RULE_PREFIXES
+                    .iter()
+                    .any(|prefix| id.starts_with(prefix)),
+                "rule ID `{id}` matches no KNOWN_RULE_PREFIXES entry - \
+                 add its prefix in config/schema.rs"
+            );
+        }
+    }
 }
