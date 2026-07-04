@@ -1,16 +1,30 @@
 use std::collections::BTreeSet;
 use std::fs;
+use std::path::Path;
 
 fn repo_file(path: &str) -> String {
-    let root = env!("CARGO_MANIFEST_DIR");
-    fs::read_to_string(format!("{root}/{path}"))
-        .unwrap_or_else(|e| panic!("failed to read {path}: {e}"))
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    fs::read_to_string(root.join(path)).unwrap_or_else(|e| panic!("failed to read {path}: {e}"))
+}
+
+fn is_rustsec_id(token: &str) -> bool {
+    let Some(rest) = token.strip_prefix("RUSTSEC-") else {
+        return false;
+    };
+    let Some((year, number)) = rest.split_once('-') else {
+        return false;
+    };
+
+    year.len() == 4
+        && year.chars().all(|c| c.is_ascii_digit())
+        && number.len() == 4
+        && number.chars().all(|c| c.is_ascii_digit())
 }
 
 fn rustsec_ids(content: &str) -> BTreeSet<String> {
     content
         .split(|c: char| !c.is_ascii_alphanumeric() && c != '-')
-        .filter(|token| token.starts_with("RUSTSEC-"))
+        .filter(|token| is_rustsec_id(token))
         .map(str::to_owned)
         .collect()
 }
@@ -27,11 +41,15 @@ fn rustsec_ignore_lists_match_docs() {
     let expected = current_ignored_advisory_ids();
 
     let security_workflow = repo_file(".github/workflows/security.yml");
-    let audit_line = security_workflow
+    assert!(
+        security_workflow.contains("cargo audit"),
+        "security.yml must run cargo audit"
+    );
+    let audit_ignores: BTreeSet<String> = security_workflow
         .lines()
-        .find(|line| line.contains("cargo audit"))
-        .expect("security.yml must run cargo audit");
-    let audit_ignores = rustsec_ids(audit_line);
+        .filter(|line| line.contains("RUSTSEC-"))
+        .flat_map(rustsec_ids)
+        .collect();
 
     let deny_toml: toml::Value =
         toml::from_str(&repo_file("deny.toml")).expect("deny.toml must parse");
