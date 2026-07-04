@@ -66,6 +66,43 @@ fn release_workflow_publishes_lsp_binary_checksums() {
 }
 
 #[test]
+fn release_workflow_scopes_attestation_and_release_permissions() {
+    let root = env!("CARGO_MANIFEST_DIR");
+    let workflow = fs::read_to_string(format!("{root}/.github/workflows/release.yml"))
+        .expect("failed to read release workflow");
+
+    assert!(
+        workflow.contains("permissions:\n  contents: read"),
+        "release workflow default token permissions must be read-only"
+    );
+    assert!(
+        !workflow.contains("permissions:\n  contents: write"),
+        "release workflow must not grant contents: write at workflow scope"
+    );
+    assert!(
+        workflow.contains(
+            "  build:\n    name: Build (${{ matrix.target }})\n    runs-on: ${{ matrix.os }}\n    permissions:\n      contents: read\n      id-token: write\n      attestations: write"
+        ),
+        "build job must carry only the permissions needed to attest built artifacts"
+    );
+    assert!(
+        workflow.contains(
+            "  release:\n    name: Create Release\n    needs: [build, test]\n    runs-on: ubuntu-latest\n    permissions:\n      contents: write"
+        ),
+        "release job must receive contents: write only where assets are published"
+    );
+    assert!(
+        workflow.contains("uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1"),
+        "release workflow must use the SHA-pinned GitHub attestation action"
+    );
+    assert!(
+        workflow.contains("agnix-*${{ matrix.target }}.tar.gz")
+            && workflow.contains("agnix-*${{ matrix.target }}.zip"),
+        "attestation subject paths must cover release archives"
+    );
+}
+
+#[test]
 fn action_download_script_verifies_release_checksum() {
     let root = env!("CARGO_MANIFEST_DIR");
     let script = fs::read_to_string(format!("{root}/scripts/download.sh"))

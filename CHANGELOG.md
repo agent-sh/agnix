@@ -7,7 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Release provenance attestations**. Release archive builds now generate GitHub artifact attestations with job-scoped OIDC and attestation permissions, while release publishing keeps write access isolated to the release job.
+
 ### Fixed
+- **Markdown import scanner performance**. Avoided repeated prefix rescans when extracting `@import` references from large non-code spans, keeping dense-at-sign inputs linear while preserving UTF-8 behavior.
+- **Rule suppression config warnings**. Recognized every shipped rule-prefix namespace in `.agnix.toml` validation, avoiding spurious `core.config.unknown_rule` warnings when disabling valid rules.
+- **Windows checkout line endings**. Added repository attributes that keep source files LF-normalized across platforms while preserving CRLF for Windows command and PowerShell scripts.
+- **npm installer checksum verification**. The npm postinstall downloader now verifies release archive SHA-256 sidecars before extraction, binds sidecar entries to the expected archive filename, streams archive hashing, and cleans temporary artifacts after failed installs.
+- **Stale version references in documentation**. Updated project instructions and configuration docs to consistently reference v0.37.2, so release guidance and user-facing docs match the current published version.
 - **Security follow-ups** (closes #1149, #1150, #1154, #1155, #1156, #1157, #1158). Hardened MCP validation against handler panics and absolute-path disclosure, extended panic isolation to project-level checks, bound shell checksum parsing to the selected artifact filename, added VS Code release-download redirect host validation, corrected the YAML parser safety comment, and documented the remaining deprecated transitive `serde_yaml` dependency from `rust-i18n`.
 
 ## [0.37.2] - 2026-07-04
