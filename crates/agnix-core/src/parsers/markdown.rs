@@ -598,7 +598,10 @@ fn scan_imports_in_text(
             let prev_ok = if i == 0 {
                 true
             } else {
-                let prev = text[..i].chars().last().unwrap_or(' ');
+                // next_back() decodes the preceding char in O(1) from the end.
+                // chars().last() would rescan the whole prefix, making this loop
+                // O(n^2) on inputs with many '@' bytes (up to the 1 MiB file cap).
+                let prev = text[..i].chars().next_back().unwrap_or(' ');
                 !prev.is_alphanumeric() && !matches!(prev, '_' | '-' | '.')
             };
             if !prev_ok {
@@ -1008,6 +1011,16 @@ mod tests {
         let content = "Use @import and @imports in docs";
         let imports = extract_imports(content);
         assert!(imports.is_empty());
+    }
+
+    #[test]
+    fn test_extract_imports_after_multibyte_char() {
+        // The char immediately preceding '@' is multibyte punctuation; the
+        // preceding-char check must decode it correctly across the UTF-8 prefix.
+        let content = "\u{00bb}@real.md";
+        let imports = extract_imports(content);
+        assert_eq!(imports.len(), 1);
+        assert_eq!(imports[0].path, "real.md");
     }
 
     #[test]
