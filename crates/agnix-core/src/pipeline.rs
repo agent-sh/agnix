@@ -837,14 +837,7 @@ pub fn validate_project_with_registry(
         ));
     }
 
-    // Sort by severity (errors first), then by file path, then by line/rule for full determinism
-    diagnostics.sort_by(|a, b| {
-        a.level
-            .cmp(&b.level)
-            .then_with(|| a.file.cmp(&b.file))
-            .then_with(|| a.line.cmp(&b.line))
-            .then_with(|| a.rule.cmp(&b.rule))
-    });
+    sort_diagnostics(&mut diagnostics);
 
     // Extract final count from atomic counter
     let files_checked = files_checked.load(Ordering::Relaxed);
@@ -856,6 +849,20 @@ pub fn validate_project_with_registry(
     Ok(ValidationResult::new(diagnostics, files_checked)
         .with_timing(elapsed_ms)
         .with_validator_factories_registered(validator_factories_registered))
+}
+
+fn sort_diagnostics(diagnostics: &mut [Diagnostic]) {
+    diagnostics.sort_by(|a, b| {
+        a.level
+            .cmp(&b.level)
+            .then_with(|| a.file.cmp(&b.file))
+            .then_with(|| a.line.cmp(&b.line))
+            .then_with(|| a.column.cmp(&b.column))
+            .then_with(|| a.rule.cmp(&b.rule))
+            .then_with(|| a.message.cmp(&b.message))
+            .then_with(|| a.suggestion.cmp(&b.suggestion))
+            .then_with(|| a.fixes.len().cmp(&b.fixes.len()))
+    });
 }
 
 #[cfg(feature = "filesystem")]
@@ -934,6 +941,27 @@ mod validate_content_tests {
         let content = "# Project\n\nSome instructions.";
         // Should not panic with tool filter
         let _ = validate_content(path, content, &config, &registry);
+    }
+
+    #[test]
+    fn sort_diagnostics_uses_column_and_message_tiebreakers() {
+        let file = PathBuf::from("same.md");
+        let mut diagnostics = vec![
+            Diagnostic::error(file.clone(), 1, 2, "XML-001", "b message"),
+            Diagnostic::error(file.clone(), 1, 1, "XML-001", "z message"),
+            Diagnostic::error(file, 1, 1, "XML-001", "a message"),
+        ];
+
+        sort_diagnostics(&mut diagnostics);
+
+        let ordered: Vec<_> = diagnostics
+            .iter()
+            .map(|d| (d.column, d.message.as_str()))
+            .collect();
+        assert_eq!(
+            ordered,
+            vec![(1, "a message"), (1, "z message"), (2, "b message")]
+        );
     }
 
     #[test]

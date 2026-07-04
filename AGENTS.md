@@ -65,8 +65,8 @@ tests/fixtures/     # Test cases by category
 ### Core Modules (agnix-core)
 
 - `parsers/` - Frontmatter, JSON, Markdown parsing
-- `schemas/` - Type definitions (13 schemas: skill, hooks, agent, mcp, cline, roo, etc.)
-- `rules/` - Validators implementing Validator trait (43 validators)
+- `schemas/` - Type definitions for skill, hooks, agent, mcp, cline, roo, and other tool configs
+- `rules/` - Validators implementing Validator trait (40 validators)
 - `config.rs` - LintConfig, LintConfigBuilder, ConfigError, ToolVersions, SpecRevisions
 - `diagnostics.rs` - Diagnostic, Fix, DiagnosticLevel, ValidationOutcome, LintError (= CoreError), LintResult
 - `eval.rs` - Rule efficacy evaluation (precision/recall/F1)
@@ -189,8 +189,8 @@ Format: `[CATEGORY]-[NUMBER]` (AS-004, CC-HK-001, etc.)
 
 ## Current State
 
-- v0.29.0 - Production-ready with full validation pipeline
-- 432 validation rules across 43 validators
+- v0.37.0 - Production-ready with full validation pipeline
+- 432 validation rules across 40 validators
 
 - 4200+ passing tests
 - LSP + MCP servers with VS Code extension

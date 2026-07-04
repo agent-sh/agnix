@@ -81,9 +81,9 @@ After the release workflow completes, verify all install targets work. This shou
 
 | Target | Install Command | Verify Command |
 |--------|----------------|----------------|
-| **Cargo** | `cargo install agnix` | `agnix --version` |
+| **Cargo** | `cargo install agnix-cli` | `agnix --version` |
 | **Homebrew** | `brew install agnix` | `agnix --version` |
-| **npm** | `npm install -g @agnix/cli` | `agnix --version` |
+| **npm** | `npm install -g agnix` | `agnix --version` |
 | **GitHub Release** | Download from releases page | Run binary directly |
 
 ### Editor Extensions to Verify
@@ -107,7 +107,7 @@ A `post-release.yml` workflow triggered on release publication should:
 ### Manual Checklist
 
 - [ ] GitHub Release page shows all platform binaries
-- [ ] `cargo install agnix` installs the new version
+- [ ] `cargo install agnix-cli` installs the new version
 - [ ] VS Code extension downloads the new LSP binary
 - [ ] Documentation website shows the new version
 - [ ] CHANGELOG.md is up to date
@@ -129,7 +129,7 @@ the job will:
 The docs-site workflow then deploys automatically once the docs PR is merged
 to main.
 
-After release, verify at https://agentskills.io that:
+After release, verify at https://agent-sh.github.io/agnix/ that:
 - New version docs are live in the version dropdown
 - Rule reference pages match the current rules.json
 - Landing page stats reflect the latest rule count

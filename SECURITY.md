@@ -22,8 +22,8 @@ You can expect:
 
 | Version | Supported |
 | ------- | --------- |
-| 0.7.x   | Yes       |
-| < 0.7   | No        |
+| 0.37.x  | Yes       |
+| < 0.37  | No        |
 
 ## Security Model
 
@@ -170,7 +170,7 @@ cargo install agnix-cli --features telemetry
 
 ## Security Updates
 
-Security fixes are released as patch versions (e.g., 0.8.0 -> 0.8.1) and announced in:
+Security fixes are released as patch versions (e.g., 0.37.0 -> 0.37.1) and announced in:
 
 - GitHub Releases
 - CHANGELOG.md

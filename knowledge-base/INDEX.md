@@ -93,15 +93,15 @@ knowledge-base/
 | Amp Checks | 4 | 2 | 2 | 0 | 3 |
 | Amp Skills | 1 | 0 | 1 | 0 | 1 |
 | Claude Agents | 17 | 12 | 4 | 1 | 10 |
-| Claude Hooks | 27 | 15 | 8 | 4 | 16 |
+| Claude Hooks | 27 | 14 | 8 | 5 | 16 |
 | Claude Memory | 13 | 8 | 5 | 0 | 3 |
 | Claude Output Styles | 6 | 2 | 2 | 2 | 0 |
 | Claude Plugins | 15 | 9 | 6 | 0 | 4 |
-| Claude Settings | 11 | 0 | 11 | 0 | 0 |
+| Claude Settings | 13 | 0 | 13 | 0 | 0 |
 | Claude Skills | 21 | 11 | 9 | 1 | 13 |
 | Cline | 7 | 4 | 3 | 0 | 3 |
 | Cline Skills | 3 | 2 | 1 | 0 | 2 |
-| Codex CLI | 64 | 31 | 28 | 5 | 10 |
+| Codex CLI | 65 | 31 | 29 | 5 | 10 |
 | Codex Skills | 1 | 0 | 1 | 0 | 1 |
 | GitHub Copilot | 25 | 13 | 9 | 3 | 11 |
 | Copilot Skills | 1 | 0 | 1 | 0 | 1 |
@@ -128,7 +128,7 @@ knowledge-base/
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **432** | **213** | **188** | **28** | **127** |
+| **TOTAL** | **432** | **212** | **191** | **29** | **127** |
 
 
 ---
@@ -293,7 +293,7 @@ Standards Covered:     5 (Agent Skills, MCP, Claude Code, Multi-Platform, Prompt
 Sources Consulted:    75+ (specs, docs, research papers, repos)
 Research Agents:       5 (10+ sources each)
 Validation Rules:     432 rules
-Auto-Fixable Rules:   96 rules
+Auto-Fixable Rules:   127 rules
 
 Test Fixtures:        116 files
 Platforms Analyzed:   9 (Claude Code, Codex CLI, OpenCode, Copilot, Cursor, Cline, Roo-Cline, Continue.dev, Aider)

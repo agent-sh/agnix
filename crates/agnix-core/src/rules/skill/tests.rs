@@ -221,6 +221,20 @@ fn test_as_008_description_too_long() {
 }
 
 #[test]
+fn test_as_008_description_counts_characters_not_bytes() {
+    let description = "測".repeat(400);
+    let content = format!(
+        "---\nname: test-skill\ndescription: {}\n---\nBody",
+        description
+    );
+
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(Path::new("test.md"), &content, &LintConfig::default());
+
+    assert!(!diagnostics.iter().any(|d| d.rule == "AS-008"));
+}
+
+#[test]
 fn test_as_008_description_empty_string() {
     let content = r#"---
 name: test-skill
@@ -358,6 +372,20 @@ fn test_as_011_compatibility_too_long() {
 
     let as_011_errors: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-011").collect();
     assert_eq!(as_011_errors.len(), 1);
+}
+
+#[test]
+fn test_as_011_compatibility_counts_characters_not_bytes() {
+    let compatibility = "測".repeat(500);
+    let content = format!(
+        "---\nname: test-skill\ndescription: Use when validating compatibility\ncompatibility: {}\n---\nBody",
+        compatibility
+    );
+
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(Path::new("test.md"), &content, &LintConfig::default());
+
+    assert!(!diagnostics.iter().any(|d| d.rule == "AS-011"));
 }
 
 #[test]
@@ -1867,6 +1895,22 @@ Body"#;
     assert_eq!(as_004.len(), 1);
     assert!(as_004[0].has_fixes());
     assert_eq!(as_004[0].fixes[0].replacement, "test-skill");
+}
+
+#[test]
+fn test_as_004_non_ascii_name_has_no_lossy_fix() {
+    let content = r#"---
+name: tëst_Skîll_😀_ทดสอบ
+description: Use when testing non-ASCII skill names
+---
+Body"#;
+
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
+
+    let as_004: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-004").collect();
+    assert_eq!(as_004.len(), 1);
+    assert!(!as_004[0].has_fixes());
 }
 
 #[test]

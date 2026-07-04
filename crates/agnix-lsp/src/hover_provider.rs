@@ -6,6 +6,8 @@
 use agnix_core::FileType;
 use tower_lsp::lsp_types::{Hover, HoverContents, MarkupContent, MarkupKind, Position};
 
+use crate::position::utf16_position_to_byte_in_line;
+
 /// Get the field name at a position in YAML/JSON-like content.
 ///
 /// Looks for patterns like `field:` or `"field":` and returns
@@ -30,12 +32,12 @@ pub fn get_field_at_position(content: &str, position: Position) -> Option<String
                 .chars()
                 .all(|c| c.is_alphanumeric() || c == '_' || c == '-')
         {
-            let char_pos = position.character as usize;
+            let byte_pos = utf16_position_to_byte_in_line(line, position.character)?;
             let field_start = total_prefix;
             let field_end = total_prefix + colon_pos;
 
             // Only return hover when cursor is on the key area (not on delimiters before it)
-            if char_pos >= field_start && char_pos <= field_end {
+            if byte_pos >= field_start && byte_pos <= field_end {
                 return Some(field.to_string());
             }
         }

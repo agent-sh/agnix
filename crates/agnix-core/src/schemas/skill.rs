@@ -150,12 +150,9 @@ impl SkillSchema {
 
 fn validate_name_segment(segment: &str, label: &str) -> Result<(), String> {
     // Length check
-    if segment.is_empty() || segment.len() > 64 {
-        return Err(format!(
-            "{} must be 1-64 characters, got {}",
-            label,
-            segment.len()
-        ));
+    let len = segment.chars().count();
+    if segment.is_empty() || len > 64 {
+        return Err(format!("{} must be 1-64 characters, got {}", label, len));
     }
 
     // Character check
@@ -185,7 +182,7 @@ impl SkillSchema {
     /// Validate description length
     #[allow(dead_code)] // schema-level API; validation uses Validator trait
     pub fn validate_description(&self) -> Result<(), String> {
-        let len = self.description.len();
+        let len = self.description.chars().count();
         if len == 0 || len > 1024 {
             return Err(format!(
                 "Description must be 1-1024 characters, got {}",
@@ -199,7 +196,7 @@ impl SkillSchema {
     #[allow(dead_code)] // schema-level API; validation uses Validator trait
     pub fn validate_compatibility(&self) -> Result<(), String> {
         if let Some(compat) = &self.compatibility {
-            let len = compat.len();
+            let len = compat.chars().count();
             if len == 0 || len > 500 {
                 return Err(format!(
                     "Compatibility must be 1-500 characters, got {}",

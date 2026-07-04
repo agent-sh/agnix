@@ -10,10 +10,12 @@ agnix works with zero configuration. To customize, add `.agnix.toml` to your pro
 ## Example
 
 ```toml
-target = "claude-code"
-strict = false
-max_files = 10000
+target = "ClaudeCode"
+tools = ["claude-code"]
+max_files_to_validate = 10000
 locale = "en"
+
+[rules]
 disabled_rules = []
 ```
 
@@ -21,14 +23,15 @@ disabled_rules = []
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `target` | string | none | Single tool focus: `claude-code`, `cursor`, `codex`, `copilot` |
-| `tools` | string[] | all | Multi-tool targeting. Overrides `target`. |
-| `strict` | bool | `false` | Treat warnings as errors |
-| `fix` | bool | `false` | Apply available auto-fixes |
-| `max_files` | int | `10000` | Maximum files to scan |
+| `target` | string | `Generic` | Legacy single tool focus: `Generic`, `ClaudeCode`, `Cursor`, `Codex`, `Kiro` |
+| `tools` | string[] | `[]` | Multi-tool targeting. Overrides `target`. Use values like `claude-code`, `cursor`, `codex`, `kiro`, `github-copilot`, `cline`, `opencode`, `gemini-cli`, `amp`, `roo-code`, `windsurf`, `generic`. |
+| `severity` | string | `Warning` | Minimum severity level: `Warning`, `Error`, or `Info` |
+| `max_files_to_validate` | int | `10000` | Maximum files to scan |
 | `locale` | string | `"en"` | Output locale |
-| `disabled_rules` | string[] | `[]` | Rule IDs to skip (e.g. `["CC-MEM-005"]`) |
-| `format` | string | `"text"` | Output format: `text`, `json`, `sarif` |
+| `[rules].disabled_rules` | string[] | `[]` | Rule IDs to skip (e.g. `["CC-MEM-005"]`) |
+| `[rules].disabled_validators` | string[] | `[]` | Validator names to skip |
+| `[files]` | table | default excludes | Include or exclude non-standard files |
+| `[[overrides]]` | table array | `[]` | Per-file disabled rule overrides |
 
 ## CLI flags
 
@@ -50,6 +53,8 @@ agnix --format sarif .
 # Strict mode
 agnix --strict .
 ```
+
+`--strict`, `--fix`, `--fix-safe`, `--fix-unsafe`, `--dry-run`, `--show-fixes`, and `--format` are CLI flags, not `.agnix.toml` keys.
 
 ## Full reference
 

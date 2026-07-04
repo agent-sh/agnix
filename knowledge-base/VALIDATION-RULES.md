@@ -951,13 +951,6 @@ Rules with an empty `applies_to` object (`{}`) apply universally.
 **Fix**: Manual
 **Source**: code.claude.com/docs/en/sub-agents
 
-<a id="cc-ag-016"></a>
-### CC-AG-016 [MEDIUM] Invalid Background Type
-**Requirement**: background SHOULD be boolean
-**Detection**: Check background field type
-**Fix**: Manual
-**Source**: code.claude.com/docs/en/sub-agents
-
 <a id="cc-ag-017"></a>
 ### CC-AG-017 [MEDIUM] Invalid MaxTurns Value
 **Requirement**: maxTurns SHOULD be a positive integer
@@ -3460,15 +3453,15 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Amp Checks | 4 | 2 | 2 | 0 | 3 |
 | Amp Skills | 1 | 0 | 1 | 0 | 1 |
 | Claude Agents | 17 | 12 | 4 | 1 | 10 |
-| Claude Hooks | 27 | 15 | 8 | 4 | 16 |
+| Claude Hooks | 27 | 14 | 8 | 5 | 16 |
 | Claude Memory | 13 | 8 | 5 | 0 | 3 |
 | Claude Output Styles | 6 | 2 | 2 | 2 | 0 |
 | Claude Plugins | 15 | 9 | 6 | 0 | 4 |
-| Claude Settings | 11 | 0 | 11 | 0 | 0 |
+| Claude Settings | 13 | 0 | 13 | 0 | 0 |
 | Claude Skills | 21 | 11 | 9 | 1 | 13 |
 | Cline | 7 | 4 | 3 | 0 | 3 |
 | Cline Skills | 3 | 2 | 1 | 0 | 2 |
-| Codex CLI | 64 | 31 | 28 | 5 | 10 |
+| Codex CLI | 65 | 31 | 29 | 5 | 10 |
 | Codex Skills | 1 | 0 | 1 | 0 | 1 |
 | GitHub Copilot | 25 | 13 | 9 | 3 | 11 |
 | Copilot Skills | 1 | 0 | 1 | 0 | 1 |
@@ -3495,7 +3488,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **429** | **213** | **188** | **28** | **127** |
+| **TOTAL** | **432** | **212** | **191** | **29** | **127** |
 
 
 ---
