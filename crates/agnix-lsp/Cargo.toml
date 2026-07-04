@@ -22,6 +22,8 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 rust-i18n = { workspace = true }
 sys-locale = { workspace = true }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 mimalloc = { workspace = true }

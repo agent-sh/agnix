@@ -728,6 +728,7 @@ core:
     files_pattern_count_limit: 字段 '%{field}' 有 %{count} 个模式，超过了建议的 %{limit} 个上限。
     files_pattern_count_limit_suggestion: 考虑合并模式或使用更广泛的 glob 表达式
     load_warning: '解析配置 ''%{path}'' 失败: %{error}。使用默认值。'
+    load_error: '解析配置 ''%{path}'' 失败: %{error}。'
 
 
 # ===========================================================================

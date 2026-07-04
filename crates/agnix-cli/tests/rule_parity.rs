@@ -589,9 +589,15 @@ fn test_rules_json_matches_validation_rules_md() {
         .captures_iter(&content)
         .map(|cap| cap[1].to_string())
         .collect();
+    let referenced_re = Regex::new(r"\b[A-Z]+(?:-[A-Z]+)*-[0-9]{3}\b").unwrap();
+    let referenced_ids: BTreeSet<String> = referenced_re
+        .captures_iter(&content)
+        .map(|cap| cap[0].to_string())
+        .collect();
 
     let missing_in_md: Vec<&String> = rules_json_ids.difference(&validation_rules_ids).collect();
     let extra_in_md: Vec<&String> = validation_rules_ids.difference(&rules_json_ids).collect();
+    let unknown_references: Vec<&String> = referenced_ids.difference(&rules_json_ids).collect();
 
     let mut report = String::new();
     if !missing_in_md.is_empty() {
@@ -606,9 +612,16 @@ fn test_rules_json_matches_validation_rules_md() {
             report.push_str(&format!("  - {}\n", rule));
         }
     }
+    if !unknown_references.is_empty() {
+        report
+            .push_str("Rule-like references in VALIDATION-RULES.md but not found in rules.json:\n");
+        for rule in &unknown_references {
+            report.push_str(&format!("  - {}\n", rule));
+        }
+    }
 
     assert!(
-        missing_in_md.is_empty() && extra_in_md.is_empty(),
+        missing_in_md.is_empty() && extra_in_md.is_empty() && unknown_references.is_empty(),
         "rules.json and VALIDATION-RULES.md rule ID parity failed:\n{}",
         report
     );

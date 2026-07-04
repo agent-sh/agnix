@@ -105,7 +105,7 @@ struct Cli {
     #[arg(short, long)]
     verbose: bool,
 
-    /// Apply automatic fixes (HIGH and MEDIUM confidence)
+    /// Apply automatic fixes marked safe
     #[arg(long, group = "fix_mode")]
     fix: bool,
 
@@ -117,7 +117,7 @@ struct Cli {
     #[arg(long, group = "fix_mode")]
     fix_safe: bool,
 
-    /// Apply all fixes, including LOW-confidence ones
+    /// Apply all fixes, including medium and LOW-confidence ones
     #[arg(long, group = "fix_mode")]
     fix_unsafe: bool,
 
@@ -304,7 +304,13 @@ fn main() {
     if cli.watch {
         let primary = primary_path(&cli.paths);
         let config_path = resolve_config_path(primary, cli.config.as_ref());
-        let (config, _) = LintConfig::load_or_default(config_path.as_ref());
+        let config = match load_config_or_default(config_path.as_ref()) {
+            Ok(config) => config,
+            Err(e) => {
+                eprintln!("{} {}", t!("cli.error_label").red().bold(), e);
+                process::exit(1);
+            }
+        };
 
         // Re-initialize locale if config specifies one and no --locale flag was given
         if cli.locale.is_none() {
@@ -353,6 +359,22 @@ fn format_paths_for_display(paths: &[PathBuf]) -> String {
         0 => ".".to_string(),
         1 => paths[0].display().to_string(),
         _ => format!("{} paths", paths.len()),
+    }
+}
+
+fn load_config_or_default(path: Option<&PathBuf>) -> anyhow::Result<LintConfig> {
+    match path {
+        Some(path) => LintConfig::load(path).map_err(|error| {
+            anyhow::anyhow!(
+                "{}",
+                t!(
+                    "core.config.load_error",
+                    path = path.display().to_string(),
+                    error = error.to_string()
+                )
+            )
+        }),
+        None => Ok(LintConfig::default()),
     }
 }
 
@@ -497,7 +519,7 @@ fn validate_command(paths: &[PathBuf], cli: &Cli) -> anyhow::Result<()> {
     let config_path = resolve_config_path(primary, cli.config.as_ref());
     tracing::debug!(config_path = ?config_path, "Resolved config path");
 
-    let (mut config, config_warning) = LintConfig::load_or_default(config_path.as_ref());
+    let mut config = load_config_or_default(config_path.as_ref())?;
 
     // Re-initialize locale if config specifies one and no --locale flag was given
     if cli.locale.is_none() {
@@ -506,11 +528,6 @@ fn validate_command(paths: &[PathBuf], cli: &Cli) -> anyhow::Result<()> {
         }
     }
 
-    // Display config warning before validation output
-    if let Some(warning) = config_warning {
-        eprintln!("{} {}", t!("cli.warning_label").yellow().bold(), warning);
-        eprintln!();
-    }
     config.set_target(cli.target.into());
 
     // Validate config semantics and display warnings (only for text output)
@@ -891,12 +908,7 @@ fn run_single_validation(
 ) -> anyhow::Result<bool> {
     let config_path = resolve_config_path(path, config_override);
 
-    let (mut config, config_warning) = LintConfig::load_or_default(config_path.as_ref());
-
-    if let Some(warning) = config_warning {
-        eprintln!("{} {}", t!("cli.warning_label").yellow().bold(), warning);
-        eprintln!();
-    }
+    let mut config = load_config_or_default(config_path.as_ref())?;
     config.set_target(target.into());
 
     let ValidationResult {
@@ -1002,8 +1014,8 @@ fn resolve_fix_mode(cli: &Cli) -> FixApplyMode {
     } else if cli.fix_unsafe {
         FixApplyMode::All
     } else {
-        // Default for --fix and --dry-run.
-        FixApplyMode::SafeAndMedium
+        // Default for --fix and --dry-run: only apply fixes marked safe.
+        FixApplyMode::SafeOnly
     }
 }
 
@@ -1111,15 +1123,7 @@ fn tools_command(subcmd: &ToolsCommand, cli: &Cli) -> anyhow::Result<()> {
             // Prefer the user's explicit --config; otherwise search from cwd.
             let cwd = env::current_dir()?;
             let config_path = resolve_config_path(&cwd, cli.config.as_ref());
-            let (config, config_warning) = LintConfig::load_or_default(config_path.as_ref());
-            // Surface any config-load warning (parse error, unknown keys,
-            // etc.). Without this, `check` would silently fall back to
-            // defaults + report nothing-pinned even when the user's config
-            // is broken.
-            if let Some(warning) = config_warning {
-                eprintln!("{} {}", t!("cli.warning_label").yellow().bold(), warning);
-                eprintln!();
-            }
+            let config = load_config_or_default(config_path.as_ref())?;
             let issues_found = tools::check_command(&config, *strict)?;
             if *strict && issues_found {
                 process::exit(1);
@@ -1420,15 +1424,15 @@ mod resolve_fix_mode_tests {
     }
 
     #[test]
-    fn fix_selects_safe_and_medium_mode() {
+    fn fix_selects_safe_only_mode() {
         let cli = Cli::parse_from(["agnix", "--fix"]);
-        assert_eq!(resolve_fix_mode(&cli), FixApplyMode::SafeAndMedium);
+        assert_eq!(resolve_fix_mode(&cli), FixApplyMode::SafeOnly);
     }
 
     #[test]
-    fn dry_run_selects_safe_and_medium_mode() {
+    fn dry_run_selects_safe_only_mode() {
         let cli = Cli::parse_from(["agnix", "--dry-run"]);
-        assert_eq!(resolve_fix_mode(&cli), FixApplyMode::SafeAndMedium);
+        assert_eq!(resolve_fix_mode(&cli), FixApplyMode::SafeOnly);
     }
 
     #[test]

@@ -1108,7 +1108,7 @@ fn test_fix_exit_code_on_remaining_errors() {
     // Invalid fixtures have errors that cannot be auto-fixed
     let output = cmd
         .arg("tests/fixtures/invalid/skills/unknown-tool")
-        .arg("--fix")
+        .arg("--fix-unsafe")
         .output()
         .unwrap();
 
@@ -1156,13 +1156,13 @@ fn test_fix_exit_code_when_all_issues_are_fixed() {
                 .to_str()
                 .expect("Temp path is not valid UTF-8"),
         )
-        .arg("--fix")
+        .arg("--fix-unsafe")
         .output()
         .expect("Failed to execute agnix command");
 
     assert!(
         output.status.success(),
-        "Expected --fix to exit 0 when all issues are fixed, stdout: {}, stderr: {}",
+        "Expected --fix-unsafe to exit 0 when all issues are fixed, stdout: {}, stderr: {}",
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
@@ -1517,10 +1517,10 @@ fn test_fixtures_have_no_empty_placeholder_dirs() {
     );
 }
 
-// ===== Config Parse Warning Tests =====
+// ===== Config Parse Error Tests =====
 
 #[test]
-fn test_invalid_config_displays_warning_to_stderr() {
+fn test_invalid_config_fails_to_stderr() {
     let temp_dir = tempfile::tempdir().unwrap();
     let config_path = temp_dir.path().join(".agnix.toml");
 
@@ -1543,18 +1543,20 @@ fn test_invalid_config_displays_warning_to_stderr() {
 
     let stderr = String::from_utf8_lossy(&output.stderr);
 
-    // Should contain warning message
     assert!(
-        stderr.contains("Warning:") && stderr.contains("Failed to parse config"),
-        "Expected config warning in stderr, got: {}",
+        !output.status.success(),
+        "Invalid config should fail instead of validating with defaults"
+    );
+    assert!(
+        stderr.contains("Error:") && stderr.contains("Failed to parse config"),
+        "Expected config parse error in stderr, got: {}",
         stderr
     );
 
-    // Should still produce validation output (continues with defaults)
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
-        stdout.contains("Validating:"),
-        "Should still run validation with default config"
+        !stdout.contains("Validating:"),
+        "Should not run validation with default config after parse failure"
     );
 }
 
@@ -1601,14 +1603,58 @@ exclude = []
 }
 
 #[test]
-fn test_config_warning_with_json_output() {
+fn test_unknown_config_key_fails_without_defaults() {
     let temp_dir = tempfile::tempdir().unwrap();
     let config_path = temp_dir.path().join(".agnix.toml");
 
-    // Create invalid TOML
+    std::fs::write(
+        &config_path,
+        r#"
+severity = "Warning"
+experimental_feature = true
+"#,
+    )
+    .unwrap();
+
+    let skill_dir = temp_dir.path().join(".claude").join("skills");
+    std::fs::create_dir_all(&skill_dir).unwrap();
+    let skill_file = skill_dir.join("test.md");
+    std::fs::write(&skill_file, "# Test\nSimple content").unwrap();
+
+    let mut cmd = agnix();
+    let output = cmd
+        .arg(temp_dir.path())
+        .arg("--config")
+        .arg(&config_path)
+        .output()
+        .unwrap();
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    assert!(
+        !output.status.success(),
+        "Unknown config keys should fail instead of falling back to defaults"
+    );
+    assert!(
+        stderr.contains("unknown field") && stderr.contains("experimental_feature"),
+        "Expected unknown-field error in stderr, got: {}",
+        stderr
+    );
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        !stdout.contains("Validating:"),
+        "Should not validate with defaults after unknown config key"
+    );
+}
+
+#[test]
+fn test_config_error_with_json_output_goes_to_stderr() {
+    let temp_dir = tempfile::tempdir().unwrap();
+    let config_path = temp_dir.path().join(".agnix.toml");
+
     std::fs::write(&config_path, "invalid [[ toml").unwrap();
 
-    // Create a minimal valid directory to scan
     let skill_dir = temp_dir.path().join(".claude").join("skills");
     std::fs::create_dir_all(&skill_dir).unwrap();
     let skill_file = skill_dir.join("test.md");
@@ -1625,18 +1671,20 @@ fn test_config_warning_with_json_output() {
         .unwrap();
 
     let stderr = String::from_utf8_lossy(&output.stderr);
-
-    // Warning should go to stderr, not corrupt JSON output
     assert!(
-        stderr.contains("Warning:"),
-        "Warning should be in stderr for JSON output"
+        !output.status.success(),
+        "Invalid config should fail for JSON output too"
+    );
+    assert!(
+        stderr.contains("Error:") && stderr.contains("Failed to parse config"),
+        "Config parse error should be in stderr for JSON output, got: {}",
+        stderr
     );
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let json: Result<serde_json::Value, _> = serde_json::from_str(&stdout);
     assert!(
-        json.is_ok(),
-        "JSON output should be valid despite config warning, got: {}",
+        stdout.trim().is_empty(),
+        "JSON stdout should stay empty on config parse failure, got: {}",
         stdout
     );
 }
@@ -1861,7 +1909,7 @@ fn test_init_creates_config_file_with_plain_text_output() {
 // ============================================================================
 
 #[test]
-fn test_fix_as_004_converts_name_to_kebab_case() {
+fn test_fix_unsafe_as_004_converts_name_to_kebab_case() {
     use std::fs;
     use std::io::Write;
 
@@ -1880,11 +1928,11 @@ fn test_fix_as_004_converts_name_to_kebab_case() {
         .unwrap();
     }
 
-    // Run with --fix
+    // Run with --fix-unsafe because this structural AS-004 rewrite is not safe-only.
     let mut cmd = agnix();
     let output = cmd
         .arg(temp_dir.path().to_str().unwrap())
-        .arg("--fix")
+        .arg("--fix-unsafe")
         .output()
         .unwrap();
 
@@ -1903,6 +1951,50 @@ fn test_fix_as_004_converts_name_to_kebab_case() {
     assert!(
         stdout.contains("Fixed") || stdout.contains("fix"),
         "Output should mention fix applied"
+    );
+}
+
+#[test]
+fn test_fix_skips_unsafe_as_004_by_default() {
+    use std::fs;
+    use std::io::Write;
+
+    let temp_dir = tempfile::tempdir().unwrap();
+    let skills_dir = temp_dir.path().join("skills").join("test-skill");
+    fs::create_dir_all(&skills_dir).unwrap();
+
+    let skill_path = skills_dir.join("SKILL.md");
+    {
+        let mut file = fs::File::create(&skill_path).unwrap();
+        write!(
+            file,
+            "---\nname: Test_Skill_Name\ndescription: Use when testing\n---\nBody"
+        )
+        .unwrap();
+    }
+
+    let mut cmd = agnix();
+    let output = cmd
+        .arg(temp_dir.path().to_str().unwrap())
+        .arg("--fix")
+        .output()
+        .unwrap();
+
+    assert!(
+        !output.status.success(),
+        "bare --fix should leave unsafe AS-004 diagnostics as errors"
+    );
+    let fixed_content = fs::read_to_string(&skill_path).unwrap();
+    assert!(
+        fixed_content.contains("name: Test_Skill_Name"),
+        "bare --fix should not apply unsafe AS-004 rewrite, got: {}",
+        fixed_content
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("Applying fixes (safe only)"),
+        "bare --fix should report safe-only mode, got: {}",
+        stdout
     );
 }
 
@@ -3032,7 +3124,7 @@ fn test_autofix_rules_json_reports_fixes_available() {
 // CLI --fix Integration Tests for Pack 2 Rules (Issue #285)
 // ============================================================================
 
-/// CC-SK: Skill name fix (AS-004) via --fix on invalid name
+/// CC-SK: Skill name fix (AS-004) via --fix-unsafe on invalid name
 #[test]
 fn test_fix_ccsk_invalid_skill_name() {
     use std::fs;
@@ -3055,13 +3147,13 @@ fn test_fix_ccsk_invalid_skill_name() {
     let mut cmd = agnix();
     let output = cmd
         .arg(temp_dir.path().to_str().unwrap())
-        .arg("--fix")
+        .arg("--fix-unsafe")
         .output()
         .unwrap();
 
     assert!(
         output.status.success(),
-        "--fix should exit successfully after applying skill name fix"
+        "--fix-unsafe should exit successfully after applying skill name fix"
     );
 
     let fixed = fs::read_to_string(&skill_path).unwrap();
@@ -3119,7 +3211,7 @@ fn test_fix_cchk_invalid_event_name() {
     );
 }
 
-/// CC-AG: Agent model fix (CC-AG-003) via --fix on invalid model value
+/// CC-AG: Agent model fix (CC-AG-003) via --fix-unsafe on invalid model value
 #[test]
 fn test_fix_ccag_invalid_model() {
     use std::fs;
@@ -3138,13 +3230,13 @@ fn test_fix_ccag_invalid_model() {
     let mut cmd = agnix();
     let output = cmd
         .arg(temp_dir.path().to_str().unwrap())
-        .arg("--fix")
+        .arg("--fix-unsafe")
         .output()
         .unwrap();
 
     assert!(
         output.status.success(),
-        "--fix should exit successfully after applying agent model fix"
+        "--fix-unsafe should exit successfully after applying agent model fix"
     );
 
     let fixed = fs::read_to_string(&agent_path).unwrap();

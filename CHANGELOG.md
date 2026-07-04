@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **CLI config and autofix safety followups** (closes #1152, #1153, #1165, #1166, #1167). The CLI now fails non-zero when a discovered or explicitly passed `.agnix.toml` cannot be parsed instead of validating with defaults, skill frontmatter now reports duplicate top-level YAML keys instead of silently applying last-wins parsing, telemetry storage failures are logged at debug level, `agnix-lsp` initializes stderr tracing for startup/config-load visibility, bare `agnix --fix` / `--dry-run` now apply or preview only safe fixes unless `--fix-unsafe` is explicitly selected, and the rule-doc parity test now catches stale inline/table rule IDs such as the removed `AS-010` and `AS-014` references.
+
 ## [0.37.2] - 2026-07-04
 
 ### Fixed

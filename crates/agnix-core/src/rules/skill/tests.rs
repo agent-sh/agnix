@@ -2402,6 +2402,33 @@ Body content"#;
 }
 
 #[test]
+fn test_as_016_duplicate_frontmatter_key() {
+    let content = r#"---
+name: first-skill
+description: Use when validating duplicate frontmatter keys
+name: second-skill
+---
+Body content"#;
+
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
+
+    let parse_errors: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-016").collect();
+    assert_eq!(
+        parse_errors.len(),
+        1,
+        "duplicate top-level key should produce one AS-016 diagnostic"
+    );
+    assert!(
+        parse_errors[0]
+            .message
+            .contains("Duplicate YAML frontmatter key 'name'"),
+        "expected duplicate key message, got: {}",
+        parse_errors[0].message
+    );
+}
+
+#[test]
 fn test_as_016_allowed_tools_yaml_list_no_parse_error() {
     // Reproduces #957: `allowed-tools` as a YAML list previously failed to
     // deserialize (Option<String>) and tripped AS-016. Claude Code accepts a

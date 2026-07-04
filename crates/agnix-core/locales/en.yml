@@ -1248,6 +1248,7 @@ core:
     files_pattern_count_limit: Field '%{field}' has %{count} patterns, which exceeds the recommended limit of %{limit}.
     files_pattern_count_limit_suggestion: Consider consolidating patterns or using broader glob expressions
     load_warning: 'Failed to parse config ''%{path}'': %{error}. Using defaults.'
+    load_error: 'Failed to parse config ''%{path}'': %{error}.'
 
 
 # ===========================================================================

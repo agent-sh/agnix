@@ -75,6 +75,8 @@ dependencies = [
  "tempfile",
  "tokio",
  "tower-lsp",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]

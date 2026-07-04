@@ -100,9 +100,9 @@ cargo install agnix-cli
 
 ```bash
 agnix .              # Validate current directory
-agnix --fix .        # Apply HIGH and MEDIUM confidence fixes
-agnix --fix-safe .   # Apply only HIGH confidence fixes
-agnix --fix-unsafe . # Apply all fixes, including LOW confidence
+agnix --fix .        # Apply only safe fixes
+agnix --fix-safe .   # Explicit safe-only fix mode
+agnix --fix-unsafe . # Apply all fixes, including medium and LOW confidence
 agnix --dry-run --show-fixes .  # Preview fixes with inline diff output
 agnix --strict .     # Strict mode (warnings = errors)
 agnix --target claude-code .  # Legacy target preset (primarily affects CC-* rules)
