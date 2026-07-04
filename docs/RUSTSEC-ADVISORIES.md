@@ -6,34 +6,7 @@ Related: [Issue #346](https://github.com/agent-sh/agnix/issues/346) (this tracki
 
 ## Currently Ignored Advisories
 
-### RUSTSEC-2024-0384 — `instant` (via `notify`)
-
-**Status**: Waiting for `notify` 7.0 release
-
-**Details**:
-- The `instant` crate is unmaintained but functionally correct
-- It's pulled in as a transitive dependency via `notify`
-- The `notify` project plans to drop `instant` in version 7.0
-
-**Risk Level**: Low
-- The crate is unmaintained, but there are no known security vulnerabilities
-- Functionality is stable and correct
-- Not exposed in public APIs
-
-**Action Items**:
-- Monitor `notify` releases for version 7.0
-- Once `notify` 7.0 is available, update the dependency
-- Remove this advisory ignore from:
-  - `deny.toml` in the `[advisories]` ignore list
-  - `.github/workflows/security.yml` in the `cargo audit` command
-
-**References**:
-- Advisory: https://rustsec.org/advisories/RUSTSEC-2024-0384
-- notify issue tracker: https://github.com/notify-rs/notify
-
----
-
-### RUSTSEC-2025-0141 — `bincode` (via `iai-callgrind`)
+### RUSTSEC-2025-0141 - `bincode` (via `iai-callgrind`)
 
 **Status**: Dev-only dependency used for benchmarks
 
@@ -58,7 +31,7 @@ Related: [Issue #346](https://github.com/agent-sh/agnix/issues/346) (this tracki
 - Advisory: https://rustsec.org/advisories/RUSTSEC-2025-0141
 - iai-callgrind repository: https://github.com/iai-callgrind/iai-callgrind
 
-### RUSTSEC-2026-0173 — `proc-macro-error2` (via `iai-callgrind`)
+### RUSTSEC-2026-0173 - `proc-macro-error2` (via `iai-callgrind`)
 
 **Status**: Dev-only dependency used for benchmarks; unmaintained, no safe upgrade
 
@@ -81,48 +54,6 @@ Related: [Issue #346](https://github.com/agent-sh/agnix/issues/346) (this tracki
 **References**:
 - Advisory: https://rustsec.org/advisories/RUSTSEC-2026-0173
 - Announcement: https://github.com/GnomedDev/proc-macro-error-2/issues/17
-
-### RUSTSEC-2025-0067 — `libyml` (via `rust-i18n-macro`)
-
-**Status**: Waiting for `rust-i18n` to migrate off `serde_yml` / `libyml`
-
-**Details**:
-- `libyml` is unmaintained and contains an unsound `yaml_string_extend` function
-- Pulled in transitively through `rust-i18n-macro 3.1.2` and `rust-i18n-support 3.1.2`
-- agnix uses `rust-i18n` for CLI message localization only; no YAML parsing happens at runtime inside `libyml`'s unsafe surface
-
-**Risk Level**: Low
-- Unsafe code lives in a macro-time code path (i18n string compilation at build) and is not reachable at runtime from agnix
-- No known exploit vector given our usage pattern
-- rust-i18n upstream is aware of the advisory; migration path is likely to `serde_yaml_ng` or `saphyr`
-
-**Action Items**:
-- Monitor `rust-i18n` releases for a version that drops `serde_yml` / `libyml`
-- Consider replacing `rust-i18n` with a simpler translation table if upstream stalls
-- Remove the ignore from `.github/workflows/security.yml` and (if present) `deny.toml` once the transitive dependency is gone
-
-**References**:
-- Advisory: https://rustsec.org/advisories/RUSTSEC-2025-0067
-- rust-i18n repository: https://github.com/longbridge/rust-i18n
-
-### RUSTSEC-2025-0068 — `serde_yml` (via `rust-i18n-macro`)
-
-**Status**: Waiting for `rust-i18n` to migrate off `serde_yml`
-
-**Details**:
-- `serde_yml` is unmaintained and unsound (the upstream fork of `serde_yaml` was abandoned)
-- Same transitive chain as RUSTSEC-2025-0067: `rust-i18n-macro 3.1.2` and `rust-i18n-support 3.1.2`
-
-**Risk Level**: Low
-- Same build-time reachability caveat as RUSTSEC-2025-0067
-
-**Action Items**:
-- Same as RUSTSEC-2025-0067; resolving that advisory will also resolve this one since both crates share the dependency chain
-
-**References**:
-- Advisory: https://rustsec.org/advisories/RUSTSEC-2025-0068
-
----
 
 ## Review Schedule
 
@@ -147,14 +78,15 @@ cargo audit
 cargo deny check advisories
 
 # Check if any of the ignored advisories have been resolved
-cargo tree -i instant -e normal      # Check if notify still depends on instant (normal deps only)
-cargo tree -i bincode -e dev         # Check if iai-callgrind still depends on bincode (dev deps)
+cargo tree -i bincode -e dev              # Check if iai-callgrind still depends on bincode
+cargo tree -i proc-macro-error2 -e dev    # Check if iai-callgrind still depends on proc-macro-error2
 
 # If a dependency has been updated and no longer triggers the advisory:
 # 1. Remove the advisory ID from deny.toml [advisories] ignore list
 # 2. Remove the --ignore flag from .github/workflows/security.yml
 # 3. Update this document to mark the advisory as resolved
-# 4. Close or update the related tracking issue
+# 4. Verify cargo audit and cargo deny still enforce the same ignore set
+# 5. Close or update the related tracking issue
 ```
 
 ## Adding New Advisory Ignores
@@ -184,7 +116,7 @@ If a new advisory needs to be temporarily ignored:
 Copy this template when adding a new ignored advisory:
 
 ```markdown
-### RUSTSEC-YYYY-NNNN — `crate-name` (via `parent-crate`)
+### RUSTSEC-YYYY-NNNN - `crate-name` (via `parent-crate`)
 
 **Status**: [One sentence describing current state]
 
@@ -211,10 +143,53 @@ Copy this template when adding a new ignored advisory:
 ## Future Automation
 
 The review process could be partially automated:
-- A scheduled CI job could run `cargo tree -i instant -e normal` and `cargo tree -i bincode -e dev` weekly
+- A scheduled CI job could run the current `cargo tree -i ... -e dev` review commands weekly
 - Results could be posted as a comment on the tracking issue
 - Manual review would still be required to decide when to remove ignores
 
 ## Resolved Advisories
 
-_(None yet - this section will track advisories that have been resolved)_
+### RUSTSEC-2024-0384 - `instant`
+
+**Resolved**: 2026-07-04
+
+**Resolution**:
+- `instant` is no longer present in `Cargo.lock`.
+- The stale CI-only `cargo audit` ignore was removed.
+
+**References**:
+- Advisory: https://rustsec.org/advisories/RUSTSEC-2024-0384
+
+### RUSTSEC-2025-0067 - `libyml`
+
+**Resolved**: 2026-07-04
+
+**Resolution**:
+- `libyml` is no longer present in `Cargo.lock`.
+- The stale CI-only `cargo audit` ignore was removed.
+
+**References**:
+- Advisory: https://rustsec.org/advisories/RUSTSEC-2025-0067
+
+### RUSTSEC-2025-0068 - `serde_yml`
+
+**Resolved**: 2026-07-04
+
+**Resolution**:
+- `serde_yml` is no longer present in `Cargo.lock`.
+- The stale CI-only `cargo audit` ignore was removed.
+
+**References**:
+- Advisory: https://rustsec.org/advisories/RUSTSEC-2025-0068
+
+### RUSTSEC-2026-0009 - `time`
+
+**Resolved**: 2026-07-04
+
+**Resolution**:
+- `time` is no longer present in `Cargo.lock`.
+- The advisory was ignored only in CI and was missing from this tracking document and `deny.toml`.
+- The stale CI-only `cargo audit` ignore was removed instead of documenting an advisory that no longer applies.
+
+**References**:
+- Advisory: https://rustsec.org/advisories/RUSTSEC-2026-0009
