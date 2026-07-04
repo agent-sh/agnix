@@ -49,7 +49,7 @@ jobs:
           fetch-depth: 0
 
       - name: Run Claude Code
-        uses: anthropics/claude-code-action@521136812280ae7ef256e06045655b9da02793f0 # v1
+        uses: anthropics/claude-code-action@01872ccc02bf66740207fb338a783ce028216758 # v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
