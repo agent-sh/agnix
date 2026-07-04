@@ -878,6 +878,7 @@ pub fn validate_project_with_registry(
         .with_validator_factories_registered(validator_factories_registered))
 }
 
+#[cfg(feature = "filesystem")]
 fn sort_diagnostics(diagnostics: &mut [Diagnostic]) {
     diagnostics.sort_by(|a, b| {
         a.level
@@ -892,6 +893,7 @@ fn sort_diagnostics(diagnostics: &mut [Diagnostic]) {
     });
 }
 
+#[cfg(feature = "filesystem")]
 fn run_project_level_checks_with_panic_guard<F>(root_dir: &Path, checks: F) -> Vec<Diagnostic>
 where
     F: FnOnce() -> Vec<Diagnostic>,
