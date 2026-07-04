@@ -14,6 +14,7 @@ import java.net.URI
 import java.nio.file.Files
 import java.nio.file.attribute.PosixFilePermission
 import java.security.MessageDigest
+import java.util.Locale
 import java.util.zip.GZIPInputStream
 import java.util.zip.ZipInputStream
 
@@ -111,7 +112,7 @@ class AgnixBinaryDownloader {
                 throw IOException("Checksum file is for $sidecarName, expected $expectedFileName")
             }
 
-            return hash.lowercase()
+            return hash.lowercase(Locale.ROOT)
         }
 
         internal fun sha256Hex(file: File): String {

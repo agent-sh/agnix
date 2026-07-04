@@ -24,29 +24,39 @@ export function parseSha256Sidecar(
   }
 
   const sidecarName = parts[1]?.replace(/^\*/, '');
-  if (sidecarName && path.basename(sidecarName) !== expectedFileName) {
-    throw new Error(
-      `Checksum file is for ${sidecarName}, expected ${expectedFileName}`
-    );
+  if (sidecarName) {
+    const baseName = sidecarName.replace(/\\/g, '/').split('/').pop();
+    if (baseName !== expectedFileName) {
+      throw new Error(
+        `Checksum file is for ${sidecarName}, expected ${expectedFileName}`
+      );
+    }
   }
 
   return hash.toLowerCase();
 }
 
-export function sha256File(filePath: string): string {
-  return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
+export function sha256File(filePath: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const hasher = crypto.createHash('sha256');
+    const stream = fs.createReadStream(filePath);
+
+    stream.on('data', (chunk) => hasher.update(chunk));
+    stream.on('error', reject);
+    stream.on('end', () => resolve(hasher.digest('hex')));
+  });
 }
 
-export function verifySha256File(
+export async function verifySha256File(
   filePath: string,
   checksumPath: string,
   expectedFileName = path.basename(filePath)
-): void {
+): Promise<void> {
   const expected = parseSha256Sidecar(
     fs.readFileSync(checksumPath, 'utf8'),
     expectedFileName
   );
-  const actual = sha256File(filePath);
+  const actual = await sha256File(filePath);
 
   if (actual !== expected) {
     throw new Error(

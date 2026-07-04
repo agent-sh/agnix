@@ -421,7 +421,7 @@ async function downloadAndInstallLsp(version?: string): Promise<string | null> {
         progress.report({ message: 'Verifying checksum...' });
         outputChannel.appendLine(`Downloading checksum from: ${releaseUrl}.sha256`);
         await downloadFile(`${releaseUrl}.sha256`, checksumPath);
-        verifySha256File(downloadPath, checksumPath, platformInfo.asset);
+        await verifySha256File(downloadPath, checksumPath, platformInfo.asset);
 
         progress.report({ message: 'Extracting...' });
         outputChannel.appendLine(`Extracting to: ${storageUri.fsPath}`);

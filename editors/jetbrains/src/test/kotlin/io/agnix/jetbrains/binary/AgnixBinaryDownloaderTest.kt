@@ -11,6 +11,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.nio.file.Path
+import java.util.Locale
 import java.util.zip.GZIPOutputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
@@ -150,7 +151,7 @@ class AgnixBinaryDownloaderTest {
     @Test
     fun `parseSha256Sidecar accepts matching artifact names`() {
         val parsed = AgnixBinaryDownloader.parseSha256Sidecar(
-            "${helloSha256.uppercase()}  agnix-lsp.tar.gz\n",
+            "${helloSha256.uppercase(Locale.ROOT)}  agnix-lsp.tar.gz\n",
             "agnix-lsp.tar.gz"
         )
 

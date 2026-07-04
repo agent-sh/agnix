@@ -36,7 +36,17 @@ describe('checksum verification', () => {
     );
   });
 
-  it('verifies a file against a matching sidecar', () => {
+  it('parses sidecars with Windows-style artifact paths', () => {
+    assert.strictEqual(
+      parseSha256Sidecar(
+        `${HELLO_SHA256}  releases\\agnix-lsp.tar.gz\n`,
+        'agnix-lsp.tar.gz'
+      ),
+      HELLO_SHA256
+    );
+  });
+
+  it('verifies a file against a matching sidecar', async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'agnix-checksum-'));
     const filePath = path.join(tempDir, 'agnix-lsp.tar.gz');
     const checksumPath = `${filePath}.sha256`;
@@ -45,8 +55,8 @@ describe('checksum verification', () => {
       fs.writeFileSync(filePath, 'hello');
       fs.writeFileSync(checksumPath, `${HELLO_SHA256}  agnix-lsp.tar.gz\n`);
 
-      assert.strictEqual(sha256File(filePath), HELLO_SHA256);
-      assert.doesNotThrow(() =>
+      assert.strictEqual(await sha256File(filePath), HELLO_SHA256);
+      await assert.doesNotReject(() =>
         verifySha256File(filePath, checksumPath, 'agnix-lsp.tar.gz')
       );
     } finally {
@@ -54,7 +64,7 @@ describe('checksum verification', () => {
     }
   });
 
-  it('rejects a mismatched file hash', () => {
+  it('rejects a mismatched file hash', async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'agnix-checksum-'));
     const filePath = path.join(tempDir, 'agnix-lsp.tar.gz');
     const checksumPath = `${filePath}.sha256`;
@@ -63,7 +73,7 @@ describe('checksum verification', () => {
       fs.writeFileSync(filePath, 'tampered');
       fs.writeFileSync(checksumPath, `${HELLO_SHA256}  agnix-lsp.tar.gz\n`);
 
-      assert.throws(
+      await assert.rejects(
         () => verifySha256File(filePath, checksumPath, 'agnix-lsp.tar.gz'),
         /Checksum mismatch/
       );

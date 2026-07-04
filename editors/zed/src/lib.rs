@@ -1,5 +1,5 @@
 use sha2::{Digest, Sha256};
-use std::{fmt::Write as _, fs};
+use std::{fmt::Write as _, fs, io::Read};
 use zed_extension_api::{
     self as zed, Architecture, Command, DownloadedFileType, GithubReleaseOptions, LanguageServerId,
     Os, Result,
@@ -96,8 +96,20 @@ fn parse_sha256_sidecar(contents: &str, expected_file_name: &str) -> Result<Stri
 }
 
 fn sha256_file(file_path: &str) -> Result<String> {
-    let bytes = fs::read(file_path).map_err(|e| format!("failed to read {file_path}: {e}"))?;
-    let digest = Sha256::digest(&bytes);
+    let mut file =
+        fs::File::open(file_path).map_err(|e| format!("failed to open {file_path}: {e}"))?;
+    let mut hasher = Sha256::new();
+    let mut buffer = [0u8; 8192];
+    loop {
+        let bytes_read = file
+            .read(&mut buffer)
+            .map_err(|e| format!("failed to read {file_path}: {e}"))?;
+        if bytes_read == 0 {
+            break;
+        }
+        hasher.update(&buffer[..bytes_read]);
+    }
+    let digest = hasher.finalize();
     let mut output = String::with_capacity(64);
     for byte in digest {
         write!(&mut output, "{byte:02x}").map_err(|e| e.to_string())?;
