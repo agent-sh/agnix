@@ -380,6 +380,8 @@ rules:
     message: Import cache lock was poisoned by a prior validator panic; recovered stale data
     suggestion: A validator panicked while holding the import cache lock. Validation continues with recovered data, but results
       may be stale.
+  file_panic_error: 'Validation panicked while processing this file: %{error}'
+  file_panic_error_suggestion: Please report this as a bug with the file type and rule context
   xp_001:
     message: 'Claude-specific feature ''%{feature}'' in %{filename}: %{description}'
     suggestion: Move to CLAUDE.md or wrap in a Claude-specific section (e.g., '## Claude Code Specific')

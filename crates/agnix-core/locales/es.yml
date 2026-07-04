@@ -300,6 +300,8 @@ rules:
       pueden estar desactualizados
     suggestion: Un validador entró en pánico mientras sostenía el bloqueo de caché de importaciones. La validación continúa
       con datos recuperados, pero los resultados pueden estar desactualizados.
+  file_panic_error: 'La validación entró en pánico al procesar este archivo: %{error}'
+  file_panic_error_suggestion: Reporta esto como bug con el tipo de archivo y el contexto de la regla
   xp_001:
     message: 'Caracteristica especifica de Claude ''%{feature}'' en %{filename}: %{description}'
     suggestion: Mueve a CLAUDE.md o envuelve en una seccion especifica de Claude (ej., '## Claude Code Specific')

@@ -134,8 +134,16 @@ fn is_json_family(file_type: FileType) -> bool {
     )
 }
 
+fn clamp_to_char_boundary(content: &str, cursor_byte: usize) -> usize {
+    let mut clamped = cursor_byte.min(content.len());
+    while clamped > 0 && !content.is_char_boundary(clamped) {
+        clamped -= 1;
+    }
+    clamped
+}
+
 fn line_bounds_at(content: &str, cursor_byte: usize) -> (usize, usize) {
-    let clamped = cursor_byte.min(content.len());
+    let clamped = clamp_to_char_boundary(content, cursor_byte);
     let line_start = content[..clamped]
         .rfind('\n')
         .map(|idx| idx + 1)
@@ -173,6 +181,8 @@ fn detect_cursor_context(file_type: FileType, content: &str, cursor_byte: usize)
     if content.is_empty() {
         return CursorContext::Key;
     }
+
+    let cursor_byte = clamp_to_char_boundary(content, cursor_byte);
 
     if is_yaml_family(file_type) {
         let parts = split_frontmatter(content);
@@ -233,7 +243,7 @@ pub fn completion_candidates(
     let Some(family) = family_for_file_type(file_type) else {
         return Vec::new();
     };
-    let cursor = cursor_byte.min(content.len());
+    let cursor = clamp_to_char_boundary(content, cursor_byte);
     let context = detect_cursor_context(file_type, content, cursor);
     let mut out = Vec::new();
 
@@ -652,6 +662,20 @@ mod tests {
         assert!(
             !candidates.is_empty(),
             "partial/invalid content should still return fallback completions"
+        );
+    }
+
+    #[test]
+    fn test_completion_candidates_clamps_mid_codepoint_cursor() {
+        let content = "{\"😀\": 1}";
+        let cursor_inside_emoji = 3;
+        assert!(!content.is_char_boundary(cursor_inside_emoji));
+
+        let candidates = completion_candidates(FileType::Mcp, content, cursor_inside_emoji);
+
+        assert!(
+            !candidates.is_empty(),
+            "mid-codepoint cursor offsets should be clamped before slicing"
         );
     }
 }
