@@ -5,9 +5,34 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 const os = require('os');
+const crypto = require('crypto');
 
 const GITHUB_REPO = 'agent-sh/agnix';
 const VERSION = require('./package.json').version;
+
+function removeIfExists(filePath) {
+  try {
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+  } catch (_) {
+    // best-effort cleanup
+  }
+}
+
+function restoreWrapperBackup(wrapperPath, wrapperBackup, installCompleted) {
+  if (!fs.existsSync(wrapperBackup)) {
+    return;
+  }
+
+  if (installCompleted) {
+    removeIfExists(wrapperBackup);
+    return;
+  }
+
+  removeIfExists(wrapperPath);
+  fs.renameSync(wrapperBackup, wrapperPath);
+}
 
 /**
  * Get platform-specific asset name and binary name.
@@ -62,43 +87,60 @@ function getPlatformInfo() {
  */
 function downloadFile(url, destPath) {
   return new Promise((resolve, reject) => {
-    const file = fs.createWriteStream(destPath);
+    let file = null;
+    let settled = false;
+
+    const fail = (err) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      if (file) {
+        file.destroy();
+      }
+      removeIfExists(destPath);
+      reject(err);
+    };
 
     const request = https.get(url, (response) => {
       if (response.statusCode === 302 || response.statusCode === 301) {
         const redirectUrl = response.headers.location;
         if (redirectUrl) {
-          file.close();
-          fs.unlinkSync(destPath);
-          downloadFile(redirectUrl, destPath).then(resolve).catch(reject);
+          response.resume();
+          const nextUrl = new URL(redirectUrl, url).href;
+          downloadFile(nextUrl, destPath).then(resolve).catch(reject);
           return;
         }
       }
 
       if (response.statusCode !== 200) {
-        file.close();
-        reject(new Error(`Download failed with status ${response.statusCode}`));
+        response.resume();
+        fail(new Error(`Download failed with status ${response.statusCode}`));
         return;
       }
 
+      file = fs.createWriteStream(destPath);
       response.pipe(file);
+      response.on('error', fail);
 
       file.on('finish', () => {
-        file.close();
-        resolve();
+        if (settled) {
+          return;
+        }
+        settled = true;
+        file.close((err) => {
+          if (err) {
+            removeIfExists(destPath);
+            reject(err);
+          } else {
+            resolve();
+          }
+        });
       });
+      file.on('error', fail);
     });
 
-    request.on('error', (err) => {
-      file.close();
-      fs.unlinkSync(destPath);
-      reject(err);
-    });
-
-    file.on('error', (err) => {
-      fs.unlinkSync(destPath);
-      reject(err);
-    });
+    request.on('error', fail);
   });
 }
 
@@ -120,11 +162,81 @@ function extractArchive(archivePath, destDir) {
   }
 }
 
+/**
+ * Compute the SHA-256 of a file as a lowercase hex string, streaming the file
+ * so large archives are not read fully into memory.
+ */
+function sha256File(filePath) {
+  return new Promise((resolve, reject) => {
+    const hash = crypto.createHash('sha256');
+    const stream = fs.createReadStream(filePath);
+    stream.on('error', reject);
+    stream.on('data', (chunk) => hash.update(chunk));
+    stream.on('end', () => resolve(hash.digest('hex')));
+  });
+}
+
+function parseSha256Sidecar(contents, expectedFileName) {
+  const expectedBase = path.basename(expectedFileName);
+  for (const line of contents.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      continue;
+    }
+
+    const [rawHash, rawFileName] = trimmed.split(/\s+/, 2);
+    if (!rawFileName) {
+      continue;
+    }
+
+    const normalizedFileName = rawFileName.replace(/^\*/, '').replace(/\\/g, '/');
+    const baseName = path.posix.basename(normalizedFileName);
+    if (baseName !== expectedBase) {
+      continue;
+    }
+
+    const expected = rawHash.toLowerCase();
+    if (!/^[0-9a-f]{64}$/.test(expected)) {
+      throw new Error(`Invalid checksum file for ${expectedBase}`);
+    }
+
+    return expected;
+  }
+
+  throw new Error(`Checksum file does not contain an entry for ${expectedBase}`);
+}
+
+/**
+ * Download the `.sha256` sidecar for an archive and verify the archive against
+ * it before extraction, so a tampered download is rejected (mirrors
+ * scripts/download.sh). Throws on a missing/malformed sidecar or hash mismatch.
+ */
+async function verifyChecksum(archivePath, checksumUrl, deps = { downloadFile }) {
+  const checksumPath = `${archivePath}.sha256`;
+  try {
+    await deps.downloadFile(checksumUrl, checksumPath);
+    const raw = fs.readFileSync(checksumPath, 'utf8').trim();
+    const expected = parseSha256Sidecar(raw, path.basename(archivePath));
+    const actual = (await sha256File(archivePath)).toLowerCase();
+    if (actual !== expected) {
+      throw new Error(
+        `Checksum mismatch for ${path.basename(archivePath)}: expected ${expected}, got ${actual}`
+      );
+    }
+    console.log('Checksum verified.');
+  } finally {
+    removeIfExists(checksumPath);
+  }
+}
+
 async function main() {
   const platformInfo = getPlatformInfo();
   const binDir = path.join(__dirname, 'bin');
   const binaryPath = path.join(binDir, platformInfo.binary);
   const extractedPath = path.join(binDir, platformInfo.extractedName);
+  const wrapperPath = path.join(binDir, 'agnix');
+  const wrapperBackup = path.join(binDir, 'agnix.backup');
+  let installCompleted = false;
 
   // Skip if binary already exists
   if (fs.existsSync(binaryPath)) {
@@ -144,18 +256,14 @@ async function main() {
 
   try {
     // Save wrapper script if it exists (npm places it during install)
-    const wrapperPath = path.join(binDir, 'agnix');
-    const wrapperBackup = path.join(binDir, 'agnix.backup');
     if (fs.existsSync(wrapperPath) && wrapperPath !== binaryPath) {
       fs.copyFileSync(wrapperPath, wrapperBackup);
     }
 
     await downloadFile(downloadUrl, archivePath);
+    await verifyChecksum(archivePath, `${downloadUrl}.sha256`);
     console.log('Extracting...');
     extractArchive(archivePath, binDir);
-
-    // Clean up archive
-    fs.unlinkSync(archivePath);
 
     // Rename extracted binary to avoid conflict with wrapper script
     if (fs.existsSync(extractedPath) && extractedPath !== binaryPath) {
@@ -177,14 +285,37 @@ async function main() {
       throw new Error('Binary not found after extraction');
     }
 
+    installCompleted = true;
     console.log('agnix installed successfully');
   } catch (error) {
     console.error(`Failed to install agnix: ${error.message}`);
     console.error('');
     console.error('You can install manually:');
     console.error('  cargo install agnix-cli');
-    process.exit(1);
+    process.exitCode = 1;
+  } finally {
+    // Best-effort cleanup so a failed install leaves no stale archive or backup.
+    removeIfExists(archivePath);
+    try {
+      restoreWrapperBackup(wrapperPath, wrapperBackup, installCompleted);
+    } catch (_) {
+      // ignore
+    }
   }
 }
 
-main();
+if (require.main === module) {
+  main();
+}
+
+module.exports = {
+  downloadFile,
+  extractArchive,
+  getPlatformInfo,
+  main,
+  parseSha256Sidecar,
+  removeIfExists,
+  restoreWrapperBackup,
+  sha256File,
+  verifyChecksum,
+};
