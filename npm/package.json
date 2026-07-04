@@ -38,7 +38,7 @@
   ],
   "scripts": {
     "postinstall": "node install.js",
-    "test": "node test/test.js"
+    "test": "node test/install-helpers.test.js && node test/test.js"
   },
   "engines": {
     "node": ">=16.0.0"
