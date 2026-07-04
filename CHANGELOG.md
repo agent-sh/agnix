@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Release provenance attestations**. Release archive builds now generate GitHub artifact attestations with job-scoped OIDC and attestation permissions, while release publishing keeps write access isolated to the release job.
+
 ## [0.37.2] - 2026-07-04
 
 ### Fixed
