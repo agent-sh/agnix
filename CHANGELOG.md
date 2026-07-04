@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **npm installer checksum verification**. The npm postinstall downloader now verifies release archive SHA-256 sidecars before extraction, binds sidecar entries to the expected archive filename, streams archive hashing, and cleans temporary artifacts after failed installs.
+
 ## [0.37.2] - 2026-07-04
 
 ### Fixed
