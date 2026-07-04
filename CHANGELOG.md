@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Docs website deployment payload**. Reduced the GitHub Pages deploy window from six to three docs versions while keeping all versioned snapshots in the repository, so release docs publish with a smaller Pages artifact and avoid repeated `syncing_files` deployment failures.
+
 ## [0.37.1] - 2026-07-04
 
 ### Fixed

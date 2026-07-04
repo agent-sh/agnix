@@ -77,10 +77,10 @@ jobs:
         env:
           NODE_OPTIONS: '--max-old-space-size=12288'
           DOCUSAURUS_SSR_CONCURRENCY: '1'
-          # Keep source snapshots for every release, but deploy a recent
-          # version window so the generated rule reference does not make
-          # every push rebuild tens of thousands of historical pages.
-          AGNIX_DOCS_VERSION_LIMIT: '6'
+          # Keep source snapshots for every release, but deploy a small
+          # recent version window so GitHub Pages does not have to sync
+          # thousands of generated historical rule pages on every push.
+          AGNIX_DOCS_VERSION_LIMIT: '3'
         run: npm --prefix website run build:site
       - name: Validate Docusaurus command
         if: github.event_name == 'pull_request'

@@ -170,7 +170,7 @@ fn docs_site_has_search_and_versioning_configuration() {
     let workflow = fs::read_to_string(&workflow_path)
         .unwrap_or_else(|e| panic!("Failed to read {}: {}", workflow_path.display(), e));
     assert!(
-        workflow.contains("AGNIX_DOCS_VERSION_LIMIT: '6'"),
+        workflow.contains("AGNIX_DOCS_VERSION_LIMIT: '3'"),
         "Docs workflow should limit deployed docs versions in {}",
         workflow_path.display()
     );
