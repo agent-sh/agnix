@@ -246,13 +246,9 @@ pub(crate) fn check_yaml_duplicate_top_level_keys(yaml: &str) -> LintResult<()> 
             continue;
         }
 
-        let Some((key, _)) = line.split_once(':') else {
+        let Some(key) = top_level_yaml_key(line) else {
             continue;
         };
-        let key = key.trim();
-        if key.is_empty() || key.starts_with('-') || key.starts_with('?') {
-            continue;
-        }
 
         if let Some(first_line) = seen.insert(key, line_no) {
             return Err(CoreError::Validation(ValidationError::Other(
@@ -267,6 +263,36 @@ pub(crate) fn check_yaml_duplicate_top_level_keys(yaml: &str) -> LintResult<()> 
     }
 
     Ok(())
+}
+
+fn top_level_yaml_key(line: &str) -> Option<&str> {
+    let trimmed = line.trim();
+    let key = if let Some(stripped) = trimmed.strip_suffix(':') {
+        stripped
+    } else if let Some(idx) = trimmed.find(": ") {
+        &trimmed[..idx]
+    } else {
+        return None;
+    };
+    let key = key.trim();
+    if key.is_empty() || key.starts_with('-') || key.starts_with('?') {
+        return None;
+    }
+    let key = strip_matching_yaml_key_quotes(key);
+    if key.is_empty() {
+        return None;
+    }
+    Some(key)
+}
+
+fn strip_matching_yaml_key_quotes(key: &str) -> &str {
+    let Some(unquoted) = key.strip_prefix('"').and_then(|key| key.strip_suffix('"')) else {
+        return key
+            .strip_prefix('\'')
+            .and_then(|key| key.strip_suffix('\''))
+            .unwrap_or(key);
+    };
+    unquoted
 }
 
 /// Parse YAML frontmatter from markdown content
@@ -419,6 +445,36 @@ metadata:
 "#;
 
         assert!(check_yaml_duplicate_top_level_keys(yaml).is_ok());
+    }
+
+    #[test]
+    fn test_colon_in_top_level_key_does_not_trip_duplicate_guard() {
+        let yaml = r#"
+rdf:type: agent-config
+rdf: namespace
+"http://example.com/schema": value
+http://example.com: bare-url-key
+"#;
+
+        assert!(check_yaml_duplicate_top_level_keys(yaml).is_ok());
+    }
+
+    #[test]
+    fn test_quoted_duplicate_top_level_key_rejected() {
+        let yaml = r#"
+name: first-name
+"name": second-name
+'description': first-description
+description: second-description
+"#;
+
+        let err = check_yaml_duplicate_top_level_keys(yaml)
+            .expect_err("quoted and unquoted copies should be duplicate keys")
+            .to_string();
+        assert!(
+            err.contains("Duplicate YAML frontmatter key 'name'"),
+            "expected normalized duplicate-key error, got: {err}"
+        );
     }
 
     #[test]
