@@ -24,7 +24,7 @@ use rmcp::{
     ServerHandler, ServiceExt,
     handler::server::{tool::ToolRouter, wrapper::Parameters},
     model::{
-        CallToolResult, Content, ErrorData as McpError, Implementation, ProtocolVersion,
+        CallToolResult, ContentBlock, ErrorData as McpError, Implementation, ProtocolVersion,
         ServerCapabilities, ServerInfo,
     },
     schemars, tool, tool_handler, tool_router,
@@ -417,7 +417,7 @@ impl AgnixServer {
         let json = serde_json::to_string_pretty(&result)
             .map_err(|e| make_internal_error(format!("Failed to serialize result: {}", e)))?;
 
-        Ok(CallToolResult::success(vec![Content::text(json)]))
+        Ok(CallToolResult::success(vec![ContentBlock::text(json)]))
     }
 
     /// Validate all agent configuration files in a project directory
@@ -442,7 +442,7 @@ impl AgnixServer {
         let json = serde_json::to_string_pretty(&result)
             .map_err(|e| make_internal_error(format!("Failed to serialize result: {}", e)))?;
 
-        Ok(CallToolResult::success(vec![Content::text(json)]))
+        Ok(CallToolResult::success(vec![ContentBlock::text(json)]))
     }
 
     /// Get all available validation rules
@@ -466,7 +466,7 @@ impl AgnixServer {
         let json = serde_json::to_string_pretty(&output)
             .map_err(|e| make_internal_error(format!("Failed to serialize rules: {}", e)))?;
 
-        Ok(CallToolResult::success(vec![Content::text(json)]))
+        Ok(CallToolResult::success(vec![ContentBlock::text(json)]))
     }
 
     /// Get documentation for a specific rule
@@ -492,7 +492,7 @@ impl AgnixServer {
         let json = serde_json::to_string_pretty(&output)
             .map_err(|e| make_internal_error(format!("Failed to serialize rule: {}", e)))?;
 
-        Ok(CallToolResult::success(vec![Content::text(json)]))
+        Ok(CallToolResult::success(vec![ContentBlock::text(json)]))
     }
 }
 
