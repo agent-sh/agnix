@@ -1,0 +1,16 @@
+# Normalize line endings to LF across platforms so a Windows checkout
+# (default core.autocrlf=true) produces LF working-tree files, keeping
+# CRLF-sensitive tests and generated files stable. See #1151.
+* text=auto eol=lf
+
+# Binary assets git must not touch.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
