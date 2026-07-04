@@ -330,14 +330,32 @@ def main() -> int:
         errors,
     )
     require_counts_in_text(
-        ROOT / "CHANGELOG.md",
-        r"Supports all (\d+) agnix validation rules",
+        ROOT / "docs" / "EDITOR-SETUP.md",
+        r"- (\d+) validation rules",
         expected_total,
         errors,
     )
     require_counts_in_text(
-        ROOT / "CHANGELOG.md",
-        r"Real-time diagnostics for all (\d+) validation rules",
+        ROOT / "website" / "docs" / "intro.md",
+        r"(\d+) rules",
+        expected_total,
+        errors,
+    )
+    require_counts_in_text(
+        ROOT / "website" / "docs" / "intro.md",
+        r"(\d+) validation rules",
+        expected_total,
+        errors,
+    )
+    require_counts_in_text(
+        ROOT / "website" / "docs" / "getting-started.md",
+        r"all (\d+) rules",
+        expected_total,
+        errors,
+    )
+    require_counts_in_text(
+        ROOT / "website" / "docs" / "contributing.md",
+        r"validates against (\d+) rules",
         expected_total,
         errors,
     )

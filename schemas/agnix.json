@@ -1,210 +1,362 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "LintConfig",
-  "description": "Configuration for the linter",
+  "description": "Shared, immutable configuration data wrapped in `Arc` for cheap cloning.\n\nAll serializable fields of `LintConfig` live here. When `LintConfig` is\ncloned (e.g., in `validate_project` / `validate_project_with_registry`),\nonly the `Arc` refcount is bumped - no heap-allocated `Vec<String>` or\nnested structs are deep-copied. Mutation through setters uses\n`Arc::make_mut` for copy-on-write semantics.",
   "type": "object",
   "properties": {
     "exclude": {
       "description": "Glob patterns for paths to exclude from validation (e.g., [\"node_modules/**\", \"dist/**\"])",
+      "type": "array",
       "default": [
         "node_modules/**",
         ".git/**",
         "target/**"
       ],
-      "type": "array",
       "items": {
         "type": "string"
       }
     },
-    "mcp_protocol_version": {
-      "description": "Expected MCP protocol version (deprecated: use spec_revisions.mcp_protocol instead)",
-      "default": null,
+    "files": {
+      "description": "File inclusion/exclusion configuration for non-standard agent files",
+      "$ref": "#/$defs/FilesConfig",
+      "default": {
+        "exclude": [],
+        "include_as_generic": [],
+        "include_as_memory": []
+      }
+    },
+    "locale": {
+      "description": "Output locale for translated messages (e.g., \"en\", \"es\", \"zh-CN\")",
       "type": [
         "string",
         "null"
-      ]
+      ],
+      "default": null
+    },
+    "max_files_to_validate": {
+      "description": "Maximum number of files to validate before stopping.\n\nThis is a security feature to prevent DoS attacks via projects with\nmillions of small files. When the limit is reached, validation stops\nwith a `TooManyFiles` error.\n\nDefault: 10,000 files. Set to `None` to disable the limit (not recommended).",
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint",
+      "default": 10000,
+      "minimum": 0
+    },
+    "mcp_protocol_version": {
+      "description": "Expected MCP protocol version (deprecated: use spec_revisions.mcp_protocol instead)",
+      "type": [
+        "string",
+        "null"
+      ],
+      "default": null
+    },
+    "overrides": {
+      "description": "Per-file rule suppression overrides (rules disabled for matching paths only)",
+      "type": "array",
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/OverrideConfig"
+      }
     },
     "rules": {
       "description": "Configuration for enabling/disabling validation rules by category",
+      "$ref": "#/$defs/RuleConfig",
       "default": {
         "agents": true,
         "agents_md": true,
+        "amp_checks": true,
+        "cline": true,
+        "codex": true,
         "copilot": true,
         "cross_platform": true,
         "cursor": true,
         "disabled_rules": [],
+        "disabled_validators": [],
         "frontmatter_validation": true,
+        "gemini_md": true,
         "generic_instructions": true,
         "hooks": true,
         "import_references": true,
         "imports": true,
+        "kiro_agents": true,
+        "kiro_steering": true,
         "mcp": true,
         "memory": true,
+        "opencode": true,
+        "output_styles": true,
         "plugins": true,
         "prompt_engineering": true,
+        "required_fields": true,
+        "roo_code": true,
         "skills": true,
+        "tool_names": true,
+        "windsurf": true,
         "xml": true,
         "xml_balance": true
-      },
-      "allOf": [
-        {
-          "$ref": "#/definitions/RuleConfig"
-        }
-      ]
+      }
     },
     "severity": {
       "description": "Minimum severity level to report (Error, Warning, Info)",
-      "default": "Warning",
-      "allOf": [
-        {
-          "$ref": "#/definitions/SeverityLevel"
-        }
-      ]
+      "$ref": "#/$defs/SeverityLevel",
+      "default": "Warning"
     },
     "spec_revisions": {
       "description": "Pin specific specification revisions for revision-aware validation",
+      "$ref": "#/$defs/SpecRevisions",
       "default": {
         "agent_skills_spec": null,
         "agents_md_spec": null,
         "mcp_protocol": null
-      },
-      "allOf": [
-        {
-          "$ref": "#/definitions/SpecRevisions"
-        }
-      ]
+      }
     },
     "target": {
-      "description": "Target tool for validation (deprecated: use 'tools' array instead)",
-      "default": "Generic",
-      "allOf": [
-        {
-          "$ref": "#/definitions/TargetTool"
-        }
-      ]
+      "description": "Target tool for validation. In config files, use PascalCase enum names (e.g., ClaudeCode, Cursor, Codex, Kiro, Generic). Deprecated: use 'tools' array instead.",
+      "$ref": "#/$defs/TargetTool",
+      "default": "Generic"
     },
     "tool_versions": {
       "description": "Pin specific tool versions for version-aware validation",
+      "$ref": "#/$defs/ToolVersions",
       "default": {
         "claude_code": null,
         "codex": null,
         "copilot": null,
         "cursor": null
-      },
-      "allOf": [
-        {
-          "$ref": "#/definitions/ToolVersions"
-        }
-      ]
+      }
     },
     "tools": {
-      "description": "Tools to validate for. Valid values: \"claude-code\", \"cursor\", \"codex\", \"copilot\", \"generic\"",
-      "default": [],
+      "description": "Tools to validate for. Valid values: \"claude-code\", \"cursor\", \"codex\", \"kiro\", \"copilot\", \"github-copilot\", \"cline\", \"opencode\", \"gemini-cli\", \"amp\", \"roo-code\", \"windsurf\", \"generic\"",
       "type": "array",
+      "default": [],
       "items": {
         "type": "string"
       }
     }
   },
-  "definitions": {
+  "additionalProperties": false,
+  "$defs": {
+    "FilesConfig": {
+      "description": "File inclusion/exclusion configuration for non-standard agent files.\n\nBy default, agnix only validates files it recognizes (CLAUDE.md, SKILL.md, etc.).\nUse this section to include additional files in validation or exclude files\nthat would otherwise be validated.\n\nPatterns use glob syntax (e.g., `\"docs/ai-rules/*.md\"`).\nPaths are matched relative to the project root.\n\nPriority: `exclude` > `include_as_memory` > `include_as_generic` > built-in detection.",
+      "type": "object",
+      "properties": {
+        "exclude": {
+          "description": "Glob patterns for files to exclude from validation",
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "include_as_generic": {
+          "description": "Glob patterns for files to validate as generic markdown (XML, XP, REF rules)",
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "include_as_memory": {
+          "description": "Glob patterns for files to validate as memory/instruction files (ClaudeMd rules)",
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "OverrideConfig": {
+      "description": "Per-file rule suppression override.\n\nEach `[[overrides]]` block carves a set of rule IDs out of validation for\nfiles matching any of its `paths` globs. Multiple blocks stack (set union)\non top of the global `rules.disabled_rules`. Absent or empty `overrides`\npreserves the existing behavior (backwards compatible).\n\n# Example\n\n```toml\n[[overrides]]\npaths = [\".claude/CLAUDE.md\", \"docs/agents/**/*.md\"]\ndisabled_rules = [\"PE-001\"]\n```",
+      "type": "object",
+      "properties": {
+        "disabled_rules": {
+          "description": "Rule IDs to disable for files matching `paths` (e.g., [\"PE-001\"])",
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "paths": {
+          "description": "Glob patterns for files this override applies to",
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
     "RuleConfig": {
       "description": "Configuration for enabling/disabling validation rules by category",
       "type": "object",
       "properties": {
         "agents": {
           "description": "Enable Claude Code agents validation rules (CC-AG-*)",
-          "default": true,
-          "type": "boolean"
+          "type": "boolean",
+          "default": true
         },
         "agents_md": {
           "description": "Enable AGENTS.md validation rules (AGM-*)",
-          "default": true,
-          "type": "boolean"
+          "type": "boolean",
+          "default": true
+        },
+        "amp_checks": {
+          "description": "Enable Amp checks validation rules (AMP-*)",
+          "type": "boolean",
+          "default": true
+        },
+        "cline": {
+          "description": "Enable Cline rules validation (CLN-*)",
+          "type": "boolean",
+          "default": true
+        },
+        "codex": {
+          "description": "Enable Codex CLI validation rules (CDX-*)",
+          "type": "boolean",
+          "default": true
         },
         "copilot": {
           "description": "Enable GitHub Copilot validation rules (COP-*)",
-          "default": true,
-          "type": "boolean"
+          "type": "boolean",
+          "default": true
         },
         "cross_platform": {
           "description": "Enable cross-platform validation rules (XP-*)",
-          "default": true,
-          "type": "boolean"
+          "type": "boolean",
+          "default": true
         },
         "cursor": {
           "description": "Enable Cursor project rules validation (CUR-*)",
-          "default": true,
-          "type": "boolean"
+          "type": "boolean",
+          "default": true
         },
         "disabled_rules": {
           "description": "List of rule IDs to explicitly disable (e.g., [\"CC-AG-001\", \"AS-005\"])",
-          "default": [],
           "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "disabled_validators": {
+          "description": "List of validator names to disable (e.g., [\"XmlValidator\", \"PromptValidator\"])",
+          "type": "array",
+          "default": [],
           "items": {
             "type": "string"
           }
         },
         "frontmatter_validation": {
           "description": "Validate YAML frontmatter in skill files",
-          "default": true,
-          "type": "boolean"
+          "type": "boolean",
+          "default": true
+        },
+        "gemini_md": {
+          "description": "Enable Gemini CLI validation rules (GM-*)",
+          "type": "boolean",
+          "default": true
         },
         "generic_instructions": {
           "description": "Detect generic placeholder instructions in CLAUDE.md",
-          "default": true,
-          "type": "boolean"
+          "type": "boolean",
+          "default": true
         },
         "hooks": {
           "description": "Enable Claude Code hooks validation rules (CC-HK-*)",
-          "default": true,
-          "type": "boolean"
+          "type": "boolean",
+          "default": true
         },
         "import_references": {
           "description": "Validate @import references (legacy: use 'imports' instead)",
-          "default": true,
-          "type": "boolean"
+          "type": "boolean",
+          "default": true
         },
         "imports": {
           "description": "Enable import reference validation rules (REF-*)",
-          "default": true,
-          "type": "boolean"
+          "type": "boolean",
+          "default": true
+        },
+        "kiro_agents": {
+          "description": "Enable Kiro agent validation rules (KR-AG-*)",
+          "type": "boolean",
+          "default": true
+        },
+        "kiro_steering": {
+          "description": "Enable Kiro steering validation rules (KIRO-*)",
+          "type": "boolean",
+          "default": true
         },
         "mcp": {
           "description": "Enable Model Context Protocol validation rules (MCP-*)",
-          "default": true,
-          "type": "boolean"
+          "type": "boolean",
+          "default": true
         },
         "memory": {
           "description": "Enable Claude Code memory validation rules (CC-MEM-*)",
-          "default": true,
-          "type": "boolean"
+          "type": "boolean",
+          "default": true
+        },
+        "opencode": {
+          "description": "Enable OpenCode validation rules (OC-*)",
+          "type": "boolean",
+          "default": true
+        },
+        "output_styles": {
+          "description": "Enable Claude Code output-style validation rules (CC-OS-*)",
+          "type": "boolean",
+          "default": true
         },
         "plugins": {
           "description": "Enable Claude Code plugins validation rules (CC-PL-*)",
-          "default": true,
-          "type": "boolean"
+          "type": "boolean",
+          "default": true
         },
         "prompt_engineering": {
           "description": "Enable prompt engineering validation rules (PE-*)",
-          "default": true,
-          "type": "boolean"
+          "type": "boolean",
+          "default": true
+        },
+        "required_fields": {
+          "description": "Deprecated no-op retained for older configs",
+          "type": "boolean",
+          "default": true
+        },
+        "roo_code": {
+          "description": "Enable Roo Code validation rules (ROO-*)",
+          "type": "boolean",
+          "default": true
         },
         "skills": {
           "description": "Enable Agent Skills validation rules (AS-*, CC-SK-*)",
-          "default": true,
-          "type": "boolean"
+          "type": "boolean",
+          "default": true
+        },
+        "tool_names": {
+          "description": "Deprecated no-op retained for older configs",
+          "type": "boolean",
+          "default": true
+        },
+        "windsurf": {
+          "description": "Enable Windsurf validation rules (WS-*)",
+          "type": "boolean",
+          "default": true
         },
         "xml": {
           "description": "Enable XML tag balance validation rules (XML-*)",
-          "default": true,
-          "type": "boolean"
+          "type": "boolean",
+          "default": true
         },
         "xml_balance": {
           "description": "Check XML tag balance (legacy: use 'xml' instead)",
-          "default": true,
-          "type": "boolean"
+          "type": "boolean",
+          "default": true
         }
-      }
+      },
+      "additionalProperties": false
     },
     "SeverityLevel": {
       "description": "Severity level for filtering diagnostics",
@@ -212,55 +364,50 @@
         {
           "description": "Only show errors",
           "type": "string",
-          "enum": [
-            "Error"
-          ]
+          "const": "Error"
         },
         {
           "description": "Show errors and warnings",
           "type": "string",
-          "enum": [
-            "Warning"
-          ]
+          "const": "Warning"
         },
         {
           "description": "Show all diagnostics including info",
           "type": "string",
-          "enum": [
-            "Info"
-          ]
+          "const": "Info"
         }
       ]
     },
     "SpecRevisions": {
-      "description": "Specification revision pinning for version-aware validation\n\nWhen spec revisions are pinned, validators can apply revision-specific rules. When not pinned, validators use the latest known revision.",
+      "description": "Specification revision pinning for version-aware validation\n\nWhen spec revisions are pinned, validators can apply revision-specific\nrules. When not pinned, validators use the latest known revision.",
       "type": "object",
       "properties": {
         "agent_skills_spec": {
           "description": "Agent Skills specification revision",
-          "default": null,
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "default": null
         },
         "agents_md_spec": {
           "description": "AGENTS.md specification revision",
-          "default": null,
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "default": null
         },
         "mcp_protocol": {
           "description": "MCP protocol version for revision-specific validation (e.g., \"2025-11-25\", \"2024-11-05\")",
-          "default": null,
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "default": null
         }
-      }
+      },
+      "additionalProperties": false
     },
     "TargetTool": {
       "description": "Target tool for validation (deprecated: use 'tools' array for multi-tool support)",
@@ -268,70 +415,68 @@
         {
           "description": "Generic Agent Skills standard",
           "type": "string",
-          "enum": [
-            "Generic"
-          ]
+          "const": "Generic"
         },
         {
           "description": "Claude Code specific",
           "type": "string",
-          "enum": [
-            "ClaudeCode"
-          ]
+          "const": "ClaudeCode"
         },
         {
           "description": "Cursor specific",
           "type": "string",
-          "enum": [
-            "Cursor"
-          ]
+          "const": "Cursor"
         },
         {
           "description": "Codex specific",
           "type": "string",
-          "enum": [
-            "Codex"
-          ]
+          "const": "Codex"
+        },
+        {
+          "description": "Kiro specific",
+          "type": "string",
+          "const": "Kiro"
         }
       ]
     },
     "ToolVersions": {
-      "description": "Tool version pinning for version-aware validation\n\nWhen tool versions are pinned, validators can apply version-specific behavior instead of using default assumptions. When not pinned, validators will use sensible defaults and add assumption notes.",
+      "description": "Tool version pinning for version-aware validation\n\nWhen tool versions are pinned, validators can apply version-specific\nbehavior instead of using default assumptions. When not pinned,\nvalidators will use sensible defaults and add assumption notes.",
       "type": "object",
       "properties": {
         "claude_code": {
           "description": "Claude Code version for version-aware validation (e.g., \"1.0.0\")",
-          "default": null,
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "default": null
         },
         "codex": {
           "description": "Codex CLI version for version-aware validation (e.g., \"0.1.0\")",
-          "default": null,
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "default": null
         },
         "copilot": {
           "description": "GitHub Copilot version for version-aware validation (e.g., \"1.0.0\")",
-          "default": null,
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "default": null
         },
         "cursor": {
           "description": "Cursor version for version-aware validation (e.g., \"0.45.0\")",
-          "default": null,
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "default": null
         }
-      }
+      },
+      "additionalProperties": false
     }
   }
 }

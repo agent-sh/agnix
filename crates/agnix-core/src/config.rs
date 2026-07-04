@@ -26,6 +26,7 @@ pub use schema::{ConfigWarning, generate_schema};
 /// behavior instead of using default assumptions. When not pinned,
 /// validators will use sensible defaults and add assumption notes.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct ToolVersions {
     /// Claude Code version (e.g., "1.0.0")
     #[serde(default)]
@@ -55,6 +56,7 @@ pub struct ToolVersions {
 /// When spec revisions are pinned, validators can apply revision-specific
 /// rules. When not pinned, validators use the latest known revision.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct SpecRevisions {
     /// MCP protocol version (e.g., "2025-11-25", "2024-11-05")
     #[serde(default)]
@@ -85,6 +87,7 @@ pub struct SpecRevisions {
 ///
 /// Priority: `exclude` > `include_as_memory` > `include_as_generic` > built-in detection.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct FilesConfig {
     /// Glob patterns for files to validate as memory/instruction files (ClaudeMd rules).
     ///
@@ -130,6 +133,7 @@ pub struct FilesConfig {
 /// disabled_rules = ["PE-001"]
 /// ```
 #[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct OverrideConfig {
     /// Glob patterns for files this override applies to.
     ///
@@ -345,7 +349,7 @@ impl std::fmt::Debug for RuntimeContext {
 /// nested structs are deep-copied. Mutation through setters uses
 /// `Arc::make_mut` for copy-on-write semantics.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-#[serde(default)]
+#[serde(default, deny_unknown_fields)]
 pub(in crate::config) struct ConfigData {
     /// Severity level threshold
     #[schemars(description = "Minimum severity level to report (Error, Warning, Info)")]
@@ -601,6 +605,7 @@ fn default_true() -> bool {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 #[schemars(description = "Configuration for enabling/disabling validation rules by category")]
 pub struct RuleConfig {
     /// Enable skills validation (AS-*, CC-SK-*)
@@ -718,6 +723,16 @@ pub struct RuleConfig {
     #[schemars(description = "Enable prompt engineering validation rules (PE-*)")]
     pub prompt_engineering: bool,
 
+    /// Deprecated no-op retained so older configs still parse.
+    #[serde(default = "default_true")]
+    #[schemars(description = "Deprecated no-op retained for older configs")]
+    pub tool_names: bool,
+
+    /// Deprecated no-op retained so older configs still parse.
+    #[serde(default = "default_true")]
+    #[schemars(description = "Deprecated no-op retained for older configs")]
+    pub required_fields: bool,
+
     /// Detect generic instructions in CLAUDE.md
     #[serde(default = "default_true")]
     #[schemars(description = "Detect generic placeholder instructions in CLAUDE.md")]
@@ -779,6 +794,8 @@ impl Default for RuleConfig {
             kiro_agents: true,
             amp_checks: true,
             prompt_engineering: true,
+            tool_names: true,
+            required_fields: true,
             generic_instructions: true,
             frontmatter_validation: true,
             xml_balance: true,

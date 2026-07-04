@@ -4,7 +4,7 @@
   "description": "Lint agent configurations before they break your workflow. 432 rules for Skills, Hooks, MCP, Memory, Plugins.",
   "author": {
     "name": "Avi Fenesh",
-    "email": "[email protected]",
+    "email": "aviarchi1994@gmail.com",
     "url": "https://github.com/avifenesh"
   },
   "homepage": "https://github.com/agent-sh/agnix",

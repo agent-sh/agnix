@@ -88,7 +88,7 @@ static_regex!(fn imperative_verb_regex, r"(?i)\b(run|execute|create|build|deploy
 static_regex!(fn indexed_arguments_regex, r"\$ARGUMENTS\[\d+\]");
 
 fn is_valid_name_segment(segment: &str) -> bool {
-    segment.len() <= 64 && name_format_regex().is_match(segment)
+    segment.chars().count() <= 64 && name_format_regex().is_match(segment)
 }
 
 fn is_valid_skill_name(name: &str) -> bool {
@@ -584,7 +584,10 @@ impl<'a> ValidationContext<'a> {
                 .with_suggestion(t!("rules.as_004.suggestion"));
 
                 // Add auto-fix if we can find the byte range and the fixed name is valid
-                if !fixed_name.is_empty() && is_valid_skill_name(&fixed_name) {
+                if name_trimmed.is_ascii()
+                    && !fixed_name.is_empty()
+                    && is_valid_skill_name(&fixed_name)
+                {
                     if let Some((start, end)) = self.frontmatter_value_byte_range("name") {
                         // Determine if fix is safe: only case changes are safe
                         let has_structural_changes = name_trimmed.contains('_')
@@ -733,7 +736,7 @@ impl<'a> ValidationContext<'a> {
             } else {
                 1024
             };
-            let len = description_trimmed.len();
+            let len = description_trimmed.chars().count();
             if !(1..=max).contains(&len) {
                 self.diagnostics.push(
                     Diagnostic::error(
@@ -789,7 +792,7 @@ impl<'a> ValidationContext<'a> {
         if self.config.is_rule_enabled("AS-011") {
             if let Some(compat) = frontmatter.compatibility.as_deref() {
                 let (compat_line, compat_col) = self.frontmatter_key_line_col("compatibility");
-                let len = compat.trim().len();
+                let len = compat.trim().chars().count();
                 if len == 0 || len > 500 {
                     self.diagnostics.push(
                         Diagnostic::error(

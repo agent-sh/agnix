@@ -65,12 +65,14 @@ Validate only configs relevant to a single tool:
 ```bash
 agnix --target claude-code .
 agnix --target cursor .
-agnix --target copilot .
+agnix --target codex .
 ```
+
+GitHub Copilot validation is enabled by default and can be targeted in config with `tools = ["github-copilot"]`.
 
 ## Next steps
 
 - [Configuration](./configuration.md) - customize rules with `.agnix.toml`
-- [Rules Reference](./rules/index.md) - browse all 426 rules
+- [Rules Reference](./rules/index.md) - browse all 432 rules
 - [Editor Integration](./editor-integration.md) - get diagnostics in your editor
 - [Troubleshooting](./troubleshooting.md) - common issues and fixes

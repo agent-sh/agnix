@@ -51,6 +51,19 @@ jobs:
         # `node scripts/sync-rule-bookkeeping.js` locally.
         run: node scripts/sync-rule-bookkeeping.js --check --skip-docs
 
+      - name: Rule count table check
+        # Fails if human-maintained rule count tables or current docs drift
+        # from knowledge-base/rules.json.
+        run: python3 scripts/check-rule-counts.py
+
+      - name: Schema sync check
+        # Fails if the committed .agnix.toml schema differs from the current
+        # binary output, or if the VS Code extension copy drifted.
+        run: |
+          cargo run -p agnix-cli --bin agnix -- schema --fix --output schemas/agnix.json
+          cmp schemas/agnix.json editors/vscode/schemas/agnix.json
+          git diff --exit-code -- schemas/agnix.json editors/vscode/schemas/agnix.json
+
   agnix:
     runs-on: ubuntu-latest
     steps:

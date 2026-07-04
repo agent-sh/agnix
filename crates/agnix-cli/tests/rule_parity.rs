@@ -577,36 +577,40 @@ fn test_rules_json_integrity() {
 
 #[test]
 fn test_rules_json_matches_validation_rules_md() {
-    // Verify rules.json IDs exist in VALIDATION-RULES.md
+    // Verify rules.json and VALIDATION-RULES.md contain the same rule IDs.
     let rules_index = load_rules_json();
     let validation_rules_path = workspace_root().join("knowledge-base/VALIDATION-RULES.md");
     let content = fs::read_to_string(&validation_rules_path)
         .unwrap_or_else(|e| panic!("Failed to read {}: {}", validation_rules_path.display(), e));
 
-    let mut missing_in_md: Vec<String> = Vec::new();
+    let rules_json_ids: BTreeSet<String> = rules_index.rules.iter().map(|r| r.id.clone()).collect();
+    let heading_re = Regex::new(r"(?m)^### ([A-Z]+(?:-[A-Z]+)*-[0-9]{3})(?:\s|\[|$)").unwrap();
+    let validation_rules_ids: BTreeSet<String> = heading_re
+        .captures_iter(&content)
+        .map(|cap| cap[1].to_string())
+        .collect();
 
-    for rule in &rules_index.rules {
-        // Check for rule ID as anchor or heading
-        let patterns = [
-            format!("<a id=\"{}\"></a>", rule.id.to_lowercase()),
-            format!("### {} ", rule.id),
-            format!("### {}[", rule.id),
-        ];
+    let missing_in_md: Vec<&String> = rules_json_ids.difference(&validation_rules_ids).collect();
+    let extra_in_md: Vec<&String> = validation_rules_ids.difference(&rules_json_ids).collect();
 
-        let found = patterns.iter().any(|p| content.contains(p));
-        if !found {
-            missing_in_md.push(rule.id.clone());
+    let mut report = String::new();
+    if !missing_in_md.is_empty() {
+        report.push_str("Rules in rules.json but not found in VALIDATION-RULES.md:\n");
+        for rule in &missing_in_md {
+            report.push_str(&format!("  - {}\n", rule));
+        }
+    }
+    if !extra_in_md.is_empty() {
+        report.push_str("Rules in VALIDATION-RULES.md but not found in rules.json:\n");
+        for rule in &extra_in_md {
+            report.push_str(&format!("  - {}\n", rule));
         }
     }
 
     assert!(
-        missing_in_md.is_empty(),
-        "Rules in rules.json but not found in VALIDATION-RULES.md:\n{}",
-        missing_in_md
-            .iter()
-            .map(|r| format!("  - {}", r))
-            .collect::<Vec<_>>()
-            .join("\n")
+        missing_in_md.is_empty() && extra_in_md.is_empty(),
+        "rules.json and VALIDATION-RULES.md rule ID parity failed:\n{}",
+        report
     );
 }
 

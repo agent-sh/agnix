@@ -49,25 +49,63 @@ See `knowledge-base/VALIDATION-RULES.md` for the full evidence schema reference 
 
 ## Rule ID Conventions
 
-Rule IDs follow the format `[PREFIX]-[NUMBER]` where the prefix indicates the category:
+Rule IDs follow the format `[PREFIX]-[NUMBER]` where the prefix indicates the rule family:
 
-| Prefix | Category | Example |
-|--------|----------|---------|
-| `AS-` | Agent Skills | AS-001 through AS-016 |
-| `CC-SK-` | Claude Code Skills | CC-SK-001 through CC-SK-009 |
-| `CC-HK-` | Claude Code Hooks | CC-HK-001 through CC-HK-012 |
-| `CC-MEM-` | Claude Code Memory | CC-MEM-001 through CC-MEM-010 |
-| `CC-AG-` | Claude Code Agents | CC-AG-001 through CC-AG-007 |
-| `CC-PL-` | Claude Code Plugins | CC-PL-001 through CC-PL-006 |
-| `MCP-` | Model Context Protocol | MCP-001 through MCP-008 |
-| `CUR-` | Cursor | CUR-001 through CUR-006 |
-| `COP-` | GitHub Copilot | COP-001 through COP-006 |
-| `AGM-` | AGENTS.md | AGM-001 through AGM-006 |
-| `XP-` | Cross-Platform | XP-001 through XP-006 |
-| `PE-` | Prompt Engineering | PE-001 through PE-004 |
-| `XML-` | XML Validation | XML-001 through XML-003 |
-| `REF-` | Reference/Import Validation | REF-001 through REF-002 |
-| `VER-` | Version Awareness | VER-001 |
+| Prefix | Rules | Current IDs |
+|--------|-------|-------------|
+| `AGM-` | 6 | AGM-001 through AGM-006 |
+| `AMP-` | 4 | AMP-001 through AMP-004 |
+| `AMP-SK-` | 1 | AMP-SK-001 |
+| `AS-` | 14 | AS-001 through AS-006, AS-008 through AS-009, AS-011 through AS-013, AS-015 through AS-017 |
+| `CC-AG-` | 17 | CC-AG-001 through CC-AG-015, CC-AG-017, CC-AG-019 |
+| `CC-HK-` | 27 | CC-HK-001 through CC-HK-027 |
+| `CC-MEM-` | 13 | CC-MEM-001 through CC-MEM-012, CC-MEM-014 |
+| `CC-OS-` | 6 | CC-OS-001 through CC-OS-006 |
+| `CC-PL-` | 15 | CC-PL-001 through CC-PL-015 |
+| `CC-SET-` | 13 | CC-SET-001 through CC-SET-013 |
+| `CC-SK-` | 21 | CC-SK-001 through CC-SK-021 |
+| `CDX-` | 7 | CDX-000 through CDX-006 |
+| `CDX-AG-` | 7 | CDX-AG-001 through CDX-AG-007 |
+| `CDX-APP-` | 3 | CDX-APP-001 through CDX-APP-003 |
+| `CDX-CFG-` | 30 | CDX-CFG-001 through CDX-CFG-030 |
+| `CDX-PL-` | 16 | CDX-PL-001 through CDX-PL-016 |
+| `CDX-REQ-` | 2 | CDX-REQ-000 through CDX-REQ-001 |
+| `CL-SK-` | 3 | CL-SK-001 through CL-SK-003 |
+| `CLN-` | 7 | CLN-001 through CLN-006, CLN-009 |
+| `COP-` | 25 | COP-001 through COP-015, COP-017 through COP-020, COP-022 through COP-027 |
+| `CP-SK-` | 1 | CP-SK-001 |
+| `CR-SK-` | 1 | CR-SK-001 |
+| `CUR-` | 19 | CUR-001 through CUR-019 |
+| `CX-SK-` | 1 | CX-SK-001 |
+| `GM-` | 10 | GM-001 through GM-010 |
+| `GM-AG-` | 1 | GM-AG-001 |
+| `KIRO-` | 14 | KIRO-001 through KIRO-014 |
+| `KR-AG-` | 13 | KR-AG-001 through KR-AG-013 |
+| `KR-HK-` | 10 | KR-HK-001 through KR-HK-010 |
+| `KR-MCP-` | 6 | KR-MCP-001 through KR-MCP-006 |
+| `KR-PW-` | 8 | KR-PW-001 through KR-PW-008 |
+| `KR-SET-` | 3 | KR-SET-001 through KR-SET-003 |
+| `KR-SK-` | 1 | KR-SK-001 |
+| `MCP-` | 26 | MCP-001 through MCP-026 |
+| `OC-` | 8 | OC-001 through OC-004, OC-006 through OC-009 |
+| `OC-AG-` | 9 | OC-AG-001 through OC-AG-009 |
+| `OC-AGM-` | 2 | OC-AGM-001 through OC-AGM-002 |
+| `OC-CFG-` | 13 | OC-CFG-001 through OC-CFG-013 |
+| `OC-DEP-` | 6 | OC-DEP-001 through OC-DEP-006 |
+| `OC-LSP-` | 2 | OC-LSP-001 through OC-LSP-002 |
+| `OC-PM-` | 2 | OC-PM-001 through OC-PM-002 |
+| `OC-SK-` | 1 | OC-SK-001 |
+| `OC-TUI-` | 3 | OC-TUI-001 through OC-TUI-003 |
+| `PE-` | 6 | PE-001 through PE-006 |
+| `RC-SK-` | 1 | RC-SK-001 |
+| `REF-` | 4 | REF-001 through REF-004 |
+| `ROO-` | 6 | ROO-001 through ROO-006 |
+| `VER-` | 1 | VER-001 |
+| `WS-` | 4 | WS-001 through WS-004 |
+| `WS-SK-` | 1 | WS-SK-001 |
+| `XML-` | 3 | XML-001 through XML-003 |
+| `XP-` | 8 | XP-001 through XP-008 |
+| `XP-SK-` | 1 | XP-SK-001 |
 
 To find the next available number for a prefix, check `knowledge-base/rules.json` for the highest existing number in that prefix group and increment by one.
 

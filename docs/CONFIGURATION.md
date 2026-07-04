@@ -47,10 +47,10 @@ See the [Per-File Rule Overrides](#per-file-rule-overrides) section below for fu
 
 ```toml
 severity = "Warning"  # Warning, Error, Info
-target = "Generic"    # Deprecated: Generic, ClaudeCode, Cursor, Codex
+target = "Generic"    # Deprecated: Generic, ClaudeCode, Cursor, Codex, Kiro
 
 # Multi-tool support (overrides target)
-tools = ["claude-code", "cursor", "github-copilot"]  # Valid: claude-code, cursor, codex, copilot, github-copilot, generic
+tools = ["claude-code", "cursor", "github-copilot"]  # Valid: claude-code, cursor, codex, kiro, copilot, github-copilot, cline, opencode, gemini-cli, amp, roo-code, windsurf, generic
 
 exclude = [
   "node_modules/**",
@@ -109,7 +109,7 @@ disabled_rules = ["CC-MEM-006", "PE-003"]
 
 agnix automatically validates `.agnix.toml` files for:
 
-- **Invalid rule IDs**: Warns if `disabled_rules` (in `[rules]` or `[[overrides]]`) contains IDs that don't match known patterns (AS-, CC-SK-, CC-HK-, CC-AG-, CC-MEM-, CC-PL-, XML-, MCP-, REF-, XP-, AGM-, COP-, CUR-, PE-, VER-, imports::)
+- **Invalid rule IDs**: Warns if `disabled_rules` (in `[rules]` or `[[overrides]]`) contains IDs that don't match known rule ID prefixes from `knowledge-base/rules.json` (AS-, CC-*, CDX-*, OC-*, KR-*, MCP-, REF-, XP-, AGM-, COP-, CUR-, CLN-, PE-, VER-, imports::, and other supported tool prefixes)
 - **Unknown tools**: Warns if `tools` array contains tool names that aren't recognized
 - **Invalid file patterns**: Warns if `[files]` or `[[overrides]].paths` glob patterns have invalid syntax. The invalid pattern is dropped at config-load (it can't match anything) and the warning surfaces it so you know which one was ignored.
 - **Unsafe override paths**: Warns if `[[overrides]].paths` entries are absolute (`/foo/...`) or contain `..` traversal. These patterns can never match a project-relative file path, so the override is a no-op even though it parses. (SDK consumers using `LintConfigBuilder::build()` get a hard error for these patterns instead.)

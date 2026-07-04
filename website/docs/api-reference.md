@@ -16,12 +16,20 @@ agnix [OPTIONS] [PATH]
 | Flag | Description |
 |------|-------------|
 | `[PATH]` | Directory or file to validate (default: `.`) |
-| `--target <TOOL>` | Single tool focus (`claude-code`, `cursor`, `codex`, `copilot`) |
-| `--tools <TOOLS>` | Comma-separated tool list |
-| `--fix` | Apply auto-fixes |
+| `--target <TOOL>` | Single tool focus (`generic`, `claude-code`, `cursor`, `codex`, `kiro`) |
+| `--fix` | Apply HIGH and MEDIUM confidence fixes |
+| `--dry-run` | Preview fixes without modifying files |
+| `--fix-safe` | Apply only HIGH confidence fixes |
+| `--fix-unsafe` | Apply all fixes, including LOW confidence fixes |
+| `--show-fixes` | Show proposed fix diffs in text output |
 | `--format <FMT>` | Output format: `text` (default), `json`, `sarif` |
 | `--strict` | Treat warnings as errors (exit code 1) |
 | `--config <PATH>` | Config file path (default: `.agnix.toml`) |
+| `--watch`, `-w` | Watch mode - re-validate on file changes |
+| `--locale <LOCALE>` | Set output locale, e.g. `en`, `es`, `zh-CN` |
+| `--list-locales` | List supported locales and exit |
+| `--max-files <N>` | Maximum number of files to validate |
+| `--verbose`, `-v` | Verbose output |
 | `--version` | Print version |
 | `--help` | Print help |
 
@@ -29,8 +37,12 @@ agnix [OPTIONS] [PATH]
 
 | Command | Description |
 |---------|-------------|
-| `agnix schema [--output FILE]` | Output JSON Schema for `.agnix.toml` |
-| `agnix watch [PATH]` | Watch mode - re-validate on file changes |
+| `agnix validate [PATH]` | Validate agent configs explicitly |
+| `agnix init` | Initialize a config file |
+| `agnix eval <FILE>` | Evaluate rule efficacy against labeled test cases |
+| `agnix schema [--output FILE] [--fix]` | Output or regenerate JSON Schema for `.agnix.toml` |
+| `agnix tools check` | Check configured tool versions |
+| `agnix tools detect` | Detect installed tool versions |
 | `agnix telemetry <status\|enable\|disable>` | Manage telemetry settings |
 
 ### Output formats

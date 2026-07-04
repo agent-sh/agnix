@@ -1,4 +1,5 @@
 import * as assert from 'assert';
+import * as path from 'path';
 import {
   readVersionMarker,
   writeVersionMarker,
@@ -36,7 +37,7 @@ describe('readVersionMarker', () => {
 
   it('returns version string when marker exists', () => {
     const deps = createMockDeps({
-      [`/storage/${VERSION_MARKER_FILE}`]: '0.9.1',
+      [path.join('/storage', VERSION_MARKER_FILE)]: '0.9.1',
     });
     const result = readVersionMarker('/storage', deps);
     assert.strictEqual(result, '0.9.1');
@@ -44,7 +45,7 @@ describe('readVersionMarker', () => {
 
   it('trims whitespace from marker content', () => {
     const deps = createMockDeps({
-      [`/storage/${VERSION_MARKER_FILE}`]: '  0.9.1\n',
+      [path.join('/storage', VERSION_MARKER_FILE)]: '  0.9.1\n',
     });
     const result = readVersionMarker('/storage', deps);
     assert.strictEqual(result, '0.9.1');
@@ -56,7 +57,7 @@ describe('writeVersionMarker', () => {
     const deps = createMockDeps();
     writeVersionMarker('/storage', '0.9.1', deps);
     assert.strictEqual(
-      deps.written[`/storage/${VERSION_MARKER_FILE}`],
+      deps.written[path.join('/storage', VERSION_MARKER_FILE)],
       '0.9.1'
     );
   });
