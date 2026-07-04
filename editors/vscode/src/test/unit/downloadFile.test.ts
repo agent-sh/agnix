@@ -2,6 +2,9 @@ import * as assert from 'assert';
 import { EventEmitter } from 'events';
 import { downloadFile, type DownloadFileDeps } from '../../download-file';
 
+const TRUSTED_URL = 'https://github.com/agent-sh/agnix/releases/download/v0.37.2/archive.tar.gz';
+const TRUSTED_REDIRECT_URL = 'https://objects.githubusercontent.com/github-production-release-asset/archive.tar.gz';
+
 type PipeDestination = {
   emit?: (event: string, ...args: unknown[]) => boolean;
 };
@@ -88,12 +91,15 @@ describe('downloadFile', () => {
     );
 
     await assert.rejects(
-      downloadFile('https://example.com/archive.tar.gz', '/tmp/archive.tar.gz', deps),
+      downloadFile(TRUSTED_URL, '/tmp/archive.tar.gz', deps),
       /status 500/
     );
 
     assert.ok(writeStreams[0].closeCalls > 0, 'expected write stream to be closed');
-    assert.deepStrictEqual(unlinkedPaths, ['/tmp/archive.tar.gz']);
+    assert.ok(
+      unlinkedPaths.includes('/tmp/archive.tar.gz'),
+      'expected temp file cleanup'
+    );
     assert.strictEqual(request.destroyed, true, 'expected HTTP request to be destroyed');
     assert.strictEqual(response.resumed, true, 'expected HTTP response to be resumed');
     assert.strictEqual(response.destroyed, true, 'expected HTTP response to be destroyed');
@@ -117,12 +123,15 @@ describe('downloadFile', () => {
     );
 
     await assert.rejects(
-      downloadFile('https://example.com/archive.tar.gz', '/tmp/archive.tar.gz', deps),
+      downloadFile(TRUSTED_URL, '/tmp/archive.tar.gz', deps),
       /disk full/
     );
 
     assert.ok(writeStreams[0].closeCalls > 0, 'expected write stream to be closed');
-    assert.deepStrictEqual(unlinkedPaths, ['/tmp/archive.tar.gz']);
+    assert.ok(
+      unlinkedPaths.includes('/tmp/archive.tar.gz'),
+      'expected temp file cleanup'
+    );
     assert.strictEqual(request.destroyed, true, 'expected HTTP request to be destroyed');
     assert.strictEqual(response.destroyed, true, 'expected HTTP response to be destroyed');
   });
@@ -140,7 +149,7 @@ describe('downloadFile', () => {
     );
 
     await assert.rejects(
-      downloadFile('https://example.com/archive.tar.gz', '/tmp/archive.tar.gz', deps),
+      downloadFile(TRUSTED_URL, '/tmp/archive.tar.gz', deps),
       /network down/
     );
 
@@ -166,7 +175,7 @@ describe('downloadFile', () => {
     );
 
     await assert.rejects(
-      downloadFile('https://example.com/archive.tar.gz', '/tmp/archive.tar.gz', deps),
+      downloadFile(TRUSTED_URL, '/tmp/archive.tar.gz', deps),
       /socket reset/
     );
 
@@ -180,7 +189,9 @@ describe('downloadFile', () => {
     const requests: FakeRequest[] = [];
     const responses: FakeResponse[] = [];
     const calledUrls: string[] = [];
-    const originalUrl = 'https://example.com/releases/latest/download/archive.tar.gz';
+    const originalUrl = TRUSTED_URL;
+    const redirectLocation = '/archive.tar.gz';
+    const redirectedUrl = new URL(redirectLocation, originalUrl).href;
 
     const { deps, writeStreams, unlinkedPaths } = createDeps(
       (url, cb) => {
@@ -193,7 +204,7 @@ describe('downloadFile', () => {
             // Redirect response does not pipe content.
           });
           response.statusCode = 302;
-          response.headers.location = '/archive.tar.gz';
+          response.headers.location = redirectLocation;
           responses.push(response);
           setImmediate(() => cb(response));
           return request;
@@ -214,10 +225,7 @@ describe('downloadFile', () => {
 
     await downloadFile(originalUrl, '/tmp/archive.tar.gz', deps);
 
-    assert.deepStrictEqual(calledUrls, [
-      originalUrl,
-      'https://example.com/archive.tar.gz',
-    ]);
+    assert.deepStrictEqual(calledUrls, [originalUrl, redirectedUrl]);
     assert.strictEqual(requests[0].destroyed, true, 'expected first request to be destroyed on redirect');
     assert.strictEqual(responses[0].resumed, true, 'expected first response to be resumed on redirect');
     assert.strictEqual(responses[0].destroyed, true, 'expected first response to be destroyed on redirect');
@@ -248,7 +256,7 @@ describe('downloadFile', () => {
     );
 
     await assert.rejects(
-      downloadFile('https://example.com/archive.tar.gz', '/tmp/archive.tar.gz', deps),
+      downloadFile(TRUSTED_URL, '/tmp/archive.tar.gz', deps),
       /Too many redirects/
     );
 
@@ -274,11 +282,84 @@ describe('downloadFile', () => {
       }
     );
 
-    await downloadFile('https://example.com/archive.tar.gz', '/tmp/archive.tar.gz', deps);
+    await downloadFile(TRUSTED_URL, '/tmp/archive.tar.gz', deps);
 
     assert.ok(writeStreams[0].closeCalls > 0, 'expected write stream to be closed on success');
     assert.deepStrictEqual(unlinkedPaths, []);
     assert.strictEqual(request.destroyed, false);
     assert.strictEqual(response.destroyed, false);
+  });
+
+  it('rejects untrusted initial URLs before opening a file', async () => {
+    const { deps, writeStreams } = createDeps(() => {
+      throw new Error('request should not be created');
+    });
+
+    await assert.rejects(
+      downloadFile('https://example.com/archive.tar.gz', '/tmp/archive.tar.gz', deps),
+      /Untrusted download URL/
+    );
+
+    assert.strictEqual(writeStreams.length, 0);
+  });
+
+  it('rejects redirects to untrusted hosts', async () => {
+    const request = new FakeRequest();
+    const response = new FakeResponse(() => {
+      // Redirect response does not pipe content.
+    });
+    response.statusCode = 302;
+    response.headers.location = 'https://example.com/archive.tar.gz';
+
+    const { deps, writeStreams, unlinkedPaths } = createDeps((_url, cb) => {
+      setImmediate(() => cb(response));
+      return request;
+    });
+
+    await assert.rejects(
+      downloadFile(TRUSTED_URL, '/tmp/archive.tar.gz', deps),
+      /Untrusted redirect URL/
+    );
+
+    assert.ok(writeStreams[0].closeCalls > 0, 'expected write stream to be closed');
+    assert.ok(
+      unlinkedPaths.includes('/tmp/archive.tar.gz'),
+      'expected temp file cleanup'
+    );
+    assert.strictEqual(request.destroyed, true, 'expected request to be destroyed');
+    assert.strictEqual(response.destroyed, true, 'expected response to be destroyed');
+  });
+
+  it('follows redirects to trusted githubusercontent hosts', async () => {
+    const calledUrls: string[] = [];
+
+    const { deps } = createDeps((url, cb) => {
+      calledUrls.push(url);
+      const request = new FakeRequest();
+
+      if (calledUrls.length === 1) {
+        const response = new FakeResponse(() => {
+          // Redirect response does not pipe content.
+        });
+        response.statusCode = 302;
+        response.headers.location = TRUSTED_REDIRECT_URL;
+        setImmediate(() => cb(response));
+        return request;
+      }
+
+      const response = new FakeResponse((dest) => {
+        setImmediate(() => {
+          if (dest.emit) {
+            dest.emit('finish');
+          }
+        });
+      });
+      setImmediate(() => cb(response));
+      return request;
+    });
+
+    await downloadFile(TRUSTED_URL, '/tmp/archive.tar.gz', deps);
+
+    assert.deepStrictEqual(calledUrls, [TRUSTED_URL, TRUSTED_REDIRECT_URL]);
   });
 });

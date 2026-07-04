@@ -152,3 +152,17 @@ fn direct_yaml_parser_uses_maintained_package() {
         "fuzz targets must exercise the same maintained YAML parser package"
     );
 }
+
+#[test]
+fn deprecated_transitive_yaml_parser_is_tracked_until_removed() {
+    let lockfile = repo_file("Cargo.lock");
+    let advisory_docs = repo_file("docs/RUSTSEC-ADVISORIES.md");
+
+    if lockfile.contains("name = \"serde_yaml\"") {
+        assert!(
+            advisory_docs.contains("serde_yaml 0.9.34+deprecated")
+                && advisory_docs.contains("via `rust-i18n`"),
+            "deprecated transitive serde_yaml must be tracked while it remains in Cargo.lock"
+        );
+    }
+}

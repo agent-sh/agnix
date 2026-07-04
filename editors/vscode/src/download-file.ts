@@ -35,12 +35,30 @@ const defaultDeps: DownloadFileDeps = {
 };
 
 const MAX_REDIRECTS = 10;
+const TRUSTED_DOWNLOAD_HOSTS = ['github.com'];
+const TRUSTED_DOWNLOAD_SUFFIXES = ['.githubusercontent.com'];
 
 function toError(value: unknown): Error {
   if (value instanceof Error) {
     return value;
   }
   return new Error(String(value));
+}
+
+function isTrustedDownloadUrl(url: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+
+  const host = parsed.hostname.toLowerCase();
+  return (
+    parsed.protocol === 'https:' &&
+    (TRUSTED_DOWNLOAD_HOSTS.includes(host) ||
+      TRUSTED_DOWNLOAD_SUFFIXES.some((suffix) => host.endsWith(suffix)))
+  );
 }
 
 /**
@@ -53,6 +71,11 @@ export function downloadFile(
   redirectCount = 0
 ): Promise<void> {
   return new Promise((resolve, reject) => {
+    if (!isTrustedDownloadUrl(url)) {
+      reject(new Error(`Untrusted download URL: ${url}`));
+      return;
+    }
+
     const file = deps.createWriteStream(destPath);
     let request: RequestLike | null = null;
     let response: ResponseLike | null = null;
@@ -133,6 +156,10 @@ export function downloadFile(
       }
 
       const nextUrl = new URL(redirectUrl, url).href;
+      if (!isTrustedDownloadUrl(nextUrl)) {
+        fail(new Error(`Untrusted redirect URL: ${nextUrl}`));
+        return;
+      }
       downloadFile(nextUrl, destPath, deps, redirectCount + 1)
         .then(resolveOnce)
         .catch((err) => {
