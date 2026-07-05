@@ -48,10 +48,8 @@ pub(in crate::config) const KNOWN_RULE_PREFIXES: &[&str] = &[
     "imports::",
 ];
 
-const REMOVED_RULES_JSON: &str = include_str!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../knowledge-base/removed-rules.json"
-));
+const REMOVED_RULES_JSON: &str =
+    include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/removed-rules.json"));
 
 #[derive(Debug, Clone, Deserialize)]
 struct RemovedRule {
@@ -69,7 +67,7 @@ struct RemovedRulesIndex {
 
 static REMOVED_RULES: LazyLock<HashMap<String, RemovedRule>> = LazyLock::new(|| {
     let index: RemovedRulesIndex = serde_json::from_str(REMOVED_RULES_JSON)
-        .expect("knowledge-base/removed-rules.json must be valid JSON");
+        .expect("crates/agnix-core/removed-rules.json must be valid JSON");
     index
         .removed_rules
         .into_iter()

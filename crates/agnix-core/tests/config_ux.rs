@@ -140,3 +140,24 @@ fn removed_rules_emit_config_warnings() {
     assert!(messages.iter().any(|message| message.contains("AS-014")));
     assert!(messages.iter().all(|message| message.contains("removed")));
 }
+
+#[test]
+fn crate_removed_rules_mirror_matches_knowledge_base_when_available() {
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let crate_removed_rules = manifest_dir.join("removed-rules.json");
+    let kb_removed_rules = manifest_dir.join("../../knowledge-base/removed-rules.json");
+    if !kb_removed_rules.exists() {
+        eprintln!("Skipping removed-rules parity test: workspace knowledge base not found");
+        return;
+    }
+
+    let crate_content =
+        std::fs::read_to_string(crate_removed_rules).expect("read crate removed-rules mirror");
+    let kb_content =
+        std::fs::read_to_string(kb_removed_rules).expect("read knowledge-base removed-rules");
+
+    assert_eq!(
+        crate_content, kb_content,
+        "crates/agnix-core/removed-rules.json must mirror knowledge-base/removed-rules.json"
+    );
+}

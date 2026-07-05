@@ -16,6 +16,9 @@
  * 2. `crates/agnix-rules/rules.json`
  *    - Byte-identical mirror of `knowledge-base/rules.json`.
  *
+ * 2b. `crates/agnix-core/removed-rules.json`
+ *    - Byte-identical mirror of `knowledge-base/removed-rules.json`.
+ *
  * 3. Count phrases in every file in `COUNT_FILES`:
  *    - `CLAUDE.md`, `AGENTS.md`, `README.md`
  *    - `knowledge-base/README.md`, `knowledge-base/INDEX.md`
@@ -81,7 +84,9 @@ const { execFileSync } = require('child_process');
 const ROOT = path.resolve(__dirname, '..');
 
 const KNOWLEDGE_RULES = path.join(ROOT, 'knowledge-base', 'rules.json');
+const KNOWLEDGE_REMOVED_RULES = path.join(ROOT, 'knowledge-base', 'removed-rules.json');
 const CRATE_RULES = path.join(ROOT, 'crates', 'agnix-rules', 'rules.json');
+const CORE_REMOVED_RULES = path.join(ROOT, 'crates', 'agnix-core', 'removed-rules.json');
 
 // Files whose "N rules" / "N validation rules" phrases must track
 // `rules.length`. Some files (notably `knowledge-base/INDEX.md`) also
@@ -295,6 +300,22 @@ if (!crateContent || !knowledgeContent.equals(crateContent)) {
   if (!checkMode) {
     fs.writeFileSync(CRATE_RULES, knowledgeContent);
     console.log('[OK] Synced crates/agnix-rules/rules.json');
+  }
+}
+
+// ---- 2b. crates/agnix-core/removed-rules.json: byte-identical mirror ----
+
+const removedRulesContent = fs.readFileSync(KNOWLEDGE_REMOVED_RULES);
+const coreRemovedRulesContent = fs.existsSync(CORE_REMOVED_RULES)
+  ? fs.readFileSync(CORE_REMOVED_RULES)
+  : null;
+if (!coreRemovedRulesContent || !removedRulesContent.equals(coreRemovedRulesContent)) {
+  note(
+    'crates/agnix-core/removed-rules.json is not a byte-identical mirror of knowledge-base/removed-rules.json'
+  );
+  if (!checkMode) {
+    fs.writeFileSync(CORE_REMOVED_RULES, removedRulesContent);
+    console.log('[OK] Synced crates/agnix-core/removed-rules.json');
   }
 }
 

@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.37.5] - 2026-07-05
+
+### Fixed
+- **Crates.io package completeness**. Ship the removed-rule lifecycle index inside `agnix-core` and mirror it from `knowledge-base/removed-rules.json`, so published `agnix-core` tarballs verify outside the workspace and downstream crates can publish cleanly.
+
 ## [0.37.4] - 2026-07-05
 
 ### Added
