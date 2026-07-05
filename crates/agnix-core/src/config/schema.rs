@@ -1,4 +1,7 @@
 use super::*;
+use serde::Deserialize;
+use std::collections::HashMap;
+use std::sync::LazyLock;
 
 /// Known rule-ID prefixes used to validate `disabled_rules` entries.
 ///
@@ -45,6 +48,35 @@ pub(in crate::config) const KNOWN_RULE_PREFIXES: &[&str] = &[
     "imports::",
 ];
 
+const REMOVED_RULES_JSON: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../../knowledge-base/removed-rules.json"
+));
+
+#[derive(Debug, Clone, Deserialize)]
+struct RemovedRule {
+    id: String,
+    removed_in: String,
+    reason: String,
+    #[serde(default)]
+    replaced_by: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct RemovedRulesIndex {
+    removed_rules: Vec<RemovedRule>,
+}
+
+static REMOVED_RULES: LazyLock<HashMap<String, RemovedRule>> = LazyLock::new(|| {
+    let index: RemovedRulesIndex = serde_json::from_str(REMOVED_RULES_JSON)
+        .expect("knowledge-base/removed-rules.json must be valid JSON");
+    index
+        .removed_rules
+        .into_iter()
+        .map(|rule| (rule.id.clone(), rule))
+        .collect()
+});
+
 impl LintConfig {
     /// Validate the configuration and return any warnings.
     ///
@@ -61,6 +93,8 @@ impl LintConfig {
             &self.data.rules.disabled_rules,
             &mut warnings,
         );
+        let severity_rule_ids: Vec<String> = self.data.rules.severity.keys().cloned().collect();
+        validate_rule_ids("rules.severity", &severity_rule_ids, &mut warnings);
 
         // Validate tools array contains known tools
         let known_tools = [
@@ -150,6 +184,25 @@ impl LintConfig {
 /// location (`"rules.disabled_rules"` vs `"overrides[N].disabled_rules"`).
 fn validate_rule_ids(field: &str, rule_ids: &[String], warnings: &mut Vec<ConfigWarning>) {
     for rule_id in rule_ids {
+        if let Some(removed) = REMOVED_RULES.get(rule_id) {
+            let replacement = if removed.replaced_by.is_empty() {
+                "no direct replacement".to_string()
+            } else {
+                format!("use {}", removed.replaced_by.join(", "))
+            };
+            warnings.push(ConfigWarning {
+                field: field.to_string(),
+                message: format!(
+                    "Rule {} was removed in {}: {}",
+                    removed.id, removed.removed_in, removed.reason
+                ),
+                suggestion: Some(format!(
+                    "Remove {} from {}; {}.",
+                    removed.id, field, replacement
+                )),
+            });
+            continue;
+        }
         let matches_known = KNOWN_RULE_PREFIXES
             .iter()
             .any(|prefix| rule_id.starts_with(prefix));

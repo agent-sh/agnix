@@ -310,6 +310,8 @@ fn diagnostic_serde_roundtrip_preserves_all_fields() {
         file: PathBuf::from("project/agents/reviewer.md"),
         line: 42,
         column: 7,
+        end_line: None,
+        end_column: None,
         rule: "CC-AG-003".to_string(),
         suggestion: Some("Use a valid model name".to_string()),
         fixes: vec![

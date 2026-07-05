@@ -4,7 +4,8 @@ use std::fs;
 fn release_publish_jobs_are_gated_by_tests() {
     let root = env!("CARGO_MANIFEST_DIR");
     let workflow = fs::read_to_string(format!("{root}/.github/workflows/release.yml"))
-        .expect("failed to read release workflow");
+        .expect("failed to read release workflow")
+        .replace("\r\n", "\n");
 
     assert!(
         workflow.contains("  test:\n    name: Test release commit"),
@@ -49,7 +50,8 @@ fn release_publish_jobs_are_gated_by_tests() {
 fn release_workflow_publishes_lsp_binary_checksums() {
     let root = env!("CARGO_MANIFEST_DIR");
     let workflow = fs::read_to_string(format!("{root}/.github/workflows/release.yml"))
-        .expect("failed to read release workflow");
+        .expect("failed to read release workflow")
+        .replace("\r\n", "\n");
 
     assert!(
         workflow.contains("agnix-lsp-${{ matrix.target }}.sha256"),
@@ -69,7 +71,8 @@ fn release_workflow_publishes_lsp_binary_checksums() {
 fn release_workflow_scopes_attestation_and_release_permissions() {
     let root = env!("CARGO_MANIFEST_DIR");
     let workflow = fs::read_to_string(format!("{root}/.github/workflows/release.yml"))
-        .expect("failed to read release workflow");
+        .expect("failed to read release workflow")
+        .replace("\r\n", "\n");
 
     assert!(
         workflow.contains("permissions:\n  contents: read"),

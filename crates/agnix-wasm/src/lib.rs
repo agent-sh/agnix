@@ -37,6 +37,8 @@ struct WasmDiagnostic {
     message: String,
     line: usize,
     column: usize,
+    end_line: Option<usize>,
+    end_column: Option<usize>,
     suggestion: Option<String>,
     assumption: Option<String>,
     fixes: Vec<WasmFix>,
@@ -54,6 +56,8 @@ impl WasmDiagnostic {
             message: d.message,
             line: d.line,
             column: d.column,
+            end_line: d.end_line,
+            end_column: d.end_column,
             suggestion: d.suggestion,
             assumption: d.assumption,
             fixes: d

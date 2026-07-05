@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Issue batch: diagnostics, config UX, lifecycle, security taxonomy, and CI portability** (closes #1151, #1159, #1160, #1161, #1162, #1163, #1164). CI now runs the workspace test suite on Linux, Windows, and macOS; Windows-sensitive tests normalize CRLF and canonical paths. Diagnostics now carry optional ranges, text output shows code frames, JSON/SARIF/LSP/WASM preserve spans, SARIF includes fixes, and `--format github` emits GitHub Actions annotations. Added `agnix explain <RULE>` with text/JSON output. `.agnix.toml` now supports `extend`, `[rules.severity]` per-rule overrides, and inline suppressions (`agnix: noqa`, `agnix-disable-next-line`). Rule lifecycle policy is documented, removed `AS-*` rule IDs warn in config, and 37 security-facing rules now carry CWE/OWASP/vulnerability-class metadata that SARIF exports as taxonomies.
+
 ## [0.37.3] - 2026-07-04
 
 ### Added

@@ -35,12 +35,45 @@
 //! - **XML-xxx**: XML/XSLT based configs
 //! - **XP-xxx**: Cross-platform rules
 
+/// Structured security taxonomy metadata for a rule.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RuleSecurityMetadata {
+    pub cwe: &'static [&'static str],
+    pub owasp: &'static [&'static str],
+    pub vulnerability_class: &'static str,
+    pub subcategory: &'static str,
+    pub confidence: &'static str,
+    pub likelihood: &'static str,
+    pub impact: &'static str,
+}
+
+/// String-list taxonomy field used by generated security rule metadata.
+pub type RuleSecurityTaxonomy = &'static [&'static str];
+
+/// Generated security metadata tuple:
+/// `(id, cwe, owasp, vulnerability_class, subcategory, confidence, likelihood, impact)`.
+pub type RuleSecurityRecord = (
+    &'static str,
+    RuleSecurityTaxonomy,
+    RuleSecurityTaxonomy,
+    &'static str,
+    &'static str,
+    &'static str,
+    &'static str,
+    &'static str,
+);
+
 // Include the auto-generated rules data from build.rs
 include!(concat!(env!("OUT_DIR"), "/rules_data.rs"));
 
 /// Returns the total number of rules.
 pub fn rule_count() -> usize {
     RULES_DATA.len()
+}
+
+/// Returns the raw rules catalog JSON generated from `knowledge-base/rules.json`.
+pub fn rules_json() -> &'static str {
+    RULES_JSON
 }
 
 /// Looks up a rule by ID, returning the name if found.
@@ -88,6 +121,26 @@ pub fn get_rule_metadata(id: &str) -> Option<(&'static str, &'static str, &'stat
         .iter()
         .find(|(rule_id, _, _, _)| *rule_id == id)
         .map(|(_, category, severity, tool)| (*category, *severity, *tool))
+}
+
+/// Looks up security taxonomy metadata for a rule by ID.
+pub fn get_rule_security(id: &str) -> Option<RuleSecurityMetadata> {
+    RULES_SECURITY
+        .iter()
+        .find(|(rule_id, _, _, _, _, _, _, _)| *rule_id == id)
+        .map(
+            |(_, cwe, owasp, vulnerability_class, subcategory, confidence, likelihood, impact)| {
+                RuleSecurityMetadata {
+                    cwe,
+                    owasp,
+                    vulnerability_class,
+                    subcategory,
+                    confidence,
+                    likelihood,
+                    impact,
+                }
+            },
+        )
 }
 
 /// Returns the tool name for a given rule ID prefix, if any.

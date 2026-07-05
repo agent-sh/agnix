@@ -319,6 +319,8 @@ fn diagnostic_mapper_accessible() {
         file: PathBuf::from("test.md"),
         line: 3,
         column: 5,
+        end_line: None,
+        end_column: None,
         rule: "AS-001".to_string(),
         suggestion: None,
         fixes: vec![],

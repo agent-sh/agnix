@@ -200,6 +200,8 @@ agnix --fix-unsafe .       # Apply all fixes, including LOW confidence
 agnix --show-fixes .       # Show inline proposed fix diffs in text output
 agnix --format json .      # JSON output for programmatic consumption
 agnix --format sarif .     # SARIF 2.1.0 output for CI/CD
+agnix --format github .    # GitHub Actions annotations
+agnix explain MCP-018      # Explain a rule from rules.json
 agnix --locale es .        # Spanish output
 agnix --list-locales       # Show available locales
 ```
@@ -207,6 +209,7 @@ agnix --list-locales       # Show available locales
 ## Config (.agnix.toml)
 
 ```toml
+extend = []          # Optional base config paths; TOML files may use a string or array
 severity = "Warning"
 target = "Generic"  # Options: Generic, ClaudeCode, Cursor, Codex
 locale = "en"       # Options: en, es, zh-CN
@@ -239,6 +242,10 @@ import_references = true
 # Disable specific rules by ID
 disabled_rules = []  # e.g., ["CC-AG-001", "AS-005"]
 
+[rules.severity]
+# Per-rule severity overrides, e.g. MCP-008 = "Error"
+
+[rules]
 # Disable entire validators by name
 disabled_validators = []  # e.g., ["XmlValidator", "ImportsValidator"]
 
@@ -265,11 +272,16 @@ For each file linted, the effective disabled-rule set is the union of `[rules].d
 
 Files excluded entirely via `[files].exclude` are skipped before any rule runs, so `[[overrides]]` on excluded paths is moot. A block with `paths = []` is a no-op (no file is ever matched). When `.agnix.toml` is loaded without a project root (single-file mode), `paths` patterns are matched against the file name only.
 
+`extend` loads one or more parent config files relative to the current config file before applying the child file. Tables merge recursively; child scalar values and arrays replace parent values.
+
+Inline suppressions are supported for local exceptions. The configuration guide documents the exact same-line and next-line markers.
+
 ### Config Validation
 
 agnix validates `.agnix.toml` files semantically before running validation:
 
-- **Rule ID validation**: `disabled_rules` (in `[rules]` and `[[overrides]]`) must match known patterns (AS-, CC-SK-, CC-HK-, CC-AG-, CC-MEM-, CC-PL-, XML-, MCP-, REF-, XP-, AGM-, COP-, CUR-, CLN-, OC-, CDX-, PE-, VER-, imports::)
+- **Rule ID validation**: `disabled_rules` (in `[rules]` and `[[overrides]]`) and `[rules.severity]` keys must match known patterns (AS-, CC-SK-, CC-HK-, CC-AG-, CC-MEM-, CC-PL-, XML-, MCP-, REF-, XP-, AGM-, COP-, CUR-, CLN-, OC-, CDX-, PE-, VER-, imports::)
+- **Removed rule redirects**: removed rule IDs such as `AS-007`, `AS-010`, and `AS-014` warn with replacement guidance from `knowledge-base/removed-rules.json`
 - **Tool validation**: `tools` array must contain valid tool names (claude-code, cursor, codex, copilot, github-copilot, cline, opencode, generic)
 - **Glob validation**: `[files].*` and `[[overrides]].paths` patterns must be syntactically valid glob expressions. Invalid patterns surface as warnings (CLI flow drops them at load and continues; programmatic `LintConfigBuilder::build()` promotes them to errors).
 - **Override path safety**: `[[overrides]].paths` entries must be project-relative. Absolute paths (`/...`) and traversal segments (`..`) surface as warnings via the CLI (the override becomes a silent no-op because the pattern can never match a project-relative path); programmatic `LintConfigBuilder::build()` and `build_lenient()` both reject these as hard errors at build time.

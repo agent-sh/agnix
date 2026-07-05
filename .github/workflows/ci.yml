@@ -11,8 +11,12 @@ permissions:
 
 jobs:
   ci:
-    name: test
-    runs-on: ubuntu-latest
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -28,35 +32,42 @@ jobs:
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Format check
+        if: matrix.os == 'ubuntu-latest'
         run: cargo fmt --check --all
 
       - name: Clippy
+        if: matrix.os == 'ubuntu-latest'
         run: cargo clippy --workspace --all-targets --all-features -- -D warnings
 
       - name: Test
         run: cargo test --workspace
 
       - name: Rule efficacy eval
+        if: matrix.os == 'ubuntu-latest'
         # Exits non-zero if any tests/eval.yaml case's fired rules diverge from
         # its expected set. Keeps the eval fixtures from silently drifting as
         # rules are added or rescoped (see #981).
         run: cargo run -p agnix-cli --bin agnix -- eval tests/eval.yaml
 
       - name: Kiro S-tier Gate
+        if: matrix.os == 'ubuntu-latest'
         run: cargo test -p agnix-cli --test kiro_ci_gate -- --include-ignored
 
       - name: Rule bookkeeping sync check
+        if: matrix.os == 'ubuntu-latest'
         # Fails if total_rules, count phrases, or the agnix-rules mirror
         # drifted from knowledge-base/rules.json. Fix by running
         # `node scripts/sync-rule-bookkeeping.js` locally.
         run: node scripts/sync-rule-bookkeeping.js --check --skip-docs
 
       - name: Rule count table check
+        if: matrix.os == 'ubuntu-latest'
         # Fails if human-maintained rule count tables or current docs drift
         # from knowledge-base/rules.json.
         run: python3 scripts/check-rule-counts.py
 
       - name: Schema sync check
+        if: matrix.os == 'ubuntu-latest'
         # Fails if the committed .agnix.toml schema differs from the current
         # binary output, or if the VS Code extension copy drifted.
         run: |

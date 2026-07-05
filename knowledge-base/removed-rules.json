@@ -1,0 +1,22 @@
+{
+  "removed_rules": [
+    {
+      "id": "AS-007",
+      "removed_in": "0.37.0",
+      "reason": "Retired during Agent Skills rule consolidation after the same field-shape guidance moved under AS-002, AS-004, AS-005, and AS-006.",
+      "replaced_by": ["AS-002", "AS-004", "AS-005", "AS-006"]
+    },
+    {
+      "id": "AS-010",
+      "removed_in": "0.37.0",
+      "reason": "Retired when trigger guidance became part of the description-quality checks instead of a standalone rule.",
+      "replaced_by": ["AS-003", "AS-008", "AS-009"]
+    },
+    {
+      "id": "AS-014",
+      "removed_in": "0.37.0",
+      "reason": "Retired when cross-platform path checks moved out of Agent Skills and into the XP rule family.",
+      "replaced_by": ["XP-001", "XP-002", "XP-003"]
+    }
+  ]
+}

@@ -32,6 +32,12 @@ pub struct JsonDiagnostic {
     pub line: usize,
     /// Column number (1-based).
     pub column: usize,
+    /// Optional end line number (1-based) for ranged diagnostics.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub end_line: Option<usize>,
+    /// Optional end column number (1-based) for ranged diagnostics.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub end_column: Option<usize>,
     /// Diagnostic message.
     pub message: String,
     /// Optional suggestion for fixing the issue.
@@ -106,6 +112,8 @@ pub fn diagnostics_to_json(
                 file: path_to_string(&diag.file, base_path),
                 line: diag.line.max(1),
                 column: diag.column.max(1),
+                end_line: diag.end_line.map(|line| line.max(1)),
+                end_column: diag.end_column.map(|column| column.max(1)),
                 message: diag.message.clone(),
                 suggestion: diag.suggestion.clone(),
                 assumption: diag.assumption.clone(),
@@ -220,6 +228,8 @@ mod tests {
                 file: PathBuf::from("/p/d.md"),
                 line: 4,
                 column: 4,
+                end_line: None,
+                end_column: None,
                 rule: "AS-004".to_string(),
                 suggestion: None,
                 fixes: vec![],
@@ -335,6 +345,8 @@ mod tests {
             file: PathBuf::from("/p/test.md"),
             line: 1,
             column: 1,
+            end_line: None,
+            end_column: None,
             rule: "UNKNOWN-999".to_string(),
             suggestion: None,
             fixes: vec![],

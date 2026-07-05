@@ -370,6 +370,8 @@ mod output_format_tests {
             file: PathBuf::from("test.md"),
             line: 1,
             column: 1,
+            end_line: None,
+            end_column: None,
             rule: "AS-001".to_string(),
             suggestion: Some("Fix this".to_string()),
             fixes: vec![],
@@ -398,6 +400,8 @@ mod output_format_tests {
             file: PathBuf::from("test.md"),
             line: 5,
             column: 10,
+            end_line: None,
+            end_column: None,
             rule: "PE-003".to_string(),
             suggestion: Some("Remove this".to_string()),
             fixes: vec![Fix {

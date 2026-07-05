@@ -169,6 +169,37 @@ fn test_format_sarif_contains_tool_info() {
 }
 
 #[test]
+fn test_format_sarif_contains_security_taxonomies() {
+    let mut cmd = agnix();
+    let output = cmd
+        .arg("tests/fixtures/valid")
+        .arg("--format")
+        .arg("sarif")
+        .output()
+        .unwrap();
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let json: serde_json::Value = serde_json::from_str(&stdout).unwrap();
+    let taxonomies = json["runs"][0]["taxonomies"].as_array().unwrap();
+    assert!(taxonomies.iter().any(|taxonomy| taxonomy["name"] == "CWE"));
+    assert!(
+        taxonomies
+            .iter()
+            .any(|taxonomy| taxonomy["name"] == "OWASP Top 10")
+    );
+
+    let rules = json["runs"][0]["tool"]["driver"]["rules"]
+        .as_array()
+        .unwrap();
+    let mcp_018 = rules.iter().find(|rule| rule["id"] == "MCP-018").unwrap();
+    assert_eq!(mcp_018["properties"]["cwe"][0], "CWE-798");
+    assert_eq!(
+        mcp_018["properties"]["vulnerabilityClass"],
+        "hardcoded-secret"
+    );
+}
+
+#[test]
 fn test_format_sarif_has_all_rules() {
     let mut cmd = agnix();
     let output = cmd
@@ -234,6 +265,48 @@ fn test_format_text_is_default() {
         .assert()
         .success()
         .stdout(predicate::str::contains("\"version\"").not());
+}
+
+#[test]
+fn test_format_github_outputs_actions_annotations() {
+    use std::fs;
+
+    let temp_dir = tempfile::tempdir().unwrap();
+    let skill_dir = temp_dir.path().join("skills").join("bad-skill");
+    fs::create_dir_all(&skill_dir).unwrap();
+    fs::write(skill_dir.join("SKILL.md"), "# Missing frontmatter\n").unwrap();
+
+    let mut cmd = agnix();
+    cmd.arg(temp_dir.path())
+        .arg("--format")
+        .arg("github")
+        .assert()
+        .failure()
+        .stdout(predicate::str::contains("::error file="))
+        .stdout(predicate::str::contains("title=AS-001"));
+}
+
+#[test]
+fn test_explain_rule_text_and_json() {
+    let mut cmd = agnix();
+    cmd.arg("explain")
+        .arg("MCP-018")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("MCP-018"))
+        .stdout(predicate::str::contains("Sources:"));
+
+    let mut cmd = agnix();
+    let output = cmd
+        .arg("explain")
+        .arg("MCP-018")
+        .arg("--format")
+        .arg("json")
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let json: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(json["id"], "MCP-018");
 }
 
 #[test]

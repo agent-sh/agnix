@@ -96,6 +96,17 @@ pub struct FixMetadata {
     pub fix_safety: Option<String>,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+struct SecurityMetadata {
+    cwe: Vec<String>,
+    owasp: Vec<String>,
+    vulnerability_class: String,
+    subcategory: String,
+    confidence: String,
+    likelihood: String,
+    impact: String,
+}
+
 /// Rule definition from rules.json
 #[derive(Debug, Deserialize)]
 struct RulesIndex {
@@ -114,6 +125,9 @@ struct RuleEntry {
     evidence: Evidence,
     /// Auto-fix metadata (required for all rules)
     fix: FixMetadata,
+    /// Security taxonomy metadata (present for security-facing rules)
+    #[serde(default)]
+    security: Option<SecurityMetadata>,
 }
 
 fn workspace_root() -> &'static Path {
@@ -144,6 +158,66 @@ fn load_rules_json() -> RulesIndex {
         .unwrap_or_else(|e| panic!("Failed to read {}: {}", rules_path.display(), e));
     serde_json::from_str(&content)
         .unwrap_or_else(|e| panic!("Failed to parse {}: {}", rules_path.display(), e))
+}
+
+#[test]
+fn security_metadata_is_valid_when_present() {
+    let rules = load_rules_json();
+    let allowed_subcategories = ["vuln", "audit", "secure-default"];
+    let allowed_levels = ["HIGH", "MEDIUM", "LOW"];
+    let mut security_rule_count = 0usize;
+
+    for rule in rules.rules {
+        let Some(security) = rule.security else {
+            continue;
+        };
+        security_rule_count += 1;
+        assert!(
+            !security.cwe.is_empty(),
+            "{} security.cwe must not be empty",
+            rule.id
+        );
+        assert!(
+            security
+                .cwe
+                .iter()
+                .all(|cwe| cwe.starts_with("CWE-") && cwe[4..].chars().all(|c| c.is_ascii_digit())),
+            "{} security.cwe entries must be CWE IDs",
+            rule.id
+        );
+        assert!(
+            !security.owasp.is_empty(),
+            "{} security.owasp must not be empty",
+            rule.id
+        );
+        assert!(
+            !security.vulnerability_class.trim().is_empty(),
+            "{} security.vulnerability_class must not be empty",
+            rule.id
+        );
+        assert!(
+            allowed_subcategories.contains(&security.subcategory.as_str()),
+            "{} security.subcategory is invalid",
+            rule.id
+        );
+        for (field, value) in [
+            ("confidence", security.confidence.as_str()),
+            ("likelihood", security.likelihood.as_str()),
+            ("impact", security.impact.as_str()),
+        ] {
+            assert!(
+                allowed_levels.contains(&value),
+                "{} security.{} is invalid",
+                rule.id,
+                field
+            );
+        }
+    }
+
+    assert!(
+        security_rule_count >= 30,
+        "expected broad security taxonomy coverage, found {security_rule_count}"
+    );
 }
 
 /// Extract SARIF rule IDs from rules.json (since SARIF rules are now generated from rules.json at build time)

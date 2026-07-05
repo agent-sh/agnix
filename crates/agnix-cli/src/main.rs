@@ -43,6 +43,7 @@ pub enum OutputFormat {
     Text,
     Json,
     Sarif,
+    Github,
 }
 
 /// CLI target argument enum with kebab-case names for command line ergonomics.
@@ -125,7 +126,7 @@ struct Cli {
     #[arg(long)]
     show_fixes: bool,
 
-    /// Output format (text, json, or sarif)
+    /// Output format (text, json, sarif, or github)
     #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
     format: OutputFormat,
 
@@ -154,6 +155,14 @@ pub enum EvalOutputFormat {
     Markdown,
     Json,
     Csv,
+}
+
+/// Output format for `agnix explain`.
+#[derive(Debug, Clone, Copy, Default, ValueEnum)]
+pub enum ExplainOutputFormat {
+    #[default]
+    Text,
+    Json,
 }
 
 impl From<EvalOutputFormat> for EvalFormat {
@@ -210,6 +219,16 @@ enum Commands {
         /// Show detailed results for each case
         #[arg(long, short)]
         verbose: bool,
+    },
+
+    /// Explain a validation rule by ID
+    Explain {
+        /// Rule ID to explain (e.g., AS-001 or MCP-008)
+        rule: String,
+
+        /// Output format (text or json)
+        #[arg(long, short, value_enum, default_value_t = ExplainOutputFormat::Text)]
+        format: ExplainOutputFormat,
     },
 
     /// Manage telemetry settings (opt-in usage analytics)
@@ -329,6 +348,7 @@ fn main() {
             filter,
             verbose,
         }) => eval_command(path, *format, filter.as_deref(), *verbose),
+        Some(Commands::Explain { rule, format }) => explain_command(rule, *format),
         Some(Commands::Telemetry { action }) => telemetry_command(*action),
         Some(Commands::Schema { output, fix }) => schema_command(output.as_ref(), *fix),
         Some(Commands::Tools(subcmd)) => tools_command(subcmd, &cli),
@@ -578,7 +598,7 @@ fn validate_command(paths: &[PathBuf], cli: &Cli) -> anyhow::Result<()> {
     // Resolve absolute path for consistent relative output.
     // SARIF uses the git repository root so artifact URIs are relative to the
     // workspace root, which IDEs expect. Text/JSON use CWD for backwards compatibility.
-    let base_path = if matches!(cli.format, OutputFormat::Sarif) {
+    let base_path = if matches!(cli.format, OutputFormat::Sarif | OutputFormat::Github) {
         sarif::find_git_root(primary)
             .unwrap_or_else(|| std::fs::canonicalize(".").unwrap_or_else(|_| PathBuf::from(".")))
     } else {
@@ -589,7 +609,10 @@ fn validate_command(paths: &[PathBuf], cli: &Cli) -> anyhow::Result<()> {
     // diagnostic messages are always in English for tooling interoperability.
     // Save and restore the user's locale so that any subsequent stderr output
     // (e.g., error messages) remains in their chosen locale.
-    let is_machine_output = matches!(cli.format, OutputFormat::Json | OutputFormat::Sarif);
+    let is_machine_output = matches!(
+        cli.format,
+        OutputFormat::Json | OutputFormat::Sarif | OutputFormat::Github
+    );
     let saved_locale = if is_machine_output {
         let current = rust_i18n::locale().to_string();
         rust_i18n::set_locale("en");
@@ -656,6 +679,23 @@ fn validate_command(paths: &[PathBuf], cli: &Cli) -> anyhow::Result<()> {
         return Ok(());
     }
 
+    // Handle GitHub Actions annotation output format
+    if matches!(cli.format, OutputFormat::Github) {
+        print_github_annotations(&diagnostics, &base_path);
+
+        let has_errors = diagnostics
+            .iter()
+            .any(|d| d.level == DiagnosticLevel::Error);
+        let has_warnings = diagnostics
+            .iter()
+            .any(|d| d.level == DiagnosticLevel::Warning);
+
+        if has_errors || (cli.strict && has_warnings) {
+            process::exit(1);
+        }
+        return Ok(());
+    }
+
     // Text output format
     println!(
         "{} {}",
@@ -698,6 +738,9 @@ fn validate_command(paths: &[PathBuf], cli: &Cli) -> anyhow::Result<()> {
             diag.message,
             fixable_marker
         );
+        if let Some(frame) = render_code_frame(diag) {
+            println!("{frame}");
+        }
 
         if cli.verbose {
             println!("  {} {}", t!("cli.rule_label").dimmed(), diag.rule.dimmed());
@@ -1027,6 +1070,72 @@ fn confidence_tier_label(tier: FixConfidenceTier) -> &'static str {
     }
 }
 
+fn github_annotation_level(level: DiagnosticLevel) -> &'static str {
+    match level {
+        DiagnosticLevel::Error => "error",
+        DiagnosticLevel::Warning => "warning",
+        DiagnosticLevel::Info => "notice",
+    }
+}
+
+fn github_escape_message(value: &str) -> String {
+    value
+        .replace('%', "%25")
+        .replace('\r', "%0D")
+        .replace('\n', "%0A")
+}
+
+fn github_escape_property(value: &str) -> String {
+    github_escape_message(value)
+        .replace(':', "%3A")
+        .replace(',', "%2C")
+}
+
+fn path_for_github_annotation(path: &Path, base_path: &Path) -> String {
+    path.strip_prefix(base_path)
+        .unwrap_or(path)
+        .to_string_lossy()
+        .replace('\\', "/")
+}
+
+fn print_github_annotations(diagnostics: &[Diagnostic], base_path: &Path) {
+    for diag in diagnostics {
+        let level = github_annotation_level(diag.level);
+        let file = github_escape_property(&path_for_github_annotation(&diag.file, base_path));
+        let title = github_escape_property(&diag.rule);
+        let message = github_escape_message(&diag.message);
+        println!(
+            "::{level} file={file},line={},col={},endLine={},endColumn={},title={title}::{message}",
+            diag.line.max(1),
+            diag.column.max(1),
+            diag.effective_end_line(),
+            diag.effective_end_column()
+        );
+    }
+}
+
+fn render_code_frame(diag: &Diagnostic) -> Option<String> {
+    let content = std::fs::read_to_string(&diag.file).ok()?;
+    let line_no = diag.line.max(1);
+    let source_line = content.lines().nth(line_no - 1)?;
+    let line_width = source_line.chars().count().max(1);
+    let start_col = diag.column.max(1).min(line_width);
+    let mut end_col = if diag.effective_end_line() == line_no {
+        diag.effective_end_column()
+    } else {
+        line_width + 1
+    };
+    end_col = end_col.clamp(start_col.saturating_add(1), line_width + 1);
+    let caret_width = end_col.saturating_sub(start_col).max(1);
+    let gutter = format!("{line_no:>4}");
+    let indent = " ".repeat(start_col.saturating_sub(1));
+    let carets = "^".repeat(caret_width);
+
+    Some(format!(
+        "  {gutter} | {source_line}\n       | {indent}{carets}"
+    ))
+}
+
 fn show_diff(original: &str, fixed: &str) {
     let diff = TextDiff::from_lines(original, fixed);
     for change in diff.iter_all_changes() {
@@ -1237,6 +1346,108 @@ fn eval_command(
     Ok(())
 }
 
+fn explain_command(rule: &str, format: ExplainOutputFormat) -> anyhow::Result<()> {
+    let catalog: serde_json::Value = serde_json::from_str(agnix_rules::rules_json())?;
+    let rules = catalog
+        .get("rules")
+        .and_then(|value| value.as_array())
+        .ok_or_else(|| anyhow::anyhow!("rules catalog is missing a rules array"))?;
+    let rule_entry = rules
+        .iter()
+        .find(|entry| {
+            entry
+                .get("id")
+                .and_then(|value| value.as_str())
+                .is_some_and(|id| id.eq_ignore_ascii_case(rule))
+        })
+        .ok_or_else(|| anyhow::anyhow!("unknown rule ID: {rule}"))?;
+
+    if matches!(format, ExplainOutputFormat::Json) {
+        println!("{}", serde_json::to_string_pretty(rule_entry)?);
+        return Ok(());
+    }
+
+    print_rule_explanation(rule_entry);
+    Ok(())
+}
+
+fn json_string<'a>(value: &'a serde_json::Value, key: &str) -> Option<&'a str> {
+    value.get(key).and_then(|v| v.as_str())
+}
+
+fn nested_json_string<'a>(value: &'a serde_json::Value, path: &[&str]) -> Option<&'a str> {
+    let mut cursor = value;
+    for key in path {
+        cursor = cursor.get(*key)?;
+    }
+    cursor.as_str()
+}
+
+fn print_rule_explanation(rule: &serde_json::Value) {
+    let id = json_string(rule, "id").unwrap_or("UNKNOWN");
+    let name = json_string(rule, "name").unwrap_or("Unnamed rule");
+
+    println!("{id} - {name}");
+    println!(
+        "Severity: {}",
+        json_string(rule, "severity").unwrap_or("unspecified")
+    );
+    println!(
+        "Category: {}",
+        json_string(rule, "category").unwrap_or("unspecified")
+    );
+    if let Some(status) = json_string(rule, "status") {
+        println!("Status: {status}");
+    }
+    if let Some(normative) = nested_json_string(rule, &["evidence", "normative_level"]) {
+        println!("Normative level: {normative}");
+    }
+    if let Some(tool) = nested_json_string(rule, &["evidence", "applies_to", "tool"]) {
+        println!("Applies to: {tool}");
+    }
+    if let Some(source_type) = nested_json_string(rule, &["evidence", "source_type"]) {
+        println!("Source type: {source_type}");
+    }
+    if let Some(verified_on) = nested_json_string(rule, &["evidence", "verified_on"]) {
+        println!("Verified on: {verified_on}");
+    }
+
+    if let Some(urls) = rule
+        .get("evidence")
+        .and_then(|e| e.get("source_urls"))
+        .and_then(|urls| urls.as_array())
+    {
+        println!("Sources:");
+        for url in urls.iter().filter_map(|url| url.as_str()) {
+            println!("  - {url}");
+        }
+    }
+
+    if let Some(fix) = rule.get("fix").and_then(|fix| fix.as_object()) {
+        let autofix = fix
+            .get("autofix")
+            .and_then(|value| value.as_bool())
+            .map(|value| value.to_string())
+            .unwrap_or_else(|| "unspecified".to_string());
+        let safety = fix
+            .get("fix_safety")
+            .and_then(|value| value.as_str())
+            .unwrap_or("unspecified");
+        println!("Autofix: {autofix} ({safety})");
+    }
+
+    if let Some(example) = json_string(rule, "bad_example") {
+        println!();
+        println!("Bad example:");
+        println!("{example}");
+    }
+    if let Some(example) = json_string(rule, "good_example") {
+        println!();
+        println!("Good example:");
+        println!("{example}");
+    }
+}
+
 /// Record telemetry event for a validation run (non-blocking, respects opt-in).
 fn record_telemetry_event(diagnostics: &[agnix_core::Diagnostic], duration: std::time::Duration) {
     use agnix_core::DiagnosticLevel;
@@ -1410,6 +1621,7 @@ fn telemetry_command(action: TelemetryAction) -> anyhow::Result<()> {
 #[cfg(test)]
 mod resolve_fix_mode_tests {
     use super::*;
+    use agnix_core::Diagnostic;
 
     #[test]
     fn fix_safe_selects_safe_only_mode() {
@@ -1445,5 +1657,18 @@ mod resolve_fix_mode_tests {
     fn dry_run_with_fix_unsafe_selects_all_mode() {
         let cli = Cli::parse_from(["agnix", "--dry-run", "--fix-unsafe"]);
         assert_eq!(resolve_fix_mode(&cli), FixApplyMode::All);
+    }
+
+    #[test]
+    fn render_code_frame_clamps_start_column_to_line_width() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let file = temp.path().join("short.md");
+        std::fs::write(&file, "abc\n").unwrap();
+        let diag = Diagnostic::warning(file, 1, 99, "TEST-001", "wide column");
+
+        let frame = render_code_frame(&diag).expect("frame should render");
+
+        assert!(frame.contains("abc"));
+        assert!(frame.contains("^"));
     }
 }

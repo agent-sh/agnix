@@ -16,6 +16,14 @@
         "type": "string"
       }
     },
+    "extend": {
+      "description": "Base configuration file paths to extend before applying this config",
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "string"
+      }
+    },
     "files": {
       "description": "File inclusion/exclusion configuration for non-standard agent files",
       "$ref": "#/$defs/FilesConfig",
@@ -89,6 +97,7 @@
         "prompt_engineering": true,
         "required_fields": true,
         "roo_code": true,
+        "severity": {},
         "skills": true,
         "tool_names": true,
         "windsurf": true,
@@ -329,6 +338,14 @@
           "description": "Enable Roo Code validation rules (ROO-*)",
           "type": "boolean",
           "default": true
+        },
+        "severity": {
+          "description": "Per-rule severity overrides keyed by rule ID (e.g., MCP-008 = \"Error\")",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/SeverityLevel"
+          },
+          "default": {}
         },
         "skills": {
           "description": "Enable Agent Skills validation rules (AS-*, CC-SK-*)",

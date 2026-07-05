@@ -435,6 +435,12 @@ pub struct Diagnostic {
     pub file: PathBuf,
     pub line: usize,
     pub column: usize,
+    /// Optional inclusive end line for diagnostics that cover a range.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub end_line: Option<usize>,
+    /// Optional inclusive end column for diagnostics that cover a range.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub end_column: Option<usize>,
     pub rule: String,
     pub suggestion: Option<String>,
     /// Automatic fixes for this diagnostic
@@ -488,6 +494,8 @@ impl Diagnostic {
             file,
             line,
             column,
+            end_line: None,
+            end_column: None,
             rule: rule.to_string(),
             suggestion: None,
             fixes: Vec::new(),
@@ -510,6 +518,8 @@ impl Diagnostic {
             file,
             line,
             column,
+            end_line: None,
+            end_column: None,
             rule: rule.to_string(),
             suggestion: None,
             fixes: Vec::new(),
@@ -532,6 +542,8 @@ impl Diagnostic {
             file,
             line,
             column,
+            end_line: None,
+            end_column: None,
             rule: rule.to_string(),
             suggestion: None,
             fixes: Vec::new(),
@@ -543,6 +555,25 @@ impl Diagnostic {
     pub fn with_suggestion(mut self, suggestion: impl Into<String>) -> Self {
         self.suggestion = Some(suggestion.into());
         self
+    }
+
+    /// Mark the inclusive source range covered by this diagnostic.
+    pub fn with_span(mut self, end_line: usize, end_column: usize) -> Self {
+        self.end_line = Some(end_line);
+        self.end_column = Some(end_column);
+        self
+    }
+
+    /// Return the end line, falling back to the start line for point diagnostics.
+    pub fn effective_end_line(&self) -> usize {
+        self.end_line.unwrap_or(self.line).max(1)
+    }
+
+    /// Return the end column, falling back to the next column for point diagnostics.
+    pub fn effective_end_column(&self) -> usize {
+        self.end_column
+            .unwrap_or_else(|| self.column.saturating_add(1))
+            .max(1)
     }
 
     /// Add an assumption note for version-aware validation
@@ -913,6 +944,8 @@ mod tests {
             file: PathBuf::from("test.md"),
             line: 1,
             column: 1,
+            end_line: None,
+            end_column: None,
             rule: "UNKNOWN".to_string(),
             suggestion: None,
             fixes: Vec::new(),

@@ -1,8 +1,6 @@
 //! Validation pipeline: file and project validation.
 
-#[cfg(feature = "filesystem")]
-use std::collections::HashMap;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 #[cfg(feature = "filesystem")]
 use std::path::PathBuf;
@@ -171,6 +169,106 @@ fn compile_files_config(files: &crate::config::FilesConfig) -> CompiledFilesConf
         include_as_generic: compile_patterns_lenient(&files.include_as_generic),
         exclude: compile_patterns_lenient(&files.exclude),
     }
+}
+
+#[derive(Default)]
+struct InlineSuppressions {
+    file_all: bool,
+    file_rules: HashSet<String>,
+    line_all: HashSet<usize>,
+    line_rules: HashMap<usize, HashSet<String>>,
+}
+
+fn parse_suppression_rules(payload: &str) -> Vec<String> {
+    payload
+        .trim()
+        .trim_start_matches(':')
+        .trim()
+        .trim_end_matches("-->")
+        .trim_end_matches("*/")
+        .trim()
+        .split(|c: char| c.is_whitespace() || c == ',')
+        .map(str::trim)
+        .filter(|token| !token.is_empty())
+        .map(ToOwned::to_owned)
+        .collect()
+}
+
+fn marker_payload<'a>(line: &'a str, marker: &str) -> Option<&'a str> {
+    line.find(marker).map(|idx| &line[idx + marker.len()..])
+}
+
+fn add_line_suppression(suppressions: &mut InlineSuppressions, line_no: usize, rules: Vec<String>) {
+    if rules.is_empty() {
+        suppressions.line_all.insert(line_no);
+    } else {
+        suppressions
+            .line_rules
+            .entry(line_no)
+            .or_default()
+            .extend(rules);
+    }
+}
+
+fn collect_inline_suppressions(content: &str) -> InlineSuppressions {
+    let mut suppressions = InlineSuppressions::default();
+    for (idx, line) in content.lines().enumerate() {
+        let line_no = idx + 1;
+        let has_next_line = marker_payload(line, "agnix-disable-next-line");
+        if let Some(payload) = has_next_line {
+            add_line_suppression(
+                &mut suppressions,
+                line_no + 1,
+                parse_suppression_rules(payload),
+            );
+        }
+        if let Some(payload) = marker_payload(line, "agnix: noqa") {
+            add_line_suppression(&mut suppressions, line_no, parse_suppression_rules(payload));
+        }
+        if has_next_line.is_none()
+            && let Some(payload) = marker_payload(line, "agnix-disable")
+        {
+            let rules = parse_suppression_rules(payload);
+            if rules.is_empty() {
+                suppressions.file_all = true;
+            } else {
+                suppressions.file_rules.extend(rules);
+            }
+        }
+    }
+    suppressions
+}
+
+fn is_diagnostic_suppressed(diag: &Diagnostic, suppressions: &InlineSuppressions) -> bool {
+    if suppressions.file_all || suppressions.file_rules.contains(&diag.rule) {
+        return true;
+    }
+    suppressions.line_all.contains(&diag.line)
+        || suppressions
+            .line_rules
+            .get(&diag.line)
+            .is_some_and(|rules| rules.contains(&diag.rule))
+}
+
+fn apply_severity_overrides(diagnostics: &mut [Diagnostic], config: &LintConfig) {
+    for diag in diagnostics {
+        if let Some(level) = config.severity_override(&diag.rule) {
+            diag.level = level;
+        }
+    }
+}
+
+fn apply_diagnostic_config(
+    mut diagnostics: Vec<Diagnostic>,
+    content: &str,
+    config: &LintConfig,
+) -> Vec<Diagnostic> {
+    apply_severity_overrides(&mut diagnostics, config);
+    let suppressions = collect_inline_suppressions(content);
+    diagnostics
+        .into_iter()
+        .filter(|diag| !is_diagnostic_suppressed(diag, &suppressions))
+        .collect()
 }
 
 /// Compile `[files]` config patterns, surfacing invalid patterns as diagnostics.
@@ -379,7 +477,11 @@ fn validate_file_with_type(
         }
     }
 
-    Ok(ValidationOutcome::Success(diagnostics))
+    Ok(ValidationOutcome::Success(apply_diagnostic_config(
+        diagnostics,
+        &content,
+        config,
+    )))
 }
 
 /// Validate in-memory content for a given path.
@@ -425,7 +527,7 @@ pub fn validate_content(
         }
     }
 
-    diagnostics
+    apply_diagnostic_config(diagnostics, &content, config)
 }
 
 /// Main entry point for validating a project
@@ -633,6 +735,7 @@ pub fn validate_project_rules(root: &Path, config: &LintConfig) -> LintResult<Ve
             &root_dir,
         )
     }));
+    apply_severity_overrides(&mut diagnostics, &config);
     Ok(diagnostics)
 }
 
@@ -866,6 +969,7 @@ pub fn validate_project_with_registry(
         )
     }));
 
+    apply_severity_overrides(&mut diagnostics, &config);
     sort_diagnostics(&mut diagnostics);
 
     // Extract final count from atomic counter
@@ -1417,6 +1521,7 @@ mod tests {
         let temp = tempfile::TempDir::new().unwrap();
         let skill_path = temp.path().join("SKILL.md");
         std::fs::write(&skill_path, "---\nname: test\n---\nBody").unwrap();
+        let expected_path = std::fs::canonicalize(&skill_path).unwrap_or(skill_path.clone());
 
         let mut registry = ValidatorRegistry::new();
         registry.register(FileType::Skill, || Box::new(PanickingValidator));
@@ -1428,7 +1533,7 @@ mod tests {
         assert!(
             result.diagnostics.iter().any(|diag| {
                 diag.rule == "file::panic"
-                    && diag.file == skill_path
+                    && diag.file == expected_path
                     && diag.message.contains("intentional validator panic")
             }),
             "expected file::panic diagnostic, got {:?}",
