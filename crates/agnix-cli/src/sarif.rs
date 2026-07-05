@@ -5,9 +5,10 @@
 //!
 //! Rules are loaded from the agnix-rules crate at compile time.
 
-use agnix_core::diagnostics::{Diagnostic, DiagnosticLevel};
+use agnix_core::diagnostics::{Diagnostic, DiagnosticLevel, Fix};
 use agnix_rules::RULES_DATA;
 use serde::Serialize;
+use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
@@ -28,6 +29,8 @@ pub struct SarifLog {
 pub struct Run {
     pub tool: Tool,
     pub results: Vec<SarifResult>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub taxonomies: Option<Vec<Taxonomy>>,
 }
 
 #[derive(Debug, Serialize)]
@@ -68,6 +71,27 @@ pub struct ReportingDescriptorProperties {
     /// Tool this rule applies to (e.g., "claude-code").
     #[serde(rename = "appliesToTool", skip_serializing_if = "Option::is_none")]
     pub applies_to_tool: Option<String>,
+    /// CWE taxonomy IDs for security rules.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cwe: Option<Vec<String>>,
+    /// OWASP Top 10 taxonomy IDs for security rules.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub owasp: Option<Vec<String>>,
+    /// Security vulnerability class.
+    #[serde(rename = "vulnerabilityClass", skip_serializing_if = "Option::is_none")]
+    pub vulnerability_class: Option<String>,
+    /// Semgrep-compatible security rule subcategory.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub subcategory: Option<String>,
+    /// Security metadata confidence.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub confidence: Option<String>,
+    /// Security metadata likelihood.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub likelihood: Option<String>,
+    /// Security metadata impact.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub impact: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -82,6 +106,21 @@ pub struct SarifResult {
     pub level: String,
     pub message: Message,
     pub locations: Vec<Location>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fixes: Option<Vec<SarifFix>>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct Taxonomy {
+    pub name: String,
+    pub taxa: Vec<Taxon>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Taxon {
+    pub id: String,
+    pub short_description: Message,
 }
 
 #[derive(Debug, Serialize)]
@@ -107,6 +146,36 @@ pub struct ArtifactLocation {
 pub struct Region {
     pub start_line: usize,
     pub start_column: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub end_line: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub end_column: Option<usize>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SarifFix {
+    pub description: Message,
+    pub artifact_changes: Vec<ArtifactChange>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ArtifactChange {
+    pub artifact_location: ArtifactLocation,
+    pub replacements: Vec<Replacement>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Replacement {
+    pub deleted_region: Region,
+    pub inserted_content: InsertedContent,
+}
+
+#[derive(Debug, Serialize)]
+pub struct InsertedContent {
+    pub text: String,
 }
 
 fn level_to_sarif(level: DiagnosticLevel) -> &'static str {
@@ -127,6 +196,78 @@ fn path_to_uri(path: &Path, base_path: &Path) -> String {
     uri_path
 }
 
+fn diagnostic_region(diag: &Diagnostic) -> Region {
+    Region {
+        // SARIF requires 1-based positions; clamp to 1 for diagnostics without location
+        start_line: diag.line.max(1),
+        start_column: diag.column.max(1),
+        end_line: Some(diag.effective_end_line()),
+        end_column: Some(diag.effective_end_column()),
+    }
+}
+
+fn clamp_to_char_boundary(content: &str, byte_offset: usize) -> usize {
+    let mut offset = byte_offset.min(content.len());
+    while offset > 0 && !content.is_char_boundary(offset) {
+        offset -= 1;
+    }
+    offset
+}
+
+fn byte_to_line_column(content: &str, byte_offset: usize) -> (usize, usize) {
+    let offset = clamp_to_char_boundary(content, byte_offset);
+    let mut line = 1usize;
+    let mut column = 1usize;
+    for ch in content[..offset].chars() {
+        if ch == '\n' {
+            line += 1;
+            column = 1;
+        } else {
+            column += 1;
+        }
+    }
+    (line, column)
+}
+
+fn fix_to_sarif(fix: &Fix, diag: &Diagnostic, base_path: &Path, content: &str) -> SarifFix {
+    let (start_line, start_column) = byte_to_line_column(content, fix.start_byte);
+    let (end_line, end_column) = byte_to_line_column(content, fix.end_byte);
+    SarifFix {
+        description: Message {
+            text: fix.description.clone(),
+        },
+        artifact_changes: vec![ArtifactChange {
+            artifact_location: ArtifactLocation {
+                uri: path_to_uri(&diag.file, base_path),
+            },
+            replacements: vec![Replacement {
+                deleted_region: Region {
+                    start_line,
+                    start_column,
+                    end_line: Some(end_line),
+                    end_column: Some(end_column),
+                },
+                inserted_content: InsertedContent {
+                    text: fix.replacement.clone(),
+                },
+            }],
+        }],
+    }
+}
+
+fn diagnostic_fixes_to_sarif(diag: &Diagnostic, base_path: &Path) -> Option<Vec<SarifFix>> {
+    if diag.fixes.is_empty() {
+        return None;
+    }
+    let content = std::fs::read_to_string(&diag.file).ok()?;
+    let fixes: Vec<SarifFix> = diag
+        .fixes
+        .iter()
+        .map(|fix| fix_to_sarif(fix, diag, base_path, &content))
+        .collect();
+    (!fixes.is_empty()).then_some(fixes)
+}
+
 static RULES: LazyLock<Vec<ReportingDescriptor>> = LazyLock::new(|| {
     // Rules loaded from knowledge-base/rules.json at compile time via build.rs
     RULES_DATA
@@ -134,10 +275,27 @@ static RULES: LazyLock<Vec<ReportingDescriptor>> = LazyLock::new(|| {
         .map(|(id, desc)| {
             let properties =
                 agnix_rules::get_rule_metadata(id).map(|(category, severity, tool)| {
+                    let security = agnix_rules::get_rule_security(id);
                     ReportingDescriptorProperties {
                         category: (!category.is_empty()).then_some(category.to_string()),
                         severity: (!severity.is_empty()).then_some(severity.to_string()),
                         applies_to_tool: (!tool.is_empty()).then_some(tool.to_string()),
+                        cwe: security.map(|security| {
+                            security.cwe.iter().map(|value| value.to_string()).collect()
+                        }),
+                        owasp: security.map(|security| {
+                            security
+                                .owasp
+                                .iter()
+                                .map(|value| value.to_string())
+                                .collect()
+                        }),
+                        vulnerability_class: security
+                            .map(|security| security.vulnerability_class.to_string()),
+                        subcategory: security.map(|security| security.subcategory.to_string()),
+                        confidence: security.map(|security| security.confidence.to_string()),
+                        likelihood: security.map(|security| security.likelihood.to_string()),
+                        impact: security.map(|security| security.impact.to_string()),
                     }
                 });
 
@@ -160,6 +318,54 @@ fn get_all_rules() -> &'static [ReportingDescriptor] {
     &RULES
 }
 
+fn taxonomy_label(id: &str) -> String {
+    match id {
+        "A01:2021" => "Broken Access Control".to_string(),
+        "A02:2021" => "Cryptographic Failures".to_string(),
+        "A03:2021" => "Injection".to_string(),
+        "A05:2021" => "Security Misconfiguration".to_string(),
+        "A07:2021" => "Identification and Authentication Failures".to_string(),
+        "A08:2021" => "Software and Data Integrity Failures".to_string(),
+        "A10:2021" => "Server-Side Request Forgery".to_string(),
+        _ => id.replace('-', " "),
+    }
+}
+
+fn build_taxonomy(name: &str, ids: BTreeSet<String>) -> Option<Taxonomy> {
+    if ids.is_empty() {
+        return None;
+    }
+    Some(Taxonomy {
+        name: name.to_string(),
+        taxa: ids
+            .into_iter()
+            .map(|id| Taxon {
+                short_description: Message {
+                    text: taxonomy_label(&id),
+                },
+                id,
+            })
+            .collect(),
+    })
+}
+
+fn build_security_taxonomies() -> Option<Vec<Taxonomy>> {
+    let mut cwe = BTreeSet::new();
+    let mut owasp = BTreeSet::new();
+    for (_, cwe_values, owasp_values, _, _, _, _, _) in agnix_rules::RULES_SECURITY {
+        cwe.extend(cwe_values.iter().map(|value| (*value).to_string()));
+        owasp.extend(owasp_values.iter().map(|value| (*value).to_string()));
+    }
+    let taxonomies: Vec<Taxonomy> = [
+        build_taxonomy("CWE", cwe),
+        build_taxonomy("OWASP Top 10", owasp),
+    ]
+    .into_iter()
+    .flatten()
+    .collect();
+    (!taxonomies.is_empty()).then_some(taxonomies)
+}
+
 pub fn diagnostics_to_sarif(diagnostics: &[Diagnostic], base_path: &Path) -> SarifLog {
     let results: Vec<SarifResult> = diagnostics
         .iter()
@@ -174,13 +380,10 @@ pub fn diagnostics_to_sarif(diagnostics: &[Diagnostic], base_path: &Path) -> Sar
                     artifact_location: ArtifactLocation {
                         uri: path_to_uri(&diag.file, base_path),
                     },
-                    region: Region {
-                        // SARIF requires 1-based positions; clamp to 1 for diagnostics without location
-                        start_line: diag.line.max(1),
-                        start_column: diag.column.max(1),
-                    },
+                    region: diagnostic_region(diag),
                 },
             }],
+            fixes: diagnostic_fixes_to_sarif(diag, base_path),
         })
         .collect();
 
@@ -197,6 +400,7 @@ pub fn diagnostics_to_sarif(diagnostics: &[Diagnostic], base_path: &Path) -> Sar
                 },
             },
             results,
+            taxonomies: build_security_taxonomies(),
         }],
     }
 }
@@ -444,6 +648,62 @@ mod tests {
             result.locations[0].physical_location.artifact_location.uri,
             "test.md"
         );
+        assert_eq!(
+            result.locations[0].physical_location.region.end_line,
+            Some(10)
+        );
+        assert_eq!(
+            result.locations[0].physical_location.region.end_column,
+            Some(6)
+        );
+    }
+
+    #[test]
+    fn test_sarif_includes_diagnostic_span() {
+        let diag = Diagnostic::error(
+            PathBuf::from("/project/test.md"),
+            10,
+            5,
+            "AS-001",
+            "Missing frontmatter".to_string(),
+        )
+        .with_span(12, 3);
+
+        let sarif = diagnostics_to_sarif(&[diag], Path::new("/project"));
+        let region = &sarif.runs[0].results[0].locations[0]
+            .physical_location
+            .region;
+        assert_eq!(region.end_line, Some(12));
+        assert_eq!(region.end_column, Some(3));
+    }
+
+    #[test]
+    fn test_sarif_includes_fixes() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let file = temp.path().join("test.md");
+        std::fs::write(&file, "abc\n").unwrap();
+        let diag = Diagnostic::error(file.clone(), 1, 2, "AS-001", "bad").with_fix(Fix::replace(
+            1,
+            2,
+            "x",
+            "replace b",
+            true,
+        ));
+
+        let sarif = diagnostics_to_sarif(&[diag], temp.path());
+        let fixes = sarif.runs[0].results[0].fixes.as_ref().unwrap();
+        assert_eq!(fixes.len(), 1);
+        assert_eq!(fixes[0].description.text, "replace b");
+        assert_eq!(
+            fixes[0].artifact_changes[0].artifact_location.uri,
+            "test.md"
+        );
+        assert_eq!(
+            fixes[0].artifact_changes[0].replacements[0]
+                .inserted_content
+                .text,
+            "x"
+        );
     }
 
     #[test]
@@ -506,6 +766,8 @@ mod tests {
             file: PathBuf::from("/project/test.md"),
             line: 1,
             column: 1,
+            end_line: None,
+            end_column: None,
             rule: "info".to_string(),
             suggestion: None,
             fixes: vec![],
@@ -642,6 +904,8 @@ mod tests {
             file: PathBuf::from("/project/test.md"),
             line: 0,
             column: 0,
+            end_line: None,
+            end_column: None,
             rule: "AS-001".to_string(),
             suggestion: None,
             fixes: vec![],

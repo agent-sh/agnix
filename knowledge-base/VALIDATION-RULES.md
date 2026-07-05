@@ -68,6 +68,24 @@ The `applies_to` object specifies when a rule is relevant:
 
 Rules with an empty `applies_to` object (`{}`) apply universally.
 
+### Security Metadata
+
+Security-relevant rules may include a `security` object in `knowledge-base/rules.json`. These fields feed SARIF rule properties and run taxonomies:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `cwe` | string[] | CWE IDs such as CWE ID 798 |
+| `owasp` | string[] | OWASP Top 10 IDs such as `A07:2021` |
+| `vulnerability_class` | string | Short class such as `hardcoded-secret` or `command-injection` |
+| `subcategory` | enum | `vuln`, `audit`, or `secure-default` |
+| `confidence` | enum | `HIGH`, `MEDIUM`, or `LOW` |
+| `likelihood` | enum | `HIGH`, `MEDIUM`, or `LOW` |
+| `impact` | enum | `HIGH`, `MEDIUM`, or `LOW` |
+
+### Lifecycle Metadata
+
+Rules are active by default. Deprecated rules should include `status`, `deprecated_since`, `replaced_by`, and `reason` fields in `rules.json`. Removed rule IDs are tracked in `knowledge-base/removed-rules.json` so `.agnix.toml` validation can warn on stale suppressions and point users at replacement rules.
+
 ### Example Evidence Block
 
 ```json

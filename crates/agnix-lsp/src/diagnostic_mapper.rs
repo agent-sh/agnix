@@ -75,6 +75,8 @@ pub fn to_lsp_diagnostic(diag: &Diagnostic) -> LspDiagnostic {
 
     let line = diag.line.saturating_sub(1) as u32;
     let column = diag.column.saturating_sub(1) as u32;
+    let end_line = diag.effective_end_line().saturating_sub(1) as u32;
+    let end_column = diag.effective_end_column().saturating_sub(1) as u32;
 
     let message = if let Some(ref suggestion) = diag.suggestion {
         format!(
@@ -103,8 +105,8 @@ pub fn to_lsp_diagnostic(diag: &Diagnostic) -> LspDiagnostic {
                 character: column,
             },
             end: Position {
-                line,
-                character: column,
+                line: end_line,
+                character: end_column,
             },
         },
         severity: Some(severity),
@@ -142,6 +144,8 @@ mod tests {
             file: PathBuf::from("test.md"),
             line,
             column,
+            end_line: None,
+            end_column: None,
             rule: rule.to_string(),
             suggestion: suggestion.map(String::from),
             fixes: vec![],
@@ -164,6 +168,8 @@ mod tests {
             file: PathBuf::from("test.md"),
             line,
             column,
+            end_line: None,
+            end_column: None,
             rule: rule.to_string(),
             suggestion: None,
             fixes,

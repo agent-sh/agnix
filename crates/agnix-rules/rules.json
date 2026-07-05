@@ -27,7 +27,22 @@
       "fix_safety": "safe|unsafe|safe/unsafe (only present when autofix is true)"
     },
     "good_example": "string - valid config snippet that passes this rule (optional, falls back to category template)",
-    "bad_example": "string - invalid config snippet that triggers this rule (optional, falls back to category template)"
+    "bad_example": "string - invalid config snippet that triggers this rule (optional, falls back to category template)",
+    "security": {
+      "cwe": "array of CWE IDs, e.g. CWE-798",
+      "owasp": "array of OWASP Top 10 tags, e.g. A07:2021",
+      "vulnerability_class": "short taxonomy class such as hardcoded-secret or command-injection",
+      "subcategory": "vuln|audit|secure-default",
+      "confidence": "HIGH|MEDIUM|LOW",
+      "likelihood": "HIGH|MEDIUM|LOW",
+      "impact": "HIGH|MEDIUM|LOW"
+    },
+    "lifecycle": {
+      "status": "active|deprecated|removed",
+      "deprecated_since": "version string when status=deprecated",
+      "replaced_by": "array of replacement rule IDs",
+      "reason": "human-readable lifecycle rationale"
+    }
   },
   "rules": [
     {
@@ -658,7 +673,20 @@
         "autofix": false
       },
       "good_example": "---\nname: small-skill\ndescription: Use when running a lightweight task\n---\nThis skill directory is under 8MB total.",
-      "bad_example": "---\nname: huge-skill\ndescription: Use when running a task with many large assets\n---\nThis skill bundles 10MB of binary data in its directory."
+      "bad_example": "---\nname: huge-skill\ndescription: Use when running a task with many large assets\n---\nThis skill bundles 10MB of binary data in its directory.",
+      "security": {
+        "cwe": [
+          "CWE-400"
+        ],
+        "owasp": [
+          "A05:2021"
+        ],
+        "vulnerability_class": "resource-exhaustion",
+        "subcategory": "vuln",
+        "confidence": "MEDIUM",
+        "likelihood": "LOW",
+        "impact": "MEDIUM"
+      }
     },
     {
       "id": "AS-016",
@@ -824,7 +852,20 @@
         "fix_safety": "unsafe"
       },
       "good_example": "---\nname: code-reviewer\ndescription: Reviews code\npermissionMode: acceptEdits\n---\nReview code changes.",
-      "bad_example": "---\nname: code-reviewer\ndescription: Reviews code\npermissionMode: yolo\n---\nReview code changes."
+      "bad_example": "---\nname: code-reviewer\ndescription: Reviews code\npermissionMode: yolo\n---\nReview code changes.",
+      "security": {
+        "cwe": [
+          "CWE-732"
+        ],
+        "owasp": [
+          "A01:2021"
+        ],
+        "vulnerability_class": "insecure-permissions",
+        "subcategory": "audit",
+        "confidence": "HIGH",
+        "likelihood": "MEDIUM",
+        "impact": "HIGH"
+      }
     },
     {
       "id": "CC-AG-005",
@@ -878,7 +919,20 @@
         "autofix": false
       },
       "good_example": "---\nname: safe-agent\ndescription: Agent with separate tool lists\ntools:\n  - Read\n  - Grep\ndisallowedTools:\n  - Bash\n---\nAgent instructions.",
-      "bad_example": "---\nname: conflict-agent\ndescription: Agent with conflicting tool lists\ntools:\n  - Read\n  - Bash\ndisallowedTools:\n  - Bash\n---\nAgent instructions."
+      "bad_example": "---\nname: conflict-agent\ndescription: Agent with conflicting tool lists\ntools:\n  - Read\n  - Bash\ndisallowedTools:\n  - Bash\n---\nAgent instructions.",
+      "security": {
+        "cwe": [
+          "CWE-284"
+        ],
+        "owasp": [
+          "A01:2021"
+        ],
+        "vulnerability_class": "authorization-bypass",
+        "subcategory": "vuln",
+        "confidence": "HIGH",
+        "likelihood": "MEDIUM",
+        "impact": "HIGH"
+      }
     },
     {
       "id": "CC-AG-007",
@@ -1042,7 +1096,20 @@
         "fix_safety": "unsafe"
       },
       "good_example": "---\nname: my-agent\ndescription: Agent with safe permissions\npermissionMode: default\n---\nAgent instructions.",
-      "bad_example": "---\nname: my-agent\ndescription: Agent with dangerous permissions\npermissionMode: bypassPermissions\n---\nAgent instructions."
+      "bad_example": "---\nname: my-agent\ndescription: Agent with dangerous permissions\npermissionMode: bypassPermissions\n---\nAgent instructions.",
+      "security": {
+        "cwe": [
+          "CWE-732"
+        ],
+        "owasp": [
+          "A01:2021"
+        ],
+        "vulnerability_class": "insecure-permissions",
+        "subcategory": "audit",
+        "confidence": "HIGH",
+        "likelihood": "MEDIUM",
+        "impact": "HIGH"
+      }
     },
     {
       "id": "CC-AG-013",
@@ -1427,7 +1494,20 @@
         "autofix": false
       },
       "good_example": "{\n  \"hooks\": {\n    \"PreToolUse\": [\n      {\n        \"matcher\": \"Bash\",\n        \"hooks\": [\n          { \"type\": \"command\", \"command\": \"echo $TOOL_INPUT | jq .command\", \"timeout\": 30 }\n        ]\n      }\n    ]\n  }\n}",
-      "bad_example": "{\n  \"hooks\": {\n    \"PreToolUse\": [\n      {\n        \"matcher\": \"Bash\",\n        \"hooks\": [\n          { \"type\": \"command\", \"command\": \"rm -rf /\", \"timeout\": 30 }\n        ]\n      }\n    ]\n  }\n}"
+      "bad_example": "{\n  \"hooks\": {\n    \"PreToolUse\": [\n      {\n        \"matcher\": \"Bash\",\n        \"hooks\": [\n          { \"type\": \"command\", \"command\": \"rm -rf /\", \"timeout\": 30 }\n        ]\n      }\n    ]\n  }\n}",
+      "security": {
+        "cwe": [
+          "CWE-78"
+        ],
+        "owasp": [
+          "A03:2021"
+        ],
+        "vulnerability_class": "command-injection",
+        "subcategory": "vuln",
+        "confidence": "HIGH",
+        "likelihood": "MEDIUM",
+        "impact": "HIGH"
+      }
     },
     {
       "id": "CC-HK-010",
@@ -1868,7 +1948,22 @@
         "fix_safety": "safe"
       },
       "good_example": "{ \"type\": \"http\", \"url\": \"https://ex.com\", \"headers\": { \"Authorization\": \"$TOKEN\" }, \"allowedEnvVars\": [\"TOKEN\"] }",
-      "bad_example": "{ \"type\": \"http\", \"url\": \"https://ex.com\", \"headers\": { \"Authorization\": \"$TOKEN\" } }"
+      "bad_example": "{ \"type\": \"http\", \"url\": \"https://ex.com\", \"headers\": { \"Authorization\": \"$TOKEN\" } }",
+      "security": {
+        "cwe": [
+          "CWE-200",
+          "CWE-522"
+        ],
+        "owasp": [
+          "A02:2021",
+          "A05:2021"
+        ],
+        "vulnerability_class": "secret-exposure",
+        "subcategory": "vuln",
+        "confidence": "HIGH",
+        "likelihood": "MEDIUM",
+        "impact": "HIGH"
+      }
     },
     {
       "id": "CC-HK-025",
@@ -2202,7 +2297,20 @@
         "autofix": false
       },
       "good_example": "# Project Rules\n\nUse TypeScript strict mode.\nRun tests before committing.\nFollow the style guide.",
-      "bad_example": "# Project Rules\n- Follow coding standard rule 1: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 2: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 3: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 4: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 5: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 6: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 7: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 8: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 9: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 10: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 11: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 12: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 13: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 14: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 15: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 16: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 17: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 18: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 19: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 20: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 21: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 22: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 23: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 24: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 25: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 26: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 27: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 28: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 29: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 30: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 31: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 32: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 33: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 34: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 35: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 36: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 37: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 38: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 39: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 40: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 41: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 42: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 43: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 44: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 45: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 46: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 47: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 48: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 49: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 50: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 51: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 52: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 53: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 54: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 55: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 56: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 57: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 58: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 59: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 60: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 61: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 62: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 63: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 64: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 65: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 66: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 67: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 68: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 69: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 70: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 71: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 72: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 73: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 74: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 75: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 76: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 77: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 78: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 79: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 80: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 81: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 82: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 83: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 84: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 85: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 86: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 87: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 88: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 89: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 90: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 91: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 92: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 93: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 94: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 95: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 96: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 97: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 98: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 99: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 100: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 101: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 102: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 103: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 104: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 105: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 106: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 107: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 108: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 109: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 110: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 111: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 112: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 113: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 114: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 115: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 116: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 117: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 118: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 119: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 120: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 121: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 122: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 123: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 124: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 125: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 126: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 127: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 128: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 129: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 130: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 131: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 132: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 133: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 134: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 135: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 136: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 137: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 138: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 139: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 140: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 141: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 142: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 143: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 144: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 145: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 146: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 147: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 148: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 149: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 150: use consistent naming conventions and document all public APIs.\n"
+      "bad_example": "# Project Rules\n- Follow coding standard rule 1: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 2: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 3: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 4: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 5: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 6: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 7: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 8: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 9: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 10: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 11: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 12: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 13: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 14: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 15: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 16: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 17: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 18: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 19: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 20: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 21: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 22: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 23: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 24: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 25: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 26: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 27: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 28: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 29: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 30: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 31: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 32: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 33: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 34: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 35: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 36: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 37: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 38: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 39: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 40: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 41: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 42: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 43: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 44: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 45: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 46: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 47: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 48: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 49: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 50: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 51: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 52: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 53: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 54: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 55: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 56: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 57: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 58: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 59: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 60: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 61: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 62: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 63: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 64: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 65: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 66: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 67: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 68: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 69: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 70: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 71: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 72: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 73: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 74: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 75: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 76: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 77: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 78: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 79: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 80: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 81: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 82: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 83: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 84: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 85: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 86: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 87: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 88: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 89: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 90: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 91: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 92: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 93: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 94: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 95: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 96: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 97: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 98: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 99: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 100: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 101: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 102: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 103: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 104: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 105: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 106: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 107: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 108: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 109: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 110: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 111: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 112: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 113: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 114: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 115: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 116: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 117: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 118: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 119: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 120: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 121: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 122: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 123: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 124: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 125: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 126: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 127: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 128: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 129: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 130: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 131: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 132: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 133: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 134: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 135: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 136: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 137: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 138: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 139: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 140: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 141: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 142: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 143: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 144: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 145: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 146: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 147: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 148: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 149: use consistent naming conventions and document all public APIs.\n- Follow coding standard rule 150: use consistent naming conventions and document all public APIs.\n",
+      "security": {
+        "cwe": [
+          "CWE-400"
+        ],
+        "owasp": [
+          "A05:2021"
+        ],
+        "vulnerability_class": "resource-exhaustion",
+        "subcategory": "audit",
+        "confidence": "MEDIUM",
+        "likelihood": "LOW",
+        "impact": "MEDIUM"
+      }
     },
     {
       "id": "CC-MEM-010",
@@ -3051,7 +3159,22 @@
         "fix_safety": "unsafe"
       },
       "good_example": "---\nname: deploy-staging\ndescription: Use when deploying to staging environment\ndisable-model-invocation: true\n---\nDeploy the application to staging.",
-      "bad_example": "---\nname: deploy-staging\ndescription: Use when deploying to staging environment\n---\nDeploy the application to staging."
+      "bad_example": "---\nname: deploy-staging\ndescription: Use when deploying to staging environment\n---\nDeploy the application to staging.",
+      "security": {
+        "cwe": [
+          "CWE-20",
+          "CWE-284"
+        ],
+        "owasp": [
+          "A01:2021",
+          "A05:2021"
+        ],
+        "vulnerability_class": "unsafe-auto-invocation",
+        "subcategory": "audit",
+        "confidence": "MEDIUM",
+        "likelihood": "MEDIUM",
+        "impact": "HIGH"
+      }
     },
     {
       "id": "CC-SK-007",
@@ -3079,7 +3202,20 @@
         "fix_safety": "unsafe"
       },
       "good_example": "---\nname: git-status\ndescription: Use when checking git status\nallowed-tools: Bash(git:*), Read\n---\nRun git status and read the output.",
-      "bad_example": "---\nname: git-status\ndescription: Use when checking git status\nallowed-tools: Bash, Read\n---\nRun git status and read the output."
+      "bad_example": "---\nname: git-status\ndescription: Use when checking git status\nallowed-tools: Bash, Read\n---\nRun git status and read the output.",
+      "security": {
+        "cwe": [
+          "CWE-78"
+        ],
+        "owasp": [
+          "A03:2021"
+        ],
+        "vulnerability_class": "command-injection",
+        "subcategory": "audit",
+        "confidence": "HIGH",
+        "likelihood": "MEDIUM",
+        "impact": "HIGH"
+      }
     },
     {
       "id": "CC-SK-008",
@@ -4002,7 +4138,20 @@
         "autofix": false
       },
       "good_example": "project_doc_max_bytes = 32768",
-      "bad_example": "project_doc_max_bytes = 100000"
+      "bad_example": "project_doc_max_bytes = 100000",
+      "security": {
+        "cwe": [
+          "CWE-400"
+        ],
+        "owasp": [
+          "A05:2021"
+        ],
+        "vulnerability_class": "resource-exhaustion",
+        "subcategory": "vuln",
+        "confidence": "MEDIUM",
+        "likelihood": "LOW",
+        "impact": "MEDIUM"
+      }
     },
     {
       "id": "CDX-006",
@@ -4233,7 +4382,20 @@
         "autofix": false
       },
       "good_example": "sandbox_mode = \"danger-full-access\"\n[notice]\nhide_full_access_warning = true",
-      "bad_example": "sandbox_mode = \"danger-full-access\""
+      "bad_example": "sandbox_mode = \"danger-full-access\"",
+      "security": {
+        "cwe": [
+          "CWE-732"
+        ],
+        "owasp": [
+          "A01:2021"
+        ],
+        "vulnerability_class": "insecure-permissions",
+        "subcategory": "vuln",
+        "confidence": "HIGH",
+        "likelihood": "MEDIUM",
+        "impact": "HIGH"
+      }
     },
     {
       "id": "CDX-CFG-008",
@@ -4320,7 +4482,20 @@
         "autofix": false
       },
       "good_example": "api_key = \"${OPENAI_API_KEY}\"",
-      "bad_example": "api_key = \"sk-live-super-secret-value\""
+      "bad_example": "api_key = \"sk-live-super-secret-value\"",
+      "security": {
+        "cwe": [
+          "CWE-798"
+        ],
+        "owasp": [
+          "A07:2021"
+        ],
+        "vulnerability_class": "hardcoded-secret",
+        "subcategory": "vuln",
+        "confidence": "HIGH",
+        "likelihood": "MEDIUM",
+        "impact": "HIGH"
+      }
     },
     {
       "id": "CDX-CFG-011",
@@ -4601,7 +4776,20 @@
         "autofix": false
       },
       "good_example": "mcp_oauth_credentials_store = \"file\"",
-      "bad_example": "mcp_oauth_credentials_store = 123"
+      "bad_example": "mcp_oauth_credentials_store = 123",
+      "security": {
+        "cwe": [
+          "CWE-287"
+        ],
+        "owasp": [
+          "A07:2021"
+        ],
+        "vulnerability_class": "oauth-misconfiguration",
+        "subcategory": "vuln",
+        "confidence": "HIGH",
+        "likelihood": "MEDIUM",
+        "impact": "HIGH"
+      }
     },
     {
       "id": "CDX-CFG-021",
@@ -4711,7 +4899,22 @@
         "autofix": false
       },
       "good_example": "Use `${OPENAI_API_KEY}` from the environment.",
-      "bad_example": "OPENAI_API_KEY=sk-live-super-secret-value"
+      "bad_example": "OPENAI_API_KEY=sk-live-super-secret-value",
+      "security": {
+        "cwe": [
+          "CWE-798",
+          "CWE-200"
+        ],
+        "owasp": [
+          "A07:2021",
+          "A02:2021"
+        ],
+        "vulnerability_class": "secret-exposure",
+        "subcategory": "vuln",
+        "confidence": "HIGH",
+        "likelihood": "MEDIUM",
+        "impact": "HIGH"
+      }
     },
     {
       "id": "CDX-AG-003",
@@ -5101,7 +5304,20 @@
         "autofix": false
       },
       "good_example": "{\"name\": \"my-plugin\", \"mcpServers\": \"./servers\"}",
-      "bad_example": "{\"name\": \"my-plugin\", \"mcpServers\": \"./../../../etc/passwd\"}"
+      "bad_example": "{\"name\": \"my-plugin\", \"mcpServers\": \"./../../../etc/passwd\"}",
+      "security": {
+        "cwe": [
+          "CWE-22"
+        ],
+        "owasp": [
+          "A01:2021"
+        ],
+        "vulnerability_class": "path-traversal",
+        "subcategory": "vuln",
+        "confidence": "HIGH",
+        "likelihood": "MEDIUM",
+        "impact": "HIGH"
+      }
     },
     {
       "id": "CDX-PL-007",
@@ -5551,7 +5767,20 @@
         "autofix": false
       },
       "good_example": "[mcp_servers.myserver]\nurl = \"https://api.example.com\"\nbearer_token_env_var = \"MY_API_TOKEN\"",
-      "bad_example": "[mcp_servers.myserver]\nurl = \"https://api.example.com\"\nbearer_token = \"sk-live-...\""
+      "bad_example": "[mcp_servers.myserver]\nurl = \"https://api.example.com\"\nbearer_token = \"sk-live-...\"",
+      "security": {
+        "cwe": [
+          "CWE-798"
+        ],
+        "owasp": [
+          "A07:2021"
+        ],
+        "vulnerability_class": "hardcoded-secret",
+        "subcategory": "vuln",
+        "confidence": "HIGH",
+        "likelihood": "MEDIUM",
+        "impact": "HIGH"
+      }
     },
     {
       "id": "CDX-CFG-029",
@@ -7717,7 +7946,22 @@
         "autofix": false
       },
       "good_example": "---\ninclusion: always\n---\nUse ${API_KEY} from the environment at runtime.",
-      "bad_example": "---\ninclusion: always\n---\nAPI_KEY=hardcoded-secret-123"
+      "bad_example": "---\ninclusion: always\n---\nAPI_KEY=hardcoded-secret-123",
+      "security": {
+        "cwe": [
+          "CWE-798",
+          "CWE-200"
+        ],
+        "owasp": [
+          "A07:2021",
+          "A02:2021"
+        ],
+        "vulnerability_class": "secret-exposure",
+        "subcategory": "vuln",
+        "confidence": "HIGH",
+        "likelihood": "MEDIUM",
+        "impact": "HIGH"
+      }
     },
     {
       "id": "KIRO-007",
@@ -8015,7 +8259,20 @@
         "autofix": false
       },
       "good_example": "{\n  \"resources\": [\"file://docs/architecture.md\", \"skill://deploy\"]\n}",
-      "bad_example": "{\n  \"resources\": [\"https://example.com/private\"]\n}"
+      "bad_example": "{\n  \"resources\": [\"https://example.com/private\"]\n}",
+      "security": {
+        "cwe": [
+          "CWE-918"
+        ],
+        "owasp": [
+          "A10:2021"
+        ],
+        "vulnerability_class": "ssrf",
+        "subcategory": "audit",
+        "confidence": "MEDIUM",
+        "likelihood": "LOW",
+        "impact": "HIGH"
+      }
     },
     {
       "id": "KR-AG-003",
@@ -8320,7 +8577,22 @@
         "autofix": false
       },
       "good_example": "{\"prompt\": \"Use ${API_KEY} from env\"}",
-      "bad_example": "{\"prompt\": \"API_KEY=sk-live-secret123\"}"
+      "bad_example": "{\"prompt\": \"API_KEY=sk-live-secret123\"}",
+      "security": {
+        "cwe": [
+          "CWE-798",
+          "CWE-200"
+        ],
+        "owasp": [
+          "A07:2021",
+          "A02:2021"
+        ],
+        "vulnerability_class": "secret-exposure",
+        "subcategory": "vuln",
+        "confidence": "HIGH",
+        "likelihood": "MEDIUM",
+        "impact": "HIGH"
+      }
     },
     {
       "id": "KR-HK-001",
@@ -8590,7 +8862,22 @@
         "autofix": false
       },
       "good_example": "{\"event\": \"promptSubmit\", \"runCommand\": \"echo $API_KEY\"}",
-      "bad_example": "{\"event\": \"promptSubmit\", \"runCommand\": \"curl -H 'Authorization: Bearer sk-live-secret123'\"}"
+      "bad_example": "{\"event\": \"promptSubmit\", \"runCommand\": \"curl -H 'Authorization: Bearer sk-live-secret123'\"}",
+      "security": {
+        "cwe": [
+          "CWE-798",
+          "CWE-200"
+        ],
+        "owasp": [
+          "A07:2021",
+          "A02:2021"
+        ],
+        "vulnerability_class": "secret-exposure",
+        "subcategory": "vuln",
+        "confidence": "HIGH",
+        "likelihood": "MEDIUM",
+        "impact": "HIGH"
+      }
     },
     {
       "id": "KR-MCP-001",
@@ -8644,7 +8931,20 @@
         "autofix": false
       },
       "good_example": "{\n  \"mcpServers\": {\n    \"server\": {\n      \"command\": \"node\",\n      \"env\": {\"API_KEY\": \"${API_KEY}\"}\n    }\n  }\n}",
-      "bad_example": "{\n  \"mcpServers\": {\n    \"server\": {\n      \"command\": \"node\",\n      \"env\": {\"API_KEY\": \"hardcoded-secret\"}\n    }\n  }\n}"
+      "bad_example": "{\n  \"mcpServers\": {\n    \"server\": {\n      \"command\": \"node\",\n      \"env\": {\"API_KEY\": \"hardcoded-secret\"}\n    }\n  }\n}",
+      "security": {
+        "cwe": [
+          "CWE-798"
+        ],
+        "owasp": [
+          "A07:2021"
+        ],
+        "vulnerability_class": "hardcoded-secret",
+        "subcategory": "vuln",
+        "confidence": "HIGH",
+        "likelihood": "MEDIUM",
+        "impact": "HIGH"
+      }
     },
     {
       "id": "KR-MCP-003",
@@ -8698,7 +8998,20 @@
         "autofix": false
       },
       "good_example": "{\"mcpServers\": {\"remote\": {\"url\": \"https://example.com/mcp\"}}}",
-      "bad_example": "{\"mcpServers\": {\"remote\": {\"url\": \"not-a-url\"}}}"
+      "bad_example": "{\"mcpServers\": {\"remote\": {\"url\": \"not-a-url\"}}}",
+      "security": {
+        "cwe": [
+          "CWE-918"
+        ],
+        "owasp": [
+          "A10:2021"
+        ],
+        "vulnerability_class": "ssrf",
+        "subcategory": "audit",
+        "confidence": "MEDIUM",
+        "likelihood": "LOW",
+        "impact": "HIGH"
+      }
     },
     {
       "id": "KR-MCP-005",
@@ -8969,7 +9282,22 @@
         "autofix": false
       },
       "good_example": "---\nname: test\ndescription: desc\nkeywords: [test]\n---\nUse ${API_KEY}",
-      "bad_example": "---\nname: test\ndescription: desc\nkeywords: [test]\n---\nAPI_KEY=sk-live-secret123"
+      "bad_example": "---\nname: test\ndescription: desc\nkeywords: [test]\n---\nAPI_KEY=sk-live-secret123",
+      "security": {
+        "cwe": [
+          "CWE-798",
+          "CWE-200"
+        ],
+        "owasp": [
+          "A07:2021",
+          "A02:2021"
+        ],
+        "vulnerability_class": "secret-exposure",
+        "subcategory": "vuln",
+        "confidence": "HIGH",
+        "likelihood": "MEDIUM",
+        "impact": "HIGH"
+      }
     },
     {
       "id": "KR-SET-001",
@@ -9189,7 +9517,20 @@
         "autofix": false
       },
       "good_example": "{\n  \"name\": \"delete-file\",\n  \"description\": \"Permanently deletes a file from the filesystem\",\n  \"inputSchema\": { \"type\": \"object\" },\n  \"requiresApproval\": true\n}",
-      "bad_example": "{\n  \"name\": \"delete-file\",\n  \"description\": \"Permanently deletes a file from the filesystem\",\n  \"inputSchema\": { \"type\": \"object\" }\n}"
+      "bad_example": "{\n  \"name\": \"delete-file\",\n  \"description\": \"Permanently deletes a file from the filesystem\",\n  \"inputSchema\": { \"type\": \"object\" }\n}",
+      "security": {
+        "cwe": [
+          "CWE-284"
+        ],
+        "owasp": [
+          "A01:2021"
+        ],
+        "vulnerability_class": "authorization-bypass",
+        "subcategory": "audit",
+        "confidence": "HIGH",
+        "likelihood": "MEDIUM",
+        "impact": "HIGH"
+      }
     },
     {
       "id": "MCP-006",
@@ -9216,7 +9557,20 @@
         "autofix": false
       },
       "good_example": "{\n  \"name\": \"read-file\",\n  \"description\": \"Reads a file and returns its contents as text\",\n  \"inputSchema\": { \"type\": \"object\" },\n  \"annotations\": { \"readOnlyHint\": true, \"title\": \"File Reader\" },\n  \"requiresApproval\": true\n}",
-      "bad_example": "{\n  \"name\": \"read-file\",\n  \"description\": \"Reads a file and returns its contents as text\",\n  \"inputSchema\": { \"type\": \"object\" },\n  \"annotations\": { \"unsafeHint\": true },\n  \"requiresApproval\": true\n}"
+      "bad_example": "{\n  \"name\": \"read-file\",\n  \"description\": \"Reads a file and returns its contents as text\",\n  \"inputSchema\": { \"type\": \"object\" },\n  \"annotations\": { \"unsafeHint\": true },\n  \"requiresApproval\": true\n}",
+      "security": {
+        "cwe": [
+          "CWE-345"
+        ],
+        "owasp": [
+          "A08:2021"
+        ],
+        "vulnerability_class": "trust-boundary",
+        "subcategory": "audit",
+        "confidence": "MEDIUM",
+        "likelihood": "MEDIUM",
+        "impact": "HIGH"
+      }
     },
     {
       "id": "MCP-007",
@@ -9518,7 +9872,20 @@
         "fix_safety": "safe"
       },
       "good_example": "{\n  \"mcpServers\": {\n    \"remote\": {\n      \"type\": \"http\",\n      \"url\": \"https://api.example.com/mcp\"\n    }\n  }\n}",
-      "bad_example": "{\n  \"mcpServers\": {\n    \"remote\": {\n      \"type\": \"http\",\n      \"url\": \"http://api.example.com/mcp\"\n    }\n  }\n}"
+      "bad_example": "{\n  \"mcpServers\": {\n    \"remote\": {\n      \"type\": \"http\",\n      \"url\": \"http://api.example.com/mcp\"\n    }\n  }\n}",
+      "security": {
+        "cwe": [
+          "CWE-319"
+        ],
+        "owasp": [
+          "A02:2021"
+        ],
+        "vulnerability_class": "cleartext-transmission",
+        "subcategory": "vuln",
+        "confidence": "HIGH",
+        "likelihood": "MEDIUM",
+        "impact": "HIGH"
+      }
     },
     {
       "id": "MCP-018",
@@ -9545,7 +9912,20 @@
         "autofix": false
       },
       "good_example": "{\n  \"mcpServers\": {\n    \"local\": {\n      \"type\": \"stdio\",\n      \"command\": \"node\",\n      \"env\": {\n        \"API_KEY\": \"${API_KEY}\"\n      }\n    }\n  }\n}",
-      "bad_example": "{\n  \"mcpServers\": {\n    \"local\": {\n      \"type\": \"stdio\",\n      \"command\": \"node\",\n      \"env\": {\n        \"API_KEY\": \"hardcoded-secret\"\n      }\n    }\n  }\n}"
+      "bad_example": "{\n  \"mcpServers\": {\n    \"local\": {\n      \"type\": \"stdio\",\n      \"command\": \"node\",\n      \"env\": {\n        \"API_KEY\": \"hardcoded-secret\"\n      }\n    }\n  }\n}",
+      "security": {
+        "cwe": [
+          "CWE-798"
+        ],
+        "owasp": [
+          "A07:2021"
+        ],
+        "vulnerability_class": "hardcoded-secret",
+        "subcategory": "vuln",
+        "confidence": "HIGH",
+        "likelihood": "MEDIUM",
+        "impact": "HIGH"
+      }
     },
     {
       "id": "MCP-019",
@@ -9572,7 +9952,20 @@
         "autofix": false
       },
       "good_example": "{\n  \"mcpServers\": {\n    \"local\": {\n      \"type\": \"stdio\",\n      \"command\": \"node server.js\"\n    }\n  }\n}",
-      "bad_example": "{\n  \"mcpServers\": {\n    \"local\": {\n      \"type\": \"stdio\",\n      \"command\": \"curl https://example.com/install.sh | sh\"\n    }\n  }\n}"
+      "bad_example": "{\n  \"mcpServers\": {\n    \"local\": {\n      \"type\": \"stdio\",\n      \"command\": \"curl https://example.com/install.sh | sh\"\n    }\n  }\n}",
+      "security": {
+        "cwe": [
+          "CWE-78"
+        ],
+        "owasp": [
+          "A03:2021"
+        ],
+        "vulnerability_class": "command-injection",
+        "subcategory": "vuln",
+        "confidence": "HIGH",
+        "likelihood": "MEDIUM",
+        "impact": "HIGH"
+      }
     },
     {
       "id": "MCP-020",
@@ -9627,7 +10020,22 @@
         "fix_safety": "safe"
       },
       "good_example": "{\n  \"mcpServers\": {\n    \"local\": {\n      \"type\": \"http\",\n      \"url\": \"http://localhost:3000/mcp\"\n    }\n  }\n}",
-      "bad_example": "{\n  \"mcpServers\": {\n    \"wild\": {\n      \"type\": \"http\",\n      \"url\": \"http://0.0.0.0:3000/mcp\"\n    }\n  }\n}"
+      "bad_example": "{\n  \"mcpServers\": {\n    \"wild\": {\n      \"type\": \"http\",\n      \"url\": \"http://0.0.0.0:3000/mcp\"\n    }\n  }\n}",
+      "security": {
+        "cwe": [
+          "CWE-200",
+          "CWE-668"
+        ],
+        "owasp": [
+          "A01:2021",
+          "A05:2021"
+        ],
+        "vulnerability_class": "network-exposure",
+        "subcategory": "audit",
+        "confidence": "MEDIUM",
+        "likelihood": "MEDIUM",
+        "impact": "HIGH"
+      }
     },
     {
       "id": "MCP-022",
@@ -9900,7 +10308,20 @@
         "autofix": false
       },
       "good_example": "{\n  \"instructions\": [\"**/*.md\"]\n}",
-      "bad_example": "{\n  \"instructions\": [\"https://example.com/rules.md\"]\n}"
+      "bad_example": "{\n  \"instructions\": [\"https://example.com/rules.md\"]\n}",
+      "security": {
+        "cwe": [
+          "CWE-494"
+        ],
+        "owasp": [
+          "A08:2021"
+        ],
+        "vulnerability_class": "untrusted-download",
+        "subcategory": "audit",
+        "confidence": "MEDIUM",
+        "likelihood": "LOW",
+        "impact": "MEDIUM"
+      }
     },
     {
       "id": "OC-007",
@@ -9955,7 +10376,20 @@
         "fix_safety": "unsafe"
       },
       "good_example": "{\n  \"permission\": {\n    \"read\": \"allow\",\n    \"edit\": \"ask\"\n  }\n}",
-      "bad_example": "{\n  \"permission\": {\n    \"read\": \"yes\"\n  }\n}"
+      "bad_example": "{\n  \"permission\": {\n    \"read\": \"yes\"\n  }\n}",
+      "security": {
+        "cwe": [
+          "CWE-732"
+        ],
+        "owasp": [
+          "A01:2021"
+        ],
+        "vulnerability_class": "insecure-permissions",
+        "subcategory": "vuln",
+        "confidence": "HIGH",
+        "likelihood": "MEDIUM",
+        "impact": "HIGH"
+      }
     },
     {
       "id": "OC-009",
@@ -11073,7 +11507,20 @@
         "autofix": false
       },
       "good_example": "{\n  \"provider\": { \"options\": { \"apiKey\": \"{env:OPENAI_API_KEY}\" } }\n}",
-      "bad_example": "{\n  \"provider\": { \"options\": { \"apiKey\": \"sk-1234567890abcdef\" } }\n}"
+      "bad_example": "{\n  \"provider\": { \"options\": { \"apiKey\": \"sk-1234567890abcdef\" } }\n}",
+      "security": {
+        "cwe": [
+          "CWE-798"
+        ],
+        "owasp": [
+          "A07:2021"
+        ],
+        "vulnerability_class": "hardcoded-secret",
+        "subcategory": "vuln",
+        "confidence": "HIGH",
+        "likelihood": "MEDIUM",
+        "impact": "HIGH"
+      }
     },
     {
       "id": "OC-CFG-006",
@@ -11128,7 +11575,22 @@
         "autofix": false
       },
       "good_example": "{\n  \"mcp\": { \"server\": { \"type\": \"local\", \"command\": [\"node\"], \"cwd\": \"plugins/sub\" } }\n}",
-      "bad_example": "{\n  \"mcp\": { \"server\": { \"type\": \"local\", \"command\": [\"node\"], \"cwd\": 42 } }\n}"
+      "bad_example": "{\n  \"mcp\": { \"server\": { \"type\": \"local\", \"command\": [\"node\"], \"cwd\": 42 } }\n}",
+      "security": {
+        "cwe": [
+          "CWE-78",
+          "CWE-22"
+        ],
+        "owasp": [
+          "A03:2021",
+          "A01:2021"
+        ],
+        "vulnerability_class": "command-injection",
+        "subcategory": "vuln",
+        "confidence": "HIGH",
+        "likelihood": "MEDIUM",
+        "impact": "HIGH"
+      }
     },
     {
       "id": "OC-AG-001",
@@ -11263,7 +11725,20 @@
         "autofix": false
       },
       "good_example": "{\n  \"permission\": { \"read\": \"allow\", \"bash\": \"ask\" }\n}",
-      "bad_example": "{\n  \"permission\": { \"read\": \"yes\" }\n}"
+      "bad_example": "{\n  \"permission\": { \"read\": \"yes\" }\n}",
+      "security": {
+        "cwe": [
+          "CWE-732"
+        ],
+        "owasp": [
+          "A01:2021"
+        ],
+        "vulnerability_class": "insecure-permissions",
+        "subcategory": "vuln",
+        "confidence": "HIGH",
+        "likelihood": "MEDIUM",
+        "impact": "HIGH"
+      }
     },
     {
       "id": "OC-PM-002",
@@ -11344,7 +11819,22 @@
         "autofix": false
       },
       "good_example": "# AGENTS\n\nUse environment variables.",
-      "bad_example": "# AGENTS\n\nAPI_KEY=sk-123456"
+      "bad_example": "# AGENTS\n\nAPI_KEY=sk-123456",
+      "security": {
+        "cwe": [
+          "CWE-798",
+          "CWE-200"
+        ],
+        "owasp": [
+          "A07:2021",
+          "A02:2021"
+        ],
+        "vulnerability_class": "secret-exposure",
+        "subcategory": "vuln",
+        "confidence": "HIGH",
+        "likelihood": "MEDIUM",
+        "impact": "HIGH"
+      }
     },
     {
       "id": "OC-DEP-001",
@@ -11592,7 +12082,20 @@
         "autofix": false
       },
       "good_example": "{\n  \"skills\": { \"urls\": [\"https://example.com\"] }\n}",
-      "bad_example": "{\n  \"skills\": { \"urls\": [\"not-a-url\"] }\n}"
+      "bad_example": "{\n  \"skills\": { \"urls\": [\"not-a-url\"] }\n}",
+      "security": {
+        "cwe": [
+          "CWE-494"
+        ],
+        "owasp": [
+          "A08:2021"
+        ],
+        "vulnerability_class": "untrusted-download",
+        "subcategory": "audit",
+        "confidence": "MEDIUM",
+        "likelihood": "LOW",
+        "impact": "MEDIUM"
+      }
     },
     {
       "id": "OC-CFG-011",
@@ -11646,7 +12149,20 @@
         "autofix": false
       },
       "good_example": "{\n  \"mcp\": { \"srv\": { \"oauth\": { \"client_id\": \"abc\", \"authorization_url\": \"https://auth.example.com\" } } }\n}",
-      "bad_example": "{\n  \"mcp\": { \"srv\": { \"oauth\": { \"client_id\": \"abc\" } } }\n}"
+      "bad_example": "{\n  \"mcp\": { \"srv\": { \"oauth\": { \"client_id\": \"abc\" } } }\n}",
+      "security": {
+        "cwe": [
+          "CWE-287"
+        ],
+        "owasp": [
+          "A07:2021"
+        ],
+        "vulnerability_class": "oauth-misconfiguration",
+        "subcategory": "vuln",
+        "confidence": "HIGH",
+        "likelihood": "MEDIUM",
+        "impact": "HIGH"
+      }
     },
     {
       "id": "OC-CFG-013",

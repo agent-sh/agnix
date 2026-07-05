@@ -206,6 +206,8 @@ fn diagnostic_fields_are_accessible() {
         file: PathBuf::from("test.md"),
         line: 1,
         column: 0,
+        end_line: None,
+        end_column: None,
         rule: String::from("AS-001"),
         suggestion: Some(String::from("try this")),
         fixes: vec![],

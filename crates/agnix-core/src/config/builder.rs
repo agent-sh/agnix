@@ -21,6 +21,7 @@ use super::*;
 /// assert_eq!(config.severity(), SeverityLevel::Error);
 /// ```
 pub struct LintConfigBuilder {
+    extend: Option<Vec<String>>,
     severity: Option<SeverityLevel>,
     rules: Option<RuleConfig>,
     exclude: Option<Vec<String>>,
@@ -58,6 +59,7 @@ impl LintConfigBuilder {
     fn new() -> Self {
         Self {
             severity: None,
+            extend: None,
             rules: None,
             exclude: None,
             target: None,
@@ -80,6 +82,12 @@ impl LintConfigBuilder {
     /// Set the severity level threshold.
     pub fn severity(&mut self, severity: SeverityLevel) -> &mut Self {
         self.severity = Some(severity);
+        self
+    }
+
+    /// Set base config paths this config extends.
+    pub fn extend(&mut self, extend: Vec<String>) -> &mut Self {
+        self.extend = Some(extend);
         self
     }
 
@@ -293,6 +301,7 @@ impl LintConfigBuilder {
         );
 
         let config_data = ConfigData {
+            extend: self.extend.take().unwrap_or(defaults.extend),
             severity: self.severity.take().unwrap_or(defaults.severity),
             rules,
             exclude: self.exclude.take().unwrap_or(defaults.exclude),

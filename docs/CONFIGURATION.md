@@ -4,11 +4,24 @@ Create `.agnix.toml` in your project root. All fields are optional with sensible
 
 ## Quick Examples
 
+### Extend a Shared Config
+
+```toml
+extend = "../base.agnix.toml"
+```
+
 ### Disable Specific Rules
 
 ```toml
 [rules]
 disabled_rules = ["CC-MEM-006", "PE-003", "XP-001"]
+```
+
+### Override a Rule Severity
+
+```toml
+[rules.severity]
+MCP-008 = "Error"
 ```
 
 ### Target a Specific Tool
@@ -43,9 +56,19 @@ disabled_rules = ["CC-MEM-005"]
 
 See the [Per-File Rule Overrides](#per-file-rule-overrides) section below for full semantics.
 
+### Inline Suppression
+
+```md
+<!-- agnix-disable-next-line CC-MEM-005 -->
+- make sure to use this exact example text
+
+temporary exception <!-- agnix: noqa: PE-003 -->
+```
+
 ## Full Reference
 
 ```toml
+extend = []          # Optional base config paths, string or array in TOML files
 severity = "Warning"  # Warning, Error, Info
 target = "Generic"    # Deprecated: Generic, ClaudeCode, Cursor, Codex, Kiro
 
@@ -76,6 +99,10 @@ agents_md = true           # AGM-* rules
 
 # Disable specific rules by ID
 disabled_rules = ["CC-MEM-006", "PE-003"]
+
+# Override reported diagnostic levels for specific rules
+[rules.severity]
+# MCP-008 = "Error"
 
 # Version-aware validation (optional)
 [tool_versions]
@@ -110,12 +137,60 @@ disabled_rules = ["CC-MEM-006", "PE-003"]
 agnix automatically validates `.agnix.toml` files for:
 
 - **Invalid rule IDs**: Warns if `disabled_rules` (in `[rules]` or `[[overrides]]`) contains IDs that don't match known rule ID prefixes from `knowledge-base/rules.json` (AS-, CC-*, CDX-*, OC-*, KR-*, MCP-, REF-, XP-, AGM-, COP-, CUR-, CLN-, PE-, VER-, imports::, and other supported tool prefixes)
+- **Removed rule IDs**: Warns if `disabled_rules` or `[rules.severity]` references a removed rule ID such as `AS-007`, `AS-010`, or `AS-014`, and suggests the replacement rule family when one exists.
+- **Invalid severity override IDs**: Warns if `[rules.severity]` keys don't match known rule ID prefixes.
 - **Unknown tools**: Warns if `tools` array contains tool names that aren't recognized
 - **Invalid file patterns**: Warns if `[files]` or `[[overrides]].paths` glob patterns have invalid syntax. The invalid pattern is dropped at config-load (it can't match anything) and the warning surfaces it so you know which one was ignored.
 - **Unsafe override paths**: Warns if `[[overrides]].paths` entries are absolute (`/foo/...`) or contain `..` traversal. These patterns can never match a project-relative file path, so the override is a no-op even though it parses. (SDK consumers using `LintConfigBuilder::build()` get a hard error for these patterns instead.)
 - **Deprecated fields**: Warns when using `mcp_protocol_version` (use `spec_revisions.mcp_protocol` instead)
 
 These warnings appear before validation output and include suggestions for fixes.
+
+## Config Inheritance
+
+Use `extend` to share a base `.agnix.toml` across projects:
+
+```toml
+extend = "../base.agnix.toml"
+
+[rules.severity]
+MCP-008 = "Error"
+```
+
+`extend` accepts either a string or an array of strings. Paths are resolved relative to the config file that declares them. Parent configs load first, then child values merge on top. Tables merge recursively, while scalar values and arrays in the child replace the parent value.
+
+## Per-Rule Severity Overrides
+
+Use `[rules.severity]` to adjust the diagnostic level for one rule without disabling it:
+
+```toml
+[rules.severity]
+MCP-008 = "Error"
+VER-001 = "Info"
+```
+
+Allowed values are `Error`, `Warning`, and `Info`. Overrides apply to CLI, JSON, SARIF, LSP, MCP, and WASM validation paths because they are applied in the core pipeline.
+
+## Inline Suppression
+
+Inline suppressions are intended for small, local exceptions where a file legitimately contains example text or compatibility glue that would otherwise trip a rule.
+
+```md
+<!-- agnix-disable-next-line CC-MEM-005 -->
+- make sure to keep this phrase in the example
+
+This wording is intentional. <!-- agnix: noqa: PE-003 -->
+```
+
+Supported markers:
+
+| Marker | Scope |
+|--------|-------|
+| `agnix: noqa` | Suppress all diagnostics on the same line |
+| `agnix: noqa: RULE-ID` | Suppress one or more same-line rules |
+| `agnix-disable-next-line` | Suppress all diagnostics on the following line |
+| `agnix-disable-next-line RULE-ID` | Suppress one or more following-line rules |
+| `agnix-disable RULE-ID` | Suppress one or more rules for the whole file |
 
 ### Generate Schema
 
@@ -276,6 +351,25 @@ agnix --format sarif . > results.sarif
 ```
 
 Full SARIF 2.1.0 compliance for GitHub Code Scanning.
+
+SARIF output includes rule metadata, diagnostic spans, safe fix suggestions when available, and CWE/OWASP taxonomies for rules with security metadata.
+
+### GitHub Actions Annotations
+
+```bash
+agnix --format github .
+```
+
+Emits workflow-command annotations such as `::error file=...,line=...::message` for direct inline display in GitHub Actions logs.
+
+### Explain a Rule
+
+```bash
+agnix explain MCP-018
+agnix explain MCP-018 --format json
+```
+
+Prints a rule's severity, category, source URLs, evidence metadata, fix metadata, and examples from the same `rules.json` catalog used by validation.
 
 ---
 

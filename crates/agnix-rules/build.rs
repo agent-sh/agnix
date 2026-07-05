@@ -119,6 +119,14 @@ fn main() {
             .replace('\r', "\\r")
             .replace('\t', "\\t")
     };
+    let format_str_slice = |values: &[String]| -> String {
+        let items = values
+            .iter()
+            .map(|value| format!("\"{}\"", escape_str(value)))
+            .collect::<Vec<_>>()
+            .join(", ");
+        format!("&[{}]", items)
+    };
 
     // Validate rule ID format (e.g., AS-001, CC-HK-001, MCP-001)
     let is_valid_id = |id: &str| -> bool {
@@ -163,6 +171,12 @@ fn main() {
     }
 
     generated_code.push_str("];\n\n");
+    generated_code
+        .push_str("/// Raw rules catalog JSON generated from knowledge-base/rules.json.\n");
+    generated_code.push_str(&format!(
+        "pub const RULES_JSON: &str = \"{}\";\n\n",
+        escape_str(&rules_json)
+    ));
 
     // =========================================================================
     // Generate RULES_METADATA: (id, category, severity, tool) tuples
@@ -215,6 +229,54 @@ fn main() {
         ));
     }
 
+    generated_code.push_str("];\n\n");
+
+    // =========================================================================
+    // Generate RULES_SECURITY: security taxonomy metadata
+    // =========================================================================
+    generated_code.push_str("/// Security taxonomy metadata as (id, cwe, owasp, vulnerability_class, subcategory, confidence, likelihood, impact) tuples.\n");
+    generated_code.push_str("pub const RULES_SECURITY: &[RuleSecurityRecord] = &[\n");
+    for rule in rules_array {
+        let id = rule["id"].as_str().unwrap_or("");
+        let Some(security) = rule.get("security") else {
+            continue;
+        };
+        let read_string_array = |key: &str| -> Vec<String> {
+            security
+                .get(key)
+                .and_then(|value| value.as_array())
+                .unwrap_or_else(|| panic!("rule '{}' security.{} must be an array", id, key))
+                .iter()
+                .map(|value| {
+                    value
+                        .as_str()
+                        .unwrap_or_else(|| {
+                            panic!("rule '{}' security.{} entries must be strings", id, key)
+                        })
+                        .to_string()
+                })
+                .collect()
+        };
+        let read_string = |key: &str| -> &str {
+            security
+                .get(key)
+                .and_then(|value| value.as_str())
+                .unwrap_or_else(|| panic!("rule '{}' security.{} must be a string", id, key))
+        };
+        let cwe = read_string_array("cwe");
+        let owasp = read_string_array("owasp");
+        generated_code.push_str(&format!(
+            "    (\"{}\", {}, {}, \"{}\", \"{}\", \"{}\", \"{}\", \"{}\"),\n",
+            escape_str(id),
+            format_str_slice(&cwe),
+            format_str_slice(&owasp),
+            escape_str(read_string("vulnerability_class")),
+            escape_str(read_string("subcategory")),
+            escape_str(read_string("confidence")),
+            escape_str(read_string("likelihood")),
+            escape_str(read_string("impact")),
+        ));
+    }
     generated_code.push_str("];\n\n");
 
     // =========================================================================

@@ -32,6 +32,8 @@ When editing project memory instructions, keep `CLAUDE.md` and `AGENTS.md` byte-
 
 Each rule in `rules.json` must include complete `evidence` metadata. See [Rule Evidence Requirements](#rule-evidence-requirements) below for field details.
 
+Security-facing rules should also include `security` metadata. See [Security Rule Metadata](#security-rule-metadata).
+
 ## Rule Evidence Requirements
 
 Each rule in `knowledge-base/rules.json` must include an `evidence` object documenting its authoritative source. The evidence fields are:
@@ -46,6 +48,36 @@ Each rule in `knowledge-base/rules.json` must include an `evidence` object docum
 | `tests` | object | Test coverage tracking: `{ "unit": true/false, "fixtures": true/false, "e2e": true/false }` |
 
 See `knowledge-base/VALIDATION-RULES.md` for the full evidence schema reference with examples.
+
+## Security Rule Metadata
+
+Rules that detect or prevent security-relevant misconfiguration must include a `security` object in `knowledge-base/rules.json`:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `cwe` | string[] | CWE IDs such as CWE ID 798 |
+| `owasp` | string[] | OWASP Top 10 IDs such as `A07:2021` |
+| `vulnerability_class` | string | Short class such as `hardcoded-secret`, `command-injection`, or `insecure-permissions` |
+| `subcategory` | enum | `vuln`, `audit`, or `secure-default` |
+| `confidence` | enum | `HIGH`, `MEDIUM`, or `LOW` |
+| `likelihood` | enum | `HIGH`, `MEDIUM`, or `LOW` |
+| `impact` | enum | `HIGH`, `MEDIUM`, or `LOW` |
+
+This metadata is exported through `agnix-rules` and SARIF taxonomies, so keep it in `rules.json` rather than adding SARIF-only tags.
+
+## Rule Lifecycle
+
+Rules should prefer additive evolution over removal. Use these states:
+
+| Status | Meaning |
+|--------|---------|
+| `active` | Default when no lifecycle fields are present |
+| `deprecated` | Still emitted, but planned for removal or replacement |
+| `removed` | No longer emitted; keep a redirect in `knowledge-base/removed-rules.json` |
+
+When deprecating a rule, add `status`, `deprecated_since`, `replaced_by`, and `reason` fields to the rule entry in `knowledge-base/rules.json`, then document the change in `knowledge-base/VALIDATION-RULES.md` and `CHANGELOG.md`.
+
+When removing a rule, remove the active rule entry, add an entry to `knowledge-base/removed-rules.json`, update docs/changelog, and make sure `.agnix.toml` validation warns for stale `disabled_rules` or `[rules.severity]` references. If a replacement exists, list it in `replaced_by`.
 
 ## Rule ID Conventions
 

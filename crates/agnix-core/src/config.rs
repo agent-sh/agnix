@@ -6,6 +6,7 @@ use crate::schemas::mcp::DEFAULT_MCP_PROTOCOL_VERSION;
 use rust_i18n::t;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -351,6 +352,17 @@ impl std::fmt::Debug for RuntimeContext {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(default, deny_unknown_fields)]
 pub(in crate::config) struct ConfigData {
+    /// Base configuration files to extend before applying this config.
+    ///
+    /// Paths are resolved relative to the current config file by `LintConfig::load`.
+    /// Direct TOML deserialization keeps this field as data but does not load
+    /// parent files because there is no source path available.
+    #[serde(default)]
+    #[schemars(
+        description = "Base configuration file paths to extend before applying this config"
+    )]
+    extend: Vec<String>,
+
     /// Severity level threshold
     #[schemars(description = "Minimum severity level to report (Error, Warning, Info)")]
     severity: SeverityLevel,
@@ -439,6 +451,7 @@ pub(in crate::config) struct ConfigData {
 impl Default for ConfigData {
     fn default() -> Self {
         Self {
+            extend: Vec::new(),
             severity: SeverityLevel::Warning,
             rules: RuleConfig::default(),
             exclude: vec![
@@ -455,6 +468,77 @@ impl Default for ConfigData {
             overrides: Vec::new(),
             locale: None,
             max_files_to_validate: Some(DEFAULT_MAX_FILES),
+        }
+    }
+}
+
+const MAX_CONFIG_EXTENDS_DEPTH: usize = 8;
+
+fn load_config_value_with_extends(path: &Path, depth: usize) -> anyhow::Result<toml::Value> {
+    if depth > MAX_CONFIG_EXTENDS_DEPTH {
+        anyhow::bail!(
+            "config extend depth exceeded {} while loading {}",
+            MAX_CONFIG_EXTENDS_DEPTH,
+            path.display()
+        );
+    }
+
+    let content = safe_read_file(path)?;
+    let mut current: toml::Value = toml::from_str(&content)?;
+    let extend_paths = extract_extend_paths(&current)?;
+    if extend_paths.is_empty() {
+        return Ok(current);
+    }
+
+    let base_dir = path.parent().unwrap_or_else(|| Path::new("."));
+    let mut merged = toml::Value::Table(toml::map::Map::new());
+    for extend_path in extend_paths {
+        let base_path = base_dir.join(&extend_path);
+        let base_value = load_config_value_with_extends(&base_path, depth + 1)?;
+        merge_toml_values(&mut merged, base_value);
+    }
+    remove_extend_key(&mut current);
+    merge_toml_values(&mut merged, current);
+    Ok(merged)
+}
+
+fn extract_extend_paths(value: &toml::Value) -> anyhow::Result<Vec<String>> {
+    let Some(extend) = value.get("extend") else {
+        return Ok(Vec::new());
+    };
+    match extend {
+        toml::Value::String(path) => Ok(vec![path.clone()]),
+        toml::Value::Array(items) => items
+            .iter()
+            .map(|item| match item {
+                toml::Value::String(path) => Ok(path.clone()),
+                _ => anyhow::bail!("config extend entries must be strings"),
+            })
+            .collect(),
+        _ => anyhow::bail!("config extend must be a string or an array of strings"),
+    }
+}
+
+fn remove_extend_key(value: &mut toml::Value) {
+    if let Some(table) = value.as_table_mut() {
+        table.remove("extend");
+    }
+}
+
+fn merge_toml_values(target: &mut toml::Value, source: toml::Value) {
+    match (target, source) {
+        (toml::Value::Table(target_table), toml::Value::Table(source_table)) => {
+            for (key, value) in source_table {
+                match target_table.get_mut(&key) {
+                    Some(existing) => merge_toml_values(existing, value),
+                    None => {
+                        target_table.insert(key, value);
+                    }
+                }
+            }
+        }
+        (target_slot, source_value) => {
+            *target_slot = source_value;
         }
     }
 }
@@ -496,6 +580,7 @@ impl std::fmt::Debug for LintConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("LintConfig")
             .field("severity", &self.data.severity)
+            .field("extend", &self.data.extend)
             .field("rules", &self.data.rules)
             .field("exclude", &self.data.exclude)
             .field("target", &self.data.target)
@@ -597,6 +682,17 @@ pub enum SeverityLevel {
     Warning,
     /// Show all diagnostics including info
     Info,
+}
+
+impl SeverityLevel {
+    /// Convert config severity values to diagnostic levels.
+    pub fn to_diagnostic_level(self) -> crate::diagnostics::DiagnosticLevel {
+        match self {
+            SeverityLevel::Error => crate::diagnostics::DiagnosticLevel::Error,
+            SeverityLevel::Warning => crate::diagnostics::DiagnosticLevel::Warning,
+            SeverityLevel::Info => crate::diagnostics::DiagnosticLevel::Info,
+        }
+    }
 }
 
 /// Helper function for serde default
@@ -766,6 +862,20 @@ pub struct RuleConfig {
         description = "List of validator names to disable (e.g., [\"XmlValidator\", \"PromptValidator\"])"
     )]
     pub disabled_validators: Vec<String>,
+
+    /// Per-rule severity overrides, keyed by rule ID (e.g., `{ "MCP-008" = "Error" }`).
+    ///
+    /// In TOML this is usually written as:
+    ///
+    /// ```toml
+    /// [rules.severity]
+    /// MCP-008 = "Error"
+    /// ```
+    #[serde(default)]
+    #[schemars(
+        description = "Per-rule severity overrides keyed by rule ID (e.g., MCP-008 = \"Error\")"
+    )]
+    pub severity: BTreeMap<String, SeverityLevel>,
 }
 
 impl Default for RuleConfig {
@@ -802,6 +912,7 @@ impl Default for RuleConfig {
             import_references: true,
             disabled_rules: Vec::new(),
             disabled_validators: Vec::new(),
+            severity: BTreeMap::new(),
         }
     }
 }
@@ -826,8 +937,9 @@ pub enum TargetTool {
 impl LintConfig {
     /// Load config from file
     pub fn load<P: AsRef<Path>>(path: P) -> anyhow::Result<Self> {
-        let content = safe_read_file(path.as_ref())?;
-        let config = toml::from_str(&content)?;
+        let path = path.as_ref();
+        let merged = load_config_value_with_extends(path, 0)?;
+        let config = merged.try_into()?;
         Ok(config)
     }
 
@@ -935,10 +1047,27 @@ impl LintConfig {
         self.data.severity
     }
 
+    /// Get config files extended by this config.
+    #[inline]
+    pub fn extend(&self) -> &[String] {
+        &self.data.extend
+    }
+
     /// Get the rules configuration.
     #[inline]
     pub fn rules(&self) -> &RuleConfig {
         &self.data.rules
+    }
+
+    /// Get the diagnostic level override for a rule, if configured.
+    #[inline]
+    pub fn severity_override(&self, rule_id: &str) -> Option<crate::diagnostics::DiagnosticLevel> {
+        self.data
+            .rules
+            .severity
+            .get(rule_id)
+            .copied()
+            .map(SeverityLevel::to_diagnostic_level)
     }
 
     /// Get the exclude patterns.
