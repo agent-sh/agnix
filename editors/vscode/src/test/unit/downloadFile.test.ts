@@ -2,7 +2,7 @@ import * as assert from 'assert';
 import { EventEmitter } from 'events';
 import { downloadFile, type DownloadFileDeps } from '../../download-file';
 
-const TRUSTED_URL = 'https://github.com/agent-sh/agnix/releases/download/v0.37.3/archive.tar.gz';
+const TRUSTED_URL = 'https://github.com/agent-sh/agnix/releases/download/v0.37.4/archive.tar.gz';
 const TRUSTED_REDIRECT_URL = 'https://objects.githubusercontent.com/github-production-release-asset/archive.tar.gz';
 
 type PipeDestination = {
