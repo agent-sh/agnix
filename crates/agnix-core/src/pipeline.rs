@@ -185,6 +185,7 @@ fn parse_suppression_rules(payload: &str) -> Vec<String> {
         .trim_start_matches(':')
         .trim()
         .trim_end_matches("-->")
+        .trim_end_matches("*/")
         .trim()
         .split(|c: char| c.is_whitespace() || c == ',')
         .map(str::trim)

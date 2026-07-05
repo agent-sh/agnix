@@ -60,6 +60,18 @@ fn inline_noqa_suppresses_matching_rule_on_same_line() {
 }
 
 #[test]
+fn block_comment_noqa_suppresses_all_rules_on_same_line() {
+    let diagnostics = validate_content(
+        Path::new("CLAUDE.md"),
+        "# Test\n/* agnix: noqa */\n",
+        &LintConfig::default(),
+        &registry_with_test_validator(),
+    );
+
+    assert!(diagnostics.is_empty(), "diagnostic should be suppressed");
+}
+
+#[test]
 fn inline_disable_next_line_suppresses_matching_rule_on_next_line() {
     let diagnostics = validate_content(
         Path::new("CLAUDE.md"),

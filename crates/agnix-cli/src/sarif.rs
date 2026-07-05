@@ -8,7 +8,7 @@
 use agnix_core::diagnostics::{Diagnostic, DiagnosticLevel, Fix};
 use agnix_rules::RULES_DATA;
 use serde::Serialize;
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
 use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
@@ -255,15 +255,22 @@ fn fix_to_sarif(fix: &Fix, diag: &Diagnostic, base_path: &Path, content: &str) -
     }
 }
 
-fn diagnostic_fixes_to_sarif(diag: &Diagnostic, base_path: &Path) -> Option<Vec<SarifFix>> {
+fn diagnostic_fixes_to_sarif(
+    diag: &Diagnostic,
+    base_path: &Path,
+    content_cache: &mut HashMap<PathBuf, Option<String>>,
+) -> Option<Vec<SarifFix>> {
     if diag.fixes.is_empty() {
         return None;
     }
-    let content = std::fs::read_to_string(&diag.file).ok()?;
+    let content = content_cache
+        .entry(diag.file.clone())
+        .or_insert_with(|| std::fs::read_to_string(&diag.file).ok())
+        .as_deref()?;
     let fixes: Vec<SarifFix> = diag
         .fixes
         .iter()
-        .map(|fix| fix_to_sarif(fix, diag, base_path, &content))
+        .map(|fix| fix_to_sarif(fix, diag, base_path, content))
         .collect();
     (!fixes.is_empty()).then_some(fixes)
 }
@@ -367,6 +374,7 @@ fn build_security_taxonomies() -> Option<Vec<Taxonomy>> {
 }
 
 pub fn diagnostics_to_sarif(diagnostics: &[Diagnostic], base_path: &Path) -> SarifLog {
+    let mut content_cache: HashMap<PathBuf, Option<String>> = HashMap::new();
     let results: Vec<SarifResult> = diagnostics
         .iter()
         .map(|diag| SarifResult {
@@ -383,7 +391,7 @@ pub fn diagnostics_to_sarif(diagnostics: &[Diagnostic], base_path: &Path) -> Sar
                     region: diagnostic_region(diag),
                 },
             }],
-            fixes: diagnostic_fixes_to_sarif(diag, base_path),
+            fixes: diagnostic_fixes_to_sarif(diag, base_path, &mut content_cache),
         })
         .collect();
 
@@ -704,6 +712,32 @@ mod tests {
                 .text,
             "x"
         );
+    }
+
+    #[test]
+    fn test_sarif_includes_fixes_for_multiple_diagnostics_in_one_file() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let file = temp.path().join("test.md");
+        std::fs::write(&file, "abc\ndef\n").unwrap();
+        let first = Diagnostic::error(file.clone(), 1, 2, "AS-001", "bad").with_fix(Fix::replace(
+            1,
+            2,
+            "x",
+            "replace b",
+            true,
+        ));
+        let second = Diagnostic::error(file, 2, 2, "AS-002", "bad").with_fix(Fix::replace(
+            5,
+            6,
+            "y",
+            "replace e",
+            true,
+        ));
+
+        let sarif = diagnostics_to_sarif(&[first, second], temp.path());
+
+        assert!(sarif.runs[0].results[0].fixes.is_some());
+        assert!(sarif.runs[0].results[1].fixes.is_some());
     }
 
     #[test]

@@ -1118,8 +1118,8 @@ fn render_code_frame(diag: &Diagnostic) -> Option<String> {
     let content = std::fs::read_to_string(&diag.file).ok()?;
     let line_no = diag.line.max(1);
     let source_line = content.lines().nth(line_no - 1)?;
-    let start_col = diag.column.max(1);
     let line_width = source_line.chars().count().max(1);
+    let start_col = diag.column.max(1).min(line_width);
     let mut end_col = if diag.effective_end_line() == line_no {
         diag.effective_end_column()
     } else {
@@ -1621,6 +1621,7 @@ fn telemetry_command(action: TelemetryAction) -> anyhow::Result<()> {
 #[cfg(test)]
 mod resolve_fix_mode_tests {
     use super::*;
+    use agnix_core::Diagnostic;
 
     #[test]
     fn fix_safe_selects_safe_only_mode() {
@@ -1656,5 +1657,18 @@ mod resolve_fix_mode_tests {
     fn dry_run_with_fix_unsafe_selects_all_mode() {
         let cli = Cli::parse_from(["agnix", "--dry-run", "--fix-unsafe"]);
         assert_eq!(resolve_fix_mode(&cli), FixApplyMode::All);
+    }
+
+    #[test]
+    fn render_code_frame_clamps_start_column_to_line_width() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let file = temp.path().join("short.md");
+        std::fs::write(&file, "abc\n").unwrap();
+        let diag = Diagnostic::warning(file, 1, 99, "TEST-001", "wide column");
+
+        let frame = render_code_frame(&diag).expect("frame should render");
+
+        assert!(frame.contains("abc"));
+        assert!(frame.contains("^"));
     }
 }
