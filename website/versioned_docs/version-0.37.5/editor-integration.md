@@ -1,0 +1,69 @@
+---
+title: Editor Integration
+description: "Set up agnix real-time diagnostics in VS Code, Neovim, JetBrains, and Zed."
+---
+
+# Editor Integration
+
+agnix ships an LSP server (`agnix-lsp`) that provides real-time diagnostics, code actions, and hover documentation in your editor.
+
+## Capabilities
+
+- Diagnostics on open, save, and change
+- Code actions for fixable findings
+- Hover details for rule explanations
+
+## VS Code
+
+Install the extension from the
+[VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=avifenesh.agnix).
+
+The extension bundles the LSP server. No additional setup needed.
+
+For manual configuration, see the
+[VS Code extension README](https://github.com/agent-sh/agnix/tree/main/editors/vscode).
+
+## JetBrains (IntelliJ, WebStorm, etc.)
+
+Install from the
+[JetBrains Plugin Marketplace](https://plugins.jetbrains.com/plugin/30087-agnix).
+
+Configure the `agnix-lsp` binary path in plugin settings if not auto-detected.
+
+For details, see the
+[JetBrains plugin README](https://github.com/agent-sh/agnix/tree/main/editors/jetbrains).
+
+## Neovim
+
+Install with lazy.nvim:
+
+```lua
+{ "agent-sh/agnix.nvim" }
+```
+
+Then in your config:
+
+```lua
+require('agnix').setup()
+```
+
+The plugin auto-detects and downloads the `agnix-lsp` binary. For full setup instructions, see the
+[agnix.nvim README](https://github.com/agent-sh/agnix.nvim).
+
+## Zed
+
+Install the agnix extension from the
+[Zed extension marketplace](https://zed.dev/extensions?query=agnix), or see the
+[Zed extension README](https://github.com/agent-sh/agnix/tree/main/editors/zed).
+
+## Other editors
+
+Any editor with LSP support can use `agnix-lsp`. Point your LSP client to the binary:
+
+```bash
+cargo install agnix-lsp
+agnix-lsp
+```
+
+For the full editor support matrix, see
+[docs/EDITOR-SETUP.md](https://github.com/agent-sh/agnix/blob/main/docs/EDITOR-SETUP.md).
