@@ -914,7 +914,6 @@ fn validate_command(paths: &[PathBuf], cli: &Cli) -> anyhow::Result<()> {
         if !cli.dry_run {
             let ValidationResult {
                 diagnostics: post_fix_diagnostics,
-                files_checked: _,
                 ..
             } = run_validation(paths, &config)?;
 
@@ -954,11 +953,7 @@ fn run_single_validation(
     let mut config = load_config_or_default(config_path.as_ref())?;
     config.set_target(target.into());
 
-    let ValidationResult {
-        diagnostics,
-        files_checked: _,
-        ..
-    } = validate_project(path, &config)?;
+    let ValidationResult { diagnostics, .. } = validate_project(path, &config)?;
 
     println!("{} {}", t!("cli.validating").cyan().bold(), path.display());
     println!();

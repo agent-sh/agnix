@@ -318,7 +318,7 @@ This section contains all `432` validation rules generated from `knowledge-base/
 | [KR-MCP-003](./generated/kr-mcp-003.md) | Missing Required Args | MEDIUM | Kiro MCP | No |
 | [KR-MCP-004](./generated/kr-mcp-004.md) | Invalid MCP URL | HIGH | Kiro MCP | No |
 | [KR-MCP-005](./generated/kr-mcp-005.md) | Duplicate MCP Server Names | MEDIUM | Kiro MCP | No |
-| [KR-MCP-006](./generated/kr-mcp-006.md) | Invalid OAuth Client ID Configuration | MEDIUM | Kiro MCP | No |
+| [KR-MCP-006](./generated/kr-mcp-006.md) | Invalid OAuth Configuration | MEDIUM | Kiro MCP | No |
 | [KR-PW-001](./generated/kr-pw-001.md) | Missing Required POWER.md Frontmatter Fields | HIGH | Kiro Powers | No |
 | [KR-PW-002](./generated/kr-pw-002.md) | Empty POWER.md Keywords Array | MEDIUM | Kiro Powers | No |
 | [KR-PW-003](./generated/kr-pw-003.md) | Empty POWER.md Body | MEDIUM | Kiro Powers | No |
