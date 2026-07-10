@@ -560,14 +560,20 @@ rules:
     message: Kiro MCP 服务 '%{server}' 在 env '%{env_key}' 中存在潜在硬编码密钥
     suggestion: 使用 ${VAR_NAME} 形式的环境变量引用，避免明文密钥
   kr_mcp_006:
-    message: Kiro MCP 服务 '%{server}' 的 oauth.clientId 配置无效：%{reason}
-    suggestion: 仅在 HTTP(S) 远程 MCP 服务上使用非空字符串 oauth.clientId，或移除 oauth 块
+    message: Kiro MCP 服务 '%{server}' 的 OAuth 配置无效：%{reason}
+    suggestion: 在 HTTP(S) 远程 MCP 服务上使用文档支持的可选 OAuth 字段，或移除 oauth 块
     reasons:
       oauth_object: '''oauth'' 必须是对象'
-      missing_client_id: 配置 'oauth' 时必须提供 'oauth.clientId'
       client_id_string: '''oauth.clientId'' 必须是字符串'
       client_id_non_empty: '''oauth.clientId'' 不能为空'
-      http_url: '''oauth.clientId'' 只能用于 HTTP(S) 远程 MCP 服务器 URL'
+      client_secret_string: '''oauth.clientSecret'' 必须是字符串'
+      client_secret_non_empty: '''oauth.clientSecret'' 不能为空'
+      client_secret_requires_client_id: '''oauth.clientSecret'' 只能与 ''oauth.clientId'' 一起使用'
+      redirect_uri_string: '''oauth.redirectUri'' 必须是字符串'
+      redirect_uri_format: '''oauth.redirectUri'' 必须使用带有效端口的 HTTP 回环地址'
+      oauth_scopes_array: '''oauth.oauthScopes'' 必须是数组'
+      oauth_scopes_strings: '''oauth.oauthScopes'' 中的所有项都必须是字符串'
+      http_url: '''oauth'' 只能用于 HTTP(S) 远程 MCP 服务器 URL'
   cdx_pl_001:
     message: plugin.json 必须位于 .codex-plugin/ 目录中
     suggestion: 将 plugin.json 移至 .codex-plugin/plugin.json

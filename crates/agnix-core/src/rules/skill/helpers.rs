@@ -227,20 +227,12 @@ pub(super) fn frontmatter_value_byte_range(
                 // Handle quoted values
                 let (value_start, value_len) = if let Some(inner) = value_str.strip_prefix('"') {
                     // Double-quoted: find closing quote
-                    if let Some(end_quote) = inner.find('"') {
-                        (value_offset_in_line + 1, end_quote) // Skip opening quote
-                    } else {
-                        // Unclosed quote - return None for malformed YAML
-                        return None;
-                    }
+                    let end_quote = inner.find('"')?;
+                    (value_offset_in_line + 1, end_quote) // Skip opening quote
                 } else if let Some(inner) = value_str.strip_prefix('\'') {
                     // Single-quoted: find closing quote
-                    if let Some(end_quote) = inner.find('\'') {
-                        (value_offset_in_line + 1, end_quote) // Skip opening quote
-                    } else {
-                        // Unclosed quote - return None for malformed YAML
-                        return None;
-                    }
+                    let end_quote = inner.find('\'')?;
+                    (value_offset_in_line + 1, end_quote) // Skip opening quote
                 } else {
                     // Unquoted value: take until end of line or comment
                     // Check for both " #" (space-hash) and "\t#" (tab-hash)
