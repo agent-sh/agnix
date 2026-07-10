@@ -141,15 +141,18 @@ const KNOWN_FEATURE_KEYS: &[&str] = &[
     "auto_compaction",
     "browser_use",
     "browser_use_external",
+    "browser_use_full_cdp_access",
     "child_agents_md",
     "chronicle",
     "code_mode",
+    "code_mode_host",
     "code_mode_only",
     "codex_git_commit",
     "codex_hooks",
     "collab",
     "collaboration_modes",
     "computer_use",
+    "concurrent_reasoning_summaries",
     "connectors",
     "current_time_reminder",
     "default_mode_request_user_input",
@@ -196,12 +199,14 @@ const KNOWN_FEATURE_KEYS: &[&str] = &[
     "request_permissions",
     "request_permissions_tool",
     "request_rule",
+    "resize_all_images",
     "respect_system_proxy",
     "responses_websockets",
     "responses_websockets_v2",
     "rollout_budget",
     "runtime_metrics",
     "search_tool",
+    "secret_auth_storage",
     "shell_snapshot",
     "shell_tool",
     "shell_zsh_fork",
@@ -263,23 +268,29 @@ const KNOWN_SHELL_ENVIRONMENT_POLICY_KEYS: &[&str] = &[
 
 const KNOWN_MCP_SERVER_KEYS: &[&str] = &[
     "args",
+    "auth",
     "bearer_token_env_var",
     "command",
     "cwd",
+    "default_tools_approval_mode",
     "disabled_tools",
     "enabled",
     "enabled_tools",
     "env",
     "env_http_headers",
     "env_vars",
+    "environment_id",
     "http_headers",
+    "name",
     "oauth",
     "oauth_resource",
     "required",
     "scopes",
     "startup_timeout_ms",
     "startup_timeout_sec",
+    "supports_parallel_tool_calls",
     "tool_timeout_sec",
+    "tools",
     "url",
 ];
 
@@ -3713,6 +3724,66 @@ clock_source = "external"
         assert!(
             unexpected.is_empty(),
             "0.142 config surfaces should not be flagged, got: {unexpected:?}"
+        );
+    }
+
+    #[test]
+    fn test_codex_0_144_1_feature_and_mcp_keys_not_flagged() {
+        // Diffed against codex-rs/core/config.schema.json at rust-v0.144.1.
+        // These keys are accepted by the shipped schema and must not trigger
+        // the generic nested-key diagnostic on either TOML or JSON configs.
+        let toml = r#"
+[features]
+browser_use_full_cdp_access = true
+code_mode_host = true
+concurrent_reasoning_summaries = true
+resize_all_images = true
+secret_auth_storage = true
+
+[mcp_servers.chatgpt]
+url = "https://chatgpt.com/mcp"
+auth = "chatgpt"
+default_tools_approval_mode = "prompt"
+environment_id = "production"
+name = "ChatGPT"
+supports_parallel_tool_calls = true
+
+[mcp_servers.chatgpt.tools.search]
+approval_mode = "auto"
+"#;
+        let diagnostics = validate_config(toml);
+        let unexpected: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-006")
+            .map(|d| d.message.as_str())
+            .collect();
+        assert!(
+            unexpected.is_empty(),
+            "0.144.1 feature and MCP keys should be accepted, got: {unexpected:?}"
+        );
+
+        let json = r#"{
+  "features": {
+    "code_mode_host": true,
+    "concurrent_reasoning_summaries": true
+  },
+  "mcp_servers": {
+    "chatgpt": {
+      "url": "https://chatgpt.com/mcp",
+      "auth": "chatgpt",
+      "supports_parallel_tool_calls": true
+    }
+  }
+}"#;
+        let diagnostics = validate_config_json(json);
+        let unexpected: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-006")
+            .map(|d| d.message.as_str())
+            .collect();
+        assert!(
+            unexpected.is_empty(),
+            "0.144.1 JSON keys should be accepted, got: {unexpected:?}"
         );
     }
 
