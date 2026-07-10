@@ -274,6 +274,8 @@ fn invalid_oauth_configuration_issue(
 
 fn is_valid_oauth_redirect_uri(value: &str) -> bool {
     let value = value.trim();
+    // Kiro's shorthand forms pin only the loopback host and port. Custom callback
+    // paths must use the full http:// URL form.
     if let Some(port) = value.strip_prefix(':') {
         return is_valid_port(port);
     }
@@ -591,6 +593,8 @@ mod tests {
             "https://localhost:7778/oauth/callback",
             "http://example.com:7778/oauth/callback",
             "localhost:not-a-port",
+            "127.0.0.1:7778/oauth/callback",
+            ":7778/oauth/callback",
             ":0",
         ] {
             let content = format!(
