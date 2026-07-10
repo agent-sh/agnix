@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Tool release baselines**. Triaged the current release-watch batch and advanced Claude Code to `v2.1.206`, Codex CLI to `rust-v0.144.1`, OpenCode to `v1.17.18`, Kiro CLI to `2.12.0`, Cline to `cli-v3.0.39`, Cursor to `3.11.13`, amp to `the-dial`, and Gemini CLI to `v0.50.0` (closes #1181 through #1188). Releases without validated schema changes were classified as runtime, UI, provider, packaging, or news updates.
+
+### Fixed
+- **Codex 0.144.1 config compatibility**. Accept the current feature and MCP server keys, including session authentication, and recognize the managed `marketplaces` requirements table so valid Codex configuration no longer triggers unknown-key diagnostics.
+- **Kiro 2.12 OAuth validation**. Treat `oauth.clientId` as optional for Dynamic Client Registration, validate the new `clientSecret`, `redirectUri`, and `oauthScopes` fields, and enforce documented HTTP loopback redirect forms.
+- **Locale mirror parity**. Reconcile the canonical locale files with recently added panic, config-load, and hook-timeout messages, then resync all crate-local copies so the locale parity gate passes on Linux.
+
 ## [0.37.5] - 2026-07-05
 
 ### Fixed

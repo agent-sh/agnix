@@ -582,14 +582,20 @@ rules:
     message: El servidor MCP Kiro '%{server}' tiene un posible secreto hardcodeado en env '%{env_key}'
     suggestion: Usa referencias de variables de entorno como ${VAR_NAME} en lugar de secretos en texto plano
   kr_mcp_006:
-    message: 'El servidor MCP Kiro ''%{server}'' tiene una configuración oauth.clientId inválida: %{reason}'
-    suggestion: Usa oauth.clientId como cadena no vacía solo en servidores MCP remotos HTTP(S), o elimina el bloque oauth
+    message: 'El servidor MCP Kiro ''%{server}'' tiene una configuración OAuth inválida: %{reason}'
+    suggestion: Usa los campos OAuth opcionales documentados en un servidor MCP remoto HTTP(S), o elimina el bloque oauth
     reasons:
       oauth_object: '''oauth'' debe ser un objeto'
-      missing_client_id: '''oauth.clientId'' es obligatorio cuando ''oauth'' está configurado'
       client_id_string: '''oauth.clientId'' debe ser una cadena'
       client_id_non_empty: '''oauth.clientId'' no debe estar vacío'
-      http_url: '''oauth.clientId'' solo puede usarse con URLs de servidor MCP remoto HTTP(S)'
+      client_secret_string: '''oauth.clientSecret'' debe ser una cadena'
+      client_secret_non_empty: '''oauth.clientSecret'' no debe estar vacío'
+      client_secret_requires_client_id: '''oauth.clientSecret'' solo tiene sentido junto con ''oauth.clientId'''
+      redirect_uri_string: '''oauth.redirectUri'' debe ser una cadena'
+      redirect_uri_format: '''oauth.redirectUri'' debe usar una dirección de bucle local HTTP con un puerto válido'
+      oauth_scopes_array: '''oauth.oauthScopes'' debe ser un arreglo'
+      oauth_scopes_strings: Todas las entradas de 'oauth.oauthScopes' deben ser cadenas
+      http_url: '''oauth'' solo puede usarse con URLs de servidor MCP remoto HTTP(S)'
   cdx_pl_001:
     message: plugin.json debe estar ubicado en el directorio .codex-plugin/
     suggestion: Mueve plugin.json a .codex-plugin/plugin.json

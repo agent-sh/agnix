@@ -6,7 +6,7 @@
 //! - KR-MCP-003: Missing required args
 //! - KR-MCP-004: Invalid MCP URL
 //! - KR-MCP-005: Duplicate MCP server names
-//! - KR-MCP-006: Invalid OAuth client ID configuration
+//! - KR-MCP-006: Invalid OAuth configuration
 
 use crate::{
     config::PerFileLintConfig,
@@ -179,9 +179,10 @@ impl Validator for KiroMcpValidator {
                 }
             }
 
-            // KR-MCP-006: oauth.clientId is only meaningful on HTTP(S) remote servers
+            // KR-MCP-006: validate the optional OAuth fields documented for
+            // Kiro CLI 2.12 and require OAuth only on HTTP(S) remote servers.
             if config.is_rule_enabled("KR-MCP-006")
-                && let Some(issue) = invalid_oauth_client_id_issue(&server)
+                && let Some(issue) = invalid_oauth_configuration_issue(&server)
             {
                 let reason = issue.localized_reason();
                 diagnostics.push(
@@ -209,22 +210,54 @@ impl Validator for KiroMcpValidator {
     }
 }
 
-fn invalid_oauth_client_id_issue(
+fn invalid_oauth_configuration_issue(
     server: &crate::schemas::kiro_mcp::KiroMcpServerConfig,
-) -> Option<OauthClientIdIssue> {
+) -> Option<OauthConfigurationIssue> {
     let oauth = server.extra.get("oauth")?;
     let Some(oauth) = oauth.as_object() else {
-        return Some(OauthClientIdIssue::OauthMustBeObject);
+        return Some(OauthConfigurationIssue::OauthMustBeObject);
     };
 
-    let Some(client_id) = oauth.get("clientId") else {
-        return Some(OauthClientIdIssue::MissingClientId);
+    let has_client_id = if let Some(client_id) = oauth.get("clientId") {
+        let Some(client_id) = client_id.as_str() else {
+            return Some(OauthConfigurationIssue::ClientIdMustBeString);
+        };
+        if client_id.trim().is_empty() {
+            return Some(OauthConfigurationIssue::EmptyClientId);
+        }
+        true
+    } else {
+        false
     };
-    let Some(client_id) = client_id.as_str() else {
-        return Some(OauthClientIdIssue::ClientIdMustBeString);
-    };
-    if client_id.trim().is_empty() {
-        return Some(OauthClientIdIssue::EmptyClientId);
+
+    if let Some(client_secret) = oauth.get("clientSecret") {
+        let Some(client_secret) = client_secret.as_str() else {
+            return Some(OauthConfigurationIssue::ClientSecretMustBeString);
+        };
+        if client_secret.trim().is_empty() {
+            return Some(OauthConfigurationIssue::EmptyClientSecret);
+        }
+        if !has_client_id {
+            return Some(OauthConfigurationIssue::ClientSecretRequiresClientId);
+        }
+    }
+
+    if let Some(redirect_uri) = oauth.get("redirectUri") {
+        let Some(redirect_uri) = redirect_uri.as_str() else {
+            return Some(OauthConfigurationIssue::RedirectUriMustBeString);
+        };
+        if !is_valid_oauth_redirect_uri(redirect_uri) {
+            return Some(OauthConfigurationIssue::InvalidRedirectUri);
+        }
+    }
+
+    if let Some(oauth_scopes) = oauth.get("oauthScopes") {
+        let Some(oauth_scopes) = oauth_scopes.as_array() else {
+            return Some(OauthConfigurationIssue::OauthScopesMustBeArray);
+        };
+        if oauth_scopes.iter().any(|scope| !scope.is_string()) {
+            return Some(OauthConfigurationIssue::OauthScopesMustContainStrings);
+        }
     }
 
     let is_http_url = server
@@ -233,30 +266,81 @@ fn invalid_oauth_client_id_issue(
         .map(str::trim)
         .is_some_and(|url| url.starts_with("http://") || url.starts_with("https://"));
     if !is_http_url {
-        return Some(OauthClientIdIssue::RequiresHttpUrl);
+        return Some(OauthConfigurationIssue::RequiresHttpUrl);
     }
 
     None
 }
 
+fn is_valid_oauth_redirect_uri(value: &str) -> bool {
+    let value = value.trim();
+    if let Some(port) = value.strip_prefix(':') {
+        return is_valid_port(port);
+    }
+
+    let authority = if let Some(rest) = value.strip_prefix("http://") {
+        rest.split(['/', '?', '#']).next().unwrap_or_default()
+    } else {
+        if value.contains("://") {
+            return false;
+        }
+        value
+    };
+
+    let Some((host, port)) = authority.rsplit_once(':') else {
+        return false;
+    };
+    matches!(host, "localhost" | "127.0.0.1") && is_valid_port(port)
+}
+
+fn is_valid_port(value: &str) -> bool {
+    value.parse::<u16>().is_ok_and(|port| port > 0)
+}
+
 #[derive(Clone, Copy)]
-enum OauthClientIdIssue {
+enum OauthConfigurationIssue {
     OauthMustBeObject,
-    MissingClientId,
     ClientIdMustBeString,
     EmptyClientId,
+    ClientSecretMustBeString,
+    EmptyClientSecret,
+    ClientSecretRequiresClientId,
+    RedirectUriMustBeString,
+    InvalidRedirectUri,
+    OauthScopesMustBeArray,
+    OauthScopesMustContainStrings,
     RequiresHttpUrl,
 }
 
-impl OauthClientIdIssue {
+impl OauthConfigurationIssue {
     fn localized_reason(self) -> String {
         match self {
             Self::OauthMustBeObject => t!("rules.kr_mcp_006.reasons.oauth_object").to_string(),
-            Self::MissingClientId => t!("rules.kr_mcp_006.reasons.missing_client_id").to_string(),
             Self::ClientIdMustBeString => {
                 t!("rules.kr_mcp_006.reasons.client_id_string").to_string()
             }
             Self::EmptyClientId => t!("rules.kr_mcp_006.reasons.client_id_non_empty").to_string(),
+            Self::ClientSecretMustBeString => {
+                t!("rules.kr_mcp_006.reasons.client_secret_string").to_string()
+            }
+            Self::EmptyClientSecret => {
+                t!("rules.kr_mcp_006.reasons.client_secret_non_empty").to_string()
+            }
+            Self::ClientSecretRequiresClientId => {
+                t!("rules.kr_mcp_006.reasons.client_secret_requires_client_id").to_string()
+            }
+            Self::RedirectUriMustBeString => {
+                t!("rules.kr_mcp_006.reasons.redirect_uri_string").to_string()
+            }
+            Self::InvalidRedirectUri => {
+                t!("rules.kr_mcp_006.reasons.redirect_uri_format").to_string()
+            }
+            Self::OauthScopesMustBeArray => {
+                t!("rules.kr_mcp_006.reasons.oauth_scopes_array").to_string()
+            }
+            Self::OauthScopesMustContainStrings => {
+                t!("rules.kr_mcp_006.reasons.oauth_scopes_strings").to_string()
+            }
             Self::RequiresHttpUrl => t!("rules.kr_mcp_006.reasons.http_url").to_string(),
         }
     }
@@ -405,6 +489,29 @@ mod tests {
     }
 
     #[test]
+    fn test_kr_mcp_006_kiro_2_12_oauth_fields_allowed() {
+        let diagnostics = validate(
+            r#"{
+  "mcpServers": {
+    "figma": {
+      "url": "https://mcp.figma.com/mcp",
+      "oauth": {
+        "clientId": "registered-client",
+        "clientSecret": "registered-secret",
+        "redirectUri": "http://localhost:7778/oauth/callback",
+        "oauthScopes": ["files:read"]
+      }
+    }
+  }
+}"#,
+        );
+        assert!(
+            diagnostics.iter().all(|d| d.rule != "KR-MCP-006"),
+            "Kiro 2.12 OAuth fields should be accepted: {diagnostics:?}"
+        );
+    }
+
+    #[test]
     fn test_kr_mcp_006_oauth_must_be_object() {
         let diagnostics = validate(
             r#"{
@@ -437,13 +544,141 @@ mod tests {
     }
 
     #[test]
-    fn test_kr_mcp_006_missing_client_id() {
+    fn test_kr_mcp_006_client_id_is_optional_for_dcr() {
         let diagnostics = validate(
             r#"{
   "mcpServers": {
     "remote": {
       "url": "https://example.com/mcp",
-      "oauth": {}
+      "oauth": {
+        "redirectUri": ":7778",
+        "oauthScopes": ["read"]
+      }
+    }
+  }
+}"#,
+        );
+        assert!(
+            diagnostics.iter().all(|d| d.rule != "KR-MCP-006"),
+            "clientId is optional when Kiro uses dynamic client registration"
+        );
+    }
+
+    #[test]
+    fn test_kr_mcp_006_client_secret_requires_client_id() {
+        let diagnostics = validate(
+            r#"{
+  "mcpServers": {
+    "remote": {
+      "url": "https://example.com/mcp",
+      "oauth": {
+        "clientSecret": "secret"
+      }
+    }
+  }
+}"#,
+        );
+        let diagnostic = diagnostics
+            .iter()
+            .find(|d| d.rule == "KR-MCP-006")
+            .expect("clientSecret without clientId should be flagged");
+        assert!(diagnostic.message.contains("clientId"));
+    }
+
+    #[test]
+    fn test_kr_mcp_006_redirect_uri_requires_http_loopback() {
+        for redirect_uri in [
+            "https://localhost:7778/oauth/callback",
+            "http://example.com:7778/oauth/callback",
+            "localhost:not-a-port",
+            ":0",
+        ] {
+            let content = format!(
+                r#"{{
+  "mcpServers": {{
+    "remote": {{
+      "url": "https://example.com/mcp",
+      "oauth": {{
+        "redirectUri": "{redirect_uri}"
+      }}
+    }}
+  }}
+}}"#
+            );
+            let diagnostics = validate(&content);
+            assert!(
+                diagnostics.iter().any(|d| d.rule == "KR-MCP-006"),
+                "invalid redirectUri should be flagged: {redirect_uri}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_kr_mcp_006_documented_redirect_uri_formats_allowed() {
+        for redirect_uri in [
+            "http://localhost:7778/oauth/callback",
+            "127.0.0.1:7778",
+            ":7778",
+        ] {
+            let content = format!(
+                r#"{{
+  "mcpServers": {{
+    "remote": {{
+      "url": "https://example.com/mcp",
+      "oauth": {{
+        "redirectUri": "{redirect_uri}"
+      }}
+    }}
+  }}
+}}"#
+            );
+            let diagnostics = validate(&content);
+            assert!(
+                diagnostics.iter().all(|d| d.rule != "KR-MCP-006"),
+                "documented redirectUri should be accepted: {redirect_uri}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_kr_mcp_006_optional_field_types_are_checked() {
+        let invalid_fragments = [
+            r#""clientId": 42"#,
+            r#""clientId": "id", "clientSecret": []"#,
+            r#""clientId": "id", "clientSecret": """#,
+            r#""redirectUri": 7778"#,
+            r#""oauthScopes": "read""#,
+        ];
+
+        for fields in invalid_fragments {
+            let content = format!(
+                r#"{{
+  "mcpServers": {{
+    "remote": {{
+      "url": "https://example.com/mcp",
+      "oauth": {{ {fields} }}
+    }}
+  }}
+}}"#
+            );
+            let diagnostics = validate(&content);
+            assert!(
+                diagnostics.iter().any(|d| d.rule == "KR-MCP-006"),
+                "invalid OAuth field should be flagged: {fields}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_kr_mcp_006_oauth_scopes_must_be_string_array() {
+        let diagnostics = validate(
+            r#"{
+  "mcpServers": {
+    "remote": {
+      "url": "https://example.com/mcp",
+      "oauth": {
+        "oauthScopes": ["read", 42]
+      }
     }
   }
 }"#,
