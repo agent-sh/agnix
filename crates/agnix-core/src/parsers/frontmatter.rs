@@ -269,10 +269,9 @@ fn top_level_yaml_key(line: &str) -> Option<&str> {
     let trimmed = line.trim();
     let key = if let Some(stripped) = trimmed.strip_suffix(':') {
         stripped
-    } else if let Some(idx) = trimmed.find(": ") {
-        &trimmed[..idx]
     } else {
-        return None;
+        let idx = trimmed.find(": ")?;
+        &trimmed[..idx]
     };
     let key = key.trim();
     if key.is_empty() || key.starts_with('-') || key.starts_with('?') {

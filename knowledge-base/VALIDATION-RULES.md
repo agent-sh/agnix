@@ -3068,11 +3068,11 @@ Validates Codex's admin-written managed `requirements.toml` (system location: `/
 **Source**: kiro.dev/docs/mcp
 
 <a id="kr-mcp-006"></a>
-### KR-MCP-006 [MEDIUM] Invalid OAuth Client ID Configuration
-**Requirement**: `oauth.clientId` SHOULD be a non-empty string and only be used with HTTP(S) remote MCP server URLs.
-**Detection**: Check each MCP server `oauth` block for a non-empty string `clientId`, then require the same server to use an `http://` or `https://` URL.
-**Fix**: No auto-fix (set `oauth.clientId` on an HTTP(S) remote MCP server, or remove the OAuth block).
-**Source**: kiro.dev/changelog/cli/2-3/
+### KR-MCP-006 [MEDIUM] Invalid OAuth Configuration
+**Requirement**: An `oauth` block SHOULD be an object on an HTTP(S) remote MCP server. Its optional `clientId`, `clientSecret`, and `redirectUri` fields SHOULD be valid strings, `clientSecret` requires `clientId`, `redirectUri` SHOULD use a documented HTTP loopback form, and `oauthScopes` SHOULD be an array of strings. `clientId` is optional because Kiro uses Dynamic Client Registration when it is absent.
+**Detection**: Validate each MCP server `oauth` block against the Kiro CLI 2.12 OAuth field types and relationships, including the loopback redirect host and port constraints.
+**Fix**: No auto-fix (correct the OAuth fields on an HTTP(S) remote MCP server, or remove the block).
+**Source**: kiro.dev/docs/cli/mcp/configuration/#oauth-configuration, kiro.dev/changelog/cli/2-12/
 
 ---
 

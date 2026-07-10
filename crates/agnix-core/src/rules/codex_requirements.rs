@@ -18,7 +18,7 @@ use std::path::Path;
 const RULE_IDS: &[&str] = &["CDX-REQ-000", "CDX-REQ-001"];
 
 /// Known top-level keys of `requirements.toml`, sourced from
-/// `ConfigRequirementsToml` @ openai/codex rust-v0.137.0. Both `features`
+/// `ConfigRequirementsToml` @ openai/codex rust-v0.144.1. Both `features`
 /// (serde rename) and `feature_requirements` (serde alias) are accepted on
 /// disk; the network table is only valid as `experimental_network` (serde
 /// rename - the bare `network` field name is not a valid TOML key).
@@ -38,6 +38,7 @@ const KNOWN_REQUIREMENTS_KEYS: &[&str] = &[
     "features",
     "guardian_policy_config",
     "hooks",
+    "marketplaces",
     "mcp_servers",
     "permissions",
     "plugins",
@@ -236,6 +237,14 @@ some_feature = true
 
 [mcp_servers.docs]
 command = "docs-server"
+
+[marketplaces]
+restrict_to_allowed_sources = true
+
+[marketplaces.allowed_sources.company]
+source = "git"
+url = "https://github.com/example/plugins.git"
+ref = "main"
 
 [apps.example]
 enabled = true
