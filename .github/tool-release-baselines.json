@@ -1,6 +1,6 @@
 {
   "version": "1.1",
-  "last_updated": "2026-07-15",
+  "last_updated": "2026-07-16",
   "description": "Tracks the latest release of every tool agnix validates (one entry per tool with a validator in crates/agnix-core/src/rules/). Used by .github/workflows/tool-release-watch.yml to open per-tool issues when a new release is published. Untracked tools include the precise publication URL in untracked_reason so a maintainer can monitor manually.\n\nOptional `changes_of_interest` per tool describes what agnix cares about: `config_surfaces` (files agnix validates), `relevant` (change-types that likely affect a validator), `irrelevant` (safe to skip). When set and GLM_API_KEY is available, the watcher runs scripts/glm-extract.js --mode=agnix-triage to produce a pre-filtered summary at the top of the issue body. Falls back gracefully to the full changelog on any LLM failure.",
   "tools": {
     "claude-code": {
@@ -16,7 +16,7 @@
         "mcp"
       ],
       "github_repo": "anthropics/claude-code",
-      "last_known_version": "v2.1.207",
+      "last_known_version": "v2.1.210",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
@@ -96,7 +96,7 @@
         "agents_md"
       ],
       "github_repo": "sst/opencode",
-      "last_known_version": "v1.17.20",
+      "last_known_version": "v1.18.1",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
