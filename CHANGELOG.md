@@ -7,12 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.38.0] - 2026-07-15
+
 ### Added
 - **CC-SET-014: autoMode Setting Ignored in settings.local.json** (#1203). Claude Code v2.1.207 stopped reading `autoMode` from repo-resident `.claude/settings.local.json`; the new rule warns when the key is present there so users move it to `~/.claude/settings.json`.
 - **CC-SET-015: Dead pluginConfigs in Project-Level Settings** (#1203). Claude Code v2.1.207 removed support for `pluginConfigs` in project-level `.claude/settings.json` and `.claude/settings.local.json`; plugin option values are now only read from user settings, `--settings` files, and managed settings. The new rule warns on presence in the wrong tier.
 - **CC-HK-028: Rejected user_config Interpolation in Shell-Form Command** (#1203). Claude Code v2.1.207 rejects `${user_config.*}` in shell-form hook command strings at load time as a shell-injection fix; the rule flags (error) any command string containing the pattern and directs users to `$CLAUDE_PLUGIN_OPTION_<KEY>` or environment-passing instead. Rule count 432 → 435.
 
 ### Changed
+- **Tool release baselines (2026-07-15 sweep)**. Advanced Claude Code to `v2.1.207`, Cline to `cli-v3.0.40`, Codex CLI to `rust-v0.144.4`, Cursor to `3.11.19`, and OpenCode to `v1.17.20` (closes #1198 through #1202); the three rule-worthy v2.1.207 changes landed as CC-SET-014/015 and CC-HK-028 above.
 - **Tool release baselines**. Triaged the current release-watch batch and advanced Claude Code to `v2.1.206`, Codex CLI to `rust-v0.144.1`, OpenCode to `v1.17.18`, Kiro CLI to `2.12.0`, Cline to `cli-v3.0.39`, Cursor to `3.11.13`, amp to `the-dial`, and Gemini CLI to `v0.50.0` (closes #1181 through #1188). Releases without validated schema changes were classified as runtime, UI, provider, packaging, or news updates.
 
 ### Fixed
