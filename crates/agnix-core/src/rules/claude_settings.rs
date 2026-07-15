@@ -18,6 +18,8 @@
 //! - `respondToBashCommands` boolean check (CC-SET-011, added in Claude Code v2.1.186).
 //! - `sandbox.credentials` shape check (CC-SET-012, added in Claude Code v2.1.187).
 //! - `autoMode.classifyAllShell` boolean check (CC-SET-013, added in Claude Code v2.1.193).
+//! - autoMode ignored in settings.local.json (CC-SET-014, changed in Claude Code v2.1.207).
+//! - pluginConfigs dead in project-level settings (CC-SET-015, changed in Claude Code v2.1.207).
 //!
 //! Runs on FileType::Hooks (which covers `.claude/settings.json` -
 //! see `file_types/detection.rs`). Skips non-Claude Code settings paths
@@ -45,6 +47,8 @@ const RULE_IDS: &[&str] = &[
     "CC-SET-011",
     "CC-SET-012",
     "CC-SET-013",
+    "CC-SET-014",
+    "CC-SET-015",
 ];
 
 /// Allowed values for `worktree.baseRef` per Claude Code v2.1.133 release notes.
@@ -142,6 +146,14 @@ impl Validator for ClaudeSettingsValidator {
 
         if config.is_rule_enabled("CC-SET-013") {
             validate_auto_mode_classify_all_shell(path, content, &value, &mut diagnostics);
+        }
+
+        if config.is_rule_enabled("CC-SET-014") {
+            validate_auto_mode_in_settings_local(path, content, &value, &mut diagnostics);
+        }
+
+        if config.is_rule_enabled("CC-SET-015") {
+            validate_plugin_configs_scope(path, content, &value, &mut diagnostics);
         }
 
         diagnostics
@@ -1017,6 +1029,103 @@ fn validate_auto_mode_classify_all_shell(
             t!("rules.cc_set_013.message", actual = actual),
         )
         .with_suggestion(t!("rules.cc_set_013.suggestion")),
+    );
+}
+
+/// CC-SET-014: Warn when `autoMode` appears in `.claude/settings.local.json`.
+///
+/// Claude Code v2.1.207 stopped reading `autoMode` from the repo-resident
+/// `.claude/settings.local.json`; the key is silently ignored there. Auto
+/// mode configuration must live in `~/.claude/settings.json` instead.
+///
+/// Fires on any non-null value — the problem is presence in the wrong file,
+/// not value shape (CC-SET-013 covers the classifyAllShell shape and can
+/// co-fire). `null` is treated as field-absent, consistent with the rest of
+/// the CC-SET family. Does NOT fire on `settings.json` or
+/// `managed-settings.json` — `autoMode` is still read from those.
+fn validate_auto_mode_in_settings_local(
+    path: &Path,
+    content: &str,
+    value: &serde_json::Value,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let is_local = path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .map(|n| n == "settings.local.json")
+        .unwrap_or(false);
+    if !is_local {
+        return;
+    }
+
+    let Some(field_value) = value.get("autoMode") else {
+        return;
+    };
+    if field_value.is_null() {
+        return;
+    }
+
+    let line = find_key_line(content, "autoMode").unwrap_or(1);
+
+    diagnostics.push(
+        Diagnostic::warning(
+            path.to_path_buf(),
+            line,
+            0,
+            "CC-SET-014",
+            t!("rules.cc_set_014.message"),
+        )
+        .with_suggestion(t!("rules.cc_set_014.suggestion")),
+    );
+}
+
+/// CC-SET-015: Warn on `pluginConfigs` in project-level settings files.
+///
+/// Claude Code v2.1.207 changed where plugin option values are read: only
+/// user-level settings (`~/.claude/settings.json`), `--settings` files, and
+/// managed settings are honored. Repo-resident `.claude/settings.json` and
+/// `.claude/settings.local.json` no longer supply `pluginConfigs`; the key
+/// is silently ignored there. `managed-settings.json` IS honored, so it is
+/// skipped.
+///
+/// Fires on any non-null value; `null` is treated as field-absent,
+/// consistent with the CC-SET family. Note agnix lints repo checkouts —
+/// a user linting their home directory would hit a false positive on
+/// `~/.claude/settings.json`, the same accepted ambiguity discussed in the
+/// CC-SET-002 doc comment.
+fn validate_plugin_configs_scope(
+    path: &Path,
+    content: &str,
+    value: &serde_json::Value,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let is_managed = path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .map(|n| n == "managed-settings.json")
+        .unwrap_or(false);
+    if is_managed {
+        return;
+    }
+
+    let Some(field_value) = value.get("pluginConfigs") else {
+        return;
+    };
+    if field_value.is_null() {
+        return;
+    }
+
+    let line = find_key_line(content, "pluginConfigs").unwrap_or(1);
+
+    diagnostics.push(
+        Diagnostic::warning(
+            path.to_path_buf(),
+            line,
+            0,
+            "CC-SET-015",
+            t!("rules.cc_set_015.message"),
+        )
+        .with_suggestion(t!("rules.cc_set_015.suggestion")),
     );
 }
 
@@ -2599,5 +2708,200 @@ mod tests {
             &config,
         );
         assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-013"));
+    }
+
+    // ===== CC-SET-014: autoMode in settings.local.json =====
+
+    #[test]
+    fn test_auto_mode_in_settings_local_flags() {
+        let content = r#"{"autoMode": {"classifyAllShell": true}}"#;
+        let diagnostics = validate_at(".claude/settings.local.json", content);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-014")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].level, crate::diagnostics::DiagnosticLevel::Warning);
+    }
+
+    #[test]
+    fn test_auto_mode_in_settings_json_does_not_flag() {
+        // autoMode is still read from settings.json — must not fire CC-SET-014.
+        let content = r#"{"autoMode": {"classifyAllShell": true}}"#;
+        let diagnostics = validate_at(".claude/settings.json", content);
+        assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-014"));
+    }
+
+    #[test]
+    fn test_auto_mode_in_managed_settings_does_not_flag() {
+        // managed-settings.json is honored — must not fire CC-SET-014.
+        let content = r#"{"autoMode": {"classifyAllShell": true}}"#;
+        let diagnostics = validate_at(".claude/managed-settings.json", content);
+        assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-014"));
+    }
+
+    #[test]
+    fn test_auto_mode_absent_in_settings_local_is_fine() {
+        let content = r#"{"model": "claude-sonnet-4"}"#;
+        let diagnostics = validate_at(".claude/settings.local.json", content);
+        assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-014"));
+    }
+
+    #[test]
+    fn test_auto_mode_null_in_settings_local_is_fine() {
+        let content = r#"{"autoMode": null}"#;
+        let diagnostics = validate_at(".claude/settings.local.json", content);
+        assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-014"));
+    }
+
+    #[test]
+    fn test_auto_mode_in_settings_local_fires_for_any_non_null_type() {
+        // object, string, bool, number, array — all must produce exactly 1 CC-SET-014
+        for content in &[
+            r#"{"autoMode": {"classifyAllShell": true}}"#,
+            r#"{"autoMode": "enabled"}"#,
+            r#"{"autoMode": true}"#,
+            r#"{"autoMode": 1}"#,
+            r#"{"autoMode": []}"#,
+        ] {
+            let diagnostics = validate_at(".claude/settings.local.json", content);
+            let count = diagnostics
+                .iter()
+                .filter(|d| d.rule == "CC-SET-014")
+                .count();
+            assert_eq!(count, 1, "expected 1 CC-SET-014 for content: {}", content);
+        }
+    }
+
+    #[test]
+    fn test_auto_mode_in_settings_local_line_points_at_key() {
+        let content =
+            "{\n  \"model\": \"claude-sonnet-4\",\n  \"autoMode\": {\"classifyAllShell\": true}\n}";
+        let diagnostics = validate_at(".claude/settings.local.json", content);
+        let hit = diagnostics
+            .iter()
+            .find(|d| d.rule == "CC-SET-014")
+            .expect("CC-SET-014 diagnostic");
+        assert_eq!(hit.line, 3, "line must point at the autoMode key");
+    }
+
+    #[test]
+    fn test_auto_mode_in_settings_local_can_be_disabled() {
+        let mut builder = LintConfig::builder();
+        builder.disable_rule("CC-SET-014");
+        let config = builder.build().unwrap();
+        let validator = ClaudeSettingsValidator;
+        let path = PathBuf::from(".claude/settings.local.json");
+        let diagnostics = validator.validate(
+            &path,
+            r#"{"autoMode": {"classifyAllShell": true}}"#,
+            &config,
+        );
+        assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-014"));
+    }
+
+    #[test]
+    fn test_auto_mode_in_settings_local_coexists_with_cc_set_013() {
+        // classifyAllShell with a bad type in settings.local.json should fire
+        // both CC-SET-013 (wrong type) and CC-SET-014 (wrong file).
+        let content = r#"{"autoMode": {"classifyAllShell": "true"}}"#;
+        let diagnostics = validate_at(".claude/settings.local.json", content);
+        assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-013"));
+        assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-014"));
+    }
+
+    // ===== CC-SET-015: pluginConfigs in project-level settings =====
+
+    #[test]
+    fn test_plugin_configs_in_settings_json_flags() {
+        let content = r#"{"pluginConfigs": {"my-plugin": {"apiKey": "abc"}}}"#;
+        let diagnostics = validate_at(".claude/settings.json", content);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-015")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].level, crate::diagnostics::DiagnosticLevel::Warning);
+    }
+
+    #[test]
+    fn test_plugin_configs_in_settings_local_flags() {
+        let content = r#"{"pluginConfigs": {"my-plugin": {"apiKey": "abc"}}}"#;
+        let diagnostics = validate_at(".claude/settings.local.json", content);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-015")
+            .collect();
+        assert_eq!(hits.len(), 1);
+    }
+
+    #[test]
+    fn test_plugin_configs_in_managed_settings_does_not_flag() {
+        // managed-settings is an honored tier — must not fire CC-SET-015.
+        let content = r#"{"pluginConfigs": {"my-plugin": {"apiKey": "abc"}}}"#;
+        let diagnostics = validate_at(".claude/managed-settings.json", content);
+        assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-015"));
+    }
+
+    #[test]
+    fn test_plugin_configs_absent_is_fine() {
+        let content = r#"{"model": "claude-sonnet-4"}"#;
+        let diagnostics = validate_at(".claude/settings.json", content);
+        assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-015"));
+    }
+
+    #[test]
+    fn test_plugin_configs_null_is_fine() {
+        let content = r#"{"pluginConfigs": null}"#;
+        let diagnostics = validate_at(".claude/settings.json", content);
+        assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-015"));
+    }
+
+    #[test]
+    fn test_plugin_configs_empty_object_flags() {
+        // An empty object is still a non-null value — the presence of the key
+        // is the problem regardless of whether nested config is populated.
+        let content = r#"{"pluginConfigs": {}}"#;
+        let diagnostics = validate_at(".claude/settings.json", content);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-015")
+            .collect();
+        assert_eq!(hits.len(), 1);
+    }
+
+    #[test]
+    fn test_plugin_configs_line_points_at_key() {
+        let content = "{\n  \"model\": \"claude-sonnet-4\",\n  \"pluginConfigs\": {\"p\": {}}\n}";
+        let diagnostics = validate_at(".claude/settings.json", content);
+        let hit = diagnostics
+            .iter()
+            .find(|d| d.rule == "CC-SET-015")
+            .expect("CC-SET-015 diagnostic");
+        assert_eq!(hit.line, 3, "line must point at the pluginConfigs key");
+    }
+
+    #[test]
+    fn test_plugin_configs_can_be_disabled() {
+        let mut builder = LintConfig::builder();
+        builder.disable_rule("CC-SET-015");
+        let config = builder.build().unwrap();
+        let validator = ClaudeSettingsValidator;
+        let path = PathBuf::from(".claude/settings.json");
+        let diagnostics = validator.validate(
+            &path,
+            r#"{"pluginConfigs": {"my-plugin": {"apiKey": "abc"}}}"#,
+            &config,
+        );
+        assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-015"));
+    }
+
+    #[test]
+    fn test_plugin_configs_coexists_with_other_cc_set_rules() {
+        // Both CC-SET-002 (channelsEnabled) and CC-SET-015 fire independently.
+        let content = r#"{"channelsEnabled": "true", "pluginConfigs": {"p": {}}}"#;
+        let diagnostics = validate_at(".claude/settings.json", content);
+        assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-002"));
+        assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-015"));
     }
 }

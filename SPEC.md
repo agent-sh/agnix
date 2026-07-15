@@ -8,13 +8,13 @@
 | Type | Files | Rules |
 |------|-------|-------|
 | Skills | SKILL.md | 35 |
-| Hooks | settings.json | 27 |
+| Hooks | settings.json | 28 |
 | Memory (Claude Code) | CLAUDE.md, CLAUDE.local.md, .claude/rules/*.md | 13 |
 | Instructions (Cross-Tool) | AGENTS.md, AGENTS.local.md, AGENTS.override.md | 6 |
 | Agents | agents/*.md | 17 |
 | Plugins | plugin.json | 15 |
 | Claude Output Styles | .claude/output-styles/*.md | 6 |
-| Claude Settings | .claude/settings.json | 13 |
+| Claude Settings | .claude/settings.json | 15 |
 | Prompt Engineering | CLAUDE.md, AGENTS.md | 6 |
 | Cross-Platform | AGENTS.md | 9 |
 | MCP | tool definitions | 26 |

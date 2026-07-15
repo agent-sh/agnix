@@ -742,6 +742,17 @@ rules:
       documenta esta configuracion de auto-mode como un interruptor true/false estricto
     suggestion: Establece autoMode.classifyAllShell en true o false sin comillas, o quitalo para conservar el alcance
       predeterminado del clasificador auto-mode.
+  cc_set_014:
+    message: autoMode en .claude/settings.local.json es ignorado silenciosamente desde Claude Code 2.1.207; la clave solo
+      se lee desde ~/.claude/settings.json
+    suggestion: Mueve la configuracion de autoMode a ~/.claude/settings.json (tu archivo de configuracion global de usuario)
+      donde Claude Code 2.1.207+ la lee.
+  cc_set_015:
+    message: pluginConfigs en la configuracion .claude a nivel de proyecto se ignora silenciosamente desde Claude Code
+      2.1.207; los valores de opciones de plugin solo se leen desde la configuracion de usuario, archivos --settings y
+      configuracion administrada
+    suggestion: Mueve pluginConfigs a ~/.claude/settings.json (nivel de usuario), pasalo mediante el indicador --settings,
+      o configuralo en la configuracion administrada; eliminalo del archivo a nivel de proyecto.
 
 
 # ===========================================================================

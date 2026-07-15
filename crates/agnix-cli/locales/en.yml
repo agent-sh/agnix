@@ -1218,6 +1218,21 @@ rules:
       auto-mode setting as a strict true/false toggle
     suggestion: Set autoMode.classifyAllShell to an unquoted true or false, or remove it to keep the default auto-mode
       classifier scope.
+  cc_set_014:
+    message: autoMode in .claude/settings.local.json is silently ignored as of Claude Code 2.1.207; the key is only read
+      from ~/.claude/settings.json
+    suggestion: Move autoMode configuration to ~/.claude/settings.json (your global user settings file) where Claude Code
+      2.1.207+ reads it.
+  cc_set_015:
+    message: pluginConfigs in project-level .claude settings is silently ignored since Claude Code 2.1.207; plugin option
+      values are only read from user settings, --settings files, and managed settings
+    suggestion: Move pluginConfigs to ~/.claude/settings.json (user-level), pass it via the --settings flag, or configure
+      it in managed settings; remove it from the project-level file.
+  cc_hk_028:
+    message: Command hook at %{location} uses '${user_config.*}' interpolation, which Claude Code 2.1.207+ rejects at
+      load time as a shell-injection fix
+    suggestion: "Read the value inside the script via $CLAUDE_PLUGIN_OPTION_<KEY> (plugin hooks) or pass it through the\
+      \ environment; shell-form command strings can no longer interpolate ${user_config.*}."
   cdx_pl_015:
     message: '''skills'' must be a string path, not %{actual}'
     suggestion: Set 'skills' to a relative path string such as './skills', or remove the field

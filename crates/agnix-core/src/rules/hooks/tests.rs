@@ -5111,3 +5111,164 @@ fn test_cc_hk_mcp_tool_both_missing_flags_both() {
     assert_eq!(cc_026.len(), 1);
     assert_eq!(cc_027.len(), 1);
 }
+
+// ===== Detection safety gate: hooks validator is quiet on non-hooks JSON =====
+
+#[test]
+fn test_hooks_validator_quiet_on_json_without_hooks_key() {
+    // Safety gate for detection.rs extension: if a hooks/hooks.json path routes
+    // to the HooksValidator, a JSON object without a "hooks" key must produce
+    // NO spurious diagnostics (SettingsSchema.hooks defaults to empty map).
+    let contents = [r#"{}"#, r#"{"foo": 1}"#, r#"{"unrelated": true}"#];
+    for content in &contents {
+        let validator = HooksValidator;
+        let path = std::path::Path::new("my-plugin/hooks/hooks.json");
+        let diagnostics = validator.validate(path, content, &LintConfig::default());
+        // Filter out CC-HK-010 (timeout) and CC-HK-012 (parse) which might
+        // fire on structural issues; we care about zero spurious structural errors.
+        let non_timeout: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule != "CC-HK-010" && d.rule != "CC-HK-012")
+            .collect();
+        assert!(
+            non_timeout.is_empty(),
+            "hooks validator must be quiet on non-hooks JSON {}: got {:?}",
+            content,
+            non_timeout
+                .iter()
+                .map(|d| (&d.rule, &d.message))
+                .collect::<Vec<_>>()
+        );
+    }
+}
+
+// ===== CC-HK-028: ${user_config.*} interpolation rejected =====
+
+#[test]
+fn test_cc_hk_028_user_config_interpolation_flags() {
+    let content = r#"{
+        "hooks": {
+            "PreToolUse": [
+                {
+                    "matcher": "Bash",
+                    "hooks": [
+                        { "type": "command", "command": "my-script ${user_config.api_key}", "timeout": 30 }
+                    ]
+                }
+            ]
+        }
+    }"#;
+    let diagnostics = validate(content);
+    let hits: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-HK-028")
+        .collect();
+    assert_eq!(hits.len(), 1);
+    assert_eq!(hits[0].level, DiagnosticLevel::Error);
+}
+
+#[test]
+fn test_cc_hk_028_env_var_alternative_is_fine() {
+    // $CLAUDE_PLUGIN_OPTION_API_KEY is the documented replacement — must not flag.
+    let content = r#"{
+        "hooks": {
+            "PreToolUse": [
+                {
+                    "matcher": "Bash",
+                    "hooks": [
+                        { "type": "command", "command": "my-script $CLAUDE_PLUGIN_OPTION_API_KEY", "timeout": 30 }
+                    ]
+                }
+            ]
+        }
+    }"#;
+    let diagnostics = validate(content);
+    assert!(diagnostics.iter().all(|d| d.rule != "CC-HK-028"));
+}
+
+#[test]
+fn test_cc_hk_028_prompt_type_does_not_flag() {
+    // The rule only inspects command-type command strings, not prompt strings.
+    let content = r#"{
+        "hooks": {
+            "Stop": [
+                {
+                    "hooks": [
+                        { "type": "prompt", "prompt": "Use ${user_config.label} format", "timeout": 30 }
+                    ]
+                }
+            ]
+        }
+    }"#;
+    let diagnostics = validate(content);
+    assert!(
+        diagnostics.iter().all(|d| d.rule != "CC-HK-028"),
+        "CC-HK-028 must not fire on prompt-type hooks"
+    );
+}
+
+#[test]
+fn test_cc_hk_028_two_hooks_one_bad_one_diagnostic() {
+    let content = r#"{
+        "hooks": {
+            "PreToolUse": [
+                {
+                    "matcher": "Bash",
+                    "hooks": [
+                        { "type": "command", "command": "safe-cmd $ENV_VAR", "timeout": 30 },
+                        { "type": "command", "command": "bad-cmd ${user_config.key}", "timeout": 30 }
+                    ]
+                }
+            ]
+        }
+    }"#;
+    let diagnostics = validate(content);
+    let hits: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-HK-028")
+        .collect();
+    assert_eq!(hits.len(), 1);
+}
+
+#[test]
+fn test_cc_hk_028_multiple_refs_in_one_command_one_diagnostic() {
+    // Multiple ${user_config.*} references in a single command string → 1 diagnostic.
+    let content = r#"{
+        "hooks": {
+            "PreToolUse": [
+                {
+                    "matcher": "Bash",
+                    "hooks": [
+                        { "type": "command", "command": "cmd ${user_config.a} ${user_config.b}", "timeout": 30 }
+                    ]
+                }
+            ]
+        }
+    }"#;
+    let diagnostics = validate(content);
+    let hits: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-HK-028")
+        .collect();
+    assert_eq!(hits.len(), 1);
+}
+
+#[test]
+fn test_cc_hk_028_can_be_disabled() {
+    let mut config = LintConfig::default();
+    config.rules_mut().disabled_rules = vec!["CC-HK-028".to_string()];
+    let content = r#"{
+        "hooks": {
+            "PreToolUse": [
+                {
+                    "matcher": "Bash",
+                    "hooks": [
+                        { "type": "command", "command": "cmd ${user_config.key}", "timeout": 30 }
+                    ]
+                }
+            ]
+        }
+    }"#;
+    let diagnostics = validate_with_config(content, &config);
+    assert!(diagnostics.iter().all(|d| d.rule != "CC-HK-028"));
+}

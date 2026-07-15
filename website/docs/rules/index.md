@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `432` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `435` validation rules generated from `knowledge-base/rules.json`.
 `127` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -74,6 +74,7 @@ This section contains all `432` validation rules generated from `knowledge-base/
 | [CC-HK-025](./generated/cc-hk-025.md) | Invalid Matcher Value | LOW | Claude Hooks | Yes (unsafe) |
 | [CC-HK-026](./generated/cc-hk-026.md) | MCP Tool Hook Missing Server | HIGH | Claude Hooks | No |
 | [CC-HK-027](./generated/cc-hk-027.md) | MCP Tool Hook Missing Tool | HIGH | Claude Hooks | No |
+| [CC-HK-028](./generated/cc-hk-028.md) | Rejected user_config Interpolation in Shell-Form Command | HIGH | Claude Hooks | No |
 | [CC-MEM-001](./generated/cc-mem-001.md) | Invalid Import Path | HIGH | Claude Memory | No |
 | [CC-MEM-002](./generated/cc-mem-002.md) | Circular Import | HIGH | Claude Memory | No |
 | [CC-MEM-003](./generated/cc-mem-003.md) | Import Depth Exceeds 5 | HIGH | Claude Memory | No |
@@ -142,6 +143,8 @@ This section contains all `432` validation rules generated from `knowledge-base/
 | [CC-SET-011](./generated/cc-set-011.md) | Non-boolean respondToBashCommands Setting | MEDIUM | Claude Settings | No |
 | [CC-SET-012](./generated/cc-set-012.md) | Invalid sandbox.credentials Setting | MEDIUM | Claude Settings | No |
 | [CC-SET-013](./generated/cc-set-013.md) | Non-boolean autoMode.classifyAllShell Setting | MEDIUM | Claude Settings | No |
+| [CC-SET-014](./generated/cc-set-014.md) | autoMode Setting Ignored in settings.local.json | MEDIUM | Claude Settings | No |
+| [CC-SET-015](./generated/cc-set-015.md) | Dead pluginConfigs in Project-Level Settings | MEDIUM | Claude Settings | No |
 | [CDX-000](./generated/cdx-000.md) | TOML Parse Error | HIGH | Codex CLI | No |
 | [CDX-001](./generated/cdx-001.md) | Invalid Approval Mode | HIGH | Codex CLI | Yes (unsafe) |
 | [CDX-002](./generated/cdx-002.md) | Invalid Full Auto Error Mode | HIGH | Codex CLI | Yes (unsafe) |
