@@ -426,6 +426,19 @@ pub fn detect_file_type(path: &Path) -> FileType {
         {
             FileType::CursorHooks
         }
+        // Claude Code plugin hooks configuration (<plugin-root>/hooks/hooks.json).
+        // Path-only heuristic: any hooks/hooks.json that is not the Copilot
+        // (.github/hooks/) or Cursor (.cursor/) layout is treated as Claude hooks.
+        // Accepted trade-off (same reasoning as CodexRequirements below): an
+        // unrelated project keeping a hooks/hooks.json would be linted as Claude
+        // hooks; the layout is uncommon enough to accept.
+        "hooks.json"
+            if parent_eq_ignore_ascii_case(parent, "hooks")
+                && !parent_eq_ignore_ascii_case(grandparent, ".github")
+                && !parent_eq_ignore_ascii_case(grandparent, ".cursor") =>
+        {
+            FileType::Hooks
+        }
         // Cursor cloud-agent environment configuration (.cursor/environment.json)
         name if name.eq_ignore_ascii_case("environment.json")
             && parent.is_some_and(|p| p.eq_ignore_ascii_case(".cursor")) =>
@@ -1631,6 +1644,37 @@ mod tests {
         assert_ne!(
             detect_file_type(Path::new(".kiro/settings/not-mcp.json")),
             FileType::KiroMcp
+        );
+    }
+
+    #[test]
+    fn detect_plugin_hooks_json_as_hooks() {
+        // Claude Code plugin hooks/hooks.json → FileType::Hooks
+        assert_eq!(
+            detect_file_type(Path::new("my-plugin/hooks/hooks.json")),
+            FileType::Hooks
+        );
+        assert_eq!(
+            detect_file_type(Path::new("project/plugins/my-plugin/hooks/hooks.json")),
+            FileType::Hooks
+        );
+    }
+
+    #[test]
+    fn detect_github_hooks_still_copilot_hooks() {
+        // .github/hooks/hooks.json must remain CopilotHooks
+        assert_eq!(
+            detect_file_type(Path::new(".github/hooks/hooks.json")),
+            FileType::CopilotHooks
+        );
+    }
+
+    #[test]
+    fn detect_cursor_hooks_still_cursor_hooks() {
+        // .cursor/hooks.json must remain CursorHooks (cursor guard)
+        assert_eq!(
+            detect_file_type(Path::new(".cursor/hooks.json")),
+            FileType::CursorHooks
         );
     }
 }

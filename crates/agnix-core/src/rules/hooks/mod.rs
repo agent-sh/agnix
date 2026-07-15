@@ -1,4 +1,4 @@
-//! Hooks validation rules (CC-HK-001 to CC-HK-027)
+//! Hooks validation rules (CC-HK-001 to CC-HK-028)
 
 use crate::{
     config::PerFileLintConfig,
@@ -40,6 +40,7 @@ const RULE_IDS: &[&str] = &[
     "CC-HK-025",
     "CC-HK-026",
     "CC-HK-027",
+    "CC-HK-028",
 ];
 
 pub struct HooksValidator;
@@ -118,6 +119,33 @@ fn validate_cc_hk_009_dangerous_patterns(
                 t!("rules.cc_hk_009.message", reason = reason),
             )
             .with_suggestion(t!("rules.cc_hk_009.suggestion", pattern = pattern)),
+        );
+    }
+}
+
+/// CC-HK-028: `${user_config.*}` interpolation in a shell-form command string.
+///
+/// Claude Code v2.1.207 rejects `${user_config.<key>}` inside a command
+/// hook's shell-form `command` string at load time (shell-injection fix).
+/// Values must instead be read inside the script via
+/// `$CLAUDE_PLUGIN_OPTION_<KEY>` (plugin hooks) or passed through the
+/// environment.
+fn validate_cc_hk_028_user_config_interpolation(
+    command: &str,
+    hook_location: &str,
+    path: &Path,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    if command.contains("${user_config.") {
+        diagnostics.push(
+            Diagnostic::error(
+                path.to_path_buf(),
+                1,
+                0,
+                "CC-HK-028",
+                t!("rules.cc_hk_028.message", location = hook_location),
+            )
+            .with_suggestion(t!("rules.cc_hk_028.suggestion")),
         );
     }
 }
@@ -639,6 +667,16 @@ impl Validator for HooksValidator {
                                 if config.is_rule_enabled("CC-HK-009") {
                                     validate_cc_hk_009_dangerous_patterns(
                                         cmd,
+                                        path,
+                                        &mut diagnostics,
+                                    );
+                                }
+
+                                // CC-HK-028: ${user_config.*} interpolation rejected at load time
+                                if config.is_rule_enabled("CC-HK-028") {
+                                    validate_cc_hk_028_user_config_interpolation(
+                                        cmd,
+                                        &hook_location,
                                         path,
                                         &mut diagnostics,
                                     );

@@ -454,6 +454,20 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Fix**: Manual - set `autoMode.classifyAllShell` to an unquoted `true` or `false`.
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.193 (added `autoMode.classifyAllShell`)
 
+<a id="cc-set-014"></a>
+### CC-SET-014 [MEDIUM] autoMode Setting Ignored in settings.local.json
+**Requirement**: `autoMode` SHOULD NOT be placed in `.claude/settings.local.json`. As of Claude Code v2.1.207, auto mode no longer reads `autoMode` from the repo-resident local settings file; the key is silently ignored there and is only read from `~/.claude/settings.json`.
+**Detection**: Parse `.claude/settings.local.json` only (not `settings.json`, not `managed-settings.json`); flag (warning) any non-null value for the top-level `autoMode` key. Fires on any value type — the rule is about presence in the wrong file, not value shape. `null` values and absent keys are not flagged.
+**Fix**: Manual - move `autoMode` (with its nested keys) from `.claude/settings.local.json` to `~/.claude/settings.json`.
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.207 (auto mode no longer reads `autoMode` from repo-resident `settings.local.json`)
+
+<a id="cc-set-015"></a>
+### CC-SET-015 [MEDIUM] Dead pluginConfigs in Project-Level Settings
+**Requirement**: `pluginConfigs` SHOULD NOT be present in project-level `.claude/settings.json` or `.claude/settings.local.json` for Claude Code 2.1.207+. As of that release, plugin option values are only read from user-level settings (`~/.claude/settings.json`), `--settings` files, and managed settings; project-level `pluginConfigs` is silently ignored.
+**Detection**: Parse `settings.json` / `settings.local.json` under `.claude/`; flag (warning) any non-null value for the top-level `pluginConfigs` key. `null` values and absent keys are not flagged. `managed-settings.json` is excluded — the managed tier is still honored.
+**Fix**: Manual - move `pluginConfigs` to `~/.claude/settings.json` (user-level), pass it via the `--settings` flag, or configure it in managed settings; then remove it from the project-level file.
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.207 (project-level `pluginConfigs` no longer read)
+
 ---
 
 ## PER-CLIENT SKILL RULES
@@ -857,6 +871,13 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Detection**: Walk `hooks.*[*].hooks[*]`; for entries with `type == "mcp_tool"`, flag when `tool` is absent, not a string, or the empty string
 **Fix**: Manual (add `"tool": "<tool-name>"`)
 **Source**: code.claude.com/docs/en/hooks#mcp-tool-hook-fields (Claude Code v2.1.118+)
+
+<a id="cc-hk-028"></a>
+### CC-HK-028 [HIGH] Rejected user_config Interpolation in Shell-Form Command
+**Requirement**: A command hook's `command` string MUST NOT contain `${user_config.*}` interpolation. Claude Code v2.1.207 rejects it at load time as a shell-injection fix; values must be read inside the script via `$CLAUDE_PLUGIN_OPTION_<KEY>` (plugin hooks) or passed through the environment.
+**Detection**: Walk command-type hook entries; flag (error) when the `command` string contains the substring `${user_config.`.
+**Fix**: Manual - replace `${user_config.<key>}` with `$CLAUDE_PLUGIN_OPTION_<KEY>` read inside the script, or restructure to pass the value via the environment.
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.207 (shell-injection fix rejecting `${user_config.*}` in shell-form commands)
 
 ---
 
@@ -3469,11 +3490,11 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Amp Checks | 4 | 2 | 2 | 0 | 3 |
 | Amp Skills | 1 | 0 | 1 | 0 | 1 |
 | Claude Agents | 17 | 12 | 4 | 1 | 10 |
-| Claude Hooks | 27 | 14 | 8 | 5 | 16 |
+| Claude Hooks | 28 | 15 | 8 | 5 | 16 |
 | Claude Memory | 13 | 8 | 5 | 0 | 3 |
 | Claude Output Styles | 6 | 2 | 2 | 2 | 0 |
 | Claude Plugins | 15 | 9 | 6 | 0 | 4 |
-| Claude Settings | 13 | 0 | 13 | 0 | 0 |
+| Claude Settings | 15 | 0 | 15 | 0 | 0 |
 | Claude Skills | 21 | 11 | 9 | 1 | 13 |
 | Cline | 7 | 4 | 3 | 0 | 3 |
 | Cline Skills | 3 | 2 | 1 | 0 | 2 |
@@ -3504,7 +3525,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **432** | **212** | **191** | **29** | **127** |
+| **TOTAL** | **435** | **213** | **193** | **29** | **127** |
 
 
 ---
@@ -3534,8 +3555,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 432 validation rules across 40 categories
+**Total Coverage**: 435 validation rules across 40 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 212 HIGH, 191 MEDIUM, 29 LOW
+**Certainty**: 213 HIGH, 193 MEDIUM, 29 LOW
 **Auto-Fixable**: 127 rules (29%)

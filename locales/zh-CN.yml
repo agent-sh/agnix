@@ -704,6 +704,12 @@ rules:
   cc_set_013:
     message: autoMode.classifyAllShell 存在时必须是布尔值 (实际为 %{actual}); Claude Code 2.1.193+ 将该 auto-mode 设置记录为严格的 true/false 开关
     suggestion: 将 autoMode.classifyAllShell 设置为不带引号的 true 或 false，或移除此字段以保留默认的 auto-mode 分类器范围。
+  cc_set_014:
+    message: Claude Code 2.1.207 起，.claude/settings.local.json 中的 autoMode 将被静默忽略；该键仅从 ~/.claude/settings.json 读取
+    suggestion: 将 autoMode 配置移至 ~/.claude/settings.json（全局用户配置文件），Claude Code 2.1.207+ 将从该文件读取。
+  cc_set_015:
+    message: 自 Claude Code 2.1.207 起，项目级 .claude 设置中的 pluginConfigs 会被静默忽略；插件选项值仅从用户设置、--settings 文件和托管设置中读取
+    suggestion: 将 pluginConfigs 移至 ~/.claude/settings.json（用户级），通过 --settings 标志传入，或在托管设置中配置；并从项目级文件中删除。
 
 
 # ===========================================================================
