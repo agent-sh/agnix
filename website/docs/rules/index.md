@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `436` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `437` validation rules generated from `knowledge-base/rules.json`.
 `127` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -431,6 +431,7 @@ This section contains all `436` validation rules generated from `knowledge-base/
 | [OC-CFG-011](./generated/oc-cfg-011.md) | Invalid MCP Timeout | HIGH | OpenCode | No |
 | [OC-CFG-012](./generated/oc-cfg-012.md) | Invalid MCP OAuth Config | HIGH | OpenCode | No |
 | [OC-CFG-013](./generated/oc-cfg-013.md) | Invalid Server Config | HIGH | OpenCode | No |
+| [OC-CFG-014](./generated/oc-cfg-014.md) | Invalid subagent_depth Value | MEDIUM | OpenCode | No |
 | [OC-AG-005](./generated/oc-ag-005.md) | top_p Out of Range | HIGH | OpenCode | No |
 | [OC-AG-006](./generated/oc-ag-006.md) | Invalid Named Color | MEDIUM | OpenCode | Yes (unsafe) |
 | [OC-AG-007](./generated/oc-ag-007.md) | Redundant steps and maxSteps | MEDIUM | OpenCode | No |

@@ -2120,6 +2120,13 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 **Fix**: Manual
 **Source**: opencode.ai/docs/
 
+<a id="oc-cfg-014"></a>
+### OC-CFG-014 [MEDIUM] Invalid subagent_depth Value
+**Requirement**: The top-level `subagent_depth` field MUST be a non-negative integer when present
+**Detection**: Parse JSON, check that `subagent_depth` is a non-negative integer (null/absent is valid)
+**Fix**: No auto-fix
+**Source**: github.com/anomalyco/opencode/releases/tag/v1.18.2
+
 <a id="oc-ag-005"></a>
 ### OC-AG-005 [HIGH] top_p Out of Range
 **Requirement**: The agent `top_p` field MUST be between 0.0 and 1.0
@@ -3522,7 +3529,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Kiro Skills | 1 | 0 | 1 | 0 | 1 |
 | Kiro Steering | 14 | 3 | 9 | 2 | 1 |
 | MCP | 26 | 20 | 6 | 0 | 7 |
-| OpenCode | 45 | 28 | 16 | 1 | 10 |
+| OpenCode | 46 | 28 | 17 | 1 | 10 |
 | OpenCode Skills | 1 | 0 | 1 | 0 | 1 |
 | Prompt Eng | 6 | 0 | 6 | 0 | 2 |
 | References | 4 | 2 | 2 | 0 | 1 |
@@ -3532,7 +3539,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **436** | **213** | **193** | **30** | **127** |
+| **TOTAL** | **437** | **213** | **194** | **30** | **127** |
 
 
 ---
@@ -3562,8 +3569,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 436 validation rules across 40 categories
+**Total Coverage**: 437 validation rules across 40 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 213 HIGH, 193 MEDIUM, 30 LOW
+**Certainty**: 213 HIGH, 194 MEDIUM, 30 LOW
 **Auto-Fixable**: 127 rules (29%)

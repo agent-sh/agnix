@@ -1,6 +1,6 @@
 # agnix Technical Reference
 
-> Linter for agent configs. 436 rules across 40 categories.
+> Linter for agent configs. 437 rules across 40 categories.
 
 
 ## What agnix Validates
@@ -23,7 +23,7 @@
 | GitHub Copilot | .github/copilot-instructions.md, .github/instructions/*.instructions.md, .github/agents/*.agent.md, .github/prompts/*.prompt.md, .github/hooks/hooks.json, .github/workflows/copilot-setup-steps.yml | 25 |
 | Cursor Project Rules | .cursor/rules/*.mdc, .cursorrules, .cursor/hooks.json, .cursor/agents/**/*.md, .cursor/environment.json | 19 |
 | Cline | .clinerules, .clinerules/*.md, .clinerules/*.txt | 7 |
-| OpenCode | opencode.json, opencode.jsonc | 45 |
+| OpenCode | opencode.json, opencode.jsonc | 46 |
 | Gemini Agents | .gemini/agents/*.json | 1 |
 | Gemini CLI | GEMINI.md, GEMINI.local.md, .gemini/settings.json (hooks), gemini-extension.json (extensions), .geminiignore | 10 |
 | Codex CLI | .codex/config.toml/.json/.yaml | 65 |
@@ -62,7 +62,7 @@ agnix/
 │   ├── agnix-mcp/      # MCP server
 │   └── agnix-wasm/     # WebAssembly bindings
 ├── editors/            # Neovim, VS Code, JetBrains, Zed integrations
-├── knowledge-base/     # 436 rules documented
+├── knowledge-base/     # 437 rules documented
 
 ├── scripts/            # Build/dev automation scripts
 ├── website/            # Docusaurus documentation website

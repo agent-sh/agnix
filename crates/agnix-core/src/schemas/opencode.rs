@@ -47,6 +47,7 @@ pub const KNOWN_TOP_LEVEL_KEYS: &[&str] = &[
     "skills",
     "small_model",
     "snapshot",
+    "subagent_depth",
     "theme",
     "tools",
     "tui",
