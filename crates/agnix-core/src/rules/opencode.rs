@@ -47,6 +47,7 @@ const RULE_IDS: &[&str] = &[
     "OC-CFG-011",
     "OC-CFG-012",
     "OC-CFG-013",
+    "OC-CFG-014",
     "OC-AG-001",
     "OC-AG-002",
     "OC-AG-003",
@@ -1684,6 +1685,48 @@ impl Validator for OpenCodeValidator {
                                         ),
                                     );
                                 }
+                            }
+                        }
+                    }
+                }
+
+                // OC-CFG-014: Invalid subagent_depth value
+                if config.is_rule_enabled("OC-CFG-014") {
+                    if let Some(depth_val) = obj.get("subagent_depth") {
+                        if !depth_val.is_null() {
+                            if let Some(n) = depth_val.as_i64() {
+                                if n < 0 {
+                                    diagnostics.push(
+                                        Diagnostic::warning(
+                                            path.to_path_buf(),
+                                            find_key_line(content, "subagent_depth").unwrap_or(1),
+                                            0,
+                                            "OC-CFG-014",
+                                            format!(
+                                                "subagent_depth must be non-negative (got {})",
+                                                n
+                                            ),
+                                        )
+                                        .with_suggestion(
+                                            "Use a non-negative integer such as 0 or 1".to_string(),
+                                        ),
+                                    );
+                                }
+                            } else {
+                                // Not an integer (string, bool, float, array, object)
+                                diagnostics.push(
+                                    Diagnostic::warning(
+                                        path.to_path_buf(),
+                                        find_key_line(content, "subagent_depth").unwrap_or(1),
+                                        0,
+                                        "OC-CFG-014",
+                                        "Invalid subagent_depth type. Must be a non-negative integer"
+                                            .to_string(),
+                                    )
+                                    .with_suggestion(
+                                        "Use a non-negative integer such as 0 or 1".to_string(),
+                                    ),
+                                );
                             }
                         }
                     }
@@ -3758,6 +3801,97 @@ mod tests {
             .filter(|d| d.rule == "OC-CFG-013")
             .collect();
         assert_eq!(cfg.len(), 2);
+    }
+
+    // ===== OC-CFG-014: Invalid subagent_depth value =====
+
+    #[test]
+    fn test_oc_cfg_014_valid_positive() {
+        // subagent_depth: 2 → clean (no OC-CFG-014)
+        let diagnostics = validate(r#"{"subagent_depth": 2}"#);
+        assert!(!diagnostics.iter().any(|d| d.rule == "OC-CFG-014"));
+    }
+
+    #[test]
+    fn test_oc_cfg_014_valid_zero() {
+        // subagent_depth: 0 → clean
+        let diagnostics = validate(r#"{"subagent_depth": 0}"#);
+        assert!(!diagnostics.iter().any(|d| d.rule == "OC-CFG-014"));
+    }
+
+    #[test]
+    fn test_oc_cfg_014_negative_integer() {
+        // subagent_depth: -1 → 1 warning
+        let diagnostics = validate(r#"{"subagent_depth": -1}"#);
+        let cfg: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "OC-CFG-014")
+            .collect();
+        assert_eq!(cfg.len(), 1);
+        assert_eq!(cfg[0].level, DiagnosticLevel::Warning);
+        assert!(cfg[0].message.contains("non-negative"));
+        assert!(cfg[0].message.contains("-1"));
+    }
+
+    #[test]
+    fn test_oc_cfg_014_string_type() {
+        // subagent_depth: "2" → 1 warning (wrong type)
+        let diagnostics = validate(r#"{"subagent_depth": "2"}"#);
+        let cfg: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "OC-CFG-014")
+            .collect();
+        assert_eq!(cfg.len(), 1);
+        assert_eq!(cfg[0].level, DiagnosticLevel::Warning);
+        assert!(cfg[0].message.contains("type"));
+    }
+
+    #[test]
+    fn test_oc_cfg_014_float_type() {
+        // subagent_depth: 1.5 → 1 warning (wrong type)
+        let diagnostics = validate(r#"{"subagent_depth": 1.5}"#);
+        let cfg: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "OC-CFG-014")
+            .collect();
+        assert_eq!(cfg.len(), 1);
+        assert_eq!(cfg[0].level, DiagnosticLevel::Warning);
+        assert!(cfg[0].message.contains("type"));
+    }
+
+    #[test]
+    fn test_oc_cfg_014_null_clean() {
+        // subagent_depth: null → clean
+        let diagnostics = validate(r#"{"subagent_depth": null}"#);
+        assert!(!diagnostics.iter().any(|d| d.rule == "OC-CFG-014"));
+    }
+
+    #[test]
+    fn test_oc_cfg_014_absent_clean() {
+        // subagent_depth absent → clean
+        let diagnostics = validate(r#"{"share": "manual"}"#);
+        assert!(!diagnostics.iter().any(|d| d.rule == "OC-CFG-014"));
+    }
+
+    #[test]
+    fn test_oc_cfg_014_rule_disabled() {
+        // Rule disabled → no OC-CFG-014 even with invalid value
+        let mut config = LintConfig::default();
+        config.rules_mut().disabled_rules = vec!["OC-CFG-014".to_string()];
+        let diagnostics = validate_with_config(r#"{"subagent_depth": -1}"#, &config);
+        assert!(!diagnostics.iter().any(|d| d.rule == "OC-CFG-014"));
+    }
+
+    #[test]
+    fn test_oc_cfg_014_known_key_no_oc_004() {
+        // subagent_depth: 2 must NOT trigger OC-004 / OC-CFG-003 (Part 1: known-key fix)
+        let diagnostics = validate(r#"{"subagent_depth": 2}"#);
+        assert!(
+            !diagnostics
+                .iter()
+                .any(|d| d.rule == "OC-004" || d.rule == "OC-CFG-003"),
+            "subagent_depth should be recognized as a known key"
+        );
     }
 
     // ===== OC-AG-009: Invalid agent disable type =====

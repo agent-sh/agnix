@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **OC-CFG-014: Invalid subagent_depth Value** (#1214). OpenCode v1.18.2 added a top-level `subagent_depth` field (`Schema.optional(NonNegativeInt)`); the new rule warns when the value is present but not a non-negative integer (string, float, bool, negative number). `"subagent_depth"` is also added to `KNOWN_TOP_LEVEL_KEYS` so valid v1.18.2 configs no longer trigger the OC-004/OC-CFG-003 unknown-key false positive. Source: https://github.com/anomalyco/opencode/releases/tag/v1.18.2. Rule count 436 → 437. Closes #1214.
+
 ## [0.39.0] - 2026-07-16
 
 ### Added

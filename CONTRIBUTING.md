@@ -122,7 +122,7 @@ Rule IDs follow the format `[PREFIX]-[NUMBER]` where the prefix indicates the ru
 | `OC-` | 8 | OC-001 through OC-004, OC-006 through OC-009 |
 | `OC-AG-` | 9 | OC-AG-001 through OC-AG-009 |
 | `OC-AGM-` | 2 | OC-AGM-001 through OC-AGM-002 |
-| `OC-CFG-` | 13 | OC-CFG-001 through OC-CFG-013 |
+| `OC-CFG-` | 14 | OC-CFG-001 through OC-CFG-014 |
 | `OC-DEP-` | 6 | OC-DEP-001 through OC-DEP-006 |
 | `OC-LSP-` | 2 | OC-LSP-001 through OC-LSP-002 |
 | `OC-PM-` | 2 | OC-PM-001 through OC-PM-002 |

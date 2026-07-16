@@ -1,7 +1,7 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 436,
+  "total_rules": 437,
   "last_updated": "2026-07-16",
   "schema": {
     "evidence": {
@@ -12318,6 +12318,34 @@
       "bad_example": "{\n  \"mcp\": { \"srv\": { \"type\": \"invalid\" } }\n}"
     },
     {
+      "id": "OC-CFG-014",
+      "name": "Invalid subagent_depth Value",
+      "severity": "MEDIUM",
+      "category": "opencode",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://github.com/anomalyco/opencode/releases/tag/v1.18.2"
+        ],
+        "verified_on": "2026-07-16",
+        "applies_to": {
+          "tool": "opencode",
+          "version_range": ">=1.18.2"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"subagent_depth\": 2\n}",
+      "bad_example": "{\n  \"subagent_depth\": -1\n}"
+    },
+    {
       "id": "OC-AG-005",
       "name": "top_p Out of Range",
       "severity": "HIGH",
@@ -12654,7 +12682,7 @@
     },
     "opencode": {
       "prefix": "OC",
-      "count": 45,
+      "count": 46,
       "description": "OpenCode configuration rules"
     },
     "gemini-cli": {
