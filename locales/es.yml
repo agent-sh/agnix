@@ -753,6 +753,9 @@ rules:
       configuracion administrada
     suggestion: Mueve pluginConfigs a ~/.claude/settings.json (nivel de usuario), pasalo mediante el indicador --settings,
       o configuralo en la configuracion administrada; eliminalo del archivo a nivel de proyecto.
+  cc_set_016:
+    message: "'%{rule}' es una forma de regla de permiso obsoleta desde Claude Code 2.1.210; usa '%{replacement}' en su lugar"
+    suggestion: "Reemplaza '%{rule}' con '%{replacement}' en tu lista de permisos."
 
 
 # ===========================================================================

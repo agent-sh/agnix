@@ -468,6 +468,13 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Fix**: Manual - move `pluginConfigs` to `~/.claude/settings.json` (user-level), pass it via the `--settings` flag, or configure it in managed settings; then remove it from the project-level file.
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.207 (project-level `pluginConfigs` no longer read)
 
+<a id="cc-set-016"></a>
+### CC-SET-016 [LOW] Deprecated Tool-Scoped Permission Rule Form
+**Requirement**: `Write(path)`, `NotebookEdit(path)`, and `Glob(path)` permission rule forms SHOULD NOT be used as of Claude Code 2.1.210, which added a startup warning for them. Use `Edit(path)` instead of `Write(path)` or `NotebookEdit(path)`, and use `Read(path)` instead of `Glob(path)`.
+**Detection**: Walk `permissions.allow`, `permissions.deny`, and `permissions.ask` arrays in `.claude/settings.json`, `.claude/settings.local.json`, and `.claude/managed-settings.json`. Flag (warning) any string entry that starts with `Write(`, `NotebookEdit(`, or `Glob(`. Bare tool names without `(` (e.g. `"Write"`) are NOT flagged — only path-scoped forms. Non-array values, non-string entries, and absent `permissions` key are silently skipped.
+**Fix**: Manual - replace `Write(path)` → `Edit(path)`, `NotebookEdit(path)` → `Edit(path)`, `Glob(path)` → `Read(path)` in the permissions array.
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.210 (startup warning added for deprecated `Write(path)`, `NotebookEdit(path)`, `Glob(path)` permission rule forms)
+
 ---
 
 ## PER-CLIENT SKILL RULES
@@ -3494,7 +3501,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Claude Memory | 13 | 8 | 5 | 0 | 3 |
 | Claude Output Styles | 6 | 2 | 2 | 2 | 0 |
 | Claude Plugins | 15 | 9 | 6 | 0 | 4 |
-| Claude Settings | 15 | 0 | 15 | 0 | 0 |
+| Claude Settings | 16 | 0 | 15 | 1 | 0 |
 | Claude Skills | 21 | 11 | 9 | 1 | 13 |
 | Cline | 7 | 4 | 3 | 0 | 3 |
 | Cline Skills | 3 | 2 | 1 | 0 | 2 |
@@ -3525,7 +3532,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **435** | **213** | **193** | **29** | **127** |
+| **TOTAL** | **436** | **213** | **193** | **30** | **127** |
 
 
 ---
@@ -3555,8 +3562,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 435 validation rules across 40 categories
+**Total Coverage**: 436 validation rules across 40 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 213 HIGH, 193 MEDIUM, 29 LOW
+**Certainty**: 213 HIGH, 193 MEDIUM, 30 LOW
 **Auto-Fixable**: 127 rules (29%)

@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **CC-SET-016: Deprecated Tool-Scoped Permission Rule Form** (#1208). Claude Code v2.1.210 added a startup warning for `Write(path)`, `NotebookEdit(path)`, and `Glob(path)` permission rule forms; the new rule warns on their presence in any of the three settings files and suggests `Edit(path)` or `Read(path)` instead. Rule count 435 → 436.
+
 ## [0.38.0] - 2026-07-15
 
 ### Added

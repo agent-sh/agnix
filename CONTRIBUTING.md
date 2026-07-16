@@ -94,7 +94,7 @@ Rule IDs follow the format `[PREFIX]-[NUMBER]` where the prefix indicates the ru
 | `CC-MEM-` | 13 | CC-MEM-001 through CC-MEM-012, CC-MEM-014 |
 | `CC-OS-` | 6 | CC-OS-001 through CC-OS-006 |
 | `CC-PL-` | 15 | CC-PL-001 through CC-PL-015 |
-| `CC-SET-` | 15 | CC-SET-001 through CC-SET-015 |
+| `CC-SET-` | 16 | CC-SET-001 through CC-SET-016 |
 | `CC-SK-` | 21 | CC-SK-001 through CC-SK-021 |
 | `CDX-` | 7 | CDX-000 through CDX-006 |
 | `CDX-AG-` | 7 | CDX-AG-001 through CDX-AG-007 |
