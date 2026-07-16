@@ -20,6 +20,7 @@
 //! - `autoMode.classifyAllShell` boolean check (CC-SET-013, added in Claude Code v2.1.193).
 //! - autoMode ignored in settings.local.json (CC-SET-014, changed in Claude Code v2.1.207).
 //! - pluginConfigs dead in project-level settings (CC-SET-015, changed in Claude Code v2.1.207).
+//! - deprecated Write/NotebookEdit/Glob permission-rule forms (CC-SET-016, added in Claude Code v2.1.210).
 //!
 //! Runs on FileType::Hooks (which covers `.claude/settings.json` -
 //! see `file_types/detection.rs`). Skips non-Claude Code settings paths
@@ -49,6 +50,7 @@ const RULE_IDS: &[&str] = &[
     "CC-SET-013",
     "CC-SET-014",
     "CC-SET-015",
+    "CC-SET-016",
 ];
 
 /// Allowed values for `worktree.baseRef` per Claude Code v2.1.133 release notes.
@@ -154,6 +156,10 @@ impl Validator for ClaudeSettingsValidator {
 
         if config.is_rule_enabled("CC-SET-015") {
             validate_plugin_configs_scope(path, content, &value, &mut diagnostics);
+        }
+
+        if config.is_rule_enabled("CC-SET-016") {
+            validate_deprecated_permission_tool_forms(path, content, &value, &mut diagnostics);
         }
 
         diagnostics
@@ -1127,6 +1133,90 @@ fn validate_plugin_configs_scope(
         )
         .with_suggestion(t!("rules.cc_set_015.suggestion")),
     );
+}
+
+/// CC-SET-016: Warn on deprecated path-scoped permission rule forms.
+///
+/// Claude Code v2.1.210 added a startup warning for permission entries of the
+/// form `Write(path)`, `NotebookEdit(path)`, and `Glob(path)`. These forms are
+/// deprecated; users should use `Edit(path)` or `Read(path)` instead.
+///
+/// Fires on `permissions.allow`, `permissions.deny`, and `permissions.ask`
+/// arrays in `.claude/settings.json`, `.claude/settings.local.json`, and
+/// `.claude/managed-settings.json`. For each deprecated entry:
+/// - `Write(...)` and `NotebookEdit(...)` → suggest `Edit(...)` with the same
+///   argument.
+/// - `Glob(...)` → suggest `Read(...)` with the same argument.
+///
+/// Only path-scoped forms (those with a `(`) are flagged; bare tool names like
+/// `"Write"` alone are NOT flagged — the deprecation is specifically for the
+/// `Write(path)` forms per the v2.1.210 release notes.
+///
+/// Non-array `permissions.allow/deny/ask`, non-string entries, and absent
+/// `permissions` key are silently skipped (other rules' concern).
+fn validate_deprecated_permission_tool_forms(
+    path: &Path,
+    content: &str,
+    value: &serde_json::Value,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(permissions) = value.get("permissions") else {
+        return;
+    };
+    let Some(permissions_obj) = permissions.as_object() else {
+        return;
+    };
+
+    for array_key in &["allow", "deny", "ask"] {
+        let Some(arr) = permissions_obj.get(*array_key) else {
+            continue;
+        };
+        let Some(arr) = arr.as_array() else {
+            continue;
+        };
+
+        for entry in arr {
+            let Some(s) = entry.as_str() else {
+                continue;
+            };
+
+            // Only flag path-scoped forms: must contain '('
+            let replacement = s
+                .strip_prefix("Write(")
+                .or_else(|| s.strip_prefix("NotebookEdit("))
+                .map(|inner| format!("Edit({inner}"))
+                .or_else(|| s.strip_prefix("Glob(").map(|inner| format!("Read({inner}")));
+
+            let Some(replacement) = replacement else {
+                continue;
+            };
+
+            // Array string values aren't found by find_key_line (no trailing
+            // ':'), so fall back to the containing array key line.
+            let line = find_key_line(content, array_key)
+                .or_else(|| find_key_line(content, "permissions"))
+                .unwrap_or(1);
+
+            diagnostics.push(
+                Diagnostic::warning(
+                    path.to_path_buf(),
+                    line,
+                    0,
+                    "CC-SET-016",
+                    t!(
+                        "rules.cc_set_016.message",
+                        rule = s,
+                        replacement = replacement.as_str()
+                    ),
+                )
+                .with_suggestion(t!(
+                    "rules.cc_set_016.suggestion",
+                    rule = s,
+                    replacement = replacement.as_str()
+                )),
+            );
+        }
+    }
 }
 
 /// Renders a `serde_json::Value` variant as a short human-readable type
@@ -2903,5 +2993,148 @@ mod tests {
         let diagnostics = validate_at(".claude/settings.json", content);
         assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-002"));
         assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-015"));
+    }
+
+    // ===== CC-SET-016: deprecated Write/NotebookEdit/Glob permission-rule forms =====
+
+    #[test]
+    fn test_write_in_allow_flags_with_edit_suggestion() {
+        let content = r#"{"permissions": {"allow": ["Write(src/**)"]}}"#;
+        let diagnostics = validate_at(".claude/settings.json", content);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-016")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].level, crate::diagnostics::DiagnosticLevel::Warning);
+        let msg = &hits[0].message;
+        assert!(
+            msg.contains("Edit(src/**)"),
+            "message should mention Edit replacement, got: {msg}"
+        );
+    }
+
+    #[test]
+    fn test_notebook_edit_in_deny_flags_with_edit_suggestion() {
+        let content = r#"{"permissions": {"deny": ["NotebookEdit(notebooks/**)"]}}"#;
+        let diagnostics = validate_at(".claude/settings.json", content);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-016")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].level, crate::diagnostics::DiagnosticLevel::Warning);
+        let msg = &hits[0].message;
+        assert!(
+            msg.contains("Edit(notebooks/**)"),
+            "message should mention Edit replacement, got: {msg}"
+        );
+    }
+
+    #[test]
+    fn test_glob_in_ask_flags_with_read_suggestion() {
+        let content = r#"{"permissions": {"ask": ["Glob(docs/**)"]}}"#;
+        let diagnostics = validate_at(".claude/settings.json", content);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-016")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        let msg = &hits[0].message;
+        assert!(
+            msg.contains("Read(docs/**)"),
+            "message should mention Read replacement, got: {msg}"
+        );
+    }
+
+    #[test]
+    fn test_edit_and_read_entries_are_clean() {
+        let content =
+            r#"{"permissions": {"allow": ["Edit(src/**)", "Read(docs/**)", "Bash(npm:*)")]}"#;
+        let diagnostics = validate_at(".claude/settings.json", content);
+        assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-016"));
+    }
+
+    #[test]
+    fn test_bare_write_without_paren_is_clean() {
+        // "Write" alone (no parenthesized path) must not fire CC-SET-016.
+        let content = r#"{"permissions": {"allow": ["Write", "NotebookEdit", "Glob"]}}"#;
+        let diagnostics = validate_at(".claude/settings.json", content);
+        assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-016"));
+    }
+
+    #[test]
+    fn test_multiple_bad_entries_produce_one_diagnostic_each() {
+        let content =
+            r#"{"permissions": {"allow": ["Write(a/**)", "NotebookEdit(b/**)", "Glob(c/**)"]}}"#;
+        let diagnostics = validate_at(".claude/settings.json", content);
+        let count = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-016")
+            .count();
+        assert_eq!(count, 3, "expected one diagnostic per deprecated entry");
+    }
+
+    #[test]
+    fn test_deprecated_forms_in_all_three_settings_filenames() {
+        let content = r#"{"permissions": {"allow": ["Write(src/**)"]}}"#;
+        for path_str in &[
+            ".claude/settings.json",
+            ".claude/settings.local.json",
+            ".claude/managed-settings.json",
+        ] {
+            let diagnostics = validate_at(path_str, content);
+            let count = diagnostics
+                .iter()
+                .filter(|d| d.rule == "CC-SET-016")
+                .count();
+            assert_eq!(
+                count, 1,
+                "expected CC-SET-016 in {path_str} but got {count}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_permissions_absent_is_clean() {
+        let content = r#"{"model": "claude-sonnet-4"}"#;
+        let diagnostics = validate_at(".claude/settings.json", content);
+        assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-016"));
+    }
+
+    #[test]
+    fn test_allow_not_an_array_is_clean() {
+        let content = r#"{"permissions": {"allow": "Write(src/**)"}}"#;
+        let diagnostics = validate_at(".claude/settings.json", content);
+        assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-016"));
+    }
+
+    #[test]
+    fn test_non_string_entry_in_allow_is_skipped() {
+        let content = r#"{"permissions": {"allow": [42, true, null]}}"#;
+        let diagnostics = validate_at(".claude/settings.json", content);
+        assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-016"));
+    }
+
+    #[test]
+    fn test_rule_disabled_via_config() {
+        let mut builder = LintConfig::builder();
+        builder.disable_rule("CC-SET-016");
+        let config = builder.build().unwrap();
+        let validator = ClaudeSettingsValidator;
+        let path = PathBuf::from(".claude/settings.json");
+        let diagnostics = validator.validate(
+            &path,
+            r#"{"permissions": {"allow": ["Write(src/**)"]}}"#,
+            &config,
+        );
+        assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-016"));
+    }
+
+    #[test]
+    fn test_other_tool_forms_like_bash_are_clean() {
+        let content = r#"{"permissions": {"allow": ["Bash(npm:*)", "Bash(git:*)", "Agent(*)"]}}"#;
+        let diagnostics = validate_at(".claude/settings.json", content);
+        assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-016"));
     }
 }

@@ -1228,6 +1228,9 @@ rules:
       values are only read from user settings, --settings files, and managed settings
     suggestion: Move pluginConfigs to ~/.claude/settings.json (user-level), pass it via the --settings flag, or configure
       it in managed settings; remove it from the project-level file.
+  cc_set_016:
+    message: "'%{rule}' is a deprecated permission-rule form as of Claude Code 2.1.210; use '%{replacement}' instead"
+    suggestion: "Replace '%{rule}' with '%{replacement}' in your permissions list."
   cc_hk_028:
     message: Command hook at %{location} uses '${user_config.*}' interpolation, which Claude Code 2.1.207+ rejects at
       load time as a shell-injection fix

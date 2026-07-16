@@ -73,6 +73,6 @@ GitHub Copilot validation is enabled by default and can be targeted in config wi
 ## Next steps
 
 - [Configuration](./configuration.md) - customize rules with `.agnix.toml`
-- [Rules Reference](./rules/index.md) - browse all 435 rules
+- [Rules Reference](./rules/index.md) - browse all 436 rules
 - [Editor Integration](./editor-integration.md) - get diagnostics in your editor
 - [Troubleshooting](./troubleshooting.md) - common issues and fixes

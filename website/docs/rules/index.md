@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `435` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `436` validation rules generated from `knowledge-base/rules.json`.
 `127` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -145,6 +145,7 @@ This section contains all `435` validation rules generated from `knowledge-base/
 | [CC-SET-013](./generated/cc-set-013.md) | Non-boolean autoMode.classifyAllShell Setting | MEDIUM | Claude Settings | No |
 | [CC-SET-014](./generated/cc-set-014.md) | autoMode Setting Ignored in settings.local.json | MEDIUM | Claude Settings | No |
 | [CC-SET-015](./generated/cc-set-015.md) | Dead pluginConfigs in Project-Level Settings | MEDIUM | Claude Settings | No |
+| [CC-SET-016](./generated/cc-set-016.md) | Deprecated Tool-Scoped Permission Rule Form | LOW | Claude Settings | No |
 | [CDX-000](./generated/cdx-000.md) | TOML Parse Error | HIGH | Codex CLI | No |
 | [CDX-001](./generated/cdx-001.md) | Invalid Approval Mode | HIGH | Codex CLI | Yes (unsafe) |
 | [CDX-002](./generated/cdx-002.md) | Invalid Full Auto Error Mode | HIGH | Codex CLI | Yes (unsafe) |

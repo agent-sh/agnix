@@ -710,6 +710,9 @@ rules:
   cc_set_015:
     message: 自 Claude Code 2.1.207 起，项目级 .claude 设置中的 pluginConfigs 会被静默忽略；插件选项值仅从用户设置、--settings 文件和托管设置中读取
     suggestion: 将 pluginConfigs 移至 ~/.claude/settings.json（用户级），通过 --settings 标志传入，或在托管设置中配置；并从项目级文件中删除。
+  cc_set_016:
+    message: "'%{rule}' 是 Claude Code 2.1.210 起已弃用的权限规则形式；请改用 '%{replacement}'"
+    suggestion: "将权限列表中的 '%{rule}' 替换为 '%{replacement}'。"
 
 
 # ===========================================================================
