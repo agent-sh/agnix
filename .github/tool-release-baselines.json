@@ -96,7 +96,7 @@
         "agents_md"
       ],
       "github_repo": "sst/opencode",
-      "last_known_version": "v1.18.1",
+      "last_known_version": "v1.18.2",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
@@ -237,7 +237,7 @@
       "github_repo": null,
       "html_url": "https://api2.cursor.sh/updates/api/update/darwin/cursor/0.0.1/stable",
       "version_regex": "[0-9]+\\.[0-9]+\\.[0-9]+",
-      "last_known_version": "3.11.19",
+      "last_known_version": "3.11.25",
       "tracked": true,
       "notes": "Tracked via Cursor's stable update endpoint (the same one the desktop app polls). Returns JSON like {\"url\":\"...\",\"name\":\"3.1.17\"}. Channel is hardcoded to 'stable' for darwin; the version is platform-agnostic (same release ships across darwin/linux/win32). Prose changelog at https://cursor.com/changelog (Next.js SPA - not scrapeable from raw HTML).",
       "changes_of_interest": {
