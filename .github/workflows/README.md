@@ -28,7 +28,7 @@ cache poisoning from pull requests.
 
 ## SHA Pin Reference
 
-When updating actions, use these SHA commits (last verified: 2026-02):
+When updating actions, use these SHA commits (last verified: 2026-07):
 
 ```yaml
 # GitHub Official Actions
@@ -45,16 +45,18 @@ rhysd/actionlint@v1.7.1:       62dc61a45fc95efe8c800af7a557ab0b9165d63b
 # Rust Tooling
 dtolnay/rust-toolchain@stable: 4be9e76fd7c4901c61fb841f559994984270fce7
 Swatinem/rust-cache@v2:        779680da715d629ac1d338a641029a2f4372abb5
-taiki-e/install-action@v2.67.30:     288875dd3d64326724fa6d9593062d9f8ba0b131
+taiki-e/install-action@v2.83.4:  07b4745e0c39a41822af610387492e3e53aa222b
 taiki-e/install-action@nextest: cd05dcd6eb73067dda063b97a15b7060049dacd9
 
 # Security
-github/codeql-action@v3:       2588666de8825e1e9dc4e2329a4c985457d55b32
+github/codeql-action@v4.37.1:   7188fc363630916deb702c7fdcf4e481b751f97a
+EmbarkStudios/cargo-deny-action@v2.1.1: 3c6349835b2b7b196a839186cb8b78e02f7b5f25
 
 # Coverage
 codecov/codecov-action@v5.5.2:  671740ac38dd9b0130fbe1cec585b89eea48d3de
 
 # Release
+actions/setup-java@v5.6.0:      03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
 softprops/action-gh-release@v2: a06a81a03ee405af7f2048a818ed3f03bbf83c7b
 
 # Zed Extension

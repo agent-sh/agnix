@@ -334,8 +334,12 @@ pub struct FrontmatterParts {
 
 /// Split frontmatter and body from content.
 pub fn split_frontmatter(content: &str) -> FrontmatterParts {
+    let (content, bom_offset) = match content.strip_prefix('\u{FEFF}') {
+        Some(content) => (content, '\u{FEFF}'.len_utf8()),
+        None => (content, 0),
+    };
     let trimmed = content.trim_start();
-    let trim_offset = content.len() - trimmed.len();
+    let trim_offset = bom_offset + content.len() - trimmed.len();
 
     // Check for opening ---
     if !trimmed.starts_with("---") {
@@ -493,6 +497,17 @@ description: second-description
         assert_eq!(parts.body, "\nbody");
         // frontmatter_start points past "---\n" (4 bytes)
         assert_eq!(parts.frontmatter_start, 4);
+        assert_eq!(&content[parts.body_start..], parts.body);
+    }
+
+    #[test]
+    fn test_split_frontmatter_accepts_utf8_bom() {
+        let content = "\u{FEFF}---\nname: test\n---\nbody";
+        let parts = split_frontmatter(content);
+        assert!(parts.has_frontmatter);
+        assert!(parts.has_closing);
+        assert_eq!(parts.frontmatter, "name: test");
+        assert_eq!(parts.frontmatter_start, 7);
         assert_eq!(&content[parts.body_start..], parts.body);
     }
 

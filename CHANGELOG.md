@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Tool release baselines (2026-07-20 sweep)**. Advanced Claude Code to `v2.1.215`, Codex CLI to `rust-v0.144.6`, OpenCode to `v1.18.3`, Kiro CLI to `2.13.0`, Cline to `v4.0.10`, Cursor to `3.12.17`, Gemini CLI to `v0.51.0`, and amp to `subscriptions` after reviewing the current release notes (closes #1217, #1218, #1219, #1220, #1221, #1222, #1223, and #1234).
+- **Dependency and CI action refresh**. Updated `toml` to `1.1.3`, `clap` to `4.6.2`, `rust-i18n` to `4.2.1`, `regex` to `1.13.1`, and `ignore` to `0.4.30`; refreshed the pinned cargo-deny, CodeQL, setup-java, and taiki-e action revisions. The `rust-i18n` update removes the deprecated transitive `serde_yaml` package.
+
+### Fixed
+- **Cline UTF-8 BOM compatibility**. Parse BOM-prefixed Cline rules, workflows, and skill frontmatter so validation matches Cline's current parser behavior instead of silently skipping scoped rules.
+- **CodeQL action version consistency**. Pin CodeQL initialization, analysis, and SARIF upload to the same `v4.37.1` revision, preventing mixed-version configuration failures.
+
 ## [0.40.0] - 2026-07-16
 
 ### Added
