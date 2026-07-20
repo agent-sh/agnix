@@ -626,6 +626,13 @@ mod tests {
     }
 
     #[test]
+    fn test_cln_002_validates_bom_prefixed_frontmatter() {
+        let content = "\u{FEFF}---\npaths:\n  - \"[unclosed\"\n---\n# Instructions\n";
+        let diagnostics = validate_folder(content);
+        assert!(diagnostics.iter().any(|d| d.rule == "CLN-002"));
+    }
+
+    #[test]
     fn test_cln_002_valid_glob_patterns() {
         let patterns = vec!["**/*.ts", "*.rs", "src/**/*.js", "tests/**/*.test.ts"];
 
@@ -1051,6 +1058,13 @@ unknownKey: value
     }
 
     #[test]
+    fn test_cln_006_detects_bom_prefixed_frontmatter() {
+        let content = "\u{FEFF}---\ntitle: Deploy\n---\n# Deploy steps\n";
+        let diagnostics = validate_workflow(content);
+        assert!(diagnostics.iter().any(|d| d.rule == "CLN-006"));
+    }
+
+    #[test]
     fn test_cln_006_disabled() {
         let mut config = LintConfig::default();
         config.rules_mut().disabled_rules = vec!["CLN-006".to_string()];
@@ -1148,6 +1162,17 @@ unknownKey: value
             .filter(|d| d.rule == "CL-SK-002")
             .collect();
         assert!(cl_sk_002.is_empty());
+    }
+
+    #[test]
+    fn test_cl_sk_accepts_bom_prefixed_frontmatter() {
+        let content = "\u{FEFF}---\nname: my-skill\ndescription: A test skill\n---\n# Skill body\n";
+        let diagnostics = validate_cline_skill(".cline/skills/my-skill/SKILL.md", content);
+        assert!(
+            diagnostics
+                .iter()
+                .all(|d| d.rule != "CL-SK-002" && d.rule != "CL-SK-003")
+        );
     }
 
     #[test]

@@ -97,6 +97,7 @@ pub struct GlobValidation {
 ///
 /// Returns parsed frontmatter if present, or None if no frontmatter exists.
 pub fn parse_frontmatter(content: &str) -> Option<ParsedClineFrontmatter> {
+    let content = content.strip_prefix('\u{FEFF}').unwrap_or(content);
     let lines: Vec<&str> = content.lines().collect();
     if lines.is_empty() {
         return None;
@@ -222,7 +223,11 @@ pub fn is_body_empty(body: &str) -> bool {
 
 /// Check if content is empty
 pub fn is_content_empty(content: &str) -> bool {
-    content.trim().is_empty()
+    content
+        .strip_prefix('\u{FEFF}')
+        .unwrap_or(content)
+        .trim()
+        .is_empty()
 }
 
 #[cfg(test)]
@@ -248,6 +253,19 @@ Use strict mode.
         assert_eq!(paths.patterns(), vec!["**/*.ts"]);
         assert!(result.parse_error.is_none());
         assert!(result.body.contains("TypeScript Rules"));
+    }
+
+    #[test]
+    fn test_parse_frontmatter_accepts_utf8_bom() {
+        let content = "\u{FEFF}---\npaths:\n  - \"**/*.ts\"\n---\n# TypeScript Rules\n";
+        let result = parse_frontmatter(content).expect("BOM-prefixed frontmatter should parse");
+        let paths = result
+            .schema
+            .as_ref()
+            .and_then(|schema| schema.paths.as_ref())
+            .expect("paths should be preserved");
+        assert_eq!(paths.patterns(), vec!["**/*.ts"]);
+        assert!(result.parse_error.is_none());
     }
 
     #[test]
@@ -395,6 +413,7 @@ paths: "**/*.rs"
         assert!(is_content_empty(""));
         assert!(is_content_empty("   \n\t  "));
         assert!(!is_content_empty("# Instructions"));
+        assert!(is_content_empty("\u{FEFF}"));
     }
 
     #[test]
