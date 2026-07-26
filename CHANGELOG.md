@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.41.0] - 2026-07-26
+
 ### Added
 - **CC-SET-017: Non-boolean sandbox.filesystem.disabled Setting**. Claude Code v2.1.216 added a strict boolean setting that disables filesystem isolation while preserving network isolation; the new rule catches quoted and other non-boolean values.
 - **CC-SET-018: Non-boolean emojiCompletionEnabled Setting**. Claude Code v2.1.217 added a strict boolean setting for named emoji completion; the new rule catches non-boolean values.
