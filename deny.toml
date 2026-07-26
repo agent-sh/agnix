@@ -73,6 +73,7 @@ skip = [
     { name = "jni-sys", version = "*" },           # android/JNI multi-major
     { name = "r-efi", version = "*" },             # v5 vs v6 (efi bootloader deps)
     { name = "serde_spanned", version = "*" },     # rust-i18n's 0.6 vs our 1.x
+    { name = "syn", version = "*" },               # thiserror-impl v2.0.19+ on v3, wider tree on v2
     { name = "thiserror", version = "*" },         # many crates use v1, others v2
     { name = "thiserror-impl", version = "*" },
     { name = "toml", version = "*" },              # rust-i18n's 0.8, our 1.x

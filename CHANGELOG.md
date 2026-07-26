@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Dependency refresh**. Updated `serde_json` to `1.0.151` and `thiserror` to `2.0.19`. `thiserror-impl` 2.0.19 moved to `syn` 3.x, so `syn` joins the `[bans.skip]` duplicate allowlist in `deny.toml` alongside the other proc-macro crates that span two majors.
+
 ### Security
 - **Cleared all open high-severity npm advisories in both lockfiles.** `website/`: `fast-uri` to `3.1.4` (GHSA-v2hh-gcrm-f6hx, GHSA-4c8g-83qw-93j6), `brace-expansion` to `5.0.8` (GHSA-3jxr-9vmj-r5cp), `js-yaml` to `4.3.0` (GHSA-52cp-r559-cp3m), `shell-quote` to `1.10.0` (GHSA-395f-4hp3-45gv), and `svgo` to `3.3.4` (GHSA-2p49-hgcm-8545). `editors/vscode/`: `fast-uri` to `3.1.4`, `brace-expansion` to `5.0.8`, `js-yaml` to `4.3.0`, and `linkify-it` to `5.0.2` (GHSA-v245-v573-v5vm). Lockfile-only; no manifest ranges changed and no major upgrades pulled in.
 
