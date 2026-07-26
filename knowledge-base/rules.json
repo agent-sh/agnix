@@ -1,8 +1,8 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 437,
-  "last_updated": "2026-07-16",
+  "total_rules": 443,
+  "last_updated": "2026-07-26",
   "schema": {
     "evidence": {
       "source_type": "spec|vendor_docs|vendor_code|paper|community",
@@ -1251,6 +1251,35 @@
       "bad_example": "---\nname: my-agent\npriority: high\n---\nAgent instructions."
     },
     {
+      "id": "CC-AG-020",
+      "name": "Reserved Colon in Agent Name",
+      "severity": "HIGH",
+      "category": "claude-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.218",
+          "https://code.claude.com/docs/en/sub-agents"
+        ],
+        "verified_on": "2026-07-26",
+        "applies_to": {
+          "tool": "claude-code",
+          "version_range": ">=2.1.218"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: reviewer\ndescription: Reviews code\n---\nReview the change.",
+      "bad_example": "---\nname: plugin:reviewer\ndescription: Reviews code\n---\nReview the change."
+    },
+    {
       "id": "CC-HK-001",
       "name": "Invalid Hook Event",
       "severity": "HIGH",
@@ -1258,9 +1287,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.claude.com/docs/en/hooks"
+          "https://code.claude.com/docs/en/hooks",
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.219"
         ],
-        "verified_on": "2026-07-02",
+        "verified_on": "2026-07-26",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -3430,11 +3460,13 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.claude.com/docs/en/skills"
+          "https://code.claude.com/docs/en/skills",
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.218"
         ],
-        "verified_on": "2026-02-07",
+        "verified_on": "2026-07-26",
         "applies_to": {
-          "tool": "claude-code"
+          "tool": "claude-code",
+          "version_range": ">=2.1.218"
         },
         "normative_level": "MUST",
         "tests": {
@@ -3444,11 +3476,10 @@
         }
       },
       "fix": {
-        "autofix": true,
-        "fix_safety": "safe"
+        "autofix": false
       },
-      "good_example": "---\nname: quiet-skill\ndescription: Use when running without model invocation\ndisable-model-invocation: true\n---\nRun silently.",
-      "bad_example": "---\nname: quiet-skill\ndescription: Use when running without model invocation\ndisable-model-invocation: \"true\"\n---\nRun silently."
+      "good_example": "---\nname: quiet-skill\ndescription: Use when running without model invocation\ndisable-model-invocation: \"YES\"\n---\nRun silently.",
+      "bad_example": "---\nname: quiet-skill\ndescription: Use when running without model invocation\ndisable-model-invocation: \"maybe\"\n---\nRun silently."
     },
     {
       "id": "CC-SK-015",
@@ -3458,11 +3489,13 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.claude.com/docs/en/skills"
+          "https://code.claude.com/docs/en/skills",
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.218"
         ],
-        "verified_on": "2026-02-07",
+        "verified_on": "2026-07-26",
         "applies_to": {
-          "tool": "claude-code"
+          "tool": "claude-code",
+          "version_range": ">=2.1.218"
         },
         "normative_level": "MUST",
         "tests": {
@@ -3472,11 +3505,10 @@
         }
       },
       "fix": {
-        "autofix": true,
-        "fix_safety": "safe"
+        "autofix": false
       },
-      "good_example": "---\nname: slash-cmd\ndescription: Use when user types the slash command\nuser-invocable: true\n---\nHandle the slash command.",
-      "bad_example": "---\nname: slash-cmd\ndescription: Use when user types the slash command\nuser-invocable: \"false\"\n---\nHandle the slash command."
+      "good_example": "---\nname: slash-cmd\ndescription: Use when user types the slash command\nuser-invocable: on\n---\nHandle the slash command.",
+      "bad_example": "---\nname: slash-cmd\ndescription: Use when user types the slash command\nuser-invocable: \"maybe\"\n---\nHandle the slash command."
     },
     {
       "id": "CC-SK-016",
@@ -4099,6 +4131,122 @@
       },
       "good_example": "{\n  \"permissions\": {\"allow\": [\"Edit(src/**)\", \"Read(docs/**)\"]}\n}",
       "bad_example": "{\n  \"permissions\": {\"allow\": [\"Write(src/**)\", \"Glob(docs/**)\"]}\n}"
+    },
+    {
+      "id": "CC-SET-017",
+      "name": "Non-boolean sandbox.filesystem.disabled Setting",
+      "severity": "MEDIUM",
+      "category": "claude-settings",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.216",
+          "https://code.claude.com/docs/en/sandboxing"
+        ],
+        "verified_on": "2026-07-26",
+        "applies_to": {
+          "tool": "claude-code",
+          "version_range": ">=2.1.216"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"sandbox\": {\"filesystem\": {\"disabled\": false}}\n}",
+      "bad_example": "{\n  \"sandbox\": {\"filesystem\": {\"disabled\": \"false\"}}\n}"
+    },
+    {
+      "id": "CC-SET-018",
+      "name": "Non-boolean emojiCompletionEnabled Setting",
+      "severity": "MEDIUM",
+      "category": "claude-settings",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.217",
+          "https://code.claude.com/docs/en/settings"
+        ],
+        "verified_on": "2026-07-26",
+        "applies_to": {
+          "tool": "claude-code",
+          "version_range": ">=2.1.217"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"emojiCompletionEnabled\": true\n}",
+      "bad_example": "{\n  \"emojiCompletionEnabled\": \"true\"\n}"
+    },
+    {
+      "id": "CC-SET-019",
+      "name": "Non-boolean sandbox.network.strictAllowlist Setting",
+      "severity": "MEDIUM",
+      "category": "claude-settings",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.219",
+          "https://code.claude.com/docs/en/sandboxing"
+        ],
+        "verified_on": "2026-07-26",
+        "applies_to": {
+          "tool": "claude-code",
+          "version_range": ">=2.1.219"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"sandbox\": {\"network\": {\"strictAllowlist\": true}}\n}",
+      "bad_example": "{\n  \"sandbox\": {\"network\": {\"strictAllowlist\": \"true\"}}\n}"
+    },
+    {
+      "id": "CC-SET-020",
+      "name": "Invalid workflowSizeGuideline Setting",
+      "severity": "MEDIUM",
+      "category": "claude-settings",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.219",
+          "https://code.claude.com/docs/en/settings"
+        ],
+        "verified_on": "2026-07-26",
+        "applies_to": {
+          "tool": "claude-code",
+          "version_range": ">=2.1.219"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"workflowSizeGuideline\": \"medium\"\n}",
+      "bad_example": "{\n  \"workflowSizeGuideline\": \"tiny\"\n}"
     },
     {
       "id": "CDX-000",
@@ -5909,20 +6057,20 @@
     },
     {
       "id": "CDX-CFG-029",
-      "name": "Incompatible agents.max_threads with multi_agent_v2",
+      "name": "Invalid Agent Concurrency Limit",
       "severity": "HIGH",
       "category": "codex",
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/openai/codex/pull/19129",
-          "https://github.com/openai/codex/pull/19733",
-          "https://github.com/openai/codex/pull/19792",
-          "https://github.com/openai/codex/blob/rust-v0.128.0/codex-rs/core/src/config/mod.rs"
+          "https://github.com/openai/codex/releases/tag/rust-v0.145.0",
+          "https://github.com/openai/codex/pull/33550",
+          "https://github.com/openai/codex/blob/rust-v0.145.0/codex-rs/config/src/config_toml.rs"
         ],
-        "verified_on": "2026-05-04",
+        "verified_on": "2026-07-26",
         "applies_to": {
-          "tool": "codex"
+          "tool": "codex",
+          "version_range": ">=0.145.0"
         },
         "normative_level": "MUST",
         "tests": {
@@ -5934,8 +6082,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "[agents]\nmax_threads = 4\n\n[features]\n# multi_agent_v2 omitted or false",
-      "bad_example": "[agents]\nmax_threads = 4\n\n[features]\nmulti_agent_v2 = true"
+      "good_example": "[agents]\nmax_concurrent_threads_per_session = 4\n\n[features]\nmulti_agent_v2 = true",
+      "bad_example": "[agents]\nmax_concurrent_threads_per_session = 0"
     },
     {
       "id": "CDX-CFG-030",
@@ -8538,16 +8686,16 @@
     },
     {
       "id": "KR-AG-008",
-      "name": "Agent Missing Name",
+      "name": "Empty Explicit Agent Name",
       "severity": "HIGH",
       "category": "kiro-agents",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/docs/agents",
-          "https://kiro.dev/docs/configuration"
+          "https://kiro.dev/docs/cli/custom-agents/configuration-reference/",
+          "https://kiro.dev/docs/cli/v3/agent-config/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-07-26",
         "applies_to": {
           "tool": "kiro"
         },
@@ -8561,8 +8709,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\"name\": \"review-agent\", \"prompt\": \"Review code\"}",
-      "bad_example": "{\"prompt\": \"Review code\"}"
+      "good_example": "{\"prompt\": \"Review code\"}",
+      "bad_example": "{\"name\": \"   \", \"prompt\": \"Review code\"}"
     },
     {
       "id": "KR-AG-009",
@@ -8718,6 +8866,36 @@
         "likelihood": "MEDIUM",
         "impact": "HIGH"
       }
+    },
+    {
+      "id": "KR-AG-014",
+      "name": "Invalid Universal Permissions Rule",
+      "severity": "HIGH",
+      "category": "kiro-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/changelog/cli/2-14/",
+          "https://kiro.dev/docs/cli/v3/agent-config/",
+          "https://kiro.dev/docs/cli/v3/permissions/"
+        ],
+        "verified_on": "2026-07-26",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.14.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"permissions\": {\"rules\": [{\"capability\": \"shell\", \"effect\": \"allow\", \"match\": [\"npm *\"]}]}}",
+      "bad_example": "{\"permissions\": {\"rules\": [{\"capability\": \"shell\", \"effect\": \"sometimes\", \"match\": \"npm *\"}]}}"
     },
     {
       "id": "KR-HK-001",
@@ -12637,7 +12815,7 @@
     },
     "claude-agents": {
       "prefix": "CC-AG",
-      "count": 17,
+      "count": 18,
       "description": "Claude Code Subagents rules"
     },
     "claude-memory": {
@@ -12762,7 +12940,7 @@
     },
     "kiro-agents": {
       "prefix": "KR-AG",
-      "count": 13,
+      "count": 14,
       "description": "Kiro agent configuration and invocation rules"
     },
     "amp-skills": {
@@ -12812,7 +12990,7 @@
     },
     "claude-settings": {
       "prefix": "CC-SET",
-      "count": 16,
+      "count": 20,
       "description": "Claude Code settings (.claude/settings.json) rules"
     },
     "gemini-agents": {

@@ -1,7 +1,7 @@
 # Rules Reference
 
-This section contains all `437` validation rules generated from `knowledge-base/rules.json`.
-`127` rules have automatic fixes.
+This section contains all `443` validation rules generated from `knowledge-base/rules.json`.
+`125` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
 |------|------|----------|----------|----------|
@@ -47,6 +47,7 @@ This section contains all `437` validation rules generated from `knowledge-base/
 | [CC-AG-015](./generated/cc-ag-015.md) | Invalid Isolation Value | MEDIUM | Claude Agents | Yes (unsafe) |
 | [CC-AG-017](./generated/cc-ag-017.md) | Invalid MaxTurns Value | MEDIUM | Claude Agents | No |
 | [CC-AG-019](./generated/cc-ag-019.md) | Unknown Agent Frontmatter Field | LOW | Claude Agents | Yes (unsafe) |
+| [CC-AG-020](./generated/cc-ag-020.md) | Reserved Colon in Agent Name | HIGH | Claude Agents | No |
 | [CC-HK-001](./generated/cc-hk-001.md) | Invalid Hook Event | HIGH | Claude Hooks | Yes (safe/unsafe) |
 | [CC-HK-002](./generated/cc-hk-002.md) | Prompt Hook on Wrong Event | HIGH | Claude Hooks | No |
 | [CC-HK-003](./generated/cc-hk-003.md) | Matcher Hint for Tool Events | LOW | Claude Hooks | No |
@@ -122,8 +123,8 @@ This section contains all `437` validation rules generated from `knowledge-base/
 | [CC-SK-011](./generated/cc-sk-011.md) | Unreachable Skill | HIGH | Claude Skills | Yes (unsafe) |
 | [CC-SK-012](./generated/cc-sk-012.md) | Argument Hint Without $ARGUMENTS | MEDIUM | Claude Skills | Yes (unsafe) |
 | [CC-SK-013](./generated/cc-sk-013.md) | Fork Context Without Actionable Instructions | MEDIUM | Claude Skills | No |
-| [CC-SK-014](./generated/cc-sk-014.md) | Invalid disable-model-invocation Type | HIGH | Claude Skills | Yes (safe) |
-| [CC-SK-015](./generated/cc-sk-015.md) | Invalid user-invocable Type | HIGH | Claude Skills | Yes (safe) |
+| [CC-SK-014](./generated/cc-sk-014.md) | Invalid disable-model-invocation Type | HIGH | Claude Skills | No |
+| [CC-SK-015](./generated/cc-sk-015.md) | Invalid user-invocable Type | HIGH | Claude Skills | No |
 | [CC-SK-016](./generated/cc-sk-016.md) | Indexed $ARGUMENTS Without argument-hint | MEDIUM | Claude Skills | No |
 | [CC-SK-017](./generated/cc-sk-017.md) | Unknown Frontmatter Field | MEDIUM | Claude Skills | No |
 | [CC-SK-018](./generated/cc-sk-018.md) | Invalid Effort Value | MEDIUM | Claude Skills | Yes (unsafe) |
@@ -146,6 +147,10 @@ This section contains all `437` validation rules generated from `knowledge-base/
 | [CC-SET-014](./generated/cc-set-014.md) | autoMode Setting Ignored in settings.local.json | MEDIUM | Claude Settings | No |
 | [CC-SET-015](./generated/cc-set-015.md) | Dead pluginConfigs in Project-Level Settings | MEDIUM | Claude Settings | No |
 | [CC-SET-016](./generated/cc-set-016.md) | Deprecated Tool-Scoped Permission Rule Form | LOW | Claude Settings | No |
+| [CC-SET-017](./generated/cc-set-017.md) | Non-boolean sandbox.filesystem.disabled Setting | MEDIUM | Claude Settings | No |
+| [CC-SET-018](./generated/cc-set-018.md) | Non-boolean emojiCompletionEnabled Setting | MEDIUM | Claude Settings | No |
+| [CC-SET-019](./generated/cc-set-019.md) | Non-boolean sandbox.network.strictAllowlist Setting | MEDIUM | Claude Settings | No |
+| [CC-SET-020](./generated/cc-set-020.md) | Invalid workflowSizeGuideline Setting | MEDIUM | Claude Settings | No |
 | [CDX-000](./generated/cdx-000.md) | TOML Parse Error | HIGH | Codex CLI | No |
 | [CDX-001](./generated/cdx-001.md) | Invalid Approval Mode | HIGH | Codex CLI | Yes (unsafe) |
 | [CDX-002](./generated/cdx-002.md) | Invalid Full Auto Error Mode | HIGH | Codex CLI | Yes (unsafe) |
@@ -207,7 +212,7 @@ This section contains all `437` validation rules generated from `knowledge-base/
 | [CDX-CFG-026](./generated/cdx-cfg-026.md) | Invalid Network Permission Field | LOW | Codex CLI | Yes (safe) |
 | [CDX-CFG-027](./generated/cdx-cfg-027.md) | Invalid Windows Sandbox Value | LOW | Codex CLI | Yes (unsafe) |
 | [CDX-CFG-028](./generated/cdx-cfg-028.md) | Unsupported Inline MCP bearer_token Field | HIGH | Codex CLI | No |
-| [CDX-CFG-029](./generated/cdx-cfg-029.md) | Incompatible agents.max_threads with multi_agent_v2 | HIGH | Codex CLI | No |
+| [CDX-CFG-029](./generated/cdx-cfg-029.md) | Invalid Agent Concurrency Limit | HIGH | Codex CLI | No |
 | [CDX-CFG-030](./generated/cdx-cfg-030.md) | Invalid web_search Mode | MEDIUM | Codex CLI | No |
 | [CDX-REQ-000](./generated/cdx-req-000.md) | Codex requirements.toml TOML Parse Error | HIGH | Codex CLI | No |
 | [CDX-REQ-001](./generated/cdx-req-001.md) | Unknown Codex requirements.toml Key | MEDIUM | Codex CLI | No |
@@ -301,12 +306,13 @@ This section contains all `437` validation rules generated from `knowledge-base/
 | [KR-AG-005](./generated/kr-ag-005.md) | Kiro Agent Has No MCP Access | LOW | Kiro Agents | No |
 | [KR-AG-006](./generated/kr-ag-006.md) | Kiro Agent References Unknown Subagent | MEDIUM | Kiro Agents | No |
 | [KR-AG-007](./generated/kr-ag-007.md) | Kiro Agent Tool Scope Broader Than Referenced Subagent | MEDIUM | Kiro Agents | No |
-| [KR-AG-008](./generated/kr-ag-008.md) | Agent Missing Name | HIGH | Kiro Agents | No |
+| [KR-AG-008](./generated/kr-ag-008.md) | Empty Explicit Agent Name | HIGH | Kiro Agents | No |
 | [KR-AG-009](./generated/kr-ag-009.md) | Agent Missing Prompt | HIGH | Kiro Agents | No |
 | [KR-AG-010](./generated/kr-ag-010.md) | Duplicate Tool Entries | MEDIUM | Kiro Agents | No |
 | [KR-AG-011](./generated/kr-ag-011.md) | Empty Tools Array | LOW | Kiro Agents | No |
 | [KR-AG-012](./generated/kr-ag-012.md) | toolAliases References Unknown Tool | MEDIUM | Kiro Agents | No |
 | [KR-AG-013](./generated/kr-ag-013.md) | Secrets in Agent Prompt | HIGH | Kiro Agents | No |
+| [KR-AG-014](./generated/kr-ag-014.md) | Invalid Universal Permissions Rule | HIGH | Kiro Agents | No |
 | [KR-HK-001](./generated/kr-hk-001.md) | Invalid Kiro IDE Hook Event Type | HIGH | Kiro Hooks | No |
 | [KR-HK-002](./generated/kr-hk-002.md) | Kiro File Hook Missing Patterns | HIGH | Kiro Hooks | No |
 | [KR-HK-003](./generated/kr-hk-003.md) | Kiro IDE Hook Missing Action | HIGH | Kiro Hooks | No |

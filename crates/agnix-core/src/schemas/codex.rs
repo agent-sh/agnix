@@ -33,7 +33,7 @@ pub const AGENTS_MD_MAX_SIZE: usize = 100_000;
 /// Known valid top-level keys for .codex/config.toml
 ///
 /// Sourced from the upstream JSON schema at
-/// `codex-rs/core/config.schema.json`; current baseline is `rust-v0.144.1`
+/// `codex-rs/core/config.schema.json`; current baseline is `rust-v0.145.0`
 /// (see `.github/tool-release-baselines.json`). Prose overview:
 /// <https://developers.openai.com/codex/>.
 ///
@@ -45,8 +45,9 @@ pub const AGENTS_MD_MAX_SIZE: usize = 100_000;
 /// 1. Older-version tolerance - keys a real version once shipped but a newer
 ///    schema dropped (e.g. `commit_attribution`,
 ///    `experimental_use_freeform_apply_patch`, `windows_wsl_setup_acknowledged`,
-///    `experimental_thread_store_endpoint`, and `zsh_path` were in earlier
-///    releases and later removed by `rust-v0.133.0` / `rust-v0.136.0`).
+///    `experimental_thread_store_endpoint`, `model_supports_reasoning_summaries`,
+///    and `zsh_path` were in earlier releases and later removed by
+///    `rust-v0.133.0` through `rust-v0.145.0`).
 /// 2. Legacy camelCase keys (`approvalMode`, `fullAutoErrorMode`) - never in the
 ///    (snake_case) schema, accepted from early Codex configs.
 ///

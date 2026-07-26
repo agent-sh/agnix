@@ -282,9 +282,9 @@ pub fn detect_file_type(path: &Path) -> FileType {
     .iter()
     .any(|reserved| filename.eq_ignore_ascii_case(reserved));
 
-    if ends_with_ignore_ascii_case(filename, ".json")
-        && parent_eq_ignore_ascii_case(parent, "agents")
-        && parent_eq_ignore_ascii_case(grandparent, ".kiro")
+    if (ends_with_ignore_ascii_case(filename, ".json")
+        || ends_with_ignore_ascii_case(filename, ".md"))
+        && path_contains_consecutive_components(path, ".kiro", "agents")
         && !is_reserved_agent_filename
         && !starts_with_ignore_ascii_case(filename, "mcp-")
         && !ends_with_ignore_ascii_case(filename, ".mcp.json")
@@ -1559,6 +1559,22 @@ mod tests {
         );
         assert_eq!(
             detect_file_type(Path::new("home/.KIRO/AGENTS/reviewer.json")),
+            FileType::KiroAgent
+        );
+        assert_eq!(
+            detect_file_type(Path::new(".kiro/agents/team/reviewer.json")),
+            FileType::KiroAgent
+        );
+    }
+
+    #[test]
+    fn detect_kiro_agent_markdown() {
+        assert_eq!(
+            detect_file_type(Path::new(".kiro/agents/reviewer.md")),
+            FileType::KiroAgent
+        );
+        assert_eq!(
+            detect_file_type(Path::new("home/.KIRO/AGENTS/team/reviewer.MD")),
             FileType::KiroAgent
         );
     }

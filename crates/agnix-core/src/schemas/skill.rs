@@ -1,6 +1,6 @@
 //! Agent Skills schema (agentskills.io spec)
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de::Error as _};
 use std::collections::HashMap;
 
 /// SKILL.md frontmatter schema
@@ -35,13 +35,20 @@ pub struct SkillSchema {
 
     /// Optional: disable model invocation
     #[serde(
+        default,
         skip_serializing_if = "Option::is_none",
-        rename = "disable-model-invocation"
+        rename = "disable-model-invocation",
+        deserialize_with = "deserialize_optional_bool_alias"
     )]
     pub disable_model_invocation: Option<bool>,
 
     /// Optional: user invocable
-    #[serde(skip_serializing_if = "Option::is_none", rename = "user-invocable")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        rename = "user-invocable",
+        deserialize_with = "deserialize_optional_bool_alias"
+    )]
     pub user_invocable: Option<bool>,
 
     /// Optional: model override
@@ -51,6 +58,14 @@ pub struct SkillSchema {
     /// Optional: context mode
     #[serde(skip_serializing_if = "Option::is_none")]
     pub context: Option<String>,
+
+    /// Optional: override the default background behavior for forked skills
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_optional_bool_alias"
+    )]
+    pub background: Option<bool>,
 
     /// Optional: agent type
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -67,6 +82,51 @@ pub struct SkillSchema {
     /// Optional: shell to use (bash, powershell)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub shell: Option<String>,
+}
+
+/// Claude Code accepts boolean frontmatter values as booleans, the
+/// case-insensitive strings true/false, yes/no, on/off, and the integers 1/0.
+pub(crate) fn is_bool_alias_value(value: &serde_yaml::Value) -> bool {
+    match value {
+        serde_yaml::Value::Null | serde_yaml::Value::Bool(_) => true,
+        serde_yaml::Value::Number(number) => matches!(number.as_i64(), Some(0 | 1)),
+        serde_yaml::Value::String(value) => matches!(
+            value.trim().to_ascii_lowercase().as_str(),
+            "true" | "false" | "yes" | "no" | "on" | "off" | "1" | "0"
+        ),
+        _ => false,
+    }
+}
+
+pub(crate) fn deserialize_optional_bool_alias<'de, D>(
+    deserializer: D,
+) -> Result<Option<bool>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value = Option::<serde_yaml::Value>::deserialize(deserializer)?;
+    let Some(value) = value else {
+        return Ok(None);
+    };
+
+    let parsed = match value {
+        serde_yaml::Value::Bool(value) => Some(value),
+        serde_yaml::Value::Number(number) => match number.as_i64() {
+            Some(1) => Some(true),
+            Some(0) => Some(false),
+            _ => None,
+        },
+        serde_yaml::Value::String(value) => match value.trim().to_ascii_lowercase().as_str() {
+            "true" | "yes" | "on" | "1" => Some(true),
+            "false" | "no" | "off" | "0" => Some(false),
+            _ => None,
+        },
+        _ => None,
+    };
+
+    parsed.map(Some).ok_or_else(|| {
+        D::Error::custom("expected a boolean or one of true/false, yes/no, on/off, or 1/0")
+    })
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -112,6 +172,7 @@ pub const KNOWN_SKILL_FRONTMATTER_FIELDS: &[&str] = &[
     "user-invocable",
     "model",
     "context",
+    "background",
     "agent",
     "hooks",
     "effort",
@@ -309,6 +370,7 @@ mod tests {
             user_invocable: None,
             model: None,
             context: None,
+            background: None,
             agent: None,
             effort: None,
             paths: None,
@@ -337,6 +399,7 @@ mod tests {
             user_invocable: None,
             model: None,
             context: None,
+            background: None,
             agent: None,
             effort: None,
             paths: None,
@@ -365,6 +428,7 @@ mod tests {
             user_invocable: None,
             model: Some("gpt-4".to_string()),
             context: None,
+            background: None,
             agent: None,
             effort: None,
             paths: None,
@@ -386,6 +450,7 @@ mod tests {
             user_invocable: None,
             model: None,
             context: None,
+            background: None,
             agent: None,
             effort: None,
             paths: None,

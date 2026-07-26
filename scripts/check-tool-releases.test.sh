@@ -69,6 +69,21 @@ assert_relevant open "relevant section is last, has bullet"      "$relevant_is_l
 assert_relevant open "no triage ran (empty) - cannot rule out"   ""
 assert_relevant open "triage without the relevant heading"       "free-form notes, no headings"
 
+mixed_releases='[
+  {"tag_name":"desktop-v0.0.4","draft":false,"prerelease":false},
+  {"tag_name":"v4.0.11","draft":false,"prerelease":false},
+  {"tag_name":"v4.0.12-beta.1","draft":false,"prerelease":true},
+  {"tag_name":"v4.0.10","draft":false,"prerelease":false}
+]'
+selected=$(select_github_release_json "$mixed_releases" '^v[0-9]+\.[0-9]+\.[0-9]+$')
+if [[ $(jq -r '.tag_name' <<<"$selected") == "v4.0.11" ]]; then
+  echo "  ok   - GitHub release tag filter selects the core release train"
+  pass=$((pass + 1))
+else
+  echo "  FAIL - GitHub release tag filter selected the wrong release"
+  fail=$((fail + 1))
+fi
+
 echo ""
 echo "Summary: pass=$pass fail=$fail"
 [[ "$fail" -eq 0 ]]

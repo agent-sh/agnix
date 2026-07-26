@@ -12,7 +12,7 @@
   </p>
 </div>
 
-<p align="center">Catch broken agent configs before your AI tools silently ignore them.<br>437 rules across Claude Code, Codex CLI, OpenCode, Cursor, Copilot, and more -<br>validating CLAUDE.md, SKILL.md, hooks, MCP configs, and other agent files.</p>
+<p align="center">Catch broken agent configs before your AI tools silently ignore them.<br>443 rules across Claude Code, Codex CLI, OpenCode, Cursor, Copilot, and more -<br>validating CLAUDE.md, SKILL.md, hooks, MCP configs, and other agent files.</p>
 
 <p align="center"><strong>Auto-fix</strong> | <strong><a href="https://github.com/marketplace/actions/agnix-ci">GitHub Action</a></strong> | <strong><a href="https://marketplace.visualstudio.com/items?itemName=avifenesh.agnix">VS Code</a> + <a href="https://plugins.jetbrains.com/plugin/30087-agnix">JetBrains</a> + <a href="https://github.com/agent-sh/agnix.nvim">Neovim</a> + <a href="https://zed.dev/extensions?query=agnix">Zed</a></strong></p>
 
@@ -37,7 +37,7 @@
 
 **Bad patterns get amplified.** AI assistants don't ignore wrong configs - they [learn from them](https://www.augmentcode.com/guides/enterprise-coding-standards-12-rules-for-ai-ready-teams).
 
-agnix validates all of it - 437 rules sourced from official specs, academic research, and real-world breakage patterns. Auto-fix included.
+agnix validates all of it - 443 rules sourced from official specs, academic research, and real-world breakage patterns. Auto-fix included.
 
 > **Want to try it first?** [Open the playground](https://agent-sh.github.io/agnix/playground) - paste any agent config, see diagnostics instantly. No install, runs in your browser.
 
@@ -121,7 +121,7 @@ agnix --target kiro .         # Legacy target preset (use tools = [...] for tool
 | [Claude Code](https://docs.anthropic.com/en/docs/build-with-claude/claude-code) | CC-\* | 53 | CLAUDE.md, hooks, agents, plugins |
 | [GitHub Copilot](https://docs.github.com/en/copilot) | COP-\* | 6 | .github/copilot-instructions.md, .github/instructions/\*.instructions.md |
 | [Cursor](https://cursor.com) | CUR-\* | 16 | .cursor/rules/\*.mdc, .cursorrules, .cursor/hooks.json, .cursor/agents/\*\*/\*.md, .cursor/environment.json |
-| [Kiro](https://kiro.dev) | KIRO-\*, KR-SK-\*, KR-AG-\*, KR-HK-\*, KR-PW-\*, KR-MCP-\* | 52 | .kiro/steering/\*\*/\*.md, .kiro/skills/\*\*/SKILL.md, .kiro/agents/\*.json, .kiro/hooks/\*.kiro.hook, .kiro/settings/mcp.json, .kiro/powers/\*/POWER.md |
+| [Kiro](https://kiro.dev) | KIRO-\*, KR-SK-\*, KR-AG-\*, KR-HK-\*, KR-PW-\*, KR-MCP-\* | 53 | .kiro/steering/\*\*/\*.md, .kiro/skills/\*\*/SKILL.md, .kiro/agents/\*\*/\*.{json,md}, .kiro/hooks/\*.kiro.hook, .kiro/settings/mcp.json, .kiro/powers/\*/POWER.md |
 | [MCP](https://modelcontextprotocol.io) | MCP-\* | 12 | \*.mcp.json |
 | [AGENTS.md](https://agentsmd.org) | AGM-\*, XP-\* | 13 | AGENTS.md, AGENTS.local.md, AGENTS.override.md |
 | [Cline](https://docs.cline.bot) | CLN-\* | 4 | .clinerules, .clinerules/\*.md, .clinerules/\*.txt |

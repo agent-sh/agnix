@@ -1,6 +1,6 @@
 # agnix Technical Reference
 
-> Linter for agent configs. 437 rules across 40 categories.
+> Linter for agent configs. 443 rules across 40 categories.
 
 
 ## What agnix Validates
@@ -11,10 +11,10 @@
 | Hooks | settings.json | 28 |
 | Memory (Claude Code) | CLAUDE.md, CLAUDE.local.md, .claude/rules/*.md | 13 |
 | Instructions (Cross-Tool) | AGENTS.md, AGENTS.local.md, AGENTS.override.md | 6 |
-| Agents | agents/*.md | 17 |
+| Agents | agents/*.md | 18 |
 | Plugins | plugin.json | 15 |
 | Claude Output Styles | .claude/output-styles/*.md | 6 |
-| Claude Settings | .claude/settings.json | 16 |
+| Claude Settings | .claude/settings.json | 20 |
 | Prompt Engineering | CLAUDE.md, AGENTS.md | 6 |
 | Cross-Platform | AGENTS.md | 9 |
 | MCP | tool definitions | 26 |
@@ -37,7 +37,7 @@
 | Windsurf Skills | .windsurf/skills/*/SKILL.md | 1 |
 | Kiro Steering | .kiro/steering/*.md | 14 |
 | Kiro Skills | .kiro/skills/*/SKILL.md | 1 |
-| Kiro Agents | .kiro/agents/*.json | 13 |
+| Kiro Agents | .kiro/agents/**/*.{json,md} | 14 |
 | Kiro Hooks | .kiro/hooks/*.kiro.hook | 10 |
 | Kiro MCP | .kiro/settings/mcp.json | 6 |
 | Kiro Powers | .kiro/powers/*/POWER.md | 8 |
@@ -62,7 +62,7 @@ agnix/
 │   ├── agnix-mcp/      # MCP server
 │   └── agnix-wasm/     # WebAssembly bindings
 ├── editors/            # Neovim, VS Code, JetBrains, Zed integrations
-├── knowledge-base/     # 437 rules documented
+├── knowledge-base/     # 443 rules documented
 
 ├── scripts/            # Build/dev automation scripts
 ├── website/            # Docusaurus documentation website

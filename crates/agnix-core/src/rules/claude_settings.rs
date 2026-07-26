@@ -21,6 +21,10 @@
 //! - autoMode ignored in settings.local.json (CC-SET-014, changed in Claude Code v2.1.207).
 //! - pluginConfigs dead in project-level settings (CC-SET-015, changed in Claude Code v2.1.207).
 //! - deprecated Write/NotebookEdit/Glob permission-rule forms (CC-SET-016, added in Claude Code v2.1.210).
+//! - `sandbox.filesystem.disabled` boolean check (CC-SET-017, added in Claude Code v2.1.216).
+//! - `emojiCompletionEnabled` boolean check (CC-SET-018, added in Claude Code v2.1.217).
+//! - `sandbox.network.strictAllowlist` boolean check (CC-SET-019, added in Claude Code v2.1.219).
+//! - `workflowSizeGuideline` enum check (CC-SET-020, added in Claude Code v2.1.219).
 //!
 //! Runs on FileType::Hooks (which covers `.claude/settings.json` -
 //! see `file_types/detection.rs`). Skips non-Claude Code settings paths
@@ -51,6 +55,10 @@ const RULE_IDS: &[&str] = &[
     "CC-SET-014",
     "CC-SET-015",
     "CC-SET-016",
+    "CC-SET-017",
+    "CC-SET-018",
+    "CC-SET-019",
+    "CC-SET-020",
 ];
 
 /// Allowed values for `worktree.baseRef` per Claude Code v2.1.133 release notes.
@@ -64,6 +72,9 @@ const SANDBOX_PATH_FIELDS: &[&str] = &["bwrapPath", "socatPath"];
 
 /// Allowed values for `teammateMode`. Claude Code v2.1.186 added `iterm2`.
 const TEAMMATE_MODE_ALLOWED: &[&str] = &["in-process", "auto", "tmux", "iterm2"];
+
+/// Allowed values for `workflowSizeGuideline` per Claude Code v2.1.219.
+const WORKFLOW_SIZE_GUIDELINE_ALLOWED: &[&str] = &["unrestricted", "small", "medium", "large"];
 
 /// Placeholders documented for `prUrlTemplate` at
 /// <https://code.claude.com/docs/en/settings>.
@@ -160,6 +171,22 @@ impl Validator for ClaudeSettingsValidator {
 
         if config.is_rule_enabled("CC-SET-016") {
             validate_deprecated_permission_tool_forms(path, content, &value, &mut diagnostics);
+        }
+
+        if config.is_rule_enabled("CC-SET-017") {
+            validate_sandbox_filesystem_disabled(path, content, &value, &mut diagnostics);
+        }
+
+        if config.is_rule_enabled("CC-SET-018") {
+            validate_emoji_completion_enabled(path, content, &value, &mut diagnostics);
+        }
+
+        if config.is_rule_enabled("CC-SET-019") {
+            validate_sandbox_network_strict_allowlist(path, content, &value, &mut diagnostics);
+        }
+
+        if config.is_rule_enabled("CC-SET-020") {
+            validate_workflow_size_guideline(path, content, &value, &mut diagnostics);
         }
 
         diagnostics
@@ -1217,6 +1244,156 @@ fn validate_deprecated_permission_tool_forms(
             );
         }
     }
+}
+
+/// CC-SET-017: Validate `sandbox.filesystem.disabled`. Claude Code 2.1.216
+/// added this setting to disable filesystem isolation while leaving network
+/// isolation active. It is a strict boolean toggle; quoted strings and other
+/// JSON types are rejected by the settings schema.
+///
+/// Missing and null values are treated as absent. A non-object `sandbox` or
+/// `filesystem` container is left to a broader shape validator.
+fn validate_sandbox_filesystem_disabled(
+    path: &Path,
+    content: &str,
+    value: &serde_json::Value,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(field_value) = value
+        .get("sandbox")
+        .and_then(serde_json::Value::as_object)
+        .and_then(|sandbox| sandbox.get("filesystem"))
+        .and_then(serde_json::Value::as_object)
+        .and_then(|filesystem| filesystem.get("disabled"))
+    else {
+        return;
+    };
+
+    if field_value.is_boolean() || field_value.is_null() {
+        return;
+    }
+
+    let actual = describe_json_type(field_value);
+    let line = find_key_line(content, "disabled")
+        .or_else(|| find_key_line(content, "filesystem"))
+        .unwrap_or(1);
+    diagnostics.push(
+        Diagnostic::warning(
+            path.to_path_buf(),
+            line,
+            0,
+            "CC-SET-017",
+            t!("rules.cc_set_017.message", actual = actual),
+        )
+        .with_suggestion(t!("rules.cc_set_017.suggestion")),
+    );
+}
+
+/// CC-SET-018: Validate `emojiCompletionEnabled`. Claude Code 2.1.217 added
+/// this setting to control `:emoji_name:` completion. Only a strict boolean is
+/// accepted by the settings schema.
+fn validate_emoji_completion_enabled(
+    path: &Path,
+    content: &str,
+    value: &serde_json::Value,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(field_value) = value.get("emojiCompletionEnabled") else {
+        return;
+    };
+
+    if field_value.is_boolean() || field_value.is_null() {
+        return;
+    }
+
+    let actual = describe_json_type(field_value);
+    let line = find_key_line(content, "emojiCompletionEnabled").unwrap_or(1);
+    diagnostics.push(
+        Diagnostic::warning(
+            path.to_path_buf(),
+            line,
+            0,
+            "CC-SET-018",
+            t!("rules.cc_set_018.message", actual = actual),
+        )
+        .with_suggestion(t!("rules.cc_set_018.suggestion")),
+    );
+}
+
+/// CC-SET-019: Validate `sandbox.network.strictAllowlist`. Claude Code 2.1.219
+/// added this strict boolean setting for managed network allowlists.
+fn validate_sandbox_network_strict_allowlist(
+    path: &Path,
+    content: &str,
+    value: &serde_json::Value,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(field_value) = value
+        .get("sandbox")
+        .and_then(serde_json::Value::as_object)
+        .and_then(|sandbox| sandbox.get("network"))
+        .and_then(serde_json::Value::as_object)
+        .and_then(|network| network.get("strictAllowlist"))
+    else {
+        return;
+    };
+
+    if field_value.is_boolean() || field_value.is_null() {
+        return;
+    }
+
+    let actual = describe_json_type(field_value);
+    let line = find_key_line(content, "strictAllowlist")
+        .or_else(|| find_key_line(content, "network"))
+        .unwrap_or(1);
+    diagnostics.push(
+        Diagnostic::warning(
+            path.to_path_buf(),
+            line,
+            0,
+            "CC-SET-019",
+            t!("rules.cc_set_019.message", actual = actual),
+        )
+        .with_suggestion(t!("rules.cc_set_019.suggestion")),
+    );
+}
+
+/// CC-SET-020: Validate the workflow size enum added in Claude Code 2.1.219.
+fn validate_workflow_size_guideline(
+    path: &Path,
+    content: &str,
+    value: &serde_json::Value,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(field_value) = value.get("workflowSizeGuideline") else {
+        return;
+    };
+    if field_value.is_null() {
+        return;
+    }
+
+    if field_value
+        .as_str()
+        .is_some_and(|value| WORKFLOW_SIZE_GUIDELINE_ALLOWED.contains(&value))
+    {
+        return;
+    }
+
+    let actual = field_value
+        .as_str()
+        .map(ToString::to_string)
+        .unwrap_or_else(|| describe_json_type(field_value).to_string());
+    let line = find_key_line(content, "workflowSizeGuideline").unwrap_or(1);
+    diagnostics.push(
+        Diagnostic::warning(
+            path.to_path_buf(),
+            line,
+            0,
+            "CC-SET-020",
+            t!("rules.cc_set_020.message", actual = actual),
+        )
+        .with_suggestion(t!("rules.cc_set_020.suggestion")),
+    );
 }
 
 /// Renders a `serde_json::Value` variant as a short human-readable type
@@ -3136,5 +3313,140 @@ mod tests {
         let content = r#"{"permissions": {"allow": ["Bash(npm:*)", "Bash(git:*)", "Agent(*)"]}}"#;
         let diagnostics = validate_at(".claude/settings.json", content);
         assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-016"));
+    }
+
+    // ===== CC-SET-017: sandbox.filesystem.disabled boolean =====
+
+    #[test]
+    fn test_sandbox_filesystem_disabled_non_boolean_flags() {
+        for invalid in [r#""true""#, "1", "[]", "{}"] {
+            let content = format!(r#"{{"sandbox": {{"filesystem": {{"disabled": {invalid}}}}}}}"#);
+            let diagnostics = validate_at(".claude/settings.json", &content);
+            let hits: Vec<_> = diagnostics
+                .iter()
+                .filter(|d| d.rule == "CC-SET-017")
+                .collect();
+            assert_eq!(hits.len(), 1, "expected one hit for {invalid}");
+            assert_eq!(hits[0].level, crate::diagnostics::DiagnosticLevel::Warning);
+        }
+    }
+
+    #[test]
+    fn test_sandbox_filesystem_disabled_boolean_or_null_is_clean() {
+        for valid in ["true", "false", "null"] {
+            let content = format!(r#"{{"sandbox": {{"filesystem": {{"disabled": {valid}}}}}}}"#);
+            let diagnostics = validate_at(".claude/settings.json", &content);
+            assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-017"));
+        }
+    }
+
+    #[test]
+    fn test_sandbox_filesystem_disabled_line_and_disable_config() {
+        let content = "{\n  \"sandbox\": {\n    \"filesystem\": {\n      \"disabled\": \"false\"\n    }\n  }\n}";
+        let diagnostics = validate_at(".claude/settings.json", content);
+        let hit = diagnostics
+            .iter()
+            .find(|d| d.rule == "CC-SET-017")
+            .expect("CC-SET-017 diagnostic");
+        assert_eq!(hit.line, 4);
+
+        let mut builder = LintConfig::builder();
+        builder.disable_rule("CC-SET-017");
+        let config = builder.build().unwrap();
+        let validator = ClaudeSettingsValidator;
+        let path = PathBuf::from(".claude/settings.json");
+        let diagnostics = validator.validate(&path, content, &config);
+        assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-017"));
+    }
+
+    // ===== CC-SET-018: emojiCompletionEnabled boolean =====
+
+    #[test]
+    fn test_emoji_completion_enabled_non_boolean_flags() {
+        for invalid in [r#""false""#, "0", "[]", "{}"] {
+            let content = format!(r#"{{"emojiCompletionEnabled": {invalid}}}"#);
+            let diagnostics = validate_at(".claude/settings.json", &content);
+            let hits: Vec<_> = diagnostics
+                .iter()
+                .filter(|d| d.rule == "CC-SET-018")
+                .collect();
+            assert_eq!(hits.len(), 1, "expected one hit for {invalid}");
+            assert_eq!(hits[0].level, crate::diagnostics::DiagnosticLevel::Warning);
+        }
+    }
+
+    #[test]
+    fn test_emoji_completion_enabled_boolean_or_null_is_clean() {
+        for valid in ["true", "false", "null"] {
+            let content = format!(r#"{{"emojiCompletionEnabled": {valid}}}"#);
+            let diagnostics = validate_at(".claude/settings.json", &content);
+            assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-018"));
+        }
+    }
+
+    #[test]
+    fn test_emoji_completion_enabled_line_and_disable_config() {
+        let content =
+            "{\n  \"model\": \"claude-sonnet-4\",\n  \"emojiCompletionEnabled\": \"true\"\n}";
+        let diagnostics = validate_at(".claude/settings.json", content);
+        let hit = diagnostics
+            .iter()
+            .find(|d| d.rule == "CC-SET-018")
+            .expect("CC-SET-018 diagnostic");
+        assert_eq!(hit.line, 3);
+
+        let mut builder = LintConfig::builder();
+        builder.disable_rule("CC-SET-018");
+        let config = builder.build().unwrap();
+        let validator = ClaudeSettingsValidator;
+        let path = PathBuf::from(".claude/settings.json");
+        let diagnostics = validator.validate(&path, content, &config);
+        assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-018"));
+    }
+
+    // ===== CC-SET-019: sandbox.network.strictAllowlist boolean =====
+
+    #[test]
+    fn test_sandbox_network_strict_allowlist_type() {
+        for invalid in [r#""true""#, "1", "[]", "{}"] {
+            let content =
+                r#"{"sandbox":{"network":{"strictAllowlist":VALUE}}}"#.replace("VALUE", invalid);
+            let diagnostics = validate(&content);
+            assert_eq!(
+                diagnostics
+                    .iter()
+                    .filter(|d| d.rule == "CC-SET-019")
+                    .count(),
+                1,
+                "expected one hit for {invalid}"
+            );
+        }
+        for valid in ["true", "false", "null"] {
+            let content =
+                r#"{"sandbox":{"network":{"strictAllowlist":VALUE}}}"#.replace("VALUE", valid);
+            assert!(validate(&content).iter().all(|d| d.rule != "CC-SET-019"));
+        }
+    }
+
+    // ===== CC-SET-020: workflowSizeGuideline enum =====
+
+    #[test]
+    fn test_workflow_size_guideline_enum() {
+        for valid in ["unrestricted", "small", "medium", "large"] {
+            let content = format!(r#"{{"workflowSizeGuideline": "{valid}"}}"#);
+            assert!(validate(&content).iter().all(|d| d.rule != "CC-SET-020"));
+        }
+
+        for invalid in [r#""tiny""#, "1", "true", "[]"] {
+            let content = format!(r#"{{"workflowSizeGuideline": {invalid}}}"#);
+            assert_eq!(
+                validate(&content)
+                    .iter()
+                    .filter(|d| d.rule == "CC-SET-020")
+                    .count(),
+                1,
+                "expected one hit for {invalid}"
+            );
+        }
     }
 }

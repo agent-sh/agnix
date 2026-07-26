@@ -191,13 +191,6 @@ fn test_e2e_mcp_011_fix_transport_case() {
 }
 
 #[test]
-fn test_e2e_cc_sk_014_fix_string_boolean() {
-    // CC-SK-014 checks disable-model-invocation for quoted boolean strings
-    let content = "---\nname: test-skill\ndescription: A test skill\ndisable-model-invocation: \"true\"\n---\nBody content";
-    assert_fix_resolves(FileType::Skill, Path::new("SKILL.md"), content, "CC-SK-014");
-}
-
-#[test]
 fn test_e2e_as_004_fix_name_format() {
     let content = "---\nname: My Skill Name\ndescription: A test skill\n---\nBody content";
     assert_fix_resolves(FileType::Skill, Path::new("SKILL.md"), content, "AS-004");

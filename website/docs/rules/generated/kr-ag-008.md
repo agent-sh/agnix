@@ -1,9 +1,9 @@
 ---
 id: kr-ag-008
-title: "KR-AG-008: Agent Missing Name - Kiro Agents"
+title: "KR-AG-008: Empty Explicit Agent Name - Kiro Agents"
 sidebar_label: "KR-AG-008"
-description: "agnix rule KR-AG-008 checks for agent missing name in kiro agents files. Severity: HIGH. See examples and fix guidance."
-keywords: ["KR-AG-008", "agent missing name", "kiro agents", "validation", "agnix", "linter"]
+description: "agnix rule KR-AG-008 checks for empty explicit agent name in kiro agents files. Severity: HIGH. See examples and fix guidance."
+keywords: ["KR-AG-008", "empty explicit agent name", "kiro agents", "validation", "agnix", "linter"]
 ---
 
 ## Summary
@@ -13,7 +13,7 @@ keywords: ["KR-AG-008", "agent missing name", "kiro agents", "validation", "agni
 - **Category**: `Kiro Agents`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-07-26`
 
 ## Applicability
 
@@ -23,8 +23,8 @@ keywords: ["KR-AG-008", "agent missing name", "kiro agents", "validation", "agni
 
 ## Evidence Sources
 
-- https://kiro.dev/docs/agents
-- https://kiro.dev/docs/configuration
+- https://kiro.dev/docs/cli/custom-agents/configuration-reference/
+- https://kiro.dev/docs/cli/v3/agent-config/
 
 ## Test Coverage Metadata
 
@@ -39,11 +39,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{"prompt": "Review code"}
+{"name": "   ", "prompt": "Review code"}
 ```
 
 ### Valid
 
 ```json
-{"name": "review-agent", "prompt": "Review code"}
+{"prompt": "Review code"}
 ```

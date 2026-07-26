@@ -187,7 +187,7 @@ fn readme_supported_tools_still_lists_kiro_surface() {
     assert!(
         kiro_row.contains(".kiro/steering/\\*\\*/\\*.md")
             && kiro_row.contains(".kiro/skills/\\*\\*/SKILL.md")
-            && kiro_row.contains(".kiro/agents/\\*.json")
+            && kiro_row.contains(".kiro/agents/\\*\\*/\\*.{json,md}")
             && kiro_row.contains(".kiro/hooks/\\*.kiro.hook")
             && kiro_row.contains(".kiro/settings/mcp.json")
             && kiro_row.contains(".kiro/powers/\\*/POWER.md"),

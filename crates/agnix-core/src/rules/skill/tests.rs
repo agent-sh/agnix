@@ -3679,12 +3679,8 @@ Body"#;
         .filter(|d| d.rule == "CC-SK-014")
         .collect();
 
-    assert_eq!(cc_sk_014.len(), 1);
-    assert_eq!(
-        cc_sk_014[0].level,
-        crate::diagnostics::DiagnosticLevel::Error
-    );
-    assert!(cc_sk_014[0].message.contains("true"));
+    assert!(cc_sk_014.is_empty());
+    assert!(diagnostics.iter().all(|d| d.rule != "AS-016"));
 }
 
 #[test]
@@ -3704,7 +3700,7 @@ Body"#;
         .filter(|d| d.rule == "CC-SK-014")
         .collect();
 
-    assert_eq!(cc_sk_014.len(), 1);
+    assert!(cc_sk_014.is_empty());
 }
 
 #[test]
@@ -3728,7 +3724,7 @@ Body"#;
 }
 
 #[test]
-fn test_cc_sk_014_has_safe_fix() {
+fn test_cc_sk_014_quoted_alias_needs_no_fix() {
     let content = r#"---
 name: test-skill
 description: Use when testing
@@ -3744,19 +3740,15 @@ Body"#;
         .filter(|d| d.rule == "CC-SK-014")
         .collect();
 
-    assert_eq!(cc_sk_014.len(), 1);
-    assert!(cc_sk_014[0].has_fixes());
-    let fix = &cc_sk_014[0].fixes[0];
-    assert_eq!(fix.replacement, "true");
-    assert!(fix.safe);
+    assert!(cc_sk_014.is_empty());
 }
 
 #[test]
-fn test_cc_sk_014_fix_applies_correctly() {
+fn test_cc_sk_014_invalid_alias_is_reported_without_guessing_a_fix() {
     let content = r#"---
 name: test-skill
 description: Use when testing
-disable-model-invocation: "true"
+disable-model-invocation: "maybe"
 ---
 Body"#;
 
@@ -3769,13 +3761,7 @@ Body"#;
         .collect();
 
     assert_eq!(cc_sk_014.len(), 1);
-    assert!(cc_sk_014[0].has_fixes());
-
-    let fix = &cc_sk_014[0].fixes[0];
-    let mut fixed = content.to_string();
-    fixed.replace_range(fix.start_byte..fix.end_byte, &fix.replacement);
-    assert!(fixed.contains("disable-model-invocation: true"));
-    assert!(!fixed.contains("\"true\""));
+    assert!(!cc_sk_014[0].has_fixes());
 }
 
 #[test]
@@ -3790,7 +3776,7 @@ fn test_cc_sk_014_single_quoted() {
         .filter(|d| d.rule == "CC-SK-014")
         .collect();
 
-    assert_eq!(cc_sk_014.len(), 1);
+    assert!(cc_sk_014.is_empty());
 }
 
 // ===== CC-SK-015: Invalid user-invocable Type =====
@@ -3812,11 +3798,7 @@ Body"#;
         .filter(|d| d.rule == "CC-SK-015")
         .collect();
 
-    assert_eq!(cc_sk_015.len(), 1);
-    assert_eq!(
-        cc_sk_015[0].level,
-        crate::diagnostics::DiagnosticLevel::Error
-    );
+    assert!(cc_sk_015.is_empty());
 }
 
 #[test]
@@ -3836,7 +3818,7 @@ Body"#;
         .filter(|d| d.rule == "CC-SK-015")
         .collect();
 
-    assert_eq!(cc_sk_015.len(), 1);
+    assert!(cc_sk_015.is_empty());
 }
 
 #[test]
@@ -3860,7 +3842,7 @@ Body"#;
 }
 
 #[test]
-fn test_cc_sk_015_has_safe_fix() {
+fn test_cc_sk_015_quoted_alias_needs_no_fix() {
     let content = r#"---
 name: test-skill
 description: Use when testing
@@ -3876,19 +3858,15 @@ Body"#;
         .filter(|d| d.rule == "CC-SK-015")
         .collect();
 
-    assert_eq!(cc_sk_015.len(), 1);
-    assert!(cc_sk_015[0].has_fixes());
-    let fix = &cc_sk_015[0].fixes[0];
-    assert_eq!(fix.replacement, "false");
-    assert!(fix.safe);
+    assert!(cc_sk_015.is_empty());
 }
 
 #[test]
-fn test_cc_sk_015_fix_applies_correctly() {
+fn test_cc_sk_015_invalid_alias_is_reported_without_guessing_a_fix() {
     let content = r#"---
 name: test-skill
 description: Use when testing
-user-invocable: "false"
+user-invocable: "maybe"
 ---
 Body"#;
 
@@ -3901,13 +3879,7 @@ Body"#;
         .collect();
 
     assert_eq!(cc_sk_015.len(), 1);
-    assert!(cc_sk_015[0].has_fixes());
-
-    let fix = &cc_sk_015[0].fixes[0];
-    let mut fixed = content.to_string();
-    fixed.replace_range(fix.start_byte..fix.end_byte, &fix.replacement);
-    assert!(fixed.contains("user-invocable: false"));
-    assert!(!fixed.contains("\"false\""));
+    assert!(!cc_sk_015[0].has_fixes());
 }
 
 #[test]
@@ -3966,11 +3938,7 @@ fn test_cc_sk_014_with_inline_comment() {
         .filter(|d| d.rule == "CC-SK-014")
         .collect();
 
-    assert_eq!(
-        cc_sk_014.len(),
-        1,
-        "Should detect quoted boolean even with trailing inline comment"
-    );
+    assert!(cc_sk_014.is_empty());
 }
 
 #[test]
@@ -3985,11 +3953,7 @@ fn test_cc_sk_015_with_inline_comment() {
         .filter(|d| d.rule == "CC-SK-015")
         .collect();
 
-    assert_eq!(
-        cc_sk_015.len(),
-        1,
-        "Should detect quoted boolean even with trailing inline comment"
-    );
+    assert!(cc_sk_015.is_empty());
 }
 
 // ===== CC-SK-014/015: No AS-016 false positive =====
@@ -4007,17 +3971,48 @@ Body"#;
     let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
 
     let as_016: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-016").collect();
-    // CC-SK-014 fires; AS-016 may or may not fire depending on parse outcome.
-    // But CC-SK-014 should always be present.
     let cc_sk_014: Vec<_> = diagnostics
         .iter()
         .filter(|d| d.rule == "CC-SK-014")
         .collect();
-    assert_eq!(cc_sk_014.len(), 1, "CC-SK-014 should fire for quoted bool");
+    assert!(cc_sk_014.is_empty());
+    assert!(as_016.is_empty());
+}
 
-    // If AS-016 also fires, that's currently expected since serde can't parse string as bool.
-    // This test documents the current behavior.
-    let _ = as_016;
+#[test]
+fn test_claude_boolean_aliases_are_case_insensitive() {
+    for value in ["YES", "no", "On", "OFF", "1", "0"] {
+        let content = format!(
+            "---\nname: test-skill\ndescription: Use when testing\ndisable-model-invocation: {value}\nuser-invocable: '{value}'\n---\nBody"
+        );
+        let diagnostics = SkillValidator.validate(
+            Path::new(".claude/skills/test-skill/SKILL.md"),
+            &content,
+            &LintConfig::default(),
+        );
+        assert!(
+            diagnostics
+                .iter()
+                .all(|d| !matches!(d.rule.as_str(), "CC-SK-014" | "CC-SK-015" | "AS-016")),
+            "alias {value} should parse cleanly: {diagnostics:?}"
+        );
+    }
+}
+
+#[test]
+fn test_fork_background_false_is_a_known_valid_field() {
+    let content = "---\nname: test-skill\ndescription: Use when testing\ncontext: fork\nbackground: false\n---\nRun the review.";
+    let diagnostics = SkillValidator.validate(
+        Path::new(".claude/skills/test-skill/SKILL.md"),
+        content,
+        &LintConfig::default(),
+    );
+    assert!(
+        diagnostics
+            .iter()
+            .all(|d| !matches!(d.rule.as_str(), "CC-SK-017" | "AS-016")),
+        "background should be accepted: {diagnostics:?}"
+    );
 }
 
 // ===== CC-SK-013: Empty body with fork context =====

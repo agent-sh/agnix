@@ -12,18 +12,19 @@ keywords: ["CC-SK-014", "invalid disable-model-invocation type", "claude skills"
 - **Severity**: `HIGH`
 - **Category**: `Claude Skills`
 - **Normative Level**: `MUST`
-- **Auto-Fix**: `Yes (safe)`
-- **Verified On**: `2026-02-07`
+- **Auto-Fix**: `No`
+- **Verified On**: `2026-07-26`
 
 ## Applicability
 
 - **Tool**: `claude-code`
-- **Version Range**: `unspecified`
+- **Version Range**: `>=2.1.218`
 - **Spec Revision**: `unspecified`
 
 ## Evidence Sources
 
 - https://code.claude.com/docs/en/skills
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.218
 
 ## Test Coverage Metadata
 
@@ -41,7 +42,7 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ---
 name: quiet-skill
 description: Use when running without model invocation
-disable-model-invocation: "true"
+disable-model-invocation: "maybe"
 ---
 Run silently.
 ```
@@ -52,7 +53,7 @@ Run silently.
 ---
 name: quiet-skill
 description: Use when running without model invocation
-disable-model-invocation: true
+disable-model-invocation: "YES"
 ---
 Run silently.
 ```

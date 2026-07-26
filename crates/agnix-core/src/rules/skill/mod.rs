@@ -9,8 +9,8 @@ use crate::{
     rules::{Validator, ValidatorMetadata},
     schemas::hooks::HooksSchema,
     schemas::skill::{
-        SkillSchema, VALID_EFFORT_LEVELS, VALID_SHELLS, is_valid_skill_model,
-        parse_skill_name_parts,
+        SkillSchema, VALID_EFFORT_LEVELS, VALID_SHELLS, deserialize_optional_bool_alias,
+        is_bool_alias_value, is_valid_skill_model, parse_skill_name_parts,
     },
     validation::is_valid_mcp_tool_format,
 };
@@ -62,12 +62,22 @@ struct SkillFrontmatter {
     allowed_tools: Option<String>,
     #[serde(rename = "argument-hint")]
     argument_hint: Option<String>,
-    #[serde(rename = "disable-model-invocation")]
+    #[serde(
+        rename = "disable-model-invocation",
+        default,
+        deserialize_with = "deserialize_optional_bool_alias"
+    )]
     disable_model_invocation: Option<bool>,
-    #[serde(rename = "user-invocable")]
+    #[serde(
+        rename = "user-invocable",
+        default,
+        deserialize_with = "deserialize_optional_bool_alias"
+    )]
     user_invocable: Option<bool>,
     model: Option<String>,
     context: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_optional_bool_alias")]
+    background: Option<bool>,
     agent: Option<String>,
     effort: Option<String>,
     paths: Option<serde_yaml::Value>,
@@ -293,6 +303,7 @@ const KNOWN_FRONTMATTER_FIELDS: &[&str] = &[
     "user-invocable",
     "model",
     "context",
+    "background",
     "agent",
     "hooks",
     "effort",
@@ -1500,89 +1511,44 @@ impl<'a> ValidationContext<'a> {
         }
     }
 
-    /// CC-SK-014, CC-SK-015: Validate boolean field types from raw YAML
-    /// Detects quoted string values like "true" or "false" that should be unquoted booleans
+    /// CC-SK-014, CC-SK-015: Validate Claude Code boolean aliases from raw YAML.
     fn validate_cc_boolean_types(&mut self) {
         self.validate_boolean_field("disable-model-invocation", "CC-SK-014", "cc_sk_014");
         self.validate_boolean_field("user-invocable", "CC-SK-015", "cc_sk_015");
     }
 
-    /// Helper to check a single boolean field for string type
+    /// Helper to report values outside Claude Code's accepted boolean aliases.
     fn validate_boolean_field(&mut self, field_name: &str, rule_id: &str, i18n_key: &str) {
         if !self.config.is_rule_enabled(rule_id) {
             return;
         }
 
-        // Search raw frontmatter for the field with a quoted value
-        let frontmatter = &self.parts.frontmatter;
-        for line in frontmatter.lines() {
-            let trimmed = line.trim_start();
-            if let Some(rest) = trimmed.strip_prefix(field_name) {
-                if let Some(after_colon) = rest.trim_start().strip_prefix(':') {
-                    // Strip inline YAML comments before checking the value
-                    let value_str = after_colon.split('#').next().unwrap_or("").trim();
-                    // Check for quoted boolean strings
-                    let is_quoted_bool = value_str == "\"true\""
-                        || value_str == "\"false\""
-                        || value_str == "'true'"
-                        || value_str == "'false'";
-
-                    if is_quoted_bool {
-                        let inner_value = value_str.trim_matches('"').trim_matches('\'');
-                        let fixed_bool = inner_value == "true";
-
-                        let (line_num, col) = self.frontmatter_key_line_col(field_name);
-
-                        let msg_key = format!("rules.{}.message", i18n_key);
-                        let sug_key = format!("rules.{}.suggestion", i18n_key);
-
-                        let mut diagnostic = Diagnostic::error(
-                            self.path.to_path_buf(),
-                            line_num,
-                            col,
-                            rule_id,
-                            t!(&msg_key, value = inner_value),
-                        )
-                        .with_suggestion(t!(&sug_key));
-
-                        // Add auto-fix: replace quoted string with boolean
-                        if let Some((start, end)) = self.frontmatter_value_byte_range(field_name) {
-                            // The value range from frontmatter_value_byte_range returns
-                            // the inner content for quoted values, but we need to replace
-                            // including quotes. Expand to include surrounding quotes.
-                            let content_bytes = self.content.as_bytes();
-                            let quote_start = if start > 0
-                                && (content_bytes[start - 1] == b'"'
-                                    || content_bytes[start - 1] == b'\'')
-                            {
-                                start - 1
-                            } else {
-                                start
-                            };
-                            let quote_end = if end < self.content.len()
-                                && (content_bytes[end] == b'"' || content_bytes[end] == b'\'')
-                            {
-                                end + 1
-                            } else {
-                                end
-                            };
-
-                            let fix_key = format!("rules.{}.fix", i18n_key);
-                            let fix = Fix::replace(
-                                quote_start,
-                                quote_end,
-                                fixed_bool.to_string(),
-                                t!(&fix_key, value = inner_value, fixed = fixed_bool),
-                                true, // safe fix
-                            );
-                            diagnostic = diagnostic.with_fix(fix);
-                        }
-
-                        self.diagnostics.push(diagnostic);
-                    }
-                }
-            }
+        let Ok(serde_yaml::Value::Mapping(fields)) =
+            serde_yaml::from_str::<serde_yaml::Value>(&self.parts.frontmatter)
+        else {
+            return;
+        };
+        let key = serde_yaml::Value::String(field_name.to_string());
+        let Some(value) = fields.get(&key) else {
+            return;
+        };
+        if is_bool_alias_value(value) {
+            return;
         }
+
+        let (line_num, col) = self.frontmatter_key_line_col(field_name);
+        let msg_key = format!("rules.{}.message", i18n_key);
+        let sug_key = format!("rules.{}.suggestion", i18n_key);
+        self.diagnostics.push(
+            Diagnostic::error(
+                self.path.to_path_buf(),
+                line_num,
+                col,
+                rule_id,
+                t!(&msg_key, value = format!("{value:?}")),
+            )
+            .with_suggestion(t!(&sug_key)),
+        );
     }
 
     /// AS-012, AS-013: Validate body content
@@ -1925,6 +1891,7 @@ impl Validator for SkillValidator {
                         user_invocable: frontmatter.user_invocable,
                         model: frontmatter.model.clone(),
                         context: frontmatter.context.clone(),
+                        background: frontmatter.background,
                         agent: frontmatter.agent.clone(),
                         effort: frontmatter.effort.clone(),
                         paths: frontmatter.paths.clone(),

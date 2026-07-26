@@ -90,13 +90,11 @@ rules:
     message: 'context: fork with reference-only content lacks actionable instructions'
     suggestion: Add imperative instructions for the forked agent to follow
   cc_sk_014:
-    message: disable-model-invocation must be a boolean, got string '%{value}'
-    suggestion: Use true/false without quotes
-    fix: Convert string '%{value}' to boolean %{fixed}
+    message: disable-model-invocation has invalid boolean value %{value}
+    suggestion: Use true/false, yes/no, on/off, or 1/0 (quoted or unquoted)
   cc_sk_015:
-    message: user-invocable must be a boolean, got string '%{value}'
-    suggestion: Use true/false without quotes
-    fix: Convert string '%{value}' to boolean %{fixed}
+    message: user-invocable has invalid boolean value %{value}
+    suggestion: Use true/false, yes/no, on/off, or 1/0 (quoted or unquoted)
   cc_sk_016:
     message: Body uses indexed $ARGUMENTS[n] but argument-hint is missing
     suggestion: Add argument-hint to frontmatter so users know how to provide arguments
@@ -302,6 +300,9 @@ rules:
   cc_ag_013:
     message: Invalid skill name format '%{name}'. Must be lowercase with hyphens
     suggestion: Use kebab-case format (e.g., 'my-skill-name')
+  cc_ag_020:
+    message: "Agent name '%{name}' contains a reserved colon"
+    suggestion: "Remove ':' from the local agent name; colons are reserved for plugin namespaces"
   cc_mem_004:
     message: npm script '%{script}' not found in package.json
     suggestion_no_scripts: No scripts defined in package.json.
@@ -767,7 +768,7 @@ rules:
     suggestion: Enable includeMcpJson or configure inline mcpServers for MCP access
   kr_ag_006:
     message: Kiro agent references unknown subagent '@%{agent}'
-    suggestion: Create .kiro/agents/%{agent}.json or remove the subagent reference
+    suggestion: Create .kiro/agents/%{agent}.json or .md, or remove the subagent reference
   kr_ag_007:
     message: 'Kiro agent has broader tools than referenced subagent ''@%{agent}'' (extra tools: %{extra_tools})'
     suggestion: Narrow this agent's tool scope or align '@%{agent}' tool permissions
@@ -1044,8 +1045,8 @@ rules:
     message: Potential hardcoded secret detected in POWER.md body
     suggestion: Remove hardcoded credentials from the power body; reference environment variables instead
   kr_ag_008:
-    message: Kiro agent is missing required 'name' field
-    suggestion: Add a 'name' field at the top level of the agent JSON
+    message: Kiro agent has an empty explicit 'name' field
+    suggestion: Remove the empty field to derive the name from its relative path, or set a non-empty name
   kr_ag_009:
     message: Kiro agent is missing required 'prompt' field
     suggestion: Add a non-empty 'prompt' string defining the agent's behavior
@@ -1061,6 +1062,9 @@ rules:
   kr_ag_013:
     message: Potential hardcoded secret detected in Kiro agent prompt
     suggestion: Remove hardcoded credentials from the prompt; reference environment variables instead
+  kr_ag_014:
+    message: 'Invalid Kiro universal permissions rule: %{issue}'
+    suggestion: Use permissions.rules entries with a documented capability, deny/ask/allow effect, and string-array match/exclude fields
   kr_hk_007:
     message: Kiro hook timeout is out of range (0 or > 300s)
     suggestion: Set 'timeout' between 1 and 300 seconds
@@ -1146,11 +1150,13 @@ rules:
     suggestion: 'Replace ''bearer_token = "..."'' with ''bearer_token_env_var = "YOUR_ENV_VAR_NAME"'' and set the token in
       that env var. Rationale: openai/codex#19294 - the field was removed from the config schema in rust-v0.125.0'
   cdx_cfg_029:
-    message: '''agents.max_threads'' cannot be set when ''multi_agent_v2'' is enabled - these use different agent lifecycles
-      and Codex will fail to load this config'
-    suggestion: 'Remove ''agents.max_threads'' (the v2 lifecycle manages threading internally), or disable ''multi_agent_v2''
-      if you need the legacy thread limit. Rationale: openai/codex#19129 - Codex rejects this combination at config-load time
-      in rust-v0.125.0'
+    message: '''agents.%{field}'' must be a positive integer; Codex 0.145 uses this value as the per-session concurrent agent
+      limit and rejects zero, negative, fractional, or non-numeric values'
+    suggestion: 'Set ''agents.%{field}'' to an integer of 1 or greater. Codex 0.145 accepts both the current ''max_concurrent_threads_per_session''
+      name and the legacy ''max_threads'' alias.'
+  cdx_cfg_029_duplicate:
+    message: '''agents.max_concurrent_threads_per_session'' and its ''agents.max_threads'' compatibility alias cannot both be set'
+    suggestion: 'Remove one concurrency field; prefer ''agents.max_concurrent_threads_per_session'' for new configuration.'
   cc_hk_026:
     message: MCP tool hook at %{location} is missing required 'server' field
     suggestion: 'Add a ''server'' field naming an already-connected MCP server (e.g. "server": "my_server")'
@@ -1231,6 +1237,20 @@ rules:
   cc_set_016:
     message: "'%{rule}' is a deprecated permission-rule form as of Claude Code 2.1.210; use '%{replacement}' instead"
     suggestion: "Replace '%{rule}' with '%{replacement}' in your permissions list."
+  cc_set_017:
+    message: sandbox.filesystem.disabled must be a boolean when present (got %{actual}); Claude Code 2.1.216+ uses this
+      setting to disable filesystem isolation while preserving network isolation
+    suggestion: Set sandbox.filesystem.disabled to an unquoted true or false, or remove it to keep filesystem isolation enabled.
+  cc_set_018:
+    message: emojiCompletionEnabled must be a boolean when present (got %{actual}); Claude Code 2.1.217+ uses this setting
+      to control named emoji completion
+    suggestion: Set emojiCompletionEnabled to an unquoted true or false, or remove it to keep emoji completion enabled.
+  cc_set_019:
+    message: sandbox.network.strictAllowlist must be a boolean when present (got %{actual})
+    suggestion: Set sandbox.network.strictAllowlist to an unquoted true or false, or remove it.
+  cc_set_020:
+    message: workflowSizeGuideline must be unrestricted, small, medium, or large (got %{actual})
+    suggestion: Set workflowSizeGuideline to one of unrestricted, small, medium, or large.
   cc_hk_028:
     message: Command hook at %{location} uses '${user_config.*}' interpolation, which Claude Code 2.1.207+ rejects at
       load time as a shell-injection fix

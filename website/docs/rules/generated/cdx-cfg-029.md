@@ -1,9 +1,9 @@
 ---
 id: cdx-cfg-029
-title: "CDX-CFG-029: Incompatible agents.max_threads with multi_agent_v2"
+title: "CDX-CFG-029: Invalid Agent Concurrency Limit - Codex CLI"
 sidebar_label: "CDX-CFG-029"
-description: "agnix rule CDX-CFG-029 checks for incompatible agents.max_threads with multi_agent_v2 in codex cli files. Severity: HIGH. See examples and fix guidance."
-keywords: ["CDX-CFG-029", "incompatible agents.max_threads with multi_agent_v2", "codex cli", "validation", "agnix", "linter"]
+description: "agnix rule CDX-CFG-029 checks for invalid agent concurrency limit in codex cli files. Severity: HIGH. See examples and fix guidance."
+keywords: ["CDX-CFG-029", "invalid agent concurrency limit", "codex cli", "validation", "agnix", "linter"]
 ---
 
 ## Summary
@@ -13,20 +13,19 @@ keywords: ["CDX-CFG-029", "incompatible agents.max_threads with multi_agent_v2",
 - **Category**: `Codex CLI`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-05-04`
+- **Verified On**: `2026-07-26`
 
 ## Applicability
 
 - **Tool**: `codex`
-- **Version Range**: `unspecified`
+- **Version Range**: `>=0.145.0`
 - **Spec Revision**: `unspecified`
 
 ## Evidence Sources
 
-- https://github.com/openai/codex/pull/19129
-- https://github.com/openai/codex/pull/19733
-- https://github.com/openai/codex/pull/19792
-- https://github.com/openai/codex/blob/rust-v0.128.0/codex-rs/core/src/config/mod.rs
+- https://github.com/openai/codex/releases/tag/rust-v0.145.0
+- https://github.com/openai/codex/pull/33550
+- https://github.com/openai/codex/blob/rust-v0.145.0/codex-rs/config/src/config_toml.rs
 
 ## Test Coverage Metadata
 
@@ -42,18 +41,15 @@ The following examples demonstrate what triggers this rule and how to fix it.
 
 ```toml
 [agents]
-max_threads = 4
-
-[features]
-multi_agent_v2 = true
+max_concurrent_threads_per_session = 0
 ```
 
 ### Valid
 
 ```toml
 [agents]
-max_threads = 4
+max_concurrent_threads_per_session = 4
 
 [features]
-# multi_agent_v2 omitted or false
+multi_agent_v2 = true
 ```

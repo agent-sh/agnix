@@ -7,11 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **CC-SET-017: Non-boolean sandbox.filesystem.disabled Setting**. Claude Code v2.1.216 added a strict boolean setting that disables filesystem isolation while preserving network isolation; the new rule catches quoted and other non-boolean values.
+- **CC-SET-018: Non-boolean emojiCompletionEnabled Setting**. Claude Code v2.1.217 added a strict boolean setting for named emoji completion; the new rule catches non-boolean values.
+- **Claude Code v2.1.218-v2.1.219 validation**. Added CC-AG-020 for colon-containing agent names, CC-SET-019 for non-boolean `sandbox.network.strictAllowlist`, and CC-SET-020 for invalid `workflowSizeGuideline` values.
+- **KR-AG-014: Invalid Kiro agent permission**. Kiro CLI 2.14 universal agent profiles now validate permission capabilities, effects, match patterns, and exclusions. Rule count increased from 437 to 443.
+
 ### Changed
+- **Tool release baselines (2026-07-26 sweep)**. Advanced amp to `event-driven-orbs`, Claude Code to `v2.1.220`, OpenCode to `v1.18.5`, Kiro CLI to `2.14.0`, Cline to `v4.0.11`, Cursor to `3.13.10`, and Gemini CLI to `v0.52.0`; confirmed Codex CLI `rust-v0.145.0` and the other tracked markers remain current (closes #1238, #1239, #1240, #1241, #1242, #1243, #1244, and #1245).
+- **Claude Code skill frontmatter compatibility**. Boolean skill fields now accept the documented case-insensitive boolean aliases, and the v2.1.218 `background` field is recognized.
 - **Tool release baselines (2026-07-20 sweep)**. Advanced Claude Code to `v2.1.215`, Codex CLI to `rust-v0.144.6`, OpenCode to `v1.18.3`, Kiro CLI to `2.13.0`, Cline to `v4.0.10`, Cursor to `3.12.17`, Gemini CLI to `v0.51.0`, and amp to `subscriptions` after reviewing the current release notes (closes #1217, #1218, #1219, #1220, #1221, #1222, #1223, and #1234).
 - **Dependency and CI action refresh**. Updated `toml` to `1.1.3`, `clap` to `4.6.2`, `rust-i18n` to `4.2.1`, `regex` to `1.13.1`, and `ignore` to `0.4.30`; refreshed the pinned cargo-deny, CodeQL, setup-java, and taiki-e action revisions. The `rust-i18n` update removes the deprecated transitive `serde_yaml` package.
 
 ### Fixed
+- **Codex 0.145 config compatibility**. Accept the four new feature flags and `tui.resume_cwd`, and evolve CDX-CFG-029 for the unified positive-integer agent concurrency limit. The current `agents.max_concurrent_threads_per_session` field and legacy `agents.max_threads` alias now work with `multi_agent_v2` without the obsolete conflict diagnostic.
+- **Claude Code hook compatibility**. Recognize the v2.1.219 `DirectoryAdded` hook event without an unknown-event false positive.
+- **Kiro 2.14 universal agent compatibility**. Validate nested Markdown or JSON profiles under `.kiro/agents/`, derive omitted agent names from relative paths, and resolve nested subagent references.
+- **Cline release tracking**. Filter the mixed GitHub release feed to the core `vX.Y.Z` train so desktop, CLI, and SDK releases no longer produce false tool-release issues.
 - **Cline UTF-8 BOM compatibility**. Parse BOM-prefixed Cline rules, workflows, and skill frontmatter so validation matches Cline's current parser behavior instead of silently skipping scoped rules.
 - **CodeQL action version consistency**. Pin CodeQL initialization, analysis, and SARIF upload to the same `v4.37.1` revision, preventing mixed-version configuration failures.
 

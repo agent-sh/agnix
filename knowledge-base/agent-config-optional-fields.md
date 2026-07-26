@@ -36,10 +36,11 @@
 | `metadata` | map<string, string> | No | arbitrary key-value pairs | none | (none) | LOW |
 | `allowed-tools` | string | No | space-delimited tool names | none | CC-SK-007, CC-SK-008 | Partial |
 | `argument-hint` | string | No | hint text shown in autocomplete | none | (none) | YES |
-| `disable-model-invocation` | boolean | No | `true` / `false` | `false` | CC-SK-006 (partial) | Partial |
-| `user-invocable` | boolean | No | `true` / `false` | `true` | (none) | YES |
+| `disable-model-invocation` | boolean | No | booleans or case-insensitive `true`/`false`, `yes`/`no`, `on`/`off`, `1`/`0` aliases | `false` | CC-SK-006, CC-SK-014 | No |
+| `user-invocable` | boolean | No | booleans or case-insensitive `true`/`false`, `yes`/`no`, `on`/`off`, `1`/`0` aliases | `true` | CC-SK-015 | No |
 | `model` | string | No | `sonnet`, `opus`, `haiku`, `inherit` | inherit | CC-SK-001 | No |
 | `context` | string | No | `fork` (only valid value) | none | CC-SK-002, CC-SK-003, CC-SK-004 | No |
+| `background` | boolean | No | same boolean aliases as other Claude Code frontmatter booleans | `true` for `context: fork` | recognized | No |
 | `agent` | string | No | `Explore`, `Plan`, `general-purpose`, or custom kebab-case name | `general-purpose` | CC-SK-005 | No |
 | `hooks` | object | No | Same format as settings.json hooks | none | (none) | YES |
 
@@ -64,8 +65,8 @@ The `` !`command` `` syntax runs shell commands before skill content is sent. Cu
 | CC-SK-011: user-invocable=false with disable-model-invocation=true | HIGH | If both are set, the skill is unreachable (neither user nor model can invoke it) | Yes - remove one |
 | CC-SK-012: argument-hint without $ARGUMENTS | MEDIUM | If `argument-hint` is set but body doesn't reference `$ARGUMENTS`, the hint is misleading | Yes - add `$ARGUMENTS` |
 | CC-SK-013: context=fork without actionable instructions | MEDIUM | Warn when `context: fork` is used with reference-only content (no imperative verbs) | No |
-| CC-SK-014: Invalid disable-model-invocation type | HIGH | Must be boolean, not string "true" | Yes - convert to bool |
-| CC-SK-015: Invalid user-invocable type | HIGH | Must be boolean, not string "true"/"false" | Yes - convert to bool |
+| CC-SK-014: Invalid disable-model-invocation type | HIGH | Must use one of Claude Code's accepted boolean aliases | No - ambiguous invalid values need manual correction |
+| CC-SK-015: Invalid user-invocable type | HIGH | Must use one of Claude Code's accepted boolean aliases | No - ambiguous invalid values need manual correction |
 
 ---
 

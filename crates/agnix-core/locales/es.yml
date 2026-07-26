@@ -221,6 +221,9 @@ rules:
   cc_ag_007:
     message: El archivo de agente debe tener frontmatter YAML
     suggestion: Agrega frontmatter entre marcadores ---
+  cc_ag_020:
+    message: "El nombre de agente '%{name}' contiene dos puntos reservados"
+    suggestion: "Elimina ':' del nombre del agente local; los dos puntos estan reservados para espacios de nombres de plugins"
     parse_error: 'Error al analizar el frontmatter del agente: %{error}'
     parse_error_suggestion: Verifica la sintaxis YAML del frontmatter -- asegura indentacion adecuada, espacios despues de
       dos puntos, y comillas coincidentes
@@ -543,11 +546,14 @@ rules:
     suggestion: Activa includeMcpJson o configura mcpServers inline para acceso MCP
   kr_ag_006:
     message: El agente de Kiro referencia un subagente desconocido '@%{agent}'
-    suggestion: Crea .kiro/agents/%{agent}.json o elimina la referencia al subagente
+    suggestion: Crea .kiro/agents/%{agent}.json o .md, o elimina la referencia al subagente
   kr_ag_007:
     message: 'El agente de Kiro tiene herramientas mas amplias que el subagente referenciado ''@%{agent}'' (herramientas extra:
       %{extra_tools})'
     suggestion: Reduce el alcance de herramientas de este agente o alinea los permisos de '@%{agent}'
+  kr_ag_014:
+    message: 'Regla de permisos universales de Kiro invalida: %{issue}'
+    suggestion: Usa entradas permissions.rules con una capacidad documentada, efecto deny/ask/allow y listas de cadenas match/exclude
   kr_hk_001:
     message: 'Evento invalido de hook IDE Kiro: ''%{event}'''
     suggestion: 'Usa uno de: fileEdited, fileCreate, fileDelete, promptSubmit, agentStop, preToolUse, postToolUse, manual'
@@ -756,6 +762,22 @@ rules:
   cc_set_016:
     message: "'%{rule}' es una forma de regla de permiso obsoleta desde Claude Code 2.1.210; usa '%{replacement}' en su lugar"
     suggestion: "Reemplaza '%{rule}' con '%{replacement}' en tu lista de permisos."
+  cc_set_017:
+    message: sandbox.filesystem.disabled debe ser un booleano cuando esta presente (se obtuvo %{actual}); Claude Code 2.1.216+
+      usa esta opcion para desactivar el aislamiento del sistema de archivos y conservar el aislamiento de red
+    suggestion: Establece sandbox.filesystem.disabled en true o false sin comillas, o quitalo para mantener activo el aislamiento
+      del sistema de archivos.
+  cc_set_018:
+    message: emojiCompletionEnabled debe ser un booleano cuando esta presente (se obtuvo %{actual}); Claude Code 2.1.217+
+      usa esta opcion para controlar la finalizacion de emojis por nombre
+    suggestion: Establece emojiCompletionEnabled en true o false sin comillas, o quitalo para mantener activa la finalizacion
+      de emojis.
+  cc_set_019:
+    message: sandbox.network.strictAllowlist debe ser booleano cuando esta presente (se obtuvo %{actual})
+    suggestion: Establece sandbox.network.strictAllowlist en true o false sin comillas, o quitalo.
+  cc_set_020:
+    message: workflowSizeGuideline debe ser unrestricted, small, medium o large (se obtuvo %{actual})
+    suggestion: Establece workflowSizeGuideline en unrestricted, small, medium o large.
 
 
 # ===========================================================================

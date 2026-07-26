@@ -1,4 +1,4 @@
-//! Agent file validation (CC-AG-001 to CC-AG-019)
+//! Agent file validation (CC-AG-001 to CC-AG-020)
 //!
 //! Validates Claude Code subagent definitions in `.claude/agents/*.md`.
 //! Includes structural validation of hooks, tool names, memory, permissions,
@@ -149,6 +149,7 @@ const RULE_IDS: &[&str] = &[
     // Option<bool>. No separate runtime diagnostic is needed.
     "CC-AG-017",
     "CC-AG-019",
+    "CC-AG-020",
 ];
 
 pub struct AgentValidator;
@@ -396,6 +397,24 @@ impl Validator for AgentValidator {
             }
 
             diagnostics.push(diagnostic);
+        }
+
+        // CC-AG-020: Claude Code reserves ':' in agent names for plugin
+        // namespace qualification, so local agent definitions cannot use it.
+        if config.is_rule_enabled("CC-AG-020")
+            && let Some(name) = schema.name.as_deref()
+            && name.contains(':')
+        {
+            diagnostics.push(
+                Diagnostic::error(
+                    path.to_path_buf(),
+                    1,
+                    0,
+                    "CC-AG-020",
+                    t!("rules.cc_ag_020.message", name = name),
+                )
+                .with_suggestion(t!("rules.cc_ag_020.suggestion")),
+            );
         }
 
         // CC-AG-002: Missing description field
@@ -3730,6 +3749,22 @@ Agent instructions"#;
     }
 
     // ===== CC-AG-003: Full model IDs (claude-* pattern) =====
+
+    #[test]
+    fn test_cc_ag_020_rejects_reserved_colon_in_name() {
+        let content = "---\nname: plugin:reviewer\ndescription: Reviews code\n---\nReview changes.";
+        let diagnostics = validate(content);
+        assert_eq!(
+            diagnostics.iter().filter(|d| d.rule == "CC-AG-020").count(),
+            1
+        );
+    }
+
+    #[test]
+    fn test_cc_ag_020_allows_local_agent_name() {
+        let content = "---\nname: reviewer\ndescription: Reviews code\n---\nReview changes.";
+        assert!(validate(content).iter().all(|d| d.rule != "CC-AG-020"));
+    }
 
     #[test]
     fn test_cc_ag_003_valid_full_model_id_opus() {

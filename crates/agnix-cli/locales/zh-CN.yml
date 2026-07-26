@@ -214,6 +214,9 @@ rules:
     suggestion: 在 --- 标记之间添加 frontmatter
     parse_error: '解析代理 frontmatter 失败: %{error}'
     parse_error_suggestion: 检查 YAML frontmatter 语法 -- 确保正确的缩进、冒号间距和匹配的引号
+  cc_ag_020:
+    message: "代理名称 '%{name}' 包含保留的冒号"
+    suggestion: "从本地代理名称中删除 ':'；冒号保留用于插件命名空间"
   cc_mem_004:
     message: npm 脚本 '%{script}' 在 package.json 中未找到
     suggestion_no_scripts: package.json 中未定义脚本。
@@ -522,10 +525,13 @@ rules:
     suggestion: 启用 includeMcpJson，或配置内联 mcpServers 以访问 MCP
   kr_ag_006:
     message: Kiro 代理引用了未知子代理 '@%{agent}'
-    suggestion: 创建 .kiro/agents/%{agent}.json 或删除该子代理引用
+    suggestion: 创建 .kiro/agents/%{agent}.json 或 .md，或删除该子代理引用
   kr_ag_007:
     message: 'Kiro 代理比被引用子代理 ''@%{agent}'' 拥有更宽的工具范围（额外工具: %{extra_tools}）'
     suggestion: 收窄当前代理工具范围，或对齐 '@%{agent}' 的工具权限
+  kr_ag_014:
+    message: '无效的 Kiro 通用权限规则：%{issue}'
+    suggestion: permissions.rules 条目应使用已记录的 capability、deny/ask/allow effect，以及字符串数组 match/exclude
   kr_hk_001:
     message: 无效的 Kiro IDE Hook 事件 '%{event}'
     suggestion: 使用以下之一：fileEdited、fileCreate、fileDelete、promptSubmit、agentStop、preToolUse、postToolUse、manual
@@ -713,6 +719,18 @@ rules:
   cc_set_016:
     message: "'%{rule}' 是 Claude Code 2.1.210 起已弃用的权限规则形式；请改用 '%{replacement}'"
     suggestion: "将权限列表中的 '%{rule}' 替换为 '%{replacement}'。"
+  cc_set_017:
+    message: sandbox.filesystem.disabled 存在时必须是布尔值 (实际为 %{actual})；Claude Code 2.1.216+ 使用此设置关闭文件系统隔离，同时保留网络隔离
+    suggestion: 将 sandbox.filesystem.disabled 设置为不带引号的 true 或 false，或移除此字段以保持文件系统隔离。
+  cc_set_018:
+    message: emojiCompletionEnabled 存在时必须是布尔值 (实际为 %{actual})；Claude Code 2.1.217+ 使用此设置控制命名表情符号补全
+    suggestion: 将 emojiCompletionEnabled 设置为不带引号的 true 或 false，或移除此字段以保持表情符号补全。
+  cc_set_019:
+    message: sandbox.network.strictAllowlist 存在时必须是布尔值（实际为 %{actual}）
+    suggestion: 将 sandbox.network.strictAllowlist 设置为不带引号的 true 或 false，或移除此字段。
+  cc_set_020:
+    message: workflowSizeGuideline 必须是 unrestricted、small、medium 或 large（实际为 %{actual}）
+    suggestion: 将 workflowSizeGuideline 设置为 unrestricted、small、medium 或 large。
 
 
 # ===========================================================================

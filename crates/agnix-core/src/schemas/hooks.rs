@@ -210,6 +210,7 @@ impl HooksSchema {
         "InstructionsLoaded",
         "ConfigChange",
         "CwdChanged",
+        "DirectoryAdded",
         "FileChanged",
         "WorktreeCreate",
         "WorktreeRemove",
@@ -268,6 +269,7 @@ impl HooksSchema {
         "WorktreeRemove",
         "MessageDisplay",
         "CwdChanged",
+        "DirectoryAdded",
     ];
 
     /// Events that support prompt/agent hooks
@@ -500,6 +502,7 @@ mod tests {
         assert!(!HooksSchema::supports_matcher("TeammateIdle"));
         assert!(!HooksSchema::supports_matcher("WorktreeCreate"));
         assert!(!HooksSchema::supports_matcher("WorktreeRemove"));
+        assert!(!HooksSchema::supports_matcher("DirectoryAdded"));
     }
 
     #[test]
@@ -514,6 +517,7 @@ mod tests {
         assert!(HooksSchema::ignores_matcher("WorktreeRemove"));
         assert!(HooksSchema::ignores_matcher("MessageDisplay"));
         assert!(HooksSchema::ignores_matcher("CwdChanged"));
+        assert!(HooksSchema::ignores_matcher("DirectoryAdded"));
         assert!(!HooksSchema::ignores_matcher("PreToolUse"));
         assert!(!HooksSchema::ignores_matcher("Notification"));
     }

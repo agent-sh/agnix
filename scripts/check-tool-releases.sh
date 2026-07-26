@@ -55,6 +55,21 @@ triage_has_relevant_changes() {
   ' <<<"$triage"
 }
 
+# select_github_release_json <releases-array-json> <tag-regex>
+# Returns the first stable release whose tag matches the configured release
+# train. GitHub returns releases newest-first, so the first match is current.
+select_github_release_json() {
+  local releases_json="$1" tag_regex="$2"
+  jq -c --arg regex "$tag_regex" '
+    [
+      .[]
+      | select((.draft // false) == false)
+      | select((.prerelease // false) == false)
+      | select((.tag_name // "") | test($regex))
+    ][0] // empty
+  ' <<<"$releases_json"
+}
+
 # When sourced with CHECK_TOOL_RELEASES_LIB_ONLY set (the test harness), expose
 # the helper functions above without running the live poll below.
 if [[ -n "${CHECK_TOOL_RELEASES_LIB_ONLY:-}" ]]; then
@@ -103,6 +118,7 @@ for raw_id in "${TOOL_IDS[@]}"; do
   fi
 
   repo=$(jq -r --arg id "$tool_id" '.tools[$id].github_repo // ""' "$BASELINES_FILE")
+  release_tag_regex=$(jq -r --arg id "$tool_id" '.tools[$id].release_tag_regex // ""' "$BASELINES_FILE")
   html_url=$(jq -r --arg id "$tool_id" '.tools[$id].html_url // ""' "$BASELINES_FILE")
   version_regex=$(jq -r --arg id "$tool_id" '.tools[$id].version_regex // ""' "$BASELINES_FILE")
   commit_repo=$(jq -r --arg id "$tool_id" '.tools[$id].commit_repo // ""' "$BASELINES_FILE")
@@ -113,12 +129,26 @@ for raw_id in "${TOOL_IDS[@]}"; do
   if [[ -n "$repo" ]]; then
     # GitHub releases path
     echo "[check] $tool_id (tier=$tier) repo=$repo baseline=$baseline_version"
-    release_json=$(gh api "repos/$repo/releases/latest" 2>/dev/null || echo "")
+    if [[ -n "$release_tag_regex" ]]; then
+      releases_json=$(gh api "repos/$repo/releases?per_page=100" 2>/dev/null || echo "")
+      if [[ -n "$releases_json" ]]; then
+        release_json=$(select_github_release_json "$releases_json" "$release_tag_regex")
+      else
+        release_json=""
+      fi
+    else
+      release_json=$(gh api "repos/$repo/releases/latest" 2>/dev/null || echo "")
+    fi
 
     if [[ -z "$release_json" ]]; then
-      latest_tag=$(gh api "repos/$repo/tags" --jq '.[0].name // empty' 2>/dev/null || echo "")
+      tags_json=$(gh api "repos/$repo/tags?per_page=100" 2>/dev/null || echo "")
+      if [[ -n "$release_tag_regex" ]]; then
+        latest_tag=$(jq -r --arg regex "$release_tag_regex" '[.[] | .name | select(test($regex))][0] // empty' <<<"$tags_json")
+      else
+        latest_tag=$(jq -r '.[0].name // empty' <<<"$tags_json")
+      fi
       if [[ -z "$latest_tag" ]]; then
-        echo "  WARN: no releases or tags found for $repo (will retry on next run)"
+        echo "  WARN: no releases or tags found for $repo matching '${release_tag_regex:-any stable tag}' (will retry on next run)"
         continue
       fi
       latest_version="$latest_tag"

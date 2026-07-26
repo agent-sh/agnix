@@ -309,17 +309,17 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="cc-sk-014"></a>
 ### CC-SK-014 [HIGH] Invalid disable-model-invocation Type
-**Requirement**: `disable-model-invocation` MUST be a boolean, not a string
-**Detection**: Raw YAML parsing detects quoted "true"/"false" strings
-**Fix**: [AUTO-FIX, safe] Convert string to boolean
-**Source**: code.claude.com/docs/en/skills
+**Requirement**: `disable-model-invocation` MUST use a Claude Code boolean value: boolean or case-insensitive `true`/`false`, `yes`/`no`, `on`/`off`, or `1`/`0`
+**Detection**: Parse the raw YAML value and flag values outside the accepted boolean aliases
+**Fix**: Manual - replace the invalid value with an accepted alias
+**Source**: code.claude.com/docs/en/skills, github.com/anthropics/claude-code/releases/tag/v2.1.218
 
 <a id="cc-sk-015"></a>
 ### CC-SK-015 [HIGH] Invalid user-invocable Type
-**Requirement**: `user-invocable` MUST be a boolean, not a string
-**Detection**: Raw YAML parsing detects quoted "true"/"false" strings
-**Fix**: [AUTO-FIX, safe] Convert string to boolean
-**Source**: code.claude.com/docs/en/skills
+**Requirement**: `user-invocable` MUST use a Claude Code boolean value: boolean or case-insensitive `true`/`false`, `yes`/`no`, `on`/`off`, or `1`/`0`
+**Detection**: Parse the raw YAML value and flag values outside the accepted boolean aliases
+**Fix**: Manual - replace the invalid value with an accepted alias
+**Source**: code.claude.com/docs/en/skills, github.com/anthropics/claude-code/releases/tag/v2.1.218
 
 <a id="cc-sk-016"></a>
 ### CC-SK-016 [MEDIUM] Indexed $ARGUMENTS Without argument-hint
@@ -475,6 +475,34 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Fix**: Manual - replace `Write(path)` → `Edit(path)`, `NotebookEdit(path)` → `Edit(path)`, `Glob(path)` → `Read(path)` in the permissions array.
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.210 (startup warning added for deprecated `Write(path)`, `NotebookEdit(path)`, `Glob(path)` permission rule forms)
 
+<a id="cc-set-017"></a>
+### CC-SET-017 [MEDIUM] Non-boolean sandbox.filesystem.disabled Setting
+**Requirement**: `sandbox.filesystem.disabled` in `.claude/settings.json` / `.local.json` / `managed-settings.json` MUST be a boolean when present (Claude Code 2.1.216+). `true` disables filesystem isolation while preserving network isolation; only strict `true` / `false` is accepted.
+**Detection**: Parse settings.json; walk `sandbox.filesystem.disabled`; flag (warning) non-boolean types (string, number, array, object). `null` values and absent keys are not flagged. Non-object `sandbox` or `filesystem` values are ignored by this rule to avoid conflating container shape errors with the boolean toggle.
+**Fix**: Manual - set `sandbox.filesystem.disabled` to an unquoted `true` or `false`.
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.216, code.claude.com/docs/en/sandboxing
+
+<a id="cc-set-018"></a>
+### CC-SET-018 [MEDIUM] Non-boolean emojiCompletionEnabled Setting
+**Requirement**: `emojiCompletionEnabled` in `.claude/settings.json` / `.local.json` / `managed-settings.json` MUST be a boolean when present (Claude Code 2.1.217+). The setting controls named emoji completion and accepts only strict `true` / `false` values.
+**Detection**: Parse settings.json; look up top-level `emojiCompletionEnabled`; flag (warning) non-boolean types (string, number, array, object). `null` values and absent keys are not flagged.
+**Fix**: Manual - set `emojiCompletionEnabled` to an unquoted `true` or `false`.
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.217, code.claude.com/docs/en/settings
+
+<a id="cc-set-019"></a>
+### CC-SET-019 [MEDIUM] Non-boolean sandbox.network.strictAllowlist Setting
+**Requirement**: `sandbox.network.strictAllowlist` MUST be a boolean when present in Claude Code 2.1.219+
+**Detection**: Parse settings JSON and flag non-boolean, non-null `sandbox.network.strictAllowlist` values
+**Fix**: Manual - set the field to an unquoted `true` or `false`
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.219, code.claude.com/docs/en/sandboxing
+
+<a id="cc-set-020"></a>
+### CC-SET-020 [MEDIUM] Invalid workflowSizeGuideline Setting
+**Requirement**: `workflowSizeGuideline` MUST be `unrestricted`, `small`, `medium`, or `large` when present in Claude Code 2.1.219+
+**Detection**: Parse settings JSON and flag non-string values or strings outside the documented enum
+**Fix**: Manual - choose one of the four documented values
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.219, code.claude.com/docs/en/settings
+
 ---
 
 ## PER-CLIENT SKILL RULES
@@ -530,8 +558,8 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="kr-ag-001"></a>
 ### KR-AG-001 [MEDIUM] Unknown Field in Kiro Agent JSON
-**Requirement**: Kiro agent JSON SHOULD only use documented top-level fields
-**Detection**: `.kiro/agents/*.json` contains unknown top-level keys outside the documented schema
+**Requirement**: Kiro agent JSON or Markdown frontmatter SHOULD only use documented top-level fields
+**Detection**: A JSON or Markdown profile under `.kiro/agents/` contains unknown top-level keys outside the documented schema
 **Fix**: Remove unsupported keys or rename to documented fields
 **Source**: kiro.dev/docs/cli/custom-agents/configuration-reference
 
@@ -565,7 +593,7 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="kr-ag-006"></a>
 ### KR-AG-006 [MEDIUM] Kiro Agent References Unknown Subagent
-**Requirement**: Kiro agent prompts SHOULD reference only subagents defined in `.kiro/agents/*.json`
+**Requirement**: Kiro agent prompts SHOULD reference only JSON or Markdown subagents defined under `.kiro/agents/`
 **Detection**: Prompt contains `@agent-name` mention where agent name is not present in sibling Kiro agent definitions
 **Fix**: Add the missing agent file or remove the unresolved `@agent-name` reference
 **Source**: github.com/kirodotdev/kiro/issues/5743, github.com/kirodotdev/kiro/issues/4262
@@ -578,11 +606,11 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Source**: github.com/kirodotdev/kiro/issues/5071, github.com/kirodotdev/kiro/issues/5449
 
 <a id="kr-ag-008"></a>
-### KR-AG-008 [HIGH] Agent Missing Name
-**Requirement**: Kiro agent JSON MUST include a non-empty `name` field
-**Detection**: Check if `name` field is present and non-empty
-**Fix**: No auto-fix (add a name field)
-**Source**: kiro.dev/docs/agents, kiro.dev/docs/configuration
+### KR-AG-008 [HIGH] Empty Explicit Agent Name
+**Requirement**: An explicit Kiro agent `name` MUST be non-empty; omitted names are derived from the path relative to `.kiro/agents/`
+**Detection**: Flag an explicitly present `name` that is empty or whitespace-only
+**Fix**: Remove the field to use the path-derived name, or set a non-empty name
+**Source**: kiro.dev/docs/cli/custom-agents/configuration-reference, kiro.dev/docs/cli/v3/agent-config
 
 <a id="kr-ag-009"></a>
 ### KR-AG-009 [HIGH] Agent Missing Prompt
@@ -618,6 +646,13 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Detection**: Scan prompt for secret patterns (API keys, tokens, passwords)
 **Fix**: No auto-fix (use environment variables)
 **Source**: kiro.dev/docs/agents, kiro.dev/docs/configuration
+
+<a id="kr-ag-014"></a>
+### KR-AG-014 [HIGH] Invalid Universal Permissions Rule
+**Requirement**: Kiro universal agent `permissions.rules` entries MUST use a documented capability, an effect of `deny`, `ask`, or `allow`, and string arrays for optional `match` / `exclude`
+**Detection**: Validate the permissions container, rules array, required string fields, capability/effect enums, and pattern array shapes
+**Fix**: Manual - correct the invalid permissions rule
+**Source**: kiro.dev/changelog/cli/2-14, kiro.dev/docs/cli/v3/agent-config, kiro.dev/docs/cli/v3/permissions
 
 <a id="kr-hk-005"></a>
 ### KR-HK-005 [HIGH] Invalid Kiro CLI Hook Event Key
@@ -681,11 +716,11 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="cc-hk-001"></a>
 ### CC-HK-001 [HIGH] Invalid Hook Event
-**Requirement**: Event MUST be one of 30 valid names (case-sensitive)
-**Valid**: PreToolUse, PermissionRequest, PostToolUse, PostToolUseFailure, Notification, MessageDisplay, UserPromptSubmit, UserPromptExpansion, Stop, SubagentStart, SubagentStop, TeammateIdle, TaskCompleted, TaskCreated, PreCompact, PostCompact, Setup, SessionStart, SessionEnd, InstructionsLoaded, ConfigChange, CwdChanged, FileChanged, WorktreeCreate, WorktreeRemove, Elicitation, ElicitationResult, PermissionDenied, PostToolBatch, StopFailure
+**Requirement**: Event MUST be one of 31 valid names (case-sensitive)
+**Valid**: PreToolUse, PermissionRequest, PostToolUse, PostToolUseFailure, Notification, MessageDisplay, UserPromptSubmit, UserPromptExpansion, Stop, SubagentStart, SubagentStop, TeammateIdle, TaskCompleted, TaskCreated, PreCompact, PostCompact, Setup, SessionStart, SessionEnd, InstructionsLoaded, ConfigChange, CwdChanged, DirectoryAdded, FileChanged, WorktreeCreate, WorktreeRemove, Elicitation, ElicitationResult, PermissionDenied, PostToolBatch, StopFailure
 **Detection**: `!VALID_EVENTS.contains(event)`
 **Fix**: [AUTO-FIX] Replace with closest matching valid event name
-**Source**: code.claude.com/docs/en/hooks
+**Source**: code.claude.com/docs/en/hooks, github.com/anthropics/claude-code/releases/tag/v2.1.219
 
 <a id="cc-hk-002"></a>
 ### CC-HK-002 [HIGH] Prompt Hook on Wrong Event
@@ -1010,6 +1045,13 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Detection**: Check for keys not in known agent fields
 **Fix**: Manual - remove or fix typo
 **Source**: code.claude.com/docs/en/sub-agents
+
+<a id="cc-ag-020"></a>
+### CC-AG-020 [HIGH] Reserved Colon in Agent Name
+**Requirement**: Local Claude Code agent names MUST NOT contain `:` because it is reserved for plugin namespaces in 2.1.218+
+**Detection**: Parse agent frontmatter and flag any `name` containing a colon
+**Fix**: Manual - remove the colon or rename the local agent
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.218, code.claude.com/docs/en/sub-agents
 
 ---
 
@@ -2576,11 +2618,11 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 **Source**: openai/codex#19294 (removed from schema in rust-v0.125.0), openai/codex#19275 (original bug)
 
 <a id="cdx-cfg-029"></a>
-### CDX-CFG-029 [HIGH] Incompatible agents.max_threads with multi_agent_v2
-**Requirement**: `agents.max_threads` MUST NOT be set when `multi_agent_v2` is enabled - the v2 lifecycle manages threading internally, and Codex fails config load with "agents.max_threads cannot be set when multi_agent_v2 is enabled"
-**Detection**: Detect `multi_agent_v2` enabled in either the flat form (`[features] multi_agent_v2 = true`) or the table form (`[features.multi_agent_v2] enabled = true`); error when the feature is active AND `[agents] max_threads` is explicitly set
-**Fix**: Manual - remove `agents.max_threads` (v2 manages threading) or disable `multi_agent_v2` if the legacy limit is needed
-**Source**: openai/codex#19129 (introduced), openai/codex#19733 (briefly removed), openai/codex#19792 (restored, with cap moved to `[features.multi_agent_v2].max_concurrent_threads_per_session`). Verified against rust-v0.128.0.
+### CDX-CFG-029 [HIGH] Invalid Agent Concurrency Limit
+**Requirement**: `agents.max_concurrent_threads_per_session` and its `agents.max_threads` compatibility alias MUST be positive integers when present and MUST NOT both be set. Codex 0.145 applies either form to both multi-agent backends and rejects zero, negative, fractional, non-numeric, or duplicate values.
+**Detection**: Parse Codex config files; inspect both `[agents]` concurrency-limit keys and emit an error for any value that is not an integer of 1 or greater or when both the current name and compatibility alias are present. A positive `agents.max_threads` value alongside `multi_agent_v2` is valid in Codex 0.145 and is not flagged.
+**Fix**: Manual - keep one field set to an integer of 1 or greater; prefer `max_concurrent_threads_per_session` for new configuration, while `max_threads` remains supported as an alias.
+**Source**: github.com/openai/codex/releases/tag/rust-v0.145.0, github.com/openai/codex/pull/33550, github.com/openai/codex/blob/rust-v0.145.0/codex-rs/config/src/config_toml.rs
 
 <a id="cdx-cfg-030"></a>
 ### CDX-CFG-030 [MEDIUM] Invalid web_search Mode
@@ -3503,12 +3545,12 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | AGENTS.md | 6 | 1 | 5 | 0 | 1 |
 | Amp Checks | 4 | 2 | 2 | 0 | 3 |
 | Amp Skills | 1 | 0 | 1 | 0 | 1 |
-| Claude Agents | 17 | 12 | 4 | 1 | 10 |
+| Claude Agents | 18 | 13 | 4 | 1 | 10 |
 | Claude Hooks | 28 | 15 | 8 | 5 | 16 |
 | Claude Memory | 13 | 8 | 5 | 0 | 3 |
 | Claude Output Styles | 6 | 2 | 2 | 2 | 0 |
 | Claude Plugins | 15 | 9 | 6 | 0 | 4 |
-| Claude Settings | 16 | 0 | 15 | 1 | 0 |
+| Claude Settings | 20 | 0 | 19 | 1 | 0 |
 | Claude Skills | 21 | 11 | 9 | 1 | 13 |
 | Cline | 7 | 4 | 3 | 0 | 3 |
 | Cline Skills | 3 | 2 | 1 | 0 | 2 |
@@ -3521,7 +3563,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Cursor Skills | 1 | 0 | 1 | 0 | 1 |
 | Gemini Agents | 1 | 1 | 0 | 0 | 0 |
 | Gemini CLI | 10 | 3 | 5 | 2 | 3 |
-| Kiro Agents | 13 | 4 | 7 | 2 | 0 |
+| Kiro Agents | 14 | 5 | 7 | 2 | 0 |
 | Kiro Hooks | 10 | 6 | 4 | 0 | 0 |
 | Kiro MCP | 6 | 2 | 4 | 0 | 0 |
 | Kiro Powers | 8 | 3 | 4 | 1 | 0 |
@@ -3539,7 +3581,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **437** | **213** | **194** | **30** | **127** |
+| **TOTAL** | **443** | **215** | **198** | **30** | **127** |
 
 
 ---
@@ -3569,8 +3611,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 437 validation rules across 40 categories
+**Total Coverage**: 443 validation rules across 40 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 213 HIGH, 194 MEDIUM, 30 LOW
-**Auto-Fixable**: 127 rules (29%)
+**Certainty**: 215 HIGH, 198 MEDIUM, 30 LOW
+**Auto-Fixable**: 125 rules (28%)

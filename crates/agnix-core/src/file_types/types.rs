@@ -95,7 +95,7 @@ pub enum FileType {
     KiroSteering,
     /// Kiro power definition files (POWER.md in Kiro power directories)
     KiroPower,
-    /// Kiro custom agent definitions (.kiro/agents/*.json)
+    /// Kiro custom agent definitions (.kiro/agents/**/*.json or *.md)
     KiroAgent,
     /// Kiro IDE hook files (.kiro/hooks/*.kiro.hook)
     KiroHook,

@@ -318,11 +318,12 @@ Keep explanations conversational. For complex concepts, use multiple analogies.
 | `name` | No | Display name (lowercase, max 64 chars). Defaults to directory name |
 | `description` | Recommended | What skill does and when to use it (max 1024 chars) |
 | `argument-hint` | No | Autocomplete hint, e.g., `[issue-number]` |
-| `disable-model-invocation` | No | `true` = manual only. Default: `false` |
-| `user-invocable` | No | `false` = hidden from `/` menu. Default: `true` |
+| `disable-model-invocation` | No | Truthy = manual only. Accepts booleans and case-insensitive `true`/`false`, `yes`/`no`, `on`/`off`, `1`/`0`. Default: `false` |
+| `user-invocable` | No | Falsy = hidden from `/` menu. Accepts the same boolean aliases. Default: `true` |
 | `allowed-tools` | No | Tools Claude can use without permission |
 | `model` | No | Specific model when skill is active |
 | `context` | No | `fork` = run in isolated subagent context |
+| `background` | No | Controls background execution for `context: fork`; defaults to `true` and can be opted out with `false` |
 | `agent` | No | Subagent type: `Explore`, `Plan`, `general-purpose` |
 | `hooks` | No | Lifecycle hooks for this skill |
 

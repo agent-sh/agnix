@@ -1,6 +1,6 @@
-//! Kiro custom agent JSON schema helpers.
+//! Kiro custom agent schema helpers.
 //!
-//! Covers `.kiro/agents/*.json` payloads and embedded CLI hook structures.
+//! Covers legacy JSON and universal Markdown/JSON agent profiles.
 
 use crate::schemas::common::{ParseError, parse_json_with_raw};
 use crate::schemas::kiro_mcp::KiroMcpServerConfig;
@@ -44,7 +44,8 @@ pub struct KiroAgentConfig {
     pub resources: Option<Vec<KiroAgentResource>>,
     pub mcp_servers: Option<KiroMcpServers>,
     pub include_mcp_json: Option<bool>,
-    pub hooks: Option<KiroCliHooks>,
+    pub hooks: Option<KiroAgentHooks>,
+    pub permissions: Option<KiroAgentPermissions>,
     pub keyboard_shortcut: Option<String>,
     pub welcome_message: Option<String>,
     #[serde(flatten)]
@@ -67,6 +68,32 @@ pub enum KiroAgentResource {
 pub enum KiroMcpServers {
     Names(Vec<String>),
     Servers(HashMap<String, KiroMcpServerConfig>),
+}
+
+/// Universal capability-based permissions embedded in an agent profile.
+#[allow(dead_code)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct KiroAgentPermissions {
+    pub rules: Option<Vec<KiroAgentPermissionRule>>,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct KiroAgentPermissionRule {
+    pub capability: Option<String>,
+    pub effect: Option<String>,
+    #[serde(rename = "match")]
+    pub matches: Option<Vec<String>>,
+    pub exclude: Option<Vec<String>>,
+}
+
+/// Legacy agents use an event map; universal upgrade output may use an array.
+#[allow(dead_code)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum KiroAgentHooks {
+    Legacy(KiroCliHooks),
+    Universal(Vec<Value>),
 }
 
 /// CLI hook mapping in Kiro custom agents.

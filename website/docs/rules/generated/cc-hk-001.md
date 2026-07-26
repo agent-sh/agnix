@@ -13,7 +13,7 @@ keywords: ["CC-HK-001", "invalid hook event", "claude hooks", "validation", "agn
 - **Category**: `Claude Hooks`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `Yes (safe/unsafe)`
-- **Verified On**: `2026-07-02`
+- **Verified On**: `2026-07-26`
 
 ## Applicability
 
@@ -24,6 +24,7 @@ keywords: ["CC-HK-001", "invalid hook event", "claude hooks", "validation", "agn
 ## Evidence Sources
 
 - https://code.claude.com/docs/en/hooks
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.219
 
 ## Test Coverage Metadata
 

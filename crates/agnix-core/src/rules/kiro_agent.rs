@@ -1,6 +1,6 @@
-//! Kiro agent validation rules (KR-AG-001 to KR-AG-013, KR-HK-005 to KR-HK-006).
+//! Kiro agent validation rules (KR-AG-001 to KR-AG-014, KR-HK-005 to KR-HK-006).
 //!
-//! Validates cross-agent invocation references in `.kiro/agents/*.json`:
+//! Validates legacy JSON and universal Markdown/JSON profiles under `.kiro/agents/`:
 //! - KR-AG-001: Unknown top-level field in agent JSON.
 //! - KR-AG-002: Invalid resource protocol/type.
 //! - KR-AG-003: allowedTools contains tool not present in tools.
@@ -14,12 +14,14 @@
 //! - KR-AG-011: Empty tools array.
 //! - KR-AG-012: toolAliases references unknown tool.
 //! - KR-AG-013: Secrets in agent prompt.
+//! - KR-AG-014: Invalid universal permissions rule.
 //! - KR-HK-005: Invalid CLI hook event key.
 //! - KR-HK-006: CLI hook entry missing required command.
 
 use crate::{
     config::PerFileLintConfig,
     diagnostics::Diagnostic,
+    parsers::frontmatter::split_frontmatter,
     rules::{Validator, ValidatorMetadata, line_col_at_offset},
     schemas::kiro_agent::VALID_KIRO_AGENT_MODELS,
 };
@@ -43,6 +45,7 @@ const RULE_IDS: &[&str] = &[
     "KR-AG-011",
     "KR-AG-012",
     "KR-AG-013",
+    "KR-AG-014",
     "KR-HK-005",
     "KR-HK-006",
 ];
@@ -62,6 +65,7 @@ const VALID_AGENT_FIELDS: &[&str] = &[
     "hooks",
     "keyboardShortcut",
     "welcomeMessage",
+    "permissions",
 ];
 const VALID_CLI_HOOK_EVENTS: &[&str] = &[
     "agentSpawn",
@@ -70,6 +74,22 @@ const VALID_CLI_HOOK_EVENTS: &[&str] = &[
     "postToolUse",
     "stop",
 ];
+const VALID_PERMISSION_CAPABILITIES: &[&str] = &[
+    "fs_read",
+    "fs_write",
+    "filesystem",
+    "shell",
+    "web_fetch",
+    "web_search",
+    "mcp",
+    "subagent",
+    "skill",
+    "diagnostics",
+    "context",
+    "all",
+    "builtin",
+];
+const VALID_PERMISSION_EFFECTS: &[&str] = &["deny", "ask", "allow"];
 
 #[derive(Debug, Clone)]
 struct AgentInfo {
@@ -90,8 +110,10 @@ fn normalize_agent_name(name: &str) -> String {
 fn mention_regex() -> &'static regex::Regex {
     static RE: OnceLock<regex::Regex> = OnceLock::new();
     RE.get_or_init(|| {
-        regex::Regex::new(r"(^|[^A-Za-z0-9_@])@([A-Za-z][A-Za-z0-9_-]{0,63})")
-            .expect("mention regex must compile")
+        regex::Regex::new(
+            r"(^|[^A-Za-z0-9_@])@([A-Za-z][A-Za-z0-9_-]{0,63}(?:/[A-Za-z][A-Za-z0-9_-]{0,63})*)",
+        )
+        .expect("mention regex must compile")
     })
 }
 
@@ -108,9 +130,40 @@ fn is_prompt_field(key: &str) -> bool {
     lowered == "prompt" || lowered.ends_with("prompt")
 }
 
-fn extract_prompt_agent_mentions(content: &str) -> Vec<AgentMention> {
+fn collect_mentions(
+    text: &str,
+    base_offset: usize,
+    seen: &mut HashSet<String>,
+    mentions: &mut Vec<AgentMention>,
+) {
+    for captures in mention_regex().captures_iter(text) {
+        let Some(name_match) = captures.get(2) else {
+            continue;
+        };
+        let normalized = normalize_agent_name(name_match.as_str());
+        if normalized.is_empty() || !seen.insert(normalized.clone()) {
+            continue;
+        }
+        mentions.push(AgentMention {
+            name: normalized,
+            byte_offset: base_offset + name_match.start().saturating_sub(1),
+        });
+    }
+}
+
+fn extract_prompt_agent_mentions(
+    content: &str,
+    markdown_body_offset: Option<usize>,
+) -> Vec<AgentMention> {
     let mut seen = HashSet::new();
     let mut mentions = Vec::new();
+
+    if let Some(body_offset) = markdown_body_offset {
+        if let Some(body) = content.get(body_offset..) {
+            collect_mentions(body, body_offset, &mut seen, &mut mentions);
+        }
+        return mentions;
+    }
 
     for captures in prompt_field_regex().captures_iter(content) {
         let Some(key_match) = captures.name("key") else {
@@ -124,29 +177,72 @@ fn extract_prompt_agent_mentions(content: &str) -> Vec<AgentMention> {
             continue;
         };
 
-        for mention_captures in mention_regex().captures_iter(value_match.as_str()) {
-            let Some(name_match) = mention_captures.get(2) else {
-                continue;
-            };
-
-            let normalized = normalize_agent_name(name_match.as_str());
-            if normalized.is_empty() {
-                continue;
-            }
-
-            // Keep the first occurrence for stable diagnostics.
-            // Check contains first to avoid cloning on the non-duplicate path.
-            if !seen.contains(&normalized) {
-                seen.insert(normalized.clone());
-                mentions.push(AgentMention {
-                    name: normalized,
-                    byte_offset: value_match.start() + name_match.start().saturating_sub(1), // include '@'
-                });
-            }
-        }
+        collect_mentions(
+            value_match.as_str(),
+            value_match.start(),
+            &mut seen,
+            &mut mentions,
+        );
     }
 
     mentions
+}
+
+fn kiro_agent_name_from_path(path: &Path) -> Option<String> {
+    let components: Vec<String> = path
+        .components()
+        .filter_map(|component| match component {
+            std::path::Component::Normal(value) => value.to_str().map(ToString::to_string),
+            _ => None,
+        })
+        .collect();
+    let agents_index = components.windows(2).position(|pair| {
+        pair[0].eq_ignore_ascii_case(".kiro") && pair[1].eq_ignore_ascii_case("agents")
+    });
+
+    let mut name_parts = agents_index
+        .map(|index| components[index + 2..].to_vec())
+        .unwrap_or_default();
+    if name_parts.is_empty() {
+        return path
+            .file_stem()
+            .and_then(|value| value.to_str())
+            .map(ToString::to_string);
+    }
+    let last = name_parts.pop()?;
+    let stem = Path::new(&last).file_stem()?.to_str()?.to_string();
+    name_parts.push(stem);
+    Some(name_parts.join("/"))
+}
+
+fn parse_kiro_agent_document(path: &Path, content: &str) -> Option<(Value, Option<usize>)> {
+    let is_markdown = path
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .is_some_and(|extension| extension.eq_ignore_ascii_case("md"));
+
+    let (mut value, body_offset) = if is_markdown {
+        let parts = split_frontmatter(content);
+        if !parts.has_frontmatter || !parts.has_closing {
+            return None;
+        }
+        let yaml = serde_yaml::from_str::<serde_yaml::Value>(&parts.frontmatter).ok()?;
+        let mut value = serde_json::to_value(yaml).ok()?;
+        let object = value.as_object_mut()?;
+        let body = content.get(parts.body_start..)?.trim();
+        object.insert("prompt".to_string(), Value::String(body.to_string()));
+        (value, Some(parts.body_start))
+    } else {
+        (serde_json::from_str::<Value>(content).ok()?, None)
+    };
+
+    if let Some(object) = value.as_object_mut()
+        && !object.contains_key("name")
+        && let Some(name) = kiro_agent_name_from_path(path)
+    {
+        object.insert("name".to_string(), Value::String(name));
+    }
+    Some((value, body_offset))
 }
 
 fn extract_tools(value: &Value) -> HashSet<String> {
@@ -294,6 +390,99 @@ fn validate_cli_hook_rules(
     }
 }
 
+fn push_permissions_diagnostic(path: &Path, issue: &str, diagnostics: &mut Vec<Diagnostic>) {
+    diagnostics.push(
+        Diagnostic::error(
+            path.to_path_buf(),
+            1,
+            0,
+            "KR-AG-014",
+            t!("rules.kr_ag_014.message", issue = issue),
+        )
+        .with_suggestion(t!("rules.kr_ag_014.suggestion")),
+    );
+}
+
+fn validate_permissions_rules(
+    path: &Path,
+    current_agent: &Value,
+    config: &PerFileLintConfig<'_>,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    if !config.is_rule_enabled("KR-AG-014") {
+        return;
+    }
+    let Some(permissions) = current_agent.get("permissions") else {
+        return;
+    };
+    if permissions.is_null() {
+        return;
+    }
+    let Some(permissions) = permissions.as_object() else {
+        push_permissions_diagnostic(path, "permissions must be an object", diagnostics);
+        return;
+    };
+    let Some(rules) = permissions.get("rules").and_then(Value::as_array) else {
+        push_permissions_diagnostic(path, "permissions.rules must be an array", diagnostics);
+        return;
+    };
+
+    for (index, rule) in rules.iter().enumerate() {
+        let Some(rule) = rule.as_object() else {
+            push_permissions_diagnostic(
+                path,
+                &format!("permissions.rules[{index}] must be an object"),
+                diagnostics,
+            );
+            continue;
+        };
+
+        match rule.get("capability").and_then(Value::as_str) {
+            Some(capability) if VALID_PERMISSION_CAPABILITIES.contains(&capability) => {}
+            Some(capability) => push_permissions_diagnostic(
+                path,
+                &format!("permissions.rules[{index}].capability has unknown value '{capability}'"),
+                diagnostics,
+            ),
+            None => push_permissions_diagnostic(
+                path,
+                &format!("permissions.rules[{index}].capability must be a string"),
+                diagnostics,
+            ),
+        }
+
+        match rule.get("effect").and_then(Value::as_str) {
+            Some(effect) if VALID_PERMISSION_EFFECTS.contains(&effect) => {}
+            Some(effect) => push_permissions_diagnostic(
+                path,
+                &format!("permissions.rules[{index}].effect has unknown value '{effect}'"),
+                diagnostics,
+            ),
+            None => push_permissions_diagnostic(
+                path,
+                &format!("permissions.rules[{index}].effect must be deny, ask, or allow"),
+                diagnostics,
+            ),
+        }
+
+        for field in ["match", "exclude"] {
+            let Some(patterns) = rule.get(field) else {
+                continue;
+            };
+            let valid = patterns
+                .as_array()
+                .is_some_and(|patterns| patterns.iter().all(Value::is_string));
+            if !valid {
+                push_permissions_diagnostic(
+                    path,
+                    &format!("permissions.rules[{index}].{field} must be an array of strings"),
+                    diagnostics,
+                );
+            }
+        }
+    }
+}
+
 fn validate_agent_schema_rules(
     path: &Path,
     current_agent: &Value,
@@ -315,7 +504,8 @@ fn validate_agent_schema_rules(
         || config.is_rule_enabled("KR-AG-010")
         || config.is_rule_enabled("KR-AG-011")
         || config.is_rule_enabled("KR-AG-012")
-        || config.is_rule_enabled("KR-AG-013");
+        || config.is_rule_enabled("KR-AG-013")
+        || config.is_rule_enabled("KR-AG-014");
     if !any_schema_rule {
         return;
     }
@@ -566,6 +756,8 @@ fn validate_agent_schema_rules(
             );
         }
     }
+
+    validate_permissions_rules(path, current_agent, config, diagnostics);
 }
 
 fn agent_secret_pattern() -> &'static regex::Regex {
@@ -657,58 +849,74 @@ fn load_agent_index(
     config: &PerFileLintConfig<'_>,
 ) -> HashMap<String, AgentInfo> {
     let fs = config.fs();
-    let Ok(mut entries) = fs.read_dir(agents_dir) else {
-        return HashMap::new();
-    };
-
-    entries.sort_by(|a, b| a.path.cmp(&b.path));
-
     let mut index: HashMap<String, AgentInfo> = HashMap::new();
+    let mut pending = vec![(agents_dir.to_path_buf(), 0usize)];
 
-    for entry in entries {
-        if !entry.metadata.is_file {
+    while let Some((directory, depth)) = pending.pop() {
+        if depth > MAX_PROJECT_SEARCH_DEPTH {
             continue;
         }
-
-        let Some(filename) = entry.path.file_name().and_then(|name| name.to_str()) else {
+        let Ok(mut entries) = fs.read_dir(&directory) else {
             continue;
         };
-        if is_reserved_kiro_agent_filename(filename) {
-            continue;
+        entries.sort_by(|a, b| a.path.cmp(&b.path));
+
+        for entry in entries {
+            if entry.metadata.is_dir {
+                pending.push((entry.path, depth + 1));
+                continue;
+            }
+            if !entry.metadata.is_file {
+                continue;
+            }
+
+            let Some(filename) = entry.path.file_name().and_then(|name| name.to_str()) else {
+                continue;
+            };
+            if is_reserved_kiro_agent_filename(filename) {
+                continue;
+            }
+
+            let is_agent_file = entry
+                .path
+                .extension()
+                .and_then(|ext| ext.to_str())
+                .is_some_and(|ext| {
+                    ext.eq_ignore_ascii_case("json") || ext.eq_ignore_ascii_case("md")
+                });
+            if !is_agent_file {
+                continue;
+            }
+
+            let Ok(raw) = fs.read_to_string(&entry.path) else {
+                continue;
+            };
+            let Some((value, _)) = parse_kiro_agent_document(&entry.path, &raw) else {
+                continue;
+            };
+
+            let info = AgentInfo {
+                tools: extract_tools(&value),
+                has_explicit_tool_scope: has_explicit_tool_scope(&value),
+            };
+            let names = [
+                kiro_agent_name_from_path(&entry.path),
+                value
+                    .get("name")
+                    .and_then(Value::as_str)
+                    .map(ToString::to_string),
+            ];
+            for name in names.into_iter().flatten() {
+                let normalized_name = normalize_agent_name(&name);
+                if normalized_name.is_empty() {
+                    continue;
+                }
+
+                // The relative path is canonical in 2.14; keep an explicit
+                // legacy name as an alias for upgraded JSON compatibility.
+                index.entry(normalized_name).or_insert_with(|| info.clone());
+            }
         }
-
-        let is_json = entry
-            .path
-            .extension()
-            .and_then(|ext| ext.to_str())
-            .is_some_and(|ext| ext.eq_ignore_ascii_case("json"));
-        if !is_json {
-            continue;
-        }
-
-        let Ok(raw) = fs.read_to_string(&entry.path) else {
-            continue;
-        };
-        let Ok(value) = serde_json::from_str::<Value>(&raw) else {
-            continue;
-        };
-
-        let explicit_name = value.get("name").and_then(Value::as_str);
-        let fallback_name = entry.path.file_stem().and_then(|stem| stem.to_str());
-        let Some(name) = explicit_name.or(fallback_name) else {
-            continue;
-        };
-
-        let normalized_name = normalize_agent_name(name);
-        if normalized_name.is_empty() {
-            continue;
-        }
-
-        // Keep first observed definition for deterministic conflict handling.
-        index.entry(normalized_name).or_insert_with(|| AgentInfo {
-            tools: extract_tools(&value),
-            has_explicit_tool_scope: has_explicit_tool_scope(&value),
-        });
     }
 
     index
@@ -740,7 +948,8 @@ impl Validator for KiroAgentValidator {
             return diagnostics;
         }
 
-        let Ok(current_agent) = serde_json::from_str::<Value>(content) else {
+        let Some((current_agent, markdown_body_offset)) = parse_kiro_agent_document(path, content)
+        else {
             return diagnostics;
         };
 
@@ -751,20 +960,23 @@ impl Validator for KiroAgentValidator {
             return diagnostics;
         }
 
-        let mentions = extract_prompt_agent_mentions(content);
+        let mentions = extract_prompt_agent_mentions(content, markdown_body_offset);
         if mentions.is_empty() {
             return diagnostics;
         }
 
-        let current_name = current_agent
-            .get("name")
-            .and_then(Value::as_str)
-            .map(normalize_agent_name)
-            .or_else(|| {
-                path.file_stem()
-                    .and_then(|stem| stem.to_str())
-                    .map(normalize_agent_name)
-            });
+        let current_names: HashSet<String> = [
+            kiro_agent_name_from_path(path),
+            current_agent
+                .get("name")
+                .and_then(Value::as_str)
+                .map(ToString::to_string),
+        ]
+        .into_iter()
+        .flatten()
+        .map(|name| normalize_agent_name(&name))
+        .filter(|name| !name.is_empty())
+        .collect();
         let current_tools = extract_tools(&current_agent);
 
         let Some(agents_dir) = find_kiro_agents_dir(path, config) else {
@@ -777,7 +989,7 @@ impl Validator for KiroAgentValidator {
         }
 
         for mention in mentions {
-            if current_name.as_ref() == Some(&mention.name) {
+            if current_names.contains(&mention.name) {
                 continue;
             }
 
@@ -1476,7 +1688,7 @@ mod tests {
     }
 
     #[test]
-    fn test_kr_ag_008_missing_name() {
+    fn test_kr_ag_008_name_is_derived_from_filename() {
         let temp = tempfile::TempDir::new().unwrap();
         let agents_dir = temp.path().join(".kiro").join("agents");
         fs::create_dir_all(&agents_dir).unwrap();
@@ -1490,7 +1702,7 @@ mod tests {
         );
 
         let diagnostics = validate(&agent);
-        assert!(diagnostics.iter().any(|d| d.rule == "KR-AG-008"));
+        assert!(diagnostics.iter().all(|d| d.rule != "KR-AG-008"));
     }
 
     #[test]
@@ -1528,6 +1740,107 @@ mod tests {
 
         let diagnostics = validate(&agent);
         assert!(diagnostics.iter().any(|d| d.rule == "KR-AG-009"));
+    }
+
+    #[test]
+    fn test_universal_markdown_agent_is_valid() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let agents_dir = temp.path().join(".kiro").join("agents").join("team");
+        fs::create_dir_all(&agents_dir).unwrap();
+
+        let agent = agents_dir.join("backend.md");
+        write_agent(
+            &agent,
+            r#"---
+description: Backend development agent
+model: claude-sonnet-4
+tools: [read, write, shell, web]
+resources:
+  - file://./ARCHITECTURE.md
+permissions:
+  rules:
+    - capability: shell
+      effect: allow
+      match: ["npm *", "node *"]
+welcomeMessage: Ready to work.
+---
+Review and implement backend changes."#,
+        );
+
+        let diagnostics = validate(&agent);
+        assert!(
+            diagnostics.iter().all(|diagnostic| !matches!(
+                diagnostic.rule.as_str(),
+                "KR-AG-001" | "KR-AG-008" | "KR-AG-009" | "KR-AG-014"
+            )),
+            "universal Markdown agent should validate cleanly: {diagnostics:?}"
+        );
+    }
+
+    #[test]
+    fn test_kr_ag_014_rejects_invalid_permissions_rule() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let agents_dir = temp.path().join(".kiro").join("agents");
+        fs::create_dir_all(&agents_dir).unwrap();
+
+        let agent = agents_dir.join("invalid-permissions.md");
+        write_agent(
+            &agent,
+            "---\ndescription: Invalid permissions\npermissions:\n  rules:\n    - capability: launch_missiles\n      effect: sometimes\n      match: npm *\n---\nDo work.",
+        );
+
+        let diagnostics = validate(&agent);
+        assert!(diagnostics.iter().any(|d| d.rule == "KR-AG-014"));
+    }
+
+    #[test]
+    fn test_markdown_agent_resolves_nested_subagent_reference() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let agents_dir = temp.path().join(".kiro").join("agents");
+        let team_dir = agents_dir.join("team");
+        fs::create_dir_all(&team_dir).unwrap();
+
+        let reviewer = team_dir.join("reviewer.md");
+        write_agent(
+            &reviewer,
+            "---\ndescription: Reviews code\ntools: [read]\n---\nReview code.",
+        );
+        let orchestrator = agents_dir.join("orchestrator.md");
+        write_agent(
+            &orchestrator,
+            "---\ndescription: Delegates reviews\ntools: [read]\n---\nAsk @team/reviewer to review the change.",
+        );
+
+        let diagnostics = validate(&orchestrator);
+        assert!(
+            diagnostics.iter().all(|d| d.rule != "KR-AG-006"),
+            "nested Markdown agent should resolve: {diagnostics:?}"
+        );
+    }
+
+    #[test]
+    fn test_nested_json_agent_keeps_path_name_with_legacy_explicit_name() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let agents_dir = temp.path().join(".kiro").join("agents");
+        let team_dir = agents_dir.join("team");
+        fs::create_dir_all(&team_dir).unwrap();
+
+        let reviewer = team_dir.join("reviewer.json");
+        write_agent(
+            &reviewer,
+            r#"{"name":"reviewer","prompt":"Review code","tools":["read"]}"#,
+        );
+        let orchestrator = agents_dir.join("orchestrator.md");
+        write_agent(
+            &orchestrator,
+            "---\ndescription: Delegates reviews\ntools: [read]\n---\nAsk @team/reviewer to review the change.",
+        );
+
+        let diagnostics = validate(&orchestrator);
+        assert!(
+            diagnostics.iter().all(|d| d.rule != "KR-AG-006"),
+            "path-derived names must remain canonical after upgrade: {diagnostics:?}"
+        );
     }
 
     #[test]
@@ -1816,6 +2129,7 @@ mod tests {
                 "KR-AG-011",
                 "KR-AG-012",
                 "KR-AG-013",
+                "KR-AG-014",
                 "KR-HK-005",
                 "KR-HK-006",
             ]

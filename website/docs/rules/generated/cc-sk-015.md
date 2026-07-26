@@ -12,18 +12,19 @@ keywords: ["CC-SK-015", "invalid user-invocable type", "claude skills", "validat
 - **Severity**: `HIGH`
 - **Category**: `Claude Skills`
 - **Normative Level**: `MUST`
-- **Auto-Fix**: `Yes (safe)`
-- **Verified On**: `2026-02-07`
+- **Auto-Fix**: `No`
+- **Verified On**: `2026-07-26`
 
 ## Applicability
 
 - **Tool**: `claude-code`
-- **Version Range**: `unspecified`
+- **Version Range**: `>=2.1.218`
 - **Spec Revision**: `unspecified`
 
 ## Evidence Sources
 
 - https://code.claude.com/docs/en/skills
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.218
 
 ## Test Coverage Metadata
 
@@ -41,7 +42,7 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ---
 name: slash-cmd
 description: Use when user types the slash command
-user-invocable: "false"
+user-invocable: "maybe"
 ---
 Handle the slash command.
 ```
@@ -52,7 +53,7 @@ Handle the slash command.
 ---
 name: slash-cmd
 description: Use when user types the slash command
-user-invocable: true
+user-invocable: on
 ---
 Handle the slash command.
 ```
