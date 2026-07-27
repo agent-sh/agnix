@@ -456,26 +456,161 @@ pub(super) fn check_dangerous_patterns(command: &str) -> Option<(&'static str, &
     None
 }
 
+/// A single shell word from a `command` string, with the quoting metadata
+/// needed to tell a spaced-but-quoted path from a nested shell fragment.
+struct ShellWord {
+    /// Text with quotes removed and backslash escapes applied.
+    text: String,
+    /// Whether any part of the word was inside quotes or backslash-escaped.
+    /// A word only reaches us intact across a space if it was protected, so
+    /// this is what distinguishes `"/My App/x.js"` from an accidental split.
+    protected: bool,
+}
+
+/// Split a command string into shell words, honoring double quotes, single
+/// quotes, and backslash escapes.
+///
+/// This is deliberately not a full POSIX shell parser - it resolves exactly
+/// the quoting forms that determine where a script path begins and ends.
+/// Operators (`&&`, `|`, `;`) are left as their own words, which is enough
+/// for the per-word script matching in `extract_script_paths`.
+fn shell_words(command: &str) -> Vec<ShellWord> {
+    let mut words = Vec::new();
+    let mut current = String::new();
+    let mut protected = false;
+    let mut started = false;
+    let mut chars = command.chars().peekable();
+
+    while let Some(c) = chars.next() {
+        match c {
+            '\\' => {
+                // Outside quotes a backslash escapes whitespace and quote
+                // characters. It is kept literal before anything else so that
+                // Windows paths (`C:\tools\hook.py`) survive intact.
+                match chars.peek() {
+                    Some(&next) if next.is_whitespace() || next == '"' || next == '\'' => {
+                        chars.next();
+                        current.push(next);
+                        protected = true;
+                    }
+                    _ => current.push('\\'),
+                }
+                started = true;
+            }
+            '"' | '\'' => {
+                let quote = c;
+                started = true;
+                protected = true;
+                // Inside single quotes a backslash is always literal. Inside
+                // double quotes POSIX only lets it escape `$`, backtick, `"`
+                // and itself - every other backslash stays literal, which is
+                // what keeps `"C:\Program Files\hook.py"` intact.
+                while let Some(q) = chars.next() {
+                    if q == quote {
+                        break;
+                    }
+                    if q == '\\' && quote == '"' {
+                        match chars.peek() {
+                            Some(&next @ ('$' | '`' | '"' | '\\')) => {
+                                chars.next();
+                                current.push(next);
+                            }
+                            _ => current.push('\\'),
+                        }
+                    } else {
+                        current.push(q);
+                    }
+                }
+            }
+            c if c.is_whitespace() => {
+                if started {
+                    words.push(ShellWord {
+                        text: std::mem::take(&mut current),
+                        protected,
+                    });
+                    protected = false;
+                    started = false;
+                }
+            }
+            c => {
+                current.push(c);
+                started = true;
+            }
+        }
+    }
+    if started {
+        words.push(ShellWord {
+            text: current,
+            protected,
+        });
+    }
+    words
+}
+
+/// Whether a word looks like a filesystem path rather than a shell fragment
+/// that happens to contain one. Used only to decide whether a word holding
+/// whitespace should be treated as a single path.
+fn looks_like_path(word: &str) -> bool {
+    word.starts_with('/')
+        || word.starts_with("./")
+        || word.starts_with("../")
+        || word.starts_with('~')
+        || word.starts_with('$')
+        // Windows drive-qualified path, e.g. `C:\tools\hook.ps1`.
+        || {
+            let mut c = word.chars();
+            matches!((c.next(), c.next(), c.next()), (Some(a), Some(':'), Some('\\' | '/')) if a.is_ascii_alphabetic())
+        }
+}
+
+/// Whether a word ends in one of the script extensions CC-HK-008 checks.
+fn has_script_extension(word: &str) -> bool {
+    let lower = word.to_ascii_lowercase();
+    [".sh", ".bash", ".py", ".js", ".ts"]
+        .iter()
+        .any(|ext| lower.ends_with(ext))
+}
+
+/// Reject regex and glob fragments that happen to end in a script extension
+/// (e.g. `\.py$`, `*.js`, `[^/]*.sh`), plus URLs.
+fn is_script_path_candidate(path: &str) -> bool {
+    if path.contains("://") || path.starts_with("http") {
+        return false;
+    }
+    !(path.starts_with('\\')
+        || path.starts_with('[')
+        || path.starts_with('*')
+        || path.starts_with('(')
+        || path.contains("]*"))
+}
+
 pub(super) fn extract_script_paths(command: &str) -> Vec<String> {
     let mut paths = Vec::new();
-    for re in script_patterns() {
-        for caps in re.captures_iter(command) {
-            if let Some(m) = caps.get(1) {
-                let path = m.as_str().trim_matches(|c| c == '"' || c == '\'');
-                if path.contains("://") || path.starts_with("http") {
-                    continue;
+    for word in shell_words(command) {
+        let text = word.text.as_str();
+        // A quoted or escaped word that reads as a path is taken whole, so a
+        // space inside it no longer truncates the path. Words that merely
+        // contain a path (e.g. `bash -c "python script.py"`) fall through to
+        // the regex scan below, which picks the path out of the fragment.
+        let whole_word_is_path = has_script_extension(text)
+            && (!text.chars().any(char::is_whitespace)
+                || (word.protected && looks_like_path(text)));
+
+        if whole_word_is_path {
+            if is_script_path_candidate(text) {
+                paths.push(text.to_string());
+            }
+            continue;
+        }
+
+        for re in script_patterns() {
+            for caps in re.captures_iter(text) {
+                if let Some(m) = caps.get(1) {
+                    let path = m.as_str().trim_matches(|c| c == '"' || c == '\'');
+                    if is_script_path_candidate(path) {
+                        paths.push(path.to_string());
+                    }
                 }
-                // Skip regex patterns and glob patterns that happen to end in
-                // script extensions (e.g., `\.py$`, `*.js`, `[^/]*.sh`)
-                if path.starts_with('\\')
-                    || path.starts_with('[')
-                    || path.starts_with('*')
-                    || path.starts_with('(')
-                    || path.contains("]*")
-                {
-                    continue;
-                }
-                paths.push(path.to_string());
             }
         }
     }
@@ -1661,6 +1796,94 @@ mod tests {
         // Should filter out bracket patterns
         let paths = extract_script_paths("match [^/]*.sh pattern");
         assert!(paths.is_empty(), "Should filter bracket patterns");
+    }
+
+    // Regression tests for #1259: a space inside a quoted or escaped script
+    // path must not truncate the path. Before the fix the `[^\s"']+` script
+    // patterns matched only the tail after the space, so
+    // `/tmp/My App.app/Contents/hook.js` was reported as
+    // `App.app/Contents/hook.js` and always looked missing.
+
+    #[test]
+    fn test_extract_script_paths_double_quoted_space() {
+        let paths = extract_script_paths(r#""/tmp/My App.app/Contents/hook.js""#);
+        assert_eq!(paths, vec!["/tmp/My App.app/Contents/hook.js"]);
+    }
+
+    #[test]
+    fn test_extract_script_paths_single_quoted_space() {
+        let paths = extract_script_paths("'/tmp/My App.app/Contents/hook.js'");
+        assert_eq!(paths, vec!["/tmp/My App.app/Contents/hook.js"]);
+    }
+
+    #[test]
+    fn test_extract_script_paths_backslash_escaped_space() {
+        let paths = extract_script_paths(r"/tmp/My\ App.app/Contents/hook.js");
+        assert_eq!(paths, vec!["/tmp/My App.app/Contents/hook.js"]);
+    }
+
+    #[test]
+    fn test_extract_script_paths_interpreter_and_quoted_spaced_script() {
+        // The interpreter has no script extension, so only the script is
+        // returned - and the trailing `Stop` argument is not mistaken for one.
+        let paths = extract_script_paths(
+            r#""/opt/homebrew/bin/node" "/tmp/My App.app/Contents/hook.js" Stop"#,
+        );
+        assert_eq!(paths, vec!["/tmp/My App.app/Contents/hook.js"]);
+    }
+
+    #[test]
+    fn test_extract_script_paths_unquoted_space_stays_split() {
+        // An unquoted space is genuinely ambiguous without a shell, so the
+        // pre-existing behaviour is kept deliberately.
+        let paths = extract_script_paths("/tmp/My App.app/Contents/hook.js");
+        assert_eq!(paths, vec!["App.app/Contents/hook.js"]);
+    }
+
+    #[test]
+    fn test_extract_script_paths_quoted_no_space_unchanged() {
+        let paths = extract_script_paths(r#""/tmp/NoSpace/hook.js""#);
+        assert_eq!(paths, vec!["/tmp/NoSpace/hook.js"]);
+    }
+
+    #[test]
+    fn test_extract_script_paths_nested_shell_fragment() {
+        // A quoted word that *contains* a command rather than being a path
+        // still has the path picked out of it by the regex scan.
+        let paths = extract_script_paths(r#"bash -c "python /tmp/absent.py""#);
+        assert_eq!(paths, vec!["/tmp/absent.py"]);
+    }
+
+    #[test]
+    fn test_extract_script_paths_quoted_url_still_skipped() {
+        let paths = extract_script_paths(r#"curl "https://example.com/thing.sh""#);
+        assert!(paths.is_empty(), "URLs should still be skipped when quoted");
+    }
+
+    #[test]
+    fn test_extract_script_paths_windows_quoted_space() {
+        let paths = extract_script_paths(r#""C:\Program Files\tools\hook.py""#);
+        assert_eq!(paths, vec![r"C:\Program Files\tools\hook.py"]);
+    }
+
+    #[test]
+    fn test_shell_words_tracks_protection() {
+        let words = shell_words(r#"node "/a b/c.js" plain"#);
+        assert_eq!(words.len(), 3);
+        assert_eq!(words[0].text, "node");
+        assert!(!words[0].protected);
+        assert_eq!(words[1].text, "/a b/c.js");
+        assert!(words[1].protected);
+        assert_eq!(words[2].text, "plain");
+        assert!(!words[2].protected);
+    }
+
+    #[test]
+    fn test_shell_words_unterminated_quote() {
+        // An unterminated quote must not loop or drop the remainder.
+        let words = shell_words(r#""/tmp/a b/c.js"#);
+        assert_eq!(words.len(), 1);
+        assert_eq!(words[0].text, "/tmp/a b/c.js");
     }
 
     #[test]

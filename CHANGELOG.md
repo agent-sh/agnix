@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **CC-HK-008 false positive on script paths containing spaces**. The script-path patterns matched `[^\s"']+`, so a hook command pointing at `/Applications/My App.app/Contents/hook.js` matched only the tail after the space and was reported missing as `App.app/Contents/hook.js`. Quoting did not help — double quotes, single quotes, and backslash escapes all failed identically. `command` strings are now split into shell words that honor all three forms before script paths are matched, so a quoted or escaped path is taken whole. An unquoted space stays split, since it is genuinely ambiguous without a shell. Nested fragments such as `bash -c "python script.py"` still have the path picked out of them, and the URL, glob, and regex exclusions are unchanged (closes #1259).
+
 ### Changed
 - **Dependency refresh**. Updated `serde_json` to `1.0.151` and `thiserror` to `2.0.19`. `thiserror-impl` 2.0.19 moved to `syn` 3.x, so `syn` joins the `[bans.skip]` duplicate allowlist in `deny.toml` alongside the other proc-macro crates that span two majors.
 - **CI action refresh**. Advanced all four `github/codeql-action` pins to `v4.37.3` and `actions/setup-python` to `v7.0.0`. The CodeQL pins must move together: `init` and `analyze` reject a split, failing with `Loaded a configuration file for version '4.37.1', but running version '4.37.3'`, so `upload-sarif` in `test-action.yml` is bumped alongside them.
