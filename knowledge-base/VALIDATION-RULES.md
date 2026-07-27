@@ -3558,7 +3558,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Claude Output Styles | 6 | 2 | 2 | 2 | 0 |
 | Claude Plugins | 15 | 9 | 6 | 0 | 4 |
 | Claude Settings | 20 | 0 | 19 | 1 | 0 |
-| Claude Skills | 21 | 11 | 9 | 1 | 13 |
+| Claude Skills | 21 | 11 | 9 | 1 | 11 |
 | Cline | 7 | 4 | 3 | 0 | 3 |
 | Cline Skills | 3 | 2 | 1 | 0 | 2 |
 | Codex CLI | 65 | 31 | 29 | 5 | 10 |
@@ -3578,7 +3578,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Kiro Skills | 1 | 0 | 1 | 0 | 1 |
 | Kiro Steering | 14 | 3 | 9 | 2 | 1 |
 | MCP | 26 | 20 | 6 | 0 | 7 |
-| OpenCode | 46 | 28 | 17 | 1 | 10 |
+| OpenCode | 47 | 28 | 18 | 1 | 11 |
 | OpenCode Skills | 1 | 0 | 1 | 0 | 1 |
 | Prompt Eng | 6 | 0 | 6 | 0 | 2 |
 | References | 4 | 2 | 2 | 0 | 1 |
@@ -3588,7 +3588,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **443** | **215** | **198** | **30** | **127** |
+| **TOTAL** | **444** | **215** | **199** | **30** | **126** |
 
 
 ---
