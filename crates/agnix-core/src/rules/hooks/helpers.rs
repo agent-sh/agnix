@@ -593,7 +593,8 @@ pub(super) fn extract_script_paths(command: &str) -> Vec<String> {
         // contain a path (e.g. `bash -c "python script.py"`) fall through to
         // the regex scan below, which picks the path out of the fragment.
         let whole_word_is_path = has_script_extension(text)
-            && (!text.chars().any(char::is_whitespace) || (word.protected && looks_like_path(text)));
+            && (!text.chars().any(char::is_whitespace)
+                || (word.protected && looks_like_path(text)));
 
         if whole_word_is_path {
             if is_script_path_candidate(text) {
