@@ -18,7 +18,7 @@ Tools are organized by support tier (see [../CONTRIBUTING.md#tool-tier-system](.
 |------|---------------|-------------------|------------|-----------|---------------|-------------|
 | Claude Code | `CLAUDE.md`, `.claude/settings.json` | https://code.claude.com/docs/en | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-07-26 | CC-SK, CC-HK, CC-MEM, CC-AG, CC-PL, CC-SET |
 | Codex CLI | `AGENTS.md`, `.codex/config.toml` (also `.codex/config.json`/`.yaml`), `.codex-plugin/plugin.json` | https://developers.openai.com/codex/ | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-07-26 | AGM, XP, CDX-AG, CDX-APP, CDX-CFG, CDX-PL, CDX-REQ |
-| OpenCode | `AGENTS.md`, `opencode.json`, `opencode.jsonc`, `.opencode/config.json` | https://opencode.ai/docs/ | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-07-26 | AGM, XP, OC |
+| OpenCode | `AGENTS.md`, `opencode.json`, `opencode.jsonc`, `.opencode/config.json` | https://opencode.ai/docs/ | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-07-27 | AGM, XP, OC |
 | Kiro CLI | `.kiro/steering/*.md`, `.kiro/agents/**/*.{json,md}`, `.kiro/hooks/*.kiro.hook`, `.kiro/settings/mcp.json`, `.kiro/settings.json`, `.kiro/powers/*/POWER.md`, `.kiro/skills/*/SKILL.md` | https://kiro.dev/changelog/cli/ | Automated (tool-release-watch.yml via HTML scrape) | Quarterly | 2026-07-26 | KIRO, KR-AG, KR-HK, KR-MCP, KR-PW, KR-SK, KR-SET |
 
 ### A Tier (test on major changes)

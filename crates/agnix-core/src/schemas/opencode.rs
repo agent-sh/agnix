@@ -21,6 +21,7 @@ pub const VALID_SHARE_MODES: &[&str] = &["manual", "auto", "disabled"];
 pub const KNOWN_TOP_LEVEL_KEYS: &[&str] = &[
     "$schema",
     "agent",
+    "attachment",
     "autoshare",
     "autoupdate",
     "command",
@@ -42,13 +43,17 @@ pub const KNOWN_TOP_LEVEL_KEYS: &[&str] = &[
     "permission",
     "plugin",
     "provider",
+    "reference",
+    "references",
     "server",
     "share",
+    "shell",
     "skills",
     "small_model",
     "snapshot",
     "subagent_depth",
     "theme",
+    "tool_output",
     "tools",
     "tui",
     "username",
@@ -95,6 +100,7 @@ pub const DEPRECATED_KEYS: &[(&str, &str)] = &[
     ("mode", "agent"),
     ("tools", "permission"),
     ("autoshare", "share"),
+    ("reference", "references"),
 ];
 
 /// An unknown key found in config
@@ -520,6 +526,28 @@ mod tests {
         assert!(
             result.unknown_keys.is_empty(),
             "New schema keys should be known: {:?}",
+            result.unknown_keys
+        );
+    }
+
+    /// Keys present in the published https://opencode.ai/config.json schema as
+    /// of OpenCode 1.18.7 that were previously missing from
+    /// `KNOWN_TOP_LEVEL_KEYS`, each producing a spurious unknown-key warning.
+    /// `reference` is included: it is deprecated in favor of `references` but
+    /// still a real key, so it must route to OC-DEP-007 rather than OC-004.
+    #[test]
+    fn test_opencode_1_18_schema_keys_not_flagged() {
+        let content = r#"{
+  "attachment": {},
+  "reference": {},
+  "references": {},
+  "shell": "/bin/zsh",
+  "tool_output": {}
+}"#;
+        let result = parse_opencode_json(content);
+        assert!(
+            result.unknown_keys.is_empty(),
+            "1.18.x schema keys should be known: {:?}",
             result.unknown_keys
         );
     }

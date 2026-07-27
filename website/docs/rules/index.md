@@ -1,7 +1,7 @@
 # Rules Reference
 
-This section contains all `443` validation rules generated from `knowledge-base/rules.json`.
-`125` rules have automatic fixes.
+This section contains all `444` validation rules generated from `knowledge-base/rules.json`.
+`126` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
 |------|------|----------|----------|----------|
@@ -431,6 +431,7 @@ This section contains all `443` validation rules generated from `knowledge-base/
 | [OC-DEP-004](./generated/oc-dep-004.md) | Deprecated CONTEXT.md Filename | MEDIUM | OpenCode | No |
 | [OC-DEP-005](./generated/oc-dep-005.md) | Deprecated TUI Keys | MEDIUM | OpenCode | No |
 | [OC-DEP-006](./generated/oc-dep-006.md) | Deprecated MaxSteps Field | MEDIUM | OpenCode | Yes (safe) |
+| [OC-DEP-007](./generated/oc-dep-007.md) | Deprecated Reference Field | MEDIUM | OpenCode | Yes (safe) |
 | [OC-CFG-008](./generated/oc-cfg-008.md) | Invalid Log Level | HIGH | OpenCode | Yes (unsafe) |
 | [OC-CFG-009](./generated/oc-cfg-009.md) | Invalid Compaction Reserved | HIGH | OpenCode | No |
 | [OC-CFG-010](./generated/oc-cfg-010.md) | Invalid Skills URL | HIGH | OpenCode | No |
