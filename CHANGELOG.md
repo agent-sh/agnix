@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **OC-DEP-007: Deprecated Reference Field**. The published OpenCode schema marks the top-level `reference` key as `@deprecated Use 'references' field instead`; the new rule warns and offers a safe autofix rename. Rule count increased from 443 to 444.
+
+### Fixed
+- **Deprecated-key autofix no longer produces a duplicate key**. OC-DEP-001/002/003 (and the new OC-DEP-007) offered a rename fix unconditionally, so running `--fix-safe` on a config that already contained the replacement key emitted both: `{"mode": "agent", "agent": {}}` became `{"agent": "agent", "agent": {}}`. The rename is now only offered when the replacement key is absent; when both keys are present the diagnostic still fires but carries no fix, since merging the two values is a judgment call about which one wins.
+- **OC-004/OC-CFG-003 false positives on five current OpenCode config keys**. `attachment`, `reference`, `references`, `shell`, and `tool_output` are all present in the published `https://opencode.ai/config.json` schema but were missing from agnix's known-key allowlist, so each one produced a pair of spurious "unknown config key" warnings on a perfectly valid `opencode.json`. Found by diffing the allowlist against the live schema rather than reading release notes — the notes for v1.18.6/v1.18.7 are desktop-UX only and mention none of these keys.
+
+### Changed
+- **OpenCode release baseline advanced to v1.18.7**. v1.18.6 and v1.18.7 contain no changes to a validated config surface (repository cache fix, client-API compatibility, macOS titlebar inset, command palette, project-selector scrolling).
+
 ## [0.41.1] - 2026-07-27
 
 ### Fixed

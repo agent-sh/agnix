@@ -63,6 +63,7 @@ const RULE_IDS: &[&str] = &[
     "OC-DEP-004",
     "OC-DEP-005",
     "OC-DEP-006",
+    "OC-DEP-007",
     "OC-LSP-001",
     "OC-LSP-002",
     "OC-TUI-001",
@@ -1253,12 +1254,13 @@ impl Validator for OpenCodeValidator {
                     }
                 }
 
-                // OC-DEP-001/002/003: Deprecated top-level keys
+                // OC-DEP-001/002/003/007: Deprecated top-level keys
                 for &(old_key, new_key) in DEPRECATED_KEYS {
                     let rule_id = match old_key {
                         "mode" => "OC-DEP-001",
                         "tools" => "OC-DEP-002",
                         "autoshare" => "OC-DEP-003",
+                        "reference" => "OC-DEP-007",
                         _ => continue,
                     };
                     if config.is_rule_enabled(rule_id) && obj.contains_key(old_key) {
@@ -1272,14 +1274,20 @@ impl Validator for OpenCodeValidator {
                         )
                         .with_suggestion(format!("Rename '{}' to '{}'", old_key, new_key));
 
-                        if let Some((start, end)) = find_json_key_span(content, old_key) {
-                            diagnostic = diagnostic.with_fix(Fix::replace(
-                                start,
-                                end,
-                                new_key,
-                                format!("Rename '{}' to '{}'", old_key, new_key),
-                                true,
-                            ));
+                        // Only offer the rename fix when the replacement key is
+                        // absent. If both are present, renaming would produce a
+                        // duplicate key -- the merge is a judgment call about
+                        // which value wins, so leave it to the author.
+                        if !obj.contains_key(new_key) {
+                            if let Some((start, end)) = find_json_key_span(content, old_key) {
+                                diagnostic = diagnostic.with_fix(Fix::replace(
+                                    start,
+                                    end,
+                                    new_key,
+                                    format!("Rename '{}' to '{}'", old_key, new_key),
+                                    true,
+                                ));
+                            }
                         }
 
                         diagnostics.push(diagnostic);
@@ -2404,6 +2412,7 @@ mod tests {
             "OC-CFG-013",
             "OC-DEP-005",
             "OC-DEP-006",
+            "OC-DEP-007",
         ];
 
         for rule in rules {
@@ -2423,6 +2432,7 @@ mod tests {
                 "OC-CFG-013" => r#"{"server": {"port": "8080"}}"#,
                 "OC-DEP-005" => r#"{"theme": "dark"}"#,
                 "OC-DEP-006" => r#"{"agent": {"a": {"maxSteps": 20}}}"#,
+                "OC-DEP-007" => r#"{"reference": {"lib": "github:org/repo"}}"#,
                 _ => unreachable!(),
             };
 
@@ -3992,5 +4002,108 @@ mod tests {
     fn test_oc_dep_006_no_fire_only_steps() {
         let diagnostics = validate(r#"{"agent": {"a": {"steps": 10}}}"#);
         assert!(!diagnostics.iter().any(|d| d.rule == "OC-DEP-006"));
+    }
+
+    // ===== OC-DEP-007: Deprecated `reference` key =====
+
+    #[test]
+    fn test_oc_dep_007_reference_deprecated() {
+        let diagnostics = validate(r#"{"reference": {"lib": "github:org/repo"}}"#);
+        let dep: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "OC-DEP-007")
+            .collect();
+        assert_eq!(dep.len(), 1);
+        assert_eq!(dep[0].level, DiagnosticLevel::Warning);
+        assert!(dep[0].message.contains("reference"));
+        assert!(dep[0].message.contains("references"));
+    }
+
+    #[test]
+    fn test_oc_dep_007_no_fire_on_references() {
+        let diagnostics = validate(r#"{"references": {"lib": "github:org/repo"}}"#);
+        assert!(!diagnostics.iter().any(|d| d.rule == "OC-DEP-007"));
+    }
+
+    // ===== Schema keys added in OpenCode 1.18.x =====
+
+    /// These keys are all present in the published https://opencode.ai/config.json
+    /// schema. Before they were added to `KNOWN_TOP_LEVEL_KEYS`, each produced a
+    /// spurious pair of OC-004 + OC-CFG-003 "unknown key" warnings on a valid
+    /// config.
+    #[test]
+    fn test_current_schema_keys_not_reported_unknown() {
+        for key in ["attachment", "references", "shell", "tool_output"] {
+            let content = format!(r#"{{"{}": {{}}}}"#, key);
+            let diagnostics = validate(&content);
+            let unknown: Vec<_> = diagnostics
+                .iter()
+                .filter(|d| d.rule == "OC-004" || d.rule == "OC-CFG-003")
+                .collect();
+            assert!(
+                unknown.is_empty(),
+                "key '{}' is in the published schema but was reported unknown: {:?}",
+                key,
+                unknown.iter().map(|d| &d.message).collect::<Vec<_>>()
+            );
+        }
+    }
+
+    /// `reference` is in the schema but deprecated: it must produce the
+    /// OC-DEP-007 rename warning, never an "unknown key" diagnostic.
+    #[test]
+    fn test_deprecated_reference_key_not_reported_unknown() {
+        let diagnostics = validate(r#"{"reference": {"lib": "github:org/repo"}}"#);
+        assert!(
+            !diagnostics
+                .iter()
+                .any(|d| d.rule == "OC-004" || d.rule == "OC-CFG-003"),
+            "deprecated 'reference' should warn via OC-DEP-007, not as an unknown key"
+        );
+        assert!(diagnostics.iter().any(|d| d.rule == "OC-DEP-007"));
+    }
+
+    // ===== Deprecated-key rename fix must not create a duplicate key =====
+
+    /// When only the deprecated key is present the rename is safe and offered.
+    #[test]
+    fn test_deprecated_key_fix_offered_when_replacement_absent() {
+        for (content, rule) in [
+            (r#"{"mode": "agent"}"#, "OC-DEP-001"),
+            (r#"{"reference": {}}"#, "OC-DEP-007"),
+        ] {
+            let diagnostics = validate(content);
+            let dep = diagnostics
+                .iter()
+                .find(|d| d.rule == rule)
+                .unwrap_or_else(|| panic!("{} should fire for {}", rule, content));
+            assert!(
+                !dep.fixes.is_empty(),
+                "{} should offer a rename fix when the replacement key is absent",
+                rule
+            );
+        }
+    }
+
+    /// When both keys are present, renaming would emit two identical keys in the
+    /// same object. Warn without a fix rather than produce a duplicate.
+    #[test]
+    fn test_deprecated_key_fix_withheld_when_replacement_present() {
+        for (content, rule) in [
+            (r#"{"mode": "agent", "agent": {}}"#, "OC-DEP-001"),
+            (r#"{"reference": {}, "references": {}}"#, "OC-DEP-007"),
+        ] {
+            let diagnostics = validate(content);
+            let dep = diagnostics
+                .iter()
+                .find(|d| d.rule == rule)
+                .unwrap_or_else(|| panic!("{} should still fire for {}", rule, content));
+            assert!(
+                dep.fixes.is_empty(),
+                "{} must not offer a fix that would duplicate a key: {}",
+                rule,
+                content
+            );
+        }
     }
 }

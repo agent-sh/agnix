@@ -2120,6 +2120,13 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 **Fix**: Manual - rename to steps
 **Source**: opencode.ai/docs/
 
+<a id="oc-dep-007"></a>
+### OC-DEP-007 [MEDIUM] Deprecated Reference Field
+**Requirement**: The top-level `reference` key SHOULD be replaced with `references`
+**Detection**: Parse JSON, check for top-level `reference` key
+**Fix**: [AUTO-FIX] Rename `reference` to `references` (safe)
+**Source**: opencode.ai/config.json (schema marks `reference` as `@deprecated Use 'references' field instead`)
+
 <a id="oc-cfg-008"></a>
 ### OC-CFG-008 [HIGH] Invalid Log Level
 **Requirement**: The `logLevel` field MUST be one of: fatal, error, warn, info, debug, trace
@@ -3611,8 +3618,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 443 validation rules across 40 categories
+**Total Coverage**: 444 validation rules across 40 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 215 HIGH, 198 MEDIUM, 30 LOW
-**Auto-Fixable**: 125 rules (28%)
+**Certainty**: 215 HIGH, 199 MEDIUM, 30 LOW
+**Auto-Fixable**: 126 rules (28%)
