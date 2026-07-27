@@ -20,7 +20,7 @@ exclude = [
 ]
 
 [workspace.package]
-version = "0.41.0"
+version = "0.41.1"
 edition = "2024"
 rust-version = "1.91"
 license = "MIT OR Apache-2.0"

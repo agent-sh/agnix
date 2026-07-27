@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.41.1] - 2026-07-27
+
 ### Fixed
 - **CC-HK-008 false positive on script paths containing spaces**. The script-path patterns matched `[^\s"']+`, so a hook command pointing at `/Applications/My App.app/Contents/hook.js` matched only the tail after the space and was reported missing as `App.app/Contents/hook.js`. Quoting did not help — double quotes, single quotes, and backslash escapes all failed identically. `command` strings are now split into shell words that honor all three forms before script paths are matched, so a quoted or escaped path is taken whole. An unquoted space stays split, since it is genuinely ambiguous without a shell. Nested fragments such as `bash -c "python script.py"` still have the path picked out of them, and the URL, glob, and regex exclusions are unchanged (closes #1259).
 

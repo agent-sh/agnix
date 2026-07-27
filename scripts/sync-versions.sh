@@ -74,4 +74,16 @@ if [ -f editors/zed/extension.toml ]; then
   echo "  editors/zed/extension.toml -> $VERSION"
 fi
 
+# Claude Code plugin manifest
+if [ -f plugin/.claude-plugin/plugin.json ]; then
+  if command -v jq &>/dev/null; then
+    jq --arg v "$VERSION" '.version = $v' plugin/.claude-plugin/plugin.json > plugin/.claude-plugin/plugin.json.tmp
+    mv plugin/.claude-plugin/plugin.json.tmp plugin/.claude-plugin/plugin.json
+  else
+    sed -i.bak "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" plugin/.claude-plugin/plugin.json
+    rm -f plugin/.claude-plugin/plugin.json.bak
+  fi
+  echo "  plugin/.claude-plugin/plugin.json -> $VERSION"
+fi
+
 echo "Done. All manifests synced to $VERSION"
