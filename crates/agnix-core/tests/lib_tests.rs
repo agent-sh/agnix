@@ -792,6 +792,36 @@ fn test_validate_project_plugin_detection() {
     );
 }
 
+#[test]
+fn test_validate_project_root_agent_plugin_dispatch() {
+    let temp = tempfile::TempDir::new().unwrap();
+    std::fs::write(
+        temp.path().join("plugin.json"),
+        r#"{
+            "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+            "name": "test-plugin",
+            "description": "Test plugin",
+            "extensions": {"com.openai": {"apps": "apps"}}
+        }"#,
+    )
+    .unwrap();
+
+    let result = validate_project(temp.path(), &LintConfig::default()).unwrap();
+
+    assert_eq!(
+        result.files_checked, 1,
+        "root plugin.json should be discovered"
+    );
+    assert!(
+        result.diagnostics.iter().any(|d| d.rule == "CDX-PL-005"),
+        "CodexPluginValidator should inspect extensions.com.openai.apps"
+    );
+    assert!(
+        result.diagnostics.iter().all(|d| d.rule != "CC-PL-001"),
+        "Agent Plugins root manifests should not trigger Claude location diagnostics"
+    );
+}
+
 // ===== MCP Validation Integration Tests =====
 
 #[test]

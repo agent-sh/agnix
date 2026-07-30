@@ -33,7 +33,7 @@ pub const AGENTS_MD_MAX_SIZE: usize = 100_000;
 /// Known valid top-level keys for .codex/config.toml
 ///
 /// Sourced from the upstream JSON schema at
-/// `codex-rs/core/config.schema.json`; current baseline is `rust-v0.145.0`
+/// `codex-rs/core/config.schema.json`; current baseline is `rust-v0.146.0`
 /// (see `.github/tool-release-baselines.json`). Prose overview:
 /// <https://developers.openai.com/codex/>.
 ///

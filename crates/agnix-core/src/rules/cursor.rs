@@ -44,6 +44,7 @@ const RULE_IDS: &[&str] = &[
 ];
 
 const CURSOR_HOOK_EVENTS: &[&str] = &[
+    "workspaceOpen",
     "sessionStart",
     "sessionEnd",
     "preToolUse",
@@ -1629,6 +1630,14 @@ description: Modern format
             r#"{"version":1,"hooks":{"unknownEvent":[{"type":"command","command":"echo hi"}]}}"#,
         );
         assert!(diagnostics.iter().any(|d| d.rule == "CUR-011"));
+    }
+
+    #[test]
+    fn test_cur_011_workspace_open_event() {
+        let diagnostics = validate_cursor_hooks(
+            r#"{"version":1,"hooks":{"workspaceOpen":[{"type":"command","command":"echo open"}]}}"#,
+        );
+        assert!(!diagnostics.iter().any(|d| d.rule == "CUR-011"));
     }
 
     #[test]

@@ -158,6 +158,7 @@ const KNOWN_FEATURE_KEYS: &[&str] = &[
     "current_time_reminder",
     "default_mode_request_user_input",
     "deferred_executor",
+    "deferred_tool_world_state",
     "elevated_windows_sandbox",
     "enable_experimental_windows_sandbox",
     "enable_fanout",
@@ -172,15 +173,18 @@ const KNOWN_FEATURE_KEYS: &[&str] = &[
     "fast_mode",
     "goals",
     "guardian_approval",
+    "guardianv2",
     "hooks",
     "image_detail_original",
     "image_generation",
     "imagegenext",
     "in_app_browser",
+    "in_app_updates",
     "item_ids",
     "js_repl",
     "js_repl_tools_only",
     "local_thread_store_compression",
+    "mcp_2026_07_28",
     "memories",
     "memory_tool",
     "mentions_v2",
@@ -265,6 +269,7 @@ const KNOWN_TUI_KEYS: &[&str] = &[
 const KNOWN_SHELL_ENVIRONMENT_POLICY_KEYS: &[&str] = &[
     "exclude",
     "experimental_use_profile",
+    "filters",
     "ignore_default_excludes",
     "include_only",
     "inherit",
@@ -1234,6 +1239,41 @@ fn validate_codex_config_rules(
                 );
             }
         }
+
+        if let Some(shell) =
+            value_at_path(&root, &["shell_environment_policy"]).and_then(Value::as_object)
+            && let Some(filters) = shell.get("filters")
+        {
+            let valid_filters = filters.as_object().is_some_and(|filters| {
+                filters
+                    .values()
+                    .all(|value| matches!(value.as_str(), Some("include") | Some("exclude")))
+            });
+            if !valid_filters {
+                diagnostics.push(
+                    Diagnostic::error(
+                        path.to_path_buf(),
+                        line_for("filters"),
+                        0,
+                        "CDX-CFG-008",
+                        t!("rules.cdx_cfg_008.filters_type_error"),
+                    )
+                    .with_suggestion(t!("rules.cdx_cfg_008.filters_suggestion")),
+                );
+            }
+            if shell.contains_key("exclude") || shell.contains_key("include_only") {
+                diagnostics.push(
+                    Diagnostic::error(
+                        path.to_path_buf(),
+                        line_for("filters"),
+                        0,
+                        "CDX-CFG-008",
+                        t!("rules.cdx_cfg_008.filters_conflict"),
+                    )
+                    .with_suggestion(t!("rules.cdx_cfg_008.filters_suggestion")),
+                );
+            }
+        }
     }
 
     if config.is_rule_enabled("CDX-CFG-009")
@@ -1330,6 +1370,32 @@ fn validate_codex_config_rules(
                             t!("rules.cdx_cfg_011.message", key = feature_name.as_str()),
                         )
                         .with_suggestion(t!("rules.cdx_cfg_011.suggestion")),
+                    );
+                }
+            }
+            if let Some(value) = features_obj.get("non_prefixed_mcp_tool_names") {
+                let valid = value.is_boolean()
+                    || value.as_object().is_some_and(|object| {
+                        object
+                            .keys()
+                            .all(|key| matches!(key.as_str(), "enabled" | "server_names"))
+                            && object.get("enabled").is_none_or(Value::is_boolean)
+                            && object.get("server_names").is_none_or(|server_names| {
+                                server_names
+                                    .as_array()
+                                    .is_some_and(|items| items.iter().all(Value::is_string))
+                            })
+                    });
+                if !valid {
+                    diagnostics.push(
+                        Diagnostic::error(
+                            path.to_path_buf(),
+                            line_for("non_prefixed_mcp_tool_names"),
+                            0,
+                            "CDX-CFG-011",
+                            t!("rules.cdx_cfg_011.non_prefixed_type_error"),
+                        )
+                        .with_suggestion(t!("rules.cdx_cfg_011.non_prefixed_suggestion")),
                     );
                 }
             }
@@ -3569,6 +3635,33 @@ experimental_thread_store_endpoint = "https://thread-store.example"
     }
 
     #[test]
+    fn test_codex_0_146_0_shell_environment_filters() {
+        let diagnostics = validate_config(
+            "[shell_environment_policy.filters]\n\"AWS_*\" = \"exclude\"\n\"PATH\" = \"include\"",
+        );
+        assert!(
+            diagnostics
+                .iter()
+                .all(|d| d.rule != "CDX-CFG-008" && d.rule != "CDX-CFG-006")
+        );
+    }
+
+    #[test]
+    fn test_codex_0_146_0_shell_environment_filters_reject_invalid_action() {
+        let diagnostics =
+            validate_config("[shell_environment_policy.filters]\n\"AWS_*\" = \"deny\"");
+        assert!(diagnostics.iter().any(|d| d.rule == "CDX-CFG-008"));
+    }
+
+    #[test]
+    fn test_codex_0_146_0_shell_environment_filters_conflict_with_legacy_lists() {
+        let diagnostics = validate_config(
+            "[shell_environment_policy]\nexclude = [\"AWS_*\"]\n[shell_environment_policy.filters]\n\"PATH\" = \"include\"",
+        );
+        assert!(diagnostics.iter().any(|d| d.rule == "CDX-CFG-008"));
+    }
+
+    #[test]
     fn test_cdx_cfg_009_invalid_mcp_server_shape() {
         let diagnostics = validate_config("[mcp_servers.local]\nenabled = true");
         assert!(diagnostics.iter().any(|d| d.rule == "CDX-CFG-009"));
@@ -3609,6 +3702,35 @@ unified_exec_zsh_fork = true
             cdx_cfg_011.is_empty(),
             "0.137 feature flags should not trigger CDX-CFG-011, got: {cdx_cfg_011:?}"
         );
+    }
+
+    #[test]
+    fn test_codex_0_146_0_feature_flags_and_structured_non_prefixed_names() {
+        let diagnostics = validate_config(
+            r#"[features]
+deferred_tool_world_state = true
+guardianv2 = true
+in_app_updates = true
+mcp_2026_07_28 = true
+
+[features.non_prefixed_mcp_tool_names]
+enabled = true
+server_names = ["docs", "github"]
+"#,
+        );
+        assert!(
+            diagnostics
+                .iter()
+                .all(|d| d.rule != "CDX-CFG-011" && d.rule != "CDX-CFG-006")
+        );
+    }
+
+    #[test]
+    fn test_codex_0_146_0_non_prefixed_names_rejects_invalid_shape() {
+        let diagnostics = validate_config(
+            "[features.non_prefixed_mcp_tool_names]\nserver_names = [\"docs\", 42]",
+        );
+        assert!(diagnostics.iter().any(|d| d.rule == "CDX-CFG-011"));
     }
 
     #[test]

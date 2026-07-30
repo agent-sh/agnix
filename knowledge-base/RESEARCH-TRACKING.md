@@ -2,7 +2,7 @@
 
 > Master document for tracking AI tool ecosystem changes, research updates, and community feedback.
 
-**Last Updated**: 2026-07-26
+**Last Updated**: 2026-07-30
 **Review Cadence**: Monthly (1st week of each month)
 **Related**: [MONTHLY-REVIEW.md](./MONTHLY-REVIEW.md) | [VALIDATION-RULES.md](./VALIDATION-RULES.md) | [INDEX.md](./INDEX.md)
 
@@ -17,30 +17,30 @@ Tools are organized by support tier (see [../CONTRIBUTING.md#tool-tier-system](.
 | Tool | Config Format | Documentation URL | Monitoring | Frequency | Last Reviewed | Rule Prefix |
 |------|---------------|-------------------|------------|-----------|---------------|-------------|
 | Claude Code | `CLAUDE.md`, `.claude/settings.json` | https://code.claude.com/docs/en | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-07-26 | CC-SK, CC-HK, CC-MEM, CC-AG, CC-PL, CC-SET |
-| Codex CLI | `AGENTS.md`, `.codex/config.toml` (also `.codex/config.json`/`.yaml`), `.codex-plugin/plugin.json` | https://developers.openai.com/codex/ | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-07-26 | AGM, XP, CDX-AG, CDX-APP, CDX-CFG, CDX-PL, CDX-REQ |
-| OpenCode | `AGENTS.md`, `opencode.json`, `opencode.jsonc`, `.opencode/config.json` | https://opencode.ai/docs/ | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-07-27 | AGM, XP, OC |
-| Kiro CLI | `.kiro/steering/*.md`, `.kiro/agents/**/*.{json,md}`, `.kiro/hooks/*.kiro.hook`, `.kiro/settings/mcp.json`, `.kiro/settings.json`, `.kiro/powers/*/POWER.md`, `.kiro/skills/*/SKILL.md` | https://kiro.dev/changelog/cli/ | Automated (tool-release-watch.yml via HTML scrape) | Quarterly | 2026-07-26 | KIRO, KR-AG, KR-HK, KR-MCP, KR-PW, KR-SK, KR-SET |
+| Codex CLI | `AGENTS.md`, `.codex/config.toml` (also `.codex/config.json`/`.yaml`), `.codex-plugin/plugin.json`, Agent Plugins root `plugin.json` | https://developers.openai.com/codex/ | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-07-30 | AGM, XP, CDX-AG, CDX-APP, CDX-CFG, CDX-PL, CDX-REQ |
+| OpenCode | `AGENTS.md`, `opencode.json`, `opencode.jsonc`, `.opencode/config.json` | https://opencode.ai/docs/ | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-07-30 | AGM, XP, OC |
+| Kiro CLI | `.kiro/steering/*.md`, `.kiro/agents/**/*.{json,md}`, `.kiro/hooks/*.kiro.hook`, `.kiro/settings/mcp.json`, `.kiro/settings.json`, `.kiro/powers/*/POWER.md`, `.kiro/skills/*/SKILL.md` | https://kiro.dev/changelog/cli/ | Automated (tool-release-watch.yml via HTML scrape) | Quarterly | 2026-07-30 | KIRO, KR-AG, KR-HK, KR-MCP, KR-PW, KR-SK, KR-SET |
 
 ### A Tier (test on major changes)
 
 | Tool | Config Format | Documentation URL | Monitoring | Frequency | Last Reviewed | Rule Prefix |
 |------|---------------|-------------------|------------|-----------|---------------|-------------|
 | GitHub Copilot | `.github/copilot-instructions.md`, `.github/instructions/*.instructions.md` | https://docs.github.com/en/copilot/customizing-copilot | Automated (spec-drift.yml + tool-release-watch.yml via microsoft/vscode-copilot-chat) | Monthly | 2026-07-26 | COP |
-| Cline | `.clinerules` (file or dir), `.clinerules/workflows/*.md`, `.clinerules/hooks/*`, `.clinerules/skills/*/SKILL.md`, `.cline/skills/*/SKILL.md` | https://docs.cline.bot/features/cline-rules/overview | Automated (spec-drift.yml + tool-release-watch.yml) | Monthly | 2026-07-26 | CLN, CL-SK |
-| Cursor | `.cursor/rules/**/*.{md,mdc}`, `.cursorrules` (legacy), `.cursor/hooks.json`, `.cursor/agents/**/*.md`, `.cursor/environment.json`, `.cursor/mcp.json` | https://cursor.com/docs/rules | Automated (spec-drift.yml + tool-release-watch.yml via api2.cursor.sh stable update endpoint) | Monthly | 2026-07-26 | CUR |
+| Cline | `.clinerules` (file or dir), `.clinerules/workflows/*.md`, `.clinerules/hooks/*`, `.clinerules/skills/*/SKILL.md`, `.cline/skills/*/SKILL.md` | https://docs.cline.bot/features/cline-rules/overview | Automated (spec-drift.yml + tool-release-watch.yml) | Monthly | 2026-07-30 | CLN, CL-SK |
+| Cursor | `.cursor/rules/**/*.{md,mdc}`, `.cursorrules` (legacy), `.cursor/hooks.json`, `.cursor/agents/**/*.md`, `.cursor/environment.json`, `.cursor/mcp.json` | https://cursor.com/docs/rules | Automated (spec-drift.yml + tool-release-watch.yml via api2.cursor.sh stable update endpoint) | Monthly | 2026-07-30 | CUR |
 
 ### B Tier (test on significant changes if time permits)
 
 | Tool | Config Format | Documentation URL | Monitoring | Frequency | Last Reviewed | Rule Prefix |
 |------|---------------|-------------------|------------|-----------|---------------|-------------|
 | Roo Code | `.roomodes`, `.rooignore`, `.roorules`, `.roo/rules/*.md`, `.roo/rules-{slug}/*.md`, `.roo/mcp.json` | https://github.com/RooCodeInc/Roo-Code | Automated (tool-release-watch.yml) | Quarterly | 2026-07-26 | ROO |
-| amp | `.amp/settings.json`, `.agents/checks/*.md` | https://ampcode.com/news | Automated (tool-release-watch.yml via ampcode.com/news.rss; tracks latest news-post slug as the release marker) | Quarterly | 2026-07-26 | AMP, AMP-SK |
+| amp | `.amp/settings.json`, `.agents/checks/*.md` | https://ampcode.com/news | Automated (tool-release-watch.yml via ampcode.com/news.rss; tracks latest news-post slug as the release marker) | Quarterly | 2026-07-30 | AMP, AMP-SK |
 
 ### C Tier (community reports fixes only)
 
 | Tool | Config Format | Documentation URL | Monitoring | Frequency | Last Reviewed | Rule Prefix |
 |------|---------------|-------------------|------------|-----------|---------------|-------------|
-| gemini cli | `GEMINI.md`, `.gemini/settings.json`, `.geminiignore`, `gemini-extension.json` | https://github.com/google-gemini/gemini-cli | Automated (tool-release-watch.yml) | As reported | 2026-07-26 | GM |
+| gemini cli | `GEMINI.md`, `.gemini/settings.json`, `.geminiignore`, `gemini-extension.json` | https://github.com/google-gemini/gemini-cli | Automated (tool-release-watch.yml) | As reported | 2026-07-30 | GM |
 
 ### D Tier (no support, nice to have)
 

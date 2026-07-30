@@ -1,9 +1,9 @@
 ---
 id: cdx-cfg-008
-title: "CDX-CFG-008: Invalid shell_environment_policy.inherit Value"
+title: "CDX-CFG-008: Invalid shell_environment_policy Value"
 sidebar_label: "CDX-CFG-008"
-description: "agnix rule CDX-CFG-008 checks for invalid shell_environment_policy.inherit value in codex cli files. Severity: HIGH. See examples and fix guidance."
-keywords: ["CDX-CFG-008", "invalid shell_environment_policy.inherit value", "codex cli", "validation", "agnix", "linter"]
+description: "agnix rule CDX-CFG-008 checks for invalid shell_environment_policy value in codex cli files. Severity: HIGH. See examples and fix guidance."
+keywords: ["CDX-CFG-008", "invalid shell_environment_policy value", "codex cli", "validation", "agnix", "linter"]
 ---
 
 ## Summary
@@ -13,7 +13,7 @@ keywords: ["CDX-CFG-008", "invalid shell_environment_policy.inherit value", "cod
 - **Category**: `Codex CLI`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-07-30`
 
 ## Applicability
 
@@ -26,6 +26,7 @@ keywords: ["CDX-CFG-008", "invalid shell_environment_policy.inherit value", "cod
 - https://developers.openai.com/codex/config-reference
 - https://developers.openai.com/codex/config-schema.json
 - https://developers.openai.com/codex/enterprise/managed-configuration
+- https://github.com/openai/codex/blob/rust-v0.146.0/codex-rs/core/config.schema.json
 
 ## Test Coverage Metadata
 
@@ -41,7 +42,9 @@ The following examples demonstrate what triggers this rule and how to fix it.
 
 ```toml
 [shell_environment_policy]
-inherit = "system"
+exclude = ["AWS_*"]
+[shell_environment_policy.filters]
+"PATH" = "include"
 ```
 
 ### Valid
@@ -49,4 +52,6 @@ inherit = "system"
 ```toml
 [shell_environment_policy]
 inherit = "core"
+[shell_environment_policy.filters]
+"AWS_*" = "exclude"
 ```

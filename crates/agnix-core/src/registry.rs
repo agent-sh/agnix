@@ -398,7 +398,7 @@ impl ValidatorRegistryBuilder {
 ///
 /// Used by `BuiltinProvider` (via `debug_assert_eq!`) and tests to catch
 /// accidental additions or removals without updating all providers.
-const EXPECTED_BUILTIN_COUNT: usize = 81;
+const EXPECTED_BUILTIN_COUNT: usize = 82;
 
 // -- Category providers -----------------------------------------------------
 //
@@ -731,6 +731,11 @@ impl ValidatorProvider for MiscProvider {
                 claude_settings_validator,
             ),
             (FileType::Plugin, Some("PluginValidator"), plugin_validator),
+            (
+                FileType::Plugin,
+                Some("CodexPluginValidator"),
+                codex_plugin_validator,
+            ),
             (FileType::Mcp, Some("McpValidator"), mcp_validator),
             (
                 FileType::ClineRules,
@@ -1262,6 +1267,17 @@ mod tests {
         let registry = ValidatorRegistry::with_defaults();
         let validators = registry.validators_for(FileType::Unknown);
         assert!(validators.is_empty());
+    }
+
+    #[test]
+    fn plugin_files_run_claude_and_codex_plugin_validators() {
+        let registry = ValidatorRegistry::with_defaults();
+        let names: Vec<_> = registry
+            .validators_for(FileType::Plugin)
+            .iter()
+            .map(|validator| validator.name())
+            .collect();
+        assert_eq!(names, vec!["PluginValidator", "CodexPluginValidator"]);
     }
 
     // ---- Multiple disabled validators ----
@@ -1999,7 +2015,7 @@ mod tests {
 
     #[test]
     fn misc_provider_count() {
-        assert_eq!(MiscProvider.named_validators().len(), 31);
+        assert_eq!(MiscProvider.named_validators().len(), 32);
     }
 
     #[test]

@@ -726,6 +726,32 @@ impl Validator for OpenCodeValidator {
                                                     );
                                                 }
                                             }
+                                            if let Some(environment) = srv.get("environment") {
+                                                let valid_environment = environment
+                                                    .as_object()
+                                                    .is_some_and(|environment| {
+                                                        environment
+                                                            .values()
+                                                            .all(|value| value.is_string())
+                                                    });
+                                                if !valid_environment {
+                                                    diagnostics.push(
+                                                        Diagnostic::error(
+                                                            path.to_path_buf(),
+                                                            find_key_line(content, "environment")
+                                                                .unwrap_or(1),
+                                                            0,
+                                                            "OC-CFG-007",
+                                                            t!("rules.oc_cfg_007.environment_type")
+                                                                .to_string(),
+                                                        )
+                                                        .with_suggestion(
+                                                            t!("rules.oc_cfg_007.suggestion_environment")
+                                                                .to_string(),
+                                                        ),
+                                                    );
+                                                }
+                                            }
                                         } else if srv_type == "remote" {
                                             if !srv.contains_key("url") {
                                                 diagnostics.push(
@@ -768,6 +794,22 @@ impl Validator for OpenCodeValidator {
                                                     );
                                                 }
                                             }
+                                        }
+                                        if srv.contains_key("env") {
+                                            diagnostics.push(
+                                                Diagnostic::error(
+                                                    path.to_path_buf(),
+                                                    find_key_line(content, "env").unwrap_or(1),
+                                                    0,
+                                                    "OC-CFG-007",
+                                                    t!("rules.oc_cfg_007.unsupported_env")
+                                                        .to_string(),
+                                                )
+                                                .with_suggestion(
+                                                    t!("rules.oc_cfg_007.suggestion_environment")
+                                                        .to_string(),
+                                                ),
+                                            );
                                         }
                                     }
                                 } else if config.is_rule_enabled("OC-CFG-006") {
@@ -3025,6 +3067,38 @@ mod tests {
     fn test_oc_cfg_007_local_cwd_non_string_flags() {
         let diagnostics =
             validate(r#"{"mcp": {"srv": {"type": "local", "command": ["node"], "cwd": 42}}}"#);
+        assert!(diagnostics.iter().any(|d| d.rule == "OC-CFG-007"));
+    }
+
+    #[test]
+    fn test_oc_cfg_007_local_environment_string_map_ok() {
+        let diagnostics = validate(
+            r#"{"mcp": {"srv": {"type": "local", "command": ["node"], "environment": {"NODE_ENV": "test"}}}}"#,
+        );
+        assert!(!diagnostics.iter().any(|d| d.rule == "OC-CFG-007"));
+    }
+
+    #[test]
+    fn test_oc_cfg_007_local_environment_requires_string_values() {
+        let diagnostics = validate(
+            r#"{"mcp": {"srv": {"type": "local", "command": ["node"], "environment": {"PORT": 3000}}}}"#,
+        );
+        assert!(diagnostics.iter().any(|d| d.rule == "OC-CFG-007"));
+    }
+
+    #[test]
+    fn test_oc_cfg_007_rejects_unsupported_env_alias() {
+        let diagnostics = validate(
+            r#"{"mcp": {"srv": {"type": "local", "command": ["node"], "env": {"NODE_ENV": "test"}}}}"#,
+        );
+        assert!(diagnostics.iter().any(|d| d.rule == "OC-CFG-007"));
+    }
+
+    #[test]
+    fn test_oc_cfg_007_rejects_remote_env_alias() {
+        let diagnostics = validate(
+            r#"{"mcp": {"srv": {"type": "remote", "url": "https://example.com/mcp", "env": {"TOKEN": "test"}}}}"#,
+        );
         assert!(diagnostics.iter().any(|d| d.rule == "OC-CFG-007"));
     }
 

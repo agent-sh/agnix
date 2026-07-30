@@ -54,8 +54,24 @@ impl Validator for PluginValidator {
         let is_in_claude_plugin = plugin_dir
             .and_then(|p| p.file_name())
             .and_then(|n| n.to_str())
-            .map(|n| n == ".claude-plugin")
+            .map(|n| n.eq_ignore_ascii_case(".claude-plugin"))
             .unwrap_or(false);
+
+        if !is_in_claude_plugin
+            && serde_json::from_str::<serde_json::Value>(content)
+                .ok()
+                .and_then(|value| {
+                    value
+                        .get("$schema")
+                        .and_then(|value| value.as_str())
+                        .map(str::to_owned)
+                })
+                .is_some_and(|schema| {
+                    schema.starts_with(crate::rules::codex_plugin::AGENT_PLUGIN_SCHEMA_PREFIX)
+                })
+        {
+            return diagnostics;
+        }
 
         if config.is_rule_enabled("CC-PL-001") && !is_in_claude_plugin {
             diagnostics.push(
@@ -792,6 +808,18 @@ mod tests {
         );
 
         assert!(diagnostics.iter().any(|d| d.rule == "CC-PL-001"));
+    }
+
+    #[test]
+    fn test_agent_plugin_root_manifest_skips_claude_rules() {
+        let temp = TempDir::new().unwrap();
+        let plugin_path = temp.path().join("plugin.json");
+        let content = r#"{"$schema":"https://agent-plugins.org/schemas/1.0.0/plugin.schema.json","name":"example"}"#;
+        write_plugin(&plugin_path, content);
+
+        let diagnostics = PluginValidator.validate(&plugin_path, content, &LintConfig::default());
+
+        assert!(diagnostics.is_empty());
     }
 
     #[test]

@@ -583,15 +583,32 @@ rules:
   cdx_pl_001:
     message: plugin.json 必须位于 .codex-plugin/ 目录中
     suggestion: 将 plugin.json 移至 .codex-plugin/plugin.json
+    unsupported_schema: 不支持的 Agent Plugins 架构 '%{schema}'
+    schema_suggestion: 使用 https://agent-plugins.org/schemas/1.0.0/plugin.schema.json
+  cdx_cfg_008:
+    filters_type_error: shell_environment_policy.filters 必须将模式映射为 'include' 或 'exclude'
+    filters_conflict: shell_environment_policy.filters 不能与 exclude 或 include_only 同时使用
+    filters_suggestion: 仅使用 filters，例如 'AWS_*' = 'exclude'
+  cdx_cfg_011:
+    non_prefixed_type_error: features.non_prefixed_mcp_tool_names 必须是布尔值，或包含可选布尔值 'enabled' 和字符串数组 'server_names' 的对象
+    non_prefixed_suggestion: 使用布尔值，或在 [features.non_prefixed_mcp_tool_names] 中设置 enabled 和 server_names
+  oc_cfg_007:
+    environment_type: 本地 MCP 服务器的 'environment' 必须是值均为字符串的对象
+    unsupported_env: 本地 MCP 服务器不支持 'env'；该字段会被忽略
+    suggestion_environment: 将 'env' 重命名为 'environment'，并确保每个变量值都是字符串
   cdx_pl_002:
     message: '解析 plugin.json 失败: %{error}'
     suggestion: 验证 plugin.json 中的 JSON 语法 - 检查是否缺少逗号、括号或不带引号的键
+    agent_type: 'Agent Plugins 字段 ''%{field}'' 无效：应为 %{expected}，实际为 %{actual}'
+    agent_type_suggestion: 使用 Agent Plugins 1.0 架构声明的字段类型
   cdx_pl_003:
     message: 缺少或为空的插件名称
     suggestion: 在 plugin.json 中添加一个非空字符串的 'name' 字段
   cdx_pl_004:
     message: 无效的插件名称 '%{name}' - 必须仅包含 ASCII 字母数字、连字符或下划线
     suggestion: 重命名为仅使用 ASCII 字母、数字、连字符和下划线
+    agent_message: 无效的 Agent Plugins 名称 '%{name}' - 请使用小写字母、数字、点或连字符，且不要重复分隔符
+    agent_suggestion: 使用 1 到 64 个小写 ASCII 字母、数字、点或连字符，并以字母或数字开头和结尾
   cdx_pl_005:
     message: '''%{field}'' 中的组件路径 ''%{path}'' 必须以 ./ 开头'
     suggestion: 在路径前添加 './'
@@ -617,8 +634,8 @@ rules:
     message: interface.%{field} 中的资源路径 '%{path}' 必须以 ./ 开头且不使用 '..' 遍历
     suggestion: 使用以 './' 开头的相对路径，且在插件根目录内
   cdx_pl_013:
-    message: Codex 插件清单不支持 'hooks' 字段
-    suggestion: 从 plugin.json 中移除 'hooks' 字段
+    message: '''hooks'' 值无效：应为字符串、字符串数组、对象或对象数组；实际为 %{actual}'
+    suggestion: 使用相对 hooks 文件路径、路径数组、内联 hooks 对象或内联 hooks 对象数组
   cdx_pl_014:
     message: 缺少 'description' 字段 - 建议添加以提高市场可见性
     suggestion: 在 plugin.json 中添加 'description' 字符串以提高可发现性

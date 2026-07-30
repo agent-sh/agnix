@@ -18,32 +18,42 @@ use std::path::Path;
 const RULE_IDS: &[&str] = &["CDX-REQ-000", "CDX-REQ-001"];
 
 /// Known top-level keys of `requirements.toml`, sourced from
-/// `ConfigRequirementsToml` @ openai/codex rust-v0.144.1. Both `features`
+/// `ConfigRequirementsToml` @ openai/codex rust-v0.146.0. Both `features`
 /// (serde rename) and `feature_requirements` (serde alias) are accepted on
 /// disk; the network table is only valid as `experimental_network` (serde
 /// rename - the bare `network` field name is not a valid TOML key).
 const KNOWN_REQUIREMENTS_KEYS: &[&str] = &[
     "allow_appshots",
+    "allow_login_shell",
     "allow_managed_hooks_only",
+    "allow_remote_control",
     "allowed_approval_policies",
     "allowed_approvals_reviewers",
-    "allowed_permissions",
+    "allowed_permission_profiles",
     "allowed_sandbox_modes",
     "allowed_web_search_modes",
     "apps",
+    "browser_use",
+    "check_for_update_on_startup",
     "computer_use",
+    "default_permissions",
     "enforce_residency",
     "experimental_network",
     "feature_requirements",
     "features",
+    "feedback",
     "guardian_policy_config",
     "hooks",
+    "log_dir",
     "marketplaces",
     "mcp_servers",
+    "model_catalog_json",
+    "models",
     "permissions",
     "plugins",
     "remote_sandbox_config",
     "rules",
+    "sqlite_home",
     "windows",
 ];
 
@@ -220,12 +230,22 @@ mod tests {
     fn known_keys_not_flagged() {
         // A realistic managed requirements.toml exercising scalar, array, and
         // table forms plus the `experimental_network` rename and a permission
-        // profile sub-table.
+        // profile sub-table. `allowed_permissions` was removed upstream and is
+        // intentionally not accepted.
         let content = r#"
 allow_managed_hooks_only = true
 allow_appshots = true
 allowed_sandbox_modes = ["read-only", "workspace-write"]
-allowed_permissions = ["locked"]
+allowed_permission_profiles = ["locked"]
+allow_remote_control = false
+browser_use = false
+default_permissions = "locked"
+check_for_update_on_startup = false
+allow_login_shell = false
+sqlite_home = "/var/lib/codex"
+log_dir = "/var/log/codex"
+model_catalog_json = "/etc/codex/models.json"
+feedback = false
 enforce_residency = "us"
 guardian_policy_config = "deny everything"
 
@@ -258,6 +278,9 @@ enabled = true
 [permissions.locked]
 description = "locked profile"
 
+[models]
+gpt-5 = "allowed"
+
 [windows]
 allowed_sandbox_implementations = ["elevated", "unelevated"]
 "#;
@@ -286,6 +309,16 @@ allowed_sandbox_implementations = ["elevated", "unelevated"]
             diags.len(),
             1,
             "typo'd scalar key should be flagged: {diags:?}"
+        );
+    }
+
+    #[test]
+    fn obsolete_allowed_permissions_key_flagged() {
+        let diags = rules("allowed_permissions = [\"locked\"]\n", "CDX-REQ-001");
+        assert_eq!(
+            diags.len(),
+            1,
+            "removed allowed_permissions key should be flagged: {diags:?}"
         );
     }
 
