@@ -7,10 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.42.0] - 2026-07-31
+
 ### Added
 - **OC-DEP-007: Deprecated Reference Field**. The published OpenCode schema marks the top-level `reference` key as `@deprecated Use 'references' field instead`; the new rule warns and offers a safe autofix rename. Rule count increased from 443 to 444.
 
 ### Fixed
+- **JetBrains `SKILL.md` highlighting**. Register `SKILL.md` with the bundled Markdown language and declare the Markdown plugin dependency, restoring syntax highlighting and Markdown editor features in supported JetBrains IDEs.
 - **Codex 0.146 config compatibility**. Accept `shell_environment_policy.filters`, validate its `include`/`exclude` actions and legacy-list conflicts, recognize the four new feature flags, validate structured `features.non_prefixed_mcp_tool_names`, and refresh the managed `requirements.toml` allowlist without the removed `allowed_permissions` key.
 - **Codex Agent Plugins compatibility**. Recognize schema-discriminated Agent Plugins 1.0 root `plugin.json` manifests, validate required metadata types, inspect Codex `apps`, `hooks`, and `interface` fields under `extensions.com.openai`, accept all supported hooks forms, stop after unsupported schemas, and avoid Claude plugin location false positives.
 - **OpenCode MCP environment validation**. Validate local server `environment` maps as string-to-string objects and reject the unsupported `env` spelling that OpenCode ignores.
