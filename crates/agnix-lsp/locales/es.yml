@@ -605,15 +605,32 @@ rules:
   cdx_pl_001:
     message: plugin.json debe estar ubicado en el directorio .codex-plugin/
     suggestion: Mueve plugin.json a .codex-plugin/plugin.json
+    unsupported_schema: Esquema de Agent Plugins no compatible '%{schema}'
+    schema_suggestion: Usa https://agent-plugins.org/schemas/1.0.0/plugin.schema.json
+  cdx_cfg_008:
+    filters_type_error: shell_environment_policy.filters debe asignar patrones a 'include' o 'exclude'
+    filters_conflict: shell_environment_policy.filters no puede combinarse con exclude ni include_only
+    filters_suggestion: Usa filters solo, con entradas como 'AWS_*' = 'exclude'
+  cdx_cfg_011:
+    non_prefixed_type_error: features.non_prefixed_mcp_tool_names debe ser booleano o un objeto con 'enabled' booleano y 'server_names' como arreglo de cadenas
+    non_prefixed_suggestion: Usa un booleano o configura enabled y server_names en [features.non_prefixed_mcp_tool_names]
+  oc_cfg_007:
+    environment_type: El campo 'environment' de un servidor MCP local debe ser un objeto cuyos valores sean cadenas
+    unsupported_env: Los servidores MCP locales no admiten 'env'; el campo se ignora
+    suggestion_environment: Renombra 'env' a 'environment' y usa cadenas para todas las variables
   cdx_pl_002:
     message: 'Error al analizar plugin.json: %{error}'
     suggestion: Valida la sintaxis JSON en plugin.json - verifica comas faltantes, corchetes o claves sin comillas
+    agent_type: 'Campo de Agent Plugins ''%{field}'' no valido: se esperaba %{expected}, se encontro %{actual}'
+    agent_type_suggestion: Usa el tipo de campo declarado por el esquema Agent Plugins 1.0
   cdx_pl_003:
     message: Falta o esta vacio el nombre del plugin
     suggestion: Agrega un campo 'name' con una cadena no vacia a plugin.json
   cdx_pl_004:
     message: Nombre de plugin invalido '%{name}' - debe ser alfanumerico ASCII, guiones o guiones bajos
     suggestion: Renombra usando solo letras ASCII, digitos, guiones y guiones bajos
+    agent_message: Nombre de Agent Plugins invalido '%{name}' - usa letras minusculas, numeros, puntos o guiones sin separadores repetidos
+    agent_suggestion: Usa entre 1 y 64 letras ASCII minusculas, digitos, puntos o guiones, comenzando y terminando con letra o digito
   cdx_pl_005:
     message: La ruta del componente '%{path}' en '%{field}' debe comenzar con ./
     suggestion: Antepone './' a la ruta
@@ -639,8 +656,8 @@ rules:
     message: La ruta de recurso '%{path}' en interface.%{field} debe comenzar con ./ y no usar recorrido '..'
     suggestion: Usa una ruta relativa que comience con './' dentro de la raiz del plugin
   cdx_pl_013:
-    message: El campo 'hooks' no es compatible en manifiestos de plugin de Codex
-    suggestion: Elimina el campo 'hooks' de plugin.json
+    message: 'Valor ''hooks'' no valido: se esperaba una cadena, arreglo de cadenas, objeto o arreglo de objetos; se encontro %{actual}'
+    suggestion: Usa una ruta relativa de archivo de hooks, un arreglo de rutas, un objeto de hooks en linea o un arreglo de objetos en linea
   cdx_pl_014:
     message: Falta el campo 'description' - recomendado para visibilidad en el marketplace
     suggestion: Agrega una cadena 'description' a plugin.json para mejor descubrimiento

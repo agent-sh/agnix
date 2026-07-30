@@ -661,6 +661,9 @@ rules:
     message: 'Invalid shell environment inherit mode ''%{value}''. Valid values: ''core'', ''all'', ''none'''
     type_error: shell_environment_policy.inherit must be a string
     suggestion: 'Use one of: ''core'', ''all'', ''none'''
+    filters_type_error: shell_environment_policy.filters must map patterns to 'include' or 'exclude'
+    filters_conflict: shell_environment_policy.filters cannot be combined with exclude or include_only
+    filters_suggestion: Use filters alone with entries such as 'AWS_*' = 'exclude'
   cdx_cfg_009:
     type_error: Field 'mcp_servers' must be an object mapping server names to server config objects
     invalid_server: MCP server '%{server}' must be an object
@@ -673,6 +676,8 @@ rules:
     message: Unknown feature flag '%{key}' under [features]
     type_error: Field 'features' must be an object
     suggestion: Remove unsupported feature flags or verify the feature name against Codex docs
+    non_prefixed_type_error: features.non_prefixed_mcp_tool_names must be a boolean or an object with optional boolean 'enabled' and string-array 'server_names'
+    non_prefixed_suggestion: Use a boolean or set enabled and server_names in [features.non_prefixed_mcp_tool_names]
   cdx_cfg_012:
     message: 'Invalid cli_auth_credentials_store ''%{value}''. Valid values: ''file'', ''keyring'', ''auto'', ''ephemeral'''
     type_error: Field 'cli_auth_credentials_store' must be a string
@@ -877,15 +882,21 @@ rules:
   cdx_pl_001:
     message: plugin.json must be located in .codex-plugin/ directory
     suggestion: Move plugin.json to .codex-plugin/plugin.json
+    unsupported_schema: Unsupported Agent Plugins schema '%{schema}'
+    schema_suggestion: Use https://agent-plugins.org/schemas/1.0.0/plugin.schema.json
   cdx_pl_002:
     message: 'Failed to parse plugin.json: %{error}'
     suggestion: Validate JSON syntax in plugin.json - check for missing commas, brackets, or unquoted keys
+    agent_type: 'Invalid Agent Plugins field ''%{field}'': expected %{expected}, found %{actual}'
+    agent_type_suggestion: Use the field type declared by the Agent Plugins 1.0 schema
   cdx_pl_003:
     message: Missing or empty plugin name
     suggestion: Add a 'name' field with a non-empty string to plugin.json
   cdx_pl_004:
     message: Invalid plugin name '%{name}' - must be ASCII alphanumeric, hyphens, or underscores only
     suggestion: Rename to use only ASCII letters, digits, hyphens, and underscores
+    agent_message: Invalid Agent Plugins name '%{name}' - use lowercase letters, numbers, dots, or hyphens without repeated separators
+    agent_suggestion: Use 1-64 lowercase ASCII letters, digits, dots, or hyphens, starting and ending with a letter or digit
   cdx_pl_005:
     message: Component path '%{path}' in '%{field}' must start with ./
     suggestion: Prepend './' to the path
@@ -911,8 +922,8 @@ rules:
     message: Asset path '%{path}' in interface.%{field} must start with ./ and not use '..' traversal
     suggestion: Use a relative path starting with './' within the plugin root
   cdx_pl_013:
-    message: '''hooks'' field is not supported in Codex plugin manifests'
-    suggestion: Remove the 'hooks' field from plugin.json
+    message: 'Invalid ''hooks'' value: expected a string, string array, object, or object array; found %{actual}'
+    suggestion: Use a relative hook-file path, an array of paths, an inline hooks object, or an array of inline hooks objects
   cdx_pl_014:
     message: Missing 'description' field - recommended for marketplace visibility
     suggestion: Add a 'description' string to plugin.json for better discoverability
@@ -1134,6 +1145,9 @@ rules:
     remote_missing: MCP server '%{server}' has type 'remote' but no url
     suggestion_local: Add a 'command' array for local servers (e.g. command = ["npx", "my-server"])
     suggestion_remote: Add a 'url' for remote servers (e.g. url = "https://…")
+    environment_type: Local MCP server 'environment' must be an object whose values are strings
+    unsupported_env: Local MCP servers do not support 'env'; the field is ignored
+    suggestion_environment: Rename 'env' to 'environment' and use string values for every variable
   oc_ag_001:
     message: 'Invalid OpenCode agent mode ''%{value}'' — valid modes: ''all'', ''read-only'', ''custom'''
     suggestion: Set mode to 'all' (default), 'read-only', or 'custom'

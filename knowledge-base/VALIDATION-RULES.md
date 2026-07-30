@@ -1796,7 +1796,7 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 <a id="cur-011"></a>
 ### CUR-011 [MEDIUM] Unknown Cursor Hook Event Name
-**Requirement**: Hook event names in `.cursor/hooks.json` SHOULD use documented Cursor events
+**Requirement**: Hook event names in `.cursor/hooks.json` SHOULD use documented Cursor events, including `workspaceOpen`
 **Detection**: Validate each `hooks.<event>` key against allowlisted event names
 **Fix**: [AUTO-FIX] Rename event keys to supported Cursor hook events
 **Source**: cursor.com/docs/hooks
@@ -2030,11 +2030,11 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 **Source**: opencode.ai/docs/config
 
 <a id="oc-cfg-007"></a>
-### OC-CFG-007 [HIGH] Invalid MCP Server Command, URL, or cwd
-**Requirement**: Local MCP servers MUST have `command` as a non-empty array of non-empty strings. When local MCP servers set optional `cwd` (OpenCode v1.17.4+), it MUST be a non-empty string. Remote MCP servers MUST have `url` as a non-empty `http://` or `https://` URL.
-**Detection**: Parse JSON, validate `mcp` server requirements and local `cwd` type
+### OC-CFG-007 [HIGH] Invalid MCP Server Command, URL, cwd, or Environment
+**Requirement**: Local MCP servers MUST have `command` as a non-empty array of non-empty strings. Optional `cwd` MUST be a non-empty string and optional `environment` MUST map names to string values; unsupported `env` MUST NOT be used. Remote MCP servers MUST have `url` as a non-empty `http://` or `https://` URL.
+**Detection**: Parse JSON and validate `mcp` server requirements, including local `cwd` and `environment` types
 **Fix**: No auto-fix
-**Source**: opencode.ai/docs/config, github.com/sst/opencode/pull/30676
+**Source**: opencode.ai/docs/config, opencode.ai/config.json, github.com/sst/opencode/pull/30676
 
 <a id="oc-ag-001"></a>
 ### OC-AG-001 [HIGH] Invalid Agent Mode Value
@@ -2450,11 +2450,11 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 **Source**: developers.openai.com/codex/config-reference, developers.openai.com/codex/config-schema.json
 
 <a id="cdx-cfg-008"></a>
-### CDX-CFG-008 [HIGH] Invalid shell_environment_policy.inherit Value
-**Requirement**: `shell_environment_policy.inherit` MUST be one of `core|all|none`
-**Detection**: Parse config and validate `shell_environment_policy.inherit` enum values
+### CDX-CFG-008 [HIGH] Invalid shell_environment_policy Value
+**Requirement**: `shell_environment_policy.inherit` MUST be one of `core|all|none`; `filters` MUST map patterns to `include|exclude` and MUST NOT coexist with legacy `exclude` or `include_only`
+**Detection**: Parse config and validate shell environment inheritance, filter actions, and mutually exclusive fields
 **Fix**: No auto-fix (set to a supported value)
-**Source**: developers.openai.com/codex/config-reference, developers.openai.com/codex/config-schema.json
+**Source**: developers.openai.com/codex/config-reference, github.com/openai/codex (codex-rs/core/config.schema.json @ rust-v0.146.0)
 
 <a id="cdx-cfg-009"></a>
 ### CDX-CFG-009 [HIGH] Invalid MCP Server Structure in Codex Config
@@ -2471,11 +2471,11 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 **Source**: developers.openai.com/codex/config-reference
 
 <a id="cdx-cfg-011"></a>
-### CDX-CFG-011 [MEDIUM] Invalid Feature Flag Name
-**Requirement**: Keys under `[features]` SHOULD use known Codex feature flag names
-**Detection**: Parse config and report unknown keys under `features`
+### CDX-CFG-011 [MEDIUM] Invalid Feature Flag Name or Shape
+**Requirement**: Keys under `[features]` SHOULD use known Codex feature flag names; `non_prefixed_mcp_tool_names` MUST be a boolean or an object with optional boolean `enabled` and string-array `server_names`
+**Detection**: Parse config, report unknown keys under `features`, and validate the structured `non_prefixed_mcp_tool_names` value
 **Fix**: No auto-fix (remove unsupported flags or rename)
-**Source**: developers.openai.com/codex/config-reference, github.com/openai/codex (codex-rs/core/config.schema.json @ rust-v0.137.0)
+**Source**: developers.openai.com/codex/config-reference, github.com/openai/codex (codex-rs/core/config.schema.json @ rust-v0.146.0)
 
 <a id="cdx-cfg-012"></a>
 ### CDX-CFG-012 [HIGH] Invalid cli_auth_credentials_store Value
@@ -2683,22 +2683,22 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 ### Codex Plugin Rules (CDX-PL)
 
 <a id="cdx-pl-001"></a>
-### CDX-PL-001 [HIGH] Codex Plugin Manifest Location
-**Requirement**: plugin.json MUST be in `.codex-plugin/` directory
-**Detection**: Parent directory is not `.codex-plugin/`
-**Fix**: Move to `.codex-plugin/plugin.json`
-**Source**: github.com/openai/codex (codex-rs/core-plugins/src/manifest.rs @ rust-v0.137.0)
+### CDX-PL-001 [HIGH] Codex Plugin Manifest Location or Agent Plugins Schema
+**Requirement**: Legacy plugin.json MUST be in `.codex-plugin/`; root Agent Plugins manifests MUST declare the supported `https://agent-plugins.org/schemas/1.0.0/plugin.schema.json` schema
+**Detection**: Check the legacy parent directory or the root manifest `$schema` discriminator
+**Fix**: Move a legacy manifest to `.codex-plugin/plugin.json` or use a supported Agent Plugins schema
+**Source**: github.com/openai/codex (codex-rs/core-plugins/src/agent_plugin_manifest.rs @ rust-v0.146.0), agent-plugins.org/schemas/1.0.0/plugin.schema.json
 
 <a id="cdx-pl-002"></a>
-### CDX-PL-002 [HIGH] Invalid JSON in Plugin Manifest
-**Requirement**: `.codex-plugin/plugin.json` MUST contain valid JSON
-**Detection**: Attempt to parse as JSON; report parse errors with position
-**Fix**: Correct the JSON syntax
-**Source**: github.com/openai/codex (codex-rs/core-plugins/src/manifest.rs @ rust-v0.137.0)
+### CDX-PL-002 [HIGH] Invalid Plugin Manifest
+**Requirement**: Plugin manifests MUST contain valid JSON; Agent Plugins 1.0 metadata MUST use the required field types accepted by Codex
+**Detection**: Parse as JSON, then validate Agent Plugins string metadata, author fields, keywords, and Codex extension `apps`/`interface` types
+**Fix**: Correct the JSON syntax or field type
+**Source**: github.com/openai/codex (codex-rs/core-plugins/src/manifest.rs, agent_plugin_manifest.rs @ rust-v0.146.0), agent-plugins.org/schemas/1.0.0/plugin.schema.json
 
 <a id="cdx-pl-003"></a>
 ### CDX-PL-003 [HIGH] Missing or Empty Plugin Name
-**Requirement**: Plugin manifest MUST have a non-empty `name` field
+**Requirement**: Plugin manifest MUST have a non-empty string `name` field; Agent Plugins 1.0 requires it
 **Detection**: Check `name` field is present and non-empty after trimming
 **Fix**: Auto-fix (unsafe) - derive name from directory or parent project
 **Source**: github.com/openai/codex (codex-rs/core-plugins/src/manifest.rs @ rust-v0.137.0)
@@ -2712,7 +2712,7 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 
 <a id="cdx-pl-005"></a>
 ### CDX-PL-005 [HIGH] Component Path Missing ./ Prefix
-**Requirement**: Component `path` values MUST start with `./`
+**Requirement**: Component `path` values MUST start with `./`, including `apps` and path-form `hooks` in `extensions.com.openai`
 **Detection**: Check that each component path begins with `./`
 **Fix**: Auto-fix (safe) - prepend `./` to the path
 **Source**: github.com/openai/codex (codex-rs/core-plugins/src/manifest.rs @ rust-v0.137.0)
@@ -2767,11 +2767,11 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 **Source**: github.com/openai/codex (codex-rs/core-plugins/src/manifest.rs @ rust-v0.137.0)
 
 <a id="cdx-pl-013"></a>
-### CDX-PL-013 [LOW] Unsupported Hooks Field
-**Requirement**: Plugin manifest SHOULD NOT contain a `hooks` field (not yet supported)
-**Detection**: Check for presence of `hooks` key in manifest
-**Fix**: No auto-fix (remove the `hooks` field)
-**Source**: github.com/openai/codex (codex-rs/core-plugins/src/manifest.rs @ rust-v0.137.0)
+### CDX-PL-013 [LOW] Invalid Hooks Value
+**Requirement**: Plugin manifest `hooks` MUST be a relative path string, string array, inline hooks object, or inline hooks object array
+**Detection**: Validate the `hooks` shape in legacy manifests and Agent Plugins `extensions.com.openai`; path forms also receive CDX-PL-005/006/007 validation
+**Fix**: No auto-fix (use one of the supported hooks forms)
+**Source**: github.com/openai/codex (codex-rs/core-plugins/src/manifest.rs, agent_plugin_manifest.rs @ rust-v0.146.0)
 
 <a id="cdx-pl-014"></a>
 ### CDX-PL-014 [LOW] Missing Description
@@ -2808,9 +2808,9 @@ Validates Codex's admin-written managed `requirements.toml` (system location: `/
 
 ### CDX-REQ-001 [MEDIUM] Unknown Codex requirements.toml Key
 **Requirement**: Top-level keys SHOULD be recognized members of `ConfigRequirementsToml`; Codex silently ignores unknown keys (no `deny_unknown_fields`), so a typo is never enforced
-**Detection**: Compare each top-level key against the known set (`allow_appshots`, `allow_managed_hooks_only`, `allowed_approval_policies`, `allowed_approvals_reviewers`, `allowed_permissions`, `allowed_sandbox_modes`, `allowed_web_search_modes`, `apps`, `computer_use`, `enforce_residency`, `experimental_network`, `features`/`feature_requirements`, `guardian_policy_config`, `hooks`, `mcp_servers`, `permissions`, `plugins`, `remote_sandbox_config`, `rules`, `windows`)
+**Detection**: Compare each top-level key against the rust-v0.146.0 `ConfigRequirementsToml` set, including permission profiles, remote control, browser use, model policy, feedback, and update controls; obsolete `allowed_permissions` is unknown
 **Fix**: No auto-fix (remove or rename the key)
-**Source**: github.com/openai/codex (codex-rs/config/src/config_requirements.rs @ rust-v0.137.0, docs/config.md)
+**Source**: github.com/openai/codex (codex-rs/config/src/config_requirements.rs @ rust-v0.146.0, docs/config.md)
 
 ---
 

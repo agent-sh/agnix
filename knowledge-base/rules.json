@@ -2,7 +2,7 @@
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
   "total_rules": 444,
-  "last_updated": "2026-07-27",
+  "last_updated": "2026-07-30",
   "schema": {
     "evidence": {
       "source_type": "spec|vendor_docs|vendor_code|paper|community",
@@ -4672,7 +4672,7 @@
     },
     {
       "id": "CDX-CFG-008",
-      "name": "Invalid shell_environment_policy.inherit Value",
+      "name": "Invalid shell_environment_policy Value",
       "severity": "HIGH",
       "category": "codex",
       "evidence": {
@@ -4680,9 +4680,10 @@
         "source_urls": [
           "https://developers.openai.com/codex/config-reference",
           "https://developers.openai.com/codex/config-schema.json",
-          "https://developers.openai.com/codex/enterprise/managed-configuration"
+          "https://developers.openai.com/codex/enterprise/managed-configuration",
+          "https://github.com/openai/codex/blob/rust-v0.146.0/codex-rs/core/config.schema.json"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-07-30",
         "applies_to": {
           "tool": "codex"
         },
@@ -4696,8 +4697,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "[shell_environment_policy]\ninherit = \"core\"",
-      "bad_example": "[shell_environment_policy]\ninherit = \"system\""
+      "good_example": "[shell_environment_policy]\ninherit = \"core\"\n[shell_environment_policy.filters]\n\"AWS_*\" = \"exclude\"",
+      "bad_example": "[shell_environment_policy]\nexclude = [\"AWS_*\"]\n[shell_environment_policy.filters]\n\"PATH\" = \"include\""
     },
     {
       "id": "CDX-CFG-009",
@@ -4772,16 +4773,16 @@
     },
     {
       "id": "CDX-CFG-011",
-      "name": "Invalid Feature Flag Name",
+      "name": "Invalid Feature Flag Name or Shape",
       "severity": "MEDIUM",
       "category": "codex",
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
           "https://developers.openai.com/codex/config-reference",
-          "https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/core/config.schema.json"
+          "https://github.com/openai/codex/blob/rust-v0.146.0/codex-rs/core/config.schema.json"
         ],
-        "verified_on": "2026-06-04",
+        "verified_on": "2026-07-30",
         "applies_to": {
           "tool": "codex"
         },
@@ -4795,8 +4796,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "[features]\nmemories = true",
-      "bad_example": "[features]\nfuture_flag = true"
+      "good_example": "[features.non_prefixed_mcp_tool_names]\nenabled = true\nserver_names = [\"docs\"]",
+      "bad_example": "[features.non_prefixed_mcp_tool_names]\nserver_names = [42]"
     },
     {
       "id": "CDX-CFG-012",
@@ -5411,15 +5412,16 @@
     },
     {
       "id": "CDX-PL-001",
-      "name": "Codex Plugin Manifest Location",
+      "name": "Codex Plugin Manifest Location or Agent Plugins Schema",
       "severity": "HIGH",
       "category": "codex",
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/core-plugins/src/manifest.rs"
+          "https://github.com/openai/codex/blob/rust-v0.146.0/codex-rs/core-plugins/src/agent_plugin_manifest.rs",
+          "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json"
         ],
-        "verified_on": "2026-06-04",
+        "verified_on": "2026-07-30",
         "applies_to": {
           "tool": "codex",
           "version_range": ">=0.117.0"
@@ -5434,20 +5436,22 @@
       "fix": {
         "autofix": false
       },
-      "good_example": ".codex-plugin/plugin.json",
-      "bad_example": "plugin.json (at project root)"
+      "good_example": ".codex-plugin/plugin.json, or root plugin.json with $schema https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+      "bad_example": "root plugin.json with unsupported $schema https://agent-plugins.org/schemas/2.0.0/plugin.schema.json"
     },
     {
       "id": "CDX-PL-002",
-      "name": "Invalid JSON in Plugin Manifest",
+      "name": "Invalid Plugin Manifest",
       "severity": "HIGH",
       "category": "codex",
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/core-plugins/src/manifest.rs"
+          "https://github.com/openai/codex/blob/rust-v0.146.0/codex-rs/core-plugins/src/manifest.rs",
+          "https://github.com/openai/codex/blob/rust-v0.146.0/codex-rs/core-plugins/src/agent_plugin_manifest.rs",
+          "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json"
         ],
-        "verified_on": "2026-06-04",
+        "verified_on": "2026-07-30",
         "applies_to": {
           "tool": "codex",
           "version_range": ">=0.117.0"
@@ -5462,8 +5466,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\"name\": \"my-plugin\", \"components\": [{\"path\": \"./src/index.js\"}]}",
-      "bad_example": "{name: my-plugin, components: }"
+      "good_example": "{\"$schema\":\"https://agent-plugins.org/schemas/1.0.0/plugin.schema.json\",\"name\":\"my-plugin\",\"keywords\":[\"tools\"]}",
+      "bad_example": "{\"$schema\":\"https://agent-plugins.org/schemas/1.0.0/plugin.schema.json\",\"name\":\"my-plugin\",\"homepage\":42}"
     },
     {
       "id": "CDX-PL-003",
@@ -5762,15 +5766,16 @@
     },
     {
       "id": "CDX-PL-013",
-      "name": "Unsupported Hooks Field",
+      "name": "Invalid Hooks Value",
       "severity": "LOW",
       "category": "codex",
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/core-plugins/src/manifest.rs"
+          "https://github.com/openai/codex/blob/rust-v0.146.0/codex-rs/core-plugins/src/manifest.rs",
+          "https://github.com/openai/codex/blob/rust-v0.146.0/codex-rs/core-plugins/src/agent_plugin_manifest.rs"
         ],
-        "verified_on": "2026-06-04",
+        "verified_on": "2026-07-30",
         "applies_to": {
           "tool": "codex",
           "version_range": ">=0.117.0"
@@ -5785,8 +5790,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\"name\": \"my-plugin\", \"skills\": \"./skills\"}",
-      "bad_example": "{\"name\": \"my-plugin\", \"hooks\": {\"preStart\": \"echo hi\"}}"
+      "good_example": "{\"name\":\"my-plugin\",\"hooks\":[\"./hooks.json\"]}",
+      "bad_example": "{\"name\":\"my-plugin\",\"hooks\":42}"
     },
     {
       "id": "CDX-PL-014",
@@ -6151,10 +6156,10 @@
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/config/src/config_requirements.rs",
-          "https://github.com/openai/codex/blob/rust-v0.137.0/docs/config.md"
+          "https://github.com/openai/codex/blob/rust-v0.146.0/codex-rs/config/src/config_requirements.rs",
+          "https://github.com/openai/codex/blob/rust-v0.146.0/docs/config.md"
         ],
-        "verified_on": "2026-06-04",
+        "verified_on": "2026-07-30",
         "applies_to": {
           "tool": "codex",
           "version_range": ">=0.133.0"
@@ -7483,7 +7488,7 @@
         "source_urls": [
           "https://cursor.com/docs/hooks"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-07-30",
         "applies_to": {
           "tool": "cursor"
         },
@@ -7498,7 +7503,7 @@
         "autofix": true,
         "fix_safety": "safe"
       },
-      "good_example": "{\"version\":1,\"hooks\":{\"sessionStart\":[{\"type\":\"command\",\"command\":\"echo start\"}]}}",
+      "good_example": "{\"version\":1,\"hooks\":{\"workspaceOpen\":[{\"type\":\"command\",\"command\":\"echo open\"}]}}",
       "bad_example": "{\"version\":1,\"hooks\":{\"unknownEvent\":[{\"type\":\"command\",\"command\":\"echo start\"}]}}"
     },
     {
@@ -11855,16 +11860,17 @@
     },
     {
       "id": "OC-CFG-007",
-      "name": "Invalid MCP Server Command, URL, or cwd",
+      "name": "Invalid MCP Server Command, URL, cwd, or Environment",
       "severity": "HIGH",
       "category": "opencode",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
           "https://opencode.ai/docs/config",
-          "https://github.com/sst/opencode/pull/30676"
+          "https://github.com/sst/opencode/pull/30676",
+          "https://opencode.ai/config.json"
         ],
-        "verified_on": "2026-06-16",
+        "verified_on": "2026-07-30",
         "applies_to": {
           "tool": "opencode"
         },
@@ -11878,8 +11884,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"mcp\": { \"server\": { \"type\": \"local\", \"command\": [\"node\"], \"cwd\": \"plugins/sub\" } }\n}",
-      "bad_example": "{\n  \"mcp\": { \"server\": { \"type\": \"local\", \"command\": [\"node\"], \"cwd\": 42 } }\n}",
+      "good_example": "{\n  \"mcp\": { \"server\": { \"type\": \"local\", \"command\": [\"node\"], \"environment\": { \"NODE_ENV\": \"test\" } } }\n}",
+      "bad_example": "{\n  \"mcp\": { \"server\": { \"type\": \"local\", \"command\": [\"node\"], \"env\": { \"PORT\": 3000 } } }\n}",
       "security": {
         "cwe": [
           "CWE-78",

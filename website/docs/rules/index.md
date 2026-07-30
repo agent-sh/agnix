@@ -165,10 +165,10 @@ This section contains all `444` validation rules generated from `knowledge-base/
 | [CDX-CFG-005](./generated/cdx-cfg-005.md) | Invalid personality Value | HIGH | Codex CLI | No |
 | [CDX-CFG-006](./generated/cdx-cfg-006.md) | Unknown Codex Config Field | MEDIUM | Codex CLI | No |
 | [CDX-CFG-007](./generated/cdx-cfg-007.md) | Danger Full Access Without Acknowledgment | HIGH | Codex CLI | No |
-| [CDX-CFG-008](./generated/cdx-cfg-008.md) | Invalid shell_environment_policy.inherit Value | HIGH | Codex CLI | No |
+| [CDX-CFG-008](./generated/cdx-cfg-008.md) | Invalid shell_environment_policy Value | HIGH | Codex CLI | No |
 | [CDX-CFG-009](./generated/cdx-cfg-009.md) | Invalid MCP Server Structure in Codex Config | HIGH | Codex CLI | No |
 | [CDX-CFG-010](./generated/cdx-cfg-010.md) | Hardcoded Secret in Codex Config | HIGH | Codex CLI | No |
-| [CDX-CFG-011](./generated/cdx-cfg-011.md) | Invalid Feature Flag Name | MEDIUM | Codex CLI | No |
+| [CDX-CFG-011](./generated/cdx-cfg-011.md) | Invalid Feature Flag Name or Shape | MEDIUM | Codex CLI | No |
 | [CDX-CFG-012](./generated/cdx-cfg-012.md) | Invalid cli_auth_credentials_store Value | HIGH | Codex CLI | No |
 | [CDX-CFG-013](./generated/cdx-cfg-013.md) | Invalid sandbox_workspace_write Mode | HIGH | Codex CLI | No |
 | [CDX-CFG-014](./generated/cdx-cfg-014.md) | Invalid model Value | MEDIUM | Codex CLI | No |
@@ -190,8 +190,8 @@ This section contains all `444` validation rules generated from `knowledge-base/
 | [CDX-APP-001](./generated/cdx-app-001.md) | Invalid default_tools_approval_mode Value | HIGH | Codex CLI | No |
 | [CDX-APP-002](./generated/cdx-app-002.md) | Invalid skills Configuration | MEDIUM | Codex CLI | No |
 | [CDX-APP-003](./generated/cdx-app-003.md) | Invalid profile Configuration | MEDIUM | Codex CLI | No |
-| [CDX-PL-001](./generated/cdx-pl-001.md) | Codex Plugin Manifest Location | HIGH | Codex CLI | No |
-| [CDX-PL-002](./generated/cdx-pl-002.md) | Invalid JSON in Plugin Manifest | HIGH | Codex CLI | No |
+| [CDX-PL-001](./generated/cdx-pl-001.md) | Codex Plugin Manifest Location or Agent Plugins Schema | HIGH | Codex CLI | No |
+| [CDX-PL-002](./generated/cdx-pl-002.md) | Invalid Plugin Manifest | HIGH | Codex CLI | No |
 | [CDX-PL-003](./generated/cdx-pl-003.md) | Missing or Empty Plugin Name | HIGH | Codex CLI | Yes (unsafe) |
 | [CDX-PL-004](./generated/cdx-pl-004.md) | Invalid Plugin Name Characters | HIGH | Codex CLI | No |
 | [CDX-PL-005](./generated/cdx-pl-005.md) | Component Path Missing ./ Prefix | HIGH | Codex CLI | Yes (safe) |
@@ -202,7 +202,7 @@ This section contains all `444` validation rules generated from `knowledge-base/
 | [CDX-PL-010](./generated/cdx-pl-010.md) | Empty Default Prompt Entry | MEDIUM | Codex CLI | No |
 | [CDX-PL-011](./generated/cdx-pl-011.md) | Invalid Interface URL | MEDIUM | Codex CLI | No |
 | [CDX-PL-012](./generated/cdx-pl-012.md) | Invalid Asset Path | MEDIUM | Codex CLI | No |
-| [CDX-PL-013](./generated/cdx-pl-013.md) | Unsupported Hooks Field | LOW | Codex CLI | No |
+| [CDX-PL-013](./generated/cdx-pl-013.md) | Invalid Hooks Value | LOW | Codex CLI | No |
 | [CDX-PL-014](./generated/cdx-pl-014.md) | Missing Description | LOW | Codex CLI | No |
 | [CDX-PL-015](./generated/cdx-pl-015.md) | Invalid Skills Path Type | MEDIUM | Codex CLI | No |
 | [CDX-PL-016](./generated/cdx-pl-016.md) | Invalid Dark-mode Logo Path | MEDIUM | Codex CLI | No |
@@ -416,7 +416,7 @@ This section contains all `444` validation rules generated from `knowledge-base/
 | [OC-CFG-004](./generated/oc-cfg-004.md) | Invalid Default Agent | MEDIUM | OpenCode | No |
 | [OC-CFG-005](./generated/oc-cfg-005.md) | Hardcoded API Key | HIGH | OpenCode | No |
 | [OC-CFG-006](./generated/oc-cfg-006.md) | Invalid MCP Server Structure | HIGH | OpenCode | No |
-| [OC-CFG-007](./generated/oc-cfg-007.md) | Invalid MCP Server Command, URL, or cwd | HIGH | OpenCode | No |
+| [OC-CFG-007](./generated/oc-cfg-007.md) | Invalid MCP Server Command, URL, cwd, or Environment | HIGH | OpenCode | No |
 | [OC-AG-001](./generated/oc-ag-001.md) | Invalid Agent Mode Value | HIGH | OpenCode | No |
 | [OC-AG-002](./generated/oc-ag-002.md) | Invalid Color Format | HIGH | OpenCode | No |
 | [OC-AG-003](./generated/oc-ag-003.md) | Temperature Out of Range | HIGH | OpenCode | No |
