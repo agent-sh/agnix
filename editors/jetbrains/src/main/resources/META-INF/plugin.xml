@@ -36,6 +36,7 @@
 
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.json</depends>
+    <depends>org.intellij.plugins.markdown</depends>
     <depends>com.redhat.devtools.lsp4ij</depends>
 
     <extensions defaultExtensionNs="com.intellij">
@@ -53,7 +54,7 @@
             name="SKILL.md"
             implementationClass="io.agnix.jetbrains.filetype.SkillFileType"
             fieldName="INSTANCE"
-            language="TEXT"
+            language="Markdown"
             fileNames="SKILL.md"/>
 
         <!-- Notifications -->

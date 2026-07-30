@@ -1,8 +1,8 @@
 package io.agnix.jetbrains.filetype
 
 import com.intellij.openapi.fileTypes.LanguageFileType
-import com.intellij.openapi.fileTypes.PlainTextLanguage
 import io.agnix.jetbrains.AgnixIcons
+import org.intellij.plugins.markdown.lang.MarkdownLanguage
 import javax.swing.Icon
 
 /**
@@ -10,7 +10,7 @@ import javax.swing.Icon
  *
  * Extends Markdown language with custom icon for better identification.
  */
-class SkillFileType private constructor() : LanguageFileType(PlainTextLanguage.INSTANCE) {
+class SkillFileType private constructor() : LanguageFileType(MarkdownLanguage.INSTANCE) {
 
     override fun getName(): String = "SKILL.md"
 

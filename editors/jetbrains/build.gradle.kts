@@ -31,6 +31,7 @@ dependencies {
 
         // LSP4IJ - JetBrains LSP Support
         plugin("com.redhat.devtools.lsp4ij:0.14.0")
+        bundledPlugin("org.intellij.plugins.markdown")
 
         pluginVerifier()
         zipSigner()
