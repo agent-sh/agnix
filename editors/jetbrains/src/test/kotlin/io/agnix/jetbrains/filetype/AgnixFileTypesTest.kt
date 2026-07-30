@@ -1,13 +1,20 @@
 package io.agnix.jetbrains.filetype
 
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.intellij.plugins.markdown.lang.MarkdownLanguage
 
 /**
  * Tests for path-aware agnix file detection.
  */
 class AgnixFileTypesTest {
+
+    @Test
+    fun `skill file type uses markdown syntax highlighting`() {
+        assertSame(MarkdownLanguage.INSTANCE, SkillFileType.INSTANCE.language)
+    }
 
     @Test
     fun `matches top-level markdown memory files`() {
