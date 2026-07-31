@@ -440,3 +440,127 @@ fn overrides_suppress_ver001_on_agnix_toml() {
         "override on `.agnix.toml` must suppress VER-001, got: {ver001_hits:?}"
     );
 }
+
+/// XP-009: Codex's `project_doc_max_bytes` cap is cumulative across the
+/// instruction chain, not per-file. XP-007 checks each file alone, so a project
+/// split into several mid-size AGENTS.md files was silently truncated with no
+/// diagnostic at all (issue #1289).
+#[test]
+fn xp009_flags_cumulative_chain_over_the_cap() {
+    let temp = tempfile::TempDir::new().unwrap();
+    // Three files, each well under the 32 KiB per-file limit, 14 KB each.
+    // Combined 42 KB, so Codex stops appending partway through.
+    let body = "x".repeat(14 * 1024);
+    fs::write(temp.path().join("AGENTS.md"), &body).unwrap();
+    fs::create_dir_all(temp.path().join("api")).unwrap();
+    fs::write(temp.path().join("api").join("AGENTS.md"), &body).unwrap();
+    fs::create_dir_all(temp.path().join("api").join("v2")).unwrap();
+    fs::write(temp.path().join("api").join("v2").join("AGENTS.md"), &body).unwrap();
+
+    let result = validate_project(temp.path(), &LintConfig::default()).expect("validate_project");
+
+    let xp007: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.rule == "XP-007")
+        .collect();
+    assert!(
+        xp007.is_empty(),
+        "each file is under the per-file limit, so XP-007 must stay quiet - that is the gap XP-009 fills: {xp007:?}"
+    );
+
+    let xp009: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.rule == "XP-009")
+        .collect();
+    assert_eq!(
+        xp009.len(),
+        1,
+        "a 42 KB chain exceeds the 32768-byte cap and must be reported once: {:?}",
+        result.diagnostics
+    );
+}
+
+/// A chain that fits stays clean, so the rule is not simply counting files.
+#[test]
+fn xp009_quiet_when_chain_fits_under_the_cap() {
+    let temp = tempfile::TempDir::new().unwrap();
+    let body = "x".repeat(6 * 1024);
+    fs::write(temp.path().join("AGENTS.md"), &body).unwrap();
+    fs::create_dir_all(temp.path().join("api")).unwrap();
+    fs::write(temp.path().join("api").join("AGENTS.md"), &body).unwrap();
+
+    let result = validate_project(temp.path(), &LintConfig::default()).expect("validate_project");
+
+    let xp009: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.rule == "XP-009")
+        .collect();
+    assert!(
+        xp009.is_empty(),
+        "12 KB combined is under the cap and must not be reported: {xp009:?}"
+    );
+}
+
+/// At most one file per directory counts, preferring `AGENTS.override.md`. A
+/// shadowed `AGENTS.md` must not inflate the total, or a project using overrides
+/// would be reported for bytes Codex never reads.
+#[test]
+fn xp009_counts_one_file_per_directory_preferring_override() {
+    let temp = tempfile::TempDir::new().unwrap();
+    // Override is small; the shadowed AGENTS.md alongside it is huge. If both
+    // counted, the chain would blow the cap.
+    fs::write(temp.path().join("AGENTS.override.md"), "small override\n").unwrap();
+    fs::write(temp.path().join("AGENTS.md"), "y".repeat(40 * 1024)).unwrap();
+
+    let result = validate_project(temp.path(), &LintConfig::default()).expect("validate_project");
+
+    let xp009: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.rule == "XP-009")
+        .collect();
+    assert!(
+        xp009.is_empty(),
+        "the shadowed AGENTS.md is not in the chain, so its bytes must not count: {xp009:?}"
+    );
+}
+
+/// Per-file `[[overrides]]` must suppress XP-009 like any other rule.
+#[test]
+fn xp009_respects_per_file_overrides() {
+    let temp = tempfile::TempDir::new().unwrap();
+    let body = "x".repeat(20 * 1024);
+    fs::write(temp.path().join("AGENTS.md"), &body).unwrap();
+    fs::create_dir_all(temp.path().join("api")).unwrap();
+    fs::write(temp.path().join("api").join("AGENTS.md"), &body).unwrap();
+
+    let baseline =
+        validate_project(temp.path(), &LintConfig::default()).expect("validate_project baseline");
+    assert!(
+        baseline.diagnostics.iter().any(|d| d.rule == "XP-009"),
+        "baseline: a 40 KB chain must be reported, got: {:?}",
+        baseline.diagnostics
+    );
+
+    let config = LintConfig::builder()
+        .overrides(vec![OverrideConfig {
+            paths: vec!["**/AGENTS.md".to_string()],
+            disabled_rules: vec!["XP-009".to_string()],
+        }])
+        .build()
+        .expect("valid config");
+
+    let result = validate_project(temp.path(), &config).expect("validate_project");
+    let xp009: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.rule == "XP-009")
+        .collect();
+    assert!(
+        xp009.is_empty(),
+        "an override on the reported file must suppress XP-009: {xp009:?}"
+    );
+}

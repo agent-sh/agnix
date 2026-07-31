@@ -1005,6 +1005,10 @@ pub fn is_instruction_file(path: &Path) -> bool {
     // Direct filename matches (case-insensitive)
     if file_name.eq_ignore_ascii_case("claude.md")
         || file_name.eq_ignore_ascii_case("agents.md")
+        // Codex checks `AGENTS.override.md` before `AGENTS.md` in each
+        // directory, so it is part of the instruction set and counts toward
+        // `project_doc_max_bytes` (XP-007, XP-009).
+        || file_name.eq_ignore_ascii_case("agents.override.md")
         || file_name.eq_ignore_ascii_case("gemini.md")
         || file_name.eq_ignore_ascii_case("gemini.local.md")
         || file_name.eq_ignore_ascii_case(".clinerules")

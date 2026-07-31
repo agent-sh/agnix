@@ -1,9 +1,11 @@
-//! Project-level cross-file validation rules (AGM-006, XP-004/005/006, VER-001).
+//! Project-level cross-file validation rules (AGM-006, XP-004/005/006, XP-009,
+//! VER-001).
 // All items in this module require the filesystem feature. The file-level inner
 // attribute avoids repeating #[cfg(feature = "filesystem")] on each import and
 // function - unlike pipeline.rs, this file has no non-filesystem items.
 #![cfg(feature = "filesystem")]
 
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use rust_i18n::t;
@@ -13,6 +15,7 @@ use crate::diagnostics::Diagnostic;
 use crate::file_utils;
 use crate::parsers::frontmatter::normalize_line_endings;
 use crate::schemas;
+use crate::schemas::cross_platform::CODEX_BYTE_LIMIT;
 
 /// Join an iterator of paths into a comma-separated string.
 ///
@@ -302,6 +305,58 @@ pub(crate) fn run_project_level_checks(
                 diagnostics.push(
                     Diagnostic::info(report_path, 1, 0, "VER-001", t!("rules.ver_001.message"))
                         .with_suggestion(t!("rules.ver_001.suggestion")),
+                );
+            }
+        }
+    }
+
+    // XP-009: the Codex instruction chain exceeds `project_doc_max_bytes`.
+    //
+    // XP-007 checks each AGENTS.md against the 32 KiB default in isolation, but
+    // the documented cap is cumulative: Codex "stops adding files once the
+    // combined size reaches the limit defined by `project_doc_max_bytes`". A
+    // project split across several mid-size files is therefore truncated with no
+    // per-file diagnostic - the gap recorded in the XP-007 rule docs.
+    //
+    // Modelled on the documented discovery rules: start at the project root,
+    // walk down, take at most one file per directory in the order
+    // `AGENTS.override.md`, `AGENTS.md`, then any configured
+    // `project_doc_fallback_filenames`. Names outside that set "are ignored for
+    // instruction discovery" and so do not count.
+    if config.is_rule_enabled("XP-009") {
+        let chain = codex_instruction_chain(instruction_file_paths, root_dir);
+        let mut total = 0usize;
+        let mut truncated_at: Option<(PathBuf, usize)> = None;
+
+        for path in &chain {
+            let size = match config.fs().read_to_string(path) {
+                Ok(content) => content.len(),
+                Err(_) => continue,
+            };
+            total += size;
+            if total > CODEX_BYTE_LIMIT && truncated_at.is_none() {
+                truncated_at = Some((path.clone(), total));
+            }
+        }
+
+        if let Some((report_path, running_total)) = truncated_at {
+            // Report on the file that crosses the threshold: everything from it
+            // onward is what Codex drops.
+            if config.for_path(&report_path).is_rule_enabled("XP-009") {
+                diagnostics.push(
+                    Diagnostic::warning(
+                        report_path,
+                        1,
+                        1,
+                        "XP-009",
+                        t!(
+                            "rules.xp_009.message",
+                            bytes = running_total,
+                            limit = CODEX_BYTE_LIMIT,
+                            count = chain.len()
+                        ),
+                    )
+                    .with_suggestion(t!("rules.xp_009.suggestion")),
                 );
             }
         }
@@ -730,4 +785,57 @@ mod tests {
             ver001[0].file.display()
         );
     }
+}
+
+/// Build the Codex instruction chain for XP-009.
+///
+/// Follows the documented discovery rules: "Starting at the project root
+/// (typically the Git root), Codex walks down to your current working
+/// directory", taking at most one file per directory in the order
+/// `AGENTS.override.md`, `AGENTS.md`, then any configured
+/// `project_doc_fallback_filenames`.
+///
+/// Only files already collected by the project walk are considered, so this adds
+/// no filesystem traversal of its own. Returned root-first, which is the order
+/// Codex concatenates in.
+fn codex_instruction_chain(instruction_file_paths: &[PathBuf], root_dir: &Path) -> Vec<PathBuf> {
+    // `AGENTS.override.md` first, then `AGENTS.md`. Codex also honors any
+    // `project_doc_fallback_filenames`, but those live in the user's Codex
+    // `config.toml` rather than anything agnix reads, so the chain is built from
+    // the two default names. A project relying on fallbacks would have a longer
+    // real chain than this, which makes the check conservative: it can
+    // under-report, never over-report.
+    let precedence: [&str; 2] = ["AGENTS.override.md", "AGENTS.md"];
+
+    // Group the candidates by directory, keeping only Codex-discoverable names.
+    let mut by_dir: BTreeMap<PathBuf, Vec<&PathBuf>> = BTreeMap::new();
+    for path in instruction_file_paths {
+        let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
+            continue;
+        };
+        if !precedence.contains(&name) {
+            continue;
+        }
+        let Some(dir) = path.parent() else { continue };
+        // Only directories from the root down: the walk stops at the working
+        // directory, and anything outside the root is not part of this chain.
+        if !dir.starts_with(root_dir) {
+            continue;
+        }
+        by_dir.entry(dir.to_path_buf()).or_default().push(path);
+    }
+
+    // BTreeMap orders shallow-to-deep for nested paths, matching root-down
+    // concatenation. Within a directory, take the highest-precedence name only.
+    by_dir
+        .into_values()
+        .filter_map(|candidates| {
+            precedence.iter().find_map(|wanted| {
+                candidates
+                    .iter()
+                    .find(|p| p.file_name().and_then(|n| n.to_str()) == Some(*wanted))
+                    .map(|p| (*p).clone())
+            })
+        })
+        .collect()
 }

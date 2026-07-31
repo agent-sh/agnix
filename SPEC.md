@@ -16,7 +16,7 @@
 | Claude Output Styles | .claude/output-styles/*.md | 6 |
 | Claude Settings | .claude/settings.json | 20 |
 | Prompt Engineering | CLAUDE.md, AGENTS.md | 6 |
-| Cross-Platform | AGENTS.md | 9 |
+| Cross-Platform | AGENTS.md | 10 |
 | MCP | tool definitions | 26 |
 | XML | all .md files | 3 |
 | References | @imports | 4 |

@@ -402,6 +402,9 @@ rules:
     message: 'CLAUDE.md contains Claude-specific feature ''%{feature}'' that Cursor cannot interpret: %{description}'
     suggestion: Move Cursor-compatible instructions to .cursor/rules/ or guard Claude-specific content under a '## Claude
       Code' section header
+  xp_009:
+    message: 'Codex instruction chain reaches %{bytes} bytes across %{count} file(s), past the %{limit}-byte project_doc_max_bytes default. Codex stops appending once the combined size hits the limit, so this file and any deeper ones are dropped.'
+    suggestion: Trim the chain, or raise project_doc_max_bytes in the Codex config (e.g. project_doc_max_bytes = 65536)
   cop_001:
     message_empty: Copilot instruction file is empty
     message_no_content: Copilot instruction file has no content after frontmatter
