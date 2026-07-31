@@ -266,8 +266,17 @@ impl Validator for ClaudeMdValidator {
             }
         }
 
-        // CC-MEM-014: CLAUDE.md exceeds 200-line recommended limit
-        if config.is_rule_enabled("CC-MEM-014") {
+        // CC-MEM-014: CLAUDE.md exceeds 200-line recommended limit.
+        //
+        // Claude-specific: the 200-line figure, the message and the
+        // CLAUDE.local.md suggestion are all from the Claude Code memory
+        // reference. This validator is also registered for `FileType::CursorRule`
+        // (for the generic prose checks), which meant a `.cursor/rules/*.mdc`
+        // file was reported as "CLAUDE.md has N lines" against Claude's limit -
+        // wrong filename, wrong threshold (Cursor documents 500), wrong tool.
+        // Gated on the file actually being a Claude memory file.
+        let is_claude_memory = matches!(crate::detect_file_type(path), crate::FileType::ClaudeMd);
+        if is_claude_memory && config.is_rule_enabled("CC-MEM-014") {
             const MAX_RECOMMENDED_LINES: usize = 200;
             let non_empty_lines = content
                 .lines()

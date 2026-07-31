@@ -422,8 +422,8 @@ rules:
     message: Unknown frontmatter key '%{key}' in Copilot instruction file
     suggestion: Remove unknown key '%{key}'. Only 'applyTo' and 'excludeAgent' are recognized.
   cop_005:
-    message: 'Invalid excludeAgent value ''%{value}''. Valid values: ''code-review'', ''coding-agent'''
-    suggestion: Use 'code-review' or 'coding-agent' for excludeAgent
+    message: 'Invalid excludeAgent value ''%{value}''. Valid values: ''code-review'', ''cloud-agent'''
+    suggestion: Use 'code-review' or 'cloud-agent' for excludeAgent
     fix: Change excludeAgent to '%{fixed}'
   cop_006:
     message: Copilot instruction file exceeds recommended length (%{len} characters, limit ~4000)
@@ -463,14 +463,14 @@ rules:
     message: Agent-requested rule has no description - the agent cannot determine when to apply it
     suggestion: Add a description field explaining when this rule should apply, or set alwaysApply or globs to control activation
   cur_010:
-    message: .cursor/hooks.json must define an integer version and a hooks object
-    missing_version: .cursor/hooks.json is missing required integer field 'version'
+    message: .cursor/hooks.json must define a hooks object, and a numeric version when present
+    invalid_version: "Field 'version' must be a number (it defaults to 1 when omitted)"
     missing_hooks: .cursor/hooks.json is missing required object field 'hooks'
     invalid_hooks: Field 'hooks' must be an object, got %{got}
     invalid_event_hooks: hooks.%{event} must be an array of hook definitions, got %{got}
     invalid_hook_entry: hooks.%{event}[%{index}] must be an object
     parse_error: 'Failed to parse .cursor/hooks.json: %{error}'
-    suggestion: 'Define {"version": <integer>, "hooks": {"eventName": [{"type": "command", "command": "..."}]}}'
+    suggestion: 'Define {"hooks": {"eventName": [{"type": "command", "command": "..."}]}}; "version" is optional and defaults to 1'
   cur_011:
     message: Unknown Cursor hook event '%{event}'
     suggestion: Use one of the documented Cursor hook events in .cursor/hooks.json
@@ -501,13 +501,15 @@ rules:
     parse_error: 'Failed to parse .cursor/environment.json: %{error}'
     install: Field 'install' must be a string
     missing_install: Field 'install' is required and must be a string
+    update_renamed: "Field 'update' is not part of the environment schema - it was renamed to 'install'"
+    update_renamed_suggestion: Rename 'update' to 'install'; the published schema sets unevaluatedProperties=false, so unknown keys are invalid
     start: Field 'start' must be a string when present
     update: Field 'update' must be a string when present
     invalid_build: Field 'build' must be an object when present
     build_dockerfile: Field 'build.dockerfile' must be a string when present
     build_context: Field 'build.context' must be a string when present
     invalid_terminals: Field 'terminals' must be an array, got %{got}
-    terminal: terminals[%{index}] must be an object with string fields 'name' and 'command'
+    terminal: "terminals[%{index}] must have a string 'command' field"
     terminal_not_object: terminals[%{index}] must be a JSON object
     suggestion: 'Use schema: {"install":"...","start":"...","build":{"dockerfile":"...","context":"..."},"terminals":[{"name":"...","command":"..."}]}'
   cln_001:

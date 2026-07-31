@@ -66,10 +66,23 @@ pub enum GlobsField {
 
 impl GlobsField {
     /// Get all glob patterns as a vector
+    /// Individual glob patterns.
+    ///
+    /// The scalar form carries multiple patterns in one string - "Separate
+    /// multiple patterns with commas", with `docs/**/*.md, docs/**/*.mdx` given
+    /// as the doc's own example - so it is split rather than validated whole.
+    /// Commas inside a brace or bracket group are not separators.
+    ///
+    /// This was intermittently wrong before, which is why it survived: the doc's
+    /// literal example happens to parse as one pattern, while `src/**, tests/**`
+    /// does not.
     pub fn patterns(&self) -> Vec<&str> {
         match self {
-            GlobsField::Single(s) => vec![s.as_str()],
-            GlobsField::Multiple(v) => v.iter().map(|s| s.as_str()).collect(),
+            GlobsField::Single(s) => crate::schemas::copilot::split_comma_separated_globs(s),
+            GlobsField::Multiple(v) => v
+                .iter()
+                .flat_map(|s| crate::schemas::copilot::split_comma_separated_globs(s))
+                .collect(),
         }
     }
 }

@@ -181,7 +181,7 @@
         ]
       },
       "github-copilot": {
-        "url": "https://docs.github.com/en/copilot/customizing-copilot",
+        "url": "https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/add-custom-instructions/add-repository-instructions",
         "hash": "668c75acb7948484e1334aeb040332961836fbe187561fa830219afcde8ae289",
         "rules": [
           "COP-001",
@@ -213,7 +213,7 @@
         ]
       },
       "cline-rules": {
-        "url": "https://docs.cline.bot/features/cline-rules/overview",
+        "url": "https://docs.cline.bot/customization/cline-rules",
         "hash": "3a42acacd88e62655c440c04214bed9e622793007489f1d9ef68a2ea85360063",
         "rules": [
           "CL-SK-001",
