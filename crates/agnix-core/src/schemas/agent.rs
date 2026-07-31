@@ -25,10 +25,14 @@ where
             .map(|item| item.trim().to_string())
             .filter(|item| !item.is_empty())
             .collect(),
-        SeqOrString::Str(s) => s
-            .split([',', ' ', '\t'])
-            .map(str::trim)
-            .filter(|token| !token.is_empty())
+        // Split with `split_tool_list` rather than a plain `split`: entries
+        // carry parenthesized arguments containing commas and spaces, e.g. the
+        // sub-agents doc's own `tools: Agent(worker, researcher), Read, Bash`
+        // and `Bash(npm run test:*)`. Splitting naively shattered those into
+        // fragments like `researcher)` and `run`, which then tripped
+        // CC-AG-009/010 as unknown tools.
+        SeqOrString::Str(s) => crate::validation::split_tool_list(&s)
+            .into_iter()
             .map(String::from)
             .collect(),
     }))

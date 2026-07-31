@@ -77,7 +77,7 @@ This section contains all `443` validation rules generated from `knowledge-base/
 | [CC-HK-028](./generated/cc-hk-028.md) | Rejected user_config Interpolation in Shell-Form Command | HIGH | Claude Hooks | No |
 | [CC-MEM-001](./generated/cc-mem-001.md) | Invalid Import Path | HIGH | Claude Memory | No |
 | [CC-MEM-002](./generated/cc-mem-002.md) | Circular Import | HIGH | Claude Memory | No |
-| [CC-MEM-003](./generated/cc-mem-003.md) | Import Depth Exceeds 5 | HIGH | Claude Memory | No |
+| [CC-MEM-003](./generated/cc-mem-003.md) | Import Depth Exceeds 4 | HIGH | Claude Memory | No |
 | [CC-MEM-004](./generated/cc-mem-004.md) | Invalid Command Reference | MEDIUM | Claude Memory | No |
 | [CC-MEM-005](./generated/cc-mem-005.md) | Generic Instruction | HIGH | Claude Memory | Yes (safe) |
 | [CC-MEM-006](./generated/cc-mem-006.md) | Negative Without Positive | HIGH | Claude Memory | No |

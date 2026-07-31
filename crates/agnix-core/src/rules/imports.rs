@@ -39,7 +39,13 @@ const RULE_CACHE_POISON: &str = "lint::cache-poison";
 
 pub struct ImportsValidator;
 
-const MAX_IMPORT_DEPTH: usize = 5;
+/// Maximum recursive `@import` hops per CC-MEM-003.
+///
+/// The memory reference: "Imported files can recursively import other files,
+/// with a maximum depth of four hops." This was 5, and because the check is
+/// `depth + 1 > MAX_IMPORT_DEPTH` the diagnostic first fired at 6 hops - two
+/// past the documented limit.
+const MAX_IMPORT_DEPTH: usize = 4;
 type DiagnosticKey = (PathBuf, usize, usize, String, String);
 
 fn push_unique_diagnostic(
@@ -320,11 +326,46 @@ fn visit_imports(
         // Validate path to prevent traversal attacks
         // Reject absolute paths and paths that escape the project root
         let raw_path = Path::new(&import.path);
-        if raw_path.is_absolute()
+        let is_external_path = raw_path.is_absolute()
             || import.path.starts_with('/')
             || import.path.starts_with('\\')
-            || import.path.starts_with('~')
-        {
+            || import.path.starts_with('~');
+
+        // CLAUDE.md imports may legitimately leave the project: "Both relative
+        // and absolute paths are allowed", and the reference prescribes
+        // `@~/.claude/my-project-instructions.md` as the way to share personal
+        // instructions across worktrees. Claude Code gates those behind a
+        // one-time approval dialog rather than rejecting them, so they are
+        // valid config and CC-MEM-001 must not error. Existence is still
+        // checked below.
+        //
+        // The guard stays for non-memory files (REF-001), where no upstream
+        // spec sanctions escaping the project root.
+        if is_external_path && is_claude_md {
+            let resolved_external = resolve_import_path(&import.path, base_dir);
+            if check_not_found && !fs.exists(&resolved_external) {
+                push_unique_diagnostic(
+                    diagnostics,
+                    seen_diagnostics,
+                    Diagnostic::error(
+                        file_path.clone(),
+                        import.line,
+                        import.column,
+                        rule_not_found,
+                        t!("rules.cc_mem_001.not_found", path = import.path.as_str()),
+                    )
+                    .with_suggestion(format!(
+                        "Check that the file exists: {}",
+                        resolved_external.display()
+                    )),
+                );
+            }
+            // External files are outside the project: do not recurse into them
+            // for cycle/depth accounting, which is scoped to project files.
+            continue;
+        }
+
+        if is_external_path {
             if check_not_found {
                 push_unique_diagnostic(
                     diagnostics,
@@ -995,21 +1036,81 @@ mod tests {
         );
     }
 
+    /// Absolute imports in CLAUDE.md are documented as valid - "Both relative
+    /// and absolute paths are allowed" - so they are no longer rejected on
+    /// shape. A nonexistent target is still reported as not-found.
     #[test]
-    fn test_absolute_path_rejection() {
+    fn test_absolute_path_reported_as_missing_not_rejected() {
         let temp = TempDir::new().unwrap();
         let file_path = temp.path().join("CLAUDE.md");
-        fs::write(&file_path, "See @/etc/passwd").unwrap();
+        let content = "See @/nonexistent-agnix-test-path/instructions.md";
+        fs::write(&file_path, content).unwrap();
 
         let validator = ImportsValidator;
-        let diagnostics =
-            validator.validate(&file_path, "See @/etc/passwd", &LintConfig::default());
+        let diagnostics = validator.validate(&file_path, content, &LintConfig::default());
 
-        // Absolute paths should be rejected
+        assert!(
+            !diagnostics
+                .iter()
+                .any(|d| d.message.contains("Absolute import paths not allowed")),
+            "absolute paths are documented as valid and must not be rejected on shape, got: {diagnostics:?}"
+        );
         assert!(
             diagnostics
                 .iter()
-                .any(|d| d.message.contains("Absolute import paths not allowed"))
+                .any(|d| d.rule == "CC-MEM-001" && d.message.contains("not found")),
+            "a missing absolute target must still be reported, got: {diagnostics:?}"
+        );
+    }
+
+    /// The reference prescribes importing from the home directory to share
+    /// personal instructions across worktrees:
+    /// `- @~/.claude/my-project-instructions.md`. An existing `~/` target must
+    /// validate clean.
+    #[test]
+    fn test_home_dir_import_accepted_when_target_exists() {
+        let temp = TempDir::new().unwrap();
+        let file_path = temp.path().join("CLAUDE.md");
+
+        // Point at a file that genuinely exists in the home directory.
+        let Some(home) = dirs::home_dir() else {
+            return; // no home dir in this environment; nothing to assert
+        };
+        let target = home.join(".agnix-import-test.md");
+        if fs::write(&target, "# personal instructions\n").is_err() {
+            return; // unwritable home; skip rather than assert on the environment
+        }
+
+        let content = "# Individual Preferences\n- @~/.agnix-import-test.md\n";
+        fs::write(&file_path, content).unwrap();
+
+        let validator = ImportsValidator;
+        let diagnostics = validator.validate(&file_path, content, &LintConfig::default());
+        let _ = fs::remove_file(&target);
+
+        assert!(
+            !diagnostics.iter().any(|d| d.rule == "CC-MEM-001"),
+            "an existing `~/` import is the documented worktree pattern and must validate clean, got: {diagnostics:?}"
+        );
+    }
+
+    /// Non-memory files have no upstream spec sanctioning escape from the
+    /// project root, so REF-001 keeps rejecting absolute imports.
+    #[test]
+    fn test_absolute_path_still_rejected_outside_claude_md() {
+        let temp = TempDir::new().unwrap();
+        let file_path = temp.path().join("notes.md");
+        let content = "See @/etc/passwd";
+        fs::write(&file_path, content).unwrap();
+
+        let validator = ImportsValidator;
+        let diagnostics = validator.validate(&file_path, content, &LintConfig::default());
+
+        assert!(
+            diagnostics
+                .iter()
+                .any(|d| d.message.contains("Absolute import paths not allowed")),
+            "REF-001 must keep rejecting absolute imports, got: {diagnostics:?}"
         );
     }
 
@@ -2063,27 +2164,22 @@ mod tests {
 
     #[test]
     fn test_depth_at_boundary_no_trigger() {
-        // 6 files in a linear chain: CLAUDE -> a -> b -> c -> d -> leaf.
-        // There are 5 import hops, so the deepest file (leaf) is at depth=5.
-        // With MAX_IMPORT_DEPTH = 5 and the check `depth + 1 > MAX_IMPORT_DEPTH`:
-        // - At depth=4 (file d), recursing into leaf uses 4+1=5 > 5 (false), so it is allowed.
-        // - If leaf tried to import another file, that recursion would use 5+1=6 > 5 (true),
-        //   and CC-MEM-003 would trigger.
-        // This test verifies the boundary: a chain that reaches depth 5 is allowed as long as
-        // the leaf file has no further imports, so CC-MEM-003 should NOT fire.
+        // 5 files in a linear chain: CLAUDE -> a -> b -> c -> leaf.
+        // That is 4 import hops, the documented maximum ("a maximum depth of
+        // four hops"), so the deepest file sits exactly at the boundary and
+        // CC-MEM-003 must NOT fire. A fifth hop is covered by
+        // test_depth_exceeds_documented_four_hops below.
         let temp = TempDir::new().unwrap();
         let claude = temp.path().join("CLAUDE.md");
         let a = temp.path().join("a.md");
         let b = temp.path().join("b.md");
         let c = temp.path().join("c.md");
-        let d = temp.path().join("d.md");
         let leaf = temp.path().join("leaf.md");
 
         fs::write(&claude, "@a.md").unwrap();
         fs::write(&a, "@b.md").unwrap();
         fs::write(&b, "@c.md").unwrap();
-        fs::write(&c, "@d.md").unwrap();
-        fs::write(&d, "@leaf.md").unwrap();
+        fs::write(&c, "@leaf.md").unwrap();
         fs::write(&leaf, "End of chain").unwrap();
 
         let validator = ImportsValidator;
@@ -2092,11 +2188,35 @@ mod tests {
 
         assert!(
             !diagnostics.iter().any(|d| d.rule == "CC-MEM-003"),
-            "Chain of 6 files (depth reaches MAX_IMPORT_DEPTH=5) should not trigger CC-MEM-003"
+            "a chain of exactly four hops is at the documented limit and must not trigger CC-MEM-003, got: {diagnostics:?}"
         );
         assert!(
             !diagnostics.iter().any(|d| d.rule == "CC-MEM-002"),
             "Linear chain with no cycle should not trigger CC-MEM-002"
+        );
+    }
+
+    /// One hop past the documented four triggers CC-MEM-003. The limit was 5
+    /// and the check is `depth + 1 > MAX_IMPORT_DEPTH`, so the diagnostic used
+    /// to appear only at six hops - two past the spec.
+    #[test]
+    fn test_depth_exceeds_documented_four_hops() {
+        let temp = TempDir::new().unwrap();
+        let claude = temp.path().join("CLAUDE.md");
+        fs::write(&claude, "@a.md").unwrap();
+        fs::write(temp.path().join("a.md"), "@b.md").unwrap();
+        fs::write(temp.path().join("b.md"), "@c.md").unwrap();
+        fs::write(temp.path().join("c.md"), "@d.md").unwrap();
+        fs::write(temp.path().join("d.md"), "@leaf.md").unwrap();
+        fs::write(temp.path().join("leaf.md"), "End of chain").unwrap();
+
+        let validator = ImportsValidator;
+        let content = fs::read_to_string(&claude).unwrap();
+        let diagnostics = validator.validate(&claude, &content, &LintConfig::default());
+
+        assert!(
+            diagnostics.iter().any(|d| d.rule == "CC-MEM-003"),
+            "five hops exceeds the documented maximum of four and must trigger CC-MEM-003, got: {diagnostics:?}"
         );
     }
 

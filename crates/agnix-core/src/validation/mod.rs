@@ -1,5 +1,48 @@
 //! Shared validation utilities
 
+/// Split a tool list on commas and whitespace **without** splitting inside
+/// parentheses.
+///
+/// Tool entries carry parenthesized arguments that may themselves contain
+/// commas and spaces - `Agent(worker, researcher)` and `Bash(npm run test:*)`
+/// are both documented forms. A naive `split([',', ' '])` shatters those into
+/// fragments like `researcher)` and `run`, which then fail every known-tool
+/// lookup.
+///
+/// Used for skill `allowed-tools` and agent `tools`/`disallowedTools`, which
+/// share the same syntax.
+pub fn split_tool_list(tools: &str) -> Vec<&str> {
+    fn push<'a>(tokens: &mut Vec<&'a str>, tools: &'a str, start: usize, end: usize) {
+        let token = tools[start..end].trim();
+        if !token.is_empty() {
+            tokens.push(token);
+        }
+    }
+
+    let mut tokens = Vec::new();
+    let mut start = 0;
+    let mut paren_depth = 0usize;
+
+    for (idx, ch) in tools.char_indices() {
+        match ch {
+            '(' => paren_depth += 1,
+            ')' if paren_depth > 0 => paren_depth -= 1,
+            ',' if paren_depth == 0 => {
+                push(&mut tokens, tools, start, idx);
+                start = idx + ch.len_utf8();
+            }
+            c if c.is_whitespace() && paren_depth == 0 => {
+                push(&mut tokens, tools, start, idx);
+                start = idx + ch.len_utf8();
+            }
+            _ => {}
+        }
+    }
+
+    push(&mut tokens, tools, start, tools.len());
+    tokens
+}
+
 /// Check if a tool name is valid (either known or properly formatted MCP tool).
 ///
 /// Two MCP forms are accepted, both documented as equivalent by Claude Code:

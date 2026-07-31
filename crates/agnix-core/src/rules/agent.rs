@@ -53,8 +53,12 @@ fn humanize_yaml_error(raw: &str) -> String {
     msg
 }
 
-/// Valid model values per CC-AG-003 (short aliases)
-const VALID_MODELS: &[&str] = &["sonnet", "opus", "haiku", "inherit"];
+/// Valid model values per CC-AG-003 (short aliases).
+///
+/// Shared with the skill validator (CC-SK-001) so the two lists cannot drift:
+/// the sub-agents reference says `model` "Accepts the same values as the
+/// `--model` flag", which is the model-config alias table.
+use crate::schemas::skill::VALID_MODEL_ALIASES as VALID_MODELS;
 
 /// Check if a model value is valid: either a known short alias or a full model ID
 /// matching the `claude-*` pattern.
@@ -62,14 +66,24 @@ fn is_valid_model(model: &str) -> bool {
     VALID_MODELS.contains(&model) || model.starts_with("claude-")
 }
 
-/// Valid permission modes per CC-AG-004
+/// Valid permission modes per CC-AG-004.
+///
+/// The six documented modes (permission-modes reference, "Available modes")
+/// plus `manual`, which the CLI accepts as an alias for `default` wherever the
+/// value is typed - "The Manual label and the `manual` alias require Claude
+/// Code v2.1.200 or later."
+///
+/// `delegate` was previously listed here but appears in no current reference
+/// (neither sub-agents nor permission-modes) and was added without a cited
+/// source, so it is no longer accepted.
 const VALID_PERMISSION_MODES: &[&str] = &[
     "default",
+    "manual",
     "acceptEdits",
+    "plan",
+    "auto",
     "dontAsk",
     "bypassPermissions",
-    "plan",
-    "delegate",
 ];
 
 /// Valid memory scopes per CC-AG-008
@@ -1611,8 +1625,11 @@ Agent instructions"#;
         assert_eq!(cc_ag_004.len(), 0);
     }
 
+    /// `delegate` is not a documented permission mode. It appears in neither
+    /// the sub-agents nor the permission-modes reference, and was added without
+    /// a cited source, so it is now rejected like any other unknown value.
     #[test]
-    fn test_cc_ag_004_valid_permission_mode_delegate() {
+    fn test_cc_ag_004_delegate_is_not_a_documented_mode() {
         let content = r#"---
 name: my-agent
 description: A test agent
@@ -1626,7 +1643,110 @@ Agent instructions"#;
             .filter(|d| d.rule == "CC-AG-004")
             .collect();
 
-        assert_eq!(cc_ag_004.len(), 0);
+        assert_eq!(
+            cc_ag_004.len(),
+            1,
+            "`delegate` is undocumented and must be flagged, got: {diagnostics:?}"
+        );
+    }
+
+    /// The six documented modes plus the `manual` alias for `default`
+    /// (v2.1.200+). `auto` and `manual` were previously rejected.
+    #[test]
+    fn test_cc_ag_004_documented_modes_accepted() {
+        for mode in [
+            "default",
+            "manual",
+            "acceptEdits",
+            "plan",
+            "auto",
+            "dontAsk",
+            "bypassPermissions",
+        ] {
+            let content = format!(
+                r#"---
+name: my-agent
+description: A test agent
+permissionMode: {mode}
+---
+Agent instructions"#
+            );
+
+            let diagnostics = validate(&content);
+            let cc_ag_004: Vec<_> = diagnostics
+                .iter()
+                .filter(|d| d.rule == "CC-AG-004")
+                .collect();
+
+            assert!(
+                cc_ag_004.is_empty(),
+                "documented permission mode '{mode}' must be accepted, got: {cc_ag_004:?}"
+            );
+        }
+    }
+
+    /// `model` "Accepts the same values as the `--model` flag", which is the
+    /// model-config alias table. `fable` and the rest were rejected before.
+    #[test]
+    fn test_cc_ag_003_documented_model_aliases_accepted() {
+        for model in [
+            "default",
+            "best",
+            "fable",
+            "sonnet",
+            "opus",
+            "haiku",
+            "opusplan",
+            "sonnet[1m]",
+            "opus[1m]",
+            "inherit",
+            "claude-opus-5",
+        ] {
+            let content = format!(
+                r#"---
+name: my-agent
+description: A test agent
+model: {model}
+---
+Agent instructions"#
+            );
+
+            let diagnostics = validate(&content);
+            let cc_ag_003: Vec<_> = diagnostics
+                .iter()
+                .filter(|d| d.rule == "CC-AG-003")
+                .collect();
+
+            assert!(
+                cc_ag_003.is_empty(),
+                "documented model value '{model}' must be accepted, got: {cc_ag_003:?}"
+            );
+        }
+    }
+
+    /// The sub-agents reference's own verbatim example carries parenthesized
+    /// arguments containing commas and spaces. Splitting the string form on
+    /// `,`/space before stripping at `(` shattered these into fragments like
+    /// `researcher)` and `run`, which then tripped CC-AG-009.
+    #[test]
+    fn test_cc_ag_009_parenthesized_args_not_split() {
+        let content = r#"---
+name: my-agent
+description: A test agent
+tools: Agent(worker, researcher), Read, Bash(npm run test:*)
+---
+Agent instructions"#;
+
+        let diagnostics = validate(content);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-AG-009")
+            .collect();
+
+        assert!(
+            hits.is_empty(),
+            "parenthesized tool arguments must survive tokenization, got: {hits:?}"
+        );
     }
 
     #[test]

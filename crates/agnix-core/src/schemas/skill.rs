@@ -181,7 +181,27 @@ pub const KNOWN_SKILL_FRONTMATTER_FIELDS: &[&str] = &[
 ];
 
 /// Valid model aliases for skill frontmatter
-pub const VALID_MODEL_ALIASES: &[&str] = &["sonnet", "opus", "haiku", "inherit"];
+/// Model aliases accepted wherever Claude Code takes a model value.
+///
+/// Mirrors the alias table in the model-config reference (verified 2026-07-31):
+/// `default`, `best`, `fable`, `sonnet`, `opus`, `haiku`, `opusplan`, plus the
+/// 1M-context forms `sonnet[1m]`/`opus[1m]`. `inherit` is additionally valid in
+/// skill and agent frontmatter, where it means "keep the active model".
+///
+/// Shared with the agent validator (CC-AG-003) via `agent.rs`, so both stay in
+/// lock-step - `fable` and the rest were missing from both lists.
+pub const VALID_MODEL_ALIASES: &[&str] = &[
+    "default",
+    "best",
+    "fable",
+    "sonnet",
+    "opus",
+    "haiku",
+    "opusplan",
+    "sonnet[1m]",
+    "opus[1m]",
+    "inherit",
+];
 
 /// Check whether a model value is valid.
 pub fn is_valid_skill_model(model: &str) -> bool {

@@ -12,7 +12,7 @@ use crate::{
         SkillSchema, VALID_EFFORT_LEVELS, VALID_SHELLS, deserialize_optional_bool_alias,
         is_bool_alias_value, is_valid_skill_model, parse_skill_name_parts,
     },
-    validation::is_valid_mcp_tool_format,
+    validation::{is_valid_mcp_tool_format, split_tool_list},
 };
 use regex::Regex;
 use rust_i18n::t;
@@ -180,43 +180,6 @@ fn collapse_skill_name_hyphens(name: &str) -> String {
             .replace_all(parts.skill, "-")
             .to_string(),
     }
-}
-
-fn push_allowed_tool_token<'a>(
-    tokens: &mut Vec<&'a str>,
-    tools: &'a str,
-    start: usize,
-    end: usize,
-) {
-    let token = tools[start..end].trim();
-    if !token.is_empty() {
-        tokens.push(token);
-    }
-}
-
-fn split_allowed_tools(tools: &str) -> Vec<&str> {
-    let mut tokens = Vec::new();
-    let mut start = 0;
-    let mut paren_depth = 0usize;
-
-    for (idx, ch) in tools.char_indices() {
-        match ch {
-            '(' => paren_depth += 1,
-            ')' if paren_depth > 0 => paren_depth -= 1,
-            ',' if paren_depth == 0 => {
-                push_allowed_tool_token(&mut tokens, tools, start, idx);
-                start = idx + ch.len_utf8();
-            }
-            c if c.is_whitespace() && paren_depth == 0 => {
-                push_allowed_tool_token(&mut tokens, tools, start, idx);
-                start = idx + ch.len_utf8();
-            }
-            _ => {}
-        }
-    }
-
-    push_allowed_tool_token(&mut tokens, tools, start, tools.len());
-    tokens
 }
 
 /// Valid model description for CC-SK-001 diagnostic messages
@@ -1090,7 +1053,7 @@ impl<'a> ValidationContext<'a> {
         let tool_list: Option<Vec<&str>> = schema
             .allowed_tools
             .as_ref()
-            .map(|tools| split_allowed_tools(tools));
+            .map(|tools| split_tool_list(tools));
 
         // CC-SK-007: Unrestricted Bash warning
         if self.config.is_rule_enabled("CC-SK-007") {
