@@ -720,8 +720,15 @@ fn xp009_blames_the_largest_file_not_every_sibling() {
             .map(|d| d.file.display().to_string())
             .collect::<Vec<_>>()
     );
+    // Structural check: on macOS a TempDir under /var resolves to /private/var,
+    // so comparing the parent against `temp.path()` fails for a reason unrelated
+    // to what this asserts. The root file is the one with no `pkgNN` component.
     assert!(
-        xp009[0].file.ends_with("AGENTS.md") && xp009[0].file.parent() == Some(temp.path()),
+        xp009[0].file.ends_with("AGENTS.md")
+            && !xp009[0]
+                .file
+                .components()
+                .any(|c| c.as_os_str().to_string_lossy().starts_with("pkg")),
         "the 30 KB root is the only edit that fixes every chain, got: {}",
         xp009[0].file.display()
     );
