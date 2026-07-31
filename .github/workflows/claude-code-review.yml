@@ -115,10 +115,10 @@ jobs:
           echo "This is review #$RUN_COUNT for PR #${PR_NUMBER} (${HEAD_REF} @ ${HEAD_SHA:0:8}, event: $EVENT_ACTION)"
 
           if [ "$RUN_COUNT" -le 3 ]; then
-            echo "should_run=true" >> $GITHUB_OUTPUT
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
             echo "[OK] Will run Claude review (review $RUN_COUNT of 3 for this PR)"
           else
-            echo "should_run=false" >> $GITHUB_OUTPUT
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
             echo "[SKIP] Skipping Claude review (already ran 3 times for this PR)"
           fi
 
