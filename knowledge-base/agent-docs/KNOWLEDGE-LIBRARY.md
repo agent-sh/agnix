@@ -59,7 +59,7 @@
 - Claude Code memory (`CLAUDE.md`)  
   https://docs.anthropic.com/en/docs/claude-code/memory
 - Codex CLI `AGENTS.md`  
-  https://developers.openai.com/codex/guides/agents-md/
+  https://learn.chatgpt.com/docs/agent-configuration/agents-md
 - OpenCode `AGENTS.md`
   https://opencode.ai/docs/rules/
 - Cursor rules (`.cursor/rules/*.mdc`)  

@@ -13,7 +13,7 @@ keywords: ["CDX-AG-003", "generic agents.md guidance for codex", "codex cli", "v
 - **Category**: `Codex CLI`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-07-31`
 
 ## Applicability
 
@@ -23,7 +23,7 @@ keywords: ["CDX-AG-003", "generic agents.md guidance for codex", "codex cli", "v
 
 ## Evidence Sources
 
-- https://developers.openai.com/codex/guides/agents-md
+- https://learn.chatgpt.com/docs/agent-configuration/agents-md
 
 ## Test Coverage Metadata
 

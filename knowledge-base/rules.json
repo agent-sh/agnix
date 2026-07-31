@@ -1,7 +1,7 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 443,
+  "total_rules": 442,
   "last_updated": "2026-07-31",
   "schema": {
     "evidence": {
@@ -53,11 +53,11 @@
       "evidence": {
         "source_type": "community",
         "source_urls": [
-          "https://developers.openai.com/codex/guides/agents-md",
+          "https://learn.chatgpt.com/docs/agent-configuration/agents-md",
           "https://cursor.com/docs/rules",
           "https://docs.cline.bot/prompting/cline-memory-bank#cline-memory-bank-custom-instructions-[copy-this]"
         ],
-        "verified_on": "2026-02-09",
+        "verified_on": "2026-07-31",
         "applies_to": {},
         "normative_level": "MUST",
         "tests": {
@@ -134,10 +134,10 @@
       "evidence": {
         "source_type": "community",
         "source_urls": [
-          "https://developers.openai.com/codex/guides/agents-md",
+          "https://learn.chatgpt.com/docs/agent-configuration/agents-md",
           "https://cursor.com/docs/rules"
         ],
-        "verified_on": "2026-02-04",
+        "verified_on": "2026-07-31",
         "applies_to": {},
         "normative_level": "BEST_PRACTICE",
         "tests": {
@@ -160,10 +160,10 @@
       "evidence": {
         "source_type": "community",
         "source_urls": [
-          "https://developers.openai.com/codex/guides/agents-md",
+          "https://learn.chatgpt.com/docs/agent-configuration/agents-md",
           "https://cursor.com/docs/rules"
         ],
-        "verified_on": "2026-02-04",
+        "verified_on": "2026-07-31",
         "applies_to": {},
         "normative_level": "SHOULD",
         "tests": {
@@ -186,11 +186,11 @@
       "evidence": {
         "source_type": "community",
         "source_urls": [
-          "https://developers.openai.com/codex/guides/agents-md",
+          "https://learn.chatgpt.com/docs/agent-configuration/agents-md",
           "https://docs.cline.bot/prompting/cline-memory-bank#cline-memory-bank-custom-instructions-[copy-this]",
           "https://github.blog/changelog/2025-08-28-copilot-coding-agent-now-supports-agents-md-custom-instructions/"
         ],
-        "verified_on": "2026-02-09",
+        "verified_on": "2026-07-31",
         "applies_to": {},
         "normative_level": "BEST_PRACTICE",
         "tests": {
@@ -3095,34 +3095,6 @@
       "bad_example": "---\nname: parallel-task\ndescription: Use when running tasks in parallel\ncontext: spawn\nagent: general-purpose\n---\nRun the task in a spawned context."
     },
     {
-      "id": "CC-SK-003",
-      "name": "Context Without Agent",
-      "severity": "HIGH",
-      "category": "claude-skills",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://code.claude.com/docs/en/skills"
-        ],
-        "verified_on": "2026-02-04",
-        "applies_to": {
-          "tool": "claude-code"
-        },
-        "normative_level": "MUST",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": true,
-        "fix_safety": "unsafe"
-      },
-      "good_example": "---\nname: sub-task\ndescription: Use when delegating work to a sub-agent\ncontext: fork\nagent: general-purpose\n---\nDelegate the task to a sub-agent.",
-      "bad_example": "---\nname: sub-task\ndescription: Use when delegating work to a sub-agent\ncontext: fork\n---\nDelegate the task to a sub-agent."
-    },
-    {
       "id": "CC-SK-004",
       "name": "Agent Without Context",
       "severity": "HIGH",
@@ -4410,9 +4382,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://developers.openai.com/codex/guides/agents-md/"
+          "https://learn.chatgpt.com/docs/agent-configuration/agents-md"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-07-31",
         "applies_to": {
           "tool": "codex"
         },
@@ -5105,9 +5077,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://developers.openai.com/codex/guides/agents-md"
+          "https://learn.chatgpt.com/docs/agent-configuration/agents-md"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-07-31",
         "applies_to": {
           "tool": "codex"
         },
@@ -5132,9 +5104,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://developers.openai.com/codex/guides/agents-md"
+          "https://learn.chatgpt.com/docs/agent-configuration/agents-md"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-07-31",
         "applies_to": {
           "tool": "codex"
         },
@@ -5174,9 +5146,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://developers.openai.com/codex/guides/agents-md"
+          "https://learn.chatgpt.com/docs/agent-configuration/agents-md"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-07-31",
         "applies_to": {
           "tool": "codex"
         },
@@ -5201,9 +5173,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://developers.openai.com/codex/guides/agents-md"
+          "https://learn.chatgpt.com/docs/agent-configuration/agents-md"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-07-31",
         "applies_to": {
           "tool": "codex"
         },
@@ -5228,9 +5200,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://developers.openai.com/codex/guides/agents-md"
+          "https://learn.chatgpt.com/docs/agent-configuration/agents-md"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-07-31",
         "applies_to": {
           "tool": "codex"
         },
@@ -5255,9 +5227,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://developers.openai.com/codex/guides/agents-md"
+          "https://learn.chatgpt.com/docs/agent-configuration/agents-md"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-07-31",
         "applies_to": {
           "tool": "codex"
         },
@@ -5282,9 +5254,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://developers.openai.com/codex/guides/agents-md"
+          "https://learn.chatgpt.com/docs/agent-configuration/agents-md"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-07-31",
         "applies_to": {
           "tool": "codex"
         },
@@ -7716,9 +7688,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://developers.openai.com/codex/guides/agents-md"
+          "https://learn.chatgpt.com/docs/agent-configuration/agents-md"
         ],
-        "verified_on": "2026-02-07",
+        "verified_on": "2026-07-31",
         "applies_to": {
           "tool": "codex"
         },
@@ -11427,10 +11399,10 @@
       "evidence": {
         "source_type": "community",
         "source_urls": [
-          "https://developers.openai.com/codex/guides/agents-md",
+          "https://learn.chatgpt.com/docs/agent-configuration/agents-md",
           "https://cursor.com/docs/rules"
         ],
-        "verified_on": "2026-02-04",
+        "verified_on": "2026-07-31",
         "applies_to": {},
         "normative_level": "MUST",
         "tests": {
@@ -11453,13 +11425,13 @@
       "evidence": {
         "source_type": "community",
         "source_urls": [
-          "https://developers.openai.com/codex/guides/agents-md",
+          "https://learn.chatgpt.com/docs/agent-configuration/agents-md",
           "https://opencode.ai/docs/rules",
           "https://cursor.com/docs/rules",
           "https://docs.cline.bot/prompting/cline-memory-bank#cline-memory-bank-custom-instructions-[copy-this]",
           "https://github.blog/changelog/2025-08-28-copilot-coding-agent-now-supports-agents-md-custom-instructions/"
         ],
-        "verified_on": "2026-02-09",
+        "verified_on": "2026-07-31",
         "applies_to": {},
         "normative_level": "SHOULD",
         "tests": {
@@ -11482,10 +11454,10 @@
       "evidence": {
         "source_type": "community",
         "source_urls": [
-          "https://developers.openai.com/codex/guides/agents-md",
+          "https://learn.chatgpt.com/docs/agent-configuration/agents-md",
           "https://cursor.com/docs/rules"
         ],
-        "verified_on": "2026-02-04",
+        "verified_on": "2026-07-31",
         "applies_to": {},
         "normative_level": "SHOULD",
         "tests": {
@@ -11508,10 +11480,10 @@
       "evidence": {
         "source_type": "community",
         "source_urls": [
-          "https://developers.openai.com/codex/guides/agents-md",
+          "https://learn.chatgpt.com/docs/agent-configuration/agents-md",
           "https://cursor.com/docs/rules"
         ],
-        "verified_on": "2026-02-04",
+        "verified_on": "2026-07-31",
         "applies_to": {},
         "normative_level": "SHOULD",
         "tests": {
@@ -11534,10 +11506,10 @@
       "evidence": {
         "source_type": "community",
         "source_urls": [
-          "https://developers.openai.com/codex/guides/agents-md",
+          "https://learn.chatgpt.com/docs/agent-configuration/agents-md",
           "https://cursor.com/docs/rules"
         ],
-        "verified_on": "2026-02-04",
+        "verified_on": "2026-07-31",
         "applies_to": {},
         "normative_level": "MUST",
         "tests": {
@@ -11560,10 +11532,10 @@
       "evidence": {
         "source_type": "community",
         "source_urls": [
-          "https://developers.openai.com/codex/guides/agents-md",
+          "https://learn.chatgpt.com/docs/agent-configuration/agents-md",
           "https://cursor.com/docs/rules"
         ],
-        "verified_on": "2026-02-04",
+        "verified_on": "2026-07-31",
         "applies_to": {},
         "normative_level": "SHOULD",
         "tests": {
@@ -11587,9 +11559,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://developers.openai.com/codex/guides/agents-md"
+          "https://learn.chatgpt.com/docs/agent-configuration/agents-md"
         ],
-        "verified_on": "2025-05-01",
+        "verified_on": "2026-07-31",
         "applies_to": {
           "tool": "codex"
         },
@@ -12816,7 +12788,7 @@
     },
     "claude-skills": {
       "prefix": "CC-SK",
-      "count": 21,
+      "count": 20,
       "description": "Claude Code Skills rules"
     },
     "claude-hooks": {

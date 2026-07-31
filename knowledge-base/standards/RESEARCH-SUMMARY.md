@@ -44,7 +44,7 @@ Establish the minimum set of factual, verifiable constraints required to maintai
 ## Sources Consulted (Official / Primary)
 
 - Claude Code memory: https://docs.anthropic.com/en/docs/claude-code/memory
-- Codex CLI AGENTS.md: https://developers.openai.com/codex/guides/agents-md/
+- Codex CLI AGENTS.md: https://learn.chatgpt.com/docs/agent-configuration/agents-md
 - OpenCode project docs: https://opencode.ai/docs/rules/
 - OpenCode config: https://opencode.ai/docs/config/
 - Cursor rules and AGENTS.md:

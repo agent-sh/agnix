@@ -5,8 +5,8 @@ use crate::{
     diagnostics::{Diagnostic, Fix},
     rules::{Validator, ValidatorMetadata},
     schemas::mcp::{
-        McpServerConfig, McpToolSchema, VALID_MCP_ANNOTATION_HINTS, VALID_MCP_CAPABILITY_KEYS,
-        VALID_MCP_SERVER_TYPES, extract_request_protocol_version,
+        CURRENT_MCP_PROTOCOL_VERSIONS, McpServerConfig, McpToolSchema, VALID_MCP_ANNOTATION_HINTS,
+        VALID_MCP_CAPABILITY_KEYS, VALID_MCP_SERVER_TYPES, extract_request_protocol_version,
         extract_response_protocol_version, is_initialize_message, is_initialize_response,
         validate_json_schema_structure,
     },
@@ -949,6 +949,33 @@ fn validate_jsonrpc_version(
     // So we don't report missing jsonrpc as an error
 }
 
+/// Whether a declared `protocolVersion` should be reported by MCP-008.
+///
+/// When a revision is pinned via `[spec_revisions] mcp_protocol`, the check is
+/// exact - the user asked for one revision. When nothing is pinned, any
+/// revision in [`CURRENT_MCP_PROTOCOL_VERSIONS`] is accepted: `2025-11-25` and
+/// `2026-07-28` are behaviorally incompatible rather than sequential, so both
+/// are legitimately current and demanding either one would just relocate the
+/// false positive onto configs written for the other.
+fn is_mcp_version_mismatch(actual: &str, expected: &str, version_pinned: bool) -> bool {
+    if version_pinned {
+        return actual != expected;
+    }
+    !CURRENT_MCP_PROTOCOL_VERSIONS.contains(&actual)
+}
+
+/// The value MCP-008 should name as expected.
+///
+/// A pinned revision names itself; unpinned names the full accepted set so the
+/// message does not claim a single revision is required when two are.
+fn mcp_expected_display(expected: &str, version_pinned: bool) -> String {
+    if version_pinned {
+        expected.to_string()
+    } else {
+        CURRENT_MCP_PROTOCOL_VERSIONS.join(" or ")
+    }
+}
+
 /// MCP-008: Validate protocol version matches expected version
 fn validate_protocol_version(
     value: &serde_json::Value,
@@ -959,11 +986,12 @@ fn validate_protocol_version(
 ) {
     let expected_version = config.get_mcp_protocol_version();
     let version_pinned = config.is_mcp_revision_pinned();
+    let expected_display = mcp_expected_display(expected_version, version_pinned);
 
     // Check initialize request
     if is_initialize_message(value) {
         if let Some(actual_version) = extract_request_protocol_version(value) {
-            if actual_version != expected_version {
+            if is_mcp_version_mismatch(&actual_version, expected_version, version_pinned) {
                 let (line, col) = find_json_field_location(content, "protocolVersion");
                 let mut diag = Diagnostic::warning(
                     path.to_path_buf(),
@@ -973,12 +1001,12 @@ fn validate_protocol_version(
                     t!(
                         "rules.mcp_008.message",
                         found = actual_version.as_str(),
-                        expected = expected_version
+                        expected = expected_display.as_str()
                     ),
                 )
                 .with_suggestion(t!(
                     "rules.mcp_008.request_suggestion",
-                    expected = expected_version
+                    expected = expected_display.as_str()
                 ));
 
                 if !version_pinned {
@@ -1010,7 +1038,7 @@ fn validate_protocol_version(
     // Check initialize response
     if is_initialize_response(value) {
         if let Some(actual_version) = extract_response_protocol_version(value) {
-            if actual_version != expected_version {
+            if is_mcp_version_mismatch(&actual_version, expected_version, version_pinned) {
                 let (line, col) = find_json_field_location(content, "protocolVersion");
                 let mut diag = Diagnostic::warning(
                     path.to_path_buf(),
@@ -1020,13 +1048,13 @@ fn validate_protocol_version(
                     t!(
                         "rules.mcp_008.message",
                         found = actual_version.as_str(),
-                        expected = expected_version
+                        expected = expected_display.as_str()
                     ),
                 )
                 .with_suggestion(t!(
                     "rules.mcp_008.response_suggestion",
                     found = actual_version.as_str(),
-                    expected = expected_version
+                    expected = expected_display.as_str()
                 ));
 
                 if !version_pinned {
@@ -2411,6 +2439,80 @@ mod tests {
         }"#;
         let diagnostics = validate_with_config(content, &config);
         assert!(!diagnostics.iter().any(|d| d.rule == "MCP-008"));
+    }
+
+    /// With no revision pinned, both current revisions are accepted.
+    /// `2026-07-28` is the current protocol version; `2025-11-25` remains valid
+    /// because the two are behaviorally incompatible rather than sequential.
+    #[test]
+    fn test_mcp_008_accepts_both_current_revisions_when_unpinned() {
+        for version in ["2025-11-25", "2026-07-28"] {
+            let content = format!(
+                r#"{{
+                "jsonrpc": "2.0",
+                "method": "initialize",
+                "id": 1,
+                "params": {{"protocolVersion": "{version}"}}
+            }}"#
+            );
+            let diagnostics = validate(&content);
+            let mcp_008: Vec<_> = diagnostics.iter().filter(|d| d.rule == "MCP-008").collect();
+            assert!(
+                mcp_008.is_empty(),
+                "revision '{version}' is current and must not be flagged when unpinned, got: {mcp_008:?}"
+            );
+        }
+    }
+
+    /// A revision outside the current set is still reported when unpinned, and
+    /// the message names the accepted set rather than one revision.
+    #[test]
+    fn test_mcp_008_flags_stale_revision_when_unpinned() {
+        let content = r#"{
+            "jsonrpc": "2.0",
+            "method": "initialize",
+            "id": 1,
+            "params": {"protocolVersion": "2024-11-05"}
+        }"#;
+        let diagnostics = validate(content);
+        let mcp_008: Vec<_> = diagnostics.iter().filter(|d| d.rule == "MCP-008").collect();
+        assert_eq!(
+            mcp_008.len(),
+            1,
+            "an out-of-date revision must still be flagged, got: {diagnostics:?}"
+        );
+        assert!(
+            mcp_008[0].message.contains("2025-11-25") && mcp_008[0].message.contains("2026-07-28"),
+            "unpinned message should name every accepted revision, got: {}",
+            mcp_008[0].message
+        );
+    }
+
+    /// Pinning one revision restores the exact check, so the other current
+    /// revision is reported against the pinned value.
+    #[test]
+    fn test_mcp_008_pinned_revision_is_exact() {
+        let mut config = LintConfig::default();
+        config.set_mcp_protocol_version(Some("2025-11-25".to_string()));
+
+        let content = r#"{
+            "jsonrpc": "2.0",
+            "method": "initialize",
+            "id": 1,
+            "params": {"protocolVersion": "2026-07-28"}
+        }"#;
+        let diagnostics = validate_with_config(content, &config);
+        let mcp_008: Vec<_> = diagnostics.iter().filter(|d| d.rule == "MCP-008").collect();
+        assert_eq!(
+            mcp_008.len(),
+            1,
+            "a pinned revision must be enforced exactly, got: {diagnostics:?}"
+        );
+        assert!(
+            mcp_008[0].message.contains("2025-11-25") && !mcp_008[0].message.contains(" or "),
+            "pinned message should name only the pinned revision, got: {}",
+            mcp_008[0].message
+        );
     }
 
     #[test]

@@ -52,9 +52,6 @@ rules:
   cc_sk_002:
     message: Invalid context '%{context}'. Must be 'fork' or omitted
     suggestion: Set context to 'fork' or remove the field entirely
-  cc_sk_003:
-    message: Context 'fork' requires an 'agent' field
-    suggestion: 'Add ''agent: general-purpose'' or another valid agent type'
   cc_sk_004:
     message: 'Agent field requires ''context: fork'''
     suggestion: 'Add ''context: fork'' to the frontmatter'

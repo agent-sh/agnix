@@ -51,9 +51,6 @@ rules:
   cc_sk_002:
     message: 无效上下文 '%{context}'。必须是 'fork' 或省略
     suggestion: 将 context 设置为 'fork' 或完全删除该字段
-  cc_sk_003:
-    message: 上下文 'fork' 需要 'agent' 字段
-    suggestion: '添加 ''agent: general-purpose'' 或其他有效的代理类型'
   cc_sk_004:
     message: 'agent 字段需要 ''context: fork'''
     suggestion: '在 frontmatter 中添加 ''context: fork'''

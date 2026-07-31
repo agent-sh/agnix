@@ -183,7 +183,7 @@ fn collapse_skill_name_hyphens(name: &str) -> String {
 }
 
 /// Valid model description for CC-SK-001 diagnostic messages
-const VALID_MODELS_DESC: &str = "sonnet, opus, haiku, inherit, or claude-*";
+const VALID_MODELS_DESC: &str = "default, best, fable, sonnet, opus, haiku, opusplan, sonnet[1m], opus[1m], inherit, or claude-*";
 
 /// Built-in agent types for CC-SK-005
 const BUILTIN_AGENTS: &[&str] = &["Explore", "Plan", "general-purpose"];
@@ -793,7 +793,7 @@ impl<'a> ValidationContext<'a> {
         }
     }
 
-    /// CC-SK-001, CC-SK-002, CC-SK-003, CC-SK-004: Model and context validation
+    /// CC-SK-001, CC-SK-002, CC-SK-004: Model and context validation
     fn validate_cc_model_context(&mut self, schema: &SkillSchema) {
         let (model_line, model_col) = self.frontmatter_key_line_col("model");
         let (context_line, context_col) = self.frontmatter_key_line_col("context");
@@ -859,33 +859,6 @@ impl<'a> ValidationContext<'a> {
                     self.diagnostics.push(diagnostic);
                 }
             }
-        }
-
-        // CC-SK-003: Context without agent
-        if self.config.is_rule_enabled("CC-SK-003")
-            && schema.context.as_deref() == Some("fork")
-            && schema.agent.is_none()
-        {
-            let mut diagnostic = Diagnostic::error(
-                self.path.to_path_buf(),
-                context_line,
-                context_col,
-                "CC-SK-003",
-                t!("rules.cc_sk_003.message"),
-            )
-            .with_suggestion(t!("rules.cc_sk_003.suggestion"));
-
-            // Unsafe auto-fix: add default agent when context is fork.
-            if let Some((_, context_line_end)) = self.frontmatter_key_line_byte_range("context") {
-                diagnostic = diagnostic.with_fix(Fix::insert(
-                    context_line_end,
-                    "agent: general-purpose\n",
-                    "Add required 'agent' for context: fork",
-                    false,
-                ));
-            }
-
-            self.diagnostics.push(diagnostic);
         }
 
         // CC-SK-004: Agent without context
@@ -1736,7 +1709,6 @@ const RULE_IDS: &[&str] = &[
     "AS-017",
     "CC-SK-001",
     "CC-SK-002",
-    "CC-SK-003",
     "CC-SK-004",
     "CC-SK-005",
     "CC-SK-006",
