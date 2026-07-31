@@ -35,6 +35,9 @@ jobs:
       )
 
     runs-on: ubuntu-latest
+    # Bounded now that an @claude request can trigger a cargo build; the default
+    # is 6 hours.
+    timeout-minutes: 60
 
     permissions:
       contents: write
@@ -47,6 +50,19 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
+
+      # The cargo grant below is only usable with a toolchain and a warm cache.
+      # Granting `cargo test` without these makes running it cost a cold 6-crate
+      # build, which the model then rationally skips - "permitted but not usable"
+      # is the same failure this grant exists to fix.
+      - uses: dtolnay/rust-toolchain@4be9e76fd7c4901c61fb841f559994984270fce7 # stable
+        with:
+          components: clippy, rustfmt
+
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2
+        with:
+          shared-key: agnix-workspace
+          save-if: "false"
 
       - name: Run Claude Code
         uses: anthropics/claude-code-action@e0cf66d1d257526b5d07f141838c338921cb8455 # v1

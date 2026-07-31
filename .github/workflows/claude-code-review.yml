@@ -41,6 +41,10 @@ jobs:
           persist-credentials: false
 
       - uses: dtolnay/rust-toolchain@4be9e76fd7c4901c61fb841f559994984270fce7 # stable
+        with:
+          # Pinned like ci.yml rather than relying on the runner image, since
+          # `cargo clippy` is in the grant list below.
+          components: clippy, rustfmt
 
       # Restore ci.yml's cache via the shared key. Without it the first
       # `cargo test` cold-builds a 6-crate workspace, which is slow enough that
@@ -133,7 +137,7 @@ jobs:
           #     the baseline provides only the top-level comment tool.
           claude_args: |
             --model claude-opus-5
-            --allowedTools "WebFetch,WebSearch,Bash(cargo test:*),Bash(cargo clippy:*),Bash(node scripts/sync-rule-bookkeeping.js:*),mcp__github_inline_comment__create_inline_comment"
+            --allowedTools "WebFetch,WebSearch,Bash(cargo test:*),Bash(cargo clippy:*),Bash(cargo check:*),Bash(cargo build:*),Bash(node scripts/sync-rule-bookkeeping.js:*),Bash(python3 scripts/check-rule-counts.py:*),Bash(bash scripts/check-locale-sync.sh:*),mcp__github_inline_comment__create_inline_comment"
           prompt: |
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number }}

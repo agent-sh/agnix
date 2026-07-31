@@ -69,6 +69,14 @@ jobs:
         # from knowledge-base/rules.json.
         run: python3 scripts/check-rule-counts.py
 
+      - name: Locale sync check
+        if: matrix.os == 'ubuntu-latest'
+        # The i18n!() macro loads from each crate's own locales/ directory, so a
+        # diagnostic string edited only in the root copy silently never reaches
+        # the binary. Nothing gated this: the script existed but no workflow ran
+        # it.
+        run: bash scripts/check-locale-sync.sh
+
       - name: Schema sync check
         if: matrix.os == 'ubuntu-latest'
         # Fails if the committed .agnix.toml schema differs from the current
