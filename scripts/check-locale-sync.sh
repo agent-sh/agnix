@@ -39,11 +39,18 @@ root_non_yml=0
 for glob in "${LOCALE_GLOBS[@]}"; do
   for f in "${ROOT_LOCALES}"/$glob; do
     [ -f "$f" ] || continue
-    LOCALE_FILES+=("$(basename "$f")")
     case "$f" in
       *.yml) ;;
-      *) root_non_yml=$((root_non_yml + 1)) ;;
+      *)
+        # Counted but NOT enumerated: adding it to LOCALE_FILES would make the
+        # forward loop demand a copy in every crate, i.e. instruct the
+        # contributor to propagate the very deviation these globs exist to
+        # catch. The footer's advice is to rename it.
+        root_non_yml=$((root_non_yml + 1))
+        continue
+        ;;
     esac
+    LOCALE_FILES+=("$(basename "$f")")
   done
 done
 
@@ -138,8 +145,14 @@ if [ "$errors" -gt 0 ]; then
     echo "  cp crates/<crate>/locales/<locale>.yml ${ROOT_LOCALES}/"
   fi
 
-  # Always printed: the fan-out is the final step for every class above.
-  echo "Then fan the canonical copies out to every crate:"
+  # Always printed: the fan-out is the final step for every class above. Worded
+  # as a standalone instruction when it is the only step, since plain forward
+  # drift would otherwise open on "Then ..." with nothing before it.
+  if [ $((non_yml + root_non_yml + missing_from_root)) -gt 0 ]; then
+    echo "Then fan the canonical copies out to every crate:"
+  else
+    echo "Fan the canonical copies out to every crate:"
+  fi
   echo "  for d in${crate_targets}; do cp ${ROOT_LOCALES}/*.yml \"\$d\"; done"
   exit 1
 fi
