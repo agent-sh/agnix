@@ -6,12 +6,35 @@
 set -euo pipefail
 
 ROOT_LOCALES="locales"
+# Explicit floor: these three MUST have a locales/ directory, so a deleted one
+# is a failure rather than something a glob silently stops enumerating.
 CRATES=("crates/agnix-core" "crates/agnix-cli" "crates/agnix-lsp")
 
+# Discovery pass on top of the floor: a new crate that gains locales/ is checked
+# without editing this list. Union, so the floor keeps its failure mode.
+for discovered in crates/*/locales; do
+  [ -d "$discovered" ] || continue
+  crate_dir="${discovered%/locales}"
+  for known in "${CRATES[@]}"; do
+    [ "$known" = "$crate_dir" ] && continue 2
+  done
+  CRATES+=("$crate_dir")
+done
+
 # Dynamically discover locale files from root directory
+# rust-i18n loads YAML, JSON and TOML ("Use YAML (default), JSON or TOML format
+# for mapping localized text"), so restricting to *.yml would let a stray
+# fr.json in a crate be loaded by the macro while staying invisible here -
+# the same blind spot the reverse pass below exists to close.
+# docs/TRANSLATING.md mandates .yml; these extensions are checked so a
+# deviation fails loudly instead of silently.
+LOCALE_GLOBS=("*.yml" "*.yaml" "*.json" "*.toml")
+
 LOCALE_FILES=()
-for f in "${ROOT_LOCALES}"/*.yml; do
-  [ -f "$f" ] && LOCALE_FILES+=("$(basename "$f")")
+for glob in "${LOCALE_GLOBS[@]}"; do
+  for f in "${ROOT_LOCALES}"/$glob; do
+    [ -f "$f" ] && LOCALE_FILES+=("$(basename "$f")")
+  done
 done
 
 if [ ${#LOCALE_FILES[@]} -eq 0 ]; then
@@ -20,6 +43,8 @@ if [ ${#LOCALE_FILES[@]} -eq 0 ]; then
 fi
 
 errors=0
+# Counted separately: a crate-only file needs the opposite copy direction.
+missing_from_root=0
 
 for crate in "${CRATES[@]}"; do
   crate_locales="${crate}/locales"
@@ -48,20 +73,33 @@ for crate in "${CRATES[@]}"; do
   # otherwise be invisible, since the loop above only walks the root's files.
   # rust_i18n loads from the crate copy, so that file WOULD ship while the
   # canonical root copy silently lacked it.
-  for crate_file in "${crate_locales}"/*.yml; do
+  for glob in "${LOCALE_GLOBS[@]}"; do
+   for crate_file in "${crate_locales}"/$glob; do
     [ -f "$crate_file" ] || continue
     file="$(basename "$crate_file")"
     if [ ! -f "${ROOT_LOCALES}/${file}" ]; then
       echo "FAIL: ${crate_file} has no counterpart in ${ROOT_LOCALES}/ (add it there too; the root copy is canonical)"
       errors=$((errors + 1))
+      missing_from_root=$((missing_from_root + 1))
     fi
+   done
   done
 done
 
 if [ "$errors" -gt 0 ]; then
   echo ""
   echo "${errors} locale file(s) out of sync."
-  echo "Run: cp locales/*.yml crates/agnix-{core,cli,lsp}/locales/"
+  # Direction matters: the outward copy cannot fix a crate-only file, since it
+  # never creates the root copy. Printing only that hint sent a contributor who
+  # tripped the reverse check into a no-op and identical output on re-run.
+  if [ "$missing_from_root" -gt 0 ]; then
+    echo "For a file present in a crate but not in ${ROOT_LOCALES}/: copy it inward first,"
+    echo "  cp crates/<crate>/locales/<locale>.yml ${ROOT_LOCALES}/"
+    echo "then fan it back out to every crate:"
+  else
+    echo "Run:"
+  fi
+  echo "  cp locales/*.yml crates/agnix-{core,cli,lsp}/locales/"
   exit 1
 fi
 

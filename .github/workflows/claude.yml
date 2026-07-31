@@ -50,21 +50,28 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
-          # This workflow now compiles PR-authored code (build.rs and test code
-          # run under the cargo grant below), so it should not leave a usable
-          # `contents: write` token in the checkout's git config.
+          # Two separate points.
           #
-          # Scoped claim: this closes the git-config vector only. The action also
-          # passes the token into the CLI step's environment
+          # (1) Why it is here: this workflow now compiles PR-authored code
+          # (build.rs and test code run under the cargo grant below), so it
+          # should not leave a usable `contents: write` token in the checkout's
+          # git config. Scoped claim - this closes the git-config vector only.
+          # The action also passes the token into the CLI step's environment
           # (DEFAULT_WORKFLOW_TOKEN / OVERRIDE_GITHUB_TOKEN in its action.yml),
           # which cargo and therefore a PR's build.rs would inherit. What keeps
           # that acceptable is the author_association gate above: a trusted human
           # has to type @claude for any of this to run. Do not read this line as
-          # covering the whole threat model. Safe to drop:
-          # with `use_commit_signing: true` the action commits through GitHub's
-          # API rather than the git CLI - the action docs note it "cannot perform
-          # complex git operations like rebasing" for exactly that reason - so
-          # nothing here needs the persisted credential.
+          # covering the whole threat model.
+          #
+          # (2) Why it is safe: with `use_commit_signing: true` the action takes
+          # the API-signing path, so `useApiCommitSigning` is true and
+          # `configureGitAuth` is never called (src/modes/tag/index.ts:71,88) -
+          # nothing re-adds a token after checkout. Commits go through GitHub's
+          # API, which is why the action docs note that mode "cannot perform
+          # complex git operations like rebasing". Note the inversion: the review
+          # job sets the same flag but does NOT get a token-free checkout,
+          # because dropping `use_commit_signing` there puts it on the branch
+          # that does configure git auth.
           persist-credentials: false
 
       # The cargo grant below is only usable with a toolchain and a warm cache.
