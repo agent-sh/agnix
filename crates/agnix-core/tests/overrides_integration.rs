@@ -333,6 +333,59 @@ fn overrides_partial_agm006_no_cross_mention() {
     );
 }
 
+/// Regression for upstream issue #1277: `[[overrides]]` had no effect on any
+/// rule emitted by the skill validator (the whole AS-*/CC-SK-* family),
+/// because its internal `ValidationContext` stored the `&LintConfig` that
+/// `PerFileLintConfig` derefs to, dropping the per-file override layer before
+/// any `is_rule_enabled` call. Reported as Windows-specific but platform
+/// independent.
+#[test]
+fn overrides_suppress_skill_validator_rules() {
+    let temp = tempfile::TempDir::new().unwrap();
+    let skill_dir = temp.path().join("skills").join("picky");
+    fs::create_dir_all(&skill_dir).unwrap();
+    // `FooBarTool` is not a Claude Code tool, so CC-SK-008 fires.
+    fs::write(
+        skill_dir.join("SKILL.md"),
+        "---\nname: picky\ndescription: Use when testing per-file overrides on skills\nallowed-tools: Read, FooBarTool\n---\n\nBody\n",
+    )
+    .unwrap();
+
+    // Baseline: CC-SK-008 fires without an override.
+    let baseline =
+        validate_project(temp.path(), &LintConfig::default()).expect("validate_project (baseline)");
+    let baseline_hits: Vec<_> = baseline
+        .diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-SK-008")
+        .collect();
+    assert_eq!(
+        baseline_hits.len(),
+        1,
+        "baseline: expected CC-SK-008 for the unknown tool, got: {baseline_hits:?}"
+    );
+
+    let config = LintConfig::builder()
+        .overrides(vec![OverrideConfig {
+            paths: vec!["skills/picky/SKILL.md".to_string()],
+            disabled_rules: vec!["CC-SK-008".to_string()],
+        }])
+        .build()
+        .expect("valid config");
+
+    let result = validate_project(temp.path(), &config).expect("validate_project");
+
+    let hits: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-SK-008")
+        .collect();
+    assert!(
+        hits.is_empty(),
+        "override on `skills/picky/SKILL.md` must suppress CC-SK-008, got: {hits:?}"
+    );
+}
+
 /// Regression for project-level rule VER-001: per-file `[[overrides]]`
 /// must suppress VER-001 when the override targets the diagnostic's
 /// report path (`.agnix.toml` when present, project root otherwise).

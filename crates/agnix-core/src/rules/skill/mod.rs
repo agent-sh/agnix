@@ -1,7 +1,7 @@
 //! Skill file validation
 
 use crate::{
-    config::{LintConfig, PerFileLintConfig},
+    config::PerFileLintConfig,
     diagnostics::{Diagnostic, Fix},
     parsers::frontmatter::{FrontmatterParts, split_frontmatter},
     regex_util::static_regex,
@@ -226,17 +226,19 @@ const VALID_MODELS_DESC: &str = "sonnet, opus, haiku, inherit, or claude-*";
 const BUILTIN_AGENTS: &[&str] = &["Explore", "Plan", "general-purpose"];
 
 /// Known Claude Code tool names for CC-SK-008. Union of the current built-in
-/// tools reference (code.claude.com/docs/en/tools, verified 2026-05-24 - adds
-/// PowerShell, the Cron*/Team*/Worktree/MCP-resource tools, ScheduleWakeup,
-/// etc.) plus legacy/internal names kept for version tolerance. Alphabetized.
+/// tools reference (code.claude.com/docs/en/tools, verified 2026-07-31 - adds
+/// Artifact, EndConversation, ReportFindings, SendUserFile, and Workflow)
+/// plus legacy/internal names kept for version tolerance. Alphabetized.
 const KNOWN_TOOLS: &[&str] = &[
     "Agent",
+    "Artifact",
     "AskUserQuestion",
     "Bash",
     "CronCreate",
     "CronDelete",
     "CronList",
     "Edit",
+    "EndConversation",
     "EnterPlanMode",
     "EnterWorktree",
     "ExitPlanMode",
@@ -253,9 +255,11 @@ const KNOWN_TOOLS: &[&str] = &[
     "Read",
     "ReadMcpResourceTool",
     "RemoteTrigger",
+    "ReportFindings",
     "ScheduleWakeup",
     "SendMessage",
     "SendMessageTool",
+    "SendUserFile",
     "ShareOnboardingGuide",
     "Skill",
     "StatusBarMessageTool",
@@ -274,6 +278,7 @@ const KNOWN_TOOLS: &[&str] = &[
     "WaitForMcpServers",
     "WebFetch",
     "WebSearch",
+    "Workflow",
     "Write",
 ];
 
@@ -398,8 +403,13 @@ struct ValidationContext<'a> {
     path: &'a Path,
     /// Raw file content
     content: &'a str,
-    /// Lint configuration (rule enablement, filesystem access)
-    config: &'a LintConfig,
+    /// Per-file lint configuration view (rule enablement, filesystem access).
+    ///
+    /// This MUST stay a [`PerFileLintConfig`] rather than the `&LintConfig` it
+    /// derefs to: `is_rule_enabled` differs between the two, and storing the
+    /// bare config here silently dropped every `[[overrides]]` block for the
+    /// whole AS-*/CC-SK-* family (upstream issue #1277).
+    config: &'a PerFileLintConfig<'a>,
     /// Parsed frontmatter sections (header, body, byte positions)
     parts: FrontmatterParts,
     /// Byte offsets of line starts for position tracking
@@ -418,7 +428,7 @@ struct ValidationContext<'a> {
 }
 
 impl<'a> ValidationContext<'a> {
-    fn new(path: &'a Path, content: &'a str, config: &'a LintConfig) -> Self {
+    fn new(path: &'a Path, content: &'a str, config: &'a PerFileLintConfig<'a>) -> Self {
         let parts = split_frontmatter(content);
         let line_starts = compute_line_starts(content);
         let client = resolve_skill_client(path, config);

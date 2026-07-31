@@ -1692,6 +1692,96 @@ Body"#;
     );
 }
 
+/// The Claude Code permissions reference documents `mcp__<server>` and
+/// `mcp__<server>__*` as equivalent server-level MCP rules, so CC-SK-008 must
+/// accept both. Regression for the CC-SK-008 half of upstream issue #1277.
+#[test]
+fn test_cc_sk_008_mcp_server_only_form_valid() {
+    let content = r#"---
+name: test-skill
+description: Use when testing
+allowed-tools: Read, mcp__supabase-ssh, mcp__playwright, mcp__github__*
+---
+Body"#;
+
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(
+        Path::new(".claude/skills/test-skill/SKILL.md"),
+        content,
+        &LintConfig::default(),
+    );
+
+    let cc_sk_008: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-SK-008")
+        .collect();
+
+    assert!(
+        cc_sk_008.is_empty(),
+        "server-only MCP form `mcp__<server>` must be accepted, got: {cc_sk_008:?}"
+    );
+}
+
+/// The server segment names one configured server, so a glob there is still
+/// rejected even though the server-only form is now accepted.
+#[test]
+fn test_cc_sk_008_mcp_glob_in_server_segment_rejected() {
+    let content = r#"---
+name: test-skill
+description: Use when testing
+allowed-tools: Read, mcp__supabase-*, mcp__*
+---
+Body"#;
+
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(
+        Path::new(".claude/skills/test-skill/SKILL.md"),
+        content,
+        &LintConfig::default(),
+    );
+
+    let cc_sk_008: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-SK-008")
+        .collect();
+
+    assert_eq!(
+        cc_sk_008.len(),
+        2,
+        "a glob in the server segment must still be rejected, got: {cc_sk_008:?}"
+    );
+}
+
+/// `Workflow` and the other tools added to the built-in tools reference must
+/// not be flagged as unknown. Regression for the `Workflow` false positive
+/// reported in upstream issue #1277.
+#[test]
+fn test_cc_sk_008_recent_builtin_tools_accepted() {
+    let content = r#"---
+name: test-skill
+description: Use when testing
+allowed-tools: Workflow, Artifact, ReportFindings, SendUserFile, EndConversation
+---
+Body"#;
+
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(
+        Path::new(".claude/skills/test-skill/SKILL.md"),
+        content,
+        &LintConfig::default(),
+    );
+
+    let cc_sk_008: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-SK-008")
+        .collect();
+
+    assert!(
+        cc_sk_008.is_empty(),
+        "documented built-in tools must be accepted, got: {cc_sk_008:?}"
+    );
+}
+
 #[test]
 fn test_cc_sk_008_mcp_case_sensitive() {
     let content = r#"---

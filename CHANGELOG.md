@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **`[[overrides]]` had no effect on any skill rule**. Reported as Windows-specific path matching, but the platform was incidental: `SkillValidator`'s internal `ValidationContext` stored the `&LintConfig` that `PerFileLintConfig` derefs to, so the per-file override layer was discarded before any `is_rule_enabled` call. Every AS-* and CC-SK-* rule ignored `[[overrides]]` on all platforms, with no way to suppress one for a single file. The context now holds the per-file view, and an end-to-end regression test covers the case (closes #1277).
+- **CC-SK-008/CC-AG-009/CC-AG-010 rejected the documented server-only MCP form**. `mcp__playwright` errored while the doc-equivalent `mcp__playwright__*` passed, even though the permissions reference lists both as valid ways to name every tool from one server. Both forms are now accepted. A glob in the server segment (`mcp__supabase-*`, `mcp__*`) is still rejected, since a rule must name a specific configured server, and the tool segment may still glob (`mcp__github__get_*`).
+- **Unknown-tool false positives on current built-in tools**. `Workflow`, `Artifact`, `ReportFindings`, `SendUserFile`, and `EndConversation` are in the built-in tools reference but were missing from CC-SK-008's known-tools list. CC-AG-009/010's list was further behind - 26 documented tools absent, including the `Cron*`/`Task*` families, `PowerShell`, `LSP`, `ToolSearch`, and the worktree and MCP-resource tools - so a subagent declaring any of them failed. Tools that subagents never receive stay listed: Claude Code filters those from the resolved pool rather than rejecting the name.
+
 ## [0.42.0] - 2026-07-31
 
 ### Added

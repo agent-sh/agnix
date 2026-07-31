@@ -267,8 +267,8 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 <a id="cc-sk-008"></a>
 ### CC-SK-008 [HIGH] Unknown Tool Name
 **Requirement**: Tool names MUST match Claude Code tools. **Claude Code skills only** - other clients (Codex/OpenCode/…) have their own tool vocabularies, so this is scoped to the owning client.
-**Known Tools**: the current built-in set (code.claude.com/docs/en/tools, verified 2026-05-24) incl. `PowerShell`, `Agent`, `Cron*`, `Team*`, `EnterWorktree`/`ExitWorktree`, `ScheduleWakeup`, `ListMcpResourcesTool`/`ReadMcpResourceTool`, `WaitForMcpServers`, plus legacy names kept for tolerance
-**Detection**: skill client is Claude Code AND tool not in the set; MCP tools with lowercase `mcp__<server>__<tool>` format are accepted (case-sensitive prefix)
+**Known Tools**: the current built-in set (code.claude.com/docs/en/tools, verified 2026-07-31) incl. `PowerShell`, `Agent`, `Workflow`, `Artifact`, `ReportFindings`, `SendUserFile`, `EndConversation`, `Cron*`, `Team*`, `EnterWorktree`/`ExitWorktree`, `ScheduleWakeup`, `ListMcpResourcesTool`/`ReadMcpResourceTool`, `WaitForMcpServers`, plus legacy names kept for tolerance
+**Detection**: skill client is Claude Code AND tool not in the set; MCP tools are accepted in both documented forms - server-only `mcp__<server>` and fully qualified `mcp__<server>__<tool>` (case-sensitive lowercase prefix). The tool segment may glob (`mcp__github__get_*`); the server segment may not, since a rule must name one configured server
 **Fix**: Suggest closest match
 **Source**: code.claude.com/docs/en/tools
 
@@ -986,14 +986,14 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 <a id="cc-ag-009"></a>
 ### CC-AG-009 [HIGH] Invalid Tool Name in Tools List
 **Requirement**: Tool names in `tools` MUST match known Claude Code tools
-**Detection**: Check each tool name against known tools list; MCP tools with lowercase `mcp__<server>__<tool>` format are accepted (case-sensitive prefix)
+**Detection**: Check each tool name against known tools list; MCP tools are accepted in both documented forms - server-only `mcp__<server>` and fully qualified `mcp__<server>__<tool>` (case-sensitive lowercase prefix), with globs allowed in the tool segment only
 **Fix**: Use a known Claude Code tool name
 **Source**: code.claude.com/docs/en/sub-agents
 
 <a id="cc-ag-010"></a>
 ### CC-AG-010 [HIGH] Invalid Tool Name in DisallowedTools
 **Requirement**: Tool names in `disallowedTools` MUST match known Claude Code tools
-**Detection**: Check each disallowed tool name against known tools list; MCP tools with lowercase `mcp__<server>__<tool>` format are accepted (case-sensitive prefix)
+**Detection**: Check each disallowed tool name against known tools list; MCP tools are accepted in both documented forms - server-only `mcp__<server>` and fully qualified `mcp__<server>__<tool>` (case-sensitive lowercase prefix), with globs allowed in the tool segment only
 **Fix**: Use a known Claude Code tool name
 **Source**: code.claude.com/docs/en/sub-agents
 

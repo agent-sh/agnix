@@ -103,29 +103,64 @@ const KNOWN_AGENT_FIELDS: &[&str] = &[
     "color",
 ];
 
-/// Known Claude Code tools for CC-AG-009 and CC-AG-010
+/// Known Claude Code tools for CC-AG-009 and CC-AG-010.
+///
+/// Mirrors the built-in tools reference (code.claude.com/docs/en/tools,
+/// verified 2026-07-31) plus legacy/internal names kept for version
+/// tolerance. Alphabetized.
+///
+/// Tools that subagents never receive (`AskUserQuestion`, `Workflow`,
+/// `ScheduleWakeup`, …) stay listed here: per the sub-agents reference those
+/// are silently filtered from the resolved pool rather than rejected as
+/// unknown names, so flagging them under CC-AG-009/010 would be wrong.
 const KNOWN_AGENT_TOOLS: &[&str] = &[
     "Agent",
-    "Bash",
-    "Read",
-    "Write",
-    "Edit",
-    "Grep",
-    "Glob",
-    "Task",
-    "WebFetch",
-    "WebSearch",
+    "Artifact",
     "AskUserQuestion",
-    "TodoRead",
-    "TodoWrite",
+    "Bash",
+    "CronCreate",
+    "CronDelete",
+    "CronList",
+    "Edit",
+    "EndConversation",
+    "EnterPlanMode",
+    "EnterWorktree",
+    "ExitPlanMode",
+    "ExitWorktree",
+    "Glob",
+    "Grep",
+    "LSP",
+    "ListMcpResourcesTool",
+    "Monitor",
     "MultiTool",
     "NotebookEdit",
-    "EnterPlanMode",
-    "ExitPlanMode",
+    "PowerShell",
+    "PushNotification",
+    "Read",
+    "ReadMcpResourceTool",
+    "RemoteTrigger",
+    "ReportFindings",
+    "ScheduleWakeup",
+    "SendMessage",
+    "SendUserFile",
+    "ShareOnboardingGuide",
     "Skill",
     "StatusBarMessageTool",
+    "Task",
+    "TaskCreate",
+    "TaskGet",
+    "TaskList",
     "TaskOutput",
-    "Monitor",
+    "TaskStop",
+    "TaskUpdate",
+    "TodoRead",
+    "TodoWrite",
+    "ToolSearch",
+    "WaitForMcpServers",
+    "WebFetch",
+    "WebSearch",
+    "Workflow",
+    "Write",
 ];
 
 const RULE_IDS: &[&str] = &[
@@ -2894,15 +2929,17 @@ Agent instructions"#;
 
     #[test]
     fn test_cc_ag_009_mcp_tool_invalid_formats() {
-        // Test various invalid MCP formats
+        // Test various invalid MCP formats. `mcp__server` is NOT here: the
+        // sub-agents reference documents the server-only form as valid, so it
+        // is covered by test_cc_ag_009_mcp_server_only_form_accepted below.
         let content = r#"---
 name: my-agent
 description: A test agent
 tools:
   - Read
   - mcp__
-  - mcp__server
   - mcp__bad name
+  - mcp__supabase-*
   - MCP__server__tool
 ---
 Agent instructions"#;
@@ -2912,8 +2949,72 @@ Agent instructions"#;
             .iter()
             .filter(|d| d.rule == "CC-AG-009")
             .collect();
-        // Should flag: mcp__, mcp__server, mcp__bad name, MCP__server__tool (uppercase)
+        // Should flag: mcp__, mcp__bad name, mcp__supabase-* (glob in the
+        // server segment), MCP__server__tool (uppercase prefix)
         assert_eq!(cc_ag_009.len(), 4, "Invalid MCP formats should be rejected");
+    }
+
+    /// The sub-agents reference documents `mcp__<server>` and
+    /// `mcp__<server>__*` as equivalent server-level patterns for both
+    /// `tools` and `disallowedTools`, so neither may be flagged. Regression
+    /// for the CC-AG-009/010 half of upstream issue #1277.
+    #[test]
+    fn test_cc_ag_009_mcp_server_only_form_accepted() {
+        let content = r#"---
+name: my-agent
+description: A test agent
+tools:
+  - Read
+  - mcp__supabase-ssh
+  - mcp__playwright__*
+disallowedTools:
+  - mcp__github
+---
+Agent instructions"#;
+
+        let diagnostics = validate(content);
+        let tool_name_hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-AG-009" || d.rule == "CC-AG-010")
+            .collect();
+        assert!(
+            tool_name_hits.is_empty(),
+            "server-only MCP form must be accepted in tools and disallowedTools, got: {tool_name_hits:?}"
+        );
+    }
+
+    /// `Workflow` and the other tools added to the built-in tools reference
+    /// must not be flagged as unknown. Subagents never receive `Workflow`,
+    /// but Claude Code filters it from the resolved pool rather than
+    /// rejecting the name, so CC-AG-009 must stay silent.
+    #[test]
+    fn test_cc_ag_009_recent_builtin_tools_accepted() {
+        let content = r#"---
+name: my-agent
+description: A test agent
+tools:
+  - Workflow
+  - ToolSearch
+  - Artifact
+  - ReportFindings
+  - SendUserFile
+  - EndConversation
+  - PowerShell
+  - LSP
+  - TaskCreate
+  - EnterWorktree
+---
+Agent instructions"#;
+
+        let diagnostics = validate(content);
+        let cc_ag_009: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-AG-009")
+            .collect();
+        assert!(
+            cc_ag_009.is_empty(),
+            "documented built-in tools must be accepted, got: {cc_ag_009:?}"
+        );
     }
 
     #[test]
