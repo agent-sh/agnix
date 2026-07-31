@@ -7,7 +7,7 @@ on:
       - 'website/**'
       - 'knowledge-base/rules.json'
       - 'scripts/generate-docs-rules.py'
-      - '.github/workflows/docs-site.yml'
+      - '.github/workflows/**'
       - 'crates/agnix-cli/tests/docs_website_parity.rs'
       - 'crates/agnix-wasm/**'
       - 'crates/agnix-core/**'
@@ -18,7 +18,7 @@ on:
       - 'website/**'
       - 'knowledge-base/rules.json'
       - 'scripts/generate-docs-rules.py'
-      - '.github/workflows/docs-site.yml'
+      - '.github/workflows/**'
       - 'crates/agnix-cli/tests/docs_website_parity.rs'
       - 'crates/agnix-wasm/**'
       - 'crates/agnix-core/**'
@@ -48,8 +48,16 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Lint workflow files
         uses: rhysd/actionlint@914e7df21a07ef503a81201c76d2b11c789d3fca # v1.7.12
-        with:
-          args: .github/workflows/docs-site.yml
+        # No `args`: with none, actionlint discovers and checks every workflow
+        # under .github/workflows. Two things were needed for this step to gate
+        # workflow changes at all: dropping the `args: docs-site.yml` pin, and
+        # widening this workflow's own `paths:` filters to `.github/workflows/**`
+        # so a PR touching only another workflow actually triggers it. Note a
+        # directory argument does NOT work
+        # ("read .github/workflows/: is a directory") - verified locally with
+        # v1.7.12, which is also why this is a no-arg invocation rather than a
+        # widened path. actionlint runs shellcheck over `run:` blocks, so this
+        # covers the shell in those steps too.
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: '20'

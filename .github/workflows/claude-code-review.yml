@@ -56,41 +56,79 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          PR_CREATED_AT: ${{ github.event.pull_request.created_at }}
           EVENT_ACTION: ${{ github.event.action }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           WORKFLOW_FILE="claude-code-review.yml"
 
-          RUN_COUNT=$(gh api \
+          # Scoped to THIS pull request, which needs three filters together.
+          # Filtering on head_sha (the original) made this a per-commit cap that
+          # reset on every push; filtering on branch alone is per-branch-NAME,
+          # which is not the same thing:
+          #   - branches are not deleted here (66 remote heads, including
+          #     recurring generated names), so a new PR reusing a name would
+          #     inherit its spent budget and get zero reviews, silently;
+          #   - `branch=` is not repo-qualified, so two fork PRs both on
+          #     `patch-1` would share one budget.
+          # `pull_requests[].number` looks like the right key but the API leaves
+          # it empty once a run's PR is no longer open, so it cannot be the
+          # filter. Branch + head repo + a created_at floor at the PR's own
+          # creation bounds it to this PR's lifetime.
+          #
+          # HEAD_REF is URL-encoded: `/` is fine unencoded but `+` would decode
+          # to a space and silently match nothing, switching the cap off.
+          HEAD_REF_ENC=$(printf '%s' "$HEAD_REF" | jq -sRr '@uri')
+
+          # `gh` runs on its own so its exit status is observable: piping into
+          # `awk` made `$?` the awk stage's, which always succeeds, so the
+          # previous numeric guard could never fire. A fail-open here resets the
+          # PR's whole budget rather than granting one extra review, so it has to
+          # be detectable.
+          if ! RUN_PAGES=$(gh api \
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            "repos/${REPO}/actions/workflows/${WORKFLOW_FILE}/runs?head_sha=${HEAD_SHA}&status=completed" \
-            --jq '[.workflow_runs[] | select(.event == "pull_request" and .conclusion == "success")] | length' || echo "")
-
-          RUN_COUNT=${RUN_COUNT:-0}
-          if ! echo "$RUN_COUNT" | grep -qE '^[0-9]+$'; then
-            echo "[WARN] Invalid RUN_COUNT value ('$RUN_COUNT') from GitHub API. Defaulting to 0."
+            --paginate \
+            "repos/${REPO}/actions/workflows/${WORKFLOW_FILE}/runs?branch=${HEAD_REF_ENC}&status=completed&created=%3E%3D${PR_CREATED_AT}&per_page=100" \
+            --jq "[.workflow_runs[]
+                   | select(.event == \"pull_request\"
+                            and .conclusion == \"success\"
+                            and .head_repository.full_name == \"${HEAD_REPO}\")]
+                  | length"); then
+            echo "[WARN] Could not read run history from the GitHub API; treating this as review 1."
             RUN_COUNT=0
+          else
+            # One count per page, summed. A mid-pagination failure under-counts
+            # and so fails open, which the warning above cannot catch - the
+            # 3-review cap is a cost guard, not a correctness one, so failing
+            # open is the right direction.
+            RUN_COUNT=$(printf '%s\n' "$RUN_PAGES" | awk '{total += $1} END {print total + 0}')
           fi
 
           RUN_COUNT=$((RUN_COUNT + 1))
 
-          # Note this counts SUCCESSFUL runs for THIS commit: the API query
-          # filters on head_sha, so the cap resets on every push. Filtering on
-          # `conclusion == "success"` matters because the concurrency group
-          # cancels superseded runs, a cancelled run reports
-          # `status=completed`, and non-push events (draft -> ready_for_review,
-          # close/reopen) fire on the same sha - so cancellations would
-          # otherwise burn budget slots without ever producing a review. In-flight
-          # runs are still uncounted; the concurrency group prevents overlap.
-          echo "This is run #$RUN_COUNT for commit ${HEAD_SHA:0:8} (event: $EVENT_ACTION)"
+          # Counts SUCCESSFUL runs across the whole PR. `conclusion == "success"`
+          # matters because the concurrency group cancels superseded runs and a
+          # cancelled run still reports `status=completed`, so cancellations would
+          # otherwise burn budget without producing a review. In-flight runs are
+          # uncounted; the concurrency group prevents overlap.
+          #
+          # Known imprecision: a run that skipped also concludes `success`, so it
+          # feeds this count. Once the cap is reached the number keeps climbing
+          # and the log line overstates how many reviews actually happened. It
+          # does not affect the gate - past the cap the decision is the same
+          # either way - and separating them would mean reading each run's job
+          # steps, which is a request per run.
+          echo "This is review #$RUN_COUNT for PR #${PR_NUMBER} (${HEAD_REF} @ ${HEAD_SHA:0:8}, event: $EVENT_ACTION)"
 
           if [ "$RUN_COUNT" -le 3 ]; then
-            echo "should_run=true" >> $GITHUB_OUTPUT
-            echo "[OK] Will run Claude review (run $RUN_COUNT of 3 for this commit)"
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "[OK] Will run Claude review (review $RUN_COUNT of 3 for this PR)"
           else
-            echo "should_run=false" >> $GITHUB_OUTPUT
-            echo "[SKIP] Skipping Claude review (already ran 3 times for this commit)"
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            echo "[SKIP] Skipping Claude review (already ran 3 times for this PR)"
           fi
 
       # Toolchain and cache come after the run-count gate: both are pointless
@@ -190,6 +228,33 @@ jobs:
             clippy already gate those. Report only what a maintainer would act on,
             and say so plainly if the diff looks correct.
 
+            **Be exhaustive in one pass.** You get at most 3 reviews per PR, so
+            this may be the only one. For every problem you find, before
+            reporting it, search the diff and the files it touches for every
+            other instance of the same class and report them together as one
+            finding. Do not report one instance and stop.
+
+            Concretely, if you find:
+
+            - a list or allowlist missing an entry, check whether the parallel
+              lists elsewhere are missing it too, and whether that list is
+              missing anything else
+            - a message, comment, or doc line that contradicts the code it
+              describes, grep for the other places making the same claim
+            - a check that handles one direction, ask what the opposite
+              direction does
+            - a fix applied in one file, check whether its sibling files need it
+
+            A finding that says "and the same applies at X, Y, Z" is worth far
+            more than three rounds discovering X, then Y, then Z. If you fix one
+            corner of a class and leave the others, the next push spends another
+            of the three reviews on the same bug.
+
+            State your confidence and how you verified each finding. If you
+            could not verify something - a tool was unavailable, a fixture was
+            impractical - say so explicitly rather than presenting inference as
+            measurement, and say what would close the gap.
+
             Use inline comments for specific lines; one top-level comment for
             overall assessment.
 
@@ -198,5 +263,20 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
         run: |
-          gh pr comment "$PR_NUMBER" --body "[INFO] Claude Code review was skipped as it has already run 3 times for this commit."
+          # Post at most once per PR. Per-commit, this branch was effectively
+          # unreachable because any push reset the counter; per-PR the counter is
+          # monotonic, so without this check every later push would add another
+          # identical comment for the life of the PR. #1290 would have collected
+          # roughly ten.
+          MARKER="<!-- claude-review-cap-notice -->"
+
+          if gh api --paginate "repos/${REPO}/issues/${PR_NUMBER}/comments" \
+               --jq '.[].body' 2>/dev/null | grep -qF "$MARKER"; then
+            echo "[SKIP] Cap notice already posted on PR #${PR_NUMBER}; not repeating it."
+            exit 0
+          fi
+
+          gh pr comment "$PR_NUMBER" --body "${MARKER}
+          [INFO] Claude Code review has already run 3 times for this pull request, so further pushes will not be reviewed automatically. Comment \`@claude\` to request another look."
