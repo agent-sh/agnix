@@ -1,7 +1,7 @@
 # Rules Reference
 
-This section contains all `444` validation rules generated from `knowledge-base/rules.json`.
-`126` rules have automatic fixes.
+This section contains all `443` validation rules generated from `knowledge-base/rules.json`.
+`125` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
 |------|------|----------|----------|----------|
@@ -66,7 +66,6 @@ This section contains all `444` validation rules generated from `knowledge-base/
 | [CC-HK-016](./generated/cc-hk-016.md) | Validate Hook Type Agent | HIGH | Claude Hooks | Yes (unsafe) |
 | [CC-HK-017](./generated/cc-hk-017.md) | Prompt/Agent Hook Missing $ARGUMENTS | MEDIUM | Claude Hooks | Yes (safe) |
 | [CC-HK-018](./generated/cc-hk-018.md) | Matcher on Ignored Event | LOW | Claude Hooks | Yes (safe) |
-| [CC-HK-019](./generated/cc-hk-019.md) | Deprecated Setup Event | MEDIUM | Claude Hooks | Yes (unsafe) |
 | [CC-HK-020](./generated/cc-hk-020.md) | HTTP Hook Missing URL | HIGH | Claude Hooks | No |
 | [CC-HK-021](./generated/cc-hk-021.md) | Invalid If Field | MEDIUM | Claude Hooks | No |
 | [CC-HK-022](./generated/cc-hk-022.md) | Invalid Shell Value | MEDIUM | Claude Hooks | Yes (unsafe) |

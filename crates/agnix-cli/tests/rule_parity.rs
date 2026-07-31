@@ -970,6 +970,63 @@ fn test_autofix_count_matches_documentation() {
     );
 }
 
+/// Every rule ID listed in `.github/spec-baselines.json` must exist in
+/// `knowledge-base/rules.json`.
+///
+/// The Spec Drift Sentinel reads those lists to tell a maintainer which rules
+/// to review when an upstream doc changes, and it renders them straight into
+/// the drift issue. Nothing validated them, so the file accumulated 15 rule IDs
+/// that never existed in this repo: `CC-SA-001`..`007` (the real subagent rules
+/// are `CC-AG-*`), `GH-001`..`004` (really `COP-*`), and `CLINE-001`..`003`
+/// (really `CLN-*`/`CL-SK-*`), plus `AS-014` which was deliberately removed in
+/// PR #979. A drift issue naming rules that cannot be looked up sends the
+/// reviewer nowhere.
+#[test]
+fn test_spec_baseline_rule_ids_exist() {
+    #[derive(Deserialize)]
+    struct Baselines {
+        sources: HashMap<String, HashMap<String, BaselineSource>>,
+    }
+    #[derive(Deserialize)]
+    struct BaselineSource {
+        #[serde(default)]
+        rules: Vec<String>,
+    }
+
+    let path = workspace_root().join(".github/spec-baselines.json");
+    let content = fs::read_to_string(&path)
+        .unwrap_or_else(|e| panic!("Failed to read {}: {}", path.display(), e));
+    let baselines: Baselines = serde_json::from_str(&content)
+        .unwrap_or_else(|e| panic!("Failed to parse {}: {}", path.display(), e));
+
+    let known: BTreeSet<String> = load_rules_json()
+        .rules
+        .into_iter()
+        .map(|rule| rule.id)
+        .collect();
+
+    let mut unknown: Vec<String> = Vec::new();
+    for (tier, sources) in &baselines.sources {
+        for (source, entry) in sources {
+            for rule_id in &entry.rules {
+                if !known.contains(rule_id) {
+                    unknown.push(format!("{tier}/{source}: {rule_id}"));
+                }
+            }
+        }
+    }
+    unknown.sort();
+
+    assert!(
+        unknown.is_empty(),
+        "spec-baselines.json references {} rule ID(s) absent from rules.json:\n  {}\n\n\
+         Fix the mapping (or drop the ID if the rule was removed) so drift issues \
+         point at rules that exist.",
+        unknown.len(),
+        unknown.join("\n  ")
+    );
+}
+
 #[test]
 fn test_is_tool_alias_case_sensitivity() {
     // Test that tool alias matching is case insensitive
