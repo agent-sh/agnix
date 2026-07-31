@@ -69,9 +69,10 @@ jobs:
           # nothing re-adds a token after checkout. Commits go through GitHub's
           # API, which is why the action docs note that mode "cannot perform
           # complex git operations like rebasing". Note the inversion: the review
-          # job sets the same flag but does NOT get a token-free checkout,
-          # because dropping `use_commit_signing` there puts it on the branch
-          # that does configure git auth.
+          # job carries this same `persist-credentials: false` line but does NOT
+          # end up with a token-free checkout, because dropping
+          # `use_commit_signing` there puts it on the branch that does configure
+          # git auth.
           persist-credentials: false
 
       # The cargo grant below is only usable with a toolchain and a warm cache.

@@ -45,6 +45,8 @@ fi
 errors=0
 # Counted separately: a crate-only file needs the opposite copy direction.
 missing_from_root=0
+# Counted separately: a non-.yml locale needs a rename, not a copy.
+non_yml=0
 
 for crate in "${CRATES[@]}"; do
   crate_locales="${crate}/locales"
@@ -74,15 +76,19 @@ for crate in "${CRATES[@]}"; do
   # rust_i18n loads from the crate copy, so that file WOULD ship while the
   # canonical root copy silently lacked it.
   for glob in "${LOCALE_GLOBS[@]}"; do
-   for crate_file in "${crate_locales}"/$glob; do
-    [ -f "$crate_file" ] || continue
-    file="$(basename "$crate_file")"
-    if [ ! -f "${ROOT_LOCALES}/${file}" ]; then
-      echo "FAIL: ${crate_file} has no counterpart in ${ROOT_LOCALES}/ (add it there too; the root copy is canonical)"
-      errors=$((errors + 1))
-      missing_from_root=$((missing_from_root + 1))
-    fi
-   done
+    for crate_file in "${crate_locales}"/$glob; do
+      [ -f "$crate_file" ] || continue
+      file="$(basename "$crate_file")"
+      if [ ! -f "${ROOT_LOCALES}/${file}" ]; then
+        echo "FAIL: ${crate_file} has no counterpart in ${ROOT_LOCALES}/ (add it there too; the root copy is canonical)"
+        errors=$((errors + 1))
+        missing_from_root=$((missing_from_root + 1))
+        case "$crate_file" in
+          *.yml) ;;
+          *) non_yml=$((non_yml + 1)) ;;
+        esac
+      fi
+    done
   done
 done
 
@@ -92,14 +98,30 @@ if [ "$errors" -gt 0 ]; then
   # Direction matters: the outward copy cannot fix a crate-only file, since it
   # never creates the root copy. Printing only that hint sent a contributor who
   # tripped the reverse check into a no-op and identical output on re-run.
-  if [ "$missing_from_root" -gt 0 ]; then
+  # Derived from CRATES, not hardcoded: the discovery pass can add a crate, and
+  # a literal list here would silently exclude it from the advice while the gate
+  # still checked it.
+  crate_targets=""
+  for crate in "${CRATES[@]}"; do
+    crate_targets="${crate_targets} ${crate}/locales/"
+  done
+
+  if [ "$non_yml" -gt 0 ]; then
+    # A non-.yml locale is a convention violation, not a sync problem. Telling
+    # the contributor to propagate it would spread the deviation; the fix is a
+    # rename. See docs/TRANSLATING.md.
+    echo "A locale file uses an extension other than .yml. Rename it, e.g."
+    echo "  mv crates/<crate>/locales/<locale>.json crates/<crate>/locales/<locale>.yml"
+    echo "then make sure ${ROOT_LOCALES}/ has the canonical copy and fan it out."
+  elif [ "$missing_from_root" -gt 0 ]; then
     echo "For a file present in a crate but not in ${ROOT_LOCALES}/: copy it inward first,"
     echo "  cp crates/<crate>/locales/<locale>.yml ${ROOT_LOCALES}/"
     echo "then fan it back out to every crate:"
+    echo "  for d in${crate_targets}; do cp ${ROOT_LOCALES}/*.yml \"\$d\"; done"
   else
     echo "Run:"
+    echo "  for d in${crate_targets}; do cp ${ROOT_LOCALES}/*.yml \"\$d\"; done"
   fi
-  echo "  cp locales/*.yml crates/agnix-{core,cli,lsp}/locales/"
   exit 1
 fi
 
