@@ -43,6 +43,19 @@ for crate in "${CRATES[@]}"; do
       errors=$((errors + 1))
     fi
   done
+
+  # Reverse direction: a locale added to a crate but never to the root would
+  # otherwise be invisible, since the loop above only walks the root's files.
+  # rust_i18n loads from the crate copy, so that file WOULD ship while the
+  # canonical root copy silently lacked it.
+  for crate_file in "${crate_locales}"/*.yml; do
+    [ -f "$crate_file" ] || continue
+    file="$(basename "$crate_file")"
+    if [ ! -f "${ROOT_LOCALES}/${file}" ]; then
+      echo "FAIL: ${crate_file} has no counterpart in ${ROOT_LOCALES}/ (add it there too; the root copy is canonical)"
+      errors=$((errors + 1))
+    fi
+  done
 done
 
 if [ "$errors" -gt 0 ]; then

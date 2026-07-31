@@ -68,9 +68,17 @@ jobs:
           persist-credentials: false
 
       # The cargo grant below is only usable with a toolchain and a warm cache.
-      # Granting `cargo test` without these makes running it cost a cold 6-crate
-      # build, which the model then rationally skips - "permitted but not usable"
-      # is the same failure this grant exists to fix.
+      # Granting `cargo test` without these makes running it cost a cold build,
+      # which the model then rationally skips - "permitted but not usable" is the
+      # same failure this grant exists to fix.
+      #
+      # Deliberately ungated, unlike the two equivalent steps in
+      # claude-code-review.yml. An @claude request on a plain issue may still
+      # create a branch and commit code, and rule 7 ("not done until tests
+      # added") is why the grant exists - so predicting from `github.event_name`
+      # which requests will need cargo would fail silently in the one direction
+      # that matters. Paying toolchain setup on a prose-only question is the
+      # accepted price of the grant working everywhere.
       - uses: dtolnay/rust-toolchain@4be9e76fd7c4901c61fb841f559994984270fce7 # stable
         with:
           components: clippy, rustfmt
