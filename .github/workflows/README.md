@@ -40,7 +40,7 @@ actions/setup-node@v6.2.0:      6044e13b5dc448c55e2357c09f80417699197238
 actions/configure-pages@v5:    983d7736d9b0ae728b81ab479565c72886d7745b
 actions/upload-pages-artifact@v4.0.0: 7b1f4a764d45c48632c6b24a0339c27f5614fb0b
 actions/deploy-pages@v4:       d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e
-rhysd/actionlint@v1.7.1:       62dc61a45fc95efe8c800af7a557ab0b9165d63b
+rhysd/actionlint@v1.7.12:      914e7df21a07ef503a81201c76d2b11c789d3fca
 
 # Rust Tooling
 dtolnay/rust-toolchain@stable: 4be9e76fd7c4901c61fb841f559994984270fce7
@@ -63,7 +63,7 @@ softprops/action-gh-release@v2: a06a81a03ee405af7f2048a818ed3f03bbf83c7b
 huacnlee/zed-extension-action@v2: 8cd592a0d24e1e41157740f1a529aeabddc88a1b
 
 # Claude Code
-anthropics/claude-code-action@v1: 6867bb3ab0b2c0a10629b6823e457347e74ad6d2
+anthropics/claude-code-action@v1: e0cf66d1d257526b5d07f141838c338921cb8455
 ```
 
 ## Updating Action Versions

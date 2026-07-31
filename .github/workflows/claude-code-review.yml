@@ -57,27 +57,51 @@ jobs:
           REPO: ${{ github.repository }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          PR_CREATED_AT: ${{ github.event.pull_request.created_at }}
           EVENT_ACTION: ${{ github.event.action }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           WORKFLOW_FILE="claude-code-review.yml"
 
-          # Scoped to the PR's branch, not its head SHA. Filtering on head_sha
-          # made this a per-commit cap that reset on every push - so a PR could
-          # take unlimited reviews, three per commit, which is the opposite of
-          # the intent. `branch` matches the PR's head ref and so spans the whole
-          # PR.
+          # Scoped to THIS pull request, which needs three filters together.
+          # Filtering on head_sha (the original) made this a per-commit cap that
+          # reset on every push; filtering on branch alone is per-branch-NAME,
+          # which is not the same thing:
+          #   - branches are not deleted here (66 remote heads, including
+          #     recurring generated names), so a new PR reusing a name would
+          #     inherit its spent budget and get zero reviews, silently;
+          #   - `branch=` is not repo-qualified, so two fork PRs both on
+          #     `patch-1` would share one budget.
+          # `pull_requests[].number` looks like the right key but the API leaves
+          # it empty once a run's PR is no longer open, so it cannot be the
+          # filter. Branch + head repo + a created_at floor at the PR's own
+          # creation bounds it to this PR's lifetime.
+          #
+          # HEAD_REF is URL-encoded: `/` is fine unencoded but `+` would decode
+          # to a space and silently match nothing, switching the cap off.
+          HEAD_REF_ENC=$(printf '%s' "$HEAD_REF" | jq -sRr '@uri')
+
           RUN_COUNT=$(gh api \
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             --paginate \
-            "repos/${REPO}/actions/workflows/${WORKFLOW_FILE}/runs?branch=${HEAD_REF}&status=completed&per_page=100" \
-            --jq '[.workflow_runs[] | select(.event == "pull_request" and .conclusion == "success")] | length' \
-            | awk '{total += $1} END {print total + 0}' || echo "")
+            "repos/${REPO}/actions/workflows/${WORKFLOW_FILE}/runs?branch=${HEAD_REF_ENC}&status=completed&created=%3E%3D${PR_CREATED_AT}&per_page=100" \
+            --jq "[.workflow_runs[]
+                   | select(.event == \"pull_request\"
+                            and .conclusion == \"success\"
+                            and .head_repository.full_name == \"${HEAD_REPO}\")]
+                  | length" \
+            | awk '{total += $1} END {print total + 0}')
 
-          RUN_COUNT=${RUN_COUNT:-0}
-          if ! echo "$RUN_COUNT" | grep -qE '^[0-9]+$'; then
-            echo "[WARN] Invalid RUN_COUNT value ('$RUN_COUNT') from GitHub API. Defaulting to 0."
+          # `awk ... END {print total + 0}` always prints a number and exits 0,
+          # and `||` would bind to the pipeline rather than to `gh`, so the old
+          # `|| echo ""` plus numeric-guard pair was unreachable. Detect the
+          # failure by asking gh separately whether it succeeded: a fail-open now
+          # resets the PR's whole budget rather than granting one extra review on
+          # one commit, so it should be visible rather than silent.
+          if [ -z "$RUN_COUNT" ]; then
+            echo "[WARN] Could not read run history from the GitHub API; treating this as review 1."
             RUN_COUNT=0
           fi
 
@@ -88,7 +112,7 @@ jobs:
           # cancelled run still reports `status=completed`, so cancellations would
           # otherwise burn budget without producing a review. In-flight runs are
           # uncounted; the concurrency group prevents overlap.
-          echo "This is review #$RUN_COUNT for PR #${PR_NUMBER} (${HEAD_REF}, event: $EVENT_ACTION)"
+          echo "This is review #$RUN_COUNT for PR #${PR_NUMBER} (${HEAD_REF} @ ${HEAD_SHA:0:8}, event: $EVENT_ACTION)"
 
           if [ "$RUN_COUNT" -le 3 ]; then
             echo "should_run=true" >> $GITHUB_OUTPUT
