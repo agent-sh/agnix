@@ -18,6 +18,9 @@ jobs:
       github.event.pull_request.author_association)
 
     runs-on: ubuntu-latest
+    # A cargo build plus a review should never approach this; the bound is here
+    # so a hung run cannot hold the concurrency group indefinitely.
+    timeout-minutes: 30
 
     permissions:
       # `contents: read` is enough now that this job no longer commits: dropping
@@ -33,6 +36,21 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
+          # This job now runs `cargo test` on PR-authored code. Match ci.yml and
+          # do not leave a usable token in the checkout's git config.
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@4be9e76fd7c4901c61fb841f559994984270fce7 # stable
+
+      # Restore ci.yml's cache via the shared key. Without it the first
+      # `cargo test` cold-builds a 6-crate workspace, which is slow enough that
+      # the reviewer would skip running tests and fall back to reading them -
+      # putting prompt priorities 1 and 3 back where they started. Read-only:
+      # this job should consume ci.yml's cache, never publish its own.
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2
+        with:
+          shared-key: agnix-workspace
+          save-if: "false"
 
       - name: Check run count
         id: check-runs
@@ -49,7 +67,7 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "repos/${REPO}/actions/workflows/${WORKFLOW_FILE}/runs?head_sha=${HEAD_SHA}&status=completed" \
-            --jq '[.workflow_runs[] | select(.event == "pull_request")] | length' || echo "")
+            --jq '[.workflow_runs[] | select(.event == "pull_request" and .conclusion == "success")] | length' || echo "")
 
           RUN_COUNT=${RUN_COUNT:-0}
           if ! echo "$RUN_COUNT" | grep -qE '^[0-9]+$'; then
@@ -59,10 +77,14 @@ jobs:
 
           RUN_COUNT=$((RUN_COUNT + 1))
 
-          # Note this counts runs for THIS commit: the API query filters on
-          # head_sha, so the cap resets on every push. It also filters
-          # status=completed, so runs still in flight are not counted. The
-          # concurrency group above is what actually prevents overlap.
+          # Note this counts SUCCESSFUL runs for THIS commit: the API query
+          # filters on head_sha, so the cap resets on every push. Filtering on
+          # `conclusion == "success"` matters because the concurrency group
+          # cancels superseded runs, a cancelled run reports
+          # `status=completed`, and non-push events (draft -> ready_for_review,
+          # close/reopen) fire on the same sha - so cancellations would
+          # otherwise burn budget slots without ever producing a review. In-flight
+          # runs are still uncounted; the concurrency group prevents overlap.
           echo "This is run #$RUN_COUNT for commit ${HEAD_SHA:0:8} (event: $EVENT_ACTION)"
 
           if [ "$RUN_COUNT" -le 3 ]; then
