@@ -622,9 +622,12 @@ fn xp009_reports_a_single_deep_chain_once() {
         "a 42 KB root->api->v2 chain must be reported exactly once: {:?}",
         result.diagnostics
     );
+    // Compare structurally rather than against `temp.path()`: on macOS a
+    // TempDir under /var resolves to /private/var, so equality on the parent
+    // fails for a reason unrelated to what this asserts.
     assert!(
-        xp009[0].file.parent() == Some(temp.path()),
-        "with equal sizes the shallowest file is named, got: {}",
+        !xp009[0].file.components().any(|c| c.as_os_str() == "api"),
+        "with equal sizes the shallowest (root) file is named, got: {}",
         xp009[0].file.display()
     );
 }
