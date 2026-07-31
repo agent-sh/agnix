@@ -425,6 +425,8 @@ rules:
     message: 'Invalid excludeAgent value ''%{value}''. Valid values: ''code-review'', ''cloud-agent'''
     suggestion: Use 'code-review' or 'cloud-agent' for excludeAgent
     fix: Change excludeAgent to '%{fixed}'
+    legacy_coding_agent: "'coding-agent' is not a documented excludeAgent value - Copilot uses 'cloud-agent'. Accepted for compatibility with earlier agnix advice."
+    legacy_suggestion: Change 'coding-agent' to 'cloud-agent'
   cop_006:
     message: Copilot instruction file exceeds recommended length (%{len} characters, limit ~4000)
     suggestion: Reduce content length or split into scoped instruction files

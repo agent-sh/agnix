@@ -889,10 +889,32 @@ fn validate_cursor_environment_file(
                                 .with_suggestion(t!("rules.cur_016.suggestion")),
                             );
                         }
-                    } else if terminal.as_array().is_none() {
-                        // The `oneOf`'s other branch is an array of
-                        // command-bearing objects, so a nested list is valid
-                        // even though it reads oddly.
+                    } else if let Some(nested) = terminal.as_array() {
+                        // `terminals.items` is a `oneOf` whose first branch is an
+                        // array of command-bearing objects, so a nested list is
+                        // schema-valid. Its contents still have to hold up:
+                        // accepting the branch without checking inside let
+                        // `[[{"name": "x"}]]` pass with no `command`.
+                        for entry in nested {
+                            let ok = entry
+                                .as_object()
+                                .and_then(|obj| obj.get("command"))
+                                .and_then(JsonValue::as_str)
+                                .is_some();
+                            if !ok {
+                                diagnostics.push(
+                                    Diagnostic::error(
+                                        path_buf.clone(),
+                                        1,
+                                        0,
+                                        "CUR-016",
+                                        t!("rules.cur_016.terminal", index = index + 1),
+                                    )
+                                    .with_suggestion(t!("rules.cur_016.suggestion")),
+                                );
+                            }
+                        }
+                    } else {
                         diagnostics.push(
                             Diagnostic::error(
                                 path_buf.clone(),
@@ -2913,6 +2935,34 @@ Use strict mode.
         assert!(
             diagnostics.iter().any(|d| d.rule == "CUR-016"),
             "a terminal without `command` must be flagged, got: {diagnostics:?}"
+        );
+    }
+    /// `terminals.items` is a `oneOf`: an array of command-bearing objects, or a
+    /// single such object. Accepting the array branch without looking inside let
+    /// `[[{"name":"x"}]]` pass with no `command`.
+    #[test]
+    fn test_cur_016_nested_terminal_array_contents_are_validated() {
+        let ok = validate_cursor_environment(r#"{"terminals":[[{"command":"npm run dev"}]]}"#);
+        assert!(
+            ok.iter().all(|d| d.rule != "CUR-016"),
+            "the array branch is schema-valid, got: {ok:?}"
+        );
+
+        let bad = validate_cursor_environment(r#"{"terminals":[[{"name":"no command"}]]}"#);
+        assert!(
+            bad.iter().any(|d| d.rule == "CUR-016"),
+            "an entry inside the array branch still needs `command`, got: {bad:?}"
+        );
+    }
+
+    /// A terminal entry that is neither an object nor an array matches no `oneOf`
+    /// branch.
+    #[test]
+    fn test_cur_016_terminal_scalar_is_rejected() {
+        let diagnostics = validate_cursor_environment(r#"{"terminals":["npm run dev"]}"#);
+        assert!(
+            diagnostics.iter().any(|d| d.rule == "CUR-016"),
+            "a bare string matches no branch, got: {diagnostics:?}"
         );
     }
 }

@@ -1302,12 +1302,35 @@ impl Validator for CopilotValidator {
                 if let Some(ref agent_value) = schema.exclude_agent {
                     // The documented values are `code-review` and `cloud-agent`
                     // ("Use either `\"code-review\"` or `\"cloud-agent\"`").
-                    // `coding-agent` was never valid upstream; it is retained
-                    // here only so configs written against agnix's own previous
-                    // wrong advice keep validating, and it is deliberately last
-                    // so `find_closest_value` prefers the documented spelling.
-                    const VALID_AGENTS: &[&str] = &["code-review", "cloud-agent", "coding-agent"];
-                    if !VALID_AGENTS.contains(&agent_value.as_str()) {
+                    // Two lists, deliberately: `find_closest_value` also does
+                    // substring matching, so a single list containing the legacy
+                    // spelling let the autofix write `coding-agent` for an input
+                    // like `coding` - reintroducing the exact bug this rule was
+                    // fixed for, through a different input. Fix candidates must
+                    // contain only documented values.
+                    const DOCUMENTED_AGENTS: &[&str] = &["code-review", "cloud-agent"];
+                    // `coding-agent` was never valid upstream. Accepted without a
+                    // fix candidate so configs written against agnix's own
+                    // previous wrong advice keep validating.
+                    const ACCEPTED_AGENTS: &[&str] =
+                        &["code-review", "cloud-agent", "coding-agent"];
+                    // Accepted, but say so: a user who followed agnix's old
+                    // advice otherwise ships a file Copilot will not honor and
+                    // never hears about it.
+                    if agent_value.as_str() == "coding-agent" {
+                        diagnostics.push(
+                            Diagnostic::info(
+                                path.to_path_buf(),
+                                parsed.start_line + 1,
+                                0,
+                                "COP-005",
+                                t!("rules.cop_005.legacy_coding_agent"),
+                            )
+                            .with_suggestion(t!("rules.cop_005.legacy_suggestion")),
+                        );
+                    }
+
+                    if !ACCEPTED_AGENTS.contains(&agent_value.as_str()) {
                         // Find the line number of excludeAgent in raw frontmatter
                         let line = parsed
                             .raw
@@ -1328,7 +1351,7 @@ impl Validator for CopilotValidator {
 
                         // Unsafe auto-fix: replace with closest valid agent value
                         if let Some(closest) =
-                            super::find_closest_value(agent_value.as_str(), VALID_AGENTS)
+                            super::find_closest_value(agent_value.as_str(), DOCUMENTED_AGENTS)
                         {
                             if let Some((start, end)) = crate::rules::find_yaml_value_range(
                                 content,
@@ -1928,8 +1951,12 @@ excludeAgent: "code-review"
         assert!(cop_005.is_empty());
     }
 
+    /// `coding-agent` was never an upstream value - the documented pair is
+    /// `code-review` / `cloud-agent`. It stays accepted so existing configs keep
+    /// validating, but is now reported at info level rather than treated as
+    /// valid, so the user learns Copilot will not honor the file.
     #[test]
-    fn test_cop_005_valid_coding_agent() {
+    fn test_cop_005_legacy_coding_agent_is_reported_not_valid() {
         let content = r#"---
 applyTo: "**/*.ts"
 excludeAgent: "coding-agent"
@@ -1938,7 +1965,12 @@ excludeAgent: "coding-agent"
 "#;
         let diagnostics = validate_scoped(content);
         let cop_005: Vec<_> = diagnostics.iter().filter(|d| d.rule == "COP-005").collect();
-        assert!(cop_005.is_empty());
+        assert_eq!(cop_005.len(), 1, "got: {diagnostics:?}");
+        assert_eq!(
+            cop_005[0].level,
+            crate::diagnostics::DiagnosticLevel::Info,
+            "the config still works; it is just not the documented spelling"
+        );
     }
 
     #[test]
@@ -3094,8 +3126,38 @@ Use strict mode.
         }
     }
 
+    /// The autofix must never write an undocumented value. `find_closest_value`
+    /// also does substring matching, so keeping the legacy spelling in the
+    /// fix-candidate list let `coding` be "fixed" to `coding-agent` - the very
+    /// bug this rule was corrected for, reached through a different input. The
+    /// earlier tests missed it by asserting only that a diagnostic fired, never
+    /// its replacement text.
+    #[test]
+    fn test_cop_005_autofix_never_writes_an_undocumented_value() {
+        let content = r#"---
+applyTo: "**"
+excludeAgent: "coding"
+---
+
+Use strict mode.
+"#;
+        let diagnostics = validate_scoped(content);
+        let cop_005: Vec<_> = diagnostics.iter().filter(|d| d.rule == "COP-005").collect();
+        assert_eq!(cop_005.len(), 1, "got: {diagnostics:?}");
+
+        for fix in &cop_005[0].fixes {
+            assert!(
+                !fix.replacement.contains("coding-agent"),
+                "the fix must not write the undocumented spelling, got: {:?}",
+                fix.replacement
+            );
+        }
+    }
+
     /// `coding-agent` is kept as a deprecated alias so configs written against
-    /// agnix's own previous wrong advice keep validating.
+    /// agnix's own previous wrong advice keep validating - but it is reported at
+    /// info level rather than accepted silently, so the user learns the file will
+    /// not be honored.
     #[test]
     fn test_cop_005_tolerates_legacy_coding_agent() {
         let content = r#"---
@@ -3106,9 +3168,16 @@ excludeAgent: "coding-agent"
 Use strict mode.
 "#;
         let diagnostics = validate_scoped(content);
-        assert!(
-            diagnostics.iter().all(|d| d.rule != "COP-005"),
-            "the legacy spelling should not break existing configs, got: {diagnostics:?}"
+        let cop_005: Vec<_> = diagnostics.iter().filter(|d| d.rule == "COP-005").collect();
+        assert_eq!(
+            cop_005.len(),
+            1,
+            "the legacy spelling should be reported once, got: {diagnostics:?}"
+        );
+        assert_eq!(
+            cop_005[0].level,
+            crate::diagnostics::DiagnosticLevel::Info,
+            "info, not error: the config still works, it is just not documented"
         );
     }
 
