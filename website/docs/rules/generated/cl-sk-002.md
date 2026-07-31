@@ -13,7 +13,7 @@ keywords: ["CL-SK-002", "missing skill name", "cline skills", "validation", "agn
 - **Category**: `Cline Skills`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `Yes (safe)`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-07-31`
 
 ## Applicability
 
@@ -23,7 +23,7 @@ keywords: ["CL-SK-002", "missing skill name", "cline skills", "validation", "agn
 
 ## Evidence Sources
 
-- https://docs.cline.bot/features/cline-rules/overview
+- https://docs.cline.bot/customization/cline-rules
 
 ## Test Coverage Metadata
 

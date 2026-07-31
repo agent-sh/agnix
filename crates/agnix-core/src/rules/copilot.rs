@@ -26,7 +26,10 @@ use crate::{
     diagnostics::{Diagnostic, Fix},
     rules::{Validator, ValidatorMetadata, json_type_name},
     schemas::{
-        copilot::{is_body_empty, is_content_empty, parse_frontmatter, validate_glob_pattern},
+        copilot::{
+            is_body_empty, is_content_empty, parse_frontmatter, split_comma_separated_globs,
+            validate_glob_pattern,
+        },
         copilot_agent::parse_agent_frontmatter,
         copilot_hooks::{
             has_copilot_setup_steps_job, parse_hooks_json, parse_setup_steps_yaml,
@@ -1237,22 +1240,31 @@ impl Validator for CopilotValidator {
         if config.is_rule_enabled("COP-003") {
             if let Some(ref schema) = parsed.schema {
                 if let Some(ref apply_to) = schema.apply_to {
-                    let validation = validate_glob_pattern(apply_to);
-                    if !validation.valid {
-                        diagnostics.push(
-                            Diagnostic::error(
-                                path.to_path_buf(),
-                                parsed.start_line + 1, // applyTo is typically on line 2
-                                0,
-                                "COP-003",
-                                t!(
-                                    "rules.cop_003.message",
-                                    pattern = apply_to.as_str(),
-                                    error = validation.error.unwrap_or_default()
-                                ),
-                            )
-                            .with_suggestion(t!("rules.cop_003.suggestion")),
-                        );
+                    // `applyTo` takes multiple patterns in one string: "You can
+                    // specify multiple patterns by separating them with commas",
+                    // with `applyTo: "**/*.ts,**/*.tsx"` as the doc's own
+                    // example. Passing the whole value to `glob::Pattern` failed
+                    // on every such config. Each pattern is validated on its own;
+                    // commas inside a brace or bracket group are not separators,
+                    // which is what `split_comma_separated_globs` handles.
+                    for pattern in split_comma_separated_globs(apply_to) {
+                        let validation = validate_glob_pattern(pattern);
+                        if !validation.valid {
+                            diagnostics.push(
+                                Diagnostic::error(
+                                    path.to_path_buf(),
+                                    parsed.start_line + 1, // applyTo is typically on line 2
+                                    0,
+                                    "COP-003",
+                                    t!(
+                                        "rules.cop_003.message",
+                                        pattern = pattern,
+                                        error = validation.error.unwrap_or_default()
+                                    ),
+                                )
+                                .with_suggestion(t!("rules.cop_003.suggestion")),
+                            );
+                        }
                     }
                 }
             }
@@ -1288,8 +1300,37 @@ impl Validator for CopilotValidator {
         if config.is_rule_enabled("COP-005") {
             if let Some(ref schema) = parsed.schema {
                 if let Some(ref agent_value) = schema.exclude_agent {
-                    const VALID_AGENTS: &[&str] = &["code-review", "coding-agent"];
-                    if !VALID_AGENTS.contains(&agent_value.as_str()) {
+                    // The documented values are `code-review` and `cloud-agent`
+                    // ("Use either `\"code-review\"` or `\"cloud-agent\"`").
+                    // Two lists, deliberately: `find_closest_value` also does
+                    // substring matching, so a single list containing the legacy
+                    // spelling let the autofix write `coding-agent` for an input
+                    // like `coding` - reintroducing the exact bug this rule was
+                    // fixed for, through a different input. Fix candidates must
+                    // contain only documented values.
+                    const DOCUMENTED_AGENTS: &[&str] = &["code-review", "cloud-agent"];
+                    // `coding-agent` was never valid upstream. Accepted without a
+                    // fix candidate so configs written against agnix's own
+                    // previous wrong advice keep validating.
+                    const ACCEPTED_AGENTS: &[&str] =
+                        &["code-review", "cloud-agent", "coding-agent"];
+                    // Accepted, but say so: a user who followed agnix's old
+                    // advice otherwise ships a file Copilot will not honor and
+                    // never hears about it.
+                    if agent_value.as_str() == "coding-agent" {
+                        diagnostics.push(
+                            Diagnostic::info(
+                                path.to_path_buf(),
+                                parsed.start_line + 1,
+                                0,
+                                "COP-005",
+                                t!("rules.cop_005.legacy_coding_agent"),
+                            )
+                            .with_suggestion(t!("rules.cop_005.legacy_suggestion")),
+                        );
+                    }
+
+                    if !ACCEPTED_AGENTS.contains(&agent_value.as_str()) {
                         // Find the line number of excludeAgent in raw frontmatter
                         let line = parsed
                             .raw
@@ -1310,7 +1351,7 @@ impl Validator for CopilotValidator {
 
                         // Unsafe auto-fix: replace with closest valid agent value
                         if let Some(closest) =
-                            super::find_closest_value(agent_value.as_str(), VALID_AGENTS)
+                            super::find_closest_value(agent_value.as_str(), DOCUMENTED_AGENTS)
                         {
                             if let Some((start, end)) = crate::rules::find_yaml_value_range(
                                 content,
@@ -1910,8 +1951,12 @@ excludeAgent: "code-review"
         assert!(cop_005.is_empty());
     }
 
+    /// `coding-agent` was never an upstream value - the documented pair is
+    /// `code-review` / `cloud-agent`. It stays accepted so existing configs keep
+    /// validating, but is now reported at info level rather than treated as
+    /// valid, so the user learns Copilot will not honor the file.
     #[test]
-    fn test_cop_005_valid_coding_agent() {
+    fn test_cop_005_legacy_coding_agent_is_reported_not_valid() {
         let content = r#"---
 applyTo: "**/*.ts"
 excludeAgent: "coding-agent"
@@ -1920,7 +1965,12 @@ excludeAgent: "coding-agent"
 "#;
         let diagnostics = validate_scoped(content);
         let cop_005: Vec<_> = diagnostics.iter().filter(|d| d.rule == "COP-005").collect();
-        assert!(cop_005.is_empty());
+        assert_eq!(cop_005.len(), 1, "got: {diagnostics:?}");
+        assert_eq!(
+            cop_005[0].level,
+            crate::diagnostics::DiagnosticLevel::Info,
+            "the config still works; it is just not the documented spelling"
+        );
     }
 
     #[test]
@@ -3050,5 +3100,156 @@ Skill body.
         let diagnostics = validate_mcp_config(content);
         let cop_026: Vec<_> = diagnostics.iter().filter(|d| d.rule == "COP-026").collect();
         assert_eq!(cop_026.len(), 2);
+    }
+    /// `excludeAgent` takes `code-review` or `cloud-agent` ("Use either
+    /// `"code-review"` or `"cloud-agent"`"). agnix listed `coding-agent`, which
+    /// was never an upstream value, so the doc's own value was rejected AND the
+    /// unsafe autofix rewrote a correct value into the wrong one.
+    #[test]
+    fn test_cop_005_accepts_documented_cloud_agent() {
+        for value in ["code-review", "cloud-agent"] {
+            let content = format!(
+                r#"---
+applyTo: "**"
+excludeAgent: "{value}"
+---
+
+Use strict mode.
+"#
+            );
+            let diagnostics = validate_scoped(&content);
+            let hits: Vec<_> = diagnostics.iter().filter(|d| d.rule == "COP-005").collect();
+            assert!(
+                hits.is_empty(),
+                "documented excludeAgent value '{value}' must be accepted, got: {hits:?}"
+            );
+        }
+    }
+
+    /// The autofix must never write an undocumented value. `find_closest_value`
+    /// also does substring matching, so keeping the legacy spelling in the
+    /// fix-candidate list let `coding` be "fixed" to `coding-agent` - the very
+    /// bug this rule was corrected for, reached through a different input. The
+    /// earlier tests missed it by asserting only that a diagnostic fired, never
+    /// its replacement text.
+    #[test]
+    fn test_cop_005_autofix_never_writes_an_undocumented_value() {
+        let content = r#"---
+applyTo: "**"
+excludeAgent: "coding"
+---
+
+Use strict mode.
+"#;
+        let diagnostics = validate_scoped(content);
+        let cop_005: Vec<_> = diagnostics.iter().filter(|d| d.rule == "COP-005").collect();
+        assert_eq!(cop_005.len(), 1, "got: {diagnostics:?}");
+
+        for fix in &cop_005[0].fixes {
+            assert!(
+                !fix.replacement.contains("coding-agent"),
+                "the fix must not write the undocumented spelling, got: {:?}",
+                fix.replacement
+            );
+        }
+    }
+
+    /// `coding-agent` is kept as a deprecated alias so configs written against
+    /// agnix's own previous wrong advice keep validating - but it is reported at
+    /// info level rather than accepted silently, so the user learns the file will
+    /// not be honored.
+    #[test]
+    fn test_cop_005_tolerates_legacy_coding_agent() {
+        let content = r#"---
+applyTo: "**"
+excludeAgent: "coding-agent"
+---
+
+Use strict mode.
+"#;
+        let diagnostics = validate_scoped(content);
+        let cop_005: Vec<_> = diagnostics.iter().filter(|d| d.rule == "COP-005").collect();
+        assert_eq!(
+            cop_005.len(),
+            1,
+            "the legacy spelling should be reported once, got: {diagnostics:?}"
+        );
+        assert_eq!(
+            cop_005[0].level,
+            crate::diagnostics::DiagnosticLevel::Info,
+            "info, not error: the config still works, it is just not documented"
+        );
+    }
+
+    /// A genuinely unknown agent is still rejected.
+    #[test]
+    fn test_cop_005_still_rejects_unknown_agent() {
+        let content = r#"---
+applyTo: "**"
+excludeAgent: "bogus-agent"
+---
+
+Use strict mode.
+"#;
+        let diagnostics = validate_scoped(content);
+        assert!(
+            diagnostics.iter().any(|d| d.rule == "COP-005"),
+            "an unknown value must still be flagged, got: {diagnostics:?}"
+        );
+    }
+
+    /// `applyTo` takes several patterns in one string: "You can specify multiple
+    /// patterns by separating them with commas", with `applyTo: "**/*.ts,**/*.tsx"`
+    /// as the doc's own example. The whole string was passed to `glob::Pattern`,
+    /// so every such config errored.
+    #[test]
+    fn test_cop_003_accepts_comma_separated_apply_to() {
+        let content = r#"---
+applyTo: "**/*.ts,**/*.tsx"
+---
+
+Use strict mode.
+"#;
+        let diagnostics = validate_scoped(content);
+        let hits: Vec<_> = diagnostics.iter().filter(|d| d.rule == "COP-003").collect();
+        assert!(
+            hits.is_empty(),
+            "the doc's own comma-separated example must validate, got: {hits:?}"
+        );
+    }
+
+    /// Commas inside a brace group are not separators.
+    #[test]
+    fn test_cop_003_brace_group_commas_are_not_separators() {
+        let content = r#"---
+applyTo: "src/**/*.{ts,tsx},lib/**/*.js"
+---
+
+Use strict mode.
+"#;
+        let diagnostics = validate_scoped(content);
+        let hits: Vec<_> = diagnostics.iter().filter(|d| d.rule == "COP-003").collect();
+        assert!(
+            hits.is_empty(),
+            "brace-group commas must not split the pattern, got: {hits:?}"
+        );
+    }
+
+    /// An invalid segment inside a comma list is still reported.
+    #[test]
+    fn test_cop_003_still_flags_invalid_segment() {
+        let content = r#"---
+applyTo: "**/*.ts,[unclosed"
+---
+
+Use strict mode.
+"#;
+        let diagnostics = validate_scoped(content);
+        assert!(
+            diagnostics
+                .iter()
+                .any(|d| d.rule == "COP-003" && d.message.contains("[unclosed")),
+            "the bad segment must be named, got: {diagnostics:?}"
+        );
     }
 }

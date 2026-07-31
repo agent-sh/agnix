@@ -13,7 +13,7 @@ keywords: ["CC-MEM-014", "claude.md exceeds line limit", "claude memory", "valid
 - **Category**: `Claude Memory`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-28`
+- **Verified On**: `2026-07-31`
 
 ## Applicability
 

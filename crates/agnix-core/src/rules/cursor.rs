@@ -200,8 +200,13 @@ fn validate_cursor_hooks_file(
         }
     };
 
+    // `version` is documented with a default ("| `version` | number | `1` |
+    // Config schema version |") and several of the doc's own examples omit it,
+    // so absence is valid. Only a present-but-non-numeric value is wrong. Typed
+    // "number" rather than integer, so `1.0` is accepted too.
     if config.is_rule_enabled("CUR-010")
-        && root.get("version").and_then(JsonValue::as_i64).is_none()
+        && let Some(version) = root.get("version")
+        && !version.is_number()
     {
         diagnostics.push(
             Diagnostic::error(
@@ -209,7 +214,7 @@ fn validate_cursor_hooks_file(
                 1,
                 0,
                 "CUR-010",
-                t!("rules.cur_010.missing_version"),
+                t!("rules.cur_010.invalid_version"),
             )
             .with_suggestion(t!("rules.cur_010.suggestion")),
         );
@@ -371,7 +376,14 @@ fn validate_cursor_hooks_file(
                 }
             }
 
-            if config.is_rule_enabled("CUR-012") {
+            // Prompt hooks have no `command`: the doc's own example carries only
+            // `type`, `prompt` and `timeout`, since "Prompt hooks use an LLM to
+            // evaluate a natural language condition". CUR-018 checks `prompt`
+            // for those, so requiring `command` here rejected the documented
+            // form.
+            let is_prompt_hook = hook_obj.get("type").and_then(JsonValue::as_str) == Some("prompt");
+
+            if config.is_rule_enabled("CUR-012") && !is_prompt_hook {
                 let has_valid_command = hook_obj
                     .get("command")
                     .and_then(JsonValue::as_str)
@@ -414,7 +426,7 @@ fn validate_cursor_hooks_file(
                                         n
                                     ),
                                 )
-                                .with_suggestion("Set 'timeout' to a positive number (milliseconds)."),
+                                .with_suggestion("Set 'timeout' to a positive number of seconds."),
                             );
                         }
                         None => {
@@ -431,7 +443,7 @@ fn validate_cursor_hooks_file(
                                         json_type_name(timeout)
                                     ),
                                 )
-                                .with_suggestion("Set 'timeout' to a positive number (milliseconds)."),
+                                .with_suggestion("Set 'timeout' to a positive number of seconds."),
                             );
                         }
                     }
@@ -772,18 +784,13 @@ fn validate_cursor_environment_file(
                 .with_suggestion(t!("rules.cur_016.suggestion")),
             );
         }
-        None => {
-            diagnostics.push(
-                Diagnostic::error(
-                    path_buf.clone(),
-                    1,
-                    0,
-                    "CUR-016",
-                    t!("rules.cur_016.missing_install"),
-                )
-                .with_suggestion(t!("rules.cur_016.suggestion")),
-            );
-        }
+        // `install` is absent from every `required` array in the published
+        // environment schema (cursor.com/schemas/environment.schema.json:
+        // `definitions.common` has no `required` at all, `definitions.container`
+        // has `required: []`), and the setup page's own snapshot example omits
+        // it. Requiring it rejected valid config, so absence is fine - only a
+        // present-but-wrong type is reported, by the arm above.
+        None => {}
         _ => {}
     }
 
@@ -796,18 +803,20 @@ fn validate_cursor_environment_file(
         );
     }
 
-    if let Some(update) = root.get("update")
-        && update.as_str().is_none()
-    {
+    // `update` is not a property in the published schema, and the root sets
+    // `unevaluatedProperties: false`, so it is now invalid rather than optional.
+    // The setup page notes the install script "was previously called the update
+    // script", so this is a rename: report it as one instead of blessing it.
+    if root.get("update").is_some() {
         diagnostics.push(
-            Diagnostic::error(
+            Diagnostic::warning(
                 path_buf.clone(),
                 1,
                 0,
                 "CUR-016",
-                t!("rules.cur_016.update"),
+                t!("rules.cur_016.update_renamed"),
             )
-            .with_suggestion(t!("rules.cur_016.suggestion")),
+            .with_suggestion(t!("rules.cur_016.update_renamed_suggestion")),
         );
     }
 
@@ -862,10 +871,13 @@ fn validate_cursor_environment_file(
         match terminals_value {
             JsonValue::Array(terminals) => {
                 for (index, terminal) in terminals.iter().enumerate() {
+                    // The schema types `terminals.items` as a `oneOf` whose
+                    // object branch requires only `["command"]` - `name` and
+                    // `description` are optional - so requiring `name` rejected
+                    // valid config.
                     if let Some(obj) = terminal.as_object() {
-                        let has_name = obj.get("name").and_then(JsonValue::as_str).is_some();
                         let has_command = obj.get("command").and_then(JsonValue::as_str).is_some();
-                        if !has_name || !has_command {
+                        if !has_command {
                             diagnostics.push(
                                 Diagnostic::error(
                                     path_buf.clone(),
@@ -876,6 +888,31 @@ fn validate_cursor_environment_file(
                                 )
                                 .with_suggestion(t!("rules.cur_016.suggestion")),
                             );
+                        }
+                    } else if let Some(nested) = terminal.as_array() {
+                        // `terminals.items` is a `oneOf` whose first branch is an
+                        // array of command-bearing objects, so a nested list is
+                        // schema-valid. Its contents still have to hold up:
+                        // accepting the branch without checking inside let
+                        // `[[{"name": "x"}]]` pass with no `command`.
+                        for entry in nested {
+                            let ok = entry
+                                .as_object()
+                                .and_then(|obj| obj.get("command"))
+                                .and_then(JsonValue::as_str)
+                                .is_some();
+                            if !ok {
+                                diagnostics.push(
+                                    Diagnostic::error(
+                                        path_buf.clone(),
+                                        1,
+                                        0,
+                                        "CUR-016",
+                                        t!("rules.cur_016.terminal", index = index + 1),
+                                    )
+                                    .with_suggestion(t!("rules.cur_016.suggestion")),
+                                );
+                            }
                         }
                     } else {
                         diagnostics.push(
@@ -1585,10 +1622,33 @@ description: Modern format
 
     // ===== CUR-010 to CUR-016: Cursor hooks/agents/environment =====
 
+    /// `version` is documented with a default of 1 and several of the doc's own
+    /// examples omit it, so a bare `hooks` object is valid.
     #[test]
-    fn test_cur_010_hooks_schema_invalid() {
+    fn test_cur_010_version_is_optional() {
         let diagnostics = validate_cursor_hooks(r#"{"hooks": {}}"#);
-        assert!(diagnostics.iter().any(|d| d.rule == "CUR-010"));
+        assert!(
+            diagnostics.iter().all(|d| d.rule != "CUR-010"),
+            "an omitted `version` defaults to 1 and must not be flagged, got: {:?}",
+            diagnostics.iter().map(|d| &d.message).collect::<Vec<_>>()
+        );
+    }
+
+    /// A present-but-non-numeric `version` is still wrong. The field is typed
+    /// "number", so `1.0` is fine and `"one"` is not.
+    #[test]
+    fn test_cur_010_version_must_be_numeric_when_present() {
+        let bad = validate_cursor_hooks(r#"{"version":"one","hooks":{}}"#);
+        assert!(
+            bad.iter().any(|d| d.rule == "CUR-010"),
+            "a string version must be flagged, got: {bad:?}"
+        );
+
+        let float_ok = validate_cursor_hooks(r#"{"version":1.0,"hooks":{}}"#);
+        assert!(
+            float_ok.iter().all(|d| d.rule != "CUR-010"),
+            "`version` is typed number, so 1.0 is valid, got: {float_ok:?}"
+        );
     }
 
     #[test]
@@ -1735,12 +1795,25 @@ is_background: false
         assert!(diagnostics.iter().any(|d| d.rule == "CUR-016"));
     }
 
+    /// `install` appears in no `required` array in the published environment
+    /// schema, and the setup page's snapshot example omits it, so absence is
+    /// valid. Only a present-but-wrong type is reported.
     #[test]
-    fn test_cur_016_environment_missing_install() {
+    fn test_cur_016_environment_install_is_optional() {
         let diagnostics = validate_cursor_environment(r#"{"start":"npm run dev"}"#);
         assert!(
-            diagnostics.iter().any(|d| d.rule == "CUR-016"),
-            "Missing install should trigger CUR-016"
+            diagnostics.iter().all(|d| d.rule != "CUR-016"),
+            "an omitted `install` is valid per the schema, got: {:?}",
+            diagnostics.iter().map(|d| &d.message).collect::<Vec<_>>()
+        );
+
+        // The doc's own snapshot form must also validate clean.
+        let snapshot = validate_cursor_environment(
+            r#"{"snapshot":"snap_abc123","start":"sudo service docker start"}"#,
+        );
+        assert!(
+            snapshot.iter().all(|d| d.rule != "CUR-016"),
+            "the documented snapshot example must validate, got: {snapshot:?}"
         );
     }
 
@@ -1771,9 +1844,17 @@ is_background: false
     }
 
     #[test]
-    fn test_cur_016_environment_update_must_be_string() {
+    /// `update` is reported regardless of its type now, since the key itself is
+    /// no longer in the schema. Kept as a distinct case from the string form so
+    /// the rename notice is not accidentally narrowed to one value type later.
+    fn test_cur_016_environment_update_reported_whatever_its_type() {
         let diagnostics = validate_cursor_environment(r#"{"install":"npm ci","update":42}"#);
-        assert!(diagnostics.iter().any(|d| d.rule == "CUR-016"));
+        assert!(
+            diagnostics
+                .iter()
+                .any(|d| d.rule == "CUR-016" && d.message.contains("renamed")),
+            "got: {diagnostics:?}"
+        );
     }
 
     #[test]
@@ -1822,13 +1903,19 @@ is_background: false
         );
     }
 
+    /// `update` is absent from the published schema and the root sets
+    /// `unevaluatedProperties: false`, so it is invalid rather than optional.
+    /// The setup page calls it the former name of the install script, so it is
+    /// reported as a rename rather than silently accepted.
     #[test]
-    fn test_cur_016_environment_valid_update() {
+    fn test_cur_016_environment_update_reported_as_renamed() {
         let diagnostics =
             validate_cursor_environment(r#"{"install":"npm ci","update":"apt-get update"}"#);
         assert!(
-            diagnostics.iter().all(|d| d.rule != "CUR-016"),
-            "Valid update should not trigger CUR-016, got: {:?}",
+            diagnostics
+                .iter()
+                .any(|d| d.rule == "CUR-016" && d.message.contains("renamed")),
+            "`update` must be reported as renamed to `install`, got: {:?}",
             diagnostics
                 .iter()
                 .map(|d| (&d.rule, &d.message))
@@ -2751,5 +2838,131 @@ Some content here.
         let diagnostics = validate_mdc(content);
         let cur_009: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CUR-009").collect();
         assert!(cur_009.is_empty());
+    }
+    /// The scalar `globs` form carries several patterns: "Separate multiple
+    /// patterns with commas". Validating the whole string was intermittently
+    /// wrong - the doc's own row happens to parse, `src/**, tests/**` does not.
+    #[test]
+    fn test_cur_004_accepts_comma_separated_globs() {
+        for globs in [
+            "docs/**/*.md, docs/**/*.mdx",
+            "src/**, tests/**",
+            "app/**,lib/**",
+        ] {
+            let content = format!(
+                r#"---
+description: Test
+globs: {globs}
+alwaysApply: false
+---
+
+Use strict mode.
+"#
+            );
+            let diagnostics = validate_mdc(&content);
+            let hits: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CUR-004").collect();
+            assert!(
+                hits.is_empty(),
+                "comma-separated globs '{globs}' must validate, got: {hits:?}"
+            );
+        }
+    }
+
+    /// An invalid segment inside a comma list is still reported, and named.
+    #[test]
+    fn test_cur_004_still_flags_invalid_segment() {
+        let content = r#"---
+description: Test
+globs: src/**, [unclosed
+alwaysApply: false
+---
+
+Use strict mode.
+"#;
+        let diagnostics = validate_mdc(content);
+        assert!(
+            diagnostics
+                .iter()
+                .any(|d| d.rule == "CUR-004" && d.message.contains("[unclosed")),
+            "the bad segment must be named, got: {diagnostics:?}"
+        );
+    }
+
+    /// Prompt hooks have no `command` - the doc's example carries only `type`,
+    /// `prompt` and `timeout`.
+    #[test]
+    fn test_cur_012_prompt_hooks_need_no_command() {
+        let diagnostics = validate_cursor_hooks(
+            r#"{"version":1,"hooks":{"beforeShellExecution":[{"type":"prompt","prompt":"Does this command look safe to execute?","timeout":10}]}}"#,
+        );
+        let hits: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CUR-012").collect();
+        assert!(
+            hits.is_empty(),
+            "the documented prompt-hook form must validate, got: {hits:?}"
+        );
+    }
+
+    /// A command-type hook still requires `command`.
+    #[test]
+    fn test_cur_012_command_hooks_still_require_command() {
+        let diagnostics = validate_cursor_hooks(
+            r#"{"version":1,"hooks":{"stop":[{"type":"command","timeout":30}]}}"#,
+        );
+        assert!(
+            diagnostics.iter().any(|d| d.rule == "CUR-012"),
+            "a command hook without `command` must still be flagged, got: {diagnostics:?}"
+        );
+    }
+
+    /// Terminal entries require only `command`; `name` and `description` are
+    /// optional per the published schema's `oneOf` branches.
+    #[test]
+    fn test_cur_016_terminal_name_is_optional() {
+        let diagnostics = validate_cursor_environment(
+            r#"{"terminals":[{"command":"npm run dev","description":"dev server"}]}"#,
+        );
+        assert!(
+            diagnostics.iter().all(|d| d.rule != "CUR-016"),
+            "`name` is optional on terminal entries, got: {diagnostics:?}"
+        );
+    }
+
+    /// A terminal entry without `command` is still reported.
+    #[test]
+    fn test_cur_016_terminal_command_still_required() {
+        let diagnostics =
+            validate_cursor_environment(r#"{"terminals":[{"name":"dev","description":"x"}]}"#);
+        assert!(
+            diagnostics.iter().any(|d| d.rule == "CUR-016"),
+            "a terminal without `command` must be flagged, got: {diagnostics:?}"
+        );
+    }
+    /// `terminals.items` is a `oneOf`: an array of command-bearing objects, or a
+    /// single such object. Accepting the array branch without looking inside let
+    /// `[[{"name":"x"}]]` pass with no `command`.
+    #[test]
+    fn test_cur_016_nested_terminal_array_contents_are_validated() {
+        let ok = validate_cursor_environment(r#"{"terminals":[[{"command":"npm run dev"}]]}"#);
+        assert!(
+            ok.iter().all(|d| d.rule != "CUR-016"),
+            "the array branch is schema-valid, got: {ok:?}"
+        );
+
+        let bad = validate_cursor_environment(r#"{"terminals":[[{"name":"no command"}]]}"#);
+        assert!(
+            bad.iter().any(|d| d.rule == "CUR-016"),
+            "an entry inside the array branch still needs `command`, got: {bad:?}"
+        );
+    }
+
+    /// A terminal entry that is neither an object nor an array matches no `oneOf`
+    /// branch.
+    #[test]
+    fn test_cur_016_terminal_scalar_is_rejected() {
+        let diagnostics = validate_cursor_environment(r#"{"terminals":["npm run dev"]}"#);
+        assert!(
+            diagnostics.iter().any(|d| d.rule == "CUR-016"),
+            "a bare string matches no branch, got: {diagnostics:?}"
+        );
     }
 }

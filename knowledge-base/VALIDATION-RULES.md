@@ -1733,8 +1733,8 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 <a id="cur-004"></a>
 ### CUR-004 [HIGH] Invalid Glob Pattern in globs Field
-**Requirement**: `globs` field MUST contain valid glob patterns
-**Detection**: Attempt to parse as glob pattern
+**Requirement**: `globs` field MUST contain valid glob patterns. The scalar form carries several patterns in one string - "Separate multiple patterns with commas", with `docs/**/*.md, docs/**/*.mdx` as the doc's own example.
+**Detection**: Split on commas at brace/bracket depth 0, then parse each pattern. Validating the whole string was intermittently wrong: the doc's literal example happens to parse as one pattern, while `src/**, tests/**` does not.
 **Fix**: Correct the glob syntax
 **Source**: cursor.com/docs/rules
 
@@ -1775,9 +1775,9 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 <a id="cur-010"></a>
 ### CUR-010 [HIGH] Invalid .cursor/hooks.json Schema
-**Requirement**: `.cursor/hooks.json` MUST define an integer `version` and object `hooks` map
-**Detection**: Parse JSON and validate top-level shape and required fields
-**Fix**: Add required fields and correct schema types for `version` and `hooks`
+**Requirement**: `.cursor/hooks.json` MUST define an object `hooks` map. `version` is optional - documented as `| version | number | 1 | Config schema version |`, and several of the doc's own examples omit it - but MUST be a number when present (so `1.0` is valid, `"one"` is not).
+**Detection**: Parse JSON, validate the `hooks` shape, and check `version`'s type only when the key is present
+**Fix**: Add the `hooks` object; correct `version`'s type if present
 **Source**: cursor.com/docs/hooks
 
 <a id="cur-011"></a>
@@ -1789,8 +1789,8 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 <a id="cur-012"></a>
 ### CUR-012 [HIGH] Hook Entry Missing Required Command Field
-**Requirement**: Each hook entry MUST include a `command` field
-**Detection**: Parse `hooks.<event>[]` objects and check for missing `command`
+**Requirement**: Each hook entry MUST include a `command` field, except `type: "prompt"` entries. "Prompt hooks use an LLM to evaluate a natural language condition" and carry `prompt` instead - the doc's example has only `type`, `prompt` and `timeout`. CUR-018 checks `prompt` for those.
+**Detection**: Parse `hooks.<event>[]` objects and check for missing `command`, skipping entries whose `type` is `prompt`
 **Fix**: Add a non-empty command to each hook object
 **Source**: cursor.com/docs/hooks
 
@@ -1817,9 +1817,9 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 <a id="cur-016"></a>
 ### CUR-016 [HIGH] Invalid .cursor/environment.json Schema
-**Requirement**: `.cursor/environment.json` MUST be an object with string `install` (required), optional string `start`, optional array `terminals`, optional object `build` (with string `dockerfile` and `context`), and optional string `update`
-**Detection**: Parse JSON and validate required fields plus terminal entry and build object structure
-**Fix**: Provide required fields and valid terminal objects (`name`, `command`)
+**Requirement**: `.cursor/environment.json` MUST be an object. Per the published schema (cursor.com/schemas/environment.schema.json) **no field is required**: `definitions.common` has no `required` array and `definitions.container.required` is `[]`, so `install` is optional and the setup page's snapshot example omits it. Terminal entries require only `command` - `name` and `description` are optional, and the `oneOf` also permits an array branch. `update` is **not** in the schema and the root sets `unevaluatedProperties: false`, so it is reported as renamed to `install` rather than accepted.
+**Detection**: Parse JSON and type-check present fields; require `command` on terminal entries; flag `update` as a rename
+**Fix**: Correct field types; rename `update` to `install`
 **Source**: cursor.com/docs/cloud-agent/setup
 
 <a id="cur-017"></a>
