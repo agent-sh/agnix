@@ -10,7 +10,7 @@ agnix supports multiple languages for diagnostic messages, CLI output, and LSP l
 | `es`    | Spanish               | `crates/*/locales/es.yml`      |
 | `zh-CN` | Chinese (Simplified)  | `crates/*/locales/zh-CN.yml`   |
 
-Locale files are stored per-crate (`agnix-core/locales/`, `agnix-cli/locales/`, `agnix-lsp/locales/`) so each crate embeds its required translations at compile time. A CI `locale-sync` job verifies all copies stay in sync.
+Locale files are stored per-crate (`agnix-core/locales/`, `agnix-cli/locales/`, `agnix-lsp/locales/`) so each crate embeds its required translations at compile time. The CI "Locale sync check" step (in the `ci` job) verifies all copies stay in sync.
 
 ## Adding a New Language
 
@@ -30,7 +30,7 @@ Each locale needs identical YAML files in three crate directories and the worksp
      cp "locales/<code>.yml" "crates/$crate/locales/<code>.yml"
    done
    ```
-   All four copies (root + 3 crates) must be identical. The CI `locale-sync` job will fail if they drift.
+   All four copies (root + 3 crates) must be identical. The CI "Locale sync check" step will fail if they drift.
 
 4. **Register the locale** in two places:
 

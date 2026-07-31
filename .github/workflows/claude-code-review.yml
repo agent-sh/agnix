@@ -103,10 +103,17 @@ jobs:
           components: clippy, rustfmt
 
       # Restore ci.yml's cache via the shared key. Without it the first
-      # `cargo test` cold-builds a 6-crate workspace, which is slow enough that
-      # the reviewer would skip running tests and fall back to reading them -
-      # putting prompt priorities 1 and 3 back where they started. Read-only:
-      # this job should consume ci.yml's cache, never publish its own.
+      # `cargo test` cold-builds the third-party dependency graph, which is slow
+      # enough that the reviewer would skip running tests and fall back to
+      # reading them - putting prompt priorities 1 and 3 back where they started.
+      #
+      # Scope: rust-cache cleans workspace-member artifacts before saving, so it
+      # caches dependencies only. A warm restore still leaves the 6 workspace
+      # crates and every test binary to compile per review - budget that against
+      # `timeout-minutes` above. The cache is also empty until this merges and
+      # one `main` run populates the new key, and adding `shared-key` abandons
+      # ci.yml's old job-name-keyed entry, so CI itself cold-builds for one merge
+      # cycle. Read-only here: this job consumes ci.yml's cache, never publishes.
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2
         if: steps.check-runs.outputs.should_run == 'true'
         with:
