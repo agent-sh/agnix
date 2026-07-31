@@ -597,8 +597,10 @@ fn xp009_does_not_sum_across_sibling_subtrees() {
     );
 }
 
-/// A single deep chain over the cap is still reported, once, on the file that
-/// crosses it.
+/// A single deep chain over the cap is still reported exactly once. With three
+/// equal-sized files the attribution tiebreak picks the shallowest, so the root
+/// is named - see `xp009_blames_a_deep_file_when_it_is_the_biggest` for the case
+/// where a leaf dominates.
 #[test]
 fn xp009_reports_a_single_deep_chain_once() {
     let temp = tempfile::TempDir::new().unwrap();
@@ -621,8 +623,8 @@ fn xp009_reports_a_single_deep_chain_once() {
         result.diagnostics
     );
     assert!(
-        xp009[0].file.ends_with("v2/AGENTS.md"),
-        "the report belongs on the file that crosses the limit, got: {}",
+        xp009[0].file.parent() == Some(temp.path()),
+        "with equal sizes the shallowest file is named, got: {}",
         xp009[0].file.display()
     );
 }
@@ -680,4 +682,98 @@ fn xp004_still_flags_a_real_cross_file_conflict() {
         "a real npm-vs-yarn conflict must still be reported: {:?}",
         result.diagnostics
     );
+}
+
+/// Attribution follows the largest contributor, not the file where the running
+/// total happens to cross. A big root with many small packages crosses inside
+/// each package, so blaming the crossing file produced one diagnostic per
+/// package against files that cannot fix the problem - trimming a 5 KB package
+/// removes 5 KB from a chain that needs 30 KB removed. This is the sibling bug
+/// one step along: N reports against the wrong file instead of one report with
+/// the wrong total.
+#[test]
+fn xp009_blames_the_largest_file_not_every_sibling() {
+    let temp = tempfile::TempDir::new().unwrap();
+    fs::write(temp.path().join("AGENTS.md"), "r".repeat(30 * 1024)).unwrap();
+    for i in 0..20 {
+        let dir = temp.path().join(format!("pkg{i}"));
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(dir.join("AGENTS.md"), "p".repeat(5 * 1024)).unwrap();
+    }
+
+    let result = validate_project(temp.path(), &LintConfig::default()).expect("validate_project");
+    let xp009: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.rule == "XP-009")
+        .collect();
+
+    assert_eq!(
+        xp009.len(),
+        1,
+        "20 chains sharing one oversized root must collapse to a single report, got: {:?}",
+        xp009
+            .iter()
+            .map(|d| d.file.display().to_string())
+            .collect::<Vec<_>>()
+    );
+    assert!(
+        xp009[0].file.ends_with("AGENTS.md") && xp009[0].file.parent() == Some(temp.path()),
+        "the 30 KB root is the only edit that fixes every chain, got: {}",
+        xp009[0].file.display()
+    );
+}
+
+/// When a deep file is the largest contributor, it is named rather than the root.
+#[test]
+fn xp009_blames_a_deep_file_when_it_is_the_biggest() {
+    let temp = tempfile::TempDir::new().unwrap();
+    fs::write(temp.path().join("AGENTS.md"), "r".repeat(4 * 1024)).unwrap();
+    let deep = temp.path().join("api").join("v2");
+    fs::create_dir_all(&deep).unwrap();
+    fs::write(
+        temp.path().join("api").join("AGENTS.md"),
+        "a".repeat(4 * 1024),
+    )
+    .unwrap();
+    fs::write(deep.join("AGENTS.md"), "v".repeat(30 * 1024)).unwrap();
+
+    let result = validate_project(temp.path(), &LintConfig::default()).expect("validate_project");
+    let xp009: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.rule == "XP-009")
+        .collect();
+    assert_eq!(xp009.len(), 1, "got: {:?}", result.diagnostics);
+    assert!(
+        xp009[0].file.ends_with("v2/AGENTS.md"),
+        "the 30 KB leaf is the biggest contributor, got: {}",
+        xp009[0].file.display()
+    );
+}
+
+/// `is_instruction_file()` collects `AGENTS.override.md` case-insensitively, so
+/// the shadow filter and the chain builder have to agree. They matched exactly
+/// before, which left a lowercase `agents.override.md` treated as an instruction
+/// file while shadowing nothing - the 40 KB file it should have hidden was still
+/// summed.
+#[test]
+fn xp009_override_shadowing_is_case_insensitive() {
+    for override_name in ["AGENTS.override.md", "agents.override.md"] {
+        let temp = tempfile::TempDir::new().unwrap();
+        fs::write(temp.path().join(override_name), "small override\n").unwrap();
+        fs::write(temp.path().join("AGENTS.md"), "y".repeat(40 * 1024)).unwrap();
+
+        let result =
+            validate_project(temp.path(), &LintConfig::default()).expect("validate_project");
+        let xp009: Vec<_> = result
+            .diagnostics
+            .iter()
+            .filter(|d| d.rule == "XP-009")
+            .collect();
+        assert!(
+            xp009.is_empty(),
+            "'{override_name}' must shadow AGENTS.md, so its 40 KB must not count: {xp009:?}"
+        );
+    }
 }

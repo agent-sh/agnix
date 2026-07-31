@@ -3339,6 +3339,8 @@ agent: reviewer
 ### XP-007 [MEDIUM] AGENTS.md Exceeds Codex Byte Limit
 **Requirement**: AGENTS.md SHOULD stay under Codex CLI's 32768-byte `project_doc_max_bytes` default. `AGENTS.override.md` is checked too, since Codex reads it first in each directory and it draws on the same budget.
 **Detection**: Check byte length of `AGENTS.md` / `AGENTS.override.md` content against the 32768-byte threshold. The documented cap is cumulative across the root-to-cwd chain; that dimension is covered by [XP-009](#xp-009), while this rule catches a single file that blows the limit on its own.
+
+Known asymmetry with XP-009: this is a per-file validator, so it has no view of which files Codex actually loads. An `AGENTS.md` shadowed by an `AGENTS.override.md` in the same directory is never read by Codex, and XP-009 correctly excludes its bytes - but XP-007 still reports it on size alone. Resolving that needs the project-level shadowing model XP-009 uses, which a per-file rule cannot reach.
 **Fix**: Reduce content or split into multiple files using @import
 **Source**: learn.chatgpt.com/docs/agent-configuration/agents-md
 

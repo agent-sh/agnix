@@ -160,7 +160,14 @@ pub(crate) fn run_project_level_checks(
         let shadowed: std::collections::BTreeSet<PathBuf> = file_contents
             .iter()
             .filter(|(path, _)| {
-                path.file_name().and_then(|n| n.to_str()) == Some("AGENTS.override.md")
+                // Case-insensitive, matching `is_instruction_file()`. The three
+                // places that name this file have to agree: that helper collects
+                // it case-insensitively, so an exact-match filter here left a
+                // lowercase `agents.override.md` shadowing nothing while still
+                // being treated as an instruction file.
+                path.file_name()
+                    .and_then(|n| n.to_str())
+                    .is_some_and(|n| n.eq_ignore_ascii_case("AGENTS.override.md"))
             })
             .filter_map(|(path, _)| path.parent().map(|dir| dir.join("AGENTS.md")))
             .collect();
@@ -351,32 +358,52 @@ pub(crate) fn run_project_level_checks(
         // recommends splitting across nested directories precisely to stay under
         // this cap.
         let chains = codex_instruction_chains(instruction_file_paths, root_dir);
+
+        // Attribute each over-cap chain to the *largest* file in it, not to the
+        // file where the running total happens to cross.
+        //
+        // Those differ, and the difference matters: a 30 KB root with twenty 5 KB
+        // packages crosses inside each package, so blaming the crossing file
+        // produced twenty diagnostics against twenty 5 KB files for a problem
+        // that only trimming the 30 KB root fixes. Trimming any one of them
+        // removes 5 KB from a chain that needs 30 KB removed, and the suggestion
+        // points at the file it names. Attributing to the biggest contributor
+        // names the one edit that resolves every affected chain, and collapses
+        // those twenty reports into one.
         let mut reported: BTreeMap<PathBuf, (usize, usize)> = BTreeMap::new();
 
         for chain in &chains {
+            let mut sizes: Vec<(PathBuf, usize)> = Vec::with_capacity(chain.len());
             let mut total = 0usize;
             for path in chain {
-                let size = match config.fs().read_to_string(path) {
-                    Ok(content) => content.len(),
-                    Err(_) => continue,
+                let Ok(content) = config.fs().read_to_string(path) else {
+                    continue;
                 };
-                total += size;
-                if total > CODEX_BYTE_LIMIT {
-                    // Report on the file that crosses the limit: it and anything
-                    // deeper in this chain is what Codex drops. Deduped across
-                    // chains, keeping the largest total, so a shared root file
-                    // is not reported once per descendant.
-                    reported
-                        .entry(path.clone())
-                        .and_modify(|entry| {
-                            if total > entry.0 {
-                                *entry = (total, chain.len());
-                            }
-                        })
-                        .or_insert((total, chain.len()));
-                    break;
-                }
+                total += content.len();
+                sizes.push((path.clone(), content.len()));
             }
+
+            if total <= CODEX_BYTE_LIMIT {
+                continue;
+            }
+
+            // Largest first, then shallowest, so the choice is deterministic when
+            // two files tie.
+            let Some((culprit, _)) = sizes
+                .iter()
+                .max_by_key(|(path, size)| (*size, std::cmp::Reverse(path.components().count())))
+            else {
+                continue;
+            };
+
+            reported
+                .entry(culprit.clone())
+                .and_modify(|entry| {
+                    if total > entry.0 {
+                        *entry = (total, chain.len());
+                    }
+                })
+                .or_insert((total, chain.len()));
         }
 
         for (report_path, (running_total, chain_len)) in reported {
@@ -399,6 +426,7 @@ pub(crate) fn run_project_level_checks(
             }
         }
     }
+
     diagnostics
 }
 
@@ -431,7 +459,8 @@ fn codex_instruction_chains(
         let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
             continue;
         };
-        let Some(rank) = precedence.iter().position(|p| *p == name) else {
+        // Case-insensitive for the same reason as the shadow filter above.
+        let Some(rank) = precedence.iter().position(|p| p.eq_ignore_ascii_case(name)) else {
             continue;
         };
         let Some(dir) = path.parent() else { continue };
@@ -444,7 +473,7 @@ fn codex_instruction_chains(
                 let existing_rank = existing
                     .file_name()
                     .and_then(|n| n.to_str())
-                    .and_then(|n| precedence.iter().position(|p| *p == n))
+                    .and_then(|n| precedence.iter().position(|p| p.eq_ignore_ascii_case(n)))
                     .unwrap_or(usize::MAX);
                 if rank < existing_rank {
                     *existing = path.clone();
