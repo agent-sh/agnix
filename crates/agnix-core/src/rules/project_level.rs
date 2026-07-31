@@ -365,6 +365,59 @@ pub(crate) fn run_project_level_checks(
     diagnostics
 }
 
+/// Build the Codex instruction chain for XP-009.
+///
+/// Follows the documented discovery rules: "Starting at the project root
+/// (typically the Git root), Codex walks down to your current working
+/// directory", taking at most one file per directory in the order
+/// `AGENTS.override.md`, `AGENTS.md`, then any configured
+/// `project_doc_fallback_filenames`.
+///
+/// Only files already collected by the project walk are considered, so this adds
+/// no filesystem traversal of its own. Returned root-first, which is the order
+/// Codex concatenates in.
+fn codex_instruction_chain(instruction_file_paths: &[PathBuf], root_dir: &Path) -> Vec<PathBuf> {
+    // `AGENTS.override.md` first, then `AGENTS.md`. Codex also honors any
+    // `project_doc_fallback_filenames`, but those live in the user's Codex
+    // `config.toml` rather than anything agnix reads, so the chain is built from
+    // the two default names. A project relying on fallbacks would have a longer
+    // real chain than this, which makes the check conservative: it can
+    // under-report, never over-report.
+    let precedence: [&str; 2] = ["AGENTS.override.md", "AGENTS.md"];
+
+    // Group the candidates by directory, keeping only Codex-discoverable names.
+    let mut by_dir: BTreeMap<PathBuf, Vec<&PathBuf>> = BTreeMap::new();
+    for path in instruction_file_paths {
+        let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
+            continue;
+        };
+        if !precedence.contains(&name) {
+            continue;
+        }
+        let Some(dir) = path.parent() else { continue };
+        // Only directories from the root down: the walk stops at the working
+        // directory, and anything outside the root is not part of this chain.
+        if !dir.starts_with(root_dir) {
+            continue;
+        }
+        by_dir.entry(dir.to_path_buf()).or_default().push(path);
+    }
+
+    // BTreeMap orders shallow-to-deep for nested paths, matching root-down
+    // concatenation. Within a directory, take the highest-precedence name only.
+    by_dir
+        .into_values()
+        .filter_map(|candidates| {
+            precedence.iter().find_map(|wanted| {
+                candidates
+                    .iter()
+                    .find(|p| p.file_name().and_then(|n| n.to_str()) == Some(*wanted))
+                    .map(|p| (*p).clone())
+            })
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -785,57 +838,4 @@ mod tests {
             ver001[0].file.display()
         );
     }
-}
-
-/// Build the Codex instruction chain for XP-009.
-///
-/// Follows the documented discovery rules: "Starting at the project root
-/// (typically the Git root), Codex walks down to your current working
-/// directory", taking at most one file per directory in the order
-/// `AGENTS.override.md`, `AGENTS.md`, then any configured
-/// `project_doc_fallback_filenames`.
-///
-/// Only files already collected by the project walk are considered, so this adds
-/// no filesystem traversal of its own. Returned root-first, which is the order
-/// Codex concatenates in.
-fn codex_instruction_chain(instruction_file_paths: &[PathBuf], root_dir: &Path) -> Vec<PathBuf> {
-    // `AGENTS.override.md` first, then `AGENTS.md`. Codex also honors any
-    // `project_doc_fallback_filenames`, but those live in the user's Codex
-    // `config.toml` rather than anything agnix reads, so the chain is built from
-    // the two default names. A project relying on fallbacks would have a longer
-    // real chain than this, which makes the check conservative: it can
-    // under-report, never over-report.
-    let precedence: [&str; 2] = ["AGENTS.override.md", "AGENTS.md"];
-
-    // Group the candidates by directory, keeping only Codex-discoverable names.
-    let mut by_dir: BTreeMap<PathBuf, Vec<&PathBuf>> = BTreeMap::new();
-    for path in instruction_file_paths {
-        let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
-            continue;
-        };
-        if !precedence.contains(&name) {
-            continue;
-        }
-        let Some(dir) = path.parent() else { continue };
-        // Only directories from the root down: the walk stops at the working
-        // directory, and anything outside the root is not part of this chain.
-        if !dir.starts_with(root_dir) {
-            continue;
-        }
-        by_dir.entry(dir.to_path_buf()).or_default().push(path);
-    }
-
-    // BTreeMap orders shallow-to-deep for nested paths, matching root-down
-    // concatenation. Within a directory, take the highest-precedence name only.
-    by_dir
-        .into_values()
-        .filter_map(|candidates| {
-            precedence.iter().find_map(|wanted| {
-                candidates
-                    .iter()
-                    .find(|p| p.file_name().and_then(|n| n.to_str()) == Some(*wanted))
-                    .map(|p| (*p).clone())
-            })
-        })
-        .collect()
 }
