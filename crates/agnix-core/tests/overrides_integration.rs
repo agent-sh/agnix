@@ -564,3 +564,120 @@ fn xp009_respects_per_file_overrides() {
         "an override on the reported file must suppress XP-009: {xp009:?}"
     );
 }
+
+/// A Codex chain is a single root-to-cwd path, so sibling subtrees are never
+/// concatenated. Summing every discovered file into one total blamed a sibling
+/// for bytes it does not share, and scaled the wrong way: enough packages would
+/// cross the cap however small each one is. It also contradicted AGM-006, which
+/// recommends splitting across nested directories to stay under this very cap.
+#[test]
+fn xp009_does_not_sum_across_sibling_subtrees() {
+    let temp = tempfile::TempDir::new().unwrap();
+    // root 10 KB + two 12 KB siblings. Real chains are 22 KB each, both fine;
+    // a naive whole-tree sum reaches 34 KB and reports the second sibling.
+    fs::write(temp.path().join("AGENTS.md"), "r".repeat(10 * 1024)).unwrap();
+    for pkg in ["pkg-a", "pkg-b"] {
+        fs::create_dir_all(temp.path().join(pkg)).unwrap();
+        fs::write(
+            temp.path().join(pkg).join("AGENTS.md"),
+            "x".repeat(12 * 1024),
+        )
+        .unwrap();
+    }
+
+    let result = validate_project(temp.path(), &LintConfig::default()).expect("validate_project");
+    let xp009: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.rule == "XP-009")
+        .collect();
+    assert!(
+        xp009.is_empty(),
+        "neither root->pkg-a nor root->pkg-b exceeds the cap, so nothing may be reported: {xp009:?}"
+    );
+}
+
+/// A single deep chain over the cap is still reported, once, on the file that
+/// crosses it.
+#[test]
+fn xp009_reports_a_single_deep_chain_once() {
+    let temp = tempfile::TempDir::new().unwrap();
+    let body = "x".repeat(14 * 1024);
+    fs::write(temp.path().join("AGENTS.md"), &body).unwrap();
+    fs::create_dir_all(temp.path().join("api").join("v2")).unwrap();
+    fs::write(temp.path().join("api").join("AGENTS.md"), &body).unwrap();
+    fs::write(temp.path().join("api").join("v2").join("AGENTS.md"), &body).unwrap();
+
+    let result = validate_project(temp.path(), &LintConfig::default()).expect("validate_project");
+    let xp009: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.rule == "XP-009")
+        .collect();
+    assert_eq!(
+        xp009.len(),
+        1,
+        "a 42 KB root->api->v2 chain must be reported exactly once: {:?}",
+        result.diagnostics
+    );
+    assert!(
+        xp009[0].file.ends_with("v2/AGENTS.md"),
+        "the report belongs on the file that crosses the limit, got: {}",
+        xp009[0].file.display()
+    );
+}
+
+/// Codex "includes at most one file per directory", checking
+/// `AGENTS.override.md` first, so a shadowed `AGENTS.md` is never loaded - the
+/// doc's tree labels it "Ignored because an override exists". Comparing the two
+/// as peers reported a conflict between a file and the thing whose purpose is to
+/// differ from it.
+#[test]
+fn xp004_ignores_agents_md_shadowed_by_an_override() {
+    let temp = tempfile::TempDir::new().unwrap();
+    fs::write(
+        temp.path().join("AGENTS.md"),
+        "# Agents\n\nTo install dependencies, run `npm install`.\n",
+    )
+    .unwrap();
+    fs::write(
+        temp.path().join("AGENTS.override.md"),
+        "# Override\n\nTo install dependencies, run `yarn install`.\n",
+    )
+    .unwrap();
+
+    let result = validate_project(temp.path(), &LintConfig::default()).expect("validate_project");
+    let conflicts: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.rule == "XP-004")
+        .collect();
+    assert!(
+        conflicts.is_empty(),
+        "an override is meant to differ from the file it shadows: {conflicts:?}"
+    );
+}
+
+/// A genuine conflict between two files Codex actually loads together still
+/// fires, so the exclusion above is not simply disabling XP-004.
+#[test]
+fn xp004_still_flags_a_real_cross_file_conflict() {
+    let temp = tempfile::TempDir::new().unwrap();
+    fs::write(
+        temp.path().join("CLAUDE.md"),
+        "# Claude\n\nTo install dependencies, run `npm install`.\n",
+    )
+    .unwrap();
+    fs::write(
+        temp.path().join("AGENTS.md"),
+        "# Agents\n\nTo install dependencies, run `yarn install`.\n",
+    )
+    .unwrap();
+
+    let result = validate_project(temp.path(), &LintConfig::default()).expect("validate_project");
+    assert!(
+        result.diagnostics.iter().any(|d| d.rule == "XP-004"),
+        "a real npm-vs-yarn conflict must still be reported: {:?}",
+        result.diagnostics
+    );
+}

@@ -151,6 +151,23 @@ pub(crate) fn run_project_level_checks(
             }
         }
 
+        // Drop any `AGENTS.md` shadowed by an `AGENTS.override.md` in the same
+        // directory. Codex "includes at most one file per directory", checking
+        // the override first, so the shadowed file is never loaded - the doc's
+        // own tree labels it "Ignored because an override exists". Comparing the
+        // two as peers reported a conflict between a file and the thing whose
+        // whole purpose is to differ from it.
+        let shadowed: std::collections::BTreeSet<PathBuf> = file_contents
+            .iter()
+            .filter(|(path, _)| {
+                path.file_name().and_then(|n| n.to_str()) == Some("AGENTS.override.md")
+            })
+            .filter_map(|(path, _)| path.parent().map(|dir| dir.join("AGENTS.md")))
+            .collect();
+        if !shadowed.is_empty() {
+            file_contents.retain(|(path, _)| !shadowed.contains(path));
+        }
+
         // XP-004/005/006: each detector runs on a per-rule filtered subset
         // of `file_contents`. A file whose `[[overrides]]` disable the rule
         // is removed from that rule's candidate set up front, so the
@@ -324,24 +341,45 @@ pub(crate) fn run_project_level_checks(
     // `project_doc_fallback_filenames`. Names outside that set "are ignored for
     // instruction discovery" and so do not count.
     if config.is_rule_enabled("XP-009") {
-        let chain = codex_instruction_chain(instruction_file_paths, root_dir);
-        let mut total = 0usize;
-        let mut truncated_at: Option<(PathBuf, usize)> = None;
+        // One chain per leaf directory, not one total for the whole tree.
+        //
+        // A Codex chain is a single root-to-cwd path: two sibling packages are
+        // never concatenated. Summing every discovered file into one running
+        // total blamed a sibling for bytes it does not share - and it scaled the
+        // wrong way, since N packages would eventually cross the cap no matter
+        // how small each one is. It also contradicted AGM-006 above, which
+        // recommends splitting across nested directories precisely to stay under
+        // this cap.
+        let chains = codex_instruction_chains(instruction_file_paths, root_dir);
+        let mut reported: BTreeMap<PathBuf, (usize, usize)> = BTreeMap::new();
 
-        for path in &chain {
-            let size = match config.fs().read_to_string(path) {
-                Ok(content) => content.len(),
-                Err(_) => continue,
-            };
-            total += size;
-            if total > CODEX_BYTE_LIMIT && truncated_at.is_none() {
-                truncated_at = Some((path.clone(), total));
+        for chain in &chains {
+            let mut total = 0usize;
+            for path in chain {
+                let size = match config.fs().read_to_string(path) {
+                    Ok(content) => content.len(),
+                    Err(_) => continue,
+                };
+                total += size;
+                if total > CODEX_BYTE_LIMIT {
+                    // Report on the file that crosses the limit: it and anything
+                    // deeper in this chain is what Codex drops. Deduped across
+                    // chains, keeping the largest total, so a shared root file
+                    // is not reported once per descendant.
+                    reported
+                        .entry(path.clone())
+                        .and_modify(|entry| {
+                            if total > entry.0 {
+                                *entry = (total, chain.len());
+                            }
+                        })
+                        .or_insert((total, chain.len()));
+                    break;
+                }
             }
         }
 
-        if let Some((report_path, running_total)) = truncated_at {
-            // Report on the file that crosses the threshold: everything from it
-            // onward is what Codex drops.
+        for (report_path, (running_total, chain_len)) in reported {
             if config.for_path(&report_path).is_rule_enabled("XP-009") {
                 diagnostics.push(
                     Diagnostic::warning(
@@ -353,7 +391,7 @@ pub(crate) fn run_project_level_checks(
                             "rules.xp_009.message",
                             bytes = running_total,
                             limit = CODEX_BYTE_LIMIT,
-                            count = chain.len()
+                            count = chain_len
                         ),
                     )
                     .with_suggestion(t!("rules.xp_009.suggestion")),
@@ -361,59 +399,79 @@ pub(crate) fn run_project_level_checks(
             }
         }
     }
-
     diagnostics
 }
 
-/// Build the Codex instruction chain for XP-009.
+/// Build every Codex instruction chain for XP-009, one per leaf directory.
 ///
-/// Follows the documented discovery rules: "Starting at the project root
+/// A chain is a single root-to-directory path: "Starting at the project root
 /// (typically the Git root), Codex walks down to your current working
 /// directory", taking at most one file per directory in the order
-/// `AGENTS.override.md`, `AGENTS.md`, then any configured
-/// `project_doc_fallback_filenames`.
+/// `AGENTS.override.md`, then `AGENTS.md`. Sibling subtrees are separate
+/// chains and are never concatenated, so each is summed on its own.
 ///
-/// Only files already collected by the project walk are considered, so this adds
-/// no filesystem traversal of its own. Returned root-first, which is the order
-/// Codex concatenates in.
-fn codex_instruction_chain(instruction_file_paths: &[PathBuf], root_dir: &Path) -> Vec<PathBuf> {
+/// Only files the project walk already collected are considered, so this adds no
+/// filesystem traversal. Each chain is returned root-first, the order Codex
+/// concatenates in.
+fn codex_instruction_chains(
+    instruction_file_paths: &[PathBuf],
+    root_dir: &Path,
+) -> Vec<Vec<PathBuf>> {
     // `AGENTS.override.md` first, then `AGENTS.md`. Codex also honors any
     // `project_doc_fallback_filenames`, but those live in the user's Codex
     // `config.toml` rather than anything agnix reads, so the chain is built from
     // the two default names. A project relying on fallbacks would have a longer
-    // real chain than this, which makes the check conservative: it can
-    // under-report, never over-report.
+    // real chain, which makes this conservative: it can under-report, never
+    // over-report.
     let precedence: [&str; 2] = ["AGENTS.override.md", "AGENTS.md"];
 
-    // Group the candidates by directory, keeping only Codex-discoverable names.
-    let mut by_dir: BTreeMap<PathBuf, Vec<&PathBuf>> = BTreeMap::new();
+    // One entry per directory, keeping only the highest-precedence name there.
+    let mut by_dir: BTreeMap<PathBuf, PathBuf> = BTreeMap::new();
     for path in instruction_file_paths {
         let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
             continue;
         };
-        if !precedence.contains(&name) {
+        let Some(rank) = precedence.iter().position(|p| *p == name) else {
             continue;
-        }
+        };
         let Some(dir) = path.parent() else { continue };
-        // Only directories from the root down: the walk stops at the working
-        // directory, and anything outside the root is not part of this chain.
         if !dir.starts_with(root_dir) {
             continue;
         }
-        by_dir.entry(dir.to_path_buf()).or_default().push(path);
+        by_dir
+            .entry(dir.to_path_buf())
+            .and_modify(|existing| {
+                let existing_rank = existing
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .and_then(|n| precedence.iter().position(|p| *p == n))
+                    .unwrap_or(usize::MAX);
+                if rank < existing_rank {
+                    *existing = path.clone();
+                }
+            })
+            .or_insert_with(|| path.clone());
     }
 
-    // BTreeMap orders shallow-to-deep for nested paths, matching root-down
-    // concatenation. Within a directory, take the highest-precedence name only.
-    by_dir
-        .into_values()
-        .filter_map(|candidates| {
-            precedence.iter().find_map(|wanted| {
-                candidates
-                    .iter()
-                    .find(|p| p.file_name().and_then(|n| n.to_str()) == Some(*wanted))
-                    .map(|p| (*p).clone())
-            })
+    // A leaf is a directory with no deeper instruction-bearing descendant. Every
+    // leaf yields one chain: itself plus each ancestor that holds a file.
+    let dirs: Vec<&PathBuf> = by_dir.keys().collect();
+    dirs.iter()
+        .filter(|dir| {
+            !dirs
+                .iter()
+                .any(|other| other != *dir && other.starts_with(dir.as_path()))
+        })
+        .map(|leaf| {
+            let mut chain: Vec<PathBuf> = by_dir
+                .iter()
+                .filter(|(dir, _)| leaf.starts_with(dir.as_path()))
+                .map(|(_, file)| file.clone())
+                .collect();
+            // BTreeMap iteration is shallow-to-deep for nested paths, matching
+            // root-down concatenation; sort defensively on depth anyway.
+            chain.sort_by_key(|p| p.components().count());
+            chain
         })
         .collect()
 }
