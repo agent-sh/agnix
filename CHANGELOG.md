@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.43.0] - 2026-07-31
+
+### Changed
+- **`validation::is_valid_mcp_tool_format` accepts the server-only MCP form**. The function is in the Public/Unstable tier and its signature is unchanged, but it now returns `true` for `mcp__<server>` where it previously returned `false`, so a downstream caller relying on the stricter behavior will see a change. Whitespace in the server segment is newly rejected.
+
 ### Fixed
 - **`[[overrides]]` had no effect on any skill rule**. Reported as Windows-specific path matching, but the platform was incidental: `SkillValidator`'s internal `ValidationContext` stored the `&LintConfig` that `PerFileLintConfig` derefs to, so the per-file override layer was discarded before any `is_rule_enabled` call. Every AS-* and CC-SK-* rule ignored `[[overrides]]` on all platforms, with no way to suppress one for a single file. The context now holds the per-file view, and an end-to-end regression test covers the case (closes #1277).
 - **CC-SK-008/CC-AG-009/CC-AG-010 rejected the documented server-only MCP form**. `mcp__playwright` errored while the doc-equivalent `mcp__playwright__*` passed, even though the permissions reference lists both as valid ways to name every tool from one server. Both forms are now accepted. A glob in the server segment (`mcp__supabase-*`, `mcp__*`) is still rejected, since a rule must name a specific configured server, and the tool segment may still glob (`mcp__github__get_*`).
