@@ -7,7 +7,7 @@ on:
       - 'website/**'
       - 'knowledge-base/rules.json'
       - 'scripts/generate-docs-rules.py'
-      - '.github/workflows/docs-site.yml'
+      - '.github/workflows/**'
       - 'crates/agnix-cli/tests/docs_website_parity.rs'
       - 'crates/agnix-wasm/**'
       - 'crates/agnix-core/**'
@@ -18,7 +18,7 @@ on:
       - 'website/**'
       - 'knowledge-base/rules.json'
       - 'scripts/generate-docs-rules.py'
-      - '.github/workflows/docs-site.yml'
+      - '.github/workflows/**'
       - 'crates/agnix-cli/tests/docs_website_parity.rs'
       - 'crates/agnix-wasm/**'
       - 'crates/agnix-core/**'
@@ -49,9 +49,11 @@ jobs:
       - name: Lint workflow files
         uses: rhysd/actionlint@914e7df21a07ef503a81201c76d2b11c789d3fca # v1.7.12
         # No `args`: with none, actionlint discovers and checks every workflow
-        # under .github/workflows. It was pinned to `args: docs-site.yml`, so the
-        # step named "Lint workflow files" checked exactly one, and workflow
-        # changes had no CI gate. Note a directory argument does NOT work
+        # under .github/workflows. Two things were needed for this step to gate
+        # workflow changes at all: dropping the `args: docs-site.yml` pin, and
+        # widening this workflow's own `paths:` filters to `.github/workflows/**`
+        # so a PR touching only another workflow actually triggers it. Note a
+        # directory argument does NOT work
         # ("read .github/workflows/: is a directory") - verified locally with
         # v1.7.12, which is also why this is a no-arg invocation rather than a
         # widened path. actionlint runs shellcheck over `run:` blocks, so this
