@@ -31,18 +31,32 @@ done
 LOCALE_GLOBS=("*.yml" "*.yaml" "*.json" "*.toml")
 
 LOCALE_FILES=()
+# Root-side convention deviations, counted here so the rename advice is
+# reachable from this direction too. Previously only the reverse (crate-side)
+# pass counted them, so a root `zz.json` fell through to the copy hint - and
+# `cp locales/*.yml` cannot move it.
+root_non_yml=0
 for glob in "${LOCALE_GLOBS[@]}"; do
   for f in "${ROOT_LOCALES}"/$glob; do
-    [ -f "$f" ] && LOCALE_FILES+=("$(basename "$f")")
+    [ -f "$f" ] || continue
+    LOCALE_FILES+=("$(basename "$f")")
+    case "$f" in
+      *.yml) ;;
+      *) root_non_yml=$((root_non_yml + 1)) ;;
+    esac
   done
 done
 
 if [ ${#LOCALE_FILES[@]} -eq 0 ]; then
-  echo "FAIL: No .yml files found in ${ROOT_LOCALES}/"
+  echo "FAIL: No locale files (${LOCALE_GLOBS[*]}) found in ${ROOT_LOCALES}/"
   exit 1
 fi
 
 errors=0
+if [ "$root_non_yml" -gt 0 ]; then
+  echo "FAIL: ${ROOT_LOCALES}/ contains ${root_non_yml} locale file(s) not using the .yml extension"
+  errors=$((errors + root_non_yml))
+fi
 # Counted separately: a crate-only file needs the opposite copy direction.
 missing_from_root=0
 # Counted separately: a non-.yml locale needs a rename, not a copy.
@@ -95,9 +109,7 @@ done
 if [ "$errors" -gt 0 ]; then
   echo ""
   echo "${errors} locale file(s) out of sync."
-  # Direction matters: the outward copy cannot fix a crate-only file, since it
-  # never creates the root copy. Printing only that hint sent a contributor who
-  # tripped the reverse check into a no-op and identical output on re-run.
+
   # Derived from CRATES, not hardcoded: the discovery pass can add a crate, and
   # a literal list here would silently exclude it from the advice while the gate
   # still checked it.
@@ -106,22 +118,29 @@ if [ "$errors" -gt 0 ]; then
     crate_targets="${crate_targets} ${crate}/locales/"
   done
 
-  if [ "$non_yml" -gt 0 ]; then
-    # A non-.yml locale is a convention violation, not a sync problem. Telling
-    # the contributor to propagate it would spread the deviation; the fix is a
-    # rename. See docs/TRANSLATING.md.
+  # Each applicable class prints its own step rather than one exclusive branch:
+  # a tree can trip several at once, and an exclusive chain left the mixed case
+  # with no runnable command.
+  #
+  # A non-.yml locale is a convention violation, not a sync problem - telling
+  # the contributor to propagate it would spread the deviation. Counted from
+  # both directions, since a root-side `zz.json` is just as unfixable by
+  # `cp locales/*.yml` as a crate-side one. See docs/TRANSLATING.md.
+  if [ $((non_yml + root_non_yml)) -gt 0 ]; then
     echo "A locale file uses an extension other than .yml. Rename it, e.g."
-    echo "  mv crates/<crate>/locales/<locale>.json crates/<crate>/locales/<locale>.yml"
-    echo "then make sure ${ROOT_LOCALES}/ has the canonical copy and fan it out."
-  elif [ "$missing_from_root" -gt 0 ]; then
-    echo "For a file present in a crate but not in ${ROOT_LOCALES}/: copy it inward first,"
-    echo "  cp crates/<crate>/locales/<locale>.yml ${ROOT_LOCALES}/"
-    echo "then fan it back out to every crate:"
-    echo "  for d in${crate_targets}; do cp ${ROOT_LOCALES}/*.yml \"\$d\"; done"
-  else
-    echo "Run:"
-    echo "  for d in${crate_targets}; do cp ${ROOT_LOCALES}/*.yml \"\$d\"; done"
+    echo "  mv <dir>/<locale>.json <dir>/<locale>.yml"
   fi
+
+  # The outward copy cannot create a root file, so a crate-only locale needs the
+  # inward copy first.
+  if [ "$missing_from_root" -gt 0 ]; then
+    echo "For a file present in a crate but not in ${ROOT_LOCALES}/, copy it inward first:"
+    echo "  cp crates/<crate>/locales/<locale>.yml ${ROOT_LOCALES}/"
+  fi
+
+  # Always printed: the fan-out is the final step for every class above.
+  echo "Then fan the canonical copies out to every crate:"
+  echo "  for d in${crate_targets}; do cp ${ROOT_LOCALES}/*.yml \"\$d\"; done"
   exit 1
 fi
 
