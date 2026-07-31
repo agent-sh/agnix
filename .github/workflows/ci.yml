@@ -29,6 +29,9 @@ jobs:
 
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2
         with:
+          # `shared-key` (rather than the default job-name key) lets the Claude
+          # review job restore this cache instead of cold-building the workspace.
+          shared-key: agnix-workspace
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Format check
@@ -65,6 +68,14 @@ jobs:
         # Fails if human-maintained rule count tables or current docs drift
         # from knowledge-base/rules.json.
         run: python3 scripts/check-rule-counts.py
+
+      - name: Locale sync check
+        if: matrix.os == 'ubuntu-latest'
+        # The i18n!() macro loads from each crate's own locales/ directory, so a
+        # diagnostic string edited only in the root copy silently never reaches
+        # the binary. Nothing gated this: the script existed but no workflow ran
+        # it.
+        run: bash scripts/check-locale-sync.sh
 
       - name: Schema sync check
         if: matrix.os == 'ubuntu-latest'

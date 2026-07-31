@@ -4,6 +4,13 @@ on:
   pull_request:
     types: [opened, synchronize, ready_for_review, reopened]
 
+# A superseded push should not burn a full review. This was free while each run
+# was an 11-second no-op; now that runs take minutes it is not. Matches the
+# idiom already used in docs-site.yml.
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   claude-review:
     if: >-
@@ -11,9 +18,15 @@ jobs:
       github.event.pull_request.author_association)
 
     runs-on: ubuntu-latest
+    # A cargo build plus a review should never approach this; the bound is here
+    # so a hung run cannot hold the concurrency group indefinitely.
+    timeout-minutes: 30
 
     permissions:
-      contents: write
+      # `contents: read` is enough now that this job no longer commits: dropping
+      # `use_commit_signing` removed the file-ops tooling, so write access to the
+      # branch is no longer needed to post a review.
+      contents: read
       pull-requests: write
       issues: write
       actions: read
@@ -23,6 +36,19 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
+          # Kept, but it does NOT leave this job token-free. Dropping
+          # `use_commit_signing` puts the action in non-signing mode, and that
+          # branch calls `configureGitAuth` (src/modes/tag/index.ts:88), which
+          # unsets checkout's extraheader and then embeds the token in the remote
+          # URL (src/github/operations/git-config.ts:78). Verified in a live run:
+          # `.git/config` carries an `x-access-token` entry the action added after
+          # checkout. The token-free path there needs ALLOWED_NON_WRITE_USERS,
+          # which never engages behind the author_association gate above.
+          #
+          # So this only closes the window before the action runs. That is worth
+          # having and costs nothing, but the job still compiles PR-authored code
+          # alongside a readable token holding pull-requests/issues write.
+          persist-credentials: false
 
       - name: Check run count
         id: check-runs
@@ -39,7 +65,7 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "repos/${REPO}/actions/workflows/${WORKFLOW_FILE}/runs?head_sha=${HEAD_SHA}&status=completed" \
-            --jq '[.workflow_runs[] | select(.event == "pull_request")] | length' || echo "")
+            --jq '[.workflow_runs[] | select(.event == "pull_request" and .conclusion == "success")] | length' || echo "")
 
           RUN_COUNT=${RUN_COUNT:-0}
           if ! echo "$RUN_COUNT" | grep -qE '^[0-9]+$'; then
@@ -49,15 +75,50 @@ jobs:
 
           RUN_COUNT=$((RUN_COUNT + 1))
 
-          echo "This is run #$RUN_COUNT for this PR (event: $EVENT_ACTION)"
+          # Note this counts SUCCESSFUL runs for THIS commit: the API query
+          # filters on head_sha, so the cap resets on every push. Filtering on
+          # `conclusion == "success"` matters because the concurrency group
+          # cancels superseded runs, a cancelled run reports
+          # `status=completed`, and non-push events (draft -> ready_for_review,
+          # close/reopen) fire on the same sha - so cancellations would
+          # otherwise burn budget slots without ever producing a review. In-flight
+          # runs are still uncounted; the concurrency group prevents overlap.
+          echo "This is run #$RUN_COUNT for commit ${HEAD_SHA:0:8} (event: $EVENT_ACTION)"
 
           if [ "$RUN_COUNT" -le 3 ]; then
             echo "should_run=true" >> $GITHUB_OUTPUT
-            echo "[OK] Will run Claude review (run $RUN_COUNT of 3)"
+            echo "[OK] Will run Claude review (run $RUN_COUNT of 3 for this commit)"
           else
             echo "should_run=false" >> $GITHUB_OUTPUT
-            echo "[SKIP] Skipping Claude review (already ran 3 times)"
+            echo "[SKIP] Skipping Claude review (already ran 3 times for this commit)"
           fi
+
+      # Toolchain and cache come after the run-count gate: both are pointless
+      # work when the review is going to be skipped.
+      - uses: dtolnay/rust-toolchain@4be9e76fd7c4901c61fb841f559994984270fce7 # stable
+        if: steps.check-runs.outputs.should_run == 'true'
+        with:
+          # Pinned like ci.yml rather than relying on the runner image, since
+          # `cargo clippy` is in the grant list below.
+          components: clippy, rustfmt
+
+      # Restore ci.yml's cache via the shared key. Without it the first
+      # `cargo test` cold-builds the third-party dependency graph, which is slow
+      # enough that the reviewer would skip running tests and fall back to
+      # reading them - putting prompt priorities 1 and 3 back where they started.
+      #
+      # Scope: rust-cache cleans workspace-member artifacts before saving, so it
+      # caches dependencies only. A warm restore still leaves the 6 workspace
+      # crates and every test binary to compile per review - budget that against
+      # `timeout-minutes` above. The cache is also empty until this merges and
+      # one `main` run populates the new key, and adding `shared-key` abandons
+      # ci.yml's old job-name-keyed entry, so CI itself cold-builds for one merge
+      # cycle. Read-only here: this job consumes ci.yml's cache, never publishes.
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2
+        if: steps.check-runs.outputs.should_run == 'true'
+        with:
+          shared-key: agnix-workspace
+          save-if: "false"
 
       - name: Run Claude Code Review
         if: steps.check-runs.outputs.should_run == 'true'
@@ -65,8 +126,72 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          model: claude-opus-4-6
-          use_commit_signing: true
+          # No `use_commit_signing` here: it enables the file-ops MCP server, so
+          # a review-only job would carry `commit_files` and could write to the PR
+          # branch. claude.yml keeps it, since that workflow is meant to make
+          # changes when asked.
+          # `track_progress` is required on a `pull_request` event: without it the
+          # action finds no @claude trigger, has nothing to do, and exits in ~11
+          # seconds reporting success. That is why this job posted no review on
+          # any PR while still showing a green check.
+          track_progress: true
+          # `model` is not an action input - it goes to the CLI via claude_args.
+          # Passing it as an input produced `Unexpected input(s) 'model'` and was
+          # silently ignored, so reviews would have run on the default model.
+          # The pinned value was also a stale model ID.
+          # `--allowedTools` is ADDITIVE, not restrictive: per the action's
+          # configuration docs, "The base GitHub tools are always included. Use
+          # `--allowedTools` to add additional tools (including specific Bash
+          # commands)". So omitting it grants nothing extra - it only drops what
+          # the list itself would have added, and the baseline still withholds
+          # WebFetch and cargo.
+          #
+          # That matters because the prompt below asks for checks the baseline
+          # cannot perform:
+          #   - WebFetch/WebSearch: priority 2 is verifying that a rule's
+          #     `evidence.source_urls` actually says what the rule claims. Without
+          #     these, a reviewer can only confirm a URL is present.
+          #   - cargo test/clippy: priorities 1 and 3 are validator correctness
+          #     and whether tests assert both directions, which on a Rust
+          #     workspace means running them, not reading them.
+          #   - cargo run: two ci.yml gates execute this way - the eval suite
+          #     (`agnix eval tests/eval.yaml`, which catches fixture drift as
+          #     rules are rescoped, see #981) and the .agnix.toml schema sync.
+          #     `cargo fmt` is deliberately absent: the prompt says to skip
+          #     formatting, which fmt and clippy already gate.
+          #   - the inline-comment tool: the prompt asks for inline comments, and
+          #     the baseline provides only the top-level comment tool.
+          claude_args: |
+            --model claude-opus-5
+            --allowedTools "WebFetch,WebSearch,Bash(cargo test:*),Bash(cargo clippy:*),Bash(cargo check:*),Bash(cargo build:*),Bash(cargo run:*),Bash(node scripts/sync-rule-bookkeeping.js:*),Bash(python3 scripts/check-rule-counts.py:*),Bash(bash scripts/check-locale-sync.sh:*),mcp__github_inline_comment__create_inline_comment"
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+
+            Review this pull request against the standards in CLAUDE.md.
+
+            Focus, in priority order:
+
+            1. **Correctness** - logic errors, unhandled edge cases, off-by-one
+               boundaries. For a validator change, does the rule still reject what
+               it should while accepting what the upstream doc endorses?
+            2. **Evidence** - every rule claim must trace to a cited upstream
+               source. Flag any rule behavior that no `evidence.source_urls` entry
+               supports, and any autofix that could change a config's meaning
+               rather than just its spelling.
+            3. **Test quality** - tests must assert both directions: the valid
+               input accepted AND the invalid one still rejected. A test that only
+               proves the happy path is a gap.
+            4. **Bookkeeping** - `rules.json` and `VALIDATION-RULES.md` must agree;
+               rule counts, locales, and the `AGENTS.md`/`CLAUDE.md` copies stay in
+               sync.
+
+            Skip formatting nits that do not change behavior - `cargo fmt` and
+            clippy already gate those. Report only what a maintainer would act on,
+            and say so plainly if the diff looks correct.
+
+            Use inline comments for specific lines; one top-level comment for
+            overall assessment.
 
       - name: Comment on PR (skipped)
         if: steps.check-runs.outputs.should_run == 'false'
@@ -74,4 +199,4 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          gh pr comment "$PR_NUMBER" --body "[INFO] Claude Code review was skipped as it has already run 3 times for this PR."
+          gh pr comment "$PR_NUMBER" --body "[INFO] Claude Code review was skipped as it has already run 3 times for this commit."

@@ -35,6 +35,9 @@ jobs:
       )
 
     runs-on: ubuntu-latest
+    # Bounded now that an @claude request can trigger a cargo build; the default
+    # is 6 hours.
+    timeout-minutes: 60
 
     permissions:
       contents: write
@@ -47,11 +50,71 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
+          # Two separate points.
+          #
+          # (1) Why it is here: this workflow now compiles PR-authored code
+          # (build.rs and test code run under the cargo grant below), so it
+          # should not leave a usable `contents: write` token in the checkout's
+          # git config. Scoped claim - this closes the git-config vector only.
+          # The action also passes the token into the CLI step's environment
+          # (DEFAULT_WORKFLOW_TOKEN / OVERRIDE_GITHUB_TOKEN in its action.yml),
+          # which cargo and therefore a PR's build.rs would inherit. What keeps
+          # that acceptable is the author_association gate above: a trusted human
+          # has to type @claude for any of this to run. Do not read this line as
+          # covering the whole threat model.
+          #
+          # (2) Why it is safe: with `use_commit_signing: true` the action takes
+          # the API-signing path, so `useApiCommitSigning` is true and
+          # `configureGitAuth` is never called (src/modes/tag/index.ts:71,88) -
+          # nothing re-adds a token after checkout. Commits go through GitHub's
+          # API, which is why the action docs note that mode "cannot perform
+          # complex git operations like rebasing". Note the inversion: the review
+          # job carries this same `persist-credentials: false` line but does NOT
+          # end up with a token-free checkout, because dropping
+          # `use_commit_signing` there puts it on the branch that does configure
+          # git auth.
+          persist-credentials: false
+
+      # The cargo grant below is only usable with a toolchain and a warm cache.
+      # Granting `cargo test` without these makes running it cost a cold build,
+      # which the model then rationally skips - "permitted but not usable" is the
+      # same failure this grant exists to fix.
+      #
+      # Deliberately ungated, unlike the two equivalent steps in
+      # claude-code-review.yml. An @claude request on a plain issue may still
+      # create a branch and commit code, and rule 7 ("not done until tests
+      # added") is why the grant exists - so predicting from `github.event_name`
+      # which requests will need cargo would fail silently in the one direction
+      # that matters. Paying toolchain setup on a prose-only question is the
+      # accepted price of the grant working everywhere.
+      - uses: dtolnay/rust-toolchain@4be9e76fd7c4901c61fb841f559994984270fce7 # stable
+        with:
+          components: clippy, rustfmt
+
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2
+        with:
+          shared-key: agnix-workspace
+          save-if: "false"
 
       - name: Run Claude Code
         uses: anthropics/claude-code-action@e0cf66d1d257526b5d07f141838c338921cb8455 # v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          model: claude-opus-4-6
           use_commit_signing: true
+          # `model` is not an action input - it reaches the CLI through
+          # claude_args. As an input it produced `Unexpected input(s) 'model'`
+          # and was ignored, so this ran on the default model instead. The
+          # pinned value was also a stale model ID.
+          #
+          # No `prompt` here on purpose: this workflow is triggered by an
+          # explicit @claude mention, and the comment body is the instruction.
+          # Same additive semantics as claude-code-review.yml: the baseline
+          # withholds cargo, so without this list an `@claude fix X and add a
+          # test` request would commit code that was never compiled - against
+          # CLAUDE.md rule 7 ("Task is not done until tests added"). This
+          # workflow does commit (`use_commit_signing` + `contents: write`), so
+          # it is the one that most needs to verify its own work.
+          claude_args: |
+            --model claude-opus-5
+            --allowedTools "WebFetch,WebSearch,Bash(cargo test:*),Bash(cargo clippy:*),Bash(cargo fmt:*),Bash(cargo check:*),Bash(cargo build:*),Bash(cargo run:*),Bash(node scripts/sync-rule-bookkeeping.js:*),Bash(bash scripts/check-locale-sync.sh:*),Bash(python3 scripts/check-rule-counts.py:*)"

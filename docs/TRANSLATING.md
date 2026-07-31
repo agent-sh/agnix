@@ -10,7 +10,7 @@ agnix supports multiple languages for diagnostic messages, CLI output, and LSP l
 | `es`    | Spanish               | `crates/*/locales/es.yml`      |
 | `zh-CN` | Chinese (Simplified)  | `crates/*/locales/zh-CN.yml`   |
 
-Locale files are stored per-crate (`agnix-core/locales/`, `agnix-cli/locales/`, `agnix-lsp/locales/`) so each crate embeds its required translations at compile time. A CI `locale-sync` job verifies all copies stay in sync.
+Locale files are stored per-crate (`agnix-core/locales/`, `agnix-cli/locales/`, `agnix-lsp/locales/`) so each crate embeds its required translations at compile time. The CI "Locale sync check" step verifies all copies stay in sync (it runs in the `ci` job, which appears in the PR checks list as `test (ubuntu-latest)`).
 
 ## Adding a New Language
 
@@ -24,13 +24,17 @@ Each locale needs identical YAML files in three crate directories and the worksp
 
 2. **Translate all string values** in `locales/<code>.yml`. Keep YAML keys unchanged; only modify values.
 
-3. **Sync to all crates** -- copy the translated file into each crate's `locales/` directory:
+3. **Sync to all crates** - copy the translated file into each crate's `locales/` directory:
    ```bash
    for crate in agnix-core agnix-cli agnix-lsp; do
      cp "locales/<code>.yml" "crates/$crate/locales/<code>.yml"
    done
    ```
-   All four copies (root + 3 crates) must be identical. The CI `locale-sync` job will fail if they drift.
+   If a crate is ever added with its own `locales/` directory, run
+   `bash scripts/check-locale-sync.sh` instead of trusting this list - the gate
+   discovers crates and prints the exact copy command for the current layout.
+
+   Every copy (the root plus each crate with a `locales/` directory) must be identical. The CI "Locale sync check" step will fail if they drift.
 
 4. **Register the locale** in two places:
 
