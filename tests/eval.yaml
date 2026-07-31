@@ -55,10 +55,6 @@ cases:
     expected: [AS-017, CC-SK-005, XP-SK-001]
     description: "Invalid agent triggers CC-SK-005"
 
-  - file: fixtures/invalid/skills/context-without-agent/SKILL.md
-    expected: [AS-017, CC-SK-003, CC-SK-013, XP-SK-001]
-    description: "Context fork without agent triggers CC-SK-003"
-
   - file: fixtures/invalid/skills/agent-without-context/SKILL.md
     expected: [AS-017, CC-SK-004, XP-SK-001]
     description: "Agent without context fork triggers CC-SK-004"

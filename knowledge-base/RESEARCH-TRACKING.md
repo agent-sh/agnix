@@ -75,7 +75,7 @@ Authoritative sources monitored for changes that may affect validation rules.
 | Claude Code - Skills | https://code.claude.com/docs/en/skills | spec-drift.yml (weekly) | CC-SK-001 through CC-SK-009 |
 | Claude Code - Plugins | https://code.claude.com/docs/en/plugins-reference | spec-drift.yml (weekly) | CC-PL-001 through CC-PL-015 |
 | Claude Code - Sub-agents | https://code.claude.com/docs/en/sub-agents | spec-drift.yml (weekly) | CC-AG-001 through CC-AG-007 |
-| Codex CLI - AGENTS.md | https://developers.openai.com/codex/guides/agents-md/ | spec-drift.yml (weekly) | AGM-001 through AGM-006, XP-001 through XP-006 |
+| Codex CLI - AGENTS.md | https://learn.chatgpt.com/docs/agent-configuration/agents-md | spec-drift.yml (weekly) | AGM-001 through AGM-006, XP-001 through XP-006 |
 | OpenCode - Rules | https://opencode.ai/docs/rules/ | spec-drift.yml (weekly) | XP-001 through XP-006 |
 | Cursor - Rules | https://cursor.com/docs/rules | spec-drift.yml (monthly) | CUR-001 through CUR-009 |
 | Cursor - Hooks | https://cursor.com/docs/hooks | spec-drift.yml (monthly) | CUR-010 through CUR-013, CUR-017 through CUR-019 |
@@ -139,7 +139,7 @@ New developments that may require future rule additions or tool tier changes.
 - **Status**: Adopted by Codex CLI, OpenCode; recognized by Claude Code
 - **Watch**: Additional tools adopting AGENTS.md, format extensions
 - **Impact**: AGM rules may need updates; XP rules may need to cover more tools
-- **Sources**: https://developers.openai.com/codex/guides/agents-md/
+- **Sources**: https://learn.chatgpt.com/docs/agent-configuration/agents-md
 
 ### Sub-agent Patterns
 

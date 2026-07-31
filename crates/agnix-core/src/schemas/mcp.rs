@@ -234,6 +234,19 @@ pub const VALID_JSON_SCHEMA_TYPES: &[&str] = &[
 /// Default MCP protocol version (latest stable per MCP spec 2025-11-25)
 pub const DEFAULT_MCP_PROTOCOL_VERSION: &str = "2025-11-25";
 
+/// MCP protocol revisions agnix treats as current when no revision is pinned.
+///
+/// `2026-07-28` is the current revision per the versioning page ("The current
+/// protocol version is 2026-07-28"), and the unversioned `/specification` URL
+/// now serves it. `2025-11-25` stays accepted because the two are behaviorally
+/// incompatible - 2026-07-28 removes the `initialize`/`initialized` handshake
+/// and `Mcp-Session-Id` sessions - so a config written for either revision is
+/// legitimately current, and flagging one would only move the false positive.
+///
+/// Pin `[spec_revisions] mcp_protocol` in `.agnix.toml` to require one exactly;
+/// MCP-008 then compares against that single value and offers its autofix.
+pub const CURRENT_MCP_PROTOCOL_VERSIONS: &[&str] = &["2025-11-25", "2026-07-28"];
+
 /// MCP initialize request params
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[allow(dead_code)] // deserialized from JSON; fields not individually accessed

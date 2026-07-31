@@ -53,9 +53,6 @@ rules:
   cc_sk_002:
     message: Contexto invalido '%{context}'. Debe ser 'fork' u omitido
     suggestion: Establece context a 'fork' o elimina el campo
-  cc_sk_003:
-    message: El contexto 'fork' requiere un campo 'agent'
-    suggestion: 'Agrega ''agent: general-purpose'' u otro tipo de agente valido'
   cc_sk_004:
     message: 'El campo agent requiere ''context: fork'''
     suggestion: 'Agrega ''context: fork'' al frontmatter'

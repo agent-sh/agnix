@@ -922,51 +922,30 @@ Body"#;
     assert_eq!(cc_sk_002.len(), 0);
 }
 
-// ===== CC-SK-003: Context Without Agent =====
-
+/// `context: fork` without `agent` is valid: "The `agent` field specifies
+/// which subagent configuration to use... If omitted, uses `general-purpose`."
+/// CC-SK-003 used to error here and shipped an autofix inserting
+/// `agent: general-purpose`, restating a default the tool already applies.
 #[test]
-fn test_cc_sk_003_context_fork_without_agent() {
+fn test_context_fork_without_agent_is_valid() {
     let content = r#"---
 name: test-skill
-description: Use when testing
+description: Use when testing fork context without an explicit agent
 context: fork
 ---
-Body"#;
+Run the test suite and summarize the failures."#;
 
     let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
-
-    let cc_sk_003: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-SK-003")
-        .collect();
-
-    assert_eq!(cc_sk_003.len(), 1);
-    assert_eq!(
-        cc_sk_003[0].level,
-        crate::diagnostics::DiagnosticLevel::Error
+    let diagnostics = validator.validate(
+        Path::new(".claude/skills/test-skill/SKILL.md"),
+        content,
+        &LintConfig::default(),
     );
-}
 
-#[test]
-fn test_cc_sk_003_context_fork_with_agent_ok() {
-    let content = r#"---
-name: test-skill
-description: Use when testing
-context: fork
-agent: Explore
----
-Body"#;
-
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
-
-    let cc_sk_003: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-SK-003")
-        .collect();
-
-    assert_eq!(cc_sk_003.len(), 0);
+    assert!(
+        diagnostics.is_empty(),
+        "`context: fork` defaults `agent` to general-purpose and must validate clean, got: {diagnostics:?}"
+    );
 }
 
 // ===== CC-SK-004: Agent Without Context =====
@@ -2806,21 +2785,6 @@ Body"#;
 }
 
 #[test]
-fn test_cc_sk_003_fork_without_agent_exhaustive() {
-    let content = r#"---
-name: test
-description: Use when testing
-context: fork
----
-Body"#;
-
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
-
-    assert!(diagnostics.iter().any(|d| d.rule == "CC-SK-003"));
-}
-
-#[test]
 fn test_cc_sk_004_agent_without_context_exhaustive() {
     let content = r#"---
 name: test
@@ -2963,28 +2927,6 @@ Body"#;
     assert!(cc_sk_002.has_fixes());
     let fix = &cc_sk_002.fixes[0];
     assert_eq!(fix.replacement, "fork");
-    assert!(!fix.safe);
-}
-
-#[test]
-fn test_cc_sk_003_has_insert_fix() {
-    let content = r#"---
-name: test-skill
-description: Use when testing
-context: fork
----
-Body"#;
-
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
-    let cc_sk_003 = diagnostics
-        .iter()
-        .find(|d| d.rule == "CC-SK-003")
-        .expect("CC-SK-003 should be reported");
-
-    assert!(cc_sk_003.has_fixes());
-    let fix = &cc_sk_003.fixes[0];
-    assert!(fix.replacement.contains("agent: general-purpose"));
     assert!(!fix.safe);
 }
 

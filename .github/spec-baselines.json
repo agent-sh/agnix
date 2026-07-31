@@ -69,7 +69,6 @@
         "rules": [
           "CC-SK-001",
           "CC-SK-002",
-          "CC-SK-003",
           "CC-SK-004",
           "CC-SK-006"
         ]
@@ -110,7 +109,7 @@
         ]
       },
       "codex-cli-agents-md": {
-        "url": "https://developers.openai.com/codex/guides/agents-md/",
+        "url": "https://learn.chatgpt.com/docs/agent-configuration/agents-md",
         "hash": "7ff43344ded3bb80b7c8f3dc37f40dec948a331719c1c7a0125384338f87c15c",
         "rules": [
           "AGM-001",

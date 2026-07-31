@@ -229,13 +229,6 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Fix**: Change to "fork" or remove
 **Source**: code.claude.com/docs/en/skills
 
-<a id="cc-sk-003"></a>
-### CC-SK-003 [HIGH] Context Without Agent
-**Requirement**: `context: fork` REQUIRES `agent` field
-**Detection**: `context == "fork" && agent.is_none()`
-**Fix**: Add `agent: general-purpose`
-**Source**: code.claude.com/docs/en/skills
-
 <a id="cc-sk-004"></a>
 ### CC-SK-004 [HIGH] Agent Without Context
 **Requirement**: `agent` field REQUIRES `context: fork`
@@ -533,7 +526,7 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Requirement**: Skills in `.agents/skills/` SHOULD NOT use frontmatter fields unsupported by Codex CLI
 **Detection**: SKILL.md path contains `.agents/skills/` AND frontmatter has unsupported fields
 **Fix**: [AUTO-FIX, safe] Remove unsupported field
-**Source**: developers.openai.com/codex/guides/agents-md
+**Source**: learn.chatgpt.com/docs/agent-configuration/agents-md
 
 <a id="oc-sk-001"></a>
 ### OC-SK-001 [MEDIUM] OpenCode Skill Uses Unsupported Field
@@ -1199,7 +1192,7 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 **Requirement**: AGENTS.md MUST be valid markdown
 **Detection**: Parse as markdown, check for syntax errors
 **Fix**: [AUTO-FIX] Fix markdown syntax issues
-**Source**: developers.openai.com/codex/guides/agents-md, docs.cursor.com/en/context, docs.cline.bot/features/custom-instructions
+**Source**: learn.chatgpt.com/docs/agent-configuration/agents-md, docs.cursor.com/en/context, docs.cline.bot/features/custom-instructions
 
 <a id="agm-002"></a>
 ### AGM-002 [MEDIUM] Missing Section Headers
@@ -1234,7 +1227,7 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 **Requirement**: Some tools load AGENTS.md hierarchically (multiple files may apply)
 **Detection**: Multiple AGENTS.md files in directory tree
 **Fix**: Document inheritance behavior
-**Source**: developers.openai.com/codex/guides/agents-md, docs.cline.bot/features/custom-instructions, github.com/github/docs/changelog/2025-06-17-github-copilot-coding-agent-now-supports-agents-md-custom-instructions
+**Source**: learn.chatgpt.com/docs/agent-configuration/agents-md, docs.cline.bot/features/custom-instructions, github.com/github/docs/changelog/2025-06-17-github-copilot-coding-agent-now-supports-agents-md-custom-instructions
 
 ---
 
@@ -2391,7 +2384,7 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 **Requirement**: `project_doc_fallback_filenames` in `.codex/config.toml` MUST be an array of unique, non-empty filename strings
 **Detection**: Parse TOML, validate array type, ensure all entries are non-empty strings, flag duplicate and path-like entries
 **Fix**: Use a unique array of bare filenames (e.g., `["AGENTS.md", "README.md"]`)
-**Source**: developers.openai.com/codex/guides/agents-md/
+**Source**: learn.chatgpt.com/docs/agent-configuration/agents-md/
 
 <a id="cdx-cfg-001"></a>
 ### CDX-CFG-001 [HIGH] Invalid approval_policy Value
@@ -2482,21 +2475,21 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 **Requirement**: AGENTS.md used by Codex MUST contain actionable project guidance
 **Detection**: For `AGENTS.md` variants, flag files where `content.trim().is_empty()`
 **Fix**: No auto-fix (add repository-specific instructions)
-**Source**: developers.openai.com/codex/guides/agents-md
+**Source**: learn.chatgpt.com/docs/agent-configuration/agents-md
 
 <a id="cdx-ag-002"></a>
 ### CDX-AG-002 [HIGH] Secrets in AGENTS.md for Codex
 **Requirement**: AGENTS.md MUST NOT include hardcoded credentials or tokens
 **Detection**: Scan AGENTS.md lines for secret markers/prefixes and credential-like assignments
 **Fix**: No auto-fix (remove secrets and use environment variables)
-**Source**: developers.openai.com/codex/guides/agents-md
+**Source**: learn.chatgpt.com/docs/agent-configuration/agents-md
 
 <a id="cdx-ag-003"></a>
 ### CDX-AG-003 [MEDIUM] Generic AGENTS.md Guidance for Codex
 **Requirement**: AGENTS.md SHOULD provide specific, actionable repo guidance instead of generic boilerplate
 **Detection**: Detect generic-only instruction content lacking concrete commands/paths/constraints
 **Fix**: No auto-fix (replace generic text with concrete repository guidance)
-**Source**: developers.openai.com/codex/guides/agents-md
+**Source**: learn.chatgpt.com/docs/agent-configuration/agents-md
 
 <a id="cdx-app-001"></a>
 ### CDX-APP-001 [HIGH] Invalid default_tools_approval_mode Value
@@ -2636,28 +2629,28 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 **Requirement**: AGENTS.md SHOULD not exceed 100,000 bytes
 **Detection**: Check file size against the limit
 **Fix**: No auto-fix (reduce content length)
-**Source**: developers.openai.com/codex/guides/agents-md
+**Source**: learn.chatgpt.com/docs/agent-configuration/agents-md
 
 <a id="cdx-ag-005"></a>
 ### CDX-AG-005 [MEDIUM] AGENTS.md References Missing File
 **Requirement**: File references in AGENTS.md SHOULD point to existing files
 **Detection**: Extract backtick-quoted file paths and check existence
 **Fix**: No auto-fix (fix reference or create missing file)
-**Source**: developers.openai.com/codex/guides/agents-md
+**Source**: learn.chatgpt.com/docs/agent-configuration/agents-md
 
 <a id="cdx-ag-006"></a>
 ### CDX-AG-006 [LOW] AGENTS.md Missing Project Context
 **Requirement**: AGENTS.md SHOULD include project-specific structure like headings, commands, and paths
 **Detection**: Check for presence of headings, backtick commands, and file paths
 **Fix**: No auto-fix (add project-specific content)
-**Source**: developers.openai.com/codex/guides/agents-md
+**Source**: learn.chatgpt.com/docs/agent-configuration/agents-md
 
 <a id="cdx-ag-007"></a>
 ### CDX-AG-007 [MEDIUM] AGENTS.md Contradicts config.toml
 **Requirement**: AGENTS.md instructions SHOULD be consistent with config.toml values
 **Detection**: Cross-file analysis (project-level check)
 **Fix**: No auto-fix (align instructions with configuration)
-**Source**: developers.openai.com/codex/guides/agents-md
+**Source**: learn.chatgpt.com/docs/agent-configuration/agents-md
 
 <a id="cdx-app-002"></a>
 ### CDX-APP-002 [MEDIUM] Invalid skills Configuration
@@ -3312,7 +3305,7 @@ agent: reviewer
 **Note**: Claude Code uses `CLAUDE.md` (not AGENTS.md)
 **Detection**: Validate AGENTS.md follows markdown conventions
 **Fix**: Ensure AGENTS.md is valid markdown with clear sections
-**Source**: developers.openai.com/codex/guides/agents-md, opencode.ai/docs/rules, docs.cursor.com/en/context, docs.cline.bot/features/custom-instructions, github.com/github/docs/changelog/2025-06-17-github-copilot-coding-agent-now-supports-agents-md-custom-instructions
+**Source**: learn.chatgpt.com/docs/agent-configuration/agents-md, opencode.ai/docs/rules, docs.cursor.com/en/context, docs.cline.bot/features/custom-instructions, github.com/github/docs/changelog/2025-06-17-github-copilot-coding-agent-now-supports-agents-md-custom-instructions
 
 <a id="xp-003"></a>
 ### XP-003 [MEDIUM] Hard-Coded Platform Paths
@@ -3347,7 +3340,7 @@ agent: reviewer
 **Requirement**: AGENTS.md SHOULD stay under Codex CLI's 32768-byte default limit
 **Detection**: Check byte length of AGENTS.md content against the 32768-byte threshold
 **Fix**: Reduce content or split into multiple files using @import
-**Source**: developers.openai.com/codex/guides/agents-md
+**Source**: learn.chatgpt.com/docs/agent-configuration/agents-md
 
 <a id="xp-008"></a>
 ### XP-008 [MEDIUM] Claude-specific Features in CLAUDE.md for Cursor
@@ -3461,7 +3454,6 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | AS-006 | Collapse consecutive hyphens | safe |
 | CC-SK-001 | Default invalid model to sonnet | unsafe |
 | CC-SK-002 | Normalize context to fork | unsafe |
-| CC-SK-003 | Add default agent for fork context | unsafe |
 | CC-SK-004 | Insert context: fork before agent key | unsafe |
 | CC-SK-007 | Suggest Bash(git:*) matcher | unsafe |
 | CC-SK-011 | Remove disable-model-invocation line | unsafe |
@@ -3550,7 +3542,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Claude Output Styles | 6 | 2 | 2 | 2 | 0 |
 | Claude Plugins | 15 | 9 | 6 | 0 | 4 |
 | Claude Settings | 20 | 0 | 19 | 1 | 0 |
-| Claude Skills | 21 | 11 | 9 | 1 | 11 |
+| Claude Skills | 20 | 10 | 9 | 1 | 10 |
 | Cline | 7 | 4 | 3 | 0 | 3 |
 | Cline Skills | 3 | 2 | 1 | 0 | 2 |
 | Codex CLI | 65 | 31 | 29 | 5 | 10 |
@@ -3580,7 +3572,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **443** | **215** | **198** | **30** | **125** |
+| **TOTAL** | **442** | **214** | **198** | **30** | **124** |
 
 
 ---
@@ -3610,8 +3602,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 443 validation rules across 40 categories
+**Total Coverage**: 442 validation rules across 40 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 215 HIGH, 198 MEDIUM, 30 LOW
-**Auto-Fixable**: 125 rules (28%)
+**Certainty**: 214 HIGH, 198 MEDIUM, 30 LOW
+**Auto-Fixable**: 124 rules (28%)

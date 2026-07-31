@@ -1,7 +1,7 @@
 # Rules Reference
 
-This section contains all `443` validation rules generated from `knowledge-base/rules.json`.
-`125` rules have automatic fixes.
+This section contains all `442` validation rules generated from `knowledge-base/rules.json`.
+`124` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
 |------|------|----------|----------|----------|
@@ -111,7 +111,6 @@ This section contains all `443` validation rules generated from `knowledge-base/
 | [CC-PL-015](./generated/cc-pl-015.md) | Default Component Folder Shadowed by Manifest | MEDIUM | Claude Plugins | No |
 | [CC-SK-001](./generated/cc-sk-001.md) | Invalid Model Value | HIGH | Claude Skills | Yes (unsafe) |
 | [CC-SK-002](./generated/cc-sk-002.md) | Invalid Context Value | HIGH | Claude Skills | Yes (unsafe) |
-| [CC-SK-003](./generated/cc-sk-003.md) | Context Without Agent | HIGH | Claude Skills | Yes (unsafe) |
 | [CC-SK-004](./generated/cc-sk-004.md) | Agent Without Context | HIGH | Claude Skills | Yes (unsafe) |
 | [CC-SK-005](./generated/cc-sk-005.md) | Invalid Agent Type | HIGH | Claude Skills | Yes (unsafe) |
 | [CC-SK-006](./generated/cc-sk-006.md) | Dangerous Auto-Invocation | HIGH | Claude Skills | Yes (unsafe) |
