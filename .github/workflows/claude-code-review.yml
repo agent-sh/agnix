@@ -133,11 +133,16 @@ jobs:
           #   - cargo test/clippy: priorities 1 and 3 are validator correctness
           #     and whether tests assert both directions, which on a Rust
           #     workspace means running them, not reading them.
+          #   - cargo run: two ci.yml gates execute this way - the eval suite
+          #     (`agnix eval tests/eval.yaml`, which catches fixture drift as
+          #     rules are rescoped, see #981) and the .agnix.toml schema sync.
+          #     `cargo fmt` is deliberately absent: the prompt says to skip
+          #     formatting, which fmt and clippy already gate.
           #   - the inline-comment tool: the prompt asks for inline comments, and
           #     the baseline provides only the top-level comment tool.
           claude_args: |
             --model claude-opus-5
-            --allowedTools "WebFetch,WebSearch,Bash(cargo test:*),Bash(cargo clippy:*),Bash(cargo check:*),Bash(cargo build:*),Bash(node scripts/sync-rule-bookkeeping.js:*),Bash(python3 scripts/check-rule-counts.py:*),Bash(bash scripts/check-locale-sync.sh:*),mcp__github_inline_comment__create_inline_comment"
+            --allowedTools "WebFetch,WebSearch,Bash(cargo test:*),Bash(cargo clippy:*),Bash(cargo check:*),Bash(cargo build:*),Bash(cargo run:*),Bash(node scripts/sync-rule-bookkeeping.js:*),Bash(python3 scripts/check-rule-counts.py:*),Bash(bash scripts/check-locale-sync.sh:*),mcp__github_inline_comment__create_inline_comment"
           prompt: |
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number }}

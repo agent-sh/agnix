@@ -50,6 +50,14 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
+          # This workflow now compiles PR-authored code (build.rs and test code
+          # run under the cargo grant below), so it should not leave a usable
+          # `contents: write` token in the checkout's git config. Safe to drop:
+          # with `use_commit_signing: true` the action commits through GitHub's
+          # API rather than the git CLI - the action docs note it "cannot perform
+          # complex git operations like rebasing" for exactly that reason - so
+          # nothing here needs the persisted credential.
+          persist-credentials: false
 
       # The cargo grant below is only usable with a toolchain and a warm cache.
       # Granting `cargo test` without these makes running it cost a cold 6-crate
