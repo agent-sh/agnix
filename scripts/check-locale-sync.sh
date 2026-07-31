@@ -55,7 +55,19 @@ for glob in "${LOCALE_GLOBS[@]}"; do
 done
 
 if [ ${#LOCALE_FILES[@]} -eq 0 ]; then
-  echo "FAIL: No locale files (${LOCALE_GLOBS[*]}) found in ${ROOT_LOCALES}/"
+  # Distinguish "nothing there" from "everything there is misnamed". The second
+  # case had already been counted into root_non_yml above, and reporting "none
+  # found" discarded that measurement and skipped the rename advice in the
+  # footer, which is 80 lines below this exit.
+  if [ "$root_non_yml" -gt 0 ]; then
+    echo "FAIL: every locale file in ${ROOT_LOCALES}/ (${root_non_yml}) uses an extension other than .yml"
+    echo ""
+    echo "Rename them, e.g."
+    echo "  mv ${ROOT_LOCALES}/<locale>.json ${ROOT_LOCALES}/<locale>.yml"
+    echo "then fan the canonical copies out to every crate."
+  else
+    echo "FAIL: No locale files (${LOCALE_GLOBS[*]}) found in ${ROOT_LOCALES}/"
+  fi
   exit 1
 fi
 

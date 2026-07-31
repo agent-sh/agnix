@@ -34,7 +34,7 @@ Each locale needs identical YAML files in three crate directories and the worksp
    `bash scripts/check-locale-sync.sh` instead of trusting this list - the gate
    discovers crates and prints the exact copy command for the current layout.
 
-   All four copies (root + 3 crates) must be identical. The CI "Locale sync check" step will fail if they drift.
+   Every copy (the root plus each crate with a `locales/` directory) must be identical. The CI "Locale sync check" step will fail if they drift.
 
 4. **Register the locale** in two places:
 
