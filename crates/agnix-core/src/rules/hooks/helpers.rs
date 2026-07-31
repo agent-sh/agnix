@@ -224,9 +224,10 @@ pub(super) fn validate_cc_hk_011_invalid_timeout_values(
 
 /// Deprecated event names and their recommended replacements.
 /// Each entry is `(deprecated_name, replacement_name)`.
-pub(super) const DEPRECATED_EVENTS: &[(&str, &str)] = &[("Setup", "SessionStart")];
-
-const SESSION_START_MATCHERS: &[&str] = &["startup", "resume", "clear", "compact"];
+// `fork` covers `--fork-session` with `--resume`/`--continue`, the `/fork`
+// background copy, and `/branch`. Before Claude Code v2.1.214 a forked session
+// reported `resume` instead, so both remain valid.
+const SESSION_START_MATCHERS: &[&str] = &["startup", "resume", "clear", "compact", "fork"];
 const SETUP_MATCHERS: &[&str] = &["init", "maintenance"];
 const SESSION_END_MATCHERS: &[&str] = &[
     "clear",
@@ -285,51 +286,6 @@ fn known_matcher_values(event: &str) -> Option<&'static [&'static str]> {
         "StopFailure" => Some(STOP_FAILURE_MATCHERS),
         "InstructionsLoaded" => Some(INSTRUCTIONS_LOADED_MATCHERS),
         _ => None,
-    }
-}
-
-/// CC-HK-019: Deprecated event name
-pub(super) fn validate_cc_hk_019_deprecated_event(
-    event: &str,
-    path: &Path,
-    content: &str,
-    diagnostics: &mut Vec<Diagnostic>,
-) {
-    if let Some(&(deprecated, replacement)) = DEPRECATED_EVENTS.iter().find(|&&(d, _)| d == event) {
-        let mut diagnostic = Diagnostic::warning(
-            path.to_path_buf(),
-            1,
-            0,
-            "CC-HK-019",
-            t!(
-                "rules.cc_hk_019.message",
-                event = deprecated,
-                replacement = replacement
-            ),
-        )
-        .with_suggestion(t!(
-            "rules.cc_hk_019.suggestion",
-            event = deprecated,
-            replacement = replacement
-        ));
-
-        // Unsafe auto-fix: replace deprecated event key with replacement
-        if let Some((start, end)) = find_event_key_position(content, event) {
-            let replacement_text = format!("\"{}\"", replacement);
-            diagnostic = diagnostic.with_fix(Fix::replace(
-                start,
-                end,
-                replacement_text,
-                t!(
-                    "rules.cc_hk_019.fix",
-                    event = deprecated,
-                    replacement = replacement
-                ),
-                false,
-            ));
-        }
-
-        diagnostics.push(diagnostic);
     }
 }
 

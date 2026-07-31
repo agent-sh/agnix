@@ -31,7 +31,6 @@ const RULE_IDS: &[&str] = &[
     "CC-HK-016",
     "CC-HK-017",
     "CC-HK-018",
-    "CC-HK-019",
     "CC-HK-020",
     "CC-HK-021",
     "CC-HK-022",
@@ -556,11 +555,6 @@ impl Validator for HooksValidator {
                 }
             } else if !HooksSchema::VALID_EVENTS.contains(&event.as_str()) {
                 continue; // Skip invalid events even if rule disabled
-            }
-
-            // CC-HK-019: Deprecated event name
-            if config.is_rule_enabled("CC-HK-019") {
-                validate_cc_hk_019_deprecated_event(event, path, content, &mut diagnostics);
             }
 
             for (matcher_idx, matcher) in matchers.iter().enumerate() {

@@ -849,13 +849,6 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Fix**: Auto-fix (safe) - remove the `matcher` field line
 **Source**: code.claude.com/docs/en/hooks
 
-<a id="cc-hk-019"></a>
-### CC-HK-019 [MEDIUM] Deprecated Setup Event
-**Requirement**: The `Setup` hook event SHOULD be replaced with `SessionStart`
-**Detection**: Check if `Setup` is used as a hook event name
-**Fix**: Auto-fix (unsafe) -- replace `Setup` with `SessionStart`
-**Source**: code.claude.com/docs/en/hooks
-
 <a id="cc-hk-020"></a>
 ### CC-HK-020 [HIGH] HTTP Hook Missing URL
 **Requirement**: HTTP hooks (type: "http") MUST have a url field
@@ -1347,10 +1340,10 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 <a id="cc-pl-015"></a>
 ### CC-PL-015 [MEDIUM] Default Component Folder Shadowed by Manifest
-**Requirement**: If a root default component folder (`commands/`, `agents/`, `skills/`, or `hooks/`) exists, `plugin.json` SHOULD include that folder in the matching manifest field or avoid overriding that field.
-**Detection**: Check `.claude-plugin/plugin.json` for a component field while the matching root folder exists and is not one of the configured paths.
+**Requirement**: If a root default component folder for a **replace-semantics** field exists, `plugin.json` SHOULD include that folder in the matching manifest field or avoid overriding that field. Per the "Path behavior rules" section of the plugins reference, only `commands`, `agents`, `workflows`, `outputStyles`, `experimental.themes`, and `experimental.monitors` replace their default. `skills` **adds** to the default scan (the default `skills/` directory is always scanned), and `hooks`/`mcpServers`/`lspServers` have their own merge rules, so none of those can shadow and none are checked.
+**Detection**: Check `.claude-plugin/plugin.json` for a replace-semantics component field while the matching root folder exists and is not one of the configured paths. Folder names differ from manifest keys for `outputStyles` (`output-styles/`) and the `experimental.*` keys (`themes/`, `monitors/`).
 **Fix**: Manual - add `./<component>` to the manifest field, or move the files into a configured component path.
-**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.140
+**Source**: code.claude.com/docs/en/plugins-reference, github.com/anthropics/claude-code/releases/tag/v2.1.140
 
 ---
 
@@ -3480,7 +3473,6 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | CC-HK-013 | Remove async field | safe |
 | CC-HK-015 | Remove model field | safe |
 | CC-HK-018 | Remove matcher field | safe |
-| CC-HK-019 | Replace Setup with SessionStart | unsafe |
 | CC-AG-003 | Default invalid model to sonnet | unsafe |
 | CC-AG-004 | Default invalid permission mode | unsafe |
 | CC-AG-008 | Replace with closest memory scope | unsafe |
@@ -3553,7 +3545,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Amp Checks | 4 | 2 | 2 | 0 | 3 |
 | Amp Skills | 1 | 0 | 1 | 0 | 1 |
 | Claude Agents | 18 | 13 | 4 | 1 | 10 |
-| Claude Hooks | 28 | 15 | 8 | 5 | 16 |
+| Claude Hooks | 27 | 15 | 7 | 5 | 15 |
 | Claude Memory | 13 | 8 | 5 | 0 | 3 |
 | Claude Output Styles | 6 | 2 | 2 | 2 | 0 |
 | Claude Plugins | 15 | 9 | 6 | 0 | 4 |
@@ -3588,7 +3580,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **444** | **215** | **199** | **30** | **126** |
+| **TOTAL** | **443** | **215** | **198** | **30** | **125** |
 
 
 ---
@@ -3618,8 +3610,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 444 validation rules across 40 categories
+**Total Coverage**: 443 validation rules across 40 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 215 HIGH, 199 MEDIUM, 30 LOW
-**Auto-Fixable**: 126 rules (28%)
+**Certainty**: 215 HIGH, 198 MEDIUM, 30 LOW
+**Auto-Fixable**: 125 rules (28%)

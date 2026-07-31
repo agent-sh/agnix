@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+- **CC-HK-019 (Deprecated Setup Event)**. The rule warned that the `Setup` hook event was deprecated in favor of `SessionStart` and shipped an unsafe autofix that rewrote the event key. `Setup` is not deprecated: it is documented as a current event that fires on `--init-only` and on `--init`/`--maintenance` in `-p` mode, with its own matcher set (`init`, `maintenance`), exit-code row, and decision-control entry. `SessionStart` fires on every session begin/resume, so applying the "fix" silently changed *when* a hook ran. The rule cited no upstream deprecation notice when it was added. Rule count 444 -> 443. Follows the origin-less-rule removal precedent from PR #979.
+
+### Fixed
+- **CC-HK-025 rejected the documented `fork` SessionStart matcher**. `fork` covers `--fork-session` with `--resume`/`--continue`, the `/fork` background copy, and `/branch`. It was missing from the known-value list, so a valid hook config was flagged. (`resume` stays valid: before Claude Code v2.1.214 a forked session reported `resume`.)
+- **CC-PL-015 flagged additive and merge-semantics plugin fields as shadowing**. The rule warned that a default component folder was ignored whenever the matching manifest key was present, but the plugins reference splits those keys three ways: `skills` **adds** to the default (the default `skills/` directory is always scanned), while `hooks`/`mcpServers`/`lspServers` have their own merge rules. Neither can shadow, so both `skills` and `hooks` produced false warnings on plugins that kept their default folder. The rule now checks only the six documented replace-semantics fields, which also closes a coverage gap: `workflows`, `outputStyles`, `experimental.themes`, and `experimental.monitors` were never checked. Folder names that differ from their manifest key are handled (`outputStyles` -> `output-styles/`, `experimental.*` -> root-level `themes/`, `monitors/`).
+- **Spec Drift Sentinel pointed maintainers at 15 rule IDs that do not exist**. `.github/spec-baselines.json` mapped `claude-code-subagents` to `CC-SA-001`..`007`, `github-copilot` to `GH-001`..`004`, and `cline-rules` to `CLINE-001`..`003` - none of which were ever in this repo; the real rules are `CC-AG-*`, `COP-*`/`CP-SK-*`, and `CLN-*`/`CL-SK-*`. It also still listed `AS-014`, removed in PR #979. Every drift issue rendered these straight into the "rules may need review" list, sending the reader to rules they could not look up. Mappings are now derived from each rule's own evidence URLs, and a new `test_spec_baseline_rule_ids_exist` parity test fails CI if an unknown ID is ever added.
+
 ## [0.43.0] - 2026-07-31
 
 ### Changed

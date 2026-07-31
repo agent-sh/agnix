@@ -1254,6 +1254,97 @@ fn test_cc_hk_004_matcher_on_session_start() {
     assert_eq!(cc_hk_004.len(), 0, "SessionStart now supports matchers");
 }
 
+/// `fork` is a documented SessionStart matcher (`--fork-session` with
+/// `--resume`/`--continue`, the `/fork` background copy, `/branch`). It was
+/// missing from the known-value list, so CC-HK-025 flagged a valid config.
+#[test]
+fn test_cc_hk_025_session_start_fork_matcher_valid() {
+    let content = r#"{
+            "hooks": {
+                "SessionStart": [
+                    {
+                        "matcher": "fork",
+                        "hooks": [
+                            { "type": "command", "command": "echo 'test'" }
+                        ]
+                    }
+                ]
+            }
+        }"#;
+
+    let diagnostics = validate(content);
+    let hits: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-HK-025")
+        .collect();
+
+    assert!(
+        hits.is_empty(),
+        "SessionStart matcher 'fork' is documented and must not be flagged, got: {hits:?}"
+    );
+}
+
+/// `Setup` is a current, supported hook event that fires on `--init-only` and
+/// on `--init`/`--maintenance` in `-p` mode - distinct timing from
+/// `SessionStart`. CC-HK-019 used to warn that it was deprecated and shipped an
+/// unsafe autofix rewriting it to `SessionStart`, which silently changed when
+/// the hook ran. The rule was removed; `Setup` must now validate clean.
+#[test]
+fn test_setup_event_is_not_deprecated() {
+    let content = r#"{
+            "hooks": {
+                "Setup": [
+                    {
+                        "matcher": "init",
+                        "hooks": [
+                            { "type": "command", "command": "echo 'setup'", "timeout": 600 }
+                        ]
+                    }
+                ]
+            }
+        }"#;
+
+    let diagnostics = validate(content);
+    assert!(
+        diagnostics.is_empty(),
+        "a fully specified `Setup` hook must produce no diagnostics, got: {diagnostics:?}"
+    );
+}
+
+/// Case variants of `Setup` are still genuinely invalid event names and must
+/// keep tripping CC-HK-001. Retained from the removed CC-HK-019 suite, which
+/// covered this to prove the deprecation check did not shadow CC-HK-001.
+#[test]
+fn test_setup_case_variants_trigger_cc_hk_001() {
+    for variant in ["setup", "SetUp", "SETUP"] {
+        let content = format!(
+            r#"{{
+            "hooks": {{
+                "{variant}": [
+                    {{
+                        "hooks": [
+                            {{ "type": "command", "command": "echo 'test'" }}
+                        ]
+                    }}
+                ]
+            }}
+        }}"#
+        );
+
+        let diagnostics = validate(&content);
+        let cc_hk_001: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-HK-001")
+            .collect();
+
+        assert_eq!(
+            cc_hk_001.len(),
+            1,
+            "event names are case-sensitive: '{variant}' must trip CC-HK-001, got: {diagnostics:?}"
+        );
+    }
+}
+
 #[test]
 fn test_cc_hk_004_no_matcher_on_stop_ok() {
     let content = r#"{
@@ -4042,329 +4133,6 @@ fn test_cc_hk_012_has_suggestion_on_schema_mismatch() {
         parse_errors[0].suggestion.is_some(),
         "CC-HK-012 schema mismatch should also have a suggestion"
     );
-}
-
-// ===== CC-HK-019 Tests: Deprecated Setup Event =====
-
-#[test]
-fn test_cc_hk_019_setup_triggers_deprecation_warning() {
-    let content = r#"{
-            "hooks": {
-                "Setup": [
-                    {
-                        "hooks": [
-                            { "type": "command", "command": "echo setup", "timeout": 30 }
-                        ]
-                    }
-                ]
-            }
-        }"#;
-
-    let diagnostics = validate(content);
-    let cc_hk_019: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-HK-019")
-        .collect();
-
-    assert_eq!(cc_hk_019.len(), 1);
-    assert_eq!(cc_hk_019[0].level, DiagnosticLevel::Warning);
-    assert!(
-        cc_hk_019[0].message.contains("Deprecated"),
-        "Should mention deprecation, got: {}",
-        cc_hk_019[0].message
-    );
-    assert!(
-        cc_hk_019[0].message.contains("Setup"),
-        "Should mention Setup event, got: {}",
-        cc_hk_019[0].message
-    );
-    assert!(
-        cc_hk_019[0].message.contains("SessionStart"),
-        "Should suggest SessionStart replacement, got: {}",
-        cc_hk_019[0].message
-    );
-}
-
-#[test]
-fn test_cc_hk_019_session_start_no_warning() {
-    let content = r#"{
-            "hooks": {
-                "SessionStart": [
-                    {
-                        "hooks": [
-                            { "type": "command", "command": "echo start", "timeout": 30 }
-                        ]
-                    }
-                ]
-            }
-        }"#;
-
-    let diagnostics = validate(content);
-    let cc_hk_019: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-HK-019")
-        .collect();
-
-    assert_eq!(
-        cc_hk_019.len(),
-        0,
-        "SessionStart should NOT trigger CC-HK-019"
-    );
-}
-
-#[test]
-fn test_cc_hk_019_has_autofix() {
-    let content = r#"{
-  "hooks": {
-    "Setup": [
-      {
-        "hooks": [
-          { "type": "command", "command": "echo setup", "timeout": 30 }
-        ]
-      }
-    ]
-  }
-}"#;
-
-    let diagnostics = validate(content);
-    let cc_hk_019: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-HK-019")
-        .collect();
-
-    assert_eq!(cc_hk_019.len(), 1);
-    assert!(cc_hk_019[0].has_fixes(), "CC-HK-019 should have auto-fix");
-    let fix = &cc_hk_019[0].fixes[0];
-    assert!(
-        fix.replacement.contains("SessionStart"),
-        "Fix should replace with SessionStart, got: {}",
-        fix.replacement
-    );
-}
-
-#[test]
-fn test_cc_hk_019_fix_is_unsafe() {
-    let content = r#"{
-  "hooks": {
-    "Setup": [
-      {
-        "hooks": [
-          { "type": "command", "command": "echo setup", "timeout": 30 }
-        ]
-      }
-    ]
-  }
-}"#;
-
-    let diagnostics = validate(content);
-    let cc_hk_019: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-HK-019")
-        .collect();
-
-    assert_eq!(cc_hk_019.len(), 1);
-    assert!(cc_hk_019[0].has_fixes(), "CC-HK-019 should have auto-fix");
-    let fix = &cc_hk_019[0].fixes[0];
-    assert!(!fix.safe, "CC-HK-019 fix should be unsafe (safe=false)");
-}
-
-#[test]
-fn test_cc_hk_019_can_be_disabled() {
-    let content = r#"{
-            "hooks": {
-                "Setup": [
-                    {
-                        "hooks": [
-                            { "type": "command", "command": "echo setup", "timeout": 30 }
-                        ]
-                    }
-                ]
-            }
-        }"#;
-
-    let config = LintConfig::builder()
-        .disable_rule("CC-HK-019")
-        .build()
-        .unwrap();
-    let validator = HooksValidator;
-    let diagnostics = validator.validate(Path::new("settings.json"), content, &config);
-    let cc_hk_019: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-HK-019")
-        .collect();
-
-    assert_eq!(
-        cc_hk_019.len(),
-        0,
-        "CC-HK-019 should not fire when disabled"
-    );
-}
-
-#[test]
-fn test_cc_hk_019_fixture_deprecated_setup_event() {
-    let content = include_str!(
-        "../../../../../tests/fixtures/invalid/hooks/deprecated-setup-event/settings.json"
-    );
-    let diagnostics = validate(content);
-    let cc_hk_019: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-HK-019")
-        .collect();
-
-    assert_eq!(cc_hk_019.len(), 1, "Fixture should trigger CC-HK-019");
-    assert_eq!(cc_hk_019[0].level, DiagnosticLevel::Warning);
-}
-
-#[test]
-fn test_cc_hk_019_setup_does_not_trigger_cc_hk_001() {
-    // Setup is in VALID_EVENTS, so CC-HK-001 should NOT fire
-    let content = r#"{
-            "hooks": {
-                "Setup": [
-                    {
-                        "hooks": [
-                            { "type": "command", "command": "echo setup", "timeout": 30 }
-                        ]
-                    }
-                ]
-            }
-        }"#;
-
-    let diagnostics = validate(content);
-    let cc_hk_001: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-HK-001")
-        .collect();
-
-    assert_eq!(
-        cc_hk_001.len(),
-        0,
-        "Setup is a valid event - CC-HK-001 should NOT fire"
-    );
-}
-
-#[test]
-fn test_cc_hk_019_case_variants_trigger_cc_hk_001_not_019() {
-    // "setup" (lowercase) and "SetUp" (wrong case) are NOT deprecated - they are invalid.
-    // They should trigger CC-HK-001 (invalid event), not CC-HK-019 (deprecated event).
-    for variant in &["setup", "SetUp", "SETUP", "Setups"] {
-        let content = format!(
-            r#"{{
-            "hooks": {{
-                "{}": [
-                    {{
-                        "hooks": [
-                            {{ "type": "command", "command": "echo test", "timeout": 30 }}
-                        ]
-                    }}
-                ]
-            }}
-        }}"#,
-            variant
-        );
-
-        let diagnostics = validate(&content);
-        let cc_hk_001: Vec<_> = diagnostics
-            .iter()
-            .filter(|d| d.rule == "CC-HK-001")
-            .collect();
-        let cc_hk_019: Vec<_> = diagnostics
-            .iter()
-            .filter(|d| d.rule == "CC-HK-019")
-            .collect();
-
-        assert_eq!(
-            cc_hk_001.len(),
-            1,
-            "'{}' should trigger CC-HK-001 (invalid event)",
-            variant
-        );
-        assert_eq!(
-            cc_hk_019.len(),
-            0,
-            "'{}' should NOT trigger CC-HK-019 (not exact match for deprecated)",
-            variant
-        );
-    }
-}
-
-#[test]
-fn test_cc_hk_019_suggestion_field() {
-    let content = r#"{
-  "hooks": {
-    "Setup": [
-      {
-        "hooks": [
-          { "type": "command", "command": "echo setup", "timeout": 30 }
-        ]
-      }
-    ]
-  }
-}"#;
-
-    let diagnostics = validate(content);
-    let cc_hk_019: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-HK-019")
-        .collect();
-
-    assert_eq!(cc_hk_019.len(), 1);
-    assert!(
-        cc_hk_019[0].suggestion.is_some(),
-        "CC-HK-019 should have a suggestion"
-    );
-    let suggestion = cc_hk_019[0].suggestion.as_ref().unwrap();
-    assert!(
-        suggestion.contains("SessionStart"),
-        "Suggestion should mention SessionStart, got: {}",
-        suggestion
-    );
-}
-
-#[test]
-fn test_cc_hk_019_autofix_application() {
-    let content = r#"{
-  "hooks": {
-    "Setup": [
-      {
-        "hooks": [
-          { "type": "command", "command": "echo setup", "timeout": 30 }
-        ]
-      }
-    ]
-  }
-}"#;
-
-    let diagnostics = validate(content);
-    let cc_hk_019: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-HK-019")
-        .collect();
-
-    assert_eq!(cc_hk_019.len(), 1);
-    assert!(cc_hk_019[0].has_fixes());
-
-    let fix = &cc_hk_019[0].fixes[0];
-    let mut fixed_content = content.to_string();
-    fixed_content.replace_range(fix.start_byte..fix.end_byte, &fix.replacement);
-
-    // Verify the fixed content replaces Setup with SessionStart
-    assert!(
-        fixed_content.contains("\"SessionStart\""),
-        "Fixed content should contain SessionStart"
-    );
-    assert!(
-        !fixed_content.contains("\"Setup\""),
-        "Fixed content should not contain Setup"
-    );
-
-    // Verify re-validation produces no CC-HK-019
-    let re_diagnostics = validate(&fixed_content);
-    let re_019: Vec<_> = re_diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-HK-019")
-        .collect();
-    assert_eq!(re_019.len(), 0, "After fix, CC-HK-019 should not fire");
 }
 
 // ---------------------------------------------------------------------------

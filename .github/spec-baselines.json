@@ -17,7 +17,6 @@
           "AS-008",
           "AS-011",
           "AS-013",
-          "AS-014",
           "AS-015",
           "AS-016"
         ]
@@ -90,13 +89,24 @@
         "url": "https://code.claude.com/docs/en/sub-agents",
         "hash": "b17ed99452ce65f18804fff1ed945414d9e42ae862d295ad49be6b13dd93210c",
         "rules": [
-          "CC-SA-001",
-          "CC-SA-002",
-          "CC-SA-003",
-          "CC-SA-004",
-          "CC-SA-005",
-          "CC-SA-006",
-          "CC-SA-007"
+          "CC-AG-001",
+          "CC-AG-002",
+          "CC-AG-003",
+          "CC-AG-004",
+          "CC-AG-005",
+          "CC-AG-006",
+          "CC-AG-007",
+          "CC-AG-008",
+          "CC-AG-009",
+          "CC-AG-010",
+          "CC-AG-011",
+          "CC-AG-012",
+          "CC-AG-013",
+          "CC-AG-014",
+          "CC-AG-015",
+          "CC-AG-017",
+          "CC-AG-019",
+          "CC-AG-020"
         ]
       },
       "codex-cli-agents-md": {
@@ -175,19 +185,48 @@
         "url": "https://docs.github.com/en/copilot/customizing-copilot",
         "hash": "668c75acb7948484e1334aeb040332961836fbe187561fa830219afcde8ae289",
         "rules": [
-          "GH-001",
-          "GH-002",
-          "GH-003",
-          "GH-004"
+          "COP-001",
+          "COP-002",
+          "COP-003",
+          "COP-004",
+          "COP-005",
+          "COP-006",
+          "COP-007",
+          "COP-008",
+          "COP-009",
+          "COP-010",
+          "COP-011",
+          "COP-012",
+          "COP-013",
+          "COP-014",
+          "COP-015",
+          "COP-017",
+          "COP-018",
+          "COP-019",
+          "COP-020",
+          "COP-022",
+          "COP-023",
+          "COP-024",
+          "COP-025",
+          "COP-026",
+          "COP-027",
+          "CP-SK-001"
         ]
       },
       "cline-rules": {
         "url": "https://docs.cline.bot/features/cline-rules/overview",
         "hash": "3a42acacd88e62655c440c04214bed9e622793007489f1d9ef68a2ea85360063",
         "rules": [
-          "CLINE-001",
-          "CLINE-002",
-          "CLINE-003"
+          "CL-SK-001",
+          "CL-SK-002",
+          "CL-SK-003",
+          "CLN-001",
+          "CLN-002",
+          "CLN-003",
+          "CLN-004",
+          "CLN-005",
+          "CLN-006",
+          "CLN-009"
         ]
       }
     }

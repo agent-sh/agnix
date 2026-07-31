@@ -653,11 +653,39 @@ fn check_default_component_shadowing(
     };
 
     let fs = config.fs();
-    for component in ["commands", "agents", "skills", "hooks"] {
-        let Some(manifest_value) = raw_value.get(component) else {
+    // Only replace-semantics fields can shadow their default folder. Per the
+    // "Path behavior rules" section of the plugins reference:
+    //
+    // - Replaces the default: `commands`, `agents`, `workflows`, `outputStyles`,
+    //   `experimental.themes`, `experimental.monitors`.
+    // - Adds to the default: `skills` - "The default `skills/` directory is
+    //   always scanned, and directories listed in `skills` are loaded alongside
+    //   it", so it can never shadow and must not be listed here.
+    // - Own merge rules: `hooks`, `mcpServers`, `lspServers` - combining is
+    //   defined per-section, not as replacement, so they are excluded too.
+    //
+    // `skills` and `hooks` were previously included, which warned that a
+    // default folder was ignored when it was in fact still loaded.
+    //
+    // Each entry is (manifest key, default folder name). They differ for
+    // `outputStyles` -> `output-styles/` and for the `experimental.*` keys,
+    // whose folders sit at the plugin root without the prefix.
+    for (component, default_dir) in [
+        ("commands", "commands"),
+        ("agents", "agents"),
+        ("workflows", "workflows"),
+        ("outputStyles", "output-styles"),
+        ("experimental.themes", "themes"),
+        ("experimental.monitors", "monitors"),
+    ] {
+        let manifest_value = match component.split_once('.') {
+            Some((parent, child)) => raw_value.get(parent).and_then(|v| v.get(child)),
+            None => raw_value.get(component),
+        };
+        let Some(manifest_value) = manifest_value else {
             continue;
         };
-        if !fs.is_dir(&plugin_root.join(component)) {
+        if !fs.is_dir(&plugin_root.join(default_dir)) {
             continue;
         }
 
@@ -2745,5 +2773,100 @@ mod tests {
         );
 
         assert!(!diagnostics.iter().any(|d| d.rule == "CC-PL-015"));
+    }
+
+    /// `skills` is additive: "The default `skills/` directory is always
+    /// scanned, and directories listed in `skills` are loaded alongside it."
+    /// It can never shadow the default folder, so CC-PL-015 must stay quiet.
+    #[test]
+    fn test_cc_pl_015_skills_is_additive_not_shadowing() {
+        let temp = TempDir::new().unwrap();
+        let plugin_path = temp.path().join(".claude-plugin").join("plugin.json");
+        write_plugin(
+            &plugin_path,
+            r#"{"name":"test","description":"desc","version":"1.0.0","skills":"./custom-skills"}"#,
+        );
+        fs::create_dir_all(temp.path().join("skills")).unwrap();
+
+        let validator = PluginValidator;
+        let diagnostics = validator.validate(
+            &plugin_path,
+            &fs::read_to_string(&plugin_path).unwrap(),
+            &LintConfig::default(),
+        );
+
+        assert!(
+            !diagnostics.iter().any(|d| d.rule == "CC-PL-015"),
+            "`skills` adds to the default scan and must not be reported as shadowing, got: {:?}",
+            diagnostics
+                .iter()
+                .filter(|d| d.rule == "CC-PL-015")
+                .collect::<Vec<_>>()
+        );
+    }
+
+    /// `hooks` has its own documented merge rules rather than replace
+    /// semantics, so a `hooks/` folder alongside a `hooks` key is not shadowed.
+    #[test]
+    fn test_cc_pl_015_hooks_has_own_merge_rules() {
+        let temp = TempDir::new().unwrap();
+        let plugin_path = temp.path().join(".claude-plugin").join("plugin.json");
+        write_plugin(
+            &plugin_path,
+            r#"{"name":"test","description":"desc","version":"1.0.0","hooks":"./my-extra-hooks.json"}"#,
+        );
+        fs::create_dir_all(temp.path().join("hooks")).unwrap();
+
+        let validator = PluginValidator;
+        let diagnostics = validator.validate(
+            &plugin_path,
+            &fs::read_to_string(&plugin_path).unwrap(),
+            &LintConfig::default(),
+        );
+
+        assert!(
+            !diagnostics.iter().any(|d| d.rule == "CC-PL-015"),
+            "`hooks` merges rather than replaces and must not be reported as shadowing, got: {:?}",
+            diagnostics
+                .iter()
+                .filter(|d| d.rule == "CC-PL-015")
+                .collect::<Vec<_>>()
+        );
+    }
+
+    /// The replace-semantics list also covers `workflows`, `outputStyles`, and
+    /// the two `experimental.*` keys. `outputStyles` maps to `output-styles/`
+    /// and the experimental keys to root-level folders without the prefix.
+    #[test]
+    fn test_cc_pl_015_covers_remaining_replace_fields() {
+        for (manifest, default_dir) in [
+            (r#""workflows":"./custom-workflows""#, "workflows"),
+            (r#""outputStyles":"./custom-styles""#, "output-styles"),
+            (r#""experimental":{"themes":"./custom-themes"}"#, "themes"),
+            (
+                r#""experimental":{"monitors":"./custom-monitors.json"}"#,
+                "monitors",
+            ),
+        ] {
+            let temp = TempDir::new().unwrap();
+            let plugin_path = temp.path().join(".claude-plugin").join("plugin.json");
+            write_plugin(
+                &plugin_path,
+                &format!(r#"{{"name":"test","description":"desc","version":"1.0.0",{manifest}}}"#),
+            );
+            fs::create_dir_all(temp.path().join(default_dir)).unwrap();
+
+            let validator = PluginValidator;
+            let diagnostics = validator.validate(
+                &plugin_path,
+                &fs::read_to_string(&plugin_path).unwrap(),
+                &LintConfig::default(),
+            );
+
+            assert!(
+                diagnostics.iter().any(|d| d.rule == "CC-PL-015"),
+                "{manifest} replaces the default `{default_dir}/` and must report CC-PL-015, got: {diagnostics:?}"
+            );
+        }
     }
 }
