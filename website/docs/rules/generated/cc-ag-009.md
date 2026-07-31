@@ -13,7 +13,7 @@ keywords: ["CC-AG-009", "invalid tool name in tools list", "claude agents", "val
 - **Category**: `Claude Agents`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-07-31`
 
 ## Applicability
 
@@ -24,6 +24,7 @@ keywords: ["CC-AG-009", "invalid tool name in tools list", "claude agents", "val
 ## Evidence Sources
 
 - https://code.claude.com/docs/en/sub-agents
+- https://code.claude.com/docs/en/tools
 
 ## Test Coverage Metadata
 

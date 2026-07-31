@@ -997,9 +997,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.claude.com/docs/en/sub-agents"
+          "https://code.claude.com/docs/en/sub-agents",
+          "https://code.claude.com/docs/en/tools"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-07-31",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -1024,9 +1025,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.claude.com/docs/en/sub-agents"
+          "https://code.claude.com/docs/en/sub-agents",
+          "https://code.claude.com/docs/en/tools"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-07-31",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -3296,9 +3298,11 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.claude.com/docs/en/settings"
+          "https://code.claude.com/docs/en/settings",
+          "https://code.claude.com/docs/en/tools",
+          "https://code.claude.com/docs/en/permissions"
         ],
-        "verified_on": "2026-02-04",
+        "verified_on": "2026-07-31",
         "applies_to": {
           "tool": "claude-code"
         },
