@@ -90,7 +90,20 @@ impl Validator for PluginValidator {
         if config.is_rule_enabled("CC-PL-002") && is_in_claude_plugin {
             if let Some(plugin_dir) = plugin_dir {
                 let fs = config.fs();
-                let disallowed = ["skills", "agents", "hooks", "commands"];
+                // The full documented set: "All other directories (commands/,
+                // agents/, skills/, workflows/, output-styles/, themes/,
+                // monitors/, hooks/) must be at the plugin root, not inside
+                // `.claude-plugin/`." Four were missing.
+                let disallowed = [
+                    "commands",
+                    "agents",
+                    "skills",
+                    "workflows",
+                    "output-styles",
+                    "themes",
+                    "monitors",
+                    "hooks",
+                ];
                 for entry in disallowed {
                     if fs.exists(&plugin_dir.join(entry)) {
                         diagnostics.push(
@@ -167,7 +180,22 @@ impl Validator for PluginValidator {
         let pl_007_enabled = config.is_rule_enabled("CC-PL-007");
         let pl_008_enabled = config.is_rule_enabled("CC-PL-008");
         if pl_007_enabled || pl_008_enabled {
-            let path_fields = ["commands", "agents", "skills", "hooks"];
+            // Every documented path-bearing manifest key. The component-path
+            // table lists ten; only four were checked, so six fields accepted
+            // absolute paths, `..` traversal, and `.claude-plugin/` targets
+            // without complaint.
+            let path_fields = [
+                "commands",
+                "agents",
+                "skills",
+                "workflows",
+                "hooks",
+                "mcpServers",
+                "outputStyles",
+                "lspServers",
+                "experimental.themes",
+                "experimental.monitors",
+            ];
             for field in path_fields {
                 if pl_007_enabled {
                     check_component_paths(&raw_value, field, path, content, &mut diagnostics);
@@ -715,6 +743,21 @@ fn check_default_component_shadowing(
 
 /// CC-PL-007: Validate component paths are relative without `..` traversal.
 /// Also flags relative paths missing a `./` prefix (with safe autofix).
+/// Look up a manifest field, traversing one level of dotted key.
+///
+/// `raw_value.get("experimental.themes")` never matches, because the key is
+/// nested under `experimental`. The path-bearing fields include two such keys,
+/// so both CC-PL-007 and CC-PL-008 need this.
+fn manifest_field<'a>(
+    raw_value: &'a serde_json::Value,
+    field: &str,
+) -> Option<&'a serde_json::Value> {
+    match field.split_once('.') {
+        Some((parent, child)) => raw_value.get(parent).and_then(|v| v.get(child)),
+        None => raw_value.get(field),
+    }
+}
+
 fn check_component_paths(
     raw_value: &serde_json::Value,
     field: &str,
@@ -722,7 +765,7 @@ fn check_component_paths(
     content: &str,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
-    if let Some(val) = raw_value.get(field) {
+    if let Some(val) = manifest_field(raw_value, field) {
         for p in extract_paths(val) {
             if is_invalid_component_path(&p) {
                 // Absolute or traversal path: error without autofix
@@ -771,7 +814,7 @@ fn check_component_inside_claude_plugin(
     path: &Path,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
-    if let Some(val) = raw_value.get(field) {
+    if let Some(val) = manifest_field(raw_value, field) {
         for p in extract_paths(val) {
             if path_inside_claude_plugin(&p) {
                 diagnostics.push(

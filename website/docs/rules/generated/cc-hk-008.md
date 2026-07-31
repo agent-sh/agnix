@@ -13,7 +13,7 @@ keywords: ["CC-HK-008", "script file not found", "claude hooks", "validation", "
 - **Category**: `Claude Hooks`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-07-31`
 
 ## Applicability
 

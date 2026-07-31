@@ -62,6 +62,11 @@ struct SkillFrontmatter {
     allowed_tools: Option<String>,
     #[serde(rename = "argument-hint")]
     argument_hint: Option<String>,
+    // Named positional arguments for `$name` substitution. "Accepts a
+    // space-separated string or a YAML list." Needed so CC-SK-012 can tell a
+    // declared `$issue` placeholder from an unrelated `$word`.
+    #[serde(default, deserialize_with = "de_string_or_space_seq")]
+    arguments: Option<String>,
     #[serde(
         rename = "disable-model-invocation",
         default,
@@ -92,10 +97,17 @@ struct PathMatch {
 
 static_regex!(fn name_format_regex, r"^[a-z0-9]+(-[a-z0-9]+)*$");
 static_regex!(fn consecutive_hyphen_regex, r"-{2,}");
-static_regex!(fn reference_path_regex, "(?i)\\b(?:references?|refs)[/\\\\][^\\s)\\]}>\"']+");
+static_regex!(fn reference_path_regex, "(?i)\\b(?:references?|refs|scripts|assets)[/\\\\][^\\s)\\]}>\"']+");
 static_regex!(fn plain_bash_regex, r"\bBash\b");
 static_regex!(fn imperative_verb_regex, r"(?i)\b(run|execute|create|build|deploy|install|configure|update|delete|remove|add|write|read|check|test|validate|ensure|make|use|call|invoke|start|stop|send|fetch|generate|implement|fix|analyze|review|search|find|move|copy|replace|push|pull|commit|clean|format|lint|parse|process|handle|prepare|download|upload|export|import|open|save|load|connect|verify|apply|enable|disable)\b");
 static_regex!(fn indexed_arguments_regex, r"\$ARGUMENTS\[\d+\]");
+// `$N` shorthand for `$ARGUMENTS[N]`, e.g. `$0`. Restricted to a single digit,
+// matching the documented examples (`$0` for the first argument, `$1` for the
+// second): allowing `\d+` made prose dollar amounts like `$500` read as
+// positional argument 500. A skill needing a tenth argument would use the
+// explicit `$ARGUMENTS[N]` form. Requires a non-word, non-`$` char before the
+// `$` so `x$3y` and `${CLAUDE_SKILL_DIR}` are not mistaken for it.
+static_regex!(fn positional_shorthand_regex, r"(?:^|[^\w$])\$([0-9])\b");
 
 fn is_valid_name_segment(segment: &str) -> bool {
     segment.chars().count() <= 64 && name_format_regex().is_match(segment)
@@ -180,6 +192,27 @@ fn collapse_skill_name_hyphens(name: &str) -> String {
             .replace_all(parts.skill, "-")
             .to_string(),
     }
+}
+
+/// Whether a skill body references its arguments in any documented form.
+///
+/// The substitution table lists four: `$ARGUMENTS`, `$ARGUMENTS[N]`, the `$N`
+/// shorthand, and `$name` for each entry in the `arguments` frontmatter list.
+/// CC-SK-012 only looked for the literal `$ARGUMENTS`, so a body using `$0` or
+/// `$issue` was reported as ignoring its own arguments.
+fn body_references_arguments(body: &str, declared_arguments: Option<&str>) -> bool {
+    if body.contains("$ARGUMENTS") || positional_shorthand_regex().is_match(body) {
+        return true;
+    }
+
+    // Named arguments: `arguments: issue branch` makes `$issue` / `$branch` valid.
+    declared_arguments.is_some_and(|declared| {
+        declared
+            .split_whitespace()
+            .map(|name| name.trim_matches(|c: char| c == ',' || c == '[' || c == ']'))
+            .filter(|name| !name.is_empty())
+            .any(|name| body.contains(&format!("${}", name)))
+    })
 }
 
 /// Valid model description for CC-SK-001 diagnostic messages
@@ -281,6 +314,86 @@ const KNOWN_FRONTMATTER_FIELDS: &[&str] = &[
 
 /// Maximum dynamic injections for CC-SK-009
 const MAX_INJECTIONS: usize = 3;
+
+/// Count the dynamic shell injections in a skill body for CC-SK-009.
+///
+/// Two documented forms exist, and a raw `content.matches("!`")` scan got both
+/// wrong:
+///
+/// - Inline `` !`cmd` `` "is only recognized when `!` appears at the start of a
+///   line or immediately after whitespace. If `!` follows another character, as
+///   in `` KEY=!`cmd` ``, the placeholder is left as literal text and the
+///   command does not run" - so those are inert and must not be counted.
+/// - A fenced block opened with ` ```! ` runs each line as a command. These were
+///   not counted at all, so a block of ten commands read as zero.
+///
+/// Inline placeholders inside a fenced block are not double-counted: the block
+/// contributes its own command lines instead.
+fn count_dynamic_injections(content: &str) -> usize {
+    let mut count = 0usize;
+    let mut in_shell_fence = false;
+    let mut in_plain_fence = false;
+
+    for line in content.lines() {
+        let trimmed = line.trim_start();
+
+        if in_shell_fence {
+            if trimmed.starts_with("```") {
+                in_shell_fence = false;
+            } else if !trimmed.is_empty() {
+                // Each non-empty line in a `!` fence is one command.
+                count += 1;
+            }
+            continue;
+        }
+
+        if in_plain_fence {
+            if trimmed.starts_with("```") {
+                in_plain_fence = false;
+            }
+            continue;
+        }
+
+        if let Some(rest) = trimmed.strip_prefix("```") {
+            // ```! opens a shell-execution block; any other fence is inert.
+            if rest.trim_start().starts_with('!') {
+                in_shell_fence = true;
+            } else {
+                in_plain_fence = true;
+            }
+            continue;
+        }
+
+        count += count_inline_injections(line);
+    }
+
+    count
+}
+
+/// Count inline `` !`cmd` `` placeholders on a single line, honoring the rule
+/// that `!` must be at line start or directly after whitespace.
+fn count_inline_injections(line: &str) -> usize {
+    let bytes = line.as_bytes();
+    let mut count = 0usize;
+    let mut idx = 0usize;
+
+    while let Some(found) = line[idx..].find("!`") {
+        let at = idx + found;
+        let recognized = match line[..at].chars().next_back() {
+            None => true,
+            Some(prev) => prev.is_whitespace(),
+        };
+        if recognized {
+            count += 1;
+        }
+        idx = at + 2;
+        if idx >= bytes.len() {
+            break;
+        }
+    }
+
+    count
+}
 
 /// Convert a name to kebab-case format.
 /// - Lowercase the name
@@ -663,6 +776,20 @@ impl<'a> ValidationContext<'a> {
     /// AS-017: Validate frontmatter name matches parent directory
     fn validate_name_directory_match(&mut self, name: &str) {
         if !self.config.is_rule_enabled("AS-017") {
+            return;
+        }
+
+        // Claude Code decouples `name` from the directory: "In a personal or
+        // project skill, `name` sets only the display label shown in skill
+        // listings, and the command still comes from the directory or file
+        // name", and in a plugin skill `name` deliberately replaces the last
+        // command segment - the reference's own example is `name: fancy` inside
+        // `my-plugin/skills/review/`, which this rule used to reject.
+        //
+        // The agentskills.io baseline still requires the match ("Must match the
+        // parent directory name"), so the rule is scoped by owning client the
+        // same way AS-008's length cap is.
+        if self.client == SkillClient::ClaudeCode {
             return;
         }
 
@@ -1148,7 +1275,7 @@ impl<'a> ValidationContext<'a> {
         // CC-SK-009: Too many injections (warning)
         // Count across full content (frontmatter + body) per VALIDATION-RULES.md
         if self.config.is_rule_enabled("CC-SK-009") {
-            let injection_count = self.content.matches("!`").count();
+            let injection_count = count_dynamic_injections(self.content);
             if injection_count > MAX_INJECTIONS {
                 self.diagnostics.push(
                     Diagnostic::warning(
@@ -1329,7 +1456,7 @@ impl<'a> ValidationContext<'a> {
                 ""
             };
 
-            if !body.contains("$ARGUMENTS") {
+            if !body_references_arguments(body, frontmatter.arguments.as_deref()) {
                 let (line, col) = self.frontmatter_key_line_col("argument-hint");
                 let mut diagnostic = Diagnostic::warning(
                     self.path.to_path_buf(),
@@ -1371,11 +1498,18 @@ impl<'a> ValidationContext<'a> {
             ""
         };
 
-        let Some(first_match) = indexed_arguments_regex().find(body) else {
+        // `$N` is documented as shorthand for `$ARGUMENTS[N]`, so a body using
+        // `$0` without an argument-hint has the same gap the rule targets.
+        let indexed_at = indexed_arguments_regex().find(body).map(|m| m.start());
+        let shorthand_at = positional_shorthand_regex().find(body).map(|m| m.start());
+        let Some(match_start) = (match (indexed_at, shorthand_at) {
+            (Some(a), Some(b)) => Some(a.min(b)),
+            (a, b) => a.or(b),
+        }) else {
             return;
         };
 
-        let (line, col) = self.line_col_at(self.parts.body_start + first_match.start());
+        let (line, col) = self.line_col_at(self.parts.body_start + match_start);
         self.diagnostics.push(
             Diagnostic::warning(
                 self.path.to_path_buf(),

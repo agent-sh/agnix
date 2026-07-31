@@ -185,8 +185,8 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="as-013"></a>
 ### AS-013 [MEDIUM] File Reference Too Deep
-**Requirement**: File references SHOULD be one level deep ("Keep file references one level deep from `SKILL.md`") - a SHOULD-level agentskills.io guideline, emitted as a warning.
-**Detection**: Check references like `references/guide.md` vs `refs/deep/nested/file.md`
+**Requirement**: File references SHOULD be one level deep ("Keep file references one level deep from `SKILL.md`") - a SHOULD-level agentskills.io guideline, emitted as a warning. Covers all three documented resource directories: `references/`, `scripts/`, and `assets/`.
+**Detection**: Check references like `references/guide.md` vs `refs/deep/nested/file.md`, `scripts/deep/nested/x.py`, `assets/deep/nested/y.png`. Git ref paths (`refs/heads`, `refs/remotes`, `refs/tags`) are excluded.
 **Fix**: Flatten directory structure
 **Source**: agentskills.io/specification
 
@@ -206,8 +206,8 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="as-017"></a>
 ### AS-017 [HIGH] Name Must Match Parent Directory
-**Requirement**: Skill name MUST match parent directory name
-**Detection**: name field does not match directory containing SKILL.md
+**Requirement**: Skill name MUST match parent directory name. **agentskills.io baseline only** - Claude Code decouples the two ("`name` sets only the display label shown in skill listings, and the command still comes from the directory or file name"), and a plugin skill's `name` deliberately replaces the last command segment, so the rule is scoped out for Claude Code skills the same way AS-008's length cap is.
+**Detection**: owning client is not Claude Code AND name field does not match directory containing SKILL.md
 **Fix**: Manual fix required - rename directory or update name field
 **Source**: agentskills.io/specification
 
@@ -267,8 +267,8 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="cc-sk-009"></a>
 ### CC-SK-009 [MEDIUM] Too Many Injections
-**Requirement**: Limit dynamic injections (!`cmd`) to 3
-**Detection**: `content.matches("!\`").count() > 3`
+**Requirement**: Limit dynamic injections to 3. Both documented forms count: inline `` !`cmd` `` (recognized only when `!` is at line start or directly after whitespace - `` KEY=!`cmd` `` stays literal and does not run) and each command line inside a ` ```! ` fenced block.
+**Detection**: Count recognized inline placeholders plus command lines in ` ```! ` fences; plain fences are inert
 **Fix**: Remove or move to scripts/
 **Source**: platform.claude.com/docs
 
@@ -288,8 +288,8 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="cc-sk-012"></a>
 ### CC-SK-012 [MEDIUM] Argument Hint Without $ARGUMENTS
-**Requirement**: If `argument-hint` is set, body SHOULD reference `$ARGUMENTS`
-**Detection**: `argument_hint.is_some() && !body.contains("$ARGUMENTS")`
+**Requirement**: If `argument-hint` is set, the body SHOULD reference its arguments in any documented form: `$ARGUMENTS`, `$ARGUMENTS[N]`, the `$N` shorthand, or a `$name` declared in the `arguments` frontmatter list.
+**Detection**: `argument_hint.is_some()` AND the body references none of those forms
 **Fix**: Auto-fix (unsafe) - append `$ARGUMENTS` to skill body
 **Source**: code.claude.com/docs/en/skills
 
@@ -316,8 +316,8 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="cc-sk-016"></a>
 ### CC-SK-016 [MEDIUM] Indexed $ARGUMENTS Without argument-hint
-**Requirement**: If body uses indexed $ARGUMENTS (e.g., $ARGUMENTS[0]), SHOULD have argument-hint field
-**Detection**: Body contains indexed $ARGUMENTS syntax without argument-hint field
+**Requirement**: If the body accesses arguments by position - `$ARGUMENTS[N]` or the documented `$N` shorthand - it SHOULD have an argument-hint field
+**Detection**: Body contains `$ARGUMENTS[n]` or a single-digit `$N` placeholder without an argument-hint field. `${VAR}` forms, `x$3y`, and prose amounts like `$500` are not treated as positional.
 **Fix**: Manual fix required - add argument-hint field describing expected arguments
 **Source**: code.claude.com/docs/en/skills
 
@@ -760,8 +760,8 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="cc-hk-008"></a>
 ### CC-HK-008 [HIGH] Script File Not Found
-**Requirement**: Hook command script MUST exist on filesystem
-**Detection**: Check if script path exists (resolve $CLAUDE_PROJECT_DIR)
+**Requirement**: Hook command script MUST exist on filesystem. Script paths in the exec-form `args` vector are checked too, since that is where the script sits when `command` names an interpreter.
+**Detection**: Check if script paths in `command` and in each `args` element exist (resolve $CLAUDE_PROJECT_DIR)
 **Fix**: Show error with correct path
 **Source**: code.claude.com/docs/en/hooks
 
@@ -902,8 +902,8 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="cc-hk-028"></a>
 ### CC-HK-028 [HIGH] Rejected user_config Interpolation in Shell-Form Command
-**Requirement**: A command hook's `command` string MUST NOT contain `${user_config.*}` interpolation. Claude Code v2.1.207 rejects it at load time as a shell-injection fix; values must be read inside the script via `$CLAUDE_PLUGIN_OPTION_<KEY>` (plugin hooks) or passed through the environment.
-**Detection**: Walk command-type hook entries; flag (error) when the `command` string contains the substring `${user_config.`.
+**Requirement**: A **shell-form** command hook's `command` string MUST NOT contain `${user_config.*}` interpolation. Claude Code v2.1.207 rejects it at load time as a shell-injection fix; values must be read inside the script via `$CLAUDE_PLUGIN_OPTION_<KEY>` (plugin hooks) or passed through the environment. Exec form is explicitly permitted - "Plugin hooks additionally substitute `${user_config.*}` values, in exec form only" - and exec form is what the presence of `args` selects.
+**Detection**: Walk command-type hook entries; flag (error) when `args` is absent AND the `command` string contains the substring `${user_config.`.
 **Fix**: Manual - replace `${user_config.<key>}` with `$CLAUDE_PLUGIN_OPTION_<KEY>` read inside the script, or restructure to pass the value via the environment.
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.207 (shell-injection fix rejecting `${user_config.*}` in shell-form commands)
 
@@ -1242,8 +1242,8 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 <a id="cc-pl-002"></a>
 ### CC-PL-002 [HIGH] Components in .claude-plugin/
-**Requirement**: skills/agents/hooks MUST NOT be inside .claude-plugin/
-**Detection**: Check for `.claude-plugin/skills/`, etc.
+**Requirement**: No component directory may be inside `.claude-plugin/`. The documented set is `commands/`, `agents/`, `skills/`, `workflows/`, `output-styles/`, `themes/`, `monitors/`, and `hooks/` - "All other directories ... must be at the plugin root, not inside `.claude-plugin/`".
+**Detection**: Check for each of those eight directories under `.claude-plugin/`
 **Fix**: Move to plugin root
 **Source**: code.claude.com/docs/en/plugins-reference
 
@@ -1277,7 +1277,7 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 <a id="cc-pl-007"></a>
 ### CC-PL-007 [HIGH] Invalid Component Path
-**Requirement**: Paths in `commands`, `agents`, `skills`, `hooks` MUST be relative (no absolute paths or `..` traversal)
+**Requirement**: Paths in every documented path-bearing manifest field MUST be relative (no absolute paths or `..` traversal). The full set is `commands`, `agents`, `skills`, `workflows`, `hooks`, `mcpServers`, `outputStyles`, `lspServers`, `experimental.themes`, and `experimental.monitors`.
 **Detection**: Check path fields for absolute paths (`/`, `C:\`) or parent traversal (`..`)
 **Fix**: Prepend `./` to relative paths [safe autofix]
 **Source**: code.claude.com/docs/en/plugins-reference
@@ -3337,8 +3337,8 @@ agent: reviewer
 
 <a id="xp-007"></a>
 ### XP-007 [MEDIUM] AGENTS.md Exceeds Codex Byte Limit
-**Requirement**: AGENTS.md SHOULD stay under Codex CLI's 32768-byte default limit
-**Detection**: Check byte length of AGENTS.md content against the 32768-byte threshold
+**Requirement**: AGENTS.md SHOULD stay under Codex CLI's 32768-byte `project_doc_max_bytes` default. `AGENTS.override.md` is checked too, since Codex reads it first in each directory and it draws on the same budget.
+**Detection**: Check byte length of `AGENTS.md` / `AGENTS.override.md` content against the 32768-byte threshold. Note the documented cap is cumulative across the root-to-cwd chain while this check is per-file, so a project split across several mid-size files can still be truncated without a diagnostic.
 **Fix**: Reduce content or split into multiple files using @import
 **Source**: learn.chatgpt.com/docs/agent-configuration/agents-md
 

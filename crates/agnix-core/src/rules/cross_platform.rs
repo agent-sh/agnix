@@ -113,8 +113,21 @@ impl Validator for CrossPlatformValidator {
         }
 
         // XP-007: AGENTS.md exceeds Codex byte limit (WARNING)
-        // Only check AGENTS.md itself (Codex CLI reads this file, not local/override variants)
-        if config.is_rule_enabled("XP-007") && filename == "AGENTS.md" {
+        //
+        // `AGENTS.override.md` is included: Codex reads it *first* in each
+        // directory ("AGENTS.override.md, then AGENTS.md, then
+        // project_doc_fallback_filenames"), so it counts against the same
+        // `project_doc_max_bytes` budget. The previous comment here claimed
+        // Codex "reads this file, not local/override variants", which the
+        // current guide contradicts.
+        //
+        // Note this remains a per-file check while the documented cap is
+        // cumulative across the root-to-cwd chain, so a project split into
+        // several mid-size files can still be truncated without a diagnostic.
+        // Catching that needs project-level accounting; tracked separately.
+        if config.is_rule_enabled("XP-007")
+            && matches!(filename, "AGENTS.md" | "AGENTS.override.md")
+        {
             if let Some(exceeded) = check_byte_limit(content, CODEX_BYTE_LIMIT) {
                 diagnostics.push(
                     Diagnostic::warning(

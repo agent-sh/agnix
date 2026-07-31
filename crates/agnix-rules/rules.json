@@ -631,7 +631,7 @@
         "source_urls": [
           "https://agentskills.io/specification"
         ],
-        "verified_on": "2026-05-24",
+        "verified_on": "2026-07-31",
         "applies_to": {
           "spec_revision": "1.0"
         },
@@ -723,9 +723,10 @@
       "evidence": {
         "source_type": "spec",
         "source_urls": [
-          "https://agentskills.io/specification"
+          "https://agentskills.io/specification",
+          "https://code.claude.com/docs/en/skills"
         ],
-        "verified_on": "2026-02-14",
+        "verified_on": "2026-07-31",
         "applies_to": {
           "spec_revision": "1.0"
         },
@@ -1486,7 +1487,7 @@
         "source_urls": [
           "https://code.claude.com/docs/en/hooks"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-07-31",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -2069,9 +2070,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://github.com/anthropics/claude-code/releases/tag/v2.1.207"
+          "https://code.claude.com/docs/en/hooks"
         ],
-        "verified_on": "2026-07-15",
+        "verified_on": "2026-07-31",
         "applies_to": {
           "tool": "claude-code",
           "version_range": ">=2.1.207"
@@ -2663,7 +2664,7 @@
         "source_urls": [
           "https://code.claude.com/docs/en/plugins-reference"
         ],
-        "verified_on": "2026-02-04",
+        "verified_on": "2026-07-31",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -2800,7 +2801,7 @@
         "source_urls": [
           "https://code.claude.com/docs/en/plugins-reference"
         ],
-        "verified_on": "2026-02-07",
+        "verified_on": "2026-07-31",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -2828,7 +2829,7 @@
         "source_urls": [
           "https://code.claude.com/docs/en/plugins-reference"
         ],
-        "verified_on": "2026-02-07",
+        "verified_on": "2026-07-31",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -3271,9 +3272,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://platform.claude.com/docs"
+          "https://code.claude.com/docs/en/skills"
         ],
-        "verified_on": "2026-02-04",
+        "verified_on": "2026-07-31",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -3355,7 +3356,7 @@
         "source_urls": [
           "https://code.claude.com/docs/en/skills"
         ],
-        "verified_on": "2026-02-07",
+        "verified_on": "2026-07-31",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -3466,10 +3467,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.claude.com/docs/en/skills",
-          "https://github.com/anthropics/claude-code/releases/tag/v2.1.186"
+          "https://code.claude.com/docs/en/skills"
         ],
-        "verified_on": "2026-06-24",
+        "verified_on": "2026-07-31",
         "applies_to": {
           "tool": "claude-code"
         },

@@ -5040,3 +5040,93 @@ fn test_cc_hk_028_can_be_disabled() {
     let diagnostics = validate_with_config(content, &config);
     assert!(diagnostics.iter().all(|d| d.rule != "CC-HK-028"));
 }
+
+/// `${user_config.*}` is permitted in exec form - "Plugin hooks additionally
+/// substitute `${user_config.*}` values, in exec form only" - and rejected only
+/// in shell form. CC-HK-028 fired on both, flagging the recommended pattern.
+#[test]
+fn test_cc_hk_028_allows_user_config_in_exec_form() {
+    let content = r#"{
+            "hooks": {
+                "PreToolUse": [
+                    {
+                        "matcher": "Edit",
+                        "hooks": [
+                            {
+                                "type": "command",
+                                "command": "${user_config.formatter}",
+                                "args": ["--fix"],
+                                "timeout": 60
+                            }
+                        ]
+                    }
+                ]
+            }
+        }"#;
+
+    let diagnostics = validate(content);
+    let hits: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-HK-028")
+        .collect();
+    assert!(
+        hits.is_empty(),
+        "exec form (with `args`) permits ${{user_config.*}} and must not be flagged, got: {hits:?}"
+    );
+}
+
+/// Shell form (no `args`) is still rejected.
+#[test]
+fn test_cc_hk_028_still_flags_shell_form() {
+    let content = r#"{
+            "hooks": {
+                "PreToolUse": [
+                    {
+                        "matcher": "Edit",
+                        "hooks": [
+                            {
+                                "type": "command",
+                                "command": "${user_config.formatter} --fix",
+                                "timeout": 60
+                            }
+                        ]
+                    }
+                ]
+            }
+        }"#;
+
+    let diagnostics = validate(content);
+    assert!(
+        diagnostics.iter().any(|d| d.rule == "CC-HK-028"),
+        "shell-form ${{user_config.*}} fails at load time and must be flagged, got: {diagnostics:?}"
+    );
+}
+
+/// In exec form the script lives in `args`, so CC-HK-008 must scan there too -
+/// otherwise exec-form hooks got no script-existence checking at all.
+#[test]
+fn test_cc_hk_008_checks_script_paths_in_args() {
+    let content = r#"{
+            "hooks": {
+                "PreToolUse": [
+                    {
+                        "matcher": "Edit",
+                        "hooks": [
+                            {
+                                "type": "command",
+                                "command": "node",
+                                "args": [".claude/hooks/definitely-missing-agnix-test.js"],
+                                "timeout": 60
+                            }
+                        ]
+                    }
+                ]
+            }
+        }"#;
+
+    let diagnostics = validate(content);
+    assert!(
+        diagnostics.iter().any(|d| d.rule == "CC-HK-008"),
+        "a missing script named in `args` must be reported, got: {diagnostics:?}"
+    );
+}

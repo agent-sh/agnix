@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **`args` on command hooks**. The exec-form field - "When present, `command` is resolved as an executable and spawned directly with `args` as the argument vector, with no shell involved" - was absent from the schema, so it was silently ignored and two rules could not tell exec form from shell form.
+
+### Fixed
+- **CC-SK-009 miscounted dynamic injections in both directions**. It counted raw `` !` `` occurrences, so inert `` KEY=!`cmd` `` forms inflated the count (the doc: a `!` following another character "is left as literal text and the command does not run"), while ` ```! ` fenced blocks - where every line is a command - counted as zero. Counting now honors both documented forms and ignores plain fences.
+- **CC-SK-012/CC-SK-016 recognized only `$ARGUMENTS`**. The substitution table documents four forms; a body using the `$N` shorthand or a `$name` declared in `arguments` was reported as ignoring its own arguments, and `$0` escaped CC-SK-016 entirely. The `arguments` frontmatter field is now parsed so named placeholders can be resolved. The shorthand is matched as a single digit, matching the documented examples, so `${CLAUDE_SKILL_DIR}`, `x$3y`, and prose amounts like `$500` are not mistaken for positional arguments.
+- **CC-HK-028 flagged the exec form the doc recommends**. `${user_config.*}` is rejected only in shell form: "Plugin hooks additionally substitute `${user_config.*}` values, **in exec form only**". The rule fired regardless of `args`, so `{"command": "${user_config.formatter}", "args": ["--fix"]}` errored.
+- **CC-HK-008 skipped scripts named in `args`**. In exec form the script sits in `args` while `command` names an interpreter, so exec-form hooks - the form the doc recommends for path placeholders - got no script-existence checking at all.
+- **AS-013 only inspected `references/` paths**. The spec scopes skill resources to "`scripts/`, `references/`, or `assets/`" and uses `scripts/extract.py` in its own example, so deep `scripts/` and `assets/` paths were invisible. Git ref paths stay excluded.
+- **AS-017 rejected Claude Code display labels**. Claude Code decouples `name` from the directory ("`name` sets only the display label... the command still comes from the directory or file name"), and a plugin skill's `name` deliberately replaces the last command segment - the reference's own `name: fancy` in `skills/review/` example errored. Scoped out for Claude Code skills, following the AS-008 precedent; the agentskills.io baseline still requires the match.
+- **CC-PL-002 checked four of eight directories**. The doc names `commands/`, `agents/`, `skills/`, `workflows/`, `output-styles/`, `themes/`, `monitors/`, and `hooks/` as forbidden inside `.claude-plugin/`.
+- **CC-PL-007/CC-PL-008 checked four of ten path fields**. `workflows`, `mcpServers`, `outputStyles`, `lspServers`, `experimental.themes`, and `experimental.monitors` accepted absolute paths, `..` traversal, and `.claude-plugin/` targets unchecked. Dotted `experimental.*` keys are now traversed, which a plain field lookup could not do.
+- **XP-007 ignored `AGENTS.override.md`**. Codex reads it first in each directory, so it draws on the same `project_doc_max_bytes` budget; the code comment claiming Codex "reads this file, not local/override variants" was contradicted by the current guide. The cap is cumulative across the root-to-cwd chain while this check remains per-file - noted in the rule docs as a known gap.
+- **AGM-006's suggestion contradicted upstream**. It advised consolidating files, while Codex documents root-down concatenation with nearest-file-wins precedence and recommends splitting across nested directories to stay under the byte cap.
+
 ### Removed
 - **CC-SK-003 (Context Without Agent)**. The rule errored when `context: fork` had no `agent` field and shipped an unsafe autofix inserting `agent: general-purpose`. The skills reference states "The `agent` field specifies which subagent configuration to use... **If omitted, uses `general-purpose`**", so the rule demanded that users restate a default the tool already applies. Rule count 443 -> 442.
 

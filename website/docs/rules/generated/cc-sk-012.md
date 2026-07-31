@@ -13,7 +13,7 @@ keywords: ["CC-SK-012", "argument hint without $arguments", "claude skills", "va
 - **Category**: `Claude Skills`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `Yes (unsafe)`
-- **Verified On**: `2026-02-07`
+- **Verified On**: `2026-07-31`
 
 ## Applicability
 
