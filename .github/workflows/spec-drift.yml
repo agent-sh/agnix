@@ -249,14 +249,27 @@ jobs:
           echo ""
           echo "drift_detected=$DRIFT_DETECTED" >> "$GITHUB_OUTPUT"
 
-          # Use multiline output syntax for drift report
+          # Use multiline output syntax for the drift report. The delimiter is
+          # randomized because DRIFT_REPORT embeds upstream-controlled text
+          # (filenames from fetch_github_diff): a literal `EOF` line in that
+          # content would otherwise close the block early and let the rest of
+          # the report inject arbitrary step outputs.
+          report_delim="DRIFT_REPORT_EOF_$(openssl rand -hex 16)"
           {
-            echo "drift_report<<EOF"
+            echo "drift_report<<${report_delim}"
             echo -e "$DRIFT_REPORT"
-            echo "EOF"
+            echo "${report_delim}"
           } >> "$GITHUB_OUTPUT"
 
-          # Output drift sources JSON for downstream jobs
+          # Output drift sources JSON for downstream jobs.
+          #
+          # `jq` pretty-prints by default and the `key=value` form of
+          # GITHUB_OUTPUT takes single-line values only, so a drifted run wrote
+          # a multi-line value and failed the whole step with
+          # `Invalid format '  {'`. That aborted the step before the
+          # issue-filing step could run, so the sentinel reported nothing from
+          # 2026-03-29 onward. `-c` keeps the JSON on one line.
+          DRIFT_SOURCES_JSON=$(printf '%s' "$DRIFT_SOURCES_JSON" | jq -c '.')
           echo "drift_sources=$DRIFT_SOURCES_JSON" >> "$GITHUB_OUTPUT"
 
           # Output new hashes if update requested
