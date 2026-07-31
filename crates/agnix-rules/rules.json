@@ -806,9 +806,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.claude.com/docs/en/sub-agents"
+          "https://code.claude.com/docs/en/sub-agents",
+          "https://code.claude.com/docs/en/model-config"
         ],
-        "verified_on": "2026-02-04",
+        "verified_on": "2026-07-31",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -834,9 +835,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.claude.com/docs/en/sub-agents"
+          "https://code.claude.com/docs/en/sub-agents",
+          "https://code.claude.com/docs/en/permission-modes"
         ],
-        "verified_on": "2026-02-04",
+        "verified_on": "2026-07-31",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -2110,7 +2112,7 @@
         "source_urls": [
           "https://code.claude.com/docs/en/memory"
         ],
-        "verified_on": "2026-02-04",
+        "verified_on": "2026-07-31",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -2156,7 +2158,7 @@
     },
     {
       "id": "CC-MEM-003",
-      "name": "Import Depth Exceeds 5",
+      "name": "Import Depth Exceeds 4",
       "severity": "HIGH",
       "category": "claude-memory",
       "evidence": {
@@ -2164,7 +2166,7 @@
         "source_urls": [
           "https://code.claude.com/docs/en/memory"
         ],
-        "verified_on": "2026-02-04",
+        "verified_on": "2026-07-31",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -3043,9 +3045,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.claude.com/docs/en/skills"
+          "https://code.claude.com/docs/en/skills",
+          "https://code.claude.com/docs/en/model-config"
         ],
-        "verified_on": "2026-02-04",
+        "verified_on": "2026-07-31",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -10259,7 +10262,7 @@
         "source_urls": [
           "https://modelcontextprotocol.io/specification/2025-11-25/basic/lifecycle"
         ],
-        "verified_on": "2026-02-13",
+        "verified_on": "2026-07-31",
         "applies_to": {
           "spec_revision": "2025-11-25"
         },

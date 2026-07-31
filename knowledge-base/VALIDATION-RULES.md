@@ -936,17 +936,17 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="cc-ag-003"></a>
 ### CC-AG-003 [HIGH] Invalid Model Value
-**Requirement**: model MUST be: sonnet, opus, haiku, inherit
-**Detection**: `!["sonnet", "opus", "haiku", "inherit"].contains(model)`
+**Requirement**: model MUST be a documented alias, a full `claude-*` model ID, or `inherit`. The sub-agents reference says `model` "Accepts the same values as the `--model` flag", i.e. the model-config alias table: `default`, `best`, `fable`, `sonnet`, `opus`, `haiku`, `opusplan`, `sonnet[1m]`, `opus[1m]`.
+**Detection**: `!VALID_MODEL_ALIASES.contains(model) && !model.starts_with("claude-")`. The alias list is shared with CC-SK-001 so the two cannot drift.
 **Fix**: Replace with valid value
-**Source**: code.claude.com/docs/en/sub-agents
+**Source**: code.claude.com/docs/en/sub-agents, code.claude.com/docs/en/model-config
 
 <a id="cc-ag-004"></a>
 ### CC-AG-004 [HIGH] Invalid Permission Mode
-**Requirement**: permissionMode MUST be: default, acceptEdits, dontAsk, bypassPermissions, plan, delegate
-**Detection**: `!VALID_MODES.contains(permission_mode)`
+**Requirement**: permissionMode MUST be one of the six documented modes - `default`, `acceptEdits`, `plan`, `auto`, `dontAsk`, `bypassPermissions` - or `manual`, which the CLI accepts as an alias for `default` (requires Claude Code v2.1.200 or later). `delegate` is not a documented mode and is rejected.
+**Detection**: `!VALID_PERMISSION_MODES.contains(permission_mode)`
 **Fix**: Replace with valid value
-**Source**: code.claude.com/docs/en/sub-agents
+**Source**: code.claude.com/docs/en/sub-agents, code.claude.com/docs/en/permission-modes
 
 <a id="cc-ag-005"></a>
 ### CC-AG-005 [HIGH] Referenced Skill Not Found
@@ -1100,7 +1100,7 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 <a id="cc-mem-001"></a>
 ### CC-MEM-001 [HIGH] Invalid Import Path
-**Requirement**: @import paths MUST exist on filesystem
+**Requirement**: @import paths MUST exist on filesystem. Both relative and absolute paths are allowed, including home-directory imports such as `@~/.claude/my-project-instructions.md` (the documented way to share personal instructions across worktrees); Claude Code gates external imports behind a one-time approval dialog rather than rejecting them. Path shape is only rejected for non-memory files (REF-001), where no spec sanctions escaping the project root.
 **Detection**: Extract `@path` references, check existence
 **Fix**: Show error with resolved path
 **Source**: code.claude.com/docs/en/memory
@@ -1113,8 +1113,8 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 **Source**: code.claude.com/docs/en/memory
 
 <a id="cc-mem-003"></a>
-### CC-MEM-003 [HIGH] Import Depth Exceeds 5
-**Requirement**: @import chain MUST NOT exceed 5 hops
+### CC-MEM-003 [HIGH] Import Depth Exceeds 4
+**Requirement**: @import chain MUST NOT exceed 4 hops - "Imported files can recursively import other files, with a maximum depth of four hops."
 **Detection**: Track import depth during resolution
 **Fix**: Flatten import hierarchy
 **Source**: code.claude.com/docs/en/memory

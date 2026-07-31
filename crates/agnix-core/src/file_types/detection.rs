@@ -163,6 +163,13 @@ fn is_under_cursor_rules(path: &Path) -> bool {
     path_contains_consecutive_components(path, ".cursor", "rules")
 }
 
+/// Returns true if the path contains `.claude/rules` as consecutive
+/// components anywhere in the path. Rules are discovered recursively, so
+/// `.claude/rules/frontend/style.md` counts as well as `.claude/rules/style.md`.
+fn is_under_claude_rules(path: &Path) -> bool {
+    path_contains_consecutive_components(path, ".claude", "rules")
+}
+
 /// Returns true if the path contains `.cursor/agents` as consecutive
 /// components anywhere in the path.
 fn is_under_cursor_agents(path: &Path) -> bool {
@@ -400,13 +407,15 @@ pub fn detect_file_type(path: &Path) -> FileType {
         {
             FileType::CopilotHooks
         }
-        // Claude Code rules (.claude/rules/*.md)
-        name if name.ends_with(".md")
-            && parent == Some("rules")
-            && grandparent == Some(".claude") =>
-        {
-            FileType::ClaudeRule
-        }
+        // Claude Code rules (.claude/rules/**/*.md)
+        //
+        // Matched at any depth, not just directly under `rules/`: the memory
+        // reference says "All `.md` files are discovered recursively, so you
+        // can organize rules into subdirectories like `frontend/` or
+        // `backend/`". The previous parent/grandparent check saw only depth 1,
+        // so nested rule files were never validated at all. Mirrors the
+        // existing `.cursor/rules` and `.roo/rules` handling.
+        name if name.ends_with(".md") && is_under_claude_rules(path) => FileType::ClaudeRule,
         // Claude Code output styles (.claude/output-styles/*.md)
         name if name.ends_with(".md")
             && parent == Some("output-styles")

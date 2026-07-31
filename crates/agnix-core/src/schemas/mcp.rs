@@ -13,6 +13,15 @@ pub const VALID_MCP_ANNOTATION_HINTS: &[&str] = &[
 ];
 
 /// Known MCP capability keys from spec.
+///
+/// `tasks` is in the 2025-11-25 capability-negotiation table for both client
+/// and server; `extensions` was added to `ClientCapabilities`/`ServerCapabilities`
+/// in 2026-07-28 "to support optional extensions beyond the core protocol".
+/// Both were missing, so MCP-020 warned on spec-valid config.
+///
+/// Note the spec calls this an open set - "any server can define its own,
+/// additional capabilities" - so MCP-020 is advisory (typo-catching), not a
+/// closed-world check.
 pub const VALID_MCP_CAPABILITY_KEYS: &[&str] = &[
     "tools",
     "resources",
@@ -22,6 +31,8 @@ pub const VALID_MCP_CAPABILITY_KEYS: &[&str] = &[
     "sampling",
     "elicitation",
     "completions",
+    "tasks",
+    "extensions",
     "experimental",
 ];
 

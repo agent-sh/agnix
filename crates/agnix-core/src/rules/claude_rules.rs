@@ -58,18 +58,13 @@ impl Validator for ClaudeRulesValidator {
     ) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
 
-        // Only validate .claude/rules/*.md files
-        let parent = path
-            .parent()
-            .and_then(|p| p.file_name())
-            .and_then(|n| n.to_str());
-        let grandparent = path
-            .parent()
-            .and_then(|p| p.parent())
-            .and_then(|p| p.file_name())
-            .and_then(|n| n.to_str());
-
-        if parent != Some("rules") || grandparent != Some(".claude") {
+        // Only validate files under `.claude/rules/`, at any depth: "All `.md`
+        // files are discovered recursively, so you can organize rules into
+        // subdirectories like `frontend/` or `backend/`". This previously
+        // required `rules/` to be the immediate parent, so nested rule files
+        // were detected as ClaudeRule but then skipped here without a
+        // diagnostic - the check has to match the recursive detection.
+        if !crate::file_types::path_contains_consecutive_components(path, ".claude", "rules") {
             return diagnostics;
         }
 
@@ -485,5 +480,54 @@ Always use strict mode and explicit types.
             "Expected no diagnostics, got: {:?}",
             diagnostics
         );
+    }
+
+    /// Rules are discovered recursively - "All `.md` files are discovered
+    /// recursively, so you can organize rules into subdirectories like
+    /// `frontend/` or `backend/`". The validator required `rules/` to be the
+    /// immediate parent, so nested rule files were silently skipped and got no
+    /// validation at all.
+    #[test]
+    fn test_nested_rule_file_is_validated() {
+        let content = r#"---
+paths:
+  - "photos [2024/**"
+---
+# Nested rule with an invalid glob
+"#;
+        let validator = ClaudeRulesValidator;
+
+        for path in [
+            ".claude/rules/frontend/style.md",
+            ".claude/rules/backend/api/handlers.md",
+            "project/.claude/rules/deep/nested/rule.md",
+        ] {
+            let diagnostics = validator.validate(Path::new(path), content, &LintConfig::default());
+            assert!(
+                diagnostics.iter().any(|d| d.rule == "CC-MEM-011"),
+                "nested rule file '{path}' must be validated, got: {diagnostics:?}"
+            );
+        }
+    }
+
+    /// A `.md` file that merely has a `rules` ancestor without `.claude` before
+    /// it is not a Claude rule and must stay untouched.
+    #[test]
+    fn test_non_claude_rules_dir_still_skipped() {
+        let content = r#"---
+paths:
+  - "photos [2024/**"
+---
+# Not a Claude rule
+"#;
+        let validator = ClaudeRulesValidator;
+
+        for path in ["docs/rules/style.md", ".cursor/rules/style.md"] {
+            let diagnostics = validator.validate(Path::new(path), content, &LintConfig::default());
+            assert!(
+                diagnostics.is_empty(),
+                "'{path}' is not under .claude/rules and must be skipped, got: {diagnostics:?}"
+            );
+        }
     }
 }
