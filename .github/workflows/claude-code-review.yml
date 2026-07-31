@@ -92,17 +92,26 @@ jobs:
           # Passing it as an input produced `Unexpected input(s) 'model'` and was
           # silently ignored, so reviews would have run on the default model.
           # The pinned value was also a stale model ID.
-          # No `--allowedTools`: an explicit list here blocked the checks the
-          # prompt below asks for. Verifying that a rule's `evidence.source_urls`
-          # actually supports its behavior needs WebFetch, and judging validator
-          # correctness on a Rust workspace needs `cargo test`; an allowlist
-          # without them reduces both to reading rather than checking. It also
-          # omitted `mcp__github_comment__update_claude_comment`, the tool the job
-          # posts through, which only worked because the action injects it anyway.
-          # The action's tag-mode defaults already grant the GitHub MCP tools plus
-          # Read/Grep/Glob.
+          # `--allowedTools` is ADDITIVE, not restrictive: per the action's
+          # configuration docs, "The base GitHub tools are always included. Use
+          # `--allowedTools` to add additional tools (including specific Bash
+          # commands)". So omitting it grants nothing extra - it only drops what
+          # the list itself would have added, and the baseline still withholds
+          # WebFetch and cargo.
+          #
+          # That matters because the prompt below asks for checks the baseline
+          # cannot perform:
+          #   - WebFetch/WebSearch: priority 2 is verifying that a rule's
+          #     `evidence.source_urls` actually says what the rule claims. Without
+          #     these, a reviewer can only confirm a URL is present.
+          #   - cargo test/clippy: priorities 1 and 3 are validator correctness
+          #     and whether tests assert both directions, which on a Rust
+          #     workspace means running them, not reading them.
+          #   - the inline-comment tool: the prompt asks for inline comments, and
+          #     the baseline provides only the top-level comment tool.
           claude_args: |
             --model claude-opus-5
+            --allowedTools "WebFetch,WebSearch,Bash(cargo test:*),Bash(cargo clippy:*),Bash(node scripts/sync-rule-bookkeeping.js:*),mcp__github_inline_comment__create_inline_comment"
           prompt: |
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number }}
