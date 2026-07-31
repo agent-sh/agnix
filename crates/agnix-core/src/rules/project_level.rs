@@ -1,9 +1,11 @@
-//! Project-level cross-file validation rules (AGM-006, XP-004/005/006, VER-001).
+//! Project-level cross-file validation rules (AGM-006, XP-004/005/006, XP-009,
+//! VER-001).
 // All items in this module require the filesystem feature. The file-level inner
 // attribute avoids repeating #[cfg(feature = "filesystem")] on each import and
 // function - unlike pipeline.rs, this file has no non-filesystem items.
 #![cfg(feature = "filesystem")]
 
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use rust_i18n::t;
@@ -13,6 +15,7 @@ use crate::diagnostics::Diagnostic;
 use crate::file_utils;
 use crate::parsers::frontmatter::normalize_line_endings;
 use crate::schemas;
+use crate::schemas::cross_platform::CODEX_BYTE_LIMIT;
 
 /// Join an iterator of paths into a comma-separated string.
 ///
@@ -146,6 +149,30 @@ pub(crate) fn run_project_level_checks(
                     // excluded from XP-005/006 analysis. See comment above.
                 }
             }
+        }
+
+        // Drop any `AGENTS.md` shadowed by an `AGENTS.override.md` in the same
+        // directory. Codex "includes at most one file per directory", checking
+        // the override first, so the shadowed file is never loaded - the doc's
+        // own tree labels it "Ignored because an override exists". Comparing the
+        // two as peers reported a conflict between a file and the thing whose
+        // whole purpose is to differ from it.
+        let shadowed: std::collections::BTreeSet<PathBuf> = file_contents
+            .iter()
+            .filter(|(path, _)| {
+                // Case-insensitive, matching `is_instruction_file()`. The three
+                // places that name this file have to agree: that helper collects
+                // it case-insensitively, so an exact-match filter here left a
+                // lowercase `agents.override.md` shadowing nothing while still
+                // being treated as an instruction file.
+                path.file_name()
+                    .and_then(|n| n.to_str())
+                    .is_some_and(|n| n.eq_ignore_ascii_case("AGENTS.override.md"))
+            })
+            .filter_map(|(path, _)| path.parent().map(|dir| dir.join("AGENTS.md")))
+            .collect();
+        if !shadowed.is_empty() {
+            file_contents.retain(|(path, _)| !shadowed.contains(path));
         }
 
         // XP-004/005/006: each detector runs on a per-rule filtered subset
@@ -307,7 +334,175 @@ pub(crate) fn run_project_level_checks(
         }
     }
 
+    // XP-009: the Codex instruction chain exceeds `project_doc_max_bytes`.
+    //
+    // XP-007 checks each AGENTS.md against the 32 KiB default in isolation, but
+    // the documented cap is cumulative: Codex "stops adding files once the
+    // combined size reaches the limit defined by `project_doc_max_bytes`". A
+    // project split across several mid-size files is therefore truncated with no
+    // per-file diagnostic - the gap recorded in the XP-007 rule docs.
+    //
+    // Modelled on the documented discovery rules: start at the project root,
+    // walk down, take at most one file per directory in the order
+    // `AGENTS.override.md`, `AGENTS.md`, then any configured
+    // `project_doc_fallback_filenames`. Names outside that set "are ignored for
+    // instruction discovery" and so do not count.
+    if config.is_rule_enabled("XP-009") {
+        // One chain per leaf directory, not one total for the whole tree.
+        //
+        // A Codex chain is a single root-to-cwd path: two sibling packages are
+        // never concatenated. Summing every discovered file into one running
+        // total blamed a sibling for bytes it does not share - and it scaled the
+        // wrong way, since N packages would eventually cross the cap no matter
+        // how small each one is. It also contradicted AGM-006 above, which
+        // recommends splitting across nested directories precisely to stay under
+        // this cap.
+        let chains = codex_instruction_chains(instruction_file_paths, root_dir);
+
+        // Attribute each over-cap chain to the *largest* file in it, not to the
+        // file where the running total happens to cross.
+        //
+        // Those differ, and the difference matters: a 30 KB root with twenty 5 KB
+        // packages crosses inside each package, so blaming the crossing file
+        // produced twenty diagnostics against twenty 5 KB files for a problem
+        // that only trimming the 30 KB root fixes. Trimming any one of them
+        // removes 5 KB from a chain that needs 30 KB removed, and the suggestion
+        // points at the file it names. Attributing to the biggest contributor
+        // names the one edit that resolves every affected chain, and collapses
+        // those twenty reports into one.
+        let mut reported: BTreeMap<PathBuf, (usize, usize)> = BTreeMap::new();
+
+        for chain in &chains {
+            let mut sizes: Vec<(PathBuf, usize)> = Vec::with_capacity(chain.len());
+            let mut total = 0usize;
+            for path in chain {
+                let Ok(content) = config.fs().read_to_string(path) else {
+                    continue;
+                };
+                total += content.len();
+                sizes.push((path.clone(), content.len()));
+            }
+
+            if total <= CODEX_BYTE_LIMIT {
+                continue;
+            }
+
+            // Largest first, then shallowest, so the choice is deterministic when
+            // two files tie.
+            let Some((culprit, _)) = sizes
+                .iter()
+                .max_by_key(|(path, size)| (*size, std::cmp::Reverse(path.components().count())))
+            else {
+                continue;
+            };
+
+            reported
+                .entry(culprit.clone())
+                .and_modify(|entry| {
+                    if total > entry.0 {
+                        *entry = (total, chain.len());
+                    }
+                })
+                .or_insert((total, chain.len()));
+        }
+
+        for (report_path, (running_total, chain_len)) in reported {
+            if config.for_path(&report_path).is_rule_enabled("XP-009") {
+                diagnostics.push(
+                    Diagnostic::warning(
+                        report_path,
+                        1,
+                        1,
+                        "XP-009",
+                        t!(
+                            "rules.xp_009.message",
+                            bytes = running_total,
+                            limit = CODEX_BYTE_LIMIT,
+                            count = chain_len
+                        ),
+                    )
+                    .with_suggestion(t!("rules.xp_009.suggestion")),
+                );
+            }
+        }
+    }
+
     diagnostics
+}
+
+/// Build every Codex instruction chain for XP-009, one per leaf directory.
+///
+/// A chain is a single root-to-directory path: "Starting at the project root
+/// (typically the Git root), Codex walks down to your current working
+/// directory", taking at most one file per directory in the order
+/// `AGENTS.override.md`, then `AGENTS.md`. Sibling subtrees are separate
+/// chains and are never concatenated, so each is summed on its own.
+///
+/// Only files the project walk already collected are considered, so this adds no
+/// filesystem traversal. Each chain is returned root-first, the order Codex
+/// concatenates in.
+fn codex_instruction_chains(
+    instruction_file_paths: &[PathBuf],
+    root_dir: &Path,
+) -> Vec<Vec<PathBuf>> {
+    // `AGENTS.override.md` first, then `AGENTS.md`. Codex also honors any
+    // `project_doc_fallback_filenames`, but those live in the user's Codex
+    // `config.toml` rather than anything agnix reads, so the chain is built from
+    // the two default names. A project relying on fallbacks would have a longer
+    // real chain, which makes this conservative: it can under-report, never
+    // over-report.
+    let precedence: [&str; 2] = ["AGENTS.override.md", "AGENTS.md"];
+
+    // One entry per directory, keeping only the highest-precedence name there.
+    let mut by_dir: BTreeMap<PathBuf, PathBuf> = BTreeMap::new();
+    for path in instruction_file_paths {
+        let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
+            continue;
+        };
+        // Case-insensitive for the same reason as the shadow filter above.
+        let Some(rank) = precedence.iter().position(|p| p.eq_ignore_ascii_case(name)) else {
+            continue;
+        };
+        let Some(dir) = path.parent() else { continue };
+        if !dir.starts_with(root_dir) {
+            continue;
+        }
+        by_dir
+            .entry(dir.to_path_buf())
+            .and_modify(|existing| {
+                let existing_rank = existing
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .and_then(|n| precedence.iter().position(|p| p.eq_ignore_ascii_case(n)))
+                    .unwrap_or(usize::MAX);
+                if rank < existing_rank {
+                    *existing = path.clone();
+                }
+            })
+            .or_insert_with(|| path.clone());
+    }
+
+    // A leaf is a directory with no deeper instruction-bearing descendant. Every
+    // leaf yields one chain: itself plus each ancestor that holds a file.
+    let dirs: Vec<&PathBuf> = by_dir.keys().collect();
+    dirs.iter()
+        .filter(|dir| {
+            !dirs
+                .iter()
+                .any(|other| other != *dir && other.starts_with(dir.as_path()))
+        })
+        .map(|leaf| {
+            let mut chain: Vec<PathBuf> = by_dir
+                .iter()
+                .filter(|(dir, _)| leaf.starts_with(dir.as_path()))
+                .map(|(_, file)| file.clone())
+                .collect();
+            // BTreeMap iteration is shallow-to-deep for nested paths, matching
+            // root-down concatenation; sort defensively on depth anyway.
+            chain.sort_by_key(|p| p.components().count());
+            chain
+        })
+        .collect()
 }
 
 #[cfg(test)]

@@ -1,7 +1,7 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 442,
+  "total_rules": 443,
   "last_updated": "2026-07-31",
   "schema": {
     "evidence": {
@@ -11578,6 +11578,36 @@
       "bad_example": "# AGENTS.md\n\n(content exceeding 32768 bytes - will be truncated by Codex CLI)"
     },
     {
+      "id": "XP-009",
+      "name": "Codex Instruction Chain Exceeds project_doc_max_bytes",
+      "severity": "MEDIUM",
+      "category": "cross-platform",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://learn.chatgpt.com/docs/agent-configuration/agents-md"
+        ],
+        "verified_on": "2026-07-31",
+        "applies_to": {
+          "tool": "codex",
+          "file_types": [
+            "agents-md"
+          ]
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "# Root AGENTS.md (8 KB)\\n\\nProject conventions.\\n\\n# nested/AGENTS.md (6 KB)\\n\\nModule specifics. Combined 14 KB, under the 32768-byte cap.",
+      "bad_example": "# Root AGENTS.md (20 KB)\\n\\n# api/AGENTS.md (10 KB)\\n\\n# api/v2/AGENTS.md (8 KB)\\n\\nCombined 38 KB: Codex stops appending once the running total passes 32768, so api/v2 is silently dropped."
+    },
+    {
       "id": "XP-008",
       "name": "Claude-specific Features in CLAUDE.md for Cursor",
       "description": "CLAUDE.md contains Claude-specific features that Cursor cannot interpret. When using Cursor as the target tool, Claude-specific directives like context:fork, agent fields, and allowed-tools will be ignored.",
@@ -12877,7 +12907,7 @@
     },
     "cross-platform": {
       "prefix": "XP",
-      "count": 9,
+      "count": 10,
       "description": "Cross-platform compatibility rules"
     },
     "cursor-skills": {

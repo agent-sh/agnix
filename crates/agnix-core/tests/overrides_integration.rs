@@ -440,3 +440,350 @@ fn overrides_suppress_ver001_on_agnix_toml() {
         "override on `.agnix.toml` must suppress VER-001, got: {ver001_hits:?}"
     );
 }
+
+/// XP-009: Codex's `project_doc_max_bytes` cap is cumulative across the
+/// instruction chain, not per-file. XP-007 checks each file alone, so a project
+/// split into several mid-size AGENTS.md files was silently truncated with no
+/// diagnostic at all (issue #1289).
+#[test]
+fn xp009_flags_cumulative_chain_over_the_cap() {
+    let temp = tempfile::TempDir::new().unwrap();
+    // Three files, each well under the 32 KiB per-file limit, 14 KB each.
+    // Combined 42 KB, so Codex stops appending partway through.
+    let body = "x".repeat(14 * 1024);
+    fs::write(temp.path().join("AGENTS.md"), &body).unwrap();
+    fs::create_dir_all(temp.path().join("api")).unwrap();
+    fs::write(temp.path().join("api").join("AGENTS.md"), &body).unwrap();
+    fs::create_dir_all(temp.path().join("api").join("v2")).unwrap();
+    fs::write(temp.path().join("api").join("v2").join("AGENTS.md"), &body).unwrap();
+
+    let result = validate_project(temp.path(), &LintConfig::default()).expect("validate_project");
+
+    let xp007: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.rule == "XP-007")
+        .collect();
+    assert!(
+        xp007.is_empty(),
+        "each file is under the per-file limit, so XP-007 must stay quiet - that is the gap XP-009 fills: {xp007:?}"
+    );
+
+    let xp009: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.rule == "XP-009")
+        .collect();
+    assert_eq!(
+        xp009.len(),
+        1,
+        "a 42 KB chain exceeds the 32768-byte cap and must be reported once: {:?}",
+        result.diagnostics
+    );
+}
+
+/// A chain that fits stays clean, so the rule is not simply counting files.
+#[test]
+fn xp009_quiet_when_chain_fits_under_the_cap() {
+    let temp = tempfile::TempDir::new().unwrap();
+    let body = "x".repeat(6 * 1024);
+    fs::write(temp.path().join("AGENTS.md"), &body).unwrap();
+    fs::create_dir_all(temp.path().join("api")).unwrap();
+    fs::write(temp.path().join("api").join("AGENTS.md"), &body).unwrap();
+
+    let result = validate_project(temp.path(), &LintConfig::default()).expect("validate_project");
+
+    let xp009: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.rule == "XP-009")
+        .collect();
+    assert!(
+        xp009.is_empty(),
+        "12 KB combined is under the cap and must not be reported: {xp009:?}"
+    );
+}
+
+/// At most one file per directory counts, preferring `AGENTS.override.md`. A
+/// shadowed `AGENTS.md` must not inflate the total, or a project using overrides
+/// would be reported for bytes Codex never reads.
+#[test]
+fn xp009_counts_one_file_per_directory_preferring_override() {
+    let temp = tempfile::TempDir::new().unwrap();
+    // Override is small; the shadowed AGENTS.md alongside it is huge. If both
+    // counted, the chain would blow the cap.
+    fs::write(temp.path().join("AGENTS.override.md"), "small override\n").unwrap();
+    fs::write(temp.path().join("AGENTS.md"), "y".repeat(40 * 1024)).unwrap();
+
+    let result = validate_project(temp.path(), &LintConfig::default()).expect("validate_project");
+
+    let xp009: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.rule == "XP-009")
+        .collect();
+    assert!(
+        xp009.is_empty(),
+        "the shadowed AGENTS.md is not in the chain, so its bytes must not count: {xp009:?}"
+    );
+}
+
+/// Per-file `[[overrides]]` must suppress XP-009 like any other rule.
+#[test]
+fn xp009_respects_per_file_overrides() {
+    let temp = tempfile::TempDir::new().unwrap();
+    let body = "x".repeat(20 * 1024);
+    fs::write(temp.path().join("AGENTS.md"), &body).unwrap();
+    fs::create_dir_all(temp.path().join("api")).unwrap();
+    fs::write(temp.path().join("api").join("AGENTS.md"), &body).unwrap();
+
+    let baseline =
+        validate_project(temp.path(), &LintConfig::default()).expect("validate_project baseline");
+    assert!(
+        baseline.diagnostics.iter().any(|d| d.rule == "XP-009"),
+        "baseline: a 40 KB chain must be reported, got: {:?}",
+        baseline.diagnostics
+    );
+
+    let config = LintConfig::builder()
+        .overrides(vec![OverrideConfig {
+            paths: vec!["**/AGENTS.md".to_string()],
+            disabled_rules: vec!["XP-009".to_string()],
+        }])
+        .build()
+        .expect("valid config");
+
+    let result = validate_project(temp.path(), &config).expect("validate_project");
+    let xp009: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.rule == "XP-009")
+        .collect();
+    assert!(
+        xp009.is_empty(),
+        "an override on the reported file must suppress XP-009: {xp009:?}"
+    );
+}
+
+/// A Codex chain is a single root-to-cwd path, so sibling subtrees are never
+/// concatenated. Summing every discovered file into one total blamed a sibling
+/// for bytes it does not share, and scaled the wrong way: enough packages would
+/// cross the cap however small each one is. It also contradicted AGM-006, which
+/// recommends splitting across nested directories to stay under this very cap.
+#[test]
+fn xp009_does_not_sum_across_sibling_subtrees() {
+    let temp = tempfile::TempDir::new().unwrap();
+    // root 10 KB + two 12 KB siblings. Real chains are 22 KB each, both fine;
+    // a naive whole-tree sum reaches 34 KB and reports the second sibling.
+    fs::write(temp.path().join("AGENTS.md"), "r".repeat(10 * 1024)).unwrap();
+    for pkg in ["pkg-a", "pkg-b"] {
+        fs::create_dir_all(temp.path().join(pkg)).unwrap();
+        fs::write(
+            temp.path().join(pkg).join("AGENTS.md"),
+            "x".repeat(12 * 1024),
+        )
+        .unwrap();
+    }
+
+    let result = validate_project(temp.path(), &LintConfig::default()).expect("validate_project");
+    let xp009: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.rule == "XP-009")
+        .collect();
+    assert!(
+        xp009.is_empty(),
+        "neither root->pkg-a nor root->pkg-b exceeds the cap, so nothing may be reported: {xp009:?}"
+    );
+}
+
+/// A single deep chain over the cap is still reported exactly once. With three
+/// equal-sized files the attribution tiebreak picks the shallowest, so the root
+/// is named - see `xp009_blames_a_deep_file_when_it_is_the_biggest` for the case
+/// where a leaf dominates.
+#[test]
+fn xp009_reports_a_single_deep_chain_once() {
+    let temp = tempfile::TempDir::new().unwrap();
+    let body = "x".repeat(14 * 1024);
+    fs::write(temp.path().join("AGENTS.md"), &body).unwrap();
+    fs::create_dir_all(temp.path().join("api").join("v2")).unwrap();
+    fs::write(temp.path().join("api").join("AGENTS.md"), &body).unwrap();
+    fs::write(temp.path().join("api").join("v2").join("AGENTS.md"), &body).unwrap();
+
+    let result = validate_project(temp.path(), &LintConfig::default()).expect("validate_project");
+    let xp009: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.rule == "XP-009")
+        .collect();
+    assert_eq!(
+        xp009.len(),
+        1,
+        "a 42 KB root->api->v2 chain must be reported exactly once: {:?}",
+        result.diagnostics
+    );
+    // Compare structurally rather than against `temp.path()`: on macOS a
+    // TempDir under /var resolves to /private/var, so equality on the parent
+    // fails for a reason unrelated to what this asserts.
+    assert!(
+        !xp009[0].file.components().any(|c| c.as_os_str() == "api"),
+        "with equal sizes the shallowest (root) file is named, got: {}",
+        xp009[0].file.display()
+    );
+}
+
+/// Codex "includes at most one file per directory", checking
+/// `AGENTS.override.md` first, so a shadowed `AGENTS.md` is never loaded - the
+/// doc's tree labels it "Ignored because an override exists". Comparing the two
+/// as peers reported a conflict between a file and the thing whose purpose is to
+/// differ from it.
+#[test]
+fn xp004_ignores_agents_md_shadowed_by_an_override() {
+    let temp = tempfile::TempDir::new().unwrap();
+    fs::write(
+        temp.path().join("AGENTS.md"),
+        "# Agents\n\nTo install dependencies, run `npm install`.\n",
+    )
+    .unwrap();
+    fs::write(
+        temp.path().join("AGENTS.override.md"),
+        "# Override\n\nTo install dependencies, run `yarn install`.\n",
+    )
+    .unwrap();
+
+    let result = validate_project(temp.path(), &LintConfig::default()).expect("validate_project");
+    let conflicts: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.rule == "XP-004")
+        .collect();
+    assert!(
+        conflicts.is_empty(),
+        "an override is meant to differ from the file it shadows: {conflicts:?}"
+    );
+}
+
+/// A genuine conflict between two files Codex actually loads together still
+/// fires, so the exclusion above is not simply disabling XP-004.
+#[test]
+fn xp004_still_flags_a_real_cross_file_conflict() {
+    let temp = tempfile::TempDir::new().unwrap();
+    fs::write(
+        temp.path().join("CLAUDE.md"),
+        "# Claude\n\nTo install dependencies, run `npm install`.\n",
+    )
+    .unwrap();
+    fs::write(
+        temp.path().join("AGENTS.md"),
+        "# Agents\n\nTo install dependencies, run `yarn install`.\n",
+    )
+    .unwrap();
+
+    let result = validate_project(temp.path(), &LintConfig::default()).expect("validate_project");
+    assert!(
+        result.diagnostics.iter().any(|d| d.rule == "XP-004"),
+        "a real npm-vs-yarn conflict must still be reported: {:?}",
+        result.diagnostics
+    );
+}
+
+/// Attribution follows the largest contributor, not the file where the running
+/// total happens to cross. A big root with many small packages crosses inside
+/// each package, so blaming the crossing file produced one diagnostic per
+/// package against files that cannot fix the problem - trimming a 5 KB package
+/// removes 5 KB from a chain that needs 30 KB removed. This is the sibling bug
+/// one step along: N reports against the wrong file instead of one report with
+/// the wrong total.
+#[test]
+fn xp009_blames_the_largest_file_not_every_sibling() {
+    let temp = tempfile::TempDir::new().unwrap();
+    fs::write(temp.path().join("AGENTS.md"), "r".repeat(30 * 1024)).unwrap();
+    for i in 0..20 {
+        let dir = temp.path().join(format!("pkg{i}"));
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(dir.join("AGENTS.md"), "p".repeat(5 * 1024)).unwrap();
+    }
+
+    let result = validate_project(temp.path(), &LintConfig::default()).expect("validate_project");
+    let xp009: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.rule == "XP-009")
+        .collect();
+
+    assert_eq!(
+        xp009.len(),
+        1,
+        "20 chains sharing one oversized root must collapse to a single report, got: {:?}",
+        xp009
+            .iter()
+            .map(|d| d.file.display().to_string())
+            .collect::<Vec<_>>()
+    );
+    // Structural check: on macOS a TempDir under /var resolves to /private/var,
+    // so comparing the parent against `temp.path()` fails for a reason unrelated
+    // to what this asserts. The root file is the one with no `pkgNN` component.
+    assert!(
+        xp009[0].file.ends_with("AGENTS.md")
+            && !xp009[0]
+                .file
+                .components()
+                .any(|c| c.as_os_str().to_string_lossy().starts_with("pkg")),
+        "the 30 KB root is the only edit that fixes every chain, got: {}",
+        xp009[0].file.display()
+    );
+}
+
+/// When a deep file is the largest contributor, it is named rather than the root.
+#[test]
+fn xp009_blames_a_deep_file_when_it_is_the_biggest() {
+    let temp = tempfile::TempDir::new().unwrap();
+    fs::write(temp.path().join("AGENTS.md"), "r".repeat(4 * 1024)).unwrap();
+    let deep = temp.path().join("api").join("v2");
+    fs::create_dir_all(&deep).unwrap();
+    fs::write(
+        temp.path().join("api").join("AGENTS.md"),
+        "a".repeat(4 * 1024),
+    )
+    .unwrap();
+    fs::write(deep.join("AGENTS.md"), "v".repeat(30 * 1024)).unwrap();
+
+    let result = validate_project(temp.path(), &LintConfig::default()).expect("validate_project");
+    let xp009: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.rule == "XP-009")
+        .collect();
+    assert_eq!(xp009.len(), 1, "got: {:?}", result.diagnostics);
+    assert!(
+        xp009[0].file.ends_with("v2/AGENTS.md"),
+        "the 30 KB leaf is the biggest contributor, got: {}",
+        xp009[0].file.display()
+    );
+}
+
+/// `is_instruction_file()` collects `AGENTS.override.md` case-insensitively, so
+/// the shadow filter and the chain builder have to agree. They matched exactly
+/// before, which left a lowercase `agents.override.md` treated as an instruction
+/// file while shadowing nothing - the 40 KB file it should have hidden was still
+/// summed.
+#[test]
+fn xp009_override_shadowing_is_case_insensitive() {
+    for override_name in ["AGENTS.override.md", "agents.override.md"] {
+        let temp = tempfile::TempDir::new().unwrap();
+        fs::write(temp.path().join(override_name), "small override\n").unwrap();
+        fs::write(temp.path().join("AGENTS.md"), "y".repeat(40 * 1024)).unwrap();
+
+        let result =
+            validate_project(temp.path(), &LintConfig::default()).expect("validate_project");
+        let xp009: Vec<_> = result
+            .diagnostics
+            .iter()
+            .filter(|d| d.rule == "XP-009")
+            .collect();
+        assert!(
+            xp009.is_empty(),
+            "'{override_name}' must shadow AGENTS.md, so its 40 KB must not count: {xp009:?}"
+        );
+    }
+}

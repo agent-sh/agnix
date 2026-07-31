@@ -3338,7 +3338,9 @@ agent: reviewer
 <a id="xp-007"></a>
 ### XP-007 [MEDIUM] AGENTS.md Exceeds Codex Byte Limit
 **Requirement**: AGENTS.md SHOULD stay under Codex CLI's 32768-byte `project_doc_max_bytes` default. `AGENTS.override.md` is checked too, since Codex reads it first in each directory and it draws on the same budget.
-**Detection**: Check byte length of `AGENTS.md` / `AGENTS.override.md` content against the 32768-byte threshold. Note the documented cap is cumulative across the root-to-cwd chain while this check is per-file, so a project split across several mid-size files can still be truncated without a diagnostic.
+**Detection**: Check byte length of `AGENTS.md` / `AGENTS.override.md` content against the 32768-byte threshold. The documented cap is cumulative across the root-to-cwd chain; that dimension is covered by [XP-009](#xp-009), while this rule catches a single file that blows the limit on its own.
+
+Known asymmetry with XP-009: this is a per-file validator, so it has no view of which files Codex actually loads. An `AGENTS.md` shadowed by an `AGENTS.override.md` in the same directory is never read by Codex, and XP-009 correctly excludes its bytes - but XP-007 still reports it on size alone. Resolving that needs the project-level shadowing model XP-009 uses, which a per-file rule cannot reach.
 **Fix**: Reduce content or split into multiple files using @import
 **Source**: learn.chatgpt.com/docs/agent-configuration/agents-md
 
@@ -3348,6 +3350,14 @@ agent: reviewer
 **Detection**: When target tool is Cursor, check CLAUDE.md and CLAUDE.local.md for Claude-specific directives (context:fork, agent fields, allowed-tools, hooks, @import) outside guarded sections
 **Fix**: No auto-fix - move Cursor-compatible instructions to .cursor/rules/ or guard Claude-specific content under a `## Claude Code` section header
 **Source**: docs.cursor.com/context/rules-for-ai
+
+<a id="xp-009"></a>
+### XP-009 [MEDIUM] Codex Instruction Chain Exceeds project_doc_max_bytes
+**Requirement**: The *combined* size of the Codex instruction chain SHOULD stay under the 32768-byte `project_doc_max_bytes` default. The cap is cumulative, not per-file - Codex "stops adding files once the combined size reaches the limit", so a project split across several mid-size files is truncated even when every individual file passes XP-007.
+**Detection**: Project-level check. Builds **one chain per leaf directory** the way Codex discovers them - start at the project root, walk down, at most one file per directory, preferring `AGENTS.override.md` over `AGENTS.md` - then sums each chain independently and reports on the file where that chain's running total crosses the limit, since that file and everything deeper is what Codex drops. Sibling subtrees are separate chains and are never summed together: a single whole-tree total would blame a sibling for bytes it does not share, and would eventually trip on any project with enough packages - the opposite of AGM-006's advice to split across nested directories to stay under this cap. Conservative by design: `project_doc_fallback_filenames` lives in the user's Codex config rather than anything agnix reads, so a project using fallbacks has a longer real chain and this check under-reports rather than over-reports.
+**Fix**: Manual - trim the chain, or raise `project_doc_max_bytes` in the Codex config
+**Source**: learn.chatgpt.com/docs/agent-configuration/agents-md
+
 
 <a id="xp-sk-001"></a>
 ### XP-SK-001 [LOW] Skill Uses Client-Specific Features
@@ -3549,7 +3559,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Codex Skills | 1 | 0 | 1 | 0 | 1 |
 | GitHub Copilot | 25 | 13 | 9 | 3 | 11 |
 | Copilot Skills | 1 | 0 | 1 | 0 | 1 |
-| Cross-Platform | 9 | 2 | 6 | 1 | 0 |
+| Cross-Platform | 10 | 2 | 7 | 1 | 0 |
 | Cursor | 19 | 9 | 9 | 1 | 6 |
 | Cursor Skills | 1 | 0 | 1 | 0 | 1 |
 | Gemini Agents | 1 | 1 | 0 | 0 | 0 |
@@ -3572,7 +3582,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **442** | **214** | **198** | **30** | **124** |
+| **TOTAL** | **443** | **214** | **199** | **30** | **124** |
 
 
 ---
@@ -3602,8 +3612,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 442 validation rules across 40 categories
+**Total Coverage**: 443 validation rules across 40 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 214 HIGH, 198 MEDIUM, 30 LOW
+**Certainty**: 214 HIGH, 199 MEDIUM, 30 LOW
 **Auto-Fixable**: 124 rules (28%)

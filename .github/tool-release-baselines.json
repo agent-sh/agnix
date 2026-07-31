@@ -204,7 +204,7 @@
       ],
       "github_repo": "cline/cline",
       "release_tag_regex": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
-      "last_known_version": "v4.0.12",
+      "last_known_version": "v4.1.2",
       "tracked": true,
       "notes": "Tracks only the core Cline vX.Y.Z release train. The repository also publishes desktop-v*, cli-v*, sdk/*, and other interleaved releases that do not correspond to the validator surfaces.",
       "changes_of_interest": {

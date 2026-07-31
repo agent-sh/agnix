@@ -19,6 +19,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Stale evidence URLs for 18 rules**. `docs.github.com/en/copilot/customizing-copilot` 301-redirects and `docs.cline.bot/features/cline-rules/overview` 308-redirects; both are updated in `rules.json` and `.github/spec-baselines.json`, so those two sentinel sources can match again.
 
 ### Added
+- **XP-009: Codex Instruction Chain Exceeds project_doc_max_bytes**. Codex's 32 KiB `project_doc_max_bytes` cap is cumulative across the instruction chain, not per-file - it "stops adding files once the combined size reaches the limit". XP-007 checks each `AGENTS.md` in isolation, so a project split across several mid-size files was truncated with no diagnostic at all. The new project-level rule builds the chain the way Codex discovers it (root down, at most one file per directory, `AGENTS.override.md` before `AGENTS.md`), sums root-first, and reports on the file where the running total crosses the limit - that file and everything deeper is what Codex drops. Rule count 442 -> 443 (closes #1289).
+
+### Fixed
+- **`AGENTS.override.md` was not recognized as an instruction file**. Codex checks it before `AGENTS.md` in each directory, but `is_instruction_file()` did not list it, so it was invisible to every cross-platform rule. This also made the `AGENTS.override.md` handling added to XP-007 in the previous release unreachable in practice.
+
+### Added
 - **`args` on command hooks**. The exec-form field - "When present, `command` is resolved as an executable and spawned directly with `args` as the argument vector, with no shell involved" - was absent from the schema, so it was silently ignored and two rules could not tell exec form from shell form.
 
 ### Fixed
