@@ -13,7 +13,7 @@ keywords: ["CC-PL-007", "invalid component path", "claude plugins", "validation"
 - **Category**: `Claude Plugins`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `Yes (safe)`
-- **Verified On**: `2026-02-07`
+- **Verified On**: `2026-07-31`
 
 ## Applicability
 

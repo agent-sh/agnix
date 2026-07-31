@@ -93,7 +93,13 @@ pub(crate) fn run_project_level_checks(
                         description,
                     )
                     .with_suggestion(
-                        "Some tools load AGENTS.md hierarchically. Document inheritance behavior or consolidate files.".to_string(),
+                        // Codex concatenates from the root down, joins with blank
+                        // lines, takes at most one file per directory, and lets
+                        // files nearer the working directory override earlier
+                        // guidance. It also recommends splitting across nested
+                        // directories to stay under the byte cap - the opposite
+                        // of the "consolidate files" advice this used to give.
+                        "AGENTS.md files are merged from the project root down, one per directory, with files nearer the working directory taking precedence. Confirm the layered guidance is consistent, or document the intended precedence.".to_string(),
                     ),
                 );
             }

@@ -43,10 +43,17 @@ pub(super) fn reference_path_too_deep(path: &str) -> bool {
         return false;
     };
 
-    // Check for file references (references/, reference/, refs/)
+    // Check for bundled resource references. The spec scopes skill resources to
+    // "`scripts/`, `references/`, or `assets/`" and states the depth rule over
+    // file references generally - "Keep file references one level deep from
+    // `SKILL.md`" - with `scripts/extract.py` used in its own example. Only the
+    // `references*` spellings were inspected, so deep `scripts/` and `assets/`
+    // paths were invisible to AS-013.
     if !prefix.eq_ignore_ascii_case("references")
         && !prefix.eq_ignore_ascii_case("reference")
         && !prefix.eq_ignore_ascii_case("refs")
+        && !prefix.eq_ignore_ascii_case("scripts")
+        && !prefix.eq_ignore_ascii_case("assets")
     {
         return false;
     }

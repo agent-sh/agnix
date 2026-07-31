@@ -33,6 +33,13 @@ pub enum Hook {
     Command {
         #[serde(skip_serializing_if = "Option::is_none")]
         command: Option<String>,
+        /// Argument list. "When present, `command` is resolved as an executable
+        /// and spawned directly with `args` as the argument vector, with no
+        /// shell involved" - this is the doc's *exec form*, as opposed to the
+        /// shell form where `command` is a shell string. Several rules behave
+        /// differently between the two, so the field has to be parsed.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        args: Option<Vec<String>>,
         #[serde(skip_serializing_if = "Option::is_none")]
         timeout: Option<u64>,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -399,6 +406,7 @@ mod tests {
                 matcher: None,
                 hooks: vec![Hook::Command {
                     command: Some("echo hi".to_string()),
+                    args: None,
                     timeout: None,
                     model: None,
                     if_condition: None,
@@ -419,6 +427,7 @@ mod tests {
     fn test_hook_type_name() {
         let cmd = Hook::Command {
             command: Some("echo".to_string()),
+            args: None,
             timeout: None,
             model: None,
             if_condition: None,

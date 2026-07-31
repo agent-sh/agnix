@@ -4683,3 +4683,377 @@ fn test_cc_sk_021_ignores_files_outside_skill_dir() {
 
     assert!(cc_sk_021_for(&dir).is_empty());
 }
+
+/// CC-SK-009 counted raw `` !` `` occurrences, which was wrong twice over:
+/// inert `` KEY=!`cmd` `` forms were counted (the doc says a `!` following
+/// another character stays literal), and ` ```! ` fenced blocks were not counted
+/// at all.
+#[test]
+fn test_cc_sk_009_ignores_inert_inline_injections() {
+    let content = r#"---
+name: test-skill
+description: Use when testing inert injection forms
+---
+Run the setup with these values.
+
+KEY1=!`date`
+KEY2=!`whoami`
+KEY3=!`pwd`
+KEY4=!`hostname`
+"#;
+
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(
+        Path::new(".claude/skills/test-skill/SKILL.md"),
+        content,
+        &LintConfig::default(),
+    );
+
+    let hits: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-SK-009")
+        .collect();
+    assert!(
+        hits.is_empty(),
+        "`KEY=!`cmd`` is literal text and must not count as an injection, got: {hits:?}"
+    );
+}
+
+/// A ` ```! ` fenced block runs each line as a command, so its lines count.
+#[test]
+fn test_cc_sk_009_counts_shell_fence_lines() {
+    let content = r#"---
+name: test-skill
+description: Use when testing fenced shell injection counting
+---
+Check the environment.
+
+```!
+node --version
+npm --version
+git status --short
+uname -a
+```
+"#;
+
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(
+        Path::new(".claude/skills/test-skill/SKILL.md"),
+        content,
+        &LintConfig::default(),
+    );
+
+    let hits: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-SK-009")
+        .collect();
+    assert_eq!(
+        hits.len(),
+        1,
+        "four commands in a ```! fence exceed the limit of 3, got: {diagnostics:?}"
+    );
+}
+
+/// A plain fenced block is inert and must not contribute counts.
+#[test]
+fn test_cc_sk_009_ignores_plain_fence() {
+    let content = r#"---
+name: test-skill
+description: Use when testing that plain fences are inert
+---
+Example output:
+
+```bash
+!`one`
+!`two`
+!`three`
+!`four`
+```
+"#;
+
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(
+        Path::new(".claude/skills/test-skill/SKILL.md"),
+        content,
+        &LintConfig::default(),
+    );
+
+    let hits: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-SK-009")
+        .collect();
+    assert!(
+        hits.is_empty(),
+        "a plain ```bash fence does not execute and must not be counted, got: {hits:?}"
+    );
+}
+
+/// Genuine inline injections past the limit still fire.
+#[test]
+fn test_cc_sk_009_still_flags_real_inline_injections() {
+    let content = r#"---
+name: test-skill
+description: Use when testing that real inline injections are counted
+---
+Current state: !`date` and !`whoami` and !`pwd` and !`hostname`
+"#;
+
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(
+        Path::new(".claude/skills/test-skill/SKILL.md"),
+        content,
+        &LintConfig::default(),
+    );
+
+    assert!(
+        diagnostics.iter().any(|d| d.rule == "CC-SK-009"),
+        "four recognized inline injections must exceed the limit, got: {diagnostics:?}"
+    );
+}
+
+/// The substitution table documents four argument forms. CC-SK-012 only looked
+/// for the literal `$ARGUMENTS`, so a body using `$0` or a declared `$name` was
+/// falsely reported as ignoring its own arguments.
+#[test]
+fn test_cc_sk_012_accepts_positional_shorthand() {
+    let content = r#"---
+name: test-skill
+description: Use when testing positional shorthand recognition
+argument-hint: "[issue-number] [branch]"
+---
+Fix issue $0 on branch $1.
+"#;
+
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(
+        Path::new(".claude/skills/test-skill/SKILL.md"),
+        content,
+        &LintConfig::default(),
+    );
+
+    let hits: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-SK-012")
+        .collect();
+    assert!(
+        hits.is_empty(),
+        "`$0`/`$1` are documented shorthand for $ARGUMENTS[N], got: {hits:?}"
+    );
+}
+
+/// `$name` placeholders declared in the `arguments` frontmatter list also count.
+#[test]
+fn test_cc_sk_012_accepts_named_arguments() {
+    let content = r#"---
+name: test-skill
+description: Use when testing named argument recognition
+argument-hint: "[issue] [branch]"
+arguments: issue branch
+---
+Fix $issue on $branch.
+"#;
+
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(
+        Path::new(".claude/skills/test-skill/SKILL.md"),
+        content,
+        &LintConfig::default(),
+    );
+
+    let hits: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-SK-012")
+        .collect();
+    assert!(
+        hits.is_empty(),
+        "`$issue`/`$branch` are declared in `arguments` and must count, got: {hits:?}"
+    );
+}
+
+/// A body that references no argument at all still fires.
+#[test]
+fn test_cc_sk_012_still_flags_body_with_no_arguments() {
+    let content = r#"---
+name: test-skill
+description: Use when testing that a body ignoring arguments is flagged
+argument-hint: "[issue-number]"
+---
+Do the thing with no argument reference at all.
+"#;
+
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(
+        Path::new(".claude/skills/test-skill/SKILL.md"),
+        content,
+        &LintConfig::default(),
+    );
+
+    assert!(
+        diagnostics.iter().any(|d| d.rule == "CC-SK-012"),
+        "a body referencing no arguments must still be flagged, got: {diagnostics:?}"
+    );
+}
+
+/// CC-SK-016 covers the `$N` shorthand too, since it is documented as
+/// equivalent to `$ARGUMENTS[N]`.
+#[test]
+fn test_cc_sk_016_flags_positional_shorthand_without_hint() {
+    let content = r#"---
+name: test-skill
+description: Use when testing shorthand without an argument hint
+---
+Fix issue $0 for the reporter.
+"#;
+
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(
+        Path::new(".claude/skills/test-skill/SKILL.md"),
+        content,
+        &LintConfig::default(),
+    );
+
+    assert!(
+        diagnostics.iter().any(|d| d.rule == "CC-SK-016"),
+        "`$0` without argument-hint has the same gap as $ARGUMENTS[0], got: {diagnostics:?}"
+    );
+}
+
+/// `${CLAUDE_SKILL_DIR}`-style variables and dollar amounts must not be
+/// mistaken for positional arguments.
+#[test]
+fn test_cc_sk_016_ignores_non_positional_dollar_forms() {
+    let content = r#"---
+name: test-skill
+description: Use when testing that other dollar forms are not positional
+---
+Run ${CLAUDE_SKILL_DIR}/scripts/run.sh and report the $500 total for item x$3y.
+"#;
+
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(
+        Path::new(".claude/skills/test-skill/SKILL.md"),
+        content,
+        &LintConfig::default(),
+    );
+
+    let hits: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-SK-016")
+        .collect();
+    assert!(
+        hits.is_empty(),
+        "`${{CLAUDE_SKILL_DIR}}`, `$500`, and `x$3y` are not positional arguments, got: {hits:?}"
+    );
+}
+
+/// AS-013 only inspected `references/`-prefixed paths, so deep `scripts/` and
+/// `assets/` paths were invisible - even though the spec scopes skill resources
+/// to "`scripts/`, `references/`, or `assets/`" and uses `scripts/extract.py` in
+/// its own example.
+#[test]
+fn test_as_013_covers_scripts_and_assets() {
+    for path in [
+        "scripts/deep/nested/extract.py",
+        "assets/deep/nested/logo.png",
+    ] {
+        let content = format!(
+            r#"---
+name: test-skill
+description: Use when testing deep resource reference detection
+---
+Run the helper at {path} to continue.
+"#
+        );
+
+        let validator = SkillValidator;
+        let diagnostics = validator.validate(
+            Path::new(".claude/skills/test-skill/SKILL.md"),
+            &content,
+            &LintConfig::default(),
+        );
+
+        assert!(
+            diagnostics.iter().any(|d| d.rule == "AS-013"),
+            "deep path '{path}' must be reported by AS-013, got: {diagnostics:?}"
+        );
+    }
+}
+
+/// One level deep stays clean for the newly covered prefixes.
+#[test]
+fn test_as_013_allows_one_level_scripts_and_assets() {
+    for path in ["scripts/extract.py", "assets/logo.png"] {
+        let content = format!(
+            r#"---
+name: test-skill
+description: Use when testing shallow resource references stay clean
+---
+Run the helper at {path} to continue.
+"#
+        );
+
+        let validator = SkillValidator;
+        let diagnostics = validator.validate(
+            Path::new(".claude/skills/test-skill/SKILL.md"),
+            &content,
+            &LintConfig::default(),
+        );
+
+        let hits: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-013").collect();
+        assert!(
+            hits.is_empty(),
+            "'{path}' is one level deep and must not be flagged, got: {hits:?}"
+        );
+    }
+}
+
+/// For a Claude Code skill, `name` is a display label - "the command still comes
+/// from the directory or file name" - and a plugin skill's `name` deliberately
+/// replaces the last command segment. AS-017 used to reject the reference's own
+/// `name: fancy` in `skills/review/` example.
+#[test]
+fn test_as_017_scoped_out_for_claude_code_skills() {
+    let content = r#"---
+name: fancy
+description: Use when testing that a Claude Code display label is allowed
+---
+Body with instructions to run the task.
+"#;
+
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(
+        Path::new(".claude/skills/review/SKILL.md"),
+        content,
+        &LintConfig::default(),
+    );
+
+    let hits: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-017").collect();
+    assert!(
+        hits.is_empty(),
+        "`name` is a display label for Claude Code skills and must not trip AS-017, got: {hits:?}"
+    );
+}
+
+/// The agentskills.io baseline still requires the match, so a skill owned by
+/// another client keeps the rule.
+#[test]
+fn test_as_017_still_enforced_for_non_claude_clients() {
+    let content = r#"---
+name: mismatched
+description: Use when testing that the baseline still requires a directory match
+---
+Body with instructions to run the task.
+"#;
+
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(
+        Path::new(".opencode/skills/review/SKILL.md"),
+        content,
+        &LintConfig::default(),
+    );
+
+    assert!(
+        diagnostics.iter().any(|d| d.rule == "AS-017"),
+        "the agentskills.io baseline requires name==directory, got: {diagnostics:?}"
+    );
+}

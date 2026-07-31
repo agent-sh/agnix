@@ -13,7 +13,7 @@ keywords: ["CC-PL-008", "component inside .claude-plugin", "claude plugins", "va
 - **Category**: `Claude Plugins`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-02-07`
+- **Verified On**: `2026-07-31`
 
 ## Applicability
 

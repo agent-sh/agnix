@@ -13,7 +13,7 @@ keywords: ["CC-HK-028", "rejected user_config interpolation in shell-form comman
 - **Category**: `Claude Hooks`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-07-15`
+- **Verified On**: `2026-07-31`
 
 ## Applicability
 
@@ -23,7 +23,7 @@ keywords: ["CC-HK-028", "rejected user_config interpolation in shell-form comman
 
 ## Evidence Sources
 
-- https://github.com/anthropics/claude-code/releases/tag/v2.1.207
+- https://code.claude.com/docs/en/hooks
 
 ## Test Coverage Metadata
 

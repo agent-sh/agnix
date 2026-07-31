@@ -13,7 +13,7 @@ keywords: ["CC-SK-009", "too many injections", "claude skills", "validation", "a
 - **Category**: `Claude Skills`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-02-04`
+- **Verified On**: `2026-07-31`
 
 ## Applicability
 
@@ -23,7 +23,7 @@ keywords: ["CC-SK-009", "too many injections", "claude skills", "validation", "a
 
 ## Evidence Sources
 
-- https://platform.claude.com/docs
+- https://code.claude.com/docs/en/skills
 
 ## Test Coverage Metadata
 

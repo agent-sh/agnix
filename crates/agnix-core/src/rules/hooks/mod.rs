@@ -73,13 +73,22 @@ fn validate_cc_hk_006_command_field(
 /// CC-HK-008: Script file not found
 fn validate_cc_hk_008_script_exists(
     command: &str,
+    args: Option<&Vec<String>>,
     project_dir: &Path,
     config: &PerFileLintConfig<'_>,
     path: &Path,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
     let fs = config.fs();
-    for script_path in extract_script_paths(command) {
+    // In exec form the script often sits in `args` rather than `command` (e.g.
+    // `command: "node"`, `args: [".claude/hooks/check.js"]`), so scanning only
+    // `command` left exec-form hooks - the form the doc recommends for path
+    // placeholders - with no script-existence checking at all.
+    let arg_paths: Vec<String> = args
+        .map(|list| list.iter().flat_map(|a| extract_script_paths(a)).collect())
+        .unwrap_or_default();
+
+    for script_path in extract_script_paths(command).into_iter().chain(arg_paths) {
         if !has_unresolved_env_vars(&script_path) {
             let resolved = resolve_script_path(&script_path, project_dir);
             if !fs.exists(&resolved) {
@@ -131,10 +140,19 @@ fn validate_cc_hk_009_dangerous_patterns(
 /// environment.
 fn validate_cc_hk_028_user_config_interpolation(
     command: &str,
+    is_exec_form: bool,
     hook_location: &str,
     path: &Path,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
+    // Exec form is explicitly permitted: "Plugin hooks additionally substitute
+    // `${user_config.*}` values, in exec form only", and only "A shell-form
+    // plugin hook whose `command` references `${user_config.*}` fails with an
+    // error". Presence of `args` is what selects exec form, so firing without
+    // checking it flagged the pattern the doc recommends.
+    if is_exec_form {
+        return;
+    }
     if command.contains("${user_config.") {
         diagnostics.push(
             Diagnostic::error(
@@ -610,6 +628,7 @@ impl Validator for HooksValidator {
                     match hook {
                         Hook::Command {
                             command,
+                            args,
                             timeout,
                             model,
                             ..
@@ -650,6 +669,7 @@ impl Validator for HooksValidator {
                                 if config.is_rule_enabled("CC-HK-008") {
                                     validate_cc_hk_008_script_exists(
                                         cmd,
+                                        args.as_ref(),
                                         project_dir,
                                         config,
                                         path,
@@ -670,6 +690,7 @@ impl Validator for HooksValidator {
                                 if config.is_rule_enabled("CC-HK-028") {
                                     validate_cc_hk_028_user_config_interpolation(
                                         cmd,
+                                        args.is_some(),
                                         &hook_location,
                                         path,
                                         &mut diagnostics,
