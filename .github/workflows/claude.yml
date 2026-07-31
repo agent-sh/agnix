@@ -56,9 +56,10 @@ jobs:
           use_commit_signing: true
           # `model` is not an action input - it reaches the CLI through
           # claude_args. As an input it produced `Unexpected input(s) 'model'`
-          # and was ignored, so this ran on the default model instead.
+          # and was ignored, so this ran on the default model instead. The
+          # pinned value was also a stale model ID.
           #
           # No `prompt` here on purpose: this workflow is triggered by an
           # explicit @claude mention, and the comment body is the instruction.
           claude_args: |
-            --model claude-opus-4-6
+            --model claude-opus-5
