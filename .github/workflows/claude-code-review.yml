@@ -36,25 +36,19 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
-          # This job now runs `cargo test` on PR-authored code. Match ci.yml and
-          # do not leave a usable token in the checkout's git config.
+          # Kept, but it does NOT leave this job token-free. Dropping
+          # `use_commit_signing` puts the action in non-signing mode, and that
+          # branch calls `configureGitAuth` (src/modes/tag/index.ts:88), which
+          # unsets checkout's extraheader and then embeds the token in the remote
+          # URL (src/github/operations/git-config.ts:78). Verified in a live run:
+          # `.git/config` carries an `x-access-token` entry the action added after
+          # checkout. The token-free path there needs ALLOWED_NON_WRITE_USERS,
+          # which never engages behind the author_association gate above.
+          #
+          # So this only closes the window before the action runs. That is worth
+          # having and costs nothing, but the job still compiles PR-authored code
+          # alongside a readable token holding pull-requests/issues write.
           persist-credentials: false
-
-      - uses: dtolnay/rust-toolchain@4be9e76fd7c4901c61fb841f559994984270fce7 # stable
-        with:
-          # Pinned like ci.yml rather than relying on the runner image, since
-          # `cargo clippy` is in the grant list below.
-          components: clippy, rustfmt
-
-      # Restore ci.yml's cache via the shared key. Without it the first
-      # `cargo test` cold-builds a 6-crate workspace, which is slow enough that
-      # the reviewer would skip running tests and fall back to reading them -
-      # putting prompt priorities 1 and 3 back where they started. Read-only:
-      # this job should consume ci.yml's cache, never publish its own.
-      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2
-        with:
-          shared-key: agnix-workspace
-          save-if: "false"
 
       - name: Check run count
         id: check-runs
@@ -98,6 +92,26 @@ jobs:
             echo "should_run=false" >> $GITHUB_OUTPUT
             echo "[SKIP] Skipping Claude review (already ran 3 times for this commit)"
           fi
+
+      # Toolchain and cache come after the run-count gate: both are pointless
+      # work when the review is going to be skipped.
+      - uses: dtolnay/rust-toolchain@4be9e76fd7c4901c61fb841f559994984270fce7 # stable
+        if: steps.check-runs.outputs.should_run == 'true'
+        with:
+          # Pinned like ci.yml rather than relying on the runner image, since
+          # `cargo clippy` is in the grant list below.
+          components: clippy, rustfmt
+
+      # Restore ci.yml's cache via the shared key. Without it the first
+      # `cargo test` cold-builds a 6-crate workspace, which is slow enough that
+      # the reviewer would skip running tests and fall back to reading them -
+      # putting prompt priorities 1 and 3 back where they started. Read-only:
+      # this job should consume ci.yml's cache, never publish its own.
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2
+        if: steps.check-runs.outputs.should_run == 'true'
+        with:
+          shared-key: agnix-workspace
+          save-if: "false"
 
       - name: Run Claude Code Review
         if: steps.check-runs.outputs.should_run == 'true'
