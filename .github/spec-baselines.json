@@ -1,12 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "description": "Baseline content hashes for spec-drift sentinel. Updated automatically by workflow.",
-  "last_updated": "2026-02-04T17:10:08Z",
+  "last_updated": "2026-07-31T10:14:31Z",
   "sources": {
     "s-tier": {
       "agent-skills-spec": {
         "url": "https://agentskills.io/specification",
-        "hash": "07eb3bfba81db490030345a8c7bfed3683207205dae290300318279c30106de2",
+        "hash": "5c5ca872a1c4ac8596b903b90c931847eaad8da5f7bd5916a1ee1f44a7a1eec5",
         "rules": [
           "AS-001",
           "AS-002",
@@ -23,7 +23,7 @@
       },
       "mcp-spec": {
         "url": "https://modelcontextprotocol.io/specification/2025-11-25",
-        "hash": "45eed48714317ebca887c021e5a2a46f56b0dabbae14c399dcccd73100358934",
+        "hash": "596023030ef80f6769857c05b15946c157d3ef7024c26a5da2d28d5f7e8eaa7e",
         "github_repo": "modelcontextprotocol/specification",
         "rules": [
           "MCP-001",
@@ -38,7 +38,7 @@
       },
       "claude-code-memory": {
         "url": "https://code.claude.com/docs/en/memory",
-        "hash": "afcbf2219b2f9f72f3d8932ef5049278833627a09b2fd2955406e82b9ae312e2",
+        "hash": "24530d887609888d1b5d8abec4e659dd9fc74fff1fb3d2cf0af383a5b7abeea4",
         "rules": [
           "CC-MEM-001",
           "CC-MEM-002",
@@ -48,7 +48,7 @@
       },
       "claude-code-hooks": {
         "url": "https://code.claude.com/docs/en/hooks",
-        "hash": "404c38e161c8b9cf8daabd455776ae078a0dc29314cbaa682e0a17c2ce24ac1a",
+        "hash": "f8673e2e6c30b9a3a08d30590020207af3221f714d129a4efd2eae1096e26998",
         "rules": [
           "CC-HK-001",
           "CC-HK-002",
@@ -65,7 +65,7 @@
       },
       "claude-code-skills": {
         "url": "https://code.claude.com/docs/en/skills",
-        "hash": "aa304d51b31be37a59f35e81c315e9b298894508857295c71a6b56e7a25c8cd9",
+        "hash": "b4386cd9f7aa8da4e505afa37e0550b770fb259b6a4626339560dc4c98a1b7d6",
         "rules": [
           "CC-SK-001",
           "CC-SK-002",
@@ -75,7 +75,7 @@
       },
       "claude-code-plugins": {
         "url": "https://code.claude.com/docs/en/plugins-reference",
-        "hash": "af4d216303304bf0ffd1de74a9a1f71ffb0e44d5323306a80a30cf89bbbcb769",
+        "hash": "3cba97ea5d7d1055d223458387b9214d2c77bbbf46437c136be3d9afe0bd801d",
         "rules": [
           "CC-PL-002",
           "CC-PL-003",
@@ -86,7 +86,7 @@
       },
       "claude-code-subagents": {
         "url": "https://code.claude.com/docs/en/sub-agents",
-        "hash": "b17ed99452ce65f18804fff1ed945414d9e42ae862d295ad49be6b13dd93210c",
+        "hash": "9326cd9931f2c31a3d04cd0d520e6f414e698f98671040efc45fc7a8035b7caf",
         "rules": [
           "CC-AG-001",
           "CC-AG-002",
@@ -110,7 +110,7 @@
       },
       "codex-cli-agents-md": {
         "url": "https://learn.chatgpt.com/docs/agent-configuration/agents-md",
-        "hash": "7ff43344ded3bb80b7c8f3dc37f40dec948a331719c1c7a0125384338f87c15c",
+        "hash": "daa9ae6966e3c4125f5a84111fc85fa44b8ce763853b6781c0992aab38c16534",
         "rules": [
           "AGM-001",
           "AGM-002",
@@ -128,7 +128,7 @@
       },
       "opencode-rules": {
         "url": "https://opencode.ai/docs/rules/",
-        "hash": "622315eb04b6dacc551537a4298b02cef15078e2b041cc79945cefce7e607c4a",
+        "hash": "6301a2a1a80af127fb120d05943c412a3a3d3ddb2431b0746407472ae41cefc9",
         "rules": [
           "XP-001",
           "XP-002",
