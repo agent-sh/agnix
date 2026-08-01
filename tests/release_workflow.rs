@@ -95,7 +95,7 @@ fn release_workflow_scopes_attestation_and_release_permissions() {
         "release job must receive contents: write only where assets are published"
     );
     assert!(
-        workflow.contains("uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1"),
+        workflow.contains("uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0"),
         "release workflow must use the SHA-pinned GitHub attestation action"
     );
     assert!(
