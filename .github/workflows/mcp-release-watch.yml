@@ -54,26 +54,29 @@ jobs:
             latest_release=""
           fi
 
+          # Ignore prerelease/suffixed tags such as 2026-07-28-RC. Only final
+          # date tags can identify a published specification revision.
+          if [[ -n "$latest_release" && ! "$latest_release" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+            echo "Ignoring non-final MCP release/tag: $latest_release"
+            latest_release=""
+          fi
+
           if [[ -z "$latest_release" ]]; then
-            # No releases, check tags instead
-            if ! latest_release=$(gh api "repos/$MCP_REPO/tags" --jq '.[0].name // empty' 2>/dev/null); then
+            # No final release, select the newest final date tag instead of
+            # blindly accepting an RC/final-suffixed tag at index zero.
+            if ! latest_release=$(gh api "repos/$MCP_REPO/tags" --jq '[.[].name | select(test("^[0-9]{4}-[0-9]{2}-[0-9]{2}$"))][0] // empty' 2>/dev/null); then
               echo "ERROR: Failed to query MCP releases and tags"
               exit 1
             fi
           fi
 
           if [[ -z "$latest_release" ]]; then
-            echo "ERROR: MCP repository returned no releases or tags"
-            exit 1
+            echo "No final date-based MCP release found; ignoring prerelease tags"
+            echo "NEW_RELEASE=false" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
 
           echo "Latest release/tag: $latest_release"
-
-          # MCP uses date-based versioning like "2025-11-25"
-          if [[ ! "$latest_release" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
-            echo "ERROR: Unsupported MCP release format: $latest_release"
-            exit 1
-          fi
 
           if [[ "$latest_release" > "$baseline_version" ]]; then
             echo "NEW_RELEASE=true" >> "$GITHUB_OUTPUT"

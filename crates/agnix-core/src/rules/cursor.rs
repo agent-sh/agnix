@@ -828,10 +828,7 @@ fn validate_cursor_agent_file(
 
                 if let Some(model_value) = frontmatter_map.get(key("model")) {
                     match model_value {
-                        YamlValue::String(model)
-                            if model == "fast"
-                                || model == "inherit"
-                                || is_valid_cursor_model_id(model) => {}
+                        YamlValue::String(model) if is_valid_cursor_model_id(model) => {}
                         YamlValue::String(_) => diagnostics.push(
                             Diagnostic::error(
                                 path.to_path_buf(),
@@ -969,6 +966,8 @@ fn validate_cursor_environment_file(
         }
     };
 
+    // Cursor's VS Code JSON service treats root `$schema` as the schema-association
+    // key even though the published schema's closed property set does not declare it.
     const ALLOWED_ROOT_FIELDS: &[&str] = &[
         "$schema",
         "name",
@@ -997,7 +996,7 @@ fn validate_cursor_environment_file(
         }
     }
 
-    for field in ["name", "user", "snapshot"] {
+    for field in ["$schema", "name", "user", "snapshot"] {
         if root.get(field).is_some_and(|value| !value.is_string()) {
             diagnostics.push(
                 cursor_environment_error(
@@ -2493,6 +2492,7 @@ is_background: false
 
         for (name, content) in [
             ("unknown root field", r#"{"unknown":true}"#),
+            ("invalid schema association", r#"{"$schema":42}"#),
             ("invalid name", r#"{"name":1}"#),
             ("invalid user", r#"{"user":false}"#),
             (
@@ -2807,11 +2807,16 @@ Review the diff and suggest improvements."#;
 
     #[test]
     fn test_cur_020_mdc_rule_is_recognized() {
-        let diagnostics = validate_cursor_rule(
+        for path in [
             ".cursor/rules/typescript.mdc",
-            "---\ndescription: TypeScript rules\n---\nUse strict mode.",
-        );
-        assert!(diagnostics.iter().all(|d| d.rule != "CUR-020"));
+            ".cursor/rules/typescript.MDC",
+        ] {
+            let diagnostics = validate_cursor_rule(
+                path,
+                "---\ndescription: TypeScript rules\n---\nUse strict mode.",
+            );
+            assert!(diagnostics.iter().all(|d| d.rule != "CUR-020"));
+        }
     }
 
     #[test]

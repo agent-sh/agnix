@@ -424,7 +424,8 @@ pub fn detect_file_type(path: &Path) -> FileType {
             FileType::ClaudeOutputStyle
         }
         // Cursor project rules (.cursor/rules/**/*.md and .mdc)
-        name if (ends_with_ignore_ascii_case(name, ".md") || name.ends_with(".mdc"))
+        name if (ends_with_ignore_ascii_case(name, ".md")
+            || ends_with_ignore_ascii_case(name, ".mdc"))
             && is_under_cursor_rules(path) =>
         {
             FileType::CursorRule
@@ -930,7 +931,7 @@ mod tests {
             detect_file_type(Path::new(".cursor/rules/custom.MD")),
             FileType::CursorRule
         );
-        assert_ne!(
+        assert_eq!(
             detect_file_type(Path::new(".cursor/rules/custom.MDC")),
             FileType::CursorRule
         );

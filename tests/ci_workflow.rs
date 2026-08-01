@@ -44,3 +44,24 @@ fn ci_keeps_linux_only_quality_gates_on_ubuntu() {
         );
     }
 }
+
+#[test]
+fn mcp_release_watch_filters_prerelease_tags() {
+    let root = env!("CARGO_MANIFEST_DIR");
+    let workflow = fs::read_to_string(format!("{root}/.github/workflows/mcp-release-watch.yml"))
+        .expect("failed to read MCP release-watch workflow")
+        .replace("\r\n", "\n");
+
+    assert!(
+        workflow.contains(r#"select(test("^[0-9]{4}-[0-9]{2}-[0-9]{2}$"))"#),
+        "MCP tag fallback must select only final date-based versions"
+    );
+    assert!(
+        workflow.contains("Ignoring non-final MCP release/tag"),
+        "MCP prerelease tags must be ignored instead of failing the workflow"
+    );
+    assert!(
+        !workflow.contains("ERROR: Unsupported MCP release format"),
+        "known MCP prerelease tag shapes must not hard-fail the workflow"
+    );
+}

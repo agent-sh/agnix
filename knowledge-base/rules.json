@@ -7586,7 +7586,7 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\"build\":{\"dockerfile\":\"Dockerfile\",\"context\":\"..\"},\"install\":\"npm ci\",\"start\":\"npm run dev\",\"terminals\":[{\"name\":\"app\",\"command\":\"npm run dev\"}]}",
+      "good_example": "{\"$schema\":\"https://cursor.com/schemas/environment.schema.json\",\"build\":{\"dockerfile\":\"Dockerfile\",\"context\":\"..\"},\"install\":\"npm ci\",\"start\":\"npm run dev\",\"terminals\":[{\"name\":\"app\",\"command\":\"npm run dev\"}]}",
       "bad_example": "{\"install\":42,\"terminals\":[{\"name\":\"app\"}]}"
     },
     {
