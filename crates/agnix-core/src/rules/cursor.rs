@@ -996,7 +996,7 @@ fn validate_cursor_environment_file(
         }
     }
 
-    for field in ["$schema", "name", "user", "snapshot"] {
+    for field in ["name", "user", "snapshot"] {
         if root.get(field).is_some_and(|value| !value.is_string()) {
             diagnostics.push(
                 cursor_environment_error(
@@ -2492,7 +2492,6 @@ is_background: false
 
         for (name, content) in [
             ("unknown root field", r#"{"unknown":true}"#),
-            ("invalid schema association", r#"{"$schema":42}"#),
             ("invalid name", r#"{"name":1}"#),
             ("invalid user", r#"{"user":false}"#),
             (

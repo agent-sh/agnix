@@ -57,6 +57,10 @@ fn mcp_release_watch_filters_prerelease_tags() {
         "MCP tag fallback must select only final date-based versions"
     );
     assert!(
+        workflow.contains("] | max // empty"),
+        "MCP tag fallback must select the newest final date-based version"
+    );
+    assert!(
         workflow.contains("Ignoring non-final MCP release/tag"),
         "MCP prerelease tags must be ignored instead of failing the workflow"
     );
