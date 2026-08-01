@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CUR-020: Ignored Plain Markdown Cursor Rule**. Cursor now explicitly documents that project rules under `.cursor/rules/` must use `.mdc`; plain `.md` files are ignored. agnix reports the silent failure and suggests renaming the file. Rule count 443 -> 444.
 
 ### Fixed
-- **Cursor 3.14 configuration compatibility**. Accept parameterized subagent model IDs such as `composer-2.5[]` and `claude-opus-5[effort=high]`; validate prompt hooks as non-empty strings; accept comments and enforce the full published `environment.json` schema; and infer HTTP transport for documented URL-only servers in `.cursor/mcp.json` (closes #1306).
+- **Cursor 3.14 configuration compatibility**. Accept parameterized subagent model IDs such as `composer-2.5[]` and `claude-opus-5[effort=high]`; validate prompt hooks as non-empty strings; accept comments and enforce the full published `environment.json` schema; and infer HTTP transport for documented URL-only servers in `.cursor/mcp.json`, including MCP-017 HTTPS enforcement for remote endpoints (closes #1306).
 - **Spec Drift Sentinel HTML noise**. Hash canonical Markdown/raw source documents instead of rendered site chrome, monitor MCP overview/schema/component sources at `2026-07-28`, compare newly detected MCP releases directly, and add Cursor MCP documentation to drift coverage (closes #1305).
 
 ### Changed

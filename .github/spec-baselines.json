@@ -273,6 +273,14 @@
           "CUR-016"
         ]
       },
+      "cursor-environment-schema": {
+        "url": "https://cursor.com/schemas/environment.schema.json",
+        "content_url": "https://cursor.com/schemas/environment.schema.json",
+        "hash": "08f44a331857d2f0b866a4cc3a3ac334e4724a8bf63971228764dbbd5faa0472",
+        "rules": [
+          "CUR-016"
+        ]
+      },
       "cursor-mcp": {
         "url": "https://cursor.com/docs/mcp",
         "content_url": "https://cursor.com/docs/mcp.md",

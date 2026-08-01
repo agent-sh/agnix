@@ -81,6 +81,7 @@ Authoritative sources monitored for changes that may affect validation rules.
 | Cursor - Hooks | https://cursor.com/docs/hooks | spec-drift.yml (weekly) | CUR-010 through CUR-013, CUR-017 through CUR-019 |
 | Cursor - Subagents | https://cursor.com/docs/subagents | spec-drift.yml (weekly) | CUR-014, CUR-015 |
 | Cursor - Environment | https://cursor.com/docs/cloud-agent/setup | spec-drift.yml (weekly) | CUR-016 |
+| Cursor - Environment Schema | https://cursor.com/schemas/environment.schema.json | spec-drift.yml (weekly) | CUR-016 |
 | Cursor - MCP | https://cursor.com/docs/mcp | spec-drift.yml (weekly) | MCP-009 through MCP-012, MCP-017 through MCP-024 |
 | GitHub Copilot | https://docs.github.com/en/copilot/customizing-copilot | spec-drift.yml (weekly) | COP-001 through COP-006 |
 | Cline - Rules | https://docs.cline.bot/features/cline-rules/overview | spec-drift.yml (weekly) | -- |

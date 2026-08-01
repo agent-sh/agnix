@@ -3092,9 +3092,9 @@ fn test_validate_cursor_mdc_missing_frontmatter() {
 }
 
 #[test]
-fn test_validate_cursor_plain_markdown_rule_reports_cur_020() {
+fn test_validate_cursor_nested_plain_markdown_rule_reports_cur_020() {
     let temp = tempfile::TempDir::new().unwrap();
-    let cursor_dir = temp.path().join(".cursor").join("rules");
+    let cursor_dir = temp.path().join(".cursor").join("rules").join("frontend");
     std::fs::create_dir_all(&cursor_dir).unwrap();
     let file_path = cursor_dir.join("ignored.md");
     std::fs::write(&file_path, "# Cursor silently ignores this rule").unwrap();

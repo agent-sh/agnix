@@ -18,7 +18,7 @@
 //! - CUR-015: Empty Cursor subagent body (MEDIUM)
 //! - CUR-016: Invalid .cursor/environment.json schema (HIGH)
 //! - CUR-017: Invalid hook entry field types (MEDIUM) - timeout/loop_limit/failClosed type checks
-//! - CUR-018: Prompt-type hook missing prompt field (MEDIUM) - type:"prompt" needs prompt key
+//! - CUR-018: Invalid or missing prompt hook field (MEDIUM) - type:"prompt" requires a non-empty string
 //! - CUR-019: Invalid model field on prompt hook (LOW) - model must be a string
 //! - CUR-020: Ignored .md project rule (HIGH) - project rules must use .mdc
 
@@ -182,7 +182,7 @@ fn is_valid_cursor_model_id(model: &str) -> bool {
             let Some((name, value)) = parameter.split_once('=') else {
                 return false;
             };
-            is_valid_part(name) && is_valid_part(value) && !value.contains('=')
+            is_valid_part(name) && is_valid_part(value)
         })
 }
 
@@ -333,9 +333,10 @@ fn validate_cursor_terminal_object(
                     path,
                     content,
                     "terminals",
-                    format!(
-                        "terminals[{}].{} must be a string when present",
-                        index, field
+                    t!(
+                        "rules.cur_016.terminal_field_type",
+                        index = index,
+                        field = field
                     ),
                 )
                 .with_suggestion(t!("rules.cur_016.suggestion")),
@@ -969,6 +970,7 @@ fn validate_cursor_environment_file(
     };
 
     const ALLOWED_ROOT_FIELDS: &[&str] = &[
+        "$schema",
         "name",
         "user",
         "install",
@@ -988,9 +990,9 @@ fn validate_cursor_environment_file(
                     path,
                     content,
                     field,
-                    format!("Unknown field '{}' in .cursor/environment.json", field),
+                    t!("rules.cur_016.unknown_root_field", field = field.as_str()),
                 )
-                .with_suggestion("Remove fields not defined by Cursor's environment schema"),
+                .with_suggestion(t!("rules.cur_016.unknown_root_field_suggestion")),
             );
         }
     }
@@ -1002,7 +1004,7 @@ fn validate_cursor_environment_file(
                     path,
                     content,
                     field,
-                    format!("Field '{}' must be a string when present", field),
+                    t!("rules.cur_016.string_field", field = field),
                 )
                 .with_suggestion(t!("rules.cur_016.suggestion")),
             );
@@ -1018,7 +1020,7 @@ fn validate_cursor_environment_file(
                 path,
                 content,
                 "agentCanUpdateSnapshot",
-                "Field 'agentCanUpdateSnapshot' must be a boolean when present",
+                t!("rules.cur_016.agent_can_update_snapshot"),
             )
             .with_suggestion(t!("rules.cur_016.suggestion")),
         );
@@ -1106,11 +1108,9 @@ fn validate_cursor_environment_file(
                                 path,
                                 content,
                                 "build",
-                                format!("Unknown field 'build.{}'", field),
+                                t!("rules.cur_016.unknown_build_field", field = field.as_str()),
                             )
-                            .with_suggestion(
-                                "Use only 'dockerfile' and optional 'context' in build",
-                            ),
+                            .with_suggestion(t!("rules.cur_016.unknown_build_field_suggestion")),
                         );
                     }
                 }
@@ -1139,7 +1139,7 @@ fn validate_cursor_environment_file(
                     path,
                     content,
                     "repositoryDependencies",
-                    "Field 'repositoryDependencies' must be an array of strings",
+                    t!("rules.cur_016.repository_dependencies"),
                 )
                 .with_suggestion(t!("rules.cur_016.suggestion")),
             );
@@ -1156,7 +1156,7 @@ fn validate_cursor_environment_file(
                                 path,
                                 content,
                                 "ports",
-                                format!("ports[{}] must be an object", index),
+                                t!("rules.cur_016.port_object", index = index),
                             )
                             .with_suggestion(t!("rules.cur_016.suggestion")),
                         );
@@ -1174,10 +1174,7 @@ fn validate_cursor_environment_file(
                                 path,
                                 content,
                                 "ports",
-                                format!(
-                                    "ports[{}].port must be an integer from 1 through 65535",
-                                    index
-                                ),
+                                t!("rules.cur_016.port_number", index = index),
                             )
                             .with_suggestion(t!("rules.cur_016.suggestion")),
                         );
@@ -1189,7 +1186,7 @@ fn validate_cursor_environment_file(
                                 path,
                                 content,
                                 "ports",
-                                format!("ports[{}].name must be a string when present", index),
+                                t!("rules.cur_016.port_name", index = index),
                             )
                             .with_suggestion(t!("rules.cur_016.suggestion")),
                         );
@@ -1197,7 +1194,7 @@ fn validate_cursor_environment_file(
                 }
             }
             None => diagnostics.push(
-                cursor_environment_error(path, content, "ports", "Field 'ports' must be an array")
+                cursor_environment_error(path, content, "ports", t!("rules.cur_016.ports_array"))
                     .with_suggestion(t!("rules.cur_016.suggestion")),
             ),
         }
@@ -1303,9 +1300,9 @@ impl Validator for CursorValidator {
                         1,
                         0,
                         "CUR-020",
-                        "Cursor ignores plain .md files in .cursor/rules",
+                        t!("rules.cur_020.message"),
                     )
-                    .with_suggestion("Rename the project rule with the .mdc extension"),
+                    .with_suggestion(t!("rules.cur_020.suggestion")),
                 );
             }
             return diagnostics;
@@ -2191,6 +2188,19 @@ is_background: false
     }
 
     #[test]
+    fn test_cur_016_environment_rejects_trailing_comma() {
+        let diagnostics = validate_cursor_environment(
+            r#"{
+  "install": "npm ci",
+}"#,
+        );
+        assert!(
+            diagnostics.iter().any(|d| d.rule == "CUR-016"),
+            "Cursor's environment schema disallows trailing commas"
+        );
+    }
+
+    #[test]
     fn test_cur_016_environment_rejects_unterminated_json_comment() {
         let diagnostics = validate_cursor_environment(r#"{"install":"npm ci"} /*"#);
         assert!(
@@ -2463,6 +2473,7 @@ is_background: false
     fn test_cur_016_environment_validates_full_published_schema() {
         let valid = validate_cursor_environment(
             r#"{
+  "$schema": "https://cursor.com/schemas/environment.schema.json",
   "name": "development",
   "user": "ubuntu",
   "install": "npm ci",
@@ -2771,14 +2782,27 @@ Review the diff and suggest improvements."#;
 
     #[test]
     fn test_cur_020_plain_markdown_rule_is_ignored_by_cursor() {
-        let diagnostics = validate_cursor_rule(
-            ".cursor/rules/typescript.md",
-            "---\ndescription: TypeScript rules\n---\nUse strict mode.",
-        );
-        assert!(
-            diagnostics.iter().any(|d| d.rule == "CUR-020"),
-            "Cursor ignores plain .md files in .cursor/rules, got: {diagnostics:?}"
-        );
+        for path in [".cursor/rules/typescript.md", ".cursor/rules/typescript.MD"] {
+            let diagnostics = validate_cursor_rule(
+                path,
+                "---\ndescription: TypeScript rules\n---\nUse strict mode.",
+            );
+            assert!(
+                diagnostics.iter().any(|d| d.rule == "CUR-020"),
+                "Cursor ignores plain Markdown files in .cursor/rules, got: {diagnostics:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_cur_020_does_not_flag_legacy_or_unrelated_markdown() {
+        for path in [".cursorrules", ".cursorrules.md", "docs/typescript.md"] {
+            let diagnostics = validate_cursor_rule(path, "Use strict mode.");
+            assert!(
+                diagnostics.iter().all(|d| d.rule != "CUR-020"),
+                "CUR-020 must stay scoped to .cursor/rules Markdown: {path}: {diagnostics:?}"
+            );
+        }
     }
 
     #[test]

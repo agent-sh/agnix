@@ -11,6 +11,7 @@
 //! - Permission configuration (OC-008)
 //! - Variable substitution syntax (OC-009)
 
+use crate::schemas::gemini_settings::strip_jsonc_comments;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
@@ -246,66 +247,6 @@ pub fn parse_opencode_json(content: &str) -> ParsedOpenCodeConfig {
     }
 }
 
-/// Strip single-line (//) and multi-line (/* */) comments from JSONC content
-fn strip_jsonc_comments(input: &str) -> String {
-    let mut result = String::with_capacity(input.len());
-    let chars: Vec<char> = input.chars().collect();
-    let len = chars.len();
-    let mut i = 0;
-    let mut in_string = false;
-
-    while i < len {
-        if in_string {
-            result.push(chars[i]);
-            if chars[i] == '\\' && i + 1 < len {
-                i += 1;
-                result.push(chars[i]);
-            } else if chars[i] == '"' {
-                in_string = false;
-            }
-            i += 1;
-            continue;
-        }
-
-        if chars[i] == '"' {
-            in_string = true;
-            result.push(chars[i]);
-            i += 1;
-            continue;
-        }
-
-        if chars[i] == '/' && i + 1 < len {
-            if chars[i + 1] == '/' {
-                // Single-line comment: skip until end of line
-                i += 2;
-                while i < len && chars[i] != '\n' {
-                    i += 1;
-                }
-                continue;
-            } else if chars[i + 1] == '*' {
-                // Multi-line comment: skip until */
-                i += 2;
-                while i + 1 < len && !(chars[i] == '*' && chars[i + 1] == '/') {
-                    // Preserve newlines for line counting
-                    if chars[i] == '\n' {
-                        result.push('\n');
-                    }
-                    i += 1;
-                }
-                if i + 1 < len {
-                    i += 2; // skip */
-                }
-                continue;
-            }
-        }
-
-        result.push(chars[i]);
-        i += 1;
-    }
-
-    result
-}
-
 /// Check if a path looks like a valid glob pattern (contains glob characters)
 pub fn is_glob_pattern(path: &str) -> bool {
     path.contains('*') || path.contains('?') || path.contains('[')
@@ -405,6 +346,20 @@ mod tests {
         assert!(result.parse_error.is_none());
         let schema = result.schema.unwrap();
         assert_eq!(schema.share, Some("auto".to_string()));
+    }
+
+    #[test]
+    fn test_parse_unterminated_jsonc_comment_is_invalid() {
+        let result = parse_opencode_json(r#"{"share":"manual"} /*"#);
+        assert!(result.parse_error.is_some());
+        assert!(result.schema.is_none());
+    }
+
+    #[test]
+    fn test_jsonc_comment_removal_does_not_join_tokens() {
+        let result = parse_opencode_json(r#"{"autoupdate":tr/*x*/ue}"#);
+        assert!(result.parse_error.is_some());
+        assert!(result.schema.is_none());
     }
 
     #[test]

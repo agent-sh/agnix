@@ -3038,6 +3038,65 @@ mod tests {
     }
 
     #[test]
+    fn test_mcp_009_cursor_server_without_url_or_command_stays_stdio() {
+        let content = r#"{
+            "mcpServers": {
+                "incomplete": {
+                    "headers": {"Authorization": "Bearer ${env:MCP_TOKEN}"}
+                }
+            }
+        }"#;
+        let diagnostics = validate_path(".cursor/mcp.json", content);
+        assert!(
+            diagnostics.iter().any(|d| d.rule == "MCP-009"),
+            "a Cursor entry without a URL or command must retain the stdio error"
+        );
+    }
+
+    #[test]
+    fn test_mcp_009_cursor_url_inference_respects_path_boundaries() {
+        let content = r#"{
+            "mcpServers": {
+                "remote": {"url": "https://example.com/mcp"}
+            }
+        }"#;
+        for path in ["mcp.json", ".cursor/sub/mcp.json"] {
+            let diagnostics = validate_path(path, content);
+            assert!(
+                diagnostics.iter().any(|d| d.rule == "MCP-009"),
+                "URL-only inference must not apply to {path}: {diagnostics:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_cursor_url_server_with_command_retains_stdio_default() {
+        let content = r#"{
+            "mcpServers": {
+                "local": {
+                    "command": "node",
+                    "url": "http://api.example.com/mcp"
+                }
+            }
+        }"#;
+        let diagnostics = validate_path(".cursor/mcp.json", content);
+        assert!(diagnostics.iter().all(|d| d.rule != "MCP-009"));
+        assert!(diagnostics.iter().all(|d| d.rule != "MCP-017"));
+    }
+
+    #[test]
+    fn test_cursor_url_only_server_reaches_mcp_017() {
+        let content = r#"{
+            "mcpServers": {
+                "remote": {"url": "http://api.example.com/mcp"}
+            }
+        }"#;
+        let diagnostics = validate_path(".cursor/mcp.json", content);
+        assert!(diagnostics.iter().any(|d| d.rule == "MCP-017"));
+        assert!(diagnostics.iter().all(|d| d.rule != "MCP-009"));
+    }
+
+    #[test]
     fn test_cursor_url_server_does_not_infer_transport_for_non_string_type() {
         for invalid_type in ["42", "null"] {
             let content = format!(

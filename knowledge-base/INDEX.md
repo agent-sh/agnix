@@ -293,7 +293,7 @@ Standards Covered:     5 (Agent Skills, MCP, Claude Code, Multi-Platform, Prompt
 Sources Consulted:    75+ (specs, docs, research papers, repos)
 Research Agents:       5 (10+ sources each)
 Validation Rules:     444 rules
-Auto-Fixable Rules:   127 rules
+Auto-Fixable Rules:   124 rules
 
 Test Fixtures:        116 files
 Platforms Analyzed:   9 (Claude Code, Codex CLI, OpenCode, Copilot, Cursor, Cline, Roo-Cline, Continue.dev, Aider)
