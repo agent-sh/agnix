@@ -1,5 +1,5 @@
 # MCP Release Watcher
-# Watches modelcontextprotocol/specification for new releases and triggers spec-drift check.
+# Watches modelcontextprotocol/modelcontextprotocol for new releases and triggers spec-drift check.
 # Runs daily - faster detection than weekly polling for this critical S-tier source.
 
 name: MCP Release Watch
@@ -34,48 +34,57 @@ jobs:
           set -euo pipefail
 
           BASELINE_FILE=".github/spec-baselines.json"
-          MCP_REPO="modelcontextprotocol/specification"
+          MCP_REPO="modelcontextprotocol/modelcontextprotocol"
 
           # Get current baseline URL (contains version date)
           baseline_url=$(jq -r '.sources["s-tier"]["mcp-spec"].url' "$BASELINE_FILE")
           echo "Baseline URL: $baseline_url"
 
           # Extract version from URL (e.g., 2025-11-25 from .../specification/2025-11-25)
-          baseline_version=$(echo "$baseline_url" | grep -oP '\d{4}-\d{2}-\d{2}$' || echo "unknown")
+          baseline_version=$(echo "$baseline_url" | grep -oP '\d{4}-\d{2}-\d{2}$' || true)
+          if [[ -z "$baseline_version" ]]; then
+            echo "ERROR: Could not parse the pinned MCP version"
+            exit 1
+          fi
           echo "Baseline version: $baseline_version"
 
           # Get latest release from GitHub
-          latest_release=$(gh api "repos/$MCP_REPO/releases/latest" --jq '.tag_name // .name // empty' 2>/dev/null || echo "")
+          latest_release=""
+          if ! latest_release=$(gh api "repos/$MCP_REPO/releases/latest" --jq '.tag_name // .name // empty' 2>/dev/null); then
+            latest_release=""
+          fi
+
+          # Ignore prerelease/suffixed tags such as 2026-07-28-RC. Only final
+          # date tags can identify a published specification revision.
+          if [[ -n "$latest_release" && ! "$latest_release" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+            echo "Ignoring non-final MCP release/tag: $latest_release"
+            latest_release=""
+          fi
 
           if [[ -z "$latest_release" ]]; then
-            # No releases, check tags instead
-            latest_release=$(gh api "repos/$MCP_REPO/tags" --jq '.[0].name // empty' 2>/dev/null || echo "")
+            # No final release, select the newest final date tag instead of
+            # blindly accepting an RC/final-suffixed tag at index zero.
+            if ! latest_release=$(gh api "repos/$MCP_REPO/tags" --jq '[.[].name | select(test("^[0-9]{4}-[0-9]{2}-[0-9]{2}$"))] | max // empty' 2>/dev/null); then
+              echo "ERROR: Failed to query MCP releases and tags"
+              exit 1
+            fi
+          fi
+
+          if [[ -z "$latest_release" ]]; then
+            echo "No final date-based MCP release found; ignoring prerelease tags"
+            echo "NEW_RELEASE=false" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
 
           echo "Latest release/tag: $latest_release"
 
-          # Check if this looks like a new version
-          # MCP uses date-based versioning like "2025-11-25"
-          if [[ -n "$latest_release" && "$latest_release" != "$baseline_version" ]]; then
-            # Could be a new version - check if it's actually newer
-            if [[ "$latest_release" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
-              if [[ "$latest_release" > "$baseline_version" ]]; then
-                echo "NEW_RELEASE=true" >> "$GITHUB_OUTPUT"
-                echo "NEW_VERSION=$latest_release" >> "$GITHUB_OUTPUT"
-                echo "New MCP spec version detected: $latest_release (was: $baseline_version)"
-              else
-                echo "NEW_RELEASE=false" >> "$GITHUB_OUTPUT"
-                echo "Release $latest_release is not newer than baseline $baseline_version"
-              fi
-            else
-              # Non-date format, might still be new
-              echo "NEW_RELEASE=true" >> "$GITHUB_OUTPUT"
-              echo "NEW_VERSION=$latest_release" >> "$GITHUB_OUTPUT"
-              echo "Potential new MCP version detected: $latest_release"
-            fi
+          if [[ "$latest_release" > "$baseline_version" ]]; then
+            echo "NEW_RELEASE=true" >> "$GITHUB_OUTPUT"
+            echo "NEW_VERSION=$latest_release" >> "$GITHUB_OUTPUT"
+            echo "New MCP spec version detected: $latest_release (was: $baseline_version)"
           else
             echo "NEW_RELEASE=false" >> "$GITHUB_OUTPUT"
-            echo "No new release detected"
+            echo "Release $latest_release is not newer than baseline $baseline_version"
           fi
 
       - name: Trigger spec-drift check
@@ -86,4 +95,4 @@ jobs:
         run: |
           set -euo pipefail
           echo "Triggering spec-drift workflow for MCP version: $NEW_VERSION"
-          gh workflow run spec-drift.yml -f tier=s-tier
+          gh workflow run spec-drift.yml -f tier=s-tier -f mcp_version="$NEW_VERSION"

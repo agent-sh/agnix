@@ -310,6 +310,20 @@ mod tests {
     }
 
     #[test]
+    fn test_gm_009_unterminated_jsonc_comment_is_invalid() {
+        let diagnostics = validate(r#"{"general": {}} /* "memoryManager": true"#);
+        assert!(diagnostics.iter().any(|d| d.rule == "GM-009"));
+        assert!(diagnostics.iter().all(|d| d.rule == "GM-009"));
+    }
+
+    #[test]
+    fn test_gm_009_comment_removal_does_not_join_tokens() {
+        let diagnostics = validate(r#"{"experimental":{"autoMemory":tr/*x*/ue}}"#);
+        assert!(diagnostics.iter().any(|d| d.rule == "GM-009"));
+        assert!(diagnostics.iter().all(|d| d.rule == "GM-009"));
+    }
+
+    #[test]
     fn test_gm_009_empty_content() {
         let diagnostics = validate("");
         let gm_009: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-009").collect();

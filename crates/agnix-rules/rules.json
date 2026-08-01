@@ -1,8 +1,8 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 443,
-  "last_updated": "2026-07-31",
+  "total_rules": 444,
+  "last_updated": "2026-08-01",
   "schema": {
     "evidence": {
       "source_type": "spec|vendor_docs|vendor_code|paper|community",
@@ -7489,7 +7489,7 @@
         "source_urls": [
           "https://cursor.com/docs/hooks"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-08-01",
         "applies_to": {
           "tool": "cursor"
         },
@@ -7504,7 +7504,7 @@
         "autofix": true,
         "fix_safety": "safe"
       },
-      "good_example": "{\"version\":1,\"hooks\":{\"sessionStart\":[{\"type\":\"prompt\",\"command\":\"Summarize changes\"}]}}",
+      "good_example": "{\"version\":1,\"hooks\":{\"beforeShellExecution\":[{\"type\":\"prompt\",\"prompt\":\"Is this command safe?\"}]}}",
       "bad_example": "{\"version\":1,\"hooks\":{\"sessionStart\":[{\"type\":\"agent\",\"command\":\"echo start\"}]}}"
     },
     {
@@ -7517,7 +7517,7 @@
         "source_urls": [
           "https://cursor.com/docs/subagents"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-08-01",
         "applies_to": {
           "tool": "cursor"
         },
@@ -7531,7 +7531,7 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "---\nname: reviewer-agent\ndescription: Reviews code for defects\nmodel: fast\nreadonly: true\nis_background: false\n---\nReview staged changes and prioritize findings.",
+      "good_example": "---\nname: reviewer-agent\ndescription: Reviews code for defects\nmodel: claude-opus-5[effort=high]\nreadonly: true\nis_background: false\n---\nReview staged changes and prioritize findings.",
       "bad_example": "---\nname: ReviewerAgent\ndescription: 123\nreadonly: \"true\"\n---\nReview staged changes."
     },
     {
@@ -7572,7 +7572,7 @@
           "https://cursor.com/docs/cloud-agent/setup",
           "https://cursor.com/schemas/environment.schema.json"
         ],
-        "verified_on": "2026-07-31",
+        "verified_on": "2026-08-01",
         "applies_to": {
           "tool": "cursor"
         },
@@ -7586,7 +7586,7 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\"build\":{\"dockerfile\":\"Dockerfile\",\"context\":\"..\"},\"install\":\"npm ci\",\"start\":\"npm run dev\",\"terminals\":[{\"name\":\"app\",\"command\":\"npm run dev\"}]}",
+      "good_example": "{\"$schema\":\"https://cursor.com/schemas/environment.schema.json\",\"build\":{\"dockerfile\":\"Dockerfile\",\"context\":\"..\"},\"install\":\"npm ci\",\"start\":\"npm run dev\",\"terminals\":[{\"name\":\"app\",\"command\":\"npm run dev\"}]}",
       "bad_example": "{\"install\":42,\"terminals\":[{\"name\":\"app\"}]}"
     },
     {
@@ -7599,7 +7599,7 @@
         "source_urls": [
           "https://cursor.com/docs/hooks"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-08-01",
         "applies_to": {
           "tool": "cursor",
           "file_types": [
@@ -7616,12 +7616,12 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"hooks\": {\n    \"save-file\": [{ \"command\": \"npm run lint\", \"events\": [\"file_saved\"] }]\n  }\n}",
-      "bad_example": "{\n  \"hooks\": {\n    \"save-file\": [{ \"command\": 42, \"events\": \"file_saved\" }]\n  }\n}"
+      "good_example": "{\n  \"hooks\": {\n    \"beforeShellExecution\": [{ \"type\": \"command\", \"command\": \"npm run lint\", \"timeout\": 30, \"failClosed\": true }]\n  }\n}",
+      "bad_example": "{\n  \"hooks\": {\n    \"beforeShellExecution\": [{ \"type\": \"command\", \"command\": \"npm run lint\", \"timeout\": \"slow\", \"failClosed\": \"yes\" }]\n  }\n}"
     },
     {
       "id": "CUR-018",
-      "name": "Prompt Hook Missing Prompt Field",
+      "name": "Invalid or Missing Prompt Hook Field",
       "severity": "MEDIUM",
       "category": "cursor",
       "evidence": {
@@ -7629,7 +7629,7 @@
         "source_urls": [
           "https://cursor.com/docs/hooks"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-08-01",
         "applies_to": {
           "tool": "cursor",
           "file_types": [
@@ -7646,8 +7646,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"hooks\": {\n    \"ai-review\": [{ \"type\": \"prompt\", \"prompt\": \"Review this change\" }]\n  }\n}",
-      "bad_example": "{\n  \"hooks\": {\n    \"ai-review\": [{ \"type\": \"prompt\" }]\n  }\n}"
+      "good_example": "{\n  \"hooks\": {\n    \"beforeShellExecution\": [{ \"type\": \"prompt\", \"prompt\": \"Review this command\" }]\n  }\n}",
+      "bad_example": "{\n  \"hooks\": {\n    \"beforeShellExecution\": [{ \"type\": \"prompt\", \"prompt\": null }]\n  }\n}"
     },
     {
       "id": "CUR-019",
@@ -7678,6 +7678,36 @@
       },
       "good_example": "{\n  \"hooks\": {\n    \"ai-review\": [{ \"type\": \"prompt\", \"prompt\": \"Review\", \"model\": \"gpt-4\" }]\n  }\n}",
       "bad_example": "{\n  \"hooks\": {\n    \"ai-review\": [{ \"type\": \"prompt\", \"prompt\": \"Review\", \"model\": 123 }]\n  }\n}"
+    },
+    {
+      "id": "CUR-020",
+      "name": "Ignored Plain Markdown Cursor Rule",
+      "severity": "HIGH",
+      "category": "cursor",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://cursor.com/docs/rules"
+        ],
+        "verified_on": "2026-08-01",
+        "applies_to": {
+          "tool": "cursor",
+          "file_types": [
+            "cursor-rule"
+          ]
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": ".cursor/rules/typescript.mdc",
+      "bad_example": ".cursor/rules/typescript.md"
     },
     {
       "id": "CX-SK-001",
@@ -9891,9 +9921,10 @@
       "evidence": {
         "source_type": "spec",
         "source_urls": [
-          "https://modelcontextprotocol.io/specification"
+          "https://modelcontextprotocol.io/specification",
+          "https://cursor.com/docs/mcp"
         ],
-        "verified_on": "2026-02-13",
+        "verified_on": "2026-08-01",
         "applies_to": {
           "spec_revision": "2025-11-25"
         },
@@ -9918,9 +9949,10 @@
       "evidence": {
         "source_type": "spec",
         "source_urls": [
-          "https://modelcontextprotocol.io/specification"
+          "https://modelcontextprotocol.io/specification",
+          "https://cursor.com/docs/mcp"
         ],
-        "verified_on": "2026-02-13",
+        "verified_on": "2026-08-01",
         "applies_to": {
           "spec_revision": "2025-11-25"
         },
@@ -12862,7 +12894,7 @@
     },
     "cursor": {
       "prefix": "CUR",
-      "count": 19,
+      "count": 20,
       "description": "Cursor project rules"
     },
     "cline": {

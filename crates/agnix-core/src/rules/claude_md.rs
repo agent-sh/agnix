@@ -44,7 +44,12 @@ fn is_cursor_rules_file(path: &Path) -> bool {
         return true;
     }
 
-    (filename.ends_with(".md") || filename.ends_with(".mdc")) && is_path_under_cursor_rules(path)
+    path.extension()
+        .and_then(|extension| extension.to_str())
+        .is_some_and(|extension| {
+            extension.eq_ignore_ascii_case("md") || extension.eq_ignore_ascii_case("mdc")
+        })
+        && is_path_under_cursor_rules(path)
 }
 
 impl Validator for ClaudeMdValidator {
@@ -404,28 +409,29 @@ mod tests {
     fn test_cursor_rules_mdc_gets_rules() {
         let content = "Be helpful and accurate when responding.";
         let validator = ClaudeMdValidator;
-        let diagnostics = validator.validate(
-            Path::new(".cursor/rules/typescript.mdc"),
-            content,
-            &LintConfig::default(),
-        );
 
-        assert!(!diagnostics.is_empty());
-        assert!(diagnostics.iter().any(|d| d.rule == "CC-MEM-005"));
+        for path in [
+            ".cursor/rules/typescript.mdc",
+            ".cursor/rules/typescript.MDC",
+        ] {
+            let diagnostics = validator.validate(Path::new(path), content, &LintConfig::default());
+
+            assert!(!diagnostics.is_empty());
+            assert!(diagnostics.iter().any(|d| d.rule == "CC-MEM-005"));
+        }
     }
 
     #[test]
     fn test_cursor_rules_md_gets_rules() {
         let content = "Be helpful and accurate when responding.";
         let validator = ClaudeMdValidator;
-        let diagnostics = validator.validate(
-            Path::new(".cursor/rules/typescript.md"),
-            content,
-            &LintConfig::default(),
-        );
 
-        assert!(!diagnostics.is_empty());
-        assert!(diagnostics.iter().any(|d| d.rule == "CC-MEM-005"));
+        for path in [".cursor/rules/typescript.md", ".cursor/rules/typescript.MD"] {
+            let diagnostics = validator.validate(Path::new(path), content, &LintConfig::default());
+
+            assert!(!diagnostics.is_empty());
+            assert!(diagnostics.iter().any(|d| d.rule == "CC-MEM-005"));
+        }
     }
 
     #[test]

@@ -61,6 +61,10 @@ where
 fn is_relevant_file(path: &Path) -> bool {
     let filename = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
     let extension = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+    let is_cursor_rule = matches!(
+        agnix_core::detect_file_type(path),
+        agnix_core::FileType::CursorRule
+    );
     let parent = path
         .parent()
         .and_then(|p| p.file_name())
@@ -91,7 +95,8 @@ fn is_relevant_file(path: &Path) -> bool {
     ) || extension == "mcp"
         || is_codex_config
         || filename.ends_with(".mcp.json")
-        || filename.ends_with(".mdc")
+        || extension.eq_ignore_ascii_case("mdc")
+        || is_cursor_rule
         || filename.ends_with(".instructions.md")
         // Also watch for agent files
         || (extension == "md"
@@ -125,5 +130,19 @@ mod tests {
     fn non_codex_config_files_are_not_relevant_by_name() {
         assert!(!is_relevant_file(Path::new("configs/config.yaml")));
         assert!(!is_relevant_file(Path::new("configs/config.json")));
+    }
+
+    #[test]
+    fn cursor_rule_files_are_relevant() {
+        for path in [
+            ".cursor/rules/test.md",
+            ".cursor/rules/test.MD",
+            ".cursor/rules/test.mdc",
+            ".cursor/rules/test.MDC",
+        ] {
+            assert!(is_relevant_file(Path::new(path)));
+        }
+
+        assert!(!is_relevant_file(Path::new("docs/test.md")));
     }
 }

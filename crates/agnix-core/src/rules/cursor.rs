@@ -1,4 +1,4 @@
-//! Cursor project rules validation rules (CUR-001 to CUR-019)
+//! Cursor project rules validation rules (CUR-001 to CUR-020)
 //!
 //! Validates:
 //! - CUR-001: Empty .mdc rule file (HIGH) - files must have content
@@ -18,8 +18,9 @@
 //! - CUR-015: Empty Cursor subagent body (MEDIUM)
 //! - CUR-016: Invalid .cursor/environment.json schema (HIGH)
 //! - CUR-017: Invalid hook entry field types (MEDIUM) - timeout/loop_limit/failClosed type checks
-//! - CUR-018: Prompt-type hook missing prompt field (MEDIUM) - type:"prompt" needs prompt key
+//! - CUR-018: Invalid or missing prompt hook field (MEDIUM) - type:"prompt" requires a non-empty string
 //! - CUR-019: Invalid model field on prompt hook (LOW) - model must be a string
+//! - CUR-020: Ignored .md project rule (HIGH) - project rules must use .mdc
 
 use crate::{
     FileType,
@@ -31,6 +32,7 @@ use crate::{
         ParsedMdcFrontmatter, is_body_empty, is_content_empty, parse_mdc_frontmatter,
         validate_glob_pattern,
     },
+    schemas::gemini_settings::strip_jsonc_comments,
 };
 use rust_i18n::t;
 use serde_json::Value as JsonValue;
@@ -40,7 +42,7 @@ use std::path::Path;
 const RULE_IDS: &[&str] = &[
     "CUR-001", "CUR-002", "CUR-003", "CUR-004", "CUR-005", "CUR-006", "CUR-007", "CUR-008",
     "CUR-009", "CUR-010", "CUR-011", "CUR-012", "CUR-013", "CUR-014", "CUR-015", "CUR-016",
-    "CUR-017", "CUR-018", "CUR-019",
+    "CUR-017", "CUR-018", "CUR-019", "CUR-020",
 ];
 
 const CURSOR_HOOK_EVENTS: &[&str] = &[
@@ -149,10 +151,198 @@ fn is_valid_cursor_agent_name(name: &str) -> bool {
 }
 
 fn is_valid_cursor_model_id(model: &str) -> bool {
-    !model.trim().is_empty()
-        && model
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.' | ':' | '/'))
+    fn is_valid_part(value: &str) -> bool {
+        !value.is_empty()
+            && value
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.' | ':' | '/'))
+    }
+
+    let trimmed = model.trim();
+    if trimmed != model {
+        return false;
+    }
+    let model = trimmed;
+    let Some(open_bracket) = model.find('[') else {
+        return is_valid_part(model);
+    };
+
+    if !model.ends_with(']') {
+        return false;
+    }
+
+    let base = &model[..open_bracket];
+    let parameters = &model[open_bracket + 1..model.len() - 1];
+    if !is_valid_part(base) || parameters.contains(['[', ']']) {
+        return false;
+    }
+
+    parameters.is_empty()
+        || parameters.split(',').all(|parameter| {
+            let Some((name, value)) = parameter.split_once('=') else {
+                return false;
+            };
+            is_valid_part(name) && is_valid_part(value)
+        })
+}
+
+fn find_root_json_key_location(content: &str, key: &str) -> (usize, usize) {
+    let bytes = content.as_bytes();
+    let mut index = 0usize;
+    let mut object_depth = 0usize;
+    let mut location = None;
+
+    while index < bytes.len() {
+        if bytes[index] == b'/' && index + 1 < bytes.len() {
+            if bytes[index + 1] == b'/' {
+                index += 2;
+                while index < bytes.len() && !matches!(bytes[index], b'\n' | b'\r') {
+                    index += 1;
+                }
+                continue;
+            }
+            if bytes[index + 1] == b'*' {
+                index += 2;
+                while index + 1 < bytes.len() && !(bytes[index] == b'*' && bytes[index + 1] == b'/')
+                {
+                    index += 1;
+                }
+                index = (index + 2).min(bytes.len());
+                continue;
+            }
+        }
+
+        if bytes[index] != b'"' {
+            if bytes[index] == b'{' {
+                object_depth += 1;
+            } else if bytes[index] == b'}' {
+                object_depth = object_depth.saturating_sub(1);
+            }
+            index += 1;
+            continue;
+        }
+
+        let start = index;
+        index += 1;
+        let value_start = index;
+        let mut escaped = false;
+        let mut has_escape = false;
+        while index < bytes.len() {
+            if escaped {
+                escaped = false;
+            } else if bytes[index] == b'\\' {
+                escaped = true;
+                has_escape = true;
+            } else if bytes[index] == b'"' {
+                break;
+            }
+            index += 1;
+        }
+
+        if index >= bytes.len() {
+            break;
+        }
+
+        let value_end = index;
+        index += 1;
+        let mut next = index;
+        loop {
+            while next < bytes.len() && bytes[next].is_ascii_whitespace() {
+                next += 1;
+            }
+            if bytes.get(next..next + 2) == Some(b"//") {
+                next += 2;
+                while next < bytes.len() && !matches!(bytes[next], b'\n' | b'\r') {
+                    next += 1;
+                }
+                continue;
+            }
+            if bytes.get(next..next + 2) == Some(b"/*") {
+                next += 2;
+                while next + 1 < bytes.len() && !(bytes[next] == b'*' && bytes[next + 1] == b'/') {
+                    next += 1;
+                }
+                next = (next + 2).min(bytes.len());
+                continue;
+            }
+            break;
+        }
+
+        let key_matches = if has_escape {
+            serde_json::from_str::<String>(&content[start..=value_end])
+                .is_ok_and(|decoded| decoded == key)
+        } else {
+            bytes.get(value_start..value_end) == Some(key.as_bytes())
+        };
+
+        if object_depth == 1 && key_matches && bytes.get(next) == Some(&b':') {
+            let line = content[..start]
+                .bytes()
+                .filter(|byte| *byte == b'\n')
+                .count()
+                + 1;
+            let line_start = content[..start]
+                .rfind('\n')
+                .map(|offset| offset + 1)
+                .unwrap_or(0);
+            let column = content[line_start..start].chars().count() + 1;
+            location = Some((line, column));
+        }
+    }
+
+    location.unwrap_or((1, 0))
+}
+
+fn cursor_environment_error(
+    path: &Path,
+    content: &str,
+    field: &str,
+    message: impl Into<String>,
+) -> Diagnostic {
+    let (line, column) = find_root_json_key_location(content, field);
+    Diagnostic::error(path.to_path_buf(), line, column, "CUR-016", message)
+}
+
+fn validate_cursor_terminal_object(
+    path: &Path,
+    content: &str,
+    terminal: &serde_json::Map<String, JsonValue>,
+    index: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    if terminal
+        .get("command")
+        .and_then(JsonValue::as_str)
+        .is_none()
+    {
+        diagnostics.push(
+            cursor_environment_error(
+                path,
+                content,
+                "terminals",
+                t!("rules.cur_016.terminal", index = index),
+            )
+            .with_suggestion(t!("rules.cur_016.suggestion")),
+        );
+    }
+
+    for field in ["name", "description"] {
+        if terminal.get(field).is_some_and(|value| !value.is_string()) {
+            diagnostics.push(
+                cursor_environment_error(
+                    path,
+                    content,
+                    "terminals",
+                    t!(
+                        "rules.cur_016.terminal_field_type",
+                        index = index,
+                        field = field
+                    ),
+                )
+                .with_suggestion(t!("rules.cur_016.suggestion")),
+            );
+        }
+    }
 }
 
 fn validate_cursor_hooks_file(
@@ -490,14 +680,19 @@ fn validate_cursor_hooks_file(
                 }
             }
 
-            // CUR-018: Prompt-type hook missing prompt field
+            // CUR-018: Prompt-type hook missing or invalid prompt field
             if config.is_rule_enabled("CUR-018") {
                 let is_prompt_type = hook_obj
                     .get("type")
                     .and_then(JsonValue::as_str)
                     .is_some_and(|t| t == "prompt");
 
-                if is_prompt_type && !hook_obj.contains_key("prompt") {
+                let has_valid_prompt = hook_obj
+                    .get("prompt")
+                    .and_then(JsonValue::as_str)
+                    .is_some_and(|prompt| !prompt.trim().is_empty());
+
+                if is_prompt_type && !has_valid_prompt {
                     diagnostics.push(
                         Diagnostic::warning(
                             path.to_path_buf(),
@@ -505,7 +700,7 @@ fn validate_cursor_hooks_file(
                             0,
                             "CUR-018",
                             format!(
-                                "Hook entry {} in '{}' has type 'prompt' but is missing the 'prompt' field",
+                                "Hook entry {} in '{}' has type 'prompt' but lacks a non-empty string 'prompt' field",
                                 index + 1,
                                 event_name
                             ),
@@ -633,10 +828,7 @@ fn validate_cursor_agent_file(
 
                 if let Some(model_value) = frontmatter_map.get(key("model")) {
                     match model_value {
-                        YamlValue::String(model)
-                            if model == "fast"
-                                || model == "inherit"
-                                || is_valid_cursor_model_id(model) => {}
+                        YamlValue::String(model) if is_valid_cursor_model_id(model) => {}
                         YamlValue::String(_) => diagnostics.push(
                             Diagnostic::error(
                                 path.to_path_buf(),
@@ -737,14 +929,17 @@ fn validate_cursor_environment_file(
 
     let path_buf = path.to_path_buf();
 
-    let parsed = match serde_json::from_str::<JsonValue>(content) {
+    let stripped = strip_jsonc_comments(content);
+    let parsed = match serde_json::from_str::<JsonValue>(&stripped) {
         Ok(value) => value,
         Err(error) => {
+            let line = error.line();
+            let column = error.column();
             diagnostics.push(
                 Diagnostic::error(
                     path_buf.clone(),
-                    1,
-                    0,
+                    line,
+                    column,
                     "CUR-016",
                     t!("rules.cur_016.parse_error", error = error.to_string()),
                 )
@@ -771,17 +966,70 @@ fn validate_cursor_environment_file(
         }
     };
 
+    // Cursor's VS Code JSON service treats root `$schema` as the schema-association
+    // key even though the published schema's closed property set does not declare it.
+    const ALLOWED_ROOT_FIELDS: &[&str] = &[
+        "$schema",
+        "name",
+        "user",
+        "install",
+        "start",
+        "repositoryDependencies",
+        "ports",
+        "terminals",
+        "build",
+        "snapshot",
+        "agentCanUpdateSnapshot",
+    ];
+
+    for field in root.keys() {
+        if field != "update" && !ALLOWED_ROOT_FIELDS.contains(&field.as_str()) {
+            diagnostics.push(
+                cursor_environment_error(
+                    path,
+                    content,
+                    field,
+                    t!("rules.cur_016.unknown_root_field", field = field.as_str()),
+                )
+                .with_suggestion(t!("rules.cur_016.unknown_root_field_suggestion")),
+            );
+        }
+    }
+
+    for field in ["name", "user", "snapshot"] {
+        if root.get(field).is_some_and(|value| !value.is_string()) {
+            diagnostics.push(
+                cursor_environment_error(
+                    path,
+                    content,
+                    field,
+                    t!("rules.cur_016.string_field", field = field),
+                )
+                .with_suggestion(t!("rules.cur_016.suggestion")),
+            );
+        }
+    }
+
+    if root
+        .get("agentCanUpdateSnapshot")
+        .is_some_and(|value| !value.is_boolean())
+    {
+        diagnostics.push(
+            cursor_environment_error(
+                path,
+                content,
+                "agentCanUpdateSnapshot",
+                t!("rules.cur_016.agent_can_update_snapshot"),
+            )
+            .with_suggestion(t!("rules.cur_016.suggestion")),
+        );
+    }
+
     match root.get("install") {
         Some(v) if v.as_str().is_none() => {
             diagnostics.push(
-                Diagnostic::error(
-                    path_buf.clone(),
-                    1,
-                    0,
-                    "CUR-016",
-                    t!("rules.cur_016.install"),
-                )
-                .with_suggestion(t!("rules.cur_016.suggestion")),
+                cursor_environment_error(path, content, "install", t!("rules.cur_016.install"))
+                    .with_suggestion(t!("rules.cur_016.suggestion")),
             );
         }
         // `install` is absent from every `required` array in the published
@@ -798,7 +1046,7 @@ fn validate_cursor_environment_file(
         && start.as_str().is_none()
     {
         diagnostics.push(
-            Diagnostic::error(path_buf.clone(), 1, 0, "CUR-016", t!("rules.cur_016.start"))
+            cursor_environment_error(path, content, "start", t!("rules.cur_016.start"))
                 .with_suggestion(t!("rules.cur_016.suggestion")),
         );
     }
@@ -808,11 +1056,12 @@ fn validate_cursor_environment_file(
     // The setup page notes the install script "was previously called the update
     // script", so this is a rename: report it as one instead of blessing it.
     if root.get("update").is_some() {
+        let (line, column) = find_root_json_key_location(content, "update");
         diagnostics.push(
             Diagnostic::warning(
                 path_buf.clone(),
-                1,
-                0,
+                line,
+                column,
                 "CUR-016",
                 t!("rules.cur_016.update_renamed"),
             )
@@ -823,15 +1072,15 @@ fn validate_cursor_environment_file(
     if let Some(build) = root.get("build") {
         match build.as_object() {
             Some(build_obj) => {
-                if let Some(dockerfile) = build_obj.get("dockerfile")
-                    && dockerfile.as_str().is_none()
+                if !build_obj
+                    .get("dockerfile")
+                    .is_some_and(JsonValue::is_string)
                 {
                     diagnostics.push(
-                        Diagnostic::error(
-                            path_buf.clone(),
-                            1,
-                            0,
-                            "CUR-016",
+                        cursor_environment_error(
+                            path,
+                            content,
+                            "build",
                             t!("rules.cur_016.build_dockerfile"),
                         )
                         .with_suggestion(t!("rules.cur_016.suggestion")),
@@ -841,24 +1090,36 @@ fn validate_cursor_environment_file(
                     && context.as_str().is_none()
                 {
                     diagnostics.push(
-                        Diagnostic::error(
-                            path_buf.clone(),
-                            1,
-                            0,
-                            "CUR-016",
+                        cursor_environment_error(
+                            path,
+                            content,
+                            "build",
                             t!("rules.cur_016.build_context"),
                         )
                         .with_suggestion(t!("rules.cur_016.suggestion")),
                     );
                 }
+
+                for field in build_obj.keys() {
+                    if !["dockerfile", "context"].contains(&field.as_str()) {
+                        diagnostics.push(
+                            cursor_environment_error(
+                                path,
+                                content,
+                                "build",
+                                t!("rules.cur_016.unknown_build_field", field = field.as_str()),
+                            )
+                            .with_suggestion(t!("rules.cur_016.unknown_build_field_suggestion")),
+                        );
+                    }
+                }
             }
             None => {
                 diagnostics.push(
-                    Diagnostic::error(
-                        path_buf.clone(),
-                        1,
-                        0,
-                        "CUR-016",
+                    cursor_environment_error(
+                        path,
+                        content,
+                        "build",
                         t!("rules.cur_016.invalid_build"),
                     )
                     .with_suggestion(t!("rules.cur_016.suggestion")),
@@ -867,48 +1128,108 @@ fn validate_cursor_environment_file(
         }
     }
 
+    if let Some(dependencies) = root.get("repositoryDependencies") {
+        let valid = dependencies
+            .as_array()
+            .is_some_and(|items| items.iter().all(JsonValue::is_string));
+        if !valid {
+            diagnostics.push(
+                cursor_environment_error(
+                    path,
+                    content,
+                    "repositoryDependencies",
+                    t!("rules.cur_016.repository_dependencies"),
+                )
+                .with_suggestion(t!("rules.cur_016.suggestion")),
+            );
+        }
+    }
+
+    if let Some(ports_value) = root.get("ports") {
+        match ports_value.as_array() {
+            Some(ports) => {
+                for (index, port) in ports.iter().enumerate() {
+                    let Some(port_obj) = port.as_object() else {
+                        diagnostics.push(
+                            cursor_environment_error(
+                                path,
+                                content,
+                                "ports",
+                                t!("rules.cur_016.port_object", index = index),
+                            )
+                            .with_suggestion(t!("rules.cur_016.suggestion")),
+                        );
+                        continue;
+                    };
+
+                    let valid_port = port_obj.get("port").is_some_and(|value| {
+                        value.as_f64().is_some_and(|number| {
+                            number.fract() == 0.0 && (1.0..=65535.0).contains(&number)
+                        })
+                    });
+                    if !valid_port {
+                        diagnostics.push(
+                            cursor_environment_error(
+                                path,
+                                content,
+                                "ports",
+                                t!("rules.cur_016.port_number", index = index),
+                            )
+                            .with_suggestion(t!("rules.cur_016.suggestion")),
+                        );
+                    }
+
+                    if port_obj.get("name").is_some_and(|value| !value.is_string()) {
+                        diagnostics.push(
+                            cursor_environment_error(
+                                path,
+                                content,
+                                "ports",
+                                t!("rules.cur_016.port_name", index = index),
+                            )
+                            .with_suggestion(t!("rules.cur_016.suggestion")),
+                        );
+                    }
+                }
+            }
+            None => diagnostics.push(
+                cursor_environment_error(path, content, "ports", t!("rules.cur_016.ports_array"))
+                    .with_suggestion(t!("rules.cur_016.suggestion")),
+            ),
+        }
+    }
+
     if let Some(terminals_value) = root.get("terminals") {
         match terminals_value {
             JsonValue::Array(terminals) => {
                 for (index, terminal) in terminals.iter().enumerate() {
-                    // The schema types `terminals.items` as a `oneOf` whose
-                    // object branch requires only `["command"]` - `name` and
-                    // `description` are optional - so requiring `name` rejected
-                    // valid config.
+                    let index_label = (index + 1).to_string();
                     if let Some(obj) = terminal.as_object() {
-                        let has_command = obj.get("command").and_then(JsonValue::as_str).is_some();
-                        if !has_command {
-                            diagnostics.push(
-                                Diagnostic::error(
-                                    path_buf.clone(),
-                                    1,
-                                    0,
-                                    "CUR-016",
-                                    t!("rules.cur_016.terminal", index = index + 1),
-                                )
-                                .with_suggestion(t!("rules.cur_016.suggestion")),
-                            );
-                        }
+                        validate_cursor_terminal_object(
+                            path,
+                            content,
+                            obj,
+                            &index_label,
+                            &mut diagnostics,
+                        );
                     } else if let Some(nested) = terminal.as_array() {
-                        // `terminals.items` is a `oneOf` whose first branch is an
-                        // array of command-bearing objects, so a nested list is
-                        // schema-valid. Its contents still have to hold up:
-                        // accepting the branch without checking inside let
-                        // `[[{"name": "x"}]]` pass with no `command`.
-                        for entry in nested {
-                            let ok = entry
-                                .as_object()
-                                .and_then(|obj| obj.get("command"))
-                                .and_then(JsonValue::as_str)
-                                .is_some();
-                            if !ok {
+                        for (nested_index, entry) in nested.iter().enumerate() {
+                            let nested_label = format!("{}][{}", index + 1, nested_index + 1);
+                            if let Some(obj) = entry.as_object() {
+                                validate_cursor_terminal_object(
+                                    path,
+                                    content,
+                                    obj,
+                                    &nested_label,
+                                    &mut diagnostics,
+                                );
+                            } else {
                                 diagnostics.push(
-                                    Diagnostic::error(
-                                        path_buf.clone(),
-                                        1,
-                                        0,
-                                        "CUR-016",
-                                        t!("rules.cur_016.terminal", index = index + 1),
+                                    cursor_environment_error(
+                                        path,
+                                        content,
+                                        "terminals",
+                                        t!("rules.cur_016.terminal", index = nested_label),
                                     )
                                     .with_suggestion(t!("rules.cur_016.suggestion")),
                                 );
@@ -916,11 +1237,10 @@ fn validate_cursor_environment_file(
                         }
                     } else {
                         diagnostics.push(
-                            Diagnostic::error(
-                                path_buf.clone(),
-                                1,
-                                0,
-                                "CUR-016",
+                            cursor_environment_error(
+                                path,
+                                content,
+                                "terminals",
                                 t!("rules.cur_016.terminal_not_object", index = index + 1),
                             )
                             .with_suggestion(t!("rules.cur_016.suggestion")),
@@ -930,11 +1250,10 @@ fn validate_cursor_environment_file(
             }
             other => {
                 diagnostics.push(
-                    Diagnostic::error(
-                        path_buf.clone(),
-                        1,
-                        0,
-                        "CUR-016",
+                    cursor_environment_error(
+                        path,
+                        content,
+                        "terminals",
                         t!(
                             "rules.cur_016.invalid_terminals",
                             got = json_type_name(other)
@@ -966,6 +1285,27 @@ impl Validator for CursorValidator {
         let mut diagnostics = Vec::new();
 
         let file_type = crate::detect_file_type(path);
+
+        if file_type == FileType::CursorRule
+            && path
+                .extension()
+                .and_then(|extension| extension.to_str())
+                .is_some_and(|extension| extension.eq_ignore_ascii_case("md"))
+        {
+            if config.is_rule_enabled("CUR-020") {
+                diagnostics.push(
+                    Diagnostic::error(
+                        path.to_path_buf(),
+                        1,
+                        0,
+                        "CUR-020",
+                        t!("rules.cur_020.message"),
+                    )
+                    .with_suggestion(t!("rules.cur_020.suggestion")),
+                );
+            }
+            return diagnostics;
+        }
 
         match file_type {
             FileType::CursorHooks => return validate_cursor_hooks_file(path, content, config),
@@ -1273,6 +1613,11 @@ mod tests {
     fn validate_mdc_with_config(content: &str, config: &LintConfig) -> Vec<Diagnostic> {
         let validator = CursorValidator;
         validator.validate(Path::new(".cursor/rules/typescript.mdc"), content, config)
+    }
+
+    fn validate_cursor_rule(path: &str, content: &str) -> Vec<Diagnostic> {
+        let validator = CursorValidator;
+        validator.validate(Path::new(path), content, &LintConfig::default())
     }
 
     fn validate_cursor_hooks(content: &str) -> Vec<Diagnostic> {
@@ -1763,6 +2108,42 @@ Review changes."#,
     }
 
     #[test]
+    fn test_cur_014_accepts_parameterized_model_ids() {
+        for model in [
+            "composer-2.5[]",
+            "composer-2.5[fast=false]",
+            "claude-opus-5[effort=high]",
+            "claude-opus-5[effort=high,context=300k]",
+        ] {
+            let content = format!("---\nmodel: {model}\n---\nReview changes.");
+            let diagnostics = validate_cursor_agent(&content);
+            assert!(
+                diagnostics.iter().all(|d| d.rule != "CUR-014"),
+                "documented model ID '{model}' must validate, got: {diagnostics:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_cur_014_rejects_malformed_parameterized_model_ids() {
+        for model in [
+            "composer-2.5[fast]",
+            "composer-2.5[=false]",
+            "composer-2.5[fast=]",
+            "composer-2.5[fast=false,]",
+            "composer-2.5[fast=false",
+            "\" composer-2.5[] \"",
+        ] {
+            let content = format!("---\nmodel: {model}\n---\nReview changes.");
+            let diagnostics = validate_cursor_agent(&content);
+            assert!(
+                diagnostics.iter().any(|d| d.rule == "CUR-014"),
+                "malformed model ID '{model}' must be rejected, got: {diagnostics:?}"
+            );
+        }
+    }
+
+    #[test]
     fn test_cur_015_empty_cursor_agent_body() {
         let content = r#"---
 name: reviewer-agent
@@ -1787,6 +2168,122 @@ is_background: false
     fn test_cur_016_environment_parse_error() {
         let diagnostics = validate_cursor_environment(r#"{"install":}"#);
         assert!(diagnostics.iter().any(|d| d.rule == "CUR-016"));
+    }
+
+    #[test]
+    fn test_cur_016_environment_accepts_json_comments() {
+        let diagnostics = validate_cursor_environment(
+            r#"{
+  // Cursor's schema explicitly allows comments.
+  "install": "npm ci",
+  /* Keep the dev server running for the agent. */
+  "start": "npm run dev"
+}"#,
+        );
+        assert!(
+            diagnostics.iter().all(|d| d.rule != "CUR-016"),
+            "comments are valid in environment.json, got: {diagnostics:?}"
+        );
+    }
+
+    #[test]
+    fn test_cur_016_environment_rejects_trailing_comma() {
+        let diagnostics = validate_cursor_environment(
+            r#"{
+  "install": "npm ci",
+}"#,
+        );
+        assert!(
+            diagnostics.iter().any(|d| d.rule == "CUR-016"),
+            "Cursor's environment schema disallows trailing commas"
+        );
+    }
+
+    #[test]
+    fn test_cur_016_environment_rejects_unterminated_json_comment() {
+        let diagnostics = validate_cursor_environment(r#"{"install":"npm ci"} /*"#);
+        assert!(
+            diagnostics.iter().any(|d| d.rule == "CUR-016"),
+            "an unterminated block comment must remain invalid JSONC"
+        );
+    }
+
+    #[test]
+    fn test_cur_016_comment_removal_does_not_join_json_tokens() {
+        let diagnostics = validate_cursor_environment(r#"{"agentCanUpdateSnapshot":tr/*x*/ue}"#);
+        assert!(
+            diagnostics.iter().any(|d| d.rule == "CUR-016"),
+            "comments must not turn adjacent invalid tokens into a valid value"
+        );
+    }
+
+    #[test]
+    fn test_cur_016_environment_diagnostic_points_to_field() {
+        let diagnostics = validate_cursor_environment(
+            r#"{
+  // Keep diagnostics aligned with the original JSONC input.
+  "install": "npm ci",
+  "start": 42
+}"#,
+        );
+        let diagnostic = diagnostics
+            .iter()
+            .find(|d| d.rule == "CUR-016" && d.message.contains("start"))
+            .expect("invalid start field should be reported");
+        assert_eq!((diagnostic.line, diagnostic.column), (4, 3));
+    }
+
+    #[test]
+    fn test_cur_016_field_location_handles_escaped_key_and_comment_before_colon() {
+        let diagnostics =
+            validate_cursor_environment("{\n  \"st\\u0061rt\" /* documented JSONC */ : 42\n}");
+        let diagnostic = diagnostics
+            .iter()
+            .find(|d| d.rule == "CUR-016" && d.message.contains("start"))
+            .expect("escaped start field should be reported");
+        assert_eq!((diagnostic.line, diagnostic.column), (2, 3));
+    }
+
+    #[test]
+    fn test_cur_016_root_field_location_skips_matching_nested_key() {
+        let diagnostics = validate_cursor_environment(
+            r#"{
+  "terminals": [
+    {"name": "nested", "command": "npm test"}
+  ],
+  "name": 42
+}"#,
+        );
+        let diagnostic = diagnostics
+            .iter()
+            .find(|d| d.rule == "CUR-016" && d.message.contains("Field 'name'"))
+            .expect("invalid root name field should be reported");
+        assert_eq!((diagnostic.line, diagnostic.column), (5, 3));
+    }
+
+    #[test]
+    fn test_cur_016_root_field_location_uses_last_duplicate_key() {
+        let diagnostics = validate_cursor_environment(
+            r#"{
+  "start": "npm test",
+  "start": 42
+}"#,
+        );
+        let diagnostic = diagnostics
+            .iter()
+            .find(|d| d.rule == "CUR-016" && d.message.contains("start"))
+            .expect("invalid final start field should be reported");
+        assert_eq!((diagnostic.line, diagnostic.column), (3, 3));
+    }
+
+    #[test]
+    fn test_cur_016_root_field_location_counts_unicode_characters() {
+        let diagnostics = validate_cursor_environment(r#"{"name":"é","start":42}"#);
+        let diagnostic = diagnostics
+            .iter()
+            .find(|d| d.rule == "CUR-016" && d.message.contains("start"))
+            .expect("invalid start field should be reported");
+        assert_eq!((diagnostic.line, diagnostic.column), (1, 13));
     }
 
     #[test]
@@ -1950,8 +2447,9 @@ is_background: false
 
     #[test]
     fn test_cur_016_environment_build_context_invalid() {
-        let diagnostics =
-            validate_cursor_environment(r#"{"install":"npm ci","build":{"context":true}}"#);
+        let diagnostics = validate_cursor_environment(
+            r#"{"install":"npm ci","build":{"dockerfile":"Dockerfile","context":true}}"#,
+        );
         let cur_016: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CUR-016").collect();
         assert_eq!(
             cur_016.len(),
@@ -1962,19 +2460,73 @@ is_background: false
     }
 
     #[test]
-    fn test_cur_016_environment_snapshot_ignored() {
-        // Snapshot is a UI concept, not part of the environment.json spec.
-        // This regression test ensures we do not validate or reject it.
+    fn test_cur_016_environment_snapshot_must_be_string() {
         let diagnostics = validate_cursor_environment(r#"{"install":"npm ci","snapshot":42}"#);
         assert!(
-            diagnostics.iter().all(|d| d.rule != "CUR-016"),
-            "snapshot field should be silently ignored, got: {:?}",
-            diagnostics
-                .iter()
-                .filter(|d| d.rule == "CUR-016")
-                .map(|d| &d.message)
-                .collect::<Vec<_>>()
+            diagnostics.iter().any(|d| d.rule == "CUR-016"),
+            "the published schema types snapshot as a string, got: {diagnostics:?}"
         );
+    }
+
+    #[test]
+    fn test_cur_016_environment_validates_full_published_schema() {
+        let valid = validate_cursor_environment(
+            r#"{
+  "$schema": "https://cursor.com/schemas/environment.schema.json",
+  "name": "development",
+  "user": "ubuntu",
+  "install": "npm ci",
+  "start": "npm run dev",
+  "repositoryDependencies": ["github.com/acme/shared"],
+  "ports": [{"name": "web", "port": 3000}],
+  "terminals": [{"name": "app", "command": "npm run dev", "description": "dev server"}],
+  "build": {"dockerfile": "Dockerfile", "context": ".."},
+  "snapshot": "snap_abc123",
+  "agentCanUpdateSnapshot": true
+}"#,
+        );
+        assert!(
+            valid.iter().all(|d| d.rule != "CUR-016"),
+            "the full documented schema must validate, got: {valid:?}"
+        );
+
+        for (name, content) in [
+            ("unknown root field", r#"{"unknown":true}"#),
+            ("invalid name", r#"{"name":1}"#),
+            ("invalid user", r#"{"user":false}"#),
+            (
+                "invalid repository dependency",
+                r#"{"repositoryDependencies":["github.com/acme/shared",42]}"#,
+            ),
+            ("invalid ports container", r#"{"ports":{}}"#),
+            ("missing port", r#"{"ports":[{"name":"web"}]}"#),
+            ("out-of-range port", r#"{"ports":[{"port":70000}]}"#),
+            ("invalid port name", r#"{"ports":[{"name":1,"port":3000}]}"#),
+            ("missing dockerfile", r#"{"build":{"context":".."}}"#),
+            (
+                "unknown build field",
+                r#"{"build":{"dockerfile":"Dockerfile","target":"dev"}}"#,
+            ),
+            (
+                "invalid terminal name",
+                r#"{"terminals":[{"name":1,"command":"npm run dev"}]}"#,
+            ),
+            (
+                "invalid terminal description",
+                r#"{"terminals":[{"command":"npm run dev","description":1}]}"#,
+            ),
+            ("invalid snapshot", r#"{"snapshot":false}"#),
+            (
+                "invalid snapshot update flag",
+                r#"{"agentCanUpdateSnapshot":"yes"}"#,
+            ),
+        ] {
+            let diagnostics = validate_cursor_environment(content);
+            assert!(
+                diagnostics.iter().any(|d| d.rule == "CUR-016"),
+                "{name} must be rejected, got: {diagnostics:?}"
+            );
+        }
     }
 
     #[test]
@@ -2171,6 +2723,20 @@ Review the diff and suggest improvements."#;
     }
 
     #[test]
+    fn test_cur_018_prompt_must_be_non_empty_string() {
+        for prompt in ["null", "42", "\"\"", "\"   \""] {
+            let content = format!(
+                r#"{{"hooks":{{"beforeShellExecution":[{{"type":"prompt","prompt":{prompt}}}]}}}}"#
+            );
+            let diagnostics = validate_cursor_hooks(&content);
+            assert!(
+                diagnostics.iter().any(|d| d.rule == "CUR-018"),
+                "invalid prompt value {prompt} must be rejected, got: {diagnostics:?}"
+            );
+        }
+    }
+
+    #[test]
     fn test_cur_018_command_type_no_prompt_no_warning() {
         let diagnostics = validate_cursor_hooks(
             r#"{"version":1,"hooks":{"sessionStart":[{"type":"command","command":"echo hi"}]}}"#,
@@ -2209,6 +2775,63 @@ Review the diff and suggest improvements."#;
         );
         let cur_019: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CUR-019").collect();
         assert!(cur_019.is_empty());
+    }
+
+    // ===== CUR-020: Ignored .md project rule =====
+
+    #[test]
+    fn test_cur_020_plain_markdown_rule_is_ignored_by_cursor() {
+        for path in [".cursor/rules/typescript.md", ".cursor/rules/typescript.MD"] {
+            let diagnostics = validate_cursor_rule(
+                path,
+                "---\ndescription: TypeScript rules\n---\nUse strict mode.",
+            );
+            assert!(
+                diagnostics.iter().any(|d| d.rule == "CUR-020"),
+                "Cursor ignores plain Markdown files in .cursor/rules, got: {diagnostics:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_cur_020_does_not_flag_legacy_or_unrelated_markdown() {
+        for path in [".cursorrules", ".cursorrules.md", "docs/typescript.md"] {
+            let diagnostics = validate_cursor_rule(path, "Use strict mode.");
+            assert!(
+                diagnostics.iter().all(|d| d.rule != "CUR-020"),
+                "CUR-020 must stay scoped to .cursor/rules Markdown: {path}: {diagnostics:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_cur_020_mdc_rule_is_recognized() {
+        for path in [
+            ".cursor/rules/typescript.mdc",
+            ".cursor/rules/typescript.MDC",
+        ] {
+            let diagnostics = validate_cursor_rule(
+                path,
+                "---\ndescription: TypeScript rules\n---\nUse strict mode.",
+            );
+            assert!(diagnostics.iter().all(|d| d.rule != "CUR-020"));
+        }
+    }
+
+    #[test]
+    fn test_cur_020_disabled_does_not_validate_ignored_markdown_as_mdc() {
+        let mut config = LintConfig::default();
+        config.rules_mut().disabled_rules = vec!["CUR-020".to_string()];
+        let validator = CursorValidator;
+        let diagnostics = validator.validate(
+            Path::new(".cursor/rules/typescript.md"),
+            "Plain Markdown without MDC frontmatter",
+            &config,
+        );
+        assert!(
+            diagnostics.is_empty(),
+            "ignored .md rules must not fall through to MDC validation: {diagnostics:?}"
+        );
     }
 
     // ===== Config Integration =====
@@ -2405,7 +3028,7 @@ Body"#;
         let rules = [
             "CUR-001", "CUR-002", "CUR-003", "CUR-004", "CUR-005", "CUR-006", "CUR-007", "CUR-008",
             "CUR-009", "CUR-010", "CUR-011", "CUR-012", "CUR-013", "CUR-014", "CUR-015", "CUR-016",
-            "CUR-017", "CUR-018", "CUR-019",
+            "CUR-017", "CUR-018", "CUR-019", "CUR-020",
         ];
 
         for rule in rules {
@@ -2458,6 +3081,10 @@ Body"#;
                 "CUR-019" => (
                     r#"{"version":1,"hooks":{"sessionStart":[{"type":"prompt","command":"echo hi","prompt":"test","model":123}]}}"#,
                     ".cursor/hooks.json",
+                ),
+                "CUR-020" => (
+                    "---\ndescription: ignored\n---\nBody",
+                    ".cursor/rules/test.md",
                 ),
                 _ => ("---\nunknown: value\n---\n", ".cursor/rules/test.mdc"),
             };
@@ -2948,10 +3575,13 @@ Use strict mode.
             "the array branch is schema-valid, got: {ok:?}"
         );
 
-        let bad = validate_cursor_environment(r#"{"terminals":[[{"name":"no command"}]]}"#);
+        let bad = validate_cursor_environment(
+            r#"{"terminals":[[{"name":"no command"},{"description":1}]]}"#,
+        );
         assert!(
-            bad.iter().any(|d| d.rule == "CUR-016"),
-            "an entry inside the array branch still needs `command`, got: {bad:?}"
+            bad.iter().any(|d| d.message.contains("terminals[1][1]"))
+                && bad.iter().any(|d| d.message.contains("terminals[1][2]")),
+            "nested terminal diagnostics must identify each inner entry, got: {bad:?}"
         );
     }
 

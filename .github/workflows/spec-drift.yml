@@ -26,6 +26,11 @@ on:
           - s-tier
           - a-tier
         default: all
+      mcp_version:
+        description: 'Optional MCP release version to compare against the pinned baseline'
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -52,6 +57,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           UPDATE_BASELINES: ${{ inputs.update_baselines || 'false' }}
           TIER_FILTER: ${{ inputs.tier || 'all' }}
+          MCP_VERSION: ${{ inputs.mcp_version || '' }}
           SCHEDULE_CRON: ${{ github.event.schedule }}
         run: |
           set -euo pipefail
@@ -68,6 +74,12 @@ jobs:
           DRIFT_REPORT=""
           NEW_HASHES=""
           DRIFT_SOURCES_JSON="[]"
+          FETCH_ERRORS=false
+
+          if [[ -n "$MCP_VERSION" && ! "$MCP_VERSION" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+            echo "ERROR: mcp_version must use YYYY-MM-DD format"
+            exit 1
+          fi
 
           # Determine which tiers to check based on trigger
           check_s_tier=false
@@ -100,8 +112,9 @@ jobs:
 
           # Function to normalize content for consistent hashing
           normalize_content() {
-            # Remove extra whitespace, normalize line endings
-            tr -s '[:space:]' ' ' | sed 's/^ //;s/ $//'
+            # Normalize CRLF line endings only. Whitespace can be semantically
+            # significant in Markdown, YAML, and source documents.
+            sed 's/\r$//'
           }
 
           # Function to compute hash of URL content
@@ -127,7 +140,7 @@ jobs:
             fi
 
             # Normalize and hash
-            hash=$(echo "$content" | normalize_content | sha256sum | cut -d' ' -f1)
+            hash=$(printf '%s' "$content" | normalize_content | sha256sum | cut -d' ' -f1)
             echo "$hash"
           }
 
@@ -162,33 +175,55 @@ jobs:
 
             for source in $sources; do
               local url
+              local content_url
               local baseline_hash
               local rules
               local github_repo
 
               url=$(jq -r ".sources[\"$tier\"][\"$source\"].url" "$BASELINES_FILE")
+              content_url=$(jq -r ".sources[\"$tier\"][\"$source\"].content_url // .sources[\"$tier\"][\"$source\"].url" "$BASELINES_FILE")
               baseline_hash=$(jq -r ".sources[\"$tier\"][\"$source\"].hash" "$BASELINES_FILE")
               rules=$(jq -r ".sources[\"$tier\"][\"$source\"].rules // [] | join(\", \")" "$BASELINES_FILE")
               github_repo=$(jq -r ".sources[\"$tier\"][\"$source\"].github_repo // empty" "$BASELINES_FILE")
 
-              echo "Checking: $source ($url)"
+              # Release-watch dispatches compare every versioned MCP source
+              # against the newly detected release rather than re-fetching the
+              # permanently pinned baseline URL.
+              if [[ "$source" == mcp-spec* && -n "$MCP_VERSION" ]]; then
+                local baseline_version
+                baseline_version=$(jq -r '.sources["s-tier"]["mcp-spec"].url' "$BASELINES_FILE" | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -1 || true)
+                if [[ -z "$baseline_version" ]]; then
+                  echo "ERROR: Could not determine pinned MCP version"
+                  exit 1
+                fi
+                url=${url//$baseline_version/$MCP_VERSION}
+                content_url=${content_url//$baseline_version/$MCP_VERSION}
+              fi
 
-              current_hash=$(compute_hash "$url")
+              echo "Checking: $source ($content_url)"
+
+              current_hash=$(compute_hash "$content_url")
 
               if [[ "$current_hash" == "FETCH_FAILED" ]]; then
-                echo "  WARNING: Failed to fetch $source"
+                echo "  WARNING: Failed to fetch $source ($content_url)"
                 DRIFT_REPORT="${DRIFT_REPORT}\n- **$source**: Failed to fetch (may be temporary)"
+                DRIFT_DETECTED=true
+                FETCH_ERRORS=true
+                DRIFT_SOURCES_JSON=$(echo "$DRIFT_SOURCES_JSON" | jq --arg src "$source" --arg tier "$tier" --arg url "$url" --arg content_url "$content_url" --arg rules "$rules" '. += [{"source": $src, "tier": $tier, "url": $url, "content_url": $content_url, "rules": $rules}]')
                 continue
               fi
 
               if [[ "$current_hash" == "INVALID_URL" ]]; then
                 echo "  ERROR: Invalid URL for $source (must be https://)"
                 DRIFT_REPORT="${DRIFT_REPORT}\n- **$source**: Invalid URL (must be https://)"
+                DRIFT_DETECTED=true
+                FETCH_ERRORS=true
+                DRIFT_SOURCES_JSON=$(echo "$DRIFT_SOURCES_JSON" | jq --arg src "$source" --arg tier "$tier" --arg url "$url" --arg content_url "$content_url" --arg rules "$rules" '. += [{"source": $src, "tier": $tier, "url": $url, "content_url": $content_url, "rules": $rules}]')
                 continue
               fi
 
               # Store new hash for potential baseline update
-              NEW_HASHES="${NEW_HASHES}${tier}|${source}|${current_hash}\n"
+              NEW_HASHES="${NEW_HASHES}${tier}|${source}|${current_hash}|${url}|${content_url}\n"
 
               if [[ -z "$baseline_hash" ]]; then
                 echo "  INFO: No baseline hash set for $source (first run)"
@@ -201,6 +236,9 @@ jobs:
 
                 DRIFT_REPORT="${DRIFT_REPORT}\n### $source ($tier)"
                 DRIFT_REPORT="${DRIFT_REPORT}\n- **URL**: $url"
+                if [[ "$content_url" != "$url" ]]; then
+                  DRIFT_REPORT="${DRIFT_REPORT}\n- **Content URL**: $content_url"
+                fi
                 DRIFT_REPORT="${DRIFT_REPORT}\n- **Previous hash**: \`${baseline_hash:0:12}...\`"
                 DRIFT_REPORT="${DRIFT_REPORT}\n- **Current hash**: \`${current_hash:0:12}...\`"
 
@@ -225,7 +263,7 @@ jobs:
                 DRIFT_DETECTED=true
 
                 # Add to drift sources JSON for downstream jobs
-                DRIFT_SOURCES_JSON=$(echo "$DRIFT_SOURCES_JSON" | jq --arg src "$source" --arg tier "$tier" --arg url "$url" --arg rules "$rules" '. += [{"source": $src, "tier": $tier, "url": $url, "rules": $rules}]')
+                DRIFT_SOURCES_JSON=$(echo "$DRIFT_SOURCES_JSON" | jq --arg src "$source" --arg tier "$tier" --arg url "$url" --arg content_url "$content_url" --arg rules "$rules" '. += [{"source": $src, "tier": $tier, "url": $url, "content_url": $content_url, "rules": $rules}]')
               else
                 echo "  OK: No change"
               fi
@@ -243,6 +281,11 @@ jobs:
             echo ""
             echo "=== Checking A-tier sources ==="
             check_tier "a-tier"
+          fi
+
+          if [[ "$UPDATE_BASELINES" == "true" && "$FETCH_ERRORS" == "true" ]]; then
+            echo "ERROR: Refusing to write a partial baseline after source fetch errors"
+            exit 1
           fi
 
           # Output results
@@ -282,9 +325,9 @@ jobs:
             temp_file=$(mktemp)
             cp "$BASELINES_FILE" "$temp_file"
 
-            echo -e "$NEW_HASHES" | while IFS='|' read -r tier source hash; do
+            echo -e "$NEW_HASHES" | while IFS='|' read -r tier source hash url content_url; do
               if [[ -n "$tier" && -n "$source" && -n "$hash" ]]; then
-                jq ".sources[\"$tier\"][\"$source\"].hash = \"$hash\"" "$temp_file" > "${temp_file}.new"
+                jq --arg hash "$hash" --arg url "$url" --arg content_url "$content_url" ".sources[\"$tier\"][\"$source\"].hash = \$hash | .sources[\"$tier\"][\"$source\"].url = \$url | .sources[\"$tier\"][\"$source\"].content_url = \$content_url" "$temp_file" > "${temp_file}.new"
                 mv "${temp_file}.new" "$temp_file"
               fi
             done
@@ -324,6 +367,15 @@ jobs:
           # Build affected rules list
           ALL_RULES=$(echo "$DRIFT_SOURCES" | jq -r '.[].rules' | tr ',' '\n' | tr -d ' ' | sort -u | tr '\n' ', ' | sed 's/,$//')
 
+          # A release-triggered MCP run must carry the detected version through
+          # when maintainers generate the replacement baseline.
+          MCP_INPUT_LINE=""
+          detected_mcp_version=$(echo "$DRIFT_SOURCES" | jq -r '[.[] | select(.source == "mcp-spec") | (try (.url | capture("specification/(?<version>[0-9]{4}-[0-9]{2}-[0-9]{2})").version) catch empty)] | first // empty')
+          pinned_mcp_version=$(jq -r '.sources["s-tier"]["mcp-spec"].url' .github/spec-baselines.json | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -1 || true)
+          if [[ -n "$detected_mcp_version" && "$detected_mcp_version" != "$pinned_mcp_version" ]]; then
+            MCP_INPUT_LINE="- \`mcp_version: $detected_mcp_version\`"
+          fi
+
           ISSUE_BODY="## Spec Drift Sentinel Alert
 
           The following upstream specification sources have changed since our last baseline check.
@@ -352,6 +404,7 @@ jobs:
           Run the spec-drift workflow manually with:
           - \`update_baselines: true\`
           - \`tier: all\` (or specific tier)
+          $MCP_INPUT_LINE
 
           Then copy the output JSON to \`.github/spec-baselines.json\`.
 
@@ -399,7 +452,7 @@ jobs:
         run: |
           set -euo pipefail
           # Build analysis request
-          SOURCES_LIST=$(echo "$DRIFT_SOURCES" | jq -r '.[] | "- \(.source) (\(.tier)): \(.url)"' | head -10)
+          SOURCES_LIST=$(echo "$DRIFT_SOURCES" | jq -r '.[] | "- \(.source) (\(.tier)): \(.content_url // .url)"' | head -10)
           RULES_LIST=$(echo "$DRIFT_SOURCES" | jq -r '.[].rules' | tr ',' '\n' | tr -d ' ' | sort -u | head -20 | tr '\n' ', ' | sed 's/,$//')
 
           COMMENT_BODY="@claude Please analyze the spec drift detected above and help with the following:

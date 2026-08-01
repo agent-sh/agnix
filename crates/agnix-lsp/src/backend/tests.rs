@@ -2064,6 +2064,12 @@ fn test_is_project_level_trigger() {
         "/project/.cursor/rules/test.mdc"
     )));
     assert!(Backend::is_project_level_trigger(Path::new(
+        "/project/.cursor/rules/test.MDC"
+    )));
+    assert!(Backend::is_project_level_trigger(Path::new(
+        "/project/.cursor/rules/test.MD"
+    )));
+    assert!(Backend::is_project_level_trigger(Path::new(
         "/project/GEMINI.md"
     )));
 

@@ -1403,16 +1403,16 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 <a id="mcp-009"></a>
 ### MCP-009 [HIGH] Missing command for stdio server
 **Requirement**: Stdio MCP servers MUST have a `command` field
-**Detection**: Server entry has `type: "stdio"` (or no type, since stdio is default) but no `command` field
+**Detection**: Server entry has `type: "stdio"`, or omits `type` and has no usable `command`. In `.cursor/mcp.json` only, a URL-only entry is inferred as HTTP, matching Cursor's documented remote-server form.
 **Fix**: Add a `command` field specifying the executable to run
-**Source**: modelcontextprotocol.io/specification
+**Source**: modelcontextprotocol.io/specification, cursor.com/docs/mcp
 
 <a id="mcp-010"></a>
 ### MCP-010 [HIGH] Missing url for http/sse server
 **Requirement**: HTTP and SSE MCP servers MUST have a `url` field
-**Detection**: Server entry has `type: "http"` or `type: "sse"` but no `url` field
+**Detection**: Server entry has `type: "http"` or `type: "sse"` but no `url` field; URL-only entries in `.cursor/mcp.json` need no redundant `type`
 **Fix**: Add a `url` field specifying the server endpoint
-**Source**: modelcontextprotocol.io/specification
+**Source**: modelcontextprotocol.io/specification, cursor.com/docs/mcp
 
 <a id="mcp-011"></a>
 ### MCP-011 [HIGH] Invalid MCP server type
@@ -1803,8 +1803,8 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 <a id="cur-014"></a>
 ### CUR-014 [HIGH] Invalid Cursor Subagent Frontmatter
-**Requirement**: `.cursor/agents/**/*.md` files MUST have valid YAML frontmatter with required fields and valid optional field types
-**Detection**: Parse frontmatter and validate required keys (`name`, `description`), plus optional typed fields (`model`, `readonly`, `is_background`) when present
+**Requirement**: `.cursor/agents/**/*.md` files MUST have valid YAML frontmatter. All fields are optional: `name` defaults to the filename and `model` defaults to `inherit`. Specific model IDs may append `[id=value]` parameter lists, including empty `[]`.
+**Detection**: Parse frontmatter and validate optional typed fields (`name`, `description`, `model`, `readonly`, `is_background`) when present
 **Fix**: Correct frontmatter keys, naming format, and value types
 **Source**: cursor.com/docs/subagents
 
@@ -1817,8 +1817,8 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 <a id="cur-016"></a>
 ### CUR-016 [HIGH] Invalid .cursor/environment.json Schema
-**Requirement**: `.cursor/environment.json` MUST be an object. Per the published schema (cursor.com/schemas/environment.schema.json) **no field is required**: `definitions.common` has no `required` array and `definitions.container.required` is `[]`, so `install` is optional and the setup page's snapshot example omits it. Terminal entries require only `command` - `name` and `description` are optional, and the `oneOf` also permits an array branch. `update` is **not** in the schema and the root sets `unevaluatedProperties: false`, so it is reported as renamed to `install` rather than accepted.
-**Detection**: Parse JSON and type-check present fields; require `command` on terminal entries; flag `update` as a rename
+**Requirement**: `.cursor/environment.json` MUST match the published schema at cursor.com/schemas/environment.schema.json. Comments are allowed, trailing commas are not, no root field is required, `build.dockerfile` is required when `build` exists, and unknown root/build fields are rejected except for the conventional root `$schema` association key. Terminal entries require only `command`; `name` and `description` are optional. `update` is not in the schema and is reported as renamed to `install`.
+**Detection**: Strip JSON comments, parse JSON, enforce the root/build closed-field sets, and validate setup strings, repository dependencies, ports, build fields, snapshot fields, and terminal entries
 **Fix**: Correct field types; rename `update` to `install`
 **Source**: cursor.com/docs/cloud-agent/setup
 
@@ -1830,9 +1830,9 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 **Source**: cursor.com/docs/hooks
 
 <a id="cur-018"></a>
-### CUR-018 [MEDIUM] Prompt Hook Missing Prompt Field
-**Requirement**: Prompt-type hooks SHOULD have a prompt field
-**Detection**: Check for type:"prompt" without prompt key
+### CUR-018 [MEDIUM] Invalid or Missing Prompt Hook Field
+**Requirement**: Prompt-type hooks SHOULD have a non-empty string `prompt` field
+**Detection**: Check for `type: "prompt"` without a non-empty string prompt
 **Fix**: Manual
 **Source**: cursor.com/docs/hooks
 
@@ -1842,6 +1842,13 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 **Detection**: Check model field type
 **Fix**: Manual
 **Source**: cursor.com/docs/hooks
+
+<a id="cur-020"></a>
+### CUR-020 [HIGH] Ignored Plain Markdown Cursor Rule
+**Requirement**: Project rules under `.cursor/rules/` MUST use the `.mdc` extension. Cursor explicitly ignores plain `.md` files in this directory.
+**Detection**: Classify `.cursor/rules/**/*.md` so agnix can report the ignored extension before validating content
+**Fix**: Rename the file with a `.mdc` extension
+**Source**: cursor.com/docs/rules
 
 ---
 
@@ -3560,7 +3567,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | GitHub Copilot | 25 | 13 | 9 | 3 | 11 |
 | Copilot Skills | 1 | 0 | 1 | 0 | 1 |
 | Cross-Platform | 10 | 2 | 7 | 1 | 0 |
-| Cursor | 19 | 9 | 9 | 1 | 6 |
+| Cursor | 20 | 10 | 9 | 1 | 6 |
 | Cursor Skills | 1 | 0 | 1 | 0 | 1 |
 | Gemini Agents | 1 | 1 | 0 | 0 | 0 |
 | Gemini CLI | 10 | 3 | 5 | 2 | 3 |
@@ -3582,7 +3589,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **443** | **214** | **199** | **30** | **124** |
+| **TOTAL** | **444** | **215** | **199** | **30** | **124** |
 
 
 ---
@@ -3612,8 +3619,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 443 validation rules across 40 categories
+**Total Coverage**: 444 validation rules across 40 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 214 HIGH, 199 MEDIUM, 30 LOW
+**Certainty**: 215 HIGH, 199 MEDIUM, 30 LOW
 **Auto-Fixable**: 124 rules (28%)

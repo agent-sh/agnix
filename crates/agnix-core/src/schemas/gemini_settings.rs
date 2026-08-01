@@ -142,23 +142,34 @@ pub fn strip_jsonc_comments(input: &str) -> String {
 
         if chars[i] == '/' && i + 1 < len {
             if chars[i + 1] == '/' {
-                // Single-line comment: skip until end of line
+                // Replace comments with spaces so removing one cannot join
+                // otherwise separate JSON tokens.
+                result.push_str("  ");
                 i += 2;
-                while i < len && chars[i] != '\n' {
+                while i < len && !matches!(chars[i], '\n' | '\r') {
+                    result.push(' ');
                     i += 1;
                 }
                 continue;
             } else if chars[i + 1] == '*' {
-                // Multi-line comment: skip until */
+                let comment_start = i;
                 i += 2;
+                let body_start = i;
                 while i + 1 < len && !(chars[i] == '*' && chars[i + 1] == '/') {
-                    if chars[i] == '\n' {
-                        result.push('\n');
-                    }
                     i += 1;
                 }
                 if i + 1 < len {
+                    result.push_str("  ");
+                    for ch in &chars[body_start..i] {
+                        result.push(if matches!(*ch, '\n' | '\r') { *ch } else { ' ' });
+                    }
+                    result.push_str("  ");
                     i += 2; // skip */
+                } else {
+                    // Preserve malformed input so the JSON parser reports the
+                    // unterminated comment instead of accepting it silently.
+                    result.extend(chars[comment_start..].iter());
+                    break;
                 }
                 continue;
             }
@@ -277,6 +288,27 @@ mod tests {
         let result = parse_gemini_settings(content);
         assert!(result.parse_error.is_none());
         assert!(result.schema.is_some());
+    }
+
+    #[test]
+    fn test_parse_jsonc_line_comment_with_cr_line_endings() {
+        let result = parse_gemini_settings("{\r// comment\r\"general\": {}\r}");
+        assert!(result.parse_error.is_none());
+        assert!(result.schema.is_some());
+    }
+
+    #[test]
+    fn test_parse_unterminated_jsonc_comment_is_invalid() {
+        let result = parse_gemini_settings(r#"{"general": {}} /*"#);
+        assert!(result.parse_error.is_some());
+        assert!(result.schema.is_none());
+    }
+
+    #[test]
+    fn test_jsonc_comment_removal_does_not_join_tokens() {
+        let result = parse_gemini_settings(r#"{"experimental":{"autoMemory":tr/*x*/ue}}"#);
+        assert!(result.parse_error.is_some());
+        assert!(result.schema.is_none());
     }
 
     #[test]

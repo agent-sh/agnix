@@ -78,6 +78,10 @@ impl Backend {
             || file_name.eq_ignore_ascii_case("copilot-instructions.md")
             || file_name.to_lowercase().ends_with(".instructions.md")
             || file_name.to_lowercase().ends_with(".mdc")
+            || matches!(
+                agnix_core::detect_file_type(path),
+                agnix_core::FileType::CursorRule
+            )
             || file_name.eq_ignore_ascii_case("opencode.json")
             || file_name.eq_ignore_ascii_case("opencode.jsonc")
     }

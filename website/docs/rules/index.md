@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `443` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `444` validation rules generated from `knowledge-base/rules.json`.
 `124` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -268,8 +268,9 @@ This section contains all `443` validation rules generated from `knowledge-base/
 | [CUR-015](./generated/cur-015.md) | Empty Cursor Subagent Body | MEDIUM | Cursor | No |
 | [CUR-016](./generated/cur-016.md) | Invalid Cursor Environment Schema | HIGH | Cursor | No |
 | [CUR-017](./generated/cur-017.md) | Invalid Hook Entry Field Types | MEDIUM | Cursor | No |
-| [CUR-018](./generated/cur-018.md) | Prompt Hook Missing Prompt Field | MEDIUM | Cursor | No |
+| [CUR-018](./generated/cur-018.md) | Invalid or Missing Prompt Hook Field | MEDIUM | Cursor | No |
 | [CUR-019](./generated/cur-019.md) | Invalid Prompt Hook Model Type | LOW | Cursor | No |
+| [CUR-020](./generated/cur-020.md) | Ignored Plain Markdown Cursor Rule | HIGH | Cursor | No |
 | [CX-SK-001](./generated/cx-sk-001.md) | Codex Skill Uses Unsupported Field | MEDIUM | Codex Skills | Yes (safe/unsafe) |
 | [GM-001](./generated/gm-001.md) | Invalid Markdown Structure in GEMINI.md | HIGH | Gemini CLI | Yes (safe) |
 | [GM-002](./generated/gm-002.md) | Missing Section Headers in GEMINI.md | MEDIUM | Gemini CLI | No |
