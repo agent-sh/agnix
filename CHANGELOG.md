@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.45.0] - 2026-08-01
+
 ### Added
 - **CUR-020: Ignored Plain Markdown Cursor Rule**. Cursor now explicitly documents that project rules under `.cursor/rules/` must use `.mdc`; plain `.md` files are ignored. agnix reports the silent failure and suggests renaming the file. Rule count 443 -> 444.
 
