@@ -1,12 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "description": "Baseline content hashes for spec-drift sentinel. Updated automatically by workflow.",
-  "last_updated": "2026-07-31T10:14:31Z",
+  "description": "Baseline hashes for canonical specification content. Human-facing URLs are kept separately from machine-readable content URLs.",
+  "last_updated": "2026-08-01T00:00:00Z",
   "sources": {
     "s-tier": {
       "agent-skills-spec": {
         "url": "https://agentskills.io/specification",
-        "hash": "5c5ca872a1c4ac8596b903b90c931847eaad8da5f7bd5916a1ee1f44a7a1eec5",
+        "content_url": "https://raw.githubusercontent.com/agentskills/agentskills/main/docs/specification.mdx",
+        "hash": "4e758a27be17f5bd9af8d6506890895a412f774a4c09f08ee1cc7565391d16ef",
         "rules": [
           "AS-001",
           "AS-002",
@@ -22,23 +23,101 @@
         ]
       },
       "mcp-spec": {
-        "url": "https://modelcontextprotocol.io/specification/2025-11-25",
-        "hash": "596023030ef80f6769857c05b15946c157d3ef7024c26a5da2d28d5f7e8eaa7e",
-        "github_repo": "modelcontextprotocol/specification",
+        "url": "https://modelcontextprotocol.io/specification/2026-07-28",
+        "content_url": "https://modelcontextprotocol.io/specification/2026-07-28/index.md",
+        "hash": "44e96c2715af9074905a5c47ff7c6c0bb77a50000eb577ed772242a077efd086",
+        "github_repo": "modelcontextprotocol/modelcontextprotocol",
         "rules": [
           "MCP-001",
+          "MCP-005",
+          "MCP-007"
+        ]
+      },
+      "mcp-spec-schema": {
+        "url": "https://modelcontextprotocol.io/specification/2026-07-28/schema",
+        "content_url": "https://raw.githubusercontent.com/modelcontextprotocol/modelcontextprotocol/2026-07-28/schema/2026-07-28/schema.ts",
+        "hash": "680f5b5ee98ed107a3b6638d7662bff22656056c5014452f87e4a4fc8f0db8e7",
+        "rules": [
+          "MCP-001",
+          "MCP-002",
+          "MCP-003",
+          "MCP-007",
+          "MCP-008",
+          "MCP-013",
+          "MCP-014",
+          "MCP-015",
+          "MCP-016",
+          "MCP-020"
+        ]
+      },
+      "mcp-spec-tools": {
+        "url": "https://modelcontextprotocol.io/specification/2026-07-28/server/tools",
+        "content_url": "https://modelcontextprotocol.io/specification/2026-07-28/server/tools.md",
+        "hash": "465e76457fe4ce0825efde208fc2ea4f00877fd72e0610a663a11a21812a484b",
+        "rules": [
           "MCP-002",
           "MCP-003",
           "MCP-004",
           "MCP-005",
           "MCP-006",
-          "MCP-007",
-          "MCP-008"
+          "MCP-013",
+          "MCP-014"
+        ]
+      },
+      "mcp-spec-resources": {
+        "url": "https://modelcontextprotocol.io/specification/2026-07-28/server/resources",
+        "content_url": "https://modelcontextprotocol.io/specification/2026-07-28/server/resources.md",
+        "hash": "026934f8e3bc46c705205555ab5f1d5cb9f7ffce1e51840e7cbb53b2500b389e",
+        "rules": [
+          "MCP-015"
+        ]
+      },
+      "mcp-spec-prompts": {
+        "url": "https://modelcontextprotocol.io/specification/2026-07-28/server/prompts",
+        "content_url": "https://modelcontextprotocol.io/specification/2026-07-28/server/prompts.md",
+        "hash": "0719ebea71899029d37f56691308369d6cda170647376ead96b097e994c59da0",
+        "rules": [
+          "MCP-016"
+        ]
+      },
+      "mcp-spec-transports": {
+        "url": "https://modelcontextprotocol.io/specification/2026-07-28/basic/transports",
+        "content_url": "https://modelcontextprotocol.io/specification/2026-07-28/basic/transports.md",
+        "hash": "89251827c733dabd578cb9a2bd225dcb76849a3496ac2d3aab1d969334ff789c",
+        "rules": [
+          "MCP-009",
+          "MCP-010",
+          "MCP-011",
+          "MCP-012",
+          "MCP-017",
+          "MCP-022",
+          "MCP-023",
+          "MCP-024"
+        ]
+      },
+      "mcp-spec-security": {
+        "url": "https://modelcontextprotocol.io/specification/2026-07-28/basic/security_best_practices",
+        "content_url": "https://modelcontextprotocol.io/specification/2026-07-28/basic/security_best_practices.md",
+        "hash": "bb9f423d0bb7189d06559c60a9e209b696da2eab5f15d225f6b2b09ed346688e",
+        "rules": [
+          "MCP-018",
+          "MCP-019",
+          "MCP-021"
+        ]
+      },
+      "mcp-spec-versioning": {
+        "url": "https://modelcontextprotocol.io/specification/2026-07-28/basic/versioning",
+        "content_url": "https://modelcontextprotocol.io/specification/2026-07-28/basic/versioning.md",
+        "hash": "83178defeda24c09389a964334c3806a73cec78a65c3c3a3b297085f3d73e6bd",
+        "rules": [
+          "MCP-008",
+          "MCP-020"
         ]
       },
       "claude-code-memory": {
         "url": "https://code.claude.com/docs/en/memory",
-        "hash": "24530d887609888d1b5d8abec4e659dd9fc74fff1fb3d2cf0af383a5b7abeea4",
+        "content_url": "https://code.claude.com/docs/en/memory.md",
+        "hash": "eea3a7b7d4da9409c6a627e26142373f52171526fcfe901070ac77d20cf15513",
         "rules": [
           "CC-MEM-001",
           "CC-MEM-002",
@@ -48,7 +127,8 @@
       },
       "claude-code-hooks": {
         "url": "https://code.claude.com/docs/en/hooks",
-        "hash": "f8673e2e6c30b9a3a08d30590020207af3221f714d129a4efd2eae1096e26998",
+        "content_url": "https://code.claude.com/docs/en/hooks.md",
+        "hash": "b318b60616297d4a5a8c83d628a2061bf2c65dc0d05a17b5579482b971165ebb",
         "rules": [
           "CC-HK-001",
           "CC-HK-002",
@@ -65,7 +145,8 @@
       },
       "claude-code-skills": {
         "url": "https://code.claude.com/docs/en/skills",
-        "hash": "b4386cd9f7aa8da4e505afa37e0550b770fb259b6a4626339560dc4c98a1b7d6",
+        "content_url": "https://code.claude.com/docs/en/skills.md",
+        "hash": "1f08c689cea03dc2d12ff6646c33b740a3219ba0c2bec960ac05fcd7a4a4c308",
         "rules": [
           "CC-SK-001",
           "CC-SK-002",
@@ -75,7 +156,8 @@
       },
       "claude-code-plugins": {
         "url": "https://code.claude.com/docs/en/plugins-reference",
-        "hash": "3cba97ea5d7d1055d223458387b9214d2c77bbbf46437c136be3d9afe0bd801d",
+        "content_url": "https://code.claude.com/docs/en/plugins-reference.md",
+        "hash": "a07104858eefd300ed179c1e8727d5d92d1611140f0e524e82f68ae010e13cf7",
         "rules": [
           "CC-PL-002",
           "CC-PL-003",
@@ -86,7 +168,8 @@
       },
       "claude-code-subagents": {
         "url": "https://code.claude.com/docs/en/sub-agents",
-        "hash": "9326cd9931f2c31a3d04cd0d520e6f414e698f98671040efc45fc7a8035b7caf",
+        "content_url": "https://code.claude.com/docs/en/sub-agents.md",
+        "hash": "5b209909ee8304b3af61709d9a5fe7bacaf87feeec9b1dc8f8c48b3f4136d4cb",
         "rules": [
           "CC-AG-001",
           "CC-AG-002",
@@ -110,7 +193,8 @@
       },
       "codex-cli-agents-md": {
         "url": "https://learn.chatgpt.com/docs/agent-configuration/agents-md",
-        "hash": "daa9ae6966e3c4125f5a84111fc85fa44b8ce763853b6781c0992aab38c16534",
+        "content_url": "https://learn.chatgpt.com/docs/agent-configuration/agents-md.md",
+        "hash": "9d1f87a2d1cb55b4782b95abe710692b35b9659789c2db31a22c7074a3383e8e",
         "rules": [
           "AGM-001",
           "AGM-002",
@@ -128,7 +212,8 @@
       },
       "opencode-rules": {
         "url": "https://opencode.ai/docs/rules/",
-        "hash": "6301a2a1a80af127fb120d05943c412a3a3d3ddb2431b0746407472ae41cefc9",
+        "content_url": "https://raw.githubusercontent.com/anomalyco/opencode/dev/packages/web/src/content/docs/rules.mdx",
+        "hash": "9ec707ba349c3eb2c37f2085d40875247b59e135386217b7150ba98f7e293aa8",
         "rules": [
           "XP-001",
           "XP-002",
@@ -142,7 +227,8 @@
     "a-tier": {
       "cursor-rules": {
         "url": "https://cursor.com/docs/rules",
-        "hash": "24529507938b37d3e3815e86b8c1c87cbaf78230c899854f0d74b2d5356c676a",
+        "content_url": "https://cursor.com/docs/rules.md",
+        "hash": "c861f9650a843824b496f0a3190ecd9671c121acae623e150b041d0eb9e84d70",
         "rules": [
           "CUR-001",
           "CUR-002",
@@ -152,22 +238,28 @@
           "CUR-006",
           "CUR-007",
           "CUR-008",
-          "CUR-009"
+          "CUR-009",
+          "CUR-020"
         ]
       },
       "cursor-hooks": {
         "url": "https://cursor.com/docs/hooks",
-        "hash": "4f55df64b01fe7d2c55a9d544eafdda070e35d7f84045c021f4a5ea9fcdd05d8",
+        "content_url": "https://cursor.com/docs/hooks.md",
+        "hash": "952d09cb40387dcb70944ce73fffa446317b6cb4f107c9bc2a52d236bc887e3b",
         "rules": [
           "CUR-010",
           "CUR-011",
           "CUR-012",
-          "CUR-013"
+          "CUR-013",
+          "CUR-017",
+          "CUR-018",
+          "CUR-019"
         ]
       },
       "cursor-subagents": {
         "url": "https://cursor.com/docs/subagents",
-        "hash": "f849221f0342190122e8411587e47f129c915902077da6995753f26c8a03cc9a",
+        "content_url": "https://cursor.com/docs/subagents.md",
+        "hash": "c9c01a48171c3a0bcaa37f9412654395c27fecbd5f50535bfa59363f49c8bd46",
         "rules": [
           "CUR-014",
           "CUR-015"
@@ -175,14 +267,35 @@
       },
       "cursor-environment": {
         "url": "https://cursor.com/docs/cloud-agent/setup",
-        "hash": "326a48176a4541dc5e1d94d7f1ef94c50a007dc4798b85e97e8ada5ec75e8a9e",
+        "content_url": "https://cursor.com/docs/cloud-agent/setup.md",
+        "hash": "058418e383b5bf20786c8a858f37856aa73719759774874b73bf7fb86f18fcd0",
         "rules": [
           "CUR-016"
         ]
       },
+      "cursor-mcp": {
+        "url": "https://cursor.com/docs/mcp",
+        "content_url": "https://cursor.com/docs/mcp.md",
+        "hash": "0d85294f9c849ef4f69194ca97242599e4d8f1c6bc44b77cfaedcc2bfc56da98",
+        "rules": [
+          "MCP-009",
+          "MCP-010",
+          "MCP-011",
+          "MCP-012",
+          "MCP-017",
+          "MCP-018",
+          "MCP-019",
+          "MCP-020",
+          "MCP-021",
+          "MCP-022",
+          "MCP-023",
+          "MCP-024"
+        ]
+      },
       "github-copilot": {
         "url": "https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/add-custom-instructions/add-repository-instructions",
-        "hash": "668c75acb7948484e1334aeb040332961836fbe187561fa830219afcde8ae289",
+        "content_url": "https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/add-custom-instructions/add-repository-instructions.md",
+        "hash": "4e5454048929b4aee6357c707cd28cd3ff86a2b3717bea094be98458b1c7bc98",
         "rules": [
           "COP-001",
           "COP-002",
@@ -214,7 +327,8 @@
       },
       "cline-rules": {
         "url": "https://docs.cline.bot/customization/cline-rules",
-        "hash": "3a42acacd88e62655c440c04214bed9e622793007489f1d9ef68a2ea85360063",
+        "content_url": "https://raw.githubusercontent.com/cline/cline/main/docs/customization/cline-rules.mdx",
+        "hash": "b50f382a5626c0627cfb47b7fad2eab724be354fa21b445752f8c8abf5403e88",
         "rules": [
           "CL-SK-001",
           "CL-SK-002",

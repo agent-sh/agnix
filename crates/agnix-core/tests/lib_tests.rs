@@ -3092,6 +3092,21 @@ fn test_validate_cursor_mdc_missing_frontmatter() {
 }
 
 #[test]
+fn test_validate_cursor_plain_markdown_rule_reports_cur_020() {
+    let temp = tempfile::TempDir::new().unwrap();
+    let cursor_dir = temp.path().join(".cursor").join("rules");
+    std::fs::create_dir_all(&cursor_dir).unwrap();
+    let file_path = cursor_dir.join("ignored.md");
+    std::fs::write(&file_path, "# Cursor silently ignores this rule").unwrap();
+
+    let diagnostics = expect_success(validate_file(&file_path, &LintConfig::default()).unwrap());
+    assert!(
+        diagnostics.iter().any(|d| d.rule == "CUR-020"),
+        "registry validation should report ignored Cursor Markdown rules"
+    );
+}
+
+#[test]
 fn test_validate_cursor_valid_mdc() {
     let temp = tempfile::TempDir::new().unwrap();
     let cursor_dir = temp.path().join(".cursor").join("rules");

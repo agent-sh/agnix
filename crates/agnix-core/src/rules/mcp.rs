@@ -356,7 +356,16 @@ impl Validator for McpValidator {
 
         // Validate MCP server configurations (MCP-009 to MCP-012, MCP-024)
         for (name, server) in extract_mcp_servers(&raw_value) {
-            validate_server(&name, &server, path, content, config, &mut diagnostics);
+            let raw_server_type = find_raw_server_type(&raw_value, &name);
+            validate_server(
+                &name,
+                &server,
+                raw_server_type,
+                path,
+                content,
+                config,
+                &mut diagnostics,
+            );
         }
 
         diagnostics
@@ -486,6 +495,19 @@ fn extract_mcp_servers(raw_value: &serde_json::Value) -> Vec<(String, McpServerC
     }
 
     Vec::new()
+}
+
+fn find_raw_server_type<'a>(
+    raw_value: &'a serde_json::Value,
+    name: &str,
+) -> Option<&'a serde_json::Value> {
+    let server = if let Some(servers) = raw_value.get("mcpServers").and_then(|v| v.as_object()) {
+        servers.get(name)
+    } else {
+        raw_value.as_object().and_then(|root| root.get(name))
+    }?;
+
+    server.as_object()?.get("type")
 }
 
 /// Parse a JSON object into `(name, McpServerConfig)` entries. Strict
@@ -1448,17 +1470,32 @@ fn is_dangerous_command(command: &str) -> bool {
     has_remote_pipe || has_sudo_rm || has_exfil_pattern
 }
 
+fn has_usable_command(server: &McpServerConfig) -> bool {
+    server.command.as_ref().is_some_and(|value| match value {
+        serde_json::Value::String(command) => !command.trim().is_empty(),
+        serde_json::Value::Array(items) => !items.is_empty(),
+        serde_json::Value::Null => false,
+        _ => true,
+    })
+}
+
+fn is_cursor_mcp_file(path: &Path) -> bool {
+    path.file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| name.eq_ignore_ascii_case("mcp.json"))
+        && path
+            .parent()
+            .and_then(Path::file_name)
+            .and_then(|name| name.to_str())
+            .is_some_and(|name| name.eq_ignore_ascii_case(".cursor"))
+}
+
 fn has_meaningful_server_config(server: &McpServerConfig) -> bool {
     let has_type = server
         .server_type
         .as_deref()
         .is_some_and(|value| !value.trim().is_empty());
-    let has_command = server.command.as_ref().is_some_and(|value| match value {
-        serde_json::Value::String(command) => !command.trim().is_empty(),
-        serde_json::Value::Array(items) => !items.is_empty(),
-        serde_json::Value::Null => false,
-        _ => true,
-    });
+    let has_command = has_usable_command(server);
     let has_args = server
         .args
         .as_ref()
@@ -1482,6 +1519,7 @@ fn has_meaningful_server_config(server: &McpServerConfig) -> bool {
 fn validate_server(
     name: &str,
     server: &McpServerConfig,
+    raw_server_type: Option<&serde_json::Value>,
     path: &Path,
     content: &str,
     config: &PerFileLintConfig<'_>,
@@ -1489,11 +1527,42 @@ fn validate_server(
 ) {
     let (line, col) = find_json_field_location(content, name);
 
-    // Determine effective type (default is "stdio" when type is absent)
-    let effective_type = server.server_type.as_deref().unwrap_or("stdio");
+    // Cursor documents URL-only remote entries. Other clients, including
+    // Claude Code, still default an omitted type to stdio.
+    let effective_type = server.server_type.as_deref().unwrap_or_else(|| {
+        if raw_server_type.is_none()
+            && is_cursor_mcp_file(path)
+            && !has_usable_command(server)
+            && server.url.is_some()
+        {
+            "http"
+        } else {
+            "stdio"
+        }
+    });
 
     // MCP-011: Invalid server type (check first, skip other type-based rules if invalid)
     if config.is_rule_enabled("MCP-011") {
+        if let Some(raw_type) = raw_server_type
+            && !raw_type.is_string()
+        {
+            diagnostics.push(
+                Diagnostic::error(
+                    path.to_path_buf(),
+                    line,
+                    col,
+                    "MCP-011",
+                    t!(
+                        "rules.mcp_011.message",
+                        server = name,
+                        server_type = raw_type.to_string()
+                    ),
+                )
+                .with_suggestion(t!("rules.mcp_011.suggestion")),
+            );
+            return;
+        }
+
         if let Some(ref server_type) = server.server_type {
             if !VALID_MCP_SERVER_TYPES.contains(&server_type.as_str()) {
                 let mut diagnostic = Diagnostic::error(
@@ -1536,13 +1605,7 @@ fn validate_server(
     // MCP-009: Missing command for stdio server
     // Treat null and empty string/array as missing (not a usable command)
     if config.is_rule_enabled("MCP-009") && effective_type == "stdio" {
-        let has_command = server.command.as_ref().is_some_and(|v| match v {
-            serde_json::Value::String(s) => !s.trim().is_empty(),
-            serde_json::Value::Array(a) => !a.is_empty(),
-            serde_json::Value::Null => false,
-            _ => true,
-        });
-        if !has_command {
+        if !has_usable_command(server) {
             diagnostics.push(
                 Diagnostic::error(
                     path.to_path_buf(),
@@ -1841,6 +1904,11 @@ mod tests {
         let validator = McpValidator;
         let path = PathBuf::from("test.mcp.json");
         validator.validate(&path, content, config)
+    }
+
+    fn validate_path(path: &str, content: &str) -> Vec<Diagnostic> {
+        let validator = McpValidator;
+        validator.validate(Path::new(path), content, &LintConfig::default())
     }
 
     #[test]
@@ -2948,6 +3016,62 @@ mod tests {
         }"#;
         let diagnostics = validate(content);
         assert!(!diagnostics.iter().any(|d| d.rule == "MCP-009"));
+    }
+
+    #[test]
+    fn test_mcp_009_url_only_server_infers_http_transport() {
+        let content = r#"{
+            "mcpServers": {
+                "cursor-remote": {
+                    "url": "https://example.com/mcp",
+                    "headers": {"Authorization": "Bearer ${env:MCP_TOKEN}"}
+                }
+            }
+        }"#;
+        let diagnostics = validate_path(".cursor/mcp.json", content);
+        assert!(
+            diagnostics
+                .iter()
+                .all(|d| d.rule != "MCP-009" && d.rule != "MCP-010"),
+            "Cursor's documented URL-only remote form must validate, got: {diagnostics:?}"
+        );
+    }
+
+    #[test]
+    fn test_cursor_url_server_does_not_infer_transport_for_non_string_type() {
+        for invalid_type in ["42", "null"] {
+            let content = format!(
+                r#"{{
+                    "mcpServers": {{
+                        "cursor-remote": {{
+                            "type": {invalid_type},
+                            "url": "https://example.com/mcp"
+                        }}
+                    }}
+                }}"#
+            );
+            let diagnostics = validate_path(".cursor/mcp.json", &content);
+            assert!(
+                diagnostics.iter().any(|d| d.rule == "MCP-011"),
+                "an explicit non-string type must not be treated as omitted: {diagnostics:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_mcp_009_url_only_server_still_defaults_to_stdio_outside_cursor() {
+        let content = r#"{
+            "mcpServers": {
+                "remote": {
+                    "url": "https://example.com/mcp"
+                }
+            }
+        }"#;
+        let diagnostics = validate_path(".mcp.json", content);
+        assert!(
+            diagnostics.iter().any(|d| d.rule == "MCP-009"),
+            "Non-Cursor configs with no type must retain the stdio default"
+        );
     }
 
     #[test]

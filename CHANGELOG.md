@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **CUR-020: Ignored Plain Markdown Cursor Rule**. Cursor now explicitly documents that project rules under `.cursor/rules/` must use `.mdc`; plain `.md` files are ignored. agnix reports the silent failure and suggests renaming the file. Rule count 443 -> 444.
+
+### Fixed
+- **Cursor 3.14 configuration compatibility**. Accept parameterized subagent model IDs such as `composer-2.5[]` and `claude-opus-5[effort=high]`; validate prompt hooks as non-empty strings; accept comments and enforce the full published `environment.json` schema; and infer HTTP transport for documented URL-only servers in `.cursor/mcp.json` (closes #1306).
+- **Spec Drift Sentinel HTML noise**. Hash canonical Markdown/raw source documents instead of rendered site chrome, monitor MCP overview/schema/component sources at `2026-07-28`, compare newly detected MCP releases directly, and add Cursor MCP documentation to drift coverage (closes #1305).
+
+### Changed
+- **Tool release baselines**. Advanced Cursor to `3.14.7`, Gemini CLI to `v0.53.1`, and Kiro CLI to `2.16.0` after reviewing their validated configuration surfaces. Gemini's patch is error-reporting only; Kiro adds `/tangent` and context display without changing persisted config (closes #1307, #1308).
+
 ## [0.44.0] - 2026-07-31
 
 ### Added

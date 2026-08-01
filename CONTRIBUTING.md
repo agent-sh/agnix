@@ -107,7 +107,7 @@ Rule IDs follow the format `[PREFIX]-[NUMBER]` where the prefix indicates the ru
 | `COP-` | 25 | COP-001 through COP-015, COP-017 through COP-020, COP-022 through COP-027 |
 | `CP-SK-` | 1 | CP-SK-001 |
 | `CR-SK-` | 1 | CR-SK-001 |
-| `CUR-` | 19 | CUR-001 through CUR-019 |
+| `CUR-` | 20 | CUR-001 through CUR-020 |
 | `CX-SK-` | 1 | CX-SK-001 |
 | `GM-` | 10 | GM-001 through GM-010 |
 | `GM-AG-` | 1 | GM-AG-001 |

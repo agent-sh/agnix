@@ -21,7 +21,7 @@
 | XML | all .md files | 3 |
 | References | @imports | 4 |
 | GitHub Copilot | .github/copilot-instructions.md, .github/instructions/*.instructions.md, .github/agents/*.agent.md, .github/prompts/*.prompt.md, .github/hooks/hooks.json, .github/workflows/copilot-setup-steps.yml | 25 |
-| Cursor Project Rules | .cursor/rules/*.mdc, .cursorrules, .cursor/hooks.json, .cursor/agents/**/*.md, .cursor/environment.json | 19 |
+| Cursor Project Rules | .cursor/rules/*.mdc, .cursorrules, .cursor/hooks.json, .cursor/agents/**/*.md, .cursor/environment.json | 20 |
 | Cline | .clinerules, .clinerules/*.md, .clinerules/*.txt | 7 |
 | OpenCode | opencode.json, opencode.jsonc | 47 |
 | Gemini Agents | .gemini/agents/*.json | 1 |

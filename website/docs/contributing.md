@@ -9,7 +9,7 @@ Contributions are welcome and appreciated.
 
 ## Found something off?
 
-agnix validates against 443 rules, but the agent config ecosystem moves fast. If a rule is wrong, missing, or too noisy, I want to know.
+agnix validates against 444 rules, but the agent config ecosystem moves fast. If a rule is wrong, missing, or too noisy, I want to know.
 
 - [Report a bug](https://github.com/agent-sh/agnix/issues/new)
 - [Request a rule](https://github.com/agent-sh/agnix/issues/new)

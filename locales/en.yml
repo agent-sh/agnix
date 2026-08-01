@@ -486,23 +486,23 @@ rules:
     message: hooks.%{event}[%{index}] has invalid 'type' value
     suggestion: If present, 'type' must be 'command' or 'prompt'
   cur_014:
-    message: Cursor subagent file must have valid YAML frontmatter with required fields
+    message: Cursor subagent file must have valid YAML frontmatter with supported field types
     invalid_frontmatter: Cursor subagent frontmatter is invalid YAML or not a mapping
     missing_name: Cursor subagent frontmatter is missing required 'name' field
     invalid_name: Cursor subagent name must use lowercase letters, digits, and hyphens only
     name_not_string: Cursor subagent 'name' field must be a string
     missing_description: Cursor subagent frontmatter is missing required 'description' field
     description_not_string: Cursor subagent 'description' field must be a string
-    invalid_model: Cursor subagent model must be 'fast', 'inherit', or a valid model ID
+    invalid_model: Cursor subagent model must be 'fast', 'inherit', or a valid model ID with optional [id=value] parameters
     model_not_string: Cursor subagent 'model' field must be a string
     readonly_not_bool: Cursor subagent 'readonly' field must be a boolean
     is_background_not_bool: Cursor subagent 'is_background' field must be a boolean
-    suggestion: 'Use frontmatter fields: name, description, model, readonly, and is_background with valid types'
+    suggestion: 'Use optional frontmatter fields name, description, model, readonly, and is_background with valid types'
   cur_015:
     message: Cursor subagent definition is empty after frontmatter
     suggestion: Add body instructions below the frontmatter section
   cur_016:
-    message: .cursor/environment.json must be an object with install (required) and optional start, update, build, terminals
+    message: .cursor/environment.json must be an object matching Cursor's published environment schema
     parse_error: 'Failed to parse .cursor/environment.json: %{error}'
     install: Field 'install' must be a string
     missing_install: Field 'install' is required and must be a string
@@ -511,12 +511,12 @@ rules:
     start: Field 'start' must be a string when present
     update: Field 'update' must be a string when present
     invalid_build: Field 'build' must be an object when present
-    build_dockerfile: Field 'build.dockerfile' must be a string when present
+    build_dockerfile: Field 'build.dockerfile' is required and must be a string
     build_context: Field 'build.context' must be a string when present
     invalid_terminals: Field 'terminals' must be an array, got %{got}
     terminal: "terminals[%{index}] must have a string 'command' field"
     terminal_not_object: terminals[%{index}] must be a JSON object
-    suggestion: 'Use schema: {"install":"...","start":"...","build":{"dockerfile":"...","context":"..."},"terminals":[{"name":"...","command":"..."}]}'
+    suggestion: 'Use Cursor''s schema: string setup fields, a valid build object, string repository dependencies, valid ports, and command-bearing terminals'
   cln_001:
     message_empty: Cline rules file is empty
     message_no_content: Cline rules file has no content after frontmatter
