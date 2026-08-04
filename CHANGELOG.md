@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Tool release baselines**. Advanced Claude Code to `v2.1.221`, OpenCode to `v1.18.13`, and Cline to `v4.1.3` after reviewing their current release notes and validated configuration surfaces (closes #1311, #1312, and #1313).
+
+### Fixed
+- **Claude Code credential protection compatibility**. Extend CC-SET-012 for environment-variable masking added in 2.1.199 and file masking added in 2.1.221, including ECMAScript extraction validation, structured file controls, injection host lists, environment variable names, and `allowPlaintextInject`; accept the newly documented `skills: "."` plugin-root path under CC-PL-007.
+
+### Security
+- **Undici 7.29.0**. Refresh both npm lockfiles for the upstream cache-control, request-header, retry-response, and cookie validation security fixes from Dependabot PR #1314.
+
 ## [0.45.0] - 2026-08-01
 
 ### Added

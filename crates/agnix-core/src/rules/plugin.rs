@@ -613,11 +613,13 @@ fn is_invalid_component_path(p: &str) -> bool {
 
 /// Check if a path is a relative path missing a `./` prefix (autofixable).
 /// This is separate from `is_invalid_component_path`: paths like `skills/foo`
-/// are not absolute or traversal, but should have `./` prepended.
-fn is_autofixable_path(p: &str) -> bool {
+/// are not absolute or traversal, but should have `./` prepended. Claude Code
+/// v2.1.221 explicitly accepts `skills: "."` to load a root-level SKILL.md.
+fn is_autofixable_path(field: &str, p: &str) -> bool {
     let trimmed = p.trim();
     // Must not be empty, not already have ./ prefix, and not be invalid
     !trimmed.is_empty()
+        && !(field == "skills" && trimmed == ".")
         && !trimmed.starts_with("./")
         && !trimmed.starts_with(".\\")
         && !is_invalid_component_path(trimmed)
@@ -779,7 +781,7 @@ fn check_component_paths(
                     )
                     .with_suggestion(t!("rules.cc_pl_007.suggestion")),
                 );
-            } else if is_autofixable_path(&p) {
+            } else if is_autofixable_path(field, &p) {
                 // Relative path missing ./ prefix: error with safe autofix
                 let mut diagnostic = Diagnostic::error(
                     path.to_path_buf(),
@@ -1720,6 +1722,50 @@ mod tests {
         );
 
         assert!(!diagnostics.iter().any(|d| d.rule == "CC-PL-007"));
+    }
+
+    #[test]
+    fn test_cc_pl_007_plugin_root_skills_path_is_valid() {
+        let temp = TempDir::new().unwrap();
+        let plugin_path = temp.path().join(".claude-plugin").join("plugin.json");
+        write_plugin(
+            &plugin_path,
+            r#"{"name":"test","description":"desc","version":"1.0.0","skills":"."}"#,
+        );
+
+        let validator = PluginValidator;
+        let diagnostics = validator.validate(
+            &plugin_path,
+            &fs::read_to_string(&plugin_path).unwrap(),
+            &LintConfig::default(),
+        );
+
+        assert!(
+            !diagnostics.iter().any(|d| d.rule == "CC-PL-007"),
+            "Claude Code v2.1.221 accepts '.' as the plugin-root skills path"
+        );
+    }
+
+    #[test]
+    fn test_cc_pl_007_dot_path_exception_is_scoped_to_skills() {
+        let temp = TempDir::new().unwrap();
+        let plugin_path = temp.path().join(".claude-plugin").join("plugin.json");
+        write_plugin(
+            &plugin_path,
+            r#"{"name":"test","description":"desc","version":"1.0.0","commands":"."}"#,
+        );
+
+        let validator = PluginValidator;
+        let diagnostics = validator.validate(
+            &plugin_path,
+            &fs::read_to_string(&plugin_path).unwrap(),
+            &LintConfig::default(),
+        );
+
+        assert!(
+            diagnostics.iter().any(|d| d.rule == "CC-PL-007"),
+            "Only the documented skills field accepts '.' as a root path"
+        );
     }
 
     #[test]

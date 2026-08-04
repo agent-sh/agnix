@@ -839,8 +839,9 @@ fn validate_respond_to_bash_commands(
 /// ```
 ///
 /// Both arrays are optional, but when present they must be arrays of objects.
-/// Each entry must name the credential target and carry `"mode": "deny"`; no
-/// other mode is currently supported.
+/// Each entry must name the credential target and carry a supported `mode`.
+/// Claude Code v2.1.199 added environment-variable masking, and v2.1.221 added
+/// file masking plus controls for narrowing injection and extraction.
 fn validate_sandbox_credentials(
     path: &Path,
     content: &str,
@@ -874,38 +875,87 @@ fn validate_sandbox_credentials(
         return;
     };
 
+    if let Some(value) = credentials_obj.get("allowPlaintextInject")
+        && !value.is_boolean()
+    {
+        let line = find_key_line(content, "allowPlaintextInject")
+            .or_else(|| find_key_line(content, "credentials"))
+            .unwrap_or(1);
+        diagnostics.push(
+            Diagnostic::warning(
+                path.to_path_buf(),
+                line,
+                0,
+                "CC-SET-012",
+                format!(
+                    "sandbox.credentials.allowPlaintextInject must be a boolean (got {})",
+                    describe_json_type(value)
+                ),
+            )
+            .with_suggestion(
+                "Set sandbox.credentials.allowPlaintextInject to an unquoted true or false, or remove it.",
+            ),
+        );
+    }
+
     validate_sandbox_credential_entries(
         path,
         content,
         credentials_obj.get("files"),
-        "files",
-        "path",
-        "credential file path",
+        SandboxCredentialKind::File,
         diagnostics,
     );
     validate_sandbox_credential_entries(
         path,
         content,
         credentials_obj.get("envVars"),
-        "envVars",
-        "name",
-        "credential environment variable name",
+        SandboxCredentialKind::EnvironmentVariable,
         diagnostics,
     );
+}
+
+#[derive(Clone, Copy)]
+enum SandboxCredentialKind {
+    File,
+    EnvironmentVariable,
+}
+
+impl SandboxCredentialKind {
+    fn array_key(self) -> &'static str {
+        match self {
+            Self::File => "files",
+            Self::EnvironmentVariable => "envVars",
+        }
+    }
+
+    fn required_key(self) -> &'static str {
+        match self {
+            Self::File => "path",
+            Self::EnvironmentVariable => "name",
+        }
+    }
+
+    fn required_label(self) -> &'static str {
+        match self {
+            Self::File => "credential file path",
+            Self::EnvironmentVariable => "credential environment variable name",
+        }
+    }
 }
 
 fn validate_sandbox_credential_entries(
     path: &Path,
     content: &str,
     value: Option<&serde_json::Value>,
-    array_key: &str,
-    required_key: &str,
-    required_label: &str,
+    kind: SandboxCredentialKind,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
     let Some(value) = value else {
         return;
     };
+    let array_key = kind.array_key();
+    let required_key = kind.required_key();
+    let required_label = kind.required_label();
 
     let line = find_key_line(content, array_key)
         .or_else(|| find_key_line(content, "credentials"))
@@ -925,7 +975,7 @@ fn validate_sandbox_credential_entries(
                 ),
             )
             .with_suggestion(format!(
-                "Set sandbox.credentials.{array_key} to an array of objects with \"{required_key}\" and \"mode\": \"deny\".",
+                "Set sandbox.credentials.{array_key} to an array of objects with \"{required_key}\" and a \"mode\" of \"deny\" or \"mask\".",
             )),
         );
         return;
@@ -945,7 +995,7 @@ fn validate_sandbox_credential_entries(
                     ),
                 )
                 .with_suggestion(format!(
-                    "Use {{\"{required_key}\": \"...\", \"mode\": \"deny\"}} for each sandbox.credentials.{array_key} entry.",
+                    "Use {{\"{required_key}\": \"...\", \"mode\": \"deny\"}} or {{\"{required_key}\": \"...\", \"mode\": \"mask\"}} for each sandbox.credentials.{array_key} entry.",
                 )),
             );
             continue;
@@ -989,8 +1039,30 @@ fn validate_sandbox_credential_entries(
             }
         }
 
-        match entry_obj.get("mode").and_then(|v| v.as_str()) {
-            Some("deny") => {}
+        if matches!(kind, SandboxCredentialKind::EnvironmentVariable)
+            && let Some(name) = entry_obj.get(required_key).and_then(|v| v.as_str())
+            && !name.is_empty()
+            && !is_valid_environment_variable_name(name)
+        {
+            diagnostics.push(
+                Diagnostic::warning(
+                    path.to_path_buf(),
+                    line,
+                    0,
+                    "CC-SET-012",
+                    format!(
+                        "sandbox.credentials.{array_key}[{index}].name must start with a letter or underscore and contain only letters, digits, and underscores (got \"{name}\")"
+                    ),
+                )
+                .with_suggestion(format!(
+                    "Set sandbox.credentials.{array_key}[{index}].name to a valid environment variable name such as GITHUB_TOKEN.",
+                )),
+            );
+        }
+
+        let mode = entry_obj.get("mode").and_then(|v| v.as_str());
+        match mode {
+            Some("deny" | "mask") => {}
             Some(mode) => diagnostics.push(
                 Diagnostic::warning(
                     path.to_path_buf(),
@@ -998,11 +1070,11 @@ fn validate_sandbox_credential_entries(
                     0,
                     "CC-SET-012",
                     format!(
-                        "sandbox.credentials.{array_key}[{index}].mode must be \"deny\" (got \"{mode}\")"
+                        "sandbox.credentials.{array_key}[{index}].mode must be \"deny\" or \"mask\" (got \"{mode}\")"
                     ),
                 )
                 .with_suggestion(format!(
-                    "Set sandbox.credentials.{array_key}[{index}].mode to \"deny\"; no other mode is documented.",
+                    "Set sandbox.credentials.{array_key}[{index}].mode to \"deny\" or \"mask\".",
                 )),
             ),
             None => {
@@ -1017,16 +1089,286 @@ fn validate_sandbox_credential_entries(
                         0,
                         "CC-SET-012",
                         format!(
-                            "sandbox.credentials.{array_key}[{index}].mode must be \"deny\" (got {actual})"
+                            "sandbox.credentials.{array_key}[{index}].mode must be \"deny\" or \"mask\" (got {actual})"
                         ),
                     )
                     .with_suggestion(format!(
-                        "Set sandbox.credentials.{array_key}[{index}].mode to \"deny\".",
+                        "Set sandbox.credentials.{array_key}[{index}].mode to \"deny\" or \"mask\".",
                     )),
                 );
             }
         }
+
+        validate_sandbox_credential_inject_hosts(
+            path,
+            line,
+            array_key,
+            index,
+            entry_obj.get("injectHosts"),
+            diagnostics,
+        );
+
+        if matches!(kind, SandboxCredentialKind::File) {
+            validate_sandbox_credential_file_options(
+                path,
+                line,
+                array_key,
+                index,
+                entry_obj,
+                mode,
+                diagnostics,
+            );
+        }
     }
+}
+
+fn is_valid_environment_variable_name(name: &str) -> bool {
+    let mut chars = name.chars();
+    let Some(first) = chars.next() else {
+        return false;
+    };
+    (first.is_ascii_alphabetic() || first == '_')
+        && chars.all(|c| c.is_ascii_alphanumeric() || c == '_')
+}
+
+fn validate_sandbox_credential_inject_hosts(
+    path: &Path,
+    line: usize,
+    array_key: &str,
+    index: usize,
+    value: Option<&serde_json::Value>,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(value) = value else {
+        return;
+    };
+    let Some(hosts) = value.as_array() else {
+        diagnostics.push(
+            Diagnostic::warning(
+                path.to_path_buf(),
+                line,
+                0,
+                "CC-SET-012",
+                format!(
+                    "sandbox.credentials.{array_key}[{index}].injectHosts must be an array of strings (got {})",
+                    describe_json_type(value)
+                ),
+            )
+            .with_suggestion(format!(
+                "Set sandbox.credentials.{array_key}[{index}].injectHosts to an array of host strings, or remove it.",
+            )),
+        );
+        return;
+    };
+
+    for (host_index, host) in hosts.iter().enumerate() {
+        if !host.is_string() {
+            diagnostics.push(
+                Diagnostic::warning(
+                    path.to_path_buf(),
+                    line,
+                    0,
+                    "CC-SET-012",
+                    format!(
+                        "sandbox.credentials.{array_key}[{index}].injectHosts[{host_index}] must be a string (got {})",
+                        describe_json_type(host)
+                    ),
+                )
+                .with_suggestion(format!(
+                    "Replace sandbox.credentials.{array_key}[{index}].injectHosts[{host_index}] with a host string.",
+                )),
+            );
+        }
+    }
+}
+
+fn validate_sandbox_credential_file_options(
+    path: &Path,
+    line: usize,
+    array_key: &str,
+    index: usize,
+    entry: &serde_json::Map<String, serde_json::Value>,
+    mode: Option<&str>,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    if mode == Some("mask")
+        && entry
+            .get("path")
+            .and_then(|value| value.as_str())
+            .is_some_and(|value| value.ends_with('/'))
+    {
+        diagnostics.push(
+            Diagnostic::warning(
+                path.to_path_buf(),
+                line,
+                0,
+                "CC-SET-012",
+                format!(
+                    "sandbox.credentials.{array_key}[{index}].path must identify a single file when mode is \"mask\""
+                ),
+            )
+            .with_suggestion(
+                "List the specific credential file to mask, or use mode \"deny\" for a directory.",
+            ),
+        );
+    }
+
+    if let Some(value) = entry.get("extract") {
+        match value.as_str() {
+            Some(pattern) if let Err(error) = regress::Regex::new(pattern) => {
+                diagnostics.push(
+                    Diagnostic::warning(
+                        path.to_path_buf(),
+                        line,
+                        0,
+                        "CC-SET-012",
+                        format!(
+                            "sandbox.credentials.{array_key}[{index}].extract must be a valid ECMAScript regex ({error})"
+                        ),
+                    )
+                    .with_suggestion(format!(
+                        "Fix the regex syntax in sandbox.credentials.{array_key}[{index}].extract, or remove extract for whole-file masking.",
+                    )),
+                );
+            }
+            Some(pattern)
+                if mode == Some("mask") && !has_javascript_capturing_group(pattern) =>
+            {
+                diagnostics.push(
+                    Diagnostic::warning(
+                        path.to_path_buf(),
+                        line,
+                        0,
+                        "CC-SET-012",
+                        format!(
+                            "sandbox.credentials.{array_key}[{index}].extract must contain a capturing group when mode is \"mask\""
+                        ),
+                    )
+                    .with_suggestion(format!(
+                        "Add a credential capture group to sandbox.credentials.{array_key}[{index}].extract, such as \"token:\\\\s*(\\\\S+)\", or remove extract for whole-file masking.",
+                    )),
+                );
+            }
+            Some(_) => {}
+            None => diagnostics.push(
+                Diagnostic::warning(
+                    path.to_path_buf(),
+                    line,
+                    0,
+                    "CC-SET-012",
+                    format!(
+                        "sandbox.credentials.{array_key}[{index}].extract must be a regex string (got {})",
+                        describe_json_type(value)
+                    ),
+                )
+                .with_suggestion(format!(
+                    "Set sandbox.credentials.{array_key}[{index}].extract to a regex string with a credential capture group, or remove it.",
+                )),
+            ),
+        }
+    }
+
+    if let Some(value) = entry.get("onExtractNoMatch") {
+        match value.as_str() {
+            Some("warn" | "deny" | "error") => {}
+            Some(actual) => diagnostics.push(
+                Diagnostic::warning(
+                    path.to_path_buf(),
+                    line,
+                    0,
+                    "CC-SET-012",
+                    format!(
+                        "sandbox.credentials.{array_key}[{index}].onExtractNoMatch must be \"warn\", \"deny\", or \"error\" (got \"{actual}\")"
+                    ),
+                )
+                .with_suggestion(format!(
+                    "Set sandbox.credentials.{array_key}[{index}].onExtractNoMatch to \"warn\", \"deny\", or \"error\".",
+                )),
+            ),
+            None => diagnostics.push(
+                Diagnostic::warning(
+                    path.to_path_buf(),
+                    line,
+                    0,
+                    "CC-SET-012",
+                    format!(
+                        "sandbox.credentials.{array_key}[{index}].onExtractNoMatch must be a string (got {})",
+                        describe_json_type(value)
+                    ),
+                )
+                .with_suggestion(format!(
+                    "Set sandbox.credentials.{array_key}[{index}].onExtractNoMatch to \"warn\", \"deny\", or \"error\".",
+                )),
+            ),
+        }
+    }
+
+    if let Some(value) = entry.get("maskDuplicates")
+        && !value.is_boolean()
+    {
+        diagnostics.push(
+            Diagnostic::warning(
+                path.to_path_buf(),
+                line,
+                0,
+                "CC-SET-012",
+                format!(
+                    "sandbox.credentials.{array_key}[{index}].maskDuplicates must be a boolean (got {})",
+                    describe_json_type(value)
+                ),
+            )
+            .with_suggestion(format!(
+                "Set sandbox.credentials.{array_key}[{index}].maskDuplicates to an unquoted true or false, or remove it.",
+            )),
+        );
+    }
+}
+
+fn has_javascript_capturing_group(pattern: &str) -> bool {
+    let bytes = pattern.as_bytes();
+    let mut escaped = false;
+    let mut in_character_class = false;
+    let mut index = 0;
+
+    while index < bytes.len() {
+        let byte = bytes[index];
+        if escaped {
+            escaped = false;
+            index += 1;
+            continue;
+        }
+        if byte == b'\\' {
+            escaped = true;
+            index += 1;
+            continue;
+        }
+        if byte == b'[' {
+            in_character_class = true;
+            index += 1;
+            continue;
+        }
+        if byte == b']' && in_character_class {
+            in_character_class = false;
+            index += 1;
+            continue;
+        }
+        if byte != b'(' || in_character_class {
+            index += 1;
+            continue;
+        }
+
+        if bytes.get(index + 1) != Some(&b'?') {
+            return true;
+        }
+        if bytes.get(index + 2) == Some(&b'<')
+            && !matches!(bytes.get(index + 3), Some(b'=') | Some(b'!'))
+        {
+            return true;
+        }
+        index += 1;
+    }
+
+    false
 }
 
 /// CC-SET-013: Validate `autoMode.classifyAllShell`. Claude Code v2.1.193
@@ -2679,12 +3021,24 @@ mod tests {
             "credentials": {
               "files": [
                 { "path": "~/.aws/credentials", "mode": "deny" },
-                { "path": "~/.ssh", "mode": "deny" }
+                {
+                  "path": "~/.netrc",
+                  "mode": "mask",
+                  "extract": "password:\\s*(\\S+)",
+                  "onExtractNoMatch": "deny",
+                  "maskDuplicates": true,
+                  "injectHosts": ["api.example.com"]
+                }
               ],
               "envVars": [
                 { "name": "GITHUB_TOKEN", "mode": "deny" },
-                { "name": "NPM_TOKEN", "mode": "deny" }
-              ]
+                {
+                  "name": "NPM_TOKEN",
+                  "mode": "mask",
+                  "injectHosts": ["registry.npmjs.org"]
+                }
+              ],
+              "allowPlaintextInject": false
             }
           }
         }"#;
@@ -2789,7 +3143,7 @@ mod tests {
     }
 
     #[test]
-    fn test_sandbox_credentials_mode_must_be_deny() {
+    fn test_sandbox_credentials_mode_must_be_supported() {
         let diagnostics = validate(
             r#"{"sandbox": {"credentials": {"files": [{"path": "~/.aws/credentials", "mode": "allow"}]}}}"#,
         );
@@ -2800,6 +3154,117 @@ mod tests {
         assert_eq!(hits.len(), 1);
         assert!(hits[0].message.contains("mode"));
         assert!(hits[0].message.contains("deny"));
+        assert!(hits[0].message.contains("mask"));
+    }
+
+    #[test]
+    fn test_sandbox_credentials_mask_mode_is_valid_for_files_and_env_vars() {
+        let content = r#"{
+          "sandbox": {
+            "credentials": {
+              "files": [{"path": "~/.netrc", "mode": "mask"}],
+              "envVars": [{"name": "GITHUB_TOKEN", "mode": "mask"}]
+            }
+          }
+        }"#;
+        assert!(validate(content).iter().all(|d| d.rule != "CC-SET-012"));
+    }
+
+    #[test]
+    fn test_sandbox_credentials_mask_directory_flags() {
+        let diagnostics = validate(
+            r#"{"sandbox": {"credentials": {"files": [{"path": "~/.aws/", "mode": "mask"}]}}}"#,
+        );
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-012")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        assert!(hits[0].message.contains("single file"));
+    }
+
+    #[test]
+    fn test_sandbox_credentials_extract_requires_capture_for_mask() {
+        let diagnostics = validate(
+            r#"{"sandbox": {"credentials": {"files": [{"path": "~/.netrc", "mode": "mask", "extract": "password=\\S+"}]}}}"#,
+        );
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-012")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        assert!(hits[0].message.contains("capturing group"));
+
+        let valid = validate(
+            r#"{"sandbox": {"credentials": {"files": [{"path": "~/.netrc", "mode": "mask", "extract": "password=(?<secret>\\S+)"}]}}}"#,
+        );
+        assert!(valid.iter().all(|d| d.rule != "CC-SET-012"));
+    }
+
+    #[test]
+    fn test_sandbox_credentials_extract_rejects_invalid_ecmascript_regex() {
+        let diagnostics = validate(
+            r#"{"sandbox": {"credentials": {"files": [{"path": "~/.netrc", "mode": "mask", "extract": "password=([A-Z]+"}]}}}"#,
+        );
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-012")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        assert!(hits[0].message.contains("valid ECMAScript regex"));
+    }
+
+    #[test]
+    fn test_sandbox_credentials_extract_accepts_ecmascript_lookaround_and_backreference() {
+        let diagnostics = validate(
+            r#"{"sandbox": {"credentials": {"files": [{"path": "~/.netrc", "mode": "mask", "extract": "(?<=token=)([A-Z]+)\\1"}]}}}"#,
+        );
+        assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-012"));
+    }
+
+    #[test]
+    fn test_sandbox_credentials_optional_field_types_are_checked() {
+        let diagnostics = validate(
+            r#"{
+              "sandbox": {
+                "credentials": {
+                  "files": [{
+                    "path": "~/.netrc",
+                    "mode": "mask",
+                    "extract": 42,
+                    "onExtractNoMatch": "ignore",
+                    "maskDuplicates": "true",
+                    "injectHosts": ["api.example.com", 42]
+                  }],
+                  "envVars": [{
+                    "name": "BAD-NAME",
+                    "mode": "mask",
+                    "injectHosts": "api.example.com"
+                  }],
+                  "allowPlaintextInject": "false"
+                }
+              }
+            }"#,
+        );
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-012")
+            .collect();
+        assert_eq!(hits.len(), 7);
+        assert!(
+            hits.iter()
+                .any(|d| d.message.contains("allowPlaintextInject"))
+        );
+        assert!(hits.iter().any(|d| d.message.contains("BAD-NAME")));
+        assert!(hits.iter().any(|d| d.message.contains("extract")));
+        assert!(hits.iter().any(|d| d.message.contains("onExtractNoMatch")));
+        assert!(hits.iter().any(|d| d.message.contains("maskDuplicates")));
+        assert_eq!(
+            hits.iter()
+                .filter(|d| d.message.contains("injectHosts"))
+                .count(),
+            2
+        );
     }
 
     #[test]

@@ -2799,9 +2799,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.claude.com/docs/en/plugins-reference"
+          "https://code.claude.com/docs/en/plugins-reference",
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.221"
         ],
-        "verified_on": "2026-07-31",
+        "verified_on": "2026-08-04",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -2816,7 +2817,7 @@
         "autofix": true,
         "fix_safety": "safe"
       },
-      "good_example": "{\n  \"name\": \"my-plugin\",\n  \"description\": \"A useful plugin\",\n  \"version\": \"1.0.0\",\n  \"commands\": \"./commands/\"\n}",
+      "good_example": "{\n  \"name\": \"my-plugin\",\n  \"description\": \"A useful plugin\",\n  \"version\": \"1.0.0\",\n  \"skills\": \".\"\n}",
       "bad_example": "{\n  \"name\": \"my-plugin\",\n  \"description\": \"A useful plugin\",\n  \"version\": \"1.0.0\",\n  \"commands\": \"/usr/local/bin/cmd\"\n}"
     },
     {
@@ -3947,10 +3948,12 @@
         "source_type": "vendor_docs",
         "source_urls": [
           "https://github.com/anthropics/claude-code/releases/tag/v2.1.187",
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.199",
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.221",
           "https://code.claude.com/docs/en/settings",
           "https://code.claude.com/docs/en/sandboxing"
         ],
-        "verified_on": "2026-06-25",
+        "verified_on": "2026-08-04",
         "applies_to": {
           "tool": "claude-code",
           "version_range": ">=2.1.187"
@@ -3965,8 +3968,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"sandbox\": {\n    \"credentials\": {\n      \"files\": [\n        {\"path\": \"~/.aws/credentials\", \"mode\": \"deny\"}\n      ],\n      \"envVars\": [\n        {\"name\": \"GITHUB_TOKEN\", \"mode\": \"deny\"}\n      ]\n    }\n  }\n}",
-      "bad_example": "{\n  \"sandbox\": {\n    \"credentials\": {\n      \"files\": [\n        {\"path\": \"~/.aws/credentials\", \"mode\": \"allow\"}\n      ],\n      \"envVars\": [\n        {\"name\": \"GITHUB_TOKEN\"}\n      ]\n    }\n  }\n}"
+      "good_example": "{\n  \"sandbox\": {\n    \"credentials\": {\n      \"files\": [\n        {\"path\": \"~/.netrc\", \"mode\": \"mask\", \"extract\": \"password:\\\\s*(\\\\S+)\", \"onExtractNoMatch\": \"deny\", \"injectHosts\": [\"api.example.com\"]}\n      ],\n      \"envVars\": [\n        {\"name\": \"GITHUB_TOKEN\", \"mode\": \"mask\", \"injectHosts\": [\"api.github.com\"]}\n      ],\n      \"allowPlaintextInject\": false\n    }\n  }\n}",
+      "bad_example": "{\n  \"sandbox\": {\n    \"credentials\": {\n      \"files\": [\n        {\"path\": \"~/.aws/\", \"mode\": \"mask\", \"extract\": \"password=\\\\S+\", \"onExtractNoMatch\": \"ignore\"}\n      ],\n      \"envVars\": [\n        {\"name\": \"BAD-NAME\", \"mode\": \"allow\"}\n      ],\n      \"allowPlaintextInject\": \"false\"\n    }\n  }\n}"
     },
     {
       "id": "CC-SET-013",
