@@ -435,10 +435,10 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="cc-set-012"></a>
 ### CC-SET-012 [MEDIUM] Invalid sandbox.credentials Setting
-**Requirement**: `sandbox.credentials` in `.claude/settings.json` / `.local.json` / `managed-settings.json` MUST be an object with optional `files` and `envVars` arrays when present (Claude Code 2.1.187+). Each `files` entry MUST be an object with non-empty string `path` and `mode: "deny"`. Each `envVars` entry MUST be an object with non-empty string `name` and `mode: "deny"`. No other `mode` value is documented.
-**Detection**: Parse settings.json; walk `sandbox.credentials`; flag (warning) non-object `credentials`, non-array `files` / `envVars`, non-object entries, missing / non-string / empty `path` or `name`, and missing / non-string / non-`deny` `mode`.
-**Fix**: Manual - set entries to `{ "path": "...", "mode": "deny" }` for credential files and `{ "name": "...", "mode": "deny" }` for credential environment variables, or remove invalid entries.
-**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.187 (added `sandbox.credentials`), code.claude.com/docs/en/settings, code.claude.com/docs/en/sandboxing
+**Requirement**: `sandbox.credentials` in `.claude/settings.json` / `.local.json` / `managed-settings.json` MUST be an object with optional `files` and `envVars` arrays when present (Claude Code 2.1.187+). Each entry MUST use `mode: "deny"` or `mode: "mask"`; environment-variable masking was added in 2.1.199 and file masking in 2.1.221. File entries require a non-empty string `path` and may include string `extract`, `onExtractNoMatch: "warn"|"deny"|"error"`, boolean `maskDuplicates`, and string-array `injectHosts`; a masked path ending in `/` is invalid because masking applies to one file. Masked `extract` patterns require a valid ECMAScript regex with a credential capture group. Environment entries require a shell-compatible variable `name` and may include string-array `injectHosts`. Claude Code accepts but ignores `extract`, `onExtractNoMatch`, `maskDuplicates`, and `injectHosts` on `deny` entries. Top-level `allowPlaintextInject`, when present, MUST be boolean.
+**Detection**: Parse settings.json; walk `sandbox.credentials`; validate the container and arrays, required target fields, supported modes, environment-variable names, mask-only file constraints, optional field types and enums, ECMAScript regex syntax and capture-group presence, injection host arrays, and `allowPlaintextInject`. Skip mask-only optional-field validation for `deny` entries to match Claude Code preprocessing.
+**Fix**: Manual - use a valid `deny` or `mask` entry shape for the credential target, or remove the invalid entry or option.
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.187 (added `sandbox.credentials`), github.com/anthropics/claude-code/releases/tag/v2.1.199 (added environment-variable masking), github.com/anthropics/claude-code/releases/tag/v2.1.221 (added file masking), code.claude.com/docs/en/settings, code.claude.com/docs/en/sandboxing
 
 <a id="cc-set-013"></a>
 ### CC-SET-013 [MEDIUM] Non-boolean autoMode.classifyAllShell Setting
@@ -1277,10 +1277,10 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 <a id="cc-pl-007"></a>
 ### CC-PL-007 [HIGH] Invalid Component Path
-**Requirement**: Paths in every documented path-bearing manifest field MUST be relative (no absolute paths or `..` traversal). The full set is `commands`, `agents`, `skills`, `workflows`, `hooks`, `mcpServers`, `outputStyles`, `lspServers`, `experimental.themes`, and `experimental.monitors`.
-**Detection**: Check path fields for absolute paths (`/`, `C:\`) or parent traversal (`..`)
-**Fix**: Prepend `./` to relative paths [safe autofix]
-**Source**: code.claude.com/docs/en/plugins-reference
+**Requirement**: Paths in every documented path-bearing manifest field MUST be relative (no absolute paths or `..` traversal). The full set is `commands`, `agents`, `skills`, `workflows`, `hooks`, `mcpServers`, `outputStyles`, `lspServers`, `experimental.themes`, and `experimental.monitors`. Relative paths SHOULD use a `./` prefix, except that Claude Code 2.1.221+ explicitly accepts `skills: "."` for a root-level `SKILL.md`.
+**Detection**: Check path fields for absolute paths (`/`, `C:\`), parent traversal (`..`), or a missing `./` prefix; exempt the documented `skills: "."` root path.
+**Fix**: Prepend `./` to relative paths other than the root `skills: "."` form [safe autofix]
+**Source**: code.claude.com/docs/en/plugins-reference, github.com/anthropics/claude-code/releases/tag/v2.1.221
 
 <a id="cc-pl-008"></a>
 ### CC-PL-008 [HIGH] Component Inside .claude-plugin

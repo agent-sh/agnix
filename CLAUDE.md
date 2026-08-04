@@ -22,7 +22,7 @@
 8. **Documentation** - Keep long-form docs in `README.md`, `SPEC.md`, and `knowledge-base/` (especially `knowledge-base/VALIDATION-RULES.md`). Keep `CLAUDE.md`/`AGENTS.md` for agent instructions only.
 9. **Always follow the skill/command flow as instructed** - No deviations
 10. **No unnecessary files** - Don't create summary files, plan files, or temp docs unless specifically required
-11. **Never merge without waiting for claude workflow to end successfully** - It might take time, but this is the major quality gate, and most thorough review.
+11. **Never merge without waiting for the `revuto-review` check to end successfully** - It might take time, but this is the major quality gate and most thorough review.
 12. **You MUST follow the flow phases one by one** - If they state to use subagents, tools, or any specific method, you must follow it exactly as described.
 13. **You MUST address all comments and reviews** - If reviewers leave comments, even minor ones, and even if not a requested change, you must address them all before merging. If you disagree, respond in the review comments. Minor comments must still be addressed.
 14. **Use single dash for em-dashes** - In prose, use ` - ` (single dash with spaces), never ` -- ` (double dash). This does not apply to CLI flags like `--help` or `--fix`.

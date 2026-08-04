@@ -13,7 +13,7 @@ keywords: ["CC-PL-007", "invalid component path", "claude plugins", "validation"
 - **Category**: `Claude Plugins`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `Yes (safe)`
-- **Verified On**: `2026-07-31`
+- **Verified On**: `2026-08-04`
 
 ## Applicability
 
@@ -24,6 +24,7 @@ keywords: ["CC-PL-007", "invalid component path", "claude plugins", "validation"
 ## Evidence Sources
 
 - https://code.claude.com/docs/en/plugins-reference
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.221
 
 ## Test Coverage Metadata
 
@@ -53,6 +54,6 @@ The following examples demonstrate what triggers this rule and how to fix it.
   "name": "my-plugin",
   "description": "A useful plugin",
   "version": "1.0.0",
-  "commands": "./commands/"
+  "skills": "."
 }
 ```
