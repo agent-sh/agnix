@@ -29,8 +29,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2
         with:
-          # `shared-key` (rather than the default job-name key) lets the Claude
-          # review job restore this cache instead of cold-building the workspace.
+          # Keep one stable dependency cache namespace across the OS matrix.
           shared-key: agnix-workspace
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
