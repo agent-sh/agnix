@@ -90,7 +90,6 @@ When a new version of an action is released:
 | test-action.yml | push/PR (action paths) | Test the GitHub Action |
 | changelog.yml | PR | Verify CHANGELOG.md is updated |
 | claude.yml | issue/PR comments | Claude Code assistant |
-| claude-code-review.yml | PR | Automated code review |
 | spec-drift.yml | schedule/manual | Monitor upstream specs for changes |
 | mcp-release-watch.yml | daily/manual | Watch MCP spec repo for new releases |
 | docs-site.yml | push/PR/manual | Build and deploy documentation website |

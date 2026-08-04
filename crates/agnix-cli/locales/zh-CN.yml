@@ -721,6 +721,40 @@ rules:
   cc_set_009:
     message: attribution.sessionUrl 存在时必须是布尔值 (实际为 %{actual}); Claude Code 2.1.183+ 将该归因选项记录为严格的 true/false 设置
     suggestion: 将 attribution.sessionUrl 设置为不带引号的 true 或 false。使用 false 可在 Web 或 Remote Control 会话创建的 commit 和 PR 描述中省略 claude.ai 会话链接。
+  cc_set_012:
+    credentials_object: sandbox.credentials 必须是包含可选 files 和 envVars 数组的对象（实际为 %{actual}）
+    credentials_object_suggestion: '将 sandbox.credentials 设置为对象，例如 {"files":[{"path":"~/.aws/credentials","mode":"deny"}],"envVars":[{"name":"GITHUB_TOKEN","mode":"deny"}]}，或移除此字段。'
+    allow_plaintext_type: sandbox.credentials.allowPlaintextInject 必须是布尔值（实际为 %{actual}）
+    allow_plaintext_suggestion: 将 sandbox.credentials.allowPlaintextInject 设置为不带引号的 true 或 false，或移除此字段。
+    entries_array: sandbox.credentials.%{array_key} 必须是数组（实际为 %{actual}）
+    entries_array_suggestion: '将 sandbox.credentials.%{array_key} 设置为对象数组，每个对象包含 "%{required_key}"，且 "mode" 为 "deny" 或 "mask"。'
+    entry_object: sandbox.credentials.%{array_key}[%{index}] 必须是对象（实际为 %{actual}）
+    entry_object_suggestion: 'sandbox.credentials.%{array_key} 中的每个条目应使用 {"%{required_key}": "...", "mode": "deny"} 或 {"%{required_key}": "...", "mode": "mask"}。'
+    required_empty: sandbox.credentials.%{array_key}[%{index}].%{required_key} 不能为空
+    required_type: sandbox.credentials.%{array_key}[%{index}].%{required_key} 必须是字符串（实际为 %{actual}）
+    required_suggestion: 将 sandbox.credentials.%{array_key}[%{index}].%{required_key} 设置为标识凭据目标的非空字符串。
+    env_name: 'sandbox.credentials.%{array_key}[%{index}].name 必须以字母或下划线开头，且只能包含字母、数字和下划线（实际为 "%{name}"）'
+    env_name_suggestion: 将 sandbox.credentials.%{array_key}[%{index}].name 设置为有效的环境变量名称，例如 GITHUB_TOKEN。
+    mode_value: 'sandbox.credentials.%{array_key}[%{index}].mode 必须是 "deny" 或 "mask"（实际为 "%{mode}"）'
+    mode_type: 'sandbox.credentials.%{array_key}[%{index}].mode 必须是 "deny" 或 "mask"（实际为 %{actual}）'
+    mode_suggestion: '将 sandbox.credentials.%{array_key}[%{index}].mode 设置为 "deny" 或 "mask"。'
+    inject_hosts_array: sandbox.credentials.%{array_key}[%{index}].injectHosts 必须是字符串数组（实际为 %{actual}）
+    inject_hosts_suggestion: 将 sandbox.credentials.%{array_key}[%{index}].injectHosts 设置为主机字符串数组，或移除此字段。
+    inject_host_type: sandbox.credentials.%{array_key}[%{index}].injectHosts[%{host_index}] 必须是字符串（实际为 %{actual}）
+    inject_host_suggestion: 将 sandbox.credentials.%{array_key}[%{index}].injectHosts[%{host_index}] 替换为主机字符串。
+    mask_file: 'mode 为 "mask" 时，sandbox.credentials.%{array_key}[%{index}].path 必须标识单个文件'
+    mask_file_suggestion: '列出要屏蔽的具体凭据文件，或对目录使用 mode "deny"。'
+    extract_regex: sandbox.credentials.%{array_key}[%{index}].extract 必须是有效的 ECMAScript 正则表达式（%{error}）
+    extract_regex_suggestion: 修复 sandbox.credentials.%{array_key}[%{index}].extract 中的正则表达式语法，或移除 extract 以屏蔽整个文件。
+    extract_capture: 'mode 为 "mask" 时，sandbox.credentials.%{array_key}[%{index}].extract 必须包含捕获组'
+    extract_capture_suggestion: '向 sandbox.credentials.%{array_key}[%{index}].extract 添加凭据捕获组，例如 "token:\s*(\S+)"，或移除 extract 以屏蔽整个文件。'
+    extract_type: sandbox.credentials.%{array_key}[%{index}].extract 必须是正则表达式字符串（实际为 %{actual}）
+    extract_type_suggestion: 将 sandbox.credentials.%{array_key}[%{index}].extract 设置为包含凭据捕获组的正则表达式字符串，或移除此字段。
+    extract_no_match_value: 'sandbox.credentials.%{array_key}[%{index}].onExtractNoMatch 必须是 "warn"、"deny" 或 "error"（实际为 "%{actual}"）'
+    extract_no_match_type: sandbox.credentials.%{array_key}[%{index}].onExtractNoMatch 必须是字符串（实际为 %{actual}）
+    extract_no_match_suggestion: '将 sandbox.credentials.%{array_key}[%{index}].onExtractNoMatch 设置为 "warn"、"deny" 或 "error"。'
+    mask_duplicates_type: sandbox.credentials.%{array_key}[%{index}].maskDuplicates 必须是布尔值（实际为 %{actual}）
+    mask_duplicates_suggestion: 将 sandbox.credentials.%{array_key}[%{index}].maskDuplicates 设置为不带引号的 true 或 false，或移除此字段。
   cc_set_013:
     message: autoMode.classifyAllShell 存在时必须是布尔值 (实际为 %{actual}); Claude Code 2.1.193+ 将该 auto-mode 设置记录为严格的 true/false 开关
     suggestion: 将 autoMode.classifyAllShell 设置为不带引号的 true 或 false，或移除此字段以保留默认的 auto-mode 分类器范围。

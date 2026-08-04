@@ -757,6 +757,40 @@ rules:
       documenta esta atribucion como una configuracion true/false estricta
     suggestion: Establece attribution.sessionUrl en true o false sin comillas. Usa false para omitir enlaces de sesion
       claude.ai en commits y descripciones de PR creados desde sesiones web o Remote Control.
+  cc_set_012:
+    credentials_object: sandbox.credentials debe ser un objeto con arrays opcionales files y envVars (se obtuvo %{actual})
+    credentials_object_suggestion: 'Establece sandbox.credentials como un objeto, por ejemplo {"files":[{"path":"~/.aws/credentials","mode":"deny"}],"envVars":[{"name":"GITHUB_TOKEN","mode":"deny"}]}, o eliminalo.'
+    allow_plaintext_type: sandbox.credentials.allowPlaintextInject debe ser booleano (se obtuvo %{actual})
+    allow_plaintext_suggestion: Establece sandbox.credentials.allowPlaintextInject en true o false sin comillas, o eliminalo.
+    entries_array: sandbox.credentials.%{array_key} debe ser un array (se obtuvo %{actual})
+    entries_array_suggestion: 'Establece sandbox.credentials.%{array_key} como un array de objetos con "%{required_key}" y un "mode" de "deny" o "mask".'
+    entry_object: sandbox.credentials.%{array_key}[%{index}] debe ser un objeto (se obtuvo %{actual})
+    entry_object_suggestion: 'Usa {"%{required_key}": "...", "mode": "deny"} o {"%{required_key}": "...", "mode": "mask"} para cada entrada de sandbox.credentials.%{array_key}.'
+    required_empty: sandbox.credentials.%{array_key}[%{index}].%{required_key} no debe estar vacio
+    required_type: sandbox.credentials.%{array_key}[%{index}].%{required_key} debe ser una cadena (se obtuvo %{actual})
+    required_suggestion: Establece sandbox.credentials.%{array_key}[%{index}].%{required_key} como una cadena no vacia que identifique el objetivo de credenciales.
+    env_name: 'sandbox.credentials.%{array_key}[%{index}].name debe comenzar con una letra o guion bajo y contener solo letras, digitos y guiones bajos (se obtuvo "%{name}")'
+    env_name_suggestion: Establece sandbox.credentials.%{array_key}[%{index}].name como un nombre de variable de entorno valido, por ejemplo GITHUB_TOKEN.
+    mode_value: 'sandbox.credentials.%{array_key}[%{index}].mode debe ser "deny" o "mask" (se obtuvo "%{mode}")'
+    mode_type: 'sandbox.credentials.%{array_key}[%{index}].mode debe ser "deny" o "mask" (se obtuvo %{actual})'
+    mode_suggestion: 'Establece sandbox.credentials.%{array_key}[%{index}].mode en "deny" o "mask".'
+    inject_hosts_array: sandbox.credentials.%{array_key}[%{index}].injectHosts debe ser un array de cadenas (se obtuvo %{actual})
+    inject_hosts_suggestion: Establece sandbox.credentials.%{array_key}[%{index}].injectHosts como un array de hosts, o eliminalo.
+    inject_host_type: sandbox.credentials.%{array_key}[%{index}].injectHosts[%{host_index}] debe ser una cadena (se obtuvo %{actual})
+    inject_host_suggestion: Reemplaza sandbox.credentials.%{array_key}[%{index}].injectHosts[%{host_index}] con una cadena de host.
+    mask_file: 'sandbox.credentials.%{array_key}[%{index}].path debe identificar un solo archivo cuando mode es "mask"'
+    mask_file_suggestion: 'Indica el archivo de credenciales especifico que se debe enmascarar, o usa mode "deny" para un directorio.'
+    extract_regex: sandbox.credentials.%{array_key}[%{index}].extract debe ser una expresion regular ECMAScript valida (%{error})
+    extract_regex_suggestion: Corrige la sintaxis de la expresion regular en sandbox.credentials.%{array_key}[%{index}].extract, o elimina extract para enmascarar el archivo completo.
+    extract_capture: 'sandbox.credentials.%{array_key}[%{index}].extract debe contener un grupo de captura cuando mode es "mask"'
+    extract_capture_suggestion: 'Agrega un grupo de captura de credenciales a sandbox.credentials.%{array_key}[%{index}].extract, por ejemplo "token:\s*(\S+)", o elimina extract para enmascarar el archivo completo.'
+    extract_type: sandbox.credentials.%{array_key}[%{index}].extract debe ser una cadena de expresion regular (se obtuvo %{actual})
+    extract_type_suggestion: Establece sandbox.credentials.%{array_key}[%{index}].extract como una expresion regular con un grupo de captura de credenciales, o eliminalo.
+    extract_no_match_value: 'sandbox.credentials.%{array_key}[%{index}].onExtractNoMatch debe ser "warn", "deny" o "error" (se obtuvo "%{actual}")'
+    extract_no_match_type: sandbox.credentials.%{array_key}[%{index}].onExtractNoMatch debe ser una cadena (se obtuvo %{actual})
+    extract_no_match_suggestion: 'Establece sandbox.credentials.%{array_key}[%{index}].onExtractNoMatch en "warn", "deny" o "error".'
+    mask_duplicates_type: sandbox.credentials.%{array_key}[%{index}].maskDuplicates debe ser booleano (se obtuvo %{actual})
+    mask_duplicates_suggestion: Establece sandbox.credentials.%{array_key}[%{index}].maskDuplicates en true o false sin comillas, o eliminalo.
   cc_set_013:
     message: autoMode.classifyAllShell debe ser un booleano cuando esta presente (se obtuvo %{actual}); Claude Code 2.1.193+
       documenta esta configuracion de auto-mode como un interruptor true/false estricto

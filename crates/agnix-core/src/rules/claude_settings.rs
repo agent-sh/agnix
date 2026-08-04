@@ -863,14 +863,12 @@ fn validate_sandbox_credentials(
                 credentials_line,
                 0,
                 "CC-SET-012",
-                format!(
-                    "sandbox.credentials must be an object with optional files and envVars arrays (got {})",
-                    describe_json_type(credentials)
+                t!(
+                    "rules.cc_set_012.credentials_object",
+                    actual = describe_json_type(credentials)
                 ),
             )
-            .with_suggestion(
-                "Set sandbox.credentials to an object like {\"files\":[{\"path\":\"~/.aws/credentials\",\"mode\":\"deny\"}],\"envVars\":[{\"name\":\"GITHUB_TOKEN\",\"mode\":\"deny\"}]} or remove it.",
-            ),
+            .with_suggestion(t!("rules.cc_set_012.credentials_object_suggestion")),
         );
         return;
     };
@@ -887,14 +885,12 @@ fn validate_sandbox_credentials(
                 line,
                 0,
                 "CC-SET-012",
-                format!(
-                    "sandbox.credentials.allowPlaintextInject must be a boolean (got {})",
-                    describe_json_type(value)
+                t!(
+                    "rules.cc_set_012.allow_plaintext_type",
+                    actual = describe_json_type(value)
                 ),
             )
-            .with_suggestion(
-                "Set sandbox.credentials.allowPlaintextInject to an unquoted true or false, or remove it.",
-            ),
+            .with_suggestion(t!("rules.cc_set_012.allow_plaintext_suggestion")),
         );
     }
 
@@ -934,13 +930,6 @@ impl SandboxCredentialKind {
             Self::EnvironmentVariable => "name",
         }
     }
-
-    fn required_label(self) -> &'static str {
-        match self {
-            Self::File => "credential file path",
-            Self::EnvironmentVariable => "credential environment variable name",
-        }
-    }
 }
 
 fn validate_sandbox_credential_entries(
@@ -955,7 +944,6 @@ fn validate_sandbox_credential_entries(
     };
     let array_key = kind.array_key();
     let required_key = kind.required_key();
-    let required_label = kind.required_label();
 
     let line = find_key_line(content, array_key)
         .or_else(|| find_key_line(content, "credentials"))
@@ -969,13 +957,16 @@ fn validate_sandbox_credential_entries(
                 line,
                 0,
                 "CC-SET-012",
-                format!(
-                    "sandbox.credentials.{array_key} must be an array (got {})",
-                    describe_json_type(value)
+                t!(
+                    "rules.cc_set_012.entries_array",
+                    array_key = array_key,
+                    actual = describe_json_type(value)
                 ),
             )
-            .with_suggestion(format!(
-                "Set sandbox.credentials.{array_key} to an array of objects with \"{required_key}\" and a \"mode\" of \"deny\" or \"mask\".",
+            .with_suggestion(t!(
+                "rules.cc_set_012.entries_array_suggestion",
+                array_key = array_key,
+                required_key = required_key
             )),
         );
         return;
@@ -989,13 +980,17 @@ fn validate_sandbox_credential_entries(
                     line,
                     0,
                     "CC-SET-012",
-                    format!(
-                        "sandbox.credentials.{array_key}[{index}] must be an object (got {})",
-                        describe_json_type(entry)
+                    t!(
+                        "rules.cc_set_012.entry_object",
+                        array_key = array_key,
+                        index = index,
+                        actual = describe_json_type(entry)
                     ),
                 )
-                .with_suggestion(format!(
-                    "Use {{\"{required_key}\": \"...\", \"mode\": \"deny\"}} or {{\"{required_key}\": \"...\", \"mode\": \"mask\"}} for each sandbox.credentials.{array_key} entry.",
+                .with_suggestion(t!(
+                    "rules.cc_set_012.entry_object_suggestion",
+                    array_key = array_key,
+                    required_key = required_key
                 )),
             );
             continue;
@@ -1009,12 +1004,18 @@ fn validate_sandbox_credential_entries(
                     line,
                     0,
                     "CC-SET-012",
-                    format!(
-                        "sandbox.credentials.{array_key}[{index}].{required_key} must not be empty"
+                    t!(
+                        "rules.cc_set_012.required_empty",
+                        array_key = array_key,
+                        index = index,
+                        required_key = required_key
                     ),
                 )
-                .with_suggestion(format!(
-                    "Set sandbox.credentials.{array_key}[{index}].{required_key} to a non-empty {required_label}.",
+                .with_suggestion(t!(
+                    "rules.cc_set_012.required_suggestion",
+                    array_key = array_key,
+                    index = index,
+                    required_key = required_key
                 )),
             ),
             None => {
@@ -1028,12 +1029,19 @@ fn validate_sandbox_credential_entries(
                         line,
                         0,
                         "CC-SET-012",
-                        format!(
-                            "sandbox.credentials.{array_key}[{index}].{required_key} must be a string (got {actual})"
+                        t!(
+                            "rules.cc_set_012.required_type",
+                            array_key = array_key,
+                            index = index,
+                            required_key = required_key,
+                            actual = actual
                         ),
                     )
-                    .with_suggestion(format!(
-                        "Set sandbox.credentials.{array_key}[{index}].{required_key} to a non-empty {required_label}.",
+                    .with_suggestion(t!(
+                        "rules.cc_set_012.required_suggestion",
+                        array_key = array_key,
+                        index = index,
+                        required_key = required_key
                     )),
                 );
             }
@@ -1050,12 +1058,17 @@ fn validate_sandbox_credential_entries(
                     line,
                     0,
                     "CC-SET-012",
-                    format!(
-                        "sandbox.credentials.{array_key}[{index}].name must start with a letter or underscore and contain only letters, digits, and underscores (got \"{name}\")"
+                    t!(
+                        "rules.cc_set_012.env_name",
+                        array_key = array_key,
+                        index = index,
+                        name = name
                     ),
                 )
-                .with_suggestion(format!(
-                    "Set sandbox.credentials.{array_key}[{index}].name to a valid environment variable name such as GITHUB_TOKEN.",
+                .with_suggestion(t!(
+                    "rules.cc_set_012.env_name_suggestion",
+                    array_key = array_key,
+                    index = index
                 )),
             );
         }
@@ -1069,12 +1082,17 @@ fn validate_sandbox_credential_entries(
                     line,
                     0,
                     "CC-SET-012",
-                    format!(
-                        "sandbox.credentials.{array_key}[{index}].mode must be \"deny\" or \"mask\" (got \"{mode}\")"
+                    t!(
+                        "rules.cc_set_012.mode_value",
+                        array_key = array_key,
+                        index = index,
+                        mode = mode
                     ),
                 )
-                .with_suggestion(format!(
-                    "Set sandbox.credentials.{array_key}[{index}].mode to \"deny\" or \"mask\".",
+                .with_suggestion(t!(
+                    "rules.cc_set_012.mode_suggestion",
+                    array_key = array_key,
+                    index = index
                 )),
             ),
             None => {
@@ -1088,36 +1106,45 @@ fn validate_sandbox_credential_entries(
                         line,
                         0,
                         "CC-SET-012",
-                        format!(
-                            "sandbox.credentials.{array_key}[{index}].mode must be \"deny\" or \"mask\" (got {actual})"
+                        t!(
+                            "rules.cc_set_012.mode_type",
+                            array_key = array_key,
+                            index = index,
+                            actual = actual
                         ),
                     )
-                    .with_suggestion(format!(
-                        "Set sandbox.credentials.{array_key}[{index}].mode to \"deny\" or \"mask\".",
+                    .with_suggestion(t!(
+                        "rules.cc_set_012.mode_suggestion",
+                        array_key = array_key,
+                        index = index
                     )),
                 );
             }
         }
 
-        validate_sandbox_credential_inject_hosts(
-            path,
-            line,
-            array_key,
-            index,
-            entry_obj.get("injectHosts"),
-            diagnostics,
-        );
-
-        if matches!(kind, SandboxCredentialKind::File) {
-            validate_sandbox_credential_file_options(
+        // Claude Code accepts these fields on deny entries but removes and
+        // ignores them before schema validation. Only mask entries use them.
+        if mode != Some("deny") {
+            validate_sandbox_credential_inject_hosts(
                 path,
                 line,
                 array_key,
                 index,
-                entry_obj,
-                mode,
+                entry_obj.get("injectHosts"),
                 diagnostics,
             );
+
+            if matches!(kind, SandboxCredentialKind::File) {
+                validate_sandbox_credential_file_options(
+                    path,
+                    line,
+                    array_key,
+                    index,
+                    entry_obj,
+                    mode,
+                    diagnostics,
+                );
+            }
         }
     }
 }
@@ -1149,13 +1176,17 @@ fn validate_sandbox_credential_inject_hosts(
                 line,
                 0,
                 "CC-SET-012",
-                format!(
-                    "sandbox.credentials.{array_key}[{index}].injectHosts must be an array of strings (got {})",
-                    describe_json_type(value)
+                t!(
+                    "rules.cc_set_012.inject_hosts_array",
+                    array_key = array_key,
+                    index = index,
+                    actual = describe_json_type(value)
                 ),
             )
-            .with_suggestion(format!(
-                "Set sandbox.credentials.{array_key}[{index}].injectHosts to an array of host strings, or remove it.",
+            .with_suggestion(t!(
+                "rules.cc_set_012.inject_hosts_suggestion",
+                array_key = array_key,
+                index = index
             )),
         );
         return;
@@ -1169,13 +1200,19 @@ fn validate_sandbox_credential_inject_hosts(
                     line,
                     0,
                     "CC-SET-012",
-                    format!(
-                        "sandbox.credentials.{array_key}[{index}].injectHosts[{host_index}] must be a string (got {})",
-                        describe_json_type(host)
+                    t!(
+                        "rules.cc_set_012.inject_host_type",
+                        array_key = array_key,
+                        index = index,
+                        host_index = host_index,
+                        actual = describe_json_type(host)
                     ),
                 )
-                .with_suggestion(format!(
-                    "Replace sandbox.credentials.{array_key}[{index}].injectHosts[{host_index}] with a host string.",
+                .with_suggestion(t!(
+                    "rules.cc_set_012.inject_host_suggestion",
+                    array_key = array_key,
+                    index = index,
+                    host_index = host_index
                 )),
             );
         }
@@ -1203,13 +1240,13 @@ fn validate_sandbox_credential_file_options(
                 line,
                 0,
                 "CC-SET-012",
-                format!(
-                    "sandbox.credentials.{array_key}[{index}].path must identify a single file when mode is \"mask\""
+                t!(
+                    "rules.cc_set_012.mask_file",
+                    array_key = array_key,
+                    index = index
                 ),
             )
-            .with_suggestion(
-                "List the specific credential file to mask, or use mode \"deny\" for a directory.",
-            ),
+            .with_suggestion(t!("rules.cc_set_012.mask_file_suggestion")),
         );
     }
 
@@ -1222,30 +1259,37 @@ fn validate_sandbox_credential_file_options(
                         line,
                         0,
                         "CC-SET-012",
-                        format!(
-                            "sandbox.credentials.{array_key}[{index}].extract must be a valid ECMAScript regex ({error})"
+                        t!(
+                            "rules.cc_set_012.extract_regex",
+                            array_key = array_key,
+                            index = index,
+                            error = error
                         ),
                     )
-                    .with_suggestion(format!(
-                        "Fix the regex syntax in sandbox.credentials.{array_key}[{index}].extract, or remove extract for whole-file masking.",
+                    .with_suggestion(t!(
+                        "rules.cc_set_012.extract_regex_suggestion",
+                        array_key = array_key,
+                        index = index
                     )),
                 );
             }
-            Some(pattern)
-                if mode == Some("mask") && !has_javascript_capturing_group(pattern) =>
-            {
+            Some(pattern) if mode == Some("mask") && !has_javascript_capturing_group(pattern) => {
                 diagnostics.push(
                     Diagnostic::warning(
                         path.to_path_buf(),
                         line,
                         0,
                         "CC-SET-012",
-                        format!(
-                            "sandbox.credentials.{array_key}[{index}].extract must contain a capturing group when mode is \"mask\""
+                        t!(
+                            "rules.cc_set_012.extract_capture",
+                            array_key = array_key,
+                            index = index
                         ),
                     )
-                    .with_suggestion(format!(
-                        "Add a credential capture group to sandbox.credentials.{array_key}[{index}].extract, such as \"token:\\\\s*(\\\\S+)\", or remove extract for whole-file masking.",
+                    .with_suggestion(t!(
+                        "rules.cc_set_012.extract_capture_suggestion",
+                        array_key = array_key,
+                        index = index
                     )),
                 );
             }
@@ -1256,13 +1300,17 @@ fn validate_sandbox_credential_file_options(
                     line,
                     0,
                     "CC-SET-012",
-                    format!(
-                        "sandbox.credentials.{array_key}[{index}].extract must be a regex string (got {})",
-                        describe_json_type(value)
+                    t!(
+                        "rules.cc_set_012.extract_type",
+                        array_key = array_key,
+                        index = index,
+                        actual = describe_json_type(value)
                     ),
                 )
-                .with_suggestion(format!(
-                    "Set sandbox.credentials.{array_key}[{index}].extract to a regex string with a credential capture group, or remove it.",
+                .with_suggestion(t!(
+                    "rules.cc_set_012.extract_type_suggestion",
+                    array_key = array_key,
+                    index = index
                 )),
             ),
         }
@@ -1277,12 +1325,17 @@ fn validate_sandbox_credential_file_options(
                     line,
                     0,
                     "CC-SET-012",
-                    format!(
-                        "sandbox.credentials.{array_key}[{index}].onExtractNoMatch must be \"warn\", \"deny\", or \"error\" (got \"{actual}\")"
+                    t!(
+                        "rules.cc_set_012.extract_no_match_value",
+                        array_key = array_key,
+                        index = index,
+                        actual = actual
                     ),
                 )
-                .with_suggestion(format!(
-                    "Set sandbox.credentials.{array_key}[{index}].onExtractNoMatch to \"warn\", \"deny\", or \"error\".",
+                .with_suggestion(t!(
+                    "rules.cc_set_012.extract_no_match_suggestion",
+                    array_key = array_key,
+                    index = index
                 )),
             ),
             None => diagnostics.push(
@@ -1291,13 +1344,17 @@ fn validate_sandbox_credential_file_options(
                     line,
                     0,
                     "CC-SET-012",
-                    format!(
-                        "sandbox.credentials.{array_key}[{index}].onExtractNoMatch must be a string (got {})",
-                        describe_json_type(value)
+                    t!(
+                        "rules.cc_set_012.extract_no_match_type",
+                        array_key = array_key,
+                        index = index,
+                        actual = describe_json_type(value)
                     ),
                 )
-                .with_suggestion(format!(
-                    "Set sandbox.credentials.{array_key}[{index}].onExtractNoMatch to \"warn\", \"deny\", or \"error\".",
+                .with_suggestion(t!(
+                    "rules.cc_set_012.extract_no_match_suggestion",
+                    array_key = array_key,
+                    index = index
                 )),
             ),
         }
@@ -1312,13 +1369,17 @@ fn validate_sandbox_credential_file_options(
                 line,
                 0,
                 "CC-SET-012",
-                format!(
-                    "sandbox.credentials.{array_key}[{index}].maskDuplicates must be a boolean (got {})",
-                    describe_json_type(value)
+                t!(
+                    "rules.cc_set_012.mask_duplicates_type",
+                    array_key = array_key,
+                    index = index,
+                    actual = describe_json_type(value)
                 ),
             )
-            .with_suggestion(format!(
-                "Set sandbox.credentials.{array_key}[{index}].maskDuplicates to an unquoted true or false, or remove it.",
+            .with_suggestion(t!(
+                "rules.cc_set_012.mask_duplicates_suggestion",
+                array_key = array_key,
+                index = index
             )),
         );
     }
@@ -3265,6 +3326,30 @@ mod tests {
                 .count(),
             2
         );
+    }
+
+    #[test]
+    fn test_sandbox_credentials_deny_mode_ignores_mask_only_fields() {
+        let content = r#"{
+          "sandbox": {
+            "credentials": {
+              "files": [{
+                "path": "~/.netrc",
+                "mode": "deny",
+                "extract": 42,
+                "onExtractNoMatch": 42,
+                "maskDuplicates": "true",
+                "injectHosts": 42
+              }],
+              "envVars": [{
+                "name": "GITHUB_TOKEN",
+                "mode": "deny",
+                "injectHosts": 42
+              }]
+            }
+          }
+        }"#;
+        assert!(validate(content).iter().all(|d| d.rule != "CC-SET-012"));
     }
 
     #[test]
