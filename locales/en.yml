@@ -1313,6 +1313,11 @@ rules:
   cc_set_020:
     message: workflowSizeGuideline must be unrestricted, small, medium, or large (got %{actual})
     suggestion: Set workflowSizeGuideline to one of unrestricted, small, medium, or large.
+  cc_set_021:
+    message: 'remoteControlAtStartup: true cannot enable Remote Control from project settings in Claude Code 2.1.222+;
+      this value is ignored'
+    suggestion: Enable Remote Control in user settings with /config, or set this field to false to disable it for the
+      project.
   cc_hk_028:
     message: Command hook at %{location} uses '${user_config.*}' interpolation, which Claude Code 2.1.207+ rejects at
       load time as a shell-injection fix
