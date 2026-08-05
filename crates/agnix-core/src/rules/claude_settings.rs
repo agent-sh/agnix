@@ -25,6 +25,7 @@
 //! - `emojiCompletionEnabled` boolean check (CC-SET-018, added in Claude Code v2.1.217).
 //! - `sandbox.network.strictAllowlist` boolean check (CC-SET-019, added in Claude Code v2.1.219).
 //! - `workflowSizeGuideline` enum check (CC-SET-020, added in Claude Code v2.1.219).
+//! - ineffective project-level `remoteControlAtStartup: true` (CC-SET-021, changed in Claude Code v2.1.222).
 //!
 //! Runs on FileType::Hooks (which covers `.claude/settings.json` -
 //! see `file_types/detection.rs`). Skips non-Claude Code settings paths
@@ -59,6 +60,7 @@ const RULE_IDS: &[&str] = &[
     "CC-SET-018",
     "CC-SET-019",
     "CC-SET-020",
+    "CC-SET-021",
 ];
 
 /// Allowed values for `worktree.baseRef` per Claude Code v2.1.133 release notes.
@@ -187,6 +189,10 @@ impl Validator for ClaudeSettingsValidator {
 
         if config.is_rule_enabled("CC-SET-020") {
             validate_workflow_size_guideline(path, content, &value, &mut diagnostics);
+        }
+
+        if config.is_rule_enabled("CC-SET-021") {
+            validate_remote_control_at_startup_scope(path, content, &value, &mut diagnostics);
         }
 
         diagnostics
@@ -1796,6 +1802,39 @@ fn validate_workflow_size_guideline(
             t!("rules.cc_set_020.message", actual = actual),
         )
         .with_suggestion(t!("rules.cc_set_020.suggestion")),
+    );
+}
+
+/// CC-SET-021: Warn when project settings try to enable Remote Control.
+///
+/// Claude Code 2.1.222 stopped honoring `remoteControlAtStartup: true` in
+/// repo-local settings. A project may still set it to `false` to disable
+/// Remote Control, while enabling it must happen at user scope via `/config`.
+/// Managed settings remain an honored policy tier and are excluded.
+fn validate_remote_control_at_startup_scope(
+    path: &Path,
+    content: &str,
+    value: &serde_json::Value,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let is_managed = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| name == "managed-settings.json");
+    if is_managed || value.get("remoteControlAtStartup") != Some(&serde_json::Value::Bool(true)) {
+        return;
+    }
+
+    let line = find_key_line(content, "remoteControlAtStartup").unwrap_or(1);
+    diagnostics.push(
+        Diagnostic::warning(
+            path.to_path_buf(),
+            line,
+            0,
+            "CC-SET-021",
+            t!("rules.cc_set_021.message"),
+        )
+        .with_suggestion(t!("rules.cc_set_021.suggestion")),
     );
 }
 
@@ -3998,5 +4037,75 @@ mod tests {
                 "expected one hit for {invalid}"
             );
         }
+    }
+
+    // ===== CC-SET-021: project-level Remote Control auto-start =====
+
+    #[test]
+    fn test_remote_control_at_startup_true_flags_project_settings() {
+        let content = r#"{"remoteControlAtStartup": true}"#;
+        for path in [".claude/settings.json", ".claude/settings.local.json"] {
+            let diagnostics = validate_at(path, content);
+            assert_eq!(
+                diagnostics
+                    .iter()
+                    .filter(|diagnostic| diagnostic.rule == "CC-SET-021")
+                    .count(),
+                1,
+                "expected one hit in {path}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_remote_control_at_startup_false_null_and_absent_are_valid() {
+        for content in [
+            r#"{"remoteControlAtStartup": false}"#,
+            r#"{"remoteControlAtStartup": null}"#,
+            r#"{"model": "sonnet"}"#,
+        ] {
+            assert!(
+                validate(content)
+                    .iter()
+                    .all(|diagnostic| diagnostic.rule != "CC-SET-021"),
+                "unexpected CC-SET-021 for {content}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_remote_control_at_startup_true_is_allowed_in_managed_settings() {
+        let diagnostics = validate_at(
+            ".claude/managed-settings.json",
+            r#"{"remoteControlAtStartup": true}"#,
+        );
+        assert!(
+            diagnostics
+                .iter()
+                .all(|diagnostic| diagnostic.rule != "CC-SET-021")
+        );
+    }
+
+    #[test]
+    fn test_remote_control_at_startup_diagnostic_points_to_key_and_can_be_disabled() {
+        let content = "{\n  \"model\": \"sonnet\",\n  \"remoteControlAtStartup\": true\n}";
+        let diagnostics = validate(content);
+        let diagnostic = diagnostics
+            .iter()
+            .find(|diagnostic| diagnostic.rule == "CC-SET-021")
+            .expect("CC-SET-021 diagnostic");
+        assert_eq!(diagnostic.line, 3);
+
+        let mut builder = LintConfig::builder();
+        builder.disable_rule("CC-SET-021");
+        let config = builder.build().expect("valid config");
+        let path = PathBuf::from(".claude/settings.json");
+        let per_file = config.for_path(&path);
+        assert!(
+            ClaudeSettingsValidator
+                .validate(&path, content, &per_file)
+                .iter()
+                .all(|diagnostic| diagnostic.rule != "CC-SET-021")
+        );
     }
 }

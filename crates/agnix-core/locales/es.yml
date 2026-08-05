@@ -826,6 +826,11 @@ rules:
   cc_set_020:
     message: workflowSizeGuideline debe ser unrestricted, small, medium o large (se obtuvo %{actual})
     suggestion: Establece workflowSizeGuideline en unrestricted, small, medium o large.
+  cc_set_021:
+    message: 'remoteControlAtStartup: true no puede habilitar Remote Control desde la configuracion del proyecto en Claude
+      Code 2.1.222+; este valor se ignora'
+    suggestion: Habilita Remote Control en la configuracion de usuario con /config, o establece este campo en false para
+      deshabilitarlo en el proyecto.
 
 
 # ===========================================================================

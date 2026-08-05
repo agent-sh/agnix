@@ -7,11 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **CC-SET-021: Ineffective Project Remote Control Auto-start**. Claude Code 2.1.222 no longer honors `remoteControlAtStartup: true` in project settings; agnix now warns on the ignored value while allowing project-level `false` and managed settings. Rule count 444 -> 445.
+
 ### Changed
-- **Tool release baselines**. Advanced Claude Code to `v2.1.221`, OpenCode to `v1.18.13`, Cline to `v4.1.3`, and Amp's release marker to `attach-anything` after reviewing their current release notes and validated configuration surfaces (closes #1311, #1312, and #1313).
+- **Tool release baselines**. Advanced Claude Code to `v2.1.222`, OpenCode to `v1.18.13`, Cline to `v4.1.4`, Cursor to `3.14.27`, the Agent Skills specification to `217be548739f`, and Amp's release marker to `attach-anything` after reviewing their current release notes and validated configuration surfaces (closes #1311, #1312, #1313, #1316, #1317, #1318, and #1319).
 
 ### Fixed
 - **Claude Code credential protection compatibility**. Extend CC-SET-012 for environment-variable masking added in 2.1.199 and file masking added in 2.1.221, including ECMAScript extraction validation, structured file controls, injection host lists, environment variable names, and `allowPlaintextInject`; accept mask-only fields that Claude Code ignores on `deny` entries; accept the newly documented `skills: "."` plugin-root path under CC-PL-007.
+- **Agent Skills metadata type enforcement**. Reject non-map `metadata` and metadata entries with non-string keys or values, matching the clarified Agent Skills specification instead of silently coercing YAML scalars.
 
 ### Security
 - **Undici 7.29.0**. Refresh both npm lockfiles for the upstream cache-control, request-header, retry-response, and cookie validation security fixes from Dependabot PR #1314.

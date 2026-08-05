@@ -199,9 +199,9 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="as-016"></a>
 ### AS-016 [HIGH] Skill Parse Error
-**Requirement**: SKILL.md frontmatter MUST be valid YAML
-**Detection**: YAML parse error on frontmatter content
-**Fix**: Fix YAML syntax errors in frontmatter
+**Requirement**: SKILL.md frontmatter MUST be valid YAML and match the Agent Skills field types. In particular, `metadata` is a map from string keys to string values.
+**Detection**: YAML syntax or typed-frontmatter parse error, including non-string `metadata` values
+**Fix**: Fix YAML syntax errors and use string keys and values in `metadata`
 **Source**: agentskills.io/specification
 
 <a id="as-017"></a>
@@ -495,6 +495,13 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Detection**: Parse settings JSON and flag non-string values or strings outside the documented enum
 **Fix**: Manual - choose one of the four documented values
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.219, code.claude.com/docs/en/settings
+
+<a id="cc-set-021"></a>
+### CC-SET-021 [MEDIUM] Ineffective Project Remote Control Auto-start
+**Requirement**: Project-level `.claude/settings.json` and `.claude/settings.local.json` SHOULD NOT set `remoteControlAtStartup` to `true` in Claude Code 2.1.222+. Enabling Remote Control from repository settings is ignored; `false` remains valid for disabling it in that project.
+**Detection**: Parse project settings JSON and flag a strict `true` value for `remoteControlAtStartup`. Ignore `false`, `null`, absent values, and managed settings.
+**Fix**: Manual - enable Remote Control in user settings through `/config`, or set the project value to `false` when the project should disable it.
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.222, code.claude.com/docs/en/settings, code.claude.com/docs/en/remote-control
 
 ---
 
@@ -3558,7 +3565,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Claude Memory | 13 | 8 | 5 | 0 | 3 |
 | Claude Output Styles | 6 | 2 | 2 | 2 | 0 |
 | Claude Plugins | 15 | 9 | 6 | 0 | 4 |
-| Claude Settings | 20 | 0 | 19 | 1 | 0 |
+| Claude Settings | 21 | 0 | 20 | 1 | 0 |
 | Claude Skills | 20 | 10 | 9 | 1 | 10 |
 | Cline | 7 | 4 | 3 | 0 | 3 |
 | Cline Skills | 3 | 2 | 1 | 0 | 2 |
@@ -3589,7 +3596,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **444** | **215** | **199** | **30** | **124** |
+| **TOTAL** | **445** | **215** | **200** | **30** | **124** |
 
 
 ---
@@ -3619,8 +3626,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 444 validation rules across 40 categories
+**Total Coverage**: 445 validation rules across 40 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 215 HIGH, 199 MEDIUM, 30 LOW
+**Certainty**: 215 HIGH, 200 MEDIUM, 30 LOW
 **Auto-Fixable**: 124 rules (28%)

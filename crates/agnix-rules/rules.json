@@ -1,8 +1,8 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 444,
-  "last_updated": "2026-08-01",
+  "total_rules": 445,
+  "last_updated": "2026-08-05",
   "schema": {
     "evidence": {
       "source_type": "spec|vendor_docs|vendor_code|paper|community",
@@ -354,7 +354,7 @@
         "source_urls": [
           "https://agentskills.io/specification"
         ],
-        "verified_on": "2026-02-04",
+        "verified_on": "2026-08-05",
         "applies_to": {
           "spec_revision": "1.0"
         },
@@ -712,8 +712,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "---\nname: valid-yaml\ndescription: Use when demonstrating valid YAML frontmatter\n---\nBody content here.",
-      "bad_example": "---\nname: broken-yaml\ndescription: [unclosed bracket\n---\nBody content here."
+      "good_example": "---\nname: valid-yaml\ndescription: Use when demonstrating valid YAML frontmatter\nmetadata:\n  owner: platform\n---\nBody content here.",
+      "bad_example": "---\nname: broken-yaml\ndescription: Use when demonstrating invalid metadata\nmetadata:\n  priority: 1\n---\nBody content here."
     },
     {
       "id": "AS-017",
@@ -4200,6 +4200,36 @@
       "bad_example": "{\n  \"workflowSizeGuideline\": \"tiny\"\n}"
     },
     {
+      "id": "CC-SET-021",
+      "name": "Ineffective Project Remote Control Auto-start",
+      "severity": "MEDIUM",
+      "category": "claude-settings",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.222",
+          "https://code.claude.com/docs/en/settings",
+          "https://code.claude.com/docs/en/remote-control"
+        ],
+        "verified_on": "2026-08-05",
+        "applies_to": {
+          "tool": "claude-code",
+          "version_range": ">=2.1.222"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"remoteControlAtStartup\": false\n}",
+      "bad_example": "{\n  \"remoteControlAtStartup\": true\n}"
+    },
+    {
       "id": "CDX-000",
       "name": "TOML Parse Error",
       "severity": "HIGH",
@@ -7575,7 +7605,7 @@
           "https://cursor.com/docs/cloud-agent/setup",
           "https://cursor.com/schemas/environment.schema.json"
         ],
-        "verified_on": "2026-08-01",
+        "verified_on": "2026-08-05",
         "applies_to": {
           "tool": "cursor"
         },
@@ -13037,7 +13067,7 @@
     },
     "claude-settings": {
       "prefix": "CC-SET",
-      "count": 20,
+      "count": 21,
       "description": "Claude Code settings (.claude/settings.json) rules"
     },
     "gemini-agents": {

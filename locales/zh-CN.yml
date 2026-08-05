@@ -779,6 +779,9 @@ rules:
   cc_set_020:
     message: workflowSizeGuideline 必须是 unrestricted、small、medium 或 large（实际为 %{actual}）
     suggestion: 将 workflowSizeGuideline 设置为 unrestricted、small、medium 或 large。
+  cc_set_021:
+    message: 'Claude Code 2.1.222+ 无法通过项目设置中的 remoteControlAtStartup: true 启用远程控制；该值会被忽略'
+    suggestion: 使用 /config 在用户设置中启用远程控制，或在此处将该字段设置为 false 以针对项目禁用。
 
 
 # ===========================================================================

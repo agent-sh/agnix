@@ -1,6 +1,6 @@
 {
   "version": "1.1",
-  "last_updated": "2026-08-04",
+  "last_updated": "2026-08-05",
   "description": "Tracks the latest release of every tool agnix validates (one entry per tool with a validator in crates/agnix-core/src/rules/). Used by .github/workflows/tool-release-watch.yml to open per-tool issues when a new release is published. Untracked tools include the precise publication URL in untracked_reason so a maintainer can monitor manually.\n\nOptional `changes_of_interest` per tool describes what agnix cares about: `config_surfaces` (files agnix validates), `relevant` (change-types that likely affect a validator), `irrelevant` (safe to skip). When set and GLM_API_KEY is available, the watcher runs scripts/glm-extract.js --mode=agnix-triage to produce a pre-filtered summary at the top of the issue body. Falls back gracefully to the full changelog on any LLM failure.",
   "tools": {
     "claude-code": {
@@ -16,7 +16,7 @@
         "mcp"
       ],
       "github_repo": "anthropics/claude-code",
-      "last_known_version": "v2.1.221",
+      "last_known_version": "v2.1.222",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
@@ -204,7 +204,7 @@
       ],
       "github_repo": "cline/cline",
       "release_tag_regex": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
-      "last_known_version": "v4.1.3",
+      "last_known_version": "v4.1.4",
       "tracked": true,
       "notes": "Tracks only the core Cline vX.Y.Z release train. The repository also publishes desktop-v*, cli-v*, sdk/*, and other interleaved releases that do not correspond to the validator surfaces.",
       "changes_of_interest": {
@@ -239,7 +239,7 @@
       "github_repo": null,
       "html_url": "https://api2.cursor.sh/updates/api/update/darwin/cursor/0.0.1/stable",
       "version_regex": "[0-9]+\\.[0-9]+\\.[0-9]+",
-      "last_known_version": "3.14.7",
+      "last_known_version": "3.14.27",
       "tracked": true,
       "notes": "Tracked via Cursor's stable update endpoint (the same one the desktop app polls). Returns JSON like {\"url\":\"...\",\"name\":\"3.1.17\"}. Channel is hardcoded to 'stable' for darwin; the version is platform-agnostic (same release ships across darwin/linux/win32). Prose changelog at https://cursor.com/changelog (Next.js SPA - not scrapeable from raw HTML).",
       "changes_of_interest": {
@@ -404,7 +404,7 @@
       ],
       "commit_repo": "agentskills/agentskills",
       "commit_path": "docs/specification.mdx",
-      "last_known_version": "6868401b64f7",
+      "last_known_version": "217be548739f",
       "tracked": true,
       "notes": "The agentskills.io Skill specification (the generic cross-tool SKILL.md standard) - the source for agnix's AS-* rules. It publishes NO releases or tags, so it is tracked by the latest commit SHA touching docs/specification.mdx in the agentskills/agentskills repo (commit_repo + commit_path source). Any change opens an issue to diff the spec against the AS-* rules. Complements the weekly spec-drift.yml check. last_known_version is the short commit SHA.",
       "changes_of_interest": {

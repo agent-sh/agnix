@@ -1,13 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "description": "Baseline hashes for canonical specification content. Human-facing URLs are kept separately from machine-readable content URLs.",
-  "last_updated": "2026-08-01T00:00:00Z",
+  "last_updated": "2026-08-05T00:00:00Z",
   "sources": {
     "s-tier": {
       "agent-skills-spec": {
         "url": "https://agentskills.io/specification",
         "content_url": "https://raw.githubusercontent.com/agentskills/agentskills/main/docs/specification.mdx",
-        "hash": "4e758a27be17f5bd9af8d6506890895a412f774a4c09f08ee1cc7565391d16ef",
+        "hash": "dcbdef1ca13e15bb4430a1ecf8da7e185e4202f35ddf0d788cdec88659256b4a",
         "rules": [
           "AS-001",
           "AS-002",
@@ -268,7 +268,7 @@
       "cursor-environment": {
         "url": "https://cursor.com/docs/cloud-agent/setup",
         "content_url": "https://cursor.com/docs/cloud-agent/setup.md",
-        "hash": "058418e383b5bf20786c8a858f37856aa73719759774874b73bf7fb86f18fcd0",
+        "hash": "6565db8120f64cb59b1b4de7c1a0d6dc3c9194f9565c310b06adac3bc1cf161d",
         "rules": [
           "CUR-016"
         ]
