@@ -2498,6 +2498,73 @@ Body content"#;
 }
 
 #[test]
+fn test_as_016_metadata_requires_string_keys_and_values() {
+    let validator = SkillValidator;
+    let valid = r#"---
+name: test-skill
+description: Use when validating Agent Skills metadata
+metadata:
+  owner: platform
+---
+Body"#;
+    let valid_diagnostics = validator.validate(
+        Path::new("skills/test-skill/SKILL.md"),
+        valid,
+        &LintConfig::default(),
+    );
+    assert!(
+        valid_diagnostics
+            .iter()
+            .all(|diagnostic| diagnostic.rule != "AS-016")
+    );
+
+    for invalid in [
+        r#"---
+name: test-skill
+description: Use when validating Agent Skills metadata
+metadata:
+  priority: 1
+---
+Body"#,
+        r#"---
+name: test-skill
+description: Use when validating Agent Skills metadata
+metadata:
+  owner:
+    team: platform
+---
+Body"#,
+        r#"---
+name: test-skill
+description: Use when validating Agent Skills metadata
+metadata:
+  1: platform
+---
+Body"#,
+        r#"---
+name: test-skill
+description: Use when validating Agent Skills metadata
+metadata: platform
+---
+Body"#,
+    ] {
+        let diagnostics = validator.validate(
+            Path::new("skills/test-skill/SKILL.md"),
+            invalid,
+            &LintConfig::default(),
+        );
+        assert_eq!(
+            diagnostics
+                .iter()
+                .filter(|diagnostic| diagnostic.rule == "AS-016")
+                .count(),
+            1,
+            "non-string metadata must fail frontmatter parsing"
+        );
+    }
+}
+
+#[test]
 fn test_as_016_allowed_tools_yaml_list_no_parse_error() {
     // Reproduces #957: `allowed-tools` as a YAML list previously failed to
     // deserialize (Option<String>) and tripped AS-016. Claude Code accepts a

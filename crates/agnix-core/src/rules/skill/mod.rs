@@ -16,7 +16,7 @@ use crate::{
 };
 use regex::Regex;
 use rust_i18n::t;
-use serde::Deserialize;
+use serde::{Deserialize, de::Error as _};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
@@ -43,12 +43,37 @@ where
     }))
 }
 
+fn de_string_map<'de, D>(deserializer: D) -> Result<Option<HashMap<String, String>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value = serde_yaml::Value::deserialize(deserializer)?;
+    let serde_yaml::Value::Mapping(entries) = value else {
+        return Err(D::Error::custom(
+            "metadata must be a map from string keys to string values",
+        ));
+    };
+
+    let mut metadata = HashMap::with_capacity(entries.len());
+    for (key, value) in entries {
+        let (serde_yaml::Value::String(key), serde_yaml::Value::String(value)) = (key, value)
+        else {
+            return Err(D::Error::custom(
+                "metadata must be a map from string keys to string values",
+            ));
+        };
+        metadata.insert(key, value);
+    }
+    Ok(Some(metadata))
+}
+
 #[derive(Debug, Default, Deserialize)]
 struct SkillFrontmatter {
     name: Option<String>,
     description: Option<String>,
     license: Option<String>,
     compatibility: Option<String>,
+    #[serde(default, deserialize_with = "de_string_map")]
     metadata: Option<HashMap<String, String>>,
     // Claude Code accepts `allowed-tools` as a space-separated string OR a YAML
     // list; agentskills.io documents a space-separated string. Deserialize both
