@@ -35,13 +35,13 @@ is authoritative (last verified: 2026-07-31).
 ```yaml
 # GitHub Official Actions
 actions/add-to-project@v2.0.0: 5afcf98fcd03f1c2f92c3c83f58ae24323cc57fd
-actions/attest@v4.1.1: a1948c3f048ba23858d222213b7c278aabede763
+actions/attest@v4.2.2: 1e69f48acb82d1966a394da916b4c1698aa569d6
 actions/checkout@v7.0.0: 9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
 actions/configure-pages@v6.0.0: 45bfe0192ca1faeb007ade9deae92b16b8254a0d
 actions/deploy-pages@v5.0.0: cd2ce8fcbc39b97be8ca5fce6e763baed58fa128
 actions/download-artifact@v8.0.1: 3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
 actions/setup-java@v5.6.0: 03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
-actions/setup-node@v6.4.0: 48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+actions/setup-node@v7.0.0: 820762786026740c76f36085b0efc47a31fe5020
 actions/setup-python@v7.0.0: 5fda3b95a4ea91299a34e894583c3862153e4b97
 actions/stale@v10.4.0: 1e223db275d687790206a7acac4d1a11bd6fe629
 actions/upload-artifact@v7.0.1: 043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
@@ -55,12 +55,12 @@ taiki-e/install-action@v2.85.0: 7572810d7dd469b651bb7793945692cf78da5dd7
 
 # Security
 EmbarkStudios/cargo-deny-action@v2.1.1: 3c6349835b2b7b196a839186cb8b78e02f7b5f25
-github/codeql-action/analyze@v4.37.3: c54b30b7df092240050e69945842bc67aee0f0f4
-github/codeql-action/init@v4.37.3: c54b30b7df092240050e69945842bc67aee0f0f4
-github/codeql-action/upload-sarif@v4.37.3: c54b30b7df092240050e69945842bc67aee0f0f4
+github/codeql-action/analyze@v4.37.6: 5595ccaf912efad79be6eef63a5619ff05969be3
+github/codeql-action/init@v4.37.6: 5595ccaf912efad79be6eef63a5619ff05969be3
+github/codeql-action/upload-sarif@v4.37.6: 5595ccaf912efad79be6eef63a5619ff05969be3
 
 # Release
-softprops/action-gh-release@v2: 718ea10b132b3b2eba29c1007bb80653f286566b
+softprops/action-gh-release@v3.0.2: 3d0d9888cb7fd7b750713d6e236d1fcb99157228
 
 # Claude Code
 anthropics/claude-code-action@v1: e0cf66d1d257526b5d07f141838c338921cb8455

@@ -602,8 +602,8 @@ rules:
     message: 缺少或为空的插件名称
     suggestion: 在 plugin.json 中添加一个非空字符串的 'name' 字段
   cdx_pl_004:
-    message: 无效的插件名称 '%{name}' - 必须仅包含 ASCII 字母数字、连字符或下划线
-    suggestion: 重命名为仅使用 ASCII 字母、数字、连字符和下划线
+    message: 无效的插件名称 '%{name}' - 请使用 ASCII 字母、数字、点、连字符或下划线，且点分隔段不能为空
+    suggestion: 使用 ASCII 字母、数字、点、连字符和下划线；不要以点开头或结尾，也不要使用连续的点
     agent_message: 无效的 Agent Plugins 名称 '%{name}' - 请使用小写字母、数字、点或连字符，且不要重复分隔符
     agent_suggestion: 使用 1 到 64 个小写 ASCII 字母、数字、点或连字符，并以字母或数字开头和结尾
   cdx_pl_005:
@@ -753,8 +753,34 @@ rules:
     extract_no_match_value: 'sandbox.credentials.%{array_key}[%{index}].onExtractNoMatch 必须是 "warn"、"deny" 或 "error"（实际为 "%{actual}"）'
     extract_no_match_type: sandbox.credentials.%{array_key}[%{index}].onExtractNoMatch 必须是字符串（实际为 %{actual}）
     extract_no_match_suggestion: '将 sandbox.credentials.%{array_key}[%{index}].onExtractNoMatch 设置为 "warn"、"deny" 或 "error"。'
+    extract_no_match_jwt_value: '环境变量使用 decode: "jwt" 时，sandbox.credentials.%{array_key}[%{index}].onExtractNoMatch 必须是 "warn"（实际为 "%{actual}"）'
+    extract_no_match_jwt_suggestion: '将 sandbox.credentials.%{array_key}[%{index}].onExtractNoMatch 设置为 "warn"，或移除此字段。'
     mask_duplicates_type: sandbox.credentials.%{array_key}[%{index}].maskDuplicates 必须是布尔值（实际为 %{actual}）
     mask_duplicates_suggestion: 将 sandbox.credentials.%{array_key}[%{index}].maskDuplicates 设置为不带引号的 true 或 false，或移除此字段。
+    decode_value: 'sandbox.credentials.%{array_key}[%{index}].decode 必须是 "jwt"（实际为 "%{actual}"）'
+    decode_type: sandbox.credentials.%{array_key}[%{index}].decode 必须是字符串（实际为 %{actual}）
+    decode_suggestion: '将 sandbox.credentials.%{array_key}[%{index}].decode 设置为 "jwt"，或移除此字段。'
+    extract_decode_conflict: 环境变量的 sandbox.credentials.%{array_key}[%{index}] 不能同时设置 extract 和 decode
+    extract_decode_conflict_suggestion: 从 sandbox.credentials.%{array_key}[%{index}] 中移除 extract 或 decode。
+    mask_claims_shape: sandbox.credentials.%{array_key}[%{index}].maskClaims 必须是包含非空字符串的非空数组（实际为 %{actual}）
+    mask_claims_requires_decode: 'sandbox.credentials.%{array_key}[%{index}].maskClaims 需要 decode: "jwt"'
+    mask_claims_suggestion: '将 decode 设置为 "jwt"，并将 maskClaims 设置为类似 ["api_key"] 的声明名称，或移除 maskClaims。'
+    aws_pairs_array: sandbox.credentials.awsPairs 必须是对象数组（实际为 %{actual}）
+    aws_pair_object: sandbox.credentials.awsPairs[%{index}] 必须是对象（实际为 %{actual}）
+    aws_pair_field: sandbox.credentials.awsPairs[%{index}].%{field} 必须是非空字符串
+    aws_pairs_suggestion: '使用类似 {"accessKeyIdVar":"MY_KEY_ID","secretAccessKeyVar":"MY_SECRET_KEY"} 的条目，可选设置 sessionTokenVar。'
+    aws_pair_duplicate: sandbox.credentials.awsPairs[%{index}].%{field} 重复使用了环境变量 %{variable}，该变量已由 awsPairs[%{first_index}].%{first_field} 使用
+    aws_pair_duplicate_suggestion: 为所有 awsPairs 条目中的每个 AWS 凭证字段使用不同的环境变量名称。
+    sigv4_object: sandbox.credentials.sigv4 必须是对象（实际为 %{actual}）
+    sigv4_entry: 'sandbox.credentials.sigv4.%{field} 必须是 deny 或 passthrough，且字段必须是 streaming、presigned 或 sigv4a（实际为 %{actual}）'
+    sigv4_suggestion: 将 streaming、presigned 和 sigv4a 策略设置为 deny 或 passthrough，或移除不支持的字段。
+    aws_feature_aws_pairs: awsPairs
+    aws_feature_sigv4: sigv4
+    aws_features_both: awsPairs 和 sigv4
+    tls_terminate_required: 通过 sandbox.credentials.%{feature} 重新签署 AWS 凭证时，sandbox.network.tlsTerminate 必须是对象
+    tls_terminate_suggestion: '将 sandbox.network.tlsTerminate 设置为对象（例如 {}），或移除 AWS 凭证重新签署设置。'
+    aws_scope: 项目级 .claude 设置会忽略通过 sandbox.credentials.%{feature} 进行的 AWS 凭证重新签署
+    aws_scope_suggestion: 将 AWS 凭证重新签署设置移至 ~/.claude/settings.json、--settings 文件或托管设置。
   cc_set_013:
     message: autoMode.classifyAllShell 存在时必须是布尔值 (实际为 %{actual}); Claude Code 2.1.193+ 将该 auto-mode 设置记录为严格的 true/false 开关
     suggestion: 将 autoMode.classifyAllShell 设置为不带引号的 true 或 false，或移除此字段以保留默认的 auto-mode 分类器范围。
@@ -782,6 +808,12 @@ rules:
   cc_set_021:
     message: 'Claude Code 2.1.222+ 无法通过项目设置中的 remoteControlAtStartup: true 启用远程控制；该值会被忽略'
     suggestion: 使用 /config 在用户设置中启用远程控制，或在此处将该字段设置为 false 以针对项目禁用。
+  cc_set_022:
+    message: crossSessionInbound 必须是 accept、hold 或 refuse（实际为 %{actual}）
+    suggestion: 将 crossSessionInbound 设置为 accept、hold 或 refuse。
+  cc_set_023:
+    message: dialogExpiry 必须是 60s、5m、10m 或 never（实际为 %{actual}）
+    suggestion: 将 dialogExpiry 设置为 60s、5m、10m 或 never。
 
 
 # ===========================================================================

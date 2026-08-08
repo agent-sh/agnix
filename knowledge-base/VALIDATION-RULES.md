@@ -435,10 +435,10 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="cc-set-012"></a>
 ### CC-SET-012 [MEDIUM] Invalid sandbox.credentials Setting
-**Requirement**: `sandbox.credentials` in `.claude/settings.json` / `.local.json` / `managed-settings.json` MUST be an object with optional `files` and `envVars` arrays when present (Claude Code 2.1.187+). Each entry MUST use `mode: "deny"` or `mode: "mask"`; environment-variable masking was added in 2.1.199 and file masking in 2.1.221. File entries require a non-empty string `path` and may include string `extract`, `onExtractNoMatch: "warn"|"deny"|"error"`, boolean `maskDuplicates`, and string-array `injectHosts`; a masked path ending in `/` is invalid because masking applies to one file. Masked `extract` patterns require a valid ECMAScript regex with a credential capture group. Environment entries require a shell-compatible variable `name` and may include string-array `injectHosts`. Claude Code accepts but ignores `extract`, `onExtractNoMatch`, `maskDuplicates`, and `injectHosts` on `deny` entries. Top-level `allowPlaintextInject`, when present, MUST be boolean.
-**Detection**: Parse settings.json; walk `sandbox.credentials`; validate the container and arrays, required target fields, supported modes, environment-variable names, mask-only file constraints, optional field types and enums, ECMAScript regex syntax and capture-group presence, injection host arrays, and `allowPlaintextInject`. Skip mask-only optional-field validation for `deny` entries to match Claude Code preprocessing.
-**Fix**: Manual - use a valid `deny` or `mask` entry shape for the credential target, or remove the invalid entry or option.
-**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.187 (added `sandbox.credentials`), github.com/anthropics/claude-code/releases/tag/v2.1.199 (added environment-variable masking), github.com/anthropics/claude-code/releases/tag/v2.1.221 (added file masking), code.claude.com/docs/en/settings, code.claude.com/docs/en/sandboxing
+**Requirement**: `sandbox.credentials` in `.claude/settings.json` / `.local.json` / `managed-settings.json` MUST be an object with optional `files` and `envVars` arrays when present (Claude Code 2.1.187+). Each entry MUST use `mode: "deny"` or `mode: "mask"`; environment-variable masking was added in 2.1.199 and file masking in 2.1.221. Claude Code 2.1.224 added structured environment extraction, JWT-aware `decode: "jwt"` with non-empty `maskClaims`, `awsPairs`, and `sigv4` policies. File entries require a non-empty string `path`; environment entries require a shell-compatible variable `name`. Masked `extract` patterns require a valid ECMAScript regex with a credential capture group. Environment entries cannot combine `extract` and `decode`, and decoded environment variables only accept `onExtractNoMatch: "warn"`. `awsPairs` entries require non-empty `accessKeyIdVar` and `secretAccessKeyVar` strings with an optional non-empty `sessionTokenVar`; every variable name MUST be unique across every credential slot and pair. `sigv4` accepts only `streaming`, `presigned`, and `sigv4a` keys with `deny` or `passthrough` values. When `awsPairs` or `sigv4` is configured, `sandbox.network.tlsTerminate` MUST be an object so Claude Code can inspect and re-sign AWS requests. AWS re-signing options MUST be placed in user settings, managed settings, or a `--settings` file because Claude Code ignores them in project-level `.claude/settings.json` and `.claude/settings.local.json`. Claude Code accepts but ignores mask-only fields on `deny` entries. Top-level `allowPlaintextInject`, when present, MUST be boolean.
+**Detection**: Parse settings.json; walk `sandbox.credentials`; validate the container and arrays, required target fields, supported modes, environment-variable names, mask-only constraints, optional field types and enums, ECMAScript regex syntax and capture-group presence, JWT decode and claim-mask combinations, AWS credential-pair fields and variable-name uniqueness, SigV4 policies, the AWS re-signing TLS-termination prerequisite and settings scope, injection host arrays, and `allowPlaintextInject`. Skip mask-only optional-field validation for `deny` entries to match Claude Code preprocessing. Treat repository `.claude/settings.json` and `.claude/settings.local.json` as project scope; exempt an absolute home-directory `~/.claude/settings.json` and dispatch managed settings from `.claude/managed-settings.json`, the documented macOS, Linux/WSL, and Windows system `managed-settings.json` paths, and their non-hidden `managed-settings.d/*.json` drop-ins.
+**Fix**: Manual - use a valid `deny` or `mask` entry shape for the credential target, or remove the invalid entry or option. Move `awsPairs` and `sigv4` to user settings, managed settings, or a `--settings` file.
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.187 (added `sandbox.credentials`), github.com/anthropics/claude-code/releases/tag/v2.1.199 (added environment-variable masking), github.com/anthropics/claude-code/releases/tag/v2.1.221 (added file masking), github.com/anthropics/claude-code/releases/tag/v2.1.224 (added structured environment, JWT, and AWS masking), code.claude.com/docs/en/settings, code.claude.com/docs/en/sandboxing
 
 <a id="cc-set-013"></a>
 ### CC-SET-013 [MEDIUM] Non-boolean autoMode.classifyAllShell Setting
@@ -502,6 +502,20 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Detection**: Parse project settings JSON and flag a strict `true` value for `remoteControlAtStartup`. Ignore `false`, `null`, absent values, and managed settings.
 **Fix**: Manual - enable Remote Control in user settings through `/config`, or set the project value to `false` when the project should disable it.
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.222, code.claude.com/docs/en/settings, code.claude.com/docs/en/remote-control
+
+<a id="cc-set-022"></a>
+### CC-SET-022 [MEDIUM] Invalid crossSessionInbound Setting
+**Requirement**: `crossSessionInbound` MUST be `accept`, `hold`, or `refuse` when present in Claude Code 2.1.224+
+**Detection**: Parse settings JSON and flag non-string values or strings outside the documented enum
+**Fix**: Manual - choose one of the three documented values
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.224, code.claude.com/docs/en/settings, code.claude.com/docs/en/cross-session-messaging
+
+<a id="cc-set-023"></a>
+### CC-SET-023 [MEDIUM] Invalid dialogExpiry Setting
+**Requirement**: `dialogExpiry` MUST be `60s`, `5m`, `10m`, or `never` when present in Claude Code 2.1.224+
+**Detection**: Parse settings JSON and flag non-string values or strings outside the documented enum
+**Fix**: Manual - choose one of the four documented values
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.224, code.claude.com/docs/en/settings
 
 ---
 
@@ -2705,10 +2719,10 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 
 <a id="cdx-pl-004"></a>
 ### CDX-PL-004 [HIGH] Invalid Plugin Name Characters
-**Requirement**: Plugin `name` MUST contain only ASCII alphanumeric characters, hyphens, and underscores
-**Detection**: Validate name against allowed character set pattern
+**Requirement**: Codex 0.147+ plugin `name` MUST contain only ASCII alphanumeric characters, dots, hyphens, and underscores. Dots MUST separate non-empty segments, so names cannot start or end with a dot or contain `..`.
+**Detection**: Validate the name against Codex's path-safe plugin segment rules
 **Fix**: No auto-fix (rename to a valid plugin name)
-**Source**: github.com/openai/codex (codex-rs/core-plugins/src/manifest.rs @ rust-v0.137.0)
+**Source**: github.com/openai/codex (codex-rs/plugin/src/plugin_id.rs @ rust-v0.147.0)
 
 <a id="cdx-pl-005"></a>
 ### CDX-PL-005 [HIGH] Component Path Missing ./ Prefix
@@ -3565,7 +3579,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Claude Memory | 13 | 8 | 5 | 0 | 3 |
 | Claude Output Styles | 6 | 2 | 2 | 2 | 0 |
 | Claude Plugins | 15 | 9 | 6 | 0 | 4 |
-| Claude Settings | 21 | 0 | 20 | 1 | 0 |
+| Claude Settings | 23 | 0 | 22 | 1 | 0 |
 | Claude Skills | 20 | 10 | 9 | 1 | 10 |
 | Cline | 7 | 4 | 3 | 0 | 3 |
 | Cline Skills | 3 | 2 | 1 | 0 | 2 |
@@ -3596,7 +3610,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **445** | **215** | **200** | **30** | **124** |
+| **TOTAL** | **447** | **215** | **202** | **30** | **124** |
 
 
 ---
@@ -3626,8 +3640,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 445 validation rules across 40 categories
+**Total Coverage**: 447 validation rules across 40 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 215 HIGH, 200 MEDIUM, 30 LOW
+**Certainty**: 215 HIGH, 202 MEDIUM, 30 LOW
 **Auto-Fixable**: 124 rules (28%)

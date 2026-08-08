@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "camelCase")]
 #[allow(dead_code)] // schema-level API; validation uses raw serde_json::Value
 pub struct CodexPluginSchema {
-    /// Required: plugin name (ASCII alphanumeric + hyphens + underscores)
+    /// Required: path-safe plugin name (ASCII alphanumeric + dots + hyphens + underscores)
     #[serde(default)]
     pub name: Option<String>,
     /// Optional: description

@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **CC-SET-022 and CC-SET-023**. Validate Claude Code 2.1.224's `crossSessionInbound` and `dialogExpiry` enums. Rule count 445 -> 447.
+
+### Changed
+- **Tool release baselines**. Advanced Claude Code to `v2.1.226`, Codex CLI to `rust-v0.147.0`, OpenCode to `v1.18.15`, Cline to `v4.1.6`, Cursor to `3.15.6`, Gemini CLI to `v0.54.4`, and Amp's release marker to `size-the-orbs-of-production` after reviewing their current validated surfaces.
+- **Dependency refresh**. Updated `rmcp` to `3.1.2`, `ignore` to `0.4.33`, and `similar` to `3.1.2`.
+- **CI action refresh**. Updated `actions/setup-node` to `7.0.0`, `github/codeql-action` to `4.37.6`, `softprops/action-gh-release` to `3.0.2`, and `actions/attest` to `4.2.2`, keeping synchronized action families and SHA assertions in lockstep.
+
+### Fixed
+- **Claude Code 2.1.224 credential masking compatibility**. Extend CC-SET-012 for structured environment extraction, JWT-aware `decode` and `maskClaims`, AWS credential pairs, and SigV4 policies.
+- **Codex 0.147 plugin name compatibility**. Accept dotted legacy plugin names while rejecting leading, trailing, and repeated dots.
+
 ## [0.46.0] - 2026-08-05
 
 ### Added

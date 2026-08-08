@@ -26,6 +26,8 @@
 //! - `sandbox.network.strictAllowlist` boolean check (CC-SET-019, added in Claude Code v2.1.219).
 //! - `workflowSizeGuideline` enum check (CC-SET-020, added in Claude Code v2.1.219).
 //! - ineffective project-level `remoteControlAtStartup: true` (CC-SET-021, changed in Claude Code v2.1.222).
+//! - `crossSessionInbound` enum check (CC-SET-022, added in Claude Code v2.1.224).
+//! - `dialogExpiry` enum check (CC-SET-023, added in Claude Code v2.1.224).
 //!
 //! Runs on FileType::Hooks (which covers `.claude/settings.json` -
 //! see `file_types/detection.rs`). Skips non-Claude Code settings paths
@@ -34,10 +36,11 @@
 use crate::{
     config::PerFileLintConfig,
     diagnostics::Diagnostic,
+    file_types::{is_claude_managed_settings_path, is_claude_system_managed_settings_path},
     rules::{Validator, ValidatorMetadata},
 };
 use rust_i18n::t;
-use std::path::Path;
+use std::{collections::HashMap, path::Path};
 
 const RULE_IDS: &[&str] = &[
     "CC-SET-001",
@@ -61,6 +64,8 @@ const RULE_IDS: &[&str] = &[
     "CC-SET-019",
     "CC-SET-020",
     "CC-SET-021",
+    "CC-SET-022",
+    "CC-SET-023",
 ];
 
 /// Allowed values for `worktree.baseRef` per Claude Code v2.1.133 release notes.
@@ -77,6 +82,12 @@ const TEAMMATE_MODE_ALLOWED: &[&str] = &["in-process", "auto", "tmux", "iterm2"]
 
 /// Allowed values for `workflowSizeGuideline` per Claude Code v2.1.219.
 const WORKFLOW_SIZE_GUIDELINE_ALLOWED: &[&str] = &["unrestricted", "small", "medium", "large"];
+
+/// Allowed values for cross-session inbound message handling per Claude Code v2.1.224.
+const CROSS_SESSION_INBOUND_ALLOWED: &[&str] = &["accept", "hold", "refuse"];
+
+/// Allowed values for remote dialog expiry per Claude Code v2.1.224.
+const DIALOG_EXPIRY_ALLOWED: &[&str] = &["60s", "5m", "10m", "never"];
 
 /// Placeholders documented for `prUrlTemplate` at
 /// <https://code.claude.com/docs/en/settings>.
@@ -195,15 +206,27 @@ impl Validator for ClaudeSettingsValidator {
             validate_remote_control_at_startup_scope(path, content, &value, &mut diagnostics);
         }
 
+        if config.is_rule_enabled("CC-SET-022") {
+            validate_cross_session_inbound(path, content, &value, &mut diagnostics);
+        }
+
+        if config.is_rule_enabled("CC-SET-023") {
+            validate_dialog_expiry(path, content, &value, &mut diagnostics);
+        }
+
         diagnostics
     }
 }
 
 /// Only validate `.claude/settings.json`, `.claude/settings.local.json`, and
-/// managed/project variants. Skip `.amp/`, `.kiro/`, etc. settings files -
-/// they are classified as FileType::Hooks too but have entirely different
-/// field sets, and a false positive here would be disruptive.
+/// Claude Code managed-settings paths. Skip `.amp/`, `.kiro/`, etc. settings
+/// files - they are classified as FileType::Hooks too but have entirely
+/// different field sets, and a false positive here would be disruptive.
 fn is_claude_settings_path(path: &Path) -> bool {
+    if is_claude_managed_settings_path(path) {
+        return true;
+    }
+
     let parent_is_claude = path
         .parent()
         .and_then(|p| p.file_name())
@@ -216,10 +239,7 @@ fn is_claude_settings_path(path: &Path) -> bool {
     let Some(filename) = path.file_name().and_then(|n| n.to_str()) else {
         return false;
     };
-    matches!(
-        filename,
-        "settings.json" | "settings.local.json" | "managed-settings.json"
-    )
+    matches!(filename, "settings.json" | "settings.local.json")
 }
 
 /// CC-SET-001: Validate prUrlTemplate. Three failure modes:
@@ -847,7 +867,9 @@ fn validate_respond_to_bash_commands(
 /// Both arrays are optional, but when present they must be arrays of objects.
 /// Each entry must name the credential target and carry a supported `mode`.
 /// Claude Code v2.1.199 added environment-variable masking, and v2.1.221 added
-/// file masking plus controls for narrowing injection and extraction.
+/// file masking plus controls for narrowing injection and extraction. Claude
+/// Code v2.1.224 added AWS credential re-signing, which requires
+/// `sandbox.network.tlsTerminate`.
 fn validate_sandbox_credentials(
     path: &Path,
     content: &str,
@@ -914,6 +936,21 @@ fn validate_sandbox_credentials(
         SandboxCredentialKind::EnvironmentVariable,
         diagnostics,
     );
+    validate_sandbox_credential_aws_pairs(
+        path,
+        content,
+        credentials_obj.get("awsPairs"),
+        diagnostics,
+    );
+    validate_sandbox_credential_sigv4(path, content, credentials_obj.get("sigv4"), diagnostics);
+    validate_sandbox_credential_aws_tls_termination(
+        path,
+        content,
+        value,
+        credentials_obj,
+        diagnostics,
+    );
+    validate_sandbox_credential_aws_scope(path, content, credentials_obj, diagnostics);
 }
 
 #[derive(Clone, Copy)]
@@ -1140,17 +1177,15 @@ fn validate_sandbox_credential_entries(
                 diagnostics,
             );
 
-            if matches!(kind, SandboxCredentialKind::File) {
-                validate_sandbox_credential_file_options(
-                    path,
-                    line,
-                    array_key,
-                    index,
-                    entry_obj,
-                    mode,
-                    diagnostics,
-                );
-            }
+            validate_sandbox_credential_mask_options(
+                path,
+                line,
+                array_key,
+                index,
+                entry_obj,
+                kind,
+                diagnostics,
+            );
         }
     }
 }
@@ -1225,16 +1260,19 @@ fn validate_sandbox_credential_inject_hosts(
     }
 }
 
-fn validate_sandbox_credential_file_options(
+fn validate_sandbox_credential_mask_options(
     path: &Path,
     line: usize,
     array_key: &str,
     index: usize,
     entry: &serde_json::Map<String, serde_json::Value>,
-    mode: Option<&str>,
+    kind: SandboxCredentialKind,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
-    if mode == Some("mask")
+    let mode = entry.get("mode").and_then(serde_json::Value::as_str);
+
+    if matches!(kind, SandboxCredentialKind::File)
+        && mode == Some("mask")
         && entry
             .get("path")
             .and_then(|value| value.as_str())
@@ -1322,9 +1360,154 @@ fn validate_sandbox_credential_file_options(
         }
     }
 
+    let decode = entry.get("decode");
+    if let Some(value) = decode {
+        match value.as_str() {
+            Some("jwt") => {}
+            Some(actual) => diagnostics.push(
+                Diagnostic::warning(
+                    path.to_path_buf(),
+                    line,
+                    0,
+                    "CC-SET-012",
+                    t!(
+                        "rules.cc_set_012.decode_value",
+                        array_key = array_key,
+                        index = index,
+                        actual = actual
+                    ),
+                )
+                .with_suggestion(t!(
+                    "rules.cc_set_012.decode_suggestion",
+                    array_key = array_key,
+                    index = index
+                )),
+            ),
+            None => diagnostics.push(
+                Diagnostic::warning(
+                    path.to_path_buf(),
+                    line,
+                    0,
+                    "CC-SET-012",
+                    t!(
+                        "rules.cc_set_012.decode_type",
+                        array_key = array_key,
+                        index = index,
+                        actual = describe_json_type(value)
+                    ),
+                )
+                .with_suggestion(t!(
+                    "rules.cc_set_012.decode_suggestion",
+                    array_key = array_key,
+                    index = index
+                )),
+            ),
+        }
+    }
+
+    if matches!(kind, SandboxCredentialKind::EnvironmentVariable)
+        && entry.contains_key("extract")
+        && entry.contains_key("decode")
+    {
+        diagnostics.push(
+            Diagnostic::warning(
+                path.to_path_buf(),
+                line,
+                0,
+                "CC-SET-012",
+                t!(
+                    "rules.cc_set_012.extract_decode_conflict",
+                    array_key = array_key,
+                    index = index
+                ),
+            )
+            .with_suggestion(t!(
+                "rules.cc_set_012.extract_decode_conflict_suggestion",
+                array_key = array_key,
+                index = index
+            )),
+        );
+    }
+
+    if let Some(value) = entry.get("maskClaims") {
+        let claims_are_valid = value.as_array().is_some_and(|claims| {
+            !claims.is_empty()
+                && claims
+                    .iter()
+                    .all(|claim| claim.as_str().is_some_and(|claim| !claim.is_empty()))
+        });
+        if !claims_are_valid {
+            diagnostics.push(
+                Diagnostic::warning(
+                    path.to_path_buf(),
+                    line,
+                    0,
+                    "CC-SET-012",
+                    t!(
+                        "rules.cc_set_012.mask_claims_shape",
+                        array_key = array_key,
+                        index = index,
+                        actual = describe_json_type(value)
+                    ),
+                )
+                .with_suggestion(t!(
+                    "rules.cc_set_012.mask_claims_suggestion",
+                    array_key = array_key,
+                    index = index
+                )),
+            );
+        } else if decode.and_then(serde_json::Value::as_str) != Some("jwt") {
+            diagnostics.push(
+                Diagnostic::warning(
+                    path.to_path_buf(),
+                    line,
+                    0,
+                    "CC-SET-012",
+                    t!(
+                        "rules.cc_set_012.mask_claims_requires_decode",
+                        array_key = array_key,
+                        index = index
+                    ),
+                )
+                .with_suggestion(t!(
+                    "rules.cc_set_012.mask_claims_suggestion",
+                    array_key = array_key,
+                    index = index
+                )),
+            );
+        }
+    }
+
     if let Some(value) = entry.get("onExtractNoMatch") {
         match value.as_str() {
-            Some("warn" | "deny" | "error") => {}
+            Some("warn") => {}
+            Some("deny" | "error")
+                if !matches!(kind, SandboxCredentialKind::EnvironmentVariable)
+                    || decode.and_then(serde_json::Value::as_str) != Some("jwt") => {}
+            Some(actual)
+                if matches!(kind, SandboxCredentialKind::EnvironmentVariable)
+                    && decode.and_then(serde_json::Value::as_str) == Some("jwt") =>
+            {
+                diagnostics.push(
+                    Diagnostic::warning(
+                        path.to_path_buf(),
+                        line,
+                        0,
+                        "CC-SET-012",
+                        t!(
+                            "rules.cc_set_012.extract_no_match_jwt_value",
+                            array_key = array_key,
+                            index = index,
+                            actual = actual
+                        ),
+                    )
+                    .with_suggestion(t!(
+                        "rules.cc_set_012.extract_no_match_jwt_suggestion",
+                        array_key = array_key,
+                        index = index
+                    )),
+                );
+            }
             Some(actual) => diagnostics.push(
                 Diagnostic::warning(
                     path.to_path_buf(),
@@ -1366,7 +1549,8 @@ fn validate_sandbox_credential_file_options(
         }
     }
 
-    if let Some(value) = entry.get("maskDuplicates")
+    if matches!(kind, SandboxCredentialKind::File)
+        && let Some(value) = entry.get("maskDuplicates")
         && !value.is_boolean()
     {
         diagnostics.push(
@@ -1389,6 +1573,276 @@ fn validate_sandbox_credential_file_options(
             )),
         );
     }
+}
+
+fn validate_sandbox_credential_aws_pairs(
+    path: &Path,
+    content: &str,
+    value: Option<&serde_json::Value>,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(value) = value else {
+        return;
+    };
+    let line = find_key_line(content, "awsPairs")
+        .or_else(|| find_key_line(content, "credentials"))
+        .unwrap_or(1);
+    let Some(pairs) = value.as_array() else {
+        diagnostics.push(
+            Diagnostic::warning(
+                path.to_path_buf(),
+                line,
+                0,
+                "CC-SET-012",
+                t!(
+                    "rules.cc_set_012.aws_pairs_array",
+                    actual = describe_json_type(value)
+                ),
+            )
+            .with_suggestion(t!("rules.cc_set_012.aws_pairs_suggestion")),
+        );
+        return;
+    };
+    let mut seen_variables = HashMap::new();
+
+    for (index, pair) in pairs.iter().enumerate() {
+        let Some(pair) = pair.as_object() else {
+            diagnostics.push(
+                Diagnostic::warning(
+                    path.to_path_buf(),
+                    line,
+                    0,
+                    "CC-SET-012",
+                    t!(
+                        "rules.cc_set_012.aws_pair_object",
+                        index = index,
+                        actual = describe_json_type(pair)
+                    ),
+                )
+                .with_suggestion(t!("rules.cc_set_012.aws_pairs_suggestion")),
+            );
+            continue;
+        };
+
+        for field in ["accessKeyIdVar", "secretAccessKeyVar", "sessionTokenVar"] {
+            let Some(field_value) = pair.get(field) else {
+                if field != "sessionTokenVar" {
+                    diagnostics.push(
+                        Diagnostic::warning(
+                            path.to_path_buf(),
+                            line,
+                            0,
+                            "CC-SET-012",
+                            t!(
+                                "rules.cc_set_012.aws_pair_field",
+                                index = index,
+                                field = field
+                            ),
+                        )
+                        .with_suggestion(t!("rules.cc_set_012.aws_pairs_suggestion")),
+                    );
+                }
+                continue;
+            };
+            let Some(variable) = field_value.as_str().filter(|variable| !variable.is_empty())
+            else {
+                diagnostics.push(
+                    Diagnostic::warning(
+                        path.to_path_buf(),
+                        line,
+                        0,
+                        "CC-SET-012",
+                        t!(
+                            "rules.cc_set_012.aws_pair_field",
+                            index = index,
+                            field = field
+                        ),
+                    )
+                    .with_suggestion(t!("rules.cc_set_012.aws_pairs_suggestion")),
+                );
+                continue;
+            };
+
+            if let Some((first_index, first_field)) = seen_variables.get(variable) {
+                diagnostics.push(
+                    Diagnostic::warning(
+                        path.to_path_buf(),
+                        line,
+                        0,
+                        "CC-SET-012",
+                        t!(
+                            "rules.cc_set_012.aws_pair_duplicate",
+                            index = index,
+                            field = field,
+                            variable = variable,
+                            first_index = *first_index,
+                            first_field = *first_field
+                        ),
+                    )
+                    .with_suggestion(t!("rules.cc_set_012.aws_pair_duplicate_suggestion")),
+                );
+            } else {
+                seen_variables.insert(variable, (index, field));
+            }
+        }
+    }
+}
+
+fn validate_sandbox_credential_sigv4(
+    path: &Path,
+    content: &str,
+    value: Option<&serde_json::Value>,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(value) = value else {
+        return;
+    };
+    let line = find_key_line(content, "sigv4")
+        .or_else(|| find_key_line(content, "credentials"))
+        .unwrap_or(1);
+    let Some(policies) = value.as_object() else {
+        diagnostics.push(
+            Diagnostic::warning(
+                path.to_path_buf(),
+                line,
+                0,
+                "CC-SET-012",
+                t!(
+                    "rules.cc_set_012.sigv4_object",
+                    actual = describe_json_type(value)
+                ),
+            )
+            .with_suggestion(t!("rules.cc_set_012.sigv4_suggestion")),
+        );
+        return;
+    };
+
+    for (field, policy) in policies {
+        let valid_field = matches!(field.as_str(), "streaming" | "presigned" | "sigv4a");
+        let valid_value = matches!(policy.as_str(), Some("deny" | "passthrough"));
+        if !valid_field || !valid_value {
+            diagnostics.push(
+                Diagnostic::warning(
+                    path.to_path_buf(),
+                    line,
+                    0,
+                    "CC-SET-012",
+                    t!(
+                        "rules.cc_set_012.sigv4_entry",
+                        field = field,
+                        actual = policy
+                            .as_str()
+                            .map(ToString::to_string)
+                            .unwrap_or_else(|| describe_json_type(policy).to_string())
+                    ),
+                )
+                .with_suggestion(t!("rules.cc_set_012.sigv4_suggestion")),
+            );
+        }
+    }
+}
+
+fn validate_sandbox_credential_aws_tls_termination(
+    path: &Path,
+    content: &str,
+    value: &serde_json::Value,
+    credentials: &serde_json::Map<String, serde_json::Value>,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(feature) = sandbox_credential_aws_feature_label(credentials) else {
+        return;
+    };
+
+    let tls_terminate = value.pointer("/sandbox/network/tlsTerminate");
+    if tls_terminate.is_some_and(serde_json::Value::is_object) {
+        return;
+    }
+
+    // System policy files are merged with ordered managed-settings.d
+    // fragments. Without the merged context, a missing value in this one file
+    // does not prove that the effective policy lacks tlsTerminate.
+    if tls_terminate.is_none() && is_claude_system_managed_settings_path(path) {
+        return;
+    }
+
+    let line = find_key_line(content, "awsPairs")
+        .or_else(|| find_key_line(content, "sigv4"))
+        .or_else(|| find_key_line(content, "credentials"))
+        .unwrap_or(1);
+    diagnostics.push(
+        Diagnostic::warning(
+            path.to_path_buf(),
+            line,
+            0,
+            "CC-SET-012",
+            t!("rules.cc_set_012.tls_terminate_required", feature = feature),
+        )
+        .with_suggestion(t!("rules.cc_set_012.tls_terminate_suggestion")),
+    );
+}
+
+fn validate_sandbox_credential_aws_scope(
+    path: &Path,
+    content: &str,
+    credentials: &serde_json::Map<String, serde_json::Value>,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(feature) = sandbox_credential_aws_feature_label(credentials) else {
+        return;
+    };
+
+    if is_claude_managed_settings_path(path) || is_user_settings_path(path) {
+        return;
+    }
+
+    let line = find_key_line(content, "awsPairs")
+        .or_else(|| find_key_line(content, "sigv4"))
+        .or_else(|| find_key_line(content, "credentials"))
+        .unwrap_or(1);
+    diagnostics.push(
+        Diagnostic::warning(
+            path.to_path_buf(),
+            line,
+            0,
+            "CC-SET-012",
+            t!("rules.cc_set_012.aws_scope", feature = feature),
+        )
+        .with_suggestion(t!("rules.cc_set_012.aws_scope_suggestion")),
+    );
+}
+
+fn sandbox_credential_aws_feature_label(
+    credentials: &serde_json::Map<String, serde_json::Value>,
+) -> Option<String> {
+    match (
+        credentials.contains_key("awsPairs"),
+        credentials.contains_key("sigv4"),
+    ) {
+        (true, true) => Some(t!("rules.cc_set_012.aws_features_both").to_string()),
+        (true, false) => Some(t!("rules.cc_set_012.aws_feature_aws_pairs").to_string()),
+        (false, true) => Some(t!("rules.cc_set_012.aws_feature_sigv4").to_string()),
+        (false, false) => None,
+    }
+}
+
+fn is_user_settings_path(path: &Path) -> bool {
+    if path.file_name().and_then(|name| name.to_str()) != Some("settings.json") {
+        return false;
+    }
+
+    let Some(home) = std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE")) else {
+        return false;
+    };
+    let absolute_path = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        let Ok(current_dir) = std::env::current_dir() else {
+            return false;
+        };
+        current_dir.join(path)
+    };
+
+    absolute_path == Path::new(&home).join(".claude").join("settings.json")
 }
 
 fn has_javascript_capturing_group(pattern: &str) -> bool {
@@ -1527,8 +1981,8 @@ fn validate_auto_mode_in_settings_local(
 /// user-level settings (`~/.claude/settings.json`), `--settings` files, and
 /// managed settings are honored. Repo-resident `.claude/settings.json` and
 /// `.claude/settings.local.json` no longer supply `pluginConfigs`; the key
-/// is silently ignored there. `managed-settings.json` IS honored, so it is
-/// skipped.
+/// is silently ignored there. Managed settings files are honored, so they
+/// are skipped.
 ///
 /// Fires on any non-null value; `null` is treated as field-absent,
 /// consistent with the CC-SET family. Note agnix lints repo checkouts —
@@ -1541,12 +1995,7 @@ fn validate_plugin_configs_scope(
     value: &serde_json::Value,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
-    let is_managed = path
-        .file_name()
-        .and_then(|n| n.to_str())
-        .map(|n| n == "managed-settings.json")
-        .unwrap_or(false);
-    if is_managed {
+    if is_claude_managed_settings_path(path) {
         return;
     }
 
@@ -1817,11 +2266,9 @@ fn validate_remote_control_at_startup_scope(
     value: &serde_json::Value,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
-    let is_managed = path
-        .file_name()
-        .and_then(|name| name.to_str())
-        .is_some_and(|name| name == "managed-settings.json");
-    if is_managed || value.get("remoteControlAtStartup") != Some(&serde_json::Value::Bool(true)) {
+    if is_claude_managed_settings_path(path)
+        || value.get("remoteControlAtStartup") != Some(&serde_json::Value::Bool(true))
+    {
         return;
     }
 
@@ -1835,6 +2282,76 @@ fn validate_remote_control_at_startup_scope(
             t!("rules.cc_set_021.message"),
         )
         .with_suggestion(t!("rules.cc_set_021.suggestion")),
+    );
+}
+
+/// CC-SET-022: Validate the cross-session inbound-message policy enum.
+fn validate_cross_session_inbound(
+    path: &Path,
+    content: &str,
+    value: &serde_json::Value,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(field_value) = value.get("crossSessionInbound") else {
+        return;
+    };
+    if field_value.is_null()
+        || field_value
+            .as_str()
+            .is_some_and(|value| CROSS_SESSION_INBOUND_ALLOWED.contains(&value))
+    {
+        return;
+    }
+
+    let actual = field_value
+        .as_str()
+        .map(ToString::to_string)
+        .unwrap_or_else(|| describe_json_type(field_value).to_string());
+    let line = find_key_line(content, "crossSessionInbound").unwrap_or(1);
+    diagnostics.push(
+        Diagnostic::warning(
+            path.to_path_buf(),
+            line,
+            0,
+            "CC-SET-022",
+            t!("rules.cc_set_022.message", actual = actual),
+        )
+        .with_suggestion(t!("rules.cc_set_022.suggestion")),
+    );
+}
+
+/// CC-SET-023: Validate the remote-dialog expiry enum.
+fn validate_dialog_expiry(
+    path: &Path,
+    content: &str,
+    value: &serde_json::Value,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(field_value) = value.get("dialogExpiry") else {
+        return;
+    };
+    if field_value.is_null()
+        || field_value
+            .as_str()
+            .is_some_and(|value| DIALOG_EXPIRY_ALLOWED.contains(&value))
+    {
+        return;
+    }
+
+    let actual = field_value
+        .as_str()
+        .map(ToString::to_string)
+        .unwrap_or_else(|| describe_json_type(field_value).to_string());
+    let line = find_key_line(content, "dialogExpiry").unwrap_or(1);
+    diagnostics.push(
+        Diagnostic::warning(
+            path.to_path_buf(),
+            line,
+            0,
+            "CC-SET-023",
+            t!("rules.cc_set_023.message", actual = actual),
+        )
+        .with_suggestion(t!("rules.cc_set_023.suggestion")),
     );
 }
 
@@ -1928,7 +2445,7 @@ fn find_key_line(content: &str, key: &str) -> Option<usize> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::LintConfig;
+    use crate::{config::LintConfig, pipeline::validate_content, registry::ValidatorRegistry};
     use std::path::PathBuf;
 
     fn validate(content: &str) -> Vec<Diagnostic> {
@@ -1972,6 +2489,94 @@ mod tests {
         let content = r#"{"prUrlTemplate": 123}"#;
         let diagnostics = validate_at(".claude/managed-settings.json", content);
         assert_eq!(diagnostics.len(), 1);
+    }
+
+    #[test]
+    fn test_system_managed_settings_run_aws_checks_through_pipeline() {
+        let content = r#"{
+          "crossSessionInbound": "prompt",
+          "dialogExpiry": "30s",
+          "pluginConfigs": {"my-plugin": {}},
+          "remoteControlAtStartup": true,
+          "sandbox": {
+            "network": {"tlsTerminate": {}},
+            "credentials": {
+              "awsPairs": [{
+                "accessKeyIdVar": "AWS_KEY",
+                "secretAccessKeyVar": "AWS_KEY"
+              }]
+            }
+          }
+        }"#;
+        let config = LintConfig::default();
+        let registry = ValidatorRegistry::with_defaults();
+
+        for path in [
+            "/Library/Application Support/ClaudeCode/managed-settings.json",
+            "/etc/claude-code/managed-settings.json",
+            "C:/Program Files/ClaudeCode/managed-settings.json",
+            "/Library/Application Support/ClaudeCode/managed-settings.d/10-security.json",
+            "/etc/claude-code/managed-settings.d/sandbox.json",
+            "C:/Program Files/ClaudeCode/managed-settings.d/90-credentials.json",
+        ] {
+            let diagnostics = validate_content(Path::new(path), content, &config, &registry);
+            for rule in ["CC-SET-012", "CC-SET-022", "CC-SET-023"] {
+                assert_eq!(
+                    diagnostics
+                        .iter()
+                        .filter(|diagnostic| diagnostic.rule == rule)
+                        .count(),
+                    1,
+                    "expected {rule} through production dispatch for {path}"
+                );
+            }
+            assert!(
+                diagnostics
+                    .iter()
+                    .find(|diagnostic| diagnostic.rule == "CC-SET-012")
+                    .is_some_and(|diagnostic| diagnostic.message.contains("reuses"))
+            );
+            for rule in ["CC-SET-015", "CC-SET-021"] {
+                assert!(
+                    diagnostics.iter().all(|diagnostic| diagnostic.rule != rule),
+                    "unexpected project-scope {rule} for managed settings path {path}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_split_system_managed_settings_do_not_false_positive_aws_tls() {
+        let credentials = r#"{"sandbox":{"credentials":{"awsPairs":[]}}}"#;
+        let network = r#"{"sandbox":{"network":{"tlsTerminate":{}}}}"#;
+        let config = LintConfig::default();
+        let registry = ValidatorRegistry::with_defaults();
+
+        for (credentials_path, network_path) in [
+            (
+                "/Library/Application Support/ClaudeCode/managed-settings.d/10-credentials.json",
+                "/Library/Application Support/ClaudeCode/managed-settings.d/20-network.json",
+            ),
+            (
+                "/etc/claude-code/managed-settings.d/10-credentials.json",
+                "/etc/claude-code/managed-settings.d/20-network.json",
+            ),
+            (
+                "C:/Program Files/ClaudeCode/managed-settings.d/10-credentials.json",
+                "C:/Program Files/ClaudeCode/managed-settings.d/20-network.json",
+            ),
+        ] {
+            for (path, content) in [(credentials_path, credentials), (network_path, network)] {
+                let diagnostics = validate_content(Path::new(path), content, &config, &registry);
+                assert!(
+                    diagnostics.iter().all(|diagnostic| {
+                        diagnostic.rule != "CC-SET-012"
+                            || !diagnostic.message.contains("tlsTerminate")
+                    }),
+                    "unexpected per-file tlsTerminate diagnostic for merged source {path}"
+                );
+            }
+        }
     }
 
     // ===== CC-SET-001 positive =====
@@ -3323,6 +3928,359 @@ mod tests {
     }
 
     #[test]
+    fn test_sandbox_credentials_v2_1_224_options_are_valid() {
+        let content = r#"{
+          "sandbox": {
+            "network": {
+              "tlsTerminate": {}
+            },
+            "credentials": {
+              "files": [{
+                "path": "~/.config/service/token.json",
+                "mode": "mask",
+                "decode": "jwt",
+                "maskClaims": ["api_key"],
+                "onExtractNoMatch": "error",
+                "maskDuplicates": true
+              }],
+              "envVars": [
+                {
+                  "name": "DATABASE_URL",
+                  "mode": "mask",
+                  "extract": "://[^:]+:([^@]+)@",
+                  "onExtractNoMatch": "deny"
+                },
+                {
+                  "name": "JWT_TOKEN",
+                  "mode": "mask",
+                  "decode": "jwt",
+                  "maskClaims": ["api_key"],
+                  "onExtractNoMatch": "warn"
+                }
+              ],
+              "awsPairs": [{
+                "accessKeyIdVar": "MY_KEY_ID",
+                "secretAccessKeyVar": "MY_SECRET_KEY",
+                "sessionTokenVar": "MY_SESSION_TOKEN"
+              }],
+              "sigv4": {
+                "streaming": "passthrough",
+                "presigned": "deny",
+                "sigv4a": "deny"
+              }
+            }
+          }
+        }"#;
+        assert!(
+            validate_at(".claude/managed-settings.json", content)
+                .iter()
+                .all(|d| d.rule != "CC-SET-012")
+        );
+    }
+
+    #[test]
+    fn test_sandbox_credentials_v2_1_224_invalid_options_flag() {
+        let content = r#"{
+          "sandbox": {
+            "network": {
+              "tlsTerminate": {}
+            },
+            "credentials": {
+              "files": [{
+                "path": "~/.config/service/token.json",
+                "mode": "mask",
+                "decode": "base64",
+                "maskClaims": []
+              }],
+              "envVars": [{
+                "name": "JWT_TOKEN",
+                "mode": "mask",
+                "extract": "(token)",
+                "decode": "jwt",
+                "onExtractNoMatch": "deny"
+              }],
+              "awsPairs": [{
+                "accessKeyIdVar": "",
+                "secretAccessKeyVar": 42
+              }],
+              "sigv4": {
+                "streaming": "allow",
+                "unknown": "deny"
+              }
+            }
+          }
+        }"#;
+        let hits: Vec<_> = validate_at(".claude/managed-settings.json", content)
+            .into_iter()
+            .filter(|diagnostic| diagnostic.rule == "CC-SET-012")
+            .collect();
+        assert!(hits.iter().any(|hit| hit.message.contains(".decode")));
+        assert!(hits.iter().any(|hit| hit.message.contains("maskClaims")));
+        assert!(
+            hits.iter()
+                .any(|hit| hit.message.contains("cannot combine extract and decode"))
+        );
+        assert!(
+            hits.iter()
+                .any(|hit| hit.message.contains("onExtractNoMatch"))
+        );
+        assert!(hits.iter().any(|hit| hit.message.contains("awsPairs")));
+        assert!(hits.iter().any(|hit| hit.message.contains("sigv4")));
+    }
+
+    #[test]
+    fn test_sandbox_credentials_aws_pairs_and_sigv4_containers_are_checked() {
+        let diagnostics = validate_at(
+            ".claude/managed-settings.json",
+            r#"{"sandbox":{"network":{"tlsTerminate":{}},"credentials":{"awsPairs":true,"sigv4":[]}}}"#,
+        );
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.rule == "CC-SET-012")
+            .collect();
+        assert_eq!(hits.len(), 2);
+        assert!(hits.iter().any(|hit| hit.message.contains("awsPairs")));
+        assert!(hits.iter().any(|hit| hit.message.contains("sigv4")));
+    }
+
+    #[test]
+    fn test_sandbox_credentials_aws_pair_variables_must_be_unique_within_pair() {
+        for content in [
+            r#"{
+              "sandbox": {
+                "network": {"tlsTerminate": {}},
+                "credentials": {
+                  "awsPairs": [{
+                    "accessKeyIdVar": "AWS_KEY",
+                    "secretAccessKeyVar": "AWS_KEY"
+                  }]
+                }
+              }
+            }"#,
+            r#"{
+              "sandbox": {
+                "network": {"tlsTerminate": {}},
+                "credentials": {
+                  "awsPairs": [{
+                    "accessKeyIdVar": "AWS_KEY",
+                    "secretAccessKeyVar": "AWS_SECRET",
+                    "sessionTokenVar": "AWS_SECRET"
+                  }]
+                }
+              }
+            }"#,
+        ] {
+            let hits: Vec<_> = validate_at(".claude/managed-settings.json", content)
+                .into_iter()
+                .filter(|diagnostic| diagnostic.rule == "CC-SET-012")
+                .collect();
+            assert_eq!(hits.len(), 1);
+            assert!(hits[0].message.contains("reuses"));
+        }
+    }
+
+    #[test]
+    fn test_sandbox_credentials_aws_pair_variables_must_be_unique_across_pairs() {
+        let content = r#"{
+          "sandbox": {
+            "network": {"tlsTerminate": {}},
+            "credentials": {
+              "awsPairs": [
+                {
+                  "accessKeyIdVar": "AWS_KEY",
+                  "secretAccessKeyVar": "AWS_SECRET_1"
+                },
+                {
+                  "accessKeyIdVar": "AWS_KEY",
+                  "secretAccessKeyVar": "AWS_SECRET_2"
+                }
+              ]
+            }
+          }
+        }"#;
+        let hits: Vec<_> = validate_at(".claude/managed-settings.json", content)
+            .into_iter()
+            .filter(|diagnostic| diagnostic.rule == "CC-SET-012")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        assert!(hits[0].message.contains("awsPairs[1].accessKeyIdVar"));
+        assert!(hits[0].message.contains("awsPairs[0].accessKeyIdVar"));
+    }
+
+    #[test]
+    fn test_sandbox_credentials_aws_resigning_requires_tls_termination() {
+        for content in [
+            r#"{"sandbox":{"credentials":{"awsPairs":[],"sigv4":{}}}}"#,
+            r#"{"sandbox":{"network":{"tlsTerminate":true},"credentials":{"awsPairs":[]}}}"#,
+        ] {
+            let hits: Vec<_> = validate_at(".claude/managed-settings.json", content)
+                .into_iter()
+                .filter(|diagnostic| diagnostic.rule == "CC-SET-012")
+                .collect();
+            assert_eq!(hits.len(), 1);
+            assert!(hits[0].message.contains("tlsTerminate"));
+        }
+    }
+
+    #[test]
+    fn test_sandbox_credentials_aws_tls_missing_is_suppressed_for_system_sources() {
+        let content = r#"{"sandbox":{"credentials":{"awsPairs":[]}}}"#;
+
+        for path in [
+            "/Library/Application Support/ClaudeCode/managed-settings.json",
+            "/etc/claude-code/managed-settings.json",
+            "C:/Program Files/ClaudeCode/managed-settings.json",
+            "/Library/Application Support/ClaudeCode/managed-settings.d/10-credentials.json",
+            "/etc/claude-code/managed-settings.d/10-credentials.json",
+            "C:/Program Files/ClaudeCode/managed-settings.d/10-credentials.json",
+        ] {
+            assert!(
+                validate_at(path, content).iter().all(|diagnostic| {
+                    diagnostic.rule != "CC-SET-012" || !diagnostic.message.contains("tlsTerminate")
+                }),
+                "unexpected per-file tlsTerminate diagnostic for merged source {path}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_sandbox_credentials_aws_tls_invalid_value_still_warns_in_fragment() {
+        let content =
+            r#"{"sandbox":{"network":{"tlsTerminate":true},"credentials":{"awsPairs":[]}}}"#;
+        let hits: Vec<_> = validate_at(
+            "/etc/claude-code/managed-settings.d/10-credentials.json",
+            content,
+        )
+        .into_iter()
+        .filter(|diagnostic| diagnostic.rule == "CC-SET-012")
+        .collect();
+
+        assert_eq!(hits.len(), 1);
+        assert!(hits[0].message.contains("tlsTerminate"));
+    }
+
+    #[test]
+    fn test_sandbox_credentials_aws_resigning_flags_project_scopes() {
+        let content = r#"{
+          "sandbox": {
+            "network": {"tlsTerminate": {}},
+            "credentials": {"awsPairs": [], "sigv4": {}}
+          }
+        }"#;
+        for path in [".claude/settings.json", ".claude/settings.local.json"] {
+            let hits: Vec<_> = validate_at(path, content)
+                .into_iter()
+                .filter(|diagnostic| diagnostic.rule == "CC-SET-012")
+                .collect();
+            assert_eq!(hits.len(), 1, "expected one scope diagnostic for {path}");
+            assert!(hits[0].message.contains("project-level"));
+        }
+    }
+
+    #[test]
+    fn test_sandbox_credentials_aws_resigning_allows_honored_scopes() {
+        let content = r#"{
+          "sandbox": {
+            "network": {"tlsTerminate": {}},
+            "credentials": {"awsPairs": [], "sigv4": {}}
+          }
+        }"#;
+        assert!(
+            validate_at(".claude/managed-settings.json", content)
+                .iter()
+                .all(|diagnostic| diagnostic.rule != "CC-SET-012")
+        );
+
+        let Some(home) = std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE"))
+        else {
+            return;
+        };
+        let user_settings = PathBuf::from(home).join(".claude").join("settings.json");
+        let diagnostics =
+            ClaudeSettingsValidator.validate(&user_settings, content, &LintConfig::default());
+        assert!(
+            diagnostics
+                .iter()
+                .all(|diagnostic| diagnostic.rule != "CC-SET-012")
+        );
+    }
+
+    #[test]
+    fn test_sandbox_credentials_combined_aws_feature_label_is_localized() {
+        for (locale, conjunction) in [("es", "awsPairs y sigv4"), ("zh-CN", "awsPairs 和 sigv4")] {
+            let feature = rust_i18n::t!("rules.cc_set_012.aws_features_both", locale = locale);
+            let tls_message = rust_i18n::t!(
+                "rules.cc_set_012.tls_terminate_required",
+                locale = locale,
+                feature = feature.clone()
+            );
+            let scope_message = rust_i18n::t!(
+                "rules.cc_set_012.aws_scope",
+                locale = locale,
+                feature = feature
+            );
+
+            assert!(tls_message.contains(conjunction));
+            assert!(scope_message.contains(conjunction));
+            assert!(!tls_message.contains("awsPairs and sigv4"));
+            assert!(!scope_message.contains("awsPairs and sigv4"));
+        }
+    }
+
+    #[test]
+    fn test_sandbox_credentials_spanish_translations_preserve_diacritics() {
+        let cases = [
+            (
+                rust_i18n::t!(
+                    "rules.cc_set_012.extract_no_match_jwt_suggestion",
+                    locale = "es",
+                    array_key = "envVars",
+                    index = 0
+                ),
+                "elimínalo",
+            ),
+            (
+                rust_i18n::t!(
+                    "rules.cc_set_012.mask_claims_shape",
+                    locale = "es",
+                    array_key = "envVars",
+                    index = 0,
+                    actual = "[]"
+                ),
+                "vacío",
+            ),
+            (
+                rust_i18n::t!(
+                    "rules.cc_set_012.aws_pair_field",
+                    locale = "es",
+                    index = 0,
+                    field = "accessKeyIdVar"
+                ),
+                "vacía",
+            ),
+            (
+                rust_i18n::t!("rules.cc_set_012.sigv4_suggestion", locale = "es"),
+                "políticas",
+            ),
+            (
+                rust_i18n::t!(
+                    "rules.cc_set_012.aws_scope",
+                    locale = "es",
+                    feature = "awsPairs"
+                ),
+                "configuración",
+            ),
+        ];
+
+        for (message, expected) in cases {
+            assert!(
+                message.contains(expected),
+                "expected Spanish translation to contain {expected:?}, got {message:?}"
+            );
+        }
+    }
+
+    #[test]
     fn test_sandbox_credentials_optional_field_types_are_checked() {
         let diagnostics = validate(
             r#"{
@@ -3376,6 +4334,8 @@ mod tests {
                 "path": "~/.netrc",
                 "mode": "deny",
                 "extract": 42,
+                "decode": 42,
+                "maskClaims": 42,
                 "onExtractNoMatch": 42,
                 "maskDuplicates": "true",
                 "injectHosts": 42
@@ -3383,6 +4343,10 @@ mod tests {
               "envVars": [{
                 "name": "GITHUB_TOKEN",
                 "mode": "deny",
+                "extract": 42,
+                "decode": 42,
+                "maskClaims": 42,
+                "onExtractNoMatch": 42,
                 "injectHosts": 42
               }]
             }
@@ -4107,5 +5071,61 @@ mod tests {
                 .iter()
                 .all(|diagnostic| diagnostic.rule != "CC-SET-021")
         );
+    }
+
+    // ===== CC-SET-022: crossSessionInbound enum =====
+
+    #[test]
+    fn test_cross_session_inbound_documented_values_are_valid() {
+        for value in ["accept", "hold", "refuse"] {
+            let content = format!(r#"{{"crossSessionInbound":"{value}"}}"#);
+            assert!(
+                validate(&content)
+                    .iter()
+                    .all(|diagnostic| diagnostic.rule != "CC-SET-022")
+            );
+        }
+    }
+
+    #[test]
+    fn test_cross_session_inbound_invalid_values_flag() {
+        for value in [r#""prompt""#, "true", "[]"] {
+            let content = format!(r#"{{"crossSessionInbound":{value}}}"#);
+            assert_eq!(
+                validate(&content)
+                    .iter()
+                    .filter(|diagnostic| diagnostic.rule == "CC-SET-022")
+                    .count(),
+                1
+            );
+        }
+    }
+
+    // ===== CC-SET-023: dialogExpiry enum =====
+
+    #[test]
+    fn test_dialog_expiry_documented_values_are_valid() {
+        for value in ["60s", "5m", "10m", "never"] {
+            let content = format!(r#"{{"dialogExpiry":"{value}"}}"#);
+            assert!(
+                validate(&content)
+                    .iter()
+                    .all(|diagnostic| diagnostic.rule != "CC-SET-023")
+            );
+        }
+    }
+
+    #[test]
+    fn test_dialog_expiry_invalid_values_flag() {
+        for value in [r#""30s""#, "300", "false"] {
+            let content = format!(r#"{{"dialogExpiry":{value}}}"#);
+            assert_eq!(
+                validate(&content)
+                    .iter()
+                    .filter(|diagnostic| diagnostic.rule == "CC-SET-023")
+                    .count(),
+                1
+            );
+        }
     }
 }

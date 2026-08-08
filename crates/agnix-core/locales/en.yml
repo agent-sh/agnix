@@ -907,8 +907,8 @@ rules:
     message: Missing or empty plugin name
     suggestion: Add a 'name' field with a non-empty string to plugin.json
   cdx_pl_004:
-    message: Invalid plugin name '%{name}' - must be ASCII alphanumeric, hyphens, or underscores only
-    suggestion: Rename to use only ASCII letters, digits, hyphens, and underscores
+    message: Invalid plugin name '%{name}' - use ASCII letters, digits, dots, hyphens, or underscores without empty dot-separated segments
+    suggestion: Rename to use ASCII letters, digits, dots, hyphens, and underscores; do not start or end with a dot or use consecutive dots
     agent_message: Invalid Agent Plugins name '%{name}' - use lowercase letters, numbers, dots, or hyphens without repeated separators
     agent_suggestion: Use 1-64 lowercase ASCII letters, digits, dots, or hyphens, starting and ending with a letter or digit
   cdx_pl_005:
@@ -1279,8 +1279,34 @@ rules:
     extract_no_match_value: 'sandbox.credentials.%{array_key}[%{index}].onExtractNoMatch must be "warn", "deny", or "error" (got "%{actual}")'
     extract_no_match_type: sandbox.credentials.%{array_key}[%{index}].onExtractNoMatch must be a string (got %{actual})
     extract_no_match_suggestion: 'Set sandbox.credentials.%{array_key}[%{index}].onExtractNoMatch to "warn", "deny", or "error".'
+    extract_no_match_jwt_value: 'sandbox.credentials.%{array_key}[%{index}].onExtractNoMatch must be "warn" when an environment variable uses decode: "jwt" (got "%{actual}")'
+    extract_no_match_jwt_suggestion: 'Set sandbox.credentials.%{array_key}[%{index}].onExtractNoMatch to "warn", or remove it.'
     mask_duplicates_type: sandbox.credentials.%{array_key}[%{index}].maskDuplicates must be a boolean (got %{actual})
     mask_duplicates_suggestion: Set sandbox.credentials.%{array_key}[%{index}].maskDuplicates to an unquoted true or false, or remove it.
+    decode_value: 'sandbox.credentials.%{array_key}[%{index}].decode must be "jwt" (got "%{actual}")'
+    decode_type: sandbox.credentials.%{array_key}[%{index}].decode must be a string (got %{actual})
+    decode_suggestion: 'Set sandbox.credentials.%{array_key}[%{index}].decode to "jwt", or remove it.'
+    extract_decode_conflict: sandbox.credentials.%{array_key}[%{index}] cannot combine extract and decode for an environment variable
+    extract_decode_conflict_suggestion: Remove either extract or decode from sandbox.credentials.%{array_key}[%{index}].
+    mask_claims_shape: sandbox.credentials.%{array_key}[%{index}].maskClaims must be a non-empty array of non-empty strings (got %{actual})
+    mask_claims_requires_decode: 'sandbox.credentials.%{array_key}[%{index}].maskClaims requires decode: "jwt"'
+    mask_claims_suggestion: 'Set decode to "jwt" and maskClaims to claim names such as ["api_key"], or remove maskClaims.'
+    aws_pairs_array: sandbox.credentials.awsPairs must be an array of objects (got %{actual})
+    aws_pair_object: sandbox.credentials.awsPairs[%{index}] must be an object (got %{actual})
+    aws_pair_field: sandbox.credentials.awsPairs[%{index}].%{field} must be a non-empty string
+    aws_pairs_suggestion: 'Use entries such as {"accessKeyIdVar":"MY_KEY_ID","secretAccessKeyVar":"MY_SECRET_KEY"} with an optional sessionTokenVar.'
+    aws_pair_duplicate: sandbox.credentials.awsPairs[%{index}].%{field} reuses environment variable %{variable}, which is already used by awsPairs[%{first_index}].%{first_field}
+    aws_pair_duplicate_suggestion: Use a different environment variable name for every AWS credential slot across all awsPairs entries.
+    sigv4_object: sandbox.credentials.sigv4 must be an object (got %{actual})
+    sigv4_entry: 'sandbox.credentials.sigv4.%{field} must be deny or passthrough, and the field must be streaming, presigned, or sigv4a (got %{actual})'
+    sigv4_suggestion: Set streaming, presigned, and sigv4a policies to deny or passthrough, or remove unsupported fields.
+    aws_feature_aws_pairs: awsPairs
+    aws_feature_sigv4: sigv4
+    aws_features_both: awsPairs and sigv4
+    tls_terminate_required: AWS credential re-signing via sandbox.credentials.%{feature} requires sandbox.network.tlsTerminate to be an object
+    tls_terminate_suggestion: 'Set sandbox.network.tlsTerminate to an object such as {}, or remove the AWS credential re-signing settings.'
+    aws_scope: AWS credential re-signing via sandbox.credentials.%{feature} is ignored in project-level .claude settings
+    aws_scope_suggestion: Move the AWS credential re-signing settings to ~/.claude/settings.json, a --settings file, or managed settings.
   cc_set_013:
     message: autoMode.classifyAllShell must be a boolean when present (got %{actual}); Claude Code 2.1.193+ documents this
       auto-mode setting as a strict true/false toggle
@@ -1318,6 +1344,12 @@ rules:
       this value is ignored'
     suggestion: Enable Remote Control in user settings with /config, or set this field to false to disable it for the
       project.
+  cc_set_022:
+    message: crossSessionInbound must be accept, hold, or refuse (got %{actual})
+    suggestion: Set crossSessionInbound to accept, hold, or refuse.
+  cc_set_023:
+    message: dialogExpiry must be 60s, 5m, 10m, or never (got %{actual})
+    suggestion: Set dialogExpiry to 60s, 5m, 10m, or never.
   cc_hk_028:
     message: Command hook at %{location} uses '${user_config.*}' interpolation, which Claude Code 2.1.207+ rejects at
       load time as a shell-injection fix

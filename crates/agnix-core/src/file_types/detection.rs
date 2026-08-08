@@ -99,6 +99,74 @@ pub(crate) fn path_contains_consecutive_components(path: &Path, first: &str, sec
     false
 }
 
+fn path_ends_with_components_ignore_ascii_case(path: &Path, expected: &[&str]) -> bool {
+    let components: Vec<_> = path
+        .components()
+        .filter_map(|component| match component {
+            std::path::Component::Normal(name) => name.to_str(),
+            _ => None,
+        })
+        .collect();
+    components.len() >= expected.len()
+        && components[components.len() - expected.len()..]
+            .iter()
+            .zip(expected)
+            .all(|(actual, expected)| actual.eq_ignore_ascii_case(expected))
+}
+
+/// Returns true for Claude Code's documented macOS, Linux/WSL, and Windows
+/// system policy files. These sources are merged with `managed-settings.d`
+/// fragments before Claude Code applies the effective policy.
+pub(crate) fn is_claude_system_managed_settings_path(path: &Path) -> bool {
+    let Some(filename) = path.file_name().and_then(|name| name.to_str()) else {
+        return false;
+    };
+
+    if filename.eq_ignore_ascii_case("managed-settings.json")
+        && [
+            &[
+                "Library",
+                "Application Support",
+                "ClaudeCode",
+                "managed-settings.json",
+            ][..],
+            &["etc", "claude-code", "managed-settings.json"][..],
+            &["Program Files", "ClaudeCode", "managed-settings.json"][..],
+        ]
+        .iter()
+        .any(|suffix| path_ends_with_components_ignore_ascii_case(path, suffix))
+    {
+        return true;
+    }
+
+    if filename.starts_with('.') || !ends_with_ignore_ascii_case(filename, ".json") {
+        return false;
+    }
+
+    let Some(parent) = path.parent() else {
+        return false;
+    };
+    [
+        &[
+            "Library",
+            "Application Support",
+            "ClaudeCode",
+            "managed-settings.d",
+        ][..],
+        &["etc", "claude-code", "managed-settings.d"][..],
+        &["Program Files", "ClaudeCode", "managed-settings.d"][..],
+    ]
+    .iter()
+    .any(|suffix| path_ends_with_components_ignore_ascii_case(parent, suffix))
+}
+
+/// Returns true for Claude Code's project-compatible managed settings path and
+/// the documented macOS, Linux/WSL, and Windows system policy files.
+pub(crate) fn is_claude_managed_settings_path(path: &Path) -> bool {
+    path_ends_with_components_ignore_ascii_case(path, &[".claude", "managed-settings.json"])
+        || is_claude_system_managed_settings_path(path)
+}
+
 /// Case-insensitive suffix check that avoids allocating temporary strings.
 fn ends_with_ignore_ascii_case(value: &str, suffix: &str) -> bool {
     if value.len() < suffix.len() {
@@ -358,6 +426,7 @@ pub fn detect_file_type(path: &Path) -> FileType {
         {
             FileType::GeminiSettings
         }
+        _ if is_claude_managed_settings_path(path) => FileType::Hooks,
         "settings.json" | "settings.local.json" => FileType::Hooks,
         // Codex CLI plugin manifest (.codex-plugin/plugin.json)
         "plugin.json" if parent_eq_ignore_ascii_case(parent, ".codex-plugin") => {
@@ -820,6 +889,69 @@ mod tests {
             detect_file_type(Path::new("settings.local.json")),
             FileType::Hooks
         );
+    }
+
+    #[test]
+    fn detect_claude_managed_settings() {
+        for path in [
+            ".claude/managed-settings.json",
+            "/Library/Application Support/ClaudeCode/managed-settings.json",
+            "/etc/claude-code/managed-settings.json",
+            "C:/Program Files/ClaudeCode/managed-settings.json",
+            "/Library/Application Support/ClaudeCode/managed-settings.d/10-security.json",
+            "/etc/claude-code/managed-settings.d/sandbox.json",
+            "/etc/claude-code/managed-settings.d/managed-settings.json",
+            "C:/Program Files/ClaudeCode/managed-settings.d/90-credentials.json",
+        ] {
+            assert_eq!(
+                detect_file_type(Path::new(path)),
+                FileType::Hooks,
+                "expected Claude managed settings dispatch for {path}"
+            );
+        }
+        assert_eq!(
+            detect_file_type(Path::new("other/managed-settings.json")),
+            FileType::Unknown
+        );
+        for path in [
+            "/etc/claude-code/managed-settings.d/.hidden.json",
+            "/etc/claude-code/managed-settings.d/readme.txt",
+            "other/managed-settings.d/sandbox.json",
+        ] {
+            assert_eq!(
+                detect_file_type(Path::new(path)),
+                FileType::Unknown,
+                "expected non-active managed settings path to stay unknown: {path}"
+            );
+        }
+    }
+
+    #[test]
+    fn classify_claude_system_managed_settings_merge_sources() {
+        for path in [
+            "/Library/Application Support/ClaudeCode/managed-settings.json",
+            "/etc/claude-code/managed-settings.json",
+            "C:/Program Files/ClaudeCode/managed-settings.json",
+            "/Library/Application Support/ClaudeCode/managed-settings.d/10-security.json",
+            "/etc/claude-code/managed-settings.d/sandbox.json",
+            "C:/Program Files/ClaudeCode/managed-settings.d/90-credentials.json",
+        ] {
+            assert!(
+                is_claude_system_managed_settings_path(Path::new(path)),
+                "expected merged system settings source: {path}"
+            );
+        }
+
+        for path in [
+            ".claude/managed-settings.json",
+            "/etc/claude-code/managed-settings.d/.hidden.json",
+            "other/managed-settings.d/sandbox.json",
+        ] {
+            assert!(
+                !is_claude_system_managed_settings_path(Path::new(path)),
+                "unexpected merged system settings source: {path}"
+            );
+        }
     }
 
     #[test]
