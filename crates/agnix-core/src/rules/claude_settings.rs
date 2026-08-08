@@ -4140,6 +4140,59 @@ mod tests {
     }
 
     #[test]
+    fn test_sandbox_credentials_spanish_translations_preserve_diacritics() {
+        let cases = [
+            (
+                rust_i18n::t!(
+                    "rules.cc_set_012.extract_no_match_jwt_suggestion",
+                    locale = "es",
+                    array_key = "envVars",
+                    index = 0
+                ),
+                "elimínalo",
+            ),
+            (
+                rust_i18n::t!(
+                    "rules.cc_set_012.mask_claims_shape",
+                    locale = "es",
+                    array_key = "envVars",
+                    index = 0,
+                    actual = "[]"
+                ),
+                "vacío",
+            ),
+            (
+                rust_i18n::t!(
+                    "rules.cc_set_012.aws_pair_field",
+                    locale = "es",
+                    index = 0,
+                    field = "accessKeyIdVar"
+                ),
+                "vacía",
+            ),
+            (
+                rust_i18n::t!("rules.cc_set_012.sigv4_suggestion", locale = "es"),
+                "políticas",
+            ),
+            (
+                rust_i18n::t!(
+                    "rules.cc_set_012.aws_scope",
+                    locale = "es",
+                    feature = "awsPairs"
+                ),
+                "configuración",
+            ),
+        ];
+
+        for (message, expected) in cases {
+            assert!(
+                message.contains(expected),
+                "expected Spanish translation to contain {expected:?}, got {message:?}"
+            );
+        }
+    }
+
+    #[test]
     fn test_sandbox_credentials_optional_field_types_are_checked() {
         let diagnostics = validate(
             r#"{
