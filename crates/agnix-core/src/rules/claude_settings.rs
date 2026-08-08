@@ -2496,6 +2496,8 @@ mod tests {
     #[test]
     fn test_system_managed_settings_run_aws_checks_through_pipeline() {
         let content = r#"{
+          "crossSessionInbound": "prompt",
+          "dialogExpiry": "30s",
           "sandbox": {
             "network": {"tlsTerminate": {}},
             "credentials": {
@@ -2513,18 +2515,27 @@ mod tests {
             "/Library/Application Support/ClaudeCode/managed-settings.json",
             "/etc/claude-code/managed-settings.json",
             "C:/Program Files/ClaudeCode/managed-settings.json",
+            "/Library/Application Support/ClaudeCode/managed-settings.d/10-security.json",
+            "/etc/claude-code/managed-settings.d/sandbox.json",
+            "C:/Program Files/ClaudeCode/managed-settings.d/90-credentials.json",
         ] {
             let diagnostics = validate_content(Path::new(path), content, &config, &registry);
-            let hits: Vec<_> = diagnostics
-                .iter()
-                .filter(|diagnostic| diagnostic.rule == "CC-SET-012")
-                .collect();
-            assert_eq!(
-                hits.len(),
-                1,
-                "expected AWS validation through production dispatch for {path}"
+            for rule in ["CC-SET-012", "CC-SET-022", "CC-SET-023"] {
+                assert_eq!(
+                    diagnostics
+                        .iter()
+                        .filter(|diagnostic| diagnostic.rule == rule)
+                        .count(),
+                    1,
+                    "expected {rule} through production dispatch for {path}"
+                );
+            }
+            assert!(
+                diagnostics
+                    .iter()
+                    .find(|diagnostic| diagnostic.rule == "CC-SET-012")
+                    .is_some_and(|diagnostic| diagnostic.message.contains("reuses"))
             );
-            assert!(hits[0].message.contains("reuses"));
         }
     }
 
