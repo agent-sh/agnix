@@ -1976,8 +1976,8 @@ fn validate_auto_mode_in_settings_local(
 /// user-level settings (`~/.claude/settings.json`), `--settings` files, and
 /// managed settings are honored. Repo-resident `.claude/settings.json` and
 /// `.claude/settings.local.json` no longer supply `pluginConfigs`; the key
-/// is silently ignored there. `managed-settings.json` IS honored, so it is
-/// skipped.
+/// is silently ignored there. Managed settings files are honored, so they
+/// are skipped.
 ///
 /// Fires on any non-null value; `null` is treated as field-absent,
 /// consistent with the CC-SET family. Note agnix lints repo checkouts —
@@ -1990,12 +1990,7 @@ fn validate_plugin_configs_scope(
     value: &serde_json::Value,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
-    let is_managed = path
-        .file_name()
-        .and_then(|n| n.to_str())
-        .map(|n| n == "managed-settings.json")
-        .unwrap_or(false);
-    if is_managed {
+    if is_claude_managed_settings_path(path) {
         return;
     }
 
@@ -2266,11 +2261,9 @@ fn validate_remote_control_at_startup_scope(
     value: &serde_json::Value,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
-    let is_managed = path
-        .file_name()
-        .and_then(|name| name.to_str())
-        .is_some_and(|name| name == "managed-settings.json");
-    if is_managed || value.get("remoteControlAtStartup") != Some(&serde_json::Value::Bool(true)) {
+    if is_claude_managed_settings_path(path)
+        || value.get("remoteControlAtStartup") != Some(&serde_json::Value::Bool(true))
+    {
         return;
     }
 
@@ -2498,6 +2491,8 @@ mod tests {
         let content = r#"{
           "crossSessionInbound": "prompt",
           "dialogExpiry": "30s",
+          "pluginConfigs": {"my-plugin": {}},
+          "remoteControlAtStartup": true,
           "sandbox": {
             "network": {"tlsTerminate": {}},
             "credentials": {
@@ -2536,6 +2531,12 @@ mod tests {
                     .find(|diagnostic| diagnostic.rule == "CC-SET-012")
                     .is_some_and(|diagnostic| diagnostic.message.contains("reuses"))
             );
+            for rule in ["CC-SET-015", "CC-SET-021"] {
+                assert!(
+                    diagnostics.iter().all(|diagnostic| diagnostic.rule != rule),
+                    "unexpected project-scope {rule} for managed settings path {path}"
+                );
+            }
         }
     }
 
