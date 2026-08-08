@@ -948,6 +948,7 @@ fn validate_sandbox_credentials(
         credentials_obj,
         diagnostics,
     );
+    validate_sandbox_credential_aws_scope(path, content, credentials_obj, diagnostics);
 }
 
 #[derive(Clone, Copy)]
@@ -1758,6 +1759,66 @@ fn validate_sandbox_credential_aws_tls_termination(
         )
         .with_suggestion(t!("rules.cc_set_012.tls_terminate_suggestion")),
     );
+}
+
+fn validate_sandbox_credential_aws_scope(
+    path: &Path,
+    content: &str,
+    credentials: &serde_json::Map<String, serde_json::Value>,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let feature = match (
+        credentials.contains_key("awsPairs"),
+        credentials.contains_key("sigv4"),
+    ) {
+        (true, true) => "awsPairs and sigv4",
+        (true, false) => "awsPairs",
+        (false, true) => "sigv4",
+        (false, false) => return,
+    };
+
+    let is_managed = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| name == "managed-settings.json");
+    if is_managed || is_user_settings_path(path) {
+        return;
+    }
+
+    let line = find_key_line(content, "awsPairs")
+        .or_else(|| find_key_line(content, "sigv4"))
+        .or_else(|| find_key_line(content, "credentials"))
+        .unwrap_or(1);
+    diagnostics.push(
+        Diagnostic::warning(
+            path.to_path_buf(),
+            line,
+            0,
+            "CC-SET-012",
+            t!("rules.cc_set_012.aws_scope", feature = feature),
+        )
+        .with_suggestion(t!("rules.cc_set_012.aws_scope_suggestion")),
+    );
+}
+
+fn is_user_settings_path(path: &Path) -> bool {
+    if path.file_name().and_then(|name| name.to_str()) != Some("settings.json") {
+        return false;
+    }
+
+    let Some(home) = std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE")) else {
+        return false;
+    };
+    let absolute_path = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        let Ok(current_dir) = std::env::current_dir() else {
+            return false;
+        };
+        current_dir.join(path)
+    };
+
+    absolute_path == Path::new(&home).join(".claude").join("settings.json")
 }
 
 fn has_javascript_capturing_group(pattern: &str) -> bool {
@@ -3805,7 +3866,11 @@ mod tests {
             }
           }
         }"#;
-        assert!(validate(content).iter().all(|d| d.rule != "CC-SET-012"));
+        assert!(
+            validate_at(".claude/managed-settings.json", content)
+                .iter()
+                .all(|d| d.rule != "CC-SET-012")
+        );
     }
 
     #[test]
@@ -3840,7 +3905,7 @@ mod tests {
             }
           }
         }"#;
-        let hits: Vec<_> = validate(content)
+        let hits: Vec<_> = validate_at(".claude/managed-settings.json", content)
             .into_iter()
             .filter(|diagnostic| diagnostic.rule == "CC-SET-012")
             .collect();
@@ -3860,7 +3925,8 @@ mod tests {
 
     #[test]
     fn test_sandbox_credentials_aws_pairs_and_sigv4_containers_are_checked() {
-        let diagnostics = validate(
+        let diagnostics = validate_at(
+            ".claude/managed-settings.json",
             r#"{"sandbox":{"network":{"tlsTerminate":{}},"credentials":{"awsPairs":true,"sigv4":[]}}}"#,
         );
         let hits: Vec<_> = diagnostics
@@ -3878,13 +3944,59 @@ mod tests {
             r#"{"sandbox":{"credentials":{"awsPairs":[],"sigv4":{}}}}"#,
             r#"{"sandbox":{"network":{"tlsTerminate":true},"credentials":{"awsPairs":[]}}}"#,
         ] {
-            let hits: Vec<_> = validate(content)
+            let hits: Vec<_> = validate_at(".claude/managed-settings.json", content)
                 .into_iter()
                 .filter(|diagnostic| diagnostic.rule == "CC-SET-012")
                 .collect();
             assert_eq!(hits.len(), 1);
             assert!(hits[0].message.contains("tlsTerminate"));
         }
+    }
+
+    #[test]
+    fn test_sandbox_credentials_aws_resigning_flags_project_scopes() {
+        let content = r#"{
+          "sandbox": {
+            "network": {"tlsTerminate": {}},
+            "credentials": {"awsPairs": [], "sigv4": {}}
+          }
+        }"#;
+        for path in [".claude/settings.json", ".claude/settings.local.json"] {
+            let hits: Vec<_> = validate_at(path, content)
+                .into_iter()
+                .filter(|diagnostic| diagnostic.rule == "CC-SET-012")
+                .collect();
+            assert_eq!(hits.len(), 1, "expected one scope diagnostic for {path}");
+            assert!(hits[0].message.contains("project-level"));
+        }
+    }
+
+    #[test]
+    fn test_sandbox_credentials_aws_resigning_allows_honored_scopes() {
+        let content = r#"{
+          "sandbox": {
+            "network": {"tlsTerminate": {}},
+            "credentials": {"awsPairs": [], "sigv4": {}}
+          }
+        }"#;
+        assert!(
+            validate_at(".claude/managed-settings.json", content)
+                .iter()
+                .all(|diagnostic| diagnostic.rule != "CC-SET-012")
+        );
+
+        let Some(home) = std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE"))
+        else {
+            return;
+        };
+        let user_settings = PathBuf::from(home).join(".claude").join("settings.json");
+        let diagnostics =
+            ClaudeSettingsValidator.validate(&user_settings, content, &LintConfig::default());
+        assert!(
+            diagnostics
+                .iter()
+                .all(|diagnostic| diagnostic.rule != "CC-SET-012")
+        );
     }
 
     #[test]

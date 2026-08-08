@@ -1300,6 +1300,8 @@ rules:
     sigv4_suggestion: Set streaming, presigned, and sigv4a policies to deny or passthrough, or remove unsupported fields.
     tls_terminate_required: AWS credential re-signing via sandbox.credentials.%{feature} requires sandbox.network.tlsTerminate to be an object
     tls_terminate_suggestion: 'Set sandbox.network.tlsTerminate to an object such as {}, or remove the AWS credential re-signing settings.'
+    aws_scope: AWS credential re-signing via sandbox.credentials.%{feature} is ignored in project-level .claude settings
+    aws_scope_suggestion: Move the AWS credential re-signing settings to ~/.claude/settings.json, a --settings file, or managed settings.
   cc_set_013:
     message: autoMode.classifyAllShell must be a boolean when present (got %{actual}); Claude Code 2.1.193+ documents this
       auto-mode setting as a strict true/false toggle

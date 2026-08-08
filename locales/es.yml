@@ -810,6 +810,8 @@ rules:
     sigv4_suggestion: Establece las politicas streaming, presigned y sigv4a en deny o passthrough, o elimina campos no admitidos.
     tls_terminate_required: La firma de credenciales de AWS mediante sandbox.credentials.%{feature} requiere que sandbox.network.tlsTerminate sea un objeto
     tls_terminate_suggestion: 'Establece sandbox.network.tlsTerminate en un objeto como {}, o elimina la configuracion de firma de credenciales de AWS.'
+    aws_scope: La firma de credenciales de AWS mediante sandbox.credentials.%{feature} se ignora en la configuracion .claude a nivel de proyecto
+    aws_scope_suggestion: Mueve la configuracion de firma de credenciales de AWS a ~/.claude/settings.json, un archivo --settings o la configuracion administrada.
   cc_set_013:
     message: autoMode.classifyAllShell debe ser un booleano cuando esta presente (se obtuvo %{actual}); Claude Code 2.1.193+
       documenta esta configuracion de auto-mode como un interruptor true/false estricto
