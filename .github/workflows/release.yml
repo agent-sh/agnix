@@ -592,6 +592,50 @@ jobs:
       - name: Cut versioned docs snapshot
         run: npm --prefix website run version:cut -- "${{ steps.version.outputs.version }}"
 
+      - name: Pin versioned docs links to the release tag
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.version }}"
+          SNAPSHOT="website/versioned_docs/version-${VERSION}"
+          python3 - "$SNAPSHOT" "$VERSION" <<'PY'
+          from pathlib import Path
+          import sys
+
+          snapshot = Path(sys.argv[1])
+          version = sys.argv[2]
+          replacements = {
+              "https://github.com/agent-sh/agnix/blob/main/":
+                  f"https://github.com/agent-sh/agnix/blob/v{version}/",
+              "https://github.com/agent-sh/agnix/tree/main/":
+                  f"https://github.com/agent-sh/agnix/tree/v{version}/",
+          }
+
+          changed = 0
+          for path in snapshot.rglob("*.md"):
+              content = path.read_text(encoding="utf-8")
+              pinned = content
+              for moving, tagged in replacements.items():
+                  pinned = pinned.replace(moving, tagged)
+              if pinned != content:
+                  path.write_text(pinned, encoding="utf-8")
+                  changed += 1
+
+          remaining = [
+              str(path)
+              for path in snapshot.rglob("*.md")
+              if any(
+                  moving in path.read_text(encoding="utf-8")
+                  for moving in replacements
+              )
+          ]
+          if remaining:
+              raise SystemExit(
+                  "Versioned docs still contain moving repository links: "
+                  + ", ".join(remaining)
+              )
+          print(f"Pinned repository links in {changed} versioned docs files")
+          PY
+
       - name: Update lastVersion in Docusaurus config
         run: |
           set -euo pipefail

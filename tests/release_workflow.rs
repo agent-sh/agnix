@@ -1,4 +1,5 @@
 use std::fs;
+use std::path::PathBuf;
 
 #[test]
 fn release_publish_jobs_are_gated_by_tests() {
@@ -102,6 +103,72 @@ fn release_workflow_scopes_attestation_and_release_permissions() {
         workflow.contains("agnix-*${{ matrix.target }}.tar.gz")
             && workflow.contains("agnix-*${{ matrix.target }}.zip"),
         "attestation subject paths must cover release archives"
+    );
+}
+
+#[test]
+fn release_workflow_pins_latest_versioned_docs_to_the_release_tag() {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let workflow = fs::read_to_string(root.join(".github/workflows/release.yml"))
+        .expect("failed to read release workflow")
+        .replace("\r\n", "\n");
+
+    assert!(
+        workflow.contains("- name: Pin versioned docs links to the release tag"),
+        "release workflow must pin repository links after cutting a docs snapshot"
+    );
+    assert!(
+        workflow.contains("agnix/blob/v{version}/") && workflow.contains("agnix/tree/v{version}/"),
+        "release workflow must retarget both file and directory links"
+    );
+
+    let versions: Vec<String> = serde_json::from_str(
+        &fs::read_to_string(root.join("website/versions.json"))
+            .expect("failed to read docs versions"),
+    )
+    .expect("website/versions.json must contain a JSON string array");
+    let latest = versions
+        .first()
+        .expect("docs must contain a latest version");
+    let snapshot = root.join(format!("website/versioned_docs/version-{latest}"));
+    let moving_links = [
+        "https://github.com/agent-sh/agnix/blob/main/",
+        "https://github.com/agent-sh/agnix/tree/main/",
+    ];
+    let pinned_links = [
+        format!("https://github.com/agent-sh/agnix/blob/v{latest}/"),
+        format!("https://github.com/agent-sh/agnix/tree/v{latest}/"),
+    ];
+    let mut stack = vec![snapshot];
+    let mut pinned_link_count = 0;
+
+    while let Some(path) = stack.pop() {
+        for entry in fs::read_dir(&path)
+            .unwrap_or_else(|error| panic!("failed to read {}: {error}", path.display()))
+        {
+            let entry = entry.expect("failed to read versioned docs entry");
+            let path = entry.path();
+            if path.is_dir() {
+                stack.push(path);
+            } else if path.extension().is_some_and(|extension| extension == "md") {
+                let content = fs::read_to_string(&path)
+                    .unwrap_or_else(|error| panic!("failed to read {}: {error}", path.display()));
+                assert!(
+                    moving_links.iter().all(|link| !content.contains(link)),
+                    "{} contains a repository link to moving main",
+                    path.display()
+                );
+                pinned_link_count += pinned_links
+                    .iter()
+                    .filter(|link| content.contains(link.as_str()))
+                    .count();
+            }
+        }
+    }
+
+    assert!(
+        pinned_link_count > 0,
+        "latest versioned docs must contain release-tagged repository links"
     );
 }
 
