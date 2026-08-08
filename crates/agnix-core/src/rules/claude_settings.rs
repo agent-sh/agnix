@@ -1747,14 +1747,8 @@ fn validate_sandbox_credential_aws_tls_termination(
     credentials: &serde_json::Map<String, serde_json::Value>,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
-    let feature = match (
-        credentials.contains_key("awsPairs"),
-        credentials.contains_key("sigv4"),
-    ) {
-        (true, true) => "awsPairs and sigv4",
-        (true, false) => "awsPairs",
-        (false, true) => "sigv4",
-        (false, false) => return,
+    let Some(feature) = sandbox_credential_aws_feature_label(credentials) else {
+        return;
     };
 
     if value
@@ -1786,14 +1780,8 @@ fn validate_sandbox_credential_aws_scope(
     credentials: &serde_json::Map<String, serde_json::Value>,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
-    let feature = match (
-        credentials.contains_key("awsPairs"),
-        credentials.contains_key("sigv4"),
-    ) {
-        (true, true) => "awsPairs and sigv4",
-        (true, false) => "awsPairs",
-        (false, true) => "sigv4",
-        (false, false) => return,
+    let Some(feature) = sandbox_credential_aws_feature_label(credentials) else {
+        return;
     };
 
     let is_managed = path
@@ -1818,6 +1806,20 @@ fn validate_sandbox_credential_aws_scope(
         )
         .with_suggestion(t!("rules.cc_set_012.aws_scope_suggestion")),
     );
+}
+
+fn sandbox_credential_aws_feature_label(
+    credentials: &serde_json::Map<String, serde_json::Value>,
+) -> Option<String> {
+    match (
+        credentials.contains_key("awsPairs"),
+        credentials.contains_key("sigv4"),
+    ) {
+        (true, true) => Some(t!("rules.cc_set_012.aws_features_both").to_string()),
+        (true, false) => Some(t!("rules.cc_set_012.aws_feature_aws_pairs").to_string()),
+        (false, true) => Some(t!("rules.cc_set_012.aws_feature_sigv4").to_string()),
+        (false, false) => None,
+    }
 }
 
 fn is_user_settings_path(path: &Path) -> bool {
@@ -4080,6 +4082,28 @@ mod tests {
                 .iter()
                 .all(|diagnostic| diagnostic.rule != "CC-SET-012")
         );
+    }
+
+    #[test]
+    fn test_sandbox_credentials_combined_aws_feature_label_is_localized() {
+        for (locale, conjunction) in [("es", "awsPairs y sigv4"), ("zh-CN", "awsPairs 和 sigv4")] {
+            let feature = rust_i18n::t!("rules.cc_set_012.aws_features_both", locale = locale);
+            let tls_message = rust_i18n::t!(
+                "rules.cc_set_012.tls_terminate_required",
+                locale = locale,
+                feature = feature.clone()
+            );
+            let scope_message = rust_i18n::t!(
+                "rules.cc_set_012.aws_scope",
+                locale = locale,
+                feature = feature
+            );
+
+            assert!(tls_message.contains(conjunction));
+            assert!(scope_message.contains(conjunction));
+            assert!(!tls_message.contains("awsPairs and sigv4"));
+            assert!(!scope_message.contains("awsPairs and sigv4"));
+        }
     }
 
     #[test]

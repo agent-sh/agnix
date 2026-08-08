@@ -1300,6 +1300,9 @@ rules:
     sigv4_object: sandbox.credentials.sigv4 must be an object (got %{actual})
     sigv4_entry: 'sandbox.credentials.sigv4.%{field} must be deny or passthrough, and the field must be streaming, presigned, or sigv4a (got %{actual})'
     sigv4_suggestion: Set streaming, presigned, and sigv4a policies to deny or passthrough, or remove unsupported fields.
+    aws_feature_aws_pairs: awsPairs
+    aws_feature_sigv4: sigv4
+    aws_features_both: awsPairs and sigv4
     tls_terminate_required: AWS credential re-signing via sandbox.credentials.%{feature} requires sandbox.network.tlsTerminate to be an object
     tls_terminate_suggestion: 'Set sandbox.network.tlsTerminate to an object such as {}, or remove the AWS credential re-signing settings.'
     aws_scope: AWS credential re-signing via sandbox.credentials.%{feature} is ignored in project-level .claude settings

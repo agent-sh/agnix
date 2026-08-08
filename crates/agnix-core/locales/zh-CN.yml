@@ -774,6 +774,9 @@ rules:
     sigv4_object: sandbox.credentials.sigv4 必须是对象（实际为 %{actual}）
     sigv4_entry: 'sandbox.credentials.sigv4.%{field} 必须是 deny 或 passthrough，且字段必须是 streaming、presigned 或 sigv4a（实际为 %{actual}）'
     sigv4_suggestion: 将 streaming、presigned 和 sigv4a 策略设置为 deny 或 passthrough，或移除不支持的字段。
+    aws_feature_aws_pairs: awsPairs
+    aws_feature_sigv4: sigv4
+    aws_features_both: awsPairs 和 sigv4
     tls_terminate_required: 通过 sandbox.credentials.%{feature} 重新签署 AWS 凭证时，sandbox.network.tlsTerminate 必须是对象
     tls_terminate_suggestion: '将 sandbox.network.tlsTerminate 设置为对象（例如 {}），或移除 AWS 凭证重新签署设置。'
     aws_scope: 项目级 .claude 设置会忽略通过 sandbox.credentials.%{feature} 进行的 AWS 凭证重新签署
