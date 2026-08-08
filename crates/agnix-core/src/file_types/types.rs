@@ -21,7 +21,7 @@ pub enum FileType {
     Agent,
     /// Amp code review checks (.agents/checks/*.md)
     AmpCheck,
-    /// settings.json, settings.local.json
+    /// Claude settings.json, settings.local.json, and managed-settings.json
     Hooks,
     /// plugin.json (validator checks .claude-plugin/ location)
     Plugin,

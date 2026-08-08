@@ -24,6 +24,6 @@ pub use detection::detect_file_type;
 pub use types::FileType;
 
 // New public API
-pub(crate) use detection::path_contains_consecutive_components;
 pub use detection::{DOCUMENTATION_DIRECTORIES, EXCLUDED_FILENAMES, EXCLUDED_PARENT_DIRECTORIES};
+pub(crate) use detection::{is_claude_managed_settings_path, path_contains_consecutive_components};
 pub use detector::{BuiltinDetector, FileTypeDetector, FileTypeDetectorChain};

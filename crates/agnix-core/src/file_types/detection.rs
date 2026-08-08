@@ -99,6 +99,47 @@ pub(crate) fn path_contains_consecutive_components(path: &Path, first: &str, sec
     false
 }
 
+fn path_ends_with_components_ignore_ascii_case(path: &Path, expected: &[&str]) -> bool {
+    let components: Vec<_> = path
+        .components()
+        .filter_map(|component| match component {
+            std::path::Component::Normal(name) => name.to_str(),
+            _ => None,
+        })
+        .collect();
+    components.len() >= expected.len()
+        && components[components.len() - expected.len()..]
+            .iter()
+            .zip(expected)
+            .all(|(actual, expected)| actual.eq_ignore_ascii_case(expected))
+}
+
+/// Returns true for Claude Code's project-compatible managed settings path and
+/// the documented macOS, Linux/WSL, and Windows system policy locations.
+pub(crate) fn is_claude_managed_settings_path(path: &Path) -> bool {
+    if !path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| name.eq_ignore_ascii_case("managed-settings.json"))
+    {
+        return false;
+    }
+
+    [
+        &[".claude", "managed-settings.json"][..],
+        &[
+            "Library",
+            "Application Support",
+            "ClaudeCode",
+            "managed-settings.json",
+        ][..],
+        &["etc", "claude-code", "managed-settings.json"][..],
+        &["Program Files", "ClaudeCode", "managed-settings.json"][..],
+    ]
+    .iter()
+    .any(|suffix| path_ends_with_components_ignore_ascii_case(path, suffix))
+}
+
 /// Case-insensitive suffix check that avoids allocating temporary strings.
 fn ends_with_ignore_ascii_case(value: &str, suffix: &str) -> bool {
     if value.len() < suffix.len() {
@@ -357,6 +398,11 @@ pub fn detect_file_type(path: &Path) -> FileType {
             if parent_eq_ignore_ascii_case(parent, ".gemini") =>
         {
             FileType::GeminiSettings
+        }
+        name if name.eq_ignore_ascii_case("managed-settings.json")
+            && is_claude_managed_settings_path(path) =>
+        {
+            FileType::Hooks
         }
         "settings.json" | "settings.local.json" => FileType::Hooks,
         // Codex CLI plugin manifest (.codex-plugin/plugin.json)
@@ -819,6 +865,26 @@ mod tests {
         assert_eq!(
             detect_file_type(Path::new("settings.local.json")),
             FileType::Hooks
+        );
+    }
+
+    #[test]
+    fn detect_claude_managed_settings() {
+        for path in [
+            ".claude/managed-settings.json",
+            "/Library/Application Support/ClaudeCode/managed-settings.json",
+            "/etc/claude-code/managed-settings.json",
+            "C:/Program Files/ClaudeCode/managed-settings.json",
+        ] {
+            assert_eq!(
+                detect_file_type(Path::new(path)),
+                FileType::Hooks,
+                "expected Claude managed settings dispatch for {path}"
+            );
+        }
+        assert_eq!(
+            detect_file_type(Path::new("other/managed-settings.json")),
+            FileType::Unknown
         );
     }
 

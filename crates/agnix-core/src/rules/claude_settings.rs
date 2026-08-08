@@ -36,6 +36,7 @@
 use crate::{
     config::PerFileLintConfig,
     diagnostics::Diagnostic,
+    file_types::is_claude_managed_settings_path,
     rules::{Validator, ValidatorMetadata},
 };
 use rust_i18n::t;
@@ -218,10 +219,14 @@ impl Validator for ClaudeSettingsValidator {
 }
 
 /// Only validate `.claude/settings.json`, `.claude/settings.local.json`, and
-/// managed/project variants. Skip `.amp/`, `.kiro/`, etc. settings files -
-/// they are classified as FileType::Hooks too but have entirely different
-/// field sets, and a false positive here would be disruptive.
+/// Claude Code managed-settings paths. Skip `.amp/`, `.kiro/`, etc. settings
+/// files - they are classified as FileType::Hooks too but have entirely
+/// different field sets, and a false positive here would be disruptive.
 fn is_claude_settings_path(path: &Path) -> bool {
+    if is_claude_managed_settings_path(path) {
+        return true;
+    }
+
     let parent_is_claude = path
         .parent()
         .and_then(|p| p.file_name())
@@ -234,10 +239,7 @@ fn is_claude_settings_path(path: &Path) -> bool {
     let Some(filename) = path.file_name().and_then(|n| n.to_str()) else {
         return false;
     };
-    matches!(
-        filename,
-        "settings.json" | "settings.local.json" | "managed-settings.json"
-    )
+    matches!(filename, "settings.json" | "settings.local.json")
 }
 
 /// CC-SET-001: Validate prUrlTemplate. Three failure modes:
@@ -1784,11 +1786,7 @@ fn validate_sandbox_credential_aws_scope(
         return;
     };
 
-    let is_managed = path
-        .file_name()
-        .and_then(|name| name.to_str())
-        .is_some_and(|name| name == "managed-settings.json");
-    if is_managed || is_user_settings_path(path) {
+    if is_claude_managed_settings_path(path) || is_user_settings_path(path) {
         return;
     }
 
@@ -2449,7 +2447,7 @@ fn find_key_line(content: &str, key: &str) -> Option<usize> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::LintConfig;
+    use crate::{config::LintConfig, pipeline::validate_content, registry::ValidatorRegistry};
     use std::path::PathBuf;
 
     fn validate(content: &str) -> Vec<Diagnostic> {
@@ -2493,6 +2491,41 @@ mod tests {
         let content = r#"{"prUrlTemplate": 123}"#;
         let diagnostics = validate_at(".claude/managed-settings.json", content);
         assert_eq!(diagnostics.len(), 1);
+    }
+
+    #[test]
+    fn test_system_managed_settings_run_aws_checks_through_pipeline() {
+        let content = r#"{
+          "sandbox": {
+            "network": {"tlsTerminate": {}},
+            "credentials": {
+              "awsPairs": [{
+                "accessKeyIdVar": "AWS_KEY",
+                "secretAccessKeyVar": "AWS_KEY"
+              }]
+            }
+          }
+        }"#;
+        let config = LintConfig::default();
+        let registry = ValidatorRegistry::with_defaults();
+
+        for path in [
+            "/Library/Application Support/ClaudeCode/managed-settings.json",
+            "/etc/claude-code/managed-settings.json",
+            "C:/Program Files/ClaudeCode/managed-settings.json",
+        ] {
+            let diagnostics = validate_content(Path::new(path), content, &config, &registry);
+            let hits: Vec<_> = diagnostics
+                .iter()
+                .filter(|diagnostic| diagnostic.rule == "CC-SET-012")
+                .collect();
+            assert_eq!(
+                hits.len(),
+                1,
+                "expected AWS validation through production dispatch for {path}"
+            );
+            assert!(hits[0].message.contains("reuses"));
+        }
     }
 
     // ===== CC-SET-001 positive =====
