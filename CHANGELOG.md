@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.47.0] - 2026-08-08
+
 ### Added
 - **CC-SET-022 and CC-SET-023**. Validate Claude Code 2.1.224's `crossSessionInbound` and `dialogExpiry` enums. Rule count 445 -> 447.
 
