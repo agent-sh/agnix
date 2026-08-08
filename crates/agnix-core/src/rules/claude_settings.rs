@@ -36,7 +36,7 @@
 use crate::{
     config::PerFileLintConfig,
     diagnostics::Diagnostic,
-    file_types::is_claude_managed_settings_path,
+    file_types::{is_claude_managed_settings_path, is_claude_system_managed_settings_path},
     rules::{Validator, ValidatorMetadata},
 };
 use rust_i18n::t;
@@ -1753,10 +1753,15 @@ fn validate_sandbox_credential_aws_tls_termination(
         return;
     };
 
-    if value
-        .pointer("/sandbox/network/tlsTerminate")
-        .is_some_and(serde_json::Value::is_object)
-    {
+    let tls_terminate = value.pointer("/sandbox/network/tlsTerminate");
+    if tls_terminate.is_some_and(serde_json::Value::is_object) {
+        return;
+    }
+
+    // System policy files are merged with ordered managed-settings.d
+    // fragments. Without the merged context, a missing value in this one file
+    // does not prove that the effective policy lacks tlsTerminate.
+    if tls_terminate.is_none() && is_claude_system_managed_settings_path(path) {
         return;
     }
 
@@ -2535,6 +2540,40 @@ mod tests {
                 assert!(
                     diagnostics.iter().all(|diagnostic| diagnostic.rule != rule),
                     "unexpected project-scope {rule} for managed settings path {path}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_split_system_managed_settings_do_not_false_positive_aws_tls() {
+        let credentials = r#"{"sandbox":{"credentials":{"awsPairs":[]}}}"#;
+        let network = r#"{"sandbox":{"network":{"tlsTerminate":{}}}}"#;
+        let config = LintConfig::default();
+        let registry = ValidatorRegistry::with_defaults();
+
+        for (credentials_path, network_path) in [
+            (
+                "/Library/Application Support/ClaudeCode/managed-settings.d/10-credentials.json",
+                "/Library/Application Support/ClaudeCode/managed-settings.d/20-network.json",
+            ),
+            (
+                "/etc/claude-code/managed-settings.d/10-credentials.json",
+                "/etc/claude-code/managed-settings.d/20-network.json",
+            ),
+            (
+                "C:/Program Files/ClaudeCode/managed-settings.d/10-credentials.json",
+                "C:/Program Files/ClaudeCode/managed-settings.d/20-network.json",
+            ),
+        ] {
+            for (path, content) in [(credentials_path, credentials), (network_path, network)] {
+                let diagnostics = validate_content(Path::new(path), content, &config, &registry);
+                assert!(
+                    diagnostics.iter().all(|diagnostic| {
+                        diagnostic.rule != "CC-SET-012"
+                            || !diagnostic.message.contains("tlsTerminate")
+                    }),
+                    "unexpected per-file tlsTerminate diagnostic for merged source {path}"
                 );
             }
         }
@@ -4081,6 +4120,43 @@ mod tests {
             assert_eq!(hits.len(), 1);
             assert!(hits[0].message.contains("tlsTerminate"));
         }
+    }
+
+    #[test]
+    fn test_sandbox_credentials_aws_tls_missing_is_suppressed_for_system_sources() {
+        let content = r#"{"sandbox":{"credentials":{"awsPairs":[]}}}"#;
+
+        for path in [
+            "/Library/Application Support/ClaudeCode/managed-settings.json",
+            "/etc/claude-code/managed-settings.json",
+            "C:/Program Files/ClaudeCode/managed-settings.json",
+            "/Library/Application Support/ClaudeCode/managed-settings.d/10-credentials.json",
+            "/etc/claude-code/managed-settings.d/10-credentials.json",
+            "C:/Program Files/ClaudeCode/managed-settings.d/10-credentials.json",
+        ] {
+            assert!(
+                validate_at(path, content).iter().all(|diagnostic| {
+                    diagnostic.rule != "CC-SET-012" || !diagnostic.message.contains("tlsTerminate")
+                }),
+                "unexpected per-file tlsTerminate diagnostic for merged source {path}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_sandbox_credentials_aws_tls_invalid_value_still_warns_in_fragment() {
+        let content =
+            r#"{"sandbox":{"network":{"tlsTerminate":true},"credentials":{"awsPairs":[]}}}"#;
+        let hits: Vec<_> = validate_at(
+            "/etc/claude-code/managed-settings.d/10-credentials.json",
+            content,
+        )
+        .into_iter()
+        .filter(|diagnostic| diagnostic.rule == "CC-SET-012")
+        .collect();
+
+        assert_eq!(hits.len(), 1);
+        assert!(hits[0].message.contains("tlsTerminate"));
     }
 
     #[test]
