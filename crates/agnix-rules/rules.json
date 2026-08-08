@@ -5518,12 +5518,12 @@
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/openai/codex/blob/rust-v0.147.0/codex-rs/plugin/src/plugin_id.rs"
+          "https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/core-plugins/src/manifest.rs"
         ],
-        "verified_on": "2026-08-08",
+        "verified_on": "2026-06-04",
         "applies_to": {
           "tool": "codex",
-          "version_range": ">=0.147.0"
+          "version_range": ">=0.117.0"
         },
         "normative_level": "MUST",
         "tests": {
@@ -5547,12 +5547,13 @@
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/core-plugins/src/manifest.rs"
+          "https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/core-plugins/src/manifest.rs",
+          "https://github.com/openai/codex/blob/rust-v0.147.0/codex-rs/plugin/src/plugin_id.rs"
         ],
-        "verified_on": "2026-06-04",
+        "verified_on": "2026-08-08",
         "applies_to": {
           "tool": "codex",
-          "version_range": ">=0.117.0"
+          "version_range": ">=0.147.0"
         },
         "normative_level": "MUST",
         "tests": {

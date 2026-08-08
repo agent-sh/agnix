@@ -772,6 +772,8 @@ rules:
     sigv4_object: sandbox.credentials.sigv4 必须是对象（实际为 %{actual}）
     sigv4_entry: 'sandbox.credentials.sigv4.%{field} 必须是 deny 或 passthrough，且字段必须是 streaming、presigned 或 sigv4a（实际为 %{actual}）'
     sigv4_suggestion: 将 streaming、presigned 和 sigv4a 策略设置为 deny 或 passthrough，或移除不支持的字段。
+    tls_terminate_required: 通过 sandbox.credentials.%{feature} 重新签署 AWS 凭证时，sandbox.network.tlsTerminate 必须是对象
+    tls_terminate_suggestion: '将 sandbox.network.tlsTerminate 设置为对象（例如 {}），或移除 AWS 凭证重新签署设置。'
   cc_set_013:
     message: autoMode.classifyAllShell 存在时必须是布尔值 (实际为 %{actual}); Claude Code 2.1.193+ 将该 auto-mode 设置记录为严格的 true/false 开关
     suggestion: 将 autoMode.classifyAllShell 设置为不带引号的 true 或 false，或移除此字段以保留默认的 auto-mode 分类器范围。

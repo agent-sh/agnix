@@ -1298,6 +1298,8 @@ rules:
     sigv4_object: sandbox.credentials.sigv4 must be an object (got %{actual})
     sigv4_entry: 'sandbox.credentials.sigv4.%{field} must be deny or passthrough, and the field must be streaming, presigned, or sigv4a (got %{actual})'
     sigv4_suggestion: Set streaming, presigned, and sigv4a policies to deny or passthrough, or remove unsupported fields.
+    tls_terminate_required: AWS credential re-signing via sandbox.credentials.%{feature} requires sandbox.network.tlsTerminate to be an object
+    tls_terminate_suggestion: 'Set sandbox.network.tlsTerminate to an object such as {}, or remove the AWS credential re-signing settings.'
   cc_set_013:
     message: autoMode.classifyAllShell must be a boolean when present (got %{actual}); Claude Code 2.1.193+ documents this
       auto-mode setting as a strict true/false toggle

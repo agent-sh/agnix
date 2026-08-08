@@ -865,7 +865,9 @@ fn validate_respond_to_bash_commands(
 /// Both arrays are optional, but when present they must be arrays of objects.
 /// Each entry must name the credential target and carry a supported `mode`.
 /// Claude Code v2.1.199 added environment-variable masking, and v2.1.221 added
-/// file masking plus controls for narrowing injection and extraction.
+/// file masking plus controls for narrowing injection and extraction. Claude
+/// Code v2.1.224 added AWS credential re-signing, which requires
+/// `sandbox.network.tlsTerminate`.
 fn validate_sandbox_credentials(
     path: &Path,
     content: &str,
@@ -939,6 +941,13 @@ fn validate_sandbox_credentials(
         diagnostics,
     );
     validate_sandbox_credential_sigv4(path, content, credentials_obj.get("sigv4"), diagnostics);
+    validate_sandbox_credential_aws_tls_termination(
+        path,
+        content,
+        value,
+        credentials_obj,
+        diagnostics,
+    );
 }
 
 #[derive(Clone, Copy)]
@@ -1709,6 +1718,46 @@ fn validate_sandbox_credential_sigv4(
             );
         }
     }
+}
+
+fn validate_sandbox_credential_aws_tls_termination(
+    path: &Path,
+    content: &str,
+    value: &serde_json::Value,
+    credentials: &serde_json::Map<String, serde_json::Value>,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let feature = match (
+        credentials.contains_key("awsPairs"),
+        credentials.contains_key("sigv4"),
+    ) {
+        (true, true) => "awsPairs and sigv4",
+        (true, false) => "awsPairs",
+        (false, true) => "sigv4",
+        (false, false) => return,
+    };
+
+    if value
+        .pointer("/sandbox/network/tlsTerminate")
+        .is_some_and(serde_json::Value::is_object)
+    {
+        return;
+    }
+
+    let line = find_key_line(content, "awsPairs")
+        .or_else(|| find_key_line(content, "sigv4"))
+        .or_else(|| find_key_line(content, "credentials"))
+        .unwrap_or(1);
+    diagnostics.push(
+        Diagnostic::warning(
+            path.to_path_buf(),
+            line,
+            0,
+            "CC-SET-012",
+            t!("rules.cc_set_012.tls_terminate_required", feature = feature),
+        )
+        .with_suggestion(t!("rules.cc_set_012.tls_terminate_suggestion")),
+    );
 }
 
 fn has_javascript_capturing_group(pattern: &str) -> bool {
@@ -3716,6 +3765,9 @@ mod tests {
     fn test_sandbox_credentials_v2_1_224_options_are_valid() {
         let content = r#"{
           "sandbox": {
+            "network": {
+              "tlsTerminate": {}
+            },
             "credentials": {
               "files": [{
                 "path": "~/.config/service/token.json",
@@ -3760,6 +3812,9 @@ mod tests {
     fn test_sandbox_credentials_v2_1_224_invalid_options_flag() {
         let content = r#"{
           "sandbox": {
+            "network": {
+              "tlsTerminate": {}
+            },
             "credentials": {
               "files": [{
                 "path": "~/.config/service/token.json",
@@ -3805,7 +3860,9 @@ mod tests {
 
     #[test]
     fn test_sandbox_credentials_aws_pairs_and_sigv4_containers_are_checked() {
-        let diagnostics = validate(r#"{"sandbox":{"credentials":{"awsPairs":true,"sigv4":[]}}}"#);
+        let diagnostics = validate(
+            r#"{"sandbox":{"network":{"tlsTerminate":{}},"credentials":{"awsPairs":true,"sigv4":[]}}}"#,
+        );
         let hits: Vec<_> = diagnostics
             .iter()
             .filter(|diagnostic| diagnostic.rule == "CC-SET-012")
@@ -3813,6 +3870,21 @@ mod tests {
         assert_eq!(hits.len(), 2);
         assert!(hits.iter().any(|hit| hit.message.contains("awsPairs")));
         assert!(hits.iter().any(|hit| hit.message.contains("sigv4")));
+    }
+
+    #[test]
+    fn test_sandbox_credentials_aws_resigning_requires_tls_termination() {
+        for content in [
+            r#"{"sandbox":{"credentials":{"awsPairs":[],"sigv4":{}}}}"#,
+            r#"{"sandbox":{"network":{"tlsTerminate":true},"credentials":{"awsPairs":[]}}}"#,
+        ] {
+            let hits: Vec<_> = validate(content)
+                .into_iter()
+                .filter(|diagnostic| diagnostic.rule == "CC-SET-012")
+                .collect();
+            assert_eq!(hits.len(), 1);
+            assert!(hits[0].message.contains("tlsTerminate"));
+        }
     }
 
     #[test]

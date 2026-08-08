@@ -808,6 +808,8 @@ rules:
     sigv4_object: sandbox.credentials.sigv4 debe ser un objeto (se obtuvo %{actual})
     sigv4_entry: 'sandbox.credentials.sigv4.%{field} debe ser deny o passthrough, y el campo debe ser streaming, presigned o sigv4a (se obtuvo %{actual})'
     sigv4_suggestion: Establece las politicas streaming, presigned y sigv4a en deny o passthrough, o elimina campos no admitidos.
+    tls_terminate_required: La firma de credenciales de AWS mediante sandbox.credentials.%{feature} requiere que sandbox.network.tlsTerminate sea un objeto
+    tls_terminate_suggestion: 'Establece sandbox.network.tlsTerminate en un objeto como {}, o elimina la configuracion de firma de credenciales de AWS.'
   cc_set_013:
     message: autoMode.classifyAllShell debe ser un booleano cuando esta presente (se obtuvo %{actual}); Claude Code 2.1.193+
       documenta esta configuracion de auto-mode como un interruptor true/false estricto

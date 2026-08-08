@@ -13,17 +13,18 @@ keywords: ["CDX-PL-004", "invalid plugin name characters", "codex cli", "validat
 - **Category**: `Codex CLI`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-06-04`
+- **Verified On**: `2026-08-08`
 
 ## Applicability
 
 - **Tool**: `codex`
-- **Version Range**: `>=0.117.0`
+- **Version Range**: `>=0.147.0`
 - **Spec Revision**: `unspecified`
 
 ## Evidence Sources
 
 - https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/core-plugins/src/manifest.rs
+- https://github.com/openai/codex/blob/rust-v0.147.0/codex-rs/plugin/src/plugin_id.rs
 
 ## Test Coverage Metadata
 
