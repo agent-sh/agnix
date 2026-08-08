@@ -13,7 +13,7 @@ keywords: ["CC-SET-012", "invalid sandbox.credentials setting", "claude settings
 - **Category**: `Claude Settings`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-08-04`
+- **Verified On**: `2026-08-08`
 
 ## Applicability
 
@@ -26,6 +26,7 @@ keywords: ["CC-SET-012", "invalid sandbox.credentials setting", "claude settings
 - https://github.com/anthropics/claude-code/releases/tag/v2.1.187
 - https://github.com/anthropics/claude-code/releases/tag/v2.1.199
 - https://github.com/anthropics/claude-code/releases/tag/v2.1.221
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.224
 - https://code.claude.com/docs/en/settings
 - https://code.claude.com/docs/en/sandboxing
 

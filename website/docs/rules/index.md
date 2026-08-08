@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `445` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `447` validation rules generated from `knowledge-base/rules.json`.
 `124` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -150,6 +150,8 @@ This section contains all `445` validation rules generated from `knowledge-base/
 | [CC-SET-019](./generated/cc-set-019.md) | Non-boolean sandbox.network.strictAllowlist Setting | MEDIUM | Claude Settings | No |
 | [CC-SET-020](./generated/cc-set-020.md) | Invalid workflowSizeGuideline Setting | MEDIUM | Claude Settings | No |
 | [CC-SET-021](./generated/cc-set-021.md) | Ineffective Project Remote Control Auto-start | MEDIUM | Claude Settings | No |
+| [CC-SET-022](./generated/cc-set-022.md) | Invalid crossSessionInbound Setting | MEDIUM | Claude Settings | No |
+| [CC-SET-023](./generated/cc-set-023.md) | Invalid dialogExpiry Setting | MEDIUM | Claude Settings | No |
 | [CDX-000](./generated/cdx-000.md) | TOML Parse Error | HIGH | Codex CLI | No |
 | [CDX-001](./generated/cdx-001.md) | Invalid Approval Mode | HIGH | Codex CLI | Yes (unsafe) |
 | [CDX-002](./generated/cdx-002.md) | Invalid Full Auto Error Mode | HIGH | Codex CLI | Yes (unsafe) |

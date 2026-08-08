@@ -38,11 +38,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{"name": "my plugin!@#"}
+{"name": "acme..tools"}
 ```
 
 ### Valid
 
 ```json
-{"name": "my-cool-plugin"}
+{"name": "acme.tools"}
 ```

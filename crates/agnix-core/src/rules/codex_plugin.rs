@@ -356,12 +356,19 @@ impl Validator for CodexPluginValidator {
     }
 }
 
-/// Validate plugin name: ASCII alphanumeric, hyphens, and underscores only.
+/// Validate a legacy Codex plugin name.
+///
+/// Codex 0.147 allows dots in plugin names, but each dot must separate
+/// non-empty path-safe segments. Marketplace names remain dot-free upstream.
 fn is_valid_plugin_name(name: &str) -> bool {
     !name.is_empty()
+        && !matches!(name, "." | "..")
+        && !name.starts_with('.')
+        && !name.ends_with('.')
+        && !name.contains("..")
         && name
             .chars()
-            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '-' | '_'))
 }
 
 fn is_valid_agent_plugin_name(name: &str) -> bool {
@@ -1133,7 +1140,7 @@ mod tests {
     }
 
     #[test]
-    fn test_cdx_pl_004_dots_in_name() {
+    fn test_cdx_pl_004_dots_in_name_are_valid() {
         let temp = TempDir::new().unwrap();
         let plugin_path = temp.path().join(".codex-plugin").join("plugin.json");
         write_plugin(&plugin_path, r#"{"name":"my.plugin","description":"desc"}"#);
@@ -1145,7 +1152,31 @@ mod tests {
             &LintConfig::default(),
         );
 
-        assert!(diagnostics.iter().any(|d| d.rule == "CDX-PL-004"));
+        assert!(!diagnostics.iter().any(|d| d.rule == "CDX-PL-004"));
+    }
+
+    #[test]
+    fn test_cdx_pl_004_rejects_empty_dot_segments() {
+        for name in [".plugin", "plugin.", "my..plugin", ".", ".."] {
+            let temp = TempDir::new().unwrap();
+            let plugin_path = temp.path().join(".codex-plugin").join("plugin.json");
+            write_plugin(
+                &plugin_path,
+                &format!(r#"{{"name":"{name}","description":"desc"}}"#),
+            );
+
+            let validator = CodexPluginValidator;
+            let diagnostics = validator.validate(
+                &plugin_path,
+                &fs::read_to_string(&plugin_path).unwrap(),
+                &LintConfig::default(),
+            );
+
+            assert!(
+                diagnostics.iter().any(|d| d.rule == "CDX-PL-004"),
+                "{name} must be rejected"
+            );
+        }
     }
 
     #[test]

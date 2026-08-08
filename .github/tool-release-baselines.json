@@ -1,6 +1,6 @@
 {
   "version": "1.1",
-  "last_updated": "2026-08-05",
+  "last_updated": "2026-08-08",
   "description": "Tracks the latest release of every tool agnix validates (one entry per tool with a validator in crates/agnix-core/src/rules/). Used by .github/workflows/tool-release-watch.yml to open per-tool issues when a new release is published. Untracked tools include the precise publication URL in untracked_reason so a maintainer can monitor manually.\n\nOptional `changes_of_interest` per tool describes what agnix cares about: `config_surfaces` (files agnix validates), `relevant` (change-types that likely affect a validator), `irrelevant` (safe to skip). When set and GLM_API_KEY is available, the watcher runs scripts/glm-extract.js --mode=agnix-triage to produce a pre-filtered summary at the top of the issue body. Falls back gracefully to the full changelog on any LLM failure.",
   "tools": {
     "claude-code": {
@@ -16,7 +16,7 @@
         "mcp"
       ],
       "github_repo": "anthropics/claude-code",
-      "last_known_version": "v2.1.222",
+      "last_known_version": "v2.1.226",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
@@ -60,13 +60,13 @@
         "agents_md"
       ],
       "github_repo": "openai/codex",
-      "last_known_version": "rust-v0.146.0",
+      "last_known_version": "rust-v0.147.0",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
           "AGENTS.md",
           "codex-rs/core/config.toml (project + ~/.codex/config.toml)",
-          ".codex-plugin/plugin.json (plugin manifest)",
+          ".codex-plugin/plugin.json and Agent Plugins root plugin.json",
           ".mcp.json or [mcp_servers.*] TOML blocks referenced from config.toml",
           "requirements.toml (managed environment config)"
         ],
@@ -74,7 +74,7 @@
           "New / renamed / removed keys in config.toml ([app], [agents], [features], [mcp_servers.*], [permissions], [sandbox], [windows], etc.)",
           "Changes to MCP server schema (auth fields, bearer_token/env_var, allow-listed keys)",
           "Feature toggles in [features] - new features, flag shapes (flat bool vs nested {enabled})",
-          "Plugin manifest schema changes in .codex-plugin/plugin.json",
+          "Plugin manifest schema changes in .codex-plugin/plugin.json or Agent Plugins root plugin.json",
           "Apps config shape ([apps.*], tool-approval modes, default_tools_* keys)",
           "Hook configuration schema (config.toml hooks block stabilized in 0.124)",
           "AGENTS.md size limits, required sections, or directive grammar"
@@ -96,7 +96,7 @@
         "agents_md"
       ],
       "github_repo": "sst/opencode",
-      "last_known_version": "v1.18.13",
+      "last_known_version": "v1.18.15",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
@@ -204,7 +204,7 @@
       ],
       "github_repo": "cline/cline",
       "release_tag_regex": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
-      "last_known_version": "v4.1.4",
+      "last_known_version": "v4.1.6",
       "tracked": true,
       "notes": "Tracks only the core Cline vX.Y.Z release train. The repository also publishes desktop-v*, cli-v*, sdk/*, and other interleaved releases that do not correspond to the validator surfaces.",
       "changes_of_interest": {
@@ -239,7 +239,7 @@
       "github_repo": null,
       "html_url": "https://api2.cursor.sh/updates/api/update/darwin/cursor/0.0.1/stable",
       "version_regex": "[0-9]+\\.[0-9]+\\.[0-9]+",
-      "last_known_version": "3.14.27",
+      "last_known_version": "3.15.6",
       "tracked": true,
       "notes": "Tracked via Cursor's stable update endpoint (the same one the desktop app polls). Returns JSON like {\"url\":\"...\",\"name\":\"3.1.17\"}. Channel is hardcoded to 'stable' for darwin; the version is platform-agnostic (same release ships across darwin/linux/win32). Prose changelog at https://cursor.com/changelog (Next.js SPA - not scrapeable from raw HTML).",
       "changes_of_interest": {
@@ -307,7 +307,7 @@
       "html_url": "https://ampcode.com/news.rss",
       "version_regex": "https://ampcode\\.com/news/[a-zA-Z0-9._-]+",
       "notes_extractor": "rss_cdata",
-      "last_known_version": "attach-anything",
+      "last_known_version": "size-the-orbs-of-production",
       "tracked": true,
       "notes": "Tracked via the amp news RSS feed; the 'version' is the slug of the latest /news/ post (e.g., amp-free-is-ad-free). Source is not on GitHub; npm @sourcegraph/amp publishes per-commit (no semver gates) so npm version-bump tracking would be noise. Issue body uses the first <item><description> CDATA from the RSS feed (already structured HTML - no LLM needed).",
       "changes_of_interest": {
@@ -339,7 +339,7 @@
         "gemini_ignore"
       ],
       "github_repo": "google-gemini/gemini-cli",
-      "last_known_version": "v0.53.1",
+      "last_known_version": "v0.54.4",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [

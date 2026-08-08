@@ -624,8 +624,8 @@ rules:
     message: Falta o esta vacio el nombre del plugin
     suggestion: Agrega un campo 'name' con una cadena no vacia a plugin.json
   cdx_pl_004:
-    message: Nombre de plugin invalido '%{name}' - debe ser alfanumerico ASCII, guiones o guiones bajos
-    suggestion: Renombra usando solo letras ASCII, digitos, guiones y guiones bajos
+    message: Nombre de plugin invalido '%{name}' - usa letras ASCII, digitos, puntos, guiones o guiones bajos sin segmentos vacios separados por puntos
+    suggestion: Usa letras ASCII, digitos, puntos, guiones y guiones bajos; no empieces ni termines con punto ni uses puntos consecutivos
     agent_message: Nombre de Agent Plugins invalido '%{name}' - usa letras minusculas, numeros, puntos o guiones sin separadores repetidos
     agent_suggestion: Usa entre 1 y 64 letras ASCII minusculas, digitos, puntos o guiones, comenzando y terminando con letra o digito
   cdx_pl_005:
@@ -789,8 +789,25 @@ rules:
     extract_no_match_value: 'sandbox.credentials.%{array_key}[%{index}].onExtractNoMatch debe ser "warn", "deny" o "error" (se obtuvo "%{actual}")'
     extract_no_match_type: sandbox.credentials.%{array_key}[%{index}].onExtractNoMatch debe ser una cadena (se obtuvo %{actual})
     extract_no_match_suggestion: 'Establece sandbox.credentials.%{array_key}[%{index}].onExtractNoMatch en "warn", "deny" o "error".'
+    extract_no_match_jwt_value: 'sandbox.credentials.%{array_key}[%{index}].onExtractNoMatch debe ser "warn" cuando una variable de entorno usa decode: "jwt" (se obtuvo "%{actual}")'
+    extract_no_match_jwt_suggestion: 'Establece sandbox.credentials.%{array_key}[%{index}].onExtractNoMatch en "warn", o eliminalo.'
     mask_duplicates_type: sandbox.credentials.%{array_key}[%{index}].maskDuplicates debe ser booleano (se obtuvo %{actual})
     mask_duplicates_suggestion: Establece sandbox.credentials.%{array_key}[%{index}].maskDuplicates en true o false sin comillas, o eliminalo.
+    decode_value: 'sandbox.credentials.%{array_key}[%{index}].decode debe ser "jwt" (se obtuvo "%{actual}")'
+    decode_type: sandbox.credentials.%{array_key}[%{index}].decode debe ser una cadena (se obtuvo %{actual})
+    decode_suggestion: 'Establece sandbox.credentials.%{array_key}[%{index}].decode en "jwt", o eliminalo.'
+    extract_decode_conflict: sandbox.credentials.%{array_key}[%{index}] no puede combinar extract y decode para una variable de entorno
+    extract_decode_conflict_suggestion: Elimina extract o decode de sandbox.credentials.%{array_key}[%{index}].
+    mask_claims_shape: sandbox.credentials.%{array_key}[%{index}].maskClaims debe ser un arreglo no vacio de cadenas no vacias (se obtuvo %{actual})
+    mask_claims_requires_decode: 'sandbox.credentials.%{array_key}[%{index}].maskClaims requiere decode: "jwt"'
+    mask_claims_suggestion: 'Establece decode en "jwt" y maskClaims en nombres como ["api_key"], o elimina maskClaims.'
+    aws_pairs_array: sandbox.credentials.awsPairs debe ser un arreglo de objetos (se obtuvo %{actual})
+    aws_pair_object: sandbox.credentials.awsPairs[%{index}] debe ser un objeto (se obtuvo %{actual})
+    aws_pair_field: sandbox.credentials.awsPairs[%{index}].%{field} debe ser una cadena no vacia
+    aws_pairs_suggestion: 'Usa entradas como {"accessKeyIdVar":"MY_KEY_ID","secretAccessKeyVar":"MY_SECRET_KEY"} con sessionTokenVar opcional.'
+    sigv4_object: sandbox.credentials.sigv4 debe ser un objeto (se obtuvo %{actual})
+    sigv4_entry: 'sandbox.credentials.sigv4.%{field} debe ser deny o passthrough, y el campo debe ser streaming, presigned o sigv4a (se obtuvo %{actual})'
+    sigv4_suggestion: Establece las politicas streaming, presigned y sigv4a en deny o passthrough, o elimina campos no admitidos.
   cc_set_013:
     message: autoMode.classifyAllShell debe ser un booleano cuando esta presente (se obtuvo %{actual}); Claude Code 2.1.193+
       documenta esta configuracion de auto-mode como un interruptor true/false estricto
@@ -831,6 +848,12 @@ rules:
       Code 2.1.222+; este valor se ignora'
     suggestion: Habilita Remote Control en la configuracion de usuario con /config, o establece este campo en false para
       deshabilitarlo en el proyecto.
+  cc_set_022:
+    message: crossSessionInbound debe ser accept, hold o refuse (se obtuvo %{actual})
+    suggestion: Establece crossSessionInbound en accept, hold o refuse.
+  cc_set_023:
+    message: dialogExpiry debe ser 60s, 5m, 10m o never (se obtuvo %{actual})
+    suggestion: Establece dialogExpiry en 60s, 5m, 10m o never.
 
 
 # ===========================================================================
