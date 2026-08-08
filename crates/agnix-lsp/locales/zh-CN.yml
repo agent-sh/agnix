@@ -769,6 +769,8 @@ rules:
     aws_pair_object: sandbox.credentials.awsPairs[%{index}] 必须是对象（实际为 %{actual}）
     aws_pair_field: sandbox.credentials.awsPairs[%{index}].%{field} 必须是非空字符串
     aws_pairs_suggestion: '使用类似 {"accessKeyIdVar":"MY_KEY_ID","secretAccessKeyVar":"MY_SECRET_KEY"} 的条目，可选设置 sessionTokenVar。'
+    aws_pair_duplicate: sandbox.credentials.awsPairs[%{index}].%{field} 重复使用了环境变量 %{variable}，该变量已由 awsPairs[%{first_index}].%{first_field} 使用
+    aws_pair_duplicate_suggestion: 为所有 awsPairs 条目中的每个 AWS 凭证字段使用不同的环境变量名称。
     sigv4_object: sandbox.credentials.sigv4 必须是对象（实际为 %{actual}）
     sigv4_entry: 'sandbox.credentials.sigv4.%{field} 必须是 deny 或 passthrough，且字段必须是 streaming、presigned 或 sigv4a（实际为 %{actual}）'
     sigv4_suggestion: 将 streaming、presigned 和 sigv4a 策略设置为 deny 或 passthrough，或移除不支持的字段。

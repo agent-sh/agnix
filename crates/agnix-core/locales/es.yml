@@ -805,6 +805,8 @@ rules:
     aws_pair_object: sandbox.credentials.awsPairs[%{index}] debe ser un objeto (se obtuvo %{actual})
     aws_pair_field: sandbox.credentials.awsPairs[%{index}].%{field} debe ser una cadena no vacia
     aws_pairs_suggestion: 'Usa entradas como {"accessKeyIdVar":"MY_KEY_ID","secretAccessKeyVar":"MY_SECRET_KEY"} con sessionTokenVar opcional.'
+    aws_pair_duplicate: sandbox.credentials.awsPairs[%{index}].%{field} reutiliza la variable de entorno %{variable}, que ya usa awsPairs[%{first_index}].%{first_field}
+    aws_pair_duplicate_suggestion: Usa un nombre de variable de entorno diferente para cada campo de credenciales de AWS en todas las entradas de awsPairs.
     sigv4_object: sandbox.credentials.sigv4 debe ser un objeto (se obtuvo %{actual})
     sigv4_entry: 'sandbox.credentials.sigv4.%{field} debe ser deny o passthrough, y el campo debe ser streaming, presigned o sigv4a (se obtuvo %{actual})'
     sigv4_suggestion: Establece las politicas streaming, presigned y sigv4a en deny o passthrough, o elimina campos no admitidos.

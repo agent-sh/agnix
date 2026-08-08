@@ -39,7 +39,7 @@ use crate::{
     rules::{Validator, ValidatorMetadata},
 };
 use rust_i18n::t;
-use std::path::Path;
+use std::{collections::HashMap, path::Path};
 
 const RULE_IDS: &[&str] = &[
     "CC-SET-001",
@@ -1601,6 +1601,7 @@ fn validate_sandbox_credential_aws_pairs(
         );
         return;
     };
+    let mut seen_variables = HashMap::new();
 
     for (index, pair) in pairs.iter().enumerate() {
         let Some(pair) = pair.as_object() else {
@@ -1621,12 +1622,28 @@ fn validate_sandbox_credential_aws_pairs(
             continue;
         };
 
-        for field in ["accessKeyIdVar", "secretAccessKeyVar"] {
-            if !pair
-                .get(field)
-                .and_then(serde_json::Value::as_str)
-                .is_some_and(|value| !value.is_empty())
-            {
+        for field in ["accessKeyIdVar", "secretAccessKeyVar", "sessionTokenVar"] {
+            let Some(field_value) = pair.get(field) else {
+                if field != "sessionTokenVar" {
+                    diagnostics.push(
+                        Diagnostic::warning(
+                            path.to_path_buf(),
+                            line,
+                            0,
+                            "CC-SET-012",
+                            t!(
+                                "rules.cc_set_012.aws_pair_field",
+                                index = index,
+                                field = field
+                            ),
+                        )
+                        .with_suggestion(t!("rules.cc_set_012.aws_pairs_suggestion")),
+                    );
+                }
+                continue;
+            };
+            let Some(variable) = field_value.as_str().filter(|variable| !variable.is_empty())
+            else {
                 diagnostics.push(
                     Diagnostic::warning(
                         path.to_path_buf(),
@@ -1641,28 +1658,30 @@ fn validate_sandbox_credential_aws_pairs(
                     )
                     .with_suggestion(t!("rules.cc_set_012.aws_pairs_suggestion")),
                 );
-            }
-        }
+                continue;
+            };
 
-        if let Some(session_token) = pair.get("sessionTokenVar")
-            && !session_token
-                .as_str()
-                .is_some_and(|value| !value.is_empty())
-        {
-            diagnostics.push(
-                Diagnostic::warning(
-                    path.to_path_buf(),
-                    line,
-                    0,
-                    "CC-SET-012",
-                    t!(
-                        "rules.cc_set_012.aws_pair_field",
-                        index = index,
-                        field = "sessionTokenVar"
-                    ),
-                )
-                .with_suggestion(t!("rules.cc_set_012.aws_pairs_suggestion")),
-            );
+            if let Some((first_index, first_field)) = seen_variables.get(variable) {
+                diagnostics.push(
+                    Diagnostic::warning(
+                        path.to_path_buf(),
+                        line,
+                        0,
+                        "CC-SET-012",
+                        t!(
+                            "rules.cc_set_012.aws_pair_duplicate",
+                            index = index,
+                            field = field,
+                            variable = variable,
+                            first_index = *first_index,
+                            first_field = *first_field
+                        ),
+                    )
+                    .with_suggestion(t!("rules.cc_set_012.aws_pair_duplicate_suggestion")),
+                );
+            } else {
+                seen_variables.insert(variable, (index, field));
+            }
         }
     }
 }
@@ -3936,6 +3955,70 @@ mod tests {
         assert_eq!(hits.len(), 2);
         assert!(hits.iter().any(|hit| hit.message.contains("awsPairs")));
         assert!(hits.iter().any(|hit| hit.message.contains("sigv4")));
+    }
+
+    #[test]
+    fn test_sandbox_credentials_aws_pair_variables_must_be_unique_within_pair() {
+        for content in [
+            r#"{
+              "sandbox": {
+                "network": {"tlsTerminate": {}},
+                "credentials": {
+                  "awsPairs": [{
+                    "accessKeyIdVar": "AWS_KEY",
+                    "secretAccessKeyVar": "AWS_KEY"
+                  }]
+                }
+              }
+            }"#,
+            r#"{
+              "sandbox": {
+                "network": {"tlsTerminate": {}},
+                "credentials": {
+                  "awsPairs": [{
+                    "accessKeyIdVar": "AWS_KEY",
+                    "secretAccessKeyVar": "AWS_SECRET",
+                    "sessionTokenVar": "AWS_SECRET"
+                  }]
+                }
+              }
+            }"#,
+        ] {
+            let hits: Vec<_> = validate_at(".claude/managed-settings.json", content)
+                .into_iter()
+                .filter(|diagnostic| diagnostic.rule == "CC-SET-012")
+                .collect();
+            assert_eq!(hits.len(), 1);
+            assert!(hits[0].message.contains("reuses"));
+        }
+    }
+
+    #[test]
+    fn test_sandbox_credentials_aws_pair_variables_must_be_unique_across_pairs() {
+        let content = r#"{
+          "sandbox": {
+            "network": {"tlsTerminate": {}},
+            "credentials": {
+              "awsPairs": [
+                {
+                  "accessKeyIdVar": "AWS_KEY",
+                  "secretAccessKeyVar": "AWS_SECRET_1"
+                },
+                {
+                  "accessKeyIdVar": "AWS_KEY",
+                  "secretAccessKeyVar": "AWS_SECRET_2"
+                }
+              ]
+            }
+          }
+        }"#;
+        let hits: Vec<_> = validate_at(".claude/managed-settings.json", content)
+            .into_iter()
+            .filter(|diagnostic| diagnostic.rule == "CC-SET-012")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        assert!(hits[0].message.contains("awsPairs[1].accessKeyIdVar"));
+        assert!(hits[0].message.contains("awsPairs[0].accessKeyIdVar"));
     }
 
     #[test]
