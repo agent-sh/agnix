@@ -45,5 +45,5 @@ This website assembles and links that content for navigation and search.
 
 ## References
 
-- [CONTRIBUTING.md](https://github.com/agent-sh/agnix/blob/main/CONTRIBUTING.md) - full contribution guidelines
-- [SECURITY.md](https://github.com/agent-sh/agnix/blob/main/SECURITY.md) - security policy
+- [CONTRIBUTING.md](https://github.com/agent-sh/agnix/blob/v0.46.0/CONTRIBUTING.md) - full contribution guidelines
+- [SECURITY.md](https://github.com/agent-sh/agnix/blob/v0.46.0/SECURITY.md) - security policy

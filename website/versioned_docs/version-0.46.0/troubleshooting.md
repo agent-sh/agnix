@@ -50,8 +50,8 @@ Check your `.agnix.toml` configuration:
 
 Validate against the canonical rule data:
 
-- [knowledge-base/rules.json](https://github.com/agent-sh/agnix/blob/main/knowledge-base/rules.json)
-- [knowledge-base/VALIDATION-RULES.md](https://github.com/agent-sh/agnix/blob/main/knowledge-base/VALIDATION-RULES.md)
+- [knowledge-base/rules.json](https://github.com/agent-sh/agnix/blob/v0.46.0/knowledge-base/rules.json)
+- [knowledge-base/VALIDATION-RULES.md](https://github.com/agent-sh/agnix/blob/v0.46.0/knowledge-base/VALIDATION-RULES.md)
 
 If you find a discrepancy, please [open an issue](https://github.com/agent-sh/agnix/issues/new).
 
