@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.48.0] - 2026-08-09
+
 ### Fixed
 - **Claude Code skill and hook schema compatibility**. Accept skills without
   explicit `name` or `description`, validate the documented `disallowed-tools`
