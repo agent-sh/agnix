@@ -2620,6 +2620,48 @@ fn test_cc_hk_012_valid_json_no_error() {
 }
 
 #[test]
+fn test_cc_hk_012_prompt_continue_on_block_boolean_is_valid() {
+    let content = r#"{
+        "hooks": {
+            "PreToolUse": [{
+                "hooks": [{
+                    "type": "prompt",
+                    "prompt": "Check the request: $ARGUMENTS",
+                    "continueOnBlock": true
+                }]
+            }]
+        }
+    }"#;
+
+    let diagnostics = validate(content);
+    assert!(
+        diagnostics.iter().all(|d| d.rule != "CC-HK-012"),
+        "documented continueOnBlock boolean must parse: {diagnostics:?}"
+    );
+}
+
+#[test]
+fn test_cc_hk_012_prompt_continue_on_block_rejects_non_boolean() {
+    let content = r#"{
+        "hooks": {
+            "PreToolUse": [{
+                "hooks": [{
+                    "type": "prompt",
+                    "prompt": "Check the request: $ARGUMENTS",
+                    "continueOnBlock": "yes"
+                }]
+            }]
+        }
+    }"#;
+
+    let diagnostics = validate(content);
+    assert_eq!(
+        diagnostics.iter().filter(|d| d.rule == "CC-HK-012").count(),
+        1
+    );
+}
+
+#[test]
 fn test_cc_hk_012_disabled() {
     let mut config = LintConfig::default();
     config.rules_mut().disabled_rules = vec!["CC-HK-012".to_string()];

@@ -9,7 +9,7 @@ use crate::diagnostics::{Diagnostic, Fix};
 use crate::parsers::frontmatter::split_frontmatter;
 use crate::rules::{Validator, ValidatorMetadata};
 use rust_i18n::t;
-use std::path::Path;
+use std::path::{Component, Path, PathBuf};
 
 /// Known clients that host SKILL.md files.
 ///
@@ -119,6 +119,90 @@ pub(crate) fn detect_client(path: &Path) -> SkillClient {
     SkillClient::Unknown
 }
 
+/// Normalize a plugin component path without allowing it to escape the plugin
+/// root. Claude accepts both `/` and `\` separators in manifest paths.
+fn safe_plugin_relative_path(raw: &str) -> Option<PathBuf> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    let normalized = trimmed.replace('\\', "/");
+    let bytes = normalized.as_bytes();
+    if bytes.len() >= 2 && bytes[0].is_ascii_alphabetic() && bytes[1] == b':' {
+        return None;
+    }
+
+    let mut relative = PathBuf::new();
+    for component in Path::new(&normalized).components() {
+        match component {
+            Component::CurDir => {}
+            Component::Normal(part) => relative.push(part),
+            Component::ParentDir | Component::RootDir | Component::Prefix(_) => return None,
+        }
+    }
+    Some(relative)
+}
+
+/// Return whether `path` is a skill owned by a Claude Code plugin.
+///
+/// Claude always scans the plugin root's `skills/` directory and loads any
+/// additional string or array paths declared by the manifest's `skills` field.
+/// Require the documented sibling manifest so a generic `skills/foo/SKILL.md`
+/// tree is not misclassified as Claude-owned.
+fn is_claude_plugin_skill(path: &Path, config: &LintConfig) -> bool {
+    if path.file_name().and_then(|name| name.to_str()) != Some("SKILL.md") {
+        return false;
+    }
+
+    let Some(parent) = path.parent() else {
+        return false;
+    };
+
+    for plugin_root in parent.ancestors() {
+        let manifest_path = plugin_root.join(".claude-plugin").join("plugin.json");
+        if !config.fs().is_file(&manifest_path) {
+            continue;
+        }
+
+        if path.starts_with(plugin_root.join("skills")) {
+            return true;
+        }
+
+        let Ok(manifest_content) = config.fs().read_to_string(&manifest_path) else {
+            continue;
+        };
+        let Ok(manifest) = serde_json::from_str::<serde_json::Value>(&manifest_content) else {
+            continue;
+        };
+        let Some(declared_skills) = manifest.get("skills") else {
+            continue;
+        };
+
+        let declared_paths: Vec<&str> = match declared_skills {
+            serde_json::Value::String(path) => vec![path],
+            serde_json::Value::Array(paths) => {
+                paths.iter().filter_map(serde_json::Value::as_str).collect()
+            }
+            _ => Vec::new(),
+        };
+
+        if declared_paths.into_iter().any(|declared| {
+            safe_plugin_relative_path(declared).is_some_and(|relative| {
+                if relative.as_os_str().is_empty() {
+                    path.parent() == Some(plugin_root)
+                } else {
+                    path.starts_with(plugin_root.join(relative))
+                }
+            })
+        }) {
+            return true;
+        }
+    }
+
+    false
+}
+
 /// Map a `tools = [...]` entry (or `--tools` value) to a [`SkillClient`].
 /// Matching is case-insensitive to tolerate configs that use different casing.
 fn skill_client_from_tool_str(tool: &str) -> Option<SkillClient> {
@@ -150,6 +234,9 @@ pub(crate) fn resolve_skill_client(path: &Path, config: &LintConfig) -> SkillCli
     let by_path = detect_client(path);
     if by_path != SkillClient::Unknown {
         return by_path;
+    }
+    if is_claude_plugin_skill(path, config) {
+        return SkillClient::ClaudeCode;
     }
 
     let mut from_tools = config
@@ -303,7 +390,7 @@ impl Validator for PerClientSkillValidator {
             return diagnostics;
         }
 
-        let client = detect_client(path);
+        let client = resolve_skill_client(path, config);
 
         let per_client_rule = rule_id_for_client(client);
         let has_per_client = per_client_rule
@@ -437,6 +524,7 @@ mod tests {
     use super::*;
     use crate::config::LintConfig;
     use crate::rules::Validator;
+    use std::fs;
 
     fn make_skill(frontmatter: &str, body: &str) -> String {
         format!("---\n{}\n---\n{}", frontmatter, body)
@@ -552,6 +640,101 @@ mod tests {
         );
     }
 
+    #[test]
+    fn test_resolve_skill_client_claude_plugin_layouts() {
+        let temp = tempfile::tempdir().unwrap();
+        let plugin_root = temp.path().join("my-plugin");
+        let manifest = plugin_root.join(".claude-plugin").join("plugin.json");
+        fs::create_dir_all(manifest.parent().unwrap()).unwrap();
+        fs::write(&manifest, "{}").unwrap();
+
+        assert_eq!(
+            resolve_skill_client(
+                &plugin_root.join("skills/review/SKILL.md"),
+                &LintConfig::default()
+            ),
+            SkillClient::ClaudeCode
+        );
+
+        assert_eq!(
+            resolve_skill_client(&plugin_root.join("SKILL.md"), &LintConfig::default()),
+            SkillClient::Unknown,
+            "a root skill must be declared with skills: \".\""
+        );
+
+        fs::write(&manifest, r#"{"skills":"."}"#).unwrap();
+        assert_eq!(
+            resolve_skill_client(&plugin_root.join("SKILL.md"), &LintConfig::default()),
+            SkillClient::ClaudeCode
+        );
+        assert_eq!(
+            resolve_skill_client(&plugin_root.join("docs/SKILL.md"), &LintConfig::default()),
+            SkillClient::Unknown,
+            "skills: \".\" must not claim nested SKILL.md files"
+        );
+    }
+
+    #[test]
+    fn test_resolve_skill_client_claude_plugin_custom_skill_paths() {
+        let temp = tempfile::tempdir().unwrap();
+        let plugin_root = temp.path().join("my-plugin");
+        let manifest = plugin_root.join(".claude-plugin").join("plugin.json");
+        fs::create_dir_all(manifest.parent().unwrap()).unwrap();
+        fs::write(
+            &manifest,
+            r#"{"skills":["./custom-skills",".\\more-skills"]}"#,
+        )
+        .unwrap();
+
+        for relative in [
+            "custom-skills/review/SKILL.md",
+            "more-skills/deploy/SKILL.md",
+        ] {
+            assert_eq!(
+                resolve_skill_client(&plugin_root.join(relative), &LintConfig::default()),
+                SkillClient::ClaudeCode
+            );
+        }
+    }
+
+    #[test]
+    fn test_resolve_skill_client_rejects_escaping_plugin_skill_path() {
+        let temp = tempfile::tempdir().unwrap();
+        let plugin_root = temp.path().join("my-plugin");
+        let manifest = plugin_root.join(".claude-plugin").join("plugin.json");
+        fs::create_dir_all(manifest.parent().unwrap()).unwrap();
+        fs::write(&manifest, r#"{"skills":"../external-skills"}"#).unwrap();
+
+        assert_eq!(
+            resolve_skill_client(
+                &temp.path().join("external-skills/review/SKILL.md"),
+                &LintConfig::default()
+            ),
+            SkillClient::Unknown
+        );
+
+        fs::write(&manifest, r#"{"skills":"C:\\external-skills"}"#).unwrap();
+        assert_eq!(
+            resolve_skill_client(
+                &plugin_root.join("C:/external-skills/review/SKILL.md"),
+                &LintConfig::default()
+            ),
+            SkillClient::Unknown
+        );
+    }
+
+    #[test]
+    fn test_resolve_skill_client_generic_skills_without_plugin_manifest() {
+        let temp = tempfile::tempdir().unwrap();
+        assert_eq!(
+            resolve_skill_client(
+                &temp.path().join("skills/review/SKILL.md"),
+                &LintConfig::default()
+            ),
+            SkillClient::Unknown
+        );
+    }
+
     // ===== Validation tests =====
 
     #[test]
@@ -595,6 +778,28 @@ mod tests {
             per_client.is_empty(),
             "Claude Code should have no per-client or XP-SK-001 warnings, got {:?}",
             per_client
+        );
+    }
+
+    #[test]
+    fn test_claude_plugin_custom_skill_skips_cross_platform_warning() {
+        let temp = tempfile::tempdir().unwrap();
+        let plugin_root = temp.path().join("my-plugin");
+        let manifest = plugin_root.join(".claude-plugin").join("plugin.json");
+        let skill_path = plugin_root.join("custom-skills/review/SKILL.md");
+        fs::create_dir_all(manifest.parent().unwrap()).unwrap();
+        fs::write(&manifest, r#"{"skills":"./custom-skills"}"#).unwrap();
+
+        let content = make_skill(
+            "description: Review changes\ndisallowed-tools: Bash",
+            "Body",
+        );
+        let diagnostics =
+            PerClientSkillValidator.validate(&skill_path, &content, &LintConfig::default());
+
+        assert!(
+            !diagnostics.iter().any(|d| d.rule == "XP-SK-001"),
+            "Claude-only fields in manifest-owned skills are not portability issues: {diagnostics:?}"
         );
     }
 

@@ -73,6 +73,85 @@ Body"#;
 }
 
 #[test]
+fn test_claude_skill_allows_missing_name_and_description() {
+    let content = r#"---
+disallowed-tools: ImaginaryTool
+---
+Use the directory name as the command and this paragraph as the description."#;
+
+    let diagnostics = SkillValidator.validate(
+        Path::new(".claude/skills/review/SKILL.md"),
+        content,
+        &LintConfig::default(),
+    );
+
+    assert!(
+        diagnostics
+            .iter()
+            .all(|d| d.rule != "AS-002" && d.rule != "AS-003"),
+        "Claude Code documents every skill frontmatter field as optional: {diagnostics:?}"
+    );
+    assert_eq!(
+        diagnostics.iter().filter(|d| d.rule == "CC-SK-008").count(),
+        1,
+        "optional name and description must not suppress validation of other fields"
+    );
+}
+
+#[test]
+fn test_claude_plugin_skill_allows_missing_name_and_description() {
+    let temp = tempfile::tempdir().unwrap();
+    let plugin_root = temp.path().join("my-plugin");
+    let manifest = plugin_root.join(".claude-plugin").join("plugin.json");
+    let skill_path = plugin_root.join("skills/review/SKILL.md");
+    fs::create_dir_all(manifest.parent().unwrap()).unwrap();
+    fs::create_dir_all(skill_path.parent().unwrap()).unwrap();
+    fs::write(&manifest, "{}").unwrap();
+
+    let diagnostics = SkillValidator.validate(
+        &skill_path,
+        "---\n---\nReview the current changes.",
+        &LintConfig::default(),
+    );
+
+    assert!(
+        diagnostics
+            .iter()
+            .all(|d| d.rule != "AS-002" && d.rule != "AS-003"),
+        "manifest-owned plugin skills use Claude's optional-field contract: {diagnostics:?}"
+    );
+}
+
+#[test]
+fn test_claude_plugin_custom_skill_path_uses_claude_contract() {
+    let temp = tempfile::tempdir().unwrap();
+    let plugin_root = temp.path().join("my-plugin");
+    let manifest = plugin_root.join(".claude-plugin").join("plugin.json");
+    let skill_path = plugin_root.join("custom-skills/review/SKILL.md");
+    fs::create_dir_all(manifest.parent().unwrap()).unwrap();
+    fs::create_dir_all(skill_path.parent().unwrap()).unwrap();
+    fs::write(&manifest, r#"{"skills":"./custom-skills"}"#).unwrap();
+
+    let diagnostics = SkillValidator.validate(
+        &skill_path,
+        "---\ndisallowed-tools: ImaginaryTool\n---\nReview the current changes.",
+        &LintConfig::default(),
+    );
+
+    assert!(
+        diagnostics
+            .iter()
+            .all(|d| d.rule != "AS-002" && d.rule != "AS-003"),
+        "custom plugin skill roots use Claude's optional-field contract: {diagnostics:?}"
+    );
+    assert_eq!(
+        diagnostics.iter().filter(|d| d.rule == "CC-SK-008").count(),
+        1,
+        "custom plugin skill roots still run Claude field validation"
+    );
+}
+
+#[test]
 fn test_as_004_invalid_name_format() {
     let content = r#"---
 name: bad_name
@@ -480,6 +559,28 @@ Body"#;
         cc_sk_006_errors[0].level,
         crate::diagnostics::DiagnosticLevel::Error
     );
+}
+
+#[test]
+fn test_cc_sk_006_uses_directory_name_when_frontmatter_omits_name() {
+    let content = r#"---
+description: Deploys to production
+---
+Body"#;
+
+    let diagnostics = SkillValidator.validate(
+        Path::new(".claude/skills/deploy-prod/SKILL.md"),
+        content,
+        &LintConfig::default(),
+    );
+
+    let hits: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-SK-006")
+        .collect();
+    assert_eq!(hits.len(), 1);
+    assert!(hits[0].message.contains("deploy-prod"));
+    assert!(!diagnostics.iter().any(|d| d.rule == "AS-002"));
 }
 
 #[test]
@@ -1296,6 +1397,55 @@ Body"#;
         .collect();
 
     assert_eq!(cc_sk_008.len(), 0);
+}
+
+#[test]
+fn test_cc_sk_008_disallowed_tools_accepts_documented_shapes() {
+    let validator = SkillValidator;
+    for disallowed_tools in [
+        "disallowed-tools: AskUserQuestion, Write",
+        "disallowed-tools:\n  - AskUserQuestion\n  - Write",
+    ] {
+        let content = format!(
+            "---\nname: autonomous-review\ndescription: Use when reviewing autonomously\n{disallowed_tools}\n---\nReview the code."
+        );
+        let diagnostics = validator.validate(
+            Path::new(".claude/skills/autonomous-review/SKILL.md"),
+            &content,
+            &LintConfig::default(),
+        );
+
+        assert!(
+            diagnostics
+                .iter()
+                .all(|d| d.rule != "CC-SK-008" && d.rule != "CC-SK-017"),
+            "documented disallowed-tools shape must validate: {diagnostics:?}"
+        );
+    }
+}
+
+#[test]
+fn test_cc_sk_008_rejects_unknown_disallowed_tool() {
+    let content = r#"---
+name: autonomous-review
+description: Use when reviewing autonomously
+disallowed-tools: AskUserQuestion, ImaginaryTool
+---
+Review the code."#;
+
+    let diagnostics = SkillValidator.validate(
+        Path::new(".claude/skills/autonomous-review/SKILL.md"),
+        content,
+        &LintConfig::default(),
+    );
+    let hits: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-SK-008")
+        .collect();
+
+    assert_eq!(hits.len(), 1);
+    assert!(hits[0].message.contains("ImaginaryTool"));
+    assert_eq!(hits[0].line, 4);
 }
 
 #[test]

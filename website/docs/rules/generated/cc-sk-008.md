@@ -13,7 +13,7 @@ keywords: ["CC-SK-008", "unknown tool name", "claude skills", "validation", "agn
 - **Category**: `Claude Skills`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-07-31`
+- **Verified On**: `2026-08-09`
 
 ## Applicability
 
@@ -23,6 +23,7 @@ keywords: ["CC-SK-008", "unknown tool name", "claude skills", "validation", "agn
 
 ## Evidence Sources
 
+- https://code.claude.com/docs/en/skills
 - https://code.claude.com/docs/en/settings
 - https://code.claude.com/docs/en/tools
 - https://code.claude.com/docs/en/permissions
@@ -43,7 +44,7 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ---
 name: find-files
 description: Use when finding files by pattern
-allowed-tools: Glob, Grep, FooBar
+disallowed-tools: FooBar
 ---
 Search for files matching the pattern.
 ```
@@ -55,6 +56,7 @@ Search for files matching the pattern.
 name: find-files
 description: Use when finding files by pattern
 allowed-tools: Glob, Grep, Read
+disallowed-tools: Write
 ---
 Search for files matching the pattern.
 ```

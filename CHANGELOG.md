@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Claude Code skill and hook schema compatibility**. Accept skills without
+  explicit `name` or `description`, validate the documented `disallowed-tools`
+  field with the existing Claude tool vocabulary, and parse prompt-hook
+  `continueOnBlock` as a boolean.
+- **Claude Code specification baselines**. Advance the reviewed hooks, memory,
+  plugins, skills, and subagent documentation hashes after auditing the current
+  validation contracts.
+
 ## [0.47.0] - 2026-08-08
 
 ### Added
