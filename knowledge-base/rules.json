@@ -1405,7 +1405,7 @@
         "source_urls": [
           "https://code.claude.com/docs/en/hooks"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-08-09",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -1624,7 +1624,7 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"hooks\": {\n    \"Stop\": [\n      {\n        \"hooks\": [\n          { \"type\": \"command\", \"command\": \"echo bye\", \"timeout\": 30 }\n        ]\n      }\n    ]\n  }\n}",
+      "good_example": "{\n  \"hooks\": {\n    \"PreToolUse\": [\n      {\n        \"hooks\": [\n          { \"type\": \"prompt\", \"prompt\": \"Review: $ARGUMENTS\", \"continueOnBlock\": true }\n        ]\n      }\n    ]\n  }\n}",
       "bad_example": "{\n  \"hooks\": {\n    \"Stop\": [\n      {\n        hooks: [\n          { type: command }\n        ]\n      }\n    ]\n  }\n}"
     },
     {
@@ -3244,11 +3244,12 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
+          "https://code.claude.com/docs/en/skills",
           "https://code.claude.com/docs/en/settings",
           "https://code.claude.com/docs/en/tools",
           "https://code.claude.com/docs/en/permissions"
         ],
-        "verified_on": "2026-07-31",
+        "verified_on": "2026-08-09",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -3262,8 +3263,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "---\nname: find-files\ndescription: Use when finding files by pattern\nallowed-tools: Glob, Grep, Read\n---\nSearch for files matching the pattern.",
-      "bad_example": "---\nname: find-files\ndescription: Use when finding files by pattern\nallowed-tools: Glob, Grep, FooBar\n---\nSearch for files matching the pattern."
+      "good_example": "---\nname: find-files\ndescription: Use when finding files by pattern\nallowed-tools: Glob, Grep, Read\ndisallowed-tools: Write\n---\nSearch for files matching the pattern.",
+      "bad_example": "---\nname: find-files\ndescription: Use when finding files by pattern\ndisallowed-tools: FooBar\n---\nSearch for files matching the pattern."
     },
     {
       "id": "CC-SK-009",
@@ -3497,7 +3498,7 @@
         "source_urls": [
           "https://code.claude.com/docs/en/skills"
         ],
-        "verified_on": "2026-02-14",
+        "verified_on": "2026-08-09",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -3511,7 +3512,7 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "---\nname: lint-config\ndescription: Use when validating configuration files\ndisplay-name: Lint Config\ndefault-enabled: true\nfallback: lint-config\nallowed-tools: Read, Grep\n---\nLint project configuration files.",
+      "good_example": "---\nname: lint-config\ndescription: Use when validating configuration files\ndisplay-name: Lint Config\ndefault-enabled: true\nfallback: lint-config\nallowed-tools: Read, Grep\ndisallowed-tools: Write\n---\nLint project configuration files.",
       "bad_example": "---\nname: lint-config\ndescription: Use when validating configuration files\nallowed_tools: Read, Grep\n---\nLint project configuration files."
     },
     {

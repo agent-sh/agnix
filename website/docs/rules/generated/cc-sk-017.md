@@ -13,7 +13,7 @@ keywords: ["CC-SK-017", "unknown frontmatter field", "claude skills", "validatio
 - **Category**: `Claude Skills`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-02-14`
+- **Verified On**: `2026-08-09`
 
 ## Applicability
 
@@ -56,6 +56,7 @@ display-name: Lint Config
 default-enabled: true
 fallback: lint-config
 allowed-tools: Read, Grep
+disallowed-tools: Write
 ---
 Lint project configuration files.
 ```

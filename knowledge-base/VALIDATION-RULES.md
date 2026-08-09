@@ -118,15 +118,15 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="as-002"></a>
 ### AS-002 [HIGH] Missing Required Field: name
-**Requirement**: `name` field REQUIRED in frontmatter
-**Detection**: Parse YAML, check for `name` key
+**Requirement**: `name` field REQUIRED in Agent Skills frontmatter; Claude Code skills may omit it and derive the name from the skill location
+**Detection**: For non-Claude skills, parse YAML and check for `name` key
 **Fix**: [AUTO-FIX] Add `name: directory-name`
 **Source**: agentskills.io/specification
 
 <a id="as-003"></a>
 ### AS-003 [HIGH] Missing Required Field: description
-**Requirement**: `description` field REQUIRED in frontmatter
-**Detection**: Parse YAML, check for `description` key
+**Requirement**: `description` field REQUIRED in Agent Skills frontmatter; Claude Code skills may omit it and use the first body paragraph
+**Detection**: For non-Claude skills, parse YAML and check for `description` key
 **Fix**: [AUTO-FIX] Add `description: "Use when..."`
 **Source**: agentskills.io/specification
 
@@ -261,7 +261,7 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 ### CC-SK-008 [HIGH] Unknown Tool Name
 **Requirement**: Tool names MUST match Claude Code tools. **Claude Code skills only** - other clients (Codex/OpenCode/…) have their own tool vocabularies, so this is scoped to the owning client.
 **Known Tools**: the current built-in set (code.claude.com/docs/en/tools, verified 2026-07-31) incl. `PowerShell`, `Agent`, `Workflow`, `Artifact`, `ReportFindings`, `SendUserFile`, `EndConversation`, `Cron*`, `Team*`, `EnterWorktree`/`ExitWorktree`, `ScheduleWakeup`, `ListMcpResourcesTool`/`ReadMcpResourceTool`, `WaitForMcpServers`, plus legacy names kept for tolerance
-**Detection**: skill client is Claude Code AND tool not in the set; MCP tools are accepted in both documented forms - server-only `mcp__<server>` and fully qualified `mcp__<server>__<tool>` (case-sensitive lowercase prefix). The tool segment may glob (`mcp__github__get_*`); the server segment may not, since a rule must name one configured server
+**Detection**: skill client is Claude Code AND a tool in `allowed-tools` or `disallowed-tools` is not in the set; MCP tools are accepted in both documented forms - server-only `mcp__<server>` and fully qualified `mcp__<server>__<tool>` (case-sensitive lowercase prefix). The tool segment may glob (`mcp__github__get_*`); the server segment may not, since a rule must name one configured server
 **Fix**: Suggest closest match
 **Source**: code.claude.com/docs/en/tools
 
@@ -323,7 +323,7 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="cc-sk-017"></a>
 ### CC-SK-017 [MEDIUM] Unknown Frontmatter Field
-**Requirement**: Skill frontmatter SHOULD only use recognized Claude Code fields. **Claude Code skills only** - other clients' field support is checked by the per-client skill validator (CL-SK/CX-SK/OC-SK/WS-SK). Known fields include the documented `when_to_use` and `arguments` (added 2026-05-24).
+**Requirement**: Skill frontmatter SHOULD only use recognized Claude Code fields. **Claude Code skills only** - other clients' field support is checked by the per-client skill validator (CL-SK/CX-SK/OC-SK/WS-SK). Known fields include the documented `when_to_use`, `arguments`, and `disallowed-tools`.
 **Detection**: skill client is Claude Code AND frontmatter contains a field not in the Claude Code skill schema
 **Fix**: Manual fix required - remove unknown field or correct typo
 **Source**: code.claude.com/docs/en/skills

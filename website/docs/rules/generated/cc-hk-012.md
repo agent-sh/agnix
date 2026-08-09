@@ -56,10 +56,10 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ```json
 {
   "hooks": {
-    "Stop": [
+    "PreToolUse": [
       {
         "hooks": [
-          { "type": "command", "command": "echo bye", "timeout": 30 }
+          { "type": "prompt", "prompt": "Review: $ARGUMENTS", "continueOnBlock": true }
         ]
       }
     ]

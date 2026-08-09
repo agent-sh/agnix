@@ -68,6 +68,9 @@ pub enum Hook {
         timeout: Option<u64>,
         #[serde(skip_serializing_if = "Option::is_none")]
         model: Option<String>,
+        /// Continue the turn after a prompt hook blocks instead of stopping it.
+        #[serde(rename = "continueOnBlock", skip_serializing_if = "Option::is_none")]
+        continue_on_block: Option<bool>,
     },
     #[serde(rename = "agent")]
     Agent {
@@ -446,6 +449,7 @@ mod tests {
             prompt: Some("summarize".to_string()),
             timeout: None,
             model: None,
+            continue_on_block: None,
         };
         assert_eq!(prompt.type_name(), "prompt");
         assert!(prompt.is_prompt());

@@ -85,6 +85,12 @@ struct SkillFrontmatter {
         deserialize_with = "de_string_or_space_seq"
     )]
     allowed_tools: Option<String>,
+    #[serde(
+        rename = "disallowed-tools",
+        default,
+        deserialize_with = "de_string_or_space_seq"
+    )]
+    disallowed_tools: Option<String>,
     #[serde(rename = "argument-hint")]
     argument_hint: Option<String>,
     // Named positional arguments for `$name` substitution. "Accepts a
@@ -308,7 +314,7 @@ const KNOWN_FRONTMATTER_FIELDS: &[&str] = &[
     "name",
     "description",
     // Documented Claude Code skill fields (code.claude.com/docs/en/skills,
-    // verified 2026-05-24): `when_to_use` and `arguments` were missing.
+    // verified 2026-08-09): keep this list aligned with the documented table.
     "when_to_use",
     "arguments",
     // Claude Code v2.1.186 accepts kebab-case, snake_case, and camelCase for
@@ -324,6 +330,7 @@ const KNOWN_FRONTMATTER_FIELDS: &[&str] = &[
     "compatibility",
     "metadata",
     "allowed-tools",
+    "disallowed-tools",
     "argument-hint",
     "disable-model-invocation",
     "user-invocable",
@@ -622,6 +629,14 @@ impl<'a> ValidationContext<'a> {
 
     /// AS-002, AS-003: Validate required name and description fields
     fn validate_required_fields(&mut self, frontmatter: &SkillFrontmatter) {
+        // Claude Code treats every frontmatter field as optional: `name`
+        // defaults from the skill location, and `description` falls back to
+        // the first paragraph. AS-002/003 encode the stricter Agent Skills
+        // baseline and remain applicable to generic and other-client skills.
+        if self.client == SkillClient::ClaudeCode {
+            return;
+        }
+
         let (name_line, name_col) = self.frontmatter_key_line_col("name");
         let (description_line, description_col) = self.frontmatter_key_line_col("description");
 
@@ -1171,18 +1186,24 @@ impl<'a> ValidationContext<'a> {
     fn validate_cc_tools(&mut self, schema: &SkillSchema) {
         let (allowed_tools_line, allowed_tools_col) =
             self.frontmatter_key_line_col("allowed-tools");
+        let (disallowed_tools_line, disallowed_tools_col) =
+            self.frontmatter_key_line_col("disallowed-tools");
 
-        // Parse allowed_tools once for CC-SK-007 and CC-SK-008. Claude Code
-        // accepts comma- or space-separated entries, and scoped matchers can
-        // contain spaces inside parentheses like `Bash(git add *)`.
-        let tool_list: Option<Vec<&str>> = schema
+        // Claude Code accepts comma- or space-separated entries in both tool
+        // fields, and scoped matchers can contain spaces inside parentheses
+        // like `Bash(git add *)`.
+        let allowed_tool_list: Option<Vec<&str>> = schema
             .allowed_tools
+            .as_ref()
+            .map(|tools| split_tool_list(tools));
+        let disallowed_tool_list: Option<Vec<&str>> = schema
+            .disallowed_tools
             .as_ref()
             .map(|tools| split_tool_list(tools));
 
         // CC-SK-007: Unrestricted Bash warning
         if self.config.is_rule_enabled("CC-SK-007") {
-            if let Some(ref tools) = tool_list {
+            if let Some(ref tools) = allowed_tool_list {
                 // Find all plain Bash occurrences in the allowed-tools line only
                 // to avoid matching "Bash" in other fields like description
                 let search_start = frontmatter_key_offset(&self.parts.frontmatter, "allowed-tools")
@@ -1226,19 +1247,33 @@ impl<'a> ValidationContext<'a> {
         // CC-SK-008: Unknown tool name. KNOWN_TOOLS is Claude Code's tool set;
         // the whole CC-SK family is gated to Claude Code skills at the dispatch.
         if self.config.is_rule_enabled("CC-SK-008") {
-            if let Some(ref tools) = tool_list {
-                // Compute known tools list once outside loop
-                static KNOWN_TOOLS_LIST: OnceLock<String> = OnceLock::new();
-                let known_tools_str = KNOWN_TOOLS_LIST.get_or_init(|| KNOWN_TOOLS.join(", "));
+            // Compute known tools list once outside both loops.
+            static KNOWN_TOOLS_LIST: OnceLock<String> = OnceLock::new();
+            let known_tools_str = KNOWN_TOOLS_LIST.get_or_init(|| KNOWN_TOOLS.join(", "));
 
+            for (tools, line, col) in [
+                (
+                    allowed_tool_list.as_ref(),
+                    allowed_tools_line,
+                    allowed_tools_col,
+                ),
+                (
+                    disallowed_tool_list.as_ref(),
+                    disallowed_tools_line,
+                    disallowed_tools_col,
+                ),
+            ] {
+                let Some(tools) = tools else {
+                    continue;
+                };
                 for &tool in tools {
                     let base_name = tool.split('(').next().unwrap_or(tool);
                     if !is_valid_skill_tool_name(base_name) {
                         self.diagnostics.push(
                             Diagnostic::error(
                                 self.path.to_path_buf(),
-                                allowed_tools_line,
-                                allowed_tools_col,
+                                line,
+                                col,
                                 "CC-SK-008",
                                 t!(
                                     "rules.cc_sk_008.message",
@@ -1974,50 +2009,53 @@ impl Validator for SkillValidator {
             // Phase 11: CC-SK-017 (unknown frontmatter fields)
             ctx.validate_cc_unknown_frontmatter_fields();
 
-            // Phase 12-15: Claude Code rules (CC-SK-001-009)
-            // These require both name and description to be non-empty
-            if let (Some(name), Some(description)) = (
-                frontmatter.name.as_deref(),
-                frontmatter.description.as_deref(),
-            ) {
-                let name_trimmed = name.trim();
-                let description_trimmed = description.trim();
-                if !name_trimmed.is_empty() && !description_trimmed.is_empty() {
-                    let schema = SkillSchema {
-                        name: name_trimmed.to_string(),
-                        description: description_trimmed.to_string(),
-                        license: frontmatter.license.clone(),
-                        compatibility: frontmatter.compatibility.clone(),
-                        metadata: frontmatter.metadata.clone(),
-                        allowed_tools: frontmatter.allowed_tools.clone(),
-                        argument_hint: frontmatter.argument_hint.clone(),
-                        disable_model_invocation: frontmatter.disable_model_invocation,
-                        user_invocable: frontmatter.user_invocable,
-                        model: frontmatter.model.clone(),
-                        context: frontmatter.context.clone(),
-                        background: frontmatter.background,
-                        agent: frontmatter.agent.clone(),
-                        effort: frontmatter.effort.clone(),
-                        paths: frontmatter.paths.clone(),
-                        shell: frontmatter.shell.clone(),
-                    };
+            // Phase 12-15: Claude Code rules (CC-SK-001-009). Claude Code
+            // allows name and description to be omitted, but the remaining
+            // frontmatter fields still need validation.
+            let schema = SkillSchema {
+                name: frontmatter
+                    .name
+                    .as_deref()
+                    .unwrap_or_default()
+                    .trim()
+                    .to_string(),
+                description: frontmatter
+                    .description
+                    .as_deref()
+                    .unwrap_or_default()
+                    .trim()
+                    .to_string(),
+                license: frontmatter.license.clone(),
+                compatibility: frontmatter.compatibility.clone(),
+                metadata: frontmatter.metadata.clone(),
+                allowed_tools: frontmatter.allowed_tools.clone(),
+                disallowed_tools: frontmatter.disallowed_tools.clone(),
+                argument_hint: frontmatter.argument_hint.clone(),
+                disable_model_invocation: frontmatter.disable_model_invocation,
+                user_invocable: frontmatter.user_invocable,
+                model: frontmatter.model.clone(),
+                context: frontmatter.context.clone(),
+                background: frontmatter.background,
+                agent: frontmatter.agent.clone(),
+                effort: frontmatter.effort.clone(),
+                paths: frontmatter.paths.clone(),
+                shell: frontmatter.shell.clone(),
+            };
 
-                    // CC-SK-006 (dangerous auto-invocation) and CC-SK-009 (too many injections)
-                    ctx.validate_cc_safety(&schema, &frontmatter);
+            // CC-SK-006 (dangerous auto-invocation) and CC-SK-009 (too many injections)
+            ctx.validate_cc_safety(&schema, &frontmatter);
 
-                    // CC-SK-007 (unrestricted Bash) and CC-SK-008 (unknown tools)
-                    ctx.validate_cc_tools(&schema);
+            // CC-SK-007 (unrestricted Bash) and CC-SK-008 (unknown tools)
+            ctx.validate_cc_tools(&schema);
 
-                    // CC-SK-001-004 (model/context validation)
-                    ctx.validate_cc_model_context(&schema);
+            // CC-SK-001-004 (model/context validation)
+            ctx.validate_cc_model_context(&schema);
 
-                    // CC-SK-005 (agent type)
-                    ctx.validate_cc_agent(&schema);
+            // CC-SK-005 (agent type)
+            ctx.validate_cc_agent(&schema);
 
-                    // CC-SK-018 (effort), CC-SK-019 (paths), CC-SK-020 (shell)
-                    ctx.validate_cc_effort_paths_shell(&schema);
-                }
-            }
+            // CC-SK-018 (effort), CC-SK-019 (paths), CC-SK-020 (shell)
+            ctx.validate_cc_effort_paths_shell(&schema);
         } // end Claude Code skill rules (CC-SK-*)
 
         // Phase 16: Body validation (AS-012, AS-013)

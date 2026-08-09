@@ -28,6 +28,10 @@ pub struct SkillSchema {
     #[serde(skip_serializing_if = "Option::is_none", rename = "allowed-tools")]
     pub allowed_tools: Option<String>,
 
+    /// Optional: tools removed from the active skill's available pool
+    #[serde(skip_serializing_if = "Option::is_none", rename = "disallowed-tools")]
+    pub disallowed_tools: Option<String>,
+
     // Claude Code extensions
     /// Optional: argument hint for autocomplete
     #[serde(skip_serializing_if = "Option::is_none", rename = "argument-hint")]
@@ -167,6 +171,9 @@ pub const KNOWN_SKILL_FRONTMATTER_FIELDS: &[&str] = &[
     "compatibility",
     "metadata",
     "allowed-tools",
+    "disallowed-tools",
+    "when_to_use",
+    "arguments",
     "argument-hint",
     "disable-model-invocation",
     "user-invocable",
@@ -385,6 +392,7 @@ mod tests {
             compatibility: None,
             metadata: None,
             allowed_tools: None,
+            disallowed_tools: None,
             argument_hint: None,
             disable_model_invocation: None,
             user_invocable: None,
@@ -414,6 +422,7 @@ mod tests {
             compatibility: None,
             metadata: None,
             allowed_tools: None,
+            disallowed_tools: None,
             argument_hint: None,
             disable_model_invocation: None,
             user_invocable: None,
@@ -443,6 +452,7 @@ mod tests {
             compatibility: None,
             metadata: None,
             allowed_tools: None,
+            disallowed_tools: None,
             argument_hint: None,
             disable_model_invocation: None,
             user_invocable: None,
@@ -465,6 +475,7 @@ mod tests {
             compatibility: None,
             metadata: None,
             allowed_tools: None,
+            disallowed_tools: None,
             argument_hint: None,
             disable_model_invocation: None,
             user_invocable: None,
@@ -705,6 +716,9 @@ mod tests {
             "agent",
             "hooks",
             "allowed-tools",
+            "disallowed-tools",
+            "when_to_use",
+            "arguments",
         ] {
             assert!(
                 KNOWN_SKILL_FRONTMATTER_FIELDS.contains(field),
