@@ -188,8 +188,13 @@ fn is_claude_plugin_skill(path: &Path, config: &LintConfig) -> bool {
         };
 
         if declared_paths.into_iter().any(|declared| {
-            safe_plugin_relative_path(declared)
-                .is_some_and(|relative| path.starts_with(plugin_root.join(relative)))
+            safe_plugin_relative_path(declared).is_some_and(|relative| {
+                if relative.as_os_str().is_empty() {
+                    path.parent() == Some(plugin_root)
+                } else {
+                    path.starts_with(plugin_root.join(relative))
+                }
+            })
         }) {
             return true;
         }
@@ -661,6 +666,11 @@ mod tests {
         assert_eq!(
             resolve_skill_client(&plugin_root.join("SKILL.md"), &LintConfig::default()),
             SkillClient::ClaudeCode
+        );
+        assert_eq!(
+            resolve_skill_client(&plugin_root.join("docs/SKILL.md"), &LintConfig::default()),
+            SkillClient::Unknown,
+            "skills: \".\" must not claim nested SKILL.md files"
         );
     }
 
