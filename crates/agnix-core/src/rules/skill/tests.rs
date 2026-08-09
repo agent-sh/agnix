@@ -123,6 +123,35 @@ fn test_claude_plugin_skill_allows_missing_name_and_description() {
 }
 
 #[test]
+fn test_claude_plugin_custom_skill_path_uses_claude_contract() {
+    let temp = tempfile::tempdir().unwrap();
+    let plugin_root = temp.path().join("my-plugin");
+    let manifest = plugin_root.join(".claude-plugin").join("plugin.json");
+    let skill_path = plugin_root.join("custom-skills/review/SKILL.md");
+    fs::create_dir_all(manifest.parent().unwrap()).unwrap();
+    fs::create_dir_all(skill_path.parent().unwrap()).unwrap();
+    fs::write(&manifest, r#"{"skills":"./custom-skills"}"#).unwrap();
+
+    let diagnostics = SkillValidator.validate(
+        &skill_path,
+        "---\ndisallowed-tools: ImaginaryTool\n---\nReview the current changes.",
+        &LintConfig::default(),
+    );
+
+    assert!(
+        diagnostics
+            .iter()
+            .all(|d| d.rule != "AS-002" && d.rule != "AS-003"),
+        "custom plugin skill roots use Claude's optional-field contract: {diagnostics:?}"
+    );
+    assert_eq!(
+        diagnostics.iter().filter(|d| d.rule == "CC-SK-008").count(),
+        1,
+        "custom plugin skill roots still run Claude field validation"
+    );
+}
+
+#[test]
 fn test_as_004_invalid_name_format() {
     let content = r#"---
 name: bad_name
