@@ -1930,6 +1930,26 @@ fn is_valid_skill_tool_name(tool: &str) -> bool {
     is_valid_mcp_tool_format(tool, KNOWN_TOOLS)
 }
 
+/// Derive Claude Code's command name when frontmatter omits `name`.
+///
+/// Directory-based skills use the directory name, including plugin-root
+/// `SKILL.md` files. Legacy command files use their Markdown file stem.
+fn derived_claude_skill_name(path: &Path) -> String {
+    if path.file_name().and_then(|name| name.to_str()) == Some("SKILL.md") {
+        return path
+            .parent()
+            .and_then(Path::file_name)
+            .and_then(|name| name.to_str())
+            .unwrap_or_default()
+            .to_string();
+    }
+
+    path.file_stem()
+        .and_then(|name| name.to_str())
+        .unwrap_or_default()
+        .to_string()
+}
+
 impl Validator for SkillValidator {
     fn metadata(&self) -> ValidatorMetadata {
         ValidatorMetadata {
@@ -2016,9 +2036,10 @@ impl Validator for SkillValidator {
                 name: frontmatter
                     .name
                     .as_deref()
-                    .unwrap_or_default()
-                    .trim()
-                    .to_string(),
+                    .map(str::trim)
+                    .filter(|name| !name.is_empty())
+                    .map(str::to_string)
+                    .unwrap_or_else(|| derived_claude_skill_name(path)),
                 description: frontmatter
                     .description
                     .as_deref()

@@ -119,6 +119,35 @@ pub(crate) fn detect_client(path: &Path) -> SkillClient {
     SkillClient::Unknown
 }
 
+/// Return whether `path` is a skill owned by a Claude Code plugin.
+///
+/// Claude plugins may expose either a root `SKILL.md` or skills below the
+/// plugin's `skills/` directory. Require the documented sibling manifest so a
+/// generic `skills/foo/SKILL.md` tree is not misclassified as Claude-owned.
+fn is_claude_plugin_skill(path: &Path, config: &LintConfig) -> bool {
+    let Some(parent) = path.parent() else {
+        return false;
+    };
+
+    let has_manifest = |root: &Path| {
+        config
+            .fs()
+            .is_file(&root.join(".claude-plugin").join("plugin.json"))
+    };
+
+    if path.file_name().and_then(|name| name.to_str()) == Some("SKILL.md") && has_manifest(parent) {
+        return true;
+    }
+
+    for ancestor in parent.ancestors() {
+        if ancestor.file_name().and_then(|name| name.to_str()) == Some("skills") {
+            return ancestor.parent().is_some_and(has_manifest);
+        }
+    }
+
+    false
+}
+
 /// Map a `tools = [...]` entry (or `--tools` value) to a [`SkillClient`].
 /// Matching is case-insensitive to tolerate configs that use different casing.
 fn skill_client_from_tool_str(tool: &str) -> Option<SkillClient> {
@@ -150,6 +179,9 @@ pub(crate) fn resolve_skill_client(path: &Path, config: &LintConfig) -> SkillCli
     let by_path = detect_client(path);
     if by_path != SkillClient::Unknown {
         return by_path;
+    }
+    if is_claude_plugin_skill(path, config) {
+        return SkillClient::ClaudeCode;
     }
 
     let mut from_tools = config
@@ -437,6 +469,7 @@ mod tests {
     use super::*;
     use crate::config::LintConfig;
     use crate::rules::Validator;
+    use std::fs;
 
     fn make_skill(frontmatter: &str, body: &str) -> String {
         format!("---\n{}\n---\n{}", frontmatter, body)
@@ -549,6 +582,39 @@ mod tests {
         assert_eq!(
             detect_client(Path::new("projects/foo/.cursor/skills/review/SKILL.md")),
             SkillClient::Cursor
+        );
+    }
+
+    #[test]
+    fn test_resolve_skill_client_claude_plugin_layouts() {
+        let temp = tempfile::tempdir().unwrap();
+        let plugin_root = temp.path().join("my-plugin");
+        let manifest = plugin_root.join(".claude-plugin").join("plugin.json");
+        fs::create_dir_all(manifest.parent().unwrap()).unwrap();
+        fs::write(&manifest, "{}").unwrap();
+
+        assert_eq!(
+            resolve_skill_client(
+                &plugin_root.join("skills/review/SKILL.md"),
+                &LintConfig::default()
+            ),
+            SkillClient::ClaudeCode
+        );
+        assert_eq!(
+            resolve_skill_client(&plugin_root.join("SKILL.md"), &LintConfig::default()),
+            SkillClient::ClaudeCode
+        );
+    }
+
+    #[test]
+    fn test_resolve_skill_client_generic_skills_without_plugin_manifest() {
+        let temp = tempfile::tempdir().unwrap();
+        assert_eq!(
+            resolve_skill_client(
+                &temp.path().join("skills/review/SKILL.md"),
+                &LintConfig::default()
+            ),
+            SkillClient::Unknown
         );
     }
 

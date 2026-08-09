@@ -99,6 +99,30 @@ Use the directory name as the command and this paragraph as the description."#;
 }
 
 #[test]
+fn test_claude_plugin_skill_allows_missing_name_and_description() {
+    let temp = tempfile::tempdir().unwrap();
+    let plugin_root = temp.path().join("my-plugin");
+    let manifest = plugin_root.join(".claude-plugin").join("plugin.json");
+    let skill_path = plugin_root.join("skills/review/SKILL.md");
+    fs::create_dir_all(manifest.parent().unwrap()).unwrap();
+    fs::create_dir_all(skill_path.parent().unwrap()).unwrap();
+    fs::write(&manifest, "{}").unwrap();
+
+    let diagnostics = SkillValidator.validate(
+        &skill_path,
+        "---\n---\nReview the current changes.",
+        &LintConfig::default(),
+    );
+
+    assert!(
+        diagnostics
+            .iter()
+            .all(|d| d.rule != "AS-002" && d.rule != "AS-003"),
+        "manifest-owned plugin skills use Claude's optional-field contract: {diagnostics:?}"
+    );
+}
+
+#[test]
 fn test_as_004_invalid_name_format() {
     let content = r#"---
 name: bad_name
@@ -506,6 +530,28 @@ Body"#;
         cc_sk_006_errors[0].level,
         crate::diagnostics::DiagnosticLevel::Error
     );
+}
+
+#[test]
+fn test_cc_sk_006_uses_directory_name_when_frontmatter_omits_name() {
+    let content = r#"---
+description: Deploys to production
+---
+Body"#;
+
+    let diagnostics = SkillValidator.validate(
+        Path::new(".claude/skills/deploy-prod/SKILL.md"),
+        content,
+        &LintConfig::default(),
+    );
+
+    let hits: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-SK-006")
+        .collect();
+    assert_eq!(hits.len(), 1);
+    assert!(hits[0].message.contains("deploy-prod"));
+    assert!(!diagnostics.iter().any(|d| d.rule == "AS-002"));
 }
 
 #[test]
