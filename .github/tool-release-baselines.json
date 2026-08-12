@@ -95,7 +95,8 @@
       "display_name": "OpenCode",
       "validators": [
         "opencode",
-        "agents_md"
+        "agents_md",
+        "per_client_skill"
       ],
       "github_repo": "sst/opencode",
       "last_known_version": "v1.18.17",
@@ -106,13 +107,15 @@
           "opencode.json / opencode.jsonc",
           ".opencode/config.json",
           "opencode agent definitions",
-          "opencode MCP config (inside .opencode/config.json or referenced .mcp.json)"
+          "opencode MCP config (inside .opencode/config.json or referenced .mcp.json)",
+          ".opencode/skills/*/SKILL.md"
         ],
         "relevant": [
           "New / renamed / removed top-level keys in opencode.json, opencode.jsonc, or .opencode/config.json",
           "Permission config schema (including rule ordering semantics)",
           "LSP config shape (request keys, permission-prompt payload)",
           "MCP server definition shape / auth / env-var substitution rules",
+          "Per-client skill schema or .opencode/skills directory layout changes",
           "AGENTS.md grammar or size limits"
         ],
         "irrelevant": [
@@ -236,7 +239,8 @@
       "display_name": "Cursor",
       "validators": [
         "cursor",
-        "mcp"
+        "mcp",
+        "per_client_skill"
       ],
       "github_repo": null,
       "html_url": "https://api2.cursor.sh/updates/api/update/darwin/cursor/0.0.1/stable",
@@ -251,14 +255,16 @@
           ".cursor/hooks.json",
           ".cursor/agents/**/*.md",
           ".cursor/environment.json",
-          ".cursor/mcp.json"
+          ".cursor/mcp.json",
+          ".cursor/skills/*/SKILL.md"
         ],
         "relevant": [
           "Changes to .cursor/rules/**/*.mdc extension requirements or frontmatter (globs, description, alwaysApply)",
           "New hook shapes in .cursor/hooks.json",
           "Agent frontmatter schema in .cursor/agents/**/*.md",
           "environment.json schema changes",
-          "MCP config shape inside .cursor/mcp.json"
+          "MCP config shape inside .cursor/mcp.json",
+          "Per-client skill schema or .cursor/skills directory layout changes"
         ],
         "irrelevant": [
           "Agents Window UX (worktrees, multitask, subagents orchestration)",

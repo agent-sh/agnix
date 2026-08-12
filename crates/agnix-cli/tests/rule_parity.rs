@@ -1028,7 +1028,7 @@ fn test_spec_baseline_rule_ids_exist() {
 }
 
 #[test]
-fn test_claude_release_surfaces_match_research_inventory() {
+fn test_refreshed_release_surfaces_match_research_inventory() {
     let baseline_path = workspace_root().join(".github/tool-release-baselines.json");
     let baseline_content = fs::read_to_string(&baseline_path)
         .unwrap_or_else(|e| panic!("Failed to read {}: {}", baseline_path.display(), e));
@@ -1087,6 +1087,62 @@ fn test_claude_release_surfaces_match_research_inventory() {
         claude_row.contains("CC-OS"),
         "Claude Code research inventory must include the output-style rule prefix"
     );
+    assert!(
+        claude_row.contains("MCP"),
+        "Claude Code research inventory must include the shared MCP rule prefix"
+    );
+
+    for (tool_id, row_name, surface, prefix) in [
+        (
+            "opencode",
+            "OpenCode",
+            ".opencode/skills/*/SKILL.md",
+            "OC-SK",
+        ),
+        ("cursor", "Cursor", ".cursor/skills/*/SKILL.md", "CR-SK"),
+    ] {
+        let tool = &baselines["tools"][tool_id];
+        let tool_surfaces = tool["changes_of_interest"]["config_surfaces"]
+            .as_array()
+            .unwrap_or_else(|| panic!("{tool_id} config_surfaces must be an array"));
+        let tool_validators = tool["validators"]
+            .as_array()
+            .unwrap_or_else(|| panic!("{tool_id} validators must be an array"));
+        let relevant = tool["changes_of_interest"]["relevant"]
+            .as_array()
+            .unwrap_or_else(|| panic!("{tool_id} relevant changes must be an array"));
+
+        assert!(
+            tool_surfaces.iter().any(|candidate| candidate == surface),
+            "{tool_id} baseline must track {surface}"
+        );
+        assert!(
+            tool_validators
+                .iter()
+                .any(|validator| validator == "per_client_skill"),
+            "{tool_id} baseline must register the per-client skill validator"
+        );
+        assert!(
+            relevant.iter().any(|change| change
+                .as_str()
+                .is_some_and(|text| text.to_ascii_lowercase().contains("skill"))),
+            "{tool_id} baseline must monitor skill schema changes"
+        );
+
+        let row_prefix = format!("| {row_name} |");
+        let row = research
+            .lines()
+            .find(|line| line.starts_with(&row_prefix))
+            .unwrap_or_else(|| panic!("RESEARCH-TRACKING.md must contain a {row_name} row"));
+        assert!(
+            row.contains(surface),
+            "{row_name} research inventory is missing {surface}"
+        );
+        assert!(
+            row.contains(prefix),
+            "{row_name} research inventory is missing {prefix}"
+        );
+    }
 }
 
 #[test]
