@@ -1037,6 +1037,9 @@ fn test_claude_release_surfaces_match_research_inventory() {
     let surfaces = baselines["tools"]["claude-code"]["changes_of_interest"]["config_surfaces"]
         .as_array()
         .expect("Claude Code config_surfaces must be an array");
+    let validators = baselines["tools"]["claude-code"]["validators"]
+        .as_array()
+        .expect("Claude Code validators must be an array");
 
     assert!(
         surfaces
@@ -1049,6 +1052,18 @@ fn test_claude_release_surfaces_match_research_inventory() {
             .iter()
             .all(|surface| surface != ".claude/rules.yaml"),
         "Claude Code baseline must not use the obsolete .claude/rules.yaml surface"
+    );
+    assert!(
+        surfaces
+            .iter()
+            .any(|surface| surface == ".claude/output-styles/*.md"),
+        "Claude Code baseline must track output-style Markdown files"
+    );
+    assert!(
+        validators
+            .iter()
+            .any(|validator| validator == "output_style"),
+        "Claude Code baseline must register the output-style validator"
     );
 
     let research_path = workspace_root().join("knowledge-base/RESEARCH-TRACKING.md");
@@ -1068,6 +1083,10 @@ fn test_claude_release_surfaces_match_research_inventory() {
             "Claude Code research inventory is missing baseline surface: {surface}"
         );
     }
+    assert!(
+        claude_row.contains("CC-OS"),
+        "Claude Code research inventory must include the output-style rule prefix"
+    );
 }
 
 #[test]

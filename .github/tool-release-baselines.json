@@ -9,6 +9,7 @@
       "validators": [
         "claude_md",
         "claude_rules",
+        "output_style",
         "agent",
         "skill",
         "hooks",
@@ -29,7 +30,8 @@
           ".claude/hooks configuration",
           ".mcp.json",
           ".claude-plugin/plugin.json",
-          ".claude/rules/**/*.md"
+          ".claude/rules/**/*.md",
+          ".claude/output-styles/*.md"
         ],
         "relevant": [
           "New or renamed top-level keys in settings.json / managed-settings.json",
