@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "description": "Baseline hashes for canonical specification content. Human-facing URLs are kept separately from machine-readable content URLs.",
-  "last_updated": "2026-08-09T09:41:00Z",
+  "last_updated": "2026-08-12T22:03:57Z",
   "sources": {
     "s-tier": {
       "agent-skills-spec": {
@@ -270,7 +270,7 @@
       "cursor-environment": {
         "url": "https://cursor.com/docs/cloud-agent/setup",
         "content_url": "https://cursor.com/docs/cloud-agent/setup.md",
-        "hash": "6565db8120f64cb59b1b4de7c1a0d6dc3c9194f9565c310b06adac3bc1cf161d",
+        "hash": "dbef4e80115abc101ba9fd27e6652b3a6a08af14703391c458e7aa27da6eb645",
         "rules": [
           "CUR-016"
         ]

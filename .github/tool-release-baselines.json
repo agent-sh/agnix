@@ -1,6 +1,6 @@
 {
   "version": "1.1",
-  "last_updated": "2026-08-08",
+  "last_updated": "2026-08-13",
   "description": "Tracks the latest release of every tool agnix validates (one entry per tool with a validator in crates/agnix-core/src/rules/). Used by .github/workflows/tool-release-watch.yml to open per-tool issues when a new release is published. Untracked tools include the precise publication URL in untracked_reason so a maintainer can monitor manually.\n\nOptional `changes_of_interest` per tool describes what agnix cares about: `config_surfaces` (files agnix validates), `relevant` (change-types that likely affect a validator), `irrelevant` (safe to skip). When set and GLM_API_KEY is available, the watcher runs scripts/glm-extract.js --mode=agnix-triage to produce a pre-filtered summary at the top of the issue body. Falls back gracefully to the full changelog on any LLM failure.",
   "tools": {
     "claude-code": {
@@ -9,6 +9,7 @@
       "validators": [
         "claude_md",
         "claude_rules",
+        "output_style",
         "agent",
         "skill",
         "hooks",
@@ -16,7 +17,7 @@
         "mcp"
       ],
       "github_repo": "anthropics/claude-code",
-      "last_known_version": "v2.1.226",
+      "last_known_version": "v2.1.229",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
@@ -29,7 +30,8 @@
           ".claude/hooks configuration",
           ".mcp.json",
           ".claude-plugin/plugin.json",
-          ".claude/rules.yaml"
+          ".claude/rules/**/*.md",
+          ".claude/output-styles/*.md"
         ],
         "relevant": [
           "New or renamed top-level keys in settings.json / managed-settings.json",
@@ -93,10 +95,11 @@
       "display_name": "OpenCode",
       "validators": [
         "opencode",
-        "agents_md"
+        "agents_md",
+        "per_client_skill"
       ],
       "github_repo": "sst/opencode",
-      "last_known_version": "v1.18.15",
+      "last_known_version": "v1.18.17",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
@@ -104,13 +107,15 @@
           "opencode.json / opencode.jsonc",
           ".opencode/config.json",
           "opencode agent definitions",
-          "opencode MCP config (inside .opencode/config.json or referenced .mcp.json)"
+          "opencode MCP config (inside .opencode/config.json or referenced .mcp.json)",
+          ".opencode/skills/*/SKILL.md"
         ],
         "relevant": [
           "New / renamed / removed top-level keys in opencode.json, opencode.jsonc, or .opencode/config.json",
           "Permission config schema (including rule ordering semantics)",
           "LSP config shape (request keys, permission-prompt payload)",
           "MCP server definition shape / auth / env-var substitution rules",
+          "Per-client skill schema or .opencode/skills directory layout changes",
           "AGENTS.md grammar or size limits"
         ],
         "irrelevant": [
@@ -130,13 +135,14 @@
         "kiro_agent",
         "kiro_hook",
         "kiro_mcp",
-        "kiro_settings"
+        "kiro_settings",
+        "per_client_skill"
       ],
       "github_repo": null,
       "html_url": "https://kiro.dev/changelog/cli/",
       "version_regex": "[0-9]+\\.[0-9]+\\.[0-9]+",
       "notes_extractor": "glm",
-      "last_known_version": "2.16.0",
+      "last_known_version": "2.17.0",
       "tracked": true,
       "notes": "Proprietary CLI; no GH releases. Tracked via HTML scrape of kiro.dev/changelog/cli/ - the first NN.NN.NN version on the page is the latest. Release-note body is upgraded via GLM (scripts/glm-extract.js). The CLI itself exposes `kiro-cli version --changelog`. IDE has a separate changelog at https://kiro.dev/changelog/ide/ (not tracked here; could be added as a separate kiro-ide entry if needed).",
       "changes_of_interest": {
@@ -147,7 +153,7 @@
           ".kiro/settings/mcp.json",
           ".kiro/settings.json (CLI preferences)",
           ".kiro/powers/*/POWER.md",
-          ".kiro/skills/*/SKILL.md (surfaced as slash commands in 2.1)"
+          ".kiro/skills/*/SKILL.md"
         ],
         "relevant": [
           "New / renamed CLI settings keys (writable via `kiro-cli settings <k> <v>`)",
@@ -200,11 +206,12 @@
       "tier": "a",
       "display_name": "Cline",
       "validators": [
-        "cline"
+        "cline",
+        "per_client_skill"
       ],
       "github_repo": "cline/cline",
       "release_tag_regex": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
-      "last_known_version": "v4.1.6",
+      "last_known_version": "v4.1.8",
       "tracked": true,
       "notes": "Tracks only the core Cline vX.Y.Z release train. The repository also publishes desktop-v*, cli-v*, sdk/*, and other interleaved releases that do not correspond to the validator surfaces.",
       "changes_of_interest": {
@@ -234,12 +241,13 @@
       "display_name": "Cursor",
       "validators": [
         "cursor",
-        "mcp"
+        "mcp",
+        "per_client_skill"
       ],
       "github_repo": null,
       "html_url": "https://api2.cursor.sh/updates/api/update/darwin/cursor/0.0.1/stable",
       "version_regex": "[0-9]+\\.[0-9]+\\.[0-9]+",
-      "last_known_version": "3.15.6",
+      "last_known_version": "3.15.19",
       "tracked": true,
       "notes": "Tracked via Cursor's stable update endpoint (the same one the desktop app polls). Returns JSON like {\"url\":\"...\",\"name\":\"3.1.17\"}. Channel is hardcoded to 'stable' for darwin; the version is platform-agnostic (same release ships across darwin/linux/win32). Prose changelog at https://cursor.com/changelog (Next.js SPA - not scrapeable from raw HTML).",
       "changes_of_interest": {
@@ -249,14 +257,16 @@
           ".cursor/hooks.json",
           ".cursor/agents/**/*.md",
           ".cursor/environment.json",
-          ".cursor/mcp.json"
+          ".cursor/mcp.json",
+          ".cursor/skills/*/SKILL.md"
         ],
         "relevant": [
           "Changes to .cursor/rules/**/*.mdc extension requirements or frontmatter (globs, description, alwaysApply)",
           "New hook shapes in .cursor/hooks.json",
           "Agent frontmatter schema in .cursor/agents/**/*.md",
           "environment.json schema changes",
-          "MCP config shape inside .cursor/mcp.json"
+          "MCP config shape inside .cursor/mcp.json",
+          "Per-client skill schema or .cursor/skills directory layout changes"
         ],
         "irrelevant": [
           "Agents Window UX (worktrees, multitask, subagents orchestration)",
@@ -307,7 +317,7 @@
       "html_url": "https://ampcode.com/news.rss",
       "version_regex": "https://ampcode\\.com/news/[a-zA-Z0-9._-]+",
       "notes_extractor": "rss_cdata",
-      "last_known_version": "size-the-orbs-of-production",
+      "last_known_version": "global-plugins-and-skills",
       "tracked": true,
       "notes": "Tracked via the amp news RSS feed; the 'version' is the slug of the latest /news/ post (e.g., amp-free-is-ad-free). Source is not on GitHub; npm @sourcegraph/amp publishes per-commit (no semver gates) so npm version-bump tracking would be noise. Issue body uses the first <item><description> CDATA from the RSS feed (already structured HTML - no LLM needed).",
       "changes_of_interest": {
@@ -336,10 +346,11 @@
         "gemini_md",
         "gemini_settings",
         "gemini_extension",
-        "gemini_ignore"
+        "gemini_ignore",
+        "gemini_agent"
       ],
       "github_repo": "google-gemini/gemini-cli",
-      "last_known_version": "v0.54.4",
+      "last_known_version": "v0.55.1",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
