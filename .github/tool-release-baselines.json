@@ -29,7 +29,7 @@
           ".claude/hooks configuration",
           ".mcp.json",
           ".claude-plugin/plugin.json",
-          ".claude/rules.yaml"
+          ".claude/rules/**/*.md"
         ],
         "relevant": [
           "New or renamed top-level keys in settings.json / managed-settings.json",

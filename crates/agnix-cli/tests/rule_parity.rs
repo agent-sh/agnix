@@ -1028,6 +1028,49 @@ fn test_spec_baseline_rule_ids_exist() {
 }
 
 #[test]
+fn test_claude_release_surfaces_match_research_inventory() {
+    let baseline_path = workspace_root().join(".github/tool-release-baselines.json");
+    let baseline_content = fs::read_to_string(&baseline_path)
+        .unwrap_or_else(|e| panic!("Failed to read {}: {}", baseline_path.display(), e));
+    let baselines: serde_json::Value = serde_json::from_str(&baseline_content)
+        .unwrap_or_else(|e| panic!("Failed to parse {}: {}", baseline_path.display(), e));
+    let surfaces = baselines["tools"]["claude-code"]["changes_of_interest"]["config_surfaces"]
+        .as_array()
+        .expect("Claude Code config_surfaces must be an array");
+
+    assert!(
+        surfaces
+            .iter()
+            .any(|surface| surface == ".claude/rules/**/*.md"),
+        "Claude Code baseline must track recursive Markdown rule files"
+    );
+    assert!(
+        surfaces
+            .iter()
+            .all(|surface| surface != ".claude/rules.yaml"),
+        "Claude Code baseline must not use the obsolete .claude/rules.yaml surface"
+    );
+
+    let research_path = workspace_root().join("knowledge-base/RESEARCH-TRACKING.md");
+    let research = fs::read_to_string(&research_path)
+        .unwrap_or_else(|e| panic!("Failed to read {}: {}", research_path.display(), e));
+    let claude_row = research
+        .lines()
+        .find(|line| line.starts_with("| Claude Code |"))
+        .expect("RESEARCH-TRACKING.md must contain a Claude Code inventory row");
+
+    for surface in surfaces {
+        let surface = surface
+            .as_str()
+            .expect("Claude Code config surfaces must be strings");
+        assert!(
+            claude_row.contains(surface),
+            "Claude Code research inventory is missing baseline surface: {surface}"
+        );
+    }
+}
+
+#[test]
 fn test_is_tool_alias_case_sensitivity() {
     // Test that tool alias matching is case insensitive
     // "Copilot" (mixed case) and "COPILOT" (uppercase) should both
