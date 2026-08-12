@@ -336,7 +336,8 @@
         "gemini_md",
         "gemini_settings",
         "gemini_extension",
-        "gemini_ignore"
+        "gemini_ignore",
+        "gemini_agent"
       ],
       "github_repo": "google-gemini/gemini-cli",
       "last_known_version": "v0.55.1",
