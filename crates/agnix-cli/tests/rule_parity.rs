@@ -1100,6 +1100,8 @@ fn test_refreshed_release_surfaces_match_research_inventory() {
             "OC-SK",
         ),
         ("cursor", "Cursor", ".cursor/skills/*/SKILL.md", "CR-SK"),
+        ("kiro", "Kiro CLI", ".kiro/skills/*/SKILL.md", "KR-SK"),
+        ("cline", "Cline", ".cline/skills/*/SKILL.md", "CL-SK"),
     ] {
         let tool = &baselines["tools"][tool_id];
         let tool_surfaces = tool["changes_of_interest"]["config_surfaces"]

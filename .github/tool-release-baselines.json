@@ -135,7 +135,8 @@
         "kiro_agent",
         "kiro_hook",
         "kiro_mcp",
-        "kiro_settings"
+        "kiro_settings",
+        "per_client_skill"
       ],
       "github_repo": null,
       "html_url": "https://kiro.dev/changelog/cli/",
@@ -152,7 +153,7 @@
           ".kiro/settings/mcp.json",
           ".kiro/settings.json (CLI preferences)",
           ".kiro/powers/*/POWER.md",
-          ".kiro/skills/*/SKILL.md (surfaced as slash commands in 2.1)"
+          ".kiro/skills/*/SKILL.md"
         ],
         "relevant": [
           "New / renamed CLI settings keys (writable via `kiro-cli settings <k> <v>`)",
@@ -205,7 +206,8 @@
       "tier": "a",
       "display_name": "Cline",
       "validators": [
-        "cline"
+        "cline",
+        "per_client_skill"
       ],
       "github_repo": "cline/cline",
       "release_tag_regex": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
