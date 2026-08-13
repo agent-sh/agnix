@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- **Dependency lockfile bumps (website + VS Code extension)**: js-yaml
+  GHSA-5p4m-2wfm-xmqj (quadratic `!!omap` complexity) and nanoid
+  GHSA-2v37-7h3g-55p8 (zero-size generator loop). Lockfile-only; no manifest
+  range changes.
+
 ## [0.48.0] - 2026-08-09
 
 ### Fixed
