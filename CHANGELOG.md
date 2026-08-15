@@ -21,6 +21,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the deepest common ancestor of every path, walked up to the nearest `.git` or
   `.agnix.toml` marker, so results no longer depend on argument order or on
   which files a commit happens to touch.
+- **Linux x86_64 release binary unusable on glibc older than 2.39**
+  ([#1371](https://github.com/agent-sh/agnix/issues/1371)). The x86_64 gnu
+  build ran natively on `ubuntu-latest`, so it linked the runner's glibc and
+  failed at load time with `version 'GLIBC_2.39' not found` on Debian bookworm,
+  RHEL/Rocky 9, and Ubuntu 22.04. Both gnu targets now build through `cross`
+  against an old sysroot (currently `GLIBC_2.18`), a release gate fails the
+  build if any binary needs newer than `GLIBC_2.31`, and `npm install -g agnix`
+  plus `scripts/download.sh` probe the downloaded binary and retry with the
+  static musl archive when the host cannot load it.
 
 ### Security
 - **Dependency lockfile bumps (website + VS Code extension)**: js-yaml

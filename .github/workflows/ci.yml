@@ -76,6 +76,15 @@ jobs:
         # it.
         run: bash scripts/check-locale-sync.sh
 
+      - name: Release install path tests
+        if: matrix.os == 'ubuntu-latest'
+        # Covers the glibc floor gate the release build runs and the npm
+        # installer's static-build fallback. Neither ships inside the Rust
+        # workspace, so nothing else exercises them (see #1371).
+        run: |
+          bash scripts/check-glibc-floor.test.sh
+          node npm/test/install-helpers.test.js
+
       - name: Schema sync check
         if: matrix.os == 'ubuntu-latest'
         # Fails if the committed .agnix.toml schema differs from the current

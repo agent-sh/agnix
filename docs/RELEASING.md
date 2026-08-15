@@ -73,6 +73,22 @@ cargo deny check advisories
 
 3. Verify the release at https://github.com/agent-sh/agnix/releases
 
+### glibc floor
+
+Both `*-unknown-linux-gnu` targets build through `cross`, whose sysroot is much
+older than the runner image, and the `Verify glibc floor` step fails the build
+if any of the three binaries references a glibc newer than `GLIBC_FLOOR` in
+`scripts/check-glibc-floor.sh`. Building natively on `ubuntu-latest` instead
+pinned the x86_64 binary to `GLIBC_2.39`, which made it unloadable on Debian
+bookworm, RHEL 9, and Ubuntu 22.04 (#1371).
+
+Do not switch a gnu target back to a native build to shave build time. To check
+a binary by hand:
+
+```bash
+bash scripts/check-glibc-floor.sh target/x86_64-unknown-linux-gnu/release/agnix
+```
+
 ## Post-release Verification
 
 After the release workflow completes, verify all install targets work. This should be automated via a post-release CI workflow.

@@ -66,6 +66,9 @@ case "${OS}" in
             x86_64)
                 TARGET="x86_64-unknown-linux-gnu"
                 EXT="tar.gz"
+                # Statically linked, so it still runs when the host glibc is
+                # older than the one the gnu build was linked against (#1371).
+                FALLBACK_TARGET="x86_64-unknown-linux-musl"
                 ;;
             *)
                 echo "Error: Unsupported Linux architecture: ${ARCH}" >&2
@@ -103,6 +106,7 @@ esac
 # Set binary name (Windows uses .exe extension)
 BINARY_NAME="${BINARY_NAME:-agnix}"
 ARTIFACT_NAME="agnix-${TARGET}.${EXT}"
+FALLBACK_TARGET="${FALLBACK_TARGET:-}"
 
 # Resolve version
 if [ "${VERSION}" = "latest" ]; then
@@ -122,94 +126,120 @@ if [ "${VERSION}" = "latest" ]; then
     fi
 fi
 
-echo "Downloading agnix ${VERSION} for ${TARGET}..."
-
-# Download URL
-DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/${ARTIFACT_NAME}"
-
 # Download and extract
 TEMP_DIR=$(mktemp -d)
 trap 'rm -rf "${TEMP_DIR}"' EXIT
 
-echo "Downloading from ${DOWNLOAD_URL}..."
-HTTP_CODE=$(curl -sL -w "%{http_code}" "${DOWNLOAD_URL}" -o "${TEMP_DIR}/${ARTIFACT_NAME}")
+# install_artifact <artifact-name>
+# Downloads one release artifact, verifies it against its checksum sidecar, and
+# extracts it into BIN_DIR. Integrity failures exit non-zero: never install an
+# artifact that failed verification.
+install_artifact() {
+    ARTIFACT_NAME="$1"
+    DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/${ARTIFACT_NAME}"
 
-if [ "${HTTP_CODE}" != "200" ]; then
-    echo "Error: Failed to download release (HTTP ${HTTP_CODE})" >&2
-    echo "URL: ${DOWNLOAD_URL}" >&2
-    exit 1
-fi
+    echo "Downloading from ${DOWNLOAD_URL}..."
+    HTTP_CODE=$(curl -sL -w "%{http_code}" "${DOWNLOAD_URL}" -o "${TEMP_DIR}/${ARTIFACT_NAME}")
 
-CHECKSUM_URL="${DOWNLOAD_URL}.sha256"
-CHECKSUM_FILE="${TEMP_DIR}/${ARTIFACT_NAME}.sha256"
+    if [ "${HTTP_CODE}" != "200" ]; then
+        echo "Error: Failed to download release (HTTP ${HTTP_CODE})" >&2
+        echo "URL: ${DOWNLOAD_URL}" >&2
+        exit 1
+    fi
 
-echo "Downloading checksum from ${CHECKSUM_URL}..."
-HTTP_CODE=$(curl -sL -w "%{http_code}" "${CHECKSUM_URL}" -o "${CHECKSUM_FILE}")
+    CHECKSUM_URL="${DOWNLOAD_URL}.sha256"
+    CHECKSUM_FILE="${TEMP_DIR}/${ARTIFACT_NAME}.sha256"
 
-if [ "${HTTP_CODE}" != "200" ]; then
-    echo "Error: Failed to download release checksum (HTTP ${HTTP_CODE})" >&2
-    echo "URL: ${CHECKSUM_URL}" >&2
-    exit 1
-fi
+    echo "Downloading checksum from ${CHECKSUM_URL}..."
+    HTTP_CODE=$(curl -sL -w "%{http_code}" "${CHECKSUM_URL}" -o "${CHECKSUM_FILE}")
 
-EXPECTED_SHA="$(awk -v expected="${ARTIFACT_NAME}" '
-NF {
-    hash = tolower($1)
-    file = $2
-    sub(/^\*/, "", file)
-    sub(/\r$/, "", file)
-    n = split(file, parts, /[\\\/]/)
-    base = parts[n]
-    if (base == expected) {
-        print hash
-        found = 1
-        exit
+    if [ "${HTTP_CODE}" != "200" ]; then
+        echo "Error: Failed to download release checksum (HTTP ${HTTP_CODE})" >&2
+        echo "URL: ${CHECKSUM_URL}" >&2
+        exit 1
+    fi
+
+    EXPECTED_SHA="$(awk -v expected="${ARTIFACT_NAME}" '
+    NF {
+        hash = tolower($1)
+        file = $2
+        sub(/^\*/, "", file)
+        sub(/\r$/, "", file)
+        n = split(file, parts, /[\\\/]/)
+        base = parts[n]
+        if (base == expected) {
+            print hash
+            found = 1
+            exit
+        }
     }
-}
-END {
-    if (!found) {
+    END {
+        if (!found) {
+            exit 1
+        }
+    }
+    ' "${CHECKSUM_FILE}")" || {
+        echo "Error: Checksum file does not contain an entry for ${ARTIFACT_NAME}" >&2
         exit 1
     }
+    if ! printf '%s\n' "${EXPECTED_SHA}" | grep -Eq '^[0-9a-f]{64}$'; then
+        echo "Error: Invalid checksum file for ${ARTIFACT_NAME}" >&2
+        exit 1
+    fi
+
+    if command -v sha256sum >/dev/null 2>&1; then
+        ACTUAL_SHA="$(sha256sum "${TEMP_DIR}/${ARTIFACT_NAME}" | awk '{print $1}' | tr '[:upper:]' '[:lower:]')"
+    elif command -v shasum >/dev/null 2>&1; then
+        ACTUAL_SHA="$(shasum -a 256 "${TEMP_DIR}/${ARTIFACT_NAME}" | awk '{print $1}' | tr '[:upper:]' '[:lower:]')"
+    else
+        echo "Error: sha256sum or shasum is required to verify downloads" >&2
+        exit 1
+    fi
+
+    if [ "${ACTUAL_SHA}" != "${EXPECTED_SHA}" ]; then
+        echo "Error: Checksum mismatch for ${ARTIFACT_NAME}" >&2
+        echo "Expected: ${EXPECTED_SHA}" >&2
+        echo "Actual:   ${ACTUAL_SHA}" >&2
+        exit 1
+    fi
+
+    echo "Checksum verified."
+
+    echo "Extracting..."
+    case "${ARTIFACT_NAME}" in
+        *.tar.gz)
+            tar -xzf "${TEMP_DIR}/${ARTIFACT_NAME}" -C "${BIN_DIR}"
+            ;;
+        *.zip)
+            unzip -q -o "${TEMP_DIR}/${ARTIFACT_NAME}" -d "${BIN_DIR}"
+            ;;
+    esac
+
+    # Make executable (use correct binary name for platform)
+    chmod +x "${BIN_DIR}/${BINARY_NAME}" 2>/dev/null || true
 }
-' "${CHECKSUM_FILE}")" || {
-    echo "Error: Checksum file does not contain an entry for ${ARTIFACT_NAME}" >&2
-    exit 1
-}
-if ! printf '%s\n' "${EXPECTED_SHA}" | grep -Eq '^[0-9a-f]{64}$'; then
-    echo "Error: Invalid checksum file for ${ARTIFACT_NAME}" >&2
-    exit 1
+
+echo "Downloading agnix ${VERSION} for ${TARGET}..."
+install_artifact "agnix-${TARGET}.${EXT}"
+
+# A binary built against a newer glibc than this host provides dies in the
+# dynamic loader, so probe it and retry with the static build when one exists
+# rather than leaving an unusable binary on PATH (#1371).
+if ! "${BIN_DIR}/${BINARY_NAME}" --version >/dev/null 2>&1; then
+    if [ -n "${FALLBACK_TARGET}" ]; then
+        echo "Downloaded binary cannot run on this host, retrying with ${FALLBACK_TARGET}..."
+        install_artifact "agnix-${FALLBACK_TARGET}.tar.gz"
+        if ! "${BIN_DIR}/${BINARY_NAME}" --version >/dev/null 2>&1; then
+            echo "Error: neither ${TARGET} nor ${FALLBACK_TARGET} runs on this host" >&2
+            echo "Set BUILD_FROM_SOURCE=true to build from source instead." >&2
+            exit 1
+        fi
+    else
+        echo "Error: the downloaded ${TARGET} binary does not run on this host" >&2
+        echo "Set BUILD_FROM_SOURCE=true to build from source instead." >&2
+        exit 1
+    fi
 fi
-
-if command -v sha256sum >/dev/null 2>&1; then
-    ACTUAL_SHA="$(sha256sum "${TEMP_DIR}/${ARTIFACT_NAME}" | awk '{print $1}' | tr '[:upper:]' '[:lower:]')"
-elif command -v shasum >/dev/null 2>&1; then
-    ACTUAL_SHA="$(shasum -a 256 "${TEMP_DIR}/${ARTIFACT_NAME}" | awk '{print $1}' | tr '[:upper:]' '[:lower:]')"
-else
-    echo "Error: sha256sum or shasum is required to verify downloads" >&2
-    exit 1
-fi
-
-if [ "${ACTUAL_SHA}" != "${EXPECTED_SHA}" ]; then
-    echo "Error: Checksum mismatch for ${ARTIFACT_NAME}" >&2
-    echo "Expected: ${EXPECTED_SHA}" >&2
-    echo "Actual:   ${ACTUAL_SHA}" >&2
-    exit 1
-fi
-
-echo "Checksum verified."
-
-echo "Extracting..."
-case "${EXT}" in
-    tar.gz)
-        tar -xzf "${TEMP_DIR}/${ARTIFACT_NAME}" -C "${BIN_DIR}"
-        ;;
-    zip)
-        unzip -q -o "${TEMP_DIR}/${ARTIFACT_NAME}" -d "${BIN_DIR}"
-        ;;
-esac
-
-# Make executable (use correct binary name for platform)
-chmod +x "${BIN_DIR}/${BINARY_NAME}" 2>/dev/null || true
 
 # Add to PATH for subsequent steps
 echo "${BIN_DIR}" >> "${GITHUB_PATH:-/dev/null}"
