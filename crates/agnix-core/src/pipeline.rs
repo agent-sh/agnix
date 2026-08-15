@@ -540,8 +540,7 @@ pub fn validate_project(path: &Path, config: &LintConfig) -> LintResult<Validati
     validate_project_with_registry(path, config, &registry)
 }
 
-#[cfg(feature = "filesystem")]
-struct ExcludePattern {
+pub(crate) struct ExcludePattern {
     pattern: glob::Pattern,
     dir_only_prefix: Option<String>,
     allow_probe: bool,
@@ -556,8 +555,7 @@ pub(crate) fn normalize_rel_path(entry_path: &Path, root: &Path) -> String {
     }
 }
 
-#[cfg(feature = "filesystem")]
-fn compile_single_exclude_pattern(pattern: &str) -> Result<ExcludePattern, String> {
+pub(crate) fn compile_single_exclude_pattern(pattern: &str) -> Result<ExcludePattern, String> {
     let normalized = pattern.replace('\\', "/");
     let (glob_str, dir_only_prefix) = if let Some(prefix) = normalized.strip_suffix('/') {
         (format!("{}/**", prefix), Some(prefix.to_string()))
@@ -604,8 +602,7 @@ fn compile_files_exclude_for_walker(excludes: &[String]) -> Vec<ExcludePattern> 
         .collect()
 }
 
-#[cfg(feature = "filesystem")]
-fn should_prune_dir(rel_dir: &str, exclude_patterns: &[ExcludePattern]) -> bool {
+pub(crate) fn should_prune_dir(rel_dir: &str, exclude_patterns: &[ExcludePattern]) -> bool {
     if rel_dir.is_empty() {
         return false;
     }
@@ -617,8 +614,7 @@ fn should_prune_dir(rel_dir: &str, exclude_patterns: &[ExcludePattern]) -> bool 
         .any(|p| p.pattern.matches(rel_dir) || (p.allow_probe && p.pattern.matches(&probe)))
 }
 
-#[cfg(feature = "filesystem")]
-fn is_excluded_file(path_str: &str, exclude_patterns: &[ExcludePattern]) -> bool {
+pub(crate) fn is_excluded_file(path_str: &str, exclude_patterns: &[ExcludePattern]) -> bool {
     exclude_patterns
         .iter()
         .any(|p| p.pattern.matches(path_str) && p.dir_only_prefix.as_deref() != Some(path_str))

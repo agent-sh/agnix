@@ -193,7 +193,7 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 <a id="as-015"></a>
 ### AS-015 [HIGH] Upload Size Exceeds 8MB
 **Requirement**: Skill directory MUST be under 8MB total. **claude.ai upload-platform limit** - not in the agentskills.io spec (which uses token, not byte, budgets), so scoped to Claude Code (and unscoped) skills.
-**Detection**: skill client allows Claude rules AND `directory_size > 8 * 1024 * 1024`
+**Detection**: skill client allows Claude rules AND `directory_size > 8 * 1024 * 1024`; paths matched by top-level `exclude` or `[files].exclude` are omitted from `directory_size`
 **Fix**: Remove large assets or split skill
 **Source**: claude.ai upload limit (Claude-specific)
 

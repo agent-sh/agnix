@@ -1,6 +1,10 @@
+use crate::config::LintConfig;
 use crate::fs::FileSystem;
 use crate::parsers::frontmatter::{
     FrontmatterParts, check_yaml_depth, check_yaml_duplicate_top_level_keys,
+};
+use crate::pipeline::{
+    compile_single_exclude_pattern, is_excluded_file, normalize_rel_path, should_prune_dir,
 };
 use regex::Regex;
 use std::collections::HashSet;
@@ -402,7 +406,24 @@ pub(super) fn is_script_path(path: &Path, content: &str) -> bool {
     )
 }
 
-pub(super) fn directory_size_until(path: &Path, max_bytes: u64, fs: &dyn FileSystem) -> u64 {
+pub(super) fn directory_size_until(
+    path: &Path,
+    max_bytes: u64,
+    fs: &dyn FileSystem,
+    config: &LintConfig,
+) -> u64 {
+    let exclude_patterns = config
+        .exclude()
+        .iter()
+        .chain(config.files_config().exclude.iter())
+        .filter_map(|pattern| compile_single_exclude_pattern(pattern).ok())
+        .collect::<Vec<_>>();
+    let root_dir = if exclude_patterns.is_empty() {
+        None
+    } else {
+        config.root_dir().map(|root| root.as_path())
+    };
+
     let mut total = 0u64;
     let mut stack = vec![path.to_path_buf()];
     while let Some(current) = stack.pop() {
@@ -414,11 +435,24 @@ pub(super) fn directory_size_until(path: &Path, max_bytes: u64, fs: &dyn FileSys
             if entry.metadata.is_symlink {
                 continue;
             }
+            let relative_path = root_dir.map(|root| normalize_rel_path(&entry.path, root));
             if entry.metadata.is_dir {
+                if relative_path
+                    .as_deref()
+                    .is_some_and(|path| should_prune_dir(path, &exclude_patterns))
+                {
+                    continue;
+                }
                 stack.push(entry.path.clone());
                 continue;
             }
             if entry.metadata.is_file {
+                if relative_path
+                    .as_deref()
+                    .is_some_and(|path| is_excluded_file(path, &exclude_patterns))
+                {
+                    continue;
+                }
                 total = total.saturating_add(entry.metadata.len);
                 if total > max_bytes {
                     return total;
