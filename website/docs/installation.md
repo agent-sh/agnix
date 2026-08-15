@@ -35,6 +35,16 @@ cargo install agnix-cli
 
 Download from [GitHub Releases](https://github.com/agent-sh/agnix/releases) for your platform.
 
+Two Linux x86_64 archives are published:
+
+| Archive | Use it when |
+|---------|-------------|
+| `agnix-x86_64-unknown-linux-gnu.tar.gz` | Default. Releases are gated to require no more than glibc 2.31; current builds need only 2.18. |
+| `agnix-x86_64-unknown-linux-musl.tar.gz` | Statically linked, no glibc dependency. Use it on musl distros such as Alpine, or on any host where the gnu build reports a missing `GLIBC_...` version. |
+
+The npm installer and the GitHub Action pick the gnu build and switch to the
+static musl build automatically if it cannot run on the host.
+
 ## Verify installation
 
 ```bash

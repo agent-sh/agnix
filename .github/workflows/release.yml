@@ -27,9 +27,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Both gnu targets build through cross so the glibc floor comes from
+          # cross's old sysroot instead of the runner image. Building natively
+          # on ubuntu-latest pinned x86_64 to GLIBC_2.39 and made the binary
+          # unloadable on bookworm, RHEL 9, and Ubuntu 22.04 (issue #1371).
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             artifact: agnix
+            cross: true
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
             artifact: agnix
@@ -73,6 +78,16 @@ jobs:
       - name: Build release binary (cross)
         if: matrix.cross
         run: cross build --release --target ${{ matrix.target }} -p agnix-cli -p agnix-lsp -p agnix-mcp
+
+      # Fails the release before any asset is published if a build picks up a
+      # glibc newer than the declared floor.
+      - name: Verify glibc floor
+        if: endsWith(matrix.target, '-unknown-linux-gnu')
+        run: |
+          bash scripts/check-glibc-floor.sh \
+            target/${{ matrix.target }}/release/agnix \
+            target/${{ matrix.target }}/release/agnix-lsp \
+            target/${{ matrix.target }}/release/agnix-mcp
 
       - name: Create CLI archive (Unix)
         if: runner.os != 'Windows'

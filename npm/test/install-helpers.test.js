@@ -11,6 +11,8 @@ const os = require('os');
 const path = require('path');
 
 const {
+  binaryRuns,
+  getPlatformInfo,
   parseSha256Sidecar,
   restoreWrapperBackup,
   sha256File,
@@ -155,6 +157,62 @@ async function withTempDir(fn) {
       assert.strictEqual(fs.readFileSync(wrapperPath, 'utf8'), 'installed wrapper');
       assert.ok(!fs.existsSync(wrapperBackup), 'stale backup should be removed');
     });
+  });
+
+  await test('binaryRuns reports success only on a clean exit', () => {
+    assert.strictEqual(
+      binaryRuns('/does/not/matter', { spawnSync: () => ({ status: 0 }) }),
+      true
+    );
+    assert.strictEqual(
+      binaryRuns('/does/not/matter', { spawnSync: () => ({ status: 127 }) }),
+      false
+    );
+  });
+
+  await test('binaryRuns treats a loader failure as not runnable', () => {
+    // What a glibc-too-old host produces: the process never starts.
+    assert.strictEqual(
+      binaryRuns('/does/not/matter', {
+        spawnSync: () => ({ error: new Error('ENOEXEC'), status: null }),
+      }),
+      false
+    );
+    assert.strictEqual(
+      binaryRuns('/does/not/matter', {
+        spawnSync: () => {
+          throw new Error('spawn blocked');
+        },
+      }),
+      false
+    );
+  });
+
+  await test('binaryRuns detects a real executable', () => {
+    assert.strictEqual(binaryRuns(process.execPath), true);
+  });
+
+  await test('linux-x64 carries the static musl fallback asset', () => {
+    // Guard for #1371: the gnu asset cannot load on hosts whose glibc is older
+    // than the build's floor, so the installer needs a static alternative.
+    const info = getPlatformInfo('linux', 'x64');
+
+    assert.strictEqual(info.asset, 'agnix-x86_64-unknown-linux-gnu.tar.gz');
+    assert.strictEqual(info.fallbackAsset, 'agnix-x86_64-unknown-linux-musl.tar.gz');
+  });
+
+  await test('platforms without a static build declare no fallback', () => {
+    for (const [platform, arch] of [
+      ['darwin', 'arm64'],
+      ['linux', 'arm64'],
+      ['win32', 'x64'],
+    ]) {
+      assert.strictEqual(
+        getPlatformInfo(platform, arch).fallbackAsset,
+        undefined,
+        `${platform}-${arch} must not claim a fallback asset that is not published`
+      );
+    }
   });
 
   console.log(`\nResults: ${passed} passed, ${failed} failed`);

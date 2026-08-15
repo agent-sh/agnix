@@ -3,7 +3,7 @@
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const { execSync, spawnSync } = require('child_process');
 const os = require('os');
 const crypto = require('crypto');
 
@@ -35,12 +35,10 @@ function restoreWrapperBackup(wrapperPath, wrapperBackup, installCompleted) {
 }
 
 /**
- * Get platform-specific asset name and binary name.
+ * Get platform-specific asset name and binary name. Platform and arch are
+ * parameters so tests can cover mappings other than the host's.
  */
-function getPlatformInfo() {
-  const platform = os.platform();
-  const arch = os.arch();
-
+function getPlatformInfo(platform = os.platform(), arch = os.arch()) {
   const mapping = {
     'darwin-arm64': {
       asset: 'agnix-aarch64-apple-darwin.tar.gz',
@@ -55,6 +53,9 @@ function getPlatformInfo() {
     },
     'linux-x64': {
       asset: 'agnix-x86_64-unknown-linux-gnu.tar.gz',
+      // Statically linked, so it runs on hosts whose glibc is older than the
+      // one the gnu build was linked against (issue #1371).
+      fallbackAsset: 'agnix-x86_64-unknown-linux-musl.tar.gz',
       extractedName: 'agnix',
       binary: 'agnix-binary',
     },
@@ -229,11 +230,58 @@ async function verifyChecksum(archivePath, checksumUrl, deps = { downloadFile })
   }
 }
 
+/**
+ * Whether the installed binary can actually execute on this host. A binary
+ * built against a newer glibc than the host provides fails in the dynamic
+ * loader, which npm otherwise only surfaces on the user's first real run.
+ */
+function binaryRuns(binaryPath, deps = { spawnSync }) {
+  try {
+    const result = deps.spawnSync(binaryPath, ['--version'], { stdio: 'ignore' });
+    return !result.error && result.status === 0;
+  } catch (_) {
+    return false;
+  }
+}
+
+/**
+ * Download one release asset, verify it, and place the extracted binary at
+ * `binaryPath`. Removes the archive whether or not the download succeeded.
+ */
+async function fetchBinary({ asset, extractedName, binDir, binaryPath }) {
+  const downloadUrl = `https://github.com/${GITHUB_REPO}/releases/download/v${VERSION}/${asset}`;
+  const archivePath = path.join(binDir, asset);
+  const extractedPath = path.join(binDir, extractedName);
+
+  try {
+    await downloadFile(downloadUrl, archivePath);
+    await verifyChecksum(archivePath, `${downloadUrl}.sha256`);
+    console.log('Extracting...');
+    extractArchive(archivePath, binDir);
+
+    // Rename extracted binary to avoid conflict with wrapper script
+    if (fs.existsSync(extractedPath) && extractedPath !== binaryPath) {
+      fs.renameSync(extractedPath, binaryPath);
+    }
+
+    // Make binary executable on Unix
+    if (os.platform() !== 'win32') {
+      fs.chmodSync(binaryPath, 0o755);
+    }
+
+    if (!fs.existsSync(binaryPath)) {
+      throw new Error('Binary not found after extraction');
+    }
+  } finally {
+    // Best-effort cleanup so a failed install leaves no stale archive.
+    removeIfExists(archivePath);
+  }
+}
+
 async function main() {
   const platformInfo = getPlatformInfo();
   const binDir = path.join(__dirname, 'bin');
   const binaryPath = path.join(binDir, platformInfo.binary);
-  const extractedPath = path.join(binDir, platformInfo.extractedName);
   const wrapperPath = path.join(binDir, 'agnix');
   const wrapperBackup = path.join(binDir, 'agnix.backup');
   let installCompleted = false;
@@ -249,9 +297,6 @@ async function main() {
     fs.mkdirSync(binDir, { recursive: true });
   }
 
-  const downloadUrl = `https://github.com/${GITHUB_REPO}/releases/download/v${VERSION}/${platformInfo.asset}`;
-  const archivePath = path.join(binDir, platformInfo.asset);
-
   console.log(`Downloading agnix v${VERSION} for ${os.platform()}-${os.arch()}...`);
 
   try {
@@ -260,14 +305,30 @@ async function main() {
       fs.copyFileSync(wrapperPath, wrapperBackup);
     }
 
-    await downloadFile(downloadUrl, archivePath);
-    await verifyChecksum(archivePath, `${downloadUrl}.sha256`);
-    console.log('Extracting...');
-    extractArchive(archivePath, binDir);
+    await fetchBinary({
+      asset: platformInfo.asset,
+      extractedName: platformInfo.extractedName,
+      binDir,
+      binaryPath,
+    });
 
-    // Rename extracted binary to avoid conflict with wrapper script
-    if (fs.existsSync(extractedPath) && extractedPath !== binaryPath) {
-      fs.renameSync(extractedPath, binaryPath);
+    let runs = binaryRuns(binaryPath);
+
+    // The default Linux asset is glibc-linked, so on a host older than the
+    // build's glibc floor it cannot load at all. Retry with the static build
+    // rather than leaving behind a binary that dies in the dynamic loader.
+    if (!runs && platformInfo.fallbackAsset) {
+      console.log(
+        `Downloaded binary cannot run on this host, retrying with ${platformInfo.fallbackAsset}...`
+      );
+      removeIfExists(binaryPath);
+      await fetchBinary({
+        asset: platformInfo.fallbackAsset,
+        extractedName: platformInfo.extractedName,
+        binDir,
+        binaryPath,
+      });
+      runs = binaryRuns(binaryPath);
     }
 
     // Restore wrapper script if it was backed up
@@ -275,14 +336,11 @@ async function main() {
       fs.renameSync(wrapperBackup, wrapperPath);
     }
 
-    // Make binary executable on Unix
-    if (os.platform() !== 'win32') {
-      fs.chmodSync(binaryPath, 0o755);
-    }
-
-    // Verify binary exists
-    if (!fs.existsSync(binaryPath)) {
-      throw new Error('Binary not found after extraction');
+    if (!runs) {
+      // Keep the install itself successful: some sandboxes forbid spawning
+      // during postinstall, and the binary is on disk either way.
+      console.warn('Warning: the installed agnix binary did not run on this host.');
+      console.warn('If `agnix --version` fails, build from source with: cargo install agnix-cli');
     }
 
     installCompleted = true;
@@ -294,8 +352,8 @@ async function main() {
     console.error('  cargo install agnix-cli');
     process.exitCode = 1;
   } finally {
-    // Best-effort cleanup so a failed install leaves no stale archive or backup.
-    removeIfExists(archivePath);
+    // Best-effort cleanup so a failed install leaves no stale backup. Archives
+    // are removed by fetchBinary itself.
     try {
       restoreWrapperBackup(wrapperPath, wrapperBackup, installCompleted);
     } catch (_) {
@@ -309,8 +367,10 @@ if (require.main === module) {
 }
 
 module.exports = {
+  binaryRuns,
   downloadFile,
   extractArchive,
+  fetchBinary,
   getPlatformInfo,
   main,
   parseSha256Sidecar,
