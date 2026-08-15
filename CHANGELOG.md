@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **CC-SET-024: ineffective project-level `sandbox.ripgrep`**
+  ([#1358](https://github.com/agent-sh/agnix/issues/1358)). Claude Code
+  v2.1.232 honors the sandbox ripgrep binary only from user settings, managed
+  settings, and the `--settings` flag, so a value in a repository's
+  `.claude/settings.json` or `.claude/settings.local.json` is silently ignored.
+  agnix now warns on that dead override and points at the scopes that still
+  apply. User and managed settings are unaffected.
+
+### Changed
+- **Tool release baselines** (#1356, #1357, #1358, #1359, #1375). Advanced the
+  tracked releases for Kiro CLI (`2.17.0` to `2.18.0`), OpenCode (`v1.18.17` to
+  `v1.18.18`), Claude Code (`v2.1.229` to `v2.1.232`), Cline (`v4.1.8` to
+  `v4.1.9`), and Cursor (`3.15.19` to `3.16.17`). Only the Claude Code and Kiro
+  CLI releases touched a validated surface; the OpenCode, Cline, and Cursor
+  deltas were bookkeeping only.
+- **Kiro CLI inventory covers `AGENTS.md` steering** (#1356). Kiro CLI 2.18.0
+  loads nested `AGENTS.md` files as steering context from anywhere in the
+  workspace tree, so the tool inventory and release baseline now list
+  `AGENTS.md` and the `agents_md` validator (AGM rules) for Kiro. No validation
+  behaviour change - agnix already validated those files.
+
 ## [0.48.1] - 2026-08-15
 
 ### Changed

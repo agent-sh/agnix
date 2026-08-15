@@ -1350,6 +1350,11 @@ rules:
   cc_set_023:
     message: dialogExpiry must be 60s, 5m, 10m, or never (got %{actual})
     suggestion: Set dialogExpiry to 60s, 5m, 10m, or never.
+  cc_set_024:
+    message: sandbox.ripgrep is ignored in project settings in Claude Code 2.1.232+; only user settings, managed
+      settings, and the --settings flag can override the sandbox ripgrep binary
+    suggestion: Move the sandbox.ripgrep override to your user settings at ~/.claude/settings.json, to managed settings,
+      or to a --settings file, and remove it from the repository.
   cc_hk_028:
     message: Command hook at %{location} uses '${user_config.*}' interpolation, which Claude Code 2.1.207+ rejects at
       load time as a shell-injection fix
