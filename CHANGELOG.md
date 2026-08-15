@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.48.1] - 2026-08-15
+
 ### Fixed
 - **Skill directory size exclusions** (#1360). AS-015 now omits paths matched
   by top-level `exclude` or `[files].exclude` when calculating the 8 MB skill
