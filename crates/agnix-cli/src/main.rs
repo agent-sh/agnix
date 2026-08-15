@@ -408,11 +408,12 @@ fn load_config_or_default(path: Option<&PathBuf>) -> anyhow::Result<LintConfig> 
 /// `agnix --strict AGENTS.md CLAUDE.md` check only the changed files instead
 /// of rescanning the entire repo.
 ///
-/// Before iterating we resolve a workspace root and set it on a cloned
-/// `LintConfig` so per-file validators see the same `[files]` include/exclude
-/// semantics they'd see during a full project walk. The aggregate
-/// `files_checked` count is also bounded by `max_files_to_validate` so a large
-/// file list from pre-commit can't bypass the DoS guard.
+/// Before iterating we resolve a workspace root (see [`resolve_batch_root`])
+/// and set it on a cloned `LintConfig` so per-file validators see the same
+/// `[files]` include/exclude semantics they'd see during a full project walk.
+/// The aggregate `files_checked` count is also bounded by
+/// `max_files_to_validate` so a large file list from pre-commit can't bypass
+/// the DoS guard.
 fn run_validation(
     paths: &[PathBuf],
     config: &LintConfig,
@@ -434,24 +435,9 @@ fn run_validation(
     }
 
     // Resolve a workspace root so per-file validators can apply relative
-    // `[files]` patterns and so diagnostics use a stable base path. Use the
-    // parent of the first file path, or the first directory path, or cwd.
-    let root_dir = paths
-        .first()
-        .map(|p| {
-            if p.is_dir() {
-                p.clone()
-            } else {
-                p.parent()
-                    .map(Path::to_path_buf)
-                    .unwrap_or_else(|| PathBuf::from("."))
-            }
-        })
-        .and_then(|p| std::fs::canonicalize(&p).ok())
-        .unwrap_or_else(|| std::fs::canonicalize(".").unwrap_or_else(|_| PathBuf::from(".")));
-
+    // `[files]` patterns and so diagnostics use a stable base path.
     let mut config = config.clone();
-    config.set_root_dir(root_dir);
+    config.set_root_dir(resolve_batch_root(paths));
 
     let mut registry = ValidatorRegistry::with_defaults();
     for name in &config.rules().disabled_validators {
@@ -492,6 +478,76 @@ fn run_validation(
         }
     }
     Ok(ValidationResult::new(diagnostics, files_checked))
+}
+
+/// Markers that identify a workspace root. `.git` is matched as a directory or
+/// a file so git worktrees and submodules resolve to their own root, matching
+/// how `agnix-core` walks for a repo root when no root is configured.
+const PROJECT_ROOT_MARKERS: [&str; 2] = [".git", ".agnix.toml"];
+
+/// Resolve the workspace root for an explicit list of paths.
+///
+/// The root must not depend on argument order. Deriving it from the first path
+/// made `CLAUDE.md`'s root-relative `@imports` look like they escaped the
+/// project whenever a file in a subdirectory came first, and pre-commit passes
+/// the staged files as positional args in sorted order, so `.claude/...` sorted
+/// ahead of `CLAUDE.md` and became the root (#1368).
+///
+/// The deepest common ancestor of every path is order-independent. Walking up
+/// from there to the nearest project marker keeps a partial file list on the
+/// same root a full project walk would use, so the result also doesn't depend
+/// on which files a given commit happens to touch. With no marker anywhere
+/// above the paths, the common ancestor is used as-is.
+fn resolve_batch_root(paths: &[PathBuf]) -> PathBuf {
+    let mut common: Option<PathBuf> = None;
+    for path in paths {
+        let dir = if path.is_dir() {
+            path.clone()
+        } else {
+            match path.parent() {
+                // A bare filename has an empty parent, which means cwd.
+                Some(parent) if !parent.as_os_str().is_empty() => parent.to_path_buf(),
+                _ => PathBuf::from("."),
+            }
+        };
+        let dir = std::fs::canonicalize(&dir).unwrap_or(dir);
+        common = Some(match common {
+            Some(current) => common_ancestor(&current, &dir),
+            None => dir,
+        });
+    }
+
+    // No paths, or paths with nothing in common (separate mounts, different
+    // Windows drives): fall back to cwd rather than to the filesystem root.
+    let common = common
+        .filter(|dir| dir.components().next().is_some())
+        .unwrap_or_else(|| std::fs::canonicalize(".").unwrap_or_else(|_| PathBuf::from(".")));
+
+    find_project_root(&common).unwrap_or(common)
+}
+
+/// Deepest directory that is an ancestor of, or equal to, both paths.
+fn common_ancestor(left: &Path, right: &Path) -> PathBuf {
+    let mut shared = PathBuf::new();
+    for (left_component, right_component) in left.components().zip(right.components()) {
+        if left_component != right_component {
+            break;
+        }
+        shared.push(left_component);
+    }
+    shared
+}
+
+/// Nearest ancestor of `dir`, including `dir` itself, holding a project marker.
+fn find_project_root(dir: &Path) -> Option<PathBuf> {
+    dir.ancestors()
+        .filter(|ancestor| !ancestor.as_os_str().is_empty())
+        .find(|ancestor| {
+            PROJECT_ROOT_MARKERS
+                .iter()
+                .any(|marker| ancestor.join(marker).exists())
+        })
+        .map(Path::to_path_buf)
 }
 
 fn count_errors_warnings(diagnostics: &[Diagnostic]) -> (usize, usize) {
@@ -1665,5 +1721,91 @@ mod resolve_fix_mode_tests {
 
         assert!(frame.contains("abc"));
         assert!(frame.contains("^"));
+    }
+}
+
+/// Regression tests for #1368: the workspace root for an explicit path list
+/// must not depend on the order the paths are passed in.
+#[cfg(test)]
+mod resolve_batch_root_tests {
+    use super::*;
+
+    /// `CLAUDE.md` plus a skill file in a subdirectory, the shape pre-commit
+    /// produces. Returns the temp dir and the two paths.
+    fn batch_fixture(marker: bool) -> (tempfile::TempDir, PathBuf, PathBuf) {
+        let temp = tempfile::TempDir::new().unwrap();
+        let skill_dir = temp.path().join(".claude/skills/demo");
+        std::fs::create_dir_all(&skill_dir).unwrap();
+        if marker {
+            std::fs::create_dir_all(temp.path().join(".git")).unwrap();
+        }
+
+        let claude_md = temp.path().join("CLAUDE.md");
+        std::fs::write(&claude_md, "# Project\n\n@docs/guide.md\n").unwrap();
+        let skill_md = skill_dir.join("SKILL.md");
+        std::fs::write(&skill_md, "---\nname: demo\n---\n\n# Demo\n").unwrap();
+
+        (temp, claude_md, skill_md)
+    }
+
+    #[test]
+    fn root_is_the_same_in_both_argument_orders() {
+        let (temp, claude_md, skill_md) = batch_fixture(true);
+        let expected = std::fs::canonicalize(temp.path()).unwrap();
+
+        assert_eq!(
+            resolve_batch_root(&[claude_md.clone(), skill_md.clone()]),
+            expected
+        );
+        assert_eq!(resolve_batch_root(&[skill_md, claude_md]), expected);
+    }
+
+    #[test]
+    fn root_is_order_independent_without_any_marker() {
+        let (_temp, claude_md, skill_md) = batch_fixture(false);
+
+        assert_eq!(
+            resolve_batch_root(&[claude_md.clone(), skill_md.clone()]),
+            resolve_batch_root(&[skill_md, claude_md])
+        );
+    }
+
+    #[test]
+    fn root_walks_up_to_marker_when_every_path_is_in_a_subdirectory() {
+        let (temp, _claude_md, skill_md) = batch_fixture(true);
+        let expected = std::fs::canonicalize(temp.path()).unwrap();
+
+        assert_eq!(resolve_batch_root(&[skill_md]), expected);
+    }
+
+    #[test]
+    fn root_without_marker_is_the_common_ancestor() {
+        let (temp, claude_md, skill_md) = batch_fixture(false);
+        // Only meaningful when nothing above the temp dir carries a marker.
+        let temp_root = std::fs::canonicalize(temp.path()).unwrap();
+        if find_project_root(&temp_root).is_some() {
+            return;
+        }
+
+        assert_eq!(resolve_batch_root(&[claude_md, skill_md]), temp_root);
+    }
+
+    // Unix-only: the expected values are spelled with `/`, which does not
+    // round-trip through `PathBuf::push` on Windows.
+    #[cfg(unix)]
+    #[test]
+    fn common_ancestor_stops_at_the_first_differing_component() {
+        assert_eq!(
+            common_ancestor(Path::new("/a/b/c"), Path::new("/a/b/d/e")),
+            PathBuf::from("/a/b")
+        );
+        assert_eq!(
+            common_ancestor(Path::new("/a/b"), Path::new("/a/b")),
+            PathBuf::from("/a/b")
+        );
+        assert_eq!(
+            common_ancestor(Path::new("/a/b"), Path::new("/x/y")),
+            PathBuf::from("/")
+        );
     }
 }

@@ -11,6 +11,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Skill directory size exclusions** (#1360). AS-015 now omits paths matched
   by top-level `exclude` or `[files].exclude` when calculating the 8 MB skill
   directory total, while continuing to validate the rest of the skill.
+- **CC-MEM-001 false positive when several paths are passed on the command
+  line** ([#1368](https://github.com/agent-sh/agnix/issues/1368)). The
+  workspace root came from the parent of the first path, so a file in a
+  subdirectory listed first became the root and `CLAUDE.md`'s root-relative
+  `@imports` were reported as escaping the project. Since pre-commit passes
+  matched files in sorted order, `.claude/...` sorted ahead of `CLAUDE.md` and
+  the same tree passed or failed depending on argument order. The root is now
+  the deepest common ancestor of every path, walked up to the nearest `.git` or
+  `.agnix.toml` marker, so results no longer depend on argument order or on
+  which files a commit happens to touch.
 
 ### Security
 - **Dependency lockfile bumps (website + VS Code extension)**: js-yaml
