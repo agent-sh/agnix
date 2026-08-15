@@ -120,7 +120,7 @@ disabled_rules = ["CC-MEM-006", "PE-003"]
 # Validate as generic markdown (XML, imports, cross-platform rules)
 # include_as_generic = ["internal/*.md"]
 
-# Exclude from validation entirely (even built-in file types)
+# Exclude from validation entirely, including AS-015 skill size totals
 # exclude = ["vendor/**", "generated/**"]
 
 # Per-file rule suppression (see "Per-file rule overrides" below).
@@ -131,6 +131,13 @@ disabled_rules = ["CC-MEM-006", "PE-003"]
 # paths = ["CLAUDE.md", "AGENTS.md"]
 # disabled_rules = ["CC-MEM-005"]
 ```
+
+### Path Exclusions
+
+Top-level `exclude` and `[files].exclude` both remove matching paths from
+validation. This includes the AS-015 skill-directory size total. Use a
+payload-specific pattern such as `skills/catalog/data/**` to omit inert data
+while keeping `SKILL.md` and prompt-facing resources in scope.
 
 ## Schema Validation
 

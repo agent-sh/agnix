@@ -2439,7 +2439,12 @@ fn test_directory_size_until_short_circuits() {
     }
 
     // With a 2MB limit, should short-circuit and return > 2MB
-    let size = directory_size_until(temp_dir.path(), 2 * 1024 * 1024, &fs);
+    let size = directory_size_until(
+        temp_dir.path(),
+        2 * 1024 * 1024,
+        &fs,
+        &LintConfig::default(),
+    );
     assert!(size > 2 * 1024 * 1024, "Size should exceed 2MB limit");
     // Should not have scanned all 10MB (short-circuited after exceeding limit).
     // Upper bound is 3MB because: directory iteration order is unspecified,
@@ -2463,7 +2468,7 @@ fn test_directory_size_until_accurate_under_limit() {
     }
 
     // With a 1MB limit, should return exact size
-    let size = directory_size_until(temp_dir.path(), 1024 * 1024, &fs);
+    let size = directory_size_until(temp_dir.path(), 1024 * 1024, &fs, &LintConfig::default());
     assert_eq!(size, 2048);
 }
 
@@ -2472,7 +2477,7 @@ fn test_directory_size_until_handles_empty_directory() {
     let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
     let fs = RealFileSystem;
 
-    let size = directory_size_until(temp_dir.path(), 1024 * 1024, &fs);
+    let size = directory_size_until(temp_dir.path(), 1024 * 1024, &fs, &LintConfig::default());
     assert_eq!(size, 0);
 }
 
@@ -2491,7 +2496,12 @@ fn test_directory_size_until_nested_directories() {
     write_bytes_to_file(&sub1.join("sub1.bin"), 2048);
     write_bytes_to_file(&sub2.join("sub2.bin"), 3072);
 
-    let size = directory_size_until(temp_dir.path(), 1024 * 1024, &real_fs);
+    let size = directory_size_until(
+        temp_dir.path(),
+        1024 * 1024,
+        &real_fs,
+        &LintConfig::default(),
+    );
     assert_eq!(size, 6144, "Should sum files across all nested directories");
 }
 
@@ -2510,12 +2520,78 @@ fn test_directory_size_until_nested_short_circuits() {
     write_bytes_to_file(&sub1.join("sub1.bin"), 1024 * 1024);
     write_bytes_to_file(&sub2.join("sub2.bin"), 1024 * 1024);
 
-    let size = directory_size_until(temp_dir.path(), 2 * 1024 * 1024, &real_fs);
+    let size = directory_size_until(
+        temp_dir.path(),
+        2 * 1024 * 1024,
+        &real_fs,
+        &LintConfig::default(),
+    );
     assert!(size > 2 * 1024 * 1024, "Should exceed limit");
     assert!(
         size <= 3 * 1024 * 1024,
         "Should short-circuit before scanning all"
     );
+}
+
+#[test]
+fn test_as_015_respects_configured_excludes() {
+    let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+    let skill_dir = temp_dir.path().join("skills").join("big-skill");
+    let data_dir = skill_dir.join("data");
+    fs::create_dir_all(&data_dir).expect("Failed to create skill data directory");
+
+    let skill_content = "---\nname: big-skill\n---\nBody\n";
+    let metadata_content =
+        "name = \"big-skill\"\nversion = \"1.0.0\"\ntype = \"skill\"\nprompt-file = \"SKILL.md\"\n";
+    let skill_path = skill_dir.join("SKILL.md");
+    fs::write(&skill_path, skill_content).expect("Failed to write SKILL.md");
+    fs::write(skill_dir.join("metadata.toml"), metadata_content)
+        .expect("Failed to write metadata.toml");
+    fs::File::create(data_dir.join("big.json"))
+        .and_then(|file| file.set_len(10 * 1024 * 1024))
+        .expect("Failed to write large payload");
+
+    let expected_size = (skill_content.len() + metadata_content.len()) as u64;
+    let cases = [
+        ("top-level subtree", false, "skills/big-skill/data/**"),
+        (
+            "top-level exact file",
+            false,
+            "skills/big-skill/data/big.json",
+        ),
+        ("files subtree", true, "skills/big-skill/data/**"),
+    ];
+
+    for (label, use_files_config, pattern) in cases {
+        let mut config = LintConfig::default();
+        config.set_root_dir(temp_dir.path().to_path_buf());
+        config.set_exclude(Vec::new());
+        if use_files_config {
+            config.files_mut().exclude = vec![pattern.to_string()];
+        } else {
+            config.set_exclude(vec![pattern.to_string()]);
+        }
+
+        let measured = directory_size_until(&skill_dir, u64::MAX, &RealFileSystem, &config);
+        assert_eq!(
+            measured, expected_size,
+            "{label} should subtract the payload from the measured size"
+        );
+
+        let diagnostics = SkillValidator.validate(&skill_path, skill_content, &config);
+        assert!(
+            diagnostics
+                .iter()
+                .all(|diagnostic| diagnostic.rule != "AS-015"),
+            "{label} should prevent AS-015, got: {diagnostics:?}"
+        );
+        assert!(
+            diagnostics
+                .iter()
+                .any(|diagnostic| diagnostic.rule == "AS-003"),
+            "{label} should not stop SKILL.md validation, got: {diagnostics:?}"
+        );
+    }
 }
 
 #[test]

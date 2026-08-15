@@ -1752,7 +1752,8 @@ impl<'a> ValidationContext<'a> {
                 let (frontmatter_line, frontmatter_col) =
                     self.line_col_at(self.parts.frontmatter_start);
                 const MAX_BYTES: u64 = 8 * 1024 * 1024;
-                let size = directory_size_until(dir, MAX_BYTES, self.config.fs().as_ref());
+                let size =
+                    directory_size_until(dir, MAX_BYTES, self.config.fs().as_ref(), self.config);
                 if size > MAX_BYTES {
                     self.diagnostics.push(
                         Diagnostic::error(

@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Skill directory size exclusions** (#1360). AS-015 now omits paths matched
+  by top-level `exclude` or `[files].exclude` when calculating the 8 MB skill
+  directory total, while continuing to validate the rest of the skill.
+
 ### Security
 - **Dependency lockfile bumps (website + VS Code extension)**: js-yaml
   GHSA-5p4m-2wfm-xmqj (quadratic `!!omap` complexity) and nanoid
