@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.48.1] - 2026-08-15
+
+### Changed
+- **Tool release and spec baselines** (#1354). Advanced the tracked releases for
+  Claude Code (`v2.1.226` to `v2.1.229`), OpenCode (`v1.18.15` to `v1.18.17`),
+  Kiro CLI (`2.16.0` to `2.17.0`), Cline (`v4.1.6` to `v4.1.8`), Cursor
+  (`3.15.6` to `3.15.19`), Gemini CLI (`v0.54.4` to `v0.55.1`), and amp (news
+  marker `size-the-orbs-of-production` to `global-plugins-and-skills`), plus the
+  `cursor-environment` spec hash. Registered the `output_style`, `gemini_agent`,
+  and per-client skill validators in the tool inventory and filled in the
+  matching config surfaces and rule prefixes (`CC-OS`, `MCP`, `OC-SK`, `CR-SK`,
+  `GM-AG`) in `knowledge-base/RESEARCH-TRACKING.md`. Watcher bookkeeping only -
+  no validation behaviour changes.
+
 ### Fixed
 - **Skill directory size exclusions** (#1360). AS-015 now omits paths matched
   by top-level `exclude` or `[files].exclude` when calculating the 8 MB skill
