@@ -863,6 +863,11 @@ rules:
   cc_set_023:
     message: dialogExpiry debe ser 60s, 5m, 10m o never (se obtuvo %{actual})
     suggestion: Establece dialogExpiry en 60s, 5m, 10m o never.
+  cc_set_024:
+    message: sandbox.ripgrep se ignora en la configuración del proyecto en Claude Code 2.1.232+; solo la configuración
+      de usuario, la configuración gestionada y la opción --settings pueden reemplazar el binario ripgrep del sandbox
+    suggestion: Mueve el ajuste sandbox.ripgrep a tu configuración de usuario en ~/.claude/settings.json, a la
+      configuración gestionada o a un archivo --settings, y elimínalo del repositorio.
 
 
 # ===========================================================================

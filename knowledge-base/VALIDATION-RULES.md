@@ -517,6 +517,13 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Fix**: Manual - choose one of the four documented values
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.224, code.claude.com/docs/en/settings
 
+<a id="cc-set-024"></a>
+### CC-SET-024 [MEDIUM] Ineffective Project sandbox.ripgrep Override
+**Requirement**: Project-level `.claude/settings.json` and `.claude/settings.local.json` SHOULD NOT set `sandbox.ripgrep` in Claude Code 2.1.232+. The sandbox ripgrep binary is honored only from user settings, managed settings, and the `--settings` flag, so a repository-local value is ignored.
+**Detection**: Parse settings JSON and flag a present `sandbox.ripgrep` key in project settings. Ignore user settings (`~/.claude/settings.json`) and managed settings.
+**Fix**: Manual - move the override to user settings, managed settings, or a `--settings` file, or drop it from the repository.
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.232, code.claude.com/docs/en/sandboxing
+
 ---
 
 ## PER-CLIENT SKILL RULES
@@ -3579,7 +3586,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Claude Memory | 13 | 8 | 5 | 0 | 3 |
 | Claude Output Styles | 6 | 2 | 2 | 2 | 0 |
 | Claude Plugins | 15 | 9 | 6 | 0 | 4 |
-| Claude Settings | 23 | 0 | 22 | 1 | 0 |
+| Claude Settings | 24 | 0 | 23 | 1 | 0 |
 | Claude Skills | 20 | 10 | 9 | 1 | 10 |
 | Cline | 7 | 4 | 3 | 0 | 3 |
 | Cline Skills | 3 | 2 | 1 | 0 | 2 |
@@ -3610,7 +3617,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **447** | **215** | **202** | **30** | **124** |
+| **TOTAL** | **448** | **215** | **203** | **30** | **124** |
 
 
 ---
@@ -3640,8 +3647,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 447 validation rules across 40 categories
+**Total Coverage**: 448 validation rules across 40 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 215 HIGH, 202 MEDIUM, 30 LOW
+**Certainty**: 215 HIGH, 203 MEDIUM, 30 LOW
 **Auto-Fixable**: 124 rules (28%)

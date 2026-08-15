@@ -28,6 +28,7 @@
 //! - ineffective project-level `remoteControlAtStartup: true` (CC-SET-021, changed in Claude Code v2.1.222).
 //! - `crossSessionInbound` enum check (CC-SET-022, added in Claude Code v2.1.224).
 //! - `dialogExpiry` enum check (CC-SET-023, added in Claude Code v2.1.224).
+//! - ineffective project-level `sandbox.ripgrep` (CC-SET-024, changed in Claude Code v2.1.232).
 //!
 //! Runs on FileType::Hooks (which covers `.claude/settings.json` -
 //! see `file_types/detection.rs`). Skips non-Claude Code settings paths
@@ -66,6 +67,7 @@ const RULE_IDS: &[&str] = &[
     "CC-SET-021",
     "CC-SET-022",
     "CC-SET-023",
+    "CC-SET-024",
 ];
 
 /// Allowed values for `worktree.baseRef` per Claude Code v2.1.133 release notes.
@@ -212,6 +214,10 @@ impl Validator for ClaudeSettingsValidator {
 
         if config.is_rule_enabled("CC-SET-023") {
             validate_dialog_expiry(path, content, &value, &mut diagnostics);
+        }
+
+        if config.is_rule_enabled("CC-SET-024") {
+            validate_sandbox_ripgrep_scope(path, content, &value, &mut diagnostics);
         }
 
         diagnostics
@@ -2352,6 +2358,49 @@ fn validate_dialog_expiry(
             t!("rules.cc_set_023.message", actual = actual),
         )
         .with_suggestion(t!("rules.cc_set_023.suggestion")),
+    );
+}
+
+/// CC-SET-024: Warn when project settings override the sandbox ripgrep binary.
+///
+/// Claude Code 2.1.232 restricted `sandbox.ripgrep` to user settings, managed
+/// settings, and the `--settings` flag, so a checked-out repository can no
+/// longer point the sandbox at its own ripgrep. The same scope rule already
+/// covers `sandbox.credentials` masking (CC-SET-012), so user and managed
+/// settings are excluded here for the same reason.
+///
+/// Null is treated as "field absent" by JSON convention.
+fn validate_sandbox_ripgrep_scope(
+    path: &Path,
+    content: &str,
+    value: &serde_json::Value,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(sandbox) = value.get("sandbox").and_then(|sandbox| sandbox.as_object()) else {
+        return;
+    };
+    match sandbox.get("ripgrep") {
+        None => return,
+        Some(field_value) if field_value.is_null() => return,
+        Some(_) => {}
+    }
+
+    if is_claude_managed_settings_path(path) || is_user_settings_path(path) {
+        return;
+    }
+
+    let line = find_key_line(content, "ripgrep")
+        .or_else(|| find_key_line(content, "sandbox"))
+        .unwrap_or(1);
+    diagnostics.push(
+        Diagnostic::warning(
+            path.to_path_buf(),
+            line,
+            0,
+            "CC-SET-024",
+            t!("rules.cc_set_024.message"),
+        )
+        .with_suggestion(t!("rules.cc_set_024.suggestion")),
     );
 }
 
@@ -5127,5 +5176,84 @@ mod tests {
                 1
             );
         }
+    }
+
+    // ===== CC-SET-024: project-level sandbox.ripgrep =====
+
+    #[test]
+    fn test_sandbox_ripgrep_flags_project_settings() {
+        let content = r#"{"sandbox": {"ripgrep": "/opt/rg/bin/rg"}}"#;
+        for path in [".claude/settings.json", ".claude/settings.local.json"] {
+            assert_eq!(
+                validate_at(path, content)
+                    .iter()
+                    .filter(|diagnostic| diagnostic.rule == "CC-SET-024")
+                    .count(),
+                1,
+                "expected one hit in {path}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_sandbox_ripgrep_absent_null_and_other_sandbox_keys_are_valid() {
+        for content in [
+            r#"{"sandbox": {"enabled": true}}"#,
+            r#"{"sandbox": {"ripgrep": null}}"#,
+            r#"{"sandbox": null}"#,
+            r#"{"model": "sonnet"}"#,
+        ] {
+            assert!(
+                validate(content)
+                    .iter()
+                    .all(|diagnostic| diagnostic.rule != "CC-SET-024"),
+                "unexpected CC-SET-024 for {content}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_sandbox_ripgrep_is_allowed_in_managed_and_user_settings() {
+        let content = r#"{"sandbox": {"ripgrep": "/opt/rg/bin/rg"}}"#;
+        assert!(
+            validate_at(".claude/managed-settings.json", content)
+                .iter()
+                .all(|diagnostic| diagnostic.rule != "CC-SET-024")
+        );
+
+        let Some(home) = std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE"))
+        else {
+            return;
+        };
+        let user_settings = PathBuf::from(home).join(".claude").join("settings.json");
+        assert!(
+            ClaudeSettingsValidator
+                .validate(&user_settings, content, &LintConfig::default())
+                .iter()
+                .all(|diagnostic| diagnostic.rule != "CC-SET-024")
+        );
+    }
+
+    #[test]
+    fn test_sandbox_ripgrep_diagnostic_points_to_key_and_can_be_disabled() {
+        let content =
+            "{\n  \"model\": \"sonnet\",\n  \"sandbox\": {\n    \"ripgrep\": \"rg\"\n  }\n}";
+        let diagnostic = validate(content)
+            .into_iter()
+            .find(|diagnostic| diagnostic.rule == "CC-SET-024")
+            .expect("CC-SET-024 diagnostic");
+        assert_eq!(diagnostic.line, 4);
+
+        let mut builder = LintConfig::builder();
+        builder.disable_rule("CC-SET-024");
+        let config = builder.build().expect("valid config");
+        let path = PathBuf::from(".claude/settings.json");
+        let per_file = config.for_path(&path);
+        assert!(
+            ClaudeSettingsValidator
+                .validate(&path, content, &per_file)
+                .iter()
+                .all(|diagnostic| diagnostic.rule != "CC-SET-024")
+        );
     }
 }

@@ -1147,6 +1147,71 @@ fn test_refreshed_release_surfaces_match_research_inventory() {
     }
 }
 
+/// Kiro CLI 2.18.0 loads nested `AGENTS.md` files as steering context from
+/// anywhere in the workspace tree, so `AGENTS.md` is a Kiro config surface.
+/// Anchored to the implementation: the file type agnix classifies `AGENTS.md`
+/// into must dispatch `AgentsMdValidator`, and the AGM rule family must exist.
+#[test]
+fn test_kiro_agents_md_steering_surface_is_registered() {
+    use agnix_core::{ValidatorRegistry, detect_file_type};
+
+    let file_type = detect_file_type(Path::new("crates/agnix-core/AGENTS.md"));
+    let registry = ValidatorRegistry::with_defaults();
+    assert!(
+        registry
+            .validators_for(file_type)
+            .iter()
+            .any(|validator| validator.name() == "AgentsMdValidator"),
+        "AgentsMdValidator must run on nested AGENTS.md files"
+    );
+
+    let rules = load_rules_json();
+    assert!(
+        rules.rules.iter().any(|rule| rule.id.starts_with("AGM-")),
+        "rules.json must carry the AGM rule family that covers AGENTS.md"
+    );
+
+    let baseline_path = workspace_root().join(".github/tool-release-baselines.json");
+    let baselines: serde_json::Value = serde_json::from_str(
+        &fs::read_to_string(&baseline_path)
+            .unwrap_or_else(|e| panic!("Failed to read {}: {}", baseline_path.display(), e)),
+    )
+    .unwrap_or_else(|e| panic!("Failed to parse {}: {}", baseline_path.display(), e));
+    let kiro = &baselines["tools"]["kiro"];
+    assert!(
+        kiro["validators"]
+            .as_array()
+            .expect("kiro validators must be an array")
+            .iter()
+            .any(|validator| validator == "agents_md"),
+        "kiro baseline must register the AGENTS.md validator"
+    );
+    assert!(
+        kiro["changes_of_interest"]["config_surfaces"]
+            .as_array()
+            .expect("kiro config_surfaces must be an array")
+            .iter()
+            .any(|surface| surface == "AGENTS.md"),
+        "kiro baseline must track the AGENTS.md steering surface"
+    );
+
+    let research_path = workspace_root().join("knowledge-base/RESEARCH-TRACKING.md");
+    let research = fs::read_to_string(&research_path)
+        .unwrap_or_else(|e| panic!("Failed to read {}: {}", research_path.display(), e));
+    let row = research
+        .lines()
+        .find(|line| line.starts_with("| Kiro CLI |"))
+        .expect("RESEARCH-TRACKING.md must contain a Kiro CLI row");
+    assert!(
+        row.contains("AGENTS.md"),
+        "Kiro CLI research inventory is missing the AGENTS.md steering surface"
+    );
+    assert!(
+        row.contains("AGM"),
+        "Kiro CLI research inventory is missing the AGM rule prefix"
+    );
+}
+
 #[test]
 fn test_is_tool_alias_case_sensitivity() {
     // Test that tool alias matching is case insensitive

@@ -1,6 +1,6 @@
 {
   "version": "1.1",
-  "last_updated": "2026-08-13",
+  "last_updated": "2026-08-15",
   "description": "Tracks the latest release of every tool agnix validates (one entry per tool with a validator in crates/agnix-core/src/rules/). Used by .github/workflows/tool-release-watch.yml to open per-tool issues when a new release is published. Untracked tools include the precise publication URL in untracked_reason so a maintainer can monitor manually.\n\nOptional `changes_of_interest` per tool describes what agnix cares about: `config_surfaces` (files agnix validates), `relevant` (change-types that likely affect a validator), `irrelevant` (safe to skip). When set and GLM_API_KEY is available, the watcher runs scripts/glm-extract.js --mode=agnix-triage to produce a pre-filtered summary at the top of the issue body. Falls back gracefully to the full changelog on any LLM failure.",
   "tools": {
     "claude-code": {
@@ -17,7 +17,7 @@
         "mcp"
       ],
       "github_repo": "anthropics/claude-code",
-      "last_known_version": "v2.1.229",
+      "last_known_version": "v2.1.232",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
@@ -99,7 +99,7 @@
         "per_client_skill"
       ],
       "github_repo": "sst/opencode",
-      "last_known_version": "v1.18.17",
+      "last_known_version": "v1.18.18",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
@@ -136,13 +136,14 @@
         "kiro_hook",
         "kiro_mcp",
         "kiro_settings",
+        "agents_md",
         "per_client_skill"
       ],
       "github_repo": null,
       "html_url": "https://kiro.dev/changelog/cli/",
       "version_regex": "[0-9]+\\.[0-9]+\\.[0-9]+",
       "notes_extractor": "glm",
-      "last_known_version": "2.17.0",
+      "last_known_version": "2.18.0",
       "tracked": true,
       "notes": "Proprietary CLI; no GH releases. Tracked via HTML scrape of kiro.dev/changelog/cli/ - the first NN.NN.NN version on the page is the latest. Release-note body is upgraded via GLM (scripts/glm-extract.js). The CLI itself exposes `kiro-cli version --changelog`. IDE has a separate changelog at https://kiro.dev/changelog/ide/ (not tracked here; could be added as a separate kiro-ide entry if needed).",
       "changes_of_interest": {
@@ -153,11 +154,13 @@
           ".kiro/settings/mcp.json",
           ".kiro/settings.json (CLI preferences)",
           ".kiro/powers/*/POWER.md",
-          ".kiro/skills/*/SKILL.md"
+          ".kiro/skills/*/SKILL.md",
+          "AGENTS.md"
         ],
         "relevant": [
           "New / renamed CLI settings keys (writable via `kiro-cli settings <k> <v>`)",
           "Steering file inclusion-mode or format changes",
+          "AGENTS.md steering discovery scope (2.18.0 loads nested AGENTS.md from anywhere in the workspace tree)",
           "Agent definition schema (tools, permissions, auth)",
           "Hook event names, payload shapes, required fields",
           "MCP server config shape (auth, env substitution, tool filtering)",
@@ -211,7 +214,7 @@
       ],
       "github_repo": "cline/cline",
       "release_tag_regex": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
-      "last_known_version": "v4.1.8",
+      "last_known_version": "v4.1.9",
       "tracked": true,
       "notes": "Tracks only the core Cline vX.Y.Z release train. The repository also publishes desktop-v*, cli-v*, sdk/*, and other interleaved releases that do not correspond to the validator surfaces.",
       "changes_of_interest": {
@@ -247,7 +250,7 @@
       "github_repo": null,
       "html_url": "https://api2.cursor.sh/updates/api/update/darwin/cursor/0.0.1/stable",
       "version_regex": "[0-9]+\\.[0-9]+\\.[0-9]+",
-      "last_known_version": "3.15.19",
+      "last_known_version": "3.16.17",
       "tracked": true,
       "notes": "Tracked via Cursor's stable update endpoint (the same one the desktop app polls). Returns JSON like {\"url\":\"...\",\"name\":\"3.1.17\"}. Channel is hardcoded to 'stable' for darwin; the version is platform-agnostic (same release ships across darwin/linux/win32). Prose changelog at https://cursor.com/changelog (Next.js SPA - not scrapeable from raw HTML).",
       "changes_of_interest": {

@@ -814,6 +814,9 @@ rules:
   cc_set_023:
     message: dialogExpiry 必须是 60s、5m、10m 或 never（实际为 %{actual}）
     suggestion: 将 dialogExpiry 设置为 60s、5m、10m 或 never。
+  cc_set_024:
+    message: 在 Claude Code 2.1.232+ 中，项目设置里的 sandbox.ripgrep 会被忽略；只有用户设置、受管设置和 --settings 选项可以覆盖沙箱的 ripgrep 二进制文件
+    suggestion: 请将 sandbox.ripgrep 移到 ~/.claude/settings.json 的用户设置、受管设置或 --settings 文件中，并从仓库中删除该项。
 
 
 # ===========================================================================

@@ -300,6 +300,6 @@ cargo install agnix-lsp
 - Real-time diagnostics as you type
 - Quick-fix code actions for auto-fixable issues
 - Hover documentation for frontmatter fields
-- 447 validation rules
+- 448 validation rules
 - Status bar indicator (VS Code)
 - Syntax highlighting for SKILL.md (VS Code)
