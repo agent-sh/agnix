@@ -3633,6 +3633,66 @@ fn test_cli_multiple_paths_scope_to_listed_files() {
     );
 }
 
+// Regression test for #1368: the workspace root was taken from the parent of
+// the first path, so `CLAUDE.md`'s root-relative `@imports` were reported as
+// CC-MEM-001 "escapes project root" whenever a file in a subdirectory was
+// listed first. pre-commit passes matched files in sorted order, which puts
+// `.claude/...` ahead of `CLAUDE.md`, so the same tree passed or failed
+// depending on argument order.
+#[test]
+fn test_cli_multiple_paths_root_is_argument_order_independent() {
+    let temp = tempfile::TempDir::new().unwrap();
+    std::fs::create_dir_all(temp.path().join("docs")).unwrap();
+    std::fs::create_dir_all(temp.path().join(".claude/skills/demo")).unwrap();
+    std::fs::write(
+        temp.path().join("CLAUDE.md"),
+        "# Project\n\n@docs/guide.md\n",
+    )
+    .unwrap();
+    std::fs::write(temp.path().join("docs/guide.md"), "# Guide\n").unwrap();
+    std::fs::write(
+        temp.path().join(".claude/skills/demo/SKILL.md"),
+        "---\nname: demo\ndescription: Demo skill\n---\n\n# Demo\n",
+    )
+    .unwrap();
+
+    let run = |first: &str, second: &str| -> serde_json::Value {
+        let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("agnix");
+        let output = cmd
+            .current_dir(temp.path())
+            .arg(first)
+            .arg(second)
+            .arg("--format")
+            .arg("json")
+            .output()
+            .unwrap();
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        serde_json::from_str(&stdout)
+            .unwrap_or_else(|_| panic!("expected JSON output, got: {stdout}"))
+    };
+
+    let claude_first = run("CLAUDE.md", ".claude/skills/demo/SKILL.md");
+    let skill_first = run(".claude/skills/demo/SKILL.md", "CLAUDE.md");
+
+    for (label, json) in [
+        ("CLAUDE.md first", &claude_first),
+        ("SKILL.md first", &skill_first),
+    ] {
+        let diagnostics = json["diagnostics"].as_array().unwrap();
+        assert!(
+            !diagnostics
+                .iter()
+                .any(|d| d["rule"].as_str() == Some("CC-MEM-001")),
+            "@docs/guide.md exists inside the project, so CC-MEM-001 must not fire ({label}): {json}"
+        );
+    }
+
+    assert_eq!(
+        claude_first["diagnostics"], skill_first["diagnostics"],
+        "diagnostics must not depend on the order the paths are passed in"
+    );
+}
+
 // --watch with more than one path should be rejected with the localized error,
 // not silently pick one. Ensures we don't regress the ergonomics when someone
 // combines --watch with a pre-commit style invocation.
