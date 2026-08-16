@@ -2,7 +2,7 @@
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
   "total_rules": 448,
-  "last_updated": "2026-08-15",
+  "last_updated": "2026-08-17",
   "schema": {
     "evidence": {
       "source_type": "spec|vendor_docs|vendor_code|paper|community",
@@ -1978,7 +1978,7 @@
         "source_urls": [
           "https://code.claude.com/docs/en/hooks"
         ],
-        "verified_on": "2026-07-02",
+        "verified_on": "2026-08-17",
         "applies_to": {
           "tool": "claude-code",
           "file_types": [
