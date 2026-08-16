@@ -910,7 +910,7 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 ### CC-HK-025 [LOW] Invalid Matcher Value
 **Requirement**: Matcher values MAY be validated against known values per event
 **Detection**: Check matcher values against event-specific allowlists for SessionStart, Setup, SessionEnd, Notification, PreCompact, PostCompact, ConfigChange, StopFailure, and InstructionsLoaded
-**Notification values**: permission_prompt, idle_prompt, auth_success, elicitation_dialog, elicitation_complete, elicitation_response, agent_needs_input, agent_completed
+**Notification values**: permission_prompt, idle_prompt, auth_success, elicitation_dialog, elicitation_url_dialog, elicitation_complete, elicitation_response, agent_needs_input, agent_completed
 **Fix**: Manual
 **Source**: code.claude.com/docs/en/hooks
 

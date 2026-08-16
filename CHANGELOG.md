@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **CC-HK-025 Notification matcher compatibility**. Accept the documented
+  `elicitation_url_dialog` matcher instead of reporting it as invalid, and
+  advance the reviewed Claude Code hooks, memory, plugins, skills, and
+  subagent specification baselines.
+
 ### Changed
 - **Tool release baselines**. Advanced Claude Code from `v2.1.232` to
   `v2.1.233` and Cline from `v4.1.9` to `v4.1.10`. Neither release changes an
