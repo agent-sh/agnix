@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `elicitation_url_dialog` matcher instead of reporting it as invalid, and
   advance the reviewed Claude Code hooks, memory, plugins, skills, and
   subagent specification baselines.
+- **Spec drift baseline hashing**. Recalculate the five reviewed Claude Code
+  hashes with the sentinel's trailing-newline normalization so those sources
+  do not immediately re-report drift.
 
 ### Changed
 - **Tool release baselines**. Advanced Claude Code from `v2.1.232` to
