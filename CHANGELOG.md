@@ -18,8 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - **Tool release baselines**. Advanced Claude Code from `v2.1.232` to
-  `v2.1.233` and Cline from `v4.1.9` to `v4.1.10`. Neither release changes an
-  agnix-validated configuration surface, so no validator or rule update is
+  `v2.1.235`, Cline from `v4.1.9` to `v4.1.10`, and Amp's release marker from
+  `size-the-orbs-of-production` to `edu-discount`. These releases do not change
+  an agnix-validated configuration surface, so no validator or rule update is
   required.
 
 ## [0.49.0] - 2026-08-15
