@@ -279,7 +279,7 @@
       "cursor-environment-schema": {
         "url": "https://cursor.com/schemas/environment.schema.json",
         "content_url": "https://cursor.com/schemas/environment.schema.json",
-        "hash": "08f44a331857d2f0b866a4cc3a3ac334e4724a8bf63971228764dbbd5faa0472",
+        "hash": "5683735c6227f1316aa141587ba57b4bddde98c54417f1797ff20e7c2f176341",
         "rules": [
           "CUR-016"
         ]
