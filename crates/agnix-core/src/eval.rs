@@ -239,7 +239,7 @@ impl EvalSummary {
     /// Format summary as Markdown table
     pub fn to_markdown(&self) -> String {
         let mut lines = vec![
-            format!("## Evaluation Summary"),
+            "## Evaluation Summary".to_string(),
             String::new(),
             format!(
                 "**Cases**: {} run, {} passed, {} failed",

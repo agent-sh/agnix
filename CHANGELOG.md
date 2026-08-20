@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   agnix-validated configuration contract.
 
 ### Fixed
+- **Rust 1.98 clippy compatibility**. Replace a constant-only `format!` call
+  that is now rejected by `clippy::useless_format`.
 - **CC-HK-025 Notification matcher compatibility**. Accept the documented
   `elicitation_url_dialog` matcher instead of reporting it as invalid, and
   advance the reviewed Claude Code hooks, memory, plugins, skills, and
