@@ -975,6 +975,8 @@ fn validate_cursor_environment_file(
         "install",
         "start",
         "repositoryDependencies",
+        "disableAllMcpServers",
+        "mcpServerAllowlist",
         "ports",
         "terminals",
         "build",
@@ -1142,6 +1144,119 @@ fn validate_cursor_environment_file(
                 )
                 .with_suggestion(t!("rules.cur_016.suggestion")),
             );
+        }
+    }
+
+    if root
+        .get("disableAllMcpServers")
+        .is_some_and(|value| !value.is_boolean())
+    {
+        diagnostics.push(
+            cursor_environment_error(
+                path,
+                content,
+                "disableAllMcpServers",
+                t!("rules.cur_016.disable_all_mcp_servers"),
+            )
+            .with_suggestion(t!("rules.cur_016.suggestion")),
+        );
+    }
+
+    if let Some(allowlist_value) = root.get("mcpServerAllowlist") {
+        match allowlist_value.as_array() {
+            Some(servers) => {
+                for (index, server) in servers.iter().enumerate() {
+                    let Some(server) = server.as_object() else {
+                        diagnostics.push(
+                            cursor_environment_error(
+                                path,
+                                content,
+                                "mcpServerAllowlist",
+                                t!("rules.cur_016.mcp_server_object", index = index),
+                            )
+                            .with_suggestion(t!("rules.cur_016.suggestion")),
+                        );
+                        continue;
+                    };
+
+                    let has_server_url = server.get("serverUrl").is_some();
+                    let has_command = server.get("command").is_some();
+                    if !has_server_url && !has_command {
+                        diagnostics.push(
+                            cursor_environment_error(
+                                path,
+                                content,
+                                "mcpServerAllowlist",
+                                t!("rules.cur_016.mcp_server_identity", index = index),
+                            )
+                            .with_suggestion(t!("rules.cur_016.suggestion")),
+                        );
+                    }
+
+                    for field in ["name", "serverUrl", "command"] {
+                        if server.get(field).is_some_and(|value| !value.is_string()) {
+                            diagnostics.push(
+                                cursor_environment_error(
+                                    path,
+                                    content,
+                                    "mcpServerAllowlist",
+                                    t!(
+                                        "rules.cur_016.mcp_server_string",
+                                        index = index,
+                                        field = field
+                                    ),
+                                )
+                                .with_suggestion(t!("rules.cur_016.suggestion")),
+                            );
+                        }
+                    }
+
+                    if let Some(tools) = server.get("toolAllowlist")
+                        && !tools
+                            .as_array()
+                            .is_some_and(|items| items.iter().all(JsonValue::is_string))
+                    {
+                        diagnostics.push(
+                            cursor_environment_error(
+                                path,
+                                content,
+                                "mcpServerAllowlist",
+                                t!("rules.cur_016.mcp_tool_allowlist", index = index),
+                            )
+                            .with_suggestion(t!("rules.cur_016.suggestion")),
+                        );
+                    }
+
+                    for field in server.keys() {
+                        if !["name", "serverUrl", "command", "toolAllowlist"]
+                            .contains(&field.as_str())
+                        {
+                            diagnostics.push(
+                                cursor_environment_error(
+                                    path,
+                                    content,
+                                    "mcpServerAllowlist",
+                                    t!(
+                                        "rules.cur_016.unknown_mcp_server_field",
+                                        index = index,
+                                        field = field.as_str()
+                                    ),
+                                )
+                                .with_suggestion(t!("rules.cur_016.suggestion")),
+                            );
+                        }
+                    }
+                }
+            }
+            None => diagnostics.push(
+                cursor_environment_error(
+                    path,
+                    content,
+                    "mcpServerAllowlist",
+                    t!("rules.cur_016.mcp_server_allowlist_array"),
+                )
+                .with_suggestion(t!("rules.cur_016.suggestion")),
+            ),
         }
     }
 
@@ -2478,6 +2593,11 @@ is_background: false
   "install": "npm ci",
   "start": "npm run dev",
   "repositoryDependencies": ["github.com/acme/shared"],
+  "disableAllMcpServers": false,
+  "mcpServerAllowlist": [
+    {"name": "GitHub", "serverUrl": "https://mcp.example.com", "toolAllowlist": ["search"]},
+    {"command": "npx -y @example/mcp"}
+  ],
   "ports": [{"name": "web", "port": 3000}],
   "terminals": [{"name": "app", "command": "npm run dev", "description": "dev server"}],
   "build": {"dockerfile": "Dockerfile", "context": ".."},
@@ -2497,6 +2617,30 @@ is_background: false
             (
                 "invalid repository dependency",
                 r#"{"repositoryDependencies":["github.com/acme/shared",42]}"#,
+            ),
+            (
+                "invalid disable-all MCP flag",
+                r#"{"disableAllMcpServers":"false"}"#,
+            ),
+            (
+                "invalid MCP allowlist container",
+                r#"{"mcpServerAllowlist":{}}"#,
+            ),
+            (
+                "missing MCP server identity",
+                r#"{"mcpServerAllowlist":[{"name":"GitHub"}]}"#,
+            ),
+            (
+                "invalid MCP server URL",
+                r#"{"mcpServerAllowlist":[{"serverUrl":42}]}"#,
+            ),
+            (
+                "invalid MCP tool allowlist",
+                r#"{"mcpServerAllowlist":[{"command":"server","toolAllowlist":[42]}]}"#,
+            ),
+            (
+                "unknown MCP server field",
+                r#"{"mcpServerAllowlist":[{"command":"server","headers":{}}]}"#,
             ),
             ("invalid ports container", r#"{"ports":{}}"#),
             ("missing port", r#"{"ports":[{"name":"web"}]}"#),

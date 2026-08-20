@@ -7,7 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Cursor environment MCP policy**. Update `CUR-016` for the published
+  `disableAllMcpServers` and `mcpServerAllowlist` fields, including HTTP and
+  stdio server identities, optional tool allowlists, and closed-field checks.
+- **Tool release baselines**. Advance Claude Code to `v2.1.238`, Codex CLI to
+  `rust-v0.149.0`, Cursor to `3.17.8`, Kiro CLI to `2.19.0`, Gemini CLI to
+  `v0.56.0`, OpenCode to `v1.18.19`, and Amp to `mcp-in-orbs`. Apart from the
+  Cursor schema change above, the reviewed releases do not change an
+  agnix-validated configuration contract.
+
 ### Fixed
+- **Rust 1.98 clippy compatibility**. Replace a constant-only `format!` call
+  that is now rejected by `clippy::useless_format`.
 - **CC-HK-025 Notification matcher compatibility**. Accept the documented
   `elicitation_url_dialog` matcher instead of reporting it as invalid, and
   advance the reviewed Claude Code hooks, memory, plugins, skills, and

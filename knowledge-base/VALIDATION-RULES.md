@@ -1845,8 +1845,8 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 <a id="cur-016"></a>
 ### CUR-016 [HIGH] Invalid .cursor/environment.json Schema
-**Requirement**: `.cursor/environment.json` MUST match the published schema at cursor.com/schemas/environment.schema.json. Comments are allowed, trailing commas are not, no root field is required, `build.dockerfile` is required when `build` exists, and unknown root/build fields are rejected except for the conventional root `$schema` association key. Terminal entries require only `command`; `name` and `description` are optional. `update` is not in the schema and is reported as renamed to `install`.
-**Detection**: Strip JSON comments, parse JSON, enforce the root/build closed-field sets, and validate setup strings, repository dependencies, ports, build fields, snapshot fields, and terminal entries
+**Requirement**: `.cursor/environment.json` MUST match the published schema at cursor.com/schemas/environment.schema.json. Comments are allowed, trailing commas are not, no root field is required, `build.dockerfile` is required when `build` exists, and unknown root/build fields are rejected except for the conventional root `$schema` association key. `disableAllMcpServers` is boolean; each `mcpServerAllowlist` entry identifies an HTTP server by `serverUrl` or a stdio server by `command`, with an optional `toolAllowlist` array of strings. Terminal entries require only `command`; `name` and `description` are optional. `update` is not in the schema and is reported as renamed to `install`.
+**Detection**: Strip JSON comments, parse JSON, enforce the root/build/MCP-server closed-field sets, and validate setup strings, repository dependencies, MCP policy, ports, build fields, snapshot fields, and terminal entries
 **Fix**: Correct field types; rename `update` to `install`
 **Source**: cursor.com/docs/cloud-agent/setup
 

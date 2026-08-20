@@ -7696,7 +7696,7 @@
           "https://cursor.com/docs/cloud-agent/setup",
           "https://cursor.com/schemas/environment.schema.json"
         ],
-        "verified_on": "2026-08-05",
+        "verified_on": "2026-08-21",
         "applies_to": {
           "tool": "cursor"
         },
@@ -7710,7 +7710,7 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\"$schema\":\"https://cursor.com/schemas/environment.schema.json\",\"build\":{\"dockerfile\":\"Dockerfile\",\"context\":\"..\"},\"install\":\"npm ci\",\"start\":\"npm run dev\",\"terminals\":[{\"name\":\"app\",\"command\":\"npm run dev\"}]}",
+      "good_example": "{\"$schema\":\"https://cursor.com/schemas/environment.schema.json\",\"build\":{\"dockerfile\":\"Dockerfile\",\"context\":\"..\"},\"install\":\"npm ci\",\"start\":\"npm run dev\",\"disableAllMcpServers\":false,\"mcpServerAllowlist\":[{\"serverUrl\":\"https://mcp.example.com\",\"toolAllowlist\":[\"search\"]}],\"terminals\":[{\"name\":\"app\",\"command\":\"npm run dev\"}]}",
       "bad_example": "{\"install\":42,\"terminals\":[{\"name\":\"app\"}]}"
     },
     {

@@ -520,6 +520,13 @@ rules:
     unknown_build_field: "Unknown field 'build.%{field}'"
     unknown_build_field_suggestion: Use only 'dockerfile' and optional 'context' in build
     repository_dependencies: Field 'repositoryDependencies' must be an array of strings
+    disable_all_mcp_servers: Field 'disableAllMcpServers' must be a boolean
+    mcp_server_allowlist_array: Field 'mcpServerAllowlist' must be an array
+    mcp_server_object: mcpServerAllowlist[%{index}] must be an object
+    mcp_server_identity: mcpServerAllowlist[%{index}] must define 'serverUrl' or 'command'
+    mcp_server_string: mcpServerAllowlist[%{index}].%{field} must be a string when present
+    mcp_tool_allowlist: mcpServerAllowlist[%{index}].toolAllowlist must be an array of strings
+    unknown_mcp_server_field: "Unknown field 'mcpServerAllowlist[%{index}].%{field}'"
     port_object: ports[%{index}] must be an object
     port_number: ports[%{index}].port must be an integer from 1 through 65535
     port_name: ports[%{index}].name must be a string when present
