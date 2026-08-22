@@ -1144,6 +1144,17 @@ fn test_refreshed_release_surfaces_match_research_inventory() {
             row.contains(prefix),
             "{row_name} research inventory is missing {prefix}"
         );
+
+        if tool_id == "opencode" {
+            for implemented_prefix in [
+                "OC-AG", "OC-AGM", "OC-CFG", "OC-DEP", "OC-LSP", "OC-PM", "OC-TUI",
+            ] {
+                assert!(
+                    row.contains(implemented_prefix),
+                    "OpenCode research inventory is missing {implemented_prefix}"
+                );
+            }
+        }
     }
 }
 
