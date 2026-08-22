@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **Maintenance refresh**. Advance Claude Code to `v2.1.240`, Cline to
+  `v4.1.13`, OpenCode to `v1.18.21`, and Amp to `explain-usage` after reviewing
+  the live releases against agnix's validated configuration surfaces. Refresh
+  all CodeQL action pins to `v4.37.7`; these pins move together to avoid the
+  action's mixed-version configuration failure.
 - **Cursor environment MCP policy**. Update `CUR-016` for the published
   `disableAllMcpServers` and `mcpServerAllowlist` fields, including HTTP and
   stdio server identities, optional tool allowlists, and closed-field checks.

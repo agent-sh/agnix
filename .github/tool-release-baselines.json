@@ -1,6 +1,6 @@
 {
   "version": "1.1",
-  "last_updated": "2026-08-21",
+  "last_updated": "2026-08-23",
   "description": "Tracks the latest release of every tool agnix validates (one entry per tool with a validator in crates/agnix-core/src/rules/). Used by .github/workflows/tool-release-watch.yml to open per-tool issues when a new release is published. Untracked tools include the precise publication URL in untracked_reason so a maintainer can monitor manually.\n\nOptional `changes_of_interest` per tool describes what agnix cares about: `config_surfaces` (files agnix validates), `relevant` (change-types that likely affect a validator), `irrelevant` (safe to skip). When set and GLM_API_KEY is available, the watcher runs scripts/glm-extract.js --mode=agnix-triage to produce a pre-filtered summary at the top of the issue body. Falls back gracefully to the full changelog on any LLM failure.",
   "tools": {
     "claude-code": {
@@ -17,7 +17,7 @@
         "mcp"
       ],
       "github_repo": "anthropics/claude-code",
-      "last_known_version": "v2.1.238",
+      "last_known_version": "v2.1.240",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
@@ -99,7 +99,7 @@
         "per_client_skill"
       ],
       "github_repo": "sst/opencode",
-      "last_known_version": "v1.18.19",
+      "last_known_version": "v1.18.21",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
@@ -214,7 +214,7 @@
       ],
       "github_repo": "cline/cline",
       "release_tag_regex": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
-      "last_known_version": "v4.1.10",
+      "last_known_version": "v4.1.13",
       "tracked": true,
       "notes": "Tracks only the core Cline vX.Y.Z release train. The repository also publishes desktop-v*, cli-v*, sdk/*, and other interleaved releases that do not correspond to the validator surfaces.",
       "changes_of_interest": {
@@ -320,7 +320,7 @@
       "html_url": "https://ampcode.com/news.rss",
       "version_regex": "https://ampcode\\.com/news/[a-zA-Z0-9._-]+",
       "notes_extractor": "rss_cdata",
-      "last_known_version": "mcp-in-orbs",
+      "last_known_version": "explain-usage",
       "tracked": true,
       "notes": "Tracked via the amp news RSS feed; the 'version' is the slug of the latest /news/ post (e.g., amp-free-is-ad-free). Source is not on GitHub; npm @sourcegraph/amp publishes per-commit (no semver gates) so npm version-bump tracking would be noise. Issue body uses the first <item><description> CDATA from the RSS feed (already structured HTML - no LLM needed).",
       "changes_of_interest": {
