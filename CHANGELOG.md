@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **Tool release baselines**. Advance Cline to `v4.1.15` and Amp to
+  `friendly-urls-for-sharing-orbs` after reviewing the intervening live release
+  notes. The changes affect runtime MCP approval behavior, model metadata,
+  telemetry, and shared-orb URLs, not an agnix-validated configuration contract.
 - **Maintenance refresh**. Advance Claude Code to `v2.1.241`, Cline to
   `v4.1.13`, OpenCode to `v1.18.21`, and Amp to `explain-usage` after reviewing
   the live releases against agnix's validated configuration surfaces. Refresh
