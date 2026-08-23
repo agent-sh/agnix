@@ -1158,6 +1158,32 @@ fn test_refreshed_release_surfaces_match_research_inventory() {
             }
         }
     }
+
+    let amp = &baselines["tools"]["amp"];
+    assert!(
+        amp["validators"]
+            .as_array()
+            .expect("amp validators must be an array")
+            .iter()
+            .any(|validator| validator == "agents_md"),
+        "amp baseline must register the AGENTS.md validator"
+    );
+    assert!(
+        amp["changes_of_interest"]["config_surfaces"]
+            .as_array()
+            .expect("amp config_surfaces must be an array")
+            .iter()
+            .any(|surface| surface == "AGENTS.md"),
+        "amp baseline must track AGENTS.md"
+    );
+    let amp_row = research
+        .lines()
+        .find(|line| line.starts_with("| amp |"))
+        .expect("RESEARCH-TRACKING.md must contain an amp row");
+    assert!(
+        amp_row.contains("AGM"),
+        "amp research inventory must include the shared AGM rule prefix"
+    );
 }
 
 /// Kiro CLI 2.18.0 loads nested `AGENTS.md` files as steering context from

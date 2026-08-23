@@ -314,7 +314,8 @@
       "tier": "b",
       "display_name": "amp (Sourcegraph)",
       "validators": [
-        "amp"
+        "amp",
+        "agents_md"
       ],
       "github_repo": null,
       "html_url": "https://ampcode.com/news.rss",
