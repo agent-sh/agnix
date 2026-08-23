@@ -1146,9 +1146,11 @@ fn test_refreshed_release_surfaces_match_research_inventory() {
         );
 
         if tool_id == "opencode" {
-            for implemented_prefix in [
-                "OC-AG", "OC-AGM", "OC-CFG", "OC-DEP", "OC-LSP", "OC-PM", "OC-TUI",
-            ] {
+            for implemented_prefix in agnix_rules::get_prefixes_for_tool("opencode")
+                .into_iter()
+                .filter(|prefix| prefix.starts_with("OC-"))
+                .map(|prefix| prefix.trim_end_matches('-'))
+            {
                 assert!(
                     row.contains(implemented_prefix),
                     "OpenCode research inventory is missing {implemented_prefix}"

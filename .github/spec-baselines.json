@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "description": "Baseline hashes for canonical specification content. Human-facing URLs are kept separately from machine-readable content URLs.",
-  "last_updated": "2026-08-16T22:37:40Z",
+  "last_updated": "2026-08-23T09:50:05Z",
   "sources": {
     "s-tier": {
       "agent-skills-spec": {
@@ -117,7 +117,7 @@
       "claude-code-memory": {
         "url": "https://code.claude.com/docs/en/memory",
         "content_url": "https://code.claude.com/docs/en/memory.md",
-        "hash": "fd03743e064531bc23d4fc440b9218c1d2a5efc546da93485cbf0071c4f6aab7",
+        "hash": "7005caa7ff8f4d41f98f1fcc80f585d5a7a2d74e5b86907a2ba950f277228a7b",
         "rules": [
           "CC-MEM-001",
           "CC-MEM-002",
@@ -128,7 +128,7 @@
       "claude-code-hooks": {
         "url": "https://code.claude.com/docs/en/hooks",
         "content_url": "https://code.claude.com/docs/en/hooks.md",
-        "hash": "568c4c920d3a0b36102c0cc01cdfe2bf0a9ea52d9b5fca1f8edac671db31ff6e",
+        "hash": "bdc60cee2ffcfa0d43763a69629cf28ddf1d14d6e9cdf29fc1ab2af0c708fd8c",
         "rules": [
           "CC-HK-001",
           "CC-HK-002",
@@ -147,7 +147,7 @@
       "claude-code-skills": {
         "url": "https://code.claude.com/docs/en/skills",
         "content_url": "https://code.claude.com/docs/en/skills.md",
-        "hash": "6aa040d59af9d1fb24b9a3ec77afec6bc025ed4eb84d39e5ea7051c0fb0ad5d7",
+        "hash": "0da4530a1a1d92d4d635d3a5347198c0b0a8ddaefc4e308dbf2fda9dfce115e7",
         "rules": [
           "CC-SK-001",
           "CC-SK-002",
@@ -160,7 +160,7 @@
       "claude-code-plugins": {
         "url": "https://code.claude.com/docs/en/plugins-reference",
         "content_url": "https://code.claude.com/docs/en/plugins-reference.md",
-        "hash": "0740e469e30f3ae8d4bc2ca7bfc41d94184d10e145b5d15f6f26acd69d87eec4",
+        "hash": "b2da869773fe08bbfab2f14c2a82c399ea7a91c03fd04c6dad9fbacb005d97d4",
         "rules": [
           "CC-PL-002",
           "CC-PL-003",
@@ -172,7 +172,7 @@
       "claude-code-subagents": {
         "url": "https://code.claude.com/docs/en/sub-agents",
         "content_url": "https://code.claude.com/docs/en/sub-agents.md",
-        "hash": "261c25d52cb020044dd362b31a526e15b6961457b352008f32d6a8dcb8125a1e",
+        "hash": "c23a46eade7ff549b92df505ef8d624c269d423a36599d8610d502707f317e8a",
         "rules": [
           "CC-AG-001",
           "CC-AG-002",
