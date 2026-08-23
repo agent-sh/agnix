@@ -1136,12 +1136,20 @@ fn test_refreshed_release_surfaces_match_research_inventory() {
             .lines()
             .find(|line| line.starts_with(&row_prefix))
             .unwrap_or_else(|| panic!("RESEARCH-TRACKING.md must contain a {row_name} row"));
+        let row_rule_prefixes: std::collections::BTreeSet<_> = row
+            .split('|')
+            .filter(|cell| !cell.trim().is_empty())
+            .next_back()
+            .expect("research inventory row must have a Rule Prefix cell")
+            .split(',')
+            .map(str::trim)
+            .collect();
         assert!(
             row.contains(surface),
             "{row_name} research inventory is missing {surface}"
         );
         assert!(
-            row.contains(prefix),
+            row_rule_prefixes.contains(prefix),
             "{row_name} research inventory is missing {prefix}"
         );
 
@@ -1152,7 +1160,7 @@ fn test_refreshed_release_surfaces_match_research_inventory() {
                 .map(|prefix| prefix.trim_end_matches('-'))
             {
                 assert!(
-                    row.contains(implemented_prefix),
+                    row_rule_prefixes.contains(implemented_prefix),
                     "OpenCode research inventory is missing {implemented_prefix}"
                 );
             }
@@ -1180,8 +1188,16 @@ fn test_refreshed_release_surfaces_match_research_inventory() {
         .lines()
         .find(|line| line.starts_with("| amp |"))
         .expect("RESEARCH-TRACKING.md must contain an amp row");
+    let amp_rule_prefixes: std::collections::BTreeSet<_> = amp_row
+        .split('|')
+        .filter(|cell| !cell.trim().is_empty())
+        .next_back()
+        .expect("amp research inventory row must have a Rule Prefix cell")
+        .split(',')
+        .map(str::trim)
+        .collect();
     assert!(
-        amp_row.contains("AGM"),
+        amp_rule_prefixes.contains("AGM"),
         "amp research inventory must include the shared AGM rule prefix"
     );
 }
