@@ -1136,15 +1136,68 @@ fn test_refreshed_release_surfaces_match_research_inventory() {
             .lines()
             .find(|line| line.starts_with(&row_prefix))
             .unwrap_or_else(|| panic!("RESEARCH-TRACKING.md must contain a {row_name} row"));
+        let row_rule_prefixes: std::collections::BTreeSet<_> = row
+            .split('|')
+            .rfind(|cell| !cell.trim().is_empty())
+            .expect("research inventory row must have a Rule Prefix cell")
+            .split(',')
+            .map(str::trim)
+            .collect();
         assert!(
             row.contains(surface),
             "{row_name} research inventory is missing {surface}"
         );
         assert!(
-            row.contains(prefix),
+            row_rule_prefixes.contains(prefix),
             "{row_name} research inventory is missing {prefix}"
         );
+
+        if tool_id == "opencode" {
+            for implemented_prefix in agnix_rules::get_prefixes_for_tool("opencode")
+                .into_iter()
+                .filter(|prefix| prefix.starts_with("OC-"))
+                .map(|prefix| prefix.trim_end_matches('-'))
+            {
+                assert!(
+                    row_rule_prefixes.contains(implemented_prefix),
+                    "OpenCode research inventory is missing {implemented_prefix}"
+                );
+            }
+        }
     }
+
+    let amp = &baselines["tools"]["amp"];
+    assert!(
+        amp["validators"]
+            .as_array()
+            .expect("amp validators must be an array")
+            .iter()
+            .any(|validator| validator == "agents_md"),
+        "amp baseline must register the AGENTS.md validator"
+    );
+    assert!(
+        amp["changes_of_interest"]["config_surfaces"]
+            .as_array()
+            .expect("amp config_surfaces must be an array")
+            .iter()
+            .any(|surface| surface == "AGENTS.md"),
+        "amp baseline must track AGENTS.md"
+    );
+    let amp_row = research
+        .lines()
+        .find(|line| line.starts_with("| amp |"))
+        .expect("RESEARCH-TRACKING.md must contain an amp row");
+    let amp_rule_prefixes: std::collections::BTreeSet<_> = amp_row
+        .split('|')
+        .rfind(|cell| !cell.trim().is_empty())
+        .expect("amp research inventory row must have a Rule Prefix cell")
+        .split(',')
+        .map(str::trim)
+        .collect();
+    assert!(
+        amp_rule_prefixes.contains("AGM"),
+        "amp research inventory must include the shared AGM rule prefix"
+    );
 }
 
 /// Kiro CLI 2.18.0 loads nested `AGENTS.md` files as steering context from

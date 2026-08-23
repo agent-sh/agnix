@@ -55,9 +55,9 @@ taiki-e/install-action@v2.85.0: 7572810d7dd469b651bb7793945692cf78da5dd7
 
 # Security
 EmbarkStudios/cargo-deny-action@v2.1.1: 3c6349835b2b7b196a839186cb8b78e02f7b5f25
-github/codeql-action/analyze@v4.37.6: 5595ccaf912efad79be6eef63a5619ff05969be3
-github/codeql-action/init@v4.37.6: 5595ccaf912efad79be6eef63a5619ff05969be3
-github/codeql-action/upload-sarif@v4.37.6: 5595ccaf912efad79be6eef63a5619ff05969be3
+github/codeql-action/analyze@v4.37.7: ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd
+github/codeql-action/init@v4.37.7: ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd
+github/codeql-action/upload-sarif@v4.37.7: ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd
 
 # Release
 softprops/action-gh-release@v3.0.2: 3d0d9888cb7fd7b750713d6e236d1fcb99157228
