@@ -1138,8 +1138,7 @@ fn test_refreshed_release_surfaces_match_research_inventory() {
             .unwrap_or_else(|| panic!("RESEARCH-TRACKING.md must contain a {row_name} row"));
         let row_rule_prefixes: std::collections::BTreeSet<_> = row
             .split('|')
-            .filter(|cell| !cell.trim().is_empty())
-            .next_back()
+            .rfind(|cell| !cell.trim().is_empty())
             .expect("research inventory row must have a Rule Prefix cell")
             .split(',')
             .map(str::trim)
@@ -1190,8 +1189,7 @@ fn test_refreshed_release_surfaces_match_research_inventory() {
         .expect("RESEARCH-TRACKING.md must contain an amp row");
     let amp_rule_prefixes: std::collections::BTreeSet<_> = amp_row
         .split('|')
-        .filter(|cell| !cell.trim().is_empty())
-        .next_back()
+        .rfind(|cell| !cell.trim().is_empty())
         .expect("amp research inventory row must have a Rule Prefix cell")
         .split(',')
         .map(str::trim)
