@@ -1114,6 +1114,7 @@ fn test_refreshed_release_surfaces_match_research_inventory() {
     }
 
     for (tool_id, row_name, surface, prefix) in [
+        ("codex", "Codex CLI", ".codex/skills/*/SKILL.md", "CX-SK"),
         (
             "opencode",
             "OpenCode",

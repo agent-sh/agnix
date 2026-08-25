@@ -59,7 +59,8 @@
       "validators": [
         "codex",
         "codex_plugin",
-        "agents_md"
+        "agents_md",
+        "per_client_skill"
       ],
       "github_repo": "openai/codex",
       "last_known_version": "rust-v0.149.1",
@@ -68,6 +69,7 @@
         "config_surfaces": [
           "AGENTS.md",
           "codex-rs/core/config.toml (project + ~/.codex/config.toml)",
+          ".codex/skills/*/SKILL.md",
           ".codex-plugin/plugin.json and Agent Plugins root plugin.json",
           ".mcp.json or [mcp_servers.*] TOML blocks referenced from config.toml",
           "requirements.toml (managed environment config)"
@@ -77,6 +79,7 @@
           "Changes to MCP server schema (auth fields, bearer_token/env_var, allow-listed keys)",
           "Feature toggles in [features] - new features, flag shapes (flat bool vs nested {enabled})",
           "Plugin manifest schema changes in .codex-plugin/plugin.json or Agent Plugins root plugin.json",
+          "Per-client skill schema or .codex/skills directory layout changes",
           "Apps config shape ([apps.*], tool-approval modes, default_tools_* keys)",
           "Hook configuration schema (config.toml hooks block stabilized in 0.124)",
           "AGENTS.md size limits, required sections, or directive grammar"
