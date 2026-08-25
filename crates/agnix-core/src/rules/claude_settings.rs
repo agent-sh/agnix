@@ -2494,10 +2494,9 @@ fn validate_model_picker(
                     ));
                 }
                 for field in ["label", "description"] {
-                    if row
-                        .get(field)
-                        .is_some_and(|field_value| !field_value.is_string())
-                    {
+                    if row.get(field).is_some_and(|field_value| {
+                        !field_value.is_null() && !field_value.is_string()
+                    }) {
                         diagnostics.push(model_picker_shape_diagnostic(
                             path,
                             line,
@@ -2521,7 +2520,7 @@ fn validate_model_picker(
 
     if object
         .get("replaceBuiltInOptions")
-        .is_some_and(|replace| !replace.is_boolean())
+        .is_some_and(|replace| !replace.is_null() && !replace.is_boolean())
     {
         diagnostics.push(model_picker_shape_diagnostic(
             path,
@@ -5493,6 +5492,27 @@ mod tests {
             validate_at(".claude/managed-settings.json", content)
                 .iter()
                 .all(|diagnostic| diagnostic.rule != "CC-SET-025")
+        );
+    }
+
+    #[test]
+    fn test_model_picker_optional_null_fields_are_treated_as_absent() {
+        let content = r#"{
+            "modelPicker": {
+                "options": [{
+                    "model": "opus",
+                    "label": null,
+                    "description": null
+                }],
+                "replaceBuiltInOptions": null
+            }
+        }"#;
+
+        let diags = validate_at("/etc/claude-code/managed-settings.json", content);
+        assert!(
+            !diags
+                .iter()
+                .any(|diagnostic| diagnostic.rule == "CC-SET-025")
         );
     }
 
