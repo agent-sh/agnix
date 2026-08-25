@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.50.0] - 2026-08-25
+
 ### Added
 - **Claude Code 2.1.242 settings validation**. Add `CC-SET-025` for the
   user-or-managed `modelPicker` scope and documented option shape,
