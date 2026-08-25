@@ -8,6 +8,7 @@ import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.FormBuilder
+import io.agnix.jetbrains.binary.PlatformInfo
 import javax.swing.JComboBox
 import javax.swing.JComponent
 import javax.swing.JPanel
@@ -40,6 +41,10 @@ class AgnixSettingsComponent {
 
     init {
         configureLspPathFileChooser()
+        val wslAvailable = PlatformInfo.supportsWslExecution()
+        wslEnabledCheckBox.isEnabled = wslAvailable
+        wslDistributionField.isEnabled = wslAvailable
+        wslLspPathField.isEnabled = wslAvailable
 
         // Build the form
         mainPanel = FormBuilder.createFormBuilder()

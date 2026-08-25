@@ -45,6 +45,14 @@ class PlatformInfoTest {
     }
 
     @Test
+    fun `WSL execution is supported only on Windows`() {
+        assertTrue(PlatformInfo.supportsWslExecution(PlatformInfo.OS.WINDOWS))
+        assertFalse(PlatformInfo.supportsWslExecution(PlatformInfo.OS.MACOS))
+        assertFalse(PlatformInfo.supportsWslExecution(PlatformInfo.OS.LINUX))
+        assertFalse(PlatformInfo.supportsWslExecution(PlatformInfo.OS.UNKNOWN))
+    }
+
+    @Test
     fun `getPlatformDescription returns non-empty string`() {
         val description = PlatformInfo.getPlatformDescription()
 

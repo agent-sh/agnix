@@ -4,6 +4,7 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.redhat.devtools.lsp4ij.client.features.LSPClientFeatures
+import io.agnix.jetbrains.binary.PlatformInfo
 import io.agnix.jetbrains.settings.AgnixSettings
 import io.agnix.jetbrains.wsl.WslLaunch
 import io.agnix.jetbrains.wsl.WslPaths
@@ -79,7 +80,7 @@ class AgnixLspClientFeatures : LSPClientFeatures() {
      */
     private fun wslDistribution(): String? {
         val settings = AgnixSettings.getInstance()
-        if (!settings.wslEnabled) return null
+        if (!settings.wslEnabled || !PlatformInfo.supportsWslExecution()) return null
 
         val basePath = runCatching { project.basePath }.getOrNull()
         val resolution = WslLaunch.resolve(

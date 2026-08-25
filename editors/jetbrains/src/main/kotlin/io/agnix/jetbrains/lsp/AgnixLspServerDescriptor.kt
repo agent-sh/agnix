@@ -5,6 +5,7 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.redhat.devtools.lsp4ij.server.OSProcessStreamConnectionProvider
 import io.agnix.jetbrains.binary.AgnixBinaryResolver
+import io.agnix.jetbrains.binary.PlatformInfo
 import io.agnix.jetbrains.notifications.AgnixNotifications
 import io.agnix.jetbrains.settings.AgnixSettings
 import io.agnix.jetbrains.wsl.WslLaunch
@@ -61,7 +62,7 @@ class AgnixLspServerDescriptor(
     private fun resolveWslLaunch(): WslLaunch.Resolution {
         val settings = AgnixSettings.getInstance()
         return WslLaunch.resolve(
-            enabled = settings.wslEnabled,
+            enabled = settings.wslEnabled && PlatformInfo.supportsWslExecution(),
             distribution = settings.wslDistribution,
             lspPath = settings.wslLspPath,
             projectBasePath = project.basePath

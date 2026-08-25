@@ -111,6 +111,9 @@ object PlatformInfo {
      */
     fun isSupported(): Boolean = getBinaryInfo() != null
 
+    /** WSL process execution is available only when the IDE itself runs on Windows. */
+    fun supportsWslExecution(os: OS = getOS()): Boolean = os == OS.WINDOWS
+
     /**
      * Get a human-readable platform description.
      */

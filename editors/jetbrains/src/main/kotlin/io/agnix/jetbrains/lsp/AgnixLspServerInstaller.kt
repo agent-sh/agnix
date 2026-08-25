@@ -23,7 +23,7 @@ class AgnixLspServerInstaller : LanguageServerInstallerBase() {
         progress("Checking agnix-lsp installation...", 0.15, indicator)
 
         val settings = AgnixSettings.getInstance()
-        if (settings.wslEnabled) {
+        if (settings.wslEnabled && PlatformInfo.supportsWslExecution()) {
             // The server lives inside the WSL distribution, so the Windows-side
             // installer cannot see it and must not download a Windows binary.
             logger.info("WSL execution mode enabled; skipping host-local agnix-lsp installation")

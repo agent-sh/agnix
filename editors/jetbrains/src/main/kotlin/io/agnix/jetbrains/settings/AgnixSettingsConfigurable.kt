@@ -3,6 +3,7 @@ package io.agnix.jetbrains.settings
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.options.ConfigurationException
 import io.agnix.jetbrains.binary.AgnixBinaryResolver
+import io.agnix.jetbrains.binary.PlatformInfo
 import io.agnix.jetbrains.wsl.WslLaunch
 import javax.swing.JComponent
 
@@ -51,7 +52,7 @@ class AgnixSettingsConfigurable : Configurable {
 
         val wslDistribution = component.wslDistribution.trim()
         val wslLspPath = component.wslLspPath.trim()
-        if (component.wslEnabled) {
+        if (component.wslEnabled && PlatformInfo.supportsWslExecution()) {
             // An empty distribution is allowed here: it means "use the distribution the
             // project is opened from", which is only known once a project is open.
             if (wslDistribution.isNotEmpty()) {
