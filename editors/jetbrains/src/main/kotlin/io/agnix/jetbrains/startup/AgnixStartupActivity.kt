@@ -7,6 +7,7 @@ import io.agnix.jetbrains.binary.AgnixBinaryResolver
 import io.agnix.jetbrains.binary.PlatformInfo
 import io.agnix.jetbrains.notifications.AgnixNotifications
 import io.agnix.jetbrains.settings.AgnixSettings
+import io.agnix.jetbrains.wsl.WslLaunch
 
 /**
  * Startup activity for the agnix plugin.
@@ -35,7 +36,21 @@ class AgnixStartupActivity : ProjectActivity {
                 wslHostSupported = PlatformInfo.supportsWslExecution()
             )
         ) {
-            logger.info("WSL execution mode enabled; skipping host-local agnix-lsp startup probe")
+            val resolution = WslLaunch.resolve(
+                enabled = true,
+                distribution = settings.wslDistribution,
+                lspPath = settings.wslLspPath,
+                projectBasePath = project.basePath
+            )
+            when (resolution) {
+                is WslLaunch.Resolution.Invalid -> {
+                    logger.warn("WSL execution mode is misconfigured: ${resolution.message}")
+                    AgnixNotifications.notifyWslLaunchProblem(project, resolution.message)
+                }
+                is WslLaunch.Resolution.Ready ->
+                    logger.info("WSL execution mode enabled; skipping host-local agnix-lsp startup probe")
+                WslLaunch.Resolution.Disabled -> Unit
+            }
             return
         }
 
