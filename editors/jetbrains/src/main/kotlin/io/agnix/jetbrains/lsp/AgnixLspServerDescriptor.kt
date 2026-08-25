@@ -5,8 +5,10 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.redhat.devtools.lsp4ij.server.OSProcessStreamConnectionProvider
 import io.agnix.jetbrains.binary.AgnixBinaryResolver
+import io.agnix.jetbrains.binary.PlatformInfo
 import io.agnix.jetbrains.notifications.AgnixNotifications
 import io.agnix.jetbrains.settings.AgnixSettings
+import io.agnix.jetbrains.wsl.WslLaunch
 import java.io.File
 
 /**
@@ -22,10 +24,18 @@ class AgnixLspServerDescriptor(
     private val logger = Logger.getInstance(AgnixLspServerDescriptor::class.java)
 
     init {
-        // Resolve binary path without blocking download - only check existing locations
-        val binaryPath = resolveBinaryPathNonBlocking()
-        if (binaryPath != null) {
-            configureCommandLine(binaryPath)
+        when (val resolution = resolveWslLaunch()) {
+            is WslLaunch.Resolution.Ready -> configureWslCommandLine(resolution)
+            is WslLaunch.Resolution.Invalid ->
+                // Reported to the user in start(); the descriptor must not show UI from init.
+                logger.warn("WSL execution mode is misconfigured: ${resolution.message}")
+            WslLaunch.Resolution.Disabled -> {
+                // Resolve binary path without blocking download - only check existing locations
+                val binaryPath = resolveBinaryPathNonBlocking()
+                if (binaryPath != null) {
+                    configureCommandLine(binaryPath)
+                }
+            }
         }
     }
 
@@ -33,6 +43,30 @@ class AgnixLspServerDescriptor(
         val commandLine = GeneralCommandLine(binaryPath)
             .withWorkDirectory(project.basePath ?: System.getProperty("user.home"))
         setCommandLine(commandLine)
+    }
+
+    /**
+     * Launch agnix-lsp inside WSL.
+     *
+     * The Windows-side working directory is left at the IDE default: a Linux path
+     * is not a valid Windows working directory, and agnix-lsp takes its workspace
+     * from the LSP `rootUri` (translated by [AgnixLspClientFeatures]).
+     */
+    private fun configureWslCommandLine(launch: WslLaunch.Resolution.Ready) {
+        val command = WslLaunch.buildCommand(launch.distribution, launch.lspPath)
+        logger.info("Starting agnix-lsp through WSL distribution ${launch.distribution}: ${launch.lspPath}")
+        setCommandLine(GeneralCommandLine(command))
+    }
+
+    /** WSL launch decision from the current settings and project location. */
+    private fun resolveWslLaunch(): WslLaunch.Resolution {
+        val settings = AgnixSettings.getInstance()
+        return WslLaunch.resolve(
+            enabled = settings.wslEnabled && PlatformInfo.supportsWslExecution(),
+            distribution = settings.wslDistribution,
+            lspPath = settings.wslLspPath,
+            projectBasePath = project.basePath
+        )
     }
 
     /**
@@ -73,6 +107,24 @@ class AgnixLspServerDescriptor(
     }
 
     override fun start() {
+        // Re-resolve WSL settings here: they can change between descriptor creation
+        // and a server (re)start.
+        when (val resolution = resolveWslLaunch()) {
+            is WslLaunch.Resolution.Ready -> {
+                configureWslCommandLine(resolution)
+                // If a policy blocks the launch it is wsl.exe that was refused, not
+                // the Linux binary, so report the launcher in the failure path.
+                startProcess("${WslLaunch.WSL_EXECUTABLE} (${resolution.lspPath})")
+                return
+            }
+            is WslLaunch.Resolution.Invalid -> {
+                logger.error("WSL execution mode is misconfigured: ${resolution.message}")
+                AgnixNotifications.notifyWslLaunchProblem(project, resolution.message)
+                return
+            }
+            WslLaunch.Resolution.Disabled -> Unit
+        }
+
         var commandLine = getCommandLine()
 
         // On first run, LSP4IJ installer may download agnix-lsp after descriptor init.
@@ -98,7 +150,15 @@ class AgnixLspServerDescriptor(
             return
         }
 
-        logger.info("Starting agnix-lsp: ${commandLine.commandLineString}")
+        startProcess(binaryPath)
+    }
+
+    /**
+     * Start the configured process, turning an OS-level execution block into an
+     * actionable notification.
+     */
+    private fun startProcess(binaryPath: String) {
+        logger.info("Starting agnix-lsp: ${getCommandLine()?.commandLineString}")
         try {
             super.start()
         } catch (e: Exception) {

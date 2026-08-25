@@ -2,7 +2,11 @@ package io.agnix.jetbrains.settings
 
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.options.ConfigurationException
+import com.intellij.openapi.project.ProjectManager
+import com.redhat.devtools.lsp4ij.LanguageServerManager
 import io.agnix.jetbrains.binary.AgnixBinaryResolver
+import io.agnix.jetbrains.binary.PlatformInfo
+import io.agnix.jetbrains.wsl.WslLaunch
 import javax.swing.JComponent
 
 /**
@@ -32,6 +36,9 @@ class AgnixSettingsConfigurable : Configurable {
         return component.enabled != settings.enabled ||
             component.lspPath.trim() != settings.lspPath ||
             component.autoDownload != settings.autoDownload ||
+            component.wslEnabled != settings.wslEnabled ||
+            component.wslDistribution.trim() != settings.wslDistribution ||
+            component.wslLspPath.trim() != settings.wslLspPath ||
             component.traceLevel != settings.traceLevel ||
             component.codeLensEnabled != settings.codeLensEnabled
     }
@@ -45,17 +52,56 @@ class AgnixSettingsConfigurable : Configurable {
             throw ConfigurationException(message)
         }
 
+        val wslDistribution = component.wslDistribution.trim()
+        val wslLspPath = component.wslLspPath.trim()
+        val previousWslSettings = WslLaunchSettings(
+            enabled = settings.wslEnabled,
+            distribution = settings.wslDistribution,
+            lspPath = settings.wslLspPath
+        )
+        val nextWslSettings = WslLaunchSettings(
+            enabled = component.wslEnabled,
+            distribution = wslDistribution,
+            lspPath = wslLspPath
+        )
+        if (component.wslEnabled && PlatformInfo.supportsWslExecution()) {
+            // An empty distribution is allowed here: it means "use the distribution the
+            // project is opened from", which is only known once a project is open.
+            if (wslDistribution.isNotEmpty()) {
+                WslLaunch.validateDistribution(wslDistribution)?.let { message ->
+                    throw ConfigurationException(message)
+                }
+            }
+            WslLaunch.validateLspPath(wslLspPath)?.let { message ->
+                throw ConfigurationException(message)
+            }
+        }
+
         val lspPathChanged = settings.lspPath != lspPath
 
         settings.enabled = component.enabled
         settings.lspPath = lspPath
         settings.autoDownload = component.autoDownload
+        settings.wslEnabled = component.wslEnabled
+        settings.wslDistribution = wslDistribution
+        settings.wslLspPath = wslLspPath
         settings.traceLevel = component.traceLevel
         settings.codeLensEnabled = component.codeLensEnabled
 
         // Clear binary resolver cache if LSP path changed
         if (lspPathChanged) {
             AgnixBinaryResolver.clearCache()
+        }
+
+        if (shouldRestartForWslChange(
+                wslHostSupported = PlatformInfo.supportsWslExecution(),
+                previous = previousWslSettings,
+                next = nextWslSettings
+            )
+        ) {
+            ProjectManager.getInstance().openProjects.forEach { project ->
+                LanguageServerManager.getInstance(project).stop("io.agnix.lsp")
+            }
         }
     }
 
@@ -66,6 +112,9 @@ class AgnixSettingsConfigurable : Configurable {
         component.enabled = settings.enabled
         component.lspPath = settings.lspPath
         component.autoDownload = settings.autoDownload
+        component.wslEnabled = settings.wslEnabled
+        component.wslDistribution = settings.wslDistribution
+        component.wslLspPath = settings.wslLspPath
         component.traceLevel = settings.traceLevel
         component.codeLensEnabled = settings.codeLensEnabled
     }
@@ -74,3 +123,15 @@ class AgnixSettingsConfigurable : Configurable {
         settingsComponent = null
     }
 }
+
+internal data class WslLaunchSettings(
+    val enabled: Boolean,
+    val distribution: String,
+    val lspPath: String
+)
+
+internal fun shouldRestartForWslChange(
+    wslHostSupported: Boolean,
+    previous: WslLaunchSettings,
+    next: WslLaunchSettings
+): Boolean = wslHostSupported && previous != next

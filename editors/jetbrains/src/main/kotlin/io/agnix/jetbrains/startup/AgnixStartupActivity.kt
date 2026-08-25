@@ -4,8 +4,10 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.startup.ProjectActivity
 import io.agnix.jetbrains.binary.AgnixBinaryResolver
+import io.agnix.jetbrains.binary.PlatformInfo
 import io.agnix.jetbrains.notifications.AgnixNotifications
 import io.agnix.jetbrains.settings.AgnixSettings
+import io.agnix.jetbrains.wsl.WslLaunch
 
 /**
  * Startup activity for the agnix plugin.
@@ -25,6 +27,30 @@ class AgnixStartupActivity : ProjectActivity {
         // Check if plugin is enabled
         if (!settings.enabled) {
             logger.info("agnix plugin is disabled")
+            return
+        }
+
+        if (!shouldCheckHostBinary(
+                pluginEnabled = settings.enabled,
+                wslEnabled = settings.wslEnabled,
+                wslHostSupported = PlatformInfo.supportsWslExecution()
+            )
+        ) {
+            val resolution = WslLaunch.resolve(
+                enabled = true,
+                distribution = settings.wslDistribution,
+                lspPath = settings.wslLspPath,
+                projectBasePath = project.basePath
+            )
+            when (resolution) {
+                is WslLaunch.Resolution.Invalid -> {
+                    logger.warn("WSL execution mode is misconfigured: ${resolution.message}")
+                    AgnixNotifications.notifyWslLaunchProblem(project, resolution.message)
+                }
+                is WslLaunch.Resolution.Ready ->
+                    logger.info("WSL execution mode enabled; skipping host-local agnix-lsp startup probe")
+                WslLaunch.Resolution.Disabled -> Unit
+            }
             return
         }
 
@@ -48,5 +74,13 @@ class AgnixStartupActivity : ProjectActivity {
             // Show notification to user
             AgnixNotifications.notifyBinaryNotFound(project)
         }
+    }
+
+    companion object {
+        internal fun shouldCheckHostBinary(
+            pluginEnabled: Boolean,
+            wslEnabled: Boolean,
+            wslHostSupported: Boolean
+        ): Boolean = pluginEnabled && !(wslEnabled && wslHostSupported)
     }
 }

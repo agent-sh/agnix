@@ -167,6 +167,34 @@ object AgnixNotifications {
     }
 
     /**
+     * Notify that WSL execution mode is enabled but cannot be used as configured.
+     *
+     * Covers a missing distribution name that could not be derived from the project
+     * location and a WSL agnix-lsp path that is not an absolute Linux path.
+     */
+    fun notifyWslLaunchProblem(project: Project, message: String) {
+        val notification = NotificationGroupManager.getInstance()
+            .getNotificationGroup(NOTIFICATION_GROUP_ID)
+            .createNotification(
+                "agnix-lsp WSL configuration problem",
+                message,
+                NotificationType.ERROR
+            )
+
+        notification.addAction(object : AnAction("Settings") {
+            override fun actionPerformed(e: AnActionEvent) {
+                ShowSettingsUtil.getInstance().showSettingsDialog(
+                    project,
+                    AgnixSettingsConfigurable::class.java
+                )
+                notification.expire()
+            }
+        })
+
+        notification.notify(project)
+    }
+
+    /**
      * Notify that the LSP server encountered an error.
      */
     fun notifyServerError(project: Project, error: String) {
