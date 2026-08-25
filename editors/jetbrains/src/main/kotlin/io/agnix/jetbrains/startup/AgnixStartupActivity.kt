@@ -4,6 +4,7 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.startup.ProjectActivity
 import io.agnix.jetbrains.binary.AgnixBinaryResolver
+import io.agnix.jetbrains.binary.PlatformInfo
 import io.agnix.jetbrains.notifications.AgnixNotifications
 import io.agnix.jetbrains.settings.AgnixSettings
 
@@ -28,6 +29,16 @@ class AgnixStartupActivity : ProjectActivity {
             return
         }
 
+        if (!shouldCheckHostBinary(
+                pluginEnabled = settings.enabled,
+                wslEnabled = settings.wslEnabled,
+                wslHostSupported = PlatformInfo.supportsWslExecution()
+            )
+        ) {
+            logger.info("WSL execution mode enabled; skipping host-local agnix-lsp startup probe")
+            return
+        }
+
         logger.info("agnix startup activity running for project: ${project.name}")
 
         // Check for LSP binary using cached resolver
@@ -48,5 +59,13 @@ class AgnixStartupActivity : ProjectActivity {
             // Show notification to user
             AgnixNotifications.notifyBinaryNotFound(project)
         }
+    }
+
+    companion object {
+        internal fun shouldCheckHostBinary(
+            pluginEnabled: Boolean,
+            wslEnabled: Boolean,
+            wslHostSupported: Boolean
+        ): Boolean = pluginEnabled && !(wslEnabled && wslHostSupported)
     }
 }

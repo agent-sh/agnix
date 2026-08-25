@@ -40,6 +40,12 @@ class WslPathsTest {
     }
 
     @Test
+    fun `regular windows unc share is not treated as a linux path`() {
+        assertNull(WslPaths.toLinuxPath("\\\\fileserver\\share\\project\\SKILL.md", "Ubuntu"))
+        assertNull(WslPaths.toLinuxPath("//fileserver/share/project/SKILL.md", "Ubuntu"))
+    }
+
+    @Test
     fun `distribution is derived from the project location`() {
         assertEquals(
             "Ubuntu-24.04",

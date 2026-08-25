@@ -85,6 +85,9 @@ object WslPaths {
         }
 
         val normalized = trimmed.replace('\\', '/')
+        // A regular Windows UNC share is not a Linux absolute path and is not
+        // reachable merely because the language server runs inside WSL.
+        if (normalized.startsWith("//")) return null
         driveRootPath.matchEntire(normalized)?.let { match ->
             val drive = match.groupValues[1].lowercase(Locale.ROOT)
             val rest = match.groupValues[2].trimStart('/')
