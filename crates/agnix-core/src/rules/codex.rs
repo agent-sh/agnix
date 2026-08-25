@@ -152,6 +152,7 @@ const KNOWN_FEATURE_KEYS: &[&str] = &[
     "codex_hooks",
     "collab",
     "collaboration_modes",
+    "compaction_image_budget",
     "computer_use",
     "concurrent_reasoning_summaries",
     "connectors",
@@ -3748,6 +3749,17 @@ server_names = ["docs", "github"]
         assert!(
             unexpected.is_empty(),
             "0.138 feature flag should not be flagged, got: {unexpected:?}"
+        );
+    }
+
+    #[test]
+    fn test_codex_0_149_1_compaction_image_budget_not_flagged() {
+        let diagnostics = validate_config("[features]\ncompaction_image_budget = true");
+        assert!(
+            diagnostics
+                .iter()
+                .all(|d| d.rule != "CDX-CFG-011" && d.rule != "CDX-CFG-006"),
+            "rust-v0.149.1 feature flag should be accepted: {diagnostics:?}"
         );
     }
 

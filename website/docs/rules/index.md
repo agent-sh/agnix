@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `448` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `451` validation rules generated from `knowledge-base/rules.json`.
 `124` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -153,6 +153,9 @@ This section contains all `448` validation rules generated from `knowledge-base/
 | [CC-SET-022](./generated/cc-set-022.md) | Invalid crossSessionInbound Setting | MEDIUM | Claude Settings | No |
 | [CC-SET-023](./generated/cc-set-023.md) | Invalid dialogExpiry Setting | MEDIUM | Claude Settings | No |
 | [CC-SET-024](./generated/cc-set-024.md) | Ineffective Project sandbox.ripgrep Override | MEDIUM | Claude Settings | No |
+| [CC-SET-025](./generated/cc-set-025.md) | Invalid modelPicker Setting | MEDIUM | Claude Settings | No |
+| [CC-SET-026](./generated/cc-set-026.md) | Invalid promptCacheTtl Setting | MEDIUM | Claude Settings | No |
+| [CC-SET-027](./generated/cc-set-027.md) | Invalid subagentPromptCacheTtl Setting | MEDIUM | Claude Settings | No |
 | [CDX-000](./generated/cdx-000.md) | TOML Parse Error | HIGH | Codex CLI | No |
 | [CDX-001](./generated/cdx-001.md) | Invalid Approval Mode | HIGH | Codex CLI | Yes (unsafe) |
 | [CDX-002](./generated/cdx-002.md) | Invalid Full Auto Error Mode | HIGH | Codex CLI | Yes (unsafe) |

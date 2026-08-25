@@ -868,6 +868,26 @@ rules:
       de usuario, la configuración gestionada y la opción --settings pueden reemplazar el binario ripgrep del sandbox
     suggestion: Mueve el ajuste sandbox.ripgrep a tu configuración de usuario en ~/.claude/settings.json, a la
       configuración gestionada o a un archivo --settings, y elimínalo del repositorio.
+  cc_set_025:
+    scope_message: modelPicker se ignora en la configuración del proyecto y local en Claude Code 2.1.242+; solo se
+      aplica desde la configuración de usuario, la configuración gestionada y los archivos --settings
+    scope_suggestion: Mueve modelPicker a la configuración de usuario, gestionada o a un archivo --settings y elimínalo del repositorio.
+    shape_message: 'Configuración modelPicker no válida: %{reason}'
+    shape_suggestion: Usa un objeto con un array options cuyas filas tengan model como cadena no vacía, label y
+      description opcionales como cadenas, y replaceBuiltInOptions opcional como booleano.
+    reasons:
+      not_object: modelPicker debe ser un objeto
+      options_not_array: modelPicker.options debe ser un array
+      row_not_object: modelPicker.options[%{index}] debe ser un objeto
+      model_not_string: modelPicker.options[%{index}].model debe ser una cadena no vacía
+      field_not_string: modelPicker.options[%{index}].%{field} debe ser una cadena
+      replace_not_boolean: modelPicker.replaceBuiltInOptions debe ser booleano
+  cc_set_026:
+    message: promptCacheTtl debe ser 5m o 1h (se obtuvo %{actual})
+    suggestion: Establece promptCacheTtl en 5m o 1h.
+  cc_set_027:
+    message: subagentPromptCacheTtl debe ser 5m o 1h (se obtuvo %{actual})
+    suggestion: Establece subagentPromptCacheTtl en 5m o 1h.
 
 
 # ===========================================================================

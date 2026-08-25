@@ -1092,7 +1092,29 @@ fn test_refreshed_release_surfaces_match_research_inventory() {
         "Claude Code research inventory must include the shared MCP rule prefix"
     );
 
+    let codex_row = research
+        .lines()
+        .find(|line| line.starts_with("| Codex CLI |"))
+        .expect("RESEARCH-TRACKING.md must contain a Codex CLI inventory row");
+    let codex_rule_prefixes: std::collections::BTreeSet<_> = codex_row
+        .split('|')
+        .rfind(|cell| !cell.trim().is_empty())
+        .expect("Codex inventory row must have a Rule Prefix cell")
+        .split(',')
+        .map(str::trim)
+        .collect();
+    for implemented_prefix in agnix_rules::get_prefixes_for_tool("codex")
+        .into_iter()
+        .map(|prefix| prefix.trim_end_matches('-'))
+    {
+        assert!(
+            codex_rule_prefixes.contains(implemented_prefix),
+            "Codex research inventory is missing {implemented_prefix}"
+        );
+    }
+
     for (tool_id, row_name, surface, prefix) in [
+        ("codex", "Codex CLI", ".codex/skills/*/SKILL.md", "CX-SK"),
         (
             "opencode",
             "OpenCode",

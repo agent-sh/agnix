@@ -1362,6 +1362,26 @@ rules:
       settings, and the --settings flag can override the sandbox ripgrep binary
     suggestion: Move the sandbox.ripgrep override to your user settings at ~/.claude/settings.json, to managed settings,
       or to a --settings file, and remove it from the repository.
+  cc_set_025:
+    scope_message: modelPicker is ignored in project and local settings in Claude Code 2.1.242+; it is honored only
+      from user settings, managed settings, and --settings files
+    scope_suggestion: Move modelPicker to user settings, managed settings, or a --settings file and remove it from the repository.
+    shape_message: 'Invalid modelPicker setting: %{reason}'
+    shape_suggestion: Use an object with an options array of rows containing a non-empty model string, optional string
+      label and description fields, and an optional boolean replaceBuiltInOptions.
+    reasons:
+      not_object: modelPicker must be an object
+      options_not_array: modelPicker.options must be an array
+      row_not_object: modelPicker.options[%{index}] must be an object
+      model_not_string: modelPicker.options[%{index}].model must be a non-empty string
+      field_not_string: modelPicker.options[%{index}].%{field} must be a string
+      replace_not_boolean: modelPicker.replaceBuiltInOptions must be a boolean
+  cc_set_026:
+    message: promptCacheTtl must be 5m or 1h (got %{actual})
+    suggestion: Set promptCacheTtl to 5m or 1h.
+  cc_set_027:
+    message: subagentPromptCacheTtl must be 5m or 1h (got %{actual})
+    suggestion: Set subagentPromptCacheTtl to 5m or 1h.
   cc_hk_028:
     message: Command hook at %{location} uses '${user_config.*}' interpolation, which Claude Code 2.1.207+ rejects at
       load time as a shell-injection fix
