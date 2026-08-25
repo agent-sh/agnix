@@ -131,6 +131,15 @@ class WslPathsTest {
     }
 
     @Test
+    fun `file uri preserves literal percent sequences through round trip`() {
+        val linuxPath = "/home/me/report%20final/SKILL.md"
+        val uri = WslPaths.toLinuxFileUri(linuxPath)
+
+        assertEquals("file:///home/me/report%2520final/SKILL.md", uri.toString())
+        assertEquals(linuxPath, WslPaths.linuxPathFromFileUri(uri.toString()))
+    }
+
+    @Test
     fun `windows path is recovered from unc and drive file uris`() {
         assertEquals(
             "//wsl.localhost/Ubuntu/home/me/SKILL.md",
