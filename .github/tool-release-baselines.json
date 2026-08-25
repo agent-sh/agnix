@@ -17,7 +17,7 @@
         "mcp"
       ],
       "github_repo": "anthropics/claude-code",
-      "last_known_version": "v2.1.243",
+      "last_known_version": "v2.1.245",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
@@ -102,7 +102,7 @@
         "per_client_skill"
       ],
       "github_repo": "sst/opencode",
-      "last_known_version": "v1.18.22",
+      "last_known_version": "v1.18.23",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
