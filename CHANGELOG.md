@@ -16,6 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   workspace URIs at the LSP boundary, validates configuration, and skips the
   host-local binary installer. Native launches remain unchanged.
 
+### Changed
+- **Tool release baselines**. Advanced Claude Code from `v2.1.243` to
+  `v2.1.245` and OpenCode from `v1.18.22` to `v1.18.23` after reviewing their
+  live release notes. Claude Code's change is a Linux glibc 2.44 startup-crash
+  fix; OpenCode's changes fix Cloudflare AI Gateway routing, Anthropic model
+  slugs, parent-session headers, and immutable-OIDC GitHub auth. None changes
+  an agnix-validated configuration contract.
+
 ## [0.50.0] - 2026-08-25
 
 ### Added
