@@ -22,7 +22,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   live release notes. Claude Code's change is a Linux glibc 2.44 startup-crash
   fix; OpenCode's changes fix Cloudflare AI Gateway routing, Anthropic model
   slugs, parent-session headers, and immutable-OIDC GitHub auth. None changes
-  an agnix-validated configuration contract.
+  an agnix-validated configuration contract. Advanced Gemini CLI from `v0.56.0`
+  to `v0.57.0`; its changes affect OAuth redirects, IDE and Git worktree state,
+  runtime retry and cancellation behavior, agent enablement, and command help,
+  without changing an agnix-validated configuration contract.
 
 ## [0.50.0] - 2026-08-25
 
