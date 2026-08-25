@@ -2458,19 +2458,11 @@ fn validate_model_picker(
     }
 
     let Some(object) = model_picker.as_object() else {
-        diagnostics.push(
-            Diagnostic::warning(
-                path.to_path_buf(),
-                line,
-                0,
-                "CC-SET-025",
-                t!(
-                    "rules.cc_set_025.shape_message",
-                    reason = "modelPicker must be an object"
-                ),
-            )
-            .with_suggestion(t!("rules.cc_set_025.shape_suggestion")),
-        );
+        diagnostics.push(model_picker_shape_diagnostic(
+            path,
+            line,
+            t!("rules.cc_set_025.reasons.not_object").to_string(),
+        ));
         return;
     };
 
@@ -2486,7 +2478,7 @@ fn validate_model_picker(
                     diagnostics.push(model_picker_shape_diagnostic(
                         path,
                         line,
-                        format!("modelPicker.options[{index}] must be an object"),
+                        t!("rules.cc_set_025.reasons.row_not_object", index = index).to_string(),
                     ));
                     continue;
                 };
@@ -2498,7 +2490,7 @@ fn validate_model_picker(
                     diagnostics.push(model_picker_shape_diagnostic(
                         path,
                         line,
-                        format!("modelPicker.options[{index}].model must be a non-empty string"),
+                        t!("rules.cc_set_025.reasons.model_not_string", index = index).to_string(),
                     ));
                 }
                 for field in ["label", "description"] {
@@ -2509,7 +2501,12 @@ fn validate_model_picker(
                         diagnostics.push(model_picker_shape_diagnostic(
                             path,
                             line,
-                            format!("modelPicker.options[{index}].{field} must be a string"),
+                            t!(
+                                "rules.cc_set_025.reasons.field_not_string",
+                                index = index,
+                                field = field
+                            )
+                            .to_string(),
                         ));
                     }
                 }
@@ -2518,7 +2515,7 @@ fn validate_model_picker(
         _ => diagnostics.push(model_picker_shape_diagnostic(
             path,
             line,
-            "modelPicker.options must be an array".to_string(),
+            t!("rules.cc_set_025.reasons.options_not_array").to_string(),
         )),
     }
 
@@ -2529,7 +2526,7 @@ fn validate_model_picker(
         diagnostics.push(model_picker_shape_diagnostic(
             path,
             line,
-            "modelPicker.replaceBuiltInOptions must be a boolean".to_string(),
+            t!("rules.cc_set_025.reasons.replace_not_boolean").to_string(),
         ));
     }
 }
@@ -5534,6 +5531,26 @@ mod tests {
                 "expected CC-SET-025 for {content}"
             );
         }
+    }
+
+    #[test]
+    fn test_model_picker_shape_reasons_are_fully_localized() {
+        let spanish = t!(
+            "rules.cc_set_025.reasons.model_not_string",
+            locale = "es",
+            index = 0
+        );
+        assert!(spanish.contains("debe ser una cadena no vacía"));
+        assert!(!spanish.contains("must be"));
+
+        let chinese = t!(
+            "rules.cc_set_025.reasons.field_not_string",
+            locale = "zh-CN",
+            index = 1,
+            field = "label"
+        );
+        assert!(chinese.contains("必须是字符串"));
+        assert!(!chinese.contains("must be"));
     }
 
     // ===== CC-SET-026/027: prompt cache TTL enums =====

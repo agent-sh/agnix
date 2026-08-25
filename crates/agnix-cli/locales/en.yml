@@ -1369,6 +1369,13 @@ rules:
     shape_message: 'Invalid modelPicker setting: %{reason}'
     shape_suggestion: Use an object with an options array of rows containing a non-empty model string, optional string
       label and description fields, and an optional boolean replaceBuiltInOptions.
+    reasons:
+      not_object: modelPicker must be an object
+      options_not_array: modelPicker.options must be an array
+      row_not_object: modelPicker.options[%{index}] must be an object
+      model_not_string: modelPicker.options[%{index}].model must be a non-empty string
+      field_not_string: modelPicker.options[%{index}].%{field} must be a string
+      replace_not_boolean: modelPicker.replaceBuiltInOptions must be a boolean
   cc_set_026:
     message: promptCacheTtl must be 5m or 1h (got %{actual})
     suggestion: Set promptCacheTtl to 5m or 1h.

@@ -875,6 +875,13 @@ rules:
     shape_message: 'Configuración modelPicker no válida: %{reason}'
     shape_suggestion: Usa un objeto con un array options cuyas filas tengan model como cadena no vacía, label y
       description opcionales como cadenas, y replaceBuiltInOptions opcional como booleano.
+    reasons:
+      not_object: modelPicker debe ser un objeto
+      options_not_array: modelPicker.options debe ser un array
+      row_not_object: modelPicker.options[%{index}] debe ser un objeto
+      model_not_string: modelPicker.options[%{index}].model debe ser una cadena no vacía
+      field_not_string: modelPicker.options[%{index}].%{field} debe ser una cadena
+      replace_not_boolean: modelPicker.replaceBuiltInOptions debe ser booleano
   cc_set_026:
     message: promptCacheTtl debe ser 5m o 1h (se obtuvo %{actual})
     suggestion: Establece promptCacheTtl en 5m o 1h.
