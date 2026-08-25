@@ -817,6 +817,17 @@ rules:
   cc_set_024:
     message: 在 Claude Code 2.1.232+ 中，项目设置里的 sandbox.ripgrep 会被忽略；只有用户设置、受管设置和 --settings 选项可以覆盖沙箱的 ripgrep 二进制文件
     suggestion: 请将 sandbox.ripgrep 移到 ~/.claude/settings.json 的用户设置、受管设置或 --settings 文件中，并从仓库中删除该项。
+  cc_set_025:
+    scope_message: Claude Code 2.1.242+ 会忽略项目和本地设置中的 modelPicker；只有用户设置、受管设置和 --settings 文件会生效
+    scope_suggestion: 请将 modelPicker 移到用户设置、受管设置或 --settings 文件中，并从仓库中删除该项。
+    shape_message: '无效的 modelPicker 设置：%{reason}'
+    shape_suggestion: 请使用包含 options 数组的对象；每一项必须包含非空 model 字符串，可选 label 和 description 字符串，以及可选布尔值 replaceBuiltInOptions。
+  cc_set_026:
+    message: promptCacheTtl 必须是 5m 或 1h（实际为 %{actual}）
+    suggestion: 将 promptCacheTtl 设置为 5m 或 1h。
+  cc_set_027:
+    message: subagentPromptCacheTtl 必须是 5m 或 1h（实际为 %{actual}）
+    suggestion: 将 subagentPromptCacheTtl 设置为 5m 或 1h。
 
 
 # ===========================================================================

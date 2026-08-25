@@ -7,7 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Claude Code 2.1.242 settings validation**. Add `CC-SET-025` for the
+  user-or-managed `modelPicker` scope and documented option shape,
+  `CC-SET-026` for the `promptCacheTtl` enum, and `CC-SET-027` for the
+  `subagentPromptCacheTtl` enum.
+
 ### Changed
+- **Tool release baselines**. Advance Claude Code to `v2.1.243`, Codex CLI to
+  `rust-v0.149.1`, Cursor to `3.17.19`, and OpenCode to `v1.18.22`. Accept
+  Codex's new `compaction_image_budget` feature flag; the remaining release
+  changes outside the three Claude settings above do not alter a validated
+  configuration contract.
 - **Tool release baselines**. Advance Cline to `v4.1.15` and Amp to
   `friendly-urls-for-sharing-orbs` after reviewing the intervening live release
   notes. The changes affect runtime MCP approval behavior, model metadata,

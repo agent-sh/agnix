@@ -524,6 +524,27 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Fix**: Manual - move the override to user settings, managed settings, or a `--settings` file, or drop it from the repository.
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.232, code.claude.com/docs/en/sandboxing
 
+<a id="cc-set-025"></a>
+### CC-SET-025 [MEDIUM] Invalid modelPicker Setting
+**Requirement**: `modelPicker` MUST appear only in user or managed settings (or a `--settings` file) in Claude Code 2.1.242+, and MUST be an object with an `options` array. Each option MUST be an object with a non-empty string `model`; optional `label` and `description` fields MUST be strings, and optional `replaceBuiltInOptions` MUST be boolean.
+**Detection**: Parse settings JSON and flag repository-local `modelPicker` values, non-object values, a missing or non-array `options`, malformed option rows, or a non-boolean `replaceBuiltInOptions`.
+**Fix**: Manual - move the setting to an honored scope and use the documented object and option-row shape.
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.243, code.claude.com/docs/en/settings-reference#modelpicker
+
+<a id="cc-set-026"></a>
+### CC-SET-026 [MEDIUM] Invalid promptCacheTtl Setting
+**Requirement**: `promptCacheTtl` MUST be `5m` or `1h` when present in Claude Code 2.1.242+.
+**Detection**: Parse settings JSON and flag non-string values or strings outside the documented enum.
+**Fix**: Manual - choose `5m` or `1h`.
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.243, code.claude.com/docs/en/settings-reference#promptcachettl
+
+<a id="cc-set-027"></a>
+### CC-SET-027 [MEDIUM] Invalid subagentPromptCacheTtl Setting
+**Requirement**: `subagentPromptCacheTtl` MUST be `5m` or `1h` when present in Claude Code 2.1.242+.
+**Detection**: Parse settings JSON and flag non-string values or strings outside the documented enum.
+**Fix**: Manual - choose `5m` or `1h`.
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.243, code.claude.com/docs/en/settings-reference#subagentpromptcachettl
+
 ---
 
 ## PER-CLIENT SKILL RULES
@@ -3586,7 +3607,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Claude Memory | 13 | 8 | 5 | 0 | 3 |
 | Claude Output Styles | 6 | 2 | 2 | 2 | 0 |
 | Claude Plugins | 15 | 9 | 6 | 0 | 4 |
-| Claude Settings | 24 | 0 | 23 | 1 | 0 |
+| Claude Settings | 27 | 0 | 26 | 1 | 0 |
 | Claude Skills | 20 | 10 | 9 | 1 | 10 |
 | Cline | 7 | 4 | 3 | 0 | 3 |
 | Cline Skills | 3 | 2 | 1 | 0 | 2 |
@@ -3617,7 +3638,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **448** | **215** | **203** | **30** | **124** |
+| **TOTAL** | **451** | **215** | **206** | **30** | **124** |
 
 
 ---
@@ -3647,8 +3668,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 448 validation rules across 40 categories
+**Total Coverage**: 451 validation rules across 40 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 215 HIGH, 203 MEDIUM, 30 LOW
-**Auto-Fixable**: 124 rules (28%)
+**Certainty**: 215 HIGH, 206 MEDIUM, 30 LOW
+**Auto-Fixable**: 124 rules (27%)

@@ -29,6 +29,9 @@
 //! - `crossSessionInbound` enum check (CC-SET-022, added in Claude Code v2.1.224).
 //! - `dialogExpiry` enum check (CC-SET-023, added in Claude Code v2.1.224).
 //! - ineffective project-level `sandbox.ripgrep` (CC-SET-024, changed in Claude Code v2.1.232).
+//! - `modelPicker` scope and shape (CC-SET-025, added in Claude Code v2.1.242).
+//! - `promptCacheTtl` enum (CC-SET-026, added in Claude Code v2.1.242).
+//! - `subagentPromptCacheTtl` enum (CC-SET-027, added in Claude Code v2.1.242).
 //!
 //! Runs on FileType::Hooks (which covers `.claude/settings.json` -
 //! see `file_types/detection.rs`). Skips non-Claude Code settings paths
@@ -68,6 +71,9 @@ const RULE_IDS: &[&str] = &[
     "CC-SET-022",
     "CC-SET-023",
     "CC-SET-024",
+    "CC-SET-025",
+    "CC-SET-026",
+    "CC-SET-027",
 ];
 
 /// Allowed values for `worktree.baseRef` per Claude Code v2.1.133 release notes.
@@ -90,6 +96,9 @@ const CROSS_SESSION_INBOUND_ALLOWED: &[&str] = &["accept", "hold", "refuse"];
 
 /// Allowed values for remote dialog expiry per Claude Code v2.1.224.
 const DIALOG_EXPIRY_ALLOWED: &[&str] = &["60s", "5m", "10m", "never"];
+
+/// Allowed prompt-cache lifetimes documented for the main and subagent settings.
+const PROMPT_CACHE_TTL_ALLOWED: &[&str] = &["5m", "1h"];
 
 /// Placeholders documented for `prUrlTemplate` at
 /// <https://code.claude.com/docs/en/settings>.
@@ -218,6 +227,18 @@ impl Validator for ClaudeSettingsValidator {
 
         if config.is_rule_enabled("CC-SET-024") {
             validate_sandbox_ripgrep_scope(path, content, &value, &mut diagnostics);
+        }
+
+        if config.is_rule_enabled("CC-SET-025") {
+            validate_model_picker(path, content, &value, &mut diagnostics);
+        }
+
+        if config.is_rule_enabled("CC-SET-026") {
+            validate_prompt_cache_ttl(path, content, &value, &mut diagnostics);
+        }
+
+        if config.is_rule_enabled("CC-SET-027") {
+            validate_subagent_prompt_cache_ttl(path, content, &value, &mut diagnostics);
         }
 
         diagnostics
@@ -2401,6 +2422,207 @@ fn validate_sandbox_ripgrep_scope(
             t!("rules.cc_set_024.message"),
         )
         .with_suggestion(t!("rules.cc_set_024.suggestion")),
+    );
+}
+
+/// CC-SET-025: Validate the user-or-managed `modelPicker` setting introduced
+/// in Claude Code 2.1.242. Repository-local values are ignored. At an honored
+/// scope the setting is an object with a required `options` array, optional
+/// boolean `replaceBuiltInOptions`, and rows containing a required non-empty
+/// `model` plus optional string `label` and `description` fields.
+fn validate_model_picker(
+    path: &Path,
+    content: &str,
+    value: &serde_json::Value,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(model_picker) = value.get("modelPicker") else {
+        return;
+    };
+    if model_picker.is_null() {
+        return;
+    }
+
+    let line = find_key_line(content, "modelPicker").unwrap_or(1);
+    if !is_claude_managed_settings_path(path) && !is_user_settings_path(path) {
+        diagnostics.push(
+            Diagnostic::warning(
+                path.to_path_buf(),
+                line,
+                0,
+                "CC-SET-025",
+                t!("rules.cc_set_025.scope_message"),
+            )
+            .with_suggestion(t!("rules.cc_set_025.scope_suggestion")),
+        );
+    }
+
+    let Some(object) = model_picker.as_object() else {
+        diagnostics.push(
+            Diagnostic::warning(
+                path.to_path_buf(),
+                line,
+                0,
+                "CC-SET-025",
+                t!(
+                    "rules.cc_set_025.shape_message",
+                    reason = "modelPicker must be an object"
+                ),
+            )
+            .with_suggestion(t!("rules.cc_set_025.shape_suggestion")),
+        );
+        return;
+    };
+
+    match object.get("options") {
+        Some(options) if options.is_array() => {
+            for (index, row) in options
+                .as_array()
+                .expect("checked array")
+                .iter()
+                .enumerate()
+            {
+                let Some(row) = row.as_object() else {
+                    diagnostics.push(model_picker_shape_diagnostic(
+                        path,
+                        line,
+                        format!("modelPicker.options[{index}] must be an object"),
+                    ));
+                    continue;
+                };
+                if !row
+                    .get("model")
+                    .and_then(serde_json::Value::as_str)
+                    .is_some_and(|model| !model.trim().is_empty())
+                {
+                    diagnostics.push(model_picker_shape_diagnostic(
+                        path,
+                        line,
+                        format!("modelPicker.options[{index}].model must be a non-empty string"),
+                    ));
+                }
+                for field in ["label", "description"] {
+                    if row
+                        .get(field)
+                        .is_some_and(|field_value| !field_value.is_string())
+                    {
+                        diagnostics.push(model_picker_shape_diagnostic(
+                            path,
+                            line,
+                            format!("modelPicker.options[{index}].{field} must be a string"),
+                        ));
+                    }
+                }
+            }
+        }
+        _ => diagnostics.push(model_picker_shape_diagnostic(
+            path,
+            line,
+            "modelPicker.options must be an array".to_string(),
+        )),
+    }
+
+    if object
+        .get("replaceBuiltInOptions")
+        .is_some_and(|replace| !replace.is_boolean())
+    {
+        diagnostics.push(model_picker_shape_diagnostic(
+            path,
+            line,
+            "modelPicker.replaceBuiltInOptions must be a boolean".to_string(),
+        ));
+    }
+}
+
+fn model_picker_shape_diagnostic(path: &Path, line: usize, reason: String) -> Diagnostic {
+    Diagnostic::warning(
+        path.to_path_buf(),
+        line,
+        0,
+        "CC-SET-025",
+        t!("rules.cc_set_025.shape_message", reason = reason),
+    )
+    .with_suggestion(t!("rules.cc_set_025.shape_suggestion"))
+}
+
+/// CC-SET-026: Validate the main-conversation prompt-cache TTL.
+fn validate_prompt_cache_ttl(
+    path: &Path,
+    content: &str,
+    value: &serde_json::Value,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    validate_prompt_cache_ttl_field(
+        path,
+        content,
+        value,
+        "promptCacheTtl",
+        "CC-SET-026",
+        diagnostics,
+    );
+}
+
+/// CC-SET-027: Validate the subagent/background-request prompt-cache TTL.
+fn validate_subagent_prompt_cache_ttl(
+    path: &Path,
+    content: &str,
+    value: &serde_json::Value,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    validate_prompt_cache_ttl_field(
+        path,
+        content,
+        value,
+        "subagentPromptCacheTtl",
+        "CC-SET-027",
+        diagnostics,
+    );
+}
+
+#[allow(clippy::too_many_arguments)]
+fn validate_prompt_cache_ttl_field(
+    path: &Path,
+    content: &str,
+    value: &serde_json::Value,
+    field: &str,
+    rule: &'static str,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(field_value) = value.get(field) else {
+        return;
+    };
+    if field_value.is_null()
+        || field_value
+            .as_str()
+            .is_some_and(|ttl| PROMPT_CACHE_TTL_ALLOWED.contains(&ttl))
+    {
+        return;
+    }
+
+    let actual = field_value
+        .as_str()
+        .map(ToString::to_string)
+        .unwrap_or_else(|| describe_json_type(field_value).to_string());
+    let (message, suggestion) = match rule {
+        "CC-SET-026" => (
+            t!("rules.cc_set_026.message", actual = actual).to_string(),
+            t!("rules.cc_set_026.suggestion").to_string(),
+        ),
+        "CC-SET-027" => (
+            t!("rules.cc_set_027.message", actual = actual).to_string(),
+            t!("rules.cc_set_027.suggestion").to_string(),
+        ),
+        _ => unreachable!("prompt-cache validator called with unknown rule"),
+    };
+    diagnostics.push(
+        Diagnostic::warning(
+            path.to_path_buf(),
+            find_key_line(content, field).unwrap_or(1),
+            0,
+            rule,
+            message,
+        )
+        .with_suggestion(suggestion),
     );
 }
 
@@ -5255,5 +5477,109 @@ mod tests {
                 .iter()
                 .all(|diagnostic| diagnostic.rule != "CC-SET-024")
         );
+    }
+
+    // ===== CC-SET-025: modelPicker scope and shape =====
+
+    #[test]
+    fn test_model_picker_valid_shape_is_allowed_in_managed_settings() {
+        let content = r#"{
+            "modelPicker": {
+                "options": [
+                    {"model": "opus"},
+                    {"model": "us.anthropic.claude-sonnet-4-6", "label": "Sonnet", "description": "Daily"}
+                ],
+                "replaceBuiltInOptions": true
+            }
+        }"#;
+        assert!(
+            validate_at(".claude/managed-settings.json", content)
+                .iter()
+                .all(|diagnostic| diagnostic.rule != "CC-SET-025")
+        );
+    }
+
+    #[test]
+    fn test_model_picker_flags_project_scope() {
+        let content = r#"{"modelPicker":{"options":[{"model":"opus"}]}}"#;
+        for path in [".claude/settings.json", ".claude/settings.local.json"] {
+            assert_eq!(
+                validate_at(path, content)
+                    .iter()
+                    .filter(|diagnostic| diagnostic.rule == "CC-SET-025")
+                    .count(),
+                1,
+                "expected one scope diagnostic for {path}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_model_picker_flags_invalid_shapes() {
+        let cases = [
+            r#"{"modelPicker":[]}"#,
+            r#"{"modelPicker":{}}"#,
+            r#"{"modelPicker":{"options":"opus"}}"#,
+            r#"{"modelPicker":{"options":["opus"]}}"#,
+            r#"{"modelPicker":{"options":[{}]}}"#,
+            r#"{"modelPicker":{"options":[{"model":""}]}}"#,
+            r#"{"modelPicker":{"options":[{"model":"opus","label":1}]}}"#,
+            r#"{"modelPicker":{"options":[],"replaceBuiltInOptions":"true"}}"#,
+        ];
+        for content in cases {
+            assert!(
+                validate_at(".claude/managed-settings.json", content)
+                    .iter()
+                    .any(|diagnostic| diagnostic.rule == "CC-SET-025"),
+                "expected CC-SET-025 for {content}"
+            );
+        }
+    }
+
+    // ===== CC-SET-026/027: prompt cache TTL enums =====
+
+    #[test]
+    fn test_prompt_cache_ttl_documented_values_are_valid() {
+        for field in ["promptCacheTtl", "subagentPromptCacheTtl"] {
+            for ttl in ["5m", "1h"] {
+                let content = format!(r#"{{"{field}":"{ttl}"}}"#);
+                assert!(validate(&content).iter().all(|diagnostic| {
+                    diagnostic.rule != "CC-SET-026" && diagnostic.rule != "CC-SET-027"
+                }));
+            }
+        }
+    }
+
+    #[test]
+    fn test_prompt_cache_ttl_invalid_values_flag_the_matching_rule() {
+        for (field, rule) in [
+            ("promptCacheTtl", "CC-SET-026"),
+            ("subagentPromptCacheTtl", "CC-SET-027"),
+        ] {
+            for invalid in [r#""30m""#, "300", "false", "[]"] {
+                let content = format!(r#"{{"{field}":{invalid}}}"#);
+                assert_eq!(
+                    validate(&content)
+                        .iter()
+                        .filter(|diagnostic| diagnostic.rule == rule)
+                        .count(),
+                    1,
+                    "expected {rule} for {content}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_prompt_cache_ttl_null_and_absent_are_valid() {
+        for content in [
+            r#"{"promptCacheTtl":null}"#,
+            r#"{"subagentPromptCacheTtl":null}"#,
+            r#"{"model":"sonnet"}"#,
+        ] {
+            assert!(validate(content).iter().all(|diagnostic| {
+                diagnostic.rule != "CC-SET-026" && diagnostic.rule != "CC-SET-027"
+            }));
+        }
     }
 }
