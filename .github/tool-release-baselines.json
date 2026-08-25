@@ -357,7 +357,7 @@
         "gemini_agent"
       ],
       "github_repo": "google-gemini/gemini-cli",
-      "last_known_version": "v0.56.0",
+      "last_known_version": "v0.57.0",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
