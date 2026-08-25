@@ -35,6 +35,27 @@ class AgnixSettings : PersistentStateComponent<AgnixSettings> {
     var autoDownload: Boolean = true
 
     /**
+     * Whether to run agnix-lsp inside WSL through `wsl.exe` (Windows hosts).
+     *
+     * Off by default: the native host-local launch path stays the default on
+     * every platform.
+     */
+    var wslEnabled: Boolean = false
+
+    /**
+     * WSL distribution that hosts agnix-lsp, as printed by `wsl --list --quiet`.
+     *
+     * Empty means "use the distribution the project itself is opened from"
+     * (`\\wsl.localhost\<distro>\...`).
+     */
+    var wslDistribution: String = ""
+
+    /**
+     * Absolute Linux path to agnix-lsp inside the WSL distribution.
+     */
+    var wslLspPath: String = ""
+
+    /**
      * Trace level for LSP communication (off, messages, verbose).
      */
     var traceLevel: TraceLevel = TraceLevel.OFF

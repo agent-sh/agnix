@@ -6,6 +6,7 @@ import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.ui.TextFieldWithBrowseButton
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
+import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.FormBuilder
 import javax.swing.JComboBox
 import javax.swing.JComponent
@@ -22,6 +23,9 @@ class AgnixSettingsComponent {
     private val enabledCheckBox = JBCheckBox("Enable agnix validation")
     private val lspPathField = TextFieldWithBrowseButton()
     private val autoDownloadCheckBox = JBCheckBox("Automatically download LSP binary if not found")
+    private val wslEnabledCheckBox = JBCheckBox("Run agnix-lsp inside WSL (Windows only)")
+    private val wslDistributionField = JBTextField()
+    private val wslLspPathField = JBTextField()
     private val traceLevelComboBox = JComboBox(AgnixSettings.TraceLevel.entries.toTypedArray())
     private val codeLensCheckBox = JBCheckBox("Show CodeLens annotations")
     private val lspPathChooserDescriptor = FileChooserDescriptor(
@@ -44,6 +48,13 @@ class AgnixSettingsComponent {
             .addLabeledComponent(JBLabel("LSP binary path:"), lspPathField, 1, false)
             .addTooltip("Leave empty to use auto-detection or downloaded binary")
             .addComponent(autoDownloadCheckBox)
+            .addSeparator()
+            .addComponent(wslEnabledCheckBox)
+            .addTooltip("Starts agnix-lsp with wsl.exe instead of a host-local executable")
+            .addLabeledComponent(JBLabel("WSL distribution:"), wslDistributionField, 1, false)
+            .addTooltip("Name from 'wsl --list --quiet'; leave empty to use the project's own distribution")
+            .addLabeledComponent(JBLabel("WSL agnix-lsp path:"), wslLspPathField, 1, false)
+            .addTooltip("Absolute Linux path, for example /home/you/.cargo/bin/agnix-lsp")
             .addSeparator()
             .addLabeledComponent(JBLabel("Trace level:"), traceLevelComboBox, 1, false)
             .addTooltip("Set to 'Messages' or 'Verbose' for debugging LSP communication")
@@ -88,6 +99,24 @@ class AgnixSettingsComponent {
         get() = autoDownloadCheckBox.isSelected
         set(value) {
             autoDownloadCheckBox.isSelected = value
+        }
+
+    var wslEnabled: Boolean
+        get() = wslEnabledCheckBox.isSelected
+        set(value) {
+            wslEnabledCheckBox.isSelected = value
+        }
+
+    var wslDistribution: String
+        get() = wslDistributionField.text
+        set(value) {
+            wslDistributionField.text = value
+        }
+
+    var wslLspPath: String
+        get() = wslLspPathField.text
+        set(value) {
+            wslLspPathField.text = value
         }
 
     var traceLevel: AgnixSettings.TraceLevel

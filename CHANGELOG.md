@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **JetBrains plugin: WSL execution mode**
+  ([#1346](https://github.com/agent-sh/agnix/issues/1346)). IntelliJ on Windows
+  can now run `agnix-lsp` from inside a WSL distribution for projects that live
+  in WSL, without Remote Development. The plugin launches an argument-safe
+  `wsl.exe --distribution <name> --exec <path>` command, maps document and
+  workspace URIs at the LSP boundary, validates configuration, and skips the
+  host-local binary installer. Native launches remain unchanged.
+
 ## [0.50.0] - 2026-08-25
 
 ### Added
