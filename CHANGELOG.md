@@ -26,6 +26,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   host-local binary installer. Native launches remain unchanged.
 
 ### Changed
+- **Tool and spec baselines refreshed** (closes
+  [#1426](https://github.com/agent-sh/agnix/issues/1426),
+  [#1427](https://github.com/agent-sh/agnix/issues/1427),
+  [#1428](https://github.com/agent-sh/agnix/issues/1428),
+  [#1429](https://github.com/agent-sh/agnix/issues/1429)). Advanced Claude Code
+  from `v2.1.245` to `v2.1.246`, Cursor from `3.17.19` to `3.17.21`, and amp from
+  `friendly-urls-for-sharing-orbs` to `setup-without-a-commit`, and re-baselined
+  the eight drifted spec sources (Claude Code hooks/skills/plugins-reference;
+  Cursor rules/hooks/subagents/mcp and the environment schema). Reviewing all
+  eight against the rules they back found no contract change that agnix asserts
+  incorrectly: Claude Code's 31 known hook events still cover every event the
+  hooks reference documents, the skill frontmatter allowlist still covers all 20
+  documented fields, the plugin path-bearing keys remain a superset of the
+  documented table, Cursor's hook events (including the still-supported
+  `beforeShellExecution` / `beforeMCPExecution`) and per-script options are
+  unchanged, subagent frontmatter and model-parameter syntax still validate, the
+  environment schema's property set still matches `ALLOWED_ROOT_FIELDS`, and
+  neither MCP nor hook entries reject unknown fields, so newly documented keys
+  cannot produce false positives. Coverage gaps the review surfaced (upstream's
+  new wildcard-permission warning, unvalidated `keybindings.json`, Cursor's
+  now-required MCP `type` and STDIO-only `envFile`) are recorded in
+  RESEARCH-TRACKING. amp's release stores pre-clone and pre-setup scripts in
+  server-side project settings rather than any validated file. Cline
+  (`v4.1.16`) and Codex (`rust-v0.150.0`) published after those issues were
+  opened and are deliberately left at their previous baselines so the watcher
+  files their own triage issues.
 - **Tool release baselines**. Advanced Claude Code from `v2.1.243` to
   `v2.1.245` and OpenCode from `v1.18.22` to `v1.18.23` after reviewing their
   live release notes. Claude Code's change is a Linux glibc 2.44 startup-crash

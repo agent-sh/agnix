@@ -2,7 +2,7 @@
 
 > Master document for tracking AI tool ecosystem changes, research updates, and community feedback.
 
-**Last Updated**: 2026-08-26
+**Last Updated**: 2026-08-27
 **Review Cadence**: Monthly (1st week of each month)
 **Related**: [MONTHLY-REVIEW.md](./MONTHLY-REVIEW.md) | [VALIDATION-RULES.md](./VALIDATION-RULES.md) | [INDEX.md](./INDEX.md)
 
@@ -16,7 +16,7 @@ Tools are organized by support tier (see [../CONTRIBUTING.md#tool-tier-system](.
 
 | Tool | Config Format | Documentation URL | Monitoring | Frequency | Last Reviewed | Rule Prefix |
 |------|---------------|-------------------|------------|-----------|---------------|-------------|
-| Claude Code | `CLAUDE.md`, `.claude/settings.json`, `.claude/settings.local.json`, `.claude/managed-settings.json`, `.claude/agents/*.md`, `.claude/skills/*/SKILL.md`, `.claude/hooks configuration`, `.mcp.json`, `.claude-plugin/plugin.json`, `.claude/rules/**/*.md`, `.claude/output-styles/*.md` | https://code.claude.com/docs/en | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-08-25 | CC-SK, CC-HK, CC-MEM, CC-AG, CC-PL, CC-SET, CC-OS, MCP |
+| Claude Code | `CLAUDE.md`, `.claude/settings.json`, `.claude/settings.local.json`, `.claude/managed-settings.json`, `.claude/agents/*.md`, `.claude/skills/*/SKILL.md`, `.claude/hooks configuration`, `.mcp.json`, `.claude-plugin/plugin.json`, `.claude/rules/**/*.md`, `.claude/output-styles/*.md` | https://code.claude.com/docs/en | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-08-27 | CC-SK, CC-HK, CC-MEM, CC-AG, CC-PL, CC-SET, CC-OS, MCP |
 | Codex CLI | `AGENTS.md`, `.codex/config.toml` (also `.codex/config.json`/`.yaml`), `.codex/skills/*/SKILL.md`, `.codex-plugin/plugin.json`, Agent Plugins root `plugin.json` | https://developers.openai.com/codex/ | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-08-25 | AGM, XP, CDX, CDX-AG, CDX-APP, CDX-CFG, CDX-PL, CDX-REQ, CX-SK |
 | OpenCode | `AGENTS.md`, `opencode.json`, `opencode.jsonc`, `.opencode/config.json`, `.opencode/skills/*/SKILL.md` | https://opencode.ai/docs/ | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-08-25 | AGM, XP, OC, OC-AG, OC-AGM, OC-CFG, OC-DEP, OC-LSP, OC-PM, OC-TUI, OC-SK |
 | Kiro CLI | `.kiro/steering/*.md`, `.kiro/agents/**/*.{json,md}`, `.kiro/hooks/*.kiro.hook`, `.kiro/settings/mcp.json`, `.kiro/settings.json`, `.kiro/powers/*/POWER.md`, `.kiro/skills/*/SKILL.md`, `AGENTS.md` (nested, loaded as steering since 2.18.0) | https://kiro.dev/changelog/cli/ | Automated (tool-release-watch.yml via HTML scrape) | Quarterly | 2026-08-21 | AGM, KIRO, KR-AG, KR-HK, KR-MCP, KR-PW, KR-SK, KR-SET |
@@ -27,14 +27,14 @@ Tools are organized by support tier (see [../CONTRIBUTING.md#tool-tier-system](.
 |------|---------------|-------------------|------------|-----------|---------------|-------------|
 | GitHub Copilot | `.github/copilot-instructions.md`, `.github/instructions/*.instructions.md` | https://docs.github.com/en/copilot/customizing-copilot | Automated (spec-drift.yml + tool-release-watch.yml via microsoft/vscode-copilot-chat) | Weekly | 2026-07-26 | COP |
 | Cline | `.clinerules` (file or dir), `.clinerules/workflows/*.md`, `.clinerules/hooks/*`, `.clinerules/skills/*/SKILL.md`, `.cline/skills/*/SKILL.md` | https://docs.cline.bot/features/cline-rules/overview | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-08-24 | CLN, CL-SK |
-| Cursor | `.cursor/rules/**/*.mdc`, `.cursorrules` (legacy), `.cursor/hooks.json`, `.cursor/agents/**/*.md`, `.cursor/environment.json`, `.cursor/mcp.json`, `.cursor/skills/*/SKILL.md` | https://cursor.com/docs/rules | Automated (spec-drift.yml + tool-release-watch.yml via api2.cursor.sh stable update endpoint) | Weekly | 2026-08-25 | CUR, MCP, CR-SK |
+| Cursor | `.cursor/rules/**/*.mdc`, `.cursorrules` (legacy), `.cursor/hooks.json`, `.cursor/agents/**/*.md`, `.cursor/environment.json`, `.cursor/mcp.json`, `.cursor/skills/*/SKILL.md` | https://cursor.com/docs/rules | Automated (spec-drift.yml + tool-release-watch.yml via api2.cursor.sh stable update endpoint) | Weekly | 2026-08-27 | CUR, MCP, CR-SK |
 
 ### B Tier (test on significant changes if time permits)
 
 | Tool | Config Format | Documentation URL | Monitoring | Frequency | Last Reviewed | Rule Prefix |
 |------|---------------|-------------------|------------|-----------|---------------|-------------|
 | Roo Code | `.roomodes`, `.rooignore`, `.roorules`, `.roo/rules/*.md`, `.roo/rules-{slug}/*.md`, `.roo/mcp.json` | https://github.com/RooCodeInc/Roo-Code | Automated (tool-release-watch.yml) | Quarterly | 2026-07-26 | ROO |
-| amp | `.amp/settings.json`, `.agents/checks/*.md`, `AGENTS.md` | https://ampcode.com/news | Automated (tool-release-watch.yml via ampcode.com/news.rss; tracks latest news-post slug as the release marker) | Quarterly | 2026-08-24 | AGM, AMP, AMP-SK |
+| amp | `.amp/settings.json`, `.agents/checks/*.md`, `AGENTS.md` | https://ampcode.com/news | Automated (tool-release-watch.yml via ampcode.com/news.rss; tracks latest news-post slug as the release marker) | Quarterly | 2026-08-27 | AGM, AMP, AMP-SK |
 
 ### C Tier (community reports fixes only)
 
@@ -195,6 +195,10 @@ Tracking community input that influences rule development, tool support decision
 |------|--------|----------|--------|
 | 2026-02-05 | Tool inventory audit | B/C/D tier tools lack rule coverage | Awaiting community contributions; issue templates now available |
 | 2026-02-05 | Cross-tool compatibility | Users mixing Cursor + Claude Code + Copilot report silent failures | XP-004/005/006 rules address some cases; more patterns needed |
+| 2026-08-27 | Claude Code v2.1.246 triage | Startup warning added upstream for `permissions` entries with a wildcard before the subcommand (e.g. `Bash(git * main)`), which also match options inserted before it | No agnix rule covers this pattern; candidate CC-SET rule |
+| 2026-08-27 | Claude Code v2.1.246 triage | `keybindings.json` now skips bindings whose action name is unknown and warns under `--debug` | agnix does not validate `keybindings.json` at all; candidate new file type |
+| 2026-08-27 | Cursor MCP doc revision | STDIO table now marks `type` as Required, and documents `envFile` as STDIO-only (remote HTTP/SSE servers do not support it) | agnix infers the transport when `type` is absent and has no rule for `envFile` on a remote server; candidate MCP rules |
+| 2026-08-27 | Cursor hooks doc revision | Per-script options table types `matcher` as `object` while every example in the same document uses a string | Upstream doc inconsistency; CUR-017 deliberately leaves `matcher` unvalidated until it is resolved |
 
 ---
 
