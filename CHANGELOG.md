@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.51.0] - 2026-08-27
+
 ### Added
 - **PyPI distribution**. `pip install agnix` and `uvx agnix .` now work. The
   wheels in `pypi/` bundle the release binary for each supported target
@@ -62,6 +64,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   runtime retry and cancellation behavior, agent enablement, and command help,
   without changing an agnix-validated configuration contract.
 
+### Fixed
+- **Stale rule count in the npm long description**. `npm/README.md` advertised
+  405 rules against a canonical 451, and no automation covered it, so the number
+  had drifted for several releases and was copied into the new PyPI README.
+  Corrected, and both wrapper READMEs are now in `sync-rule-bookkeeping.js`'s
+  `COUNT_FILES` so CI fails on the next drift.
+
 ## [0.50.0] - 2026-08-25
 
 ### Added
@@ -99,11 +108,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   agnix-validated configuration contract.
 
 ### Fixed
-- **Stale rule count in the npm long description**. `npm/README.md` advertised
-  405 rules against a canonical 451, and no automation covered it, so the number
-  had drifted for several releases and was copied into the new PyPI README.
-  Corrected, and both wrapper READMEs are now in `sync-rule-bookkeeping.js`'s
-  `COUNT_FILES` so CI fails on the next drift.
 - **Rust 1.98 clippy compatibility**. Replace a constant-only `format!` call
   that is now rejected by `clippy::useless_format`.
 - **CC-HK-025 Notification matcher compatibility**. Accept the documented
