@@ -1,6 +1,6 @@
 ---
 title: Installation
-description: "Install agnix via npm, Homebrew, Cargo, or download pre-built binaries."
+description: "Install agnix via npm, Homebrew, pip, Cargo, or download pre-built binaries."
 ---
 
 # Installation
@@ -23,6 +23,32 @@ npx agnix .
 
 ```bash
 brew tap agent-sh/agnix && brew install agnix
+```
+
+## pip / uv
+
+```bash
+pip install agnix
+```
+
+Or run without installing:
+
+```bash
+uvx agnix .
+```
+
+The wheels bundle a pre-built binary, so no Rust toolchain is needed and nothing
+is downloaded after install. Wheels are published for Linux x86_64 (glibc and
+musl), Linux aarch64, macOS Apple silicon, and Windows x86_64; on any other
+platform, use `cargo install agnix-cli`.
+
+`python -m agnix` runs the same binary, and a small Python API is available:
+
+```python
+import agnix
+
+report = agnix.lint(".", tool="ClaudeCode")
+print(agnix.version(), report["summary"])
 ```
 
 ## Cargo (Rust toolchain)

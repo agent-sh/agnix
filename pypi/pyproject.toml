@@ -1,0 +1,48 @@
+[project]
+name = "agnix"
+version = "0.50.0"
+description = "Linter for AI agent configurations. Validates SKILL.md, CLAUDE.md, hooks, MCP, and more."
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT OR Apache-2.0"
+license-files = ["LICENSE-MIT", "LICENSE-APACHE"]
+authors = [{ name = "Avi Fenesh", email = "avifenesh@gmail.com" }]
+keywords = [
+    "agent",
+    "linter",
+    "claude",
+    "claude-code",
+    "mcp",
+    "model-context-protocol",
+    "skills",
+    "validation",
+    "cursor",
+    "copilot",
+    "codex",
+    "ai",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Rust",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: Software Development :: Testing",
+]
+
+[project.urls]
+Homepage = "https://github.com/agent-sh/agnix"
+Repository = "https://github.com/agent-sh/agnix"
+Issues = "https://github.com/agent-sh/agnix/issues"
+Changelog = "https://github.com/agent-sh/agnix/blob/main/CHANGELOG.md"
+
+# No [project.scripts]: the wheels ship the Rust binary itself as the `agnix`
+# entry in the environment's scripts directory, so a console_scripts shim of the
+# same name would collide with it. `python -m agnix` reaches the same binary.
+
+# No [build-system]: the wheels are not produced by a PEP 517 backend.
+# `build_wheels.py` repacks the release binaries that release.yml already built,
+# verified against their .sha256 sidecars and attested. Building from source here
+# would compile the same Rust five more times and drop the attestation chain.
+# This file is the single source of truth for the metadata the builder writes.

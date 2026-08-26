@@ -60,6 +60,19 @@ if [ -f npm/package.json ]; then
   echo "  npm/package.json -> $VERSION"
 fi
 
+# PyPI wrapper
+if [ -f pypi/pyproject.toml ]; then
+  sed -i.bak "s/^version = \"[^\"]*\"/version = \"$VERSION\"/" pypi/pyproject.toml
+  rm -f pypi/pyproject.toml.bak
+  echo "  pypi/pyproject.toml -> $VERSION"
+fi
+
+if [ -f pypi/agnix/__init__.py ]; then
+  sed -i.bak "s/^__version__ = \"[^\"]*\"/__version__ = \"$VERSION\"/" pypi/agnix/__init__.py
+  rm -f pypi/agnix/__init__.py.bak
+  echo "  pypi/agnix/__init__.py -> $VERSION"
+fi
+
 # JetBrains plugin
 if [ -f editors/jetbrains/gradle.properties ]; then
   sed -i.bak "s/pluginVersion = .*/pluginVersion = $VERSION/" editors/jetbrains/gradle.properties

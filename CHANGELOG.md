@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **PyPI distribution**. `pip install agnix` and `uvx agnix .` now work. The
+  wheels in `pypi/` bundle the release binary for each supported target
+  (manylinux and musllinux x86_64, manylinux aarch64, macOS Apple silicon,
+  Windows x86_64), so there is no Rust toolchain to install and nothing is
+  downloaded after install. `python -m agnix` and a small Python API
+  (`agnix.run`, `agnix.lint`, `agnix.version`) mirror the Node wrapper.
+  `pypi/build_wheels.py` repacks the archives the release already built and
+  verified against their `.sha256` sidecars, deriving each manylinux tag from
+  the binary's own glibc symbol references rather than a hardcoded floor.
 - **JetBrains plugin: WSL execution mode**
   ([#1346](https://github.com/agent-sh/agnix/issues/1346)). IntelliJ on Windows
   can now run `agnix-lsp` from inside a WSL distribution for projects that live
