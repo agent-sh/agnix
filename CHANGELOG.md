@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Tool-release triage produced no summaries**. Two separate faults, both of
+  which the watcher degrades silently to "post the raw changelog": the
+  `GLM_API_KEY` secret had expired, and `scripts/glm-extract.js` ran with an
+  output budget too small for a thinking model. Reasoning tokens are drawn from
+  the same `max_tokens` budget as the answer, so at 4096 the model intermittently
+  spent the entire budget reasoning and returned `finish_reason: "length"` with
+  empty `content` (reproduced at 1 failure in 3 runs, 4095 of 4096 tokens on
+  reasoning). `MAX_TOKENS` is now 32768, roughly six times the 1.9k-5.2k
+  reasoning observed on real triage prompts, and thinking stays enabled because
+  it measurably improves the "does this touch a validated config surface?"
+  judgement. The default model is now named `glm-5.3` explicitly rather than
+  relying on the endpoint's `glm-5` alias, so an alias move cannot change triage
+  behaviour silently. The empty-content error now also reports `finish_reason`,
+  reasoning size, and usage instead of just "empty content", and
+  `scripts/glm-extract.test.js` - which no workflow ran - is now part of CI.
+
 ## [0.51.0] - 2026-08-27
 
 ### Added

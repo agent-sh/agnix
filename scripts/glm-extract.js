@@ -45,10 +45,12 @@
  *
  * Env:
  *   GLM_API_KEY  required - z.ai key in "id.secret" format
- *   GLM_MODEL    optional - defaults to glm-5 (mid-tier coding model, ~22s for
- *                this workload). Other options:
+ *   GLM_MODEL    optional - defaults to glm-5.3 (what the coding-paas endpoint
+ *                already resolved the `glm-5` alias to; named explicitly so a
+ *                silent alias move cannot change triage behaviour). Other
+ *                options:
  *                  - glm-4.7  - older; observed >120s timeouts in 2026-04 testing
- *                  - glm-5.1  - current flagship; heaviest on quota
+ *                  - glm-5.1  - heaviest on quota
  *                  - glm-5-turbo - per cairn's default; not separately benchmarked here
  *   GLM_BASE_URL optional - defaults to https://api.z.ai/api/coding/paas/v4
  *
@@ -67,7 +69,12 @@ const fs = require('fs');
 // Char budget for stdin payload sent to GLM - applies to both HTML
 // (extract mode) and markdown release notes (agnix-triage mode).
 const INPUT_BUDGET = 80_000;
-const MAX_TOKENS = 4096;
+// Output budget. Thinking is on (see buildRequestBody) and reasoning tokens are
+// drawn from this same budget, so it has to cover reasoning + answer. Measured
+// reasoning on real triage prompts: 1.9k-5.2k tokens, so this leaves ~6x
+// headroom. At 4096 the model intermittently spent the whole budget reasoning
+// and returned `finish_reason: "length"` with empty content.
+const MAX_TOKENS = 32_768;
 const TEMPERATURE = 0.3; // extraction task, prefer determinism
 
 // Module-scoped argv/env holders. Populated by runCli() when invoked
@@ -243,6 +250,30 @@ function buildAgnixTriagePrompt(notes, interests, rulesManifest, ctx = { toolDis
   return lines.filter((line) => line !== null).join('\n');
 }
 
+/**
+ * Build the chat-completions request body.
+ *
+ * Thinking is enabled deliberately: the triage has to decide whether a change
+ * touches a validated config surface, and reasoning measurably improves that
+ * judgement. The catch is that reasoning tokens are drawn from the same
+ * `max_tokens` budget as the answer, so the budget has to cover both. At the
+ * old 4096 the model intermittently spent all of it reasoning and returned
+ * `finish_reason: "length"` with an empty `content` (1 failure in 3 runs on the
+ * Cline v4.1.16 prompt, 4095 of 4096 tokens on reasoning), which the watcher
+ * silently degrades to "post the raw changelog". MAX_TOKENS now carries ~6x the
+ * observed reasoning headroom instead.
+ */
+function buildRequestBody(model, prompt) {
+  return {
+    model,
+    messages: [{ role: 'user', content: prompt }],
+    stream: false,
+    max_tokens: MAX_TOKENS,
+    temperature: TEMPERATURE,
+    thinking: { type: 'enabled' },
+  };
+}
+
 function parseArgv(argv) {
   const parsedFlags = {};
   const positional = [];
@@ -282,7 +313,7 @@ async function runCli() {
     process.exit(2);
   }
 
-  model = process.env.GLM_MODEL || 'glm-5';
+  model = process.env.GLM_MODEL || 'glm-5.3';
   baseUrl = (process.env.GLM_BASE_URL || 'https://api.z.ai/api/coding/paas/v4').replace(/\/$/, '');
 
   const stdin = (await readStdin()).slice(0, INPUT_BUDGET);
@@ -308,13 +339,7 @@ async function runCli() {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model,
-        messages: [{ role: 'user', content: prompt }],
-        stream: false,
-        max_tokens: MAX_TOKENS,
-        temperature: TEMPERATURE,
-      }),
+      body: JSON.stringify(buildRequestBody(model, prompt)),
       signal: AbortSignal.timeout(180_000),
     });
   } catch (err) {
@@ -338,7 +363,15 @@ async function runCli() {
 
   const content = data?.choices?.[0]?.message?.content || '';
   if (!content.trim()) {
-    console.error('GLM returned empty content');
+    // Say why, so the watcher's WARN line is actionable. A truncated answer
+    // (`finish_reason: "length"`) needs a bigger MAX_TOKENS; anything else is
+    // a model or prompt problem.
+    const choice = data?.choices?.[0] ?? {};
+    const reasoningChars = (choice.message?.reasoning_content ?? '').length;
+    console.error(
+      `GLM returned empty content (finish_reason=${choice.finish_reason ?? 'unknown'}, ` +
+        `reasoning_chars=${reasoningChars}, usage=${JSON.stringify(data?.usage ?? {})})`
+    );
     process.exit(1);
   }
   process.stdout.write(content);
@@ -349,6 +382,7 @@ async function runCli() {
 module.exports = {
   buildExtractPrompt,
   buildAgnixTriagePrompt,
+  buildRequestBody,
   parseArgv,
 };
 
