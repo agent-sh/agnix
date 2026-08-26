@@ -20,6 +20,7 @@ const assert = require('node:assert/strict');
 const {
   buildExtractPrompt,
   buildAgnixTriagePrompt,
+  buildRequestBody,
   parseArgv,
 } = require('./glm-extract.js');
 
@@ -139,4 +140,32 @@ test('parseArgv splits flags and positionals correctly', () => {
 test('parseArgv handles bare flags as boolean true', () => {
   const { flags } = parseArgv(['--pretty']);
   assert.equal(flags.pretty, true);
+});
+
+test('buildRequestBody keeps thinking enabled', () => {
+  const body = buildRequestBody('glm-5.3', 'prompt text');
+  // Reasoning improves the "does this touch a validated config surface?"
+  // judgement, so it stays on.
+  assert.deepEqual(body.thinking, { type: 'enabled' });
+});
+
+test('buildRequestBody budgets enough output for reasoning plus answer', () => {
+  const body = buildRequestBody('glm-5.3', 'prompt text');
+  // Reasoning tokens come out of max_tokens. Measured reasoning on real triage
+  // prompts is 1.9k-5.2k; at 4096 the answer was intermittently truncated away
+  // entirely (finish_reason "length", empty content).
+  assert.ok(
+    body.max_tokens >= 16_384,
+    `max_tokens ${body.max_tokens} leaves too little room for reasoning + answer`
+  );
+});
+
+test('buildRequestBody sends a non-streaming single-turn request', () => {
+  const body = buildRequestBody('glm-5-turbo', 'prompt text');
+  assert.equal(body.model, 'glm-5-turbo');
+  assert.equal(body.stream, false);
+  assert.deepEqual(body.messages, [{ role: 'user', content: 'prompt text' }]);
+  assert.equal(typeof body.max_tokens, 'number');
+  assert.ok(body.max_tokens > 0);
+  assert.equal(typeof body.temperature, 'number');
 });
