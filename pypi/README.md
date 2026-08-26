@@ -2,7 +2,7 @@
 
 Linter for AI agent configurations. Validates SKILL.md, CLAUDE.md, hooks, MCP, and more.
 
-**405 rules** | **Real-time validation** | **Auto-fix** | **Multi-tool support**
+**451 rules** | **Real-time validation** | **Auto-fix** | **Multi-tool support**
 
 ## Installation
 
@@ -47,7 +47,7 @@ agnix . --fix
 agnix . --format json
 
 # Target a specific tool
-agnix . --target ClaudeCode
+agnix . --target claude-code
 ```
 
 `python -m agnix` works the same way as the `agnix` script.
@@ -61,7 +61,7 @@ import agnix
 print(agnix.version())
 
 # Lint a path and get parsed diagnostics
-report = agnix.lint(".", tool="ClaudeCode")
+report = agnix.lint(".", tool="claude-code")
 print(report["summary"])
 
 # Anything else: pass arguments straight through

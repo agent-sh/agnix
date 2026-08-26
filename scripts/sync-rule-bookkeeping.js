@@ -182,6 +182,12 @@ const COUNT_FILES = [
   { path: path.join(ROOT, 'website', 'docs', 'intro.md') },
   { path: path.join(ROOT, 'website', 'docs', 'getting-started.md') },
   { path: path.join(ROOT, 'website', 'docs', 'contributing.md') },
+  // Wrapper READMEs. These ship as the npm and PyPI long descriptions, so
+  // their count phrase is the first number most installers ever read, and
+  // nothing covered them: npm/README.md sat at 405 while the canonical count
+  // was 451, and that stale number was copied straight into pypi/README.md.
+  { path: path.join(ROOT, 'npm', 'README.md') },
+  { path: path.join(ROOT, 'pypi', 'README.md') },
 ];
 
 // Files whose top-level `version` field must track the Cargo.toml

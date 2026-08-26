@@ -15,7 +15,12 @@ from typing import Any, Mapping, Sequence
 
 __version__ = "0.50.0"
 
-__all__ = ["binary_path", "lint", "run", "version", "__version__"]
+__all__ = ["AgnixError", "binary_path", "lint", "run", "version", "__version__"]
+
+
+class AgnixError(RuntimeError):
+    """agnix ran but did not produce the output the caller asked for."""
+
 
 _BINARY_NAME = "agnix" + (sysconfig.get_config_var("EXE") or "")
 
@@ -78,9 +83,13 @@ def lint(
 ) -> Mapping[str, Any]:
     """Lint a file or directory and return the parsed diagnostics.
 
-    `tool` selects the agent target (ClaudeCode, Cursor, ...). A non-JSON
-    `fmt` is returned under a "raw" key, matching the Node API's behaviour on
-    output it cannot parse.
+    `tool` selects the agent target, using the same values as `--target`:
+    `generic`, `claude-code`, `cursor`, `codex`, `kiro`. A format other than
+    `json` is returned unparsed under a "raw" key.
+
+    Raises `AgnixError` if agnix produced no parseable JSON, which is what a
+    rejected argument looks like. Returning an empty report there would read as
+    a clean lint.
     """
     args = ["--format", fmt]
     if tool:
@@ -88,14 +97,17 @@ def lint(
     args.append(target)
 
     result = run(args)
+
+    if fmt != "json":
+        return {"raw": result.stdout}
+
     try:
         return json.loads(result.stdout)
-    except json.JSONDecodeError:
-        return {
-            "files": [],
-            "summary": {"errors": 0, "warnings": 0, "fixable": 0},
-            "raw": result.stdout,
-        }
+    except json.JSONDecodeError as error:
+        raise AgnixError(
+            f"agnix exited {result.returncode} without JSON output"
+            f"{': ' + result.stderr.strip() if result.stderr else ''}"
+        ) from error
 
 
 def version() -> str:

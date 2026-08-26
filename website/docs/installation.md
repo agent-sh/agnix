@@ -47,7 +47,7 @@ platform, use `cargo install agnix-cli`.
 ```python
 import agnix
 
-report = agnix.lint(".", tool="ClaudeCode")
+report = agnix.lint(".", tool="claude-code")
 print(agnix.version(), report["summary"])
 ```
 
