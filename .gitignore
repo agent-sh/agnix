@@ -28,6 +28,8 @@ lcov*.info
 dist/
 *.wasm
 .intellijPlatform/
+__pycache__/
+*.pyc
 
 # Temporary docs
 IMPLEMENTATION-NEXT-STEPS.md

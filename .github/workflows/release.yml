@@ -445,6 +445,73 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+  pypi:
+    name: Publish PyPI Wheels
+    needs: release
+    runs-on: ubuntu-latest
+    # Skip prereleases
+    if: ${{ !contains(github.ref, '-') }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.x'
+
+      - name: Sync all versions from tag
+        run: |
+          set -euo pipefail
+          TAG_VERSION="${GITHUB_REF#refs/tags/v}"
+          bash scripts/sync-versions.sh "${TAG_VERSION}"
+
+      # The wheels repack the archives this release already built, verified
+      # against their .sha256 sidecars, instead of compiling the same Rust a
+      # sixth time.
+      - name: Download release artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Build wheels
+        run: |
+          set -euo pipefail
+          TAG_VERSION="${GITHUB_REF#refs/tags/v}"
+          python3 pypi/build_wheels.py \
+            --artifacts artifacts \
+            --out pypi/dist \
+            --version "${TAG_VERSION}"
+
+      # Installs the wheel this job is about to upload and runs it, so a wheel
+      # with a broken layout, a stripped exec bit, or the wrong binary fails the
+      # release instead of reaching users.
+      - name: Verify the Linux wheel installs and runs
+        run: |
+          set -euo pipefail
+          TAG_VERSION="${GITHUB_REF#refs/tags/v}"
+          WHEEL=$(ls pypi/dist/agnix-"${TAG_VERSION}"-py3-none-manylinux*_x86_64.whl)
+          python3 -m venv /tmp/wheel-check
+          /tmp/wheel-check/bin/pip install --quiet "$WHEEL"
+          REPORTED=$(/tmp/wheel-check/bin/agnix --version)
+          echo "wheel reports: ${REPORTED}"
+          if [ "$REPORTED" != "agnix ${TAG_VERSION}" ]; then
+            echo "Error: expected 'agnix ${TAG_VERSION}'"
+            exit 1
+          fi
+          /tmp/wheel-check/bin/python -m agnix --version
+
+      - name: Publish to PyPI
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet --upgrade twine
+          python3 -m twine check pypi/dist/*.whl
+          # --skip-existing keeps a re-run after a partial upload idempotent,
+          # matching the crates.io publish helper.
+          python3 -m twine upload --skip-existing pypi/dist/*.whl
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+
   jetbrains:
     name: Publish JetBrains Plugin
     needs: release

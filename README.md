@@ -70,6 +70,9 @@ npm install -g agnix
 # Homebrew (macOS/Linux)
 brew tap agent-sh/agnix && brew install agnix
 
+# pip (or `uvx agnix .` to run without installing)
+pip install agnix
+
 # Cargo
 cargo install agnix-cli
 ```

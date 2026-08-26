@@ -69,6 +69,7 @@ cargo deny check advisories
 2. The GitHub Actions release workflow will automatically:
    - Build binaries for Linux (x86_64, aarch64), macOS (x86_64, aarch64), Windows (x86_64)
    - Create a GitHub Release with the binaries
+   - Publish the crates, the npm package, and the PyPI wheels
    - Publish the VS Code extension (if applicable)
 
 3. Verify the release at https://github.com/agent-sh/agnix/releases
@@ -100,6 +101,7 @@ After the release workflow completes, verify all install targets work. This shou
 | **Cargo** | `cargo install agnix-cli` | `agnix --version` |
 | **Homebrew** | `brew install agnix` | `agnix --version` |
 | **npm** | `npm install -g agnix` | `agnix --version` |
+| **PyPI** | `pip install agnix` | `agnix --version` |
 | **GitHub Release** | Download from releases page | Run binary directly |
 
 ### Editor Extensions to Verify
@@ -114,7 +116,7 @@ After the release workflow completes, verify all install targets work. This shou
 ### Post-release CI (Ideal)
 
 A `post-release.yml` workflow triggered on release publication should:
-1. Install from each distribution channel (cargo, brew, npm)
+1. Install from each distribution channel (cargo, brew, npm, pip)
 2. Run `agnix --version` to verify correct version
 3. Run `agnix` against a small test fixture to verify basic functionality
 4. Verify editor extension marketplace listings are updated

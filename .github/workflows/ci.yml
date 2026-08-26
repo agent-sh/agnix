@@ -78,12 +78,14 @@ jobs:
 
       - name: Release install path tests
         if: matrix.os == 'ubuntu-latest'
-        # Covers the glibc floor gate the release build runs and the npm
-        # installer's static-build fallback. Neither ships inside the Rust
-        # workspace, so nothing else exercises them (see #1371).
+        # Covers the glibc floor gate the release build runs, the npm
+        # installer's static-build fallback, and the PyPI wheel builder. None of
+        # them ship inside the Rust workspace, so nothing else exercises them
+        # (see #1371).
         run: |
           bash scripts/check-glibc-floor.test.sh
           node npm/test/install-helpers.test.js
+          python3 -m unittest discover -s pypi/test
 
       - name: Schema sync check
         if: matrix.os == 'ubuntu-latest'
