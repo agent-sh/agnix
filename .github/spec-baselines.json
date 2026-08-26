@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "description": "Baseline hashes for canonical specification content. Human-facing URLs are kept separately from machine-readable content URLs.",
-  "last_updated": "2026-08-23T09:50:05Z",
+  "last_updated": "2026-08-26T22:02:14Z",
   "sources": {
     "s-tier": {
       "agent-skills-spec": {
@@ -128,7 +128,7 @@
       "claude-code-hooks": {
         "url": "https://code.claude.com/docs/en/hooks",
         "content_url": "https://code.claude.com/docs/en/hooks.md",
-        "hash": "bdc60cee2ffcfa0d43763a69629cf28ddf1d14d6e9cdf29fc1ab2af0c708fd8c",
+        "hash": "784c137b0217adf9170cef2999b833f57bc954bf823185ed08f0e2f3cea1ce04",
         "rules": [
           "CC-HK-001",
           "CC-HK-002",
@@ -147,7 +147,7 @@
       "claude-code-skills": {
         "url": "https://code.claude.com/docs/en/skills",
         "content_url": "https://code.claude.com/docs/en/skills.md",
-        "hash": "0da4530a1a1d92d4d635d3a5347198c0b0a8ddaefc4e308dbf2fda9dfce115e7",
+        "hash": "d93942933033f8a222624ce209164d0774a1f990254c12812cdcb259a6906b3c",
         "rules": [
           "CC-SK-001",
           "CC-SK-002",
@@ -160,7 +160,7 @@
       "claude-code-plugins": {
         "url": "https://code.claude.com/docs/en/plugins-reference",
         "content_url": "https://code.claude.com/docs/en/plugins-reference.md",
-        "hash": "b2da869773fe08bbfab2f14c2a82c399ea7a91c03fd04c6dad9fbacb005d97d4",
+        "hash": "8c82f0a782126dee7d6e6cc50e2ee77beb6b043cda556af6cd510b7ed99ff951",
         "rules": [
           "CC-PL-002",
           "CC-PL-003",
@@ -231,7 +231,7 @@
       "cursor-rules": {
         "url": "https://cursor.com/docs/rules",
         "content_url": "https://cursor.com/docs/rules.md",
-        "hash": "c861f9650a843824b496f0a3190ecd9671c121acae623e150b041d0eb9e84d70",
+        "hash": "a2c5c228914798fa3bd014a74c62421663f56c90e89885224e03b617678c0d9a",
         "rules": [
           "CUR-001",
           "CUR-002",
@@ -248,7 +248,7 @@
       "cursor-hooks": {
         "url": "https://cursor.com/docs/hooks",
         "content_url": "https://cursor.com/docs/hooks.md",
-        "hash": "952d09cb40387dcb70944ce73fffa446317b6cb4f107c9bc2a52d236bc887e3b",
+        "hash": "0d3a3ce6900141d4fa7d135d842ec49c2243f5ed4bb5bab8eb359ba8c6a4df78",
         "rules": [
           "CUR-010",
           "CUR-011",
@@ -262,7 +262,7 @@
       "cursor-subagents": {
         "url": "https://cursor.com/docs/subagents",
         "content_url": "https://cursor.com/docs/subagents.md",
-        "hash": "c9c01a48171c3a0bcaa37f9412654395c27fecbd5f50535bfa59363f49c8bd46",
+        "hash": "7da0eafd67c4a33534b6663264bb9a6715983df043ba2826dd74f1d002965e3d",
         "rules": [
           "CUR-014",
           "CUR-015"
@@ -279,7 +279,7 @@
       "cursor-environment-schema": {
         "url": "https://cursor.com/schemas/environment.schema.json",
         "content_url": "https://cursor.com/schemas/environment.schema.json",
-        "hash": "5683735c6227f1316aa141587ba57b4bddde98c54417f1797ff20e7c2f176341",
+        "hash": "688e2055f803efeb567b6d7c4b04f0aac326ed55ba409cdfe6e10275a194018d",
         "rules": [
           "CUR-016"
         ]
@@ -287,7 +287,7 @@
       "cursor-mcp": {
         "url": "https://cursor.com/docs/mcp",
         "content_url": "https://cursor.com/docs/mcp.md",
-        "hash": "0d85294f9c849ef4f69194ca97242599e4d8f1c6bc44b77cfaedcc2bfc56da98",
+        "hash": "b08ca32e6d16cfd8488c01bf2d48760c34e996832eb428c3c56a46254500ab49",
         "rules": [
           "MCP-009",
           "MCP-010",
