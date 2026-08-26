@@ -1,6 +1,6 @@
 [project]
 name = "agnix"
-version = "0.50.0"
+version = "0.51.0"
 description = "Linter for AI agent configurations. Validates SKILL.md, CLAUDE.md, hooks, MCP, and more."
 readme = "README.md"
 requires-python = ">=3.9"
