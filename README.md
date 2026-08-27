@@ -12,6 +12,8 @@
   </p>
 </div>
 
+> ⚡ Running this agent 24/7? [**tiyuvta inference**](https://inference.tiyuvta.ai) — hosted LLM inference built for always-on agents, OpenAI/Anthropic-compatible APIs.
+
 <p align="center">Catch broken agent configs before your AI tools silently ignore them.<br>454 rules across Claude Code, Codex CLI, OpenCode, Cursor, Copilot, and more -<br>validating CLAUDE.md, SKILL.md, hooks, MCP configs, and other agent files.</p>
 
 <p align="center"><strong>Auto-fix</strong> | <strong><a href="https://github.com/marketplace/actions/agnix-ci">GitHub Action</a></strong> | <strong><a href="https://marketplace.visualstudio.com/items?itemName=avifenesh.agnix">VS Code</a> + <a href="https://plugins.jetbrains.com/plugin/30087-agnix">JetBrains</a> + <a href="https://github.com/agent-sh/agnix.nvim">Neovim</a> + <a href="https://zed.dev/extensions?query=agnix">Zed</a></strong></p>
