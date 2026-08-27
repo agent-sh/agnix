@@ -120,7 +120,7 @@ const KNOWN_AGENT_FIELDS: &[&str] = &[
 /// Known Claude Code tools for CC-AG-009 and CC-AG-010.
 ///
 /// Mirrors the built-in tools reference (code.claude.com/docs/en/tools,
-/// verified 2026-07-31) plus legacy/internal names kept for version
+/// verified 2026-08-27) plus legacy/internal names kept for version
 /// tolerance. Alphabetized.
 ///
 /// Tools that subagents never receive (`AskUserQuestion`, `Workflow`,
@@ -144,6 +144,7 @@ const KNOWN_AGENT_TOOLS: &[&str] = &[
     "Glob",
     "Grep",
     "LSP",
+    "ListAgents",
     "ListMcpResourcesTool",
     "Monitor",
     "MultiTool",
@@ -155,6 +156,7 @@ const KNOWN_AGENT_TOOLS: &[&str] = &[
     "RemoteTrigger",
     "ReportFindings",
     "ScheduleWakeup",
+    "SendFeedback",
     "SendMessage",
     "SendUserFile",
     "ShareOnboardingGuide",
@@ -2929,6 +2931,29 @@ Agent instructions"#;
         assert!(
             !cc_ag_008[0].has_fixes(),
             "CC-AG-008 should not auto-fix nonsense values"
+        );
+    }
+
+    #[test]
+    fn test_cc_ag_009_accepts_tools_added_in_recent_releases() {
+        // `SendFeedback` (Claude Code v2.1.238) and `ListAgents` (v2.1.224) were
+        // missing from KNOWN_AGENT_TOOLS, so agents that list them had a valid
+        // configuration reported as an unknown tool name.
+        let content = r#"---
+name: my-agent
+description: A test agent
+tools: Read, ListAgents, SendFeedback, SendMessage
+---
+Agent instructions"#;
+
+        let hits: Vec<_> = validate(content)
+            .into_iter()
+            .filter(|d| d.rule == "CC-AG-009" || d.rule == "CC-AG-010")
+            .collect();
+
+        assert!(
+            hits.is_empty(),
+            "documented built-in tools must not be flagged, got: {hits:?}"
         );
     }
 

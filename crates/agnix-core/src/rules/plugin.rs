@@ -26,7 +26,22 @@ const RULE_IDS: &[&str] = &[
     "CC-PL-013",
     "CC-PL-014",
     "CC-PL-015",
+    "CC-PL-016",
 ];
+
+/// Whether a plugin `name` matches the documented kebab-case identifier form:
+/// lowercase letters, digits, and hyphens, not starting or ending with a hyphen.
+///
+/// Control and invisible characters fail this by construction, which is the
+/// case Claude Code v2.1.247 started rejecting on the marketplace side.
+fn is_kebab_case_plugin_name(name: &str) -> bool {
+    !name.starts_with('-')
+        && !name.ends_with('-')
+        && !name.contains("--")
+        && name
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
+}
 
 pub struct PluginValidator;
 
@@ -174,6 +189,28 @@ impl Validator for PluginValidator {
                     diagnostics.push(diagnostic);
                 }
             }
+        }
+
+        // CC-PL-016: Plugin name is not kebab-case. The manifest reference
+        // documents `name` as a kebab-case identifier with no spaces, and
+        // Claude Code v2.1.247 hardened marketplace handling to reject names
+        // containing control or invisible characters - which this catches as a
+        // subset, before the plugin reaches a marketplace.
+        if config.is_rule_enabled("CC-PL-016")
+            && let Some(name) = raw_value.get("name").and_then(|v| v.as_str())
+            && !name.trim().is_empty()
+            && !is_kebab_case_plugin_name(name)
+        {
+            diagnostics.push(
+                Diagnostic::error(
+                    path.to_path_buf(),
+                    1,
+                    0,
+                    "CC-PL-016",
+                    t!("rules.cc_pl_016.message", name = name),
+                )
+                .with_suggestion(t!("rules.cc_pl_016.suggestion")),
+            );
         }
 
         // CC-PL-007: Invalid component path / CC-PL-008: Component inside .claude-plugin
@@ -2957,5 +2994,72 @@ mod tests {
                 "{manifest} replaces the default `{default_dir}/` and must report CC-PL-015, got: {diagnostics:?}"
             );
         }
+    }
+    // ===== CC-PL-016: plugin name must be kebab-case =====
+
+    /// Validate a manifest at the documented `.claude-plugin/plugin.json`
+    /// location so CC-PL-001 does not fire and mask the name rules.
+    fn validate_manifest(content: &str) -> Vec<Diagnostic> {
+        let temp = TempDir::new().unwrap();
+        let plugin_path = temp.path().join(".claude-plugin").join("plugin.json");
+        write_plugin(&plugin_path, content);
+        PluginValidator.validate(&plugin_path, content, &LintConfig::default())
+    }
+
+    #[test]
+    fn test_cc_pl_016_kebab_case_names_are_valid() {
+        for name in ["my-plugin", "agnix", "a1", "tool-2-name"] {
+            let content = format!(r#"{{"name":"{name}","version":"1.0.0"}}"#);
+            let diagnostics = validate_manifest(&content);
+            assert!(
+                diagnostics.iter().all(|d| d.rule != "CC-PL-016"),
+                "{name} should be accepted, got {diagnostics:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_cc_pl_016_flags_non_kebab_case_names() {
+        for name in [
+            "My Plugin",
+            "my_plugin",
+            "MyPlugin",
+            "-leading",
+            "trailing-",
+            "double--hyphen",
+        ] {
+            let content = format!(r#"{{"name":"{name}","version":"1.0.0"}}"#);
+            assert_eq!(
+                validate_manifest(&content)
+                    .iter()
+                    .filter(|d| d.rule == "CC-PL-016")
+                    .count(),
+                1,
+                "expected CC-PL-016 for {name}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_cc_pl_016_flags_control_and_invisible_characters() {
+        // Claude Code v2.1.247 rejects marketplace names containing these;
+        // kebab-case excludes them by construction.
+        for name in ["my\u{7}plugin", "my\u{200b}plugin", "my\u{a0}plugin"] {
+            let content = serde_json::json!({"name": name, "version": "1.0.0"}).to_string();
+            assert!(
+                validate_manifest(&content)
+                    .iter()
+                    .any(|d| d.rule == "CC-PL-016"),
+                "expected CC-PL-016 for {name:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_cc_pl_016_empty_name_is_left_to_cc_pl_005() {
+        // CC-PL-005 owns the empty case; reporting both would double-report.
+        let diagnostics = validate_manifest(r#"{"name":"","version":"1.0.0"}"#);
+        assert!(diagnostics.iter().all(|d| d.rule != "CC-PL-016"));
+        assert!(diagnostics.iter().any(|d| d.rule == "CC-PL-005"));
     }
 }

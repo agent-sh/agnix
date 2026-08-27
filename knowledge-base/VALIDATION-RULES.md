@@ -545,6 +545,22 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Fix**: Manual - choose `5m` or `1h`.
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.243, code.claude.com/docs/en/settings-reference#subagentpromptcachettl
 
+<a id="cc-set-028"></a>
+
+### CC-SET-028 [MEDIUM] Invalid feedbackDrafts Setting
+**Requirement**: `feedbackDrafts` MUST be the string `notify`, `quiet`, or `off` when present in Claude Code 2.1.247+. It is a string enum, not a boolean; `off` removes the SendFeedback tool.
+**Detection**: Parse settings JSON and flag non-string values or strings outside the documented enum.
+**Fix**: Manual - choose `notify`, `quiet`, or `off`.
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.247, code.claude.com/docs/en/settings-reference#feedbackdrafts
+
+<a id="cc-set-029"></a>
+
+### CC-SET-029 [MEDIUM] Invalid spinnerTipsOverride Shape
+**Requirement**: `spinnerTipsOverride` MUST be an object limited to `tips`, `tipsFile`, `label`, and `excludeDefault`. Each `tips` entry is a plain string or an object with a required `id` (up to 64 letters, digits, `.`, `_`, `-`) and `text` (up to 500 characters), plus optional `cooldownSessions` (0-1000) and `priority` (-10-10). A plain string is read as a tip whose text is the string itself, so it MUST satisfy the same non-empty, 500-character limit. `tipsFile` MUST be absolute or `~/`-rooted, and `label` at most 40 characters.
+**Detection**: Parse settings JSON, then check the object's fields and each tip entry against the documented shape and limits.
+**Fix**: Manual - Claude Code drops an invalid tip with a debug warning instead of reporting it, so the tip is simply never shown.
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.247, code.claude.com/docs/en/settings-reference#spinnertipsoverride
+
 ---
 
 ## PER-CLIENT SKILL RULES
@@ -1389,9 +1405,19 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 ---
 
+<a id="cc-pl-016"></a>
+
+### CC-PL-016 [HIGH] Plugin Name Not Kebab-Case
+**Requirement**: A plugin manifest `name` MUST be a kebab-case identifier - lowercase letters, digits, and hyphens, with no spaces, no leading or trailing hyphen, and no doubled hyphen.
+**Detection**: Read `name` from `.claude-plugin/plugin.json` and flag any character outside the documented set. Control and invisible characters fail by construction, which is what Claude Code 2.1.247 hardened marketplace handling to reject.
+**Fix**: Manual - rename the plugin.
+**Source**: code.claude.com/docs/en/plugins-reference, github.com/anthropics/claude-code/releases/tag/v2.1.247
+
 ## MCP RULES
 
 <a id="mcp-001"></a>
+
+
 ### MCP-001 [HIGH] Invalid JSON-RPC Version
 **Requirement**: MUST use JSON-RPC 2.0
 **Detection**: `message.jsonrpc != "2.0"`
@@ -3606,8 +3632,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Claude Hooks | 27 | 15 | 7 | 5 | 15 |
 | Claude Memory | 13 | 8 | 5 | 0 | 3 |
 | Claude Output Styles | 6 | 2 | 2 | 2 | 0 |
-| Claude Plugins | 15 | 9 | 6 | 0 | 4 |
-| Claude Settings | 27 | 0 | 26 | 1 | 0 |
+| Claude Plugins | 16 | 10 | 6 | 0 | 4 |
+| Claude Settings | 29 | 0 | 28 | 1 | 0 |
 | Claude Skills | 20 | 10 | 9 | 1 | 10 |
 | Cline | 7 | 4 | 3 | 0 | 3 |
 | Cline Skills | 3 | 2 | 1 | 0 | 2 |
@@ -3638,7 +3664,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **451** | **215** | **206** | **30** | **124** |
+| **TOTAL** | **454** | **216** | **208** | **30** | **124** |
 
 
 ---
@@ -3668,8 +3694,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 451 validation rules across 40 categories
+**Total Coverage**: 454 validation rules across 40 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 215 HIGH, 206 MEDIUM, 30 LOW
+**Certainty**: 216 HIGH, 208 MEDIUM, 30 LOW
 **Auto-Fixable**: 124 rules (27%)

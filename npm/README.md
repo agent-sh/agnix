@@ -2,7 +2,7 @@
 
 Linter for AI agent configurations. Validates SKILL.md, CLAUDE.md, hooks, MCP, and more.
 
-**451 rules** | **Real-time validation** | **Auto-fix** | **Multi-tool support**
+**454 rules** | **Real-time validation** | **Auto-fix** | **Multi-tool support**
 
 ## Installation
 

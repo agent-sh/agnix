@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **CC-SET-028: invalid `feedbackDrafts` setting**
+  ([#1435](https://github.com/agent-sh/agnix/issues/1435)). Claude Code v2.1.247
+  added the `SendFeedback` tool and the `feedbackDrafts` setting that governs it.
+  The setting is a string enum - `notify`, `quiet`, or `off` - so the natural
+  guess of a boolean silently leaves the default `notify` in place. Flags any
+  value outside the documented enum.
+- **CC-SET-029: invalid `spinnerTipsOverride` shape**
+  ([#1435](https://github.com/agent-sh/agnix/issues/1435)). v2.1.247 extended the
+  key with tip objects (`id`, `text`, `cooldownSessions`, `priority`), `tipsFile`,
+  and `label`. Claude Code drops an invalid tip with a debug warning instead of
+  rejecting the file, so a malformed tip is simply never shown. Validates the
+  object's fields, each tip entry, the documented `id`/`text` limits, the
+  `0`-`1000` and `-10`-`10` numeric ranges, the 40-character `label` cap, and
+  that `tipsFile` is absolute or `~/`-rooted.
+- **CC-PL-016: plugin name not kebab-case**. The plugin reference documents
+  `name` as a kebab-case identifier with no spaces, and v2.1.247 hardened
+  marketplace handling to reject names containing control or invisible
+  characters. Those fail kebab-case by construction, so this catches them before
+  a plugin reaches a marketplace.
+
+### Fixed
+- **`SendFeedback` and `ListAgents` reported as unknown tools**
+  ([#1435](https://github.com/agent-sh/agnix/issues/1435)). `KNOWN_AGENT_TOOLS`
+  had not been refreshed since 2026-07-31, so CC-AG-009/010 flagged two
+  documented built-in tools - `ListAgents` from Claude Code v2.1.224 and
+  `SendFeedback` from v2.1.238 - as invalid names in an agent's `tools` or
+  `disallowedTools` list. Diffed the whole list against the live tools reference,
+  and these were the only two missing.
+
+### Changed
+- **Tool baselines refreshed** (closes
+  [#1435](https://github.com/agent-sh/agnix/issues/1435),
+  [#1436](https://github.com/agent-sh/agnix/issues/1436),
+  [#1437](https://github.com/agent-sh/agnix/issues/1437)). Claude Code
+  `v2.1.246` to `v2.1.247`, Cline `v4.1.15` to `v4.1.16`, and Codex CLI
+  `rust-v0.149.1` to `rust-v0.150.0`. Cline's release moves hook workspace
+  resolution from shared global state to the VS Code window, which changes
+  runtime behaviour rather than any validated file contract. Codex adds an
+  `Interrupt` hook event; CDX-PL-013 validates hook shape without an event-name
+  allowlist, so nothing false-positives, and the missing allowlist is recorded in
+  RESEARCH-TRACKING along with the uncovered `spinnerVerbs` setting.
+
 ### Fixed
 - **Tool-release triage produced no summaries**. Two separate faults, both of
   which the watcher degrades silently to "post the raw changelog": the

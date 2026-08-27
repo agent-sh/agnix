@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `451` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `454` validation rules generated from `knowledge-base/rules.json`.
 `124` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -109,6 +109,7 @@ This section contains all `451` validation rules generated from `knowledge-base/
 | [CC-PL-013](./generated/cc-pl-013.md) | Channel Missing Server Reference | MEDIUM | Claude Plugins | No |
 | [CC-PL-014](./generated/cc-pl-014.md) | Plugin Agent Unsupported Field | MEDIUM | Claude Plugins | Yes (safe) |
 | [CC-PL-015](./generated/cc-pl-015.md) | Default Component Folder Shadowed by Manifest | MEDIUM | Claude Plugins | No |
+| [CC-PL-016](./generated/cc-pl-016.md) | Plugin Name Not Kebab-Case | HIGH | Claude Plugins | No |
 | [CC-SK-001](./generated/cc-sk-001.md) | Invalid Model Value | HIGH | Claude Skills | Yes (unsafe) |
 | [CC-SK-002](./generated/cc-sk-002.md) | Invalid Context Value | HIGH | Claude Skills | Yes (unsafe) |
 | [CC-SK-004](./generated/cc-sk-004.md) | Agent Without Context | HIGH | Claude Skills | Yes (unsafe) |
@@ -156,6 +157,8 @@ This section contains all `451` validation rules generated from `knowledge-base/
 | [CC-SET-025](./generated/cc-set-025.md) | Invalid modelPicker Setting | MEDIUM | Claude Settings | No |
 | [CC-SET-026](./generated/cc-set-026.md) | Invalid promptCacheTtl Setting | MEDIUM | Claude Settings | No |
 | [CC-SET-027](./generated/cc-set-027.md) | Invalid subagentPromptCacheTtl Setting | MEDIUM | Claude Settings | No |
+| [CC-SET-028](./generated/cc-set-028.md) | Invalid feedbackDrafts Setting | MEDIUM | Claude Settings | No |
+| [CC-SET-029](./generated/cc-set-029.md) | Invalid spinnerTipsOverride Shape | MEDIUM | Claude Settings | No |
 | [CDX-000](./generated/cdx-000.md) | TOML Parse Error | HIGH | Codex CLI | No |
 | [CDX-001](./generated/cdx-001.md) | Invalid Approval Mode | HIGH | Codex CLI | Yes (unsafe) |
 | [CDX-002](./generated/cdx-002.md) | Invalid Full Auto Error Mode | HIGH | Codex CLI | Yes (unsafe) |
