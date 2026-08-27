@@ -25,12 +25,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `.claude`, `.github`, `.cursor`, `.codex`, `.gemini`, `.amp`, `.agents`,
   `.roo`, `.windsurf`, and `.kiro` directory surfaces are enumerated -
   including `.cursor/rules/**/*.md` so CUR-020 can flag plain-markdown rules
-  Cursor silently ignores. Verified against the 150 concrete paths in
-  `detection.rs`'s own tests; the only remaining exclusions are deliberate:
-  detection's loose fallback arms outside a tool directory (a bare
-  `settings.json`, `hooks.json`, `environment.json`, `POWER.md`, or
-  `requirements.toml` anywhere), uppercase directory spellings, and generic
-  markdown. Verified end to end: a repo with a nested skill, a
+  Cursor silently ignores. Also covers plugin
+  `hooks/hooks.json` at any root, bare `agents/` directories (which detection
+  validates as agent configs, `agents/README.md` included), `.kiro/settings.json`,
+  and the undotted `codex/requirements.toml` system surface - while deliberately
+  not matching `.codex/requirements.toml`, which Codex does not read. Verified
+  against the 149 concrete paths in `detection.rs`'s own tests; the only
+  remaining exclusions are deliberate: detection's loose fallback arms outside a
+  tool directory (a bare `settings.json`, `hooks.json`, `environment.json`,
+  `POWER.md`, or `requirements.toml` anywhere), uppercase directory spellings,
+  and generic markdown. Verified end to end: a repo with a nested skill, a
   package-level AGENTS.md, GEMINI.md, and a scoped instruction file - all
   invisible to the old pattern - now produces their diagnostics through the
   hook.
