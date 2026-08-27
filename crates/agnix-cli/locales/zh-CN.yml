@@ -841,6 +841,27 @@ rules:
 # Core - Library messages
 # ===========================================================================
 core:
+  cc_set_028:
+    message: feedbackDrafts 必须为 notify、quiet 或 off（实际为 %{actual}）
+    suggestion: 将 feedbackDrafts 设置为 notify、quiet 或 off。它是字符串枚举，而不是布尔值。
+  cc_set_029:
+    suggestion: 请遵循 spinnerTipsOverride 的文档结构 - Claude Code 会以调试警告丢弃无效提示，而不会报错。
+    not_object: spinnerTipsOverride 必须是包含 tips、tipsFile、label 或 excludeDefault 的对象（实际为 %{actual}）
+    unknown_field: spinnerTipsOverride 含有未知字段 '%{field}'
+    label_not_string: spinnerTipsOverride.label 必须是字符串（实际为 %{actual}）
+    label_too_long: spinnerTipsOverride.label 有 %{len} 个字符，超过 %{max} 个字符的限制
+    exclude_default_not_bool: spinnerTipsOverride.excludeDefault 必须是布尔值（实际为 %{actual}）
+    tips_file_not_string: spinnerTipsOverride.tipsFile 必须是字符串路径（实际为 %{actual}）
+    tips_file_relative: spinnerTipsOverride.tipsFile '%{path}' 不是绝对路径也不以 ~/ 开头，Claude Code 无法加载
+    tips_not_array: spinnerTipsOverride.tips 必须是数组（实际为 %{actual}）
+    tip_not_object: spinnerTipsOverride.tips 第 %{index} 项必须是字符串或对象（实际为 %{actual}）
+    tip_id: spinnerTipsOverride.tips 第 %{index} 项需要 'id'，最多 64 个字母、数字、'.'、'_' 或 '-'
+    tip_text: spinnerTipsOverride.tips 第 %{index} 项需要非空的 'text'，最多 %{max} 个字符
+    tip_range: spinnerTipsOverride.tips 第 %{index} 项的 '%{field}' 超出 %{min}..%{max}
+    tip_unknown_field: spinnerTipsOverride.tips 第 %{index} 项含有未知字段 '%{field}'
+  cc_pl_016:
+    message: 插件名称 '%{name}' 不是 kebab-case
+    suggestion: 只使用小写字母、数字和连字符。Claude Code 会拒绝包含控制字符或不可见字符的名称。
   error:
     file_read: '读取文件失败: %{path}'
     file_write: '写入文件失败: %{path}'

@@ -894,6 +894,27 @@ rules:
 # Core - Library messages
 # ===========================================================================
 core:
+  cc_set_028:
+    message: feedbackDrafts debe ser notify, quiet u off (se recibió %{actual})
+    suggestion: Establece feedbackDrafts en notify, quiet u off. Es una cadena enumerada, no un booleano.
+  cc_set_029:
+    suggestion: Usa la forma documentada de spinnerTipsOverride - Claude Code descarta un consejo inválido con un aviso de depuración en lugar de informarlo.
+    not_object: spinnerTipsOverride debe ser un objeto con tips, tipsFile, label o excludeDefault (se recibió %{actual})
+    unknown_field: spinnerTipsOverride tiene el campo desconocido '%{field}'
+    label_not_string: spinnerTipsOverride.label debe ser una cadena (se recibió %{actual})
+    label_too_long: spinnerTipsOverride.label tiene %{len} caracteres, más del límite de %{max}
+    exclude_default_not_bool: spinnerTipsOverride.excludeDefault debe ser booleano (se recibió %{actual})
+    tips_file_not_string: spinnerTipsOverride.tipsFile debe ser una ruta en texto (se recibió %{actual})
+    tips_file_relative: spinnerTipsOverride.tipsFile '%{path}' no es absoluta ni empieza por ~/, así que Claude Code no puede cargarla
+    tips_not_array: spinnerTipsOverride.tips debe ser un arreglo (se recibió %{actual})
+    tip_not_object: la entrada %{index} de spinnerTipsOverride.tips debe ser una cadena o un objeto (se recibió %{actual})
+    tip_id: la entrada %{index} de spinnerTipsOverride.tips necesita un 'id' de hasta 64 letras, dígitos, '.', '_' o '-'
+    tip_text: la entrada %{index} de spinnerTipsOverride.tips necesita un 'text' no vacío de hasta %{max} caracteres
+    tip_range: la entrada %{index} de spinnerTipsOverride.tips tiene '%{field}' fuera de %{min}..%{max}
+    tip_unknown_field: la entrada %{index} de spinnerTipsOverride.tips tiene el campo desconocido '%{field}'
+  cc_pl_016:
+    message: El nombre de plugin '%{name}' no está en kebab-case
+    suggestion: Usa solo minúsculas, dígitos y guiones. Claude Code rechaza nombres con caracteres de control o invisibles.
   error:
     file_read: 'Error al leer archivo: %{path}'
     file_write: 'Error al escribir archivo: %{path}'

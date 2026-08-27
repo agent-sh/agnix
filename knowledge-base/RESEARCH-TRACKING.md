@@ -17,7 +17,7 @@ Tools are organized by support tier (see [../CONTRIBUTING.md#tool-tier-system](.
 | Tool | Config Format | Documentation URL | Monitoring | Frequency | Last Reviewed | Rule Prefix |
 |------|---------------|-------------------|------------|-----------|---------------|-------------|
 | Claude Code | `CLAUDE.md`, `.claude/settings.json`, `.claude/settings.local.json`, `.claude/managed-settings.json`, `.claude/agents/*.md`, `.claude/skills/*/SKILL.md`, `.claude/hooks configuration`, `.mcp.json`, `.claude-plugin/plugin.json`, `.claude/rules/**/*.md`, `.claude/output-styles/*.md` | https://code.claude.com/docs/en | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-08-27 | CC-SK, CC-HK, CC-MEM, CC-AG, CC-PL, CC-SET, CC-OS, MCP |
-| Codex CLI | `AGENTS.md`, `.codex/config.toml` (also `.codex/config.json`/`.yaml`), `.codex/skills/*/SKILL.md`, `.codex-plugin/plugin.json`, Agent Plugins root `plugin.json` | https://developers.openai.com/codex/ | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-08-25 | AGM, XP, CDX, CDX-AG, CDX-APP, CDX-CFG, CDX-PL, CDX-REQ, CX-SK |
+| Codex CLI | `AGENTS.md`, `.codex/config.toml` (also `.codex/config.json`/`.yaml`), `.codex/skills/*/SKILL.md`, `.codex-plugin/plugin.json`, Agent Plugins root `plugin.json` | https://developers.openai.com/codex/ | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-08-27 | AGM, XP, CDX, CDX-AG, CDX-APP, CDX-CFG, CDX-PL, CDX-REQ, CX-SK |
 | OpenCode | `AGENTS.md`, `opencode.json`, `opencode.jsonc`, `.opencode/config.json`, `.opencode/skills/*/SKILL.md` | https://opencode.ai/docs/ | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-08-25 | AGM, XP, OC, OC-AG, OC-AGM, OC-CFG, OC-DEP, OC-LSP, OC-PM, OC-TUI, OC-SK |
 | Kiro CLI | `.kiro/steering/*.md`, `.kiro/agents/**/*.{json,md}`, `.kiro/hooks/*.kiro.hook`, `.kiro/settings/mcp.json`, `.kiro/settings.json`, `.kiro/powers/*/POWER.md`, `.kiro/skills/*/SKILL.md`, `AGENTS.md` (nested, loaded as steering since 2.18.0) | https://kiro.dev/changelog/cli/ | Automated (tool-release-watch.yml via HTML scrape) | Quarterly | 2026-08-21 | AGM, KIRO, KR-AG, KR-HK, KR-MCP, KR-PW, KR-SK, KR-SET |
 
@@ -26,7 +26,7 @@ Tools are organized by support tier (see [../CONTRIBUTING.md#tool-tier-system](.
 | Tool | Config Format | Documentation URL | Monitoring | Frequency | Last Reviewed | Rule Prefix |
 |------|---------------|-------------------|------------|-----------|---------------|-------------|
 | GitHub Copilot | `.github/copilot-instructions.md`, `.github/instructions/*.instructions.md` | https://docs.github.com/en/copilot/customizing-copilot | Automated (spec-drift.yml + tool-release-watch.yml via microsoft/vscode-copilot-chat) | Weekly | 2026-07-26 | COP |
-| Cline | `.clinerules` (file or dir), `.clinerules/workflows/*.md`, `.clinerules/hooks/*`, `.clinerules/skills/*/SKILL.md`, `.cline/skills/*/SKILL.md` | https://docs.cline.bot/features/cline-rules/overview | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-08-24 | CLN, CL-SK |
+| Cline | `.clinerules` (file or dir), `.clinerules/workflows/*.md`, `.clinerules/hooks/*`, `.clinerules/skills/*/SKILL.md`, `.cline/skills/*/SKILL.md` | https://docs.cline.bot/features/cline-rules/overview | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-08-27 | CLN, CL-SK |
 | Cursor | `.cursor/rules/**/*.mdc`, `.cursorrules` (legacy), `.cursor/hooks.json`, `.cursor/agents/**/*.md`, `.cursor/environment.json`, `.cursor/mcp.json`, `.cursor/skills/*/SKILL.md` | https://cursor.com/docs/rules | Automated (spec-drift.yml + tool-release-watch.yml via api2.cursor.sh stable update endpoint) | Weekly | 2026-08-27 | CUR, MCP, CR-SK |
 
 ### B Tier (test on significant changes if time permits)
@@ -199,6 +199,8 @@ Tracking community input that influences rule development, tool support decision
 | 2026-08-27 | Claude Code v2.1.246 triage | `keybindings.json` now skips bindings whose action name is unknown and warns under `--debug` | agnix does not validate `keybindings.json` at all; candidate new file type |
 | 2026-08-27 | Cursor MCP doc revision | STDIO table now marks `type` as Required, and documents `envFile` as STDIO-only (remote HTTP/SSE servers do not support it) | agnix infers the transport when `type` is absent and has no rule for `envFile` on a remote server; candidate MCP rules |
 | 2026-08-27 | Cursor hooks doc revision | Per-script options table types `matcher` as `object` while every example in the same document uses a string | Upstream doc inconsistency; CUR-017 deliberately leaves `matcher` unvalidated until it is resolved |
+| 2026-08-27 | Codex CLI rust-v0.150.0 triage | New `Interrupt` hook event runs commands or MCP handlers when a top-level turn is interrupted | agnix validates Codex hook shape (CDX-PL-013) but has no hook event-name allowlist, so nothing false-positives and nothing catches a typo either; candidate rule |
+| 2026-08-27 | Claude Code v2.1.247 triage | `spinnerVerbs` takes an object with a `verbs` array and `mode` of `append` or `replace` | No rule covers it, same class as the new CC-SET-029; candidate CC-SET rule |
 
 ---
 

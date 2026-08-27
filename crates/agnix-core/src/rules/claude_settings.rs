@@ -32,6 +32,9 @@
 //! - `modelPicker` scope and shape (CC-SET-025, added in Claude Code v2.1.242).
 //! - `promptCacheTtl` enum (CC-SET-026, added in Claude Code v2.1.242).
 //! - `subagentPromptCacheTtl` enum (CC-SET-027, added in Claude Code v2.1.242).
+//! - `feedbackDrafts` enum (CC-SET-028, added in Claude Code v2.1.247).
+//! - `spinnerTipsOverride` shape (CC-SET-029, tip objects/`tipsFile`/`label`
+//!   added in Claude Code v2.1.247).
 //!
 //! Runs on FileType::Hooks (which covers `.claude/settings.json` -
 //! see `file_types/detection.rs`). Skips non-Claude Code settings paths
@@ -74,6 +77,8 @@ const RULE_IDS: &[&str] = &[
     "CC-SET-025",
     "CC-SET-026",
     "CC-SET-027",
+    "CC-SET-028",
+    "CC-SET-029",
 ];
 
 /// Allowed values for `worktree.baseRef` per Claude Code v2.1.133 release notes.
@@ -99,6 +104,22 @@ const DIALOG_EXPIRY_ALLOWED: &[&str] = &["60s", "5m", "10m", "never"];
 
 /// Allowed prompt-cache lifetimes documented for the main and subagent settings.
 const PROMPT_CACHE_TTL_ALLOWED: &[&str] = &["5m", "1h"];
+
+/// Allowed values for `feedbackDrafts` per the settings reference. `"off"`
+/// removes the SendFeedback tool entirely.
+const FEEDBACK_DRAFTS_ALLOWED: &[&str] = &["notify", "quiet", "off"];
+
+/// Documented `spinnerTipsOverride` fields, all optional.
+const SPINNER_TIPS_OVERRIDE_FIELDS: &[&str] = &["tips", "tipsFile", "label", "excludeDefault"];
+
+/// Documented limits for a `spinnerTipsOverride` tip object. Claude Code drops
+/// an invalid entry with a debug warning rather than rejecting the file, so a
+/// bad tip is silently never shown.
+const SPINNER_TIP_ID_MAX_LEN: usize = 64;
+const SPINNER_TIP_TEXT_MAX_LEN: usize = 500;
+const SPINNER_TIP_LABEL_MAX_LEN: usize = 40;
+const SPINNER_TIP_COOLDOWN_RANGE: (i64, i64) = (0, 1000);
+const SPINNER_TIP_PRIORITY_RANGE: (i64, i64) = (-10, 10);
 
 /// Placeholders documented for `prUrlTemplate` at
 /// <https://code.claude.com/docs/en/settings>.
@@ -239,6 +260,14 @@ impl Validator for ClaudeSettingsValidator {
 
         if config.is_rule_enabled("CC-SET-027") {
             validate_subagent_prompt_cache_ttl(path, content, &value, &mut diagnostics);
+        }
+
+        if config.is_rule_enabled("CC-SET-028") {
+            validate_feedback_drafts(path, content, &value, &mut diagnostics);
+        }
+
+        if config.is_rule_enabled("CC-SET-029") {
+            validate_spinner_tips_override(path, content, &value, &mut diagnostics);
         }
 
         diagnostics
@@ -2539,6 +2568,240 @@ fn model_picker_shape_diagnostic(path: &Path, line: usize, reason: String) -> Di
         t!("rules.cc_set_025.shape_message", reason = reason),
     )
     .with_suggestion(t!("rules.cc_set_025.shape_suggestion"))
+}
+
+/// CC-SET-028: Validate `feedbackDrafts`.
+///
+/// A string enum, not a boolean: `"off"` removes the SendFeedback tool, while
+/// `"notify"` and `"quiet"` differ only in whether a card appears above the
+/// prompt. A boolean `false` is the natural wrong guess and silently leaves the
+/// default `"notify"` in place.
+fn validate_feedback_drafts(
+    path: &Path,
+    content: &str,
+    value: &serde_json::Value,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(field_value) = value.get("feedbackDrafts") else {
+        return;
+    };
+    if field_value.is_null()
+        || field_value
+            .as_str()
+            .is_some_and(|mode| FEEDBACK_DRAFTS_ALLOWED.contains(&mode))
+    {
+        return;
+    }
+
+    let actual = field_value
+        .as_str()
+        .map(ToString::to_string)
+        .unwrap_or_else(|| describe_json_type(field_value).to_string());
+    diagnostics.push(
+        Diagnostic::warning(
+            path.to_path_buf(),
+            find_key_line(content, "feedbackDrafts").unwrap_or(1),
+            0,
+            "CC-SET-028",
+            t!("rules.cc_set_028.message", actual = actual),
+        )
+        .with_suggestion(t!("rules.cc_set_028.suggestion")),
+    );
+}
+
+/// CC-SET-029: Validate the `spinnerTipsOverride` object and its tip entries.
+///
+/// Claude Code drops an invalid tip entry with a debug warning instead of
+/// rejecting the settings file, so a malformed tip is simply never shown - the
+/// silent-failure class agnix exists to catch.
+fn validate_spinner_tips_override(
+    path: &Path,
+    content: &str,
+    value: &serde_json::Value,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(field_value) = value.get("spinnerTipsOverride") else {
+        return;
+    };
+    if field_value.is_null() {
+        return;
+    }
+
+    let line = find_key_line(content, "spinnerTipsOverride").unwrap_or(1);
+    let mut push = |message: String| {
+        diagnostics.push(
+            Diagnostic::warning(path.to_path_buf(), line, 0, "CC-SET-029", message)
+                .with_suggestion(t!("rules.cc_set_029.suggestion")),
+        );
+    };
+
+    let Some(object) = field_value.as_object() else {
+        push(
+            t!(
+                "rules.cc_set_029.not_object",
+                actual = describe_json_type(field_value)
+            )
+            .to_string(),
+        );
+        return;
+    };
+
+    for key in object.keys() {
+        if !SPINNER_TIPS_OVERRIDE_FIELDS.contains(&key.as_str()) {
+            push(t!("rules.cc_set_029.unknown_field", field = key.as_str()).to_string());
+        }
+    }
+
+    if let Some(label) = object.get("label") {
+        match label.as_str() {
+            Some(text) if text.chars().count() <= SPINNER_TIP_LABEL_MAX_LEN => {}
+            Some(text) => push(
+                t!(
+                    "rules.cc_set_029.label_too_long",
+                    len = text.chars().count(),
+                    max = SPINNER_TIP_LABEL_MAX_LEN
+                )
+                .to_string(),
+            ),
+            None => push(
+                t!(
+                    "rules.cc_set_029.label_not_string",
+                    actual = describe_json_type(label)
+                )
+                .to_string(),
+            ),
+        }
+    }
+
+    if let Some(exclude) = object.get("excludeDefault")
+        && !exclude.is_boolean()
+    {
+        push(
+            t!(
+                "rules.cc_set_029.exclude_default_not_bool",
+                actual = describe_json_type(exclude)
+            )
+            .to_string(),
+        );
+    }
+
+    if let Some(tips_file) = object.get("tipsFile") {
+        match tips_file.as_str() {
+            // Documented as "an absolute or `~/` path": a relative path is
+            // resolved against nothing predictable, so the file never loads.
+            Some(text) if text.starts_with('/') || text.starts_with("~/") => {}
+            Some(text) if is_windows_absolute_path(text) => {}
+            Some(text) => push(t!("rules.cc_set_029.tips_file_relative", path = text).to_string()),
+            None => push(
+                t!(
+                    "rules.cc_set_029.tips_file_not_string",
+                    actual = describe_json_type(tips_file)
+                )
+                .to_string(),
+            ),
+        }
+    }
+
+    let Some(tips) = object.get("tips") else {
+        return;
+    };
+    let Some(entries) = tips.as_array() else {
+        push(
+            t!(
+                "rules.cc_set_029.tips_not_array",
+                actual = describe_json_type(tips)
+            )
+            .to_string(),
+        );
+        return;
+    };
+
+    for (index, entry) in entries.iter().enumerate() {
+        let position = index + 1;
+        // A plain string is a valid tip and takes the documented defaults.
+        if entry.is_string() {
+            continue;
+        }
+        let Some(tip) = entry.as_object() else {
+            push(
+                t!(
+                    "rules.cc_set_029.tip_not_object",
+                    index = position,
+                    actual = describe_json_type(entry)
+                )
+                .to_string(),
+            );
+            continue;
+        };
+
+        match tip.get("id").and_then(serde_json::Value::as_str) {
+            Some(id)
+                if !id.is_empty()
+                    && id.chars().count() <= SPINNER_TIP_ID_MAX_LEN
+                    && id
+                        .chars()
+                        .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-')) => {}
+            _ => push(t!("rules.cc_set_029.tip_id", index = position).to_string()),
+        }
+
+        match tip.get("text").and_then(serde_json::Value::as_str) {
+            Some(text)
+                if !text.trim().is_empty() && text.chars().count() <= SPINNER_TIP_TEXT_MAX_LEN => {}
+            _ => push(
+                t!(
+                    "rules.cc_set_029.tip_text",
+                    index = position,
+                    max = SPINNER_TIP_TEXT_MAX_LEN
+                )
+                .to_string(),
+            ),
+        }
+
+        for (field, (min, max)) in [
+            ("cooldownSessions", SPINNER_TIP_COOLDOWN_RANGE),
+            ("priority", SPINNER_TIP_PRIORITY_RANGE),
+        ] {
+            if let Some(number) = tip.get(field) {
+                let in_range = number
+                    .as_i64()
+                    .is_some_and(|value| (min..=max).contains(&value));
+                if !in_range {
+                    push(
+                        t!(
+                            "rules.cc_set_029.tip_range",
+                            index = position,
+                            field = field,
+                            min = min,
+                            max = max
+                        )
+                        .to_string(),
+                    );
+                }
+            }
+        }
+
+        for key in tip.keys() {
+            if !["id", "text", "cooldownSessions", "priority"].contains(&key.as_str()) {
+                push(
+                    t!(
+                        "rules.cc_set_029.tip_unknown_field",
+                        index = position,
+                        field = key.as_str()
+                    )
+                    .to_string(),
+                );
+            }
+        }
+    }
+}
+
+/// `C:\path` or `C:/path`, which `tipsFile` accepts on Windows.
+fn is_windows_absolute_path(value: &str) -> bool {
+    let bytes = value.as_bytes();
+    bytes.len() >= 3
+        && bytes[0].is_ascii_alphabetic()
+        && bytes[1] == b':'
+        && (bytes[2] == b'/' || bytes[2] == b'\\')
 }
 
 /// CC-SET-026: Validate the main-conversation prompt-cache TTL.
@@ -5571,6 +5834,173 @@ mod tests {
         );
         assert!(chinese.contains("必须是字符串"));
         assert!(!chinese.contains("must be"));
+    }
+
+    // ===== CC-SET-028: feedbackDrafts enum =====
+
+    #[test]
+    fn test_feedback_drafts_documented_values_are_valid() {
+        for mode in ["notify", "quiet", "off"] {
+            let content = format!(r#"{{"feedbackDrafts":"{mode}"}}"#);
+            assert!(
+                validate(&content)
+                    .iter()
+                    .all(|diagnostic| diagnostic.rule != "CC-SET-028"),
+                "{mode} should be accepted"
+            );
+        }
+    }
+
+    #[test]
+    fn test_feedback_drafts_boolean_is_flagged() {
+        // The natural wrong guess: it reads like an on/off switch but is a
+        // string enum, and a boolean silently leaves the default in place.
+        for invalid in ["false", "true", "0", r#""disabled""#, "[]"] {
+            let content = format!(r#"{{"feedbackDrafts":{invalid}}}"#);
+            assert_eq!(
+                validate(&content)
+                    .iter()
+                    .filter(|diagnostic| diagnostic.rule == "CC-SET-028")
+                    .count(),
+                1,
+                "expected CC-SET-028 for {content}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_feedback_drafts_null_and_absent_are_valid() {
+        for content in [r#"{"feedbackDrafts":null}"#, r#"{"model":"sonnet"}"#] {
+            assert!(
+                validate(content)
+                    .iter()
+                    .all(|diagnostic| diagnostic.rule != "CC-SET-028")
+            );
+        }
+    }
+
+    // ===== CC-SET-029: spinnerTipsOverride shape =====
+
+    #[test]
+    fn test_spinner_tips_override_documented_example_is_valid() {
+        // The settings-reference example, verbatim in shape.
+        let content = r#"{
+          "spinnerTipsOverride": {
+            "label": "Acme tip",
+            "excludeDefault": false,
+            "tips": [
+              "Run /review before opening a PR",
+              {
+                "id": "gateway-errors",
+                "text": "Seeing 5xx errors? Check the gateway status page first",
+                "cooldownSessions": 5,
+                "priority": 2
+              }
+            ]
+          }
+        }"#;
+        let diagnostics = validate(content);
+        assert!(
+            diagnostics
+                .iter()
+                .all(|diagnostic| diagnostic.rule != "CC-SET-029"),
+            "documented example should be accepted, got {diagnostics:?}"
+        );
+    }
+
+    #[test]
+    fn test_spinner_tips_override_tip_object_requires_id_and_text() {
+        for invalid_tip in [
+            r#"{"text":"Missing an id"}"#,
+            r#"{"id":"no-text"}"#,
+            r#"{"id":"","text":"Empty id"}"#,
+            r#"{"id":"bad id","text":"Space in id"}"#,
+            r#"{"id":"ok","text":"   "}"#,
+        ] {
+            let content = format!(r#"{{"spinnerTipsOverride":{{"tips":[{invalid_tip}]}}}}"#);
+            assert!(
+                validate(&content)
+                    .iter()
+                    .any(|diagnostic| diagnostic.rule == "CC-SET-029"),
+                "expected CC-SET-029 for {content}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_spinner_tips_override_numeric_ranges_are_enforced() {
+        for invalid in [
+            r#"{"id":"a","text":"t","cooldownSessions":1001}"#,
+            r#"{"id":"a","text":"t","cooldownSessions":-1}"#,
+            r#"{"id":"a","text":"t","priority":11}"#,
+            r#"{"id":"a","text":"t","priority":-11}"#,
+        ] {
+            let content = format!(r#"{{"spinnerTipsOverride":{{"tips":[{invalid}]}}}}"#);
+            assert!(
+                validate(&content)
+                    .iter()
+                    .any(|diagnostic| diagnostic.rule == "CC-SET-029"),
+                "expected CC-SET-029 for {content}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_spinner_tips_override_boundary_values_are_valid() {
+        let content = r#"{"spinnerTipsOverride":{"tips":[{"id":"a.b_c-d","text":"t","cooldownSessions":0,"priority":-10},{"id":"e","text":"t","cooldownSessions":1000,"priority":10}]}}"#;
+        assert!(
+            validate(content)
+                .iter()
+                .all(|diagnostic| diagnostic.rule != "CC-SET-029")
+        );
+    }
+
+    #[test]
+    fn test_spinner_tips_override_field_and_path_checks() {
+        let cases = [
+            (r#"{"spinnerTipsOverride":[]}"#, "non-object value"),
+            (
+                r#"{"spinnerTipsOverride":{"tips":{}}}"#,
+                "tips not an array",
+            ),
+            (
+                r#"{"spinnerTipsOverride":{"tipsFile":"tips.json"}}"#,
+                "relative tipsFile",
+            ),
+            (
+                r#"{"spinnerTipsOverride":{"excludeDefault":"yes"}}"#,
+                "non-boolean excludeDefault",
+            ),
+            (
+                r#"{"spinnerTipsOverride":{"label":42}}"#,
+                "non-string label",
+            ),
+            (
+                r#"{"spinnerTipsOverride":{"tipss":[]}}"#,
+                "misspelled field",
+            ),
+        ];
+        for (content, why) in cases {
+            assert!(
+                validate(content)
+                    .iter()
+                    .any(|diagnostic| diagnostic.rule == "CC-SET-029"),
+                "expected CC-SET-029 for {why}: {content}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_spinner_tips_override_accepts_absolute_and_home_tips_files() {
+        for tips_file in ["/etc/agnix/tips.json", "~/tips.json", "C:/tips.json"] {
+            let content = format!(r#"{{"spinnerTipsOverride":{{"tipsFile":"{tips_file}"}}}}"#);
+            assert!(
+                validate(&content)
+                    .iter()
+                    .all(|diagnostic| diagnostic.rule != "CC-SET-029"),
+                "{tips_file} should be accepted"
+            );
+        }
     }
 
     // ===== CC-SET-026/027: prompt cache TTL enums =====

@@ -1,8 +1,8 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 451,
-  "last_updated": "2026-08-25",
+  "total_rules": 454,
+  "last_updated": "2026-08-27",
   "schema": {
     "evidence": {
       "source_type": "spec|vendor_docs|vendor_code|paper|community",
@@ -3040,6 +3040,35 @@
       "bad_example": "{\n  \"commands\": \"./custom-commands\"\n}"
     },
     {
+      "id": "CC-PL-016",
+      "name": "Plugin Name Not Kebab-Case",
+      "severity": "HIGH",
+      "category": "claude-plugins",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/plugins-reference",
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.247"
+        ],
+        "verified_on": "2026-08-27",
+        "applies_to": {
+          "tool": "claude-code",
+          "version_range": ">=2.1.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"name\": \"my-plugin\"\n}",
+      "bad_example": "{\n  \"name\": \"My Plugin\"\n}"
+    },
+    {
       "id": "CC-SK-001",
       "name": "Invalid Model Value",
       "severity": "HIGH",
@@ -4405,6 +4434,64 @@
       },
       "good_example": "{\n  \"subagentPromptCacheTtl\": \"5m\"\n}",
       "bad_example": "{\n  \"subagentPromptCacheTtl\": 300\n}"
+    },
+    {
+      "id": "CC-SET-028",
+      "name": "Invalid feedbackDrafts Setting",
+      "severity": "MEDIUM",
+      "category": "claude-settings",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.247",
+          "https://code.claude.com/docs/en/settings-reference#feedbackdrafts"
+        ],
+        "verified_on": "2026-08-27",
+        "applies_to": {
+          "tool": "claude-code",
+          "version_range": ">=2.1.247"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"feedbackDrafts\": \"quiet\"\n}",
+      "bad_example": "{\n  \"feedbackDrafts\": false\n}"
+    },
+    {
+      "id": "CC-SET-029",
+      "name": "Invalid spinnerTipsOverride Shape",
+      "severity": "MEDIUM",
+      "category": "claude-settings",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.247",
+          "https://code.claude.com/docs/en/settings-reference#spinnertipsoverride"
+        ],
+        "verified_on": "2026-08-27",
+        "applies_to": {
+          "tool": "claude-code",
+          "version_range": ">=2.1.247"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"spinnerTipsOverride\": {\n    \"label\": \"Acme tip\",\n    \"tips\": [\n      \"Run /review before opening a PR\",\n      { \"id\": \"gateway-errors\", \"text\": \"Check the gateway status page first\", \"cooldownSessions\": 5, \"priority\": 2 }\n    ]\n  }\n}",
+      "bad_example": "{\n  \"spinnerTipsOverride\": {\n    \"tips\": [\n      { \"text\": \"Missing an id\", \"cooldownSessions\": 5000 }\n    ]\n  }\n}"
     },
     {
       "id": "CDX-000",
@@ -13090,7 +13177,7 @@
     },
     "claude-plugins": {
       "prefix": "CC-PL",
-      "count": 15,
+      "count": 16,
       "description": "Claude Code Plugins rules"
     },
     "mcp": {
@@ -13245,7 +13332,7 @@
     },
     "claude-settings": {
       "prefix": "CC-SET",
-      "count": 27,
+      "count": 29,
       "description": "Claude Code settings (.claude/settings.json) rules"
     },
     "gemini-agents": {

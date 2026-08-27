@@ -1382,6 +1382,27 @@ rules:
   cc_set_027:
     message: subagentPromptCacheTtl must be 5m or 1h (got %{actual})
     suggestion: Set subagentPromptCacheTtl to 5m or 1h.
+  cc_set_028:
+    message: feedbackDrafts must be notify, quiet, or off (got %{actual})
+    suggestion: Set feedbackDrafts to notify, quiet, or off. It is a string enum, not a boolean.
+  cc_set_029:
+    suggestion: Match the documented spinnerTipsOverride shape - Claude Code drops an invalid tip with a debug warning instead of reporting it.
+    not_object: spinnerTipsOverride must be an object with tips, tipsFile, label, or excludeDefault (got %{actual})
+    unknown_field: spinnerTipsOverride has unknown field '%{field}'
+    label_not_string: spinnerTipsOverride.label must be a string (got %{actual})
+    label_too_long: spinnerTipsOverride.label is %{len} characters, over the %{max} character limit
+    exclude_default_not_bool: spinnerTipsOverride.excludeDefault must be a boolean (got %{actual})
+    tips_file_not_string: spinnerTipsOverride.tipsFile must be a string path (got %{actual})
+    tips_file_relative: spinnerTipsOverride.tipsFile '%{path}' is not absolute or ~/-rooted, so Claude Code cannot load it
+    tips_not_array: spinnerTipsOverride.tips must be an array (got %{actual})
+    tip_not_object: spinnerTipsOverride.tips entry %{index} must be a string or an object (got %{actual})
+    tip_id: spinnerTipsOverride.tips entry %{index} needs an 'id' of up to 64 letters, digits, '.', '_', or '-'
+    tip_text: spinnerTipsOverride.tips entry %{index} needs a non-empty 'text' of at most %{max} characters
+    tip_range: spinnerTipsOverride.tips entry %{index} has '%{field}' outside %{min}..%{max}
+    tip_unknown_field: spinnerTipsOverride.tips entry %{index} has unknown field '%{field}'
+  cc_pl_016:
+    message: Plugin name '%{name}' is not kebab-case
+    suggestion: Use lowercase letters, digits, and hyphens only. Claude Code rejects names with control or invisible characters.
   cc_hk_028:
     message: Command hook at %{location} uses '${user_config.*}' interpolation, which Claude Code 2.1.207+ rejects at
       load time as a shell-injection fix

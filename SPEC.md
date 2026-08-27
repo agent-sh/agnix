@@ -12,9 +12,9 @@
 | Memory (Claude Code) | CLAUDE.md, CLAUDE.local.md, .claude/rules/*.md | 13 |
 | Instructions (Cross-Tool) | AGENTS.md, AGENTS.local.md, AGENTS.override.md | 6 |
 | Agents | agents/*.md | 18 |
-| Plugins | plugin.json | 15 |
+| Plugins | plugin.json | 16 |
 | Claude Output Styles | .claude/output-styles/*.md | 6 |
-| Claude Settings | .claude/settings.json | 27 |
+| Claude Settings | .claude/settings.json | 29 |
 | Prompt Engineering | CLAUDE.md, AGENTS.md | 6 |
 | Cross-Platform | AGENTS.md | 10 |
 | MCP | tool definitions | 26 |

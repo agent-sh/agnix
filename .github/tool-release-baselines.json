@@ -17,7 +17,7 @@
         "mcp"
       ],
       "github_repo": "anthropics/claude-code",
-      "last_known_version": "v2.1.246",
+      "last_known_version": "v2.1.247",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
@@ -63,7 +63,7 @@
         "per_client_skill"
       ],
       "github_repo": "openai/codex",
-      "last_known_version": "rust-v0.149.1",
+      "last_known_version": "rust-v0.150.0",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
@@ -217,7 +217,7 @@
       ],
       "github_repo": "cline/cline",
       "release_tag_regex": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
-      "last_known_version": "v4.1.15",
+      "last_known_version": "v4.1.16",
       "tracked": true,
       "notes": "Tracks only the core Cline vX.Y.Z release train. The repository also publishes desktop-v*, cli-v*, sdk/*, and other interleaved releases that do not correspond to the validator surfaces.",
       "changes_of_interest": {
