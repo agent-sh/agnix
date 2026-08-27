@@ -3,7 +3,13 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      # Semver-shaped tags only. The floating major tag (v0, moved by the
+      # release job itself for `uses: agent-sh/agnix@v0`) must not trigger a
+      # release: a manual v0 push on 2026-08-27 ran the whole pipeline with
+      # version "0" - the semver guards stopped crates.io/npm/PyPI/VS Code,
+      # but a junk GitHub release, a junk Zed PR, and a version-"0" JetBrains
+      # marketplace upload all went through before cleanup.
+      - 'v[0-9]*.[0-9]*.[0-9]*'
 
 permissions:
   contents: read
