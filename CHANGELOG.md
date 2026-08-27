@@ -12,11 +12,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   from source because nothing told the tap about new releases: the tap's
   `update-formula.yml` listens for a `release-published` dispatch that the main
   repository never sent. The tap has been dispatched to v0.52.1 manually, the
-  vestigial in-repo `Formula/agnix.rb` copy is synced to match, and the tap's
-  reference notify workflow is now installed as
-  `.github/workflows/notify-tap.yml` so every future release updates the
-  formula automatically. The workflow needs a `TAP_DISPATCH_TOKEN` repo-scope
-  secret to fire; until it is set, the tap can be updated with
+  vestigial in-repo `Formula/agnix.rb` copy is synced to match, and release.yml now
+  dispatches the tap directly from a new `homebrew` job. A separate
+  `release: published` workflow could never have worked here: the release is
+  published with the default `GITHUB_TOKEN`, and events created by
+  `GITHUB_TOKEN` do not start workflow runs - which is exactly how the drift
+  stayed invisible. The job reuses the existing cross-repo `COMMITTER_TOKEN`
+  (already pushing to other repos in the zed and version-docs jobs), so no new
+  secret is needed; the dispatch shape was verified live against the tap's
+  `update-formula.yml`. Manual fallback stays
   `gh workflow run update-formula.yml --repo agent-sh/homebrew-agnix -f tag=<tag>`.
 
 ### Changed

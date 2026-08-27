@@ -512,6 +512,31 @@ jobs:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
 
+  homebrew:
+    name: Update Homebrew Tap
+    needs: release
+    runs-on: ubuntu-latest
+    # Skip prereleases
+    if: ${{ !contains(github.ref, '-') }}
+    steps:
+      # The tap repo's update-formula.yml listens for this dispatch. It cannot
+      # be triggered by a `release: published` workflow in this repo: the
+      # release is published with the default GITHUB_TOKEN, and events created
+      # by GITHUB_TOKEN never start workflow runs - which is how the tap
+      # silently sat at v0.18.0 for 34 releases. Dispatching from the release
+      # run itself has no such suppression. Cross-repo dispatch needs a PAT;
+      # COMMITTER_TOKEN already pushes to other repos in the zed and
+      # version-docs jobs.
+      - name: Dispatch formula update to the tap
+        env:
+          GH_TOKEN: ${{ secrets.COMMITTER_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh api repos/agent-sh/homebrew-agnix/dispatches \
+            --method POST \
+            -f event_type=release-published \
+            -f "client_payload[tag]=${GITHUB_REF#refs/tags/}"
+
   jetbrains:
     name: Publish JetBrains Plugin
     needs: release
