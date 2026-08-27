@@ -189,7 +189,7 @@ Format: `[CATEGORY]-[NUMBER]` (AS-004, CC-HK-001, etc.)
 
 ## Current State
 
-- v0.37.3 - Production-ready with full validation pipeline
+- Production-ready with full validation pipeline (current version: the latest [GitHub release](https://github.com/agent-sh/agnix/releases))
 - 454 validation rules across 40 validators
 
 - 4200+ passing tests

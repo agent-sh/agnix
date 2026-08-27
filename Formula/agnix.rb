@@ -1,8 +1,8 @@
 class Agnix < Formula
   desc "Lint AI agent configuration files"
   homepage "https://github.com/agent-sh/agnix"
-  url "https://github.com/agent-sh/agnix/archive/refs/tags/v0.18.0.tar.gz"
-  sha256 "5f3d82403ff5616c864c970de3bc11052cbc047e4d4fe3320f5e6063b12cc393"
+  url "https://github.com/agent-sh/agnix/archive/refs/tags/v0.52.1.tar.gz"
+  sha256 "c4723028406428bb56466cbffaf95d92e96a5c220de76d42910bff493a5a748a"
   license any_of: ["MIT", "Apache-2.0"]
   head "https://github.com/agent-sh/agnix.git", branch: "main"
 
@@ -13,7 +13,6 @@ class Agnix < Formula
   end
 
   test do
-    # Create a test SKILL.md with an error
     (testpath/"SKILL.md").write <<~EOS
       ---
       name: Test-Skill
