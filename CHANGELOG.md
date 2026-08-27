@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.52.0] - 2026-08-27
+
 ### Changed
 - **pre-commit hooks install agnix themselves**
   ([#1439](https://github.com/agent-sh/agnix/issues/1439)). The three hooks in
