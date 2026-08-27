@@ -14,7 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   multi-repository project checkout, retained-image compaction, and spec-run
   terminal behavior respectively; none changes a schema agnix validates. The
   Codex research inventory now also records its shared `MCP` rule family and
-  accepted `.yml` configuration spelling, with a parity regression assertion.
+  accepted `.yml`, `.mcp.json`, `[mcp_servers.*]`, and managed-environment
+  `requirements.toml` surfaces, with parity regression assertions.
 
 ### Fixed
 - **Floating `v0` tag pushes no longer trigger the release pipeline**. The

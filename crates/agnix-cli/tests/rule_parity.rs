@@ -1116,6 +1116,12 @@ fn test_refreshed_release_surfaces_match_research_inventory() {
         codex_rule_prefixes.contains("MCP"),
         "Codex research inventory must include the shared MCP rule prefix"
     );
+    for surface in [".mcp.json", "[mcp_servers.*]", "requirements.toml"] {
+        assert!(
+            codex_row.contains(surface),
+            "Codex research inventory is missing validated surface: {surface}"
+        );
+    }
 
     for (tool_id, row_name, surface, prefix) in [
         ("codex", "Codex CLI", ".codex/skills/*/SKILL.md", "CX-SK"),
