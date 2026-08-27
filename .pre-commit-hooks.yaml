@@ -2,7 +2,7 @@
   name: agnix
   description: Lint AI agent configuration files
   entry: agnix
-  language: system
+  language: python
   types: [file]
   files: |
     (?x)^(
@@ -25,7 +25,7 @@
   name: agnix (with auto-fix)
   description: Lint and auto-fix AI agent configuration files
   entry: agnix
-  language: system
+  language: python
   types: [file]
   files: |
     (?x)^(
@@ -53,7 +53,7 @@
     fails the commit if the working tree is dirty afterward. Override the
     target path with `args: [--output=<path>, --fix]`.
   entry: agnix schema
-  language: system
+  language: python
   pass_filenames: false
   always_run: true
   args: [--fix]

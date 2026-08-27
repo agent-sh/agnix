@@ -462,10 +462,17 @@ Add to `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/agent-sh/agnix
-    rev: v0.37.5
+    rev: v0.52.0
     hooks:
       - id: agnix
 ```
+
+pre-commit installs agnix itself: the hooks use `language: python`, so it
+creates a virtualenv and pulls the `agnix` wheel matching the `rev` you pinned.
+Nothing needs to be on your PATH.
+
+This needs `rev: v0.52.0` or later. Earlier tags ship `language: system` hooks,
+which require an `agnix` already on your PATH.
 
 ### Available Hooks
 
@@ -479,15 +486,30 @@ repos:
 ```yaml
 repos:
   - repo: https://github.com/agent-sh/agnix
-    rev: v0.37.5
+    rev: v0.52.0
     hooks:
       - id: agnix-fix
 ```
 
 ### Requirements
 
-The `agnix` binary must be installed and available in PATH:
+Python 3.9 or newer, which pre-commit already needs. The hook environment
+installs the `agnix` wheel for your platform, so there is nothing to install by
+hand.
+
+Wheels cover Linux x86_64 (glibc and musl), Linux aarch64, macOS Apple silicon,
+and Windows x86_64. On any other platform, pin the binary yourself and switch
+the hook to a locally installed agnix:
 
 ```bash
 cargo install agnix-cli
+```
+
+```yaml
+repos:
+  - repo: https://github.com/agent-sh/agnix
+    rev: v0.52.0
+    hooks:
+      - id: agnix
+        language: system
 ```

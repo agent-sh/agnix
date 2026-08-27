@@ -211,20 +211,45 @@ class WheelTests(unittest.TestCase):
             self.assertEqual(first, second)
 
 
+def workspace_version() -> str:
+    cargo = (bw.REPO_ROOT / "Cargo.toml").read_text(encoding="utf-8")
+    section = cargo.split("[workspace.package]", 1)[1]
+    return next(
+        line.split('"')[1]
+        for line in section.splitlines()
+        if line.startswith("version = ")
+    )
+
+
 class VersionTests(unittest.TestCase):
     def test_pyproject_matches_workspace_version(self):
-        cargo = (bw.REPO_ROOT / "Cargo.toml").read_text(encoding="utf-8")
-        section = cargo.split("[workspace.package]", 1)[1]
-        workspace_version = next(
-            line.split('"')[1]
-            for line in section.splitlines()
-            if line.startswith("version = ")
-        )
+        workspace_version_local = workspace_version()
         meta = bw.read_metadata(bw.PYPI_DIR / "pyproject.toml")
-        self.assertEqual(meta["version"], workspace_version)
+        self.assertEqual(meta["version"], workspace_version_local)
 
         init = (bw.PYPI_DIR / "agnix" / "__init__.py").read_text(encoding="utf-8")
-        self.assertIn(f'__version__ = "{workspace_version}"', init)
+        self.assertIn(f'__version__ = "{workspace_version_local}"', init)
+
+    def test_precommit_shim_pins_the_workspace_version(self):
+        # The root pyproject.toml exists only so `pre-commit`'s `language: python`
+        # hooks can pip-install the clone. Its contract is that a hook pinned at
+        # `rev: vX.Y.Z` runs agnix X.Y.Z, which holds only while both its own
+        # version and its `agnix==` pin track the workspace version. Every other
+        # manifest in the repo has a drift guard; this is that guard.
+        expected = workspace_version()
+        shim = bw.read_metadata(bw.REPO_ROOT / "pyproject.toml")
+
+        self.assertEqual(shim["version"], expected)
+        self.assertEqual(
+            shim["dependencies"],
+            [f"agnix=={expected}"],
+            "the pre-commit shim must pin exactly the agnix version it ships with",
+        )
+        self.assertNotEqual(
+            shim["name"],
+            "agnix",
+            "the shim must not share the published package's name",
+        )
 
     def test_version_mismatch_is_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:

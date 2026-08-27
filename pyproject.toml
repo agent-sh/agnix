@@ -1,0 +1,30 @@
+# Installed by `pre-commit`, not published to PyPI.
+#
+# A `language: python` hook makes pre-commit clone this repository at the
+# pinned rev, create a virtualenv, and `pip install .` from this directory.
+# That is the only reason a Rust project has a root pyproject.toml: it turns
+# the clone into something pip can install, whose single dependency is the
+# real `agnix` wheel from PyPI. pre-commit then finds the `agnix` binary the
+# wheel puts in the venv's scripts directory, so `entry: agnix` resolves
+# without the user installing anything by hand.
+#
+# The dependency is pinned exactly to this repository's version so a hook
+# pinned at `rev: vX.Y.Z` always runs agnix X.Y.Z. `scripts/sync-versions.sh`
+# keeps both numbers in step.
+#
+# The package under `pypi/` is the published one. This is a shim, and its
+# name is deliberately different so the two can never collide on PyPI.
+[project]
+name = "agnix-pre-commit"
+version = "0.51.0"
+description = "pre-commit shim that installs the agnix wheel. Not published to PyPI."
+requires-python = ">=3.9"
+dependencies = ["agnix==0.51.0"]
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+# No Python code of its own: the dependency provides the binary.
+[tool.setuptools]
+py-modules = []
