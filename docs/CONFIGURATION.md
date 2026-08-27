@@ -471,7 +471,7 @@ pre-commit installs agnix itself: the hooks use `language: python`, so it
 creates a virtualenv and pulls the `agnix` wheel matching the `rev` you pinned.
 Nothing needs to be on your PATH.
 
-This needs `rev: v0.52.0` or later for the self-installing hooks, and `rev: v0.52.1` or later for full file coverage. Earlier tags ship `language: system` hooks,
+This needs `rev: v0.52.0` or later for the self-installing hooks, and `rev: v0.52.1` or later to cover every tool-scoped config path (see the hook file list). Earlier tags ship `language: system` hooks,
 which require an `agnix` already on your PATH.
 
 ### Available Hooks
