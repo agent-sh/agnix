@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **pre-commit hooks skipped nearly every file agnix validates**
+  ([#1444](https://github.com/agent-sh/agnix/issues/1444),
+  [#1445](https://github.com/agent-sh/agnix/issues/1445)). The `files:` pattern
+  in `.pre-commit-hooks.yaml` was `^(...)$`-anchored with root-level entries, so
+  `SKILL\.md` matched only a repository-root SKILL.md - a skill at its normal
+  `.claude/skills/<name>/SKILL.md` location, a nested `AGENTS.md`, a plugin
+  manifest, or a scoped Copilot instruction file never reached agnix, and the
+  hook reported Passed with nothing validated. The pattern now mirrors
+  `file_types/detection.rs`: filename-based entries (`SKILL.md`, the
+  `CLAUDE.md`/`AGENTS.md` variants, `GEMINI.md`/`GEMINI.local.md`,
+  `plugin.json`, `mcp.json`, `*.mcp.json`) match at any depth via a shared
+  `(?:.*/)?` prefix, and `.github/instructions/**/*.instructions.md` joins the
+  path-scoped entries. Verified end to end: a repo with a nested skill, a
+  package-level AGENTS.md, GEMINI.md, and a scoped instruction file - all
+  invisible to the old pattern - now produces their diagnostics through the
+  hook.
+
 ## [0.52.0] - 2026-08-27
 
 ### Changed

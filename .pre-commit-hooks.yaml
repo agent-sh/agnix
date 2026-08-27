@@ -5,19 +5,24 @@
   language: python
   types: [file]
   files: |
-    (?x)^(
+    (?x)^(?:.*/)?(
       SKILL\.md|
       CLAUDE\.md|
       CLAUDE\.local\.md|
       AGENTS\.md|
       AGENTS\.local\.md|
       AGENTS\.override\.md|
+      GEMINI\.md|
+      GEMINI\.local\.md|
+      plugin\.json|
+      mcp\.json|
+      [^/]+\.mcp\.json|
       \.claude/settings\.json|
       \.claude/settings\.local\.json|
-      \.claude/agents/.*\.md|
-      .*\.mcp\.json|
+      \.claude/agents/[^/]+\.md|
       \.github/copilot-instructions\.md|
-      \.cursor/rules/.*\.mdc
+      \.github/instructions/.+\.instructions\.md|
+      \.cursor/rules/.+\.mdc
     )$
   args: [--strict]
 
@@ -28,19 +33,24 @@
   language: python
   types: [file]
   files: |
-    (?x)^(
+    (?x)^(?:.*/)?(
       SKILL\.md|
       CLAUDE\.md|
       CLAUDE\.local\.md|
       AGENTS\.md|
       AGENTS\.local\.md|
       AGENTS\.override\.md|
+      GEMINI\.md|
+      GEMINI\.local\.md|
+      plugin\.json|
+      mcp\.json|
+      [^/]+\.mcp\.json|
       \.claude/settings\.json|
       \.claude/settings\.local\.json|
-      \.claude/agents/.*\.md|
-      .*\.mcp\.json|
+      \.claude/agents/[^/]+\.md|
       \.github/copilot-instructions\.md|
-      \.cursor/rules/.*\.mdc
+      \.github/instructions/.+\.instructions\.md|
+      \.cursor/rules/.+\.mdc
     )$
   args: [--fix]
 
