@@ -242,6 +242,9 @@ jobs:
       # snippet got "unable to resolve action agent-sh/agnix@v0" - and nothing
       # here moved it, so it would have gone stale immediately once created.
       - name: Update floating major tag
+        # Skip prereleases, like every publisher job: a v0.53.0-beta.1 tag
+        # must not move @v0 onto beta code for action users.
+        if: ${{ !contains(github.ref, '-') }}
         run: |
           set -euo pipefail
           VERSION="${GITHUB_REF_NAME#v}"
