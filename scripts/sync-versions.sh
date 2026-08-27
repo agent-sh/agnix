@@ -60,6 +60,15 @@ if [ -f npm/package.json ]; then
   echo "  npm/package.json -> $VERSION"
 fi
 
+# pre-commit shim at the repo root. Both the version and the pinned dependency
+# must move together: a hook pinned at rev vX.Y.Z installs agnix X.Y.Z.
+if [ -f pyproject.toml ]; then
+  sed -i.bak "s/^version = \"[^\"]*\"/version = \"$VERSION\"/" pyproject.toml
+  sed -i.bak "s/^dependencies = \[\"agnix==[^\"]*\"\]/dependencies = [\"agnix==$VERSION\"]/" pyproject.toml
+  rm -f pyproject.toml.bak
+  echo "  pyproject.toml -> $VERSION"
+fi
+
 # PyPI wrapper
 if [ -f pypi/pyproject.toml ]; then
   sed -i.bak "s/^version = \"[^\"]*\"/version = \"$VERSION\"/" pypi/pyproject.toml

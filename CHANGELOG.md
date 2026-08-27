@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **pre-commit hooks install agnix themselves**
+  ([#1439](https://github.com/agent-sh/agnix/issues/1439)). The three hooks in
+  `.pre-commit-hooks.yaml` move from `language: system` to `language: python`,
+  so `pre-commit` and `prek` create a virtualenv and pull the `agnix` wheel that
+  matches the pinned `rev` instead of requiring a manual `cargo install` on
+  PATH. This is what the new PyPI distribution makes possible. A root
+  `pyproject.toml` exists solely for that install: pre-commit clones the repo
+  and `pip install .`s it, so the clone has to be pip-installable, and this shim
+  declares the matching `agnix==<version>` as its only dependency.
+  `scripts/sync-versions.sh` moves the shim's version and its pin together, so a
+  hook pinned at `rev: vX.Y.Z` always runs agnix X.Y.Z. Platforms without a
+  wheel can still pin `language: system` in their own config, which the
+  configuration guide now documents.
+
 ### Added
 - **CC-SET-028: invalid `feedbackDrafts` setting**
   ([#1435](https://github.com/agent-sh/agnix/issues/1435)). Claude Code v2.1.247
