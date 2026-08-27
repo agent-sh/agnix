@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **Floating `v0` tag pushes no longer trigger the release pipeline**. The
+  release workflow matched every `v*` tag, so the manually pushed floating
+  action tag ran the entire pipeline with version "0": the semver verification
+  guards stopped crates.io, npm, PyPI, and VS Code, but a junk GitHub release
+  was created, a junk Zed update PR was opened, and a version-"0" plugin update
+  reached the JetBrains marketplace (all three cleaned up the same day; the
+  marketplace update was deleted via the vendor API). The trigger now matches
+  only semver-shaped tags (`v[0-9]*.[0-9]*.[0-9]*`), which the automated
+  floating-tag move never produces - and that move uses `GITHUB_TOKEN`, whose
+  events do not start workflows anyway.
+
+### Fixed
 - **`uses: agent-sh/agnix@v0` did not resolve**. The README, configuration
   guide, and marketplace snippet all instruct `agent-sh/agnix@v0`, but no `v0`
   tag or branch has ever existed - every user who copied the documented GitHub
