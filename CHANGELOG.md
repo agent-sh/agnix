@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Tool release baselines**. Advance Amp to `multi-repo-projects`, Codex CLI
+  to `rust-v0.150.1`, and Kiro CLI to `2.20.0` after reviewing their current
+  upstream notes and validated configuration surfaces. The releases change
+  multi-repository project checkout, retained-image compaction, and spec-run
+  terminal behavior respectively; none changes a schema agnix validates.
+
 ### Fixed
 - **Floating `v0` tag pushes no longer trigger the release pipeline**. The
   release workflow matched every `v*` tag, so the manually pushed floating
