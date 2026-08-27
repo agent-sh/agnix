@@ -16,10 +16,10 @@
 # name is deliberately different so the two can never collide on PyPI.
 [project]
 name = "agnix-pre-commit"
-version = "0.52.0"
+version = "0.52.1"
 description = "pre-commit shim that installs the agnix wheel. Not published to PyPI."
 requires-python = ">=3.9"
-dependencies = ["agnix==0.52.0"]
+dependencies = ["agnix==0.52.1"]
 
 [build-system]
 requires = ["setuptools>=61"]

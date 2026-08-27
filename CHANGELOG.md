@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.52.1] - 2026-08-27
+
 ### Fixed
 - **pre-commit hooks skipped nearly every file agnix validates**
   ([#1444](https://github.com/agent-sh/agnix/issues/1444),
