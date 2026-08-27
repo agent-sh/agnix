@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Homebrew tap was 34 releases behind**. `brew install agnix` built v0.18.0
+  from source because nothing told the tap about new releases: the tap's
+  `update-formula.yml` listens for a `release-published` dispatch that the main
+  repository never sent. The tap has been dispatched to v0.52.1 manually, the
+  vestigial in-repo `Formula/agnix.rb` copy is synced to match, and release.yml now
+  dispatches the tap directly from a new `homebrew` job. A separate
+  `release: published` workflow could never have worked here: the release is
+  published with the default `GITHUB_TOKEN`, and events created by
+  `GITHUB_TOKEN` do not start workflow runs - which is exactly how the drift
+  stayed invisible. The job reuses the existing cross-repo `COMMITTER_TOKEN`
+  (already pushing to other repos in the zed and version-docs jobs), so no new
+  secret is needed; the dispatch shape was verified live against the tap's
+  `update-formula.yml`. Manual fallback stays
+  `gh workflow run update-formula.yml --repo agent-sh/homebrew-agnix -f tag=<tag>`.
+
+### Changed
+- **CLAUDE.md/AGENTS.md no longer pin a stale version**. The "Current State"
+  section claimed v0.37.3 fifteen releases later; nothing in the bookkeeping
+  sync touches that line, so it now points at GitHub releases instead of
+  hardcoding a number that drifts.
+
 ## [0.52.1] - 2026-08-27
 
 ### Fixed
