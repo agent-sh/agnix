@@ -15,14 +15,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `SKILL\.md` matched only a repository-root SKILL.md - a skill at its normal
   `.claude/skills/<name>/SKILL.md` location, a nested `AGENTS.md`, a plugin
   manifest, or a scoped Copilot instruction file never reached agnix, and the
-  hook reported Passed with nothing validated. The pattern now mirrors
-  `file_types/detection.rs`: filename-based entries (`SKILL.md`, the
-  `CLAUDE.md`/`AGENTS.md` variants, `GEMINI.md`/`GEMINI.local.md`,
-  `plugin.json`, `mcp.json`, `*.mcp.json`) match at any depth via a shared
-  `(?:.*/)?` prefix, and `.github/instructions/**/*.instructions.md` joins the
-  path-scoped entries. `.cursor/rules/**/*.md` is now passed alongside `.mdc`
-  so CUR-020 can flag plain-markdown rules Cursor silently ignores, and nested
-  subagent files under `.claude/agents/` keep their coverage. Verified end to end: a repo with a nested skill, a
+  hook reported Passed with nothing validated. The pattern now covers
+  every tool-scoped path shape `file_types/detection.rs` recognizes: the
+  filename-based entries (`SKILL.md`, the `CLAUDE.md`/`AGENTS.md` variants,
+  `GEMINI.md`, `plugin.json`, `mcp.json`, `*.mcp.json`, `mcp-*.json`,
+  `opencode.json{,c}`, `gemini-extension.json`, the `.cursorrules`,
+  `.clinerules`, `.roorules`/`.roomodes`/`.rooignore`, and `.windsurfrules`
+  legacy files) match at any depth via a shared `(?:.*/)?` prefix, and the
+  `.claude`, `.github`, `.cursor`, `.codex`, `.gemini`, `.amp`, `.agents`,
+  `.roo`, `.windsurf`, and `.kiro` directory surfaces are enumerated -
+  including `.cursor/rules/**/*.md` so CUR-020 can flag plain-markdown rules
+  Cursor silently ignores. Verified against the 150 concrete paths in
+  `detection.rs`'s own tests; the only remaining exclusions are deliberate:
+  detection's loose fallback arms outside a tool directory (a bare
+  `settings.json`, `hooks.json`, `environment.json`, `POWER.md`, or
+  `requirements.toml` anywhere), uppercase directory spellings, and generic
+  markdown. Verified end to end: a repo with a nested skill, a
   package-level AGENTS.md, GEMINI.md, and a scoped instruction file - all
   invisible to the old pattern - now produces their diagnostics through the
   hook.

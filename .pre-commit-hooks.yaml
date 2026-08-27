@@ -17,12 +17,47 @@
       plugin\.json|
       mcp\.json|
       [^/]+\.mcp\.json|
-      \.claude/settings\.json|
-      \.claude/settings\.local\.json|
+      mcp-[^/]+\.json|
+      opencode\.jsonc?|
+      gemini-extension\.json|
+      \.geminiignore|
+      \.cursorrules(\.md)?|
+      \.clinerules(/.+)?|
+      \.roorules|
+      \.roomodes|
+      \.rooignore|
+      \.windsurfrules|
+      \.claude/settings(\.local)?\.json|
+      \.claude/managed-settings\.json|
       \.claude/agents/.+\.md|
+      \.claude/rules/.+\.md|
+      \.claude/output-styles/[^/]+\.md|
       \.github/copilot-instructions\.md|
       \.github/instructions/.+\.instructions\.md|
-      \.cursor/rules/.+\.mdc?
+      \.github/agents/[^/]+\.agent\.md|
+      \.github/prompts/[^/]+\.prompt\.md|
+      \.github/hooks/hooks\.json|
+      \.github/workflows/copilot-setup-steps\.ya?ml|
+      \.cursor/rules/.+\.mdc?|
+      \.cursor/agents/.+\.md|
+      \.cursor/(.+/)?hooks\.json|
+      \.cursor/environment\.json|
+      \.cursor/[^/]+\.mdc?|
+      \.codex/config\.(toml|json|ya?ml)|
+      \.codex/requirements\.toml|
+      \.gemini/settings(\.local)?\.json|
+      \.gemini/agents/[^/]+\.md|
+      \.amp/settings(\.local)?\.json|
+      \.agents/(checks|skills)/.+\.md|
+      \.roo/rules[^/]*/.+\.md|
+      \.windsurf/(rules|workflows)/.+\.md|
+      \.windsurf/[^/]+\.md|
+      \.kiro/steering/.+\.md|
+      \.kiro/[^/]+\.md|
+      \.kiro/agents/.+|
+      \.kiro/hooks/[^/]+\.kiro\.hook|
+      \.kiro/settings/[^/]+\.json|
+      \.kiro/powers/.+/POWER\.md
     )$
   args: [--strict]
 
@@ -45,12 +80,47 @@
       plugin\.json|
       mcp\.json|
       [^/]+\.mcp\.json|
-      \.claude/settings\.json|
-      \.claude/settings\.local\.json|
+      mcp-[^/]+\.json|
+      opencode\.jsonc?|
+      gemini-extension\.json|
+      \.geminiignore|
+      \.cursorrules(\.md)?|
+      \.clinerules(/.+)?|
+      \.roorules|
+      \.roomodes|
+      \.rooignore|
+      \.windsurfrules|
+      \.claude/settings(\.local)?\.json|
+      \.claude/managed-settings\.json|
       \.claude/agents/.+\.md|
+      \.claude/rules/.+\.md|
+      \.claude/output-styles/[^/]+\.md|
       \.github/copilot-instructions\.md|
       \.github/instructions/.+\.instructions\.md|
-      \.cursor/rules/.+\.mdc?
+      \.github/agents/[^/]+\.agent\.md|
+      \.github/prompts/[^/]+\.prompt\.md|
+      \.github/hooks/hooks\.json|
+      \.github/workflows/copilot-setup-steps\.ya?ml|
+      \.cursor/rules/.+\.mdc?|
+      \.cursor/agents/.+\.md|
+      \.cursor/(.+/)?hooks\.json|
+      \.cursor/environment\.json|
+      \.cursor/[^/]+\.mdc?|
+      \.codex/config\.(toml|json|ya?ml)|
+      \.codex/requirements\.toml|
+      \.gemini/settings(\.local)?\.json|
+      \.gemini/agents/[^/]+\.md|
+      \.amp/settings(\.local)?\.json|
+      \.agents/(checks|skills)/.+\.md|
+      \.roo/rules[^/]*/.+\.md|
+      \.windsurf/(rules|workflows)/.+\.md|
+      \.windsurf/[^/]+\.md|
+      \.kiro/steering/.+\.md|
+      \.kiro/[^/]+\.md|
+      \.kiro/agents/.+|
+      \.kiro/hooks/[^/]+\.kiro\.hook|
+      \.kiro/settings/[^/]+\.json|
+      \.kiro/powers/.+/POWER\.md
     )$
   args: [--fix]
 
