@@ -545,11 +545,15 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Fix**: Manual - choose `5m` or `1h`.
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.243, code.claude.com/docs/en/settings-reference#subagentpromptcachettl
 
+<a id="cc-set-028"></a>
+
 ### CC-SET-028 [MEDIUM] Invalid feedbackDrafts Setting
 **Requirement**: `feedbackDrafts` MUST be the string `notify`, `quiet`, or `off` when present in Claude Code 2.1.247+. It is a string enum, not a boolean; `off` removes the SendFeedback tool.
 **Detection**: Parse settings JSON and flag non-string values or strings outside the documented enum.
 **Fix**: Manual - choose `notify`, `quiet`, or `off`.
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.247, code.claude.com/docs/en/settings-reference#feedbackdrafts
+
+<a id="cc-set-029"></a>
 
 ### CC-SET-029 [MEDIUM] Invalid spinnerTipsOverride Shape
 **Requirement**: `spinnerTipsOverride` MUST be an object limited to `tips`, `tipsFile`, `label`, and `excludeDefault`. Each `tips` entry is a plain string or an object with a required `id` (up to 64 letters, digits, `.`, `_`, `-`) and `text` (up to 500 characters), plus optional `cooldownSessions` (0-1000) and `priority` (-10-10). `tipsFile` MUST be absolute or `~/`-rooted, and `label` at most 40 characters.
@@ -1401,15 +1405,18 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 ---
 
-## MCP RULES
-
-<a id="mcp-001"></a>
+<a id="cc-pl-016"></a>
 
 ### CC-PL-016 [HIGH] Plugin Name Not Kebab-Case
 **Requirement**: A plugin manifest `name` MUST be a kebab-case identifier - lowercase letters, digits, and hyphens, with no spaces, no leading or trailing hyphen, and no doubled hyphen.
 **Detection**: Read `name` from `.claude-plugin/plugin.json` and flag any character outside the documented set. Control and invisible characters fail by construction, which is what Claude Code 2.1.247 hardened marketplace handling to reject.
 **Fix**: Manual - rename the plugin.
 **Source**: code.claude.com/docs/en/plugins-reference, github.com/anthropics/claude-code/releases/tag/v2.1.247
+
+## MCP RULES
+
+<a id="mcp-001"></a>
+
 
 ### MCP-001 [HIGH] Invalid JSON-RPC Version
 **Requirement**: MUST use JSON-RPC 2.0

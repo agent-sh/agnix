@@ -893,7 +893,6 @@ rules:
 # ===========================================================================
 # Core - Library messages
 # ===========================================================================
-core:
   cc_set_028:
     message: feedbackDrafts debe ser notify, quiet u off (se recibió %{actual})
     suggestion: Establece feedbackDrafts en notify, quiet u off. Es una cadena enumerada, no un booleano.
@@ -915,6 +914,7 @@ core:
   cc_pl_016:
     message: El nombre de plugin '%{name}' no está en kebab-case
     suggestion: Usa solo minúsculas, dígitos y guiones. Claude Code rechaza nombres con caracteres de control o invisibles.
+core:
   error:
     file_read: 'Error al leer archivo: %{path}'
     file_write: 'Error al escribir archivo: %{path}'
