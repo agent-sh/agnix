@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **`uses: agent-sh/agnix@v0` did not resolve**. The README, configuration
+  guide, and marketplace snippet all instruct `agent-sh/agnix@v0`, but no `v0`
+  tag or branch has ever existed - every user who copied the documented GitHub
+  Action snippet got "unable to resolve action". The repo's own CI never
+  noticed because it exercises the action as `uses: ./`. The floating tag now
+  exists (pointing at v0.52.1) and the release workflow force-moves it to each
+  new release commit, so the documented ref tracks the latest release the way
+  major-version action tags are expected to.
+
+### Fixed
 - **Homebrew tap was 34 releases behind**. `brew install agnix` built v0.18.0
   from source because nothing told the tap about new releases: the tap's
   `update-formula.yml` listens for a `release-published` dispatch that the main

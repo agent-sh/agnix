@@ -236,6 +236,19 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # Keep the floating major tag on the latest release so the documented
+      # `uses: agent-sh/agnix@v0` keeps resolving. The tag did not exist at all
+      # until 2026-08-27 - every user who copied the README's GitHub Action
+      # snippet got "unable to resolve action agent-sh/agnix@v0" - and nothing
+      # here moved it, so it would have gone stale immediately once created.
+      - name: Update floating major tag
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          MAJOR="v${VERSION%%.*}"
+          git tag -f "$MAJOR" "$GITHUB_SHA"
+          git push -f origin "refs/tags/$MAJOR"
+
       - name: Publish release
         run: |
           set -euo pipefail
