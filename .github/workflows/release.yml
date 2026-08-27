@@ -249,7 +249,10 @@ jobs:
           set -euo pipefail
           VERSION="${GITHUB_REF_NAME#v}"
           MAJOR="v${VERSION%%.*}"
-          git tag -f "$MAJOR" "$GITHUB_SHA"
+          # Peel to the commit: on an annotated tag push GITHUB_SHA is the tag
+          # object, and tagging it directly would nest v0 -> tag -> commit.
+          COMMIT="$(git rev-list -n 1 "$GITHUB_REF_NAME")"
+          git tag -f "$MAJOR" "$COMMIT"
           git push -f origin "refs/tags/$MAJOR"
 
       - name: Publish release
