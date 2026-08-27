@@ -19,10 +19,10 @@
       [^/]+\.mcp\.json|
       \.claude/settings\.json|
       \.claude/settings\.local\.json|
-      \.claude/agents/[^/]+\.md|
+      \.claude/agents/.+\.md|
       \.github/copilot-instructions\.md|
       \.github/instructions/.+\.instructions\.md|
-      \.cursor/rules/.+\.mdc
+      \.cursor/rules/.+\.mdc?
     )$
   args: [--strict]
 
@@ -47,10 +47,10 @@
       [^/]+\.mcp\.json|
       \.claude/settings\.json|
       \.claude/settings\.local\.json|
-      \.claude/agents/[^/]+\.md|
+      \.claude/agents/.+\.md|
       \.github/copilot-instructions\.md|
       \.github/instructions/.+\.instructions\.md|
-      \.cursor/rules/.+\.mdc
+      \.cursor/rules/.+\.mdc?
     )$
   args: [--fix]
 

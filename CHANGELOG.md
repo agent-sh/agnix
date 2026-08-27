@@ -20,7 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `CLAUDE.md`/`AGENTS.md` variants, `GEMINI.md`/`GEMINI.local.md`,
   `plugin.json`, `mcp.json`, `*.mcp.json`) match at any depth via a shared
   `(?:.*/)?` prefix, and `.github/instructions/**/*.instructions.md` joins the
-  path-scoped entries. Verified end to end: a repo with a nested skill, a
+  path-scoped entries. `.cursor/rules/**/*.md` is now passed alongside `.mdc`
+  so CUR-020 can flag plain-markdown rules Cursor silently ignores, and nested
+  subagent files under `.claude/agents/` keep their coverage. Verified end to end: a repo with a nested skill, a
   package-level AGENTS.md, GEMINI.md, and a scoped instruction file - all
   invisible to the old pattern - now produces their diagnostics through the
   hook.
