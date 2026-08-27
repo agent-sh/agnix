@@ -2718,8 +2718,20 @@ fn validate_spinner_tips_override(
 
     for (index, entry) in entries.iter().enumerate() {
         let position = index + 1;
-        // A plain string is a valid tip and takes the documented defaults.
-        if entry.is_string() {
+        // A plain string is a tip that takes the documented defaults, so the
+        // string *is* the tip's text and the same "one line of up to 500
+        // characters" limit applies to it as to an object's `text`.
+        if let Some(text) = entry.as_str() {
+            if !is_valid_spinner_tip_text(text) {
+                push(
+                    t!(
+                        "rules.cc_set_029.tip_text",
+                        index = position,
+                        max = SPINNER_TIP_TEXT_MAX_LEN
+                    )
+                    .to_string(),
+                );
+            }
             continue;
         }
         let Some(tip) = entry.as_object() else {
@@ -2745,8 +2757,7 @@ fn validate_spinner_tips_override(
         }
 
         match tip.get("text").and_then(serde_json::Value::as_str) {
-            Some(text)
-                if !text.trim().is_empty() && text.chars().count() <= SPINNER_TIP_TEXT_MAX_LEN => {}
+            Some(text) if is_valid_spinner_tip_text(text) => {}
             _ => push(
                 t!(
                     "rules.cc_set_029.tip_text",
@@ -2793,6 +2804,13 @@ fn validate_spinner_tips_override(
             }
         }
     }
+}
+
+/// Whether a tip's text is usable: non-empty after trimming and within the
+/// documented one-line, 500-character limit. Applies to both entry forms - a
+/// plain string tip is read as a tip whose text is the string itself.
+fn is_valid_spinner_tip_text(text: &str) -> bool {
+    !text.trim().is_empty() && text.chars().count() <= SPINNER_TIP_TEXT_MAX_LEN
 }
 
 /// `C:\path` or `C:/path`, which `tipsFile` accepts on Windows.
@@ -5906,6 +5924,42 @@ mod tests {
                 .all(|diagnostic| diagnostic.rule != "CC-SET-029"),
             "documented example should be accepted, got {diagnostics:?}"
         );
+    }
+
+    #[test]
+    fn test_spinner_tips_override_string_tips_share_the_text_limits() {
+        // A plain string is read as a tip whose text is the string, so an empty
+        // or over-long string is dropped just like a bad object `text`.
+        let long = "x".repeat(501);
+        for invalid in ["", "   ", long.as_str()] {
+            let content =
+                serde_json::json!({"spinnerTipsOverride": {"tips": [invalid]}}).to_string();
+            assert!(
+                validate(&content)
+                    .iter()
+                    .any(|diagnostic| diagnostic.rule == "CC-SET-029"),
+                "expected CC-SET-029 for string tip {invalid:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_spinner_tips_override_text_boundary_is_inclusive() {
+        // Exactly at the limit is valid, in both entry forms.
+        let string_form =
+            serde_json::json!({"spinnerTipsOverride": {"tips": ["x".repeat(500)]}}).to_string();
+        let object_form = serde_json::json!({
+            "spinnerTipsOverride": {"tips": [{"id": "a", "text": "x".repeat(500)}]}
+        })
+        .to_string();
+        for content in [string_form, object_form] {
+            assert!(
+                validate(&content)
+                    .iter()
+                    .all(|diagnostic| diagnostic.rule != "CC-SET-029"),
+                "500 characters should be accepted"
+            );
+        }
     }
 
     #[test]

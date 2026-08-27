@@ -556,7 +556,7 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 <a id="cc-set-029"></a>
 
 ### CC-SET-029 [MEDIUM] Invalid spinnerTipsOverride Shape
-**Requirement**: `spinnerTipsOverride` MUST be an object limited to `tips`, `tipsFile`, `label`, and `excludeDefault`. Each `tips` entry is a plain string or an object with a required `id` (up to 64 letters, digits, `.`, `_`, `-`) and `text` (up to 500 characters), plus optional `cooldownSessions` (0-1000) and `priority` (-10-10). `tipsFile` MUST be absolute or `~/`-rooted, and `label` at most 40 characters.
+**Requirement**: `spinnerTipsOverride` MUST be an object limited to `tips`, `tipsFile`, `label`, and `excludeDefault`. Each `tips` entry is a plain string or an object with a required `id` (up to 64 letters, digits, `.`, `_`, `-`) and `text` (up to 500 characters), plus optional `cooldownSessions` (0-1000) and `priority` (-10-10). A plain string is read as a tip whose text is the string itself, so it MUST satisfy the same non-empty, 500-character limit. `tipsFile` MUST be absolute or `~/`-rooted, and `label` at most 40 characters.
 **Detection**: Parse settings JSON, then check the object's fields and each tip entry against the documented shape and limits.
 **Fix**: Manual - Claude Code drops an invalid tip with a debug warning instead of reporting it, so the tip is simply never shown.
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.247, code.claude.com/docs/en/settings-reference#spinnertipsoverride
