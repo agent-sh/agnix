@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **Maintenance dependencies**. Update `uuid` to 1.26.0, synchronize both
+  CodeQL steps on 4.37.8, and refresh the pinned setup-java, install-action,
+  and Claude Code action revisions.
 - **Tool release baselines**. Advance Amp through `amp-on-ios-and-macos`, Claude
   Code to `v2.1.251`, Codex CLI to `rust-v0.151.0`, Cursor to `3.18.9`, OpenCode
   to `v1.18.25`, and Kiro CLI to `2.20.0` after reviewing their current upstream
