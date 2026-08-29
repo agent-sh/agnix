@@ -2785,6 +2785,20 @@ fn test_cc_hk_001_all_valid_events() {
 }
 
 #[test]
+fn test_cc_hk_001_model_switch_events_are_valid() {
+    for event in ["PreModelSwitch", "PostModelSwitch"] {
+        let content = format!(
+            r#"{{"hooks":{{"{event}":[{{"matcher":"claude-opus-5","hooks":[{{"type":"command","command":"echo model"}}]}}]}}}}"#
+        );
+        let diagnostics = validate(&content);
+        assert!(
+            diagnostics.iter().all(|d| d.rule != "CC-HK-001"),
+            "{event} must be accepted by CC-HK-001: {diagnostics:?}"
+        );
+    }
+}
+
+#[test]
 fn test_cc_hk_003_all_tool_events_hint_matcher() {
     // Must match HooksSchema::TOOL_EVENTS constant
     let tool_events = HooksSchema::TOOL_EVENTS;
@@ -2934,6 +2948,8 @@ fn test_cc_hk_002_prompt_disallowed_events() {
         "SubagentStart",
         "PreCompact",
         "PostCompact",
+        "PreModelSwitch",
+        "PostModelSwitch",
         "ConfigChange",
         "CwdChanged",
         "FileChanged",
@@ -2983,6 +2999,8 @@ fn test_cc_hk_002_agent_disallowed_events() {
         "SubagentStart",
         "PreCompact",
         "PostCompact",
+        "PreModelSwitch",
+        "PostModelSwitch",
         "ConfigChange",
         "CwdChanged",
         "FileChanged",

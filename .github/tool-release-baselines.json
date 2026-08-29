@@ -17,7 +17,7 @@
         "mcp"
       ],
       "github_repo": "anthropics/claude-code",
-      "last_known_version": "v2.1.247",
+      "last_known_version": "v2.1.251",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
@@ -63,7 +63,7 @@
         "per_client_skill"
       ],
       "github_repo": "openai/codex",
-      "last_known_version": "rust-v0.150.1",
+      "last_known_version": "rust-v0.151.0",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
@@ -102,7 +102,7 @@
         "per_client_skill"
       ],
       "github_repo": "sst/opencode",
-      "last_known_version": "v1.18.23",
+      "last_known_version": "v1.18.25",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
@@ -253,7 +253,7 @@
       "github_repo": null,
       "html_url": "https://api2.cursor.sh/updates/api/update/darwin/cursor/0.0.1/stable",
       "version_regex": "[0-9]+\\.[0-9]+\\.[0-9]+",
-      "last_known_version": "3.17.21",
+      "last_known_version": "3.18.9",
       "tracked": true,
       "notes": "Tracked via Cursor's stable update endpoint (the same one the desktop app polls). Returns JSON like {\"url\":\"...\",\"name\":\"3.1.17\"}. Channel is hardcoded to 'stable' for darwin; the version is platform-agnostic (same release ships across darwin/linux/win32). Prose changelog at https://cursor.com/changelog (Next.js SPA - not scrapeable from raw HTML).",
       "changes_of_interest": {
@@ -324,7 +324,7 @@
       "html_url": "https://ampcode.com/news.rss",
       "version_regex": "https://ampcode\\.com/news/[a-zA-Z0-9._-]+",
       "notes_extractor": "rss_cdata",
-      "last_known_version": "multi-repo-projects",
+      "last_known_version": "amp-on-ios-and-macos",
       "tracked": true,
       "notes": "Tracked via the amp news RSS feed; the 'version' is the slug of the latest /news/ post (e.g., amp-free-is-ad-free). Source is not on GitHub; npm @sourcegraph/amp publishes per-commit (no semver gates) so npm version-bump tracking would be noise. Issue body uses the first <item><description> CDATA from the RSS feed (already structured HTML - no LLM needed).",
       "changes_of_interest": {
