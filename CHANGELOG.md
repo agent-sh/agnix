@@ -8,11 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- **Tool release baselines**. Advance Amp to `multi-repo-projects`, Codex CLI
-  to `rust-v0.150.1`, and Kiro CLI to `2.20.0` after reviewing their current
-  upstream notes and validated configuration surfaces. The releases change
-  multi-repository project checkout, retained-image compaction, and spec-run
-  terminal behavior respectively; none changes a schema agnix validates. The
+- **Maintenance dependencies**. Update `uuid` to 1.26.0, synchronize both
+  CodeQL steps on 4.37.8, and refresh the pinned setup-java, install-action,
+  and Claude Code action revisions.
+- **Tool release baselines**. Advance Amp through `amp-on-ios-and-macos`, Claude
+  Code to `v2.1.251`, Codex CLI to `rust-v0.151.0`, Cursor to `3.18.9`, OpenCode
+  to `v1.18.25`, and Kiro CLI to `2.20.0` after reviewing their current upstream
+  notes and validated configuration surfaces. Claude Code added the
+  `PreModelSwitch` and `PostModelSwitch` hook events, now accepted by the
+  existing `CC-HK-001` rule; the other releases do not change a schema agnix
+  validates. The
   Codex research inventory now also records its shared `MCP` rule family and
   accepted `.yml`, `.mcp.json`, `[mcp_servers.*]`, and managed-environment
   `requirements.toml` surfaces, with parity regression assertions.

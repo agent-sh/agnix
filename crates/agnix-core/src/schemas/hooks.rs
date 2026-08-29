@@ -214,6 +214,8 @@ impl HooksSchema {
         "TaskCreated",
         "PreCompact",
         "PostCompact",
+        "PreModelSwitch",
+        "PostModelSwitch",
         "Setup",
         "SessionStart",
         "SessionEnd",
@@ -258,6 +260,8 @@ impl HooksSchema {
         "SubagentStop",
         "PreCompact",
         "PostCompact",
+        "PreModelSwitch",
+        "PostModelSwitch",
         "ConfigChange",
         "FileChanged",
         "StopFailure",
@@ -499,6 +503,8 @@ mod tests {
         assert!(HooksSchema::supports_matcher("SubagentStop"));
         assert!(HooksSchema::supports_matcher("PreCompact"));
         assert!(HooksSchema::supports_matcher("PostCompact"));
+        assert!(HooksSchema::supports_matcher("PreModelSwitch"));
+        assert!(HooksSchema::supports_matcher("PostModelSwitch"));
         assert!(HooksSchema::supports_matcher("ConfigChange"));
         assert!(HooksSchema::supports_matcher("FileChanged"));
         assert!(HooksSchema::supports_matcher("StopFailure"));
@@ -560,6 +566,8 @@ mod tests {
         assert!(!HooksSchema::is_prompt_event("SubagentStart"));
         assert!(!HooksSchema::is_prompt_event("PreCompact"));
         assert!(!HooksSchema::is_prompt_event("PostCompact"));
+        assert!(!HooksSchema::is_prompt_event("PreModelSwitch"));
+        assert!(!HooksSchema::is_prompt_event("PostModelSwitch"));
         assert!(!HooksSchema::is_prompt_event("ConfigChange"));
         assert!(!HooksSchema::is_prompt_event("CwdChanged"));
         assert!(!HooksSchema::is_prompt_event("FileChanged"));

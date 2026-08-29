@@ -1293,9 +1293,10 @@
         "source_type": "vendor_docs",
         "source_urls": [
           "https://code.claude.com/docs/en/hooks",
-          "https://github.com/anthropics/claude-code/releases/tag/v2.1.219"
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.219",
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.251"
         ],
-        "verified_on": "2026-07-26",
+        "verified_on": "2026-08-30",
         "applies_to": {
           "tool": "claude-code"
         },
