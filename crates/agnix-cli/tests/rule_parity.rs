@@ -1185,6 +1185,10 @@ fn test_refreshed_release_surfaces_match_research_inventory() {
         );
 
         if tool_id == "opencode" {
+            assert!(
+                row.contains(".mcp.json") && row_rule_prefixes.contains("MCP"),
+                "OpenCode research inventory must include its shared MCP surface and prefix"
+            );
             for implemented_prefix in agnix_rules::get_prefixes_for_tool("opencode")
                 .into_iter()
                 .filter(|prefix| prefix.starts_with("OC-"))
