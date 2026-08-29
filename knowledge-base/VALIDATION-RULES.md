@@ -774,7 +774,7 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="cc-hk-001"></a>
 ### CC-HK-001 [HIGH] Invalid Hook Event
-**Requirement**: Event MUST be one of 31 valid names (case-sensitive)
+**Requirement**: Event MUST be one of 33 valid names (case-sensitive)
 **Valid**: PreToolUse, PermissionRequest, PostToolUse, PostToolUseFailure, Notification, MessageDisplay, UserPromptSubmit, UserPromptExpansion, Stop, SubagentStart, SubagentStop, TeammateIdle, TaskCompleted, TaskCreated, PreCompact, PostCompact, PreModelSwitch, PostModelSwitch, Setup, SessionStart, SessionEnd, InstructionsLoaded, ConfigChange, CwdChanged, DirectoryAdded, FileChanged, WorktreeCreate, WorktreeRemove, Elicitation, ElicitationResult, PermissionDenied, PostToolBatch, StopFailure
 **Detection**: `!VALID_EVENTS.contains(event)`
 **Fix**: [AUTO-FIX] Replace with closest matching valid event name
