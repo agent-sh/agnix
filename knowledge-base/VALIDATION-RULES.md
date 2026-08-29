@@ -778,7 +778,7 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Valid**: PreToolUse, PermissionRequest, PostToolUse, PostToolUseFailure, Notification, MessageDisplay, UserPromptSubmit, UserPromptExpansion, Stop, SubagentStart, SubagentStop, TeammateIdle, TaskCompleted, TaskCreated, PreCompact, PostCompact, PreModelSwitch, PostModelSwitch, Setup, SessionStart, SessionEnd, InstructionsLoaded, ConfigChange, CwdChanged, DirectoryAdded, FileChanged, WorktreeCreate, WorktreeRemove, Elicitation, ElicitationResult, PermissionDenied, PostToolBatch, StopFailure
 **Detection**: `!VALID_EVENTS.contains(event)`
 **Fix**: [AUTO-FIX] Replace with closest matching valid event name
-**Source**: code.claude.com/docs/en/hooks, github.com/anthropics/claude-code/releases/tag/v2.1.219
+**Source**: code.claude.com/docs/en/hooks, github.com/anthropics/claude-code/releases/tag/v2.1.219, github.com/anthropics/claude-code/releases/tag/v2.1.251
 
 <a id="cc-hk-002"></a>
 ### CC-HK-002 [HIGH] Prompt Hook on Wrong Event
