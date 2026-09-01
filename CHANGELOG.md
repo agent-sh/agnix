@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **OpenCode release baseline**. Advance OpenCode to `v1.18.26`; its primary
+  release notes contain model-provider, replay, timing, patch metadata, Azure
+  sign-in, and desktop bug fixes, with no change to a configuration surface
+  agnix validates.
 - **Tool and specification baselines**. Advance Amp to `fable-5.1`, Claude
   Code to `v2.1.257`, Codex CLI to `rust-v0.152.0`, Cursor to `3.18.25`, and
   Gemini CLI to `v0.58.0` after reviewing their current primary release notes

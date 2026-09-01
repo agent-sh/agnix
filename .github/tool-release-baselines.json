@@ -102,7 +102,7 @@
         "per_client_skill"
       ],
       "github_repo": "sst/opencode",
-      "last_known_version": "v1.18.25",
+      "last_known_version": "v1.18.26",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
