@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **Tool and specification baselines**. Advance Amp to `fable-5.1`, Claude
+  Code to `v2.1.257`, Codex CLI to `rust-v0.152.0`, Cursor to `3.18.25`, and
+  Gemini CLI to `v0.58.0` after reviewing their current primary release notes
+  and validated configuration surfaces. Refresh the Claude hooks, plugins,
+  skills, and subagent documentation hashes after confirming the documented
+  event, manifest, frontmatter, and matcher contracts remain covered by the
+  existing rules. Claude's new clock and read-boundary preferences are not
+  correctness constraints agnix currently validates; Codex's package-style MCP
+  names, per-tool output limits, app-server timeout, and opt-in planning flag
+  are accepted by the current lenient nested configuration handling. The Amp,
+  Cursor, and Gemini markers do not change a schema agnix validates.
 - **Maintenance dependencies**. Update `uuid` to 1.26.0, synchronize both
   CodeQL steps on 4.37.8, and refresh the pinned setup-java, install-action,
   and Claude Code action revisions.
