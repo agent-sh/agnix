@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **Claude Code and Codex patch baselines**. Advance Claude Code to `v2.1.258`
+  and Codex CLI to `rust-v0.152.1`. Their primary notes contain only a macOS
+  launch repair, remote-session message replay repair, and Guardian Node REPL
+  policy fix; neither patch changes a configuration schema agnix validates.
 - **OpenCode release baseline**. Advance OpenCode to `v1.18.26`; its primary
   release notes contain model-provider, replay, timing, patch metadata, Azure
   sign-in, and desktop bug fixes, with no change to a configuration surface

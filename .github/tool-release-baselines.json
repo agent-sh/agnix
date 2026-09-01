@@ -17,7 +17,7 @@
         "mcp"
       ],
       "github_repo": "anthropics/claude-code",
-      "last_known_version": "v2.1.257",
+      "last_known_version": "v2.1.258",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
@@ -63,7 +63,7 @@
         "per_client_skill"
       ],
       "github_repo": "openai/codex",
-      "last_known_version": "rust-v0.152.0",
+      "last_known_version": "rust-v0.152.1",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
