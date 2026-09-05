@@ -13,7 +13,7 @@ import sysconfig
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-__version__ = "0.52.1"
+__version__ = "0.53.0"
 
 __all__ = ["AgnixError", "binary_path", "lint", "run", "version", "__version__"]
 

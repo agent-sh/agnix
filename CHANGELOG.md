@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.53.0] - 2026-09-06
+
 ### Changed
 - **Claude Code 2.1.261 and ecosystem baseline refresh**. Add `CC-SET-030`
   for local-command entries that Claude Code silently skips in
