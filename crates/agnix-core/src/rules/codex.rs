@@ -154,6 +154,7 @@ const KNOWN_FEATURE_KEYS: &[&str] = &[
     "collaboration_modes",
     "compaction_image_budget",
     "computer_use",
+    "context_management",
     "concurrent_reasoning_summaries",
     "connectors",
     "current_time_reminder",
@@ -258,6 +259,8 @@ const KNOWN_FEATURE_KEYS: &[&str] = &[
 const KNOWN_TUI_KEYS: &[&str] = &[
     "alternate_screen",
     "animations",
+    "auto_recap",
+    "disable_paste_burst",
     "model_availability_nux",
     "notification_method",
     "notifications",

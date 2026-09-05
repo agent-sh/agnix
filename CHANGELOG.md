@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **Claude Code 2.1.261 and ecosystem baseline refresh**. Add `CC-SET-030`
+  for local-command entries that Claude Code silently skips in
+  `managedMcpServers`; accept Codex CLI 0.153's `tui.auto_recap`,
+  `tui.disable_paste_burst`, and experimental context-management keys; and
+  refresh Amp, Cline, Cursor, Kiro, OpenCode, and changed specification hashes.
+- **Maintenance dependencies**. Keep CodeQL init/analyze together on v4.37.9
+  and refresh the VS Code and docs-site npm lockfiles.
 - **Claude Code and Codex patch baselines**. Advance Claude Code to `v2.1.258`
   and Codex CLI to `rust-v0.152.1`. Their primary notes contain only a macOS
   launch repair, remote-session message replay repair, and Guardian Node REPL

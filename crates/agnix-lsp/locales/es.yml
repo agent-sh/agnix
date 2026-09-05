@@ -911,6 +911,11 @@ rules:
     tip_text: la entrada %{index} de spinnerTipsOverride.tips necesita un 'text' no vacío de hasta %{max} caracteres
     tip_range: la entrada %{index} de spinnerTipsOverride.tips tiene '%{field}' fuera de %{min}..%{max}
     tip_unknown_field: la entrada %{index} de spinnerTipsOverride.tips tiene el campo desconocido '%{field}'
+  cc_set_030:
+    not_object: managedMcpServers debe ser un objeto indexado por nombre de servidor
+    entry_not_object: la entrada '%{name}' de managedMcpServers debe ser un objeto de servidor MCP
+    local_command: la entrada '%{name}' de managedMcpServers nombra un comando local, por lo que Claude Code la omite
+    suggestion: Configura un servidor HTTP o SSE con una URL; managedMcpServers no distribuye comandos stdio locales.
   cc_pl_016:
     message: El nombre de plugin '%{name}' no está en kebab-case
     suggestion: Usa solo minúsculas, dígitos y guiones. Claude Code rechaza nombres con caracteres de control o invisibles.

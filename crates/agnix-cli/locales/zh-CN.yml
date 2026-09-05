@@ -858,6 +858,11 @@ rules:
     tip_text: spinnerTipsOverride.tips 第 %{index} 项需要非空的 'text'，最多 %{max} 个字符
     tip_range: spinnerTipsOverride.tips 第 %{index} 项的 '%{field}' 超出 %{min}..%{max}
     tip_unknown_field: spinnerTipsOverride.tips 第 %{index} 项含有未知字段 '%{field}'
+  cc_set_030:
+    not_object: managedMcpServers 必须是以服务器名称为键的对象
+    entry_not_object: managedMcpServers 条目 '%{name}' 必须是 MCP 服务器对象
+    local_command: managedMcpServers 条目 '%{name}' 指定了本地命令，Claude Code 会跳过该条目
+    suggestion: 请配置带 URL 的 HTTP 或 SSE 服务器；managedMcpServers 不分发本地 stdio 命令。
   cc_pl_016:
     message: 插件名称 '%{name}' 不是 kebab-case
     suggestion: 只使用小写字母、数字和连字符。Claude Code 会拒绝包含控制字符或不可见字符的名称。
