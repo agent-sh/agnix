@@ -192,12 +192,20 @@
       "changes_of_interest": {
         "config_surfaces": [
           ".github/copilot-instructions.md",
-          ".github/instructions/*.instructions.md"
+          ".github/instructions/*.instructions.md",
+          ".github/agents/*.agent.md",
+          ".github/prompts/*.prompt.md",
+          ".github/hooks/hooks.json",
+          ".github/workflows/copilot-setup-steps.yml",
+          ".github/skills/*/SKILL.md"
         ],
         "relevant": [
           "Changes to instruction-file frontmatter, globs, or resolution order",
           "New instruction-file naming conventions or scope rules",
-          "Additions to the supported instruction-file markdown directives"
+          "Additions to the supported instruction-file markdown directives",
+          "Changes to custom agent and reusable prompt frontmatter or file layout",
+          "Changes to Copilot hook events, hook configuration, or setup workflow conventions",
+          "Changes to Copilot skill frontmatter or the .github/skills directory layout"
         ],
         "irrelevant": [
           "Chat UX / conversation history",
