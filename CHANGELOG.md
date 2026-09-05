@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **Tool and specification baselines**. Advance Claude Code to `v2.1.261`,
+  Codex CLI to `rust-v0.153.4`, OpenCode to `v1.18.29`, Kiro CLI to `2.21.0`,
+  Cline to `v4.1.17`, Cursor to `3.19.13`, and Amp to `desktop`. The reviewed
+  release notes and current Cursor/Copilot specification pages add no new
+  validator surface changes. The Claude v2.1.259 MCP wording was checked
+  against the current v2.1.261 managed-MCP documentation before keeping the
+  existing MCP rules unchanged. Refresh the three changed spec hashes and the
+  global research date.
 - **Claude Code and Codex patch baselines**. Advance Claude Code to `v2.1.258`
   and Codex CLI to `rust-v0.152.1`. Their primary notes contain only a macOS
   launch repair, remote-session message replay repair, and Guardian Node REPL
@@ -42,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `requirements.toml` surfaces, with parity regression assertions.
 
 ### Fixed
+- **XML-001 no longer scans nested list fences** ([#1498](https://github.com/agent-sh/agnix/issues/1498)). Fenced code blocks indented under an ordered list item are valid CommonMark fences; the XML scanner now tracks the list container indentation and keeps placeholders inside those fences out of XML balance checking, while preserving four-space paragraph continuation behavior.
 - **Floating `v0` tag pushes no longer trigger the release pipeline**. The
   release workflow matched every `v*` tag, so the manually pushed floating
   action tag ran the entire pipeline with version "0": the semver verification

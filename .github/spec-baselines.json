@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "description": "Baseline hashes for canonical specification content. Human-facing URLs are kept separately from machine-readable content URLs.",
-  "last_updated": "2026-09-01T21:41:31Z",
+  "last_updated": "2026-09-05T19:36:07Z",
   "sources": {
     "s-tier": {
       "agent-skills-spec": {
@@ -262,7 +262,7 @@
       "cursor-subagents": {
         "url": "https://cursor.com/docs/subagents",
         "content_url": "https://cursor.com/docs/subagents.md",
-        "hash": "7da0eafd67c4a33534b6663264bb9a6715983df043ba2826dd74f1d002965e3d",
+        "hash": "187b052042c53a4ce32375ca7043b1f0e1a31ff8f735087880205a8e22cb1d36",
         "rules": [
           "CUR-014",
           "CUR-015"
@@ -279,7 +279,7 @@
       "cursor-environment-schema": {
         "url": "https://cursor.com/schemas/environment.schema.json",
         "content_url": "https://cursor.com/schemas/environment.schema.json",
-        "hash": "688e2055f803efeb567b6d7c4b04f0aac326ed55ba409cdfe6e10275a194018d",
+        "hash": "5c6c4be3865951d1fda0797cf85293d0a40b08eb82d0ce18d15d3ddea78f71e9",
         "rules": [
           "CUR-016"
         ]
@@ -306,7 +306,7 @@
       "github-copilot": {
         "url": "https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/add-custom-instructions/add-repository-instructions",
         "content_url": "https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/add-custom-instructions/add-repository-instructions.md",
-        "hash": "4e5454048929b4aee6357c707cd28cd3ff86a2b3717bea094be98458b1c7bc98",
+        "hash": "4b3378059d1509067204b6a986f57248415b75f28bdab284f4a2967e34590d76",
         "rules": [
           "COP-001",
           "COP-002",
