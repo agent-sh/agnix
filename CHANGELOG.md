@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.52.2] - 2026-09-06
+
+### Added
+- CC-SET-030 detects local-command entries that Claude Code skips in
+  `managedMcpServers`.
+
+### Changed
+- Refresh current Claude Code, Codex CLI, OpenCode, Kiro, Cline, Cursor, Amp,
+  Cursor/Copilot spec, and Copilot inventory baselines.
+- Accept Codex CLI 0.153 configuration keys and synchronize CodeQL v4.37.9
+  action pins.
+
+### Fixed
+- XML-001 now ignores fenced code blocks indented under ordered list items.
+
 ### Changed
 - **Claude Code 2.1.261 and ecosystem baseline refresh**. Add `CC-SET-030`
   for local-command entries that Claude Code silently skips in
