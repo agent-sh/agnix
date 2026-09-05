@@ -1,8 +1,8 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 454,
-  "last_updated": "2026-08-27",
+  "total_rules": 455,
+  "last_updated": "2026-09-05",
   "schema": {
     "evidence": {
       "source_type": "spec|vendor_docs|vendor_code|paper|community",
@@ -4493,6 +4493,34 @@
       },
       "good_example": "{\n  \"spinnerTipsOverride\": {\n    \"label\": \"Acme tip\",\n    \"tips\": [\n      \"Run /review before opening a PR\",\n      { \"id\": \"gateway-errors\", \"text\": \"Check the gateway status page first\", \"cooldownSessions\": 5, \"priority\": 2 }\n    ]\n  }\n}",
       "bad_example": "{\n  \"spinnerTipsOverride\": {\n    \"tips\": [\n      { \"text\": \"Missing an id\", \"cooldownSessions\": 5000 }\n    ]\n  }\n}"
+    },
+    {
+      "id": "CC-SET-030",
+      "name": "Local Command in managedMcpServers",
+      "severity": "HIGH",
+      "category": "claude-settings",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.259"
+        ],
+        "verified_on": "2026-09-06",
+        "applies_to": {
+          "tool": "claude-code",
+          "version_range": ">=2.1.259"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"managedMcpServers\": {\n    \"docs\": { \"type\": \"http\", \"url\": \"https://mcp.example.com\" }\n  }\n}",
+      "bad_example": "{\n  \"managedMcpServers\": {\n    \"local\": { \"command\": \"npx\", \"args\": [\"server\"] }\n  }\n}"
     },
     {
       "id": "CDX-000",
@@ -13333,7 +13361,7 @@
     },
     "claude-settings": {
       "prefix": "CC-SET",
-      "count": 29,
+      "count": 30,
       "description": "Claude Code settings (.claude/settings.json) rules"
     },
     "gemini-agents": {

@@ -156,6 +156,7 @@ const KNOWN_FEATURE_KEYS: &[&str] = &[
     "computer_use",
     "concurrent_reasoning_summaries",
     "connectors",
+    "context_management",
     "current_time_reminder",
     "default_mode_request_user_input",
     "deferred_executor",
@@ -258,6 +259,8 @@ const KNOWN_FEATURE_KEYS: &[&str] = &[
 const KNOWN_TUI_KEYS: &[&str] = &[
     "alternate_screen",
     "animations",
+    "auto_recap",
+    "disable_paste_burst",
     "model_availability_nux",
     "notification_method",
     "notifications",

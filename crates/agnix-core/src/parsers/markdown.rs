@@ -351,7 +351,8 @@ pub fn sanitize_for_pulldown_cmark(s: &str) -> std::borrow::Cow<'_, str> {
 /// * **Fenced code blocks** – lines whose first non-space content is a run of
 ///   three or more `` ` `` or `~` characters open a fence; a subsequent line
 ///   with the same fence character and at least the same run length closes it.
-///   Up to three leading spaces are allowed before the fence (per CommonMark).
+///   Up to three leading spaces are allowed before the fence (per CommonMark),
+///   plus the indentation of an enclosing Markdown list item.
 /// * **Inline code spans** – backtick-delimited spans inside a non-fenced line
 ///   are skipped.  We match the opening backtick run and look for the same-
 ///   length closing run to stay correct for ` ``double`` ` spans.
@@ -372,8 +373,14 @@ fn scan_non_code_spans(content: &str, mut callback: impl FnMut(&str, usize)) {
     let mut in_fence = false;
     let mut fence_char: u8 = b'`';
     let mut fence_min_len: usize = 3;
+    let mut fence_indent: usize = 0;
     let mut in_indented_code = false;
     let mut can_start_indented_code = true;
+    // The indentation at which the content of the current list item starts.
+    // CommonMark measures a nested fence relative to that container, so an
+    // ordered-list fence commonly has four leading spaces even though a
+    // top-level fence may have at most three.
+    let mut active_list_content_indent: Option<usize> = None;
 
     while pos < len {
         // Find the end of the current line (pos..line_end) where line_end points
@@ -387,14 +394,32 @@ fn scan_non_code_spans(content: &str, mut callback: impl FnMut(&str, usize)) {
         };
         let line = &content[pos..line_end];
         let line_start = pos;
+        let line_trimmed = trim_line_ending(line);
+        let n_leading = line_trimmed.bytes().take_while(|&b| b == b' ').count();
+        let is_blank_line = is_markdown_blank_line(line);
+
+        if !in_fence {
+            if let Some(content_indent) = markdown_list_content_indent(line_trimmed) {
+                active_list_content_indent = Some(content_indent);
+            } else if is_blank_line {
+                active_list_content_indent = None;
+            } else if let Some(content_indent) = active_list_content_indent
+                && n_leading < content_indent
+            {
+                // A non-indented block ends the list-item container for the
+                // purposes of the lightweight scanner. This keeps a later
+                // four-space code block from being mistaken for a nested fence.
+                active_list_content_indent = None;
+            }
+        }
 
         if in_fence {
             // Check whether this line closes the fence.
-            // A closing fence is: up to 3 optional spaces, then ≥ fence_min_len
-            // fence_char bytes, then optional spaces, then end-of-line.
-            let line_trimmed = trim_line_ending(line);
-            let n_leading = line_trimmed.bytes().take_while(|&b| b == b' ').count();
-            if n_leading <= 3 {
+            // A closing fence is: up to three optional spaces relative to its
+            // container, then >= fence_min_len fence_char bytes, then optional
+            // spaces, then end-of-line. For a fence nested in a list, the
+            // container itself contributes the recorded indentation.
+            if n_leading <= fence_indent.max(3) {
                 let after = &line_trimmed[n_leading..];
                 let run = after.bytes().take_while(|&b| b == fence_char).count();
                 if run >= fence_min_len {
@@ -413,7 +438,6 @@ fn scan_non_code_spans(content: &str, mut callback: impl FnMut(&str, usize)) {
             continue;
         }
 
-        let is_blank_line = is_markdown_blank_line(line);
         let is_indented_line = is_indented_code_line(line);
 
         if in_indented_code {
@@ -433,29 +457,28 @@ fn scan_non_code_spans(content: &str, mut callback: impl FnMut(&str, usize)) {
             continue;
         }
 
-        // Not in a fenced block.  Check if this line opens a fence.
-        {
-            let line_trimmed = trim_line_ending(line);
-            let n_leading = line_trimmed.bytes().take_while(|&b| b == b' ').count();
-            if n_leading <= 3 {
-                let after = &line_trimmed[n_leading..];
-                let tick_run = after.bytes().take_while(|&b| b == b'`').count();
-                let tilde_run = after.bytes().take_while(|&b| b == b'~').count();
-                // The fence char is whichever has the longer run
-                let (run, ch) = if tick_run >= tilde_run {
-                    (tick_run, b'`')
-                } else {
-                    (tilde_run, b'~')
-                };
-                if run >= 3 {
-                    // Opening fence: skip this line, enter fenced mode
-                    in_fence = true;
-                    fence_char = ch;
-                    fence_min_len = run;
-                    pos = line_end;
-                    continue;
-                }
-            }
+        // Not in a fenced block. Check whether this line opens a fence. A
+        // fence nested under a list may have more than three spaces in the
+        // source, but no more than three beyond the list content indent.
+        let after = &line_trimmed[n_leading..];
+        let tick_run = after.bytes().take_while(|&b| b == b'`').count();
+        let tilde_run = after.bytes().take_while(|&b| b == b'~').count();
+        let (run, ch) = if tick_run >= tilde_run {
+            (tick_run, b'`')
+        } else {
+            (tilde_run, b'~')
+        };
+        let list_fence = active_list_content_indent.is_some_and(|content_indent| {
+            n_leading >= content_indent && n_leading <= content_indent.saturating_add(3)
+        });
+        if run >= 3 && (n_leading <= 3 || list_fence) {
+            // Opening fence: skip this line, enter fenced mode.
+            in_fence = true;
+            fence_char = ch;
+            fence_min_len = run;
+            fence_indent = n_leading;
+            pos = line_end;
+            continue;
         }
 
         // Non-code-block line: yield non-inline-code sub-spans.
@@ -516,6 +539,40 @@ fn is_markdown_blank_line(line: &str) -> bool {
     trim_line_ending(line)
         .bytes()
         .all(|b| matches!(b, b' ' | b'\t'))
+}
+
+/// Return the source indentation at which a Markdown list item's content
+/// begins, if `line` starts a list item. Ordered markers are limited to the
+/// CommonMark maximum of nine digits; bullets may be `-`, `+`, or `*`.
+fn markdown_list_content_indent(line: &str) -> Option<usize> {
+    let leading = line.bytes().take_while(|&b| b == b' ').count();
+    if leading > 3 {
+        return None;
+    }
+
+    let bytes = line.as_bytes();
+    let mut index = leading;
+    if matches!(bytes.get(index), Some(b'-' | b'+' | b'*')) {
+        index += 1;
+    } else {
+        let digits_start = index;
+        while bytes.get(index).is_some_and(u8::is_ascii_digit) && index - digits_start < 9 {
+            index += 1;
+        }
+        if index == digits_start || !matches!(bytes.get(index), Some(b'.' | b')')) {
+            return None;
+        }
+        index += 1;
+    }
+
+    // A list marker must be followed by at least one whitespace character.
+    if !matches!(bytes.get(index), Some(b' ' | b'\t')) {
+        return None;
+    }
+    while matches!(bytes.get(index), Some(b' ' | b'\t')) {
+        index += 1;
+    }
+    Some(index)
 }
 
 fn is_indented_code_line(line: &str) -> bool {
@@ -1036,6 +1093,30 @@ mod tests {
         let content = "```\n<example>test</example>\n```\n";
         let tags = extract_xml_tags(content);
         assert!(tags.is_empty());
+    }
+
+    #[test]
+    fn test_xml_ignores_fenced_code_block_indented_under_ordered_list() {
+        // CommonMark measures a nested fence relative to the list item's
+        // content container. Four source spaces are therefore valid for the
+        // common `1. ` marker even though a top-level fence allows at most
+        // three spaces.
+        let content = "1. Move the message:\n    ```bash\n    himalaya message move \"Trash\" <idC> -a fastmail\n    ```\n";
+        let tags = extract_xml_tags(content);
+        assert!(
+            tags.is_empty(),
+            "nested fenced code must be ignored: {tags:?}"
+        );
+    }
+
+    #[test]
+    fn test_xml_scans_four_space_fence_like_text_outside_list() {
+        // Four-space indentation after an ordinary paragraph is not a nested
+        // fence. Keep scanning its contents so a real XML tag is still found.
+        let content = "A paragraph continues:\n    ```bash\n    <example>real\n    ```\n";
+        let tags = extract_xml_tags(content);
+        assert_eq!(tags.len(), 1);
+        assert_eq!(tags[0].name, "example");
     }
 
     #[test]

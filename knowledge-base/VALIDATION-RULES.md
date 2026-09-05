@@ -561,6 +561,14 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Fix**: Manual - Claude Code drops an invalid tip with a debug warning instead of reporting it, so the tip is simply never shown.
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.247, code.claude.com/docs/en/settings-reference#spinnertipsoverride
 
+<a id="cc-set-030"></a>
+
+### CC-SET-030 [HIGH] Local Command in managedMcpServers
+**Requirement**: Every `managedMcpServers` entry MUST describe a remote HTTP or SSE server. Claude Code 2.1.259+ skips entries that name a local command, including entries with `command` or `type: "stdio"`.
+**Detection**: Parse settings JSON, require `managedMcpServers` and its named entries to be objects, and flag command-based or explicitly stdio entries.
+**Fix**: Manual - provide the server through HTTP or SSE with a URL. Use another supported deployment mechanism for local stdio servers.
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.259
+
 ---
 
 ## PER-CLIENT SKILL RULES
@@ -3633,7 +3641,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Claude Memory | 13 | 8 | 5 | 0 | 3 |
 | Claude Output Styles | 6 | 2 | 2 | 2 | 0 |
 | Claude Plugins | 16 | 10 | 6 | 0 | 4 |
-| Claude Settings | 29 | 0 | 28 | 1 | 0 |
+| Claude Settings | 30 | 1 | 28 | 1 | 0 |
 | Claude Skills | 20 | 10 | 9 | 1 | 10 |
 | Cline | 7 | 4 | 3 | 0 | 3 |
 | Cline Skills | 3 | 2 | 1 | 0 | 2 |
@@ -3664,7 +3672,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **454** | **216** | **208** | **30** | **124** |
+| **TOTAL** | **455** | **217** | **208** | **30** | **124** |
 
 
 ---
@@ -3694,8 +3702,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 454 validation rules across 40 categories
+**Total Coverage**: 455 validation rules across 40 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 216 HIGH, 208 MEDIUM, 30 LOW
+**Certainty**: 217 HIGH, 208 MEDIUM, 30 LOW
 **Auto-Fixable**: 124 rules (27%)

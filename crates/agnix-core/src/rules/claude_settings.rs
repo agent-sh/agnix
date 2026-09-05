@@ -35,6 +35,8 @@
 //! - `feedbackDrafts` enum (CC-SET-028, added in Claude Code v2.1.247).
 //! - `spinnerTipsOverride` shape (CC-SET-029, tip objects/`tipsFile`/`label`
 //!   added in Claude Code v2.1.247).
+//! - `managedMcpServers` rejects local-command entries (CC-SET-030, added in
+//!   Claude Code v2.1.259).
 //!
 //! Runs on FileType::Hooks (which covers `.claude/settings.json` -
 //! see `file_types/detection.rs`). Skips non-Claude Code settings paths
@@ -79,6 +81,7 @@ const RULE_IDS: &[&str] = &[
     "CC-SET-027",
     "CC-SET-028",
     "CC-SET-029",
+    "CC-SET-030",
 ];
 
 /// Allowed values for `worktree.baseRef` per Claude Code v2.1.133 release notes.
@@ -270,7 +273,70 @@ impl Validator for ClaudeSettingsValidator {
             validate_spinner_tips_override(path, content, &value, &mut diagnostics);
         }
 
+        if config.is_rule_enabled("CC-SET-030") {
+            validate_managed_mcp_servers(path, content, &value, &mut diagnostics);
+        }
+
         diagnostics
+    }
+}
+
+/// CC-SET-030: `managedMcpServers` can distribute remote HTTP/SSE servers,
+/// but Claude Code skips entries that name a local command.
+fn validate_managed_mcp_servers(
+    path: &Path,
+    content: &str,
+    value: &serde_json::Value,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(servers) = value.get("managedMcpServers") else {
+        return;
+    };
+
+    let line = find_key_line(content, "managedMcpServers").unwrap_or(1);
+    let Some(entries) = servers.as_object() else {
+        diagnostics.push(
+            Diagnostic::error(
+                path.to_path_buf(),
+                line,
+                0,
+                "CC-SET-030",
+                t!("rules.cc_set_030.not_object"),
+            )
+            .with_suggestion(t!("rules.cc_set_030.suggestion")),
+        );
+        return;
+    };
+
+    for (name, entry) in entries {
+        let Some(entry) = entry.as_object() else {
+            diagnostics.push(
+                Diagnostic::error(
+                    path.to_path_buf(),
+                    find_key_line(content, name).unwrap_or(line),
+                    0,
+                    "CC-SET-030",
+                    t!("rules.cc_set_030.entry_not_object", name = name.as_str()),
+                )
+                .with_suggestion(t!("rules.cc_set_030.suggestion")),
+            );
+            continue;
+        };
+
+        if entry.contains_key("command")
+            || entry.get("type").and_then(serde_json::Value::as_str) == Some("stdio")
+        {
+            diagnostics.push(
+                Diagnostic::error(
+                    path.to_path_buf(),
+                    find_key_line(content, name).unwrap_or(line),
+                    0,
+                    "CC-SET-030",
+                    t!("rules.cc_set_030.local_command", name = name.as_str()),
+                )
+                .with_suggestion(t!("rules.cc_set_030.suggestion")),
+            );
+        }
     }
 }
 
@@ -6053,6 +6119,42 @@ mod tests {
                     .iter()
                     .all(|diagnostic| diagnostic.rule != "CC-SET-029"),
                 "{tips_file} should be accepted"
+            );
+        }
+    }
+
+    // ===== CC-SET-030: managed MCP servers are remote-only =====
+
+    #[test]
+    fn test_managed_mcp_servers_accepts_remote_entries() {
+        let content = r#"{
+          "managedMcpServers": {
+            "docs": {"type":"http","url":"https://mcp.example.com"},
+            "events": {"type":"sse","url":"https://mcp.example.com/sse"}
+          }
+        }"#;
+        let diagnostics = validate_at("/etc/claude-code/managed-settings.json", content);
+        assert!(
+            diagnostics
+                .iter()
+                .all(|diagnostic| diagnostic.rule != "CC-SET-030"),
+            "remote managed servers should be accepted, got {diagnostics:?}"
+        );
+    }
+
+    #[test]
+    fn test_managed_mcp_servers_rejects_entries_claude_skips() {
+        for content in [
+            r#"{"managedMcpServers":[]}"#,
+            r#"{"managedMcpServers":{"local":"npx server"}}"#,
+            r#"{"managedMcpServers":{"local":{"command":"npx","args":["server"]}}}"#,
+            r#"{"managedMcpServers":{"local":{"type":"stdio","command":"server"}}}"#,
+        ] {
+            assert!(
+                validate_at("/etc/claude-code/managed-settings.json", content)
+                    .iter()
+                    .any(|diagnostic| diagnostic.rule == "CC-SET-030"),
+                "expected CC-SET-030 for {content}"
             );
         }
     }
