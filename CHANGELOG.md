@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   against the current v2.1.261 managed-MCP documentation before keeping the
   existing MCP rules unchanged. Refresh the three changed spec hashes and the
   global research date.
+- **Copilot research inventory parity**. Document the live `.github/agents/`,
+  `.github/prompts/`, `.github/hooks/`, and setup-workflow surfaces alongside
+  the complete `COP-001..027` and `CP-SK-001` rule coverage.
 - **CodeQL action pins**. Synchronize the security workflow's `init` and
   `analyze` actions on v4.37.9, matching the SARIF upload pin and preventing
   the split-version SARIF failure exposed by Dependabot #1496.

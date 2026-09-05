@@ -25,7 +25,7 @@ Tools are organized by support tier (see [../CONTRIBUTING.md#tool-tier-system](.
 
 | Tool | Config Format | Documentation URL | Monitoring | Frequency | Last Reviewed | Rule Prefix |
 |------|---------------|-------------------|------------|-----------|---------------|-------------|
-| GitHub Copilot | `.github/copilot-instructions.md`, `.github/instructions/*.instructions.md` | https://docs.github.com/en/copilot/customizing-copilot | Automated (spec-drift.yml + tool-release-watch.yml via microsoft/vscode-copilot-chat) | Weekly | 2026-09-05 | COP |
+| GitHub Copilot | `.github/copilot-instructions.md`, `.github/instructions/*.instructions.md`, `.github/agents/*.agent.md`, `.github/prompts/*.prompt.md`, `.github/hooks/hooks.json`, `.github/workflows/copilot-setup-steps.yml` | https://docs.github.com/en/copilot/customizing-copilot | Automated (spec-drift.yml + tool-release-watch.yml via microsoft/vscode-copilot-chat) | Weekly | 2026-09-05 | COP, CP-SK |
 | Cline | `.clinerules` (file or dir), `.clinerules/workflows/*.md`, `.clinerules/hooks/*`, `.clinerules/skills/*/SKILL.md`, `.cline/skills/*/SKILL.md` | https://docs.cline.bot/features/cline-rules/overview | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-09-05 | CLN, CL-SK |
 | Cursor | `.cursor/rules/**/*.mdc`, `.cursorrules` (legacy), `.cursor/hooks.json`, `.cursor/agents/**/*.md`, `.cursor/environment.json`, `.cursor/mcp.json`, `.cursor/skills/*/SKILL.md` | https://cursor.com/docs/rules | Automated (spec-drift.yml + tool-release-watch.yml via api2.cursor.sh stable update endpoint) | Weekly | 2026-09-05 | CUR, MCP, CR-SK |
 
@@ -83,7 +83,7 @@ Authoritative sources monitored for changes that may affect validation rules.
 | Cursor - Environment | https://cursor.com/docs/cloud-agent/setup | spec-drift.yml (weekly) | CUR-016 |
 | Cursor - Environment Schema | https://cursor.com/schemas/environment.schema.json | spec-drift.yml (weekly) | CUR-016 |
 | Cursor - MCP | https://cursor.com/docs/mcp | spec-drift.yml (weekly) | MCP-009 through MCP-012, MCP-017 through MCP-024 |
-| GitHub Copilot | https://docs.github.com/en/copilot/customizing-copilot | spec-drift.yml (weekly) | COP-001 through COP-006 |
+| GitHub Copilot | https://docs.github.com/en/copilot/customizing-copilot | spec-drift.yml (weekly) | COP-001 through COP-027, CP-SK-001 |
 | Cline - Rules | https://docs.cline.bot/features/cline-rules/overview | spec-drift.yml (weekly) | -- |
 
 ### Community Sources
