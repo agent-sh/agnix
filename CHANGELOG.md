@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   against the current v2.1.261 managed-MCP documentation before keeping the
   existing MCP rules unchanged. Refresh the three changed spec hashes and the
   global research date.
+- **CodeQL action pins**. Synchronize the security workflow's `init` and
+  `analyze` actions on v4.37.9, matching the SARIF upload pin and preventing
+  the split-version SARIF failure exposed by Dependabot #1496.
 - **Claude Code and Codex patch baselines**. Advance Claude Code to `v2.1.258`
   and Codex CLI to `rust-v0.152.1`. Their primary notes contain only a macOS
   launch repair, remote-session message replay repair, and Guardian Node REPL
