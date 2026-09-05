@@ -1123,6 +1123,37 @@ fn test_refreshed_release_surfaces_match_research_inventory() {
         );
     }
 
+    let copilot = &baselines["tools"]["copilot"];
+    let copilot_surfaces = copilot["changes_of_interest"]["config_surfaces"]
+        .as_array()
+        .expect("Copilot config_surfaces must be an array");
+    let copilot_row = research
+        .lines()
+        .find(|line| line.starts_with("| GitHub Copilot |"))
+        .expect("RESEARCH-TRACKING.md must contain a GitHub Copilot inventory row");
+    for surface in copilot_surfaces {
+        let surface = surface
+            .as_str()
+            .expect("Copilot config surfaces must be strings");
+        assert!(
+            copilot_row.contains(surface),
+            "GitHub Copilot research inventory is missing baseline surface: {surface}"
+        );
+    }
+    let copilot_rule_prefixes: std::collections::BTreeSet<_> = copilot_row
+        .split('|')
+        .rfind(|cell| !cell.trim().is_empty())
+        .expect("GitHub Copilot inventory row must have a Rule Prefix cell")
+        .split(',')
+        .map(str::trim)
+        .collect();
+    for prefix in ["COP", "CP-SK"] {
+        assert!(
+            copilot_rule_prefixes.contains(prefix),
+            "GitHub Copilot research inventory is missing {prefix}"
+        );
+    }
+
     for (tool_id, row_name, surface, prefix) in [
         ("codex", "Codex CLI", ".codex/skills/*/SKILL.md", "CX-SK"),
         (
