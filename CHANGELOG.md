@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Advance the Claude Code release baseline to `v2.1.263` and refresh the
+  current hooks, memory, plugins, skills, and subagent documentation hashes.
+  The patch release contains reliability fixes only, and the documented
+  configuration contracts remain covered by existing rules.
+
 ## [0.52.2] - 2026-09-06
 
 ### Added
