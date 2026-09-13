@@ -3064,16 +3064,10 @@ fn describe_json_type(value: &serde_json::Value) -> &'static str {
 /// the way `content[i..j] == needle` can when the tail lands inside a
 /// multi-byte char.
 ///
-/// Only ASCII keys are supported (the needle contains a bare `"` prefix/
-/// suffix with no JSON-string escaping). That's fine for the documented
-/// Claude Code settings keys, which are all ASCII identifiers. If future
-/// rules need keys with escapes, build the needle with proper escaping.
+/// Encode keys as JSON strings, including arbitrary model names supplied in
+/// modelSettings. They may contain Unicode, quotes, or backslashes.
 fn find_key_line(content: &str, key: &str) -> Option<usize> {
-    debug_assert!(
-        key.is_ascii() && !key.contains('"') && !key.contains('\\'),
-        "find_key_line expects ASCII key without quotes or backslashes"
-    );
-    let needle = format!("\"{key}\"");
+    let needle = serde_json::to_string(key).ok()?;
     let needle_bytes = needle.as_bytes();
     let needle_len = needle_bytes.len();
     let bytes = content.as_bytes();
@@ -6228,6 +6222,20 @@ mod tests {
     }
 
     // ===== CC-SET-031: effort caps =====
+
+    #[test]
+    fn test_effort_caps_accept_arbitrary_model_names_without_panicking() {
+        for name in ["模型", "custom\"model", "custom\\model"] {
+            let content = serde_json::to_string_pretty(&serde_json::json!({
+                "modelSettings": {name: {"maxEffortLevel": 42}}
+            }))
+            .unwrap();
+            let diagnostics = validate(&content);
+            let diagnostic = diagnostics.iter().find(|d| d.rule == "CC-SET-031").unwrap();
+            assert!(diagnostic.message.contains(name));
+            assert_eq!(diagnostic.line, 3);
+        }
+    }
 
     #[test]
     fn test_max_effort_level_accepts_top_level_and_per_model_caps() {
