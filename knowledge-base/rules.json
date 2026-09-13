@@ -1,8 +1,8 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 455,
-  "last_updated": "2026-09-05",
+  "total_rules": 456,
+  "last_updated": "2026-09-13",
   "schema": {
     "evidence": {
       "source_type": "spec|vendor_docs|vendor_code|paper|community",
@@ -4521,6 +4521,35 @@
       },
       "good_example": "{\n  \"managedMcpServers\": {\n    \"docs\": { \"type\": \"http\", \"url\": \"https://mcp.example.com\" }\n  }\n}",
       "bad_example": "{\n  \"managedMcpServers\": {\n    \"local\": { \"command\": \"npx\", \"args\": [\"server\"] }\n  }\n}"
+    },
+    {
+      "id": "CC-SET-031",
+      "name": "Invalid maxEffortLevel Setting",
+      "severity": "MEDIUM",
+      "category": "claude-settings",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/settings-reference#maxeffortlevel",
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.267"
+        ],
+        "verified_on": "2026-09-14",
+        "applies_to": {
+          "tool": "claude-code",
+          "version_range": ">=2.1.267"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"maxEffortLevel\": \"medium\",\n  \"modelSettings\": {\n    \"claude-sonnet-4-6\": { \"maxEffortLevel\": \"max\" }\n  }\n}",
+      "bad_example": "{\n  \"maxEffortLevel\": \"ultracode\",\n  \"modelSettings\": {\n    \"claude-opus-5\": { \"maxEffortLevel\": 3 }\n  }\n}"
     },
     {
       "id": "CDX-000",
@@ -13361,7 +13390,7 @@
     },
     "claude-settings": {
       "prefix": "CC-SET",
-      "count": 30,
+      "count": 31,
       "description": "Claude Code settings (.claude/settings.json) rules"
     },
     "gemini-agents": {

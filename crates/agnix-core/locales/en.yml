@@ -1405,6 +1405,9 @@ rules:
     entry_not_object: managedMcpServers entry '%{name}' must be an MCP server object
     local_command: managedMcpServers entry '%{name}' names a local command, so Claude Code skips it
     suggestion: Configure an HTTP or SSE server with a URL; managedMcpServers does not distribute local stdio commands.
+  cc_set_031:
+    invalid: "%{location} must be one of low, medium, high, xhigh, or max"
+    suggestion: Set the effort cap to low, medium, high, xhigh, or max.
   cc_pl_016:
     message: Plugin name '%{name}' is not kebab-case
     suggestion: Use lowercase letters, digits, and hyphens only. Claude Code rejects names with control or invisible characters.

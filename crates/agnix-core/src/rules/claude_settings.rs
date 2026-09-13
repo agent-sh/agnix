@@ -37,6 +37,8 @@
 //!   added in Claude Code v2.1.247).
 //! - `managedMcpServers` rejects local-command entries (CC-SET-030, added in
 //!   Claude Code v2.1.259).
+//! - `maxEffortLevel` and per-model caps use the documented effort enum
+//!   (CC-SET-031, added in Claude Code v2.1.267).
 //!
 //! Runs on FileType::Hooks (which covers `.claude/settings.json` -
 //! see `file_types/detection.rs`). Skips non-Claude Code settings paths
@@ -82,6 +84,7 @@ const RULE_IDS: &[&str] = &[
     "CC-SET-028",
     "CC-SET-029",
     "CC-SET-030",
+    "CC-SET-031",
 ];
 
 /// Allowed values for `worktree.baseRef` per Claude Code v2.1.133 release notes.
@@ -107,6 +110,8 @@ const DIALOG_EXPIRY_ALLOWED: &[&str] = &["60s", "5m", "10m", "never"];
 
 /// Allowed prompt-cache lifetimes documented for the main and subagent settings.
 const PROMPT_CACHE_TTL_ALLOWED: &[&str] = &["5m", "1h"];
+
+const MAX_EFFORT_LEVEL_ALLOWED: &[&str] = &["low", "medium", "high", "xhigh", "max"];
 
 /// Allowed values for `feedbackDrafts` per the settings reference. `"off"`
 /// removes the SendFeedback tool entirely.
@@ -277,7 +282,67 @@ impl Validator for ClaudeSettingsValidator {
             validate_managed_mcp_servers(path, content, &value, &mut diagnostics);
         }
 
+        if config.is_rule_enabled("CC-SET-031") {
+            validate_max_effort_level(path, content, &value, &mut diagnostics);
+        }
+
         diagnostics
+    }
+}
+
+/// CC-SET-031: effort caps use the same ordered effort vocabulary at the
+/// top level and inside each modelSettings entry. `max` explicitly means no
+/// cap and is valid only for maxEffortLevel, not effortLevel.
+fn validate_max_effort_level(
+    path: &Path,
+    content: &str,
+    value: &serde_json::Value,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let mut validate_cap = |cap: &serde_json::Value, location: &str, line: usize| {
+        if cap
+            .as_str()
+            .is_some_and(|level| MAX_EFFORT_LEVEL_ALLOWED.contains(&level))
+        {
+            return;
+        }
+
+        diagnostics.push(
+            Diagnostic::warning(
+                path.to_path_buf(),
+                line,
+                0,
+                "CC-SET-031",
+                t!("rules.cc_set_031.invalid", location = location),
+            )
+            .with_suggestion(t!("rules.cc_set_031.suggestion")),
+        );
+    };
+
+    if let Some(cap) = value.get("maxEffortLevel") {
+        validate_cap(
+            cap,
+            "maxEffortLevel",
+            find_key_line(content, "maxEffortLevel").unwrap_or(1),
+        );
+    }
+
+    let Some(model_settings) = value.get("modelSettings") else {
+        return;
+    };
+    let Some(models) = model_settings.as_object() else {
+        return;
+    };
+
+    for (model, settings) in models {
+        let Some(cap) = settings.get("maxEffortLevel") else {
+            continue;
+        };
+        validate_cap(
+            cap,
+            &format!("modelSettings.{model}.maxEffortLevel"),
+            find_key_line(content, model).unwrap_or(1),
+        );
     }
 }
 
@@ -6157,6 +6222,46 @@ mod tests {
                 "expected CC-SET-030 for {content}"
             );
         }
+    }
+
+    // ===== CC-SET-031: effort caps =====
+
+    #[test]
+    fn test_max_effort_level_accepts_top_level_and_per_model_caps() {
+        let diagnostics = validate(
+            r#"{
+              "maxEffortLevel": "medium",
+              "modelSettings": {
+                "claude-sonnet-4-6": {"maxEffortLevel": "max"},
+                "claude-opus-5": {"maxEffortLevel": "xhigh"}
+              }
+            }"#,
+        );
+        assert!(
+            diagnostics
+                .iter()
+                .all(|diagnostic| diagnostic.rule != "CC-SET-031"),
+            "documented effort caps should validate cleanly: {diagnostics:?}"
+        );
+    }
+
+    #[test]
+    fn test_max_effort_level_rejects_invalid_top_level_and_per_model_caps() {
+        let diagnostics = validate(
+            r#"{
+              "maxEffortLevel": "ultracode",
+              "modelSettings": {
+                "claude-opus-5": {"maxEffortLevel": 3}
+              }
+            }"#,
+        );
+        assert_eq!(
+            diagnostics
+                .iter()
+                .filter(|diagnostic| diagnostic.rule == "CC-SET-031")
+                .count(),
+            2
+        );
     }
 
     // ===== CC-SET-026/027: prompt cache TTL enums =====

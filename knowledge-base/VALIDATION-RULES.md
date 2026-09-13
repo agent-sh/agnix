@@ -569,6 +569,14 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Fix**: Manual - provide the server through HTTP or SSE with a URL. Use another supported deployment mechanism for local stdio servers.
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.259
 
+<a id="cc-set-031"></a>
+
+### CC-SET-031 [MEDIUM] Invalid maxEffortLevel Setting
+**Requirement**: `maxEffortLevel`, both at the top level and inside a `modelSettings` entry, MUST be one of `low`, `medium`, `high`, `xhigh`, or `max` in Claude Code 2.1.267+. The `max` value explicitly removes the cap for that settings source.
+**Detection**: Parse settings JSON and flag non-string caps or strings outside the documented enum at either supported location.
+**Fix**: Manual - choose `low`, `medium`, `high`, `xhigh`, or `max`.
+**Source**: code.claude.com/docs/en/settings-reference#maxeffortlevel, github.com/anthropics/claude-code/releases/tag/v2.1.267
+
 ---
 
 ## PER-CLIENT SKILL RULES
@@ -3641,7 +3649,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Claude Memory | 13 | 8 | 5 | 0 | 3 |
 | Claude Output Styles | 6 | 2 | 2 | 2 | 0 |
 | Claude Plugins | 16 | 10 | 6 | 0 | 4 |
-| Claude Settings | 30 | 1 | 28 | 1 | 0 |
+| Claude Settings | 31 | 1 | 29 | 1 | 0 |
 | Claude Skills | 20 | 10 | 9 | 1 | 10 |
 | Cline | 7 | 4 | 3 | 0 | 3 |
 | Cline Skills | 3 | 2 | 1 | 0 | 2 |
@@ -3672,7 +3680,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **455** | **217** | **208** | **30** | **124** |
+| **TOTAL** | **456** | **217** | **209** | **30** | **124** |
 
 
 ---
@@ -3702,8 +3710,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 455 validation rules across 40 categories
+**Total Coverage**: 456 validation rules across 40 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 217 HIGH, 208 MEDIUM, 30 LOW
+**Certainty**: 217 HIGH, 209 MEDIUM, 30 LOW
 **Auto-Fixable**: 124 rules (27%)
