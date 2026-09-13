@@ -572,7 +572,7 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 <a id="cc-set-031"></a>
 
 ### CC-SET-031 [MEDIUM] Invalid maxEffortLevel Setting
-**Requirement**: `maxEffortLevel`, both at the top level and inside a `modelSettings` entry, MUST be one of `low`, `medium`, `high`, `xhigh`, or `max` in Claude Code 2.1.267+. The `max` value explicitly removes the cap for that settings source.
+**Requirement**: `maxEffortLevel`, both at the top level and inside a `modelSettings` entry, MUST be one of `low`, `medium`, `high`, `xhigh`, or `max` in Claude Code 2.1.267+ when non-null. A `null` value is treated as unset. The `max` value explicitly removes the cap for that settings source.
 **Detection**: Parse settings JSON and flag non-string caps or strings outside the documented enum at either supported location.
 **Fix**: Manual - choose `low`, `medium`, `high`, `xhigh`, or `max`.
 **Source**: code.claude.com/docs/en/settings-reference#maxeffortlevel, github.com/anthropics/claude-code/releases/tag/v2.1.267

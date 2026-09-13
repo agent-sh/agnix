@@ -300,6 +300,9 @@ fn validate_max_effort_level(
     diagnostics: &mut Vec<Diagnostic>,
 ) {
     let mut validate_cap = |cap: &serde_json::Value, location: &str, line: usize| {
+        if cap.is_null() {
+            return;
+        }
         if cap
             .as_str()
             .is_some_and(|level| MAX_EFFORT_LEVEL_ALLOWED.contains(&level))
@@ -6261,6 +6264,24 @@ mod tests {
                 .filter(|diagnostic| diagnostic.rule == "CC-SET-031")
                 .count(),
             2
+        );
+    }
+
+    #[test]
+    fn test_max_effort_level_null_values_are_unset() {
+        let diagnostics = validate(
+            r#"{
+              "maxEffortLevel": null,
+              "modelSettings": {
+                "claude-opus-5": {"maxEffortLevel": null}
+              }
+            }"#,
+        );
+        assert!(
+            diagnostics
+                .iter()
+                .all(|diagnostic| diagnostic.rule != "CC-SET-031"),
+            "null effort caps should be treated as unset: {diagnostics:?}"
         );
     }
 
