@@ -2465,6 +2465,7 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 
 <a id="cdx-004"></a>
 ### CDX-004 [MEDIUM] Unknown Config Key
+**0.154 schema refresh**: Accept `allow_symlinked_codex_home` and `thread_unload_delay_secs` added by the tagged Codex 0.154.0 schema.
 **Requirement**: Top-level keys in `.codex/config.toml` SHOULD be from the known configuration schema
 **Detection**: Parse TOML, compare top-level keys against known key and table allowlists
 **Fix**: [AUTO-FIX] Remove unrecognized keys
@@ -2521,6 +2522,7 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 
 <a id="cdx-cfg-006"></a>
 ### CDX-CFG-006 [MEDIUM] Unknown Codex Config Field
+**0.154 schema refresh**: Accept the new `tui.question_esc_back` and `tui.whimsy` preferences and the feature names listed under CDX-CFG-011.
 **Requirement**: Codex config keys SHOULD match the official schema at top-level and known nested sections (`features`, `tui`, `shell_environment_policy`, `mcp_servers`, `apps`)
 **Detection**: Parse `.codex/config.toml|json|yaml`, compare observed keys against allowlists, and report unknown keys
 **Fix**: No auto-fix (remove or rename unsupported fields)
@@ -2556,6 +2558,7 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 
 <a id="cdx-cfg-011"></a>
 ### CDX-CFG-011 [MEDIUM] Invalid Feature Flag Name or Shape
+**0.154 schema refresh**: Accept `reasoning_effort_override`, `unified_exec_tty`, `windows_sandbox_service`, and `worktrees`. Source: [tagged configuration schema](https://github.com/openai/codex/blob/rust-v0.154.0/codex-rs/core/config.schema.json).
 **Requirement**: Keys under `[features]` SHOULD use known Codex feature flag names; `non_prefixed_mcp_tool_names` MUST be a boolean or an object with optional boolean `enabled` and string-array `server_names`
 **Detection**: Parse config, report unknown keys under `features`, and validate the structured `non_prefixed_mcp_tool_names` value
 **Fix**: No auto-fix (remove unsupported flags or rename)

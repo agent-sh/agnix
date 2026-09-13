@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Claude Code 2.1.267.
 
 ### Changed
+- Accept the eight configuration keys added in Codex CLI 0.154.0, including
+  `features.worktrees`, `features.unified_exec_tty`, and the new TUI preferences.
 - Advance current Amp, Claude Code, Codex CLI, Cursor, Gemini CLI, Kiro CLI,
   and OpenCode release baselines after reviewing their primary release notes.
   Refresh Cursor's hooks specification hash; its documented event and field

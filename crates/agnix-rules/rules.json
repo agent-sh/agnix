@@ -4669,9 +4669,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://developers.openai.com/codex/"
+          "https://developers.openai.com/codex/",
+          "https://github.com/openai/codex/blob/rust-v0.154.0/codex-rs/core/config.schema.json"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-09-14",
         "applies_to": {
           "tool": "codex"
         },
@@ -4912,9 +4913,10 @@
         "source_urls": [
           "https://developers.openai.com/codex/config-reference",
           "https://developers.openai.com/codex/config-schema.json",
-          "https://developers.openai.com/codex/enterprise/managed-configuration"
+          "https://developers.openai.com/codex/enterprise/managed-configuration",
+          "https://github.com/openai/codex/blob/rust-v0.154.0/codex-rs/core/config.schema.json"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-09-14",
         "applies_to": {
           "tool": "codex"
         },
@@ -5083,9 +5085,9 @@
         "source_type": "vendor_code",
         "source_urls": [
           "https://developers.openai.com/codex/config-reference",
-          "https://github.com/openai/codex/blob/rust-v0.146.0/codex-rs/core/config.schema.json"
+          "https://github.com/openai/codex/blob/rust-v0.154.0/codex-rs/core/config.schema.json"
         ],
-        "verified_on": "2026-07-30",
+        "verified_on": "2026-09-14",
         "applies_to": {
           "tool": "codex"
         },

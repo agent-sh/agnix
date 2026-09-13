@@ -13,7 +13,7 @@ keywords: ["CDX-CFG-006", "unknown codex config field", "codex cli", "validation
 - **Category**: `Codex CLI`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-09-14`
 
 ## Applicability
 
@@ -26,6 +26,7 @@ keywords: ["CDX-CFG-006", "unknown codex config field", "codex cli", "validation
 - https://developers.openai.com/codex/config-reference
 - https://developers.openai.com/codex/config-schema.json
 - https://developers.openai.com/codex/enterprise/managed-configuration
+- https://github.com/openai/codex/blob/rust-v0.154.0/codex-rs/core/config.schema.json
 
 ## Test Coverage Metadata
 
