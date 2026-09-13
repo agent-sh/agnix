@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.53.0] - 2026-09-14
+
 ### Added
 - CC-SET-031 validates top-level and per-model `maxEffortLevel` caps added in
   Claude Code 2.1.267.
