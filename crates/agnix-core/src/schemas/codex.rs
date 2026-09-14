@@ -148,6 +148,9 @@ pub const KNOWN_TOP_LEVEL_KEYS: &[&str] = &[
     "apps_mcp_product_sku",
     "include_collaboration_mode_instructions",
     "model_auto_compact_token_limit_scope",
+    // Added by the tagged rust-v0.154.0 configuration schema.
+    "allow_symlinked_codex_home",
+    "thread_unload_delay_secs",
     // Legacy camelCase keys: never in `config.schema.json` (which is snake_case)
     // but accepted from very early Codex configs for backwards compatibility.
     "approvalMode",

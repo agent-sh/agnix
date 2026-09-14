@@ -7,7 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- CC-SET-031 validates top-level and per-model `maxEffortLevel` caps added in
+  Claude Code 2.1.267.
+
 ### Changed
+- Accept the eight configuration keys added in Codex CLI 0.154.0, including
+  `features.worktrees`, `features.unified_exec_tty`, and the new TUI preferences.
+- Advance current Amp, Claude Code, Codex CLI, Cursor, Gemini CLI, Kiro CLI,
+  and OpenCode release baselines after reviewing their primary release notes.
+  Refresh Cursor's hooks specification hash; its documented event and field
+  contracts remain covered by CUR-010 through CUR-019.
 - Advance the Claude Code release baseline to `v2.1.263` and refresh the
   current hooks, memory, plugins, skills, and subagent documentation hashes.
   The patch release contains reliability fixes only, and the documented

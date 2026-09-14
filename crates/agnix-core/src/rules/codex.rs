@@ -201,6 +201,7 @@ const KNOWN_FEATURE_KEYS: &[&str] = &[
     "plugins",
     "prevent_idle_sleep",
     "realtime_conversation",
+    "reasoning_effort_override",
     "remote_compaction_v2",
     "remote_control",
     "remote_models",
@@ -237,6 +238,7 @@ const KNOWN_FEATURE_KEYS: &[&str] = &[
     "unavailable_dummy_tools",
     "undo",
     "unified_exec",
+    "unified_exec_tty",
     "unified_exec_zsh_fork",
     "use_agent_identity",
     "use_legacy_landlock",
@@ -244,8 +246,10 @@ const KNOWN_FEATURE_KEYS: &[&str] = &[
     "web_search",
     "web_search_cached",
     "web_search_request",
+    "windows_sandbox_service",
     "workspace_dependencies",
     "workspace_owner_usage_nudge",
+    "worktrees",
     // Older-version tolerance: these shipped in earlier Codex releases but are
     // absent from the current rust-v0.138.0 schema.
     "apps_mcp_gateway",
@@ -264,10 +268,12 @@ const KNOWN_TUI_KEYS: &[&str] = &[
     "model_availability_nux",
     "notification_method",
     "notifications",
+    "question_esc_back",
     "resume_cwd",
     "show_tooltips",
     "status_line",
     "theme",
+    "whimsy",
 ];
 
 const KNOWN_SHELL_ENVIRONMENT_POLICY_KEYS: &[&str] = &[
@@ -3944,6 +3950,40 @@ approval_mode = "auto"
             .collect();
         assert_eq!(hits.len(), 1);
         assert!(hits[0].message.contains("indexed"));
+    }
+
+    #[test]
+    fn test_codex_0_154_schema_additions_are_accepted_in_toml_and_json() {
+        // All eight keys added between the tagged 0.153.4 and 0.154.0
+        // codex-rs/core/config.schema.json files. Keep unknown-key detection
+        // active for neighboring misspellings, not just a clean fixture.
+        let toml = r#"
+allow_symlinked_codex_home = false
+thread_unload_delay_secs = 60
+[features]
+reasoning_effort_override = true
+unified_exec_tty = true
+windows_sandbox_service = true
+worktrees = true
+[tui]
+question_esc_back = true
+whimsy = true
+"#;
+        let json = serde_json::to_string(&toml::from_str::<toml::Value>(toml).unwrap()).unwrap();
+        for diagnostics in [validate_config(toml), validate_config_json(&json)] {
+            assert!(
+                diagnostics
+                    .iter()
+                    .all(|d| !matches!(d.rule.as_str(), "CDX-004" | "CDX-CFG-006" | "CDX-CFG-011")),
+                "{diagnostics:?}"
+            );
+        }
+        let misspelled = toml.replace("worktrees =", "worktreess =");
+        assert!(
+            validate_config(&misspelled)
+                .iter()
+                .any(|d| d.message.contains("worktreess"))
+        );
     }
 
     #[test]

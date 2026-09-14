@@ -35,7 +35,7 @@ regress.workspace = true
 ignore = { workspace = true, optional = true }
 glob.workspace = true
 rayon = { workspace = true, optional = true }
-dirs = { version = "6", optional = true }
+dirs = { version = "7", optional = true }
 semver = "1"
 toml = "1.0"
 schemars = "1"

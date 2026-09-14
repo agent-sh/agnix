@@ -569,6 +569,14 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Fix**: Manual - provide the server through HTTP or SSE with a URL. Use another supported deployment mechanism for local stdio servers.
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.259
 
+<a id="cc-set-031"></a>
+
+### CC-SET-031 [MEDIUM] Invalid maxEffortLevel Setting
+**Requirement**: `maxEffortLevel`, both at the top level and inside a `modelSettings` entry, MUST be one of `low`, `medium`, `high`, `xhigh`, or `max` in Claude Code 2.1.267+ when non-null. A `null` value is treated as unset. The `max` value explicitly removes the cap for that settings source.
+**Detection**: Parse settings JSON and flag non-string caps or strings outside the documented enum at either supported location.
+**Fix**: Manual - choose `low`, `medium`, `high`, `xhigh`, or `max`.
+**Source**: code.claude.com/docs/en/settings-reference#maxeffortlevel, github.com/anthropics/claude-code/releases/tag/v2.1.267
+
 ---
 
 ## PER-CLIENT SKILL RULES
@@ -2457,6 +2465,7 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 
 <a id="cdx-004"></a>
 ### CDX-004 [MEDIUM] Unknown Config Key
+**0.154 schema refresh**: Accept `allow_symlinked_codex_home` and `thread_unload_delay_secs` added by the tagged Codex 0.154.0 schema.
 **Requirement**: Top-level keys in `.codex/config.toml` SHOULD be from the known configuration schema
 **Detection**: Parse TOML, compare top-level keys against known key and table allowlists
 **Fix**: [AUTO-FIX] Remove unrecognized keys
@@ -2513,6 +2522,7 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 
 <a id="cdx-cfg-006"></a>
 ### CDX-CFG-006 [MEDIUM] Unknown Codex Config Field
+**0.154 schema refresh**: Accept the new `tui.question_esc_back` and `tui.whimsy` preferences and the feature names listed under CDX-CFG-011.
 **Requirement**: Codex config keys SHOULD match the official schema at top-level and known nested sections (`features`, `tui`, `shell_environment_policy`, `mcp_servers`, `apps`)
 **Detection**: Parse `.codex/config.toml|json|yaml`, compare observed keys against allowlists, and report unknown keys
 **Fix**: No auto-fix (remove or rename unsupported fields)
@@ -2548,6 +2558,7 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 
 <a id="cdx-cfg-011"></a>
 ### CDX-CFG-011 [MEDIUM] Invalid Feature Flag Name or Shape
+**0.154 schema refresh**: Accept `reasoning_effort_override`, `unified_exec_tty`, `windows_sandbox_service`, and `worktrees`. Source: [tagged configuration schema](https://github.com/openai/codex/blob/rust-v0.154.0/codex-rs/core/config.schema.json).
 **Requirement**: Keys under `[features]` SHOULD use known Codex feature flag names; `non_prefixed_mcp_tool_names` MUST be a boolean or an object with optional boolean `enabled` and string-array `server_names`
 **Detection**: Parse config, report unknown keys under `features`, and validate the structured `non_prefixed_mcp_tool_names` value
 **Fix**: No auto-fix (remove unsupported flags or rename)
@@ -3641,7 +3652,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Claude Memory | 13 | 8 | 5 | 0 | 3 |
 | Claude Output Styles | 6 | 2 | 2 | 2 | 0 |
 | Claude Plugins | 16 | 10 | 6 | 0 | 4 |
-| Claude Settings | 30 | 1 | 28 | 1 | 0 |
+| Claude Settings | 31 | 1 | 29 | 1 | 0 |
 | Claude Skills | 20 | 10 | 9 | 1 | 10 |
 | Cline | 7 | 4 | 3 | 0 | 3 |
 | Cline Skills | 3 | 2 | 1 | 0 | 2 |
@@ -3672,7 +3683,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **455** | **217** | **208** | **30** | **124** |
+| **TOTAL** | **456** | **217** | **209** | **30** | **124** |
 
 
 ---
@@ -3702,8 +3713,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 455 validation rules across 40 categories
+**Total Coverage**: 456 validation rules across 40 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 217 HIGH, 208 MEDIUM, 30 LOW
+**Certainty**: 217 HIGH, 209 MEDIUM, 30 LOW
 **Auto-Fixable**: 124 rules (27%)

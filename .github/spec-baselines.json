@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "description": "Baseline hashes for canonical specification content. Human-facing URLs are kept separately from machine-readable content URLs.",
-  "last_updated": "2026-09-07T00:00:00Z",
+  "last_updated": "2026-09-14T00:00:00Z",
   "sources": {
     "s-tier": {
       "agent-skills-spec": {
@@ -248,7 +248,7 @@
       "cursor-hooks": {
         "url": "https://cursor.com/docs/hooks",
         "content_url": "https://cursor.com/docs/hooks.md",
-        "hash": "0d3a3ce6900141d4fa7d135d842ec49c2243f5ed4bb5bab8eb359ba8c6a4df78",
+        "hash": "8aad385176a5b0c4fef4bd20cdfc7ec1b86378dac7fbeab09361f6ee7d3ee48e",
         "rules": [
           "CUR-010",
           "CUR-011",
