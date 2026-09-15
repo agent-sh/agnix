@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `v0.60.0`, and OpenCode to `v1.18.31` after reviewing their primary release
   notes. The changes are runtime, security, session-restoration, provider, and
   cloud-agent updates outside agnix's validated configuration schemas.
+- Update `rustls` to 0.23.45 to address `RUSTSEC-2026-0285`, which allowed
+  selected TLS 1.3 handshake messages at the wrong encryption level.
 
 ## [0.53.0] - 2026-09-14
 
