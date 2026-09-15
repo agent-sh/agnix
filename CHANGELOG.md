@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Advance Claude Code to `v2.1.273`, Cursor to `3.20.21`, Gemini CLI to
+  `v0.60.0`, and OpenCode to `v1.18.31` after reviewing their primary release
+  notes. The changes are runtime, security, session-restoration, provider, and
+  cloud-agent updates outside agnix's validated configuration schemas.
+
 ## [0.53.0] - 2026-09-14
 
 ### Added
