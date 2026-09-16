@@ -7653,9 +7653,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
+          "https://cursor.com/help/customization/rules",
           "https://cursor.com/docs/rules"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-09-16",
         "applies_to": {
           "tool": "cursor"
         },
@@ -7765,7 +7766,7 @@
         "source_urls": [
           "https://cursor.com/docs/hooks"
         ],
-        "verified_on": "2026-07-31",
+        "verified_on": "2026-09-16",
         "applies_to": {
           "tool": "cursor"
         },
@@ -7930,7 +7931,7 @@
           "https://cursor.com/docs/cloud-agent/setup",
           "https://cursor.com/schemas/environment.schema.json"
         ],
-        "verified_on": "2026-08-21",
+        "verified_on": "2026-09-16",
         "applies_to": {
           "tool": "cursor"
         },
@@ -7944,8 +7945,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\"$schema\":\"https://cursor.com/schemas/environment.schema.json\",\"build\":{\"dockerfile\":\"Dockerfile\",\"context\":\"..\"},\"install\":\"npm ci\",\"start\":\"npm run dev\",\"disableAllMcpServers\":false,\"mcpServerAllowlist\":[{\"serverUrl\":\"https://mcp.example.com\",\"toolAllowlist\":[\"search\"]}],\"terminals\":[{\"name\":\"app\",\"command\":\"npm run dev\"}]}",
-      "bad_example": "{\"install\":42,\"terminals\":[{\"name\":\"app\"}]}"
+      "good_example": "{\"$schema\":\"https://cursor.com/schemas/environment.schema.json\",\"build\":{\"dockerfile\":\"Dockerfile\",\"context\":\"..\"},\"install\":\"npm ci\",\"start\":\"npm run dev\",\"egressMode\":\"parent_plus_network_settings\",\"egressAllowlist\":[\"registry.npmjs.org\"],\"disableAllMcpServers\":false,\"mcpServerAllowlist\":[{\"serverUrl\":\"https://mcp.example.com\",\"toolAllowlist\":[\"search\"]}],\"terminals\":[{\"name\":\"app\",\"command\":\"npm run dev\"}]}",
+      "bad_example": "{\"install\":42,\"egressMode\":\"open\",\"terminals\":[{\"name\":\"app\"}]}"
     },
     {
       "id": "CUR-017",
@@ -7957,7 +7958,7 @@
         "source_urls": [
           "https://cursor.com/docs/hooks"
         ],
-        "verified_on": "2026-08-01",
+        "verified_on": "2026-09-16",
         "applies_to": {
           "tool": "cursor",
           "file_types": [
@@ -7974,8 +7975,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"hooks\": {\n    \"beforeShellExecution\": [{ \"type\": \"command\", \"command\": \"npm run lint\", \"timeout\": 30, \"failClosed\": true }]\n  }\n}",
-      "bad_example": "{\n  \"hooks\": {\n    \"beforeShellExecution\": [{ \"type\": \"command\", \"command\": \"npm run lint\", \"timeout\": \"slow\", \"failClosed\": \"yes\" }]\n  }\n}"
+      "good_example": "{\n  \"version\": 1,\n  \"hooks\": {\n    \"beforeShellExecution\": [{ \"type\": \"command\", \"command\": \"npm run lint\", \"timeout\": 30, \"failClosed\": true, \"matcher\": \"npm|pnpm\" }]\n  }\n}",
+      "bad_example": "{\n  \"version\": 1,\n  \"hooks\": {\n    \"beforeShellExecution\": [{ \"type\": \"command\", \"command\": \"npm run lint\", \"timeout\": \"slow\", \"failClosed\": \"yes\", \"matcher\": { \"tool\": \"Shell\" } }]\n  }\n}"
     },
     {
       "id": "CUR-018",

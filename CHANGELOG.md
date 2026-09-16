@@ -7,13 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- CUR-017 validates the `matcher` field on Cursor hook entries as a regex
+  string, now that the hooks documentation types it as one.
+
 ### Changed
+- CUR-010 requires `version` in `.cursor/hooks.json` and checks that it is a
+  positive integer, matching the hooks documentation's per-file options table.
+- Refresh the Cursor rules, hooks, and cloud-agent setup specification hashes
+  after review. CUR-006 now cites the help-center migration guide, where the
+  `.cursorrules` deprecation notice moved.
 - Advance Claude Code to `v2.1.273`, Cursor to `3.20.21`, Gemini CLI to
   `v0.60.0`, and OpenCode to `v1.18.31` after reviewing their primary release
   notes. The changes are runtime, security, session-restoration, provider, and
   cloud-agent updates outside agnix's validated configuration schemas.
 - Update `rustls` to 0.23.45 to address `RUSTSEC-2026-0285`, which allowed
   selected TLS 1.3 handshake messages at the wrong encryption level.
+
+### Fixed
+- CUR-016 no longer rejects the published environment schema's
+  `egressAllowlist`, `egressMode`, `chromeExecutablePath`, `enable_testing`,
+  `image`, and `build.dockerfileContents` fields, and validates their types.
 
 ## [0.53.0] - 2026-09-14
 

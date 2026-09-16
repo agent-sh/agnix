@@ -1841,7 +1841,7 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 **Requirement**: Projects SHOULD migrate from .cursorrules to .cursor/rules/*.mdc format
 **Detection**: File named `.cursorrules`
 **Fix**: Create `.cursor/rules/` directory and migrate rules to .mdc files
-**Source**: cursor.com/docs/rules
+**Source**: cursor.com/help/customization/rules ("How do I migrate from .cursorrules?": the file "is legacy and will be deprecated"); cursor.com/docs/rules documents the `.mdc` format that replaces it
 
 <a id="cur-007"></a>
 ### CUR-007 [MEDIUM] alwaysApply with Redundant globs
@@ -1866,9 +1866,9 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 <a id="cur-010"></a>
 ### CUR-010 [HIGH] Invalid .cursor/hooks.json Schema
-**Requirement**: `.cursor/hooks.json` MUST define an object `hooks` map. `version` is optional - documented as `| version | number | 1 | Config schema version |`, and several of the doc's own examples omit it - but MUST be a number when present (so `1.0` is valid, `"one"` is not).
-**Detection**: Parse JSON, validate the `hooks` shape, and check `version`'s type only when the key is present
-**Fix**: Add the `hooks` object; correct `version`'s type if present
+**Requirement**: `.cursor/hooks.json` MUST define an object `hooks` map and a `version` field. The per-file options table documents `version` as `| version | number | required | Config schema version. Must be a positive integer (use 1). |`, and every hooks.json example in the doc carries `"version": 1`. Zero, negative, fractional, and non-numeric values are invalid; `1.0` is accepted because JSON has one number type and its value is the integer 1.
+**Detection**: Parse JSON, validate the `hooks` shape, report a missing `version`, and check that a present `version` is an integer >= 1
+**Fix**: Add `"version": 1` and the `hooks` object; correct `version` if it is not a positive integer
 **Source**: cursor.com/docs/hooks
 
 <a id="cur-011"></a>
@@ -1908,14 +1908,14 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 <a id="cur-016"></a>
 ### CUR-016 [HIGH] Invalid .cursor/environment.json Schema
-**Requirement**: `.cursor/environment.json` MUST match the published schema at cursor.com/schemas/environment.schema.json. Comments are allowed, trailing commas are not, no root field is required, `build.dockerfile` is required when `build` exists, and unknown root/build fields are rejected except for the conventional root `$schema` association key. `disableAllMcpServers` is boolean; each `mcpServerAllowlist` entry identifies an HTTP server by `serverUrl` or a stdio server by `command`, with an optional `toolAllowlist` array of strings. Terminal entries require only `command`; `name` and `description` are optional. `update` is not in the schema and is reported as renamed to `install`.
-**Detection**: Strip JSON comments, parse JSON, enforce the root/build/MCP-server closed-field sets, and validate setup strings, repository dependencies, MCP policy, ports, build fields, snapshot fields, and terminal entries
+**Requirement**: `.cursor/environment.json` MUST match the published schema at cursor.com/schemas/environment.schema.json. Comments are allowed, trailing commas are not, no root field is required, `build` needs `dockerfile` or `dockerfileContents` (the schema's `anyOf`) with an optional `context`, and unknown root/build fields are rejected except for the conventional root `$schema` association key. The root accepts the union of the schema's `common` and `container` definitions: `name`, `user`, `install`, `start`, `repositoryDependencies`, `disableAllMcpServers`, `mcpServerAllowlist`, `egressAllowlist` (array of strings), `egressMode` (`allow_all`, `parent_plus_network_settings`, `default_with_network_settings`, or `network_settings_only`), `chromeExecutablePath`, `enable_testing` (boolean or the strings `"true"`/`"false"`), `ports`, `terminals`, `build`, `image`, `snapshot`, and `agentCanUpdateSnapshot`. Each `mcpServerAllowlist` entry identifies an HTTP server by `serverUrl` or a stdio server by `command`, with an optional `toolAllowlist` array of strings. Terminal entries require only `command`; `name` and `description` are optional. `update` is not in the schema and is reported as renamed to `install`.
+**Detection**: Strip JSON comments, parse JSON, enforce the root/build/MCP-server closed-field sets, and validate setup strings, repository dependencies, MCP policy, egress policy, testing flag, ports, build fields, image and snapshot fields, and terminal entries
 **Fix**: Correct field types; rename `update` to `install`
 **Source**: cursor.com/docs/cloud-agent/setup
 
 <a id="cur-017"></a>
 ### CUR-017 [MEDIUM] Invalid Hook Entry Field Types
-**Requirement**: Hook entry fields SHOULD have correct types (timeout: number, loop_limit: number|null, failClosed: boolean)
+**Requirement**: Hook entry fields SHOULD have correct types (timeout: positive number, loop_limit: number|null, failClosed: boolean, matcher: regex string where an empty string or `"*"` matches everything)
 **Detection**: Check field types in hook entries
 **Fix**: Manual
 **Source**: cursor.com/docs/hooks

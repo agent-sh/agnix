@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "description": "Baseline hashes for canonical specification content. Human-facing URLs are kept separately from machine-readable content URLs.",
-  "last_updated": "2026-09-14T00:00:00Z",
+  "last_updated": "2026-09-16T00:00:00Z",
   "sources": {
     "s-tier": {
       "agent-skills-spec": {
@@ -231,7 +231,7 @@
       "cursor-rules": {
         "url": "https://cursor.com/docs/rules",
         "content_url": "https://cursor.com/docs/rules.md",
-        "hash": "a2c5c228914798fa3bd014a74c62421663f56c90e89885224e03b617678c0d9a",
+        "hash": "0084ee9ef5e916629b4efd4fd3e0f296a6d0c52cced114e3a191eb67755d4d9e",
         "rules": [
           "CUR-001",
           "CUR-002",
@@ -248,7 +248,7 @@
       "cursor-hooks": {
         "url": "https://cursor.com/docs/hooks",
         "content_url": "https://cursor.com/docs/hooks.md",
-        "hash": "8aad385176a5b0c4fef4bd20cdfc7ec1b86378dac7fbeab09361f6ee7d3ee48e",
+        "hash": "f3e90a345003a8cedfe8376d5f97d3ce6375c9f921e37cd5879b146f824ebaae",
         "rules": [
           "CUR-010",
           "CUR-011",
@@ -271,7 +271,7 @@
       "cursor-environment": {
         "url": "https://cursor.com/docs/cloud-agent/setup",
         "content_url": "https://cursor.com/docs/cloud-agent/setup.md",
-        "hash": "dbef4e80115abc101ba9fd27e6652b3a6a08af14703391c458e7aa27da6eb645",
+        "hash": "51ba181e5219d57692650521ea263c0a980a324d86c80e62720b1f7d0efd4f8b",
         "rules": [
           "CUR-016"
         ]
