@@ -468,14 +468,15 @@ rules:
     message: Agent-requested rule has no description - the agent cannot determine when to apply it
     suggestion: Add a description field explaining when this rule should apply, or set alwaysApply or globs to control activation
   cur_010:
-    message: .cursor/hooks.json must define a hooks object, and a numeric version when present
-    invalid_version: "Field 'version' must be a number (it defaults to 1 when omitted)"
+    message: .cursor/hooks.json must define a hooks object and a positive integer version
+    missing_version: "Field 'version' is required (use 1)"
+    invalid_version: "Field 'version' must be a positive integer (use 1), got %{got}"
     missing_hooks: .cursor/hooks.json is missing required object field 'hooks'
     invalid_hooks: Field 'hooks' must be an object, got %{got}
     invalid_event_hooks: hooks.%{event} must be an array of hook definitions, got %{got}
     invalid_hook_entry: hooks.%{event}[%{index}] must be an object
     parse_error: 'Failed to parse .cursor/hooks.json: %{error}'
-    suggestion: 'Define {"hooks": {"eventName": [{"type": "command", "command": "..."}]}}; "version" is optional and defaults to 1'
+    suggestion: 'Define {"version": 1, "hooks": {"eventName": [{"type": "command", "command": "..."}]}}'
   cur_011:
     message: Unknown Cursor hook event '%{event}'
     suggestion: Use one of the documented Cursor hook events in .cursor/hooks.json
@@ -507,7 +508,8 @@ rules:
     update_renamed_suggestion: Rename 'update' to 'install'; the published schema sets unevaluatedProperties=false, so unknown keys are invalid
     start: Field 'start' must be a string when present
     invalid_build: Field 'build' must be an object when present
-    build_dockerfile: Field 'build.dockerfile' is required and must be a string
+    build_dockerfile: Field 'build' must set 'dockerfile' or 'dockerfileContents'
+    build_string_field: Field 'build.%{field}' must be a string when present
     build_context: Field 'build.context' must be a string when present
     invalid_terminals: Field 'terminals' must be an array, got %{got}
     terminal: "terminals[%{index}] must have a string 'command' field"
@@ -517,8 +519,11 @@ rules:
     unknown_root_field_suggestion: Remove fields not defined by Cursor's environment schema
     string_field: "Field '%{field}' must be a string when present"
     agent_can_update_snapshot: Field 'agentCanUpdateSnapshot' must be a boolean when present
+    egress_allowlist: Field 'egressAllowlist' must be an array of strings
+    egress_mode: Field 'egressMode' must be one of allow_all, parent_plus_network_settings, default_with_network_settings, or network_settings_only
+    enable_testing: Field 'enable_testing' must be a boolean or the string "true" or "false"
     unknown_build_field: "Unknown field 'build.%{field}'"
-    unknown_build_field_suggestion: Use only 'dockerfile' and optional 'context' in build
+    unknown_build_field_suggestion: Use only 'dockerfile' or 'dockerfileContents', plus optional 'context', in build
     repository_dependencies: Field 'repositoryDependencies' must be an array of strings
     disable_all_mcp_servers: Field 'disableAllMcpServers' must be a boolean
     mcp_server_allowlist_array: Field 'mcpServerAllowlist' must be an array
@@ -532,6 +537,9 @@ rules:
     port_name: ports[%{index}].name must be a string when present
     ports_array: Field 'ports' must be an array
     suggestion: 'Use Cursor''s schema: string setup fields, a valid build object, string repository dependencies, valid ports, and command-bearing terminals'
+  cur_017:
+    matcher_message: "Hook entry %{index} in '%{event}' has invalid 'matcher': expected a regex string, got %{got}"
+    matcher_suggestion: Set 'matcher' to a regex string; an empty string or "*" matches everything
   cur_020:
     message: Cursor ignores plain .md files in .cursor/rules
     suggestion: Rename the project rule with the .mdc extension

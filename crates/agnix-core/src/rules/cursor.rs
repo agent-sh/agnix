@@ -71,6 +71,22 @@ const CURSOR_HOOK_EVENTS: &[&str] = &[
 
 const CURSOR_HOOK_TYPES: &[&str] = &["command", "prompt"];
 
+/// `egressMode` enum from cursor.com/schemas/environment.schema.json.
+const CURSOR_EGRESS_MODES: &[&str] = &[
+    "allow_all",
+    "parent_plus_network_settings",
+    "default_with_network_settings",
+    "network_settings_only",
+];
+
+/// JSON has one number type, so `1.0` is the integer 1; `0`, negatives and
+/// fractions are not positive integers.
+fn is_positive_integer(value: &JsonValue) -> bool {
+    value
+        .as_f64()
+        .is_some_and(|number| number >= 1.0 && number.fract() == 0.0)
+}
+
 pub struct CursorValidator;
 
 fn line_byte_range(content: &str, line_number: usize) -> Option<(usize, usize)> {
@@ -390,24 +406,41 @@ fn validate_cursor_hooks_file(
         }
     };
 
-    // `version` is documented with a default ("| `version` | number | `1` |
-    // Config schema version |") and several of the doc's own examples omit it,
-    // so absence is valid. Only a present-but-non-numeric value is wrong. Typed
-    // "number" rather than integer, so `1.0` is accepted too.
-    if config.is_rule_enabled("CUR-010")
-        && let Some(version) = root.get("version")
-        && !version.is_number()
-    {
-        diagnostics.push(
-            Diagnostic::error(
-                path.to_path_buf(),
-                1,
-                0,
-                "CUR-010",
-                t!("rules.cur_010.invalid_version"),
-            )
-            .with_suggestion(t!("rules.cur_010.suggestion")),
-        );
+    // The hooks doc's per-file options table reads "| `version` | number |
+    // required | Config schema version. Must be a positive integer (use `1`). |"
+    // and every hooks.json example in it carries `"version": 1`. Absence is an
+    // error, and so is any value that is not an integer >= 1.
+    if config.is_rule_enabled("CUR-010") {
+        match root.get("version") {
+            None => diagnostics.push(
+                Diagnostic::error(
+                    path.to_path_buf(),
+                    1,
+                    0,
+                    "CUR-010",
+                    t!("rules.cur_010.missing_version"),
+                )
+                .with_suggestion(t!("rules.cur_010.suggestion")),
+            ),
+            Some(version) if !is_positive_integer(version) => {
+                let got = if version.is_number() {
+                    version.to_string()
+                } else {
+                    json_type_name(version).to_string()
+                };
+                diagnostics.push(
+                    Diagnostic::error(
+                        path.to_path_buf(),
+                        1,
+                        0,
+                        "CUR-010",
+                        t!("rules.cur_010.invalid_version", got = got),
+                    )
+                    .with_suggestion(t!("rules.cur_010.suggestion")),
+                );
+            }
+            Some(_) => {}
+        }
     }
 
     let hooks = match root.get("hooks") {
@@ -675,6 +708,30 @@ fn validate_cursor_hooks_file(
                                 ),
                             )
                             .with_suggestion("Set 'failClosed' to true or false."),
+                        );
+                    }
+                }
+
+                // The per-script options table now types `matcher` as a string
+                // ("Regex that filters when the hook runs. An empty string or
+                // \"*\" matches everything."), resolving the object-vs-string
+                // inconsistency that kept this field unvalidated.
+                if let Some(matcher) = hook_obj.get("matcher") {
+                    if !matcher.is_string() {
+                        diagnostics.push(
+                            Diagnostic::warning(
+                                path.to_path_buf(),
+                                1,
+                                0,
+                                "CUR-017",
+                                t!(
+                                    "rules.cur_017.matcher_message",
+                                    index = index + 1,
+                                    event = event_name.as_str(),
+                                    got = json_type_name(matcher)
+                                ),
+                            )
+                            .with_suggestion(t!("rules.cur_017.matcher_suggestion")),
                         );
                     }
                 }
@@ -968,6 +1025,8 @@ fn validate_cursor_environment_file(
 
     // Cursor's VS Code JSON service treats root `$schema` as the schema-association
     // key even though the published schema's closed property set does not declare it.
+    // Everything else is the union of `definitions.common` and
+    // `definitions.container` in cursor.com/schemas/environment.schema.json.
     const ALLOWED_ROOT_FIELDS: &[&str] = &[
         "$schema",
         "name",
@@ -977,9 +1036,14 @@ fn validate_cursor_environment_file(
         "repositoryDependencies",
         "disableAllMcpServers",
         "mcpServerAllowlist",
+        "egressAllowlist",
+        "egressMode",
+        "chromeExecutablePath",
+        "enable_testing",
         "ports",
         "terminals",
         "build",
+        "image",
         "snapshot",
         "agentCanUpdateSnapshot",
     ];
@@ -998,7 +1062,7 @@ fn validate_cursor_environment_file(
         }
     }
 
-    for field in ["name", "user", "snapshot"] {
+    for field in ["name", "user", "snapshot", "image", "chromeExecutablePath"] {
         if root.get(field).is_some_and(|value| !value.is_string()) {
             diagnostics.push(
                 cursor_environment_error(
@@ -1022,6 +1086,49 @@ fn validate_cursor_environment_file(
                 content,
                 "agentCanUpdateSnapshot",
                 t!("rules.cur_016.agent_can_update_snapshot"),
+            )
+            .with_suggestion(t!("rules.cur_016.suggestion")),
+        );
+    }
+
+    if let Some(allowlist) = root.get("egressAllowlist")
+        && !allowlist
+            .as_array()
+            .is_some_and(|items| items.iter().all(JsonValue::is_string))
+    {
+        diagnostics.push(
+            cursor_environment_error(
+                path,
+                content,
+                "egressAllowlist",
+                t!("rules.cur_016.egress_allowlist"),
+            )
+            .with_suggestion(t!("rules.cur_016.suggestion")),
+        );
+    }
+
+    if let Some(mode) = root.get("egressMode")
+        && !mode
+            .as_str()
+            .is_some_and(|mode| CURSOR_EGRESS_MODES.contains(&mode))
+    {
+        diagnostics.push(
+            cursor_environment_error(path, content, "egressMode", t!("rules.cur_016.egress_mode"))
+                .with_suggestion(t!("rules.cur_016.suggestion")),
+        );
+    }
+
+    // The schema types `enable_testing` as `oneOf` boolean or the strings
+    // "true" / "false".
+    if let Some(flag) = root.get("enable_testing")
+        && !(flag.is_boolean() || matches!(flag.as_str(), Some("true" | "false")))
+    {
+        diagnostics.push(
+            cursor_environment_error(
+                path,
+                content,
+                "enable_testing",
+                t!("rules.cur_016.enable_testing"),
             )
             .with_suggestion(t!("rules.cur_016.suggestion")),
         );
@@ -1074,10 +1181,11 @@ fn validate_cursor_environment_file(
     if let Some(build) = root.get("build") {
         match build.as_object() {
             Some(build_obj) => {
-                if !build_obj
-                    .get("dockerfile")
-                    .is_some_and(JsonValue::is_string)
-                {
+                // The schema's `build` is `anyOf` required `dockerfile` or
+                // `dockerfileContents`, both strings, plus an optional `context`.
+                let dockerfile = build_obj.get("dockerfile");
+                let dockerfile_contents = build_obj.get("dockerfileContents");
+                if dockerfile.is_none() && dockerfile_contents.is_none() {
                     diagnostics.push(
                         cursor_environment_error(
                             path,
@@ -1087,6 +1195,22 @@ fn validate_cursor_environment_file(
                         )
                         .with_suggestion(t!("rules.cur_016.suggestion")),
                     );
+                }
+                for (field, value) in [
+                    ("dockerfile", dockerfile),
+                    ("dockerfileContents", dockerfile_contents),
+                ] {
+                    if value.is_some_and(|value| !value.is_string()) {
+                        diagnostics.push(
+                            cursor_environment_error(
+                                path,
+                                content,
+                                "build",
+                                t!("rules.cur_016.build_string_field", field = field),
+                            )
+                            .with_suggestion(t!("rules.cur_016.suggestion")),
+                        );
+                    }
                 }
                 if let Some(context) = build_obj.get("context")
                     && context.as_str().is_none()
@@ -1103,7 +1227,7 @@ fn validate_cursor_environment_file(
                 }
 
                 for field in build_obj.keys() {
-                    if !["dockerfile", "context"].contains(&field.as_str()) {
+                    if !["dockerfile", "dockerfileContents", "context"].contains(&field.as_str()) {
                         diagnostics.push(
                             cursor_environment_error(
                                 path,
@@ -2082,33 +2206,52 @@ description: Modern format
 
     // ===== CUR-010 to CUR-016: Cursor hooks/agents/environment =====
 
-    /// `version` is documented with a default of 1 and several of the doc's own
-    /// examples omit it, so a bare `hooks` object is valid.
+    /// The hooks doc's per-file options table marks `version` as required and
+    /// every hooks.json example in it carries `"version": 1`, so a bare `hooks`
+    /// object is invalid.
     #[test]
-    fn test_cur_010_version_is_optional() {
+    fn test_cur_010_version_is_required() {
         let diagnostics = validate_cursor_hooks(r#"{"hooks": {}}"#);
         assert!(
-            diagnostics.iter().all(|d| d.rule != "CUR-010"),
-            "an omitted `version` defaults to 1 and must not be flagged, got: {:?}",
+            diagnostics
+                .iter()
+                .any(|d| d.rule == "CUR-010" && d.message.contains("version")),
+            "an omitted `version` must be flagged, got: {:?}",
             diagnostics.iter().map(|d| &d.message).collect::<Vec<_>>()
         );
     }
 
-    /// A present-but-non-numeric `version` is still wrong. The field is typed
-    /// "number", so `1.0` is fine and `"one"` is not.
+    /// `version` "must be a positive integer (use `1`)". JSON has a single
+    /// number type, so `1.0` is the integer 1 and passes; zero, negatives,
+    /// fractions and non-numbers do not.
     #[test]
-    fn test_cur_010_version_must_be_numeric_when_present() {
-        let bad = validate_cursor_hooks(r#"{"version":"one","hooks":{}}"#);
-        assert!(
-            bad.iter().any(|d| d.rule == "CUR-010"),
-            "a string version must be flagged, got: {bad:?}"
-        );
+    fn test_cur_010_version_must_be_positive_integer() {
+        for bad in [
+            r#"{"version":"one","hooks":{}}"#,
+            r#"{"version":0,"hooks":{}}"#,
+            r#"{"version":-1,"hooks":{}}"#,
+            r#"{"version":1.5,"hooks":{}}"#,
+            r#"{"version":null,"hooks":{}}"#,
+            r#"{"version":true,"hooks":{}}"#,
+        ] {
+            let diagnostics = validate_cursor_hooks(bad);
+            assert!(
+                diagnostics.iter().any(|d| d.rule == "CUR-010"),
+                "{bad} must be flagged, got: {diagnostics:?}"
+            );
+        }
 
-        let float_ok = validate_cursor_hooks(r#"{"version":1.0,"hooks":{}}"#);
-        assert!(
-            float_ok.iter().all(|d| d.rule != "CUR-010"),
-            "`version` is typed number, so 1.0 is valid, got: {float_ok:?}"
-        );
+        for good in [
+            r#"{"version":1,"hooks":{}}"#,
+            r#"{"version":1.0,"hooks":{}}"#,
+            r#"{"version":2,"hooks":{}}"#,
+        ] {
+            let diagnostics = validate_cursor_hooks(good);
+            assert!(
+                diagnostics.iter().all(|d| d.rule != "CUR-010"),
+                "{good} must not be flagged, got: {diagnostics:?}"
+            );
+        }
     }
 
     #[test]
@@ -2598,9 +2741,14 @@ is_background: false
     {"name": "GitHub", "serverUrl": "https://mcp.example.com", "toolAllowlist": ["search"]},
     {"command": "npx -y @example/mcp"}
   ],
+  "egressAllowlist": ["api.example.com", "registry.npmjs.org"],
+  "egressMode": "parent_plus_network_settings",
+  "chromeExecutablePath": "/usr/bin/chromium",
+  "enable_testing": true,
   "ports": [{"name": "web", "port": 3000}],
   "terminals": [{"name": "app", "command": "npm run dev", "description": "dev server"}],
   "build": {"dockerfile": "Dockerfile", "context": ".."},
+  "image": "ubuntu:24.04",
   "snapshot": "snap_abc123",
   "agentCanUpdateSnapshot": true
 }"#,
@@ -2647,6 +2795,18 @@ is_background: false
             ("out-of-range port", r#"{"ports":[{"port":70000}]}"#),
             ("invalid port name", r#"{"ports":[{"name":1,"port":3000}]}"#),
             ("missing dockerfile", r#"{"build":{"context":".."}}"#),
+            (
+                "invalid dockerfileContents",
+                r#"{"build":{"dockerfileContents":["FROM ubuntu"]}}"#,
+            ),
+            (
+                "invalid egress allowlist",
+                r#"{"egressAllowlist":["api.example.com",42]}"#,
+            ),
+            ("unknown egress mode", r#"{"egressMode":"open"}"#),
+            ("invalid chrome path", r#"{"chromeExecutablePath":1}"#),
+            ("invalid enable_testing", r#"{"enable_testing":"yes"}"#),
+            ("invalid image", r#"{"image":["ubuntu:24.04"]}"#),
             (
                 "unknown build field",
                 r#"{"build":{"dockerfile":"Dockerfile","target":"dev"}}"#,
@@ -3738,5 +3898,89 @@ Use strict mode.
             diagnostics.iter().any(|d| d.rule == "CUR-016"),
             "a bare string matches no branch, got: {diagnostics:?}"
         );
+    }
+
+    /// `build` is `anyOf` required `dockerfile` or `dockerfileContents`, so an
+    /// inline Dockerfile alone is a complete build block.
+    #[test]
+    fn test_cur_016_environment_build_accepts_dockerfile_contents() {
+        let diagnostics = validate_cursor_environment(
+            r#"{"build":{"dockerfileContents":"FROM ubuntu:24.04\nRUN apt-get update"},"install":"npm ci"}"#,
+        );
+        assert!(
+            diagnostics.iter().all(|d| d.rule != "CUR-016"),
+            "dockerfileContents satisfies the build identity, got: {diagnostics:?}"
+        );
+    }
+
+    /// `enable_testing` is `oneOf` boolean or the strings "true" / "false".
+    #[test]
+    fn test_cur_016_environment_enable_testing_accepts_string_booleans() {
+        for content in [
+            r#"{"enable_testing":false}"#,
+            r#"{"enable_testing":"true"}"#,
+            r#"{"enable_testing":"false"}"#,
+        ] {
+            let diagnostics = validate_cursor_environment(content);
+            assert!(
+                diagnostics.iter().all(|d| d.rule != "CUR-016"),
+                "{content} is valid per the schema, got: {diagnostics:?}"
+            );
+        }
+    }
+
+    /// Every `egressMode` enum member from the published schema is accepted.
+    #[test]
+    fn test_cur_016_environment_egress_modes() {
+        for mode in CURSOR_EGRESS_MODES {
+            let content = format!(r#"{{"egressMode":"{mode}"}}"#);
+            let diagnostics = validate_cursor_environment(&content);
+            assert!(
+                diagnostics.iter().all(|d| d.rule != "CUR-016"),
+                "{mode} is a documented egress mode, got: {diagnostics:?}"
+            );
+        }
+    }
+
+    /// `matcher` is now typed as a regex string in the per-script options table.
+    #[test]
+    fn test_cur_017_matcher_must_be_string() {
+        let bad = validate_cursor_hooks(
+            r#"{"version":1,"hooks":{"preToolUse":[{"command":"./validate.sh","matcher":{"tool":"Shell"}}]}}"#,
+        );
+        assert!(
+            bad.iter()
+                .any(|d| d.rule == "CUR-017" && d.message.contains("matcher")),
+            "an object matcher must be flagged, got: {bad:?}"
+        );
+
+        let also_bad = validate_cursor_hooks(
+            r#"{"version":1,"hooks":{"preToolUse":[{"command":"./validate.sh","matcher":["Shell"]}]}}"#,
+        );
+        assert!(
+            also_bad
+                .iter()
+                .any(|d| d.rule == "CUR-017" && d.message.contains("matcher")),
+            "an array matcher must be flagged, got: {also_bad:?}"
+        );
+    }
+
+    #[test]
+    fn test_cur_017_matcher_string_is_valid() {
+        for matcher in [
+            r#""Shell|Read|Write""#,
+            r#""""#,
+            r#""*""#,
+            r#""curl|wget|nc ""#,
+        ] {
+            let content = format!(
+                r#"{{"version":1,"hooks":{{"beforeShellExecution":[{{"command":"./approve.sh","matcher":{matcher}}}]}}}}"#
+            );
+            let diagnostics = validate_cursor_hooks(&content);
+            assert!(
+                diagnostics.iter().all(|d| d.rule != "CUR-017"),
+                "matcher {matcher} is a valid regex string, got: {diagnostics:?}"
+            );
+        }
     }
 }
