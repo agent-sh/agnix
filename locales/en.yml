@@ -537,6 +537,9 @@ rules:
     port_name: ports[%{index}].name must be a string when present
     ports_array: Field 'ports' must be an array
     suggestion: 'Use Cursor''s schema: string setup fields, a valid build object, string repository dependencies, valid ports, and command-bearing terminals'
+  cur_017:
+    matcher_message: "Hook entry %{index} in '%{event}' has invalid 'matcher': expected a regex string, got %{got}"
+    matcher_suggestion: Set 'matcher' to a regex string; an empty string or "*" matches everything
   cur_020:
     message: Cursor ignores plain .md files in .cursor/rules
     suggestion: Rename the project rule with the .mdc extension

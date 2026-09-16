@@ -724,16 +724,14 @@ fn validate_cursor_hooks_file(
                                 1,
                                 0,
                                 "CUR-017",
-                                format!(
-                                    "Hook entry {} in '{}' has invalid 'matcher': expected a regex string, got {}",
-                                    index + 1,
-                                    event_name,
-                                    json_type_name(matcher)
+                                t!(
+                                    "rules.cur_017.matcher_message",
+                                    index = index + 1,
+                                    event = event_name.as_str(),
+                                    got = json_type_name(matcher)
                                 ),
                             )
-                            .with_suggestion(
-                                "Set 'matcher' to a regex string; an empty string or \"*\" matches everything.",
-                            ),
+                            .with_suggestion(t!("rules.cur_017.matcher_suggestion")),
                         );
                     }
                 }
