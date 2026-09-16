@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.54.0] - 2026-09-16
+
 ### Added
 - CUR-017 validates the `matcher` field on Cursor hook entries as a regex
   string, now that the hooks documentation types it as one.
