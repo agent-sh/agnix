@@ -296,9 +296,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://ampcode.com/manual#settings"
+          "https://ampcode.com/docs/cli/settings",
+          "https://ampcode.com/docs/cli/runners"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-09-18",
         "applies_to": {
           "tool": "amp"
         },
