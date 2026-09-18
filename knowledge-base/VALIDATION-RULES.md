@@ -772,10 +772,10 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="amp-004"></a>
 ### AMP-004 [HIGH] Invalid Amp Settings Configuration
-**Requirement**: `.amp/settings.json` MUST be valid JSON and use known top-level keys
+**Requirement**: `.amp/settings.json` MUST be valid JSON and use known top-level keys, including documented dotted keys such as `amp.runner.autoUpdate.enabled`, `amp.remoteThreadCreation.enabled`, and `amp.updates.mode`
 **Detection**: JSON parse error OR unknown top-level key in `.amp/settings.json` / `.amp/settings.local.json`
 **Fix**: [AUTO-FIX] Fix JSON syntax and remove unknown keys
-**Source**: ampcode.com/manual#settings
+**Source**: ampcode.com/docs/cli/settings, ampcode.com/docs/cli/runners
 
 <a id="rc-sk-001"></a>
 ### RC-SK-001 [MEDIUM] Roo Code Skill Uses Unsupported Field

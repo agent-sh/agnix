@@ -43,6 +43,9 @@ const VALID_AMP_SETTINGS_KEYS: &[&str] = &[
     "trusted",
     "history",
     "notify",
+    "amp.runner.autoUpdate.enabled",
+    "amp.remoteThreadCreation.enabled",
+    "amp.updates.mode",
 ];
 
 /// Adapter to use raw frontmatter with `find_yaml_value_range`.
@@ -763,7 +766,10 @@ mod tests {
 
     #[test]
     fn test_amp_004_valid_settings() {
-        let diagnostics = validate(".amp/settings.json", r#"{"model":"x","notify":true}"#);
+        let diagnostics = validate(
+            ".amp/settings.json",
+            r#"{"model":"x","notify":true,"amp.runner.autoUpdate.enabled":false,"amp.remoteThreadCreation.enabled":true,"amp.updates.mode":"disabled"}"#,
+        );
         assert!(diagnostics.is_empty());
     }
 

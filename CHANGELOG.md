@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- AMP-004 accepts the documented `amp.runner.autoUpdate.enabled`,
+  `amp.remoteThreadCreation.enabled`, and `amp.updates.mode` settings keys.
+
+### Changed
+- Advance Amp to `one-runner-is-now-enough`, Claude Code to `v2.1.276`, Cline
+  to `v4.1.19`, Codex CLI to `rust-v0.155.0`, Cursor to `3.21.9`, and Kiro CLI
+  to `2.22.0` after reviewing their primary release notes. Only Amp changed a
+  validated configuration contract; the other releases cover runtime, UI,
+  security, model, and session behavior outside the current schemas.
+
 ## [0.54.0] - 2026-09-16
 
 ### Added
