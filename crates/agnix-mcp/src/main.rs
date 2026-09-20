@@ -25,7 +25,7 @@ use rmcp::{
     handler::server::{tool::ToolRouter, wrapper::Parameters},
     model::{
         CallToolResult, ContentBlock, ErrorData as McpError, Implementation, ProtocolVersion,
-        ServerCapabilities, ServerInfo,
+        ServerCapabilities, ServerConfig,
     },
     schemars, tool, tool_handler, tool_router,
     transport::stdio,
@@ -621,12 +621,12 @@ impl AgnixServer {
 
 #[tool_handler]
 impl ServerHandler for AgnixServer {
-    fn get_info(&self) -> ServerInfo {
+    fn get_info(&self) -> ServerConfig {
         let mut server_impl = Implementation::default();
         server_impl.name = "agnix".into();
         server_impl.version = env!("CARGO_PKG_VERSION").into();
 
-        let mut info = ServerInfo::default();
+        let mut info = ServerConfig::default();
         info.protocol_version = ProtocolVersion::V_2024_11_05;
         info.capabilities = ServerCapabilities::builder().enable_tools().build();
         info.server_info = server_impl;

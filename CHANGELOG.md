@@ -10,8 +10,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - AMP-004 accepts the documented `amp.runner.autoUpdate.enabled`,
   `amp.remoteThreadCreation.enabled`, and `amp.updates.mode` settings keys.
+- The MCP server uses rmcp's current `ServerConfig` name, keeping warning-denied
+  builds clean after the rmcp 3.4 update.
 
 ### Changed
+- Add Claude Code 2.1.277+ `AGENTS.md` fallback and combined-instruction support
+  to the tracked compatibility surface. Existing AGM and XP rules already
+  validate the documented file, imports, hierarchy, and size constraints.
+- Advance Claude Code to `v2.1.278`, Codex CLI to `rust-v0.155.1`, and Cursor
+  to `3.21.16`; refresh the five changed Claude documentation hashes after
+  reviewing the current vendor sources. The other release changes affect
+  runtime classifier and reasoning-summary defaults outside validated schemas.
+- Consolidate the current Rust patch updates, CodeQL v4.38.0 pins,
+  `actions/setup-java` v6.0.1, and `anthropics/claude-code-action` v1.0.226.
 - Advance Amp to `one-runner-is-now-enough`, Claude Code to `v2.1.276`, Cline
   to `v4.1.19`, Codex CLI to `rust-v0.155.0`, Cursor to `3.21.9`, and Kiro CLI
   to `2.22.0` after reviewing their primary release notes. Only Amp changed a
