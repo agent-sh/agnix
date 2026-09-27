@@ -563,7 +563,14 @@ jobs:
           cd "$WORKDIR/homebrew-agnix"
 
           BRANCH="update-agnix-${TAG}"
-          git checkout -B "$BRANCH" origin/main
+          if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null; then
+            git fetch origin "refs/heads/$BRANCH:refs/remotes/origin/$BRANCH"
+            git checkout -B "$BRANCH" "origin/$BRANCH"
+            HAS_REMOTE_BRANCH=true
+          else
+            git checkout -B "$BRANCH" origin/main
+            HAS_REMOTE_BRANCH=false
+          fi
           SHA="$(curl -fsSL --retry 3 "https://github.com/agent-sh/agnix/archive/refs/tags/${TAG}.tar.gz" | sha256sum | awk '{print $1}')"
           if [[ ! "$SHA" =~ ^[0-9a-f]{64}$ ]]; then
             echo "Invalid formula archive hash" >&2
@@ -575,13 +582,16 @@ jobs:
           git add Formula/agnix.rb
           if git diff --cached --quiet; then
             echo "Homebrew formula already matches ${TAG}"
-            exit 0
+            if [ "$HAS_REMOTE_BRANCH" = false ]; then
+              exit 0
+            fi
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "Update agnix to ${TAG}"
+            git push origin "$BRANCH"
           fi
 
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Update agnix to ${TAG}"
-          git push --force-with-lease origin "$BRANCH"
           EXISTING_PR="$(gh pr list --repo agent-sh/homebrew-agnix --state open --head "$BRANCH" --json number --jq '.[0].number // empty')"
           if [ -n "$EXISTING_PR" ]; then
             echo "Formula PR #${EXISTING_PR} updated"

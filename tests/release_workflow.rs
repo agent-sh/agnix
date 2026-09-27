@@ -121,16 +121,20 @@ fn release_homebrew_update_opens_a_pr() {
         .0;
 
     assert!(
-        homebrew.contains("git push --force-with-lease origin \"$BRANCH\""),
-        "Homebrew formula update must push a dedicated branch"
+        homebrew.contains("git ls-remote --exit-code --heads origin \"$BRANCH\"")
+            && homebrew.contains("git checkout -B \"$BRANCH\" \"origin/$BRANCH\"")
+            && homebrew.contains("git push origin \"$BRANCH\""),
+        "Homebrew formula reruns must preserve existing branch commits"
     );
     assert!(
         homebrew.contains("gh pr create") && homebrew.contains("--repo agent-sh/homebrew-agnix"),
         "Homebrew formula update must open a PR"
     );
     assert!(
-        !homebrew.contains("repository_dispatch") && !homebrew.contains("git push\n"),
-        "Homebrew release must not dispatch a direct-main updater"
+        !homebrew.contains("repository_dispatch")
+            && !homebrew.contains("git push\n")
+            && !homebrew.contains("git push --force"),
+        "Homebrew release must not dispatch a direct-main updater or force-push a PR branch"
     );
 }
 
