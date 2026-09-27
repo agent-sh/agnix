@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- CC-HK-002 now rejects Claude Code agent hooks on `PermissionRequest` while
+  continuing to allow prompt hooks on that event.
 - AMP-004 accepts the documented `amp.runner.autoUpdate.enabled`,
   `amp.remoteThreadCreation.enabled`, and `amp.updates.mode` settings keys.
 - The MCP server uses rmcp's current `ServerConfig` name, keeping warning-denied
