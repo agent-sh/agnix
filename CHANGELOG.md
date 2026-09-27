@@ -24,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   builds clean after the rmcp 3.4 update.
 
 ### Changed
+- Update the Homebrew tap through a reviewed PR during releases instead of
+  writing the formula directly to its default branch.
 - Advance Amp to `less-noise`, Claude Code to `v2.1.283`, Cline to
   `v4.1.21`, Codex CLI to `rust-v0.157.1`, Cursor to `3.22.7`, Gemini CLI to
   `v0.61.0`, Kiro CLI to `2.24.0`, and OpenCode to `v1.18.32` after reviewing
