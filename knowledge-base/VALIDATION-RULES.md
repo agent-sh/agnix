@@ -356,6 +356,13 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Fix**: Manual - replace with `~/`, `$HOME/`, a project-relative path, or an env var like `$PROJECT_ROOT`. For shebangs, prefer `#!/usr/bin/env <interpreter>`.
 **Source**: code.claude.com/docs/en/skills
 
+<a id="cc-sk-022"></a>
+### CC-SK-022 [HIGH] Reserved Claude Skill Name
+**Requirement**: In Claude Code 2.1.282+, a local skill under `.claude/skills/` MUST NOT use the folder name `synced` or the reserved `anthropic-skills` namespace in its folder or frontmatter `name`. Claude Code skips these skills at load time. The `claude-ai` namespace is not reserved in 2.1.283.
+**Detection**: For local Claude skill files, compare the folder and effective frontmatter name against `synced` and `anthropic-skills[:...]`; honor a pinned older Claude Code version.
+**Fix**: Rename the local skill folder or frontmatter name.
+**Source**: code.claude.com/docs/en/skills, github.com/anthropics/claude-code/releases/tag/v2.1.283
+
 <a id="cc-set-001"></a>
 ### CC-SET-001 [MEDIUM] Invalid prUrlTemplate Setting
 **Requirement**: `prUrlTemplate` in `.claude/settings.json` (and `.local.json`/`managed-settings.json`) SHOULD be a non-empty string containing at least one of the documented placeholders: `{host}`, `{owner}`, `{repo}`, `{number}`, `{url}`. A template with no placeholder will render the same static URL for every PR badge.
@@ -3654,7 +3661,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Claude Output Styles | 6 | 2 | 2 | 2 | 0 |
 | Claude Plugins | 16 | 10 | 6 | 0 | 4 |
 | Claude Settings | 31 | 1 | 29 | 1 | 0 |
-| Claude Skills | 20 | 10 | 9 | 1 | 10 |
+| Claude Skills | 21 | 11 | 9 | 1 | 10 |
 | Cline | 7 | 4 | 3 | 0 | 3 |
 | Cline Skills | 3 | 2 | 1 | 0 | 2 |
 | Codex CLI | 65 | 31 | 29 | 5 | 10 |
@@ -3684,7 +3691,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **456** | **217** | **209** | **30** | **124** |
+| **TOTAL** | **457** | **218** | **209** | **30** | **124** |
 
 
 ---
@@ -3714,8 +3721,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 456 validation rules across 40 categories
+**Total Coverage**: 457 validation rules across 40 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 217 HIGH, 209 MEDIUM, 30 LOW
+**Certainty**: 218 HIGH, 209 MEDIUM, 30 LOW
 **Auto-Fixable**: 124 rules (27%)

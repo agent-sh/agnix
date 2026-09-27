@@ -1129,6 +1129,9 @@ rules:
     message: Hardcoded user directory path '%{path}' leaks author identity and is not portable across machines
     suggestion: Replace with '~/', '$HOME/', a project-relative path, or an env var like '$PROJECT_ROOT'. For shebangs prefer
       '#!/usr/bin/env <interpreter>'.
+  cc_sk_022:
+    message: Claude Code skips local skill '%{name}' because its name is reserved
+    suggestion: Rename the skill folder or frontmatter name outside the reserved synced and anthropic-skills names.
   cln_005:
     message: Cline workflow file is empty
     suggestion: Add workflow steps to the file

@@ -686,6 +686,9 @@ rules:
   cc_sk_021:
     message: 硬编码的用户目录路径 '%{path}' 会泄露作者身份，且在不同机器间不可移植
     suggestion: 改用 '~/'、'$HOME/'、相对于项目的路径，或像 '$PROJECT_ROOT' 这样的环境变量。shebang 行建议使用 '#!/usr/bin/env <解释器>'。
+  cc_sk_022:
+    message: Claude Code 会跳过名称 '%{name}' 的本地技能，因为该名称已保留
+    suggestion: 重命名技能目录或 frontmatter 中的 name，避开 synced 和 anthropic-skills 保留名称。
   cln_005:
     message: Cline 工作流文件为空
     suggestion: 向文件添加工作流步骤

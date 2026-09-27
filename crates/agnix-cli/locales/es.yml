@@ -713,6 +713,9 @@ rules:
     message: La ruta de directorio de usuario codificada '%{path}' revela la identidad del autor y no es portable entre maquinas
     suggestion: Reemplaza con '~/', '$HOME/', una ruta relativa al proyecto, o una variable de entorno como '$PROJECT_ROOT'.
       Para shebangs, prefiere '#!/usr/bin/env <interprete>'.
+  cc_sk_022:
+    message: Claude Code omite el skill local '%{name}' porque su nombre esta reservado
+    suggestion: Cambia el nombre de la carpeta o el campo name para evitar synced y anthropic-skills.
   cln_005:
     message: El archivo de flujo de trabajo de Cline esta vacio
     suggestion: Agrega pasos del flujo de trabajo al archivo

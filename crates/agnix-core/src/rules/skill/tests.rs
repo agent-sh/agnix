@@ -5,6 +5,91 @@ use crate::schemas::skill::{VALID_EFFORT_LEVELS, VALID_MODEL_ALIASES};
 use std::fs;
 
 #[test]
+fn test_cc_sk_022_rejects_reserved_local_skill_names() {
+    let validator = SkillValidator;
+    let config = LintConfig::default();
+    let cases = [
+        (".claude/skills/synced/SKILL.md", "other-name"),
+        (".claude/skills/anthropic-skills/SKILL.md", "other-name"),
+        (".claude/skills/custom/SKILL.md", "anthropic-skills:pdf"),
+    ];
+    for (path, name) in cases {
+        let content = format!(
+            "---\nname: {name}\ndescription: Use when testing reserved names\n---\nRun the test."
+        );
+        let diagnostics = validator.validate(Path::new(path), &content, &config);
+        assert!(
+            diagnostics.iter().any(|d| d.rule == "CC-SK-022"),
+            "{path} with name {name} should be rejected: {diagnostics:?}"
+        );
+        let reserved_name = if path.contains("/synced/") {
+            "synced"
+        } else if path.contains("/anthropic-skills/") {
+            "anthropic-skills"
+        } else {
+            name
+        };
+        assert!(
+            diagnostics
+                .iter()
+                .any(|d| d.rule == "CC-SK-022" && d.message.contains(reserved_name)),
+            "diagnostic should name the reserved value: {diagnostics:?}"
+        );
+    }
+}
+
+#[test]
+fn test_cc_sk_022_allows_plugin_and_reverted_namespace() {
+    let validator = SkillValidator;
+    let config = LintConfig::default();
+    let cases = [
+        ("plugin/skills/synced/SKILL.md", "synced"),
+        (".claude/skills/claude-ai/SKILL.md", "claude-ai"),
+        (".claude/skills/custom/SKILL.md", "custom"),
+    ];
+    for (path, name) in cases {
+        let content = format!(
+            "---\nname: {name}\ndescription: Use when testing allowed names\n---\nRun the test."
+        );
+        let diagnostics = validator.validate(Path::new(path), &content, &config);
+        assert!(
+            diagnostics.iter().all(|d| d.rule != "CC-SK-022"),
+            "{path} with name {name} should be allowed: {diagnostics:?}"
+        );
+    }
+}
+
+#[test]
+fn test_cc_sk_022_respects_pinned_older_claude_code() {
+    let mut builder = LintConfig::builder();
+    builder.tool_versions(crate::config::ToolVersions {
+        claude_code: Some("2.1.280".to_string()),
+        ..Default::default()
+    });
+    let config = builder.build().unwrap();
+    let content = "---\nname: anthropic-skills:pdf\ndescription: Use when testing version gating\n---\nRun the test.";
+    let diagnostics = SkillValidator.validate(
+        Path::new(".claude/skills/custom/SKILL.md"),
+        content,
+        &config,
+    );
+    assert!(diagnostics.iter().all(|d| d.rule != "CC-SK-022"));
+
+    let mut builder = LintConfig::builder();
+    builder.tool_versions(crate::config::ToolVersions {
+        claude_code: Some("2.1.282".to_string()),
+        ..Default::default()
+    });
+    let config = builder.build().unwrap();
+    let diagnostics = SkillValidator.validate(
+        Path::new(".claude/skills/custom/SKILL.md"),
+        content,
+        &config,
+    );
+    assert!(diagnostics.iter().any(|d| d.rule == "CC-SK-022"));
+}
+
+#[test]
 fn test_valid_skill() {
     let content = r#"---
 name: test-skill

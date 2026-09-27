@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- CC-SK-022 flags local Claude Code skill names reserved for synced skills, which
+  would otherwise make the skill silently fail to load.
 - CC-AG-019 now accepts the documented `omitClaudeMd` subagent field and
   validates its boolean type through the agent schema.
 - Cline rules under `.cline/rules/` now receive the same content and
