@@ -17,7 +17,7 @@
         "mcp"
       ],
       "github_repo": "anthropics/claude-code",
-      "last_known_version": "v2.1.278",
+      "last_known_version": "v2.1.283",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
@@ -64,7 +64,7 @@
         "per_client_skill"
       ],
       "github_repo": "openai/codex",
-      "last_known_version": "rust-v0.155.1",
+      "last_known_version": "rust-v0.157.1",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
@@ -103,7 +103,7 @@
         "per_client_skill"
       ],
       "github_repo": "sst/opencode",
-      "last_known_version": "v1.18.31",
+      "last_known_version": "v1.18.32",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
@@ -147,7 +147,7 @@
       "html_url": "https://kiro.dev/changelog/cli/",
       "version_regex": "[0-9]+\\.[0-9]+\\.[0-9]+",
       "notes_extractor": "glm",
-      "last_known_version": "2.22.0",
+      "last_known_version": "2.24.0",
       "tracked": true,
       "notes": "Proprietary CLI; no GH releases. Tracked via HTML scrape of kiro.dev/changelog/cli/ - the first NN.NN.NN version on the page is the latest. Release-note body is upgraded via GLM (scripts/glm-extract.js). The CLI itself exposes `kiro-cli version --changelog`. IDE has a separate changelog at https://kiro.dev/changelog/ide/ (not tracked here; could be added as a separate kiro-ide entry if needed).",
       "changes_of_interest": {
@@ -226,12 +226,13 @@
       ],
       "github_repo": "cline/cline",
       "release_tag_regex": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
-      "last_known_version": "v4.1.19",
+      "last_known_version": "v4.1.21",
       "tracked": true,
       "notes": "Tracks only the core Cline vX.Y.Z release train. The repository also publishes desktop-v*, cli-v*, sdk/*, and other interleaved releases that do not correspond to the validator surfaces.",
       "changes_of_interest": {
         "config_surfaces": [
           ".clinerules (file or dir)",
+          ".cline/rules/**/*.md",
           ".clinerules/workflows/*.md",
           ".clinerules/hooks/*",
           ".clinerules/skills/*/SKILL.md",
@@ -239,6 +240,7 @@
         ],
         "relevant": [
           "Changes to .clinerules parsing (file vs dir, precedence)",
+          "Changes to .cline/rules Markdown discovery or conditional paths",
           "New workflow/hook/skill file layouts",
           "Skill frontmatter schema changes",
           "Memory-bank format changes"
@@ -262,7 +264,7 @@
       "github_repo": null,
       "html_url": "https://api2.cursor.sh/updates/api/update/darwin/cursor/0.0.1/stable",
       "version_regex": "[0-9]+\\.[0-9]+\\.[0-9]+",
-      "last_known_version": "3.21.16",
+      "last_known_version": "3.22.7",
       "tracked": true,
       "notes": "Tracked via Cursor's stable update endpoint (the same one the desktop app polls). Returns JSON like {\"url\":\"...\",\"name\":\"3.1.17\"}. Channel is hardcoded to 'stable' for darwin; the version is platform-agnostic (same release ships across darwin/linux/win32). Prose changelog at https://cursor.com/changelog (Next.js SPA - not scrapeable from raw HTML).",
       "changes_of_interest": {
@@ -333,7 +335,7 @@
       "html_url": "https://ampcode.com/news.rss",
       "version_regex": "https://ampcode\\.com/news/[a-zA-Z0-9._-]+",
       "notes_extractor": "rss_cdata",
-      "last_known_version": "one-runner-is-now-enough",
+      "last_known_version": "less-noise",
       "tracked": true,
       "notes": "Tracked via the amp news RSS feed; the 'version' is the slug of the latest /news/ post (e.g., amp-free-is-ad-free). Source is not on GitHub; npm @sourcegraph/amp publishes per-commit (no semver gates) so npm version-bump tracking would be noise. Issue body uses the first <item><description> CDATA from the RSS feed (already structured HTML - no LLM needed).",
       "changes_of_interest": {
@@ -366,7 +368,7 @@
         "gemini_agent"
       ],
       "github_repo": "google-gemini/gemini-cli",
-      "last_known_version": "v0.60.0",
+      "last_known_version": "v0.61.0",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [

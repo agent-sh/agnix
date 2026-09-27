@@ -114,9 +114,8 @@ rules:
     message: 'Evento de hook invalido ''%{event}'', eventos validos: %{valid}'
     fix: Reemplazar '%{old}' con '%{new}'
   cc_hk_002:
-    message: Hook de prompt/agent en %{location} no es compatible con eventos '%{event}'
-    suggestion: 'Los hooks de prompt/agent funcionan en PreToolUse, PostToolUse, PostToolUseFailure, PermissionRequest, UserPromptSubmit,
-      Stop, SubagentStop y TaskCompleted. Use ''type'': ''command'' para otros eventos'
+    message: 'El hook %{hook_type} en %{location} no es compatible con los eventos ''%{event}'''
+    suggestion: 'Usa un evento compatible para este hook %{hook_type}, o usa ''type'': ''command'''
   cc_hk_003:
     message: El evento de herramienta '%{event}' en %{location} no tiene campo matcher; omitirlo coincide con todas las herramientas
     suggestion: Considera agregar un campo 'matcher' para dirigirse a herramientas específicas (ej., 'Bash', 'Read')
@@ -714,6 +713,9 @@ rules:
     message: La ruta de directorio de usuario codificada '%{path}' revela la identidad del autor y no es portable entre maquinas
     suggestion: Reemplaza con '~/', '$HOME/', una ruta relativa al proyecto, o una variable de entorno como '$PROJECT_ROOT'.
       Para shebangs, prefiere '#!/usr/bin/env <interprete>'.
+  cc_sk_022:
+    message: Claude Code omite el skill local '%{name}' porque su nombre esta reservado
+    suggestion: Cambia el nombre de la carpeta o el campo name para evitar synced y anthropic-skills.
   cln_005:
     message: El archivo de flujo de trabajo de Cline esta vacio
     suggestion: Agrega pasos del flujo de trabajo al archivo

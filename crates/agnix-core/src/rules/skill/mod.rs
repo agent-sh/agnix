@@ -1619,6 +1619,73 @@ impl<'a> ValidationContext<'a> {
         }
     }
 
+    /// CC-SK-022: Claude Code skips locally defined skills with names
+    /// reserved for skills synced from claude.ai.
+    fn validate_cc_reserved_skill_name(&mut self, frontmatter: &SkillFrontmatter) {
+        if !self.config.is_rule_enabled("CC-SK-022") {
+            return;
+        }
+        if self
+            .config
+            .get_claude_code_version()
+            .and_then(|version| semver::Version::parse(version.trim_start_matches('v')).ok())
+            .is_some_and(|version| version < semver::Version::new(2, 1, 282))
+        {
+            return;
+        }
+
+        let components: Vec<_> = self
+            .path
+            .components()
+            .filter_map(|component| component.as_os_str().to_str())
+            .collect();
+        let is_local_claude_skill = components
+            .windows(2)
+            .any(|pair| pair[0] == ".claude" && pair[1] == "skills");
+        if !is_local_claude_skill {
+            return;
+        }
+
+        // A skill folder can itself be a plugin. Claude explicitly allows a
+        // plugin named anthropic-skills, so its root SKILL.md is exempt.
+        if self.path.parent().is_some_and(|folder| {
+            self.config
+                .fs()
+                .is_file(&folder.join(".claude-plugin/plugin.json"))
+        }) {
+            return;
+        }
+
+        let folder = self
+            .path
+            .parent()
+            .and_then(Path::file_name)
+            .and_then(|name| name.to_str())
+            .unwrap_or_default();
+        let name = frontmatter.name.as_deref().unwrap_or(folder);
+        let reserved_namespace = |value: &str| {
+            let value = value.to_ascii_lowercase();
+            value == "anthropic-skills" || value.starts_with("anthropic-skills:")
+        };
+        let reserved_folder = folder.eq_ignore_ascii_case("synced") || reserved_namespace(folder);
+        if !reserved_folder && !reserved_namespace(name) {
+            return;
+        }
+        let reported_name = if reserved_folder { folder } else { name };
+
+        let (line, col) = self.frontmatter_key_line_col("name");
+        self.diagnostics.push(
+            Diagnostic::error(
+                self.path.to_path_buf(),
+                line,
+                col,
+                "CC-SK-022",
+                t!("rules.cc_sk_022.message", name = reported_name),
+            )
+            .with_suggestion(t!("rules.cc_sk_022.suggestion")),
+        );
+    }
+
     /// CC-SK-013: Validate context: fork has actionable instructions
     fn validate_cc_fork_instructions(&mut self, frontmatter: &SkillFrontmatter) {
         if !self.config.is_rule_enabled("CC-SK-013") {
@@ -1922,6 +1989,7 @@ const RULE_IDS: &[&str] = &[
     "CC-SK-019",
     "CC-SK-020",
     "CC-SK-021",
+    "CC-SK-022",
 ];
 
 pub struct SkillValidator;
@@ -2029,6 +2097,7 @@ impl Validator for SkillValidator {
 
             // Phase 11: CC-SK-017 (unknown frontmatter fields)
             ctx.validate_cc_unknown_frontmatter_fields();
+            ctx.validate_cc_reserved_skill_name(&frontmatter);
 
             // Phase 12-15: Claude Code rules (CC-SK-001-009). Claude Code
             // allows name and description to be omitted, but the remaining

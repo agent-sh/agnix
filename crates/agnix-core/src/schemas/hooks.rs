@@ -303,6 +303,23 @@ impl HooksSchema {
         "TeammateIdle",
     ];
 
+    /// Events that support agent hooks. PermissionRequest accepts prompt
+    /// hooks, but skips agent hooks without affecting the permission flow.
+    pub const AGENT_EVENTS: &'static [&'static str] = &[
+        "PreToolUse",
+        "PostToolUse",
+        "PostToolUseFailure",
+        "PostToolBatch",
+        "PermissionDenied",
+        "UserPromptSubmit",
+        "UserPromptExpansion",
+        "Stop",
+        "SubagentStop",
+        "TaskCreated",
+        "TaskCompleted",
+        "TeammateIdle",
+    ];
+
     /// Check if an event is a tool event (matcher recommended)
     pub fn is_tool_event(event: &str) -> bool {
         Self::TOOL_EVENTS.contains(&event)
@@ -321,6 +338,11 @@ impl HooksSchema {
     /// Check if an event supports prompt hooks
     pub fn is_prompt_event(event: &str) -> bool {
         Self::PROMPT_EVENTS.contains(&event)
+    }
+
+    /// Check if an event supports agent hooks.
+    pub fn is_agent_event(event: &str) -> bool {
+        Self::AGENT_EVENTS.contains(&event)
     }
 
     #[allow(dead_code)] // schema-level API; validation uses Validator trait

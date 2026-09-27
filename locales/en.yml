@@ -133,9 +133,8 @@ rules:
     message: 'Invalid hook event ''%{event}'', valid events: %{valid}'
     fix: Replace '%{old}' with '%{new}'
   cc_hk_002:
-    message: Prompt/agent hook at %{location} is not supported on '%{event}' events
-    suggestion: 'Prompt/agent hooks work on PreToolUse, PostToolUse, PostToolUseFailure, PermissionRequest, UserPromptSubmit,
-      Stop, SubagentStop, and TaskCompleted. Use ''type'': ''command'' for other events'
+    message: '%{hook_type} hook at %{location} is not supported on ''%{event}'' events'
+    suggestion: 'Use a supported event for this %{hook_type} hook, or use ''type'': ''command'' instead'
   cc_hk_003:
     message: Tool event '%{event}' at %{location} has no matcher field; omitting it matches all tools
     suggestion: Consider adding a 'matcher' field to target specific tools (e.g., 'Bash', 'Read')
@@ -1130,6 +1129,9 @@ rules:
     message: Hardcoded user directory path '%{path}' leaks author identity and is not portable across machines
     suggestion: Replace with '~/', '$HOME/', a project-relative path, or an env var like '$PROJECT_ROOT'. For shebangs prefer
       '#!/usr/bin/env <interpreter>'.
+  cc_sk_022:
+    message: Claude Code skips local skill '%{name}' because its name is reserved
+    suggestion: Rename the skill folder or frontmatter name outside the reserved synced and anthropic-skills names.
   cln_005:
     message: Cline workflow file is empty
     suggestion: Add workflow steps to the file

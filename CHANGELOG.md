@@ -7,15 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- CC-SK-022 flags local Claude Code skill names reserved for synced skills, which
+  would otherwise make the skill silently fail to load.
+
 ### Fixed
+- CC-AG-019 now accepts the documented `omitClaudeMd` subagent field and
+  validates its boolean type through the agent schema.
+- Cline rules under `.cline/rules/` now receive the same content and
+  frontmatter checks as Markdown rules under `.clinerules/`.
+- CC-HK-002 now rejects Claude Code agent hooks on `PermissionRequest` while
+  continuing to allow prompt hooks on that event.
 - AMP-004 accepts the documented `amp.runner.autoUpdate.enabled`,
   `amp.remoteThreadCreation.enabled`, and `amp.updates.mode` settings keys.
 - The MCP server uses rmcp's current `ServerConfig` name, keeping warning-denied
   builds clean after the rmcp 3.4 update.
 
 ### Changed
+- Advance Amp to `less-noise`, Claude Code to `v2.1.283`, Cline to
+  `v4.1.21`, Codex CLI to `rust-v0.157.1`, Cursor to `3.22.7`, Gemini CLI to
+  `v0.61.0`, Kiro CLI to `2.24.0`, and OpenCode to `v1.18.32` after reviewing
+  their live releases. The OpenCode and Gemini releases do not change a
+  validated configuration format.
 - Refresh the CodeQL action components together at v4.38.1, taiki-e/install-action
   at v2.87.18, and anthropics/claude-code-action at v1.0.231.
+- Refresh nine spec source hashes after reviewing current Claude Code, Cline,
+  Cursor, and MCP documentation. The Cline rules layout and Claude hook
+  behavior changes are handled above.
 - Add Claude Code 2.1.277+ `AGENTS.md` fallback and combined-instruction support
   to the tracked compatibility surface. Existing AGM and XP rules already
   validate the documented file, imports, hierarchy, and size constraints.

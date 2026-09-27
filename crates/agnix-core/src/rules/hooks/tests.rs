@@ -2992,6 +2992,7 @@ fn test_cc_hk_002_prompt_disallowed_events() {
 #[test]
 fn test_cc_hk_002_agent_disallowed_events() {
     let agent_disallowed = [
+        "PermissionRequest",
         "Setup",
         "SessionStart",
         "SessionEnd",
@@ -3038,6 +3039,37 @@ fn test_cc_hk_002_agent_disallowed_events() {
             event
         );
     }
+}
+
+#[test]
+fn test_cc_hk_002_prompt_on_permission_request_ok() {
+    let content = r#"{
+        "hooks": {
+            "PermissionRequest": [{
+                "hooks": [{ "type": "prompt", "prompt": "Review: $ARGUMENTS" }]
+            }]
+        }
+    }"#;
+
+    let diagnostics = validate(content);
+    assert!(diagnostics.iter().all(|d| d.rule != "CC-HK-002"));
+}
+
+#[test]
+fn test_cc_hk_002_agent_on_permission_request_is_invalid() {
+    let content = r#"{
+        "hooks": {
+            "PermissionRequest": [{
+                "hooks": [{ "type": "agent", "prompt": "Review: $ARGUMENTS" }]
+            }]
+        }
+    }"#;
+
+    let diagnostics = validate(content);
+    assert_eq!(
+        diagnostics.iter().filter(|d| d.rule == "CC-HK-002").count(),
+        1
+    );
 }
 
 // ===== CC-HK-013 Tests: Async on Non-Command Hook =====

@@ -67,7 +67,7 @@
       "mcp-spec-resources": {
         "url": "https://modelcontextprotocol.io/specification/2026-07-28/server/resources",
         "content_url": "https://modelcontextprotocol.io/specification/2026-07-28/server/resources.md",
-        "hash": "026934f8e3bc46c705205555ab5f1d5cb9f7ffce1e51840e7cbb53b2500b389e",
+        "hash": "dbe6654048bc5e0b31de2f401d1d6d23d7a48b6730ce436fe0558bc46d626b75",
         "rules": [
           "MCP-015"
         ]
@@ -117,7 +117,7 @@
       "claude-code-memory": {
         "url": "https://code.claude.com/docs/en/memory",
         "content_url": "https://code.claude.com/docs/en/memory.md",
-      "hash": "f21f81bf68842ea8cefc83370e06b5f02ca81d7ce80a5c7a9e4a56a839d444c9",
+        "hash": "653d8649a10890093b89d1e500d0524b2d50a61ad4402b81cc5237440dd8ca8b",
         "rules": [
           "CC-MEM-001",
           "CC-MEM-002",
@@ -128,7 +128,7 @@
       "claude-code-hooks": {
         "url": "https://code.claude.com/docs/en/hooks",
         "content_url": "https://code.claude.com/docs/en/hooks.md",
-      "hash": "9990525f9bb5f3d6d1ce347535d8deca297bce8f21252411eb84502053efd517",
+        "hash": "080941057dd87ed68506098e95c11f3b67c6b0b4ba80a23cba052e932bb2d9af",
         "rules": [
           "CC-HK-001",
           "CC-HK-002",
@@ -147,7 +147,7 @@
       "claude-code-skills": {
         "url": "https://code.claude.com/docs/en/skills",
         "content_url": "https://code.claude.com/docs/en/skills.md",
-      "hash": "2ed3d0548951b9ee3bbbab65e1c731a531a3e35ca5083ff9947c7d0dcdf6469f",
+        "hash": "123826d2c1f1e8ac339b3a0585edd279f2d8853a5632447e018c3a70fdb4babc",
         "rules": [
           "CC-SK-001",
           "CC-SK-002",
@@ -160,7 +160,7 @@
       "claude-code-plugins": {
         "url": "https://code.claude.com/docs/en/plugins-reference",
         "content_url": "https://code.claude.com/docs/en/plugins-reference.md",
-      "hash": "695e20640c18aca016ea94e85a7014e975b2e8f45f9188f78e0de07c42e9ab57",
+        "hash": "7312b5de9dd5657bc2d6b1fba065edfda41f6fca9a9848dd4e109126f3f7b869",
         "rules": [
           "CC-PL-002",
           "CC-PL-003",
@@ -172,7 +172,7 @@
       "claude-code-subagents": {
         "url": "https://code.claude.com/docs/en/sub-agents",
         "content_url": "https://code.claude.com/docs/en/sub-agents.md",
-      "hash": "f00bf52722c4558a9c956396dd8a3d7f14a2f9b3b467b95c677c6340c3de5b06",
+        "hash": "e41970a730c7dd47d3aab9283adffef15fd3676c739258285da5a06533f7feff",
         "rules": [
           "CC-AG-001",
           "CC-AG-002",
@@ -271,7 +271,7 @@
       "cursor-environment": {
         "url": "https://cursor.com/docs/cloud-agent/setup",
         "content_url": "https://cursor.com/docs/cloud-agent/setup.md",
-        "hash": "51ba181e5219d57692650521ea263c0a980a324d86c80e62720b1f7d0efd4f8b",
+        "hash": "b0ec723848a1a01e21d6061fb54c0aa4daca7ac3bcefa7fd6ab631980f8c3db5",
         "rules": [
           "CUR-016"
         ]
@@ -287,7 +287,7 @@
       "cursor-mcp": {
         "url": "https://cursor.com/docs/mcp",
         "content_url": "https://cursor.com/docs/mcp.md",
-        "hash": "b08ca32e6d16cfd8488c01bf2d48760c34e996832eb428c3c56a46254500ab49",
+        "hash": "a6eee295326b0fbb72f5101371838c81b609e94fd351959908b858dc253abb37",
         "rules": [
           "MCP-009",
           "MCP-010",
@@ -339,7 +339,7 @@
       "cline-rules": {
         "url": "https://docs.cline.bot/customization/cline-rules",
         "content_url": "https://raw.githubusercontent.com/cline/cline/main/docs/customization/cline-rules.mdx",
-        "hash": "b50f382a5626c0627cfb47b7fad2eab724be354fa21b445752f8c8abf5403e88",
+        "hash": "68a5dbf9e06a6af8438e98e3fa8602f3ae931d1a560be532bd6026f5eb747a9f",
         "rules": [
           "CL-SK-001",
           "CL-SK-002",

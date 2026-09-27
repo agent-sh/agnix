@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `456` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `457` validation rules generated from `knowledge-base/rules.json`.
 `124` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -49,7 +49,7 @@ This section contains all `456` validation rules generated from `knowledge-base/
 | [CC-AG-019](./generated/cc-ag-019.md) | Unknown Agent Frontmatter Field | LOW | Claude Agents | Yes (unsafe) |
 | [CC-AG-020](./generated/cc-ag-020.md) | Reserved Colon in Agent Name | HIGH | Claude Agents | No |
 | [CC-HK-001](./generated/cc-hk-001.md) | Invalid Hook Event | HIGH | Claude Hooks | Yes (safe/unsafe) |
-| [CC-HK-002](./generated/cc-hk-002.md) | Prompt Hook on Wrong Event | HIGH | Claude Hooks | No |
+| [CC-HK-002](./generated/cc-hk-002.md) | Prompt or Agent Hook on Wrong Event | HIGH | Claude Hooks | No |
 | [CC-HK-003](./generated/cc-hk-003.md) | Matcher Hint for Tool Events | LOW | Claude Hooks | No |
 | [CC-HK-004](./generated/cc-hk-004.md) | Matcher on Unsupported Event | LOW | Claude Hooks | Yes (safe) |
 | [CC-HK-005](./generated/cc-hk-005.md) | Missing Type Field | HIGH | Claude Hooks | Yes (safe) |
@@ -130,6 +130,7 @@ This section contains all `456` validation rules generated from `knowledge-base/
 | [CC-SK-019](./generated/cc-sk-019.md) | Invalid Paths Format | LOW | Claude Skills | No |
 | [CC-SK-020](./generated/cc-sk-020.md) | Invalid Shell Value | MEDIUM | Claude Skills | Yes (unsafe) |
 | [CC-SK-021](./generated/cc-sk-021.md) | Hardcoded User Directory Path | MEDIUM | Claude Skills | No |
+| [CC-SK-022](./generated/cc-sk-022.md) | Reserved Claude Skill Name | HIGH | Claude Skills | No |
 | [CC-SET-001](./generated/cc-set-001.md) | Invalid prUrlTemplate Setting | MEDIUM | Claude Settings | No |
 | [CC-SET-002](./generated/cc-set-002.md) | Non-boolean channelsEnabled Setting | MEDIUM | Claude Settings | No |
 | [CC-SET-003](./generated/cc-set-003.md) | Invalid worktree.baseRef Value | MEDIUM | Claude Settings | No |

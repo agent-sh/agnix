@@ -356,6 +356,13 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Fix**: Manual - replace with `~/`, `$HOME/`, a project-relative path, or an env var like `$PROJECT_ROOT`. For shebangs, prefer `#!/usr/bin/env <interpreter>`.
 **Source**: code.claude.com/docs/en/skills
 
+<a id="cc-sk-022"></a>
+### CC-SK-022 [HIGH] Reserved Claude Skill Name
+**Requirement**: In Claude Code 2.1.282+, a local skill under `.claude/skills/` MUST NOT use the folder name `synced` or the reserved `anthropic-skills` namespace in its folder or frontmatter `name`. Claude Code skips these skills at load time. The `claude-ai` namespace is not reserved in 2.1.283.
+**Detection**: For local Claude skill files, compare the folder and effective frontmatter name against `synced` and `anthropic-skills[:...]`; exempt a skill folder with its own `.claude-plugin/plugin.json`, which loads as a plugin; honor a pinned older Claude Code version.
+**Fix**: Rename the local skill folder or frontmatter name.
+**Source**: code.claude.com/docs/en/skills, github.com/anthropics/claude-code/releases/tag/v2.1.283
+
 <a id="cc-set-001"></a>
 ### CC-SET-001 [MEDIUM] Invalid prUrlTemplate Setting
 **Requirement**: `prUrlTemplate` in `.claude/settings.json` (and `.local.json`/`managed-settings.json`) SHOULD be a non-empty string containing at least one of the documented placeholders: `{host}`, `{owner}`, `{repo}`, `{number}`, `{url}`. A template with no placeholder will render the same static URL for every PR badge.
@@ -797,10 +804,11 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Source**: code.claude.com/docs/en/hooks, github.com/anthropics/claude-code/releases/tag/v2.1.219, github.com/anthropics/claude-code/releases/tag/v2.1.251
 
 <a id="cc-hk-002"></a>
-### CC-HK-002 [HIGH] Prompt Hook on Wrong Event
-**Requirement**: `type: "prompt"` or `type: "agent"` only on supported events
-**Supported**: PreToolUse, PostToolUse, PostToolUseFailure, PostToolBatch, PermissionRequest, PermissionDenied, UserPromptSubmit, UserPromptExpansion, Stop, SubagentStop, TaskCreated, TaskCompleted, TeammateIdle
-**Detection**: `hook.type in ["prompt", "agent"] && !PROMPT_EVENTS.contains(event)`
+### CC-HK-002 [HIGH] Prompt or Agent Hook on Wrong Event
+**Requirement**: `type: "prompt"` and `type: "agent"` MUST only appear on events supported by that hook type. `PermissionRequest` permits prompt hooks but skips agent hooks.
+**Prompt-supported**: PreToolUse, PostToolUse, PostToolUseFailure, PostToolBatch, PermissionRequest, PermissionDenied, UserPromptSubmit, UserPromptExpansion, Stop, SubagentStop, TaskCreated, TaskCompleted, TeammateIdle
+**Agent-supported**: PreToolUse, PostToolUse, PostToolUseFailure, PostToolBatch, PermissionDenied, UserPromptSubmit, UserPromptExpansion, Stop, SubagentStop, TaskCreated, TaskCompleted, TeammateIdle
+**Detection**: `hook.type == "prompt" && !PROMPT_EVENTS.contains(event)` OR `hook.type == "agent" && !AGENT_EVENTS.contains(event)`
 **Fix**: Change to `type: "command"` for unsupported events
 **Source**: code.claude.com/docs/en/hooks
 
@@ -1108,7 +1116,7 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="cc-ag-019"></a>
 ### CC-AG-019 [LOW] Unknown Agent Frontmatter Field
-**Requirement**: Agent frontmatter fields MAY be validated against known set
+**Requirement**: Agent frontmatter fields MAY be validated against the documented set, including boolean `omitClaudeMd` (Claude Code 2.1.271+)
 **Detection**: Check for keys not in known agent fields
 **Fix**: Manual - remove or fix typo
 **Source**: code.claude.com/docs/en/sub-agents
@@ -1947,28 +1955,28 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 <a id="cln-001"></a>
 ### CLN-001 [HIGH] Empty Cline Rules File
-**Requirement**: `.clinerules` file or files in `.clinerules/` folder MUST have non-empty content after frontmatter
+**Requirement**: `.clinerules` file and Markdown rules in `.clinerules/` or `.cline/rules/` MUST have non-empty content after frontmatter
 **Detection**: Parse file, strip optional YAML frontmatter, check remaining body is non-whitespace
 **Fix**: No auto-fix (content must be authored by user)
 **Source**: docs.cline.bot/improving-your-workflow/cline-rules
 
 <a id="cln-002"></a>
 ### CLN-002 [HIGH] Invalid Paths Glob in Cline Rules
-**Requirement**: `paths` field in `.clinerules/*.md` and `.clinerules/*.txt` frontmatter MUST contain valid glob patterns
+**Requirement**: `paths` field in `.clinerules/*.{md,txt}` and `.cline/rules/*.md` frontmatter MUST contain valid glob patterns
 **Detection**: Parse YAML frontmatter, extract `paths` field, validate each glob pattern
 **Fix**: No auto-fix (glob patterns must be manually corrected)
 **Source**: docs.cline.bot/improving-your-workflow/cline-rules
 
 <a id="cln-003"></a>
 ### CLN-003 [MEDIUM] Unknown Frontmatter Key in Cline Rules
-**Requirement**: Frontmatter in `.clinerules/*.md` and `.clinerules/*.txt` files SHOULD only use documented keys (`paths`)
+**Requirement**: Frontmatter in `.clinerules/*.{md,txt}` and `.cline/rules/*.md` SHOULD only use documented keys (`paths`)
 **Detection**: Parse YAML frontmatter, check all keys against allowlist
 **Fix**: [AUTO-FIX unsafe] Remove unknown frontmatter keys
 **Source**: docs.cline.bot/improving-your-workflow/cline-rules
 
 <a id="cln-004"></a>
 ### CLN-004 [HIGH] Scalar Paths in Cline Rules
-**Requirement**: `paths` field in `.clinerules/*.md` and `.clinerules/*.txt` frontmatter MUST be a YAML array, not a scalar string
+**Requirement**: `paths` field in `.clinerules/*.{md,txt}` and `.cline/rules/*.md` frontmatter MUST be a YAML array, not a scalar string
 **Detection**: Parse YAML frontmatter, check if `paths` is a scalar string (Cline silently ignores scalar values)
 **Fix**: [AUTO-FIX safe] Convert scalar paths to array format
 **Source**: docs.cline.bot/features/cline-rules
@@ -3653,7 +3661,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Claude Output Styles | 6 | 2 | 2 | 2 | 0 |
 | Claude Plugins | 16 | 10 | 6 | 0 | 4 |
 | Claude Settings | 31 | 1 | 29 | 1 | 0 |
-| Claude Skills | 20 | 10 | 9 | 1 | 10 |
+| Claude Skills | 21 | 11 | 9 | 1 | 10 |
 | Cline | 7 | 4 | 3 | 0 | 3 |
 | Cline Skills | 3 | 2 | 1 | 0 | 2 |
 | Codex CLI | 65 | 31 | 29 | 5 | 10 |
@@ -3683,7 +3691,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **456** | **217** | **209** | **30** | **124** |
+| **TOTAL** | **457** | **218** | **209** | **30** | **124** |
 
 
 ---
@@ -3713,8 +3721,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 456 validation rules across 40 categories
+**Total Coverage**: 457 validation rules across 40 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 217 HIGH, 209 MEDIUM, 30 LOW
+**Certainty**: 218 HIGH, 209 MEDIUM, 30 LOW
 **Auto-Fixable**: 124 rules (27%)

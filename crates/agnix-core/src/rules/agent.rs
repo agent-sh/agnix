@@ -107,6 +107,7 @@ const KNOWN_AGENT_FIELDS: &[&str] = &[
     "maxTurns",
     "effort",
     "background",
+    "omitClaudeMd",
     "isolation",
     "initialPrompt",
     "mcpServers",
@@ -4092,6 +4093,7 @@ description: b
 maxTurns: 5
 effort: high
 background: true
+omitClaudeMd: true
 isolation: worktree
 initialPrompt: hi
 mcpServers:
@@ -4606,5 +4608,20 @@ Agent instructions"#;
             .filter(|d| d.rule == "CC-AG-019")
             .collect();
         assert_eq!(cc_ag_019.len(), 0);
+    }
+
+    #[test]
+    fn test_omit_claude_md_is_known_and_boolean() {
+        let valid = "---\nname: my-agent\ndescription: A test agent\nomitClaudeMd: true\n---\nAgent instructions";
+        let diagnostics = validate(valid);
+        assert!(
+            diagnostics
+                .iter()
+                .all(|d| d.rule != "CC-AG-019" && d.rule != "CC-AG-007")
+        );
+
+        let invalid = "---\nname: my-agent\ndescription: A test agent\nomitClaudeMd: perhaps\n---\nAgent instructions";
+        let diagnostics = validate(invalid);
+        assert!(diagnostics.iter().any(|d| d.rule == "CC-AG-007"));
     }
 }

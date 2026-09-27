@@ -1,7 +1,7 @@
 //! Cline rules validation rules (CLN-001 to CLN-009, CL-SK-002/003)
 //!
 //! Validates:
-//! - CLN-001: Empty clinerules file (HIGH) - files must have content
+//! - CLN-001: Empty Cline rule file (HIGH) - files must have content
 //! - CLN-002: Invalid paths glob in clinerules (HIGH) - glob patterns must be valid
 //! - CLN-003: Unknown frontmatter key in clinerules (MEDIUM) - only `paths` is recognized
 //! - CLN-004: Scalar paths in clinerules (HIGH) - must be array, not scalar
@@ -901,6 +901,24 @@ unknownKey: value
             crate::detect_file_type(Path::new(".clinerules/01-coding.md")),
             FileType::ClineRulesFolder
         );
+    }
+
+    #[test]
+    fn test_alternate_cline_rules_folder_uses_existing_rules() {
+        let validator = ClineValidator;
+        let empty = validator.validate(
+            Path::new(".cline/rules/coding.md"),
+            "",
+            &LintConfig::default(),
+        );
+        assert!(empty.iter().any(|d| d.rule == "CLN-001"));
+
+        let invalid_paths = validator.validate(
+            Path::new(".cline/rules/coding.md"),
+            "---\npaths: \"**/*.rs\"\n---\n# Coding rules\n",
+            &LintConfig::default(),
+        );
+        assert!(invalid_paths.iter().any(|d| d.rule == "CLN-004"));
     }
 
     // ===== .txt file validation (mirrors .md tests) =====
