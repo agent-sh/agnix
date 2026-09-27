@@ -114,9 +114,8 @@ rules:
     message: 'Evento de hook invalido ''%{event}'', eventos validos: %{valid}'
     fix: Reemplazar '%{old}' con '%{new}'
   cc_hk_002:
-    message: Hook de prompt/agent en %{location} no es compatible con eventos '%{event}'
-    suggestion: 'Los hooks de prompt/agent funcionan en PreToolUse, PostToolUse, PostToolUseFailure, PermissionRequest, UserPromptSubmit,
-      Stop, SubagentStop y TaskCompleted. Use ''type'': ''command'' para otros eventos'
+    message: 'El hook %{hook_type} en %{location} no es compatible con los eventos ''%{event}'''
+    suggestion: 'Usa un evento compatible para este hook %{hook_type}, o usa ''type'': ''command'''
   cc_hk_003:
     message: El evento de herramienta '%{event}' en %{location} no tiene campo matcher; omitirlo coincide con todas las herramientas
     suggestion: Considera agregar un campo 'matcher' para dirigirse a herramientas específicas (ej., 'Bash', 'Read')
