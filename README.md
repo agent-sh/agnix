@@ -173,10 +173,11 @@ CI, and address every review comment before merging through the PR. A changed
 head needs fresh checks and review. Report a specific blocker when a required
 gate cannot finish; keep branch protection intact.
 
-CI, Security, and Docs Website cancel superseded runs of the same PR. Main,
-scheduled, and manual runs use separate groups so newer runs cannot cancel them.
-CodeQL uses Rust's buildless extraction, which runs build scripts and proc macros
-itself; release binaries are still built by the release workflow.
+CI and Security cancel superseded runs of the same PR. Their main and scheduled
+runs use separate groups so newer runs cannot cancel them. The docs deployment
+workflow keeps its existing shared concurrency group. CodeQL uses Rust's buildless
+extraction, which runs build scripts and proc macros itself; release binaries are
+still built by the release workflow.
 
 [Report a bug](https://github.com/agent-sh/agnix/issues/new) | [Request a rule](https://github.com/agent-sh/agnix/issues/new) | [Good first issues](https://github.com/agent-sh/agnix/labels/good%20first%20issue)
 

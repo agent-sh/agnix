@@ -49,7 +49,7 @@ fn ci_keeps_linux_only_quality_gates_on_ubuntu() {
 #[test]
 fn validation_concurrency_cancels_only_superseded_pr_runs() {
     let root = env!("CARGO_MANIFEST_DIR");
-    for name in ["ci.yml", "security.yml", "docs-site.yml"] {
+    for name in ["ci.yml", "security.yml"] {
         let workflow = fs::read_to_string(format!("{root}/.github/workflows/{name}"))
             .expect("failed to read workflow");
         assert!(workflow.contains("group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}"),
