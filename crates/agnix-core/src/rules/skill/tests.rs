@@ -60,6 +60,27 @@ fn test_cc_sk_022_allows_plugin_and_reverted_namespace() {
 }
 
 #[test]
+fn test_cc_sk_022_allows_plugin_root_named_anthropic_skills() {
+    let temp = tempfile::tempdir().unwrap();
+    let folder = temp.path().join(".claude/skills/anthropic-skills");
+    let manifest_dir = folder.join(".claude-plugin");
+    std::fs::create_dir_all(&manifest_dir).unwrap();
+    std::fs::write(
+        manifest_dir.join("plugin.json"),
+        r#"{"name":"anthropic-skills","version":"1.0.0"}"#,
+    )
+    .unwrap();
+
+    let content = "---\nname: anthropic-skills\ndescription: Use when testing a plugin skill\n---\nRun the test.";
+    let diagnostics =
+        SkillValidator.validate(&folder.join("SKILL.md"), content, &LintConfig::default());
+    assert!(
+        diagnostics.iter().all(|d| d.rule != "CC-SK-022"),
+        "plugin root should be exempt: {diagnostics:?}"
+    );
+}
+
+#[test]
 fn test_cc_sk_022_respects_pinned_older_claude_code() {
     let mut builder = LintConfig::builder();
     builder.tool_versions(crate::config::ToolVersions {

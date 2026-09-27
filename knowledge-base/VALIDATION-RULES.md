@@ -359,7 +359,7 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 <a id="cc-sk-022"></a>
 ### CC-SK-022 [HIGH] Reserved Claude Skill Name
 **Requirement**: In Claude Code 2.1.282+, a local skill under `.claude/skills/` MUST NOT use the folder name `synced` or the reserved `anthropic-skills` namespace in its folder or frontmatter `name`. Claude Code skips these skills at load time. The `claude-ai` namespace is not reserved in 2.1.283.
-**Detection**: For local Claude skill files, compare the folder and effective frontmatter name against `synced` and `anthropic-skills[:...]`; honor a pinned older Claude Code version.
+**Detection**: For local Claude skill files, compare the folder and effective frontmatter name against `synced` and `anthropic-skills[:...]`; exempt a skill folder with its own `.claude-plugin/plugin.json`, which loads as a plugin; honor a pinned older Claude Code version.
 **Fix**: Rename the local skill folder or frontmatter name.
 **Source**: code.claude.com/docs/en/skills, github.com/anthropics/claude-code/releases/tag/v2.1.283
 

@@ -1646,6 +1646,16 @@ impl<'a> ValidationContext<'a> {
             return;
         }
 
+        // A skill folder can itself be a plugin. Claude explicitly allows a
+        // plugin named anthropic-skills, so its root SKILL.md is exempt.
+        if self.path.parent().is_some_and(|folder| {
+            self.config
+                .fs()
+                .is_file(&folder.join(".claude-plugin/plugin.json"))
+        }) {
+            return;
+        }
+
         let folder = self
             .path
             .parent()
