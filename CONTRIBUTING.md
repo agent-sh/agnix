@@ -16,9 +16,13 @@ cargo test
 Before committing:
 
 ```bash
-cargo fmt
-cargo clippy --all-targets
+bash scripts/preflight.sh
+# Before pushing:
+bash scripts/preflight.sh --full
 ```
+
+See the [local development loop](README.md#local-development-loop) for checks,
+resource limits, optional hooks, and the testing-to-review handoff.
 
 ## Adding a New Rule
 
@@ -204,8 +208,8 @@ I welcome community input through several channels:
 
 1. **Update CHANGELOG.md** - Required for all PRs (skip with `[skip changelog]` in title)
 2. **Add tests** - Every feature/fix must have tests
-3. **Wait for CI** - The claude workflow is the major quality gate
-4. **Get review approval** - At least one approval required
+3. **Wait for CI and review** - Require successful `revuto-review` and hosted checks on the current head
+4. **Address review comments** - Resolve findings before merging through the PR; follow the current repository protection rules
 
 ## Backward-Compatibility Policy
 

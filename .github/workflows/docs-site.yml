@@ -32,9 +32,11 @@ defaults:
   run:
     shell: bash
 
+# Only successive runs of the same PR share a group. Non-PR runs get a
+# unique group so pending main, scheduled, and deployment work is preserved.
 concurrency:
-  group: docs-site-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
