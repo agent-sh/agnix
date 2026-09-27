@@ -32,7 +32,7 @@ resource limits, optional hooks, and the testing-to-review handoff.
 4. **Add test fixtures** - `tests/fixtures/`
 5. **Run parity tests** - CI enforces rules.json and VALIDATION-RULES.md stay in sync
 
-When editing project memory instructions, keep `CLAUDE.md` and `AGENTS.md` byte-identical.
+Maintain project instructions in `AGENTS.md` only.
 
 Each rule in `rules.json` must include complete `evidence` metadata. See [Rule Evidence Requirements](#rule-evidence-requirements) below for field details.
 

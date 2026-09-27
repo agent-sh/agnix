@@ -198,7 +198,7 @@ fn readme_supported_tools_still_lists_kiro_surface() {
 #[test]
 #[ignore = "run via CI Kiro S-tier gate step"]
 fn project_memory_marks_kiro_as_s_tier() {
-    for relative in ["CLAUDE.md", "AGENTS.md"] {
+    for relative in std::iter::once("AGENTS.md") {
         let path = workspace_root().join(relative);
         let content = fs::read_to_string(&path)
             .unwrap_or_else(|e| panic!("Failed to read {}: {}", path.display(), e));

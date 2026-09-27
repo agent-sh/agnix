@@ -13,7 +13,7 @@ function fixture(t) {
     fs.mkdirSync(path.join(root, dir), { recursive: true });
   }
   fs.copyFileSync(path.join(__dirname, 'preflight.sh'), path.join(root, 'scripts/preflight.sh'));
-  for (const file of ['CLAUDE.md', 'AGENTS.md', 'schemas/agnix.json', 'editors/vscode/schemas/agnix.json']) {
+  for (const file of ['AGENTS.md', 'schemas/agnix.json', 'editors/vscode/schemas/agnix.json']) {
     fs.writeFileSync(path.join(root, file), 'same\n');
   }
   // Preserve only the shell utilities the real entrypoint needs. In particular,
@@ -119,4 +119,19 @@ test('unknown or extra options fail before running checks', (t) => {
     assert.equal(f.run(args).status, 2);
   }
   assert.equal(f.commands(), '');
+});
+
+
+test('instruction policy rejects missing AGENTS or a root mirror before builds', (t) => {
+  const f = fixture(t);
+  const agents = path.join(f.root, 'AGENTS.md');
+  fs.unlinkSync(agents);
+  let result = f.run();
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /FAIL.*Canonical agent instructions/);
+  fs.writeFileSync(agents, 'canonical\n');
+  fs.writeFileSync(path.join(f.root, 'CLAUDE.md'), 'mirror\n');
+  result = f.run();
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /FAIL.*Canonical agent instructions/);
 });

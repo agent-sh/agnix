@@ -47,7 +47,7 @@ run 'Format' cargo fmt --check --all
 run 'Rule bookkeeping' node scripts/sync-rule-bookkeeping.js --check --skip-docs
 run 'Rule count tables' python3 scripts/check-rule-counts.py
 run 'Locale copies' bash scripts/check-locale-sync.sh
-run 'Agent instruction copies' cmp CLAUDE.md AGENTS.md
+run 'Canonical agent instructions' bash -c '[[ -f AGENTS.md && ! -L AGENTS.md && -s AGENTS.md && ! -e CLAUDE.md && ! -L CLAUDE.md ]]'
 run 'Schema copies' cmp schemas/agnix.json editors/vscode/schemas/agnix.json
 
 if [[ "$mode" == --quick ]]; then

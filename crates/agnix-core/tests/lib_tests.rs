@@ -99,19 +99,20 @@ fn test_detect_instruction_variants() {
 }
 
 #[test]
-fn test_repo_agents_md_matches_claude_md() {
+fn test_repo_uses_canonical_agents_md() {
     let repo_root = workspace_root();
-
-    let claude_path = repo_root.join("CLAUDE.md");
-    let claude = std::fs::read_to_string(&claude_path).unwrap_or_else(|e| {
-        panic!("Failed to read CLAUDE.md at {}: {e}", claude_path.display());
-    });
     let agents_path = repo_root.join("AGENTS.md");
-    let agents = std::fs::read_to_string(&agents_path).unwrap_or_else(|e| {
-        panic!("Failed to read AGENTS.md at {}: {e}", agents_path.display());
-    });
-
-    assert_eq!(agents, claude, "AGENTS.md must match CLAUDE.md");
+    let metadata = std::fs::symlink_metadata(&agents_path).expect("AGENTS.md must exist");
+    assert!(metadata.is_file(), "AGENTS.md must be a regular file");
+    let agents = std::fs::read_to_string(&agents_path).expect("AGENTS.md must be readable");
+    assert!(
+        !agents.trim().is_empty(),
+        "AGENTS.md must contain instructions"
+    );
+    assert!(
+        std::fs::symlink_metadata(repo_root.join("CLAUDE.md")).is_err(),
+        "Repository instructions must not have a CLAUDE.md mirror"
+    );
 }
 
 #[test]
