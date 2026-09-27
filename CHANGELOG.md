@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- Consolidate repository instructions in AGENTS.md. Update instruction checks,
+  rule bookkeeping and contributor guidance while retaining CLAUDE.md validation
+  for user projects and fixtures.
 - Add quick and full local preflight commands and reuse the full checks in the
   pre-push hook. Report per-check timing and fail on missing prerequisites.
 - Cancel superseded CI and Security PR runs while preserving their main and

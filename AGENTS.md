@@ -224,9 +224,9 @@ Release tracking for these is automated where the upstream publishes to GitHub: 
 
 ## Validation scope
 
-Choose checks that cover the changed behavior. For CPU-only tooling, documentation
-and configuration changes, run the relevant CPU tests, static checks and configuration
-validation. Do not require a blanket GPU gate for those changes. Require GPU
-qualification when GPU, runtime or model behavior, or related claims, change.
-Preserve applicable native, model and hardware qualification gates. CPU checks do
-not qualify GPU behavior.
+agnix is CPU-only Rust/WASM tooling. Choose checks for the changed behavior:
+formatting, lint, tests, rule bookkeeping and parity, packaging, and review.
+Use the relevant checks in `scripts/preflight.sh`; CPU-only tooling and docs do
+not need a GPU gate. If a future change introduces GPU, runtime or model behavior
+or related claims, require the corresponding native, model and hardware
+qualification before claiming support. CPU checks cannot provide that proof.
