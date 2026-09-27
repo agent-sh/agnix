@@ -49,7 +49,7 @@ This section contains all `456` validation rules generated from `knowledge-base/
 | [CC-AG-019](./generated/cc-ag-019.md) | Unknown Agent Frontmatter Field | LOW | Claude Agents | Yes (unsafe) |
 | [CC-AG-020](./generated/cc-ag-020.md) | Reserved Colon in Agent Name | HIGH | Claude Agents | No |
 | [CC-HK-001](./generated/cc-hk-001.md) | Invalid Hook Event | HIGH | Claude Hooks | Yes (safe/unsafe) |
-| [CC-HK-002](./generated/cc-hk-002.md) | Prompt Hook on Wrong Event | HIGH | Claude Hooks | No |
+| [CC-HK-002](./generated/cc-hk-002.md) | Prompt or Agent Hook on Wrong Event | HIGH | Claude Hooks | No |
 | [CC-HK-003](./generated/cc-hk-003.md) | Matcher Hint for Tool Events | LOW | Claude Hooks | No |
 | [CC-HK-004](./generated/cc-hk-004.md) | Matcher on Unsupported Event | LOW | Claude Hooks | Yes (safe) |
 | [CC-HK-005](./generated/cc-hk-005.md) | Missing Type Field | HIGH | Claude Hooks | Yes (safe) |

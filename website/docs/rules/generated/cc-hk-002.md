@@ -1,9 +1,9 @@
 ---
 id: cc-hk-002
-title: "CC-HK-002: Prompt Hook on Wrong Event - Claude Hooks"
+title: "CC-HK-002: Prompt or Agent Hook on Wrong Event"
 sidebar_label: "CC-HK-002"
-description: "agnix rule CC-HK-002 checks for prompt hook on wrong event in claude hooks files. Severity: HIGH. See examples and fix guidance."
-keywords: ["CC-HK-002", "prompt hook on wrong event", "claude hooks", "validation", "agnix", "linter"]
+description: "agnix rule CC-HK-002 checks for prompt or agent hook on wrong event in claude hooks files. Severity: HIGH. See examples and fix guidance."
+keywords: ["CC-HK-002", "prompt or agent hook on wrong event", "claude hooks", "validation", "agnix", "linter"]
 ---
 
 ## Summary
@@ -13,7 +13,7 @@ keywords: ["CC-HK-002", "prompt hook on wrong event", "claude hooks", "validatio
 - **Category**: `Claude Hooks`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-07-02`
+- **Verified On**: `2026-09-27`
 
 ## Applicability
 
