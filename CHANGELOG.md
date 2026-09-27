@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Add quick and full local preflight commands and reuse the full checks in the
+  pre-push hook. Report per-check timing and fail on missing prerequisites.
+- Cancel superseded CI and Security PR runs while preserving their main and
+  scheduled runs.
+- Remove the redundant release build before CodeQL's Rust extraction while
+  retaining the security query suite and dependency checks.
+
 ## [0.55.0] - 2026-09-27
 
 ### Added

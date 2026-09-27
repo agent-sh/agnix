@@ -17,6 +17,12 @@ defaults:
   run:
     shell: bash
 
+# Only successive runs of the same PR share a group. Non-PR runs get a
+# unique group so pending main, scheduled, and deployment work is preserved.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   codeql:
     name: CodeQL Analysis
@@ -28,10 +34,11 @@ jobs:
         uses: github/codeql-action/init@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4.38.1
         with:
           languages: rust
+          # Rust extraction runs build scripts and proc macros itself. A full
+          # release/LTO build is redundant and adds generated target/ files to
+          # the source scan without their semantic context.
+          build-mode: none
           queries: security-extended
-
-      - name: Build
-        run: cargo build --release --workspace
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4.38.1

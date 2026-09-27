@@ -29,6 +29,7 @@ fn ci_keeps_linux_only_quality_gates_on_ubuntu() {
         .replace("\r\n", "\n");
 
     for step in [
+        "Preflight regression tests",
         "Format check",
         "Clippy",
         "Rule efficacy eval",
@@ -43,6 +44,49 @@ fn ci_keeps_linux_only_quality_gates_on_ubuntu() {
             "{step} must stay scoped to Ubuntu so Windows/macOS exercise portability tests without duplicating Linux-only gates"
         );
     }
+}
+
+#[test]
+fn validation_concurrency_cancels_only_superseded_pr_runs() {
+    let root = env!("CARGO_MANIFEST_DIR");
+    for name in ["ci.yml", "security.yml"] {
+        let workflow = fs::read_to_string(format!("{root}/.github/workflows/{name}"))
+            .expect("failed to read workflow");
+        assert!(workflow.contains("group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}"),
+            "{name}: isolate workflows, PR numbers, and every non-PR run, including pending runs");
+        assert!(
+            workflow.contains("cancel-in-progress: ${{ github.event_name == 'pull_request' }}"),
+            "{name}: main, scheduled and deployment runs must not be canceled"
+        );
+    }
+}
+
+#[test]
+fn security_keeps_rust_extraction_and_all_security_gates() {
+    let root = env!("CARGO_MANIFEST_DIR");
+    let workflow = fs::read_to_string(format!("{root}/.github/workflows/security.yml"))
+        .expect("failed to read Security workflow");
+    for required in [
+        "languages: rust",
+        "build-mode: none",
+        "queries: security-extended",
+        "category: \"/language:rust\"",
+        "github/codeql-action/analyze@",
+        "cargo audit --deny warnings",
+        "command: check all",
+        "schedule:",
+        "push:",
+        "pull_request:",
+    ] {
+        assert!(
+            workflow.contains(required),
+            "missing security gate: {required}"
+        );
+    }
+    assert!(
+        !workflow.contains("run: cargo build"),
+        "CodeQL Rust extracts with rust-analyzer; a separate release build is redundant"
+    );
 }
 
 #[test]

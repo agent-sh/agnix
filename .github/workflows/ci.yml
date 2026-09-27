@@ -9,6 +9,12 @@ on:
 permissions:
   contents: read
 
+# Only successive runs of the same PR share a group. Non-PR runs get a
+# unique group so pending main, scheduled, and deployment work is preserved.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   ci:
     name: test (${{ matrix.os }})
@@ -32,6 +38,10 @@ jobs:
           # Keep one stable dependency cache namespace across the OS matrix.
           shared-key: agnix-workspace
           save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: Preflight regression tests
+        if: matrix.os == 'ubuntu-latest'
+        run: node --test scripts/preflight.test.js
 
       - name: Format check
         if: matrix.os == 'ubuntu-latest'

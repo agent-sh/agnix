@@ -146,6 +146,39 @@ Rust workspace crates:
 
 Contributions welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the development guide.
 
+### Local development loop
+
+Run `bash scripts/preflight.sh` while editing. It checks formatting, rule
+bookkeeping, count tables, locale copies, instruction copies, and schema copies
+before any compilation. It requires Rust with rustfmt, Node.js, Python 3, and
+Bash. Missing tools fail the check instead of silently skipping it.
+
+Before pushing, run `bash scripts/preflight.sh --full`. This adds Clippy, workspace
+tests, the rule efficacy evaluation, the Kiro gate, packaging script tests,
+generated schema comparison, and source-built agent configuration validation.
+It reports each check's elapsed time and stops at the first failure. Schema
+comparison uses a temporary file and never overwrites local edits. Cargo builds,
+Rust tests, and Rayon default to two workers each; set `CARGO_BUILD_JOBS`,
+`RUST_TEST_THREADS`, or `RAYON_NUM_THREADS` to override these local defaults.
+
+The existing optional hook installer, `sh scripts/setup-hooks.sh`, installs a
+pre-push hook that calls the same full preflight. Git worktrees share the hooks
+directory, and the installer replaces the existing pre-push hook.
+
+Track the change in an issue, then open a PR with the tested commit, commands,
+results, and any limits of the evidence. Local preflight does not replace hosted
+Linux, Windows, macOS, CodeQL, dependency, or review gates. Review the diff and
+record a factual self-review comment, wait for successful `revuto-review` and
+CI, and address every review comment before merging through the PR. A changed
+head needs fresh checks and review. Report a specific blocker when a required
+gate cannot finish; keep branch protection intact.
+
+CI and Security cancel superseded runs of the same PR. Their main and scheduled
+runs use separate groups so newer runs cannot cancel them. The docs deployment
+workflow keeps its existing shared concurrency group. CodeQL uses Rust's buildless
+extraction, which runs build scripts and proc macros itself; release binaries are
+still built by the release workflow.
+
 [Report a bug](https://github.com/agent-sh/agnix/issues/new) | [Request a rule](https://github.com/agent-sh/agnix/issues/new) | [Good first issues](https://github.com/agent-sh/agnix/labels/good%20first%20issue)
 
 ## License
