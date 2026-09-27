@@ -1,17 +1,6 @@
 use std::fs;
 
 #[test]
-fn claude_and_agents_docs_are_byte_identical() {
-    let root = env!("CARGO_MANIFEST_DIR");
-    let claude = fs::read(format!("{root}/CLAUDE.md")).expect("Failed to read CLAUDE.md");
-    let agents = fs::read(format!("{root}/AGENTS.md")).expect("Failed to read AGENTS.md");
-    assert_eq!(
-        claude, agents,
-        "CLAUDE.md and AGENTS.md must stay identical"
-    );
-}
-
-#[test]
 fn architecture_docs_list_all_workspace_crates() {
     let root = env!("CARGO_MANIFEST_DIR");
 
@@ -39,13 +28,7 @@ fn architecture_docs_list_all_workspace_crates() {
     );
 
     // Check each doc file mentions every workspace crate
-    let doc_files = [
-        "CLAUDE.md",
-        "AGENTS.md",
-        "README.md",
-        "SPEC.md",
-        "CONTRIBUTING.md",
-    ];
+    let doc_files = ["AGENTS.md", "README.md", "SPEC.md", "CONTRIBUTING.md"];
 
     let mut mismatches: Vec<String> = Vec::new();
 

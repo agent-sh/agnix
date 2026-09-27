@@ -20,7 +20,7 @@
  *    - Byte-identical mirror of `knowledge-base/removed-rules.json`.
  *
  * 3. Count phrases in every file in `COUNT_FILES`:
- *    - `CLAUDE.md`, `AGENTS.md`, `README.md`
+ *    - `AGENTS.md`, `README.md`
  *    - `knowledge-base/README.md`, `knowledge-base/INDEX.md`
  *    - `plugin/commands/agnix.md`, `plugin/skills/agnix/SKILL.md`,
  *      `skills/agnix/SKILL.md`
@@ -155,7 +155,6 @@ const INDEX_MD_PATTERNS = [
 ];
 
 const COUNT_FILES = [
-  { path: path.join(ROOT, 'CLAUDE.md') },
   { path: path.join(ROOT, 'AGENTS.md') },
   { path: path.join(ROOT, 'README.md') },
   { path: path.join(ROOT, 'knowledge-base', 'README.md') },

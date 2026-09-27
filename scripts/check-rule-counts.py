@@ -381,20 +381,6 @@ def main(fix: bool = False) -> int:
         print(f"[fixed] {spec_path}: rows {sorted(spec_stale)}")
 
     require_counts_in_text(
-        ROOT / "CLAUDE.md",
-        r"knowledge-base/\s+#\s*(\d+)\s+rules",
-        expected_total,
-        errors,
-        fix,
-    )
-    require_counts_in_text(
-        ROOT / "CLAUDE.md",
-        r"(\d+)\s+rules defined in `knowledge-base/rules.json`",
-        expected_total,
-        errors,
-        fix,
-    )
-    require_counts_in_text(
         ROOT / "AGENTS.md",
         r"knowledge-base/\s+#\s*(\d+)\s+rules",
         expected_total,

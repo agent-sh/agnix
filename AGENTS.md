@@ -6,9 +6,8 @@
 
 ## Project Instruction Files
 
-- `CLAUDE.md` is the project memory entrypoint for Claude Code.
-- `AGENTS.md` is a byte-for-byte copy of `CLAUDE.md` for tools that read `AGENTS.md` (Codex CLI, OpenCode, Cursor, Cline, Copilot).
-- Keep them identical (tests enforce this).
+`AGENTS.md` is the repository instruction source. Keep directory-specific guidance
+in the corresponding nested `AGENTS.md`.
 
 ## Critical Rules
 
@@ -19,7 +18,7 @@
 5. **Release binaries** - Compile with LTO, strip symbols
 6. **Track work in GitHub issues** - All tasks tracked there
 7. **Task is not done until tests added** - Every feature/fix must have quality tests
-8. **Documentation** - Keep long-form docs in `README.md`, `SPEC.md`, and `knowledge-base/` (especially `knowledge-base/VALIDATION-RULES.md`). Keep `CLAUDE.md`/`AGENTS.md` for agent instructions only.
+8. **Documentation** - Keep long-form docs in `README.md`, `SPEC.md`, and `knowledge-base/` (especially `knowledge-base/VALIDATION-RULES.md`). Keep `AGENTS.md` for agent instructions only.
 9. **Always follow the skill/command flow as instructed** - No deviations
 10. **No unnecessary files** - Don't create summary files, plan files, or temp docs unless specifically required
 11. **Never merge without waiting for the `revuto-review` check to end successfully** - It might take time, but this is the major quality gate and most thorough review.
@@ -185,7 +184,7 @@ Human-readable docs: `knowledge-base/VALIDATION-RULES.md`
 
 Format: `[CATEGORY]-[NUMBER]` (AS-004, CC-HK-001, etc.)
 
-**Adding a new rule**: Add to BOTH `rules.json` AND `VALIDATION-RULES.md`. CI parity tests will fail if they drift. Each rule in `rules.json` must include complete `evidence` metadata (source_type, source_urls, verified_on, applies_to, normative_level, tests). See VALIDATION-RULES.md for the evidence schema reference. Then run `node scripts/sync-rule-bookkeeping.js` (add `--validators=N` if a new validator was registered) to update the derived locations: `total_rules` + `last_updated` in rules.json, count phrases in CLAUDE.md/AGENTS.md/README.md, the `crates/agnix-rules/rules.json` mirror, and the website docs. CI enforces this with `--check` mode.
+**Adding a new rule**: Add to BOTH `rules.json` AND `VALIDATION-RULES.md`. CI parity tests will fail if they drift. Each rule in `rules.json` must include complete `evidence` metadata (source_type, source_urls, verified_on, applies_to, normative_level, tests). See VALIDATION-RULES.md for the evidence schema reference. Then run `node scripts/sync-rule-bookkeeping.js` (add `--validators=N` if a new validator was registered) to update the derived locations: `total_rules` + `last_updated` in rules.json, count phrases in AGENTS.md/README.md, the `crates/agnix-rules/rules.json` mirror, and the website docs. CI enforces this with `--check` mode.
 
 ## Current State
 
@@ -222,3 +221,12 @@ Release tracking for these is automated where the upstream publishes to GitHub: 
 - knowledge-base/INDEX.md - Knowledge navigation
 - https://agentskills.io
 - https://modelcontextprotocol.io
+
+## Validation scope
+
+agnix is CPU-only Rust/WASM tooling. Choose checks for the changed behavior:
+formatting, lint, tests, rule bookkeeping and parity, packaging, and review.
+Use the relevant checks in `scripts/preflight.sh`; CPU-only tooling and docs do
+not need a GPU gate. If a future change introduces GPU, runtime or model behavior
+or related claims, require the corresponding native, model and hardware
+qualification before claiming support. CPU checks cannot provide that proof.
