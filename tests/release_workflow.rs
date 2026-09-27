@@ -107,6 +107,34 @@ fn release_workflow_scopes_attestation_and_release_permissions() {
 }
 
 #[test]
+fn release_homebrew_update_opens_a_pr() {
+    let root = env!("CARGO_MANIFEST_DIR");
+    let workflow = fs::read_to_string(format!("{root}/.github/workflows/release.yml"))
+        .expect("failed to read release workflow")
+        .replace("\r\n", "\n");
+    let homebrew = workflow
+        .split_once("\n  homebrew:")
+        .expect("release workflow must contain a Homebrew job")
+        .1
+        .split_once("\n  jetbrains:")
+        .expect("Homebrew job must precede JetBrains")
+        .0;
+
+    assert!(
+        homebrew.contains("git push --force-with-lease origin \"$BRANCH\""),
+        "Homebrew formula update must push a dedicated branch"
+    );
+    assert!(
+        homebrew.contains("gh pr create") && homebrew.contains("--repo agent-sh/homebrew-agnix"),
+        "Homebrew formula update must open a PR"
+    );
+    assert!(
+        !homebrew.contains("repository_dispatch") && !homebrew.contains("git push\n"),
+        "Homebrew release must not dispatch a direct-main updater"
+    );
+}
+
+#[test]
 fn release_workflow_pins_latest_versioned_docs_to_the_release_tag() {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let workflow = fs::read_to_string(root.join(".github/workflows/release.yml"))
