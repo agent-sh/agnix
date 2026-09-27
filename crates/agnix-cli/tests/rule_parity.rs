@@ -1231,6 +1231,25 @@ fn test_refreshed_release_surfaces_match_research_inventory() {
                 );
             }
         }
+        if tool_id == "cline" {
+            let rules_surface = ".cline/rules/**/*.md";
+            assert!(
+                tool_surfaces
+                    .iter()
+                    .any(|candidate| candidate == rules_surface),
+                "Cline baseline must track {rules_surface}"
+            );
+            assert!(
+                row.contains(rules_surface),
+                "Cline research inventory must include {rules_surface}"
+            );
+            assert!(
+                relevant.iter().any(|change| change
+                    .as_str()
+                    .is_some_and(|text| text.contains(".cline/rules"))),
+                "Cline watcher must treat .cline/rules changes as relevant"
+            );
+        }
     }
 
     let amp = &baselines["tools"]["amp"];

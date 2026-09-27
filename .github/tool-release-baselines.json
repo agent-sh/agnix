@@ -232,6 +232,7 @@
       "changes_of_interest": {
         "config_surfaces": [
           ".clinerules (file or dir)",
+          ".cline/rules/**/*.md",
           ".clinerules/workflows/*.md",
           ".clinerules/hooks/*",
           ".clinerules/skills/*/SKILL.md",
@@ -239,6 +240,7 @@
         ],
         "relevant": [
           "Changes to .clinerules parsing (file vs dir, precedence)",
+          "Changes to .cline/rules Markdown discovery or conditional paths",
           "New workflow/hook/skill file layouts",
           "Skill frontmatter schema changes",
           "Memory-bank format changes"
