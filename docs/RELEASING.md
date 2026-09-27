@@ -74,6 +74,10 @@ cargo deny check advisories
 
 3. Verify the release at https://github.com/agent-sh/agnix/releases
 
+The Homebrew and Zed jobs open pull requests in their registry repositories.
+Review their diffs, wait for CI and Revuto, and merge those PRs before treating
+the distribution update as complete.
+
 ### glibc floor
 
 Both `*-unknown-linux-gnu` targets build through `cross`, whose sysroot is much
