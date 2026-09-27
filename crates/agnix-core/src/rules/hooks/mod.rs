@@ -308,13 +308,15 @@ fn validate_cc_hk_018_matcher_ignored(
 }
 
 /// CC-HK-002: Prompt hook on wrong event
-fn validate_cc_hk_002_prompt_event_type(
+fn validate_cc_hk_002_hook_event_type(
     event: &str,
+    hook_type: &str,
+    supported: bool,
     hook_location: &str,
     path: &Path,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
-    if !HooksSchema::is_prompt_event(event) {
+    if !supported {
         diagnostics.push(
             Diagnostic::error(
                 path.to_path_buf(),
@@ -324,10 +326,11 @@ fn validate_cc_hk_002_prompt_event_type(
                 t!(
                     "rules.cc_hk_002.message",
                     location = hook_location,
-                    event = event
+                    event = event,
+                    hook_type = hook_type
                 ),
             )
-            .with_suggestion(t!("rules.cc_hk_002.suggestion")),
+            .with_suggestion(t!("rules.cc_hk_002.suggestion", hook_type = hook_type)),
         );
     }
 }
@@ -714,8 +717,10 @@ impl Validator for HooksValidator {
 
                             // CC-HK-002: Prompt on wrong event
                             if config.is_rule_enabled("CC-HK-002") {
-                                validate_cc_hk_002_prompt_event_type(
+                                validate_cc_hk_002_hook_event_type(
                                     event,
+                                    "prompt",
+                                    HooksSchema::is_prompt_event(event),
                                     &hook_location,
                                     path,
                                     &mut diagnostics,
@@ -758,10 +763,12 @@ impl Validator for HooksValidator {
                                 );
                             }
 
-                            // CC-HK-002: Agent hook on wrong event (same restriction as prompt)
+                            // CC-HK-002: Agent hook on wrong event.
                             if config.is_rule_enabled("CC-HK-002") {
-                                validate_cc_hk_002_prompt_event_type(
+                                validate_cc_hk_002_hook_event_type(
                                     event,
+                                    "agent",
+                                    HooksSchema::is_agent_event(event),
                                     &hook_location,
                                     path,
                                     &mut diagnostics,

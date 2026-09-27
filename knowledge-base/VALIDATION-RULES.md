@@ -797,10 +797,11 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Source**: code.claude.com/docs/en/hooks, github.com/anthropics/claude-code/releases/tag/v2.1.219, github.com/anthropics/claude-code/releases/tag/v2.1.251
 
 <a id="cc-hk-002"></a>
-### CC-HK-002 [HIGH] Prompt Hook on Wrong Event
-**Requirement**: `type: "prompt"` or `type: "agent"` only on supported events
-**Supported**: PreToolUse, PostToolUse, PostToolUseFailure, PostToolBatch, PermissionRequest, PermissionDenied, UserPromptSubmit, UserPromptExpansion, Stop, SubagentStop, TaskCreated, TaskCompleted, TeammateIdle
-**Detection**: `hook.type in ["prompt", "agent"] && !PROMPT_EVENTS.contains(event)`
+### CC-HK-002 [HIGH] Prompt or Agent Hook on Wrong Event
+**Requirement**: `type: "prompt"` and `type: "agent"` MUST only appear on events supported by that hook type. `PermissionRequest` permits prompt hooks but skips agent hooks.
+**Prompt-supported**: PreToolUse, PostToolUse, PostToolUseFailure, PostToolBatch, PermissionRequest, PermissionDenied, UserPromptSubmit, UserPromptExpansion, Stop, SubagentStop, TaskCreated, TaskCompleted, TeammateIdle
+**Agent-supported**: PreToolUse, PostToolUse, PostToolUseFailure, PostToolBatch, PermissionDenied, UserPromptSubmit, UserPromptExpansion, Stop, SubagentStop, TaskCreated, TaskCompleted, TeammateIdle
+**Detection**: `hook.type == "prompt" && !PROMPT_EVENTS.contains(event)` OR `hook.type == "agent" && !AGENT_EVENTS.contains(event)`
 **Fix**: Change to `type: "command"` for unsupported events
 **Source**: code.claude.com/docs/en/hooks
 
