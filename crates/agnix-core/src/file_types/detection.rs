@@ -544,10 +544,12 @@ pub fn detect_file_type(path: &Path) -> FileType {
         }
         // Roo Code rules (.roo/rules/*.md)
         name if name.ends_with(".md") && is_under_roo_rules(path) => FileType::RooRules,
-        // Cline rules folder - any .md/.txt file under .clinerules/ at any depth
-        // (direct children, workflows, hooks, skills subdirectories)
+        // Cline rules folder - .md/.txt under .clinerules/, or Markdown
+        // rules under the documented .cline/rules/ layout.
         name if (name.ends_with(".md") || name.ends_with(".txt"))
-            && has_clinerules_ancestor(path) =>
+            && (has_clinerules_ancestor(path)
+                || (name.ends_with(".md")
+                    && path_contains_consecutive_components(path, ".cline", "rules"))) =>
         {
             FileType::ClineRulesFolder
         }
@@ -1198,6 +1200,26 @@ mod tests {
         assert_eq!(
             detect_file_type(Path::new(".clinerules/01-coding.txt")),
             FileType::ClineRulesFolder
+        );
+    }
+
+    #[test]
+    fn detect_cline_rules_alternate_folder() {
+        assert_eq!(
+            detect_file_type(Path::new(".cline/rules/coding.md")),
+            FileType::ClineRulesFolder
+        );
+        assert_eq!(
+            detect_file_type(Path::new("project/.cline/rules/nested/testing.md")),
+            FileType::ClineRulesFolder
+        );
+        assert_eq!(
+            detect_file_type(Path::new(".cline/rules/coding.txt")),
+            FileType::Unknown
+        );
+        assert_eq!(
+            detect_file_type(Path::new(".cline/skills/coding.md")),
+            FileType::GenericMarkdown
         );
     }
 

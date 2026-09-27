@@ -100,6 +100,10 @@ pub struct AgentSchema {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub background: Option<bool>,
 
+    /// Optional: omit user, project, and local CLAUDE.md files (2.1.271+)
+    #[serde(skip_serializing_if = "Option::is_none", rename = "omitClaudeMd")]
+    pub omit_claude_md: Option<bool>,
+
     /// Optional: isolation mode (worktree)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub isolation: Option<String>,

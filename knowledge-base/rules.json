@@ -1238,7 +1238,7 @@
         "source_urls": [
           "https://code.claude.com/docs/en/sub-agents"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-09-27",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -6577,7 +6577,7 @@
         "source_urls": [
           "https://docs.cline.bot/customization/cline-rules"
         ],
-        "verified_on": "2026-07-31",
+        "verified_on": "2026-09-27",
         "applies_to": {
           "tool": "cline"
         },
@@ -6604,7 +6604,7 @@
         "source_urls": [
           "https://docs.cline.bot/customization/cline-rules"
         ],
-        "verified_on": "2026-07-31",
+        "verified_on": "2026-09-27",
         "applies_to": {
           "tool": "cline"
         },
@@ -6631,7 +6631,7 @@
         "source_urls": [
           "https://docs.cline.bot/customization/cline-rules"
         ],
-        "verified_on": "2026-07-31",
+        "verified_on": "2026-09-27",
         "applies_to": {
           "tool": "cline"
         },
@@ -6659,7 +6659,7 @@
         "source_urls": [
           "https://docs.cline.bot/customization/cline-rules"
         ],
-        "verified_on": "2026-07-31",
+        "verified_on": "2026-09-27",
         "applies_to": {
           "tool": "cline"
         },

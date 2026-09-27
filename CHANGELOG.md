@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- CC-AG-019 now accepts the documented `omitClaudeMd` subagent field and
+  validates its boolean type through the agent schema.
+- Cline rules under `.cline/rules/` now receive the same content and
+  frontmatter checks as Markdown rules under `.clinerules/`.
 - CC-HK-002 now rejects Claude Code agent hooks on `PermissionRequest` while
   continuing to allow prompt hooks on that event.
 - AMP-004 accepts the documented `amp.runner.autoUpdate.enabled`,
@@ -18,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Refresh the CodeQL action components together at v4.38.1, taiki-e/install-action
   at v2.87.18, and anthropics/claude-code-action at v1.0.231.
+- Refresh nine spec source hashes after reviewing current Claude Code, Cline,
+  Cursor, and MCP documentation. The Cline rules layout and Claude hook
+  behavior changes are handled above.
 - Add Claude Code 2.1.277+ `AGENTS.md` fallback and combined-instruction support
   to the tracked compatibility surface. Existing AGM and XP rules already
   validate the documented file, imports, hierarchy, and size constraints.

@@ -26,7 +26,7 @@ Tools are organized by support tier (see [../CONTRIBUTING.md#tool-tier-system](.
 | Tool | Config Format | Documentation URL | Monitoring | Frequency | Last Reviewed | Rule Prefix |
 |------|---------------|-------------------|------------|-----------|---------------|-------------|
 | GitHub Copilot | `.github/copilot-instructions.md`, `.github/instructions/*.instructions.md`, `.github/agents/*.agent.md`, `.github/prompts/*.prompt.md`, `.github/hooks/hooks.json`, `.github/workflows/copilot-setup-steps.yml`, `.github/skills/*/SKILL.md` | https://docs.github.com/en/copilot/customizing-copilot | Automated (spec-drift.yml + tool-release-watch.yml via microsoft/vscode-copilot-chat) | Weekly | 2026-09-06 | COP, CP-SK |
-| Cline | `.clinerules` (file or dir), `.clinerules/workflows/*.md`, `.clinerules/hooks/*`, `.clinerules/skills/*/SKILL.md`, `.cline/skills/*/SKILL.md` | https://docs.cline.bot/features/cline-rules/overview | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-09-27 | CLN, CL-SK |
+| Cline | `.clinerules` (file or dir), `.cline/rules/*.md`, `.clinerules/workflows/*.md`, `.clinerules/hooks/*`, `.clinerules/skills/*/SKILL.md`, `.cline/skills/*/SKILL.md` | https://docs.cline.bot/customization/cline-rules | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-09-27 | CLN, CL-SK |
 | Cursor | `.cursor/rules/**/*.mdc`, `.cursorrules` (legacy), `.cursor/hooks.json`, `.cursor/agents/**/*.md`, `.cursor/environment.json`, `.cursor/mcp.json`, `.cursor/skills/*/SKILL.md` | https://cursor.com/docs/rules | Automated (spec-drift.yml + tool-release-watch.yml via api2.cursor.sh stable update endpoint) | Weekly | 2026-09-27 | CUR, MCP, CR-SK |
 
 ### B Tier (test on significant changes if time permits)

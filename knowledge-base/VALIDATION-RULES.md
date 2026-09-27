@@ -1109,7 +1109,7 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="cc-ag-019"></a>
 ### CC-AG-019 [LOW] Unknown Agent Frontmatter Field
-**Requirement**: Agent frontmatter fields MAY be validated against known set
+**Requirement**: Agent frontmatter fields MAY be validated against the documented set, including boolean `omitClaudeMd` (Claude Code 2.1.271+)
 **Detection**: Check for keys not in known agent fields
 **Fix**: Manual - remove or fix typo
 **Source**: code.claude.com/docs/en/sub-agents
@@ -1948,28 +1948,28 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 <a id="cln-001"></a>
 ### CLN-001 [HIGH] Empty Cline Rules File
-**Requirement**: `.clinerules` file or files in `.clinerules/` folder MUST have non-empty content after frontmatter
+**Requirement**: `.clinerules` file and Markdown rules in `.clinerules/` or `.cline/rules/` MUST have non-empty content after frontmatter
 **Detection**: Parse file, strip optional YAML frontmatter, check remaining body is non-whitespace
 **Fix**: No auto-fix (content must be authored by user)
 **Source**: docs.cline.bot/improving-your-workflow/cline-rules
 
 <a id="cln-002"></a>
 ### CLN-002 [HIGH] Invalid Paths Glob in Cline Rules
-**Requirement**: `paths` field in `.clinerules/*.md` and `.clinerules/*.txt` frontmatter MUST contain valid glob patterns
+**Requirement**: `paths` field in `.clinerules/*.{md,txt}` and `.cline/rules/*.md` frontmatter MUST contain valid glob patterns
 **Detection**: Parse YAML frontmatter, extract `paths` field, validate each glob pattern
 **Fix**: No auto-fix (glob patterns must be manually corrected)
 **Source**: docs.cline.bot/improving-your-workflow/cline-rules
 
 <a id="cln-003"></a>
 ### CLN-003 [MEDIUM] Unknown Frontmatter Key in Cline Rules
-**Requirement**: Frontmatter in `.clinerules/*.md` and `.clinerules/*.txt` files SHOULD only use documented keys (`paths`)
+**Requirement**: Frontmatter in `.clinerules/*.{md,txt}` and `.cline/rules/*.md` SHOULD only use documented keys (`paths`)
 **Detection**: Parse YAML frontmatter, check all keys against allowlist
 **Fix**: [AUTO-FIX unsafe] Remove unknown frontmatter keys
 **Source**: docs.cline.bot/improving-your-workflow/cline-rules
 
 <a id="cln-004"></a>
 ### CLN-004 [HIGH] Scalar Paths in Cline Rules
-**Requirement**: `paths` field in `.clinerules/*.md` and `.clinerules/*.txt` frontmatter MUST be a YAML array, not a scalar string
+**Requirement**: `paths` field in `.clinerules/*.{md,txt}` and `.cline/rules/*.md` frontmatter MUST be a YAML array, not a scalar string
 **Detection**: Parse YAML frontmatter, check if `paths` is a scalar string (Cline silently ignores scalar values)
 **Fix**: [AUTO-FIX safe] Convert scalar paths to array format
 **Source**: docs.cline.bot/features/cline-rules
