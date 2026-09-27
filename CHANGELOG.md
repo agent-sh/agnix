@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.55.0] - 2026-09-27
+
 ### Added
 - CC-SK-022 flags local Claude Code skill names reserved for synced skills, which
   would otherwise make the skill silently fail to load.
