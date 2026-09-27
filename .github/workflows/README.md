@@ -51,19 +51,19 @@ rhysd/actionlint@v1.7.12: 914e7df21a07ef503a81201c76d2b11c789d3fca
 # Rust Tooling
 Swatinem/rust-cache@v2: c19371144df3bb44fab255c43d04cbc2ab54d1c4
 dtolnay/rust-toolchain@stable: 4be9e76fd7c4901c61fb841f559994984270fce7
-taiki-e/install-action@v2.85.0: 7572810d7dd469b651bb7793945692cf78da5dd7
+taiki-e/install-action@v2.87.18: dfae9bf3d6f6c6f20ef4ebb3486c01a51341ff12
 
 # Security
 EmbarkStudios/cargo-deny-action@v2.1.1: 3c6349835b2b7b196a839186cb8b78e02f7b5f25
-github/codeql-action/analyze@v4.37.7: ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd
-github/codeql-action/init@v4.37.7: ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd
-github/codeql-action/upload-sarif@v4.37.7: ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd
+github/codeql-action/analyze@v4.38.1: 1c5b675653bb5c22dbe9b12b556ec555138e09fd
+github/codeql-action/init@v4.38.1: 1c5b675653bb5c22dbe9b12b556ec555138e09fd
+github/codeql-action/upload-sarif@v4.38.1: 1c5b675653bb5c22dbe9b12b556ec555138e09fd
 
 # Release
 softprops/action-gh-release@v3.0.2: 3d0d9888cb7fd7b750713d6e236d1fcb99157228
 
 # Claude Code
-anthropics/claude-code-action@v1: e0cf66d1d257526b5d07f141838c338921cb8455
+anthropics/claude-code-action@v1.0.231: cfc3eb22bfed5c26ef66e3223c982af27e4524de
 ```
 
 ## Updating Action Versions

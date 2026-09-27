@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   builds clean after the rmcp 3.4 update.
 
 ### Changed
+- Refresh the CodeQL action components together at v4.38.1, taiki-e/install-action
+  at v2.87.18, and anthropics/claude-code-action at v1.0.231.
 - Add Claude Code 2.1.277+ `AGENTS.md` fallback and combined-instruction support
   to the tracked compatibility surface. Existing AGM and XP rules already
   validate the documented file, imports, hierarchy, and size constraints.
