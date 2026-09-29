@@ -584,6 +584,14 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Fix**: Manual - choose `low`, `medium`, `high`, `xhigh`, or `max`.
 **Source**: code.claude.com/docs/en/settings-reference#maxeffortlevel, github.com/anthropics/claude-code/releases/tag/v2.1.267
 
+<a id="cc-set-032"></a>
+
+### CC-SET-032 [MEDIUM] Ineffective Project allowedProviders Setting
+**Requirement**: `allowedProviders` MUST only appear in Claude Code managed settings. Claude Code 2.1.285 introduced it as a machine-level provider policy, so a repository `.claude/settings.json` or `.claude/settings.local.json` value cannot enforce the configured provider boundary.
+**Detection**: Parse settings JSON and flag any non-null `allowedProviders` value outside a managed-settings.json path.
+**Fix**: Manual - move the setting to the organization's managed-settings.json.
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.285
+
 ---
 
 ## PER-CLIENT SKILL RULES
@@ -3660,7 +3668,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Claude Memory | 13 | 8 | 5 | 0 | 3 |
 | Claude Output Styles | 6 | 2 | 2 | 2 | 0 |
 | Claude Plugins | 16 | 10 | 6 | 0 | 4 |
-| Claude Settings | 31 | 1 | 29 | 1 | 0 |
+| Claude Settings | 32 | 1 | 30 | 1 | 0 |
 | Claude Skills | 21 | 11 | 9 | 1 | 10 |
 | Cline | 7 | 4 | 3 | 0 | 3 |
 | Cline Skills | 3 | 2 | 1 | 0 | 2 |
@@ -3691,7 +3699,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **457** | **218** | **209** | **30** | **124** |
+| **TOTAL** | **458** | **218** | **210** | **30** | **124** |
 
 
 ---
@@ -3721,8 +3729,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 457 validation rules across 40 categories
+**Total Coverage**: 458 validation rules across 40 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 218 HIGH, 209 MEDIUM, 30 LOW
+**Certainty**: 218 HIGH, 210 MEDIUM, 30 LOW
 **Auto-Fixable**: 124 rules (27%)

@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- Advance Amp to `plaid-mode`, Claude Code to `v2.1.285`, Codex CLI to
+  `rust-v0.159.1`, Cursor to `3.22.12`, Gemini CLI to `v0.62.0`, and OpenCode
+  to `v1.18.33` after reviewing their primary releases. Claude Code adds the
+  managed-only `allowedProviders` policy, validated by CC-SET-032; the other
+  changes are outside agnix's configuration schemas.
 - Consolidate repository instructions in AGENTS.md. Update instruction checks,
   rule bookkeeping and contributor guidance while retaining CLAUDE.md validation
   for user projects and fixtures.
