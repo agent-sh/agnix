@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.56.0] - 2026-09-30
+
 ### Changed
 - Advance Amp to `plaid-mode`, Claude Code to `v2.1.285`, Codex CLI to
   `rust-v0.159.1`, Cursor to `3.22.12`, Gemini CLI to `v0.62.0`, and OpenCode
