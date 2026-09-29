@@ -868,6 +868,9 @@ rules:
   cc_set_031:
     invalid: "%{location} 必须是 low、medium、high、xhigh 或 max 之一"
     suggestion: 将努力上限设置为 low、medium、high、xhigh 或 max。
+  cc_set_032:
+    message: allowedProviders 仅在 Claude Code 托管设置中生效
+    suggestion: 将 allowedProviders 移至组织的 managed-settings.json。
   cc_pl_016:
     message: 插件名称 '%{name}' 不是 kebab-case
     suggestion: 只使用小写字母、数字和连字符。Claude Code 会拒绝包含控制字符或不可见字符的名称。

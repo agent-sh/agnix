@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `457` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `458` validation rules generated from `knowledge-base/rules.json`.
 `124` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -162,6 +162,7 @@ This section contains all `457` validation rules generated from `knowledge-base/
 | [CC-SET-029](./generated/cc-set-029.md) | Invalid spinnerTipsOverride Shape | MEDIUM | Claude Settings | No |
 | [CC-SET-030](./generated/cc-set-030.md) | Local Command in managedMcpServers | HIGH | Claude Settings | No |
 | [CC-SET-031](./generated/cc-set-031.md) | Invalid maxEffortLevel Setting | MEDIUM | Claude Settings | No |
+| [CC-SET-032](./generated/cc-set-032.md) | Ineffective Project allowedProviders Setting | MEDIUM | Claude Settings | No |
 | [CDX-000](./generated/cdx-000.md) | TOML Parse Error | HIGH | Codex CLI | No |
 | [CDX-001](./generated/cdx-001.md) | Invalid Approval Mode | HIGH | Codex CLI | Yes (unsafe) |
 | [CDX-002](./generated/cdx-002.md) | Invalid Full Auto Error Mode | HIGH | Codex CLI | Yes (unsafe) |

@@ -921,6 +921,9 @@ rules:
   cc_set_031:
     invalid: "%{location} debe ser uno de low, medium, high, xhigh o max"
     suggestion: Establece el límite de esfuerzo en low, medium, high, xhigh o max.
+  cc_set_032:
+    message: allowedProviders solo se respeta en la configuración administrada de Claude Code
+    suggestion: Mueve allowedProviders al managed-settings.json de tu organización.
   cc_pl_016:
     message: El nombre de plugin '%{name}' no está en kebab-case
     suggestion: Usa solo minúsculas, dígitos y guiones. Claude Code rechaza nombres con caracteres de control o invisibles.

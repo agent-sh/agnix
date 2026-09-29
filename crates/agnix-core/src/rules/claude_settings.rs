@@ -39,6 +39,8 @@
 //!   Claude Code v2.1.259).
 //! - `maxEffortLevel` and per-model caps use the documented effort enum
 //!   (CC-SET-031, added in Claude Code v2.1.267).
+//! - `allowedProviders` only takes effect in managed settings (CC-SET-032,
+//!   added in Claude Code v2.1.285).
 //!
 //! Runs on FileType::Hooks (which covers `.claude/settings.json` -
 //! see `file_types/detection.rs`). Skips non-Claude Code settings paths
@@ -85,6 +87,7 @@ const RULE_IDS: &[&str] = &[
     "CC-SET-029",
     "CC-SET-030",
     "CC-SET-031",
+    "CC-SET-032",
 ];
 
 /// Allowed values for `worktree.baseRef` per Claude Code v2.1.133 release notes.
@@ -286,8 +289,43 @@ impl Validator for ClaudeSettingsValidator {
             validate_max_effort_level(path, content, &value, &mut diagnostics);
         }
 
+        if config.is_rule_enabled("CC-SET-032") {
+            validate_allowed_providers_scope(path, content, &value, &mut diagnostics);
+        }
+
         diagnostics
     }
+}
+
+/// CC-SET-032: `allowedProviders` is an organization-managed setting.
+///
+/// Claude Code 2.1.285 introduced this policy to limit the API providers a
+/// machine may use. A repository-local setting cannot enforce a machine-wide
+/// provider boundary, so Claude Code only honors the key from managed settings.
+/// Null is treated as absent, matching the other settings scope checks.
+fn validate_allowed_providers_scope(
+    path: &Path,
+    content: &str,
+    value: &serde_json::Value,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(field_value) = value.get("allowedProviders") else {
+        return;
+    };
+    if field_value.is_null() || is_claude_managed_settings_path(path) {
+        return;
+    }
+
+    diagnostics.push(
+        Diagnostic::warning(
+            path.to_path_buf(),
+            find_key_line(content, "allowedProviders").unwrap_or(1),
+            0,
+            "CC-SET-032",
+            t!("rules.cc_set_032.message"),
+        )
+        .with_suggestion(t!("rules.cc_set_032.suggestion")),
+    );
 }
 
 /// CC-SET-031: effort caps use the same ordered effort vocabulary at the
@@ -6290,6 +6328,35 @@ mod tests {
                 .iter()
                 .all(|diagnostic| diagnostic.rule != "CC-SET-031"),
             "null effort caps should be treated as unset: {diagnostics:?}"
+        );
+    }
+
+    // ===== CC-SET-032: allowedProviders managed scope =====
+
+    #[test]
+    fn test_allowed_providers_requires_managed_settings() {
+        let content = r#"{"allowedProviders":["anthropic","bedrock"]}"#;
+        for path in [".claude/settings.json", ".claude/settings.local.json"] {
+            assert!(
+                validate_at(path, content)
+                    .iter()
+                    .any(|diagnostic| diagnostic.rule == "CC-SET-032"),
+                "expected CC-SET-032 for {path}"
+            );
+        }
+        assert!(
+            validate_at("/etc/claude-code/managed-settings.json", content)
+                .iter()
+                .all(|diagnostic| diagnostic.rule != "CC-SET-032")
+        );
+    }
+
+    #[test]
+    fn test_allowed_providers_null_is_absent() {
+        assert!(
+            validate_at(".claude/settings.json", r#"{"allowedProviders":null}"#)
+                .iter()
+                .all(|diagnostic| diagnostic.rule != "CC-SET-032")
         );
     }
 
