@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- XP-001 no longer reports Claude-specific features found inside fenced code
+  blocks. Command examples such as `dig @192.168.40.4` in a bash fence were
+  read as `@file` imports and reported as errors.
+
 ## [0.56.0] - 2026-09-30
 
 ### Changed
