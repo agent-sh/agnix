@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.56.1] - 2026-10-01
+
 ### Fixed
 - XP-001 no longer reports Claude-specific features found inside fenced code
   blocks. Command examples such as `dig @192.168.40.4` in a bash fence were
@@ -15,6 +17,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   fences, fences nested inside a longer fence, indented code blocks and inline
   code spans. It shares the fence scanner with `extract_imports` instead of
   toggling on triple-backtick lines.
+
+### Security
+- Patch brace-expansion (5.0.12, 2.1.7) and fast-uri (3.1.8) in the website
+  and VS Code lockfiles for GHSA-6j4f-fj2g-mc7p, GHSA-qhr7-859c-m2p7,
+  GHSA-q2hr-2g5m-vwhr and GHSA-hrr3-gc8f-f4qj. Lock-only, no manifest change.
 
 ## [0.56.0] - 2026-09-30
 
