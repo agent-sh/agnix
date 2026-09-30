@@ -7935,7 +7935,7 @@
         "source_urls": [
           "https://cursor.com/docs/subagents"
         ],
-        "verified_on": "2026-08-01",
+        "verified_on": "2026-09-30",
         "applies_to": {
           "tool": "cursor"
         },
@@ -7962,7 +7962,7 @@
         "source_urls": [
           "https://cursor.com/docs/subagents"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-09-30",
         "applies_to": {
           "tool": "cursor"
         },
