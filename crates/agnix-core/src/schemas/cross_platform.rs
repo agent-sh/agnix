@@ -80,8 +80,20 @@ pub fn find_claude_specific_features(content: &str) -> Vec<ClaudeSpecificFeature
 
     let mut in_claude_section = false;
     let mut claude_section_level = 0; // Track the level of the Claude guard header
+    let mut in_code_block = false;
 
     for (line_num, line) in content.lines().enumerate() {
+        // Fenced code blocks hold literal content, not directives. Skipping them
+        // keeps command examples such as `dig @192.168.40.4` from being read as
+        // @file imports. Mirrors the fence handling in check_markdown_structure.
+        if line.trim_start().starts_with("```") {
+            in_code_block = !in_code_block;
+            continue;
+        }
+        if in_code_block {
+            continue;
+        }
+
         let is_claude_guard = guard_pattern.is_match(line);
         if is_claude_guard {
             in_claude_section = true;
@@ -1223,6 +1235,51 @@ Body"#;
         assert!(
             !results.iter().any(|r| r.feature == "@import"),
             "Standalone email should not trigger @import detection"
+        );
+    }
+
+    #[test]
+    fn test_no_false_positive_import_in_fenced_code_block() {
+        let content = "# Ops\n\n```bash\ndig @192.168.40.4 example.com\n```\n";
+        let results = find_claude_specific_features(content);
+        assert!(
+            !results.iter().any(|r| r.feature == "@import"),
+            "Command examples inside a fenced code block are not @imports"
+        );
+    }
+
+    #[test]
+    fn test_no_false_positive_claude_feature_in_fenced_code_block() {
+        let content = "# Ops\n\n```yaml\nhooks: true\ncontext: fork\n```\n";
+        let results = find_claude_specific_features(content);
+        assert!(
+            results.is_empty(),
+            "Claude-specific markers inside a fence are examples, not directives"
+        );
+    }
+
+    #[test]
+    fn test_detect_at_import_after_fenced_code_block_closes() {
+        let content =
+            "# Ops\n\n```bash\ndig @192.168.40.4 example.com\n```\n\nSee @path/to/rules.md\n";
+        let results = find_claude_specific_features(content);
+        let imports: Vec<_> = results.iter().filter(|r| r.feature == "@import").collect();
+        assert_eq!(
+            imports.len(),
+            1,
+            "Only the import outside the fence should be reported"
+        );
+    }
+
+    #[test]
+    fn test_fence_state_does_not_leak_into_claude_section_guard() {
+        // A `## Claude Code Specific` heading inside a fence must not open the
+        // guard section, which would suppress real findings after the fence.
+        let content = "# Ops\n\n```md\n## Claude Code Specific\n```\n\nSee @path/to/rules.md\n";
+        let results = find_claude_specific_features(content);
+        assert!(
+            results.iter().any(|r| r.feature == "@import"),
+            "A guard heading inside a fence must not suppress later findings"
         );
     }
 
