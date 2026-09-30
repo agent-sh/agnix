@@ -16,7 +16,7 @@ use regex::Regex;
 #[cfg(feature = "filesystem")]
 use std::path::Path;
 
-use crate::parsers::markdown::MAX_REGEX_INPUT_SIZE;
+use crate::parsers::markdown::{MAX_REGEX_INPUT_SIZE, mask_code_spans};
 use crate::regex_util::static_regex;
 
 // XP-001: Claude-specific feature patterns
@@ -80,20 +80,14 @@ pub fn find_claude_specific_features(content: &str) -> Vec<ClaudeSpecificFeature
 
     let mut in_claude_section = false;
     let mut claude_section_level = 0; // Track the level of the Claude guard header
-    let mut in_code_block = false;
 
-    for (line_num, line) in content.lines().enumerate() {
-        // Fenced code blocks hold literal content, not directives. Skipping them
-        // keeps command examples such as `dig @192.168.40.4` from being read as
-        // @file imports. Mirrors the fence handling in check_markdown_structure.
-        if line.trim_start().starts_with("```") {
-            in_code_block = !in_code_block;
-            continue;
-        }
-        if in_code_block {
-            continue;
-        }
+    // Code blocks and inline code hold literal content, not directives. Masking
+    // them keeps command examples such as `dig @192.168.40.4` from being read as
+    // @file imports, and keeps a guard heading inside a fence from opening a
+    // Claude section.
+    let masked = mask_code_spans(content);
 
+    for (line_num, line) in masked.lines().enumerate() {
         let is_claude_guard = guard_pattern.is_match(line);
         if is_claude_guard {
             in_claude_section = true;
@@ -1281,6 +1275,56 @@ Body"#;
             results.iter().any(|r| r.feature == "@import"),
             "A guard heading inside a fence must not suppress later findings"
         );
+    }
+
+    #[test]
+    fn test_no_false_positive_import_in_tilde_fence() {
+        let content = "# Ops\n\n~~~bash\ndig @192.168.40.4 example.com\n~~~\n";
+        let results = find_claude_specific_features(content);
+        assert!(
+            results.is_empty(),
+            "A tilde fence is a code block like a backtick fence"
+        );
+    }
+
+    #[test]
+    fn test_no_false_positive_in_nested_backtick_fence() {
+        // The inner three-backtick line is content of the four-backtick fence,
+        // not a closing fence.
+        let content = "# Ops\n\n````md\n```bash\ndig @192.168.40.4 example.com\n```\n````\n";
+        let results = find_claude_specific_features(content);
+        assert!(
+            results.is_empty(),
+            "Lines inside a longer outer fence are code"
+        );
+    }
+
+    #[test]
+    fn test_no_false_positive_import_in_inline_code() {
+        let content = "# Ops\n\nRun `dig @192.168.40.4 example.com` to check DNS.\n";
+        let results = find_claude_specific_features(content);
+        assert!(
+            results.is_empty(),
+            "An inline code span is literal text, not an @import"
+        );
+    }
+
+    #[test]
+    fn test_no_false_positive_in_indented_code_block() {
+        let content = "# Ops\n\n    context: fork\n    dig @192.168.40.4 example.com\n";
+        let results = find_claude_specific_features(content);
+        assert!(results.is_empty(), "An indented code block is literal text");
+    }
+
+    #[test]
+    fn test_import_position_unchanged_after_inline_code() {
+        let content = "# Ops\n\nRun `ls` then read @docs/rules.md\n";
+        let results = find_claude_specific_features(content);
+        let imports: Vec<_> = results.iter().filter(|r| r.feature == "@import").collect();
+        assert_eq!(imports.len(), 1);
+        assert_eq!(imports[0].line, 3);
+        // The match includes the leading space before `@`.
+        assert_eq!(imports[0].column, "Run `ls` then read".len() + 1);
     }
 
     #[test]
