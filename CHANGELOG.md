@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - XP-001 no longer reports Claude-specific features found inside fenced code
   blocks. Command examples such as `dig @192.168.40.4` in a bash fence were
   read as `@file` imports and reported as errors.
+- XP-001 now skips every code form the other Markdown extractors skip: tilde
+  fences, fences nested inside a longer fence, indented code blocks and inline
+  code spans. It shares the fence scanner with `extract_imports` instead of
+  toggling on triple-backtick lines.
 
 ## [0.56.0] - 2026-09-30
 

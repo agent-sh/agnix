@@ -162,6 +162,26 @@ fn extract_markdown_links_inner(content: &str) -> Vec<MarkdownLink> {
     links
 }
 
+/// Return `content` with every byte inside a code block or inline code span
+/// replaced by a space.
+///
+/// Line breaks are kept, so byte offsets, line numbers and columns in the
+/// result match the input. Line-oriented validators can run their existing
+/// per-line logic on the masked text and skip code the same way the
+/// `scan_non_code_spans`-based extractors do.
+pub(crate) fn mask_code_spans(content: &str) -> String {
+    let mut masked: Vec<u8> = content
+        .bytes()
+        .map(|b| if b == b'\n' || b == b'\r' { b } else { b' ' })
+        .collect();
+    scan_non_code_spans(content, |span, span_start| {
+        masked[span_start..span_start + span.len()].copy_from_slice(span.as_bytes());
+    });
+    // Non-code spans are `&str` slices, so they start and end on char
+    // boundaries, and every other byte is ASCII.
+    String::from_utf8(masked).expect("masked content is valid UTF-8")
+}
+
 /// Check if XML tags are balanced
 #[allow(dead_code)] // used in cfg(test) and __internal; not yet used by production validators
 pub fn check_xml_balance(tags: &[XmlTag]) -> Vec<XmlBalanceError> {
@@ -1036,6 +1056,15 @@ mod tests {
     #[test]
     fn test_regex_patterns_compile() {
         let _ = xml_tag_regex();
+    }
+
+    #[test]
+    fn test_mask_code_spans_blanks_code_and_keeps_offsets() {
+        let content = "a `b` c\r\n```\n@x.md \u{e9}\n```\nd \u{e9}\n";
+        let masked = mask_code_spans(content);
+        assert_eq!(masked.len(), content.len());
+        assert_eq!(masked.lines().count(), content.lines().count());
+        assert_eq!(masked, "a     c\r\n   \n        \n   \nd \u{e9}\n");
     }
 
     #[test]
