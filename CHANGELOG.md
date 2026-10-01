@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Update the Tiyuvta README link and copy for company model deployment and fine-tuning services.
+
 ## [0.56.1] - 2026-10-01
 
 ### Fixed
