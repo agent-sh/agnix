@@ -1,6 +1,37 @@
 use super::*;
 use tower_lsp::LspService;
 
+#[tokio::test]
+async fn test_kiro_references_without_workspace_config() {
+    let workspace = tempfile::tempdir().unwrap();
+    let root = workspace.path().canonicalize().unwrap();
+    let steering = root.join(".kiro/steering/test.md");
+    std::fs::create_dir_all(steering.parent().unwrap()).unwrap();
+    std::fs::create_dir(root.join("config")).unwrap();
+    std::fs::write(root.join("guide.md"), "guide\n").unwrap();
+    std::fs::write(
+        &steering,
+        "# Context\n#[[folder:config]]\n#[[file:guide.md:1]]\n#[[folder:missing]]\n",
+    )
+    .unwrap();
+    let backend = Backend::new_test();
+    backend
+        .initialize(InitializeParams {
+            root_uri: Some(Url::from_file_path(&root).unwrap()),
+            ..Default::default()
+        })
+        .await
+        .unwrap();
+    assert_eq!(backend.config.load().root_dir(), Some(&root));
+    let diagnostics = backend.validate_file(steering).await;
+    let references: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.code == Some(NumberOrString::String("KIRO-009".into())))
+        .collect();
+    assert_eq!(references.len(), 1);
+    assert!(references[0].message.contains("missing"));
+}
+
 /// Test that Backend::new creates a valid Backend instance.
 /// We verify this by creating a service and checking initialize returns proper capabilities.
 #[tokio::test]
