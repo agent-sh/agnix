@@ -766,8 +766,8 @@ rules:
     message: Unknown Kiro steering frontmatter field '%{field}'
     suggestion: 'Use only supported fields: inclusion, name, description, fileMatchPattern'
   kiro_009:
-    message: 'Inline file reference points to a missing file: %{reference}'
-    suggestion: Fix the reference path or create the referenced file
+    message: 'Inline file or folder reference points to a missing target: %{reference}'
+    suggestion: Fix the reference path or create the referenced file or folder
   kr_pw_001:
     message: 'POWER.md is missing required frontmatter fields: %{fields}'
     suggestion: 'Add required frontmatter fields: name, description, keywords'

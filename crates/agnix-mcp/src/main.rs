@@ -415,6 +415,15 @@ struct ResolvedMcpPath {
     workspace_root: PathBuf,
 }
 
+fn validate_file_in_workspace(
+    resolved: &ResolvedMcpPath,
+    config: &LintConfig,
+) -> agnix_core::LintResult<agnix_core::ValidationOutcome> {
+    let mut config = config.clone();
+    config.set_root_dir(resolved.workspace_root.clone());
+    core_validate_file(&resolved.canonical_path, &config)
+}
+
 fn resolve_mcp_path_with_root(input_path: &str) -> Result<ResolvedMcpPath, McpError> {
     let workspace_root = std::env::current_dir()
         .map_err(|e| make_internal_error(format!("Failed to read current directory: {e}")))?
@@ -524,7 +533,7 @@ impl AgnixServer {
             "validate file",
             &input.path,
             &resolved_path.workspace_root,
-            || core_validate_file(&resolved_path.canonical_path, &config),
+            || validate_file_in_workspace(&resolved_path, &config),
         )?;
 
         let diagnostics = outcome.into_diagnostics();
@@ -683,6 +692,34 @@ mod tests {
     use rmcp::model::ErrorCode;
     use serde_json::json;
     use std::path::PathBuf;
+
+    #[test]
+    fn test_single_file_kiro_references_use_mcp_workspace_root() {
+        let workspace = tempfile::tempdir().unwrap();
+        let root = workspace.path().canonicalize().unwrap();
+        let steering = root.join(".kiro/steering/test.md");
+        std::fs::create_dir_all(steering.parent().unwrap()).unwrap();
+        std::fs::create_dir(root.join("config")).unwrap();
+        std::fs::write(root.join("guide.md"), "guide\n").unwrap();
+        std::fs::write(
+            &steering,
+            "# Context\n#[[folder:config]]\n#[[file:guide.md:1]]\n#[[folder:missing]]\n",
+        )
+        .unwrap();
+        let resolved = super::ResolvedMcpPath {
+            canonical_path: steering,
+            workspace_root: root,
+        };
+        let diagnostics = super::validate_file_in_workspace(&resolved, &LintConfig::default())
+            .unwrap()
+            .into_diagnostics();
+        let references: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "KIRO-009")
+            .collect();
+        assert_eq!(references.len(), 1);
+        assert!(references[0].message.contains("missing"));
+    }
 
     #[test]
     fn test_parse_tools_csv_trims_and_discards_empty_entries() {

@@ -7,8 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.56.2] - 2026-10-04
+
 ### Changed
 - Update the Tiyuvta README link and copy for company model deployment and fine-tuning services.
+- Advance Claude Code to `v2.1.288`, Codex CLI to `rust-v0.160.0`, Cline to
+  `v4.1.22`, Cursor to `3.23.12`, OpenCode to `v1.18.34`, and Kiro CLI to
+  `2.27.0` after reviewing current vendor documentation and releases.
+- Update CodeQL action components together to v4.38.2 and group future updates.
+- Update rust-i18n to 4.2.4 with a documented foldhash duplicate exception.
+
+### Fixed
+- KIRO-009 accepts line selectors in file references and checks folder references
+  against directory targets.
 
 ## [0.56.1] - 2026-10-01
 

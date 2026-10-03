@@ -3054,10 +3054,10 @@ Validates Codex's admin-written managed `requirements.toml` (system location: `/
 **Source**: kiro.dev/docs/steering/
 
 <a id="kiro-009"></a>
-### KIRO-009 [MEDIUM] Broken Inline File Reference
-**Requirement**: Inline `#[[file:...]]` references SHOULD resolve to existing files
-**Detection**: Inline file reference points to a path that does not exist
-**Fix**: Correct the file reference path or create the missing file
+### KIRO-009 [MEDIUM] Broken Inline Steering Reference
+**Requirement**: Inline `#[[file:...]]` and `#[[folder:...]]` references SHOULD resolve to existing targets. File references may select one line or an inclusive line range.
+**Detection**: Inline file or folder reference points to a missing target; line selectors are removed before resolving file paths.
+**Fix**: Correct the reference path or create the missing file or folder
 **Source**: kiro.dev/docs/steering/
 
 <a id="kiro-010"></a>

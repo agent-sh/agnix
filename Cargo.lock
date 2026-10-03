@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "agnix-cli"
-version = "0.56.1"
+version = "0.56.2"
 dependencies = [
  "agnix-core",
  "agnix-rules",
@@ -35,7 +35,7 @@ dependencies = [
 
 [[package]]
 name = "agnix-core"
-version = "0.56.1"
+version = "0.56.2"
 dependencies = [
  "agnix-core",
  "agnix-rules",
@@ -63,7 +63,7 @@ dependencies = [
 
 [[package]]
 name = "agnix-lsp"
-version = "0.56.1"
+version = "0.56.2"
 dependencies = [
  "agnix-core",
  "anyhow",
@@ -82,7 +82,7 @@ dependencies = [
 
 [[package]]
 name = "agnix-mcp"
-version = "0.56.1"
+version = "0.56.2"
 dependencies = [
  "agnix-core",
  "agnix-rules",
@@ -99,14 +99,14 @@ dependencies = [
 
 [[package]]
 name = "agnix-rules"
-version = "0.56.1"
+version = "0.56.2"
 dependencies = [
  "serde_json",
 ]
 
 [[package]]
 name = "agnix-wasm"
-version = "0.56.1"
+version = "0.56.2"
 dependencies = [
  "agnix-core",
  "console_error_panic_hook",
@@ -867,6 +867,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d9c4f5dac5e15c24eb999c26181a6ca40b39fe946cbe4c263c7209467bc83af2"
 
 [[package]]
+name = "foldhash"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "77ce24cb58228fbb8aa041425bb1050850ac19177686ea6e0f41a70416f56fdb"
+
+[[package]]
 name = "form_urlencoded"
 version = "1.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1100,7 +1106,7 @@ version = "0.15.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9229cfe53dfd69f0609a49f65461bd93001ea1ef889cd5529dd176593f5338a1"
 dependencies = [
- "foldhash",
+ "foldhash 0.1.5",
 ]
 
 [[package]]
@@ -2372,9 +2378,9 @@ dependencies = [
 
 [[package]]
 name = "rust-i18n"
-version = "4.2.2"
+version = "4.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7c43fd69c20da13756643a5bf51ae799965465c78e05c57a1242a736aaa56527"
+checksum = "8502e73e6461c738659455c5d2cf95bc132760a6f203c717e66ee72b78906d7f"
 dependencies = [
  "globwalk",
  "regex",
@@ -2385,9 +2391,9 @@ dependencies = [
 
 [[package]]
 name = "rust-i18n-macro"
-version = "4.2.2"
+version = "4.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "086ec8a9eaa6afda33919b9bc1661c1f4e017c40e99bbd33ca98f6e1cb6ca91f"
+checksum = "d54a28dd9d46108d56b9f0c85b220908844233e561c03087890325104f90f2c6"
 dependencies = [
  "glob",
  "proc-macro2",
@@ -2400,12 +2406,13 @@ dependencies = [
 
 [[package]]
 name = "rust-i18n-support"
-version = "4.2.2"
+version = "4.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ac02dcb9a01ec145d0a5534ea9554a966050ca250b346bb2a9ab0fcdafab5979"
+checksum = "e806c2a9701cbd6043992cd935c30cb1fdb128fa15e7b506f3b46f97045737c0"
 dependencies = [
  "arc-swap",
  "base62",
+ "foldhash 0.2.0",
  "globwalk",
  "itertools 0.11.0",
  "normpath",

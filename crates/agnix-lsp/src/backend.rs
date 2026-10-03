@@ -301,6 +301,12 @@ impl LanguageServer for Backend {
                         .unwrap_or_else(|_| normalize_path(&root_path)),
                 );
 
+                // The default configuration also needs the workspace root for
+                // steering references and other workspace-relative validation.
+                let mut default_config_with_root = (**self.config.load()).clone();
+                default_config_with_root.set_root_dir(root_path.clone());
+                self.config.store(Arc::new(default_config_with_root));
+
                 // Try to load config from .agnix.toml in workspace root
                 let config_path = root_path.join(".agnix.toml");
                 if config_path.exists() {

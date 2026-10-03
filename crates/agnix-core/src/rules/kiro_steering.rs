@@ -1,4 +1,4 @@
-//! Kiro steering file validation rules (KIRO-001 to KIRO-009)
+//! Kiro steering file validation rules (KIRO-001 to KIRO-014)
 //!
 //! Validates:
 //! - KIRO-001: Invalid steering file inclusion mode (HIGH/ERROR)
@@ -9,7 +9,7 @@
 //! - KIRO-006: Secrets detected in steering content (HIGH/ERROR)
 //! - KIRO-007: fileMatchPattern present without inclusion: fileMatch (MEDIUM/WARNING)
 //! - KIRO-008: Unknown frontmatter field (MEDIUM/WARNING)
-//! - KIRO-009: Inline file reference points to missing file (MEDIUM/WARNING)
+//! - KIRO-009: Inline file or folder reference points to a missing target (MEDIUM/WARNING)
 
 use crate::{
     config::PerFileLintConfig,
@@ -53,11 +53,20 @@ fn secret_pattern() -> &'static Regex {
     })
 }
 
-fn inline_file_ref_pattern() -> &'static Regex {
+fn inline_reference_pattern() -> &'static Regex {
     static RE: OnceLock<Regex> = OnceLock::new();
     RE.get_or_init(|| {
-        Regex::new(r"#\[\[file:(?P<path>[^\]\n]+)\]\]").expect("inline file pattern must compile")
+        Regex::new(r"#\[\[(?P<kind>file|folder):(?P<path>[^\]\n]+)\]\]")
+            .expect("inline reference pattern must compile")
     })
+}
+
+fn file_reference_path(reference: &str) -> String {
+    static SELECTOR_RE: OnceLock<Regex> = OnceLock::new();
+    let selector = SELECTOR_RE.get_or_init(|| {
+        Regex::new(r":\d+(?:-\d+)?$").expect("file line selector pattern must compile")
+    });
+    selector.replace(reference, "").into_owned()
 }
 
 fn has_parent_dir_traversal(reference: &str) -> bool {
@@ -144,10 +153,10 @@ impl Validator for KiroSteeringValidator {
             }
         }
 
-        // KIRO-009: Broken inline file references
+        // KIRO-009: Broken inline file and folder references
         if config.is_rule_enabled("KIRO-009") {
             let fs = config.fs();
-            for captures in inline_file_ref_pattern().captures_iter(content) {
+            for captures in inline_reference_pattern().captures_iter(content) {
                 let Some(full_match) = captures.get(0) else {
                     continue;
                 };
@@ -155,23 +164,39 @@ impl Validator for KiroSteeringValidator {
                     continue;
                 };
 
+                let kind = captures.name("kind").map(|m| m.as_str()).unwrap_or("file");
                 let reference = path_match.as_str().trim();
+                let resolved_reference = if kind == "file" {
+                    file_reference_path(reference)
+                } else {
+                    reference.to_string()
+                };
                 if reference.is_empty()
                     || reference.starts_with("http://")
                     || reference.starts_with("https://")
                     || reference.starts_with('/')
-                    || Path::new(reference).is_absolute()
-                    || has_parent_dir_traversal(reference)
+                    || Path::new(&resolved_reference).is_absolute()
+                    || has_parent_dir_traversal(&resolved_reference)
                 {
                     continue;
                 }
 
-                let resolved = path
-                    .parent()
-                    .unwrap_or_else(|| Path::new("."))
-                    .join(reference);
+                // Workspace steering resolves from the workspace root. Global
+                // steering and AGENTS.md references use their containing folder.
+                let parent = path.parent().unwrap_or_else(|| Path::new("."));
+                let workspace_steering = config.root_dir().filter(|root| {
+                    path.starts_with(root.join(".kiro/steering"))
+                        || path.starts_with(".kiro/steering")
+                });
+                let base = workspace_steering.map_or(parent, |root| root.as_path());
+                let resolved = base.join(&resolved_reference);
 
-                if !fs.exists(&resolved) {
+                let valid_target = if kind == "folder" {
+                    fs.is_dir(&resolved)
+                } else {
+                    fs.is_file(&resolved)
+                };
+                if !valid_target {
                     let (line, col) = line_col_at_offset(content, full_match.start());
                     diagnostics.push(
                         Diagnostic::warning(
@@ -1046,6 +1071,95 @@ mod tests {
         let content = "---\ninclusion: always\n---\nUse #[[file:../../secrets.txt]]\n";
         let diagnostics = validate_steering(content);
         assert!(diagnostics.iter().all(|d| d.rule != "KIRO-009"));
+    }
+
+    #[test]
+    fn test_kiro_009_strips_one_line_selector_before_lookup() {
+        assert_eq!(file_reference_path("docs/api.md:12"), "docs/api.md");
+    }
+
+    #[test]
+    fn test_kiro_009_strips_line_range_selector_before_lookup() {
+        assert_eq!(file_reference_path("docs/api.md:12-28"), "docs/api.md");
+    }
+
+    #[test]
+    fn test_kiro_009_preserves_colons_in_file_names_without_selector() {
+        assert_eq!(file_reference_path("docs/api:v3.md"), "docs/api:v3.md");
+    }
+
+    #[test]
+    fn test_kiro_009_workspace_targets_and_selectors() {
+        let fs = std::sync::Arc::new(crate::fs::MockFileSystem::new());
+        fs.add_file("/project/docs/api.md", "one\ntwo\nthree\n");
+        fs.add_dir("/project/config");
+        let mut config = LintConfig::default();
+        config.set_fs(fs);
+        config.set_root_dir("/project".into());
+        for reference in [
+            "file:docs/api.md",
+            "file:docs/api.md:2",
+            "file:docs/api.md:1-3",
+            "folder:config",
+        ] {
+            let content = format!("# Context\n#[[{reference}]]\n");
+            for path in ["/project/.kiro/steering/test.md", ".kiro/steering/test.md"] {
+                let diagnostics =
+                    KiroSteeringValidator.validate(Path::new(path), &content, &config);
+                assert!(
+                    diagnostics.iter().all(|d| d.rule != "KIRO-009"),
+                    "{reference} at {path}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_kiro_009_rejects_missing_and_wrong_kind_targets() {
+        let fs = std::sync::Arc::new(crate::fs::MockFileSystem::new());
+        fs.add_file("/project/docs/api.md", "content");
+        fs.add_dir("/project/config");
+        let mut config = LintConfig::default();
+        config.set_fs(fs);
+        config.set_root_dir("/project".into());
+        for reference in [
+            "file:missing.md:2",
+            "folder:missing",
+            "folder:docs/api.md",
+            "file:config",
+        ] {
+            let diagnostics = KiroSteeringValidator.validate(
+                Path::new("/project/.kiro/steering/test.md"),
+                &format!("# Context\n#[[{reference}]]\n"),
+                &config,
+            );
+            assert_eq!(
+                diagnostics.iter().filter(|d| d.rule == "KIRO-009").count(),
+                1,
+                "{reference}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_kiro_009_global_and_agents_references_use_containing_folder() {
+        let fs = std::sync::Arc::new(crate::fs::MockFileSystem::new());
+        fs.add_file("/global/.kiro/steering/style.md", "global");
+        fs.add_file("/project/services/style.md", "service");
+        let mut config = LintConfig::default();
+        config.set_fs(fs);
+        config.set_root_dir("/project".into());
+        for path in [
+            "/global/.kiro/steering/test.md",
+            "/project/services/AGENTS.md",
+        ] {
+            let diagnostics = KiroSteeringValidator.validate(
+                Path::new(path),
+                "# Context\n#[[file:style.md:1]]\n",
+                &config,
+            );
+            assert!(diagnostics.iter().all(|d| d.rule != "KIRO-009"), "{path}");
+        }
     }
 
     // ===== KIRO-010: Missing inclusion mode =====

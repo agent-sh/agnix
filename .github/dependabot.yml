@@ -17,6 +17,10 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      codeql-action:
+        patterns:
+          - "github/codeql-action*"
     open-pull-requests-limit: 5
     reviewers:
       - "avifenesh"

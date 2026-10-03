@@ -507,8 +507,8 @@ rules:
     message: 'Campo de frontmatter desconocido en orientacion Kiro: ''%{field}'''
     suggestion: 'Usa solo campos soportados: inclusion, name, description, fileMatchPattern'
   kiro_009:
-    message: 'La referencia inline de archivo apunta a un archivo inexistente: %{reference}'
-    suggestion: Corrige la ruta de referencia o crea el archivo referenciado
+    message: 'La referencia inline de archivo o carpeta apunta a un destino inexistente: %{reference}'
+    suggestion: Corrige la ruta de referencia o crea el archivo o carpeta referenciado
   kr_pw_001:
     message: 'POWER.md no tiene los campos de frontmatter requeridos: %{fields}'
     suggestion: 'Agrega los campos requeridos: name, description, keywords'
