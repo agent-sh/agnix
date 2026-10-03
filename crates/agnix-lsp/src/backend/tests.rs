@@ -4,7 +4,10 @@ use tower_lsp::LspService;
 #[tokio::test]
 async fn test_kiro_references_without_workspace_config() {
     let workspace = tempfile::tempdir().unwrap();
-    let root = workspace.path().canonicalize().unwrap();
+    let root_uri = Url::from_file_path(workspace.path()).unwrap();
+    // LSP file URIs normalize Windows verbatim prefixes. Exercise the same
+    // path representation that initialize() receives from the real client.
+    let root = root_uri.to_file_path().unwrap();
     let steering = root.join(".kiro/steering/test.md");
     std::fs::create_dir_all(steering.parent().unwrap()).unwrap();
     std::fs::create_dir(root.join("config")).unwrap();
@@ -17,7 +20,7 @@ async fn test_kiro_references_without_workspace_config() {
     let backend = Backend::new_test();
     backend
         .initialize(InitializeParams {
-            root_uri: Some(Url::from_file_path(&root).unwrap()),
+            root_uri: Some(root_uri),
             ..Default::default()
         })
         .await
