@@ -487,8 +487,8 @@ rules:
     message: 未知的 Kiro 引导 frontmatter 字段 '%{field}'
     suggestion: 仅使用受支持字段：inclusion、name、description、fileMatchPattern
   kiro_009:
-    message: 内联文件引用指向不存在的路径：%{reference}
-    suggestion: 修正引用路径或创建被引用文件
+    message: 内联文件或文件夹引用指向不存在的目标：%{reference}
+    suggestion: 修正引用路径或创建被引用文件或文件夹
   kr_pw_001:
     message: POWER.md 缺少必需的 frontmatter 字段：%{fields}
     suggestion: 添加必需字段：name、description、keywords

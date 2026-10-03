@@ -305,7 +305,7 @@ This section contains all `458` validation rules generated from `knowledge-base/
 | [KIRO-006](./generated/kiro-006.md) | Secrets Detected in Steering File | HIGH | Kiro Steering | No |
 | [KIRO-007](./generated/kiro-007.md) | fileMatchPattern Without fileMatch Inclusion | MEDIUM | Kiro Steering | No |
 | [KIRO-008](./generated/kiro-008.md) | Unknown Kiro Steering Frontmatter Field | MEDIUM | Kiro Steering | No |
-| [KIRO-009](./generated/kiro-009.md) | Broken Inline File Reference in Steering | MEDIUM | Kiro Steering | No |
+| [KIRO-009](./generated/kiro-009.md) | Broken Inline Steering Reference | MEDIUM | Kiro Steering | No |
 | [KIRO-010](./generated/kiro-010.md) | Missing Inclusion Mode | MEDIUM | Kiro Steering | No |
 | [KIRO-011](./generated/kiro-011.md) | Steering Doc Excessively Long | LOW | Kiro Steering | No |
 | [KIRO-012](./generated/kiro-012.md) | Duplicate Steering Name | MEDIUM | Kiro Steering | No |

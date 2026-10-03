@@ -181,12 +181,22 @@ impl Validator for KiroSteeringValidator {
                     continue;
                 }
 
-                let resolved = path
-                    .parent()
-                    .unwrap_or_else(|| Path::new("."))
-                    .join(&resolved_reference);
+                // Workspace steering resolves from the workspace root. Global
+                // steering and AGENTS.md references use their containing folder.
+                let parent = path.parent().unwrap_or_else(|| Path::new("."));
+                let workspace_steering = config.root_dir().filter(|root| {
+                    path.starts_with(root.join(".kiro/steering"))
+                        || path.starts_with(".kiro/steering")
+                });
+                let base = workspace_steering.map_or(parent, |root| root.as_path());
+                let resolved = base.join(&resolved_reference);
 
-                if !fs.exists(&resolved) || (kind == "folder" && !fs.is_dir(&resolved)) {
+                let valid_target = if kind == "folder" {
+                    fs.is_dir(&resolved)
+                } else {
+                    fs.is_file(&resolved)
+                };
+                if !valid_target {
                     let (line, col) = line_col_at_offset(content, full_match.start());
                     diagnostics.push(
                         Diagnostic::warning(
@@ -1076,6 +1086,80 @@ mod tests {
     #[test]
     fn test_kiro_009_preserves_colons_in_file_names_without_selector() {
         assert_eq!(file_reference_path("docs/api:v3.md"), "docs/api:v3.md");
+    }
+
+    #[test]
+    fn test_kiro_009_workspace_targets_and_selectors() {
+        let fs = std::sync::Arc::new(crate::fs::MockFileSystem::new());
+        fs.add_file("/project/docs/api.md", "one\ntwo\nthree\n");
+        fs.add_dir("/project/config");
+        let mut config = LintConfig::default();
+        config.set_fs(fs);
+        config.set_root_dir("/project".into());
+        for reference in [
+            "file:docs/api.md",
+            "file:docs/api.md:2",
+            "file:docs/api.md:1-3",
+            "folder:config",
+        ] {
+            let content = format!("# Context\n#[[{reference}]]\n");
+            for path in ["/project/.kiro/steering/test.md", ".kiro/steering/test.md"] {
+                let diagnostics =
+                    KiroSteeringValidator.validate(Path::new(path), &content, &config);
+                assert!(
+                    diagnostics.iter().all(|d| d.rule != "KIRO-009"),
+                    "{reference} at {path}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_kiro_009_rejects_missing_and_wrong_kind_targets() {
+        let fs = std::sync::Arc::new(crate::fs::MockFileSystem::new());
+        fs.add_file("/project/docs/api.md", "content");
+        fs.add_dir("/project/config");
+        let mut config = LintConfig::default();
+        config.set_fs(fs);
+        config.set_root_dir("/project".into());
+        for reference in [
+            "file:missing.md:2",
+            "folder:missing",
+            "folder:docs/api.md",
+            "file:config",
+        ] {
+            let diagnostics = KiroSteeringValidator.validate(
+                Path::new("/project/.kiro/steering/test.md"),
+                &format!("# Context\n#[[{reference}]]\n"),
+                &config,
+            );
+            assert_eq!(
+                diagnostics.iter().filter(|d| d.rule == "KIRO-009").count(),
+                1,
+                "{reference}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_kiro_009_global_and_agents_references_use_containing_folder() {
+        let fs = std::sync::Arc::new(crate::fs::MockFileSystem::new());
+        fs.add_file("/global/.kiro/steering/style.md", "global");
+        fs.add_file("/project/services/style.md", "service");
+        let mut config = LintConfig::default();
+        config.set_fs(fs);
+        config.set_root_dir("/project".into());
+        for path in [
+            "/global/.kiro/steering/test.md",
+            "/project/services/AGENTS.md",
+        ] {
+            let diagnostics = KiroSteeringValidator.validate(
+                Path::new(path),
+                "# Context\n#[[file:style.md:1]]\n",
+                &config,
+            );
+            assert!(diagnostics.iter().all(|d| d.rule != "KIRO-009"), "{path}");
+        }
     }
 
     // ===== KIRO-010: Missing inclusion mode =====
