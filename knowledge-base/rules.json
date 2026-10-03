@@ -8692,7 +8692,7 @@
     },
     {
       "id": "KIRO-009",
-      "name": "Broken Inline File Reference in Steering",
+      "name": "Broken Inline Steering Reference",
       "severity": "MEDIUM",
       "category": "kiro-steering",
       "evidence": {
@@ -8700,7 +8700,7 @@
         "source_urls": [
           "https://kiro.dev/docs/steering/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-04",
         "applies_to": {
           "tool": "kiro"
         },
@@ -8714,7 +8714,7 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "Read #[[file:docs/style-guide.md]] before generating code.",
+      "good_example": "Read #[[file:docs/style-guide.md:12-28]] and #[[folder:config]] before generating code.",
       "bad_example": "Read #[[file:docs/missing-style-guide.md]] before generating code."
     },
     {

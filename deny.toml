@@ -67,6 +67,7 @@ skip = [
     #
     { name = "bitflags", version = "*" },          # globwalk uses v1, others v2
     { name = "core-foundation", version = "*" },   # system-configuration v0.7 vs v0.10
+    { name = "foldhash", version = "*" },          # hashbrown 0.15 vs rust-i18n-support 4.2.4
     { name = "getrandom", version = "*" },         # dirs v0.2, others v0.3/v0.4
     { name = "hashbrown", version = "*" },         # multi-version fanout
     { name = "itertools", version = "*" },         # v0.11 vs v0.13

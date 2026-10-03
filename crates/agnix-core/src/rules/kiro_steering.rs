@@ -1,4 +1,4 @@
-//! Kiro steering file validation rules (KIRO-001 to KIRO-009)
+//! Kiro steering file validation rules (KIRO-001 to KIRO-014)
 //!
 //! Validates:
 //! - KIRO-001: Invalid steering file inclusion mode (HIGH/ERROR)
@@ -9,7 +9,7 @@
 //! - KIRO-006: Secrets detected in steering content (HIGH/ERROR)
 //! - KIRO-007: fileMatchPattern present without inclusion: fileMatch (MEDIUM/WARNING)
 //! - KIRO-008: Unknown frontmatter field (MEDIUM/WARNING)
-//! - KIRO-009: Inline file reference points to missing file (MEDIUM/WARNING)
+//! - KIRO-009: Inline file or folder reference points to a missing target (MEDIUM/WARNING)
 
 use crate::{
     config::PerFileLintConfig,
@@ -53,11 +53,20 @@ fn secret_pattern() -> &'static Regex {
     })
 }
 
-fn inline_file_ref_pattern() -> &'static Regex {
+fn inline_reference_pattern() -> &'static Regex {
     static RE: OnceLock<Regex> = OnceLock::new();
     RE.get_or_init(|| {
-        Regex::new(r"#\[\[file:(?P<path>[^\]\n]+)\]\]").expect("inline file pattern must compile")
+        Regex::new(r"#\[\[(?P<kind>file|folder):(?P<path>[^\]\n]+)\]\]")
+            .expect("inline reference pattern must compile")
     })
+}
+
+fn file_reference_path(reference: &str) -> String {
+    static SELECTOR_RE: OnceLock<Regex> = OnceLock::new();
+    let selector = SELECTOR_RE.get_or_init(|| {
+        Regex::new(r":\d+(?:-\d+)?$").expect("file line selector pattern must compile")
+    });
+    selector.replace(reference, "").into_owned()
 }
 
 fn has_parent_dir_traversal(reference: &str) -> bool {
@@ -144,10 +153,10 @@ impl Validator for KiroSteeringValidator {
             }
         }
 
-        // KIRO-009: Broken inline file references
+        // KIRO-009: Broken inline file and folder references
         if config.is_rule_enabled("KIRO-009") {
             let fs = config.fs();
-            for captures in inline_file_ref_pattern().captures_iter(content) {
+            for captures in inline_reference_pattern().captures_iter(content) {
                 let Some(full_match) = captures.get(0) else {
                     continue;
                 };
@@ -155,13 +164,19 @@ impl Validator for KiroSteeringValidator {
                     continue;
                 };
 
+                let kind = captures.name("kind").map(|m| m.as_str()).unwrap_or("file");
                 let reference = path_match.as_str().trim();
+                let resolved_reference = if kind == "file" {
+                    file_reference_path(reference)
+                } else {
+                    reference.to_string()
+                };
                 if reference.is_empty()
                     || reference.starts_with("http://")
                     || reference.starts_with("https://")
                     || reference.starts_with('/')
-                    || Path::new(reference).is_absolute()
-                    || has_parent_dir_traversal(reference)
+                    || Path::new(&resolved_reference).is_absolute()
+                    || has_parent_dir_traversal(&resolved_reference)
                 {
                     continue;
                 }
@@ -169,9 +184,9 @@ impl Validator for KiroSteeringValidator {
                 let resolved = path
                     .parent()
                     .unwrap_or_else(|| Path::new("."))
-                    .join(reference);
+                    .join(&resolved_reference);
 
-                if !fs.exists(&resolved) {
+                if !fs.exists(&resolved) || (kind == "folder" && !fs.is_dir(&resolved)) {
                     let (line, col) = line_col_at_offset(content, full_match.start());
                     diagnostics.push(
                         Diagnostic::warning(
@@ -1046,6 +1061,21 @@ mod tests {
         let content = "---\ninclusion: always\n---\nUse #[[file:../../secrets.txt]]\n";
         let diagnostics = validate_steering(content);
         assert!(diagnostics.iter().all(|d| d.rule != "KIRO-009"));
+    }
+
+    #[test]
+    fn test_kiro_009_strips_one_line_selector_before_lookup() {
+        assert_eq!(file_reference_path("docs/api.md:12"), "docs/api.md");
+    }
+
+    #[test]
+    fn test_kiro_009_strips_line_range_selector_before_lookup() {
+        assert_eq!(file_reference_path("docs/api.md:12-28"), "docs/api.md");
+    }
+
+    #[test]
+    fn test_kiro_009_preserves_colons_in_file_names_without_selector() {
+        assert_eq!(file_reference_path("docs/api:v3.md"), "docs/api:v3.md");
     }
 
     // ===== KIRO-010: Missing inclusion mode =====
