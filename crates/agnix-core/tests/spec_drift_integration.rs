@@ -147,16 +147,18 @@ fn hook_matchers_accept_current_event_vocabulary_and_still_catch_typos() {
 #[test]
 fn once_only_has_effect_in_skill_hooks() {
     let temp = tempfile::TempDir::new().unwrap();
-    let skill = temp.path().join(".claude/skills/cache-review/SKILL.md");
-    let agent = temp.path().join(".claude/agents/cache-review.md");
-    let settings = temp.path().join(".claude/settings.json");
+    // macOS temporary roots can be symlinks; diagnostics use canonical paths.
+    let root = temp.path().canonicalize().unwrap();
+    let skill = root.join(".claude/skills/cache-review/SKILL.md");
+    let agent = root.join(".claude/agents/cache-review.md");
+    let settings = root.join(".claude/settings.json");
     let body = "---\nname: cache-review\ndescription: Review code for cache behavior\nhooks:\n  Stop:\n    - hooks:\n        - type: command\n          command: echo ready\n          timeout: 10\n          once: true\n---\nReview code.\n";
     for file in [&skill, &agent] {
         fs::create_dir_all(file.parent().unwrap()).unwrap();
         fs::write(file, body).unwrap();
     }
     fs::write(&settings, serde_json::json!({"hooks": {"Stop": [{"hooks": [{"type": "command", "command": "echo ready", "timeout": 10, "once": true}]}]}}).to_string()).unwrap();
-    let result = validate_project(temp.path(), &LintConfig::default()).unwrap();
+    let result = validate_project(&root, &LintConfig::default()).unwrap();
     let once: Vec<_> = result
         .diagnostics
         .iter()
@@ -170,7 +172,7 @@ fn once_only_has_effect_in_skill_hooks() {
         .disable_rule("CC-HK-014")
         .build()
         .unwrap();
-    let result = validate_project(temp.path(), &config).unwrap();
+    let result = validate_project(&root, &config).unwrap();
     assert!(result.diagnostics.iter().all(|d| d.rule != "CC-HK-014"));
 }
 

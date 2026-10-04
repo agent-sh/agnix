@@ -5585,6 +5585,12 @@ fn test_cc_hk_008_exec_form_checks_only_the_executed_script() {
     for (command, args) in [
         ("scripts/run.sh", vec!["start.sh"]),
         ("node", vec!["scripts/My App/tool.js", "other.js"]),
+        ("node.exe", vec!["scripts/My App/tool.js", "other.js"]),
+        ("NODE.EXE", vec!["scripts/My App/tool.js", "other.js"]),
+        (
+            r"C:\Program Files\Python\python3.exe",
+            vec!["scripts/tool.py", "other.py"],
+        ),
         (
             "/usr/bin/python3",
             vec!["scripts/tool.py", "--config", "other.py"],
@@ -5601,6 +5607,12 @@ fn test_cc_hk_008_exec_form_checks_only_the_executed_script() {
     }
     for (command, args) in [
         ("node", vec!["scripts/missing.js", "other.js"]),
+        ("node.exe", vec!["scripts/missing.js", "other.js"]),
+        ("NODE.EXE", vec!["scripts/missing.js", "other.js"]),
+        (
+            r"C:\Program Files\Python\python3.exe",
+            vec!["scripts/missing.py", "other.py"],
+        ),
         ("scripts/missing.sh", vec!["start.sh"]),
         (
             "bash",

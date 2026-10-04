@@ -19,8 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Use line tables for dev/test debug information. Keep Cargo as the local test
   default after comparing it with nextest.
-- Run nextest and doc tests in CI and release validation. Owner PRs run lint and
-  merge contracts; external contributions and daily runs keep the full suite.
+- Keep native Cargo tests in CI and releases after comparing nextest. Owner PRs
+  run lint and merge contracts; external contributions and daily runs keep the
+  full suite, including doc tests.
 - Refresh six reviewed specification baselines and clarify legacy MCP checks.
 
 ## [0.56.2] - 2026-10-04

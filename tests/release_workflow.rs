@@ -22,8 +22,7 @@ fn release_publish_jobs_are_gated_by_tests() {
         "release test job must run clippy"
     );
     assert!(
-        workflow.contains("run: cargo nextest run --locked --workspace --profile ci")
-            && workflow.contains("run: cargo test --locked --workspace --doc"),
+        workflow.contains("run: cargo test --workspace"),
         "release test job must run tests"
     );
 

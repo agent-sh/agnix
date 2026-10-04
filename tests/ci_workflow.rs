@@ -16,7 +16,7 @@ fn ci_runs_tests_on_linux_windows_and_macos() {
         "CI matrix must include Linux, Windows, and macOS"
     );
     assert!(
-        workflow.contains("run: cargo nextest run --locked --workspace --profile ci"),
+        workflow.contains("run: cargo test --locked --workspace"),
         "CI matrix must run the full workspace test suite"
     );
 }
@@ -127,16 +127,19 @@ fn ci_preserves_full_suites_and_cold_runner_settings() {
         "!contains(fromJSON('[\"OWNER\", \"MEMBER\", \"COLLABORATOR\"]'), github.event.pull_request.author_association)",
         "CARGO_INCREMENTAL: '0'",
         "CARGO_PROFILE_DEV_DEBUG: '0'",
-        "tool: cargo-nextest@0.9.146",
         "if: env.FULL_TEST_SUITE != 'true'",
-        "run: cargo nextest run --locked -p agnix-workspace-tests --profile ci",
+        "run: cargo test --locked -p agnix-workspace-tests",
         "- name: Test\n        if: env.FULL_TEST_SUITE == 'true'",
-        "run: cargo test --locked --workspace --doc",
         "if: matrix.os == 'ubuntu-latest' && env.FULL_TEST_SUITE == 'true'",
-        "--test kiro_ci_gate --run-ignored all --profile ci",
+        "--test kiro_ci_gate -- --include-ignored",
     ] {
         assert!(workflow.contains(required), "missing CI policy: {required}");
     }
+
+    assert!(
+        !workflow.contains("run: cargo nextest"),
+        "keep the measured faster native Cargo runner"
+    );
 
     let config: toml::Value =
         toml::from_str(&fs::read_to_string(format!("{root}/.config/nextest.toml")).unwrap())

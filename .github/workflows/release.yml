@@ -193,10 +193,6 @@ jobs:
           toolchain: stable
           components: clippy, rustfmt
 
-      - uses: taiki-e/install-action@861a07ce7084f55488e375df125cdc99bba60eb7 # v2.87.23
-        with:
-          tool: cargo-nextest@0.9.146
-
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
 
       - name: Format check
@@ -206,10 +202,7 @@ jobs:
         run: cargo clippy --workspace --all-targets --all-features -- -D warnings
 
       - name: Test
-        run: cargo nextest run --locked --workspace --profile ci
-
-      - name: Doc tests
-        run: cargo test --locked --workspace --doc
+        run: cargo test --workspace
 
   release:
     name: Create Release

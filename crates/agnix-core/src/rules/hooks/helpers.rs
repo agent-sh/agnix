@@ -540,18 +540,30 @@ fn is_script_path_candidate(path: &str) -> bool {
         || path.contains("]*"))
 }
 
+fn interpreter_name(command: &str) -> String {
+    let name = command.rsplit(['/', '\\']).next().unwrap_or(command);
+    if name.to_ascii_lowercase().ends_with(".exe") {
+        name[..name.len() - 4].to_ascii_lowercase()
+    } else {
+        name.to_string()
+    }
+}
+
 fn is_shell_interpreter(command: &str) -> bool {
     matches!(
-        command.rsplit(['/', '\\']).next(),
-        Some("sh" | "bash" | "zsh" | "dash" | "ksh")
+        interpreter_name(command).as_str(),
+        "sh" | "bash" | "zsh" | "dash" | "ksh"
     )
 }
 
 /// Recognize interpreters whose exec-form arguments can name the script.
 fn is_script_interpreter(command: &str) -> bool {
-    let name = command.rsplit(['/', '\\']).next().unwrap_or(command);
+    let name = interpreter_name(command);
     is_shell_interpreter(command)
-        || matches!(name, "node" | "nodejs" | "deno" | "bun" | "tsx" | "ts-node")
+        || matches!(
+            name.as_str(),
+            "node" | "nodejs" | "deno" | "bun" | "tsx" | "ts-node"
+        )
         || name
             .strip_prefix("python")
             .is_some_and(|version| version.chars().all(|c| c.is_ascii_digit() || c == '.'))
@@ -619,6 +631,11 @@ pub(super) fn resolve_script_path(script_path: &str, project_dir: &Path) -> std:
     let resolved = expanded
         .replace("$CLAUDE_PROJECT_DIR", &project_dir.display().to_string())
         .replace("${CLAUDE_PROJECT_DIR}", &project_dir.display().to_string());
+
+    // Canonical Windows roots use a verbatim prefix, where forward slashes
+    // are literal characters rather than separators.
+    #[cfg(windows)]
+    let resolved = resolved.replace('/', "\\");
 
     let path = std::path::PathBuf::from(&resolved);
 
