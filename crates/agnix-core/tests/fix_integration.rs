@@ -370,6 +370,156 @@ fn test_unsafe_fix_correctly_marked_xml_001() {
 }
 
 #[test]
+fn test_xml_markdown_literals_do_not_generate_diagnostics_or_fixes() {
+    let content = "# Notes\n\n<!-- e.g. build reputation in <field> -->\n\n\
+        - Draft a post about \\<one of the trends\\>\n\
+        - Ask \\<name> first\n\n\
+        The pin is `plugin <key in\n\
+        installed_plugins.json>`, `cmd <version command>`, or `none`.\n";
+    let config = LintConfig::default();
+    let registry = ValidatorRegistry::with_defaults();
+    let diagnostics =
+        agnix_core::validate_content(Path::new("CLAUDE.md"), content, &config, &registry);
+    assert!(
+        diagnostics.iter().all(|d| !d.rule.starts_with("XML-")),
+        "Markdown literals must not generate XML diagnostics or unsafe fixes: {diagnostics:?}"
+    );
+    for content in [
+        "<!-- unclosed block comment\n<hidden>",
+        r"\<hidden> \</hidden>",
+        r"\\\<hidden>",
+        "`<hidden>\ntext` <real></real>",
+        "<!-- <hidden> --> <real></real>",
+    ] {
+        assert!(
+            agnix_core::validate_content(Path::new("CLAUDE.md"), content, &config, &registry)
+                .iter()
+                .all(|d| !d.rule.starts_with("XML-")),
+            "content: {content:?}"
+        );
+    }
+}
+
+#[test]
+#[cfg(feature = "filesystem")]
+fn test_xml_comment_exclusion_preserves_cross_platform_comment_guards() {
+    let cases = [
+        (
+            "# Config\n\n<!-- Claude Code Specific <hidden> -->\n\
+             - type: Notification\n  command: notify-send\n\n\
+             <!-- General Settings <also-hidden> -->\n\
+             `agent: code-reviewer\n<code-tag>`\nagent: reviewer\n",
+            10,
+        ),
+        (
+            "# Config\n\n`<!-- Claude Code Specific <hidden> -->\n\
+             wrapped`\n- type: Notification\n  command: notify-send\n",
+            5,
+        ),
+    ];
+    for (content, unguarded_line) in cases {
+        let project = tempfile::TempDir::new().unwrap();
+        std::fs::write(project.path().join("AGENTS.md"), content).unwrap();
+        let result = agnix_core::validate_project(project.path(), &LintConfig::default()).unwrap();
+        assert!(
+            result
+                .diagnostics
+                .iter()
+                .all(|d| !d.rule.starts_with("XML-")),
+            "Hidden comment/code tags must not produce XML diagnostics: {:?}",
+            result.diagnostics
+        );
+        let platform: Vec<_> = result
+            .diagnostics
+            .iter()
+            .filter(|d| d.rule == "XP-001")
+            .collect();
+        assert_eq!(
+            platform.len(),
+            1,
+            "content: {content:?}; diagnostics: {platform:?}"
+        );
+        assert_eq!(platform[0].line, unguarded_line);
+    }
+}
+
+#[test]
+fn test_xml_markdown_skipping_preserves_real_tag_diagnostics() {
+    let cases = [
+        ("<!-- <hidden> --> <real>", "XML-001", "<real>"),
+        ("<!-->\n<real>", "XML-001", "<real>"),
+        ("<!--->\n<real>", "XML-001", "<real>"),
+        ("<!-- <hidden>\n```\n-->\n<real>", "XML-001", "<real>"),
+        ("prefix <!-- <hidden>\n--> <real>", "XML-001", "<real>"),
+        ("prefix <!-- <real>\n\n-->", "XML-001", "<real>"),
+        ("`<hidden>\ntext` <real>", "XML-001", "<real>"),
+        ("``<hidden> `\ntext`` <real>", "XML-001", "<real>"),
+        ("`<!-- <hidden>` <real>", "XML-001", "<real>"),
+        ("`unmatched\n\n<real> `", "XML-001", "<real>"),
+        ("`unmatched\n```\n`\n```\n<real>", "XML-001", "<real>"),
+        ("`unmatched\n# <real> `", "XML-001", "<real>"),
+        ("`unmatched\n- <real> `", "XML-001", "<real>"),
+        (r"\\<real>", "XML-001", "<real>"),
+        (r"\`<real>", "XML-001", "<real>"),
+        (r"\\</real>", "XML-003", "</real>"),
+        ("<!-- <hidden> -->\n</real>", "XML-003", "</real>"),
+    ];
+    let config = LintConfig::default();
+    let registry = ValidatorRegistry::with_defaults();
+    for (content, rule, tag) in cases {
+        let diagnostics =
+            agnix_core::validate_content(Path::new("CLAUDE.md"), content, &config, &registry);
+        let xml: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule.starts_with("XML-"))
+            .collect();
+        assert_eq!(xml.len(), 1, "content: {content:?}; diagnostics: {xml:?}");
+        assert_eq!(xml[0].rule, rule, "content: {content:?}");
+        let offset = content.find(tag).unwrap();
+        let prefix = &content[..offset];
+        assert_eq!(
+            xml[0].line,
+            prefix.bytes().filter(|&b| b == b'\n').count() + 1
+        );
+        assert_eq!(
+            xml[0].column,
+            prefix
+                .rfind('\n')
+                .map_or(offset + 1, |newline| offset - newline)
+        );
+    }
+}
+
+#[test]
+fn test_xml_fix_after_multiline_literals_preserves_original_bytes() {
+    let content = "<!-- <hidden>\né -->\n`<ignored>\nwrapped` \\<escaped>\n<real>é";
+    let path = Path::new("CLAUDE.md");
+    let config = LintConfig::default();
+    let registry = ValidatorRegistry::with_defaults();
+    let diagnostics = agnix_core::validate_content(path, content, &config, &registry);
+    let xml: Vec<_> = diagnostics
+        .into_iter()
+        .filter(|d| d.rule.starts_with("XML-"))
+        .collect();
+    assert_eq!(xml.len(), 1);
+    assert_eq!(xml[0].rule, "XML-001");
+    assert_eq!((xml[0].line, xml[0].column), (5, 1));
+    assert_eq!(xml[0].fixes[0].start_byte, content.len());
+    assert_eq!(xml[0].fixes[0].end_byte, content.len());
+
+    let fs = Arc::new(MockFileSystem::new());
+    fs.add_file(path, content);
+    apply_fixes_with_fs(&xml, false, false, Some(fs.clone())).unwrap();
+    let fixed = fs.read_to_string(path).unwrap();
+    assert_eq!(fixed, format!("{content}</real>"));
+    assert!(
+        agnix_core::validate_content(path, &fixed, &config, &registry)
+            .iter()
+            .all(|d| !d.rule.starts_with("XML-"))
+    );
+}
+
+#[test]
 fn test_unsafe_fix_correctly_marked_xml_003() {
     // Orphan closing tag should produce an unsafe fix
     let content = "</orphan>";

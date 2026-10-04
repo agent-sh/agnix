@@ -13,7 +13,7 @@ keywords: ["CC-SK-008", "unknown tool name", "claude skills", "validation", "agn
 - **Category**: `Claude Skills`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-08-09`
+- **Verified On**: `2026-10-04`
 
 ## Applicability
 

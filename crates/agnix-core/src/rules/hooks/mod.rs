@@ -80,15 +80,11 @@ fn validate_cc_hk_008_script_exists(
     diagnostics: &mut Vec<Diagnostic>,
 ) {
     let fs = config.fs();
-    // In exec form the script often sits in `args` rather than `command` (e.g.
-    // `command: "node"`, `args: [".claude/hooks/check.js"]`), so scanning only
-    // `command` left exec-form hooks - the form the doc recommends for path
-    // placeholders - with no script-existence checking at all.
-    let arg_paths: Vec<String> = args
-        .map(|list| list.iter().flat_map(|a| extract_script_paths(a)).collect())
-        .unwrap_or_default();
-
-    for script_path in extract_script_paths(command).into_iter().chain(arg_paths) {
+    let script_paths = match args {
+        Some(args) => extract_exec_script_paths(command, args),
+        None => extract_script_paths(command),
+    };
+    for script_path in script_paths {
         if !has_unresolved_env_vars(&script_path) {
             let resolved = resolve_script_path(&script_path, project_dir);
             if !fs.exists(&resolved) {

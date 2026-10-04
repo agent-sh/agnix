@@ -13,7 +13,7 @@ pub struct PluginSchema {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
 
-    /// Recommended: version (semver)
+    /// Recommended: version string. Claude Code does not require semver.
     #[serde(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub version: Option<String>,
@@ -50,7 +50,8 @@ pub struct AuthorInfo {
 }
 
 impl PluginSchema {
-    /// Validate semver format
+    /// Check optional semver suitability for version-constrained consumers.
+    /// This helper does not determine whether Claude Code loads the manifest.
     #[allow(dead_code)] // schema-level API; validation uses Validator trait
     pub fn validate_version(&self) -> Result<(), String> {
         if let Some(ref version) = self.version {
@@ -83,10 +84,21 @@ impl PluginSchema {
             }
         }
 
-        if let Err(e) = self.validate_version() {
-            errors.push(e);
-        }
-
         errors
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::PluginSchema;
+
+    #[test]
+    fn arbitrary_version_is_loadable_but_semver_check_remains_opt_in() {
+        let schema: PluginSchema = serde_json::from_str(
+            r#"{"name":"release-plugin","description":"Release plugin","version":"release-2026-10"}"#,
+        )
+        .unwrap();
+        assert!(schema.validate().is_empty());
+        assert!(schema.validate_version().is_err());
     }
 }

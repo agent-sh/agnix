@@ -505,7 +505,7 @@ plugin-root/
 
 **CRITICAL**: DO NOT put `commands/`, `agents/`, `skills/`, or `hooks/` inside `.claude-plugin/`. Only `plugin.json` goes there.
 
-### 4.3 Semver Requirements
+### 4.3 Version Strings and Semver Advice
 
 **Format**: `MAJOR.MINOR.PATCH[-PRERELEASE][+BUILD]`
 
@@ -515,7 +515,7 @@ plugin-root/
 - PATCH: Bug fixes (backward-compatible)
 - Pre-release: `2.0.0-beta.1`, `1.0.0-alpha.3`
 
-**CRITICAL**: Claude Code validates semver format; invalid versions cause loading failure.
+Claude Code accepts arbitrary manifest version strings and does not validate them against semver. Semver remains useful when other plugins consume yours through version-constrained dependencies. agnix's CC-PL-003 emits advisory warnings, not loading errors. See the [manifest version reference](https://code.claude.com/docs/en/plugins-reference#version) and [dependency release tags](https://code.claude.com/docs/en/plugins/dependencies#tag-plugin-releases-for-version-resolution), reviewed 2026-10-04.
 
 ### 4.4 Plugin Environment Variables
 

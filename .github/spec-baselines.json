@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "description": "Baseline hashes for canonical specification content. Human-facing URLs are kept separately from machine-readable content URLs.",
-  "last_updated": "2026-09-30T01:53:20Z",
+  "last_updated": "2026-10-04T02:19:01Z",
   "sources": {
     "s-tier": {
       "agent-skills-spec": {
@@ -108,7 +108,7 @@
       "mcp-spec-versioning": {
         "url": "https://modelcontextprotocol.io/specification/2026-07-28/basic/versioning",
         "content_url": "https://modelcontextprotocol.io/specification/2026-07-28/basic/versioning.md",
-        "hash": "83178defeda24c09389a964334c3806a73cec78a65c3c3a3b297085f3d73e6bd",
+        "hash": "4d897c03643058bde4a7b812271e5e5fa0ac2add4a1ed198594bc22621903055",
         "rules": [
           "MCP-008",
           "MCP-020"
@@ -117,7 +117,7 @@
       "claude-code-memory": {
         "url": "https://code.claude.com/docs/en/memory",
         "content_url": "https://code.claude.com/docs/en/memory.md",
-        "hash": "653d8649a10890093b89d1e500d0524b2d50a61ad4402b81cc5237440dd8ca8b",
+        "hash": "00edddd69e125090668c7b324c35ed31de922f04d6db04238bf14f71bdf9bb5d",
         "rules": [
           "CC-MEM-001",
           "CC-MEM-002",
@@ -128,7 +128,7 @@
       "claude-code-hooks": {
         "url": "https://code.claude.com/docs/en/hooks",
         "content_url": "https://code.claude.com/docs/en/hooks.md",
-        "hash": "080941057dd87ed68506098e95c11f3b67c6b0b4ba80a23cba052e932bb2d9af",
+        "hash": "d0da8e5f0b69d2297a4360b8eb74140a4c2752843b52d0052719cda97f3fc4b2",
         "rules": [
           "CC-HK-001",
           "CC-HK-002",
@@ -147,7 +147,7 @@
       "claude-code-skills": {
         "url": "https://code.claude.com/docs/en/skills",
         "content_url": "https://code.claude.com/docs/en/skills.md",
-        "hash": "123826d2c1f1e8ac339b3a0585edd279f2d8853a5632447e018c3a70fdb4babc",
+        "hash": "2b21cdd695f327618fbe87c6c9c2745ee4aeb04dbaec73f1c7d362f0342b2e7a",
         "rules": [
           "CC-SK-001",
           "CC-SK-002",
@@ -160,7 +160,7 @@
       "claude-code-plugins": {
         "url": "https://code.claude.com/docs/en/plugins-reference",
         "content_url": "https://code.claude.com/docs/en/plugins-reference.md",
-        "hash": "7312b5de9dd5657bc2d6b1fba065edfda41f6fca9a9848dd4e109126f3f7b869",
+        "hash": "0e7ce30078e4edf4115b682b31406072cad96fbee36469e100bff83a68186687",
         "rules": [
           "CC-PL-002",
           "CC-PL-003",
@@ -172,7 +172,7 @@
       "claude-code-subagents": {
         "url": "https://code.claude.com/docs/en/sub-agents",
         "content_url": "https://code.claude.com/docs/en/sub-agents.md",
-        "hash": "e41970a730c7dd47d3aab9283adffef15fd3676c739258285da5a06533f7feff",
+        "hash": "7741568762eeecb04be9aacb386ef8a95eedb38e29c2a2bec8eeb2126afbdcf3",
         "rules": [
           "CC-AG-001",
           "CC-AG-002",

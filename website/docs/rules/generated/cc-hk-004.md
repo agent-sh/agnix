@@ -13,7 +13,7 @@ keywords: ["CC-HK-004", "matcher on unsupported event", "claude hooks", "validat
 - **Category**: `Claude Hooks`
 - **Normative Level**: `BEST_PRACTICE`
 - **Auto-Fix**: `Yes (safe)`
-- **Verified On**: `2026-07-02`
+- **Verified On**: `2026-10-04`
 
 ## Applicability
 

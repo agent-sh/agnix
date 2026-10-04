@@ -182,8 +182,8 @@ rules:
     suggestion: Remove the async field or change the hook type to command
     fix: Remove 'async' field (has no effect on non-command hooks)
   cc_hk_014:
-    message: once field at %{location} is only meaningful in skill/agent frontmatter hooks
-    suggestion: Remove the once field from settings.json hooks
+    message: once field at %{location} is only meaningful in skill frontmatter hooks
+    suggestion: Remove the once field from hooks outside skill frontmatter
   cc_hk_015:
     message: model field is only valid on prompt/agent hooks, not command hooks at %{location}
     suggestion: Remove the model field or change the hook type to prompt/agent
@@ -878,8 +878,8 @@ rules:
     message: Component '%{component}' must not be inside .claude-plugin/
     suggestion: Move components to the plugin root directory
   cc_pl_003:
-    message: 'Invalid semver format: ''%{version}'''
-    suggestion: 'Use semver format: 1.0.0, 1.0.0-rc.1, 1.0.0+build'
+    message: 'Non-semver version: ''%{version}'' (optional recommendation for version-constrained dependencies)'
+    suggestion: 'Consider semver for dependency compatibility: 1.0.0, 1.0.0-rc.1, 1.0.0+build'
   cc_pl_004:
     message: 'Missing or invalid required field: %{field}'
     suggestion: Add '%{field}' field to plugin.json

@@ -140,7 +140,7 @@ The `` !`command` `` syntax runs shell commands before skill content is sent. Cu
 | Proposed Rule | Severity | Description | Auto-Fix? |
 |---------------|----------|-------------|-----------|
 | CC-HK-013: async on non-command hook | HIGH | `async: true` is only valid on `type: "command"` hooks | Yes - remove async |
-| CC-HK-014: once outside skill/agent frontmatter | MEDIUM | `once` is only meaningful in skill/agent frontmatter hooks | Yes - remove once |
+| CC-HK-014: once outside skill frontmatter | MEDIUM | `once` is only meaningful in skill hooks; ignored in settings and agent frontmatter (reviewed 2026-10-04) | Remove ignored field |
 | CC-HK-015: model on command hook | MEDIUM | `model` field is only valid on `prompt` and `agent` hook types | Yes - remove model |
 | CC-HK-016: Invalid hook type "agent" | HIGH | Validate that `type: "agent"` is recognized (new handler type) | No |
 | CC-HK-017: prompt hook missing $ARGUMENTS | MEDIUM | Prompt hooks should reference `$ARGUMENTS` to receive event data | Yes - append |
@@ -156,7 +156,7 @@ The `` !`command` `` syntax runs shell commands before skill content is sent. Cu
 |-------|------|----------|-------------|---------|------------|------|
 | `name` | string | Yes (if manifest exists) | kebab-case, no spaces | directory name | CC-PL-004, CC-PL-005 | No |
 | `description` | string | No (recommended) | Free-form text | none | CC-PL-004 (warning) | No |
-| `version` | string | No (recommended) | semver format (MAJOR.MINOR.PATCH) | none | CC-PL-003, CC-PL-004 (warning) | No |
+| `version` | string | No (recommended) | Arbitrary version string; semver is optional interoperability advice (reviewed 2026-10-04) | none | CC-PL-003, CC-PL-004 (warning) | No |
 | `author` | object | No | `{ name, email?, url? }` | none | (none) | LOW |
 | `homepage` | string | No | URL | none | (none) | LOW |
 | `repository` | string | No | URL | none | (none) | LOW |

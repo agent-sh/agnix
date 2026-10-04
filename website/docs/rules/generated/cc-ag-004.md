@@ -13,7 +13,7 @@ keywords: ["CC-AG-004", "invalid permission mode", "claude agents", "validation"
 - **Category**: `Claude Agents`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `Yes (unsafe)`
-- **Verified On**: `2026-07-31`
+- **Verified On**: `2026-10-04`
 
 ## Applicability
 

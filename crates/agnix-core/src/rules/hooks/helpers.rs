@@ -14,7 +14,6 @@ struct DangerousPattern {
 }
 
 static DANGEROUS_PATTERNS: OnceLock<Vec<DangerousPattern>> = OnceLock::new();
-static SCRIPT_PATTERNS: OnceLock<Vec<Regex>> = OnceLock::new();
 
 fn dangerous_patterns() -> &'static Vec<DangerousPattern> {
     DANGEROUS_PATTERNS.get_or_init(|| {
@@ -87,24 +86,6 @@ fn dangerous_patterns() -> &'static Vec<DangerousPattern> {
                 }
             })
             .collect()
-    })
-}
-
-fn script_patterns() -> &'static Vec<Regex> {
-    SCRIPT_PATTERNS.get_or_init(|| {
-        [
-            r#"["']?([^\s"']+\.sh)["']?\b"#,
-            r#"["']?([^\s"']+\.bash)["']?\b"#,
-            r#"["']?([^\s"']+\.py)["']?\b"#,
-            r#"["']?([^\s"']+\.js)["']?\b"#,
-            r#"["']?([^\s"']+\.ts)["']?\b"#,
-        ]
-        .iter()
-        .map(|p| {
-            Regex::new(p)
-                .unwrap_or_else(|e| panic!("BUG: invalid script pattern regex '{}': {}", p, e))
-        })
-        .collect()
     })
 }
 
@@ -247,6 +228,9 @@ const NOTIFICATION_MATCHERS: &[&str] = &[
     "elicitation_response",
     "agent_needs_input",
     "agent_completed",
+    "quota_auto_resume_fired",
+    "quota_auto_resume_stale",
+    "quota_auto_resume_disabled",
 ];
 const COMPACT_MATCHERS: &[&str] = &["manual", "auto"];
 const CONFIG_CHANGE_MATCHERS: &[&str] = &[
@@ -256,16 +240,19 @@ const CONFIG_CHANGE_MATCHERS: &[&str] = &[
     "policy_settings",
     "skills",
 ];
+const DIRECTORY_ADDED_MATCHERS: &[&str] = &["slash_command", "register_repo_root"];
 const STOP_FAILURE_MATCHERS: &[&str] = &[
     "rate_limit",
     "overloaded",
     "authentication_failed",
     "oauth_org_not_allowed",
+    "account_on_hold",
     "billing_error",
     "invalid_request",
     "model_not_found",
     "server_error",
     "max_output_tokens",
+    "cloud_credential_error",
     "unknown",
 ];
 const INSTRUCTIONS_LOADED_MATCHERS: &[&str] = &[
@@ -284,6 +271,7 @@ fn known_matcher_values(event: &str) -> Option<&'static [&'static str]> {
         "Notification" => Some(NOTIFICATION_MATCHERS),
         "PreCompact" | "PostCompact" => Some(COMPACT_MATCHERS),
         "ConfigChange" => Some(CONFIG_CHANGE_MATCHERS),
+        "DirectoryAdded" => Some(DIRECTORY_ADDED_MATCHERS),
         "StopFailure" => Some(STOP_FAILURE_MATCHERS),
         "InstructionsLoaded" => Some(INSTRUCTIONS_LOADED_MATCHERS),
         _ => None,
@@ -422,6 +410,8 @@ struct ShellWord {
     /// A word only reaches us intact across a space if it was protected, so
     /// this is what distinguishes `"/My App/x.js"` from an accidental split.
     protected: bool,
+    /// An unquoted shell operator separates executable command segments.
+    operator: bool,
 }
 
 /// Split a command string into shell words, honoring double quotes, single
@@ -429,8 +419,8 @@ struct ShellWord {
 ///
 /// This is deliberately not a full POSIX shell parser - it resolves exactly
 /// the quoting forms that determine where a script path begins and ends.
-/// Operators (`&&`, `|`, `;`) are left as their own words, which is enough
-/// for the per-word script matching in `extract_script_paths`.
+/// Unquoted operators are separate words even without surrounding spaces.
+/// Quoted and escaped operators remain part of their argument.
 fn shell_words(command: &str) -> Vec<ShellWord> {
     let mut words = Vec::new();
     let mut current = String::new();
@@ -445,7 +435,9 @@ fn shell_words(command: &str) -> Vec<ShellWord> {
                 // characters. It is kept literal before anything else so that
                 // Windows paths (`C:\tools\hook.py`) survive intact.
                 match chars.peek() {
-                    Some(&next) if next.is_whitespace() || next == '"' || next == '\'' => {
+                    Some(&next)
+                        if next.is_whitespace() || matches!(next, '"' | '\'' | '&' | '|' | ';') =>
+                    {
                         chars.next();
                         current.push(next);
                         protected = true;
@@ -479,11 +471,33 @@ fn shell_words(command: &str) -> Vec<ShellWord> {
                     }
                 }
             }
+            '&' | '|' | ';' => {
+                if started {
+                    words.push(ShellWord {
+                        text: std::mem::take(&mut current),
+                        protected,
+                        operator: false,
+                    });
+                    protected = false;
+                    started = false;
+                }
+                let mut operator = c.to_string();
+                if matches!(c, '&' | '|') && chars.peek() == Some(&c) {
+                    chars.next();
+                    operator.push(c);
+                }
+                words.push(ShellWord {
+                    text: operator,
+                    protected: false,
+                    operator: true,
+                });
+            }
             c if c.is_whitespace() => {
                 if started {
                     words.push(ShellWord {
                         text: std::mem::take(&mut current),
                         protected,
+                        operator: false,
                     });
                     protected = false;
                     started = false;
@@ -499,25 +513,10 @@ fn shell_words(command: &str) -> Vec<ShellWord> {
         words.push(ShellWord {
             text: current,
             protected,
+            operator: false,
         });
     }
     words
-}
-
-/// Whether a word looks like a filesystem path rather than a shell fragment
-/// that happens to contain one. Used only to decide whether a word holding
-/// whitespace should be treated as a single path.
-fn looks_like_path(word: &str) -> bool {
-    word.starts_with('/')
-        || word.starts_with("./")
-        || word.starts_with("../")
-        || word.starts_with('~')
-        || word.starts_with('$')
-        // Windows drive-qualified path, e.g. `C:\tools\hook.ps1`.
-        || {
-            let mut c = word.chars();
-            matches!((c.next(), c.next(), c.next()), (Some(a), Some(':'), Some('\\' | '/')) if a.is_ascii_alphabetic())
-        }
 }
 
 /// Whether a word ends in one of the script extensions CC-HK-008 checks.
@@ -541,33 +540,86 @@ fn is_script_path_candidate(path: &str) -> bool {
         || path.contains("]*"))
 }
 
+fn interpreter_name(command: &str) -> String {
+    let name = command.rsplit(['/', '\\']).next().unwrap_or(command);
+    if name.to_ascii_lowercase().ends_with(".exe") {
+        name[..name.len() - 4].to_ascii_lowercase()
+    } else {
+        name.to_string()
+    }
+}
+
+fn is_shell_interpreter(command: &str) -> bool {
+    matches!(
+        interpreter_name(command).as_str(),
+        "sh" | "bash" | "zsh" | "dash" | "ksh"
+    )
+}
+
+/// Recognize interpreters whose exec-form arguments can name the script.
+fn is_script_interpreter(command: &str) -> bool {
+    let name = interpreter_name(command);
+    is_shell_interpreter(command)
+        || matches!(
+            name.as_str(),
+            "node" | "nodejs" | "deno" | "bun" | "tsx" | "ts-node"
+        )
+        || name
+            .strip_prefix("python")
+            .is_some_and(|version| version.chars().all(|c| c.is_ascii_digit() || c == '.'))
+}
+
+/// Exec-form arguments are already individual words, including paths with spaces.
+/// A script command owns all its arguments; only an interpreter takes a script.
+pub(super) fn extract_exec_script_paths(command: &str, args: &[String]) -> Vec<String> {
+    if has_script_extension(command) && is_script_path_candidate(command) {
+        return vec![command.to_string()];
+    }
+    if !is_script_interpreter(command) {
+        return Vec::new();
+    }
+    for (index, arg) in args.iter().enumerate() {
+        if is_shell_interpreter(command)
+            && arg.starts_with('-')
+            && !arg.starts_with("--")
+            && arg.ends_with('c')
+        {
+            return args
+                .get(index + 1)
+                .map_or_else(Vec::new, |fragment| extract_script_paths(fragment));
+        }
+        if !arg.starts_with('-') && has_script_extension(arg) && is_script_path_candidate(arg) {
+            return vec![arg.clone()];
+        }
+    }
+    Vec::new()
+}
+
 pub(super) fn extract_script_paths(command: &str) -> Vec<String> {
     let mut paths = Vec::new();
-    for word in shell_words(command) {
-        let text = word.text.as_str();
-        // A quoted or escaped word that reads as a path is taken whole, so a
-        // space inside it no longer truncates the path. Words that merely
-        // contain a path (e.g. `bash -c "python script.py"`) fall through to
-        // the regex scan below, which picks the path out of the fragment.
-        let whole_word_is_path = has_script_extension(text)
-            && (!text.chars().any(char::is_whitespace)
-                || (word.protected && looks_like_path(text)));
-
-        if whole_word_is_path {
-            if is_script_path_candidate(text) {
-                paths.push(text.to_string());
+    let words = shell_words(command);
+    for segment in words.split(|word| word.operator) {
+        for (index, word) in segment.iter().enumerate() {
+            let text = word.text.as_str();
+            // A shell's -c argument is a command, so its executable segments
+            // must be parsed independently before any following arguments.
+            let is_shell_fragment = index > 0
+                && segment
+                    .first()
+                    .is_some_and(|first| is_shell_interpreter(&first.text))
+                && segment[index - 1].text.starts_with('-')
+                && segment[index - 1].text.ends_with('c');
+            if is_shell_fragment {
+                paths.extend(extract_script_paths(text));
+                break;
             }
-            continue;
-        }
-
-        for re in script_patterns() {
-            for caps in re.captures_iter(text) {
-                if let Some(m) = caps.get(1) {
-                    let path = m.as_str().trim_matches(|c| c == '"' || c == '\'');
-                    if is_script_path_candidate(path) {
-                        paths.push(path.to_string());
-                    }
-                }
+            let whole_word_is_path = has_script_extension(text)
+                && (!text.chars().any(char::is_whitespace) || word.protected);
+            if whole_word_is_path && is_script_path_candidate(text) {
+                // Consume unresolved paths too. Their following words are
+                // script arguments even when the executable cannot be checked.
+                paths.push(text.to_string());
+                break;
             }
         }
     }
@@ -579,6 +631,11 @@ pub(super) fn resolve_script_path(script_path: &str, project_dir: &Path) -> std:
     let resolved = expanded
         .replace("$CLAUDE_PROJECT_DIR", &project_dir.display().to_string())
         .replace("${CLAUDE_PROJECT_DIR}", &project_dir.display().to_string());
+
+    // Canonical Windows roots use a verbatim prefix, where forward slashes
+    // are literal characters rather than separators.
+    #[cfg(windows)]
+    let resolved = resolved.replace('/', "\\");
 
     let path = std::path::PathBuf::from(&resolved);
 
@@ -785,7 +842,7 @@ pub(super) fn validate_cc_hk_013_async_field(
     });
 }
 
-/// CC-HK-014: Once outside skill/agent frontmatter (raw JSON check)
+/// CC-HK-014: Once outside skill frontmatter (raw JSON check)
 #[allow(dead_code)]
 pub(super) fn validate_cc_hk_014_once_field(
     raw_value: &serde_json::Value,
@@ -1379,7 +1436,7 @@ pub(super) fn validate_all_raw_hooks(
                             }
                         }
 
-                        // CC-HK-014: Once outside skill/agent frontmatter
+                        // CC-HK-014: Once outside skill frontmatter
                         if check_014 {
                             if hook.get("once").is_some() {
                                 conditional_diags.push(
@@ -1805,8 +1862,7 @@ mod tests {
 
     #[test]
     fn test_extract_script_paths_nested_shell_fragment() {
-        // A quoted word that *contains* a command rather than being a path
-        // still has the path picked out of it by the regex scan.
+        // A shell -c argument contains a command whose script is still checked.
         let paths = extract_script_paths(r#"bash -c "python /tmp/absent.py""#);
         assert_eq!(paths, vec!["/tmp/absent.py"]);
     }

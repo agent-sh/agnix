@@ -13,7 +13,7 @@ keywords: ["CC-HK-005", "missing type field", "claude hooks", "validation", "agn
 - **Category**: `Claude Hooks`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `Yes (safe)`
-- **Verified On**: `2026-08-09`
+- **Verified On**: `2026-10-04`
 
 ## Applicability
 

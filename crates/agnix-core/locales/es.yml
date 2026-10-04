@@ -681,8 +681,8 @@ rules:
     message: El componente '%{component}' no debe estar dentro de .claude-plugin/
     suggestion: Mueve los componentes al directorio raiz del plugin
   cc_pl_003:
-    message: 'Formato semver invalido: ''%{version}'''
-    suggestion: 'Usa formato semver: 1.0.0, 1.0.0-rc.1, 1.0.0+build'
+    message: 'Version sin semver: ''%{version}'' (recomendacion opcional para dependencias con restricciones de version)'
+    suggestion: 'Considera semver para compatibilidad de dependencias: 1.0.0, 1.0.0-rc.1, 1.0.0+build'
   cc_pl_004:
     message: 'Falta o es invalido el campo requerido: %{field}'
     suggestion: Agrega el campo '%{field}' a plugin.json

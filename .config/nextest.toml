@@ -1,0 +1,7 @@
+[profile.default]
+# Keep local runs responsive. Override with --test-threads when appropriate.
+test-threads = 2
+
+[profile.ci]
+fail-fast = false
+retries = 0

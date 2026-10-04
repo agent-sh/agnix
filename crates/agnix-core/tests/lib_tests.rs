@@ -5495,3 +5495,135 @@ fn test_invalid_glob_in_all_files_config_lists_produces_diagnostics() {
         assert!(d.suggestion.is_some());
     }
 }
+
+/// Exercise hook detection, JSON parsing, and real filesystem checks together.
+fn hook_script_diagnostics(command: &str, args: Option<&[&str]>, plugin: bool) -> Vec<Diagnostic> {
+    let temp = tempfile::TempDir::new().unwrap();
+    let config_path = temp.path().join(if plugin {
+        "plugin/hooks/hooks.json"
+    } else {
+        ".claude/settings.json"
+    });
+    std::fs::create_dir_all(config_path.parent().unwrap()).unwrap();
+    std::fs::create_dir_all(temp.path().join("scripts/My App")).unwrap();
+    for script in [
+        "scripts/run.sh",
+        "scripts/tool.py",
+        "scripts/My App/tool.js",
+    ] {
+        std::fs::write(temp.path().join(script), "# hook script\n").unwrap();
+    }
+    let mut hook = serde_json::json!({
+        "type": "command",
+        "command": command,
+        "timeout": 10
+    });
+    if let Some(args) = args {
+        hook["args"] = serde_json::json!(args);
+    }
+    let settings = serde_json::json!({
+        "hooks": { "SessionStart": [{ "hooks": [hook] }] }
+    });
+    std::fs::write(&config_path, settings.to_string()).unwrap();
+    let result = validate_project(temp.path(), &LintConfig::default()).unwrap();
+    assert_eq!(result.files_checked, 1, "the hook config must be validated");
+    result
+        .diagnostics
+        .into_iter()
+        .filter(|diagnostic| diagnostic.rule == "CC-HK-008")
+        .collect()
+}
+
+#[test]
+fn test_cc_hk_008_shell_scripts_own_their_arguments() {
+    for command in [
+        "bash scripts/run.sh start.sh",
+        "python3 scripts/tool.py --config other.py",
+        "bash scripts/run.sh 'start.sh;other.py'",
+        "bash scripts/run.sh start.sh\\;other.py",
+        r#""$CLAUDE_PROJECT_DIR"/scripts/run.sh start.sh"#,
+        r#"node "scripts/My App/tool.js" other.js"#,
+        r#"bash -c "bash scripts/run.sh start.sh" other.py"#,
+    ] {
+        let hits = hook_script_diagnostics(command, None, false);
+        assert!(hits.is_empty(), "{command}: {hits:?}");
+    }
+    let hits = hook_script_diagnostics(
+        r#""${CLAUDE_PLUGIN_ROOT}"/hooks/run.sh session-context.sh"#,
+        None,
+        true,
+    );
+    assert!(hits.is_empty(), "plugin script arguments: {hits:?}");
+}
+
+#[test]
+fn test_cc_hk_008_checks_each_shell_chain_executable() {
+    for operator in ["&&", "||", "|", ";"] {
+        for spacing in ["", " "] {
+            let command = format!(
+                "bash scripts/run.sh start.sh{spacing}{operator}{spacing}bash scripts/missing.sh other.py"
+            );
+            let hits = hook_script_diagnostics(&command, None, false);
+            assert_eq!(hits.len(), 1, "{command}: {hits:?}");
+            assert!(
+                hits[0].message.contains("scripts/missing.sh"),
+                "{command}: {hits:?}"
+            );
+        }
+    }
+    let hits = hook_script_diagnostics(
+        r#"bash -c "bash scripts/run.sh start.sh && python3 scripts/missing.py other.py""#,
+        None,
+        false,
+    );
+    assert_eq!(hits.len(), 1, "nested shell command: {hits:?}");
+    assert!(hits[0].message.contains("scripts/missing.py"));
+}
+
+#[test]
+fn test_cc_hk_008_exec_form_checks_only_the_executed_script() {
+    for (command, args) in [
+        ("scripts/run.sh", vec!["start.sh"]),
+        ("node", vec!["scripts/My App/tool.js", "other.js"]),
+        ("node.exe", vec!["scripts/My App/tool.js", "other.js"]),
+        ("NODE.EXE", vec!["scripts/My App/tool.js", "other.js"]),
+        (
+            r"C:\Program Files\Python\python3.exe",
+            vec!["scripts/tool.py", "other.py"],
+        ),
+        (
+            "/usr/bin/python3",
+            vec!["scripts/tool.py", "--config", "other.py"],
+        ),
+        ("bash", vec!["scripts/run.sh", "start.sh"]),
+        (
+            "bash",
+            vec!["-c", "bash scripts/run.sh start.sh", "other.py"],
+        ),
+        ("echo", vec!["other.js"]),
+    ] {
+        let hits = hook_script_diagnostics(command, Some(&args), false);
+        assert!(hits.is_empty(), "{command} {args:?}: {hits:?}");
+    }
+    for (command, args) in [
+        ("node", vec!["scripts/missing.js", "other.js"]),
+        ("node.exe", vec!["scripts/missing.js", "other.js"]),
+        ("NODE.EXE", vec!["scripts/missing.js", "other.js"]),
+        (
+            r"C:\Program Files\Python\python3.exe",
+            vec!["scripts/missing.py", "other.py"],
+        ),
+        ("scripts/missing.sh", vec!["start.sh"]),
+        (
+            "bash",
+            vec![
+                "-c",
+                "bash scripts/run.sh start.sh && node scripts/missing.js other.js",
+            ],
+        ),
+    ] {
+        let hits = hook_script_diagnostics(command, Some(&args), false);
+        assert_eq!(hits.len(), 1, "{command} {args:?}: {hits:?}");
+        assert!(hits[0].message.contains("scripts/missing."));
+    }
+}

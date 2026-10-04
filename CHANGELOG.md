@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- CC-HK-008 checks executed scripts instead of script-like arguments, including
+  shell chains and interpreter exec form.
+- XML checks skip HTML comments, backslash escapes and wrapped code spans while
+  preserving real tag locations, fixes and platform guard comments.
+- Accept current Claude Code hook matchers, subagent experimental settings and
+  HTTPS MCP bundles. Warn about ignored agent `once` fields. Treat plugin semver
+  as optional dependency advice and align fix metadata with emitted edits.
+
+### Changed
+- Use line tables for dev/test debug information. Keep Cargo as the local test
+  default after comparing it with nextest.
+- Keep native Cargo tests in CI and releases after comparing nextest. Owner PRs
+  run lint and merge contracts; external contributions and daily runs keep the
+  full suite, including doc tests.
+- Refresh six reviewed specification baselines and clarify legacy MCP checks.
+
 ## [0.56.2] - 2026-10-04
 
 ### Changed

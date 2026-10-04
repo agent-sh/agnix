@@ -458,14 +458,13 @@ if let Some(skills) = &frontmatter.skills {
 
 ## Plugin Patterns
 
-### 1. Invalid Semver [HIGH]
+### 1. Semver Interoperability Advice [MEDIUM]
 
-**Pattern**: Version not in major.minor.patch format
+**Pattern**: A version string is not semver. This is optional advice for version-constrained consumers; Claude Code accepts arbitrary manifest version strings (reference reviewed 2026-10-04).
 **Detection**:
 ```rust
-let semver_re = Regex::new(r"^\d+\.\d+\.\d+$").unwrap();
-if !semver_re.is_match(&version) {
-    error!("Version must be semver format (e.g., 1.0.0)");
+if semver::Version::parse(&version).is_err() {
+    warn!("Consider semver for consumers with version constraints");
 }
 ```
 

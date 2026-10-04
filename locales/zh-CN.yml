@@ -657,8 +657,8 @@ rules:
     message: 组件 '%{component}' 不得在 .claude-plugin/ 内
     suggestion: 将组件移到插件根目录
   cc_pl_003:
-    message: '无效的 semver 格式: ''%{version}'''
-    suggestion: '使用 semver 格式: 1.0.0, 1.0.0-rc.1, 1.0.0+build'
+    message: '非 semver 版本: ''%{version}''（用于版本约束依赖的可选建议）'
+    suggestion: '可考虑使用 semver 以兼容依赖: 1.0.0, 1.0.0-rc.1, 1.0.0+build'
   cc_pl_004:
     message: '缺少或无效的必需字段: %{field}'
     suggestion: 在 plugin.json 中添加 '%{field}' 字段

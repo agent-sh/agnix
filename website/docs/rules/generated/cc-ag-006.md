@@ -13,7 +13,7 @@ keywords: ["CC-AG-006", "tool/disallowed conflict", "claude agents", "validation
 - **Category**: `Claude Agents`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-02-04`
+- **Verified On**: `2026-10-04`
 
 ## Applicability
 

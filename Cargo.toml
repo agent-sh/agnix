@@ -85,6 +85,11 @@ serde_json = "1"
 tempfile = "3"
 toml = "1.0"
 
+# Keep file and line information in backtraces without full debug metadata.
+# The test profile inherits this setting.
+[profile.dev]
+debug = "line-tables-only"
+
 [profile.release]
 lto = "fat"
 codegen-units = 1

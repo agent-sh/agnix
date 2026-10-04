@@ -13,7 +13,7 @@ keywords: ["CC-AG-014", "invalid effort value", "claude agents", "validation", "
 - **Category**: `Claude Agents`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `Yes (unsafe)`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-10-04`
 
 ## Applicability
 

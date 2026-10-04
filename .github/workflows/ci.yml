@@ -6,6 +6,16 @@ on:
   pull_request:
     branches: [main]
 
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+# Cold runners cannot reuse incremental artifacts. Keep the cache small.
+env:
+  CARGO_INCREMENTAL: '0'
+  CARGO_PROFILE_DEV_DEBUG: '0'
+  FULL_TEST_SUITE: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'full-suite') || (github.event_name == 'pull_request' && !contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.pull_request.author_association)) }}
+
 permissions:
   contents: read
 
@@ -51,8 +61,16 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: cargo clippy --workspace --all-targets --all-features -- -D warnings
 
+      # Owner PRs run scoped tests locally. Owner PRs and main pushes run
+      # the workspace merge contracts here. Full runs follow the daily/release policy.
+      # External contributions, daily runs and manual runs exercise everything.
+      - name: Merge validation
+        if: env.FULL_TEST_SUITE != 'true'
+        run: cargo test --locked -p agnix-workspace-tests
+
       - name: Test
-        run: cargo test --workspace
+        if: env.FULL_TEST_SUITE == 'true'
+        run: cargo test --locked --workspace
 
       - name: Rule efficacy eval
         if: matrix.os == 'ubuntu-latest'
@@ -62,8 +80,8 @@ jobs:
         run: cargo run -p agnix-cli --bin agnix -- eval tests/eval.yaml
 
       - name: Kiro S-tier Gate
-        if: matrix.os == 'ubuntu-latest'
-        run: cargo test -p agnix-cli --test kiro_ci_gate -- --include-ignored
+        if: matrix.os == 'ubuntu-latest' && env.FULL_TEST_SUITE == 'true'
+        run: cargo test --locked -p agnix-cli --test kiro_ci_gate -- --include-ignored
 
       - name: Rule bookkeeping sync check
         if: matrix.os == 'ubuntu-latest'

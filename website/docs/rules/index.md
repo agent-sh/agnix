@@ -1,7 +1,7 @@
 # Rules Reference
 
 This section contains all `458` validation rules generated from `knowledge-base/rules.json`.
-`124` rules have automatic fixes.
+`123` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
 |------|------|----------|----------|----------|
@@ -61,7 +61,7 @@ This section contains all `458` validation rules generated from `knowledge-base/
 | [CC-HK-011](./generated/cc-hk-011.md) | Invalid Timeout Value | HIGH | Claude Hooks | Yes (unsafe) |
 | [CC-HK-012](./generated/cc-hk-012.md) | Hooks Parse Error | HIGH | Claude Hooks | No |
 | [CC-HK-013](./generated/cc-hk-013.md) | Async on Non-Command Hook | HIGH | Claude Hooks | Yes (safe) |
-| [CC-HK-014](./generated/cc-hk-014.md) | Once Outside Skill/Agent Frontmatter | MEDIUM | Claude Hooks | Yes (safe) |
+| [CC-HK-014](./generated/cc-hk-014.md) | Once Outside Skill Frontmatter | MEDIUM | Claude Hooks | No |
 | [CC-HK-015](./generated/cc-hk-015.md) | Model on Command Hook | MEDIUM | Claude Hooks | Yes (safe) |
 | [CC-HK-016](./generated/cc-hk-016.md) | Validate Hook Type Agent | HIGH | Claude Hooks | Yes (unsafe) |
 | [CC-HK-017](./generated/cc-hk-017.md) | Prompt/Agent Hook Missing $ARGUMENTS | MEDIUM | Claude Hooks | Yes (safe) |
@@ -96,7 +96,7 @@ This section contains all `458` validation rules generated from `knowledge-base/
 | [CC-MEM-014](./generated/cc-mem-014.md) | CLAUDE.md Exceeds Line Limit | MEDIUM | Claude Memory | No |
 | [CC-PL-001](./generated/cc-pl-001.md) | Plugin Manifest Not in .claude-plugin/ | HIGH | Claude Plugins | No |
 | [CC-PL-002](./generated/cc-pl-002.md) | Components in .claude-plugin/ | HIGH | Claude Plugins | No |
-| [CC-PL-003](./generated/cc-pl-003.md) | Invalid Semver | HIGH | Claude Plugins | Yes (safe) |
+| [CC-PL-003](./generated/cc-pl-003.md) | Invalid Semver | MEDIUM | Claude Plugins | Yes (unsafe) |
 | [CC-PL-004](./generated/cc-pl-004.md) | Missing Required/Recommended Plugin Field | HIGH | Claude Plugins | No |
 | [CC-PL-005](./generated/cc-pl-005.md) | Empty Plugin Name | HIGH | Claude Plugins | Yes (unsafe) |
 | [CC-PL-006](./generated/cc-pl-006.md) | Plugin Parse Error | HIGH | Claude Plugins | No |

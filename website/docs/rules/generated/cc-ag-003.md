@@ -13,7 +13,7 @@ keywords: ["CC-AG-003", "invalid model value", "claude agents", "validation", "a
 - **Category**: `Claude Agents`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `Yes (unsafe)`
-- **Verified On**: `2026-07-31`
+- **Verified On**: `2026-10-04`
 
 ## Applicability
 

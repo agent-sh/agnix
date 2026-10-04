@@ -71,10 +71,10 @@ Authoritative sources monitored for changes that may affect validation rules.
 | Source | URL | Watch Method | Rules Affected |
 |--------|-----|-------------|----------------|
 | Claude Code - Memory and AGENTS.md | https://code.claude.com/docs/en/memory | spec-drift.yml (weekly) | AGM-001 through AGM-006, XP-001 through XP-009, CC-MEM-001 through CC-MEM-010 |
-| Claude Code - Hooks | https://code.claude.com/docs/en/hooks | spec-drift.yml (weekly) | CC-HK-001 through CC-HK-012 |
-| Claude Code - Skills | https://code.claude.com/docs/en/skills | spec-drift.yml (weekly) | CC-SK-001 through CC-SK-009 |
+| Claude Code - Hooks | https://code.claude.com/docs/en/hooks | spec-drift.yml (weekly) | CC-HK-001 through CC-HK-028 |
+| Claude Code - Skills | https://code.claude.com/docs/en/skills | spec-drift.yml (weekly) | CC-SK-001 through CC-SK-022 |
 | Claude Code - Plugins | https://code.claude.com/docs/en/plugins-reference | spec-drift.yml (weekly) | CC-PL-001 through CC-PL-015 |
-| Claude Code - Sub-agents | https://code.claude.com/docs/en/sub-agents | spec-drift.yml (weekly) | CC-AG-001 through CC-AG-007 |
+| Claude Code - Sub-agents | https://code.claude.com/docs/en/sub-agents | spec-drift.yml (weekly) | CC-AG-001 through CC-AG-020 |
 | Codex CLI - AGENTS.md | https://learn.chatgpt.com/docs/agent-configuration/agents-md | spec-drift.yml (weekly) | AGM-001 through AGM-006, XP-001 through XP-006 |
 | OpenCode - Rules | https://opencode.ai/docs/rules/ | spec-drift.yml (weekly) | XP-001 through XP-006 |
 | Cursor - Rules | https://cursor.com/docs/rules | spec-drift.yml (weekly) | CUR-001 through CUR-009, CUR-020 |
@@ -191,6 +191,7 @@ Tracking community input that influences rule development, tool support decision
 | 2026-09-30 | Cursor subagents spec drift (#1588) | Current source expands usage, built-in/cloud subagents, and project/user compatibility locations (`.cursor`, `.claude`, `.codex`); the `.cursor/agents` frontmatter fields and types, model-parameter syntax, and body guidance remain covered by CUR-014/015 | Re-reviewed current official docs; rule behavior remains accurate, so updated only the source baseline and verification dates | #1588 |
 | 2026-09-30 | Codex CLI rust-v0.159.2 release triage | Official release says it suppresses Windows console flashes when launching background and sandboxed commands; no config schema changes were identified. The tagged backport commit says the exact candidate lacked native Windows validation and called for a focused smoke test. | Updated the tool-release baseline only; no validator/rule change or Windows/runtime support claim | #1589 |
 | 2026-02-01 | Tool tier decisions | Community adoption data used to assign S/A/B/C/D/E tiers | Tier assignments documented in CLAUDE.md; spec-drift frequency matches tier priority | #107 |
+| 2026-10-04 | Six primary spec sources in #1615: Claude Code hooks, memory, plugins, skills, subagents; MCP 2026-07-28 versioning | Read all six current Markdown sources and compared their configuration contracts to validators. Previous vendor source bodies were not retained, so this review does not claim a line-by-line historical diff. Memory imports still allow relative/absolute paths and four hops. Skill model aliases already match code. MCP documents modern per-request metadata and legacy fallback; existing extension keys remain covered. | Refreshed six exact sentinel hashes; accepted DirectoryAdded filtering and new Notification/StopFailure matchers; scoped once to skill hooks; accepted agent experimental map and HTTPS MCP bundles; changed semver rejection to optional advice; corrected skill and MCP scope docs. Modern MCP metadata/fallback and plugin optional LSP fields remain outside these checks. | #1615 |
 
 ### Pending Items
 
