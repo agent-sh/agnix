@@ -164,6 +164,7 @@ const KNOWN_AGENT_TOOLS: &[&str] = &[
     "ShareOnboardingGuide",
     "Skill",
     "StatusBarMessageTool",
+    "SubagentHandback",
     "Task",
     "TaskCreate",
     "TaskGet",
@@ -694,7 +695,10 @@ impl Validator for AgentValidator {
         if config.is_rule_enabled("CC-AG-010") {
             if let Some(disallowed) = &schema.disallowed_tools {
                 for tool in disallowed {
-                    if !Self::is_valid_tool_name(tool) {
+                    // The deny list additionally accepts this exact pattern
+                    // to remove every MCP tool. Allow lists still require a
+                    // specific server, as do all other server patterns.
+                    if tool != "mcp__*" && !Self::is_valid_tool_name(tool) {
                         diagnostics.push(
                             Diagnostic::error(
                                 path.to_path_buf(),
@@ -798,7 +802,10 @@ impl Validator for AgentValidator {
                                                             .get("type")
                                                             .and_then(|t| t.as_str())
                                                         {
-                                                            Some("command") | Some("prompt") => {}
+                                                            Some(
+                                                                "command" | "http" | "mcp_tool"
+                                                                | "prompt" | "agent",
+                                                            ) => {}
                                                             Some(invalid_type) => {
                                                                 diagnostics.push(
                                                                     Diagnostic::error(
@@ -809,7 +816,7 @@ impl Validator for AgentValidator {
                                                                         t!(
                                                                             "rules.cc_ag_011.message",
                                                                             error = format!(
-                                                                                "hook type '{}' in hooks.{}[{}].hooks[{}] is invalid, must be 'command' or 'prompt'",
+                                                                                "hook type '{}' in hooks.{}[{}].hooks[{}] is invalid, must be 'command', 'http', 'mcp_tool', 'prompt', or 'agent'",
                                                                                 invalid_type, event_name, i, j
                                                                             )
                                                                         ),
@@ -1179,6 +1186,113 @@ mod tests {
     fn validate_with_path(path: &Path, content: &str) -> Vec<Diagnostic> {
         let validator = AgentValidator;
         validator.validate(path, content, &LintConfig::default())
+    }
+
+    #[test]
+    fn test_cc_ag_019_experimental_cache_ttl_is_recognized() {
+        for ttl in ["5m", "1h"] {
+            let content = format!(
+                "---\nname: repo-auditor\ndescription: Audits repositories\nexperimental:\n  cacheTtl: {ttl}\n---\nReview the repository."
+            );
+            let diagnostics = validate(&content);
+            assert!(
+                diagnostics
+                    .iter()
+                    .all(|d| d.rule != "CC-AG-007" && d.rule != "CC-AG-019"),
+                "documented experimental map should parse and be recognized: {diagnostics:?}"
+            );
+        }
+        let diagnostics = validate(
+            "---\nname: repo-auditor\ndescription: Audits repositories\ncacheTtl: 1h\n---\nReview the repository.",
+        );
+        assert!(diagnostics.iter().any(|d| d.rule == "CC-AG-019"));
+    }
+
+    #[test]
+    fn test_cc_ag_007_experimental_requires_map() {
+        for value in ["true", "5m", "[5m, 1h]"] {
+            let content = format!(
+                "---\nname: repo-auditor\ndescription: Audits repositories\nexperimental: {value}\n---\nReview the repository."
+            );
+            assert!(
+                validate(&content).iter().any(|d| d.rule == "CC-AG-007"),
+                "experimental must be a map, not {value}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_cc_ag_010_all_mcp_deny_pattern_only() {
+        for entry in ["mcp__*", "[mcp__*]"] {
+            let content = format!(
+                "---\nname: local-only\ndescription: Works without MCP tools\ndisallowedTools: {entry}\n---\nReview local files."
+            );
+            let diagnostics = validate(&content);
+            assert!(
+                diagnostics
+                    .iter()
+                    .all(|d| d.rule != "CC-AG-007" && d.rule != "CC-AG-010"),
+                "exact all-server deny pattern should be accepted: {diagnostics:?}"
+            );
+        }
+        for (field, rule, entry) in [
+            ("tools", "CC-AG-009", "mcp__*"),
+            ("disallowedTools", "CC-AG-010", "mcp__github-*"),
+            ("disallowedTools", "CC-AG-010", "mcp__*__read"),
+            ("disallowedTools", "CC-AG-010", "MCP__*"),
+            ("disallowedTools", "CC-AG-010", "mcp__"),
+        ] {
+            let content = format!(
+                "---\nname: local-only\ndescription: Works without MCP tools\n{field}: [{entry}]\n---\nReview local files."
+            );
+            let diagnostics = validate(&content);
+            assert!(
+                diagnostics.iter().any(|d| d.rule == rule),
+                "{field}: {entry} must remain invalid: {diagnostics:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_documented_handback_tool_is_recognized_in_both_lists() {
+        for field in ["tools", "disallowedTools"] {
+            let content = format!(
+                "---\nname: reporter\ndescription: Reports work\n{field}: [SubagentHandback, UnknownHandback]\n---\nReport findings."
+            );
+            let diagnostics = validate(&content);
+            let hits: Vec<_> = diagnostics
+                .iter()
+                .filter(|d| d.rule == "CC-AG-009" || d.rule == "CC-AG-010")
+                .collect();
+            assert_eq!(hits.len(), 1, "{field}: {diagnostics:?}");
+            assert!(hits[0].message.contains("UnknownHandback"));
+        }
+    }
+
+    #[test]
+    fn test_cc_ag_011_accepts_documented_handler_types() {
+        for handler in [
+            "type: command\n          command: echo checked",
+            "type: http\n          url: https://example.com/hooks",
+            "type: mcp_tool\n          server: audit\n          tool: check",
+            "type: prompt\n          prompt: Check the result",
+            "type: agent\n          prompt: Check the result",
+        ] {
+            let content = format!(
+                "---\nname: reviewer\ndescription: Reviews changes\nhooks:\n  Stop:\n    - hooks:\n        - {handler}\n---\nReview the changes."
+            );
+            let diagnostics = validate(&content);
+            assert!(
+                diagnostics
+                    .iter()
+                    .all(|d| d.rule != "CC-AG-007" && d.rule != "CC-AG-011"),
+                "documented handler should be accepted: {diagnostics:?}"
+            );
+        }
+        let diagnostics = validate(
+            "---\nname: reviewer\ndescription: Reviews changes\nhooks:\n  Stop:\n    - hooks:\n        - type: remote_agent\n---\nReview the changes.",
+        );
+        assert!(diagnostics.iter().any(|d| d.rule == "CC-AG-011"));
     }
 
     // ===== CC-AG-001 Tests: Missing Name Field =====
@@ -3605,7 +3719,7 @@ Agent instructions"#;
         assert!(
             cc_ag_011[0]
                 .message
-                .contains("must be 'command' or 'prompt'")
+                .contains("must be 'command', 'http', 'mcp_tool', 'prompt', or 'agent'")
         );
     }
 

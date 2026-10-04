@@ -2897,6 +2897,73 @@ Body"#,
 }
 
 #[test]
+fn test_claude_metadata_accepts_free_form_maps_and_keeps_validation() {
+    use crate::config::TargetTool;
+
+    let content = "---\nname: test-skill\ndescription: Use when auditing a repository\nmetadata:\n  enabled: true\n  priority: 2\n  catalog:\n    tags: [audit, review]\nallowed-tools: UnknownAuditTool\n---\nReview the repository.";
+    let validator = SkillValidator;
+    let mut targeted = LintConfig::default();
+    targeted.set_target(TargetTool::ClaudeCode);
+    for (path, config) in [
+        (".claude/skills/test-skill/SKILL.md", LintConfig::default()),
+        ("skills/test-skill/SKILL.md", targeted),
+    ] {
+        let diagnostics = validator.validate(Path::new(path), content, &config);
+        assert!(
+            diagnostics.iter().all(|d| d.rule != "AS-016"),
+            "Claude's free-form metadata must parse: {diagnostics:?}"
+        );
+        assert!(
+            diagnostics.iter().any(|d| d.rule == "CC-SK-008"),
+            "metadata must not suppress further validation: {diagnostics:?}"
+        );
+    }
+
+    for path in [
+        "skills/test-skill/SKILL.md",
+        ".agents/skills/test-skill/SKILL.md",
+    ] {
+        let diagnostics = validator.validate(Path::new(path), content, &LintConfig::default());
+        assert!(
+            diagnostics.iter().any(|d| d.rule == "AS-016"),
+            "generic and other-client metadata must remain string-only: {diagnostics:?}"
+        );
+    }
+
+    for malformed in ["platform", "[platform]", "null"] {
+        let content = format!(
+            "---\nname: test-skill\ndescription: Use when auditing\nmetadata: {malformed}\n---\nReview the repository."
+        );
+        let diagnostics = validator.validate(
+            Path::new(".claude/skills/test-skill/SKILL.md"),
+            &content,
+            &LintConfig::default(),
+        );
+        assert!(diagnostics.iter().any(|d| d.rule == "AS-016"));
+    }
+}
+
+#[test]
+fn test_cc_sk_008_documented_agent_tools_in_both_tool_fields() {
+    for field in ["allowed-tools", "disallowed-tools"] {
+        let content = format!(
+            "---\nname: test-skill\ndescription: Use when reporting work\n{field}: [ListAgents, SubagentHandback, UnknownHandback]\n---\nReport findings."
+        );
+        let diagnostics = SkillValidator.validate(
+            Path::new(".claude/skills/test-skill/SKILL.md"),
+            &content,
+            &LintConfig::default(),
+        );
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SK-008")
+            .collect();
+        assert_eq!(hits.len(), 1, "{field}: {diagnostics:?}");
+        assert!(hits[0].message.contains("UnknownHandback"));
+    }
+}
+
+#[test]
 fn test_as_016_allowed_tools_yaml_list_no_parse_error() {
     // Reproduces #957: `allowed-tools` as a YAML list previously failed to
     // deserialize (Option<String>) and tripped AS-016. Claude Code accepts a

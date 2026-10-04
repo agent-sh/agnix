@@ -165,12 +165,29 @@ fn validate_cc_hk_028_user_config_interpolation(
 
 /// CC-HK-010: Command hook timeout policy
 fn validate_cc_hk_010_command_timeout(
+    event: &str,
     timeout: &Option<u64>,
+    timeout_is_enforced: bool,
     hook_location: &str,
     version_pinned: bool,
     path: &Path,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
+    // `async: true` has no enforced timeout. `asyncRewake` still does, so
+    // don't suppress timeout advice when that field is enabled as well.
+    if !timeout_is_enforced {
+        return;
+    }
+
+    let default = match event {
+        "UserPromptSubmit" | "PreModelSwitch" | "PostModelSwitch" => 30,
+        "MessageDisplay" => 10,
+        _ => COMMAND_HOOK_DEFAULT_TIMEOUT,
+    };
+    // SessionEnd has a shared 1.5-second budget. An explicit settings timeout
+    // raises that budget up to 60 seconds; exceeding the ordinary default is
+    // therefore expected, not grounds for the usual excess-default warning.
+    let session_end = event == "SessionEnd";
     if timeout.is_none() {
         let mut diag = Diagnostic::warning(
             path.to_path_buf(),
@@ -182,7 +199,14 @@ fn validate_cc_hk_010_command_timeout(
                 location = hook_location
             ),
         )
-        .with_suggestion(t!("rules.cc_hk_010.command_no_timeout_suggestion"));
+        .with_suggestion(if session_end {
+            t!("rules.cc_hk_010.session_end_no_timeout_suggestion")
+        } else {
+            t!(
+                "rules.cc_hk_010.command_no_timeout_suggestion",
+                default = default
+            )
+        });
 
         if !version_pinned {
             diag = diag.with_assumption(t!("rules.cc_hk_010.assumption"));
@@ -191,23 +215,35 @@ fn validate_cc_hk_010_command_timeout(
         diagnostics.push(diag);
     }
     if let Some(t) = timeout {
-        if *t > COMMAND_HOOK_DEFAULT_TIMEOUT {
+        if *t > if session_end { 60 } else { default } {
             let mut diag = Diagnostic::warning(
                 path.to_path_buf(),
                 1,
                 0,
                 "CC-HK-010",
-                t!(
-                    "rules.cc_hk_010.command_exceeds",
-                    location = hook_location,
-                    timeout = t,
-                    default = COMMAND_HOOK_DEFAULT_TIMEOUT
-                ),
+                if session_end {
+                    t!(
+                        "rules.cc_hk_010.session_end_exceeds",
+                        location = hook_location,
+                        timeout = t
+                    )
+                } else {
+                    t!(
+                        "rules.cc_hk_010.command_exceeds",
+                        location = hook_location,
+                        timeout = t,
+                        default = default
+                    )
+                },
             )
-            .with_suggestion(t!(
-                "rules.cc_hk_010.command_exceeds_suggestion",
-                default = COMMAND_HOOK_DEFAULT_TIMEOUT
-            ));
+            .with_suggestion(if session_end {
+                t!("rules.cc_hk_010.session_end_exceeds_suggestion")
+            } else {
+                t!(
+                    "rules.cc_hk_010.command_exceeds_suggestion",
+                    default = default
+                )
+            });
 
             if !version_pinned {
                 diag = diag.with_assumption(t!("rules.cc_hk_010.assumption"));
@@ -630,12 +666,16 @@ impl Validator for HooksValidator {
                             args,
                             timeout,
                             model,
+                            is_async,
+                            async_rewake,
                             ..
                         } => {
                             // CC-HK-010: Command timeout policy
                             if config.is_rule_enabled("CC-HK-010") {
                                 validate_cc_hk_010_command_timeout(
+                                    event,
                                     timeout,
+                                    *is_async != Some(true) || *async_rewake == Some(true),
                                     &hook_location,
                                     config.is_claude_code_version_pinned(),
                                     path,

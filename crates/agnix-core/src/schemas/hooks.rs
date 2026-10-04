@@ -53,12 +53,17 @@ pub enum Hook {
         /// Status message displayed while hook is running
         #[serde(rename = "statusMessage", skip_serializing_if = "Option::is_none")]
         status_message: Option<String>,
-        /// Run hook only once per session
+        /// Remove a skill-frontmatter hook after its first successful run.
+        /// Ignored in settings files and agent frontmatter.
         #[serde(skip_serializing_if = "Option::is_none")]
         once: Option<bool>,
         /// Run hook asynchronously (non-blocking)
         #[serde(rename = "async", skip_serializing_if = "Option::is_none")]
         is_async: Option<bool>,
+        /// Background hook that wakes Claude on exit code 2; unlike `async`,
+        /// its timeout is still enforced.
+        #[serde(rename = "asyncRewake", skip_serializing_if = "Option::is_none")]
+        async_rewake: Option<bool>,
     },
     #[serde(rename = "prompt")]
     Prompt {
@@ -443,6 +448,7 @@ mod tests {
                     status_message: None,
                     once: None,
                     is_async: None,
+                    async_rewake: None,
                 }],
             }],
         );
@@ -464,6 +470,7 @@ mod tests {
             status_message: None,
             once: None,
             is_async: None,
+            async_rewake: None,
         };
         assert_eq!(cmd.type_name(), "command");
         assert!(cmd.is_command());

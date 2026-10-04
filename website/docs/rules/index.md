@@ -1,7 +1,7 @@
 # Rules Reference
 
 This section contains all `458` validation rules generated from `knowledge-base/rules.json`.
-`123` rules have automatic fixes.
+`121` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
 |------|------|----------|----------|----------|
@@ -57,7 +57,7 @@ This section contains all `458` validation rules generated from `knowledge-base/
 | [CC-HK-007](./generated/cc-hk-007.md) | Missing Prompt Field | HIGH | Claude Hooks | No |
 | [CC-HK-008](./generated/cc-hk-008.md) | Script File Not Found | HIGH | Claude Hooks | No |
 | [CC-HK-009](./generated/cc-hk-009.md) | Dangerous Command Pattern | HIGH | Claude Hooks | No |
-| [CC-HK-010](./generated/cc-hk-010.md) | Timeout Policy | MEDIUM | Claude Hooks | Yes (safe) |
+| [CC-HK-010](./generated/cc-hk-010.md) | Timeout Policy | MEDIUM | Claude Hooks | No |
 | [CC-HK-011](./generated/cc-hk-011.md) | Invalid Timeout Value | HIGH | Claude Hooks | Yes (unsafe) |
 | [CC-HK-012](./generated/cc-hk-012.md) | Hooks Parse Error | HIGH | Claude Hooks | No |
 | [CC-HK-013](./generated/cc-hk-013.md) | Async on Non-Command Hook | HIGH | Claude Hooks | Yes (safe) |
@@ -71,7 +71,7 @@ This section contains all `458` validation rules generated from `knowledge-base/
 | [CC-HK-022](./generated/cc-hk-022.md) | Invalid Shell Value | MEDIUM | Claude Hooks | Yes (unsafe) |
 | [CC-HK-023](./generated/cc-hk-023.md) | Once Field Not Boolean | LOW | Claude Hooks | Yes (unsafe) |
 | [CC-HK-024](./generated/cc-hk-024.md) | Headers Missing AllowedEnvVars | MEDIUM | Claude Hooks | Yes (safe) |
-| [CC-HK-025](./generated/cc-hk-025.md) | Invalid Matcher Value | LOW | Claude Hooks | Yes (unsafe) |
+| [CC-HK-025](./generated/cc-hk-025.md) | Invalid Matcher Value | LOW | Claude Hooks | No |
 | [CC-HK-026](./generated/cc-hk-026.md) | MCP Tool Hook Missing Server | HIGH | Claude Hooks | No |
 | [CC-HK-027](./generated/cc-hk-027.md) | MCP Tool Hook Missing Tool | HIGH | Claude Hooks | No |
 | [CC-HK-028](./generated/cc-hk-028.md) | Rejected user_config Interpolation in Shell-Form Command | HIGH | Claude Hooks | No |

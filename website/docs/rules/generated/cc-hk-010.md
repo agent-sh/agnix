@@ -12,7 +12,7 @@ keywords: ["CC-HK-010", "timeout policy", "claude hooks", "validation", "agnix",
 - **Severity**: `MEDIUM`
 - **Category**: `Claude Hooks`
 - **Normative Level**: `SHOULD`
-- **Auto-Fix**: `Yes (safe)`
+- **Auto-Fix**: `No`
 - **Verified On**: `2026-10-04`
 
 ## Applicability

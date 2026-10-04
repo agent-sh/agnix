@@ -210,7 +210,8 @@ pub(super) fn validate_cc_hk_011_invalid_timeout_values(
 // reported `resume` instead, so both remain valid.
 const SESSION_START_MATCHERS: &[&str] = &["startup", "resume", "clear", "compact", "fork"];
 const SETUP_MATCHERS: &[&str] = &["init", "maintenance"];
-const SESSION_END_MATCHERS: &[&str] = &[
+const SESSION_END_MATCHERS: &[&str] = &["clear", "resume", "logout", "prompt_input_exit", "other"];
+const LEGACY_SESSION_END_MATCHERS: &[&str] = &[
     "clear",
     "resume",
     "logout",
@@ -263,11 +264,27 @@ const INSTRUCTIONS_LOADED_MATCHERS: &[&str] = &[
     "compact",
 ];
 
-fn known_matcher_values(event: &str) -> Option<&'static [&'static str]> {
+fn known_matcher_values(
+    event: &str,
+    claude_code_version: Option<&str>,
+) -> Option<&'static [&'static str]> {
     match event {
         "SessionStart" => Some(SESSION_START_MATCHERS),
         "Setup" => Some(SETUP_MATCHERS),
-        "SessionEnd" => Some(SESSION_END_MATCHERS),
+        "SessionEnd" => {
+            // Removed in v2.1.234. Retain the old value for explicitly pinned
+            // older releases, and don't infer removal from an unparseable pin.
+            let legacy = claude_code_version.is_some_and(|version| {
+                semver::Version::parse(version.trim_start_matches('v'))
+                    .map(|version| version < semver::Version::new(2, 1, 234))
+                    .unwrap_or(true)
+            });
+            Some(if legacy {
+                LEGACY_SESSION_END_MATCHERS
+            } else {
+                SESSION_END_MATCHERS
+            })
+        }
         "Notification" => Some(NOTIFICATION_MATCHERS),
         "PreCompact" | "PostCompact" => Some(COMPACT_MATCHERS),
         "ConfigChange" => Some(CONFIG_CHANGE_MATCHERS),
@@ -276,6 +293,28 @@ fn known_matcher_values(event: &str) -> Option<&'static [&'static str]> {
         "InstructionsLoaded" => Some(INSTRUCTIONS_LOADED_MATCHERS),
         _ => None,
     }
+}
+
+/// Check only the exact-string/list matcher path documented by Claude Code.
+/// Other characters select JavaScript RegExp semantics; Rust's regex engine
+/// cannot faithfully validate that path, so leave it to the runtime.
+fn has_unknown_exact_matcher(event: &str, matcher: &str, valid_values: &[&str]) -> bool {
+    if matcher.is_empty() || matcher == "*" {
+        return false;
+    }
+    let narrow = matches!(event, "FileChanged" | "StopFailure");
+    let exact = matcher.chars().all(|c| {
+        c.is_ascii_alphanumeric()
+            || matches!(c, '_' | '|')
+            || (!narrow && matches!(c, '-' | ' ' | ','))
+    });
+    if !exact {
+        return false;
+    }
+    matcher
+        .split(|c| c == '|' || (!narrow && c == ','))
+        .map(str::trim)
+        .any(|value| !valid_values.contains(&value))
 }
 
 /// CC-HK-001: Invalid event name with auto-fix support
@@ -1258,11 +1297,13 @@ pub(super) fn validate_all_raw_hooks(
     for (event, matchers) in hooks_obj {
         // --- CC-HK-025: matcher-level check (not per-hook) ---
         if check_025 {
-            if let Some(valid_values) = known_matcher_values(event) {
+            if let Some(valid_values) =
+                known_matcher_values(event, config.get_claude_code_version())
+            {
                 if let Some(matchers_arr) = matchers.as_array() {
                     for (matcher_idx, matcher) in matchers_arr.iter().enumerate() {
                         if let Some(matcher_val) = matcher.get("matcher").and_then(|m| m.as_str()) {
-                            if !valid_values.contains(&matcher_val) {
+                            if has_unknown_exact_matcher(event, matcher_val, valid_values) {
                                 let location = format!("hooks.{}[{}]", event, matcher_idx);
                                 conditional_diags.push(
                                     Diagnostic::warning(
@@ -1705,14 +1746,14 @@ pub(super) fn validate_cc_hk_025_invalid_matcher_value(
 ) {
     if let Some(hooks_obj) = raw_value.get("hooks").and_then(|h| h.as_object()) {
         for (event, matchers) in hooks_obj {
-            let Some(valid_values) = known_matcher_values(event) else {
+            let Some(valid_values) = known_matcher_values(event, None) else {
                 continue;
             };
 
             if let Some(matchers_arr) = matchers.as_array() {
                 for (matcher_idx, matcher) in matchers_arr.iter().enumerate() {
                     if let Some(matcher_val) = matcher.get("matcher").and_then(|m| m.as_str()) {
-                        if !valid_values.contains(&matcher_val) {
+                        if has_unknown_exact_matcher(event, matcher_val, valid_values) {
                             let location = format!("hooks.{}[{}]", event, matcher_idx);
                             diagnostics.push(
                                 Diagnostic::warning(
@@ -2150,7 +2191,6 @@ mod tests {
             ("SessionEnd", "resume"),
             ("SessionEnd", "logout"),
             ("SessionEnd", "prompt_input_exit"),
-            ("SessionEnd", "bypass_permissions_disabled"),
             ("SessionEnd", "other"),
             ("PreCompact", "manual"),
             ("PostCompact", "auto"),

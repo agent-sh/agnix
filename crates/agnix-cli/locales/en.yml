@@ -158,9 +158,12 @@ rules:
     suggestion: 'Review the command for safety. Pattern matched: %{pattern}'
   cc_hk_010:
     command_no_timeout: Command hook at %{location} has no timeout specified
-    command_no_timeout_suggestion: Add a "timeout" field (e.g., 600 for command hooks)
+    command_no_timeout_suggestion: Add a "timeout" field (e.g., %{default} for this event)
     command_exceeds: Command hook at %{location} has timeout %{timeout}s exceeding %{default}s default
-    command_exceeds_suggestion: Consider timeout <= %{default}s (10-minute default limit)
+    command_exceeds_suggestion: Consider timeout <= %{default}s
+    session_end_no_timeout_suggestion: SessionEnd hooks share a 1.5-second budget. Set an explicit integer timeout to raise the settings budget, up to 60 seconds; plugin timeouts do not raise it.
+    session_end_exceeds: Command hook at %{location} has timeout %{timeout}s above the 60-second settings-raised SessionEnd budget
+    session_end_exceeds_suggestion: Use timeout <= 60s, or configure CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS explicitly when more time is needed
     prompt_no_timeout: Prompt hook at %{location} has no timeout specified
     prompt_no_timeout_suggestion: Add a "timeout" field (e.g., 30 for prompt hooks)
     prompt_exceeds: Prompt hook at %{location} has timeout %{timeout}s exceeding %{default}s default
@@ -289,8 +292,8 @@ rules:
     message: 'Invalid hooks configuration in agent frontmatter: %{error}'
     suggestion: Ensure hooks follow the same schema as settings.json hooks
   cc_ag_012:
-    message: permissionMode 'bypassPermissions' disables all safety checks
-    suggestion: Consider using 'dontAsk' or 'acceptEdits' for a safer permission mode
+    message: permissionMode 'bypassPermissions' is restricted to an already-bypassing parent in Claude Code 2.1.267 or later; review older versions separately
+    suggestion: Review the parent permission mode and pinned Claude Code version before enabling bypassPermissions
     fix: Replace 'bypassPermissions' with 'default'
   cc_ag_013:
     message: Invalid skill name format '%{name}'. Must be lowercase with hyphens

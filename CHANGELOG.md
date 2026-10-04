@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.56.4] - 2026-10-04
+
+### Fixed
+- Use event-specific command timeout advice, skip unenforced async timeouts,
+  and handle the separate SessionEnd settings budget.
+- Preserve matcher alternatives, match-all values, JavaScript regex paths and
+  explicit older SessionEnd versions. Accept current tools and hook handlers,
+  and free-form Claude skill metadata without weakening generic metadata checks.
+- Clarify the permission inheritance version boundary and track modern MCP
+  per-request metadata as an uncovered validation surface.
+
+### Changed
+- Advance the reviewed Claude Code release baseline to 2.1.289.
+- Align hook fix metadata with the edits actually emitted by the validator.
+
 ## [0.56.3] - 2026-10-04
 
 ### Fixed

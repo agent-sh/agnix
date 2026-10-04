@@ -5222,3 +5222,237 @@ fn test_cc_hk_008_checks_script_paths_in_args() {
         "a missing script named in `args` must be reported, got: {diagnostics:?}"
     );
 }
+
+fn command_hook_settings(event: &str, matcher: Option<&str>, hook: serde_json::Value) -> String {
+    let mut group = serde_json::json!({"hooks": [hook]});
+    if let Some(matcher) = matcher {
+        group["matcher"] = serde_json::json!(matcher);
+    }
+    serde_json::json!({"hooks": {event: [group]}}).to_string()
+}
+
+#[test]
+fn test_directory_added_source_matchers_preserve_filtering() {
+    for matcher in ["slash_command", "register_repo_root"] {
+        let content = command_hook_settings(
+            "DirectoryAdded",
+            Some(matcher),
+            serde_json::json!({"type":"command", "command":"echo added", "timeout":600}),
+        );
+        let diagnostics = validate(&content);
+        assert!(diagnostics.is_empty(), "{matcher}: {diagnostics:?}");
+    }
+    // A matcher on Stop is still ignored and diagnosed.
+    let content = command_hook_settings(
+        "Stop",
+        Some("slash_command"),
+        serde_json::json!({"type":"command", "command":"echo stop", "timeout":600}),
+    );
+    assert!(validate(&content).iter().any(|d| d.rule == "CC-HK-018"));
+}
+
+#[test]
+fn test_cc_hk_025_current_literal_values_and_matcher_semantics() {
+    let cases = [
+        ("Notification", "quota_auto_resume_fired", false),
+        ("Notification", "quota_auto_resume_stale", false),
+        ("Notification", "quota_auto_resume_disabled", false),
+        ("StopFailure", "account_on_hold", false),
+        ("StopFailure", "cloud_credential_error", false),
+        ("SessionStart", "startup|resume", false),
+        ("SessionStart", "startup, resume", false),
+        ("SessionStart", "startup | resume", false),
+        ("Notification", "permission_prompt|idle_prompt", false),
+        ("Notification", "^agent_", false),
+        ("Notification", "(?<=agent_)completed", false),
+        ("StopFailure", "rate_limit|overloaded", false),
+        // Spaces and commas select JavaScript regex for StopFailure, even
+        // though other lifecycle events interpret them as exact lists.
+        ("StopFailure", "rate_limit, overloaded", false),
+        ("SessionStart", "startup|unknown_source", true),
+        ("StopFailure", "unknown_error", true),
+        ("Notification", "unknown_notification", true),
+        ("SessionEnd", "bypass_permissions_disabled", true),
+    ];
+    for (event, matcher, warns) in cases {
+        let content = command_hook_settings(
+            event,
+            Some(matcher),
+            serde_json::json!({"type":"command", "command":"echo event", "timeout":1}),
+        );
+        let diagnostics = validate(&content);
+        assert_eq!(
+            diagnostics.iter().any(|d| d.rule == "CC-HK-025"),
+            warns,
+            "{event}/{matcher}: {diagnostics:?}"
+        );
+        // Keep the standalone helper and consolidated validation on the same
+        // classifier. Their default-version behavior must agree.
+        let mut standalone = Vec::new();
+        validate_cc_hk_025_invalid_matcher_value(
+            &serde_json::from_str(&content).unwrap(),
+            Path::new("settings.json"),
+            &mut standalone,
+        );
+        assert_eq!(!standalone.is_empty(), warns, "{event}/{matcher}");
+    }
+}
+
+#[test]
+fn test_cc_hk_025_all_lifecycle_matchers_allow_match_all_and_regex() {
+    for event in [
+        "SessionStart",
+        "Setup",
+        "SessionEnd",
+        "Notification",
+        "PreCompact",
+        "PostCompact",
+        "ConfigChange",
+        "StopFailure",
+        "InstructionsLoaded",
+    ] {
+        for matcher in ["*", "", ".*"] {
+            let content = command_hook_settings(
+                event,
+                Some(matcher),
+                serde_json::json!({"type":"command", "command":"echo event", "timeout":1}),
+            );
+            let diagnostics = validate(&content);
+            assert!(
+                !diagnostics.iter().any(|d| d.rule == "CC-HK-025"),
+                "{event}/{matcher}: {diagnostics:?}"
+            );
+        }
+    }
+}
+
+#[test]
+fn test_cc_hk_025_removed_session_end_matcher_respects_version_pin() {
+    let content = command_hook_settings(
+        "SessionEnd",
+        Some("bypass_permissions_disabled"),
+        serde_json::json!({"type":"command", "command":"echo exit", "timeout":1}),
+    );
+    for (version, warns) in [
+        ("2.1.233", false),
+        ("v2.1.233", false),
+        ("2.1.234", true),
+        ("2.1.268", true),
+        ("unknown", false),
+    ] {
+        let mut config = LintConfig::default();
+        config.tool_versions_mut().claude_code = Some(version.to_string());
+        let diagnostics = validate_with_config(&content, &config);
+        assert_eq!(
+            diagnostics.iter().any(|d| d.rule == "CC-HK-025"),
+            warns,
+            "{version}: {diagnostics:?}"
+        );
+    }
+}
+
+#[test]
+fn test_cc_hk_010_command_defaults_follow_event() {
+    for (event, default) in [
+        ("UserPromptSubmit", 30),
+        ("PreModelSwitch", 30),
+        ("PostModelSwitch", 30),
+        ("MessageDisplay", 10),
+        ("PreToolUse", 600),
+        ("DirectoryAdded", 600),
+    ] {
+        for (timeout, warns) in [(default, false), (default + 1, true)] {
+            let content = command_hook_settings(
+                event,
+                None,
+                serde_json::json!({"type":"command", "command":"echo event", "timeout":timeout}),
+            );
+            let diagnostics = validate(&content);
+            let hits: Vec<_> = diagnostics
+                .iter()
+                .filter(|d| d.rule == "CC-HK-010")
+                .collect();
+            assert_eq!(
+                !hits.is_empty(),
+                warns,
+                "{event}/{timeout}: {diagnostics:?}"
+            );
+            if warns {
+                assert!(hits[0].message.contains(&format!("{default}s default")));
+            }
+        }
+        let content = command_hook_settings(
+            event,
+            None,
+            serde_json::json!({"type":"command", "command":"echo event"}),
+        );
+        let diagnostics = validate(&content);
+        let hit = diagnostics.iter().find(|d| d.rule == "CC-HK-010").unwrap();
+        assert!(
+            hit.suggestion
+                .as_deref()
+                .unwrap()
+                .contains(&default.to_string())
+        );
+    }
+}
+
+#[test]
+fn test_cc_hk_010_async_timeout_is_not_enforced_but_async_rewake_is() {
+    for (is_async, async_rewake, timeout, warns) in [
+        (true, false, None, false),
+        (true, false, Some(700), false),
+        (false, true, None, true),
+        (false, true, Some(700), true),
+        (true, true, Some(700), true),
+        (false, false, Some(600), false),
+    ] {
+        let mut hook = serde_json::json!({
+            "type":"command", "command":"echo event", "async":is_async, "asyncRewake":async_rewake,
+        });
+        if let Some(timeout) = timeout {
+            hook["timeout"] = serde_json::json!(timeout);
+        }
+        let content = command_hook_settings("PostToolUse", Some("Write"), hook);
+        let diagnostics = validate(&content);
+        assert!(
+            !diagnostics.iter().any(|d| d.rule == "CC-HK-012"),
+            "{diagnostics:?}"
+        );
+        assert_eq!(
+            diagnostics.iter().any(|d| d.rule == "CC-HK-010"),
+            warns,
+            "async={is_async}, asyncRewake={async_rewake}, timeout={timeout:?}: {diagnostics:?}"
+        );
+    }
+}
+
+#[test]
+fn test_cc_hk_010_session_end_accepts_settings_budget_overrides() {
+    for (timeout, warns) in [(1, false), (5, false), (60, false), (61, true)] {
+        let content = command_hook_settings(
+            "SessionEnd",
+            None,
+            serde_json::json!({"type":"command", "command":"echo exit", "timeout":timeout}),
+        );
+        let diagnostics = validate(&content);
+        assert_eq!(
+            diagnostics.iter().any(|d| d.rule == "CC-HK-010"),
+            warns,
+            "{diagnostics:?}"
+        );
+        assert!(
+            !diagnostics.iter().any(|d| d.rule == "CC-HK-011"),
+            "{diagnostics:?}"
+        );
+    }
+    let content = command_hook_settings(
+        "SessionEnd",
+        None,
+        serde_json::json!({"type":"command", "command":"echo exit"}),
+    );
+    let diagnostics = validate(&content);
+    let hit = diagnostics.iter().find(|d| d.rule == "CC-HK-010").unwrap();
+    assert!(hit.suggestion.as_deref().unwrap().contains("1.5-second"));
+    assert!(hit.suggestion.as_deref().unwrap().contains("60 seconds"));
+}

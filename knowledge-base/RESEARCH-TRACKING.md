@@ -120,6 +120,23 @@ Research papers that inform validation rules, particularly prompt engineering an
 
 ## Emerging Tools Watchlist
 
+### 2026-10-04 spec sentinel reconciliation
+
+Reviewed the current Claude hooks, skills, subagents, memory, plugin reference,
+and MCP 2026-07-28 versioning sources for issue #1615. Existing-rule compatibility
+fixes preserve DirectoryAdded filters, current lifecycle matcher forms and values,
+event-specific timeout advice, documented agent settings/tools, and free-form
+Claude skill metadata. Plugin versions are opaque runtime strings, so semver is
+advisory. MCP initialize version checks accept modern and legacy revision strings;
+modern per-request version metadata is not yet validated. Capability checks remain
+advisory for the open extension set. Memory import paths and four-hop depth remain aligned.
+
+Tracked gaps, not new rules in this maintenance patch: modern MCP per-request
+version metadata, HTTP event restrictions, first-line agent delimiters and leading-dash
+names, full multi-scope skill preload resolution, plugin reserved-name/directory
+listing checks, and newer optional plugin components. These need deliberately
+scoped validation rather than inferring requirements from content hash changes.
+
 New developments that may require future rule additions or tool tier changes.
 
 ### Agent Protocol Standardization

@@ -850,8 +850,8 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="cc-hk-007"></a>
 ### CC-HK-007 [HIGH] Missing Prompt Field
-**Requirement**: `type: "prompt"` REQUIRES `prompt` field
-**Detection**: `hook.type == "prompt" && hook.prompt.is_none()`
+**Requirement**: `type: "prompt"` and `type: "agent"` REQUIRE `prompt` field
+**Detection**: `matches!(hook.type, "prompt" | "agent") && hook.prompt.is_none()`
 **Fix**: Add prompt field
 **Source**: code.claude.com/docs/en/hooks
 
@@ -875,10 +875,12 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Requirement**: Hooks SHOULD have explicit timeout; excessive timeouts warn
 **Detection**:
   - `hook.timeout.is_none()` - missing timeout
-  - Command: `timeout > 600` exceeds 10-min default
+  - Command: event-specific defaults are 600s generally, 30s for UserPromptSubmit/PreModelSwitch/PostModelSwitch, and 10s for MessageDisplay
+  - Ordinary `async: true` commands have no enforced timeout; asyncRewake retains timeout checks
+  - SessionEnd shares a 1.5s budget; explicit settings timeouts through 60s are accepted, and the environment override is documented separately
   - Prompt: `timeout > 30` exceeds 30s default
   - Agent: `timeout > 60` exceeds 60s default
-**Fix**: [AUTO-FIX] Add explicit timeout within default limits (600s for commands, 30s for prompts, 60s for agents)
+**Fix**: Add an explicit timeout appropriate for the event. This is advisory budget guidance, not a claim that larger ordinary explicit timeouts are invalid.
 **Source**: code.claude.com/docs/en/hooks
 **Version-Aware**: When Claude Code version is not pinned in `.agnix.toml [tool_versions]`, an assumption note is added indicating default timeout behavior is assumed. Pin the version for version-specific validation.
 
@@ -978,7 +980,7 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 <a id="cc-hk-025"></a>
 ### CC-HK-025 [LOW] Invalid Matcher Value
 **Requirement**: Matcher values MAY be validated against known values per event
-**Detection**: Check matcher values against event-specific allowlists for SessionStart, Setup, SessionEnd, Notification, PreCompact, PostCompact, ConfigChange, DirectoryAdded, StopFailure, and InstructionsLoaded
+**Detection**: Check exact matcher tokens against event-specific allowlists. Preserve match-all and JavaScript-regex paths; exact alternatives use the documented separators. StopFailure uses its narrower exact alphabet and pipe separator. Explicit older versions retain removed SessionEnd values.
 **Notification values**: permission_prompt, idle_prompt, auth_success, elicitation_dialog, elicitation_url_dialog, elicitation_complete, elicitation_response, agent_needs_input, agent_completed, quota_auto_resume_fired, quota_auto_resume_stale, quota_auto_resume_disabled
 **DirectoryAdded values**: slash_command, register_repo_root; this event supports matcher filtering
 **StopFailure values**: rate_limit, overloaded, authentication_failed, oauth_org_not_allowed, account_on_hold, billing_error, invalid_request, model_not_found, server_error, max_output_tokens, cloud_credential_error, unknown
@@ -1091,7 +1093,7 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="cc-ag-012"></a>
 ### CC-AG-012 [HIGH] Bypass Permissions Warning
-**Requirement**: `permissionMode: bypassPermissions` SHOULD NOT be used (disables all safety checks)
+**Requirement**: Review `permissionMode: bypassPermissions`; since Claude Code 2.1.267 it takes effect only when the parent session already bypasses permissions and cannot escalate the parent mode
 **Detection**: Check if permissionMode equals `bypassPermissions`
 **Fix**: Auto-fix (unsafe) -- replace 'bypassPermissions' with 'default'
 **Source**: code.claude.com/docs/en/sub-agents
@@ -3666,7 +3668,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Amp Checks | 4 | 2 | 2 | 0 | 3 |
 | Amp Skills | 1 | 0 | 1 | 0 | 1 |
 | Claude Agents | 18 | 13 | 4 | 1 | 10 |
-| Claude Hooks | 27 | 15 | 7 | 5 | 14 |
+| Claude Hooks | 27 | 15 | 7 | 5 | 12 |
 | Claude Memory | 13 | 8 | 5 | 0 | 3 |
 | Claude Output Styles | 6 | 2 | 2 | 2 | 0 |
 | Claude Plugins | 16 | 9 | 7 | 0 | 4 |
@@ -3701,7 +3703,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **458** | **217** | **211** | **30** | **123** |
+| **TOTAL** | **458** | **217** | **211** | **30** | **121** |
 
 
 ---
@@ -3735,4 +3737,4 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
 **Certainty**: 217 HIGH, 211 MEDIUM, 30 LOW
-**Auto-Fixable**: 123 rules (27%)
+**Auto-Fixable**: 121 rules (26%)
