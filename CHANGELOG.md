@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.56.3] - 2026-10-04
+## [0.56.4] - 2026-10-04
 
 ### Fixed
 - Use event-specific command timeout advice, skip unenforced async timeouts,
@@ -17,6 +17,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and free-form Claude skill metadata without weakening generic metadata checks.
 - Clarify the permission inheritance version boundary and track modern MCP
   per-request metadata as an uncovered validation surface.
+
+### Changed
+- Advance the reviewed Claude Code release baseline to 2.1.289.
+- Align hook fix metadata with the edits actually emitted by the validator.
+
+## [0.56.3] - 2026-10-04
+
+### Fixed
 - CC-HK-008 checks executed scripts instead of script-like arguments, including
   shell chains and interpreter exec form.
 - XML checks skip HTML comments, backslash escapes and wrapped code spans while
@@ -32,7 +40,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   run lint and merge contracts; external contributions and daily runs keep the
   full suite, including doc tests.
 - Refresh six reviewed specification baselines and clarify legacy MCP checks.
-- Advance the reviewed Claude Code release baseline to 2.1.289.
 
 ## [0.56.2] - 2026-10-04
 
