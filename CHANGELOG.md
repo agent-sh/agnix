@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.56.3] - 2026-10-04
+
 ### Fixed
 - CC-HK-008 checks executed scripts instead of script-like arguments, including
   shell chains and interpreter exec form.
