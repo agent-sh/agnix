@@ -10314,7 +10314,7 @@
         ],
         "verified_on": "2026-10-04",
         "applies_to": {
-          "spec_revision": "2026-07-28"
+          "spec_revision": "2025-11-25"
         },
         "normative_level": "SHOULD",
         "tests": {
