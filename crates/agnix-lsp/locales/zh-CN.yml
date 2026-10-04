@@ -135,9 +135,12 @@ rules:
     suggestion: '审查命令的安全性。匹配的模式: %{pattern}'
   cc_hk_010:
     command_no_timeout: '%{location} 处的命令 hook 未指定超时'
-    command_no_timeout_suggestion: 添加 "timeout" 字段（例如，命令 hook 使用 600）
+    command_no_timeout_suggestion: 添加 "timeout" 字段（例如，此事件使用 %{default}）
     command_exceeds: '%{location} 处的命令 hook 超时 %{timeout}s 超过默认值 %{default}s'
-    command_exceeds_suggestion: 考虑 timeout <= %{default}s（10分钟默认限制）
+    command_exceeds_suggestion: 考虑 timeout <= %{default}s
+    session_end_no_timeout_suggestion: SessionEnd hooks 共享 1.5 秒预算。settings 中的显式整数 timeout 可将预算提高至 60 秒；插件 timeout 不会提高预算。
+    session_end_exceeds: '%{location} 处的命令 hook 超时 %{timeout}s，超过 settings 提高后的 60 秒 SessionEnd 预算'
+    session_end_exceeds_suggestion: 使用 timeout <= 60s；如需更多时间，请显式配置 CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS
     prompt_no_timeout: '%{location} 处的 prompt hook 未指定超时'
     prompt_no_timeout_suggestion: 添加 "timeout" 字段（例如，prompt hook 使用 30）
     prompt_exceeds: '%{location} 处的 prompt hook 超时 %{timeout}s 超过默认值 %{default}s'

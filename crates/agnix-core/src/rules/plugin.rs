@@ -988,7 +988,30 @@ mod tests {
             &LintConfig::default(),
         );
 
-        assert!(diagnostics.iter().any(|d| d.rule == "CC-PL-003"));
+        let version_diagnostic = diagnostics.iter().find(|d| d.rule == "CC-PL-003").unwrap();
+        assert_eq!(
+            version_diagnostic.level,
+            crate::diagnostics::DiagnosticLevel::Warning
+        );
+    }
+
+    #[test]
+    fn test_cc_pl_003_opaque_versions_are_advisory_not_parse_errors() {
+        let temp = TempDir::new().unwrap();
+        let path = temp.path().join(".claude-plugin/plugin.json");
+        let validator = PluginValidator;
+        for version in ["release-candidate", "2026.10", "branch/main"] {
+            let content =
+                format!(r#"{{"name":"test-plugin","description":"desc","version":"{version}"}}"#);
+            write_plugin(&path, &content);
+            let diagnostics = validator.validate(&path, &content, &LintConfig::default());
+            assert!(!diagnostics.iter().any(|d| d.rule == "CC-PL-006"));
+            let diagnostic = diagnostics.iter().find(|d| d.rule == "CC-PL-003").unwrap();
+            assert_eq!(
+                diagnostic.level,
+                crate::diagnostics::DiagnosticLevel::Warning
+            );
+        }
     }
 
     #[test]

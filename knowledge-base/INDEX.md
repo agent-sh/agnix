@@ -93,7 +93,7 @@ knowledge-base/
 | Amp Checks | 4 | 2 | 2 | 0 | 3 |
 | Amp Skills | 1 | 0 | 1 | 0 | 1 |
 | Claude Agents | 18 | 13 | 4 | 1 | 10 |
-| Claude Hooks | 27 | 15 | 7 | 5 | 14 |
+| Claude Hooks | 27 | 15 | 7 | 5 | 12 |
 | Claude Memory | 13 | 8 | 5 | 0 | 3 |
 | Claude Output Styles | 6 | 2 | 2 | 2 | 0 |
 | Claude Plugins | 16 | 9 | 7 | 0 | 4 |
@@ -128,7 +128,7 @@ knowledge-base/
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **458** | **217** | **211** | **30** | **123** |
+| **TOTAL** | **458** | **217** | **211** | **30** | **121** |
 
 
 ---

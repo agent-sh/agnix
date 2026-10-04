@@ -16,8 +16,7 @@ use crate::{
 };
 use regex::Regex;
 use rust_i18n::t;
-use serde::{Deserialize, de::Error as _};
-use std::collections::HashMap;
+use serde::Deserialize;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
@@ -43,28 +42,13 @@ where
     }))
 }
 
-fn de_string_map<'de, D>(deserializer: D) -> Result<Option<HashMap<String, String>>, D::Error>
+fn de_metadata_value<'de, D>(deserializer: D) -> Result<Option<serde_yaml::Value>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
-    let value = serde_yaml::Value::deserialize(deserializer)?;
-    let serde_yaml::Value::Mapping(entries) = value else {
-        return Err(D::Error::custom(
-            "metadata must be a map from string keys to string values",
-        ));
-    };
-
-    let mut metadata = HashMap::with_capacity(entries.len());
-    for (key, value) in entries {
-        let (serde_yaml::Value::String(key), serde_yaml::Value::String(value)) = (key, value)
-        else {
-            return Err(D::Error::custom(
-                "metadata must be a map from string keys to string values",
-            ));
-        };
-        metadata.insert(key, value);
-    }
-    Ok(Some(metadata))
+    // Preserve an explicitly null value so it still fails the map contract;
+    // an omitted metadata field is optional.
+    serde_yaml::Value::deserialize(deserializer).map(Some)
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -73,8 +57,10 @@ struct SkillFrontmatter {
     description: Option<String>,
     license: Option<String>,
     compatibility: Option<String>,
-    #[serde(default, deserialize_with = "de_string_map")]
-    metadata: Option<HashMap<String, String>>,
+    // Claude Code accepts a free-form YAML map; the generic Agent Skills
+    // schema requires string keys and values. Validate after client detection.
+    #[serde(default, deserialize_with = "de_metadata_value")]
+    metadata: Option<serde_yaml::Value>,
     // Claude Code accepts `allowed-tools` as a space-separated string OR a YAML
     // list; agentskills.io documents a space-separated string. Deserialize both
     // shapes (a list is joined with spaces) so a list never trips AS-016
@@ -273,6 +259,7 @@ const KNOWN_TOOLS: &[&str] = &[
     "Glob",
     "Grep",
     "LSP",
+    "ListAgents",
     "ListMcpResourcesTool",
     "Monitor",
     "MultiTool",
@@ -290,6 +277,7 @@ const KNOWN_TOOLS: &[&str] = &[
     "ShareOnboardingGuide",
     "Skill",
     "StatusBarMessageTool",
+    "SubagentHandback",
     "Task",
     "TaskCreate",
     "TaskGet",
@@ -605,7 +593,25 @@ impl<'a> ValidationContext<'a> {
         }
 
         if self.parts.has_frontmatter && self.parts.has_closing {
-            match parse_frontmatter_fields(&self.parts.frontmatter) {
+            let parsed =
+                parse_frontmatter_fields(&self.parts.frontmatter).and_then(|frontmatter| {
+                    if let Some(metadata) = &frontmatter.metadata {
+                        let serde_yaml::Value::Mapping(entries) = metadata else {
+                            return Err("metadata must be a YAML map".to_string());
+                        };
+                        if self.client != SkillClient::ClaudeCode
+                            && entries.iter().any(|(key, value)| {
+                                !matches!(key, serde_yaml::Value::String(_))
+                                    || !matches!(value, serde_yaml::Value::String(_))
+                            })
+                        {
+                            return Err("metadata must be a map from string keys to string values"
+                                .to_string());
+                        }
+                    }
+                    Ok(frontmatter)
+                });
+            match parsed {
                 Ok(frontmatter) => {
                     self.frontmatter = Some(frontmatter);
                 }
@@ -2118,7 +2124,19 @@ impl Validator for SkillValidator {
                     .to_string(),
                 license: frontmatter.license.clone(),
                 compatibility: frontmatter.compatibility.clone(),
-                metadata: frontmatter.metadata.clone(),
+                // SkillSchema represents the generic string-map contract.
+                // Claude-only metadata values have no validation semantics;
+                // retain the string entries needed by the generic schema.
+                metadata: frontmatter.metadata.as_ref().and_then(|value| {
+                    value.as_mapping().map(|entries| {
+                        entries
+                            .iter()
+                            .filter_map(|(key, value)| {
+                                Some((key.as_str()?.to_string(), value.as_str()?.to_string()))
+                            })
+                            .collect()
+                    })
+                }),
                 allowed_tools: frontmatter.allowed_tools.clone(),
                 disallowed_tools: frontmatter.disallowed_tools.clone(),
                 argument_hint: frontmatter.argument_hint.clone(),

@@ -1568,8 +1568,7 @@
         }
       },
       "fix": {
-        "autofix": true,
-        "fix_safety": "safe"
+        "autofix": false
       },
       "good_example": "{\n  \"hooks\": {\n    \"Stop\": [\n      {\n        \"hooks\": [\n          { \"type\": \"agent\", \"prompt\": \"Review: $ARGUMENTS\", \"timeout\": 60 }\n        ]\n      }\n    ]\n  }\n}",
       "bad_example": "{\n  \"hooks\": {\n    \"Stop\": [\n      {\n        \"hooks\": [\n          { \"type\": \"agent\", \"prompt\": \"Review: $ARGUMENTS\", \"timeout\": 120 }\n        ]\n      }\n    ]\n  }\n}"
@@ -1995,8 +1994,7 @@
         }
       },
       "fix": {
-        "autofix": true,
-        "fix_safety": "unsafe"
+        "autofix": false
       },
       "good_example": "{\n  \"hooks\": {\n    \"Notification\": [\n      {\n        \"matcher\": \"agent_completed\",\n        \"hooks\": [\n          { \"type\": \"command\", \"command\": \"echo agent finished\", \"timeout\": 30 }\n        ]\n      }\n    ]\n  }\n}",
       "bad_example": "{\n  \"hooks\": {\n    \"Notification\": [\n      {\n        \"matcher\": \"unknown_notification\",\n        \"hooks\": [\n          { \"type\": \"command\", \"command\": \"echo agent finished\", \"timeout\": 30 }\n        ]\n      }\n    ]\n  }\n}"
@@ -10316,7 +10314,7 @@
         ],
         "verified_on": "2026-10-04",
         "applies_to": {
-          "spec_revision": "2025-11-25"
+          "spec_revision": "2026-07-28"
         },
         "normative_level": "SHOULD",
         "tests": {

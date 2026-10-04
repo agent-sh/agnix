@@ -139,9 +139,12 @@ rules:
     suggestion: 'Revisa el comando por seguridad. Patron coincidente: %{pattern}'
   cc_hk_010:
     command_no_timeout: Hook de comando en %{location} no tiene timeout especificado
-    command_no_timeout_suggestion: Agrega un campo "timeout" (ej., 600 para hooks de comando)
+    command_no_timeout_suggestion: Agrega un campo "timeout" (ej., %{default} para este evento)
     command_exceeds: Hook de comando en %{location} tiene timeout %{timeout}s excediendo el predeterminado de %{default}s
-    command_exceeds_suggestion: Considera timeout <= %{default}s (limite predeterminado de 10 minutos)
+    command_exceeds_suggestion: Considera timeout <= %{default}s
+    session_end_no_timeout_suggestion: Los hooks SessionEnd comparten 1.5 segundos. Un timeout entero explicito en settings puede elevar el presupuesto hasta 60 segundos; los timeouts de plugins no lo elevan.
+    session_end_exceeds: El hook de comando en %{location} tiene timeout %{timeout}s superior al presupuesto SessionEnd de 60 segundos elevado por settings
+    session_end_exceeds_suggestion: Usa timeout <= 60s o configura CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS explicitamente si necesitas mas tiempo
     prompt_no_timeout: Hook de prompt en %{location} no tiene timeout especificado
     prompt_no_timeout_suggestion: Agrega un campo "timeout" (ej., 30 para hooks de prompt)
     prompt_exceeds: Hook de prompt en %{location} tiene timeout %{timeout}s excediendo el predeterminado de %{default}s

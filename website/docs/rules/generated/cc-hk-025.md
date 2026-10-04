@@ -12,7 +12,7 @@ keywords: ["CC-HK-025", "invalid matcher value", "claude hooks", "validation", "
 - **Severity**: `LOW`
 - **Category**: `Claude Hooks`
 - **Normative Level**: `SHOULD`
-- **Auto-Fix**: `Yes (unsafe)`
+- **Auto-Fix**: `No`
 - **Verified On**: `2026-10-04`
 
 ## Applicability
