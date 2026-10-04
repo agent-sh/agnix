@@ -13,7 +13,7 @@ keywords: ["CC-AG-020", "reserved colon in agent name", "claude agents", "valida
 - **Category**: `Claude Agents`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-07-26`
+- **Verified On**: `2026-10-04`
 
 ## Applicability
 

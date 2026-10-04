@@ -13,7 +13,7 @@ keywords: ["CC-SK-017", "unknown frontmatter field", "claude skills", "validatio
 - **Category**: `Claude Skills`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-08-09`
+- **Verified On**: `2026-10-04`
 
 ## Applicability
 

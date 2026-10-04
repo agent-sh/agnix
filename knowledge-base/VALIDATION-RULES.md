@@ -217,10 +217,10 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="cc-sk-001"></a>
 ### CC-SK-001 [HIGH] Invalid Model Value
-**Requirement**: model MUST be one of: sonnet, opus, haiku, inherit
-**Detection**: `!["sonnet", "opus", "haiku", "inherit"].contains(model)`
+**Requirement**: model MUST be a documented Claude Code model alias, a full `claude-*` model ID, or `inherit`. The skill reference accepts the same values as `/model`: `default`, `best`, `fable`, `sonnet`, `opus`, `haiku`, `opusplan`, `sonnet[1m]`, `opus[1m]`.
+**Detection**: `!VALID_MODEL_ALIASES.contains(model) && !model.starts_with("claude-")`; shared with CC-AG-003
 **Fix**: Replace with closest valid option
-**Source**: code.claude.com/docs/en/skills
+**Source**: code.claude.com/docs/en/skills, code.claude.com/docs/en/model-config
 
 <a id="cc-sk-002"></a>
 ### CC-SK-002 [HIGH] Invalid Context Value
@@ -836,7 +836,7 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="cc-hk-005"></a>
 ### CC-HK-005 [HIGH] Missing Type Field
-**Requirement**: Hook MUST have `type: "command"` or `type: "prompt"`
+**Requirement**: Hook MUST declare `type`: `command`, `prompt`, `agent`, `http`, or `mcp_tool`
 **Detection**: `hook.type.is_none()`
 **Fix**: [AUTO-FIX] Add `"type": "command"`
 **Source**: code.claude.com/docs/en/hooks
@@ -904,10 +904,10 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Source**: code.claude.com/docs/en/hooks
 
 <a id="cc-hk-014"></a>
-### CC-HK-014 [MEDIUM] Once Outside Skill/Agent Frontmatter
-**Requirement**: `once` field SHOULD only appear in skill/agent frontmatter hooks
-**Detection**: Check for `once` field in settings.json hooks
-**Fix**: [AUTO-FIX] Remove the once field from settings.json hooks
+### CC-HK-014 [MEDIUM] Once Outside Skill Frontmatter
+**Requirement**: `once` field SHOULD only appear in skill frontmatter hooks; Claude Code ignores it in settings files and agent frontmatter
+**Detection**: Check for `once` in settings and agent hooks
+**Fix**: Manually remove the ignored field. No automatic edit is applied.
 **Source**: code.claude.com/docs/en/hooks
 
 <a id="cc-hk-015"></a>
@@ -978,8 +978,10 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 <a id="cc-hk-025"></a>
 ### CC-HK-025 [LOW] Invalid Matcher Value
 **Requirement**: Matcher values MAY be validated against known values per event
-**Detection**: Check matcher values against event-specific allowlists for SessionStart, Setup, SessionEnd, Notification, PreCompact, PostCompact, ConfigChange, StopFailure, and InstructionsLoaded
-**Notification values**: permission_prompt, idle_prompt, auth_success, elicitation_dialog, elicitation_url_dialog, elicitation_complete, elicitation_response, agent_needs_input, agent_completed
+**Detection**: Check matcher values against event-specific allowlists for SessionStart, Setup, SessionEnd, Notification, PreCompact, PostCompact, ConfigChange, DirectoryAdded, StopFailure, and InstructionsLoaded
+**Notification values**: permission_prompt, idle_prompt, auth_success, elicitation_dialog, elicitation_url_dialog, elicitation_complete, elicitation_response, agent_needs_input, agent_completed, quota_auto_resume_fired, quota_auto_resume_stale, quota_auto_resume_disabled
+**DirectoryAdded values**: slash_command, register_repo_root; this event supports matcher filtering
+**StopFailure values**: rate_limit, overloaded, authentication_failed, oauth_org_not_allowed, account_on_hold, billing_error, invalid_request, model_not_found, server_error, max_output_tokens, cloud_credential_error, unknown
 **Fix**: Manual
 **Source**: code.claude.com/docs/en/hooks
 
@@ -1124,7 +1126,7 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="cc-ag-019"></a>
 ### CC-AG-019 [LOW] Unknown Agent Frontmatter Field
-**Requirement**: Agent frontmatter fields MAY be validated against the documented set, including boolean `omitClaudeMd` (Claude Code 2.1.271+)
+**Requirement**: Agent frontmatter fields MAY be validated against the documented set, including boolean `omitClaudeMd` (Claude Code 2.1.271+) and the `experimental` map (2.1.248+). `experimental.cacheTtl` recognizes `5m` and `1h`; Claude Code ignores other values and ignores `1h` while subscription usage credits are active. These ignored values are accepted; a non-map `experimental` value is a CC-AG-007 parse error.
 **Detection**: Check for keys not in known agent fields
 **Fix**: Manual - remove or fix typo
 **Source**: code.claude.com/docs/en/sub-agents
@@ -1345,11 +1347,11 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 **Source**: code.claude.com/docs/en/plugins-reference
 
 <a id="cc-pl-003"></a>
-### CC-PL-003 [HIGH] Invalid Semver
-**Requirement**: version MUST be semver format (major.minor.patch)
-**Detection**: `!Regex::new(r"^\d+\.\d+\.\d+$").matches(version)`
-**Fix**: [AUTO-FIX] Suggest valid semver
-**Source**: code.claude.com/docs/en/plugins-reference
+### CC-PL-003 [MEDIUM] Invalid Semver
+**Requirement**: Semver is an optional interoperability recommendation for plugins consumed through version-constrained dependencies. Claude Code accepts arbitrary version strings and does not check manifest versions against semver.
+**Detection**: Warn when a non-empty version string does not parse as semver, including prerelease and build forms. This is advice, not a loader rejection.
+**Fix**: Suggest valid semver. Partial versions can be normalized with an unsafe autofix because changing a version string can change dependency resolution.
+**Source**: code.claude.com/docs/en/plugins-reference#version, code.claude.com/docs/en/plugins/dependencies#tag-plugin-releases-for-version-resolution
 
 <a id="cc-pl-004"></a>
 ### CC-PL-004 [HIGH] Missing Required/Recommended Plugin Field
@@ -1374,7 +1376,7 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 <a id="cc-pl-007"></a>
 ### CC-PL-007 [HIGH] Invalid Component Path
-**Requirement**: Paths in every documented path-bearing manifest field MUST be relative (no absolute paths or `..` traversal). The full set is `commands`, `agents`, `skills`, `workflows`, `hooks`, `mcpServers`, `outputStyles`, `lspServers`, `experimental.themes`, and `experimental.monitors`. Relative paths SHOULD use a `./` prefix, except that Claude Code 2.1.221+ explicitly accepts `skills: "."` for a root-level `SKILL.md`.
+**Requirement**: Paths in every documented path-bearing manifest field MUST be relative (no absolute paths or `..` traversal). The full set is `commands`, `agents`, `skills`, `workflows`, `hooks`, `mcpServers`, `outputStyles`, `lspServers`, `experimental.themes`, and `experimental.monitors`. Relative paths SHOULD use a `./` prefix, except that Claude Code 2.1.221+ explicitly accepts `skills: "."` for a root-level `SKILL.md`. `mcpServers` also accepts a valid HTTPS URL ending in `.mcpb` or `.dxt`. agnix conservatively limits its URL exception to this field and literal bundle endpoints without query or fragment suffixes; this scope does not establish whether upstream loads URLs with those suffixes.
 **Detection**: Check path fields for absolute paths (`/`, `C:\`), parent traversal (`..`), or a missing `./` prefix; exempt the documented `skills: "."` root path.
 **Fix**: Prepend `./` to relative paths other than the root `skills: "."` form [safe autofix]
 **Source**: code.claude.com/docs/en/plugins-reference, github.com/anthropics/claude-code/releases/tag/v2.1.221
@@ -1501,10 +1503,10 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 <a id="mcp-008"></a>
 ### MCP-008 [MEDIUM] Protocol Version Mismatch
 **Requirement**: MCP initialize messages SHOULD use the expected protocol version
-**Detection**: Check `protocolVersion` field in initialize request params or response result against configured expected version (default: `2025-11-25`)
+**Detection**: Check `protocolVersion` in initialize request params or response result. A pinned revision requires an exact match; unpinned validation tolerates the current revision strings `2025-11-25` and `2026-07-28`.
 **Fix**: Update protocolVersion to match expected version, or configure `mcp_protocol_version` in agnix config to match your target version
-**Note**: This is a warning (not error) because MCP allows version negotiation between client and server
-**Source**: modelcontextprotocol.io/specification (Protocol Versioning)
+**Note**: This warning checks declarations on legacy initialization messages. MCP 2026-07-28 uses per-request `_meta` and `UnsupportedProtocolVersionError`, with no initialization handshake. Accepting its revision string here does not validate the modern protocol flow; per-request metadata and fallback behavior remain outside MCP-008's scope.
+**Source**: modelcontextprotocol.io/specification/2025-11-25/basic/lifecycle, modelcontextprotocol.io/specification/2026-07-28/basic/versioning
 **Version-Aware**: When MCP protocol version is not pinned in `.agnix.toml [spec_revisions]`, an assumption note is added indicating default protocol version is being used. Pin the version with `mcp_protocol = "2025-11-25"` for explicit control.
 
 <a id="mcp-009"></a>
@@ -1587,10 +1589,10 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 <a id="mcp-020"></a>
 ### MCP-020 [MEDIUM] Unknown Capability Declaration Key
-**Requirement**: Capability keys MUST come from the spec-defined set
-**Detection**: Validate keys under `capabilities` against known list
+**Requirement**: Capability keys SHOULD use recognized core keys; this is advisory typo detection because implementations can declare additional capabilities.
+**Detection**: Validate keys under `capabilities` against the known list, including legacy `tasks` and modern `extensions`. Extension identifiers and settings inside `extensions` are not checked by this rule.
 **Fix**: Remove or rename unknown capability keys
-**Source**: modelcontextprotocol.io/specification/2025-11-25/basic/lifecycle
+**Source**: modelcontextprotocol.io/specification/2025-11-25/basic/lifecycle, modelcontextprotocol.io/specification/2026-07-28/basic/versioning
 
 <a id="mcp-021"></a>
 ### MCP-021 [MEDIUM] Wildcard HTTP Interface Binding
@@ -3664,10 +3666,10 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Amp Checks | 4 | 2 | 2 | 0 | 3 |
 | Amp Skills | 1 | 0 | 1 | 0 | 1 |
 | Claude Agents | 18 | 13 | 4 | 1 | 10 |
-| Claude Hooks | 27 | 15 | 7 | 5 | 15 |
+| Claude Hooks | 27 | 15 | 7 | 5 | 14 |
 | Claude Memory | 13 | 8 | 5 | 0 | 3 |
 | Claude Output Styles | 6 | 2 | 2 | 2 | 0 |
-| Claude Plugins | 16 | 10 | 6 | 0 | 4 |
+| Claude Plugins | 16 | 9 | 7 | 0 | 4 |
 | Claude Settings | 32 | 1 | 30 | 1 | 0 |
 | Claude Skills | 21 | 11 | 9 | 1 | 10 |
 | Cline | 7 | 4 | 3 | 0 | 3 |
@@ -3699,7 +3701,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **458** | **218** | **210** | **30** | **124** |
+| **TOTAL** | **458** | **217** | **211** | **30** | **123** |
 
 
 ---
@@ -3732,5 +3734,5 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 **Total Coverage**: 458 validation rules across 40 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 218 HIGH, 210 MEDIUM, 30 LOW
-**Auto-Fixable**: 124 rules (27%)
+**Certainty**: 217 HIGH, 211 MEDIUM, 30 LOW
+**Auto-Fixable**: 123 rules (27%)

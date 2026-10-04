@@ -325,7 +325,10 @@ impl Validator for PluginValidator {
             if let Some(version) = raw_value.get("version").and_then(|v| v.as_str()) {
                 let trimmed = version.trim();
                 if !trimmed.is_empty() && !is_valid_semver(trimmed) {
-                    let mut diagnostic = Diagnostic::error(
+                    // Arbitrary version strings load. Semver is an optional
+                    // interoperability recommendation for plugins that others
+                    // consume through version-constrained dependencies.
+                    let mut diagnostic = Diagnostic::warning(
                         path.to_path_buf(),
                         1,
                         0,
@@ -806,6 +809,9 @@ fn check_component_paths(
 ) {
     if let Some(val) = manifest_field(raw_value, field) {
         for p in extract_paths(val) {
+            if field == "mcpServers" && is_https_mcp_bundle_url(&p) {
+                continue;
+            }
             if is_invalid_component_path(&p) {
                 // Absolute or traversal path: error without autofix
                 diagnostics.push(
@@ -844,6 +850,20 @@ fn check_component_paths(
             }
         }
     }
+}
+
+/// The manifest reference accepts HTTPS bundle URLs ending in .mcpb or .dxt.
+/// Query/fragment suffixes are not documented as bundle forms; keep the
+/// exception limited to a real HTTPS URL naming the bundle itself.
+fn is_https_mcp_bundle_url(value: &str) -> bool {
+    let Ok(url) = url::Url::parse(value) else {
+        return false;
+    };
+    url.scheme() == "https"
+        && url.host_str().is_some()
+        && url.query().is_none()
+        && url.fragment().is_none()
+        && (url.path().ends_with(".mcpb") || url.path().ends_with(".dxt"))
 }
 
 /// CC-PL-008: Detect component paths pointing inside .claude-plugin/.

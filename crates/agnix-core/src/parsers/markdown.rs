@@ -55,7 +55,7 @@ fn extract_imports_inner(content: &str) -> Vec<Import> {
     let line_starts = compute_line_starts(content);
     let mut imports = Vec::new();
 
-    scan_non_code_spans(content, |span, span_start| {
+    scan_non_code_spans(content, HtmlCommentMode::Skip, |span, span_start| {
         let range = span_start..span_start + span.len();
         scan_imports_in_text(span, range, &line_starts, &mut imports);
     });
@@ -92,7 +92,7 @@ fn extract_xml_tags_inner(content: &str) -> Vec<XmlTag> {
     let line_starts = compute_line_starts(content);
     let mut tags = Vec::new();
 
-    scan_non_code_spans(content, |span, span_start| {
+    scan_non_code_spans(content, HtmlCommentMode::Skip, |span, span_start| {
         let range = span_start..span_start + span.len();
         scan_xml_tags_in_text(span, range, &line_starts, &mut tags);
     });
@@ -136,7 +136,7 @@ fn extract_markdown_links_inner(content: &str) -> Vec<MarkdownLink> {
     );
     let re = link_re();
 
-    scan_non_code_spans(content, |span, span_start| {
+    scan_non_code_spans(content, HtmlCommentMode::Skip, |span, span_start| {
         for cap in re.captures_iter(span) {
             let full = cap.get(0).unwrap();
             let is_image = cap.get(1).is_some_and(|m| m.as_str() == "!");
@@ -169,12 +169,14 @@ fn extract_markdown_links_inner(content: &str) -> Vec<MarkdownLink> {
 /// result match the input. Line-oriented validators can run their existing
 /// per-line logic on the masked text and skip code the same way the
 /// `scan_non_code_spans`-based extractors do.
+/// HTML comments remain intact because validators can use them as directives,
+/// such as cross-platform guards in AGENTS.md.
 pub(crate) fn mask_code_spans(content: &str) -> String {
     let mut masked: Vec<u8> = content
         .bytes()
         .map(|b| if b == b'\n' || b == b'\r' { b } else { b' ' })
         .collect();
-    scan_non_code_spans(content, |span, span_start| {
+    scan_non_code_spans(content, HtmlCommentMode::Preserve, |span, span_start| {
         masked[span_start..span_start + span.len()].copy_from_slice(span.as_bytes());
     });
     // Non-code spans are `&str` slices, so they start and end on char
@@ -356,8 +358,15 @@ pub fn sanitize_for_pulldown_cmark(s: &str) -> std::borrow::Cow<'_, str> {
     std::borrow::Cow::Owned(out)
 }
 
+#[derive(Clone, Copy)]
+enum HtmlCommentMode {
+    Skip,
+    Preserve,
+}
+
 /// Call `callback(span, span_start_byte)` for each text span in `content` that
-/// lies outside a fenced code block or inline code span.
+/// lies outside a fenced code block or inline code span. HTML comments are
+/// yielded intact or skipped according to `comment_mode`.
 ///
 /// This is a panic-free replacement for the `pulldown-cmark` event iterator used
 /// in `extract_xml_tags_inner` and `extract_imports_inner`.  `pulldown-cmark`
@@ -373,9 +382,11 @@ pub fn sanitize_for_pulldown_cmark(s: &str) -> std::borrow::Cow<'_, str> {
 ///   with the same fence character and at least the same run length closes it.
 ///   Up to three leading spaces are allowed before the fence (per CommonMark),
 ///   plus the indentation of an enclosing Markdown list item.
-/// * **Inline code spans** – backtick-delimited spans inside a non-fenced line
-///   are skipped.  We match the opening backtick run and look for the same-
-///   length closing run to stay correct for ` ``double`` ` spans.
+/// * **Inline code spans** – backtick-delimited spans can wrap across lines
+///   within a paragraph. We match runs of the same length, and escaped
+///   opening backticks remain literal text.
+/// * **HTML comments** – comments are skipped or preserved as a whole, including
+///   line breaks and syntax that would otherwise open a code block.
 /// * **Indented code blocks** – lines indented to four or more columns are
 ///   skipped when they start at the beginning of a document, follow a blank
 ///   line, or continue an existing indented code block. Tabs expand to the next
@@ -383,8 +394,12 @@ pub fn sanitize_for_pulldown_cmark(s: &str) -> std::borrow::Cow<'_, str> {
 ///
 /// ### What we do NOT handle
 ///
-/// * HTML block scanning.  All non-fenced, non-backtick content is yielded.
-fn scan_non_code_spans(content: &str, mut callback: impl FnMut(&str, usize)) {
+/// * Other HTML block scanning. Raw tags outside comments are still yielded.
+fn scan_non_code_spans(
+    content: &str,
+    comment_mode: HtmlCommentMode,
+    mut callback: impl FnMut(&str, usize),
+) {
     let bytes = content.as_bytes();
     let len = bytes.len();
 
@@ -401,6 +416,11 @@ fn scan_non_code_spans(content: &str, mut callback: impl FnMut(&str, usize)) {
     // ordered-list fence commonly has four leading spaces even though a
     // top-level fence may have at most three.
     let mut active_list_content_indent: Option<usize> = None;
+    // A code span or comment can end on a later line. Keep visiting lines so
+    // the existing block scanner retains its source offsets, but ignore block
+    // syntax within the span itself.
+    let mut inline_skip_until = 0;
+    let mut paragraph_end = 0;
 
     while pos < len {
         // Find the end of the current line (pos..line_end) where line_end points
@@ -417,8 +437,13 @@ fn scan_non_code_spans(content: &str, mut callback: impl FnMut(&str, usize)) {
         let line_trimmed = trim_line_ending(line);
         let n_leading = line_trimmed.bytes().take_while(|&b| b == b' ').count();
         let is_blank_line = is_markdown_blank_line(line);
+        let continuing_inline_span = inline_skip_until > line_start;
+        if inline_skip_until >= line_end {
+            pos = line_end;
+            continue;
+        }
 
-        if !in_fence {
+        if !in_fence && !continuing_inline_span {
             if let Some(content_indent) = markdown_list_content_indent(line_trimmed) {
                 active_list_content_indent = Some(content_indent);
             } else if is_blank_line {
@@ -470,7 +495,7 @@ fn scan_non_code_spans(content: &str, mut callback: impl FnMut(&str, usize)) {
             in_indented_code = false;
         }
 
-        if can_start_indented_code && is_indented_line {
+        if !continuing_inline_span && can_start_indented_code && is_indented_line {
             in_indented_code = true;
             can_start_indented_code = true;
             pos = line_end;
@@ -491,7 +516,7 @@ fn scan_non_code_spans(content: &str, mut callback: impl FnMut(&str, usize)) {
         let list_fence = active_list_content_indent.is_some_and(|content_indent| {
             n_leading >= content_indent && n_leading <= content_indent.saturating_add(3)
         });
-        if run >= 3 && (n_leading <= 3 || list_fence) {
+        if !continuing_inline_span && run >= 3 && (n_leading <= 3 || list_fence) {
             // Opening fence: skip this line, enter fenced mode.
             in_fence = true;
             fence_char = ch;
@@ -504,10 +529,42 @@ fn scan_non_code_spans(content: &str, mut callback: impl FnMut(&str, usize)) {
         // Non-code-block line: yield non-inline-code sub-spans.
         // We walk through the line looking for backtick runs that open/close
         // inline code spans.
-        let mut cursor = line_start;
-        let mut i = line_start;
+        let mut cursor = line_start.max(inline_skip_until);
+        let mut i = cursor;
         while i < line_end {
-            if bytes[i] == b'`' {
+            if bytes[i..].starts_with(b"<!--") && !is_backslash_escaped(bytes, i) {
+                // An unclosed comment at the beginning of a line is an HTML
+                // block extending to EOF. An unclosed inline opener is literal.
+                let block_comment = line_trimmed[..i - line_start]
+                    .bytes()
+                    .all(|b| matches!(b, b' ' | b'\t'));
+                let search_end = if block_comment {
+                    len
+                } else {
+                    if paragraph_end <= line_start {
+                        paragraph_end = inline_paragraph_end(content, line_start, line_end);
+                    }
+                    paragraph_end
+                };
+                // Search from the first dash to include CommonMark's short
+                // comments `<!-->` and `<!--->` as well as ordinary comments.
+                let comment_end = content[i + 2..search_end]
+                    .find("-->")
+                    .map(|end| i + 2 + end + 3);
+                if let Some(end) = comment_end.or_else(|| block_comment.then_some(len)) {
+                    if i > cursor {
+                        callback(&content[cursor..i], cursor);
+                    }
+                    if matches!(comment_mode, HtmlCommentMode::Preserve) {
+                        callback(&content[i..end], i);
+                    }
+                    inline_skip_until = end;
+                    i = end;
+                    cursor = end;
+                    continue;
+                }
+                i += 4;
+            } else if bytes[i] == b'`' && !is_backslash_escaped(bytes, i) {
                 // Measure the length of this backtick run
                 let tick_start = i;
                 while i < line_end && bytes[i] == b'`' {
@@ -520,15 +577,19 @@ fn scan_non_code_spans(content: &str, mut callback: impl FnMut(&str, usize)) {
                 }
                 // Find the matching closing backtick run (same length)
                 let search_from = i;
-                let close = find_closing_backtick(bytes, search_from, line_end, tick_len);
+                if paragraph_end <= line_start {
+                    paragraph_end = inline_paragraph_end(content, line_start, line_end);
+                }
+                let close = find_closing_backtick(bytes, search_from, paragraph_end, tick_len);
                 match close {
                     Some(close_start) => {
                         // Skip from cursor past the closing run
                         i = close_start + tick_len;
+                        inline_skip_until = i;
                         cursor = i;
                     }
                     None => {
-                        // No matching close on this line: treat the backtick run as
+                        // No matching close in this paragraph: treat the backtick run as
                         // literal text and continue scanning from after the opening run.
                         // Yield the backtick run itself as part of the normal text so
                         // that the caller sees everything except a real closed span.
@@ -549,6 +610,59 @@ fn scan_non_code_spans(content: &str, mut callback: impl FnMut(&str, usize)) {
         can_start_indented_code = is_blank_line;
         pos = line_end;
     }
+}
+
+/// CommonMark escapes punctuation with an odd run of backslashes. An even
+/// run escapes the backslashes themselves and leaves the following byte active.
+fn is_backslash_escaped(bytes: &[u8], pos: usize) -> bool {
+    bytes[..pos]
+        .iter()
+        .rev()
+        .take_while(|&&b| b == b'\\')
+        .count()
+        % 2
+        == 1
+}
+
+/// Limit multiline backtick matching to the current paragraph. Blank lines and
+/// block starts take precedence over inline syntax in CommonMark; a backtick in
+/// a later paragraph or fenced block cannot close an earlier inline opener.
+fn inline_paragraph_end(content: &str, line_start: usize, line_end: usize) -> usize {
+    let current = trim_line_ending(&content[line_start..line_end]).trim_start_matches(' ');
+    // ATX headings have inline content confined to their own line.
+    if is_atx_heading(current) {
+        return line_end;
+    }
+    let mut pos = line_end;
+    while pos < content.len() {
+        let end =
+            memchr_newline(content.as_bytes(), pos).map_or(content.len(), |newline| newline + 1);
+        let line = &content[pos..end];
+        let trimmed = trim_line_ending(line).trim_start_matches(' ');
+        let fence = trimmed.starts_with("```") || trimmed.starts_with("~~~");
+        let underline = !trimmed.is_empty()
+            && (trimmed.bytes().all(|b| b == b'=') || trimmed.bytes().all(|b| b == b'-'));
+        if is_markdown_blank_line(line)
+            || fence
+            || underline
+            || is_atx_heading(trimmed)
+            || markdown_list_content_indent(trim_line_ending(line)).is_some()
+            || trimmed.starts_with("<!--")
+        {
+            return pos;
+        }
+        pos = end;
+    }
+    content.len()
+}
+
+fn is_atx_heading(line: &str) -> bool {
+    let hashes = line.bytes().take_while(|&b| b == b'#').count();
+    (1..=6).contains(&hashes)
+        && line
+            .as_bytes()
+            .get(hashes)
+            .is_none_or(|b| matches!(b, b' ' | b'\t'))
 }
 
 fn trim_line_ending(line: &str) -> &str {
@@ -913,6 +1027,9 @@ fn scan_xml_tags_in_text(
     let re = xml_tag_regex();
 
     for cap in re.captures_iter(text) {
+        if is_backslash_escaped(text.as_bytes(), cap.get(0).unwrap().start()) {
+            continue;
+        }
         let is_closing = cap.get(1).is_some_and(|m| m.as_str() == "/");
         let is_self_closing = cap.get(3).is_some_and(|m| m.as_str() == "/");
 

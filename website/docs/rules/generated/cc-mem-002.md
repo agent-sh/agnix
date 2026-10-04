@@ -13,7 +13,7 @@ keywords: ["CC-MEM-002", "circular import", "claude memory", "validation", "agni
 - **Category**: `Claude Memory`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-02-04`
+- **Verified On**: `2026-10-04`
 
 ## Applicability
 

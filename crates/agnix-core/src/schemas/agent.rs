@@ -112,6 +112,12 @@ pub struct AgentSchema {
     #[serde(skip_serializing_if = "Option::is_none", rename = "initialPrompt")]
     pub initial_prompt: Option<String>,
 
+    /// Optional experimental options (2.1.248+). `cacheTtl` recognizes `5m`
+    /// and `1h`; Claude Code ignores other values rather than rejecting the
+    /// agent, so keep values flexible while requiring the documented map.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub experimental: Option<HashMap<String, Value>>,
+
     /// Optional: MCP server configurations
     #[serde(skip_serializing_if = "Option::is_none", rename = "mcpServers")]
     pub mcp_servers: Option<Value>,

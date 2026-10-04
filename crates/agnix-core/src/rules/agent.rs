@@ -110,6 +110,7 @@ const KNOWN_AGENT_FIELDS: &[&str] = &[
     "omitClaudeMd",
     "isolation",
     "initialPrompt",
+    "experimental",
     "mcpServers",
     "memory",
     "skills",
@@ -708,6 +709,43 @@ impl Validator for AgentValidator {
                             )
                             .with_suggestion(t!("rules.cc_ag_010.suggestion")),
                         );
+                    }
+                }
+            }
+        }
+
+        // CC-HK-014: `once` is honored only in skill hooks. Agent hooks
+        // otherwise remain valid; warn without changing their content.
+        // Borrow the hooks check without owning its metadata ID; each rule
+        // has one registry owner, as with hooks checked by SkillValidator.
+        if config.is_rule_enabled("CC-HK-014") {
+            if let Some(hooks) = schema.hooks.as_ref().and_then(|v| v.as_object()) {
+                for (event, matchers) in hooks {
+                    for (matcher_idx, matcher) in
+                        matchers.as_array().into_iter().flatten().enumerate()
+                    {
+                        for (hook_idx, hook) in matcher
+                            .get("hooks")
+                            .and_then(|v| v.as_array())
+                            .into_iter()
+                            .flatten()
+                            .enumerate()
+                        {
+                            if hook.get("once").is_some() {
+                                let location =
+                                    format!("hooks.{event}[{matcher_idx}].hooks[{hook_idx}]");
+                                diagnostics.push(
+                                    Diagnostic::warning(
+                                        path.to_path_buf(),
+                                        1,
+                                        0,
+                                        "CC-HK-014",
+                                        t!("rules.cc_hk_014.message", location = location.as_str()),
+                                    )
+                                    .with_suggestion(t!("rules.cc_hk_014.suggestion")),
+                                );
+                            }
+                        }
                     }
                 }
             }

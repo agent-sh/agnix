@@ -13,7 +13,7 @@ keywords: ["CC-AG-012", "bypass permissions warning", "claude agents", "validati
 - **Category**: `Claude Agents`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `Yes (unsafe)`
-- **Verified On**: `2026-02-07`
+- **Verified On**: `2026-10-04`
 
 ## Applicability
 

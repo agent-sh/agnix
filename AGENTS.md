@@ -168,12 +168,25 @@ CLI args → LintConfig → validate_project()
 
 ```bash
 cargo check                 # Compile check
-cargo test                  # Run tests
+cargo test                  # Run tests and doc tests
+cargo nextest run --workspace # Optional process-per-test runner
 cargo build --release       # Build binaries
 cargo run --bin agnix -- .  # Run CLI
 cargo run --bin agnix-lsp   # Run LSP server
 cargo run --bin agnix-mcp   # Run MCP server
 ```
+
+For local checks, prefer a scoped crate or integration binary, for example
+`cargo test -p agnix-core --test fix_integration`. Cargo remains the local
+preflight default; nextest is available for CI and optional local runs.
+The default nextest profile uses two test processes; increase `--test-threads` only within the
+machine's CPU budget. Dev and test builds retain file and line backtraces with
+`line-tables-only` debug information. Release profiles are unchanged.
+
+CI runs lint and workspace merge contracts on owner PRs. External contributors,
+the daily run, manual CI runs, PRs labeled `full-suite` before a push, and release
+validation run the full test suite.
+Nextest does not run doc tests; pair it with `cargo test --workspace --doc`.
 
 ## Rules Reference
 

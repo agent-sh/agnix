@@ -6,6 +6,16 @@ on:
   pull_request:
     branches: [main]
 
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+# Cold runners cannot reuse incremental artifacts. Keep the cache small.
+env:
+  CARGO_INCREMENTAL: '0'
+  CARGO_PROFILE_DEV_DEBUG: '0'
+  FULL_TEST_SUITE: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'full-suite') || (github.event_name == 'pull_request' && !contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.pull_request.author_association)) }}
+
 permissions:
   contents: read
 
@@ -33,6 +43,10 @@ jobs:
           toolchain: stable
           components: clippy, rustfmt
 
+      - uses: taiki-e/install-action@861a07ce7084f55488e375df125cdc99bba60eb7 # v2.87.23
+        with:
+          tool: cargo-nextest@0.9.146
+
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
         with:
           # Keep one stable dependency cache namespace across the OS matrix.
@@ -51,8 +65,19 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: cargo clippy --workspace --all-targets --all-features -- -D warnings
 
+      # Owner PRs run local scoped tests and the workspace's merge contracts.
+      # External contributions, daily runs and manual runs exercise everything.
+      - name: Merge validation
+        if: env.FULL_TEST_SUITE != 'true'
+        run: cargo nextest run --locked -p agnix-workspace-tests --profile ci
+
       - name: Test
-        run: cargo test --workspace
+        if: env.FULL_TEST_SUITE == 'true'
+        run: cargo nextest run --locked --workspace --profile ci
+
+      - name: Doc tests
+        if: env.FULL_TEST_SUITE == 'true'
+        run: cargo test --locked --workspace --doc
 
       - name: Rule efficacy eval
         if: matrix.os == 'ubuntu-latest'
@@ -62,8 +87,8 @@ jobs:
         run: cargo run -p agnix-cli --bin agnix -- eval tests/eval.yaml
 
       - name: Kiro S-tier Gate
-        if: matrix.os == 'ubuntu-latest'
-        run: cargo test -p agnix-cli --test kiro_ci_gate -- --include-ignored
+        if: matrix.os == 'ubuntu-latest' && env.FULL_TEST_SUITE == 'true'
+        run: cargo nextest run --locked -p agnix-cli --test kiro_ci_gate --run-ignored all --profile ci
 
       - name: Rule bookkeeping sync check
         if: matrix.os == 'ubuntu-latest'

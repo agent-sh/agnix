@@ -13,7 +13,7 @@ keywords: ["CC-AG-017", "invalid maxturns value", "claude agents", "validation",
 - **Category**: `Claude Agents`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-28`
+- **Verified On**: `2026-10-04`
 
 ## Applicability
 

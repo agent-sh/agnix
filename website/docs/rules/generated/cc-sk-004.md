@@ -13,7 +13,7 @@ keywords: ["CC-SK-004", "agent without context", "claude skills", "validation", 
 - **Category**: `Claude Skills`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `Yes (unsafe)`
-- **Verified On**: `2026-02-04`
+- **Verified On**: `2026-10-04`
 
 ## Applicability
 

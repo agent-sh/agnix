@@ -183,7 +183,7 @@ All rules in `knowledge-base/VALIDATION-RULES.md`
 | CC-AG-006 | ERROR | Tool/disallowed conflict |
 | CC-PL-001 | ERROR | Plugin manifest not in .claude-plugin/ |
 | CC-PL-002 | ERROR | Components inside .claude-plugin/ |
-| CC-PL-003 | ERROR | Invalid semver format |
+| CC-PL-003 | WARNING | Optional semver advice for dependency compatibility |
 | CC-PL-004 | ERROR/WARN | Missing required/recommended plugin field |
 | CC-PL-005 | ERROR | Empty plugin name |
 | XML-001 | ERROR | Unclosed XML tag |

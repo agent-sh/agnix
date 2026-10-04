@@ -1,9 +1,9 @@
 ---
 id: cc-hk-014
-title: "CC-HK-014: Once Outside Skill/Agent Frontmatter"
+title: "CC-HK-014: Once Outside Skill Frontmatter - Claude Hooks"
 sidebar_label: "CC-HK-014"
-description: "agnix rule CC-HK-014 checks for once outside skill/agent frontmatter in claude hooks files. Severity: MEDIUM. See examples and fix guidance."
-keywords: ["CC-HK-014", "once outside skill/agent frontmatter", "claude hooks", "validation", "agnix", "linter"]
+description: "agnix rule CC-HK-014 checks for once outside skill frontmatter in claude hooks files. Severity: MEDIUM. See examples and fix guidance."
+keywords: ["CC-HK-014", "once outside skill frontmatter", "claude hooks", "validation", "agnix", "linter"]
 ---
 
 ## Summary
@@ -12,8 +12,8 @@ keywords: ["CC-HK-014", "once outside skill/agent frontmatter", "claude hooks", 
 - **Severity**: `MEDIUM`
 - **Category**: `Claude Hooks`
 - **Normative Level**: `SHOULD`
-- **Auto-Fix**: `Yes (safe)`
-- **Verified On**: `2026-04-23`
+- **Auto-Fix**: `No`
+- **Verified On**: `2026-10-04`
 
 ## Applicability
 

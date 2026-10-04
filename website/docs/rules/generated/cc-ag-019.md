@@ -13,7 +13,7 @@ keywords: ["CC-AG-019", "unknown agent frontmatter field", "claude agents", "val
 - **Category**: `Claude Agents`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `Yes (unsafe)`
-- **Verified On**: `2026-09-27`
+- **Verified On**: `2026-10-04`
 
 ## Applicability
 
@@ -50,7 +50,9 @@ Agent instructions.
 ```markdown
 ---
 name: my-agent
-description: A helpful agent
+description: Review code
+experimental:
+  cacheTtl: 1h
 ---
-Agent instructions.
+Review the changed code.
 ```

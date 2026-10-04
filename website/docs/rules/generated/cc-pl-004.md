@@ -13,7 +13,7 @@ keywords: ["CC-PL-004", "missing required/recommended plugin field", "claude plu
 - **Category**: `Claude Plugins`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-02-04`
+- **Verified On**: `2026-10-04`
 
 ## Applicability
 

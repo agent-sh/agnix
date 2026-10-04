@@ -13,7 +13,7 @@ keywords: ["CC-HK-018", "matcher on ignored event", "claude hooks", "validation"
 - **Category**: `Claude Hooks`
 - **Normative Level**: `BEST_PRACTICE`
 - **Auto-Fix**: `Yes (safe)`
-- **Verified On**: `2026-07-02`
+- **Verified On**: `2026-10-04`
 
 ## Applicability
 

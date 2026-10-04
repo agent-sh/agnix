@@ -49,6 +49,7 @@ fi
       return spawnSync('bash', [path.join(root, 'scripts/preflight.sh'), ...args], {
         cwd: path.join(root, 'nested'), encoding: 'utf8',
         env: { ...process.env, PATH: path.join(root, 'bin'), TMPDIR: path.join(root, 'tmp'),
+          BASH_ENV: '', ENV: '',
           CARGO_BUILD_JOBS: '', RUST_TEST_THREADS: '', RAYON_NUM_THREADS: '',
           PREFLIGHT_LOG: log, ...overrides },
       });

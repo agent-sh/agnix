@@ -13,7 +13,7 @@ keywords: ["CC-AG-005", "referenced skill not found", "claude agents", "validati
 - **Category**: `Claude Agents`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-02-04`
+- **Verified On**: `2026-10-04`
 
 ## Applicability
 
