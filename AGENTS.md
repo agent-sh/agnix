@@ -64,7 +64,7 @@ tests/fixtures/     # Test cases by category
 - `pipeline.rs`: `validate_project()`, `validate_file()` returning `LintResult<ValidationOutcome>`.
 - `fixes.rs` (auto-fix engine), `eval.rs` (rule precision/recall/F1), `file_utils.rs` (safe I/O: symlink rejection, size limits), `fs.rs` (`FileSystem` trait with `RealFileSystem` and `MockFileSystem`).
 
-`build_unchecked()` and the `__internal` module are test-only features; `agnix_core::normalize_line_endings` is stable at the crate root. The public API surface and its stability rules are in `CONTRIBUTING.md`.
+`build_unchecked()` (`cfg(test)` or the `__internal_unchecked` feature) and the `__internal` module are for tests, fuzz targets and benches only; `agnix_core::normalize_line_endings` is stable at the crate root. The public API surface and its stability rules are in `CONTRIBUTING.md`.
 
 ### Validation flow
 

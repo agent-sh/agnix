@@ -2,7 +2,7 @@
 description: Use when user asks to 'lint agent configs', 'validate skills', 'check CLAUDE.md', 'validate hooks', 'lint MCP', or mentions 'agent config issues', 'skill validation'.
 codex-description: 'Use when user asks to "lint agent configs", "validate skills", "check CLAUDE.md", "validate hooks", "lint MCP". Validates agent configuration files against 457 rules across 10+ AI tools.'
 argument-hint: "[path] [--fix] [--strict] [--target [target]]"
-allowed-tools: Task, Read
+allowed-tools: Task, Read, Bash(agnix:*)
 ---
 
 # /agnix - Agent Config Linter

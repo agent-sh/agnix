@@ -208,7 +208,7 @@ I welcome community input through several channels:
 
 1. **Update CHANGELOG.md** - Required for all PRs (skip with `[skip changelog]` in title)
 2. **Add tests** - Every feature/fix must have tests
-3. **Wait for CI and review** - Require successful `revuto-review` and hosted checks on the current head
+3. **Wait for CI and review** - Require successful `revuto-review` and hosted checks on the current head. If revuto is capped or unavailable (daily limit, round cap, quota), do not wait for it or re-trigger it: the author's self-review is enough, noted in the PR body
 4. **Address review comments** - Resolve findings before merging through the PR; follow the current repository protection rules
 
 ## Backward-Compatibility Policy
