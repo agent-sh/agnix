@@ -7,7 +7,7 @@
 
 | Type | Files | Rules |
 |------|-------|-------|
-| Skills | SKILL.md | 35 |
+| Skills | SKILL.md | 34 |
 | Hooks | settings.json | 27 |
 | Memory (Claude Code) | CLAUDE.md, CLAUDE.local.md, .claude/rules/*.md | 13 |
 | Instructions (Cross-Tool) | AGENTS.md, AGENTS.local.md, AGENTS.override.md | 6 |

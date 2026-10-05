@@ -1,8 +1,8 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 458,
-  "last_updated": "2026-10-04",
+  "total_rules": 457,
+  "last_updated": "2026-10-05",
   "schema": {
     "evidence": {
       "source_type": "spec|vendor_docs|vendor_code|paper|community",
@@ -3348,34 +3348,6 @@
       },
       "good_example": "---\nname: hook-skill\ndescription: Use when running a skill with hooks\nhooks:\n  PreToolUse:\n    - type: command\n      command: echo pre\n---\nRun with hooks.",
       "bad_example": "---\nname: hook-skill\ndescription: Use when running a skill with hooks\nhooks:\n  InvalidEvent:\n    - type: command\n      command: echo bad\n---\nRun with hooks."
-    },
-    {
-      "id": "CC-SK-011",
-      "name": "Unreachable Skill",
-      "severity": "HIGH",
-      "category": "claude-skills",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://code.claude.com/docs/en/skills"
-        ],
-        "verified_on": "2026-02-07",
-        "applies_to": {
-          "tool": "claude-code"
-        },
-        "normative_level": "MUST",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": true,
-        "fix_safety": "unsafe"
-      },
-      "good_example": "---\nname: internal-skill\ndescription: Use when running internal automation\nuser-invocable: false\n---\nThis skill can still be invoked by the model.",
-      "bad_example": "---\nname: internal-skill\ndescription: Use when running internal automation\nuser-invocable: false\ndisable-model-invocation: true\n---\nThis skill cannot be reached by anyone."
     },
     {
       "id": "CC-SK-012",
@@ -13267,7 +13239,7 @@
     },
     "claude-skills": {
       "prefix": "CC-SK",
-      "count": 21,
+      "count": 20,
       "description": "Claude Code Skills rules"
     },
     "claude-hooks": {
@@ -13547,8 +13519,7 @@
             "key": "user-invocable",
             "docs": "Whether users can invoke this skill directly.",
             "rules": [
-              "CC-SK-015",
-              "CC-SK-011"
+              "CC-SK-015"
             ],
             "values": [
               "true",

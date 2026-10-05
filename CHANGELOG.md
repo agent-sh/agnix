@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.56.5] - 2026-10-05
+
+### Fixed
+- Retire CC-SK-011 and its unsafe auto-fix. Inline user permission can invoke a
+  skill with both invocation flags; preserve the automatic-invocation guard.
+
 ### Changed
 - Refresh reviewed Claude Code, Cursor cloud environment, and GitHub Copilot
   specification baselines after documentation clarifications.
