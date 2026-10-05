@@ -6,19 +6,27 @@ allowed-tools: Bash(agnix:*), Bash(cargo:*), Read, Glob, Grep
 
 # agnix
 
-Lint agent configurations before they break your workflow. Validates Skills, Hooks, MCP, Memory, Plugins across Claude Code, Cursor, GitHub Copilot, and Codex CLI.
+Lint agent configurations (Skills, Hooks, MCP, Memory, Plugins) before they break a workflow, across Claude Code, Codex CLI, OpenCode, Kiro, Cursor, GitHub Copilot and other tools.
 
-## When to Use
+## Run
 
-Invoke when user asks to:
-- "Lint my agent configs"
-- "Validate my skills"
-- "Check my CLAUDE.md"
-- "Validate hooks"
-- "Lint MCP configs"
-- "Fix agent configuration issues"
+1. `agnix --version`. If it is missing, install with `npm install -g agnix` or `cargo install agnix-cli`.
+2. `agnix .` (or the path the user named).
+3. If the user asked for fixes: `agnix --fix .`, then run step 2 again to confirm what remains. Otherwise change no files; `agnix --dry-run .` previews the fixes.
 
-## Supported Files
+## CLI reference
+
+| Command | Description |
+|---------|-------------|
+| `agnix .` | Validate current project |
+| `agnix --fix .` | Apply safe auto-fixes |
+| `agnix --dry-run .` | Show what would be fixed, change nothing |
+| `agnix --strict .` | Treat warnings as errors |
+| `agnix --target claude-code .` | Target one tool: `generic` (default), `claude-code`, `cursor`, `codex`, `kiro` |
+| `agnix --watch .` | Watch mode |
+| `agnix --format json .` | JSON output |
+
+## Supported files
 
 | File Type | Examples |
 |-----------|----------|
@@ -29,50 +37,7 @@ Invoke when user asks to:
 | Cursor | `.cursor/rules/*.mdc` |
 | Copilot | `.github/copilot-instructions.md` |
 
-## Execution
-
-### 1. Check if agnix is installed
-
-```bash
-agnix --version
-```
-
-If not found, install:
-```bash
-cargo install agnix-cli
-```
-
-### 2. Validate
-
-```bash
-agnix .
-```
-
-### 3. If issues found and --fix requested
-
-```bash
-agnix --fix .
-```
-
-### 4. Re-validate to confirm
-
-```bash
-agnix .
-```
-
-## CLI Reference
-
-| Command | Description |
-|---------|-------------|
-| `agnix .` | Validate current project |
-| `agnix --fix .` | Auto-fix issues |
-| `agnix --strict .` | Treat warnings as errors |
-| `agnix --target claude-code .` | Only Claude Code rules |
-| `agnix --target cursor .` | Only Cursor rules |
-| `agnix --watch .` | Watch mode |
-| `agnix --format json .` | JSON output |
-
-## Output Format
+## Output
 
 ```
 CLAUDE.md:15:1 warning: Generic instruction 'Be helpful' [fixable]
@@ -84,7 +49,7 @@ skills/review/SKILL.md:3:1 error: Invalid name [fixable]
 Found 1 error, 1 warning (2 fixable)
 ```
 
-## Common Issues & Fixes
+## Common fixes
 
 | Issue | Solution |
 |-------|----------|

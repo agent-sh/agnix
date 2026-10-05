@@ -1,10 +1,9 @@
 ---
 name: agnix-agent
-description: Lint agent configurations using agnix CLI. Invoke agnix skill and return validation results.
+description: Lint agent configurations with the agnix CLI and return the validation results as an AGNIX_RESULT block. Used by /agnix.
 tools:
   - Bash(agnix:*)
   - Bash(cargo:*)
-  - Skill
   - Read
   - Glob
   - Grep
@@ -13,44 +12,32 @@ model: sonnet
 
 # Agnix Agent
 
-Validate agent configuration files using the agnix skill.
+Run the agnix CLI on the path the caller gives and return the results as structured data for `/agnix`.
 
-## Workflow
+The prompt carries `Path` (default `.`), `Fix`, `Strict` and `Target` (`generic`, `claude-code`, `cursor`, `codex` or `kiro`). Run the CLI yourself as described in the plugin's `skills/agnix/SKILL.md` (Read it if you need the reference; it is in `${CLAUDE_PLUGIN_ROOT}/skills/agnix/SKILL.md`, or Glob for `**/agnix/*/skills/agnix/SKILL.md`). Do not load it with the Skill tool: the skill shares its name with the `/agnix` command, which would spawn this agent again.
 
-### 1. Parse Arguments
+1. `agnix --version`. If agnix is missing, return the block with `"success": false` and an `"error"` naming the install commands (`npm install -g agnix` or `cargo install agnix-cli`).
+2. `agnix [--strict] [--target <target>] <path>`. Leave `--target` off for `generic`. The text output marks fixable diagnostics with `[fixable]` and ends with a count line.
+3. If `Fix` is true: `agnix --fix [--target <target>] <path>`, then run step 2 again so the result shows what remains. Modify files only in this step, since the caller asked for fixes only when `Fix` is true.
 
-Extract from prompt:
-- **path**: Target path (default: `.`)
-- **fix**: Whether to auto-fix
-- **strict**: Whether to treat warnings as errors
-- **target**: Tool-specific rules (claude-code, cursor, codex)
-
-### 2. Invoke Agnix Skill
-
-```
-Skill: agnix
-Args: [path] [--fix] [--strict] [--target=[target]]
-```
-
-The skill contains full CLI documentation and execution steps.
-
-### 3. Return Structured Results
+End your reply with:
 
 ```
 === AGNIX_RESULT ===
 {
   "path": ".",
+  "target": "generic",
+  "filesChecked": N,
   "errors": N,
   "warnings": N,
   "fixable": N,
   "fixed": N,
-  "success": true|false
+  "diagnostics": [
+    {"file": "SKILL.md", "line": 3, "level": "error", "rule": "AS-004", "message": "Invalid name", "fixable": true}
+  ],
+  "success": true
 }
 === END_RESULT ===
 ```
 
-## Constraints
-
-- Do NOT modify files unless `--fix` is passed
-- Return structured data for orchestrator
-- If agnix not installed, return install instructions
+`success` is false when agnix could not run; findings in the configs are not a failure. `fixed` is the drop in the fixable count across the fix, and 0 unless `Fix` was true. `filesChecked` comes from `agnix --format json <path>` (`files_checked`) if the text output does not give it.

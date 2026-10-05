@@ -1,86 +1,36 @@
 ---
 name: agnix
 description: "Use when user asks to 'lint agent configs', 'validate skills', 'check CLAUDE.md', 'validate hooks', 'lint MCP'. Validates agent configuration files against 457 rules across 10+ AI tools."
-argument-hint: "[path] [--fix] [--strict] [--target=claude-code|cursor|codex]"
+argument-hint: "[path] [--fix] [--strict] [--target=generic|claude-code|cursor|codex|kiro]"
 allowed-tools: Bash(agnix:*), Bash(cargo:*), Read, Glob, Grep
 ---
 
 # agnix
 
-Lint agent configurations before they break your workflow. Validates Skills, Hooks, MCP, Memory, Plugins across 10+ AI tools including Claude Code, Cursor, GitHub Copilot, Codex CLI, OpenCode, Gemini CLI, Cline, Windsurf, Kiro, and Amp.
+Lint agent configurations (Skills, Hooks, MCP, Memory, Plugins) before they break a workflow, across Claude Code, Codex CLI, OpenCode, Kiro, Cursor, GitHub Copilot, Cline, Gemini CLI, Windsurf, Amp and others.
 
-## Parse Arguments
+Arguments, from `$ARGUMENTS`: a path (default `.`), `--fix`, `--strict`, and `--target` as `--target=X` or `--target X`. Without `--target` the CLI uses `generic`.
 
-```javascript
-const args = '$ARGUMENTS'.split(' ').filter(Boolean);
-const targetPath = args.find(a => !a.startsWith('--')) || '.';
-const fix = args.includes('--fix');
-const strict = args.includes('--strict');
-let target = args.find(a => a.startsWith('--target='))?.split('=')[1];
-if (!target) {
-  const idx = args.indexOf('--target');
-  if (idx !== -1 && args[idx + 1]) target = args[idx + 1];
-}
-target = target || 'claude-code';
-```
+## Run
 
-## When to Use
+1. `agnix --version`. If it is missing, install with `npm install -g agnix` or `cargo install agnix-cli` (also on Homebrew and PyPI).
+2. `agnix [--strict] [--target <target>] <path>`.
+3. With `--fix`: `agnix --fix [--target <target>] <path>`, then run step 2 again to confirm what remains. Without `--fix`, change no files; `agnix --dry-run <path>` previews the fixes.
 
-Invoke when user asks to:
-- "Lint my agent configs"
-- "Validate my skills"
-- "Check my CLAUDE.md"
-- "Validate hooks"
-- "Lint MCP configs"
-- "Fix agent configuration issues"
-- "Check if my SKILL.md is correct"
-
-## Prerequisites
-
-agnix must be installed. Check with:
-```bash
-agnix --version
-```
-
-If not installed:
-```bash
-cargo install agnix-cli
-```
-
-## Execution
-
-### 1. Validate Project
-
-```bash
-agnix .
-```
-
-### 2. If Issues Found and Fix Requested
-
-```bash
-agnix --fix .
-```
-
-### 3. Re-validate to Confirm
-
-```bash
-agnix .
-```
-
-## CLI Reference
+## CLI reference
 
 | Command | Description |
 |---------|-------------|
 | `agnix .` | Validate current project |
-| `agnix --fix .` | Auto-fix issues |
+| `agnix --fix .` | Apply safe auto-fixes |
+| `agnix --dry-run .` | Show what would be fixed, change nothing |
 | `agnix --strict .` | Treat warnings as errors |
-| `agnix --target claude-code .` | Only Claude Code rules |
-| `agnix --target cursor .` | Only Cursor rules |
+| `agnix --target claude-code .` | Target one tool: `generic`, `claude-code`, `cursor`, `codex`, `kiro` |
 | `agnix --watch .` | Watch mode - re-validate on changes |
 | `agnix --format json .` | JSON output |
 | `agnix --format sarif .` | SARIF for GitHub Code Scanning |
 
-## Supported Files
+## Supported files
 
 | File Type | Examples |
 |-----------|----------|
@@ -91,7 +41,7 @@ agnix .
 | Cursor | `.cursor/rules/*.mdc` |
 | Copilot | `.github/copilot-instructions.md` |
 
-## Output Format
+## Output
 
 ```
 CLAUDE.md:15:1 warning: Generic instruction 'Be helpful' [fixable]
@@ -103,12 +53,9 @@ skills/review/SKILL.md:3:1 error: Invalid name [fixable]
 Found 1 error, 1 warning (2 fixable)
 ```
 
-Exit codes:
-- `0` - No errors (warnings allowed)
-- `1` - Errors found
-- `2` - Invalid arguments
+Exit codes: `0` no errors (warnings allowed), `1` errors found, `2` invalid arguments.
 
-## Rule Categories
+## Rule categories
 
 | Prefix | Category | Examples |
 |--------|----------|----------|
@@ -121,7 +68,7 @@ Exit codes:
 | COP-* | GitHub Copilot | Instructions format |
 | CUR-* | Cursor | MDC format, rules |
 
-## Common Issues & Fixes
+## Common fixes
 
 | Issue | Solution |
 |-------|----------|
@@ -130,11 +77,7 @@ Exit codes:
 | Generic instructions | Remove "be helpful", "be accurate" |
 | Missing trigger phrase | Add "Use when..." to description |
 
-## Integration
-
-This skill is standalone and can be invoked directly via `/agnix`.
-
-For CI integration, see the [GitHub Action](https://github.com/agent-sh/agnix#github-action).
+For CI, use the [GitHub Action](https://github.com/agent-sh/agnix#github-action).
 
 ## Links
 

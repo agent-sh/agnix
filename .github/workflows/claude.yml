@@ -110,8 +110,8 @@ jobs:
           # explicit @claude mention, and the comment body is the instruction.
           # The list is additive: the baseline withholds cargo, so without it an
           # `@claude fix X and add a test` request would commit code that was
-          # never compiled - against AGENTS.md rule 7 ("Task is not done until
-          # tests added"). This workflow commits (`use_commit_signing` +
+          # never compiled - against the AGENTS.md rule that a feature or fix
+          # is done when a test covers it. This workflow commits (`use_commit_signing` +
           # `contents: write`), so it must verify its own work.
           # Explicit file input also covers the action SDK's bundled CLI version.
           # Keep the user mention as the task prompt and load the canonical rules.

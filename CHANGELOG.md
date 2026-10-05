@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Rewrite the agent-facing text for current models: AGENTS.md, the `/agnix`
+  command, the `agnix-agent` agent and both agnix skills. Rules are stated once
+  with their reasons; the "follow the flow exactly, no deviations" rails are
+  gone; the `revuto-review` merge rule now says not to wait when revuto is
+  capped. Rule IDs, count phrases, tier lines and config keys are unchanged.
+
+### Fixed
+- `/agnix` reported zero issues when the agent's `AGNIX_RESULT` block was
+  missing; it now shows the raw output. The result block now carries the
+  diagnostics the report table needs.
+- `agnix-agent` loaded the skill with the Skill tool. The skill shares its name
+  with the `/agnix` command, so that call can load the command and spawn the
+  agent again. The agent now runs the CLI itself.
+- The plugin skill defaulted `--target` to `claude-code`, while the command and
+  the CLI default to `generic`. The skill now uses the CLI default, and the
+  command, agent and skills accept `kiro`.
+
 ## [0.56.5] - 2026-10-05
 
 ### Fixed
