@@ -2,75 +2,43 @@
 description: Use when user asks to 'lint agent configs', 'validate skills', 'check CLAUDE.md', 'validate hooks', 'lint MCP', or mentions 'agent config issues', 'skill validation'.
 codex-description: 'Use when user asks to "lint agent configs", "validate skills", "check CLAUDE.md", "validate hooks", "lint MCP". Validates agent configuration files against 457 rules across 10+ AI tools.'
 argument-hint: "[path] [--fix] [--strict] [--target [target]]"
-allowed-tools: Task, Read
+allowed-tools: Task, Read, Bash(agnix:*)
 ---
 
 # /agnix - Agent Config Linter
 
-Lint agent configurations before they break your workflow. Validates Skills, Hooks, MCP, Memory, Plugins across Claude Code, Cursor, GitHub Copilot, and Codex CLI.
+Lint agent configurations (Skills, Hooks, MCP, Memory, Plugins) for Claude Code, Codex CLI, Cursor, GitHub Copilot, Kiro and other tools, and show the findings.
 
 ## Arguments
 
-Parse from $ARGUMENTS or use defaults:
+From `$ARGUMENTS`:
 
-- **Path**: Target path (default: `.`)
-- **--fix**: Auto-fix issues
-- **--strict**: Treat warnings as errors
-- **--target**: `claude-code`, `cursor`, `codex`, or `generic` (default)
+- **path**: the first argument that is not a flag or the value of `--target`. Default `.`. Remove newlines from it before passing it on.
+- **--fix**: apply auto-fixes.
+- **--strict**: treat warnings as errors.
+- **--target**: `generic` (default), `claude-code`, `cursor`, `codex` or `kiro`, as `--target=X` or `--target X`. Any other value falls back to `generic`.
 
-## Execution
+## Run
 
-### Phase 1: Spawn Agnix Agent
+Spawn `agnix:agnix-agent` with:
 
-```javascript
-const args = '$ARGUMENTS'.split(' ').filter(Boolean);
-const fix = args.includes('--fix');
-const strict = args.includes('--strict');
+```
+Validate agent configurations.
+Path: {path}
+Fix: {true|false}
+Strict: {true|false}
+Target: {target}
 
-// Parse --target (supports both --target=value and --target value forms)
-const allowedTargets = ['claude-code', 'cursor', 'codex', 'generic'];
-let rawTarget = 'generic';
-const targetEqIdx = args.findIndex(a => a.startsWith('--target='));
-const targetSpaceIdx = args.findIndex(a => a === '--target');
-if (targetEqIdx !== -1) {
-  rawTarget = args[targetEqIdx].split('=')[1] || 'generic';
-} else if (targetSpaceIdx !== -1 && args[targetSpaceIdx + 1] && !args[targetSpaceIdx + 1].startsWith('-')) {
-  rawTarget = args[targetSpaceIdx + 1];
-}
-const target = allowedTargets.includes(rawTarget) ? rawTarget : 'generic';
-
-// Parse path - exclude flags and --target's value, sanitize to prevent injection
-const excludeIndices = new Set([targetSpaceIdx, targetSpaceIdx + 1].filter(i => i >= 0));
-const path = (args.find((a, i) => !a.startsWith('-') && !excludeIndices.has(i)) || '.').replace(/[\n\r]/g, '');
-
-const result = await Task({
-  subagent_type: "agnix:agnix-agent",
-  prompt: `Validate agent configurations.
-Path: ${path}
-Fix: ${fix}
-Strict: ${strict}
-Target: ${target}
-
-Return structured results between === AGNIX_RESULT === markers.`
-});
+Return structured results between === AGNIX_RESULT === markers.
 ```
 
-### Phase 2: Parse Agent Results
+Without the Task tool, run the steps of the plugin's `skills/agnix/SKILL.md` in this session.
 
-Extract structured JSON from agent output:
+Parse the JSON between `=== AGNIX_RESULT ===` and `=== END_RESULT ===` as JSON. If the block is missing or does not parse, show the agent's raw output instead of reporting zero issues.
 
-```javascript
-function parseAgnix(output) {
-  const match = output.match(/=== AGNIX_RESULT ===[\s\S]*?({[\s\S]*?})[\s\S]*?=== END_RESULT ===/);
-  return match ? JSON.parse(match[1]) : { errors: 0, warnings: 0, diagnostics: [] };
-}
+## Report
 
-const findings = parseAgnix(result);
-```
-
-### Phase 3: Present Results
-
-#### No Issues
+No issues:
 
 ```markdown
 ## Validation Passed
@@ -81,7 +49,7 @@ No issues found in agent configurations.
 - Target: {target}
 ```
 
-#### Issues Found
+Issues found:
 
 ```markdown
 ## Agent Config Issues
@@ -103,7 +71,7 @@ No issues found in agent configurations.
 - [ ] Review remaining issues manually
 ```
 
-#### After Fix
+After `--fix`:
 
 ```markdown
 ## Fixed Issues
@@ -116,22 +84,11 @@ No issues found in agent configurations.
 **Remaining**: N issues (manual review needed)
 ```
 
-## Supported Files
+## Errors
 
-| File Type | Examples |
-|-----------|----------|
-| Skills | `SKILL.md` |
-| Memory | `CLAUDE.md`, `AGENTS.md` |
-| Hooks | `${STATE_DIR}/settings.json` (Claude: .claude/, OpenCode: .opencode/, Codex: .codex/) |
-| MCP | `*.mcp.json` |
-| Cursor | `.cursor/rules/*.mdc` |
-| Copilot | `.github/copilot-instructions.md` |
-
-## Error Handling
-
-- **agnix not installed**: Show install command `cargo install agnix-cli`
-- **Invalid path**: Exit with "Path not found: [path]"
-- **Parse errors**: Show raw agnix output
+- agnix not installed: show the install command, `npm install -g agnix` or `cargo install agnix-cli`.
+- Path not found: `Path not found: [path]`.
+- agnix output that cannot be parsed: show the raw output.
 
 ## Links
 

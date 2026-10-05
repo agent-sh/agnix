@@ -4,31 +4,22 @@
 
 **Repository**: https://github.com/agent-sh/agnix
 
-## Project Instruction Files
+## Rules
 
-`AGENTS.md` is the repository instruction source. Keep directory-specific guidance
-in the corresponding nested `AGENTS.md`.
-
-## Critical Rules
-
-1. **Rust workspace** - agnix-rules (data), agnix-core (lib), agnix-cli/agnix-lsp/agnix-mcp (binaries), agnix-wasm (WASM bindings)
-2. **rules.json is source of truth** - `knowledge-base/rules.json` is the machine-readable source of truth. When adding a new rule, add it to BOTH `rules.json` AND `VALIDATION-RULES.md`. CI parity tests enforce this.
-3. **Plain text output** - No emojis, no ASCII art
-4. **Certainty filtering** - HIGH (>95%), MEDIUM (75-95%), LOW (<75%)
-5. **Release binaries** - Compile with LTO, strip symbols
-6. **Track work in GitHub issues** - All tasks tracked there
-7. **Task is not done until tests added** - Every feature/fix must have quality tests
-8. **Documentation** - Keep long-form docs in `README.md`, `SPEC.md`, and `knowledge-base/` (especially `knowledge-base/VALIDATION-RULES.md`). Keep `AGENTS.md` for agent instructions only.
-9. **Always follow the skill/command flow as instructed** - No deviations
-10. **No unnecessary files** - Don't create summary files, plan files, or temp docs unless specifically required
-11. **Never merge without waiting for the `revuto-review` check to end successfully** - It might take time, but this is the major quality gate and most thorough review.
-12. **You MUST follow the flow phases one by one** - If they state to use subagents, tools, or any specific method, you must follow it exactly as described.
-13. **You MUST address all comments and reviews** - If reviewers leave comments, even minor ones, and even if not a requested change, you must address them all before merging. If you disagree, respond in the review comments. Minor comments must still be addressed.
-14. **Use single dash for em-dashes** - In prose, use ` - ` (single dash with spaces), never ` -- ` (double dash). This does not apply to CLI flags like `--help` or `--fix`.
+- `knowledge-base/rules.json` is the source of truth for rules. A new rule goes into both `rules.json` and `knowledge-base/VALIDATION-RULES.md`; CI parity tests fail when they drift. See "Adding a rule" below.
+- Output is plain text: no emojis, no ASCII art.
+- Certainty levels: HIGH (>95%), MEDIUM (75-95%), LOW (<75%).
+- Release binaries are compiled with LTO and stripped.
+- Track work in GitHub issues.
+- A feature or fix is done when a test covers it.
+- Long-form docs live in `README.md`, `SPEC.md` and `knowledge-base/` (especially `knowledge-base/VALIDATION-RULES.md`). This file holds agent instructions only. Create no summary, plan or scratch docs unless the task needs them.
+- Wait for the `revuto-review` check to pass before merging: it is the most thorough review. If revuto is capped or unavailable, do not wait; a self-review is enough, noted in the PR body.
+- Address every review comment before merging, minor ones included. If you disagree, reply in the review thread.
+- In prose, write a spaced single dash (` - `), not ` -- `. CLI flags like `--help` or `--fix` are fine.
 
 ## Architecture
 
-### Crate Dependency Graph
+### Crate dependency graph
 
 ```
 agnix-rules (data-only, generated from rules.json)
@@ -41,7 +32,7 @@ agnix-core (validation engine)
 └── agnix-wasm (WebAssembly bindings)
 ```
 
-### Project Layout
+### Project layout
 
 ```
 crates/
@@ -61,92 +52,21 @@ knowledge-base/     # 457 rules, 75+ sources, rules.json
 tests/fixtures/     # Test cases by category
 ```
 
-### Core Modules (agnix-core)
+### agnix-core modules
 
-- `parsers/` - Frontmatter, JSON, Markdown parsing
-- `schemas/` - Type definitions for skill, hooks, agent, mcp, cline, roo, and other tool configs
-- `rules/` - Validators implementing Validator trait (40 validators)
-- `config.rs` - LintConfig, LintConfigBuilder, ConfigError, ToolVersions, SpecRevisions
-- `diagnostics.rs` - Diagnostic, Fix, DiagnosticLevel, ValidationOutcome, LintError (= CoreError), LintResult
-- `eval.rs` - Rule efficacy evaluation (precision/recall/F1)
-- `file_types/` - FileType enum, detect_file_type(), FileTypeDetector trait, FileTypeDetectorChain
-- `file_utils.rs` - Safe file I/O (symlink rejection, size limits)
-- `fixes.rs` - Auto-fix application engine
-- `fs.rs` - FileSystem trait abstraction (RealFileSystem, MockFileSystem)
-- `pipeline.rs` - `ValidationResult`, `validate_project()`, `validate_file()` -> `LintResult<ValidationOutcome>`
-- `registry.rs` - ValidatorRegistry, ValidatorRegistryBuilder, ValidatorProvider, factory functions
+- `parsers/`: frontmatter, JSON and Markdown parsing.
+- `schemas/`: types for skill, hooks, agent, MCP, Cline, Roo and other tool configs.
+- `rules/`: validators implementing the `Validator` trait (`rules/mod.rs`).
+- `config.rs`, `config/builder.rs`: `LintConfig` and `LintConfigBuilder` (fields are private; build with `LintConfig::builder()...build()?`), `ConfigError`, `ToolVersions`, `SpecRevisions`.
+- `diagnostics.rs`: `Diagnostic`, `Fix`, `DiagnosticLevel`, `ValidationOutcome`, `LintError` (= `CoreError`), `LintResult`.
+- `file_types/`: `FileType`, `detect_file_type()`, and the `FileTypeDetector` trait with `FileTypeDetectorChain` (chain of responsibility; `with_builtin()`, `prepend`, `push`).
+- `registry.rs`: `ValidatorRegistry` and its builder, `ValidatorProvider` for external validators. Validators are `Send + Sync + 'static` because the registry caches one instance each and shares them across threads.
+- `pipeline.rs`: `validate_project()`, `validate_file()` returning `LintResult<ValidationOutcome>`.
+- `fixes.rs` (auto-fix engine), `eval.rs` (rule precision/recall/F1), `file_utils.rs` (safe I/O: symlink rejection, size limits), `fs.rs` (`FileSystem` trait with `RealFileSystem` and `MockFileSystem`).
 
-### Key Abstractions
+`build_unchecked()` (`cfg(test)` or the `__internal_unchecked` feature) and the `__internal` module are for tests, fuzz targets and benches only; `agnix_core::normalize_line_endings` is stable at the crate root. The public API surface and its stability rules are in `CONTRIBUTING.md`.
 
-```rust
-// Primary extension point
-// Implementors must be Send + Sync + 'static (cached in registry, shared across threads)
-pub trait Validator: Send + Sync + 'static {
-    fn validate(&self, path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic>;
-    fn name(&self) -> &'static str { /* default: short type name */ }
-    fn metadata(&self) -> ValidatorMetadata { /* default: empty rule_ids */ }
-}
-
-// Plugin architecture for extensibility
-pub trait ValidatorProvider: Send + Sync {
-    fn name(&self) -> &str { /* default: short type name */ }
-    fn validators(&self) -> Vec<(FileType, ValidatorFactory)>;
-    fn named_validators(&self) -> Vec<(FileType, Option<&'static str>, ValidatorFactory)> { /* default: wraps validators() with None names */ }
-}
-
-// Registry with builder pattern and runtime filtering
-// Stores cached Box<dyn Validator> instances; no per-file re-instantiation
-pub struct ValidatorRegistry { /* ... */ }
-
-impl ValidatorRegistry {
-    pub fn builder() -> ValidatorRegistryBuilder;
-    pub fn with_defaults() -> Self;
-    pub fn validators_for(&self, file_type: FileType) -> &[Box<dyn Validator>];
-    pub fn total_validator_count(&self) -> usize;
-    pub fn disable_validator(&mut self, name: &'static str);
-    pub fn disable_validator_owned(&mut self, name: &str);
-}
-
-// Extensible file type detection (chain-of-responsibility)
-pub trait FileTypeDetector: Send + Sync {
-    fn detect(&self, path: &Path) -> Option<FileType>;
-    fn name(&self) -> &str { /* default: short type name */ }
-}
-
-pub struct FileTypeDetectorChain { /* ... */ }
-
-impl FileTypeDetectorChain {
-    pub fn new() -> Self;
-    pub fn with_builtin() -> Self;
-    pub fn prepend(self, detector: impl FileTypeDetector + 'static) -> Self;
-    pub fn push(self, detector: impl FileTypeDetector + 'static) -> Self;
-    pub fn detect(&self, path: &Path) -> Option<FileType>;
-}
-
-// Validated config construction (fields are private)
-// Usage: LintConfig::builder().severity(Error).tools(vec![...]).build()?
-pub struct LintConfigBuilder { /* ... */ }
-
-impl LintConfigBuilder {
-    pub fn severity(&mut self, s: SeverityLevel) -> &mut Self;
-    pub fn target(&mut self, t: TargetTool) -> &mut Self;
-    pub fn tools(&mut self, t: Vec<String>) -> &mut Self;
-    pub fn exclude(&mut self, e: Vec<String>) -> &mut Self;
-    pub fn disable_rule(&mut self, id: impl Into<String>) -> &mut Self;
-    pub fn disable_validator(&mut self, name: impl Into<String>) -> &mut Self;
-    pub fn build(&mut self) -> Result<LintConfig, ConfigError>;
-    pub fn build_lenient(&mut self) -> Result<LintConfig, ConfigError>;
-    // build_unchecked() exists but is #[cfg(any(test, feature = "__internal_unchecked"))]
-    // __internal module exists but is #[cfg(any(test, feature = "__internal"))]
-    // normalize_line_endings is stable at crate root: agnix_core::normalize_line_endings
-}
-
-impl LintConfig {
-    pub fn builder() -> LintConfigBuilder;
-}
-```
-
-### Validation Flow
+### Validation flow
 
 ```
 CLI args → LintConfig → validate_project()
@@ -158,61 +78,39 @@ CLI args → LintConfig → validate_project()
     → Output (text/JSON/SARIF)
 ```
 
-### LSP Architecture
+### LSP
 
-- Backend holds `Arc<ArcSwap<LintConfig>>` for lock-free config reads, immutable `Arc<ValidatorRegistry>`, document cache
-- Validation runs in `spawn_blocking()` (CPU-bound, sync)
-- Events: `did_open`, `did_change`, `did_save`, `did_close`, `did_change_configuration`, `codeAction`, `hover`
+The backend holds `Arc<ArcSwap<LintConfig>>` for lock-free config reads, an immutable `Arc<ValidatorRegistry>` and a document cache. Validation runs in `spawn_blocking()` because it is CPU-bound and sync. Handled events: `did_open`, `did_change`, `did_save`, `did_close`, `did_change_configuration`, `codeAction`, `hover`.
 
 ## Commands
 
 ```bash
-cargo check                 # Compile check
-cargo test                  # Run tests and doc tests
-cargo nextest run --workspace # Optional process-per-test runner
-cargo build --release       # Build binaries
-cargo run --bin agnix -- .  # Run CLI
-cargo run --bin agnix-lsp   # Run LSP server
-cargo run --bin agnix-mcp   # Run MCP server
+cargo check                    # Compile check
+cargo test                     # Tests and doc tests
+cargo nextest run --workspace  # Optional process-per-test runner
+cargo build --release          # Build binaries
+cargo run --bin agnix -- .     # Run CLI
+cargo run --bin agnix-lsp      # Run LSP server
+cargo run --bin agnix-mcp      # Run MCP server
+bash scripts/preflight.sh      # Quick local checks; --full before pushing
 ```
 
-For local checks, prefer a scoped crate or integration binary, for example
-`cargo test -p agnix-core --test fix_integration`. Cargo remains the local
-preflight and CI default after measurement; nextest is available for optional
-local runs.
-The default nextest profile uses two test processes; increase `--test-threads` only within the
-machine's CPU budget. Dev and test builds retain file and line backtraces with
-`line-tables-only` debug information. Release profiles are unchanged.
+Run the tests a change touches, scoped to a crate or integration binary, for example `cargo test -p agnix-core --test fix_integration`. Cargo is the local and CI default. Nextest is optional, uses two test processes by default (raise `--test-threads` only within the machine's CPU budget), and skips doc tests, so pair it with `cargo test --workspace --doc`. Dev and test builds keep `line-tables-only` debug info for file and line backtraces.
 
-CI runs lint and workspace merge contracts on owner PRs and pushes to main.
-Owner PRs run scoped tests locally before pushing. External contributors,
-the daily run, manual CI runs, PRs labeled `full-suite` before a push, and release
-validation run the full test suite.
-Nextest does not run doc tests; pair it with `cargo test --workspace --doc`.
+CI runs lint and the workspace merge contracts on owner PRs and pushes to main; owner PRs run scoped tests locally before pushing. External contributors' PRs, the daily run, manual runs, PRs labeled `full-suite` and release validation run the full suite.
 
-## Rules Reference
+## Rules reference
 
-457 rules defined in `knowledge-base/rules.json` (source of truth)
+457 rules defined in `knowledge-base/rules.json` (source of truth), 457 validation rules across 40 validators. Human-readable docs: `knowledge-base/VALIDATION-RULES.md`. IDs are `[CATEGORY]-[NUMBER]` (AS-004, CC-HK-001).
 
+### Adding a rule
 
-Human-readable docs: `knowledge-base/VALIDATION-RULES.md`
+1. Add it to both `rules.json` and `VALIDATION-RULES.md`. Each rule in `rules.json` needs complete `evidence` metadata (`source_type`, `source_urls`, `verified_on`, `applies_to`, `normative_level`, `tests`); the schema is in `VALIDATION-RULES.md`.
+2. Run `node scripts/sync-rule-bookkeeping.js` (add `--validators=N` if you registered a new validator). It updates `total_rules` and `last_updated` in `rules.json`, the count phrases in AGENTS.md and README.md, the `crates/agnix-rules/rules.json` mirror and the website docs. CI runs it with `--check`.
 
-Format: `[CATEGORY]-[NUMBER]` (AS-004, CC-HK-001, etc.)
+## Tool support tiers
 
-**Adding a new rule**: Add to BOTH `rules.json` AND `VALIDATION-RULES.md`. CI parity tests will fail if they drift. Each rule in `rules.json` must include complete `evidence` metadata (source_type, source_urls, verified_on, applies_to, normative_level, tests). See VALIDATION-RULES.md for the evidence schema reference. Then run `node scripts/sync-rule-bookkeeping.js` (add `--validators=N` if a new validator was registered) to update the derived locations: `total_rules` + `last_updated` in rules.json, count phrases in AGENTS.md/README.md, the `crates/agnix-rules/rules.json` mirror, and the website docs. CI enforces this with `--check` mode.
-
-## Current State
-
-- Production-ready with full validation pipeline (current version: the latest [GitHub release](https://github.com/agent-sh/agnix/releases))
-- 457 validation rules across 40 validators
-
-- 4200+ passing tests
-- LSP + MCP servers with VS Code extension
-- See GitHub issues for roadmap
-
-## Tool Support Tiers
-
-agnix validates 11 tools today - those with a per-tool validator in `crates/agnix-core/src/rules/`. Tier indicates support priority (higher = stricter testing and release tracking).
+agnix validates 11 tools, those with a per-tool validator in `crates/agnix-core/src/rules/`. A higher tier gets stricter testing and release tracking.
 
 **Validated** (have a validator in agnix):
 
@@ -222,26 +120,19 @@ agnix validates 11 tools today - those with a per-tool validator in `crates/agni
 - **C** (community reports only): Gemini CLI
 - **D** (nice to have): Windsurf
 
-Release tracking for these is automated where the upstream publishes to GitHub: see `.github/tool-release-baselines.json` and `.github/workflows/tool-release-watch.yml`.
+Release tracking is automated where the upstream publishes to GitHub: `.github/tool-release-baselines.json` and `.github/workflows/tool-release-watch.yml`.
 
-**Watchlist** (no validator yet; tracked manually in `knowledge-base/RESEARCH-TRACKING.md`):
+**Watchlist** (no validator yet; tracked by hand in `knowledge-base/RESEARCH-TRACKING.md`): continue, Antigravity, Tabnine, Codeium, Amazon Q, Aider, SourceGraph Cody, pi.
 
-- continue, Antigravity, Tabnine, Codeium, Amazon Q, Aider, SourceGraph Cody, pi
-
-**E** (no support): Everything else - community contributions welcome via the Tool Support Request issue template.
-
-## References
-
-- SPEC.md - Technical reference
-- knowledge-base/INDEX.md - Knowledge navigation
-- https://agentskills.io
-- https://modelcontextprotocol.io
+**E** (no support): everything else. Community contributions are welcome through the Tool Support Request issue template.
 
 ## Validation scope
 
-agnix is CPU-only Rust/WASM tooling. Choose checks for the changed behavior:
-formatting, lint, tests, rule bookkeeping and parity, packaging, and review.
-Use the relevant checks in `scripts/preflight.sh`; CPU-only tooling and docs do
-not need a GPU gate. If a future change introduces GPU, runtime or model behavior
-or related claims, require the corresponding native, model and hardware
-qualification before claiming support. CPU checks cannot provide that proof.
+agnix is CPU-only Rust and WASM tooling. Pick the checks the change touches from `scripts/preflight.sh`: format, lint, tests, rule bookkeeping and parity, packaging. A change that adds GPU, runtime or model behavior, or claims about it, needs native qualification on that hardware before any support claim.
+
+## References
+
+- `SPEC.md`: technical reference
+- `knowledge-base/INDEX.md`: knowledge navigation
+- https://agentskills.io
+- https://modelcontextprotocol.io
