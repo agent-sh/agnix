@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Refresh reviewed Claude Code, Cursor cloud environment, and GitHub Copilot
+  specification baselines after documentation clarifications.
+
 ## [0.56.4] - 2026-10-04
 
 ### Fixed
