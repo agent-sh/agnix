@@ -86,6 +86,8 @@ Security-relevant rules may include a `security` object in `knowledge-base/rules
 
 Rules are active by default. Deprecated rules should include `status`, `deprecated_since`, `replaced_by`, and `reason` fields in `rules.json`. Removed rule IDs are tracked in `knowledge-base/removed-rules.json` so `.agnix.toml` validation can warn on stale suppressions and point users at replacement rules.
 
+`CC-SK-011` was retired in 0.56.5. A user-typed inline `/skill-name` mention can authorize Claude to invoke a skill with both `user-invocable: false` and `disable-model-invocation: true`. The flags still restrict direct slash invocation and automatic model invocation, respectively. No reachability diagnostic or permission-changing auto-fix is emitted. See [Claude Code skill invocation](https://code.claude.com/docs/en/skills#where-you-write-the-skills-name).
+
 ### Example Evidence Block
 
 ```json
@@ -277,13 +279,6 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Requirement**: `hooks` field in skill frontmatter MUST follow the same schema as settings.json hooks (valid events, handler types, required fields)
 **Detection**: Parse hooks YAML value and validate against HooksSchema rules
 **Fix**: No auto-fix
-**Source**: code.claude.com/docs/en/skills
-
-<a id="cc-sk-011"></a>
-### CC-SK-011 [HIGH] Unreachable Skill
-**Requirement**: Skill MUST NOT set both `user-invocable: false` and `disable-model-invocation: true`
-**Detection**: `user_invocable == false && disable_model_invocation == true`
-**Fix**: Auto-fix (unsafe) -- remove `disable-model-invocation: true` line
 **Source**: code.claude.com/docs/en/skills
 
 <a id="cc-sk-012"></a>
@@ -3587,7 +3582,6 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | CC-SK-002 | Normalize context to fork | unsafe |
 | CC-SK-004 | Insert context: fork before agent key | unsafe |
 | CC-SK-007 | Suggest Bash(git:*) matcher | unsafe |
-| CC-SK-011 | Remove disable-model-invocation line | unsafe |
 | CC-SK-014 | Convert string to boolean | safe |
 | CC-SK-015 | Convert string to boolean | safe |
 | CC-HK-001 | Correct event name casing/typo | safe/unsafe |
@@ -3673,7 +3667,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Claude Output Styles | 6 | 2 | 2 | 2 | 0 |
 | Claude Plugins | 16 | 9 | 7 | 0 | 4 |
 | Claude Settings | 32 | 1 | 30 | 1 | 0 |
-| Claude Skills | 21 | 11 | 9 | 1 | 10 |
+| Claude Skills | 20 | 10 | 9 | 1 | 9 |
 | Cline | 7 | 4 | 3 | 0 | 3 |
 | Cline Skills | 3 | 2 | 1 | 0 | 2 |
 | Codex CLI | 65 | 31 | 29 | 5 | 10 |
@@ -3703,7 +3697,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **458** | **217** | **211** | **30** | **121** |
+| **TOTAL** | **457** | **216** | **211** | **30** | **120** |
 
 
 ---
@@ -3733,8 +3727,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 458 validation rules across 40 categories
+**Total Coverage**: 457 validation rules across 40 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 217 HIGH, 211 MEDIUM, 30 LOW
-**Auto-Fixable**: 121 rules (26%)
+**Certainty**: 216 HIGH, 211 MEDIUM, 30 LOW
+**Auto-Fixable**: 120 rules (26%)

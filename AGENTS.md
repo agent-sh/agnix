@@ -56,7 +56,7 @@ editors/
 ├── vscode/         # VS Code extension
 ├── jetbrains/      # JetBrains IDE plugin
 └── zed/            # Zed extension
-knowledge-base/     # 458 rules, 75+ sources, rules.json
+knowledge-base/     # 457 rules, 75+ sources, rules.json
 
 tests/fixtures/     # Test cases by category
 ```
@@ -192,7 +192,7 @@ Nextest does not run doc tests; pair it with `cargo test --workspace --doc`.
 
 ## Rules Reference
 
-458 rules defined in `knowledge-base/rules.json` (source of truth)
+457 rules defined in `knowledge-base/rules.json` (source of truth)
 
 
 Human-readable docs: `knowledge-base/VALIDATION-RULES.md`
@@ -204,7 +204,7 @@ Format: `[CATEGORY]-[NUMBER]` (AS-004, CC-HK-001, etc.)
 ## Current State
 
 - Production-ready with full validation pipeline (current version: the latest [GitHub release](https://github.com/agent-sh/agnix/releases))
-- 458 validation rules across 40 validators
+- 457 validation rules across 40 validators
 
 - 4200+ passing tests
 - LSP + MCP servers with VS Code extension

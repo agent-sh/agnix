@@ -57,12 +57,13 @@
 
 The `` !`command` `` syntax runs shell commands before skill content is sent. Currently validated by CC-SK-009 (max 3 injections).
 
+`CC-SK-011` was retired in 0.56.5. Inline user permission can invoke a skill with both invocation flags; the flags do not make it unreachable. Preserve `disable-model-invocation` for side-effect skills.
+
 ### New Rule Opportunities
 
 | Proposed Rule | Severity | Description | Auto-Fix? |
 |---------------|----------|-------------|-----------|
 | CC-SK-010: Invalid hooks in skill frontmatter | HIGH | Validate that `hooks` field in skill frontmatter follows the same schema as settings.json hooks | No |
-| CC-SK-011: user-invocable=false with disable-model-invocation=true | HIGH | If both are set, the skill is unreachable (neither user nor model can invoke it) | Yes - remove one |
 | CC-SK-012: argument-hint without $ARGUMENTS | MEDIUM | If `argument-hint` is set but body doesn't reference `$ARGUMENTS`, the hint is misleading | Yes - add `$ARGUMENTS` |
 | CC-SK-013: context=fork without actionable instructions | MEDIUM | Warn when `context: fork` is used with reference-only content (no imperative verbs) | No |
 | CC-SK-014: Invalid disable-model-invocation type | HIGH | Must use one of Claude Code's accepted boolean aliases | No - ambiguous invalid values need manual correction |
@@ -452,7 +453,7 @@ Supported syntax in `.mcp.json`:
 
 | Tool | Current Rules | Proposed New Rules | Coverage Gap |
 |------|--------------|-------------------|-------------|
-| Claude Code Skills | CC-SK-001 to CC-SK-009 | CC-SK-010 to CC-SK-015 (6 new) | hooks, user-invocable, argument-hint validation |
+| Claude Code Skills | CC-SK-001 to CC-SK-009 | CC-SK-010, CC-SK-012 to CC-SK-015 (5 active) | hooks, user-invocable, argument-hint validation |
 | Claude Code Agents | CC-AG-001 to CC-AG-007 | CC-AG-008 to CC-AG-013 (6 new) | memory, tool name validation, hooks |
 | Claude Code Hooks | CC-HK-001 to CC-HK-012 | CC-HK-013 to CC-HK-018 (6 new) | async, once, agent type, model field |
 | Claude Code Plugins | CC-PL-001 to CC-PL-006 | CC-PL-007 to CC-PL-010 (4 new) | path validation, component placement |
@@ -467,32 +468,30 @@ Supported syntax in `.mcp.json`:
 ### Priority Ranking for New Rules
 
 **P0 (High Impact, High Confidence)**:
-1. CC-SK-011: user-invocable + disable-model-invocation conflict
-2. CC-AG-008: Invalid memory scope validation
-3. CC-HK-013: async on non-command hook
-4. CC-HK-016: Validate `type: "agent"` hook handler
-5. COP-005: Invalid excludeAgent value
-6. MCP-009/MCP-010: Missing required fields for MCP server types
+1. CC-AG-008: Invalid memory scope validation
+2. CC-HK-013: async on non-command hook
+3. CC-HK-016: Validate `type: "agent"` hook handler
+4. COP-005: Invalid excludeAgent value
+5. MCP-009/MCP-010: Missing required fields for MCP server types
 
 **P1 (Medium Impact)**:
-7. CC-SK-014/CC-SK-015: Boolean type validation for skill fields
-8. CC-AG-009/CC-AG-010: Tool name validation in agent frontmatter
-9. CUR-007: alwaysApply with redundant globs
-10. CC-MEM-011: Glob validation in .claude/rules paths
-11. CLN-001/CLN-002: Cline clinerules validation
+6. CC-SK-014/CC-SK-015: Boolean type validation for skill fields
+7. CC-AG-009/CC-AG-010: Tool name validation in agent frontmatter
+8. CUR-007: alwaysApply with redundant globs
+9. CC-MEM-011: Glob validation in .claude/rules paths
+10. CLN-001/CLN-002: Cline clinerules validation
 
 **P2 (Nice to Have)**:
-12. CC-SK-012: argument-hint without $ARGUMENTS
-13. CC-PL-007/CC-PL-008: Plugin path validation
-14. CC-HK-018: Matcher on UserPromptSubmit/Stop
-15. CDX-001/CDX-002: Codex CLI config validation
-16. OC-001/OC-002: OpenCode config validation
+11. CC-SK-012: argument-hint without $ARGUMENTS
+12. CC-PL-007/CC-PL-008: Plugin path validation
+13. CC-HK-018: Matcher on UserPromptSubmit/Stop
+14. CDX-001/CDX-002: Codex CLI config validation
+15. OC-001/OC-002: OpenCode config validation
 
 ### Auto-Fix Opportunities Summary
 
 | Rule | Fix Description | Safety |
 |------|----------------|--------|
-| CC-SK-011 | Remove `disable-model-invocation` when `user-invocable: false` | HIGH |
 | CC-SK-014/015 | Convert string "true"/"false" to boolean | HIGH |
 | CC-HK-013 | Remove `async` from non-command hooks | HIGH |
 | CC-HK-015 | Remove `model` from command hooks | HIGH |

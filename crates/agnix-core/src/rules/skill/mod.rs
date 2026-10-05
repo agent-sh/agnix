@@ -1473,42 +1473,6 @@ impl<'a> ValidationContext<'a> {
         }
     }
 
-    /// CC-SK-011: Validate unreachable skill (both user-invocable=false and disable-model-invocation=true)
-    fn validate_cc_unreachable(&mut self, frontmatter: &SkillFrontmatter) {
-        if !self.config.is_rule_enabled("CC-SK-011") {
-            return;
-        }
-
-        let user_invocable = frontmatter.user_invocable.unwrap_or(true);
-        let disable_model = frontmatter.disable_model_invocation.unwrap_or(false);
-
-        if !user_invocable && disable_model {
-            let (line, col) = self.frontmatter_key_line_col("user-invocable");
-            let mut diagnostic = Diagnostic::error(
-                self.path.to_path_buf(),
-                line,
-                col,
-                "CC-SK-011",
-                t!("rules.cc_sk_011.message"),
-            )
-            .with_suggestion(t!("rules.cc_sk_011.suggestion"));
-
-            // Unsafe auto-fix: remove disable-model-invocation line to allow model invocation
-            if let Some((start, end)) =
-                self.frontmatter_key_line_byte_range("disable-model-invocation")
-            {
-                diagnostic = diagnostic.with_fix(Fix::delete(
-                    start,
-                    end,
-                    t!("rules.cc_sk_011.fix"),
-                    false, // unsafe
-                ));
-            }
-
-            self.diagnostics.push(diagnostic);
-        }
-    }
-
     /// CC-SK-012: Validate argument-hint has matching $ARGUMENTS in body
     fn validate_cc_argument_hint(&mut self, frontmatter: &SkillFrontmatter) {
         if !self.config.is_rule_enabled("CC-SK-012") {
@@ -1984,7 +1948,6 @@ const RULE_IDS: &[&str] = &[
     "CC-SK-008",
     "CC-SK-009",
     "CC-SK-010",
-    "CC-SK-011",
     "CC-SK-012",
     "CC-SK-013",
     "CC-SK-014",
@@ -2089,8 +2052,8 @@ impl Validator for SkillValidator {
             // Phase 6: CC-SK-010 (hooks in frontmatter)
             ctx.validate_cc_hooks();
 
-            // Phase 7: CC-SK-011 (unreachable skill)
-            ctx.validate_cc_unreachable(&frontmatter);
+            // CC-SK-011 is retired: inline user permission can invoke a skill
+            // with both user-invocable=false and disable-model-invocation=true.
 
             // Phase 8: CC-SK-012 (argument-hint without $ARGUMENTS)
             ctx.validate_cc_argument_hint(&frontmatter);

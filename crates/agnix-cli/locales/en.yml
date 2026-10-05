@@ -77,10 +77,6 @@ rules:
   cc_sk_010:
     message: 'Invalid hooks configuration in skill frontmatter: %{error}'
     suggestion: Ensure hooks follow the same schema as settings.json hooks
-  cc_sk_011:
-    message: 'Skill is unreachable: user-invocable is false and disable-model-invocation is true'
-    suggestion: Set user-invocable to true or disable-model-invocation to false
-    fix: 'Remove ''disable-model-invocation: true'' to allow model invocation'
   cc_sk_012:
     message: argument-hint is set but body does not reference $ARGUMENTS
     suggestion: Add $ARGUMENTS to the skill body or remove the argument-hint field

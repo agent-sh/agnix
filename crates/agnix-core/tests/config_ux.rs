@@ -126,6 +126,7 @@ fn removed_rules_emit_config_warnings() {
         ..RuleConfig::default()
     };
     rules.disabled_rules.push("AS-007".to_string());
+    rules.disabled_rules.push("CC-SK-011".to_string());
     let mut config = LintConfig::default();
     *config.rules_mut() = rules;
 
@@ -138,6 +139,16 @@ fn removed_rules_emit_config_warnings() {
     assert!(messages.iter().any(|message| message.contains("AS-007")));
     assert!(messages.iter().any(|message| message.contains("AS-010")));
     assert!(messages.iter().any(|message| message.contains("AS-014")));
+    let retired_skill = warnings
+        .iter()
+        .find(|warning| warning.message.contains("CC-SK-011"))
+        .expect("Removed skill rule should warn on stale suppression");
+    assert!(
+        retired_skill
+            .suggestion
+            .as_deref()
+            .is_some_and(|suggestion| suggestion.contains("no direct replacement"))
+    );
     assert!(messages.iter().all(|message| message.contains("removed")));
 }
 

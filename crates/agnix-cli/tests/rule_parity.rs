@@ -671,7 +671,23 @@ fn test_rules_json_matches_validation_rules_md() {
 
     let missing_in_md: Vec<&String> = rules_json_ids.difference(&validation_rules_ids).collect();
     let extra_in_md: Vec<&String> = validation_rules_ids.difference(&rules_json_ids).collect();
-    let unknown_references: Vec<&String> = referenced_ids.difference(&rules_json_ids).collect();
+    // Retirement notes may name removed IDs, but they must never appear as
+    // active rule headings or overlap the active catalog.
+    let removed_path = workspace_root().join("knowledge-base/removed-rules.json");
+    let removed: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&removed_path).unwrap()).unwrap();
+    let removed_ids: BTreeSet<String> = removed["removed_rules"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|rule| rule["id"].as_str().unwrap().to_string())
+        .collect();
+    assert!(
+        rules_json_ids.is_disjoint(&removed_ids),
+        "Active and removed rule catalogs must not overlap"
+    );
+    let known_ids: BTreeSet<String> = rules_json_ids.union(&removed_ids).cloned().collect();
+    let unknown_references: Vec<&String> = referenced_ids.difference(&known_ids).collect();
 
     let mut report = String::new();
     if !missing_in_md.is_empty() {

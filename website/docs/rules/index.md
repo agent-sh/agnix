@@ -1,7 +1,7 @@
 # Rules Reference
 
-This section contains all `458` validation rules generated from `knowledge-base/rules.json`.
-`121` rules have automatic fixes.
+This section contains all `457` validation rules generated from `knowledge-base/rules.json`.
+`120` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
 |------|------|----------|----------|----------|
@@ -119,7 +119,6 @@ This section contains all `458` validation rules generated from `knowledge-base/
 | [CC-SK-008](./generated/cc-sk-008.md) | Unknown Tool Name | HIGH | Claude Skills | No |
 | [CC-SK-009](./generated/cc-sk-009.md) | Too Many Injections | MEDIUM | Claude Skills | No |
 | [CC-SK-010](./generated/cc-sk-010.md) | Invalid Hooks in Skill Frontmatter | HIGH | Claude Skills | No |
-| [CC-SK-011](./generated/cc-sk-011.md) | Unreachable Skill | HIGH | Claude Skills | Yes (unsafe) |
 | [CC-SK-012](./generated/cc-sk-012.md) | Argument Hint Without $ARGUMENTS | MEDIUM | Claude Skills | Yes (unsafe) |
 | [CC-SK-013](./generated/cc-sk-013.md) | Fork Context Without Actionable Instructions | MEDIUM | Claude Skills | No |
 | [CC-SK-014](./generated/cc-sk-014.md) | Invalid disable-model-invocation Type | HIGH | Claude Skills | No |

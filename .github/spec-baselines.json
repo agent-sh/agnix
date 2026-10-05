@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "description": "Baseline hashes for canonical specification content. Human-facing URLs are kept separately from machine-readable content URLs.",
-  "last_updated": "2026-10-04T02:19:01Z",
+  "last_updated": "2026-10-05T16:28:17Z",
   "sources": {
     "s-tier": {
       "agent-skills-spec": {
@@ -128,7 +128,7 @@
       "claude-code-hooks": {
         "url": "https://code.claude.com/docs/en/hooks",
         "content_url": "https://code.claude.com/docs/en/hooks.md",
-        "hash": "d0da8e5f0b69d2297a4360b8eb74140a4c2752843b52d0052719cda97f3fc4b2",
+        "hash": "db9d8b23233a0039bcf51732be69a8fdab15d660dbf1c75f899614b4697a0484",
         "rules": [
           "CC-HK-001",
           "CC-HK-002",
@@ -147,7 +147,7 @@
       "claude-code-skills": {
         "url": "https://code.claude.com/docs/en/skills",
         "content_url": "https://code.claude.com/docs/en/skills.md",
-        "hash": "2b21cdd695f327618fbe87c6c9c2745ee4aeb04dbaec73f1c7d362f0342b2e7a",
+        "hash": "320f1dfa434353f7de93b07a8c0f18e51c682bc6902a94c142d05c76a1b24473",
         "rules": [
           "CC-SK-001",
           "CC-SK-002",
@@ -160,7 +160,7 @@
       "claude-code-plugins": {
         "url": "https://code.claude.com/docs/en/plugins-reference",
         "content_url": "https://code.claude.com/docs/en/plugins-reference.md",
-        "hash": "0e7ce30078e4edf4115b682b31406072cad96fbee36469e100bff83a68186687",
+        "hash": "b10e09cb40379725aacb0c961afe96e43485686b921a06162990cbeba08febcd",
         "rules": [
           "CC-PL-002",
           "CC-PL-003",
@@ -172,7 +172,7 @@
       "claude-code-subagents": {
         "url": "https://code.claude.com/docs/en/sub-agents",
         "content_url": "https://code.claude.com/docs/en/sub-agents.md",
-        "hash": "7741568762eeecb04be9aacb386ef8a95eedb38e29c2a2bec8eeb2126afbdcf3",
+        "hash": "5ade7dab13e1978a763d8e21f3d369dd2fc07cf8013403b1dc34835e2d1276ea",
         "rules": [
           "CC-AG-001",
           "CC-AG-002",
@@ -271,7 +271,7 @@
       "cursor-environment": {
         "url": "https://cursor.com/docs/cloud-agent/setup",
         "content_url": "https://cursor.com/docs/cloud-agent/setup.md",
-        "hash": "b0ec723848a1a01e21d6061fb54c0aa4daca7ac3bcefa7fd6ab631980f8c3db5",
+        "hash": "d31187e6a7a10a9236ef34669618a1d471d6c6c0f75c63e818f1c1900ff610e8",
         "rules": [
           "CUR-016"
         ]
@@ -306,7 +306,7 @@
       "github-copilot": {
         "url": "https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/add-custom-instructions/add-repository-instructions",
         "content_url": "https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/add-custom-instructions/add-repository-instructions.md",
-        "hash": "4b3378059d1509067204b6a986f57248415b75f28bdab284f4a2967e34590d76",
+        "hash": "fa2dc87c7ae8118db1df44caf4ccb30c61f30007b6d2a78a01587d9412e942d2",
         "rules": [
           "COP-001",
           "COP-002",

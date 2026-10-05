@@ -899,3 +899,51 @@ fn test_e2e_agm_001_fix_closes_code_block() {
         "AGM-001 unclosed code block should not fire after fix"
     );
 }
+
+/// User-typed inline `/inline-authorized-skill` supplies invocation permission even when
+/// the command is hidden from users and automatic model invocation is disabled.
+/// Validation and unsafe fix application must preserve those permission limits.
+#[test]
+fn inline_authorized_skill_preserves_invocation_guards_through_fixes() {
+    let path = Path::new(".claude/skills/inline-authorized-skill/SKILL.md");
+    let content =
+        include_str!("../../../tests/fixtures/valid/skills/inline-authorized-skill/SKILL.md");
+    let config = LintConfig::default();
+    let registry = ValidatorRegistry::with_defaults();
+    let validate = |source: &str| {
+        registry
+            .validators_for(FileType::Skill)
+            .iter()
+            .flat_map(|validator| validator.validate(path, source, &config))
+            .collect::<Vec<_>>()
+    };
+    let diagnostics = validate(content);
+    assert!(
+        !diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.rule == "CC-SK-011"),
+        "Both flags permit inline user authorization; they do not make a skill unreachable: {diagnostics:?}"
+    );
+    let fs = Arc::new(MockFileSystem::new());
+    fs.add_file(path, content);
+    let filesystem: Arc<dyn FileSystem> = fs.clone();
+    apply_fixes_with_fs(&diagnostics, false, false, Some(filesystem)).unwrap();
+    assert_eq!(fs.read_to_string(path).unwrap(), content);
+
+    // Retiring the reachability error must not weaken the independent guard
+    // against Claude automatically invoking a skill with deployment effects.
+    let unguarded = content
+        .replace("disable-model-invocation: true\n", "")
+        .replace("inline-authorized-skill", "deploy-staging");
+    let diagnostics = validate(&unguarded);
+    let dangerous = diagnostics
+        .iter()
+        .find(|diagnostic| diagnostic.rule == "CC-SK-006")
+        .expect("Deployment still requires disable-model-invocation");
+    assert!(
+        dangerous
+            .fixes
+            .iter()
+            .any(|fix| fix.replacement.contains("disable-model-invocation: true"))
+    );
+}

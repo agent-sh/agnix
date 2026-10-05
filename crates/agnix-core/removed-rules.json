@@ -17,6 +17,12 @@
       "removed_in": "0.37.0",
       "reason": "Retired when cross-platform path checks moved out of Agent Skills and into the XP rule family.",
       "replaced_by": ["XP-001", "XP-002", "XP-003"]
+    },
+    {
+      "id": "CC-SK-011",
+      "removed_in": "0.56.5",
+      "reason": "Claude Code permits a user-typed inline /skill-name mention to authorize model invocation even when user-invocable is false and disable-model-invocation is true. The combination is reachable; removing the invocation guard would weaken permission control.",
+      "replaced_by": []
     }
   ]
 }
