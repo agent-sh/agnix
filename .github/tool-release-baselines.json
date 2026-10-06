@@ -17,12 +17,12 @@
         "mcp"
       ],
       "github_repo": "anthropics/claude-code",
-      "last_known_version": "v2.1.289",
+      "last_known_version": "v2.1.292",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
-        "CLAUDE.md",
-        "AGENTS.md",
+          "CLAUDE.md",
+          "AGENTS.md",
           ".claude/settings.json",
           ".claude/settings.local.json",
           ".claude/managed-settings.json",
@@ -64,7 +64,7 @@
         "per_client_skill"
       ],
       "github_repo": "openai/codex",
-      "last_known_version": "rust-v0.160.0",
+      "last_known_version": "rust-v0.160.1",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
@@ -103,7 +103,7 @@
         "per_client_skill"
       ],
       "github_repo": "sst/opencode",
-      "last_known_version": "v1.18.34",
+      "last_known_version": "v1.18.35",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
@@ -264,7 +264,7 @@
       "github_repo": null,
       "html_url": "https://api2.cursor.sh/updates/api/update/darwin/cursor/0.0.1/stable",
       "version_regex": "[0-9]+\\.[0-9]+\\.[0-9]+",
-      "last_known_version": "3.23.12",
+      "last_known_version": "3.23.23",
       "tracked": true,
       "notes": "Tracked via Cursor's stable update endpoint (the same one the desktop app polls). Returns JSON like {\"url\":\"...\",\"name\":\"3.1.17\"}. Channel is hardcoded to 'stable' for darwin; the version is platform-agnostic (same release ships across darwin/linux/win32). Prose changelog at https://cursor.com/changelog (Next.js SPA - not scrapeable from raw HTML).",
       "changes_of_interest": {
@@ -368,7 +368,7 @@
         "gemini_agent"
       ],
       "github_repo": "google-gemini/gemini-cli",
-      "last_known_version": "v0.62.0",
+      "last_known_version": "v0.63.0",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [

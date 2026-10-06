@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- Update website dependencies and pin patched Tinypool, selector-parser and
+  SockJS UUID versions. Upstream braces and sprintf-js advisories remain open.
+
+### Changed
+- Refresh reviewed tool releases and Claude Code specification baselines.
+
 ## [0.56.6] - 2026-10-06
 
 ### Changed

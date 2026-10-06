@@ -2,7 +2,7 @@
 
 > Master document for tracking AI tool ecosystem changes, research updates, and community feedback.
 
-**Last Updated**: 2026-10-05
+**Last Updated**: 2026-10-07
 **Review Cadence**: Monthly (1st week of each month)
 **Related**: [MONTHLY-REVIEW.md](./MONTHLY-REVIEW.md) | [VALIDATION-RULES.md](./VALIDATION-RULES.md) | [INDEX.md](./INDEX.md)
 
@@ -16,9 +16,9 @@ Tools are organized by support tier (see [../CONTRIBUTING.md#tool-tier-system](.
 
 | Tool | Config Format | Documentation URL | Monitoring | Frequency | Last Reviewed | Rule Prefix |
 |------|---------------|-------------------|------------|-----------|---------------|-------------|
-| Claude Code | `CLAUDE.md`, `AGENTS.md` (fallback or combined project instructions in 2.1.277+), `.claude/settings.json`, `.claude/settings.local.json`, `.claude/managed-settings.json`, `.claude/agents/*.md`, `.claude/skills/*/SKILL.md`, `.claude/hooks configuration`, `.mcp.json`, `.claude-plugin/plugin.json`, `.claude/rules/**/*.md`, `.claude/output-styles/*.md` | https://code.claude.com/docs/en | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-10-05 | AGM, XP, CC-SK, CC-HK, CC-MEM, CC-AG, CC-PL, CC-SET, CC-OS, MCP |
-| Codex CLI | `AGENTS.md`, `.codex/config.toml` (also `.codex/config.json`/`.yaml`/`.yml`, including `[mcp_servers.*]` blocks), `.mcp.json`, `codex/requirements.toml` (managed environments), `.codex/skills/*/SKILL.md`, `.codex-plugin/plugin.json`, Agent Plugins root `plugin.json` | https://developers.openai.com/codex/ | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-10-04 | AGM, XP, MCP, CDX, CDX-AG, CDX-APP, CDX-CFG, CDX-PL, CDX-REQ, CX-SK |
-| OpenCode | `AGENTS.md`, `opencode.json`, `opencode.jsonc`, `.opencode/config.json`, `.mcp.json`, `.opencode/skills/*/SKILL.md` | https://opencode.ai/docs/ | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-10-04 | AGM, XP, MCP, OC, OC-AG, OC-AGM, OC-CFG, OC-DEP, OC-LSP, OC-PM, OC-TUI, OC-SK |
+| Claude Code | `CLAUDE.md`, `AGENTS.md` (fallback or combined project instructions in 2.1.277+), `.claude/settings.json`, `.claude/settings.local.json`, `.claude/managed-settings.json`, `.claude/agents/*.md`, `.claude/skills/*/SKILL.md`, `.claude/hooks configuration`, `.mcp.json`, `.claude-plugin/plugin.json`, `.claude/rules/**/*.md`, `.claude/output-styles/*.md` | https://code.claude.com/docs/en | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-10-07 | AGM, XP, CC-SK, CC-HK, CC-MEM, CC-AG, CC-PL, CC-SET, CC-OS, MCP |
+| Codex CLI | `AGENTS.md`, `.codex/config.toml` (also `.codex/config.json`/`.yaml`/`.yml`, including `[mcp_servers.*]` blocks), `.mcp.json`, `codex/requirements.toml` (managed environments), `.codex/skills/*/SKILL.md`, `.codex-plugin/plugin.json`, Agent Plugins root `plugin.json` | https://developers.openai.com/codex/ | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-10-07 | AGM, XP, MCP, CDX, CDX-AG, CDX-APP, CDX-CFG, CDX-PL, CDX-REQ, CX-SK |
+| OpenCode | `AGENTS.md`, `opencode.json`, `opencode.jsonc`, `.opencode/config.json`, `.mcp.json`, `.opencode/skills/*/SKILL.md` | https://opencode.ai/docs/ | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-10-07 | AGM, XP, MCP, OC, OC-AG, OC-AGM, OC-CFG, OC-DEP, OC-LSP, OC-PM, OC-TUI, OC-SK |
 | Kiro CLI | `.kiro/steering/*.md`, `.kiro/agents/**/*.{json,md}`, `.kiro/hooks/*.kiro.hook`, `.kiro/settings/mcp.json`, `.kiro/settings.json`, `.kiro/powers/*/POWER.md`, `.kiro/skills/*/SKILL.md`, `AGENTS.md` (nested, loaded as steering since 2.18.0) | https://kiro.dev/changelog/cli/ | Automated (tool-release-watch.yml via HTML scrape) | Quarterly | 2026-10-04 | AGM, KIRO, KR-AG, KR-HK, KR-MCP, KR-PW, KR-SK, KR-SET |
 
 ### A Tier (test on major changes)
@@ -27,7 +27,7 @@ Tools are organized by support tier (see [../CONTRIBUTING.md#tool-tier-system](.
 |------|---------------|-------------------|------------|-----------|---------------|-------------|
 | GitHub Copilot | `.github/copilot-instructions.md`, `.github/instructions/*.instructions.md`, `.github/agents/*.agent.md`, `.github/prompts/*.prompt.md`, `.github/hooks/hooks.json`, `.github/workflows/copilot-setup-steps.yml`, `.github/skills/*/SKILL.md` | https://docs.github.com/en/copilot/customizing-copilot | Automated (spec-drift.yml + tool-release-watch.yml via microsoft/vscode-copilot-chat) | Weekly | 2026-10-05 | COP, CP-SK |
 | Cline | `.clinerules` (file or dir), `.cline/rules/**/*.md`, `.clinerules/workflows/*.md`, `.clinerules/hooks/*`, `.clinerules/skills/*/SKILL.md`, `.cline/skills/*/SKILL.md` | https://docs.cline.bot/customization/cline-rules | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-10-04 | CLN, CL-SK |
-| Cursor | `.cursor/rules/**/*.mdc`, `.cursorrules` (legacy), `.cursor/hooks.json`, `.cursor/agents/**/*.md` (Cursor also reads `.claude/agents/**/*.md`, `.codex/agents/**/*.md`, and corresponding user-level agent directories for compatibility), `.cursor/environment.json`, `.cursor/mcp.json`, `.cursor/skills/*/SKILL.md` | https://cursor.com/docs/rules | Automated (spec-drift.yml + tool-release-watch.yml via api2.cursor.sh stable update endpoint) | Weekly | 2026-10-05 | CUR, MCP, CR-SK |
+| Cursor | `.cursor/rules/**/*.mdc`, `.cursorrules` (legacy), `.cursor/hooks.json`, `.cursor/agents/**/*.md` (Cursor also reads `.claude/agents/**/*.md`, `.codex/agents/**/*.md`, and corresponding user-level agent directories for compatibility), `.cursor/environment.json`, `.cursor/mcp.json`, `.cursor/skills/*/SKILL.md` | https://cursor.com/docs/rules | Automated (spec-drift.yml + tool-release-watch.yml via api2.cursor.sh stable update endpoint) | Weekly | 2026-10-07 | CUR, MCP, CR-SK |
 
 ### B Tier (test on significant changes if time permits)
 
@@ -40,7 +40,7 @@ Tools are organized by support tier (see [../CONTRIBUTING.md#tool-tier-system](.
 
 | Tool | Config Format | Documentation URL | Monitoring | Frequency | Last Reviewed | Rule Prefix |
 |------|---------------|-------------------|------------|-----------|---------------|-------------|
-| gemini cli | `GEMINI.md`, `.gemini/settings.json`, `.geminiignore`, `gemini-extension.json`, `.gemini/agents/*.md` | https://github.com/google-gemini/gemini-cli | Automated (tool-release-watch.yml) | As reported | 2026-09-30 | GM, GM-AG |
+| gemini cli | `GEMINI.md`, `.gemini/settings.json`, `.geminiignore`, `gemini-extension.json`, `.gemini/agents/*.md` | https://github.com/google-gemini/gemini-cli | Automated (tool-release-watch.yml) | As reported | 2026-10-07 | GM, GM-AG |
 
 ### D Tier (no support, nice to have)
 
@@ -209,6 +209,8 @@ Tracking community input that influences rule development, tool support decision
 | 2026-09-30 | Codex CLI rust-v0.159.2 release triage | Official release says it suppresses Windows console flashes when launching background and sandboxed commands; no config schema changes were identified. The tagged backport commit says the exact candidate lacked native Windows validation and called for a focused smoke test. | Updated the tool-release baseline only; no validator/rule change or Windows/runtime support claim | #1589 |
 | 2026-02-01 | Tool tier decisions | Community adoption data used to assign S/A/B/C/D/E tiers | Tier assignments documented in CLAUDE.md; spec-drift frequency matches tier priority | #107 |
 | 2026-10-04 | Six primary spec sources in #1615: Claude Code hooks, memory, plugins, skills, subagents; MCP 2026-07-28 versioning | Read all six current Markdown sources and compared their configuration contracts to validators. Previous vendor source bodies were not retained, so this review does not claim a line-by-line historical diff. Memory imports still allow relative/absolute paths and four hops. Skill model aliases already match code. MCP documents modern per-request metadata and legacy fallback; existing extension keys remain covered. | Refreshed six exact sentinel hashes; accepted DirectoryAdded filtering and new Notification/StopFailure matchers; scoped once to skill hooks; accepted agent experimental map and HTTPS MCP bundles; changed semver rejection to optional advice; corrected skill and MCP scope docs. Modern MCP metadata/fallback and plugin optional LSP fields remain outside these checks. | #1615 |
+
+| 2026-10-07 | Claude Code 2.1.290-292, Codex 0.160.1, OpenCode 1.18.35, Gemini CLI 0.63.0, Cursor 3.23.23 | Reviewed live releases and all 24 primary spec sentinels. Claude memory documents `cc-plugin-agents-md@builtin` with the earlier alias still accepted; hook, skill and subagent edits clarify existing runtime behavior. Codex fixes remote Windows MCP environment preservation; OpenCode changes stats and image results; Gemini fixes runtime policy and malformed MCP config reporting; Cursor retains existing rule and hook contracts. | Refreshed five release markers and four spec hashes. Existing validators accept both plugin identifiers through free-form plugin configuration; no rule behavior or IDs changed. | #1628 |
 
 ### Pending Items
 
