@@ -55,6 +55,15 @@ exclude = [
     file
 }
 
+// Fixture scans must opt out of the repository self-lint exclusions.
+// Return the config file with the command so it lives through execution.
+fn fixtures_agnix() -> (Command, tempfile::NamedTempFile) {
+    let config = fixtures_config();
+    let mut cmd = agnix();
+    cmd.arg("--config").arg(config.path());
+    (cmd, config)
+}
+
 fn assert_fix_flags_rejected(format: &str, flag: &str) {
     let mut cmd = agnix();
     cmd.arg("tests/fixtures/valid")
@@ -70,7 +79,7 @@ fn assert_fix_flags_rejected(format: &str, flag: &str) {
 
 // Helper function to check JSON output contains rules from a specific family
 fn check_json_rule_family(fixture: &str, prefixes: &[&str], family_name: &str) {
-    let mut cmd = agnix();
+    let (mut cmd, _config) = fixtures_agnix();
     let output = cmd
         .arg(fixture)
         .arg("--format")
@@ -98,7 +107,7 @@ fn check_json_rule_family(fixture: &str, prefixes: &[&str], family_name: &str) {
 
 // Helper function to check SARIF output contains rules from a specific family
 fn check_sarif_rule_family(fixture: &str, prefixes: &[&str], family_name: &str) {
-    let mut cmd = agnix();
+    let (mut cmd, _config) = fixtures_agnix();
     let output = cmd
         .arg(fixture)
         .arg("--format")
@@ -783,7 +792,7 @@ fn test_format_json_contains_amp_rules() {
 
 #[test]
 fn test_format_json_contains_amp_002_diagnostic() {
-    let mut cmd = agnix();
+    let (mut cmd, _config) = fixtures_agnix();
     let output = cmd
         .arg("tests/fixtures/amp-checks")
         .arg("--format")
@@ -829,7 +838,7 @@ fn test_format_sarif_results_include_amp_diagnostics() {
 
 #[test]
 fn test_format_sarif_results_include_amp_002_diagnostic() {
-    let mut cmd = agnix();
+    let (mut cmd, _config) = fixtures_agnix();
     let output = cmd
         .arg("tests/fixtures/amp-checks")
         .arg("--format")
@@ -889,7 +898,7 @@ fn test_format_sarif_results_include_memory_diagnostics() {
 
 #[test]
 fn test_format_sarif_location_fields() {
-    let mut cmd = agnix();
+    let (mut cmd, _config) = fixtures_agnix();
     let output = cmd
         .arg("tests/fixtures/invalid/skills")
         .arg("--format")
@@ -1049,7 +1058,7 @@ fn test_json_format_uses_cwd_not_git_root() {
 
 #[test]
 fn test_format_text_shows_file_location() {
-    let mut cmd = agnix();
+    let (mut cmd, _config) = fixtures_agnix();
     cmd.arg("tests/fixtures/invalid/skills/unknown-tool")
         .assert()
         .failure()
@@ -1058,7 +1067,7 @@ fn test_format_text_shows_file_location() {
 
 #[test]
 fn test_format_text_shows_error_level() {
-    let mut cmd = agnix();
+    let (mut cmd, _config) = fixtures_agnix();
     // Match diagnostic line format: file:line:col error: message
     cmd.arg("tests/fixtures/invalid/skills/unknown-tool")
         .assert()
@@ -1094,7 +1103,7 @@ fn test_format_text_shows_warning_level() {
 
 #[test]
 fn test_format_text_shows_summary() {
-    let mut cmd = agnix();
+    let (mut cmd, _config) = fixtures_agnix();
     cmd.arg("tests/fixtures/invalid/skills")
         .assert()
         .failure()
@@ -1106,7 +1115,7 @@ fn test_format_text_verbose_shows_rule() {
     // Use the broader invalid-skills fixture dir so a multi-segment rule code
     // (e.g. CC-SK-001) appears - the unknown-tool fixture's CC-SK-008 is now
     // scoped to Claude Code skills and no longer fires on a bare fixture path.
-    let mut cmd = agnix();
+    let (mut cmd, _config) = fixtures_agnix();
     cmd.arg("tests/fixtures/invalid/skills")
         .arg("--verbose")
         .assert()
@@ -1116,7 +1125,7 @@ fn test_format_text_verbose_shows_rule() {
 
 #[test]
 fn test_format_text_verbose_shows_suggestion() {
-    let mut cmd = agnix();
+    let (mut cmd, _config) = fixtures_agnix();
     let output = cmd
         .arg("tests/fixtures/invalid/skills/unknown-tool")
         .arg("--verbose")
@@ -1177,7 +1186,7 @@ fn test_dry_run_no_file_modification() {
 
 #[test]
 fn test_fix_exit_code_on_remaining_errors() {
-    let mut cmd = agnix();
+    let (mut cmd, _config) = fixtures_agnix();
     // Invalid fixtures have errors that cannot be auto-fixed
     let output = cmd
         .arg("tests/fixtures/invalid/skills/unknown-tool")
@@ -1250,7 +1259,7 @@ fn test_fix_exit_code_when_all_issues_are_fixed() {
 
 #[test]
 fn test_fix_safe_exit_code() {
-    let mut cmd = agnix();
+    let (mut cmd, _config) = fixtures_agnix();
     let output = cmd
         .arg("tests/fixtures/invalid/skills/unknown-tool")
         .arg("--fix-safe")
@@ -3691,6 +3700,73 @@ fn test_cli_multiple_paths_root_is_argument_order_independent() {
         claude_first["diagnostics"], skill_first["diagnostics"],
         "diagnostics must not depend on the order the paths are passed in"
     );
+}
+
+// Regression for #1629: directory walks must retain the workspace root used
+// by the import validator, including when several directories are passed.
+#[test]
+fn test_cli_nested_imports_use_workspace_root() {
+    for (marker, directory) in [(".git", true), (".git", false), (".agnix.toml", false)] {
+        let temp = tempfile::TempDir::new().unwrap();
+        if directory {
+            std::fs::create_dir(temp.path().join(marker)).unwrap();
+        } else {
+            std::fs::write(temp.path().join(marker), "").unwrap();
+        }
+        std::fs::create_dir_all(temp.path().join(".myplugin/commands")).unwrap();
+        std::fs::write(
+            temp.path().join(".myplugin/commands/command1.md"),
+            "# Layer A\n",
+        )
+        .unwrap();
+        for (dir, filename, content) in [
+            (
+                ".claude/commands/myplugin",
+                "spec.md",
+                "---\ndescription: wrapper\n---\n\n@.myplugin/commands/command1.md\n",
+            ),
+            (
+                ".claude/skills/demo",
+                "SKILL.md",
+                "---\nname: demo\ndescription: Demo skill\n---\n\n@.myplugin/commands/command1.md\n",
+            ),
+        ] {
+            std::fs::create_dir_all(temp.path().join(dir)).unwrap();
+            std::fs::write(temp.path().join(dir).join(filename), content).unwrap();
+            let file = format!("{dir}/{filename}");
+            let nested_cwd = temp.path().join(dir);
+            for (cwd, paths) in [
+                (temp.path(), vec![dir]),
+                (temp.path(), vec![dir, ".myplugin/commands"]),
+                (temp.path(), vec![".myplugin/commands", dir]),
+                (temp.path(), vec![file.as_str()]),
+                (nested_cwd.as_path(), vec!["."]),
+            ] {
+                let output = assert_cmd::cargo::cargo_bin_cmd!("agnix")
+                    .current_dir(cwd)
+                    .args(["--format", "json"])
+                    .arg("validate")
+                    .args(&paths)
+                    .output()
+                    .unwrap();
+                let json: serde_json::Value = serde_json::from_slice(&output.stdout)
+                    .unwrap_or_else(|_| panic!("expected JSON output: {output:?}"));
+                assert!(
+                    !json["diagnostics"]
+                        .as_array()
+                        .unwrap()
+                        .iter()
+                        .any(|d| { matches!(d["rule"].as_str(), Some("REF-001" | "CC-MEM-001")) }),
+                    "project import exists ({marker}, {paths:?}): {json}"
+                );
+                assert_eq!(
+                    json["files_checked"].as_u64(),
+                    Some(paths.len() as u64),
+                    "the scan must stay limited to the requested paths: {json}"
+                );
+            }
+        }
+    }
 }
 
 // --watch with more than one path should be rejected with the localized error,

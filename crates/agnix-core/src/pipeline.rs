@@ -629,12 +629,18 @@ pub(crate) fn is_excluded_file(path_str: &str, exclude_patterns: &[ExcludePatter
 /// Designed for the LSP server to provide project-level diagnostics that
 /// require workspace-wide analysis, without the overhead of full per-file
 /// validation (which the LSP handles incrementally via `did_open`/`did_change`).
+/// The walk is limited to `root`; a configured workspace root remains the base
+/// for relative configuration patterns and project-level checks.
 #[cfg(feature = "filesystem")]
 pub fn validate_project_rules(root: &Path, config: &LintConfig) -> LintResult<Vec<Diagnostic>> {
     use ignore::WalkBuilder;
     use std::sync::Arc;
 
     let root_dir = resolve_validation_root(root)?;
+    let root_dir = match config.root_dir() {
+        Some(workspace_root) => resolve_validation_root(workspace_root)?,
+        None => root_dir,
+    };
     let mut config = config.clone();
     config.set_root_dir(root_dir.clone());
 
@@ -736,6 +742,9 @@ pub fn validate_project_rules(root: &Path, config: &LintConfig) -> LintResult<Ve
 }
 
 /// Main entry point for validating a project with a custom validator registry
+///
+/// The walk is limited to `path`. When configured, the workspace root remains
+/// the base for imports, relative configuration patterns and project checks.
 #[cfg(feature = "filesystem")]
 pub fn validate_project_with_registry(
     path: &Path,
@@ -749,6 +758,12 @@ pub fn validate_project_with_registry(
     let validation_start = Instant::now();
 
     let root_dir = resolve_validation_root(path)?;
+    // A subtree walk still uses the configured workspace for imports and
+    // relative config patterns. Only the walker is rooted at `path`.
+    let root_dir = match config.root_dir() {
+        Some(workspace_root) => resolve_validation_root(workspace_root)?,
+        None => root_dir,
+    };
     let mut config = config.clone();
     config.set_root_dir(root_dir.clone());
 
