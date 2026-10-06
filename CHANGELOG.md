@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   capped. Rule IDs, count phrases, tier lines and config keys are unchanged.
 
 ### Fixed
+- Preserve the workspace root for nested directory and watch scans so command
+  and skill wrappers can import files from the project root without REF-001.
+  Workspace-relative exclusions still apply, and scans stay limited to the
+  requested paths (#1629).
 - `/agnix` reported zero issues when the agent's `AGNIX_RESULT` block was
   missing; it now shows the raw output. The result block now carries the
   diagnostics the report table needs.

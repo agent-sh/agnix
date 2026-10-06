@@ -823,6 +823,53 @@ fn test_validate_project_root_agent_plugin_dispatch() {
     );
 }
 
+#[test]
+fn test_subtree_validation_preserves_configured_workspace_root() {
+    let temp = tempfile::TempDir::new().unwrap();
+    let root = temp.path();
+    let subtree = root.join("nested");
+    std::fs::create_dir_all(subtree.join("vendor")).unwrap();
+    std::fs::write(root.join("target.md"), "# Target\n").unwrap();
+    std::fs::write(subtree.join("wrapper.md"), "@target.md\n@missing.md\n").unwrap();
+    std::fs::write(subtree.join("CLAUDE.md"), "@local.md\n").unwrap();
+    std::fs::write(subtree.join("local.md"), "# Local\n").unwrap();
+    std::fs::write(subtree.join("AGENTS.md"), "# Nested\n").unwrap();
+    // A same-named root file must not override the adjacent memory import.
+    std::fs::write(root.join("local.md"), "@wrong-target.md\n").unwrap();
+    std::fs::write(subtree.join("vendor/AGENTS.md"), "@excluded.md\n").unwrap();
+    std::fs::write(root.join("AGENTS.md"), "@unscanned.md\n").unwrap();
+
+    let mut config = LintConfig::default();
+    config.set_root_dir(root.to_path_buf());
+    config.files_mut().exclude = vec!["nested/vendor/**".to_string()];
+
+    let result = validate_project(&subtree, &config).unwrap();
+    assert_eq!(result.files_checked, 4, "{result:?}");
+    let imports: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| matches!(d.rule.as_str(), "REF-001" | "CC-MEM-001"))
+        .collect();
+    assert_eq!(imports.len(), 1, "{imports:?}");
+    assert!(imports[0].message.contains("@missing.md"), "{imports:?}");
+    assert_eq!(imports[0].file, subtree.join("wrapper.md"));
+
+    // The lightweight LSP walk uses the same workspace-relative filters.
+    let diagnostics = validate_project_rules(&subtree, &config).unwrap();
+    assert!(
+        diagnostics.iter().all(|d| d.rule != "AGM-006"),
+        "only the requested, non-excluded AGENTS.md is walked: {diagnostics:?}"
+    );
+    assert!(
+        diagnostics
+            .iter()
+            .any(|d| d.rule == "VER-001" && d.file == root)
+    );
+    let missing = subtree.join("absent");
+    assert!(validate_project(&missing, &config).is_err());
+    assert!(validate_project_rules(&missing, &config).is_err());
+}
+
 // ===== MCP Validation Integration Tests =====
 
 #[test]

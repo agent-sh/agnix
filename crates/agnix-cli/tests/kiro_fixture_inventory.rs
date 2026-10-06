@@ -112,7 +112,13 @@ fn collect_relative_files(root: &Path, dir: &Path, out: &mut BTreeSet<String>) {
 }
 
 fn run_agnix_json(target: &Path) -> Value {
+    // Fixture baselines are independent of repository self-lint exclusions
+    // and omit the version-pinning info diagnostic.
+    let config = tempfile::NamedTempFile::new().unwrap();
+    fs::write(config.path(), "[rules]\ndisabled_rules = [\"VER-001\"]\n").unwrap();
     let output = agnix()
+        .arg("--config")
+        .arg(config.path())
         .arg(target)
         .arg("--format")
         .arg("json")

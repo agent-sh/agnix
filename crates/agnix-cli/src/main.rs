@@ -430,14 +430,14 @@ fn run_validation(
         }
     }
 
-    if paths.len() == 1 && paths[0].is_dir() {
-        return validate_project(&paths[0], config);
-    }
-
     // Resolve a workspace root so per-file validators can apply relative
     // `[files]` patterns and so diagnostics use a stable base path.
     let mut config = config.clone();
     config.set_root_dir(resolve_batch_root(paths));
+
+    if paths.len() == 1 && paths[0].is_dir() {
+        return validate_project(&paths[0], &config);
+    }
 
     let mut registry = ValidatorRegistry::with_defaults();
     for name in &config.rules().disabled_validators {
@@ -1008,6 +1008,7 @@ fn run_single_validation(
 
     let mut config = load_config_or_default(config_path.as_ref())?;
     config.set_target(target.into());
+    config.set_root_dir(resolve_batch_root(&[path.to_path_buf()]));
 
     let ValidationResult { diagnostics, .. } = validate_project(path, &config)?;
 
@@ -1729,6 +1730,24 @@ mod resolve_fix_mode_tests {
 #[cfg(test)]
 mod resolve_batch_root_tests {
     use super::*;
+
+    #[test]
+    fn watch_pass_preserves_workspace_import_root() {
+        let temp = tempfile::TempDir::new().unwrap();
+        std::fs::create_dir(temp.path().join(".git")).unwrap();
+        let commands = temp.path().join(".claude/commands/demo");
+        std::fs::create_dir_all(&commands).unwrap();
+        let target = temp.path().join("guide.md");
+        std::fs::write(&target, "# Guide\n").unwrap();
+        std::fs::write(
+            commands.join("spec.md"),
+            "---\ndescription: wrapper\n---\n\n@guide.md\n",
+        )
+        .unwrap();
+        assert!(!run_single_validation(&commands, false, false, TargetArg::Generic, None).unwrap());
+        std::fs::remove_file(target).unwrap();
+        assert!(run_single_validation(&commands, false, false, TargetArg::Generic, None).unwrap());
+    }
 
     /// `CLAUDE.md` plus a skill file in a subdirectory, the shape pre-commit
     /// produces. Returns the temp dir and the two paths.

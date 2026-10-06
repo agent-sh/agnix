@@ -29,7 +29,12 @@ fn workspace_root() -> &'static std::path::Path {
 }
 
 fn run_json(path: &std::path::Path) -> serde_json::Value {
+    // These fixtures are intentionally excluded by the repository self-lint
+    // config. Use a default config so the fixture validators actually run.
+    let config = tempfile::NamedTempFile::new().unwrap();
     let output = agnix()
+        .arg("--config")
+        .arg(config.path())
         .arg(path)
         .arg("--format")
         .arg("json")
