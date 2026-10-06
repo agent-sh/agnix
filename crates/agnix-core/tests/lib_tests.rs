@@ -826,7 +826,7 @@ fn test_validate_project_root_agent_plugin_dispatch() {
 #[test]
 fn test_subtree_validation_preserves_configured_workspace_root() {
     let temp = tempfile::TempDir::new().unwrap();
-    let root = temp.path();
+    let root = std::fs::canonicalize(temp.path()).unwrap();
     let subtree = root.join("nested");
     std::fs::create_dir_all(subtree.join("vendor")).unwrap();
     std::fs::write(root.join("target.md"), "# Target\n").unwrap();
