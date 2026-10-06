@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- Update website dependencies and pin patched Tinypool, selector-parser and
+  SockJS UUID versions. Upstream braces and sprintf-js advisories remain open.
+
+### Changed
+- Refresh reviewed releases: Claude Code 2.1.292, Codex CLI 0.160.1,
+  OpenCode 1.18.35, Cursor 3.23.23 and Gemini CLI 0.63.0. Refresh the
+  reviewed Claude Code specification baselines.
+
 ## [0.56.6] - 2026-10-06
 
 ### Changed

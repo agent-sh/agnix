@@ -20,6 +20,11 @@
     "serialize-javascript": "^7.0.5",
     "webpack-dev-server": {
       "ws": "^8.20.1"
+    },
+    "tinypool": "^2.1.2",
+    "postcss-selector-parser": "^7.1.6",
+    "sockjs": {
+      "uuid": "^11.1.1"
     }
   },
   "dependencies": {
