@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.56.6] - 2026-10-06
+
 ### Changed
 - Rewrite the agent-facing text for current models: AGENTS.md, the `/agnix`
   command, the `agnix-agent` agent and both agnix skills. Rules are stated once
