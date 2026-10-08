@@ -26,6 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Warn for missing skill references, redundant tool exclusions and plugin naming.
 - Retire CC-SK-009, CC-SK-012 and CC-HK-004; migration metadata describes why.
 - Accept Codex 0.161 Daybreak settings and review Kiro CLI 2.28 hook matchers.
+- Review Claude Code 2.1.294, Cline 4.1.23 and Amp many-many-pucks;
+  no new validation constraints.
 
 ### Security
 - Update website dependencies and pin patched Tinypool, selector-parser and

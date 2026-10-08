@@ -38,8 +38,8 @@ rules:
     message: La referencia de archivo '%{path}' tiene mas de un nivel de profundidad
     suggestion: Aplana la estructura del directorio references/
   as_015:
-    message: El directorio del skill excede 30MB (%{size} bytes)
-    suggestion: Elimina recursos grandes o divide el skill en partes mas pequenas
+    message: "El directorio supera el limite de carga de 30MB de la API de Claude (%{size} bytes); Claude Code local no tiene un limite documentado"
+    suggestion: "Reduce los recursos antes de cargar el skill a la API de Claude"
   as_016:
     message: 'Error al analizar SKILL.md: %{error}'
     suggestion: Verifica la sintaxis YAML del frontmatter -- asegura indentacion adecuada, espacios despues de dos puntos,
@@ -221,8 +221,8 @@ rules:
     message: El archivo de agente debe tener frontmatter YAML
     suggestion: Agrega frontmatter entre marcadores ---
   cc_ag_020:
-    message: "El nombre de agente '%{name}' contiene dos puntos reservados"
-    suggestion: "Elimina ':' del nombre del agente local; los dos puntos estan reservados para espacios de nombres de plugins"
+    message: "El nombre del agente local '%{name}' empieza con '-', contiene ':' o supera 256 caracteres"
+    suggestion: "Usa un nombre de hasta 256 caracteres sin '-' inicial ni ':'"
     parse_error: 'Error al analizar el frontmatter del agente: %{error}'
     parse_error_suggestion: Verifica la sintaxis YAML del frontmatter -- asegura indentacion adecuada, espacios despues de
       dos puntos, y comillas coincidentes
@@ -931,8 +931,8 @@ rules:
     message: El nombre de plugin '%{name}' no está en kebab-case
     suggestion: Usa solo minúsculas, dígitos y guiones. Claude Code rechaza nombres con caracteres de control o invisibles.
   cc_pl_017:
-    message: "Unknown plugin manifest field '%{field}'; Claude Code ignores it at load time"
-    suggestion: "Check the field spelling against the plugin manifest reference"
+    message: "Campo desconocido '%{field}' en el manifiesto; Claude Code lo ignora al cargar"
+    suggestion: "Comprueba el nombre del campo en la referencia del manifiesto de plugins"
 
 core:
   error:

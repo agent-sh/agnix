@@ -182,6 +182,35 @@ fn escaped_single_quotes_do_not_hide_later_comments() {
 }
 
 #[test]
+fn extensionless_markdown_rules_support_html_suppressions() {
+    for filename in [".cursorrules", ".clinerules", ".windsurfrules", ".roorules"] {
+        let path = Path::new(filename);
+        let config = LintConfig::default();
+        let file_type = agnix_core::resolve_file_type(path, &config);
+        assert_ne!(file_type, FileType::Unknown);
+        let mut registry = ValidatorRegistry::new();
+        registry.register(file_type, || Box::new(TestWarningValidator));
+        assert_eq!(
+            validate_content(
+                path,
+                "Don't ignore the rule.\ntrigger\n",
+                &config,
+                &registry
+            )
+            .len(),
+            1
+        );
+        let diagnostics = validate_content(
+            path,
+            "Don't ignore the rule.\n<!-- agnix: noqa: TEST-001 -->\n",
+            &config,
+            &registry,
+        );
+        assert!(diagnostics.is_empty(), "{filename}: {diagnostics:?}");
+    }
+}
+
+#[test]
 fn block_comment_noqa_suppresses_all_rules_on_same_line() {
     let diagnostics = validate_content(
         Path::new("CLAUDE.md"),

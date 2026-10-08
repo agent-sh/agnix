@@ -133,7 +133,6 @@ const KNOWN_PERMISSIONS_NETWORK_KEYS: &[&str] = &[
 const VALID_WINDOWS_SANDBOX_VALUES: &[&str] = &["elevated", "unelevated"];
 
 const KNOWN_FEATURE_KEYS: &[&str] = &[
-    "cli_daybreak",
     "apply_patch_freeform",
     "apply_patch_streaming_events",
     "apps",
@@ -145,6 +144,7 @@ const KNOWN_FEATURE_KEYS: &[&str] = &[
     "browser_use_full_cdp_access",
     "child_agents_md",
     "chronicle",
+    "cli_daybreak",
     "code_mode",
     "code_mode_buffered_exec",
     "code_mode_host",

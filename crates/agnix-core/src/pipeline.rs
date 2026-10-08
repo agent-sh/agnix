@@ -356,16 +356,29 @@ fn collect_inline_suppressions(content: &str, path: &Path) -> InlineSuppressions
         .and_then(|ext| ext.to_str())
         .unwrap_or("")
         .to_ascii_lowercase();
-    let prefixes: &[&str] = match extension.as_str() {
-        "md" | "mdc" | "markdown" | "html" | "xml" => &["<!--"],
-        "json" => &[],
-        "toml" | "yaml" | "yml" | "py" | "sh" => &["#"],
-        _ => &["//", "/*"],
+    let filename = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or("")
+        .to_ascii_lowercase();
+    let markdown = matches!(extension.as_str(), "md" | "mdc" | "markdown")
+        || matches!(
+            filename.as_str(),
+            ".cursorrules" | ".clinerules" | ".windsurfrules" | ".roorules"
+        );
+    let prefixes: &[&str] = if markdown {
+        &["<!--"]
+    } else {
+        match extension.as_str() {
+            "md" | "mdc" | "markdown" | "html" | "xml" => &["<!--"],
+            "json" => &[],
+            "toml" | "yaml" | "yml" | "py" | "sh" => &["#"],
+            _ => &["//", "/*"],
+        }
     };
     if prefixes.is_empty() || !content.contains("agnix") {
         return suppressions;
     }
-    let markdown = matches!(extension.as_str(), "md" | "mdc" | "markdown");
     let masked = if markdown {
         let mut masked = crate::parsers::markdown::mask_code_spans(content).into_bytes();
         let parts = crate::parsers::frontmatter::split_frontmatter(content);

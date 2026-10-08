@@ -37,8 +37,8 @@ rules:
     message: 文件引用 '%{path}' 深度超过一级
     suggestion: 扁平化 references/ 目录结构
   as_015:
-    message: Skill 目录超过 30MB（%{size} 字节）
-    suggestion: 删除大型资源或将 skill 拆分为更小的部分
+    message: "目录超过 Claude API 的 30MB 上传限制（%{size} 字节）；本地 Claude Code 没有已公布的大小限制"
+    suggestion: "上传到 Claude API 前减少技能资源大小"
   as_016:
     message: '解析 SKILL.md 失败: %{error}'
     suggestion: 检查 YAML frontmatter 语法 -- 确保正确的缩进、冒号间距和匹配的引号
@@ -214,8 +214,8 @@ rules:
     parse_error: '解析代理 frontmatter 失败: %{error}'
     parse_error_suggestion: 检查 YAML frontmatter 语法 -- 确保正确的缩进、冒号间距和匹配的引号
   cc_ag_020:
-    message: "代理名称 '%{name}' 包含保留的冒号"
-    suggestion: "从本地代理名称中删除 ':'；冒号保留用于插件命名空间"
+    message: "本地代理名称 '%{name}' 以 '-' 开头、包含 ':' 或超过 256 个字符"
+    suggestion: "名称不得以 '-' 开头或包含 ':'，且长度不得超过 256 个字符"
   cc_mem_004:
     message: npm 脚本 '%{script}' 在 package.json 中未找到
     suggestion_no_scripts: package.json 中未定义脚本。
@@ -878,8 +878,8 @@ rules:
     message: 插件名称 '%{name}' 不是 kebab-case
     suggestion: 只使用小写字母、数字和连字符。Claude Code 会拒绝包含控制字符或不可见字符的名称。
   cc_pl_017:
-    message: "Unknown plugin manifest field '%{field}'; Claude Code ignores it at load time"
-    suggestion: "Check the field spelling against the plugin manifest reference"
+    message: "插件清单中的未知字段 '%{field}' 会在 Claude Code 加载时被忽略"
+    suggestion: "根据插件清单参考检查字段名称"
 
 core:
   error:
