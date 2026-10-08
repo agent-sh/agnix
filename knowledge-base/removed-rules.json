@@ -4,25 +4,59 @@
       "id": "AS-007",
       "removed_in": "0.37.0",
       "reason": "Retired during Agent Skills rule consolidation after the same field-shape guidance moved under AS-002, AS-004, AS-005, and AS-006.",
-      "replaced_by": ["AS-002", "AS-004", "AS-005", "AS-006"]
+      "replaced_by": [
+        "AS-002",
+        "AS-004",
+        "AS-005",
+        "AS-006"
+      ]
     },
     {
       "id": "AS-010",
       "removed_in": "0.37.0",
       "reason": "Retired when trigger guidance became part of the description-quality checks instead of a standalone rule.",
-      "replaced_by": ["AS-003", "AS-008", "AS-009"]
+      "replaced_by": [
+        "AS-003",
+        "AS-008",
+        "AS-009"
+      ]
     },
     {
       "id": "AS-014",
       "removed_in": "0.37.0",
       "reason": "Retired when cross-platform path checks moved out of Agent Skills and into the XP rule family.",
-      "replaced_by": ["XP-001", "XP-002", "XP-003"]
+      "replaced_by": [
+        "XP-001",
+        "XP-002",
+        "XP-003"
+      ]
     },
     {
       "id": "CC-SK-011",
       "removed_in": "0.56.5",
       "reason": "Claude Code permits a user-typed inline /skill-name mention to authorize model invocation even when user-invocable is false and disable-model-invocation is true. The combination is reachable; removing the invocation guard would weaken permission control.",
       "replaced_by": []
+    },
+    {
+      "id": "CC-SK-009",
+      "removed_in": "0.57.0",
+      "reason": "Claude Code documents no limit on dynamic injections.",
+      "replaced_by": []
+    },
+    {
+      "id": "CC-SK-012",
+      "removed_in": "0.57.0",
+      "reason": "Claude Code appends invocation arguments when no placeholder receives them.",
+      "replaced_by": []
+    },
+    {
+      "id": "CC-HK-004",
+      "removed_in": "0.57.0",
+      "reason": "CC-HK-018 covers documented ignored matchers. Unknown events belong to CC-HK-001.",
+      "replaced_by": [
+        "CC-HK-018",
+        "CC-HK-001"
+      ]
     }
   ]
 }

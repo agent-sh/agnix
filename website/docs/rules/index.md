@@ -1,7 +1,7 @@
 # Rules Reference
 
-This section contains all `457` validation rules generated from `knowledge-base/rules.json`.
-`120` rules have automatic fixes.
+This section contains all `455` validation rules generated from `knowledge-base/rules.json`.
+`118` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
 |------|------|----------|----------|----------|
@@ -27,15 +27,15 @@ This section contains all `457` validation rules generated from `knowledge-base/
 | [AS-011](./generated/as-011.md) | Invalid Compatibility Length | HIGH | Agent Skills | No |
 | [AS-012](./generated/as-012.md) | Content Exceeds 500 Lines | MEDIUM | Agent Skills | No |
 | [AS-013](./generated/as-013.md) | File Reference Too Deep | MEDIUM | Agent Skills | No |
-| [AS-015](./generated/as-015.md) | Upload Size Exceeds 8MB | HIGH | Agent Skills | No |
+| [AS-015](./generated/as-015.md) | Claude API Upload Size Exceeds 30MB | MEDIUM | Agent Skills | No |
 | [AS-016](./generated/as-016.md) | Skill Parse Error | HIGH | Agent Skills | No |
 | [AS-017](./generated/as-017.md) | Name Must Match Parent Directory | HIGH | Agent Skills | No |
 | [CC-AG-001](./generated/cc-ag-001.md) | Missing Name Field | HIGH | Claude Agents | Yes (safe) |
 | [CC-AG-002](./generated/cc-ag-002.md) | Missing Description Field | HIGH | Claude Agents | Yes (safe) |
 | [CC-AG-003](./generated/cc-ag-003.md) | Invalid Model Value | HIGH | Claude Agents | Yes (unsafe) |
 | [CC-AG-004](./generated/cc-ag-004.md) | Invalid Permission Mode | HIGH | Claude Agents | Yes (unsafe) |
-| [CC-AG-005](./generated/cc-ag-005.md) | Referenced Skill Not Found | HIGH | Claude Agents | No |
-| [CC-AG-006](./generated/cc-ag-006.md) | Tool/Disallowed Conflict | HIGH | Claude Agents | No |
+| [CC-AG-005](./generated/cc-ag-005.md) | Referenced Skill Not Found | MEDIUM | Claude Agents | No |
+| [CC-AG-006](./generated/cc-ag-006.md) | Tool/Disallowed Conflict | MEDIUM | Claude Agents | No |
 | [CC-AG-007](./generated/cc-ag-007.md) | Agent Parse Error | HIGH | Claude Agents | No |
 | [CC-AG-008](./generated/cc-ag-008.md) | Invalid Memory Scope | HIGH | Claude Agents | Yes (unsafe) |
 | [CC-AG-009](./generated/cc-ag-009.md) | Invalid Tool Name in Tools List | HIGH | Claude Agents | No |
@@ -47,11 +47,10 @@ This section contains all `457` validation rules generated from `knowledge-base/
 | [CC-AG-015](./generated/cc-ag-015.md) | Invalid Isolation Value | MEDIUM | Claude Agents | Yes (unsafe) |
 | [CC-AG-017](./generated/cc-ag-017.md) | Invalid MaxTurns Value | MEDIUM | Claude Agents | No |
 | [CC-AG-019](./generated/cc-ag-019.md) | Unknown Agent Frontmatter Field | LOW | Claude Agents | Yes (unsafe) |
-| [CC-AG-020](./generated/cc-ag-020.md) | Reserved Colon in Agent Name | HIGH | Claude Agents | No |
+| [CC-AG-020](./generated/cc-ag-020.md) | Invalid Local Agent Name | HIGH | Claude Agents | No |
 | [CC-HK-001](./generated/cc-hk-001.md) | Invalid Hook Event | HIGH | Claude Hooks | Yes (safe/unsafe) |
 | [CC-HK-002](./generated/cc-hk-002.md) | Prompt or Agent Hook on Wrong Event | HIGH | Claude Hooks | No |
 | [CC-HK-003](./generated/cc-hk-003.md) | Matcher Hint for Tool Events | LOW | Claude Hooks | No |
-| [CC-HK-004](./generated/cc-hk-004.md) | Matcher on Unsupported Event | LOW | Claude Hooks | Yes (safe) |
 | [CC-HK-005](./generated/cc-hk-005.md) | Missing Type Field | HIGH | Claude Hooks | Yes (safe) |
 | [CC-HK-006](./generated/cc-hk-006.md) | Missing Command Field | HIGH | Claude Hooks | No |
 | [CC-HK-007](./generated/cc-hk-007.md) | Missing Prompt Field | HIGH | Claude Hooks | No |
@@ -109,7 +108,7 @@ This section contains all `457` validation rules generated from `knowledge-base/
 | [CC-PL-013](./generated/cc-pl-013.md) | Channel Missing Server Reference | MEDIUM | Claude Plugins | No |
 | [CC-PL-014](./generated/cc-pl-014.md) | Plugin Agent Unsupported Field | MEDIUM | Claude Plugins | Yes (safe) |
 | [CC-PL-015](./generated/cc-pl-015.md) | Default Component Folder Shadowed by Manifest | MEDIUM | Claude Plugins | No |
-| [CC-PL-016](./generated/cc-pl-016.md) | Plugin Name Not Kebab-Case | HIGH | Claude Plugins | No |
+| [CC-PL-016](./generated/cc-pl-016.md) | Plugin Name Not Kebab-Case | MEDIUM | Claude Plugins | No |
 | [CC-SK-001](./generated/cc-sk-001.md) | Invalid Model Value | HIGH | Claude Skills | Yes (unsafe) |
 | [CC-SK-002](./generated/cc-sk-002.md) | Invalid Context Value | HIGH | Claude Skills | Yes (unsafe) |
 | [CC-SK-004](./generated/cc-sk-004.md) | Agent Without Context | HIGH | Claude Skills | Yes (unsafe) |
@@ -117,9 +116,7 @@ This section contains all `457` validation rules generated from `knowledge-base/
 | [CC-SK-006](./generated/cc-sk-006.md) | Dangerous Auto-Invocation | HIGH | Claude Skills | Yes (unsafe) |
 | [CC-SK-007](./generated/cc-sk-007.md) | Unrestricted Bash | MEDIUM | Claude Skills | Yes (unsafe) |
 | [CC-SK-008](./generated/cc-sk-008.md) | Unknown Tool Name | HIGH | Claude Skills | No |
-| [CC-SK-009](./generated/cc-sk-009.md) | Too Many Injections | MEDIUM | Claude Skills | No |
 | [CC-SK-010](./generated/cc-sk-010.md) | Invalid Hooks in Skill Frontmatter | HIGH | Claude Skills | No |
-| [CC-SK-012](./generated/cc-sk-012.md) | Argument Hint Without $ARGUMENTS | MEDIUM | Claude Skills | Yes (unsafe) |
 | [CC-SK-013](./generated/cc-sk-013.md) | Fork Context Without Actionable Instructions | MEDIUM | Claude Skills | No |
 | [CC-SK-014](./generated/cc-sk-014.md) | Invalid disable-model-invocation Type | HIGH | Claude Skills | No |
 | [CC-SK-015](./generated/cc-sk-015.md) | Invalid user-invocable Type | HIGH | Claude Skills | No |
@@ -462,3 +459,4 @@ This section contains all `457` validation rules generated from `knowledge-base/
 | [OC-TUI-001](./generated/oc-tui-001.md) | Unknown TUI Key | MEDIUM | OpenCode | No |
 | [OC-TUI-002](./generated/oc-tui-002.md) | Invalid scroll_speed | HIGH | OpenCode | No |
 | [OC-TUI-003](./generated/oc-tui-003.md) | Invalid diff_style | HIGH | OpenCode | Yes (unsafe) |
+| [CC-PL-017](./generated/cc-pl-017.md) | Unknown Plugin Manifest Field | MEDIUM | Claude Plugins | No |

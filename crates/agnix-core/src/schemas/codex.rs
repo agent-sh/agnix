@@ -55,6 +55,7 @@ pub const AGENTS_MD_MAX_SIZE: usize = 100_000;
 /// audited schema ever contained and have no such backwards-compat reason are
 /// removed instead (see #969).
 pub const KNOWN_TOP_LEVEL_KEYS: &[&str] = &[
+    "daybreak",
     // Core model settings (alphabetized within block)
     "log_dir",
     "model",

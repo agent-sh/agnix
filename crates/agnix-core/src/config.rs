@@ -259,6 +259,7 @@ struct RuntimeContext {
     /// When set, validators can use this to resolve relative paths and
     /// detect project-escape attempts in import validation.
     root_dir: Option<PathBuf>,
+    config_path: Option<PathBuf>,
 
     /// Shared import cache for project-level validation.
     ///
@@ -318,6 +319,7 @@ impl Default for RuntimeContext {
     fn default() -> Self {
         Self {
             root_dir: None,
+            config_path: None,
             import_cache: None,
             fs: Arc::new(RealFileSystem),
             compiled_overrides: Arc::new(Vec::new()),
@@ -422,6 +424,10 @@ pub(in crate::config) struct ConfigData {
     )]
     files: FilesConfig,
 
+    /// Ignore inline suppression comments during validation.
+    #[serde(default)]
+    ignore_inline_suppressions: bool,
+
     /// Per-file rule suppression overrides
     #[serde(default)]
     #[schemars(
@@ -466,6 +472,7 @@ impl Default for ConfigData {
             spec_revisions: SpecRevisions::default(),
             files: FilesConfig::default(),
             overrides: Vec::new(),
+            ignore_inline_suppressions: false,
             locale: None,
             max_files_to_validate: Some(DEFAULT_MAX_FILES),
         }
@@ -939,7 +946,8 @@ impl LintConfig {
     pub fn load<P: AsRef<Path>>(path: P) -> anyhow::Result<Self> {
         let path = path.as_ref();
         let merged = load_config_value_with_extends(path, 0)?;
-        let config = merged.try_into()?;
+        let mut config: Self = merged.try_into()?;
+        config.runtime.config_path = Some(std::fs::canonicalize(path)?);
         Ok(config)
     }
 
@@ -977,6 +985,21 @@ impl LintConfig {
     #[inline]
     pub fn root_dir(&self) -> Option<&PathBuf> {
         self.runtime.root_dir.as_ref()
+    }
+
+    /// Path of the loaded configuration, if loaded from disk.
+    pub fn config_path(&self) -> Option<&Path> {
+        self.runtime.config_path.as_deref()
+    }
+
+    /// Whether inline suppression comments are ignored.
+    pub fn ignore_inline_suppressions(&self) -> bool {
+        self.data.ignore_inline_suppressions
+    }
+
+    /// Control whether inline suppression comments are ignored.
+    pub fn set_ignore_inline_suppressions(&mut self, ignore: bool) {
+        Arc::make_mut(&mut self.data).ignore_inline_suppressions = ignore;
     }
 
     /// Alias for `root_dir()` for consistency with other accessors.

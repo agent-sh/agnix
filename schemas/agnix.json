@@ -33,6 +33,11 @@
         "include_as_memory": []
       }
     },
+    "ignore_inline_suppressions": {
+      "description": "Ignore inline suppression comments during validation.",
+      "type": "boolean",
+      "default": false
+    },
     "locale": {
       "description": "Output locale for translated messages (e.g., \"en\", \"es\", \"zh-CN\")",
       "type": [

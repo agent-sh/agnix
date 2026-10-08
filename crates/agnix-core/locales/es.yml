@@ -38,7 +38,7 @@ rules:
     message: La referencia de archivo '%{path}' tiene mas de un nivel de profundidad
     suggestion: Aplana la estructura del directorio references/
   as_015:
-    message: El directorio del skill excede 8MB (%{size} bytes)
+    message: El directorio del skill excede 30MB (%{size} bytes)
     suggestion: Elimina recursos grandes o divide el skill en partes mas pequenas
   as_016:
     message: 'Error al analizar SKILL.md: %{error}'
@@ -930,6 +930,10 @@ rules:
   cc_pl_016:
     message: El nombre de plugin '%{name}' no está en kebab-case
     suggestion: Usa solo minúsculas, dígitos y guiones. Claude Code rechaza nombres con caracteres de control o invisibles.
+  cc_pl_017:
+    message: "Unknown plugin manifest field '%{field}'; Claude Code ignores it at load time"
+    suggestion: "Check the field spelling against the plugin manifest reference"
+
 core:
   error:
     file_read: 'Error al leer archivo: %{path}'

@@ -133,6 +133,7 @@ const KNOWN_PERMISSIONS_NETWORK_KEYS: &[&str] = &[
 const VALID_WINDOWS_SANDBOX_VALUES: &[&str] = &["elevated", "unelevated"];
 
 const KNOWN_FEATURE_KEYS: &[&str] = &[
+    "cli_daybreak",
     "apply_patch_freeform",
     "apply_patch_streaming_events",
     "apps",

@@ -37,7 +37,7 @@ rules:
     message: 文件引用 '%{path}' 深度超过一级
     suggestion: 扁平化 references/ 目录结构
   as_015:
-    message: Skill 目录超过 8MB（%{size} 字节）
+    message: Skill 目录超过 30MB（%{size} 字节）
     suggestion: 删除大型资源或将 skill 拆分为更小的部分
   as_016:
     message: '解析 SKILL.md 失败: %{error}'
@@ -877,6 +877,10 @@ rules:
   cc_pl_016:
     message: 插件名称 '%{name}' 不是 kebab-case
     suggestion: 只使用小写字母、数字和连字符。Claude Code 会拒绝包含控制字符或不可见字符的名称。
+  cc_pl_017:
+    message: "Unknown plugin manifest field '%{field}'; Claude Code ignores it at load time"
+    suggestion: "Check the field spelling against the plugin manifest reference"
+
 core:
   error:
     file_read: '读取文件失败: %{path}'

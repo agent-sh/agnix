@@ -108,8 +108,8 @@ pub use fs::{FileSystem, MockFileSystem, RealFileSystem};
 pub use pipeline::{ValidationResult, resolve_file_type, validate_content};
 #[cfg(feature = "filesystem")]
 pub use pipeline::{
-    validate_file, validate_file_with_registry, validate_project, validate_project_rules,
-    validate_project_with_registry,
+    validate_file, validate_file_with_registry, validate_paths_with_registry, validate_project,
+    validate_project_rules, validate_project_with_registry,
 };
 pub use registry::{
     ValidatorFactory, ValidatorProvider, ValidatorRegistry, ValidatorRegistryBuilder,

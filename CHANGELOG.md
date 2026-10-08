@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.0] - 2026-10-08
+
+### Fixed
+- Run workspace checks once over all requested directories and attribute version
+  pinning diagnostics to the configuration actually loaded.
+- Require suppression comments and add `--ignore-inline-suppressions` and
+  `ignore_inline_suppressions` for CI validation.
+- Honor skill resource exclusions and skip dependency directories in CC-SK-021.
+- Validate local agent name and frontmatter skip conditions, and allow plugin
+  agents to load under their filename when frontmatter is absent or malformed.
+
+### Added
+- CC-PL-017 warns on unknown plugin manifest keys.
+
+### Changed
+- Correct the Claude API upload warning to 30 MB, with no local Claude Code cap.
+- Warn for missing skill references, redundant tool exclusions and plugin naming.
+- Retire CC-SK-009, CC-SK-012 and CC-HK-004; migration metadata describes why.
+- Accept Codex 0.161 Daybreak settings and review Kiro CLI 2.28 hook matchers.
+
 ### Security
 - Update website dependencies and pin patched Tinypool, selector-parser and
   SockJS UUID versions. Upstream braces and sprintf-js advisories remain open.

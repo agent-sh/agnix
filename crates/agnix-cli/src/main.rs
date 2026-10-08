@@ -25,7 +25,7 @@ use agnix_core::{
     diagnostics::{Diagnostic, DiagnosticLevel, FixConfidenceTier},
     eval::{EvalFormat, evaluate_manifest_file},
     fixes::{FixApplyMode, FixApplyOptions},
-    generate_schema, validate_file_with_registry, validate_project, validate_project_with_registry,
+    generate_schema, validate_file_with_registry, validate_paths_with_registry, validate_project,
 };
 use clap::{Parser, Subcommand, ValueEnum};
 use colored::*;
@@ -101,6 +101,10 @@ struct Cli {
     /// Config file path
     #[arg(short, long)]
     config: Option<PathBuf>,
+
+    /// Ignore inline suppression comments, useful for CI validation.
+    #[arg(long)]
+    ignore_inline_suppressions: bool,
 
     /// Verbose output
     #[arg(short, long)]
@@ -444,6 +448,10 @@ fn run_validation(
         registry.disable_validator_owned(name);
     }
 
+    if paths.iter().any(|path| path.is_dir()) {
+        return validate_paths_with_registry(paths, &config, &registry);
+    }
+
     let max_files = config.max_files_to_validate();
     let mut diagnostics = Vec::new();
     let mut files_checked = 0usize;
@@ -455,12 +463,6 @@ fn run_validation(
                     limit,
                 }));
             }
-        }
-        if path.is_dir() {
-            let r = validate_project_with_registry(path, &config, &registry)?;
-            files_checked += r.files_checked;
-            diagnostics.extend(r.diagnostics);
-            continue;
         }
         match validate_file_with_registry(path, &config, &registry)? {
             ValidationOutcome::Success(d) => {
@@ -585,9 +587,17 @@ fn validate_command(paths: &[PathBuf], cli: &Cli) -> anyhow::Result<()> {
         let verbose = cli.verbose;
         let target = cli.target;
         let config_override = cli.config.clone();
+        let ignore_inline_suppressions = cli.ignore_inline_suppressions;
 
         return watch::watch_and_validate(&path_for_watch, move || {
-            run_single_validation(&path, strict, verbose, target, config_override.as_ref())
+            run_single_validation(
+                &path,
+                strict,
+                verbose,
+                target,
+                config_override.as_ref(),
+                ignore_inline_suppressions,
+            )
         });
     }
 
@@ -605,6 +615,9 @@ fn validate_command(paths: &[PathBuf], cli: &Cli) -> anyhow::Result<()> {
     }
 
     config.set_target(cli.target.into());
+    if cli.ignore_inline_suppressions {
+        config.set_ignore_inline_suppressions(true);
+    }
 
     // Validate config semantics and display warnings (only for text output)
     if matches!(cli.format, OutputFormat::Text) {
@@ -1003,11 +1016,15 @@ fn run_single_validation(
     verbose: bool,
     target: TargetArg,
     config_override: Option<&PathBuf>,
+    ignore_inline_suppressions: bool,
 ) -> anyhow::Result<bool> {
     let config_path = resolve_config_path(path, config_override);
 
     let mut config = load_config_or_default(config_path.as_ref())?;
     config.set_target(target.into());
+    if ignore_inline_suppressions {
+        config.set_ignore_inline_suppressions(true);
+    }
     config.set_root_dir(resolve_batch_root(&[path.to_path_buf()]));
 
     let ValidationResult { diagnostics, .. } = validate_project(path, &config)?;
@@ -1744,9 +1761,15 @@ mod resolve_batch_root_tests {
             "---\ndescription: wrapper\n---\n\n@guide.md\n",
         )
         .unwrap();
-        assert!(!run_single_validation(&commands, false, false, TargetArg::Generic, None).unwrap());
+        assert!(
+            !run_single_validation(&commands, false, false, TargetArg::Generic, None, false)
+                .unwrap()
+        );
         std::fs::remove_file(target).unwrap();
-        assert!(run_single_validation(&commands, false, false, TargetArg::Generic, None).unwrap());
+        assert!(
+            run_single_validation(&commands, false, false, TargetArg::Generic, None, false)
+                .unwrap()
+        );
     }
 
     /// `CLAUDE.md` plus a skill file in a subdirectory, the shape pre-commit

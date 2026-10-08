@@ -337,7 +337,7 @@ impl HooksSchema {
 
     /// Check if an event ignores a configured matcher field.
     pub fn ignores_matcher(event: &str) -> bool {
-        Self::NO_MATCHER_EVENTS.contains(&event)
+        Self::NO_MATCHER_EVENTS.contains(&event) && !Self::supports_matcher(event)
     }
 
     /// Check if an event supports prompt hooks

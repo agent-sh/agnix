@@ -16,7 +16,6 @@ const RULE_IDS: &[&str] = &[
     "CC-HK-001",
     "CC-HK-002",
     "CC-HK-003",
-    "CC-HK-004",
     "CC-HK-005",
     "CC-HK-006",
     "CC-HK-007",
@@ -619,18 +618,6 @@ impl Validator for HooksValidator {
                         &matcher.matcher,
                         matcher_idx,
                         path,
-                        &mut diagnostics,
-                    );
-                }
-
-                // CC-HK-004: Matcher on non-tool event
-                if config.is_rule_enabled("CC-HK-004") {
-                    validate_cc_hk_004_matcher_forbidden(
-                        event,
-                        &matcher.matcher,
-                        matcher_idx,
-                        path,
-                        content,
                         &mut diagnostics,
                     );
                 }

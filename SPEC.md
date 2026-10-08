@@ -7,12 +7,12 @@
 
 | Type | Files | Rules |
 |------|-------|-------|
-| Skills | SKILL.md | 34 |
-| Hooks | settings.json | 27 |
+| Skills | SKILL.md | 32 |
+| Hooks | settings.json | 26 |
 | Memory (Claude Code) | CLAUDE.md, CLAUDE.local.md, .claude/rules/*.md | 13 |
 | Instructions (Cross-Tool) | AGENTS.md, AGENTS.local.md, AGENTS.override.md | 6 |
 | Agents | agents/*.md | 18 |
-| Plugins | plugin.json | 16 |
+| Plugins | plugin.json | 17 |
 | Claude Output Styles | .claude/output-styles/*.md | 6 |
 | Claude Settings | .claude/settings.json | 32 |
 | Prompt Engineering | CLAUDE.md, AGENTS.md | 6 |
@@ -163,7 +163,6 @@ All rules in `knowledge-base/VALIDATION-RULES.md`
 | CC-SK-006 | ERROR | Dangerous skill without safety flag |
 | CC-SK-007 | WARN | Unrestricted Bash access |
 | CC-SK-008 | ERROR | Unknown tool name |
-| CC-SK-009 | WARN | Too many dynamic injections |
 | CC-HK-001 | ERROR | Invalid hook event |
 | CC-HK-006 | ERROR | Missing command field |
 | CC-HK-007 | ERROR | Missing prompt field |

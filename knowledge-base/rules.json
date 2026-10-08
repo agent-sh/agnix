@@ -1,8 +1,8 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 457,
-  "last_updated": "2026-10-05",
+  "total_rules": 455,
+  "last_updated": "2026-10-08",
   "schema": {
     "evidence": {
       "source_type": "spec|vendor_docs|vendor_code|paper|community",
@@ -651,15 +651,15 @@
     },
     {
       "id": "AS-015",
-      "name": "Upload Size Exceeds 8MB",
-      "severity": "HIGH",
+      "name": "Claude API Upload Size Exceeds 30MB",
+      "severity": "MEDIUM",
       "category": "agent-skills",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://platform.claude.com/docs"
+          "https://platform.claude.com/docs/en/build-with-claude/skills-guide"
         ],
-        "verified_on": "2026-02-04",
+        "verified_on": "2026-10-08",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -673,8 +673,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "---\nname: small-skill\ndescription: Use when running a lightweight task\n---\nThis skill directory is under 8MB total.",
-      "bad_example": "---\nname: huge-skill\ndescription: Use when running a task with many large assets\n---\nThis skill bundles 10MB of binary data in its directory.",
+      "good_example": "---\nname: small-skill\ndescription: Use when running a lightweight task\n---\nThis skill directory is under 30MB total.",
+      "bad_example": "---\nname: huge-skill\ndescription: Use when running a task with many large assets\n---\nThis skill bundles 31MB of binary data in its directory.",
       "security": {
         "cwe": [
           "CWE-400"
@@ -754,7 +754,7 @@
         "source_urls": [
           "https://code.claude.com/docs/en/sub-agents"
         ],
-        "verified_on": "2026-10-04",
+        "verified_on": "2026-10-08",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -874,18 +874,18 @@
     {
       "id": "CC-AG-005",
       "name": "Referenced Skill Not Found",
-      "severity": "HIGH",
+      "severity": "MEDIUM",
       "category": "claude-agents",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
           "https://code.claude.com/docs/en/sub-agents"
         ],
-        "verified_on": "2026-10-04",
+        "verified_on": "2026-10-08",
         "applies_to": {
           "tool": "claude-code"
         },
-        "normative_level": "MUST",
+        "normative_level": "SHOULD",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -901,18 +901,18 @@
     {
       "id": "CC-AG-006",
       "name": "Tool/Disallowed Conflict",
-      "severity": "HIGH",
+      "severity": "MEDIUM",
       "category": "claude-agents",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
           "https://code.claude.com/docs/en/sub-agents"
         ],
-        "verified_on": "2026-10-04",
+        "verified_on": "2026-10-08",
         "applies_to": {
           "tool": "claude-code"
         },
-        "normative_level": "MUST",
+        "normative_level": "SHOULD",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -948,7 +948,7 @@
         "source_urls": [
           "https://code.claude.com/docs/en/sub-agents"
         ],
-        "verified_on": "2026-10-04",
+        "verified_on": "2026-10-08",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -1258,7 +1258,7 @@
     },
     {
       "id": "CC-AG-020",
-      "name": "Reserved Colon in Agent Name",
+      "name": "Invalid Local Agent Name",
       "severity": "HIGH",
       "category": "claude-agents",
       "evidence": {
@@ -1267,7 +1267,7 @@
           "https://github.com/anthropics/claude-code/releases/tag/v2.1.218",
           "https://code.claude.com/docs/en/sub-agents"
         ],
-        "verified_on": "2026-10-04",
+        "verified_on": "2026-10-08",
         "applies_to": {
           "tool": "claude-code",
           "version_range": ">=2.1.218"
@@ -1368,34 +1368,6 @@
       },
       "good_example": "{\n  \"hooks\": {\n    \"PreToolUse\": [\n      {\n        \"matcher\": \"Bash\",\n        \"hooks\": [\n          { \"type\": \"command\", \"command\": \"echo ok\", \"timeout\": 30 }\n        ]\n      }\n    ]\n  }\n}",
       "bad_example": "{\n  \"hooks\": {\n    \"PreToolUse\": [\n      {\n        \"hooks\": [\n          { \"type\": \"command\", \"command\": \"echo ok\", \"timeout\": 30 }\n        ]\n      }\n    ]\n  }\n}"
-    },
-    {
-      "id": "CC-HK-004",
-      "name": "Matcher on Unsupported Event",
-      "severity": "LOW",
-      "category": "claude-hooks",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://code.claude.com/docs/en/hooks"
-        ],
-        "verified_on": "2026-10-04",
-        "applies_to": {
-          "tool": "claude-code"
-        },
-        "normative_level": "BEST_PRACTICE",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": true,
-        "fix_safety": "safe"
-      },
-      "good_example": "{\n  \"hooks\": {\n    \"PostToolBatch\": [\n      {\n        \"hooks\": [\n          { \"type\": \"command\", \"command\": \"echo batch done\", \"timeout\": 30 }\n        ]\n      }\n    ]\n  }\n}",
-      "bad_example": "{\n  \"hooks\": {\n    \"PostToolBatch\": [\n      {\n        \"matcher\": \"Bash\",\n        \"hooks\": [\n          { \"type\": \"command\", \"command\": \"echo batch done\", \"timeout\": 30 }\n        ]\n      }\n    ]\n  }\n}"
     },
     {
       "id": "CC-HK-005",
@@ -2634,9 +2606,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.claude.com/docs/en/plugins"
+          "https://code.claude.com/docs/en/plugins-reference"
         ],
-        "verified_on": "2026-02-04",
+        "verified_on": "2026-10-08",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -3042,7 +3014,7 @@
     {
       "id": "CC-PL-016",
       "name": "Plugin Name Not Kebab-Case",
-      "severity": "HIGH",
+      "severity": "MEDIUM",
       "category": "claude-plugins",
       "evidence": {
         "source_type": "vendor_docs",
@@ -3050,12 +3022,12 @@
           "https://code.claude.com/docs/en/plugins-reference",
           "https://github.com/anthropics/claude-code/releases/tag/v2.1.247"
         ],
-        "verified_on": "2026-08-27",
+        "verified_on": "2026-10-08",
         "applies_to": {
           "tool": "claude-code",
           "version_range": ">=2.1.0"
         },
-        "normative_level": "MUST",
+        "normative_level": "SHOULD",
         "tests": {
           "unit": true,
           "fixtures": false,
@@ -3296,33 +3268,6 @@
       "bad_example": "---\nname: find-files\ndescription: Use when finding files by pattern\ndisallowed-tools: FooBar\n---\nSearch for files matching the pattern."
     },
     {
-      "id": "CC-SK-009",
-      "name": "Too Many Injections",
-      "severity": "MEDIUM",
-      "category": "claude-skills",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://code.claude.com/docs/en/skills"
-        ],
-        "verified_on": "2026-07-31",
-        "applies_to": {
-          "tool": "claude-code"
-        },
-        "normative_level": "SHOULD",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": false
-      },
-      "good_example": "---\nname: template-skill\ndescription: Use when applying a code template\n---\nApply the template with !`config.json` values.",
-      "bad_example": "---\nname: template-skill\ndescription: Use when applying a code template\n---\nUse !`config.json` and !`env.json` and !`secrets.json` and !`overrides.json` for setup."
-    },
-    {
       "id": "CC-SK-010",
       "name": "Invalid Hooks in Skill Frontmatter",
       "severity": "HIGH",
@@ -3348,34 +3293,6 @@
       },
       "good_example": "---\nname: hook-skill\ndescription: Use when running a skill with hooks\nhooks:\n  PreToolUse:\n    - type: command\n      command: echo pre\n---\nRun with hooks.",
       "bad_example": "---\nname: hook-skill\ndescription: Use when running a skill with hooks\nhooks:\n  InvalidEvent:\n    - type: command\n      command: echo bad\n---\nRun with hooks."
-    },
-    {
-      "id": "CC-SK-012",
-      "name": "Argument Hint Without $ARGUMENTS",
-      "severity": "MEDIUM",
-      "category": "claude-skills",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://code.claude.com/docs/en/skills"
-        ],
-        "verified_on": "2026-07-31",
-        "applies_to": {
-          "tool": "claude-code"
-        },
-        "normative_level": "SHOULD",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": true,
-        "fix_safety": "unsafe"
-      },
-      "good_example": "---\nname: greet-user\ndescription: Use when greeting a user by name\nargument-hint: Enter the user's name\n---\nGreet the user: Hello, $ARGUMENTS!",
-      "bad_example": "---\nname: greet-user\ndescription: Use when greeting a user by name\nargument-hint: Enter the user's name\n---\nGreet the user with a friendly message."
     },
     {
       "id": "CC-SK-013",
@@ -13229,6 +13146,34 @@
       },
       "good_example": "{\n  \"tui\": { \"diff_style\": \"auto\" }\n}",
       "bad_example": "{\n  \"tui\": { \"diff_style\": \"unified\" }\n}"
+    },
+    {
+      "id": "CC-PL-017",
+      "name": "Unknown Plugin Manifest Field",
+      "severity": "MEDIUM",
+      "category": "claude-plugins",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/plugins-reference"
+        ],
+        "verified_on": "2026-10-08",
+        "applies_to": {
+          "tool": "claude-code",
+          "version_range": ">=2.1.0"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": false,
+          "fixtures": false,
+          "e2e": true
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"name\":\"demo\",\"homepage\":\"https://example.com\"}",
+      "bad_example": "{\"name\":\"demo\",\"homepag\":\"https://example.com\"}"
     }
   ],
   "categories": {
@@ -13239,12 +13184,12 @@
     },
     "claude-skills": {
       "prefix": "CC-SK",
-      "count": 20,
+      "count": 18,
       "description": "Claude Code Skills rules"
     },
     "claude-hooks": {
       "prefix": "CC-HK",
-      "count": 27,
+      "count": 26,
       "description": "Claude Code Hooks rules"
     },
     "claude-agents": {
@@ -13269,7 +13214,7 @@
     },
     "claude-plugins": {
       "prefix": "CC-PL",
-      "count": 16,
+      "count": 17,
       "description": "Claude Code Plugins rules"
     },
     "mcp": {

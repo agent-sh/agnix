@@ -38,7 +38,7 @@ rules:
     message: File reference '%{path}' is deeper than one level
     suggestion: Flatten the references/ directory structure
   as_015:
-    message: Skill directory exceeds 8MB (%{size} bytes)
+    message: Skill directory exceeds the Claude API 30MB upload limit (%{size} bytes); local Claude Code has no documented size limit
     suggestion: Remove large assets or split the skill into smaller parts
   as_016:
     message: 'Failed to parse SKILL.md: %{error}'
@@ -261,11 +261,11 @@ rules:
     message: 'Invalid permissionMode ''%{mode}''. Valid values: %{valid}'
     suggestion: 'Change permissionMode to one of: %{valid}'
   cc_ag_005:
-    message: Referenced skill '%{skill}' not found at .claude/skills/%{skill}/SKILL.md
-    suggestion: Create the skill at .claude/skills/%{skill}/SKILL.md or remove the reference
+    message: Referenced skill '%{skill}' not found in project or user skills; an enabled plugin may supply it
+    suggestion: Check enabled plugin skills or add the skill in the project or user skill directory
   cc_ag_006:
     message: 'Tool(s) appear in both ''tools'' and ''disallowedTools'': %{conflicts}'
-    suggestion: Remove conflicting tool(s) from either 'tools' or 'disallowedTools'
+    suggestion: Claude Code removes overlapping tools; remove a redundant entry if unintended
   cc_ag_007:
     message: Agent file must have YAML frontmatter
     suggestion: Add frontmatter between --- markers
@@ -295,8 +295,8 @@ rules:
     message: Invalid skill name format '%{name}'. Must be lowercase with hyphens
     suggestion: Use kebab-case format (e.g., 'my-skill-name')
   cc_ag_020:
-    message: "Agent name '%{name}' contains a reserved colon"
-    suggestion: "Remove ':' from the local agent name; colons are reserved for plugin namespaces"
+    message: "Local agent name '%{name}' starts with '-', contains ':', or exceeds 256 characters"
+    suggestion: "Use a name of at most 256 characters without a leading '-' or ':'"
   cc_mem_004:
     message: npm script '%{script}' not found in package.json
     suggestion_no_scripts: No scripts defined in package.json.
@@ -1436,6 +1436,10 @@ rules:
 # ===========================================================================
 # Core - Library messages
 # ===========================================================================
+  cc_pl_017:
+    message: "Unknown plugin manifest field '%{field}'; Claude Code ignores it at load time"
+    suggestion: "Check the field spelling against the plugin manifest reference"
+
 core:
   error:
     file_read: 'Failed to read file: %{path}'

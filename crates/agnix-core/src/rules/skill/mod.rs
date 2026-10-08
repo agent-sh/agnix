@@ -79,11 +79,12 @@ struct SkillFrontmatter {
     disallowed_tools: Option<String>,
     #[serde(rename = "argument-hint")]
     argument_hint: Option<String>,
-    // Named positional arguments for `$name` substitution. "Accepts a
-    // space-separated string or a YAML list." Needed so CC-SK-012 can tell a
-    // declared `$issue` placeholder from an unrelated `$word`.
-    #[serde(default, deserialize_with = "de_string_or_space_seq")]
-    arguments: Option<String>,
+    #[serde(
+        rename = "arguments",
+        default,
+        deserialize_with = "de_string_or_space_seq"
+    )]
+    _arguments: Option<String>,
     #[serde(
         rename = "disable-model-invocation",
         default,
@@ -211,27 +212,6 @@ fn collapse_skill_name_hyphens(name: &str) -> String {
     }
 }
 
-/// Whether a skill body references its arguments in any documented form.
-///
-/// The substitution table lists four: `$ARGUMENTS`, `$ARGUMENTS[N]`, the `$N`
-/// shorthand, and `$name` for each entry in the `arguments` frontmatter list.
-/// CC-SK-012 only looked for the literal `$ARGUMENTS`, so a body using `$0` or
-/// `$issue` was reported as ignoring its own arguments.
-fn body_references_arguments(body: &str, declared_arguments: Option<&str>) -> bool {
-    if body.contains("$ARGUMENTS") || positional_shorthand_regex().is_match(body) {
-        return true;
-    }
-
-    // Named arguments: `arguments: issue branch` makes `$issue` / `$branch` valid.
-    declared_arguments.is_some_and(|declared| {
-        declared
-            .split_whitespace()
-            .map(|name| name.trim_matches(|c: char| c == ',' || c == '[' || c == ']'))
-            .filter(|name| !name.is_empty())
-            .any(|name| body.contains(&format!("${}", name)))
-    })
-}
-
 /// Valid model description for CC-SK-001 diagnostic messages
 const VALID_MODELS_DESC: &str = "default, best, fable, sonnet, opus, haiku, opusplan, sonnet[1m], opus[1m], inherit, or claude-*";
 
@@ -331,89 +311,6 @@ const KNOWN_FRONTMATTER_FIELDS: &[&str] = &[
     "paths",
     "shell",
 ];
-
-/// Maximum dynamic injections for CC-SK-009
-const MAX_INJECTIONS: usize = 3;
-
-/// Count the dynamic shell injections in a skill body for CC-SK-009.
-///
-/// Two documented forms exist, and a raw `content.matches("!`")` scan got both
-/// wrong:
-///
-/// - Inline `` !`cmd` `` "is only recognized when `!` appears at the start of a
-///   line or immediately after whitespace. If `!` follows another character, as
-///   in `` KEY=!`cmd` ``, the placeholder is left as literal text and the
-///   command does not run" - so those are inert and must not be counted.
-/// - A fenced block opened with ` ```! ` runs each line as a command. These were
-///   not counted at all, so a block of ten commands read as zero.
-///
-/// Inline placeholders inside a fenced block are not double-counted: the block
-/// contributes its own command lines instead.
-fn count_dynamic_injections(content: &str) -> usize {
-    let mut count = 0usize;
-    let mut in_shell_fence = false;
-    let mut in_plain_fence = false;
-
-    for line in content.lines() {
-        let trimmed = line.trim_start();
-
-        if in_shell_fence {
-            if trimmed.starts_with("```") {
-                in_shell_fence = false;
-            } else if !trimmed.is_empty() {
-                // Each non-empty line in a `!` fence is one command.
-                count += 1;
-            }
-            continue;
-        }
-
-        if in_plain_fence {
-            if trimmed.starts_with("```") {
-                in_plain_fence = false;
-            }
-            continue;
-        }
-
-        if let Some(rest) = trimmed.strip_prefix("```") {
-            // ```! opens a shell-execution block; any other fence is inert.
-            if rest.trim_start().starts_with('!') {
-                in_shell_fence = true;
-            } else {
-                in_plain_fence = true;
-            }
-            continue;
-        }
-
-        count += count_inline_injections(line);
-    }
-
-    count
-}
-
-/// Count inline `` !`cmd` `` placeholders on a single line, honoring the rule
-/// that `!` must be at line start or directly after whitespace.
-fn count_inline_injections(line: &str) -> usize {
-    let bytes = line.as_bytes();
-    let mut count = 0usize;
-    let mut idx = 0usize;
-
-    while let Some(found) = line[idx..].find("!`") {
-        let at = idx + found;
-        let recognized = match line[..at].chars().next_back() {
-            None => true,
-            Some(prev) => prev.is_whitespace(),
-        };
-        if recognized {
-            count += 1;
-        }
-        idx = at + 2;
-        if idx >= bytes.len() {
-            break;
-        }
-    }
-
-    count
-}
 
 /// Convert a name to kebab-case format.
 /// - Lowercase the name
@@ -1298,11 +1195,9 @@ impl<'a> ValidationContext<'a> {
         }
     }
 
-    /// CC-SK-006, CC-SK-009: Safety-related validations
+    /// CC-SK-006: Dangerous automatic invocation.
     fn validate_cc_safety(&mut self, schema: &SkillSchema, frontmatter: &SkillFrontmatter) {
         let (name_line, name_col) = self.frontmatter_key_line_col("name");
-        let (frontmatter_line, frontmatter_col) = self.line_col_at(self.parts.frontmatter_start);
-
         // CC-SK-006: Dangerous auto-invocation check
         if self.config.is_rule_enabled("CC-SK-006") {
             const DANGEROUS_NAMES: &[&str] =
@@ -1335,28 +1230,6 @@ impl<'a> ValidationContext<'a> {
                 }
 
                 self.diagnostics.push(diagnostic);
-            }
-        }
-
-        // CC-SK-009: Too many injections (warning)
-        // Count across full content (frontmatter + body) per VALIDATION-RULES.md
-        if self.config.is_rule_enabled("CC-SK-009") {
-            let injection_count = count_dynamic_injections(self.content);
-            if injection_count > MAX_INJECTIONS {
-                self.diagnostics.push(
-                    Diagnostic::warning(
-                        self.path.to_path_buf(),
-                        frontmatter_line,
-                        frontmatter_col,
-                        "CC-SK-009",
-                        t!(
-                            "rules.cc_sk_009.message",
-                            count = injection_count,
-                            max = MAX_INJECTIONS
-                        ),
-                    )
-                    .with_suggestion(t!("rules.cc_sk_009.suggestion")),
-                );
             }
         }
     }
@@ -1469,49 +1342,6 @@ impl<'a> ValidationContext<'a> {
                     )
                     .with_suggestion(t!("rules.cc_sk_010.suggestion")),
                 );
-            }
-        }
-    }
-
-    /// CC-SK-012: Validate argument-hint has matching $ARGUMENTS in body
-    fn validate_cc_argument_hint(&mut self, frontmatter: &SkillFrontmatter) {
-        if !self.config.is_rule_enabled("CC-SK-012") {
-            return;
-        }
-
-        if frontmatter.argument_hint.is_some() {
-            let body = if self.parts.body_start <= self.content.len() {
-                &self.content[self.parts.body_start..]
-            } else {
-                ""
-            };
-
-            if !body_references_arguments(body, frontmatter.arguments.as_deref()) {
-                let (line, col) = self.frontmatter_key_line_col("argument-hint");
-                let mut diagnostic = Diagnostic::warning(
-                    self.path.to_path_buf(),
-                    line,
-                    col,
-                    "CC-SK-012",
-                    t!("rules.cc_sk_012.message"),
-                )
-                .with_suggestion(t!("rules.cc_sk_012.suggestion"));
-
-                // Append $ARGUMENTS to the end of body
-                let insert_pos = self.content.len();
-                let prefix = if self.content.ends_with('\n') {
-                    ""
-                } else {
-                    "\n"
-                };
-                diagnostic = diagnostic.with_fix(Fix::insert(
-                    insert_pos,
-                    format!("{}$ARGUMENTS\n", prefix),
-                    "Append $ARGUMENTS to body",
-                    false, // unsafe: appends content that may not suit all body formats
-                ));
-
-                self.diagnostics.push(diagnostic);
             }
         }
     }
@@ -1779,8 +1609,8 @@ impl<'a> ValidationContext<'a> {
 
     /// AS-015: Validate directory size
     fn validate_directory(&mut self) {
-        // AS-015 (8 MB) is the claude.ai upload limit, not an agentskills.io
-        // constraint - scope to Claude Code (and unscoped) skills.
+        // The Claude API upload cap is 30 MB. Local Claude Code skills have
+        // no documented directory-size limit, so this is an upload warning.
         if claude_skill_rules_apply(self.client, self.config)
             && self.config.is_rule_enabled("AS-015")
             && self.path.is_file()
@@ -1788,12 +1618,12 @@ impl<'a> ValidationContext<'a> {
             if let Some(dir) = self.path.parent() {
                 let (frontmatter_line, frontmatter_col) =
                     self.line_col_at(self.parts.frontmatter_start);
-                const MAX_BYTES: u64 = 8 * 1024 * 1024;
+                const MAX_BYTES: u64 = 30 * 1024 * 1024;
                 let size =
                     directory_size_until(dir, MAX_BYTES, self.config.fs().as_ref(), self.config);
                 if size > MAX_BYTES {
                     self.diagnostics.push(
-                        Diagnostic::error(
+                        Diagnostic::warning(
                             self.path.to_path_buf(),
                             frontmatter_line,
                             frontmatter_col,
@@ -1821,6 +1651,14 @@ impl<'a> ValidationContext<'a> {
             return;
         };
 
+        let patterns = self
+            .config
+            .exclude()
+            .iter()
+            .chain(self.config.files_config().exclude.iter())
+            .filter_map(|pattern| crate::pipeline::compile_single_exclude_pattern(pattern).ok())
+            .collect::<Vec<_>>();
+        let root = self.config.root_dir().map(PathBuf::as_path).unwrap_or(dir);
         // Collect in-scope files first (FS-only), then scan (mutates diagnostics).
         let mut stack = vec![dir.to_path_buf()];
         let mut files: Vec<PathBuf> = Vec::new();
@@ -1832,6 +1670,13 @@ impl<'a> ValidationContext<'a> {
                 if entry.metadata.is_symlink {
                     continue;
                 }
+                let relative = crate::pipeline::normalize_rel_path(&entry.path, root);
+                if entry.metadata.is_dir && crate::pipeline::should_prune_dir(&relative, &patterns)
+                    || entry.metadata.is_file
+                        && crate::pipeline::is_excluded_file(&relative, &patterns)
+                {
+                    continue;
+                }
                 if entry.metadata.is_dir {
                     // Skip hidden subdirectories (.git, .github, vendored caches)
                     // to avoid scanning irrelevant files. The skill directory
@@ -1840,7 +1685,7 @@ impl<'a> ValidationContext<'a> {
                         .path
                         .file_name()
                         .and_then(|n| n.to_str())
-                        .is_some_and(|s| s.starts_with('.'));
+                        .is_some_and(|s| s.starts_with('.') || s == "node_modules");
                     if !hidden {
                         stack.push(entry.path.clone());
                     }
@@ -1946,9 +1791,7 @@ const RULE_IDS: &[&str] = &[
     "CC-SK-006",
     "CC-SK-007",
     "CC-SK-008",
-    "CC-SK-009",
     "CC-SK-010",
-    "CC-SK-012",
     "CC-SK-013",
     "CC-SK-014",
     "CC-SK-015",
@@ -2054,9 +1897,6 @@ impl Validator for SkillValidator {
 
             // CC-SK-011 is retired: inline user permission can invoke a skill
             // with both user-invocable=false and disable-model-invocation=true.
-
-            // Phase 8: CC-SK-012 (argument-hint without $ARGUMENTS)
-            ctx.validate_cc_argument_hint(&frontmatter);
 
             // Phase 9: CC-SK-016 ($ARGUMENTS[n] without argument-hint)
             ctx.validate_cc_indexed_arguments(&frontmatter);
