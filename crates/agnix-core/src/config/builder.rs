@@ -32,6 +32,7 @@ pub struct LintConfigBuilder {
     spec_revisions: Option<SpecRevisions>,
     files: Option<FilesConfig>,
     overrides: Option<Vec<OverrideConfig>>,
+    ignore_inline_suppressions: Option<bool>,
     locale: Option<Option<String>>,
     max_files_to_validate: Option<Option<usize>>,
     // Runtime
@@ -69,6 +70,7 @@ impl LintConfigBuilder {
             spec_revisions: None,
             files: None,
             overrides: None,
+            ignore_inline_suppressions: None,
             locale: None,
             max_files_to_validate: None,
             root_dir: None,
@@ -142,6 +144,12 @@ impl LintConfigBuilder {
     /// Set the per-file rule suppression overrides.
     pub fn overrides(&mut self, overrides: Vec<OverrideConfig>) -> &mut Self {
         self.overrides = Some(overrides);
+        self
+    }
+
+    /// Ignore inline suppression comments during validation.
+    pub fn ignore_inline_suppressions(&mut self, ignore: bool) -> &mut Self {
+        self.ignore_inline_suppressions = Some(ignore);
         self
     }
 
@@ -318,6 +326,10 @@ impl LintConfigBuilder {
                 .unwrap_or(defaults.spec_revisions),
             files: self.files.take().unwrap_or(defaults.files),
             overrides: self.overrides.take().unwrap_or(defaults.overrides),
+            ignore_inline_suppressions: self
+                .ignore_inline_suppressions
+                .take()
+                .unwrap_or(defaults.ignore_inline_suppressions),
             locale: self.locale.take().unwrap_or(defaults.locale),
             max_files_to_validate: self
                 .max_files_to_validate

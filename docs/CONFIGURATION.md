@@ -180,6 +180,10 @@ Allowed values are `Error`, `Warning`, and `Info`. Overrides apply to CLI, JSON,
 
 ## Inline Suppression
 
+Inline suppressions require comments: HTML comments in Markdown, `#` in TOML/YAML or scripts, and `//` or block comments in formats that support them. JSON has no comment syntax. Markers in prose, quoted strings or Markdown code examples do not suppress diagnostics.
+
+Use `--ignore-inline-suppressions`, or set `ignore_inline_suppressions = true` in the config, to report all diagnostics in CI. The switch also applies in watch mode.
+
 Inline suppressions are intended for small, local exceptions where a file legitimately contains example text or compatibility glue that would otherwise trip a rule.
 
 ```md

@@ -2,18 +2,18 @@
 id: cc-pl-016
 title: "CC-PL-016: Plugin Name Not Kebab-Case - Claude Plugins"
 sidebar_label: "CC-PL-016"
-description: "agnix rule CC-PL-016 checks for plugin name not kebab-case in claude plugins files. Severity: HIGH. See examples and fix guidance."
+description: "agnix rule CC-PL-016 checks for plugin name not kebab-case in claude plugins files. Severity: MEDIUM. See examples and fix guidance."
 keywords: ["CC-PL-016", "plugin name not kebab-case", "claude plugins", "validation", "agnix", "linter"]
 ---
 
 ## Summary
 
 - **Rule ID**: `CC-PL-016`
-- **Severity**: `HIGH`
+- **Severity**: `MEDIUM`
 - **Category**: `Claude Plugins`
-- **Normative Level**: `MUST`
+- **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-08-27`
+- **Verified On**: `2026-10-08`
 
 ## Applicability
 

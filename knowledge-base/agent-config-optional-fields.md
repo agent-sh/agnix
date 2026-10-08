@@ -55,7 +55,7 @@
 
 ### Dynamic Context Injection
 
-The `` !`command` `` syntax runs shell commands before skill content is sent. Currently validated by CC-SK-009 (max 3 injections).
+The `` !`command` `` syntax runs shell commands before skill content is sent. Claude Code documents no injection-count limit. CC-SK-009 was retired in 0.57.0.
 
 `CC-SK-011` was retired in 0.56.5. Inline user permission can invoke a skill with both invocation flags; the flags do not make it unreachable. Preserve `disable-model-invocation` for side-effect skills.
 
@@ -64,7 +64,6 @@ The `` !`command` `` syntax runs shell commands before skill content is sent. Cu
 | Proposed Rule | Severity | Description | Auto-Fix? |
 |---------------|----------|-------------|-----------|
 | CC-SK-010: Invalid hooks in skill frontmatter | HIGH | Validate that `hooks` field in skill frontmatter follows the same schema as settings.json hooks | No |
-| CC-SK-012: argument-hint without $ARGUMENTS | MEDIUM | If `argument-hint` is set but body doesn't reference `$ARGUMENTS`, the hint is misleading | Yes - add `$ARGUMENTS` |
 | CC-SK-013: context=fork without actionable instructions | MEDIUM | Warn when `context: fork` is used with reference-only content (no imperative verbs) | No |
 | CC-SK-014: Invalid disable-model-invocation type | HIGH | Must use one of Claude Code's accepted boolean aliases | No - ambiguous invalid values need manual correction |
 | CC-SK-015: Invalid user-invocable type | HIGH | Must use one of Claude Code's accepted boolean aliases | No - ambiguous invalid values need manual correction |
@@ -453,7 +452,6 @@ Supported syntax in `.mcp.json`:
 
 | Tool | Current Rules | Proposed New Rules | Coverage Gap |
 |------|--------------|-------------------|-------------|
-| Claude Code Skills | CC-SK-001 to CC-SK-009 | CC-SK-010, CC-SK-012 to CC-SK-015 (5 active) | hooks, user-invocable, argument-hint validation |
 | Claude Code Agents | CC-AG-001 to CC-AG-007 | CC-AG-008 to CC-AG-013 (6 new) | memory, tool name validation, hooks |
 | Claude Code Hooks | CC-HK-001 to CC-HK-012 | CC-HK-013 to CC-HK-018 (6 new) | async, once, agent type, model field |
 | Claude Code Plugins | CC-PL-001 to CC-PL-006 | CC-PL-007 to CC-PL-010 (4 new) | path validation, component placement |
@@ -482,7 +480,6 @@ Supported syntax in `.mcp.json`:
 10. CLN-001/CLN-002: Cline clinerules validation
 
 **P2 (Nice to Have)**:
-11. CC-SK-012: argument-hint without $ARGUMENTS
 12. CC-PL-007/CC-PL-008: Plugin path validation
 13. CC-HK-018: Matcher on UserPromptSubmit/Stop
 14. CDX-001/CDX-002: Codex CLI config validation
@@ -553,3 +550,5 @@ Supported syntax in `.mcp.json`:
 ---
 
 *This guide was synthesized from 42 sources. See `resources/agent-config-optional-fields-sources.json` for full source list.*
+
+Claude Code appends invocation arguments when no placeholder receives them. An argument hint does not require a body placeholder; CC-SK-012 was retired in 0.57.0.

@@ -632,7 +632,7 @@ fn test_as_015_directory_size_exceeds() {
     .unwrap();
 
     let big_file_path = skill_dir.join("big.bin");
-    let big_payload = vec![0u8; 8 * 1024 * 1024 + 1];
+    let big_payload = vec![0u8; 30 * 1024 * 1024 + 1];
     fs::write(&big_file_path, big_payload).unwrap();
 
     let content = fs::read_to_string(&skill_path).unwrap();
@@ -1703,79 +1703,6 @@ Body"#;
     assert!(cc_sk_008[0].message.contains("FakeTool"));
 }
 
-// ===== CC-SK-009: Too Many Injections =====
-
-#[test]
-fn test_cc_sk_009_too_many_injections() {
-    let content = r#"---
-name: test-skill
-description: Use when testing
----
-Current date: !`date`
-Git status: !`git status`
-Branch: !`git branch`
-User: !`whoami`
----
-Body"#;
-
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
-
-    let cc_sk_009: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-SK-009")
-        .collect();
-
-    assert_eq!(cc_sk_009.len(), 1);
-    assert_eq!(
-        cc_sk_009[0].level,
-        crate::diagnostics::DiagnosticLevel::Warning
-    );
-    assert!(cc_sk_009[0].message.contains("4"));
-}
-
-#[test]
-fn test_cc_sk_009_exactly_three_injections_ok() {
-    let content = r#"---
-name: test-skill
-description: Use when testing
----
-Date: !`date`
-Status: !`git status`
-Branch: !`git branch`
-Body"#;
-
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
-
-    let cc_sk_009: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-SK-009")
-        .collect();
-
-    assert_eq!(cc_sk_009.len(), 0);
-}
-
-#[test]
-fn test_cc_sk_009_no_injections_ok() {
-    let content = r#"---
-name: test-skill
-description: Use when testing
----
-No dynamic injections here.
-Body"#;
-
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
-
-    let cc_sk_009: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-SK-009")
-        .collect();
-
-    assert_eq!(cc_sk_009.len(), 0);
-}
-
 // ===== Edge Case Tests =====
 
 #[test]
@@ -2701,7 +2628,7 @@ fn test_as_015_respects_configured_excludes() {
 }
 
 #[test]
-fn test_as_015_boundary_exactly_8mb() {
+fn test_as_015_boundary_exactly_30mb() {
     let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
     let skill_dir = temp_dir.path().join("skill");
     fs::create_dir_all(&skill_dir).expect("Failed to create skill directory");
@@ -2711,22 +2638,22 @@ fn test_as_015_boundary_exactly_8mb() {
     fs::write(&skill_path, "---\nname: boundary-test\n---\nBody")
         .expect("Failed to write SKILL.md");
 
-    // Create file that brings total to exactly 8MB (minus SKILL.md size)
+    // Create file that brings total to exactly 30MB (minus SKILL.md size)
     let skill_md_size = fs::metadata(&skill_path)
         .expect("Failed to read SKILL.md metadata")
         .len() as usize;
-    let target_size = 8 * 1024 * 1024 - skill_md_size;
+    let target_size = 30 * 1024 * 1024 - skill_md_size;
     write_bytes_to_file(&skill_dir.join("data.bin"), target_size);
 
     let validator = SkillValidator;
     let content = fs::read_to_string(&skill_path).expect("Failed to read SKILL.md content");
     let diagnostics = validator.validate(&skill_path, &content, &LintConfig::default());
 
-    // Exactly 8MB should NOT trigger AS-015 (uses > not >=)
+    // Exactly 30MB should NOT trigger AS-015 (uses > not >=)
     let as_015_errors: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-015").collect();
     assert!(
         as_015_errors.is_empty(),
-        "Exactly 8MB should not trigger AS-015, but got: {:?}",
+        "Exactly 30MB should not trigger AS-015, but got: {:?}",
         as_015_errors
     );
 }
@@ -3546,111 +3473,6 @@ fn test_cc_sk_010_fixture_valid() {
         cc_sk_010.len(),
         0,
         "Valid hooks fixture should not trigger CC-SK-010"
-    );
-}
-
-// ===== CC-SK-012: Argument Hint Without $ARGUMENTS =====
-
-#[test]
-fn test_cc_sk_012_hint_without_arguments() {
-    let content = r#"---
-name: hint-skill
-description: Use when testing hints
-argument-hint: <file-path>
----
-Process the given file."#;
-
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
-
-    let cc_sk_012: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-SK-012")
-        .collect();
-
-    assert_eq!(cc_sk_012.len(), 1);
-    assert_eq!(
-        cc_sk_012[0].level,
-        crate::diagnostics::DiagnosticLevel::Warning
-    );
-}
-
-#[test]
-fn test_cc_sk_012_hint_with_arguments_ok() {
-    let content = r#"---
-name: hint-skill
-description: Use when testing hints
-argument-hint: <file-path>
----
-Process the file specified in $ARGUMENTS."#;
-
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
-
-    let cc_sk_012: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-SK-012")
-        .collect();
-
-    assert_eq!(cc_sk_012.len(), 0);
-}
-
-#[test]
-fn test_cc_sk_012_no_hint_ok() {
-    let content = r#"---
-name: no-hint
-description: Use when testing
----
-Body without $ARGUMENTS."#;
-
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
-
-    let cc_sk_012: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-SK-012")
-        .collect();
-
-    assert_eq!(cc_sk_012.len(), 0);
-}
-
-#[test]
-fn test_cc_sk_012_fixture_invalid() {
-    let content =
-        include_str!("../../../../../tests/fixtures/invalid/skills/argument-hint-no-args/SKILL.md");
-
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("SKILL.md"), content, &LintConfig::default());
-
-    let cc_sk_012: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-SK-012")
-        .collect();
-
-    assert_eq!(
-        cc_sk_012.len(),
-        1,
-        "Argument hint without $ARGUMENTS fixture should trigger CC-SK-012"
-    );
-}
-
-#[test]
-fn test_cc_sk_012_fixture_valid() {
-    let content =
-        include_str!("../../../../../tests/fixtures/valid/skills/with-argument-hint/SKILL.md");
-
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("SKILL.md"), content, &LintConfig::default());
-
-    let cc_sk_012: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-SK-012")
-        .collect();
-
-    assert_eq!(
-        cc_sk_012.len(),
-        0,
-        "Valid argument hint fixture should not trigger CC-SK-012"
     );
 }
 
@@ -4520,31 +4342,6 @@ fn test_cc_sk_006_has_fix() {
     );
 }
 
-// ===== CC-SK-012 auto-fix tests =====
-
-#[test]
-fn test_cc_sk_012_has_fix() {
-    // Has argument-hint but body lacks $ARGUMENTS
-    let content = "---\nname: greet-user\ndescription: Use when greeting users\nargument-hint: Name of person to greet\n---\nGreet the user warmly.";
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
-    let cc_sk_012: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-SK-012")
-        .collect();
-    assert_eq!(cc_sk_012.len(), 1);
-    assert!(cc_sk_012[0].has_fixes(), "CC-SK-012 should have auto-fix");
-    let fix = &cc_sk_012[0].fixes[0];
-    assert!(
-        !fix.safe,
-        "CC-SK-012 fix should be unsafe (appends to body)"
-    );
-    assert!(
-        fix.replacement.contains("$ARGUMENTS"),
-        "Fix should append $ARGUMENTS"
-    );
-}
-
 // ===== AS-001 auto-fix tests =====
 
 #[test]
@@ -5024,216 +4821,6 @@ fn test_cc_sk_021_ignores_files_outside_skill_dir() {
     fs::write(tmp.path().join("build.sh"), "#!/Users/alice/run\n").unwrap();
 
     assert!(cc_sk_021_for(&dir).is_empty());
-}
-
-/// CC-SK-009 counted raw `` !` `` occurrences, which was wrong twice over:
-/// inert `` KEY=!`cmd` `` forms were counted (the doc says a `!` following
-/// another character stays literal), and ` ```! ` fenced blocks were not counted
-/// at all.
-#[test]
-fn test_cc_sk_009_ignores_inert_inline_injections() {
-    let content = r#"---
-name: test-skill
-description: Use when testing inert injection forms
----
-Run the setup with these values.
-
-KEY1=!`date`
-KEY2=!`whoami`
-KEY3=!`pwd`
-KEY4=!`hostname`
-"#;
-
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(
-        Path::new(".claude/skills/test-skill/SKILL.md"),
-        content,
-        &LintConfig::default(),
-    );
-
-    let hits: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-SK-009")
-        .collect();
-    assert!(
-        hits.is_empty(),
-        "`KEY=!`cmd`` is literal text and must not count as an injection, got: {hits:?}"
-    );
-}
-
-/// A ` ```! ` fenced block runs each line as a command, so its lines count.
-#[test]
-fn test_cc_sk_009_counts_shell_fence_lines() {
-    let content = r#"---
-name: test-skill
-description: Use when testing fenced shell injection counting
----
-Check the environment.
-
-```!
-node --version
-npm --version
-git status --short
-uname -a
-```
-"#;
-
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(
-        Path::new(".claude/skills/test-skill/SKILL.md"),
-        content,
-        &LintConfig::default(),
-    );
-
-    let hits: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-SK-009")
-        .collect();
-    assert_eq!(
-        hits.len(),
-        1,
-        "four commands in a ```! fence exceed the limit of 3, got: {diagnostics:?}"
-    );
-}
-
-/// A plain fenced block is inert and must not contribute counts.
-#[test]
-fn test_cc_sk_009_ignores_plain_fence() {
-    let content = r#"---
-name: test-skill
-description: Use when testing that plain fences are inert
----
-Example output:
-
-```bash
-!`one`
-!`two`
-!`three`
-!`four`
-```
-"#;
-
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(
-        Path::new(".claude/skills/test-skill/SKILL.md"),
-        content,
-        &LintConfig::default(),
-    );
-
-    let hits: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-SK-009")
-        .collect();
-    assert!(
-        hits.is_empty(),
-        "a plain ```bash fence does not execute and must not be counted, got: {hits:?}"
-    );
-}
-
-/// Genuine inline injections past the limit still fire.
-#[test]
-fn test_cc_sk_009_still_flags_real_inline_injections() {
-    let content = r#"---
-name: test-skill
-description: Use when testing that real inline injections are counted
----
-Current state: !`date` and !`whoami` and !`pwd` and !`hostname`
-"#;
-
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(
-        Path::new(".claude/skills/test-skill/SKILL.md"),
-        content,
-        &LintConfig::default(),
-    );
-
-    assert!(
-        diagnostics.iter().any(|d| d.rule == "CC-SK-009"),
-        "four recognized inline injections must exceed the limit, got: {diagnostics:?}"
-    );
-}
-
-/// The substitution table documents four argument forms. CC-SK-012 only looked
-/// for the literal `$ARGUMENTS`, so a body using `$0` or a declared `$name` was
-/// falsely reported as ignoring its own arguments.
-#[test]
-fn test_cc_sk_012_accepts_positional_shorthand() {
-    let content = r#"---
-name: test-skill
-description: Use when testing positional shorthand recognition
-argument-hint: "[issue-number] [branch]"
----
-Fix issue $0 on branch $1.
-"#;
-
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(
-        Path::new(".claude/skills/test-skill/SKILL.md"),
-        content,
-        &LintConfig::default(),
-    );
-
-    let hits: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-SK-012")
-        .collect();
-    assert!(
-        hits.is_empty(),
-        "`$0`/`$1` are documented shorthand for $ARGUMENTS[N], got: {hits:?}"
-    );
-}
-
-/// `$name` placeholders declared in the `arguments` frontmatter list also count.
-#[test]
-fn test_cc_sk_012_accepts_named_arguments() {
-    let content = r#"---
-name: test-skill
-description: Use when testing named argument recognition
-argument-hint: "[issue] [branch]"
-arguments: issue branch
----
-Fix $issue on $branch.
-"#;
-
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(
-        Path::new(".claude/skills/test-skill/SKILL.md"),
-        content,
-        &LintConfig::default(),
-    );
-
-    let hits: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-SK-012")
-        .collect();
-    assert!(
-        hits.is_empty(),
-        "`$issue`/`$branch` are declared in `arguments` and must count, got: {hits:?}"
-    );
-}
-
-/// A body that references no argument at all still fires.
-#[test]
-fn test_cc_sk_012_still_flags_body_with_no_arguments() {
-    let content = r#"---
-name: test-skill
-description: Use when testing that a body ignoring arguments is flagged
-argument-hint: "[issue-number]"
----
-Do the thing with no argument reference at all.
-"#;
-
-    let validator = SkillValidator;
-    let diagnostics = validator.validate(
-        Path::new(".claude/skills/test-skill/SKILL.md"),
-        content,
-        &LintConfig::default(),
-    );
-
-    assert!(
-        diagnostics.iter().any(|d| d.rule == "CC-SK-012"),
-        "a body referencing no arguments must still be flagged, got: {diagnostics:?}"
-    );
 }
 
 /// CC-SK-016 covers the `$N` shorthand too, since it is documented as

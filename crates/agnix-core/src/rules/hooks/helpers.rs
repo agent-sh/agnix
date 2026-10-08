@@ -385,52 +385,6 @@ pub(super) fn validate_cc_hk_003_matcher_hint(
     }
 }
 
-/// CC-HK-004: Matcher on event without matcher support.
-/// Valid no-matcher events are handled by CC-HK-018 instead (info-level),
-/// because Claude Code silently ignores the matcher at runtime.
-pub(super) fn validate_cc_hk_004_matcher_forbidden(
-    event: &str,
-    matcher: &Option<String>,
-    matcher_idx: usize,
-    path: &Path,
-    content: &str,
-    diagnostics: &mut Vec<Diagnostic>,
-) {
-    if !HooksSchema::supports_matcher(event)
-        && matcher.is_some()
-        && !HooksSchema::ignores_matcher(event)
-    {
-        let hook_location = format!("hooks.{}[{}]", event, matcher_idx);
-        let mut diagnostic = Diagnostic::error(
-            path.to_path_buf(),
-            1,
-            0,
-            "CC-HK-004",
-            t!(
-                "rules.cc_hk_004.message",
-                event = event,
-                location = hook_location.as_str()
-            ),
-        )
-        .with_suggestion(t!("rules.cc_hk_004.suggestion"));
-
-        // Safe auto-fix: remove matcher line on non-tool events.
-        // Emit only when we can uniquely identify the exact matcher property.
-        if let Some(matcher_value) = matcher {
-            if let Some((start, end)) = find_unique_matcher_line_span(content, matcher_value) {
-                diagnostic = diagnostic.with_fix(Fix::delete(
-                    start,
-                    end,
-                    "Remove matcher from non-tool event",
-                    true,
-                ));
-            }
-        }
-
-        diagnostics.push(diagnostic);
-    }
-}
-
 pub(super) fn check_dangerous_patterns(command: &str) -> Option<(&'static str, &'static str)> {
     for dp in dangerous_patterns() {
         if dp.regex.is_match(command) {
@@ -978,7 +932,6 @@ pub(super) fn find_unique_json_field_line_span(
 }
 
 /// Find a unique matcher line span that can be safely deleted.
-/// Includes trailing newline when present.
 pub(super) fn find_unique_matcher_line_span(
     content: &str,
     matcher_value: &str,

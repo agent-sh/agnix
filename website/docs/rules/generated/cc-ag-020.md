@@ -1,9 +1,9 @@
 ---
 id: cc-ag-020
-title: "CC-AG-020: Reserved Colon in Agent Name - Claude Agents"
+title: "CC-AG-020: Invalid Local Agent Name - Claude Agents"
 sidebar_label: "CC-AG-020"
-description: "agnix rule CC-AG-020 checks for reserved colon in agent name in claude agents files. Severity: HIGH. See examples and fix guidance."
-keywords: ["CC-AG-020", "reserved colon in agent name", "claude agents", "validation", "agnix", "linter"]
+description: "agnix rule CC-AG-020 checks for invalid local agent name in claude agents files. Severity: HIGH. See examples and fix guidance."
+keywords: ["CC-AG-020", "invalid local agent name", "claude agents", "validation", "agnix", "linter"]
 ---
 
 ## Summary
@@ -13,7 +13,7 @@ keywords: ["CC-AG-020", "reserved colon in agent name", "claude agents", "valida
 - **Category**: `Claude Agents`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-10-04`
+- **Verified On**: `2026-10-08`
 
 ## Applicability
 

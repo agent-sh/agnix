@@ -370,9 +370,31 @@ impl Validator for AgentValidator {
     ) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
 
+        let local_agent = path
+            .ancestors()
+            .skip(1)
+            .find_map(|ancestor| {
+                if ancestor.file_name().is_some_and(|name| name == "agents") {
+                    Some(
+                        ancestor
+                            .parent()
+                            .and_then(Path::file_name)
+                            .is_some_and(|name| name == ".claude" || name == "claude-code"),
+                    )
+                } else if config.fs().exists(&ancestor.join(".claude-plugin")) {
+                    Some(false)
+                } else {
+                    None
+                }
+            })
+            .unwrap_or(true);
         // Check if content has frontmatter
-        if !content.trim_start().starts_with("---") {
-            if config.is_rule_enabled("CC-AG-007") {
+        if !(if local_agent {
+            content.starts_with("---\n") || content.starts_with("---\r\n")
+        } else {
+            content.trim_start().starts_with("---")
+        }) {
+            if local_agent && config.is_rule_enabled("CC-AG-007") {
                 diagnostics.push(
                     Diagnostic::error(
                         path.to_path_buf(),
@@ -392,7 +414,7 @@ impl Validator for AgentValidator {
         let schema: AgentSchema = match serde_yaml::from_str(&parts.frontmatter) {
             Ok(s) => s,
             Err(e) => {
-                if config.is_rule_enabled("CC-AG-007") {
+                if local_agent && config.is_rule_enabled("CC-AG-007") {
                     // serde_yaml lines are relative to the frontmatter string;
                     // add 1 to account for the `---` delimiter line.
                     let (line, column) = e
@@ -417,7 +439,8 @@ impl Validator for AgentValidator {
         };
 
         // CC-AG-001: Missing name field
-        if config.is_rule_enabled("CC-AG-001")
+        if local_agent
+            && config.is_rule_enabled("CC-AG-001")
             && schema.name.as_deref().unwrap_or("").trim().is_empty()
         {
             let mut diagnostic = Diagnostic::error(
@@ -457,7 +480,8 @@ impl Validator for AgentValidator {
         // namespace qualification, so local agent definitions cannot use it.
         if config.is_rule_enabled("CC-AG-020")
             && let Some(name) = schema.name.as_deref()
-            && name.contains(':')
+            && local_agent
+            && (name.contains(':') || name.starts_with('-') || name.chars().count() > 256)
         {
             diagnostics.push(
                 Diagnostic::error(
@@ -584,9 +608,22 @@ impl Validator for AgentValidator {
                 let fs = config.fs();
                 if let Some(project_root) = Self::find_project_root(path, fs.as_ref()) {
                     for skill_name in skills {
-                        if !Self::skill_exists(project_root, skill_name, fs.as_ref()) {
+                        #[cfg(feature = "filesystem")]
+                        let user_skill = dirs::home_dir().map(|home| {
+                            home.join(".claude/skills")
+                                .join(skill_name)
+                                .join("SKILL.md")
+                        });
+                        #[cfg(not(feature = "filesystem"))]
+                        let user_skill: Option<std::path::PathBuf> = None;
+                        if !skill_name.contains(':')
+                            && !Self::skill_exists(project_root, skill_name, fs.as_ref())
+                            && !user_skill.as_ref().is_some_and(|path| {
+                                Self::is_safe_skill_name(skill_name) && fs.exists(path)
+                            })
+                        {
                             diagnostics.push(
-                                Diagnostic::error(
+                                Diagnostic::warning(
                                     path.to_path_buf(),
                                     1,
                                     0,
@@ -615,7 +652,7 @@ impl Validator for AgentValidator {
 
                 if !conflicts.is_empty() {
                     diagnostics.push(
-                        Diagnostic::error(
+                        Diagnostic::warning(
                             path.to_path_buf(),
                             1,
                             0,
@@ -992,7 +1029,7 @@ impl Validator for AgentValidator {
         if config.is_rule_enabled("CC-AG-013") {
             if let Some(skills) = &schema.skills {
                 for skill_name in skills {
-                    if !Self::is_valid_skill_name_format(skill_name) {
+                    if !skill_name.split(':').all(Self::is_valid_skill_name_format) {
                         let kebab = crate::rules::skill::convert_to_kebab_case(skill_name);
                         let mut diagnostic = Diagnostic::warning(
                             path.to_path_buf(),
@@ -1177,7 +1214,7 @@ mod tests {
     fn validate(content: &str) -> Vec<Diagnostic> {
         let validator = AgentValidator;
         validator.validate(
-            Path::new("agents/test-agent.md"),
+            Path::new(".claude/agents/test-agent.md"),
             content,
             &LintConfig::default(),
         )
@@ -1429,7 +1466,7 @@ Agent instructions"#;
     #[test]
     fn test_cc_ag_001_has_fix() {
         let content = "---\ndescription: A test agent\n---\nAgent instructions";
-        let diagnostics = validate_with_path(Path::new("agents/reviewer.md"), content);
+        let diagnostics = validate_with_path(Path::new(".claude/agents/reviewer.md"), content);
         let cc_ag_001: Vec<_> = diagnostics
             .iter()
             .filter(|d| d.rule == "CC-AG-001")
@@ -1497,7 +1534,8 @@ Agent instructions"#;
     #[test]
     fn test_cc_ag_001_sanitizes_special_filename() {
         let content = "---\ndescription: A test agent\n---\nAgent instructions";
-        let diagnostics = validate_with_path(Path::new("agents/my: agent\"file.md"), content);
+        let diagnostics =
+            validate_with_path(Path::new(".claude/agents/my: agent\"file.md"), content);
         let cc_ag_001: Vec<_> = diagnostics
             .iter()
             .filter(|d| d.rule == "CC-AG-001")
@@ -1947,7 +1985,7 @@ Agent instructions"#;
             .collect();
 
         assert_eq!(cc_ag_005.len(), 1);
-        assert_eq!(cc_ag_005[0].level, DiagnosticLevel::Error);
+        assert_eq!(cc_ag_005[0].level, DiagnosticLevel::Warning);
         assert!(cc_ag_005[0].message.contains("nonexistent-skill"));
         assert!(cc_ag_005[0].message.contains("not found"));
     }
@@ -2054,7 +2092,7 @@ Agent instructions"#;
             .collect();
 
         assert_eq!(cc_ag_006.len(), 1);
-        assert_eq!(cc_ag_006[0].level, DiagnosticLevel::Error);
+        assert_eq!(cc_ag_006[0].level, DiagnosticLevel::Warning);
         assert!(cc_ag_006[0].message.contains("Bash"));
         assert!(cc_ag_006[0].message.contains("both"));
     }

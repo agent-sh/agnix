@@ -264,10 +264,10 @@ See [reference.md](reference.md)
 
 ## Size and Character Limits
 
-### Upload Size Limits
+### Claude API Upload Size Limits
 **Source**: https://platform.claude.com/docs/en/docs/build-with-claude/skills-guide
 
-- **Total upload size**: MUST be under 8MB (all files combined)
+- **Claude API upload size**: MUST be under 30MB (all files combined)
 
 ### Line Count Recommendations
 **Source**: https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices
@@ -504,10 +504,10 @@ description: Does something
 
 ---
 
-### 11. Upload Size Exceeds 8MB
+### 11. Claude API Upload Size Exceeds 30MB
 **Source**: https://platform.claude.com/docs/en/docs/build-with-claude/skills-guide
 
-❌ **BREAKS**: Total skill files exceed 8MB
+❌ **BREAKS**: Total skill files exceed 30MB
 ```
 my-skill/
 ├── SKILL.md
@@ -652,7 +652,7 @@ Skills run in the code execution container with these HARD limitations:
 | Missing SKILL.md | Discovery failure | agentskills.io/specification |
 | Missing frontmatter delimiters | Parse failure | agentskills.io/specification |
 | Windows paths on Unix | Execution failure | best-practices |
-| Upload exceeds 8MB | Upload failure | skills-guide |
+| Upload exceeds 30MB | Upload failure | skills-guide |
 | More than 8 skills | Request failure | skills-guide |
 | Missing code execution | Integration failure | skills-guide |
 | Missing setting_sources in SDK | Skills not loaded | agent-sdk/skills |
@@ -695,3 +695,5 @@ Skills run in the code execution container with these HARD limitations:
 ---
 
 **Note**: This document contains ONLY hard rules that will break compatibility. For recommendations and best practices, see `agent-skills-OPINIONS.md`.
+
+The 30 MB limit applies to Claude API uploads. Local Claude Code has no documented directory-size cap.

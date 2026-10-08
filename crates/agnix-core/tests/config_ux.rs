@@ -51,7 +51,7 @@ fn per_rule_severity_override_remaps_diagnostic_level() {
 fn inline_noqa_suppresses_matching_rule_on_same_line() {
     let diagnostics = validate_content(
         Path::new("CLAUDE.md"),
-        "# Test\n# agnix: noqa: TEST-001\n",
+        "# Test\n<!-- agnix: noqa: TEST-001 -->\n",
         &LintConfig::default(),
         &registry_with_test_validator(),
     );
@@ -60,10 +60,161 @@ fn inline_noqa_suppresses_matching_rule_on_same_line() {
 }
 
 #[test]
+fn markdown_inline_comment_noqa_is_supported() {
+    let diagnostics = validate_content(
+        Path::new("CLAUDE.md"),
+        "# Test\nIntentional wording. <!-- agnix: noqa: TEST-001 -->\n",
+        &LintConfig::default(),
+        &registry_with_test_validator(),
+    );
+    assert!(diagnostics.is_empty());
+}
+
+#[test]
+fn markdown_prose_and_code_examples_do_not_suppress() {
+    for content in [
+        "# Test\n# agnix-disable\n",
+        "# Test\nagnix-disable\n",
+        "# Test\n`<!-- agnix-disable -->`\n",
+        "```md\n<!-- agnix-disable -->\n```\n",
+        "~~~md\n<!-- agnix-disable -->\n~~~\n",
+        "\n    <!-- agnix-disable -->\n",
+        "\n\t<!-- agnix-disable -->\n",
+    ] {
+        let diagnostics = validate_content(
+            Path::new("CLAUDE.md"),
+            content,
+            &LintConfig::default(),
+            &registry_with_test_validator(),
+        );
+        assert_eq!(diagnostics.len(), 1, "{content}");
+    }
+}
+
+#[test]
+fn a_second_html_comment_can_contain_a_suppression() {
+    let diagnostics = validate_content(
+        Path::new("CLAUDE.md"),
+        "# Test\n<!-- explanation --> <!-- agnix: noqa: TEST-001 -->\n",
+        &LintConfig::default(),
+        &registry_with_test_validator(),
+    );
+    assert!(diagnostics.is_empty());
+}
+
+#[test]
+fn quoted_toml_markers_cannot_suppress() {
+    let config = LintConfig::builder()
+        .files(agnix_core::config::FilesConfig {
+            include_as_memory: vec!["*.toml".into()],
+            ..Default::default()
+        })
+        .build()
+        .unwrap();
+    for content in [
+        "model = \"\"\"\n# agnix-disable\n\"\"\"\nbogus = true\n",
+        "model = '''\n# agnix-disable\n'''\nbogus = true\n",
+        "model = \"demo\"\nbogus = '# agnix-disable'\n",
+    ] {
+        let diagnostics = validate_content(
+            Path::new("demo.toml"),
+            content,
+            &config,
+            &registry_with_test_validator(),
+        );
+        assert_eq!(diagnostics.len(), 1, "{content}");
+    }
+    let diagnostics = validate_content(
+        Path::new("demo.toml"),
+        "model = \"\"\"\ntext\n\"\"\"\n# agnix-disable\n",
+        &config,
+        &registry_with_test_validator(),
+    );
+    assert!(
+        diagnostics.is_empty(),
+        "a comment after the string must still work"
+    );
+}
+
+#[test]
+fn yaml_scalar_markers_are_literal_text() {
+    let config = LintConfig::builder()
+        .files(agnix_core::config::FilesConfig {
+            include_as_memory: vec!["*.yaml".into()],
+            ..Default::default()
+        })
+        .build()
+        .unwrap();
+    for content in [
+        "model: |\n  # agnix-disable\nbogus: true\n",
+        "model: >-\n  # agnix-disable\nbogus: true\n",
+        "models:\n  - |\n    # agnix-disable\nbogus: true\n",
+    ] {
+        let diagnostics = validate_content(
+            Path::new("demo.yaml"),
+            content,
+            &config,
+            &registry_with_test_validator(),
+        );
+        assert_eq!(diagnostics.len(), 1, "{content}");
+    }
+}
+
+#[test]
+fn escaped_single_quotes_do_not_hide_later_comments() {
+    for (extension, comment) in [("js", "//"), ("py", "#")] {
+        let config = LintConfig::builder()
+            .files(agnix_core::config::FilesConfig {
+                include_as_memory: vec![format!("*.{extension}")],
+                ..Default::default()
+            })
+            .build()
+            .unwrap();
+        let content = format!("value = 'don\\'t';\n{comment} agnix-disable\n");
+        let diagnostics = validate_content(
+            Path::new(&format!("demo.{extension}")),
+            &content,
+            &config,
+            &registry_with_test_validator(),
+        );
+        assert!(diagnostics.is_empty(), "{content}");
+    }
+}
+
+#[test]
+fn extensionless_markdown_rules_support_html_suppressions() {
+    for filename in [".cursorrules", ".clinerules", ".windsurfrules", ".roorules"] {
+        let path = Path::new(filename);
+        let config = LintConfig::default();
+        let file_type = agnix_core::resolve_file_type(path, &config);
+        assert_ne!(file_type, FileType::Unknown);
+        let mut registry = ValidatorRegistry::new();
+        registry.register(file_type, || Box::new(TestWarningValidator));
+        assert_eq!(
+            validate_content(
+                path,
+                "Don't ignore the rule.\ntrigger\n",
+                &config,
+                &registry
+            )
+            .len(),
+            1
+        );
+        let diagnostics = validate_content(
+            path,
+            "Don't ignore the rule.\n<!-- agnix: noqa: TEST-001 -->\n",
+            &config,
+            &registry,
+        );
+        assert!(diagnostics.is_empty(), "{filename}: {diagnostics:?}");
+    }
+}
+
+#[test]
 fn block_comment_noqa_suppresses_all_rules_on_same_line() {
     let diagnostics = validate_content(
         Path::new("CLAUDE.md"),
-        "# Test\n/* agnix: noqa */\n",
+        "# Test\n<!-- agnix: noqa -->\n",
         &LintConfig::default(),
         &registry_with_test_validator(),
     );
@@ -75,7 +226,7 @@ fn block_comment_noqa_suppresses_all_rules_on_same_line() {
 fn inline_disable_next_line_suppresses_matching_rule_on_next_line() {
     let diagnostics = validate_content(
         Path::new("CLAUDE.md"),
-        "# agnix-disable-next-line TEST-001\ntrigger\n",
+        "<!-- agnix-disable-next-line TEST-001 -->\ntrigger\n",
         &LintConfig::default(),
         &registry_with_test_validator(),
     );

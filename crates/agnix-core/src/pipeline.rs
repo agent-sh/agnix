@@ -194,8 +194,147 @@ fn parse_suppression_rules(payload: &str) -> Vec<String> {
         .collect()
 }
 
-fn marker_payload<'a>(line: &'a str, marker: &str) -> Option<&'a str> {
-    line.find(marker).map(|idx| &line[idx + marker.len()..])
+fn marker_payload<'a>(line: &'a str, marker: &str, prefixes: &[&str]) -> Option<&'a str> {
+    let mut remaining = line;
+    while let Some((index, prefix)) = prefixes
+        .iter()
+        .filter_map(|prefix| remaining.find(prefix).map(|index| (index, *prefix)))
+        .min_by_key(|(index, _)| *index)
+    {
+        let after = &remaining[index + prefix.len()..];
+        let closing = match prefix {
+            "<!--" => Some("-->"),
+            "/*" => Some("*/"),
+            _ => None,
+        };
+        let end = closing.and_then(|closing| after.find(closing));
+        let comment = end.map_or(after, |end| &after[..end]).trim_start();
+        if let Some(payload) = comment.strip_prefix(marker)
+            && (payload.is_empty() || payload.starts_with(|c: char| c.is_whitespace() || c == ':'))
+        {
+            return Some(payload);
+        }
+        match (closing, end) {
+            (Some(closing), Some(end)) => remaining = &after[end + closing.len()..],
+            _ => break,
+        }
+    }
+    None
+}
+
+fn mask_string_literals(
+    content: &str,
+    prefixes: &[&str],
+    triple_quotes: bool,
+    literal_single_quotes: bool,
+) -> String {
+    let bytes = content.as_bytes();
+    let mut masked = bytes.to_vec();
+    let mut index = 0;
+    let mut quote: Option<(u8, usize)> = None;
+    let mask = |byte: &mut u8| {
+        if *byte != b'\n' && *byte != b'\r' {
+            *byte = b' ';
+        }
+    };
+    while index < bytes.len() {
+        if let Some((delimiter, length)) = quote {
+            if (delimiter != b'\'' || !literal_single_quotes) && bytes[index] == b'\\' {
+                mask(&mut masked[index]);
+                index += 1;
+                if index < bytes.len() {
+                    mask(&mut masked[index]);
+                    index += 1;
+                }
+                continue;
+            }
+            if bytes[index..].starts_with(&[delimiter; 3][..length]) {
+                for byte in &mut masked[index..index + length] {
+                    mask(byte);
+                }
+                index += length;
+                if length == 3 {
+                    while index < bytes.len() && bytes[index] == delimiter {
+                        mask(&mut masked[index]);
+                        index += 1;
+                    }
+                }
+                quote = None;
+            } else {
+                mask(&mut masked[index]);
+                index += 1;
+            }
+            continue;
+        }
+        if let Some(prefix) = prefixes
+            .iter()
+            .find(|prefix| bytes[index..].starts_with(prefix.as_bytes()))
+        {
+            if *prefix == "/*" {
+                index = content[index + 2..]
+                    .find("*/")
+                    .map_or(bytes.len(), |end| index + 2 + end + 2);
+            } else {
+                index = content[index..]
+                    .find('\n')
+                    .map_or(bytes.len(), |end| index + end + 1);
+            }
+            continue;
+        }
+        if matches!(bytes[index], b'\'' | b'"' | b'`') {
+            let delimiter = bytes[index];
+            let length = if triple_quotes && bytes[index..].starts_with(&[delimiter; 3]) {
+                3
+            } else {
+                1
+            };
+            quote = Some((delimiter, length));
+            for byte in &mut masked[index..index + length] {
+                mask(byte);
+            }
+            index += length;
+        } else {
+            index += 1;
+        }
+    }
+    String::from_utf8(masked).expect("masked strings preserve UTF-8 boundaries")
+}
+
+fn mask_yaml_scalar_blocks(content: String) -> String {
+    let mut masked = content.as_bytes().to_vec();
+    let mut block_indent = None;
+    let mut offset = 0;
+    for line in content.split_inclusive('\n') {
+        let indent = line.bytes().take_while(|byte| *byte == b' ').count();
+        let trimmed = line.trim();
+        if let Some(parent_indent) = block_indent {
+            if trimmed.is_empty() || indent > parent_indent {
+                for byte in &mut masked[offset..offset + line.len()] {
+                    if *byte != b'\n' && *byte != b'\r' {
+                        *byte = b' ';
+                    }
+                }
+                offset += line.len();
+                continue;
+            }
+            block_indent = None;
+        }
+        let value = trimmed.split('#').next().unwrap_or(trimmed).trim_end();
+        let indicator = value
+            .rsplit_once(':')
+            .map(|(_, value)| value.trim())
+            .or_else(|| value.strip_prefix('-').map(str::trim))
+            .unwrap_or(value);
+        if indicator.starts_with(['|', '>'])
+            && indicator[1..]
+                .chars()
+                .all(|c| matches!(c, '+' | '-' | '1'..='9'))
+        {
+            block_indent = Some(indent);
+        }
+        offset += line.len();
+    }
+    String::from_utf8(masked).expect("masked YAML preserves UTF-8 boundaries")
 }
 
 fn add_line_suppression(suppressions: &mut InlineSuppressions, line_no: usize, rules: Vec<String>) {
@@ -210,11 +349,63 @@ fn add_line_suppression(suppressions: &mut InlineSuppressions, line_no: usize, r
     }
 }
 
-fn collect_inline_suppressions(content: &str) -> InlineSuppressions {
+fn collect_inline_suppressions(content: &str, path: &Path) -> InlineSuppressions {
     let mut suppressions = InlineSuppressions::default();
-    for (idx, line) in content.lines().enumerate() {
+    let extension = path
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .unwrap_or("")
+        .to_ascii_lowercase();
+    let filename = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or("")
+        .to_ascii_lowercase();
+    let markdown = matches!(extension.as_str(), "md" | "mdc" | "markdown")
+        || matches!(
+            filename.as_str(),
+            ".cursorrules" | ".clinerules" | ".windsurfrules" | ".roorules"
+        );
+    let prefixes: &[&str] = if markdown {
+        &["<!--"]
+    } else {
+        match extension.as_str() {
+            "md" | "mdc" | "markdown" | "html" | "xml" => &["<!--"],
+            "json" => &[],
+            "toml" | "yaml" | "yml" | "py" | "sh" => &["#"],
+            _ => &["//", "/*"],
+        }
+    };
+    if prefixes.is_empty() || !content.contains("agnix") {
+        return suppressions;
+    }
+    let masked = if markdown {
+        let mut masked = crate::parsers::markdown::mask_code_spans(content).into_bytes();
+        let parts = crate::parsers::frontmatter::split_frontmatter(content);
+        if parts.has_frontmatter && parts.has_closing {
+            for byte in &mut masked[..parts.body_start] {
+                if *byte != b'\n' && *byte != b'\r' {
+                    *byte = b' ';
+                }
+            }
+        }
+        String::from_utf8(masked).expect("masked Markdown preserves UTF-8 boundaries")
+    } else {
+        let masked = mask_string_literals(
+            content,
+            prefixes,
+            matches!(extension.as_str(), "toml" | "py"),
+            matches!(extension.as_str(), "toml" | "yaml" | "yml"),
+        );
+        if matches!(extension.as_str(), "yaml" | "yml") {
+            mask_yaml_scalar_blocks(masked)
+        } else {
+            masked
+        }
+    };
+    for (idx, line) in masked.lines().enumerate() {
         let line_no = idx + 1;
-        let has_next_line = marker_payload(line, "agnix-disable-next-line");
+        let has_next_line = marker_payload(line, "agnix-disable-next-line", prefixes);
         if let Some(payload) = has_next_line {
             add_line_suppression(
                 &mut suppressions,
@@ -222,11 +413,11 @@ fn collect_inline_suppressions(content: &str) -> InlineSuppressions {
                 parse_suppression_rules(payload),
             );
         }
-        if let Some(payload) = marker_payload(line, "agnix: noqa") {
+        if let Some(payload) = marker_payload(line, "agnix: noqa", prefixes) {
             add_line_suppression(&mut suppressions, line_no, parse_suppression_rules(payload));
         }
         if has_next_line.is_none()
-            && let Some(payload) = marker_payload(line, "agnix-disable")
+            && let Some(payload) = marker_payload(line, "agnix-disable", prefixes)
         {
             let rules = parse_suppression_rules(payload);
             if rules.is_empty() {
@@ -262,9 +453,13 @@ fn apply_diagnostic_config(
     mut diagnostics: Vec<Diagnostic>,
     content: &str,
     config: &LintConfig,
+    path: &Path,
 ) -> Vec<Diagnostic> {
     apply_severity_overrides(&mut diagnostics, config);
-    let suppressions = collect_inline_suppressions(content);
+    if config.ignore_inline_suppressions() {
+        return diagnostics;
+    }
+    let suppressions = collect_inline_suppressions(content, path);
     diagnostics
         .into_iter()
         .filter(|diag| !is_diagnostic_suppressed(diag, &suppressions))
@@ -481,6 +676,7 @@ fn validate_file_with_type(
         diagnostics,
         &content,
         config,
+        path,
     )))
 }
 
@@ -527,7 +723,7 @@ pub fn validate_content(
         }
     }
 
-    apply_diagnostic_config(diagnostics, &content, config)
+    apply_diagnostic_config(diagnostics, &content, config, path)
 }
 
 /// Main entry point for validating a project
@@ -658,7 +854,10 @@ pub fn validate_project_rules(root: &Path, config: &LintConfig) -> LintResult<Ve
     // what `validate_project_with_registry` does via the same function; the
     // compiled include patterns are discarded because this lightweight path
     // does no per-file type resolution.
-    let config_file = root_dir.join(".agnix.toml");
+    let config_file = config
+        .config_path()
+        .map(Path::to_path_buf)
+        .unwrap_or_else(|| root_dir.join(".agnix.toml"));
     let (_, files_config_diags) =
         compile_files_config_with_diagnostics(config.files_config(), &config_file);
 
@@ -751,13 +950,31 @@ pub fn validate_project_with_registry(
     config: &LintConfig,
     registry: &ValidatorRegistry,
 ) -> LintResult<ValidationResult> {
+    validate_paths_with_registry(&[path.to_path_buf()], config, registry)
+}
+
+/// Validate the union of paths, running workspace checks once over the union.
+#[cfg(feature = "filesystem")]
+pub fn validate_paths_with_registry(
+    paths: &[PathBuf],
+    config: &LintConfig,
+    registry: &ValidatorRegistry,
+) -> LintResult<ValidationResult> {
     use ignore::WalkBuilder;
     use std::sync::Arc;
     use std::time::Instant;
 
     let validation_start = Instant::now();
 
-    let root_dir = resolve_validation_root(path)?;
+    for path in paths {
+        resolve_validation_root(path)?;
+    }
+    let root_dir = resolve_validation_root(
+        paths
+            .first()
+            .map(PathBuf::as_path)
+            .unwrap_or(Path::new(".")),
+    )?;
     // A subtree walk still uses the configured workspace for imports and
     // relative config patterns. Only the walker is rooted at `path`.
     let root_dir = match config.root_dir() {
@@ -781,7 +998,10 @@ pub fn validate_project_with_registry(
     // the two filters share a single "don't look at this path" semantic - per-file
     // rules AND project-level rules see the same excluded set.
     let mut exclude_patterns = compile_exclude_patterns(config.exclude())?;
-    let config_file = root_dir.join(".agnix.toml");
+    let config_file = config
+        .config_path()
+        .map(Path::to_path_buf)
+        .unwrap_or_else(|| root_dir.join(".agnix.toml"));
     exclude_patterns.extend(compile_files_exclude_for_walker(
         &config.files_config().exclude,
     ));
@@ -797,8 +1017,28 @@ pub fn validate_project_with_registry(
 
     let root_path = root_dir.clone();
 
-    // Fallback to relative path is safe: symlink checks and size limits still apply per-file
-    let walk_root = std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
+    let walk_paths = paths
+        .iter()
+        .map(|path| {
+            if path.is_dir() {
+                std::fs::canonicalize(path).unwrap_or_else(|_| path.clone())
+            } else if path.is_absolute() {
+                path.clone()
+            } else {
+                std::env::current_dir().unwrap_or_default().join(path)
+            }
+        })
+        .collect::<Vec<_>>();
+    let mut walker = WalkBuilder::new(
+        walk_paths
+            .first()
+            .map(PathBuf::as_path)
+            .unwrap_or(&root_dir),
+    );
+    for path in walk_paths.iter().skip(1) {
+        walker.add(path);
+    }
+    let mut seen = HashSet::new();
 
     // Shared atomic state for file-limit enforcement across parallel workers.
     // These must remain atomic (not fold/reduce) because the limit check must
@@ -819,139 +1059,147 @@ pub fn validate_project_with_registry(
     //
     // Uses fold/reduce instead of Mutex-protected Vecs to accumulate paths and
     // diagnostics thread-locally, eliminating lock contention in the hot loop.
-    let (mut diagnostics, mut agents_md_paths, mut instruction_file_paths) =
-        WalkBuilder::new(&walk_root)
-            .hidden(false)
-            .git_ignore(true)
-            .git_exclude(false)
-            .filter_entry({
-                let exclude_patterns = Arc::clone(&exclude_patterns);
-                let root_path = root_path.clone();
-                move |entry| {
-                    let entry_path = entry.path();
-                    if entry_path == root_path {
-                        return true;
-                    }
-                    if entry.file_type().is_some_and(|ft| ft.is_dir()) {
-                        let rel_path = normalize_rel_path(entry_path, &root_path);
-                        return !should_prune_dir(&rel_path, exclude_patterns.as_slice());
-                    }
-                    true
-                }
-            })
-            .build()
-            .filter_map(|entry| entry.ok())
-            .filter(|entry| entry.path().is_file())
-            .filter(|entry| {
+    let (mut diagnostics, mut agents_md_paths, mut instruction_file_paths) = walker
+        .hidden(false)
+        .git_ignore(true)
+        .git_exclude(false)
+        .filter_entry({
+            let exclude_patterns = Arc::clone(&exclude_patterns);
+            let root_path = root_path.clone();
+            move |entry| {
                 let entry_path = entry.path();
-                let path_str = normalize_rel_path(entry_path, &root_path);
-                !is_excluded_file(&path_str, exclude_patterns.as_slice())
-            })
-            .map(|entry| entry.path().to_path_buf())
-            .par_bridge()
-            .fold(
-                || {
-                    (
-                        Vec::<Diagnostic>::new(),
-                        Vec::<PathBuf>::new(),
-                        Vec::<PathBuf>::new(),
-                    )
-                },
-                |(mut diags, mut agents, mut instructions), file_path| {
-                    // Security: Check if file limit has been exceeded
-                    // Once exceeded, skip processing additional files
-                    // Use SeqCst ordering for consistency with store operations
-                    if limit_exceeded.load(Ordering::SeqCst) {
-                        return (diags, agents, instructions);
-                    }
+                if entry_path == root_path {
+                    return true;
+                }
+                if entry.file_type().is_some_and(|ft| ft.is_dir()) {
+                    let rel_path = normalize_rel_path(entry_path, &root_path);
+                    return !should_prune_dir(&rel_path, exclude_patterns.as_slice());
+                }
+                true
+            }
+        })
+        .build()
+        .filter_map(|entry| entry.ok())
+        .filter(|entry| entry.path().is_file())
+        .filter(|entry| {
+            let entry_path = entry.path();
+            let path_str = normalize_rel_path(entry_path, &root_path);
+            !is_excluded_file(&path_str, exclude_patterns.as_slice())
+        })
+        .map(|entry| entry.path().to_path_buf())
+        .filter(|path| {
+            let key = path
+                .parent()
+                .and_then(|parent| std::fs::canonicalize(parent).ok())
+                .zip(path.file_name())
+                .map(|(parent, name)| parent.join(name))
+                .unwrap_or_else(|| path.clone());
+            seen.insert(key)
+        })
+        .par_bridge()
+        .fold(
+            || {
+                (
+                    Vec::<Diagnostic>::new(),
+                    Vec::<PathBuf>::new(),
+                    Vec::<PathBuf>::new(),
+                )
+            },
+            |(mut diags, mut agents, mut instructions), file_path| {
+                // Security: Check if file limit has been exceeded
+                // Once exceeded, skip processing additional files
+                // Use SeqCst ordering for consistency with store operations
+                if limit_exceeded.load(Ordering::SeqCst) {
+                    return (diags, agents, instructions);
+                }
 
-                    // Count recognized files (resolve_with_compiled is string-only, no I/O)
-                    let file_type =
-                        resolve_with_compiled(&file_path, Some(&root_path), &compiled_files);
-                    if file_type != FileType::Unknown {
-                        let count = files_checked.fetch_add(1, Ordering::SeqCst) + 1;
-                        // Security: Enforce file count limit to prevent DoS
-                        if let Some(limit) = max_files {
-                            if count > limit {
-                                limit_exceeded.store(true, Ordering::SeqCst);
-                                return (diags, agents, instructions);
-                            }
+                // Count recognized files (resolve_with_compiled is string-only, no I/O)
+                let file_type =
+                    resolve_with_compiled(&file_path, Some(&root_path), &compiled_files);
+                if file_type != FileType::Unknown {
+                    let count = files_checked.fetch_add(1, Ordering::SeqCst) + 1;
+                    // Security: Enforce file count limit to prevent DoS
+                    if let Some(limit) = max_files {
+                        if count > limit {
+                            limit_exceeded.store(true, Ordering::SeqCst);
+                            return (diags, agents, instructions);
                         }
                     }
+                }
 
-                    // Collect AGENTS.md paths for AGM-006 check (thread-local, no lock).
-                    if file_path.file_name().and_then(|n| n.to_str()) == Some("AGENTS.md") {
-                        agents.push(file_path.clone());
+                // Collect AGENTS.md paths for AGM-006 check (thread-local, no lock).
+                if file_path.file_name().and_then(|n| n.to_str()) == Some("AGENTS.md") {
+                    agents.push(file_path.clone());
+                }
+
+                // Collect instruction file paths for XP-004/005/006 checks (thread-local, no lock).
+                if schemas::cross_platform::is_instruction_file(&file_path) {
+                    instructions.push(file_path.clone());
+                }
+
+                // Validate the file using the pre-resolved file_type to avoid
+                // re-compiling [files] glob patterns for every file.
+                match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    validate_file_with_type(&file_path, file_type, &config, registry)
+                })) {
+                    Err(err) => {
+                        let panic_message = panic_payload_message(err.as_ref());
+                        let panic_diag = Diagnostic::error(
+                            file_path,
+                            0,
+                            0,
+                            "file::panic",
+                            t!("rules.file_panic_error", error = panic_message),
+                        )
+                        .with_suggestion(t!("rules.file_panic_error_suggestion"));
+                        diags.push(panic_diag);
                     }
-
-                    // Collect instruction file paths for XP-004/005/006 checks (thread-local, no lock).
-                    if schemas::cross_platform::is_instruction_file(&file_path) {
-                        instructions.push(file_path.clone());
-                    }
-
-                    // Validate the file using the pre-resolved file_type to avoid
-                    // re-compiling [files] glob patterns for every file.
-                    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                        validate_file_with_type(&file_path, file_type, &config, registry)
-                    })) {
-                        Err(err) => {
-                            let panic_message = panic_payload_message(err.as_ref());
-                            let panic_diag = Diagnostic::error(
-                                file_path,
-                                0,
-                                0,
-                                "file::panic",
-                                t!("rules.file_panic_error", error = panic_message),
-                            )
-                            .with_suggestion(t!("rules.file_panic_error_suggestion"));
-                            diags.push(panic_diag);
+                    Ok(result) => match result {
+                        Ok(ValidationOutcome::Success(file_diagnostics)) => {
+                            diags.extend(file_diagnostics);
                         }
-                        Ok(result) => match result {
-                            Ok(ValidationOutcome::Success(file_diagnostics)) => {
-                                diags.extend(file_diagnostics);
-                            }
-                            Ok(ValidationOutcome::IoError(file_error)) => {
-                                diags.push(
-                                    Diagnostic::error(
-                                        file_path,
-                                        0,
-                                        0,
-                                        "file::read",
-                                        t!("rules.file_read_error", error = file_error.to_string()),
-                                    )
-                                    .with_suggestion(t!("rules.file_read_error_suggestion")),
-                                );
-                            }
-                            Ok(ValidationOutcome::Skipped) => {
-                                // File type unknown - no validation needed
-                            }
-                            Err(e) => {
-                                diags.push(
-                                    Diagnostic::error(
-                                        file_path,
-                                        0,
-                                        0,
-                                        "file::read",
-                                        t!("rules.file_read_error", error = e.to_string()),
-                                    )
-                                    .with_suggestion(t!("rules.file_read_error_suggestion")),
-                                );
-                            }
-                        },
-                    }
+                        Ok(ValidationOutcome::IoError(file_error)) => {
+                            diags.push(
+                                Diagnostic::error(
+                                    file_path,
+                                    0,
+                                    0,
+                                    "file::read",
+                                    t!("rules.file_read_error", error = file_error.to_string()),
+                                )
+                                .with_suggestion(t!("rules.file_read_error_suggestion")),
+                            );
+                        }
+                        Ok(ValidationOutcome::Skipped) => {
+                            // File type unknown - no validation needed
+                        }
+                        Err(e) => {
+                            diags.push(
+                                Diagnostic::error(
+                                    file_path,
+                                    0,
+                                    0,
+                                    "file::read",
+                                    t!("rules.file_read_error", error = e.to_string()),
+                                )
+                                .with_suggestion(t!("rules.file_read_error_suggestion")),
+                            );
+                        }
+                    },
+                }
 
-                    (diags, agents, instructions)
-                },
-            )
-            .reduce(
-                || (Vec::new(), Vec::new(), Vec::new()),
-                |(mut d1, mut a1, mut i1), (d2, a2, i2)| {
-                    d1.extend(d2);
-                    a1.extend(a2);
-                    i1.extend(i2);
-                    (d1, a1, i1)
-                },
-            );
+                (diags, agents, instructions)
+            },
+        )
+        .reduce(
+            || (Vec::new(), Vec::new(), Vec::new()),
+            |(mut d1, mut a1, mut i1), (d2, a2, i2)| {
+                d1.extend(d2);
+                a1.extend(a2);
+                i1.extend(i2);
+                (d1, a1, i1)
+            },
+        );
 
     // Surface config-level diagnostics (e.g. invalid glob patterns in [files])
     // before the TooManyFiles check so they are included on successful validation.

@@ -13,7 +13,7 @@ keywords: ["CC-PL-001", "plugin manifest not in .claude-plugin/", "claude plugin
 - **Category**: `Claude Plugins`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-02-04`
+- **Verified On**: `2026-10-08`
 
 ## Applicability
 
@@ -23,7 +23,7 @@ keywords: ["CC-PL-001", "plugin manifest not in .claude-plugin/", "claude plugin
 
 ## Evidence Sources
 
-- https://code.claude.com/docs/en/plugins
+- https://code.claude.com/docs/en/plugins-reference
 
 ## Test Coverage Metadata
 

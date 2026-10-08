@@ -2,12 +2,16 @@
 //!
 //! Validates `.claude-plugin/plugin.json` manifests.
 
+use crate::regex_util::static_regex;
 use crate::{
     config::PerFileLintConfig,
     diagnostics::{Diagnostic, Fix},
     rules::{Validator, ValidatorMetadata},
 };
+use regex::Regex;
 use rust_i18n::t;
+
+static_regex!(fn forbidden_plugin_name, r"[\p{Cc}\p{Cf}\s@:/\\]");
 use std::path::Path;
 
 const RULE_IDS: &[&str] = &[
@@ -27,6 +31,7 @@ const RULE_IDS: &[&str] = &[
     "CC-PL-014",
     "CC-PL-015",
     "CC-PL-016",
+    "CC-PL-017",
 ];
 
 /// Whether a plugin `name` matches the documented kebab-case identifier form:
@@ -155,6 +160,61 @@ impl Validator for PluginValidator {
             }
         };
 
+        if config.is_rule_enabled("CC-PL-017")
+            && let Some(fields) = raw_value.as_object()
+        {
+            const KNOWN_FIELDS: &[&str] = &[
+                "$schema",
+                "displayName",
+                "defaultEnabled",
+                "dependencies",
+                "termsOfServiceUrl",
+                "types",
+                "channels",
+                "experimental",
+                "name",
+                "version",
+                "description",
+                "author",
+                "homepage",
+                "repository",
+                "license",
+                "keywords",
+                "commands",
+                "agents",
+                "skills",
+                "workflows",
+                "outputStyles",
+                "themes",
+                "monitors",
+                "hooks",
+                "mcpServers",
+                "lspServers",
+                "settings",
+                "userConfig",
+                "metadata",
+                "icon",
+                "documentationUrl",
+                "supportUrl",
+                "privacyPolicyUrl",
+            ];
+            for key in fields
+                .keys()
+                .filter(|key| !KNOWN_FIELDS.contains(&key.as_str()))
+            {
+                diagnostics.push(
+                    Diagnostic::warning(
+                        path.to_path_buf(),
+                        1,
+                        0,
+                        "CC-PL-017",
+                        t!("rules.cc_pl_017.message", field = key.as_str()),
+                    )
+                    .with_suggestion(t!("rules.cc_pl_017.suggestion")),
+                );
+            }
+        }
+
         if config.is_rule_enabled("CC-PL-004") {
             check_required_field(&raw_value, "name", path, diagnostics.as_mut());
             check_recommended_field(&raw_value, "description", path, diagnostics.as_mut());
@@ -202,7 +262,11 @@ impl Validator for PluginValidator {
             && !is_kebab_case_plugin_name(name)
         {
             diagnostics.push(
-                Diagnostic::error(
+                if forbidden_plugin_name().is_match(name) {
+                    Diagnostic::error
+                } else {
+                    Diagnostic::warning
+                }(
                     path.to_path_buf(),
                     1,
                     0,

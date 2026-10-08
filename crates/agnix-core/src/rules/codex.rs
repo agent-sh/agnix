@@ -144,6 +144,7 @@ const KNOWN_FEATURE_KEYS: &[&str] = &[
     "browser_use_full_cdp_access",
     "child_agents_md",
     "chronicle",
+    "cli_daybreak",
     "code_mode",
     "code_mode_buffered_exec",
     "code_mode_host",

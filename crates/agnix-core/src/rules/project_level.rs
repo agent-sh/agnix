@@ -315,13 +315,10 @@ pub(crate) fn run_project_level_checks(
             || config.spec_revisions().agents_md_spec.is_some();
 
         if !has_any_version_pinned {
-            // Use .agnix.toml path or project root as the file reference
-            let config_file = root_dir.join(".agnix.toml");
-            let report_path = if config_file.exists() {
-                config_file
-            } else {
-                root_dir.to_path_buf()
-            };
+            let report_path = config
+                .config_path()
+                .map(Path::to_path_buf)
+                .unwrap_or_else(|| root_dir.to_path_buf());
 
             // Honor `[[overrides]]` carve-outs targeting `.agnix.toml` (or the
             // project root). Per-file gating runs after the global guard above.
@@ -914,13 +911,14 @@ mod tests {
         let agnix_toml = temp.path().join(".agnix.toml");
         std::fs::write(&agnix_toml, "# no versions pinned\n").unwrap();
 
-        let diagnostics = run_project_level_checks(&[], &[], &LintConfig::default(), temp.path());
+        let config = LintConfig::load(&agnix_toml).unwrap();
+        let diagnostics = run_project_level_checks(&[], &[], &config, temp.path());
 
         let ver001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "VER-001").collect();
         assert_eq!(ver001.len(), 1, "Expected one VER-001 diagnostic");
         assert_eq!(
             ver001[0].file,
-            agnix_toml,
+            agnix_toml.canonicalize().unwrap(),
             "VER-001 diagnostic should reference .agnix.toml when it exists, got: {}",
             ver001[0].file.display()
         );

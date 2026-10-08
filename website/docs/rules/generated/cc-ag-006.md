@@ -2,18 +2,18 @@
 id: cc-ag-006
 title: "CC-AG-006: Tool/Disallowed Conflict - Claude Agents"
 sidebar_label: "CC-AG-006"
-description: "agnix rule CC-AG-006 checks for tool/disallowed conflict in claude agents files. Severity: HIGH. See examples and fix guidance."
+description: "agnix rule CC-AG-006 checks for tool/disallowed conflict in claude agents files. Severity: MEDIUM. See examples and fix guidance."
 keywords: ["CC-AG-006", "tool/disallowed conflict", "claude agents", "validation", "agnix", "linter"]
 ---
 
 ## Summary
 
 - **Rule ID**: `CC-AG-006`
-- **Severity**: `HIGH`
+- **Severity**: `MEDIUM`
 - **Category**: `Claude Agents`
-- **Normative Level**: `MUST`
+- **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-10-04`
+- **Verified On**: `2026-10-08`
 
 ## Applicability
 

@@ -394,51 +394,24 @@ fn overrides_suppress_skill_validator_rules() {
 #[test]
 fn overrides_suppress_ver001_on_agnix_toml() {
     let temp = tempfile::TempDir::new().unwrap();
-    // `.agnix.toml` must exist on disk so `run_project_level_checks`
-    // picks it as the report path (vs. falling back to the project root).
-    // Content is irrelevant here - config is built via the builder below.
-    fs::write(temp.path().join(".agnix.toml"), "# placeholder\n").unwrap();
-
-    // Baseline: with no tool versions pinned and no override, VER-001
-    // fires and reports on `.agnix.toml`.
-    let baseline =
-        validate_project(temp.path(), &LintConfig::default()).expect("validate_project (baseline)");
-    let baseline_hits: Vec<_> = baseline
-        .diagnostics
-        .iter()
-        .filter(|d| d.rule == "VER-001")
-        .collect();
+    let path = temp.path().join(".agnix.toml");
+    fs::write(&path, "").unwrap();
+    let baseline = validate_project(temp.path(), &LintConfig::load(&path).unwrap()).unwrap();
     assert_eq!(
-        baseline_hits.len(),
-        1,
-        "baseline: expected one VER-001 diagnostic when no versions are pinned, got: {baseline_hits:?}"
+        baseline
+            .diagnostics
+            .iter()
+            .filter(|d| d.rule == "VER-001")
+            .count(),
+        1
     );
-    assert!(
-        baseline_hits[0].file.ends_with(".agnix.toml"),
-        "baseline: VER-001 should report on `.agnix.toml`, got: {}",
-        baseline_hits[0].file.display()
-    );
-
-    // With override targeting `.agnix.toml`, VER-001 must be suppressed.
-    let config = LintConfig::builder()
-        .overrides(vec![OverrideConfig {
-            paths: vec![".agnix.toml".to_string()],
-            disabled_rules: vec!["VER-001".to_string()],
-        }])
-        .build()
-        .expect("valid config");
-
-    let result = validate_project(temp.path(), &config).expect("validate_project");
-
-    let ver001_hits: Vec<_> = result
-        .diagnostics
-        .iter()
-        .filter(|d| d.rule == "VER-001")
-        .collect();
-    assert!(
-        ver001_hits.is_empty(),
-        "override on `.agnix.toml` must suppress VER-001, got: {ver001_hits:?}"
-    );
+    fs::write(
+        &path,
+        "[[overrides]]\npaths = [\".agnix.toml\"]\ndisabled_rules = [\"VER-001\"]\n",
+    )
+    .unwrap();
+    let result = validate_project(temp.path(), &LintConfig::load(&path).unwrap()).unwrap();
+    assert!(result.diagnostics.iter().all(|d| d.rule != "VER-001"));
 }
 
 /// XP-009: Codex's `project_doc_max_bytes` cap is cumulative across the

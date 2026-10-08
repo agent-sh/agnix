@@ -86,6 +86,8 @@ Security-relevant rules may include a `security` object in `knowledge-base/rules
 
 Rules are active by default. Deprecated rules should include `status`, `deprecated_since`, `replaced_by`, and `reason` fields in `rules.json`. Removed rule IDs are tracked in `knowledge-base/removed-rules.json` so `.agnix.toml` validation can warn on stale suppressions and point users at replacement rules.
 
+`CC-SK-009`, `CC-SK-012`, and `CC-HK-004` were retired in 0.57.0. There is no documented three-injection cap, arguments are appended when no placeholder receives them, and CC-HK-018 covers ignored matchers.
+
 `CC-SK-011` was retired in 0.56.5. A user-typed inline `/skill-name` mention can authorize Claude to invoke a skill with both `user-invocable: false` and `disable-model-invocation: true`. The flags still restrict direct slash invocation and automatic model invocation, respectively. No reachability diagnostic or permission-changing auto-fix is emitted. See [Claude Code skill invocation](https://code.claude.com/docs/en/skills#where-you-write-the-skills-name).
 
 ### Example Evidence Block
@@ -193,11 +195,11 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Source**: agentskills.io/specification
 
 <a id="as-015"></a>
-### AS-015 [HIGH] Upload Size Exceeds 8MB
-**Requirement**: Skill directory MUST be under 8MB total. **claude.ai upload-platform limit** - not in the agentskills.io spec (which uses token, not byte, budgets), so scoped to Claude Code (and unscoped) skills.
-**Detection**: skill client allows Claude rules AND `directory_size > 8 * 1024 * 1024`; paths matched by top-level `exclude` or `[files].exclude` are omitted from `directory_size`
-**Fix**: Remove large assets or split skill
-**Source**: claude.ai upload limit (Claude-specific)
+### AS-015 [MEDIUM] Claude API Upload Size Exceeds 30MB
+**Requirement**: Claude API skill uploads MUST be under 30 MB uncompressed. Local Claude Code skill directories have no documented size cap; this rule emits an upload-readiness warning.
+**Detection**: `directory_size > 30 * 1024 * 1024`; honor top-level `exclude` and `[files].exclude`.
+**Fix**: Remove large assets before uploading to the Claude API.
+**Source**: platform.claude.com/docs/en/build-with-claude/skills-guide
 
 <a id="as-016"></a>
 ### AS-016 [HIGH] Skill Parse Error
@@ -267,25 +269,11 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Fix**: Suggest closest match
 **Source**: code.claude.com/docs/en/tools
 
-<a id="cc-sk-009"></a>
-### CC-SK-009 [MEDIUM] Too Many Injections
-**Requirement**: Limit dynamic injections to 3. Both documented forms count: inline `` !`cmd` `` (recognized only when `!` is at line start or directly after whitespace - `` KEY=!`cmd` `` stays literal and does not run) and each command line inside a ` ```! ` fenced block.
-**Detection**: Count recognized inline placeholders plus command lines in ` ```! ` fences; plain fences are inert
-**Fix**: Remove or move to scripts/
-**Source**: platform.claude.com/docs
-
 <a id="cc-sk-010"></a>
 ### CC-SK-010 [HIGH] Invalid Hooks in Skill Frontmatter
 **Requirement**: `hooks` field in skill frontmatter MUST follow the same schema as settings.json hooks (valid events, handler types, required fields)
 **Detection**: Parse hooks YAML value and validate against HooksSchema rules
 **Fix**: No auto-fix
-**Source**: code.claude.com/docs/en/skills
-
-<a id="cc-sk-012"></a>
-### CC-SK-012 [MEDIUM] Argument Hint Without $ARGUMENTS
-**Requirement**: If `argument-hint` is set, the body SHOULD reference its arguments in any documented form: `$ARGUMENTS`, `$ARGUMENTS[N]`, the `$N` shorthand, or a `$name` declared in the `arguments` frontmatter list.
-**Detection**: `argument_hint.is_some()` AND the body references none of those forms
-**Fix**: Auto-fix (unsafe) - append `$ARGUMENTS` to skill body
 **Source**: code.claude.com/docs/en/skills
 
 <a id="cc-sk-013"></a>
@@ -822,13 +810,6 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Fix**: Consider adding `"matcher": "Bash"` or `"*"` to target specific tools
 **Source**: code.claude.com/docs/en/hooks
 
-<a id="cc-hk-004"></a>
-### CC-HK-004 [LOW] Matcher on Unsupported Event
-**Requirement**: Matchers SHOULD only appear on events that support matcher filtering
-**Detection**: `matcher.is_some() && !MATCHER_EVENTS.contains(event) && !NO_MATCHER_EVENTS.contains(event)`
-**Fix**: Remove matcher field or move the hook to an event with matcher support
-**Source**: code.claude.com/docs/en/hooks
-
 <a id="cc-hk-005"></a>
 ### CC-HK-005 [HIGH] Missing Type Field
 **Requirement**: Hook MUST declare `type`: `command`, `prompt`, `agent`, `http`, or `mcp_tool`
@@ -1038,22 +1019,22 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Source**: code.claude.com/docs/en/sub-agents, code.claude.com/docs/en/permission-modes
 
 <a id="cc-ag-005"></a>
-### CC-AG-005 [HIGH] Referenced Skill Not Found
-**Requirement**: Skills in `skills` array MUST exist
-**Detection**: Check `.claude/skills/{name}/SKILL.md` exists
-**Fix**: Remove reference or create skill
+### CC-AG-005 [MEDIUM] Referenced Skill Not Found
+**Requirement**: Referenced skills SHOULD be available. Claude Code skips missing or disabled skills with a debug warning.
+**Detection**: Check project and user `.claude/skills/{name}/SKILL.md`. Plugin-qualified references are left to plugin resolution; unresolved unqualified names get a warning because an enabled plugin may supply them.
+**Fix**: Check enabled plugins or add the skill to project or user skills.
 **Source**: code.claude.com/docs/en/sub-agents
 
 <a id="cc-ag-006"></a>
-### CC-AG-006 [HIGH] Tool/Disallowed Conflict
-**Requirement**: Tool cannot be in both `tools` and `disallowedTools`
-**Detection**: `tools.intersection(disallowedTools).is_empty()`
-**Fix**: Remove from one list
+### CC-AG-006 [MEDIUM] Tool/Disallowed Overlap
+**Requirement**: Overlapping entries SHOULD be intentional. Claude Code applies disallowedTools first and removes tools listed in both fields.
+**Detection**: Warn when `tools` intersects `disallowedTools`.
+**Fix**: Remove redundant entries if unintended.
 **Source**: code.claude.com/docs/en/sub-agents
 
 <a id="cc-ag-007"></a>
 ### CC-AG-007 [HIGH] Agent Parse Error
-**Requirement**: Agent frontmatter MUST be valid YAML. `tools`/`disallowedTools` accept a comma/space-separated **string** (the canonical sub-agent form `tools: Read, Glob, Grep`) **or** a YAML list - both parse without error.
+**Requirement**: Local agent frontmatter MUST begin on the first line and be valid YAML. Plugin agents with missing or malformed frontmatter load under their filename. `tools`/`disallowedTools` accept a comma/space-separated **string** (the canonical sub-agent form `tools: Read, Glob, Grep`) **or** a YAML list - both parse without error.
 **Detection**: YAML parse error on agent frontmatter
 **Fix**: Fix YAML syntax errors in agent frontmatter
 **Source**: code.claude.com/docs/en/sub-agents
@@ -1129,10 +1110,10 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Source**: code.claude.com/docs/en/sub-agents
 
 <a id="cc-ag-020"></a>
-### CC-AG-020 [HIGH] Reserved Colon in Agent Name
-**Requirement**: Local Claude Code agent names MUST NOT contain `:` because it is reserved for plugin namespaces in 2.1.218+
-**Detection**: Parse agent frontmatter and flag any `name` containing a colon
-**Fix**: Manual - remove the colon or rename the local agent
+### CC-AG-020 [HIGH] Invalid Local Agent Name
+**Requirement**: Local Claude Code agent names MUST NOT start with `-`, contain `:`, or exceed 256 characters.
+**Detection**: For local agents, flag a leading hyphen, reserved colon, or name longer than 256 characters. Plugin agents may use filename fallback.
+**Fix**: Manual - use a local agent name of at most 256 characters without a leading hyphen or colon
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.218, code.claude.com/docs/en/sub-agents
 
 ---
@@ -1331,10 +1312,10 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 <a id="cc-pl-001"></a>
 ### CC-PL-001 [HIGH] Plugin Manifest Not in .claude-plugin/
-**Requirement**: plugin.json MUST be in `.claude-plugin/` directory
-**Detection**: Check `!.claude-plugin/plugin.json` exists
+**Requirement**: The manifest is optional. When present, plugin.json MUST be in `.claude-plugin/`.
+**Detection**: For an existing plugin.json, check that its parent directory is `.claude-plugin/`.
 **Fix**: Move to correct location
-**Source**: code.claude.com/docs/en/plugins
+**Source**: code.claude.com/docs/en/plugins-reference
 
 <a id="cc-pl-002"></a>
 ### CC-PL-002 [HIGH] Components in .claude-plugin/
@@ -1438,11 +1419,18 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 <a id="cc-pl-016"></a>
 
-### CC-PL-016 [HIGH] Plugin Name Not Kebab-Case
-**Requirement**: A plugin manifest `name` MUST be a kebab-case identifier - lowercase letters, digits, and hyphens, with no spaces, no leading or trailing hyphen, and no doubled hyphen.
-**Detection**: Read `name` from `.claude-plugin/plugin.json` and flag any character outside the documented set. Control and invisible characters fail by construction, which is what Claude Code 2.1.247 hardened marketplace handling to reject.
+### CC-PL-016 [MEDIUM] Plugin Name Not Kebab-Case
+**Requirement**: A plugin manifest `name` SHOULD be a kebab-case identifier - lowercase letters, digits, and hyphens, with no spaces, no leading or trailing hyphen, and no doubled hyphen.
+**Detection**: Reject spaces, `@`, `:`, path separators, control and invisible characters. Warn for other accepted names that are not kebab-case, such as uppercase letters or underscores.
 **Fix**: Manual - rename the plugin.
 **Source**: code.claude.com/docs/en/plugins-reference, github.com/anthropics/claude-code/releases/tag/v2.1.247
+
+<a id="cc-pl-017"></a>
+### CC-PL-017 [MEDIUM] Unknown Plugin Manifest Field
+**Requirement**: Manifest keys SHOULD match the documented top-level fields. Claude Code strips unknown keys at load time.
+**Detection**: Warn for keys outside the manifest reference, including misspellings such as `homepag`.
+**Fix**: Correct the key spelling or remove it.
+**Source**: code.claude.com/docs/en/plugins-reference
 
 ## MCP RULES
 
@@ -3585,7 +3573,6 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | CC-SK-014 | Convert string to boolean | safe |
 | CC-SK-015 | Convert string to boolean | safe |
 | CC-HK-001 | Correct event name casing/typo | safe/unsafe |
-| CC-HK-004 | Remove matcher field | safe |
 | CC-HK-011 | Remove redundant wildcard matcher | unsafe |
 | CC-HK-013 | Remove async field | safe |
 | CC-HK-015 | Remove model field | safe |
@@ -3619,7 +3606,6 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | CC-AG-002 | Insert description placeholder | unsafe |
 | CC-AG-013 | Replace skill name with kebab-case version | unsafe |
 | CC-SK-006 | Insert disable-model-invocation: true | unsafe |
-| CC-SK-012 | Append $ARGUMENTS to body | unsafe |
 | CC-PL-003 | Normalize partial semver | unsafe |
 | AGM-001 | Append closing code fence for unclosed blocks | unsafe |
 | GM-001 | Append closing code fence for unclosed blocks | unsafe |
@@ -3657,17 +3643,17 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 | Category | Total Rules | HIGH | MEDIUM | LOW | Auto-Fixable |
 |----------|-------------|------|--------|-----|--------------|
-| Agent Skills | 14 | 12 | 2 | 0 | 7 |
+| Agent Skills | 14 | 11 | 3 | 0 | 7 |
 | AGENTS.md | 6 | 1 | 5 | 0 | 1 |
 | Amp Checks | 4 | 2 | 2 | 0 | 3 |
 | Amp Skills | 1 | 0 | 1 | 0 | 1 |
-| Claude Agents | 18 | 13 | 4 | 1 | 10 |
-| Claude Hooks | 27 | 15 | 7 | 5 | 12 |
+| Claude Agents | 18 | 11 | 6 | 1 | 10 |
+| Claude Hooks | 26 | 15 | 7 | 4 | 11 |
 | Claude Memory | 13 | 8 | 5 | 0 | 3 |
 | Claude Output Styles | 6 | 2 | 2 | 2 | 0 |
-| Claude Plugins | 16 | 9 | 7 | 0 | 4 |
+| Claude Plugins | 17 | 8 | 9 | 0 | 4 |
 | Claude Settings | 32 | 1 | 30 | 1 | 0 |
-| Claude Skills | 20 | 10 | 9 | 1 | 9 |
+| Claude Skills | 18 | 10 | 7 | 1 | 8 |
 | Cline | 7 | 4 | 3 | 0 | 3 |
 | Cline Skills | 3 | 2 | 1 | 0 | 2 |
 | Codex CLI | 65 | 31 | 29 | 5 | 10 |
@@ -3697,7 +3683,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **457** | **216** | **211** | **30** | **120** |
+| **TOTAL** | **455** | **212** | **214** | **29** | **118** |
 
 
 ---
@@ -3727,8 +3713,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 457 validation rules across 40 categories
+**Total Coverage**: 455 validation rules across 40 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 216 HIGH, 211 MEDIUM, 30 LOW
-**Auto-Fixable**: 120 rules (26%)
+**Certainty**: 212 HIGH, 214 MEDIUM, 29 LOW
+**Auto-Fixable**: 118 rules (26%)
