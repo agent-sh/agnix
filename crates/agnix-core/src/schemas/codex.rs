@@ -56,6 +56,15 @@ pub const AGENTS_MD_MAX_SIZE: usize = 100_000;
 /// removed instead (see #969).
 pub const KNOWN_TOP_LEVEL_KEYS: &[&str] = &[
     "daybreak",
+    // Added by the tagged rust-v0.162.0 configuration schema.
+    "browser_use",
+    "cloud",
+    "computer_use",
+    "goals",
+    "mcp_enterprise_managed_auth",
+    "mcp_optional_startup_grace_ms",
+    "model_post_turn_compact_threshold_percent",
+    "responses_api_metadata",
     // Core model settings (alphabetized within block)
     "log_dir",
     "model",

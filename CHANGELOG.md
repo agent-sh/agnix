@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Accept the Codex rust-v0.162.0 config keys: the `[tui]` options (`mouse_scroll_speed`,
+  `keymap`, `agents_overview_grouping` and the rest of the current schema) and the new
+  root keys (`goals`, `cloud`, `browser_use`, `computer_use` and others).
+
 ## [0.57.0] - 2026-10-08
 
 ### Fixed
