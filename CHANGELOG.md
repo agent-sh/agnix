@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `keymap`, `agents_overview_grouping` and the rest of the current schema) and the new
   root keys (`goals`, `cloud`, `browser_use`, `computer_use` and others).
 
+### Changed
+- Review Claude Code 2.1.295 and Cursor 3.24.9; no new validation constraints.
+
 ## [0.57.0] - 2026-10-08
 
 ### Fixed
