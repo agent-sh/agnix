@@ -70,3 +70,14 @@ fn user_skill_resolution_uses_the_platform_home() {
         "{diagnostics:?}"
     );
 }
+
+#[test]
+fn codex_0162_accepts_new_tui_and_root_keys() {
+    let diagnostics = validate_content(
+        Path::new(".codex/config.toml"),
+        "goals = { enabled = true }\nmcp_optional_startup_grace_ms = 500\nmodel_post_turn_compact_threshold_percent = 80\n[tui]\nmouse_scroll_speed = 3\nagents_overview_grouping = \"project\"\n[tui.keymap.agents]\ntoggle_pin = \"p\"\n",
+        &LintConfig::default(),
+        &ValidatorRegistry::with_defaults(),
+    );
+    assert!(diagnostics.is_empty(), "{diagnostics:?}");
+}
