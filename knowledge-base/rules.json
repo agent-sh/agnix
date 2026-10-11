@@ -1236,9 +1236,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.claude.com/docs/en/sub-agents"
+          "https://code.claude.com/docs/en/sub-agents",
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.296"
         ],
-        "verified_on": "2026-10-04",
+        "verified_on": "2026-10-11",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -1253,7 +1254,7 @@
         "autofix": true,
         "fix_safety": "unsafe"
       },
-      "good_example": "---\nname: my-agent\ndescription: Review code\nexperimental:\n  cacheTtl: 1h\n---\nReview the changed code.",
+      "good_example": "---\nname: my-agent\ndescription: Review code\nautoCompactWindow: 200000\nexperimental:\n  cacheTtl: 1h\n---\nReview the changed code.",
       "bad_example": "---\nname: my-agent\npriority: high\n---\nAgent instructions."
     },
     {
