@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   root keys (`goals`, `cloud`, `browser_use`, `computer_use` and others).
 
 ### Changed
+- Bump uuid to 1.27.0 and tokio to 1.53.2. Lockfile only.
 - Review Claude Code 2.1.295 and Cursor 3.24.9; no new validation constraints.
 
 ## [0.57.0] - 2026-10-08
