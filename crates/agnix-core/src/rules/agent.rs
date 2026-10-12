@@ -108,6 +108,7 @@ const KNOWN_AGENT_FIELDS: &[&str] = &[
     "effort",
     "background",
     "omitClaudeMd",
+    "autoCompactWindow",
     "isolation",
     "initialPrompt",
     "experimental",
@@ -4284,6 +4285,7 @@ maxTurns: 5
 effort: high
 background: true
 omitClaudeMd: true
+autoCompactWindow: 200000
 isolation: worktree
 initialPrompt: hi
 mcpServers:
@@ -4813,5 +4815,34 @@ Agent instructions"#;
         let invalid = "---\nname: my-agent\ndescription: A test agent\nomitClaudeMd: perhaps\n---\nAgent instructions";
         let diagnostics = validate(invalid);
         assert!(diagnostics.iter().any(|d| d.rule == "CC-AG-007"));
+    }
+
+    #[test]
+    fn test_auto_compact_window_is_known_number() {
+        let valid = r#"---
+name: my-agent
+description: A test agent
+autoCompactWindow: 200000
+---
+Agent instructions"#;
+        let diagnostics = validate(valid);
+        assert!(
+            diagnostics
+                .iter()
+                .all(|d| d.rule != "CC-AG-019" && d.rule != "CC-AG-007"),
+            "numeric autoCompactWindow must be accepted, got {diagnostics:?}"
+        );
+
+        let invalid = r#"---
+name: my-agent
+description: A test agent
+autoCompactWindow: earlier
+---
+Agent instructions"#;
+        let diagnostics = validate(invalid);
+        assert!(
+            diagnostics.iter().any(|d| d.rule == "CC-AG-007"),
+            "non-numeric autoCompactWindow must fail parse, got {diagnostics:?}"
+        );
     }
 }

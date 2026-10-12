@@ -13,7 +13,7 @@ keywords: ["CC-AG-019", "unknown agent frontmatter field", "claude agents", "val
 - **Category**: `Claude Agents`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `Yes (unsafe)`
-- **Verified On**: `2026-10-04`
+- **Verified On**: `2026-10-11`
 
 ## Applicability
 
@@ -24,6 +24,7 @@ keywords: ["CC-AG-019", "unknown agent frontmatter field", "claude agents", "val
 ## Evidence Sources
 
 - https://code.claude.com/docs/en/sub-agents
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.296
 
 ## Test Coverage Metadata
 
@@ -51,6 +52,7 @@ Agent instructions.
 ---
 name: my-agent
 description: Review code
+autoCompactWindow: 200000
 experimental:
   cacheTtl: 1h
 ---

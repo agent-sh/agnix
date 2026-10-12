@@ -11,10 +11,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Accept the Codex rust-v0.162.0 config keys: the `[tui]` options (`mouse_scroll_speed`,
   `keymap`, `agents_overview_grouping` and the rest of the current schema) and the new
   root keys (`goals`, `cloud`, `browser_use`, `computer_use` and others).
+- Accept numeric `autoCompactWindow` on Claude Code subagent frontmatter (v2.1.296).
+  A non-number is a CC-AG-007 parse error. No range rule: the published
+  `AgentDefinition` type is `number`, and the 100000-1000000 window is documented
+  for settings and `/autocompact`, not this field.
 
 ### Changed
 - Bump uuid to 1.27.0 and tokio to 1.53.2. Lockfile only.
 - Review Claude Code 2.1.295 and Cursor 3.24.9; no new validation constraints.
+- Review Claude Code v2.1.296 and Cursor 3.24.12. The gateway
+  `managed.policies[].code` key lives in `gateway.yaml`, which agnix does not
+  validate. Refresh the reviewed Claude Code hooks, memory, plugins, skills,
+  and subagents spec hashes. Hook event names, skill frontmatter fields, plugin
+  manifest keys, and the four-hop memory import limit are unchanged.
 
 ## [0.57.0] - 2026-10-08
 

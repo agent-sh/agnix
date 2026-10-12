@@ -104,6 +104,15 @@ pub struct AgentSchema {
     #[serde(skip_serializing_if = "Option::is_none", rename = "omitClaudeMd")]
     pub omit_claude_md: Option<bool>,
 
+    /// Optional token count at which this agent compacts when it runs as a
+    /// subagent (Claude Code 2.1.296+). The published `AgentDefinition` type
+    /// is `number`. A non-number fails frontmatter parse (CC-AG-007). No
+    /// range check: the 100000-1000000 window is documented for settings and
+    /// `/autocompact`, not for this field, which only lowers the inherited
+    /// window.
+    #[serde(skip_serializing_if = "Option::is_none", rename = "autoCompactWindow")]
+    pub auto_compact_window: Option<u64>,
+
     /// Optional: isolation mode (worktree)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub isolation: Option<String>,

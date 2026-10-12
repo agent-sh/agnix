@@ -1104,10 +1104,10 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="cc-ag-019"></a>
 ### CC-AG-019 [LOW] Unknown Agent Frontmatter Field
-**Requirement**: Agent frontmatter fields MAY be validated against the documented set, including boolean `omitClaudeMd` (Claude Code 2.1.271+) and the `experimental` map (2.1.248+). `experimental.cacheTtl` recognizes `5m` and `1h`; Claude Code ignores other values and ignores `1h` while subscription usage credits are active. These ignored values are accepted; a non-map `experimental` value is a CC-AG-007 parse error.
+**Requirement**: Agent frontmatter fields MAY be validated against the documented set, including boolean `omitClaudeMd` (Claude Code 2.1.271+), numeric `autoCompactWindow` (2.1.296+; a non-number is a CC-AG-007 parse error), and the `experimental` map (2.1.248+). `experimental.cacheTtl` recognizes `5m` and `1h`; Claude Code ignores other values and ignores `1h` while subscription usage credits are active. These ignored values are accepted; a non-map `experimental` value is a CC-AG-007 parse error. `autoCompactWindow` is a token count that only lowers the window a subagent would otherwise inherit. The 100000-1000000 range documented for settings and `/autocompact` is not applied here.
 **Detection**: Check for keys not in known agent fields
 **Fix**: Manual - remove or fix typo
-**Source**: code.claude.com/docs/en/sub-agents
+**Source**: code.claude.com/docs/en/sub-agents, github.com/anthropics/claude-code/releases/tag/v2.1.296
 
 <a id="cc-ag-020"></a>
 ### CC-AG-020 [HIGH] Invalid Local Agent Name
