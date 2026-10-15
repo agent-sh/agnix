@@ -143,44 +143,76 @@ suite('Extension Test Suite', () => {
   });
 
   suite('Configuration Sync', () => {
-  	test('buildLspConfig should transform camelCase to snake_case', () => {
-  		const config = buildLspConfig();
+    const changedKeys = new Set<string>();
 
-  		assert.ok(config.rules);
-  		assert.strictEqual(typeof config.rules.cross_platform, 'boolean');
-  		assert.strictEqual(typeof config.rules.agents_md, 'boolean');
-  		assert.strictEqual(typeof config.rules.prompt_engineering, 'boolean');
-  	});
+    async function setUserConfig(values: Record<string, unknown>): Promise<void> {
+      const config = vscode.workspace.getConfiguration('agnix');
+      for (const [key, value] of Object.entries(values)) {
+        changedKeys.add(key);
+        await config.update(key, value, vscode.ConfigurationTarget.Global);
+      }
+    }
 
-  	test('buildLspConfig should include all configuration sections', () => {
-  		const config = buildLspConfig();
+    teardown(async () => {
+      const config = vscode.workspace.getConfiguration('agnix');
+      for (const key of changedKeys) {
+        await config.update(key, undefined, vscode.ConfigurationTarget.Global);
+      }
+      changedKeys.clear();
+    });
 
-  		assert.ok('severity' in config);
-  		assert.ok('target' in config);
-  		assert.ok('tools' in config);
-  		assert.ok('rules' in config);
-  		assert.ok('versions' in config);
-  		assert.ok('specs' in config);
-  	});
+    test('schema defaults do not override project configuration', () => {
+      assert.deepStrictEqual(buildLspConfig(), {});
+    });
 
-  	test('buildLspConfig rules section should have all 14 fields', () => {
-  		const config = buildLspConfig();
+    test('buildLspConfig transforms configured camelCase rules to snake_case', async () => {
+      await setUserConfig({
+        'rules.crossPlatform': false,
+        'rules.agentsMd': true,
+        'rules.promptEngineering': false,
+      });
+      const config = buildLspConfig();
+      assert.deepStrictEqual(config.rules, {
+        cross_platform: false,
+        agents_md: true,
+        prompt_engineering: false,
+      });
+    });
 
-  		assert.strictEqual(typeof config.rules?.skills, 'boolean');
-  		assert.strictEqual(typeof config.rules?.hooks, 'boolean');
-  		assert.strictEqual(typeof config.rules?.agents, 'boolean');
-  		assert.strictEqual(typeof config.rules?.memory, 'boolean');
-  		assert.strictEqual(typeof config.rules?.plugins, 'boolean');
-  		assert.strictEqual(typeof config.rules?.xml, 'boolean');
-  		assert.strictEqual(typeof config.rules?.mcp, 'boolean');
-  		assert.strictEqual(typeof config.rules?.imports, 'boolean');
-  		assert.strictEqual(typeof config.rules?.cross_platform, 'boolean');
-  		assert.strictEqual(typeof config.rules?.agents_md, 'boolean');
-  		assert.strictEqual(typeof config.rules?.copilot, 'boolean');
-  		assert.strictEqual(typeof config.rules?.cursor, 'boolean');
-  		assert.strictEqual(typeof config.rules?.prompt_engineering, 'boolean');
-  		assert.ok(Array.isArray(config.rules?.disabled_rules));
-  	});
+    test('buildLspConfig includes explicitly configured sections', async () => {
+      await setUserConfig({
+        severity: 'Error',
+        target: 'Codex',
+        tools: ['codex'],
+        'rules.skills': false,
+        'versions.claudeCode': '2.1.296',
+        'specs.mcpProtocol': '2025-11-25',
+      });
+      const config = buildLspConfig();
+      assert.strictEqual(config.severity, 'Error');
+      assert.strictEqual(config.target, 'Codex');
+      assert.deepStrictEqual(config.tools, ['codex']);
+      assert.deepStrictEqual(config.rules, { skills: false });
+      assert.deepStrictEqual(config.versions, { claude_code: '2.1.296' });
+      assert.deepStrictEqual(config.specs, { mcp_protocol: '2025-11-25' });
+    });
+
+    test('buildLspConfig forwards all configured rule fields', async () => {
+      const rules = {
+        skills: 'skills', hooks: 'hooks', agents: 'agents', memory: 'memory',
+        plugins: 'plugins', xml: 'xml', mcp: 'mcp', imports: 'imports',
+        crossPlatform: 'cross_platform', agentsMd: 'agents_md', copilot: 'copilot',
+        cursor: 'cursor', promptEngineering: 'prompt_engineering',
+      };
+      await setUserConfig({
+        ...Object.fromEntries(Object.keys(rules).map(key => [`rules.${key}`, false])),
+        'rules.disabledRules': ['AS-001'],
+      });
+      assert.deepStrictEqual(buildLspConfig().rules, {
+        ...Object.fromEntries(Object.values(rules).map(field => [field, false])),
+        disabled_rules: ['AS-001'],
+      });
+    });
   });
 
   suite('Language Support', () => {
