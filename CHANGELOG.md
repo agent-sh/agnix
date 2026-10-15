@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- Restore VS Code lint and native integration checks: configure ESLint, use the
+  compiled test entry point, isolate the test profile, and check explicit settings.
 - Accept the Codex rust-v0.162.0 config keys: the `[tui]` options (`mouse_scroll_speed`,
   `keymap`, `agents_overview_grouping` and the rest of the current schema) and the new
   root keys (`goals`, `cloud`, `browser_use`, `computer_use` and others).
@@ -17,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   for settings and `/autocompact`, not this field.
 
 ### Changed
+- Update rustls to 0.23.46 and refresh editor and website dependency locks.
+- Update VS Code development tooling to Mocha 12 and VSCE 4.
 - Bump uuid to 1.27.0 and tokio to 1.53.2. Lockfile only.
 - Review Claude Code 2.1.295 and Cursor 3.24.9; no new validation constraints.
 - Review Claude Code v2.1.296 and Cursor 3.24.12. The gateway
