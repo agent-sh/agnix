@@ -19,8 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   for settings and `/autocompact`, not this field.
 
 ### Changed
-- Update rustls to 0.23.46 and refresh editor and website dependency locks.
-- Update VS Code development tooling to Mocha 12 and VSCE 4.
+- Update rustls to 0.23.46, quinn-proto to 0.11.18, and refresh editor and website dependency locks.
+- Update VS Code development tooling to Mocha 12 and VSCE 4; package and publish on Node 22.
 - Bump uuid to 1.27.0 and tokio to 1.53.2. Lockfile only.
 - Review Claude Code 2.1.295 and Cursor 3.24.9; no new validation constraints.
 - Review Claude Code v2.1.296 and Cursor 3.24.12. The gateway
