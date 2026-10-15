@@ -1,7 +1,6 @@
 # Source files
 src/**
 **/*.ts
-!**/*.d.ts
 
 # Test files
 **/test/**
