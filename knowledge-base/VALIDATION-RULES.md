@@ -575,6 +575,13 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Fix**: Manual - move the setting to the organization's managed-settings.json.
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.285
 
+<a id="cc-set-033"></a>
+### CC-SET-033 [MEDIUM] Idle Compaction Not Boolean
+**Requirement**: `idleCompaction` MUST be a strict boolean when present. Claude Code 2.1.290 added idle compaction with the `"idleCompaction": false` settings.json opt-out (v2.1.299 release notes); a quoted `"false"` or truthy number silently keeps idle compaction enabled.
+**Detection**: Parse settings JSON and flag a non-boolean, non-null `idleCompaction` value.
+**Fix**: Manual - set a strict `true`/`false`; adjust the 200K-token minimum with `CLAUDE_CODE_IDLE_COMPACT_MIN_TOKENS`.
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.299
+
 ---
 
 ## PER-CLIENT SKILL RULES
@@ -725,6 +732,13 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Detection**: Validate the permissions container, rules array, required string fields, capability/effect enums, and pattern array shapes
 **Fix**: Manual - correct the invalid permissions rule
 **Source**: kiro.dev/changelog/cli/2-14, kiro.dev/docs/cli/v3/agent-config, kiro.dev/docs/cli/v3/permissions
+
+<a id="kr-ag-015"></a>
+### KR-AG-015 [MEDIUM] Unconverted CLI 2.x Trust Configuration
+**Requirement**: A Kiro agent profile carrying CLI 2.x trust fields (`allowedTools`, or `toolsSettings`) MUST also include a `permissions` block; CLI V3 skips unconverted profiles
+**Detection**: Agent JSON has `allowedTools` or `toolsSettings` but no non-null `permissions` field
+**Fix**: Manual - run `/upgrade-agent` in a V3 session or add a `permissions.rules` block
+**Source**: kiro.dev/docs/custom-agents/configuration-reference, kiro.dev/docs/cli/v3/migration-guide
 
 <a id="kr-hk-005"></a>
 ### KR-HK-005 [HIGH] Invalid Kiro CLI Hook Event Key
@@ -3202,6 +3216,27 @@ Validates Codex's admin-written managed `requirements.toml` (system location: `/
 **Fix**: No auto-fix (use environment variables)
 **Source**: kiro.dev/docs/hooks
 
+<a id="kr-hk-011"></a>
+### KR-HK-011 [MEDIUM] Invalid Kiro V3 Hook Document Version
+**Requirement**: A standalone `.kiro/hooks/*.json` document MUST set `version` to the documented `"v1"` value
+**Detection**: Top-level `version` is missing or not `"v1"`
+**Fix**: Manual - set `"version": "v1"` at the top level
+**Source**: kiro.dev/docs/hooks, kiro.dev/docs/cli/v3/hooks-migration
+
+<a id="kr-hk-012"></a>
+### KR-HK-012 [HIGH] Invalid Kiro V3 Hook Entry
+**Requirement**: Each hook in a `.kiro/hooks/*.json` document MUST have a `name`, a documented PascalCase `trigger` (camelCase CLI 2.x aliases accepted), and an `action`; the document MUST contain a `hooks` array
+**Detection**: Missing `name`/`trigger`/`action`, unknown trigger name, missing `hooks` array, or invalid JSON
+**Fix**: Manual - correct the trigger name and required fields
+**Source**: kiro.dev/docs/hooks, kiro.dev/docs/hooks/types, kiro.dev/docs/cli/v3/hooks-migration
+
+<a id="kr-hk-013"></a>
+### KR-HK-013 [HIGH] Invalid Kiro V3 Hook Action
+**Requirement**: `action.type` MUST be `command` (with a non-empty `command`) or `agent` (with a non-empty `prompt`); optional `timeout` is seconds, `0` disables it
+**Detection**: Unknown/missing `action.type`, empty command/prompt payload, or an out-of-range/negative timeout
+**Fix**: Manual - use a documented action type and payload
+**Source**: kiro.dev/docs/hooks, kiro.dev/docs/hooks/actions
+
 ---
 
 ## KIRO MCP RULES
@@ -3652,7 +3687,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Claude Memory | 13 | 8 | 5 | 0 | 3 |
 | Claude Output Styles | 6 | 2 | 2 | 2 | 0 |
 | Claude Plugins | 17 | 8 | 9 | 0 | 4 |
-| Claude Settings | 32 | 1 | 30 | 1 | 0 |
+| Claude Settings | 33 | 1 | 31 | 1 | 0 |
 | Claude Skills | 18 | 10 | 7 | 1 | 8 |
 | Cline | 7 | 4 | 3 | 0 | 3 |
 | Cline Skills | 3 | 2 | 1 | 0 | 2 |
@@ -3665,8 +3700,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Cursor Skills | 1 | 0 | 1 | 0 | 1 |
 | Gemini Agents | 1 | 1 | 0 | 0 | 0 |
 | Gemini CLI | 10 | 3 | 5 | 2 | 3 |
-| Kiro Agents | 14 | 5 | 7 | 2 | 0 |
-| Kiro Hooks | 10 | 6 | 4 | 0 | 0 |
+| Kiro Agents | 15 | 5 | 8 | 2 | 0 |
+| Kiro Hooks | 13 | 8 | 5 | 0 | 0 |
 | Kiro MCP | 6 | 2 | 4 | 0 | 0 |
 | Kiro Powers | 8 | 3 | 4 | 1 | 0 |
 | Kiro Settings | 3 | 1 | 2 | 0 | 3 |
@@ -3683,7 +3718,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **455** | **212** | **214** | **29** | **118** |
+| **TOTAL** | **460** | **214** | **217** | **29** | **118** |
 
 
 ---
@@ -3713,8 +3748,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 455 validation rules across 40 categories
+**Total Coverage**: 460 validation rules across 40 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 212 HIGH, 214 MEDIUM, 29 LOW
+**Certainty**: 214 HIGH, 217 MEDIUM, 29 LOW
 **Auto-Fixable**: 118 rules (26%)

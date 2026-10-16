@@ -531,6 +531,32 @@ rules:
   kr_ag_014:
     message: '无效的 Kiro 通用权限规则：%{issue}'
     suggestion: permissions.rules 条目应使用已记录的 capability、deny/ask/allow effect，以及字符串数组 match/exclude
+  kr_ag_015:
+    message: 'Kiro agent 使用 CLI 2.x 信任字段（%{fields}）但没有 permissions 块；CLI V3 会跳过该 profile 直到升级'
+    suggestion: 在 V3 会话中运行 /upgrade-agent 将 allowedTools/toolsSettings 转换为 permissions.rules，或手动添加 permissions 块
+  kr_hk_011:
+    message: Kiro V3 hook 文档%{version_desc}
+    suggestion: 在独立 hook 文件顶层将 "version" 设为 "v1"
+    invalid_version: '的 version "%{version}" 无效（应为 "v1"）'
+    missing_version: 缺少 version 字段
+  kr_hk_012:
+    message: 无效的 Kiro V3 hook 条目
+    suggestion: 使用已记录的 PascalCase 触发器（SessionStart、UserPromptSubmit、PreToolUse、PostToolUse、PostFileCreate、PostFileSave、PostFileDelete、PreTaskExec、PostTaskExec、Stop、SessionEnd），并带必需的 name 和 action 字段
+    parse_error: 'Kiro V3 hook 文件不是有效 JSON：%{error}'
+    missing_hooks: Kiro V3 hook 文档没有 hooks 数组
+    missing_name: 'hooks[%{index}] 缺少必需的 name 字段'
+    missing_trigger: 'hooks[%{index}] 缺少必需的 trigger 字段'
+    invalid_trigger: 'hook 条目使用了未知触发器 "%{trigger}"'
+    missing_action: 'hooks[%{index}] 缺少必需的 action 字段'
+  kr_hk_013:
+    message: 无效的 Kiro V3 hook 动作
+    suggestion: action.type 使用 "command" 加非空 command，或 "agent" 加非空 prompt
+    invalid_type: 'hooks[%{index}] action.type "%{kind}" 不是 command 或 agent'
+    missing_type: 'hooks[%{index}] action 缺少 type 字段'
+    command_required: 'hooks[%{index}] command 动作缺少非空 command'
+    prompt_required: 'hooks[%{index}] agent 动作缺少非空 prompt'
+    timeout_range: 'hooks[%{index}] timeout %{value}s 超过 %{limit}s 上限；0 表示禁用超时'
+    timeout_negative: 'hooks[%{index}] timeout %{value}s 为负数；用 0 禁用'
   kr_hk_001:
     message: 无效的 Kiro IDE Hook 事件 '%{event}'
     suggestion: 使用以下之一：fileEdited、fileCreate、fileDelete、promptSubmit、agentStop、preToolUse、postToolUse、manual
@@ -874,6 +900,9 @@ rules:
   cc_set_032:
     message: allowedProviders 仅在 Claude Code 托管设置中生效
     suggestion: 将 allowedProviders 移至组织的 managed-settings.json。
+  cc_set_033:
+    message: idleCompaction 必须是布尔值（实际为 %{actual}）
+    suggestion: 将 idleCompaction 设为严格的 true/false 布尔值；200K token 下限请改用 CLAUDE_CODE_IDLE_COMPACT_MIN_TOKENS 调整。
   cc_pl_016:
     message: 插件名称 '%{name}' 不是 kebab-case
     suggestion: 只使用小写字母、数字和连字符。Claude Code 会拒绝包含控制字符或不可见字符的名称。

@@ -65,6 +65,12 @@ pub const KNOWN_TOP_LEVEL_KEYS: &[&str] = &[
     "mcp_optional_startup_grace_ms",
     "model_post_turn_compact_threshold_percent",
     "responses_api_metadata",
+    // Added by the tagged rust-v0.163.0 configuration schema.
+    "include_environment_context_time",
+    // Present in the rust-v0.163.0 ConfigToml struct though not exported to
+    // config.schema.json root properties yet.
+    "js_repl_node_module_dirs",
+    "js_repl_node_path",
     // Core model settings (alphabetized within block)
     "log_dir",
     "model",
@@ -805,22 +811,23 @@ experimental_realtime_webrtc_call_base_url = "https://realtime.example.com/call"
     }
 
     #[test]
-    fn test_codex_stale_js_repl_keys_flagged() {
-        // Audit (issue #969): `js_repl_node_path` / `js_repl_node_module_dirs`
-        // were never present in any audited Codex schema (rust-v0.129.0 through
-        // rust-v0.134.0-alpha.3) and are not `[features]` sub-keys - they were a
-        // stale agnix allow-list entry. They were dropped from
-        // KNOWN_TOP_LEVEL_KEYS, so both backends now flag them. (The TOML and
-        // JSON/YAML paths still agree, which was the #966 invariant - they just
-        // agree on "unknown" now.)
+    fn test_codex_js_repl_keys_reinstated_in_0163() {
+        // Audit history: issue #969 dropped `js_repl_node_path` /
+        // `js_repl_node_module_dirs` because they appeared in no audited
+        // schema (rust-v0.129.0 through rust-v0.134.0-alpha.3). The tagged
+        // rust-v0.163.0 `ConfigToml` struct carries both fields again, so
+        // they are reinstated in KNOWN_TOP_LEVEL_KEYS and neither backend
+        // flags them. (The TOML and JSON/YAML paths still agree - the #966
+        // invariant.)
         let content =
             "js_repl_node_path = \"/usr/bin/node\"\njs_repl_node_module_dirs = [\"/x\"]\n";
         let result = parse_codex_toml(content);
         assert!(result.parse_error.is_none());
         let flagged: Vec<&str> = result.unknown_keys.iter().map(|u| u.key.as_str()).collect();
         assert!(
-            flagged.contains(&"js_repl_node_path") && flagged.contains(&"js_repl_node_module_dirs"),
-            "stale js_repl_* keys should now be flagged on the TOML path, got: {flagged:?}"
+            !flagged.contains(&"js_repl_node_path")
+                && !flagged.contains(&"js_repl_node_module_dirs"),
+            "js_repl_* keys are valid again per the rust-v0.163.0 schema, got: {flagged:?}"
         );
     }
 

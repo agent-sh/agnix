@@ -1,4 +1,4 @@
-//! Kiro agent validation rules (KR-AG-001 to KR-AG-014, KR-HK-005 to KR-HK-006).
+//! Kiro agent validation rules (KR-AG-001 to KR-AG-015, KR-HK-005 to KR-HK-006).
 //!
 //! Validates legacy JSON and universal Markdown/JSON profiles under `.kiro/agents/`:
 //! - KR-AG-001: Unknown top-level field in agent JSON.
@@ -15,6 +15,8 @@
 //! - KR-AG-012: toolAliases references unknown tool.
 //! - KR-AG-013: Secrets in agent prompt.
 //! - KR-AG-014: Invalid universal permissions rule.
+//! - KR-AG-015: CLI 2.x-only field combination without the V3 permissions
+//!   block (unconverted V2 profile).
 //! - KR-HK-005: Invalid CLI hook event key.
 //! - KR-HK-006: CLI hook entry missing required command.
 
@@ -46,6 +48,7 @@ const RULE_IDS: &[&str] = &[
     "KR-AG-012",
     "KR-AG-013",
     "KR-AG-014",
+    "KR-AG-015",
     "KR-HK-005",
     "KR-HK-006",
 ];
@@ -56,12 +59,14 @@ const VALID_AGENT_FIELDS: &[&str] = &[
     "prompt",
     "model",
     "tools",
+    "excludedTools",
     "allowedTools",
     "toolAliases",
     "toolsSettings",
     "resources",
     "mcpServers",
     "includeMcpJson",
+    "includePowers",
     "hooks",
     "keyboardShortcut",
     "welcomeMessage",
@@ -84,8 +89,10 @@ const VALID_PERMISSION_CAPABILITIES: &[&str] = &[
     "mcp",
     "subagent",
     "skill",
+    "power",
     "diagnostics",
     "context",
+    "sandbox_network",
     "all",
     "builtin",
 ];
@@ -758,6 +765,35 @@ fn validate_agent_schema_rules(
     }
 
     validate_permissions_rules(path, current_agent, config, diagnostics);
+
+    // KR-AG-015: unconverted CLI 2.x trust configuration. V3 skips a JSON
+    // profile that has `allowedTools` (or `toolsSettings` used for shell/fs
+    // trust) without a `permissions` block until `/upgrade-agent` converts
+    // it; `toolsSettings` with a `permissions` block is a valid V3 profile.
+    if config.is_rule_enabled("KR-AG-015") {
+        let has_permissions = current_agent
+            .get("permissions")
+            .is_some_and(|p| !p.is_null());
+        let has_v2_trust = current_agent.get("allowedTools").is_some()
+            || current_agent.get("toolsSettings").is_some();
+        if has_v2_trust && !has_permissions {
+            let fields: Vec<&str> = ["allowedTools", "toolsSettings"]
+                .iter()
+                .filter(|field| current_agent.get(**field).is_some())
+                .copied()
+                .collect();
+            diagnostics.push(
+                Diagnostic::warning(
+                    path.to_path_buf(),
+                    1,
+                    0,
+                    "KR-AG-015",
+                    t!("rules.kr_ag_015.message", fields = fields.join(", ")),
+                )
+                .with_suggestion(t!("rules.kr_ag_015.suggestion")),
+            );
+        }
+    }
 }
 
 fn agent_secret_pattern() -> &'static regex::Regex {
@@ -2130,9 +2166,149 @@ Review and implement backend changes."#,
                 "KR-AG-012",
                 "KR-AG-013",
                 "KR-AG-014",
+                "KR-AG-015",
                 "KR-HK-005",
                 "KR-HK-006",
             ]
+        );
+    }
+
+    #[test]
+    fn test_kr_ag_015_flags_v2_trust_fields_without_permissions() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let agents_dir = temp.path().join(".kiro").join("agents");
+        fs::create_dir_all(&agents_dir).unwrap();
+
+        let v2_profile = agents_dir.join("legacy-v2.json");
+        write_agent(
+            &v2_profile,
+            r#"{
+  "name": "legacy-v2",
+  "tools": ["fs_read"],
+  "allowedTools": ["fs_read"],
+  "toolsSettings": {
+    "fs_read": { "allowedPaths": ["src/**"] }
+  }
+}"#,
+        );
+
+        let diagnostics = validate(&v2_profile);
+        assert!(
+            diagnostics.iter().any(|d| d.rule == "KR-AG-015"),
+            "{diagnostics:?}"
+        );
+    }
+
+    #[test]
+    fn test_kr_ag_015_allowed_tools_alone_flags() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let agents_dir = temp.path().join(".kiro").join("agents");
+        fs::create_dir_all(&agents_dir).unwrap();
+
+        let v2_profile = agents_dir.join("allowed-only.json");
+        write_agent(
+            &v2_profile,
+            r#"{
+  "name": "allowed-only",
+  "allowedTools": ["read"]
+}"#,
+        );
+
+        let diagnostics = validate(&v2_profile);
+        assert!(diagnostics.iter().any(|d| d.rule == "KR-AG-015"));
+    }
+
+    #[test]
+    fn test_kr_ag_015_permissions_block_clears_the_flag() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let agents_dir = temp.path().join(".kiro").join("agents");
+        fs::create_dir_all(&agents_dir).unwrap();
+
+        let upgraded = agents_dir.join("upgraded.json");
+        write_agent(
+            &upgraded,
+            r#"{
+  "name": "upgraded",
+  "tools": ["read", "shell"],
+  "toolsSettings": {
+    "subagent": { "availableAgents": ["reviewer"] }
+  },
+  "permissions": {
+    "rules": [
+      { "capability": "shell", "match": ["npm *"], "effect": "allow" }
+    ]
+  }
+}"#,
+        );
+
+        let diagnostics = validate(&upgraded);
+        assert!(
+            diagnostics.iter().all(|d| d.rule != "KR-AG-015"),
+            "{diagnostics:?}"
+        );
+    }
+
+    #[test]
+    fn test_kr_ag_015_absent_when_no_v2_trust_fields() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let agents_dir = temp.path().join(".kiro").join("agents");
+        fs::create_dir_all(&agents_dir).unwrap();
+
+        let plain = agents_dir.join("plain.json");
+        write_agent(
+            &plain,
+            r#"{
+  "name": "plain",
+  "tools": ["read", "shell"],
+  "excludedTools": ["knowledge"],
+  "includePowers": false,
+  "permissions": {
+    "rules": [
+      { "capability": "shell", "match": ["git *"], "effect": "allow" }
+    ]
+  }
+}"#,
+        );
+
+        let diagnostics = validate(&plain);
+        assert!(
+            diagnostics.iter().all(|d| d.rule != "KR-AG-015"),
+            "{diagnostics:?}"
+        );
+        // V3 fields must not trip KR-AG-001 either.
+        assert!(
+            diagnostics.iter().all(|d| d.rule != "KR-AG-001"),
+            "{diagnostics:?}"
+        );
+    }
+
+    #[test]
+    fn test_kr_ag_014_accepts_v3_capabilities() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let agents_dir = temp.path().join(".kiro").join("agents");
+        fs::create_dir_all(&agents_dir).unwrap();
+
+        let agent = agents_dir.join("v3-caps.json");
+        write_agent(
+            &agent,
+            r#"{
+  "name": "v3-caps",
+  "tools": ["web"],
+  "permissions": {
+    "rules": [
+      { "capability": "web_fetch", "effect": "allow" },
+      { "capability": "web_search", "effect": "deny" },
+      { "capability": "power", "effect": "ask" },
+      { "capability": "sandbox_network", "match": ["*.example.com"], "effect": "allow" }
+    ]
+  }
+}"#,
+        );
+
+        let diagnostics = validate(&agent);
+        assert!(
+            diagnostics.iter().all(|d| d.rule != "KR-AG-014"),
+            "{diagnostics:?}"
         );
     }
 }

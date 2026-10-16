@@ -1,8 +1,8 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 455,
-  "last_updated": "2026-10-08",
+  "total_rules": 460,
+  "last_updated": "2026-10-16",
   "schema": {
     "evidence": {
       "source_type": "spec|vendor_docs|vendor_code|paper|community",
@@ -4497,6 +4497,34 @@
       },
       "good_example": "{\n  \"allowedProviders\": [\"anthropic\", \"bedrock\"]\n}",
       "bad_example": "{\n  \"allowedProviders\": [\"anthropic\"]\n}"
+    },
+    {
+      "id": "CC-SET-033",
+      "name": "Idle Compaction Not Boolean",
+      "severity": "MEDIUM",
+      "category": "claude-settings",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.299"
+        ],
+        "verified_on": "2026-10-16",
+        "applies_to": {
+          "tool": "claude-code",
+          "version_range": ">=2.1.290"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"idleCompaction\": false}",
+      "bad_example": "{\"idleCompaction\": \"false\"}"
     },
     {
       "id": "CDX-000",
@@ -9186,6 +9214,35 @@
       "bad_example": "{\"permissions\": {\"rules\": [{\"capability\": \"shell\", \"effect\": \"sometimes\", \"match\": \"npm *\"}]}}"
     },
     {
+      "id": "KR-AG-015",
+      "name": "Unconverted CLI 2.x Trust Configuration",
+      "severity": "MEDIUM",
+      "category": "kiro-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/custom-agents/configuration-reference/",
+          "https://kiro.dev/docs/cli/v3/migration-guide/"
+        ],
+        "verified_on": "2026-10-16",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.30.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"tools\": [\"read\", \"shell\"], \"permissions\": {\"rules\": [{\"capability\": \"shell\", \"match\": [\"npm *\"], \"effect\": \"allow\"}]}}",
+      "bad_example": "{\"tools\": [\"fs_read\"], \"allowedTools\": [\"fs_read\"], \"toolsSettings\": {\"fs_read\": {\"allowedPaths\": [\"src/**\"]}}}"
+    },
+    {
       "id": "KR-HK-001",
       "name": "Invalid Kiro IDE Hook Event Type",
       "severity": "HIGH",
@@ -9469,6 +9526,94 @@
         "likelihood": "MEDIUM",
         "impact": "HIGH"
       }
+    },
+    {
+      "id": "KR-HK-011",
+      "name": "Invalid Kiro V3 Hook Document Version",
+      "severity": "MEDIUM",
+      "category": "kiro-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/hooks/",
+          "https://kiro.dev/docs/cli/v3/hooks-migration/"
+        ],
+        "verified_on": "2026-10-16",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.26.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"version\": \"v1\", \"hooks\": [{\"name\": \"lint\", \"trigger\": \"PostFileSave\", \"action\": {\"type\": \"command\", \"command\": \"npx eslint --fix\"}}]}",
+      "bad_example": "{\"hooks\": [{\"name\": \"lint\", \"trigger\": \"PostFileSave\", \"action\": {\"type\": \"command\", \"command\": \"npx eslint --fix\"}}]}"
+    },
+    {
+      "id": "KR-HK-012",
+      "name": "Invalid Kiro V3 Hook Entry",
+      "severity": "HIGH",
+      "category": "kiro-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/hooks/",
+          "https://kiro.dev/docs/hooks/types/",
+          "https://kiro.dev/docs/cli/v3/hooks-migration/"
+        ],
+        "verified_on": "2026-10-16",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.26.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"name\": \"audit-shell\", \"trigger\": \"PreToolUse\", \"matcher\": \"shell\", \"action\": {\"type\": \"command\", \"command\": \"echo audit\"}}",
+      "bad_example": "{\"name\": \"audit\", \"trigger\": \"onFileChange\", \"action\": {\"type\": \"command\", \"command\": \"echo\"}}"
+    },
+    {
+      "id": "KR-HK-013",
+      "name": "Invalid Kiro V3 Hook Action",
+      "severity": "HIGH",
+      "category": "kiro-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/hooks/",
+          "https://kiro.dev/docs/hooks/actions/"
+        ],
+        "verified_on": "2026-10-16",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.26.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"name\": \"ctx\", \"trigger\": \"UserPromptSubmit\", \"action\": {\"type\": \"agent\", \"prompt\": \"Add repo context\"}}",
+      "bad_example": "{\"name\": \"ctx\", \"trigger\": \"UserPromptSubmit\", \"action\": {\"type\": \"http\", \"url\": \"https://x.example\"}}"
     },
     {
       "id": "KR-MCP-001",
@@ -13320,7 +13465,7 @@
     },
     "kiro-agents": {
       "prefix": "KR-AG",
-      "count": 14,
+      "count": 15,
       "description": "Kiro agent configuration and invocation rules"
     },
     "amp-skills": {
@@ -13350,7 +13495,7 @@
     },
     "kiro-hooks": {
       "prefix": "KR-HK",
-      "count": 10,
+      "count": 13,
       "description": "Kiro IDE and CLI hook rules"
     },
     "kiro-mcp": {
@@ -13370,7 +13515,7 @@
     },
     "claude-settings": {
       "prefix": "CC-SET",
-      "count": 32,
+      "count": 33,
       "description": "Claude Code settings (.claude/settings.json) rules"
     },
     "gemini-agents": {

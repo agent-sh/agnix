@@ -1103,6 +1103,32 @@ rules:
   kr_ag_014:
     message: 'Invalid Kiro universal permissions rule: %{issue}'
     suggestion: Use permissions.rules entries with a documented capability, deny/ask/allow effect, and string-array match/exclude fields
+  kr_ag_015:
+    message: 'Kiro agent uses CLI 2.x trust fields (%{fields}) without a permissions block; CLI V3 skips this profile until it is upgraded'
+    suggestion: Run /upgrade-agent in a V3 session to convert allowedTools/toolsSettings into permissions.rules, or add a permissions block manually
+  kr_hk_011:
+    message: Kiro V3 hook document has %{version_desc}
+    suggestion: Set "version" to "v1" at the top level of the standalone hook file
+    invalid_version: 'invalid version "%{version}" (expected "v1")'
+    missing_version: no version field
+  kr_hk_012:
+    message: Invalid Kiro V3 hook entry
+    suggestion: Use documented PascalCase triggers (SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, PostFileCreate, PostFileSave, PostFileDelete, PreTaskExec, PostTaskExec, Stop, SessionEnd) with required name and action fields
+    parse_error: 'Kiro V3 hook file is not valid JSON: %{error}'
+    missing_hooks: Kiro V3 hook document has no hooks array
+    missing_name: 'hooks[%{index}] is missing the required name field'
+    missing_trigger: 'hooks[%{index}] is missing the required trigger field'
+    invalid_trigger: 'hooks entry uses unknown trigger "%{trigger}"'
+    missing_action: 'hooks[%{index}] is missing the required action field'
+  kr_hk_013:
+    message: Invalid Kiro V3 hook action
+    suggestion: Use action.type "command" with a non-empty command, or "agent" with a non-empty prompt
+    invalid_type: 'hooks[%{index}] action.type "%{kind}" is not command or agent'
+    missing_type: 'hooks[%{index}] action is missing the type field'
+    command_required: 'hooks[%{index}] command action is missing a non-empty command'
+    prompt_required: 'hooks[%{index}] agent action is missing a non-empty prompt'
+    timeout_range: 'hooks[%{index}] timeout %{value}s exceeds the %{limit}s ceiling; 0 disables the timeout'
+    timeout_negative: 'hooks[%{index}] timeout %{value}s is negative; use 0 to disable'
   kr_hk_007:
     message: Kiro hook timeout is out of range (0 or > 300s)
     suggestion: Set 'timeout' between 1 and 300 seconds
@@ -1420,6 +1446,9 @@ rules:
   cc_set_032:
     message: allowedProviders is only honored in Claude Code managed settings
     suggestion: Move allowedProviders to your organization's managed-settings.json.
+  cc_set_033:
+    message: idleCompaction must be a boolean (got %{actual})
+    suggestion: Set idleCompaction to a strict true/false boolean; adjust the 200K-token minimum with CLAUDE_CODE_IDLE_COMPACT_MIN_TOKENS instead.
   cc_pl_016:
     message: Plugin name '%{name}' is not kebab-case
     suggestion: Use lowercase letters, digits, and hyphens only. Claude Code rejects names with control or invisible characters.
