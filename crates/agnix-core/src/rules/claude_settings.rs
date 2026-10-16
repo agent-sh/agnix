@@ -338,9 +338,9 @@ fn validate_idle_compaction(
             line,
             0,
             "CC-SET-033",
-            format!("idleCompaction must be a boolean (got {actual})"),
+            t!("rules.cc_set_033.message", actual = actual),
         )
-        .with_suggestion("Set idleCompaction to a strict true/false boolean; adjust the 200K-token minimum with CLAUDE_CODE_IDLE_COMPACT_MIN_TOKENS instead."),
+        .with_suggestion(t!("rules.cc_set_033.suggestion")),
     );
 }
 

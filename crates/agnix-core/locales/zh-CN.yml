@@ -900,6 +900,9 @@ rules:
   cc_set_032:
     message: allowedProviders 仅在 Claude Code 托管设置中生效
     suggestion: 将 allowedProviders 移至组织的 managed-settings.json。
+  cc_set_033:
+    message: idleCompaction 必须是布尔值（实际为 %{actual}）
+    suggestion: 将 idleCompaction 设为严格的 true/false 布尔值；200K token 下限请改用 CLAUDE_CODE_IDLE_COMPACT_MIN_TOKENS 调整。
   cc_pl_016:
     message: 插件名称 '%{name}' 不是 kebab-case
     suggestion: 只使用小写字母、数字和连字符。Claude Code 会拒绝包含控制字符或不可见字符的名称。
