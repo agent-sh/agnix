@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.58.0] - 2026-10-16
 
+### Migration
+- Remove retired IDs REF-004, OC-DEP-004, CC-MEM-005, CC-MEM-006, CC-MEM-008, AGM-006, and MCP-005 from `disabled_rules`, severity overrides, and explicit rule lists. Generic-instruction advice remains under PE-005; unrelated retirements have no replacement.
+- Quoted-boolean repairs now require `--fix-unsafe`. Review the proposed values first: enabling previously ignored settings can change behavior or security policy. Plain `--fix` leaves these strings unchanged.
+
 ### Removed
 - Retire REF-004: Claude Code supports non-Markdown imports, including `@package.json`.
 - Retire OC-DEP-004: a file named `CONTEXT.md` is not invalid in an explicit OpenCode instructions list.
@@ -66,6 +70,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Review Claude Code v2.1.299, Codex CLI rust-v0.163.0, Cursor 3.24.18 and
   Gemini CLI v0.64.0; refresh the drifted Cline and Cursor spec hashes.
 - Review Kiro CLI 2.30.0 through 2.31.1 (V3 rollout) and add V3 validation.
+- Review Cline v4.1.24; rule symlink loading and skill discovery change runtime behavior, with no new validation constraints.
 
 ## [0.57.0] - 2026-10-08
 

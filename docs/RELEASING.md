@@ -2,18 +2,19 @@
 
 ## Version Bumping
 
-1. Update version in all `Cargo.toml` files:
+1. Update `[workspace.package].version` and the internal `agnix-rules` / `agnix-core` dependency versions in root `Cargo.toml`. Keep the unpublished root test package at `0.0.0`. Refresh `Cargo.lock`, then synchronize distribution manifests:
    ```bash
-   # Workspace root
-   grep -rn 'version = "0\.' Cargo.toml crates/*/Cargo.toml
-   # Update each to the new version
+   cargo metadata --format-version 1 --no-deps >/dev/null
+   bash scripts/sync-versions.sh 0.X.Y
    ```
+   Run a locked workspace check before tagging to verify all six crate versions in `Cargo.lock`. The sync script updates npm, Python, editor and plugin manifests, not Rust versions.
 
 2. Update `CHANGELOG.md` with the new version section.
 
 3. Commit version bump:
    ```bash
-   git add -A
+   git add Cargo.toml Cargo.lock CHANGELOG.md
+   # Also stage the explicitly reviewed manifests changed by sync-versions.sh.
    git commit -m "release: v0.X.Y"
    ```
 
@@ -40,7 +41,7 @@ cargo test --workspace
 cargo test --doc --workspace
 
 # Clippy clean
-cargo clippy --workspace -- -D warnings
+cargo clippy --workspace --all-targets --all-features -- -D warnings
 
 # Eval must be fully green (0 failed cases). It is gated in CI (ci.yml,
 # "Rule efficacy eval"), so a red eval blocks merge - this is just a local
@@ -67,12 +68,12 @@ cargo deny check advisories
    ```
 
 2. The GitHub Actions release workflow will automatically:
-   - Build binaries for Linux (x86_64, aarch64), macOS (x86_64, aarch64), Windows (x86_64)
+   - Build binaries for Linux (x86_64 GNU/musl, aarch64 GNU), macOS (aarch64), and Windows (x86_64)
    - Create a GitHub Release with the binaries
    - Publish the crates, the npm package, and the PyPI wheels
-   - Publish the VS Code extension (if applicable)
+   - Publish VS Code and JetBrains plugins, and move the floating `v0` tag
 
-3. Verify the release at https://github.com/agent-sh/agnix/releases
+3. Verify every publish job, not only the GitHub Release at https://github.com/agent-sh/agnix/releases. Crates and editor publications can fail independently. The workflow publishes `agnix-rules`, then `agnix-core`, then CLI/LSP/MCP; do not manually double-publish.
 
 The Homebrew and Zed jobs open pull requests in their registry repositories.
 Review their diffs, wait for CI and Revuto, and merge those PRs before treating
@@ -170,7 +171,7 @@ No API changes. Examples:
 
 ### Minor Release (0.X.0)
 
-Additive changes only to Public/Stable tier. Examples:
+Additive changes to Public/Stable tier. Before 1.0, necessary breaking changes also use a minor bump with explicit changelog migration instructions, as defined in CONTRIBUTING.md. Examples:
 
 - New validation rules (e.g., adding CC-SK-016)
 - New `FileType` enum variants
@@ -180,7 +181,7 @@ Additive changes only to Public/Stable tier. Examples:
 
 ### Major Release (X.0.0)
 
-Breaking changes to Public/Stable tier. Examples:
+After 1.0, breaking changes to Public/Stable tier require a major bump. Before 1.0, they require a minor bump and documented migration. Examples:
 
 - Removing or renaming a public type or function
 - Changing a function signature (parameter types, return type)
