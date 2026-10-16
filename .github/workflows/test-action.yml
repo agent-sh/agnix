@@ -179,12 +179,35 @@ jobs:
           build-from-source: 'true'
           fail-on-error: 'false'
 
+      - name: Test action (report errors without failing)
+        id: test-report-errors
+        uses: ./
+        with:
+          path: './tests/fixtures/invalid/skills/invalid-name'
+          config: './tests/action.agnix.toml'
+          build-from-source: 'true'
+          fail-on-error: 'false'
+
+      - name: Verify validation errors reported
+        shell: bash
+        # Pass outputs through env and quote them instead of interpolating shell code.
+        env:
+          RESULT: ${{ steps.test-report-errors.outputs.result }}
+          ERRORS: ${{ steps.test-report-errors.outputs.errors }}
+        run: |
+          set -euo pipefail
+          if [ "${RESULT}" != "failure" ] || ! [[ "${ERRORS}" =~ ^[0-9]+$ ]] || [ "${ERRORS}" -eq 0 ]; then
+            echo "Expected invalid fixture to report validation errors despite fail-on-error=false."
+            exit 1
+          fi
+
       - name: Test action (fail on error)
         id: test-fail-on-error
         uses: ./
         continue-on-error: true
         with:
           path: './tests/fixtures/invalid/skills/invalid-name'
+          config: './tests/action.agnix.toml'
           build-from-source: 'true'
           fail-on-error: 'true'
 
@@ -220,6 +243,7 @@ jobs:
         uses: ./
         with:
           path: './tests/fixtures/valid'
+          config: './tests/action.agnix.toml'
           build-from-source: 'false'
           fail-on-error: 'true'
 

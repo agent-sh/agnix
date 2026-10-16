@@ -67,7 +67,7 @@ This section contains all `458` validation rules generated from `knowledge-base/
 | [CC-HK-020](./generated/cc-hk-020.md) | HTTP Hook Missing URL | HIGH | Claude Hooks | No |
 | [CC-HK-021](./generated/cc-hk-021.md) | Invalid If Field | MEDIUM | Claude Hooks | No |
 | [CC-HK-022](./generated/cc-hk-022.md) | Invalid Shell Value | MEDIUM | Claude Hooks | Yes (unsafe) |
-| [CC-HK-023](./generated/cc-hk-023.md) | Once Field Not Boolean | LOW | Claude Hooks | Yes (safe) |
+| [CC-HK-023](./generated/cc-hk-023.md) | Once Field Not Boolean | LOW | Claude Hooks | Yes (unsafe) |
 | [CC-HK-024](./generated/cc-hk-024.md) | Headers Missing AllowedEnvVars | MEDIUM | Claude Hooks | Yes (safe) |
 | [CC-HK-025](./generated/cc-hk-025.md) | Invalid Matcher Value | LOW | Claude Hooks | No |
 | [CC-HK-026](./generated/cc-hk-026.md) | MCP Tool Hook Missing Server | HIGH | Claude Hooks | No |
@@ -83,7 +83,7 @@ This section contains all `458` validation rules generated from `knowledge-base/
 | [CC-MEM-011](./generated/cc-mem-011.md) | Invalid Paths Glob in Rules | HIGH | Claude Memory | No |
 | [CC-MEM-012](./generated/cc-mem-012.md) | Rules File Unknown Frontmatter Key | MEDIUM | Claude Memory | Yes (unsafe) |
 | [CC-OS-001](./generated/cc-os-001.md) | Output Style Missing Description | LOW | claude-output-styles | No |
-| [CC-OS-002](./generated/cc-os-002.md) | Output Style Invalid keep-coding-instructions Type | HIGH | claude-output-styles | Yes (safe) |
+| [CC-OS-002](./generated/cc-os-002.md) | Output Style Invalid keep-coding-instructions Type | HIGH | claude-output-styles | Yes (unsafe) |
 | [CC-OS-003](./generated/cc-os-003.md) | Output Style Unknown Frontmatter Key | MEDIUM | claude-output-styles | No |
 | [CC-OS-004](./generated/cc-os-004.md) | Output Style Empty Body | MEDIUM | claude-output-styles | No |
 | [CC-OS-005](./generated/cc-os-005.md) | Output Style Name Exceeds Length | LOW | claude-output-styles | No |
@@ -124,24 +124,24 @@ This section contains all `458` validation rules generated from `knowledge-base/
 | [CC-SK-021](./generated/cc-sk-021.md) | Hardcoded User Directory Path | MEDIUM | Claude Skills | No |
 | [CC-SK-022](./generated/cc-sk-022.md) | Reserved Claude Skill Name | HIGH | Claude Skills | No |
 | [CC-SET-001](./generated/cc-set-001.md) | Invalid prUrlTemplate Setting | MEDIUM | Claude Settings | No |
-| [CC-SET-002](./generated/cc-set-002.md) | Non-boolean channelsEnabled Setting | MEDIUM | Claude Settings | Yes (safe) |
+| [CC-SET-002](./generated/cc-set-002.md) | Non-boolean channelsEnabled Setting | MEDIUM | Claude Settings | Yes (unsafe) |
 | [CC-SET-003](./generated/cc-set-003.md) | Invalid worktree.baseRef Value | MEDIUM | Claude Settings | No |
 | [CC-SET-004](./generated/cc-set-004.md) | Invalid Sandbox Path Setting | MEDIUM | Claude Settings | No |
 | [CC-SET-005](./generated/cc-set-005.md) | Invalid parentSettingsBehavior Value | MEDIUM | Claude Settings | No |
-| [CC-SET-006](./generated/cc-set-006.md) | Non-boolean disableBundledSkills Setting | MEDIUM | Claude Settings | Yes (safe) |
-| [CC-SET-007](./generated/cc-set-007.md) | Non-boolean enforceAvailableModels Setting | MEDIUM | Claude Settings | Yes (safe) |
-| [CC-SET-008](./generated/cc-set-008.md) | Non-boolean sandbox.allowAppleEvents Setting | MEDIUM | Claude Settings | Yes (safe) |
-| [CC-SET-009](./generated/cc-set-009.md) | Non-boolean attribution.sessionUrl Setting | MEDIUM | Claude Settings | Yes (safe) |
+| [CC-SET-006](./generated/cc-set-006.md) | Non-boolean disableBundledSkills Setting | MEDIUM | Claude Settings | Yes (unsafe) |
+| [CC-SET-007](./generated/cc-set-007.md) | Non-boolean enforceAvailableModels Setting | MEDIUM | Claude Settings | Yes (unsafe) |
+| [CC-SET-008](./generated/cc-set-008.md) | Non-boolean sandbox.allowAppleEvents Setting | MEDIUM | Claude Settings | Yes (unsafe) |
+| [CC-SET-009](./generated/cc-set-009.md) | Non-boolean attribution.sessionUrl Setting | MEDIUM | Claude Settings | Yes (unsafe) |
 | [CC-SET-010](./generated/cc-set-010.md) | Invalid teammateMode Setting | MEDIUM | Claude Settings | No |
-| [CC-SET-011](./generated/cc-set-011.md) | Non-boolean respondToBashCommands Setting | MEDIUM | Claude Settings | Yes (safe) |
+| [CC-SET-011](./generated/cc-set-011.md) | Non-boolean respondToBashCommands Setting | MEDIUM | Claude Settings | Yes (unsafe) |
 | [CC-SET-012](./generated/cc-set-012.md) | Invalid sandbox.credentials Setting | MEDIUM | Claude Settings | No |
-| [CC-SET-013](./generated/cc-set-013.md) | Non-boolean autoMode.classifyAllShell Setting | MEDIUM | Claude Settings | Yes (safe) |
+| [CC-SET-013](./generated/cc-set-013.md) | Non-boolean autoMode.classifyAllShell Setting | MEDIUM | Claude Settings | Yes (unsafe) |
 | [CC-SET-014](./generated/cc-set-014.md) | autoMode Setting Ignored in settings.local.json | MEDIUM | Claude Settings | No |
 | [CC-SET-015](./generated/cc-set-015.md) | Dead pluginConfigs in Project-Level Settings | MEDIUM | Claude Settings | No |
 | [CC-SET-016](./generated/cc-set-016.md) | Deprecated Tool-Scoped Permission Rule Form | LOW | Claude Settings | Yes (unsafe) |
-| [CC-SET-017](./generated/cc-set-017.md) | Non-boolean sandbox.filesystem.disabled Setting | MEDIUM | Claude Settings | Yes (safe) |
-| [CC-SET-018](./generated/cc-set-018.md) | Non-boolean emojiCompletionEnabled Setting | MEDIUM | Claude Settings | Yes (safe) |
-| [CC-SET-019](./generated/cc-set-019.md) | Non-boolean sandbox.network.strictAllowlist Setting | MEDIUM | Claude Settings | Yes (safe) |
+| [CC-SET-017](./generated/cc-set-017.md) | Non-boolean sandbox.filesystem.disabled Setting | MEDIUM | Claude Settings | Yes (unsafe) |
+| [CC-SET-018](./generated/cc-set-018.md) | Non-boolean emojiCompletionEnabled Setting | MEDIUM | Claude Settings | Yes (unsafe) |
+| [CC-SET-019](./generated/cc-set-019.md) | Non-boolean sandbox.network.strictAllowlist Setting | MEDIUM | Claude Settings | Yes (unsafe) |
 | [CC-SET-020](./generated/cc-set-020.md) | Invalid workflowSizeGuideline Setting | MEDIUM | Claude Settings | No |
 | [CC-SET-021](./generated/cc-set-021.md) | Ineffective Project Remote Control Auto-start | MEDIUM | Claude Settings | No |
 | [CC-SET-022](./generated/cc-set-022.md) | Invalid crossSessionInbound Setting | MEDIUM | Claude Settings | No |
@@ -155,7 +155,7 @@ This section contains all `458` validation rules generated from `knowledge-base/
 | [CC-SET-030](./generated/cc-set-030.md) | Local Command in managedMcpServers | HIGH | Claude Settings | No |
 | [CC-SET-031](./generated/cc-set-031.md) | Invalid maxEffortLevel Setting | MEDIUM | Claude Settings | No |
 | [CC-SET-032](./generated/cc-set-032.md) | Ineffective Project allowedProviders Setting | MEDIUM | Claude Settings | No |
-| [CC-SET-033](./generated/cc-set-033.md) | Idle Compaction Not Boolean | MEDIUM | Claude Settings | Yes (safe) |
+| [CC-SET-033](./generated/cc-set-033.md) | Idle Compaction Not Boolean | MEDIUM | Claude Settings | Yes (unsafe) |
 | [CDX-000](./generated/cdx-000.md) | TOML Parse Error | HIGH | Codex CLI | No |
 | [CDX-001](./generated/cdx-001.md) | Invalid Approval Mode | HIGH | Codex CLI | Yes (unsafe) |
 | [CDX-002](./generated/cdx-002.md) | Invalid Full Auto Error Mode | HIGH | Codex CLI | Yes (unsafe) |
@@ -373,7 +373,7 @@ This section contains all `458` validation rules generated from `knowledge-base/
 | [MCP-022](./generated/mcp-022.md) | Invalid args Array Type | HIGH | MCP | No |
 | [MCP-023](./generated/mcp-023.md) | Duplicate MCP Server Names | HIGH | MCP | No |
 | [MCP-024](./generated/mcp-024.md) | Empty MCP Server Configuration | HIGH | MCP | No |
-| [MCP-025](./generated/mcp-025.md) | Non-boolean alwaysLoad in MCP Server Config | MEDIUM | MCP | Yes (safe) |
+| [MCP-025](./generated/mcp-025.md) | Non-boolean alwaysLoad in MCP Server Config | MEDIUM | MCP | Yes (unsafe) |
 | [MCP-026](./generated/mcp-026.md) | Reserved MCP Server Name | HIGH | MCP | No |
 | [OC-001](./generated/oc-001.md) | Invalid Share Mode | HIGH | OpenCode | Yes (unsafe) |
 | [OC-002](./generated/oc-002.md) | Invalid Instruction Path | HIGH | OpenCode | No |

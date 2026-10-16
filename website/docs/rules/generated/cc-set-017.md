@@ -12,7 +12,7 @@ keywords: ["CC-SET-017", "non-boolean sandbox.filesystem.disabled setting", "cla
 - **Severity**: `MEDIUM`
 - **Category**: `Claude Settings`
 - **Normative Level**: `MUST`
-- **Auto-Fix**: `Yes (safe)`
+- **Auto-Fix**: `Yes (unsafe)`
 - **Verified On**: `2026-07-26`
 
 ## Applicability

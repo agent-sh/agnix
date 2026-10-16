@@ -12,7 +12,7 @@ keywords: ["CC-SET-009", "non-boolean attribution.sessionurl setting", "claude s
 - **Severity**: `MEDIUM`
 - **Category**: `Claude Settings`
 - **Normative Level**: `MUST`
-- **Auto-Fix**: `Yes (safe)`
+- **Auto-Fix**: `Yes (unsafe)`
 - **Verified On**: `2026-06-21`
 
 ## Applicability

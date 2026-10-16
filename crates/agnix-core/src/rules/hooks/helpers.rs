@@ -1645,7 +1645,7 @@ pub(super) fn validate_all_raw_hooks(
                                                 end,
                                                 quoted,
                                                 t!("rules.boolean_unwrap.json_fix", value = quoted),
-                                                true,
+                                                false,
                                             ));
                                         }
                                     }

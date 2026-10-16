@@ -1861,7 +1861,7 @@
       },
       "fix": {
         "autofix": true,
-        "fix_safety": "safe"
+        "fix_safety": "unsafe"
       },
       "good_example": "{ \"type\": \"command\", \"command\": \"echo hi\", \"once\": true }",
       "bad_example": "{ \"type\": \"command\", \"command\": \"echo hi\", \"once\": \"yes\" }"
@@ -2352,7 +2352,7 @@
       },
       "fix": {
         "autofix": true,
-        "fix_safety": "safe"
+        "fix_safety": "unsafe"
       },
       "good_example": "---\nname: Concise\ndescription: Short replies\nkeep-coding-instructions: true\n---\nBe brief.",
       "bad_example": "---\nname: Concise\ndescription: Short replies\nkeep-coding-instructions: \"yes\"\n---\nBe brief."
@@ -3517,7 +3517,7 @@
       },
       "fix": {
         "autofix": true,
-        "fix_safety": "safe"
+        "fix_safety": "unsafe"
       },
       "good_example": "{\n  \"channelsEnabled\": true\n}",
       "bad_example": "{\n  \"channelsEnabled\": \"true\"\n}"
@@ -3632,7 +3632,7 @@
       },
       "fix": {
         "autofix": true,
-        "fix_safety": "safe"
+        "fix_safety": "unsafe"
       },
       "good_example": "{\n  \"disableBundledSkills\": true\n}",
       "bad_example": "{\n  \"disableBundledSkills\": \"true\"\n}"
@@ -3662,7 +3662,7 @@
       },
       "fix": {
         "autofix": true,
-        "fix_safety": "safe"
+        "fix_safety": "unsafe"
       },
       "good_example": "{\n  \"enforceAvailableModels\": true\n}",
       "bad_example": "{\n  \"enforceAvailableModels\": \"true\"\n}"
@@ -3693,7 +3693,7 @@
       },
       "fix": {
         "autofix": true,
-        "fix_safety": "safe"
+        "fix_safety": "unsafe"
       },
       "good_example": "{\n  \"sandbox\": {\"allowAppleEvents\": true}\n}",
       "bad_example": "{\n  \"sandbox\": {\"allowAppleEvents\": \"true\"}\n}"
@@ -3723,7 +3723,7 @@
       },
       "fix": {
         "autofix": true,
-        "fix_safety": "safe"
+        "fix_safety": "unsafe"
       },
       "good_example": "{\n  \"attribution\": {\"sessionUrl\": false}\n}",
       "bad_example": "{\n  \"attribution\": {\"sessionUrl\": \"false\"}\n}"
@@ -3782,7 +3782,7 @@
       },
       "fix": {
         "autofix": true,
-        "fix_safety": "safe"
+        "fix_safety": "unsafe"
       },
       "good_example": "{\n  \"respondToBashCommands\": false\n}",
       "bad_example": "{\n  \"respondToBashCommands\": \"false\"\n}"
@@ -3844,7 +3844,7 @@
       },
       "fix": {
         "autofix": true,
-        "fix_safety": "safe"
+        "fix_safety": "unsafe"
       },
       "good_example": "{\n  \"autoMode\": {\"classifyAllShell\": true}\n}",
       "bad_example": "{\n  \"autoMode\": {\"classifyAllShell\": \"true\"}\n}"
@@ -3959,7 +3959,7 @@
       },
       "fix": {
         "autofix": true,
-        "fix_safety": "safe"
+        "fix_safety": "unsafe"
       },
       "good_example": "{\n  \"sandbox\": {\"filesystem\": {\"disabled\": false}}\n}",
       "bad_example": "{\n  \"sandbox\": {\"filesystem\": {\"disabled\": \"false\"}}\n}"
@@ -3989,7 +3989,7 @@
       },
       "fix": {
         "autofix": true,
-        "fix_safety": "safe"
+        "fix_safety": "unsafe"
       },
       "good_example": "{\n  \"emojiCompletionEnabled\": true\n}",
       "bad_example": "{\n  \"emojiCompletionEnabled\": \"true\"\n}"
@@ -4019,7 +4019,7 @@
       },
       "fix": {
         "autofix": true,
-        "fix_safety": "safe"
+        "fix_safety": "unsafe"
       },
       "good_example": "{\n  \"sandbox\": {\"network\": {\"strictAllowlist\": true}}\n}",
       "bad_example": "{\n  \"sandbox\": {\"network\": {\"strictAllowlist\": \"true\"}}\n}"
@@ -4425,7 +4425,7 @@
       },
       "fix": {
         "autofix": true,
-        "fix_safety": "safe"
+        "fix_safety": "unsafe"
       },
       "good_example": "{\"idleCompaction\": false}",
       "bad_example": "{\"idleCompaction\": \"false\"}"
@@ -10740,7 +10740,7 @@
       },
       "fix": {
         "autofix": true,
-        "fix_safety": "safe"
+        "fix_safety": "unsafe"
       },
       "good_example": "{\n  \"mcpServers\": {\n    \"fs\": {\n      \"type\": \"stdio\",\n      \"command\": \"node\",\n      \"alwaysLoad\": true\n    }\n  }\n}",
       "bad_example": "{\n  \"mcpServers\": {\n    \"fs\": {\n      \"type\": \"stdio\",\n      \"command\": \"node\",\n      \"alwaysLoad\": \"true\"\n    }\n  }\n}"

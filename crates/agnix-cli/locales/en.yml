@@ -30,8 +30,8 @@ rules:
   cop_027:
     fix: "Replace infer with invocation controls, preserving explicit fields"
   boolean_unwrap:
-    json_fix: "Convert quoted %{value} to a JSON boolean"
-    yaml_fix: "Convert quoted %{value} to a YAML boolean"
+    json_fix: "Convert quoted %{value} to a JSON boolean (may change behavior or security policy)"
+    yaml_fix: "Convert quoted %{value} to a YAML boolean (may change behavior or security policy)"
   as_001:
     message: SKILL.md must have YAML frontmatter between --- markers
     suggestion: Add frontmatter between --- markers

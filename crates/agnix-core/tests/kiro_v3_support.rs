@@ -174,6 +174,62 @@ fn kiro_alias_fixes_each_entry_without_touching_payloads() {
 }
 
 #[test]
+fn kiro_alias_escaped_keys_and_values_have_exact_safe_fixes() {
+    let path = Path::new(".kiro/hooks/escaped.json");
+    let content = r#"{
+      "note": "é🙂",
+      "ho\u006fks": [{"name":"é🙂", "trig\u0067er":"agent\u0053pawn", "action":{"type":"command","command":"agentSpawn", "trigger":"stop"}}],
+      "ver\u0073ion": "1"
+    }"#;
+    let diagnostics = validate(path, content, &LintConfig::default());
+    assert_eq!(diagnostics.len(), 2);
+    let hint = diagnostics.iter().find(|d| d.rule == "KR-HK-014").unwrap();
+    assert_eq!(hint.line, 3);
+    assert_eq!(hint.fixes.len(), 1);
+    let fix = &hint.fixes[0];
+    assert_eq!(
+        &content[fix.start_byte..fix.end_byte],
+        r#""agent\u0053pawn""#
+    );
+    let prefix = &content[..fix.start_byte];
+    assert_eq!(
+        hint.column,
+        prefix.rsplit('\n').next().unwrap().chars().count() + 1
+    );
+    let fs = Arc::new(MockFileSystem::new());
+    fs.add_file(path, content);
+    apply_fixes_with_fs(&diagnostics, false, true, Some(fs.clone())).unwrap();
+    assert_eq!(
+        fs.read_to_string(path).unwrap(),
+        content.replace(r#""agent\u0053pawn""#, r#""SessionStart""#)
+    );
+}
+
+#[test]
+fn kiro_alias_ambiguous_decoded_paths_never_fixed() {
+    let path = Path::new(".kiro/hooks/duplicates.json");
+    let hook =
+        r#"{"name":"a","trigger":"agentSpawn","action":{"type":"command","command":"echo"}}"#;
+    for content in [
+        format!(r#"{{"version":"v1","hooks":[],"hooks":[{hook}]}}"#),
+        format!(r#"{{"version":"v1","hooks":[{hook}],"ho\u006fks":[{hook}]}}"#),
+        format!(r#"{{"version":"v1","ho\u006fks":[],"hooks":[],"hooks":[{hook}]}}"#),
+        format!(
+            r#"{{"version":"v1","hooks":[{}]}}"#,
+            hook.replace(
+                r#""trigger":"agentSpawn""#,
+                r#""trigger":"stop","trig\u0067er":"agentSpawn""#
+            )
+        ),
+    ] {
+        let diagnostics = validate(path, &content, &LintConfig::default());
+        assert_eq!(diagnostics.len(), 1, "{content}: {diagnostics:?}");
+        assert_eq!(diagnostics[0].rule, "KR-HK-014");
+        assert!(diagnostics[0].fixes.is_empty(), "{content}");
+    }
+}
+
+#[test]
 fn kiro_manual_and_session_end_are_valid_v3_triggers() {
     let path = Path::new(".kiro/hooks/cli.json");
     for trigger in ["Manual", "SessionEnd"] {

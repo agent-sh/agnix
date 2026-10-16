@@ -39,8 +39,8 @@ rules:
     type_error: "El campo 'project_doc_max_bytes' debe ser un entero no negativo"
     suggestion: "Establece project_doc_max_bytes como un entero no negativo (predeterminado: 32768; cero es válido y el esquema no tiene máximo)"
   boolean_unwrap:
-    json_fix: "Convertir el valor entre comillas %{value} en un booleano JSON"
-    yaml_fix: "Convertir el valor entre comillas %{value} en un booleano YAML"
+    json_fix: "Convertir el valor entre comillas %{value} en un booleano JSON (puede cambiar el comportamiento o la política de seguridad)"
+    yaml_fix: "Convertir el valor entre comillas %{value} en un booleano YAML (puede cambiar el comportamiento o la política de seguridad)"
   as_001:
     message: SKILL.md debe tener frontmatter YAML entre marcadores ---
     suggestion: Agrega frontmatter entre marcadores ---

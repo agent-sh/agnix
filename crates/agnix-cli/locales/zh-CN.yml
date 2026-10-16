@@ -39,8 +39,8 @@ rules:
     type_error: "字段 'project_doc_max_bytes' 必须是非负整数"
     suggestion: "将 project_doc_max_bytes 设置为非负整数（默认值：32768；零有效，模式没有最大值限制）"
   boolean_unwrap:
-    json_fix: "将带引号的 %{value} 转换为 JSON 布尔值"
-    yaml_fix: "将带引号的 %{value} 转换为 YAML 布尔值"
+    json_fix: "将带引号的 %{value} 转换为 JSON 布尔值（可能改变行为或安全策略）"
+    yaml_fix: "将带引号的 %{value} 转换为 YAML 布尔值（可能改变行为或安全策略）"
   as_001:
     message: SKILL.md 必须在 --- 标记之间包含 YAML frontmatter
     suggestion: 在 --- 标记之间添加 frontmatter

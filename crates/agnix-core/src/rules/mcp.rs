@@ -1874,7 +1874,7 @@ fn validate_server(
                 end,
                 quoted,
                 t!("rules.boolean_unwrap.json_fix", value = quoted),
-                true,
+                false,
             ));
         }
 
@@ -3811,7 +3811,7 @@ mod tests {
             let hit = diagnostics.iter().find(|d| d.rule == "MCP-025").unwrap();
             assert_eq!(hit.fixes.len(), 1, "{content}");
             let fix = &hit.fixes[0];
-            assert!(fix.safe);
+            assert!(!fix.safe);
             let mut fixed = content.to_owned();
             fixed.replace_range(fix.start_byte..fix.end_byte, &fix.replacement);
             let mut expected: serde_json::Value = serde_json::from_str(content).unwrap();
@@ -3850,7 +3850,7 @@ mod tests {
     }
 
     #[test]
-    fn test_mcp_025_quoted_true_has_safe_unwrap() {
+    fn test_mcp_025_quoted_true_has_unsafe_unwrap() {
         let content = r#"{
             "mcpServers": {
                 "fs": { "type": "stdio", "command": "node", "alwaysLoad": "true" }
@@ -3861,13 +3861,13 @@ mod tests {
         assert_eq!(hits.len(), 1);
         assert!(hits[0].has_fixes());
         let fix = &hits[0].fixes[0];
-        assert!(fix.safe);
+        assert!(!fix.safe);
         assert_eq!(fix.replacement, "true");
         assert_eq!(content.get(fix.start_byte..fix.end_byte), Some("\"true\""));
     }
 
     #[test]
-    fn test_mcp_025_quoted_false_has_safe_unwrap() {
+    fn test_mcp_025_quoted_false_has_unsafe_unwrap() {
         let content = r#"{
             "mcpServers": {
                 "fs": { "type": "stdio", "command": "node", "alwaysLoad": "false" }
@@ -3877,7 +3877,7 @@ mod tests {
         let hits: Vec<_> = diagnostics.iter().filter(|d| d.rule == "MCP-025").collect();
         assert_eq!(hits.len(), 1);
         let fix = &hits[0].fixes[0];
-        assert!(fix.safe);
+        assert!(!fix.safe);
         assert_eq!(fix.replacement, "false");
         assert_eq!(content.get(fix.start_byte..fix.end_byte), Some("\"false\""));
     }
@@ -3907,7 +3907,7 @@ mod tests {
         let hits: Vec<_> = diagnostics.iter().filter(|d| d.rule == "MCP-025").collect();
         assert_eq!(hits.len(), 1);
         let fix = &hits[0].fixes[0];
-        assert!(fix.safe);
+        assert!(!fix.safe);
         assert_eq!(fix.replacement, "false");
         assert_eq!(content.get(fix.start_byte..fix.end_byte), Some("\"false\""));
     }

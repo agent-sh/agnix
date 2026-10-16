@@ -357,7 +357,7 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 ### CC-SET-002 [MEDIUM] Non-boolean channelsEnabled Setting
 **Requirement**: `channelsEnabled` in `.claude/settings.json` / `.local.json` / `managed-settings.json` MUST be a boolean when present (Claude Code 2.1.128+). A quoted `"true"` or numeric value leaves Channels silently disabled - same footgun shape as MCP-025 `alwaysLoad`.
 **Detection**: Parse settings.json; look up top-level `channelsEnabled`; flag (warning) string / number / array / object values. Explicit `false` and `null` are not flagged.
-**Fix**: Manual - replace the value with an unquoted `true` or `false`.
+**Fix**: Opt-in unsafe autofix converts exact quoted `true` or `false` to a boolean. This can activate ignored settings or change security policy; plain `--fix` leaves them unchanged. Other invalid values require manual correction.
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.128 (introduced `--channels` support for console API-key auth; console orgs with managed settings must opt in via `channelsEnabled: true`)
 
 <a id="cc-set-003"></a>
@@ -385,28 +385,28 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 ### CC-SET-006 [MEDIUM] Non-boolean disableBundledSkills Setting
 **Requirement**: `disableBundledSkills` in `.claude/settings.json` / `.local.json` / `managed-settings.json` MUST be a boolean when present (Claude Code 2.1.169+). `true` hides the bundled skills, workflows, and built-in slash commands from the model; equivalent to setting the `CLAUDE_CODE_DISABLE_BUNDLED_SKILLS` environment variable to `1`. Only strict `true`/`false` is documented - a quoted `"true"` or a truthy number is not a documented opt-in (same footgun shape as CC-SET-002).
 **Detection**: Parse settings.json; look up top-level `disableBundledSkills`; flag (warning) non-boolean types (string, number, array, object). `null` values and absent keys are not flagged.
-**Fix**: Manual - set `disableBundledSkills` to an unquoted `true` or `false`, or use the `CLAUDE_CODE_DISABLE_BUNDLED_SKILLS` environment variable.
+**Fix**: Opt-in unsafe autofix converts exact quoted `true` or `false` to a boolean. This can activate ignored settings or change security policy; plain `--fix` leaves them unchanged. Other invalid values require manual correction.
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.169 (added `disableBundledSkills`), code.claude.com/docs/en/settings
 
 <a id="cc-set-007"></a>
 ### CC-SET-007 [MEDIUM] Non-boolean enforceAvailableModels Setting
 **Requirement**: `enforceAvailableModels` in `.claude/settings.json` / `.local.json` / `managed-settings.json` MUST be a boolean when present (Claude Code 2.1.175+). `true` enforces the managed `availableModels` allowlist for users; only strict `true`/`false` is documented.
 **Detection**: Parse settings.json; look up top-level `enforceAvailableModels`; flag (warning) non-boolean types (string, number, array, object). `null` values and absent keys are not flagged.
-**Fix**: Manual - set `enforceAvailableModels` to an unquoted `true` or `false`.
+**Fix**: Opt-in unsafe autofix converts exact quoted `true` or `false` to a boolean. This can activate ignored settings or change security policy; plain `--fix` leaves them unchanged. Other invalid values require manual correction.
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.175 (added `enforceAvailableModels`), code.claude.com/docs/en/settings
 
 <a id="cc-set-008"></a>
 ### CC-SET-008 [MEDIUM] Non-boolean sandbox.allowAppleEvents Setting
 **Requirement**: `sandbox.allowAppleEvents` in `.claude/settings.json` / `.local.json` / `managed-settings.json` MUST be a boolean when present (Claude Code 2.1.181+). `true` opts macOS sandboxed commands into sending Apple Events; only strict `true`/`false` is documented.
 **Detection**: Parse settings.json; walk `sandbox.allowAppleEvents`; flag (warning) non-boolean types (string, number, array, object). `null` values and absent keys are not flagged. Non-object `sandbox` values are ignored by this rule to avoid conflating shape errors with the specific boolean opt-in.
-**Fix**: Manual - set `sandbox.allowAppleEvents` to an unquoted `true` or `false`, or remove it to keep Apple Events blocked.
+**Fix**: Opt-in unsafe autofix converts exact quoted `true` or `false` to a boolean. This can activate ignored settings or change security policy; plain `--fix` leaves them unchanged. Other invalid values require manual correction.
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.181 (added `sandbox.allowAppleEvents`), code.claude.com/docs/en/settings
 
 <a id="cc-set-009"></a>
 ### CC-SET-009 [MEDIUM] Non-boolean attribution.sessionUrl Setting
 **Requirement**: `attribution.sessionUrl` in `.claude/settings.json` / `.local.json` / `managed-settings.json` MUST be a boolean when present (Claude Code 2.1.183+). `true` keeps the default claude.ai session link in commits and PR descriptions created from web or Remote Control sessions; `false` omits it. Only strict `true`/`false` is documented.
 **Detection**: Parse settings.json; walk `attribution.sessionUrl`; flag (warning) non-boolean types (string, number, array, object). `null` values and absent keys are not flagged. Non-object `attribution` values are ignored by this rule to avoid conflating container shape errors with the specific boolean toggle.
-**Fix**: Manual - set `attribution.sessionUrl` to an unquoted `true` or `false`.
+**Fix**: Opt-in unsafe autofix converts exact quoted `true` or `false` to a boolean. This can activate ignored settings or change security policy; plain `--fix` leaves them unchanged. Other invalid values require manual correction.
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.183 (added `attribution.sessionUrl`), code.claude.com/docs/en/settings
 
 <a id="cc-set-010"></a>
@@ -420,7 +420,7 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 ### CC-SET-011 [MEDIUM] Non-boolean respondToBashCommands Setting
 **Requirement**: `respondToBashCommands` in `.claude/settings.json` / `.local.json` / `managed-settings.json` MUST be a boolean when present (Claude Code 2.1.186+). `false` keeps `!` bash command output context-only; only strict `true`/`false` is documented.
 **Detection**: Parse settings.json; look up top-level `respondToBashCommands`; flag (warning) non-boolean types (string, number, array, object). `null` values and absent keys are not flagged.
-**Fix**: Manual - set `respondToBashCommands` to an unquoted `true` or `false`.
+**Fix**: Opt-in unsafe autofix converts exact quoted `true` or `false` to a boolean. This can activate ignored settings or change security policy; plain `--fix` leaves them unchanged. Other invalid values require manual correction.
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.186 (added `respondToBashCommands`)
 
 <a id="cc-set-012"></a>
@@ -434,7 +434,7 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 ### CC-SET-013 [MEDIUM] Non-boolean autoMode.classifyAllShell Setting
 **Requirement**: `autoMode.classifyAllShell` in `.claude/settings.json` / `.local.json` / `managed-settings.json` MUST be a boolean when present (Claude Code 2.1.193+). `true` routes all Bash/PowerShell commands through the auto-mode classifier; only strict `true`/`false` is documented.
 **Detection**: Parse settings.json; walk `autoMode.classifyAllShell`; flag (warning) non-boolean types (string, number, array, object). `null` values and absent keys are not flagged. Non-object `autoMode` values are ignored by this rule to avoid conflating container shape errors with the specific boolean toggle.
-**Fix**: Manual - set `autoMode.classifyAllShell` to an unquoted `true` or `false`.
+**Fix**: Opt-in unsafe autofix converts exact quoted `true` or `false` to a boolean. This can activate ignored settings or change security policy; plain `--fix` leaves them unchanged. Other invalid values require manual correction.
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.193 (added `autoMode.classifyAllShell`)
 
 <a id="cc-set-014"></a>
@@ -462,21 +462,21 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 ### CC-SET-017 [MEDIUM] Non-boolean sandbox.filesystem.disabled Setting
 **Requirement**: `sandbox.filesystem.disabled` in `.claude/settings.json` / `.local.json` / `managed-settings.json` MUST be a boolean when present (Claude Code 2.1.216+). `true` disables filesystem isolation while preserving network isolation; only strict `true` / `false` is accepted.
 **Detection**: Parse settings.json; walk `sandbox.filesystem.disabled`; flag (warning) non-boolean types (string, number, array, object). `null` values and absent keys are not flagged. Non-object `sandbox` or `filesystem` values are ignored by this rule to avoid conflating container shape errors with the boolean toggle.
-**Fix**: Manual - set `sandbox.filesystem.disabled` to an unquoted `true` or `false`.
+**Fix**: Opt-in unsafe autofix converts exact quoted `true` or `false` to a boolean. This can activate ignored settings or change security policy; plain `--fix` leaves them unchanged. Other invalid values require manual correction.
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.216, code.claude.com/docs/en/sandboxing
 
 <a id="cc-set-018"></a>
 ### CC-SET-018 [MEDIUM] Non-boolean emojiCompletionEnabled Setting
 **Requirement**: `emojiCompletionEnabled` in `.claude/settings.json` / `.local.json` / `managed-settings.json` MUST be a boolean when present (Claude Code 2.1.217+). The setting controls named emoji completion and accepts only strict `true` / `false` values.
 **Detection**: Parse settings.json; look up top-level `emojiCompletionEnabled`; flag (warning) non-boolean types (string, number, array, object). `null` values and absent keys are not flagged.
-**Fix**: Manual - set `emojiCompletionEnabled` to an unquoted `true` or `false`.
+**Fix**: Opt-in unsafe autofix converts exact quoted `true` or `false` to a boolean. This can activate ignored settings or change security policy; plain `--fix` leaves them unchanged. Other invalid values require manual correction.
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.217, code.claude.com/docs/en/settings
 
 <a id="cc-set-019"></a>
 ### CC-SET-019 [MEDIUM] Non-boolean sandbox.network.strictAllowlist Setting
 **Requirement**: `sandbox.network.strictAllowlist` MUST be a boolean when present in Claude Code 2.1.219+
 **Detection**: Parse settings JSON and flag non-boolean, non-null `sandbox.network.strictAllowlist` values
-**Fix**: Manual - set the field to an unquoted `true` or `false`
+**Fix**: Opt-in unsafe autofix converts exact quoted `true` or `false` to a boolean. This can activate ignored settings or change security policy; plain `--fix` leaves them unchanged. Other invalid values require manual correction.
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.219, code.claude.com/docs/en/sandboxing
 
 <a id="cc-set-020"></a>
@@ -579,7 +579,7 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 ### CC-SET-033 [MEDIUM] Idle Compaction Not Boolean
 **Requirement**: `idleCompaction` MUST be a strict boolean when present. Claude Code 2.1.290 added idle compaction with the `"idleCompaction": false` settings.json opt-out (v2.1.299 release notes); a quoted `"false"` or truthy number silently keeps idle compaction enabled.
 **Detection**: Parse settings JSON and flag a non-boolean, non-null `idleCompaction` value.
-**Fix**: Manual - set a strict `true`/`false`; adjust the 200K-token minimum with `CLAUDE_CODE_IDLE_COMPACT_MIN_TOKENS`.
+**Fix**: Opt-in unsafe autofix converts exact quoted `true` or `false` to a boolean. This can activate ignored settings or change security policy; plain `--fix` leaves them unchanged. Other invalid values require manual correction.
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.299
 
 ---
@@ -957,7 +957,7 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 ### CC-HK-023 [LOW] Once Field Not Boolean
 **Requirement**: once field MAY be present and must be boolean
 **Detection**: Check once field type
-**Fix**: Manual
+**Fix**: Opt-in unsafe autofix converts exact quoted `true` or `false` to a boolean. This can activate ignored settings or change security policy; plain `--fix` leaves them unchanged. Other invalid values require manual correction.
 **Source**: code.claude.com/docs/en/hooks
 
 <a id="cc-hk-024"></a>
@@ -1147,7 +1147,7 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 ### CC-OS-002 [HIGH] Output Style Invalid keep-coding-instructions Type
 **Requirement**: `keep-coding-instructions` MUST be a YAML boolean (`true` or `false`)
 **Detection**: Frontmatter parse - reject string `"yes"`, number `1`, `null`, etc.
-**Fix**: Manual - use `keep-coding-instructions: true` or `false`
+**Fix**: Opt-in unsafe autofix converts exact quoted `true` or `false` to a boolean. This can activate ignored settings or change security policy; plain `--fix` leaves them unchanged. Other invalid values require manual correction.
 **Source**: code.claude.com/docs/en/output-styles
 
 <a id="cc-os-003"></a>
@@ -1587,7 +1587,7 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 ### MCP-025 [MEDIUM] Non-boolean alwaysLoad in MCP Server Config
 **Requirement**: `mcpServers.*.alwaysLoad` MUST be a boolean when present (Claude Code 2.1.121+)
 **Detection**: Validate `mcpServers.*.alwaysLoad` type; flag string / number / array / object values
-**Fix**: Replace the value with an unquoted `true` or `false` (non-boolean values are not consistently applied by Claude Code - they may be treated as truthy in some code paths and ignored in others)
+**Fix**: Opt-in unsafe autofix converts exact quoted `true` or `false` to a boolean. This can activate ignored settings or change security policy; plain `--fix` leaves them unchanged. Other invalid values require manual correction.
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.121
 
 <a id="mcp-026"></a>

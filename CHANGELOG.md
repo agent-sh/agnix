@@ -31,11 +31,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (key added in v2.1.290, documented by the v2.1.299 release notes).
 
 ### Fixed
+- Index Kiro V3 hook edit spans once per document, preserving duplicate decoded-key guards and avoiding quadratic alias validation and diagnostic-location scans.
 - Missing or empty MCP tool descriptions no longer produce MCP-002 errors. Descriptions are optional in the MCP schema; MCP-004 provides informational advice instead.
 - Add opt-in unsafe migrations for CC-SET-016 permission tool names, COP-027 `infer`, and KR-HK-011 version strings `1` / `1.0`; add unsafe OC-DEP-005 cleanup only after manually copying TUI settings. Keep OC-DEP-001 safe and OC-DEP-002 without a key-only fix.
 - CDX-005 accepts zero and removes the invented 65536-byte ceiling on `project_doc_max_bytes`; negative and non-integer values remain invalid.
 - CDX-CFG-001 follows the current Codex approval-policy schema, including granular objects.
-- Add exact quoted-boolean fixes for Claude settings, hook `once`, output-style `keep-coding-instructions`, and MCP `alwaysLoad`. Other wrong types remain manual corrections.
+- Add opt-in unsafe quoted-boolean fixes for Claude settings, hook `once`, output-style `keep-coding-instructions`, and MCP `alwaysLoad`. Converting ignored strings can activate security-sensitive behavior, so plain `--fix` leaves them untouched. Other wrong types remain manual corrections.
 - Restore VS Code lint and native integration checks: configure ESLint, use the
   compiled test entry point, isolate the test profile, and check explicit settings.
 - Accept the Codex rust-v0.162.0 config keys: the `[tui]` options (`mouse_scroll_speed`,

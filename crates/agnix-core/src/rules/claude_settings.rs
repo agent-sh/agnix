@@ -3230,8 +3230,9 @@ fn unambiguous_json_strings(content: &str) -> Option<Vec<(usize, usize, String, 
     Some(tokens)
 }
 
-/// Emit a CC-SET boolean-type warning. Exact quoted `"true"` / `"false"` get a
-/// safe unwrap to the bare JSON boolean. Other wrong types stay diagnostics
+/// Emit a CC-SET boolean-type warning. Exact quoted `"true"` / `"false"` get an
+/// opt-in unsafe unwrap to the bare JSON boolean: activating an ignored string
+/// may change behavior or security policy. Other wrong types stay diagnostics
 /// without a fix — rewriting a number, null, array, or object would invent a
 /// value the user did not write.
 fn boolean_type_diagnostic(
@@ -3261,7 +3262,7 @@ fn boolean_type_diagnostic(
             end,
             quoted,
             t!("rules.boolean_unwrap.json_fix", value = quoted),
-            true,
+            false,
         ));
     }
 
@@ -3293,7 +3294,10 @@ mod tests {
             "{rule} quoted boolean should carry a fix"
         );
         let fix = &hits[0].fixes[0];
-        assert!(fix.safe, "{rule} quoted-boolean unwrap must be safe");
+        assert!(
+            !fix.safe,
+            "{rule} quoted-boolean unwrap must require unsafe opt-in"
+        );
         assert_eq!(fix.replacement, replacement);
         let expected = format!("\"{replacement}\"");
         assert_eq!(
@@ -3311,7 +3315,7 @@ mod tests {
     }
 
     #[test]
-    fn test_quoted_boolean_settings_get_safe_unwrap() {
+    fn test_quoted_boolean_settings_get_unsafe_unwrap() {
         let cases = [
             (
                 "CC-SET-002",
@@ -3471,7 +3475,7 @@ mod tests {
         assert_eq!(hits.len(), 1);
         assert!(
             !hits[0].has_fixes(),
-            "ambiguous quoted-boolean spans must not get a safe fix"
+            "ambiguous quoted-boolean spans must not get a fix"
         );
     }
 

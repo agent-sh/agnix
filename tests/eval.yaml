@@ -78,8 +78,8 @@ cases:
     description: "Invalid jsonrpc version triggers MCP-001"
 
   - file: fixtures/mcp/missing-required-fields.mcp.json
-    expected: [MCP-002]
-    description: "Missing required fields triggers MCP-002"
+    expected: [MCP-002, MCP-004]
+    description: "Missing inputSchema triggers MCP-002; missing description also triggers advisory MCP-004"
 
   - file: fixtures/mcp/invalid-input-schema.mcp.json
     expected: [MCP-003]
