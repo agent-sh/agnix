@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.58.0] - 2026-10-16
+
 ### Removed
 - Retire REF-004: Claude Code supports non-Markdown imports, including `@package.json`.
 - Retire OC-DEP-004: a file named `CONTEXT.md` is not invalid in an explicit OpenCode instructions list.
