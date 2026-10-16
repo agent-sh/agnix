@@ -723,40 +723,32 @@ fn test_category_disabled_copilot() {
 }
 
 #[test]
-fn test_cop_rules_work_with_all_targets() {
-    // COP-* rules are NOT target-specific
-    let targets = [
-        TargetTool::Generic,
+fn test_cop_rules_only_for_generic_target() {
+    // COP-* rules are GitHub Copilot's: a specific legacy target selects only
+    // its own tool, the same as `tools = ["<tool>"]`, while Generic runs all.
+    let mut config = LintConfig::default();
+    dm(&mut config).target = TargetTool::Generic;
+    for rule in ["COP-001", "COP-002", "COP-003", "COP-004"] {
+        assert!(
+            config.is_rule_enabled(rule),
+            "{rule} should run for Generic"
+        );
+    }
+
+    for target in [
         TargetTool::ClaudeCode,
         TargetTool::Cursor,
         TargetTool::Codex,
         TargetTool::Kiro,
-    ];
-
-    for target in targets {
+    ] {
         let mut config = LintConfig::default();
         dm(&mut config).target = target;
-
-        assert!(
-            config.is_rule_enabled("COP-001"),
-            "COP-001 should be enabled for {:?}",
-            target
-        );
-        assert!(
-            config.is_rule_enabled("COP-002"),
-            "COP-002 should be enabled for {:?}",
-            target
-        );
-        assert!(
-            config.is_rule_enabled("COP-003"),
-            "COP-003 should be enabled for {:?}",
-            target
-        );
-        assert!(
-            config.is_rule_enabled("COP-004"),
-            "COP-004 should be enabled for {:?}",
-            target
-        );
+        for rule in ["COP-001", "COP-002", "COP-003", "COP-004"] {
+            assert!(
+                !config.is_rule_enabled(rule),
+                "{rule} should not run for {target:?}"
+            );
+        }
     }
 }
 
@@ -824,30 +816,48 @@ fn test_category_disabled_cursor() {
 }
 
 #[test]
-fn test_cur_rules_work_with_all_targets() {
-    // CUR-* rules are NOT target-specific
-    let targets = [
-        TargetTool::Generic,
+fn test_cur_rules_follow_target() {
+    // CUR-* rules are Cursor's: they run for Generic and Cursor targets only,
+    // the same as `tools = ["cursor"]`.
+    for (target, expected) in [
+        (TargetTool::Generic, true),
+        (TargetTool::Cursor, true),
+        (TargetTool::ClaudeCode, false),
+        (TargetTool::Codex, false),
+        (TargetTool::Kiro, false),
+    ] {
+        let mut config = LintConfig::default();
+        dm(&mut config).target = target;
+        for rule in ["CUR-001", "CUR-006"] {
+            assert_eq!(
+                config.is_rule_enabled(rule),
+                expected,
+                "{rule} for {target:?}"
+            );
+        }
+    }
+}
+
+#[test]
+fn test_legacy_target_matches_single_tool_list() {
+    // `target = X` and `tools = ["X"]` must enable exactly the same rules.
+    for target in [
         TargetTool::ClaudeCode,
         TargetTool::Cursor,
         TargetTool::Codex,
         TargetTool::Kiro,
-    ];
-
-    for target in targets {
-        let mut config = LintConfig::default();
-        dm(&mut config).target = target;
-
-        assert!(
-            config.is_rule_enabled("CUR-001"),
-            "CUR-001 should be enabled for {:?}",
-            target
-        );
-        assert!(
-            config.is_rule_enabled("CUR-006"),
-            "CUR-006 should be enabled for {:?}",
-            target
-        );
+    ] {
+        let mut legacy = LintConfig::default();
+        dm(&mut legacy).target = target;
+        let mut tools = LintConfig::default();
+        dm(&mut tools).tools = vec![target.tool_name().unwrap().to_string()];
+        for rule in agnix_rules::RULES_DATA.iter().map(|(id, _)| *id) {
+            assert_eq!(
+                legacy.is_rule_enabled(rule),
+                tools.is_rule_enabled(rule),
+                "{rule} differs for {target:?}"
+            );
+        }
     }
 }
 

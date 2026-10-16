@@ -941,6 +941,20 @@ pub enum TargetTool {
     Kiro,
 }
 
+impl TargetTool {
+    /// The tool name this target selects, as used in the `tools` array, or
+    /// `None` for `Generic`, which selects every rule.
+    pub fn tool_name(self) -> Option<&'static str> {
+        match self {
+            TargetTool::Generic => None,
+            TargetTool::ClaudeCode => Some("claude-code"),
+            TargetTool::Cursor => Some("cursor"),
+            TargetTool::Codex => Some("codex"),
+            TargetTool::Kiro => Some("kiro"),
+        }
+    }
+}
+
 impl LintConfig {
     /// Load config from file
     pub fn load<P: AsRef<Path>>(path: P) -> anyhow::Result<Self> {

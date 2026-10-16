@@ -59,6 +59,16 @@ pub enum TargetArg {
     Kiro,
 }
 
+/// Apply `--target`: a specific tool selects that tool's rules, the same as
+/// `tools = ["<tool>"]`. It sets the tools list rather than the deprecated
+/// `target` config field, so no warning names a field the user never wrote,
+/// and the default `generic` leaves the loaded config untouched.
+fn apply_cli_target(config: &mut LintConfig, target: TargetArg) {
+    if let Some(tool) = TargetTool::from(target).tool_name() {
+        config.set_tools(vec![tool.to_string()]);
+    }
+}
+
 impl From<TargetArg> for TargetTool {
     fn from(arg: TargetArg) -> Self {
         match arg {
@@ -94,7 +104,7 @@ struct Cli {
     #[arg(short, long)]
     strict: bool,
 
-    /// Target tool (generic, claude-code, cursor, codex, kiro)
+    /// Validate for one tool only, like `tools = ["<tool>"]` in .agnix.toml (generic runs every rule)
     #[arg(short, long, value_enum, default_value_t = TargetArg::Generic)]
     target: TargetArg,
 
@@ -614,7 +624,7 @@ fn validate_command(paths: &[PathBuf], cli: &Cli) -> anyhow::Result<()> {
         }
     }
 
-    config.set_target(cli.target.into());
+    apply_cli_target(&mut config, cli.target);
     if cli.ignore_inline_suppressions {
         config.set_ignore_inline_suppressions(true);
     }
@@ -1021,7 +1031,7 @@ fn run_single_validation(
     let config_path = resolve_config_path(path, config_override);
 
     let mut config = load_config_or_default(config_path.as_ref())?;
-    config.set_target(target.into());
+    apply_cli_target(&mut config, target);
     if ignore_inline_suppressions {
         config.set_ignore_inline_suppressions(true);
     }

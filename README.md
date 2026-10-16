@@ -112,8 +112,8 @@ agnix --dry-run --show-fixes .  # Preview fixes with inline diff output
 agnix --strict .     # Strict mode (warnings = errors)
 agnix --format github .  # GitHub Actions annotations
 agnix explain MCP-018    # Explain a rule and its evidence
-agnix --target claude-code .  # Legacy target preset (primarily affects CC-* rules)
-agnix --target kiro .         # Legacy target preset (use tools = [...] for tool-only filtering)
+agnix --target claude-code .  # Only Claude Code rules plus generic ones, like tools = ["claude-code"]
+agnix --target kiro .         # Only Kiro rules plus generic ones, like tools = ["kiro"]
 ```
 
 [Full CLI reference](https://agent-sh.github.io/agnix/docs/configuration) | [Full rules reference](https://agent-sh.github.io/agnix/docs/rules)

@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Migration
+- `--target <tool>` and a specific `target` in `.agnix.toml` now select only that tool's rules plus the generic ones, exactly like `tools = ["<tool>"]`. Before, they only disabled CC-* rules, so `--target cursor` still ran Codex, Copilot and Kiro rules. Without `--target`, the CLI keeps the config file's `target` instead of resetting it to `generic`.
 - Remove the retired ID CDX-AG-004 from `disabled_rules`, severity overrides, and explicit rule lists. XP-007 covers oversized AGENTS.md files.
 - The CLI now finds `.agnix.toml` in the target's parent directories, up to the repository root, so a project's config applies wherever agnix runs from. Previously it looked only in the target directory and the working directory.
 
@@ -19,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Retire CDX-AG-004: its 100,000-byte AGENTS.md limit had no source. XP-007 checks AGENTS.md against Codex's documented 32 KiB `project_doc_max_bytes` default, and XP-009 checks the combined chain.
 
 ### Fixed
+- `--target` no longer prints a warning that the `target` config field is deprecated: the flag sets the tools list for the run.
+- Tool filtering treats every CC-* rule as Claude Code's, including CC-MEM-* rules, whose family the prefix table left out.
 - REF-002 reports broken links whose text contains inline code again, such as ``[`docs/RECIPES.md`](docs/RECIPES.md)``. The link scanner split text at code spans, so these links were never checked. REF-002 also checks link reference definitions (`[guide]: docs/guide.md`), drops link titles and `?query` suffixes, unwraps `<...>` destinations, and decodes `%XX` escapes before the existence check.
 - REF-002 expands `${CLAUDE_SKILL_DIR}` and `${CLAUDE_PLUGIN_ROOT}` before checking a link, and skips links built on other variables. Targets such as `${CLAUDE_SKILL_DIR}/jobs/scan.md` were reported missing although they exist.
 - REF-002 no longer treats prose such as `[name](redis.io link)` as a link: CommonMark allows only a quoted title after the destination.

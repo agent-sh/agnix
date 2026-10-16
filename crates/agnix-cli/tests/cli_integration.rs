@@ -1885,6 +1885,48 @@ fn test_config_error_with_json_output_goes_to_stderr() {
 // ============================================================================
 
 #[test]
+fn test_target_selects_one_tool_like_tools_list() {
+    // `--target cursor` used to disable only CC-* rules and still ran Codex
+    // rules. It now selects Cursor alone, like `tools = ["cursor"]`, and does
+    // not warn about the deprecated `target` config field.
+    let tmp = tempfile::tempdir().unwrap();
+    std::fs::write(
+        tmp.path().join("AGENTS.md"),
+        "# Project\n\nSee `docs/missing-guide.md` for setup.\n",
+    )
+    .unwrap();
+
+    let run = |target: &str, format: &str| {
+        assert_cmd::Command::cargo_bin("agnix")
+            .unwrap()
+            .current_dir(tmp.path())
+            .args([".", "--target", target, "--format", format])
+            .output()
+            .unwrap()
+    };
+    let rules = |target: &str| {
+        let json: serde_json::Value = serde_json::from_slice(&run(target, "json").stdout).unwrap();
+        json["diagnostics"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|d| d["rule"].as_str().unwrap().to_string())
+            .collect::<Vec<_>>()
+    };
+
+    assert!(rules("codex").iter().any(|r| r == "CDX-AG-005"));
+    assert!(
+        !rules("cursor").iter().any(|r| r.starts_with("CDX-")),
+        "Codex rules must not run for --target cursor"
+    );
+    let stderr = String::from_utf8_lossy(&run("cursor", "text").stderr).to_string();
+    assert!(
+        !stderr.contains("deprecated"),
+        "--target is a CLI flag, not the deprecated config field: {stderr}"
+    );
+}
+
+#[test]
 fn test_invalid_target_rejected() {
     let mut cmd = agnix();
     cmd.arg("tests/fixtures/valid")

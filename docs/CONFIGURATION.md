@@ -296,9 +296,10 @@ Version-awareness (`VER-*`) is always active and configured via `tool_versions` 
 
 ## Target Filtering
 
-When `target` is set:
-- **ClaudeCode** or **Generic**: All rules enabled
-- **Cursor** or **Codex**: CC-* rules disabled
+A specific `target` (or `--target` on the CLI) selects one tool, exactly like `tools = ["<tool>"]`: that tool's rules run, plus the rules that apply to every tool (AS-*, XML-*, REF-*, XP-*, AGM-*, MCP-*, PE-*). Other tools' rules are skipped. For example, `--target cursor` runs CUR-* but not CDX-*, COP-* or CC-*.
+- **Generic**: all rules run.
+- `tools`, when set, overrides `target`.
+- `--target <tool>` sets the tools list for that run; without the flag, the config file's `target` or `tools` applies.
 
 ## Version-Aware Validation
 

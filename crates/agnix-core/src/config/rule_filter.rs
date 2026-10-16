@@ -36,28 +36,37 @@ impl<'a> DefaultRuleFilter<'a> {
     fn is_rule_for_target(&self, rule_id: &str) -> bool {
         // If tools array is specified, use it for filtering
         if !self.tools.is_empty() {
-            return self.is_rule_for_tools(rule_id);
+            return Self::is_rule_for_tool(rule_id, |tool| {
+                // Case-insensitive, and accept backward-compat aliases
+                // (e.g., "copilot" for "github-copilot")
+                self.tools
+                    .iter()
+                    .any(|t| t.eq_ignore_ascii_case(tool) || Self::is_tool_alias(t, tool))
+            });
         }
 
-        // Legacy: CC-* rules only apply to ClaudeCode or Generic targets
-        if rule_id.starts_with("CC-") {
-            return matches!(self.target, TargetTool::ClaudeCode | TargetTool::Generic);
+        // A specific legacy target filters exactly like `tools = ["<tool>"]`:
+        // `target = "cursor"` used to disable only CC-* rules, so it still ran
+        // Codex, Copilot and Kiro rules. Generic selects every rule.
+        match self.target.tool_name() {
+            Some(name) => Self::is_rule_for_tool(rule_id, |tool| tool == name),
+            None => true,
         }
-        // All other rules apply to all targets (see TOOL_RULE_PREFIXES for tool-specific rules)
-        true
     }
 
-    /// Check if a rule applies based on the tools array
-    fn is_rule_for_tools(&self, rule_id: &str) -> bool {
+    /// Check if a rule applies to the selected tools: a tool-specific rule (see
+    /// TOOL_RULE_PREFIXES) applies only when `selected` accepts its tool.
+    fn is_rule_for_tool(rule_id: &str, selected: impl Fn(&str) -> bool) -> bool {
         for (prefix, tool) in agnix_rules::TOOL_RULE_PREFIXES {
             if rule_id.starts_with(prefix) {
-                // Check if the required tool is in the tools list (case-insensitive)
-                // Also accept backward-compat aliases (e.g., "copilot" for "github-copilot")
-                return self
-                    .tools
-                    .iter()
-                    .any(|t| t.eq_ignore_ascii_case(tool) || Self::is_tool_alias(t, tool));
+                return selected(tool);
             }
+        }
+
+        // CC-* rules are Claude Code's by naming convention, also in a family the
+        // prefix table leaves out because one rule names no tool (CC-MEM-007).
+        if rule_id.starts_with("CC-") {
+            return selected("claude-code");
         }
 
         // Generic rules (AS-*, XML-*, REF-*, XP-*, AGM-*, MCP-*, PE-*) apply to all tools
