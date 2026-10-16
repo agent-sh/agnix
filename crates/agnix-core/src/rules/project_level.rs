@@ -280,7 +280,8 @@ pub(crate) fn run_project_level_checks(
         // how small each one is. Nested AGENTS.md is a supported hierarchy, which
         // recommends splitting across nested directories precisely to stay under
         // this cap.
-        let chains = codex_instruction_chains(instruction_file_paths, root_dir);
+        let chains =
+            codex_instruction_chains(instruction_file_paths, root_dir, config.fs().as_ref());
 
         // Attribute each over-cap chain to the *largest* file in it, not to the
         // file where the running total happens to cross.
@@ -307,6 +308,14 @@ pub(crate) fn run_project_level_checks(
             }
 
             if total <= CODEX_BYTE_LIMIT {
+                continue;
+            }
+
+            // A one-file chain over the cap is exactly what XP-007 reports for
+            // that file, so XP-009 would only repeat it.
+            if let [only] = chain.as_slice()
+                && config.for_path(only).is_rule_enabled("XP-007")
+            {
                 continue;
             }
 
@@ -359,7 +368,8 @@ pub(crate) fn run_project_level_checks(
 /// (typically the Git root), Codex walks down to your current working
 /// directory", taking at most one file per directory in the order
 /// `AGENTS.override.md`, then `AGENTS.md`. Sibling subtrees are separate
-/// chains and are never concatenated, so each is summed on its own.
+/// chains and are never concatenated, so each is summed on its own. A leaf
+/// inside a nested Git repository starts its chain at that repository.
 ///
 /// Only files the project walk already collected are considered, so this adds no
 /// filesystem traversal. Each chain is returned root-first, the order Codex
@@ -367,6 +377,7 @@ pub(crate) fn run_project_level_checks(
 fn codex_instruction_chains(
     instruction_file_paths: &[PathBuf],
     root_dir: &Path,
+    fs: &dyn crate::fs::FileSystem,
 ) -> Vec<Vec<PathBuf>> {
     // `AGENTS.override.md` first, then `AGENTS.md`. Codex also honors any
     // `project_doc_fallback_filenames`, but those live in the user's Codex
@@ -415,9 +426,17 @@ fn codex_instruction_chains(
                 .any(|other| other != *dir && other.starts_with(dir.as_path()))
         })
         .map(|leaf| {
+            // Codex starts at the Git root, so a nested repository (its own
+            // `.git` directory or file) begins a new chain: files above it are
+            // never loaded for this leaf.
+            let start = leaf
+                .ancestors()
+                .take_while(|dir| dir.starts_with(root_dir))
+                .find(|dir| fs.exists(&dir.join(".git")))
+                .unwrap_or(root_dir);
             let mut chain: Vec<PathBuf> = by_dir
                 .iter()
-                .filter(|(dir, _)| leaf.starts_with(dir.as_path()))
+                .filter(|(dir, _)| leaf.starts_with(dir.as_path()) && dir.starts_with(start))
                 .map(|(_, file)| file.clone())
                 .collect();
             // BTreeMap iteration is shallow-to-deep for nested paths, matching

@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Migration
+- Remove the retired ID CDX-AG-004 from `disabled_rules`, severity overrides, and explicit rule lists. XP-007 covers oversized AGENTS.md files.
+- The CLI now finds `.agnix.toml` in the target's parent directories, up to the repository root, so a project's config applies wherever agnix runs from. Previously it looked only in the target directory and the working directory.
+
+### Added
+- CC-SK-023 warns when a Claude Code skill without `argument-hint` or `arguments` has an unescaped `$N` inside code. Claude Code substitutes `$N` in code blocks too, so `awk '{print $1}'` receives the second skill argument whenever the skill is invoked with two or more arguments. Escape it as `\$1`.
+- XP-SK-002 reports hardcoded user-home paths in skills owned by clients other than Claude Code, using the same scan as CC-SK-021. The Agent Skills spec asks for paths relative to the skill root.
+
+### Removed
+- Retire CDX-AG-004: its 100,000-byte AGENTS.md limit had no source. XP-007 checks AGENTS.md against Codex's documented 32 KiB `project_doc_max_bytes` default, and XP-009 checks the combined chain.
+
+### Fixed
+- REF-002 reports broken links whose text contains inline code again, such as ``[`docs/RECIPES.md`](docs/RECIPES.md)``. The link scanner split text at code spans, so these links were never checked. REF-002 also checks link reference definitions (`[guide]: docs/guide.md`), drops link titles and `?query` suffixes, unwraps `<...>` destinations, and decodes `%XX` escapes before the existence check.
+- REF-002 expands `${CLAUDE_SKILL_DIR}` and `${CLAUDE_PLUGIN_ROOT}` before checking a link, and skips links built on other variables. Targets such as `${CLAUDE_SKILL_DIR}/jobs/scan.md` were reported missing although they exist.
+- REF-002 no longer treats prose such as `[name](redis.io link)` as a link: CommonMark allows only a quoted title after the destination.
+- XML-001 no longer reports prose placeholders such as `ssh <host> 'df -h'`, `run_key=<date>)`, `Result<Outcome>` and `<brief description of bug>`. An unclosed tag still counts when it starts its line, runs straight into content (`<thinking>Think`), has attributes, or is closed elsewhere in the file. On a 17-tree corpus this removed 208 of 216 XML-001 findings.
+- REF-001 and CC-MEM-001 no longer read prose such as `@mcp.tool-decorated` as an import: a bare name needs an alphanumeric file extension.
+- CDX-AG-005 checks only inline-code spans shaped like a relative file path, skips fenced code, resolves from the project root as well as the AGENTS.md directory, and reports once per file as intended. Method names, globs, placeholders, versions and bare file names produced about 95% of its findings, up to 113 in one file.
+- CC-SK-016 ignores `$N` inside code, which is usually shell or awk syntax where an `argument-hint` does not help, and honors the documented `\$1` escape.
+- AS-013 ignores reference-directory names inside URLs (`.../static-assets/...`) and strips backticks and `*` from paths, so `` `scripts/vendor/` `` no longer counts as two levels deep.
+- CC-SK-021 treats elided names such as `C:\Users\...` as placeholders.
+- Skills under `~/.codex/skills` resolve to Codex and skills under `~/.config/opencode/skills`, OpenCode's global skills directory, to OpenCode, instead of falling back to the Claude Code rules. Hardcoded home paths in those skills are reported by XP-SK-002.
+- Gemini CLI extension hooks (`.gemini/hooks/hooks.json`) and Cursor plugin manifests (`.cursor-plugin/plugin.json`) are no longer validated as Claude Code files.
+- KR-AG-009 reports a `prompt` that is set but empty or not a string, and no longer requires the field. The Kiro configuration reference lists `prompt` among the sections an agent file "can include", and Markdown agents take the prompt from the body. Renamed to "Agent Prompt Empty Or Invalid".
+- XP-004 reports the same file and line on every run. Package managers were grouped in a hash map, so the reported side of a conflict changed between runs.
+- The CLI applies a `.agnix.toml` from the working directory only to targets inside that directory. Linting another tree from a project directory applied that project's `exclude` patterns to it, which could skip every file.
+- `removed-rules.json` now redirects AS-018, AS-019 (removed in 0.28.0), CC-SK-003 and CC-HK-019 (removed in 0.44.0).
+- XP-009 no longer repeats XP-007 for a single AGENTS.md over the cap, and starts a chain at a nested Git repository, where Codex starts, instead of adding the instruction files above it.
+- pi subagent definitions in `~/.pi/agent/agents/` and `.pi/agents/` are no longer validated as Claude Code agents.
+- KR-AG-006 ignores `@` mentions inside code in an agent prompt, such as `require('@scope/pkg')` in a fenced block.
+- XP-003 checks tool directories such as `.claude/` in every file but reports machine paths (`~/.<dir>/`, `/Users/<name>/`, `~/Library/`) only in files agents load. In generic Markdown, such as design docs, those paths mostly document where a tool keeps its data.
+
 ## [0.58.0] - 2026-10-16
 
 ### Migration

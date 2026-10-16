@@ -459,6 +459,44 @@ fn xp009_flags_cumulative_chain_over_the_cap() {
     );
 }
 
+/// A single AGENTS.md over the cap is XP-007's finding; XP-009 must not repeat it.
+#[test]
+fn xp009_single_file_chain_defers_to_xp007() {
+    let temp = tempfile::TempDir::new().unwrap();
+    fs::write(temp.path().join("AGENTS.md"), "x".repeat(40 * 1024)).unwrap();
+
+    let result = validate_project(temp.path(), &LintConfig::default()).expect("validate_project");
+    let rules: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.rule == "XP-007" || d.rule == "XP-009")
+        .map(|d| d.rule.as_str())
+        .collect();
+    assert_eq!(rules, ["XP-007"], "got: {:?}", result.diagnostics);
+}
+
+/// Codex starts at the Git root, so a nested repository does not inherit the
+/// AGENTS.md above it.
+#[test]
+fn xp009_chain_stops_at_nested_git_root() {
+    let temp = tempfile::TempDir::new().unwrap();
+    fs::write(temp.path().join("AGENTS.md"), "r".repeat(20 * 1024)).unwrap();
+    let nested = temp.path().join("src").join("pkg");
+    fs::create_dir_all(nested.join(".git")).unwrap();
+    fs::write(nested.join("AGENTS.md"), "p".repeat(20 * 1024)).unwrap();
+
+    let result = validate_project(temp.path(), &LintConfig::default()).expect("validate_project");
+    let xp009: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.rule == "XP-009")
+        .collect();
+    assert!(
+        xp009.is_empty(),
+        "each repository's chain is 20 KB, under the cap: {xp009:?}"
+    );
+}
+
 /// A chain that fits stays clean, so the rule is not simply counting files.
 #[test]
 fn xp009_quiet_when_chain_fits_under_the_cap() {

@@ -94,29 +94,31 @@ pub(crate) fn detect_client(path: &Path) -> SkillClient {
         .collect();
 
     // Walk backwards from the end to find "skills", then look at the component before it.
-    let mut found_skills = false;
-    for component in components.iter().rev() {
-        if *component == "skills" {
-            found_skills = true;
-            continue;
+    let Some(skills_idx) = components.iter().rposition(|c| *c == "skills") else {
+        return SkillClient::Unknown;
+    };
+    let Some(owner_idx) = skills_idx.checked_sub(1) else {
+        return SkillClient::Unknown;
+    };
+    match components[owner_idx] {
+        ".claude" => SkillClient::ClaudeCode,
+        ".cursor" => SkillClient::Cursor,
+        ".cline" => SkillClient::Cline,
+        ".github" => SkillClient::Copilot,
+        ".agents" => SkillClient::Codex, // NOTE: Amp also uses .agents; AMP-SK-001 unreachable without config context
+        // `$CODEX_HOME/skills`, by default `~/.codex/skills`, including the
+        // `.system` skills Codex installs there.
+        ".codex" => SkillClient::Codex,
+        ".opencode" => SkillClient::OpenCode,
+        // OpenCode's global skills: `~/.config/opencode/skills/<name>/SKILL.md`.
+        "opencode" if owner_idx > 0 && components[owner_idx - 1] == ".config" => {
+            SkillClient::OpenCode
         }
-        if found_skills {
-            return match *component {
-                ".claude" => SkillClient::ClaudeCode,
-                ".cursor" => SkillClient::Cursor,
-                ".cline" => SkillClient::Cline,
-                ".github" => SkillClient::Copilot,
-                ".agents" => SkillClient::Codex, // NOTE: Amp also uses .agents; AMP-SK-001 unreachable without config context
-                ".opencode" => SkillClient::OpenCode,
-                ".windsurf" => SkillClient::Windsurf,
-                ".kiro" => SkillClient::Kiro,
-                ".roo" => SkillClient::RooCode,
-                _ => SkillClient::Unknown,
-            };
-        }
+        ".windsurf" => SkillClient::Windsurf,
+        ".kiro" => SkillClient::Kiro,
+        ".roo" => SkillClient::RooCode,
+        _ => SkillClient::Unknown,
     }
-
-    SkillClient::Unknown
 }
 
 /// Normalize a plugin component path without allowing it to escape the plugin
@@ -584,6 +586,33 @@ mod tests {
         assert_eq!(
             detect_client(Path::new(".agents/skills/my-skill/SKILL.md")),
             SkillClient::Codex
+        );
+    }
+
+    #[test]
+    fn test_detect_client_codex_home_skills() {
+        assert_eq!(
+            detect_client(Path::new("/home/u/.codex/skills/ship/SKILL.md")),
+            SkillClient::Codex
+        );
+        assert_eq!(
+            detect_client(Path::new(
+                "/home/u/.codex/skills/.system/skill-creator/SKILL.md"
+            )),
+            SkillClient::Codex
+        );
+    }
+
+    #[test]
+    fn test_detect_client_opencode_global_config() {
+        assert_eq!(
+            detect_client(Path::new("/home/u/.config/opencode/skills/review/SKILL.md")),
+            SkillClient::OpenCode
+        );
+        // A plain `opencode/` directory is not OpenCode's config directory.
+        assert_eq!(
+            detect_client(Path::new("projects/opencode/skills/review/SKILL.md")),
+            SkillClient::Unknown
         );
     }
 

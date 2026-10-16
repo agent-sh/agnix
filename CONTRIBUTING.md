@@ -99,9 +99,9 @@ Rule IDs follow the format `[PREFIX]-[NUMBER]` where the prefix indicates the ru
 | `CC-OS-` | 6 | CC-OS-001 through CC-OS-006 |
 | `CC-PL-` | 15 | CC-PL-001 through CC-PL-015 |
 | `CC-SET-` | 16 | CC-SET-001 through CC-SET-016 |
-| `CC-SK-` | 21 | CC-SK-001 through CC-SK-021 |
+| `CC-SK-` | 19 | CC-SK-001 through CC-SK-002, CC-SK-004 through CC-SK-008, CC-SK-010, CC-SK-013 through CC-SK-023 |
 | `CDX-` | 7 | CDX-000 through CDX-006 |
-| `CDX-AG-` | 7 | CDX-AG-001 through CDX-AG-007 |
+| `CDX-AG-` | 6 | CDX-AG-001 through CDX-AG-003, CDX-AG-005 through CDX-AG-007 |
 | `CDX-APP-` | 3 | CDX-APP-001 through CDX-APP-003 |
 | `CDX-CFG-` | 30 | CDX-CFG-001 through CDX-CFG-030 |
 | `CDX-PL-` | 16 | CDX-PL-001 through CDX-PL-016 |
@@ -141,7 +141,7 @@ Rule IDs follow the format `[PREFIX]-[NUMBER]` where the prefix indicates the ru
 | `WS-SK-` | 1 | WS-SK-001 |
 | `XML-` | 3 | XML-001 through XML-003 |
 | `XP-` | 8 | XP-001 through XP-008 |
-| `XP-SK-` | 1 | XP-SK-001 |
+| `XP-SK-` | 2 | XP-SK-001 through XP-SK-002 |
 
 To find the next available number for a prefix, check `knowledge-base/rules.json` for the highest existing number in that prefix group and increment by one.
 

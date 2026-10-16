@@ -91,9 +91,17 @@ impl Validator for CrossPlatformValidator {
         }
 
         // XP-003: Hard-coded platform paths (WARNING)
-        // Check all config files for hard-coded platform-specific paths
+        // Tool directories (`.claude/`, `.cursor/`, ...) are checked in every
+        // file, since any Markdown can end up in an agent's context. Machine
+        // paths (home directories, `~/.<dir>/`, `~/Library/`) are checked only
+        // in files agents load: in generic Markdown they mostly document where
+        // a tool keeps its data.
         if config.is_rule_enabled("XP-003") {
-            let hard_coded = find_hard_coded_paths(content);
+            let generic_markdown =
+                crate::file_types::detect_file_type(path) == crate::FileType::GenericMarkdown;
+            let hard_coded = find_hard_coded_paths(content)
+                .into_iter()
+                .filter(|issue| !generic_markdown || issue.is_tool_directory());
             for path_issue in hard_coded {
                 diagnostics.push(
                     Diagnostic::warning(
@@ -469,6 +477,25 @@ Use environment variables for all platform-specific settings.
 
         let xp_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-003").collect();
         assert!(xp_003.is_empty());
+    }
+
+    #[test]
+    fn test_xp_003_machine_paths_only_in_agent_files() {
+        let content = "Data lives in ~/.local/share/tool/ and /home/bob/cache/; settings in .claude/settings.json";
+        let validator = CrossPlatformValidator;
+        let rules_for = |path: &str| {
+            validator
+                .validate(Path::new(path), content, &LintConfig::default())
+                .into_iter()
+                .filter(|d| d.rule == "XP-003")
+                .map(|d| d.message)
+                .collect::<Vec<_>>()
+        };
+
+        assert_eq!(rules_for("CLAUDE.md").len(), 3);
+        let generic = rules_for("notes/design.md");
+        assert_eq!(generic.len(), 1, "{generic:?}");
+        assert!(generic[0].contains(".claude/"), "{generic:?}");
     }
 
     #[test]

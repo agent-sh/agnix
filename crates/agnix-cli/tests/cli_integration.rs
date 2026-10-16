@@ -1001,6 +1001,85 @@ fn test_format_sarif_rules_have_help_uri() {
 }
 
 #[test]
+fn test_project_config_found_from_parent_directory() {
+    // A target below a project's `.agnix.toml` uses that config even when agnix
+    // runs from somewhere else.
+    let tmp = tempfile::tempdir().unwrap();
+    let project = tmp.path().join("project");
+    let elsewhere = tmp.path().join("elsewhere");
+    std::fs::create_dir_all(project.join(".git")).unwrap();
+    std::fs::create_dir_all(project.join("docs/agents")).unwrap();
+    std::fs::create_dir_all(&elsewhere).unwrap();
+    std::fs::write(
+        project.join(".agnix.toml"),
+        "[rules]\ndisabled_rules = [\"XML-001\"]\n",
+    )
+    .unwrap();
+    std::fs::write(project.join("docs/agents/CLAUDE.md"), "<unclosed>body\n").unwrap();
+
+    let output = assert_cmd::Command::cargo_bin("agnix")
+        .unwrap()
+        .current_dir(&elsewhere)
+        .arg(project.join("docs/agents"))
+        .arg("--format")
+        .arg("json")
+        .output()
+        .unwrap();
+    let json: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    let xml_001 = json["diagnostics"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|d| d["rule"] == "XML-001")
+        .count();
+    assert_eq!(xml_001, 0, "the project config disables XML-001: {json}");
+}
+
+#[test]
+fn test_cwd_config_does_not_apply_to_unrelated_target() {
+    // A project config in the working directory must not leak onto a target
+    // outside it: its excludes used to hide every file of the other tree.
+    let tmp = tempfile::tempdir().unwrap();
+    let here = tmp.path().join("here");
+    let elsewhere = tmp.path().join("elsewhere");
+    std::fs::create_dir_all(here.join("sub")).unwrap();
+    std::fs::create_dir_all(&elsewhere).unwrap();
+    std::fs::write(here.join(".agnix.toml"), "exclude = [\"**\"]\n").unwrap();
+    for dir in [&here.join("sub"), &elsewhere] {
+        std::fs::write(dir.join("CLAUDE.md"), "<unclosed>body\n").unwrap();
+    }
+
+    let count = |target: &std::path::Path| {
+        let output = assert_cmd::Command::cargo_bin("agnix")
+            .unwrap()
+            .current_dir(&here)
+            .arg(target)
+            .arg("--format")
+            .arg("json")
+            .output()
+            .unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+        json["diagnostics"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|d| d["rule"] == "XML-001")
+            .count()
+    };
+
+    assert_eq!(
+        count(&elsewhere),
+        1,
+        "cwd config must not exclude another tree"
+    );
+    assert_eq!(
+        count(std::path::Path::new("sub")),
+        0,
+        "cwd config still covers targets inside it"
+    );
+}
+
+#[test]
 fn test_sarif_artifact_uris_relative_to_git_root() {
     // Create a temp directory simulating a git repo with a subdirectory
     let tmp = tempfile::tempdir().unwrap();

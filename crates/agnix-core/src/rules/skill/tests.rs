@@ -4812,6 +4812,45 @@ fn test_cc_sk_021_good_placeholders_clean() {
 }
 
 #[test]
+fn test_cc_sk_021_ellipsis_placeholders_clean() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = tmp.path().join("demo");
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(
+        dir.join("SKILL.md"),
+        "---\nname: demo\ndescription: Use when demoing elided paths for testing.\n---\nTranscripts carry `C:\\Users\\...` while git answers `C:/Users/...` and `/Users/.../x`.\n",
+    )
+    .unwrap();
+
+    assert!(cc_sk_021_for(&dir).is_empty());
+
+    fs::write(
+        dir.join("SKILL.md"),
+        "---\nname: demo\ndescription: Use when demoing elided paths for testing.\n---\nOutput goes to /home/zuoying/x.\n",
+    )
+    .unwrap();
+    assert_eq!(cc_sk_021_for(&dir).len(), 1);
+}
+
+#[test]
+fn test_xp_sk_002_reports_home_paths_in_other_client_skills() {
+    let tmp = tempfile::tempdir().unwrap();
+    let skill = tmp.path().join(".codex/skills/demo");
+    fs::create_dir_all(&skill).unwrap();
+    let path = skill.join("SKILL.md");
+    let content = "---\nname: demo\ndescription: Use when demoing the rule for testing here.\n---\nRun /Users/zuoying/demo/build.sh first.\n";
+    fs::write(&path, content).unwrap();
+
+    let diagnostics = SkillValidator.validate(&path, content, &LintConfig::default());
+    let rules: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "XP-SK-002" || d.rule == "CC-SK-021")
+        .map(|d| d.rule.as_str())
+        .collect();
+    assert_eq!(rules, ["XP-SK-002"], "{diagnostics:?}");
+}
+
+#[test]
 fn test_cc_sk_021_ignores_files_outside_skill_dir() {
     let tmp = tempfile::tempdir().unwrap();
     let dir = tmp.path().join("demo");
@@ -4847,6 +4886,129 @@ Fix issue $0 for the reporter.
     );
 }
 
+#[test]
+fn test_cc_sk_023_flags_positional_placeholder_in_code() {
+    let content = r#"---
+name: test-skill
+description: Use when testing positional placeholders in code
+---
+Ignore the fee of \$1.00 here.
+
+```bash
+kill $(fuser lock | awk '{print $1}')
+```
+"#;
+
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(
+        Path::new(".claude/skills/test-skill/SKILL.md"),
+        content,
+        &LintConfig::default(),
+    );
+
+    let hits: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-SK-023")
+        .collect();
+    assert_eq!(hits.len(), 1, "{diagnostics:?}");
+    assert_eq!((hits[0].line, hits[0].column), (8, 33));
+    assert!(
+        hits[0].message.contains("$ARGUMENTS[1]"),
+        "{}",
+        hits[0].message
+    );
+}
+
+#[test]
+fn test_cc_sk_023_skips_escaped_prose_and_declared_arguments() {
+    let validator = SkillValidator;
+    let clean = [
+        // Escaped in code, and prose `$0` belongs to CC-SK-016.
+        "---\nname: test-skill\ndescription: Use when testing escapes\n---\nFix issue $0.\n\n```bash\nawk '{print \\$1}'\n```\n",
+        // The skill declares arguments, so `$0` in code is likely meant.
+        "---\nname: test-skill\ndescription: Use when testing hints\nargument-hint: \"[branch]\"\n---\n```bash\ngit checkout $0\n```\n",
+        "---\nname: test-skill\ndescription: Use when testing named args\narguments: branch\n---\n```bash\ngit checkout $0\n```\n",
+    ];
+    for content in clean {
+        let diagnostics = validator.validate(
+            Path::new(".claude/skills/test-skill/SKILL.md"),
+            content,
+            &LintConfig::default(),
+        );
+        assert!(
+            !diagnostics.iter().any(|d| d.rule == "CC-SK-023"),
+            "{content:?}: {diagnostics:?}"
+        );
+    }
+}
+
+#[test]
+fn test_cc_sk_023_not_for_other_clients() {
+    let content = "---\nname: test-skill\ndescription: Use when testing other clients\n---\n```bash\nawk '{print $1}'\n```\n";
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(
+        Path::new(".agents/skills/test-skill/SKILL.md"),
+        content,
+        &LintConfig::default(),
+    );
+    assert!(
+        !diagnostics.iter().any(|d| d.rule == "CC-SK-023"),
+        "{diagnostics:?}"
+    );
+}
+
+#[test]
+fn test_cc_sk_016_ignores_shorthand_in_code_and_escapes() {
+    let content = r#"---
+name: test-skill
+description: Use when testing shorthand in code and escaped dollars
+---
+Kill the supervisor:
+
+```bash
+kill $(fuser lock | awk '{print $1}')
+```
+
+Read the field with `cut -f $2`. The fee is \$1.00 per run.
+"#;
+
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(
+        Path::new(".claude/skills/test-skill/SKILL.md"),
+        content,
+        &LintConfig::default(),
+    );
+
+    assert!(
+        !diagnostics.iter().any(|d| d.rule == "CC-SK-016"),
+        "shell `$N` in code and an escaped `\\$1` are not argument use, got: {diagnostics:?}"
+    );
+}
+
+#[test]
+fn test_cc_sk_016_double_backslash_does_not_escape() {
+    let content = r#"---
+name: test-skill
+description: Use when testing a double backslash before a dollar
+---
+Migrate \\$0 now.
+"#;
+
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(
+        Path::new(".claude/skills/test-skill/SKILL.md"),
+        content,
+        &LintConfig::default(),
+    );
+
+    let hit = diagnostics.iter().find(|d| d.rule == "CC-SK-016");
+    assert!(
+        hit.is_some(),
+        "`\\\\$0` still expands, got: {diagnostics:?}"
+    );
+    assert_eq!((hit.unwrap().line, hit.unwrap().column), (5, 11));
+}
+
 /// `${CLAUDE_SKILL_DIR}`-style variables and dollar amounts must not be
 /// mistaken for positional arguments.
 #[test]
@@ -4879,6 +5041,59 @@ Run ${CLAUDE_SKILL_DIR}/scripts/run.sh and report the $500 total for item x$3y.
 /// `assets/` paths were invisible - even though the spec scopes skill resources
 /// to "`scripts/`, `references/`, or `assets/`" and uses `scripts/extract.py` in
 /// its own example.
+#[test]
+fn test_as_013_ignores_urls_and_code_span_punctuation() {
+    let content = r#"---
+name: test-skill
+description: Use when testing reference paths inside URLs and code spans
+---
+See [Pages](https://developers.cloudflare.com/workers/static-assets/migration-guides/migrate/).
+Copy `assets/frontend-template/` and vendor into **`scripts/vendor/`**:
+"#;
+
+    let validator = SkillValidator;
+    let diagnostics = validator.validate(
+        Path::new(".claude/skills/test-skill/SKILL.md"),
+        content,
+        &LintConfig::default(),
+    );
+
+    assert!(
+        !diagnostics.iter().any(|d| d.rule == "AS-013"),
+        "URL segments and one-level paths in code spans are not deep references, got: {diagnostics:?}"
+    );
+}
+
+#[test]
+fn test_as_013_still_flags_deep_skill_relative_paths() {
+    for path in [
+        "`references/api/v2/guide.md`",
+        "./references/api/v2/guide.md",
+        "${CLAUDE_SKILL_DIR}/references/api/v2/guide.md",
+    ] {
+        let content = format!(
+            r#"---
+name: test-skill
+description: Use when testing deep reference detection
+---
+Read {path} first.
+"#
+        );
+
+        let validator = SkillValidator;
+        let diagnostics = validator.validate(
+            Path::new(".claude/skills/test-skill/SKILL.md"),
+            &content,
+            &LintConfig::default(),
+        );
+
+        assert!(
+            diagnostics.iter().any(|d| d.rule == "AS-013"),
+            "{path} is two levels deep, got: {diagnostics:?}"
+        );
+    }
+}
+
 #[test]
 fn test_as_013_covers_scripts_and_assets() {
     for path in [

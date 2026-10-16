@@ -77,6 +77,16 @@ impl Validator for PluginValidator {
             .map(|n| n.eq_ignore_ascii_case(".claude-plugin"))
             .unwrap_or(false);
 
+        // Cursor plugin manifests (`.cursor-plugin/plugin.json`) follow Cursor's
+        // schema, and Claude Code never reads them.
+        let is_in_cursor_plugin = plugin_dir
+            .and_then(|p| p.file_name())
+            .and_then(|n| n.to_str())
+            .is_some_and(|n| n.eq_ignore_ascii_case(".cursor-plugin"));
+        if is_in_cursor_plugin {
+            return diagnostics;
+        }
+
         if !is_in_claude_plugin
             && serde_json::from_str::<serde_json::Value>(content)
                 .ok()
@@ -1014,6 +1024,18 @@ mod tests {
         let diagnostics = PluginValidator.validate(&plugin_path, content, &LintConfig::default());
 
         assert!(diagnostics.is_empty());
+    }
+
+    #[test]
+    fn test_cursor_plugin_manifest_skips_claude_rules() {
+        let temp = TempDir::new().unwrap();
+        let plugin_path = temp.path().join(".cursor-plugin").join("plugin.json");
+        let content = r#"{"name":"slack","logo":"logo.svg","mcpServers":"../.cursor-mcp.json"}"#;
+        write_plugin(&plugin_path, content);
+
+        let diagnostics = PluginValidator.validate(&plugin_path, content, &LintConfig::default());
+
+        assert!(diagnostics.is_empty(), "{diagnostics:?}");
     }
 
     #[test]

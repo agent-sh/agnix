@@ -7,7 +7,7 @@
 
 | Type | Files | Rules |
 |------|-------|-------|
-| Skills | SKILL.md | 32 |
+| Skills | SKILL.md | 33 |
 | Hooks | settings.json | 26 |
 | Memory (Claude Code) | CLAUDE.md, CLAUDE.local.md, .claude/rules/*.md | 10 |
 | Instructions (Cross-Tool) | AGENTS.md, AGENTS.local.md, AGENTS.override.md | 5 |
@@ -16,7 +16,7 @@
 | Claude Output Styles | .claude/output-styles/*.md | 6 |
 | Claude Settings | .claude/settings.json | 33 |
 | Prompt Engineering | CLAUDE.md, AGENTS.md | 6 |
-| Cross-Platform | AGENTS.md | 10 |
+| Cross-Platform | AGENTS.md | 11 |
 | MCP | tool definitions | 25 |
 | XML | all .md files | 3 |
 | References | @imports | 3 |
@@ -26,7 +26,7 @@
 | OpenCode | opencode.json, opencode.jsonc | 46 |
 | Gemini Agents | .gemini/agents/*.json | 1 |
 | Gemini CLI | GEMINI.md, GEMINI.local.md, .gemini/settings.json (hooks), gemini-extension.json (extensions), .geminiignore | 10 |
-| Codex CLI | .codex/config.toml/.json/.yaml | 65 |
+| Codex CLI | .codex/config.toml/.json/.yaml | 64 |
 | Version Awareness | .agnix.toml | 1 |
 | Cursor Skills | .cursor/skills/*/SKILL.md | 1 |
 | Cline Skills | .cline/skills/*/SKILL.md | 3 |

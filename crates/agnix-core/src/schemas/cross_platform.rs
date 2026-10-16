@@ -278,6 +278,17 @@ pub struct HardCodedPath {
     pub platform: String,
 }
 
+impl HardCodedPath {
+    /// Returns true for an agent tool's directory (`.claude/`, `.cursor/`, ...)
+    /// rather than a machine-specific path such as a home directory.
+    pub fn is_tool_directory(&self) -> bool {
+        matches!(
+            self.platform.as_str(),
+            "Claude Code" | "OpenCode" | "Cursor" | "Cline" | "GitHub Copilot"
+        )
+    }
+}
+
 // Expanded XP-003 pattern: tool-specific dirs + OS-specific absolute paths
 static_regex!(fn hard_coded_path_pattern, r"(?i)(?:\.claude/|\.opencode/|\.cursor/|\.cline/|\.github/copilot/|~/Library/|~/\.[a-z][\w-]*/|/Users/[a-zA-Z][\w.-]*/|/home/[a-zA-Z][\w.-]*/|[A-Z]:\\Users\\[a-zA-Z][\w.-]*\\)");
 /// Find hard-coded platform-specific paths (for XP-003)
@@ -340,7 +351,7 @@ pub fn find_hard_coded_paths(content: &str) -> Vec<HardCodedPath> {
 
 #[cfg(feature = "filesystem")]
 /// Package manager type for build commands
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum PackageManager {
     Npm,
     Pnpm,
@@ -363,7 +374,7 @@ impl PackageManager {
 
 #[cfg(feature = "filesystem")]
 /// Command type (build, test, install, etc.)
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum CommandType {
     Install,
     Build,
@@ -482,11 +493,12 @@ pub struct BuildConflict {
 pub fn detect_build_conflicts(
     files: &[(std::path::PathBuf, Vec<BuildCommand>)],
 ) -> Vec<BuildConflict> {
-    use std::collections::HashMap;
+    use std::collections::BTreeMap;
 
-    // Group commands by CommandType: HashMap<CommandType, Vec<(PathBuf, BuildCommand)>>
-    let mut by_type: HashMap<CommandType, Vec<(std::path::PathBuf, &BuildCommand)>> =
-        HashMap::new();
+    // Group commands by CommandType. Ordered maps keep the reported pair, and
+    // so the file and line each diagnostic points at, the same on every run.
+    let mut by_type: BTreeMap<CommandType, Vec<(std::path::PathBuf, &BuildCommand)>> =
+        BTreeMap::new();
 
     for (path, commands) in files {
         for cmd in commands {
@@ -502,8 +514,8 @@ pub fn detect_build_conflicts(
     // For each command type, check if different package managers are used
     for (cmd_type, entries) in by_type {
         // Group by package manager within this command type
-        let mut by_manager: HashMap<PackageManager, Vec<(std::path::PathBuf, &BuildCommand)>> =
-            HashMap::new();
+        let mut by_manager: BTreeMap<PackageManager, Vec<(std::path::PathBuf, &BuildCommand)>> =
+            BTreeMap::new();
 
         for (path, cmd) in entries {
             by_manager

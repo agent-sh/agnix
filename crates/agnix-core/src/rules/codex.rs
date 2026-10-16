@@ -18,9 +18,8 @@ use crate::{
     rules::{Validator, ValidatorMetadata},
     schemas::claude_md::count_generic_instructions,
     schemas::codex::{
-        AGENTS_MD_MAX_SIZE, VALID_APPROVAL_MODES, VALID_FULL_AUTO_ERROR_MODES,
-        VALID_MCP_OAUTH_STORES, VALID_MODEL_REASONING_SUMMARIES,
-        VALID_SANDBOX_WORKSPACE_WRITE_MODES, parse_codex_toml,
+        VALID_APPROVAL_MODES, VALID_FULL_AUTO_ERROR_MODES, VALID_MCP_OAUTH_STORES,
+        VALID_MODEL_REASONING_SUMMARIES, VALID_SANDBOX_WORKSPACE_WRITE_MODES, parse_codex_toml,
     },
 };
 use rust_i18n::t;
@@ -47,7 +46,6 @@ const CODEX_MARKDOWN_RULE_IDS: &[&str] = &[
     "CDX-AG-001",
     "CDX-AG-002",
     "CDX-AG-003",
-    "CDX-AG-004",
     "CDX-AG-005",
     "CDX-AG-006",
     "CDX-AG-007",
@@ -909,45 +907,44 @@ fn validate_codex_markdown_rules(
         }
     }
 
-    // CDX-AG-004: AGENTS.md exceeds size limit
-    if config.is_rule_enabled("CDX-AG-004") && content.len() > AGENTS_MD_MAX_SIZE {
-        diagnostics.push(
-            Diagnostic::warning(
-                path.to_path_buf(),
-                1,
-                0,
-                "CDX-AG-004",
-                t!(
-                    "rules.cdx_ag_004.message",
-                    size = &content.len().to_string(),
-                    limit = &AGENTS_MD_MAX_SIZE.to_string()
-                ),
-            )
-            .with_suggestion(t!("rules.cdx_ag_004.suggestion")),
-        );
-    }
+    // CDX-AG-004 is retired: XP-007 checks AGENTS.md against Codex's
+    // documented 32 KiB project_doc_max_bytes, and the 100,000-byte limit
+    // here had no source.
 
-    // CDX-AG-005: AGENTS.md references missing file (simplified: check for broken markdown links)
+    // CDX-AG-005: AGENTS.md references a missing file. Only inline-code spans
+    // shaped like a relative file path are checked: method names
+    // (`store.claimKey`), globs (`*.c`), placeholders (`prompts/<agent>.md`),
+    // versions and bare file names (often relative to some other source root)
+    // are skipped, as are fenced code blocks.
     if config.is_rule_enabled("CDX-AG-005") {
         let fs = config.fs();
-        for (line_no, line) in content.lines().enumerate() {
-            // Match markdown-style file references like `path/to/file.ext`
+        let agents_dir = path.parent().unwrap_or_else(|| Path::new("."));
+        let mut fence: Option<char> = None;
+        'lines: for (line_no, line) in content.lines().enumerate() {
+            let trimmed = line.trim_start();
+            for marker in ['`', '~'] {
+                if trimmed.starts_with(&marker.to_string().repeat(3)) {
+                    match fence {
+                        None => fence = Some(marker),
+                        Some(open) if open == marker => fence = None,
+                        Some(_) => {}
+                    }
+                    continue 'lines;
+                }
+            }
+            if fence.is_some() {
+                continue;
+            }
             for cap in find_backtick_file_refs(line) {
                 let reference = cap.trim();
-                if reference.is_empty()
-                    || reference.starts_with("http")
-                    || reference.starts_with('$')
-                    || reference.starts_with('<')
-                    || !reference.contains('.')
-                {
+                if !is_checkable_file_reference(reference) {
                     continue;
                 }
-                // Resolve relative to project root (parent of AGENTS.md's parent)
-                let resolved = path
-                    .parent()
-                    .unwrap_or_else(|| Path::new("."))
-                    .join(reference);
-                if !fs.exists(&resolved) {
+                let found = fs.exists(&agents_dir.join(reference))
+                    || config
+                        .root_dir()
+                        .is_some_and(|root| fs.exists(&root.join(reference)));
+                if !found {
                     diagnostics.push(
                         Diagnostic::warning(
                             path.to_path_buf(),
@@ -958,7 +955,7 @@ fn validate_codex_markdown_rules(
                         )
                         .with_suggestion(t!("rules.cdx_ag_005.suggestion")),
                     );
-                    break; // One diagnostic per file is enough
+                    break 'lines; // One diagnostic per file is enough
                 }
             }
         }
@@ -990,6 +987,54 @@ fn validate_codex_markdown_rules(
     // actual cross-file checking is deferred to project-level validators.
 
     diagnostics
+}
+
+/// Returns true if an inline-code `reference` looks like a relative path to a
+/// file in this project: it has a directory part, a plain file extension, no
+/// glob, placeholder or call syntax, and does not leave the project.
+fn is_checkable_file_reference(reference: &str) -> bool {
+    if !reference.contains('/')
+        || reference.starts_with(['/', '~'])
+        || reference.starts_with("../")
+        || reference.contains("://")
+        || reference.chars().any(|c| {
+            c.is_whitespace()
+                || matches!(
+                    c,
+                    '*' | '?'
+                        | '['
+                        | ']'
+                        | '{'
+                        | '}'
+                        | '<'
+                        | '>'
+                        | '('
+                        | ')'
+                        | '='
+                        | ':'
+                        | '@'
+                        | '~'
+                        | '$'
+                        | '%'
+                        | '\\'
+                        | ','
+                        | ';'
+                        | '|'
+                        | '"'
+                        | '\''
+                )
+        })
+    {
+        return false;
+    }
+    let file_name = reference.rsplit('/').next().unwrap_or("");
+    let Some((stem, ext)) = file_name.rsplit_once('.') else {
+        return false;
+    };
+    !stem.is_empty()
+        && (1..=10).contains(&ext.len())
+        && ext.chars().all(|c| c.is_ascii_alphanumeric())
+        && !ext.chars().all(|c| c.is_ascii_digit())
 }
 
 /// Extract file-like references inside backticks from a line.
@@ -4421,17 +4466,76 @@ approvals_reviewer = "guardian_subagent"
     }
 
     #[test]
-    fn test_cdx_ag_004_agents_md_exceeds_size_limit() {
+    fn test_cdx_ag_004_is_retired() {
         let content = "# Project\n".to_string() + &"x".repeat(200_000);
         let diagnostics = validate_claude_md("AGENTS.md", &content);
-        assert!(diagnostics.iter().any(|d| d.rule == "CDX-AG-004"));
+        assert!(diagnostics.iter().all(|d| d.rule != "CDX-AG-004"));
+        assert!(!CODEX_MARKDOWN_RULE_IDS.contains(&"CDX-AG-004"));
     }
 
     #[test]
     fn test_cdx_ag_005_missing_file_reference() {
         let diagnostics =
-            validate_claude_md("AGENTS.md", "Check `nonexistent-file.ts` for details.");
+            validate_claude_md("AGENTS.md", "Check `docs/nonexistent-file.ts` for details.");
         assert!(diagnostics.iter().any(|d| d.rule == "CDX-AG-005"));
+    }
+
+    #[test]
+    fn test_cdx_ag_005_ignores_non_path_code_spans() {
+        let content = "Call `store.claimHandledKey` and `client.close()`. Match `*.c` and \
+            `agents/*.md`. Edit `prompts/<agent>.md` and `worker.ts`. Needs `8.0.6` at \
+            `127.0.0.1`, maybe `../AgenticCore/AGENTS.md` or `~/.axiom/x.md`.";
+        let diagnostics = validate_claude_md("AGENTS.md", content);
+        assert!(
+            diagnostics.iter().all(|d| d.rule != "CDX-AG-005"),
+            "{diagnostics:?}"
+        );
+    }
+
+    #[test]
+    fn test_cdx_ag_005_reports_once_per_file() {
+        let content = "See `docs/a.md`.\nSee `docs/b.md`.\nSee `docs/c.md`.\n";
+        let diagnostics = validate_claude_md("AGENTS.md", content);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-AG-005")
+            .collect();
+        assert_eq!(hits.len(), 1, "{hits:?}");
+        assert_eq!(hits[0].line, 1);
+    }
+
+    #[test]
+    fn test_cdx_ag_005_skips_fenced_code() {
+        let content = "```bash\ncat `docs/missing.md`\n```\n";
+        let diagnostics = validate_claude_md("AGENTS.md", content);
+        assert!(
+            diagnostics.iter().all(|d| d.rule != "CDX-AG-005"),
+            "{diagnostics:?}"
+        );
+    }
+
+    #[test]
+    fn test_cdx_ag_005_resolves_from_project_root() {
+        let temp = tempfile::TempDir::new().unwrap();
+        std::fs::create_dir_all(temp.path().join("pkg/docs")).unwrap();
+        std::fs::create_dir_all(temp.path().join("tools")).unwrap();
+        std::fs::write(temp.path().join("tools/run.sh"), "").unwrap();
+        std::fs::write(temp.path().join("pkg/docs/guide.md"), "").unwrap();
+        let agents = temp.path().join("pkg/AGENTS.md");
+        let content = "Use `tools/run.sh` and read `docs/guide.md`; `docs/gone.md` is stale.\n";
+        std::fs::write(&agents, content).unwrap();
+        let config = LintConfig::builder()
+            .root_dir(temp.path().to_path_buf())
+            .build()
+            .unwrap();
+        let diagnostics = CodexValidator.validate(&agents, content, &config);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-AG-005")
+            .map(|d| d.message.as_str())
+            .collect();
+        assert_eq!(hits.len(), 1, "{hits:?}");
+        assert!(hits[0].contains("docs/gone.md"));
     }
 
     #[test]
