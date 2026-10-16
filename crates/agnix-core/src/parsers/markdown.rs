@@ -12,7 +12,7 @@ use std::panic::{self, AssertUnwindSafe};
 
 use crate::regex_util::static_regex;
 
-static_regex!(fn xml_tag_regex, r"<(/?)([a-zA-Z_][a-zA-Z0-9_-]*)(\s+[^>]*?)?(/?)>");
+static_regex!(fn xml_tag_regex, r"<(/?)([a-zA-Z_][a-zA-Z0-9_-]*)(?:\s+[^>]*?)?(/?)>");
 
 /// Maximum size (in bytes) for content processed by regex operations.
 /// This prevents ReDoS attacks by limiting input size to 64KB.
@@ -110,10 +110,21 @@ fn extract_xml_tags_inner(content: &str) -> Vec<XmlTag> {
     tags.retain(|tag| {
         tag.is_closing
             || closed.contains(&tag.name)
-            || !is_inline_placeholder(content, tag, &line_starts)
+            || !(has_prose_attributes(content, tag)
+                || is_inline_placeholder(content, tag, &line_starts))
     });
 
     tags
+}
+
+/// Returns true if the text after the tag name is prose, as in `<output file>`
+/// or `<brief description of bug>`: real attributes carry `=`. Only whitespace
+/// (`<example >`) is not prose.
+fn has_prose_attributes(content: &str, tag: &XmlTag) -> bool {
+    let inner = &content[tag.start_byte + 1..tag.end_byte - 1];
+    let rest = inner.trim_start_matches('/');
+    let rest = rest.get(tag.name.len()..).unwrap_or("").trim();
+    !rest.is_empty() && !rest.contains('=')
 }
 
 /// Returns true if the opening `tag` has no attributes and either runs into
@@ -199,10 +210,11 @@ fn extract_markdown_links_inner(content: &str) -> Vec<MarkdownLink> {
         r"(!?)\[([^\[\]]*)\]\(([^()]*)\)"
     );
     // Link reference definition: up to three spaces of indent, `[label]:`,
-    // then the destination. `[^...]` labels are footnotes, not links.
+    // then the rest of the line, which must be a destination and an optional
+    // title. `[^...]` labels are footnotes, not links.
     static_regex!(
         fn reference_definition_re,
-        r"(?m)^ {0,3}\[([^\]\[^][^\]\[]*)\]:[ \t]*(<[^<>\n]*>|\S+)"
+        r"(?m)^ {0,3}\[([^\]\[^][^\]\[]*)\]:[ \t]*([^\n]*)$"
     );
 
     // Fill code with a byte that is not link syntax rather than splitting the
@@ -255,8 +267,8 @@ fn extract_markdown_links_inner(content: &str) -> Vec<MarkdownLink> {
 /// Return the destination part of a link target, without the optional title.
 ///
 /// Returns `None` when the target is not a CommonMark link destination, such
-/// as the prose in `[name](redis.io link)`: only a quoted title may follow the
-/// destination.
+/// as the prose in `[name](redis.io link)` or `[Note]: e.g. run setup first`:
+/// only a title in quotes or parentheses may follow the destination.
 fn link_destination(raw: &str) -> Option<&str> {
     let raw = raw.trim();
     let (destination, rest) = match raw.strip_prefix('<') {
@@ -267,7 +279,8 @@ fn link_destination(raw: &str) -> Option<&str> {
     let valid_title = title.is_empty()
         || (title.len() >= 2
             && ((title.starts_with('"') && title.ends_with('"'))
-                || (title.starts_with('\'') && title.ends_with('\''))));
+                || (title.starts_with('\'') && title.ends_with('\''))
+                || (title.starts_with('(') && title.ends_with(')'))));
     valid_title.then_some(destination)
 }
 
@@ -1148,17 +1161,7 @@ fn scan_xml_tags_in_text(
             continue;
         }
         let is_closing = cap.get(1).is_some_and(|m| m.as_str() == "/");
-        let is_self_closing = cap.get(4).is_some_and(|m| m.as_str() == "/");
-
-        // Prose inside angle brackets, such as `<output file>` or
-        // `<brief description of bug>`, is a placeholder: real attributes
-        // carry `=`, and closing tags take no attributes at all.
-        if cap
-            .get(3)
-            .is_some_and(|attrs| !attrs.as_str().contains('='))
-        {
-            continue;
-        }
+        let is_self_closing = cap.get(3).is_some_and(|m| m.as_str() == "/");
 
         // Skip self-closing tags - they don't need balance checking
         // Examples: <br/>, <hr />, <img src="..." />
@@ -1682,6 +1685,14 @@ mod tests {
     }
 
     #[test]
+    fn test_extract_markdown_links_rejects_prose_reference_definitions() {
+        let content = "[Note]: e.g. run setup first\n[Optional]: config.yaml is read on start\n[guide]: docs/guide.md (The guide)\n";
+        let links = extract_markdown_links(content);
+        let urls: Vec<_> = links.iter().map(|l| l.url.as_str()).collect();
+        assert_eq!(urls, ["docs/guide.md"]);
+    }
+
+    #[test]
     fn test_extract_markdown_links_reference_definition_in_code_ignored() {
         let content = "```\n[guide]: missing.md\n```\n    [indented]: missing.md\n";
         let links = extract_markdown_links(content);
@@ -1934,6 +1945,20 @@ mod tests {
             names,
             ["instructions", "structure", "thinking", "b", "example"]
         );
+    }
+
+    #[test]
+    fn test_xml_whitespace_and_boolean_attributes_stay_balanced() {
+        for content in [
+            "<example >body</example>",
+            "<example>body</example >",
+            "<section hidden>body</section>",
+        ] {
+            let tags = extract_xml_tags(content);
+            assert_eq!(tags.len(), 2, "{content:?}: {tags:?}");
+            let errors = check_xml_balance(&tags);
+            assert!(errors.is_empty(), "{content:?}: {errors:?}");
+        }
     }
 
     #[test]
