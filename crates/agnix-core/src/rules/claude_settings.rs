@@ -41,6 +41,8 @@
 //!   (CC-SET-031, added in Claude Code v2.1.267).
 //! - `allowedProviders` only takes effect in managed settings (CC-SET-032,
 //!   added in Claude Code v2.1.285).
+//! - `idleCompaction` boolean check (CC-SET-033, added in Claude Code v2.1.290;
+//!   surfaced by the v2.1.299 release notes).
 //!
 //! Runs on FileType::Hooks (which covers `.claude/settings.json` -
 //! see `file_types/detection.rs`). Skips non-Claude Code settings paths
@@ -88,6 +90,7 @@ const RULE_IDS: &[&str] = &[
     "CC-SET-030",
     "CC-SET-031",
     "CC-SET-032",
+    "CC-SET-033",
 ];
 
 /// Allowed values for `worktree.baseRef` per Claude Code v2.1.133 release notes.
@@ -293,8 +296,52 @@ impl Validator for ClaudeSettingsValidator {
             validate_allowed_providers_scope(path, content, &value, &mut diagnostics);
         }
 
+        if config.is_rule_enabled("CC-SET-033") {
+            validate_idle_compaction(path, content, &value, &mut diagnostics);
+        }
+
         diagnostics
     }
+}
+
+/// CC-SET-033: `idleCompaction` must be a boolean when present.
+///
+/// Claude Code 2.1.290 added idle compaction (a 200K+ token conversation idle
+/// for about 54 minutes is compacted before the one-hour prompt cache expires)
+/// and the `"idleCompaction": false` settings.json opt-out. The v2.1.299
+/// release notes document the key. Only strict `true`/`false` is documented -
+/// a quoted `"false"` or truthy number silently keeps idle compaction enabled
+/// (same shape as the CC-SET-006 `disableBundledSkills` footgun).
+///
+/// Missing field is fine: idle compaction stays enabled by default.
+/// `null` is treated as "field-absent", consistent with the other CC-SET rules.
+fn validate_idle_compaction(
+    path: &Path,
+    content: &str,
+    value: &serde_json::Value,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(field_value) = value.get("idleCompaction") else {
+        return;
+    };
+
+    if field_value.is_boolean() || field_value.is_null() {
+        return;
+    }
+
+    let actual = describe_json_type(field_value);
+    let line = find_key_line(content, "idleCompaction").unwrap_or(1);
+
+    diagnostics.push(
+        Diagnostic::warning(
+            path.to_path_buf(),
+            line,
+            0,
+            "CC-SET-033",
+            format!("idleCompaction must be a boolean (got {actual})"),
+        )
+        .with_suggestion("Set idleCompaction to a strict true/false boolean; adjust the 200K-token minimum with CLAUDE_CODE_IDLE_COMPACT_MIN_TOKENS instead."),
+    );
 }
 
 /// CC-SET-032: `allowedProviders` is an organization-managed setting.
@@ -6405,5 +6452,56 @@ mod tests {
                 diagnostic.rule != "CC-SET-026" && diagnostic.rule != "CC-SET-027"
             }));
         }
+    }
+
+    // ===== CC-SET-033: idleCompaction =====
+
+    #[test]
+    fn test_idle_compaction_absent_is_fine() {
+        let content = r#"{"model": "claude-sonnet-4"}"#;
+        assert!(validate(content).iter().all(|d| d.rule != "CC-SET-033"));
+    }
+
+    #[test]
+    fn test_idle_compaction_booleans_are_fine() {
+        for content in [
+            r#"{"idleCompaction": true}"#,
+            r#"{"idleCompaction": false}"#,
+        ] {
+            assert!(validate(content).iter().all(|d| d.rule != "CC-SET-033"));
+        }
+    }
+
+    #[test]
+    fn test_idle_compaction_null_is_not_flagged() {
+        let content = r#"{"idleCompaction": null}"#;
+        assert!(validate(content).iter().all(|d| d.rule != "CC-SET-033"));
+    }
+
+    #[test]
+    fn test_idle_compaction_non_boolean_flags() {
+        for invalid in [r#""false""#, "0", "1", "[]"] {
+            let content = format!(r#"{{"idleCompaction":{invalid}}}"#);
+            let diagnostics = validate(&content);
+            assert_eq!(
+                diagnostics
+                    .iter()
+                    .filter(|diagnostic| diagnostic.rule == "CC-SET-033")
+                    .count(),
+                1,
+                "expected CC-SET-033 for {content}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_idle_compaction_quoted_false_reports_expected_type() {
+        let content = r#"{"idleCompaction": "false"}"#;
+        let diagnostics = validate(content);
+        let diagnostic = diagnostics
+            .iter()
+            .find(|d| d.rule == "CC-SET-033")
+            .expect("CC-SET-033 diagnostic");
+        assert!(diagnostic.message.contains("string"));
     }
 }

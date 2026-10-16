@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `455` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `460` validation rules generated from `knowledge-base/rules.json`.
 `118` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -159,6 +159,7 @@ This section contains all `455` validation rules generated from `knowledge-base/
 | [CC-SET-030](./generated/cc-set-030.md) | Local Command in managedMcpServers | HIGH | Claude Settings | No |
 | [CC-SET-031](./generated/cc-set-031.md) | Invalid maxEffortLevel Setting | MEDIUM | Claude Settings | No |
 | [CC-SET-032](./generated/cc-set-032.md) | Ineffective Project allowedProviders Setting | MEDIUM | Claude Settings | No |
+| [CC-SET-033](./generated/cc-set-033.md) | Idle Compaction Not Boolean | MEDIUM | Claude Settings | No |
 | [CDX-000](./generated/cdx-000.md) | TOML Parse Error | HIGH | Codex CLI | No |
 | [CDX-001](./generated/cdx-001.md) | Invalid Approval Mode | HIGH | Codex CLI | Yes (unsafe) |
 | [CDX-002](./generated/cdx-002.md) | Invalid Full Auto Error Mode | HIGH | Codex CLI | Yes (unsafe) |
@@ -322,6 +323,7 @@ This section contains all `455` validation rules generated from `knowledge-base/
 | [KR-AG-012](./generated/kr-ag-012.md) | toolAliases References Unknown Tool | MEDIUM | Kiro Agents | No |
 | [KR-AG-013](./generated/kr-ag-013.md) | Secrets in Agent Prompt | HIGH | Kiro Agents | No |
 | [KR-AG-014](./generated/kr-ag-014.md) | Invalid Universal Permissions Rule | HIGH | Kiro Agents | No |
+| [KR-AG-015](./generated/kr-ag-015.md) | Unconverted CLI 2.x Trust Configuration | MEDIUM | Kiro Agents | No |
 | [KR-HK-001](./generated/kr-hk-001.md) | Invalid Kiro IDE Hook Event Type | HIGH | Kiro Hooks | No |
 | [KR-HK-002](./generated/kr-hk-002.md) | Kiro File Hook Missing Patterns | HIGH | Kiro Hooks | No |
 | [KR-HK-003](./generated/kr-hk-003.md) | Kiro IDE Hook Missing Action | HIGH | Kiro Hooks | No |
@@ -332,6 +334,9 @@ This section contains all `455` validation rules generated from `knowledge-base/
 | [KR-HK-008](./generated/kr-hk-008.md) | Duplicate Event Handlers | MEDIUM | Kiro Hooks | No |
 | [KR-HK-009](./generated/kr-hk-009.md) | Command Uses Absolute Path | MEDIUM | Kiro Hooks | No |
 | [KR-HK-010](./generated/kr-hk-010.md) | Secrets in Hook Command | HIGH | Kiro Hooks | No |
+| [KR-HK-011](./generated/kr-hk-011.md) | Invalid Kiro V3 Hook Document Version | MEDIUM | Kiro Hooks | No |
+| [KR-HK-012](./generated/kr-hk-012.md) | Invalid Kiro V3 Hook Entry | HIGH | Kiro Hooks | No |
+| [KR-HK-013](./generated/kr-hk-013.md) | Invalid Kiro V3 Hook Action | HIGH | Kiro Hooks | No |
 | [KR-MCP-001](./generated/kr-mcp-001.md) | Kiro MCP Server Missing command and url | HIGH | Kiro MCP | No |
 | [KR-MCP-002](./generated/kr-mcp-002.md) | Hardcoded Secrets in Kiro MCP env | MEDIUM | Kiro MCP | No |
 | [KR-MCP-003](./generated/kr-mcp-003.md) | Missing Required Args | MEDIUM | Kiro MCP | No |

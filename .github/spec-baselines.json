@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "description": "Baseline hashes for canonical specification content. Human-facing URLs are kept separately from machine-readable content URLs.",
-  "last_updated": "2026-10-11T06:20:58Z",
+  "last_updated": "2026-10-16T00:00:00Z",
   "sources": {
     "s-tier": {
       "agent-skills-spec": {
@@ -230,7 +230,7 @@
       "cursor-rules": {
         "url": "https://cursor.com/docs/rules",
         "content_url": "https://cursor.com/docs/rules.md",
-        "hash": "0084ee9ef5e916629b4efd4fd3e0f296a6d0c52cced114e3a191eb67755d4d9e",
+        "hash": "c420f217cd1c61bceb55d42966b16d1b3d537e16f040a082c6903e490deb83b3",
         "rules": [
           "CUR-001",
           "CUR-002",
@@ -261,7 +261,7 @@
       "cursor-subagents": {
         "url": "https://cursor.com/docs/subagents",
         "content_url": "https://cursor.com/docs/subagents.md",
-        "hash": "eed093147ff17efa937e20d7c0bbbf719f7233b2b9a63a13e323adb5207ccb37",
+        "hash": "07141f46cdcabd4ff7aa6ad8c5264d01cabca0adb2b5763febe26c7d9a2b73e1",
         "rules": [
           "CUR-014",
           "CUR-015"
@@ -270,7 +270,7 @@
       "cursor-environment": {
         "url": "https://cursor.com/docs/cloud-agent/setup",
         "content_url": "https://cursor.com/docs/cloud-agent/setup.md",
-        "hash": "d31187e6a7a10a9236ef34669618a1d471d6c6c0f75c63e818f1c1900ff610e8",
+        "hash": "2f23f3e863b9faea5feb2b13d789ddf646cc1e18a47f5f243cb9c2fd83edb5cb",
         "rules": [
           "CUR-016"
         ]
@@ -278,7 +278,7 @@
       "cursor-environment-schema": {
         "url": "https://cursor.com/schemas/environment.schema.json",
         "content_url": "https://cursor.com/schemas/environment.schema.json",
-        "hash": "37e8f94990e48b58e22da1ac7387ca7d74d94fd63b06d68d3921b6fa83aca159",
+        "hash": "09146dc319696cf90dac703679ec81bca5ad075b3eee2a71ca7752ad76a8d674",
         "rules": [
           "CUR-016"
         ]
@@ -338,7 +338,7 @@
       "cline-rules": {
         "url": "https://docs.cline.bot/customization/cline-rules",
         "content_url": "https://raw.githubusercontent.com/cline/cline/main/docs/customization/cline-rules.mdx",
-        "hash": "68a5dbf9e06a6af8438e98e3fa8602f3ae931d1a560be532bd6026f5eb747a9f",
+        "hash": "7c3e01390571320a551a8c5b184b41521444c39fcf55f3d6a2d02a897bf1b932",
         "rules": [
           "CL-SK-001",
           "CL-SK-002",

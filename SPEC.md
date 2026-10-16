@@ -14,7 +14,7 @@
 | Agents | agents/*.md | 18 |
 | Plugins | plugin.json | 17 |
 | Claude Output Styles | .claude/output-styles/*.md | 6 |
-| Claude Settings | .claude/settings.json | 32 |
+| Claude Settings | .claude/settings.json | 33 |
 | Prompt Engineering | CLAUDE.md, AGENTS.md | 6 |
 | Cross-Platform | AGENTS.md | 10 |
 | MCP | tool definitions | 26 |
@@ -37,8 +37,8 @@
 | Windsurf Skills | .windsurf/skills/*/SKILL.md | 1 |
 | Kiro Steering | .kiro/steering/*.md | 14 |
 | Kiro Skills | .kiro/skills/*/SKILL.md | 1 |
-| Kiro Agents | .kiro/agents/**/*.{json,md} | 14 |
-| Kiro Hooks | .kiro/hooks/*.kiro.hook | 10 |
+| Kiro Agents | .kiro/agents/**/*.{json,md} | 15 |
+| Kiro Hooks | .kiro/hooks/*.kiro.hook | 13 |
 | Kiro MCP | .kiro/settings/mcp.json | 6 |
 | Kiro Powers | .kiro/powers/*/POWER.md | 8 |
 | Kiro Settings | .kiro/settings/*.json | 3 |

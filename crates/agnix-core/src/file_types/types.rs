@@ -99,6 +99,8 @@ pub enum FileType {
     KiroAgent,
     /// Kiro IDE hook files (.kiro/hooks/*.kiro.hook)
     KiroHook,
+    /// Kiro V3 standalone hook files (.kiro/hooks/*.json)
+    KiroHookV3,
     /// Kiro MCP settings (.kiro/settings/mcp.json)
     KiroMcp,
     /// Kiro CLI settings (.kiro/settings.json or ~/.kiro/settings.json)
@@ -179,6 +181,7 @@ impl fmt::Display for FileType {
             FileType::KiroPower => "KiroPower",
             FileType::KiroAgent => "KiroAgent",
             FileType::KiroHook => "KiroHook",
+            FileType::KiroHookV3 => "KiroHookV3",
             FileType::KiroMcp => "KiroMcp",
             FileType::KiroSettings => "KiroSettings",
             FileType::GeminiAgent => "GeminiAgent",
@@ -238,6 +241,7 @@ mod tests {
             (FileType::KiroPower, "KiroPower"),
             (FileType::KiroAgent, "KiroAgent"),
             (FileType::KiroHook, "KiroHook"),
+            (FileType::KiroHookV3, "KiroHookV3"),
             (FileType::KiroMcp, "KiroMcp"),
             (FileType::KiroSettings, "KiroSettings"),
             (FileType::GeminiAgent, "GeminiAgent"),
@@ -296,6 +300,7 @@ mod tests {
             FileType::KiroPower,
             FileType::KiroAgent,
             FileType::KiroHook,
+            FileType::KiroHookV3,
             FileType::KiroMcp,
             FileType::KiroSettings,
             FileType::GeminiAgent,
@@ -368,6 +373,7 @@ mod tests {
             FileType::KiroPower,
             FileType::KiroAgent,
             FileType::KiroHook,
+            FileType::KiroHookV3,
             FileType::KiroMcp,
             FileType::KiroSettings,
             FileType::GeminiAgent,

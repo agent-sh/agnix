@@ -553,6 +553,32 @@ rules:
   kr_ag_014:
     message: 'Regla de permisos universales de Kiro invalida: %{issue}'
     suggestion: Usa entradas permissions.rules con una capacidad documentada, efecto deny/ask/allow y listas de cadenas match/exclude
+  kr_ag_015:
+    message: 'El agente de Kiro usa campos de confianza de CLI 2.x (%{fields}) sin bloque permissions; CLI V3 omite este perfil hasta actualizarlo'
+    suggestion: Ejecuta /upgrade-agent en una sesión V3 para convertir allowedTools/toolsSettings en permissions.rules, o añade un bloque permissions
+  kr_hk_011:
+    message: El documento de hooks V3 de Kiro tiene %{version_desc}
+    suggestion: Establece "version" en "v1" en el nivel superior del archivo de hooks autónomo
+    invalid_version: 'versión invalida "%{version}" (se esperaba "v1")'
+    missing_version: sin campo version
+  kr_hk_012:
+    message: Entrada de hook V3 de Kiro invalida
+    suggestion: Usa triggers PascalCase documentados (SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, PostFileCreate, PostFileSave, PostFileDelete, PreTaskExec, PostTaskExec, Stop, SessionEnd) con los campos name y action requeridos
+    parse_error: 'El archivo de hooks V3 de Kiro no es JSON valido: %{error}'
+    missing_hooks: El documento de hooks V3 de Kiro no tiene array hooks
+    missing_name: 'hooks[%{index}] falta el campo name requerido'
+    missing_trigger: 'hooks[%{index}] falta el campo trigger requerido'
+    invalid_trigger: 'La entrada de hooks usa trigger desconocido "%{trigger}"'
+    missing_action: 'hooks[%{index}] falta el campo action requerido'
+  kr_hk_013:
+    message: Acción de hook V3 de Kiro invalida
+    suggestion: Usa action.type "command" con un command no vacío, o "agent" con un prompt no vacío
+    invalid_type: 'hooks[%{index}] action.type "%{kind}" no es command ni agent'
+    missing_type: 'hooks[%{index}] action carece del campo type'
+    command_required: 'hooks[%{index}] acción command sin command no vacío'
+    prompt_required: 'hooks[%{index}] acción agent sin prompt no vacío'
+    timeout_range: 'hooks[%{index}] timeout %{value}s supera el límite de %{limit}s; 0 desactiva el timeout'
+    timeout_negative: 'hooks[%{index}] timeout %{value}s es negativo; usa 0 para desactivar'
   kr_hk_001:
     message: 'Evento invalido de hook IDE Kiro: ''%{event}'''
     suggestion: 'Usa uno de: fileEdited, fileCreate, fileDelete, promptSubmit, agentStop, preToolUse, postToolUse, manual'

@@ -7,12 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Kiro CLI V3 support: standalone `.kiro/hooks/*.json` documents validate under
+  new rules KR-HK-011 (document `version` must be `v1`), KR-HK-012 (documented
+  PascalCase triggers, camelCase 2.x aliases accepted, required
+  `name`/`trigger`/`action`) and KR-HK-013 (`action.type` `command`/`agent`
+  with a non-empty payload; seconds-based `timeout` with a sanity ceiling).
+- KR-AG-015 warns when a Kiro agent profile keeps CLI 2.x trust fields
+  (`allowedTools`, `toolsSettings`) without a `permissions` block: CLI V3
+  skips such profiles until `/upgrade-agent` converts them.
+- Kiro agent profiles accept the V3 fields `excludedTools` and `includePowers`,
+  and the V3 permission capabilities `power` and `sandbox_network`.
+- CC-SET-033 flags a non-boolean `idleCompaction` in Claude Code settings
+  (key added in v2.1.290, documented by the v2.1.299 release notes).
+
 ### Fixed
 - Restore VS Code lint and native integration checks: configure ESLint, use the
   compiled test entry point, isolate the test profile, and check explicit settings.
 - Accept the Codex rust-v0.162.0 config keys: the `[tui]` options (`mouse_scroll_speed`,
   `keymap`, `agents_overview_grouping` and the rest of the current schema) and the new
   root keys (`goals`, `cloud`, `browser_use`, `computer_use` and others).
+- Accept the Codex rust-v0.163.0 config keys: root
+  `include_environment_context_time`, `js_repl_node_module_dirs`,
+  `js_repl_node_path` and the 67 new `[features]` flags.
 - Accept numeric `autoCompactWindow` on Claude Code subagent frontmatter (v2.1.296).
   A non-number is a CC-AG-007 parse error. No range rule: the published
   `AgentDefinition` type is `number`, and the 100000-1000000 window is documented
@@ -28,6 +45,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   validate. Refresh the reviewed Claude Code hooks, memory, plugins, skills,
   and subagents spec hashes. Hook event names, skill frontmatter fields, plugin
   manifest keys, and the four-hop memory import limit are unchanged.
+- Review Claude Code v2.1.299, Codex CLI rust-v0.163.0, Cursor 3.24.18 and
+  Gemini CLI v0.64.0; refresh the drifted Cline and Cursor spec hashes.
+- Review Kiro CLI 2.30.0 through 2.31.1 (V3 rollout) and add V3 validation.
 
 ## [0.57.0] - 2026-10-08
 

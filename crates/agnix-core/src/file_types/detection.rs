@@ -374,6 +374,19 @@ pub fn detect_file_type(path: &Path) -> FileType {
         return FileType::KiroHook;
     }
 
+    // Kiro V3 standalone hook documents: .kiro/hooks/*.json (CLI V3 / IDE
+    // 1.0). The legacy .kiro.hook files are matched above; plain .json files
+    // directly under .kiro/hooks/ are the V3 standalone format documented at
+    // https://kiro.dev/docs/hooks/. mcp.json never lives here, but stay
+    // conservative and keep reserved names out.
+    if ends_with_ignore_ascii_case(filename, ".json")
+        && !filename.eq_ignore_ascii_case("mcp.json")
+        && parent_eq_ignore_ascii_case(parent, "hooks")
+        && parent_eq_ignore_ascii_case(grandparent, ".kiro")
+    {
+        return FileType::KiroHookV3;
+    }
+
     if filename.eq_ignore_ascii_case("mcp.json")
         && parent_eq_ignore_ascii_case(parent, "settings")
         && parent_eq_ignore_ascii_case(grandparent, ".kiro")
@@ -1796,6 +1809,30 @@ mod tests {
         assert_eq!(
             detect_file_type(Path::new(".KIRO/HOOKS/on-save.kiro.hook")),
             FileType::KiroHook
+        );
+    }
+
+    #[test]
+    fn detect_kiro_v3_hook_file() {
+        assert_eq!(
+            detect_file_type(Path::new(".kiro/hooks/lint-on-save.json")),
+            FileType::KiroHookV3
+        );
+        assert_eq!(
+            detect_file_type(Path::new(".KIRO/HOOKS/global-audit.JSON")),
+            FileType::KiroHookV3
+        );
+    }
+
+    #[test]
+    fn detect_kiro_v3_hook_wrong_directory_is_not_v3_hook() {
+        assert_ne!(
+            detect_file_type(Path::new(".kiro/agents/lint-on-save.json")),
+            FileType::KiroHookV3
+        );
+        assert_ne!(
+            detect_file_type(Path::new(".kiro/hooks/nested/deep.json")),
+            FileType::KiroHookV3
         );
     }
 

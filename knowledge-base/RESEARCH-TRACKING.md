@@ -2,7 +2,7 @@
 
 > Master document for tracking AI tool ecosystem changes, research updates, and community feedback.
 
-**Last Updated**: 2026-10-11
+**Last Updated**: 2026-10-16
 **Review Cadence**: Monthly (1st week of each month)
 **Related**: [MONTHLY-REVIEW.md](./MONTHLY-REVIEW.md) | [VALIDATION-RULES.md](./VALIDATION-RULES.md) | [INDEX.md](./INDEX.md)
 
@@ -16,18 +16,18 @@ Tools are organized by support tier (see [../CONTRIBUTING.md#tool-tier-system](.
 
 | Tool | Config Format | Documentation URL | Monitoring | Frequency | Last Reviewed | Rule Prefix |
 |------|---------------|-------------------|------------|-----------|---------------|-------------|
-| Claude Code | `CLAUDE.md`, `AGENTS.md` (fallback or combined project instructions in 2.1.277+), `.claude/settings.json`, `.claude/settings.local.json`, `.claude/managed-settings.json`, `.claude/agents/*.md`, `.claude/skills/*/SKILL.md`, `.claude/hooks configuration`, `.mcp.json`, `.claude-plugin/plugin.json`, `.claude/rules/**/*.md`, `.claude/output-styles/*.md` | https://code.claude.com/docs/en | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-10-11 | AGM, XP, CC-SK, CC-HK, CC-MEM, CC-AG, CC-PL, CC-SET, CC-OS, MCP |
-| Codex CLI | `AGENTS.md`, `.codex/config.toml` (also `.codex/config.json`/`.yaml`/`.yml`, including `[mcp_servers.*]` blocks), `.mcp.json`, `codex/requirements.toml` (managed environments), `.codex/skills/*/SKILL.md`, `.codex-plugin/plugin.json`, Agent Plugins root `plugin.json` | https://developers.openai.com/codex/ | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-10-09 | AGM, XP, MCP, CDX, CDX-AG, CDX-APP, CDX-CFG, CDX-PL, CDX-REQ, CX-SK |
+| Claude Code | `CLAUDE.md`, `AGENTS.md` (fallback or combined project instructions in 2.1.277+), `.claude/settings.json`, `.claude/settings.local.json`, `.claude/managed-settings.json`, `.claude/agents/*.md`, `.claude/skills/*/SKILL.md`, `.claude/hooks configuration`, `.mcp.json`, `.claude-plugin/plugin.json`, `.claude/rules/**/*.md`, `.claude/output-styles/*.md` | https://code.claude.com/docs/en | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-10-16 | AGM, XP, CC-SK, CC-HK, CC-MEM, CC-AG, CC-PL, CC-SET, CC-OS, MCP |
+| Codex CLI | `AGENTS.md`, `.codex/config.toml` (also `.codex/config.json`/`.yaml`/`.yml`, including `[mcp_servers.*]` blocks), `.mcp.json`, `codex/requirements.toml` (managed environments), `.codex/skills/*/SKILL.md`, `.codex-plugin/plugin.json`, Agent Plugins root `plugin.json` | https://developers.openai.com/codex/ | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-10-16 | AGM, XP, MCP, CDX, CDX-AG, CDX-APP, CDX-CFG, CDX-PL, CDX-REQ, CX-SK |
 | OpenCode | `AGENTS.md`, `opencode.json`, `opencode.jsonc`, `.opencode/config.json`, `.mcp.json`, `.opencode/skills/*/SKILL.md` | https://opencode.ai/docs/ | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-10-07 | AGM, XP, MCP, OC, OC-AG, OC-AGM, OC-CFG, OC-DEP, OC-LSP, OC-PM, OC-TUI, OC-SK |
-| Kiro CLI | `.kiro/steering/*.md`, `.kiro/agents/**/*.{json,md}`, `.kiro/hooks/*.kiro.hook`, `.kiro/settings/mcp.json`, `.kiro/settings.json`, `.kiro/powers/*/POWER.md`, `.kiro/skills/*/SKILL.md`, `AGENTS.md` (nested, loaded as steering since 2.18.0) | https://kiro.dev/changelog/cli/ | Automated (tool-release-watch.yml via HTML scrape) | Quarterly | 2026-10-08 | AGM, KIRO, KR-AG, KR-HK, KR-MCP, KR-PW, KR-SK, KR-SET |
+| Kiro CLI | `.kiro/steering/*.md`, `.kiro/agents/**/*.{json,md}`, `.kiro/hooks/*.kiro.hook`, `.kiro/hooks/*.json` (V3 standalone, 2.26+), `.kiro/settings/mcp.json`, `.kiro/settings.json`, `.kiro/powers/*/POWER.md`, `.kiro/skills/*/SKILL.md`, `AGENTS.md` (nested, loaded as steering since 2.18.0) | https://kiro.dev/changelog/cli/ | Automated (tool-release-watch.yml via HTML scrape) | Quarterly | 2026-10-16 | AGM, KIRO, KR-AG, KR-HK, KR-MCP, KR-PW, KR-SK, KR-SET |
 
 ### A Tier (test on major changes)
 
 | Tool | Config Format | Documentation URL | Monitoring | Frequency | Last Reviewed | Rule Prefix |
 |------|---------------|-------------------|------------|-----------|---------------|-------------|
 | GitHub Copilot | `.github/copilot-instructions.md`, `.github/instructions/*.instructions.md`, `.github/agents/*.agent.md`, `.github/prompts/*.prompt.md`, `.github/hooks/hooks.json`, `.github/workflows/copilot-setup-steps.yml`, `.github/skills/*/SKILL.md` | https://docs.github.com/en/copilot/customizing-copilot | Automated (spec-drift.yml + tool-release-watch.yml via microsoft/vscode-copilot-chat) | Weekly | 2026-10-05 | COP, CP-SK |
-| Cline | `.clinerules` (file or dir), `.cline/rules/**/*.md`, `.clinerules/workflows/*.md`, `.clinerules/hooks/*`, `.clinerules/skills/*/SKILL.md`, `.cline/skills/*/SKILL.md` | https://docs.cline.bot/customization/cline-rules | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-10-08 | CLN, CL-SK |
-| Cursor | `.cursor/rules/**/*.mdc`, `.cursorrules` (legacy), `.cursor/hooks.json`, `.cursor/agents/**/*.md` (Cursor also reads `.claude/agents/**/*.md`, `.codex/agents/**/*.md`, and corresponding user-level agent directories for compatibility), `.cursor/environment.json`, `.cursor/mcp.json`, `.cursor/skills/*/SKILL.md` | https://cursor.com/docs/rules | Automated (spec-drift.yml + tool-release-watch.yml via api2.cursor.sh stable update endpoint) | Weekly | 2026-10-11 | CUR, MCP, CR-SK |
+| Cline | `.clinerules` (file or dir), `.cline/rules/**/*.md`, `.clinerules/workflows/*.md`, `.clinerules/hooks/*`, `.clinerules/skills/*/SKILL.md`, `.cline/skills/*/SKILL.md` | https://docs.cline.bot/customization/cline-rules | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-10-16 | CLN, CL-SK |
+| Cursor | `.cursor/rules/**/*.mdc`, `.cursorrules` (legacy), `.cursor/hooks.json`, `.cursor/agents/**/*.md` (Cursor also reads `.claude/agents/**/*.md`, `.codex/agents/**/*.md`, and corresponding user-level agent directories for compatibility), `.cursor/environment.json`, `.cursor/mcp.json`, `.cursor/skills/*/SKILL.md` | https://cursor.com/docs/rules | Automated (spec-drift.yml + tool-release-watch.yml via api2.cursor.sh stable update endpoint) | Weekly | 2026-10-16 | CUR, MCP, CR-SK |
 
 ### B Tier (test on significant changes if time permits)
 
@@ -200,6 +200,13 @@ Tracking community input that influences rule development, tool support decision
 
 | Date | Source | Feedback | Action Taken | Issue/PR |
 |------|--------|----------|-------------|----------|
+| 2026-10-16 | Codex CLI rust-v0.163.0 tagged schema (#1673) | Root `include_environment_context_time`, `js_repl_node_module_dirs`, `js_repl_node_path` and 67 new `[features]` flags (instant_interrupt, recommended_plugins, ultrafast_mode, write_stdin_approval etc.); retired patched zsh flags get a migration notice upstream | Extended the two key allowlists and added a tagged-schema regression | #1673 |
+| 2026-10-16 | Claude Code v2.1.299 (#1666) | `idleCompaction` boolean settings key documented (added 2.1.290, surfaced 2.1.299) with `CLAUDE_CODE_IDLE_COMPACT_MIN_TOKENS` env knob | Added CC-SET-033 boolean check; env vars are not settings keys so no rule | #1666 |
+| 2026-10-16 | Spec drift #1665: cline-rules, cursor rules/subagents/environment (#1665) | Cline keeps `paths` as the only conditional; Cursor keeps .mdc + frontmatter, subagent fields and the environment.json schema unchanged in validated surface | Re-read all five sources; rule behavior accurate, refreshed five sentinel hashes only | #1665 |
+| 2026-10-16 | Cline v4.1.24 (#1667) | Rule-file symlinks now load and `.claude/skills` discovery added; both runtime behaviors, no schema change | Baseline-only advance; no new validation constraints | #1667 |
+| 2026-10-16 | Cursor 3.24.18 (#1668) | Stable update endpoint returned 3.24.18; version marker only (no notes payload) | Baseline-only advance | #1668 |
+| 2026-10-16 | Gemini CLI v0.64.0 (#1669) | a2a-server V1->V2 settings migration is server-internal; no `.gemini/settings.json` key renames published | Baseline-only advance; GM-011 candidate rejected - no documented key map | #1669 |
+| 2026-10-16 | Kiro CLI 2.30.0 + V3 rollout (#1664) | V3 becomes default at end of October; standalone `.kiro/hooks/*.json`, Markdown agent profiles, `excludedTools`/`includePowers`, capability permissions incl. `power`/`sandbox_network`, and unconverted V2 profiles are skipped by V3 | Added KR-HK-011/012/013 (standalone hooks), KR-AG-015 (unconverted V2 trust config), accepted V3 agent fields and capabilities | #1664 |
 | 2026-01-15 | GitHub Issues | Skills invoke at 0% without explicit trigger phrases | Added AS-010 rule for missing trigger phrase detection; sourced from Vercel research | #14 |
 | 2026-01-20 | agentsys patterns | Enhance plugins identified 70 production-tested config patterns | Created PATTERNS-CATALOG.md; patterns informed CC-SK-007, CC-HK-009, CC-MEM-005 rules | #28 |
 | 2026-02-01 | February 2026 monthly review | Coverage gap: no rules for Aider, Continue, Roo Code, Kiro CLI | Documented in tool inventory; awaiting community contributions via issue templates | #191 |

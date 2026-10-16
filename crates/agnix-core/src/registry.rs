@@ -398,7 +398,7 @@ impl ValidatorRegistryBuilder {
 ///
 /// Used by `BuiltinProvider` (via `debug_assert_eq!`) and tests to catch
 /// accidental additions or removals without updating all providers.
-const EXPECTED_BUILTIN_COUNT: usize = 82;
+const EXPECTED_BUILTIN_COUNT: usize = 84;
 
 // -- Category providers -----------------------------------------------------
 //
@@ -815,6 +815,16 @@ impl ValidatorProvider for MiscProvider {
                 imports_validator,
             ),
             (
+                FileType::KiroHookV3,
+                Some("KiroV3HookValidator"),
+                kiro_v3_hook_validator,
+            ),
+            (
+                FileType::KiroHookV3,
+                Some("ImportsValidator"),
+                imports_validator,
+            ),
+            (
                 FileType::KiroMcp,
                 Some("KiroMcpValidator"),
                 kiro_mcp_validator,
@@ -1005,6 +1015,10 @@ fn kiro_power_validator() -> Box<dyn Validator> {
 
 fn kiro_hook_validator() -> Box<dyn Validator> {
     Box::new(crate::rules::kiro_hook::KiroHookValidator)
+}
+
+fn kiro_v3_hook_validator() -> Box<dyn Validator> {
+    Box::new(crate::rules::kiro_hook_v3::KiroV3HookValidator)
 }
 
 fn kiro_settings_validator() -> Box<dyn Validator> {
@@ -1431,7 +1445,7 @@ mod tests {
 
     #[test]
     fn every_validatable_file_type_has_at_least_one_validator() {
-        let validatable_types: [FileType; 43] = [
+        let validatable_types: [FileType; 44] = [
             FileType::Skill,
             FileType::ClaudeMd,
             FileType::Agent,
@@ -1473,6 +1487,7 @@ mod tests {
             FileType::KiroPower,
             FileType::KiroAgent,
             FileType::KiroHook,
+            FileType::KiroHookV3,
             FileType::KiroMcp,
             FileType::GenericMarkdown,
         ];
@@ -1523,6 +1538,7 @@ mod tests {
                 | FileType::KiroPower
                 | FileType::KiroAgent
                 | FileType::KiroHook
+                | FileType::KiroHookV3
                 | FileType::KiroMcp
                 | FileType::KiroSettings
                 | FileType::GeminiAgent
@@ -1572,6 +1588,10 @@ mod tests {
         assert_eq!(
             names_for(FileType::KiroHook),
             vec!["KiroHookValidator", "ImportsValidator"]
+        );
+        assert_eq!(
+            names_for(FileType::KiroHookV3),
+            vec!["KiroV3HookValidator", "ImportsValidator"]
         );
         assert_eq!(names_for(FileType::KiroMcp), vec!["KiroMcpValidator"]);
     }
@@ -2015,7 +2035,7 @@ mod tests {
 
     #[test]
     fn misc_provider_count() {
-        assert_eq!(MiscProvider.named_validators().len(), 32);
+        assert_eq!(MiscProvider.named_validators().len(), 34);
     }
 
     #[test]
