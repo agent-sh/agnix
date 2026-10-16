@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `458` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `459` validation rules generated from `knowledge-base/rules.json`.
 `129` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -123,6 +123,7 @@ This section contains all `458` validation rules generated from `knowledge-base/
 | [CC-SK-020](./generated/cc-sk-020.md) | Invalid Shell Value | MEDIUM | Claude Skills | No |
 | [CC-SK-021](./generated/cc-sk-021.md) | Hardcoded User Directory Path | MEDIUM | Claude Skills | No |
 | [CC-SK-022](./generated/cc-sk-022.md) | Reserved Claude Skill Name | HIGH | Claude Skills | No |
+| [CC-SK-023](./generated/cc-sk-023.md) | Argument Placeholder Inside Code | MEDIUM | Claude Skills | No |
 | [CC-SET-001](./generated/cc-set-001.md) | Invalid prUrlTemplate Setting | MEDIUM | Claude Settings | No |
 | [CC-SET-002](./generated/cc-set-002.md) | Non-boolean channelsEnabled Setting | MEDIUM | Claude Settings | Yes (unsafe) |
 | [CC-SET-003](./generated/cc-set-003.md) | Invalid worktree.baseRef Value | MEDIUM | Claude Settings | No |
@@ -188,7 +189,6 @@ This section contains all `458` validation rules generated from `knowledge-base/
 | [CDX-AG-001](./generated/cdx-ag-001.md) | Empty AGENTS.md for Codex | HIGH | Codex CLI | No |
 | [CDX-AG-002](./generated/cdx-ag-002.md) | Secrets in AGENTS.md for Codex | HIGH | Codex CLI | No |
 | [CDX-AG-003](./generated/cdx-ag-003.md) | Generic AGENTS.md Guidance for Codex | MEDIUM | Codex CLI | No |
-| [CDX-AG-004](./generated/cdx-ag-004.md) | AGENTS.md Exceeds Size Limit | MEDIUM | Codex CLI | No |
 | [CDX-AG-005](./generated/cdx-ag-005.md) | AGENTS.md References Missing File | MEDIUM | Codex CLI | No |
 | [CDX-AG-006](./generated/cdx-ag-006.md) | AGENTS.md Missing Project Context | LOW | Codex CLI | No |
 | [CDX-AG-007](./generated/cdx-ag-007.md) | AGENTS.md Contradicts config.toml | MEDIUM | Codex CLI | No |
@@ -313,7 +313,7 @@ This section contains all `458` validation rules generated from `knowledge-base/
 | [KR-AG-006](./generated/kr-ag-006.md) | Kiro Agent References Unknown Subagent | MEDIUM | Kiro Agents | No |
 | [KR-AG-007](./generated/kr-ag-007.md) | Kiro Agent Tool Scope Broader Than Referenced Subagent | MEDIUM | Kiro Agents | No |
 | [KR-AG-008](./generated/kr-ag-008.md) | Empty Explicit Agent Name | HIGH | Kiro Agents | No |
-| [KR-AG-009](./generated/kr-ag-009.md) | Agent Missing Prompt | HIGH | Kiro Agents | No |
+| [KR-AG-009](./generated/kr-ag-009.md) | Agent Prompt Empty Or Invalid | HIGH | Kiro Agents | No |
 | [KR-AG-010](./generated/kr-ag-010.md) | Duplicate Tool Entries | MEDIUM | Kiro Agents | No |
 | [KR-AG-011](./generated/kr-ag-011.md) | Empty Tools Array | LOW | Kiro Agents | No |
 | [KR-AG-012](./generated/kr-ag-012.md) | toolAliases References Unknown Tool | MEDIUM | Kiro Agents | No |
@@ -419,6 +419,7 @@ This section contains all `458` validation rules generated from `knowledge-base/
 | [XP-009](./generated/xp-009.md) | Codex Instruction Chain Exceeds project_doc_max_bytes | MEDIUM | Cross-Platform | No |
 | [XP-008](./generated/xp-008.md) | Claude-specific Features in CLAUDE.md for Cursor | MEDIUM | Cross-Platform | No |
 | [XP-SK-001](./generated/xp-sk-001.md) | Skill Uses Client-Specific Features | LOW | Cross-Platform | No |
+| [XP-SK-002](./generated/xp-sk-002.md) | Hardcoded User Directory Path In Skill | MEDIUM | Cross-Platform | No |
 | [OC-CFG-001](./generated/oc-cfg-001.md) | Invalid Model Format | HIGH | OpenCode | No |
 | [OC-CFG-002](./generated/oc-cfg-002.md) | Invalid autoupdate value | HIGH | OpenCode | No |
 | [OC-CFG-003](./generated/oc-cfg-003.md) | Unknown Top-level Config Field | MEDIUM | OpenCode | No |

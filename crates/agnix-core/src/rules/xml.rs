@@ -413,6 +413,20 @@ Persist the resolved path to a file:
     }
 
     #[test]
+    fn test_xml_001_ignores_prose_placeholders() {
+        let content = "---\nname: my-skill\ndescription: A skill\n---\n\
+            Run `ssh` as: ssh <build-host> 'free -h'\n\
+            Report \"Path not found: <path>\" and stop.\n";
+        let validator = XmlValidator;
+        let diagnostics =
+            validator.validate(Path::new("SKILL.md"), content, &LintConfig::default());
+        assert!(
+            !diagnostics.iter().any(|d| d.rule.starts_with("XML-")),
+            "{diagnostics:?}"
+        );
+    }
+
+    #[test]
     fn test_xml_001_still_flags_unclosed_tag_in_body() {
         // The mask only covers frontmatter - unclosed XML in the body is still
         // flagged, and the reported line accounts for the frontmatter offset.

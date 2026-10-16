@@ -445,22 +445,24 @@ fn test_xml_comment_exclusion_preserves_cross_platform_comment_guards() {
 
 #[test]
 fn test_xml_markdown_skipping_preserves_real_tag_diagnostics() {
+    // `<real>body` runs straight into content, so it reads as a structural tag
+    // rather than a prose placeholder like `run <host> now`.
     let cases = [
-        ("<!-- <hidden> --> <real>", "XML-001", "<real>"),
-        ("<!-->\n<real>", "XML-001", "<real>"),
-        ("<!--->\n<real>", "XML-001", "<real>"),
-        ("<!-- <hidden>\n```\n-->\n<real>", "XML-001", "<real>"),
-        ("prefix <!-- <hidden>\n--> <real>", "XML-001", "<real>"),
-        ("prefix <!-- <real>\n\n-->", "XML-001", "<real>"),
-        ("`<hidden>\ntext` <real>", "XML-001", "<real>"),
-        ("``<hidden> `\ntext`` <real>", "XML-001", "<real>"),
-        ("`<!-- <hidden>` <real>", "XML-001", "<real>"),
-        ("`unmatched\n\n<real> `", "XML-001", "<real>"),
-        ("`unmatched\n```\n`\n```\n<real>", "XML-001", "<real>"),
-        ("`unmatched\n# <real> `", "XML-001", "<real>"),
-        ("`unmatched\n- <real> `", "XML-001", "<real>"),
-        (r"\\<real>", "XML-001", "<real>"),
-        (r"\`<real>", "XML-001", "<real>"),
+        ("<!-- <hidden> --> <real>body", "XML-001", "<real>"),
+        ("<!-->\n<real>body", "XML-001", "<real>"),
+        ("<!--->\n<real>body", "XML-001", "<real>"),
+        ("<!-- <hidden>\n```\n-->\n<real>body", "XML-001", "<real>"),
+        ("prefix <!-- <hidden>\n--> <real>body", "XML-001", "<real>"),
+        ("prefix <!-- <real>body\n\n-->", "XML-001", "<real>"),
+        ("`<hidden>\ntext` <real>body", "XML-001", "<real>"),
+        ("``<hidden> `\ntext`` <real>body", "XML-001", "<real>"),
+        ("`<!-- <hidden>` <real>body", "XML-001", "<real>"),
+        ("`unmatched\n\n<real>body `", "XML-001", "<real>"),
+        ("`unmatched\n```\n`\n```\n<real>body", "XML-001", "<real>"),
+        ("`unmatched\n# <real>body `", "XML-001", "<real>"),
+        ("`unmatched\n- <real>body `", "XML-001", "<real>"),
+        (r"\\<real>body", "XML-001", "<real>"),
+        (r"\`<real>body", "XML-001", "<real>"),
         (r"\\</real>", "XML-003", "</real>"),
         ("<!-- <hidden> -->\n</real>", "XML-003", "</real>"),
     ];

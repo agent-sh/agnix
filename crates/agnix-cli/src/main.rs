@@ -1099,20 +1099,40 @@ fn resolve_config_path(path: &Path, config_override: Option<&PathBuf>) -> Option
         return Some(config.clone());
     }
 
-    let mut candidates = Vec::new();
-    if path.is_dir() {
-        candidates.push(path.to_path_buf());
-    } else if let Some(parent) = path.parent() {
-        candidates.push(parent.to_path_buf());
-    }
+    let start = if path.is_dir() {
+        path
+    } else {
+        path.parent().unwrap_or(Path::new(""))
+    };
+    let start = if start.as_os_str().is_empty() {
+        Path::new(".")
+    } else {
+        start
+    };
+    let start = start.canonicalize().unwrap_or_else(|_| start.to_path_buf());
 
-    if let Ok(cwd) = env::current_dir() {
-        candidates.push(cwd);
-    }
-
-    for dir in candidates {
+    // The nearest `.agnix.toml` from the target up to its repository root
+    // governs it, wherever agnix runs from. This matches the workspace root
+    // `resolve_batch_root` picks, so results do not depend on the working
+    // directory.
+    for dir in start.ancestors() {
         let candidate = dir.join(".agnix.toml");
         if candidate.exists() {
+            return Some(candidate);
+        }
+        if dir.join(".git").exists() {
+            break;
+        }
+    }
+
+    // The working directory's config applies only to targets inside it, for a
+    // target below a nested repository boundary. Using it for an unrelated tree
+    // applied that project's `exclude` patterns there and could silently skip
+    // every file.
+    if let Ok(cwd) = env::current_dir() {
+        let cwd_canonical = cwd.canonicalize().unwrap_or_else(|_| cwd.clone());
+        let candidate = cwd.join(".agnix.toml");
+        if start.starts_with(&cwd_canonical) && candidate.exists() {
             return Some(candidate);
         }
     }

@@ -27,9 +27,6 @@ pub const VALID_MODEL_REASONING_SUMMARIES: &[&str] =
 /// Valid values for `mcp_oauth_credentials_store`
 pub const VALID_MCP_OAUTH_STORES: &[&str] = &["file", "keyring", "auto", "ephemeral"];
 
-/// Maximum allowed size (bytes) for AGENTS.md in Codex projects
-pub const AGENTS_MD_MAX_SIZE: usize = 100_000;
-
 /// Known valid top-level keys for .codex/config.toml
 ///
 /// Sourced from the upstream JSON schema at

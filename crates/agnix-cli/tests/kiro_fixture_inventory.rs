@@ -216,7 +216,8 @@ fn kiro_fixture_families_are_cli_runnable() {
     let root = workspace_root();
     let fixture_roots = [
         ("tests/fixtures/kiro-powers", 7_u64, 4_u64),
-        ("tests/fixtures/kiro-agents", 10_u64, 20_u64),
+        // KR-AG-009 no longer flags the 10 agents that omit the optional `prompt`.
+        ("tests/fixtures/kiro-agents", 10_u64, 10_u64),
         ("tests/fixtures/kiro-hooks", 7_u64, 4_u64),
         ("tests/fixtures/kiro-mcp", 1_u64, 0_u64),
         ("tests/fixtures/kiro-permissions", 2_u64, 4_u64),

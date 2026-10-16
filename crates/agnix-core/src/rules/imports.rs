@@ -76,12 +76,73 @@ fn is_local_file_link(url: &str) -> bool {
     !url.is_empty() && !url.starts_with('#')
 }
 
-/// Strip URL fragment (e.g., "file.md#section" -> "file.md")
+/// Strip URL fragment and query (e.g., "file.md#section" or "file.md?raw=1" -> "file.md")
 fn strip_fragment(url: &str) -> &str {
-    match url.find('#') {
+    match url.find(['#', '?']) {
         Some(idx) => &url[..idx],
         None => url,
     }
+}
+
+/// Decode `%XX` escapes, so `my%20notes.md` names the file `my notes.md`.
+/// Returns the input unchanged when an escape is malformed or the decoded
+/// bytes are not UTF-8.
+fn percent_decode(path: &str) -> std::borrow::Cow<'_, str> {
+    if !path.contains('%') {
+        return std::borrow::Cow::Borrowed(path);
+    }
+    let bytes = path.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%' {
+            let hex = bytes
+                .get(i + 1..i + 3)
+                .and_then(|h| std::str::from_utf8(h).ok());
+            match hex.and_then(|h| u8::from_str_radix(h, 16).ok()) {
+                Some(byte) => {
+                    out.push(byte);
+                    i += 3;
+                    continue;
+                }
+                None => return std::borrow::Cow::Borrowed(path),
+            }
+        }
+        out.push(bytes[i]);
+        i += 1;
+    }
+    match String::from_utf8(out) {
+        Ok(decoded) => std::borrow::Cow::Owned(decoded),
+        Err(_) => std::borrow::Cow::Borrowed(path),
+    }
+}
+
+/// Expand the Claude Code path variables a link can start with.
+///
+/// `${CLAUDE_SKILL_DIR}` is the directory of the nearest enclosing SKILL.md and
+/// `${CLAUDE_PLUGIN_ROOT}` the nearest directory holding `.claude-plugin/`.
+/// Returns `None` when the link uses another variable or the directory cannot
+/// be found, since the target is then only known at runtime.
+fn expand_link_variables(url: &str, base_dir: &Path, fs: &dyn FileSystem) -> Option<String> {
+    if !url.contains('$') {
+        return Some(url.to_string());
+    }
+    let (rest, marker) = if let Some(rest) = url.strip_prefix("${CLAUDE_SKILL_DIR}") {
+        (rest, Path::new("SKILL.md"))
+    } else {
+        (
+            url.strip_prefix("${CLAUDE_PLUGIN_ROOT}")?,
+            Path::new(".claude-plugin"),
+        )
+    };
+    if rest.contains('$') {
+        return None;
+    }
+    let root = base_dir
+        .ancestors()
+        .find(|dir| fs.exists(&dir.join(marker)))?;
+    let rest = rest.trim_start_matches(['/', '\\']);
+    Some(root.join(rest).to_string_lossy().into_owned())
 }
 
 impl Validator for ImportsValidator {
@@ -728,11 +789,18 @@ fn validate_markdown_links(
             continue;
         }
 
-        // Strip fragment to get the file path
-        let file_path = strip_fragment(&link.url);
+        // Expand path variables, then strip the fragment and query and decode
+        // %XX escapes to get the file path
+        let Some(expanded) = expand_link_variables(&link.url, base_dir, fs) else {
+            continue;
+        };
+        let file_path = percent_decode(strip_fragment(&expanded));
+        if file_path.is_empty() {
+            continue;
+        }
 
         // Resolve the path relative to the file's directory
-        let resolved = resolve_import_path(file_path, base_dir);
+        let resolved = resolve_import_path(&file_path, base_dir);
 
         // Security: Verify resolved path stays within project root
         if let Some(ref canonical_base) = canonical_base {
@@ -1344,6 +1412,96 @@ mod tests {
         assert!(diagnostics.iter().any(|d| d.rule == "REF-002"));
         let ref_002 = diagnostics.iter().find(|d| d.rule == "REF-002").unwrap();
         assert!(ref_002.message.contains("Broken markdown link"));
+    }
+
+    /// Write `content` to `name` under `dir` and return the REF-002 messages,
+    /// validating with `dir` as the project root.
+    fn ref_002_messages(dir: &Path, name: &str, content: &str) -> Vec<String> {
+        let file_path = dir.join(name);
+        fs::create_dir_all(file_path.parent().unwrap()).unwrap();
+        fs::write(&file_path, content).unwrap();
+        let config = LintConfig::builder()
+            .root_dir(dir.to_path_buf())
+            .build()
+            .unwrap();
+        ImportsValidator
+            .validate(&file_path, content, &config)
+            .into_iter()
+            .filter(|d| d.rule == "REF-002")
+            .map(|d| d.message)
+            .collect()
+    }
+
+    #[test]
+    fn test_ref_002_broken_link_with_inline_code_text() {
+        let temp = TempDir::new().unwrap();
+        let content = "The bridge ([`agent-bridge/README.md`](../agent-bridge/README.md)) is gone.";
+        let messages = ref_002_messages(temp.path(), "skills/tmux/SKILL.md", content);
+        assert_eq!(messages.len(), 1, "{messages:?}");
+        assert!(messages[0].contains("../agent-bridge/README.md"));
+    }
+
+    #[test]
+    fn test_ref_002_titled_link_to_existing_file() {
+        let temp = TempDir::new().unwrap();
+        fs::write(temp.path().join("guide.md"), "Guide").unwrap();
+        let content = r#"See [guide](guide.md "The guide")."#;
+        assert!(ref_002_messages(temp.path(), "CLAUDE.md", content).is_empty());
+    }
+
+    #[test]
+    fn test_ref_002_percent_encoded_and_query_links() {
+        let temp = TempDir::new().unwrap();
+        fs::write(temp.path().join("my notes.md"), "Notes").unwrap();
+        let content =
+            "See [notes](my%20notes.md), [raw](my%20notes.md?plain=1) and [bad](my%2Gnotes.md).";
+        let messages = ref_002_messages(temp.path(), "CLAUDE.md", content);
+        // The malformed escape is checked literally and reported.
+        assert_eq!(messages.len(), 1, "{messages:?}");
+        assert!(messages[0].contains("my%2Gnotes.md"));
+    }
+
+    #[test]
+    fn test_ref_002_broken_reference_definition() {
+        let temp = TempDir::new().unwrap();
+        fs::write(temp.path().join("guide.md"), "Guide").unwrap();
+        let content =
+            "See [the guide][guide] and [old][old].\n\n[guide]: guide.md\n[old]: removed.md\n";
+        let messages = ref_002_messages(temp.path(), "AGENTS.md", content);
+        assert_eq!(messages.len(), 1, "{messages:?}");
+        assert!(messages[0].contains("removed.md"));
+    }
+
+    #[test]
+    fn test_ref_002_expands_claude_skill_dir() {
+        let temp = TempDir::new().unwrap();
+        let skill = temp.path().join("skills/sec");
+        fs::create_dir_all(skill.join("jobs")).unwrap();
+        fs::write(skill.join("jobs/scan.md"), "Scan").unwrap();
+        let content = "1. [Scan](${CLAUDE_SKILL_DIR}/jobs/scan.md)\n2. [Patch](${CLAUDE_SKILL_DIR}/jobs/patch.md)\n";
+        let messages = ref_002_messages(temp.path(), "skills/sec/SKILL.md", content);
+        assert_eq!(messages.len(), 1, "{messages:?}");
+        assert!(messages[0].contains("jobs/patch.md"));
+    }
+
+    #[test]
+    fn test_ref_002_expands_claude_plugin_root() {
+        let temp = TempDir::new().unwrap();
+        let plugin = temp.path().join("plugin");
+        fs::create_dir_all(plugin.join(".claude-plugin")).unwrap();
+        fs::create_dir_all(plugin.join("scripts")).unwrap();
+        let content = "- [Scripts](${CLAUDE_PLUGIN_ROOT}/scripts)\n- [Docs](${CLAUDE_PLUGIN_ROOT}/docs/missing.md)\n";
+        let messages = ref_002_messages(&plugin, "skills/sec/SKILL.md", content);
+        assert_eq!(messages.len(), 1, "{messages:?}");
+        assert!(messages[0].contains("docs/missing.md"));
+    }
+
+    #[test]
+    fn test_ref_002_skips_unresolvable_variables() {
+        let temp = TempDir::new().unwrap();
+        // No `.claude-plugin/` above the file, and an unknown variable.
+        let content = "- [Scripts](${CLAUDE_PLUGIN_ROOT}/scripts)\n- [Data](${DATA_DIR}/data.md)\n";
+        assert!(ref_002_messages(temp.path(), "skills/sec/SKILL.md", content).is_empty());
     }
 
     #[test]

@@ -84,7 +84,7 @@ struct SkillFrontmatter {
         default,
         deserialize_with = "de_string_or_space_seq"
     )]
-    _arguments: Option<String>,
+    arguments: Option<String>,
     #[serde(
         rename = "disable-model-invocation",
         default,
@@ -115,7 +115,7 @@ struct PathMatch {
 
 static_regex!(fn name_format_regex, r"^[a-z0-9]+(-[a-z0-9]+)*$");
 static_regex!(fn consecutive_hyphen_regex, r"-{2,}");
-static_regex!(fn reference_path_regex, "(?i)\\b(?:references?|refs|scripts|assets)[/\\\\][^\\s)\\]}>\"']+");
+static_regex!(fn reference_path_regex, "(?i)\\b(?:references?|refs|scripts|assets)[/\\\\][^\\s)\\]}>\"'`]+");
 static_regex!(fn plain_bash_regex, r"\bBash\b");
 static_regex!(fn imperative_verb_regex, r"(?i)\b(run|execute|create|build|deploy|install|configure|update|delete|remove|add|write|read|check|test|validate|ensure|make|use|call|invoke|start|stop|send|fetch|generate|implement|fix|analyze|review|search|find|move|copy|replace|push|pull|commit|clean|format|lint|parse|process|handle|prepare|download|upload|export|import|open|save|load|connect|verify|apply|enable|disable)\b");
 static_regex!(fn indexed_arguments_regex, r"\$ARGUMENTS\[\d+\]");
@@ -126,6 +126,18 @@ static_regex!(fn indexed_arguments_regex, r"\$ARGUMENTS\[\d+\]");
 // explicit `$ARGUMENTS[N]` form. Requires a non-word, non-`$` char before the
 // `$` so `x$3y` and `${CLAUDE_SKILL_DIR}` are not mistaken for it.
 static_regex!(fn positional_shorthand_regex, r"(?:^|[^\w$])\$([0-9])\b");
+
+/// Returns true if the byte at `pos` is preceded by an odd number of
+/// backslashes, so `\$1` is escaped while `\\$1` is not.
+fn is_backslash_escaped_at(bytes: &[u8], pos: usize) -> bool {
+    bytes[..pos]
+        .iter()
+        .rev()
+        .take_while(|&&b| b == b'\\')
+        .count()
+        % 2
+        == 1
+}
 
 fn is_valid_name_segment(segment: &str) -> bool {
     segment.chars().count() <= 64 && name_format_regex().is_match(segment)
@@ -1346,6 +1358,57 @@ impl<'a> ValidationContext<'a> {
         }
     }
 
+    /// CC-SK-023: `$N` inside code in a skill that declares no arguments.
+    /// Claude Code substitutes `$N` everywhere in the body, code included, so
+    /// shell or awk syntax such as `awk '{print $1}'` receives the second skill
+    /// argument whenever the skill is invoked with two or more. A skill with an
+    /// `argument-hint` or `arguments` likely means the placeholder, so it is
+    /// left alone.
+    fn validate_cc_positional_placeholder_in_code(&mut self, frontmatter: &SkillFrontmatter) {
+        if !self.config.is_rule_enabled("CC-SK-023")
+            || frontmatter.argument_hint.is_some()
+            || frontmatter.arguments.is_some()
+        {
+            return;
+        }
+
+        let body = if self.parts.body_start <= self.content.len() {
+            &self.content[self.parts.body_start..]
+        } else {
+            ""
+        };
+        let prose = crate::parsers::markdown::mask_code_spans(body);
+        let mut in_code = positional_shorthand_regex()
+            .captures_iter(body)
+            .filter_map(|cap| {
+                let digit = cap.get(1)?;
+                let dollar = digit.start() - 1;
+                // Masked bytes are code; prose keeps the `$`.
+                let masked = prose.as_bytes()[dollar] != b'$';
+                (masked && !is_backslash_escaped_at(body.as_bytes(), dollar))
+                    .then(|| (dollar, digit.as_str().to_string()))
+            });
+        let Some((dollar, digit)) = in_code.next() else {
+            return;
+        };
+        let token = format!("${digit}");
+        let (line, col) = self.line_col_at(self.parts.body_start + dollar);
+        self.diagnostics.push(
+            Diagnostic::warning(
+                self.path.to_path_buf(),
+                line,
+                col,
+                "CC-SK-023",
+                t!(
+                    "rules.cc_sk_023.message",
+                    token = token.as_str(),
+                    index = digit.as_str()
+                ),
+            )
+            .with_suggestion(t!("rules.cc_sk_023.suggestion", token = token.as_str())),
+        );
+    }
+
     /// CC-SK-016: Validate indexed $ARGUMENTS[n] has argument-hint
     fn validate_cc_indexed_arguments(&mut self, frontmatter: &SkillFrontmatter) {
         if !self.config.is_rule_enabled("CC-SK-016") || frontmatter.argument_hint.is_some() {
@@ -1360,8 +1423,15 @@ impl<'a> ValidationContext<'a> {
 
         // `$N` is documented as shorthand for `$ARGUMENTS[N]`, so a body using
         // `$0` without an argument-hint has the same gap the rule targets.
+        // Only prose counts as that use: in code, `$1` is almost always shell or
+        // awk syntax (`awk '{print $1}'`), where an argument-hint is no remedy.
+        // A backslash-escaped `\$1` is documented as a literal dollar sign.
         let indexed_at = indexed_arguments_regex().find(body).map(|m| m.start());
-        let shorthand_at = positional_shorthand_regex().find(body).map(|m| m.start());
+        let prose = crate::parsers::markdown::mask_code_spans(body);
+        let shorthand_at = positional_shorthand_regex()
+            .find_iter(&prose)
+            .map(|m| m.start() + m.as_str().find('$').unwrap_or(0))
+            .find(|&dollar| !is_backslash_escaped_at(prose.as_bytes(), dollar));
         let Some(match_start) = (match (indexed_at, shorthand_at) {
             (Some(a), Some(b)) => Some(a.min(b)),
             (a, b) => a.or(b),
@@ -1637,14 +1707,19 @@ impl<'a> ValidationContext<'a> {
         }
     }
 
-    /// CC-SK-021: Hardcoded user-home paths in bundled skill content. Walks the
-    /// skill directory and scans the SKILL.md body, sibling `.md` bodies, and
-    /// bundled scripts (whole file). Diagnostics attach to the offending file.
-    fn validate_cc_sk_021(&mut self) {
-        if !claude_skill_rules_apply(self.client, self.config)
-            || !self.config.is_rule_enabled("CC-SK-021")
-            || !self.path.is_file()
-        {
+    /// CC-SK-021 / XP-SK-002: Hardcoded user-home paths in bundled skill
+    /// content. Walks the skill directory and scans the SKILL.md body, sibling
+    /// `.md` bodies, and bundled scripts (whole file). Diagnostics attach to the
+    /// offending file. Claude Code and unscoped skills report CC-SK-021; skills
+    /// owned by any other client report the client-neutral XP-SK-002, so the
+    /// same path is never reported twice.
+    fn validate_hardcoded_user_paths(&mut self) {
+        let rule = if claude_skill_rules_apply(self.client, self.config) {
+            "CC-SK-021"
+        } else {
+            "XP-SK-002"
+        };
+        if !self.config.is_rule_enabled(rule) || !self.path.is_file() {
             return;
         }
         let Some(dir) = self.path.parent() else {
@@ -1696,11 +1771,11 @@ impl<'a> ValidationContext<'a> {
         }
         files.sort();
         for file in files {
-            self.scan_file_for_user_paths(&file);
+            self.scan_file_for_user_paths(&file, rule);
         }
     }
 
-    fn scan_file_for_user_paths(&mut self, file: &Path) {
+    fn scan_file_for_user_paths(&mut self, file: &Path, rule: &'static str) {
         let filename = file
             .file_name()
             .and_then(|n| n.to_str())
@@ -1760,10 +1835,18 @@ impl<'a> ValidationContext<'a> {
                     file.to_path_buf(),
                     line,
                     col,
-                    "CC-SK-021",
-                    t!("rules.cc_sk_021.message", path = hit.text),
+                    rule,
+                    if rule == "CC-SK-021" {
+                        t!("rules.cc_sk_021.message", path = hit.text)
+                    } else {
+                        t!("rules.xp_sk_002.message", path = hit.text)
+                    },
                 )
-                .with_suggestion(t!("rules.cc_sk_021.suggestion")),
+                .with_suggestion(if rule == "CC-SK-021" {
+                    t!("rules.cc_sk_021.suggestion")
+                } else {
+                    t!("rules.xp_sk_002.suggestion")
+                }),
             );
         }
     }
@@ -1802,6 +1885,8 @@ const RULE_IDS: &[&str] = &[
     "CC-SK-020",
     "CC-SK-021",
     "CC-SK-022",
+    "CC-SK-023",
+    "XP-SK-002",
 ];
 
 pub struct SkillValidator;
@@ -1901,6 +1986,9 @@ impl Validator for SkillValidator {
             // Phase 9: CC-SK-016 ($ARGUMENTS[n] without argument-hint)
             ctx.validate_cc_indexed_arguments(&frontmatter);
 
+            // Phase 9b: CC-SK-023 ($N inside code in a skill without arguments)
+            ctx.validate_cc_positional_placeholder_in_code(&frontmatter);
+
             // Phase 10: CC-SK-013 (fork without actionable instructions)
             ctx.validate_cc_fork_instructions(&frontmatter);
 
@@ -1976,8 +2064,8 @@ impl Validator for SkillValidator {
         // Phase 17: Directory validation (AS-015)
         ctx.validate_directory();
 
-        // Phase 18: Bundled-content scan (CC-SK-021)
-        ctx.validate_cc_sk_021();
+        // Phase 18: Bundled-content scan (CC-SK-021 / XP-SK-002)
+        ctx.validate_hardcoded_user_paths();
 
         ctx.diagnostics
     }

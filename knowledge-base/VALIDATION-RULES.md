@@ -346,6 +346,13 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Fix**: Rename the local skill folder or frontmatter name.
 **Source**: code.claude.com/docs/en/skills, github.com/anthropics/claude-code/releases/tag/v2.1.283
 
+<a id="cc-sk-023"></a>
+### CC-SK-023 [MEDIUM] Argument Placeholder Inside Code
+**Requirement**: A Claude Code skill that declares no `argument-hint` or `arguments` SHOULD NOT contain an unescaped `$N` (`$0` through `$9`) inside a fenced or inline code span. Claude Code substitutes `$N` everywhere in the skill body, code included, so shell or awk syntax such as `awk '{print $1}'` receives the second skill argument whenever the skill is invoked with two or more arguments. The skills docs say to escape a literal `$` before a digit with a single backslash (`\$1`).
+**Detection**: Find `$N` shorthand matches in the body that fall inside code and are not preceded by a single backslash; report the first one. Skills with `argument-hint` or `arguments` are skipped, since they likely mean the placeholder. Prose `$N` is covered by CC-SK-016.
+**Fix**: Manual - escape the dollar sign (`\$1`) when it is code syntax, or add an `argument-hint` when it should receive an argument.
+**Source**: code.claude.com/docs/en/skills
+
 <a id="cc-set-001"></a>
 ### CC-SET-001 [MEDIUM] Invalid prUrlTemplate Setting
 **Requirement**: `prUrlTemplate` in `.claude/settings.json` (and `.local.json`/`managed-settings.json`) SHOULD be a non-empty string containing at least one of the documented placeholders: `{host}`, `{owner}`, `{repo}`, `{number}`, `{url}`. A template with no placeholder will render the same static URL for every PR badge.
@@ -692,9 +699,9 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Source**: kiro.dev/docs/cli/custom-agents/configuration-reference, kiro.dev/docs/cli/v3/agent-config
 
 <a id="kr-ag-009"></a>
-### KR-AG-009 [HIGH] Agent Missing Prompt
-**Requirement**: Kiro agent JSON MUST include a non-empty `prompt` field
-**Detection**: Check if `prompt` field is present and non-empty
+### KR-AG-009 [HIGH] Agent Prompt Empty Or Invalid
+**Requirement**: A Kiro agent JSON `prompt`, when set, SHOULD be a non-empty string (inline text or a `file://` URI). The field is optional: the configuration reference says every agent file "can include" it, and Markdown agents take the prompt from the body
+**Detection**: Check that a present `prompt` field is a non-empty string
 **Fix**: No auto-fix (add a prompt field)
 **Source**: kiro.dev/docs/agents, kiro.dev/docs/configuration
 
@@ -2697,13 +2704,6 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 **Fix**: Manual - set `web_search` to `"disabled"`, `"cached"`, `"indexed"`, or `"live"`.
 **Source**: github.com/openai/codex/releases/tag/rust-v0.142.0, github.com/openai/codex/blob/rust-v0.142.0/codex-rs/protocol/src/config_types.rs
 
-<a id="cdx-ag-004"></a>
-### CDX-AG-004 [MEDIUM] AGENTS.md Exceeds Size Limit
-**Requirement**: AGENTS.md SHOULD not exceed 100,000 bytes
-**Detection**: Check file size against the limit
-**Fix**: No auto-fix (reduce content length)
-**Source**: learn.chatgpt.com/docs/agent-configuration/agents-md
-
 <a id="cdx-ag-005"></a>
 ### CDX-AG-005 [MEDIUM] AGENTS.md References Missing File
 **Requirement**: File references in AGENTS.md SHOULD point to existing files
@@ -3440,7 +3440,7 @@ agent: reviewer
 <a id="xp-003"></a>
 ### XP-003 [MEDIUM] Hard-Coded Platform Paths
 **Requirement**: Paths SHOULD use environment variables
-**Detection**: Check for `.claude/`, `.opencode/` in configs
+**Detection**: Check for tool directories (`.claude/`, `.opencode/`, `.cursor/`, `.cline/`, `.github/copilot/`) in every validated file. Machine paths (`~/.<dir>/`, `~/Library/`, `/Users/<name>/`, `/home/<name>/`, `C:\Users\<name>\`) are checked only in files agents load, not in generic Markdown, where they mostly document where a tool keeps its data
 **Fix**: Use `$CLAUDE_PROJECT_DIR` or equivalent
 **Source**: multi-platform best practices
 
@@ -3484,7 +3484,7 @@ Known asymmetry with XP-009: this is a per-file validator, so it has no view of 
 <a id="xp-009"></a>
 ### XP-009 [MEDIUM] Codex Instruction Chain Exceeds project_doc_max_bytes
 **Requirement**: The *combined* size of the Codex instruction chain SHOULD stay under the 32768-byte `project_doc_max_bytes` default. The cap is cumulative, not per-file - Codex "stops adding files once the combined size reaches the limit", so a project split across several mid-size files is truncated even when every individual file passes XP-007.
-**Detection**: Project-level check. Builds **one chain per leaf directory** the way Codex discovers them - start at the project root, walk down, at most one file per directory, preferring `AGENTS.override.md` over `AGENTS.md` - then sums each chain independently and reports on the file where that chain's running total crosses the limit, since that file and everything deeper is what Codex drops. Sibling subtrees are separate chains and are never summed together: a single whole-tree total would blame a sibling for bytes it does not share, and would eventually trip on any project with enough packages - nested instruction directories are supported, not a defect. Conservative by design: `project_doc_fallback_filenames` lives in the user's Codex config rather than anything agnix reads, so a project using fallbacks has a longer real chain and this check under-reports rather than over-reports.
+**Detection**: Project-level check. Builds **one chain per leaf directory** the way Codex discovers them - start at the project root, walk down, at most one file per directory, preferring `AGENTS.override.md` over `AGENTS.md` - then sums each chain independently and reports on the file where that chain's running total crosses the limit, since that file and everything deeper is what Codex drops. Sibling subtrees are separate chains and are never summed together: a single whole-tree total would blame a sibling for bytes it does not share, and would eventually trip on any project with enough packages - nested instruction directories are supported, not a defect. A leaf inside a nested Git repository starts its chain at that repository, since Codex starts at the Git root. A chain of one file over the cap is left to XP-007, which already reports it. Conservative by design: `project_doc_fallback_filenames` lives in the user's Codex config rather than anything agnix reads, so a project using fallbacks has a longer real chain and this check under-reports rather than over-reports.
 **Fix**: Manual - trim the chain, or raise `project_doc_max_bytes` in the Codex config
 **Source**: learn.chatgpt.com/docs/agent-configuration/agents-md
 
@@ -3494,6 +3494,13 @@ Known asymmetry with XP-009: this is a per-file validator, so it has no view of 
 **Requirement**: Skills SHOULD avoid client-specific frontmatter fields for maximum portability
 **Detection**: Skill frontmatter uses extension fields (model, context, agent, hooks, etc.) that are not part of the universal Agent Skills spec
 **Fix**: No auto-fix -- review whether the field is needed or can be removed for portability
+**Source**: agentskills.io/specification
+
+<a id="xp-sk-002"></a>
+### XP-SK-002 [MEDIUM] Hardcoded User Directory Path In Skill
+**Requirement**: A skill owned by a client other than Claude Code SHOULD NOT contain hardcoded user-home paths (`/Users/<name>/`, `/home/<name>/`, `C:\Users\<name>\`). The Agent Skills spec says to reference other files with relative paths from the skill root; a home path leaks the author's identity and does not resolve on another machine. This is the client-neutral twin of CC-SK-021, which covers Claude Code and unscoped skills, so a path is reported by exactly one of the two rules.
+**Detection**: Same scan as CC-SK-021: the SKILL.md body, `.md` bodies bundled in the skill directory, and bundled scripts, skipping placeholder names such as `<name>`, `user` and `...`.
+**Fix**: Manual - use a path relative to the skill root, `~/`, `$HOME/`, or an environment variable.
 **Source**: agentskills.io/specification
 
 ---
@@ -3538,7 +3545,7 @@ Add these 15 rules:
 Complete coverage:
 - MCP-001 through MCP-004, MCP-006 (MCP protocol)
 - PE-001 through PE-006 (Prompt engineering)
-- XP-001 through XP-008, XP-SK-001 (Cross-platform)
+- XP-001 through XP-008, XP-SK-001 through XP-SK-002 (Cross-platform)
 - CR-SK-001, CL-SK-001, CP-SK-001, CX-SK-001, OC-SK-001, WS-SK-001, KR-SK-001, KR-AG-001 through KR-AG-007, KR-HK-001 through KR-HK-006, KR-PW-001 through KR-PW-004, KR-MCP-001 through KR-MCP-002, AMP-SK-001, RC-SK-001 (Per-client and Kiro rules)
 - Remaining MEDIUM/LOW certainty rules
 
@@ -3680,14 +3687,14 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Claude Output Styles | 6 | 2 | 2 | 2 | 1 |
 | Claude Plugins | 17 | 8 | 8 | 1 | 4 |
 | Claude Settings | 33 | 1 | 31 | 1 | 12 |
-| Claude Skills | 18 | 10 | 7 | 1 | 7 |
+| Claude Skills | 19 | 10 | 8 | 1 | 7 |
 | Cline | 7 | 4 | 3 | 0 | 3 |
 | Cline Skills | 3 | 2 | 1 | 0 | 2 |
-| Codex CLI | 65 | 31 | 29 | 5 | 9 |
+| Codex CLI | 64 | 31 | 28 | 5 | 9 |
 | Codex Skills | 1 | 0 | 1 | 0 | 1 |
 | GitHub Copilot | 25 | 13 | 9 | 3 | 12 |
 | Copilot Skills | 1 | 0 | 1 | 0 | 1 |
-| Cross-Platform | 10 | 1 | 7 | 2 | 0 |
+| Cross-Platform | 11 | 1 | 8 | 2 | 0 |
 | Cursor | 20 | 10 | 9 | 1 | 6 |
 | Cursor Skills | 1 | 0 | 1 | 0 | 1 |
 | Gemini Agents | 1 | 1 | 0 | 0 | 0 |
@@ -3711,7 +3718,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **458** | **210** | **211** | **37** | **129** |
+| **TOTAL** | **459** | **210** | **212** | **37** | **129** |
 
 
 ---
@@ -3741,8 +3748,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 458 validation rules across 41 categories
+**Total Coverage**: 459 validation rules across 41 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 210 HIGH, 211 MEDIUM, 37 LOW
+**Certainty**: 210 HIGH, 212 MEDIUM, 37 LOW
 **Auto-Fixable**: 129 rules (28%)

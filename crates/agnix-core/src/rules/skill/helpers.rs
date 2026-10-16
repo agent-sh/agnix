@@ -27,6 +27,19 @@ pub(super) fn extract_reference_paths(body: &str) -> Vec<PathMatch> {
     let mut paths = Vec::new();
     let mut seen = HashSet::new();
     for m in re.find_iter(body) {
+        // A match that continues a longer token is part of a URL or of another
+        // name, as in `.../workers/static-assets/migration-guides/`, not a
+        // reference relative to SKILL.md. A literal `./` prefix still counts.
+        let preceding = &body[..m.start()];
+        let before = preceding.chars().next_back();
+        let skill_relative = (preceding.ends_with("./") && !preceding.ends_with("../"))
+            || preceding.ends_with("${CLAUDE_SKILL_DIR}/");
+        if !skill_relative
+            && before
+                .is_some_and(|c| c.is_alphanumeric() || matches!(c, '-' | '_' | '.' | '/' | '\\'))
+        {
+            continue;
+        }
         #[allow(clippy::collapsible_if)]
         if let Some((trimmed, delta)) = trim_path_token_with_offset(m.as_str()) {
             if seen.insert(trimmed.clone()) {
@@ -84,8 +97,8 @@ pub(super) fn reference_path_too_deep(path: &str) -> bool {
 
 pub(super) fn trim_path_token(token: &str) -> &str {
     token
-        .trim_start_matches(['(', '[', '{', '<', '"', '\''])
-        .trim_end_matches(['.', ',', ';', ':', ')', ']', '}', '>', '"', '\''])
+        .trim_start_matches(['(', '[', '{', '<', '"', '\'', '`', '*'])
+        .trim_end_matches(['.', ',', ';', ':', ')', ']', '}', '>', '"', '\'', '`', '*'])
 }
 
 pub(super) fn trim_path_token_with_offset(token: &str) -> Option<(String, usize)> {
@@ -367,6 +380,10 @@ fn windows_user_path_regex() -> &'static Regex {
 }
 
 fn is_placeholder_name(name: &str) -> bool {
+    // A name without letters or digits is an elided example, as in `C:\Users\...`.
+    if !name.chars().any(|c| c.is_ascii_alphanumeric()) {
+        return true;
+    }
     let lower = name.to_ascii_lowercase();
     USER_PATH_PLACEHOLDERS.contains(&lower.as_str())
 }

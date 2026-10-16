@@ -105,6 +105,38 @@
       "removed_in": "0.58.0",
       "reason": "The MCP Tool schema does not require requiresApproval or confirmation fields. Client-side consent recommendations cannot be validated by inventing tool-definition fields.",
       "replaced_by": []
+    },
+    {
+      "id": "AS-018",
+      "removed_in": "0.28.0",
+      "reason": "The Agent Skills spec says nothing about grammatical person in descriptions, and its description guidance recommends second-person imperative phrasing.",
+      "replaced_by": []
+    },
+    {
+      "id": "AS-019",
+      "removed_in": "0.28.0",
+      "reason": "The Agent Skills spec defines only the name format, so vague names were an agnix heuristic rather than a validated constraint.",
+      "replaced_by": []
+    },
+    {
+      "id": "CC-SK-003",
+      "removed_in": "0.44.0",
+      "reason": "Claude Code documents that a skill with context: fork and no agent field uses general-purpose, so the rule demanded restating the default.",
+      "replaced_by": []
+    },
+    {
+      "id": "CC-HK-019",
+      "removed_in": "0.44.0",
+      "reason": "The Setup hook event is not deprecated: Claude Code documents it as a current event for --init-only and --init or --maintenance in -p mode.",
+      "replaced_by": []
+    },
+    {
+      "id": "CDX-AG-004",
+      "removed_in": "0.59.0",
+      "reason": "The 100,000-byte AGENTS.md limit had no source. XP-007 checks AGENTS.md against Codex's documented 32 KiB project_doc_max_bytes default, and XP-009 checks the combined chain.",
+      "replaced_by": [
+        "XP-007"
+      ]
     }
   ]
 }

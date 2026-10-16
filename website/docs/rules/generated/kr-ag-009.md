@@ -1,9 +1,9 @@
 ---
 id: kr-ag-009
-title: "KR-AG-009: Agent Missing Prompt - Kiro Agents"
+title: "KR-AG-009: Agent Prompt Empty Or Invalid - Kiro Agents"
 sidebar_label: "KR-AG-009"
-description: "agnix rule KR-AG-009 checks for agent missing prompt in kiro agents files. Severity: HIGH. See examples and fix guidance."
-keywords: ["KR-AG-009", "agent missing prompt", "kiro agents", "validation", "agnix", "linter"]
+description: "agnix rule KR-AG-009 checks for agent prompt empty or invalid in kiro agents files. Severity: HIGH. See examples and fix guidance."
+keywords: ["KR-AG-009", "agent prompt empty or invalid", "kiro agents", "validation", "agnix", "linter"]
 ---
 
 ## Summary
@@ -11,9 +11,9 @@ keywords: ["KR-AG-009", "agent missing prompt", "kiro agents", "validation", "ag
 - **Rule ID**: `KR-AG-009`
 - **Severity**: `HIGH`
 - **Category**: `Kiro Agents`
-- **Normative Level**: `MUST`
+- **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -25,6 +25,7 @@ keywords: ["KR-AG-009", "agent missing prompt", "kiro agents", "validation", "ag
 
 - https://kiro.dev/docs/agents
 - https://kiro.dev/docs/configuration
+- https://kiro.dev/docs/custom-agents/configuration-reference/
 
 ## Test Coverage Metadata
 
@@ -39,7 +40,7 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{"name": "review-agent"}
+{"name": "review-agent", "prompt": ""}
 ```
 
 ### Valid

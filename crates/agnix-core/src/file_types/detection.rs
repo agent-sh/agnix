@@ -67,6 +67,14 @@ pub const EXCLUDED_PARENT_DIRECTORIES: &[&str] =
 // Detection helpers
 // ============================================================================
 
+/// Returns true for a file in a pi subagent directory: user agents in
+/// `~/.pi/agent/agents/` or project agents in `.pi/agents/`.
+fn is_pi_agents_dir(path: &Path) -> bool {
+    path_contains_consecutive_components(path, ".pi", "agents")
+        || (path_contains_consecutive_components(path, ".pi", "agent")
+            && path_contains_consecutive_components(path, "agent", "agents"))
+}
+
 /// Returns true if the path contains two consecutive normal path components.
 pub(crate) fn path_contains_consecutive_components(path: &Path, first: &str, second: &str) -> bool {
     let mut previous: Option<&str> = None;
@@ -538,14 +546,16 @@ pub fn detect_file_type(path: &Path) -> FileType {
         }
         // Claude Code plugin hooks configuration (<plugin-root>/hooks/hooks.json).
         // Path-only heuristic: any hooks/hooks.json that is not the Copilot
-        // (.github/hooks/) or Cursor (.cursor/) layout is treated as Claude hooks.
+        // (.github/hooks/), Cursor (.cursor/) or Gemini CLI extension
+        // (.gemini/hooks/) layout is treated as Claude hooks.
         // Accepted trade-off (same reasoning as CodexRequirements below): an
         // unrelated project keeping a hooks/hooks.json would be linted as Claude
         // hooks; the layout is uncommon enough to accept.
         "hooks.json"
             if parent_eq_ignore_ascii_case(parent, "hooks")
                 && !parent_eq_ignore_ascii_case(grandparent, ".github")
-                && !parent_eq_ignore_ascii_case(grandparent, ".cursor") =>
+                && !parent_eq_ignore_ascii_case(grandparent, ".cursor")
+                && !parent_eq_ignore_ascii_case(grandparent, ".gemini") =>
         {
             FileType::Hooks
         }
@@ -623,7 +633,11 @@ pub fn detect_file_type(path: &Path) -> FileType {
         name if name.ends_with(".md") => {
             // Agent directories take precedence over filename exclusions.
             // Files like agents/README.md should be validated as agent configs.
-            if parent == Some("agents") || grandparent == Some("agents") {
+            if is_pi_agents_dir(path) {
+                // pi subagent definitions (`~/.pi/agent/agents/`, project
+                // `.pi/agents/`) use pi's own fields and tool names.
+                FileType::Unknown
+            } else if parent == Some("agents") || grandparent == Some("agents") {
                 FileType::Agent
             } else {
                 // Exclude common project files that are not agent configurations.
@@ -889,6 +903,25 @@ mod tests {
                 dir
             );
         }
+    }
+
+    #[test]
+    fn detect_pi_agents_not_claude_agents() {
+        for path in [
+            "/home/u/.pi/agent/agents/scout.md",
+            "repo/.pi/agents/reviewer.md",
+        ] {
+            assert_eq!(
+                detect_file_type(Path::new(path)),
+                FileType::Unknown,
+                "{path}"
+            );
+        }
+        // A plain plugin `agents/` directory is still a Claude agent.
+        assert_eq!(
+            detect_file_type(Path::new("my-plugin/agents/reviewer.md")),
+            FileType::Agent
+        );
     }
 
     #[test]
@@ -1887,6 +1920,15 @@ mod tests {
         assert_ne!(
             detect_file_type(Path::new(".kiro/settings/not-mcp.json")),
             FileType::KiroMcp
+        );
+    }
+
+    #[test]
+    fn detect_gemini_extension_hooks_json_not_claude_hooks() {
+        // Gemini CLI extension hooks use Gemini events (BeforeAgent, AfterTool).
+        assert_ne!(
+            detect_file_type(Path::new("remember/.gemini/hooks/hooks.json")),
+            FileType::Hooks
         );
     }
 

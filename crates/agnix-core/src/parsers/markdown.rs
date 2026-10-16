@@ -25,8 +25,8 @@ static_regex!(fn xml_tag_regex, r"<(/?)([a-zA-Z_][a-zA-Z0-9_-]*)(?:\s+[^>]*?)?(/
 /// - 2^16 is a clean power-of-2 boundary
 ///
 /// This limit applies to regex-guarded operations only. `extract_xml_tags` is guarded;
-/// `extract_imports` and `extract_markdown_links` use byte-by-byte scanning and
-/// pulldown-cmark respectively and are NOT subject to this limit.
+/// `extract_imports` uses byte-by-byte scanning and `extract_markdown_links` uses
+/// linear-time regexes, so neither is subject to this limit.
 /// Files larger than 1 MiB are rejected earlier by `DEFAULT_MAX_FILE_SIZE` in file_utils.rs.
 pub const MAX_REGEX_INPUT_SIZE: usize = 65536; // 64KB
 
@@ -35,8 +35,8 @@ pub const MAX_REGEX_INPUT_SIZE: usize = 65536; // 64KB
 /// # Security
 ///
 /// This function is NOT subject to `MAX_REGEX_INPUT_SIZE` limits because it uses
-/// byte-by-byte scanning instead of regex. The limit only applies to regex-based
-/// extraction functions (`extract_xml_tags`, `extract_markdown_links`).
+/// byte-by-byte scanning instead of regex. The limit only applies to
+/// `extract_xml_tags`.
 ///
 /// # Input sanitization
 ///
@@ -97,18 +97,93 @@ fn extract_xml_tags_inner(content: &str) -> Vec<XmlTag> {
         scan_xml_tags_in_text(span, range, &line_starts, &mut tags);
     });
 
+    // A prose placeholder such as `ssh <host> 'df -h'`, `run_key=<date>)` or
+    // `Result<Outcome>` sits between other text and a space, punctuation or the
+    // line end, and the file never closes it. An opener that starts its line,
+    // runs straight into content (`<thinking>Think`) or has a closing tag
+    // somewhere in the file stays subject to balance checking.
+    let closed: std::collections::HashSet<String> = tags
+        .iter()
+        .filter(|tag| tag.is_closing)
+        .map(|tag| tag.name.clone())
+        .collect();
+    tags.retain(|tag| {
+        tag.is_closing
+            || closed.contains(&tag.name)
+            || !(has_prose_attributes(content, tag)
+                || is_inline_placeholder(content, tag, &line_starts))
+    });
+
     tags
+}
+
+/// Returns true if the text after the tag name is prose, as in `<output file>`
+/// or `<brief description of bug>`: real attributes carry `=`. Only whitespace
+/// (`<example >`) is not prose.
+fn has_prose_attributes(content: &str, tag: &XmlTag) -> bool {
+    let inner = &content[tag.start_byte + 1..tag.end_byte - 1];
+    let rest = inner.trim_start_matches('/');
+    let rest = rest.get(tag.name.len()..).unwrap_or("").trim();
+    !rest.is_empty() && !rest.contains('=')
+}
+
+/// Returns true if the opening `tag` has no attributes and either runs into
+/// closing punctuation (`'<x>'`, `<id>:`) or follows text on its line without
+/// running into content.
+fn is_inline_placeholder(content: &str, tag: &XmlTag, line_starts: &[usize]) -> bool {
+    if content[tag.start_byte..tag.end_byte].contains('=') {
+        return false;
+    }
+    let next = content[tag.end_byte..].chars().next();
+    if next.is_some_and(|c| matches!(c, '"' | '\'' | ')' | ']' | '}' | ',' | ';' | ':')) {
+        return true;
+    }
+    if next.is_some_and(|c| c.is_alphanumeric() || c == '<') {
+        return false;
+    }
+
+    let line_start = match line_starts.binary_search(&tag.start_byte) {
+        Ok(idx) => line_starts[idx],
+        Err(idx) => line_starts[idx.saturating_sub(1)],
+    };
+    let mut prefix = content[line_start..tag.start_byte].trim();
+    // Indentation and list or blockquote markers are not text.
+    loop {
+        let rest = prefix.strip_prefix(['-', '*', '+', '>']).or_else(|| {
+            let digits = prefix.len()
+                - prefix
+                    .trim_start_matches(|c: char| c.is_ascii_digit())
+                    .len();
+            (digits > 0)
+                .then(|| prefix[digits..].strip_prefix(['.', ')']))
+                .flatten()
+        });
+        match rest {
+            Some(rest) if rest.is_empty() || rest.starts_with(char::is_whitespace) => {
+                prefix = rest.trim_start();
+            }
+            _ => break,
+        }
+    }
+    // A tag directly before, as in `<outer><inner>`, is structure rather than
+    // text.
+    !prefix.is_empty() && !content[..tag.start_byte].ends_with('>')
 }
 
 /// Extract markdown links from content (excluding code blocks/spans)
 ///
-/// This extracts both regular links `[text](url)` and image links `![alt](url)`.
+/// This extracts regular links `[text](url)`, image links `![alt](url)` and
+/// link reference definitions `[label]: url`. Inline code inside link text,
+/// as in ``[`guide.md`](guide.md)``, does not hide the link.
+///
+/// `url` holds only the link destination: an optional title
+/// (`[t](a.md "Title")`) is dropped and an angle-bracket destination
+/// (`[t](<a b.md>)`) is unwrapped.
 ///
 /// # Security
 ///
-/// Uses a regex-based scan rather than a full markdown parser. The scan is limited
-/// to `MAX_REGEX_INPUT_SIZE` bytes to prevent ReDoS; content exceeding that limit
-/// returns an empty result.
+/// Uses a regex-based scan rather than a full markdown parser. The link regex
+/// excludes nested brackets and parentheses, so it runs in linear time.
 ///
 /// # Input sanitization
 ///
@@ -127,39 +202,86 @@ fn extract_markdown_links_inner(content: &str) -> Vec<MarkdownLink> {
     let line_starts = compute_line_starts(content);
     let mut links = Vec::new();
 
-    // Regex for inline links: optional `!` (image), then [text](url)
+    // Regex for inline links: optional `!` (image), then [text](destination)
     // Uses a simple pattern that avoids nested brackets/parens (sufficient for
     // real-world agent config files).
     static_regex!(
         fn link_re,
         r"(!?)\[([^\[\]]*)\]\(([^()]*)\)"
     );
-    let re = link_re();
+    // Link reference definition: up to three spaces of indent, `[label]:`,
+    // then the rest of the line, which must be a destination and an optional
+    // title. `[^...]` labels are footnotes, not links.
+    static_regex!(
+        fn reference_definition_re,
+        r"(?m)^ {0,3}\[([^\]\[^][^\]\[]*)\]:[ \t]*([^\n]*)$"
+    );
 
-    scan_non_code_spans(content, HtmlCommentMode::Skip, |span, span_start| {
-        for cap in re.captures_iter(span) {
-            let full = cap.get(0).unwrap();
-            let is_image = cap.get(1).is_some_and(|m| m.as_str() == "!");
-            let text = cap.get(2).map(|m| m.as_str()).unwrap_or("").to_string();
-            let url = cap.get(3).map(|m| m.as_str()).unwrap_or("").to_string();
+    // Fill code with a byte that is not link syntax rather than splitting the
+    // text at code spans. Links inside code stay hidden, while inline code
+    // inside link text keeps the brackets around it in one piece.
+    let masked = mask_code(content, HtmlCommentMode::Skip, b'x');
 
-            let start_byte = span_start + full.start();
-            let end_byte = span_start + full.end();
-            let (line, column) = line_col_at(start_byte, &line_starts);
+    for cap in link_re().captures_iter(&masked) {
+        let full = cap.get(0).unwrap();
+        let text = cap.get(2).unwrap();
+        let Some(url) = link_destination(cap.get(3).unwrap().as_str()) else {
+            continue;
+        };
+        let (line, column) = line_col_at(full.start(), &line_starts);
+        links.push(MarkdownLink {
+            url: url.to_string(),
+            text: content[text.range()].to_string(),
+            is_image: cap.get(1).is_some_and(|m| m.as_str() == "!"),
+            line,
+            column,
+            start_byte: full.start(),
+            end_byte: full.end(),
+        });
+    }
 
-            links.push(MarkdownLink {
-                url,
-                text,
-                is_image,
-                line,
-                column,
-                start_byte,
-                end_byte,
-            });
-        }
-    });
+    for cap in reference_definition_re().captures_iter(&masked) {
+        let full = cap.get(0).unwrap();
+        let label = cap.get(1).unwrap();
+        let Some(url) = link_destination(cap.get(2).unwrap().as_str()) else {
+            continue;
+        };
+        // Report the position of the `[`, past any indentation.
+        let start = label.start() - 1;
+        let (line, column) = line_col_at(start, &line_starts);
+        links.push(MarkdownLink {
+            url: url.to_string(),
+            text: content[label.range()].to_string(),
+            is_image: false,
+            line,
+            column,
+            start_byte: start,
+            end_byte: full.end(),
+        });
+    }
 
+    links.sort_by_key(|link| link.start_byte);
     links
+}
+
+/// Return the destination part of a link target, without the optional title.
+///
+/// Returns `None` when the target is not a CommonMark link destination, such
+/// as the prose in `[name](redis.io link)` or `[Note]: e.g. run setup first`:
+/// only a title in quotes or parentheses may follow the destination.
+fn link_destination(raw: &str) -> Option<&str> {
+    let raw = raw.trim();
+    let (destination, rest) = match raw.strip_prefix('<') {
+        Some(inner) => inner.split_once('>')?,
+        None => raw.split_once(char::is_whitespace).unwrap_or((raw, "")),
+    };
+    let title = rest.trim();
+    let valid_title = title.is_empty()
+        || (title.len() >= 2
+            && ((title.starts_with('"') && title.ends_with('"'))
+                || (title.starts_with('\'') && title.ends_with('\''))
+                || (title.starts_with('(') && title.ends_with(')'))));
+    valid_title.then_some(destination)
 }
 
 /// Return `content` with every byte inside a code block or inline code span
@@ -172,11 +294,19 @@ fn extract_markdown_links_inner(content: &str) -> Vec<MarkdownLink> {
 /// HTML comments remain intact because validators can use them as directives,
 /// such as cross-platform guards in AGENTS.md.
 pub(crate) fn mask_code_spans(content: &str) -> String {
+    mask_code(content, HtmlCommentMode::Preserve, b' ')
+}
+
+/// Return `content` with every byte inside code, and inside HTML comments when
+/// `comment_mode` is `Skip`, replaced by the ASCII byte `fill`. Line breaks are
+/// kept, so offsets, lines and columns match the input.
+fn mask_code(content: &str, comment_mode: HtmlCommentMode, fill: u8) -> String {
+    debug_assert!(fill.is_ascii());
     let mut masked: Vec<u8> = content
         .bytes()
-        .map(|b| if b == b'\n' || b == b'\r' { b } else { b' ' })
+        .map(|b| if b == b'\n' || b == b'\r' { b } else { fill })
         .collect();
-    scan_non_code_spans(content, HtmlCommentMode::Preserve, |span, span_start| {
+    scan_non_code_spans(content, comment_mode, |span, span_start| {
         masked[span_start..span_start + span.len()].copy_from_slice(span.as_bytes());
     });
     // Non-code spans are `&str` slices, so they start and end on char
@@ -1162,8 +1292,10 @@ fn is_probable_import_path(path: &str) -> bool {
         }
     }
 
-    // Must contain a dot (file extension) to be considered a file reference
-    path.contains('.')
+    // Must have a file extension to be considered a file reference. Prose like
+    // "every @mcp.tool-decorated function" has a dot but no real extension.
+    path.rsplit_once('.')
+        .is_some_and(|(_, ext)| !ext.is_empty() && ext.chars().all(|c| c.is_ascii_alphanumeric()))
 }
 
 #[cfg(test)]
@@ -1495,6 +1627,86 @@ mod tests {
         assert_eq!(links[0].column, 1);
     }
 
+    #[test]
+    fn test_extract_markdown_links_inline_code_in_text() {
+        let content = "Guides live in [`docs/RECIPES.md`](docs/RECIPES.md) and [why `//` fails](docs/RECIPES.md#flags).";
+        let links = extract_markdown_links(content);
+        assert_eq!(links.len(), 2);
+        assert_eq!(links[0].url, "docs/RECIPES.md");
+        assert_eq!(links[0].text, "`docs/RECIPES.md`");
+        assert_eq!(links[0].column, 16);
+        assert_eq!(links[1].url, "docs/RECIPES.md#flags");
+        assert_eq!(links[1].text, "why `//` fails");
+    }
+
+    #[test]
+    fn test_extract_markdown_links_inline_code_with_brackets_in_text() {
+        let content = "See [`args[0]` handling](args.md).";
+        let links = extract_markdown_links(content);
+        assert_eq!(links.len(), 1);
+        assert_eq!(links[0].url, "args.md");
+    }
+
+    #[test]
+    fn test_extract_markdown_links_drops_title() {
+        let content = r#"See [guide](docs/guide.md "The guide") and [other](a.md 'Other')."#;
+        let links = extract_markdown_links(content);
+        assert_eq!(links.len(), 2);
+        assert_eq!(links[0].url, "docs/guide.md");
+        assert_eq!(links[1].url, "a.md");
+    }
+
+    #[test]
+    fn test_extract_markdown_links_angle_bracket_destination() {
+        let content = r#"See [notes](<my notes.md> "Title")."#;
+        let links = extract_markdown_links(content);
+        assert_eq!(links.len(), 1);
+        assert_eq!(links[0].url, "my notes.md");
+    }
+
+    #[test]
+    fn test_extract_markdown_links_rejects_prose_after_destination() {
+        let content =
+            r#"Follow the "Support for [`X`](redis.io link)" pattern; [ok](a.md "Title")."#;
+        let links = extract_markdown_links(content);
+        assert_eq!(links.len(), 1, "{links:?}");
+        assert_eq!(links[0].url, "a.md");
+    }
+
+    #[test]
+    fn test_extract_markdown_links_reference_definitions() {
+        let content = "See [the guide][guide].\n\n[guide]: docs/guide.md \"Guide\"\n  [spaced]: <my notes.md>\n[^1]: A footnote, not a link.\n";
+        let links = extract_markdown_links(content);
+        let urls: Vec<_> = links.iter().map(|l| l.url.as_str()).collect();
+        assert_eq!(urls, ["docs/guide.md", "my notes.md"]);
+        assert_eq!(links[0].text, "guide");
+        assert_eq!((links[0].line, links[0].column), (3, 1));
+        assert_eq!((links[1].line, links[1].column), (4, 3));
+    }
+
+    #[test]
+    fn test_extract_markdown_links_rejects_prose_reference_definitions() {
+        let content = "[Note]: e.g. run setup first\n[Optional]: config.yaml is read on start\n[guide]: docs/guide.md (The guide)\n";
+        let links = extract_markdown_links(content);
+        let urls: Vec<_> = links.iter().map(|l| l.url.as_str()).collect();
+        assert_eq!(urls, ["docs/guide.md"]);
+    }
+
+    #[test]
+    fn test_extract_markdown_links_reference_definition_in_code_ignored() {
+        let content = "```\n[guide]: missing.md\n```\n    [indented]: missing.md\n";
+        let links = extract_markdown_links(content);
+        assert!(links.is_empty(), "{links:?}");
+    }
+
+    #[test]
+    fn test_extract_markdown_links_ignores_html_comment() {
+        let content = "<!-- [old](removed.md) -->\n[kept](kept.md)";
+        let links = extract_markdown_links(content);
+        assert_eq!(links.len(), 1);
+        assert_eq!(links[0].url, "kept.md");
+    }
+
     // ===== Security: Regex DoS Protection Tests =====
 
     #[test]
@@ -1680,7 +1892,7 @@ mod tests {
         // it gets filtered. This test verifies the behavior matches expectations.
 
         // Real XML tag without slashes should be detected
-        let content = "Some <example> tag here";
+        let content = "Some <example>tag here";
         let tags = extract_xml_tags(content);
         assert_eq!(tags.len(), 1, "Real XML tags should be detected");
         assert_eq!(tags[0].name, "example");
@@ -1695,10 +1907,76 @@ mod tests {
     #[test]
     fn test_xml_non_path_tags_not_filtered() {
         // Real XML tags not adjacent to slashes should not be filtered
-        let content = "Some <example> tag here";
+        let content = "Some <example>tag here";
         let tags = extract_xml_tags(content);
         assert_eq!(tags.len(), 1, "Real XML tags should not be filtered");
         assert_eq!(tags[0].name, "example");
+    }
+
+    #[test]
+    fn test_xml_skips_unclosed_inline_placeholders() {
+        let content = "ssh <build-host> 'df -h'\n\
+            ProcedureRun(scope_id, run_key=<date>) runs.\n\
+            (\"status is '<x>', not active\")\n\
+            - Supports Set<HostAndPort> initialization\n\
+            1. <brief description of bug>\n\
+            URL: elmo-op-<region>.amazon.com/ops\n\
+            | e.g. dead node | redisinfo host <HOST_ID> |\n\
+            **#<n>** (@<author>)\n\
+            Put the result in <answer> tags.\n\
+            - **CLIENT.KILL <eid> <gid>:** kills a client\n\
+            <pkg>\", wrapped from the line above\n";
+        let tags = extract_xml_tags(content);
+        assert!(tags.is_empty(), "{tags:?}");
+    }
+
+    #[test]
+    fn test_xml_keeps_structural_unclosed_tags() {
+        let content = "<instructions>\n\
+            - <structure>\n\
+            Body with <thinking>unclosed\n\
+            Use <b>bold text\n\
+            See <example id=\"1\"> here\n";
+        let names: Vec<_> = extract_xml_tags(content)
+            .into_iter()
+            .map(|tag| tag.name)
+            .collect();
+        assert_eq!(
+            names,
+            ["instructions", "structure", "thinking", "b", "example"]
+        );
+    }
+
+    #[test]
+    fn test_xml_whitespace_and_boolean_attributes_stay_balanced() {
+        for content in [
+            "<example >body</example>",
+            "<example>body</example >",
+            "<section hidden>body</section>",
+        ] {
+            let tags = extract_xml_tags(content);
+            assert_eq!(tags.len(), 2, "{content:?}: {tags:?}");
+            let errors = check_xml_balance(&tags);
+            assert!(errors.is_empty(), "{content:?}: {errors:?}");
+        }
+    }
+
+    #[test]
+    fn test_xml_keeps_inline_mention_of_a_closed_tag() {
+        // The file closes `<example>` elsewhere, so the mention stays in the
+        // balance check instead of being guessed away.
+        let content = "Verify <example> blocks.\n<example>One</example>\n";
+        let tags = extract_xml_tags(content);
+        assert_eq!(tags.len(), 3, "{tags:?}");
+    }
+
+    #[test]
+    fn test_is_probable_import_path_requires_real_extension() {
+        // Prose about decorators has a dot but no file extension.
+        assert!(!is_probable_import_path("mcp.tool-decorated"));
+        assert!(is_probable_import_path("package.json"));
+        assert!(is_probable_import_path(".env"));
+        assert!(is_probable_import_path("archive.tar.gz"));
     }
 
     #[test]

@@ -9,7 +9,7 @@
 //! - KR-AG-006: Prompt references a non-existent subagent.
 //! - KR-AG-007: Invoking agent has a broader tool scope than referenced subagent.
 //! - KR-AG-008: Agent missing name.
-//! - KR-AG-009: Agent missing prompt.
+//! - KR-AG-009: Agent prompt empty or not a string.
 //! - KR-AG-010: Duplicate tool entries.
 //! - KR-AG-011: Empty tools array.
 //! - KR-AG-012: toolAliases references unknown tool.
@@ -165,9 +165,12 @@ fn extract_prompt_agent_mentions(
     let mut seen = HashSet::new();
     let mut mentions = Vec::new();
 
+    // Mentions inside code, such as `require('@scope/pkg')` in a fenced block,
+    // are not subagent references, so code is masked before matching.
     if let Some(body_offset) = markdown_body_offset {
         if let Some(body) = content.get(body_offset..) {
-            collect_mentions(body, body_offset, &mut seen, &mut mentions);
+            let prose = crate::parsers::markdown::mask_code_spans(body);
+            collect_mentions(&prose, body_offset, &mut seen, &mut mentions);
         }
         return mentions;
     }
@@ -184,12 +187,12 @@ fn extract_prompt_agent_mentions(
             continue;
         };
 
-        collect_mentions(
-            value_match.as_str(),
-            value_match.start(),
-            &mut seen,
-            &mut mentions,
-        );
+        // A JSON prompt is still escaped here. Turning each two-byte `\n` into
+        // a space and a line break keeps offsets while letting the Markdown
+        // scanner see fenced blocks.
+        let unescaped_lines = value_match.as_str().replace("\\n", " \n");
+        let prose = crate::parsers::markdown::mask_code_spans(&unescaped_lines);
+        collect_mentions(&prose, value_match.start(), &mut seen, &mut mentions);
     }
 
     mentions
@@ -646,13 +649,14 @@ fn validate_agent_schema_rules(
         }
     }
 
-    // KR-AG-009: Agent missing prompt
+    // KR-AG-009: Agent prompt set but empty or not a string. The prompt is
+    // optional: the configuration reference says every agent file "can
+    // include" it, and a Markdown agent takes it from the body.
     if config.is_rule_enabled("KR-AG-009") {
-        let prompt_present = obj
+        let prompt_invalid = obj
             .get("prompt")
-            .and_then(Value::as_str)
-            .is_some_and(|p| !p.trim().is_empty());
-        if !prompt_present {
+            .is_some_and(|p| p.as_str().is_none_or(|p| p.trim().is_empty()));
+        if prompt_invalid {
             diagnostics.push(
                 Diagnostic::error(
                     path.to_path_buf(),
@@ -1323,6 +1327,31 @@ mod tests {
     }
 
     #[test]
+    fn test_kr_ag_006_ignores_mentions_in_code() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let agents_dir = temp.path().join(".kiro").join("agents");
+        fs::create_dir_all(&agents_dir).unwrap();
+
+        let orchestrator = agents_dir.join("orchestrator.json");
+        write_agent(
+            &orchestrator,
+            r#"{
+  "name": "orchestrator",
+  "prompt": "Setup:\n\n```javascript\nconst { root } = require('@agentsys/lib/cross-platform');\n```\n\nRun `@tooling/cli`, then delegate to @research-agent"
+}"#,
+        );
+
+        let diagnostics = validate(&orchestrator);
+        let messages: Vec<_> = diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.rule == "KR-AG-006")
+            .map(|diagnostic| diagnostic.message.as_str())
+            .collect();
+        assert_eq!(messages.len(), 1, "{messages:?}");
+        assert!(messages[0].contains("research-agent"), "{messages:?}");
+    }
+
+    #[test]
     fn test_kr_ag_006_reports_unknown_subagent_reference() {
         let temp = tempfile::TempDir::new().unwrap();
         let agents_dir = temp.path().join(".kiro").join("agents");
@@ -1761,7 +1790,7 @@ mod tests {
     }
 
     #[test]
-    fn test_kr_ag_009_missing_prompt() {
+    fn test_kr_ag_009_absent_prompt_is_valid() {
         let temp = tempfile::TempDir::new().unwrap();
         let agents_dir = temp.path().join(".kiro").join("agents");
         fs::create_dir_all(&agents_dir).unwrap();
@@ -1771,6 +1800,25 @@ mod tests {
             &agent,
             r#"{
   "name": "no-prompt"
+}"#,
+        );
+
+        let diagnostics = validate(&agent);
+        assert!(diagnostics.iter().all(|d| d.rule != "KR-AG-009"));
+    }
+
+    #[test]
+    fn test_kr_ag_009_non_string_prompt() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let agents_dir = temp.path().join(".kiro").join("agents");
+        fs::create_dir_all(&agents_dir).unwrap();
+
+        let agent = agents_dir.join("list-prompt.json");
+        write_agent(
+            &agent,
+            r#"{
+  "name": "list-prompt",
+  "prompt": ["Review code"]
 }"#,
         );
 
