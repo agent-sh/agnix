@@ -30,6 +30,7 @@ pub const VALID_KIRO_V3_HOOK_TRIGGERS: &[&str] = &[
     "PostTaskExec",
     "Stop",
     "SessionEnd",
+    "Manual",
     // Documented compatibility aliases.
     "AgentSpawn",
     "agentSpawn",
@@ -38,6 +39,109 @@ pub const VALID_KIRO_V3_HOOK_TRIGGERS: &[&str] = &[
     "postToolUse",
     "stop",
 ];
+
+/// Compatibility names explicitly accepted by V3, not arbitrary IDE migration
+/// spellings. Keep migration-only aliases out until runtime support is documented.
+/// Sources: hook types and custom-agent configuration reference.
+pub fn canonical_trigger(trigger: &str) -> Option<&'static str> {
+    match trigger {
+        "AgentSpawn" | "agentSpawn" => Some("SessionStart"),
+        "userPromptSubmit" => Some("UserPromptSubmit"),
+        "preToolUse" => Some("PreToolUse"),
+        "postToolUse" => Some("PostToolUse"),
+        "stop" => Some("Stop"),
+        _ => None,
+    }
+}
+
+/// Locate an exact JSON value by object keys / array indexes. The input must
+/// already be valid JSON. Parse each sibling value rather than text-searching:
+/// strings, escaped keys, repeated values and nested lookalike keys are safe.
+/// Refuse a path with duplicate object keys, even if serde would keep the last.
+pub(crate) fn json_value_span(content: &str, path: &[&str]) -> Option<(usize, usize)> {
+    fn first_value(content: &str) -> Option<(Value, usize)> {
+        let mut stream = serde_json::Deserializer::from_str(content).into_iter::<Value>();
+        let value = stream.next()?.ok()?;
+        Some((value, stream.byte_offset()))
+    }
+    fn locate(content: &str, path: &[&str], base: usize) -> Option<(usize, usize)> {
+        let trimmed = content.trim_start();
+        let base = base + content.len() - trimmed.len();
+        if path.is_empty() {
+            let (_, length) = first_value(trimmed)?;
+            return Some((base, base + length));
+        }
+        let object = trimmed.starts_with('{');
+        if !object && !trimmed.starts_with('[') {
+            return None;
+        }
+        let mut pos = 1;
+        let mut index = 0;
+        let mut found = None;
+        let mut matched = false;
+        loop {
+            while trimmed
+                .as_bytes()
+                .get(pos)
+                .is_some_and(u8::is_ascii_whitespace)
+            {
+                pos += 1;
+            }
+            if matches!(trimmed.as_bytes().get(pos), Some(b'}' | b']')) {
+                break;
+            }
+            let key = if object {
+                let (key, length) = first_value(trimmed.get(pos..)?)?;
+                pos += length;
+                while trimmed
+                    .as_bytes()
+                    .get(pos)
+                    .is_some_and(u8::is_ascii_whitespace)
+                {
+                    pos += 1;
+                }
+                if trimmed.as_bytes().get(pos) != Some(&b':') {
+                    return None;
+                }
+                pos += 1;
+                key.as_str()?.to_string()
+            } else {
+                index.to_string()
+            };
+            while trimmed
+                .as_bytes()
+                .get(pos)
+                .is_some_and(u8::is_ascii_whitespace)
+            {
+                pos += 1;
+            }
+            let (_, length) = first_value(trimmed.get(pos..)?)?;
+            if key == path[0] {
+                if matched {
+                    return None;
+                }
+                matched = true;
+                found = locate(&trimmed[pos..pos + length], &path[1..], base + pos);
+            }
+            pos += length;
+            index += 1;
+            while trimmed
+                .as_bytes()
+                .get(pos)
+                .is_some_and(u8::is_ascii_whitespace)
+            {
+                pos += 1;
+            }
+            if trimmed.as_bytes().get(pos) == Some(&b',') {
+                pos += 1;
+            } else {
+                break;
+            }
+        }
+        found
+    }
+    locate(content, path, 0)
+}
 
 /// Documented `version` values for the standalone hook document.
 #[allow(dead_code)] // schema constant used by downstream validators

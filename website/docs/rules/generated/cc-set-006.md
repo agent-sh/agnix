@@ -12,7 +12,7 @@ keywords: ["CC-SET-006", "non-boolean disablebundledskills setting", "claude set
 - **Severity**: `MEDIUM`
 - **Category**: `Claude Settings`
 - **Normative Level**: `MUST`
-- **Auto-Fix**: `No`
+- **Auto-Fix**: `Yes (safe)`
 - **Verified On**: `2026-06-11`
 
 ## Applicability

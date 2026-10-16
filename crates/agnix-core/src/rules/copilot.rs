@@ -379,8 +379,7 @@ fn validate_custom_agent(
                 };
                 if has_infer {
                     let line = frontmatter_key_line(&parsed.raw, parsed.start_line, "infer:");
-                    diagnostics.push(
-                        Diagnostic::info(
+                    let mut diagnostic = Diagnostic::info(
                             path.to_path_buf(),
                             line,
                             0,
@@ -389,8 +388,48 @@ fn validate_custom_agent(
                         )
                         .with_suggestion(
                             "Replace 'infer' with 'disable-model-invocation' and 'user-invocable'.",
-                        ),
-                    );
+                        );
+                    // GitHub documents disable-model-invocation = !infer, with
+                    // user-invocable defaulting to true independently of infer.
+                    // Explicit replacement fields take precedence and are never overwritten.
+                    if let Some(map) = raw_mapping.as_ref()
+                        && let Some(infer) = schema.infer.as_ref().and_then(|value| value.as_bool())
+                        && let Some((start, end)) =
+                            crate::rules::find_yaml_value_range(content, parsed, "infer", true)
+                        && matches!(&content[start..end], "true" | "false")
+                        && let Some((line_start, _)) = line_byte_range(content, line)
+                        && content[line_start..start].trim_end() == "infer:"
+                    {
+                        let newline = if content.contains("\r\n") {
+                            "\r\n"
+                        } else {
+                            "\n"
+                        };
+                        let mut replacements = Vec::new();
+                        let mut valid = true;
+                        for (key, value) in [
+                            ("disable-model-invocation", !infer),
+                            ("user-invocable", true),
+                        ] {
+                            if let Some(explicit) =
+                                map.get(serde_yaml::Value::String(key.to_string()))
+                            {
+                                valid &= explicit.is_bool();
+                            } else {
+                                replacements.push(format!("{key}: {value}"));
+                            }
+                        }
+                        if valid {
+                            diagnostic = diagnostic.with_fix(Fix::replace(
+                                line_start,
+                                end,
+                                replacements.join(newline),
+                                t!("rules.cop_027.fix"),
+                                false,
+                            ));
+                        }
+                    }
+                    diagnostics.push(diagnostic);
                 }
             }
 
@@ -2918,6 +2957,72 @@ Review pull requests.
         );
         let cop_027: Vec<_> = diagnostics.iter().filter(|d| d.rule == "COP-027").collect();
         assert!(cop_027.is_empty());
+    }
+
+    #[test]
+    fn test_cop_027_migration_roundtrip_and_precedence() {
+        for newline in ["\n", "\r\n"] {
+            for infer in [true, false] {
+                for explicit in [
+                    "",
+                    "disable-model-invocation: false\n",
+                    "user-invocable: false\n",
+                    "disable-model-invocation: true\nuser-invocable: false\n",
+                ] {
+                    let content = format!("---\ndescription: Réview\ninfer: {infer} # keep this note\n{explicit}---\nBody unchanged.\n").replace('\n', newline);
+                    let diagnostics = validate_agent(&content);
+                    let diagnostic = diagnostics.iter().find(|d| d.rule == "COP-027").unwrap();
+                    assert_eq!(diagnostic.fixes.len(), 1, "{content}");
+                    let fix = &diagnostic.fixes[0];
+                    assert!(!fix.safe);
+                    let mut fixed = content.clone();
+                    fixed.replace_range(fix.start_byte..fix.end_byte, &fix.replacement);
+                    let yaml = fixed.split("---").nth(1).unwrap();
+                    let value: serde_yaml::Value = serde_yaml::from_str(yaml).unwrap();
+                    assert!(value.get("infer").is_none());
+                    let expected_disable = if explicit.contains("disable-model-invocation: true") {
+                        true
+                    } else if explicit.contains("disable-model-invocation: false") {
+                        false
+                    } else {
+                        !infer
+                    };
+                    assert_eq!(
+                        value["disable-model-invocation"].as_bool(),
+                        Some(expected_disable)
+                    );
+                    assert_eq!(
+                        value["user-invocable"].as_bool(),
+                        Some(!explicit.contains("user-invocable: false"))
+                    );
+                    assert!(fixed.contains("# keep this note"));
+                    assert!(fixed.ends_with(&format!("Body unchanged.{newline}")));
+                    assert!(!validate_agent(&fixed).iter().any(|d| d.rule == "COP-027"));
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_cop_027_withholds_ambiguous_or_invalid_fix() {
+        for fields in [
+            "infer: 'false'",
+            "infer: null",
+            "infer: [false]",
+            "infer: &setting false\nuser-invocable: *setting",
+            "infer: true\ninfer: false",
+            "infer: false\nuser-invocable: null",
+            "infer: false\ndisable-model-invocation: 'true'",
+        ] {
+            let content = format!("---\ndescription: Review\n{fields}\n---\nBody\n");
+            assert!(
+                validate_agent(&content)
+                    .iter()
+                    .filter(|d| d.rule == "COP-027")
+                    .all(|d| !d.has_fixes()),
+                "{content}"
+            );
+        }
     }
 
     // ===== COP-024: Unknown SKILL.md frontmatter field =====

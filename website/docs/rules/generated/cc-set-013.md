@@ -12,7 +12,7 @@ keywords: ["CC-SET-013", "non-boolean automode.classifyallshell setting", "claud
 - **Severity**: `MEDIUM`
 - **Category**: `Claude Settings`
 - **Normative Level**: `MUST`
-- **Auto-Fix**: `No`
+- **Auto-Fix**: `Yes (safe)`
 - **Verified On**: `2026-06-27`
 
 ## Applicability

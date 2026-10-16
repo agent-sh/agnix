@@ -29,7 +29,6 @@
         "github_repo": "modelcontextprotocol/modelcontextprotocol",
         "rules": [
           "MCP-001",
-          "MCP-005",
           "MCP-007"
         ]
       },
@@ -58,7 +57,6 @@
           "MCP-002",
           "MCP-003",
           "MCP-004",
-          "MCP-005",
           "MCP-006",
           "MCP-013",
           "MCP-014"
@@ -203,7 +201,6 @@
           "AGM-003",
           "AGM-004",
           "AGM-005",
-          "AGM-006",
           "XP-001",
           "XP-002",
           "XP-003",

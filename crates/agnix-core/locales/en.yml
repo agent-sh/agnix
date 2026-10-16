@@ -2,6 +2,36 @@
 # Rules - Validator diagnostic messages, suggestions, assumptions, fixes
 # ===========================================================================
 rules:
+  kr_hk_014:
+    alias: "Hook trigger alias %{trigger} is supported; prefer canonical %{canonical}"
+    alias_suggestion: "Use the canonical PascalCase trigger when editing V3 hooks. Compatibility aliases remain valid."
+    fix: "Normalize hook trigger to %{canonical}"
+    legacy: "Legacy .kiro.hook uses CLI trigger spelling %{trigger} without a corresponding V3 JSON hook in this directory"
+    legacy_suggestion: "If this hook is intended for CLI V3, migrate it to a versioned .kiro/hooks/*.json file. Legacy IDE manual hooks can remain in their original format."
+  kr_pm_004:
+    message: "Permission rule at index %{index}: %{field} must be an array of strings"
+    suggestion: "Use a list of quoted glob patterns. Omit match for unrestricted scope; exclude is optional."
+  kr_pm_003:
+    message: "Permission rule at index %{index} has a missing or invalid effect"
+    suggestion: "Set effect to allow, deny, or ask. Review the policy before changing access."
+  kr_pm_002:
+    message: "Permission rule at index %{index} has a missing or invalid capability"
+    suggestion: "Use a documented capability such as shell, fs_read, fs_write, mcp, or a meta-capability (all, builtin, filesystem)."
+  kr_pm_001:
+    parse_error: "Invalid Kiro permissions YAML: %{error}"
+    shape: "Kiro permissions must be a mapping containing a rules array"
+    entry: "Permission rule at index %{index} must be a mapping"
+    suggestion: "Use rules: [] or a list of capability/effect mappings in permissions.yaml."
+  oc_dep_005:
+    cleanup_suggestion: "Move '%{key}' to tui.json first. Only use the unsafe cleanup after migration is complete; it deletes legacy TUI settings without moving them."
+    cleanup_fix: "Remove legacy TUI settings only after migration to tui.json is complete (does not move configuration)"
+  oc_dep_002:
+    migration_suggestion: "Migrate tools boolean values to permission actions/rules; do not only rename the key. Legacy tools remains supported."
+  cop_027:
+    fix: "Replace infer with invocation controls, preserving explicit fields"
+  boolean_unwrap:
+    json_fix: "Convert quoted %{value} to a JSON boolean"
+    yaml_fix: "Convert quoted %{value} to a YAML boolean"
   as_001:
     message: SKILL.md must have YAML frontmatter between --- markers
     suggestion: Add frontmatter between --- markers
@@ -645,9 +675,8 @@ rules:
     message: Unknown config key '%{key}' in .codex/config.toml
     suggestion: Remove unrecognized keys or check the Codex CLI documentation for valid configuration options
   cdx_005:
-    message: project_doc_max_bytes value %{value} exceeds the maximum limit of 65536
-    type_error: Field 'project_doc_max_bytes' must be a positive integer
-    suggestion: 'Set project_doc_max_bytes to 65536 or less (default: 32768)'
+    type_error: "Field 'project_doc_max_bytes' must be a non-negative integer"
+    suggestion: "Set project_doc_max_bytes to a non-negative integer (default: 32768; zero is valid and the schema has no maximum)"
   cdx_006:
     type_error: Field 'project_doc_fallback_filenames' must be an array of strings
     non_string: Field 'project_doc_fallback_filenames' contains a non-string entry at index %{index}
@@ -656,9 +685,11 @@ rules:
     suspicious: Field 'project_doc_fallback_filenames' contains path-like entry '%{value}'; use bare filenames only
     suggestion: Use a unique array of non-empty filenames like ['AGENTS.md', 'README.md']
   cdx_cfg_001:
-    message: 'Invalid approval_policy ''%{value}''. Valid values: ''untrusted'', ''on-request'', ''never'', ''on-failure'''
-    type_error: Field 'approval_policy' must be a string
-    suggestion: 'Use one of: ''untrusted'', ''on-request'', ''never'', ''on-failure'''
+    message: "Invalid approval_policy '%{value}'. Must be 'on-request', 'never', or a granular object. 'untrusted' is project trust_level; 'on-failure' is retired."
+    type_error: "Field 'approval_policy' must be a string or a granular object"
+    suggestion: "Use 'on-request', 'never', or a granular approval_policy object. 'untrusted' belongs on project trust_level; 'on-failure' is retired."
+    granular_shape: "approval_policy must contain only a granular object with required boolean fields mcp_elicitations, rules, and sandbox_approval; request_permissions and skill_approval must also be booleans when present"
+    granular_suggestion: "Use approval_policy = \"on-request\" or \"never\", or [approval_policy.granular] with the required boolean fields."
   cdx_cfg_002:
     message: 'Invalid sandbox_mode ''%{value}''. Valid values: ''read-only'', ''workspace-write'', ''danger-full-access'''
     type_error: Field 'sandbox_mode' must be a string
@@ -1107,10 +1138,11 @@ rules:
     message: 'Kiro agent uses CLI 2.x trust fields (%{fields}) without a permissions block; CLI V3 skips this profile until it is upgraded'
     suggestion: Run /upgrade-agent in a V3 session to convert allowedTools/toolsSettings into permissions.rules, or add a permissions block manually
   kr_hk_011:
-    message: Kiro V3 hook document has %{version_desc}
-    suggestion: Set "version" to "v1" at the top level of the standalone hook file
-    invalid_version: 'invalid version "%{version}" (expected "v1")'
-    missing_version: no version field
+    message: "Kiro V3 hook document has %{version_desc}"
+    suggestion: "Set \"version\" to \"v1\" at the top level of the standalone hook file"
+    invalid_version: "invalid version \"%{version}\" (expected \"v1\")"
+    missing_version: "no version field"
+    fix: "Replace the invalid version string with v1 (may activate this hook)"
   kr_hk_012:
     message: Invalid Kiro V3 hook entry
     suggestion: Use documented PascalCase triggers (SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, PostFileCreate, PostFileSave, PostFileDelete, PreTaskExec, PostTaskExec, Stop, SessionEnd) with required name and action fields
@@ -1367,6 +1399,7 @@ rules:
   cc_set_016:
     message: "'%{rule}' is a deprecated permission-rule form as of Claude Code 2.1.210; use '%{replacement}' instead"
     suggestion: "Replace '%{rule}' with '%{replacement}' in your permissions list."
+    fix: "Replace '%{rule}' with '%{replacement}' (changes permission enforcement)"
   cc_set_017:
     message: sandbox.filesystem.disabled must be a boolean when present (got %{actual}); Claude Code 2.1.216+ uses this
       setting to disable filesystem isolation while preserving network isolation

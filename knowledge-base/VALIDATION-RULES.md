@@ -455,7 +455,7 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 ### CC-SET-016 [LOW] Deprecated Tool-Scoped Permission Rule Form
 **Requirement**: `Write(path)`, `NotebookEdit(path)`, and `Glob(path)` permission rule forms SHOULD NOT be used as of Claude Code 2.1.210, which added a startup warning for them. Use `Edit(path)` instead of `Write(path)` or `NotebookEdit(path)`, and use `Read(path)` instead of `Glob(path)`.
 **Detection**: Walk `permissions.allow`, `permissions.deny`, and `permissions.ask` arrays in `.claude/settings.json`, `.claude/settings.local.json`, and `.claude/managed-settings.json`. Flag (warning) any string entry that starts with `Write(`, `NotebookEdit(`, or `Glob(`. Bare tool names without `(` (e.g. `"Write"`) are NOT flagged — only path-scoped forms. Non-array values, non-string entries, and absent `permissions` key are silently skipped.
-**Fix**: Manual - replace `Write(path)` → `Edit(path)`, `NotebookEdit(path)` → `Edit(path)`, `Glob(path)` → `Read(path)` in the permissions array.
+**Fix**: [AUTO-FIX, unsafe] Replace `Write(path)` with `Edit(path)`, `NotebookEdit(path)` with `Edit(path)`, and `Glob(path)` with `Read(path)` in the permissions array. Review changed tool scope before applying.
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.210 (startup warning added for deprecated `Write(path)`, `NotebookEdit(path)`, `Glob(path)` permission rule forms)
 
 <a id="cc-set-017"></a>
@@ -1082,10 +1082,10 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Source**: code.claude.com/docs/en/sub-agents
 
 <a id="cc-ag-012"></a>
-### CC-AG-012 [HIGH] Bypass Permissions Warning
+### CC-AG-012 [MEDIUM] Bypass Permissions Warning
 **Requirement**: Review `permissionMode: bypassPermissions`; since Claude Code 2.1.267 it takes effect only when the parent session already bypasses permissions and cannot escalate the parent mode
 **Detection**: Check if permissionMode equals `bypassPermissions`
-**Fix**: Auto-fix (unsafe) -- replace 'bypassPermissions' with 'default'
+**Fix**: Review manually; no automatic rewrite of intent or permission behavior.
 **Source**: code.claude.com/docs/en/sub-agents
 
 <a id="cc-ag-013"></a>
@@ -1210,34 +1210,12 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 **Fix**: Show available scripts
 **Source**: agentsys/enhance-claude-memory
 
-<a id="cc-mem-005"></a>
-### CC-MEM-005 [HIGH] Generic Instruction
-**Requirement**: Avoid redundant "be helpful" instructions
-**Patterns**: `be helpful`, `be accurate`, `think step by step`, `be concise`
-**Detection**: Regex match against 8 generic patterns
-**Fix**: Remove line
-**Source**: agentsys/enhance-claude-memory, research papers
-
-<a id="cc-mem-006"></a>
-### CC-MEM-006 [HIGH] Negative Without Positive
-**Requirement**: Negative instructions ("don't") SHOULD include positive alternative
-**Detection**: Line contains `don't|never|avoid` without follow-up positive
-**Fix**: Suggest "Instead, do..."
-**Source**: research: positive framing improves compliance
-
 <a id="cc-mem-007"></a>
-### CC-MEM-007 [HIGH] Weak Constraint Language
-**Requirement**: Critical rules MUST use strong language (must/always/never)
+### CC-MEM-007 [LOW] Weak Constraint Language
+**Requirement**: Consider explicit wording for critical rules. This is optional writing advice, not a configuration requirement.
 **Detection**: In critical section, check for `should|try to|consider|maybe`
-**Fix**: Replace with `must|always|required`
+**Fix**: Review manually; no automatic rewrite of intent or permission behavior.
 **Source**: research: constraint strength affects compliance
-
-<a id="cc-mem-008"></a>
-### CC-MEM-008 [HIGH] Critical Content in Middle
-**Requirement**: Important rules SHOULD be at START or END (lost in the middle)
-**Detection**: "critical" appears after 40% of content
-**Fix**: Move to top
-**Source**: Liu et al. (2023), TACL
 
 <a id="cc-mem-009"></a>
 ### CC-MEM-009 [MEDIUM] Token Count Exceeded
@@ -1313,15 +1291,6 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 **Fix**: Add platform guard comment (e.g., "## Claude Code Specific")
 **Source**: Multi-platform compatibility
 
-<a id="agm-006"></a>
-### AGM-006 [MEDIUM] Nested AGENTS.md Hierarchy
-**Requirement**: Some tools load AGENTS.md hierarchically (multiple files may apply)
-**Detection**: Multiple AGENTS.md files in directory tree
-**Fix**: Document inheritance behavior
-**Source**: learn.chatgpt.com/docs/agent-configuration/agents-md, docs.cline.bot/features/custom-instructions, github.com/github/docs/changelog/2025-06-17-github-copilot-coding-agent-now-supports-agents-md-custom-instructions
-
----
-
 ## CLAUDE CODE RULES (PLUGINS)
 
 <a id="cc-pl-001"></a>
@@ -1339,7 +1308,7 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 **Source**: code.claude.com/docs/en/plugins-reference
 
 <a id="cc-pl-003"></a>
-### CC-PL-003 [MEDIUM] Invalid Semver
+### CC-PL-003 [LOW] Invalid Semver
 **Requirement**: Semver is an optional interoperability recommendation for plugins consumed through version-constrained dependencies. Claude Code accepts arbitrary version strings and does not check manifest versions against semver.
 **Detection**: Warn when a non-empty version string does not parse as semver, including prerelease and build forms. This is advice, not a loader rejection.
 **Fix**: Suggest valid semver. Partial versions can be normalized with an unsafe autofix because changing a version string can change dependency resolution.
@@ -1459,10 +1428,10 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 <a id="mcp-002"></a>
 ### MCP-002 [HIGH] Missing Required Tool Field
-**Requirement**: Tool MUST have `name`, `description`, `inputSchema`
-**Detection**: Parse tool definition, check required fields while allowing optional `title`, `outputSchema`, and `icons`
-**Fix**: Add missing fields
-**Source**: modelcontextprotocol.io/docs/concepts/tools
+**Requirement**: Tool MUST have `name` and `inputSchema`. `description` is optional.
+**Detection**: Parse tool definitions and check the required fields. Missing descriptions are informational advice under MCP-004, not schema errors.
+**Fix**: Add missing required fields
+**Source**: modelcontextprotocol.io/specification/2026-07-28/server/tools
 
 <a id="mcp-003"></a>
 ### MCP-003 [HIGH] Invalid JSON Schema
@@ -1472,18 +1441,11 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 **Source**: modelcontextprotocol.io/specification
 
 <a id="mcp-004"></a>
-### MCP-004 [HIGH] Missing Tool Description
-**Requirement**: Tool SHOULD have clear description
-**Detection**: `description.is_empty()`
-**Fix**: Add description
-**Source**: modelcontextprotocol.io/docs/concepts/tools
-
-<a id="mcp-005"></a>
-### MCP-005 [HIGH] Tool Without User Consent
-**Requirement**: Tools MUST have user consent before invocation
-**Detection**: Check for permission flow
-**Fix**: Document consent requirement
-**Source**: modelcontextprotocol.io/specification (Security)
+### MCP-004 [LOW] Missing Tool Description
+**Requirement**: Consider a clear description to help clients and models understand the tool. The field is optional in the MCP schema.
+**Detection**: Missing, empty, or fewer than ten trimmed description characters. This heuristic emits informational advice only.
+**Fix**: Add or improve the description manually
+**Source**: modelcontextprotocol.io/specification/2026-07-28/server/tools
 
 <a id="mcp-006"></a>
 ### MCP-006 [HIGH] Untrusted Annotations
@@ -1811,7 +1773,7 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 ### COP-027 [LOW] Deprecated Infer Field
 **Requirement**: Agent infer field MAY be replaced with disable-model-invocation
 **Detection**: Check for infer key in .agent.md frontmatter
-**Fix**: Manual - use disable-model-invocation and user-invocable
+**Fix**: [AUTO-FIX, unsafe] Migrate an unambiguous boolean `infer` to `disable-model-invocation` (inverted) and default `user-invocable: true` independently of `infer`. Preserve explicit boolean replacement fields; refuse ambiguous or wrong-type fields. Review invocation behavior before applying.
 **Source**: docs.github.com/en/copilot/customizing-copilot
 
 ---
@@ -2190,7 +2152,7 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 ### OC-DEP-002 [MEDIUM] Deprecated `tools` Field
 **Requirement**: The top-level `tools` field is deprecated - use `permission` instead
 **Detection**: Parse JSON, flag presence of `tools` key at top-level
-**Fix**: [AUTO-FIX] Rename `tools` key to `permission` (safe)
+**Fix**: Review manually; no automatic rewrite of intent or permission behavior.
 **Source**: opencode.ai/docs/config
 
 <a id="oc-dep-003"></a>
@@ -2200,18 +2162,11 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 **Fix**: [AUTO-FIX] Rename `autoshare` key to `share` (safe)
 **Source**: opencode.ai/docs/config
 
-<a id="oc-dep-004"></a>
-### OC-DEP-004 [MEDIUM] Deprecated CONTEXT.md Filename
-**Requirement**: CONTEXT.md is deprecated - rename to AGENTS.md
-**Detection**: Check if file path contains CONTEXT.md
-**Fix**: No auto-fix
-**Source**: opencode.ai/docs/config
-
 <a id="oc-dep-005"></a>
 ### OC-DEP-005 [MEDIUM] Deprecated TUI Keys
 **Requirement**: theme, keybinds, tui keys SHOULD be in tui.json, not opencode.json/opencode.jsonc
 **Detection**: Check for deprecated TUI keys in opencode.json/opencode.jsonc
-**Fix**: Manual - move to tui.json
+**Fix**: [AUTO-FIX, unsafe] Remove deprecated top-level TUI keys from `opencode.json` / `opencode.jsonc`. This is cleanup, not migration: copy values to `tui.json` yourself first or they will be lost.
 **Source**: opencode.ai/docs/
 
 <a id="oc-dep-006"></a>
@@ -2489,11 +2444,11 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 **Source**: developers.openai.com/codex/
 
 <a id="cdx-005"></a>
-### CDX-005 [HIGH] project_doc_max_bytes Exceeds Limit
-**Requirement**: `project_doc_max_bytes` in `.codex/config.toml` MUST be a positive integer <= 65536
-**Detection**: Parse TOML, validate `project_doc_max_bytes` value is an integer within the allowed range
-**Fix**: Reduce value to 65536 or less (default: 32768)
-**Source**: developers.openai.com/codex/
+### CDX-005 [HIGH] Invalid project_doc_max_bytes
+**Requirement**: `project_doc_max_bytes` in `.codex/config.toml` MUST be a non-negative integer. Codex `config.schema.json` specifies minimum 0 and no maximum (default 32768). Zero is valid.
+**Detection**: Parse TOML, flag a non-integer or negative `project_doc_max_bytes`
+**Fix**: Set a non-negative integer (default: 32768)
+**Source**: developers.openai.com/codex/config-schema.json
 
 <a id="cdx-006"></a>
 ### CDX-006 [HIGH] Invalid project_doc_fallback_filenames
@@ -2504,9 +2459,9 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 
 <a id="cdx-cfg-001"></a>
 ### CDX-CFG-001 [HIGH] Invalid approval_policy Value
-**Requirement**: `approval_policy` in Codex config MUST be `untrusted`, `on-request`, `never`, or `on-failure`
-**Detection**: Parse `.codex/config.toml|json|yaml` and validate `approval_policy` enum values
-**Fix**: No auto-fix (set to a supported value)
+**Requirement**: `approval_policy` MUST be `"on-request"`, `"never"`, or an object with exactly one outer key, `granular`. The nested `approval_policy.granular` object requires boolean `mcp_elicitations`, `rules`, and `sandbox_approval`; optional `request_permissions` and `skill_approval` must also be booleans. This union is identical in the Codex `rust-v0.163.0` and `main` schemas. `untrusted` is a project `trust_level`, not an approval policy.
+**Detection**: Parse `.codex/config.toml|json|yaml`; reject other strings, non-object/non-string values, a missing or non-object `granular` wrapper, missing required booleans, and wrong known-field types. Unknown nested keys receive advisory CDX-CFG-023 rather than an invented schema rejection.
+**Fix**: No auto-fix (set to `on-request`, `never`, or a granular object)
 **Source**: developers.openai.com/codex/config-reference, developers.openai.com/codex/config-schema.json
 
 <a id="cdx-cfg-002"></a>
@@ -2688,10 +2643,10 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 
 <a id="cdx-cfg-023"></a>
 ### CDX-CFG-023 [MEDIUM] Invalid Approval Policy Sub-field
-**Requirement**: Granular approval_policy sub-fields SHOULD be from known set
-**Detection**: Check object keys against: sandbox_approval, rules, mcp_elicitations, request_permissions, skill_approval
-**Fix**: Manual
-**Source**: developers.openai.com/codex/
+**Requirement**: Keys inside `approval_policy.granular` SHOULD be recognized: `sandbox_approval`, `rules`, `mcp_elicitations`, `request_permissions`, and `skill_approval`. Unknown keys are advisory because the upstream granular schema does not forbid additional properties.
+**Detection**: Warn on unknown keys in the nested object, not the outer `approval_policy` wrapper. CDX-CFG-001 validates required fields and boolean types.
+**Fix**: No auto-fix - review and manually remove or rename the unknown key.
+**Source**: github.com/openai/codex/blob/rust-v0.163.0/codex-rs/core/config.schema.json, github.com/openai/codex/blob/main/codex-rs/core/config.schema.json
 
 <a id="cdx-cfg-024"></a>
 ### CDX-CFG-024 [MEDIUM] Invalid Approvals Reviewer Value
@@ -3220,13 +3175,13 @@ Validates Codex's admin-written managed `requirements.toml` (system location: `/
 ### KR-HK-011 [MEDIUM] Invalid Kiro V3 Hook Document Version
 **Requirement**: A standalone `.kiro/hooks/*.json` document MUST set `version` to the documented `"v1"` value
 **Detection**: Top-level `version` is missing or not `"v1"`
-**Fix**: Manual - set `"version": "v1"` at the top level
+**Fix**: [AUTO-FIX, unsafe] Replace only decoded version strings `"1"` or `"1.0"` with `"v1"`. This can activate previously ignored hooks. Missing, numeric, and future versions require manual review.
 **Source**: kiro.dev/docs/hooks, kiro.dev/docs/cli/v3/hooks-migration
 
 <a id="kr-hk-012"></a>
 ### KR-HK-012 [HIGH] Invalid Kiro V3 Hook Entry
 **Requirement**: Each hook in a `.kiro/hooks/*.json` document MUST have a `name`, a documented PascalCase `trigger` (camelCase CLI 2.x aliases accepted), and an `action`; the document MUST contain a `hooks` array
-**Detection**: Missing `name`/`trigger`/`action`, unknown trigger name, missing `hooks` array, or invalid JSON
+**Detection**: Missing `name`/`trigger`/`action`, unknown trigger name, missing `hooks` array, or invalid JSON. `Manual` is a documented trigger and is accepted; this does not imply CLI V3 provides a `/hooks` invoke action.
 **Fix**: Manual - correct the trigger name and required fields
 **Source**: kiro.dev/docs/hooks, kiro.dev/docs/hooks/types, kiro.dev/docs/cli/v3/hooks-migration
 
@@ -3236,6 +3191,49 @@ Validates Codex's admin-written managed `requirements.toml` (system location: `/
 **Detection**: Unknown/missing `action.type`, empty command/prompt payload, or an out-of-range/negative timeout
 **Fix**: Manual - use a documented action type and payload
 **Source**: kiro.dev/docs/hooks, kiro.dev/docs/hooks/actions
+
+---
+
+<a id="kr-hk-014"></a>
+### KR-HK-014 [LOW] Kiro Hook Migration and Canonical Trigger Hint
+**Requirement**: Prefer canonical trigger names when editing V3 hooks; supported aliases remain valid. Legacy IDE manual hooks may stay in their original format.
+**Detection**: In standalone `.kiro/hooks/*.json`, advise `AgentSpawn` / `agentSpawn` → `SessionStart`, `userPromptSubmit` → `UserPromptSubmit`, `preToolUse` → `PreToolUse`, `postToolUse` → `PostToolUse`, and `stop` → `Stop`. In legacy `.kiro.hook` files, advise migration for CLI-only spellings `SessionEnd`, `AgentSpawn`, `userPromptSubmit`, and `stop` only when no parsed, enabled `v1` sibling contains the same canonical trigger and action. Unrelated, disabled, or invalid siblings do not suppress the hint; an unreadable directory is inconclusive. Lowercase `agentSpawn` and legacy manual `userTriggered` are not misplaced-CLI hints.
+**Fix**: [AUTO-FIX, safe] Normalize compatible trigger aliases in standalone V3 JSON using exact structural string spans. Legacy file migration is manual; do not rename a file or convert an IDE hook automatically.
+**Source**: kiro.dev/docs/hooks/types, kiro.dev/docs/ide/whats-new-v1/hooks, kiro.dev/docs/custom-agents/configuration-reference
+
+---
+
+## KIRO PERMISSIONS RULES
+
+Capability policy YAML is recognized at `.kiro/settings/permissions.yaml` and `.kiro/workspace-roots/<hash>/permissions.yaml`. The user policy is `~/.kiro/settings/permissions.yaml`; real workspace policies live outside the repository in `~/.kiro/workspace-roots/<hash>/permissions.yaml`. Repository-local `.kiro/settings/permissions.yaml` templates can be linted, but are not the real workspace policy store. All corrections below are manual because permissions affect access.
+
+<a id="kr-pm-001"></a>
+### KR-PM-001 [HIGH] Invalid Kiro Permissions Document
+**Requirement**: A permissions document MUST be valid YAML with a top-level mapping containing a `rules` array of mappings. `rules: []` is valid.
+**Detection**: Reject YAML parse errors, non-mapping documents, missing/non-array `rules`, and non-mapping rule entries. Do not invent unknown-field or non-empty-array restrictions.
+**Fix**: No auto-fix - repair the YAML and document shape without guessing access policy.
+**Source**: kiro.dev/docs/permissions, kiro.dev/docs/cli/v3/permissions
+
+<a id="kr-pm-002"></a>
+### KR-PM-002 [HIGH] Invalid Kiro Permission Capability
+**Requirement**: Each rule MUST have a documented, case-sensitive string `capability`: `fs_read`, `fs_write`, `shell`, `web_fetch`, `web_search`, `mcp`, `subagent`, `skill`, `power`, `context`, `diagnostics`, `sandbox_network`, or the meta-capabilities `all`, `builtin`, `filesystem`.
+**Detection**: Flag a missing, non-string, or unknown capability; values are not coerced or case-normalized.
+**Fix**: No auto-fix - choose the intended capability after reviewing access scope.
+**Source**: kiro.dev/docs/permissions, kiro.dev/docs/cli/v3/permissions
+
+<a id="kr-pm-003"></a>
+### KR-PM-003 [HIGH] Invalid Kiro Permission Effect
+**Requirement**: Each permission rule MUST have a string `effect` of `allow`, `deny`, or `ask`.
+**Detection**: Flag missing, wrong-type, or unknown effect values. For example, `permit` and `Allow` are invalid.
+**Fix**: No auto-fix - explicitly select the intended access decision.
+**Source**: kiro.dev/docs/permissions, kiro.dev/docs/cli/v3/permissions
+
+<a id="kr-pm-004"></a>
+### KR-PM-004 [HIGH] Invalid Kiro Permission Patterns
+**Requirement**: Optional `match` and `exclude` MUST be arrays of strings. Omitting `match` means unrestricted scope; empty arrays are accepted.
+**Detection**: Flag a scalar, mapping, null, or any non-string array member. `match: ["git *"]` is valid; `match: "git *"` is not. This checks shape, not whether a glob grants appropriate access.
+**Fix**: No auto-fix - supply string arrays after reviewing their scope.
+**Source**: kiro.dev/docs/permissions, kiro.dev/docs/cli/v3/permissions
 
 ---
 
@@ -3360,36 +3358,29 @@ Rules for `.kiro/settings.json` (and `~/.kiro/settings.json`) - the flat-key JSO
 **Fix**: [AUTO-FIX] Remove the duplicate @import line
 **Source**: Claude Code memory docs
 
-<a id="ref-004"></a>
-### REF-004 [MEDIUM] Non-Markdown Import
-**Requirement**: @imports SHOULD reference .md files only
-**Detection**: Extract @imports, check file extension, flag non-`.md` extensions
-**Fix**: Convert referenced content to markdown or remove the import
-**Source**: Claude Code memory docs
-
 ---
 
 ## PROMPT ENGINEERING RULES
 
 <a id="pe-001"></a>
-### PE-001 [MEDIUM] Lost in the Middle
+### PE-001 [LOW] Lost in the Middle
 **Requirement**: Critical content SHOULD NOT be in middle 40-60%
 **Detection**: Find "critical|important|must" positions, check if in middle
 **Fix**: Move to start or end
 **Source**: Liu et al. (2023), "Lost in the Middle: How Language Models Use Long Contexts", TACL
 
 <a id="pe-002"></a>
-### PE-002 [MEDIUM] Chain-of-Thought on Simple Task
+### PE-002 [LOW] Chain-of-Thought on Simple Task
 **Requirement**: SHOULD NOT use "think step by step" for simple operations
 **Detection**: Check for CoT phrases in simple skills (file reads, basic commands)
 **Fix**: Remove CoT instructions
 **Source**: Wei et al. (2022), research shows CoT hurts simple tasks
 
 <a id="pe-003"></a>
-### PE-003 [MEDIUM] Weak Imperative Language
+### PE-003 [LOW] Weak Imperative Language
 **Requirement**: Use strong language (must/always/never) for critical rules
 **Detection**: Critical section with `should|could|try|consider|maybe`
-**Fix**: [AUTO-FIX] Replace with must/always/required
+**Fix**: Review manually; no automatic rewrite of intent or permission behavior.
 **Source**: Multiple prompt engineering studies
 
 <a id="pe-004"></a>
@@ -3418,7 +3409,7 @@ Rules for `.kiro/settings.json` (and `~/.kiro/settings.json`) - the flat-key JSO
 ## CROSS-PLATFORM RULES
 
 <a id="xp-001"></a>
-### XP-001 [HIGH] Platform-Specific Feature in Generic Config
+### XP-001 [LOW] Platform-Specific Feature in Generic Config
 **Requirement**: Generic configs MUST NOT use platform-specific features
 **Detection**: Check for Claude-only features (hooks, context: fork) in AGENTS.md
 **Fix**: Move to CLAUDE.md or wrap in a Claude-specific section header
@@ -3493,7 +3484,7 @@ Known asymmetry with XP-009: this is a per-file validator, so it has no view of 
 <a id="xp-009"></a>
 ### XP-009 [MEDIUM] Codex Instruction Chain Exceeds project_doc_max_bytes
 **Requirement**: The *combined* size of the Codex instruction chain SHOULD stay under the 32768-byte `project_doc_max_bytes` default. The cap is cumulative, not per-file - Codex "stops adding files once the combined size reaches the limit", so a project split across several mid-size files is truncated even when every individual file passes XP-007.
-**Detection**: Project-level check. Builds **one chain per leaf directory** the way Codex discovers them - start at the project root, walk down, at most one file per directory, preferring `AGENTS.override.md` over `AGENTS.md` - then sums each chain independently and reports on the file where that chain's running total crosses the limit, since that file and everything deeper is what Codex drops. Sibling subtrees are separate chains and are never summed together: a single whole-tree total would blame a sibling for bytes it does not share, and would eventually trip on any project with enough packages - the opposite of AGM-006's advice to split across nested directories to stay under this cap. Conservative by design: `project_doc_fallback_filenames` lives in the user's Codex config rather than anything agnix reads, so a project using fallbacks has a longer real chain and this check under-reports rather than over-reports.
+**Detection**: Project-level check. Builds **one chain per leaf directory** the way Codex discovers them - start at the project root, walk down, at most one file per directory, preferring `AGENTS.override.md` over `AGENTS.md` - then sums each chain independently and reports on the file where that chain's running total crosses the limit, since that file and everything deeper is what Codex drops. Sibling subtrees are separate chains and are never summed together: a single whole-tree total would blame a sibling for bytes it does not share, and would eventually trip on any project with enough packages - nested instruction directories are supported, not a defect. Conservative by design: `project_doc_fallback_filenames` lives in the user's Codex config rather than anything agnix reads, so a project using fallbacks has a longer real chain and this check under-reports rather than over-reports.
 **Fix**: Manual - trim the chain, or raise `project_doc_max_bytes` in the Codex config
 **Source**: learn.chatgpt.com/docs/agent-configuration/agents-md
 
@@ -3532,20 +3523,20 @@ Implement these 30 rules first:
 - AS-001 through AS-009 (Skills frontmatter)
 - CC-SK-001 through CC-SK-008 (Claude skills)
 - CC-HK-001 through CC-HK-008 (Hooks)
-- CC-MEM-001, CC-MEM-005 (Memory critical)
+- CC-MEM-001 (Memory critical)
 - XML-001 through XML-003 (XML balance)
-- REF-001 through REF-004 (Import/reference validation)
+- REF-001 through REF-003 (Import/reference validation)
 
 ### P1 (Week 4)
 Add these 15 rules:
 - AS-011 through AS-013 and AS-015 (Skills best practices)
-- CC-MEM-006 through CC-MEM-010 (Memory quality)
+- CC-MEM-007, CC-MEM-009, CC-MEM-010 (Memory quality)
 - CC-AG-001 through CC-AG-013 (Agents)
 - CC-PL-001 through CC-PL-010 (Plugins)
 
 ### P2 (Week 5-6)
 Complete coverage:
-- MCP-001 through MCP-006 (MCP protocol)
+- MCP-001 through MCP-004, MCP-006 (MCP protocol)
 - PE-001 through PE-006 (Prompt engineering)
 - XP-001 through XP-008, XP-SK-001 (Cross-platform)
 - CR-SK-001, CL-SK-001, CP-SK-001, CX-SK-001, OC-SK-001, WS-SK-001, KR-SK-001, KR-AG-001 through KR-AG-007, KR-HK-001 through KR-HK-006, KR-PW-001 through KR-PW-004, KR-MCP-001 through KR-MCP-002, AMP-SK-001, RC-SK-001 (Per-client and Kiro rules)
@@ -3615,8 +3606,6 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | CC-AG-003 | Default invalid model to sonnet | unsafe |
 | CC-AG-004 | Default invalid permission mode | unsafe |
 | CC-AG-008 | Replace with closest memory scope | unsafe |
-| CC-MEM-005 | Remove generic instruction line | safe |
-| CC-MEM-007 | Replace weak language with strong | safe/unsafe |
 | CC-PL-005 | Normalize plugin name | unsafe |
 | CC-PL-007 | Prepend ./ to relative path | safe |
 | MCP-001 | Set jsonrpc to "2.0" | safe |
@@ -3645,7 +3634,6 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | AGM-001 | Append closing code fence for unclosed blocks | unsafe |
 | GM-001 | Append closing code fence for unclosed blocks | unsafe |
 | GM-008 | Strip directory prefix from contextFileName | unsafe |
-| PE-003 | Replace weak language with stronger alternative | unsafe |
 | PE-005 | Delete redundant instruction line | unsafe |
 | REF-003 | Delete duplicate import line | unsafe |
 | CUR-011 | Replace invalid cursor hook event with closest match | unsafe |
@@ -3653,7 +3641,11 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | KIRO-001 | Replace invalid inclusion mode with closest match | unsafe |
 | OC-008 | Replace invalid permission mode with closest match | unsafe |
 | OC-DEP-001 | Rename `mode` key to `agent` | safe |
-| OC-DEP-002 | Rename `tools` key to `permission` | safe |
+| OC-DEP-005 | Remove TUI keys after manual migration to tui.json | unsafe |
+| CC-SET-016 | Rename deprecated permission tool names | unsafe |
+| COP-027 | Migrate infer while preserving explicit invocation fields | unsafe |
+| KR-HK-011 | Normalize version strings 1 / 1.0 to v1 | unsafe |
+| KR-HK-014 | Normalize supported V3 trigger aliases | safe |
 | OC-DEP-003 | Rename `autoshare` key to `share` | safe |
 | OC-CFG-008 | Replace logLevel with closest valid value | unsafe |
 | OC-AG-006 | Replace color with closest named color | unsafe |
@@ -3679,46 +3671,47 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Category | Total Rules | HIGH | MEDIUM | LOW | Auto-Fixable |
 |----------|-------------|------|--------|-----|--------------|
 | Agent Skills | 14 | 11 | 3 | 0 | 7 |
-| AGENTS.md | 6 | 1 | 5 | 0 | 1 |
+| AGENTS.md | 5 | 1 | 4 | 0 | 1 |
 | Amp Checks | 4 | 2 | 2 | 0 | 3 |
 | Amp Skills | 1 | 0 | 1 | 0 | 1 |
-| Claude Agents | 18 | 11 | 6 | 1 | 10 |
+| Claude Agents | 18 | 10 | 7 | 1 | 9 |
 | Claude Hooks | 26 | 15 | 7 | 4 | 11 |
-| Claude Memory | 13 | 8 | 5 | 0 | 3 |
-| Claude Output Styles | 6 | 2 | 2 | 2 | 0 |
-| Claude Plugins | 17 | 8 | 9 | 0 | 4 |
-| Claude Settings | 33 | 1 | 31 | 1 | 0 |
-| Claude Skills | 18 | 10 | 7 | 1 | 8 |
+| Claude Memory | 10 | 4 | 5 | 1 | 1 |
+| Claude Output Styles | 6 | 2 | 2 | 2 | 1 |
+| Claude Plugins | 17 | 8 | 8 | 1 | 4 |
+| Claude Settings | 33 | 1 | 31 | 1 | 12 |
+| Claude Skills | 18 | 10 | 7 | 1 | 7 |
 | Cline | 7 | 4 | 3 | 0 | 3 |
 | Cline Skills | 3 | 2 | 1 | 0 | 2 |
-| Codex CLI | 65 | 31 | 29 | 5 | 10 |
+| Codex CLI | 65 | 31 | 29 | 5 | 9 |
 | Codex Skills | 1 | 0 | 1 | 0 | 1 |
-| GitHub Copilot | 25 | 13 | 9 | 3 | 11 |
+| GitHub Copilot | 25 | 13 | 9 | 3 | 12 |
 | Copilot Skills | 1 | 0 | 1 | 0 | 1 |
-| Cross-Platform | 10 | 2 | 7 | 1 | 0 |
+| Cross-Platform | 10 | 1 | 7 | 2 | 0 |
 | Cursor | 20 | 10 | 9 | 1 | 6 |
 | Cursor Skills | 1 | 0 | 1 | 0 | 1 |
 | Gemini Agents | 1 | 1 | 0 | 0 | 0 |
 | Gemini CLI | 10 | 3 | 5 | 2 | 3 |
 | Kiro Agents | 15 | 5 | 8 | 2 | 0 |
-| Kiro Hooks | 13 | 8 | 5 | 0 | 0 |
+| Kiro Hooks | 14 | 8 | 5 | 1 | 2 |
+| Kiro Permissions | 4 | 4 | 0 | 0 | 0 |
 | Kiro MCP | 6 | 2 | 4 | 0 | 0 |
 | Kiro Powers | 8 | 3 | 4 | 1 | 0 |
 | Kiro Settings | 3 | 1 | 2 | 0 | 3 |
 | Kiro Skills | 1 | 0 | 1 | 0 | 1 |
 | Kiro Steering | 14 | 3 | 9 | 2 | 1 |
-| MCP | 26 | 20 | 6 | 0 | 7 |
-| OpenCode | 47 | 28 | 18 | 1 | 11 |
+| MCP | 25 | 18 | 6 | 1 | 8 |
+| OpenCode | 46 | 28 | 17 | 1 | 11 |
 | OpenCode Skills | 1 | 0 | 1 | 0 | 1 |
-| Prompt Eng | 6 | 0 | 6 | 0 | 2 |
-| References | 4 | 2 | 2 | 0 | 1 |
+| Prompt Eng | 6 | 0 | 3 | 3 | 1 |
+| References | 3 | 2 | 1 | 0 | 1 |
 | Roo Code | 6 | 3 | 3 | 0 | 0 |
 | Roo Code Skills | 1 | 0 | 1 | 0 | 1 |
 | Version Awareness | 1 | 0 | 0 | 1 | 0 |
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **460** | **214** | **217** | **29** | **118** |
+| **TOTAL** | **458** | **210** | **211** | **37** | **129** |
 
 
 ---
@@ -3748,8 +3741,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 460 validation rules across 40 categories
+**Total Coverage**: 458 validation rules across 41 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 214 HIGH, 217 MEDIUM, 29 LOW
-**Auto-Fixable**: 118 rules (26%)
+**Certainty**: 210 HIGH, 211 MEDIUM, 37 LOW
+**Auto-Fixable**: 129 rules (28%)

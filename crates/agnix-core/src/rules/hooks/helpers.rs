@@ -1618,19 +1618,39 @@ pub(super) fn validate_all_raw_hooks(
                         if check_023 {
                             if let Some(once_val) = hook.get("once") {
                                 if !once_val.is_boolean() {
-                                    conditional_diags.push(
-                                        Diagnostic::info(
-                                            path.to_path_buf(),
-                                            1,
-                                            0,
-                                            "CC-HK-023",
-                                            format!(
-                                                "Hook at {} has non-boolean 'once' field; 'once' must be true or false",
-                                                hook_location
-                                            ),
-                                        )
-                                        .with_suggestion("Set 'once' to true or false"),
-                                    );
+                                    let mut diagnostic = Diagnostic::info(
+                                        path.to_path_buf(),
+                                        1,
+                                        0,
+                                        "CC-HK-023",
+                                        format!(
+                                            "Hook at {} has non-boolean 'once' field; 'once' must be true or false",
+                                            hook_location
+                                        ),
+                                    )
+                                    .with_suggestion("Set 'once' to true or false");
+
+                                    if let Some(quoted) = once_val.as_str() {
+                                        let event = event.replace('~', "~0").replace('/', "~1");
+                                        let pointer = format!(
+                                            "/hooks/{event}/{matcher_idx}/hooks/{hook_idx}/once"
+                                        );
+                                        if let Some((start, end)) =
+                                            crate::schemas::mcp::quoted_json_boolean_span(
+                                                content, &pointer, "once", quoted,
+                                            )
+                                        {
+                                            diagnostic = diagnostic.with_fix(Fix::replace(
+                                                start,
+                                                end,
+                                                quoted,
+                                                t!("rules.boolean_unwrap.json_fix", value = quoted),
+                                                true,
+                                            ));
+                                        }
+                                    }
+
+                                    conditional_diags.push(diagnostic);
                                 }
                             }
                         }

@@ -1,4 +1,5 @@
-//! Kiro CLI V3 standalone hook validation rules (KR-HK-011 to KR-HK-013).
+//! Kiro CLI V3 hook validation and migration rules (KR-HK-011 to KR-HK-014).
+//! KR-HK-014 also checks CLI-only spellings in legacy `.kiro.hook` files.
 //!
 //! Validates `.kiro/hooks/*.json` documents (CLI V3 / IDE 1.0 standalone
 //! format: `{ "version": "v1", "hooks": [...] }`):
@@ -13,16 +14,17 @@
 
 use crate::{
     config::PerFileLintConfig,
-    diagnostics::Diagnostic,
-    rules::{Validator, ValidatorMetadata},
+    diagnostics::{Diagnostic, Fix},
+    rules::{Validator, ValidatorMetadata, line_col_at_offset},
     schemas::kiro_hook_v3::{
-        VALID_KIRO_V3_HOOK_DOC_VERSIONS, VALID_KIRO_V3_HOOK_TRIGGERS, parse_kiro_v3_hook_doc,
+        VALID_KIRO_V3_HOOK_DOC_VERSIONS, VALID_KIRO_V3_HOOK_TRIGGERS, canonical_trigger,
+        json_value_span, parse_kiro_v3_hook_doc,
     },
 };
 use rust_i18n::t;
 use std::path::Path;
 
-const RULE_IDS: &[&str] = &["KR-HK-011", "KR-HK-012", "KR-HK-013"];
+const RULE_IDS: &[&str] = &["KR-HK-011", "KR-HK-012", "KR-HK-013", "KR-HK-014"];
 
 /// `timeout` of 0 disables the timeout, so 0 is valid. The documented
 /// default is 60 seconds (kept here as the reference value the range check
@@ -46,6 +48,13 @@ impl Validator for KiroV3HookValidator {
         content: &str,
         config: &PerFileLintConfig<'_>,
     ) -> Vec<Diagnostic> {
+        if path
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("hook"))
+        {
+            return super::kiro_hook::validate_legacy_migration(path, content, config);
+        }
         let mut diagnostics = Vec::new();
         let parsed = parse_kiro_v3_hook_doc(content);
 
@@ -75,10 +84,13 @@ impl Validator for KiroV3HookValidator {
         };
 
         if config.is_rule_enabled("KR-HK-011") {
-            validate_version(path, &doc, &mut diagnostics);
+            validate_version(path, content, &doc, &mut diagnostics);
         }
 
-        if !config.is_rule_enabled("KR-HK-012") && !config.is_rule_enabled("KR-HK-013") {
+        if !config.is_rule_enabled("KR-HK-012")
+            && !config.is_rule_enabled("KR-HK-013")
+            && !config.is_rule_enabled("KR-HK-014")
+        {
             return diagnostics;
         }
 
@@ -100,6 +112,15 @@ impl Validator for KiroV3HookValidator {
 
         for (index, hook) in hooks.iter().enumerate() {
             validate_entry(path, index, hook, config, &mut diagnostics);
+            if config.is_rule_enabled("KR-HK-014") {
+                validate_alias(
+                    path,
+                    content,
+                    index,
+                    hook.trigger.as_deref(),
+                    &mut diagnostics,
+                );
+            }
         }
 
         diagnostics
@@ -110,21 +131,39 @@ impl Validator for KiroV3HookValidator {
 /// docs fix it at `"v1"`.
 fn validate_version(
     path: &Path,
+    content: &str,
     doc: &crate::schemas::kiro_hook_v3::KiroV3HookDoc,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
     match doc.version.as_deref() {
         Some(version) if VALID_KIRO_V3_HOOK_DOC_VERSIONS.contains(&version) => {}
-        Some(version) => diagnostics.push(
-            Diagnostic::warning(
+        Some(version) => {
+            let span = json_value_span(content, &["version"]);
+            let (line, column) =
+                span.map_or((1, 0), |(start, _)| line_col_at_offset(content, start));
+            let mut diagnostic = Diagnostic::warning(
                 path.to_path_buf(),
-                1,
-                0,
+                line,
+                column,
                 "KR-HK-011",
                 t!("rules.kr_hk_011.invalid_version", version = version),
             )
-            .with_suggestion(t!("rules.kr_hk_011.suggestion")),
-        ),
+            .with_suggestion(t!("rules.kr_hk_011.suggestion"));
+            // This can activate a previously ignored hook, so never auto-apply
+            // it as a safe fix. Unknown/future/missing versions are not guessed.
+            if matches!(version, "1" | "1.0")
+                && let Some((start, end)) = span
+            {
+                diagnostic = diagnostic.with_fix(Fix::replace(
+                    start,
+                    end,
+                    "\"v1\"",
+                    t!("rules.kr_hk_011.fix"),
+                    false,
+                ));
+            }
+            diagnostics.push(diagnostic);
+        }
         None => diagnostics.push(
             Diagnostic::warning(
                 path.to_path_buf(),
@@ -136,6 +175,46 @@ fn validate_version(
             .with_suggestion(t!("rules.kr_hk_011.suggestion")),
         ),
     }
+}
+
+/// Style advice only: aliases remain valid, including /upgrade-agent output.
+fn validate_alias(
+    path: &Path,
+    content: &str,
+    index: usize,
+    trigger: Option<&str>,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(trigger) = trigger else {
+        return;
+    };
+    let Some(canonical) = canonical_trigger(trigger) else {
+        return;
+    };
+    let span = json_value_span(content, &["hooks", &index.to_string(), "trigger"]);
+    let (line, column) = span.map_or((1, 0), |(start, _)| line_col_at_offset(content, start));
+    let mut diagnostic = Diagnostic::info(
+        path.to_path_buf(),
+        line,
+        column,
+        "KR-HK-014",
+        t!(
+            "rules.kr_hk_014.alias",
+            trigger = trigger,
+            canonical = canonical
+        ),
+    )
+    .with_suggestion(t!("rules.kr_hk_014.alias_suggestion"));
+    if let Some((start, end)) = span {
+        diagnostic = diagnostic.with_fix(Fix::replace(
+            start,
+            end,
+            format!("\"{canonical}\""),
+            t!("rules.kr_hk_014.fix", canonical = canonical),
+            true,
+        ));
+    }
+    diagnostics.push(diagnostic);
 }
 
 fn validate_entry(

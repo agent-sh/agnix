@@ -1,0 +1,5 @@
+rules:
+  - capability: unknown
+    match: "git *"
+    exclude: [true]
+    effect: permit

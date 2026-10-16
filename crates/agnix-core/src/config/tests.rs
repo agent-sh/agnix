@@ -18,7 +18,7 @@ fn test_default_config_enables_all_rules() {
     assert!(config.is_rule_enabled("CC-HK-001"));
     assert!(config.is_rule_enabled("AS-005"));
     assert!(config.is_rule_enabled("CC-SK-006"));
-    assert!(config.is_rule_enabled("CC-MEM-005"));
+    assert!(config.is_rule_enabled("CC-MEM-007"));
     assert!(config.is_rule_enabled("CC-PL-001"));
     assert!(config.is_rule_enabled("XML-001"));
     assert!(config.is_rule_enabled("REF-001"));
@@ -131,7 +131,7 @@ fn test_category_disabled_memory() {
     let mut config = LintConfig::default();
     dm(&mut config).rules.memory = false;
 
-    assert!(!config.is_rule_enabled("CC-MEM-005"));
+    assert!(!config.is_rule_enabled("CC-MEM-007"));
 
     // Other categories still enabled
     assert!(config.is_rule_enabled("CC-AG-001"));
@@ -182,7 +182,7 @@ fn test_target_cursor_disables_cc_rules() {
     assert!(!config.is_rule_enabled("CC-AG-001"));
     assert!(!config.is_rule_enabled("CC-HK-001"));
     assert!(!config.is_rule_enabled("CC-SK-006"));
-    assert!(!config.is_rule_enabled("CC-MEM-005"));
+    assert!(!config.is_rule_enabled("CC-MEM-007"));
 
     // AS-* rules should still work
     assert!(config.is_rule_enabled("AS-005"));
@@ -520,7 +520,6 @@ fn test_default_config_enables_agm_rules() {
     assert!(config.is_rule_enabled("AGM-003"));
     assert!(config.is_rule_enabled("AGM-004"));
     assert!(config.is_rule_enabled("AGM-005"));
-    assert!(config.is_rule_enabled("AGM-006"));
 }
 
 #[test]
@@ -533,7 +532,6 @@ fn test_category_disabled_agents_md() {
     assert!(!config.is_rule_enabled("AGM-003"));
     assert!(!config.is_rule_enabled("AGM-004"));
     assert!(!config.is_rule_enabled("AGM-005"));
-    assert!(!config.is_rule_enabled("AGM-006"));
 
     // Other categories still enabled
     assert!(config.is_rule_enabled("CC-AG-001"));
@@ -563,8 +561,8 @@ fn test_agm_rules_work_with_all_targets() {
             target
         );
         assert!(
-            config.is_rule_enabled("AGM-006"),
-            "AGM-006 should be enabled for {:?}",
+            config.is_rule_enabled("AGM-005"),
+            "AGM-005 should be enabled for {:?}",
             target
         );
     }
@@ -580,7 +578,6 @@ fn test_disabled_specific_agm_rule() {
     assert!(config.is_rule_enabled("AGM-003"));
     assert!(config.is_rule_enabled("AGM-004"));
     assert!(config.is_rule_enabled("AGM-005"));
-    assert!(config.is_rule_enabled("AGM-006"));
 }
 
 #[test]
@@ -598,7 +595,6 @@ agents_md = false
 
     assert!(!config.data.rules.agents_md);
     assert!(!config.is_rule_enabled("AGM-001"));
-    assert!(!config.is_rule_enabled("AGM-006"));
 }
 
 // ===== Prompt Engineering Category Tests =====
@@ -1661,7 +1657,7 @@ fn test_is_tool_alias_no_aliases_for_other_tools() {
 fn test_partial_config_only_rules_section() {
     let toml_str = r#"
 [rules]
-disabled_rules = ["CC-MEM-006"]
+disabled_rules = ["CC-MEM-007"]
 "#;
     let config: LintConfig = toml::from_str(toml_str).unwrap();
 
@@ -1672,8 +1668,8 @@ disabled_rules = ["CC-MEM-006"]
     assert!(config.data.rules.hooks);
 
     // disabled_rules should be set
-    assert_eq!(config.data.rules.disabled_rules, vec!["CC-MEM-006"]);
-    assert!(!config.is_rule_enabled("CC-MEM-006"));
+    assert_eq!(config.data.rules.disabled_rules, vec!["CC-MEM-007"]);
+    assert!(!config.is_rule_enabled("CC-MEM-007"));
 }
 
 #[test]
@@ -1753,14 +1749,14 @@ target = "ClaudeCode"
 
 [rules]
 xml = false
-disabled_rules = ["CC-MEM-006"]
+disabled_rules = ["CC-MEM-007"]
 "#;
     let config: LintConfig = toml::from_str(toml_str).unwrap();
 
     assert_eq!(config.data.severity, SeverityLevel::Error);
     assert_eq!(config.data.target, TargetTool::ClaudeCode);
     assert!(!config.data.rules.xml);
-    assert!(!config.is_rule_enabled("CC-MEM-006"));
+    assert!(!config.is_rule_enabled("CC-MEM-007"));
     // exclude should use default
     assert!(config.data.exclude.contains(&"node_modules/**".to_string()));
 }
@@ -1938,7 +1934,7 @@ severity = "Error"
 # Disable specific rules
 [rules]
 # Disable negative instruction warnings
-disabled_rules = ["CC-MEM-006"]
+disabled_rules = ["CC-MEM-007"]
 "#,
     )
     .unwrap();
@@ -1946,7 +1942,7 @@ disabled_rules = ["CC-MEM-006"]
     let (config, warning) = LintConfig::load_or_default(Some(&config_path));
 
     assert_eq!(config.data.severity, SeverityLevel::Error);
-    assert!(!config.is_rule_enabled("CC-MEM-006"));
+    assert!(!config.is_rule_enabled("CC-MEM-007"));
     assert!(warning.is_none());
 }
 
@@ -2065,7 +2061,7 @@ fn test_config_serialize_deserialize_roundtrip() {
     dm(&mut config).target = TargetTool::ClaudeCode;
     dm(&mut config).rules.skills = false;
     dm(&mut config).rules.amp_checks = false;
-    dm(&mut config).rules.disabled_rules = vec!["CC-MEM-006".to_string()];
+    dm(&mut config).rules.disabled_rules = vec!["CC-MEM-007".to_string()];
 
     let serialized = toml::to_string(&config).unwrap();
     let deserialized: LintConfig = toml::from_str(&serialized).unwrap();
@@ -2074,7 +2070,7 @@ fn test_config_serialize_deserialize_roundtrip() {
     assert_eq!(deserialized.data.target, TargetTool::ClaudeCode);
     assert!(!deserialized.data.rules.skills);
     assert!(!deserialized.data.rules.amp_checks);
-    assert_eq!(deserialized.data.rules.disabled_rules, vec!["CC-MEM-006"]);
+    assert_eq!(deserialized.data.rules.disabled_rules, vec!["CC-MEM-007"]);
 }
 
 #[test]
@@ -2094,14 +2090,14 @@ fn test_minimal_disable_warnings_config() {
     let toml_str = r#"
 [rules]
 disabled_rules = [
-"CC-MEM-006",  # Negative instructions
+"CC-MEM-007",  # Weak constraint language
 "PE-003",      # Weak language
 "XP-001",      # Hard-coded paths
 ]
 "#;
     let config: LintConfig = toml::from_str(toml_str).unwrap();
 
-    assert!(!config.is_rule_enabled("CC-MEM-006"));
+    assert!(!config.is_rule_enabled("CC-MEM-007"));
     assert!(!config.is_rule_enabled("PE-003"));
     assert!(!config.is_rule_enabled("XP-001"));
     // Everything else should work normally

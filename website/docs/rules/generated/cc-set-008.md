@@ -12,7 +12,7 @@ keywords: ["CC-SET-008", "non-boolean sandbox.allowappleevents setting", "claude
 - **Severity**: `MEDIUM`
 - **Category**: `Claude Settings`
 - **Normative Level**: `MUST`
-- **Auto-Fix**: `No`
+- **Auto-Fix**: `Yes (safe)`
 - **Verified On**: `2026-06-18`
 
 ## Applicability

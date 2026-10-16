@@ -742,13 +742,13 @@ fn test_format_json_contains_memory_rules() {
     use std::io::Write;
 
     // CC-MEM rules require specific content patterns to trigger
-    // Create a fixture with generic instructions (CC-MEM-005)
+    // Create a fixture with weak constraint advice (CC-MEM-007)
     let temp_dir = tempfile::tempdir().unwrap();
     let claude_md = temp_dir.path().join("CLAUDE.md");
     let mut file = fs::File::create(&claude_md).unwrap();
     writeln!(
         file,
-        "# Project Memory\n\nBe helpful and concise. Always follow best practices."
+        "# Critical Rules\n\nYou should follow the coding style."
     )
     .unwrap();
 
@@ -864,13 +864,13 @@ fn test_format_sarif_results_include_memory_diagnostics() {
     use std::io::Write;
 
     // CC-MEM rules require specific content patterns to trigger
-    // Create a fixture with generic instructions (CC-MEM-005)
+    // Create a fixture with weak constraint advice (CC-MEM-007)
     let temp_dir = tempfile::tempdir().unwrap();
     let claude_md = temp_dir.path().join("CLAUDE.md");
     let mut file = fs::File::create(&claude_md).unwrap();
     writeln!(
         file,
-        "# Project Memory\n\nBe helpful and concise. Always follow best practices."
+        "# Critical Rules\n\nYou should follow the coding style."
     )
     .unwrap();
 

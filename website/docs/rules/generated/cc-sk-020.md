@@ -12,7 +12,7 @@ keywords: ["CC-SK-020", "invalid shell value", "claude skills", "validation", "a
 - **Severity**: `MEDIUM`
 - **Category**: `Claude Skills`
 - **Normative Level**: `MUST`
-- **Auto-Fix**: `Yes (unsafe)`
+- **Auto-Fix**: `No`
 - **Verified On**: `2026-03-28`
 
 ## Applicability

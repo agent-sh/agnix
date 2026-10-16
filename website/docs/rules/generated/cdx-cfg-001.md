@@ -13,7 +13,7 @@ keywords: ["CDX-CFG-001", "invalid approval_policy value", "codex cli", "validat
 - **Category**: `Codex CLI`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-10-16`
 
 ## Applicability
 
@@ -26,6 +26,8 @@ keywords: ["CDX-CFG-001", "invalid approval_policy value", "codex cli", "validat
 - https://developers.openai.com/codex/config-reference
 - https://developers.openai.com/codex/config-schema.json
 - https://developers.openai.com/codex/enterprise/managed-configuration
+- https://github.com/openai/codex/blob/rust-v0.163.0/codex-rs/core/config.schema.json
+- https://github.com/openai/codex/blob/main/codex-rs/core/config.schema.json
 
 ## Test Coverage Metadata
 
@@ -40,7 +42,7 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```toml
-approval_policy = "always"
+approval_policy = "untrusted"
 ```
 
 ### Valid

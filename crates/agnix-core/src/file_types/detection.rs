@@ -394,6 +394,24 @@ pub fn detect_file_type(path: &Path) -> FileType {
         return FileType::KiroMcp;
     }
 
+    // User-scoped policies and the per-user workspace store. Kiro does not
+    // load repo-local permissions as workspace policy; detection is path-only
+    // so a checked-in template at the settings suffix can still be linted.
+    let great_grandparent = path
+        .parent()
+        .and_then(Path::parent)
+        .and_then(Path::parent)
+        .and_then(Path::file_name)
+        .and_then(|n| n.to_str());
+    if filename.eq_ignore_ascii_case("permissions.yaml")
+        && ((parent_eq_ignore_ascii_case(parent, "settings")
+            && parent_eq_ignore_ascii_case(grandparent, ".kiro"))
+            || (parent_eq_ignore_ascii_case(grandparent, "workspace-roots")
+                && parent_eq_ignore_ascii_case(great_grandparent, ".kiro")))
+    {
+        return FileType::KiroPermissions;
+    }
+
     // .kiro/settings.json - global CLI preferences written by
     // `kiro-cli settings <key> <value>`. Documented at
     // https://kiro.dev/docs/cli/mcp/tool-search/ for toolSearch.* keys

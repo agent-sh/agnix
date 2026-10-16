@@ -1403,11 +1403,15 @@ mod project_level_validation_tests {
 
         let temp_dir = tempfile::tempdir().unwrap();
 
-        // Create nested AGENTS.md files (triggers AGM-006)
-        std::fs::write(temp_dir.path().join("AGENTS.md"), "# Root AGENTS").unwrap();
+        // Create nested AGENTS.md files (triggers XP-004)
+        std::fs::write(
+            temp_dir.path().join("AGENTS.md"),
+            "# Root\nRun `npm install`.",
+        )
+        .unwrap();
         let sub = temp_dir.path().join("sub");
         std::fs::create_dir(&sub).unwrap();
-        std::fs::write(sub.join("AGENTS.md"), "# Sub AGENTS").unwrap();
+        std::fs::write(sub.join("AGENTS.md"), "# Nested\nRun `yarn install`.").unwrap();
 
         let root_uri = Url::from_file_path(temp_dir.path()).unwrap();
         service

@@ -252,7 +252,7 @@ Also supports `AGENTS.override.md` at any level. No frontmatter schema is define
 | Field | Description |
 |-------|-------------|
 | `project_doc_fallback_filenames` | Alternative filenames to treat as instruction files |
-| `project_doc_max_bytes` | Size limit for combined instruction text (default: 32 KiB, max: 65536) |
+| `project_doc_max_bytes` | Size limit for combined instruction text (default: 32 KiB; schema minimum 0, no maximum) |
 
 ### Potential agnix Rules (Codex CLI)
 

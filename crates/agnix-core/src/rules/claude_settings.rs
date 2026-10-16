@@ -50,7 +50,7 @@
 
 use crate::{
     config::PerFileLintConfig,
-    diagnostics::Diagnostic,
+    diagnostics::{Diagnostic, Fix},
     file_types::{is_claude_managed_settings_path, is_claude_system_managed_settings_path},
     rules::{Validator, ValidatorMetadata},
 };
@@ -329,19 +329,18 @@ fn validate_idle_compaction(
         return;
     }
 
-    let actual = describe_json_type(field_value);
-    let line = find_key_line(content, "idleCompaction").unwrap_or(1);
-
-    diagnostics.push(
-        Diagnostic::warning(
-            path.to_path_buf(),
-            line,
-            0,
-            "CC-SET-033",
-            t!("rules.cc_set_033.message", actual = actual),
-        )
-        .with_suggestion(t!("rules.cc_set_033.suggestion")),
-    );
+    diagnostics.push(boolean_type_diagnostic(
+        path,
+        content,
+        field_value,
+        "idleCompaction",
+        "CC-SET-033",
+        t!(
+            "rules.cc_set_033.message",
+            actual = describe_json_type(field_value)
+        ),
+        t!("rules.cc_set_033.suggestion"),
+    ));
 }
 
 /// CC-SET-032: `allowedProviders` is an organization-managed setting.
@@ -620,24 +619,18 @@ fn validate_channels_enabled(
         return;
     }
 
-    let actual = describe_json_type(field_value);
-    let line = find_key_line(content, "channelsEnabled").unwrap_or(1);
-
-    diagnostics.push(
-        Diagnostic::warning(
-            path.to_path_buf(),
-            line,
-            0,
-            "CC-SET-002",
-            format!(
-                "channelsEnabled must be a boolean when present (got {}); Claude Code leaves Channels disabled when the value is not strictly true/false",
-                actual
-            ),
-        )
-        .with_suggestion(
-            "Set channelsEnabled to an unquoted true or false. Quoted strings and numbers are not treated as opt-in by Claude Code 2.1.128+.",
+    diagnostics.push(boolean_type_diagnostic(
+        path,
+        content,
+        field_value,
+        "channelsEnabled",
+        "CC-SET-002",
+        format!(
+            "channelsEnabled must be a boolean when present (got {}); Claude Code leaves Channels disabled when the value is not strictly true/false",
+            describe_json_type(field_value)
         ),
-    );
+        "Set channelsEnabled to an unquoted true or false. Quoted strings and numbers are not treated as opt-in by Claude Code 2.1.128+.",
+    ));
 }
 
 /// CC-SET-003: Validate `worktree.baseRef`. Claude Code 2.1.133 added
@@ -887,19 +880,18 @@ fn validate_disable_bundled_skills(
         return;
     }
 
-    let actual = describe_json_type(field_value);
-    let line = find_key_line(content, "disableBundledSkills").unwrap_or(1);
-
-    diagnostics.push(
-        Diagnostic::warning(
-            path.to_path_buf(),
-            line,
-            0,
-            "CC-SET-006",
-            t!("rules.cc_set_006.message", actual = actual),
-        )
-        .with_suggestion(t!("rules.cc_set_006.suggestion")),
-    );
+    diagnostics.push(boolean_type_diagnostic(
+        path,
+        content,
+        field_value,
+        "disableBundledSkills",
+        "CC-SET-006",
+        t!(
+            "rules.cc_set_006.message",
+            actual = describe_json_type(field_value)
+        ),
+        t!("rules.cc_set_006.suggestion"),
+    ));
 }
 
 /// CC-SET-007: Validate `enforceAvailableModels`. Claude Code 2.1.175
@@ -926,19 +918,18 @@ fn validate_enforce_available_models(
         return;
     }
 
-    let actual = describe_json_type(field_value);
-    let line = find_key_line(content, "enforceAvailableModels").unwrap_or(1);
-
-    diagnostics.push(
-        Diagnostic::warning(
-            path.to_path_buf(),
-            line,
-            0,
-            "CC-SET-007",
-            t!("rules.cc_set_007.message", actual = actual),
-        )
-        .with_suggestion(t!("rules.cc_set_007.suggestion")),
-    );
+    diagnostics.push(boolean_type_diagnostic(
+        path,
+        content,
+        field_value,
+        "enforceAvailableModels",
+        "CC-SET-007",
+        t!(
+            "rules.cc_set_007.message",
+            actual = describe_json_type(field_value)
+        ),
+        t!("rules.cc_set_007.suggestion"),
+    ));
 }
 
 /// CC-SET-008: Validate `sandbox.allowAppleEvents`. Claude Code 2.1.181
@@ -972,21 +963,18 @@ fn validate_sandbox_allow_apple_events(
         return;
     }
 
-    let actual = describe_json_type(field_value);
-    let line = find_key_line(content, "allowAppleEvents")
-        .or_else(|| find_key_line(content, "sandbox"))
-        .unwrap_or(1);
-
-    diagnostics.push(
-        Diagnostic::warning(
-            path.to_path_buf(),
-            line,
-            0,
-            "CC-SET-008",
-            t!("rules.cc_set_008.message", actual = actual),
-        )
-        .with_suggestion(t!("rules.cc_set_008.suggestion")),
-    );
+    diagnostics.push(boolean_type_diagnostic(
+        path,
+        content,
+        field_value,
+        "allowAppleEvents",
+        "CC-SET-008",
+        t!(
+            "rules.cc_set_008.message",
+            actual = describe_json_type(field_value)
+        ),
+        t!("rules.cc_set_008.suggestion"),
+    ));
 }
 
 /// CC-SET-009: Validate `attribution.sessionUrl`. Claude Code v2.1.183
@@ -1013,21 +1001,18 @@ fn validate_attribution_session_url(
         return;
     }
 
-    let actual = describe_json_type(field_value);
-    let line = find_key_line(content, "sessionUrl")
-        .or_else(|| find_key_line(content, "attribution"))
-        .unwrap_or(1);
-
-    diagnostics.push(
-        Diagnostic::warning(
-            path.to_path_buf(),
-            line,
-            0,
-            "CC-SET-009",
-            t!("rules.cc_set_009.message", actual = actual),
-        )
-        .with_suggestion(t!("rules.cc_set_009.suggestion")),
-    );
+    diagnostics.push(boolean_type_diagnostic(
+        path,
+        content,
+        field_value,
+        "sessionUrl",
+        "CC-SET-009",
+        t!(
+            "rules.cc_set_009.message",
+            actual = describe_json_type(field_value)
+        ),
+        t!("rules.cc_set_009.suggestion"),
+    ));
 }
 
 /// CC-SET-010: Validate `teammateMode`. Claude Code documents four display
@@ -1105,23 +1090,18 @@ fn validate_respond_to_bash_commands(
         return;
     }
 
-    let actual = describe_json_type(field_value);
-    let line = find_key_line(content, "respondToBashCommands").unwrap_or(1);
-
-    diagnostics.push(
-        Diagnostic::warning(
-            path.to_path_buf(),
-            line,
-            0,
-            "CC-SET-011",
-            format!(
-                "respondToBashCommands must be a boolean when present (got {actual}); Claude Code v2.1.186+ documents this as a strict true/false setting"
-            ),
-        )
-        .with_suggestion(
-            "Set respondToBashCommands to an unquoted true or false. Use false to keep ! bash command output context-only.",
+    diagnostics.push(boolean_type_diagnostic(
+        path,
+        content,
+        field_value,
+        "respondToBashCommands",
+        "CC-SET-011",
+        format!(
+            "respondToBashCommands must be a boolean when present (got {}); Claude Code v2.1.186+ documents this as a strict true/false setting",
+            describe_json_type(field_value)
         ),
-    );
+        "Set respondToBashCommands to an unquoted true or false. Use false to keep ! bash command output context-only.",
+    ));
 }
 
 /// CC-SET-012: Validate `sandbox.credentials`. Claude Code v2.1.187 added a
@@ -2186,21 +2166,18 @@ fn validate_auto_mode_classify_all_shell(
         return;
     }
 
-    let actual = describe_json_type(field_value);
-    let line = find_key_line(content, "classifyAllShell")
-        .or_else(|| find_key_line(content, "autoMode"))
-        .unwrap_or(1);
-
-    diagnostics.push(
-        Diagnostic::warning(
-            path.to_path_buf(),
-            line,
-            0,
-            "CC-SET-013",
-            t!("rules.cc_set_013.message", actual = actual),
-        )
-        .with_suggestion(t!("rules.cc_set_013.suggestion")),
-    );
+    diagnostics.push(boolean_type_diagnostic(
+        path,
+        content,
+        field_value,
+        "classifyAllShell",
+        "CC-SET-013",
+        t!(
+            "rules.cc_set_013.message",
+            actual = describe_json_type(field_value)
+        ),
+        t!("rules.cc_set_013.suggestion"),
+    ));
 }
 
 /// CC-SET-014: Warn when `autoMode` appears in `.claude/settings.local.json`.
@@ -2357,24 +2334,44 @@ fn validate_deprecated_permission_tool_forms(
                 .or_else(|| find_key_line(content, "permissions"))
                 .unwrap_or(1);
 
-            diagnostics.push(
-                Diagnostic::warning(
-                    path.to_path_buf(),
-                    line,
-                    0,
-                    "CC-SET-016",
+            let mut diagnostic = Diagnostic::warning(
+                path.to_path_buf(),
+                line,
+                0,
+                "CC-SET-016",
+                t!(
+                    "rules.cc_set_016.message",
+                    rule = s,
+                    replacement = replacement.as_str()
+                ),
+            )
+            .with_suggestion(t!(
+                "rules.cc_set_016.suggestion",
+                rule = s,
+                replacement = replacement.as_str()
+            ));
+            // The documented replacement activates previously ignored path rules,
+            // so it changes permissions and must remain opt-in (unsafe).
+            if s.ends_with(')')
+                && !s.ends_with("()")
+                && let Some(tokens) = unambiguous_json_strings(content)
+                && let mut matches = tokens.iter().filter(|token| !token.3 && token.2 == s)
+                && let Some(token) = matches.next()
+                && matches.next().is_none()
+            {
+                diagnostic = diagnostic.with_fix(Fix::replace(
+                    token.0,
+                    token.1,
+                    serde_json::to_string(&replacement).expect("string serialization"),
                     t!(
-                        "rules.cc_set_016.message",
+                        "rules.cc_set_016.fix",
                         rule = s,
                         replacement = replacement.as_str()
                     ),
-                )
-                .with_suggestion(t!(
-                    "rules.cc_set_016.suggestion",
-                    rule = s,
-                    replacement = replacement.as_str()
-                )),
-            );
+                    false,
+                ));
+            }
+            diagnostics.push(diagnostic);
         }
     }
 }
@@ -2406,20 +2403,18 @@ fn validate_sandbox_filesystem_disabled(
         return;
     }
 
-    let actual = describe_json_type(field_value);
-    let line = find_key_line(content, "disabled")
-        .or_else(|| find_key_line(content, "filesystem"))
-        .unwrap_or(1);
-    diagnostics.push(
-        Diagnostic::warning(
-            path.to_path_buf(),
-            line,
-            0,
-            "CC-SET-017",
-            t!("rules.cc_set_017.message", actual = actual),
-        )
-        .with_suggestion(t!("rules.cc_set_017.suggestion")),
-    );
+    diagnostics.push(boolean_type_diagnostic(
+        path,
+        content,
+        field_value,
+        "disabled",
+        "CC-SET-017",
+        t!(
+            "rules.cc_set_017.message",
+            actual = describe_json_type(field_value)
+        ),
+        t!("rules.cc_set_017.suggestion"),
+    ));
 }
 
 /// CC-SET-018: Validate `emojiCompletionEnabled`. Claude Code 2.1.217 added
@@ -2439,18 +2434,18 @@ fn validate_emoji_completion_enabled(
         return;
     }
 
-    let actual = describe_json_type(field_value);
-    let line = find_key_line(content, "emojiCompletionEnabled").unwrap_or(1);
-    diagnostics.push(
-        Diagnostic::warning(
-            path.to_path_buf(),
-            line,
-            0,
-            "CC-SET-018",
-            t!("rules.cc_set_018.message", actual = actual),
-        )
-        .with_suggestion(t!("rules.cc_set_018.suggestion")),
-    );
+    diagnostics.push(boolean_type_diagnostic(
+        path,
+        content,
+        field_value,
+        "emojiCompletionEnabled",
+        "CC-SET-018",
+        t!(
+            "rules.cc_set_018.message",
+            actual = describe_json_type(field_value)
+        ),
+        t!("rules.cc_set_018.suggestion"),
+    ));
 }
 
 /// CC-SET-019: Validate `sandbox.network.strictAllowlist`. Claude Code 2.1.219
@@ -2475,20 +2470,18 @@ fn validate_sandbox_network_strict_allowlist(
         return;
     }
 
-    let actual = describe_json_type(field_value);
-    let line = find_key_line(content, "strictAllowlist")
-        .or_else(|| find_key_line(content, "network"))
-        .unwrap_or(1);
-    diagnostics.push(
-        Diagnostic::warning(
-            path.to_path_buf(),
-            line,
-            0,
-            "CC-SET-019",
-            t!("rules.cc_set_019.message", actual = actual),
-        )
-        .with_suggestion(t!("rules.cc_set_019.suggestion")),
-    );
+    diagnostics.push(boolean_type_diagnostic(
+        path,
+        content,
+        field_value,
+        "strictAllowlist",
+        "CC-SET-019",
+        t!(
+            "rules.cc_set_019.message",
+            actual = describe_json_type(field_value)
+        ),
+        t!("rules.cc_set_019.suggestion"),
+    ));
 }
 
 /// CC-SET-020: Validate the workflow size enum added in Claude Code 2.1.219.
@@ -3203,6 +3196,78 @@ fn find_key_line(content: &str, key: &str) -> Option<usize> {
     None
 }
 
+/// Scan actual JSON string tokens, honoring escapes. Reject duplicate decoded
+/// keys conservatively (including repeated ancestors or non-scalar values), so
+/// serde's last-key-wins behavior cannot make a fix target an ambiguous setting.
+/// Repeated keys in unrelated objects also suppress fixes, not diagnostics.
+fn unambiguous_json_strings(content: &str) -> Option<Vec<(usize, usize, String, bool)>> {
+    serde_json::from_str::<serde_json::Value>(content).ok()?;
+    let bytes = content.as_bytes();
+    let mut tokens = Vec::new();
+    let mut keys = std::collections::HashSet::new();
+    let mut pos = 0;
+    while pos < bytes.len() {
+        if bytes[pos] != b'"' {
+            pos += 1;
+            continue;
+        }
+        let start = pos;
+        pos += 1;
+        while pos < bytes.len() && bytes[pos] != b'"' {
+            if bytes[pos] == b'\\' {
+                pos += 1;
+            }
+            pos += 1;
+        }
+        pos += 1;
+        let decoded: String = serde_json::from_str(content.get(start..pos)?).ok()?;
+        let is_key = content[pos..].trim_start().starts_with(':');
+        if is_key && !keys.insert(decoded.clone()) {
+            return None;
+        }
+        tokens.push((start, pos, decoded, is_key));
+    }
+    Some(tokens)
+}
+
+/// Emit a CC-SET boolean-type warning. Exact quoted `"true"` / `"false"` get a
+/// safe unwrap to the bare JSON boolean. Other wrong types stay diagnostics
+/// without a fix — rewriting a number, null, array, or object would invent a
+/// value the user did not write.
+fn boolean_type_diagnostic(
+    path: &Path,
+    content: &str,
+    field_value: &serde_json::Value,
+    key: &str,
+    rule: &str,
+    message: impl Into<String>,
+    suggestion: impl Into<String>,
+) -> Diagnostic {
+    let line = find_key_line(content, key).unwrap_or(1);
+    let mut diagnostic =
+        Diagnostic::warning(path.to_path_buf(), line, 0, rule, message).with_suggestion(suggestion);
+
+    if let Some(quoted) = field_value.as_str()
+        && matches!(quoted, "true" | "false")
+        && let Some(tokens) = unambiguous_json_strings(content)
+        && let Some(pair) = tokens.windows(2).find(|pair| pair[0].3 && pair[0].2 == key)
+        && !pair[1].3
+        && let (start, end) = (pair[1].0, pair[1].1)
+        && content.get(start..end) == Some(&format!("\"{quoted}\""))
+        && content[pair[0].1..start].trim() == ":"
+    {
+        diagnostic = diagnostic.with_fix(Fix::replace(
+            start,
+            end,
+            quoted,
+            t!("rules.boolean_unwrap.json_fix", value = quoted),
+            true,
+        ));
+    }
+
+    diagnostic
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -3217,6 +3282,278 @@ mod tests {
         let validator = ClaudeSettingsValidator;
         let path = PathBuf::from(path_str);
         validator.validate(&path, content, &LintConfig::default())
+    }
+
+    fn assert_quoted_boolean_fix(content: &str, rule: &str, replacement: &str) {
+        let diagnostics = validate(content);
+        let hits: Vec<_> = diagnostics.iter().filter(|d| d.rule == rule).collect();
+        assert_eq!(hits.len(), 1, "{rule} should fire once for {content}");
+        assert!(
+            hits[0].has_fixes(),
+            "{rule} quoted boolean should carry a fix"
+        );
+        let fix = &hits[0].fixes[0];
+        assert!(fix.safe, "{rule} quoted-boolean unwrap must be safe");
+        assert_eq!(fix.replacement, replacement);
+        let expected = format!("\"{replacement}\"");
+        assert_eq!(
+            content.get(fix.start_byte..fix.end_byte),
+            Some(expected.as_str()),
+            "{rule} fix span must cover the quoted boolean"
+        );
+        let mut fixed = content.to_string();
+        fixed.replace_range(fix.start_byte..fix.end_byte, &fix.replacement);
+        serde_json::from_str::<serde_json::Value>(&fixed).expect("fixed JSON must parse");
+        assert!(
+            !validate(&fixed).iter().any(|d| d.rule == rule),
+            "{rule} must clear after fix"
+        );
+    }
+
+    #[test]
+    fn test_quoted_boolean_settings_get_safe_unwrap() {
+        let cases = [
+            (
+                "CC-SET-002",
+                "channelsEnabled",
+                r#"{"channelsEnabled": "true"}"#,
+                "true",
+            ),
+            (
+                "CC-SET-006",
+                "disableBundledSkills",
+                r#"{"disableBundledSkills": "false"}"#,
+                "false",
+            ),
+            (
+                "CC-SET-007",
+                "enforceAvailableModels",
+                r#"{"enforceAvailableModels": "true"}"#,
+                "true",
+            ),
+            (
+                "CC-SET-008",
+                "allowAppleEvents",
+                r#"{"sandbox": {"allowAppleEvents": "false"}}"#,
+                "false",
+            ),
+            (
+                "CC-SET-009",
+                "sessionUrl",
+                r#"{"attribution": {"sessionUrl": "true"}}"#,
+                "true",
+            ),
+            (
+                "CC-SET-011",
+                "respondToBashCommands",
+                r#"{"respondToBashCommands": "false"}"#,
+                "false",
+            ),
+            (
+                "CC-SET-013",
+                "classifyAllShell",
+                r#"{"autoMode": {"classifyAllShell": "true"}}"#,
+                "true",
+            ),
+            (
+                "CC-SET-017",
+                "disabled",
+                r#"{"sandbox": {"filesystem": {"disabled": "false"}}}"#,
+                "false",
+            ),
+            (
+                "CC-SET-018",
+                "emojiCompletionEnabled",
+                r#"{"emojiCompletionEnabled": "true"}"#,
+                "true",
+            ),
+            (
+                "CC-SET-019",
+                "strictAllowlist",
+                r#"{"sandbox": {"network": {"strictAllowlist": "false"}}}"#,
+                "false",
+            ),
+            (
+                "CC-SET-033",
+                "idleCompaction",
+                r#"{"idleCompaction": "false"}"#,
+                "false",
+            ),
+        ];
+
+        for (rule, _key, content, replacement) in cases {
+            assert_quoted_boolean_fix(content, rule, replacement);
+        }
+    }
+
+    #[test]
+    fn test_real_boolean_settings_do_not_fire() {
+        let contents = [
+            r#"{"channelsEnabled": true}"#,
+            r#"{"disableBundledSkills": false}"#,
+            r#"{"enforceAvailableModels": true}"#,
+            r#"{"sandbox": {"allowAppleEvents": false}}"#,
+            r#"{"attribution": {"sessionUrl": true}}"#,
+            r#"{"respondToBashCommands": false}"#,
+            r#"{"autoMode": {"classifyAllShell": true}}"#,
+            r#"{"sandbox": {"filesystem": {"disabled": false}}}"#,
+            r#"{"emojiCompletionEnabled": true}"#,
+            r#"{"sandbox": {"network": {"strictAllowlist": false}}}"#,
+            r#"{"idleCompaction": false}"#,
+        ];
+        let rules = [
+            "CC-SET-002",
+            "CC-SET-006",
+            "CC-SET-007",
+            "CC-SET-008",
+            "CC-SET-009",
+            "CC-SET-011",
+            "CC-SET-013",
+            "CC-SET-017",
+            "CC-SET-018",
+            "CC-SET-019",
+            "CC-SET-033",
+        ];
+        for content in contents {
+            let diagnostics = validate(content);
+            for rule in rules {
+                assert!(
+                    !diagnostics.iter().any(|d| d.rule == rule),
+                    "{rule} must not fire on a real boolean in {content}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_non_quoted_boolean_types_have_no_fix() {
+        let cases = [
+            ("CC-SET-002", r#"{"channelsEnabled": 1}"#),
+            ("CC-SET-006", r#"{"disableBundledSkills": "yes"}"#),
+            ("CC-SET-007", r#"{"enforceAvailableModels": [true]}"#),
+            ("CC-SET-008", r#"{"sandbox": {"allowAppleEvents": 0}}"#),
+            ("CC-SET-009", r#"{"attribution": {"sessionUrl": "yes"}}"#),
+            ("CC-SET-011", r#"{"respondToBashCommands": 1}"#),
+            (
+                "CC-SET-013",
+                r#"{"autoMode": {"classifyAllShell": "TRUE"}}"#,
+            ),
+            (
+                "CC-SET-017",
+                r#"{"sandbox": {"filesystem": {"disabled": 1}}}"#,
+            ),
+            ("CC-SET-018", r#"{"emojiCompletionEnabled": {"on": true}}"#),
+            (
+                "CC-SET-019",
+                r#"{"sandbox": {"network": {"strictAllowlist": "yes"}}}"#,
+            ),
+            ("CC-SET-033", r#"{"idleCompaction": 0}"#),
+        ];
+        for (rule, content) in cases {
+            let diagnostics = validate(content);
+            let hits: Vec<_> = diagnostics.iter().filter(|d| d.rule == rule).collect();
+            assert_eq!(hits.len(), 1, "{rule} should still fire for {content}");
+            assert!(
+                !hits[0].has_fixes(),
+                "{rule} must not autofix a non-quoted-boolean value"
+            );
+        }
+    }
+
+    #[test]
+    fn test_duplicate_quoted_boolean_has_no_fix() {
+        let content = r#"{"channelsEnabled": "true", "note": {"channelsEnabled": "true"}}"#;
+        let diagnostics = validate(content);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-SET-002")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        assert!(
+            !hits[0].has_fixes(),
+            "ambiguous quoted-boolean spans must not get a safe fix"
+        );
+    }
+
+    #[test]
+    fn test_quoted_boolean_ambiguous_and_escaped_keys_are_not_misfixed() {
+        for content in [
+            r#"{"channelsEnabled": {}, "channelsEnabled": "true"}"#,
+            r#"{"channelsEnabled": "true", "channels\u0045nabled": "true"}"#,
+            r#"{"sandbox": {}, "sandbox": {"filesystem": {"disabled": "false"}}}"#,
+            r#"{"sandbox": {"filesystem": {"disabled": "false"}}, "other": {"disabled": []}}"#,
+        ] {
+            assert!(
+                validate(content)
+                    .iter()
+                    .filter(|d| matches!(d.rule.as_str(), "CC-SET-002" | "CC-SET-017"))
+                    .all(|d| !d.has_fixes()),
+                "{content}"
+            );
+        }
+        // Escaped key spellings are decoded, but only literal quoted booleans
+        // are unwrapped. Strings containing key-like text are never keys.
+        assert_quoted_boolean_fix(
+            r#"{"channels\u0045nabled": "false", "note": "\"channelsEnabled\": \"true\""}"#,
+            "CC-SET-002",
+            "false",
+        );
+        let content = r#"{"channelsEnabled": "tr\u0075e"}"#;
+        assert!(
+            !validate(content)
+                .iter()
+                .find(|d| d.rule == "CC-SET-002")
+                .unwrap()
+                .has_fixes()
+        );
+    }
+
+    #[test]
+    fn test_cc_set_016_migration_roundtrip() {
+        for array in ["allow", "deny", "ask"] {
+            for (old, new) in [
+                ("Write", "Edit"),
+                ("NotebookEdit", "Edit"),
+                ("Glob", "Read"),
+            ] {
+                let value = format!("{old}(./héllo/\\\"file\\\"/**)");
+                let content =
+                    serde_json::json!({"permissions": {array: [value]}, "note": "unchanged"})
+                        .to_string();
+                let diagnostics = validate(&content);
+                let diagnostic = diagnostics.iter().find(|d| d.rule == "CC-SET-016").unwrap();
+                assert_eq!(diagnostic.fixes.len(), 1);
+                let fix = &diagnostic.fixes[0];
+                assert!(!fix.safe);
+                let mut fixed = content.clone();
+                fixed.replace_range(fix.start_byte..fix.end_byte, &fix.replacement);
+                let fixed_value: serde_json::Value = serde_json::from_str(&fixed).unwrap();
+                assert_eq!(
+                    fixed_value["permissions"][array][0],
+                    value.replacen(old, new, 1)
+                );
+                assert_eq!(fixed_value["note"], "unchanged");
+                assert!(!validate(&fixed).iter().any(|d| d.rule == "CC-SET-016"));
+            }
+        }
+    }
+
+    #[test]
+    fn test_cc_set_016_ambiguous_or_malformed_rules_have_no_fix() {
+        for content in [
+            r#"{"permissions":{"allow":["Write(x)","Write(x)"]}}"#,
+            r#"{"permissions":{"allow":["Write(x)"]},"permissions":{"allow":["Write(x)"]}}"#,
+            r#"{"permissions":{"allow":["Write(x"]}}"#,
+            r#"{"permissions":{"allow":["Glob()"]}}"#,
+        ] {
+            let diagnostics = validate(content);
+            let hits: Vec<_> = diagnostics
+                .iter()
+                .filter(|d| d.rule == "CC-SET-016")
+                .collect();
+            assert!(!hits.is_empty());
+            assert!(hits.iter().all(|d| !d.has_fixes()), "{content}");
+        }
     }
 
     // ===== Scope guard: only runs on Claude Code settings =====

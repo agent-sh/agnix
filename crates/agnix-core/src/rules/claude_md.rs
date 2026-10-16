@@ -2,12 +2,11 @@
 
 use crate::{
     config::PerFileLintConfig,
-    diagnostics::{Diagnostic, Fix},
+    diagnostics::Diagnostic,
     file_utils::safe_read_file,
     rules::{Validator, ValidatorMetadata},
     schemas::claude_md::{
-        check_readme_duplication, check_token_count, extract_npm_scripts, find_critical_in_middle,
-        find_generic_instructions, find_negative_without_positive, find_weak_constraints,
+        check_readme_duplication, check_token_count, extract_npm_scripts, find_weak_constraints,
     },
 };
 use rust_i18n::t;
@@ -15,10 +14,7 @@ use std::path::Path;
 
 const RULE_IDS: &[&str] = &[
     "CC-MEM-004",
-    "CC-MEM-005",
-    "CC-MEM-006",
     "CC-MEM-007",
-    "CC-MEM-008",
     "CC-MEM-009",
     "CC-MEM-010",
     "CC-MEM-014",
@@ -77,30 +73,6 @@ impl Validator for ClaudeMdValidator {
             return diagnostics;
         }
 
-        // CC-MEM-005: Generic instructions detection
-        // Also check legacy config flag for backward compatibility
-        if config.is_rule_enabled("CC-MEM-005") && config.rules().generic_instructions {
-            let generic_insts = find_generic_instructions(content);
-            for inst in generic_insts {
-                diagnostics.push(
-                    Diagnostic::warning(
-                        path.to_path_buf(),
-                        inst.line,
-                        inst.column,
-                        "CC-MEM-005",
-                        t!("rules.cc_mem_005.message", text = inst.text.as_str()),
-                    )
-                    .with_suggestion(t!("rules.cc_mem_005.suggestion"))
-                    .with_fix(Fix::delete(
-                        inst.start_byte,
-                        inst.end_byte,
-                        t!("rules.cc_mem_005.fix"),
-                        false,
-                    )),
-                );
-            }
-        }
-
         // CC-MEM-009: Token count exceeded
         if config.is_rule_enabled("CC-MEM-009")
             && let Some(exceeded) = check_token_count(content)
@@ -121,30 +93,11 @@ impl Validator for ClaudeMdValidator {
             );
         }
 
-        // CC-MEM-006: Negative without positive
-        if config.is_rule_enabled("CC-MEM-006") {
-            let negatives = find_negative_without_positive(content);
-            for neg in negatives {
-                diagnostics.push(
-                    Diagnostic::warning(
-                        path.to_path_buf(),
-                        neg.line,
-                        neg.column,
-                        "CC-MEM-006",
-                        t!("rules.cc_mem_006.message", text = neg.text.as_str()),
-                    )
-                    .with_suggestion(t!("rules.cc_mem_006.suggestion")),
-                );
-            }
-        }
-
         // CC-MEM-007: Weak constraint language in critical sections
         if config.is_rule_enabled("CC-MEM-007") {
             let weak = find_weak_constraints(content);
             for w in weak {
-                // Determine the replacement for weak language
-                let (replacement, safe) = get_weak_constraint_replacement(&w.text);
-                let mut diagnostic = Diagnostic::warning(
+                let diagnostic = Diagnostic::info(
                     path.to_path_buf(),
                     w.line,
                     w.column,
@@ -157,39 +110,7 @@ impl Validator for ClaudeMdValidator {
                 )
                 .with_suggestion(t!("rules.cc_mem_007.suggestion"));
 
-                // Add fix if we have a replacement
-                if let Some(repl) = replacement {
-                    diagnostic = diagnostic.with_fix(Fix::replace(
-                        w.start_byte,
-                        w.end_byte,
-                        repl,
-                        t!("rules.cc_mem_007.fix", text = w.text.as_str()),
-                        safe,
-                    ));
-                }
-
                 diagnostics.push(diagnostic);
-            }
-        }
-
-        // CC-MEM-008: Critical content in middle
-        if config.is_rule_enabled("CC-MEM-008") {
-            let critical = find_critical_in_middle(content);
-            for c in critical {
-                diagnostics.push(
-                    Diagnostic::warning(
-                        path.to_path_buf(),
-                        c.line,
-                        c.column,
-                        "CC-MEM-008",
-                        t!(
-                            "rules.cc_mem_008.message",
-                            keyword = c.keyword.as_str(),
-                            percent = format!("{:.0}", c.position_percent)
-                        ),
-                    )
-                    .with_suggestion(t!("rules.cc_mem_008.suggestion")),
-                );
             }
         }
 
@@ -310,28 +231,6 @@ impl Validator for ClaudeMdValidator {
     }
 }
 
-/// Get the replacement for weak constraint language
-/// Returns (replacement_text, is_safe)
-/// - "should" -> "must" (safe)
-/// - "try to" -> "must" (safe)
-/// - "consider" -> "ensure" (safe)
-/// - "maybe" -> "" (delete, safe)
-/// - "might want to" -> "must" (safe)
-/// - "could" -> "must" (not safe - could have other meanings)
-/// - "possibly" -> "" (delete, not safe)
-fn get_weak_constraint_replacement(text: &str) -> (Option<&'static str>, bool) {
-    match text.to_lowercase().as_str() {
-        "should" => (Some("must"), true),
-        "try to" => (Some("must"), true),
-        "consider" => (Some("ensure"), true),
-        "maybe" => (Some(""), true),
-        "might want to" => (Some("must"), true),
-        "could" => (Some("must"), false),
-        "possibly" => (Some(""), false),
-        _ => (None, false),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -339,21 +238,19 @@ mod tests {
     use std::fs;
 
     #[test]
-    fn test_generic_instruction_detected() {
+    fn test_retired_generic_instruction_absent() {
         let content = "Be helpful and accurate when responding.";
         let validator = ClaudeMdValidator;
         let diagnostics =
             validator.validate(Path::new("CLAUDE.md"), content, &LintConfig::default());
 
-        assert!(!diagnostics.is_empty());
-        // Verify rule ID is CC-MEM-005
-        assert!(diagnostics.iter().any(|d| d.rule == "CC-MEM-005"));
+        assert!(!diagnostics.iter().any(|d| d.rule == "CC-MEM-005"));
     }
 
     #[test]
     fn test_skip_agents_files() {
         // CC-MEM rules should NOT apply to AGENTS.* files
-        let content = "Be helpful and accurate when responding.";
+        let content = "# Critical Rules\nYou should follow the coding style.";
         let validator = ClaudeMdValidator;
 
         // AGENTS.md should be skipped
@@ -390,7 +287,7 @@ mod tests {
     #[test]
     fn test_claude_local_md_gets_rules() {
         // CLAUDE.local.md SHOULD get CC-MEM rules
-        let content = "Be helpful and accurate when responding.";
+        let content = "# Critical Rules\nYou should follow the coding style.";
         let validator = ClaudeMdValidator;
         let diagnostics = validator.validate(
             Path::new("CLAUDE.local.md"),
@@ -402,12 +299,12 @@ mod tests {
             !diagnostics.is_empty(),
             "CC-MEM rules should fire for CLAUDE.local.md"
         );
-        assert!(diagnostics.iter().any(|d| d.rule == "CC-MEM-005"));
+        assert!(diagnostics.iter().any(|d| d.rule == "CC-MEM-007"));
     }
 
     #[test]
     fn test_cursor_rules_mdc_gets_rules() {
-        let content = "Be helpful and accurate when responding.";
+        let content = "# Critical Rules\nYou should follow the coding style.";
         let validator = ClaudeMdValidator;
 
         for path in [
@@ -417,20 +314,20 @@ mod tests {
             let diagnostics = validator.validate(Path::new(path), content, &LintConfig::default());
 
             assert!(!diagnostics.is_empty());
-            assert!(diagnostics.iter().any(|d| d.rule == "CC-MEM-005"));
+            assert!(diagnostics.iter().any(|d| d.rule == "CC-MEM-007"));
         }
     }
 
     #[test]
     fn test_cursor_rules_md_gets_rules() {
-        let content = "Be helpful and accurate when responding.";
+        let content = "# Critical Rules\nYou should follow the coding style.";
         let validator = ClaudeMdValidator;
 
         for path in [".cursor/rules/typescript.md", ".cursor/rules/typescript.MD"] {
             let diagnostics = validator.validate(Path::new(path), content, &LintConfig::default());
 
             assert!(!diagnostics.is_empty());
-            assert!(diagnostics.iter().any(|d| d.rule == "CC-MEM-005"));
+            assert!(diagnostics.iter().any(|d| d.rule == "CC-MEM-007"));
         }
     }
 
@@ -439,7 +336,7 @@ mod tests {
         let mut config = LintConfig::default();
         config.rules_mut().memory = false;
 
-        let content = "Be helpful and accurate when responding.";
+        let content = "# Critical Rules\nYou should follow the coding style.";
         let validator = ClaudeMdValidator;
         let diagnostics = validator.validate(Path::new("CLAUDE.md"), content, &config);
 
@@ -450,13 +347,13 @@ mod tests {
     #[test]
     fn test_config_disabled_specific_rule() {
         let mut config = LintConfig::default();
-        config.rules_mut().disabled_rules = vec!["CC-MEM-005".to_string()];
+        config.rules_mut().disabled_rules = vec!["CC-MEM-007".to_string()];
 
-        let content = "Be helpful and accurate when responding.";
+        let content = "# Critical Rules\nYou should follow the coding style.";
         let validator = ClaudeMdValidator;
         let diagnostics = validator.validate(Path::new("CLAUDE.md"), content, &config);
 
-        // Should be empty when CC-MEM-005 is specifically disabled
+        // Should be empty when CC-MEM-007 is specifically disabled
         assert!(diagnostics.is_empty());
     }
 
@@ -467,11 +364,11 @@ mod tests {
         let mut config = LintConfig::default();
         config.set_target(TargetTool::Cursor);
 
-        let content = "Be helpful and accurate when responding.";
+        let content = "# Critical Rules\nYou should follow the coding style.";
         let validator = ClaudeMdValidator;
         let diagnostics = validator.validate(Path::new("CLAUDE.md"), content, &config);
 
-        // CC-MEM-005 should not fire for Cursor target
+        // CC-MEM-007 should not fire for Cursor target
         assert!(diagnostics.is_empty());
     }
 
@@ -530,8 +427,7 @@ mod tests {
             .iter()
             .filter(|d| d.rule == "CC-MEM-006")
             .collect();
-        assert_eq!(mem006.len(), 1);
-        assert!(mem006[0].message.contains("Never"));
+        assert!(mem006.is_empty());
     }
 
     #[test]
@@ -594,8 +490,7 @@ mod tests {
             .iter()
             .filter(|d| d.rule == "CC-MEM-008")
             .collect();
-        assert_eq!(mem008.len(), 1);
-        assert!(mem008[0].message.contains("middle zone"));
+        assert!(mem008.is_empty());
     }
 
     #[test]
@@ -757,9 +652,7 @@ You should consider this approach.
         let mut config = LintConfig::default();
         config.rules_mut().disabled_rules = vec![
             "CC-MEM-004".to_string(),
-            "CC-MEM-006".to_string(),
             "CC-MEM-007".to_string(),
-            "CC-MEM-008".to_string(),
             "CC-MEM-009".to_string(),
             "CC-MEM-010".to_string(),
         ];
@@ -767,20 +660,20 @@ You should consider this approach.
         let validator = ClaudeMdValidator;
         let diagnostics = validator.validate(Path::new("CLAUDE.md"), &content, &config);
 
-        // Only CC-MEM-005 should remain (if present)
+        // All active memory rules exercised by this content are disabled.
         for d in &diagnostics {
             assert!(
-                !d.rule.starts_with("CC-MEM-00") || d.rule == "CC-MEM-005",
+                !d.rule.starts_with("CC-MEM-00"),
                 "Rule {} should be disabled",
                 d.rule
             );
         }
     }
 
-    // ===== Auto-fix Tests for CC-MEM-005 =====
+    // ===== Retired CC-MEM-005 regression tests =====
 
     #[test]
-    fn test_cc_mem_005_has_fix() {
+    fn test_cc_mem_005_retired_without_fixes() {
         let content = "Be helpful and accurate when responding.";
         let validator = ClaudeMdValidator;
         let diagnostics =
@@ -790,16 +683,14 @@ You should consider this approach.
             .iter()
             .filter(|d| d.rule == "CC-MEM-005")
             .collect();
-        assert!(!mem005.is_empty());
-        assert!(mem005[0].has_fixes());
-
-        let fix = &mem005[0].fixes[0];
-        assert!(fix.is_deletion());
-        assert!(!fix.safe);
+        assert!(
+            mem005.is_empty(),
+            "Retired heuristic must not emit diagnostics or fixes"
+        );
     }
 
     #[test]
-    fn test_cc_mem_005_fix_byte_positions() {
+    fn test_cc_mem_005_retired_on_middle_line() {
         let content = "Line one.\nBe helpful and accurate.\nLine three.";
         let validator = ClaudeMdValidator;
         let diagnostics =
@@ -809,17 +700,14 @@ You should consider this approach.
             .iter()
             .filter(|d| d.rule == "CC-MEM-005")
             .collect();
-        assert_eq!(mem005.len(), 1);
-
-        let fix = &mem005[0].fixes[0];
-        // Line "Be helpful and accurate." starts at byte 10 (after "Line one.\n")
-        assert_eq!(fix.start_byte, 10);
-        // Ends at byte 35 (after "Be helpful and accurate.\n")
-        assert_eq!(fix.end_byte, 35);
+        assert!(
+            mem005.is_empty(),
+            "Retired heuristic must not emit diagnostics or fixes"
+        );
     }
 
     #[test]
-    fn test_cc_mem_005_fix_application() {
+    fn test_cc_mem_005_retired_preserves_prose() {
         let content = "Line one.\nBe helpful and accurate.\nLine three.";
         let validator = ClaudeMdValidator;
         let diagnostics =
@@ -829,17 +717,14 @@ You should consider this approach.
             .iter()
             .filter(|d| d.rule == "CC-MEM-005")
             .collect();
-        assert_eq!(mem005.len(), 1);
-
-        let fix = &mem005[0].fixes[0];
-        let mut fixed = content.to_string();
-        fixed.replace_range(fix.start_byte..fix.end_byte, &fix.replacement);
-
-        assert_eq!(fixed, "Line one.\nLine three.");
+        assert!(
+            mem005.is_empty(),
+            "Retired heuristic must not emit diagnostics or fixes"
+        );
     }
 
     #[test]
-    fn test_cc_mem_005_fix_last_line_no_newline() {
+    fn test_cc_mem_005_retired_without_final_newline() {
         let content = "Be helpful and accurate.";
         let validator = ClaudeMdValidator;
         let diagnostics =
@@ -849,92 +734,76 @@ You should consider this approach.
             .iter()
             .filter(|d| d.rule == "CC-MEM-005")
             .collect();
-        assert_eq!(mem005.len(), 1);
-
-        let fix = &mem005[0].fixes[0];
-        // Last line without newline should have end_byte at content length
-        assert_eq!(fix.start_byte, 0);
-        assert_eq!(fix.end_byte, 24);
-    }
-
-    // ===== Auto-fix Tests for CC-MEM-007 =====
-
-    #[test]
-    fn test_cc_mem_007_has_fix() {
-        let content = "# Critical Rules\n\nYou should follow the coding style.";
-        let validator = ClaudeMdValidator;
-        let diagnostics =
-            validator.validate(Path::new("CLAUDE.md"), content, &LintConfig::default());
-
-        let mem007: Vec<_> = diagnostics
-            .iter()
-            .filter(|d| d.rule == "CC-MEM-007")
-            .collect();
-        assert_eq!(mem007.len(), 1);
-        assert!(mem007[0].has_fixes());
-
-        let fix = &mem007[0].fixes[0];
-        assert_eq!(fix.replacement, "must");
-        assert!(fix.safe);
-    }
-
-    #[test]
-    fn test_cc_mem_007_fix_byte_positions() {
-        let content = "# Critical Rules\n\nYou should follow the coding style.";
-        let validator = ClaudeMdValidator;
-        let diagnostics =
-            validator.validate(Path::new("CLAUDE.md"), content, &LintConfig::default());
-
-        let mem007: Vec<_> = diagnostics
-            .iter()
-            .filter(|d| d.rule == "CC-MEM-007")
-            .collect();
-        assert_eq!(mem007.len(), 1);
-
-        let fix = &mem007[0].fixes[0];
-        // "should" starts at byte 22 (after "# Critical Rules\n\nYou ")
-        assert_eq!(fix.start_byte, 22);
-        // "should" ends at byte 28
-        assert_eq!(fix.end_byte, 28);
-    }
-
-    #[test]
-    fn test_cc_mem_007_fix_application() {
-        let content = "# Critical Rules\n\nYou should follow the coding style.";
-        let validator = ClaudeMdValidator;
-        let diagnostics =
-            validator.validate(Path::new("CLAUDE.md"), content, &LintConfig::default());
-
-        let mem007: Vec<_> = diagnostics
-            .iter()
-            .filter(|d| d.rule == "CC-MEM-007")
-            .collect();
-        assert_eq!(mem007.len(), 1);
-
-        let fix = &mem007[0].fixes[0];
-        let mut fixed = content.to_string();
-        fixed.replace_range(fix.start_byte..fix.end_byte, &fix.replacement);
-
-        assert_eq!(
-            fixed,
-            "# Critical Rules\n\nYou must follow the coding style."
+        assert!(
+            mem005.is_empty(),
+            "Retired heuristic must not emit diagnostics or fixes"
         );
     }
 
+    // ===== CC-MEM-007 advice never rewrites prose =====
+
     #[test]
-    fn test_cc_mem_007_fix_replacements() {
-        // Test all replacement mappings
+    fn test_cc_mem_007_is_info_without_fix() {
+        let content = "# Critical Rules\n\nYou should follow the coding style.";
+        let validator = ClaudeMdValidator;
+        let diagnostics =
+            validator.validate(Path::new("CLAUDE.md"), content, &LintConfig::default());
+
+        let mem007: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-MEM-007")
+            .collect();
+        assert_eq!(mem007.len(), 1);
+        assert_eq!(mem007[0].level, crate::diagnostics::DiagnosticLevel::Info);
+        assert!(!mem007[0].has_fixes());
+    }
+
+    #[test]
+    fn test_cc_mem_007_does_not_rewrite_should() {
+        let content = "# Critical Rules\n\nYou should follow the coding style.";
+        let validator = ClaudeMdValidator;
+        let diagnostics =
+            validator.validate(Path::new("CLAUDE.md"), content, &LintConfig::default());
+
+        let mem007: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-MEM-007")
+            .collect();
+        assert_eq!(mem007.len(), 1);
+        assert_eq!(mem007[0].level, crate::diagnostics::DiagnosticLevel::Info);
+        assert!(!mem007[0].has_fixes());
+    }
+
+    #[test]
+    fn test_cc_mem_007_preserves_user_wording() {
+        let content = "# Critical Rules\n\nYou should follow the coding style.";
+        let validator = ClaudeMdValidator;
+        let diagnostics =
+            validator.validate(Path::new("CLAUDE.md"), content, &LintConfig::default());
+
+        let mem007: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-MEM-007")
+            .collect();
+        assert_eq!(mem007.len(), 1);
+        assert_eq!(mem007[0].level, crate::diagnostics::DiagnosticLevel::Info);
+        assert!(!mem007[0].has_fixes());
+    }
+
+    #[test]
+    fn test_cc_mem_007_no_rewrites_for_weak_words() {
+        // Cover the formerly rewritten words.
         let test_cases = vec![
-            ("# Critical Rules\n\nYou should do this.", "must", true),
-            ("# Critical Rules\n\nTry to do this.", "must", true),
-            ("# Critical Rules\n\nConsider doing this.", "ensure", true),
-            ("# Critical Rules\n\nMaybe do this.", "", true),
-            ("# Critical Rules\n\nYou could do this.", "must", false),
+            "# Critical Rules\n\nYou should do this.",
+            "# Critical Rules\n\nTry to do this.",
+            "# Critical Rules\n\nConsider doing this.",
+            "# Critical Rules\n\nMaybe do this.",
+            "# Critical Rules\n\nYou could do this.",
         ];
 
         let validator = ClaudeMdValidator;
 
-        for (content, expected_replacement, expected_safe) in test_cases {
+        for content in test_cases {
             let diagnostics =
                 validator.validate(Path::new("CLAUDE.md"), content, &LintConfig::default());
 
@@ -943,15 +812,7 @@ You should consider this approach.
                 .filter(|d| d.rule == "CC-MEM-007")
                 .collect();
             assert_eq!(mem007.len(), 1, "Expected one CC-MEM-007 for: {}", content);
-            assert!(mem007[0].has_fixes());
-
-            let fix = &mem007[0].fixes[0];
-            assert_eq!(
-                fix.replacement, expected_replacement,
-                "Wrong replacement for: {}",
-                content
-            );
-            assert_eq!(fix.safe, expected_safe, "Wrong safe flag for: {}", content);
+            assert!(!mem007[0].has_fixes());
         }
     }
 
@@ -967,10 +828,10 @@ You should consider this approach.
             .filter(|d| d.rule == "CC-MEM-007")
             .collect();
 
-        // Each weak word generates a separate diagnostic with its own fix
+        // Each weak word generates a separate diagnostic without a prose-rewriting fix
         assert!(mem007.len() >= 1);
         for d in &mem007 {
-            assert!(d.has_fixes());
+            assert!(!d.has_fixes());
         }
     }
 
@@ -1014,8 +875,8 @@ You should consider this approach.
             .filter(|d| d.rule == "CC-MEM-005")
             .collect();
         assert!(
-            !mem005.is_empty(),
-            "Generic 'Be helpful and accurate' should trigger CC-MEM-005"
+            mem005.is_empty(),
+            "Retired heuristic must not emit diagnostics or fixes"
         );
     }
 
@@ -1039,8 +900,8 @@ You should consider this approach.
                 .filter(|d| d.rule == "CC-MEM-006")
                 .collect();
             assert!(
-                !mem006.is_empty(),
-                "Negative pattern '{}' should trigger CC-MEM-006",
+                mem006.is_empty(),
+                "Negative pattern '{}' must not trigger CC-MEM-006",
                 pattern
             );
         }
@@ -1162,10 +1023,7 @@ You should consider this approach.
     fn test_all_cc_mem_rules_can_be_disabled() {
         let rules = [
             "CC-MEM-004",
-            "CC-MEM-005",
-            "CC-MEM-006",
             "CC-MEM-007",
-            "CC-MEM-008",
             "CC-MEM-009",
             "CC-MEM-010",
             "CC-MEM-014",

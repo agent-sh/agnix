@@ -1,0 +1,10 @@
+rules:
+  - capability: shell
+    match: ["git *", "npm *", "npx *"]
+    exclude: ["npm publish*"]
+    effect: allow
+  - capability: fs_read
+    effect: allow
+  - capability: fs_write
+    match: ["*.env", "*.pem", "*.key"]
+    effect: deny

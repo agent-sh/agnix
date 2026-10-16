@@ -9,21 +9,21 @@
 |------|-------|-------|
 | Skills | SKILL.md | 32 |
 | Hooks | settings.json | 26 |
-| Memory (Claude Code) | CLAUDE.md, CLAUDE.local.md, .claude/rules/*.md | 13 |
-| Instructions (Cross-Tool) | AGENTS.md, AGENTS.local.md, AGENTS.override.md | 6 |
+| Memory (Claude Code) | CLAUDE.md, CLAUDE.local.md, .claude/rules/*.md | 10 |
+| Instructions (Cross-Tool) | AGENTS.md, AGENTS.local.md, AGENTS.override.md | 5 |
 | Agents | agents/*.md | 18 |
 | Plugins | plugin.json | 17 |
 | Claude Output Styles | .claude/output-styles/*.md | 6 |
 | Claude Settings | .claude/settings.json | 33 |
 | Prompt Engineering | CLAUDE.md, AGENTS.md | 6 |
 | Cross-Platform | AGENTS.md | 10 |
-| MCP | tool definitions | 26 |
+| MCP | tool definitions | 25 |
 | XML | all .md files | 3 |
-| References | @imports | 4 |
+| References | @imports | 3 |
 | GitHub Copilot | .github/copilot-instructions.md, .github/instructions/*.instructions.md, .github/agents/*.agent.md, .github/prompts/*.prompt.md, .github/hooks/hooks.json, .github/workflows/copilot-setup-steps.yml | 25 |
 | Cursor Project Rules | .cursor/rules/*.mdc, .cursorrules, .cursor/hooks.json, .cursor/agents/**/*.md, .cursor/environment.json | 20 |
 | Cline | .clinerules, .clinerules/*.md, .clinerules/*.txt | 7 |
-| OpenCode | opencode.json, opencode.jsonc | 47 |
+| OpenCode | opencode.json, opencode.jsonc | 46 |
 | Gemini Agents | .gemini/agents/*.json | 1 |
 | Gemini CLI | GEMINI.md, GEMINI.local.md, .gemini/settings.json (hooks), gemini-extension.json (extensions), .geminiignore | 10 |
 | Codex CLI | .codex/config.toml/.json/.yaml | 65 |
@@ -38,7 +38,8 @@
 | Kiro Steering | .kiro/steering/*.md | 14 |
 | Kiro Skills | .kiro/skills/*/SKILL.md | 1 |
 | Kiro Agents | .kiro/agents/**/*.{json,md} | 15 |
-| Kiro Hooks | .kiro/hooks/*.kiro.hook | 13 |
+| Kiro Hooks | .kiro/hooks/*.kiro.hook, .kiro/hooks/*.json | 14 |
+| Kiro Permissions | .kiro/settings/permissions.yaml, ~/.kiro/workspace-roots/<hash>/permissions.yaml | 4 |
 | Kiro MCP | .kiro/settings/mcp.json | 6 |
 | Kiro Powers | .kiro/powers/*/POWER.md | 8 |
 | Kiro Settings | .kiro/settings/*.json | 3 |
@@ -84,9 +85,8 @@ This architecture ensures fast validation on large projects while maintaining co
 
 ### Project-Level Validation
 
-Cross-file validation rules (AGM-006, XP-004/005/006, VER-001) require analysis across multiple files to detect:
+Cross-file validation rules (XP-004/005/006, VER-001) require analysis across multiple files to detect:
 
-- **AGM-006**: Nested AGENTS.md hierarchies across different directories
 - **XP-004 to XP-006**: Conflicting build commands, tool constraints, and instruction layers across CLAUDE.md, AGENTS.md, Cursor rules, and Copilot files
 - **VER-001**: Missing or incomplete version pinning in .agnix.toml
 
@@ -169,11 +169,11 @@ All rules in `knowledge-base/VALIDATION-RULES.md`
 | CC-HK-008 | ERROR | Script file not found |
 | CC-HK-009 | WARN | Dangerous command pattern |
 | CC-MEM-004 | WARN | Invalid command reference |
-| CC-MEM-005 | WARN | Generic instruction detected |
+| PE-005 | WARN | Redundant generic instruction detected |
 | AGM-003 | WARN | Character limit exceeded (12000 chars) |
 | AGM-005 | WARN | Platform features without guard |
-| PE-001 | WARN | Critical content in middle |
-| PE-002 | WARN | Chain-of-thought on simple task |
+| PE-001 | INFO | Critical content in middle |
+| PE-002 | INFO | Chain-of-thought on simple task |
 | CC-AG-001 | ERROR | Missing agent name field |
 | CC-AG-002 | ERROR | Missing agent description field |
 | CC-AG-003 | ERROR | Invalid model value |
@@ -255,7 +255,7 @@ exclude = ["node_modules/**", ".git/**", "target/**"]
 # Multiple blocks stack (set union); ordering does not matter.
 [[overrides]]
 paths = ["CLAUDE.md", "AGENTS.md"]
-disabled_rules = ["CC-MEM-005"]
+disabled_rules = ["PE-003"]
 ```
 
 ### Per-File Rule Overrides

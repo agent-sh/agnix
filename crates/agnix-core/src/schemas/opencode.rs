@@ -93,6 +93,9 @@ pub const KNOWN_TUI_KEYS: &[&str] = &[
 ];
 
 /// Deprecated top-level keys and their replacements.
+/// These are migration targets, not necessarily key-only renames: `tools`
+/// maps booleans whereas `permission` accepts actions/rules. The live schema
+/// uses singular `agent` and `permission`, not `agents` or `permissions`.
 ///
 /// Note: deprecated keys must also remain in `KNOWN_TOP_LEVEL_KEYS` above.
 /// If a deprecated key is removed from that list, it would trigger a false
@@ -245,6 +248,76 @@ pub fn parse_opencode_json(content: &str) -> ParsedOpenCodeConfig {
         unknown_keys,
         raw_value: Some(value),
     }
+}
+
+/// Source spans of an unambiguous top-level JSON property. Offsets include
+/// key quotes; `comma` is the optional following separator.
+pub(crate) struct ConfigPropertySpan {
+    pub key: String,
+    pub key_start: usize,
+    pub key_end: usize,
+    pub value_end: usize,
+    pub comma: Option<usize>,
+}
+
+/// Use serde's token consumption to avoid matching nested keys, strings, or
+/// comments. Duplicate decoded root keys suppress fixes. The comment stripper
+/// preserves character offsets, not byte offsets for non-ASCII comments; in
+/// that case conservatively offer diagnostics only.
+pub(crate) fn config_property_spans(content: &str) -> Option<Vec<ConfigPropertySpan>> {
+    let stripped = strip_jsonc_comments(content);
+    if stripped.len() != content.len() {
+        return None;
+    }
+    let root: serde_json::Value = serde_json::from_str(&stripped).ok()?;
+    root.as_object()?;
+    let bytes = stripped.as_bytes();
+    let mut pos = stripped.find('{')? + 1;
+    let mut keys = HashSet::new();
+    let mut properties = Vec::new();
+    loop {
+        while bytes.get(pos).is_some_and(u8::is_ascii_whitespace) {
+            pos += 1;
+        }
+        if bytes.get(pos) == Some(&b'}') {
+            break;
+        }
+        let key_start = pos;
+        let mut stream = serde_json::Deserializer::from_str(&stripped[pos..]).into_iter::<String>();
+        let key = stream.next()?.ok()?;
+        pos += stream.byte_offset();
+        let key_end = pos;
+        if !keys.insert(key.clone()) {
+            return None;
+        }
+        while bytes.get(pos).is_some_and(u8::is_ascii_whitespace) {
+            pos += 1;
+        }
+        if bytes.get(pos) != Some(&b':') {
+            return None;
+        }
+        pos += 1;
+        let mut stream =
+            serde_json::Deserializer::from_str(&stripped[pos..]).into_iter::<serde_json::Value>();
+        stream.next()?.ok()?;
+        pos += stream.byte_offset();
+        let value_end = pos;
+        while bytes.get(pos).is_some_and(u8::is_ascii_whitespace) {
+            pos += 1;
+        }
+        let comma = (bytes.get(pos) == Some(&b',')).then_some(pos);
+        if comma.is_some() {
+            pos += 1;
+        }
+        properties.push(ConfigPropertySpan {
+            key,
+            key_start,
+            key_end,
+            value_end,
+            comma,
+        });
+    }
+    Some(properties)
 }
 
 /// Check if a path looks like a valid glob pattern (contains glob characters)

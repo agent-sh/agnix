@@ -12,7 +12,7 @@ keywords: ["CC-HK-023", "once field not boolean", "claude hooks", "validation", 
 - **Severity**: `LOW`
 - **Category**: `Claude Hooks`
 - **Normative Level**: `MUST`
-- **Auto-Fix**: `Yes (unsafe)`
+- **Auto-Fix**: `Yes (safe)`
 - **Verified On**: `2026-04-23`
 
 ## Applicability

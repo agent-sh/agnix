@@ -12,7 +12,7 @@ keywords: ["CC-SET-011", "non-boolean respondtobashcommands setting", "claude se
 - **Severity**: `MEDIUM`
 - **Category**: `Claude Settings`
 - **Normative Level**: `MUST`
-- **Auto-Fix**: `No`
+- **Auto-Fix**: `Yes (safe)`
 - **Verified On**: `2026-06-24`
 
 ## Applicability

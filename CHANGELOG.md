@@ -7,7 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+- Retire REF-004: Claude Code supports non-Markdown imports, including `@package.json`.
+- Retire OC-DEP-004: a file named `CONTEXT.md` is not invalid in an explicit OpenCode instructions list.
+- Retire duplicate memory advice CC-MEM-005, CC-MEM-006, and CC-MEM-008 in favor of the PE rules. Retire AGM-006: nested AGENTS.md files are supported instruction hierarchies.
+- Retire MCP-005: client consent recommendations do not require invented `requiresApproval` or `confirmation` fields in MCP tool definitions.
+- Remove prose-rewriting autofixes from CC-MEM-007 and PE-003, the permission-mode rewrite from CC-AG-012, and the invalid `tools`-to-`permission` key-only migration from OC-DEP-002.
+
 ### Added
+- Kiro capability permissions YAML validation (KR-PM-001 through KR-PM-004), including optional `match` / `exclude` string arrays and the real user/workspace policy paths.
+- KR-HK-014 provides safe canonical trigger spelling fixes for supported V3 aliases and advisory legacy CLI hook migration hints. `Manual` is accepted without claiming CLI invocation support.
 - Kiro CLI V3 support: standalone `.kiro/hooks/*.json` documents validate under
   new rules KR-HK-011 (document `version` must be `v1`), KR-HK-012 (documented
   PascalCase triggers, camelCase 2.x aliases accepted, required
@@ -22,6 +31,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (key added in v2.1.290, documented by the v2.1.299 release notes).
 
 ### Fixed
+- Missing or empty MCP tool descriptions no longer produce MCP-002 errors. Descriptions are optional in the MCP schema; MCP-004 provides informational advice instead.
+- Add opt-in unsafe migrations for CC-SET-016 permission tool names, COP-027 `infer`, and KR-HK-011 version strings `1` / `1.0`; add unsafe OC-DEP-005 cleanup only after manually copying TUI settings. Keep OC-DEP-001 safe and OC-DEP-002 without a key-only fix.
+- CDX-005 accepts zero and removes the invented 65536-byte ceiling on `project_doc_max_bytes`; negative and non-integer values remain invalid.
+- CDX-CFG-001 follows the current Codex approval-policy schema, including granular objects.
+- Add exact quoted-boolean fixes for Claude settings, hook `once`, output-style `keep-coding-instructions`, and MCP `alwaysLoad`. Other wrong types remain manual corrections.
 - Restore VS Code lint and native integration checks: configure ESLint, use the
   compiled test entry point, isolate the test profile, and check explicit settings.
 - Accept the Codex rust-v0.162.0 config keys: the `[tui]` options (`mouse_scroll_speed`,
@@ -36,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   for settings and `/autocompact`, not this field.
 
 ### Changed
+- Make CC-MEM-007, PE-001/002/003, XP-001, CC-PL-003, and MCP-004 informational advice rather than warnings or errors. Keep CC-AG-012 as a permission-safety warning without rewriting a valid mode.
 - Update rustls to 0.23.46, quinn-proto to 0.11.18, and refresh editor and website dependency locks.
 - Update VS Code development tooling to Mocha 12 and VSCE 4; package and publish on Node 22.
 - Bump uuid to 1.27.0 and tokio to 1.53.2. Lockfile only.

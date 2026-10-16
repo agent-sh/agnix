@@ -18,6 +18,13 @@ pub const VALID_KIRO_HOOK_EVENTS: &[&str] = &[
     "preToolUse",
     "postToolUse",
     "manual",
+    "userTriggered",
+    "sessionStart",
+    "agentSpawn",
+    "fileCreated",
+    "fileDeleted",
+    "preTaskExecution",
+    "postTaskExecution",
 ];
 
 /// Parsed Kiro hook document.
@@ -37,6 +44,7 @@ pub struct KiroIdeHook {
     pub title: Option<String>,
     pub description: Option<String>,
     pub event: Option<String>,
+    pub when: Option<KiroHookWhen>,
     pub patterns: Option<Vec<String>>,
     pub tool_types: Option<Vec<String>>,
     pub then: Option<KiroHookAction>,
@@ -46,11 +54,22 @@ pub struct KiroIdeHook {
     pub extra: HashMap<String, Value>,
 }
 
+/// Legacy IDE event selector (`when.type`).
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct KiroHookWhen {
+    pub r#type: Option<String>,
+    pub patterns: Option<Vec<String>>,
+    pub tool_types: Option<Vec<String>>,
+}
+
 /// Optional nested action block used by some hook representations.
 #[allow(dead_code)] // schema-level API; consumed by validator layer
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct KiroHookAction {
+    pub command: Option<String>,
+    pub prompt: Option<String>,
     pub run_command: Option<String>,
     pub ask_agent: Option<String>,
     #[serde(flatten)]
@@ -58,20 +77,43 @@ pub struct KiroHookAction {
 }
 
 impl KiroIdeHook {
+    pub fn effective_event(&self) -> Option<&str> {
+        self.when
+            .as_ref()
+            .and_then(|w| w.r#type.as_deref())
+            .or(self.event.as_deref())
+    }
+
+    pub fn effective_patterns(&self) -> Option<&[String]> {
+        self.when
+            .as_ref()
+            .and_then(|w| w.patterns.as_deref())
+            .or(self.patterns.as_deref())
+    }
+
+    pub fn effective_tool_types(&self) -> Option<&[String]> {
+        self.when
+            .as_ref()
+            .and_then(|w| w.tool_types.as_deref().or(w.patterns.as_deref()))
+            .or(self.tool_types.as_deref())
+    }
+
     /// Resolve an effective command from top-level or nested `then`.
     #[allow(dead_code)] // helper for downstream validators
     pub fn effective_run_command(&self) -> Option<&str> {
-        self.run_command
-            .as_deref()
-            .or_else(|| self.then.as_ref()?.run_command.as_deref())
+        self.run_command.as_deref().or_else(|| {
+            let action = self.then.as_ref()?;
+            action.run_command.as_deref().or(action.command.as_deref())
+        })
     }
 
     /// Resolve an effective `askAgent` target from top-level or nested `then`.
     #[allow(dead_code)] // helper for downstream validators
     pub fn effective_ask_agent(&self) -> Option<&str> {
-        self.ask_agent
-            .as_deref()
-            .or_else(|| self.then.as_ref()?.ask_agent.as_deref())
+        self.ask_agent.as_deref().or_else(|| {
+            let action = self.then.as_ref()?;
+            action.ask_agent.as_deref().or(action.prompt.as_deref())
+        })
     }
 
     /// True if either supported action is configured.

@@ -14,7 +14,7 @@ extend = "../base.agnix.toml"
 
 ```toml
 [rules]
-disabled_rules = ["CC-MEM-006", "PE-003", "XP-001"]
+disabled_rules = ["PE-006", "PE-003", "XP-001"]
 ```
 
 ### Override a Rule Severity
@@ -51,7 +51,7 @@ Disable a rule on specific files only, without disabling it globally. Useful whe
 ```toml
 [[overrides]]
 paths = ["CLAUDE.md", "AGENTS.md"]
-disabled_rules = ["CC-MEM-005"]
+disabled_rules = ["PE-003"]
 ```
 
 See the [Per-File Rule Overrides](#per-file-rule-overrides) section below for full semantics.
@@ -59,7 +59,7 @@ See the [Per-File Rule Overrides](#per-file-rule-overrides) section below for fu
 ### Inline Suppression
 
 ```md
-<!-- agnix-disable-next-line CC-MEM-005 -->
+<!-- agnix-disable-next-line PE-003 -->
 - make sure to use this exact example text
 
 temporary exception <!-- agnix: noqa: PE-003 -->
@@ -98,7 +98,7 @@ cross_platform = true      # XP-* rules
 agents_md = true           # AGM-* rules
 
 # Disable specific rules by ID
-disabled_rules = ["CC-MEM-006", "PE-003"]
+disabled_rules = ["PE-006", "PE-003"]
 
 # Override reported diagnostic levels for specific rules
 [rules.severity]
@@ -129,7 +129,7 @@ disabled_rules = ["CC-MEM-006", "PE-003"]
 # does not matter.
 # [[overrides]]
 # paths = ["CLAUDE.md", "AGENTS.md"]
-# disabled_rules = ["CC-MEM-005"]
+# disabled_rules = ["PE-003"]
 ```
 
 ### Path Exclusions
@@ -187,7 +187,7 @@ Use `--ignore-inline-suppressions`, or set `ignore_inline_suppressions = true` i
 Inline suppressions are intended for small, local exceptions where a file legitimately contains example text or compatibility glue that would otherwise trip a rule.
 
 ```md
-<!-- agnix-disable-next-line CC-MEM-005 -->
+<!-- agnix-disable-next-line PE-003 -->
 - make sure to keep this phrase in the example
 
 This wording is intentional. <!-- agnix: noqa: PE-003 -->
@@ -226,7 +226,7 @@ The VS Code extension automatically uses this schema for autocomplete and valida
 ```toml
 [[overrides]]
 paths = ["CLAUDE.md", "docs/agents/**/*.md"]
-disabled_rules = ["CC-MEM-005", "PE-003"]
+disabled_rules = ["PE-003", "PE-003"]
 
 [[overrides]]
 paths = ["AGENTS.md"]
@@ -264,15 +264,15 @@ Paths are matched relative to the project root (where `.agnix.toml` lives). When
 
 ### Example: CLAUDE.md carve-out
 
-A project-level `CLAUDE.md` that documents Claude trigger phrases would normally trip CC-MEM-005 (generic-instruction detection) on its own example text. Carve it out without losing the rule everywhere else:
+A project-level `CLAUDE.md` that documents generic instructions such as "write clean code" can trigger PE-005 (redundant generic instructions) on its own example text. Carve it out without losing the rule everywhere else:
 
 ```toml
 [[overrides]]
 paths = ["CLAUDE.md", "AGENTS.md"]
-disabled_rules = ["CC-MEM-005"]
+disabled_rules = ["PE-005"]
 ```
 
-CC-MEM-005 still fires on every other memory file in the repo.
+PE-005 still fires on every other memory file in the repo.
 
 ## Rule Categories
 

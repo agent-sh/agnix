@@ -12,7 +12,7 @@ keywords: ["CC-SET-002", "non-boolean channelsenabled setting", "claude settings
 - **Severity**: `MEDIUM`
 - **Category**: `Claude Settings`
 - **Normative Level**: `MUST`
-- **Auto-Fix**: `No`
+- **Auto-Fix**: `Yes (safe)`
 - **Verified On**: `2026-05-06`
 
 ## Applicability

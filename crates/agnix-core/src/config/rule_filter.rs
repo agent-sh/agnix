@@ -123,6 +123,11 @@ impl<'a> DefaultRuleFilter<'a> {
                 || s.starts_with("KR-HK-002")
                 || s.starts_with("KR-HK-003")
                 || s.starts_with("KR-HK-004")
+                || s.starts_with("KR-HK-011")
+                || s.starts_with("KR-HK-012")
+                || s.starts_with("KR-HK-013")
+                || s.starts_with("KR-HK-014")
+                || s.starts_with("KR-PM-")
                 || s.starts_with("KR-MCP-")
                 || s.starts_with("KR-PW-") =>
             {

@@ -62,13 +62,6 @@ pub struct McpToolSchema {
     /// Optional: annotations (should be treated as untrusted)
     #[serde(default)]
     pub annotations: Option<HashMap<String, serde_json::Value>>,
-
-    /// Optional: requires user approval before invocation
-    #[serde(rename = "requiresApproval")]
-    pub requires_approval: Option<bool>,
-
-    /// Optional: confirmation field for consent
-    pub confirmation: Option<String>,
 }
 
 /// MCP resource definition schema
@@ -330,17 +323,6 @@ impl McpToolSchema {
             .is_some_and(|desc| !desc.trim().is_empty() && desc.len() >= 10)
     }
 
-    /// Check if tool has consent-related fields with meaningful values
-    /// - requiresApproval must be true (false doesn't indicate consent mechanism)
-    /// - confirmation must be a non-empty string
-    pub fn has_consent_fields(&self) -> bool {
-        self.requires_approval == Some(true)
-            || self
-                .confirmation
-                .as_deref()
-                .is_some_and(|c| !c.trim().is_empty())
-    }
-
     /// Check if tool has annotations (which should be validated)
     pub fn has_annotations(&self) -> bool {
         self.annotations.as_ref().is_some_and(|a| !a.is_empty())
@@ -425,8 +407,69 @@ pub fn validate_json_schema_structure(schema: &serde_json::Value) -> Vec<String>
     errors
 }
 
+/// Locate an exact quoted boolean only when parsing proves that replacing it
+/// changes exactly the requested JSON pointer and nothing else. The existing
+/// scalar locator is only a candidate generator, never the authority for scope.
+/// Duplicate maps (including escaped-key duplicates) are refused by the YAML
+/// Value parser; strict JSON parsing separately rejects comments and extensions.
+/// Multiple matching values are deliberately left without an automatic fix.
+pub(crate) fn quoted_json_boolean_span(
+    content: &str,
+    pointer: &str,
+    key: &str,
+    quoted: &str,
+) -> Option<(usize, usize)> {
+    if !matches!(quoted, "true" | "false") {
+        return None;
+    }
+    let mut expected: serde_json::Value = serde_json::from_str(content).ok()?;
+    // Unlike serde_json::Value, this parser rejects duplicate mapping keys.
+    serde_yaml::from_str::<serde_yaml::Value>(content).ok()?;
+    let target = expected.pointer_mut(pointer)?;
+    if target.as_str() != Some(quoted) {
+        return None;
+    }
+    *target = serde_json::Value::Bool(quoted == "true");
+    let serialized = format!("\"{quoted}\"");
+    let (start, end) = crate::span_utils::find_unique_json_key_value(content, key, &serialized)?;
+    let mut fixed = content.to_owned();
+    fixed.replace_range(start..end, quoted);
+    let actual: serde_json::Value = serde_json::from_str(&fixed).ok()?;
+    (actual == expected).then_some((start, end))
+}
+
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn quoted_boolean_span_refuses_ambiguous_or_non_json_documents() {
+        for content in [
+            r#"{"mcpServers":{"s":{"alwaysLoad":"true"}},"mcpServers":{"s":{"alwaysLoad":"true"}}}"#,
+            r#"{"mcpServers":{"s":{"alwaysLoad":"true"},"s":{"alwaysLoad":"true"}}}"#,
+            r#"{"mcpServers":{"s":{"alwaysLoad":false,"alwaysLoad":"true"}}}"#,
+            r#"{"mcpServers":{"s":{"alwaysLoad":false,"always\u004coad":"true"}}}"#,
+            r#"{"mcpServers":{"s":{"alwaysLoad":"true"}},"mcp\u0053ervers":{}}"#,
+            r#"{"mcpServers":{"s":{"nested":{"alwaysLoad":"true"},"alwaysLoad":"true"}}}"#,
+            r#"{/* comment */ "mcpServers":{"s":{"alwaysLoad":"true"}}}"#,
+            r#"{"mcpServers":{"s":{"alwaysLoad":"true"}},}"#,
+        ] {
+            assert!(
+                quoted_json_boolean_span(content, "/mcpServers/s/alwaysLoad", "alwaysLoad", "true")
+                    .is_none(),
+                "{content}"
+            );
+        }
+    }
+
+    #[test]
+    fn quoted_boolean_span_does_not_edit_an_inactive_nested_decoy() {
+        let content =
+            r#"{"decoy":{"alwaysLoad":"true"},"mcpServers":{"s":{"always\u004coad":"true"}}}"#;
+        assert!(
+            quoted_json_boolean_span(content, "/mcpServers/s/alwaysLoad", "alwaysLoad", "true")
+                .is_none()
+        );
+    }
+
     use super::*;
     use serde_json::json;
 
@@ -440,8 +483,6 @@ mod tests {
             output_schema: None,
             icons: None,
             annotations: None,
-            requires_approval: None,
-            confirmation: None,
         };
         assert_eq!(tool.has_required_fields(), (true, true, true));
     }
@@ -456,8 +497,6 @@ mod tests {
             output_schema: None,
             icons: None,
             annotations: None,
-            requires_approval: None,
-            confirmation: None,
         };
         assert_eq!(tool.has_required_fields(), (false, true, true));
     }
@@ -472,8 +511,6 @@ mod tests {
             output_schema: None,
             icons: None,
             annotations: None,
-            requires_approval: None,
-            confirmation: None,
         };
         assert_eq!(tool.has_required_fields(), (false, true, true));
     }
@@ -488,8 +525,6 @@ mod tests {
             output_schema: None,
             icons: None,
             annotations: None,
-            requires_approval: None,
-            confirmation: None,
         };
         assert!(tool.has_meaningful_description());
     }
@@ -504,93 +539,8 @@ mod tests {
             output_schema: None,
             icons: None,
             annotations: None,
-            requires_approval: None,
-            confirmation: None,
         };
         assert!(!tool.has_meaningful_description());
-    }
-
-    #[test]
-    fn test_consent_fields_requires_approval_true() {
-        let tool = McpToolSchema {
-            name: Some("test".to_string()),
-            description: None,
-            input_schema: None,
-            title: None,
-            output_schema: None,
-            icons: None,
-            annotations: None,
-            requires_approval: Some(true),
-            confirmation: None,
-        };
-        assert!(tool.has_consent_fields());
-    }
-
-    #[test]
-    fn test_consent_fields_requires_approval_false() {
-        // requiresApproval: false should NOT count as having consent mechanism
-        let tool = McpToolSchema {
-            name: Some("test".to_string()),
-            description: None,
-            input_schema: None,
-            title: None,
-            output_schema: None,
-            icons: None,
-            annotations: None,
-            requires_approval: Some(false),
-            confirmation: None,
-        };
-        assert!(!tool.has_consent_fields());
-    }
-
-    #[test]
-    fn test_consent_fields_confirmation_non_empty() {
-        let tool = McpToolSchema {
-            name: Some("test".to_string()),
-            description: None,
-            input_schema: None,
-            title: None,
-            output_schema: None,
-            icons: None,
-            annotations: None,
-            requires_approval: None,
-            confirmation: Some("Are you sure?".to_string()),
-        };
-        assert!(tool.has_consent_fields());
-    }
-
-    #[test]
-    fn test_consent_fields_confirmation_empty() {
-        // Empty confirmation should NOT count as having consent mechanism
-        let tool = McpToolSchema {
-            name: Some("test".to_string()),
-            description: None,
-            input_schema: None,
-            title: None,
-            output_schema: None,
-            icons: None,
-            annotations: None,
-            requires_approval: None,
-            confirmation: Some("".to_string()),
-        };
-        assert!(!tool.has_consent_fields());
-    }
-
-    #[test]
-    fn test_consent_fields_confirmation_whitespace() {
-        // Whitespace-only confirmation should NOT count as having consent mechanism
-        let tool = McpToolSchema {
-            name: Some("test".to_string()),
-            description: None,
-            input_schema: None,
-            title: None,
-            output_schema: None,
-            icons: None,
-            annotations: None,
-            requires_approval: None,
-            confirmation: Some("   ".to_string()),
-        };
-        assert!(!tool.has_consent_fields());
     }
 
     #[test]

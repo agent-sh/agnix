@@ -33,7 +33,10 @@ const RULE_IDS: &[&str] = &[
 const MAX_HOOK_TIMEOUT_MS: u64 = 300_000; // 5 minutes
 
 fn is_file_event(event: &str) -> bool {
-    matches!(event, "fileEdited" | "fileCreate" | "fileDelete")
+    matches!(
+        event,
+        "fileEdited" | "fileCreate" | "fileDelete" | "fileCreated" | "fileDeleted"
+    )
 }
 
 fn is_tool_event(event: &str) -> bool {
@@ -42,6 +45,119 @@ fn is_tool_event(event: &str) -> bool {
 
 fn has_non_blank_entries(values: &[String]) -> bool {
     values.iter().any(|value| !value.trim().is_empty())
+}
+
+/// Do not infer migration from a filename alone: the replacement must contain
+/// an enabled v1 hook with the same canonical event and action. An unrelated or
+/// malformed JSON sibling must not hide the hint. Read failures are inconclusive.
+fn has_corresponding_v3_hook(
+    path: &Path,
+    event: &str,
+    legacy: &crate::schemas::kiro_hook::KiroIdeHook,
+    config: &PerFileLintConfig<'_>,
+) -> bool {
+    use crate::schemas::kiro_hook_v3::{canonical_trigger, parse_kiro_v3_hook_doc};
+    let Some(parent) = path.parent() else {
+        return true;
+    };
+    let Ok(entries) = config.fs().read_dir(parent) else {
+        return true;
+    };
+    let event = canonical_trigger(event).unwrap_or(event);
+    for entry in entries {
+        if !entry.metadata.is_file
+            || entry.metadata.is_symlink
+            || entry.path.extension().and_then(|s| s.to_str()) != Some("json")
+        {
+            continue;
+        }
+        let Ok(content) = config.fs().read_to_string(&entry.path) else {
+            return true;
+        };
+        let Some(doc) = parse_kiro_v3_hook_doc(&content).doc else {
+            continue;
+        };
+        if doc.version.as_deref() != Some("v1") {
+            continue;
+        }
+        for hook in doc.hooks.unwrap_or_default() {
+            let Some(trigger) = hook.trigger.as_deref() else {
+                continue;
+            };
+            if canonical_trigger(trigger).unwrap_or(trigger) != event
+                || hook.enabled == Some(false)
+                || hook.name.as_deref().is_none_or(|n| n.trim().is_empty())
+            {
+                continue;
+            }
+            // A narrower matcher is not evidence that the old hook is covered.
+            if hook
+                .matcher
+                .as_deref()
+                .is_some_and(|m| !m.is_empty() && m != ".*")
+            {
+                continue;
+            }
+            let Some(action) = hook.action else {
+                continue;
+            };
+            if (action.r#type.as_deref() == Some("command")
+                && action.command.as_deref().is_some_and(|cmd| {
+                    !cmd.trim().is_empty() && Some(cmd) == legacy.effective_run_command()
+                }))
+                || (action.r#type.as_deref() == Some("agent")
+                    && action.prompt.as_deref().is_some_and(|prompt| {
+                        !prompt.trim().is_empty() && Some(prompt) == legacy.effective_ask_agent()
+                    }))
+            {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+/// Low-certainty placement advice owned by the V3 validator. IDE legacy manual
+/// hooks remain runnable, and agentSpawn appears in the IDE migration mapping:
+/// neither is evidence of a misplaced CLI-only hook.
+pub(super) fn validate_legacy_migration(
+    path: &Path,
+    content: &str,
+    config: &PerFileLintConfig<'_>,
+) -> Vec<Diagnostic> {
+    if !config.is_rule_enabled("KR-HK-014") {
+        return Vec::new();
+    }
+    let Some(hook) = parse_kiro_hook(content).hook else {
+        return Vec::new();
+    };
+    if hook
+        .extra
+        .get("enabled")
+        .and_then(serde_json::Value::as_bool)
+        == Some(false)
+    {
+        return Vec::new();
+    }
+    let event = hook.effective_event().unwrap_or("");
+    if matches!(
+        event,
+        "SessionEnd" | "AgentSpawn" | "userPromptSubmit" | "stop"
+    ) && !has_corresponding_v3_hook(path, event, &hook, config)
+    {
+        vec![
+            Diagnostic::info(
+                path.to_path_buf(),
+                1,
+                0,
+                "KR-HK-014",
+                t!("rules.kr_hk_014.legacy", trigger = event),
+            )
+            .with_suggestion(t!("rules.kr_hk_014.legacy_suggestion")),
+        ]
+    } else {
+        Vec::new()
+    }
 }
 
 pub struct KiroHookValidator;
@@ -86,10 +202,14 @@ impl Validator for KiroHookValidator {
             return diagnostics;
         };
 
-        let event = hook.event.as_deref().unwrap_or("").trim();
+        let event = hook.effective_event().unwrap_or("").trim();
+        let cli_only = matches!(
+            event,
+            "SessionEnd" | "AgentSpawn" | "userPromptSubmit" | "stop"
+        );
         let event_valid = !event.is_empty() && VALID_KIRO_HOOK_EVENTS.contains(&event);
 
-        if config.is_rule_enabled("KR-HK-001") && !event_valid {
+        if config.is_rule_enabled("KR-HK-001") && !event_valid && !cli_only {
             let display = if event.is_empty() { "<missing>" } else { event };
             diagnostics.push(
                 Diagnostic::error(
@@ -107,8 +227,7 @@ impl Validator for KiroHookValidator {
             if config.is_rule_enabled("KR-HK-002")
                 && is_file_event(event)
                 && hook
-                    .patterns
-                    .as_ref()
+                    .effective_patterns()
                     .is_none_or(|patterns| !has_non_blank_entries(patterns))
             {
                 diagnostics.push(
@@ -126,8 +245,7 @@ impl Validator for KiroHookValidator {
             if config.is_rule_enabled("KR-HK-004")
                 && is_tool_event(event)
                 && hook
-                    .tool_types
-                    .as_ref()
+                    .effective_tool_types()
                     .is_none_or(|tool_types| !has_non_blank_entries(tool_types))
             {
                 diagnostics.push(

@@ -2,6 +2,45 @@
 # Rules - Validator diagnostic messages, suggestions, assumptions, fixes
 # ===========================================================================
 rules:
+  kr_hk_014:
+    alias: "钩子触发器别名 %{trigger} 受支持；建议使用规范名称 %{canonical}"
+    alias_suggestion: "编辑 V3 钩子时请使用规范的 PascalCase 触发器。兼容别名仍然有效。"
+    fix: "将钩子触发器规范化为 %{canonical}"
+    legacy: "旧版 .kiro.hook 使用 CLI 触发器名称 %{trigger}，但此目录中没有对应的 V3 JSON 钩子"
+    legacy_suggestion: "如果此钩子用于 CLI V3，请将其迁移到带版本的 .kiro/hooks/*.json 文件。旧版 IDE 手动钩子可以保留原始格式。"
+  kr_pm_004:
+    message: "索引 %{index} 处的权限规则：%{field} 必须是字符串数组"
+    suggestion: "使用带引号的 glob 模式列表。省略 match 表示不限制范围；exclude 为可选项。"
+  kr_pm_003:
+    message: "索引 %{index} 处的权限规则缺少 effect 或其值无效"
+    suggestion: "将 effect 设置为 allow、deny 或 ask。更改访问权限前请检查策略。"
+  kr_pm_002:
+    message: "索引 %{index} 处的权限规则缺少 capability 或其值无效"
+    suggestion: "使用文档列出的能力，例如 shell、fs_read、fs_write、mcp，或元能力（all、builtin、filesystem）。"
+  kr_pm_001:
+    parse_error: "Kiro 权限 YAML 无效：%{error}"
+    shape: "Kiro 权限必须是包含 rules 数组的映射"
+    entry: "索引 %{index} 处的权限规则必须是映射"
+    suggestion: "在 permissions.yaml 中使用 rules: [] 或 capability/effect 映射列表。"
+  oc_dep_005:
+    cleanup_suggestion: "请先将 '%{key}' 移至 tui.json。仅在迁移完成后使用不安全清理；它会删除旧版 TUI 设置，但不会移动这些设置。"
+    cleanup_fix: "仅在完成向 tui.json 的迁移后删除旧版 TUI 设置（不会移动配置）"
+  oc_dep_002:
+    migration_suggestion: "将 tools 布尔值迁移为 permission 动作或规则；不要仅重命名键。旧版 tools 仍受支持。"
+  cop_027:
+    fix: "将 infer 替换为调用控制字段，保留已显式设置的字段"
+  cdx_cfg_001:
+    message: "无效的 approval_policy '%{value}'。必须为 'on-request'、'never' 或 granular 对象。'untrusted' 属于项目 trust_level；'on-failure' 已移除。"
+    type_error: "字段 'approval_policy' 必须是字符串或 granular 对象"
+    suggestion: "使用 'on-request'、'never' 或 granular approval_policy 对象。'untrusted' 属于项目 trust_level；'on-failure' 已移除。"
+    granular_shape: "approval_policy 必须仅包含 granular 对象，其中必须有布尔字段 mcp_elicitations、rules 和 sandbox_approval；可选字段 request_permissions 和 skill_approval 也必须为布尔值"
+    granular_suggestion: "使用 approval_policy = \"on-request\" 或 \"never\"，或在 [approval_policy.granular] 中设置必需的布尔字段。"
+  cdx_005:
+    type_error: "字段 'project_doc_max_bytes' 必须是非负整数"
+    suggestion: "将 project_doc_max_bytes 设置为非负整数（默认值：32768；零有效，模式没有最大值限制）"
+  boolean_unwrap:
+    json_fix: "将带引号的 %{value} 转换为 JSON 布尔值"
+    yaml_fix: "将带引号的 %{value} 转换为 YAML 布尔值"
   as_001:
     message: SKILL.md 必须在 --- 标记之间包含 YAML frontmatter
     suggestion: 在 --- 标记之间添加 frontmatter
@@ -535,10 +574,11 @@ rules:
     message: 'Kiro agent 使用 CLI 2.x 信任字段（%{fields}）但没有 permissions 块；CLI V3 会跳过该 profile 直到升级'
     suggestion: 在 V3 会话中运行 /upgrade-agent 将 allowedTools/toolsSettings 转换为 permissions.rules，或手动添加 permissions 块
   kr_hk_011:
-    message: Kiro V3 hook 文档%{version_desc}
-    suggestion: 在独立 hook 文件顶层将 "version" 设为 "v1"
-    invalid_version: '的 version "%{version}" 无效（应为 "v1"）'
-    missing_version: 缺少 version 字段
+    message: "Kiro V3 hook 文档%{version_desc}"
+    suggestion: "在独立 hook 文件顶层将 \"version\" 设为 \"v1\""
+    invalid_version: "的 version \"%{version}\" 无效（应为 \"v1\"）"
+    missing_version: "缺少 version 字段"
+    fix: "将无效的版本字符串替换为 v1（可能会启用此钩子）"
   kr_hk_012:
     message: 无效的 Kiro V3 hook 条目
     suggestion: 使用已记录的 PascalCase 触发器（SessionStart、UserPromptSubmit、PreToolUse、PostToolUse、PostFileCreate、PostFileSave、PostFileDelete、PreTaskExec、PostTaskExec、Stop、SessionEnd），并带必需的 name 和 action 字段
@@ -824,6 +864,7 @@ rules:
   cc_set_016:
     message: "'%{rule}' 是 Claude Code 2.1.210 起已弃用的权限规则形式；请改用 '%{replacement}'"
     suggestion: "将权限列表中的 '%{rule}' 替换为 '%{replacement}'。"
+    fix: "将 '%{rule}' 替换为 '%{replacement}'（会改变权限执行行为）"
   cc_set_017:
     message: sandbox.filesystem.disabled 存在时必须是布尔值 (实际为 %{actual})；Claude Code 2.1.216+ 使用此设置关闭文件系统隔离，同时保留网络隔离
     suggestion: 将 sandbox.filesystem.disabled 设置为不带引号的 true 或 false，或移除此字段以保持文件系统隔离。

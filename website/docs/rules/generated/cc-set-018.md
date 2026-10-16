@@ -12,7 +12,7 @@ keywords: ["CC-SET-018", "non-boolean emojicompletionenabled setting", "claude s
 - **Severity**: `MEDIUM`
 - **Category**: `Claude Settings`
 - **Normative Level**: `MUST`
-- **Auto-Fix**: `No`
+- **Auto-Fix**: `Yes (safe)`
 - **Verified On**: `2026-07-26`
 
 ## Applicability

@@ -89,7 +89,7 @@ Rule IDs follow the format `[PREFIX]-[NUMBER]` where the prefix indicates the ru
 
 | Prefix | Rules | Current IDs |
 |--------|-------|-------------|
-| `AGM-` | 6 | AGM-001 through AGM-006 |
+| `AGM-` | 5 | AGM-001 through AGM-005 |
 | `AMP-` | 4 | AMP-001 through AMP-004 |
 | `AMP-SK-` | 1 | AMP-SK-001 |
 | `AS-` | 14 | AS-001 through AS-006, AS-008 through AS-009, AS-011 through AS-013, AS-015 through AS-017 |
@@ -127,14 +127,14 @@ Rule IDs follow the format `[PREFIX]-[NUMBER]` where the prefix indicates the ru
 | `OC-AG-` | 9 | OC-AG-001 through OC-AG-009 |
 | `OC-AGM-` | 2 | OC-AGM-001 through OC-AGM-002 |
 | `OC-CFG-` | 14 | OC-CFG-001 through OC-CFG-014 |
-| `OC-DEP-` | 7 | OC-DEP-001 through OC-DEP-007 |
+| `OC-DEP-` | 6 | OC-DEP-001 through OC-DEP-003, OC-DEP-005 through OC-DEP-007 |
 | `OC-LSP-` | 2 | OC-LSP-001 through OC-LSP-002 |
 | `OC-PM-` | 2 | OC-PM-001 through OC-PM-002 |
 | `OC-SK-` | 1 | OC-SK-001 |
 | `OC-TUI-` | 3 | OC-TUI-001 through OC-TUI-003 |
 | `PE-` | 6 | PE-001 through PE-006 |
 | `RC-SK-` | 1 | RC-SK-001 |
-| `REF-` | 4 | REF-001 through REF-004 |
+| `REF-` | 3 | REF-001 through REF-003 |
 | `ROO-` | 6 | ROO-001 through ROO-006 |
 | `VER-` | 1 | VER-001 |
 | `WS-` | 4 | WS-001 through WS-004 |

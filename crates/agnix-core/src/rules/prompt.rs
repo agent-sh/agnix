@@ -46,7 +46,7 @@ impl Validator for PromptValidator {
             let critical_in_middle = find_critical_in_middle_pe(content);
             for issue in critical_in_middle {
                 diagnostics.push(
-                    Diagnostic::warning(
+                    Diagnostic::info(
                         path.to_path_buf(),
                         issue.line,
                         issue.column,
@@ -67,7 +67,7 @@ impl Validator for PromptValidator {
             let cot_issues = find_cot_on_simple_tasks(content);
             for issue in cot_issues {
                 diagnostics.push(
-                    Diagnostic::warning(
+                    Diagnostic::info(
                         path.to_path_buf(),
                         issue.line,
                         issue.column,
@@ -87,21 +87,7 @@ impl Validator for PromptValidator {
         if config.is_rule_enabled("PE-003") {
             let weak_language = find_weak_imperative_language(content);
             for issue in weak_language {
-                let replacement = match issue.weak_term.to_lowercase().as_str() {
-                    "should" => Some("must"),
-                    "try to" => Some("must"),
-                    "consider" => Some("ensure"),
-                    "maybe" => Some(""),
-                    "might" => Some("must"),
-                    "could" => Some("must"),
-                    "possibly" => Some(""),
-                    "preferably" => Some(""),
-                    "ideally" => Some(""),
-                    "optionally" => Some(""),
-                    _ => None,
-                };
-
-                let mut diagnostic = Diagnostic::warning(
+                let diagnostic = Diagnostic::info(
                     path.to_path_buf(),
                     issue.line,
                     issue.column,
@@ -113,19 +99,6 @@ impl Validator for PromptValidator {
                     ),
                 )
                 .with_suggestion(t!("rules.pe_003.suggestion"));
-
-                if let Some(repl) = replacement {
-                    let end = issue.byte_offset + issue.weak_term.len();
-                    if end <= content.len() {
-                        diagnostic = diagnostic.with_fix(Fix::replace(
-                            issue.byte_offset,
-                            end,
-                            repl,
-                            format!("Replace '{}' with stronger language", issue.weak_term),
-                            false,
-                        ));
-                    }
-                }
 
                 diagnostics.push(diagnostic);
             }
@@ -216,7 +189,7 @@ mod tests {
 
         let pe_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "PE-001").collect();
         assert_eq!(pe_001.len(), 1);
-        assert_eq!(pe_001[0].level, DiagnosticLevel::Warning);
+        assert_eq!(pe_001[0].level, DiagnosticLevel::Info);
         assert!(pe_001[0].message.contains("critical"));
     }
 
@@ -273,7 +246,7 @@ When asked to read the file, think step by step.
 
         let pe_002: Vec<_> = diagnostics.iter().filter(|d| d.rule == "PE-002").collect();
         assert_eq!(pe_002.len(), 1);
-        assert_eq!(pe_002[0].level, DiagnosticLevel::Warning);
+        assert_eq!(pe_002[0].level, DiagnosticLevel::Info);
     }
 
     #[test]
@@ -318,7 +291,7 @@ You should follow the style guide.
 
         let pe_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "PE-003").collect();
         assert_eq!(pe_003.len(), 1);
-        assert_eq!(pe_003[0].level, DiagnosticLevel::Warning);
+        assert_eq!(pe_003[0].level, DiagnosticLevel::Info);
         assert!(pe_003[0].message.contains("should"));
     }
 
@@ -889,7 +862,7 @@ This is not a critical section.
     // ===== Autofix Tests =====
 
     #[test]
-    fn test_pe_003_has_fix() {
+    fn test_pe_003_has_no_fix() {
         let content = "# Critical Rules\n\nYou should follow the style guide.";
         let validator = PromptValidator;
         let diagnostics =
@@ -897,13 +870,14 @@ This is not a critical section.
 
         let pe_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "PE-003").collect();
         assert_eq!(pe_003.len(), 1);
-        assert!(pe_003[0].has_fixes(), "PE-003 should have auto-fix");
-        assert!(!pe_003[0].fixes[0].safe, "PE-003 fix should be unsafe");
-        assert_eq!(pe_003[0].fixes[0].replacement, "must");
+        assert!(
+            !pe_003[0].has_fixes(),
+            "Recommendations must not rewrite prose"
+        );
     }
 
     #[test]
-    fn test_pe_003_fix_replaces_consider_with_ensure() {
+    fn test_pe_003_preserves_consider() {
         let content = "# Critical Rules\n\nConsider doing this.";
         let validator = PromptValidator;
         let diagnostics =
@@ -911,8 +885,10 @@ This is not a critical section.
 
         let pe_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "PE-003").collect();
         assert_eq!(pe_003.len(), 1);
-        assert!(pe_003[0].has_fixes());
-        assert_eq!(pe_003[0].fixes[0].replacement, "ensure");
+        assert!(
+            !pe_003[0].has_fixes(),
+            "Recommendations must not rewrite prose"
+        );
     }
 
     #[test]
