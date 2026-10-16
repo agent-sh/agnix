@@ -105,6 +105,8 @@ pub enum FileType {
     KiroMcp,
     /// Kiro CLI settings (.kiro/settings.json or ~/.kiro/settings.json)
     KiroSettings,
+    /// Kiro capability policy (.kiro/settings/permissions.yaml or workspace-roots/<hash>/permissions.yaml)
+    KiroPermissions,
     /// Gemini CLI agent definition (.gemini/agents/*.md)
     GeminiAgent,
     /// Other .md files (for XML/import checks)
@@ -184,6 +186,7 @@ impl fmt::Display for FileType {
             FileType::KiroHookV3 => "KiroHookV3",
             FileType::KiroMcp => "KiroMcp",
             FileType::KiroSettings => "KiroSettings",
+            FileType::KiroPermissions => "KiroPermissions",
             FileType::GeminiAgent => "GeminiAgent",
             FileType::GenericMarkdown => "GenericMarkdown",
             FileType::Unknown => "Unknown",
@@ -244,6 +247,7 @@ mod tests {
             (FileType::KiroHookV3, "KiroHookV3"),
             (FileType::KiroMcp, "KiroMcp"),
             (FileType::KiroSettings, "KiroSettings"),
+            (FileType::KiroPermissions, "KiroPermissions"),
             (FileType::GeminiAgent, "GeminiAgent"),
             (FileType::GenericMarkdown, "GenericMarkdown"),
             (FileType::Unknown, "Unknown"),
@@ -303,6 +307,7 @@ mod tests {
             FileType::KiroHookV3,
             FileType::KiroMcp,
             FileType::KiroSettings,
+            FileType::KiroPermissions,
             FileType::GeminiAgent,
             FileType::GenericMarkdown,
         ];
@@ -376,6 +381,7 @@ mod tests {
             FileType::KiroHookV3,
             FileType::KiroMcp,
             FileType::KiroSettings,
+            FileType::KiroPermissions,
             FileType::GeminiAgent,
             FileType::Unknown,
         ];

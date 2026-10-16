@@ -2,7 +2,7 @@
 //!
 //! This module tests the full pipeline: validate -> collect fixes -> apply -> re-validate.
 //! It covers:
-//! - E2E fix roundtrips for multiple rules (AS-005, AS-006, CC-MEM-005, XML-003, etc.)
+//! - E2E fix roundtrips for multiple rules (AS-005, AS-006, PE-005, XML-003, etc.)
 //! - Fix safety flag correctness (safe vs unsafe)
 //! - Fix determinism (same input -> same output)
 //! - Fix ordering with MockFileSystem integration
@@ -109,13 +109,13 @@ fn test_e2e_as_006_fix_collapses_consecutive_hyphens() {
 }
 
 #[test]
-fn test_e2e_cc_mem_005_fix_removes_generic_instruction() {
+fn test_e2e_pe_005_fix_removes_generic_instruction() {
     let content = "# Project\n\nBe helpful and concise.\n\n## Details\nActual content.";
     assert_fix_resolves(
         FileType::ClaudeMd,
         Path::new("CLAUDE.md"),
         content,
-        "CC-MEM-005",
+        "PE-005",
     );
 }
 
@@ -541,7 +541,7 @@ fn test_unsafe_fix_correctly_marked_xml_003() {
 }
 
 #[test]
-fn test_cc_mem_005_fix_is_safe() {
+fn test_pe_005_fix_is_safe() {
     let content = "Be helpful and concise.";
     let path = Path::new("CLAUDE.md");
     let config = LintConfig::default();
@@ -554,15 +554,12 @@ fn test_cc_mem_005_fix_is_safe() {
     }
     let mem_005: Vec<_> = diags
         .iter()
-        .filter(|d| d.rule == "CC-MEM-005" && d.has_fixes())
+        .filter(|d| d.rule == "PE-005" && d.has_fixes())
         .collect();
-    assert!(
-        !mem_005.is_empty(),
-        "Expected CC-MEM-005 diagnostic with fix"
-    );
+    assert!(!mem_005.is_empty(), "Expected PE-005 diagnostic with fix");
     assert!(
         !mem_005[0].fixes[0].safe,
-        "CC-MEM-005 fix should be unsafe (content deletion needs review)"
+        "PE-005 fix should be unsafe (content deletion needs review)"
     );
 }
 

@@ -2,6 +2,45 @@
 # Rules - Validator diagnostic messages, suggestions, assumptions, fixes
 # ===========================================================================
 rules:
+  kr_hk_014:
+    alias: "El alias de trigger %{trigger} es compatible; se recomienda el nombre canónico %{canonical}"
+    alias_suggestion: "Usa el trigger canónico en PascalCase al editar hooks V3. Los alias de compatibilidad siguen siendo válidos."
+    fix: "Normalizar el trigger del hook a %{canonical}"
+    legacy: "El archivo .kiro.hook heredado usa el trigger de CLI %{trigger} sin un hook JSON V3 correspondiente en este directorio"
+    legacy_suggestion: "Si este hook está destinado a CLI V3, mígralo a un archivo .kiro/hooks/*.json con versión. Los hooks manuales heredados del IDE pueden conservar su formato original."
+  kr_pm_004:
+    message: "Regla de permisos en el índice %{index}: %{field} debe ser un array de cadenas"
+    suggestion: "Usa una lista de patrones glob entre comillas. Omite match para un alcance sin restricciones; exclude es opcional."
+  kr_pm_003:
+    message: "La regla de permisos en el índice %{index} tiene un effect ausente o no válido"
+    suggestion: "Establece effect en allow, deny o ask. Revisa la política antes de cambiar el acceso."
+  kr_pm_002:
+    message: "La regla de permisos en el índice %{index} tiene una capability ausente o no válida"
+    suggestion: "Usa una capacidad documentada como shell, fs_read, fs_write, mcp o una metacapacidad (all, builtin, filesystem)."
+  kr_pm_001:
+    parse_error: "YAML de permisos de Kiro no válido: %{error}"
+    shape: "Los permisos de Kiro deben ser un mapa que contenga un array rules"
+    entry: "La regla de permisos en el índice %{index} debe ser un mapa"
+    suggestion: "Usa rules: [] o una lista de mapas capability/effect en permissions.yaml."
+  oc_dep_005:
+    cleanup_suggestion: "Mueve primero '%{key}' a tui.json. Usa la limpieza no segura solo después de completar la migración; elimina los ajustes TUI heredados sin moverlos."
+    cleanup_fix: "Eliminar los ajustes TUI heredados solo después de completar la migración a tui.json (no mueve la configuración)"
+  oc_dep_002:
+    migration_suggestion: "Migra los valores booleanos de tools a acciones o reglas de permission; no cambies solo el nombre de la clave. El campo tools heredado sigue siendo compatible."
+  cop_027:
+    fix: "Reemplazar infer por controles de invocación, conservando los campos explícitos"
+  cdx_cfg_001:
+    message: "approval_policy '%{value}' no válido. Debe ser 'on-request', 'never' o un objeto granular. 'untrusted' pertenece a trust_level del proyecto; 'on-failure' se ha retirado."
+    type_error: "El campo 'approval_policy' debe ser una cadena o un objeto granular"
+    suggestion: "Usa 'on-request', 'never' o un objeto granular para approval_policy. 'untrusted' pertenece a trust_level del proyecto; 'on-failure' se ha retirado."
+    granular_shape: "approval_policy solo debe contener un objeto granular con los campos booleanos obligatorios mcp_elicitations, rules y sandbox_approval; request_permissions y skill_approval también deben ser booleanos cuando estén presentes"
+    granular_suggestion: "Usa approval_policy = \"on-request\" o \"never\", o [approval_policy.granular] con los campos booleanos obligatorios."
+  cdx_005:
+    type_error: "El campo 'project_doc_max_bytes' debe ser un entero no negativo"
+    suggestion: "Establece project_doc_max_bytes como un entero no negativo (predeterminado: 32768; cero es válido y el esquema no tiene máximo)"
+  boolean_unwrap:
+    json_fix: "Convertir el valor entre comillas %{value} en un booleano JSON (puede cambiar el comportamiento o la política de seguridad)"
+    yaml_fix: "Convertir el valor entre comillas %{value} en un booleano YAML (puede cambiar el comportamiento o la política de seguridad)"
   as_001:
     message: SKILL.md debe tener frontmatter YAML entre marcadores ---
     suggestion: Agrega frontmatter entre marcadores ---
@@ -557,10 +596,11 @@ rules:
     message: 'El agente de Kiro usa campos de confianza de CLI 2.x (%{fields}) sin bloque permissions; CLI V3 omite este perfil hasta actualizarlo'
     suggestion: Ejecuta /upgrade-agent en una sesión V3 para convertir allowedTools/toolsSettings en permissions.rules, o añade un bloque permissions
   kr_hk_011:
-    message: El documento de hooks V3 de Kiro tiene %{version_desc}
-    suggestion: Establece "version" en "v1" en el nivel superior del archivo de hooks autónomo
-    invalid_version: 'versión invalida "%{version}" (se esperaba "v1")'
-    missing_version: sin campo version
+    message: "El documento de hooks V3 de Kiro tiene %{version_desc}"
+    suggestion: "Establece \"version\" en \"v1\" en el nivel superior del archivo de hooks autónomo"
+    invalid_version: "versión invalida \"%{version}\" (se esperaba \"v1\")"
+    missing_version: "sin campo version"
+    fix: "Sustituir la cadena de versión no válida por v1 (puede activar este hook)"
   kr_hk_012:
     message: Entrada de hook V3 de Kiro invalida
     suggestion: Usa triggers PascalCase documentados (SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, PostFileCreate, PostFileSave, PostFileDelete, PreTaskExec, PostTaskExec, Stop, SessionEnd) con los campos name y action requeridos
@@ -867,6 +907,7 @@ rules:
   cc_set_016:
     message: "'%{rule}' es una forma de regla de permiso obsoleta desde Claude Code 2.1.210; usa '%{replacement}' en su lugar"
     suggestion: "Reemplaza '%{rule}' con '%{replacement}' en tu lista de permisos."
+    fix: "Reemplazar '%{rule}' por '%{replacement}' (cambia la aplicación de permisos)"
   cc_set_017:
     message: sandbox.filesystem.disabled debe ser un booleano cuando esta presente (se obtuvo %{actual}); Claude Code 2.1.216+
       usa esta opcion para desactivar el aislamiento del sistema de archivos y conservar el aislamiento de red

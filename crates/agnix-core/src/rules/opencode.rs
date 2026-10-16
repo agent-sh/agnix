@@ -60,7 +60,6 @@ const RULE_IDS: &[&str] = &[
     "OC-DEP-001",
     "OC-DEP-002",
     "OC-DEP-003",
-    "OC-DEP-004",
     "OC-DEP-005",
     "OC-DEP-006",
     "OC-DEP-007",
@@ -1316,11 +1315,25 @@ impl Validator for OpenCodeValidator {
                         )
                         .with_suggestion(format!("Rename '{}' to '{}'", old_key, new_key));
 
-                        // Only offer the rename fix when the replacement key is
-                        // absent. If both are present, renaming would produce a
-                        // duplicate key -- the merge is a judgment call about
-                        // which value wins, so leave it to the author.
-                        if !obj.contains_key(new_key) {
+                        // `tools` is a boolean map, not a permission action map.
+                        // A key-only rename would produce invalid configuration.
+                        if old_key == "tools" {
+                            diagnostic = diagnostic
+                                .with_suggestion(t!("rules.oc_dep_002.migration_suggestion"));
+                        }
+                        let shape_allows_rename = match old_key {
+                            "tools" => false,
+                            "mode" => obj
+                                .get(old_key)
+                                .and_then(serde_json::Value::as_object)
+                                .is_some_and(|modes| {
+                                    modes.values().all(serde_json::Value::is_object)
+                                }),
+                            _ => true,
+                        };
+                        // Never collide with an existing target (even null), or
+                        // rename a nested key with the same spelling.
+                        if shape_allows_rename && !obj.contains_key(new_key) {
                             if let Some((start, end)) = find_json_key_span(content, old_key) {
                                 diagnostic = diagnostic.with_fix(Fix::replace(
                                     start,
@@ -1336,45 +1349,13 @@ impl Validator for OpenCodeValidator {
                     }
                 }
 
-                // OC-DEP-004: CONTEXT.md deprecated filename in instructions
-                if config.is_rule_enabled("OC-DEP-004") {
-                    if let Some(instructions) = obj.get("instructions").and_then(|v| v.as_array()) {
-                        for instr in instructions {
-                            if let Some(instr_str) = instr.as_str() {
-                                let instr_path = Path::new(instr_str);
-                                if instr_path
-                                    .file_name()
-                                    .and_then(|n| n.to_str())
-                                    .is_some_and(|n| n.to_lowercase() == "context.md")
-                                {
-                                    diagnostics.push(
-                                        Diagnostic::warning(
-                                            path.to_path_buf(),
-                                            find_key_line(content, "instructions").unwrap_or(1),
-                                            0,
-                                            "OC-DEP-004",
-                                            format!(
-                                                "CONTEXT.md is deprecated. Rename '{}' to use AGENTS.md instead",
-                                                instr_str
-                                            ),
-                                        )
-                                        .with_suggestion(
-                                            "Rename CONTEXT.md references to AGENTS.md".to_string(),
-                                        ),
-                                    );
-                                }
-                            }
-                        }
-                    }
-                }
-
                 // OC-DEP-005: Deprecated TUI keys in opencode.json
                 if config.is_rule_enabled("OC-DEP-005") {
                     let deprecated_tui_keys = ["theme", "keybinds", "tui"];
+                    let cleanup = legacy_tui_cleanup(content);
                     for &tui_key in &deprecated_tui_keys {
                         if obj.contains_key(tui_key) {
-                            diagnostics.push(
-                                Diagnostic::warning(
+                            let mut diagnostic = Diagnostic::warning(
                                     path.to_path_buf(),
                                     find_key_line(content, tui_key).unwrap_or(1),
                                     0,
@@ -1382,9 +1363,18 @@ impl Validator for OpenCodeValidator {
                                     format!("Deprecated top-level key '{}'. TUI settings should be in a separate tui.json file", tui_key),
                                 )
                                 .with_suggestion(
-                                    format!("Move '{}' to tui.json", tui_key),
-                                ),
-                            );
+                                    t!("rules.oc_dep_005.cleanup_suggestion", key = tui_key),
+                                );
+                            if let Some(replacement) = &cleanup {
+                                diagnostic = diagnostic.with_fix(Fix::replace(
+                                    0,
+                                    content.len(),
+                                    replacement.clone(),
+                                    t!("rules.oc_dep_005.cleanup_fix"),
+                                    false,
+                                ));
+                            }
+                            diagnostics.push(diagnostic);
                         }
                     }
                 }
@@ -2087,35 +2077,46 @@ fn validate_substitution_string(
     }
 }
 
-/// Find the byte span of a JSON key string (the text between quotes).
-/// Returns (start, end) byte offsets of the key name (excluding quotes).
-///
-/// Uses a loop to skip false positives where the pattern appears inside
-/// string values rather than as an object key. A match is only accepted
-/// when the next non-whitespace character after the closing quote is `:`.
-///
-/// Limitation: when the same key appears in nested objects, this returns
-/// the first occurrence.
-fn find_json_key_span(content: &str, key: &str) -> Option<(usize, usize)> {
-    let pattern = format!("\"{}\"", key);
-    let mut search_from = 0;
-    let mut found = None;
-    let mut count = 0;
-    while let Some(pos) = content[search_from..].find(&pattern) {
-        let abs_pos = search_from + pos;
-        let after_quote = abs_pos + pattern.len();
-        if let Some(next_char) = content[after_quote..].trim_start().chars().next() {
-            if next_char == ':' {
-                count += 1;
-                if found.is_none() {
-                    found = Some((abs_pos + 1, abs_pos + 1 + key.len()));
-                }
-            }
+/// Opt-in cleanup only: this does NOT migrate data to tui.json. Use a single
+/// edit for all legacy fields so adjacent removals cannot leave a dangling comma.
+/// Keep all surviving source text (including comments), rather than reserialize.
+fn legacy_tui_cleanup(content: &str) -> Option<String> {
+    let properties = crate::schemas::opencode::config_property_spans(content)?;
+    let legacy = |key: &str| matches!(key, "theme" | "keybinds" | "tui");
+    let last_retained = properties
+        .iter()
+        .rposition(|property| !legacy(&property.key));
+    let mut removals = Vec::new();
+    for (index, property) in properties.iter().enumerate() {
+        if legacy(&property.key) {
+            removals.push((property.key_start, property.value_end));
         }
-        search_from = abs_pos + pattern.len();
+        if (legacy(&property.key) || Some(index) == last_retained)
+            && let Some(comma) = property.comma
+        {
+            removals.push((comma, comma + 1));
+        }
     }
-    // Only return span if key appears exactly once as a key (safe to autofix)
-    if count == 1 { found } else { None }
+    if removals.is_empty() {
+        return None;
+    }
+    removals.sort_unstable();
+    let mut fixed = content.to_string();
+    for (start, end) in removals.into_iter().rev() {
+        fixed.replace_range(start..end, "");
+    }
+    // Always check syntax after composing the cleanup, including JSONC input.
+    crate::schemas::opencode::parse_opencode_json(&fixed)
+        .schema
+        .as_ref()?;
+    Some(fixed)
+}
+
+/// Find only an unambiguous root key, never a similarly named nested key.
+fn find_json_key_span(content: &str, key: &str) -> Option<(usize, usize)> {
+    let properties = crate::schemas::opencode::config_property_spans(content)?;
+    let property = properties.iter().find(|property| property.key == key)?;
+    Some((property.key_start + 1, property.key_end - 1))
 }
 
 /// Find the 1-indexed line number where a string pattern appears in content.
@@ -3197,7 +3198,7 @@ mod tests {
 
     #[test]
     fn test_oc_dep_001_autofix() {
-        let content = r#"{"mode": "agent"}"#;
+        let content = r#"{"mode": {"build": {"mode": "primary"}}}"#;
         let diagnostics = validate(content);
         let dep: Vec<_> = diagnostics
             .iter()
@@ -3232,18 +3233,17 @@ mod tests {
     }
 
     #[test]
-    fn test_oc_dep_002_autofix() {
+    fn test_oc_dep_002_no_key_only_autofix() {
         let content = r#"{"tools": {}}"#;
         let diagnostics = validate(content);
         let dep: Vec<_> = diagnostics
             .iter()
             .filter(|d| d.rule == "OC-DEP-002")
             .collect();
-        assert!(dep[0].has_fixes());
-        let fix = &dep[0].fixes[0];
-        let target = &content[fix.start_byte..fix.end_byte];
-        assert_eq!(target, "tools");
-        assert_eq!(fix.replacement, "permission");
+        assert!(
+            !dep[0].has_fixes(),
+            "tools booleans require value migration, not key renaming"
+        );
     }
 
     // ===== OC-DEP-003: Deprecated autoshare key =====
@@ -3272,32 +3272,6 @@ mod tests {
         let target = &content[fix.start_byte..fix.end_byte];
         assert_eq!(target, "autoshare");
         assert_eq!(fix.replacement, "share");
-    }
-
-    // ===== OC-DEP-004: CONTEXT.md deprecated =====
-
-    #[test]
-    fn test_oc_dep_004_context_md() {
-        let diagnostics = validate(r#"{"instructions": ["CONTEXT.md"]}"#);
-        assert!(diagnostics.iter().any(|d| d.rule == "OC-DEP-004"));
-    }
-
-    #[test]
-    fn test_oc_dep_004_context_md_nested_path() {
-        let diagnostics = validate(r#"{"instructions": ["docs/CONTEXT.md"]}"#);
-        assert!(diagnostics.iter().any(|d| d.rule == "OC-DEP-004"));
-    }
-
-    #[test]
-    fn test_oc_dep_004_not_context_md() {
-        let diagnostics = validate(r#"{"instructions": ["AGENTS.md"]}"#);
-        assert!(!diagnostics.iter().any(|d| d.rule == "OC-DEP-004"));
-    }
-
-    #[test]
-    fn test_oc_dep_004_no_instructions() {
-        let diagnostics = validate(r#"{}"#);
-        assert!(!diagnostics.iter().any(|d| d.rule == "OC-DEP-004"));
     }
 
     // ===== OC-CFG-008: Invalid logLevel =====
@@ -3769,15 +3743,11 @@ mod tests {
     // ===== Fix #8: find_json_key_span nested key =====
 
     #[test]
-    fn test_find_json_key_span_nested_returns_none() {
-        // When the same key appears at multiple nesting levels,
-        // find_json_key_span returns None to prevent unsafe autofixes.
-        let content = r#"{"name": "outer", "nested": {"name": "inner"}}"#;
-        let span = find_json_key_span(content, "name");
-        assert!(
-            span.is_none(),
-            "Should return None when key appears multiple times"
-        );
+    fn test_find_json_key_span_ignores_nested_keys() {
+        let content = r#"{"nested": {"name": "inner"}, "name": "outer"}"#;
+        let (start, end) = find_json_key_span(content, "name").unwrap();
+        assert_eq!(&content[start..end], "name");
+        assert!(content[end..].starts_with("\": \"outer\""));
     }
 
     // ===== Fix #11: truncate_for_display =====
@@ -3793,17 +3763,6 @@ mod tests {
         let result = truncate_for_display(&long, 200);
         assert_eq!(result.len(), 203); // 200 + "..."
         assert!(result.ends_with("..."));
-    }
-
-    // ===== Fix #12: DEP-004 case-insensitive =====
-
-    #[test]
-    fn test_oc_dep_004_case_insensitive() {
-        let diagnostics = validate(r#"{"instructions": ["context.md"]}"#);
-        assert!(
-            diagnostics.iter().any(|d| d.rule == "OC-DEP-004"),
-            "OC-DEP-004 should fire for case-insensitive match on context.md"
-        );
     }
 
     // ===== OC-CFG-013: Invalid server config =====
@@ -4137,13 +4096,142 @@ mod tests {
         assert!(diagnostics.iter().any(|d| d.rule == "OC-DEP-007"));
     }
 
+    #[test]
+    fn test_oc_dep_001_shape_and_source_guards() {
+        for content in [
+            r#"{"mode":"agent"}"#,
+            r#"{"mode":true}"#,
+            r#"{"mode":null}"#,
+            r#"{"mode":[]}"#,
+            r#"{"mode":{"build":false}}"#,
+            r#"{"mode":{},"agent":null}"#,
+            r#"{"mode":{},"mo\u0064e":{"build":{}}}"#,
+        ] {
+            let diagnostics = validate(content);
+            let diagnostic = diagnostics.iter().find(|d| d.rule == "OC-DEP-001").unwrap();
+            assert!(!diagnostic.has_fixes(), "{content}");
+        }
+        for content in [
+            r#"{"mode":{"build":{"mode":"primary"}},"instructions":["mémo.md"]}"#,
+            "{\n// \"mode\": fake\n\"mode\": {\"build\":{\"mode\":\"primary\"}}\n}",
+            r#"{"mo\u0064e":{"build":{}}}"#,
+        ] {
+            let diagnostics = validate(content);
+            let fix = &diagnostics
+                .iter()
+                .find(|d| d.rule == "OC-DEP-001")
+                .unwrap()
+                .fixes[0];
+            assert!(fix.safe);
+            let mut fixed = content.to_string();
+            fixed.replace_range(fix.start_byte..fix.end_byte, &fix.replacement);
+            let value = parse_opencode_json(&fixed).raw_value.unwrap();
+            assert!(value.get("mode").is_none());
+            assert!(value["agent"]["build"].is_object());
+            assert!(value.get("agents").is_none());
+            assert!(!validate(&fixed).iter().any(|d| d.rule == "OC-DEP-001"));
+        }
+    }
+
+    #[test]
+    fn test_oc_dep_002_never_key_renames_boolean_permissions() {
+        for content in [
+            r#"{"tools":{"bash":true,"write":false}}"#,
+            r#"{"tools":{},"permission":{"bash":"ask"}}"#,
+        ] {
+            let diagnostics = validate(content);
+            assert!(
+                !diagnostics
+                    .iter()
+                    .find(|d| d.rule == "OC-DEP-002")
+                    .unwrap()
+                    .has_fixes()
+            );
+        }
+    }
+
+    #[test]
+    fn test_oc_dep_005_cleanup_is_unsafe_and_roundtrips() {
+        for content in [
+            r#"{"theme":"dark"}"#,
+            r#"{"theme":"dark","keybinds":{"x":"a"},"tui":{"diff_style":"auto"}}"#,
+            r#"{"theme":"dark","model":"p/m","keybinds":{"x":"a"},"tui":{}}"#,
+            r#"{"model":"p/m","theme":"dark","keybinds":{},"tui":{}}"#,
+            r#"{"theme":"dark","keybinds":{},"tui":{},"model":"p/m"}"#,
+            "{\r\n// keep this comment\r\n\"theme\":\"dark\",\r\n\"model\":\"p/m\",\r\n\"tui\":{}\r\n}",
+            r#"{"agent":{"build":{"theme":"nested","prompt":"héllo \\\"tui\\\""}},"theme":"dark"}"#,
+        ] {
+            let diagnostics = validate(content);
+            let fixes: Vec<_> = diagnostics
+                .iter()
+                .filter(|d| d.rule == "OC-DEP-005")
+                .flat_map(|d| &d.fixes)
+                .collect();
+            assert!(!fixes.is_empty(), "{content}");
+            assert!(fixes.iter().all(|fix| !fix.safe));
+            let mut fixed = content.to_string();
+            let fix = fixes[0];
+            fixed.replace_range(fix.start_byte..fix.end_byte, &fix.replacement);
+            let mut expected = parse_opencode_json(content).raw_value.unwrap();
+            for key in ["theme", "keybinds", "tui"] {
+                expected.as_object_mut().unwrap().remove(key);
+            }
+            assert_eq!(parse_opencode_json(&fixed).raw_value.unwrap(), expected);
+            assert!(!validate(&fixed).iter().any(|d| d.rule == "OC-DEP-005"));
+            if content.contains("// keep this comment") {
+                assert!(fixed.contains("// keep this comment"));
+            }
+        }
+    }
+
+    #[test]
+    fn test_oc_dep_005_cleanup_requires_opt_in_in_fix_engine() {
+        use crate::fs::{FileSystem, MockFileSystem};
+        use std::sync::Arc;
+
+        let content = r#"{"theme":"dark","keybinds":{},"model":"p/m","tui":{}}"#;
+        let diagnostics: Vec<_> = validate(content)
+            .into_iter()
+            .filter(|d| d.rule == "OC-DEP-005")
+            .collect();
+        let path = diagnostics[0].file.clone();
+        let fs = Arc::new(MockFileSystem::new());
+        fs.add_file(&path, content);
+        let safe =
+            crate::fixes::apply_fixes_with_fs(&diagnostics, false, true, Some(fs.clone())).unwrap();
+        assert!(safe.is_empty());
+        assert_eq!(fs.read_to_string(&path).unwrap(), content);
+        let opted_in =
+            crate::fixes::apply_fixes_with_fs(&diagnostics, false, false, Some(fs.clone()))
+                .unwrap();
+        assert_eq!(opted_in.len(), 1);
+        let fixed = fs.read_to_string(&path).unwrap();
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(&fixed).unwrap(),
+            serde_json::json!({"model":"p/m"})
+        );
+        assert!(!validate(&fixed).iter().any(|d| d.rule == "OC-DEP-005"));
+    }
+
+    #[test]
+    fn test_oc_dep_005_duplicate_keys_and_unicode_comments_withhold_cleanup() {
+        for content in [
+            r#"{"theme":"dark","th\u0065me":"light"}"#,
+            "{/* héllo */ \"theme\": \"dark\"}",
+        ] {
+            let diagnostics = validate(content);
+            let diagnostic = diagnostics.iter().find(|d| d.rule == "OC-DEP-005").unwrap();
+            assert!(!diagnostic.has_fixes());
+        }
+    }
+
     // ===== Deprecated-key rename fix must not create a duplicate key =====
 
     /// When only the deprecated key is present the rename is safe and offered.
     #[test]
     fn test_deprecated_key_fix_offered_when_replacement_absent() {
         for (content, rule) in [
-            (r#"{"mode": "agent"}"#, "OC-DEP-001"),
+            (r#"{"mode": {"build": {}}}"#, "OC-DEP-001"),
             (r#"{"reference": {}}"#, "OC-DEP-007"),
         ] {
             let diagnostics = validate(content);

@@ -78,20 +78,20 @@ cases:
     description: "Invalid jsonrpc version triggers MCP-001"
 
   - file: fixtures/mcp/missing-required-fields.mcp.json
-    expected: [MCP-002, MCP-005]
-    description: "Missing required fields triggers MCP-002 and MCP-005"
+    expected: [MCP-002, MCP-004]
+    description: "Missing inputSchema triggers MCP-002; missing description also triggers advisory MCP-004"
 
   - file: fixtures/mcp/invalid-input-schema.mcp.json
-    expected: [MCP-003, MCP-005]
-    description: "Invalid input schema triggers MCP-003 and MCP-005"
+    expected: [MCP-003]
+    description: "Invalid input schema triggers MCP-003"
 
   - file: fixtures/mcp/empty-description.mcp.json
-    expected: [MCP-004, MCP-005]
-    description: "Empty description triggers MCP-004 and MCP-005"
+    expected: [MCP-004]
+    description: "Empty description triggers MCP-004"
 
   - file: fixtures/mcp/missing-consent.mcp.json
-    expected: [MCP-005]
-    description: "Missing consent field triggers MCP-005"
+    expected: []
+    description: "Tool schemas do not require a consent field"
 
   - file: fixtures/mcp/untrusted-annotations.mcp.json
     expected: [MCP-006]
@@ -122,12 +122,12 @@ cases:
     description: "Valid MCP tool should have no errors"
 
   - file: fixtures/mcp/invalid-tool-name.mcp.json
-    expected: [MCP-013, MCP-005]
-    description: "Invalid tool name format triggers MCP-013 (tool also lacks a consent mechanism: MCP-005)"
+    expected: [MCP-013]
+    description: "Invalid tool name format triggers MCP-013"
 
   - file: fixtures/mcp/invalid-output-schema.mcp.json
-    expected: [MCP-014, MCP-005]
-    description: "Invalid outputSchema triggers MCP-014 (tool also lacks a consent mechanism: MCP-005)"
+    expected: [MCP-014]
+    description: "Invalid outputSchema triggers MCP-014"
 
   - file: fixtures/mcp/missing-resource-required-fields.mcp.json
     expected: [MCP-015]

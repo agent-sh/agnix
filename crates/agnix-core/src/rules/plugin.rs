@@ -392,7 +392,7 @@ impl Validator for PluginValidator {
                     // Arbitrary version strings load. Semver is an optional
                     // interoperability recommendation for plugins that others
                     // consume through version-constrained dependencies.
-                    let mut diagnostic = Diagnostic::warning(
+                    let mut diagnostic = Diagnostic::info(
                         path.to_path_buf(),
                         1,
                         0,
@@ -1055,7 +1055,7 @@ mod tests {
         let version_diagnostic = diagnostics.iter().find(|d| d.rule == "CC-PL-003").unwrap();
         assert_eq!(
             version_diagnostic.level,
-            crate::diagnostics::DiagnosticLevel::Warning
+            crate::diagnostics::DiagnosticLevel::Info
         );
     }
 
@@ -1071,10 +1071,7 @@ mod tests {
             let diagnostics = validator.validate(&path, &content, &LintConfig::default());
             assert!(!diagnostics.iter().any(|d| d.rule == "CC-PL-006"));
             let diagnostic = diagnostics.iter().find(|d| d.rule == "CC-PL-003").unwrap();
-            assert_eq!(
-                diagnostic.level,
-                crate::diagnostics::DiagnosticLevel::Warning
-            );
+            assert_eq!(diagnostic.level, crate::diagnostics::DiagnosticLevel::Info);
         }
     }
 

@@ -70,12 +70,12 @@ Authoritative sources monitored for changes that may affect validation rules.
 
 | Source | URL | Watch Method | Rules Affected |
 |--------|-----|-------------|----------------|
-| Claude Code - Memory and AGENTS.md | https://code.claude.com/docs/en/memory | spec-drift.yml (weekly) | AGM-001 through AGM-006, XP-001 through XP-009, CC-MEM-001 through CC-MEM-010 |
+| Claude Code - Memory and AGENTS.md | https://code.claude.com/docs/en/memory | spec-drift.yml (weekly) | AGM-001 through AGM-005, XP-001 through XP-009, CC-MEM-001 through CC-MEM-010 |
 | Claude Code - Hooks | https://code.claude.com/docs/en/hooks | spec-drift.yml (weekly) | CC-HK-001 through CC-HK-028 |
 | Claude Code - Skills | https://code.claude.com/docs/en/skills | spec-drift.yml (weekly) | CC-SK-001 through CC-SK-022 |
 | Claude Code - Plugins | https://code.claude.com/docs/en/plugins-reference | spec-drift.yml (weekly) | CC-PL-001 through CC-PL-015 |
 | Claude Code - Sub-agents | https://code.claude.com/docs/en/sub-agents | spec-drift.yml (weekly) | CC-AG-001 through CC-AG-020 |
-| Codex CLI - AGENTS.md | https://learn.chatgpt.com/docs/agent-configuration/agents-md | spec-drift.yml (weekly) | AGM-001 through AGM-006, XP-001 through XP-006 |
+| Codex CLI - AGENTS.md | https://learn.chatgpt.com/docs/agent-configuration/agents-md | spec-drift.yml (weekly) | AGM-001 through AGM-005, XP-001 through XP-006 |
 | OpenCode - Rules | https://opencode.ai/docs/rules/ | spec-drift.yml (weekly) | XP-001 through XP-006 |
 | Cursor - Rules | https://cursor.com/docs/rules | spec-drift.yml (weekly) | CUR-001 through CUR-009, CUR-020 |
 | Cursor - Hooks | https://cursor.com/docs/hooks | spec-drift.yml (weekly) | CUR-010 through CUR-013, CUR-017 through CUR-019 |
@@ -102,11 +102,11 @@ Research papers that inform validation rules, particularly prompt engineering an
 
 | Paper | Authors | Year | Key Finding | Rules Informed |
 |-------|---------|------|-------------|----------------|
-| Lost in the Middle: How Language Models Use Long Contexts | Liu et al. | 2023 | Critical content in the middle of long contexts loses recall; position at start or end for best results | PE-001, CC-MEM-008 |
+| Lost in the Middle: How Language Models Use Long Contexts | Liu et al. | 2023 | Critical content in the middle of long contexts loses recall; position at start or end for best results | PE-001 |
 | Anthropic Long Context Research | Anthropic | 2023 | Single prompt change ("here is the most relevant sentence") improved retrieval accuracy from 27% to 98% | PE-001 |
-| Positive Framing Studies | Multiple | 2023-2024 | "Do X" instructions outperform "Don't do Y" with measurable improvement in compliance rates | CC-MEM-006 |
-| Constraint Strength Research | Instruction-following researchers | 2024 | MUST > imperatives > should > try to; weak language reduces compliance by significant margins | CC-MEM-007, PE-003 |
-| Instruction-Following Reliability in LLMs | Multiple | 2024 | LLMs more reliably follow explicit, structured constraints than implicit or conversational ones | PE-003, PE-004 |
+| Positive Framing Studies | Multiple | 2023-2024 | "Do X" instructions outperform "Don't do Y" with measurable improvement in compliance rates | PE-006 |
+| Constraint Strength Research | Instruction-following researchers | 2024 | MUST > imperatives > should > try to; weak language reduces compliance by significant margins | CC-MEM-007, PE-005 |
+| Instruction-Following Reliability in LLMs | Multiple | 2024 | LLMs more reliably follow explicit, structured constraints than implicit or conversational ones | PE-005, PE-004 |
 | Chain-of-Thought Prompting | Wei et al. | 2022 | CoT improves reasoning on complex tasks but adds overhead on simple tasks | PE-002 |
 
 ### Research Watch Areas
@@ -208,7 +208,7 @@ Tracking community input that influences rule development, tool support decision
 | 2026-10-16 | Gemini CLI v0.64.0 (#1669) | a2a-server V1->V2 settings migration is server-internal; no `.gemini/settings.json` key renames published | Baseline-only advance; GM-011 candidate rejected - no documented key map | #1669 |
 | 2026-10-16 | Kiro CLI 2.30.0 + V3 rollout (#1664) | V3 becomes default at end of October; standalone `.kiro/hooks/*.json`, Markdown agent profiles, `excludedTools`/`includePowers`, capability permissions incl. `power`/`sandbox_network`, and unconverted V2 profiles are skipped by V3 | Added KR-HK-011/012/013 (standalone hooks), KR-AG-015 (unconverted V2 trust config), accepted V3 agent fields and capabilities | #1664 |
 | 2026-01-15 | GitHub Issues | Skills invoke at 0% without explicit trigger phrases | Added AS-010 rule for missing trigger phrase detection; sourced from Vercel research | #14 |
-| 2026-01-20 | agentsys patterns | Enhance plugins identified 70 production-tested config patterns | Created PATTERNS-CATALOG.md; patterns informed CC-SK-007, CC-HK-009, CC-MEM-005 rules | #28 |
+| 2026-01-20 | agentsys patterns | Enhance plugins identified 70 production-tested config patterns | Created PATTERNS-CATALOG.md; patterns informed CC-SK-007, CC-HK-009, PE-005 rules | #28 |
 | 2026-02-01 | February 2026 monthly review | Coverage gap: no rules for Aider, Continue, Roo Code, Kiro CLI | Documented in tool inventory; awaiting community contributions via issue templates | #191 |
 | 2026-02-01 | README pain points | "Almost-right configs" and "skills don't auto-trigger" as top developer frustrations | Prioritized auto-fix for AS-004 (kebab-case), AS-010 (trigger phrase), CC-HK-001 (event name) | #45, #46 |
 | 2026-09-16 | Cursor hooks, rules, and cloud-agent setup doc revisions (spec drift) | Hooks per-script options table now types `matcher` as `string` ("Regex that filters when the hook runs"), resolving the 2026-08-27 object-vs-string inconsistency, and marks `version` as required ("Must be a positive integer (use 1)"); the rules page dropped its `.cursorrules` section in favor of the help center migration guide; the published environment schema carries `egressAllowlist`, `egressMode`, `chromeExecutablePath`, `enable_testing`, `image`, and `build.dockerfileContents` | CUR-017 validates `matcher` as a string; CUR-010 requires a positive integer `version`; CUR-006 cites cursor.com/help/customization/rules; CUR-016 accepts and type-checks the six schema fields it previously rejected as unknown | #1531 |

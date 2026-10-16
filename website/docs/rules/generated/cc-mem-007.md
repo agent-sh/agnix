@@ -2,17 +2,17 @@
 id: cc-mem-007
 title: "CC-MEM-007: Weak Constraint Language - Claude Memory"
 sidebar_label: "CC-MEM-007"
-description: "agnix rule CC-MEM-007 checks for weak constraint language in claude memory files. Severity: HIGH. See examples and fix guidance."
+description: "agnix rule CC-MEM-007 checks for weak constraint language in claude memory files. Severity: LOW. See examples and fix guidance."
 keywords: ["CC-MEM-007", "weak constraint language", "claude memory", "validation", "agnix", "linter"]
 ---
 
 ## Summary
 
 - **Rule ID**: `CC-MEM-007`
-- **Severity**: `HIGH`
+- **Severity**: `LOW`
 - **Category**: `Claude Memory`
 - **Normative Level**: `SHOULD`
-- **Auto-Fix**: `Yes (safe/unsafe)`
+- **Auto-Fix**: `No`
 - **Verified On**: `2026-02-04`
 
 ## Applicability

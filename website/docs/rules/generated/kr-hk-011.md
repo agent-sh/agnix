@@ -12,7 +12,7 @@ keywords: ["KR-HK-011", "invalid kiro v3 hook document version", "kiro hooks", "
 - **Severity**: `MEDIUM`
 - **Category**: `Kiro Hooks`
 - **Normative Level**: `MUST`
-- **Auto-Fix**: `No`
+- **Auto-Fix**: `Yes (unsafe)`
 - **Verified On**: `2026-10-16`
 
 ## Applicability
@@ -30,7 +30,7 @@ keywords: ["KR-HK-011", "invalid kiro v3 hook document version", "kiro hooks", "
 
 - Unit tests: `true`
 - Fixture tests: `false`
-- E2E tests: `false`
+- E2E tests: `true`
 
 ## Examples
 

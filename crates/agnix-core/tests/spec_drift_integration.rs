@@ -97,7 +97,7 @@ fn plugin_bundle_urls_and_version_advice_follow_manifest_contract() {
             .iter()
             .find(|d| d.rule == "CC-PL-003")
             .unwrap();
-        assert_eq!(version.level, DiagnosticLevel::Warning);
+        assert_eq!(version.level, DiagnosticLevel::Info);
     }
 }
 

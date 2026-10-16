@@ -115,6 +115,18 @@ fn find_unique_json_scalar_value_span(content: &str, key: &str) -> Option<(usize
     crate::span_utils::find_unique_json_scalar_span(content, key)
 }
 
+/// JSON pointers escape server names independently of JSON key encoding.
+fn server_boolean_span(content: &str, name: &str, quoted: &str) -> Option<(usize, usize)> {
+    let root: serde_json::Value = serde_json::from_str(content).ok()?;
+    let name = name.replace('~', "~0").replace('/', "~1");
+    let pointer = if root.get("mcpServers").is_some() {
+        format!("/mcpServers/{name}/alwaysLoad")
+    } else {
+        format!("/{name}/alwaysLoad")
+    };
+    crate::schemas::mcp::quoted_json_boolean_span(content, &pointer, "alwaysLoad", quoted)
+}
+
 use super::find_unique_json_string_value_span;
 
 fn compute_line_starts(content: &str) -> Vec<usize> {
@@ -230,10 +242,10 @@ fn find_json_field_location_in_span(
 }
 
 const RULE_IDS: &[&str] = &[
-    "MCP-001", "MCP-002", "MCP-003", "MCP-004", "MCP-005", "MCP-006", "MCP-007", "MCP-008",
-    "MCP-009", "MCP-010", "MCP-011", "MCP-012", "MCP-013", "MCP-014", "MCP-015", "MCP-016",
-    "MCP-017", "MCP-018", "MCP-019", "MCP-020", "MCP-021", "MCP-022", "MCP-023", "MCP-024",
-    "MCP-025", "MCP-026",
+    "MCP-001", "MCP-002", "MCP-003", "MCP-004", "MCP-006", "MCP-007", "MCP-008", "MCP-009",
+    "MCP-010", "MCP-011", "MCP-012", "MCP-013", "MCP-014", "MCP-015", "MCP-016", "MCP-017",
+    "MCP-018", "MCP-019", "MCP-020", "MCP-021", "MCP-022", "MCP-023", "MCP-024", "MCP-025",
+    "MCP-026",
 ];
 
 pub struct McpValidator;
@@ -1151,7 +1163,7 @@ fn validate_tool(
         }
     };
 
-    let (has_name, has_desc, has_schema) = tool.has_required_fields();
+    let (has_name, _, has_schema) = tool.has_required_fields();
 
     // MCP-013: Tool name format validation.
     if config.is_rule_enabled("MCP-013")
@@ -1226,26 +1238,6 @@ fn validate_tool(
                 .with_suggestion(t!("rules.mcp_002.missing_name_suggestion")),
             );
         }
-        if !has_desc {
-            let (line, col) = if tool.description.is_some() {
-                find_field("description")
-            } else {
-                tool_loc
-            };
-            diagnostics.push(
-                Diagnostic::error(
-                    path.to_path_buf(),
-                    line,
-                    col,
-                    "MCP-002",
-                    t!(
-                        "rules.mcp_002.missing_description",
-                        prefix = tool_prefix.as_str()
-                    ),
-                )
-                .with_suggestion(t!("rules.mcp_002.missing_description_suggestion")),
-            );
-        }
         if !has_schema {
             // Check if content has a "parameters" field that might be a misnaming
             let has_parameters_field = content.contains("\"parameters\"");
@@ -1318,11 +1310,15 @@ fn validate_tool(
     }
 
     // MCP-004: Missing or short tool description
-    if config.is_rule_enabled("MCP-004") && has_desc && !tool.has_meaningful_description() {
-        let (line, col) = find_field("description");
+    if config.is_rule_enabled("MCP-004") && !tool.has_meaningful_description() {
+        let (line, col) = if tool.description.is_some() {
+            find_field("description")
+        } else {
+            tool_loc
+        };
         let desc_len = tool.description.as_ref().map(|d| d.len()).unwrap_or(0);
         diagnostics.push(
-            Diagnostic::warning(
+            Diagnostic::info(
                 path.to_path_buf(),
                 line,
                 col,
@@ -1334,20 +1330,6 @@ fn validate_tool(
                 ),
             )
             .with_suggestion(t!("rules.mcp_004.suggestion")),
-        );
-    }
-
-    // MCP-005: Tool without user consent mechanism
-    if config.is_rule_enabled("MCP-005") && !tool.has_consent_fields() {
-        diagnostics.push(
-            Diagnostic::warning(
-                path.to_path_buf(),
-                tool_loc.0,
-                tool_loc.1,
-                "MCP-005",
-                t!("rules.mcp_005.message", prefix = tool_prefix.as_str()),
-            )
-            .with_suggestion(t!("rules.mcp_005.suggestion")),
         );
     }
 
@@ -1870,21 +1852,33 @@ fn validate_server(
             // Bool and Null are excluded by the guards above.
             serde_json::Value::Bool(_) | serde_json::Value::Null => unreachable!(),
         };
-        diagnostics.push(
-            Diagnostic::warning(
-                path.to_path_buf(),
-                line,
-                col,
-                "MCP-025",
-                format!(
-                    "Server '{}' has non-boolean 'alwaysLoad' value (got {})",
-                    name, actual_type
-                ),
-            )
-            .with_suggestion(
-                "Set alwaysLoad to true or false (unquoted). Non-boolean values are not consistently applied by Claude Code - they may be treated as truthy in some code paths and ignored in others.",
+        let mut diagnostic = Diagnostic::warning(
+            path.to_path_buf(),
+            line,
+            col,
+            "MCP-025",
+            format!(
+                "Server '{}' has non-boolean 'alwaysLoad' value (got {})",
+                name, actual_type
             ),
+        )
+        .with_suggestion(
+            "Set alwaysLoad to true or false (unquoted). Non-boolean values are not consistently applied by Claude Code - they may be treated as truthy in some code paths and ignored in others.",
         );
+
+        if let Some(quoted) = value.as_str()
+            && let Some((start, end)) = server_boolean_span(content, name, quoted)
+        {
+            diagnostic = diagnostic.with_fix(Fix::replace(
+                start,
+                end,
+                quoted,
+                t!("rules.boolean_unwrap.json_fix", value = quoted),
+                false,
+            ));
+        }
+
+        diagnostics.push(diagnostic);
     }
 }
 
@@ -2032,18 +2026,19 @@ mod tests {
     }
 
     #[test]
-    fn test_mcp_002_missing_description() {
-        let content = r#"{
-            "name": "test-tool",
-            "inputSchema": {"type": "object"}
-        }"#;
-        let diagnostics = validate(content);
-        let mcp_002 = diagnostics
-            .iter()
-            .filter(|d| d.rule == "MCP-002")
-            .collect::<Vec<_>>();
-        assert_eq!(mcp_002.len(), 1);
-        assert!(mcp_002[0].message.contains("'description'"));
+    fn test_optional_mcp_description_is_advisory() {
+        for description in [None, Some(""), Some("short")] {
+            let mut tool =
+                serde_json::json!({"name": "test-tool", "inputSchema": {"type": "object"}});
+            if let Some(description) = description {
+                tool["description"] = description.into();
+            }
+            let diagnostics = validate(&tool.to_string());
+            assert!(!diagnostics.iter().any(|d| d.rule == "MCP-002"));
+            let advice: Vec<_> = diagnostics.iter().filter(|d| d.rule == "MCP-004").collect();
+            assert_eq!(advice.len(), 1);
+            assert_eq!(advice[0].level, crate::diagnostics::DiagnosticLevel::Info);
+        }
     }
 
     #[test]
@@ -2200,76 +2195,27 @@ mod tests {
             "inputSchema": {"type": "object"}
         }"#;
         let diagnostics = validate(content);
-        // Empty description triggers MCP-002 (missing), not MCP-004
-        // MCP-004 only triggers when description exists but is short
-        assert!(diagnostics.iter().any(|d| d.rule == "MCP-002"));
-    }
-
-    // MCP-005 Tests
-    #[test]
-    fn test_mcp_005_has_requires_approval() {
-        let content = r#"{
-            "name": "test-tool",
-            "description": "A test tool for testing",
-            "inputSchema": {"type": "object"},
-            "requiresApproval": true
-        }"#;
-        let diagnostics = validate(content);
-        assert!(!diagnostics.iter().any(|d| d.rule == "MCP-005"));
-    }
-
-    #[test]
-    fn test_mcp_005_has_confirmation() {
-        let content = r#"{
-            "name": "test-tool",
-            "description": "A test tool for testing",
-            "inputSchema": {"type": "object"},
-            "confirmation": "Are you sure?"
-        }"#;
-        let diagnostics = validate(content);
-        assert!(!diagnostics.iter().any(|d| d.rule == "MCP-005"));
-    }
-
-    #[test]
-    fn test_mcp_005_missing_consent() {
-        let content = r#"{
-            "name": "test-tool",
-            "description": "A test tool for testing",
-            "inputSchema": {"type": "object"}
-        }"#;
-        let diagnostics = validate(content);
-        assert!(diagnostics.iter().any(|d| d.rule == "MCP-005"));
+        assert!(!diagnostics.iter().any(|d| d.rule == "MCP-002"));
         assert!(
-            diagnostics
-                .iter()
-                .any(|d| d.message.contains("consent mechanism"))
+            diagnostics.iter().any(
+                |d| d.rule == "MCP-004" && d.level == crate::diagnostics::DiagnosticLevel::Info
+            )
         );
     }
 
     #[test]
-    fn test_mcp_005_requires_approval_false_triggers_warning() {
-        // requiresApproval: false should still trigger MCP-005 warning
-        let content = r#"{
-            "name": "test-tool",
-            "description": "A test tool for testing",
-            "inputSchema": {"type": "object"},
-            "requiresApproval": false
-        }"#;
-        let diagnostics = validate(content);
-        assert!(diagnostics.iter().any(|d| d.rule == "MCP-005"));
-    }
-
-    #[test]
-    fn test_mcp_005_empty_confirmation_triggers_warning() {
-        // Empty confirmation should still trigger MCP-005 warning
-        let content = r#"{
-            "name": "test-tool",
-            "description": "A test tool for testing",
-            "inputSchema": {"type": "object"},
-            "confirmation": ""
-        }"#;
-        let diagnostics = validate(content);
-        assert!(diagnostics.iter().any(|d| d.rule == "MCP-005"));
+    fn test_mcp_005_retired_consent_is_a_client_responsibility() {
+        for extra in [
+            "",
+            ", \"requiresApproval\": false",
+            ", \"confirmation\": \"\"",
+        ] {
+            let content = format!(
+                r#"{{"name":"test", "description":"A testing tool", "inputSchema":{{"type":"object"}}{extra}}}"#
+            );
+            assert!(!validate(&content).iter().any(|d| d.rule == "MCP-005"));
+        }
+        assert!(!RULE_IDS.contains(&"MCP-005"));
     }
 
     // MCP-006 Tests
@@ -2393,8 +2339,6 @@ mod tests {
             ]
         }"#;
         let diagnostics = validate(content);
-        // Only MCP-005 warnings should be present (if consent fields missing)
-        // In this case, tool has requiresApproval, so no MCP-005
         let errors = diagnostics
             .iter()
             .filter(|d| d.level == crate::diagnostics::DiagnosticLevel::Error)
@@ -2834,23 +2778,6 @@ mod tests {
     }
 
     #[test]
-    fn test_mcp_005_requires_approval_at_tool_level_ok() {
-        // requiresApproval must be at tool level, not in annotations
-        let content = r#"{
-            "tools": [{
-                "name": "safe-tool",
-                "description": "A tool with approval",
-                "inputSchema": {},
-                "requiresApproval": true
-            }]
-        }"#;
-
-        let diagnostics = validate(content);
-        let mcp_005: Vec<_> = diagnostics.iter().filter(|d| d.rule == "MCP-005").collect();
-        assert!(mcp_005.is_empty());
-    }
-
-    #[test]
     fn test_mcp_006_annotations_triggers_warning() {
         // MCP-006 warns when annotations exist (they should be validated before trusting)
         let content = r#"{
@@ -2874,10 +2801,10 @@ mod tests {
     #[test]
     fn test_all_mcp_rules_can_be_disabled() {
         let rules = [
-            "MCP-001", "MCP-002", "MCP-003", "MCP-004", "MCP-005", "MCP-006", "MCP-007", "MCP-008",
-            "MCP-009", "MCP-010", "MCP-011", "MCP-012", "MCP-013", "MCP-014", "MCP-015", "MCP-016",
-            "MCP-017", "MCP-018", "MCP-019", "MCP-020", "MCP-021", "MCP-022", "MCP-023", "MCP-024",
-            "MCP-025", "MCP-026",
+            "MCP-001", "MCP-002", "MCP-003", "MCP-004", "MCP-006", "MCP-007", "MCP-008", "MCP-009",
+            "MCP-010", "MCP-011", "MCP-012", "MCP-013", "MCP-014", "MCP-015", "MCP-016", "MCP-017",
+            "MCP-018", "MCP-019", "MCP-020", "MCP-021", "MCP-022", "MCP-023", "MCP-024", "MCP-025",
+            "MCP-026",
         ];
 
         for rule in rules {
@@ -3862,6 +3789,127 @@ mod tests {
         let mcp_025: Vec<_> = diagnostics.iter().filter(|d| d.rule == "MCP-025").collect();
         assert_eq!(mcp_025.len(), 1);
         assert!(mcp_025[0].message.contains("number"));
+    }
+
+    #[test]
+    fn test_mcp_004_short_description_is_advisory() {
+        let diagnostics = validate(r#"{"name":"test","description":"short","inputSchema":{}}"#);
+        let hit = diagnostics.iter().find(|d| d.rule == "MCP-004").unwrap();
+        assert_eq!(hit.level, crate::diagnostics::DiagnosticLevel::Info);
+    }
+
+    #[test]
+    fn test_mcp_025_roundtrip_changes_only_intended_server_field() {
+        for content in [
+            r#"{"mcpServers":{"s":{"command":"node","alwaysLoad":"true"}}}"#,
+            r#"{"s":{"command":"node","alwaysLoad":"false"}}"#,
+            r#"{"mcpServers":{"a\"/~é":{"command":"node","alwaysLoad":"false"}}}"#,
+            r#"{"nested":{"mcpServers":{"decoy":{"alwaysLoad":true}}},"mcpServers":{"s":{"command":"node","alwaysLoad":"true"}}}"#,
+            r#"{"mcpServers":{"s":{"command":"node","env":{"alwaysLoad":false},"alwaysLoad":"true"}}}"#,
+        ] {
+            let diagnostics = validate(content);
+            let hit = diagnostics.iter().find(|d| d.rule == "MCP-025").unwrap();
+            assert_eq!(hit.fixes.len(), 1, "{content}");
+            let fix = &hit.fixes[0];
+            assert!(!fix.safe);
+            let mut fixed = content.to_owned();
+            fixed.replace_range(fix.start_byte..fix.end_byte, &fix.replacement);
+            let mut expected: serde_json::Value = serde_json::from_str(content).unwrap();
+            let servers = if expected.get("mcpServers").is_some() {
+                expected.get_mut("mcpServers").unwrap()
+            } else {
+                &mut expected
+            };
+            let server = servers
+                .as_object_mut()
+                .unwrap()
+                .values_mut()
+                .next()
+                .unwrap();
+            server["alwaysLoad"] = serde_json::Value::Bool(fix.replacement == "true");
+            assert_eq!(
+                serde_json::from_str::<serde_json::Value>(&fixed).unwrap(),
+                expected
+            );
+            assert!(!validate(&fixed).iter().any(|d| d.rule == "MCP-025"));
+        }
+    }
+
+    #[test]
+    fn test_mcp_025_no_fix_for_duplicate_maps_or_escaped_decoys() {
+        for content in [
+            r#"{"mcpServers":{},"mcpServers":{"s":{"command":"node","alwaysLoad":"true"}}}"#,
+            r#"{"mcpServers":{"s":{"command":"node","alwaysLoad":false,"alwaysLoad":"true"}}}"#,
+            r#"{"decoy":{"alwaysLoad":"true"},"mcpServers":{"s":{"command":"node","always\u004coad":"true"}}}"#,
+        ] {
+            let diagnostics = validate(content);
+            let hits: Vec<_> = diagnostics.iter().filter(|d| d.rule == "MCP-025").collect();
+            assert_eq!(hits.len(), 1, "{content}");
+            assert!(!hits[0].has_fixes(), "{content}");
+        }
+    }
+
+    #[test]
+    fn test_mcp_025_quoted_true_has_unsafe_unwrap() {
+        let content = r#"{
+            "mcpServers": {
+                "fs": { "type": "stdio", "command": "node", "alwaysLoad": "true" }
+            }
+        }"#;
+        let diagnostics = validate(content);
+        let hits: Vec<_> = diagnostics.iter().filter(|d| d.rule == "MCP-025").collect();
+        assert_eq!(hits.len(), 1);
+        assert!(hits[0].has_fixes());
+        let fix = &hits[0].fixes[0];
+        assert!(!fix.safe);
+        assert_eq!(fix.replacement, "true");
+        assert_eq!(content.get(fix.start_byte..fix.end_byte), Some("\"true\""));
+    }
+
+    #[test]
+    fn test_mcp_025_quoted_false_has_unsafe_unwrap() {
+        let content = r#"{
+            "mcpServers": {
+                "fs": { "type": "stdio", "command": "node", "alwaysLoad": "false" }
+            }
+        }"#;
+        let diagnostics = validate(content);
+        let hits: Vec<_> = diagnostics.iter().filter(|d| d.rule == "MCP-025").collect();
+        assert_eq!(hits.len(), 1);
+        let fix = &hits[0].fixes[0];
+        assert!(!fix.safe);
+        assert_eq!(fix.replacement, "false");
+        assert_eq!(content.get(fix.start_byte..fix.end_byte), Some("\"false\""));
+    }
+
+    #[test]
+    fn test_mcp_025_number_has_no_fix() {
+        let content = r#"{
+            "mcpServers": {
+                "fs": { "type": "stdio", "command": "node", "alwaysLoad": 1 }
+            }
+        }"#;
+        let diagnostics = validate(content);
+        let hits: Vec<_> = diagnostics.iter().filter(|d| d.rule == "MCP-025").collect();
+        assert_eq!(hits.len(), 1);
+        assert!(!hits[0].has_fixes());
+    }
+
+    #[test]
+    fn test_mcp_025_quoted_boolean_is_scoped_to_server() {
+        let content = r#"{
+            "mcpServers": {
+                "fs": { "type": "stdio", "command": "node", "alwaysLoad": true },
+                "web": { "type": "stdio", "command": "node", "alwaysLoad": "false" }
+            }
+        }"#;
+        let diagnostics = validate(content);
+        let hits: Vec<_> = diagnostics.iter().filter(|d| d.rule == "MCP-025").collect();
+        assert_eq!(hits.len(), 1);
+        let fix = &hits[0].fixes[0];
+        assert!(!fix.safe);
+        assert_eq!(fix.replacement, "false");
+        assert_eq!(content.get(fix.start_byte..fix.end_byte), Some("\"false\""));
     }
 
     #[test]

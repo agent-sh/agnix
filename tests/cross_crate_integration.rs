@@ -215,7 +215,7 @@ fn mcp_diagnostic_json_serialization() {
         PathBuf::from("CLAUDE.md"),
         10,
         0,
-        "CC-MEM-006",
+        "PE-006",
         "Negative instruction without positive alternative",
     )
     .with_suggestion("Add a positive alternative")

@@ -1,0 +1,5 @@
+# Action smoke tests must scan fixtures rather than inherit the repository's
+# self-lint config, which deliberately excludes tests/fixtures/**.
+severity = "Warning"
+target = "Generic"
+exclude = []

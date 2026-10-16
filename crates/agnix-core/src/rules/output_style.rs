@@ -10,11 +10,12 @@
 //! - CC-OS-005 (LOW)    : `name` value exceeds 64 characters
 //! - CC-OS-006 (HIGH)   : invalid output-style frontmatter syntax (YAML parse error)
 //!
-//! All rules are non-autofix.
+//! All rules are non-autofix except CC-OS-002, which safely unwraps an exact
+//! quoted `true`/`false`. Other wrong types stay diagnostics without a fix.
 
 use crate::{
     config::PerFileLintConfig,
-    diagnostics::Diagnostic,
+    diagnostics::{Diagnostic, Fix},
     rules::{Validator, ValidatorMetadata},
     schemas::output_style::parse_frontmatter,
 };
@@ -30,6 +31,52 @@ const RULE_IDS: &[&str] = &[
 ];
 
 const NAME_MAX_LEN: usize = 64;
+
+/// Adapter so CC-OS-002 can reuse `find_yaml_value_range` on output-style frontmatter.
+struct OutputStyleFrontmatter<'a> {
+    raw: &'a str,
+}
+
+impl crate::rules::FrontmatterRanges for OutputStyleFrontmatter<'_> {
+    fn raw_content(&self) -> &str {
+        self.raw
+    }
+
+    fn start_line(&self) -> usize {
+        1
+    }
+}
+
+/// Treat the line-range helper as a candidate locator: accept its edit only
+/// when reparsing proves that exactly the root boolean changes. This rejects
+/// nested/block-scalar decoys, duplicate maps, aliases, and quoted-key ambiguity.
+fn quoted_yaml_boolean_span(content: &str, raw: &str, quoted: &str) -> Option<(usize, usize)> {
+    if !matches!(quoted, "true" | "false") {
+        return None;
+    }
+    let mut expected: serde_yaml::Value = serde_yaml::from_str(raw).ok()?;
+    let key = serde_yaml::Value::String("keep-coding-instructions".into());
+    let target = expected.as_mapping_mut()?.get_mut(&key)?;
+    if target.as_str() != Some(quoted) {
+        return None;
+    }
+    *target = serde_yaml::Value::Bool(quoted == "true");
+    let (start, end) = crate::rules::find_yaml_value_range(
+        content,
+        &OutputStyleFrontmatter { raw },
+        "keep-coding-instructions",
+        true,
+    )?;
+    let candidate = content.get(start..end)?;
+    if candidate != format!("\"{quoted}\"") && candidate != format!("'{quoted}'") {
+        return None;
+    }
+    let mut fixed = content.to_owned();
+    fixed.replace_range(start..end, quoted);
+    let fixed_frontmatter = parse_frontmatter(&fixed)?;
+    let actual: serde_yaml::Value = serde_yaml::from_str(&fixed_frontmatter.raw).ok()?;
+    (actual == expected).then_some((start, end))
+}
 
 pub struct OutputStyleValidator;
 
@@ -134,21 +181,34 @@ impl Validator for OutputStyleValidator {
         if config.is_rule_enabled("CC-OS-002") {
             if let Some(v) = schema.keep_coding_instructions.as_ref() {
                 if v.as_bool().is_none() {
-                    diagnostics.push(
-                        Diagnostic::error(
-                            path.to_path_buf(),
-                            parsed.start_line,
-                            0,
-                            "CC-OS-002",
-                            format!(
-                                "`keep-coding-instructions` must be a boolean (true/false); got {}",
-                                yaml_type_name(v)
-                            ),
-                        )
-                        .with_suggestion(
-                            "Use `keep-coding-instructions: true` or `keep-coding-instructions: false`.",
+                    let mut diagnostic = Diagnostic::error(
+                        path.to_path_buf(),
+                        parsed.start_line,
+                        0,
+                        "CC-OS-002",
+                        format!(
+                            "`keep-coding-instructions` must be a boolean (true/false); got {}",
+                            yaml_type_name(v)
                         ),
+                    )
+                    .with_suggestion(
+                        "Use `keep-coding-instructions: true` or `keep-coding-instructions: false`.",
                     );
+
+                    if let Some(quoted) = v.as_str()
+                        && let Some((start, end)) =
+                            quoted_yaml_boolean_span(content, &parsed.raw, quoted)
+                    {
+                        diagnostic = diagnostic.with_fix(Fix::replace(
+                            start,
+                            end,
+                            quoted,
+                            rust_i18n::t!("rules.boolean_unwrap.yaml_fix", value = quoted),
+                            false,
+                        ));
+                    }
+
+                    diagnostics.push(diagnostic);
                 }
             }
         }
@@ -325,6 +385,102 @@ mod tests {
     #[test]
     fn test_cc_os_002_no_autofix() {
         let content = "---\nname: X\ndescription: y\nkeep-coding-instructions: \"yes\"\n---\nBody";
+        let diagnostics = validate(content);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-OS-002")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        assert!(!hits[0].has_fixes());
+    }
+
+    #[test]
+    fn test_cc_os_002_quoted_boolean_roundtrip() {
+        for quoted in ["\"true\"", "\"false\"", "'true'", "'false'"] {
+            for newline in ["\n", "\r\n"] {
+                let content = format!("---\nname: é\ndescription: y\nkeep-coding-instructions: {quoted} # keep comment\n---\nBody\n").replace('\n', newline);
+                let diagnostics = validate(&content);
+                let hit = diagnostics.iter().find(|d| d.rule == "CC-OS-002").unwrap();
+                assert_eq!(hit.fixes.len(), 1);
+                let fix = &hit.fixes[0];
+                assert!(!fix.safe);
+                let mut fixed = content.clone();
+                fixed.replace_range(fix.start_byte..fix.end_byte, &fix.replacement);
+                let mut expected: serde_yaml::Value =
+                    serde_yaml::from_str(&parse_frontmatter(&content).unwrap().raw).unwrap();
+                expected["keep-coding-instructions"] =
+                    serde_yaml::Value::Bool(quoted.contains("true"));
+                let actual: serde_yaml::Value =
+                    serde_yaml::from_str(&parse_frontmatter(&fixed).unwrap().raw).unwrap();
+                assert_eq!(actual, expected);
+                assert!(fixed.contains("# keep comment"));
+                assert!(!validate(&fixed).iter().any(|d| d.rule == "CC-OS-002"));
+            }
+        }
+    }
+
+    #[test]
+    fn test_cc_os_002_refuses_decoys_and_duplicate_maps() {
+        for raw in [
+            "extra:\n  keep-coding-instructions: \"true\"\nkeep-coding-instructions: \"true\"",
+            "description: |\n  keep-coding-instructions: \"true\"\nkeep-coding-instructions: \"true\"",
+            "description: |\n  keep-coding-instructions: \"true\"\n\"keep-coding-instructions\": \"true\"",
+            "keep-coding-instructions: \"true\"\n\"keep-coding-instructions\": \"true\"",
+            "extra: {}\nextra: {}\nkeep-coding-instructions: \"true\"",
+            "\"keep-coding-instructions\": \"true\"",
+            "\"keep-coding-instructi\\u006fns\": \"true\"",
+            "keep-coding-instructions: &flag \"true\"\nextra: *flag",
+        ] {
+            let content = format!("---\n{raw}\n---\nBody");
+            assert!(
+                quoted_yaml_boolean_span(&content, raw, "true").is_none(),
+                "{raw}"
+            );
+            assert!(
+                validate(&content)
+                    .iter()
+                    .filter(|d| d.rule == "CC-OS-002")
+                    .all(|d| !d.has_fixes()),
+                "{raw}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_cc_os_002_quoted_true_has_unsafe_unwrap() {
+        let content = "---\nname: X\ndescription: y\nkeep-coding-instructions: \"true\"\n---\nBody";
+        let diagnostics = validate(content);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-OS-002")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        assert!(hits[0].has_fixes());
+        let fix = &hits[0].fixes[0];
+        assert!(!fix.safe);
+        assert_eq!(fix.replacement, "true");
+        assert_eq!(content.get(fix.start_byte..fix.end_byte), Some("\"true\""));
+    }
+
+    #[test]
+    fn test_cc_os_002_quoted_false_has_unsafe_unwrap() {
+        let content =
+            "---\nname: X\ndescription: y\nkeep-coding-instructions: \"false\"\n---\nBody";
+        let diagnostics = validate(content);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-OS-002")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        let fix = &hits[0].fixes[0];
+        assert!(!fix.safe);
+        assert_eq!(fix.replacement, "false");
+        assert_eq!(content.get(fix.start_byte..fix.end_byte), Some("\"false\""));
+    }
+
+    #[test]
+    fn test_cc_os_002_number_has_no_fix() {
+        let content = "---\nname: X\ndescription: y\nkeep-coding-instructions: 1\n---\nBody";
         let diagnostics = validate(content);
         let hits: Vec<_> = diagnostics
             .iter()

@@ -5,15 +5,14 @@
 //! detection → validator dispatch → `PerFileLintConfig` view → rule
 //! filtering. They mirror the original use case where a CLAUDE.md-style
 //! file legitimately contains quoted-example patterns that would otherwise
-//! trip generic-instruction detection (CC-MEM-005).
+//! trip generic-instruction detection (PE-005).
 
 use agnix_core::{LintConfig, OverrideConfig, validate_project};
 use std::fs;
 use std::path::Path;
 
-/// Content that reliably triggers CC-MEM-005 (generic-instruction
-/// detection). "make sure to" and "be helpful" both match patterns in
-/// `crates/agnix-core/src/schemas/claude_md.rs::generic_patterns()`.
+/// Content that reliably triggers PE-005 (generic-instruction
+/// detection). "be helpful" matches the canonical prompt heuristic.
 const TRIGGER_CONTENT: &str = "\
 # Test memory file
 
@@ -58,19 +57,19 @@ fn baseline_without_override_rule_fires_on_both_files() {
     let hits: Vec<_> = result
         .diagnostics
         .iter()
-        .filter(|d| d.rule == "CC-MEM-005")
+        .filter(|d| d.rule == "PE-005")
         .collect();
     let root_hits = hits.iter().filter(|d| is_root_level(&d.file)).count();
     let nested_hits = hits.iter().filter(|d| is_nested(&d.file)).count();
 
     assert!(
         root_hits > 0,
-        "baseline: expected CC-MEM-005 on root CLAUDE.md, got hits on: {:?}",
+        "baseline: expected PE-005 on root CLAUDE.md, got hits on: {:?}",
         hits.iter().map(|d| &d.file).collect::<Vec<_>>()
     );
     assert!(
         nested_hits > 0,
-        "baseline: expected CC-MEM-005 on nested/CLAUDE.md, got hits on: {:?}",
+        "baseline: expected PE-005 on nested/CLAUDE.md, got hits on: {:?}",
         hits.iter().map(|d| &d.file).collect::<Vec<_>>()
     );
 }
@@ -86,7 +85,7 @@ fn overrides_suppress_rule_on_matching_path_only() {
     let config = LintConfig::builder()
         .overrides(vec![OverrideConfig {
             paths: vec!["CLAUDE.md".to_string()],
-            disabled_rules: vec!["CC-MEM-005".to_string()],
+            disabled_rules: vec!["PE-005".to_string()],
         }])
         .build()
         .expect("valid config");
@@ -96,7 +95,7 @@ fn overrides_suppress_rule_on_matching_path_only() {
     let hits: Vec<_> = result
         .diagnostics
         .iter()
-        .filter(|d| d.rule == "CC-MEM-005")
+        .filter(|d| d.rule == "PE-005")
         .collect();
     let root_hits = hits.iter().filter(|d| is_root_level(&d.file)).count();
     let nested_hits = hits.iter().filter(|d| is_nested(&d.file)).count();
@@ -104,14 +103,14 @@ fn overrides_suppress_rule_on_matching_path_only() {
     assert_eq!(
         root_hits,
         0,
-        "override should suppress CC-MEM-005 on root CLAUDE.md, but got hits: {:?}",
+        "override should suppress PE-005 on root CLAUDE.md, but got hits: {:?}",
         hits.iter()
             .filter(|d| is_root_level(&d.file))
             .collect::<Vec<_>>()
     );
     assert!(
         nested_hits > 0,
-        "override pattern `CLAUDE.md` must NOT recurse - expected CC-MEM-005 still on nested/CLAUDE.md, got hits on: {:?}",
+        "override pattern `CLAUDE.md` must NOT recurse - expected PE-005 still on nested/CLAUDE.md, got hits on: {:?}",
         hits.iter().map(|d| &d.file).collect::<Vec<_>>()
     );
 }
@@ -125,74 +124,78 @@ fn overrides_recursive_glob_suppresses_everywhere() {
     let config = LintConfig::builder()
         .overrides(vec![OverrideConfig {
             paths: vec!["**/CLAUDE.md".to_string()],
-            disabled_rules: vec!["CC-MEM-005".to_string()],
+            disabled_rules: vec!["PE-005".to_string()],
         }])
         .build()
         .expect("valid config");
 
     let result = validate_project(temp.path(), &config).expect("validate_project");
 
-    let cc_mem_005_hits = result
+    let pe_005_hits = result
         .diagnostics
         .iter()
-        .filter(|d| d.rule == "CC-MEM-005")
+        .filter(|d| d.rule == "PE-005")
         .count();
 
     assert_eq!(
-        cc_mem_005_hits,
+        pe_005_hits,
         0,
-        "recursive override `**/CLAUDE.md` should suppress CC-MEM-005 on both files, got diagnostics: {:?}",
+        "recursive override `**/CLAUDE.md` should suppress PE-005 on both files, got diagnostics: {:?}",
         result
             .diagnostics
             .iter()
-            .filter(|d| d.rule == "CC-MEM-005")
+            .filter(|d| d.rule == "PE-005")
             .collect::<Vec<_>>()
     );
 }
 
-/// Regression for project-level rule AGM-006: per-file `[[overrides]]`
-/// must suppress AGM-006 just like normal file-validator rules. Mirrors
+/// Regression for project-level rule XP-004: per-file `[[overrides]]`
+/// must suppress XP-004 just like normal file-validator rules. Mirrors
 /// the repro provided by @avifenesh on PR #915.
 #[test]
-fn overrides_suppress_agm006_on_matching_paths() {
+fn overrides_suppress_xp004_on_nested_matching_paths() {
     let temp = tempfile::TempDir::new().unwrap();
-    fs::write(temp.path().join("AGENTS.md"), "# Root\n").unwrap();
+    fs::write(temp.path().join("AGENTS.md"), "# Root\nRun `npm install`.").unwrap();
     fs::create_dir_all(temp.path().join("nested")).unwrap();
-    fs::write(temp.path().join("nested").join("AGENTS.md"), "# Nested\n").unwrap();
+    fs::write(
+        temp.path().join("nested").join("AGENTS.md"),
+        "# Nested\nRun `yarn install`.",
+    )
+    .unwrap();
 
-    // Baseline: AGM-006 fires on both AGENTS.md files when no override is set.
+    // Baseline: XP-004 detects conflicting install commands when no override is set.
     let baseline =
         validate_project(temp.path(), &LintConfig::default()).expect("validate_project (baseline)");
     let baseline_hits: Vec<_> = baseline
         .diagnostics
         .iter()
-        .filter(|d| d.rule == "AGM-006")
+        .filter(|d| d.rule == "XP-004")
         .collect();
     assert_eq!(
         baseline_hits.len(),
-        2,
-        "baseline: expected AGM-006 on both AGENTS.md files, got: {baseline_hits:?}"
+        1,
+        "baseline: expected XP-004 across AGENTS.md files, got: {baseline_hits:?}"
     );
 
-    // With override: AGM-006 must be fully suppressed on both files.
+    // With override: XP-004 must be fully suppressed on both files.
     let config = LintConfig::builder()
         .overrides(vec![OverrideConfig {
             paths: vec!["**/AGENTS.md".to_string()],
-            disabled_rules: vec!["AGM-006".to_string()],
+            disabled_rules: vec!["XP-004".to_string()],
         }])
         .build()
         .expect("valid config");
 
     let result = validate_project(temp.path(), &config).expect("validate_project");
 
-    let agm006_hits: Vec<_> = result
+    let xp004_hits: Vec<_> = result
         .diagnostics
         .iter()
-        .filter(|d| d.rule == "AGM-006")
+        .filter(|d| d.rule == "XP-004")
         .collect();
     assert!(
-        agm006_hits.is_empty(),
-        "override on `**/AGENTS.md` must suppress AGM-006 on every matching file, got: {agm006_hits:?}"
+        xp004_hits.is_empty(),
+        "override on `**/AGENTS.md` must suppress XP-004 on every matching file, got: {xp004_hits:?}"
     );
 }
 
@@ -296,40 +299,41 @@ fn overrides_partial_xp004_deterministic_suppression() {
     );
 }
 
-/// Regression for AGM-006 partial-override semantics: a file that disables
-/// AGM-006 is invisible to the rule - it neither fires nor appears in
-/// other files' "other AGENTS.md files exist at:" listings. When the only
-/// remaining unfiltered AGENTS.md leaves the participating set below the
-/// `len() > 1` threshold, AGM-006 is fully suppressed.
+/// A nested file excluded from XP-004 cannot participate in a build conflict.
+/// The remaining root file alone is not a conflict.
 #[test]
-fn overrides_partial_agm006_no_cross_mention() {
+fn overrides_partial_xp004_nested_no_cross_mention() {
     let temp = tempfile::TempDir::new().unwrap();
-    fs::write(temp.path().join("AGENTS.md"), "# Root\n").unwrap();
+    fs::write(temp.path().join("AGENTS.md"), "# Root\nRun `npm install`.").unwrap();
     fs::create_dir_all(temp.path().join("nested")).unwrap();
-    fs::write(temp.path().join("nested").join("AGENTS.md"), "# Nested\n").unwrap();
+    fs::write(
+        temp.path().join("nested").join("AGENTS.md"),
+        "# Nested\nRun `yarn install`.",
+    )
+    .unwrap();
 
     // Override ONLY the nested AGENTS.md. After filtering, the root file is
-    // the only AGM-006 participant - `len() > 1` fails, so AGM-006 produces
-    // zero diagnostics. Crucially, the root file must NOT fire AGM-006 with
+    // the only XP-004 participant - `len() > 1` fails, so XP-004 produces
+    // zero diagnostics. Crucially, the root file must NOT fire XP-004 with
     // a message that mentions the (filtered-out) nested file.
     let config = LintConfig::builder()
         .overrides(vec![OverrideConfig {
             paths: vec!["nested/AGENTS.md".to_string()],
-            disabled_rules: vec!["AGM-006".to_string()],
+            disabled_rules: vec!["XP-004".to_string()],
         }])
         .build()
         .expect("valid config");
 
     let result = validate_project(temp.path(), &config).expect("validate_project");
 
-    let agm006_hits: Vec<_> = result
+    let xp004_hits: Vec<_> = result
         .diagnostics
         .iter()
-        .filter(|d| d.rule == "AGM-006")
+        .filter(|d| d.rule == "XP-004")
         .collect();
     assert!(
-        agm006_hits.is_empty(),
-        "partial override on nested/AGENTS.md must remove it from the AGM-006 participating set, dropping below len() > 1 - got: {agm006_hits:?}"
+        xp004_hits.is_empty(),
+        "partial override on nested/AGENTS.md must remove it from the XP-004 participating set, dropping below len() > 1 - got: {xp004_hits:?}"
     );
 }
 
@@ -541,7 +545,7 @@ fn xp009_respects_per_file_overrides() {
 /// A Codex chain is a single root-to-cwd path, so sibling subtrees are never
 /// concatenated. Summing every discovered file into one total blamed a sibling
 /// for bytes it does not share, and scaled the wrong way: enough packages would
-/// cross the cap however small each one is. It also contradicted AGM-006, which
+/// cross the cap however small each one is. Supported nested guidance
 /// recommends splitting across nested directories to stay under this very cap.
 #[test]
 fn xp009_does_not_sum_across_sibling_subtrees() {

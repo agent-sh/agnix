@@ -1,7 +1,7 @@
 # Rules Reference
 
-This section contains all `460` validation rules generated from `knowledge-base/rules.json`.
-`118` rules have automatic fixes.
+This section contains all `458` validation rules generated from `knowledge-base/rules.json`.
+`129` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
 |------|------|----------|----------|----------|
@@ -10,7 +10,6 @@ This section contains all `460` validation rules generated from `knowledge-base/
 | [AGM-003](./generated/agm-003.md) | Character Limit (Windsurf) | MEDIUM | AGENTS.md | No |
 | [AGM-004](./generated/agm-004.md) | Missing Project Context | MEDIUM | AGENTS.md | No |
 | [AGM-005](./generated/agm-005.md) | Platform-Specific Features Without Guard | MEDIUM | AGENTS.md | No |
-| [AGM-006](./generated/agm-006.md) | Nested AGENTS.md Hierarchy | MEDIUM | AGENTS.md | No |
 | [AMP-001](./generated/amp-001.md) | Invalid Amp Check Frontmatter | HIGH | Amp Checks | Yes (safe) |
 | [AMP-002](./generated/amp-002.md) | Invalid Amp severity-default | MEDIUM | Amp Checks | Yes (safe) |
 | [AMP-003](./generated/amp-003.md) | Invalid AGENTS.md globs Frontmatter for Amp | MEDIUM | Amp Checks | No |
@@ -41,7 +40,7 @@ This section contains all `460` validation rules generated from `knowledge-base/
 | [CC-AG-009](./generated/cc-ag-009.md) | Invalid Tool Name in Tools List | HIGH | Claude Agents | No |
 | [CC-AG-010](./generated/cc-ag-010.md) | Invalid Tool Name in DisallowedTools | HIGH | Claude Agents | No |
 | [CC-AG-011](./generated/cc-ag-011.md) | Invalid Hooks in Agent Frontmatter | HIGH | Claude Agents | No |
-| [CC-AG-012](./generated/cc-ag-012.md) | Bypass Permissions Warning | HIGH | Claude Agents | Yes (unsafe) |
+| [CC-AG-012](./generated/cc-ag-012.md) | Bypass Permissions Warning | MEDIUM | Claude Agents | No |
 | [CC-AG-013](./generated/cc-ag-013.md) | Invalid Skill Name Format | MEDIUM | Claude Agents | Yes (unsafe) |
 | [CC-AG-014](./generated/cc-ag-014.md) | Invalid Effort Value | MEDIUM | Claude Agents | Yes (unsafe) |
 | [CC-AG-015](./generated/cc-ag-015.md) | Invalid Isolation Value | MEDIUM | Claude Agents | Yes (unsafe) |
@@ -78,16 +77,13 @@ This section contains all `460` validation rules generated from `knowledge-base/
 | [CC-MEM-002](./generated/cc-mem-002.md) | Circular Import | HIGH | Claude Memory | No |
 | [CC-MEM-003](./generated/cc-mem-003.md) | Import Depth Exceeds 4 | HIGH | Claude Memory | No |
 | [CC-MEM-004](./generated/cc-mem-004.md) | Invalid Command Reference | MEDIUM | Claude Memory | No |
-| [CC-MEM-005](./generated/cc-mem-005.md) | Generic Instruction | HIGH | Claude Memory | Yes (safe) |
-| [CC-MEM-006](./generated/cc-mem-006.md) | Negative Without Positive | HIGH | Claude Memory | No |
-| [CC-MEM-007](./generated/cc-mem-007.md) | Weak Constraint Language | HIGH | Claude Memory | Yes (safe/unsafe) |
-| [CC-MEM-008](./generated/cc-mem-008.md) | Critical Content in Middle | HIGH | Claude Memory | No |
+| [CC-MEM-007](./generated/cc-mem-007.md) | Weak Constraint Language | LOW | Claude Memory | No |
 | [CC-MEM-009](./generated/cc-mem-009.md) | Token Count Exceeded | MEDIUM | Claude Memory | No |
 | [CC-MEM-010](./generated/cc-mem-010.md) | README Duplication | MEDIUM | Claude Memory | No |
 | [CC-MEM-011](./generated/cc-mem-011.md) | Invalid Paths Glob in Rules | HIGH | Claude Memory | No |
 | [CC-MEM-012](./generated/cc-mem-012.md) | Rules File Unknown Frontmatter Key | MEDIUM | Claude Memory | Yes (unsafe) |
 | [CC-OS-001](./generated/cc-os-001.md) | Output Style Missing Description | LOW | claude-output-styles | No |
-| [CC-OS-002](./generated/cc-os-002.md) | Output Style Invalid keep-coding-instructions Type | HIGH | claude-output-styles | No |
+| [CC-OS-002](./generated/cc-os-002.md) | Output Style Invalid keep-coding-instructions Type | HIGH | claude-output-styles | Yes (unsafe) |
 | [CC-OS-003](./generated/cc-os-003.md) | Output Style Unknown Frontmatter Key | MEDIUM | claude-output-styles | No |
 | [CC-OS-004](./generated/cc-os-004.md) | Output Style Empty Body | MEDIUM | claude-output-styles | No |
 | [CC-OS-005](./generated/cc-os-005.md) | Output Style Name Exceeds Length | LOW | claude-output-styles | No |
@@ -95,7 +91,7 @@ This section contains all `460` validation rules generated from `knowledge-base/
 | [CC-MEM-014](./generated/cc-mem-014.md) | CLAUDE.md Exceeds Line Limit | MEDIUM | Claude Memory | No |
 | [CC-PL-001](./generated/cc-pl-001.md) | Plugin Manifest Not in .claude-plugin/ | HIGH | Claude Plugins | No |
 | [CC-PL-002](./generated/cc-pl-002.md) | Components in .claude-plugin/ | HIGH | Claude Plugins | No |
-| [CC-PL-003](./generated/cc-pl-003.md) | Invalid Semver | MEDIUM | Claude Plugins | Yes (unsafe) |
+| [CC-PL-003](./generated/cc-pl-003.md) | Invalid Semver | LOW | Claude Plugins | Yes (unsafe) |
 | [CC-PL-004](./generated/cc-pl-004.md) | Missing Required/Recommended Plugin Field | HIGH | Claude Plugins | No |
 | [CC-PL-005](./generated/cc-pl-005.md) | Empty Plugin Name | HIGH | Claude Plugins | Yes (unsafe) |
 | [CC-PL-006](./generated/cc-pl-006.md) | Plugin Parse Error | HIGH | Claude Plugins | No |
@@ -124,28 +120,28 @@ This section contains all `460` validation rules generated from `knowledge-base/
 | [CC-SK-017](./generated/cc-sk-017.md) | Unknown Frontmatter Field | MEDIUM | Claude Skills | No |
 | [CC-SK-018](./generated/cc-sk-018.md) | Invalid Effort Value | MEDIUM | Claude Skills | Yes (unsafe) |
 | [CC-SK-019](./generated/cc-sk-019.md) | Invalid Paths Format | LOW | Claude Skills | No |
-| [CC-SK-020](./generated/cc-sk-020.md) | Invalid Shell Value | MEDIUM | Claude Skills | Yes (unsafe) |
+| [CC-SK-020](./generated/cc-sk-020.md) | Invalid Shell Value | MEDIUM | Claude Skills | No |
 | [CC-SK-021](./generated/cc-sk-021.md) | Hardcoded User Directory Path | MEDIUM | Claude Skills | No |
 | [CC-SK-022](./generated/cc-sk-022.md) | Reserved Claude Skill Name | HIGH | Claude Skills | No |
 | [CC-SET-001](./generated/cc-set-001.md) | Invalid prUrlTemplate Setting | MEDIUM | Claude Settings | No |
-| [CC-SET-002](./generated/cc-set-002.md) | Non-boolean channelsEnabled Setting | MEDIUM | Claude Settings | No |
+| [CC-SET-002](./generated/cc-set-002.md) | Non-boolean channelsEnabled Setting | MEDIUM | Claude Settings | Yes (unsafe) |
 | [CC-SET-003](./generated/cc-set-003.md) | Invalid worktree.baseRef Value | MEDIUM | Claude Settings | No |
 | [CC-SET-004](./generated/cc-set-004.md) | Invalid Sandbox Path Setting | MEDIUM | Claude Settings | No |
 | [CC-SET-005](./generated/cc-set-005.md) | Invalid parentSettingsBehavior Value | MEDIUM | Claude Settings | No |
-| [CC-SET-006](./generated/cc-set-006.md) | Non-boolean disableBundledSkills Setting | MEDIUM | Claude Settings | No |
-| [CC-SET-007](./generated/cc-set-007.md) | Non-boolean enforceAvailableModels Setting | MEDIUM | Claude Settings | No |
-| [CC-SET-008](./generated/cc-set-008.md) | Non-boolean sandbox.allowAppleEvents Setting | MEDIUM | Claude Settings | No |
-| [CC-SET-009](./generated/cc-set-009.md) | Non-boolean attribution.sessionUrl Setting | MEDIUM | Claude Settings | No |
+| [CC-SET-006](./generated/cc-set-006.md) | Non-boolean disableBundledSkills Setting | MEDIUM | Claude Settings | Yes (unsafe) |
+| [CC-SET-007](./generated/cc-set-007.md) | Non-boolean enforceAvailableModels Setting | MEDIUM | Claude Settings | Yes (unsafe) |
+| [CC-SET-008](./generated/cc-set-008.md) | Non-boolean sandbox.allowAppleEvents Setting | MEDIUM | Claude Settings | Yes (unsafe) |
+| [CC-SET-009](./generated/cc-set-009.md) | Non-boolean attribution.sessionUrl Setting | MEDIUM | Claude Settings | Yes (unsafe) |
 | [CC-SET-010](./generated/cc-set-010.md) | Invalid teammateMode Setting | MEDIUM | Claude Settings | No |
-| [CC-SET-011](./generated/cc-set-011.md) | Non-boolean respondToBashCommands Setting | MEDIUM | Claude Settings | No |
+| [CC-SET-011](./generated/cc-set-011.md) | Non-boolean respondToBashCommands Setting | MEDIUM | Claude Settings | Yes (unsafe) |
 | [CC-SET-012](./generated/cc-set-012.md) | Invalid sandbox.credentials Setting | MEDIUM | Claude Settings | No |
-| [CC-SET-013](./generated/cc-set-013.md) | Non-boolean autoMode.classifyAllShell Setting | MEDIUM | Claude Settings | No |
+| [CC-SET-013](./generated/cc-set-013.md) | Non-boolean autoMode.classifyAllShell Setting | MEDIUM | Claude Settings | Yes (unsafe) |
 | [CC-SET-014](./generated/cc-set-014.md) | autoMode Setting Ignored in settings.local.json | MEDIUM | Claude Settings | No |
 | [CC-SET-015](./generated/cc-set-015.md) | Dead pluginConfigs in Project-Level Settings | MEDIUM | Claude Settings | No |
-| [CC-SET-016](./generated/cc-set-016.md) | Deprecated Tool-Scoped Permission Rule Form | LOW | Claude Settings | No |
-| [CC-SET-017](./generated/cc-set-017.md) | Non-boolean sandbox.filesystem.disabled Setting | MEDIUM | Claude Settings | No |
-| [CC-SET-018](./generated/cc-set-018.md) | Non-boolean emojiCompletionEnabled Setting | MEDIUM | Claude Settings | No |
-| [CC-SET-019](./generated/cc-set-019.md) | Non-boolean sandbox.network.strictAllowlist Setting | MEDIUM | Claude Settings | No |
+| [CC-SET-016](./generated/cc-set-016.md) | Deprecated Tool-Scoped Permission Rule Form | LOW | Claude Settings | Yes (unsafe) |
+| [CC-SET-017](./generated/cc-set-017.md) | Non-boolean sandbox.filesystem.disabled Setting | MEDIUM | Claude Settings | Yes (unsafe) |
+| [CC-SET-018](./generated/cc-set-018.md) | Non-boolean emojiCompletionEnabled Setting | MEDIUM | Claude Settings | Yes (unsafe) |
+| [CC-SET-019](./generated/cc-set-019.md) | Non-boolean sandbox.network.strictAllowlist Setting | MEDIUM | Claude Settings | Yes (unsafe) |
 | [CC-SET-020](./generated/cc-set-020.md) | Invalid workflowSizeGuideline Setting | MEDIUM | Claude Settings | No |
 | [CC-SET-021](./generated/cc-set-021.md) | Ineffective Project Remote Control Auto-start | MEDIUM | Claude Settings | No |
 | [CC-SET-022](./generated/cc-set-022.md) | Invalid crossSessionInbound Setting | MEDIUM | Claude Settings | No |
@@ -159,13 +155,13 @@ This section contains all `460` validation rules generated from `knowledge-base/
 | [CC-SET-030](./generated/cc-set-030.md) | Local Command in managedMcpServers | HIGH | Claude Settings | No |
 | [CC-SET-031](./generated/cc-set-031.md) | Invalid maxEffortLevel Setting | MEDIUM | Claude Settings | No |
 | [CC-SET-032](./generated/cc-set-032.md) | Ineffective Project allowedProviders Setting | MEDIUM | Claude Settings | No |
-| [CC-SET-033](./generated/cc-set-033.md) | Idle Compaction Not Boolean | MEDIUM | Claude Settings | No |
+| [CC-SET-033](./generated/cc-set-033.md) | Idle Compaction Not Boolean | MEDIUM | Claude Settings | Yes (unsafe) |
 | [CDX-000](./generated/cdx-000.md) | TOML Parse Error | HIGH | Codex CLI | No |
 | [CDX-001](./generated/cdx-001.md) | Invalid Approval Mode | HIGH | Codex CLI | Yes (unsafe) |
 | [CDX-002](./generated/cdx-002.md) | Invalid Full Auto Error Mode | HIGH | Codex CLI | Yes (unsafe) |
 | [CDX-003](./generated/cdx-003.md) | AGENTS.override.md in Version Control | MEDIUM | Codex CLI | No |
 | [CDX-004](./generated/cdx-004.md) | Unknown Config Key | MEDIUM | Codex CLI | Yes (safe) |
-| [CDX-005](./generated/cdx-005.md) | project_doc_max_bytes Exceeds Limit | HIGH | Codex CLI | No |
+| [CDX-005](./generated/cdx-005.md) | Invalid project_doc_max_bytes | HIGH | Codex CLI | No |
 | [CDX-006](./generated/cdx-006.md) | Invalid project_doc_fallback_filenames | HIGH | Codex CLI | No |
 | [CDX-CFG-001](./generated/cdx-cfg-001.md) | Invalid approval_policy Value | HIGH | Codex CLI | No |
 | [CDX-CFG-002](./generated/cdx-cfg-002.md) | Invalid sandbox_mode Value | HIGH | Codex CLI | No |
@@ -215,7 +211,7 @@ This section contains all `460` validation rules generated from `knowledge-base/
 | [CDX-PL-014](./generated/cdx-pl-014.md) | Missing Description | LOW | Codex CLI | No |
 | [CDX-PL-015](./generated/cdx-pl-015.md) | Invalid Skills Path Type | MEDIUM | Codex CLI | No |
 | [CDX-PL-016](./generated/cdx-pl-016.md) | Invalid Dark-mode Logo Path | MEDIUM | Codex CLI | No |
-| [CDX-CFG-023](./generated/cdx-cfg-023.md) | Invalid Approval Policy Sub-field | MEDIUM | Codex CLI | Yes (safe) |
+| [CDX-CFG-023](./generated/cdx-cfg-023.md) | Invalid Approval Policy Sub-field | MEDIUM | Codex CLI | No |
 | [CDX-CFG-024](./generated/cdx-cfg-024.md) | Invalid Approvals Reviewer Value | MEDIUM | Codex CLI | Yes (unsafe) |
 | [CDX-CFG-025](./generated/cdx-cfg-025.md) | Invalid Service Tier Value | MEDIUM | Codex CLI | Yes (unsafe) |
 | [CDX-CFG-026](./generated/cdx-cfg-026.md) | Invalid Network Permission Field | LOW | Codex CLI | Yes (safe) |
@@ -259,7 +255,7 @@ This section contains all `460` validation rules generated from `knowledge-base/
 | [COP-024](./generated/cop-024.md) | CLI Skill Unknown Field | MEDIUM | GitHub Copilot | Yes (safe) |
 | [COP-025](./generated/cop-025.md) | Agent File Wrong Location | LOW | GitHub Copilot | No |
 | [COP-026](./generated/cop-026.md) | Deprecated SSE Transport | LOW | GitHub Copilot | Yes (unsafe) |
-| [COP-027](./generated/cop-027.md) | Deprecated Infer Field | LOW | GitHub Copilot | No |
+| [COP-027](./generated/cop-027.md) | Deprecated Infer Field | LOW | GitHub Copilot | Yes (unsafe) |
 | [CP-SK-001](./generated/cp-sk-001.md) | Copilot Skill Uses Unsupported Field | MEDIUM | Copilot Skills | Yes (safe/unsafe) |
 | [CR-SK-001](./generated/cr-sk-001.md) | Cursor Skill Uses Unsupported Field | MEDIUM | Cursor Skills | Yes (safe/unsafe) |
 | [CUR-001](./generated/cur-001.md) | Empty Cursor Rule File | HIGH | Cursor | No |
@@ -334,7 +330,7 @@ This section contains all `460` validation rules generated from `knowledge-base/
 | [KR-HK-008](./generated/kr-hk-008.md) | Duplicate Event Handlers | MEDIUM | Kiro Hooks | No |
 | [KR-HK-009](./generated/kr-hk-009.md) | Command Uses Absolute Path | MEDIUM | Kiro Hooks | No |
 | [KR-HK-010](./generated/kr-hk-010.md) | Secrets in Hook Command | HIGH | Kiro Hooks | No |
-| [KR-HK-011](./generated/kr-hk-011.md) | Invalid Kiro V3 Hook Document Version | MEDIUM | Kiro Hooks | No |
+| [KR-HK-011](./generated/kr-hk-011.md) | Invalid Kiro V3 Hook Document Version | MEDIUM | Kiro Hooks | Yes (unsafe) |
 | [KR-HK-012](./generated/kr-hk-012.md) | Invalid Kiro V3 Hook Entry | HIGH | Kiro Hooks | No |
 | [KR-HK-013](./generated/kr-hk-013.md) | Invalid Kiro V3 Hook Action | HIGH | Kiro Hooks | No |
 | [KR-MCP-001](./generated/kr-mcp-001.md) | Kiro MCP Server Missing command and url | HIGH | Kiro MCP | No |
@@ -357,8 +353,7 @@ This section contains all `460` validation rules generated from `knowledge-base/
 | [MCP-001](./generated/mcp-001.md) | Invalid JSON-RPC Version | HIGH | MCP | Yes (safe) |
 | [MCP-002](./generated/mcp-002.md) | Missing Required Tool Field | HIGH | MCP | No |
 | [MCP-003](./generated/mcp-003.md) | Invalid JSON Schema | HIGH | MCP | No |
-| [MCP-004](./generated/mcp-004.md) | Missing Tool Description | HIGH | MCP | No |
-| [MCP-005](./generated/mcp-005.md) | Tool Without User Consent | HIGH | MCP | No |
+| [MCP-004](./generated/mcp-004.md) | Missing Tool Description | LOW | MCP | No |
 | [MCP-006](./generated/mcp-006.md) | Untrusted Annotations | HIGH | MCP | No |
 | [MCP-007](./generated/mcp-007.md) | MCP Parse Error | HIGH | MCP | No |
 | [MCP-008](./generated/mcp-008.md) | Protocol Version Mismatch | MEDIUM | MCP | Yes (unsafe) |
@@ -378,7 +373,7 @@ This section contains all `460` validation rules generated from `knowledge-base/
 | [MCP-022](./generated/mcp-022.md) | Invalid args Array Type | HIGH | MCP | No |
 | [MCP-023](./generated/mcp-023.md) | Duplicate MCP Server Names | HIGH | MCP | No |
 | [MCP-024](./generated/mcp-024.md) | Empty MCP Server Configuration | HIGH | MCP | No |
-| [MCP-025](./generated/mcp-025.md) | Non-boolean alwaysLoad in MCP Server Config | MEDIUM | MCP | No |
+| [MCP-025](./generated/mcp-025.md) | Non-boolean alwaysLoad in MCP Server Config | MEDIUM | MCP | Yes (unsafe) |
 | [MCP-026](./generated/mcp-026.md) | Reserved MCP Server Name | HIGH | MCP | No |
 | [OC-001](./generated/oc-001.md) | Invalid Share Mode | HIGH | OpenCode | Yes (unsafe) |
 | [OC-002](./generated/oc-002.md) | Invalid Instruction Path | HIGH | OpenCode | No |
@@ -389,9 +384,9 @@ This section contains all `460` validation rules generated from `knowledge-base/
 | [OC-008](./generated/oc-008.md) | Invalid Permission Config | HIGH | OpenCode | Yes (unsafe) |
 | [OC-009](./generated/oc-009.md) | Invalid Variable Substitution | MEDIUM | OpenCode | No |
 | [OC-SK-001](./generated/oc-sk-001.md) | OpenCode Skill Uses Unsupported Field | MEDIUM | OpenCode Skills | Yes (safe/unsafe) |
-| [PE-001](./generated/pe-001.md) | Lost in the Middle | MEDIUM | Prompt Engineering | No |
-| [PE-002](./generated/pe-002.md) | Chain-of-Thought on Simple Task | MEDIUM | Prompt Engineering | No |
-| [PE-003](./generated/pe-003.md) | Weak Imperative Language | MEDIUM | Prompt Engineering | Yes (unsafe) |
+| [PE-001](./generated/pe-001.md) | Lost in the Middle | LOW | Prompt Engineering | No |
+| [PE-002](./generated/pe-002.md) | Chain-of-Thought on Simple Task | LOW | Prompt Engineering | No |
+| [PE-003](./generated/pe-003.md) | Weak Imperative Language | LOW | Prompt Engineering | No |
 | [PE-004](./generated/pe-004.md) | Ambiguous Instructions | MEDIUM | Prompt Engineering | No |
 | [PE-005](./generated/pe-005.md) | Redundant Generic Instructions | MEDIUM | Prompt Engineering | Yes (safe) |
 | [PE-006](./generated/pe-006.md) | Negative-Only Instructions | MEDIUM | Prompt Engineering | No |
@@ -399,7 +394,6 @@ This section contains all `460` validation rules generated from `knowledge-base/
 | [REF-001](./generated/ref-001.md) | Import File Not Found | HIGH | References | No |
 | [REF-002](./generated/ref-002.md) | Broken Markdown Link | HIGH | References | No |
 | [REF-003](./generated/ref-003.md) | Duplicate Import | MEDIUM | References | Yes (safe) |
-| [REF-004](./generated/ref-004.md) | Non-Markdown Import | MEDIUM | References | No |
 | [ROO-001](./generated/roo-001.md) | Empty Roo Code Rule File | HIGH | Roo Code | No |
 | [ROO-002](./generated/roo-002.md) | Invalid .roomodes Configuration | HIGH | Roo Code | No |
 | [ROO-003](./generated/roo-003.md) | Invalid .rooignore File | MEDIUM | Roo Code | No |
@@ -415,7 +409,7 @@ This section contains all `460` validation rules generated from `knowledge-base/
 | [XML-001](./generated/xml-001.md) | Unclosed XML Tag | HIGH | XML | Yes (unsafe) |
 | [XML-002](./generated/xml-002.md) | Mismatched Closing Tag | HIGH | XML | Yes (unsafe) |
 | [XML-003](./generated/xml-003.md) | Unmatched Closing Tag | HIGH | XML | Yes (unsafe) |
-| [XP-001](./generated/xp-001.md) | Platform-Specific Feature in Generic Config | HIGH | Cross-Platform | No |
+| [XP-001](./generated/xp-001.md) | Platform-Specific Feature in Generic Config | LOW | Cross-Platform | No |
 | [XP-002](./generated/xp-002.md) | AGENTS.md Platform Compatibility | MEDIUM | Cross-Platform | No |
 | [XP-003](./generated/xp-003.md) | Hard-Coded Platform Paths | MEDIUM | Cross-Platform | No |
 | [XP-004](./generated/xp-004.md) | Conflicting Build/Test Commands | MEDIUM | Cross-Platform | No |
@@ -441,10 +435,9 @@ This section contains all `460` validation rules generated from `knowledge-base/
 | [OC-AGM-001](./generated/oc-agm-001.md) | Empty AGENTS.md | HIGH | OpenCode | No |
 | [OC-AGM-002](./generated/oc-agm-002.md) | Secrets in AGENTS.md | HIGH | OpenCode | No |
 | [OC-DEP-001](./generated/oc-dep-001.md) | Deprecated mode Field | MEDIUM | OpenCode | Yes (safe) |
-| [OC-DEP-002](./generated/oc-dep-002.md) | Deprecated tools Field | MEDIUM | OpenCode | Yes (safe) |
+| [OC-DEP-002](./generated/oc-dep-002.md) | Deprecated tools Field | MEDIUM | OpenCode | No |
 | [OC-DEP-003](./generated/oc-dep-003.md) | Deprecated autoshare Field | MEDIUM | OpenCode | Yes (safe) |
-| [OC-DEP-004](./generated/oc-dep-004.md) | Deprecated CONTEXT.md Filename | MEDIUM | OpenCode | No |
-| [OC-DEP-005](./generated/oc-dep-005.md) | Deprecated TUI Keys | MEDIUM | OpenCode | No |
+| [OC-DEP-005](./generated/oc-dep-005.md) | Deprecated TUI Keys | MEDIUM | OpenCode | Yes (unsafe) |
 | [OC-DEP-006](./generated/oc-dep-006.md) | Deprecated MaxSteps Field | MEDIUM | OpenCode | Yes (safe) |
 | [OC-DEP-007](./generated/oc-dep-007.md) | Deprecated Reference Field | MEDIUM | OpenCode | Yes (safe) |
 | [OC-CFG-008](./generated/oc-cfg-008.md) | Invalid Log Level | HIGH | OpenCode | Yes (unsafe) |
@@ -465,3 +458,8 @@ This section contains all `460` validation rules generated from `knowledge-base/
 | [OC-TUI-002](./generated/oc-tui-002.md) | Invalid scroll_speed | HIGH | OpenCode | No |
 | [OC-TUI-003](./generated/oc-tui-003.md) | Invalid diff_style | HIGH | OpenCode | Yes (unsafe) |
 | [CC-PL-017](./generated/cc-pl-017.md) | Unknown Plugin Manifest Field | MEDIUM | Claude Plugins | No |
+| [KR-PM-001](./generated/kr-pm-001.md) | Invalid Kiro Permissions Document | HIGH | Kiro Permissions | No |
+| [KR-PM-002](./generated/kr-pm-002.md) | Invalid Kiro Permission Capability | HIGH | Kiro Permissions | No |
+| [KR-PM-003](./generated/kr-pm-003.md) | Invalid Kiro Permission Effect | HIGH | Kiro Permissions | No |
+| [KR-PM-004](./generated/kr-pm-004.md) | Invalid Kiro Permission Patterns | HIGH | Kiro Permissions | No |
+| [KR-HK-014](./generated/kr-hk-014.md) | Kiro Hook Migration and Canonical Trigger Hint | LOW | Kiro Hooks | Yes (safe) |

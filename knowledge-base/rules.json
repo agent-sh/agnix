@@ -1,7 +1,7 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 460,
+  "total_rules": 458,
   "last_updated": "2026-10-16",
   "schema": {
     "evidence": {
@@ -177,33 +177,6 @@
       },
       "good_example": "# Project\n\nThis project uses various tools.\n\n## Claude Code Specific\n\n- type: PreToolExecution\n  command: echo \"lint\"\n\ncontext: fork\nagent: security-reviewer",
       "bad_example": "# Project\n\nThis project uses hooks.\n\n- type: PreToolExecution\n  command: echo \"test\"\n\ncontext: fork\nagent: reviewer\nallowed-tools: Read Write"
-    },
-    {
-      "id": "AGM-006",
-      "name": "Nested AGENTS.md Hierarchy",
-      "severity": "MEDIUM",
-      "category": "agents-md",
-      "evidence": {
-        "source_type": "community",
-        "source_urls": [
-          "https://learn.chatgpt.com/docs/agent-configuration/agents-md",
-          "https://docs.cline.bot/prompting/cline-memory-bank#cline-memory-bank-custom-instructions-[copy-this]",
-          "https://github.blog/changelog/2025-08-28-copilot-coding-agent-now-supports-agents-md-custom-instructions/"
-        ],
-        "verified_on": "2026-07-31",
-        "applies_to": {},
-        "normative_level": "BEST_PRACTICE",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": false
-      },
-      "good_example": "# Project\n\nSingle AGENTS.md at the project root with all instructions.\n\n## Commands\n\n- npm test",
-      "bad_example": "# Root AGENTS.md\n\nProject instructions.\n\n# src/AGENTS.md (nested, separate file)\n\nComponent-specific instructions that create hierarchy ambiguity."
     },
     {
       "id": "AMP-001",
@@ -1079,7 +1052,7 @@
     {
       "id": "CC-AG-012",
       "name": "Bypass Permissions Warning",
-      "severity": "HIGH",
+      "severity": "MEDIUM",
       "category": "claude-agents",
       "evidence": {
         "source_type": "vendor_docs",
@@ -1098,8 +1071,7 @@
         }
       },
       "fix": {
-        "autofix": true,
-        "fix_safety": "unsafe"
+        "autofix": false
       },
       "good_example": "---\nname: my-agent\ndescription: Agent with safe permissions\npermissionMode: default\n---\nAgent instructions.",
       "bad_example": "---\nname: my-agent\ndescription: Agent with dangerous permissions\npermissionMode: bypassPermissions\n---\nAgent instructions.",
@@ -2184,38 +2156,9 @@
       "bad_example": "# Commands\n\nRun tests with `npm run nonexistent`\n\n(Requires package.json with scripts section in the same directory for this rule to trigger)"
     },
     {
-      "id": "CC-MEM-005",
-      "name": "Generic Instruction",
-      "severity": "HIGH",
-      "category": "claude-memory",
-      "evidence": {
-        "source_type": "community",
-        "source_urls": [
-          "https://github.com/anthropics/claude-code/tree/main/.claude/commands",
-          "https://arxiv.org/abs/2201.11903"
-        ],
-        "verified_on": "2026-02-09",
-        "applies_to": {
-          "tool": "claude-code"
-        },
-        "normative_level": "SHOULD",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": true,
-        "fix_safety": "safe"
-      },
-      "good_example": "# Project Rules\n\nAlways use TypeScript strict mode.\nRun `cargo test` before committing.",
-      "bad_example": "Be helpful and accurate when responding.\nAlways provide the best possible answer."
-    },
-    {
-      "id": "CC-MEM-006",
-      "name": "Negative Without Positive",
-      "severity": "HIGH",
+      "id": "CC-MEM-007",
+      "name": "Weak Constraint Language",
+      "severity": "LOW",
       "category": "claude-memory",
       "evidence": {
         "source_type": "paper",
@@ -2233,60 +2176,9 @@
       },
       "fix": {
         "autofix": false
-      },
-      "good_example": "# Rules\n\nNever use var in JavaScript, instead prefer const or let.",
-      "bad_example": "# Rules\n\nNever use var in JavaScript."
-    },
-    {
-      "id": "CC-MEM-007",
-      "name": "Weak Constraint Language",
-      "severity": "HIGH",
-      "category": "claude-memory",
-      "evidence": {
-        "source_type": "paper",
-        "source_urls": [
-          "https://arxiv.org/abs/2201.11903"
-        ],
-        "verified_on": "2026-02-04",
-        "applies_to": {},
-        "normative_level": "SHOULD",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": true,
-        "fix_safety": "safe/unsafe"
       },
       "good_example": "# Critical Rules\n\nYou must follow the coding style guide.",
       "bad_example": "# Critical Rules\n\nYou should follow the coding style guide."
-    },
-    {
-      "id": "CC-MEM-008",
-      "name": "Critical Content in Middle",
-      "severity": "HIGH",
-      "category": "claude-memory",
-      "evidence": {
-        "source_type": "paper",
-        "source_urls": [
-          "https://aclanthology.org/2024.tacl-1.9/"
-        ],
-        "verified_on": "2026-02-04",
-        "applies_to": {},
-        "normative_level": "SHOULD",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": false
-      },
-      "good_example": "# Critical Rules\n\nIMPORTANT: Always run tests before committing.\n\n## Setup\n\nInstall dependencies with npm install.\n\n## Architecture\n\nThe project uses a monorepo structure.\n\n## Testing\n\nRun unit tests.\n\n## Deployment\n\nDeploy to staging.\n\n## Monitoring\n\nCheck dashboards.\n\n## Cleanup\n\nRemove temp files.",
-      "bad_example": "## Setup\n\nInstall dependencies with npm install.\n\n## Architecture\n\nThe project uses a monorepo structure.\n\n## Testing\n\nRun unit tests with npm test.\n\nIMPORTANT: Always run tests before committing.\n\n## Deployment\n\nDeploy to staging first.\n\n## Monitoring\n\nCheck dashboards after deploy.\n\n## Cleanup\n\nRemove temp files after build."
     },
     {
       "id": "CC-MEM-009",
@@ -2459,7 +2351,8 @@
         }
       },
       "fix": {
-        "autofix": false
+        "autofix": true,
+        "fix_safety": "unsafe"
       },
       "good_example": "---\nname: Concise\ndescription: Short replies\nkeep-coding-instructions: true\n---\nBe brief.",
       "bad_example": "---\nname: Concise\ndescription: Short replies\nkeep-coding-instructions: \"yes\"\n---\nBe brief."
@@ -2656,7 +2549,7 @@
     {
       "id": "CC-PL-003",
       "name": "Invalid Semver",
-      "severity": "MEDIUM",
+      "severity": "LOW",
       "category": "claude-plugins",
       "evidence": {
         "source_type": "vendor_docs",
@@ -3511,8 +3404,7 @@
         }
       },
       "fix": {
-        "autofix": true,
-        "fix_safety": "unsafe"
+        "autofix": false
       },
       "good_example": "---\nname: my-skill\nshell: bash\n---\nSkill instructions.",
       "bad_example": "---\nname: my-skill\nshell: zsh\n---\nSkill instructions."
@@ -3624,7 +3516,8 @@
         }
       },
       "fix": {
-        "autofix": false
+        "autofix": true,
+        "fix_safety": "unsafe"
       },
       "good_example": "{\n  \"channelsEnabled\": true\n}",
       "bad_example": "{\n  \"channelsEnabled\": \"true\"\n}"
@@ -3738,7 +3631,8 @@
         }
       },
       "fix": {
-        "autofix": false
+        "autofix": true,
+        "fix_safety": "unsafe"
       },
       "good_example": "{\n  \"disableBundledSkills\": true\n}",
       "bad_example": "{\n  \"disableBundledSkills\": \"true\"\n}"
@@ -3767,7 +3661,8 @@
         }
       },
       "fix": {
-        "autofix": false
+        "autofix": true,
+        "fix_safety": "unsafe"
       },
       "good_example": "{\n  \"enforceAvailableModels\": true\n}",
       "bad_example": "{\n  \"enforceAvailableModels\": \"true\"\n}"
@@ -3797,7 +3692,8 @@
         }
       },
       "fix": {
-        "autofix": false
+        "autofix": true,
+        "fix_safety": "unsafe"
       },
       "good_example": "{\n  \"sandbox\": {\"allowAppleEvents\": true}\n}",
       "bad_example": "{\n  \"sandbox\": {\"allowAppleEvents\": \"true\"}\n}"
@@ -3826,7 +3722,8 @@
         }
       },
       "fix": {
-        "autofix": false
+        "autofix": true,
+        "fix_safety": "unsafe"
       },
       "good_example": "{\n  \"attribution\": {\"sessionUrl\": false}\n}",
       "bad_example": "{\n  \"attribution\": {\"sessionUrl\": \"false\"}\n}"
@@ -3884,7 +3781,8 @@
         }
       },
       "fix": {
-        "autofix": false
+        "autofix": true,
+        "fix_safety": "unsafe"
       },
       "good_example": "{\n  \"respondToBashCommands\": false\n}",
       "bad_example": "{\n  \"respondToBashCommands\": \"false\"\n}"
@@ -3945,7 +3843,8 @@
         }
       },
       "fix": {
-        "autofix": false
+        "autofix": true,
+        "fix_safety": "unsafe"
       },
       "good_example": "{\n  \"autoMode\": {\"classifyAllShell\": true}\n}",
       "bad_example": "{\n  \"autoMode\": {\"classifyAllShell\": \"true\"}\n}"
@@ -4029,7 +3928,8 @@
         }
       },
       "fix": {
-        "autofix": false
+        "autofix": true,
+        "fix_safety": "unsafe"
       },
       "good_example": "{\n  \"permissions\": {\"allow\": [\"Edit(src/**)\", \"Read(docs/**)\"]}\n}",
       "bad_example": "{\n  \"permissions\": {\"allow\": [\"Write(src/**)\", \"Glob(docs/**)\"]}\n}"
@@ -4058,7 +3958,8 @@
         }
       },
       "fix": {
-        "autofix": false
+        "autofix": true,
+        "fix_safety": "unsafe"
       },
       "good_example": "{\n  \"sandbox\": {\"filesystem\": {\"disabled\": false}}\n}",
       "bad_example": "{\n  \"sandbox\": {\"filesystem\": {\"disabled\": \"false\"}}\n}"
@@ -4087,7 +3988,8 @@
         }
       },
       "fix": {
-        "autofix": false
+        "autofix": true,
+        "fix_safety": "unsafe"
       },
       "good_example": "{\n  \"emojiCompletionEnabled\": true\n}",
       "bad_example": "{\n  \"emojiCompletionEnabled\": \"true\"\n}"
@@ -4116,7 +4018,8 @@
         }
       },
       "fix": {
-        "autofix": false
+        "autofix": true,
+        "fix_safety": "unsafe"
       },
       "good_example": "{\n  \"sandbox\": {\"network\": {\"strictAllowlist\": true}}\n}",
       "bad_example": "{\n  \"sandbox\": {\"network\": {\"strictAllowlist\": \"true\"}}\n}"
@@ -4521,7 +4424,8 @@
         }
       },
       "fix": {
-        "autofix": false
+        "autofix": true,
+        "fix_safety": "unsafe"
       },
       "good_example": "{\"idleCompaction\": false}",
       "bad_example": "{\"idleCompaction\": \"false\"}"
@@ -4667,15 +4571,17 @@
     },
     {
       "id": "CDX-005",
-      "name": "project_doc_max_bytes Exceeds Limit",
+      "name": "Invalid project_doc_max_bytes",
       "severity": "HIGH",
       "category": "codex",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://developers.openai.com/codex/"
+          "https://developers.openai.com/codex/config-schema.json",
+          "https://github.com/openai/codex/blob/rust-v0.163.0/codex-rs/core/config.schema.json",
+          "https://github.com/openai/codex/blob/main/codex-rs/core/config.schema.json"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-16",
         "applies_to": {
           "tool": "codex"
         },
@@ -4690,20 +4596,7 @@
         "autofix": false
       },
       "good_example": "project_doc_max_bytes = 32768",
-      "bad_example": "project_doc_max_bytes = 100000",
-      "security": {
-        "cwe": [
-          "CWE-400"
-        ],
-        "owasp": [
-          "A05:2021"
-        ],
-        "vulnerability_class": "resource-exhaustion",
-        "subcategory": "vuln",
-        "confidence": "MEDIUM",
-        "likelihood": "LOW",
-        "impact": "MEDIUM"
-      }
+      "bad_example": "project_doc_max_bytes = -1"
     },
     {
       "id": "CDX-006",
@@ -4742,9 +4635,11 @@
         "source_urls": [
           "https://developers.openai.com/codex/config-reference",
           "https://developers.openai.com/codex/config-schema.json",
-          "https://developers.openai.com/codex/enterprise/managed-configuration"
+          "https://developers.openai.com/codex/enterprise/managed-configuration",
+          "https://github.com/openai/codex/blob/rust-v0.163.0/codex-rs/core/config.schema.json",
+          "https://github.com/openai/codex/blob/main/codex-rs/core/config.schema.json"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-16",
         "applies_to": {
           "tool": "codex"
         },
@@ -4759,7 +4654,7 @@
         "autofix": false
       },
       "good_example": "approval_policy = \"on-request\"",
-      "bad_example": "approval_policy = \"always\""
+      "bad_example": "approval_policy = \"untrusted\""
     },
     {
       "id": "CDX-CFG-002",
@@ -6167,13 +6062,14 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://developers.openai.com/codex/"
+          "https://github.com/openai/codex/blob/rust-v0.163.0/codex-rs/core/config.schema.json",
+          "https://github.com/openai/codex/blob/main/codex-rs/core/config.schema.json"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-16",
         "applies_to": {
           "tool": "codex"
         },
-        "normative_level": "MUST",
+        "normative_level": "SHOULD",
         "tests": {
           "unit": true,
           "fixtures": false,
@@ -6181,11 +6077,10 @@
         }
       },
       "fix": {
-        "autofix": true,
-        "fix_safety": "safe"
+        "autofix": false
       },
-      "good_example": "[approval_policy]\nmode = \"suggest\"",
-      "bad_example": "[approval_policy]\nmode = \"yolo\""
+      "good_example": "[approval_policy.granular]\nmcp_elicitations = true\nrules = true\nsandbox_approval = true",
+      "bad_example": "[approval_policy.granular]\nmcp_elicitations = true\nrules = true\nsandbox_approval = true\nunknown_field = true"
     },
     {
       "id": "CDX-CFG-024",
@@ -7422,10 +7317,11 @@
         }
       },
       "fix": {
-        "autofix": false
+        "autofix": true,
+        "fix_safety": "unsafe"
       },
-      "good_example": "{\n  \"name\": \"my-plugin\",\n  \"version\": \"1.0.0\"\n}",
-      "bad_example": "{\n  \"name\": \"my-plugin\",\n  \"infer\": true\n}"
+      "good_example": "---\nname: reviewer\ndescription: Review changes\ndisable-model-invocation: false\nuser-invocable: true\n---\nReview changes.",
+      "bad_example": "---\nname: reviewer\ndescription: Review changes\ninfer: true\n---\nReview changes."
     },
     {
       "id": "CP-SK-001",
@@ -9547,11 +9443,12 @@
         "tests": {
           "unit": true,
           "fixtures": false,
-          "e2e": false
+          "e2e": true
         }
       },
       "fix": {
-        "autofix": false
+        "autofix": true,
+        "fix_safety": "unsafe"
       },
       "good_example": "{\"version\": \"v1\", \"hooks\": [{\"name\": \"lint\", \"trigger\": \"PostFileSave\", \"action\": {\"type\": \"command\", \"command\": \"npx eslint --fix\"}}]}",
       "bad_example": "{\"hooks\": [{\"name\": \"lint\", \"trigger\": \"PostFileSave\", \"action\": {\"type\": \"command\", \"command\": \"npx eslint --fix\"}}]}"
@@ -10156,11 +10053,11 @@
       "evidence": {
         "source_type": "spec",
         "source_urls": [
-          "https://modelcontextprotocol.io/docs/concepts/tools"
+          "https://modelcontextprotocol.io/specification/2026-07-28/server/tools"
         ],
-        "verified_on": "2026-02-13",
+        "verified_on": "2026-10-16",
         "applies_to": {
-          "spec_revision": "2025-11-25"
+          "spec_revision": "2026-07-28"
         },
         "normative_level": "MUST",
         "tests": {
@@ -10205,16 +10102,16 @@
     {
       "id": "MCP-004",
       "name": "Missing Tool Description",
-      "severity": "HIGH",
+      "severity": "LOW",
       "category": "mcp",
       "evidence": {
         "source_type": "spec",
         "source_urls": [
-          "https://modelcontextprotocol.io/docs/concepts/tools"
+          "https://modelcontextprotocol.io/specification/2026-07-28/server/tools"
         ],
-        "verified_on": "2026-02-13",
+        "verified_on": "2026-10-16",
         "applies_to": {
-          "spec_revision": "2025-11-25"
+          "spec_revision": "2026-07-28"
         },
         "normative_level": "SHOULD",
         "tests": {
@@ -10228,46 +10125,6 @@
       },
       "good_example": "{\n  \"name\": \"deploy\",\n  \"description\": \"Deploys the application to the specified environment with rollback support\",\n  \"inputSchema\": { \"type\": \"object\" }\n}",
       "bad_example": "{\n  \"name\": \"deploy\",\n  \"description\": \"Short\",\n  \"inputSchema\": { \"type\": \"object\" }\n}"
-    },
-    {
-      "id": "MCP-005",
-      "name": "Tool Without User Consent",
-      "severity": "HIGH",
-      "category": "mcp",
-      "evidence": {
-        "source_type": "spec",
-        "source_urls": [
-          "https://modelcontextprotocol.io/specification"
-        ],
-        "verified_on": "2026-02-13",
-        "applies_to": {
-          "spec_revision": "2025-11-25"
-        },
-        "normative_level": "SHOULD",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": false
-      },
-      "good_example": "{\n  \"name\": \"delete-file\",\n  \"description\": \"Permanently deletes a file from the filesystem\",\n  \"inputSchema\": { \"type\": \"object\" },\n  \"requiresApproval\": true\n}",
-      "bad_example": "{\n  \"name\": \"delete-file\",\n  \"description\": \"Permanently deletes a file from the filesystem\",\n  \"inputSchema\": { \"type\": \"object\" }\n}",
-      "security": {
-        "cwe": [
-          "CWE-284"
-        ],
-        "owasp": [
-          "A01:2021"
-        ],
-        "vulnerability_class": "authorization-bypass",
-        "subcategory": "audit",
-        "confidence": "HIGH",
-        "likelihood": "MEDIUM",
-        "impact": "HIGH"
-      }
     },
     {
       "id": "MCP-006",
@@ -10882,7 +10739,8 @@
         }
       },
       "fix": {
-        "autofix": false
+        "autofix": true,
+        "fix_safety": "unsafe"
       },
       "good_example": "{\n  \"mcpServers\": {\n    \"fs\": {\n      \"type\": \"stdio\",\n      \"command\": \"node\",\n      \"alwaysLoad\": true\n    }\n  }\n}",
       "bad_example": "{\n  \"mcpServers\": {\n    \"fs\": {\n      \"type\": \"stdio\",\n      \"command\": \"node\",\n      \"alwaysLoad\": \"true\"\n    }\n  }\n}"
@@ -11190,7 +11048,7 @@
     {
       "id": "PE-001",
       "name": "Lost in the Middle",
-      "severity": "MEDIUM",
+      "severity": "LOW",
       "category": "prompt-engineering",
       "evidence": {
         "source_type": "paper",
@@ -11215,7 +11073,7 @@
     {
       "id": "PE-002",
       "name": "Chain-of-Thought on Simple Task",
-      "severity": "MEDIUM",
+      "severity": "LOW",
       "category": "prompt-engineering",
       "evidence": {
         "source_type": "paper",
@@ -11240,7 +11098,7 @@
     {
       "id": "PE-003",
       "name": "Weak Imperative Language",
-      "severity": "MEDIUM",
+      "severity": "LOW",
       "category": "prompt-engineering",
       "evidence": {
         "source_type": "paper",
@@ -11258,8 +11116,7 @@
         }
       },
       "fix": {
-        "autofix": true,
-        "fix_safety": "unsafe"
+        "autofix": false
       },
       "good_example": "# Critical Rules\n\nYou must follow the style guide.\nAlways run linting before commits.",
       "bad_example": "# Critical Rules\n\nYou should follow the style guide.\nTry to run linting before commits."
@@ -11447,32 +11304,6 @@
       },
       "good_example": "# Project\n\n@docs/coding-standards.md\n@docs/testing-guide.md",
       "bad_example": "# Project\n\n@docs/coding-standards.md\n@docs/testing-guide.md\n@docs/coding-standards.md"
-    },
-    {
-      "id": "REF-004",
-      "name": "Non-Markdown Import",
-      "description": "Detects @import directives that reference non-markdown files (e.g., .json, .py, .ts). Only markdown files are reliably processed by @import.",
-      "severity": "MEDIUM",
-      "category": "references",
-      "evidence": {
-        "source_type": "community",
-        "source_urls": [
-          "https://code.claude.com/docs/en/memory"
-        ],
-        "verified_on": "2025-05-01",
-        "applies_to": {},
-        "normative_level": "SHOULD",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": false
-      },
-      "good_example": "# Project\n\n@docs/coding-standards.md\n@docs/architecture.md",
-      "bad_example": "# Project\n\n@config.json\n@scripts/deploy.py\n@src/utils.ts"
     },
     {
       "id": "ROO-001",
@@ -11878,7 +11709,7 @@
     {
       "id": "XP-001",
       "name": "Platform-Specific Feature in Generic Config",
-      "severity": "HIGH",
+      "severity": "LOW",
       "category": "cross-platform",
       "evidence": {
         "source_type": "community",
@@ -11888,7 +11719,7 @@
         ],
         "verified_on": "2026-07-31",
         "applies_to": {},
-        "normative_level": "MUST",
+        "normative_level": "SHOULD",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -12658,8 +12489,7 @@
         }
       },
       "fix": {
-        "autofix": true,
-        "fix_safety": "safe"
+        "autofix": false
       },
       "good_example": "{\n  \"permission\": { \"read\": \"allow\" }\n}",
       "bad_example": "{\n  \"tools\": {}\n}"
@@ -12693,33 +12523,6 @@
       "bad_example": "{\n  \"autoshare\": \"manual\"\n}"
     },
     {
-      "id": "OC-DEP-004",
-      "name": "Deprecated CONTEXT.md Filename",
-      "severity": "MEDIUM",
-      "category": "opencode",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://opencode.ai/docs/config"
-        ],
-        "verified_on": "2026-04-23",
-        "applies_to": {
-          "tool": "opencode"
-        },
-        "normative_level": "SHOULD",
-        "tests": {
-          "unit": true,
-          "fixtures": false,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": false
-      },
-      "good_example": "AGENTS.md",
-      "bad_example": "CONTEXT.md"
-    },
-    {
       "id": "OC-DEP-005",
       "name": "Deprecated TUI Keys",
       "severity": "MEDIUM",
@@ -12741,10 +12544,11 @@
         }
       },
       "fix": {
-        "autofix": false
+        "autofix": true,
+        "fix_safety": "unsafe"
       },
-      "good_example": "{\n  \"tui\": { \"theme\": \"dark\" }\n}",
-      "bad_example": "{\n  \"tui\": { \"colors\": { \"bg\": \"#000\" } }\n}"
+      "good_example": "{\n  \"$schema\": \"https://opencode.ai/config.json\"\n}",
+      "bad_example": "{\n  \"theme\": \"dark\",\n  \"keybinds\": {}\n}"
     },
     {
       "id": "OC-DEP-006",
@@ -13320,6 +13124,154 @@
       },
       "good_example": "{\"name\":\"demo\",\"homepage\":\"https://example.com\"}",
       "bad_example": "{\"name\":\"demo\",\"homepag\":\"https://example.com\"}"
+    },
+    {
+      "id": "KR-PM-001",
+      "name": "Invalid Kiro Permissions Document",
+      "severity": "HIGH",
+      "category": "kiro-permissions",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/permissions/",
+          "https://kiro.dev/docs/cli/v3/permissions/"
+        ],
+        "verified_on": "2026-10-16",
+        "applies_to": {
+          "tool": "kiro",
+          "spec_revision": "CLI V3 / IDE 1.x capability permissions"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": true
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "rules:\n  - capability: shell\n    match: [\"git *\"]\n    effect: allow\n",
+      "bad_example": "rules: {}"
+    },
+    {
+      "id": "KR-PM-002",
+      "name": "Invalid Kiro Permission Capability",
+      "severity": "HIGH",
+      "category": "kiro-permissions",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/permissions/",
+          "https://kiro.dev/docs/cli/v3/permissions/"
+        ],
+        "verified_on": "2026-10-16",
+        "applies_to": {
+          "tool": "kiro",
+          "spec_revision": "CLI V3 / IDE 1.x capability permissions"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": true
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "rules:\n  - capability: shell\n    match: [\"git *\"]\n    effect: allow\n",
+      "bad_example": "rules: [{capability: unknown, effect: allow}]"
+    },
+    {
+      "id": "KR-PM-003",
+      "name": "Invalid Kiro Permission Effect",
+      "severity": "HIGH",
+      "category": "kiro-permissions",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/permissions/",
+          "https://kiro.dev/docs/cli/v3/permissions/"
+        ],
+        "verified_on": "2026-10-16",
+        "applies_to": {
+          "tool": "kiro",
+          "spec_revision": "CLI V3 / IDE 1.x capability permissions"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": true
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "rules:\n  - capability: shell\n    match: [\"git *\"]\n    effect: allow\n",
+      "bad_example": "rules: [{capability: shell, effect: permit}]"
+    },
+    {
+      "id": "KR-PM-004",
+      "name": "Invalid Kiro Permission Patterns",
+      "severity": "HIGH",
+      "category": "kiro-permissions",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/permissions/",
+          "https://kiro.dev/docs/cli/v3/permissions/"
+        ],
+        "verified_on": "2026-10-16",
+        "applies_to": {
+          "tool": "kiro",
+          "spec_revision": "CLI V3 / IDE 1.x capability permissions"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": true
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "rules:\n  - capability: shell\n    match: [\"git *\"]\n    effect: allow\n",
+      "bad_example": "rules: [{capability: shell, effect: allow, match: \"git *\"}]"
+    },
+    {
+      "id": "KR-HK-014",
+      "name": "Kiro Hook Migration and Canonical Trigger Hint",
+      "severity": "LOW",
+      "category": "kiro-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/hooks/",
+          "https://kiro.dev/docs/hooks/types/",
+          "https://kiro.dev/docs/ide/whats-new-v1/hooks/",
+          "https://kiro.dev/docs/custom-agents/configuration-reference/"
+        ],
+        "verified_on": "2026-10-16",
+        "applies_to": {
+          "tool": "kiro",
+          "spec_revision": "CLI V3 / IDE 1.x hooks"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": false,
+          "fixtures": false,
+          "e2e": true
+        }
+      },
+      "fix": {
+        "autofix": true,
+        "fix_safety": "safe"
+      },
+      "good_example": "{\"version\":\"v1\",\"hooks\":[{\"name\":\"init\",\"trigger\":\"SessionStart\",\"action\":{\"type\":\"command\",\"command\":\"git status\"}}]}",
+      "bad_example": "{\"version\":\"v1\",\"hooks\":[{\"name\":\"init\",\"trigger\":\"agentSpawn\",\"action\":{\"type\":\"command\",\"command\":\"git status\"}}]}"
     }
   ],
   "categories": {
@@ -13345,7 +13297,7 @@
     },
     "claude-memory": {
       "prefix": "CC-MEM",
-      "count": 13,
+      "count": 10,
       "description": "Claude Code Memory rules"
     },
     "claude-output-styles": {
@@ -13355,7 +13307,7 @@
     },
     "agents-md": {
       "prefix": "AGM",
-      "count": 6,
+      "count": 5,
       "description": "AGENTS.md cross-platform rules"
     },
     "claude-plugins": {
@@ -13365,7 +13317,7 @@
     },
     "mcp": {
       "prefix": "MCP",
-      "count": 26,
+      "count": 25,
       "description": "Model Context Protocol rules"
     },
     "copilot": {
@@ -13385,7 +13337,7 @@
     },
     "opencode": {
       "prefix": "OC",
-      "count": 47,
+      "count": 46,
       "description": "OpenCode configuration rules"
     },
     "gemini-cli": {
@@ -13410,7 +13362,7 @@
     },
     "references": {
       "prefix": "REF",
-      "count": 4,
+      "count": 3,
       "description": "Reference/import validation rules"
     },
     "prompt-engineering": {
@@ -13495,8 +13447,13 @@
     },
     "kiro-hooks": {
       "prefix": "KR-HK",
-      "count": 13,
+      "count": 14,
       "description": "Kiro IDE and CLI hook rules"
+    },
+    "kiro-permissions": {
+      "prefix": "KR-PM",
+      "count": 4,
+      "description": "Kiro capability permissions YAML rules"
     },
     "kiro-mcp": {
       "prefix": "KR-MCP",

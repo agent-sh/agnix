@@ -242,8 +242,8 @@ fn extract_implemented_rule_ids() -> BTreeSet<String> {
         "AS-", "CC-SK-", "CC-HK-", "CC-AG-", "CC-MEM-", "CC-OS-", "CC-PL-", "CC-SET-", "AGM-",
         "MCP-", "COP-", "CUR-", "CLN-", "CDX-", "OC-", "GM-", "GM-AG-", "XML-", "REF-", "PE-",
         "XP-", "VER-", "WS-", "CR-SK-", "CL-SK-", "CP-SK-", "CX-SK-", "OC-SK-", "WS-SK-", "KR-SK-",
-        "KR-AG-", "KR-HK-", "KR-PW-", "KR-MCP-", "KR-SET-", "KIRO-", "AMP-SK-", "AMP-", "RC-SK-",
-        "ROO-",
+        "KR-AG-", "KR-PM-", "KR-HK-", "KR-PW-", "KR-MCP-", "KR-SET-", "KIRO-", "AMP-SK-", "AMP-",
+        "RC-SK-", "ROO-",
     ];
 
     fn extract_from_file(
@@ -401,6 +401,7 @@ fn infer_fixture_coverage(rules: &[RuleEntry]) -> HashMap<String, Vec<String>> {
         ("kiro-skills", vec!["per_client_skills"]),
         ("kiro-agents", vec!["kiro-agents"]),
         ("kiro-hooks", vec!["kiro-hooks", "kiro-agents"]),
+        ("kiro-permissions", vec!["kiro-permissions"]),
         ("kiro-mcp", vec!["kiro-mcp", "kiro-powers"]),
         ("kiro-powers", vec!["kiro-powers"]),
         (
@@ -630,6 +631,7 @@ fn test_rules_json_integrity() {
         "kiro-skills",
         "kiro-agents",
         "kiro-hooks",
+        "kiro-permissions",
         "kiro-mcp",
         "kiro-powers",
         "kiro-settings",
@@ -955,6 +957,29 @@ fn test_all_rules_have_fix_metadata() {
                 rule.fix.fix_safety.as_deref().unwrap_or("")
             );
         }
+    }
+}
+
+#[test]
+fn test_audited_fix_metadata_matches_supported_migrations() {
+    let index = load_rules_json();
+    for (id, safety) in [
+        ("CC-SET-016", Some("unsafe")),
+        ("COP-027", Some("unsafe")),
+        ("OC-DEP-005", Some("unsafe")),
+        ("KR-HK-011", Some("unsafe")),
+        ("KR-HK-014", Some("safe")),
+        ("OC-DEP-001", Some("safe")),
+        ("OC-DEP-002", None),
+        ("CC-SK-020", None),
+        ("CDX-CFG-023", None),
+        ("CC-MEM-007", None),
+        ("PE-003", None),
+        ("CC-AG-012", None),
+    ] {
+        let rule = index.rules.iter().find(|rule| rule.id == id).unwrap();
+        assert_eq!(rule.fix.autofix, safety.is_some(), "{id}");
+        assert_eq!(rule.fix.fix_safety.as_deref(), safety, "{id}");
     }
 }
 

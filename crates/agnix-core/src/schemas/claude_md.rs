@@ -8,11 +8,8 @@ use crate::regex_util::static_regex;
 
 static GENERIC_PATTERNS: OnceLock<Vec<Regex>> = OnceLock::new();
 
-static_regex!(fn negative_pattern, r"(?i)\b(don't|do\s+not|never|avoid|shouldn't|should\s+not)\b");
-static_regex!(fn positive_pattern, r"(?i)\b(instead|rather|prefer|better\s+to|alternative|always|use\s+\w|ensure|verify|check|open\s+an?\b|run\s+\w|apply|create|add|set|enable)\b");
 static_regex!(fn weak_language_pattern, r"(?i)\b(should|try\s+to|consider|maybe|might\s+want\s+to|could|possibly)\b");
 static_regex!(fn critical_section_pattern, r"(?i)^#+\s*.*(critical|important|required|mandatory|rules|must|essential)");
-static_regex!(fn critical_keyword_pattern, r"(?i)\b(critical|important|must|required|essential|mandatory|crucial)\b");
 static_regex!(fn npm_run_pattern, r"npm\s+run\s+([a-zA-Z0-9_:-]+)");
 
 /// Generic instruction patterns that Claude already knows
@@ -41,58 +38,21 @@ pub fn generic_patterns() -> &'static Vec<Regex> {
     })
 }
 
-/// Check for generic instructions in content
-pub fn find_generic_instructions(content: &str) -> Vec<GenericInstruction> {
-    let mut results = Vec::new();
+/// Count generic instruction patterns, once per pattern per line.
+///
+/// Codex uses the count to assess specificity; repeated occurrences of the same
+/// pattern on one line still count only once.
+pub fn count_generic_instructions(content: &str) -> usize {
     let patterns = generic_patterns();
-    let mut byte_offset: usize = 0;
-
-    for (line_num, line) in content.lines().enumerate() {
-        let line_start = byte_offset;
-
-        // Compute actual line end by inspecting the bytes after the line content
-        let line_bytes = line.len();
-        let remaining = &content.as_bytes()[byte_offset + line_bytes..];
-        let newline_len = if remaining.starts_with(b"\r\n") {
-            2
-        } else if remaining.starts_with(b"\n") {
-            1
-        } else {
-            0 // last line, no newline
-        };
-        let line_end = byte_offset + line_bytes + newline_len;
-
-        for pattern in patterns {
-            if let Some(mat) = pattern.find(line) {
-                results.push(GenericInstruction {
-                    line: line_num + 1,
-                    column: mat.start() + 1,
-                    text: mat.as_str().to_string(),
-                    pattern: pattern.as_str().to_string(),
-                    start_byte: line_start,
-                    end_byte: line_end,
-                });
-            }
-        }
-
-        // Move to next line
-        byte_offset = line_end;
-    }
-
-    results
-}
-
-#[derive(Debug, Clone)]
-pub struct GenericInstruction {
-    pub line: usize,
-    pub column: usize,
-    pub text: String,
-    #[allow(dead_code)] // parsed but not yet consumed by validators
-    pub pattern: String,
-    /// Byte offset of the start of the line containing this instruction
-    pub start_byte: usize,
-    /// Byte offset of the end of the line (including newline if present)
-    pub end_byte: usize,
+    content
+        .lines()
+        .map(|line| {
+            patterns
+                .iter()
+                .filter(|pattern| pattern.is_match(line))
+                .count()
+        })
+        .sum()
 }
 
 // ============================================================================
@@ -127,79 +87,6 @@ pub fn check_token_count(content: &str) -> Option<TokenCountExceeded> {
 }
 
 // ============================================================================
-// CC-MEM-006: Negative Without Positive
-// ============================================================================
-
-#[derive(Debug, Clone)]
-pub struct NegativeInstruction {
-    pub line: usize,
-    pub column: usize,
-    pub text: String,
-}
-
-/// Find negative instructions without positive alternatives
-pub fn find_negative_without_positive(content: &str) -> Vec<NegativeInstruction> {
-    let mut results = Vec::new();
-    let neg_pattern = negative_pattern();
-    let pos_pattern = positive_pattern();
-    let lines: Vec<&str> = content.lines().collect();
-
-    for (line_num, line) in lines.iter().enumerate() {
-        if let Some(mat) = neg_pattern.find(line) {
-            // Check for positive alternative AFTER the negative on the same line
-            // Patterns: "NEVER X - always Y", "don't X, use Y instead"
-            let has_positive_after = if mat.end() < line.len() {
-                let after_negative = &line[mat.end()..];
-                // Look for separator followed by positive language
-                after_negative.contains(" - ") && pos_pattern.is_match(after_negative)
-                    || after_negative.contains(", ") && pos_pattern.is_match(after_negative)
-                    || after_negative.contains("; ") && pos_pattern.is_match(after_negative)
-            } else {
-                false
-            };
-
-            // Check current line for positive transition words
-            let has_positive_transition = pos_pattern.is_match(line);
-
-            // Check if there's a positive imperative before the negative
-            // e.g., "Use X, don't use Y" or "Fetch fresh data, don't cache"
-            // e.g., "**Report failures** - Never silently bypass"
-            let has_positive_before = if mat.start() > 0 {
-                let before_raw = &line[..mat.start()];
-                let before_trimmed = before_raw.trim();
-                before_trimmed.len() > 5
-                    && (before_raw.contains(',')
-                        || before_raw.contains(';')
-                        || before_raw.contains(" - "))
-                    && !before_trimmed.starts_with("//")
-                    && !before_trimmed.starts_with('#')
-            } else {
-                false
-            };
-
-            // Check next line for positive alternative
-            let has_positive_next_line = lines
-                .get(line_num + 1)
-                .is_some_and(|next| pos_pattern.is_match(next));
-
-            if !has_positive_transition
-                && !has_positive_before
-                && !has_positive_after
-                && !has_positive_next_line
-            {
-                results.push(NegativeInstruction {
-                    line: line_num + 1,
-                    column: mat.start() + 1,
-                    text: mat.as_str().to_string(),
-                });
-            }
-        }
-    }
-
-    results
-}
-
-// ============================================================================
 // CC-MEM-007: Weak Constraint Language
 // ============================================================================
 
@@ -209,10 +96,6 @@ pub struct WeakConstraint {
     pub column: usize,
     pub text: String,
     pub section: String,
-    /// Byte offset of the start of the weak constraint word
-    pub start_byte: usize,
-    /// Byte offset of the end of the weak constraint word
-    pub end_byte: usize,
 }
 
 /// Find weak constraint language in critical sections
@@ -220,24 +103,10 @@ pub fn find_weak_constraints(content: &str) -> Vec<WeakConstraint> {
     let mut results = Vec::new();
     let weak_pattern = weak_language_pattern();
     let section_pattern = critical_section_pattern();
-    let mut byte_offset: usize = 0;
 
     let mut current_section: Option<String> = None;
 
     for (line_num, line) in content.lines().enumerate() {
-        let line_start = byte_offset;
-
-        // Compute actual line end by inspecting the bytes after the line content
-        let line_bytes = line.len();
-        let remaining = &content.as_bytes()[byte_offset + line_bytes..];
-        let newline_len = if remaining.starts_with(b"\r\n") {
-            2
-        } else if remaining.starts_with(b"\n") {
-            1
-        } else {
-            0 // last line, no newline
-        };
-
         // Check if this is a header line
         if line.starts_with('#') {
             if section_pattern.is_match(line) {
@@ -256,60 +125,6 @@ pub fn find_weak_constraints(content: &str) -> Vec<WeakConstraint> {
                     column: mat.start() + 1,
                     text: mat.as_str().to_string(),
                     section: section_name.clone(),
-                    start_byte: line_start + mat.start(),
-                    end_byte: line_start + mat.end(),
-                });
-            }
-        }
-
-        // Move to next line
-        byte_offset += line_bytes + newline_len;
-    }
-
-    results
-}
-
-// ============================================================================
-// CC-MEM-008: Critical Content in Middle
-// ============================================================================
-
-#[derive(Debug, Clone)]
-pub struct CriticalInMiddle {
-    pub line: usize,
-    pub column: usize,
-    pub keyword: String,
-    pub position_percent: f64,
-}
-
-/// Find critical content positioned in the middle of the document (40-60%)
-///
-/// Based on "Lost in the Middle" research (Liu et al., 2023, TACL):
-/// LLMs have lower recall for content in the middle of documents, but better
-/// recall for content at the START and END. The 40-60% range is specifically
-/// the "lost in the middle" zone. Content at 70%+ (near the end) is actually
-/// well-recalled, so we intentionally only flag the middle zone.
-pub fn find_critical_in_middle(content: &str) -> Vec<CriticalInMiddle> {
-    let mut results = Vec::new();
-    let pattern = critical_keyword_pattern();
-    let lines: Vec<&str> = content.lines().collect();
-    let total_lines = lines.len();
-
-    if total_lines < 10 {
-        // Too short to meaningfully apply this rule
-        return results;
-    }
-
-    for (line_num, line) in lines.iter().enumerate() {
-        if let Some(mat) = pattern.find(line) {
-            let position_percent = (line_num as f64 / total_lines as f64) * 100.0;
-
-            // Flag if in the middle 40-60% of the document (lost in the middle zone)
-            if position_percent > 40.0 && position_percent < 60.0 {
-                results.push(CriticalInMiddle {
-                    line: line_num + 1,
-                    column: mat.start() + 1,
-                    keyword: mat.as_str().to_string(),
-                    position_percent,
                 });
             }
         }
@@ -414,92 +229,41 @@ mod tests {
     #[test]
     fn test_regex_patterns_compile() {
         let _ = generic_patterns();
-        let _ = negative_pattern();
-        let _ = positive_pattern();
         let _ = weak_language_pattern();
         let _ = critical_section_pattern();
-        let _ = critical_keyword_pattern();
         let _ = npm_run_pattern();
     }
 
     #[test]
-    fn test_find_generic_instructions() {
-        let content = "Be helpful and accurate when responding.\nUse project-specific guidelines.";
-        let results = find_generic_instructions(content);
-        assert!(!results.is_empty());
-        assert!(results[0].text.to_lowercase().contains("helpful"));
+    fn test_count_generic_instructions() {
+        assert_eq!(count_generic_instructions("Be helpful and be accurate."), 2);
+        assert_eq!(count_generic_instructions("Be helpful and be helpful."), 1);
+        assert_eq!(count_generic_instructions("Be helpful.\nBe helpful."), 2);
+        assert_eq!(count_generic_instructions("Be helpful.\r\nBe helpful."), 2);
+        assert_eq!(count_generic_instructions(""), 0);
     }
 
     #[test]
-    fn test_no_generic_instructions() {
-        let content = "Use the coding style defined in .editorconfig\nFollow team conventions";
-        let results = find_generic_instructions(content);
-        assert!(results.is_empty());
+    fn test_detect_generic_preambles_and_principles() {
+        for content in [
+            "# You Are an Expert\nDo this specific task.",
+            "You are a helpful assistant for this project.",
+            "Follow best practices when writing code.",
+            "Write clean and maintainable code.",
+        ] {
+            assert_eq!(count_generic_instructions(content), 1, "{content}");
+        }
     }
 
     #[test]
-    fn test_detect_role_play_header() {
-        let content = "# You Are an Expert\nDo this specific task.";
-        let results = find_generic_instructions(content);
-        assert!(
-            results.iter().any(|r| r.pattern.contains("you\\s+are")),
-            "Should detect role-play header '# You Are'"
-        );
-    }
-
-    #[test]
-    fn test_detect_role_play_preamble() {
-        let content = "You are a helpful assistant for this project.";
-        let results = find_generic_instructions(content);
-        assert!(
-            !results.is_empty(),
-            "Should detect 'You are a helpful assistant'"
-        );
-    }
-
-    #[test]
-    fn test_no_false_positive_role_play() {
-        // "You are a developer" should not match because "developer" isn't in the descriptor list
-        let content = "You are a developer who writes Rust code.";
-        let results = find_generic_instructions(content);
-        let role_play: Vec<_> = results
-            .iter()
-            .filter(|r| r.pattern.contains("you\\s+are\\s+a"))
-            .collect();
-        assert!(
-            role_play.is_empty(),
-            "Should not match 'You are a developer' (not a generic role-play)"
-        );
-    }
-
-    #[test]
-    fn test_detect_generic_programming_principles() {
-        let content = "Follow best practices when writing code.";
-        let results = find_generic_instructions(content);
-        assert!(
-            results
-                .iter()
-                .any(|r| r.text.to_lowercase().contains("follow best practices")),
-            "Should detect 'follow best practices'"
-        );
-
-        let content2 = "Write clean and maintainable code.";
-        let results2 = find_generic_instructions(content2);
-        assert!(
-            !results2.is_empty(),
-            "Should detect 'write clean and maintainable code'"
-        );
-    }
-
-    #[test]
-    fn test_no_false_positive_specific_standards() {
-        // Project-specific references should not match
-        let content = "Follow the airbnb style guide for JavaScript.";
-        let results = find_generic_instructions(content);
-        assert!(
-            results.is_empty(),
-            "Project-specific style references should not trigger"
-        );
+    fn test_no_false_positive_specific_instructions() {
+        for content in [
+            "Use the coding style defined in .editorconfig\nFollow team conventions",
+            "You are a developer who writes Rust code.",
+            "Follow the airbnb style guide for JavaScript.",
+        ] {
+            assert_eq!(count_generic_instructions(content), 0, "{content}");
+        }
     }
 
     // CC-MEM-009 tests
@@ -518,117 +282,6 @@ mod tests {
         let exceeded = result.unwrap();
         assert!(exceeded.estimated_tokens > 1500);
         assert_eq!(exceeded.limit, 1500);
-    }
-
-    // CC-MEM-006 tests
-    #[test]
-    fn test_find_negative_without_positive() {
-        let content = "Don't use var in JavaScript.\nNever use global variables.";
-        let results = find_negative_without_positive(content);
-        assert_eq!(results.len(), 2);
-        assert!(results[0].text.to_lowercase().contains("don"));
-    }
-
-    #[test]
-    fn test_negative_with_positive_same_line() {
-        let content = "Don't use var, instead prefer const or let.";
-        let results = find_negative_without_positive(content);
-        assert!(results.is_empty());
-    }
-
-    #[test]
-    fn test_negative_with_positive_next_line() {
-        let content = "Don't use var.\nUse const instead of var.";
-        let results = find_negative_without_positive(content);
-        assert!(results.is_empty());
-    }
-
-    #[test]
-    fn test_negative_with_positive_before_comma() {
-        // Pattern: "DO X, don't do Y" should be accepted
-        let content = "Fetch web resources fresh, don't rely on cached data";
-        let results = find_negative_without_positive(content);
-        assert!(results.is_empty(), "Should recognize positive before comma");
-
-        // Another example
-        let content2 = "Use const or let, never use var";
-        let results2 = find_negative_without_positive(content2);
-        assert!(
-            results2.is_empty(),
-            "Should recognize positive before comma"
-        );
-
-        // But standalone negative should still trigger
-        let content3 = "Don't use var";
-        let results3 = find_negative_without_positive(content3);
-        assert_eq!(results3.len(), 1, "Standalone negative should trigger");
-    }
-
-    #[test]
-    fn test_negative_with_positive_after_dash() {
-        // "NEVER X - always Y" pattern
-        let content = "NEVER assume - always verify with tests and benchmarks";
-        let results = find_negative_without_positive(content);
-        assert!(
-            results.is_empty(),
-            "NEVER with dash-separated positive should not trigger"
-        );
-
-        let content2 = "NEVER ignore bugs, even out of scope - open an issue";
-        let results2 = find_negative_without_positive(content2);
-        assert!(
-            results2.is_empty(),
-            "NEVER with dash-separated action should not trigger"
-        );
-    }
-
-    #[test]
-    fn test_negative_with_positive_before_dash() {
-        // "Raise it, but don't change without approval"
-        let content = "Disagree? Raise it, but don't change without approval";
-        let results = find_negative_without_positive(content);
-        assert!(
-            results.is_empty(),
-            "don't with preceding positive context should not trigger"
-        );
-    }
-
-    #[test]
-    fn test_negative_with_bold_positive_before_dash() {
-        // Issue #661: "**Positive action** - Never negative" pattern
-        let content = "7. **Report script failures before manual fallback** - Never silently bypass broken tooling.";
-        let results = find_negative_without_positive(content);
-        assert!(
-            results.is_empty(),
-            "Bold positive before dash-separated Never should not trigger"
-        );
-
-        // Numbered list with bold positive and don't
-        let content2 = "3. **Always commit before rebasing** - Don't rebase uncommitted work.";
-        let results2 = find_negative_without_positive(content2);
-        assert!(
-            results2.is_empty(),
-            "Bold positive before dash-separated Don't should not trigger"
-        );
-    }
-
-    #[test]
-    fn test_standalone_negative_still_triggers() {
-        let content = "Never use global variables";
-        let results = find_negative_without_positive(content);
-        assert_eq!(
-            results.len(),
-            1,
-            "Standalone NEVER without alternative should trigger"
-        );
-
-        let content2 = "Don't hardcode values";
-        let results2 = find_negative_without_positive(content2);
-        assert_eq!(
-            results2.len(),
-            1,
-            "Standalone don't without alternative should trigger"
-        );
     }
 
     // CC-MEM-007 tests
@@ -653,48 +306,6 @@ mod tests {
             "# Critical Rules\n\nMust follow style.\n\n# Other\n\nYou should do this too.";
         let results = find_weak_constraints(content);
         // "should" is in non-critical section, so no results
-        assert!(results.is_empty());
-    }
-
-    // CC-MEM-008 tests
-    #[test]
-    fn test_find_critical_in_middle() {
-        // Create 20 lines with "critical" at line 10 (50%)
-        let mut lines: Vec<String> = (0..20).map(|i| format!("Line {}", i)).collect();
-        lines[10] = "This is critical information.".to_string();
-        let content = lines.join("\n");
-
-        let results = find_critical_in_middle(&content);
-        assert_eq!(results.len(), 1);
-        assert!(results[0].position_percent > 40.0);
-        assert!(results[0].position_percent < 60.0);
-    }
-
-    #[test]
-    fn test_critical_at_top() {
-        let mut lines: Vec<String> = (0..20).map(|i| format!("Line {}", i)).collect();
-        lines[1] = "This is critical information.".to_string();
-        let content = lines.join("\n");
-
-        let results = find_critical_in_middle(&content);
-        assert!(results.is_empty());
-    }
-
-    #[test]
-    fn test_critical_at_bottom() {
-        let mut lines: Vec<String> = (0..20).map(|i| format!("Line {}", i)).collect();
-        lines[18] = "This is critical information.".to_string();
-        let content = lines.join("\n");
-
-        let results = find_critical_in_middle(&content);
-        assert!(results.is_empty());
-    }
-
-    #[test]
-    fn test_short_document_no_critical_middle() {
-        let content = "Critical info here.\nAnother line.";
-        let results = find_critical_in_middle(content);
-        // Document too short (< 10 lines)
         assert!(results.is_empty());
     }
 
@@ -756,224 +367,32 @@ mod tests {
         assert!(result.is_none());
     }
 
-    // ===== Byte offset tests for GenericInstruction =====
-
     #[test]
-    fn test_generic_instruction_byte_offsets_single_line() {
-        let content = "Be helpful and accurate.";
-        let results = find_generic_instructions(content);
-        assert!(!results.is_empty());
-
-        let inst = &results[0];
-        assert_eq!(inst.start_byte, 0);
-        assert_eq!(inst.end_byte, 24); // No trailing newline
-    }
-
-    #[test]
-    fn test_generic_instruction_byte_offsets_multiline() {
-        let content = "Line one.\nBe helpful and accurate.\nLine three.";
-        let results = find_generic_instructions(content);
-        assert!(!results.is_empty());
-
-        let inst = &results[0];
-        // "Be helpful and accurate." is on line 2, starting at byte 10
-        assert_eq!(inst.start_byte, 10);
-        // Ends at byte 35 (including newline)
-        assert_eq!(inst.end_byte, 35);
-    }
-
-    #[test]
-    fn test_generic_instruction_byte_offsets_last_line_no_newline() {
-        let content = "Line one.\nBe helpful and accurate.";
-        let results = find_generic_instructions(content);
-        assert!(!results.is_empty());
-
-        let inst = &results[0];
-        assert_eq!(inst.start_byte, 10);
-        // Last line, no trailing newline
-        assert_eq!(inst.end_byte, 34);
-    }
-
-    #[test]
-    fn test_generic_instruction_delete_produces_expected() {
-        let content = "Line one.\nBe helpful and accurate.\nLine three.";
-        let results = find_generic_instructions(content);
-        assert!(!results.is_empty());
-
-        let inst = &results[0];
-        let mut modified = content.to_string();
-        modified.replace_range(inst.start_byte..inst.end_byte, "");
-        assert_eq!(modified, "Line one.\nLine three.");
-    }
-
-    // ===== Byte offset tests for WeakConstraint =====
-
-    #[test]
-    fn test_weak_constraint_byte_offsets() {
-        let content = "# Critical Rules\n\nYou should follow the coding style.";
-        let results = find_weak_constraints(content);
-        assert_eq!(results.len(), 1);
-
-        let wc = &results[0];
-        assert_eq!(wc.text.to_lowercase(), "should");
-        // "should" starts at byte 22 (after "# Critical Rules\n\nYou ")
-        assert_eq!(wc.start_byte, 22);
-        // "should" ends at byte 28
-        assert_eq!(wc.end_byte, 28);
-    }
-
-    #[test]
-    fn test_weak_constraint_replace_produces_expected() {
-        let content = "# Critical Rules\n\nYou should follow the coding style.";
-        let results = find_weak_constraints(content);
-        assert_eq!(results.len(), 1);
-
-        let wc = &results[0];
-        let mut modified = content.to_string();
-        modified.replace_range(wc.start_byte..wc.end_byte, "must");
-        assert_eq!(
-            modified,
-            "# Critical Rules\n\nYou must follow the coding style."
-        );
-    }
-
-    #[test]
-    fn test_weak_constraint_try_to() {
-        let content = "# Critical Rules\n\nTry to follow the coding style.";
-        let results = find_weak_constraints(content);
-        assert_eq!(results.len(), 1);
-
-        let wc = &results[0];
-        assert_eq!(wc.text.to_lowercase(), "try to");
-        // Verify byte offsets allow correct replacement
-        let mut modified = content.to_string();
-        modified.replace_range(wc.start_byte..wc.end_byte, "must");
-        assert_eq!(
-            modified,
-            "# Critical Rules\n\nmust follow the coding style."
-        );
+    fn test_weak_constraint_locations() {
+        for newline in ["\n", "\r\n"] {
+            let content = [
+                "# Critical Rules",
+                "",
+                "You should do this.",
+                "Try to do that.",
+            ]
+            .join(newline);
+            let results = find_weak_constraints(&content);
+            assert_eq!(results.len(), 2);
+            assert_eq!(results[0].line, 3);
+            assert_eq!(results[0].column, 5);
+            assert_eq!(results[0].text.to_lowercase(), "should");
+            assert_eq!(results[0].section, "Critical Rules");
+            assert_eq!(results[1].line, 4);
+            assert_eq!(results[1].column, 1);
+            assert_eq!(results[1].text.to_lowercase(), "try to");
+        }
     }
 
     #[test]
     fn test_weak_constraint_multiple_on_same_line() {
-        let content = "# Critical Rules\n\nYou should consider doing this.";
-        let results = find_weak_constraints(content);
-
-        // The regex finds only the first match per line
-        // In this case, "should" is found first
-        assert!(!results.is_empty());
-        assert_eq!(results[0].text.to_lowercase(), "should");
-    }
-
-    #[test]
-    fn test_weak_constraint_multiline() {
-        let content = "# Critical Rules\n\nYou should do this.\nYou could do that.";
-        let results = find_weak_constraints(content);
-
-        // Two weak constraints on two lines
-        assert_eq!(results.len(), 2);
-        assert_eq!(results[0].text.to_lowercase(), "should");
-        assert_eq!(results[1].text.to_lowercase(), "could");
-
-        // Verify byte offsets are correct for both
-        let mut modified = content.to_string();
-        // Apply fixes from end to start to avoid offset issues
-        modified.replace_range(results[1].start_byte..results[1].end_byte, "must");
-        modified.replace_range(results[0].start_byte..results[0].end_byte, "must");
-        assert_eq!(
-            modified,
-            "# Critical Rules\n\nYou must do this.\nYou must do that."
-        );
-    }
-
-    // ===== CRLF line ending tests =====
-
-    #[test]
-    fn test_generic_instruction_byte_offsets_crlf() {
-        // CRLF line endings (Windows style)
-        let content = "Line one.\r\nBe helpful and accurate.\r\nLine three.";
-        let results = find_generic_instructions(content);
-        assert!(!results.is_empty());
-
-        let inst = &results[0];
-        // "Be helpful and accurate." is on line 2, starting at byte 11 (after "Line one.\r\n")
-        assert_eq!(inst.start_byte, 11);
-        // Ends at byte 37 (including CRLF)
-        assert_eq!(inst.end_byte, 37);
-    }
-
-    #[test]
-    fn test_generic_instruction_delete_produces_expected_crlf() {
-        let content = "Line one.\r\nBe helpful and accurate.\r\nLine three.";
-        let results = find_generic_instructions(content);
-        assert!(!results.is_empty());
-
-        let inst = &results[0];
-        let mut modified = content.to_string();
-        modified.replace_range(inst.start_byte..inst.end_byte, "");
-        assert_eq!(modified, "Line one.\r\nLine three.");
-    }
-
-    #[test]
-    fn test_generic_instruction_byte_offsets_crlf_last_line() {
-        // CRLF with match on last line (no trailing newline)
-        let content = "Line one.\r\nBe helpful and accurate.";
-        let results = find_generic_instructions(content);
-        assert!(!results.is_empty());
-
-        let inst = &results[0];
-        assert_eq!(inst.start_byte, 11);
-        // Last line, no trailing CRLF
-        assert_eq!(inst.end_byte, 35);
-    }
-
-    #[test]
-    fn test_weak_constraint_byte_offsets_crlf() {
-        let content = "# Critical Rules\r\n\r\nYou should follow the coding style.";
-        let results = find_weak_constraints(content);
+        let results = find_weak_constraints("# Critical Rules\nYou should consider doing this.");
         assert_eq!(results.len(), 1);
-
-        let wc = &results[0];
-        assert_eq!(wc.text.to_lowercase(), "should");
-        // "should" starts at byte 24 (after "# Critical Rules\r\n\r\nYou ")
-        assert_eq!(wc.start_byte, 24);
-        // "should" ends at byte 30
-        assert_eq!(wc.end_byte, 30);
-    }
-
-    #[test]
-    fn test_weak_constraint_replace_produces_expected_crlf() {
-        let content = "# Critical Rules\r\n\r\nYou should follow the coding style.";
-        let results = find_weak_constraints(content);
-        assert_eq!(results.len(), 1);
-
-        let wc = &results[0];
-        let mut modified = content.to_string();
-        modified.replace_range(wc.start_byte..wc.end_byte, "must");
-        assert_eq!(
-            modified,
-            "# Critical Rules\r\n\r\nYou must follow the coding style."
-        );
-    }
-
-    #[test]
-    fn test_weak_constraint_multiline_crlf() {
-        let content = "# Critical Rules\r\n\r\nYou should do this.\r\nYou could do that.";
-        let results = find_weak_constraints(content);
-
-        // Two weak constraints on two lines
-        assert_eq!(results.len(), 2);
         assert_eq!(results[0].text.to_lowercase(), "should");
-        assert_eq!(results[1].text.to_lowercase(), "could");
-
-        // Verify byte offsets are correct for both
-        let mut modified = content.to_string();
-        // Apply fixes from end to start to avoid offset issues
-        modified.replace_range(results[1].start_byte..results[1].end_byte, "must");
-        modified.replace_range(results[0].start_byte..results[0].end_byte, "must");
-        assert_eq!(
-            modified,
-            "# Critical Rules\r\n\r\nYou must do this.\r\nYou must do that."
-        );
     }
 }

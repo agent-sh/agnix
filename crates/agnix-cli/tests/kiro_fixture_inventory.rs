@@ -64,6 +64,8 @@ fn required_paths() -> Vec<&'static str> {
         "tests/fixtures/kiro-mcp/.kiro/settings/valid-remote-mcp.json",
         "tests/fixtures/kiro-mcp/.kiro/settings/missing-command-url.json",
         "tests/fixtures/kiro-mcp/.kiro/settings/hardcoded-secrets.json",
+        "tests/fixtures/kiro-permissions/valid/.kiro/settings/permissions.yaml",
+        "tests/fixtures/kiro-permissions/invalid/.kiro/settings/permissions.yaml",
     ]
 }
 
@@ -175,6 +177,7 @@ fn kiro_fixture_families_exist_with_required_cases() {
         "tests/fixtures/kiro-agents",
         "tests/fixtures/kiro-hooks",
         "tests/fixtures/kiro-mcp",
+        "tests/fixtures/kiro-permissions",
     ];
 
     for rel in fixture_roots {
@@ -216,6 +219,7 @@ fn kiro_fixture_families_are_cli_runnable() {
         ("tests/fixtures/kiro-agents", 10_u64, 20_u64),
         ("tests/fixtures/kiro-hooks", 7_u64, 4_u64),
         ("tests/fixtures/kiro-mcp", 1_u64, 0_u64),
+        ("tests/fixtures/kiro-permissions", 2_u64, 4_u64),
     ];
 
     for (rel, expected_files_checked, expected_diagnostics) in fixture_roots {
@@ -247,12 +251,45 @@ fn kiro_fixture_families_are_cli_runnable() {
 }
 
 #[test]
+fn kiro_permissions_invalid_shape_is_reported_by_cli() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join(".kiro/settings/permissions.yaml");
+    fs::create_dir_all(path.parent().unwrap()).unwrap();
+    fs::write(&path, "rules: {}\n").unwrap();
+    let output = run_agnix_json(dir.path());
+    let diagnostics = output["diagnostics"].as_array().unwrap();
+    assert_eq!(diagnostics.len(), 1);
+    assert_eq!(diagnostics[0]["rule"], "KR-PM-001");
+}
+
+#[test]
+fn kiro_permissions_fixtures_cover_claimed_rule_ids() {
+    let root = workspace_root();
+    let valid = root.join("tests/fixtures/kiro-permissions/valid");
+    let invalid = root.join("tests/fixtures/kiro-permissions/invalid");
+    assert_eq!(diagnostics_len(&run_agnix_json(&valid), &valid), 0);
+    let output = run_agnix_json(&invalid);
+    let rules: BTreeSet<_> = output["diagnostics"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|diagnostic| diagnostic["rule"].as_str().unwrap())
+        .collect();
+    assert_eq!(
+        rules,
+        BTreeSet::from(["KR-PM-002", "KR-PM-003", "KR-PM-004"])
+    );
+    // KR-PM-001 shape failures are covered by unit/integration tests, not this fixture.
+}
+
+#[test]
 fn kiro_fixture_files_have_explicit_detection_baselines() {
     for rel in required_paths() {
         let is_detected = detect_file_type(Path::new(rel)).is_validatable();
         let should_be_detected = rel.starts_with("tests/fixtures/kiro-powers/")
             || rel.starts_with("tests/fixtures/kiro-agents/.kiro/agents/")
             || rel.starts_with("tests/fixtures/kiro-hooks/.kiro/hooks/")
+            || rel.starts_with("tests/fixtures/kiro-permissions/")
             || rel == "tests/fixtures/kiro-mcp/.kiro/settings/mcp.json";
 
         assert_eq!(
@@ -266,6 +303,10 @@ fn kiro_fixture_files_have_explicit_detection_baselines() {
 #[test]
 fn kiro_fixture_representatives_map_to_expected_file_types() {
     let expectations = [
+        (
+            "tests/fixtures/kiro-permissions/valid/.kiro/settings/permissions.yaml",
+            FileType::KiroPermissions,
+        ),
         (
             "tests/fixtures/kiro-powers/.kiro/powers/valid-power/POWER.md",
             FileType::KiroPower,

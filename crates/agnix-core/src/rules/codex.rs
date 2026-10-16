@@ -6,7 +6,7 @@
 //! - CDX-002: Invalid fullAutoErrorMode (HIGH) - must be "ask-user" or "ignore-and-continue"
 //! - CDX-003: AGENTS.override.md in version control (MEDIUM) - should be in .gitignore
 //! - CDX-004: Unknown config key (MEDIUM) - unrecognized key in .codex/config.toml
-//! - CDX-005: project_doc_max_bytes exceeds limit (HIGH) - must be <= 65536
+//! - CDX-005: project_doc_max_bytes type/range (HIGH) - must be a nonnegative integer (schema has no maximum)
 //! - CDX-006: Invalid project_doc_fallback_filenames (HIGH) - must be unique non-empty filenames
 //! - CDX-CFG-001..027: Codex config schema/value checks (approval, sandbox, enums, unknown keys, etc.)
 //! - CDX-AG-001..007: AGENTS.md quality and secret-safety checks for Codex
@@ -16,7 +16,7 @@ use crate::{
     config::PerFileLintConfig,
     diagnostics::{Diagnostic, Fix},
     rules::{Validator, ValidatorMetadata},
-    schemas::claude_md::find_generic_instructions,
+    schemas::claude_md::count_generic_instructions,
     schemas::codex::{
         AGENTS_MD_MAX_SIZE, VALID_APPROVAL_MODES, VALID_FULL_AUTO_ERROR_MODES,
         VALID_MCP_OAUTH_STORES, VALID_MODEL_REASONING_SUMMARIES,
@@ -98,7 +98,9 @@ const CODEX_CONFIG_RULE_IDS: &[&str] = &[
 pub struct CodexValidator;
 pub struct CodexConfigValidator;
 
-const VALID_APPROVAL_POLICIES: &[&str] = &["untrusted", "on-request", "never", "on-failure"];
+/// AskForApproval strings in both rust-v0.163.0 and main config.schema.json.
+/// The object variant wraps GranularApprovalConfig under `granular`.
+const VALID_APPROVAL_POLICIES: &[&str] = &["on-request", "never"];
 const VALID_SANDBOX_MODES: &[&str] = &["read-only", "workspace-write", "danger-full-access"];
 const VALID_MODEL_VERBOSITY: &[&str] = &["low", "medium", "high"];
 const VALID_PERSONALITIES: &[&str] = &["none", "friendly", "pragmatic"];
@@ -631,7 +633,7 @@ impl Validator for CodexValidator {
                         }
                     }
 
-                    // CDX-005: project_doc_max_bytes exceeds limit (ERROR)
+                    // CDX-005: the tagged schema specifies minimum 0 and no maximum.
                     if cdx_005_enabled {
                         if parsed.project_doc_max_bytes_wrong_type {
                             let line = key_lines.get("project_doc_max_bytes").copied().unwrap_or(1);
@@ -647,7 +649,7 @@ impl Validator for CodexValidator {
                             );
                         } else if let Some(value) = schema.project_doc_max_bytes {
                             let line = key_lines.get("project_doc_max_bytes").copied().unwrap_or(1);
-                            if value <= 0 {
+                            if value < 0 {
                                 diagnostics.push(
                                     Diagnostic::error(
                                         path.to_path_buf(),
@@ -655,17 +657,6 @@ impl Validator for CodexValidator {
                                         0,
                                         "CDX-005",
                                         t!("rules.cdx_005.type_error"),
-                                    )
-                                    .with_suggestion(t!("rules.cdx_005.suggestion")),
-                                );
-                            } else if value > 65536 {
-                                diagnostics.push(
-                                    Diagnostic::error(
-                                        path.to_path_buf(),
-                                        line,
-                                        0,
-                                        "CDX-005",
-                                        t!("rules.cdx_005.message", value = &value.to_string()),
                                     )
                                     .with_suggestion(t!("rules.cdx_005.suggestion")),
                                 );
@@ -899,7 +890,7 @@ fn validate_codex_markdown_rules(
     }
 
     if config.is_rule_enabled("CDX-AG-003") {
-        let generic_count = find_generic_instructions(content).len();
+        let generic_count = count_generic_instructions(content);
         let trimmed = content.trim();
         let too_short = trimmed.len() < 120;
         let low_specificity =
@@ -1107,6 +1098,25 @@ fn validate_codex_config_rules(
 
     let line_for = |key: &str| key_lines.get(key).copied().unwrap_or(1);
 
+    // TOML is checked by the legacy parser above. JSON/YAML can also represent
+    // unsigned integers above i64::MAX; do not narrow them through as_i64().
+    if path.extension().and_then(|ext| ext.to_str()) != Some("toml")
+        && config.is_rule_enabled("CDX-005")
+        && let Some(value) = root.get("project_doc_max_bytes")
+        && value.as_u64().is_none()
+    {
+        diagnostics.push(
+            Diagnostic::error(
+                path.to_path_buf(),
+                line_for("project_doc_max_bytes"),
+                0,
+                "CDX-005",
+                t!("rules.cdx_005.type_error"),
+            )
+            .with_suggestion(t!("rules.cdx_005.suggestion")),
+        );
+    }
+
     if config.is_rule_enabled("CDX-CFG-001")
         && let Some(value) = value_at_path(&root, &["approval_policy"])
     {
@@ -1123,7 +1133,34 @@ fn validate_codex_config_rules(
                     .with_suggestion(t!("rules.cdx_cfg_001.suggestion")),
                 );
             }
-        } else if !value.is_null() && !value.is_object() {
+        } else if let Some(obj) = value.as_object() {
+            // AskForApproval is externally tagged, not a flat map of categories.
+            // Required booleans have no defaults; optional booleans do.
+            let valid = obj.len() == 1
+                && obj
+                    .get("granular")
+                    .and_then(Value::as_object)
+                    .is_some_and(|granular| {
+                        ["mcp_elicitations", "rules", "sandbox_approval"]
+                            .iter()
+                            .all(|key| granular.get(*key).is_some_and(Value::is_boolean))
+                            && KNOWN_APPROVAL_POLICY_SUB_FIELDS
+                                .iter()
+                                .all(|key| granular.get(*key).is_none_or(Value::is_boolean))
+                    });
+            if !valid {
+                diagnostics.push(
+                    Diagnostic::error(
+                        path.to_path_buf(),
+                        line_for("approval_policy"),
+                        0,
+                        "CDX-CFG-001",
+                        t!("rules.cdx_cfg_001.granular_shape"),
+                    )
+                    .with_suggestion(t!("rules.cdx_cfg_001.granular_suggestion")),
+                );
+            }
+        } else {
             diagnostics.push(
                 Diagnostic::error(
                     path.to_path_buf(),
@@ -1790,7 +1827,7 @@ fn validate_codex_config_rules(
 
     // CDX-CFG-023: Invalid granular approval_policy sub-field name
     if config.is_rule_enabled("CDX-CFG-023")
-        && let Some(value) = value_at_path(&root, &["approval_policy"])
+        && let Some(value) = value_at_path(&root, &["approval_policy", "granular"])
     {
         if let Some(obj) = value.as_object() {
             for key in obj.keys() {
@@ -3025,7 +3062,7 @@ mod tests {
                 "CDX-002" => ("fullAutoErrorMode = \"crash\"", ".codex/config.toml"),
                 "CDX-003" => ("# Override", "AGENTS.override.md"),
                 "CDX-004" => ("totally_unknown_key = true", ".codex/config.toml"),
-                "CDX-005" => ("project_doc_max_bytes = 999999", ".codex/config.toml"),
+                "CDX-005" => ("project_doc_max_bytes = -1", ".codex/config.toml"),
                 "CDX-006" => (
                     "project_doc_fallback_filenames = [\"AGENTS.md\", \"AGENTS.md\"]",
                     ".codex/config.toml",
@@ -3241,36 +3278,45 @@ mitm = true
         );
     }
 
-    // ===== CDX-005: project_doc_max_bytes exceeds limit =====
+    // ===== CDX-005: project_doc_max_bytes type and negative =====
 
     #[test]
-    fn test_cdx_005_exceeds_limit() {
+    fn test_cdx_005_large_value_allowed() {
+        // config.schema.json types project_doc_max_bytes as uint with no maximum.
         let diagnostics = validate_config("project_doc_max_bytes = 100000");
         let cdx_005: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-005").collect();
-        assert_eq!(cdx_005.len(), 1);
-        assert_eq!(cdx_005[0].level, DiagnosticLevel::Error);
-        assert!(cdx_005[0].message.contains("100000"));
+        assert!(
+            cdx_005.is_empty(),
+            "values above 65536 must not fire CDX-005"
+        );
     }
 
     #[test]
-    fn test_cdx_005_at_limit() {
+    fn test_cdx_005_at_former_ceiling_allowed() {
         let diagnostics = validate_config("project_doc_max_bytes = 65536");
         let cdx_005: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-005").collect();
-        assert!(cdx_005.is_empty(), "65536 is at the limit, should be valid");
+        assert!(cdx_005.is_empty(), "65536 is a valid uint");
     }
 
     #[test]
-    fn test_cdx_005_below_limit() {
+    fn test_cdx_005_default_allowed() {
         let diagnostics = validate_config("project_doc_max_bytes = 32768");
         let cdx_005: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-005").collect();
-        assert!(cdx_005.is_empty(), "32768 is below limit, should be valid");
+        assert!(cdx_005.is_empty(), "32768 is the schema default");
     }
 
     #[test]
-    fn test_cdx_005_just_over_limit() {
+    fn test_cdx_005_just_over_former_ceiling_allowed() {
         let diagnostics = validate_config("project_doc_max_bytes = 65537");
         let cdx_005: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-005").collect();
-        assert_eq!(cdx_005.len(), 1, "65537 exceeds 65536 limit");
+        assert!(cdx_005.is_empty(), "65537 has no schema maximum");
+    }
+
+    #[test]
+    fn test_cdx_005_very_large_value_allowed() {
+        let diagnostics = validate_config("project_doc_max_bytes = 999999");
+        let cdx_005: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-005").collect();
+        assert!(cdx_005.is_empty(), "999999 has no schema maximum");
     }
 
     #[test]
@@ -3293,7 +3339,7 @@ mitm = true
 
     #[test]
     fn test_cdx_005_line_number() {
-        let content = "model = \"o4-mini\"\nproject_doc_max_bytes = 999999";
+        let content = "model = \"o4-mini\"\nproject_doc_max_bytes = -1";
         let diagnostics = validate_config(content);
         let cdx_005: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-005").collect();
         assert_eq!(cdx_005.len(), 1);
@@ -3302,7 +3348,7 @@ mitm = true
 
     #[test]
     fn test_cdx_005_has_suggestion() {
-        let diagnostics = validate_config("project_doc_max_bytes = 100000");
+        let diagnostics = validate_config("project_doc_max_bytes = -1");
         let cdx_005: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-005").collect();
         assert_eq!(cdx_005.len(), 1);
         assert!(
@@ -3313,37 +3359,75 @@ mitm = true
 
     #[test]
     fn test_cdx_005_negative_value() {
-        // Negative values are invalid because project_doc_max_bytes must be a positive integer
         let diagnostics = validate_config("project_doc_max_bytes = -1");
-        let cdx_005: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-005").collect();
-        assert_eq!(cdx_005.len(), 1, "Negative values should trigger CDX-005");
-        assert!(
-            cdx_005[0].message.contains("positive integer"),
-            "Error message should indicate positive integer requirement"
-        );
+        let hits: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-005").collect();
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].level, DiagnosticLevel::Error);
     }
 
     #[test]
-    fn test_cdx_005_zero_value() {
-        // Zero is invalid because project_doc_max_bytes must be a positive integer
-        let diagnostics = validate_config("project_doc_max_bytes = 0");
-        let cdx_005: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-005").collect();
-        assert_eq!(cdx_005.len(), 1, "Zero should trigger CDX-005");
-        assert!(
-            cdx_005[0].message.contains("positive integer"),
-            "Error message should indicate positive integer requirement"
-        );
+    fn test_cdx_005_json_yaml_nonnegative_integer_without_ceiling() {
+        for value in ["0", "65537", "9223372036854775807", "18446744073709551615"] {
+            for (path, content) in [
+                (
+                    ".codex/config.json",
+                    format!(r#"{{"project_doc_max_bytes":{value}}}"#),
+                ),
+                (
+                    ".codex/config.yaml",
+                    format!("project_doc_max_bytes: {value}"),
+                ),
+            ] {
+                assert!(
+                    !validate_config_at_path(path, &content)
+                        .iter()
+                        .any(|d| d.rule == "CDX-005" || d.rule == "CDX-000"),
+                    "{path}: {value}"
+                );
+            }
+        }
+        for value in ["-1", "1.5", "true", "null", "[]", "{}", "\"10\""] {
+            for (path, content) in [
+                (
+                    ".codex/config.json",
+                    format!(r#"{{"project_doc_max_bytes":{value}}}"#),
+                ),
+                (
+                    ".codex/config.yaml",
+                    format!("project_doc_max_bytes: {value}"),
+                ),
+            ] {
+                assert!(
+                    validate_config_at_path(path, &content)
+                        .iter()
+                        .any(|d| d.rule == "CDX-005"),
+                    "{path}: {value}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_cdx_005_zero_and_max_representable_integer() {
+        for value in [0, i64::MAX] {
+            let diagnostics = validate_config(&format!("project_doc_max_bytes = {value}"));
+            assert!(
+                !diagnostics
+                    .iter()
+                    .any(|d| d.rule == "CDX-005" || d.rule == "CDX-000")
+            );
+        }
     }
 
     #[test]
     fn test_cdx_004_and_cdx_005_combined() {
-        // Both an unknown key and exceeding limit in the same file
-        let content = "unknown_key = true\nproject_doc_max_bytes = 999999";
+        // Unknown key plus a negative project_doc_max_bytes in the same file.
+        let content = "unknown_key = true\nproject_doc_max_bytes = -1";
         let diagnostics = validate_config(content);
         let cdx_004: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-004").collect();
         let cdx_005: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-005").collect();
         assert_eq!(cdx_004.len(), 1, "CDX-004 should fire for unknown_key");
-        assert_eq!(cdx_005.len(), 1, "CDX-005 should fire for exceeding limit");
+        assert_eq!(cdx_005.len(), 1, "CDX-005 should fire for a negative value");
     }
 
     // ===== CDX-006: project_doc_fallback_filenames validation =====
@@ -3575,6 +3659,50 @@ mitm = true
     fn test_cdx_cfg_001_invalid_approval_policy() {
         let diagnostics = validate_config("approval_policy = \"always\"");
         assert!(diagnostics.iter().any(|d| d.rule == "CDX-CFG-001"));
+    }
+
+    #[test]
+    fn test_cdx_cfg_001_retired_untrusted_and_on_failure() {
+        for value in ["untrusted", "on-failure"] {
+            let diagnostics = validate_config(&format!("approval_policy = \"{value}\""));
+            let hits: Vec<_> = diagnostics
+                .iter()
+                .filter(|d| d.rule == "CDX-CFG-001")
+                .collect();
+            assert_eq!(hits.len(), 1, "{value} is not an AskForApproval string");
+            assert!(
+                hits[0].message.contains(value),
+                "message should name the rejected value, got: {}",
+                hits[0].message
+            );
+        }
+    }
+
+    #[test]
+    fn test_cdx_cfg_001_current_string_values_accepted() {
+        for value in ["on-request", "never"] {
+            let diagnostics = validate_config(&format!("approval_policy = \"{value}\""));
+            assert!(
+                diagnostics.iter().all(|d| d.rule != "CDX-CFG-001"),
+                "{value} is a current AskForApproval string, got: {:?}",
+                diagnostics
+                    .iter()
+                    .filter(|d| d.rule == "CDX-CFG-001")
+                    .map(|d| d.message.as_str())
+                    .collect::<Vec<_>>()
+            );
+        }
+    }
+
+    #[test]
+    fn test_cdx_cfg_001_non_string_non_object_type_error() {
+        let diagnostics = validate_config("approval_policy = 1");
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-001")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        assert!(hits[0].message.contains("string or a granular object"));
     }
 
     #[test]
@@ -4543,7 +4671,7 @@ hide_full_access_warning = true
 
     #[test]
     fn test_cdx_cfg_023_unknown_approval_policy_sub_field() {
-        let content = "[approval_policy]\nunknown_field = \"never\"\nrules = \"on-request\"";
+        let content = "[approval_policy.granular]\nunknown_field = true\nrules = true";
         let diagnostics = validate_config(content);
         let cdx_023: Vec<_> = diagnostics
             .iter()
@@ -4556,7 +4684,7 @@ hide_full_access_warning = true
 
     #[test]
     fn test_cdx_cfg_023_valid_approval_policy_sub_fields_no_diagnostic() {
-        let content = "[approval_policy]\nsandbox_approval = \"on-request\"\nrules = \"never\"\nmcp_elicitations = \"on-failure\"";
+        let content = "[approval_policy.granular]\nsandbox_approval = true\nrules = false\nmcp_elicitations = true";
         let diagnostics = validate_config(content);
         let cdx_023: Vec<_> = diagnostics
             .iter()
@@ -4580,7 +4708,7 @@ hide_full_access_warning = true
 
     #[test]
     fn test_cdx_cfg_023_object_approval_policy_no_type_error_from_001() {
-        let content = "[approval_policy]\nsandbox_approval = \"on-request\"";
+        let content = "[approval_policy.granular]\nsandbox_approval = true\nrules = false\nmcp_elicitations = true";
         let diagnostics = validate_config(content);
         let cdx_001: Vec<_> = diagnostics
             .iter()
@@ -4595,12 +4723,12 @@ hide_full_access_warning = true
     #[test]
     fn test_cdx_cfg_023_granular_all_valid_no_diagnostic() {
         let content = r#"
-[approval_policy]
-sandbox_approval = "on-request"
-rules = "never"
-mcp_elicitations = "on-failure"
-request_permissions = "on-request"
-skill_approval = "never"
+[approval_policy.granular]
+sandbox_approval = true
+rules = false
+mcp_elicitations = true
+request_permissions = true
+skill_approval = false
 "#;
         let diagnostics = validate_config(content);
         let cdx_cfg: Vec<_> = diagnostics
@@ -4611,6 +4739,48 @@ skill_approval = "never"
             cdx_cfg.is_empty(),
             "Granular approval_policy with valid sub-fields should not trigger CDX-CFG-023 or CDX-CFG-001"
         );
+    }
+
+    #[test]
+    fn test_cdx_cfg_001_rejects_malformed_granular_shapes() {
+        for value in [
+            "{}",
+            "{ rules = true }",
+            "{ granular = false }",
+            "{ granular = {} }",
+            "{ granular = { rules = true, mcp_elicitations = true } }",
+            "{ granular = { rules = true, mcp_elicitations = true, sandbox_approval = true, skill_approval = 1 } }",
+            "{ granular = { rules = true, mcp_elicitations = true, sandbox_approval = true }, extra = true }",
+        ] {
+            let mut config = LintConfig::default();
+            config.rules_mut().disabled_rules = vec!["CDX-CFG-023".into()];
+            let diagnostics =
+                validate_config_with_config(&format!("approval_policy = {value}"), &config);
+            assert!(
+                diagnostics.iter().any(|d| d.rule == "CDX-CFG-001"),
+                "{value}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_cdx_cfg_001_granular_shape_json_yaml() {
+        for (path, content) in [
+            (
+                ".codex/config.json",
+                r#"{"approval_policy":{"granular":{"rules":true,"mcp_elicitations":false,"sandbox_approval":true}}}"#,
+            ),
+            (
+                ".codex/config.yaml",
+                "approval_policy:\n  granular:\n    rules: true\n    mcp_elicitations: false\n    sandbox_approval: true",
+            ),
+        ] {
+            assert!(
+                !validate_config_at_path(path, content)
+                    .iter()
+                    .any(|d| d.rule == "CDX-CFG-001" || d.rule == "CDX-CFG-023")
+            );
+        }
     }
 
     // ===== CDX-CFG-024: Invalid approvals_reviewer enum value =====

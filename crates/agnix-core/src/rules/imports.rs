@@ -7,7 +7,6 @@
 //! - REF-001: @import file not found (universal)
 //! - REF-002: Broken markdown links (universal)
 //! - REF-003: Duplicate @import detection
-//! - REF-004: Non-markdown @import detection
 
 use crate::{
     config::PerFileLintConfig,
@@ -28,7 +27,6 @@ const RULE_IDS: &[&str] = &[
     "REF-001",
     "REF-002",
     "REF-003",
-    "REF-004",
 ];
 
 /// Infrastructure rule ID for poisoned-lock recovery diagnostics.
@@ -157,32 +155,6 @@ impl Validator for ImportsValidator {
 
                     diagnostics.push(diagnostic);
                 }
-            }
-        }
-
-        // REF-004: Non-markdown @import detection
-        if config.is_rule_enabled("REF-004") {
-            for import in &root_imports {
-                let import_path = Path::new(&import.path);
-                if let Some(ext) = import_path.extension().and_then(|e| e.to_str()) {
-                    if !ext.eq_ignore_ascii_case("md") {
-                        diagnostics.push(
-                            Diagnostic::warning(
-                                path.to_path_buf(),
-                                import.line,
-                                import.column,
-                                "REF-004",
-                                t!(
-                                    "rules.ref_004.message",
-                                    path = import.path.as_str(),
-                                    ext = ext
-                                ),
-                            )
-                            .with_suggestion(t!("rules.ref_004.suggestion")),
-                        );
-                    }
-                }
-                // Extensionless imports are allowed (might be directories)
             }
         }
 
@@ -1980,101 +1952,6 @@ mod tests {
 
         let ref_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "REF-003").collect();
         assert!(ref_003.is_empty(), "REF-003 should be disabled");
-    }
-
-    // ===== REF-004: Non-Markdown @import =====
-
-    #[test]
-    fn test_ref_004_json_import() {
-        let temp = TempDir::new().unwrap();
-        let file_path = temp.path().join("test.md");
-        fs::write(&file_path, "@config.json").unwrap();
-
-        let validator = ImportsValidator;
-        let diagnostics = validator.validate(&file_path, "@config.json", &LintConfig::default());
-
-        let ref_004: Vec<_> = diagnostics.iter().filter(|d| d.rule == "REF-004").collect();
-        assert_eq!(ref_004.len(), 1, "Should detect non-markdown import");
-        assert!(ref_004[0].message.contains("config.json"));
-        assert!(ref_004[0].message.contains("json"));
-    }
-
-    #[test]
-    fn test_ref_004_python_import() {
-        let temp = TempDir::new().unwrap();
-        let file_path = temp.path().join("test.md");
-        fs::write(&file_path, "@scripts/deploy.py").unwrap();
-
-        let validator = ImportsValidator;
-        let diagnostics =
-            validator.validate(&file_path, "@scripts/deploy.py", &LintConfig::default());
-
-        let ref_004: Vec<_> = diagnostics.iter().filter(|d| d.rule == "REF-004").collect();
-        assert_eq!(ref_004.len(), 1);
-    }
-
-    #[test]
-    fn test_ref_004_markdown_import_ok() {
-        let temp = TempDir::new().unwrap();
-        let target = temp.path().join("guide.md");
-        let file_path = temp.path().join("test.md");
-        fs::write(&target, "Guide content").unwrap();
-        fs::write(&file_path, "@guide.md").unwrap();
-
-        let validator = ImportsValidator;
-        let diagnostics = validator.validate(&file_path, "@guide.md", &LintConfig::default());
-
-        let ref_004: Vec<_> = diagnostics.iter().filter(|d| d.rule == "REF-004").collect();
-        assert!(ref_004.is_empty(), "Markdown imports should be OK");
-    }
-
-    #[test]
-    fn test_ref_004_multiple_non_markdown() {
-        let temp = TempDir::new().unwrap();
-        let file_path = temp.path().join("test.md");
-        fs::write(&file_path, "@config.json\n@script.py\n@utils.ts").unwrap();
-
-        let validator = ImportsValidator;
-        let diagnostics = validator.validate(
-            &file_path,
-            "@config.json\n@script.py\n@utils.ts",
-            &LintConfig::default(),
-        );
-
-        let ref_004: Vec<_> = diagnostics.iter().filter(|d| d.rule == "REF-004").collect();
-        assert_eq!(ref_004.len(), 3);
-    }
-
-    #[test]
-    fn test_ref_004_disabled() {
-        let temp = TempDir::new().unwrap();
-        let file_path = temp.path().join("test.md");
-        fs::write(&file_path, "@config.json").unwrap();
-
-        let mut config = LintConfig::default();
-        config.rules_mut().disabled_rules = vec!["REF-004".to_string()];
-
-        let validator = ImportsValidator;
-        let diagnostics = validator.validate(&file_path, "@config.json", &config);
-
-        let ref_004: Vec<_> = diagnostics.iter().filter(|d| d.rule == "REF-004").collect();
-        assert!(ref_004.is_empty(), "REF-004 should be disabled");
-    }
-
-    #[test]
-    fn test_ref_004_extensionless_import_ok() {
-        let temp = TempDir::new().unwrap();
-        let file_path = temp.path().join("test.md");
-        fs::write(&file_path, "@utils").unwrap();
-
-        let validator = ImportsValidator;
-        let diagnostics = validator.validate(&file_path, "@utils", &LintConfig::default());
-
-        let ref_004: Vec<_> = diagnostics.iter().filter(|d| d.rule == "REF-004").collect();
-        assert!(
-            ref_004.is_empty(),
-            "Extensionless imports should not trigger REF-004"
-        );
     }
 
     #[test]

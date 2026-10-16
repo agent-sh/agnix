@@ -355,7 +355,7 @@ async fn test_did_save_project_trigger_starts_project_revalidation() {
 
     let temp_dir = tempfile::tempdir().unwrap();
     let agents_path = temp_dir.path().join("AGENTS.md");
-    std::fs::write(&agents_path, "# Root AGENTS").unwrap();
+    std::fs::write(&agents_path, "# Root\nRun `npm install`.").unwrap();
 
     let root_uri = Url::from_file_path(temp_dir.path()).unwrap();
     service
@@ -1887,11 +1887,15 @@ async fn test_project_diagnostics_cached() {
 
     let temp_dir = tempfile::tempdir().unwrap();
 
-    // Create two AGENTS.md files to trigger AGM-006
-    std::fs::write(temp_dir.path().join("AGENTS.md"), "# Root").unwrap();
+    // Create two conflicting AGENTS.md files to trigger XP-004
+    std::fs::write(
+        temp_dir.path().join("AGENTS.md"),
+        "# Root\nRun `npm install`.",
+    )
+    .unwrap();
     let sub = temp_dir.path().join("sub");
     std::fs::create_dir(&sub).unwrap();
-    std::fs::write(sub.join("AGENTS.md"), "# Sub").unwrap();
+    std::fs::write(sub.join("AGENTS.md"), "# Nested\nRun `yarn install`.").unwrap();
 
     let root_uri = Url::from_file_path(temp_dir.path()).unwrap();
     service
@@ -1907,7 +1911,11 @@ async fn test_project_diagnostics_cached() {
     // Wait for it to complete before asserting.
     for _ in 0..80 {
         let proj_diags = service.inner().project_level_diagnostics.read().await;
-        if !proj_diags.is_empty() {
+        if proj_diags
+            .values()
+            .flatten()
+            .any(|d| d.code == Some(NumberOrString::String("XP-004".to_string())))
+        {
             break;
         }
         drop(proj_diags);
@@ -1917,8 +1925,11 @@ async fn test_project_diagnostics_cached() {
     // Verify project diagnostics are stored
     let proj_diags = service.inner().project_level_diagnostics.read().await;
     assert!(
-        !proj_diags.is_empty(),
-        "Project diagnostics should be cached for AGM-006"
+        proj_diags
+            .values()
+            .flatten()
+            .any(|d| d.code == Some(NumberOrString::String("XP-004".to_string()))),
+        "Project diagnostics should be cached for XP-004"
     );
 
     // Verify URIs are tracked for cleanup
@@ -1936,11 +1947,15 @@ async fn test_project_diagnostics_cleared_on_rerun() {
 
     let temp_dir = tempfile::tempdir().unwrap();
 
-    // Create two AGENTS.md files to trigger AGM-006
-    std::fs::write(temp_dir.path().join("AGENTS.md"), "# Root").unwrap();
+    // Create two conflicting AGENTS.md files to trigger XP-004
+    std::fs::write(
+        temp_dir.path().join("AGENTS.md"),
+        "# Root\nRun `npm install`.",
+    )
+    .unwrap();
     let sub = temp_dir.path().join("sub");
     std::fs::create_dir(&sub).unwrap();
-    std::fs::write(sub.join("AGENTS.md"), "# Sub").unwrap();
+    std::fs::write(sub.join("AGENTS.md"), "# Nested\nRun `yarn install`.").unwrap();
 
     let root_uri = Url::from_file_path(temp_dir.path()).unwrap();
     service
@@ -1956,7 +1971,11 @@ async fn test_project_diagnostics_cleared_on_rerun() {
     // Wait for it to complete before continuing.
     for _ in 0..80 {
         let proj_diags = service.inner().project_level_diagnostics.read().await;
-        if !proj_diags.is_empty() {
+        if proj_diags
+            .values()
+            .flatten()
+            .any(|d| d.code == Some(NumberOrString::String("XP-004".to_string())))
+        {
             break;
         }
         drop(proj_diags);
@@ -1972,21 +1991,21 @@ async fn test_project_diagnostics_cleared_on_rerun() {
     // Remove the nested AGENTS.md to resolve the issue
     std::fs::remove_file(sub.join("AGENTS.md")).unwrap();
 
-    // Second run: AGM-006 should no longer fire
+    // Second run: XP-004 should no longer fire
     service.inner().validate_project_rules_and_publish().await;
 
     let proj_diags = service.inner().project_level_diagnostics.read().await;
-    let agm006_count: usize = proj_diags
+    let xp004_count: usize = proj_diags
         .values()
         .flat_map(|diags| diags.iter())
         .filter(|d| {
             d.code
                 .as_ref()
-                .map(|c| matches!(c, NumberOrString::String(s) if s == "AGM-006"))
+                .map(|c| matches!(c, NumberOrString::String(s) if s == "XP-004"))
                 .unwrap_or(false)
         })
         .count();
-    assert_eq!(agm006_count, 0, "AGM-006 should be cleared after fix");
+    assert_eq!(xp004_count, 0, "XP-004 should be cleared after fix");
 }
 
 /// Test stale generation guard returns early without mutating cached project diagnostics.
@@ -1998,10 +2017,14 @@ async fn test_project_validation_stale_generation_returns_early() {
     let temp_dir = tempfile::tempdir().unwrap();
 
     // Create two AGENTS.md files so project validation has work to do.
-    std::fs::write(temp_dir.path().join("AGENTS.md"), "# Root").unwrap();
+    std::fs::write(
+        temp_dir.path().join("AGENTS.md"),
+        "# Root\nRun `npm install`.",
+    )
+    .unwrap();
     let sub = temp_dir.path().join("sub");
     std::fs::create_dir(&sub).unwrap();
-    std::fs::write(sub.join("AGENTS.md"), "# Sub").unwrap();
+    std::fs::write(sub.join("AGENTS.md"), "# Nested\nRun `yarn install`.").unwrap();
 
     let root_uri = Url::from_file_path(temp_dir.path()).unwrap();
     service
@@ -2250,7 +2273,7 @@ async fn test_project_and_file_diagnostics_merged() {
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
     }
 
-    // Pre-populate project_level_diagnostics with a fake AGM-006 diagnostic
+    // Pre-populate project_level_diagnostics with a fake XP-004 diagnostic
     // for this URI, simulating what validate_project_rules_and_publish would store.
     {
         let fake_project_diag = Diagnostic {
@@ -2265,7 +2288,7 @@ async fn test_project_and_file_diagnostics_merged() {
                 },
             },
             severity: Some(DiagnosticSeverity::WARNING),
-            code: Some(NumberOrString::String("AGM-006".to_string())),
+            code: Some(NumberOrString::String("XP-004".to_string())),
             code_description: None,
             source: Some("agnix".to_string()),
             message: "Nested AGENTS.md detected".to_string(),
@@ -2288,7 +2311,7 @@ async fn test_project_and_file_diagnostics_merged() {
 
     // Open the file -- this triggers validate_from_content_and_publish which
     // should merge per-file diagnostics (e.g. XML-001) with the cached
-    // project-level diagnostics (AGM-006).
+    // project-level diagnostics (XP-004).
     service
         .inner()
         .did_open(DidOpenTextDocumentParams {
@@ -2313,7 +2336,7 @@ async fn test_project_and_file_diagnostics_merged() {
         assert!(
             diags
                 .iter()
-                .any(|d| d.code == Some(NumberOrString::String("AGM-006".to_string()))),
+                .any(|d| d.code == Some(NumberOrString::String("XP-004".to_string()))),
             "Cached project diagnostic should be preserved after merge"
         );
     }
@@ -2617,11 +2640,15 @@ async fn test_project_validation_starts_in_initialize() {
 
     let temp_dir = tempfile::tempdir().unwrap();
 
-    // Create two AGENTS.md files to trigger AGM-006
-    std::fs::write(temp_dir.path().join("AGENTS.md"), "# Root").unwrap();
+    // Create two conflicting AGENTS.md files to trigger XP-004
+    std::fs::write(
+        temp_dir.path().join("AGENTS.md"),
+        "# Root\nRun `npm install`.",
+    )
+    .unwrap();
     let sub = temp_dir.path().join("sub");
     std::fs::create_dir(&sub).unwrap();
-    std::fs::write(sub.join("AGENTS.md"), "# Sub").unwrap();
+    std::fs::write(sub.join("AGENTS.md"), "# Nested\nRun `yarn install`.").unwrap();
 
     let root_uri = Url::from_file_path(temp_dir.path()).unwrap();
 
@@ -2640,7 +2667,11 @@ async fn test_project_validation_starts_in_initialize() {
     let mut found = false;
     for _ in 0..80 {
         let proj_diags = service.inner().project_level_diagnostics.read().await;
-        if !proj_diags.is_empty() {
+        if proj_diags
+            .values()
+            .flatten()
+            .any(|d| d.code == Some(NumberOrString::String("XP-004".to_string())))
+        {
             found = true;
             break;
         }
@@ -2651,7 +2682,7 @@ async fn test_project_validation_starts_in_initialize() {
     assert!(
         found,
         "Project-level validation should run during initialize(), \
-         producing AGM-006 diagnostics for duplicate AGENTS.md files"
+         producing XP-004 diagnostics for conflicting install commands files"
     );
 }
 
@@ -3044,11 +3075,15 @@ async fn test_stress_concurrent_project_and_file_validation() {
     let temp_dir = tempfile::tempdir().unwrap();
     let root_uri = Url::from_file_path(temp_dir.path()).unwrap();
 
-    // Create 2 AGENTS.md files to trigger AGM-006
-    std::fs::write(temp_dir.path().join("AGENTS.md"), "# Root AGENTS").unwrap();
+    // Create 2 AGENTS.md files to trigger XP-004
+    std::fs::write(
+        temp_dir.path().join("AGENTS.md"),
+        "# Root\nRun `npm install`.",
+    )
+    .unwrap();
     let sub = temp_dir.path().join("sub");
     std::fs::create_dir(&sub).unwrap();
-    std::fs::write(sub.join("AGENTS.md"), "# Sub AGENTS").unwrap();
+    std::fs::write(sub.join("AGENTS.md"), "# Nested\nRun `yarn install`.").unwrap();
 
     // Create 5 SKILL.md files
     for i in 0..5 {
@@ -3111,7 +3146,11 @@ async fn test_stress_concurrent_project_and_file_validation() {
         loop {
             {
                 let proj_diags = service.inner().project_level_diagnostics.read().await;
-                if !proj_diags.is_empty() {
+                if proj_diags
+                    .values()
+                    .flatten()
+                    .any(|d| d.code == Some(NumberOrString::String("XP-004".to_string())))
+                {
                     break;
                 }
             }
@@ -3177,8 +3216,11 @@ async fn test_stress_concurrent_project_and_file_validation() {
     // call above will not be stale-dropped. Assert diagnostics directly.
     let proj_diags = service.inner().project_level_diagnostics.read().await;
     assert!(
-        !proj_diags.is_empty(),
-        "project_level_diagnostics should be non-empty (AGM-006 from duplicate AGENTS.md)"
+        proj_diags
+            .values()
+            .flatten()
+            .any(|d| d.code == Some(NumberOrString::String("XP-004".to_string()))),
+        "project_level_diagnostics should be non-empty (XP-004 from conflicting install commands)"
     );
     drop(proj_diags);
 
@@ -3376,11 +3418,15 @@ async fn test_stress_rapid_project_validation_generation_guard() {
 
     let temp_dir = tempfile::tempdir().unwrap();
 
-    // Create 2 AGENTS.md files to trigger AGM-006
-    std::fs::write(temp_dir.path().join("AGENTS.md"), "# Root AGENTS").unwrap();
+    // Create 2 AGENTS.md files to trigger XP-004
+    std::fs::write(
+        temp_dir.path().join("AGENTS.md"),
+        "# Root\nRun `npm install`.",
+    )
+    .unwrap();
     let sub = temp_dir.path().join("sub");
     std::fs::create_dir(&sub).unwrap();
-    std::fs::write(sub.join("AGENTS.md"), "# Sub AGENTS").unwrap();
+    std::fs::write(sub.join("AGENTS.md"), "# Nested\nRun `yarn install`.").unwrap();
 
     let root_uri = Url::from_file_path(temp_dir.path()).unwrap();
     service
@@ -3399,7 +3445,11 @@ async fn test_stress_rapid_project_validation_generation_guard() {
         loop {
             {
                 let proj_diags = service.inner().project_level_diagnostics.read().await;
-                if !proj_diags.is_empty() {
+                if proj_diags
+                    .values()
+                    .flatten()
+                    .any(|d| d.code == Some(NumberOrString::String("XP-004".to_string())))
+                {
                     break;
                 }
             }

@@ -12,7 +12,7 @@ keywords: ["CC-SET-016", "deprecated tool-scoped permission rule form", "claude 
 - **Severity**: `LOW`
 - **Category**: `Claude Settings`
 - **Normative Level**: `SHOULD`
-- **Auto-Fix**: `No`
+- **Auto-Fix**: `Yes (unsafe)`
 - **Verified On**: `2026-07-16`
 
 ## Applicability

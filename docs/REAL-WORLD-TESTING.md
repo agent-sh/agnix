@@ -123,7 +123,7 @@ cargo test --workspace
 ### Common False Negatives
 | Pattern | Should trigger | Why missed |
 |---------|---------------|------------|
-| "You're a senior engineer" | CC-MEM-005 | Contraction not matched |
+| "You're a senior engineer" | PE-005 | Contraction not matched |
 | `\|\| true` in hook commands | CC-HK-009 | Not in dangerous patterns |
 | .cursorrules.md (with .md extension) | CUR-* | File type not detected |
 | @import from project root | REF-001 (should NOT fire) | Resolution only tried file-relative |
@@ -134,7 +134,7 @@ cargo test --workspace
 - LLM response artifact detection
 - Non-English negative keyword detection (Russian, Japanese, etc.)
 - PE-004 firing on descriptive text vs instructions
-- CC-MEM-006 firing when positive alternative exists in context
+- PE-006 firing when positive alternative exists in context
 
 ## Metrics
 

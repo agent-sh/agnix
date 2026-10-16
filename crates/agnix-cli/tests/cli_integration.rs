@@ -64,6 +64,36 @@ fn fixtures_agnix() -> (Command, tempfile::NamedTempFile) {
     (cmd, config)
 }
 
+#[test]
+fn test_action_fixture_config_scans_fixtures_and_preserves_exit_status() {
+    for (fixture, should_fail) in [
+        ("tests/fixtures/invalid/skills/invalid-name", true),
+        ("tests/fixtures/valid", false),
+    ] {
+        let output = agnix()
+            .arg(fixture)
+            .args(["--config", "tests/action.agnix.toml", "--format", "json"])
+            .output()
+            .unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+        assert!(
+            json["files_checked"].as_u64().unwrap() > 0,
+            "action smoke test must scan {fixture}, not inherit self-lint exclusions"
+        );
+        assert_eq!(output.status.code(), Some(if should_fail { 1 } else { 0 }));
+        assert_eq!(json["summary"]["errors"].as_u64().unwrap() > 0, should_fail);
+        if should_fail {
+            assert!(
+                json["diagnostics"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|d| d["rule"] == "AS-004" && d["level"] == "error")
+            );
+        }
+    }
+}
+
 fn assert_fix_flags_rejected(format: &str, flag: &str) {
     let mut cmd = agnix();
     cmd.arg("tests/fixtures/valid")
@@ -742,13 +772,13 @@ fn test_format_json_contains_memory_rules() {
     use std::io::Write;
 
     // CC-MEM rules require specific content patterns to trigger
-    // Create a fixture with generic instructions (CC-MEM-005)
+    // Create a fixture with weak constraint advice (CC-MEM-007)
     let temp_dir = tempfile::tempdir().unwrap();
     let claude_md = temp_dir.path().join("CLAUDE.md");
     let mut file = fs::File::create(&claude_md).unwrap();
     writeln!(
         file,
-        "# Project Memory\n\nBe helpful and concise. Always follow best practices."
+        "# Critical Rules\n\nYou should follow the coding style."
     )
     .unwrap();
 
@@ -864,13 +894,13 @@ fn test_format_sarif_results_include_memory_diagnostics() {
     use std::io::Write;
 
     // CC-MEM rules require specific content patterns to trigger
-    // Create a fixture with generic instructions (CC-MEM-005)
+    // Create a fixture with weak constraint advice (CC-MEM-007)
     let temp_dir = tempfile::tempdir().unwrap();
     let claude_md = temp_dir.path().join("CLAUDE.md");
     let mut file = fs::File::create(&claude_md).unwrap();
     writeln!(
         file,
-        "# Project Memory\n\nBe helpful and concise. Always follow best practices."
+        "# Critical Rules\n\nYou should follow the coding style."
     )
     .unwrap();
 

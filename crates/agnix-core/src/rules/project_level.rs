@@ -1,4 +1,4 @@
-//! Project-level cross-file validation rules (AGM-006, XP-004/005/006, XP-009,
+//! Project-level cross-file validation rules (XP-004/005/006, XP-009,
 //! VER-001).
 // All items in this module require the filesystem feature. The file-level inner
 // attribute avoids repeating #[cfg(feature = "filesystem")] on each import and
@@ -17,25 +17,9 @@ use crate::parsers::frontmatter::normalize_line_endings;
 use crate::schemas;
 use crate::schemas::cross_platform::CODEX_BYTE_LIMIT;
 
-/// Join an iterator of paths into a comma-separated string.
-///
-/// Uses `to_string_lossy()` to handle non-UTF-8 paths without panicking;
-/// the `Cow::Borrowed` case for valid UTF-8 avoids an intermediate `String`
-/// allocation per path.
-fn join_paths<'a>(paths: impl Iterator<Item = &'a Path>) -> String {
-    paths.enumerate().fold(String::new(), |mut acc, (i, p)| {
-        if i > 0 {
-            acc.push_str(", ");
-        }
-        acc.push_str(&p.to_string_lossy());
-        acc
-    })
-}
-
 /// Run project-level checks that require cross-file analysis.
 ///
 /// These checks analyze relationships between multiple files in the project:
-/// - AGM-006: Multiple AGENTS.md files
 /// - XP-004: Conflicting build/test commands across instruction files
 /// - XP-005: Conflicting tool constraints across instruction files
 /// - XP-006: Multiple instruction layers without documented precedence
@@ -44,70 +28,12 @@ fn join_paths<'a>(paths: impl Iterator<Item = &'a Path>) -> String {
 /// Both `agents_md_paths` and `instruction_file_paths` must be pre-sorted
 /// for deterministic output ordering.
 pub(crate) fn run_project_level_checks(
-    agents_md_paths: &[PathBuf],
+    _agents_md_paths: &[PathBuf],
     instruction_file_paths: &[PathBuf],
     config: &LintConfig,
     root_dir: &Path,
 ) -> Vec<Diagnostic> {
     let mut diagnostics = Vec::new();
-
-    // AGM-006: Check for multiple AGENTS.md files in the directory tree.
-    //
-    // Per-file `[[overrides]]` are applied by filtering the participating
-    // set up front, not by gating at the push site. A file that disables
-    // AGM-006 is invisible to the rule: it neither fires nor appears in
-    // other files' "other AGENTS.md files exist at:" listings. This makes
-    // the suppression deterministic (no dependence on which file the
-    // detector happens to report on) and matches the semantics of the
-    // `per-file override` name.
-    if config.is_rule_enabled("AGM-006") {
-        let agm006_paths: Vec<PathBuf> = agents_md_paths
-            .iter()
-            .filter(|p| config.for_path(p).is_rule_enabled("AGM-006"))
-            .cloned()
-            .collect();
-        if agm006_paths.len() > 1 {
-            for agents_file in agm006_paths.iter() {
-                let parent_files =
-                    schemas::agents_md::check_agents_md_hierarchy(agents_file, &agm006_paths);
-                let description = if !parent_files.is_empty() {
-                    let parent_paths = join_paths(parent_files.iter().map(|p| p.as_path()));
-                    format!(
-                        "Nested AGENTS.md detected - parent AGENTS.md files exist at: {parent_paths}",
-                    )
-                } else {
-                    let other_paths = join_paths(
-                        agm006_paths
-                            .iter()
-                            .filter(|p| p.as_path() != agents_file.as_path())
-                            .map(|p| p.as_path()),
-                    );
-                    format!(
-                        "Multiple AGENTS.md files detected - other AGENTS.md files exist at: {other_paths}",
-                    )
-                };
-
-                diagnostics.push(
-                    Diagnostic::warning(
-                        agents_file.clone(),
-                        1,
-                        0,
-                        "AGM-006",
-                        description,
-                    )
-                    .with_suggestion(
-                        // Codex concatenates from the root down, joins with blank
-                        // lines, takes at most one file per directory, and lets
-                        // files nearer the working directory override earlier
-                        // guidance. It also recommends splitting across nested
-                        // directories to stay under the byte cap - the opposite
-                        // of the "consolidate files" advice this used to give.
-                        "AGENTS.md files are merged from the project root down, one per directory, with files nearer the working directory taking precedence. Confirm the layered guidance is consistent, or document the intended precedence.".to_string(),
-                    ),
-                );
-            }
-        }
-    }
 
     // XP-004, XP-005, XP-006: Cross-layer contradiction detection.
     // Note: when XP-004 is disabled, file-read failures are silently dropped
@@ -351,7 +277,7 @@ pub(crate) fn run_project_level_checks(
         // never concatenated. Summing every discovered file into one running
         // total blamed a sibling for bytes it does not share - and it scaled the
         // wrong way, since N packages would eventually cross the cap no matter
-        // how small each one is. It also contradicted AGM-006 above, which
+        // how small each one is. Nested AGENTS.md is a supported hierarchy, which
         // recommends splitting across nested directories precisely to stay under
         // this cap.
         let chains = codex_instruction_chains(instruction_file_paths, root_dir);
@@ -508,34 +434,6 @@ mod tests {
     use crate::config::LintConfig;
 
     #[test]
-    fn test_join_paths_empty() {
-        assert_eq!(join_paths(std::iter::empty()), "");
-    }
-
-    #[test]
-    fn test_join_paths_single() {
-        let p = std::path::Path::new("/foo/bar.md");
-        // Build expected from the path itself so the assertion is platform-correct
-        // (path separators may render differently on Windows).
-        assert_eq!(join_paths(std::iter::once(p)), p.to_string_lossy().as_ref());
-    }
-
-    #[test]
-    fn test_join_paths_multiple() {
-        let a = std::path::Path::new("/a.md");
-        let b = std::path::Path::new("/b.md");
-        let c = std::path::Path::new("/c.md");
-        // Build expected from the paths themselves to stay platform-correct.
-        let expected = format!(
-            "{}, {}, {}",
-            a.to_string_lossy(),
-            b.to_string_lossy(),
-            c.to_string_lossy()
-        );
-        assert_eq!(join_paths([a, b, c].iter().copied()), expected);
-    }
-
-    #[test]
     fn test_xp004_read_error_for_missing_instruction_file() {
         use crate::DiagnosticLevel;
 
@@ -593,7 +491,7 @@ mod tests {
     }
 
     #[test]
-    fn test_agm006_disabled_skips_diagnostics() {
+    fn test_agm006_retired_config_and_diagnostics() {
         let temp = tempfile::TempDir::new().unwrap();
 
         let root_agents = temp.path().join("AGENTS.md");
@@ -605,28 +503,25 @@ mod tests {
 
         let agents_md_paths = vec![root_agents, nested_agents];
 
-        let config = LintConfig::builder()
-            .disable_rule("AGM-006")
-            .build()
-            .unwrap();
-        let diagnostics = run_project_level_checks(&agents_md_paths, &[], &config, temp.path());
-        let agm006: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AGM-006").collect();
+        // Retired rule IDs are rejected by the validated builder.
         assert!(
-            agm006.is_empty(),
-            "Disabling AGM-006 should suppress all AGM-006 diagnostics, got: {agm006:?}"
+            LintConfig::builder()
+                .disable_rule("AGM-006")
+                .build()
+                .is_err()
         );
 
-        // Sanity check: with default config, AGM-006 diagnostics DO appear
+        // Sanity check: with default config, AGM-006 remains retired
         let diagnostics =
             run_project_level_checks(&agents_md_paths, &[], &LintConfig::default(), temp.path());
         assert!(
-            diagnostics.iter().any(|d| d.rule == "AGM-006"),
-            "Default config should produce AGM-006 diagnostics for multiple AGENTS.md files"
+            !diagnostics.iter().any(|d| d.rule == "AGM-006"),
+            "Default config must not produce AGM-006 diagnostics for multiple AGENTS.md files"
         );
     }
 
     #[test]
-    fn test_agm006_message_variants() {
+    fn test_agm006_retired_for_nested_and_root_files() {
         let temp = tempfile::TempDir::new().unwrap();
 
         // Nested hierarchy: root AGENTS.md and subdir/AGENTS.md
@@ -642,48 +537,9 @@ mod tests {
             run_project_level_checks(&agents_md_paths, &[], &LintConfig::default(), temp.path());
 
         let agm006: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AGM-006").collect();
-        assert_eq!(
-            agm006.len(),
-            2,
-            "Expected one diagnostic per AGENTS.md file"
-        );
-
-        let nested_diag = agm006
-            .iter()
-            .find(|d| d.file == nested_agents)
-            .expect("Expected a diagnostic for the nested AGENTS.md");
         assert!(
-            nested_diag.message.contains("Nested AGENTS.md detected"),
-            "Nested file should get 'Nested AGENTS.md detected' message, got: {}",
-            nested_diag.message
-        );
-
-        let root_diag = agm006
-            .iter()
-            .find(|d| d.file == root_agents)
-            .expect("Expected a diagnostic for the root AGENTS.md");
-        assert!(
-            root_diag
-                .message
-                .contains("Multiple AGENTS.md files detected"),
-            "Root file should get 'Multiple AGENTS.md files detected' message, got: {}",
-            root_diag.message
-        );
-
-        // Verify listed paths: each message should name the other file
-        assert!(
-            nested_diag
-                .message
-                .contains(root_agents.to_string_lossy().as_ref()),
-            "Nested file's message should list the root AGENTS.md path, got: {}",
-            nested_diag.message
-        );
-        assert!(
-            root_diag
-                .message
-                .contains(nested_agents.to_string_lossy().as_ref()),
-            "Root file's message should list the nested AGENTS.md path, got: {}",
-            root_diag.message
+            agm006.is_empty(),
+            "Supported hierarchy must not be diagnosed"
         );
     }
 

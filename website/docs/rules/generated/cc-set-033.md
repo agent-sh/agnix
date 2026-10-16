@@ -12,7 +12,7 @@ keywords: ["CC-SET-033", "idle compaction not boolean", "claude settings", "vali
 - **Severity**: `MEDIUM`
 - **Category**: `Claude Settings`
 - **Normative Level**: `MUST`
-- **Auto-Fix**: `No`
+- **Auto-Fix**: `Yes (unsafe)`
 - **Verified On**: `2026-10-16`
 
 ## Applicability

@@ -12,7 +12,7 @@ keywords: ["CC-SET-007", "non-boolean enforceavailablemodels setting", "claude s
 - **Severity**: `MEDIUM`
 - **Category**: `Claude Settings`
 - **Normative Level**: `MUST`
-- **Auto-Fix**: `No`
+- **Auto-Fix**: `Yes (unsafe)`
 - **Verified On**: `2026-06-16`
 
 ## Applicability

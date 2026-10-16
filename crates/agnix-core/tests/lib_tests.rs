@@ -695,31 +695,31 @@ fn test_parallel_validation_mixed_results() {
 
 #[test]
 fn test_validate_project_agents_md_collection() {
-    // Verify that validation correctly collects AGENTS.md paths for AGM-006
+    // Verify that validation correctly collects AGENTS.md paths for XP-004
     let temp = tempfile::TempDir::new().unwrap();
 
     // Create multiple AGENTS.md files in different directories
-    std::fs::write(temp.path().join("AGENTS.md"), "# Root agents").unwrap();
+    std::fs::write(temp.path().join("AGENTS.md"), "# Root\nRun `npm install`.").unwrap();
 
     let subdir = temp.path().join("subproject");
     std::fs::create_dir_all(&subdir).unwrap();
-    std::fs::write(subdir.join("AGENTS.md"), "# Subproject agents").unwrap();
+    std::fs::write(subdir.join("AGENTS.md"), "# Nested\nRun `yarn install`.").unwrap();
 
     let config = LintConfig::default();
     let result = validate_project(temp.path(), &config).unwrap();
 
-    // Should have AGM-006 warnings for both AGENTS.md files
-    let agm006_diagnostics: Vec<_> = result
+    // Should have XP-004 warning for conflicting install commands
+    let xp004_diagnostics: Vec<_> = result
         .diagnostics
         .iter()
-        .filter(|d| d.rule == "AGM-006")
+        .filter(|d| d.rule == "XP-004")
         .collect();
 
     assert_eq!(
-        agm006_diagnostics.len(),
-        2,
-        "Expected AGM-006 diagnostic for each AGENTS.md file, got: {:?}",
-        agm006_diagnostics
+        xp004_diagnostics.len(),
+        1,
+        "Expected XP-004 diagnostic across AGENTS.md files, got: {:?}",
+        xp004_diagnostics
     );
 }
 
@@ -885,8 +885,13 @@ fn test_validate_file_mcp() {
     let config = LintConfig::default();
     let diagnostics = expect_success(validate_file(&mcp_path, &config).unwrap());
 
-    // Tool without consent field should trigger MCP-005 warning
-    assert!(diagnostics.iter().any(|d| d.rule == "MCP-005"));
+    // Consent is not a required tool-schema field.
+    assert!(!diagnostics.iter().any(|d| d.rule == "MCP-005"));
+    assert!(
+        !diagnostics
+            .iter()
+            .any(|d| d.level == DiagnosticLevel::Error)
+    );
 }
 
 #[test]
@@ -1147,33 +1152,17 @@ fn test_agm_006_nested_agents_md() {
     let config = LintConfig::default();
     let result = validate_project(temp.path(), &config).unwrap();
 
-    // Should detect AGM-006 for both AGENTS.md files
+    // Both supported AGENTS.md files are checked without retired hierarchy advice
     let agm_006: Vec<_> = result
         .diagnostics
         .iter()
         .filter(|d| d.rule == "AGM-006")
         .collect();
-    assert_eq!(
-        agm_006.len(),
-        2,
-        "Should detect both AGENTS.md files, got {:?}",
-        agm_006
-    );
     assert!(
-        agm_006
-            .iter()
-            .any(|d| d.file.to_string_lossy().contains("subdir"))
+        agm_006.is_empty(),
+        "Supported AGENTS.md hierarchy is not a defect"
     );
-    assert!(
-        agm_006
-            .iter()
-            .any(|d| d.message.contains("Nested AGENTS.md"))
-    );
-    assert!(
-        agm_006
-            .iter()
-            .any(|d| d.message.contains("Multiple AGENTS.md files"))
-    );
+    assert_eq!(result.files_checked, 2);
 }
 
 #[test]
@@ -1230,17 +1219,11 @@ fn test_agm_006_multiple_agents_md() {
         .iter()
         .filter(|d| d.rule == "AGM-006")
         .collect();
-    assert_eq!(
-        agm_006.len(),
-        2,
-        "Should detect both AGENTS.md files, got {:?}",
-        agm_006
-    );
     assert!(
-        agm_006
-            .iter()
-            .all(|d| d.message.contains("Multiple AGENTS.md files"))
+        agm_006.is_empty(),
+        "Supported AGENTS.md hierarchy is not a defect"
     );
+    assert_eq!(result.files_checked, 2);
 }
 
 #[test]
@@ -1978,9 +1961,9 @@ fn test_validate_fixtures_directory() {
 
     // empty-description.mcp.json should trigger MCP-004 (short description)
     assert!(
-        mcp_diagnostics
-            .iter()
-            .any(|d| d.rule == "MCP-004" && d.file.to_string_lossy().contains("empty-description")),
+        mcp_diagnostics.iter().any(|d| d.rule == "MCP-004"
+            && d.level == DiagnosticLevel::Info
+            && d.file.to_string_lossy().contains("empty-description")),
         "Expected MCP-004 from empty-description.mcp.json fixture"
     );
 
@@ -2002,13 +1985,8 @@ fn test_validate_fixtures_directory() {
         "Expected MCP-001 from invalid-jsonrpc-version.mcp.json fixture"
     );
 
-    // missing-consent.mcp.json should trigger MCP-005 (missing consent)
-    assert!(
-        mcp_diagnostics
-            .iter()
-            .any(|d| d.rule == "MCP-005" && d.file.to_string_lossy().contains("missing-consent")),
-        "Expected MCP-005 from missing-consent.mcp.json fixture"
-    );
+    // Consent requirements are not part of the tool schema.
+    assert!(!mcp_diagnostics.iter().any(|d| d.rule == "MCP-005"));
 
     // untrusted-annotations.mcp.json should trigger MCP-006 (untrusted annotations)
     assert!(
@@ -4109,9 +4087,9 @@ fn test_invalid_files_exclude_pattern_warns_once() {
 }
 
 // Regression for #722: previously, `[files].exclude` only skipped per-file
-// validators (via FileType::Unknown) while project-level rules like AGM-006
+// validators (via FileType::Unknown) while project-level cross-file rules
 // collected paths by filename during the walk. A vendored AGENTS.md would
-// silently trigger AGM-006 "Nested AGENTS.md" despite being excluded.
+// silently trigger project-level diagnostics despite being excluded.
 // After the fix, `[files].exclude` joins the walker filter so excluded paths
 // don't feed cross-file rule collection either.
 #[test]
@@ -4119,36 +4097,35 @@ fn test_files_config_exclude_also_filters_project_level_rules() {
     let temp = tempfile::TempDir::new().unwrap();
     let root = temp.path();
 
-    std::fs::write(
-        root.join("AGENTS.md"),
-        "# Project\n\nRoot agent instructions.\n",
-    )
-    .unwrap();
+    std::fs::write(root.join("AGENTS.md"), "# Project\n\nRun `npm install`.\n").unwrap();
 
     let vendor = root.join("vendor").join("other-repo");
     std::fs::create_dir_all(&vendor).unwrap();
     std::fs::write(
         vendor.join("AGENTS.md"),
-        "# Vendored\n\nThird-party content.\n",
+        "# Vendored\n\nRun `yarn install`.\n",
     )
     .unwrap();
+
+    let baseline = validate_project(root, &LintConfig::default()).unwrap();
+    assert!(baseline.diagnostics.iter().any(|d| d.rule == "XP-004"));
 
     let mut config = LintConfig::default();
     config.files_mut().exclude = vec!["**/vendor/**".to_string()];
 
     let result = validate_project(root, &config).unwrap();
 
-    // Project-level rules should not see the vendored AGENTS.md, so AGM-006
-    // (nested AGENTS.md) must not fire.
-    let agm_006: Vec<_> = result
+    // Project-level rules should not see the vendored AGENTS.md, so XP-004
+    // (conflicting install commands) must not fire.
+    let xp_004: Vec<_> = result
         .diagnostics
         .iter()
-        .filter(|d| d.rule == "AGM-006")
+        .filter(|d| d.rule == "XP-004")
         .collect();
     assert!(
-        agm_006.is_empty(),
-        "[files].exclude should prevent AGM-006 on vendored AGENTS.md, got: {:?}",
-        agm_006.iter().map(|d| &d.message).collect::<Vec<_>>()
+        xp_004.is_empty(),
+        "[files].exclude should prevent XP-004 on vendored AGENTS.md, got: {:?}",
+        xp_004.iter().map(|d| &d.message).collect::<Vec<_>>()
     );
 
     // And the vendored file must not show up in any diagnostic path.
@@ -4269,22 +4246,26 @@ fn test_resolve_file_type_double_star_recursive() {
 // ===== validate_project_rules() Tests =====
 
 #[test]
-fn test_validate_project_rules_agm006() {
+fn test_validate_project_rules_xp004_nested() {
     let temp_dir = tempfile::tempdir().unwrap();
 
     // Create two AGENTS.md files at different levels
-    std::fs::write(temp_dir.path().join("AGENTS.md"), "# Root AGENTS").unwrap();
+    std::fs::write(
+        temp_dir.path().join("AGENTS.md"),
+        "# Root\nRun `npm install`.",
+    )
+    .unwrap();
     let sub_dir = temp_dir.path().join("sub");
     std::fs::create_dir(&sub_dir).unwrap();
-    std::fs::write(sub_dir.join("AGENTS.md"), "# Sub AGENTS").unwrap();
+    std::fs::write(sub_dir.join("AGENTS.md"), "# Nested\nRun `yarn install`.").unwrap();
 
     let config = LintConfig::default();
     let diagnostics = validate_project_rules(temp_dir.path(), &config).unwrap();
-    let agm006: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AGM-006").collect();
+    let xp004: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-004").collect();
     assert!(
-        agm006.len() >= 2,
-        "Expected AGM-006 for both AGENTS.md files, got {} diagnostics",
-        agm006.len()
+        xp004.len() == 1,
+        "Expected XP-004 for conflicting install commands, got {} diagnostics",
+        xp004.len()
     );
 }
 
@@ -4345,16 +4326,17 @@ fn test_validate_project_rules_disabled_rules() {
     let temp_dir = tempfile::tempdir().unwrap();
 
     // Create two AGENTS.md files
-    std::fs::write(temp_dir.path().join("AGENTS.md"), "# Root").unwrap();
+    std::fs::write(
+        temp_dir.path().join("AGENTS.md"),
+        "# Root\nRun `npm install`.",
+    )
+    .unwrap();
     let sub = temp_dir.path().join("sub");
     std::fs::create_dir(&sub).unwrap();
-    std::fs::write(sub.join("AGENTS.md"), "# Sub").unwrap();
+    std::fs::write(sub.join("AGENTS.md"), "# Nested\nRun `yarn install`.").unwrap();
 
     let mut config = LintConfig::default();
-    config
-        .rules_mut()
-        .disabled_rules
-        .push("AGM-006".to_string());
+    config.rules_mut().disabled_rules.push("XP-004".to_string());
     config
         .rules_mut()
         .disabled_rules
@@ -4362,8 +4344,8 @@ fn test_validate_project_rules_disabled_rules() {
 
     let diagnostics = validate_project_rules(temp_dir.path(), &config).unwrap();
     assert!(
-        !diagnostics.iter().any(|d| d.rule == "AGM-006"),
-        "AGM-006 should be disabled"
+        !diagnostics.iter().any(|d| d.rule == "XP-004"),
+        "XP-004 should be disabled"
     );
     assert!(
         !diagnostics.iter().any(|d| d.rule == "VER-001"),
@@ -4578,28 +4560,31 @@ fn test_validate_project_file_input_valid_file_no_errors() {
 #[test]
 fn test_validate_project_rules_file_input() {
     // When a file path is passed to validate_project_rules(), the walk is
-    // scoped to that single file. AGM-006 requires multiple AGENTS.md files,
+    // scoped to that single file. XP-004 requires multiple AGENTS.md files,
     // so it should NOT fire when only one file is walked.
     let temp = tempfile::TempDir::new().unwrap();
 
-    std::fs::write(temp.path().join("AGENTS.md"), "# Root agents").unwrap();
+    std::fs::write(temp.path().join("AGENTS.md"), "# Root\nRun `npm install`.").unwrap();
 
     let sub_dir = temp.path().join("sub");
     std::fs::create_dir_all(&sub_dir).unwrap();
-    std::fs::write(sub_dir.join("AGENTS.md"), "# Sub agents").unwrap();
+    std::fs::write(sub_dir.join("AGENTS.md"), "# Nested\nRun `yarn install`.").unwrap();
 
     let mut config = LintConfig::default();
     config.rules_mut().disabled_rules = vec!["VER-001".to_string()];
+
+    let baseline = validate_project_rules(temp.path(), &config).unwrap();
+    assert!(baseline.iter().any(|d| d.rule == "XP-004"));
 
     // Pass the root AGENTS.md file path, not the directory
     let target_file = temp.path().join("AGENTS.md");
     let diagnostics = validate_project_rules(&target_file, &config).unwrap();
 
-    let agm006: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AGM-006").collect();
+    let xp004: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-004").collect();
     assert!(
-        agm006.is_empty(),
-        "AGM-006 should not fire when walk is scoped to a single file, got {} diagnostics",
-        agm006.len()
+        xp004.is_empty(),
+        "XP-004 should not fire when walk is scoped to a single file, got {} diagnostics",
+        xp004.len()
     );
 }
 
@@ -5170,10 +5155,10 @@ fn test_disabled_validators_multi_validator_validate_file_with_registry() {
     let temp_dir = tempfile::tempdir().unwrap();
     let claude_md = temp_dir.path().join("CLAUDE.md");
     // Unclosed XML tag triggers XmlValidator (XML-001).
-    // "Never use var" (negative-only instruction) triggers ClaudeMdValidator (CC-MEM-006).
+    // Weak language in a critical section triggers ClaudeMdValidator (CC-MEM-007).
     std::fs::write(
         &claude_md,
-        "Never use var in JavaScript.\n\n<example>some content here\n",
+        "# Critical Rules\nYou should follow the coding style.\n\n<example>some content here\n",
     )
     .unwrap();
 
@@ -5189,8 +5174,8 @@ fn test_disabled_validators_multi_validator_validate_file_with_registry() {
         diags.iter().map(|d| &d.rule).collect::<Vec<_>>()
     );
     assert!(
-        diags.iter().any(|d| d.rule == "CC-MEM-006"),
-        "Expected CC-MEM-006 to fire with default config, got rules: {:?}",
+        diags.iter().any(|d| d.rule == "CC-MEM-007"),
+        "Expected CC-MEM-007 to fire with default config, got rules: {:?}",
         diags.iter().map(|d| &d.rule).collect::<Vec<_>>()
     );
 
@@ -5209,11 +5194,11 @@ fn test_disabled_validators_multi_validator_validate_file_with_registry() {
             .collect::<Vec<_>>()
     );
     assert!(
-        !diags_multi.iter().any(|d| d.rule == "CC-MEM-006"),
-        "Expected CC-MEM-006 absent when ClaudeMdValidator is disabled, got: {:?}",
+        !diags_multi.iter().any(|d| d.rule == "CC-MEM-007"),
+        "Expected CC-MEM-007 absent when ClaudeMdValidator is disabled, got: {:?}",
         diags_multi
             .iter()
-            .filter(|d| d.rule == "CC-MEM-006")
+            .filter(|d| d.rule == "CC-MEM-007")
             .collect::<Vec<_>>()
     );
 }

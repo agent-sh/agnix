@@ -4602,6 +4602,157 @@ fn test_cc_hk_023_once_numeric() {
     assert_eq!(cc_hk_023.len(), 1);
 }
 
+#[test]
+fn test_cc_hk_023_unwrap_roundtrip_and_nested_decoys() {
+    for quoted in ["true", "false"] {
+        let content = format!(
+            r#"{{"decoy":{{"hooks":{{}}}},"hooks":{{"PreToolUse":[{{"hooks":[{{"type":"command","command":"echo é","once":"{quoted}"}}]}}]}}}}"#
+        );
+        let diagnostics = validate(&content);
+        let hit = diagnostics.iter().find(|d| d.rule == "CC-HK-023").unwrap();
+        assert_eq!(hit.fixes.len(), 1);
+        let fix = &hit.fixes[0];
+        assert!(!fix.safe);
+        let mut fixed = content.clone();
+        fixed.replace_range(fix.start_byte..fix.end_byte, &fix.replacement);
+        let mut expected: serde_json::Value = serde_json::from_str(&content).unwrap();
+        expected["hooks"]["PreToolUse"][0]["hooks"][0]["once"] =
+            serde_json::Value::Bool(quoted == "true");
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(&fixed).unwrap(),
+            expected
+        );
+        assert!(!validate(&fixed).iter().any(|d| d.rule == "CC-HK-023"));
+    }
+}
+
+#[test]
+fn test_cc_hk_023_refuses_ambiguous_fixes() {
+    for content in [
+        r#"{"hooks":{},"hooks":{"PreToolUse":[{"hooks":[{"type":"command","command":"echo hi","once":"true"}]}]}}"#,
+        r#"{"hooks":{"PreToolUse":[],"PreToolUse":[{"hooks":[{"type":"command","command":"echo hi","once":"true"}]}]}}"#,
+        r#"{"hooks":{"PreToolUse":[{"hooks":[],"hooks":[{"type":"command","command":"echo hi","once":"true"}]}]}}"#,
+        r#"{"hooks":{"PreToolUse":[{"hooks":[{"type":"command","command":"echo hi","once":false,"once":"true"}]}]}}"#,
+        r#"{"decoy":{"once":"true"},"hooks":{"PreToolUse":[{"hooks":[{"type":"command","command":"echo hi","on\u0063e":"true"}]}]}}"#,
+        r#"{"hooks":{"PreToolUse":[{"hooks":[{"type":"command","command":"echo hi","decoy":{"once":"true"},"once":"true"}]}]}}"#,
+    ] {
+        let diagnostics = validate(content);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-HK-023")
+            .collect();
+        assert_eq!(hits.len(), 1, "{content}");
+        assert!(!hits[0].has_fixes(), "{content}");
+    }
+}
+
+#[test]
+fn test_cc_hk_023_quoted_true_has_unsafe_unwrap() {
+    let content = r#"{
+            "hooks": {
+                "PreToolUse": [
+                    {
+                        "matcher": "Bash",
+                        "hooks": [
+                            { "type": "command", "command": "echo hi", "once": "true" }
+                        ]
+                    }
+                ]
+            }
+        }"#;
+
+    let diagnostics = validate(content);
+    let hits: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-HK-023")
+        .collect();
+    assert_eq!(hits.len(), 1);
+    assert!(hits[0].has_fixes());
+    let fix = &hits[0].fixes[0];
+    assert!(!fix.safe);
+    assert_eq!(fix.replacement, "true");
+    assert_eq!(content.get(fix.start_byte..fix.end_byte), Some("\"true\""));
+}
+
+#[test]
+fn test_cc_hk_023_quoted_false_has_unsafe_unwrap() {
+    let content = r#"{
+            "hooks": {
+                "PreToolUse": [
+                    {
+                        "matcher": "Bash",
+                        "hooks": [
+                            { "type": "command", "command": "echo hi", "once": "false" }
+                        ]
+                    }
+                ]
+            }
+        }"#;
+
+    let diagnostics = validate(content);
+    let hits: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-HK-023")
+        .collect();
+    assert_eq!(hits.len(), 1);
+    let fix = &hits[0].fixes[0];
+    assert!(!fix.safe);
+    assert_eq!(fix.replacement, "false");
+    assert_eq!(content.get(fix.start_byte..fix.end_byte), Some("\"false\""));
+}
+
+#[test]
+fn test_cc_hk_023_number_has_no_fix() {
+    let content = r#"{
+            "hooks": {
+                "PreToolUse": [
+                    {
+                        "matcher": "Bash",
+                        "hooks": [
+                            { "type": "command", "command": "echo hi", "once": 1 }
+                        ]
+                    }
+                ]
+            }
+        }"#;
+
+    let diagnostics = validate(content);
+    let hits: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-HK-023")
+        .collect();
+    assert_eq!(hits.len(), 1);
+    assert!(!hits[0].has_fixes());
+}
+
+#[test]
+fn test_cc_hk_023_second_hook_quoted_boolean_is_scoped() {
+    let content = r#"{
+            "hooks": {
+                "PreToolUse": [
+                    {
+                        "matcher": "Bash",
+                        "hooks": [
+                            { "type": "command", "command": "echo first", "once": true },
+                            { "type": "command", "command": "echo second", "once": "false" }
+                        ]
+                    }
+                ]
+            }
+        }"#;
+
+    let diagnostics = validate(content);
+    let hits: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CC-HK-023")
+        .collect();
+    assert_eq!(hits.len(), 1);
+    let fix = &hits[0].fixes[0];
+    assert!(!fix.safe);
+    assert_eq!(fix.replacement, "false");
+    assert_eq!(content.get(fix.start_byte..fix.end_byte), Some("\"false\""));
+}
+
 // ---------------------------------------------------------------------------
 // CC-HK-024: Headers with $VAR but no allowedEnvVars
 // ---------------------------------------------------------------------------

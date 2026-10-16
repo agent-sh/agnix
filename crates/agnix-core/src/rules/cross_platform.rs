@@ -1,7 +1,7 @@
 //! Cross-platform validation rules
 //!
 //! Validates:
-//! - XP-001: Claude-specific features in AGENTS.md (error)
+//! - XP-001: Claude-specific features in AGENTS.md (info)
 //! - XP-002: AGENTS.md markdown structure (warning)
 //! - XP-003: Hard-coded platform paths in configs (warning)
 //! - XP-007: AGENTS.md exceeds Codex CLI byte limit (warning)
@@ -45,13 +45,13 @@ impl Validator for CrossPlatformValidator {
             "AGENTS.md" | "AGENTS.local.md" | "AGENTS.override.md"
         );
 
-        // XP-001: Claude-specific features in AGENTS.md (ERROR)
+        // XP-001: Claude-specific features in AGENTS.md (INFO)
         // Only check AGENTS.md files - CLAUDE.md is allowed to have these features
         if config.is_rule_enabled("XP-001") && is_agents_md {
             let claude_features = find_claude_specific_features(content);
             for feature in claude_features {
                 diagnostics.push(
-                    Diagnostic::error(
+                    Diagnostic::info(
                         path.to_path_buf(),
                         feature.line,
                         feature.column,
@@ -194,7 +194,7 @@ mod tests {
 
         let xp_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-001").collect();
         assert_eq!(xp_001.len(), 1);
-        assert_eq!(xp_001[0].level, DiagnosticLevel::Error);
+        assert_eq!(xp_001[0].level, DiagnosticLevel::Info);
         assert!(xp_001[0].message.contains("hooks"));
     }
 

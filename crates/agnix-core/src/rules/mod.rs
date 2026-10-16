@@ -24,6 +24,7 @@ pub mod kiro_agent;
 pub mod kiro_hook;
 pub mod kiro_hook_v3;
 pub mod kiro_mcp;
+pub mod kiro_permissions;
 pub mod kiro_power;
 pub mod kiro_settings;
 pub mod kiro_steering;

@@ -57,6 +57,54 @@
         "CC-HK-018",
         "CC-HK-001"
       ]
+    },
+    {
+      "id": "REF-004",
+      "removed_in": "0.58.0",
+      "reason": "Claude Code memory docs explicitly import @package.json: @ syntax is documented for README, package.json, and workflow guides, not only .md files.",
+      "replaced_by": []
+    },
+    {
+      "id": "OC-DEP-004",
+      "removed_in": "0.58.0",
+      "reason": "OpenCode config docs, rules docs, and config.json do not document CONTEXT.md or treat an instructions entry named CONTEXT.md as deprecated.",
+      "replaced_by": []
+    },
+    {
+      "id": "CC-MEM-005",
+      "removed_in": "0.58.0",
+      "reason": "Duplicate generic-instruction advice is covered by PE-005; removing entire prose lines is not a mechanical repair.",
+      "replaced_by": [
+        "PE-005"
+      ]
+    },
+    {
+      "id": "CC-MEM-006",
+      "removed_in": "0.58.0",
+      "reason": "Duplicate negative-instruction advice is covered by PE-006; negative wording does not make a memory file invalid.",
+      "replaced_by": [
+        "PE-006"
+      ]
+    },
+    {
+      "id": "CC-MEM-008",
+      "removed_in": "0.58.0",
+      "reason": "Duplicate content-placement advice is covered by PE-001 and is not a loader constraint.",
+      "replaced_by": [
+        "PE-001"
+      ]
+    },
+    {
+      "id": "AGM-006",
+      "removed_in": "0.58.0",
+      "reason": "Nested AGENTS.md files are a documented instruction hierarchy, not a configuration defect requiring cross-references.",
+      "replaced_by": []
+    },
+    {
+      "id": "MCP-005",
+      "removed_in": "0.58.0",
+      "reason": "The MCP Tool schema does not require requiresApproval or confirmation fields. Client-side consent recommendations cannot be validated by inventing tool-definition fields.",
+      "replaced_by": []
     }
   ]
 }

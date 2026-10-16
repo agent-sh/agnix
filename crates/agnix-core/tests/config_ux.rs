@@ -241,7 +241,7 @@ fn config_extends_merges_base_file_before_child() {
         temp.path().join("base.toml"),
         r#"
 [rules]
-disabled_rules = ["CC-MEM-005"]
+disabled_rules = ["PE-005"]
 "#,
     )
     .unwrap();
@@ -251,7 +251,7 @@ disabled_rules = ["CC-MEM-005"]
 extend = "base.toml"
 
 [rules.severity]
-CC-MEM-005 = "Info"
+PE-005 = "Info"
 "#,
     )
     .unwrap();
@@ -264,7 +264,7 @@ CC-MEM-005 = "Info"
     let config = LintConfig::load(temp.path().join(".agnix.toml")).expect("load config");
     let result = validate_project(temp.path(), &config).expect("validate project");
     assert!(
-        !result.diagnostics.iter().any(|d| d.rule == "CC-MEM-005"),
+        !result.diagnostics.iter().any(|d| d.rule == "PE-005"),
         "base disabled_rules should apply after extend merge"
     );
 }

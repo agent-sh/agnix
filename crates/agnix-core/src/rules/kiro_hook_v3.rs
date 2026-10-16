@@ -1,4 +1,5 @@
-//! Kiro CLI V3 standalone hook validation rules (KR-HK-011 to KR-HK-013).
+//! Kiro CLI V3 hook validation and migration rules (KR-HK-011 to KR-HK-014).
+//! KR-HK-014 also checks CLI-only spellings in legacy `.kiro.hook` files.
 //!
 //! Validates `.kiro/hooks/*.json` documents (CLI V3 / IDE 1.0 standalone
 //! format: `{ "version": "v1", "hooks": [...] }`):
@@ -13,16 +14,17 @@
 
 use crate::{
     config::PerFileLintConfig,
-    diagnostics::Diagnostic,
+    diagnostics::{Diagnostic, Fix},
     rules::{Validator, ValidatorMetadata},
     schemas::kiro_hook_v3::{
-        VALID_KIRO_V3_HOOK_DOC_VERSIONS, VALID_KIRO_V3_HOOK_TRIGGERS, parse_kiro_v3_hook_doc,
+        JsonValueSpan, KiroV3HookSpans, VALID_KIRO_V3_HOOK_DOC_VERSIONS,
+        VALID_KIRO_V3_HOOK_TRIGGERS, canonical_trigger, parse_kiro_v3_hook_doc,
     },
 };
 use rust_i18n::t;
 use std::path::Path;
 
-const RULE_IDS: &[&str] = &["KR-HK-011", "KR-HK-012", "KR-HK-013"];
+const RULE_IDS: &[&str] = &["KR-HK-011", "KR-HK-012", "KR-HK-013", "KR-HK-014"];
 
 /// `timeout` of 0 disables the timeout, so 0 is valid. The documented
 /// default is 60 seconds (kept here as the reference value the range check
@@ -46,6 +48,13 @@ impl Validator for KiroV3HookValidator {
         content: &str,
         config: &PerFileLintConfig<'_>,
     ) -> Vec<Diagnostic> {
+        if path
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("hook"))
+        {
+            return super::kiro_hook::validate_legacy_migration(path, content, config);
+        }
         let mut diagnostics = Vec::new();
         let parsed = parse_kiro_v3_hook_doc(content);
 
@@ -74,11 +83,35 @@ impl Validator for KiroV3HookValidator {
             return diagnostics;
         };
 
+        // Resolve all edit locations together, only when a rule needs them.
+        let needs_version_span = config.is_rule_enabled("KR-HK-011")
+            && doc
+                .version
+                .as_deref()
+                .is_some_and(|v| !VALID_KIRO_V3_HOOK_DOC_VERSIONS.contains(&v));
+        let needs_alias_spans = config.is_rule_enabled("KR-HK-014")
+            && doc.hooks.as_ref().is_some_and(|hooks| {
+                hooks.iter().any(|hook| {
+                    hook.trigger
+                        .as_deref()
+                        .and_then(canonical_trigger)
+                        .is_some()
+                })
+            });
+        let spans = if needs_version_span || needs_alias_spans {
+            KiroV3HookSpans::new(content)
+        } else {
+            KiroV3HookSpans::default()
+        };
+
         if config.is_rule_enabled("KR-HK-011") {
-            validate_version(path, &doc, &mut diagnostics);
+            validate_version(path, spans.version, &doc, &mut diagnostics);
         }
 
-        if !config.is_rule_enabled("KR-HK-012") && !config.is_rule_enabled("KR-HK-013") {
+        if !config.is_rule_enabled("KR-HK-012")
+            && !config.is_rule_enabled("KR-HK-013")
+            && !config.is_rule_enabled("KR-HK-014")
+        {
             return diagnostics;
         }
 
@@ -100,6 +133,14 @@ impl Validator for KiroV3HookValidator {
 
         for (index, hook) in hooks.iter().enumerate() {
             validate_entry(path, index, hook, config, &mut diagnostics);
+            if config.is_rule_enabled("KR-HK-014") {
+                validate_alias(
+                    path,
+                    spans.triggers.get(index).copied().flatten(),
+                    hook.trigger.as_deref(),
+                    &mut diagnostics,
+                );
+            }
         }
 
         diagnostics
@@ -110,21 +151,37 @@ impl Validator for KiroV3HookValidator {
 /// docs fix it at `"v1"`.
 fn validate_version(
     path: &Path,
+    span: Option<JsonValueSpan>,
     doc: &crate::schemas::kiro_hook_v3::KiroV3HookDoc,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
     match doc.version.as_deref() {
         Some(version) if VALID_KIRO_V3_HOOK_DOC_VERSIONS.contains(&version) => {}
-        Some(version) => diagnostics.push(
-            Diagnostic::warning(
+        Some(version) => {
+            let (line, column) = span.map_or((1, 0), |span| (span.line, span.column));
+            let mut diagnostic = Diagnostic::warning(
                 path.to_path_buf(),
-                1,
-                0,
+                line,
+                column,
                 "KR-HK-011",
                 t!("rules.kr_hk_011.invalid_version", version = version),
             )
-            .with_suggestion(t!("rules.kr_hk_011.suggestion")),
-        ),
+            .with_suggestion(t!("rules.kr_hk_011.suggestion"));
+            // This can activate a previously ignored hook, so never auto-apply
+            // it as a safe fix. Unknown/future/missing versions are not guessed.
+            if matches!(version, "1" | "1.0")
+                && let Some(JsonValueSpan { start, end, .. }) = span
+            {
+                diagnostic = diagnostic.with_fix(Fix::replace(
+                    start,
+                    end,
+                    "\"v1\"",
+                    t!("rules.kr_hk_011.fix"),
+                    false,
+                ));
+            }
+            diagnostics.push(diagnostic);
+        }
         None => diagnostics.push(
             Diagnostic::warning(
                 path.to_path_buf(),
@@ -136,6 +193,44 @@ fn validate_version(
             .with_suggestion(t!("rules.kr_hk_011.suggestion")),
         ),
     }
+}
+
+/// Style advice only: aliases remain valid, including /upgrade-agent output.
+fn validate_alias(
+    path: &Path,
+    span: Option<JsonValueSpan>,
+    trigger: Option<&str>,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(trigger) = trigger else {
+        return;
+    };
+    let Some(canonical) = canonical_trigger(trigger) else {
+        return;
+    };
+    let (line, column) = span.map_or((1, 0), |span| (span.line, span.column));
+    let mut diagnostic = Diagnostic::info(
+        path.to_path_buf(),
+        line,
+        column,
+        "KR-HK-014",
+        t!(
+            "rules.kr_hk_014.alias",
+            trigger = trigger,
+            canonical = canonical
+        ),
+    )
+    .with_suggestion(t!("rules.kr_hk_014.alias_suggestion"));
+    if let Some(JsonValueSpan { start, end, .. }) = span {
+        diagnostic = diagnostic.with_fix(Fix::replace(
+            start,
+            end,
+            format!("\"{canonical}\""),
+            t!("rules.kr_hk_014.fix", canonical = canonical),
+            true,
+        ));
+    }
+    diagnostics.push(diagnostic);
 }
 
 fn validate_entry(
@@ -341,6 +436,48 @@ mod tests {
             content,
             &LintConfig::default(),
         )
+    }
+
+    #[test]
+    fn alias_spans_are_indexed_once_for_8000_hooks() {
+        use crate::schemas::kiro_hook_v3::SPAN_INDEX_BUILDS;
+
+        // Exercise both a long single line and many lines: neither source
+        // lookup nor diagnostic location may repeatedly scan the prefix.
+        for separator in [",", ",\n"] {
+            let hooks = (0..8000).map(|i| format!(
+                r#"{{"name":"é🙂-{i}","trigger":"agentSpawn","action":{{"type":"command","command":"echo ok"}}}}"#
+            )).collect::<Vec<_>>().join(separator);
+            let content = format!(r#"{{"version":"1","hooks":[{hooks}]}}"#);
+            let before = SPAN_INDEX_BUILDS.with(|builds| builds.get());
+            let diagnostics = validate(&content);
+            assert_eq!(SPAN_INDEX_BUILDS.with(|builds| builds.get()) - before, 1);
+            assert_eq!(diagnostics.len(), 8001);
+            assert_eq!(diagnostics[0].rule, "KR-HK-011");
+            for diagnostic in &diagnostics[1..] {
+                assert_eq!(diagnostic.rule, "KR-HK-014");
+                assert_eq!(diagnostic.fixes.len(), 1);
+                let fix = &diagnostic.fixes[0];
+                assert!(fix.is_safe());
+                assert_eq!(&content[fix.start_byte..fix.end_byte], "\"agentSpawn\"");
+                assert_eq!(fix.replacement, "\"SessionStart\"");
+            }
+            let last = diagnostics.last().unwrap();
+            assert_eq!(
+                (last.line, last.column),
+                crate::rules::line_col_at_offset(&content, last.fixes[0].start_byte)
+            );
+
+            let mut config = LintConfig::default();
+            config.rules_mut().disabled_rules = vec!["KR-HK-011".into(), "KR-HK-014".into()];
+            let before = SPAN_INDEX_BUILDS.with(|builds| builds.get());
+            assert!(
+                KiroV3HookValidator
+                    .validate(Path::new(".kiro/hooks/large.json"), &content, &config)
+                    .is_empty()
+            );
+            assert_eq!(SPAN_INDEX_BUILDS.with(|builds| builds.get()), before);
+        }
     }
 
     #[test]

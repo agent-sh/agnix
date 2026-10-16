@@ -305,6 +305,7 @@ fn file_type_enum_covers_all_variants() {
         agnix_core::FileType::KiroHookV3,
         agnix_core::FileType::KiroMcp,
         agnix_core::FileType::KiroSettings,
+        agnix_core::FileType::KiroPermissions,
         agnix_core::FileType::GeminiAgent,
         agnix_core::FileType::GenericMarkdown,
         agnix_core::FileType::Unknown,
@@ -312,7 +313,7 @@ fn file_type_enum_covers_all_variants() {
 
     assert_eq!(
         variants.len(),
-        48,
+        49,
         "A new FileType variant may have been added or removed. Please update this test's variant list and the match statement below."
     );
 
@@ -363,6 +364,7 @@ fn file_type_enum_covers_all_variants() {
             agnix_core::FileType::KiroHookV3 => {}
             agnix_core::FileType::KiroMcp => {}
             agnix_core::FileType::KiroSettings => {}
+            agnix_core::FileType::KiroPermissions => {}
             agnix_core::FileType::GeminiAgent => {}
             agnix_core::FileType::GenericMarkdown => {}
             agnix_core::FileType::Unknown => {}

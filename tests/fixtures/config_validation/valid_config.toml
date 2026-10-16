@@ -9,7 +9,7 @@ skills = true
 hooks = true
 agents = true
 mcp = true
-disabled_rules = ["CC-MEM-006", "AS-001"]
+disabled_rules = ["PE-006", "AS-001"]
 
 [tool_versions]
 claude_code = "1.0.0"

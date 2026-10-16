@@ -2,17 +2,17 @@
 id: cc-ag-012
 title: "CC-AG-012: Bypass Permissions Warning - Claude Agents"
 sidebar_label: "CC-AG-012"
-description: "agnix rule CC-AG-012 checks for bypass permissions warning in claude agents files. Severity: HIGH. See examples and fix guidance."
+description: "agnix rule CC-AG-012 checks for bypass permissions warning in claude agents files. Severity: MEDIUM. See examples and fix guidance."
 keywords: ["CC-AG-012", "bypass permissions warning", "claude agents", "validation", "agnix", "linter"]
 ---
 
 ## Summary
 
 - **Rule ID**: `CC-AG-012`
-- **Severity**: `HIGH`
+- **Severity**: `MEDIUM`
 - **Category**: `Claude Agents`
 - **Normative Level**: `SHOULD`
-- **Auto-Fix**: `Yes (unsafe)`
+- **Auto-Fix**: `No`
 - **Verified On**: `2026-10-04`
 
 ## Applicability

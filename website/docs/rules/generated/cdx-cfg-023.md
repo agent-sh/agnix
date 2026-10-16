@@ -11,9 +11,9 @@ keywords: ["CDX-CFG-023", "invalid approval policy sub-field", "codex cli", "val
 - **Rule ID**: `CDX-CFG-023`
 - **Severity**: `MEDIUM`
 - **Category**: `Codex CLI`
-- **Normative Level**: `MUST`
-- **Auto-Fix**: `Yes (safe)`
-- **Verified On**: `2026-04-23`
+- **Normative Level**: `SHOULD`
+- **Auto-Fix**: `No`
+- **Verified On**: `2026-10-16`
 
 ## Applicability
 
@@ -23,7 +23,8 @@ keywords: ["CDX-CFG-023", "invalid approval policy sub-field", "codex cli", "val
 
 ## Evidence Sources
 
-- https://developers.openai.com/codex/
+- https://github.com/openai/codex/blob/rust-v0.163.0/codex-rs/core/config.schema.json
+- https://github.com/openai/codex/blob/main/codex-rs/core/config.schema.json
 
 ## Test Coverage Metadata
 
@@ -38,13 +39,18 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```toml
-[approval_policy]
-mode = "yolo"
+[approval_policy.granular]
+mcp_elicitations = true
+rules = true
+sandbox_approval = true
+unknown_field = true
 ```
 
 ### Valid
 
 ```toml
-[approval_policy]
-mode = "suggest"
+[approval_policy.granular]
+mcp_elicitations = true
+rules = true
+sandbox_approval = true
 ```

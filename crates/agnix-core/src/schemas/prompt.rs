@@ -172,8 +172,6 @@ pub struct WeakLanguageInCritical {
     pub column: usize,
     pub weak_term: String,
     pub section_name: String,
-    /// Byte offset of the weak term in the full content
-    pub byte_offset: usize,
 }
 
 /// Advance a byte position past the current line's terminator (LF or CRLF).
@@ -206,7 +204,6 @@ pub fn find_weak_imperative_language(content: &str) -> Vec<WeakLanguageInCritica
     let section_pattern = critical_section_pattern();
 
     let mut current_section: Option<String> = None;
-    let mut byte_pos = 0usize;
 
     for (line_num, line) in content.lines().enumerate() {
         // Check if this is a header line
@@ -227,14 +224,9 @@ pub fn find_weak_imperative_language(content: &str) -> Vec<WeakLanguageInCritica
                     column: mat.start() + 1, // 1-indexed for diagnostics
                     weak_term: mat.as_str().to_string(),
                     section_name: section_name.clone(),
-                    byte_offset: byte_pos + mat.start(),
                 });
             }
         }
-
-        // Advance byte_pos past this line plus its actual line terminator
-        byte_pos += line.len();
-        advance_past_line_ending(content.as_bytes(), &mut byte_pos);
     }
 
     results
@@ -906,20 +898,14 @@ Code could be cleaner.
     // ===== CRLF byte offset tests =====
 
     #[test]
-    fn test_pe_003_crlf_byte_offsets() {
-        // Use CRLF line endings to verify byte offsets account for \r\n
+    fn test_pe_003_crlf_locations() {
         let content = "# Critical Rules\r\n\r\nYou should follow the style.\r\nAnother line.\r\n";
         let results = find_weak_imperative_language(content);
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].weak_term.to_lowercase(), "should");
-        // Verify the byte offset points to the actual position of "should"
-        let found =
-            &content[results[0].byte_offset..results[0].byte_offset + results[0].weak_term.len()];
-        assert_eq!(
-            found.to_lowercase(),
-            results[0].weak_term.to_lowercase(),
-            "Byte offset should correctly point to the weak term in CRLF content"
-        );
+        assert_eq!(results[0].line, 3);
+        assert_eq!(results[0].column, 5);
+        assert_eq!(results[0].section_name, "Critical Rules");
     }
 
     #[test]

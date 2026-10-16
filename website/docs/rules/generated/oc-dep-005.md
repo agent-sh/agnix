@@ -12,7 +12,7 @@ keywords: ["OC-DEP-005", "deprecated tui keys", "opencode", "validation", "agnix
 - **Severity**: `MEDIUM`
 - **Category**: `OpenCode`
 - **Normative Level**: `SHOULD`
-- **Auto-Fix**: `No`
+- **Auto-Fix**: `Yes (unsafe)`
 - **Verified On**: `2026-04-23`
 
 ## Applicability
@@ -39,7 +39,8 @@ The following examples demonstrate what triggers this rule and how to fix it.
 
 ```json
 {
-  "tui": { "colors": { "bg": "#000" } }
+  "theme": "dark",
+  "keybinds": {}
 }
 ```
 
@@ -47,6 +48,6 @@ The following examples demonstrate what triggers this rule and how to fix it.
 
 ```json
 {
-  "tui": { "theme": "dark" }
+  "$schema": "https://opencode.ai/config.json"
 }
 ```

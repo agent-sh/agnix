@@ -1,6 +1,6 @@
 # agnix Knowledge Base - Master Index
 
-> 460 validation rules across 40 categories, sourced from 75+ references
+> 458 validation rules across 40 categories, sourced from 75+ references
 
 
 ---
@@ -9,7 +9,7 @@
 
 | What You Need | Start Here |
 |---------------|------------|
-| **Implement validator** | [VALIDATION-RULES.md](./VALIDATION-RULES.md) - 460 rules with detection logic |
+| **Implement validator** | [VALIDATION-RULES.md](./VALIDATION-RULES.md) - 458 rules with detection logic |
 
 | **Understand a standard** | [standards/](#standards) - HARD-RULES files |
 | **Learn best practices** | [standards/](#standards) - OPINIONS files |
@@ -28,7 +28,7 @@
 knowledge-base/
 ├── INDEX.md                        # This file
 ├── README.md                       # Detailed navigation guide
-├── VALIDATION-RULES.md             # Master validation reference (460 rules)
+├── VALIDATION-RULES.md             # Master validation reference (458 rules)
 
 ├── PATTERNS-CATALOG.md             # 70 production-tested patterns
 ├── RESEARCH-TRACKING.md            # Tool inventory and monitoring process
@@ -81,7 +81,7 @@ knowledge-base/
 | **AGENTS.md** | 5 | - | - | 6 rules |
 | **Cursor** | 2 | - | - | 9 rules |
 | **agentsys** | 12 | - | - | 70 patterns |
-| **Total** | **75+** | **117KB** | **160KB** | **460 rules** |
+| **Total** | **75+** | **117KB** | **160KB** | **458 rules** |
 
 
 ### Validation Rules by Category
@@ -89,46 +89,47 @@ knowledge-base/
 | Category | Rules | HIGH | MEDIUM | LOW | Auto-Fix |
 |----------|-------|------|--------|-----|----------|
 | Agent Skills | 14 | 11 | 3 | 0 | 7 |
-| AGENTS.md | 6 | 1 | 5 | 0 | 1 |
+| AGENTS.md | 5 | 1 | 4 | 0 | 1 |
 | Amp Checks | 4 | 2 | 2 | 0 | 3 |
 | Amp Skills | 1 | 0 | 1 | 0 | 1 |
-| Claude Agents | 18 | 11 | 6 | 1 | 10 |
+| Claude Agents | 18 | 10 | 7 | 1 | 9 |
 | Claude Hooks | 26 | 15 | 7 | 4 | 11 |
-| Claude Memory | 13 | 8 | 5 | 0 | 3 |
-| Claude Output Styles | 6 | 2 | 2 | 2 | 0 |
-| Claude Plugins | 17 | 8 | 9 | 0 | 4 |
-| Claude Settings | 33 | 1 | 31 | 1 | 0 |
-| Claude Skills | 18 | 10 | 7 | 1 | 8 |
+| Claude Memory | 10 | 4 | 5 | 1 | 1 |
+| Claude Output Styles | 6 | 2 | 2 | 2 | 1 |
+| Claude Plugins | 17 | 8 | 8 | 1 | 4 |
+| Claude Settings | 33 | 1 | 31 | 1 | 12 |
+| Claude Skills | 18 | 10 | 7 | 1 | 7 |
 | Cline | 7 | 4 | 3 | 0 | 3 |
 | Cline Skills | 3 | 2 | 1 | 0 | 2 |
-| Codex CLI | 65 | 31 | 29 | 5 | 10 |
+| Codex CLI | 65 | 31 | 29 | 5 | 9 |
 | Codex Skills | 1 | 0 | 1 | 0 | 1 |
-| GitHub Copilot | 25 | 13 | 9 | 3 | 11 |
+| GitHub Copilot | 25 | 13 | 9 | 3 | 12 |
 | Copilot Skills | 1 | 0 | 1 | 0 | 1 |
-| Cross-Platform | 10 | 2 | 7 | 1 | 0 |
+| Cross-Platform | 10 | 1 | 7 | 2 | 0 |
 | Cursor | 20 | 10 | 9 | 1 | 6 |
 | Cursor Skills | 1 | 0 | 1 | 0 | 1 |
 | Gemini Agents | 1 | 1 | 0 | 0 | 0 |
 | Gemini CLI | 10 | 3 | 5 | 2 | 3 |
 | Kiro Agents | 15 | 5 | 8 | 2 | 0 |
-| Kiro Hooks | 13 | 8 | 5 | 0 | 0 |
+| Kiro Hooks | 14 | 8 | 5 | 1 | 2 |
+| Kiro Permissions | 4 | 4 | 0 | 0 | 0 |
 | Kiro MCP | 6 | 2 | 4 | 0 | 0 |
 | Kiro Powers | 8 | 3 | 4 | 1 | 0 |
 | Kiro Settings | 3 | 1 | 2 | 0 | 3 |
 | Kiro Skills | 1 | 0 | 1 | 0 | 1 |
 | Kiro Steering | 14 | 3 | 9 | 2 | 1 |
-| MCP | 26 | 20 | 6 | 0 | 7 |
-| OpenCode | 47 | 28 | 18 | 1 | 11 |
+| MCP | 25 | 18 | 6 | 1 | 8 |
+| OpenCode | 46 | 28 | 17 | 1 | 11 |
 | OpenCode Skills | 1 | 0 | 1 | 0 | 1 |
-| Prompt Eng | 6 | 0 | 6 | 0 | 2 |
-| References | 4 | 2 | 2 | 0 | 1 |
+| Prompt Eng | 6 | 0 | 3 | 3 | 1 |
+| References | 3 | 2 | 1 | 0 | 1 |
 | Roo Code | 6 | 3 | 3 | 0 | 0 |
 | Roo Code Skills | 1 | 0 | 1 | 0 | 1 |
 | Version Awareness | 1 | 0 | 0 | 1 | 0 |
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **460** | **214** | **217** | **29** | **118** |
+| **TOTAL** | **458** | **210** | **211** | **37** | **129** |
 
 
 ---
@@ -141,7 +142,7 @@ knowledge-base/
    - Critical content in middle loses recall
    - Position at start or end
 
-2. **Positive Framing** (Multiple studies) → CC-MEM-006
+2. **Positive Framing** (Multiple studies) → PE-006
    - "Do X" outperforms "Don't do Y"
    - Measured improvement in compliance
 
@@ -166,7 +167,7 @@ knowledge-base/
 
 ### For Implementation
 
-**Start here**: [VALIDATION-RULES.md](./VALIDATION-RULES.md) - 460 rules with rule IDs (AS-001, CC-HK-001, etc.)
+**Start here**: [VALIDATION-RULES.md](./VALIDATION-RULES.md) - 458 rules with rule IDs (AS-001, CC-HK-001, etc.)
 
 - Detection pseudocode
 - Auto-fix implementations
@@ -228,7 +229,7 @@ Hooks Validation:
 
 Memory Validation:
 - [x] CC-MEM-001: Import paths exist
-- [x] CC-MEM-005: Generic instructions
+- [x] PE-005: Generic instructions
 
 XML & References:
 - [x] XML-001: Tag balance
@@ -241,7 +242,7 @@ Skills:
 - [x] CC-SK-002 through CC-SK-005
 
 Memory:
-- [x] CC-MEM-006 through CC-MEM-010
+- [x] CC-MEM-007, CC-MEM-009, CC-MEM-010
 
 Agents:
 - [x] CC-AG-001 through CC-AG-006
@@ -292,7 +293,7 @@ Total Size:           650KB
 Standards Covered:     5 (Agent Skills, MCP, Claude Code, Multi-Platform, Prompt Eng)
 Sources Consulted:    75+ (specs, docs, research papers, repos)
 Research Agents:       5 (10+ sources each)
-Validation Rules:     460 rules
+Validation Rules:     458 rules
 Auto-Fixable Rules:   124 rules
 
 Test Fixtures:        116 files

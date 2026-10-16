@@ -6,7 +6,7 @@
 //! - `approvalMode` field values (suggest, auto-edit, full-auto)
 //! - `fullAutoErrorMode` field values (ask-user, ignore-and-continue)
 //! - Unknown config keys (CDX-004)
-//! - `project_doc_max_bytes` limits (CDX-005)
+//! - `project_doc_max_bytes` nonnegative integer type (CDX-005)
 //! - `project_doc_fallback_filenames` shape/content (CDX-006)
 
 use serde::{Deserialize, Serialize};
