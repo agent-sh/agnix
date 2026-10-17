@@ -359,7 +359,6 @@ mod kiro {
             FileType::KiroAgent => Some(Syntax::Json),
             FileType::KiroHookV3
             | FileType::KiroMcp
-            | FileType::KiroPowerMcp
             | FileType::KiroPowerPlugin
             | FileType::KiroSettings => Some(Syntax::Json),
             FileType::KiroSteering | FileType::KiroPower => Some(Syntax::Frontmatter),
@@ -383,7 +382,6 @@ mod kiro {
             FileType::KiroSteering => "kiro-steering",
             FileType::KiroPower => "kiro-power",
             FileType::KiroPowerPlugin => "kiro-power-plugin",
-            FileType::KiroPowerMcp => "kiro-power-mcp",
             FileType::KiroSettings => "kiro-settings",
             FileType::KiroPermissions => "kiro-permissions",
             FileType::KiroWorkflow => "kiro-workflow",
@@ -673,34 +671,6 @@ mod kiro {
         ),
     ];
 
-    const POWER_MCP_KEYS: &[Key] = &[
-        key_with(
-            "$schema",
-            "Agent Plugins MCP schema; must target the same version as plugin.json.",
-            &[],
-            &["https://agent-plugins.org/schemas/1.0.0/mcp.schema.json"],
-        ),
-        key(
-            "mcpServers",
-            "Servers by name; Kiro registers them as power-<power>-<server>.",
-        ),
-        key_with(
-            "type",
-            "Server transport (Agent Plugins format).",
-            &[],
-            &["stdio", "streamable-http", "sse"],
-        ),
-        key(
-            "command",
-            "Executable: a bare name or ./path inside the power.",
-        ),
-        key("args", "Arguments of the command."),
-        key("env", "Environment variables."),
-        key("cwd", "Working directory of the command."),
-        key("url", "Endpoint of a remote server."),
-        key("headers", "HTTP headers."),
-    ];
-
     const SETTINGS_KEYS: &[Key] = &[
         key_with(
             "chat.agentEngine",
@@ -987,11 +957,6 @@ mod kiro {
                 "{\n  \"\\$schema\": \"https://agent-plugins.org/schemas/1.0.0/plugin.schema.json\",\n  \"name\": \"my-power\",\n  \"version\": \"1.0.0\",\n  \"description\": \"What the power does\",\n  \"keywords\": [\"keyword\"]\n}\n",
                 "Agent Plugins manifest of a Kiro power.",
             )],
-        },
-        Family {
-            id: "kiro-power-mcp",
-            keys: POWER_MCP_KEYS,
-            snippets: &[],
         },
         Family {
             id: "kiro-settings",
@@ -1523,7 +1488,6 @@ mod tests {
             FileType::KiroSteering,
             FileType::KiroPower,
             FileType::KiroPowerPlugin,
-            FileType::KiroPowerMcp,
             FileType::KiroSettings,
             FileType::KiroPermissions,
             FileType::KiroWorkflow,

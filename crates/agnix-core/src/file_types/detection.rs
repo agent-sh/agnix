@@ -684,7 +684,7 @@ fn classify_in_kiro_dir(rel_dirs: &[&str], filename: &str) -> Option<KiroClass> 
                     return Some(Type(FileType::KiroPowerPlugin));
                 }
                 if filename.eq_ignore_ascii_case("mcp.json") {
-                    return Some(Type(FileType::KiroPowerMcp));
+                    return Some(Type(FileType::KiroMcp));
                 }
             } else if is_kiro_power_steering(sub_dirs, filename) {
                 return Some(Type(FileType::KiroPowerSteering));
@@ -736,7 +736,7 @@ fn classify_outside_kiro_dir(dirs: &[&str], filename: &str) -> Option<KiroClass>
     if is_named_power_root(dirs) {
         match filename {
             "plugin.json" => return Some(Type(FileType::KiroPowerPlugin)),
-            "mcp.json" => return Some(Type(FileType::KiroPowerMcp)),
+            "mcp.json" => return Some(Type(FileType::KiroMcp)),
             _ => {}
         }
     }
@@ -2606,8 +2606,8 @@ mod tests {
             (".kiro/powers/aws/power.md", KiroPower),
             (".kiro/powers/installed/aws/plugin.json", KiroPowerPlugin),
             (".kiro/powers/aws/plugin.json", KiroPowerPlugin),
-            (".kiro/powers/installed/aws/mcp.json", KiroPowerMcp),
-            (".kiro/powers/aws/mcp.json", KiroPowerMcp),
+            (".kiro/powers/installed/aws/mcp.json", KiroMcp),
+            (".kiro/powers/aws/mcp.json", KiroMcp),
             (".kiro/powers/aws/steering/patterns.md", KiroPowerSteering),
             (
                 ".kiro/powers/installed/aws/steering/patterns.md",
@@ -2641,8 +2641,8 @@ mod tests {
             ("power.md", GenericMarkdown),
             ("power/plugin.json", KiroPowerPlugin),
             ("powers/supabase/plugin.json", KiroPowerPlugin),
-            ("power/mcp.json", KiroPowerMcp),
-            ("powers/database-power/mcp.json", KiroPowerMcp),
+            ("power/mcp.json", KiroMcp),
+            ("powers/database-power/mcp.json", KiroMcp),
             ("power/steering/patterns.md", KiroPowerSteering),
             (
                 "powers/database-power/steering/patterns.md",

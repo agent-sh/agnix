@@ -301,7 +301,6 @@ fn file_type_enum_covers_all_variants() {
         agnix_core::FileType::KiroSteering,
         agnix_core::FileType::KiroPower,
         agnix_core::FileType::KiroPowerPlugin,
-        agnix_core::FileType::KiroPowerMcp,
         agnix_core::FileType::KiroPowerSteering,
         agnix_core::FileType::KiroAgent,
         agnix_core::FileType::KiroHook,
@@ -319,7 +318,7 @@ fn file_type_enum_covers_all_variants() {
 
     assert_eq!(
         variants.len(),
-        55,
+        54,
         "A new FileType variant may have been added or removed. Please update this test's variant list and the match statement below."
     );
 
@@ -366,7 +365,6 @@ fn file_type_enum_covers_all_variants() {
             agnix_core::FileType::KiroSteering => {}
             agnix_core::FileType::KiroPower => {}
             agnix_core::FileType::KiroPowerPlugin => {}
-            agnix_core::FileType::KiroPowerMcp => {}
             agnix_core::FileType::KiroPowerSteering => {}
             agnix_core::FileType::KiroAgent => {}
             agnix_core::FileType::KiroHook => {}

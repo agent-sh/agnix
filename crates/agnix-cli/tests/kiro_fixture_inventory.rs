@@ -300,7 +300,7 @@ fn kiro_fixture_families_exist_with_required_cases() {
 fn kiro_fixture_families_are_cli_runnable() {
     let root = workspace_root();
     let fixture_roots = [
-        // The power mcp.json files are KiroPowerMcp now and get Kiro MCP rules:
+        // The power mcp.json files are KiroMcp now and get Kiro MCP rules:
         // bad-mcp/mcp.json adds KR-MCP-001 (mcpServers is an array).
         ("tests/fixtures/kiro-powers", 7_u64, 5_u64),
         // KR-AG-009 no longer flags the 10 agents that omit the optional `prompt`.
@@ -418,7 +418,7 @@ fn kiro_fixture_representatives_map_to_expected_file_types() {
         ),
         (
             "tests/fixtures/kiro-powers/.kiro/powers/valid-power/mcp.json",
-            FileType::KiroPowerMcp,
+            FileType::KiroMcp,
         ),
     ];
 

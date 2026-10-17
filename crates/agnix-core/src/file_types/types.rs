@@ -100,9 +100,6 @@ pub enum FileType {
     /// .kiro/powers/<name>/, .kiro/powers/installed/<name>/, power/,
     /// powers/<name>/)
     KiroPowerPlugin,
-    /// Kiro power MCP configuration (mcp.json at a power root; legacy Kiro
-    /// mcp.json format or Agent Plugins mcp.json format)
-    KiroPowerMcp,
     /// Kiro power documents read raw by the agent (steering/*.md,
     /// dev.kiro/steering/*.md, dev.kiro/INSTRUCTIONS.md in a power)
     KiroPowerSteering,
@@ -113,7 +110,8 @@ pub enum FileType {
     KiroHook,
     /// Kiro V3 standalone hook files (.kiro/hooks/*.json)
     KiroHookV3,
-    /// Kiro MCP settings (.kiro/settings/mcp.json)
+    /// Kiro MCP configuration (.kiro/settings/mcp.json, and the mcp.json of a
+    /// power: legacy Kiro format or Agent Plugins format)
     KiroMcp,
     /// Kiro CLI settings (.kiro/settings/cli.json or ~/.kiro/settings/cli.json)
     KiroSettings,
@@ -204,7 +202,6 @@ impl fmt::Display for FileType {
             FileType::KiroSteering => "KiroSteering",
             FileType::KiroPower => "KiroPower",
             FileType::KiroPowerPlugin => "KiroPowerPlugin",
-            FileType::KiroPowerMcp => "KiroPowerMcp",
             FileType::KiroPowerSteering => "KiroPowerSteering",
             FileType::KiroAgent => "KiroAgent",
             FileType::KiroHook => "KiroHook",
@@ -271,7 +268,6 @@ mod tests {
             (FileType::KiroSteering, "KiroSteering"),
             (FileType::KiroPower, "KiroPower"),
             (FileType::KiroPowerPlugin, "KiroPowerPlugin"),
-            (FileType::KiroPowerMcp, "KiroPowerMcp"),
             (FileType::KiroPowerSteering, "KiroPowerSteering"),
             (FileType::KiroAgent, "KiroAgent"),
             (FileType::KiroHook, "KiroHook"),
@@ -337,7 +333,6 @@ mod tests {
             FileType::KiroSteering,
             FileType::KiroPower,
             FileType::KiroPowerPlugin,
-            FileType::KiroPowerMcp,
             FileType::KiroPowerSteering,
             FileType::KiroAgent,
             FileType::KiroHook,
@@ -417,7 +412,6 @@ mod tests {
             FileType::KiroSteering,
             FileType::KiroPower,
             FileType::KiroPowerPlugin,
-            FileType::KiroPowerMcp,
             FileType::KiroPowerSteering,
             FileType::KiroAgent,
             FileType::KiroHook,
