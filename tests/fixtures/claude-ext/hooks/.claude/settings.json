@@ -1,0 +1,35 @@
+{
+  "hooks": {
+    "Stop": [
+      { "hooks": [{ "type": "command", "command": "echo stop", "if": "Bash(git *)" }] }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "bash",
+        "hooks": [
+          { "type": "command", "command": "node check.js", "args": ["--strict"] },
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/check.sh", "onFailure": "deny", "if": "Bash(git *) && Edit(*.ts)" }
+        ]
+      },
+      {
+        "matcher": "mcp__memory",
+        "hooks": [{ "type": "command", "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/log.sh" }]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [{ "type": "command", "shell": "powershell", "command": "& \"$CLAUDE_PROJECT_DIR\\.claude\\hooks\\fmt.ps1\"" }]
+      }
+    ],
+    "PermissionRequest": [
+      { "hooks": [{ "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/approve.sh" }] }
+    ],
+    "SessionStart": [
+      { "hooks": [{ "type": "http", "url": "http://localhost:8080/start" }] }
+    ],
+    "SessionEnd": [
+      { "hooks": [{ "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/bye.sh", "timeout": 120 }] }
+    ]
+  }
+}

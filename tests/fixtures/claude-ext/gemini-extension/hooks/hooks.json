@@ -1,0 +1,1 @@
+{ "hooks": { "BeforeTool": [ { "hooks": [ { "type": "command", "command": "echo before" } ] } ] } }

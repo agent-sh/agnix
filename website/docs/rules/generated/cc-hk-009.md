@@ -2,18 +2,18 @@
 id: cc-hk-009
 title: "CC-HK-009: Dangerous Command Pattern - Claude Hooks"
 sidebar_label: "CC-HK-009"
-description: "agnix rule CC-HK-009 checks for dangerous command pattern in claude hooks files. Severity: HIGH. See examples and fix guidance."
+description: "agnix rule CC-HK-009 checks for dangerous command pattern in claude hooks files. Severity: MEDIUM. See examples and fix guidance."
 keywords: ["CC-HK-009", "dangerous command pattern", "claude hooks", "validation", "agnix", "linter"]
 ---
 
 ## Summary
 
 - **Rule ID**: `CC-HK-009`
-- **Severity**: `HIGH`
+- **Severity**: `MEDIUM`
 - **Category**: `Claude Hooks`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,7 @@ keywords: ["CC-HK-009", "dangerous command pattern", "claude hooks", "validation
 
 ## Evidence Sources
 
-- https://github.com/anthropics/claude-code/tree/main/.claude/commands
+- https://code.claude.com/docs/en/hooks
 
 ## Test Coverage Metadata
 

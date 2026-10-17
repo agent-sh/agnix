@@ -1,19 +1,19 @@
 ---
 id: cc-ag-019
-title: "CC-AG-019: Unknown Agent Frontmatter Field - Claude Agents"
+title: "CC-AG-019: Unknown or Ignored Agent Frontmatter Field"
 sidebar_label: "CC-AG-019"
-description: "agnix rule CC-AG-019 checks for unknown agent frontmatter field in claude agents files. Severity: LOW. See examples and fix guidance."
-keywords: ["CC-AG-019", "unknown agent frontmatter field", "claude agents", "validation", "agnix", "linter"]
+description: "agnix rule CC-AG-019 checks for unknown or ignored agent frontmatter field in claude agents files. Severity: MEDIUM. See examples and fix guidance."
+keywords: ["CC-AG-019", "unknown or ignored agent frontmatter field", "claude agents", "validation", "agnix", "linter"]
 ---
 
 ## Summary
 
 - **Rule ID**: `CC-AG-019`
-- **Severity**: `LOW`
+- **Severity**: `MEDIUM`
 - **Category**: `Claude Agents`
 - **Normative Level**: `SHOULD`
-- **Auto-Fix**: `Yes (unsafe)`
-- **Verified On**: `2026-10-11`
+- **Auto-Fix**: `No`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -24,7 +24,6 @@ keywords: ["CC-AG-019", "unknown agent frontmatter field", "claude agents", "val
 ## Evidence Sources
 
 - https://code.claude.com/docs/en/sub-agents
-- https://github.com/anthropics/claude-code/releases/tag/v2.1.296
 
 ## Test Coverage Metadata
 

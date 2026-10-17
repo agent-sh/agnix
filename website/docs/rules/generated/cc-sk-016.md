@@ -2,18 +2,18 @@
 id: cc-sk-016
 title: "CC-SK-016: Indexed $ARGUMENTS Without argument-hint"
 sidebar_label: "CC-SK-016"
-description: "agnix rule CC-SK-016 checks for indexed $arguments without argument-hint in claude skills files. Severity: MEDIUM. See examples and fix guidance."
+description: "agnix rule CC-SK-016 checks for indexed $arguments without argument-hint in claude skills files. Severity: LOW. See examples and fix guidance."
 keywords: ["CC-SK-016", "indexed $arguments without argument-hint", "claude skills", "validation", "agnix", "linter"]
 ---
 
 ## Summary
 
 - **Rule ID**: `CC-SK-016`
-- **Severity**: `MEDIUM`
+- **Severity**: `LOW`
 - **Category**: `Claude Skills`
-- **Normative Level**: `SHOULD`
+- **Normative Level**: `BEST_PRACTICE`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-07-31`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 

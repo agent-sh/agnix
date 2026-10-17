@@ -1,7 +1,7 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 535,
+  "total_rules": 567,
   "last_updated": "2026-10-17",
   "schema": {
     "evidence": {
@@ -727,7 +727,7 @@
         "source_urls": [
           "https://code.claude.com/docs/en/sub-agents"
         ],
-        "verified_on": "2026-10-08",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -740,7 +740,7 @@
       },
       "fix": {
         "autofix": true,
-        "fix_safety": "safe"
+        "fix_safety": "unsafe"
       },
       "good_example": "---\nname: code-reviewer\ndescription: Reviews pull requests for quality\n---\nReview code changes and provide feedback.",
       "bad_example": "---\ndescription: Reviews pull requests for quality\n---\nReview code changes and provide feedback."
@@ -846,7 +846,7 @@
     },
     {
       "id": "CC-AG-005",
-      "name": "Referenced Skill Not Found",
+      "name": "Preloaded Skill Not Found or Not Preloadable",
       "severity": "MEDIUM",
       "category": "claude-agents",
       "evidence": {
@@ -854,7 +854,7 @@
         "source_urls": [
           "https://code.claude.com/docs/en/sub-agents"
         ],
-        "verified_on": "2026-10-08",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -921,7 +921,7 @@
         "source_urls": [
           "https://code.claude.com/docs/en/sub-agents"
         ],
-        "verified_on": "2026-10-08",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -1090,34 +1090,6 @@
       }
     },
     {
-      "id": "CC-AG-013",
-      "name": "Invalid Skill Name Format",
-      "severity": "MEDIUM",
-      "category": "claude-agents",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://code.claude.com/docs/en/sub-agents"
-        ],
-        "verified_on": "2026-10-04",
-        "applies_to": {
-          "tool": "claude-code"
-        },
-        "normative_level": "SHOULD",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": true,
-        "fix_safety": "unsafe"
-      },
-      "good_example": "---\nname: my-agent\ndescription: Agent with valid skill names\nskills:\n  - code-review\n  - deploy-prod\n---\nAgent instructions.",
-      "bad_example": "---\nname: my-agent\ndescription: Agent with invalid skill name format\nskills:\n  - Code_Review\n  - --bad-name\n---\nAgent instructions."
-    },
-    {
       "id": "CC-AG-014",
       "name": "Invalid Effort Value",
       "severity": "MEDIUM",
@@ -1202,16 +1174,15 @@
     },
     {
       "id": "CC-AG-019",
-      "name": "Unknown Agent Frontmatter Field",
-      "severity": "LOW",
+      "name": "Unknown or Ignored Agent Frontmatter Field",
+      "severity": "MEDIUM",
       "category": "claude-agents",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.claude.com/docs/en/sub-agents",
-          "https://github.com/anthropics/claude-code/releases/tag/v2.1.296"
+          "https://code.claude.com/docs/en/sub-agents"
         ],
-        "verified_on": "2026-10-11",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -1223,8 +1194,7 @@
         }
       },
       "fix": {
-        "autofix": true,
-        "fix_safety": "unsafe"
+        "autofix": false
       },
       "good_example": "---\nname: my-agent\ndescription: Review code\nautoCompactWindow: 200000\nexperimental:\n  cacheTtl: 1h\n---\nReview the changed code.",
       "bad_example": "---\nname: my-agent\npriority: high\n---\nAgent instructions."
@@ -1257,6 +1227,115 @@
       },
       "good_example": "---\nname: reviewer\ndescription: Reviews code\n---\nReview the change.",
       "bad_example": "---\nname: plugin:reviewer\ndescription: Reviews code\n---\nReview the change."
+    },
+    {
+      "id": "CC-AG-021",
+      "name": "Subagent Descriptions Over Startup Budget",
+      "severity": "MEDIUM",
+      "category": "claude-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/sub-agents",
+          "https://code.claude.com/docs/en/errors"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: reviewer\ndescription: Reviews pull requests for correctness. Use proactively after edits.\n---\nReview the diff.",
+      "bad_example": "---\nname: reviewer\ndescription: <tens of thousands of characters of guidance across all agents>\n---\nReview the diff."
+    },
+    {
+      "id": "CC-AG-022",
+      "name": "Subagent Inherits All Tools",
+      "severity": "LOW",
+      "category": "claude-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/sub-agents"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: reviewer\ndescription: Reviews code\ntools: Read, Grep, Glob\n---\nReview the diff.",
+      "bad_example": "---\nname: reviewer\ndescription: Reviews code\n---\nReview the diff."
+    },
+    {
+      "id": "CC-AG-023",
+      "name": "Duplicate Subagent Name",
+      "severity": "MEDIUM",
+      "category": "claude-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/sub-agents"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "# .claude/agents/reviewer.md\n---\nname: reviewer\ndescription: Reviews code\n---\n",
+      "bad_example": "# .claude/agents/reviewer.md and .claude/agents/team/reviewer.md\n---\nname: reviewer\ndescription: Reviews code\n---\n"
+    },
+    {
+      "id": "CC-AG-024",
+      "name": "disallowedTools Specifier Removes the Whole Tool",
+      "severity": "MEDIUM",
+      "category": "claude-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/sub-agents"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: safe-shell\ndescription: Runs builds\ndisallowedTools: WebFetch\n---\nRun the build.",
+      "bad_example": "---\nname: safe-shell\ndescription: Runs builds\ndisallowedTools: Bash(git push *)\n---\nRun the build."
     },
     {
       "id": "CC-HK-001",
@@ -1298,7 +1377,7 @@
         "source_urls": [
           "https://code.claude.com/docs/en/hooks"
         ],
-        "verified_on": "2026-10-04",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -1325,7 +1404,7 @@
         "source_urls": [
           "https://code.claude.com/docs/en/hooks"
         ],
-        "verified_on": "2026-10-04",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -1454,14 +1533,14 @@
     {
       "id": "CC-HK-009",
       "name": "Dangerous Command Pattern",
-      "severity": "HIGH",
+      "severity": "MEDIUM",
       "category": "claude-hooks",
       "evidence": {
-        "source_type": "community",
+        "source_type": "vendor_docs",
         "source_urls": [
-          "https://github.com/anthropics/claude-code/tree/main/.claude/commands"
+          "https://code.claude.com/docs/en/hooks"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -1493,15 +1572,16 @@
     },
     {
       "id": "CC-HK-010",
-      "name": "Timeout Policy",
+      "name": "SessionEnd Hook Timeout Above Budget",
       "severity": "MEDIUM",
       "category": "claude-hooks",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.claude.com/docs/en/hooks"
+          "https://code.claude.com/docs/en/hooks",
+          "https://code.claude.com/docs/en/hooks-guide"
         ],
-        "verified_on": "2026-10-04",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -1658,7 +1738,7 @@
     },
     {
       "id": "CC-HK-016",
-      "name": "Validate Hook Type Agent",
+      "name": "Unknown Hook Type",
       "severity": "HIGH",
       "category": "claude-hooks",
       "evidence": {
@@ -1666,7 +1746,7 @@
         "source_urls": [
           "https://code.claude.com/docs/en/hooks"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -1683,34 +1763,6 @@
       },
       "good_example": "{\n  \"hooks\": {\n    \"Stop\": [\n      {\n        \"hooks\": [\n          { \"type\": \"command\", \"command\": \"echo done\", \"timeout\": 30 }\n        ]\n      }\n    ]\n  }\n}",
       "bad_example": "{\n  \"hooks\": {\n    \"Stop\": [\n      {\n        \"hooks\": [\n          { \"type\": \"webhook\", \"url\": \"https://example.com\", \"timeout\": 30 }\n        ]\n      }\n    ]\n  }\n}"
-    },
-    {
-      "id": "CC-HK-017",
-      "name": "Prompt/Agent Hook Missing $ARGUMENTS",
-      "severity": "MEDIUM",
-      "category": "claude-hooks",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://code.claude.com/docs/en/hooks"
-        ],
-        "verified_on": "2026-04-23",
-        "applies_to": {
-          "tool": "claude-code"
-        },
-        "normative_level": "SHOULD",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": true,
-        "fix_safety": "safe"
-      },
-      "good_example": "{\n  \"hooks\": {\n    \"Stop\": [\n      {\n        \"hooks\": [\n          { \"type\": \"prompt\", \"prompt\": \"Summarize: $ARGUMENTS\", \"timeout\": 30 }\n        ]\n      }\n    ]\n  }\n}",
-      "bad_example": "{\n  \"hooks\": {\n    \"Stop\": [\n      {\n        \"hooks\": [\n          { \"type\": \"prompt\", \"prompt\": \"Summarize what was done\", \"timeout\": 30 }\n        ]\n      }\n    ]\n  }\n}"
     },
     {
       "id": "CC-HK-018",
@@ -1774,14 +1826,14 @@
     {
       "id": "CC-HK-021",
       "name": "Invalid If Field",
-      "severity": "MEDIUM",
+      "severity": "HIGH",
       "category": "claude-hooks",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
           "https://code.claude.com/docs/en/hooks"
         ],
-        "verified_on": "2026-07-02",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code",
           "file_types": [
@@ -1916,14 +1968,15 @@
     {
       "id": "CC-HK-025",
       "name": "Invalid Matcher Value",
-      "severity": "LOW",
+      "severity": "MEDIUM",
       "category": "claude-hooks",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.claude.com/docs/en/hooks"
+          "https://code.claude.com/docs/en/hooks",
+          "https://code.claude.com/docs/en/hooks-guide"
         ],
-        "verified_on": "2026-10-04",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code",
           "file_types": [
@@ -2046,6 +2099,200 @@
         "likelihood": "MEDIUM",
         "impact": "HIGH"
       }
+    },
+    {
+      "id": "CC-HK-029",
+      "name": "Invalid or Ineffective onFailure",
+      "severity": "MEDIUM",
+      "category": "claude-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/hooks"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "claude-code",
+          "version_range": ">=2.1.295"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"hooks\": {\n    \"PreToolUse\": [\n      {\n        \"matcher\": \"Bash\",\n        \"hooks\": [\n          {\n            \"type\": \"command\",\n            \"command\": \"node\",\n            \"args\": [\n              \"check.js\"\n            ],\n            \"onFailure\": \"block\"\n          }\n        ]\n      }\n    ]\n  }\n}",
+      "bad_example": "{\n  \"hooks\": {\n    \"PreToolUse\": [\n      {\n        \"matcher\": \"Bash\",\n        \"hooks\": [\n          {\n            \"type\": \"command\",\n            \"command\": \"check.sh\",\n            \"onFailure\": \"deny\"\n          }\n        ]\n      }\n    ]\n  }\n}"
+    },
+    {
+      "id": "CC-HK-030",
+      "name": "Unquoted Path Placeholder in Shell-Form Hook",
+      "severity": "MEDIUM",
+      "category": "claude-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/hooks",
+          "https://code.claude.com/docs/en/plugins/manifest-reference",
+          "https://code.claude.com/docs/en/hooks-guide"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"hooks\": {\n    \"PostToolUse\": [\n      {\n        \"matcher\": \"Write|Edit\",\n        \"hooks\": [\n          {\n            \"type\": \"command\",\n            \"command\": \"\\\"${CLAUDE_PLUGIN_ROOT}\\\"/scripts/format.sh\"\n          }\n        ]\n      }\n    ]\n  }\n}",
+      "bad_example": "{\n  \"hooks\": {\n    \"PostToolUse\": [\n      {\n        \"matcher\": \"Write|Edit\",\n        \"hooks\": [\n          {\n            \"type\": \"command\",\n            \"command\": \"${CLAUDE_PLUGIN_ROOT}/scripts/format.sh\"\n          }\n        ]\n      }\n    ]\n  }\n}"
+    },
+    {
+      "id": "CC-HK-031",
+      "name": "Exec-Form Command With Embedded Arguments",
+      "severity": "HIGH",
+      "category": "claude-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/hooks"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"hooks\": {\n    \"PostToolUse\": [\n      {\n        \"matcher\": \"Write\",\n        \"hooks\": [\n          {\n            \"type\": \"command\",\n            \"command\": \"node\",\n            \"args\": [\n              \"script.js\",\n              \"--fix\"\n            ]\n          }\n        ]\n      }\n    ]\n  }\n}",
+      "bad_example": "{\n  \"hooks\": {\n    \"PostToolUse\": [\n      {\n        \"matcher\": \"Write\",\n        \"hooks\": [\n          {\n            \"type\": \"command\",\n            \"command\": \"node script.js\",\n            \"args\": [\n              \"--fix\"\n            ]\n          }\n        ]\n      }\n    ]\n  }\n}"
+    },
+    {
+      "id": "CC-HK-032",
+      "name": "PowerShell Hook Placeholder Not Expanded",
+      "severity": "HIGH",
+      "category": "claude-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/hooks"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"hooks\": {\n    \"PostToolUse\": [\n      {\n        \"matcher\": \"Write\",\n        \"hooks\": [\n          {\n            \"type\": \"command\",\n            \"shell\": \"powershell\",\n            \"command\": \"& \\\"$env:CLAUDE_PROJECT_DIR\\\\.claude\\\\hooks\\\\check.ps1\\\"\"\n          }\n        ]\n      }\n    ]\n  }\n}",
+      "bad_example": "{\n  \"hooks\": {\n    \"PostToolUse\": [\n      {\n        \"matcher\": \"Write\",\n        \"hooks\": [\n          {\n            \"type\": \"command\",\n            \"shell\": \"powershell\",\n            \"command\": \"& \\\"$CLAUDE_PROJECT_DIR\\\\.claude\\\\hooks\\\\check.ps1\\\"\"\n          }\n        ]\n      }\n    ]\n  }\n}"
+    },
+    {
+      "id": "CC-HK-033",
+      "name": "MCP Matcher Without Wildcard",
+      "severity": "HIGH",
+      "category": "claude-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/hooks"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": true,
+        "fix_safety": "unsafe"
+      },
+      "good_example": "{\n  \"hooks\": {\n    \"PreToolUse\": [\n      {\n        \"matcher\": \"mcp__memory__.*\",\n        \"hooks\": [\n          {\n            \"type\": \"command\",\n            \"command\": \"echo memory op\"\n          }\n        ]\n      }\n    ]\n  }\n}",
+      "bad_example": "{\n  \"hooks\": {\n    \"PreToolUse\": [\n      {\n        \"matcher\": \"mcp__memory\",\n        \"hooks\": [\n          {\n            \"type\": \"command\",\n            \"command\": \"echo memory op\"\n          }\n        ]\n      }\n    ]\n  }\n}"
+    },
+    {
+      "id": "CC-HK-034",
+      "name": "Plugin Hook Names Own MCP Server by Bare Key",
+      "severity": "HIGH",
+      "category": "claude-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/hooks",
+          "https://code.claude.com/docs/en/plugins/components"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"hooks\": {\n    \"PreToolUse\": [\n      {\n        \"matcher\": \"mcp__plugin_my-plugin_db__.*\",\n        \"hooks\": [\n          {\n            \"type\": \"command\",\n            \"command\": \"echo db op\"\n          }\n        ]\n      }\n    ]\n  }\n}",
+      "bad_example": "{\n  \"hooks\": {\n    \"PreToolUse\": [\n      {\n        \"matcher\": \"mcp__db__.*\",\n        \"hooks\": [\n          {\n            \"type\": \"command\",\n            \"command\": \"echo db op\"\n          }\n        ]\n      }\n    ]\n  }\n}"
+    },
+    {
+      "id": "CC-HK-035",
+      "name": "Broad PermissionRequest Matcher",
+      "severity": "MEDIUM",
+      "category": "claude-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/hooks-guide"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"hooks\": {\n    \"PermissionRequest\": [\n      {\n        \"matcher\": \"Bash\",\n        \"hooks\": [\n          {\n            \"type\": \"command\",\n            \"command\": \"approve-git.sh\"\n          }\n        ]\n      }\n    ]\n  }\n}",
+      "bad_example": "{\n  \"hooks\": {\n    \"PermissionRequest\": [\n      {\n        \"matcher\": \".*\",\n        \"hooks\": [\n          {\n            \"type\": \"command\",\n            \"command\": \"approve.sh\"\n          }\n        ]\n      }\n    ]\n  }\n}"
     },
     {
       "id": "CC-MEM-001",
@@ -2500,9 +2747,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.claude.com/docs/en/plugins-reference"
+          "https://code.claude.com/docs/en/plugins/manifest-reference"
         ],
-        "verified_on": "2026-10-08",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -2527,9 +2774,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.claude.com/docs/en/plugins-reference"
+          "https://code.claude.com/docs/en/plugins/manifest-reference"
         ],
-        "verified_on": "2026-10-04",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -2554,10 +2801,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.claude.com/docs/en/plugins-reference#version",
+          "https://code.claude.com/docs/en/plugins/manifest-reference",
           "https://code.claude.com/docs/en/plugins/dependencies#tag-plugin-releases-for-version-resolution"
         ],
-        "verified_on": "2026-10-04",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -2583,9 +2830,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.claude.com/docs/en/plugins-reference"
+          "https://code.claude.com/docs/en/plugins/manifest-reference"
         ],
-        "verified_on": "2026-10-04",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -2610,9 +2857,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.claude.com/docs/en/plugins-reference"
+          "https://code.claude.com/docs/en/plugins/manifest-reference"
         ],
-        "verified_on": "2026-10-04",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -2638,9 +2885,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.claude.com/docs/en/plugins-reference"
+          "https://code.claude.com/docs/en/plugins/manifest-reference"
         ],
-        "verified_on": "2026-10-04",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -2665,10 +2912,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.claude.com/docs/en/plugins-reference",
-          "https://github.com/anthropics/claude-code/releases/tag/v2.1.221"
+          "https://code.claude.com/docs/en/plugins/manifest-reference"
         ],
-        "verified_on": "2026-10-04",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -2694,9 +2940,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.claude.com/docs/en/plugins-reference"
+          "https://code.claude.com/docs/en/plugins/manifest-reference"
         ],
-        "verified_on": "2026-07-31",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -2721,9 +2967,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.claude.com/docs/en/plugins-reference"
+          "https://code.claude.com/docs/en/plugins/manifest-reference"
         ],
-        "verified_on": "2026-02-07",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -2743,18 +2989,18 @@
     {
       "id": "CC-PL-010",
       "name": "Invalid Homepage URL",
-      "severity": "MEDIUM",
+      "severity": "HIGH",
       "category": "claude-plugins",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.claude.com/docs/en/plugins-reference"
+          "https://code.claude.com/docs/en/plugins/manifest-reference"
         ],
-        "verified_on": "2026-02-07",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code"
         },
-        "normative_level": "SHOULD",
+        "normative_level": "MUST",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -2775,9 +3021,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.claude.com/docs/en/plugins-reference"
+          "https://code.claude.com/docs/en/plugins/manifest-reference"
         ],
-        "verified_on": "2026-03-28",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -2802,9 +3048,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.claude.com/docs/en/plugins-reference"
+          "https://code.claude.com/docs/en/plugins/manifest-reference"
         ],
-        "verified_on": "2026-03-28",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -2829,9 +3075,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.claude.com/docs/en/plugins-reference"
+          "https://code.claude.com/docs/en/plugins/manifest-reference"
         ],
-        "verified_on": "2026-03-28",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -2850,28 +3096,28 @@
     },
     {
       "id": "CC-PL-014",
-      "name": "Plugin Agent Unsupported Field",
+      "name": "Plugin Agent Field Ignored",
       "severity": "MEDIUM",
       "category": "claude-plugins",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.claude.com/docs/en/plugins-reference"
+          "https://code.claude.com/docs/en/plugins/components",
+          "https://code.claude.com/docs/en/sub-agents"
         ],
-        "verified_on": "2026-03-28",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code"
         },
         "normative_level": "SHOULD",
         "tests": {
           "unit": true,
-          "fixtures": false,
+          "fixtures": true,
           "e2e": false
         }
       },
       "fix": {
-        "autofix": true,
-        "fix_safety": "safe"
+        "autofix": false
       },
       "good_example": "{\n  \"agents\": [{ \"name\": \"helper\", \"description\": \"Assists with code\" }]\n}",
       "bad_example": "{\n  \"agents\": [{ \"name\": \"helper\", \"priority\": 1 }]\n}"
@@ -2884,10 +3130,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.claude.com/docs/en/plugins-reference",
+          "https://code.claude.com/docs/en/plugins/manifest-reference",
           "https://github.com/anthropics/claude-code/releases/tag/v2.1.140"
         ],
-        "verified_on": "2026-07-31",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code",
           "version_range": ">=2.1.140"
@@ -2913,10 +3159,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.claude.com/docs/en/plugins-reference",
+          "https://code.claude.com/docs/en/plugins/manifest-reference",
           "https://github.com/anthropics/claude-code/releases/tag/v2.1.247"
         ],
-        "verified_on": "2026-10-08",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code",
           "version_range": ">=2.1.0"
@@ -3049,19 +3295,19 @@
     },
     {
       "id": "CC-SK-006",
-      "name": "Dangerous Auto-Invocation",
-      "severity": "HIGH",
+      "name": "Side-Effect Skill Without disable-model-invocation",
+      "severity": "MEDIUM",
       "category": "claude-skills",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
           "https://code.claude.com/docs/en/skills"
         ],
-        "verified_on": "2026-10-04",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code"
         },
-        "normative_level": "MUST",
+        "normative_level": "SHOULD",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -3096,11 +3342,11 @@
       "severity": "MEDIUM",
       "category": "claude-skills",
       "evidence": {
-        "source_type": "community",
+        "source_type": "vendor_docs",
         "source_urls": [
-          "https://github.com/anthropics/claude-code/tree/main/.claude/commands"
+          "https://code.claude.com/docs/en/skills"
         ],
-        "verified_on": "2026-02-09",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -3276,18 +3522,18 @@
     {
       "id": "CC-SK-016",
       "name": "Indexed $ARGUMENTS Without argument-hint",
-      "severity": "MEDIUM",
+      "severity": "LOW",
       "category": "claude-skills",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
           "https://code.claude.com/docs/en/skills"
         ],
-        "verified_on": "2026-07-31",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code"
         },
-        "normative_level": "SHOULD",
+        "normative_level": "BEST_PRACTICE",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -3492,6 +3738,252 @@
       },
       "good_example": "---\nname: top-processes\ndescription: Use when checking which processes use the most memory\n---\n```bash\nps -eo pid,rss | sort -k2 -n | awk '{print \\$1}'\n```",
       "bad_example": "---\nname: top-processes\ndescription: Use when checking which processes use the most memory\n---\n```bash\nps -eo pid,rss | sort -k2 -n | awk '{print $1}'\n```"
+    },
+    {
+      "id": "CC-SK-024",
+      "name": "Skill Without Description",
+      "severity": "LOW",
+      "category": "claude-skills",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/skills"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: pdf-tools\ndescription: Extracts text from PDF files. Use when working with PDFs.\n---\nExtract the text.",
+      "bad_example": "---\nname: pdf-tools\n---\nExtract the text."
+    },
+    {
+      "id": "CC-SK-025",
+      "name": "Skill Listing Over Budget",
+      "severity": "LOW",
+      "category": "claude-skills",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/skills",
+          "https://code.claude.com/docs/en/settings-reference"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "# .claude/skills/*: short descriptions with the key use case first",
+      "bad_example": "# .claude/skills/*: dozens of skills with 1,500-character descriptions"
+    },
+    {
+      "id": "CC-SK-027",
+      "name": "Legacy Custom Command File",
+      "severity": "LOW",
+      "category": "claude-skills",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/skills"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "# .claude/skills/deploy/SKILL.md\n---\ndescription: Deploy the app\ndisable-model-invocation: true\n---\nDeploy.",
+      "bad_example": "# .claude/commands/deploy.md\n---\nname: ship\ndescription: Deploy the app\n---\nDeploy."
+    },
+    {
+      "id": "CC-SK-028",
+      "name": "Injected Command Not Run",
+      "severity": "MEDIUM",
+      "category": "claude-skills",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/skills"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: status\ndescription: Shows branch status. Use when asked for status.\n---\nBranch: !`git branch --show-current`",
+      "bad_example": "---\nname: status\ndescription: Shows branch status. Use when asked for status.\n---\nBRANCH=!`git branch --show-current`"
+    },
+    {
+      "id": "CC-SK-030",
+      "name": "Skill Name Uses a Reserved Word",
+      "severity": "LOW",
+      "category": "claude-skills",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://platform.claude.com/docs/en/build-with-claude/skills-guide",
+          "https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: pdf-helper-tools\ndescription: Fills PDF forms. Use when filling forms.\n---\nFill the form.",
+      "bad_example": "---\nname: claude-pdf-tools\ndescription: Fills PDF forms. Use when filling forms.\n---\nFill the form."
+    },
+    {
+      "id": "CC-SK-031",
+      "name": "XML Tag in Skill Name or Description",
+      "severity": "LOW",
+      "category": "claude-skills",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://platform.claude.com/docs/en/build-with-claude/skills-guide"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: formatter\ndescription: Formats output blocks. Use when formatting.\n---\nFormat.",
+      "bad_example": "---\nname: formatter\ndescription: Formats <output> blocks. Use when formatting.\n---\nFormat."
+    },
+    {
+      "id": "CC-SK-032",
+      "name": "Skill Description Not in Third Person",
+      "severity": "LOW",
+      "category": "claude-skills",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: excel-reports\ndescription: Processes Excel files and generates reports. Use when working with spreadsheets.\n---\nBuild the report.",
+      "bad_example": "---\nname: excel-reports\ndescription: I can help you process Excel files\n---\nBuild the report."
+    },
+    {
+      "id": "CC-SK-033",
+      "name": "Vague Skill Name",
+      "severity": "LOW",
+      "category": "claude-skills",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: processing-pdfs\ndescription: Extracts text from PDFs. Use when working with PDFs.\n---\nExtract.",
+      "bad_example": "---\nname: helper\ndescription: Extracts text from PDFs. Use when working with PDFs.\n---\nExtract."
+    },
+    {
+      "id": "CC-SK-034",
+      "name": "Long Reference File Without Table of Contents",
+      "severity": "LOW",
+      "category": "claude-skills",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://github.com/anthropics/skills/blob/main/skills/skill-creator/SKILL.md",
+          "https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "# reference/finance.md\n## Contents\n- Revenue\n- Costs\n...",
+      "bad_example": "# reference/finance.md\n(400 lines with no contents list)"
     },
     {
       "id": "CC-SET-001",
@@ -12681,19 +13173,99 @@
       "bad_example": "{\n  \"mcpServers\": {\n    \"empty\": {}\n  }\n}"
     },
     {
-      "id": "MCP-025",
-      "name": "Non-boolean alwaysLoad in MCP Server Config",
-      "severity": "MEDIUM",
-      "category": "mcp",
+      "id": "CC-MCP-001",
+      "name": "Credential Variable Reads as Empty in Remote MCP Server",
+      "severity": "HIGH",
+      "category": "claude-mcp",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://github.com/anthropics/claude-code/releases/tag/v2.1.121"
+          "https://code.claude.com/docs/en/mcp"
         ],
-        "verified_on": "2026-04-28",
+        "verified_on": "2026-10-17",
         "applies_to": {
-          "tool": "claude-code",
-          "version_range": ">=2.1.121"
+          "tool": "claude-code"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"mcpServers\": {\n    \"gw\": { \"type\": \"http\", \"url\": \"https://gw.example.com/mcp\", \"headers\": { \"Authorization\": \"Bearer ${GW_TOKEN}\" } }\n  }\n}",
+      "bad_example": "{\n  \"mcpServers\": {\n    \"gw\": { \"type\": \"http\", \"url\": \"https://gw.example.com/mcp\", \"headers\": { \"Authorization\": \"Bearer ${ANTHROPIC_AUTH_TOKEN}\" } }\n  }\n}"
+    },
+    {
+      "id": "CC-MCP-002",
+      "name": "CLAUDE_PROJECT_DIR Without Default in Project .mcp.json",
+      "severity": "MEDIUM",
+      "category": "claude-mcp",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/mcp"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"mcpServers\": {\n    \"fs\": { \"type\": \"stdio\", \"command\": \"node\", \"args\": [\"${CLAUDE_PROJECT_DIR:-.}/server.js\"], \"alwaysLoad\": true }\n  }\n}",
+      "bad_example": "{\n  \"mcpServers\": {\n    \"fs\": { \"type\": \"stdio\", \"command\": \"${CLAUDE_PROJECT_DIR}/bin/server\" }\n  }\n}"
+    },
+    {
+      "id": "CC-MCP-003",
+      "name": "MCP Tool Description or Instructions Truncated",
+      "severity": "LOW",
+      "category": "claude-mcp",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/mcp"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"tools\": [{ \"name\": \"search\", \"description\": \"Searches the docs index.\", \"inputSchema\": { \"type\": \"object\" } }]\n}",
+      "bad_example": "{\n  \"tools\": [{ \"name\": \"search\", \"description\": \"<more than 4,096 characters>\", \"inputSchema\": { \"type\": \"object\" } }]\n}"
+    },
+    {
+      "id": "CC-MCP-004",
+      "name": "Non-boolean alwaysLoad in Claude Code MCP Config",
+      "severity": "MEDIUM",
+      "category": "claude-mcp",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/mcp"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "claude-code"
         },
         "normative_level": "MUST",
         "tests": {
@@ -12706,23 +13278,22 @@
         "autofix": true,
         "fix_safety": "unsafe"
       },
-      "good_example": "{\n  \"mcpServers\": {\n    \"fs\": {\n      \"type\": \"stdio\",\n      \"command\": \"node\",\n      \"alwaysLoad\": true\n    }\n  }\n}",
-      "bad_example": "{\n  \"mcpServers\": {\n    \"fs\": {\n      \"type\": \"stdio\",\n      \"command\": \"node\",\n      \"alwaysLoad\": \"true\"\n    }\n  }\n}"
+      "good_example": "{\n  \"mcpServers\": {\n    \"fs\": { \"type\": \"stdio\", \"command\": \"node\", \"args\": [\"${CLAUDE_PROJECT_DIR:-.}/server.js\"], \"alwaysLoad\": true }\n  }\n}",
+      "bad_example": "{\n  \"mcpServers\": {\n    \"fs\": { \"type\": \"stdio\", \"command\": \"node\", \"alwaysLoad\": \"true\" }\n  }\n}"
     },
     {
-      "id": "MCP-026",
+      "id": "CC-MCP-005",
       "name": "Reserved MCP Server Name",
       "severity": "HIGH",
-      "category": "mcp",
+      "category": "claude-mcp",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://github.com/anthropics/claude-code/releases/tag/v2.1.128"
+          "https://code.claude.com/docs/en/mcp"
         ],
-        "verified_on": "2026-05-06",
+        "verified_on": "2026-10-17",
         "applies_to": {
-          "tool": "claude-code",
-          "version_range": ">=2.1.128"
+          "tool": "claude-code"
         },
         "normative_level": "MUST",
         "tests": {
@@ -12734,8 +13305,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"mcpServers\": {\n    \"fs\": {\"type\": \"stdio\", \"command\": \"node\"}\n  }\n}",
-      "bad_example": "{\n  \"mcpServers\": {\n    \"workspace\": {\"type\": \"stdio\", \"command\": \"node\"}\n  }\n}"
+      "good_example": "{\n  \"mcpServers\": {\n    \"fs\": { \"type\": \"stdio\", \"command\": \"node\", \"args\": [\"${CLAUDE_PROJECT_DIR:-.}/server.js\"], \"alwaysLoad\": true }\n  }\n}",
+      "bad_example": "{\n  \"mcpServers\": {\n    \"workspace\": { \"type\": \"stdio\", \"command\": \"node\" }\n  }\n}"
     },
     {
       "id": "OC-001",
@@ -15094,9 +15665,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.claude.com/docs/en/plugins-reference"
+          "https://code.claude.com/docs/en/plugins/manifest-reference"
         ],
-        "verified_on": "2026-10-08",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code",
           "version_range": ">=2.1.0"
@@ -15113,6 +15684,309 @@
       },
       "good_example": "{\"name\":\"demo\",\"homepage\":\"https://example.com\"}",
       "bad_example": "{\"name\":\"demo\",\"homepag\":\"https://example.com\"}"
+    },
+    {
+      "id": "CC-PL-018",
+      "name": "Reserved Plugin Name",
+      "severity": "HIGH",
+      "category": "claude-plugins",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/plugins/manifest-reference",
+          "https://code.claude.com/docs/en/plugins/marketplace-reference"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"name\": \"deploy-tools\"\n}",
+      "bad_example": "{\n  \"name\": \"claude-deploy-tools\"\n}"
+    },
+    {
+      "id": "CC-PL-019",
+      "name": "Invalid Dependency Version Range",
+      "severity": "MEDIUM",
+      "category": "claude-plugins",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/plugins/dependencies",
+          "https://code.claude.com/docs/en/plugins/manifest-reference"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"name\": \"p\",\n  \"dependencies\": [{ \"name\": \"secrets-vault\", \"version\": \"~2.1.0\" }]\n}",
+      "bad_example": "{\n  \"name\": \"p\",\n  \"dependencies\": [{ \"name\": \"secrets-vault\", \"version\": \"latest\" }]\n}"
+    },
+    {
+      "id": "CC-PL-020",
+      "name": "Unbraced Plugin Variable in Plugin Content",
+      "severity": "MEDIUM",
+      "category": "claude-plugins",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/plugins/manifest-reference"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: run\ndescription: Runs the bundled tool. Use when asked to run it.\n---\nRun `bash \"${CLAUDE_PLUGIN_ROOT}\"/scripts/run.sh`.",
+      "bad_example": "---\nname: run\ndescription: Runs the bundled tool. Use when asked to run it.\n---\nRun `bash $CLAUDE_PLUGIN_ROOT/scripts/run.sh`."
+    },
+    {
+      "id": "CC-PL-021",
+      "name": "Plugin Settings Key Dropped",
+      "severity": "MEDIUM",
+      "category": "claude-plugins",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/plugins/components",
+          "https://code.claude.com/docs/en/plugins/manifest-reference"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"agent\": \"reviewer\"\n}",
+      "bad_example": "{\n  \"agent\": \"reviewer\",\n  \"permissions\": { \"allow\": [\"Bash\"] }\n}"
+    },
+    {
+      "id": "CC-PL-022",
+      "name": "Monitor Command References user_config",
+      "severity": "HIGH",
+      "category": "claude-plugins",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/plugins/components",
+          "https://code.claude.com/docs/en/plugins/manifest-reference"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"experimental\": {\n    \"monitors\": [{ \"name\": \"deploys\", \"command\": \"\\\"${CLAUDE_PLUGIN_ROOT}\\\"/scripts/poll.sh\", \"description\": \"Deploy status\" }]\n  }\n}",
+      "bad_example": "{\n  \"experimental\": {\n    \"monitors\": [{ \"name\": \"deploys\", \"command\": \"poll ${user_config.url}\", \"description\": \"Deploy status\" }]\n  }\n}"
+    },
+    {
+      "id": "CC-PL-023",
+      "name": "Invalid Key or Value in Strict Manifest Object",
+      "severity": "HIGH",
+      "category": "claude-plugins",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/plugins/manifest-reference"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"userConfig\": {\n    \"api_token\": { \"type\": \"string\", \"title\": \"API token\", \"description\": \"Token\", \"sensitive\": true }\n  }\n}",
+      "bad_example": "{\n  \"userConfig\": {\n    \"api_token\": { \"type\": \"string\", \"title\": \"API token\", \"description\": \"Token\", \"secret\": true }\n  }\n}"
+    },
+    {
+      "id": "CC-MP-001",
+      "name": "Marketplace Parse Error or Missing Required Field",
+      "severity": "HIGH",
+      "category": "claude-marketplaces",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/plugins/marketplace-reference"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"name\": \"acme-tools\",\n  \"description\": \"Acme plugins\",\n  \"owner\": { \"name\": \"Acme\" },\n  \"plugins\": [{ \"name\": \"formatter\", \"source\": \"./plugins/formatter\" }]\n}",
+      "bad_example": "{\n  \"name\": \"acme-tools\",\n  \"plugins\": [{ \"name\": \"formatter\" }]\n}"
+    },
+    {
+      "id": "CC-MP-002",
+      "name": "Invalid or Reserved Marketplace or Plugin Name",
+      "severity": "HIGH",
+      "category": "claude-marketplaces",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/plugins/marketplace-reference",
+          "https://code.claude.com/docs/en/plugins/manifest-reference"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"name\": \"acme-tools\",\n  \"description\": \"Acme plugins\",\n  \"owner\": { \"name\": \"Acme\" },\n  \"plugins\": [{ \"name\": \"formatter\", \"source\": \"./plugins/formatter\" }]\n}",
+      "bad_example": "{\n  \"name\": \"claude-plugins-official\",\n  \"owner\": { \"name\": \"Acme\" },\n  \"plugins\": [{ \"name\": \"my formatter\", \"source\": \"./plugins/formatter\" }]\n}"
+    },
+    {
+      "id": "CC-MP-003",
+      "name": "Invalid Plugin Source, Duplicate Entry or Unresolved Rename",
+      "severity": "HIGH",
+      "category": "claude-marketplaces",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/plugins/marketplace-reference"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"name\": \"acme-tools\",\n  \"description\": \"Acme plugins\",\n  \"owner\": { \"name\": \"Acme\" },\n  \"plugins\": [{ \"name\": \"formatter\", \"source\": \"./plugins/formatter\" }]\n}",
+      "bad_example": "{\n  \"name\": \"acme-tools\",\n  \"owner\": { \"name\": \"Acme\" },\n  \"plugins\": [{ \"name\": \"formatter\", \"source\": \"plugins/formatter\" }]\n}"
+    },
+    {
+      "id": "CC-MP-004",
+      "name": "Marketplace Entry Fails to Load",
+      "severity": "HIGH",
+      "category": "claude-marketplaces",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/plugins/marketplace-reference",
+          "https://code.claude.com/docs/en/plugins/manifest-reference"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"name\": \"acme-tools\",\n  \"owner\": { \"name\": \"Acme\" },\n  \"plugins\": [{ \"name\": \"formatter\", \"source\": \"./plugins/formatter\", \"hooks\": { \"PostToolUse\": [] } }]\n}",
+      "bad_example": "{\n  \"name\": \"acme-tools\",\n  \"owner\": { \"name\": \"Acme\" },\n  \"plugins\": [{ \"name\": \"formatter\", \"source\": \"./plugins/formatter\", \"hooks\": \"./hooks.json\" }]\n}"
+    },
+    {
+      "id": "CC-MP-005",
+      "name": "Marketplace Field Ignored or Missing Metadata",
+      "severity": "LOW",
+      "category": "claude-marketplaces",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/plugins/marketplace-reference"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"name\": \"acme-tools\",\n  \"description\": \"Acme plugins\",\n  \"owner\": { \"name\": \"Acme\" },\n  \"plugins\": [{ \"name\": \"formatter\", \"source\": \"./plugins/formatter\" }]\n}",
+      "bad_example": "{\n  \"name\": \"acme-tools\",\n  \"owner\": { \"name\": \"Acme\" },\n  \"plugin\": [],\n  \"plugins\": [{ \"name\": \"formatter\", \"source\": \"./plugins/formatter\" }]\n}"
     },
     {
       "id": "KR-PM-001",
@@ -15508,17 +16382,17 @@
     },
     "claude-skills": {
       "prefix": "CC-SK",
-      "count": 19,
+      "count": 28,
       "description": "Claude Code Skills rules"
     },
     "claude-hooks": {
       "prefix": "CC-HK",
-      "count": 26,
+      "count": 32,
       "description": "Claude Code Hooks rules"
     },
     "claude-agents": {
       "prefix": "CC-AG",
-      "count": 18,
+      "count": 21,
       "description": "Claude Code Subagents rules"
     },
     "claude-memory": {
@@ -15538,13 +16412,23 @@
     },
     "claude-plugins": {
       "prefix": "CC-PL",
-      "count": 17,
+      "count": 23,
       "description": "Claude Code Plugins rules"
+    },
+    "claude-marketplaces": {
+      "prefix": "CC-MP",
+      "count": 5,
+      "description": "Claude Code plugin marketplace rules"
     },
     "mcp": {
       "prefix": "MCP",
-      "count": 25,
+      "count": 23,
       "description": "Model Context Protocol rules"
+    },
+    "claude-mcp": {
+      "prefix": "CC-MCP",
+      "count": 5,
+      "description": "Claude Code MCP configuration rules"
     },
     "copilot": {
       "prefix": "COP",

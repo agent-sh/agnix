@@ -2,18 +2,18 @@
 id: cc-hk-021
 title: "CC-HK-021: Invalid If Field - Claude Hooks"
 sidebar_label: "CC-HK-021"
-description: "agnix rule CC-HK-021 checks for invalid if field in claude hooks files. Severity: MEDIUM. See examples and fix guidance."
+description: "agnix rule CC-HK-021 checks for invalid if field in claude hooks files. Severity: HIGH. See examples and fix guidance."
 keywords: ["CC-HK-021", "invalid if field", "claude hooks", "validation", "agnix", "linter"]
 ---
 
 ## Summary
 
 - **Rule ID**: `CC-HK-021`
-- **Severity**: `MEDIUM`
+- **Severity**: `HIGH`
 - **Category**: `Claude Hooks`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-07-02`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 

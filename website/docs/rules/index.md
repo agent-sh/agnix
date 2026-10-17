@@ -1,7 +1,7 @@
 # Rules Reference
 
-This section contains all `535` validation rules generated from `knowledge-base/rules.json`.
-`136` rules have automatic fixes.
+This section contains all `567` validation rules generated from `knowledge-base/rules.json`.
+`133` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
 |------|------|----------|----------|----------|
@@ -33,7 +33,7 @@ This section contains all `535` validation rules generated from `knowledge-base/
 | [CC-AG-002](./generated/cc-ag-002.md) | Missing Description Field | HIGH | Claude Agents | Yes (safe) |
 | [CC-AG-003](./generated/cc-ag-003.md) | Invalid Model Value | HIGH | Claude Agents | Yes (unsafe) |
 | [CC-AG-004](./generated/cc-ag-004.md) | Invalid Permission Mode | HIGH | Claude Agents | Yes (unsafe) |
-| [CC-AG-005](./generated/cc-ag-005.md) | Referenced Skill Not Found | MEDIUM | Claude Agents | No |
+| [CC-AG-005](./generated/cc-ag-005.md) | Preloaded Skill Not Found or Not Preloadable | MEDIUM | Claude Agents | No |
 | [CC-AG-006](./generated/cc-ag-006.md) | Tool/Disallowed Conflict | MEDIUM | Claude Agents | No |
 | [CC-AG-007](./generated/cc-ag-007.md) | Agent Parse Error | HIGH | Claude Agents | No |
 | [CC-AG-008](./generated/cc-ag-008.md) | Invalid Memory Scope | HIGH | Claude Agents | Yes (unsafe) |
@@ -41,12 +41,15 @@ This section contains all `535` validation rules generated from `knowledge-base/
 | [CC-AG-010](./generated/cc-ag-010.md) | Invalid Tool Name in DisallowedTools | HIGH | Claude Agents | No |
 | [CC-AG-011](./generated/cc-ag-011.md) | Invalid Hooks in Agent Frontmatter | HIGH | Claude Agents | No |
 | [CC-AG-012](./generated/cc-ag-012.md) | Bypass Permissions Warning | MEDIUM | Claude Agents | No |
-| [CC-AG-013](./generated/cc-ag-013.md) | Invalid Skill Name Format | MEDIUM | Claude Agents | Yes (unsafe) |
 | [CC-AG-014](./generated/cc-ag-014.md) | Invalid Effort Value | MEDIUM | Claude Agents | Yes (unsafe) |
 | [CC-AG-015](./generated/cc-ag-015.md) | Invalid Isolation Value | MEDIUM | Claude Agents | Yes (unsafe) |
 | [CC-AG-017](./generated/cc-ag-017.md) | Invalid MaxTurns Value | MEDIUM | Claude Agents | No |
-| [CC-AG-019](./generated/cc-ag-019.md) | Unknown Agent Frontmatter Field | LOW | Claude Agents | Yes (unsafe) |
+| [CC-AG-019](./generated/cc-ag-019.md) | Unknown or Ignored Agent Frontmatter Field | MEDIUM | Claude Agents | No |
 | [CC-AG-020](./generated/cc-ag-020.md) | Invalid Local Agent Name | HIGH | Claude Agents | No |
+| [CC-AG-021](./generated/cc-ag-021.md) | Subagent Descriptions Over Startup Budget | MEDIUM | Claude Agents | No |
+| [CC-AG-022](./generated/cc-ag-022.md) | Subagent Inherits All Tools | LOW | Claude Agents | No |
+| [CC-AG-023](./generated/cc-ag-023.md) | Duplicate Subagent Name | MEDIUM | Claude Agents | No |
+| [CC-AG-024](./generated/cc-ag-024.md) | disallowedTools Specifier Removes the Whole Tool | MEDIUM | Claude Agents | No |
 | [CC-HK-001](./generated/cc-hk-001.md) | Invalid Hook Event | HIGH | Claude Hooks | Yes (safe/unsafe) |
 | [CC-HK-002](./generated/cc-hk-002.md) | Prompt or Agent Hook on Wrong Event | HIGH | Claude Hooks | No |
 | [CC-HK-003](./generated/cc-hk-003.md) | Matcher Hint for Tool Events | LOW | Claude Hooks | No |
@@ -54,25 +57,31 @@ This section contains all `535` validation rules generated from `knowledge-base/
 | [CC-HK-006](./generated/cc-hk-006.md) | Missing Command Field | HIGH | Claude Hooks | No |
 | [CC-HK-007](./generated/cc-hk-007.md) | Missing Prompt Field | HIGH | Claude Hooks | No |
 | [CC-HK-008](./generated/cc-hk-008.md) | Script File Not Found | HIGH | Claude Hooks | No |
-| [CC-HK-009](./generated/cc-hk-009.md) | Dangerous Command Pattern | HIGH | Claude Hooks | No |
-| [CC-HK-010](./generated/cc-hk-010.md) | Timeout Policy | MEDIUM | Claude Hooks | No |
+| [CC-HK-009](./generated/cc-hk-009.md) | Dangerous Command Pattern | MEDIUM | Claude Hooks | No |
+| [CC-HK-010](./generated/cc-hk-010.md) | SessionEnd Hook Timeout Above Budget | MEDIUM | Claude Hooks | No |
 | [CC-HK-011](./generated/cc-hk-011.md) | Invalid Timeout Value | HIGH | Claude Hooks | Yes (unsafe) |
 | [CC-HK-012](./generated/cc-hk-012.md) | Hooks Parse Error | HIGH | Claude Hooks | No |
 | [CC-HK-013](./generated/cc-hk-013.md) | Async on Non-Command Hook | HIGH | Claude Hooks | Yes (safe) |
 | [CC-HK-014](./generated/cc-hk-014.md) | Once Outside Skill Frontmatter | MEDIUM | Claude Hooks | No |
 | [CC-HK-015](./generated/cc-hk-015.md) | Model on Command Hook | MEDIUM | Claude Hooks | Yes (safe) |
-| [CC-HK-016](./generated/cc-hk-016.md) | Validate Hook Type Agent | HIGH | Claude Hooks | Yes (unsafe) |
-| [CC-HK-017](./generated/cc-hk-017.md) | Prompt/Agent Hook Missing $ARGUMENTS | MEDIUM | Claude Hooks | Yes (safe) |
+| [CC-HK-016](./generated/cc-hk-016.md) | Unknown Hook Type | HIGH | Claude Hooks | Yes (unsafe) |
 | [CC-HK-018](./generated/cc-hk-018.md) | Matcher on Ignored Event | LOW | Claude Hooks | Yes (safe) |
 | [CC-HK-020](./generated/cc-hk-020.md) | HTTP Hook Missing URL | HIGH | Claude Hooks | No |
-| [CC-HK-021](./generated/cc-hk-021.md) | Invalid If Field | MEDIUM | Claude Hooks | No |
+| [CC-HK-021](./generated/cc-hk-021.md) | Invalid If Field | HIGH | Claude Hooks | No |
 | [CC-HK-022](./generated/cc-hk-022.md) | Invalid Shell Value | MEDIUM | Claude Hooks | Yes (unsafe) |
 | [CC-HK-023](./generated/cc-hk-023.md) | Once Field Not Boolean | LOW | Claude Hooks | Yes (unsafe) |
 | [CC-HK-024](./generated/cc-hk-024.md) | Headers Missing AllowedEnvVars | MEDIUM | Claude Hooks | Yes (safe) |
-| [CC-HK-025](./generated/cc-hk-025.md) | Invalid Matcher Value | LOW | Claude Hooks | No |
+| [CC-HK-025](./generated/cc-hk-025.md) | Invalid Matcher Value | MEDIUM | Claude Hooks | No |
 | [CC-HK-026](./generated/cc-hk-026.md) | MCP Tool Hook Missing Server | HIGH | Claude Hooks | No |
 | [CC-HK-027](./generated/cc-hk-027.md) | MCP Tool Hook Missing Tool | HIGH | Claude Hooks | No |
 | [CC-HK-028](./generated/cc-hk-028.md) | Rejected user_config Interpolation in Shell-Form Command | HIGH | Claude Hooks | No |
+| [CC-HK-029](./generated/cc-hk-029.md) | Invalid or Ineffective onFailure | MEDIUM | Claude Hooks | No |
+| [CC-HK-030](./generated/cc-hk-030.md) | Unquoted Path Placeholder in Shell-Form Hook | MEDIUM | Claude Hooks | No |
+| [CC-HK-031](./generated/cc-hk-031.md) | Exec-Form Command With Embedded Arguments | HIGH | Claude Hooks | No |
+| [CC-HK-032](./generated/cc-hk-032.md) | PowerShell Hook Placeholder Not Expanded | HIGH | Claude Hooks | No |
+| [CC-HK-033](./generated/cc-hk-033.md) | MCP Matcher Without Wildcard | HIGH | Claude Hooks | Yes (unsafe) |
+| [CC-HK-034](./generated/cc-hk-034.md) | Plugin Hook Names Own MCP Server by Bare Key | HIGH | Claude Hooks | No |
+| [CC-HK-035](./generated/cc-hk-035.md) | Broad PermissionRequest Matcher | MEDIUM | Claude Hooks | No |
 | [CC-MEM-001](./generated/cc-mem-001.md) | Invalid Import Path | HIGH | Claude Memory | No |
 | [CC-MEM-002](./generated/cc-mem-002.md) | Circular Import | HIGH | Claude Memory | No |
 | [CC-MEM-003](./generated/cc-mem-003.md) | Import Depth Exceeds 4 | HIGH | Claude Memory | No |
@@ -98,25 +107,25 @@ This section contains all `535` validation rules generated from `knowledge-base/
 | [CC-PL-007](./generated/cc-pl-007.md) | Invalid Component Path | HIGH | Claude Plugins | Yes (safe) |
 | [CC-PL-008](./generated/cc-pl-008.md) | Component Inside .claude-plugin | HIGH | Claude Plugins | No |
 | [CC-PL-009](./generated/cc-pl-009.md) | Invalid Author Object | MEDIUM | Claude Plugins | No |
-| [CC-PL-010](./generated/cc-pl-010.md) | Invalid Homepage URL | MEDIUM | Claude Plugins | No |
+| [CC-PL-010](./generated/cc-pl-010.md) | Invalid Homepage URL | HIGH | Claude Plugins | No |
 | [CC-PL-011](./generated/cc-pl-011.md) | LSP Server Missing Required Fields | HIGH | Claude Plugins | No |
 | [CC-PL-012](./generated/cc-pl-012.md) | Invalid UserConfig Key | MEDIUM | Claude Plugins | No |
 | [CC-PL-013](./generated/cc-pl-013.md) | Channel Missing Server Reference | MEDIUM | Claude Plugins | No |
-| [CC-PL-014](./generated/cc-pl-014.md) | Plugin Agent Unsupported Field | MEDIUM | Claude Plugins | Yes (safe) |
+| [CC-PL-014](./generated/cc-pl-014.md) | Plugin Agent Field Ignored | MEDIUM | Claude Plugins | No |
 | [CC-PL-015](./generated/cc-pl-015.md) | Default Component Folder Shadowed by Manifest | MEDIUM | Claude Plugins | No |
 | [CC-PL-016](./generated/cc-pl-016.md) | Plugin Name Not Kebab-Case | MEDIUM | Claude Plugins | No |
 | [CC-SK-001](./generated/cc-sk-001.md) | Invalid Model Value | HIGH | Claude Skills | Yes (unsafe) |
 | [CC-SK-002](./generated/cc-sk-002.md) | Invalid Context Value | HIGH | Claude Skills | Yes (unsafe) |
 | [CC-SK-004](./generated/cc-sk-004.md) | Agent Without Context | HIGH | Claude Skills | Yes (unsafe) |
 | [CC-SK-005](./generated/cc-sk-005.md) | Invalid Agent Type | HIGH | Claude Skills | Yes (unsafe) |
-| [CC-SK-006](./generated/cc-sk-006.md) | Dangerous Auto-Invocation | HIGH | Claude Skills | Yes (unsafe) |
+| [CC-SK-006](./generated/cc-sk-006.md) | Side-Effect Skill Without disable-model-invocation | MEDIUM | Claude Skills | Yes (unsafe) |
 | [CC-SK-007](./generated/cc-sk-007.md) | Unrestricted Bash | MEDIUM | Claude Skills | Yes (unsafe) |
 | [CC-SK-008](./generated/cc-sk-008.md) | Unknown Tool Name | HIGH | Claude Skills | No |
 | [CC-SK-010](./generated/cc-sk-010.md) | Invalid Hooks in Skill Frontmatter | HIGH | Claude Skills | No |
 | [CC-SK-013](./generated/cc-sk-013.md) | Fork Context Without Actionable Instructions | MEDIUM | Claude Skills | No |
 | [CC-SK-014](./generated/cc-sk-014.md) | Invalid disable-model-invocation Type | HIGH | Claude Skills | No |
 | [CC-SK-015](./generated/cc-sk-015.md) | Invalid user-invocable Type | HIGH | Claude Skills | No |
-| [CC-SK-016](./generated/cc-sk-016.md) | Indexed $ARGUMENTS Without argument-hint | MEDIUM | Claude Skills | No |
+| [CC-SK-016](./generated/cc-sk-016.md) | Indexed $ARGUMENTS Without argument-hint | LOW | Claude Skills | No |
 | [CC-SK-017](./generated/cc-sk-017.md) | Unknown Frontmatter Field | MEDIUM | Claude Skills | No |
 | [CC-SK-018](./generated/cc-sk-018.md) | Invalid Effort Value | MEDIUM | Claude Skills | Yes (unsafe) |
 | [CC-SK-019](./generated/cc-sk-019.md) | Invalid Paths Format | LOW | Claude Skills | No |
@@ -124,6 +133,15 @@ This section contains all `535` validation rules generated from `knowledge-base/
 | [CC-SK-021](./generated/cc-sk-021.md) | Hardcoded User Directory Path | MEDIUM | Claude Skills | No |
 | [CC-SK-022](./generated/cc-sk-022.md) | Reserved Claude Skill Name | HIGH | Claude Skills | No |
 | [CC-SK-023](./generated/cc-sk-023.md) | Argument Placeholder Inside Code | MEDIUM | Claude Skills | No |
+| [CC-SK-024](./generated/cc-sk-024.md) | Skill Without Description | LOW | Claude Skills | No |
+| [CC-SK-025](./generated/cc-sk-025.md) | Skill Listing Over Budget | LOW | Claude Skills | No |
+| [CC-SK-027](./generated/cc-sk-027.md) | Legacy Custom Command File | LOW | Claude Skills | No |
+| [CC-SK-028](./generated/cc-sk-028.md) | Injected Command Not Run | MEDIUM | Claude Skills | No |
+| [CC-SK-030](./generated/cc-sk-030.md) | Skill Name Uses a Reserved Word | LOW | Claude Skills | No |
+| [CC-SK-031](./generated/cc-sk-031.md) | XML Tag in Skill Name or Description | LOW | Claude Skills | No |
+| [CC-SK-032](./generated/cc-sk-032.md) | Skill Description Not in Third Person | LOW | Claude Skills | No |
+| [CC-SK-033](./generated/cc-sk-033.md) | Vague Skill Name | LOW | Claude Skills | No |
+| [CC-SK-034](./generated/cc-sk-034.md) | Long Reference File Without Table of Contents | LOW | Claude Skills | No |
 | [CC-SET-001](./generated/cc-set-001.md) | Invalid prUrlTemplate Setting | MEDIUM | Claude Settings | No |
 | [CC-SET-002](./generated/cc-set-002.md) | Non-boolean channelsEnabled Setting | MEDIUM | Claude Settings | Yes (unsafe) |
 | [CC-SET-003](./generated/cc-set-003.md) | Invalid worktree.baseRef Value | MEDIUM | Claude Settings | No |
@@ -441,8 +459,11 @@ This section contains all `535` validation rules generated from `knowledge-base/
 | [MCP-022](./generated/mcp-022.md) | Invalid args Array Type | HIGH | MCP | No |
 | [MCP-023](./generated/mcp-023.md) | Duplicate MCP Server Names | HIGH | MCP | No |
 | [MCP-024](./generated/mcp-024.md) | Empty MCP Server Configuration | HIGH | MCP | No |
-| [MCP-025](./generated/mcp-025.md) | Non-boolean alwaysLoad in MCP Server Config | MEDIUM | MCP | Yes (unsafe) |
-| [MCP-026](./generated/mcp-026.md) | Reserved MCP Server Name | HIGH | MCP | No |
+| [CC-MCP-001](./generated/cc-mcp-001.md) | Credential Variable Reads as Empty in Remote MCP Server | HIGH | Claude MCP | No |
+| [CC-MCP-002](./generated/cc-mcp-002.md) | CLAUDE_PROJECT_DIR Without Default in Project .mcp.json | MEDIUM | Claude MCP | No |
+| [CC-MCP-003](./generated/cc-mcp-003.md) | MCP Tool Description or Instructions Truncated | LOW | Claude MCP | No |
+| [CC-MCP-004](./generated/cc-mcp-004.md) | Non-boolean alwaysLoad in Claude Code MCP Config | MEDIUM | Claude MCP | Yes (unsafe) |
+| [CC-MCP-005](./generated/cc-mcp-005.md) | Reserved MCP Server Name | HIGH | Claude MCP | No |
 | [OC-001](./generated/oc-001.md) | Invalid Share Mode | HIGH | OpenCode | Yes (unsafe) |
 | [OC-002](./generated/oc-002.md) | Invalid Instruction Path | HIGH | OpenCode | No |
 | [OC-003](./generated/oc-003.md) | opencode.json Parse Error | HIGH | OpenCode | No |
@@ -527,6 +548,17 @@ This section contains all `535` validation rules generated from `knowledge-base/
 | [OC-TUI-002](./generated/oc-tui-002.md) | Invalid scroll_speed | HIGH | OpenCode | No |
 | [OC-TUI-003](./generated/oc-tui-003.md) | Invalid diff_style | HIGH | OpenCode | Yes (unsafe) |
 | [CC-PL-017](./generated/cc-pl-017.md) | Unknown Plugin Manifest Field | MEDIUM | Claude Plugins | No |
+| [CC-PL-018](./generated/cc-pl-018.md) | Reserved Plugin Name | HIGH | Claude Plugins | No |
+| [CC-PL-019](./generated/cc-pl-019.md) | Invalid Dependency Version Range | MEDIUM | Claude Plugins | No |
+| [CC-PL-020](./generated/cc-pl-020.md) | Unbraced Plugin Variable in Plugin Content | MEDIUM | Claude Plugins | No |
+| [CC-PL-021](./generated/cc-pl-021.md) | Plugin Settings Key Dropped | MEDIUM | Claude Plugins | No |
+| [CC-PL-022](./generated/cc-pl-022.md) | Monitor Command References user_config | HIGH | Claude Plugins | No |
+| [CC-PL-023](./generated/cc-pl-023.md) | Invalid Key or Value in Strict Manifest Object | HIGH | Claude Plugins | No |
+| [CC-MP-001](./generated/cc-mp-001.md) | Marketplace Parse Error or Missing Required Field | HIGH | Claude Marketplaces | No |
+| [CC-MP-002](./generated/cc-mp-002.md) | Invalid or Reserved Marketplace or Plugin Name | HIGH | Claude Marketplaces | No |
+| [CC-MP-003](./generated/cc-mp-003.md) | Invalid Plugin Source, Duplicate Entry or Unresolved Rename | HIGH | Claude Marketplaces | No |
+| [CC-MP-004](./generated/cc-mp-004.md) | Marketplace Entry Fails to Load | HIGH | Claude Marketplaces | No |
+| [CC-MP-005](./generated/cc-mp-005.md) | Marketplace Field Ignored or Missing Metadata | LOW | Claude Marketplaces | No |
 | [KR-PM-001](./generated/kr-pm-001.md) | Invalid Kiro Permissions Document | HIGH | Kiro Permissions | No |
 | [KR-PM-002](./generated/kr-pm-002.md) | Invalid Kiro Permission Capability | HIGH | Kiro Permissions | No |
 | [KR-PM-003](./generated/kr-pm-003.md) | Invalid Kiro Permission Effect | HIGH | Kiro Permissions | No |

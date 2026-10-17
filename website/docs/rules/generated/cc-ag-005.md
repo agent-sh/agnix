@@ -1,9 +1,9 @@
 ---
 id: cc-ag-005
-title: "CC-AG-005: Referenced Skill Not Found - Claude Agents"
+title: "CC-AG-005: Preloaded Skill Not Found or Not Preloadable"
 sidebar_label: "CC-AG-005"
-description: "agnix rule CC-AG-005 checks for referenced skill not found in claude agents files. Severity: MEDIUM. See examples and fix guidance."
-keywords: ["CC-AG-005", "referenced skill not found", "claude agents", "validation", "agnix", "linter"]
+description: "agnix rule CC-AG-005 checks for preloaded skill not found or not preloadable in claude agents files. Severity: MEDIUM. See examples and fix guidance."
+keywords: ["CC-AG-005", "preloaded skill not found or not preloadable", "claude agents", "validation", "agnix", "linter"]
 ---
 
 ## Summary
@@ -13,7 +13,7 @@ keywords: ["CC-AG-005", "referenced skill not found", "claude agents", "validati
 - **Category**: `Claude Agents`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-10-08`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 

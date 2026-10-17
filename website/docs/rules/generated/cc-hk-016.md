@@ -1,9 +1,9 @@
 ---
 id: cc-hk-016
-title: "CC-HK-016: Validate Hook Type Agent - Claude Hooks"
+title: "CC-HK-016: Unknown Hook Type - Claude Hooks"
 sidebar_label: "CC-HK-016"
-description: "agnix rule CC-HK-016 checks for validate hook type agent in claude hooks files. Severity: HIGH. See examples and fix guidance."
-keywords: ["CC-HK-016", "validate hook type agent", "claude hooks", "validation", "agnix", "linter"]
+description: "agnix rule CC-HK-016 checks for unknown hook type in claude hooks files. Severity: HIGH. See examples and fix guidance."
+keywords: ["CC-HK-016", "unknown hook type", "claude hooks", "validation", "agnix", "linter"]
 ---
 
 ## Summary
@@ -13,7 +13,7 @@ keywords: ["CC-HK-016", "validate hook type agent", "claude hooks", "validation"
 - **Category**: `Claude Hooks`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `Yes (unsafe)`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 

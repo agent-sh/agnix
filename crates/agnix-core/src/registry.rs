@@ -1874,10 +1874,11 @@ mod tests {
             .iter()
             .filter(|(_, name, _)| *name == Some("XmlValidator"))
             .count();
-        // 12 since Kiro power steering (KiroPowerSteering) runs XmlValidator.
+        // 12 since Kiro power steering (KiroPowerSteering) runs XmlValidator;
+        // 13 since legacy Claude commands (ClaudeCommand) keep it too.
         assert_eq!(
-            xml_occurrences, 12,
-            "Expected XmlValidator in 12 BuiltinProvider entries"
+            xml_occurrences, 13,
+            "Expected XmlValidator in 13 BuiltinProvider entries"
         );
         let total_after = registry.total_validator_count();
         assert_eq!(
@@ -2183,7 +2184,8 @@ mod tests {
 
     #[test]
     fn skill_provider_count() {
-        assert_eq!(SkillProvider.named_validators().len(), 4);
+        // 8: SKILL.md (4) plus legacy `.claude/commands/` files (4).
+        assert_eq!(SkillProvider.named_validators().len(), 8);
     }
 
     #[test]
@@ -2220,8 +2222,9 @@ mod tests {
     fn misc_provider_count() {
         // 38: Kiro hooks and powers dropped four Imports/CrossPlatform entries
         // and gained power plugin, power steering, workflow, ignore-file,
-        // not-loaded and Kiro AGENTS.md entries.
-        assert_eq!(MiscProvider.named_validators().len(), 38);
+        // not-loaded and Kiro AGENTS.md entries. 40 with the Claude
+        // marketplace and Claude MCP validators.
+        assert_eq!(MiscProvider.named_validators().len(), 40);
     }
 
     #[test]

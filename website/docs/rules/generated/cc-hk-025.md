@@ -2,18 +2,18 @@
 id: cc-hk-025
 title: "CC-HK-025: Invalid Matcher Value - Claude Hooks"
 sidebar_label: "CC-HK-025"
-description: "agnix rule CC-HK-025 checks for invalid matcher value in claude hooks files. Severity: LOW. See examples and fix guidance."
+description: "agnix rule CC-HK-025 checks for invalid matcher value in claude hooks files. Severity: MEDIUM. See examples and fix guidance."
 keywords: ["CC-HK-025", "invalid matcher value", "claude hooks", "validation", "agnix", "linter"]
 ---
 
 ## Summary
 
 - **Rule ID**: `CC-HK-025`
-- **Severity**: `LOW`
+- **Severity**: `MEDIUM`
 - **Category**: `Claude Hooks`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-10-04`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -24,6 +24,7 @@ keywords: ["CC-HK-025", "invalid matcher value", "claude hooks", "validation", "
 ## Evidence Sources
 
 - https://code.claude.com/docs/en/hooks
+- https://code.claude.com/docs/en/hooks-guide
 
 ## Test Coverage Metadata
 

@@ -1,0 +1,12 @@
+{
+  "name": "claude-plugins-official",
+  "owner": { "name": "Fixture Team" },
+  "plugin": [],
+  "plugins": [
+    { "name": "formatter", "source": "./plugins/formatter", "version": "1.0.0", "strict": false, "skills": ["./x"] },
+    { "name": "formatter", "source": "plugins/other" },
+    { "name": "claude-tools", "source": { "source": "github" } },
+    { "name": "hooked", "source": "./plugins/formatter", "hooks": "./hooks.json" },
+    { "name": "no-source" }
+  ]
+}

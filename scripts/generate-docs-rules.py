@@ -23,6 +23,8 @@ CATEGORY_LABELS: Dict[str, str] = {
     "claude-settings": "Claude Settings",
     "agents-md": "AGENTS.md",
     "claude-plugins": "Claude Plugins",
+    "claude-marketplaces": "Claude Marketplaces",
+    "claude-mcp": "Claude MCP",
     "copilot": "GitHub Copilot",
     "mcp": "MCP",
     "xml": "XML",

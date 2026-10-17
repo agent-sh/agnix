@@ -1,9 +1,9 @@
 ---
 id: cc-pl-014
-title: "CC-PL-014: Plugin Agent Unsupported Field - Claude Plugins"
+title: "CC-PL-014: Plugin Agent Field Ignored - Claude Plugins"
 sidebar_label: "CC-PL-014"
-description: "agnix rule CC-PL-014 checks for plugin agent unsupported field in claude plugins files. Severity: MEDIUM. See examples and fix guidance."
-keywords: ["CC-PL-014", "plugin agent unsupported field", "claude plugins", "validation", "agnix", "linter"]
+description: "agnix rule CC-PL-014 checks for plugin agent field ignored in claude plugins files. Severity: MEDIUM. See examples and fix guidance."
+keywords: ["CC-PL-014", "plugin agent field ignored", "claude plugins", "validation", "agnix", "linter"]
 ---
 
 ## Summary
@@ -12,8 +12,8 @@ keywords: ["CC-PL-014", "plugin agent unsupported field", "claude plugins", "val
 - **Severity**: `MEDIUM`
 - **Category**: `Claude Plugins`
 - **Normative Level**: `SHOULD`
-- **Auto-Fix**: `Yes (safe)`
-- **Verified On**: `2026-03-28`
+- **Auto-Fix**: `No`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,12 +23,13 @@ keywords: ["CC-PL-014", "plugin agent unsupported field", "claude plugins", "val
 
 ## Evidence Sources
 
-- https://code.claude.com/docs/en/plugins-reference
+- https://code.claude.com/docs/en/plugins/components
+- https://code.claude.com/docs/en/sub-agents
 
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples

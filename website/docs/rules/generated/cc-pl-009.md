@@ -13,7 +13,7 @@ keywords: ["CC-PL-009", "invalid author object", "claude plugins", "validation",
 - **Category**: `Claude Plugins`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-02-07`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,7 @@ keywords: ["CC-PL-009", "invalid author object", "claude plugins", "validation",
 
 ## Evidence Sources
 
-- https://code.claude.com/docs/en/plugins-reference
+- https://code.claude.com/docs/en/plugins/manifest-reference
 
 ## Test Coverage Metadata
 

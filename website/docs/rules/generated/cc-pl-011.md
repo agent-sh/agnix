@@ -13,7 +13,7 @@ keywords: ["CC-PL-011", "lsp server missing required fields", "claude plugins", 
 - **Category**: `Claude Plugins`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-03-28`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,7 @@ keywords: ["CC-PL-011", "lsp server missing required fields", "claude plugins", 
 
 ## Evidence Sources
 
-- https://code.claude.com/docs/en/plugins-reference
+- https://code.claude.com/docs/en/plugins/manifest-reference
 
 ## Test Coverage Metadata
 

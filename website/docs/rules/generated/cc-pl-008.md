@@ -13,7 +13,7 @@ keywords: ["CC-PL-008", "component inside .claude-plugin", "claude plugins", "va
 - **Category**: `Claude Plugins`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-07-31`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,7 @@ keywords: ["CC-PL-008", "component inside .claude-plugin", "claude plugins", "va
 
 ## Evidence Sources
 
-- https://code.claude.com/docs/en/plugins-reference
+- https://code.claude.com/docs/en/plugins/manifest-reference
 
 ## Test Coverage Metadata
 

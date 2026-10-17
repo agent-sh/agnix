@@ -1,9 +1,9 @@
 ---
 id: cc-hk-010
-title: "CC-HK-010: Timeout Policy - Claude Hooks"
+title: "CC-HK-010: SessionEnd Hook Timeout Above Budget"
 sidebar_label: "CC-HK-010"
-description: "agnix rule CC-HK-010 checks for timeout policy in claude hooks files. Severity: MEDIUM. See examples and fix guidance."
-keywords: ["CC-HK-010", "timeout policy", "claude hooks", "validation", "agnix", "linter"]
+description: "agnix rule CC-HK-010 checks for sessionend hook timeout above budget in claude hooks files. Severity: MEDIUM. See examples and fix guidance."
+keywords: ["CC-HK-010", "sessionend hook timeout above budget", "claude hooks", "validation", "agnix", "linter"]
 ---
 
 ## Summary
@@ -13,7 +13,7 @@ keywords: ["CC-HK-010", "timeout policy", "claude hooks", "validation", "agnix",
 - **Category**: `Claude Hooks`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-10-04`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -24,6 +24,7 @@ keywords: ["CC-HK-010", "timeout policy", "claude hooks", "validation", "agnix",
 ## Evidence Sources
 
 - https://code.claude.com/docs/en/hooks
+- https://code.claude.com/docs/en/hooks-guide
 
 ## Test Coverage Metadata
 
