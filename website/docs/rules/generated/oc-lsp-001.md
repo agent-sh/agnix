@@ -13,17 +13,18 @@ keywords: ["OC-LSP-001", "lsp command without extensions", "opencode", "validati
 - **Category**: `OpenCode`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
 - **Tool**: `opencode`
-- **Version Range**: `unspecified`
+- **Version Range**: `<2.0.0`
 - **Spec Revision**: `unspecified`
 
 ## Evidence Sources
 
-- https://opencode.ai/docs/config
+- https://opencode.ai/docs/lsp/
+- https://opencode.ai/config.json
 
 ## Test Coverage Metadata
 
@@ -38,15 +39,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{
-  "lsp": { "ts": { "command": "tsc" } }
-}
+{"lsp": {"ts": {"command": ["typescript-language-server", "--stdio"]}}}
 ```
 
 ### Valid
 
 ```json
-{
-  "lsp": { "ts": { "command": "tsc", "extensions": [".ts"] } }
-}
+{"lsp": {"ts": {"command": ["typescript-language-server", "--stdio"], "extensions": [".ts"]}}}
 ```

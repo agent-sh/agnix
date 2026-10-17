@@ -85,6 +85,18 @@ pub enum FileType {
     ClineMcpSettings,
     /// OpenCode configuration (opencode.json, opencode.jsonc)
     OpenCodeConfig,
+    /// OpenCode Markdown agents (.opencode/agents/**/*.md and the legacy
+    /// agent/, modes/, mode/ directories; also ~/.config/opencode/agents/)
+    OpenCodeAgent,
+    /// OpenCode Markdown commands (.opencode/commands/**/*.md and the legacy
+    /// command/ directory; also ~/.config/opencode/commands/)
+    OpenCodeCommand,
+    /// OpenCode custom tool modules (.opencode/tools/*.ts|js and the legacy
+    /// tool/ directory; also ~/.config/opencode/tools/)
+    OpenCodeTool,
+    /// OpenCode plugin modules (.opencode/plugins/*.ts|js and the legacy
+    /// plugin/ directory; also ~/.config/opencode/plugins/)
+    OpenCodePlugin,
     /// Gemini CLI instruction files (GEMINI.md, GEMINI.local.md)
     GeminiMd,
     /// Gemini CLI settings (.gemini/settings.json)
@@ -102,6 +114,17 @@ pub enum FileType {
     /// Codex CLI managed requirements (system `codex/requirements.toml` -
     /// `/etc/codex/` on Unix, `%ProgramData%\OpenAI\Codex\` on Windows)
     CodexRequirements,
+    /// Codex CLI lifecycle hooks file (.codex/hooks.json, ~/.codex/hooks.json)
+    CodexHooks,
+    /// Codex CLI custom agent files (.codex/agents/*.toml, ~/.codex/agents/*.toml)
+    CodexAgent,
+    /// Codex CLI command rules (.codex/rules/*.rules, ~/.codex/rules/*.rules)
+    CodexRules,
+    /// Codex CLI custom prompts, deprecated in favor of skills
+    /// (~/.codex/prompts/*.md)
+    CodexPrompt,
+    /// Codex skill interface metadata (<skill>/agents/openai.yaml)
+    CodexSkillMetadata,
     /// Roo Code rules files (.roorules, .roo/rules/*.md)
     RooRules,
     /// Roo Code custom modes configuration (.roomodes)
@@ -221,6 +244,10 @@ impl fmt::Display for FileType {
             FileType::ClineIgnore => "ClineIgnore",
             FileType::ClineMcpSettings => "ClineMcpSettings",
             FileType::OpenCodeConfig => "OpenCodeConfig",
+            FileType::OpenCodeAgent => "OpenCodeAgent",
+            FileType::OpenCodeCommand => "OpenCodeCommand",
+            FileType::OpenCodeTool => "OpenCodeTool",
+            FileType::OpenCodePlugin => "OpenCodePlugin",
             FileType::GeminiMd => "GeminiMd",
             FileType::GeminiSettings => "GeminiSettings",
             FileType::AmpSettings => "AmpSettings",
@@ -229,6 +256,11 @@ impl fmt::Display for FileType {
             FileType::CodexConfig => "CodexConfig",
             FileType::CodexPlugin => "CodexPlugin",
             FileType::CodexRequirements => "CodexRequirements",
+            FileType::CodexHooks => "CodexHooks",
+            FileType::CodexAgent => "CodexAgent",
+            FileType::CodexRules => "CodexRules",
+            FileType::CodexPrompt => "CodexPrompt",
+            FileType::CodexSkillMetadata => "CodexSkillMetadata",
             FileType::RooRules => "RooRules",
             FileType::RooModes => "RooModes",
             FileType::RooIgnore => "RooIgnore",
@@ -298,6 +330,10 @@ mod tests {
             (FileType::ClineIgnore, "ClineIgnore"),
             (FileType::ClineMcpSettings, "ClineMcpSettings"),
             (FileType::OpenCodeConfig, "OpenCodeConfig"),
+            (FileType::OpenCodeAgent, "OpenCodeAgent"),
+            (FileType::OpenCodeCommand, "OpenCodeCommand"),
+            (FileType::OpenCodeTool, "OpenCodeTool"),
+            (FileType::OpenCodePlugin, "OpenCodePlugin"),
             (FileType::GeminiMd, "GeminiMd"),
             (FileType::GeminiSettings, "GeminiSettings"),
             (FileType::AmpSettings, "AmpSettings"),
@@ -306,6 +342,11 @@ mod tests {
             (FileType::CodexConfig, "CodexConfig"),
             (FileType::CodexPlugin, "CodexPlugin"),
             (FileType::CodexRequirements, "CodexRequirements"),
+            (FileType::CodexHooks, "CodexHooks"),
+            (FileType::CodexAgent, "CodexAgent"),
+            (FileType::CodexRules, "CodexRules"),
+            (FileType::CodexPrompt, "CodexPrompt"),
+            (FileType::CodexSkillMetadata, "CodexSkillMetadata"),
             (FileType::RooRules, "RooRules"),
             (FileType::RooModes, "RooModes"),
             (FileType::RooIgnore, "RooIgnore"),
@@ -372,6 +413,10 @@ mod tests {
             FileType::ClineIgnore,
             FileType::ClineMcpSettings,
             FileType::OpenCodeConfig,
+            FileType::OpenCodeAgent,
+            FileType::OpenCodeCommand,
+            FileType::OpenCodeTool,
+            FileType::OpenCodePlugin,
             FileType::GeminiMd,
             FileType::GeminiSettings,
             FileType::AmpSettings,
@@ -380,6 +425,11 @@ mod tests {
             FileType::CodexConfig,
             FileType::CodexPlugin,
             FileType::CodexRequirements,
+            FileType::CodexHooks,
+            FileType::CodexAgent,
+            FileType::CodexRules,
+            FileType::CodexPrompt,
+            FileType::CodexSkillMetadata,
             FileType::RooRules,
             FileType::RooModes,
             FileType::RooIgnore,
@@ -460,6 +510,10 @@ mod tests {
             FileType::ClineIgnore,
             FileType::ClineMcpSettings,
             FileType::OpenCodeConfig,
+            FileType::OpenCodeAgent,
+            FileType::OpenCodeCommand,
+            FileType::OpenCodeTool,
+            FileType::OpenCodePlugin,
             FileType::GeminiMd,
             FileType::GeminiSettings,
             FileType::AmpSettings,
@@ -468,6 +522,11 @@ mod tests {
             FileType::CodexConfig,
             FileType::CodexPlugin,
             FileType::CodexRequirements,
+            FileType::CodexHooks,
+            FileType::CodexAgent,
+            FileType::CodexRules,
+            FileType::CodexPrompt,
+            FileType::CodexSkillMetadata,
             FileType::RooRules,
             FileType::RooModes,
             FileType::RooIgnore,

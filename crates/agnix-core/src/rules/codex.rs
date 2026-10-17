@@ -2,25 +2,29 @@
 //!
 //! Validates:
 //! - CDX-000: TOML Parse Error (HIGH) - invalid TOML syntax in config.toml
-//! - CDX-001: Invalid approvalMode (HIGH) - must be "suggest", "auto-edit", or "full-auto"
-//! - CDX-002: Invalid fullAutoErrorMode (HIGH) - must be "ask-user" or "ignore-and-continue"
-//! - CDX-003: AGENTS.override.md in version control (MEDIUM) - should be in .gitignore
 //! - CDX-004: Unknown config key (MEDIUM) - unrecognized key in .codex/config.toml
 //! - CDX-005: project_doc_max_bytes type/range (HIGH) - must be a nonnegative integer (schema has no maximum)
 //! - CDX-006: Invalid project_doc_fallback_filenames (HIGH) - must be unique non-empty filenames
-//! - CDX-CFG-001..027: Codex config schema/value checks (approval, sandbox, enums, unknown keys, etc.)
-//! - CDX-AG-001..007: AGENTS.md quality and secret-safety checks for Codex
-//! - CDX-APP-001..003: App and plugin configuration validation
+//! - CDX-CFG-*: Codex config schema/value checks (approval, sandbox, permission
+//!   profiles, enums, unknown keys, keys ignored in project config, etc.)
+//! - CDX-AG-*: AGENTS.md checks for the files Codex reads (AGENTS.md and
+//!   AGENTS.override.md)
+//! - CDX-APP-*: App, tool approval, skills and profile configuration
+//! - CDX-HK-*: inline `[hooks]` tables (shared with `codex_hooks`)
+//!
+//! CDX-001 and CDX-002 (`approvalMode`, `fullAutoErrorMode`) were retired: the
+//! keys belong to the retired TypeScript CLI and the Rust CLI ignores them, so
+//! CDX-004 reports them as unknown keys instead. CDX-003 was retired in favor
+//! of CDX-AG-008, CDX-AG-007 had no source and never ran, and CDX-CFG-013
+//! checked a `sandbox_workspace_write.mode` field no Codex schema defines.
 
+use crate::rules::codex_hooks::{HookCheck, HookLayer, HookSpans, check_hook_events};
+use crate::rules::config_span::{Seg, TomlSpans, line_col};
 use crate::{
     config::PerFileLintConfig,
     diagnostics::{Diagnostic, Fix},
     rules::{Validator, ValidatorMetadata},
-    schemas::claude_md::count_generic_instructions,
-    schemas::codex::{
-        VALID_APPROVAL_MODES, VALID_FULL_AUTO_ERROR_MODES, VALID_MCP_OAUTH_STORES,
-        VALID_MODEL_REASONING_SUMMARIES, VALID_SANDBOX_WORKSPACE_WRITE_MODES, parse_codex_toml,
-    },
+    schemas::codex::{VALID_MCP_OAUTH_STORES, VALID_MODEL_REASONING_SUMMARIES, parse_codex_toml},
 };
 use rust_i18n::t;
 use serde_json::Value;
@@ -28,33 +32,18 @@ use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
 use std::path::Path;
 
-use crate::rules::find_closest_value;
-
-/// Find the byte span of a TOML string value for the given key.
-/// Returns byte positions of the inner string (without quotes).
-/// Returns None if the key is not found or appears more than once (uniqueness guard).
-fn find_toml_string_value_span(
-    content: &str,
-    key: &str,
-    current_value: &str,
-) -> Option<(usize, usize)> {
-    crate::span_utils::find_unique_toml_string_value(content, key, current_value)
-}
-
 const CODEX_MARKDOWN_RULE_IDS: &[&str] = &[
-    "CDX-003",
     "CDX-AG-001",
     "CDX-AG-002",
     "CDX-AG-003",
     "CDX-AG-005",
     "CDX-AG-006",
-    "CDX-AG-007",
+    "CDX-AG-008",
+    "CDX-AG-009",
 ];
 
 const CODEX_CONFIG_RULE_IDS: &[&str] = &[
     "CDX-000",
-    "CDX-001",
-    "CDX-002",
     "CDX-004",
     "CDX-005",
     "CDX-006",
@@ -70,7 +59,6 @@ const CODEX_CONFIG_RULE_IDS: &[&str] = &[
     "CDX-CFG-010",
     "CDX-CFG-011",
     "CDX-CFG-012",
-    "CDX-CFG-013",
     "CDX-CFG-014",
     "CDX-CFG-015",
     "CDX-CFG-016",
@@ -88,6 +76,11 @@ const CODEX_CONFIG_RULE_IDS: &[&str] = &[
     "CDX-CFG-028",
     "CDX-CFG-029",
     "CDX-CFG-030",
+    "CDX-CFG-031",
+    "CDX-CFG-032",
+    "CDX-CFG-033",
+    "CDX-CFG-034",
+    "CDX-CFG-035",
     "CDX-APP-001",
     "CDX-APP-002",
     "CDX-APP-003",
@@ -104,7 +97,9 @@ const VALID_MODEL_VERBOSITY: &[&str] = &["low", "medium", "high"];
 const VALID_PERSONALITIES: &[&str] = &["none", "friendly", "pragmatic"];
 const VALID_SHELL_ENVIRONMENT_INHERIT: &[&str] = &["core", "all", "none"];
 const VALID_CLI_AUTH_STORES: &[&str] = &["file", "keyring", "auto", "ephemeral"];
-const VALID_DEFAULT_TOOLS_APPROVAL_MODES: &[&str] = &["auto", "prompt", "approve"];
+/// "Supported values are `auto`, `prompt`, `writes`, and `approve`."
+/// (learn.chatgpt.com/docs/extend/mcp; schema `AppToolApproval`)
+const VALID_DEFAULT_TOOLS_APPROVAL_MODES: &[&str] = &["auto", "prompt", "writes", "approve"];
 const VALID_WEB_SEARCH_MODES: &[&str] = &["disabled", "cached", "indexed", "live"];
 
 const KNOWN_APPROVAL_POLICY_SUB_FIELDS: &[&str] = &[
@@ -119,16 +114,56 @@ const VALID_APPROVALS_REVIEWER: &[&str] = &["user", "auto_review", "guardian_sub
 
 const VALID_SERVICE_TIERS: &[&str] = &["fast", "flex"];
 
+/// Keys of a permission profile's `[permissions.<name>.network]` table
+/// (`NetworkToml`, `additionalProperties: false`; learn.chatgpt.com/docs/permissions).
 const KNOWN_PERMISSIONS_NETWORK_KEYS: &[&str] = &[
-    "admin_url",
-    "allowed_domains",
-    "denied_domains",
+    "allow_local_binding",
+    "allow_upstream_proxy",
+    "dangerously_allow_all_unix_sockets",
+    "dangerously_allow_non_loopback_proxy",
+    "domains",
     "enable_socks5",
+    "enable_socks5_udp",
     "enabled",
     "mitm",
     "mode",
     "proxy_url",
+    "socks_url",
+    "unix_sockets",
 ];
+
+/// Keys of `[sandbox_workspace_write]` (`SandboxWorkspaceWrite`,
+/// `additionalProperties: false`).
+const KNOWN_SANDBOX_WORKSPACE_WRITE_KEYS: &[&str] = &[
+    "exclude_slash_tmp",
+    "exclude_tmpdir_env_var",
+    "network_access",
+    "writable_roots",
+];
+
+/// "Codex ignores the following keys in project-local `.codex/config.toml`
+/// and prints a startup warning when it sees them" (config-advanced,
+/// "Project config files").
+const IGNORED_IN_PROJECT_CONFIG: &[&str] = &[
+    "openai_base_url",
+    "chatgpt_base_url",
+    "apps_mcp_product_sku",
+    "model_provider",
+    "model_providers",
+    "notify",
+    "profile",
+    "profiles",
+    "experimental_realtime_ws_base_url",
+    "otel",
+];
+
+/// Built-in permission profiles a profile may extend (`:danger-full-access`
+/// may be selected but not extended).
+const EXTENDABLE_BUILTIN_PROFILES: &[&str] = &[":read-only", ":workspace"];
+const BUILTIN_PERMISSION_PROFILES: &[&str] = &[":read-only", ":workspace", ":danger-full-access"];
+
+/// "Explicit values are capped at `10000` tokens." (skills.max_context_tokens)
+const SKILLS_MAX_CONTEXT_TOKENS_CAP: u64 = 10_000;
 
 const VALID_WINDOWS_SANDBOX_VALUES: &[&str] = &["elevated", "unelevated"];
 
@@ -337,6 +372,7 @@ const KNOWN_TUI_KEYS: &[&str] = &[
     "animations",
     "auto_recap",
     "copy_on_select",
+    "copy_on_select_clear_selection",
     "disable_paste_burst",
     "effects",
     "fullscreen_transcript",
@@ -391,14 +427,18 @@ const KNOWN_MCP_SERVER_KEYS: &[&str] = &[
     "env_vars",
     "environment_id",
     "http_headers",
+    "http_headers_helper",
     "name",
     "oauth",
     "oauth_resource",
+    "omit_tools_from",
     "required",
     "scopes",
+    "startup_readiness",
     "startup_timeout_ms",
     "startup_timeout_sec",
     "supports_parallel_tool_calls",
+    "tool_input_schema_max_bytes",
     "tool_timeout_sec",
     "tools",
     "url",
@@ -406,6 +446,7 @@ const KNOWN_MCP_SERVER_KEYS: &[&str] = &[
 
 const KNOWN_APPS_DEFAULT_KEYS: &[&str] = &[
     "approvals_reviewer",
+    "default_tools_approval_mode",
     "enabled",
     "destructive_enabled",
     "open_world_enabled",
@@ -417,6 +458,8 @@ const KNOWN_APP_CONFIG_KEYS: &[&str] = &[
     "open_world_enabled",
     "default_tools_approval_mode",
     "default_tools_enabled",
+    "links",
+    "omit_tools_from",
     "tools",
 ];
 const KNOWN_APP_TOOL_CONFIG_KEYS: &[&str] = &["enabled", "approval_mode"];
@@ -462,17 +505,13 @@ impl Validator for CodexValidator {
             // Build key-to-line mappings once for all config-based rules (CDX-000..006 + CDX-CFG-*)
             let key_lines = build_key_line_map(content);
 
-            // For Codex TOML config files, run legacy CDX-000..006 checks.
+            // For Codex TOML config files, run the CDX-000/004/005/006 checks.
             // Skip TOML parsing entirely when all TOML-dependent rules are disabled.
             if is_toml {
-                let cdx_001_enabled = config.is_rule_enabled("CDX-001");
-                let cdx_002_enabled = config.is_rule_enabled("CDX-002");
                 let cdx_004_enabled = config.is_rule_enabled("CDX-004");
                 let cdx_005_enabled = config.is_rule_enabled("CDX-005");
                 let cdx_006_enabled = config.is_rule_enabled("CDX-006");
                 let legacy_enabled = config.is_rule_enabled("CDX-000")
-                    || cdx_001_enabled
-                    || cdx_002_enabled
                     || cdx_004_enabled
                     || cdx_005_enabled
                     || cdx_006_enabled;
@@ -501,12 +540,25 @@ impl Validator for CodexValidator {
                     // even when schema extraction fails.
                     if cdx_004_enabled {
                         for unknown in &parsed.unknown_keys {
+                            let message = match unknown.key.as_str() {
+                                // Settings of the retired TypeScript CLI.
+                                "approvalMode" | "fullAutoErrorMode" => {
+                                    t!("rules.cdx_004.legacy_ts_cli", key = unknown.key.as_str())
+                                }
+                                "allow_managed_hooks_only" => {
+                                    t!(
+                                        "rules.cdx_004.requirements_only",
+                                        key = unknown.key.as_str()
+                                    )
+                                }
+                                key => t!("rules.cdx_004.message", key = key),
+                            };
                             let mut diagnostic = Diagnostic::warning(
                                 path.to_path_buf(),
                                 unknown.line,
                                 unknown.column,
                                 "CDX-004",
-                                t!("rules.cdx_004.message", key = unknown.key.as_str()),
+                                message,
                             )
                             .with_suggestion(t!("rules.cdx_004.suggestion"));
 
@@ -529,107 +581,6 @@ impl Validator for CodexValidator {
                         Some(s) => s,
                         None => return diagnostics,
                     };
-
-                    // CDX-001: Invalid approvalMode (ERROR)
-                    if cdx_001_enabled {
-                        if parsed.approval_mode_wrong_type {
-                            let line = key_lines.get("approvalMode").copied().unwrap_or(1);
-                            diagnostics.push(
-                                Diagnostic::error(
-                                    path.to_path_buf(),
-                                    line,
-                                    0,
-                                    "CDX-001",
-                                    t!("rules.cdx_001.type_error"),
-                                )
-                                .with_suggestion(t!("rules.cdx_001.suggestion")),
-                            );
-                        } else if let Some(ref approval_value) = schema.approval_mode {
-                            if !VALID_APPROVAL_MODES.contains(&approval_value.as_str()) {
-                                let line = key_lines.get("approvalMode").copied().unwrap_or(1);
-                                let mut diagnostic = Diagnostic::error(
-                                    path.to_path_buf(),
-                                    line,
-                                    0,
-                                    "CDX-001",
-                                    t!("rules.cdx_001.message", value = approval_value.as_str()),
-                                )
-                                .with_suggestion(t!("rules.cdx_001.suggestion"));
-
-                                // Unsafe auto-fix: replace with closest valid approval mode.
-                                if let Some(suggested) =
-                                    find_closest_value(approval_value, VALID_APPROVAL_MODES)
-                                {
-                                    if let Some((start, end)) = find_toml_string_value_span(
-                                        content,
-                                        "approvalMode",
-                                        approval_value,
-                                    ) {
-                                        diagnostic = diagnostic.with_fix(Fix::replace(
-                                            start,
-                                            end,
-                                            suggested,
-                                            t!("rules.cdx_001.fix", fixed = suggested),
-                                            false,
-                                        ));
-                                    }
-                                }
-
-                                diagnostics.push(diagnostic);
-                            }
-                        }
-                    }
-
-                    // CDX-002: Invalid fullAutoErrorMode (ERROR)
-                    if cdx_002_enabled {
-                        if parsed.full_auto_error_mode_wrong_type {
-                            let line = key_lines.get("fullAutoErrorMode").copied().unwrap_or(1);
-                            diagnostics.push(
-                                Diagnostic::error(
-                                    path.to_path_buf(),
-                                    line,
-                                    0,
-                                    "CDX-002",
-                                    t!("rules.cdx_002.type_error"),
-                                )
-                                .with_suggestion(t!("rules.cdx_002.suggestion")),
-                            );
-                        } else if let Some(ref error_mode_value) = schema.full_auto_error_mode {
-                            if !VALID_FULL_AUTO_ERROR_MODES.contains(&error_mode_value.as_str()) {
-                                let line = key_lines.get("fullAutoErrorMode").copied().unwrap_or(1);
-                                let mut diagnostic = Diagnostic::error(
-                                    path.to_path_buf(),
-                                    line,
-                                    0,
-                                    "CDX-002",
-                                    t!("rules.cdx_002.message", value = error_mode_value.as_str()),
-                                )
-                                .with_suggestion(t!("rules.cdx_002.suggestion"));
-
-                                // Unsafe auto-fix: replace with closest valid error mode.
-                                if let Some(suggested) = find_closest_value(
-                                    error_mode_value,
-                                    VALID_FULL_AUTO_ERROR_MODES,
-                                ) {
-                                    if let Some((start, end)) = find_toml_string_value_span(
-                                        content,
-                                        "fullAutoErrorMode",
-                                        error_mode_value,
-                                    ) {
-                                        diagnostic = diagnostic.with_fix(Fix::replace(
-                                            start,
-                                            end,
-                                            suggested,
-                                            t!("rules.cdx_002.fix", fixed = suggested),
-                                            false,
-                                        ));
-                                    }
-                                }
-
-                                diagnostics.push(diagnostic);
-                            }
-                        }
-                    }
 
                     // CDX-005: the tagged schema specifies minimum 0 and no maximum.
                     if cdx_005_enabled {
@@ -808,24 +759,30 @@ fn validate_codex_markdown_rules(
         .and_then(|n| n.to_str())
         .unwrap_or_default();
 
-    if config.is_rule_enabled("CDX-003") && filename == "AGENTS.override.md" {
-        diagnostics.push(
-            Diagnostic::warning(
-                path.to_path_buf(),
-                1,
-                0,
-                "CDX-003",
-                t!("rules.cdx_003.message"),
-            )
-            .with_suggestion(t!("rules.cdx_003.suggestion")),
-        );
+    // Codex reads AGENTS.override.md, else AGENTS.md, else a configured
+    // fallback name, in each directory ("Codex includes at most one file per
+    // directory"). AGENTS.local.md is not a Codex discovery name.
+    if !matches!(filename, "AGENTS.md" | "AGENTS.override.md") {
+        return diagnostics;
     }
 
-    if !matches!(
-        filename,
-        "AGENTS.md" | "AGENTS.local.md" | "AGENTS.override.md"
-    ) {
-        return diagnostics;
+    // CDX-AG-008: an AGENTS.override.md in the same directory replaces this
+    // AGENTS.md for Codex; other tools still read AGENTS.md.
+    let shadowed = filename == "AGENTS.md"
+        && path
+            .parent()
+            .is_some_and(|dir| config.fs().is_file(&dir.join("AGENTS.override.md")));
+    if shadowed && config.is_rule_enabled("CDX-AG-008") {
+        diagnostics.push(
+            Diagnostic::info(
+                path.to_path_buf(),
+                1,
+                1,
+                "CDX-AG-008",
+                t!("rules.cdx_ag_008.message"),
+            )
+            .with_suggestion(t!("rules.cdx_ag_008.suggestion")),
+        );
     }
 
     if config.is_rule_enabled("CDX-AG-001") && content.trim().is_empty() {
@@ -873,7 +830,7 @@ fn validate_codex_markdown_rules(
             let has_interpolation = line.contains("${") || line.contains("$(");
             if (has_sensitive_key || contains_key_prefix) && !has_interpolation {
                 diagnostics.push(
-                    Diagnostic::error(
+                    Diagnostic::warning(
                         path.to_path_buf(),
                         line_no + 1,
                         0,
@@ -888,14 +845,14 @@ fn validate_codex_markdown_rules(
     }
 
     if config.is_rule_enabled("CDX-AG-003") {
-        let generic_count = count_generic_instructions(content);
+        let generic_count = count_vague_rules(content);
         let trimmed = content.trim();
         let too_short = trimmed.len() < 120;
         let low_specificity =
             !trimmed.contains('`') && !trimmed.contains('/') && !trimmed.contains("--");
         if generic_count > 0 && too_short && low_specificity {
             diagnostics.push(
-                Diagnostic::warning(
+                Diagnostic::info(
                     path.to_path_buf(),
                     1,
                     0,
@@ -907,9 +864,31 @@ fn validate_codex_markdown_rules(
         }
     }
 
-    // CDX-AG-004 is retired: XP-007 checks AGENTS.md against Codex's
-    // documented 32 KiB project_doc_max_bytes, and the 100,000-byte limit
-    // here had no source.
+    // CDX-AG-009: one instruction file over project_doc_max_bytes. "Codex
+    // skips empty files and stops adding files once the combined size reaches
+    // the limit defined by `project_doc_max_bytes` (32 KiB by default)." An
+    // AGENTS.md shadowed by AGENTS.override.md is never read, so it is not
+    // counted. The chain-wide total is CDX-AG-010 (rules/codex_chain.rs).
+    if config.is_rule_enabled("CDX-AG-009")
+        && !shadowed
+        && content.len() > crate::schemas::cross_platform::CODEX_BYTE_LIMIT
+    {
+        diagnostics.push(
+            Diagnostic::warning(
+                path.to_path_buf(),
+                1,
+                1,
+                "CDX-AG-009",
+                t!(
+                    "rules.cdx_ag_009.message",
+                    file = filename,
+                    bytes = content.len(),
+                    limit = crate::schemas::cross_platform::CODEX_BYTE_LIMIT
+                ),
+            )
+            .with_suggestion(t!("rules.cdx_ag_009.suggestion")),
+        );
+    }
 
     // CDX-AG-005: AGENTS.md references a missing file. Only inline-code spans
     // shaped like a relative file path are checked: method names
@@ -981,10 +960,6 @@ fn validate_codex_markdown_rules(
             );
         }
     }
-
-    // CDX-AG-007: AGENTS.md contradicts config.toml (placeholder - requires cross-file analysis)
-    // This rule is registered but validation requires project-level context;
-    // actual cross-file checking is deferred to project-level validators.
 
     diagnostics
 }
@@ -1142,6 +1117,27 @@ fn validate_codex_config_rules(
     };
 
     let line_for = |key: &str| key_lines.get(key).copied().unwrap_or(1);
+    let is_toml = path
+        .extension()
+        .and_then(OsStr::to_str)
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("toml"));
+    let toml_spans = if is_toml {
+        TomlSpans::parse(content)
+    } else {
+        None
+    };
+    // Position of a key path: exact for TOML, the first line naming the last
+    // key otherwise.
+    let pos = |segs: &[Seg<'_>]| -> (usize, usize) {
+        if let Some(offset) = toml_spans.as_ref().and_then(|spans| spans.offset(segs)) {
+            return line_col(content, offset);
+        }
+        let last = segs.iter().rev().find_map(|seg| match seg {
+            Seg::Key(key) => Some(*key),
+            Seg::Index(_) => None,
+        });
+        (last.map_or(1, line_for), 0)
+    };
 
     // TOML is checked by the legacy parser above. JSON/YAML can also represent
     // unsigned integers above i64::MAX; do not narrow them through as_i64().
@@ -1372,19 +1368,38 @@ fn validate_codex_config_rules(
         }
     }
 
-    if config.is_rule_enabled("CDX-CFG-007")
-        && let Some(value) = value_at_path(&root, &["sandbox_mode"])
-        && value.as_str() == Some("danger-full-access")
-    {
-        let acknowledged = bool_at_path(&root, &["notice", "hide_full_access_warning"]);
-        if acknowledged != Some(true) {
+    // CDX-CFG-007: full access removes the sandbox. "Use `danger-full-access`
+    // only in a controlled environment"; with `approval_policy = "never"` it
+    // also removes approvals ("not recommended"). `notice.hide_full_access_warning`
+    // only records that the TUI warning was dismissed and is not an
+    // acknowledgment mechanism, so it does not suppress the rule.
+    if config.is_rule_enabled("CDX-CFG-007") {
+        let posture = if value_at_path(&root, &["sandbox_mode"]).and_then(Value::as_str)
+            == Some("danger-full-access")
+        {
+            Some(("sandbox_mode", "danger-full-access"))
+        } else if value_at_path(&root, &["default_permissions"]).and_then(Value::as_str)
+            == Some(":danger-full-access")
+        {
+            Some(("default_permissions", ":danger-full-access"))
+        } else {
+            None
+        };
+        if let Some((key, value)) = posture {
+            let no_approvals =
+                value_at_path(&root, &["approval_policy"]).and_then(Value::as_str) == Some("never");
+            let (line, column) = pos(&[Seg::Key(key)]);
             diagnostics.push(
-                Diagnostic::error(
+                Diagnostic::warning(
                     path.to_path_buf(),
-                    line_for("sandbox_mode"),
-                    0,
+                    line,
+                    column,
                     "CDX-CFG-007",
-                    t!("rules.cdx_cfg_007.message"),
+                    if no_approvals {
+                        t!("rules.cdx_cfg_007.no_approvals", key = key, value = value)
+                    } else {
+                        t!("rules.cdx_cfg_007.message", key = key, value = value)
+                    },
                 )
                 .with_suggestion(t!("rules.cdx_cfg_007.suggestion")),
             );
@@ -1625,36 +1640,8 @@ fn validate_codex_config_rules(
         }
     }
 
-    // CDX-CFG-013: Invalid sandbox_workspace_write mode
-    if config.is_rule_enabled("CDX-CFG-013")
-        && let Some(value) = value_at_path(&root, &["sandbox_workspace_write", "mode"])
-    {
-        if let Some(mode) = value.as_str() {
-            if !VALID_SANDBOX_WORKSPACE_WRITE_MODES.contains(&mode) {
-                diagnostics.push(
-                    Diagnostic::error(
-                        path.to_path_buf(),
-                        line_for("mode"),
-                        0,
-                        "CDX-CFG-013",
-                        t!("rules.cdx_cfg_013.message", value = mode),
-                    )
-                    .with_suggestion(t!("rules.cdx_cfg_013.suggestion")),
-                );
-            }
-        } else if !value.is_null() {
-            diagnostics.push(
-                Diagnostic::error(
-                    path.to_path_buf(),
-                    line_for("mode"),
-                    0,
-                    "CDX-CFG-013",
-                    t!("rules.cdx_cfg_013.type_error"),
-                )
-                .with_suggestion(t!("rules.cdx_cfg_013.suggestion")),
-            );
-        }
-    }
+    // CDX-CFG-013 (sandbox_workspace_write.mode) is retired: no Codex schema
+    // has that field. Unknown [sandbox_workspace_write] keys are CDX-CFG-006.
 
     // CDX-CFG-014: Invalid model value (must be a string)
     if config.is_rule_enabled("CDX-CFG-014")
@@ -2026,31 +2013,41 @@ fn validate_codex_config_rules(
         }
     }
 
-    // CDX-CFG-026: Invalid permissions.network sub-field
+    // CDX-CFG-026: unknown key in a permission profile's network table. A
+    // profile is `[permissions.<name>]`; its network settings live in
+    // `[permissions.<name>.network]` (learn.chatgpt.com/docs/permissions).
     if config.is_rule_enabled("CDX-CFG-026")
-        && let Some(value) = value_at_path(&root, &["permissions", "network"])
+        && let Some(profiles) = value_at_path(&root, &["permissions"]).and_then(Value::as_object)
     {
-        if let Some(obj) = value.as_object() {
-            for key in obj.keys() {
-                if !KNOWN_PERMISSIONS_NETWORK_KEYS.contains(&key.as_str()) {
-                    diagnostics.push(
-                        Diagnostic::info(
-                            path.to_path_buf(),
-                            line_for("network"),
-                            0,
-                            "CDX-CFG-026",
-                            format!(
-                                "Unknown permissions.network sub-field '{}'. Known sub-fields: {}",
-                                key,
-                                KNOWN_PERMISSIONS_NETWORK_KEYS.join(", ")
-                            ),
-                        )
-                        .with_suggestion(
-                            "Remove or rename the unknown sub-field in permissions.network."
-                                .to_string(),
-                        ),
-                    );
+        for (profile, settings) in profiles {
+            let Some(network) = settings.get("network").and_then(Value::as_object) else {
+                continue;
+            };
+            for key in network.keys() {
+                if KNOWN_PERMISSIONS_NETWORK_KEYS.contains(&key.as_str()) {
+                    continue;
                 }
+                let (line, column) = pos(&[
+                    Seg::Key("permissions"),
+                    Seg::Key(profile),
+                    Seg::Key("network"),
+                    Seg::Key(key),
+                ]);
+                diagnostics.push(
+                    Diagnostic::info(
+                        path.to_path_buf(),
+                        line,
+                        column,
+                        "CDX-CFG-026",
+                        t!(
+                            "rules.cdx_cfg_026.message",
+                            profile = profile.as_str(),
+                            key = key.as_str(),
+                            known = KNOWN_PERMISSIONS_NETWORK_KEYS.join(", ")
+                        ),
+                    )
+                    .with_suggestion(t!("rules.cdx_cfg_026.suggestion")),
+                );
             }
         }
     }
@@ -2169,7 +2166,40 @@ fn validate_codex_config_rules(
         }
     }
 
-    if config.is_rule_enabled("CDX-APP-001")
+    // CDX-APP-001: tool approval modes for apps, MCP servers and plugin MCP
+    // servers ("Supported values are `auto`, `prompt`, `writes`, and
+    // `approve`").
+    if config.is_rule_enabled("CDX-APP-001") {
+        let mut modes: Vec<(Vec<Seg<'_>>, &Value)> = Vec::new();
+        collect_approval_modes(&root, &mut modes);
+        for (segs, mode) in modes {
+            let field = segs
+                .iter()
+                .map(|seg| match seg {
+                    Seg::Key(key) => (*key).to_string(),
+                    Seg::Index(index) => index.to_string(),
+                })
+                .collect::<Vec<_>>()
+                .join(".");
+            let (line, column) = pos(&segs);
+            let message = match mode.as_str() {
+                Some(value) if VALID_DEFAULT_TOOLS_APPROVAL_MODES.contains(&value) => continue,
+                Some(value) => t!(
+                    "rules.cdx_app_001.message",
+                    field = field.as_str(),
+                    value = value
+                ),
+                None if mode.is_null() => continue,
+                None => t!("rules.cdx_app_001.type_error", field = field.as_str()),
+            };
+            diagnostics.push(
+                Diagnostic::error(path.to_path_buf(), line, column, "CDX-APP-001", message)
+                    .with_suggestion(t!("rules.cdx_app_001.suggestion")),
+            );
+        }
+    }
+
+    if (config.is_rule_enabled("CDX-APP-001") || config.is_rule_enabled("CDX-CFG-024"))
         && let Some(apps) = value_at_path(&root, &["apps"])
     {
         if let Some(apps_obj) = apps.as_object() {
@@ -2223,37 +2253,6 @@ fn validate_codex_config_rules(
                 let Some(app_obj) = app_value.as_object() else {
                     continue;
                 };
-                if let Some(mode) = app_obj.get("default_tools_approval_mode") {
-                    if let Some(mode_str) = mode.as_str() {
-                        if !VALID_DEFAULT_TOOLS_APPROVAL_MODES.contains(&mode_str) {
-                            diagnostics.push(
-                                Diagnostic::error(
-                                    path.to_path_buf(),
-                                    line_for("default_tools_approval_mode"),
-                                    0,
-                                    "CDX-APP-001",
-                                    t!(
-                                        "rules.cdx_app_001.message",
-                                        app = app_name.as_str(),
-                                        value = mode_str
-                                    ),
-                                )
-                                .with_suggestion(t!("rules.cdx_app_001.suggestion")),
-                            );
-                        }
-                    } else if !mode.is_null() {
-                        diagnostics.push(
-                            Diagnostic::error(
-                                path.to_path_buf(),
-                                line_for("default_tools_approval_mode"),
-                                0,
-                                "CDX-APP-001",
-                                t!("rules.cdx_app_001.type_error", app = app_name.as_str()),
-                            )
-                            .with_suggestion(t!("rules.cdx_app_001.suggestion")),
-                        );
-                    }
-                }
                 if config.is_rule_enabled("CDX-CFG-024")
                     && let Some(reviewer) = app_obj.get("approvals_reviewer")
                 {
@@ -2322,25 +2321,359 @@ fn validate_codex_config_rules(
         }
     }
 
-    // CDX-APP-003: Invalid profile configuration (must be a string)
-    if config.is_rule_enabled("CDX-APP-003")
-        && let Some(value) = value_at_path(&root, &["profile"])
+    // CDX-APP-003: "In Codex 0.134.0 and later, `--profile` no longer reads
+    // `[profiles.profile-name]` from `config.toml`, and the top-level
+    // `profile = "profile-name"` selector is no longer supported."
+    if config.is_rule_enabled("CDX-APP-003") {
+        for key in ["profile", "profiles"] {
+            if root.get(key).is_some() {
+                let (line, column) = pos(&[Seg::Key(key)]);
+                diagnostics.push(
+                    Diagnostic::warning(
+                        path.to_path_buf(),
+                        line,
+                        column,
+                        "CDX-APP-003",
+                        if key == "profile" {
+                            t!("rules.cdx_app_003.selector")
+                        } else {
+                            t!("rules.cdx_app_003.table")
+                        },
+                    )
+                    .with_suggestion(t!("rules.cdx_app_003.suggestion")),
+                );
+            }
+        }
+    }
+
+    // CDX-CFG-031: skills.max_context_tokens ("integer (positive)"; "Explicit
+    // values are capped at `10000` tokens").
+    if config.is_rule_enabled("CDX-CFG-031")
+        && let Some(value) = value_at_path(&root, &["skills", "max_context_tokens"])
     {
-        if !value.is_string() && !value.is_null() {
+        let (line, column) = pos(&[Seg::Key("skills"), Seg::Key("max_context_tokens")]);
+        match value.as_u64() {
+            Some(tokens) if tokens > SKILLS_MAX_CONTEXT_TOKENS_CAP => diagnostics.push(
+                Diagnostic::info(
+                    path.to_path_buf(),
+                    line,
+                    column,
+                    "CDX-CFG-031",
+                    t!(
+                        "rules.cdx_cfg_031.capped",
+                        value = tokens,
+                        cap = SKILLS_MAX_CONTEXT_TOKENS_CAP
+                    ),
+                )
+                .with_suggestion(t!("rules.cdx_cfg_031.suggestion")),
+            ),
+            Some(tokens) if tokens >= 1 => {}
+            _ => diagnostics.push(
+                Diagnostic::warning(
+                    path.to_path_buf(),
+                    line,
+                    column,
+                    "CDX-CFG-031",
+                    t!("rules.cdx_cfg_031.invalid"),
+                )
+                .with_suggestion(t!("rules.cdx_cfg_031.suggestion")),
+            ),
+        }
+    }
+
+    // CDX-CFG-032: keys Codex ignores in a project-local .codex/config.toml.
+    if config.is_rule_enabled("CDX-CFG-032")
+        && let Some(dot_codex) = path.parent()
+        && crate::rules::codex_files::codex_home().is_some()
+        && !crate::rules::codex_files::is_codex_home(dot_codex)
+        && let Some(root_obj) = root.as_object()
+    {
+        let app_003 = config.is_rule_enabled("CDX-APP-003");
+        for key in IGNORED_IN_PROJECT_CONFIG {
+            if !root_obj.contains_key(*key) || (app_003 && matches!(*key, "profile" | "profiles")) {
+                continue;
+            }
+            let (line, column) = pos(&[Seg::Key(key)]);
             diagnostics.push(
                 Diagnostic::warning(
                     path.to_path_buf(),
-                    line_for("profile"),
-                    0,
-                    "CDX-APP-003",
-                    t!("rules.cdx_app_003.type_error"),
+                    line,
+                    column,
+                    "CDX-CFG-032",
+                    t!("rules.cdx_cfg_032.message", key = *key),
                 )
-                .with_suggestion(t!("rules.cdx_app_003.suggestion")),
+                .with_suggestion(t!("rules.cdx_cfg_032.suggestion", key = *key)),
             );
         }
     }
 
+    // CDX-CFG-033: permission profiles and the older sandbox settings do not
+    // compose: "If `sandbox_mode` appears in any loaded config file ... Codex
+    // uses those older sandbox settings instead of `default_permissions`."
+    if config.is_rule_enabled("CDX-CFG-033") {
+        let profiles_key = ["default_permissions", "permissions"]
+            .into_iter()
+            .find(|key| root.get(*key).is_some());
+        let legacy_key = ["sandbox_mode", "sandbox_workspace_write"]
+            .into_iter()
+            .find(|key| root.get(*key).is_some());
+        if let (Some(profiles_key), Some(legacy_key)) = (profiles_key, legacy_key) {
+            let (line, column) = pos(&[Seg::Key(profiles_key)]);
+            diagnostics.push(
+                Diagnostic::warning(
+                    path.to_path_buf(),
+                    line,
+                    column,
+                    "CDX-CFG-033",
+                    if root.get("sandbox_mode").is_some() {
+                        t!("rules.cdx_cfg_033.shadowed", key = profiles_key)
+                    } else {
+                        t!(
+                            "rules.cdx_cfg_033.mixed",
+                            key = profiles_key,
+                            legacy = legacy_key
+                        )
+                    },
+                )
+                .with_suggestion(t!("rules.cdx_cfg_033.suggestion")),
+            );
+        }
+    }
+
+    let profiles = value_at_path(&root, &["permissions"]).and_then(Value::as_object);
+
+    // CDX-CFG-034: "Without an active proxy, profile domain rules do not
+    // restrict direct network access."
+    if config.is_rule_enabled("CDX-CFG-034")
+        && let Some(profiles) = profiles
+        && !network_proxy_enabled(&root)
+    {
+        for (profile, settings) in profiles {
+            let network = settings.get("network");
+            let enabled = network
+                .and_then(|n| n.get("enabled"))
+                .and_then(Value::as_bool)
+                == Some(true);
+            let has_domains = network
+                .and_then(|n| n.get("domains"))
+                .and_then(Value::as_object)
+                .is_some_and(|domains| !domains.is_empty());
+            if enabled && has_domains {
+                let (line, column) = pos(&[
+                    Seg::Key("permissions"),
+                    Seg::Key(profile),
+                    Seg::Key("network"),
+                    Seg::Key("domains"),
+                ]);
+                diagnostics.push(
+                    Diagnostic::warning(
+                        path.to_path_buf(),
+                        line,
+                        column,
+                        "CDX-CFG-034",
+                        t!("rules.cdx_cfg_034.message", profile = profile.as_str()),
+                    )
+                    .with_suggestion(t!("rules.cdx_cfg_034.suggestion")),
+                );
+            }
+        }
+    }
+
+    // CDX-CFG-035: "A profile can extend `:read-only`, `:workspace`, or another
+    // named profile. It cannot extend `:danger-full-access`; Codex also rejects
+    // unknown parents and inheritance cycles."
+    if config.is_rule_enabled("CDX-CFG-035") {
+        if let Some(profiles) = profiles {
+            for (profile, settings) in profiles {
+                let Some(parent) = settings.get("extends").and_then(Value::as_str) else {
+                    continue;
+                };
+                let reason = if parent == ":danger-full-access" {
+                    Some(t!("rules.cdx_cfg_035.danger").to_string())
+                } else if parent.starts_with(':') && !EXTENDABLE_BUILTIN_PROFILES.contains(&parent)
+                {
+                    Some(t!("rules.cdx_cfg_035.unknown_builtin", parent = parent).to_string())
+                } else if !parent.starts_with(':') && extends_cycle(profiles, profile) {
+                    Some(t!("rules.cdx_cfg_035.cycle").to_string())
+                } else {
+                    None
+                };
+                if let Some(reason) = reason {
+                    let (line, column) = pos(&[
+                        Seg::Key("permissions"),
+                        Seg::Key(profile),
+                        Seg::Key("extends"),
+                    ]);
+                    diagnostics.push(
+                        Diagnostic::error(
+                            path.to_path_buf(),
+                            line,
+                            column,
+                            "CDX-CFG-035",
+                            t!(
+                                "rules.cdx_cfg_035.message",
+                                profile = profile.as_str(),
+                                parent = parent,
+                                reason = reason
+                            ),
+                        )
+                        .with_suggestion(t!("rules.cdx_cfg_035.suggestion")),
+                    );
+                }
+            }
+        }
+        if let Some(selected) =
+            value_at_path(&root, &["default_permissions"]).and_then(Value::as_str)
+            && selected.starts_with(':')
+            && !BUILTIN_PERMISSION_PROFILES.contains(&selected)
+        {
+            let (line, column) = pos(&[Seg::Key("default_permissions")]);
+            let mut diagnostic = Diagnostic::error(
+                path.to_path_buf(),
+                line,
+                column,
+                "CDX-CFG-035",
+                t!("rules.cdx_cfg_035.default", value = selected),
+            )
+            .with_suggestion(t!("rules.cdx_cfg_035.suggestion"));
+            // Unsafe: the profile Codex applies changes from none (rejected)
+            // to the closest built-in.
+            if is_toml
+                && let Some(closest) =
+                    crate::rules::find_closest_value(selected, BUILTIN_PERMISSION_PROFILES)
+                && let Some((start, end)) = crate::span_utils::find_unique_toml_string_value(
+                    content,
+                    "default_permissions",
+                    selected,
+                )
+            {
+                diagnostic = diagnostic.with_fix(Fix::replace(
+                    start,
+                    end,
+                    closest,
+                    t!("rules.cdx_cfg_035.fix", value = closest),
+                    false,
+                ));
+            }
+            diagnostics.push(diagnostic);
+        }
+    }
+
+    // CDX-HK-*: inline [hooks] tables use the same event structure as
+    // hooks.json. Only the TOML config is a real Codex layer.
+    if let (Some(hooks), Some(spans)) = (root.get("hooks"), toml_spans.as_ref()) {
+        let check = HookCheck {
+            path,
+            content,
+            spans: HookSpans::Toml(spans),
+            layer: HookLayer::ConfigToml,
+        };
+        check_hook_events(
+            hooks,
+            &[Seg::Key("hooks")],
+            &check,
+            config,
+            &mut diagnostics,
+        );
+    }
+
     diagnostics
+}
+
+/// Every tool approval mode setting in a Codex config, with its key path:
+/// `apps.<id>.default_tools_approval_mode`, `apps.<id>.tools.<tool>.approval_mode`,
+/// the same under `mcp_servers.<id>` and `plugins.<plugin>.mcp_servers.<id>`,
+/// and `apps._default.default_tools_approval_mode`.
+fn collect_approval_modes<'a>(root: &'a Value, out: &mut Vec<(Vec<Seg<'a>>, &'a Value)>) {
+    fn entries<'a>(
+        base: Vec<Seg<'a>>,
+        table: Option<&'a serde_json::Map<String, Value>>,
+        out: &mut Vec<(Vec<Seg<'a>>, &'a Value)>,
+    ) {
+        let Some(table) = table else {
+            return;
+        };
+        for (name, entry) in table {
+            let Some(entry) = entry.as_object() else {
+                continue;
+            };
+            let mut entry_path = base.clone();
+            entry_path.push(Seg::Key(name.as_str()));
+            if let Some(mode) = entry.get("default_tools_approval_mode") {
+                let mut segs = entry_path.clone();
+                segs.push(Seg::Key("default_tools_approval_mode"));
+                out.push((segs, mode));
+            }
+            if let Some(tools) = entry.get("tools").and_then(Value::as_object) {
+                for (tool, settings) in tools {
+                    if let Some(mode) = settings.get("approval_mode") {
+                        let mut segs = entry_path.clone();
+                        segs.push(Seg::Key("tools"));
+                        segs.push(Seg::Key(tool.as_str()));
+                        segs.push(Seg::Key("approval_mode"));
+                        out.push((segs, mode));
+                    }
+                }
+            }
+        }
+    }
+    entries(
+        vec![Seg::Key("apps")],
+        root.get("apps").and_then(Value::as_object),
+        out,
+    );
+    entries(
+        vec![Seg::Key("mcp_servers")],
+        root.get("mcp_servers").and_then(Value::as_object),
+        out,
+    );
+    if let Some(plugins) = root.get("plugins").and_then(Value::as_object) {
+        for (plugin, settings) in plugins {
+            entries(
+                vec![
+                    Seg::Key("plugins"),
+                    Seg::Key(plugin.as_str()),
+                    Seg::Key("mcp_servers"),
+                ],
+                settings.get("mcp_servers").and_then(Value::as_object),
+                out,
+            );
+        }
+    }
+}
+
+/// `features.network_proxy` enabled (a boolean, or a table not set to
+/// `enabled = false`).
+fn network_proxy_enabled(root: &Value) -> bool {
+    match value_at_path(root, &["features", "network_proxy"]) {
+        Some(Value::Bool(enabled)) => *enabled,
+        Some(Value::Object(table)) => table.get("enabled").and_then(Value::as_bool) != Some(false),
+        _ => false,
+    }
+}
+
+/// Whether following `extends` from `start` returns to a profile already
+/// visited, using only the profiles in this file.
+fn extends_cycle(profiles: &serde_json::Map<String, Value>, start: &str) -> bool {
+    let mut seen = HashSet::new();
+    let mut current = start;
+    while seen.insert(current.to_string()) {
+        let Some(parent) = profiles
+            .get(current)
+            .and_then(|settings| settings.get("extends"))
+            .and_then(Value::as_str)
+        else {
+            return false;
+        };
+        if parent.starts_with(':') {
+            return false;
+        }
+        if parent == start {
+            return true;
+        }
+        current = parent;
+    }
+    false
 }
 
 fn value_type_name(value: &Value) -> &'static str {
@@ -2424,10 +2757,6 @@ fn value_at_path<'a>(root: &'a Value, path: &[&str]) -> Option<&'a Value> {
     Some(current)
 }
 
-fn bool_at_path(root: &Value, path: &[&str]) -> Option<bool> {
-    value_at_path(root, path).and_then(Value::as_bool)
-}
-
 /// When `cdx_cfg_028_active` is true, `bearer_token` inside `mcp_servers.*`
 /// is suppressed here because CDX-CFG-028 emits a more specific diagnostic.
 /// When the user has disabled CDX-CFG-028, fall back to reporting it via the
@@ -2469,6 +2798,17 @@ fn collect_unknown_codex_keys(root: &Value, cdx_cfg_028_active: bool) -> Vec<Str
         for key in shell.keys() {
             if !KNOWN_SHELL_ENVIRONMENT_POLICY_KEYS.contains(&key.as_str()) {
                 unknown.push(format!("shell_environment_policy.{key}"));
+            }
+        }
+    }
+
+    if let Some(sandbox) = root_obj
+        .get("sandbox_workspace_write")
+        .and_then(Value::as_object)
+    {
+        for key in sandbox.keys() {
+            if !KNOWN_SANDBOX_WORKSPACE_WRITE_KEYS.contains(&key.as_str()) {
+                unknown.push(format!("sandbox_workspace_write.{key}"));
             }
         }
     }
@@ -2706,6 +3046,36 @@ fn find_key_line(content: &str, key: &str) -> Option<usize> {
     None
 }
 
+/// CDX-AG-003: the vague, project-independent rules Codex's guidance warns
+/// about ("A short, accurate AGENTS.md is more useful than a long file full of
+/// vague rules"). The phrase list is an agnix heuristic; it no longer reuses the
+/// Claude memory list of model-behavior phrases ("be helpful", "think step by
+/// step"), which Codex does not address.
+fn count_vague_rules(content: &str) -> usize {
+    static VAGUE: std::sync::OnceLock<Vec<regex::Regex>> = std::sync::OnceLock::new();
+    let patterns = VAGUE.get_or_init(|| {
+        [
+            r"(?i)\bfollow\s+(?:the\s+)?(?:best\s+practices|coding\s+standards|clean\s+code)\b",
+            r"(?i)\bwrite\s+(?:clean|good|high[- ]quality|maintainable|readable)\b[\w\s,]*\bcode\b",
+            r"(?i)\bkeep\s+(?:the\s+)?code\s+(?:clean|simple|readable|tidy)\b",
+            r"(?i)\bbe\s+careful\b",
+            r"(?i)\buse\s+common\s+sense\b",
+        ]
+        .iter()
+        .map(|pattern| regex::Regex::new(pattern).expect("valid CDX-AG-003 pattern"))
+        .collect()
+    });
+    content
+        .lines()
+        .map(|line| {
+            patterns
+                .iter()
+                .filter(|pattern| pattern.is_match(line))
+                .count()
+        })
+        .sum()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2745,326 +3115,319 @@ mod tests {
         validator.validate(Path::new(path), content, &LintConfig::default())
     }
 
-    // ===== CDX-001: Invalid approvalMode =====
+    fn rules_of(diagnostics: &[Diagnostic], prefix: &str) -> Vec<(String, usize, usize)> {
+        diagnostics
+            .iter()
+            .filter(|d| d.rule.starts_with(prefix))
+            .map(|d| (d.rule.clone(), d.line, d.column))
+            .collect()
+    }
+
+    // ===== Vendor-survey Codex config rules =====
 
     #[test]
-    fn test_cdx_001_invalid_approval_mode() {
-        let diagnostics = validate_config("approvalMode = \"yolo\"");
-        let cdx_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-001").collect();
-        assert_eq!(cdx_001.len(), 1);
-        assert_eq!(cdx_001[0].level, DiagnosticLevel::Error);
-        assert!(cdx_001[0].message.contains("yolo"));
+    fn test_cdx_app_001_accepts_writes_and_checks_mcp_and_plugins() {
+        let content = r#"
+[apps.github]
+default_tools_approval_mode = "writes"
+
+[apps._default]
+default_tools_approval_mode = "prompt"
+
+[mcp_servers.docs]
+url = "https://example.com/mcp"
+default_tools_approval_mode = "manual"
+
+[mcp_servers.docs.tools.search]
+approval_mode = "approve"
+
+[plugins."my-plugin".mcp_servers.docs]
+default_tools_approval_mode = 3
+"#;
+        let diagnostics = validate_config(content);
+        let app_001 = rules_of(&diagnostics, "CDX-APP-001");
+        assert_eq!(app_001.len(), 2, "{diagnostics:?}");
+        assert_eq!(app_001[0].1, 10);
+        assert!(
+            diagnostics.iter().all(|d| d.rule != "CDX-CFG-006"),
+            "{diagnostics:?}"
+        );
     }
 
     #[test]
-    fn test_cdx_001_valid_suggest() {
-        let diagnostics = validate_config("approvalMode = \"suggest\"");
-        let cdx_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-001").collect();
-        assert!(cdx_001.is_empty());
+    fn test_cdx_cfg_031_skills_max_context_tokens() {
+        assert!(
+            rules_of(
+                &validate_config("[skills]\nmax_context_tokens = 4000\n"),
+                "CDX-CFG-031"
+            )
+            .is_empty()
+        );
+        let capped = validate_config("[skills]\nmax_context_tokens = 20000\n");
+        let capped: Vec<_> = capped.iter().filter(|d| d.rule == "CDX-CFG-031").collect();
+        assert_eq!(capped.len(), 1);
+        assert_eq!(capped[0].level, DiagnosticLevel::Info);
+        assert_eq!(capped[0].line, 2);
+        let invalid = validate_config("[skills]\nmax_context_tokens = 0\n");
+        assert!(
+            invalid
+                .iter()
+                .any(|d| d.rule == "CDX-CFG-031" && d.level == DiagnosticLevel::Warning)
+        );
     }
 
     #[test]
-    fn test_cdx_001_valid_auto_edit() {
-        let diagnostics = validate_config("approvalMode = \"auto-edit\"");
-        let cdx_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-001").collect();
-        assert!(cdx_001.is_empty());
-    }
-
-    #[test]
-    fn test_cdx_001_valid_full_auto() {
-        let diagnostics = validate_config("approvalMode = \"full-auto\"");
-        let cdx_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-001").collect();
-        assert!(cdx_001.is_empty());
-    }
-
-    #[test]
-    fn test_cdx_001_all_valid_modes() {
-        for mode in VALID_APPROVAL_MODES {
-            let content = format!("approvalMode = \"{}\"", mode);
-            let diagnostics = validate_config(&content);
-            let cdx_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-001").collect();
-            assert!(cdx_001.is_empty(), "Mode '{}' should be valid", mode);
+    fn test_cdx_cfg_032_project_config_ignored_keys() {
+        // `.codex/config.toml` relative to the project is a project layer.
+        let content = "model = \"gpt-5\"\nmodel_provider = \"azure\"\nnotify = [\"notify-send\"]\n\n[otel]\nenvironment = \"dev\"\n";
+        let cfg_032 = rules_of(&validate_config(content), "CDX-CFG-032");
+        let lines: Vec<_> = cfg_032.iter().map(|(_, line, _)| *line).collect();
+        assert_eq!(lines, [2, 3, 5], "{cfg_032:?}");
+        // The user config in the Codex home is not a project layer.
+        if let Some(home) = crate::rules::codex_files::codex_home() {
+            let user = home.join("config.toml");
+            let diagnostics = CodexValidator.validate(&user, content, &LintConfig::default());
+            assert!(rules_of(&diagnostics, "CDX-CFG-032").is_empty());
         }
     }
 
     #[test]
-    fn test_cdx_001_absent_approval_mode() {
-        let diagnostics = validate_config("model = \"o4-mini\"");
-        let cdx_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-001").collect();
-        assert!(cdx_001.is_empty());
-    }
-
-    #[test]
-    fn test_cdx_001_empty_string() {
-        let diagnostics = validate_config("approvalMode = \"\"");
-        let cdx_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-001").collect();
-        assert_eq!(cdx_001.len(), 1);
-    }
-
-    #[test]
-    fn test_cdx_001_case_sensitive() {
-        let diagnostics = validate_config("approvalMode = \"Suggest\"");
-        let cdx_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-001").collect();
-        assert_eq!(cdx_001.len(), 1, "approvalMode should be case-sensitive");
-    }
-
-    #[test]
-    fn test_cdx_001_autofix_case_insensitive() {
-        // "Suggest" is a case-insensitive match to "suggest"
-        let diagnostics = validate_config("approvalMode = \"Suggest\"");
-        let cdx_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-001").collect();
-        assert_eq!(cdx_001.len(), 1);
+    fn test_cdx_cfg_033_permission_profiles_and_legacy_sandbox() {
+        let shadowed = "default_permissions = \":workspace\"\nsandbox_mode = \"read-only\"\n";
+        let diagnostics = validate_config(shadowed);
+        let cfg_033: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-033")
+            .collect();
+        assert_eq!(cfg_033.len(), 1);
+        assert_eq!(cfg_033[0].line, 1);
+        assert!(cfg_033[0].message.contains("sandbox_mode is set"));
+        let mixed = "default_permissions = \":workspace\"\n\n[sandbox_workspace_write]\nnetwork_access = true\n";
+        assert_eq!(rules_of(&validate_config(mixed), "CDX-CFG-033").len(), 1);
         assert!(
-            cdx_001[0].has_fixes(),
-            "CDX-001 should have auto-fix for case mismatch"
+            rules_of(
+                &validate_config("default_permissions = \":workspace\"\n"),
+                "CDX-CFG-033"
+            )
+            .is_empty()
         );
-        let fix = &cdx_001[0].fixes[0];
-        assert!(!fix.safe, "CDX-001 fix should be unsafe");
-        assert_eq!(fix.replacement, "suggest", "Fix should suggest 'suggest'");
     }
 
     #[test]
-    fn test_cdx_001_no_autofix_when_duplicate() {
-        // The regex pattern `approvalMode\s*=\s*"Suggest"` appears twice in this
-        // valid TOML because a [section] table also uses the same key name.
-        // The uniqueness guard should prevent autofix when there are multiple matches.
-        let content = "approvalMode = \"Suggest\"\n\n[overrides]\napprovalMode = \"Suggest\"";
+    fn test_cdx_cfg_034_domains_without_network_proxy() {
+        let content = r#"default_permissions = "project-edit"
+
+[permissions.project-edit.network]
+enabled = true
+
+[permissions.project-edit.network.domains]
+"api.openai.com" = "allow"
+"#;
+        let cfg_034 = rules_of(&validate_config(content), "CDX-CFG-034");
+        assert_eq!(cfg_034.len(), 1);
+        assert_eq!(cfg_034[0].1, 6);
+        let with_proxy = format!("{content}\n[features]\nnetwork_proxy = true\n");
+        assert!(rules_of(&validate_config(&with_proxy), "CDX-CFG-034").is_empty());
+    }
+
+    #[test]
+    fn test_cdx_cfg_035_extends_and_default_permissions() {
+        let content = r#"default_permissions = ":workspaces"
+
+[permissions.a]
+extends = ":danger-full-access"
+
+[permissions.b]
+extends = "c"
+
+[permissions.c]
+extends = "b"
+
+[permissions.d]
+extends = ":workspace"
+
+[permissions.e]
+extends = "defined-in-another-layer"
+"#;
         let diagnostics = validate_config(content);
-        let cdx_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-001").collect();
-        assert_eq!(cdx_001.len(), 1);
-        assert!(
-            !cdx_001[0].has_fixes(),
-            "CDX-001 should not have auto-fix when value pattern appears multiple times"
-        );
+        let cfg_035 = rules_of(&diagnostics, "CDX-CFG-035");
+        let lines: Vec<_> = cfg_035.iter().map(|(_, line, _)| *line).collect();
+        assert_eq!(lines, [4, 7, 10, 1], "{diagnostics:?}");
+        // The default_permissions typo has an unsafe fix that still parses.
+        let fix = diagnostics
+            .iter()
+            .find(|d| d.rule == "CDX-CFG-035" && d.line == 1)
+            .and_then(|d| d.fixes.first())
+            .expect("fix");
+        assert!(!fix.safe);
+        let mut fixed = content.to_string();
+        fixed.replace_range(fix.start_byte..fix.end_byte, &fix.replacement);
+        assert!(fixed.starts_with("default_permissions = \":workspace\"\n"));
+        assert!(toml::from_str::<toml::Table>(&fixed).is_ok());
     }
 
     #[test]
-    fn test_cdx_001_no_autofix_nonsense() {
-        let diagnostics = validate_config("approvalMode = \"yolo\"");
-        let cdx_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-001").collect();
-        assert_eq!(cdx_001.len(), 1);
-        // "yolo" has no close match - should NOT get a fix
-        assert!(
-            !cdx_001[0].has_fixes(),
-            "CDX-001 should not auto-fix nonsense values"
-        );
+    fn test_cdx_cfg_026_checks_profile_network_tables() {
+        let content = "[permissions.dev.network]\nenabled = true\nallowed_domains = [\"x\"]\n";
+        let cfg_026 = rules_of(&validate_config(content), "CDX-CFG-026");
+        assert_eq!(cfg_026.len(), 1);
+        assert_eq!((cfg_026[0].1, cfg_026[0].2), (3, 1));
+        // A profile named `network` is a profile, not a network table.
+        let profile = "[permissions.network]\nextends = \":workspace\"\n";
+        assert!(rules_of(&validate_config(profile), "CDX-CFG-026").is_empty());
     }
 
     #[test]
-    fn test_cdx_001_autofix_targets_correct_bytes() {
-        let content = "approvalMode = \"Suggest\"";
+    fn test_inline_hooks_in_config_toml() {
+        let content = "[[hooks.SessionEnd]]\n[[hooks.SessionEnd.hooks]]\ntype = \"command\"\ncommand = \"x\"\ntimeout = 60\n\n[[hooks.Notification]]\n";
         let diagnostics = validate_config(content);
-        let cdx_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-001").collect();
-        assert_eq!(cdx_001.len(), 1);
-        assert!(cdx_001[0].has_fixes());
-        let fix = &cdx_001[0].fixes[0];
-        let target = &content[fix.start_byte..fix.end_byte];
-        assert_eq!(target, "Suggest", "Fix should target the inner value");
-    }
-
-    #[test]
-    fn test_cdx_001_type_mismatch() {
-        let diagnostics = validate_config("approvalMode = true");
-        let cdx_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-001").collect();
-        assert_eq!(cdx_001.len(), 1);
-        assert!(cdx_001[0].message.contains("string"));
-    }
-
-    #[test]
-    fn test_cdx_001_type_mismatch_number() {
-        let diagnostics = validate_config("approvalMode = 42");
-        let cdx_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-001").collect();
-        assert_eq!(cdx_001.len(), 1);
-    }
-
-    #[test]
-    fn test_cdx_001_type_mismatch_float() {
-        let diagnostics = validate_config("approvalMode = 1.5");
-        let cdx_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-001").collect();
-        assert_eq!(cdx_001.len(), 1);
-        assert!(
-            cdx_001[0].message.contains("string"),
-            "Expected type error message for float value"
-        );
-    }
-
-    #[test]
-    fn test_cdx_001_type_mismatch_array() {
-        let diagnostics = validate_config("approvalMode = [\"suggest\"]");
-        let cdx_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-001").collect();
-        assert_eq!(cdx_001.len(), 1);
-        assert!(
-            cdx_001[0].message.contains("string"),
-            "Expected type error message for array value"
-        );
-    }
-
-    #[test]
-    fn test_cdx_001_line_number() {
-        let content = "model = \"o4-mini\"\napprovalMode = \"invalid\"";
-        let diagnostics = validate_config(content);
-        let cdx_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-001").collect();
-        assert_eq!(cdx_001.len(), 1);
-        assert_eq!(cdx_001[0].line, 2);
-    }
-
-    // ===== CDX-002: Invalid fullAutoErrorMode =====
-
-    #[test]
-    fn test_cdx_002_invalid_error_mode() {
-        let diagnostics = validate_config("fullAutoErrorMode = \"crash\"");
-        let cdx_002: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-002").collect();
-        assert_eq!(cdx_002.len(), 1);
-        assert_eq!(cdx_002[0].level, DiagnosticLevel::Error);
-        assert!(cdx_002[0].message.contains("crash"));
-    }
-
-    #[test]
-    fn test_cdx_002_valid_ask_user() {
-        let diagnostics = validate_config("fullAutoErrorMode = \"ask-user\"");
-        let cdx_002: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-002").collect();
-        assert!(cdx_002.is_empty());
-    }
-
-    #[test]
-    fn test_cdx_002_valid_ignore_and_continue() {
-        let diagnostics = validate_config("fullAutoErrorMode = \"ignore-and-continue\"");
-        let cdx_002: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-002").collect();
-        assert!(cdx_002.is_empty());
-    }
-
-    #[test]
-    fn test_cdx_002_all_valid_modes() {
-        for mode in VALID_FULL_AUTO_ERROR_MODES {
-            let content = format!("fullAutoErrorMode = \"{}\"", mode);
-            let diagnostics = validate_config(&content);
-            let cdx_002: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-002").collect();
-            assert!(cdx_002.is_empty(), "Mode '{}' should be valid", mode);
-        }
-    }
-
-    #[test]
-    fn test_cdx_002_absent_error_mode() {
-        let diagnostics = validate_config("model = \"o4-mini\"");
-        let cdx_002: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-002").collect();
-        assert!(cdx_002.is_empty());
-    }
-
-    #[test]
-    fn test_cdx_002_empty_string() {
-        let diagnostics = validate_config("fullAutoErrorMode = \"\"");
-        let cdx_002: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-002").collect();
-        assert_eq!(cdx_002.len(), 1);
-    }
-
-    #[test]
-    fn test_cdx_002_autofix_case_insensitive() {
-        // "Ask-User" is a case-insensitive match to "ask-user"
-        let diagnostics = validate_config("fullAutoErrorMode = \"Ask-User\"");
-        let cdx_002: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-002").collect();
-        assert_eq!(cdx_002.len(), 1);
-        assert!(
-            cdx_002[0].has_fixes(),
-            "CDX-002 should have auto-fix for case mismatch"
-        );
-        let fix = &cdx_002[0].fixes[0];
-        assert!(!fix.safe, "CDX-002 fix should be unsafe");
-        assert_eq!(fix.replacement, "ask-user", "Fix should suggest 'ask-user'");
-    }
-
-    #[test]
-    fn test_cdx_002_no_autofix_nonsense() {
-        let diagnostics = validate_config("fullAutoErrorMode = \"crash\"");
-        let cdx_002: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-002").collect();
-        assert_eq!(cdx_002.len(), 1);
-        // "crash" has no close match - should NOT get a fix
-        assert!(
-            !cdx_002[0].has_fixes(),
-            "CDX-002 should not auto-fix nonsense values"
-        );
-    }
-
-    #[test]
-    fn test_cdx_002_autofix_targets_correct_bytes() {
-        let content = "fullAutoErrorMode = \"Ask-User\"";
-        let diagnostics = validate_config(content);
-        let cdx_002: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-002").collect();
-        assert_eq!(cdx_002.len(), 1);
-        assert!(cdx_002[0].has_fixes());
-        let fix = &cdx_002[0].fixes[0];
-        let target = &content[fix.start_byte..fix.end_byte];
-        assert_eq!(target, "Ask-User", "Fix should target the inner value");
-    }
-
-    #[test]
-    fn test_cdx_002_type_mismatch() {
-        let diagnostics = validate_config("fullAutoErrorMode = false");
-        let cdx_002: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-002").collect();
-        assert_eq!(cdx_002.len(), 1);
-        assert!(cdx_002[0].message.contains("string"));
-    }
-
-    #[test]
-    fn test_cdx_002_case_sensitive() {
-        let diagnostics = validate_config("fullAutoErrorMode = \"Ask-User\"");
-        let cdx_002: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-002").collect();
+        let hk = rules_of(&diagnostics, "CDX-HK-");
+        let mut hk = hk;
+        hk.sort();
         assert_eq!(
-            cdx_002.len(),
-            1,
-            "fullAutoErrorMode should be case-sensitive"
+            hk,
+            vec![
+                ("CDX-HK-001".to_string(), 5, 1),
+                ("CDX-HK-005".to_string(), 7, 9)
+            ],
+            "{diagnostics:?}"
         );
     }
 
     #[test]
-    fn test_cdx_002_line_number() {
-        let content = "model = \"o4-mini\"\nfullAutoErrorMode = \"crash\"";
-        let diagnostics = validate_config(content);
-        let cdx_002: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-002").collect();
-        assert_eq!(cdx_002.len(), 1);
-        assert_eq!(cdx_002[0].line, 2);
-    }
-
-    // ===== CDX-003: AGENTS.override.md in version control =====
-
-    #[test]
-    fn test_cdx_003_agents_override_md() {
-        let diagnostics = validate_claude_md("AGENTS.override.md", "# Override");
-        let cdx_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-003").collect();
-        assert_eq!(cdx_003.len(), 1);
-        assert_eq!(cdx_003[0].level, DiagnosticLevel::Warning);
-        assert!(cdx_003[0].message.contains("AGENTS.override.md"));
-    }
-
-    #[test]
-    fn test_cdx_003_not_triggered_on_claude_md() {
-        let diagnostics = validate_claude_md("CLAUDE.md", "# My project");
-        let cdx_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-003").collect();
-        assert!(cdx_003.is_empty());
-    }
-
-    #[test]
-    fn test_cdx_003_not_triggered_on_agents_md() {
-        let diagnostics = validate_claude_md("AGENTS.md", "# My project");
-        let cdx_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-003").collect();
-        assert!(cdx_003.is_empty());
+    fn test_cdx_ag_008_override_shadows_agents_md() {
+        use crate::fs::MockFileSystem;
+        use std::sync::Arc;
+        let fs = Arc::new(MockFileSystem::new());
+        fs.add_file("/repo/svc/AGENTS.override.md", "# Team rules");
+        let mut config = LintConfig::default();
+        config.set_fs(fs);
+        let diagnostics = CodexValidator.validate(
+            Path::new("/repo/svc/AGENTS.md"),
+            "# Rules\n\nRun `make test`.",
+            &config,
+        );
+        let ag_008: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-AG-008")
+            .collect();
+        assert_eq!(ag_008.len(), 1);
+        assert_eq!(ag_008[0].level, DiagnosticLevel::Info);
+        let alone = CodexValidator.validate(
+            Path::new("/repo/AGENTS.md"),
+            "# Rules\n\nRun `make test`.",
+            &config,
+        );
+        assert!(!alone.iter().any(|d| d.rule == "CDX-AG-008"));
     }
 
     #[test]
-    fn test_cdx_003_case_sensitive_extension() {
-        // AGENTS.override.MD (wrong extension case) should NOT trigger CDX-003
-        let diagnostics = validate_claude_md("AGENTS.override.MD", "# test");
-        let cdx_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-003").collect();
+    fn test_cdx_ag_009_size_limit_skips_shadowed_files() {
+        use crate::fs::MockFileSystem;
+        use std::sync::Arc;
+        let big = format!(
+            "# Rules\n\n{}",
+            "Run `make test` before committing.\n".repeat(1000)
+        );
+        assert!(big.len() > 32768);
+        let diagnostics = validate_claude_md("AGENTS.md", &big);
+        let ag_009: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-AG-009")
+            .collect();
+        assert_eq!(ag_009.len(), 1);
         assert!(
-            cdx_003.is_empty(),
-            "CDX-003 should not fire for AGENTS.override.MD"
+            !ag_009[0]
+                .suggestion
+                .as_deref()
+                .unwrap_or("")
+                .contains("@import")
+        );
+        assert!(
+            validate_claude_md("AGENTS.md", "# Rules\n\nRun `make test`.")
+                .iter()
+                .all(|d| d.rule != "CDX-AG-009")
+        );
+        // Shadowed by AGENTS.override.md: Codex never reads it.
+        let fs = Arc::new(MockFileSystem::new());
+        fs.add_file("/repo/AGENTS.override.md", "# Override");
+        let mut config = LintConfig::default();
+        config.set_fs(fs);
+        let shadowed = CodexValidator.validate(Path::new("/repo/AGENTS.md"), &big, &config);
+        assert!(!shadowed.iter().any(|d| d.rule == "CDX-AG-009"));
+    }
+
+    #[test]
+    fn test_count_vague_rules() {
+        // Moved from schemas/claude_md.rs with the CDX-AG-003 phrase list.
+        for content in [
+            "Follow best practices when writing code.",
+            "Write clean and maintainable code.",
+            "Be careful.",
+        ] {
+            assert_eq!(count_vague_rules(content), 1, "{content}");
+        }
+        for content in [
+            "Use the coding style defined in .editorconfig\nFollow team conventions",
+            "Follow the airbnb style guide for JavaScript.",
+            "Be helpful and accurate.",
+        ] {
+            assert_eq!(count_vague_rules(content), 0, "{content}");
+        }
+    }
+
+    #[test]
+    fn test_agents_local_md_is_not_a_codex_file() {
+        let diagnostics = validate_claude_md("AGENTS.local.md", "");
+        assert!(diagnostics.is_empty(), "{diagnostics:?}");
+        let diagnostics = validate_claude_md("AGENTS.md", "");
+        assert!(diagnostics.iter().any(|d| d.rule == "CDX-AG-001"));
+    }
+
+    #[test]
+    fn test_cdx_ag_002_is_a_warning() {
+        let diagnostics = validate_claude_md("AGENTS.md", "token: ghp_abcdefghijklmnopqrstu");
+        let ag_002: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-AG-002")
+            .collect();
+        assert_eq!(ag_002.len(), 1);
+        assert_eq!(ag_002[0].level, DiagnosticLevel::Warning);
+    }
+
+    // ===== Retired CDX-001/CDX-002/CDX-003 =====
+
+    #[test]
+    fn test_retired_typescript_cli_keys_are_unknown_keys() {
+        // CDX-001/CDX-002 were retired: approvalMode and fullAutoErrorMode
+        // belong to the retired TypeScript CLI and the Rust CLI ignores them.
+        let diagnostics =
+            validate_config("approvalMode = \"yolo\"\nfullAutoErrorMode = \"crash\"\n");
+        let cdx_004: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-004").collect();
+        assert_eq!(cdx_004.len(), 2, "{diagnostics:?}");
+        assert!(cdx_004[0].message.contains("TypeScript"));
+        assert!(
+            !diagnostics
+                .iter()
+                .any(|d| d.rule == "CDX-001" || d.rule == "CDX-002")
         );
     }
 
     #[test]
-    fn test_cdx_003_not_triggered_on_config() {
-        let diagnostics = validate_config("approvalMode = \"suggest\"");
-        let cdx_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-003").collect();
-        assert!(cdx_003.is_empty());
+    fn test_cdx_004_managed_hooks_only_points_to_requirements() {
+        let diagnostics = validate_config("allow_managed_hooks_only = true\n");
+        let cdx_004: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-004").collect();
+        assert_eq!(cdx_004.len(), 1);
+        assert!(cdx_004[0].message.contains("requirements.toml"));
+    }
+
+    #[test]
+    fn test_agents_override_md_is_not_reported_by_itself() {
+        // CDX-003 was retired: the Codex docs present committed nested
+        // AGENTS.override.md files as the team pattern.
+        let diagnostics =
+            validate_claude_md("AGENTS.override.md", "# Override\n\nUse `make test`.");
+        assert!(diagnostics.is_empty(), "{diagnostics:?}");
     }
 
     // ===== Config Integration =====
@@ -3074,7 +3437,7 @@ mod tests {
         let mut config = LintConfig::default();
         config.rules_mut().codex = false;
 
-        let diagnostics = validate_config_with_config("approvalMode = \"invalid\"", &config);
+        let diagnostics = validate_config_with_config("totally_unknown_key = true", &config);
         let cdx_rules: Vec<_> = diagnostics
             .iter()
             .filter(|d| d.rule.starts_with("CDX-"))
@@ -3085,27 +3448,22 @@ mod tests {
     #[test]
     fn test_config_disabled_specific_rule() {
         let mut config = LintConfig::default();
-        config.rules_mut().disabled_rules = vec!["CDX-001".to_string()];
+        config.rules_mut().disabled_rules = vec!["CDX-004".to_string()];
 
-        let diagnostics = validate_config_with_config("approvalMode = \"invalid\"", &config);
-        let cdx_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-001").collect();
-        assert!(cdx_001.is_empty());
+        let diagnostics = validate_config_with_config("totally_unknown_key = true", &config);
+        let cdx_004: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-004").collect();
+        assert!(cdx_004.is_empty());
     }
 
     #[test]
     fn test_all_cdx_rules_can_be_disabled() {
-        let rules = [
-            "CDX-001", "CDX-002", "CDX-003", "CDX-004", "CDX-005", "CDX-006",
-        ];
+        let rules = ["CDX-004", "CDX-005", "CDX-006"];
 
         for rule in rules {
             let mut config = LintConfig::default();
             config.rules_mut().disabled_rules = vec![rule.to_string()];
 
             let (content, path): (&str, &str) = match rule {
-                "CDX-001" => ("approvalMode = \"invalid\"", ".codex/config.toml"),
-                "CDX-002" => ("fullAutoErrorMode = \"crash\"", ".codex/config.toml"),
-                "CDX-003" => ("# Override", "AGENTS.override.md"),
                 "CDX-004" => ("totally_unknown_key = true", ".codex/config.toml"),
                 "CDX-005" => ("project_doc_max_bytes = -1", ".codex/config.toml"),
                 "CDX-006" => (
@@ -3132,9 +3490,8 @@ mod tests {
     fn test_valid_config_no_issues() {
         let content = r#"
 model = "o4-mini"
-approvalMode = "suggest"
-fullAutoErrorMode = "ask-user"
-notify = true
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
 "#;
         let diagnostics = validate_config(content);
         assert!(
@@ -3148,55 +3505,6 @@ notify = true
     fn test_empty_config_no_issues() {
         let diagnostics = validate_config("");
         assert!(diagnostics.is_empty());
-    }
-
-    // ===== Multiple Issues =====
-
-    #[test]
-    fn test_multiple_issues() {
-        let content = "approvalMode = \"yolo\"\nfullAutoErrorMode = \"crash\"";
-        let diagnostics = validate_config(content);
-        assert!(diagnostics.iter().any(|d| d.rule == "CDX-001"));
-        assert!(diagnostics.iter().any(|d| d.rule == "CDX-002"));
-    }
-
-    #[test]
-    fn test_cdx_002_empty_with_cdx_001_invalid() {
-        // Both CDX-001 (invalid value) and CDX-002 (empty string) should fire together
-        let content = "approvalMode = \"invalid\"\nfullAutoErrorMode = \"\"";
-        let diagnostics = validate_config(content);
-        let cdx_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-001").collect();
-        let cdx_002: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-002").collect();
-        assert_eq!(
-            cdx_001.len(),
-            1,
-            "CDX-001 should fire for invalid approvalMode"
-        );
-        assert_eq!(
-            cdx_002.len(),
-            1,
-            "CDX-002 should fire for empty fullAutoErrorMode"
-        );
-    }
-
-    #[test]
-    fn test_both_fields_wrong_type() {
-        let content = "approvalMode = true\nfullAutoErrorMode = 123";
-        let diagnostics = validate_config(content);
-        let cdx_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-001").collect();
-        let cdx_002: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CDX-002").collect();
-        assert_eq!(
-            cdx_001.len(),
-            1,
-            "CDX-001 should fire for wrong-type approvalMode"
-        );
-        assert_eq!(
-            cdx_002.len(),
-            1,
-            "CDX-002 should fire for wrong-type fullAutoErrorMode"
-        );
-        assert!(cdx_001[0].message.contains("string"));
-        assert!(cdx_002[0].message.contains("string"));
     }
 
     // ===== CDX-004: Unknown config keys =====
@@ -3214,9 +3522,7 @@ notify = true
     fn test_cdx_004_known_keys_no_warning() {
         let content = r#"
 model = "o4-mini"
-approvalMode = "suggest"
-fullAutoErrorMode = "ask-user"
-notify = true
+notify = ["notify-send"]
 project_doc_max_bytes = 32768
 project_doc_fallback_filenames = ["AGENTS.md", "README.md"]
 "#;
@@ -3263,7 +3569,7 @@ name = "test"
         // Config keys introduced in Codex rust-v0.133.0 (diffed from
         // codex-rs/core/config.schema.json between rust-v0.129.0 and
         // rust-v0.133.0). Regression guard against CDX-004 (unknown key) and
-        // CDX-CFG-026 (unknown permissions.network sub-field) false-positives
+        // CDX-CFG-026 (unknown network key of a permission profile) false-positives
         // on valid 0.133 configs. Covers every new allow-list entry:
         // top-level (apps_mcp_product_sku, desktop, include_collaboration_
         // mode_instructions, model_auto_compact_token_limit_scope), features
@@ -3288,7 +3594,7 @@ plugin_sharing = true
 command = "example-server"
 oauth = true
 
-[permissions.network]
+[permissions.dev.network]
 mitm = true
 "#;
         let diagnostics = validate_config(content);
@@ -3892,13 +4198,29 @@ experimental_thread_store_endpoint = "https://thread-store.example"
 
     #[test]
     fn test_cdx_cfg_007_danger_full_access_without_ack() {
+        // Advice, not a rejection: a warning (formerly an error).
         let diagnostics = validate_config("sandbox_mode = \"danger-full-access\"");
         let cdx_007: Vec<_> = diagnostics
             .iter()
             .filter(|d| d.rule == "CDX-CFG-007")
             .collect();
         assert_eq!(cdx_007.len(), 1);
-        assert_eq!(cdx_007[0].level, DiagnosticLevel::Error);
+        assert_eq!(cdx_007[0].level, DiagnosticLevel::Warning);
+        assert_eq!((cdx_007[0].line, cdx_007[0].column), (1, 1));
+    }
+
+    #[test]
+    fn test_cdx_cfg_007_permission_profile_and_no_approvals() {
+        let diagnostics = validate_config(
+            "approval_policy = \"never\"\ndefault_permissions = \":danger-full-access\"\n",
+        );
+        let cdx_007: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-007")
+            .collect();
+        assert_eq!(cdx_007.len(), 1);
+        assert_eq!(cdx_007[0].line, 2);
+        assert!(cdx_007[0].message.contains("no approvals"));
     }
 
     #[test]
@@ -4356,8 +4678,13 @@ whimsy = true
             "Keyword in assignment context should still trigger"
         );
 
-        let generic = validate_claude_md("AGENTS.md", "Be helpful and accurate.");
+        // CDX-AG-003 now uses a Codex-owned list of vague rules instead of the
+        // Claude memory list of model-behavior phrases.
+        let generic =
+            validate_claude_md("AGENTS.md", "Follow best practices and write clean code.");
         assert!(generic.iter().any(|d| d.rule == "CDX-AG-003"));
+        let claude_phrase = validate_claude_md("AGENTS.md", "Be helpful and accurate.");
+        assert!(!claude_phrase.iter().any(|d| d.rule == "CDX-AG-003"));
     }
 
     #[test]
@@ -4388,9 +4715,17 @@ approvals_reviewer = "guardian_subagent"
     }
 
     #[test]
-    fn test_cdx_cfg_013_invalid_sandbox_workspace_write_mode() {
+    fn test_sandbox_workspace_write_mode_is_an_unknown_key() {
+        // CDX-CFG-013 was retired: no Codex schema has
+        // sandbox_workspace_write.mode, so CDX-CFG-006 reports it as unknown.
         let diagnostics = validate_config("[sandbox_workspace_write]\nmode = \"everything\"");
-        assert!(diagnostics.iter().any(|d| d.rule == "CDX-CFG-013"));
+        assert!(!diagnostics.iter().any(|d| d.rule == "CDX-CFG-013"));
+        assert!(
+            diagnostics
+                .iter()
+                .any(|d| d.rule == "CDX-CFG-006"
+                    && d.message.contains("sandbox_workspace_write.mode"))
+        );
     }
 
     #[test]
@@ -4582,9 +4917,20 @@ approvals_reviewer = "guardian_subagent"
     }
 
     #[test]
-    fn test_cdx_app_003_valid_profile_no_diagnostic() {
-        let diagnostics = validate_config("profile = \"default\"");
-        assert!(diagnostics.iter().all(|d| d.rule != "CDX-APP-003"));
+    fn test_cdx_app_003_removed_profile_selector_and_table() {
+        // The selector and [profiles.*] tables are no longer read (formerly a
+        // string selector passed).
+        let diagnostics =
+            validate_config("profile = \"default\"\n\n[profiles.default]\nmodel = \"x\"\n");
+        let cdx_003: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-APP-003")
+            .collect();
+        assert_eq!(cdx_003.len(), 2);
+        assert_eq!(cdx_003[0].line, 1);
+        assert_eq!(cdx_003[1].line, 3);
+        // CDX-CFG-032 leaves profile keys to CDX-APP-003.
+        assert!(!diagnostics.iter().any(|d| d.rule == "CDX-CFG-032"));
     }
 
     // M10: Comprehensive negative test - valid config values don't trigger CDX-CFG rules
@@ -4602,13 +4948,12 @@ cli_auth_credentials_store = "auto"
 mcp_oauth_credentials_store = "auto"
 model_context_window = 128000
 model_auto_compact_token_limit = 50000
-profile = "default"
 file_opener = "code"
 approvals_reviewer = "user"
 service_tier = "flex"
 
 [sandbox_workspace_write]
-mode = "allowlist"
+network_access = false
 
 [shell_environment_policy]
 inherit = "core"
@@ -4632,10 +4977,6 @@ url = "https://example.com"
 
 [windows]
 sandbox = "elevated"
-
-[permissions.network]
-enabled = true
-mode = "allowlist"
 "#;
         let diagnostics = validate_config(content);
         let cdx_cfg: Vec<_> = diagnostics
@@ -4659,6 +5000,8 @@ mode = "allowlist"
     // M12: CDX-CFG-007 suppression with hide_full_access_warning
     #[test]
     fn test_cdx_cfg_007_suppressed_with_hide_warning() {
+        // The notice key only records that the TUI warning was dismissed; it
+        // no longer suppresses CDX-CFG-007 (formerly it did).
         let content = r#"
 sandbox_mode = "danger-full-access"
 
@@ -4666,7 +5009,7 @@ sandbox_mode = "danger-full-access"
 hide_full_access_warning = true
 "#;
         let diagnostics = validate_config(content);
-        assert!(diagnostics.iter().all(|d| d.rule != "CDX-CFG-007"));
+        assert!(diagnostics.iter().any(|d| d.rule == "CDX-CFG-007"));
     }
 
     // M13: CDX-CFG-010 env-var exclusion
@@ -5093,7 +5436,9 @@ approvals_reviewer = 42
 
     #[test]
     fn test_cdx_cfg_026_unknown_network_sub_field() {
-        let content = "[permissions.network]\nunknown_option = true\nenabled = true";
+        // Network settings belong to a named profile (formerly a bare
+        // [permissions.network] table was checked).
+        let content = "[permissions.dev.network]\nunknown_option = true\nenabled = true";
         let diagnostics = validate_config(content);
         let cdx_026: Vec<_> = diagnostics
             .iter()
@@ -5106,7 +5451,7 @@ approvals_reviewer = 42
 
     #[test]
     fn test_cdx_cfg_026_valid_network_sub_fields_no_diagnostic() {
-        let content = "[permissions.network]\nenabled = true\nmode = \"allowlist\"\nallowed_domains = [\"example.com\"]";
+        let content = "[permissions.dev.network]\nenabled = true\nmode = \"limited\"\n\n[permissions.dev.network.domains]\n\"example.com\" = \"allow\"";
         let diagnostics = validate_config(content);
         let cdx_026: Vec<_> = diagnostics
             .iter()

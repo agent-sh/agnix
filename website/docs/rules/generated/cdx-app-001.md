@@ -1,9 +1,9 @@
 ---
 id: cdx-app-001
-title: "CDX-APP-001: Invalid default_tools_approval_mode Value"
+title: "CDX-APP-001: Invalid Tool Approval Mode - Codex CLI"
 sidebar_label: "CDX-APP-001"
-description: "agnix rule CDX-APP-001 checks for invalid default_tools_approval_mode value in codex cli files. Severity: HIGH. See examples and fix guidance."
-keywords: ["CDX-APP-001", "invalid default_tools_approval_mode value", "codex cli", "validation", "agnix", "linter"]
+description: "agnix rule CDX-APP-001 checks for invalid tool approval mode in codex cli files. Severity: HIGH. See examples and fix guidance."
+keywords: ["CDX-APP-001", "invalid tool approval mode", "codex cli", "validation", "agnix", "linter"]
 ---
 
 ## Summary
@@ -13,7 +13,7 @@ keywords: ["CDX-APP-001", "invalid default_tools_approval_mode value", "codex cl
 - **Category**: `Codex CLI`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,9 +23,9 @@ keywords: ["CDX-APP-001", "invalid default_tools_approval_mode value", "codex cl
 
 ## Evidence Sources
 
-- https://developers.openai.com/codex/config-reference
-- https://developers.openai.com/codex/config-schema.json
-- https://developers.openai.com/codex/enterprise/managed-configuration
+- https://learn.chatgpt.com/docs/extend/mcp
+- https://learn.chatgpt.com/docs/config-file/config-reference
+- https://learn.chatgpt.com/docs/config-schema.json
 
 ## Test Coverage Metadata
 
@@ -47,6 +47,7 @@ default_tools_approval_mode = "manual"
 ### Valid
 
 ```toml
-[apps.github]
-default_tools_approval_mode = "prompt"
+[mcp_servers.docs]
+url = "https://example.com/mcp"
+default_tools_approval_mode = "writes"
 ```

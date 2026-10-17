@@ -1,7 +1,7 @@
 # Rules Reference
 
-This section contains all `606` validation rules generated from `knowledge-base/rules.json`.
-`129` rules have automatic fixes.
+This section contains all `650` validation rules generated from `knowledge-base/rules.json`.
+`127` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
 |------|------|----------|----------|----------|
@@ -183,9 +183,6 @@ This section contains all `606` validation rules generated from `knowledge-base/
 | [CC-SET-039](./generated/cc-set-039.md) | Secret Files Not Denied | LOW | Claude Settings | No |
 | [CC-SET-040](./generated/cc-set-040.md) | Memory Path Setting Cannot Match | MEDIUM | Claude Settings | No |
 | [CDX-000](./generated/cdx-000.md) | TOML Parse Error | HIGH | Codex CLI | No |
-| [CDX-001](./generated/cdx-001.md) | Invalid Approval Mode | HIGH | Codex CLI | Yes (unsafe) |
-| [CDX-002](./generated/cdx-002.md) | Invalid Full Auto Error Mode | HIGH | Codex CLI | Yes (unsafe) |
-| [CDX-003](./generated/cdx-003.md) | AGENTS.override.md in Version Control | MEDIUM | Codex CLI | No |
 | [CDX-004](./generated/cdx-004.md) | Unknown Config Key | MEDIUM | Codex CLI | Yes (safe) |
 | [CDX-005](./generated/cdx-005.md) | Invalid project_doc_max_bytes | HIGH | Codex CLI | No |
 | [CDX-006](./generated/cdx-006.md) | Invalid project_doc_fallback_filenames | HIGH | Codex CLI | No |
@@ -195,13 +192,12 @@ This section contains all `606` validation rules generated from `knowledge-base/
 | [CDX-CFG-004](./generated/cdx-cfg-004.md) | Invalid model_verbosity Value | HIGH | Codex CLI | No |
 | [CDX-CFG-005](./generated/cdx-cfg-005.md) | Invalid personality Value | HIGH | Codex CLI | No |
 | [CDX-CFG-006](./generated/cdx-cfg-006.md) | Unknown Codex Config Field | MEDIUM | Codex CLI | No |
-| [CDX-CFG-007](./generated/cdx-cfg-007.md) | Danger Full Access Without Acknowledgment | HIGH | Codex CLI | No |
+| [CDX-CFG-007](./generated/cdx-cfg-007.md) | Full Access Sandbox Posture | MEDIUM | Codex CLI | No |
 | [CDX-CFG-008](./generated/cdx-cfg-008.md) | Invalid shell_environment_policy Value | HIGH | Codex CLI | No |
 | [CDX-CFG-009](./generated/cdx-cfg-009.md) | Invalid MCP Server Structure in Codex Config | HIGH | Codex CLI | No |
 | [CDX-CFG-010](./generated/cdx-cfg-010.md) | Hardcoded Secret in Codex Config | HIGH | Codex CLI | No |
 | [CDX-CFG-011](./generated/cdx-cfg-011.md) | Invalid Feature Flag Name or Shape | MEDIUM | Codex CLI | No |
 | [CDX-CFG-012](./generated/cdx-cfg-012.md) | Invalid cli_auth_credentials_store Value | HIGH | Codex CLI | No |
-| [CDX-CFG-013](./generated/cdx-cfg-013.md) | Invalid sandbox_workspace_write Mode | HIGH | Codex CLI | No |
 | [CDX-CFG-014](./generated/cdx-cfg-014.md) | Invalid model Value | MEDIUM | Codex CLI | No |
 | [CDX-CFG-015](./generated/cdx-cfg-015.md) | Invalid model_provider Value | HIGH | Codex CLI | No |
 | [CDX-CFG-016](./generated/cdx-cfg-016.md) | Invalid model_reasoning_summary Value | MEDIUM | Codex CLI | No |
@@ -212,14 +208,16 @@ This section contains all `606` validation rules generated from `knowledge-base/
 | [CDX-CFG-021](./generated/cdx-cfg-021.md) | Invalid model_context_window Value | MEDIUM | Codex CLI | No |
 | [CDX-CFG-022](./generated/cdx-cfg-022.md) | Invalid model_auto_compact_token_limit Value | MEDIUM | Codex CLI | No |
 | [CDX-AG-001](./generated/cdx-ag-001.md) | Empty AGENTS.md for Codex | HIGH | Codex CLI | No |
-| [CDX-AG-002](./generated/cdx-ag-002.md) | Secrets in AGENTS.md for Codex | HIGH | Codex CLI | No |
-| [CDX-AG-003](./generated/cdx-ag-003.md) | Generic AGENTS.md Guidance for Codex | MEDIUM | Codex CLI | No |
+| [CDX-AG-002](./generated/cdx-ag-002.md) | Secrets in AGENTS.md for Codex | MEDIUM | Codex CLI | No |
+| [CDX-AG-003](./generated/cdx-ag-003.md) | Generic AGENTS.md Guidance for Codex | LOW | Codex CLI | No |
 | [CDX-AG-005](./generated/cdx-ag-005.md) | AGENTS.md References Missing File | MEDIUM | Codex CLI | No |
 | [CDX-AG-006](./generated/cdx-ag-006.md) | AGENTS.md Missing Project Context | LOW | Codex CLI | No |
-| [CDX-AG-007](./generated/cdx-ag-007.md) | AGENTS.md Contradicts config.toml | MEDIUM | Codex CLI | No |
-| [CDX-APP-001](./generated/cdx-app-001.md) | Invalid default_tools_approval_mode Value | HIGH | Codex CLI | No |
+| [CDX-AG-008](./generated/cdx-ag-008.md) | AGENTS.md Shadowed by AGENTS.override.md | LOW | Codex CLI | No |
+| [CDX-AG-009](./generated/cdx-ag-009.md) | AGENTS.md Exceeds Codex project_doc_max_bytes | MEDIUM | Codex CLI | No |
+| [CDX-AG-010](./generated/cdx-ag-010.md) | Codex Instruction Chain Exceeds project_doc_max_bytes | MEDIUM | Codex CLI | No |
+| [CDX-APP-001](./generated/cdx-app-001.md) | Invalid Tool Approval Mode | HIGH | Codex CLI | No |
 | [CDX-APP-002](./generated/cdx-app-002.md) | Invalid skills Configuration | MEDIUM | Codex CLI | No |
-| [CDX-APP-003](./generated/cdx-app-003.md) | Invalid profile Configuration | MEDIUM | Codex CLI | No |
+| [CDX-APP-003](./generated/cdx-app-003.md) | Removed Profile Selector or Profiles Table | MEDIUM | Codex CLI | No |
 | [CDX-PL-001](./generated/cdx-pl-001.md) | Codex Plugin Manifest Location or Agent Plugins Schema | HIGH | Codex CLI | No |
 | [CDX-PL-002](./generated/cdx-pl-002.md) | Invalid Plugin Manifest | HIGH | Codex CLI | No |
 | [CDX-PL-003](./generated/cdx-pl-003.md) | Missing or Empty Plugin Name | HIGH | Codex CLI | Yes (unsafe) |
@@ -233,19 +231,42 @@ This section contains all `606` validation rules generated from `knowledge-base/
 | [CDX-PL-011](./generated/cdx-pl-011.md) | Invalid Interface URL | MEDIUM | Codex CLI | No |
 | [CDX-PL-012](./generated/cdx-pl-012.md) | Invalid Asset Path | MEDIUM | Codex CLI | No |
 | [CDX-PL-013](./generated/cdx-pl-013.md) | Invalid Hooks Value | LOW | Codex CLI | No |
-| [CDX-PL-014](./generated/cdx-pl-014.md) | Missing Description | LOW | Codex CLI | No |
+| [CDX-PL-014](./generated/cdx-pl-014.md) | Missing Required Codex-Format Package Field | LOW | Codex CLI | No |
 | [CDX-PL-015](./generated/cdx-pl-015.md) | Invalid Skills Path Type | MEDIUM | Codex CLI | No |
 | [CDX-PL-016](./generated/cdx-pl-016.md) | Invalid Dark-mode Logo Path | MEDIUM | Codex CLI | No |
+| [CDX-PL-017](./generated/cdx-pl-017.md) | Codex Compatibility Manifest Without Portable Root Manifest | LOW | Codex CLI | No |
+| [CDX-PL-018](./generated/cdx-pl-018.md) | Plugin Exceeds Public Submission Limits | LOW | Codex CLI | No |
+| [CDX-PL-019](./generated/cdx-pl-019.md) | Secret in Plugin MCP Configuration | HIGH | Codex CLI | No |
 | [CDX-CFG-023](./generated/cdx-cfg-023.md) | Invalid Approval Policy Sub-field | MEDIUM | Codex CLI | No |
 | [CDX-CFG-024](./generated/cdx-cfg-024.md) | Invalid Approvals Reviewer Value | MEDIUM | Codex CLI | Yes (unsafe) |
 | [CDX-CFG-025](./generated/cdx-cfg-025.md) | Invalid Service Tier Value | MEDIUM | Codex CLI | Yes (unsafe) |
-| [CDX-CFG-026](./generated/cdx-cfg-026.md) | Invalid Network Permission Field | LOW | Codex CLI | Yes (safe) |
+| [CDX-CFG-026](./generated/cdx-cfg-026.md) | Unknown Permission Profile Network Key | LOW | Codex CLI | Yes (safe) |
 | [CDX-CFG-027](./generated/cdx-cfg-027.md) | Invalid Windows Sandbox Value | LOW | Codex CLI | Yes (unsafe) |
 | [CDX-CFG-028](./generated/cdx-cfg-028.md) | Unsupported Inline MCP bearer_token Field | HIGH | Codex CLI | No |
 | [CDX-CFG-029](./generated/cdx-cfg-029.md) | Invalid Agent Concurrency Limit | HIGH | Codex CLI | No |
 | [CDX-CFG-030](./generated/cdx-cfg-030.md) | Invalid web_search Mode | MEDIUM | Codex CLI | No |
+| [CDX-CFG-031](./generated/cdx-cfg-031.md) | Invalid skills.max_context_tokens | MEDIUM | Codex CLI | No |
+| [CDX-CFG-032](./generated/cdx-cfg-032.md) | Key Ignored in Project Config | MEDIUM | Codex CLI | No |
+| [CDX-CFG-033](./generated/cdx-cfg-033.md) | Permission Profile Shadowed by Legacy Sandbox Settings | MEDIUM | Codex CLI | No |
+| [CDX-CFG-034](./generated/cdx-cfg-034.md) | Profile Domain Rules Without Network Proxy | MEDIUM | Codex CLI | No |
+| [CDX-CFG-035](./generated/cdx-cfg-035.md) | Invalid Permission Profile Inheritance | HIGH | Codex CLI | Yes (unsafe) |
 | [CDX-REQ-000](./generated/cdx-req-000.md) | Codex requirements.toml TOML Parse Error | HIGH | Codex CLI | No |
 | [CDX-REQ-001](./generated/cdx-req-001.md) | Unknown Codex requirements.toml Key | MEDIUM | Codex CLI | No |
+| [CDX-REQ-002](./generated/cdx-req-002.md) | Requirements Rule Without Prompt or Forbidden Decision | HIGH | Codex CLI | No |
+| [CDX-REQ-003](./generated/cdx-req-003.md) | Managed Hook Script Outside managed_dir | LOW | Codex CLI | No |
+| [CDX-REQ-004](./generated/cdx-req-004.md) | Conflicting experimental_network Domain Settings | LOW | Codex CLI | No |
+| [CDX-HK-000](./generated/cdx-hk-000.md) | Codex Hooks File Fails to Load | HIGH | Codex CLI | No |
+| [CDX-HK-001](./generated/cdx-hk-001.md) | Codex Hook Timeout Out of Range | MEDIUM | Codex CLI | No |
+| [CDX-HK-002](./generated/cdx-hk-002.md) | Codex Hook Handler Skipped | MEDIUM | Codex CLI | No |
+| [CDX-HK-003](./generated/cdx-hk-003.md) | Hooks in Both hooks.json and Inline [hooks] | LOW | Codex CLI | No |
+| [CDX-HK-004](./generated/cdx-hk-004.md) | additionalContextLimit Ineffective or Unbounded | LOW | Codex CLI | No |
+| [CDX-HK-005](./generated/cdx-hk-005.md) | Unknown Codex Hook Event | MEDIUM | Codex CLI | No |
+| [CDX-SUB-001](./generated/cdx-sub-001.md) | Invalid Codex Custom Agent File | HIGH | Codex CLI | No |
+| [CDX-SUB-002](./generated/cdx-sub-002.md) | Session Setting in Codex Custom Agent File | MEDIUM | Codex CLI | No |
+| [CDX-SUB-003](./generated/cdx-sub-003.md) | Custom Agent Replaces a Built-in Agent | LOW | Codex CLI | No |
+| [CDX-RL-001](./generated/cdx-rl-001.md) | Forbidden Rule Without Justification | LOW | Codex CLI | No |
+| [CDX-RL-002](./generated/cdx-rl-002.md) | Broad Allow Rule Outside the Sandbox | MEDIUM | Codex CLI | No |
+| [CDX-DEP-001](./generated/cdx-dep-001.md) | Deprecated Codex Custom Prompt | LOW | Codex CLI | No |
 | [CL-SK-001](./generated/cl-sk-001.md) | Cline Skill Uses Unsupported Field | MEDIUM | Cline Skills | Yes (safe/unsafe) |
 | [CL-SK-004](./generated/cl-sk-004.md) | Cline Skill Without Instructions | MEDIUM | Cline Skills | No |
 | [CLN-001](./generated/cln-001.md) | Empty Cline Rules File | HIGH | Cline | No |
@@ -338,6 +359,9 @@ This section contains all `606` validation rules generated from `knowledge-base/
 | [CUR-039](./generated/cur-039.md) | Invalid Cursor CLI Config | HIGH | Cursor | No |
 | [CUR-040](./generated/cur-040.md) | Cursor Plugin Submission Checklist | MEDIUM | Cursor | No |
 | [CX-SK-001](./generated/cx-sk-001.md) | Codex Skill Uses Unsupported Field | MEDIUM | Codex Skills | Yes (safe/unsafe) |
+| [CX-SK-004](./generated/cx-sk-004.md) | Skill Catalog Exceeds Codex Fallback Budget | LOW | Codex Skills | No |
+| [CX-SK-006](./generated/cx-sk-006.md) | agents/openai.yaml Field Ignored by Codex | MEDIUM | Codex Skills | No |
+| [CX-SK-007](./generated/cx-sk-007.md) | Auxiliary Documentation in Codex Skill Folder | LOW | Codex Skills | No |
 | [GM-001](./generated/gm-001.md) | Invalid Markdown Structure in GEMINI.md | HIGH | Gemini CLI | Yes (safe) |
 | [GM-002](./generated/gm-002.md) | Missing Section Headers in GEMINI.md | MEDIUM | Gemini CLI | No |
 | [GM-003](./generated/gm-003.md) | Missing Project Context in GEMINI.md | MEDIUM | Gemini CLI | No |
@@ -549,28 +573,25 @@ This section contains all `606` validation rules generated from `knowledge-base/
 | [XP-SK-001](./generated/xp-sk-001.md) | Skill Uses Client-Specific Features | LOW | Cross-Platform | No |
 | [XP-SK-002](./generated/xp-sk-002.md) | Hardcoded User Directory Path In Skill | MEDIUM | Cross-Platform | No |
 | [OC-CFG-001](./generated/oc-cfg-001.md) | Invalid Model Format | HIGH | OpenCode | No |
-| [OC-CFG-002](./generated/oc-cfg-002.md) | Invalid autoupdate value | HIGH | OpenCode | No |
-| [OC-CFG-003](./generated/oc-cfg-003.md) | Unknown Top-level Config Field | MEDIUM | OpenCode | No |
+| [OC-CFG-002](./generated/oc-cfg-002.md) | Invalid autoupdate or update Value | HIGH | OpenCode | No |
 | [OC-CFG-004](./generated/oc-cfg-004.md) | Invalid Default Agent | MEDIUM | OpenCode | No |
-| [OC-CFG-005](./generated/oc-cfg-005.md) | Hardcoded API Key | HIGH | OpenCode | No |
+| [OC-CFG-005](./generated/oc-cfg-005.md) | Hardcoded Secret in Config | MEDIUM | OpenCode | No |
 | [OC-CFG-006](./generated/oc-cfg-006.md) | Invalid MCP Server Structure | HIGH | OpenCode | No |
 | [OC-CFG-007](./generated/oc-cfg-007.md) | Invalid MCP Server Command, URL, cwd, or Environment | HIGH | OpenCode | No |
 | [OC-AG-001](./generated/oc-ag-001.md) | Invalid Agent Mode Value | HIGH | OpenCode | No |
 | [OC-AG-002](./generated/oc-ag-002.md) | Invalid Color Format | HIGH | OpenCode | No |
-| [OC-AG-003](./generated/oc-ag-003.md) | Temperature Out of Range | HIGH | OpenCode | No |
+| [OC-AG-003](./generated/oc-ag-003.md) | Temperature Out of Range | MEDIUM | OpenCode | No |
 | [OC-AG-004](./generated/oc-ag-004.md) | Steps Not a Positive Integer | HIGH | OpenCode | No |
-| [OC-PM-001](./generated/oc-pm-001.md) | Invalid Permission Action | HIGH | OpenCode | No |
-| [OC-PM-002](./generated/oc-pm-002.md) | Unknown Permission Key | MEDIUM | OpenCode | No |
-| [OC-AGM-001](./generated/oc-agm-001.md) | Empty AGENTS.md | HIGH | OpenCode | No |
-| [OC-AGM-002](./generated/oc-agm-002.md) | Secrets in AGENTS.md | HIGH | OpenCode | No |
-| [OC-DEP-001](./generated/oc-dep-001.md) | Deprecated mode Field | MEDIUM | OpenCode | Yes (safe) |
+| [OC-PM-002](./generated/oc-pm-002.md) | Possibly Misspelled Permission Key | LOW | OpenCode | No |
+| [OC-AGM-002](./generated/oc-agm-002.md) | Secrets in AGENTS.md | MEDIUM | OpenCode | No |
+| [OC-DEP-001](./generated/oc-dep-001.md) | Deprecated mode Map | MEDIUM | OpenCode | Yes (unsafe) |
 | [OC-DEP-002](./generated/oc-dep-002.md) | Deprecated tools Field | MEDIUM | OpenCode | No |
-| [OC-DEP-003](./generated/oc-dep-003.md) | Deprecated autoshare Field | MEDIUM | OpenCode | Yes (safe) |
+| [OC-DEP-003](./generated/oc-dep-003.md) | Deprecated autoshare Field | MEDIUM | OpenCode | Yes (unsafe) |
 | [OC-DEP-005](./generated/oc-dep-005.md) | Deprecated TUI Keys | MEDIUM | OpenCode | Yes (unsafe) |
-| [OC-DEP-006](./generated/oc-dep-006.md) | Deprecated MaxSteps Field | MEDIUM | OpenCode | Yes (safe) |
-| [OC-DEP-007](./generated/oc-dep-007.md) | Deprecated Reference Field | MEDIUM | OpenCode | Yes (safe) |
+| [OC-DEP-006](./generated/oc-dep-006.md) | Deprecated maxSteps Field | MEDIUM | OpenCode | Yes (unsafe) |
+| [OC-DEP-007](./generated/oc-dep-007.md) | Deprecated reference Field | MEDIUM | OpenCode | Yes (unsafe) |
 | [OC-CFG-008](./generated/oc-cfg-008.md) | Invalid Log Level | HIGH | OpenCode | Yes (unsafe) |
-| [OC-CFG-009](./generated/oc-cfg-009.md) | Invalid Compaction Reserved | HIGH | OpenCode | No |
+| [OC-CFG-009](./generated/oc-cfg-009.md) | Invalid Compaction Token Budget | HIGH | OpenCode | No |
 | [OC-CFG-010](./generated/oc-cfg-010.md) | Invalid Skills URL | HIGH | OpenCode | No |
 | [OC-CFG-011](./generated/oc-cfg-011.md) | Invalid MCP Timeout | HIGH | OpenCode | No |
 | [OC-CFG-012](./generated/oc-cfg-012.md) | Invalid MCP OAuth Config | HIGH | OpenCode | No |
@@ -580,12 +601,35 @@ This section contains all `606` validation rules generated from `knowledge-base/
 | [OC-AG-006](./generated/oc-ag-006.md) | Invalid Named Color | MEDIUM | OpenCode | Yes (unsafe) |
 | [OC-AG-007](./generated/oc-ag-007.md) | Redundant steps and maxSteps | MEDIUM | OpenCode | No |
 | [OC-AG-008](./generated/oc-ag-008.md) | Invalid hidden Type | HIGH | OpenCode | No |
-| [OC-AG-009](./generated/oc-ag-009.md) | Invalid Agent Disable Type | HIGH | OpenCode | Yes (unsafe) |
+| [OC-AG-009](./generated/oc-ag-009.md) | Invalid Agent disable or disabled Type | HIGH | OpenCode | No |
 | [OC-LSP-001](./generated/oc-lsp-001.md) | LSP Command Without Extensions | MEDIUM | OpenCode | No |
 | [OC-LSP-002](./generated/oc-lsp-002.md) | Invalid LSP Extensions | HIGH | OpenCode | No |
 | [OC-TUI-001](./generated/oc-tui-001.md) | Unknown TUI Key | MEDIUM | OpenCode | No |
 | [OC-TUI-002](./generated/oc-tui-002.md) | Invalid scroll_speed | HIGH | OpenCode | No |
 | [OC-TUI-003](./generated/oc-tui-003.md) | Invalid diff_style | HIGH | OpenCode | Yes (unsafe) |
+| [OC-CFG-015](./generated/oc-cfg-015.md) | Shell-Style Variable Not Expanded | MEDIUM | OpenCode | No |
+| [OC-CFG-017](./generated/oc-cfg-017.md) | Mixed OpenCode 1 and 2 Fields in One Entry | MEDIUM | OpenCode | No |
+| [OC-CFG-018](./generated/oc-cfg-018.md) | Reference Without Description | LOW | OpenCode | No |
+| [OC-CFG-019](./generated/oc-cfg-019.md) | Bare Reference Shorthand Read as Git Repository | LOW | OpenCode | No |
+| [OC-CFG-020](./generated/oc-cfg-020.md) | Many Enabled MCP Servers | LOW | OpenCode | No |
+| [OC-CFG-021](./generated/oc-cfg-021.md) | OpenCode 1 Field in an mcp.servers Entry | MEDIUM | OpenCode | No |
+| [OC-CFG-022](./generated/oc-cfg-022.md) | Global-Only Setting in Project Config | MEDIUM | OpenCode | No |
+| [OC-AG-010](./generated/oc-ag-010.md) | OpenCode Agent Without Description | MEDIUM | OpenCode | No |
+| [OC-AG-011](./generated/oc-ag-011.md) | hidden on a Non-Subagent | LOW | OpenCode | No |
+| [OC-PM-003](./generated/oc-pm-003.md) | Permission Rule Shadowed by Later Catch-All | MEDIUM | OpenCode | No |
+| [OC-PM-004](./generated/oc-pm-004.md) | Broad external_directory Allow | MEDIUM | OpenCode | No |
+| [OC-PM-005](./generated/oc-pm-005.md) | OpenCode 1 Action Name in a permissions Array | MEDIUM | OpenCode | No |
+| [OC-PM-006](./generated/oc-pm-006.md) | Shell Allow-All With Deny Patterns | LOW | OpenCode | No |
+| [OC-PM-007](./generated/oc-pm-007.md) | Shell Pattern Without Argument Wildcard | LOW | OpenCode | No |
+| [OC-POL-001](./generated/oc-pol-001.md) | Invalid Policy Statement | HIGH | OpenCode | No |
+| [OC-CMD-001](./generated/oc-cmd-001.md) | Command Argument Inside Shell Block | MEDIUM | OpenCode | No |
+| [OC-CMD-002](./generated/oc-cmd-002.md) | JSON Command Without Template | HIGH | OpenCode | No |
+| [OC-CMD-003](./generated/oc-cmd-003.md) | template in Markdown Command Frontmatter | LOW | OpenCode | No |
+| [OC-DEP-008](./generated/oc-dep-008.md) | Legacy Singular .opencode Subdirectory | LOW | OpenCode | No |
+| [OC-DEP-009](./generated/oc-dep-009.md) | Field Ignored by OpenCode 2 | MEDIUM | OpenCode | No |
+| [OC-AGM-003](./generated/oc-agm-003.md) | CLAUDE.md Ignored by OpenCode 2 | MEDIUM | OpenCode | No |
+| [OC-SK-002](./generated/oc-sk-002.md) | Duplicate OpenCode Skill ID | LOW | OpenCode | No |
+| [OC-TOOL-001](./generated/oc-tool-001.md) | Custom Tool Shadows Built-in Tool | LOW | OpenCode | No |
 | [CC-PL-017](./generated/cc-pl-017.md) | Unknown Plugin Manifest Field | MEDIUM | Claude Plugins | No |
 | [CC-PL-018](./generated/cc-pl-018.md) | Reserved Plugin Name | HIGH | Claude Plugins | No |
 | [CC-PL-019](./generated/cc-pl-019.md) | Invalid Dependency Version Range | MEDIUM | Claude Plugins | No |

@@ -1,7 +1,7 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 606,
+  "total_rules": 650,
   "last_updated": "2026-10-17",
   "schema": {
     "evidence": {
@@ -5152,9 +5152,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://developers.openai.com/codex/"
+          "https://learn.chatgpt.com/docs/config-file/config-basic",
+          "https://learn.chatgpt.com/docs/config-file/config-reference"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "codex"
         },
@@ -5168,91 +5169,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "[model]\napprovalMode = \"suggest\"\nfullAutoErrorMode = \"ask-user\"",
-      "bad_example": "[model\napprovalMode = suggest"
-    },
-    {
-      "id": "CDX-001",
-      "name": "Invalid Approval Mode",
-      "severity": "HIGH",
-      "category": "codex",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://developers.openai.com/codex/"
-        ],
-        "verified_on": "2026-04-23",
-        "applies_to": {
-          "tool": "codex"
-        },
-        "normative_level": "MUST",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": true,
-        "fix_safety": "unsafe"
-      },
-      "good_example": "approvalMode = \"suggest\"",
-      "bad_example": "approvalMode = \"yolo\""
-    },
-    {
-      "id": "CDX-002",
-      "name": "Invalid Full Auto Error Mode",
-      "severity": "HIGH",
-      "category": "codex",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://developers.openai.com/codex/"
-        ],
-        "verified_on": "2026-04-23",
-        "applies_to": {
-          "tool": "codex"
-        },
-        "normative_level": "MUST",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": true,
-        "fix_safety": "unsafe"
-      },
-      "good_example": "fullAutoErrorMode = \"ask-user\"",
-      "bad_example": "fullAutoErrorMode = \"crash\""
-    },
-    {
-      "id": "CDX-003",
-      "name": "AGENTS.override.md in Version Control",
-      "severity": "MEDIUM",
-      "category": "codex",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://developers.openai.com/codex/"
-        ],
-        "verified_on": "2026-04-23",
-        "applies_to": {
-          "tool": "codex"
-        },
-        "normative_level": "SHOULD",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": false
-      },
-      "good_example": "# AGENTS.md\n\nProject instructions for Codex CLI.",
-      "bad_example": "# AGENTS.override.md\n\nLocal overrides that should not be committed to version control."
+      "good_example": "model = \"gpt-5\"\napproval_policy = \"on-request\"",
+      "bad_example": "[sandbox_workspace_write\nnetwork_access = false"
     },
     {
       "id": "CDX-004",
@@ -5262,10 +5180,11 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://developers.openai.com/codex/",
-          "https://github.com/openai/codex/blob/rust-v0.154.0/codex-rs/core/config.schema.json"
+          "https://learn.chatgpt.com/docs/config-file/config-reference",
+          "https://learn.chatgpt.com/docs/config-schema.json",
+          "https://learn.chatgpt.com/docs/hooks"
         ],
-        "verified_on": "2026-09-14",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "codex"
         },
@@ -5280,8 +5199,8 @@
         "autofix": true,
         "fix_safety": "safe"
       },
-      "good_example": "model = \"o4-mini\"\napprovalMode = \"suggest\"",
-      "bad_example": "unknownKey = true"
+      "good_example": "model = \"gpt-5\"\napproval_policy = \"on-request\"",
+      "bad_example": "approvalMode = \"suggest\""
     },
     {
       "id": "CDX-005",
@@ -5519,21 +5438,22 @@
     },
     {
       "id": "CDX-CFG-007",
-      "name": "Danger Full Access Without Acknowledgment",
-      "severity": "HIGH",
+      "name": "Full Access Sandbox Posture",
+      "severity": "MEDIUM",
       "category": "codex",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://developers.openai.com/codex/config-reference",
-          "https://developers.openai.com/codex/config-schema.json",
-          "https://developers.openai.com/codex/enterprise/managed-configuration"
+          "https://learn.chatgpt.com/docs/sandboxing",
+          "https://learn.chatgpt.com/docs/agent-approvals-security",
+          "https://learn.chatgpt.com/docs/non-interactive-mode",
+          "https://learn.chatgpt.com/docs/config-file/config-reference"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "codex"
         },
-        "normative_level": "MUST",
+        "normative_level": "SHOULD",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -5543,8 +5463,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "sandbox_mode = \"danger-full-access\"\n[notice]\nhide_full_access_warning = true",
-      "bad_example": "sandbox_mode = \"danger-full-access\"",
+      "good_example": "sandbox_mode = \"workspace-write\"\napproval_policy = \"on-request\"",
+      "bad_example": "sandbox_mode = \"danger-full-access\"\napproval_policy = \"never\"",
       "security": {
         "cwe": [
           "CWE-732"
@@ -5716,34 +5636,6 @@
       },
       "good_example": "cli_auth_credentials_store = \"keyring\"",
       "bad_example": "cli_auth_credentials_store = \"vault\""
-    },
-    {
-      "id": "CDX-CFG-013",
-      "name": "Invalid sandbox_workspace_write Mode",
-      "severity": "HIGH",
-      "category": "codex",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://developers.openai.com/codex/config-reference",
-          "https://developers.openai.com/codex/config-schema.json"
-        ],
-        "verified_on": "2026-04-23",
-        "applies_to": {
-          "tool": "codex"
-        },
-        "normative_level": "MUST",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": false
-      },
-      "good_example": "[sandbox_workspace_write]\nmode = \"allowlist\"",
-      "bad_example": "[sandbox_workspace_write]\nmode = \"yolo\""
     },
     {
       "id": "CDX-CFG-014",
@@ -6020,7 +5912,7 @@
         "source_urls": [
           "https://learn.chatgpt.com/docs/agent-configuration/agents-md"
         ],
-        "verified_on": "2026-07-31",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "codex"
         },
@@ -6040,18 +5932,19 @@
     {
       "id": "CDX-AG-002",
       "name": "Secrets in AGENTS.md for Codex",
-      "severity": "HIGH",
+      "severity": "MEDIUM",
       "category": "codex",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
+          "https://learn.chatgpt.com/docs/customization/overview",
           "https://learn.chatgpt.com/docs/agent-configuration/agents-md"
         ],
-        "verified_on": "2026-07-31",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "codex"
         },
-        "normative_level": "MUST",
+        "normative_level": "SHOULD",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -6082,18 +5975,18 @@
     {
       "id": "CDX-AG-003",
       "name": "Generic AGENTS.md Guidance for Codex",
-      "severity": "MEDIUM",
+      "severity": "LOW",
       "category": "codex",
       "evidence": {
-        "source_type": "vendor_docs",
+        "source_type": "community",
         "source_urls": [
-          "https://learn.chatgpt.com/docs/agent-configuration/agents-md"
+          "https://learn.chatgpt.com/guides/best-practices"
         ],
-        "verified_on": "2026-07-31",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "codex"
         },
-        "normative_level": "SHOULD",
+        "normative_level": "BEST_PRACTICE",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -6104,7 +5997,7 @@
         "autofix": false
       },
       "good_example": "Run `cargo test -p agnix-core` and `cargo test -p agnix-cli` before merge.",
-      "bad_example": "Be helpful and accurate."
+      "bad_example": "Follow best practices and write clean code."
     },
     {
       "id": "CDX-AG-005",
@@ -6112,11 +6005,11 @@
       "severity": "MEDIUM",
       "category": "codex",
       "evidence": {
-        "source_type": "vendor_docs",
+        "source_type": "community",
         "source_urls": [
-          "https://learn.chatgpt.com/docs/agent-configuration/agents-md"
+          "https://learn.chatgpt.com/guides/best-practices"
         ],
-        "verified_on": "2026-07-31",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "codex"
         },
@@ -6141,9 +6034,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://learn.chatgpt.com/docs/agent-configuration/agents-md"
+          "https://learn.chatgpt.com/guides/best-practices"
         ],
-        "verified_on": "2026-07-31",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "codex"
         },
@@ -6161,16 +6054,44 @@
       "bad_example": "# AGENTS.md\n\nFollow best practices."
     },
     {
-      "id": "CDX-AG-007",
-      "name": "AGENTS.md Contradicts config.toml",
-      "severity": "MEDIUM",
+      "id": "CDX-AG-008",
+      "name": "AGENTS.md Shadowed by AGENTS.override.md",
+      "severity": "LOW",
       "category": "codex",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
           "https://learn.chatgpt.com/docs/agent-configuration/agents-md"
         ],
-        "verified_on": "2026-07-31",
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "services/payments/AGENTS.override.md (no AGENTS.md next to it)",
+      "bad_example": "services/payments/AGENTS.md next to services/payments/AGENTS.override.md"
+    },
+    {
+      "id": "CDX-AG-009",
+      "name": "AGENTS.md Exceeds Codex project_doc_max_bytes",
+      "severity": "MEDIUM",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://learn.chatgpt.com/docs/agent-configuration/agents-md",
+          "https://learn.chatgpt.com/docs/config-file/config-advanced"
+        ],
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "codex"
         },
@@ -6184,22 +6105,50 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "Use full-auto mode for CI.\n\napprovalMode = \"full-auto\"",
-      "bad_example": "Use suggest mode.\n\napprovalMode = \"full-auto\""
+      "good_example": "AGENTS.md under 32 KiB, details in nested AGENTS.md files",
+      "bad_example": "one AGENTS.md of 40 KiB"
+    },
+    {
+      "id": "CDX-AG-010",
+      "name": "Codex Instruction Chain Exceeds project_doc_max_bytes",
+      "severity": "MEDIUM",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://learn.chatgpt.com/docs/agent-configuration/agents-md",
+          "https://learn.chatgpt.com/docs/config-file/config-advanced"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "root and nested AGENTS.md together under 32 KiB",
+      "bad_example": "a 20 KiB root AGENTS.md and a 15 KiB nested AGENTS.md on one path"
     },
     {
       "id": "CDX-APP-001",
-      "name": "Invalid default_tools_approval_mode Value",
+      "name": "Invalid Tool Approval Mode",
       "severity": "HIGH",
       "category": "codex",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://developers.openai.com/codex/config-reference",
-          "https://developers.openai.com/codex/config-schema.json",
-          "https://developers.openai.com/codex/enterprise/managed-configuration"
+          "https://learn.chatgpt.com/docs/extend/mcp",
+          "https://learn.chatgpt.com/docs/config-file/config-reference",
+          "https://learn.chatgpt.com/docs/config-schema.json"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "codex"
         },
@@ -6213,7 +6162,7 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "[apps.github]\ndefault_tools_approval_mode = \"prompt\"",
+      "good_example": "[mcp_servers.docs]\nurl = \"https://example.com/mcp\"\ndefault_tools_approval_mode = \"writes\"",
       "bad_example": "[apps.github]\ndefault_tools_approval_mode = \"manual\""
     },
     {
@@ -6224,10 +6173,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://developers.openai.com/codex/config-reference",
-          "https://developers.openai.com/codex/config-schema.json"
+          "https://learn.chatgpt.com/docs/config-file/config-reference",
+          "https://learn.chatgpt.com/docs/config-schema.json"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "codex"
         },
@@ -6246,20 +6195,19 @@
     },
     {
       "id": "CDX-APP-003",
-      "name": "Invalid profile Configuration",
+      "name": "Removed Profile Selector or Profiles Table",
       "severity": "MEDIUM",
       "category": "codex",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://developers.openai.com/codex/config-reference",
-          "https://developers.openai.com/codex/config-schema.json"
+          "https://learn.chatgpt.com/docs/config-file/config-advanced"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "codex"
         },
-        "normative_level": "SHOULD",
+        "normative_level": "MUST",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -6269,8 +6217,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "profile = \"default\"",
-      "bad_example": "profile = 123"
+      "good_example": "# ~/.codex/deep-review.config.toml\nmodel = \"gpt-5\"",
+      "bad_example": "profile = \"deep-review\"\n\n[profiles.deep-review]\nmodel = \"gpt-5\""
     },
     {
       "id": "CDX-PL-001",
@@ -6658,20 +6606,20 @@
     },
     {
       "id": "CDX-PL-014",
-      "name": "Missing Description",
+      "name": "Missing Required Codex-Format Package Field",
       "severity": "LOW",
       "category": "codex",
       "evidence": {
-        "source_type": "vendor_code",
+        "source_type": "vendor_docs",
         "source_urls": [
-          "https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/core-plugins/src/manifest.rs"
+          "https://developers.openai.com/plugins/deploy/submission",
+          "https://developers.openai.com/plugins/build/plugins"
         ],
-        "verified_on": "2026-06-04",
+        "verified_on": "2026-10-17",
         "applies_to": {
-          "tool": "codex",
-          "version_range": ">=0.117.0"
+          "tool": "codex"
         },
-        "normative_level": "BEST_PRACTICE",
+        "normative_level": "MUST",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -6681,7 +6629,7 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\"name\": \"my-plugin\", \"description\": \"Adds code review capabilities\"}",
+      "good_example": "{\"name\": \"my-plugin\", \"version\": \"1.0.0\", \"description\": \"Bundle skills.\", \"author\": {\"name\": \"Team\"}, \"interface\": {\"composerIcon\": \"./assets/icon.png\", \"logo\": \"./assets/logo.png\"}}",
       "bad_example": "{\"name\": \"my-plugin\"}"
     },
     {
@@ -6740,6 +6688,89 @@
       },
       "good_example": "{\"name\": \"my-plugin\", \"interface\": {\"logoDark\": \"./assets/logo-dark.png\"}}",
       "bad_example": "{\"name\": \"my-plugin\", \"interface\": {\"logoDark\": \"assets/logo-dark.png\"}}"
+    },
+    {
+      "id": "CDX-PL-017",
+      "name": "Codex Compatibility Manifest Without Portable Root Manifest",
+      "severity": "LOW",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://developers.openai.com/plugins/build/plugins"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "plugin.json with \"$schema\": \"https://agent-plugins.org/schemas/1.0.0/plugin.schema.json\"",
+      "bad_example": ".codex-plugin/plugin.json only"
+    },
+    {
+      "id": "CDX-PL-018",
+      "name": "Plugin Exceeds Public Submission Limits",
+      "severity": "LOW",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://developers.openai.com/plugins/deploy/submission",
+          "https://developers.openai.com/plugins/build/plugins"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"name\": \"notes\", \"interface\": {\"displayName\": \"Notes\", \"developerName\": \"Acme\"}}",
+      "bad_example": "{\"name\": \"Notes_Plugin\", \"interface\": {\"displayName\": \"A display name over thirty characters\", \"developerName\": \"Acme\"}}"
+    },
+    {
+      "id": "CDX-PL-019",
+      "name": "Secret in Plugin MCP Configuration",
+      "severity": "HIGH",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://developers.openai.com/plugins/build/plugins",
+          "https://developers.openai.com/plugins/deploy/submission"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"mcpServers\": {\"docs\": {\"url\": \"https://example.com/mcp\", \"extensions\": {\"com.openai\": {\"auth\": {\"type\": \"api_key\", \"headerScheme\": \"bearer\"}}}}}}",
+      "bad_example": "{\"mcpServers\": {\"docs\": {\"url\": \"https://example.com/mcp\", \"headers\": {\"Authorization\": \"Bearer sk-live-1234567890abcdef\"}}}}"
     },
     {
       "id": "CDX-CFG-023",
@@ -6806,9 +6837,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://developers.openai.com/codex/"
+          "https://learn.chatgpt.com/docs/config-file/config-reference",
+          "https://learn.chatgpt.com/docs/config-schema.json"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "codex"
         },
@@ -6828,15 +6860,16 @@
     },
     {
       "id": "CDX-CFG-026",
-      "name": "Invalid Network Permission Field",
+      "name": "Unknown Permission Profile Network Key",
       "severity": "LOW",
       "category": "codex",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://developers.openai.com/codex/"
+          "https://learn.chatgpt.com/docs/permissions",
+          "https://learn.chatgpt.com/docs/config-schema.json"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "codex"
         },
@@ -6851,8 +6884,8 @@
         "autofix": true,
         "fix_safety": "safe"
       },
-      "good_example": "[network]\nallow = [\"*.example.com\"]",
-      "bad_example": "[network]\nallow = \"all\""
+      "good_example": "[permissions.dev.network]\nenabled = true\n\n[permissions.dev.network.domains]\n\"api.openai.com\" = \"allow\"",
+      "bad_example": "[permissions.dev.network]\nallowed_domains = [\"api.openai.com\"]"
     },
     {
       "id": "CDX-CFG-027",
@@ -6983,6 +7016,145 @@
       "bad_example": "web_search = \"server_approved\""
     },
     {
+      "id": "CDX-CFG-031",
+      "name": "Invalid skills.max_context_tokens",
+      "severity": "MEDIUM",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://learn.chatgpt.com/docs/config-file/config-reference",
+          "https://learn.chatgpt.com/docs/build-skills",
+          "https://learn.chatgpt.com/docs/config-schema.json"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "[skills]\nmax_context_tokens = 4000",
+      "bad_example": "[skills]\nmax_context_tokens = 20000"
+    },
+    {
+      "id": "CDX-CFG-032",
+      "name": "Key Ignored in Project Config",
+      "severity": "MEDIUM",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://learn.chatgpt.com/docs/config-file/config-advanced"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "# ~/.codex/config.toml\nmodel_provider = \"azure\"",
+      "bad_example": "# <repo>/.codex/config.toml\nmodel_provider = \"azure\""
+    },
+    {
+      "id": "CDX-CFG-033",
+      "name": "Permission Profile Shadowed by Legacy Sandbox Settings",
+      "severity": "MEDIUM",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://learn.chatgpt.com/docs/permissions",
+          "https://learn.chatgpt.com/docs/config-file/config-reference"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "default_permissions = \":workspace\"",
+      "bad_example": "default_permissions = \":workspace\"\nsandbox_mode = \"read-only\""
+    },
+    {
+      "id": "CDX-CFG-034",
+      "name": "Profile Domain Rules Without Network Proxy",
+      "severity": "MEDIUM",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://learn.chatgpt.com/docs/permissions"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "[features]\nnetwork_proxy = true\n\n[permissions.dev.network]\nenabled = true\n\n[permissions.dev.network.domains]\n\"api.openai.com\" = \"allow\"",
+      "bad_example": "[permissions.dev.network]\nenabled = true\n\n[permissions.dev.network.domains]\n\"api.openai.com\" = \"allow\""
+    },
+    {
+      "id": "CDX-CFG-035",
+      "name": "Invalid Permission Profile Inheritance",
+      "severity": "HIGH",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://learn.chatgpt.com/docs/permissions"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": true,
+        "fix_safety": "unsafe"
+      },
+      "good_example": "[permissions.project-edit]\nextends = \":workspace\"",
+      "bad_example": "[permissions.project-edit]\nextends = \":danger-full-access\""
+    },
+    {
       "id": "CDX-REQ-000",
       "name": "Codex requirements.toml TOML Parse Error",
       "severity": "HIGH",
@@ -7022,7 +7194,7 @@
           "https://github.com/openai/codex/blob/rust-v0.146.0/codex-rs/config/src/config_requirements.rs",
           "https://github.com/openai/codex/blob/rust-v0.146.0/docs/config.md"
         ],
-        "verified_on": "2026-07-30",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "codex",
           "version_range": ">=0.133.0"
@@ -7039,6 +7211,427 @@
       },
       "good_example": "allowed_sandbox_modes = [\"read-only\"]\n[windows]\nallowed_sandbox_implementations = [\"elevated\", \"unelevated\"]",
       "bad_example": "allowed_sandbox_mode = [\"read-only\"]"
+    },
+    {
+      "id": "CDX-REQ-002",
+      "name": "Requirements Rule Without Prompt or Forbidden Decision",
+      "severity": "HIGH",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://learn.chatgpt.com/docs/enterprise/managed-configuration"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "[rules]\nprefix_rules = [{ pattern = [{ token = \"rm\" }], decision = \"forbidden\" }]",
+      "bad_example": "[rules]\nprefix_rules = [{ pattern = [{ token = \"rm\" }] }]"
+    },
+    {
+      "id": "CDX-REQ-003",
+      "name": "Managed Hook Script Outside managed_dir",
+      "severity": "LOW",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://learn.chatgpt.com/docs/hooks",
+          "https://learn.chatgpt.com/docs/enterprise/managed-configuration"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "[hooks]\nmanaged_dir = \"/enterprise/hooks\"\n\n[[hooks.PreToolUse]]\n[[hooks.PreToolUse.hooks]]\ntype = \"command\"\ncommand = \"python3 /enterprise/hooks/policy.py\"",
+      "bad_example": "[hooks]\nmanaged_dir = \"/enterprise/hooks\"\n\n[[hooks.PreToolUse]]\n[[hooks.PreToolUse.hooks]]\ntype = \"command\"\ncommand = \"python3 ./policy.py\""
+    },
+    {
+      "id": "CDX-REQ-004",
+      "name": "Conflicting experimental_network Domain Settings",
+      "severity": "LOW",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://learn.chatgpt.com/docs/enterprise/managed-configuration"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "[experimental_network]\nenabled = true\n\n[experimental_network.domains]\n\"api.openai.com\" = \"allow\"",
+      "bad_example": "[experimental_network]\nallowed_domains = [\"api.openai.com\"]\n\n[experimental_network.domains]\n\"api.openai.com\" = \"allow\""
+    },
+    {
+      "id": "CDX-HK-000",
+      "name": "Codex Hooks File Fails to Load",
+      "severity": "HIGH",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://learn.chatgpt.com/docs/hooks",
+          "https://github.com/openai/codex/blob/main/codex-rs/config/src/hook_config.rs",
+          "https://github.com/openai/codex/blob/main/codex-rs/hooks/src/engine/discovery.rs"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"hooks\": {\"Stop\": [{\"hooks\": [{\"type\": \"command\", \"command\": \"./stop.sh\"}]}]}}",
+      "bad_example": "{\"version\": 1, \"hooks\": {\"Stop\": [{\"hooks\": [{\"type\": \"command\", \"command\": \"./stop.sh\", \"timeout\": \"30\"}]}]}}"
+    },
+    {
+      "id": "CDX-HK-001",
+      "name": "Codex Hook Timeout Out of Range",
+      "severity": "MEDIUM",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://learn.chatgpt.com/docs/hooks",
+          "https://github.com/openai/codex/blob/main/codex-rs/config/src/hook_config.rs",
+          "https://github.com/openai/codex/blob/main/codex-rs/hooks/src/engine/discovery.rs"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"hooks\": {\"SessionEnd\": [{\"hooks\": [{\"type\": \"command\", \"command\": \"./end.sh\", \"timeout\": 3}]}]}}",
+      "bad_example": "{\"hooks\": {\"SessionEnd\": [{\"hooks\": [{\"type\": \"command\", \"command\": \"./end.sh\", \"timeout\": 60}]}]}}"
+    },
+    {
+      "id": "CDX-HK-002",
+      "name": "Codex Hook Handler Skipped",
+      "severity": "MEDIUM",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://learn.chatgpt.com/docs/hooks",
+          "https://github.com/openai/codex/blob/main/codex-rs/config/src/hook_config.rs",
+          "https://github.com/openai/codex/blob/main/codex-rs/hooks/src/engine/discovery.rs"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"hooks\": {\"Stop\": [{\"hooks\": [{\"type\": \"command\", \"command\": \"./check.sh\"}]}]}}",
+      "bad_example": "{\"hooks\": {\"Stop\": [{\"hooks\": [{\"type\": \"prompt\", \"prompt\": \"Check the work\"}]}]}}"
+    },
+    {
+      "id": "CDX-HK-003",
+      "name": "Hooks in Both hooks.json and Inline [hooks]",
+      "severity": "LOW",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://learn.chatgpt.com/docs/hooks",
+          "https://learn.chatgpt.com/docs/config-file/config-advanced"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": ".codex/hooks.json only",
+      "bad_example": ".codex/hooks.json and [[hooks.Stop]] in .codex/config.toml"
+    },
+    {
+      "id": "CDX-HK-004",
+      "name": "additionalContextLimit Ineffective or Unbounded",
+      "severity": "LOW",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://learn.chatgpt.com/docs/hooks",
+          "https://github.com/openai/codex/blob/main/codex-rs/config/src/hook_config.rs",
+          "https://github.com/openai/codex/blob/main/codex-rs/hooks/src/engine/discovery.rs"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"hooks\": {\"SessionStart\": [{\"hooks\": [{\"type\": \"command\", \"command\": \"./ctx.sh\", \"additionalContextLimit\": 5000}]}]}}",
+      "bad_example": "{\"hooks\": {\"Stop\": [{\"hooks\": [{\"type\": \"command\", \"command\": \"./ctx.sh\", \"additionalContextLimit\": 0}]}]}}"
+    },
+    {
+      "id": "CDX-HK-005",
+      "name": "Unknown Codex Hook Event",
+      "severity": "MEDIUM",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://learn.chatgpt.com/docs/hooks",
+          "https://github.com/openai/codex/blob/main/codex-rs/config/src/hook_config.rs",
+          "https://github.com/openai/codex/blob/main/codex-rs/hooks/src/engine/discovery.rs"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"hooks\": {\"PreToolUse\": []}}",
+      "bad_example": "{\"hooks\": {\"Notification\": []}}"
+    },
+    {
+      "id": "CDX-SUB-001",
+      "name": "Invalid Codex Custom Agent File",
+      "severity": "HIGH",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://learn.chatgpt.com/docs/agent-configuration/subagents",
+          "https://github.com/openai/codex/blob/main/codex-rs/agent-roles/src/agent_role_config.rs"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "name = \"reviewer\"\ndescription = \"PR reviewer focused on correctness.\"\ndeveloper_instructions = \"Review code like an owner.\"",
+      "bad_example": "name = \"reviewer\"\nmodel = \"gpt-5\""
+    },
+    {
+      "id": "CDX-SUB-002",
+      "name": "Session Setting in Codex Custom Agent File",
+      "severity": "MEDIUM",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://learn.chatgpt.com/docs/agent-configuration/subagents",
+          "https://github.com/openai/codex/blob/main/codex-rs/agent-roles/src/agent_role_config.rs"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "name = \"reviewer\"\ndescription = \"d\"\ndeveloper_instructions = \"Do not edit files.\"",
+      "bad_example": "name = \"reviewer\"\ndescription = \"d\"\ndeveloper_instructions = \"i\"\nsandbox_mode = \"read-only\""
+    },
+    {
+      "id": "CDX-SUB-003",
+      "name": "Custom Agent Replaces a Built-in Agent",
+      "severity": "LOW",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://learn.chatgpt.com/docs/agent-configuration/subagents"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "name = \"pr_explorer\"",
+      "bad_example": "name = \"explorer\""
+    },
+    {
+      "id": "CDX-RL-001",
+      "name": "Forbidden Rule Without Justification",
+      "severity": "LOW",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://learn.chatgpt.com/docs/agent-configuration/rules",
+          "https://learn.chatgpt.com/docs/sandboxing"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "prefix_rule(pattern = [\"grep\"], decision = \"forbidden\", justification = \"Use rg instead of grep.\")",
+      "bad_example": "prefix_rule(pattern = [\"grep\"], decision = \"forbidden\")"
+    },
+    {
+      "id": "CDX-RL-002",
+      "name": "Broad Allow Rule Outside the Sandbox",
+      "severity": "MEDIUM",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://learn.chatgpt.com/docs/agent-configuration/rules",
+          "https://learn.chatgpt.com/docs/sandboxing"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "prefix_rule(pattern = [\"gh\", \"pr\", \"view\"], decision = \"prompt\")",
+      "bad_example": "prefix_rule(pattern = [\"bash\"])"
+    },
+    {
+      "id": "CDX-DEP-001",
+      "name": "Deprecated Codex Custom Prompt",
+      "severity": "LOW",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://learn.chatgpt.com/docs/custom-prompts"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": ".agents/skills/draftpr/SKILL.md",
+      "bad_example": "~/.codex/prompts/draftpr.md"
     },
     {
       "id": "CL-SK-001",
@@ -9579,11 +10172,12 @@
       "severity": "MEDIUM",
       "category": "codex-skills",
       "evidence": {
-        "source_type": "vendor_docs",
+        "source_type": "vendor_code",
         "source_urls": [
-          "https://learn.chatgpt.com/docs/agent-configuration/agents-md"
+          "https://learn.chatgpt.com/docs/build-skills",
+          "https://github.com/openai/codex/blob/main/codex-rs/skills/src/assets/samples/skill-creator/scripts/quick_validate.py"
         ],
-        "verified_on": "2026-07-31",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "codex"
         },
@@ -9600,6 +10194,90 @@
       },
       "good_example": "---\nname: my-skill\ndescription: A useful development skill\n---\n# My Skill\n\nSkill instructions here.",
       "bad_example": "---\nname: my-skill\ndescription: A useful development skill\nhooks: some-value\n---\n# My Skill\n\nSkill instructions here."
+    },
+    {
+      "id": "CX-SK-004",
+      "name": "Skill Catalog Exceeds Codex Fallback Budget",
+      "severity": "LOW",
+      "category": "codex-skills",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://learn.chatgpt.com/docs/build-skills",
+          "https://learn.chatgpt.com/docs/config-file/config-reference"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "12 skills with one-sentence descriptions",
+      "bad_example": "40 skills with 500-character descriptions in .agents/skills"
+    },
+    {
+      "id": "CX-SK-006",
+      "name": "agents/openai.yaml Field Ignored by Codex",
+      "severity": "MEDIUM",
+      "category": "codex-skills",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/openai/codex/blob/main/codex-rs/skills/src/interface.rs",
+          "https://github.com/openai/codex/blob/main/codex-rs/skills/src/metadata.rs",
+          "https://github.com/openai/codex/blob/main/codex-rs/skills/src/assets/samples/skill-creator/references/openai_yaml.md"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "interface:\n  display_name: \"Release Notes\"\n  icon_small: \"./assets/small.svg\"\n  brand_color: \"#3B82F6\"",
+      "bad_example": "interface:\n  icon_small: \"/abs/icon.svg\"\n  brand_color: \"blue\""
+    },
+    {
+      "id": "CX-SK-007",
+      "name": "Auxiliary Documentation in Codex Skill Folder",
+      "severity": "LOW",
+      "category": "codex-skills",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://github.com/openai/codex/blob/main/codex-rs/skills/src/assets/samples/skill-creator/SKILL.md"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "my-skill/SKILL.md, my-skill/references/api.md",
+      "bad_example": "my-skill/SKILL.md, my-skill/README.md"
     },
     {
       "id": "GM-001",
@@ -14459,9 +15137,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://opencode.ai/docs/config"
+          "https://opencode.ai/config.json",
+          "https://opencode.ai/docs/config/"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "opencode"
         },
@@ -14476,8 +15155,8 @@
         "autofix": true,
         "fix_safety": "unsafe"
       },
-      "good_example": "{\n  \"share\": \"manual\"\n}",
-      "bad_example": "{\n  \"share\": \"public\"\n}"
+      "good_example": "{\"share\": \"manual\"}",
+      "bad_example": "{\"share\": \"public\"}"
     },
     {
       "id": "OC-002",
@@ -14487,9 +15166,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://opencode.ai/docs/config"
+          "https://opencode.ai/docs/rules/",
+          "https://opencode.ai/v2/docs/instructions/"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "opencode"
         },
@@ -14503,8 +15183,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"instructions\": [\"**/*.md\"]\n}",
-      "bad_example": "{\n  \"instructions\": [\"[unclosed\"]\n}"
+      "good_example": "{\"instructions\": [\"CONTRIBUTING.md\", \"docs/guidelines/*.md\", \"~/rules/opencode.md\"]}",
+      "bad_example": "{\"instructions\": [\"missing.md\"]}"
     },
     {
       "id": "OC-003",
@@ -14514,9 +15194,11 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://opencode.ai/docs/config"
+          "https://opencode.ai/v2/docs/config/",
+          "https://opencode.ai/docs/config/",
+          "https://opencode.ai/config.json"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "opencode"
         },
@@ -14530,8 +15212,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"share\": \"manual\",\n  \"instructions\": [\"**/*.md\"]\n}",
-      "bad_example": "{ invalid json content }"
+      "good_example": "{\n  // comment\n  \"model\": \"anthropic/claude-sonnet-4-5\",\n}",
+      "bad_example": "{ \"model\": }"
     },
     {
       "id": "OC-004",
@@ -14541,9 +15223,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://opencode.ai/docs/config"
+          "https://opencode.ai/config.json",
+          "https://opencode.ai/v2/docs/migrate-v1/"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "opencode"
         },
@@ -14557,8 +15240,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"share\": \"manual\",\n  \"model\": \"claude-sonnet-4-5\"\n}",
-      "bad_example": "{\n  \"unknownKey\": true\n}"
+      "good_example": "{\"agents\": {}, \"agent\": {}}",
+      "bad_example": "{\"totally_unknown\": true}"
     },
     {
       "id": "OC-006",
@@ -14568,9 +15251,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://opencode.ai/docs/config"
+          "https://opencode.ai/docs/rules/",
+          "https://opencode.ai/v2/docs/instructions/"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "opencode"
         },
@@ -14584,8 +15268,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"instructions\": [\"**/*.md\"]\n}",
-      "bad_example": "{\n  \"instructions\": [\"https://example.com/rules.md\"]\n}",
+      "good_example": "{\"instructions\": [\"docs/guidelines.md\"]}",
+      "bad_example": "{\"instructions\": [\"https://example.com/rules.md\"]}",
       "security": {
         "cwe": [
           "CWE-494"
@@ -14608,9 +15292,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://opencode.ai/docs/config"
+          "https://opencode.ai/docs/agents/",
+          "https://opencode.ai/v2/docs/agents/"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "opencode"
         },
@@ -14624,8 +15309,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"agent\": {\n    \"my-agent\": {\n      \"description\": \"A custom agent\"\n    }\n  }\n}",
-      "bad_example": "{\n  \"agent\": {\n    \"my-agent\": {}\n  }\n}"
+      "good_example": "{\"agent\": {\"review\": {\"description\": \"Reviews code\", \"mode\": \"subagent\"}}}",
+      "bad_example": "{\"agent\": {\"review\": {\"mode\": \"subagent\"}}}"
     },
     {
       "id": "OC-008",
@@ -14635,9 +15320,11 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://opencode.ai/docs/config"
+          "https://opencode.ai/docs/permissions/",
+          "https://opencode.ai/v2/docs/permissions/",
+          "https://opencode.ai/config.json"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "opencode"
         },
@@ -14652,8 +15339,8 @@
         "autofix": true,
         "fix_safety": "unsafe"
       },
-      "good_example": "{\n  \"permission\": {\n    \"read\": \"allow\",\n    \"edit\": \"ask\"\n  }\n}",
-      "bad_example": "{\n  \"permission\": {\n    \"read\": \"yes\"\n  }\n}",
+      "good_example": "{\"permission\": {\"edit\": \"ask\", \"bash\": {\"*\": \"ask\", \"git *\": \"allow\"}}}",
+      "bad_example": "{\"permission\": {\"edit\": \"maybe\"}}",
       "security": {
         "cwe": [
           "CWE-732"
@@ -14676,9 +15363,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://opencode.ai/docs/config"
+          "https://opencode.ai/docs/config/",
+          "https://opencode.ai/v2/docs/config/"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "opencode"
         },
@@ -14692,8 +15380,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"model\": \"{env:OPENAI_MODEL}\"\n}",
-      "bad_example": "{\n  \"model\": \"{bad:value}\"\n}"
+      "good_example": "{\"model\": \"{env:OPENCODE_MODEL}\"}",
+      "bad_example": "{\"model\": \"{environment:OPENCODE_MODEL}\"}"
     },
     {
       "id": "OC-SK-001",
@@ -14703,9 +15391,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://opencode.ai/docs/rules"
+          "https://opencode.ai/docs/skills/",
+          "https://opencode.ai/v2/docs/skills/"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "opencode"
         },
@@ -15648,9 +16337,11 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://opencode.ai/docs/config"
+          "https://opencode.ai/config.json",
+          "https://opencode.ai/v2/docs/agents/",
+          "https://opencode.ai/docs/agents/"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "opencode"
         },
@@ -15664,20 +16355,21 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"model\": \"anthropic/claude-3-opus\"\n}",
-      "bad_example": "{\n  \"model\": \"claude-3-opus\"\n}"
+      "good_example": "{\"model\": \"anthropic/claude-sonnet-4-5\"}",
+      "bad_example": "{\"model\": \"gpt-5\"}"
     },
     {
       "id": "OC-CFG-002",
-      "name": "Invalid autoupdate value",
+      "name": "Invalid autoupdate or update Value",
       "severity": "HIGH",
       "category": "opencode",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://opencode.ai/docs/config"
+          "https://opencode.ai/config.json",
+          "https://opencode.ai/v2/docs/config/"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "opencode"
         },
@@ -15691,35 +16383,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"autoupdate\": \"notify\"\n}",
-      "bad_example": "{\n  \"autoupdate\": \"yes\"\n}"
-    },
-    {
-      "id": "OC-CFG-003",
-      "name": "Unknown Top-level Config Field",
-      "severity": "MEDIUM",
-      "category": "opencode",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://opencode.ai/docs/config"
-        ],
-        "verified_on": "2026-04-23",
-        "applies_to": {
-          "tool": "opencode"
-        },
-        "normative_level": "SHOULD",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": false
-      },
-      "good_example": "{\n  \"model\": \"anthropic/claude-3-opus\",\n  \"share\": \"manual\"\n}",
-      "bad_example": "{\n  \"mdoel\": \"anthropic/claude-3-opus\"\n}"
+      "good_example": "{\"autoupdate\": \"notify\"}",
+      "bad_example": "{\"update\": \"always\"}"
     },
     {
       "id": "OC-CFG-004",
@@ -15729,9 +16394,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://opencode.ai/docs/config"
+          "https://opencode.ai/docs/config/",
+          "https://opencode.ai/v2/docs/agents/"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "opencode"
         },
@@ -15745,24 +16411,26 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"default_agent\": \"build\"\n}",
-      "bad_example": "{\n  \"default_agent\": \"unknown-agent\"\n}"
+      "good_example": "{\"default_agent\": \"plan\"}",
+      "bad_example": "{\"default_agent\": \"ghost\"}"
     },
     {
       "id": "OC-CFG-005",
-      "name": "Hardcoded API Key",
-      "severity": "HIGH",
+      "name": "Hardcoded Secret in Config",
+      "severity": "MEDIUM",
       "category": "opencode",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://opencode.ai/docs/config"
+          "https://opencode.ai/v2/docs/mcp-servers/",
+          "https://opencode.ai/docs/config/",
+          "https://opencode.ai/v2/docs/config/"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "opencode"
         },
-        "normative_level": "MUST",
+        "normative_level": "SHOULD",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -15772,8 +16440,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"provider\": { \"options\": { \"apiKey\": \"{env:OPENAI_API_KEY}\" } }\n}",
-      "bad_example": "{\n  \"provider\": { \"options\": { \"apiKey\": \"sk-1234567890abcdef\" } }\n}",
+      "good_example": "{\"mcp\": {\"x\": {\"type\": \"remote\", \"url\": \"https://x.example/mcp\", \"headers\": {\"Authorization\": \"Bearer {env:MY_API_KEY}\"}}}}",
+      "bad_example": "{\"provider\": {\"acme\": {\"options\": {\"apiKey\": \"sk-live-1234567890abcdef\"}}}}",
       "security": {
         "cwe": [
           "CWE-798"
@@ -15796,9 +16464,11 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://opencode.ai/docs/config"
+          "https://opencode.ai/docs/mcp-servers/",
+          "https://opencode.ai/v2/docs/mcp-servers/",
+          "https://opencode.ai/config.json"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "opencode"
         },
@@ -15812,8 +16482,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"mcp\": { \"server\": { \"type\": \"local\", \"command\": [\"node\"] } }\n}",
-      "bad_example": "{\n  \"mcp\": { \"server\": { \"type\": \"invalid\" } }\n}"
+      "good_example": "{\"mcp\": {\"servers\": {\"pw\": {\"type\": \"local\", \"command\": [\"npx\", \"@playwright/mcp\"]}}}}",
+      "bad_example": "{\"mcp\": {\"pw\": {\"command\": [\"npx\", \"@playwright/mcp\"]}}}"
     },
     {
       "id": "OC-CFG-007",
@@ -15823,11 +16493,11 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://opencode.ai/docs/config",
-          "https://github.com/sst/opencode/pull/30676",
+          "https://opencode.ai/docs/mcp-servers/",
+          "https://opencode.ai/v2/docs/mcp-servers/",
           "https://opencode.ai/config.json"
         ],
-        "verified_on": "2026-07-30",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "opencode"
         },
@@ -15841,8 +16511,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"mcp\": { \"server\": { \"type\": \"local\", \"command\": [\"node\"], \"environment\": { \"NODE_ENV\": \"test\" } } }\n}",
-      "bad_example": "{\n  \"mcp\": { \"server\": { \"type\": \"local\", \"command\": [\"node\"], \"env\": { \"PORT\": 3000 } } }\n}",
+      "good_example": "{\"mcp\": {\"x\": {\"type\": \"remote\", \"url\": \"https://mcp.example.com/mcp\"}}}",
+      "bad_example": "{\"mcp\": {\"x\": {\"type\": \"remote\"}}}",
       "security": {
         "cwe": [
           "CWE-78",
@@ -15867,9 +16537,11 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://opencode.ai/docs/config"
+          "https://opencode.ai/docs/agents/",
+          "https://opencode.ai/v2/docs/agents/",
+          "https://opencode.ai/config.json"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "opencode"
         },
@@ -15883,8 +16555,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"agent\": { \"custom\": { \"mode\": \"subagent\" } }\n}",
-      "bad_example": "{\n  \"agent\": { \"custom\": { \"mode\": \"invalid\" } }\n}"
+      "good_example": "mode: subagent",
+      "bad_example": "mode: helper"
     },
     {
       "id": "OC-AG-002",
@@ -15894,9 +16566,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://opencode.ai/docs/config"
+          "https://opencode.ai/config.json",
+          "https://opencode.ai/v2/docs/agents/"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "opencode"
         },
@@ -15910,114 +16583,21 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"agent\": { \"custom\": { \"color\": \"#ff0000\" } }\n}",
-      "bad_example": "{\n  \"agent\": { \"custom\": { \"color\": \"red\" } }\n}"
+      "good_example": "color: \"#ff6b6b\"",
+      "bad_example": "color: \"#f00\""
     },
     {
       "id": "OC-AG-003",
       "name": "Temperature Out of Range",
-      "severity": "HIGH",
-      "category": "opencode",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://opencode.ai/docs/config"
-        ],
-        "verified_on": "2026-04-23",
-        "applies_to": {
-          "tool": "opencode"
-        },
-        "normative_level": "MUST",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": false
-      },
-      "good_example": "{\n  \"agent\": { \"custom\": { \"temperature\": 0.7 } }\n}",
-      "bad_example": "{\n  \"agent\": { \"custom\": { \"temperature\": 3.5 } }\n}"
-    },
-    {
-      "id": "OC-AG-004",
-      "name": "Steps Not a Positive Integer",
-      "severity": "HIGH",
-      "category": "opencode",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://opencode.ai/docs/config"
-        ],
-        "verified_on": "2026-04-23",
-        "applies_to": {
-          "tool": "opencode"
-        },
-        "normative_level": "MUST",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": false
-      },
-      "good_example": "{\n  \"agent\": { \"custom\": { \"steps\": 50 } }\n}",
-      "bad_example": "{\n  \"agent\": { \"custom\": { \"steps\": -5 } }\n}"
-    },
-    {
-      "id": "OC-PM-001",
-      "name": "Invalid Permission Action",
-      "severity": "HIGH",
-      "category": "opencode",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://opencode.ai/docs/config"
-        ],
-        "verified_on": "2026-04-23",
-        "applies_to": {
-          "tool": "opencode"
-        },
-        "normative_level": "MUST",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": false
-      },
-      "good_example": "{\n  \"permission\": { \"read\": \"allow\", \"bash\": \"ask\" }\n}",
-      "bad_example": "{\n  \"permission\": { \"read\": \"yes\" }\n}",
-      "security": {
-        "cwe": [
-          "CWE-732"
-        ],
-        "owasp": [
-          "A01:2021"
-        ],
-        "vulnerability_class": "insecure-permissions",
-        "subcategory": "vuln",
-        "confidence": "HIGH",
-        "likelihood": "MEDIUM",
-        "impact": "HIGH"
-      }
-    },
-    {
-      "id": "OC-PM-002",
-      "name": "Unknown Permission Key",
       "severity": "MEDIUM",
       "category": "opencode",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://opencode.ai/docs/config"
+          "https://opencode.ai/docs/agents/",
+          "https://opencode.ai/config.json"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "opencode"
         },
@@ -16031,20 +16611,21 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"permission\": { \"read\": \"allow\" }\n}",
-      "bad_example": "{\n  \"permission\": { \"unknown\": \"allow\" }\n}"
+      "good_example": "temperature: 0.1",
+      "bad_example": "temperature: 5"
     },
     {
-      "id": "OC-AGM-001",
-      "name": "Empty AGENTS.md",
+      "id": "OC-AG-004",
+      "name": "Steps Not a Positive Integer",
       "severity": "HIGH",
       "category": "opencode",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://opencode.ai/docs/config"
+          "https://opencode.ai/config.json",
+          "https://opencode.ai/v2/docs/agents/"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "opencode"
         },
@@ -16058,24 +16639,53 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "# AGENTS\n\nSome content.",
-      "bad_example": ""
+      "good_example": "steps: 8",
+      "bad_example": "steps: 0"
+    },
+    {
+      "id": "OC-PM-002",
+      "name": "Possibly Misspelled Permission Key",
+      "severity": "LOW",
+      "category": "opencode",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://opencode.ai/docs/agents/",
+          "https://opencode.ai/docs/permissions/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "opencode"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"permission\": {\"mymcp_*\": \"deny\"}}",
+      "bad_example": "{\"permission\": {\"raed\": \"allow\"}}"
     },
     {
       "id": "OC-AGM-002",
       "name": "Secrets in AGENTS.md",
-      "severity": "HIGH",
+      "severity": "MEDIUM",
       "category": "opencode",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://opencode.ai/docs/config"
+          "https://opencode.ai/v2/docs/instructions/",
+          "https://opencode.ai/docs/rules/"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "opencode"
         },
-        "normative_level": "MUST",
+        "normative_level": "SHOULD",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -16085,8 +16695,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "# AGENTS\n\nUse environment variables.",
-      "bad_example": "# AGENTS\n\nAPI_KEY=sk-123456",
+      "good_example": "Use `$GITHUB_TOKEN` from the environment.",
+      "bad_example": "Deploy token: ghp_...",
       "security": {
         "cwe": [
           "CWE-798",
@@ -16105,15 +16715,16 @@
     },
     {
       "id": "OC-DEP-001",
-      "name": "Deprecated mode Field",
+      "name": "Deprecated mode Map",
       "severity": "MEDIUM",
       "category": "opencode",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://opencode.ai/docs/config"
+          "https://opencode.ai/config.json",
+          "https://opencode.ai/v2/docs/migrate-v1/"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "opencode"
         },
@@ -16126,10 +16737,10 @@
       },
       "fix": {
         "autofix": true,
-        "fix_safety": "safe"
+        "fix_safety": "unsafe"
       },
-      "good_example": "{\n  \"agent\": { \"my-agent\": {} }\n}",
-      "bad_example": "{\n  \"mode\": \"agent\"\n}"
+      "good_example": "{\"agent\": {\"focus\": {\"mode\": \"primary\"}}}",
+      "bad_example": "{\"mode\": {\"focus\": {}}}"
     },
     {
       "id": "OC-DEP-002",
@@ -16139,9 +16750,11 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://opencode.ai/docs/config"
+          "https://opencode.ai/docs/permissions/",
+          "https://opencode.ai/docs/agents/",
+          "https://opencode.ai/config.json"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "opencode"
         },
@@ -16155,8 +16768,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"permission\": { \"read\": \"allow\" }\n}",
-      "bad_example": "{\n  \"tools\": {}\n}"
+      "good_example": "{\"permission\": {\"bash\": \"deny\"}}",
+      "bad_example": "{\"tools\": {\"bash\": false}}"
     },
     {
       "id": "OC-DEP-003",
@@ -16166,9 +16779,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://opencode.ai/docs/config"
+          "https://opencode.ai/config.json"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "opencode"
         },
@@ -16181,10 +16794,10 @@
       },
       "fix": {
         "autofix": true,
-        "fix_safety": "safe"
+        "fix_safety": "unsafe"
       },
-      "good_example": "{\n  \"share\": \"manual\"\n}",
-      "bad_example": "{\n  \"autoshare\": \"manual\"\n}"
+      "good_example": "{\"share\": \"auto\"}",
+      "bad_example": "{\"autoshare\": true}"
     },
     {
       "id": "OC-DEP-005",
@@ -16194,16 +16807,16 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://opencode.ai/docs/"
+          "https://opencode.ai/docs/config/"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "opencode"
         },
         "normative_level": "SHOULD",
         "tests": {
           "unit": true,
-          "fixtures": false,
+          "fixtures": true,
           "e2e": false
         }
       },
@@ -16211,65 +16824,66 @@
         "autofix": true,
         "fix_safety": "unsafe"
       },
-      "good_example": "{\n  \"$schema\": \"https://opencode.ai/config.json\"\n}",
-      "bad_example": "{\n  \"theme\": \"dark\",\n  \"keybinds\": {}\n}"
+      "good_example": "tui.json: {\"theme\": \"tokyonight\"}",
+      "bad_example": "opencode.json: {\"theme\": \"tokyonight\"}"
     },
     {
       "id": "OC-DEP-006",
-      "name": "Deprecated MaxSteps Field",
+      "name": "Deprecated maxSteps Field",
       "severity": "MEDIUM",
       "category": "opencode",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://opencode.ai/docs/"
+          "https://opencode.ai/docs/agents/",
+          "https://opencode.ai/v2/docs/migrate-v1/"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "opencode"
         },
         "normative_level": "SHOULD",
         "tests": {
           "unit": true,
-          "fixtures": false,
+          "fixtures": true,
           "e2e": false
         }
       },
       "fix": {
         "autofix": true,
-        "fix_safety": "safe"
+        "fix_safety": "unsafe"
       },
-      "good_example": "{\n  \"agent\": { \"a\": { \"maxTokens\": 8000 } }\n}",
-      "bad_example": "{\n  \"agent\": { \"a\": { \"maxSteps\": 50 } }\n}"
+      "good_example": "steps: 20",
+      "bad_example": "maxSteps: 20"
     },
     {
       "id": "OC-DEP-007",
-      "name": "Deprecated Reference Field",
+      "name": "Deprecated reference Field",
       "severity": "MEDIUM",
       "category": "opencode",
       "evidence": {
-        "source_type": "vendor_code",
+        "source_type": "vendor_docs",
         "source_urls": [
           "https://opencode.ai/config.json",
-          "https://opencode.ai/docs/"
+          "https://opencode.ai/v2/docs/migrate-v1/"
         ],
-        "verified_on": "2026-07-27",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "opencode"
         },
         "normative_level": "SHOULD",
         "tests": {
           "unit": true,
-          "fixtures": false,
+          "fixtures": true,
           "e2e": false
         }
       },
       "fix": {
         "autofix": true,
-        "fix_safety": "safe"
+        "fix_safety": "unsafe"
       },
-      "good_example": "{\n  \"references\": { \"lib\": \"github:org/repo\" }\n}",
-      "bad_example": "{\n  \"reference\": { \"lib\": \"github:org/repo\" }\n}"
+      "good_example": "{\"references\": {\"docs\": \"../docs\"}}",
+      "bad_example": "{\"reference\": {\"docs\": \"../docs\"}}"
     },
     {
       "id": "OC-CFG-008",
@@ -16279,11 +16893,13 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://opencode.ai/docs/config"
+          "https://opencode.ai/config.json",
+          "https://opencode.ai/v2/docs/migrate-v1/"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
-          "tool": "opencode"
+          "tool": "opencode",
+          "version_range": "<2.0.0"
         },
         "normative_level": "MUST",
         "tests": {
@@ -16296,20 +16912,21 @@
         "autofix": true,
         "fix_safety": "unsafe"
       },
-      "good_example": "{\n  \"logLevel\": \"info\"\n}",
-      "bad_example": "{\n  \"logLevel\": \"verbose\"\n}"
+      "good_example": "{\"logLevel\": \"INFO\"}",
+      "bad_example": "{\"logLevel\": \"verbose\"}"
     },
     {
       "id": "OC-CFG-009",
-      "name": "Invalid Compaction Reserved",
+      "name": "Invalid Compaction Token Budget",
       "severity": "HIGH",
       "category": "opencode",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://opencode.ai/docs/config"
+          "https://opencode.ai/config.json",
+          "https://opencode.ai/v2/docs/migrate-v1/"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "opencode"
         },
@@ -16323,8 +16940,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"compaction\": { \"reserved\": 5 }\n}",
-      "bad_example": "{\n  \"compaction\": { \"reserved\": -1 }\n}"
+      "good_example": "{\"compaction\": {\"keep\": {\"tokens\": 8000}, \"buffer\": 20000}}",
+      "bad_example": "{\"compaction\": {\"reserved\": -1}}"
     },
     {
       "id": "OC-CFG-010",
@@ -16334,9 +16951,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://opencode.ai/docs/config"
+          "https://opencode.ai/config.json",
+          "https://opencode.ai/v2/docs/skills/"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "opencode"
         },
@@ -16350,8 +16968,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"skills\": { \"urls\": [\"https://example.com\"] }\n}",
-      "bad_example": "{\n  \"skills\": { \"urls\": [\"not-a-url\"] }\n}",
+      "good_example": "{\"skills\": {\"urls\": [\"https://example.com/.well-known/skills/\"]}}",
+      "bad_example": "{\"skills\": {\"urls\": [\"not-a-url\"]}}",
       "security": {
         "cwe": [
           "CWE-494"
@@ -16374,9 +16992,11 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://opencode.ai/docs/config"
+          "https://opencode.ai/docs/mcp-servers/",
+          "https://opencode.ai/v2/docs/mcp-servers/",
+          "https://opencode.ai/config.json"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "opencode"
         },
@@ -16390,8 +17010,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"mcp\": { \"srv\": { \"timeout\": 5000 } }\n}",
-      "bad_example": "{\n  \"mcp\": { \"srv\": { \"timeout\": -5 } }\n}"
+      "good_example": "{\"mcp\": {\"x\": {\"type\": \"local\", \"command\": [\"x\"], \"timeout\": 5000}}}",
+      "bad_example": "{\"mcp\": {\"x\": {\"type\": \"local\", \"command\": [\"x\"], \"timeout\": -5}}}"
     },
     {
       "id": "OC-CFG-012",
@@ -16401,9 +17021,11 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://opencode.ai/docs/config"
+          "https://opencode.ai/docs/mcp-servers/",
+          "https://opencode.ai/v2/docs/mcp-servers/",
+          "https://opencode.ai/config.json"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "opencode"
         },
@@ -16417,8 +17039,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"mcp\": { \"srv\": { \"oauth\": { \"client_id\": \"abc\", \"authorization_url\": \"https://auth.example.com\" } } }\n}",
-      "bad_example": "{\n  \"mcp\": { \"srv\": { \"oauth\": { \"client_id\": \"abc\" } } }\n}",
+      "good_example": "{\"mcp\": {\"sentry\": {\"type\": \"remote\", \"url\": \"https://mcp.sentry.dev/mcp\", \"oauth\": {}}}}",
+      "bad_example": "{\"mcp\": {\"sentry\": {\"type\": \"remote\", \"url\": \"https://mcp.sentry.dev/mcp\", \"oauth\": {\"authorization_url\": \"https://auth.example\"}}}}",
       "security": {
         "cwe": [
           "CWE-287"
@@ -16441,24 +17063,27 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://opencode.ai/docs/"
+          "https://opencode.ai/docs/config/",
+          "https://opencode.ai/config.json",
+          "https://opencode.ai/v2/docs/migrate-v1/"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
-          "tool": "opencode"
+          "tool": "opencode",
+          "version_range": "<2.0.0"
         },
         "normative_level": "MUST",
         "tests": {
           "unit": true,
-          "fixtures": false,
+          "fixtures": true,
           "e2e": false
         }
       },
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"mcp\": { \"srv\": { \"type\": \"stdio\", \"command\": \"node server.js\" } }\n}",
-      "bad_example": "{\n  \"mcp\": { \"srv\": { \"type\": \"invalid\" } }\n}"
+      "good_example": "{\"server\": {\"port\": 4096}}",
+      "bad_example": "{\"server\": {\"port\": \"8080\"}}"
     },
     {
       "id": "OC-CFG-014",
@@ -16468,25 +17093,26 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://github.com/anomalyco/opencode/releases/tag/v1.18.2"
+          "https://opencode.ai/docs/config/",
+          "https://opencode.ai/config.json",
+          "https://opencode.ai/v2/docs/migrate-v1/"
         ],
-        "verified_on": "2026-07-16",
+        "verified_on": "2026-10-17",
         "applies_to": {
-          "tool": "opencode",
-          "version_range": ">=1.18.2"
+          "tool": "opencode"
         },
         "normative_level": "MUST",
         "tests": {
           "unit": true,
-          "fixtures": false,
+          "fixtures": true,
           "e2e": false
         }
       },
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"subagent_depth\": 2\n}",
-      "bad_example": "{\n  \"subagent_depth\": -1\n}"
+      "good_example": "{\"subagent_depth\": 2}",
+      "bad_example": "{\"subagent_depth\": -1}"
     },
     {
       "id": "OC-AG-005",
@@ -16496,9 +17122,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://opencode.ai/docs/config"
+          "https://opencode.ai/docs/agents/"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "opencode"
         },
@@ -16512,8 +17138,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"agent\": { \"a\": { \"top_p\": 0.9 } }\n}",
-      "bad_example": "{\n  \"agent\": { \"a\": { \"top_p\": 1.5 } }\n}"
+      "good_example": "top_p: 0.9",
+      "bad_example": "top_p: 1.5"
     },
     {
       "id": "OC-AG-006",
@@ -16523,9 +17149,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://opencode.ai/docs/config"
+          "https://opencode.ai/docs/agents/",
+          "https://opencode.ai/config.json"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "opencode"
         },
@@ -16540,8 +17167,8 @@
         "autofix": true,
         "fix_safety": "unsafe"
       },
-      "good_example": "{\n  \"agent\": { \"a\": { \"color\": \"primary\" } }\n}",
-      "bad_example": "{\n  \"agent\": { \"a\": { \"color\": \"purple\" } }\n}"
+      "good_example": "color: accent",
+      "bad_example": "color: purple"
     },
     {
       "id": "OC-AG-007",
@@ -16551,9 +17178,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://opencode.ai/docs/config"
+          "https://opencode.ai/docs/agents/"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "opencode"
         },
@@ -16567,8 +17194,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"agent\": { \"a\": { \"steps\": 20 } }\n}",
-      "bad_example": "{\n  \"agent\": { \"a\": { \"steps\": 10, \"maxSteps\": 20 } }\n}"
+      "good_example": "steps: 20",
+      "bad_example": "steps: 20\nmaxSteps: 20"
     },
     {
       "id": "OC-AG-008",
@@ -16578,9 +17205,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://opencode.ai/docs/config"
+          "https://opencode.ai/config.json",
+          "https://opencode.ai/v2/docs/agents/"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "opencode"
         },
@@ -16594,36 +17222,36 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"agent\": { \"a\": { \"hidden\": true } }\n}",
-      "bad_example": "{\n  \"agent\": { \"a\": { \"hidden\": \"yes\" } }\n}"
+      "good_example": "hidden: true",
+      "bad_example": "hidden: \"yes\""
     },
     {
       "id": "OC-AG-009",
-      "name": "Invalid Agent Disable Type",
+      "name": "Invalid Agent disable or disabled Type",
       "severity": "HIGH",
       "category": "opencode",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://opencode.ai/docs/"
+          "https://opencode.ai/config.json",
+          "https://opencode.ai/v2/docs/agents/"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "opencode"
         },
         "normative_level": "MUST",
         "tests": {
           "unit": true,
-          "fixtures": false,
+          "fixtures": true,
           "e2e": false
         }
       },
       "fix": {
-        "autofix": true,
-        "fix_safety": "unsafe"
+        "autofix": false
       },
-      "good_example": "{\n  \"agent\": { \"a\": { \"disabled\": true } }\n}",
-      "bad_example": "{\n  \"agent\": { \"a\": { \"disabled\": \"yes\" } }\n}"
+      "good_example": "disabled: true",
+      "bad_example": "disable: \"yes\""
     },
     {
       "id": "OC-LSP-001",
@@ -16633,11 +17261,13 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://opencode.ai/docs/config"
+          "https://opencode.ai/docs/lsp/",
+          "https://opencode.ai/config.json"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
-          "tool": "opencode"
+          "tool": "opencode",
+          "version_range": "<2.0.0"
         },
         "normative_level": "SHOULD",
         "tests": {
@@ -16649,8 +17279,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"lsp\": { \"ts\": { \"command\": \"tsc\", \"extensions\": [\".ts\"] } }\n}",
-      "bad_example": "{\n  \"lsp\": { \"ts\": { \"command\": \"tsc\" } }\n}"
+      "good_example": "{\"lsp\": {\"ts\": {\"command\": [\"typescript-language-server\", \"--stdio\"], \"extensions\": [\".ts\"]}}}",
+      "bad_example": "{\"lsp\": {\"ts\": {\"command\": [\"typescript-language-server\", \"--stdio\"]}}}"
     },
     {
       "id": "OC-LSP-002",
@@ -16660,11 +17290,13 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://opencode.ai/docs/config"
+          "https://opencode.ai/docs/lsp/",
+          "https://opencode.ai/config.json"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
-          "tool": "opencode"
+          "tool": "opencode",
+          "version_range": "<2.0.0"
         },
         "normative_level": "MUST",
         "tests": {
@@ -16676,8 +17308,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"lsp\": { \"ts\": { \"extensions\": [\".ts\", \".tsx\"] } }\n}",
-      "bad_example": "{\n  \"lsp\": { \"ts\": { \"extensions\": [] } }\n}"
+      "good_example": "\"extensions\": [\".ts\", \".tsx\"]",
+      "bad_example": "\"extensions\": \".ts\""
     },
     {
       "id": "OC-TUI-001",
@@ -16687,9 +17319,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://opencode.ai/docs/config"
+          "https://opencode.ai/docs/config/"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "opencode"
         },
@@ -16703,8 +17335,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"tui\": { \"theme\": \"dark\" }\n}",
-      "bad_example": "{\n  \"tui\": { \"unknown_opt\": true }\n}"
+      "good_example": "\"tui\": {\"scroll_speed\": 3}",
+      "bad_example": "\"tui\": {\"unknown_option\": true}"
     },
     {
       "id": "OC-TUI-002",
@@ -16714,9 +17346,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://opencode.ai/docs/config"
+          "https://opencode.ai/docs/config/"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "opencode"
         },
@@ -16730,8 +17362,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"tui\": { \"scroll_speed\": 1.0 }\n}",
-      "bad_example": "{\n  \"tui\": { \"scroll_speed\": 0.0001 }\n}"
+      "good_example": "\"scroll_speed\": 3",
+      "bad_example": "\"scroll_speed\": 0"
     },
     {
       "id": "OC-TUI-003",
@@ -16741,9 +17373,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://opencode.ai/docs/config"
+          "https://opencode.ai/docs/config/"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "opencode"
         },
@@ -16758,8 +17390,659 @@
         "autofix": true,
         "fix_safety": "unsafe"
       },
-      "good_example": "{\n  \"tui\": { \"diff_style\": \"auto\" }\n}",
-      "bad_example": "{\n  \"tui\": { \"diff_style\": \"unified\" }\n}"
+      "good_example": "\"diff_style\": \"auto\"",
+      "bad_example": "\"diff_style\": \"unified\""
+    },
+    {
+      "id": "OC-CFG-015",
+      "name": "Shell-Style Variable Not Expanded",
+      "severity": "MEDIUM",
+      "category": "opencode",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://opencode.ai/v2/docs/mcp-servers/",
+          "https://opencode.ai/docs/config/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "opencode"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"mcp\": {\"x\": {\"type\": \"remote\", \"url\": \"https://x.example/mcp\", \"headers\": {\"X-Key\": \"{env:MY_API_KEY}\"}}}}",
+      "bad_example": "{\"mcp\": {\"x\": {\"type\": \"remote\", \"url\": \"https://x.example/mcp\", \"headers\": {\"X-Key\": \"${MY_API_KEY}\"}}}}"
+    },
+    {
+      "id": "OC-CFG-017",
+      "name": "Mixed OpenCode 1 and 2 Fields in One Entry",
+      "severity": "MEDIUM",
+      "category": "opencode",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://opencode.ai/v2/docs/migrate-v1/",
+          "https://opencode.ai/v2/docs/agents/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "opencode",
+          "version_range": ">=2.0.0"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"agents\": {\"reviewer\": {\"system\": \"Review only.\", \"permissions\": []}}}",
+      "bad_example": "{\"agents\": {\"reviewer\": {\"prompt\": \"Review only.\", \"permissions\": []}}}"
+    },
+    {
+      "id": "OC-CFG-018",
+      "name": "Reference Without Description",
+      "severity": "LOW",
+      "category": "opencode",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://opencode.ai/docs/references/",
+          "https://opencode.ai/v2/docs/references/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "opencode"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"references\": {\"docs\": {\"path\": \"../docs\", \"description\": \"Product behavior\"}}}",
+      "bad_example": "{\"references\": {\"docs\": \"../docs\"}}"
+    },
+    {
+      "id": "OC-CFG-019",
+      "name": "Bare Reference Shorthand Read as Git Repository",
+      "severity": "LOW",
+      "category": "opencode",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://opencode.ai/v2/docs/references/",
+          "https://opencode.ai/docs/references/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "opencode"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"references\": {\"docs\": \"./docs\"}}",
+      "bad_example": "{\"references\": {\"docs\": \"docs\"}}"
+    },
+    {
+      "id": "OC-CFG-020",
+      "name": "Many Enabled MCP Servers",
+      "severity": "LOW",
+      "category": "opencode",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://opencode.ai/docs/mcp-servers/",
+          "https://opencode.ai/v2/docs/mcp-servers/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "opencode"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"mcp\": {\"docs\": {\"type\": \"remote\", \"url\": \"https://x.example/mcp\"}}}",
+      "bad_example": "nine enabled servers under mcp"
+    },
+    {
+      "id": "OC-CFG-021",
+      "name": "OpenCode 1 Field in an mcp.servers Entry",
+      "severity": "MEDIUM",
+      "category": "opencode",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://opencode.ai/v2/docs/mcp-servers/",
+          "https://opencode.ai/v2/docs/migrate-v1/",
+          "https://opencode.ai/config.json"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "opencode",
+          "version_range": ">=2.0.0"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"mcp\": {\"servers\": {\"x\": {\"type\": \"local\", \"command\": [\"x\"], \"disabled\": true}}}}",
+      "bad_example": "{\"mcp\": {\"servers\": {\"x\": {\"type\": \"local\", \"command\": [\"x\"], \"enabled\": false}}}}"
+    },
+    {
+      "id": "OC-CFG-022",
+      "name": "Global-Only Setting in Project Config",
+      "severity": "MEDIUM",
+      "category": "opencode",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://opencode.ai/v2/docs/config/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "opencode",
+          "version_range": ">=2.0.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "~/.config/opencode/opencode.json: {\"update\": \"notify\"}",
+      "bad_example": "<project>/opencode.json: {\"update\": \"auto\"}"
+    },
+    {
+      "id": "OC-AG-010",
+      "name": "OpenCode Agent Without Description",
+      "severity": "MEDIUM",
+      "category": "opencode",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://opencode.ai/v2/docs/agents/",
+          "https://opencode.ai/docs/agents/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "opencode"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\ndescription: Reviews code\nmode: subagent\n---",
+      "bad_example": "---\nmode: subagent\n---"
+    },
+    {
+      "id": "OC-AG-011",
+      "name": "hidden on a Non-Subagent",
+      "severity": "LOW",
+      "category": "opencode",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://opencode.ai/docs/agents/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "opencode",
+          "version_range": "<2.0.0"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "mode: subagent\nhidden: true",
+      "bad_example": "mode: primary\nhidden: true"
+    },
+    {
+      "id": "OC-PM-003",
+      "name": "Permission Rule Shadowed by Later Catch-All",
+      "severity": "MEDIUM",
+      "category": "opencode",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://opencode.ai/docs/permissions/",
+          "https://opencode.ai/v2/docs/permissions/",
+          "https://opencode.ai/v2/docs/policies/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "opencode"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"permission\": {\"bash\": {\"*\": \"ask\", \"git status *\": \"allow\"}}}",
+      "bad_example": "{\"permission\": {\"bash\": {\"git status *\": \"allow\", \"*\": \"ask\"}}}"
+    },
+    {
+      "id": "OC-PM-004",
+      "name": "Broad external_directory Allow",
+      "severity": "MEDIUM",
+      "category": "opencode",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://opencode.ai/docs/permissions/",
+          "https://opencode.ai/v2/docs/permissions/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "opencode"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"permission\": {\"external_directory\": {\"~/projects/personal/**\": \"allow\"}}}",
+      "bad_example": "{\"permission\": {\"external_directory\": {\"~/**\": \"allow\"}}}"
+    },
+    {
+      "id": "OC-PM-005",
+      "name": "OpenCode 1 Action Name in a permissions Array",
+      "severity": "MEDIUM",
+      "category": "opencode",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://opencode.ai/v2/docs/migrate-v1/",
+          "https://opencode.ai/v2/docs/permissions/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "opencode",
+          "version_range": ">=2.0.0"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"action\": \"shell\", \"resource\": \"git push *\", \"effect\": \"ask\"}",
+      "bad_example": "{\"action\": \"bash\", \"resource\": \"git push *\", \"effect\": \"ask\"}"
+    },
+    {
+      "id": "OC-PM-006",
+      "name": "Shell Allow-All With Deny Patterns",
+      "severity": "LOW",
+      "category": "opencode",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://opencode.ai/v2/docs/permissions/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "opencode"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"permission\": {\"bash\": {\"*\": \"ask\", \"git status *\": \"allow\"}}}",
+      "bad_example": "{\"permission\": {\"bash\": {\"*\": \"allow\", \"rm *\": \"deny\"}}}"
+    },
+    {
+      "id": "OC-PM-007",
+      "name": "Shell Pattern Without Argument Wildcard",
+      "severity": "LOW",
+      "category": "opencode",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://opencode.ai/docs/permissions/",
+          "https://opencode.ai/v2/docs/permissions/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "opencode"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "\"git status *\": \"allow\"",
+      "bad_example": "\"git status\": \"allow\""
+    },
+    {
+      "id": "OC-POL-001",
+      "name": "Invalid Policy Statement",
+      "severity": "HIGH",
+      "category": "opencode",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://opencode.ai/v2/docs/policies/",
+          "https://opencode.ai/config.json",
+          "https://opencode.ai/docs/config/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "opencode"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"policies\": [{\"action\": \"provider.use\", \"resource\": \"openai\", \"effect\": \"deny\"}]}",
+      "bad_example": "{\"policies\": [{\"action\": \"provider.use\", \"resource\": \"openai\", \"effect\": \"ask\"}]}"
+    },
+    {
+      "id": "OC-CMD-001",
+      "name": "Command Argument Inside Shell Block",
+      "severity": "MEDIUM",
+      "category": "opencode",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://opencode.ai/v2/docs/commands/",
+          "https://opencode.ai/docs/commands/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "opencode"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "Summarize these commits:\n!`git log --oneline -10`",
+      "bad_example": "Summarize these commits:\n!`git log --oneline -$1`"
+    },
+    {
+      "id": "OC-CMD-002",
+      "name": "JSON Command Without Template",
+      "severity": "HIGH",
+      "category": "opencode",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://opencode.ai/docs/commands/",
+          "https://opencode.ai/v2/docs/commands/",
+          "https://opencode.ai/config.json"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "opencode"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"command\": {\"test\": {\"template\": \"Run the tests.\"}}}",
+      "bad_example": "{\"command\": {\"test\": {\"description\": \"Run tests\"}}}"
+    },
+    {
+      "id": "OC-CMD-003",
+      "name": "template in Markdown Command Frontmatter",
+      "severity": "LOW",
+      "category": "opencode",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://opencode.ai/v2/docs/commands/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "opencode"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\ndescription: Review\n---\nReview $ARGUMENTS.",
+      "bad_example": "---\ntemplate: Review $ARGUMENTS.\n---"
+    },
+    {
+      "id": "OC-DEP-008",
+      "name": "Legacy Singular .opencode Subdirectory",
+      "severity": "LOW",
+      "category": "opencode",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://opencode.ai/docs/config/",
+          "https://opencode.ai/v2/docs/commands/",
+          "https://opencode.ai/v2/docs/migrate-v1/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "opencode"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": ".opencode/agents/review.md",
+      "bad_example": ".opencode/agent/review.md"
+    },
+    {
+      "id": "OC-DEP-009",
+      "name": "Field Ignored by OpenCode 2",
+      "severity": "MEDIUM",
+      "category": "opencode",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://opencode.ai/v2/docs/migrate-v1/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "opencode",
+          "version_range": ">=2.0.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "OPENCODE_LOG_LEVEL=INFO opencode",
+      "bad_example": "{\"permissions\": [], \"logLevel\": \"INFO\"}"
+    },
+    {
+      "id": "OC-AGM-003",
+      "name": "CLAUDE.md Ignored by OpenCode 2",
+      "severity": "MEDIUM",
+      "category": "opencode",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://opencode.ai/v2/docs/instructions/",
+          "https://opencode.ai/v2/docs/migrate-v1/",
+          "https://opencode.ai/docs/rules/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "opencode",
+          "version_range": ">=2.0.0"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "AGENTS.md (CLAUDE.md may import it)",
+      "bad_example": "CLAUDE.md only, in a project with .opencode/"
+    },
+    {
+      "id": "OC-SK-002",
+      "name": "Duplicate OpenCode Skill ID",
+      "severity": "LOW",
+      "category": "opencode",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://opencode.ai/v2/docs/skills/",
+          "https://opencode.ai/docs/skills/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "opencode"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": ".opencode/skills/release/SKILL.md only",
+      "bad_example": ".claude/skills/release/SKILL.md and .opencode/skills/release/SKILL.md"
+    },
+    {
+      "id": "OC-TOOL-001",
+      "name": "Custom Tool Shadows Built-in Tool",
+      "severity": "LOW",
+      "category": "opencode",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://opencode.ai/docs/custom-tools/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "opencode"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": ".opencode/tools/database.ts",
+      "bad_example": ".opencode/tools/bash.ts with export default"
     },
     {
       "id": "CC-PL-017",
@@ -17551,7 +18834,7 @@
     },
     "opencode": {
       "prefix": "OC",
-      "count": 46,
+      "count": 66,
       "description": "OpenCode configuration rules"
     },
     "gemini-cli": {
@@ -17561,7 +18844,7 @@
     },
     "codex": {
       "prefix": "CDX",
-      "count": 64,
+      "count": 85,
       "description": "Codex CLI configuration validation"
     },
     "roo-code": {
@@ -17606,7 +18889,7 @@
     },
     "codex-skills": {
       "prefix": "CX-SK",
-      "count": 1,
+      "count": 4,
       "description": "Codex per-client skill rules"
     },
     "opencode-skills": {

@@ -1,0 +1,15 @@
+{
+  "description": "CDX-HK-001, CDX-HK-002, CDX-HK-004 and CDX-HK-005 fixture",
+  "hooks": {
+    "SessionEnd": [
+      {"hooks": [{"type": "command", "command": "./end.sh", "timeout": 60}]}
+    ],
+    "Stop": [
+      {"hooks": [{"type": "prompt", "prompt": "Check the work"}]}
+    ],
+    "PreToolUse": [
+      {"matcher": "Bash", "hooks": [{"type": "command", "command": "./pre.sh", "additionalContextLimit": 0}]}
+    ],
+    "Notification": []
+  }
+}

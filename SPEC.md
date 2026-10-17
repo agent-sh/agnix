@@ -25,15 +25,15 @@
 | GitHub Copilot | .github/copilot-instructions.md, .github/instructions/*.instructions.md, .github/agents/*.agent.md, .github/prompts/*.prompt.md, .github/hooks/hooks.json, .github/workflows/copilot-setup-steps.yml | 33 |
 | Cursor Project Rules | .cursor/rules/*.mdc, .cursorrules, .cursor/hooks.json, .cursor/agents/**/*.md, .cursor/environment.json | 39 |
 | Cline | .clinerules, .clinerules/*.md, .clinerules/*.txt | 14 |
-| OpenCode | opencode.json, opencode.jsonc | 46 |
+| OpenCode | opencode.json, opencode.jsonc | 66 |
 | Gemini Agents | .gemini/agents/*.json | 1 |
 | Gemini CLI | GEMINI.md, GEMINI.local.md, .gemini/settings.json (hooks), gemini-extension.json (extensions), .geminiignore | 10 |
-| Codex CLI | .codex/config.toml/.json/.yaml | 64 |
+| Codex CLI | .codex/config.toml/.json/.yaml | 85 |
 | Version Awareness | .agnix.toml | 1 |
 | Cursor Skills | .cursor/skills/*/SKILL.md | 1 |
 | Cline Skills | .cline/skills/*/SKILL.md | 2 |
 | Copilot Skills | .github/skills/*/SKILL.md | 2 |
-| Codex Skills | .agents/skills/*/SKILL.md | 1 |
+| Codex Skills | .agents/skills/*/SKILL.md | 4 |
 | OpenCode Skills | .opencode/skills/*/SKILL.md | 1 |
 | Windsurf | .windsurf/rules/*.md, .windsurf/workflows/*.md, .windsurfrules | 4 |
 | Windsurf Skills | .windsurf/skills/*/SKILL.md | 1 |

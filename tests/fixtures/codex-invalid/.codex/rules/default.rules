@@ -1,0 +1,5 @@
+# CDX-RL-001: forbidden without a justification.
+prefix_rule(pattern = ["grep"], decision = "forbidden")
+
+# CDX-RL-002: allows any shell script outside the sandbox.
+prefix_rule(pattern = ["bash"])

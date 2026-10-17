@@ -13,7 +13,7 @@ keywords: ["CDX-REQ-001", "unknown codex requirements.toml key", "codex cli", "v
 - **Category**: `Codex CLI`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-07-30`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 

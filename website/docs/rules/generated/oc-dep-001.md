@@ -1,9 +1,9 @@
 ---
 id: oc-dep-001
-title: "OC-DEP-001: Deprecated mode Field - OpenCode"
+title: "OC-DEP-001: Deprecated mode Map - OpenCode"
 sidebar_label: "OC-DEP-001"
-description: "agnix rule OC-DEP-001 checks for deprecated mode field in opencode files. Severity: MEDIUM. See examples and fix guidance."
-keywords: ["OC-DEP-001", "deprecated mode field", "opencode", "validation", "agnix", "linter"]
+description: "agnix rule OC-DEP-001 checks for deprecated mode map in opencode files. Severity: MEDIUM. See examples and fix guidance."
+keywords: ["OC-DEP-001", "deprecated mode map", "opencode", "validation", "agnix", "linter"]
 ---
 
 ## Summary
@@ -12,8 +12,8 @@ keywords: ["OC-DEP-001", "deprecated mode field", "opencode", "validation", "agn
 - **Severity**: `MEDIUM`
 - **Category**: `OpenCode`
 - **Normative Level**: `SHOULD`
-- **Auto-Fix**: `Yes (safe)`
-- **Verified On**: `2026-04-23`
+- **Auto-Fix**: `Yes (unsafe)`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,8 @@ keywords: ["OC-DEP-001", "deprecated mode field", "opencode", "validation", "agn
 
 ## Evidence Sources
 
-- https://opencode.ai/docs/config
+- https://opencode.ai/config.json
+- https://opencode.ai/v2/docs/migrate-v1/
 
 ## Test Coverage Metadata
 
@@ -38,15 +39,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{
-  "mode": "agent"
-}
+{"mode": {"focus": {}}}
 ```
 
 ### Valid
 
 ```json
-{
-  "agent": { "my-agent": {} }
-}
+{"agent": {"focus": {"mode": "primary"}}}
 ```

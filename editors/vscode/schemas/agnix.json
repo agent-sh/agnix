@@ -137,7 +137,8 @@
         "codex": null,
         "copilot": null,
         "cursor": null,
-        "kiro": null
+        "kiro": null,
+        "opencode": null
       }
     },
     "tools": {
@@ -500,6 +501,14 @@
         },
         "kiro": {
           "description": "Kiro CLI version for version-aware validation (e.g., \"2.32.1\"). 2.x selects the V2 agent engine and 3.x or later the V3 engine; unpinned, each Kiro file is checked against the engines its own fields target",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "opencode": {
+          "description": "OpenCode version for version-aware validation (e.g., \"2.0.32\"). 1.x selects OpenCode 1 behavior and 2.x or later OpenCode 2; unpinned, each OpenCode file is checked against the line its own fields target",
           "type": [
             "string",
             "null"

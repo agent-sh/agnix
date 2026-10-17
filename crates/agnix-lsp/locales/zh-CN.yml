@@ -8,11 +8,6 @@ rules:
     fix: "将钩子触发器规范化为 %{canonical}"
     legacy: "旧版 .kiro.hook 使用 CLI 触发器名称 %{trigger}，但此目录中没有对应的 V3 JSON 钩子"
     legacy_suggestion: "如果此钩子用于 CLI V3，请将其迁移到带版本的 .kiro/hooks/*.json 文件。旧版 IDE 手动钩子可以保留原始格式。"
-  oc_dep_005:
-    cleanup_suggestion: "请先将 '%{key}' 移至 tui.json。仅在迁移完成后使用不安全清理；它会删除旧版 TUI 设置，但不会移动这些设置。"
-    cleanup_fix: "仅在完成向 tui.json 的迁移后删除旧版 TUI 设置（不会移动配置）"
-  oc_dep_002:
-    migration_suggestion: "将 tools 布尔值迁移为 permission 动作或规则；不要仅重命名键。旧版 tools 仍受支持。"
   cop_027:
     fix: "将 infer 替换为调用控制字段，保留已显式设置的字段"
   cdx_cfg_001:
@@ -377,33 +372,9 @@ rules:
     message: '解析 .gemini/settings.json 失败: %{error}'
     suggestion: 修复 .gemini/settings.json 中的 JSON 语法错误
     unknown_key: .gemini/settings.json 中未知的顶级键 '%{key}'
-  oc_001:
-    message: '无效的共享模式 ''%{value}''。有效值: ''manual'', ''auto'', ''disabled'''
-    type_error: '字段 ''share'' 必须是字符串。有效值: ''manual'', ''auto'', ''disabled'''
-    suggestion: 使用 'manual'、'auto' 或 'disabled' 作为 share 字段的值
-  oc_002:
-    not_found: 指令路径 '%{path}' 不存在
-    invalid_glob: 指令路径 '%{path}' 的 glob 语法无效
-    traversal: 指令路径 '%{path}' 必须是相对路径且不能包含 '..'
-    type_error: 字段 'instructions' 必须是字符串数组
-    suggestion: 在指令数组中使用存在的相对路径或有效的 glob 模式
-  oc_003:
-    message: 'opencode.json 解析错误: %{error}'
-    suggestion: 修复 opencode.json 中的 JSON 语法
   cdx_000:
     message: '解析 .codex/config.toml 为 TOML 失败: %{error}'
     suggestion: 验证 TOML 语法 -- 检查是否缺少引号、括号或无效的键值对
-  cdx_001:
-    message: '无效的 approvalMode ''%{value}''。有效值: ''suggest'', ''auto-edit'', ''full-auto'''
-    type_error: '字段 ''approvalMode'' 必须是字符串。有效值: ''suggest'', ''auto-edit'', ''full-auto'''
-    suggestion: 使用 'suggest'、'auto-edit' 或 'full-auto' 作为 approvalMode 字段的值
-  cdx_002:
-    message: '无效的 fullAutoErrorMode ''%{value}''。有效值: ''ask-user'', ''ignore-and-continue'''
-    type_error: '字段 ''fullAutoErrorMode'' 必须是字符串。有效值: ''ask-user'', ''ignore-and-continue'''
-    suggestion: 使用 'ask-user' 或 'ignore-and-continue' 作为 fullAutoErrorMode 字段的值
-  cdx_003:
-    message: AGENTS.override.md 不应纳入版本控制
-    suggestion: 将 AGENTS.override.md 添加到 .gitignore（它包含用户特定的覆盖配置）
   cdx_006:
     type_error: 字段 'project_doc_fallback_filenames' 必须是字符串数组
     non_string: 字段 'project_doc_fallback_filenames' 在索引 %{index} 处包含非字符串条目
@@ -549,10 +520,6 @@ rules:
   cdx_cfg_011:
     non_prefixed_type_error: features.non_prefixed_mcp_tool_names 必须是布尔值，或包含可选布尔值 'enabled' 和字符串数组 'server_names' 的对象
     non_prefixed_suggestion: 使用布尔值，或在 [features.non_prefixed_mcp_tool_names] 中设置 enabled 和 server_names
-  oc_cfg_007:
-    environment_type: 本地 MCP 服务器的 'environment' 必须是值均为字符串的对象
-    unsupported_env: 本地 MCP 服务器不支持 'env'；该字段会被忽略
-    suggestion_environment: 将 'env' 重命名为 'environment'，并确保每个变量值都是字符串
   cdx_pl_002:
     message: '解析 plugin.json 失败: %{error}'
     suggestion: 验证 plugin.json 中的 JSON 语法 - 检查是否缺少逗号、括号或不带引号的键
@@ -593,9 +560,6 @@ rules:
   cdx_pl_013:
     message: '''hooks'' 值无效：应为字符串、字符串数组、对象或对象数组；实际为 %{actual}'
     suggestion: 使用相对 hooks 文件路径、路径数组、内联 hooks 对象或内联 hooks 对象数组
-  cdx_pl_014:
-    message: 缺少 'description' 字段 - 建议添加以提高市场可见性
-    suggestion: 在 plugin.json 中添加 'description' 字符串以提高可发现性
   cdx_pl_016:
     message: interface.logoDark 中的深色模式 logo 路径 '%{path}' 必须以 ./ 开头且不使用 '..' 遍历
     suggestion: 使用相对深色模式 logo 资源路径，例如 './assets/logo-dark.png'

@@ -340,6 +340,62 @@
       "replaced_by": [
         "CC-MCP-005"
       ]
+    },
+    {
+      "id": "CDX-001",
+      "removed_in": "0.59.0",
+      "reason": "`approvalMode` belonged to the retired TypeScript Codex CLI; current Codex ignores it, and CDX-004 reports it as a retired key.",
+      "replaced_by": [
+        "CDX-004"
+      ]
+    },
+    {
+      "id": "CDX-002",
+      "removed_in": "0.59.0",
+      "reason": "`fullAutoErrorMode` belonged to the retired TypeScript Codex CLI; current Codex ignores it, and CDX-004 reports it as a retired key.",
+      "replaced_by": [
+        "CDX-004"
+      ]
+    },
+    {
+      "id": "CDX-003",
+      "removed_in": "0.59.0",
+      "reason": "Committing nested AGENTS.override.md files is the team pattern the Codex docs describe.",
+      "replaced_by": []
+    },
+    {
+      "id": "CDX-AG-007",
+      "removed_in": "0.59.0",
+      "reason": "Never ran.",
+      "replaced_by": []
+    },
+    {
+      "id": "CDX-CFG-013",
+      "removed_in": "0.59.0",
+      "reason": "Codex has no `sandbox_workspace_write.mode` field.",
+      "replaced_by": []
+    },
+    {
+      "id": "OC-CFG-003",
+      "removed_in": "0.59.0",
+      "reason": "Duplicated OC-004, which reports unknown config keys for both OpenCode release lines.",
+      "replaced_by": [
+        "OC-004"
+      ]
+    },
+    {
+      "id": "OC-PM-001",
+      "removed_in": "0.59.0",
+      "reason": "Duplicated OC-008, which checks permission actions.",
+      "replaced_by": [
+        "OC-008"
+      ]
+    },
+    {
+      "id": "OC-AGM-001",
+      "removed_in": "0.59.0",
+      "reason": "OpenCode documents no requirement against an empty AGENTS.md.",
+      "replaced_by": []
     }
   ]
 }

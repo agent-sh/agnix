@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "hooks": {
+    "Stop": [{"hooks": [{"type": "command", "command": "./stop.sh"}]}]
+  }
+}

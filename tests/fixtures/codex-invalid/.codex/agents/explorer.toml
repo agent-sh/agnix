@@ -1,0 +1,4 @@
+# CDX-SUB-001 (no description), CDX-SUB-002 (sandbox_mode), CDX-SUB-003 (built-in name)
+name = "explorer"
+developer_instructions = "Explore the repository and report findings."
+sandbox_mode = "read-only"

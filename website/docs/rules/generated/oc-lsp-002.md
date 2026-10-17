@@ -13,17 +13,18 @@ keywords: ["OC-LSP-002", "invalid lsp extensions", "opencode", "validation", "ag
 - **Category**: `OpenCode`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
 - **Tool**: `opencode`
-- **Version Range**: `unspecified`
+- **Version Range**: `<2.0.0`
 - **Spec Revision**: `unspecified`
 
 ## Evidence Sources
 
-- https://opencode.ai/docs/config
+- https://opencode.ai/docs/lsp/
+- https://opencode.ai/config.json
 
 ## Test Coverage Metadata
 
@@ -38,15 +39,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{
-  "lsp": { "ts": { "extensions": [] } }
-}
+"extensions": ".ts"
 ```
 
 ### Valid
 
 ```json
-{
-  "lsp": { "ts": { "extensions": [".ts", ".tsx"] } }
-}
+"extensions": [".ts", ".tsx"]
 ```

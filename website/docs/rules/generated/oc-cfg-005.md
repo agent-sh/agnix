@@ -1,19 +1,19 @@
 ---
 id: oc-cfg-005
-title: "OC-CFG-005: Hardcoded API Key - OpenCode"
+title: "OC-CFG-005: Hardcoded Secret in Config - OpenCode"
 sidebar_label: "OC-CFG-005"
-description: "agnix rule OC-CFG-005 checks for hardcoded api key in opencode files. Severity: HIGH. See examples and fix guidance."
-keywords: ["OC-CFG-005", "hardcoded api key", "opencode", "validation", "agnix", "linter"]
+description: "agnix rule OC-CFG-005 checks for hardcoded secret in config in opencode files. Severity: MEDIUM. See examples and fix guidance."
+keywords: ["OC-CFG-005", "hardcoded secret in config", "opencode", "validation", "agnix", "linter"]
 ---
 
 ## Summary
 
 - **Rule ID**: `OC-CFG-005`
-- **Severity**: `HIGH`
+- **Severity**: `MEDIUM`
 - **Category**: `OpenCode`
-- **Normative Level**: `MUST`
+- **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,9 @@ keywords: ["OC-CFG-005", "hardcoded api key", "opencode", "validation", "agnix",
 
 ## Evidence Sources
 
-- https://opencode.ai/docs/config
+- https://opencode.ai/v2/docs/mcp-servers/
+- https://opencode.ai/docs/config/
+- https://opencode.ai/v2/docs/config/
 
 ## Test Coverage Metadata
 
@@ -38,15 +40,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{
-  "provider": { "options": { "apiKey": "sk-1234567890abcdef" } }
-}
+{"provider": {"acme": {"options": {"apiKey": "sk-live-1234567890abcdef"}}}}
 ```
 
 ### Valid
 
 ```json
-{
-  "provider": { "options": { "apiKey": "{env:OPENAI_API_KEY}" } }
-}
+{"mcp": {"x": {"type": "remote", "url": "https://x.example/mcp", "headers": {"Authorization": "Bearer {env:MY_API_KEY}"}}}}
 ```

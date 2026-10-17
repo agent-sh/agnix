@@ -1,0 +1,23 @@
+{
+  "update": "auto",
+  "logLevel": "INFO",
+  "permissions": [
+    { "action": "bash", "resource": "git status *", "effect": "allow" },
+  ],
+  "policies": [
+    { "action": "provider.use", "resource": "openai", "effect": "ask" },
+  ],
+  "mcp": {
+    "servers": {
+      "s1": { "type": "local", "command": ["x"], "enabled": false },
+      "s2": { "type": "local", "command": ["x"] },
+      "s3": { "type": "local", "command": ["x"] },
+      "s4": { "type": "local", "command": ["x"] },
+      "s5": { "type": "local", "command": ["x"] },
+      "s6": { "type": "local", "command": ["x"] },
+      "s7": { "type": "local", "command": ["x"] },
+      "s8": { "type": "local", "command": ["x"] },
+      "s9": { "type": "local", "command": ["x"] },
+    },
+  },
+}

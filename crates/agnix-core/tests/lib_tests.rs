@@ -344,18 +344,20 @@ fn test_validators_for_gemini_ignore() {
 fn test_validators_for_skill() {
     let registry = ValidatorRegistry::with_defaults();
     let validators = registry.validators_for(FileType::Skill);
-    // 7: the Copilot, Cursor and Cline validators act on their own skill
-    // folders (CP-SK-002, CUR-023, CL-SK-004).
-    assert_eq!(validators.len(), 7);
+    // 9: the Copilot, Cursor and Cline validators act on their own skill
+    // folders (CP-SK-002, CUR-023, CL-SK-004), and the Codex (CX-SK-004/007)
+    // and OpenCode skill directory validators run on SKILL.md too.
+    assert_eq!(validators.len(), 9);
 }
 
 #[test]
 fn test_validators_for_claude_md() {
     let registry = ValidatorRegistry::with_defaults();
     let validators = registry.validators_for(FileType::ClaudeMd);
-    // 10: CopilotValidator checks AGENTS.md / CLAUDE.md @references for
-    // Copilot runs (COP-030).
-    assert_eq!(validators.len(), 10);
+    // 11: CopilotValidator checks AGENTS.md / CLAUDE.md @references for
+    // Copilot runs (COP-030), and the OpenCode instruction-file validator
+    // (OC-AGM-*) runs on AGENTS.md and CLAUDE.md.
+    assert_eq!(validators.len(), 11);
     assert!(validators.iter().any(|v| v.name() == "AmpValidator"));
     assert!(
         validators
@@ -384,10 +386,10 @@ fn test_validators_for_amp_settings() {
 fn test_validators_for_mcp() {
     let registry = ValidatorRegistry::with_defaults();
     let validators = registry.validators_for(FileType::Mcp);
-    // 4: McpValidator, ClaudeMcpValidator (CC-MCP-*, Claude Code MCP files),
-    // and the Copilot (COP-035) and Cursor (CUR-024) validators for their own
-    // MCP files.
-    assert_eq!(validators.len(), 4);
+    // 5: McpValidator, ClaudeMcpValidator (CC-MCP-*, Claude Code MCP files),
+    // the Copilot (COP-035) and Cursor (CUR-024) validators for their own MCP
+    // files, and the Codex plugin MCP validator (CDX-PL-019).
+    assert_eq!(validators.len(), 5);
 }
 
 #[test]
@@ -2708,13 +2710,74 @@ fn test_validate_project_finds_github_hidden_dir() {
 }
 
 #[test]
+fn test_validate_project_finds_opencode_invalid_fixtures() {
+    // Every new or reworked OpenCode rule fires through path detection,
+    // the registry and the validators on the opencode-invalid fixture.
+    let fixtures_dir = get_fixtures_dir();
+    let result = validate_project(
+        &fixtures_dir.join("opencode-invalid"),
+        &LintConfig::default(),
+    )
+    .unwrap();
+    let found: std::collections::BTreeSet<&str> =
+        result.diagnostics.iter().map(|d| d.rule.as_str()).collect();
+    for rule in [
+        "OC-001",
+        "OC-002",
+        "OC-004",
+        "OC-007",
+        "OC-AG-010",
+        "OC-AG-011",
+        "OC-AGM-002",
+        "OC-AGM-003",
+        "OC-CFG-005",
+        "OC-CFG-015",
+        "OC-CFG-017",
+        "OC-CFG-018",
+        "OC-CFG-019",
+        "OC-CFG-020",
+        "OC-CFG-021",
+        "OC-CFG-022",
+        "OC-CMD-001",
+        "OC-CMD-002",
+        "OC-CMD-003",
+        "OC-DEP-002",
+        "OC-DEP-008",
+        "OC-DEP-009",
+        "OC-PM-002",
+        "OC-PM-003",
+        "OC-PM-004",
+        "OC-PM-005",
+        "OC-PM-006",
+        "OC-PM-007",
+        "OC-POL-001",
+        "OC-SK-002",
+        "OC-TOOL-001",
+    ] {
+        assert!(
+            found.contains(rule),
+            "Should report {rule} from the opencode-invalid fixture. Rules found: {found:?}"
+        );
+    }
+    // Markdown agents are OpenCode agents, not Claude subagents.
+    assert!(
+        !result
+            .diagnostics
+            .iter()
+            .any(|d| d.rule.starts_with("CC-AG-") && d.file.to_string_lossy().contains(".opencode")),
+        "Claude agent rules must not run on OpenCode agents"
+    );
+}
+
+#[test]
 fn test_validate_project_finds_codex_hidden_dir() {
     // Test validate_project walks .codex directory (hidden dot-directory)
     let temp = tempfile::TempDir::new().unwrap();
     let codex_dir = temp.path().join(".codex");
     std::fs::create_dir_all(&codex_dir).unwrap();
 
-    // Create config.toml with invalid approvalMode (should trigger CDX-001)
+    // approvalMode is a retired TypeScript CLI key. CDX-001 was retired, so
+    // the current CLI's unknown-key rule (CDX-004) reports it.
     let file_path = codex_dir.join("config.toml");
     std::fs::write(&file_path, "approvalMode = \"yolo\"").unwrap();
 
@@ -2722,8 +2785,8 @@ fn test_validate_project_finds_codex_hidden_dir() {
     let result = validate_project(temp.path(), &config).unwrap();
 
     assert!(
-        result.diagnostics.iter().any(|d| d.rule == "CDX-001"),
-        "validate_project should find .codex/config.toml and report CDX-001. Found: {:?}",
+        result.diagnostics.iter().any(|d| d.rule == "CDX-004"),
+        "validate_project should find .codex/config.toml and report CDX-004. Found: {:?}",
         result
             .diagnostics
             .iter()
@@ -2741,35 +2804,55 @@ fn test_validate_project_finds_codex_invalid_fixtures() {
     let config = LintConfig::default();
     let result = validate_project(&codex_invalid_dir, &config).unwrap();
 
-    // Should find CDX-001 and CDX-002 from .codex/config.toml
-    assert!(
-        result.diagnostics.iter().any(|d| d.rule == "CDX-001"),
-        "Should report CDX-001 from .codex/config.toml. Rules found: {:?}",
-        result
-            .diagnostics
-            .iter()
-            .map(|d| &d.rule)
-            .collect::<Vec<_>>()
-    );
-    assert!(
-        result.diagnostics.iter().any(|d| d.rule == "CDX-002"),
-        "Should report CDX-002 from .codex/config.toml. Rules found: {:?}",
-        result
-            .diagnostics
-            .iter()
-            .map(|d| &d.rule)
-            .collect::<Vec<_>>()
-    );
-    // Should find CDX-003 from AGENTS.override.md
-    assert!(
-        result.diagnostics.iter().any(|d| d.rule == "CDX-003"),
-        "Should report CDX-003 from AGENTS.override.md. Rules found: {:?}",
-        result
-            .diagnostics
-            .iter()
-            .map(|d| &d.rule)
-            .collect::<Vec<_>>()
-    );
+    // CDX-001, CDX-002 and CDX-003 were retired; the fixture now holds one
+    // trigger for each current Codex rule, across every Codex file type.
+    let found: std::collections::BTreeSet<&str> =
+        result.diagnostics.iter().map(|d| d.rule.as_str()).collect();
+    for rule in [
+        "CDX-004",
+        "CDX-AG-008",
+        "CDX-AG-009",
+        "CDX-AG-010",
+        "CDX-APP-001",
+        "CDX-APP-003",
+        "CDX-CFG-007",
+        "CDX-CFG-026",
+        "CDX-CFG-031",
+        "CDX-CFG-032",
+        "CDX-CFG-033",
+        "CDX-CFG-034",
+        "CDX-CFG-035",
+        "CDX-DEP-001",
+        "CDX-HK-000",
+        "CDX-HK-001",
+        "CDX-HK-002",
+        "CDX-HK-003",
+        "CDX-HK-004",
+        "CDX-HK-005",
+        "CDX-PL-014",
+        "CDX-PL-017",
+        "CDX-PL-018",
+        "CDX-PL-019",
+        "CDX-REQ-002",
+        "CDX-REQ-003",
+        "CDX-REQ-004",
+        "CDX-RL-001",
+        "CDX-RL-002",
+        "CDX-SUB-001",
+        "CDX-SUB-002",
+        "CDX-SUB-003",
+        "CX-SK-004",
+        "CX-SK-006",
+        "CX-SK-007",
+    ] {
+        assert!(
+            found.contains(rule),
+            "Should report {rule} from the codex-invalid fixture. Rules found: {found:?}"
+        );
+    }
+    for retired in ["CDX-001", "CDX-002", "CDX-003"] {
+        assert!(!found.contains(retired), "{retired} is retired");
+    }
 }
 
 #[test]
@@ -4877,6 +4960,16 @@ const ALL_VALIDATED_FILE_TYPES: &[FileType] = &[
     FileType::GeminiExtension,
     FileType::GeminiIgnore,
     FileType::CodexConfig,
+    FileType::CodexHooks,
+    FileType::CodexAgent,
+    FileType::CodexRules,
+    FileType::CodexPrompt,
+    FileType::CodexSkillMetadata,
+    FileType::CodexRequirements,
+    FileType::OpenCodeAgent,
+    FileType::OpenCodeCommand,
+    FileType::OpenCodeTool,
+    FileType::OpenCodePlugin,
     FileType::GenericMarkdown,
 ];
 

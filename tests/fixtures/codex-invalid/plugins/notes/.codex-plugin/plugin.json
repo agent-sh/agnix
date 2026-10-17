@@ -1,0 +1,7 @@
+{
+  "name": "Notes_Plugin",
+  "interface": {
+    "displayName": "A display name over thirty characters long",
+    "developerName": "Acme"
+  }
+}

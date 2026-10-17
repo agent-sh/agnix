@@ -1,0 +1,5 @@
+# CX-SK-006: absolute icon path and a non-hex brand color.
+interface:
+  display_name: "Release Notes"
+  icon_small: "/abs/icon.svg"
+  brand_color: "blue"

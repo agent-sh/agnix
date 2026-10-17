@@ -13,7 +13,7 @@ keywords: ["OC-TUI-002", "invalid scroll_speed", "opencode", "validation", "agni
 - **Category**: `OpenCode`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,7 @@ keywords: ["OC-TUI-002", "invalid scroll_speed", "opencode", "validation", "agni
 
 ## Evidence Sources
 
-- https://opencode.ai/docs/config
+- https://opencode.ai/docs/config/
 
 ## Test Coverage Metadata
 
@@ -38,15 +38,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{
-  "tui": { "scroll_speed": 0.0001 }
-}
+"scroll_speed": 0
 ```
 
 ### Valid
 
 ```json
-{
-  "tui": { "scroll_speed": 1.0 }
-}
+"scroll_speed": 3
 ```

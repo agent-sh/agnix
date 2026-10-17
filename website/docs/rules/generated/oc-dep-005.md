@@ -13,7 +13,7 @@ keywords: ["OC-DEP-005", "deprecated tui keys", "opencode", "validation", "agnix
 - **Category**: `OpenCode`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `Yes (unsafe)`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,12 +23,12 @@ keywords: ["OC-DEP-005", "deprecated tui keys", "opencode", "validation", "agnix
 
 ## Evidence Sources
 
-- https://opencode.ai/docs/
+- https://opencode.ai/docs/config/
 
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples
@@ -38,16 +38,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{
-  "theme": "dark",
-  "keybinds": {}
-}
+opencode.json: {"theme": "tokyonight"}
 ```
 
 ### Valid
 
 ```json
-{
-  "$schema": "https://opencode.ai/config.json"
-}
+tui.json: {"theme": "tokyonight"}
 ```

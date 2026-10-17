@@ -977,7 +977,10 @@ fn test_audited_fix_metadata_matches_supported_migrations() {
         ("OC-DEP-005", Some("unsafe")),
         ("KR-HK-011", Some("unsafe")),
         ("KR-HK-014", Some("safe")),
-        ("OC-DEP-001", Some("safe")),
+        // Unsafe: renaming `mode` to `agent` changes the default mode of the
+        // entries (primary to all), and renaming a key OpenCode reads is
+        // never a safe fix.
+        ("OC-DEP-001", Some("unsafe")),
         ("OC-DEP-002", None),
         ("CC-SK-020", None),
         ("CDX-CFG-023", None),

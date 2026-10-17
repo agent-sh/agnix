@@ -1,0 +1,19 @@
+# CDX-REQ-002: requirements rules must use prompt or forbidden.
+[rules]
+prefix_rules = [{ pattern = [{ token = "rm" }], decision = "allow" }]
+
+# CDX-REQ-003: managed hook script outside managed_dir.
+[hooks]
+managed_dir = "/enterprise/hooks"
+
+[[hooks.PreToolUse]]
+[[hooks.PreToolUse.hooks]]
+type = "command"
+command = "python3 ./policy.py"
+
+# CDX-REQ-004: legacy allowed_domains next to the domains map.
+[experimental_network]
+allowed_domains = ["api.openai.com"]
+
+[experimental_network.domains]
+"api.openai.com" = "allow"

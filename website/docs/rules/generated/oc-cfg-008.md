@@ -13,17 +13,18 @@ keywords: ["OC-CFG-008", "invalid log level", "opencode", "validation", "agnix",
 - **Category**: `OpenCode`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `Yes (unsafe)`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
 - **Tool**: `opencode`
-- **Version Range**: `unspecified`
+- **Version Range**: `<2.0.0`
 - **Spec Revision**: `unspecified`
 
 ## Evidence Sources
 
-- https://opencode.ai/docs/config
+- https://opencode.ai/config.json
+- https://opencode.ai/v2/docs/migrate-v1/
 
 ## Test Coverage Metadata
 
@@ -38,15 +39,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{
-  "logLevel": "verbose"
-}
+{"logLevel": "verbose"}
 ```
 
 ### Valid
 
 ```json
-{
-  "logLevel": "info"
-}
+{"logLevel": "INFO"}
 ```

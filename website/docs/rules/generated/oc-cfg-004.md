@@ -13,7 +13,7 @@ keywords: ["OC-CFG-004", "invalid default agent", "opencode", "validation", "agn
 - **Category**: `OpenCode`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,8 @@ keywords: ["OC-CFG-004", "invalid default agent", "opencode", "validation", "agn
 
 ## Evidence Sources
 
-- https://opencode.ai/docs/config
+- https://opencode.ai/docs/config/
+- https://opencode.ai/v2/docs/agents/
 
 ## Test Coverage Metadata
 
@@ -38,15 +39,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{
-  "default_agent": "unknown-agent"
-}
+{"default_agent": "ghost"}
 ```
 
 ### Valid
 
 ```json
-{
-  "default_agent": "build"
-}
+{"default_agent": "plan"}
 ```

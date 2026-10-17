@@ -13,7 +13,7 @@ keywords: ["OC-CFG-010", "invalid skills url", "opencode", "validation", "agnix"
 - **Category**: `OpenCode`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,8 @@ keywords: ["OC-CFG-010", "invalid skills url", "opencode", "validation", "agnix"
 
 ## Evidence Sources
 
-- https://opencode.ai/docs/config
+- https://opencode.ai/config.json
+- https://opencode.ai/v2/docs/skills/
 
 ## Test Coverage Metadata
 
@@ -38,15 +39,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{
-  "skills": { "urls": ["not-a-url"] }
-}
+{"skills": {"urls": ["not-a-url"]}}
 ```
 
 ### Valid
 
 ```json
-{
-  "skills": { "urls": ["https://example.com"] }
-}
+{"skills": {"urls": ["https://example.com/.well-known/skills/"]}}
 ```

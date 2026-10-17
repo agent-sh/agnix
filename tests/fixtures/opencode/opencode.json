@@ -13,7 +13,7 @@
   },
   "enterprise": {},
   "layout": "stretch",
-  "logLevel": "info",
+  "logLevel": "INFO",
   "skills": [],
   "snapshot": false,
   "username": "dev"

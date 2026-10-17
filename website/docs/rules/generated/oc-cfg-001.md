@@ -13,7 +13,7 @@ keywords: ["OC-CFG-001", "invalid model format", "opencode", "validation", "agni
 - **Category**: `OpenCode`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,9 @@ keywords: ["OC-CFG-001", "invalid model format", "opencode", "validation", "agni
 
 ## Evidence Sources
 
-- https://opencode.ai/docs/config
+- https://opencode.ai/config.json
+- https://opencode.ai/v2/docs/agents/
+- https://opencode.ai/docs/agents/
 
 ## Test Coverage Metadata
 
@@ -38,15 +40,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{
-  "model": "claude-3-opus"
-}
+{"model": "gpt-5"}
 ```
 
 ### Valid
 
 ```json
-{
-  "model": "anthropic/claude-3-opus"
-}
+{"model": "anthropic/claude-sonnet-4-5"}
 ```

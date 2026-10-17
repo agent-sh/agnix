@@ -1,9 +1,9 @@
 ---
 id: cdx-cfg-026
-title: "CDX-CFG-026: Invalid Network Permission Field - Codex CLI"
+title: "CDX-CFG-026: Unknown Permission Profile Network Key"
 sidebar_label: "CDX-CFG-026"
-description: "agnix rule CDX-CFG-026 checks for invalid network permission field in codex cli files. Severity: LOW. See examples and fix guidance."
-keywords: ["CDX-CFG-026", "invalid network permission field", "codex cli", "validation", "agnix", "linter"]
+description: "agnix rule CDX-CFG-026 checks for unknown permission profile network key in codex cli files. Severity: LOW. See examples and fix guidance."
+keywords: ["CDX-CFG-026", "unknown permission profile network key", "codex cli", "validation", "agnix", "linter"]
 ---
 
 ## Summary
@@ -13,7 +13,7 @@ keywords: ["CDX-CFG-026", "invalid network permission field", "codex cli", "vali
 - **Category**: `Codex CLI`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `Yes (safe)`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,8 @@ keywords: ["CDX-CFG-026", "invalid network permission field", "codex cli", "vali
 
 ## Evidence Sources
 
-- https://developers.openai.com/codex/
+- https://learn.chatgpt.com/docs/permissions
+- https://learn.chatgpt.com/docs/config-schema.json
 
 ## Test Coverage Metadata
 
@@ -38,13 +39,16 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```toml
-[network]
-allow = "all"
+[permissions.dev.network]
+allowed_domains = ["api.openai.com"]
 ```
 
 ### Valid
 
 ```toml
-[network]
-allow = ["*.example.com"]
+[permissions.dev.network]
+enabled = true
+
+[permissions.dev.network.domains]
+"api.openai.com" = "allow"
 ```

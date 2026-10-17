@@ -431,9 +431,9 @@ fn kiro_fixture_families_are_cli_runnable() {
         // are not linted). `--config` replaces their Kiro 2.x pins, so
         // KR-AG-028 and KR-HK-025 do not fire here; the reachability test
         // lints each fixture with its own config. The two AGENTS.md files add
-        // AGM-003, XP-006 and XP-007, and several fixtures also trip related
-        // Kiro rules (KR-AG-001, KR-AG-015, KR-PW-015, KR-PW-016, ...).
-        ("tests/fixtures/kiro-reach", 60_u64, 67_u64),
+        // AGM-003, XP-006, XP-007 and CDX-AG-009, and several fixtures also trip
+        // related Kiro rules (KR-AG-001, KR-AG-015, KR-PW-015, KR-PW-016, ...).
+        ("tests/fixtures/kiro-reach", 60_u64, 68_u64),
     ];
 
     for (rel, expected_files_checked, expected_diagnostics) in fixture_roots {

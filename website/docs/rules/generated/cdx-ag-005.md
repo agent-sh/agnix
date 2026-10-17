@@ -13,7 +13,7 @@ keywords: ["CDX-AG-005", "agents.md references missing file", "codex cli", "vali
 - **Category**: `Codex CLI`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-07-31`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,7 @@ keywords: ["CDX-AG-005", "agents.md references missing file", "codex cli", "vali
 
 ## Evidence Sources
 
-- https://learn.chatgpt.com/docs/agent-configuration/agents-md
+- https://learn.chatgpt.com/guides/best-practices
 
 ## Test Coverage Metadata
 

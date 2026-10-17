@@ -293,6 +293,10 @@ fn file_type_enum_covers_all_variants() {
         agnix_core::FileType::ClineIgnore,
         agnix_core::FileType::ClineMcpSettings,
         agnix_core::FileType::OpenCodeConfig,
+        agnix_core::FileType::OpenCodeAgent,
+        agnix_core::FileType::OpenCodeCommand,
+        agnix_core::FileType::OpenCodeTool,
+        agnix_core::FileType::OpenCodePlugin,
         agnix_core::FileType::GeminiMd,
         agnix_core::FileType::GeminiSettings,
         agnix_core::FileType::AmpSettings,
@@ -301,6 +305,11 @@ fn file_type_enum_covers_all_variants() {
         agnix_core::FileType::CodexConfig,
         agnix_core::FileType::CodexPlugin,
         agnix_core::FileType::CodexRequirements,
+        agnix_core::FileType::CodexHooks,
+        agnix_core::FileType::CodexAgent,
+        agnix_core::FileType::CodexRules,
+        agnix_core::FileType::CodexPrompt,
+        agnix_core::FileType::CodexSkillMetadata,
         agnix_core::FileType::RooRules,
         agnix_core::FileType::RooModes,
         agnix_core::FileType::RooIgnore,
@@ -329,7 +338,7 @@ fn file_type_enum_covers_all_variants() {
 
     assert_eq!(
         variants.len(),
-        65,
+        74,
         "A new FileType variant may have been added or removed. Please update this test's variant list and the match statement below."
     );
 
@@ -368,6 +377,10 @@ fn file_type_enum_covers_all_variants() {
             agnix_core::FileType::ClineIgnore => {}
             agnix_core::FileType::ClineMcpSettings => {}
             agnix_core::FileType::OpenCodeConfig => {}
+            agnix_core::FileType::OpenCodeAgent => {}
+            agnix_core::FileType::OpenCodeCommand => {}
+            agnix_core::FileType::OpenCodeTool => {}
+            agnix_core::FileType::OpenCodePlugin => {}
             agnix_core::FileType::GeminiMd => {}
             agnix_core::FileType::GeminiSettings => {}
             agnix_core::FileType::AmpSettings => {}
@@ -376,6 +389,11 @@ fn file_type_enum_covers_all_variants() {
             agnix_core::FileType::CodexConfig => {}
             agnix_core::FileType::CodexPlugin => {}
             agnix_core::FileType::CodexRequirements => {}
+            agnix_core::FileType::CodexHooks => {}
+            agnix_core::FileType::CodexAgent => {}
+            agnix_core::FileType::CodexRules => {}
+            agnix_core::FileType::CodexPrompt => {}
+            agnix_core::FileType::CodexSkillMetadata => {}
             agnix_core::FileType::RooRules => {}
             agnix_core::FileType::RooModes => {}
             agnix_core::FileType::RooIgnore => {}

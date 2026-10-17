@@ -1,2 +1,40 @@
+# Each setting below triggers a Codex rule; see the comments.
+# CDX-004: approvalMode is a setting of the retired TypeScript CLI.
 approvalMode = "yolo"
-fullAutoErrorMode = "crash"
+# CDX-CFG-007: full access sandbox with no approvals.
+sandbox_mode = "danger-full-access"
+approval_policy = "never"
+# CDX-CFG-035: unknown built-in profile; CDX-CFG-033: mixed with sandbox_mode.
+default_permissions = ":workspaces"
+# CDX-CFG-032: ignored in a project config.
+model_provider = "azure"
+# CDX-APP-003: removed profile selector.
+profile = "deep-review"
+
+[skills]
+# CDX-CFG-031: Codex caps this at 10000.
+max_context_tokens = 20000
+
+# CDX-CFG-035: a profile cannot extend :danger-full-access.
+[permissions.dev]
+extends = ":danger-full-access"
+
+# CDX-CFG-026: allowed_domains is not a permission profile network key.
+# CDX-CFG-034: domain rules without features.network_proxy.
+[permissions.dev.network]
+enabled = true
+allowed_domains = ["api.openai.com"]
+
+[permissions.dev.network.domains]
+"api.openai.com" = "allow"
+
+# CDX-APP-001: "manual" is not an approval mode.
+[mcp_servers.docs]
+url = "https://example.com/mcp"
+default_tools_approval_mode = "manual"
+
+# CDX-HK-003: inline hooks next to .codex/hooks.json.
+[[hooks.Stop]]
+[[hooks.Stop.hooks]]
+type = "command"
+command = "./stop.sh"

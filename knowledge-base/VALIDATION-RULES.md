@@ -700,17 +700,38 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="cx-sk-001"></a>
 ### CX-SK-001 [MEDIUM] Codex Skill Uses Unsupported Field
-**Requirement**: Skills in `.agents/skills/` SHOULD NOT use frontmatter fields unsupported by Codex CLI
-**Detection**: SKILL.md path contains `.agents/skills/` AND frontmatter has unsupported fields
+**Requirement**: Skills in `.agents/skills/` and `.codex/skills/` SHOULD NOT use frontmatter fields unsupported by Codex CLI. Codex's own validator allows `allowed_properties = {"name", "description", "license", "allowed-tools", "metadata"}`; the runtime parser ignores other keys.
+**Detection**: SKILL.md path contains `.agents/skills/` or `.codex/skills/` AND frontmatter has unsupported fields
 **Fix**: [AUTO-FIX, safe] Remove unsupported field
-**Source**: learn.chatgpt.com/docs/agent-configuration/agents-md
+**Source**: learn.chatgpt.com/docs/build-skills, github.com/openai/codex (skill-creator scripts/quick_validate.py)
+
+<a id="cx-sk-004"></a>
+### CX-SK-004 [LOW] Skill Catalog Exceeds Codex Fallback Budget
+**Requirement**: Repository skill metadata SHOULD fit Codex's initial skill list: "In Codex, the initial list also includes each skill's file path. By default, this list uses at most 2% of the model's context window, or 8,000 characters when the context window is unknown. If many skills are installed, Codex shortens skill descriptions first. For large skill sets, Codex may omit some skills from the initial list and show a warning."
+**Detection**: Info on the first skill of a `.agents/skills` or `.codex/skills` directory when the names, descriptions and relative paths of its skills (up to six levels deep) exceed 8,000 characters. Low, not medium: for a model with a known context window the budget is 2% of that window, usually larger; user, system and other-directory skills are not counted, and the exact per-entry format is not documented.
+**Fix**: No auto-fix (shorten descriptions, or raise skills.max_context_tokens)
+**Source**: learn.chatgpt.com/docs/build-skills, learn.chatgpt.com/docs/config-file/config-reference
+
+<a id="cx-sk-006"></a>
+### CX-SK-006 [MEDIUM] agents/openai.yaml Field Ignored by Codex
+**Requirement**: Skill interface metadata MUST be in the form Codex reads. Codex drops a whole `agents/openai.yaml` it cannot deserialize ("ignoring {metadata_path}: invalid {label}"), and individual fields it cannot use: empty values, `display_name` over 64 characters and `short_description` or `default_prompt` over 1024 ("ignoring {field}: exceeds maximum length of {max_len} characters"), `brand_color` not `#RRGGBB`, icons that are absolute or outside the skill's `assets/` ("ignoring {field}: icon must be a relative assets path"; `..` only to reach a plugin's shared `assets/`), and `dependencies.tools` entries without `type` or `value`.
+**Detection**: Warning at the key in `<skills>/<name>/agents/openai.yaml`. The skill-creator authoring advice (short_description 25-64 characters, `$skill-name` in default_prompt, quoted strings) is not checked: OpenAI's own bundled skills do not follow it.
+**Fix**: No auto-fix
+**Source**: openai/codex codex-rs/skills/src/interface.rs, codex-rs/skills/src/metadata.rs, skill-creator references/openai_yaml.md
+
+<a id="cx-sk-007"></a>
+### CX-SK-007 [LOW] Auxiliary Documentation in Codex Skill Folder
+**Requirement**: "Avoid adding a `README.md`, installation guide, changelog, duplicated quick reference, or other auxiliary documentation unless a specific task or packaging requirement calls for it." (skill-creator, "What Not to Include")
+**Detection**: Info on a Codex SKILL.md whose folder contains README, README.md, README.txt, CHANGELOG.md, CHANGES.md, INSTALL.md or INSTALLATION.md (case-insensitive)
+**Fix**: No auto-fix
+**Source**: openai/codex skill-creator SKILL.md
 
 <a id="oc-sk-001"></a>
 ### OC-SK-001 [MEDIUM] OpenCode Skill Uses Unsupported Field
-**Requirement**: Skills in `.opencode/skills/` SHOULD NOT use frontmatter fields unsupported by OpenCode
+**Requirement**: Skills in `.opencode/skills/` SHOULD use the Agent Skills fields: "Use these Agent Skills fields: `name` (required), `description` (required), `license` (optional), `compatibility` (optional), `metadata` (optional, string-to-string map)" and "Put OpenCode-specific behavior in `metadata` instead of adding custom top-level fields." (OpenCode 1). OpenCode 2 also documents `disable-model-invocation` ("Set to true for the same effect as opencode/autoinvoke: false").
 **Detection**: SKILL.md path contains `.opencode/skills/` AND frontmatter has unsupported fields
 **Fix**: [AUTO-FIX, safe] Remove unsupported field
-**Source**: opencode.ai/docs/rules
+**Source**: opencode.ai/docs/skills, opencode.ai/v2/docs/skills
 
 <a id="ws-sk-001"></a>
 ### WS-SK-001 [MEDIUM] Windsurf Skill Uses Unsupported Field
@@ -2636,330 +2657,469 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 ## OPENCODE RULES
 
+OpenCode 1 (`opencode-ai`) and OpenCode 2 (`@opencode/cli`, released 2026-09-11) read the same files. Each OpenCode file is checked against the release lines it targets: `[tool_versions] opencode` pins one line (1.x or 2.x); unpinned, a file that uses native OpenCode 2 fields (`agents`, `permissions`, `policies`, `mcp.servers`, ...) targets OpenCode 2, and any other file targets both. Checks that hold for one line only run when that is the only line targeted, so documented OpenCode 1 configuration gets no OpenCode 2 finding.
+
 <a id="oc-001"></a>
 ### OC-001 [HIGH] Invalid Share Mode
-**Requirement**: The `share` field in `opencode.json` or `opencode.jsonc` MUST be `"manual"`, `"auto"`, or `"disabled"`
-**Detection**: Parse JSON, validate `share` value against allowed set
-**Fix**: Auto-fix (unsafe) - replace with closest valid share mode
-**Source**: opencode.ai/docs/config
+**Requirement**: The `share` field MUST be `"manual"`, `"auto"` or `"disabled"` (schema `share` enum: "Control whether sessions may be shared manually, automatically, or not at all")
+**Detection**: Parse JSON/JSONC, validate `share` at the value
+**Fix**: Auto-fix (unsafe) - replace with the closest valid mode
+**Source**: opencode.ai/config.json
 
 <a id="oc-002"></a>
 ### OC-002 [HIGH] Invalid Instruction Path
-**Requirement**: Paths in the `instructions` array MUST exist on disk or be valid glob patterns
-**Detection**: Parse JSON, resolve each path in `instructions` array relative to config file location
-**Fix**: Fix or remove broken instruction paths
-**Source**: opencode.ai/docs/config
+**Requirement**: Entries of `instructions` MUST resolve: OpenCode loads "files, glob patterns, or HTTP(S) URLs" and skips missing files. "Relative path or glob | Searched in each directory from the workspace up to the project root"; "~/ path | Resolved from your home directory"; "Absolute path | Used as written".
+**Detection**: Error for a non-array or non-string entry, an invalid glob, or a relative path that exists neither next to a project config nor (for `.opencode/opencode.json`) at the project root. `~/` and absolute entries are not checked (machine-specific; they were errors before), nor are entries of the global or system config, whose relative paths resolve per project.
+**Fix**: Fix or remove the entry
+**Source**: opencode.ai/docs/rules, opencode.ai/v2/docs/instructions
 
 <a id="oc-003"></a>
 ### OC-003 [HIGH] opencode.json Parse Error
-**Requirement**: `opencode.json` and `opencode.jsonc` MUST be valid JSON (or JSONC with comments stripped)
-**Detection**: Attempt JSON parse, report errors with line/column location
-**Fix**: Fix JSON syntax errors
-**Source**: opencode.ai/docs/config
+**Requirement**: opencode.json(c) MUST parse: "OpenCode supports JSON and JSONC. Use JSONC when you want comments or trailing commas." (the V1 docs' own first example has trailing commas; the schema sets `allowComments` and `allowTrailingCommas`). The root MUST be an object.
+**Detection**: Parse as JSONC (comments and trailing commas allowed, formerly an error), report the syntax error position or a non-object root
+**Fix**: Fix the syntax
+**Source**: opencode.ai/v2/docs/config, opencode.ai/docs/config
 
 <a id="oc-004"></a>
 ### OC-004 [MEDIUM] Unknown Config Key
-**Requirement**: Top-level keys in `opencode.json` or `opencode.jsonc` SHOULD be from the known configuration schema
-**Detection**: Parse JSON, compare top-level keys against known key allowlist
-**Fix**: Remove unrecognized keys
-**Source**: opencode.ai/docs/config
+**Requirement**: Top-level keys SHOULD be keys of https://opencode.ai/config.json (top-level `additionalProperties: false`), which lists the native OpenCode 2 keys and the OpenCode 1 keys it still reads ("supported V1 and native V2 fields may coexist at the top level").
+**Detection**: Warning at each key outside the schema (plus the OpenCode 1 TUI keys `theme`, `keybinds`, `tui`, which OC-DEP-005 reports), with a closest-key hint. When `[tool_versions] opencode` pins 1.x, native OpenCode 2 keys (`agents`, `permissions`, `policies`, `commands`, `providers`, `plugins`, `snapshots`, `update`, `media`, `websearch`, `worktree`, `warming`) are reported as keys OpenCode 1 does not read.
+**Fix**: No auto-fix
+**Source**: opencode.ai/config.json, opencode.ai/v2/docs/migrate-v1
 
 <a id="oc-006"></a>
 ### OC-006 [LOW] Remote URL in Instructions
-**Requirement**: Remote URLs in `instructions` MAY slow startup (5-second timeout per URL)
-**Detection**: Check if instruction paths start with `http://` or `https://`
-**Fix**: No auto-fix (user preference)
-**Source**: opencode.ai/docs/config
+**Requirement**: Remote instructions are fetched at load: "Remote instructions are fetched with a 5 second timeout." (V1) / "Fetched when config loads, with a five-second timeout" (V2). That a remote entry can slow or skip loading is agnix inference.
+**Detection**: Info at each `http://` or `https://` entry of `instructions`
+**Fix**: No auto-fix
+**Source**: opencode.ai/docs/rules, opencode.ai/v2/docs/instructions
 
 <a id="oc-007"></a>
 ### OC-007 [MEDIUM] Invalid Agent Definition
-**Requirement**: Custom agents in `agent` object SHOULD have a `description` field
-**Detection**: Parse JSON, check each agent object for `description` key
-**Fix**: Add description field to agent definitions
-**Source**: opencode.ai/docs/config
+**Requirement**: Agents SHOULD have a description. OpenCode 1: "Use the `description` option to provide a brief description of what the agent does and when to use it." ... "This is a **required** config option." (its own `build`/`plan` overrides omit it). OpenCode 2: "description explains the agent's purpose. Add it to subagents because OpenCode shows it to the model choosing which agent to launch".
+**Detection**: Warning for an `agent.<id>` entry without `description` when the file targets OpenCode 1 (custom agents with no mode or mode `subagent`/`all`), and for an `agents.<id>` (or OpenCode 2 targeted) entry with mode `subagent` or `all`. Built-in agents (build, plan, general, explore, scout, compaction, title, summary) and disabled agents are skipped. Error when `agent`/`agents` is not an object.
+**Fix**: Add a description
+**Source**: opencode.ai/docs/agents, opencode.ai/v2/docs/agents
 
 <a id="oc-008"></a>
 ### OC-008 [HIGH] Invalid Permission Config
-**Requirement**: Permission values MUST be `"allow"`, `"ask"`, or `"deny"`
-**Detection**: Parse JSON, validate each permission value against allowed set
-**Fix**: [AUTO-FIX] Replace invalid permission value with the closest valid mode (`"allow"`, `"ask"`, or `"deny"`)
-**Source**: opencode.ai/docs/config
+**Requirement**: Permission values MUST be `"allow"`, `"ask"` or `"deny"`: OpenCode 1 `permission` is a shorthand action or an object of patterns to actions (top level and per agent); OpenCode 2 `permissions` is an ordered array where "Each rule requires three string fields" `action`, `resource`, `effect` (`Permission.Rule`, `additionalProperties: false`).
+**Detection**: Error at each invalid value or rule (top level, agent entries, Markdown agent frontmatter).
+**Fix**: [AUTO-FIX, unsafe] Replace an invalid action with the closest valid one
+**Source**: opencode.ai/docs/permissions, opencode.ai/v2/docs/permissions
 
 <a id="oc-009"></a>
 ### OC-009 [MEDIUM] Invalid Variable Substitution
-**Requirement**: Variable substitution patterns MUST use `{env:NAME}` or `{file:path}` syntax
-**Detection**: Scan all string values for `{prefix:value}` patterns, flag unknown prefixes or empty values
-**Fix**: No auto-fix (must be manually corrected)
-**Source**: opencode.ai/docs/config
-
----
-
+**Requirement**: Substitutions MUST use `{env:VARIABLE_NAME}` or `{file:path/to/file}`: "You can use variable substitution in your config files to reference environment variables and file contents."
+**Detection**: Warning at each string with a `{word:...}` pattern that has another prefix or an empty value
+**Fix**: No auto-fix
+**Source**: opencode.ai/docs/config, opencode.ai/v2/docs/config
 
 <a id="oc-cfg-001"></a>
 ### OC-CFG-001 [HIGH] Invalid Model Format
-**Requirement**: The `model` field must be formatted as `provider/model`
-**Detection**: Parse JSON, validate `model` and `small_model` against the required format
+**Requirement**: Model references MUST be `provider/model`: "model uses provider/model with an optional #variant" (OpenCode 2; schema pattern `^[^/#]+\/[^#]+(?:#[^#]+)?$`), and "JSON configuration also accepts the expanded form" `{ providerID, model, variant }`.
+**Detection**: Error for `model`, `small_model`, agent and command `model` values that are not `provider/model[#variant]`, an `{env:}`/`{file:}` reference, or the expanded object (the object form was an error before)
 **Fix**: No auto-fix
-**Source**: opencode.ai/docs/config
+**Source**: opencode.ai/config.json, opencode.ai/v2/docs/agents
 
 <a id="oc-cfg-002"></a>
-### OC-CFG-002 [HIGH] Invalid autoupdate value
-**Requirement**: `autoupdate` MUST be a boolean or the string `notify`
-**Detection**: Parse JSON, validate `autoupdate` type/value
+### OC-CFG-002 [HIGH] Invalid autoupdate or update Value
+**Requirement**: `autoupdate` (OpenCode 1) MUST be a boolean or `"notify"`; `update` (OpenCode 2) MUST be `"disable"`, `"notify"` or `"auto"`
+**Detection**: Error at an invalid value
 **Fix**: No auto-fix
-**Source**: opencode.ai/docs/config
-
-<a id="oc-cfg-003"></a>
-### OC-CFG-003 [MEDIUM] Unknown Top-level Config Field
-**Requirement**: Top-level config keys SHOULD match documented OpenCode fields
-**Detection**: Parse JSON object keys, flag unknown top-level keys
-**Fix**: No auto-fix
-**Source**: opencode.ai/docs/config
+**Source**: opencode.ai/config.json, opencode.ai/v2/docs/config
 
 <a id="oc-cfg-004"></a>
 ### OC-CFG-004 [MEDIUM] Invalid Default Agent
-**Requirement**: The `default_agent` field must refer to a valid agent
-**Detection**: Parse JSON, validate `default_agent`
+**Requirement**: `default_agent` SHOULD name an existing primary agent: "If the specified agent doesn't exist or is a subagent, OpenCode will fall back to `\"build\"` with a warning."
+**Detection**: Warning when the name is not a built-in agent, not defined under `agent`, `agents` or `mode`, and no `agents/` (or `agent/`, `modes/`, `mode/`) Markdown file of that name exists in the project `.opencode/` or the global config directory (Markdown agents were reported before)
 **Fix**: No auto-fix
 **Source**: opencode.ai/docs/config
 
 <a id="oc-cfg-005"></a>
-### OC-CFG-005 [HIGH] Hardcoded API Key
-**Requirement**: The `apiKey` field in provider options MUST NOT be hardcoded
-**Detection**: Parse JSON, scan `provider.options.apiKey` for hardcoded strings
+### OC-CFG-005 [MEDIUM] Hardcoded Secret in Config
+**Requirement**: Secrets SHOULD stay out of the config file: "Use configuration for other options. Store secrets in environment variables rather than in the file" (OpenCode 2 MCP servers); the config docs show `"apiKey": "{env:ANTHROPIC_API_KEY}"` and `"apiKey": "{file:~/.secrets/openai-key}"`.
+**Detection**: Warning (formerly an error) for a literal provider `apiKey` (`provider.<id>.options`, `providers.<id>.settings`), credential headers of providers and MCP servers, credential-named MCP `environment` variables, and OAuth `clientSecret`/`client_secret`. `{env:...}` and `{file:...}` (formerly reported), shell variables, all-caps placeholders such as `Bearer MY_API_KEY` and short dummy keys (`"ollama"`) are not reported; a value is literal when it has a known token prefix or 16 or more characters (agnix heuristic).
 **Fix**: No auto-fix
-**Source**: opencode.ai/docs/config
+**Source**: opencode.ai/v2/docs/mcp-servers, opencode.ai/docs/config
 
 <a id="oc-cfg-006"></a>
 ### OC-CFG-006 [HIGH] Invalid MCP Server Structure
-**Requirement**: The MCP server configuration MUST be valid
-**Detection**: Parse JSON, validate `mcp` configuration objects
+**Requirement**: MCP servers MUST be objects with `"type": "local"` or `"remote"`. OpenCode 1 lists servers under `mcp`; OpenCode 2 under `mcp.servers` ("V2 does not place server names directly under mcp"), with defaults in `mcp.timeout`. An OpenCode 1 entry with only `enabled` toggles a server from remote organization config.
+**Detection**: Error for a non-object `mcp`, a non-object server, or a server without a valid `type`. `mcp.servers` and `mcp.timeout` are containers, not servers (they were reported as a server named `servers`), and enabled-only OpenCode 1 entries are valid.
 **Fix**: No auto-fix
-**Source**: opencode.ai/docs/config
+**Source**: opencode.ai/docs/mcp-servers, opencode.ai/v2/docs/mcp-servers
 
 <a id="oc-cfg-007"></a>
 ### OC-CFG-007 [HIGH] Invalid MCP Server Command, URL, cwd, or Environment
-**Requirement**: Local MCP servers MUST have `command` as a non-empty array of non-empty strings. Optional `cwd` MUST be a non-empty string and optional `environment` MUST map names to string values; unsupported `env` MUST NOT be used. Remote MCP servers MUST have `url` as a non-empty `http://` or `https://` URL.
-**Detection**: Parse JSON and validate `mcp` server requirements, including local `cwd` and `environment` types
+**Requirement**: Local servers MUST have `command` ("Executable followed by its arguments", required); remote servers MUST have an absolute `url` ("requires an absolute URL"); `environment` holds strings; `cwd` is a path; OpenCode 2 `protocol` is `legacy`, `auto` or `2026-07-28`. `env` is not a field.
+**Detection**: Error at the offending field
 **Fix**: No auto-fix
-**Source**: opencode.ai/docs/config, opencode.ai/config.json, github.com/sst/opencode/pull/30676
-
-<a id="oc-ag-001"></a>
-### OC-AG-001 [HIGH] Invalid Agent Mode Value
-**Requirement**: The `mode` field MUST be `subagent`, `primary`, or `all`
-**Detection**: Parse JSON, validate agent `mode`
-**Fix**: No auto-fix
-**Source**: opencode.ai/docs/config
-
-<a id="oc-ag-002"></a>
-### OC-AG-002 [HIGH] Invalid Color Format
-**Requirement**: The `color` field MUST be a hex string or valid theme color
-**Detection**: Parse JSON, validate agent `color`
-**Fix**: No auto-fix
-**Source**: opencode.ai/docs/config
-
-<a id="oc-ag-003"></a>
-### OC-AG-003 [HIGH] Temperature Out of Range
-**Requirement**: The `temperature` field MUST be between 0 and 2
-**Detection**: Parse JSON, validate agent `temperature`
-**Fix**: No auto-fix
-**Source**: opencode.ai/docs/config
-
-<a id="oc-ag-004"></a>
-### OC-AG-004 [HIGH] Steps Not a Positive Integer
-**Requirement**: The `steps` field MUST be a positive integer
-**Detection**: Parse JSON, validate agent `steps`
-**Fix**: No auto-fix
-**Source**: opencode.ai/docs/config
-
-<a id="oc-pm-002"></a>
-### OC-PM-002 [MEDIUM] Unknown Permission Key
-**Requirement**: Permission keys MUST be known actions/rules
-**Detection**: Parse JSON, validate permission keys
-**Fix**: No auto-fix
-**Source**: opencode.ai/docs/config
-
-<a id="oc-pm-001"></a>
-### OC-PM-001 [HIGH] Invalid Permission Action
-**Requirement**: Permission actions MUST be `allow`, `ask`, or `deny`
-**Detection**: Parse JSON, validate permission action values across root and nested permission maps
-**Fix**: No auto-fix
-**Source**: opencode.ai/docs/config
-
-<a id="oc-dep-001"></a>
-### OC-DEP-001 [MEDIUM] Deprecated `mode` Field
-**Requirement**: The top-level `mode` field is deprecated - use `agent` instead
-**Detection**: Parse JSON, flag presence of `mode` key at top-level
-**Fix**: [AUTO-FIX] Rename `mode` key to `agent` (safe)
-**Source**: opencode.ai/docs/config
-
-<a id="oc-dep-002"></a>
-### OC-DEP-002 [MEDIUM] Deprecated `tools` Field
-**Requirement**: The top-level `tools` field is deprecated - use `permission` instead
-**Detection**: Parse JSON, flag presence of `tools` key at top-level
-**Fix**: Review manually; no automatic rewrite of intent or permission behavior.
-**Source**: opencode.ai/docs/config
-
-<a id="oc-dep-003"></a>
-### OC-DEP-003 [MEDIUM] Deprecated `autoshare` Field
-**Requirement**: The top-level `autoshare` field is deprecated - use `share` instead
-**Detection**: Parse JSON, flag presence of `autoshare` key at top-level
-**Fix**: [AUTO-FIX] Rename `autoshare` key to `share` (safe)
-**Source**: opencode.ai/docs/config
-
-<a id="oc-dep-005"></a>
-### OC-DEP-005 [MEDIUM] Deprecated TUI Keys
-**Requirement**: theme, keybinds, tui keys SHOULD be in tui.json, not opencode.json/opencode.jsonc
-**Detection**: Check for deprecated TUI keys in opencode.json/opencode.jsonc
-**Fix**: [AUTO-FIX, unsafe] Remove deprecated top-level TUI keys from `opencode.json` / `opencode.jsonc`. This is cleanup, not migration: copy values to `tui.json` yourself first or they will be lost.
-**Source**: opencode.ai/docs/
-
-<a id="oc-dep-006"></a>
-### OC-DEP-006 [MEDIUM] Deprecated MaxSteps Field
-**Requirement**: maxSteps SHOULD be replaced with steps
-**Detection**: Check for maxSteps without steps in agent config
-**Fix**: Manual - rename to steps
-**Source**: opencode.ai/docs/
-
-<a id="oc-dep-007"></a>
-### OC-DEP-007 [MEDIUM] Deprecated Reference Field
-**Requirement**: The top-level `reference` key SHOULD be replaced with `references`
-**Detection**: Parse JSON, check for top-level `reference` key
-**Fix**: [AUTO-FIX] Rename `reference` to `references` (safe)
-**Source**: opencode.ai/config.json (schema marks `reference` as `@deprecated Use 'references' field instead`)
+**Source**: opencode.ai/docs/mcp-servers, opencode.ai/v2/docs/mcp-servers
 
 <a id="oc-cfg-008"></a>
 ### OC-CFG-008 [HIGH] Invalid Log Level
-**Requirement**: The `logLevel` field MUST be one of: fatal, error, warn, info, debug, trace
-**Detection**: Parse JSON, validate `logLevel` value (case-insensitive)
-**Fix**: [AUTO-FIX] Replace with closest valid log level (unsafe)
-**Source**: opencode.ai/docs/config
+**Requirement**: `logLevel` MUST be one of the schema enum `DEBUG`, `INFO`, `WARN`, `ERROR` (case-sensitive; lowercase and `trace`/`fatal` were accepted before). OpenCode 2 ignores the field ("logLevel: use OPENCODE_LOG_LEVEL when starting OpenCode"), so the check runs only for files that target OpenCode 1.
+**Detection**: Error at the value when the file targets OpenCode 1 (OC-DEP-009 covers OpenCode 2)
+**Fix**: Auto-fix (unsafe) - replace with the matching level
+**Source**: opencode.ai/config.json
 
 <a id="oc-cfg-009"></a>
-### OC-CFG-009 [HIGH] Invalid Compaction Reserved
-**Requirement**: The `compaction.reserved` field MUST be a non-negative integer
-**Detection**: Parse JSON, validate `compaction.reserved` is integer >= 0
+### OC-CFG-009 [HIGH] Invalid Compaction Token Budget
+**Requirement**: `compaction.reserved` (OpenCode 1), `compaction.buffer` and `compaction.keep.tokens` (OpenCode 2) MUST be non-negative integers (schema `minimum: 0`)
+**Detection**: Error at the value
 **Fix**: No auto-fix
-**Source**: opencode.ai/docs/config
+**Source**: opencode.ai/config.json
 
 <a id="oc-cfg-010"></a>
 ### OC-CFG-010 [HIGH] Invalid Skills URL
-**Requirement**: Each URL in `skills.urls` MUST start with http:// or https://
-**Detection**: Parse JSON, validate each URL in skills.urls array
+**Requirement**: `skills.urls` (OpenCode 1 object form) MUST hold http(s) URLs. The OpenCode 2 array form mixes paths and URLs ("Add more local directories or HTTP catalogs with the skills array") and is not checked.
+**Detection**: Error at each non-URL or non-string entry
 **Fix**: No auto-fix
-**Source**: opencode.ai/docs/config
+**Source**: opencode.ai/config.json
 
 <a id="oc-cfg-011"></a>
 ### OC-CFG-011 [HIGH] Invalid MCP Timeout
-**Requirement**: MCP server `timeout` MUST be a positive integer
-**Detection**: Parse JSON, validate timeout field in each MCP server entry
+**Requirement**: OpenCode 1: "`timeout` | Number | Timeout in ms for fetching tools from the MCP server" (positive integer). OpenCode 2: "Timeouts are positive integer milliseconds. Set defaults under mcp.timeout; a server's timeout object overrides matching defaults" with `startup`, `catalog`, `execution`.
+**Detection**: Error at a non-positive OpenCode 1 timeout, and at unknown keys or non-positive values of OpenCode 2 timeout objects
 **Fix**: No auto-fix
-**Source**: opencode.ai/docs/config
+**Source**: opencode.ai/docs/mcp-servers, opencode.ai/v2/docs/mcp-servers
 
 <a id="oc-cfg-012"></a>
 ### OC-CFG-012 [HIGH] Invalid MCP OAuth Config
-**Requirement**: MCP server `oauth` MUST include `client_id` and `authorization_url`
-**Detection**: Parse JSON, validate oauth object structure in MCP server entries
+**Requirement**: `oauth` MUST be an object or `false`. No member is required: "OAuth client ID. If not provided, dynamic client registration will be attempted", and `"oauth": {}` is a documented example. Members: `clientId`, `clientSecret`, `scope`, `callbackPort`, `redirectUri` (OpenCode 1, `additionalProperties: false`); `client_id`, `client_secret`, `scope`, `callback_port`, `redirect_uri`, `auth_server_metadata_url` under `mcp.servers` ("use V2's snake_case OAuth fields"). The rule formerly required `client_id` and `authorization_url`, which no OpenCode page mentions.
+**Detection**: Error for `oauth: true` or another non-object, an unknown member (with a closest-name hint), a non-string member, or a callback port outside 1-65535. OpenCode 1 members under `mcp.servers` are OC-CFG-021.
 **Fix**: No auto-fix
-**Source**: opencode.ai/docs/config
+**Source**: opencode.ai/docs/mcp-servers, opencode.ai/v2/docs/mcp-servers
 
 <a id="oc-cfg-013"></a>
 ### OC-CFG-013 [HIGH] Invalid Server Config
-**Requirement**: Server config fields MUST have correct types (port: number, hostname: string, mdns: boolean, cors: array)
-**Detection**: Check server object field types
-**Fix**: Manual
-**Source**: opencode.ai/docs/
+**Requirement**: `server` options MUST have the documented types (`port` positive integer, `hostname` string, `mdns` boolean, `mdnsDomain` string, `cors` array). OpenCode 2 ignores `server` ("use the V2 service and explicit server options"), so the check runs only for files that target OpenCode 1.
+**Detection**: Warning at each mistyped option when the file targets OpenCode 1
+**Fix**: No auto-fix
+**Source**: opencode.ai/docs/config
 
 <a id="oc-cfg-014"></a>
 ### OC-CFG-014 [MEDIUM] Invalid subagent_depth Value
-**Requirement**: The top-level `subagent_depth` field MUST be a non-negative integer when present
-**Detection**: Parse JSON, check that `subagent_depth` is a non-negative integer (null/absent is valid)
+**Requirement**: `subagent_depth` (OpenCode 1) and `experimental.subagent_depth` (OpenCode 2) MUST be non-negative integers: "The default is `1` ... or `0` to prevent all subagent launches." OpenCode 2 ignores the top-level key ("Top-level subagent_depth: use experimental.subagent_depth instead").
+**Detection**: Warning at an invalid value; the top-level key only when the file targets OpenCode 1
 **Fix**: No auto-fix
-**Source**: github.com/anomalyco/opencode/releases/tag/v1.18.2
+**Source**: opencode.ai/docs/config
+
+<a id="oc-cfg-015"></a>
+### OC-CFG-015 [MEDIUM] Shell-Style Variable Not Expanded
+**Requirement**: "Use {env:NAME} for environment substitution. Shell expressions such as $NAME are not expanded in JSON strings" - the literal text is sent.
+**Detection**: Warning at strings with `$NAME` or `${NAME}` (all-caps names) in MCP `environment`, `headers`, `url` and `oauth`, and provider `options`/`settings`/`headers`. Command arrays are not checked (a shell may expand them).
+**Fix**: No auto-fix (write `{env:NAME}`)
+**Source**: opencode.ai/v2/docs/mcp-servers
+
+<a id="oc-cfg-017"></a>
+### OC-CFG-017 [MEDIUM] Mixed OpenCode 1 and 2 Fields in One Entry
+**Requirement**: "Nested mixing is intentionally bounded. OpenCode recognizes mixed V1 and V2 members within mcp, compaction, and experimental, but it does not recursively infer formats inside individual agents, providers, commands, or models. Keep each of those nested entries entirely in one format." / "Do not use legacy top-level fields such as temperature, top_p, prompt, permission, tools, disable, or maxSteps in new V2 agent configuration."
+**Detection**: Warning when one agent (JSON or Markdown), command, provider or model entry has members of both shapes (agent: `prompt`, `permission`, `tools`, `disable`, `maxSteps`, `variant`, `temperature`, `top_p`, `options` with `system`, `permissions`, `disabled`, `request`; command: `variant` with `subagent`; provider: `api`, `id`, `npm`, `whitelist`, `blacklist`, `options` with `canonical`, `package`, `compatibility`, `settings`, `headers`, `body`; model: `id`, `release_date`, `tool_call`, `modalities`, `options`, `status` with `modelID`, `capabilities`, `settings`, `releaseDate`, `disabled`)
+**Fix**: No auto-fix
+**Source**: opencode.ai/v2/docs/migrate-v1
+
+<a id="oc-cfg-018"></a>
+### OC-CFG-018 [LOW] Reference Without Description
+**Requirement**: "OpenCode includes references with descriptions in agent context. ... References without descriptions remain available through autocomplete and direct use, but are not advertised to agents."
+**Detection**: Info at a `references` (or `reference`) entry that is a string shorthand or an object without a non-empty `description`
+**Fix**: No auto-fix
+**Source**: opencode.ai/docs/references, opencode.ai/v2/docs/references
+
+<a id="oc-cfg-019"></a>
+### OC-CFG-019 [LOW] Bare Reference Shorthand Read as Git Repository
+**Requirement**: "A shorthand string is a local path only when it starts with ., /, or ~. Use ./docs, not docs; a bare docs value is interpreted as a Git repository."
+**Detection**: Info at a string reference that does not start with `.`, `/` or `~` and contains no `/` or `:` (so it is not `owner/repo`, a host path or a Git URL)
+**Fix**: No auto-fix
+**Source**: opencode.ai/v2/docs/references
+
+<a id="oc-cfg-020"></a>
+### OC-CFG-020 [LOW] Many Enabled MCP Servers
+**Requirement**: "When you use an MCP server, it adds to the context. This can quickly add up if you have a lot of tools." / "MCP tools consume model context, so add only the servers you need." The threshold of 8 enabled servers is an agnix heuristic; OpenCode gives no number.
+**Detection**: Info at `mcp` when more than 8 servers in one file are enabled (`enabled: false` / `disabled: true` servers are not counted)
+**Fix**: No auto-fix
+**Source**: opencode.ai/docs/mcp-servers, opencode.ai/v2/docs/mcp-servers
+
+<a id="oc-cfg-021"></a>
+### OC-CFG-021 [MEDIUM] OpenCode 1 Field in an mcp.servers Entry
+**Requirement**: Entries under `mcp.servers` use the OpenCode 2 fields: "Use disabled, not an enabled field, to keep one configured without connecting it", timeouts are objects ("separates timeout purposes"), and "Remote OAuth fields use snake case: clientId becomes client_id, clientSecret becomes client_secret, callbackPort becomes callback_port, and redirectUri becomes redirect_uri." (`Mcp.*ConfigEncoded`, `additionalProperties: false`)
+**Detection**: Warning at `enabled`, a numeric `timeout`, or a camelCase OAuth member of an `mcp.servers` entry
+**Fix**: No auto-fix
+**Source**: opencode.ai/v2/docs/mcp-servers, opencode.ai/v2/docs/migrate-v1
+
+<a id="oc-cfg-022"></a>
+### OC-CFG-022 [MEDIUM] Global-Only Setting in Project Config
+**Requirement**: "Control update checks from the global config. ... Project-level values are ignored." (`update`)
+**Detection**: Warning at `update` in a config outside the global (`~/.config/opencode`) and system directories
+**Fix**: No auto-fix (move it to the global config)
+**Source**: opencode.ai/v2/docs/config
+
+<a id="oc-ag-001"></a>
+### OC-AG-001 [HIGH] Invalid Agent Mode Value
+**Requirement**: Agent `mode` MUST be `primary`, `subagent` or `all` ("The `mode` option can be set to `primary`, `subagent`, or `all`.")
+**Detection**: Error at the value in `agent`, `agents`, `mode` entries and Markdown agent frontmatter
+**Fix**: No auto-fix
+**Source**: opencode.ai/docs/agents, opencode.ai/v2/docs/agents
+
+<a id="oc-ag-002"></a>
+### OC-AG-002 [HIGH] Invalid Color Format
+**Requirement**: Hex agent colors MUST be six-digit `#RRGGBB` (schema pattern `^#[0-9a-fA-F]{6}$`; "color sets the agent's UI color using a six-digit hex value"); native OpenCode 2 `agents` entries accept only hex.
+**Detection**: Error for a `#` value that is not six hex digits (three-digit values were accepted before), and for a non-hex value in an `agents` entry. Theme names in OpenCode 1 entries are OC-AG-006.
+**Fix**: No auto-fix
+**Source**: opencode.ai/config.json, opencode.ai/v2/docs/agents
+
+<a id="oc-ag-003"></a>
+### OC-AG-003 [MEDIUM] Temperature Out of Range
+**Requirement**: `temperature` (OpenCode 1) MUST be a number. OpenCode documents "Temperature values typically range from 0.0 to 1.0"; the 0-2 bound is an agnix heuristic (provider limits), so out-of-range values are warnings (formerly errors).
+**Detection**: Warning for a non-number or a value outside 0-2 in OpenCode 1 agent entries and Markdown agents
+**Fix**: No auto-fix
+**Source**: opencode.ai/docs/agents
+
+<a id="oc-ag-004"></a>
+### OC-AG-004 [HIGH] Steps Not a Positive Integer
+**Requirement**: `steps` MUST be a positive integer ("steps sets a positive maximum number of model steps"; schema `exclusiveMinimum: 0`)
+**Detection**: Error at the value
+**Fix**: No auto-fix
+**Source**: opencode.ai/config.json, opencode.ai/v2/docs/agents
 
 <a id="oc-ag-005"></a>
 ### OC-AG-005 [HIGH] top_p Out of Range
-**Requirement**: The agent `top_p` field MUST be between 0.0 and 1.0
-**Detection**: Parse JSON, validate agent `top_p` value range
+**Requirement**: `top_p` (OpenCode 1) MUST be within range: "Values range from 0.0 to 1.0."
+**Detection**: Error at a non-number or a value outside 0-1
 **Fix**: No auto-fix
-**Source**: opencode.ai/docs/config
+**Source**: opencode.ai/docs/agents
 
 <a id="oc-ag-006"></a>
 ### OC-AG-006 [MEDIUM] Invalid Named Color
-**Requirement**: The agent `color` field SHOULD be a hex color or one of: primary, secondary, accent, success, warning, error, info
-**Detection**: Parse JSON, validate agent `color` against named colors and hex format
-**Fix**: [AUTO-FIX] Replace with closest named color (unsafe)
-**Source**: opencode.ai/docs/config
+**Requirement**: Named colors SHOULD be theme colors: "Use a valid hex color (e.g., `#FF5733`) or theme color: `primary`, `secondary`, `accent`, `success`, `warning`, `error`, `info`."
+**Detection**: Warning at a non-hex color that is not a theme color, in OpenCode 1 entries and Markdown agents
+**Fix**: Auto-fix (unsafe) - replace with the closest theme color
+**Source**: opencode.ai/docs/agents
 
 <a id="oc-ag-007"></a>
 ### OC-AG-007 [MEDIUM] Redundant steps and maxSteps
-**Requirement**: Agents SHOULD use `steps` only - `maxSteps` is redundant when both are present
-**Detection**: Parse JSON, detect both `steps` and `maxSteps` in agent definition
+**Requirement**: "The legacy `maxSteps` field is deprecated. Use `steps` instead."
+**Detection**: Warning at `maxSteps` when `steps` is also set
 **Fix**: No auto-fix
-**Source**: opencode.ai/docs/config
+**Source**: opencode.ai/docs/agents
 
 <a id="oc-ag-008"></a>
 ### OC-AG-008 [HIGH] Invalid hidden Type
-**Requirement**: The agent `hidden` field MUST be a boolean
-**Detection**: Parse JSON, validate agent `hidden` is boolean
+**Requirement**: `hidden` MUST be a boolean (schema `type: boolean`)
+**Detection**: Error at a non-boolean value
 **Fix**: No auto-fix
-**Source**: opencode.ai/docs/config
+**Source**: opencode.ai/config.json
 
 <a id="oc-ag-009"></a>
-### OC-AG-009 [HIGH] Invalid Agent Disable Type
-**Requirement**: Agent disable field MUST be boolean
-**Detection**: Check disable field type
-**Fix**: Manual
-**Source**: opencode.ai/docs/
+### OC-AG-009 [HIGH] Invalid Agent disable or disabled Type
+**Requirement**: `disable` (OpenCode 1) and `disabled` (OpenCode 2) MUST be booleans (schema `type: boolean`)
+**Detection**: Error at a non-boolean value
+**Fix**: No auto-fix
+**Source**: opencode.ai/config.json
+
+<a id="oc-ag-010"></a>
+### OC-AG-010 [MEDIUM] OpenCode Agent Without Description
+**Requirement**: Markdown agents (`.opencode/agents/**.md`, `~/.config/opencode/agents/**.md`) SHOULD have a description: "description explains the agent's purpose. Add it to subagents because OpenCode shows it to the model choosing which agent to launch" (OpenCode 2); "This is a **required** config option." (OpenCode 1). "The markdown file name becomes the agent name"; nested paths become part of the ID.
+**Detection**: Warning on a Markdown agent without `description` whose mode is `subagent` or `all`, or whose mode is omitted when the file also targets OpenCode 1 (default `all`; OpenCode 2 defaults to `primary`). These files are an OpenCode agent file type: the OpenCode agent field checks (OC-AG-*, OC-008, OC-PM-*, OC-DEP-002, OC-CFG-001, OC-CFG-017) run on the frontmatter, and the Claude Code subagent rules (CC-AG-*) no longer do. Files in `mode/`/`modes/` are primary agents and are not reported.
+**Fix**: No auto-fix
+**Source**: opencode.ai/v2/docs/agents, opencode.ai/docs/agents
+
+<a id="oc-ag-011"></a>
+### OC-AG-011 [LOW] hidden on a Non-Subagent
+**Requirement**: OpenCode 1: "Hide a subagent from the `@` autocomplete menu with `hidden: true`." ... "Only applies to `mode: subagent` agents." (OpenCode 2 hides any agent.)
+**Detection**: Info at `hidden: true` on an agent whose mode is not `subagent`, when the file targets OpenCode 1 (not for native `agents` entries)
+**Fix**: No auto-fix
+**Source**: opencode.ai/docs/agents
+
+<a id="oc-pm-002"></a>
+### OC-PM-002 [LOW] Possibly Misspelled Permission Key
+**Requirement**: "Permission keys are matched as wildcard patterns against the underlying tool name, so the same syntax works for built-ins, custom tools, and MCP tools - for example `\"mymcp_*\": \"deny\"`". Keys are not limited to built-in names, so only near misses of built-in keys are reported (every non-built-in key was a warning before, including `*`).
+**Detection**: Info at an OpenCode 1 permission key without wildcards that is within a small edit distance of a built-in key (`raed` for `read`)
+**Fix**: No auto-fix
+**Source**: opencode.ai/docs/agents
+
+<a id="oc-pm-003"></a>
+### OC-PM-003 [MEDIUM] Permission Rule Shadowed by Later Catch-All
+**Requirement**: "Rules are evaluated by pattern match, with the **last matching rule winning**. A common pattern is to put the catch-all `\"*\"` rule first, and more specific rules after it." / "The last matching rule wins, so the specific exceptions follow the broad rule." / policies: "When several statements match, the last one wins."
+**Detection**: Warning at a `"*"` key of an OpenCode 1 permission object (top level, per tool, per agent) placed after keys with another action, and at an OpenCode 2 `permissions` rule or policy statement with resource `*` (and the same action, or action `*`) placed after rules of that action with another effect
+**Fix**: No auto-fix (move the catch-all first)
+**Source**: opencode.ai/docs/permissions, opencode.ai/v2/docs/permissions
+
+<a id="oc-pm-004"></a>
+### OC-PM-004 [MEDIUM] Broad external_directory Allow
+**Requirement**: "Keep the list focused on trusted paths" (OpenCode 1) / "Explicit external paths are canonicalized before matching, so authorize only trusted directory boundaries." (OpenCode 2)
+**Detection**: Warning at `external_directory: "allow"` or an allow pattern covering everything or the home directory (`*`, `**`, `/`, `/**`, `~`, `~/**`, `$HOME/**`, ...), in both shapes
+**Fix**: No auto-fix
+**Source**: opencode.ai/docs/permissions, opencode.ai/v2/docs/permissions
+
+<a id="oc-pm-005"></a>
+### OC-PM-005 [MEDIUM] OpenCode 1 Action Name in a permissions Array
+**Requirement**: "Permission actions also changed: bash is now shell, task is now subagent, and write and patch are now edit." / "doom_loop and lsp are not current V2 Core permission actions."
+**Detection**: Warning at an OpenCode 2 `permissions` rule whose action is `bash`, `task`, `write`, `patch`, `doom_loop` or `lsp`
+**Fix**: No auto-fix
+**Source**: opencode.ai/v2/docs/migrate-v1
+
+<a id="oc-pm-006"></a>
+### OC-PM-006 [LOW] Shell Allow-All With Deny Patterns
+**Requirement**: "shell runs with the host user's filesystem, process, and network authority. Directory inference from command text is best effort, so prefer a narrow shell allowlist instead of patterns intended to recognize every dangerous command."
+**Detection**: Info at `bash: {"*": "allow", ...}` with deny patterns (OpenCode 1) and at a shell `*` allow rule followed by shell deny rules (OpenCode 2)
+**Fix**: No auto-fix
+**Source**: opencode.ai/v2/docs/permissions
+
+<a id="oc-pm-007"></a>
+### OC-PM-007 [LOW] Shell Pattern Without Argument Wildcard
+**Requirement**: "Use pattern matching for commands with arguments. `\"grep *\"` allows `grep pattern file.txt`, while `\"grep\"` alone would block it." (OpenCode 2: "A shell pattern ending in * also matches the command without arguments.")
+**Detection**: Info at an allowed `bash` pattern (OpenCode 1) or shell allow rule resource (OpenCode 2) without `*` or `?`
+**Fix**: No auto-fix
+**Source**: opencode.ai/docs/permissions
+
+<a id="oc-pol-001"></a>
+### OC-POL-001 [HIGH] Invalid Policy Statement
+**Requirement**: "Each statement has three fields" (`action` provider.use, tool.use or integration.use; `resource`; `effect` allow or deny) and "Statements that fail validation are dropped with a warning in the server log and the rest of the list still applies." `tool.use` resources are `<action>:<value>`; `integration.use` resources are `mcp:<server>`, `skill:<id>` or `plugin:<target>`. OpenCode 1 `experimental.policies`: "Currently, policies can control which providers OpenCode may use."
+**Detection**: Error for a statement OpenCode drops (non-object, unknown member, invalid action or effect, non-string resource) in `policies` or `experimental.policies`; warning for a `tool.use`/`integration.use` resource without its prefix form (it matches nothing); error for a non-provider.use statement in `experimental.policies` when OpenCode 1 is pinned
+**Fix**: No auto-fix
+**Source**: opencode.ai/v2/docs/policies
+
+<a id="oc-cmd-001"></a>
+### OC-CMD-001 [MEDIUM] Command Argument Inside Shell Block
+**Requirement**: "Do not place untrusted arguments inside shell blocks." / "Shell blocks run when OpenCode evaluates the command, outside the agent's tool permission flow. Only use commands from sources you trust."
+**Detection**: Warning at each ``!`...` `` block containing `$ARGUMENTS` or `$N` in Markdown command bodies and JSON command templates
+**Fix**: No auto-fix
+**Source**: opencode.ai/v2/docs/commands
+
+<a id="oc-cmd-002"></a>
+### OC-CMD-002 [HIGH] JSON Command Without Template
+**Requirement**: JSON commands MUST have a template: "This is a **required** config option." / "Each command requires a template." (schema `required: ["template"]`)
+**Detection**: Error for a `command`/`commands` entry that is not an object or has no string `template`
+**Fix**: No auto-fix
+**Source**: opencode.ai/docs/commands, opencode.ai/v2/docs/commands
+
+<a id="oc-cmd-003"></a>
+### OC-CMD-003 [LOW] template in Markdown Command Frontmatter
+**Requirement**: "Do not put template in Markdown frontmatter; the body supplies it." / "The trimmed Markdown body is always the prompt template."
+**Detection**: Info at `template` in the frontmatter of `.opencode/commands/**.md` (or `~/.config/opencode/commands/`)
+**Fix**: No auto-fix
+**Source**: opencode.ai/v2/docs/commands
+
+<a id="oc-dep-001"></a>
+### OC-DEP-001 [MEDIUM] Deprecated mode Map
+**Requirement**: The `mode` map is deprecated (schema: "@deprecated Use `agent` field instead."; "The singular agent and deprecated mode maps become agents." ... "Entries from the old mode map become primary agents.")
+**Detection**: Warning at `mode`
+**Fix**: Auto-fix (unsafe, formerly safe) - rename `mode` to `agent` when every entry is an object and `agent` is absent; entries then default to mode `all`
+**Source**: opencode.ai/config.json, opencode.ai/v2/docs/migrate-v1
+
+<a id="oc-dep-002"></a>
+### OC-DEP-002 [MEDIUM] Deprecated tools Field
+**Requirement**: "As of `v1.1.1`, the legacy `tools` boolean config is deprecated and has been merged into `permission`. The old `tools` config is still supported for backwards compatibility." / "`tools` is **deprecated**. Prefer the agent's `permission` field"
+**Detection**: Warning at top-level `tools` and at agent-level `tools` in JSON agents and Markdown agent frontmatter (agent level was not checked before)
+**Fix**: No auto-fix (booleans map to permission rules; a key rename would be invalid)
+**Source**: opencode.ai/docs/permissions, opencode.ai/docs/agents
+
+<a id="oc-dep-003"></a>
+### OC-DEP-003 [MEDIUM] Deprecated autoshare Field
+**Requirement**: `autoshare` is deprecated (schema: "@deprecated Use 'share' field instead. Share newly created sessions automatically")
+**Detection**: Warning at `autoshare`
+**Fix**: Auto-fix (unsafe) - replace `"autoshare": true|false` with `"share": "auto"|"manual"` (the old safe fix renamed the key only and left a boolean `share`)
+**Source**: opencode.ai/config.json
+
+<a id="oc-dep-005"></a>
+### OC-DEP-005 [MEDIUM] Deprecated TUI Keys
+**Requirement**: "Legacy `theme`, `keybinds`, and `tui` keys in `opencode.json` are deprecated and automatically migrated when possible." TUI settings belong in `tui.json` (OpenCode 2: `~/.config/opencode/cli.json`).
+**Detection**: Warning at each legacy key
+**Fix**: Auto-fix (unsafe) - remove the legacy keys after migration
+**Source**: opencode.ai/docs/config
+
+<a id="oc-dep-006"></a>
+### OC-DEP-006 [MEDIUM] Deprecated maxSteps Field
+**Requirement**: "The legacy `maxSteps` field is deprecated. Use `steps` instead."
+**Detection**: Warning at `maxSteps` without `steps` (JSON agents and Markdown agents)
+**Fix**: Auto-fix (unsafe, formerly safe) - rename to `steps`
+**Source**: opencode.ai/docs/agents
+
+<a id="oc-dep-007"></a>
+### OC-DEP-007 [MEDIUM] Deprecated reference Field
+**Requirement**: "Rename the deprecated singular reference map to references" ... "Reference entries keep the same shapes." (schema: "@deprecated Use 'references' field instead.")
+**Detection**: Warning at `reference`
+**Fix**: Auto-fix (unsafe, formerly safe) - rename to `references` when absent
+**Source**: opencode.ai/v2/docs/migrate-v1
+
+<a id="oc-dep-008"></a>
+### OC-DEP-008 [LOW] Legacy Singular .opencode Subdirectory
+**Requirement**: "The `.opencode` and `~/.config/opencode` directories use **plural names** for subdirectories ... Singular names (e.g., `agent/`) are also supported for backwards compatibility." / "The legacy singular directories command/ are also discovered, but use commands/ for new files." / "Files under a V1 mode/ or modes/ directory represent primary agents. When moving one into agents/, add mode: primary to its frontmatter."
+**Detection**: Info on files in `agent/`, `command/`, `tool/`, `plugin/`, `skill/`, `mode/` or `modes/` under `.opencode/` or the global or system config directory
+**Fix**: No auto-fix (move the file)
+**Source**: opencode.ai/docs/config, opencode.ai/v2/docs/migrate-v1
+
+<a id="oc-dep-009"></a>
+### OC-DEP-009 [MEDIUM] Field Ignored by OpenCode 2
+**Requirement**: "The V1 schema also accepted fields that have no supported V2 behavior. V2 ignores these values and emits a warning so they are not mistaken for active configuration": `logLevel`, `server`, top-level `subagent_depth`, `compaction.tail_turns` and `compaction.prune`, agent `name` in JSON, an enabled-only MCP entry without a type, experimental `batch_tool`, `openTelemetry`, `primary_tools`, `continue_loop_on_deny`, provider `id`, `whitelist`, `blacklist`, and provider-model `release_date`, `attachment`, `reasoning`, `temperature`, `experimental`, a non-deprecated `status`, and boolean `interleaved`.
+**Detection**: Warning at each such field when the file targets OpenCode 2 only (it uses native OpenCode 2 fields or `[tool_versions] opencode` pins 2.x). Unpinned OpenCode 1 configuration is not reported.
+**Fix**: No auto-fix
+**Source**: opencode.ai/v2/docs/migrate-v1
 
 <a id="oc-lsp-001"></a>
 ### OC-LSP-001 [MEDIUM] LSP Command Without Extensions
-**Requirement**: LSP entries with `command` SHOULD also define `extensions`
-**Detection**: Parse JSON, flag LSP entries with command but no extensions
+**Requirement**: Custom LSP servers SHOULD list the file extensions they handle (`extensions`). OpenCode 2 "accepts and preserves lsp configuration, but it does not run language servers", so the check runs only for files that target OpenCode 1.
+**Detection**: Warning at an `lsp` entry with `command` and no `extensions`
 **Fix**: No auto-fix
-**Source**: opencode.ai/docs/config
+**Source**: opencode.ai/docs/lsp
 
 <a id="oc-lsp-002"></a>
 ### OC-LSP-002 [HIGH] Invalid LSP Extensions
-**Requirement**: LSP `extensions` MUST be a non-empty array of strings
-**Detection**: Parse JSON, validate extensions field in LSP entries
+**Requirement**: `extensions` MUST be a non-empty array of strings (schema `type: array, items: string`). Checked only for files that target OpenCode 1.
+**Detection**: Error at the value
 **Fix**: No auto-fix
-**Source**: opencode.ai/docs/config
+**Source**: opencode.ai/docs/lsp
 
 <a id="oc-tui-001"></a>
 ### OC-TUI-001 [MEDIUM] Unknown TUI Key
-**Requirement**: TUI configuration keys SHOULD be from the known set
-**Detection**: Parse JSON, compare TUI keys against known set
+**Requirement**: Keys of the legacy `tui` object SHOULD be TUI settings (`theme`, `keybinds`, `mouse`, `scroll_speed`, `scroll_acceleration`, `diff_style`)
+**Detection**: Warning at each other key
 **Fix**: No auto-fix
 **Source**: opencode.ai/docs/config
 
 <a id="oc-tui-002"></a>
 ### OC-TUI-002 [HIGH] Invalid scroll_speed
-**Requirement**: The `tui.scroll_speed` field MUST be a number >= 0.001
-**Detection**: Parse JSON, validate scroll_speed value
+**Requirement**: `tui.scroll_speed` MUST be a number of at least 0.001
+**Detection**: Error at the value
 **Fix**: No auto-fix
 **Source**: opencode.ai/docs/config
 
 <a id="oc-tui-003"></a>
 ### OC-TUI-003 [HIGH] Invalid diff_style
-**Requirement**: The `tui.diff_style` field MUST be `auto` or `stacked`
-**Detection**: Parse JSON, validate diff_style value
-**Fix**: [AUTO-FIX] Replace with closest valid diff style (unsafe)
-**Source**: opencode.ai/docs/config
-
-<a id="oc-agm-001"></a>
-### OC-AGM-001 [HIGH] Empty AGENTS.md
-**Requirement**: `AGENTS.md` MUST NOT be empty
-**Detection**: Check `AGENTS.md` file size/content
-**Fix**: No auto-fix
+**Requirement**: `tui.diff_style` MUST be `auto` or `stacked`
+**Detection**: Error at the value
+**Fix**: Auto-fix (unsafe) - replace with the closest style
 **Source**: opencode.ai/docs/config
 
 <a id="oc-agm-002"></a>
-### OC-AGM-002 [HIGH] Secrets in AGENTS.md
-**Requirement**: `AGENTS.md` MUST NOT contain hardcoded secrets
-**Detection**: Scan `AGENTS.md` for secret patterns
+### OC-AGM-002 [MEDIUM] Secrets in AGENTS.md
+**Requirement**: AGENTS.md SHOULD NOT contain credentials: "Commit project instruction files so everyone working in the repository receives the same guidance." / "You should commit your project's `AGENTS.md` file to Git." OpenCode does not reject such a file (formerly HIGH/MUST).
+**Detection**: Warning at each line of an AGENTS.md in an OpenCode project (an `opencode.json(c)` or `.opencode/` in the file's directory or an ancestor) or in the global config directory that contains a known credential prefix (`sk-ant-`, `sk-proj-`, `xoxb-`, `xoxp-`, `AKIA`, `AIza` (formerly the never-matching `AIZA`), `ghp_`, `gho_`, `github_pat_`); it no longer runs on every AGENTS.md
 **Fix**: No auto-fix
-**Source**: opencode.ai/docs/config
+**Source**: opencode.ai/v2/docs/instructions, opencode.ai/docs/rules
+
+<a id="oc-agm-003"></a>
+### OC-AGM-003 [MEDIUM] CLAUDE.md Ignored by OpenCode 2
+**Requirement**: "OpenCode V2 recognizes AGENTS.md only. It does not use CLAUDE.md as a fallback." / "If a V1 setup relied on a CLAUDE.md fallback, move that guidance into the applicable AGENTS.md." (OpenCode 1: "`CLAUDE.md` in your project directory (used if no `AGENTS.md` exists)")
+**Detection**: For a CLAUDE.md with no AGENTS.md in the same directory, in an OpenCode project: warning when the project targets OpenCode 2 only (native OpenCode 2 config or a 2.x pin), info when it targets both lines, nothing when OpenCode 1 is pinned
+**Fix**: No auto-fix
+**Source**: opencode.ai/v2/docs/instructions
+
+<a id="oc-sk-002"></a>
+### OC-SK-002 [LOW] Duplicate OpenCode Skill ID
+**Requirement**: "Skills are selected by ID. If two sources define git-release, the source registered later supplies the skill that OpenCode loads" (order: `.claude/skills`, `.agents/skills`, `~/.config/opencode/skills`, project `.opencode/skills`) / "Avoid duplicate IDs unless you intend to override an earlier skill." (OpenCode 1: "Ensure skill names are unique across all locations")
+**Detection**: Info on a project skill in `.claude/skills/<id>/` or `.agents/skills/<id>/` when a higher-precedence source in the same project root (`.agents/skills`, `.opencode/skills`) defines the same ID, in an OpenCode project. Mirrored copies in multi-tool repositories are common, hence LOW.
+**Fix**: No auto-fix
+**Source**: opencode.ai/v2/docs/skills
+
+<a id="oc-tool-001"></a>
+### OC-TOOL-001 [LOW] Custom Tool Shadows Built-in Tool
+**Requirement**: "Custom tools are keyed by tool name. If a custom tool uses the same name as a built-in tool, the custom tool takes precedence." ... "Prefer unique names unless you intentionally want to replace a built-in tool." "The **filename** becomes the **tool name**" for the default export.
+**Detection**: Info on `.opencode/tools/<name>.ts|js` (or `~/.config/opencode/tools/`) whose file name is a built-in tool (bash, shell, read, write, edit, patch, grep, glob, list, skill, task, subagent, webfetch, websearch, question, lsp, todowrite, todoread, execute) and that has a default export (named exports become `<file>_<export>`)
+**Fix**: No auto-fix
+**Source**: opencode.ai/docs/custom-tools
 
 ## GEMINI CLI RULES
 
@@ -3056,37 +3216,16 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 **Requirement**: Codex config.toml files MUST have valid TOML syntax
 **Detection**: Attempt to parse as TOML; report parse errors with line/column
 **Fix**: Correct the TOML syntax
-**Source**: developers.openai.com/codex/
+**Source**: learn.chatgpt.com/docs/config-file/config-basic, learn.chatgpt.com/docs/config-file/config-reference
 
-
-<a id="cdx-001"></a>
-### CDX-001 [HIGH] Invalid Approval Mode
-**Requirement**: The `approvalMode` field in `.codex/config.toml` MUST be `"suggest"`, `"auto-edit"`, or `"full-auto"`
-**Detection**: Parse TOML, validate `approvalMode` value against allowed set
-**Fix**: Auto-fix (unsafe) -- replace with closest valid approval mode
-**Source**: developers.openai.com/codex/
-
-<a id="cdx-002"></a>
-### CDX-002 [HIGH] Invalid Full Auto Error Mode
-**Requirement**: The `fullAutoErrorMode` field in `.codex/config.toml` MUST be `"ask-user"` or `"ignore-and-continue"`
-**Detection**: Parse TOML, validate `fullAutoErrorMode` value against allowed set
-**Fix**: Auto-fix (unsafe) -- replace with closest valid full auto error mode
-**Source**: developers.openai.com/codex/
-
-<a id="cdx-003"></a>
-### CDX-003 [MEDIUM] AGENTS.override.md in Version Control
-**Requirement**: `AGENTS.override.md` SHOULD NOT be committed to version control (contains user-specific overrides)
-**Detection**: Check if file name is `AGENTS.override.md`
-**Fix**: Add `AGENTS.override.md` to `.gitignore`
-**Source**: developers.openai.com/codex/
 
 <a id="cdx-004"></a>
 ### CDX-004 [MEDIUM] Unknown Config Key
 **0.154 schema refresh**: Accept `allow_symlinked_codex_home` and `thread_unload_delay_secs` added by the tagged Codex 0.154.0 schema.
-**Requirement**: Top-level keys in `.codex/config.toml` SHOULD be from the known configuration schema
-**Detection**: Parse TOML, compare top-level keys against known key and table allowlists
-**Fix**: [AUTO-FIX] Remove unrecognized keys
-**Source**: developers.openai.com/codex/
+**Requirement**: Top-level keys in `.codex/config.toml` SHOULD be from the current configuration schema (`config-schema.json`, top-level `additionalProperties: false`); Codex ignores unknown keys
+**Detection**: Parse TOML, compare top-level keys against known key and table allowlists. `approvalMode` and `fullAutoErrorMode` are settings of the retired TypeScript CLI that the current CLI ignores, and get a message saying so. `allow_managed_hooks_only` gets a message pointing to requirements.toml: "This setting is only supported in `requirements.toml`; putting it in `config.toml` does not enable managed-hooks-only mode."
+**Fix**: [AUTO-FIX, unsafe] Remove unrecognized keys
+**Source**: learn.chatgpt.com/docs/config-file/config-reference, learn.chatgpt.com/docs/config-schema.json, learn.chatgpt.com/docs/hooks
 
 <a id="cdx-005"></a>
 ### CDX-005 [HIGH] Invalid project_doc_max_bytes
@@ -3146,11 +3285,11 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 **Source**: developers.openai.com/codex/config-reference, developers.openai.com/codex/config-schema.json
 
 <a id="cdx-cfg-007"></a>
-### CDX-CFG-007 [HIGH] Danger Full Access Without Acknowledgment
-**Requirement**: `sandbox_mode = "danger-full-access"` MUST include explicit acknowledgement via `notice.hide_full_access_warning = true`
-**Detection**: Parse config and flag danger-full-access when explicit warning acknowledgment is absent
-**Fix**: No auto-fix (explicitly acknowledge risk or reduce sandbox mode)
-**Source**: developers.openai.com/codex/config-reference, developers.openai.com/codex/config-schema.json
+### CDX-CFG-007 [MEDIUM] Full Access Sandbox Posture
+**Requirement**: A Codex config SHOULD NOT remove the sandbox outside a controlled environment: "`danger-full-access`: The agent runs without sandbox restrictions. This removes the filesystem and network boundaries and should be used only when you want the agent to act with full access." and "Use `danger-full-access` only in a controlled environment (for example, an isolated CI runner or container)." Combined with `approval_policy = "never"` the agents page marks the posture "No sandbox; no approvals _(not recommended)_".
+**Detection**: Warning on `sandbox_mode = "danger-full-access"` or `default_permissions = ":danger-full-access"`, at the key; the message names the no-approvals combination when `approval_policy = "never"`. `notice.hide_full_access_warning` no longer suppresses the rule: the config reference defines it as "Track acknowledgement of the full access warning prompt.", UI state rather than an author acknowledgment. Use agnix disable comments or config for intentional CI configs.
+**Fix**: No auto-fix (use workspace-write or a permission profile)
+**Source**: learn.chatgpt.com/docs/sandboxing, learn.chatgpt.com/docs/agent-approvals-security, learn.chatgpt.com/docs/non-interactive-mode, learn.chatgpt.com/docs/config-file/config-reference
 
 <a id="cdx-cfg-008"></a>
 ### CDX-CFG-008 [HIGH] Invalid shell_environment_policy Value
@@ -3190,38 +3329,31 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 
 <a id="cdx-ag-001"></a>
 ### CDX-AG-001 [HIGH] Empty AGENTS.md for Codex
-**Requirement**: AGENTS.md used by Codex MUST contain actionable project guidance
-**Detection**: For `AGENTS.md` variants, flag files where `content.trim().is_empty()`
+**Requirement**: AGENTS.md used by Codex MUST contain actionable project guidance: "Ensure instruction files contain content; Codex ignores empty files."
+**Detection**: For `AGENTS.md` and `AGENTS.override.md` (the names Codex discovers; `AGENTS.local.md` is not one of them), flag files where `content.trim().is_empty()`
 **Fix**: No auto-fix (add repository-specific instructions)
 **Source**: learn.chatgpt.com/docs/agent-configuration/agents-md
 
 <a id="cdx-ag-002"></a>
-### CDX-AG-002 [HIGH] Secrets in AGENTS.md for Codex
-**Requirement**: AGENTS.md MUST NOT include hardcoded credentials or tokens
-**Detection**: Scan AGENTS.md lines for secret markers/prefixes and credential-like assignments
+### CDX-AG-002 [MEDIUM] Secrets in AGENTS.md for Codex
+**Requirement**: AGENTS.md SHOULD NOT include hardcoded credentials or tokens. Codex documents AGENTS.md as project guidance "that travels with your repository", so anything in it is shared with everyone who clones the repository. Codex itself does not reject such a file (formerly HIGH/MUST).
+**Detection**: Scan AGENTS.md and AGENTS.override.md lines for secret markers/prefixes and credential-like assignments
 **Fix**: No auto-fix (remove secrets and use environment variables)
-**Source**: learn.chatgpt.com/docs/agent-configuration/agents-md
+**Source**: learn.chatgpt.com/docs/customization/overview, learn.chatgpt.com/docs/agent-configuration/agents-md
 
 <a id="cdx-ag-003"></a>
-### CDX-AG-003 [MEDIUM] Generic AGENTS.md Guidance for Codex
-**Requirement**: AGENTS.md SHOULD provide specific, actionable repo guidance instead of generic boilerplate
-**Detection**: Detect generic-only instruction content lacking concrete commands/paths/constraints
-**Fix**: No auto-fix (replace generic text with concrete repository guidance)
-**Source**: learn.chatgpt.com/docs/agent-configuration/agents-md
+### CDX-AG-003 [LOW] Generic AGENTS.md Guidance for Codex
+**Requirement**: AGENTS.md SHOULD provide specific, actionable repo guidance instead of vague rules: "Keep it practical. A short, accurate AGENTS.md is more useful than a long file full of vague rules." The vague-rule phrases (follow best practices or coding standards, write clean code, keep code clean, be careful, use common sense) are an agnix heuristic; Codex publishes no list. The rule no longer reuses the Claude memory list of model-behavior phrases such as "be helpful" or "think step by step".
+**Detection**: A short file (under 120 characters) with a vague-rule phrase and no inline code, paths or flags. Info level.
+**Fix**: No auto-fix (replace vague rules with concrete repository guidance)
+**Source**: learn.chatgpt.com/guides/best-practices
 
 <a id="cdx-app-001"></a>
-### CDX-APP-001 [HIGH] Invalid default_tools_approval_mode Value
-**Requirement**: `apps.<app_id>.default_tools_approval_mode` MUST be one of `auto|prompt|approve`
-**Detection**: Parse config and validate app-level `default_tools_approval_mode` enum values
+### CDX-APP-001 [HIGH] Invalid Tool Approval Mode
+**Requirement**: Tool approval modes MUST be valid: "Supported values are `auto`, `prompt`, `writes`, and `approve`. The `writes` mode prompts for tools that aren't marked read-only." (schema `AppToolApproval`). `writes` was formerly rejected.
+**Detection**: `default_tools_approval_mode` and `tools.<tool>.approval_mode` under `apps.<id>`, `apps._default`, `mcp_servers.<id>` and `plugins.<plugin>.mcp_servers.<id>`; reported at the value
 **Fix**: No auto-fix (set to a supported value)
-**Source**: developers.openai.com/codex/config-reference, developers.openai.com/codex/config-schema.json
-
-<a id="cdx-cfg-013"></a>
-### CDX-CFG-013 [HIGH] Invalid sandbox_workspace_write Mode
-**Requirement**: `sandbox_workspace_write.mode` MUST be one of `allowlist|denylist|all`
-**Detection**: Parse config and validate `sandbox_workspace_write.mode` enum values
-**Fix**: No auto-fix (set to a supported value)
-**Source**: developers.openai.com/codex/config-reference, developers.openai.com/codex/config-schema.json
+**Source**: learn.chatgpt.com/docs/extend/mcp, learn.chatgpt.com/docs/config-file/config-reference, learn.chatgpt.com/docs/config-schema.json
 
 <a id="cdx-cfg-014"></a>
 ### CDX-CFG-014 [MEDIUM] Invalid model Value
@@ -3305,14 +3437,14 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 **Requirement**: service_tier SHOULD be "flex" or "fast"
 **Detection**: Check enum value
 **Fix**: Manual
-**Source**: developers.openai.com/codex/
+**Source**: learn.chatgpt.com/docs/config-file/config-reference, learn.chatgpt.com/docs/config-schema.json
 
 <a id="cdx-cfg-026"></a>
-### CDX-CFG-026 [LOW] Invalid Network Permission Field
-**Requirement**: permissions.network sub-fields MAY be validated
-**Detection**: Check keys against known network permission fields
+### CDX-CFG-026 [LOW] Unknown Permission Profile Network Key
+**Requirement**: Keys of a permission profile's `[permissions.<name>.network]` table SHOULD be ones Codex defines (`NetworkToml`, `additionalProperties: false`): `enabled`, `domains`, `unix_sockets`, `proxy_url`, `enable_socks5`, `socks_url`, `enable_socks5_udp`, `allow_upstream_proxy`, `allow_local_binding`, `dangerously_allow_non_loopback_proxy`, `dangerously_allow_all_unix_sockets`, `mode`, `mitm`
+**Detection**: For each `[permissions.<name>]` profile, report unknown keys of its `network` table at the key. A bare `[permissions.network]` is a profile named `network`, not a network table (the rule formerly checked that table against an older key list).
 **Fix**: Manual
-**Source**: developers.openai.com/codex/
+**Source**: learn.chatgpt.com/docs/permissions, learn.chatgpt.com/docs/config-schema.json
 
 <a id="cdx-cfg-027"></a>
 ### CDX-CFG-027 [LOW] Invalid Windows Sandbox Value
@@ -3342,25 +3474,74 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 **Fix**: Manual - set `web_search` to `"disabled"`, `"cached"`, `"indexed"`, or `"live"`.
 **Source**: github.com/openai/codex/releases/tag/rust-v0.142.0, github.com/openai/codex/blob/rust-v0.142.0/codex-rs/protocol/src/config_types.rs
 
+<a id="cdx-cfg-031"></a>
+### CDX-CFG-031 [MEDIUM] Invalid skills.max_context_tokens
+**Requirement**: `skills.max_context_tokens` MUST be a positive integer ("integer (positive)"); "Explicit values are capped at `10000` tokens."
+**Detection**: Warning for a non-integer or non-positive value; info for a value above 10000, which Codex caps
+**Fix**: No auto-fix
+**Source**: learn.chatgpt.com/docs/config-file/config-reference, learn.chatgpt.com/docs/build-skills, learn.chatgpt.com/docs/config-schema.json
+
+<a id="cdx-cfg-032"></a>
+### CDX-CFG-032 [MEDIUM] Key Ignored in Project Config
+**Requirement**: A project `.codex/config.toml` MUST NOT rely on keys Codex reads only from user config: "Codex ignores the following keys in project-local `.codex/config.toml` and prints a startup warning when it sees them: `openai_base_url`, `chatgpt_base_url`, `apps_mcp_product_sku`, `model_provider`, `model_providers`, `notify`, `profile`, `profiles`, `experimental_realtime_ws_base_url`, and `otel`."
+**Detection**: Warning at each of those top-level keys in a `.codex/config.toml` outside the Codex home (`$CODEX_HOME`, else `~/.codex`). `profile` and `profiles` are left to CDX-APP-003 while it is enabled. Not reported when no home directory is known.
+**Fix**: No auto-fix (move the key to `~/.codex/config.toml`)
+**Source**: learn.chatgpt.com/docs/config-file/config-advanced
+
+<a id="cdx-cfg-033"></a>
+### CDX-CFG-033 [MEDIUM] Permission Profile Shadowed by Legacy Sandbox Settings
+**Requirement**: A config MUST NOT mix permission profiles with the older sandbox settings: "Configure either `default_permissions` and `[permissions]`, or `sandbox_mode` / `sandbox_workspace_write`, but not both. If `sandbox_mode` appears in any loaded config file, you pass `--sandbox`, or the selected config profile sets `sandbox_mode`, Codex uses those older sandbox settings instead of `default_permissions`."
+**Detection**: Warning at `default_permissions` (or `[permissions]`) when the same file sets `sandbox_mode` or `[sandbox_workspace_write]`; the message says the profile is ignored when `sandbox_mode` is set. Settings split across user and project layers are not visible to a single-file check.
+**Fix**: No auto-fix (choose one system)
+**Source**: learn.chatgpt.com/docs/permissions, learn.chatgpt.com/docs/config-file/config-reference
+
+<a id="cdx-cfg-034"></a>
+### CDX-CFG-034 [MEDIUM] Profile Domain Rules Without Network Proxy
+**Requirement**: Domain rules of a permission profile SHOULD be backed by the network proxy: "A profile's `network.enabled = true` permits command network access, but it does not start the network proxy. To enforce profile domain rules, also set `features.network_proxy = true` in `config.toml`, or use enabled, administrator-managed `[experimental_network]` requirements. Without an active proxy, profile domain rules do not restrict direct network access."
+**Detection**: Warning at `[permissions.<name>.network.domains]` when that profile sets `network.enabled = true`, has domain rules, and the same file does not enable `features.network_proxy`. Managed requirements can start the proxy, which agnix cannot see, so this is a warning.
+**Fix**: No auto-fix (set `features.network_proxy = true`)
+**Source**: learn.chatgpt.com/docs/permissions
+
+<a id="cdx-cfg-035"></a>
+### CDX-CFG-035 [HIGH] Invalid Permission Profile Inheritance
+**Requirement**: `extends` MUST name a profile Codex accepts: "A profile can extend `:read-only`, `:workspace`, or another named profile. It cannot extend `:danger-full-access`; Codex also rejects unknown parents and inheritance cycles." `default_permissions` "must match a profile under `[permissions]` or a built-in such as `:workspace`".
+**Detection**: Error at `permissions.<name>.extends` for `:danger-full-access`, an unknown `:`-prefixed built-in, or a cycle among the profiles in the file; error at `default_permissions` for an unknown `:`-prefixed built-in. Names without `:` may be defined in another config layer and are not reported as unknown.
+**Fix**: [AUTO-FIX, unsafe] Replace an unknown `default_permissions` built-in with the closest one (`:workspaces` to `:workspace`); unsafe because Codex then applies that profile
+**Source**: learn.chatgpt.com/docs/permissions
+
 <a id="cdx-ag-005"></a>
 ### CDX-AG-005 [MEDIUM] AGENTS.md References Missing File
-**Requirement**: File references in AGENTS.md SHOULD point to existing files
-**Detection**: Extract backtick-quoted file paths and check existence
+**Requirement**: File references in AGENTS.md SHOULD point to existing files. Codex advises keeping AGENTS.md concise and referencing "task-specific markdown files"; a reference to a missing file sends the agent to a file that is not there. Codex has no import mechanism, so references are plain text for the model. The path-shape filter is an agnix heuristic.
+**Detection**: Extract backtick-quoted relative file paths (with a directory part and a plain extension) outside fenced code and check existence relative to the file and the project root; one diagnostic per file
 **Fix**: No auto-fix (fix reference or create missing file)
-**Source**: learn.chatgpt.com/docs/agent-configuration/agents-md
+**Source**: learn.chatgpt.com/guides/best-practices
 
 <a id="cdx-ag-006"></a>
 ### CDX-AG-006 [LOW] AGENTS.md Missing Project Context
-**Requirement**: AGENTS.md SHOULD include project-specific structure like headings, commands, and paths
+**Requirement**: AGENTS.md SHOULD include project-specific structure. Codex: "A good AGENTS.md covers:" repo layout, how to run the project, build/test/lint commands, conventions, constraints and how to verify work.
 **Detection**: Check for presence of headings, backtick commands, and file paths
 **Fix**: No auto-fix (add project-specific content)
+**Source**: learn.chatgpt.com/guides/best-practices
+
+<a id="cdx-ag-008"></a>
+### CDX-AG-008 [LOW] AGENTS.md Shadowed by AGENTS.override.md
+**Requirement**: An AGENTS.md next to an AGENTS.override.md is not read by Codex: "In each directory along the path, it checks for `AGENTS.override.md`, then `AGENTS.md`, then any fallback names in `project_doc_fallback_filenames`. Codex includes at most one file per directory." Other tools still read that AGENTS.md, so the two files SHOULD be kept deliberately. Committed nested overrides are a documented team pattern ("Add overrides in nested directories when specific teams need different rules"), so this is informational.
+**Detection**: Info on an `AGENTS.md` whose directory also has `AGENTS.override.md`
+**Fix**: No auto-fix
 **Source**: learn.chatgpt.com/docs/agent-configuration/agents-md
 
-<a id="cdx-ag-007"></a>
-### CDX-AG-007 [MEDIUM] AGENTS.md Contradicts config.toml
-**Requirement**: AGENTS.md instructions SHOULD be consistent with config.toml values
-**Detection**: Cross-file analysis (project-level check)
-**Fix**: No auto-fix (align instructions with configuration)
+<a id="cdx-ag-009"></a>
+### CDX-AG-009 [MEDIUM] AGENTS.md Exceeds Codex project_doc_max_bytes
+**Requirement**: A Codex instruction file SHOULD fit the instruction budget: "Codex skips empty files and stops adding files once the combined size reaches the limit defined by `project_doc_max_bytes` (32 KiB by default). ... Raise the limit or split instructions across nested directories when you hit the cap." Codex has no import mechanism, so the fix is nesting or a higher limit.
+**Detection**: Warning on an `AGENTS.md` or `AGENTS.override.md` over 32768 bytes. An `AGENTS.md` next to an `AGENTS.override.md` is not checked, since Codex never reads it. Codex-family twin of XP-007 with the Codex fix text.
+**Fix**: No auto-fix (move guidance into nested AGENTS.md files or raise `project_doc_max_bytes`)
+**Source**: learn.chatgpt.com/docs/agent-configuration/agents-md
+
+<a id="cdx-ag-010"></a>
+### CDX-AG-010 [MEDIUM] Codex Instruction Chain Exceeds project_doc_max_bytes
+**Requirement**: The combined instruction chain SHOULD fit `project_doc_max_bytes`: Codex "stops adding files once the combined size reaches the limit" (32 KiB by default), walking from the project root to the working directory with at most one file per directory (`AGENTS.override.md`, then `AGENTS.md`).
+**Detection**: Project-level: one chain per leaf directory; a chain over 32768 bytes is reported once, on its largest file. A chain of one file is left to CDX-AG-009. Fallback names from the user's Codex config are not visible, so the check can under-report. Codex-family twin of XP-009.
+**Fix**: No auto-fix (trim the largest file, nest guidance deeper, or raise `project_doc_max_bytes`)
 **Source**: learn.chatgpt.com/docs/agent-configuration/agents-md
 
 <a id="cdx-app-002"></a>
@@ -3368,14 +3549,14 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 **Requirement**: `skills` SHOULD be a TOML table (object)
 **Detection**: Parse config and verify `skills` is an object type
 **Fix**: No auto-fix (configure as a TOML table)
-**Source**: developers.openai.com/codex/config-reference, developers.openai.com/codex/config-schema.json
+**Source**: learn.chatgpt.com/docs/config-file/config-reference, learn.chatgpt.com/docs/config-schema.json
 
 <a id="cdx-app-003"></a>
-### CDX-APP-003 [MEDIUM] Invalid profile Configuration
-**Requirement**: `profile` SHOULD be a string
-**Detection**: Parse config and verify `profile` is a string type
-**Fix**: No auto-fix (set to a valid profile name string)
-**Source**: developers.openai.com/codex/config-reference, developers.openai.com/codex/config-schema.json
+### CDX-APP-003 [MEDIUM] Removed Profile Selector or Profiles Table
+**Requirement**: Codex configs MUST NOT rely on in-file profiles: "In Codex 0.134.0 and later, `--profile` no longer reads `[profiles.profile-name]` from `config.toml`, and the top-level `profile = "profile-name"` selector is no longer supported." Profiles are separate `~/.codex/<name>.config.toml` files selected with `--profile <name>`. The rule formerly checked only that `profile` was a string.
+**Detection**: Warning at a top-level `profile` key or a `[profiles]` table in any Codex config. No version gating: Codex 0.134.0 is older than the releases agnix tracks.
+**Fix**: No auto-fix (move each profile to `~/.codex/<name>.config.toml`)
+**Source**: learn.chatgpt.com/docs/config-file/config-advanced
 
 ### Codex Plugin Rules (CDX-PL)
 
@@ -3471,11 +3652,11 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 **Source**: github.com/openai/codex (codex-rs/core-plugins/src/manifest.rs, agent_plugin_manifest.rs @ rust-v0.146.0)
 
 <a id="cdx-pl-014"></a>
-### CDX-PL-014 [LOW] Missing Description
-**Requirement**: Plugin manifest SHOULD include a `description` field for discoverability
-**Detection**: Check for presence and non-emptiness of `description` field
-**Fix**: No auto-fix (add a meaningful description)
-**Source**: github.com/openai/codex (codex-rs/core-plugins/src/manifest.rs @ rust-v0.137.0)
+### CDX-PL-014 [LOW] Missing Required Codex-Format Package Field
+**Requirement**: A Codex-format manifest (`.codex-plugin/plugin.json` with no portable root manifest) MUST define the fields the Codex format requires before it is uploaded: "`description` | Required for Codex; optional for Agent Plugins | Package summary, at most 4000 characters.", likewise `version` and `author` (`author.name`) and `interface`; "Codex package validation requires both" `logo` and `composerIcon`. Upload validation enforces this ("If validation fails, correct the reported package errors and upload again"); locally installed plugins load without these fields, so the rule is informational.
+**Detection**: Info listing the missing fields among `version`, `description`, `author.name`, `interface`, `interface.composerIcon`, `interface.logo`. Not reported for a compatibility overlay next to a portable root `plugin.json`. A `description` over 4,000 characters is a warning in both formats.
+**Fix**: No auto-fix
+**Source**: developers.openai.com/plugins/deploy/submission, developers.openai.com/plugins/build/plugins
 
 <a id="cdx-pl-015"></a>
 ### CDX-PL-015 [MEDIUM] Invalid Skills Path Type
@@ -3490,6 +3671,27 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 **Detection**: Validate the dark-mode logo asset path for `./` prefix and absence of `..`
 **Fix**: No auto-fix (set `logoDark` to a package-relative asset path such as `./assets/logo-dark.png`)
 **Source**: github.com/openai/codex (openai/codex#29488, codex-rs/core-plugins/src/manifest.rs @ rust-v0.142.2)
+
+<a id="cdx-pl-017"></a>
+### CDX-PL-017 [LOW] Codex Compatibility Manifest Without Portable Root Manifest
+**Requirement**: "The root `plugin.json` is the portable entry point. OpenAI also accepts legacy and Claude-compatible manifests, but new packages should use this format." A `.codex-plugin/plugin.json` "is optional and serves as a compatibility fallback".
+**Detection**: Info on a `.codex-plugin/plugin.json` when the plugin root has no `plugin.json` with the Agent Plugins `$schema`
+**Fix**: No auto-fix
+**Source**: developers.openai.com/plugins/build/plugins
+
+<a id="cdx-pl-018"></a>
+### CDX-PL-018 [LOW] Plugin Exceeds Public Submission Limits
+**Requirement**: Plugins prepared for the public directory SHOULD meet the submission limits: `name` "at most 64 characters. Use lowercase letters, numbers, and single hyphens for packages you plan to submit"; `displayName` and `shortDescription` "at most 30 characters"; `longDescription` at most 4000; `developerName` at most 80; capabilities "at most 20, with at most 120 characters each". "Plugins containing lifecycle hooks aren't eligible for the public plugin directory", and packages with app references "cannot currently be submitted". "The limits here are for public submission; a package upload can accept longer draft text."
+**Detection**: Info per limit, only for manifests that carry submission metadata (`interface.developerName`, `interface.category`, `interface.longDescription`, or OpenAI `review` / `publication` settings), so locally installed plugins are not reported
+**Fix**: No auto-fix
+**Source**: developers.openai.com/plugins/deploy/submission, developers.openai.com/plugins/build/plugins
+
+<a id="cdx-pl-019"></a>
+### CDX-PL-019 [HIGH] Secret in Plugin MCP Configuration
+**Requirement**: A plugin package MUST NOT contain credentials: "Keep the client secret out of the package. The manifest doesn't accept a `clientSecret` field; supply it through the connection setup flow." and "Don't embed a token in server `headers` to work around this limitation: public submission rejects nonempty server headers."
+**Detection**: In the plugin root's `.mcp.json` or `mcp.json` (when the plugin has `.codex-plugin/plugin.json` or OpenAI extension settings): error at a non-empty `clientSecret` / `client_secret` under a server; warning at a credential header (`Authorization`, names with token, api-key, secret, password or cookie) whose value is a literal credential. `${VAR}` references and placeholder values are not reported.
+**Fix**: No auto-fix
+**Source**: developers.openai.com/plugins/build/plugins, developers.openai.com/plugins/deploy/submission
 
 ---
 
@@ -3508,6 +3710,111 @@ Validates Codex's admin-written managed `requirements.toml` (system location: `/
 **Detection**: Compare each top-level key against the rust-v0.146.0 `ConfigRequirementsToml` set, including permission profiles, remote control, browser use, model policy, feedback, and update controls; obsolete `allowed_permissions` is unknown
 **Fix**: No auto-fix (remove or rename the key)
 **Source**: github.com/openai/codex (codex-rs/config/src/config_requirements.rs @ rust-v0.146.0, docs/config.md)
+
+<a id="cdx-req-002"></a>
+### CDX-REQ-002 [HIGH] Requirements Rule Without Prompt or Forbidden Decision
+**Requirement**: "Unlike `.rules`, requirements rules must specify `decision`, and that decision must be `"prompt"` or `"forbidden"` (not `"allow"`)."
+**Detection**: Error for each `[rules].prefix_rules` entry with no `decision`, a non-string decision, or any other value; reported at the decision or the entry
+**Fix**: No auto-fix
+**Source**: learn.chatgpt.com/docs/enterprise/managed-configuration
+
+<a id="cdx-req-003"></a>
+### CDX-REQ-003 [LOW] Managed Hook Script Outside managed_dir
+**Requirement**: "Managed hook commands should use absolute script paths under the configured managed directory." Codex "doesn't distribute the scripts in `managed_dir`; your enterprise tooling must install and update them separately."
+**Detection**: Info for a requirements.toml command hook whose `command` has no token under `managed_dir` (or whose `command_windows` has none under `windows_managed_dir`), or a command hook with no `managed_dir` set
+**Fix**: No auto-fix
+**Source**: learn.chatgpt.com/docs/hooks, learn.chatgpt.com/docs/enterprise/managed-configuration
+
+<a id="cdx-req-004"></a>
+### CDX-REQ-004 [LOW] Conflicting experimental_network Domain Settings
+**Requirement**: "Do not combine the canonical `domains` map with the legacy `allowed_domains` or `denied_domains` lists." and use `managed_allowed_domains_only = true` "only when you also define administrator-owned `"allow"` entries in `[experimental_network.domains]`".
+**Detection**: Info at a legacy list next to a `domains` map, and at `managed_allowed_domains_only = true` with no allow entry
+**Fix**: No auto-fix
+**Source**: learn.chatgpt.com/docs/enterprise/managed-configuration
+
+<a id="cdx-hk-000"></a>
+### CDX-HK-000 [HIGH] Codex Hooks File Fails to Load
+**Requirement**: A Codex hooks file MUST deserialize, or Codex skips every hook in it. `hooks.json` is `HooksFile` with `deny_unknown_fields` (only `description` and `hooks` at the top), and every handler is a tagged `command`, `mcp_tool`, `prompt` or `agent` entry; a type error anywhere fails the whole file ("failed to parse hooks config"). An invalid inline `[hooks]` table drops all inline hooks of that config layer ("failed to parse TOML hooks").
+**Detection**: Error for invalid JSON in `.codex/hooks.json` (plain JSON: no comments or trailing commas), an unknown top-level key, a non-object `hooks`, an event value that is not an array, a matcher group or handler of the wrong type, a handler without `type` or with an unknown type, a `command` handler without a string `command`, an `mcp_tool` handler without string `server` and `tool`, and `timeout` / `additionalContextLimit` that are not non-negative integers. Also run on inline `[hooks]` in `.codex/config.toml` and managed `requirements.toml`, and on a Codex plugin's default `hooks/hooks.json` (when the plugin has `.codex-plugin/plugin.json` and its manifest does not replace the default hooks path).
+**Fix**: No auto-fix
+**Source**: learn.chatgpt.com/docs/hooks; openai/codex codex-rs/config/src/hook_config.rs and codex-rs/hooks/src/engine/discovery.rs (main, 2026-10-17)
+
+<a id="cdx-hk-001"></a>
+### CDX-HK-001 [MEDIUM] Codex Hook Timeout Out of Range
+**Requirement**: Hook timeouts MUST be within what Codex runs: "`timeout` is in seconds." and "`SessionEnd` and `Interrupt` use `1` second by default and support up to `3` seconds." Codex clamps a larger value to 3 seconds (with a startup warning) and raises 0 to 1 second for every event, so a Claude-style 60-second SessionEnd hook is killed after 3 seconds.
+**Detection**: Warning at `timeout` for a SessionEnd or Interrupt handler over 3, and for a timeout of 0 on any event. Medium, not high: Codex still runs the hook with the clamped value.
+**Fix**: No auto-fix
+**Source**: learn.chatgpt.com/docs/hooks; openai/codex codex-rs/hooks/src/engine/discovery.rs (`normalize_command_hook`)
+
+<a id="cdx-hk-002"></a>
+### CDX-HK-002 [MEDIUM] Codex Hook Handler Skipped
+**Requirement**: Hook handlers MUST be ones Codex runs: "`command` and `mcp_tool` handlers are supported. `prompt` and `agent` handlers are parsed but skipped." and "`SessionEnd` doesn't support MCP tool hooks." Codex also skips a handler with an empty command or an empty MCP server or tool name, and a whole matcher group whose regex does not compile.
+**Detection**: Warning at `type` for prompt and agent handlers and for an `mcp_tool` handler on SessionEnd; at `command` for a blank command; at the handler for a blank `server` or `tool`; at `matcher` for an invalid regex on an event whose matcher Codex compiles (not UserPromptSubmit, Stop or Interrupt). In a plugin hooks file shared with Claude Code (the plugin also has `.claude-plugin/plugin.json`), prompt and agent handlers are not reported, since Claude Code runs them.
+**Fix**: No auto-fix (use a command or mcp_tool handler)
+**Source**: learn.chatgpt.com/docs/hooks; openai/codex codex-rs/hooks/src/engine/discovery.rs
+
+<a id="cdx-hk-003"></a>
+### CDX-HK-003 [LOW] Hooks in Both hooks.json and Inline [hooks]
+**Requirement**: "If a single layer contains both `hooks.json` and inline `[hooks]`, Codex merges them and warns at startup. Prefer one representation per layer."
+**Detection**: Info on a `.codex/hooks.json` with handlers when the `config.toml` next to it also has inline hook handlers
+**Fix**: No auto-fix (keep one representation)
+**Source**: learn.chatgpt.com/docs/hooks, learn.chatgpt.com/docs/config-file/config-advanced
+
+<a id="cdx-hk-004"></a>
+### CDX-HK-004 [LOW] additionalContextLimit Ineffective or Unbounded
+**Requirement**: "Avoid setting the limit to `0` unless the hook enforces a strict output cap; otherwise, a single hook can consume the entire context window." and "For events that can't produce additional context, Codex ignores `additionalContextLimit` and reports a configuration warning."
+**Detection**: Info at `additionalContextLimit` on an event other than PreToolUse, PostToolUse, SessionStart, UserPromptSubmit and SubagentStart (the events whose limit Codex keeps), and at `additionalContextLimit = 0` on those events
+**Fix**: No auto-fix
+**Source**: learn.chatgpt.com/docs/hooks; openai/codex codex-rs/hooks/src/engine/discovery.rs
+
+<a id="cdx-hk-005"></a>
+### CDX-HK-005 [MEDIUM] Unknown Codex Hook Event
+**Requirement**: Hook events MUST be Codex events: PreToolUse, PermissionRequest, PostToolUse, PreCompact, PostCompact, SessionStart, SessionEnd, UserPromptSubmit, SubagentStart, SubagentStop, Stop, Interrupt. Codex reads events as fixed fields without `deny_unknown_fields`, so hooks under any other name (a Claude Code `Notification` hook, a misspelling) are dropped without a warning.
+**Detection**: Warning at each unknown event key, with a "did you mean" suggestion for near misses. Inline `[hooks]` also accepts `state` (config.toml) and `managed_dir` / `windows_managed_dir` (requirements.toml). In a plugin hooks file shared with Claude Code only near misses are reported.
+**Fix**: No auto-fix
+**Source**: openai/codex codex-rs/config/src/hook_config.rs (`HookEventsToml`); learn.chatgpt.com/docs/hooks
+
+<a id="cdx-sub-001"></a>
+### CDX-SUB-001 [HIGH] Invalid Codex Custom Agent File
+**Requirement**: "Every standalone custom agent file must define:" `name`, `description`, `developer_instructions`. The loader rejects a file without a non-empty `name` ("must define a non-empty `name`") or `developer_instructions`, a blank `description` ("cannot be blank"), invalid TOML, and a `nickname_candidates` list that is empty or has blank, duplicate or non-ASCII names.
+**Detection**: Error for each problem in `.codex/agents/*.toml` and `~/.codex/agents/*.toml`, at the key when it is present
+**Fix**: No auto-fix
+**Source**: learn.chatgpt.com/docs/agent-configuration/subagents; openai/codex codex-rs/agent-roles/src/agent_role_config.rs
+
+<a id="cdx-sub-002"></a>
+### CDX-SUB-002 [MEDIUM] Session Setting in Codex Custom Agent File
+**Requirement**: "Other session settings, including `sandbox_mode`, `approval_policy`, `model_provider`, and `mcp_servers`, don't override the parent configuration when placed in a custom agent file." Custom agents "inherit the parent's permissions, provider, and MCP servers; a custom agent file can't override those settings", and "The service tier also follows the root session's preference."
+**Detection**: Warning at `sandbox_mode`, `sandbox_workspace_write`, `approval_policy`, `default_permissions`, `permissions`, `model_provider`, `model_providers`, `mcp_servers` or `service_tier` in a custom agent file
+**Fix**: No auto-fix (set it on the parent session; narrow the agent with developer_instructions)
+**Source**: learn.chatgpt.com/docs/agent-configuration/subagents
+
+<a id="cdx-sub-003"></a>
+### CDX-SUB-003 [LOW] Custom Agent Replaces a Built-in Agent
+**Requirement**: "If a custom agent name matches a built-in agent such as `explorer`, your custom agent takes precedence." Codex ships `default`, `worker` and `explorer`.
+**Detection**: Info at `name` when it is `default`, `worker` or `explorer`. File names that differ from `name` are not reported: "the `name` field is the source of truth", and the docs' own examples use `pr-explorer.toml` for `pr_explorer`.
+**Fix**: No auto-fix
+**Source**: learn.chatgpt.com/docs/agent-configuration/subagents
+
+<a id="cdx-rl-001"></a>
+### CDX-RL-001 [LOW] Forbidden Rule Without Justification
+**Requirement**: "When you use `forbidden`, include a recommended alternative in the justification when appropriate"; Codex "may surface it in approval prompts or rejection messages".
+**Detection**: Info at `decision` of a literal `prefix_rule(...)` call in `.codex/rules/*.rules` (or `~/.codex/rules/`) with `decision = "forbidden"` and no non-empty `justification`. Non-literal Starlark is not read.
+**Fix**: No auto-fix
+**Source**: learn.chatgpt.com/docs/agent-configuration/rules
+
+<a id="cdx-rl-002"></a>
+### CDX-RL-002 [MEDIUM] Broad Allow Rule Outside the Sandbox
+**Requirement**: "Rules let you allow, prompt, or forbid command prefixes outside the sandbox, which is often a better fit than broadly expanding access." `decision` "defaults to `"allow"`", and Codex treats a complex `bash -lc "<script>"` as one invocation matched by its prefix, so allowing a shell or interpreter allows any code outside the sandbox.
+**Detection**: Warning at `pattern` when a literal `prefix_rule` with no decision or `decision = "allow"` has a one-token pattern that is a shell, interpreter, privilege or network command (bash, sh, zsh, fish, pwsh, python, python3, node, deno, bun, ruby, perl, php, sudo, doas, env, xargs, npx, uvx, curl, wget, rm), or such a command followed only by a code flag (`-c`, `-lc`, `-e`, ...). The command list is an agnix heuristic.
+**Fix**: No auto-fix (allow a narrower prefix or use decision = "prompt")
+**Source**: learn.chatgpt.com/docs/agent-configuration/rules, learn.chatgpt.com/docs/sandboxing
+
+<a id="cdx-dep-001"></a>
+### CDX-DEP-001 [LOW] Deprecated Codex Custom Prompt
+**Requirement**: "Custom prompts are deprecated. Use [skills](https://learn.chatgpt.com/docs/build-skills) for reusable instructions"; custom prompts "live in your local Codex home directory (for example, `~/.codex`)", and "Codex scans only the top-level Markdown files in that folder".
+**Detection**: Info on Markdown files in `.codex/prompts/`; the message says when the file is outside the Codex home (never loaded) and a warning is used for files in a subdirectory (never loaded)
+**Fix**: No auto-fix (convert the prompt to a skill)
+**Source**: learn.chatgpt.com/docs/custom-prompts
 
 ---
 
@@ -4773,8 +5080,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Claude Skills | 28 | 9 | 9 | 10 | 7 |
 | Cline | 14 | 6 | 7 | 1 | 2 |
 | Cline Skills | 2 | 0 | 2 | 0 | 1 |
-| Codex CLI | 64 | 31 | 28 | 5 | 9 |
-| Codex Skills | 1 | 0 | 1 | 0 | 1 |
+| Codex CLI | 85 | 31 | 38 | 16 | 8 |
+| Codex Skills | 4 | 0 | 2 | 2 | 1 |
 | GitHub Copilot | 33 | 13 | 13 | 7 | 7 |
 | Copilot Skills | 2 | 0 | 2 | 0 | 1 |
 | Cross-Platform | 11 | 1 | 8 | 2 | 0 |
@@ -4793,7 +5100,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Kiro Skills | 2 | 0 | 1 | 1 | 1 |
 | Kiro Steering | 16 | 4 | 10 | 2 | 1 |
 | MCP | 23 | 17 | 5 | 1 | 7 |
-| OpenCode | 46 | 28 | 17 | 1 | 11 |
+| OpenCode | 66 | 25 | 29 | 12 | 10 |
 | OpenCode Skills | 1 | 0 | 1 | 0 | 1 |
 | Prompt Eng | 4 | 0 | 3 | 1 | 1 |
 | References | 3 | 2 | 1 | 0 | 1 |
@@ -4803,7 +5110,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 0 | 3 | 0 | 3 |
-| **TOTAL** | **606** | **254** | **274** | **78** | **129** |
+| **TOTAL** | **650** | **251** | **297** | **102** | **127** |
 
 
 ---
@@ -4831,8 +5138,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 606 validation rules across 45 categories
+**Total Coverage**: 650 validation rules across 45 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 254 HIGH, 274 MEDIUM, 78 LOW
-**Auto-Fixable**: 129 rules (21%)
+**Certainty**: 251 HIGH, 297 MEDIUM, 102 LOW
+**Auto-Fixable**: 127 rules (20%)

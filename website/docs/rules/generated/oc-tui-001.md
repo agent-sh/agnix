@@ -13,7 +13,7 @@ keywords: ["OC-TUI-001", "unknown tui key", "opencode", "validation", "agnix", "
 - **Category**: `OpenCode`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,7 @@ keywords: ["OC-TUI-001", "unknown tui key", "opencode", "validation", "agnix", "
 
 ## Evidence Sources
 
-- https://opencode.ai/docs/config
+- https://opencode.ai/docs/config/
 
 ## Test Coverage Metadata
 
@@ -38,15 +38,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{
-  "tui": { "unknown_opt": true }
-}
+"tui": {"unknown_option": true}
 ```
 
 ### Valid
 
 ```json
-{
-  "tui": { "theme": "dark" }
-}
+"tui": {"scroll_speed": 3}
 ```

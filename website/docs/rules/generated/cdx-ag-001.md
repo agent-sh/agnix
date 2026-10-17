@@ -13,7 +13,7 @@ keywords: ["CDX-AG-001", "empty agents.md for codex", "codex cli", "validation",
 - **Category**: `Codex CLI`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-07-31`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 

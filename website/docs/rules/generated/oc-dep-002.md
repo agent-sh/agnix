@@ -13,7 +13,7 @@ keywords: ["OC-DEP-002", "deprecated tools field", "opencode", "validation", "ag
 - **Category**: `OpenCode`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,9 @@ keywords: ["OC-DEP-002", "deprecated tools field", "opencode", "validation", "ag
 
 ## Evidence Sources
 
-- https://opencode.ai/docs/config
+- https://opencode.ai/docs/permissions/
+- https://opencode.ai/docs/agents/
+- https://opencode.ai/config.json
 
 ## Test Coverage Metadata
 
@@ -38,15 +40,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{
-  "tools": {}
-}
+{"tools": {"bash": false}}
 ```
 
 ### Valid
 
 ```json
-{
-  "permission": { "read": "allow" }
-}
+{"permission": {"bash": "deny"}}
 ```
