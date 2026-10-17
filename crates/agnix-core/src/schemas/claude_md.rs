@@ -2,58 +2,12 @@
 
 use regex::Regex;
 use std::collections::HashSet;
-use std::sync::OnceLock;
 
 use crate::regex_util::static_regex;
-
-static GENERIC_PATTERNS: OnceLock<Vec<Regex>> = OnceLock::new();
 
 static_regex!(fn weak_language_pattern, r"(?i)\b(should|try\s+to|consider|maybe|might\s+want\s+to|could|possibly)\b");
 static_regex!(fn critical_section_pattern, r"(?i)^#+\s*.*(critical|important|required|mandatory|rules|must|essential)");
 static_regex!(fn npm_run_pattern, r"npm\s+run\s+([a-zA-Z0-9_:-]+)");
-
-/// Generic instruction patterns that Claude already knows
-pub fn generic_patterns() -> &'static Vec<Regex> {
-    GENERIC_PATTERNS.get_or_init(|| {
-        const PATTERNS: &[&str] = &[
-            r"(?i)\bbe\s+helpful",
-            r"(?i)\bbe\s+accurate",
-            r"(?i)\bthink\s+step\s+by\s+step",
-            r"(?i)\bbe\s+concise",
-            r"(?i)\bformat.*properly",
-            r"(?i)\bprovide.*clear.*explanations",
-            r"(?i)\bmake\s+sure\s+to",
-            r"(?i)\balways\s+be",
-            // Role-play identity preambles
-            r"(?i)^#+\s*(?:you\s+are|your\s+role)\b",
-            r"(?i)^\s*-?\s*you(?:'re|\s+are)\s+a\s+(?:helpful|expert|senior|skilled|experienced)\b",
-            // Generic programming principles without project context
-            r"(?i)\bfollow\s+(?:best\s+practices|coding\s+standards|clean\s+code)\b",
-            r"(?i)\bwrite\s+clean\s+(?:and\s+)?(?:maintainable|readable)\s+code\b",
-        ];
-        PATTERNS
-            .iter()
-            .map(|&p| Regex::new(p).unwrap_or_else(|e| panic!("BUG: invalid regex '{}': {}", p, e)))
-            .collect()
-    })
-}
-
-/// Count generic instruction patterns, once per pattern per line.
-///
-/// Codex uses the count to assess specificity; repeated occurrences of the same
-/// pattern on one line still count only once.
-pub fn count_generic_instructions(content: &str) -> usize {
-    let patterns = generic_patterns();
-    content
-        .lines()
-        .map(|line| {
-            patterns
-                .iter()
-                .filter(|pattern| pattern.is_match(line))
-                .count()
-        })
-        .sum()
-}
 
 // ============================================================================
 // CC-MEM-009: Token Count Exceeded
@@ -228,42 +182,9 @@ mod tests {
 
     #[test]
     fn test_regex_patterns_compile() {
-        let _ = generic_patterns();
         let _ = weak_language_pattern();
         let _ = critical_section_pattern();
         let _ = npm_run_pattern();
-    }
-
-    #[test]
-    fn test_count_generic_instructions() {
-        assert_eq!(count_generic_instructions("Be helpful and be accurate."), 2);
-        assert_eq!(count_generic_instructions("Be helpful and be helpful."), 1);
-        assert_eq!(count_generic_instructions("Be helpful.\nBe helpful."), 2);
-        assert_eq!(count_generic_instructions("Be helpful.\r\nBe helpful."), 2);
-        assert_eq!(count_generic_instructions(""), 0);
-    }
-
-    #[test]
-    fn test_detect_generic_preambles_and_principles() {
-        for content in [
-            "# You Are an Expert\nDo this specific task.",
-            "You are a helpful assistant for this project.",
-            "Follow best practices when writing code.",
-            "Write clean and maintainable code.",
-        ] {
-            assert_eq!(count_generic_instructions(content), 1, "{content}");
-        }
-    }
-
-    #[test]
-    fn test_no_false_positive_specific_instructions() {
-        for content in [
-            "Use the coding style defined in .editorconfig\nFollow team conventions",
-            "You are a developer who writes Rust code.",
-            "Follow the airbnb style guide for JavaScript.",
-        ] {
-            assert_eq!(count_generic_instructions(content), 0, "{content}");
-        }
     }
 
     // CC-MEM-009 tests

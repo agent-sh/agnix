@@ -3358,6 +3358,25 @@ extends = "defined-in-another-layer"
     }
 
     #[test]
+    fn test_count_vague_rules() {
+        // Moved from schemas/claude_md.rs with the CDX-AG-003 phrase list.
+        for content in [
+            "Follow best practices when writing code.",
+            "Write clean and maintainable code.",
+            "Be careful.",
+        ] {
+            assert_eq!(count_vague_rules(content), 1, "{content}");
+        }
+        for content in [
+            "Use the coding style defined in .editorconfig\nFollow team conventions",
+            "Follow the airbnb style guide for JavaScript.",
+            "Be helpful and accurate.",
+        ] {
+            assert_eq!(count_vague_rules(content), 0, "{content}");
+        }
+    }
+
+    #[test]
     fn test_agents_local_md_is_not_a_codex_file() {
         let diagnostics = validate_claude_md("AGENTS.local.md", "");
         assert!(diagnostics.is_empty(), "{diagnostics:?}");
