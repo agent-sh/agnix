@@ -142,7 +142,7 @@ fn mcp_quoted_booleans_require_opt_in_and_target_only_the_intended_server() {
             &format!("\"alwaysLoad\":\"{quoted}\""),
             &format!("\"alwaysLoad\":{quoted}"),
         );
-        assert_requires_opt_in(Path::new(".mcp.json"), &content, &expected, "MCP-025");
+        assert_requires_opt_in(Path::new(".mcp.json"), &content, &expected, "CC-MCP-004");
         let fixed: serde_json::Value = serde_json::from_str(&expected).unwrap();
         assert_eq!(fixed["mcpServers"]["first"]["alwaysLoad"], true);
         assert_eq!(

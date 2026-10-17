@@ -13,7 +13,7 @@ keywords: ["CC-PL-015", "default component folder shadowed by manifest", "claude
 - **Category**: `Claude Plugins`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-07-31`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,7 @@ keywords: ["CC-PL-015", "default component folder shadowed by manifest", "claude
 
 ## Evidence Sources
 
-- https://code.claude.com/docs/en/plugins-reference
+- https://code.claude.com/docs/en/plugins/manifest-reference
 - https://github.com/anthropics/claude-code/releases/tag/v2.1.140
 
 ## Test Coverage Metadata

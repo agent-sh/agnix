@@ -1,5 +1,6 @@
-//! Hooks validation rules (CC-HK-001 to CC-HK-028)
+//! Hooks validation rules (CC-HK-001 to CC-HK-035)
 
+use crate::rules::claude_json_spans::{JsonLocator, Seg};
 use crate::{
     config::PerFileLintConfig,
     diagnostics::{Diagnostic, Fix},
@@ -9,7 +10,9 @@ use crate::{
 use rust_i18n::t;
 use std::path::Path;
 
+mod extra;
 mod helpers;
+pub(crate) use extra::{HookFinding, HookOrigin, PathSeg, PluginServers, check_hooks};
 use helpers::*;
 
 const RULE_IDS: &[&str] = &[
@@ -28,7 +31,8 @@ const RULE_IDS: &[&str] = &[
     "CC-HK-014",
     "CC-HK-015",
     "CC-HK-016",
-    "CC-HK-017",
+    // CC-HK-017 is retired: Claude Code appends the input JSON to a prompt or
+    // agent hook prompt that has no $ARGUMENTS placeholder.
     "CC-HK-018",
     "CC-HK-020",
     "CC-HK-021",
@@ -39,14 +43,16 @@ const RULE_IDS: &[&str] = &[
     "CC-HK-026",
     "CC-HK-027",
     "CC-HK-028",
+    "CC-HK-029",
+    "CC-HK-030",
+    "CC-HK-031",
+    "CC-HK-032",
+    "CC-HK-033",
+    "CC-HK-034",
+    "CC-HK-035",
 ];
 
 pub struct HooksValidator;
-
-/// Default timeout thresholds per hook type (from official Claude Code docs)
-const COMMAND_HOOK_DEFAULT_TIMEOUT: u64 = 600; // 10 minutes
-const PROMPT_HOOK_DEFAULT_TIMEOUT: u64 = 30; // 30 seconds
-const AGENT_HOOK_DEFAULT_TIMEOUT: u64 = 60; // 60 seconds
 
 /// CC-HK-006: Missing command field
 fn validate_cc_hk_006_command_field(
@@ -110,14 +116,15 @@ fn validate_cc_hk_008_script_exists(
 fn validate_cc_hk_009_dangerous_patterns(
     command: &str,
     path: &Path,
+    (line, col): (usize, usize),
     diagnostics: &mut Vec<Diagnostic>,
 ) {
     if let Some((pattern, reason)) = check_dangerous_patterns(command) {
         diagnostics.push(
             Diagnostic::warning(
                 path.to_path_buf(),
-                1,
-                0,
+                line,
+                col,
                 "CC-HK-009",
                 t!("rules.cc_hk_009.message", reason = reason),
             )
@@ -162,97 +169,6 @@ fn validate_cc_hk_028_user_config_interpolation(
     }
 }
 
-/// CC-HK-010: Command hook timeout policy
-fn validate_cc_hk_010_command_timeout(
-    event: &str,
-    timeout: &Option<u64>,
-    timeout_is_enforced: bool,
-    hook_location: &str,
-    version_pinned: bool,
-    path: &Path,
-    diagnostics: &mut Vec<Diagnostic>,
-) {
-    // `async: true` has no enforced timeout. `asyncRewake` still does, so
-    // don't suppress timeout advice when that field is enabled as well.
-    if !timeout_is_enforced {
-        return;
-    }
-
-    let default = match event {
-        "UserPromptSubmit" | "PreModelSwitch" | "PostModelSwitch" => 30,
-        "MessageDisplay" => 10,
-        _ => COMMAND_HOOK_DEFAULT_TIMEOUT,
-    };
-    // SessionEnd has a shared 1.5-second budget. An explicit settings timeout
-    // raises that budget up to 60 seconds; exceeding the ordinary default is
-    // therefore expected, not grounds for the usual excess-default warning.
-    let session_end = event == "SessionEnd";
-    if timeout.is_none() {
-        let mut diag = Diagnostic::warning(
-            path.to_path_buf(),
-            1,
-            0,
-            "CC-HK-010",
-            t!(
-                "rules.cc_hk_010.command_no_timeout",
-                location = hook_location
-            ),
-        )
-        .with_suggestion(if session_end {
-            t!("rules.cc_hk_010.session_end_no_timeout_suggestion")
-        } else {
-            t!(
-                "rules.cc_hk_010.command_no_timeout_suggestion",
-                default = default
-            )
-        });
-
-        if !version_pinned {
-            diag = diag.with_assumption(t!("rules.cc_hk_010.assumption"));
-        }
-
-        diagnostics.push(diag);
-    }
-    if let Some(t) = timeout {
-        if *t > if session_end { 60 } else { default } {
-            let mut diag = Diagnostic::warning(
-                path.to_path_buf(),
-                1,
-                0,
-                "CC-HK-010",
-                if session_end {
-                    t!(
-                        "rules.cc_hk_010.session_end_exceeds",
-                        location = hook_location,
-                        timeout = t
-                    )
-                } else {
-                    t!(
-                        "rules.cc_hk_010.command_exceeds",
-                        location = hook_location,
-                        timeout = t,
-                        default = default
-                    )
-                },
-            )
-            .with_suggestion(if session_end {
-                t!("rules.cc_hk_010.session_end_exceeds_suggestion")
-            } else {
-                t!(
-                    "rules.cc_hk_010.command_exceeds_suggestion",
-                    default = default
-                )
-            });
-
-            if !version_pinned {
-                diag = diag.with_assumption(t!("rules.cc_hk_010.assumption"));
-            }
-
-            diagnostics.push(diag);
-        }
-    }
-}
-
 /// CC-HK-015: Model on command hook
 fn validate_cc_hk_015_model_on_command(
     hook_location: &str,
@@ -275,27 +191,6 @@ fn validate_cc_hk_015_model_on_command(
     }
 
     diagnostics.push(diagnostic);
-}
-
-/// CC-HK-017: Prompt hook missing $ARGUMENTS
-fn validate_cc_hk_017_prompt_arguments(
-    prompt: &str,
-    hook_location: &str,
-    path: &Path,
-    diagnostics: &mut Vec<Diagnostic>,
-) {
-    if !prompt.contains("$ARGUMENTS") {
-        diagnostics.push(
-            Diagnostic::warning(
-                path.to_path_buf(),
-                1,
-                0,
-                "CC-HK-017",
-                t!("rules.cc_hk_017.message", location = hook_location),
-            )
-            .with_suggestion(t!("rules.cc_hk_017.suggestion")),
-        );
-    }
 }
 
 /// CC-HK-018: Matcher on events where Claude Code silently ignores it
@@ -387,111 +282,99 @@ fn validate_cc_hk_007_prompt_field(
     }
 }
 
-/// CC-HK-010: Prompt hook timeout policy
-fn validate_cc_hk_010_prompt_timeout(
-    timeout: &Option<u64>,
-    hook_location: &str,
-    version_pinned: bool,
-    path: &Path,
-    diagnostics: &mut Vec<Diagnostic>,
-) {
-    if timeout.is_none() {
-        let mut diag = Diagnostic::warning(
-            path.to_path_buf(),
-            1,
-            0,
-            "CC-HK-010",
-            t!(
-                "rules.cc_hk_010.prompt_no_timeout",
-                location = hook_location
-            ),
-        )
-        .with_suggestion(t!("rules.cc_hk_010.prompt_no_timeout_suggestion"));
-
-        if !version_pinned {
-            diag = diag.with_assumption(t!("rules.cc_hk_010.assumption"));
-        }
-
-        diagnostics.push(diag);
-    }
-    if let Some(t) = timeout {
-        if *t > PROMPT_HOOK_DEFAULT_TIMEOUT {
-            let mut diag = Diagnostic::warning(
-                path.to_path_buf(),
-                1,
-                0,
-                "CC-HK-010",
-                t!(
-                    "rules.cc_hk_010.prompt_exceeds",
-                    location = hook_location,
-                    timeout = t,
-                    default = PROMPT_HOOK_DEFAULT_TIMEOUT
-                ),
-            )
-            .with_suggestion(t!(
-                "rules.cc_hk_010.prompt_exceeds_suggestion",
-                default = PROMPT_HOOK_DEFAULT_TIMEOUT
-            ));
-
-            if !version_pinned {
-                diag = diag.with_assumption(t!("rules.cc_hk_010.assumption"));
-            }
-
-            diagnostics.push(diag);
-        }
-    }
+/// The plugin root of a `hooks/hooks.json` (the directory that contains
+/// `hooks/`), when it is a plugin root of any vendor's layout.
+fn hooks_file_plugin_root(path: &Path) -> Option<&Path> {
+    let hooks_dir = path.parent()?;
+    (path.file_name().is_some_and(|n| n == "hooks.json")
+        && hooks_dir.file_name().is_some_and(|n| n == "hooks"))
+    .then(|| hooks_dir.parent())
+    .flatten()
 }
 
-/// CC-HK-010: Agent hook timeout policy
-fn validate_cc_hk_010_agent_timeout(
-    timeout: &Option<u64>,
-    hook_location: &str,
-    version_pinned: bool,
+/// A `settings.json` at a Claude plugin root (beside `.claude-plugin/`).
+fn is_plugin_root_settings(path: &Path, config: &PerFileLintConfig<'_>) -> bool {
+    path.file_name().is_some_and(|n| n == "settings.json")
+        && path
+            .parent()
+            .is_some_and(|dir| config.fs().exists(&dir.join(".claude-plugin")))
+}
+
+/// Whether `path` is a Gemini CLI extension's or a Codex plugin's
+/// `hooks/hooks.json` rather than a Claude Code plugin's.
+fn is_other_vendor_hooks_file(path: &Path, config: &PerFileLintConfig<'_>) -> bool {
+    let Some(root) = hooks_file_plugin_root(path) else {
+        return false;
+    };
+    let fs = config.fs();
+    if fs.exists(&root.join(".claude-plugin")) {
+        return false;
+    }
+    fs.exists(&root.join("gemini-extension.json")) || fs.exists(&root.join(".codex-plugin"))
+}
+
+/// For a Claude plugin's `hooks/hooks.json`: the plugin name and the keys of
+/// the MCP servers it declares in `.mcp.json` or inline in `plugin.json`.
+fn plugin_servers_for_hooks_file(
     path: &Path,
-    diagnostics: &mut Vec<Diagnostic>,
-) {
-    if timeout.is_none() {
-        let mut diag = Diagnostic::warning(
-            path.to_path_buf(),
-            1,
-            0,
-            "CC-HK-010",
-            t!("rules.cc_hk_010.agent_no_timeout", location = hook_location),
-        )
-        .with_suggestion(t!("rules.cc_hk_010.agent_no_timeout_suggestion"));
-
-        if !version_pinned {
-            diag = diag.with_assumption(t!("rules.cc_hk_010.assumption"));
-        }
-
-        diagnostics.push(diag);
+    config: &PerFileLintConfig<'_>,
+) -> Option<PluginServers> {
+    let root = hooks_file_plugin_root(path)?;
+    let fs = config.fs();
+    if !fs.exists(&root.join(".claude-plugin")) {
+        return None;
     }
-    if let Some(t) = timeout {
-        if *t > AGENT_HOOK_DEFAULT_TIMEOUT {
-            let mut diag = Diagnostic::warning(
-                path.to_path_buf(),
-                1,
-                0,
-                "CC-HK-010",
-                t!(
-                    "rules.cc_hk_010.agent_exceeds",
-                    location = hook_location,
-                    timeout = t,
-                    default = AGENT_HOOK_DEFAULT_TIMEOUT
-                ),
-            )
-            .with_suggestion(t!(
-                "rules.cc_hk_010.agent_exceeds_suggestion",
-                default = AGENT_HOOK_DEFAULT_TIMEOUT
-            ));
+    Some(crate::rules::plugin::plugin_mcp_servers(root, fs.as_ref()))
+}
 
-            if !version_pinned {
-                diag = diag.with_assumption(t!("rules.cc_hk_010.assumption"));
-            }
-
-            diagnostics.push(diag);
-        }
+/// Turn a handler or matcher finding into a diagnostic that points at the
+/// offending key or value of a JSON hooks file.
+fn finding_to_diagnostic(
+    path: &Path,
+    content: &str,
+    locator: &JsonLocator<'_>,
+    finding: HookFinding,
+) -> Diagnostic {
+    let segs: Vec<Seg<'_>> = std::iter::once(Seg::Key("hooks"))
+        .chain(finding.path.iter().map(|seg| match seg {
+            PathSeg::Key(key) => Seg::Key(key.as_str()),
+            PathSeg::Index(index) => Seg::Index(*index),
+        }))
+        .collect();
+    let (line, column) = if finding.on_key {
+        locator.key_pos(&segs)
+    } else {
+        locator.value_pos(&segs)
+    };
+    let mut diagnostic = match finding.level {
+        crate::diagnostics::DiagnosticLevel::Error => Diagnostic::error,
+        crate::diagnostics::DiagnosticLevel::Warning => Diagnostic::warning,
+        crate::diagnostics::DiagnosticLevel::Info => Diagnostic::info,
+    }(
+        path.to_path_buf(),
+        line,
+        column,
+        finding.rule,
+        finding.message,
+    )
+    .with_suggestion(finding.suggestion);
+    // Replace the inner text of a JSON string value, only when the source has
+    // no escapes, so the edit is exactly the decoded value.
+    if let Some(replacement) = finding.replacement
+        && let Some((start, end)) = locator.value_span(&segs)
+        && end >= start + 2
+        && content.get(start..start + 1) == Some("\"")
+        && !content[start + 1..end - 1].contains('\\')
+    {
+        diagnostic = diagnostic.with_fix(Fix::replace(
+            start + 1,
+            end - 1,
+            replacement.as_str(),
+            t!("rules.cc_hk_033.fix", fixed = replacement.as_str()),
+            false,
+        ));
     }
+    diagnostic
 }
 
 #[cfg(test)]
@@ -528,9 +411,10 @@ impl Validator for HooksValidator {
     ///
     /// 1. **Category check** - Early return if hooks category disabled
     /// 2. **JSON parsing** - Parse raw JSON, report CC-HK-012 on failure
-    /// 3. **Pre-parse validation** - Raw JSON checks (CC-HK-005, CC-HK-011, CC-HK-013..014, CC-HK-016, CC-HK-020..024)
-    /// 4. **Typed parsing** - Parse into SettingsSchema
-    /// 5. **Event iteration** - Validate each event and hook (CC-HK-015, CC-HK-017, CC-HK-018)
+    /// 3. **Pre-parse validation** - Raw JSON checks (CC-HK-005, CC-HK-011, CC-HK-013..014, CC-HK-016, CC-HK-020..025)
+    /// 4. **Handler checks** - CC-HK-010, CC-HK-025 (case) and CC-HK-029..035 (extra.rs)
+    /// 5. **Typed parsing** - Parse into SettingsSchema
+    /// 6. **Event iteration** - Validate each event and hook (CC-HK-001..003, CC-HK-006..009, CC-HK-015, CC-HK-018, CC-HK-028)
     fn validate_per_file(
         &self,
         path: &Path,
@@ -547,6 +431,24 @@ impl Validator for HooksValidator {
         // directory (`.kiro/settings/settings.json` holds Kiro IDE editor
         // settings, for example), so Claude hook rules do not apply there.
         if crate::file_types::is_inside_kiro_dir(path) {
+            return diagnostics;
+        }
+
+        // A `hooks/hooks.json` inside a Gemini CLI extension or a Codex plugin
+        // follows that tool's hook schema (`BeforeTool`, `Interrupt`, ...), and
+        // Claude Code never reads it. Path detection can't tell these apart
+        // from a Claude plugin, so check the plugin root here.
+        if is_other_vendor_hooks_file(path, config) {
+            return diagnostics;
+        }
+
+        // `.vscode/settings.json` is VS Code's editor settings file (JSON with
+        // comments and trailing commas); Claude Code never reads it.
+        if path
+            .parent()
+            .and_then(Path::file_name)
+            .is_some_and(|dir| dir.eq_ignore_ascii_case(".vscode"))
+        {
             return diagnostics;
         }
 
@@ -569,10 +471,64 @@ impl Validator for HooksValidator {
             }
         };
 
+        let locator = JsonLocator::new(content);
+
+        // CC-PL-021 (owned by PluginValidator): "Only two keys take effect from
+        // a plugin, `agent` and `subagentStatusLine`; every other key is
+        // dropped", so hooks in a plugin's root settings.json never run.
+        if is_plugin_root_settings(path, config) {
+            if config.is_rule_enabled("CC-PL-021")
+                && let Some(map) = raw_value.as_object()
+            {
+                for key in map
+                    .keys()
+                    .filter(|k| !matches!(k.as_str(), "agent" | "subagentStatusLine" | "$schema"))
+                {
+                    let (line, col) = locator.key_pos(&[Seg::Key(key.as_str())]);
+                    diagnostics.push(
+                        Diagnostic::warning(
+                            path.to_path_buf(),
+                            line,
+                            col,
+                            "CC-PL-021",
+                            t!(
+                                "rules.cc_pl_021.message",
+                                key = key.as_str(),
+                                location = "settings.json"
+                            ),
+                        )
+                        .with_suggestion(t!("rules.cc_pl_021.suggestion")),
+                    );
+                }
+            }
+            return diagnostics;
+        }
+
         // Raw JSON validation: CC-HK-005, 011, 013, 014, 016, 020-025.
         // Single consolidated traversal (2 passes max instead of 11).
-        if !validate_all_raw_hooks(&raw_value, path, content, config, &mut diagnostics) {
+        if !validate_all_raw_hooks(
+            &raw_value,
+            path,
+            content,
+            &locator,
+            config,
+            &mut diagnostics,
+        ) {
             return diagnostics;
+        }
+
+        // CC-HK-010 and CC-HK-029..035: per-handler and per-matcher checks
+        // shared with skill and agent frontmatter hooks.
+        if let Some(events) = raw_value.get("hooks").and_then(|v| v.as_object()) {
+            let plugin = plugin_servers_for_hooks_file(path, config);
+            let origin = if plugin.is_some() {
+                HookOrigin::PluginHooksFile
+            } else {
+                HookOrigin::Settings
+            };
+            for finding in check_hooks(events, origin, plugin.as_ref(), config) {
+                diagnostics.push(finding_to_diagnostic(path, content, &locator, finding));
+            }
         }
 
         let settings: SettingsSchema = match serde_json::from_value(raw_value) {
@@ -618,8 +574,11 @@ impl Validator for HooksValidator {
 
             for (matcher_idx, matcher) in matchers.iter().enumerate() {
                 // --- Matcher-level validation ---
-                // CC-HK-003: Matcher hint for tool events
-                if config.is_rule_enabled("CC-HK-003") {
+                // CC-HK-003: Matcher hint for tool events. A PermissionRequest
+                // group without a matcher is reported by CC-HK-035 instead.
+                if config.is_rule_enabled("CC-HK-003")
+                    && !(event == "PermissionRequest" && config.is_rule_enabled("CC-HK-035"))
+                {
                     validate_cc_hk_003_matcher_hint(
                         event,
                         &matcher.matcher,
@@ -658,25 +617,9 @@ impl Validator for HooksValidator {
                         Hook::Command {
                             command,
                             args,
-                            timeout,
                             model,
-                            is_async,
-                            async_rewake,
                             ..
                         } => {
-                            // CC-HK-010: Command timeout policy
-                            if config.is_rule_enabled("CC-HK-010") {
-                                validate_cc_hk_010_command_timeout(
-                                    event,
-                                    timeout,
-                                    *is_async != Some(true) || *async_rewake == Some(true),
-                                    &hook_location,
-                                    config.is_claude_code_version_pinned(),
-                                    path,
-                                    &mut diagnostics,
-                                );
-                            }
-
                             // CC-HK-006: Missing command field
                             if config.is_rule_enabled("CC-HK-006") {
                                 validate_cc_hk_006_command_field(
@@ -712,9 +655,18 @@ impl Validator for HooksValidator {
 
                                 // CC-HK-009: Dangerous command patterns
                                 if config.is_rule_enabled("CC-HK-009") {
+                                    let pos = locator.value_pos(&[
+                                        Seg::Key("hooks"),
+                                        Seg::Key(event.as_str()),
+                                        Seg::Index(matcher_idx),
+                                        Seg::Key("hooks"),
+                                        Seg::Index(hook_idx),
+                                        Seg::Key("command"),
+                                    ]);
                                     validate_cc_hk_009_dangerous_patterns(
                                         cmd,
                                         path,
+                                        pos,
                                         &mut diagnostics,
                                     );
                                 }
@@ -731,20 +683,7 @@ impl Validator for HooksValidator {
                                 }
                             }
                         }
-                        Hook::Prompt {
-                            prompt, timeout, ..
-                        } => {
-                            // CC-HK-010: Prompt timeout policy
-                            if config.is_rule_enabled("CC-HK-010") {
-                                validate_cc_hk_010_prompt_timeout(
-                                    timeout,
-                                    &hook_location,
-                                    config.is_claude_code_version_pinned(),
-                                    path,
-                                    &mut diagnostics,
-                                );
-                            }
-
+                        Hook::Prompt { prompt, .. } => {
                             // CC-HK-002: Prompt on wrong event
                             if config.is_rule_enabled("CC-HK-002") {
                                 validate_cc_hk_002_hook_event_type(
@@ -766,33 +705,8 @@ impl Validator for HooksValidator {
                                     &mut diagnostics,
                                 );
                             }
-
-                            // CC-HK-017: Prompt hook missing $ARGUMENTS
-                            if config.is_rule_enabled("CC-HK-017") {
-                                if let Some(p) = prompt {
-                                    validate_cc_hk_017_prompt_arguments(
-                                        p,
-                                        &hook_location,
-                                        path,
-                                        &mut diagnostics,
-                                    );
-                                }
-                            }
                         }
-                        Hook::Agent {
-                            prompt, timeout, ..
-                        } => {
-                            // CC-HK-010: Agent timeout policy
-                            if config.is_rule_enabled("CC-HK-010") {
-                                validate_cc_hk_010_agent_timeout(
-                                    timeout,
-                                    &hook_location,
-                                    config.is_claude_code_version_pinned(),
-                                    path,
-                                    &mut diagnostics,
-                                );
-                            }
-
+                        Hook::Agent { prompt, .. } => {
                             // CC-HK-002: Agent hook on wrong event.
                             if config.is_rule_enabled("CC-HK-002") {
                                 validate_cc_hk_002_hook_event_type(
@@ -814,24 +728,23 @@ impl Validator for HooksValidator {
                                     &mut diagnostics,
                                 );
                             }
-
-                            // CC-HK-017: Agent hook missing $ARGUMENTS
-                            if config.is_rule_enabled("CC-HK-017") {
-                                if let Some(p) = prompt {
-                                    validate_cc_hk_017_prompt_arguments(
-                                        p,
-                                        &hook_location,
-                                        path,
-                                        &mut diagnostics,
-                                    );
-                                }
-                            }
                         }
                         Hook::Http { .. } => {
-                            // HTTP hooks are validated at the raw JSON level:
-                            // CC-HK-005 type check, CC-HK-011 timeout, CC-HK-016 type validation,
-                            // CC-HK-020 url validation, CC-HK-024 headers env vars.
-                            // No additional typed validation needed here.
+                            // Other HTTP checks run on the raw JSON (CC-HK-005,
+                            // CC-HK-011, CC-HK-016, CC-HK-020, CC-HK-024).
+                            // CC-HK-002: "`SessionStart` and `Setup` support
+                            // `command` and `mcp_tool` hooks ... They don't
+                            // support `http`, `prompt`, or `agent` hooks."
+                            if config.is_rule_enabled("CC-HK-002") {
+                                validate_cc_hk_002_hook_event_type(
+                                    event,
+                                    "http",
+                                    !matches!(event.as_str(), "SessionStart" | "Setup"),
+                                    &hook_location,
+                                    path,
+                                    &mut diagnostics,
+                                );
+                            }
                         }
                         Hook::McpTool { .. } => {
                             // MCP tool hooks (added Claude Code v2.1.118) are
@@ -852,3 +765,5 @@ impl Validator for HooksValidator {
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_extra;

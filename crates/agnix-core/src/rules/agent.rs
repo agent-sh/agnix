@@ -196,7 +196,9 @@ const RULE_IDS: &[&str] = &[
     "CC-AG-010",
     "CC-AG-011",
     "CC-AG-012",
-    "CC-AG-013",
+    // CC-AG-013 is retired: the sub-agents reference states no naming format
+    // for the `skills` list, and CC-AG-005 already reports names that resolve
+    // to no skill.
     "CC-AG-014",
     "CC-AG-015",
     // CC-AG-016 (invalid background type) is intentionally not listed here.
@@ -205,6 +207,13 @@ const RULE_IDS: &[&str] = &[
     "CC-AG-017",
     "CC-AG-019",
     "CC-AG-020",
+    "CC-AG-021",
+    "CC-AG-022",
+    "CC-AG-023",
+    "CC-AG-024",
+    // Plugin agent fields Claude Code ignores; checked on the agent Markdown
+    // file, which is where the plugins reference documents them.
+    "CC-PL-014",
 ];
 
 pub struct AgentValidator;
@@ -319,22 +328,6 @@ impl AgentValidator {
                 .all(|c| c.is_alphanumeric() || c == '-' || c == '_')
     }
 
-    /// Check if a skill name follows valid kebab-case format.
-    /// Must be lowercase letters, digits, and hyphens only, no leading/trailing hyphens.
-    fn is_valid_skill_name_format(name: &str) -> bool {
-        if name.is_empty() {
-            return false;
-        }
-        if name.starts_with('-') || name.ends_with('-') {
-            return false;
-        }
-        if name.contains("--") {
-            return false;
-        }
-        name.chars()
-            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
-    }
-
     /// Check if a skill exists at the expected location.
     /// Returns false for invalid skill names (path traversal attempts).
     fn skill_exists(project_root: &Path, skill_name: &str, fs: &dyn FileSystem) -> bool {
@@ -378,6 +371,14 @@ impl Validator for AgentValidator {
             return diagnostics;
         }
 
+        // Other tools' agent directories that path detection hands to this
+        // validator because the parent is named `agents`: OpenCode
+        // (`.opencode/agents/`, `~/.config/opencode/agents/`) and GitHub
+        // Copilot (`.github/agents/`). Claude Code reads neither.
+        if is_other_vendor_agents_dir(path) {
+            return diagnostics;
+        }
+
         let local_agent = path
             .ancestors()
             .skip(1)
@@ -402,9 +403,14 @@ impl Validator for AgentValidator {
         } else {
             content.trim_start().starts_with("---")
         }) {
+            // "No `name`: Claude Code treats the file as documentation kept
+            // beside your agents" and "An opening `---` that isn't the file's
+            // first line: Claude Code reads the file as having no frontmatter
+            // and treats it as documentation." A README is a normal thing to
+            // keep there, so this is information, not an error.
             if local_agent && config.is_rule_enabled("CC-AG-007") {
                 diagnostics.push(
-                    Diagnostic::error(
+                    Diagnostic::info(
                         path.to_path_buf(),
                         1,
                         0,
@@ -610,12 +616,88 @@ impl Validator for AgentValidator {
             }
         }
 
-        // CC-AG-005: Referenced skill not found
+        // CC-AG-005: Referenced skill not found, or one Claude Code doesn't
+        // preload: "up to the first 32 distinct names in the list" and "You
+        // can't preload skills that set `disable-model-invocation: true`".
         if config.is_rule_enabled("CC-AG-005") {
             if let Some(skills) = &schema.skills {
                 let fs = config.fs();
+                let (skills_line, skills_col) = frontmatter_key_pos(content, &parts, "skills");
+                let mut distinct: Vec<&str> = Vec::new();
+                for skill in skills {
+                    if !distinct.contains(&skill.as_str()) {
+                        distinct.push(skill.as_str());
+                    }
+                }
+                if distinct.len() > 32 {
+                    diagnostics.push(
+                        Diagnostic::warning(
+                            path.to_path_buf(),
+                            skills_line,
+                            skills_col,
+                            "CC-AG-005",
+                            t!(
+                                "rules.cc_ag_005.too_many",
+                                count = distinct.len(),
+                                skipped = distinct[32..].join(", ")
+                            ),
+                        )
+                        .with_suggestion(t!("rules.cc_ag_005.too_many_suggestion")),
+                    );
+                }
                 if let Some(project_root) = Self::find_project_root(path, fs.as_ref()) {
                     for skill_name in skills {
+                        if !Self::is_safe_skill_name(skill_name) {
+                            continue;
+                        }
+                        let skill_md = project_root
+                            .join(".claude")
+                            .join("skills")
+                            .join(skill_name)
+                            .join("SKILL.md");
+                        let not_preloadable = fs.read_to_string(&skill_md).is_ok_and(|text| {
+                            let fm = split_frontmatter(&text);
+                            fm.has_frontmatter
+                                && quick_frontmatter_scalar(
+                                    &fm.frontmatter,
+                                    "disable-model-invocation",
+                                )
+                                .is_some_and(|v| {
+                                    matches!(
+                                        v.to_ascii_lowercase().as_str(),
+                                        "true" | "yes" | "on" | "1"
+                                    )
+                                })
+                        });
+                        if not_preloadable {
+                            diagnostics.push(
+                                Diagnostic::warning(
+                                    path.to_path_buf(),
+                                    skills_line,
+                                    skills_col,
+                                    "CC-AG-005",
+                                    t!(
+                                        "rules.cc_ag_005.not_preloadable",
+                                        skill = skill_name.as_str()
+                                    ),
+                                )
+                                .with_suggestion(t!("rules.cc_ag_005.not_preloadable_suggestion")),
+                            );
+                        }
+                    }
+                }
+                // A plugin agent's bare skill names resolve to the plugin's
+                // own skills.
+                let plugin_skills = plugin_agent_root(path, fs.as_ref()).map(|r| r.join("skills"));
+                if let Some(project_root) = Self::find_project_root(path, fs.as_ref()) {
+                    for skill_name in skills {
+                        let in_plugin = plugin_skills.as_ref().is_some_and(|dir| {
+                            Self::is_safe_skill_name(skill_name)
+                                && fs.exists(&dir.join(skill_name).join("SKILL.md"))
+                        });
+                        if in_plugin {
+                            continue;
+                        }
                         #[cfg(feature = "filesystem")]
                         let user_skill = dirs::home_dir().map(|home| {
                             home.join(".claude/skills")
@@ -633,8 +715,8 @@ impl Validator for AgentValidator {
                             diagnostics.push(
                                 Diagnostic::warning(
                                     path.to_path_buf(),
-                                    1,
-                                    0,
+                                    skills_line,
+                                    skills_col,
                                     "CC-AG-005",
                                     t!("rules.cc_ag_005.message", skill = skill_name.as_str()),
                                 )
@@ -1020,56 +1102,6 @@ impl Validator for AgentValidator {
             }
         }
 
-        // CC-AG-013: Skill name format validation
-        if config.is_rule_enabled("CC-AG-013") {
-            if let Some(skills) = &schema.skills {
-                for skill_name in skills {
-                    if !skill_name.split(':').all(Self::is_valid_skill_name_format) {
-                        let kebab = crate::rules::skill::convert_to_kebab_case(skill_name);
-                        let mut diagnostic = Diagnostic::warning(
-                            path.to_path_buf(),
-                            1,
-                            0,
-                            "CC-AG-013",
-                            t!("rules.cc_ag_013.message", name = skill_name.as_str()),
-                        )
-                        .with_suggestion(t!("rules.cc_ag_013.suggestion"));
-
-                        if !kebab.is_empty() && kebab != skill_name.as_str() {
-                            // Try to get the precise byte range for the `skills` field in
-                            // the frontmatter; if unavailable (e.g. multi-line YAML lists),
-                            // fall back to searching the entire frontmatter.
-                            let (search_start, search_end) = if let Some((start, end)) =
-                                frontmatter_value_byte_range_from_parts(&parts, "skills")
-                            {
-                                (start, end)
-                            } else {
-                                (0, parts.frontmatter_start + parts.frontmatter.len())
-                            };
-
-                            // The value range covers the whole skills field which may be
-                            // multi-line. For a single skill, try to find the exact
-                            // occurrence within that range.
-                            let fm_slice = &content[search_start..search_end];
-                            if let Some(offset) = fm_slice.find(skill_name.as_str()) {
-                                let abs_start = search_start + offset;
-                                let abs_end = abs_start + skill_name.len();
-                                diagnostic = diagnostic.with_fix(Fix::replace(
-                                    abs_start,
-                                    abs_end,
-                                    &kebab,
-                                    format!("Replace '{}' with '{}'", skill_name, kebab),
-                                    false,
-                                ));
-                            }
-                        }
-
-                        diagnostics.push(diagnostic);
-                    }
-                }
-            }
-        }
-
         // CC-AG-014: Invalid effort value
         if config.is_rule_enabled("CC-AG-014") {
             if let Some(effort) = &schema.effort {
@@ -1176,25 +1208,477 @@ impl Validator for AgentValidator {
         // Unknown keys are captured by serde(flatten) into schema.extra during
         // the initial parse, so no re-parsing is needed.
         if config.is_rule_enabled("CC-AG-019") {
-            for key_str in schema.extra.keys() {
+            let mut keys: Vec<&String> = schema.extra.keys().collect();
+            keys.sort();
+            for key_str in keys {
+                let (line, col) = frontmatter_key_pos(content, &parts, key_str);
+                let suggestion = if key_str == "cacheTtl" {
+                    t!("rules.cc_ag_019.cache_ttl_suggestion").to_string()
+                } else {
+                    t!(
+                        "rules.cc_ag_019.unknown_suggestion",
+                        field = key_str.as_str(),
+                        known = KNOWN_AGENT_FIELDS.join(", ")
+                    )
+                    .to_string()
+                };
                 diagnostics.push(
                     Diagnostic::warning(
                         path.to_path_buf(),
-                        1,
-                        0,
+                        line,
+                        col,
                         "CC-AG-019",
-                        format!("Unknown agent frontmatter field '{}'", key_str),
+                        t!("rules.cc_ag_019.unknown", field = key_str.as_str()),
                     )
-                    .with_suggestion(format!(
-                        "Remove or rename '{}' - known fields: {}",
-                        key_str,
-                        KNOWN_AGENT_FIELDS.join(", ")
-                    )),
+                    .with_suggestion(suggestion),
+                );
+            }
+            // "set `autoCompactWindow` in its frontmatter to a token count
+            // from `100000` to `1000000`" and "in frontmatter Claude Code
+            // reads `200k` as 200, which is outside the allowed range. The
+            // subagent still loads and compacts as if the field were absent."
+            if let Some(value) = &schema.auto_compact_window
+                && let Some(problem) = auto_compact_window_problem(value)
+            {
+                let (line, col) = frontmatter_key_pos(content, &parts, "autoCompactWindow");
+                diagnostics.push(
+                    Diagnostic::warning(
+                        path.to_path_buf(),
+                        line,
+                        col,
+                        "CC-AG-019",
+                        t!(
+                            "rules.cc_ag_019.auto_compact_window",
+                            value = problem.as_str()
+                        ),
+                    )
+                    .with_suggestion(t!("rules.cc_ag_019.auto_compact_window_suggestion")),
                 );
             }
         }
 
+        let plugin_root = plugin_agent_root(path, config.fs().as_ref());
+
+        // CC-PL-014: "Ignored fields: `permissionMode`, `hooks`,
+        // `mcpServers`, and `initialPrompt`" in plugin agents.
+        if let Some(root) = plugin_root
+            && config.is_rule_enabled("CC-PL-014")
+        {
+            let present = [
+                ("permissionMode", schema.permission_mode.is_some()),
+                ("hooks", schema.hooks.is_some()),
+                ("mcpServers", schema.mcp_servers.is_some()),
+                ("initialPrompt", schema.initial_prompt.is_some()),
+            ];
+            let plugin = root
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or_default();
+            for (field, _) in present.iter().filter(|(_, set)| *set) {
+                let (line, col) = frontmatter_key_pos(content, &parts, field);
+                diagnostics.push(
+                    Diagnostic::warning(
+                        path.to_path_buf(),
+                        line,
+                        col,
+                        "CC-PL-014",
+                        t!("rules.cc_pl_014.message", field = *field, plugin = plugin),
+                    )
+                    .with_suggestion(
+                        if *field == "permissionMode" || *field == "initialPrompt" {
+                            t!("rules.cc_pl_014.suggestion_remove", field = *field)
+                        } else {
+                            t!("rules.cc_pl_014.suggestion_plugin_level", field = *field)
+                        },
+                    ),
+                );
+            }
+        }
+
+        // CC-PL-020 (owned by SkillValidator): a plugin agent body that writes
+        // `$CLAUDE_PLUGIN_ROOT` without braces gets no substitution, and the
+        // variable isn't in the Bash tool's environment.
+        if plugin_root.is_some()
+            && config.is_rule_enabled("CC-PL-020")
+            && let Some((pos, spelling)) = crate::rules::skill::unbraced_plugin_var(
+                &content[parts.body_start.min(content.len())..],
+            )
+        {
+            let offset = parts.body_start.min(content.len()) + pos;
+            let line = content[..offset].bytes().filter(|&b| b == b'\n').count() + 1;
+            let col = offset - content[..offset].rfind('\n').map_or(0, |i| i + 1) + 1;
+            let braced = format!("${{{}}}", &spelling[1..]);
+            diagnostics.push(
+                Diagnostic::warning(
+                    path.to_path_buf(),
+                    line,
+                    col,
+                    "CC-PL-020",
+                    t!("rules.cc_pl_020.message", spelling = spelling),
+                )
+                .with_suggestion(t!("rules.cc_pl_020.suggestion", braced = braced.as_str())),
+            );
+        }
+
+        // CC-HK-0xx handler checks on agent frontmatter hooks. Plugin agents
+        // ignore `hooks` (CC-PL-014 above).
+        if plugin_root.is_none()
+            && let Some(events) = schema.hooks.as_ref().and_then(|v| v.as_object())
+        {
+            let (line, col) = frontmatter_key_pos(content, &parts, "hooks");
+            for finding in crate::rules::hooks::check_hooks(
+                events,
+                crate::rules::hooks::HookOrigin::Frontmatter,
+                None,
+                config,
+            ) {
+                diagnostics.push(frontmatter_hook_diagnostic(path, line, col, finding));
+            }
+        }
+
+        // CC-AG-022: "Limit tool access: grant only necessary permissions" and
+        // `tools` "Inherits every tool available to subagents if omitted."
+        if config.is_rule_enabled("CC-AG-022")
+            && schema.tools.is_none()
+            && schema.disallowed_tools.is_none()
+            && schema.name.as_deref().is_some_and(|n| !n.trim().is_empty())
+        {
+            let (line, col) = frontmatter_key_pos(content, &parts, "name");
+            diagnostics.push(
+                Diagnostic::info(
+                    path.to_path_buf(),
+                    line,
+                    col,
+                    "CC-AG-022",
+                    t!("rules.cc_ag_022.message"),
+                )
+                .with_suggestion(t!("rules.cc_ag_022.suggestion")),
+            );
+        }
+
+        // CC-AG-024: a `disallowedTools` entry with a specifier "still removes
+        // the whole tool from the subagent, not only the matching commands",
+        // and an `Agent(type, ...)` list in a subagent's `tools` is ignored
+        // unless the agent runs as the main thread with `claude --agent`.
+        if config.is_rule_enabled("CC-AG-024") {
+            for entry in schema.disallowed_tools.iter().flatten() {
+                if let Some((tool, _)) = entry.split_once('(')
+                    && entry.ends_with(')')
+                    && !tool.is_empty()
+                    && tool.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+                {
+                    let (line, col) = frontmatter_key_pos(content, &parts, "disallowedTools");
+                    diagnostics.push(
+                        Diagnostic::warning(
+                            path.to_path_buf(),
+                            line,
+                            col,
+                            "CC-AG-024",
+                            t!(
+                                "rules.cc_ag_024.disallowed_specifier",
+                                entry = entry.as_str(),
+                                tool = tool
+                            ),
+                        )
+                        .with_suggestion(t!(
+                            "rules.cc_ag_024.disallowed_specifier_suggestion",
+                            entry = entry.as_str()
+                        )),
+                    );
+                }
+            }
+            // `initialPrompt` only applies "when this agent runs as the main
+            // session agent", so an agent that sets it is meant for
+            // `claude --agent`, where the type list applies.
+            let main_thread_agent = schema.initial_prompt.is_some();
+            for entry in schema.tools.iter().flatten().filter(|_| !main_thread_agent) {
+                if let Some(inner) = entry
+                    .strip_prefix("Agent(")
+                    .or_else(|| entry.strip_prefix("Task("))
+                    && inner.ends_with(')')
+                    && inner.len() > 1
+                {
+                    let (line, col) = frontmatter_key_pos(content, &parts, "tools");
+                    diagnostics.push(
+                        Diagnostic::info(
+                            path.to_path_buf(),
+                            line,
+                            col,
+                            "CC-AG-024",
+                            t!("rules.cc_ag_024.agent_type_list", entry = entry.as_str()),
+                        )
+                        .with_suggestion(t!("rules.cc_ag_024.agent_type_list_suggestion")),
+                    );
+                }
+            }
+        }
+
+        // CC-AG-021 and CC-AG-023 look at the whole `.claude/agents/` tree.
+        if local_agent
+            && (config.is_rule_enabled("CC-AG-021") || config.is_rule_enabled("CC-AG-023"))
+            && let Some(tree) = local_agents_tree(path)
+        {
+            check_agents_tree(
+                path,
+                content,
+                &parts,
+                &schema,
+                tree,
+                config,
+                &mut diagnostics,
+            );
+        }
+
         diagnostics
+    }
+}
+
+/// Most files read from one agents tree for CC-AG-021 and CC-AG-023.
+const MAX_TREE_AGENTS: usize = 2000;
+
+/// The combined-description warning threshold Claude Code shows at startup:
+/// "When the combined descriptions of your subagents, except the built-in
+/// ones, exceed 15,000 tokens".
+const AGENT_DESCRIPTION_TOKEN_BUDGET: usize = 15_000;
+
+/// Directories named `agents` that belong to other tools.
+fn is_other_vendor_agents_dir(path: &Path) -> bool {
+    let Some(agents_dir) = nearest_agents_dir(path) else {
+        return false;
+    };
+    let parent = agents_dir.parent();
+    let parent_name = parent.and_then(Path::file_name).and_then(|n| n.to_str());
+    match parent_name {
+        Some(".opencode") | Some(".github") => true,
+        Some("opencode") => parent
+            .and_then(Path::parent)
+            .and_then(Path::file_name)
+            .is_some_and(|n| n == ".config"),
+        _ => false,
+    }
+}
+
+fn nearest_agents_dir(path: &Path) -> Option<&Path> {
+    path.ancestors()
+        .skip(1)
+        .find(|dir| dir.file_name().is_some_and(|name| name == "agents"))
+}
+
+/// The plugin root of a plugin agent (`<root>/agents/**.md` with
+/// `<root>/.claude-plugin/`).
+fn plugin_agent_root<'a>(path: &'a Path, fs: &dyn FileSystem) -> Option<&'a Path> {
+    let root = nearest_agents_dir(path)?.parent()?;
+    fs.exists(&root.join(".claude-plugin")).then_some(root)
+}
+
+/// The `.claude/agents` directory of a local agent.
+fn local_agents_tree(path: &Path) -> Option<&Path> {
+    let agents = nearest_agents_dir(path)?;
+    agents
+        .parent()
+        .and_then(Path::file_name)
+        .is_some_and(|n| n == ".claude")
+        .then_some(agents)
+}
+
+/// (line, column) of a top-level frontmatter key, or of the opening `---`.
+fn frontmatter_key_pos(content: &str, parts: &FrontmatterParts, key: &str) -> (usize, usize) {
+    let mut offset = parts.frontmatter_start;
+    for line in parts.frontmatter.split_inclusive('\n') {
+        if let Some(rest) = line.strip_prefix(key)
+            && rest.trim_start().starts_with(':')
+        {
+            let line_no = content[..offset.min(content.len())]
+                .bytes()
+                .filter(|&b| b == b'\n')
+                .count()
+                + 1;
+            return (line_no, 1);
+        }
+        offset += line.len();
+    }
+    (1, 1)
+}
+
+/// Why an `autoCompactWindow` value is ignored, if it is.
+fn auto_compact_window_problem(value: &serde_yaml::Value) -> Option<String> {
+    match value {
+        serde_yaml::Value::Number(n) => match n.as_u64() {
+            Some(v) if (100_000..=1_000_000).contains(&v) => None,
+            _ => Some(n.to_string()),
+        },
+        serde_yaml::Value::String(s) => Some(format!("'{s}'")),
+        serde_yaml::Value::Null => None,
+        other => Some(format!("{other:?}")),
+    }
+}
+
+/// A CC-HK finding on a frontmatter hook, reported at the `hooks` key.
+fn frontmatter_hook_diagnostic(
+    path: &Path,
+    line: usize,
+    col: usize,
+    finding: crate::rules::hooks::HookFinding,
+) -> Diagnostic {
+    let make = match finding.level {
+        crate::diagnostics::DiagnosticLevel::Error => Diagnostic::error,
+        crate::diagnostics::DiagnosticLevel::Warning => Diagnostic::warning,
+        crate::diagnostics::DiagnosticLevel::Info => Diagnostic::info,
+    };
+    make(path.to_path_buf(), line, col, finding.rule, finding.message)
+        .with_suggestion(finding.suggestion)
+}
+
+/// The value of a top-level `key:` line in a frontmatter block, unquoted.
+fn quick_frontmatter_scalar(frontmatter: &str, key: &str) -> Option<String> {
+    frontmatter.lines().find_map(|line| {
+        let rest = line.strip_prefix(key)?.trim_start().strip_prefix(':')?;
+        let value = rest.trim();
+        let value = value
+            .strip_prefix('"')
+            .and_then(|v| v.strip_suffix('"'))
+            .or_else(|| value.strip_prefix('\'').and_then(|v| v.strip_suffix('\'')))
+            .unwrap_or(value);
+        (!value.is_empty()).then(|| value.to_string())
+    })
+}
+
+/// Every `.md` file under an agents tree, sorted.
+fn agent_tree_files(tree: &Path, fs: &dyn FileSystem) -> Vec<std::path::PathBuf> {
+    let mut files = Vec::new();
+    let mut stack = vec![(tree.to_path_buf(), 0usize)];
+    while let Some((dir, depth)) = stack.pop() {
+        let Ok(entries) = fs.read_dir(&dir) else {
+            continue;
+        };
+        for entry in entries {
+            if entry.metadata.is_symlink {
+                continue;
+            }
+            if entry.metadata.is_dir && depth < MAX_TRAVERSAL_DEPTH {
+                stack.push((entry.path.clone(), depth + 1));
+            } else if entry.metadata.is_file
+                && entry.path.extension().is_some_and(|e| e == "md")
+                && files.len() < MAX_TREE_AGENTS
+            {
+                files.push(entry.path.clone());
+            }
+        }
+    }
+    files.sort();
+    files
+}
+
+/// CC-AG-021 (combined description budget) and CC-AG-023 (duplicate names)
+/// over the `.claude/agents` tree that holds `path`.
+fn check_agents_tree(
+    path: &Path,
+    content: &str,
+    parts: &FrontmatterParts,
+    schema: &AgentSchema,
+    tree: &Path,
+    config: &PerFileLintConfig<'_>,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let fs = config.fs();
+    let files = agent_tree_files(tree, fs.as_ref());
+    // Read each other agent's frontmatter once. Files without frontmatter on
+    // the first line are documentation, not agents.
+    let agents: Vec<(std::path::PathBuf, String)> = files
+        .iter()
+        .filter_map(|file| {
+            let text = if file == path {
+                content.to_string()
+            } else {
+                fs.read_to_string(file).ok()?
+            };
+            if !(text.starts_with("---\n") || text.starts_with("---\r\n")) {
+                return None;
+            }
+            Some((file.clone(), text))
+        })
+        .collect();
+    let rel = |p: &Path| {
+        p.strip_prefix(tree)
+            .unwrap_or(p)
+            .display()
+            .to_string()
+            .replace('\\', "/")
+    };
+
+    // CC-AG-023: "if two files under the same `.claude/agents/` directory,
+    // including its subfolders, declare the same name, Claude Code loads
+    // only one of them, chosen by filesystem read order".
+    if config.is_rule_enabled("CC-AG-023")
+        && let Some(name) = schema
+            .name
+            .as_deref()
+            .map(str::trim)
+            .filter(|n| !n.is_empty())
+    {
+        let others: Vec<String> = agents
+            .iter()
+            .filter(|(file, _)| file != path)
+            .filter(|(_, text)| {
+                quick_frontmatter_scalar(&split_frontmatter(text).frontmatter, "name").as_deref()
+                    == Some(name)
+            })
+            .map(|(file, _)| rel(file))
+            .collect();
+        if !others.is_empty() {
+            let (line, col) = frontmatter_key_pos(content, parts, "name");
+            diagnostics.push(
+                Diagnostic::warning(
+                    path.to_path_buf(),
+                    line,
+                    col,
+                    "CC-AG-023",
+                    t!(
+                        "rules.cc_ag_023.message",
+                        name = name,
+                        others = others.join(", ")
+                    ),
+                )
+                .with_suggestion(t!("rules.cc_ag_023.suggestion")),
+            );
+        }
+    }
+
+    // CC-AG-021: the first agent file in the tree reports the total, so one
+    // project gets one diagnostic. "Each agent counts its name plus its
+    // `description` frontmatter." Tokens are estimated as characters / 4,
+    // agnix's usual estimate; Claude Code's own count can differ.
+    if config.is_rule_enabled("CC-AG-021") && agents.first().is_some_and(|(f, _)| f == path) {
+        let mut chars = 0usize;
+        for (_, text) in &agents {
+            let fm = split_frontmatter(text);
+            let Ok(agent) = serde_yaml::from_str::<AgentSchema>(&fm.frontmatter) else {
+                continue;
+            };
+            let Some(name) = agent.name.as_deref().filter(|n| !n.trim().is_empty()) else {
+                continue;
+            };
+            chars +=
+                name.chars().count() + agent.description.as_deref().unwrap_or("").chars().count();
+        }
+        let tokens = chars / 4;
+        if tokens > AGENT_DESCRIPTION_TOKEN_BUDGET {
+            diagnostics.push(
+                Diagnostic::warning(
+                    path.to_path_buf(),
+                    1,
+                    1,
+                    "CC-AG-021",
+                    t!(
+                        "rules.cc_ag_021.message",
+                        tokens = tokens,
+                        count = agents.len(),
+                        budget = AGENT_DESCRIPTION_TOKEN_BUDGET
+                    ),
+                )
+                .with_suggestion(t!("rules.cc_ag_021.suggestion")),
+            );
+        }
     }
 }
 
@@ -1540,7 +2024,9 @@ Agent instructions here"#;
 
         assert_eq!(cc_ag_001.len(), 1);
         assert_eq!(cc_ag_001[0].level, DiagnosticLevel::Error);
-        assert!(cc_ag_001[0].message.contains("missing required 'name'"));
+        // Message now states the effect: the file is treated as documentation.
+        assert!(cc_ag_001[0].message.contains("no 'name' field"));
+        assert!(cc_ag_001[0].message.contains("documentation"));
     }
 
     #[test]
@@ -1694,31 +2180,6 @@ Agent instructions"#;
     }
 
     // ===== CC-AG-013 auto-fix tests =====
-
-    #[test]
-    fn test_cc_ag_013_has_fix() {
-        // Use inline YAML list format so frontmatter_value_byte_range can find the value
-        // Use underscored name that convert_to_kebab_case will transform with hyphens
-        let content = "---\nname: my-agent\ndescription: A test agent\nskills: [my_Skill]\n---\nAgent instructions";
-        let diagnostics = validate(content);
-        let cc_ag_013: Vec<_> = diagnostics
-            .iter()
-            .filter(|d| d.rule == "CC-AG-013")
-            .collect();
-        assert_eq!(cc_ag_013.len(), 1);
-        assert!(cc_ag_013[0].has_fixes(), "CC-AG-013 should have auto-fix");
-        let fix = &cc_ag_013[0].fixes[0];
-        assert!(!fix.safe, "CC-AG-013 fix should be unsafe");
-        assert_eq!(
-            fix.replacement, "my-skill",
-            "Fix should replace with kebab-case version"
-        );
-        let target = &content[fix.start_byte..fix.end_byte];
-        assert_eq!(
-            target, "my_Skill",
-            "Fix should target the original skill name"
-        );
-    }
 
     // ===== CC-AG-001 YAML injection prevention =====
 
@@ -2179,6 +2640,38 @@ Agent instructions"#;
         assert_eq!(cc_ag_005[0].level, DiagnosticLevel::Warning);
         assert!(cc_ag_005[0].message.contains("nonexistent-skill"));
         assert!(cc_ag_005[0].message.contains("not found"));
+        assert_eq!(cc_ag_005[0].line, 4, "points at the skills key");
+    }
+
+    #[test]
+    fn test_cc_ag_005_plugin_agent_finds_plugin_skills() {
+        let temp = TempDir::new().unwrap();
+        let root = temp.path();
+        std::fs::create_dir_all(root.join(".claude")).unwrap();
+        let plugin = root.join("plugins/p");
+        std::fs::create_dir_all(plugin.join(".claude-plugin")).unwrap();
+        std::fs::write(
+            plugin.join(".claude-plugin/plugin.json"),
+            r#"{"name": "p"}"#,
+        )
+        .unwrap();
+        std::fs::create_dir_all(plugin.join("skills/triage")).unwrap();
+        std::fs::write(
+            plugin.join("skills/triage/SKILL.md"),
+            "---\nname: triage\ndescription: Triage\n---\nBody",
+        )
+        .unwrap();
+        std::fs::create_dir_all(plugin.join("agents")).unwrap();
+        let agent_path = plugin.join("agents/lead.md");
+        let content =
+            "---\nname: lead\ndescription: Lead\nskills:\n  - triage\n  - elsewhere\n---\nBody";
+        let diagnostics = validate_with_path(&agent_path, content);
+        let missing: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-AG-005")
+            .collect();
+        assert_eq!(missing.len(), 1, "{missing:?}");
+        assert!(missing[0].message.contains("elsewhere"));
     }
 
     #[test]
@@ -2390,11 +2883,11 @@ Agent instructions"#;
             .collect();
 
         assert_eq!(parse_errors.len(), 1);
-        assert!(
-            parse_errors[0]
-                .message
-                .contains("must have YAML frontmatter")
-        );
+        // Changed expectation: a file without frontmatter is documentation to
+        // Claude Code ("treats the file as documentation kept beside your
+        // agents"), so this is now an info note, not an error.
+        assert_eq!(parse_errors[0].level, DiagnosticLevel::Info);
+        assert!(parse_errors[0].message.contains("documentation"));
     }
 
     #[test]
@@ -4057,101 +4550,6 @@ Agent instructions"#;
 
     // ===== CC-AG-013 Tests: Skill Name Format =====
 
-    #[test]
-    fn test_cc_ag_013_invalid_skill_name_uppercase() {
-        let content = r#"---
-name: my-agent
-description: A test agent
-skills:
-  - MySkill
----
-Agent instructions"#;
-
-        let diagnostics = validate(content);
-        let cc_ag_013: Vec<_> = diagnostics
-            .iter()
-            .filter(|d| d.rule == "CC-AG-013")
-            .collect();
-
-        assert_eq!(cc_ag_013.len(), 1);
-        assert_eq!(cc_ag_013[0].level, DiagnosticLevel::Warning);
-        assert!(cc_ag_013[0].message.contains("MySkill"));
-    }
-
-    #[test]
-    fn test_cc_ag_013_invalid_skill_name_underscore() {
-        let content = r#"---
-name: my-agent
-description: A test agent
-skills:
-  - my_skill
----
-Agent instructions"#;
-
-        let diagnostics = validate(content);
-        let cc_ag_013: Vec<_> = diagnostics
-            .iter()
-            .filter(|d| d.rule == "CC-AG-013")
-            .collect();
-
-        assert_eq!(cc_ag_013.len(), 1);
-    }
-
-    #[test]
-    fn test_cc_ag_013_invalid_skill_name_leading_hyphen() {
-        let content = r#"---
-name: my-agent
-description: A test agent
-skills:
-  - -my-skill
----
-Agent instructions"#;
-
-        let diagnostics = validate(content);
-        let cc_ag_013: Vec<_> = diagnostics
-            .iter()
-            .filter(|d| d.rule == "CC-AG-013")
-            .collect();
-
-        assert_eq!(cc_ag_013.len(), 1);
-    }
-
-    #[test]
-    fn test_cc_ag_013_valid_skill_names() {
-        let content = r#"---
-name: my-agent
-description: A test agent
-skills:
-  - my-skill
-  - code-review
-  - test123
----
-Agent instructions"#;
-
-        let diagnostics = validate(content);
-        let cc_ag_013: Vec<_> = diagnostics
-            .iter()
-            .filter(|d| d.rule == "CC-AG-013")
-            .collect();
-        assert_eq!(cc_ag_013.len(), 0);
-    }
-
-    #[test]
-    fn test_cc_ag_013_no_skills_ok() {
-        let content = r#"---
-name: my-agent
-description: A test agent
----
-Agent instructions"#;
-
-        let diagnostics = validate(content);
-        let cc_ag_013: Vec<_> = diagnostics
-            .iter()
-            .filter(|d| d.rule == "CC-AG-013")
-            .collect();
-        assert_eq!(cc_ag_013.len(), 0);
-    }
-
     // ===== CC-AG-012 auto-fix tests =====
 
     #[test]
@@ -4168,24 +4566,6 @@ Agent instructions"#;
             "Safety advice must not rewrite permissionMode"
         );
         assert_eq!(cc_ag_012[0].level, DiagnosticLevel::Warning);
-    }
-
-    #[test]
-    fn test_cc_ag_013_consecutive_hyphens() {
-        let content = r#"---
-name: my-agent
-description: A test agent
-skills:
-  - my--skill
----
-Agent instructions"#;
-
-        let diagnostics = validate(content);
-        let cc_ag_013: Vec<_> = diagnostics
-            .iter()
-            .filter(|d| d.rule == "CC-AG-013")
-            .collect();
-        assert_eq!(cc_ag_013.len(), 1);
     }
 
     // ===== Fixture Tests for New Rules =====
@@ -4254,11 +4634,9 @@ Agent instructions"#;
         let content =
             include_str!("../../../../tests/fixtures/invalid/agents/invalid-skill-format.md");
         let diagnostics = validate(content);
-        let cc_ag_013: Vec<_> = diagnostics
-            .iter()
-            .filter(|d| d.rule == "CC-AG-013")
-            .collect();
-        assert!(!cc_ag_013.is_empty());
+        // CC-AG-013 is retired: the sub-agents reference states no naming
+        // format for the `skills` list.
+        assert!(diagnostics.iter().all(|d| d.rule != "CC-AG-013"));
     }
 
     #[test]
@@ -4278,22 +4656,6 @@ Agent instructions"#;
     }
 
     // ===== is_valid_skill_name_format unit tests =====
-
-    #[test]
-    fn test_is_valid_skill_name_format() {
-        assert!(AgentValidator::is_valid_skill_name_format("my-skill"));
-        assert!(AgentValidator::is_valid_skill_name_format("code-review"));
-        assert!(AgentValidator::is_valid_skill_name_format("test123"));
-        assert!(AgentValidator::is_valid_skill_name_format("a"));
-        assert!(!AgentValidator::is_valid_skill_name_format(""));
-        assert!(!AgentValidator::is_valid_skill_name_format("MySkill"));
-        assert!(!AgentValidator::is_valid_skill_name_format("my_skill"));
-        assert!(!AgentValidator::is_valid_skill_name_format("-leading"));
-        assert!(!AgentValidator::is_valid_skill_name_format("trailing-"));
-        assert!(!AgentValidator::is_valid_skill_name_format("my--skill"));
-        assert!(!AgentValidator::is_valid_skill_name_format("has space"));
-        assert!(!AgentValidator::is_valid_skill_name_format("has.dot"));
-    }
 
     // ===== CC-AG-007 parse error suggestion test =====
 
@@ -5024,10 +5386,316 @@ description: A test agent
 autoCompactWindow: earlier
 ---
 Agent instructions"#;
+        // Changed expectation: a non-number no longer fails the frontmatter
+        // parse. The sub-agents reference says Claude Code reads `200k` as 200
+        // and "The subagent still loads and compacts as if the field were
+        // absent", so the value is reported as ignored (CC-AG-019).
         let diagnostics = validate(invalid);
         assert!(
-            diagnostics.iter().any(|d| d.rule == "CC-AG-007"),
-            "non-numeric autoCompactWindow must fail parse, got {diagnostics:?}"
+            diagnostics.iter().all(|d| d.rule != "CC-AG-007"),
+            "{diagnostics:?}"
         );
+        assert!(
+            diagnostics
+                .iter()
+                .any(|d| d.rule == "CC-AG-019" && d.message.contains("autoCompactWindow")),
+            "{diagnostics:?}"
+        );
+    }
+
+    #[test]
+    fn test_cc_ag_019_auto_compact_window_range_and_strings() {
+        for (value, ignored) in [
+            ("200000", false),
+            ("100000", false),
+            ("1000000", false),
+            ("99999", true),
+            ("1000001", true),
+            ("200k", true),
+            ("\"200000\"", true),
+        ] {
+            let content = format!(
+                "---\nname: my-agent\ndescription: A test agent\ntools: Read\nautoCompactWindow: {value}\n---\nBody\n"
+            );
+            let diagnostics = validate(&content);
+            let hits: Vec<_> = diagnostics
+                .iter()
+                .filter(|d| d.rule == "CC-AG-019")
+                .collect();
+            assert_eq!(!hits.is_empty(), ignored, "{value}: {diagnostics:?}");
+            if ignored {
+                assert_eq!(hits[0].line, 5);
+                assert!(diagnostics.iter().all(|d| d.rule != "CC-AG-007"));
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests_claude_ext {
+    //! CC-AG-005 (preload limits), CC-AG-021..024, CC-PL-014 on plugin agent
+    //! files, CC-HK checks on agent frontmatter hooks, and other tools'
+    //! `agents` directories.
+    use super::*;
+    use crate::config::LintConfig;
+    use crate::diagnostics::DiagnosticLevel;
+    use std::fs;
+    use tempfile::TempDir;
+
+    fn write(root: &Path, rel: &str, content: &str) -> std::path::PathBuf {
+        let path = root.join(rel);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(&path, content).unwrap();
+        path
+    }
+
+    fn check(path: &Path) -> Vec<Diagnostic> {
+        let content = fs::read_to_string(path).unwrap();
+        AgentValidator.validate(path, &content, &LintConfig::default())
+    }
+
+    fn rules(diagnostics: &[Diagnostic], id: &str) -> usize {
+        diagnostics.iter().filter(|d| d.rule == id).count()
+    }
+
+    fn agent(name: &str, description: &str, extra: &str) -> String {
+        format!("---\nname: {name}\ndescription: {description}\n{extra}---\nBody\n")
+    }
+
+    #[test]
+    fn cc_ag_021_combined_description_budget() {
+        let temp = TempDir::new().unwrap();
+        let long = "d".repeat(31_000);
+        let first = write(
+            temp.path(),
+            ".claude/agents/a.md",
+            &agent("a", &long, "tools: Read\n"),
+        );
+        let second = write(
+            temp.path(),
+            ".claude/agents/sub/b.md",
+            &agent("b", &long, "tools: Read\n"),
+        );
+        let diagnostics = check(&first);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-AG-021")
+            .collect();
+        assert_eq!(hits.len(), 1, "{diagnostics:?}");
+        assert_eq!(hits[0].level, DiagnosticLevel::Warning);
+        assert!(hits[0].message.contains("15000"));
+        // Only the first file in the tree reports the project total.
+        assert_eq!(rules(&check(&second), "CC-AG-021"), 0);
+
+        let small = TempDir::new().unwrap();
+        let only = write(
+            small.path(),
+            ".claude/agents/a.md",
+            &agent("a", "Reviews code", "tools: Read\n"),
+        );
+        assert_eq!(rules(&check(&only), "CC-AG-021"), 0);
+    }
+
+    #[test]
+    fn cc_ag_023_duplicate_names_in_tree() {
+        let temp = TempDir::new().unwrap();
+        let a = write(
+            temp.path(),
+            ".claude/agents/reviewer.md",
+            &agent("reviewer", "Reviews code", "tools: Read\n"),
+        );
+        let b = write(
+            temp.path(),
+            ".claude/agents/team/reviewer-v2.md",
+            &agent("reviewer", "Reviews code too", "tools: Read\n"),
+        );
+        let c = write(
+            temp.path(),
+            ".claude/agents/other.md",
+            &agent("other", "Other", "tools: Read\n"),
+        );
+        // A README without frontmatter is documentation, not an agent.
+        write(
+            temp.path(),
+            ".claude/agents/README.md",
+            "# Agents\nname: reviewer\n",
+        );
+        for path in [&a, &b] {
+            let diagnostics = check(path);
+            assert_eq!(rules(&diagnostics, "CC-AG-023"), 1, "{diagnostics:?}");
+        }
+        assert_eq!(rules(&check(&c), "CC-AG-023"), 0);
+    }
+
+    #[test]
+    fn cc_ag_022_inherits_all_tools() {
+        let temp = TempDir::new().unwrap();
+        let open = write(temp.path(), ".claude/agents/a.md", &agent("a", "A", ""));
+        let diagnostics = check(&open);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-AG-022")
+            .collect();
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].level, DiagnosticLevel::Info);
+        for extra in ["tools: Read, Grep\n", "disallowedTools: Write\n"] {
+            let path = write(temp.path(), ".claude/agents/b.md", &agent("b", "B", extra));
+            assert_eq!(rules(&check(&path), "CC-AG-022"), 0, "{extra}");
+        }
+    }
+
+    #[test]
+    fn cc_ag_024_specifiers_and_agent_type_lists() {
+        let temp = TempDir::new().unwrap();
+        let path = write(
+            temp.path(),
+            ".claude/agents/a.md",
+            &agent(
+                "a",
+                "A",
+                "tools: Agent(worker, researcher), Read, Bash\ndisallowedTools: Bash(git push *), mcp__github\n",
+            ),
+        );
+        let diagnostics = check(&path);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-AG-024")
+            .collect();
+        assert_eq!(hits.len(), 2, "{diagnostics:?}");
+        assert!(
+            hits.iter()
+                .any(|d| d.level == DiagnosticLevel::Warning
+                    && d.message.contains("Bash(git push *)"))
+        );
+        assert!(
+            hits.iter().any(|d| d.level == DiagnosticLevel::Info
+                && d.message.contains("Agent(worker, researcher)"))
+        );
+        // An agent with initialPrompt is meant to run as the main thread.
+        let main = write(
+            temp.path(),
+            ".claude/agents/lead.md",
+            &agent(
+                "lead",
+                "Lead",
+                "tools: Agent(worker), Read\ninitialPrompt: \"/start\"\n",
+            ),
+        );
+        assert_eq!(rules(&check(&main), "CC-AG-024"), 0);
+    }
+
+    #[test]
+    fn cc_ag_005_preload_limits() {
+        let temp = TempDir::new().unwrap();
+        write(
+            temp.path(),
+            ".claude/skills/deploy/SKILL.md",
+            "---\nname: deploy\ndescription: Deploy\ndisable-model-invocation: true\n---\nDeploy.\n",
+        );
+        write(
+            temp.path(),
+            ".claude/skills/review/SKILL.md",
+            "---\nname: review\ndescription: Review\n---\nReview.\n",
+        );
+        let path = write(
+            temp.path(),
+            ".claude/agents/a.md",
+            &agent("a", "A", "tools: Read\nskills:\n  - deploy\n  - review\n"),
+        );
+        let diagnostics = check(&path);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-AG-005")
+            .collect();
+        assert_eq!(hits.len(), 1, "{diagnostics:?}");
+        assert!(hits[0].message.contains("deploy"));
+
+        let many: String = (0..34).map(|i| format!("  - s{i}\n")).collect();
+        let path = write(
+            temp.path(),
+            ".claude/agents/b.md",
+            &agent("b", "B", &format!("tools: Read\nskills:\n{many}")),
+        );
+        let diagnostics = check(&path);
+        assert!(
+            diagnostics
+                .iter()
+                .any(|d| d.rule == "CC-AG-005" && d.message.contains("first 32")),
+            "{diagnostics:?}"
+        );
+    }
+
+    #[test]
+    fn cc_pl_014_plugin_agent_ignored_fields() {
+        let temp = TempDir::new().unwrap();
+        write(
+            temp.path(),
+            ".claude-plugin/plugin.json",
+            r#"{"name": "p"}"#,
+        );
+        let path = write(
+            temp.path(),
+            "agents/reviewer.md",
+            &agent(
+                "reviewer",
+                "Reviews",
+                "tools: Read\npermissionMode: plan\ninitialPrompt: Start\nmcpServers:\n  - github\n",
+            ),
+        );
+        let diagnostics = check(&path);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-PL-014")
+            .collect();
+        assert_eq!(hits.len(), 3, "{diagnostics:?}");
+        assert!(hits.iter().any(|d| d.message.contains("initialPrompt")));
+        // The same fields in a project agent are fine.
+        let local = write(
+            temp.path(),
+            ".claude/agents/reviewer.md",
+            &agent(
+                "reviewer",
+                "Reviews",
+                "tools: Read\npermissionMode: plan\ninitialPrompt: Start\n",
+            ),
+        );
+        assert_eq!(rules(&check(&local), "CC-PL-014"), 0);
+    }
+
+    #[test]
+    fn frontmatter_hooks_get_handler_checks() {
+        let temp = TempDir::new().unwrap();
+        let path = write(
+            temp.path(),
+            ".claude/agents/a.md",
+            &agent(
+                "a",
+                "A",
+                "tools: Read\nhooks:\n  PreToolUse:\n    - matcher: mcp__memory\n      hooks:\n        - type: command\n          command: ${CLAUDE_PROJECT_DIR}/check.sh\n",
+            ),
+        );
+        let diagnostics = check(&path);
+        assert_eq!(rules(&diagnostics, "CC-HK-033"), 1, "{diagnostics:?}");
+        assert_eq!(rules(&diagnostics, "CC-HK-030"), 1, "{diagnostics:?}");
+        let hook_line = diagnostics
+            .iter()
+            .find(|d| d.rule == "CC-HK-033")
+            .unwrap()
+            .line;
+        assert_eq!(hook_line, 5, "reported at the hooks key");
+    }
+
+    #[test]
+    fn other_vendor_agent_dirs_are_skipped() {
+        let temp = TempDir::new().unwrap();
+        let bad = "---\ndescription: OpenCode agent\nmodel: anthropic/claude-sonnet-4-5\ntemperature: 0.1\n---\nBody\n";
+        for rel in [
+            ".opencode/agents/review.md",
+            ".github/agents/review.md",
+            "home/.config/opencode/agents/review.md",
+        ] {
+            let path = write(temp.path(), rel, bad);
+            assert!(check(&path).is_empty(), "{rel}: {:?}", check(&path));
+        }
     }
 }

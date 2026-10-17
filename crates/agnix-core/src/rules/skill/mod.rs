@@ -20,7 +20,9 @@ use serde::Deserialize;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
+mod claude_ext;
 mod helpers;
+pub(crate) use claude_ext::{is_claude_command_path, unbraced_plugin_var};
 use helpers::*;
 
 /// Deserialize `allowed-tools` from either a space-separated string or a YAML
@@ -1212,13 +1214,46 @@ impl<'a> ValidationContext<'a> {
         let (name_line, name_col) = self.frontmatter_key_line_col("name");
         // CC-SK-006: Dangerous auto-invocation check
         if self.config.is_rule_enabled("CC-SK-006") {
-            const DANGEROUS_NAMES: &[&str] =
-                &["deploy", "ship", "publish", "delete", "release", "push"];
+            // "Use this for workflows with side effects or that you want to
+            // control timing, like `/commit`, `/deploy`, or
+            // `/send-slack-message`." The vendor's own examples include commit
+            // and send; the other words are agnix's.
+            // Words match whole name segments, so `deployment-triage` and
+            // `ownership` don't count, and a read-only qualifier such as
+            // `commit-style` or `release-notes` drops the match.
+            const DANGEROUS_NAMES: &[&str] = &[
+                "deploy", "ship", "publish", "delete", "release", "push", "commit", "send",
+            ];
+            const READ_ONLY_QUALIFIERS: &[&str] = &[
+                "style",
+                "guide",
+                "guidelines",
+                "conventions",
+                "format",
+                "triage",
+                "analysis",
+                "analyzer",
+                "summary",
+                "report",
+                "review",
+                "status",
+                "check",
+                "docs",
+                "notes",
+                "history",
+                "lookup",
+                "search",
+            ];
             let name_lower = schema.name.to_lowercase();
-            if DANGEROUS_NAMES.iter().any(|d| name_lower.contains(d))
+            let segments: Vec<&str> = name_lower
+                .split(|c: char| !c.is_ascii_alphanumeric())
+                .filter(|s| !s.is_empty())
+                .collect();
+            if segments.iter().any(|s| DANGEROUS_NAMES.contains(s))
+                && !segments.iter().any(|s| READ_ONLY_QUALIFIERS.contains(s))
                 && !frontmatter.disable_model_invocation.unwrap_or(false)
             {
-                let mut diagnostic = Diagnostic::error(
+                let mut diagnostic = Diagnostic::warning(
                     self.path.to_path_buf(),
                     name_line,
                     name_col,
@@ -1440,8 +1475,10 @@ impl<'a> ValidationContext<'a> {
         };
 
         let (line, col) = self.line_col_at(self.parts.body_start + match_start);
+        // The skills reference defines `argument-hint` only as an autocomplete
+        // hint, so this is an agnix suggestion, reported at LOW.
         self.diagnostics.push(
-            Diagnostic::warning(
+            Diagnostic::info(
                 self.path.to_path_buf(),
                 line,
                 col,
@@ -1886,6 +1923,16 @@ const RULE_IDS: &[&str] = &[
     "CC-SK-021",
     "CC-SK-022",
     "CC-SK-023",
+    "CC-SK-024",
+    "CC-SK-025",
+    "CC-SK-027",
+    "CC-SK-028",
+    "CC-SK-030",
+    "CC-SK-031",
+    "CC-SK-032",
+    "CC-SK-033",
+    "CC-SK-034",
+    "CC-PL-020",
     "XP-SK-002",
 ];
 
@@ -1916,6 +1963,14 @@ fn derived_claude_skill_name(path: &Path) -> String {
         .to_string()
 }
 
+/// A legacy `.claude/commands/` file gets one migration note (CC-SK-027),
+/// not the skill field rules: Claude Code still loads command files, and its
+/// docs say to prefer skills for new work.
+fn validate_claude_command(mut ctx: ValidationContext<'_>) -> Vec<Diagnostic> {
+    ctx.validate_cc_command_note();
+    ctx.diagnostics
+}
+
 impl Validator for SkillValidator {
     fn metadata(&self) -> ValidatorMetadata {
         ValidatorMetadata {
@@ -1935,6 +1990,13 @@ impl Validator for SkillValidator {
         }
 
         let mut ctx = ValidationContext::new(path, content, config);
+        // A legacy `.claude/commands/*.md` file is a Claude Code command, not
+        // an Agent Skill: it gets a migration note only.
+        let is_command = is_claude_command_path(path);
+        if is_command {
+            ctx.client = SkillClient::ClaudeCode;
+            return validate_claude_command(ctx);
+        }
 
         // Phase 0: Raw YAML type checks (CC-SK-014, CC-SK-015)
         // Run before serde parsing since string booleans cause parse failures
@@ -2056,6 +2118,18 @@ impl Validator for SkillValidator {
 
             // CC-SK-018 (effort), CC-SK-019 (paths), CC-SK-020 (shell)
             ctx.validate_cc_effort_paths_shell(&schema);
+
+            // CC-SK-024, CC-SK-025, CC-SK-028, CC-SK-030..034, CC-PL-020 and
+            // handler checks on frontmatter hooks.
+            ctx.validate_cc_description_presence(&frontmatter);
+            ctx.validate_cc_upload_constraints(&frontmatter);
+            ctx.validate_cc_description_style(&frontmatter);
+            ctx.validate_cc_vague_name(&frontmatter);
+            ctx.validate_cc_injected_commands();
+            ctx.validate_cc_plugin_vars();
+            ctx.validate_cc_frontmatter_hooks();
+            ctx.validate_cc_listing_budget();
+            ctx.validate_cc_reference_toc();
         } // end Claude Code skill rules (CC-SK-*)
 
         // Phase 16: Body validation (AS-012, AS-013)

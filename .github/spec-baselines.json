@@ -138,7 +138,15 @@
           "CC-HK-010",
           "CC-HK-011",
           "CC-HK-012",
-          "CC-HK-025"
+          "CC-HK-025",
+          "CC-HK-021",
+          "CC-HK-029",
+          "CC-HK-030",
+          "CC-HK-031",
+          "CC-HK-032",
+          "CC-HK-033",
+          "CC-HK-034",
+          "CC-HK-035"
         ]
       },
       "claude-code-skills": {
@@ -151,7 +159,11 @@
           "CC-SK-004",
           "CC-SK-006",
           "CC-SK-008",
-          "CC-SK-017"
+          "CC-SK-017",
+          "CC-SK-024",
+          "CC-SK-025",
+          "CC-SK-027",
+          "CC-SK-028"
         ]
       },
       "claude-code-plugins": {
@@ -163,7 +175,12 @@
           "CC-PL-003",
           "CC-PL-004",
           "CC-PL-005",
-          "CC-PL-006"
+          "CC-PL-006",
+          "CC-PL-018",
+          "CC-PL-019",
+          "CC-PL-021",
+          "CC-PL-022",
+          "CC-PL-023"
         ]
       },
       "claude-code-subagents": {
@@ -183,12 +200,15 @@
           "CC-AG-010",
           "CC-AG-011",
           "CC-AG-012",
-          "CC-AG-013",
           "CC-AG-014",
           "CC-AG-015",
           "CC-AG-017",
           "CC-AG-019",
-          "CC-AG-020"
+          "CC-AG-020",
+          "CC-AG-021",
+          "CC-AG-022",
+          "CC-AG-023",
+          "CC-AG-024"
         ]
       },
       "codex-cli-agents-md": {

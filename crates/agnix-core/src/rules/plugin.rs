@@ -1,8 +1,9 @@
-//! Plugin manifest validation (CC-PL-001 to CC-PL-015).
+//! Plugin manifest validation (CC-PL-001 to CC-PL-023).
 //!
 //! Validates `.claude-plugin/plugin.json` manifests.
 
 use crate::regex_util::static_regex;
+use crate::rules::claude_json_spans::{JsonLocator, Seg};
 use crate::{
     config::PerFileLintConfig,
     diagnostics::{Diagnostic, Fix},
@@ -28,10 +29,16 @@ const RULE_IDS: &[&str] = &[
     "CC-PL-011",
     "CC-PL-012",
     "CC-PL-013",
-    "CC-PL-014",
+    // CC-PL-014 is checked on plugin agent Markdown files (AgentValidator)
+    // and CC-PL-020 on plugin skill bodies (SkillValidator).
     "CC-PL-015",
     "CC-PL-016",
     "CC-PL-017",
+    "CC-PL-018",
+    "CC-PL-019",
+    "CC-PL-021",
+    "CC-PL-022",
+    "CC-PL-023",
 ];
 
 /// Whether a plugin `name` matches the documented kebab-case identifier form:
@@ -169,6 +176,8 @@ impl Validator for PluginValidator {
                 return diagnostics;
             }
         };
+
+        let locator = JsonLocator::new(content);
 
         if config.is_rule_enabled("CC-PL-017")
             && let Some(fields) = raw_value.as_object()
@@ -359,34 +368,41 @@ impl Validator for PluginValidator {
             }
         }
 
-        // CC-PL-010: Invalid homepage URL
+        // CC-PL-010: homepage "Must parse as a URL, or the plugin fails to
+        // load". A URL that parses but isn't http(s) only gets a note.
         if config.is_rule_enabled("CC-PL-010") {
             if let Some(homepage_val) = raw_value.get("homepage") {
-                match homepage_val.as_str() {
-                    Some(homepage) => {
-                        if !homepage.is_empty() && !is_valid_url(homepage) {
+                let (line, col) = locator.value_pos(&[Seg::Key("homepage")]);
+                let shown = homepage_val
+                    .as_str()
+                    .map(str::to_string)
+                    .unwrap_or_else(|| homepage_val.to_string());
+                match homepage_val.as_str().map(|h| (h, url::Url::parse(h))) {
+                    // An empty homepage was never reported; whether Claude Code
+                    // rejects it is not documented.
+                    Some(("", _)) => {}
+                    Some((_, Ok(url))) => {
+                        if !matches!(url.scheme(), "http" | "https") {
                             diagnostics.push(
-                                Diagnostic::warning(
+                                Diagnostic::info(
                                     path.to_path_buf(),
-                                    1,
-                                    0,
+                                    line,
+                                    col,
                                     "CC-PL-010",
-                                    t!("rules.cc_pl_010.message", url = homepage),
+                                    t!("rules.cc_pl_010.scheme", url = shown.as_str()),
                                 )
-                                .with_suggestion(t!("rules.cc_pl_010.suggestion")),
+                                .with_suggestion(t!("rules.cc_pl_010.scheme_suggestion")),
                             );
                         }
                     }
-                    None => {
-                        // homepage is present but not a string (e.g., number, object)
-                        let val_str = homepage_val.to_string();
+                    _ => {
                         diagnostics.push(
-                            Diagnostic::warning(
+                            Diagnostic::error(
                                 path.to_path_buf(),
-                                1,
-                                0,
+                                line,
+                                col,
                                 "CC-PL-010",
-                                t!("rules.cc_pl_010.message", url = val_str.as_str()),
+                                t!("rules.cc_pl_010.message", url = shown.as_str()),
                             )
                             .with_suggestion(t!("rules.cc_pl_010.suggestion")),
                         );
@@ -570,58 +586,760 @@ impl Validator for PluginValidator {
             }
         }
 
-        // CC-PL-014: Plugin agent uses unsupported field
-        if config.is_rule_enabled("CC-PL-014") {
-            if let Some(agents) = raw_value.get("agents") {
-                let unsupported_fields = ["hooks", "mcpServers", "permissionMode"];
-                let agent_entries: Vec<(&str, &serde_json::Value)> =
-                    if let Some(obj) = agents.as_object() {
-                        obj.iter().map(|(k, v)| (k.as_str(), v)).collect()
-                    } else if let Some(arr) = agents.as_array() {
-                        arr.iter()
-                            .map(|v| {
-                                let name = v.get("name").and_then(|n| n.as_str()).unwrap_or("");
-                                (name, v)
-                            })
-                            .collect()
-                    } else {
-                        vec![]
-                    };
+        // CC-PL-014 moved to the plugin agent Markdown files: the manifest
+        // `agents` key takes .md paths only (see CC-PL-007 below).
 
-                for (agent_name, agent_val) in agent_entries {
-                    if let Some(agent_obj) = agent_val.as_object() {
-                        for field in unsupported_fields {
-                            if agent_obj.contains_key(field) {
-                                let label = if agent_name.is_empty() {
-                                    "Plugin agent".to_string()
-                                } else {
-                                    format!("Plugin agent '{}'", agent_name)
-                                };
-                                diagnostics.push(
-                                    Diagnostic::warning(
-                                        path.to_path_buf(),
-                                        1,
-                                        0,
-                                        "CC-PL-014",
-                                        format!(
-                                            "{} uses unsupported field '{}' (ignored for plugin agents)",
-                                            label, field
-                                        ),
-                                    )
-                                    .with_suggestion(format!(
-                                        "Remove '{}' from the plugin agent definition",
-                                        field
-                                    )),
-                                );
-                            }
-                        }
-                    }
-                }
-            }
+        if is_in_claude_plugin && let Some(plugin_root) = plugin_dir.and_then(Path::parent) {
+            check_manifest_extras(
+                path,
+                &raw_value,
+                plugin_root,
+                &locator,
+                config,
+                &mut diagnostics,
+            );
         }
 
         diagnostics
     }
+}
+
+/// How `claude plugin validate` treats a plugin name that passes as one of
+/// Anthropic's own: "The check ignores case and treats any run of separators
+/// as one".
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ReservedPluginName {
+    /// "Starts with `claude-`, `anthropic-`, `anthropics-`, or `cc-plugin-`",
+    /// "Is `claude`, `anthropic`, `anthropics`, `claude-code`, or
+    /// `claude-mods`", or "Puts `official` beside `claude` or `anthropic`".
+    Error,
+    /// "Has `claude`, `anthropic`, or `anthropics` as a whole word anywhere
+    /// else".
+    Warning,
+}
+
+pub(crate) fn reserved_plugin_name(name: &str) -> Option<ReservedPluginName> {
+    let words: Vec<String> = name
+        .split(|c: char| !c.is_alphanumeric())
+        .filter(|w| !w.is_empty())
+        .map(str::to_lowercase)
+        .collect();
+    if words.is_empty() {
+        return None;
+    }
+    let joined = words.join("-");
+    let brand = |w: &str| matches!(w, "claude" | "anthropic" | "anthropics");
+    let error = ["claude-", "anthropic-", "anthropics-", "cc-plugin-"]
+        .iter()
+        .any(|prefix| joined.starts_with(prefix))
+        || matches!(
+            joined.as_str(),
+            "claude" | "anthropic" | "anthropics" | "claude-code" | "claude-mods"
+        )
+        || words.windows(2).any(|pair| {
+            (pair[0] == "official" && (pair[1] == "claude" || pair[1] == "anthropic"))
+                || (pair[1] == "official" && (pair[0] == "claude" || pair[0] == "anthropic"))
+        });
+    if error {
+        Some(ReservedPluginName::Error)
+    } else if words.iter().any(|w| brand(w)) {
+        Some(ReservedPluginName::Warning)
+    } else {
+        None
+    }
+}
+
+/// Whether an `author` or `owner` object names Anthropic, whose own plugins
+/// and marketplaces use the reserved names.
+pub(crate) fn is_anthropic_party(value: Option<&serde_json::Value>) -> bool {
+    value.is_some_and(|party| {
+        party
+            .get("name")
+            .and_then(|n| n.as_str())
+            .is_some_and(|n| n.trim().eq_ignore_ascii_case("anthropic"))
+            || party
+                .get("email")
+                .and_then(|e| e.as_str())
+                .is_some_and(|e| e.to_ascii_lowercase().ends_with("@anthropic.com"))
+    })
+}
+
+/// The plugin name and the keys of the MCP servers a Claude plugin at `root`
+/// declares: `.mcp.json` at the plugin root, plus an inline `mcpServers` map
+/// in `.claude-plugin/plugin.json`. The name is the manifest `name`, or the
+/// plugin directory name when the manifest is missing or has none ("The
+/// plugin name then comes from the marketplace entry, or from the directory
+/// name").
+pub(crate) fn plugin_mcp_servers(
+    root: &Path,
+    fs: &dyn crate::fs::FileSystem,
+) -> crate::rules::hooks::PluginServers {
+    let read_json = |path: &Path| {
+        fs.read_to_string(path)
+            .ok()
+            .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok())
+    };
+    let manifest = read_json(&root.join(".claude-plugin").join("plugin.json"));
+    let plugin = manifest
+        .as_ref()
+        .and_then(|m| m.get("name"))
+        .and_then(|n| n.as_str())
+        .map(str::trim)
+        .filter(|n| !n.is_empty())
+        .map(str::to_string)
+        .or_else(|| {
+            root.file_name()
+                .and_then(|n| n.to_str())
+                .map(str::to_string)
+        })
+        .unwrap_or_default();
+    let mut servers: Vec<String> = Vec::new();
+    if let Some(mcp) = read_json(&root.join(".mcp.json")) {
+        let map = mcp
+            .get("mcpServers")
+            .and_then(|v| v.as_object())
+            .or_else(|| mcp.as_object().filter(|o| !o.contains_key("mcpServers")));
+        if let Some(map) = map {
+            servers.extend(
+                map.iter()
+                    .filter(|(_, v)| v.is_object())
+                    .map(|(k, _)| k.clone()),
+            );
+        }
+    }
+    if let Some(inline) = manifest
+        .as_ref()
+        .and_then(|m| m.get("mcpServers"))
+        .and_then(|v| v.as_object())
+    {
+        servers.extend(inline.keys().cloned());
+    }
+    servers.sort();
+    servers.dedup();
+    crate::rules::hooks::PluginServers { plugin, servers }
+}
+
+const USER_CONFIG_OPTION_KEYS: &[&str] = &[
+    "type",
+    "title",
+    "description",
+    "required",
+    "default",
+    "options",
+    "multiple",
+    "sensitive",
+    "min",
+    "max",
+];
+const CHANNEL_KEYS: &[&str] = &["server", "displayName", "userConfig"];
+const LSP_SERVER_KEYS: &[&str] = &[
+    "command",
+    "extensionToLanguage",
+    "args",
+    "transport",
+    "env",
+    "initializationOptions",
+    "settings",
+    "workspaceFolder",
+    "startupTimeout",
+    "shutdownTimeout",
+    "requestTimeout",
+    "restartOnCrash",
+    "maxRestarts",
+    "diagnostics",
+];
+const MONITOR_KEYS: &[&str] = &["name", "command", "description", "when"];
+/// "Only `agent` and `subagentStatusLine` take effect".
+const PLUGIN_SETTINGS_KEYS: &[&str] = &["agent", "subagentStatusLine"];
+
+/// Whether a node-semver range parses: `||` alternatives of space-separated
+/// comparators (`>=1.4`, `~2.1.0`, `^2.0`, `=2.1.0`, `1.x`, `*`) or a hyphen
+/// range (`1.2 - 2.3`).
+pub(crate) fn is_semver_range(range: &str) -> bool {
+    static_regex!(fn partial_re, r"^v?(?:x|X|\*|0|[1-9]\d*)(?:\.(?:x|X|\*|0|[1-9]\d*)(?:\.(?:x|X|\*|0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)?)?$");
+    range.split("||").all(|set| {
+        let set = set.trim();
+        if set.is_empty() {
+            return true;
+        }
+        if let Some((low, high)) = set.split_once(" - ") {
+            return partial_re().is_match(low.trim()) && partial_re().is_match(high.trim());
+        }
+        let mut tokens = set.split_whitespace().peekable();
+        while let Some(token) = tokens.next() {
+            let mut token = token.to_string();
+            if matches!(
+                token.as_str(),
+                ">=" | "<=" | ">" | "<" | "=" | "~" | "^" | "~>"
+            ) {
+                match tokens.next() {
+                    Some(next) => token.push_str(next),
+                    None => return false,
+                }
+            }
+            let version = [">=", "<=", "~>", ">", "<", "=", "~", "^"]
+                .iter()
+                .find_map(|op| token.strip_prefix(op))
+                .unwrap_or(&token);
+            if !partial_re().is_match(version) {
+                return false;
+            }
+        }
+        true
+    })
+}
+
+/// Whether the plugin at `plugin_root` is Anthropic's own: its manifest
+/// author is Anthropic, or it sits in a marketplace Anthropic owns.
+fn is_anthropic_plugin(
+    raw_value: &serde_json::Value,
+    plugin_root: &Path,
+    fs: &dyn crate::fs::FileSystem,
+) -> bool {
+    if is_anthropic_party(raw_value.get("author")) {
+        return true;
+    }
+    plugin_root.ancestors().take(6).any(|dir| {
+        fs.read_to_string(&dir.join(".claude-plugin").join("marketplace.json"))
+            .ok()
+            .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok())
+            .is_some_and(|m| is_anthropic_party(m.get("owner")))
+    })
+}
+
+/// Read a JSON file the manifest points at (or a default file), relative to
+/// the plugin root.
+fn read_plugin_json(
+    plugin_root: &Path,
+    rel: &str,
+    fs: &dyn crate::fs::FileSystem,
+) -> Option<(std::path::PathBuf, String, serde_json::Value)> {
+    if is_invalid_component_path(rel) {
+        return None;
+    }
+    let file = plugin_root.join(rel.trim_start_matches("./"));
+    let text = fs.read_to_string(&file).ok()?;
+    let value = serde_json::from_str(&text).ok()?;
+    Some((file, text, value))
+}
+
+/// CC-PL-007 (entry types, existence), CC-PL-018, CC-PL-019, CC-PL-021,
+/// CC-PL-022 and CC-PL-023 on a `.claude-plugin/plugin.json`.
+fn check_manifest_extras(
+    path: &Path,
+    raw_value: &serde_json::Value,
+    plugin_root: &Path,
+    locator: &JsonLocator<'_>,
+    config: &PerFileLintConfig<'_>,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let fs = config.fs();
+    let push = |diagnostics: &mut Vec<Diagnostic>,
+                file: &Path,
+                level: crate::diagnostics::DiagnosticLevel,
+                (line, col): (usize, usize),
+                rule: &str,
+                message: String,
+                suggestion: String| {
+        let make = match level {
+            crate::diagnostics::DiagnosticLevel::Error => Diagnostic::error,
+            crate::diagnostics::DiagnosticLevel::Warning => Diagnostic::warning,
+            crate::diagnostics::DiagnosticLevel::Info => Diagnostic::info,
+        };
+        diagnostics
+            .push(make(file.to_path_buf(), line, col, rule, message).with_suggestion(suggestion));
+    };
+    use crate::diagnostics::DiagnosticLevel::{Error, Info, Warning};
+
+    // ---- CC-PL-007: "`agents` entries must be `.md` files, and `skills`
+    // entries must be directories", and "Every component path must resolve
+    // inside the plugin root and must exist". ----
+    if config.is_rule_enabled("CC-PL-007") {
+        if let Some(agents) = raw_value.get("agents") {
+            let entries: Vec<(Option<usize>, &serde_json::Value)> = match agents {
+                serde_json::Value::Array(items) => items
+                    .iter()
+                    .enumerate()
+                    .map(|(i, v)| (Some(i), v))
+                    .collect(),
+                other => vec![(None, other)],
+            };
+            for (index, entry) in entries {
+                let bad = match entry.as_str() {
+                    Some(p) => !p.trim().to_ascii_lowercase().ends_with(".md"),
+                    None => true,
+                };
+                if bad {
+                    let segs: Vec<Seg<'_>> = match index {
+                        Some(i) => vec![Seg::Key("agents"), Seg::Index(i)],
+                        None => vec![Seg::Key("agents")],
+                    };
+                    let shown = entry
+                        .as_str()
+                        .map(|p| format!("'{p}'"))
+                        .unwrap_or_else(|| crate::rules::json_type_name(entry).to_string());
+                    push(
+                        diagnostics,
+                        path,
+                        Error,
+                        locator.value_pos(&segs),
+                        "CC-PL-007",
+                        t!("rules.cc_pl_007.agents_entry", value = shown.as_str()).to_string(),
+                        t!("rules.cc_pl_007.entry_suggestion").to_string(),
+                    );
+                }
+            }
+        }
+        for (index, skill) in
+            extract_paths(raw_value.get("skills").unwrap_or(&serde_json::Value::Null))
+                .iter()
+                .enumerate()
+        {
+            if skill.trim().to_ascii_lowercase().ends_with(".md") {
+                let segs = if raw_value.get("skills").is_some_and(|v| v.is_array()) {
+                    vec![Seg::Key("skills"), Seg::Index(index)]
+                } else {
+                    vec![Seg::Key("skills")]
+                };
+                push(
+                    diagnostics,
+                    path,
+                    Error,
+                    locator.value_pos(&segs),
+                    "CC-PL-007",
+                    t!("rules.cc_pl_007.skills_entry", value = skill.as_str()).to_string(),
+                    t!("rules.cc_pl_007.entry_suggestion").to_string(),
+                );
+            }
+        }
+        for field in [
+            "commands",
+            "agents",
+            "skills",
+            "workflows",
+            "hooks",
+            "mcpServers",
+            "outputStyles",
+            "lspServers",
+            "experimental.themes",
+            "experimental.monitors",
+        ] {
+            let Some(value) = manifest_field(raw_value, field) else {
+                continue;
+            };
+            let mut paths = extract_paths(value);
+            if field == "commands"
+                && let Some(map) = value.as_object()
+            {
+                paths.extend(
+                    map.values()
+                        .filter_map(|c| c.get("source").and_then(|s| s.as_str()))
+                        .map(str::to_string),
+                );
+            }
+            for p in paths {
+                let trimmed = p.trim();
+                // Paths that already fail the `./` or containment checks are
+                // reported once, above.
+                if trimmed.is_empty()
+                    || matches!(trimmed, "." | "./")
+                    || is_autofixable_path(field, trimmed)
+                    || is_invalid_component_path(trimmed)
+                    || path_inside_claude_plugin(trimmed)
+                    || trimmed.contains("://")
+                    || trimmed.contains('$')
+                {
+                    continue;
+                }
+                if !fs.exists(&plugin_root.join(trimmed.trim_start_matches("./"))) {
+                    let top = field.split('.').next().unwrap_or(field);
+                    push(
+                        diagnostics,
+                        path,
+                        Error,
+                        locator.value_pos(&[Seg::Key(top)]),
+                        "CC-PL-007",
+                        t!("rules.cc_pl_007.missing", path = trimmed, field = field).to_string(),
+                        t!("rules.cc_pl_007.missing_suggestion").to_string(),
+                    );
+                }
+            }
+        }
+    }
+
+    // ---- CC-PL-018: reserved plugin names ----
+    if config.is_rule_enabled("CC-PL-018")
+        && let Some(name) = raw_value.get("name").and_then(|n| n.as_str())
+        && let Some(level) = reserved_plugin_name(name)
+        && !is_anthropic_plugin(raw_value, plugin_root, fs.as_ref())
+    {
+        let (level, key) = match level {
+            ReservedPluginName::Error => (Error, "rules.cc_pl_018.error"),
+            ReservedPluginName::Warning => (Warning, "rules.cc_pl_018.warning"),
+        };
+        push(
+            diagnostics,
+            path,
+            level,
+            locator.value_pos(&[Seg::Key("name")]),
+            "CC-PL-018",
+            t!(key, name = name).to_string(),
+            t!("rules.cc_pl_018.suggestion").to_string(),
+        );
+    }
+
+    // ---- CC-PL-019: dependency version ranges ----
+    if config.is_rule_enabled("CC-PL-019")
+        && let Some(deps) = raw_value.get("dependencies").and_then(|d| d.as_array())
+    {
+        for (i, dep) in deps.iter().enumerate() {
+            let Some(version) = dep.get("version").and_then(|v| v.as_str()) else {
+                continue;
+            };
+            if !is_semver_range(version) {
+                let name = dep.get("name").and_then(|n| n.as_str()).unwrap_or("?");
+                push(
+                    diagnostics,
+                    path,
+                    Warning,
+                    locator.value_pos(&[
+                        Seg::Key("dependencies"),
+                        Seg::Index(i),
+                        Seg::Key("version"),
+                    ]),
+                    "CC-PL-019",
+                    t!("rules.cc_pl_019.message", name = name, version = version).to_string(),
+                    t!("rules.cc_pl_019.suggestion").to_string(),
+                );
+            }
+        }
+    }
+
+    // ---- CC-PL-021: manifest `settings` keys that are dropped ----
+    if config.is_rule_enabled("CC-PL-021")
+        && let Some(settings) = raw_value.get("settings").and_then(|s| s.as_object())
+    {
+        for key in settings.keys() {
+            if !PLUGIN_SETTINGS_KEYS.contains(&key.as_str()) {
+                push(
+                    diagnostics,
+                    path,
+                    Warning,
+                    locator.key_pos(&[Seg::Key("settings"), Seg::Key(key.as_str())]),
+                    "CC-PL-021",
+                    t!(
+                        "rules.cc_pl_021.message",
+                        key = key.as_str(),
+                        location = "plugin.json settings"
+                    )
+                    .to_string(),
+                    t!("rules.cc_pl_021.suggestion").to_string(),
+                );
+            }
+        }
+    }
+
+    // ---- CC-PL-022 and CC-PL-023: monitors (inline or file) ----
+    let pl022 = config.is_rule_enabled("CC-PL-022");
+    let pl023 = config.is_rule_enabled("CC-PL-023");
+    let check_monitors = |diagnostics: &mut Vec<Diagnostic>,
+                          file: &Path,
+                          monitors: &serde_json::Value,
+                          locate: &dyn Fn(&[Seg<'_>]) -> (usize, usize),
+                          base: &[Seg<'_>]| {
+        let Some(items) = monitors.as_array() else {
+            return;
+        };
+        for (i, monitor) in items.iter().enumerate() {
+            let Some(obj) = monitor.as_object() else {
+                continue;
+            };
+            let mut at = base.to_vec();
+            at.push(Seg::Index(i));
+            let monitor_name = obj.get("name").and_then(|n| n.as_str()).unwrap_or("?");
+            if pl022
+                && obj
+                    .get("command")
+                    .and_then(|c| c.as_str())
+                    .is_some_and(|c| c.contains("${user_config."))
+            {
+                let mut segs = at.clone();
+                segs.push(Seg::Key("command"));
+                push(
+                    diagnostics,
+                    file,
+                    Error,
+                    locate(&segs),
+                    "CC-PL-022",
+                    t!("rules.cc_pl_022.message", monitor = monitor_name).to_string(),
+                    t!("rules.cc_pl_022.suggestion").to_string(),
+                );
+            }
+            if pl023 {
+                for key in obj.keys() {
+                    if !MONITOR_KEYS.contains(&key.as_str()) {
+                        let mut segs = at.clone();
+                        segs.push(Seg::Key(key.as_str()));
+                        let location = format!("monitor '{monitor_name}'");
+                        push(
+                            diagnostics,
+                            file,
+                            Error,
+                            locate(&segs),
+                            "CC-PL-023",
+                            t!(
+                                "rules.cc_pl_023.unknown_key",
+                                key = key.as_str(),
+                                location = location.as_str()
+                            )
+                            .to_string(),
+                            t!("rules.cc_pl_023.unknown_key_suggestion").to_string(),
+                        );
+                    }
+                }
+            }
+        }
+    };
+    if pl022 || pl023 {
+        let inline_locate = |segs: &[Seg<'_>]| locator.value_pos(segs);
+        let experimental = raw_value
+            .get("experimental")
+            .and_then(|e| e.get("monitors"));
+        match (experimental, raw_value.get("monitors")) {
+            (Some(serde_json::Value::String(rel)), _) => {
+                if let Some((file, text, value)) = read_plugin_json(plugin_root, rel, fs.as_ref()) {
+                    let file_locator = JsonLocator::new(&text);
+                    check_monitors(
+                        diagnostics,
+                        &file,
+                        &value,
+                        &|s| file_locator.value_pos(s),
+                        &[],
+                    );
+                }
+            }
+            (Some(inline @ serde_json::Value::Array(_)), _) => check_monitors(
+                diagnostics,
+                path,
+                inline,
+                &inline_locate,
+                &[Seg::Key("experimental"), Seg::Key("monitors")],
+            ),
+            (None, Some(inline @ serde_json::Value::Array(_))) => check_monitors(
+                diagnostics,
+                path,
+                inline,
+                &inline_locate,
+                &[Seg::Key("monitors")],
+            ),
+            (None, None) => {
+                if let Some((file, text, value)) =
+                    read_plugin_json(plugin_root, "monitors/monitors.json", fs.as_ref())
+                {
+                    let file_locator = JsonLocator::new(&text);
+                    check_monitors(
+                        diagnostics,
+                        &file,
+                        &value,
+                        &|s| file_locator.value_pos(s),
+                        &[],
+                    );
+                }
+            }
+            _ => {}
+        }
+    }
+
+    if !pl023 {
+        return;
+    }
+
+    // ---- CC-PL-023: strict userConfig options, channels and LSP configs ----
+    let check_user_config =
+        |diagnostics: &mut Vec<Diagnostic>, user_config: &serde_json::Value, base: Vec<Seg<'_>>| {
+            let Some(options) = user_config.as_object() else {
+                return;
+            };
+            for (option, spec) in options {
+                let Some(spec) = spec.as_object() else {
+                    continue;
+                };
+                let mut at = base.clone();
+                at.push(Seg::Key(option.as_str()));
+                for key in spec.keys() {
+                    if !USER_CONFIG_OPTION_KEYS.contains(&key.as_str()) {
+                        let mut segs = at.clone();
+                        segs.push(Seg::Key(key.as_str()));
+                        let location = format!("userConfig option '{option}'");
+                        push(
+                            diagnostics,
+                            path,
+                            Error,
+                            locator.key_pos(&segs),
+                            "CC-PL-023",
+                            t!(
+                                "rules.cc_pl_023.unknown_key",
+                                key = key.as_str(),
+                                location = location.as_str()
+                            )
+                            .to_string(),
+                            t!("rules.cc_pl_023.unknown_key_suggestion").to_string(),
+                        );
+                    }
+                }
+                let Some(list) = spec.get("options") else {
+                    continue;
+                };
+                let mut segs = at.clone();
+                segs.push(Seg::Key("options"));
+                let pos = locator.value_pos(&segs);
+                let is_true = |k: &str| spec.get(k).and_then(|v| v.as_bool()) == Some(true);
+                let problem = if spec.get("type").and_then(|t| t.as_str()) != Some("string")
+                    || is_true("multiple")
+                    || is_true("sensitive")
+                {
+                    Some("rules.cc_pl_023.option_type")
+                } else if !list.as_array().is_some_and(|items| {
+                    !items.is_empty()
+                        && items.iter().all(|item| {
+                            item.as_str()
+                                .is_some_and(|s| (1..=64).contains(&s.chars().count()))
+                        })
+                }) {
+                    Some("rules.cc_pl_023.option_label")
+                } else {
+                    let labels: Vec<&str> = list
+                        .as_array()
+                        .into_iter()
+                        .flatten()
+                        .filter_map(|v| v.as_str())
+                        .collect();
+                    match spec.get("default") {
+                        Some(serde_json::Value::String(d)) if labels.contains(&d.as_str()) => None,
+                        None if is_true("required") => None,
+                        _ => Some("rules.cc_pl_023.option_default"),
+                    }
+                };
+                if let Some(key) = problem {
+                    push(
+                        diagnostics,
+                        path,
+                        Error,
+                        pos,
+                        "CC-PL-023",
+                        t!(key, option = option.as_str()).to_string(),
+                        t!("rules.cc_pl_023.option_suggestion").to_string(),
+                    );
+                }
+            }
+        };
+    if let Some(user_config) = raw_value.get("userConfig") {
+        check_user_config(diagnostics, user_config, vec![Seg::Key("userConfig")]);
+    }
+    if let Some(channels) = raw_value.get("channels").and_then(|c| c.as_array()) {
+        for (i, channel) in channels.iter().enumerate() {
+            let Some(obj) = channel.as_object() else {
+                continue;
+            };
+            for key in obj.keys() {
+                if !CHANNEL_KEYS.contains(&key.as_str()) {
+                    let location = format!("channels[{i}]");
+                    push(
+                        diagnostics,
+                        path,
+                        Error,
+                        locator.key_pos(&[
+                            Seg::Key("channels"),
+                            Seg::Index(i),
+                            Seg::Key(key.as_str()),
+                        ]),
+                        "CC-PL-023",
+                        t!(
+                            "rules.cc_pl_023.unknown_key",
+                            key = key.as_str(),
+                            location = location.as_str()
+                        )
+                        .to_string(),
+                        t!("rules.cc_pl_023.unknown_key_suggestion").to_string(),
+                    );
+                }
+            }
+            if let Some(user_config) = obj.get("userConfig") {
+                check_user_config(
+                    diagnostics,
+                    user_config,
+                    vec![Seg::Key("channels"), Seg::Index(i), Seg::Key("userConfig")],
+                );
+            }
+        }
+    }
+    let check_lsp = |diagnostics: &mut Vec<Diagnostic>,
+                     file: &Path,
+                     servers: &serde_json::Value,
+                     locate: &dyn Fn(&[Seg<'_>]) -> (usize, usize),
+                     base: &[Seg<'_>]| {
+        let Some(map) = servers.as_object() else {
+            return;
+        };
+        for (server, config_value) in map {
+            let Some(obj) = config_value.as_object() else {
+                continue;
+            };
+            for key in obj.keys() {
+                if !LSP_SERVER_KEYS.contains(&key.as_str()) {
+                    let mut segs = base.to_vec();
+                    segs.push(Seg::Key(server.as_str()));
+                    segs.push(Seg::Key(key.as_str()));
+                    let location = format!("LSP server '{server}'");
+                    push(
+                        diagnostics,
+                        file,
+                        Error,
+                        locate(&segs),
+                        "CC-PL-023",
+                        t!(
+                            "rules.cc_pl_023.unknown_key",
+                            key = key.as_str(),
+                            location = location.as_str()
+                        )
+                        .to_string(),
+                        t!("rules.cc_pl_023.unknown_key_suggestion").to_string(),
+                    );
+                }
+            }
+        }
+    };
+    let mut lsp_files: Vec<String> = vec![".lsp.json".to_string()];
+    match raw_value.get("lspServers") {
+        Some(inline @ serde_json::Value::Object(_)) => check_lsp(
+            diagnostics,
+            path,
+            inline,
+            &|s| locator.key_pos(s),
+            &[Seg::Key("lspServers")],
+        ),
+        Some(other) => lsp_files.extend(extract_paths(other)),
+        None => {}
+    }
+    for rel in lsp_files {
+        if let Some((file, text, value)) = read_plugin_json(plugin_root, &rel, fs.as_ref()) {
+            let file_locator = JsonLocator::new(&text);
+            let servers = value.get("lspServers").unwrap_or(&value);
+            let base: Vec<Seg<'_>> = if value.get("lspServers").is_some() {
+                vec![Seg::Key("lspServers")]
+            } else {
+                Vec::new()
+            };
+            check_lsp(
+                diagnostics,
+                &file,
+                servers,
+                &|s| file_locator.key_pos(s),
+                &base,
+            );
+        }
+    }
+    let _ = Info;
 }
 
 fn is_field_missing(value: &serde_json::Value, field: &str) -> bool {
@@ -963,11 +1681,6 @@ fn check_component_inside_claude_plugin(
             }
         }
     }
-}
-
-/// Check if a URL is valid (http or https scheme).
-fn is_valid_url(url: &str) -> bool {
-    url.starts_with("http://") || url.starts_with("https://")
 }
 
 /// Check if a string is a valid identifier (alphanumeric + underscores, not starting with a number).
@@ -1849,6 +2562,8 @@ mod tests {
             &plugin_path,
             r#"{"name":"test","description":"desc","version":"1.0.0","skills":["./valid","../invalid"]}"#,
         );
+        // Component paths must exist (CC-PL-007 existence check).
+        fs::create_dir_all(temp.path().join("valid")).unwrap();
 
         let validator = PluginValidator;
         let diagnostics = validator.validate(
@@ -1876,6 +2591,8 @@ mod tests {
             &plugin_path,
             r#"{"name":"test","description":"desc","version":"1.0.0","commands":"./commands/"}"#,
         );
+        // Component paths must exist (CC-PL-007 existence check).
+        fs::create_dir_all(temp.path().join("commands")).unwrap();
 
         let validator = PluginValidator;
         let diagnostics = validator.validate(
@@ -2815,94 +3532,6 @@ mod tests {
 
     // ===== CC-PL-014: Plugin Agent Uses Unsupported Field =====
 
-    #[test]
-    fn test_cc_pl_014_agent_with_hooks() {
-        let temp = TempDir::new().unwrap();
-        let plugin_path = temp.path().join(".claude-plugin").join("plugin.json");
-        write_plugin(
-            &plugin_path,
-            r#"{"name":"test","description":"desc","version":"1.0.0","agents":{"myAgent":{"hooks":{"preCommit":"echo test"}}}}"#,
-        );
-
-        let validator = PluginValidator;
-        let diagnostics = validator.validate(
-            &plugin_path,
-            &fs::read_to_string(&plugin_path).unwrap(),
-            &LintConfig::default(),
-        );
-
-        let pl_014: Vec<_> = diagnostics
-            .iter()
-            .filter(|d| d.rule == "CC-PL-014")
-            .collect();
-        assert_eq!(pl_014.len(), 1);
-        assert!(
-            pl_014[0].message.contains("hooks"),
-            "Should mention unsupported 'hooks' field"
-        );
-    }
-
-    #[test]
-    fn test_cc_pl_014_agent_with_multiple_unsupported() {
-        let temp = TempDir::new().unwrap();
-        let plugin_path = temp.path().join(".claude-plugin").join("plugin.json");
-        write_plugin(
-            &plugin_path,
-            r#"{"name":"test","description":"desc","version":"1.0.0","agents":{"myAgent":{"hooks":{},"mcpServers":{},"permissionMode":"full"}}}"#,
-        );
-
-        let validator = PluginValidator;
-        let diagnostics = validator.validate(
-            &plugin_path,
-            &fs::read_to_string(&plugin_path).unwrap(),
-            &LintConfig::default(),
-        );
-
-        let pl_014: Vec<_> = diagnostics
-            .iter()
-            .filter(|d| d.rule == "CC-PL-014")
-            .collect();
-        assert_eq!(pl_014.len(), 3, "Should flag all three unsupported fields");
-    }
-
-    #[test]
-    fn test_cc_pl_014_agent_without_unsupported_no_error() {
-        let temp = TempDir::new().unwrap();
-        let plugin_path = temp.path().join(".claude-plugin").join("plugin.json");
-        write_plugin(
-            &plugin_path,
-            r#"{"name":"test","description":"desc","version":"1.0.0","agents":{"myAgent":{"name":"Agent","description":"A test agent"}}}"#,
-        );
-
-        let validator = PluginValidator;
-        let diagnostics = validator.validate(
-            &plugin_path,
-            &fs::read_to_string(&plugin_path).unwrap(),
-            &LintConfig::default(),
-        );
-
-        assert!(!diagnostics.iter().any(|d| d.rule == "CC-PL-014"));
-    }
-
-    #[test]
-    fn test_cc_pl_014_no_agents_no_error() {
-        let temp = TempDir::new().unwrap();
-        let plugin_path = temp.path().join(".claude-plugin").join("plugin.json");
-        write_plugin(
-            &plugin_path,
-            r#"{"name":"test","description":"desc","version":"1.0.0"}"#,
-        );
-
-        let validator = PluginValidator;
-        let diagnostics = validator.validate(
-            &plugin_path,
-            &fs::read_to_string(&plugin_path).unwrap(),
-            &LintConfig::default(),
-        );
-
-        assert!(!diagnostics.iter().any(|d| d.rule == "CC-PL-014"));
-    }
-
     // ===== CC-PL-015: Default Component Folder Shadowed by Manifest =====
 
     #[test]
@@ -3187,5 +3816,167 @@ mod tests {
         let diagnostics = validate_manifest(r#"{"name":"","version":"1.0.0"}"#);
         assert!(diagnostics.iter().all(|d| d.rule != "CC-PL-016"));
         assert!(diagnostics.iter().any(|d| d.rule == "CC-PL-005"));
+    }
+}
+
+#[cfg(test)]
+mod tests_claude_ext {
+    //! CC-PL-007 (entry types, existence), CC-PL-010, CC-PL-018, CC-PL-019,
+    //! CC-PL-021, CC-PL-022 and CC-PL-023.
+    use super::*;
+    use crate::config::LintConfig;
+    use crate::diagnostics::DiagnosticLevel;
+    use std::fs;
+    use tempfile::TempDir;
+
+    fn plugin(manifest: &str, extra: &[(&str, &str)]) -> (TempDir, Vec<Diagnostic>) {
+        let temp = TempDir::new().unwrap();
+        for (rel, content) in extra {
+            let path = temp.path().join(rel);
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            fs::write(path, content).unwrap();
+        }
+        let path = temp.path().join(".claude-plugin/plugin.json");
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(&path, manifest).unwrap();
+        let diagnostics = PluginValidator.validate(&path, manifest, &LintConfig::default());
+        (temp, diagnostics)
+    }
+
+    fn hits<'a>(diagnostics: &'a [Diagnostic], id: &str) -> Vec<&'a Diagnostic> {
+        diagnostics.iter().filter(|d| d.rule == id).collect()
+    }
+
+    #[test]
+    fn cc_pl_007_entry_types_and_existence() {
+        let (_t, diagnostics) = plugin(
+            r#"{"name": "p", "agents": ["./agents/a.md", "./agents/", {"name": "x"}], "skills": ["./skills/x/SKILL.md"], "commands": "./missing/"}"#,
+            &[
+                ("agents/a.md", "---\nname: a\ndescription: A\n---\n"),
+                ("skills/x/SKILL.md", "x"),
+            ],
+        );
+        let pl007 = hits(&diagnostics, "CC-PL-007");
+        // agents dir entry, agents object entry, skills .md entry, missing commands dir
+        assert_eq!(pl007.len(), 4, "{diagnostics:?}");
+        assert!(pl007.iter().all(|d| d.level == DiagnosticLevel::Error));
+        assert!(pl007.iter().any(|d| d.message.contains("does not exist")));
+    }
+
+    #[test]
+    fn cc_pl_010_homepage_must_parse() {
+        let (_t, diagnostics) = plugin(r#"{"name": "p", "homepage": "not a url"}"#, &[]);
+        let h = hits(&diagnostics, "CC-PL-010");
+        assert_eq!(h.len(), 1);
+        assert_eq!(h[0].level, DiagnosticLevel::Error);
+        assert_eq!(h[0].line, 1);
+        let (_t, diagnostics) = plugin(r#"{"name": "p", "homepage": "mailto:x@y.z"}"#, &[]);
+        assert_eq!(
+            hits(&diagnostics, "CC-PL-010")[0].level,
+            DiagnosticLevel::Info
+        );
+        let (_t, diagnostics) = plugin(r#"{"name": "p", "homepage": "https://x.dev/docs"}"#, &[]);
+        assert!(hits(&diagnostics, "CC-PL-010").is_empty());
+    }
+
+    #[test]
+    fn cc_pl_018_reserved_names() {
+        for (name, level) in [
+            ("claude-tools", Some(DiagnosticLevel::Error)),
+            ("cc-plugin-x", Some(DiagnosticLevel::Error)),
+            ("claude", Some(DiagnosticLevel::Error)),
+            ("official-claude-tools", Some(DiagnosticLevel::Error)),
+            ("Claude_Code", Some(DiagnosticLevel::Error)),
+            ("mcp-for-claude", Some(DiagnosticLevel::Warning)),
+            ("claudette", None),
+            ("deploy-tools", None),
+        ] {
+            let (_t, diagnostics) = plugin(&format!(r#"{{"name": "{name}"}}"#), &[]);
+            let h = hits(&diagnostics, "CC-PL-018");
+            assert_eq!(h.first().map(|d| d.level), level, "{name}: {diagnostics:?}");
+        }
+        // Anthropic's own plugins are exempt.
+        let (_t, diagnostics) = plugin(
+            r#"{"name": "claude-code-setup", "author": {"name": "Anthropic"}}"#,
+            &[],
+        );
+        assert!(hits(&diagnostics, "CC-PL-018").is_empty());
+    }
+
+    #[test]
+    fn cc_pl_019_dependency_ranges() {
+        for (range, ok) in [
+            ("~2.1.0", true),
+            ("^2.0", true),
+            (">=1.4", true),
+            ("=2.1.0", true),
+            (">= 1.2.3 < 2", true),
+            ("1.x || >=2.5.0", true),
+            ("1.2 - 2.3", true),
+            ("^2.0.0-0", true),
+            ("latest", false),
+            ("~>", false),
+            ("2.1.0.1", false),
+        ] {
+            assert_eq!(is_semver_range(range), ok, "{range}");
+        }
+        let (_t, diagnostics) = plugin(
+            r#"{"name": "p", "dependencies": ["a", {"name": "b", "version": "latest"}, {"name": "c", "version": "^1.2"}]}"#,
+            &[],
+        );
+        assert_eq!(hits(&diagnostics, "CC-PL-019").len(), 1, "{diagnostics:?}");
+    }
+
+    #[test]
+    fn cc_pl_021_manifest_settings() {
+        let (_t, diagnostics) = plugin(
+            r#"{"name": "p", "settings": {"agent": "x", "permissions": {}}}"#,
+            &[],
+        );
+        let h = hits(&diagnostics, "CC-PL-021");
+        assert_eq!(h.len(), 1, "{diagnostics:?}");
+        assert!(h[0].message.contains("permissions"));
+    }
+
+    #[test]
+    fn cc_pl_022_023_monitors() {
+        let (_t, diagnostics) = plugin(
+            r#"{"name": "p", "experimental": {"monitors": [{"name": "m", "command": "watch ${user_config.url}", "description": "d", "interval": 5}]}}"#,
+            &[],
+        );
+        assert_eq!(hits(&diagnostics, "CC-PL-022").len(), 1, "{diagnostics:?}");
+        assert_eq!(hits(&diagnostics, "CC-PL-023").len(), 1, "{diagnostics:?}");
+        // The default monitors/monitors.json file is checked too.
+        let (_t, diagnostics) = plugin(
+            r#"{"name": "p"}"#,
+            &[(
+                "monitors/monitors.json",
+                r#"[{"name": "m", "command": "x ${user_config.k}", "description": "d"}]"#,
+            )],
+        );
+        let h = hits(&diagnostics, "CC-PL-022");
+        assert_eq!(h.len(), 1, "{diagnostics:?}");
+        assert!(h[0].file.ends_with("monitors/monitors.json"));
+    }
+
+    #[test]
+    fn cc_pl_023_strict_objects() {
+        let (_t, diagnostics) = plugin(
+            r#"{"name": "p",
+  "userConfig": {
+    "token": {"type": "string", "title": "T", "description": "D", "secret": true},
+    "tone": {"type": "string", "title": "T", "description": "D", "options": ["a", "b"], "default": "c"},
+    "ok": {"type": "string", "title": "T", "description": "D", "options": ["a"], "required": true}
+  },
+  "mcpServers": {"s": {"command": "x"}},
+  "channels": [{"server": "s", "label": "x"}],
+  "lspServers": {"go": {"command": "gopls", "extensionToLanguage": {".go": "go"}, "port": 1}}
+}"#,
+            &[],
+        );
+        let h = hits(&diagnostics, "CC-PL-023");
+        // secret, tone default, channels label, lsp port
+        assert_eq!(h.len(), 4, "{diagnostics:?}");
+        assert!(h.iter().all(|d| d.level == DiagnosticLevel::Error));
     }
 }

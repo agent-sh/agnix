@@ -1,19 +1,19 @@
 ---
 id: cc-sk-006
-title: "CC-SK-006: Dangerous Auto-Invocation - Claude Skills"
+title: "CC-SK-006: Side-Effect Skill Without disable-model-invocation"
 sidebar_label: "CC-SK-006"
-description: "agnix rule CC-SK-006 checks for dangerous auto-invocation in claude skills files. Severity: HIGH. See examples and fix guidance."
-keywords: ["CC-SK-006", "dangerous auto-invocation", "claude skills", "validation", "agnix", "linter"]
+description: "agnix rule CC-SK-006 checks for side-effect skill without disable-model-invocation in claude skills files. Severity: MEDIUM. See examples and fix guidance."
+keywords: ["CC-SK-006", "side-effect skill without disable-model-invocation", "claude skills", "validation", "agnix", "linter"]
 ---
 
 ## Summary
 
 - **Rule ID**: `CC-SK-006`
-- **Severity**: `HIGH`
+- **Severity**: `MEDIUM`
 - **Category**: `Claude Skills`
-- **Normative Level**: `MUST`
+- **Normative Level**: `SHOULD`
 - **Auto-Fix**: `Yes (unsafe)`
-- **Verified On**: `2026-10-04`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 

@@ -82,9 +82,6 @@ rules:
   cc_sk_005:
     message: 无效的代理类型 '%{agent}'。必须是 Explore、Plan、general-purpose 或自定义 kebab-case 名称（1-64个字符）
     suggestion: 使用内置代理（Explore、Plan、general-purpose）或自定义 kebab-case 名称
-  cc_sk_006:
-    message: '危险 skill ''%{name}'' 必须设置 ''disable-model-invocation: true'' 以防止意外调用'
-    suggestion: '在 frontmatter 中添加 ''disable-model-invocation: true'''
   cc_sk_007:
     message: 检测到不受限制的 Bash 访问。考虑使用范围限定版本以提高安全性。
     suggestion: 使用范围限定的 Bash，如 'Bash(git:*)' 或 'Bash(npm:*)'，而不是普通 'Bash'
@@ -95,9 +92,6 @@ rules:
   cc_sk_009:
     message: 动态注入过多（%{count} 个）。限制为 %{max} 个以获得更好性能
     suggestion: 考虑将复杂逻辑移至 scripts/ 目录或减少注入
-  cc_sk_016:
-    message: 正文使用了索引形式的 $ARGUMENTS[n]，但缺少 argument-hint
-    suggestion: 在 frontmatter 中添加 argument-hint，说明应如何提供参数
   cc_sk_017:
     message: 未知的 frontmatter 字段 '%{field}'
     suggestion: 删除不受支持的字段或修正 frontmatter 键名拼写
@@ -155,23 +149,6 @@ rules:
   cc_hk_009:
     message: '检测到潜在危险的命令模式: %{reason}'
     suggestion: '审查命令的安全性。匹配的模式: %{pattern}'
-  cc_hk_010:
-    command_no_timeout: '%{location} 处的命令 hook 未指定超时'
-    command_no_timeout_suggestion: 添加 "timeout" 字段（例如，此事件使用 %{default}）
-    command_exceeds: '%{location} 处的命令 hook 超时 %{timeout}s 超过默认值 %{default}s'
-    command_exceeds_suggestion: 考虑 timeout <= %{default}s
-    session_end_no_timeout_suggestion: SessionEnd hooks 共享 1.5 秒预算。settings 中的显式整数 timeout 可将预算提高至 60 秒；插件 timeout 不会提高预算。
-    session_end_exceeds: '%{location} 处的命令 hook 超时 %{timeout}s，超过 settings 提高后的 60 秒 SessionEnd 预算'
-    session_end_exceeds_suggestion: 使用 timeout <= 60s；如需更多时间，请显式配置 CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS
-    prompt_no_timeout: '%{location} 处的 prompt hook 未指定超时'
-    prompt_no_timeout_suggestion: 添加 "timeout" 字段（例如，prompt hook 使用 30）
-    prompt_exceeds: '%{location} 处的 prompt hook 超时 %{timeout}s 超过默认值 %{default}s'
-    prompt_exceeds_suggestion: 考虑 timeout <= %{default}s（30秒默认限制）
-    agent_no_timeout: '%{location} 处的 agent hook 未指定超时'
-    agent_no_timeout_suggestion: 添加 "timeout" 字段（例如，agent hook 使用 60）
-    agent_exceeds: '%{location} 处的 agent hook 超时 %{timeout}s 超过默认值 %{default}s'
-    agent_exceeds_suggestion: 考虑 timeout <= %{default}s（60秒默认限制）
-    assumption: 假设 Claude Code 默认超时行为。在 .agnix.toml [tool_versions] 中固定 claude_code 版本以进行特定版本验证。
   cc_hk_011:
     message: '%{location} 处的超时值无效：必须是正整数'
     suggestion: 将超时设置为正整数，如 30
@@ -212,9 +189,6 @@ rules:
   invalid_tool: '工具 #%{num}: 无效的工具定义: %{error}'
   invalid_tool_single: '无效的工具定义: %{error}'
   invalid_tool_suggestion: '确保工具具有有效的字段类型（name: string, description: string, inputSchema: object）'
-  cc_ag_001:
-    message: 代理 frontmatter 缺少必需的 'name' 字段
-    suggestion: '在 frontmatter 中添加 ''name: your-agent-name'''
   cc_ag_002:
     message: 代理 frontmatter 缺少必需的 'description' 字段
     suggestion: '在 frontmatter 中添加 ''description: 描述此代理的功能'''
@@ -230,11 +204,6 @@ rules:
   cc_ag_006:
     message: '工具同时出现在 ''tools'' 和 ''disallowedTools'' 中: %{conflicts}'
     suggestion: 从 'tools' 或 'disallowedTools' 中删除冲突的工具
-  cc_ag_007:
-    message: 代理文件必须有 YAML frontmatter
-    suggestion: 在 --- 标记之间添加 frontmatter
-    parse_error: '解析代理 frontmatter 失败: %{error}'
-    parse_error_suggestion: 检查 YAML frontmatter 语法 -- 确保正确的缩进、冒号间距和匹配的引号
   cc_ag_020:
     message: "本地代理名称 '%{name}' 以 '-' 开头、包含 ':' 或超过 256 个字符"
     suggestion: "名称不得以 '-' 开头或包含 ':'，且长度不得超过 256 个字符"

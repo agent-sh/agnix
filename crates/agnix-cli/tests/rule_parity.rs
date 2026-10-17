@@ -239,11 +239,11 @@ fn extract_implemented_rule_ids() -> BTreeSet<String> {
 
     // Known rule ID prefixes to filter out false positives
     let valid_prefixes = [
-        "AS-", "CC-SK-", "CC-HK-", "CC-AG-", "CC-MEM-", "CC-OS-", "CC-PL-", "CC-SET-", "AGM-",
-        "MCP-", "COP-", "CUR-", "CLN-", "CDX-", "OC-", "GM-", "GM-AG-", "XML-", "REF-", "PE-",
-        "XP-", "VER-", "WS-", "CR-SK-", "CL-SK-", "CP-SK-", "CX-SK-", "OC-SK-", "WS-SK-", "KR-SK-",
-        "KR-AG-", "KR-PM-", "KR-HK-", "KR-PW-", "KR-MCP-", "KR-SET-", "KR-WF-", "KR-IGN-", "KIRO-",
-        "AMP-SK-", "AMP-", "RC-SK-", "ROO-",
+        "AS-", "CC-SK-", "CC-HK-", "CC-AG-", "CC-MEM-", "CC-OS-", "CC-PL-", "CC-MP-", "CC-MCP-",
+        "CC-SET-", "AGM-", "MCP-", "COP-", "CUR-", "CLN-", "CDX-", "OC-", "GM-", "GM-AG-", "XML-",
+        "REF-", "PE-", "XP-", "VER-", "WS-", "CR-SK-", "CL-SK-", "CP-SK-", "CX-SK-", "OC-SK-",
+        "WS-SK-", "KR-SK-", "KR-AG-", "KR-PM-", "KR-HK-", "KR-PW-", "KR-MCP-", "KR-SET-", "KR-WF-",
+        "KR-IGN-", "KIRO-", "AMP-SK-", "AMP-", "RC-SK-", "ROO-",
     ];
 
     fn extract_from_file(
@@ -373,6 +373,8 @@ fn infer_fixture_coverage(rules: &[RuleEntry]) -> HashMap<String, Vec<String>> {
             vec!["valid/output-styles", "invalid/output-styles"],
         ),
         ("claude-plugins", vec!["valid/plugins", "invalid/plugins"]),
+        ("claude-marketplaces", vec!["claude-ext/marketplace"]),
+        ("claude-mcp", vec!["claude-ext/mcp"]),
         ("agents-md", vec!["agents_md"]),
         ("mcp", vec!["mcp"]),
         (
@@ -611,7 +613,9 @@ fn test_rules_json_integrity() {
         "gemini-agents",
         "agents-md",
         "claude-plugins",
+        "claude-marketplaces",
         "mcp",
+        "claude-mcp",
         "copilot",
         "cursor",
         "cline",

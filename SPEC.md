@@ -7,17 +7,19 @@
 
 | Type | Files | Rules |
 |------|-------|-------|
-| Skills | SKILL.md | 33 |
-| Hooks | settings.json | 26 |
+| Skills | SKILL.md | 42 |
+| Hooks | settings.json | 32 |
 | Memory (Claude Code) | CLAUDE.md, CLAUDE.local.md, .claude/rules/*.md | 15 |
 | Instructions (Cross-Tool) | AGENTS.md, AGENTS.local.md, AGENTS.override.md | 5 |
-| Agents | agents/*.md | 18 |
-| Plugins | plugin.json | 17 |
+| Agents | agents/*.md | 21 |
+| Plugins | plugin.json | 23 |
+| Claude Marketplaces | .claude-plugin/marketplace.json | 5 |
+| Claude MCP | .mcp.json (project and plugin), MCP tool listings | 5 |
 | Claude Output Styles | .claude/output-styles/*.md | 6 |
 | Claude Settings | .claude/settings.json | 35 |
 | Prompt Engineering | CLAUDE.md, AGENTS.md | 4 |
 | Cross-Platform | AGENTS.md | 11 |
-| MCP | tool definitions | 25 |
+| MCP | tool definitions | 23 |
 | XML | all .md files | 3 |
 | References | @imports | 3 |
 | GitHub Copilot | .github/copilot-instructions.md, .github/instructions/*.instructions.md, .github/agents/*.agent.md, .github/prompts/*.prompt.md, .github/hooks/hooks.json, .github/workflows/copilot-setup-steps.yml | 33 |
@@ -304,8 +306,8 @@ When `target` is set to a specific tool, only relevant rules run:
 | Agents | `agents` | CC-AG-* | Subagent validation |
 | GitHub Copilot | `copilot` | COP-* | Copilot instruction validation |
 | Memory | `memory` | CC-MEM-* | Memory/CLAUDE.md validation |
-| Plugins | `plugins` | CC-PL-* | Plugin validation |
-| MCP | `mcp` | MCP-* | MCP tool validation |
+| Plugins | `plugins` | CC-PL-*, CC-MP-* | Plugin and marketplace validation |
+| MCP | `mcp` | MCP-*, CC-MCP-* | MCP tool and server validation (CC-MCP-* on Claude Code MCP files) |
 | Prompt Engineering | `prompt_engineering` | PE-* | Prompt engineering best practices |
 | XML | `xml` | XML-* | XML tag balance |
 | Imports | `imports` | REF-* | Import reference validation |

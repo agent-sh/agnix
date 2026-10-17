@@ -398,7 +398,7 @@ impl ValidatorRegistryBuilder {
 ///
 /// Used by `BuiltinProvider` (via `debug_assert_eq!`) and tests to catch
 /// accidental additions or removals without updating all providers.
-const EXPECTED_BUILTIN_COUNT: usize = 102;
+const EXPECTED_BUILTIN_COUNT: usize = 108;
 
 // -- Category providers -----------------------------------------------------
 //
@@ -428,6 +428,24 @@ impl ValidatorProvider for SkillProvider {
             ),
             (FileType::Skill, Some("XmlValidator"), xml_validator),
             (FileType::Skill, Some("ImportsValidator"), imports_validator),
+            // Legacy `.claude/commands/` files take the skill frontmatter, and
+            // keep the generic Markdown checks they got before detection.
+            (
+                FileType::ClaudeCommand,
+                Some("SkillValidator"),
+                skill_validator,
+            ),
+            (
+                FileType::ClaudeCommand,
+                Some("CrossPlatformValidator"),
+                cross_platform_validator,
+            ),
+            (FileType::ClaudeCommand, Some("XmlValidator"), xml_validator),
+            (
+                FileType::ClaudeCommand,
+                Some("ImportsValidator"),
+                imports_validator,
+            ),
         ]
     }
 }
@@ -796,7 +814,17 @@ impl ValidatorProvider for MiscProvider {
                 Some("CodexPluginValidator"),
                 codex_plugin_validator,
             ),
+            (
+                FileType::ClaudeMarketplace,
+                Some("ClaudeMarketplaceValidator"),
+                claude_marketplace_validator,
+            ),
             (FileType::Mcp, Some("McpValidator"), mcp_validator),
+            (
+                FileType::Mcp,
+                Some("ClaudeMcpValidator"),
+                claude_mcp_validator,
+            ),
             (
                 FileType::ClineRules,
                 Some("ClineValidator"),
@@ -1016,6 +1044,14 @@ fn plugin_validator() -> Box<dyn Validator> {
 
 fn mcp_validator() -> Box<dyn Validator> {
     Box::new(crate::rules::mcp::McpValidator)
+}
+
+fn claude_mcp_validator() -> Box<dyn Validator> {
+    Box::new(crate::rules::claude_mcp::ClaudeMcpValidator)
+}
+
+fn claude_marketplace_validator() -> Box<dyn Validator> {
+    Box::new(crate::rules::claude_marketplace::ClaudeMarketplaceValidator)
 }
 
 fn xml_validator() -> Box<dyn Validator> {
@@ -1585,6 +1621,7 @@ mod tests {
             FileType::AmpCheck,
             FileType::Hooks,
             FileType::Plugin,
+            FileType::ClaudeMarketplace,
             FileType::Mcp,
             FileType::Copilot,
             FileType::CopilotScoped,
@@ -1596,6 +1633,7 @@ mod tests {
             FileType::ClaudeOutputStyle,
             FileType::ClaudeMemoryIndex,
             FileType::ClaudeIgnore,
+            FileType::ClaudeCommand,
             FileType::CursorRule,
             FileType::CursorHooks,
             FileType::CursorAgent,
@@ -1651,6 +1689,7 @@ mod tests {
                 | FileType::AmpCheck
                 | FileType::Hooks
                 | FileType::Plugin
+                | FileType::ClaudeMarketplace
                 | FileType::Mcp
                 | FileType::Copilot
                 | FileType::CopilotScoped
@@ -1662,6 +1701,7 @@ mod tests {
                 | FileType::ClaudeOutputStyle
                 | FileType::ClaudeMemoryIndex
                 | FileType::ClaudeIgnore
+                | FileType::ClaudeCommand
                 | FileType::CursorRule
                 | FileType::CursorHooks
                 | FileType::CursorAgent
@@ -1930,10 +1970,11 @@ mod tests {
             .iter()
             .filter(|(_, name, _)| *name == Some("XmlValidator"))
             .count();
-        // 12 since Kiro power steering (KiroPowerSteering) runs XmlValidator.
+        // 12 since Kiro power steering (KiroPowerSteering) runs XmlValidator;
+        // 13 since legacy Claude commands (ClaudeCommand) keep it too.
         assert_eq!(
-            xml_occurrences, 12,
-            "Expected XmlValidator in 12 BuiltinProvider entries"
+            xml_occurrences, 13,
+            "Expected XmlValidator in 13 BuiltinProvider entries"
         );
         let total_after = registry.total_validator_count();
         assert_eq!(
@@ -2239,7 +2280,8 @@ mod tests {
 
     #[test]
     fn skill_provider_count() {
-        assert_eq!(SkillProvider.named_validators().len(), 4);
+        // 8: SKILL.md (4) plus legacy `.claude/commands/` files (4).
+        assert_eq!(SkillProvider.named_validators().len(), 8);
     }
 
     #[test]
@@ -2283,10 +2325,11 @@ mod tests {
     fn misc_provider_count() {
         // 38: Kiro hooks and powers dropped four Imports/CrossPlatform entries
         // and gained power plugin, power steering, workflow, ignore-file,
-        // not-loaded and Kiro AGENTS.md entries. 41: .clineignore and
-        // cline_mcp_settings.json (ClineSkillValidator moved to skills), and
-        // ClaudeMdValidator on Hooks (CC-MEM-020 for .claude/settings.local.json).
-        assert_eq!(MiscProvider.named_validators().len(), 41);
+        // not-loaded and Kiro AGENTS.md entries. 43: .clineignore and
+        // cline_mcp_settings.json (ClineSkillValidator moved to skills),
+        // ClaudeMdValidator on Hooks (CC-MEM-020 for .claude/settings.local.json),
+        // and the Claude marketplace and Claude MCP validators.
+        assert_eq!(MiscProvider.named_validators().len(), 43);
     }
 
     #[test]

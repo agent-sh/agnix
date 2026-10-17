@@ -244,22 +244,22 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 ### CC-SK-005 [HIGH] Invalid Agent Type
 **Requirement**: agent MUST be: Explore, Plan, general-purpose, or custom kebab-case name (1-64 chars, pattern: `^[a-z0-9]+(-[a-z0-9]+)*$`)
 **Detection**: Check against built-in agents or validate kebab-case format
-**Fix**: Auto-fix (unsafe) -- replace invalid agent with 'general-purpose'
+**Fix**: Auto-fix (unsafe) - replace invalid agent with 'general-purpose'
 **Source**: code.claude.com/docs/en/sub-agents
 
 <a id="cc-sk-006"></a>
-### CC-SK-006 [HIGH] Dangerous Auto-Invocation
-**Requirement**: Side-effect skills MUST have `disable-model-invocation: true`
-**Detection**: `name.contains("deploy|ship|publish|delete|drop") && !disable_model_invocation`
-**Fix**: [AUTO-FIX] Add `disable-model-invocation: true`
+### CC-SK-006 [MEDIUM] Side-Effect Skill Without disable-model-invocation
+**Requirement**: Skills with side effects SHOULD set `disable-model-invocation: true`. Vendor text: "Use this for workflows with side effects or that you want to control timing, like `/commit`, `/deploy`, or `/send-slack-message`. You don't want Claude deciding to deploy because your code looks ready." (skills, "Control who invokes a skill")
+**Detection**: a segment of the skill name (split on non-alphanumeric characters) is `deploy`, `ship`, `publish`, `delete`, `release`, `push`, `commit` or `send`, no segment is a read-only qualifier (`style`, `guide`, `guidelines`, `conventions`, `format`, `triage`, `analysis`, `analyzer`, `summary`, `report`, `review`, `status`, `check`, `docs`, `notes`, `history`, `lookup`, `search`), and `disable-model-invocation` is not true. `commit` and `send` are the vendor's own examples; the other words and the qualifier list are agnix heuristics.
+**Fix**: [AUTO-FIX] (unsafe) Add `disable-model-invocation: true`
 **Source**: code.claude.com/docs/en/skills
 
 <a id="cc-sk-007"></a>
 ### CC-SK-007 [MEDIUM] Unrestricted Bash
-**Requirement**: Bash in allowed-tools SHOULD be scoped
+**Requirement**: Bash in allowed-tools SHOULD be scoped. Vendor text: "Workspace trust doesn't gate this field. Claude Code applies a project skill's `allowed-tools` even in a `-p` run in a folder you've never trusted. A skill can grant itself broad tool access, so review the `allowed-tools` of skills checked into a repository before you run Claude Code there." (skills, "Pre-approve tools for a skill")
 **Detection**: `allowed_tools.contains("Bash") && !allowed_tools.contains("Bash(")`
-**Fix**: [AUTO-FIX] Replace unrestricted Bash with scoped version (e.g., `Bash(git:*)`)
-**Source**: agentsys/enhance-skills
+**Fix**: [AUTO-FIX] (unsafe) Replace plain Bash with a scoped `Bash(git:*)`
+**Source**: code.claude.com/docs/en/skills
 
 <a id="cc-sk-008"></a>
 ### CC-SK-008 [HIGH] Unknown Tool Name
@@ -298,10 +298,10 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Source**: code.claude.com/docs/en/skills, github.com/anthropics/claude-code/releases/tag/v2.1.218
 
 <a id="cc-sk-016"></a>
-### CC-SK-016 [MEDIUM] Indexed $ARGUMENTS Without argument-hint
-**Requirement**: If the body accesses arguments by position - `$ARGUMENTS[N]` or the documented `$N` shorthand - it SHOULD have an argument-hint field
-**Detection**: Body contains `$ARGUMENTS[n]` or a single-digit `$N` placeholder without an argument-hint field. `${VAR}` forms, `x$3y`, and prose amounts like `$500` are not treated as positional.
-**Fix**: Manual fix required - add argument-hint field describing expected arguments
+### CC-SK-016 [LOW] Indexed $ARGUMENTS Without argument-hint
+**Requirement**: A skill body that uses indexed arguments MAY declare an `argument-hint`. This is an agnix suggestion: the skills reference defines the field only as an autocomplete hint ("Hint shown during autocomplete to indicate expected arguments.") and does not require it.
+**Detection**: prose `$ARGUMENTS[n]` or `$N` without `argument-hint` (info)
+**Fix**: Manual - add an `argument-hint`
 **Source**: code.claude.com/docs/en/skills
 
 <a id="cc-sk-017"></a>
@@ -353,6 +353,69 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Fix**: Manual - escape the dollar sign (`\$1`) when it is code syntax, or add an `argument-hint` when it should receive an argument.
 **Source**: code.claude.com/docs/en/skills
 
+<a id="cc-sk-024"></a>
+### CC-SK-024 [LOW] Skill Without Description
+**Requirement**: A Claude Code skill SHOULD have a `description` (or `when_to_use`). Vendor text: "All fields are optional. Only `description` is recommended so Claude knows when to use the skill." and `description` "If omitted, uses the first non-empty line of the markdown content." (skills, "Frontmatter reference")
+**Detection**: neither `description` nor `when_to_use` is set, and `disable-model-invocation` is not true (info)
+**Fix**: Manual
+**Source**: code.claude.com/docs/en/skills
+
+<a id="cc-sk-025"></a>
+### CC-SK-025 [LOW] Skill Listing Over Budget
+**Requirement**: The project's skill names and descriptions SHOULD fit the skill listing budget. Vendor text: "if you have many skills, Claude Code drops some descriptions to fit the listing's character budget, which removes the keywords Claude needs to match your request. The budget scales at 1% of the model's context window." (skills, "Skill descriptions are cut short")
+**Detection**: over the `.claude/skills/*/SKILL.md` files without `disable-model-invocation: true`, sum each name plus its `description` and `when_to_use` (each entry capped at the documented 1,536 characters); report when the total is above 8,000 characters. The threshold is an agnix estimate: the token-to-character conversion is not documented, so agnix assumes a 200,000-token window and 4 characters per token. User and plugin skills are not visible to a project lint. The first skill (sorted) reports it once.
+**Fix**: Manual
+**Source**: code.claude.com/docs/en/skills, code.claude.com/docs/en/settings-reference
+
+<a id="cc-sk-027"></a>
+### CC-SK-027 [LOW] Legacy Custom Command File
+**Requirement**: New commands SHOULD be skills. Vendor text: "a Markdown file in `.claude/commands/` is the older format and still works. It supports the same frontmatter except `name` and `paths`. To find the name you type to invoke it, see How a skill gets its command name. Prefer a skill for new work, since skills also support supporting files." (skills, "Choose where skills load")
+**Detection**: every `.claude/commands/**/*.md` file (a new file type) gets one migration note (info); when it sets `name` or `paths`, the note says those fields have no effect. Command files get no other skill rules: they are a legacy form the current release still loads.
+**Fix**: Manual - move the file to `.claude/skills/<name>/SKILL.md`
+**Source**: code.claude.com/docs/en/skills
+
+<a id="cc-sk-028"></a>
+### CC-SK-028 [MEDIUM] Injected Command Not Run
+**Requirement**: `!` command injection SHOULD use a form Claude Code runs. Vendor text: "The inline form is only recognized when `!` appears at the start of a line or immediately after whitespace. If `!` follows another character, as in `` KEY=!`cmd` ``, the placeholder is left as literal text and the command does not run." and "`No shell command in <name> was run` means one of the file's `!` commands contains a raw control character other than tab or newline, so none of them runs." (skills, "Inject dynamic context")
+**Detection**: in prose (outside code spans and fences), `` !` `` preceded by a non-whitespace character on the same line; and, in a file with a recognized `!` command or a ```` ```! ```` block, any control character other than tab, newline or carriage return
+**Fix**: Manual
+**Source**: code.claude.com/docs/en/skills
+
+<a id="cc-sk-030"></a>
+### CC-SK-030 [LOW] Skill Name Uses a Reserved Word
+**Requirement**: A skill that may be uploaded SHOULD avoid the reserved words. Vendor text: "`name`: Maximum 64 characters, lowercase letters/numbers/hyphens only, no XML tags, no reserved words ("anthropic", "claude")" (Claude API skills guide, "Limits and constraints")
+**Detection**: the skill name (frontmatter `name`, or the directory name) contains `claude` or `anthropic` (info). Claude Code itself loads these skills, so this is a note for skills that may be uploaded to claude.ai or the Claude API.
+**Fix**: Manual
+**Source**: platform.claude.com/docs/en/build-with-claude/skills-guide, platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices
+
+<a id="cc-sk-031"></a>
+### CC-SK-031 [LOW] XML Tag in Skill Name or Description
+**Requirement**: A skill that may be uploaded SHOULD keep XML tags out of its name and description. Vendor text: "`description`: Maximum 1024 characters, non-empty, no XML tags" (Claude API skills guide, "Limits and constraints")
+**Detection**: a tag-shaped `<name>`, `<name attr="...">` or `</name>` in `name` or `description` (info). `a < b` comparisons and prose placeholders such as `<the problem, stated in full>` are not tags.
+**Fix**: Manual
+**Source**: platform.claude.com/docs/en/build-with-claude/skills-guide
+
+<a id="cc-sk-032"></a>
+### CC-SK-032 [LOW] Skill Description Not in Third Person
+**Requirement**: Skill descriptions SHOULD be written in the third person. Vendor text: "Always write in third person. The description is injected into the system prompt, and inconsistent point-of-view can cause discovery problems." (agent skills best practices, "Writing effective descriptions")
+**Detection**: the description starts with `I `, `I'm `, `I'll `, `I can `, `I will `, `I help `, `You can `, `You should `, `This skill helps you` or `Lets you ` (info). English-only heuristic.
+**Fix**: Manual
+**Source**: platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices
+
+<a id="cc-sk-033"></a>
+### CC-SK-033 [LOW] Vague Skill Name
+**Requirement**: Skill names SHOULD say what the skill does. Vendor text: "Vague names: `helper`, `utils`, `tools`" and "Overly generic: `documents`, `data`, `files`" (agent skills best practices, "Naming conventions")
+**Detection**: the skill name (last segment) is one of helper, helpers, util, utils, tool, tools, document, documents, data, file, files (info)
+**Fix**: Manual
+**Source**: platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices
+
+<a id="cc-sk-034"></a>
+### CC-SK-034 [LOW] Long Reference File Without Table of Contents
+**Requirement**: Long bundled reference files SHOULD start with a table of contents. Vendor text: "For large reference files (>300 lines), include a table of contents" (skill-creator) and "For reference files longer than 100 lines, include a table of contents at the top." (agent skills best practices). agnix uses the skill-creator's 300 lines to keep the check quiet.
+**Detection**: a `.md` file inside the skill directory that SKILL.md links to (Markdown link or `references/...` mention), longer than 300 lines, with no "Contents" or "Table of contents" heading and fewer than three `](#` anchor links in its first 40 lines. Reported on the reference file (info).
+**Fix**: Manual
+**Source**: github.com/anthropics/skills/blob/main/skills/skill-creator/SKILL.md, platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices
+
 <a id="cc-set-001"></a>
 ### CC-SET-001 [MEDIUM] Invalid prUrlTemplate Setting
 **Requirement**: `prUrlTemplate` in `.claude/settings.json` (and `.local.json`/`managed-settings.json`) SHOULD be a non-empty string containing at least one of the documented placeholders: `{host}`, `{owner}`, `{repo}`, `{number}`, `{url}`. A template with no placeholder will render the same static URL for every PR badge.
@@ -362,7 +425,7 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="cc-set-002"></a>
 ### CC-SET-002 [MEDIUM] Non-boolean channelsEnabled Setting
-**Requirement**: `channelsEnabled` MUST be a boolean when present (Claude Code 2.1.128+). Its Scope is `Managed`. Checked only where Claude Code reads the key; in other files CC-SET-034 reports it instead. A quoted `"true"` or numeric value leaves Channels silently disabled - same footgun shape as MCP-025 `alwaysLoad`.
+**Requirement**: `channelsEnabled` MUST be a boolean when present (Claude Code 2.1.128+). Its Scope is `Managed`. Checked only where Claude Code reads the key; in other files CC-SET-034 reports it instead. A quoted `"true"` or numeric value leaves Channels silently disabled - same footgun shape as CC-MCP-004 `alwaysLoad`.
 **Detection**: Parse settings.json; look up top-level `channelsEnabled`; flag (warning) string / number / array / object values. Explicit `false` and `null` are not flagged.
 **Fix**: Opt-in unsafe autofix converts exact quoted `true` or `false` to a boolean. This can activate ignored settings or change security policy; plain `--fix` leaves them unchanged. Other invalid values require manual correction.
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.128 (introduced `--channels` support for console API-key auth; console orgs with managed settings must opt in via `channelsEnabled: true`), code.claude.com/docs/en/settings-reference
@@ -945,17 +1008,18 @@ Kiro agent rules check `.kiro/agents/**/*.json` and `*.md` against the engines a
 
 <a id="cc-hk-002"></a>
 ### CC-HK-002 [HIGH] Prompt or Agent Hook on Wrong Event
-**Requirement**: `type: "prompt"` and `type: "agent"` MUST only appear on events supported by that hook type. `PermissionRequest` permits prompt hooks but skips agent hooks.
+**Requirement**: `type: "prompt"` and `type: "agent"` MUST only appear on events supported by that hook type, and `type: "http"` MUST NOT appear on SessionStart or Setup. `PermissionRequest` permits prompt hooks but skips agent hooks.
 **Prompt-supported**: PreToolUse, PostToolUse, PostToolUseFailure, PostToolBatch, PermissionRequest, PermissionDenied, UserPromptSubmit, UserPromptExpansion, Stop, SubagentStop, TaskCreated, TaskCompleted, TeammateIdle
 **Agent-supported**: PreToolUse, PostToolUse, PostToolUseFailure, PostToolBatch, PermissionDenied, UserPromptSubmit, UserPromptExpansion, Stop, SubagentStop, TaskCreated, TaskCompleted, TeammateIdle
-**Detection**: `hook.type == "prompt" && !PROMPT_EVENTS.contains(event)` OR `hook.type == "agent" && !AGENT_EVENTS.contains(event)`
+**Vendor text**: "`SessionStart` and `Setup` support `command` and `mcp_tool` hooks ... They don't support `http`, `prompt`, or `agent` hooks." (hooks, "Prompt-based hooks")
+**Detection**: `hook.type == "prompt" && !PROMPT_EVENTS.contains(event)` OR `hook.type == "agent" && !AGENT_EVENTS.contains(event)` OR `hook.type == "http" && event in [SessionStart, Setup]`
 **Fix**: Change to `type: "command"` for unsupported events
 **Source**: code.claude.com/docs/en/hooks
 
 <a id="cc-hk-003"></a>
 ### CC-HK-003 [LOW] Matcher Hint for Tool Events
 **Requirement**: Tool events support an optional matcher field; omitting it matches all tools
-**Detection**: `["PreToolUse", "PermissionRequest", "PermissionDenied", "PostToolUse", "PostToolUseFailure"].contains(event) && matcher.is_none()`
+**Detection**: `["PreToolUse", "PermissionDenied", "PostToolUse", "PostToolUseFailure"].contains(event) && matcher.is_none()`. A PermissionRequest group without a matcher is reported by CC-HK-035 instead.
 **Fix**: Consider adding `"matcher": "Bash"` or `"*"` to target specific tools
 **Source**: code.claude.com/docs/en/hooks
 
@@ -988,26 +1052,22 @@ Kiro agent rules check `.kiro/agents/**/*.json` and `*.md` against the engines a
 **Source**: code.claude.com/docs/en/hooks
 
 <a id="cc-hk-009"></a>
-### CC-HK-009 [HIGH] Dangerous Command Pattern
-**Requirement**: Hooks SHOULD NOT contain destructive commands
-**Patterns**: `rm -rf`, `git reset --hard`, `drop database`, `curl.*|.*sh`
+### CC-HK-009 [MEDIUM] Dangerous Command Pattern
+**Requirement**: Hook commands SHOULD be reviewed for destructive or remote-execution patterns. Vendor text: "Command hooks execute shell commands with your full user permissions. They can modify, delete, or access any files your user account can access. Review and test all hook commands before adding them to your configuration." (hooks, "Security considerations")
+**Patterns**: `rm -rf /`, `rm -rf *`, `rm -rf ..`, `git reset --hard`, `git clean -fd`, `git push --force`, `drop database`, `drop table`, `truncate table`, `curl ... | sh`, `wget ... | sh`, `chmod 777`, writes to block devices, `mkfs.`, `dd ... of=/dev/`. The list is an agnix heuristic; the vendor names no patterns. `|| true` and `2>/dev/null` are no longer reported: they are not destructive, and Anthropic's own plugins use `|| true` on PostToolUse hooks.
 **Detection**: Regex match against dangerous patterns
 **Fix**: Warn, suggest safer alternative
-**Source**: agentsys/enhance-hooks
+**Source**: code.claude.com/docs/en/hooks
 
 <a id="cc-hk-010"></a>
-### CC-HK-010 [MEDIUM] Timeout Policy
-**Requirement**: Hooks SHOULD have explicit timeout; excessive timeouts warn
+### CC-HK-010 [MEDIUM] SessionEnd Hook Timeout Above Budget
+**Requirement**: A SessionEnd hook timeout SHOULD stay within the SessionEnd budget. Vendor text: "`SessionEnd` hooks share a 1.5-second budget; if your settings set a longer per-hook `timeout`, Claude Code raises the budget to match, up to 60 seconds" (hooks, "Common fields") and "Timeouts set on plugin-provided hooks don't raise the budget." (hooks, "SessionEnd")
 **Detection**:
-  - `hook.timeout.is_none()` - missing timeout
-  - Command: event-specific defaults are 600s generally, 30s for UserPromptSubmit/PreModelSwitch/PostModelSwitch, and 10s for MessageDisplay
-  - Ordinary `async: true` commands have no enforced timeout; asyncRewake retains timeout checks
-  - SessionEnd shares a 1.5s budget; explicit settings timeouts through 60s are accepted, and the environment override is documented separately
-  - Prompt: `timeout > 30` exceeds 30s default
-  - Agent: `timeout > 60` exceeds 60s default
-**Fix**: Add an explicit timeout appropriate for the event. This is advisory budget guidance, not a claim that larger ordinary explicit timeouts are invalid.
-**Source**: code.claude.com/docs/en/hooks
-**Version-Aware**: When Claude Code version is not pinned in `.agnix.toml [tool_versions]`, an assumption note is added indicating default timeout behavior is assumed. Pin the version for version-specific validation.
+  - Settings files and frontmatter hooks: SessionEnd `timeout > 60` (warning)
+  - Plugin `hooks/hooks.json`: SessionEnd `timeout > 1` (info), since a plugin timeout never raises the 1.5-second budget
+**Not reported**: a missing timeout, or a timeout above the event default. The hooks reference documents only defaults ("Defaults: 600 for `command`, `http`, and `mcp_tool`; 30 for `prompt`; 60 for `agent`.") and its own agent-hook example sets `"timeout": 120`.
+**Fix**: Manual; `CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS` sets the budget explicitly
+**Source**: code.claude.com/docs/en/hooks, code.claude.com/docs/en/hooks-guide
 
 <a id="cc-hk-011"></a>
 ### CC-HK-011 [HIGH] Invalid Timeout Value
@@ -1019,7 +1079,7 @@ Kiro agent rules check `.kiro/agents/**/*.json` and `*.md` against the engines a
 <a id="cc-hk-012"></a>
 ### CC-HK-012 [HIGH] Hooks Parse Error
 **Requirement**: Hooks configuration MUST be valid JSON
-**Detection**: JSON parse error on settings.json
+**Detection**: JSON parse error on settings.json. `.vscode/settings.json` (VS Code editor settings, which allow comments and trailing commas) and the `hooks/hooks.json` of a Gemini CLI extension or Codex plugin are not Claude Code files and get no CC-HK rules.
 **Fix**: Fix JSON syntax errors in hooks configuration
 **Source**: code.claude.com/docs/en/hooks
 
@@ -1027,7 +1087,7 @@ Kiro agent rules check `.kiro/agents/**/*.json` and `*.md` against the engines a
 ### CC-HK-013 [HIGH] Async on Non-Command Hook
 **Requirement**: `async: true` MUST only appear on `type: "command"` hooks
 **Detection**: Check for `async` field on prompt or agent hook types
-**Fix**: Auto-fix (safe) -- remove the `async` field line
+**Fix**: Auto-fix (safe) - remove the `async` field line
 **Source**: code.claude.com/docs/en/hooks
 
 <a id="cc-hk-014"></a>
@@ -1041,21 +1101,14 @@ Kiro agent rules check `.kiro/agents/**/*.json` and `*.md` against the engines a
 ### CC-HK-015 [MEDIUM] Model on Command Hook
 **Requirement**: `model` field MUST only appear on prompt or agent hooks
 **Detection**: Check for `model` field on command hook types
-**Fix**: Auto-fix (safe) -- remove the `model` field line
+**Fix**: Auto-fix (safe) - remove the `model` field line
 **Source**: code.claude.com/docs/en/hooks
 
 <a id="cc-hk-016"></a>
-### CC-HK-016 [HIGH] Validate Hook Type Agent
-**Requirement**: `type: "agent"` MUST be recognized as a valid hook handler type
-**Detection**: Ensure agent type is accepted alongside command and prompt
-**Fix**: Auto-fix (unsafe) -- replace unknown hook type with closest valid type (command, prompt, agent)
-**Source**: code.claude.com/docs/en/hooks
-
-<a id="cc-hk-017"></a>
-### CC-HK-017 [MEDIUM] Prompt/Agent Hook Missing $ARGUMENTS
-**Requirement**: Prompt and agent hooks SHOULD reference `$ARGUMENTS` to receive event data
-**Detection**: Check prompt or agent hook text for `$ARGUMENTS` reference
-**Fix**: [AUTO-FIX] Include `$ARGUMENTS` in the prompt or agent hook
+### CC-HK-016 [HIGH] Unknown Hook Type
+**Requirement**: Hook `type` MUST be one of the five handler types. Vendor text: "There are five types" - `command`, `http`, `mcp_tool`, `prompt`, `agent` (hooks, "Hook handler fields")
+**Detection**: `type` is not one of the five strings, or is not a string
+**Fix**: Auto-fix (unsafe) - replace unknown hook type with the closest valid type
 **Source**: code.claude.com/docs/en/hooks
 
 <a id="cc-hk-018"></a>
@@ -1074,10 +1127,13 @@ Kiro agent rules check `.kiro/agents/**/*.json` and `*.md` against the engines a
 **Source**: code.claude.com/docs/en/hooks
 
 <a id="cc-hk-021"></a>
-### CC-HK-021 [MEDIUM] Invalid If Field
-**Requirement**: The if field SHOULD be a non-empty string, only on tool events
+### CC-HK-021 [HIGH] Invalid If Field
+**Requirement**: `if` MUST only appear on tool events and MUST hold one permission rule. Vendor text: "Only evaluated on tool events: `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PermissionRequest`, and `PermissionDenied`. On other events, a hook with `if` set never runs" and "The `if` field holds exactly one permission rule. There is no `&&`, `||`, or list syntax for combining rules; to apply multiple conditions, define a separate hook handler for each." (hooks, "Common fields")
 **Tool events**: PreToolUse, PermissionRequest, PermissionDenied, PostToolUse, PostToolUseFailure
-**Detection**: Check if field presence and type
+**Detection**:
+  - `if` on any other event: error at the `if` key (the hook never runs)
+  - `&&`, `||` or a `,` list outside the rule's parentheses: warning (how Claude Code treats a combined string is not documented). Text inside `Tool(...)`, such as a Bash pattern with `&&`, is the rule's own argument and is not reported.
+  - empty or non-string `if`: warning
 **Fix**: Manual
 **Source**: code.claude.com/docs/en/hooks
 
@@ -1103,14 +1159,14 @@ Kiro agent rules check `.kiro/agents/**/*.json` and `*.md` against the engines a
 **Source**: code.claude.com/docs/en/hooks
 
 <a id="cc-hk-025"></a>
-### CC-HK-025 [LOW] Invalid Matcher Value
-**Requirement**: Matcher values MAY be validated against known values per event
-**Detection**: Check exact matcher tokens against event-specific allowlists. Preserve match-all and JavaScript-regex paths; exact alternatives use the documented separators. StopFailure uses its narrower exact alphabet and pipe separator. Explicit older versions retain removed SessionEnd values.
+### CC-HK-025 [MEDIUM] Invalid Matcher Value
+**Requirement**: Matcher values SHOULD name a value the event can match. Lifecycle events have documented value sets, and tool-event matchers are case-sensitive: "Check that the matcher pattern matches the tool name exactly. Matchers are case-sensitive" (hooks-guide, "Hook not firing")
+**Detection**: Check exact matcher tokens against event-specific allowlists. Preserve match-all and JavaScript-regex paths; exact alternatives use the documented separators. StopFailure uses its narrower exact alphabet and pipe separator. Explicit older versions (before v2.1.234, 2026-08-17) retain the removed SessionEnd value `bypass_permissions_disabled`. On tool events, an exact alternative that equals a built-in tool name only when case is ignored (`bash`, `edit`) is reported.
 **Notification values**: permission_prompt, idle_prompt, auth_success, elicitation_dialog, elicitation_url_dialog, elicitation_complete, elicitation_response, agent_needs_input, agent_completed, quota_auto_resume_fired, quota_auto_resume_stale, quota_auto_resume_disabled
 **DirectoryAdded values**: slash_command, register_repo_root; this event supports matcher filtering
 **StopFailure values**: rate_limit, overloaded, authentication_failed, oauth_org_not_allowed, account_on_hold, billing_error, invalid_request, model_not_found, server_error, max_output_tokens, cloud_credential_error, unknown
 **Fix**: Manual
-**Source**: code.claude.com/docs/en/hooks
+**Source**: code.claude.com/docs/en/hooks, code.claude.com/docs/en/hooks-guide
 
 <a id="cc-hk-026"></a>
 ### CC-HK-026 [HIGH] MCP Tool Hook Missing Server
@@ -1133,6 +1189,59 @@ Kiro agent rules check `.kiro/agents/**/*.json` and `*.md` against the engines a
 **Fix**: Manual - replace `${user_config.<key>}` with `$CLAUDE_PLUGIN_OPTION_<KEY>` read inside the script, or restructure to pass the value via the environment.
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.207 (shell-injection fix rejecting `${user_config.*}` in shell-form commands)
 
+<a id="cc-hk-029"></a>
+### CC-HK-029 [MEDIUM] Invalid or Ineffective onFailure
+**Requirement**: `onFailure` MUST be `"continue"` or `"block"`, and SHOULD only be set where it has an effect. Vendor text: "`onFailure` | no | Whether the action that triggered the hook goes ahead when the hook fails: `"continue"` or `"block"`" and "The field has no effect on these hooks: ... `Stop`, `SubagentStop`, `TaskCompleted`, and `TeammateIdle` hooks ... Background command hooks: command hooks that set `async` or `asyncRewake`" (hooks, "Command hook fields", "Block the action when a hook fails"). "Requires Claude Code v2.1.295 or later."
+**Detection**:
+  - value other than `continue` or `block`: warning at the value
+  - info when it has no effect: on a hook type other than `command` or `http`, on Stop, SubagentStop, TaskCompleted or TeammateIdle, on an `async` or `asyncRewake` command hook, or when the pinned Claude Code version is older than 2.1.295 (released 2026-10-08)
+**Fix**: Manual
+**Source**: code.claude.com/docs/en/hooks
+
+<a id="cc-hk-030"></a>
+### CC-HK-030 [MEDIUM] Unquoted Path Placeholder in Shell-Form Hook
+**Requirement**: A shell-form command hook SHOULD quote each path placeholder. Vendor text: "Prefer exec form for any hook that references a path placeholder. In shell form, wrap each placeholder in double quotes." (hooks, "Reference scripts by path") and "If you leave one of these variables outside quotes in a shell-form command in a hooks file, `claude plugin validate` warns about it unless the hook sets `shell` to `"powershell"`." (plugins manifest reference, "Quoting and path separators")
+**Detection**:
+  - command hook without `args`, `shell` not `powershell`, whose `command` has `${CLAUDE_PROJECT_DIR}`, `$CLAUDE_PROJECT_DIR`, `${CLAUDE_PLUGIN_ROOT}` (or the `$` spelling) or `${CLAUDE_PLUGIN_DATA}` outside double quotes: warning at the command. Single-quoted text counts as quoted.
+  - LOW branch (info): a script run by a relative path (`./x.sh`, `.claude/hooks/x.py`) in a settings file or plugin hooks file. Hooks-guide: "If you see "command not found", use absolute paths or `${CLAUDE_PROJECT_DIR}` to reference scripts." Skill and subagent frontmatter hooks are exempt, because the hooks reference's own frontmatter example runs `./scripts/security-check.sh`.
+**Fix**: Manual - quote the placeholder or switch to exec form with `args`
+**Source**: code.claude.com/docs/en/hooks, code.claude.com/docs/en/plugins/manifest-reference, code.claude.com/docs/en/hooks-guide
+
+<a id="cc-hk-031"></a>
+### CC-HK-031 [HIGH] Exec-Form Command With Embedded Arguments
+**Requirement**: In exec form, `command` MUST be the executable only. Vendor text: "If `command` is a bare name with no path separator and contains whitespace alongside `args`, Claude Code logs a warning because the spawn will fail: there is no executable named `node script.js`. Move the extra tokens into `args`." and `shell` is "Ignored when `args` is set" (hooks, "Exec form and shell form", "Command hook fields")
+**Detection**: command hook with `args` whose `command` contains whitespace and no `/` or `\` (error). `shell` set together with `args` is an info note.
+**Fix**: Manual - move the extra words into `args`
+**Source**: code.claude.com/docs/en/hooks
+
+<a id="cc-hk-032"></a>
+### CC-HK-032 [HIGH] PowerShell Hook Placeholder Not Expanded
+**Requirement**: A `shell: "powershell"` shell-form hook MUST reference the placeholders in a form PowerShell expands. Vendor text: "Don't write the bare `$CLAUDE_PROJECT_DIR` spelling in a PowerShell hook. PowerShell parses it as an undefined local variable and resolves it to `$null`, which leaves the script path without its project-root prefix." and "the placeholder works inside double-quoted strings but not inside single-quoted strings" (hooks, "Windows PowerShell tool")
+**Detection**: shell-form hook with `shell: "powershell"` whose `command` has `$CLAUDE_PROJECT_DIR`, `$CLAUDE_PLUGIN_ROOT` or `$CLAUDE_PLUGIN_DATA` without braces (not `$env:`), or a `${CLAUDE_...}` placeholder inside a single-quoted string
+**Fix**: Manual - write `${CLAUDE_PROJECT_DIR}` or `$env:CLAUDE_PROJECT_DIR` inside double quotes
+**Source**: code.claude.com/docs/en/hooks
+
+<a id="cc-hk-033"></a>
+### CC-HK-033 [HIGH] MCP Matcher Without Wildcard
+**Requirement**: A tool-event matcher for an MCP server's tools MUST include the tool segment. Vendor text: "To match every tool from a server, append `.*` to the server prefix. The `.*` is required: a matcher like `mcp__memory` or `mcp__brave-search` contains only exact-match characters, so it is compared as an exact string and matches no tool." (hooks, "Match MCP tools")
+**Detection**: on PreToolUse, PostToolUse, PostToolUseFailure, PermissionRequest and PermissionDenied, an exact-path matcher (only letters, digits, `_`, `-`, spaces, `,` and `|`) with an alternative `mcp__<server>` that has no second `__`
+**Fix**: Auto-fix (unsafe) for a single-alternative matcher: change it to `mcp__<server>__.*`. The hook starts firing on that server's tools, so the fix changes behavior and requires opt-in.
+**Source**: code.claude.com/docs/en/hooks
+
+<a id="cc-hk-034"></a>
+### CC-HK-034 [HIGH] Plugin Hook Names Own MCP Server by Bare Key
+**Requirement**: A plugin's hooks MUST name the plugin's own MCP servers by their scoped names. Vendor text: "Tools from a plugin-bundled MCP server use a scoped server segment that includes the plugin name: `mcp__plugin_<plugin-name>_<server-name>__<tool>`. A matcher written against the bare server key never fires for these tools." (hooks, "Match MCP tools") and `server` "For a plugin-bundled server, this is the scoped name `plugin:<plugin-name>:<server-name>`, such as `plugin:my-plugin:db`, not the bare server key" (hooks, "MCP tool hook fields")
+**Detection**: in a plugin's `hooks/hooks.json` (the plugin root has `.claude-plugin/`), collect the server keys from `.mcp.json` and inline `plugin.json` `mcpServers`; flag a matcher or `if` rule that names `mcp__<key>` and an `mcp_tool` hook whose `server` is a bare key
+**Fix**: Manual - use `mcp__plugin_<plugin>_<server>__...` and `plugin:<plugin>:<server>`
+**Source**: code.claude.com/docs/en/hooks, code.claude.com/docs/en/plugins/components
+
+<a id="cc-hk-035"></a>
+### CC-HK-035 [MEDIUM] Broad PermissionRequest Matcher
+**Requirement**: A PermissionRequest hook SHOULD have a narrow matcher. Vendor text: "Keep the matcher as narrow as possible. Matching on `.*` or leaving the matcher empty would auto-approve every tool permission prompt, including file writes and shell commands." (hooks-guide, "Auto-approve specific permission prompts")
+**Detection**: PermissionRequest group with no matcher, `""`, `*` or `.*`, unless every hook in the group is `async`/`asyncRewake` (background hooks can't decide)
+**Fix**: Manual
+**Source**: code.claude.com/docs/en/hooks-guide
+
 ---
 
 ## CLAUDE CODE RULES (SUBAGENTS)
@@ -1141,8 +1250,8 @@ Kiro agent rules check `.kiro/agents/**/*.json` and `*.md` against the engines a
 
 <a id="cc-ag-001"></a>
 ### CC-AG-001 [HIGH] Missing Name Field
-**Requirement**: Agent frontmatter REQUIRES `name` field
-**Detection**: Parse frontmatter, check for `name`
+**Requirement**: Local agent frontmatter REQUIRES a `name` field. Vendor text: "No `name`: Claude Code treats the file as documentation kept beside your agents." (sub-agents, "Subagent files Claude Code skips"). A file with agent frontmatter but no `name` is therefore not loaded as a subagent.
+**Detection**: Parse frontmatter of a `.claude/agents/` file, check for `name`
 **Fix**: [AUTO-FIX] Add `name: agent-name`
 **Source**: code.claude.com/docs/en/sub-agents
 
@@ -1168,10 +1277,10 @@ Kiro agent rules check `.kiro/agents/**/*.json` and `*.md` against the engines a
 **Source**: code.claude.com/docs/en/sub-agents, code.claude.com/docs/en/permission-modes
 
 <a id="cc-ag-005"></a>
-### CC-AG-005 [MEDIUM] Referenced Skill Not Found
-**Requirement**: Referenced skills SHOULD be available. Claude Code skips missing or disabled skills with a debug warning.
-**Detection**: Check project and user `.claude/skills/{name}/SKILL.md`. Plugin-qualified references are left to plugin resolution; unresolved unqualified names get a warning because an enabled plugin may supply them.
-**Fix**: Check enabled plugins or add the skill to project or user skills.
+### CC-AG-005 [MEDIUM] Preloaded Skill Not Found or Not Preloadable
+**Requirement**: Skills listed in `skills` SHOULD be ones Claude Code preloads. Claude Code skips missing or disabled skills with a debug warning, and the sub-agents reference says: "The full content of each listed skill is injected into the subagent's context at startup, up to the first 32 distinct names in the list." and "You can't preload skills that set `disable-model-invocation: true`" (sub-agents, "Preload skills into subagents")
+**Detection**: Check project and user `.claude/skills/{name}/SKILL.md`, and for a plugin agent the plugin's own `skills/{name}/SKILL.md`. Reported at the `skills` key. Plugin-qualified references are left to plugin resolution; unresolved unqualified names get a warning because an enabled plugin may supply them. Also warn when the list has more than 32 distinct names, and when a project skill it names sets `disable-model-invocation: true`.
+**Fix**: Check enabled plugins or add the skill to project or user skills; trim the list or drop `disable-model-invocation`.
 **Source**: code.claude.com/docs/en/sub-agents
 
 <a id="cc-ag-006"></a>
@@ -1183,8 +1292,8 @@ Kiro agent rules check `.kiro/agents/**/*.json` and `*.md` against the engines a
 
 <a id="cc-ag-007"></a>
 ### CC-AG-007 [HIGH] Agent Parse Error
-**Requirement**: Local agent frontmatter MUST begin on the first line and be valid YAML. Plugin agents with missing or malformed frontmatter load under their filename. `tools`/`disallowedTools` accept a comma/space-separated **string** (the canonical sub-agent form `tools: Read, Glob, Grep`) **or** a YAML list - both parse without error.
-**Detection**: YAML parse error on agent frontmatter
+**Requirement**: Local agent frontmatter MUST begin on the first line and be valid YAML. Vendor text: "YAML that doesn't parse: Claude Code reads no fields from the file, skips it" and "An opening `---` that isn't the file's first line: Claude Code reads the file as having no frontmatter and treats it as documentation." (sub-agents, "Subagent files Claude Code skips"). Plugin agents with missing or malformed frontmatter load under their filename. `tools`/`disallowedTools` accept a comma/space-separated **string** (the canonical sub-agent form `tools: Read, Glob, Grep`) **or** a YAML list - both parse without error.
+**Detection**: YAML parse error on agent frontmatter (error). A local agents-directory file with no frontmatter on its first line, such as `agents/README.md`, gets an info note that Claude Code treats it as documentation.
 **Fix**: Fix YAML syntax errors in agent frontmatter
 **Source**: code.claude.com/docs/en/sub-agents
 
@@ -1192,7 +1301,7 @@ Kiro agent rules check `.kiro/agents/**/*.json` and `*.md` against the engines a
 ### CC-AG-008 [HIGH] Invalid Memory Scope
 **Requirement**: `memory` field MUST be `user`, `project`, or `local`
 **Detection**: Check `memory` value against allowed list
-**Fix**: Auto-fix (unsafe) -- replace with closest valid memory scope
+**Fix**: Auto-fix (unsafe) - replace with closest valid memory scope
 **Source**: code.claude.com/docs/en/sub-agents
 
 <a id="cc-ag-009"></a>
@@ -1223,13 +1332,6 @@ Kiro agent rules check `.kiro/agents/**/*.json` and `*.md` against the engines a
 **Fix**: Review manually; no automatic rewrite of intent or permission behavior.
 **Source**: code.claude.com/docs/en/sub-agents
 
-<a id="cc-ag-013"></a>
-### CC-AG-013 [MEDIUM] Invalid Skill Name Format
-**Requirement**: Skill names in `skills` array SHOULD follow valid naming format (lowercase, hyphens)
-**Detection**: Check skill name matches kebab-case pattern
-**Fix**: [AUTO-FIX] Use kebab-case format (e.g., 'my-skill-name')
-**Source**: code.claude.com/docs/en/sub-agents
-
 <a id="cc-ag-014"></a>
 ### CC-AG-014 [MEDIUM] Invalid Effort Value
 **Requirement**: effort SHOULD be low, medium, high, xhigh, or max
@@ -1252,11 +1354,11 @@ Kiro agent rules check `.kiro/agents/**/*.json` and `*.md` against the engines a
 **Source**: code.claude.com/docs/en/sub-agents
 
 <a id="cc-ag-019"></a>
-### CC-AG-019 [LOW] Unknown Agent Frontmatter Field
-**Requirement**: Agent frontmatter fields MAY be validated against the documented set, including boolean `omitClaudeMd` (Claude Code 2.1.271+), numeric `autoCompactWindow` (2.1.296+; a non-number is a CC-AG-007 parse error), and the `experimental` map (2.1.248+). `experimental.cacheTtl` recognizes `5m` and `1h`; Claude Code ignores other values and ignores `1h` while subscription usage credits are active. These ignored values are accepted; a non-map `experimental` value is a CC-AG-007 parse error. `autoCompactWindow` is a token count that only lowers the window a subagent would otherwise inherit. The 100000-1000000 range documented for settings and `/autocompact` is not applied here.
-**Detection**: Check for keys not in known agent fields
-**Fix**: Manual - remove or fix typo
-**Source**: code.claude.com/docs/en/sub-agents, github.com/anthropics/claude-code/releases/tag/v2.1.296
+### CC-AG-019 [MEDIUM] Unknown or Ignored Agent Frontmatter Field
+**Requirement**: Agent frontmatter fields SHOULD be fields Claude Code reads, with values it accepts. Vendor text: "Multi-word field names use camelCase, such as `maxTurns` and `disallowedTools`, and must match the table exactly: Claude Code ignores a field it doesn't recognize without reporting an error." and, for `autoCompactWindow`, "set `autoCompactWindow` in its frontmatter to a token count from `100000` to `1000000`" and "Write the value as a plain integer such as `200000`, because in frontmatter Claude Code reads `200k` as 200, which is outside the allowed range. The subagent still loads and compacts as if the field were absent." (sub-agents, "Supported frontmatter fields", "Set the auto-compact window for one subagent")
+**Detection**: keys not in the known agent fields (with a specific hint for a top-level `cacheTtl`, which belongs inside `experimental`), and an `autoCompactWindow` that is not an integer from 100000 to 1000000 (a string such as `200k` is reported as ignored, not as a parse error). `experimental.cacheTtl` recognizes `5m` and `1h`; Claude Code ignores other values, so those are accepted; a non-map `experimental` value is a CC-AG-007 parse error.
+**Fix**: Manual - remove or fix typo; write `autoCompactWindow` as a plain integer
+**Source**: code.claude.com/docs/en/sub-agents
 
 <a id="cc-ag-020"></a>
 ### CC-AG-020 [HIGH] Invalid Local Agent Name
@@ -1264,6 +1366,34 @@ Kiro agent rules check `.kiro/agents/**/*.json` and `*.md` against the engines a
 **Detection**: For local agents, flag a leading hyphen, reserved colon, or name longer than 256 characters. Plugin agents may use filename fallback.
 **Fix**: Manual - use a local agent name of at most 256 characters without a leading hyphen or colon
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.218, code.claude.com/docs/en/sub-agents
+
+<a id="cc-ag-021"></a>
+### CC-AG-021 [MEDIUM] Subagent Descriptions Over Startup Budget
+**Requirement**: The project's subagent descriptions SHOULD stay under the combined budget. Vendor text: "When the combined descriptions of your subagents, except the built-in ones, exceed 15,000 tokens, Claude Code shows a warning at startup with the total token count. Trim the `description` fields of your subagents, and move detail into each subagent's system prompt, which only loads when that subagent runs." (sub-agents) and "Each agent counts its name plus its `description` frontmatter." (errors)
+**Detection**: sum of `name` plus `description` over the `.md` files in the `.claude/agents/` tree, estimated as characters / 4 (agnix's estimate; Claude Code's own count can differ, and user or plugin agents are not visible to a project lint). The first agent file in the tree reports the total once.
+**Fix**: Manual
+**Source**: code.claude.com/docs/en/sub-agents, code.claude.com/docs/en/errors
+
+<a id="cc-ag-022"></a>
+### CC-AG-022 [LOW] Subagent Inherits All Tools
+**Requirement**: A subagent SHOULD get only the tools it needs. Vendor text: "Limit tool access: grant only necessary permissions for security and focus" (sub-agents, "Example subagents") and `tools` "Inherits every tool available to subagents if omitted."
+**Detection**: agent with a `name` and neither `tools` nor `disallowedTools` (info)
+**Fix**: Manual
+**Source**: code.claude.com/docs/en/sub-agents
+
+<a id="cc-ag-023"></a>
+### CC-AG-023 [MEDIUM] Duplicate Subagent Name
+**Requirement**: Subagent names SHOULD be unique in a `.claude/agents/` tree. Vendor text: "Keep `name` values unique across the whole tree: if two files under the same `.claude/agents/` directory, including its subfolders, declare the same name, Claude Code loads only one of them, chosen by filesystem read order rather than a documented precedence." (sub-agents, "Choose the subagent scope")
+**Detection**: another `.md` file in the same tree (with frontmatter on its first line) declares the same top-level `name`; each duplicate is reported and names the others
+**Fix**: Manual - rename all but one
+**Source**: code.claude.com/docs/en/sub-agents
+
+<a id="cc-ag-024"></a>
+### CC-AG-024 [MEDIUM] disallowedTools Specifier Removes the Whole Tool
+**Requirement**: `disallowedTools` SHOULD list whole tools. Vendor text: "A `disallowedTools` entry with a specifier, such as `Bash(git push *)`, still removes the whole tool from the subagent, not only the matching commands. To keep Bash and block specific commands, add a Bash deny rule such as `Bash(git push *)` to `permissions.deny` in your settings." and "The `Agent(agent_type)` allowlist syntax applies only to an agent running as the main thread with `claude --agent`. In a subagent definition, listing `Agent` in `tools` lets that subagent spawn subagents of its own while the depth limit allows it, but any type list inside the parentheses is ignored." (sub-agents, "Restrict which tools a subagent can use", "Restrict which subagents can be spawned")
+**Detection**: a `disallowedTools` entry of the form `Tool(...)` (warning); an `Agent(...)` or `Task(...)` entry with a type list in `tools` (info, since agnix can't tell whether the file runs as the main thread), unless the agent sets `initialPrompt`, which only applies to a main session agent
+**Fix**: Manual - move the pattern to `permissions.deny`
+**Source**: code.claude.com/docs/en/sub-agents
 
 ---
 
@@ -1468,105 +1598,105 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 **Requirement**: The manifest is optional. When present, plugin.json MUST be in `.claude-plugin/`.
 **Detection**: For an existing plugin.json, check that its parent directory is `.claude-plugin/`.
 **Fix**: Move to correct location
-**Source**: code.claude.com/docs/en/plugins-reference
+**Source**: code.claude.com/docs/en/plugins/manifest-reference
 
 <a id="cc-pl-002"></a>
 ### CC-PL-002 [HIGH] Components in .claude-plugin/
 **Requirement**: No component directory may be inside `.claude-plugin/`. The documented set is `commands/`, `agents/`, `skills/`, `workflows/`, `output-styles/`, `themes/`, `monitors/`, and `hooks/` - "All other directories ... must be at the plugin root, not inside `.claude-plugin/`".
 **Detection**: Check for each of those eight directories under `.claude-plugin/`
 **Fix**: Move to plugin root
-**Source**: code.claude.com/docs/en/plugins-reference
+**Source**: code.claude.com/docs/en/plugins/manifest-reference
 
 <a id="cc-pl-003"></a>
 ### CC-PL-003 [LOW] Invalid Semver
 **Requirement**: Semver is an optional interoperability recommendation for plugins consumed through version-constrained dependencies. Claude Code accepts arbitrary version strings and does not check manifest versions against semver.
 **Detection**: Warn when a non-empty version string does not parse as semver, including prerelease and build forms. This is advice, not a loader rejection.
 **Fix**: Suggest valid semver. Partial versions can be normalized with an unsafe autofix because changing a version string can change dependency resolution.
-**Source**: code.claude.com/docs/en/plugins-reference#version, code.claude.com/docs/en/plugins/dependencies#tag-plugin-releases-for-version-resolution
+**Source**: code.claude.com/docs/en/plugins/manifest-reference#version, code.claude.com/docs/en/plugins/dependencies#tag-plugin-releases-for-version-resolution
 
 <a id="cc-pl-004"></a>
 ### CC-PL-004 [HIGH] Missing Required/Recommended Plugin Field
 **Requirement**: plugin.json REQUIRES name; description and version are RECOMMENDED
 **Detection**: Parse JSON, check required fields (error for name, warning for description/version)
 **Fix**: Add missing fields
-**Source**: code.claude.com/docs/en/plugins-reference
+**Source**: code.claude.com/docs/en/plugins/manifest-reference
 
 <a id="cc-pl-005"></a>
 ### CC-PL-005 [HIGH] Empty Plugin Name
 **Requirement**: name field MUST NOT be empty
 **Detection**: `name.trim().is_empty()`
 **Fix**: Add plugin name
-**Source**: code.claude.com/docs/en/plugins-reference
+**Source**: code.claude.com/docs/en/plugins/manifest-reference
 
 <a id="cc-pl-006"></a>
 ### CC-PL-006 [HIGH] Plugin Parse Error
 **Requirement**: plugin.json MUST be valid JSON
 **Detection**: JSON parse error on plugin.json
 **Fix**: Fix JSON syntax errors in plugin.json
-**Source**: code.claude.com/docs/en/plugins-reference
+**Source**: code.claude.com/docs/en/plugins/manifest-reference
 
 <a id="cc-pl-007"></a>
 ### CC-PL-007 [HIGH] Invalid Component Path
-**Requirement**: Paths in every documented path-bearing manifest field MUST be relative (no absolute paths or `..` traversal). The full set is `commands`, `agents`, `skills`, `workflows`, `hooks`, `mcpServers`, `outputStyles`, `lspServers`, `experimental.themes`, and `experimental.monitors`. Relative paths SHOULD use a `./` prefix, except that Claude Code 2.1.221+ explicitly accepts `skills: "."` for a root-level `SKILL.md`. `mcpServers` also accepts a valid HTTPS URL ending in `.mcpb` or `.dxt`. agnix conservatively limits its URL exception to this field and literal bundle endpoints without query or fragment suffixes; this scope does not establish whether upstream loads URLs with those suffixes.
-**Detection**: Check path fields for absolute paths (`/`, `C:\`), parent traversal (`..`), or a missing `./` prefix; exempt the documented `skills: "."` root path.
+**Requirement**: Paths in every documented path-bearing manifest field MUST be relative to the plugin root, start with `./`, stay inside the plugin root and exist. Vendor text: "Every component path in a manifest is relative to the plugin root and must start with `./`. A path such as `commands/foo.md` fails validation.", "`agents` entries must be `.md` files, and `skills` entries must be directories." and "Every component path must resolve inside the plugin root and must exist." (plugins manifest reference, "Path rules", "Path-only fields", "Containment and existence"). The full set is `commands`, `agents`, `skills`, `workflows`, `hooks`, `mcpServers`, `outputStyles`, `lspServers`, `experimental.themes`, and `experimental.monitors`. Claude Code 2.1.221+ explicitly accepts `skills: "."` for a root-level `SKILL.md`. `mcpServers` also accepts a valid HTTPS URL ending in `.mcpb` or `.dxt`. agnix conservatively limits its URL exception to this field and literal bundle endpoints without query or fragment suffixes; this scope does not establish whether upstream loads URLs with those suffixes.
+**Detection**: Check path fields for absolute paths (`/`, `C:\`), parent traversal (`..`), or a missing `./` prefix; exempt the documented `skills: "."` root path. For a manifest in `.claude-plugin/`, also report `agents` entries that are not `.md` paths (directories and inline objects), `skills` entries that name a `.md` file, and `./` paths that don't exist under the plugin root (paths with `$` placeholders are skipped).
 **Fix**: Prepend `./` to relative paths other than the root `skills: "."` form [safe autofix]
-**Source**: code.claude.com/docs/en/plugins-reference, github.com/anthropics/claude-code/releases/tag/v2.1.221
+**Source**: code.claude.com/docs/en/plugins/manifest-reference, github.com/anthropics/claude-code/releases/tag/v2.1.221
 
 <a id="cc-pl-008"></a>
 ### CC-PL-008 [HIGH] Component Inside .claude-plugin
 **Requirement**: Component paths in manifest MUST NOT point inside `.claude-plugin/` directory
 **Detection**: Check if path fields reference `.claude-plugin/` subdirectories
 **Fix**: Suggest moving components to plugin root
-**Source**: code.claude.com/docs/en/plugins-reference
+**Source**: code.claude.com/docs/en/plugins/manifest-reference
 
 <a id="cc-pl-009"></a>
 ### CC-PL-009 [MEDIUM] Invalid Author Object
 **Requirement**: If `author` field is present, `author.name` SHOULD be a non-empty string
 **Detection**: Check `author.name` exists and is non-empty when `author` is present
 **Fix**: Manual fix required
-**Source**: code.claude.com/docs/en/plugins-reference
+**Source**: code.claude.com/docs/en/plugins/manifest-reference
 
 <a id="cc-pl-010"></a>
-### CC-PL-010 [MEDIUM] Invalid Homepage URL
-**Requirement**: If `homepage` field is present, it SHOULD be a valid URL (http/https)
-**Detection**: Validate URL format with http/https scheme check
+### CC-PL-010 [HIGH] Invalid Homepage URL
+**Requirement**: If `homepage` is present, it MUST parse as a URL. Vendor text: "Documentation URL. Must parse as a URL, or the plugin fails to load" (plugins manifest reference, "Fields")
+**Detection**: `url::Url::parse(homepage)` fails, or `homepage` is not a string (error). A URL that parses but isn't `http` or `https` gets an info note, since the doc only says "parse as a URL". An empty string is not reported.
 **Fix**: Manual fix required
-**Source**: code.claude.com/docs/en/plugins-reference
+**Source**: code.claude.com/docs/en/plugins/manifest-reference
 
 <a id="cc-pl-011"></a>
 ### CC-PL-011 [HIGH] LSP Server Missing Required Fields
 **Requirement**: LSP servers MUST have command and extensionToLanguage
 **Detection**: Check lspServers entries for required fields
 **Fix**: Manual
-**Source**: code.claude.com/docs/en/plugins-reference
+**Source**: code.claude.com/docs/en/plugins/manifest-reference
 
 <a id="cc-pl-012"></a>
 ### CC-PL-012 [MEDIUM] Invalid UserConfig Key
 **Requirement**: userConfig keys SHOULD be valid identifiers
 **Detection**: Check keys match identifier pattern
 **Fix**: Manual
-**Source**: code.claude.com/docs/en/plugins-reference
+**Source**: code.claude.com/docs/en/plugins/manifest-reference
 
 <a id="cc-pl-013"></a>
 ### CC-PL-013 [MEDIUM] Channel Missing Server Reference
 **Requirement**: channels entries SHOULD have server field
 **Detection**: Check each channel has server key
 **Fix**: Manual
-**Source**: code.claude.com/docs/en/plugins-reference
+**Source**: code.claude.com/docs/en/plugins/manifest-reference
 
 <a id="cc-pl-014"></a>
-### CC-PL-014 [MEDIUM] Plugin Agent Unsupported Field
-**Requirement**: Plugin agents SHOULD NOT use hooks, mcpServers, or permissionMode
-**Detection**: Check plugin agent frontmatter for unsupported keys
-**Fix**: Manual - remove unsupported fields
-**Source**: code.claude.com/docs/en/plugins-reference
+### CC-PL-014 [MEDIUM] Plugin Agent Field Ignored
+**Requirement**: Plugin agent files SHOULD NOT set fields Claude Code ignores for plugin agents. Vendor text: "Ignored fields: `permissionMode`, `hooks`, `mcpServers`, and `initialPrompt`. An agent file can't add hooks or MCP servers on its own, so add those as plugin hooks and MCP servers instead" (plugins components, "Frontmatter fields in plugin agents")
+**Detection**: frontmatter of an agent Markdown file under a plugin's `agents/` directory (the plugin root has `.claude-plugin/`) sets `permissionMode`, `hooks`, `mcpServers` or `initialPrompt`. Inline agent objects in `plugin.json` are not a documented shape ("`agents` entries must be `.md` files") and are reported by CC-PL-007.
+**Fix**: Manual - remove the field, or declare hooks and MCP servers at plugin level
+**Source**: code.claude.com/docs/en/plugins/components, code.claude.com/docs/en/sub-agents
 
 <a id="cc-pl-015"></a>
 ### CC-PL-015 [MEDIUM] Default Component Folder Shadowed by Manifest
 **Requirement**: If a root default component folder for a **replace-semantics** field exists, `plugin.json` SHOULD include that folder in the matching manifest field or avoid overriding that field. Per the "Path behavior rules" section of the plugins reference, only `commands`, `agents`, `workflows`, `outputStyles`, `experimental.themes`, and `experimental.monitors` replace their default. `skills` **adds** to the default scan (the default `skills/` directory is always scanned), and `hooks`/`mcpServers`/`lspServers` have their own merge rules, so none of those can shadow and none are checked.
 **Detection**: Check `.claude-plugin/plugin.json` for a replace-semantics component field while the matching root folder exists and is not one of the configured paths. Folder names differ from manifest keys for `outputStyles` (`output-styles/`) and the `experimental.*` keys (`themes/`, `monitors/`).
 **Fix**: Manual - add `./<component>` to the manifest field, or move the files into a configured component path.
-**Source**: code.claude.com/docs/en/plugins-reference, github.com/anthropics/claude-code/releases/tag/v2.1.140
+**Source**: code.claude.com/docs/en/plugins/manifest-reference, github.com/anthropics/claude-code/releases/tag/v2.1.140
 
 ---
 
@@ -1576,14 +1706,100 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 **Requirement**: A plugin manifest `name` SHOULD be a kebab-case identifier - lowercase letters, digits, and hyphens, with no spaces, no leading or trailing hyphen, and no doubled hyphen.
 **Detection**: Reject spaces, `@`, `:`, path separators, control and invisible characters. Warn for other accepted names that are not kebab-case, such as uppercase letters or underscores.
 **Fix**: Manual - rename the plugin.
-**Source**: code.claude.com/docs/en/plugins-reference, github.com/anthropics/claude-code/releases/tag/v2.1.247
+**Source**: code.claude.com/docs/en/plugins/manifest-reference, github.com/anthropics/claude-code/releases/tag/v2.1.247
 
 <a id="cc-pl-017"></a>
 ### CC-PL-017 [MEDIUM] Unknown Plugin Manifest Field
 **Requirement**: Manifest keys SHOULD match the documented top-level fields. Claude Code strips unknown keys at load time.
 **Detection**: Warn for keys outside the manifest reference, including misspellings such as `homepag`.
 **Fix**: Correct the key spelling or remove it.
-**Source**: code.claude.com/docs/en/plugins-reference
+**Source**: code.claude.com/docs/en/plugins/manifest-reference
+
+<a id="cc-pl-018"></a>
+### CC-PL-018 [HIGH] Reserved Plugin Name
+**Requirement**: A plugin name MUST NOT pass as one of Anthropic's own. Vendor text: "`claude plugin validate` also checks that the name doesn't pass as one of Anthropic's own plugins. The check ignores case and treats any run of separators as one", with "Starts with `claude-`, `anthropic-`, `anthropics-`, or `cc-plugin-` | Error", "Is `claude`, `anthropic`, `anthropics`, `claude-code`, or `claude-mods` | Error", "Puts `official` beside `claude` or `anthropic`, such as `official-claude-tools` | Error" and "Has `claude`, `anthropic`, or `anthropics` as a whole word anywhere else, such as `mcp-for-claude` | Warning". "`claude plugin init` and `claude plugin tag` refuse a name that draws the error. Claude Code still installs and loads a plugin whose name they refuse." (plugins manifest reference, "`name`")
+**Detection**: the `plugin.json` `name`, split into words on any non-alphanumeric run and lowercased: the error set is an error, the warning set a warning. Plugins whose `author` is Anthropic, or that sit in a marketplace owned by Anthropic, are exempt. Marketplace entry names get the same check under CC-MP-002.
+**Fix**: Manual - rename the plugin
+**Source**: code.claude.com/docs/en/plugins/manifest-reference, code.claude.com/docs/en/plugins/marketplace-reference
+
+<a id="cc-pl-019"></a>
+### CC-PL-019 [MEDIUM] Invalid Dependency Version Range
+**Requirement**: A dependency `version` MUST be a semantic-version range. Vendor text: "`version` | A semantic-version range such as `~2.1.0`, `^2.0`, `>=1.4`, or `=2.1.0`. The dependency installs at the highest git tag that satisfies this range, so the dependency's maintainer must tag releases." (plugin dependencies, "Declare a dependency with a version constraint")
+**Detection**: `dependencies[i].version` that is not a node-semver range: `||` alternatives of comparators (`<`, `<=`, `>`, `>=`, `=`, `~`, `~>`, `^`, X-ranges) or a hyphen range
+**Fix**: Manual
+**Source**: code.claude.com/docs/en/plugins/dependencies, code.claude.com/docs/en/plugins/manifest-reference
+
+<a id="cc-pl-020"></a>
+### CC-PL-020 [MEDIUM] Unbraced Plugin Variable in Plugin Content
+**Requirement**: Plugin skill, command and agent content SHOULD write path variables in braces. Vendor text: "The variables aren't present in the environment of commands Claude runs through the Bash tool, in the main session or in a subagent. In skill, command, and agent content, write the `${...}` reference in the Markdown body instead, and Claude Code substitutes the path inline when it loads the content." (plugins manifest reference, "Where each variable resolves")
+**Detection**: the body of a plugin skill (SKILL.md under a plugin root) or plugin agent contains `$CLAUDE_PLUGIN_ROOT` or `$CLAUDE_PLUGIN_DATA` without braces. Hook commands get the variables from their environment, so lines that mention hooks, fenced JSON blocks and inline code spans holding only the variable name are skipped. Plugin command files are not detected as a file type.
+**Fix**: Manual - write `${CLAUDE_PLUGIN_ROOT}`
+**Source**: code.claude.com/docs/en/plugins/manifest-reference
+
+<a id="cc-pl-021"></a>
+### CC-PL-021 [MEDIUM] Plugin Settings Key Dropped
+**Requirement**: A plugin's settings SHOULD only use the keys that take effect. Vendor text: "Only two keys take effect from a plugin, `agent` and `subagentStatusLine`; every other key is dropped." (plugins components) and, for the manifest key, "Only `agent` and `subagentStatusLine` take effect; other keys are dropped at load." (plugins manifest reference, "`settings`")
+**Detection**: keys other than `agent`, `subagentStatusLine` (and `$schema`) in a `settings.json` beside `.claude-plugin/`, or in the manifest `settings` object
+**Fix**: Manual
+**Source**: code.claude.com/docs/en/plugins/components, code.claude.com/docs/en/plugins/manifest-reference
+
+<a id="cc-pl-022"></a>
+### CC-PL-022 [HIGH] Monitor Command References user_config
+**Requirement**: A monitor `command` MUST NOT reference `${user_config.*}`. Vendor text: "`command` gets the path variables and `${ENV_VAR}` from the environment, but never `${user_config.*}`. A monitor that references one doesn't start, and monitor processes don't receive `CLAUDE_PLUGIN_OPTION_<KEY>` either" (plugins components, "Monitors")
+**Detection**: monitor entries inline in `experimental.monitors` (or a top-level `monitors` array), in the file `experimental.monitors` names, or in the default `monitors/monitors.json`
+**Fix**: Manual
+**Source**: code.claude.com/docs/en/plugins/components, code.claude.com/docs/en/plugins/manifest-reference
+
+<a id="cc-pl-023"></a>
+### CC-PL-023 [HIGH] Invalid Key or Value in Strict Manifest Object
+**Requirement**: Strict manifest objects MUST only use their documented keys, and `userConfig` options MUST follow the options rules. Vendor text: "Strict objects: `userConfig` options, `channels` entries, `lspServers` configs, and `monitors` entries are strict. An unknown key inside one is an error, and the plugin doesn't load" (plugins manifest reference, "Unrecognized fields") and "`options` applies to a `string` field that isn't `multiple` or `sensitive`. Set `default` to one of the listed values, or set `required: true` so the user must pick one. Each option is a plain label of 1 to 64 characters ... A plugin whose `options` break these rules fails to load." ("Limit a field to fixed options")
+**Detection**: unknown keys in `userConfig` options (top level and inside `channels[].userConfig`), `channels` entries, inline `lspServers` configs and `.lsp.json`/listed LSP files, and monitor entries; `options` on a non-string, `multiple` or `sensitive` field, labels that are not 1-64-character strings, and a `default` outside `options` without `required: true`
+**Fix**: Manual
+**Source**: code.claude.com/docs/en/plugins/manifest-reference
+
+---
+
+## CLAUDE CODE RULES (PLUGIN MARKETPLACES)
+
+> **Scope:** `.claude-plugin/marketplace.json` (a new file type). The rules mirror the `claude plugin validate` messages in the marketplace reference ("Validation messages") and the load-time failures it lists. Positions point at the field each message names.
+
+<a id="cc-mp-001"></a>
+### CC-MP-001 [HIGH] Marketplace Parse Error or Missing Required Field
+**Requirement**: The marketplace file MUST parse and set the required fields. Vendor text: "`name`, `owner`, and `plugins` are required.", `owner` "`name` is required", and plugin entries: "`name` and `source` are required." (marketplace reference, "Top-level fields", "Plugin entries")
+**Detection**: invalid JSON, a non-object root, a missing or empty `name` or `owner.name`, a missing `plugins` array, and entries that are not objects or lack `name` or `source`
+**Fix**: Manual
+**Source**: code.claude.com/docs/en/plugins/marketplace-reference
+
+<a id="cc-mp-002"></a>
+### CC-MP-002 [HIGH] Invalid or Reserved Marketplace or Plugin Name
+**Requirement**: Marketplace and plugin entry names MUST be ids Claude Code accepts and MUST NOT be reserved. Vendor text: marketplace `name` "letters, digits, `.`, `_`, and `-`, starting with a letter or digit, and no `..`. `claude plugin validate` fails any other name, because Claude Code can't install plugins from a marketplace that uses one", and plugin entry `name` "letters, digits, `.`, `_`, and `-`, starting with a letter or digit. `claude plugin validate` fails other names, which Claude Code can't install" (marketplace reference, "Top-level fields", "Plugin entries"); "You can't give your marketplace any of the following names" ("Reserved names")
+**Detection**:
+  - marketplace `name`: control or bidirectional-formatting characters, non-ASCII ("any name containing a non-ASCII character"), spaces, `/`, `\`, `..` or `.`, other characters outside the id set, the `claudeai-` prefix, the official, community and directory names (unless the `owner` is Anthropic), another spelling of a reserved name (trailing dot, or a symbol other than `_` in place of `-`), `inline`, `builtin`, `skills-dir`, `synced`, `claude-plugin-test`, `npm`/`pip`/`uv`/`cargo`/`github`/`gh` in any casing, and JavaScript object member names
+  - entry `name`: control characters, spaces, characters outside the id set, and the CC-PL-018 reserved-name table (error set as errors, warning set as warnings; skipped for an Anthropic owner or author)
+  - not covered: the open-ended "names that impersonate an official marketplace" heuristic beyond non-ASCII, and the `<owner>-<repo>` download-folder clash, which depends on what the user has registered
+**Fix**: Manual
+**Source**: code.claude.com/docs/en/plugins/marketplace-reference, code.claude.com/docs/en/plugins/manifest-reference
+
+<a id="cc-mp-003"></a>
+### CC-MP-003 [HIGH] Invalid Plugin Source, Duplicate Entry or Unresolved Rename
+**Requirement**: Plugin sources, entry names and renames MUST validate. Vendor text: "`plugins.i.source: Invalid string: must start with "./"`", "`plugins[i].source: Path contains "..": <path>`", "`Duplicate plugin name "x" found in marketplace`", "`plugins.i.source: Invalid input`" and "`chain does not resolve (<reason>) — target must be a name in plugins[], a key in renames, or null`" are errors (marketplace reference, "Validation messages"); "On macOS and Linux, Claude Code refuses an entry path that contains a backslash anywhere after the leading `./`" ("Relative path plugin source")
+**Detection**: a string `source` that contains `..`, has a backslash after `./`, or doesn't start with `./` (other than `.` or a bare name under `metadata.pluginRoot`); an object `source` whose `source` type is unknown, the `unsupported` placeholder, or missing its required field (`github` `repo`, `url` `url`, `git-subdir` `url` and `path`, `npm` `package`, `archive` `url`, `command` `command`); a duplicate entry `name`; a `renames` value that is not null, a plugin name in `plugins`, or a key in `renames`
+**Fix**: Manual
+**Source**: code.claude.com/docs/en/plugins/marketplace-reference
+
+<a id="cc-mp-004"></a>
+### CC-MP-004 [HIGH] Marketplace Entry Fails to Load
+**Requirement**: Marketplace entries MUST NOT use field forms that fail at load time. Vendor text: "Write entry `hooks` as an inline object that maps hook event names to matcher arrays. If you write a file path or an array instead, `claude plugin validate` passes it. Those hooks never run" ("Hooks in an entry"); "`Plugin "x" sets headersHelper but is not "strict": false`" is an error ("Validation messages"); and with `strict: false`, plugin.json present and component fields on the entry, "the plugin fails to load with `Plugin <name> has conflicting manifests: both plugin.json and marketplace entry specify components`" ("Strict mode")
+**Detection**: entry `hooks` that is a string or array; `headersHelper` without `"strict": false`; `"strict": false` with `commands`, `agents`, `skills`, `hooks`, `outputStyles` or `themes` on a relative-path entry whose directory has `.claude-plugin/plugin.json`
+**Fix**: Manual
+**Source**: code.claude.com/docs/en/plugins/marketplace-reference, code.claude.com/docs/en/plugins/manifest-reference
+
+<a id="cc-mp-005"></a>
+### CC-MP-005 [LOW] Marketplace Field Ignored or Missing Metadata
+**Requirement**: Marketplace files SHOULD avoid fields Claude Code ignores and SHOULD describe the marketplace. Vendor text: "Claude Code ignores an unknown top-level key or plugin-entry key rather than rejecting it, so a typo loads silently. `claude plugin validate` reports each unknown key as a warning." ("Marketplace file"), plus the warnings "No marketplace description provided", "Marketplace has no plugins defined", "Entry declares version "x" but <path>/plugin.json says "y". At install time, plugin.json wins" and "sets headers/headersHelper, which only apply to "archive" sources; they have no effect on this entry." ("Validation messages")
+**Detection**: unknown keys at the top level, under `metadata` and in entries (directory listing fields such as `icon` count as unknown in an entry); no `description` or `metadata.description`; an empty `plugins` array; an entry `version` that differs from the relative-path plugin's `plugin.json`; `headers` or `headersHelper` on a non-archive entry
+**Fix**: Manual
+**Source**: code.claude.com/docs/en/plugins/marketplace-reference
 
 ## MCP RULES
 
@@ -1753,19 +1969,46 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 **Fix**: Add at least one meaningful field (`type`, `command`, `url`, `args`, `env`)
 **Source**: modelcontextprotocol.io/specification/2025-11-25/basic/transports
 
-<a id="mcp-025"></a>
-### MCP-025 [MEDIUM] Non-boolean alwaysLoad in MCP Server Config
-**Requirement**: `mcpServers.*.alwaysLoad` MUST be a boolean when present (Claude Code 2.1.121+)
-**Detection**: Validate `mcpServers.*.alwaysLoad` type; flag string / number / array / object values
-**Fix**: Opt-in unsafe autofix converts exact quoted `true` or `false` to a boolean. This can activate ignored settings or change security policy; plain `--fix` leaves them unchanged. Other invalid values require manual correction.
-**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.121
+---
 
-<a id="mcp-026"></a>
-### MCP-026 [HIGH] Reserved MCP Server Name
-**Requirement**: MCP server names in `mcpServers` MUST NOT collide with names Claude Code reserves for internal use. As of Claude Code 2.1.128, `workspace` is reserved - servers registered under that key are silently skipped at startup with only a Claude Code log warning.
-**Detection**: Walk top-level `mcpServers` keys (case-sensitive); flag any that match the reserved list (`workspace` today).
-**Fix**: Manual - rename the server to something unique.
-**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.128
+## CLAUDE CODE RULES (MCP)
+
+> **Scope:** Claude Code's own handling of MCP server entries. CC-MCP-001, -002, -004 and -005 run only on the MCP files Claude Code reads - a project `.mcp.json` and a plugin's `.mcp.json` (the directory has `.claude-plugin/`) - so other clients' MCP files (`.cursor/mcp.json`, `.vscode/mcp.json`, ...) don't get Claude Code facts. CC-MCP-003 runs on MCP tool listings. The generic MCP rules (MCP-*) still run on every MCP file.
+
+<a id="cc-mcp-001"></a>
+### CC-MCP-001 [HIGH] Credential Variable Reads as Empty in Remote MCP Server
+**Requirement**: A remote server's `url` and `headers` MUST NOT reference the credential variables Claude Code reads as empty. Vendor text: "In a remote server's `url` and `headers`, Claude Code reads credential variables from your environment as empty rather than expanding them. ... If you write `Bearer ${ANTHROPIC_AUTH_TOKEN}`, the server receives `Bearer ` with no credential and rejects the request, usually with a `401`." and "A covered name reads as empty whether or not you have set the variable, and a `:-default` fallback on it is ignored." (mcp, "Credential variables that read as empty")
+**Detection**: on servers with `type` `http`, `streamable-http`, `sse` or `ws`, a `${NAME}` or `${NAME:-...}` in `url` or a `headers` value, where NAME is one the page names: `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`, `AWS_BEARER_TOKEN_BEDROCK`, `HTTPS_PROXY`, `NPM_TOKEN`. The page introduces them with "such as", so the list is the documented subset. `ANTHROPIC_BASE_URL` still expands and is not reported.
+**Fix**: Manual - copy the value into a variable with a name of your own
+**Source**: code.claude.com/docs/en/mcp
+
+<a id="cc-mcp-002"></a>
+### CC-MCP-002 [MEDIUM] CLAUDE_PROJECT_DIR Without Default in Project .mcp.json
+**Requirement**: A project `.mcp.json` `command` or `args` MUST give `${CLAUDE_PROJECT_DIR}` a default. Vendor text: "This variable is set in the server's environment, not in Claude Code's own environment, so referencing it via `${VAR}` expansion in the `command` or `args` of a project-scoped `.mcp.json` entry or a local- or user-scoped server entry in `~/.claude.json` requires a default such as `${CLAUDE_PROJECT_DIR:-.}`. Plugin-provided MCP configurations substitute `${CLAUDE_PROJECT_DIR}` directly and don't need the default." (mcp, "Option 3: Add a local stdio server")
+**Detection**: project `.mcp.json` (not a plugin's) server whose `command` or an `args` element contains `${CLAUDE_PROJECT_DIR}`
+**Fix**: Manual - write `${CLAUDE_PROJECT_DIR:-.}`
+**Source**: code.claude.com/docs/en/mcp
+
+<a id="cc-mcp-003"></a>
+### CC-MCP-003 [LOW] MCP Tool Description or Instructions Truncated
+**Requirement**: MCP tool descriptions and server instructions SHOULD fit what Claude Code keeps. Vendor text: "**Server instructions, and the description of a tool that loads upfront**: 4,096 characters" and "Claude Code cuts a tool description or server instructions that run past these default limits, and Claude sees only the text before the cut." (mcp, "Tool search for MCP server authors")
+**Detection**: a `tools[]` (or `result.tools[]`) description longer than 4,096 characters (16,384 when the tool sets `_meta["anthropic/alwaysLoad"]: false`), or `instructions` (or `result.instructions`) longer than 4,096 characters (info). With a pinned Claude Code version older than 2.1.296 (released 2026-10-09), the upfront limit is 2,048.
+**Fix**: Manual
+**Source**: code.claude.com/docs/en/mcp
+
+<a id="cc-mcp-004"></a>
+### CC-MCP-004 [MEDIUM] Non-boolean alwaysLoad in Claude Code MCP Config
+**Requirement**: `alwaysLoad` MUST be a boolean when present. Vendor text: "If a server's tools should always be visible to Claude without a search step, set `alwaysLoad` to `true` in that server's configuration." and "To keep all of a server's tools behind tool search, set `"alwaysLoad": false`" (mcp, "Exempt a server from deferral")
+**Detection**: string, number, array or object `alwaysLoad` on a server in a Claude Code `.mcp.json` (JSON `null` counts as absent)
+**Fix**: Opt-in unsafe autofix converts exact quoted `true` or `false` to a boolean. This can activate ignored settings or change security policy; plain `--fix` leaves them unchanged. Other invalid values require manual correction.
+**Source**: code.claude.com/docs/en/mcp
+
+<a id="cc-mcp-005"></a>
+### CC-MCP-005 [HIGH] Reserved MCP Server Name
+**Requirement**: MCP server names MUST NOT be names Claude Code reserves. Vendor text: "Claude Code reserves the names of its built-in servers, including `workspace`, `claude-in-chrome`, `computer-use`, `Claude Preview`, and `Claude Browser`. If your configuration defines a server with a reserved name, Claude Code skips it at load time and shows a warning asking you to rename it." (mcp, "Configuration warnings") and "Prompts from a server named `anthropic-skills` don't appear, because Claude Code reserves that name for skills synced from claude.ai. The server's tools still work."
+**Detection**: top-level server keys of a project `.mcp.json`, compared case-sensitively with the five reserved names (error); `anthropic-skills` gets an info note. A plugin's servers are scoped as `plugin:<plugin>:<server>`, so plugin `.mcp.json` keys are not checked.
+**Fix**: Manual - rename the server
+**Source**: code.claude.com/docs/en/mcp
 
 ---
 
@@ -4363,7 +4606,7 @@ Implement these 30 rules first:
 Add these 15 rules:
 - AS-011 through AS-013 and AS-015 (Skills best practices)
 - CC-MEM-004, CC-MEM-010, CC-MEM-014 through CC-MEM-021 (Memory quality)
-- CC-AG-001 through CC-AG-013 (Agents)
+- CC-AG-001 through CC-AG-012 (Agents)
 - CC-PL-001 through CC-PL-010 (Plugins)
 
 ### P2 (Week 5-6)
@@ -4460,7 +4703,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | AS-009 | Strip XML tags from skill description | unsafe |
 | CC-AG-001 | Insert name field derived from filename | unsafe |
 | CC-AG-002 | Insert description placeholder | unsafe |
-| CC-AG-013 | Replace skill name with kebab-case version | unsafe |
+| CC-HK-033 | Append `__.*` to a bare MCP server matcher | unsafe |
+| CC-MCP-004 | Convert quoted true/false alwaysLoad to a JSON boolean | unsafe |
 | CC-SK-006 | Insert disable-model-invocation: true | unsafe |
 | CC-PL-003 | Normalize partial semver | unsafe |
 | AGM-001 | Append closing code fence for unclosed blocks | unsafe |
@@ -4518,13 +4762,15 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | AGENTS.md | 5 | 1 | 4 | 0 | 1 |
 | Amp Checks | 4 | 2 | 2 | 0 | 3 |
 | Amp Skills | 1 | 0 | 1 | 0 | 1 |
-| Claude Agents | 18 | 10 | 7 | 1 | 9 |
-| Claude Hooks | 26 | 15 | 7 | 4 | 11 |
+| Claude Agents | 21 | 10 | 10 | 1 | 7 |
+| Claude Hooks | 32 | 19 | 10 | 3 | 11 |
 | Claude Memory | 15 | 4 | 6 | 5 | 1 |
 | Claude Output Styles | 6 | 2 | 3 | 1 | 2 |
-| Claude Plugins | 17 | 8 | 8 | 1 | 4 |
+| Claude Plugins | 23 | 12 | 10 | 1 | 3 |
+| Claude Marketplaces | 5 | 4 | 0 | 1 | 0 |
+| Claude MCP | 5 | 2 | 2 | 1 | 1 |
 | Claude Settings | 35 | 2 | 32 | 1 | 12 |
-| Claude Skills | 19 | 10 | 8 | 1 | 7 |
+| Claude Skills | 28 | 9 | 9 | 10 | 7 |
 | Cline | 14 | 6 | 7 | 1 | 2 |
 | Cline Skills | 2 | 0 | 2 | 0 | 1 |
 | Codex CLI | 64 | 31 | 28 | 5 | 9 |
@@ -4546,7 +4792,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Kiro Ignore | 1 | 0 | 1 | 0 | 0 |
 | Kiro Skills | 2 | 0 | 1 | 1 | 1 |
 | Kiro Steering | 16 | 4 | 10 | 2 | 1 |
-| MCP | 25 | 18 | 6 | 1 | 8 |
+| MCP | 23 | 17 | 5 | 1 | 7 |
 | OpenCode | 46 | 28 | 17 | 1 | 11 |
 | OpenCode Skills | 1 | 0 | 1 | 0 | 1 |
 | Prompt Eng | 4 | 0 | 3 | 1 | 1 |
@@ -4557,7 +4803,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 0 | 3 | 0 | 3 |
-| **TOTAL** | **574** | **242** | **264** | **68** | **132** |
+| **TOTAL** | **606** | **254** | **274** | **78** | **129** |
 
 
 ---
@@ -4585,8 +4831,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 574 validation rules across 43 categories
+**Total Coverage**: 606 validation rules across 45 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 242 HIGH, 264 MEDIUM, 68 LOW
-**Auto-Fixable**: 132 rules (23%)
+**Certainty**: 254 HIGH, 274 MEDIUM, 78 LOW
+**Auto-Fixable**: 129 rules (21%)

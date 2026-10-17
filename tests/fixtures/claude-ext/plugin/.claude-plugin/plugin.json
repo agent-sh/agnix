@@ -1,0 +1,12 @@
+{
+  "name": "claude-helper",
+  "description": "Fixture plugin for the claude-ext rules",
+  "version": "1.0.0",
+  "homepage": "not a url",
+  "agents": ["./agents/reviewer.md", "./agents/"],
+  "dependencies": [{ "name": "secrets-vault", "version": "latest" }],
+  "settings": { "agent": "reviewer", "model": "opus" },
+  "userConfig": {
+    "api_token": { "type": "string", "title": "API token", "description": "Token", "secret": true }
+  }
+}

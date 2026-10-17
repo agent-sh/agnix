@@ -636,7 +636,7 @@ fn validate_pr_url_template(
 /// organisations with managed settings must opt in explicitly by setting
 /// `channelsEnabled: true`. When present, the field MUST be a boolean -
 /// a quoted `"true"` or a truthy number leaves Channels silently disabled
-/// (same shape as the MCP-025 `alwaysLoad` footgun).
+/// (same shape as the CC-MCP-004 `alwaysLoad` footgun).
 ///
 /// Missing field is fine: Channels just stays disabled (the pre-v2.1.128
 /// default for console orgs). We only flag explicitly-set non-boolean

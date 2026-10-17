@@ -654,7 +654,8 @@ Body"#;
     let validator = SkillValidator;
     let diagnostics = validator.validate(Path::new("test.md"), content, &LintConfig::default());
 
-    // Should have an error for CC-SK-006
+    // CC-SK-006 is advice ("Use this for workflows with side effects"), so it
+    // is now a MEDIUM warning, not an error.
     let cc_sk_006_errors: Vec<_> = diagnostics
         .iter()
         .filter(|d| d.rule == "CC-SK-006")
@@ -663,7 +664,7 @@ Body"#;
     assert_eq!(cc_sk_006_errors.len(), 1);
     assert_eq!(
         cc_sk_006_errors[0].level,
-        crate::diagnostics::DiagnosticLevel::Error
+        crate::diagnostics::DiagnosticLevel::Warning
     );
 }
 
@@ -740,6 +741,27 @@ Body"#,
             "Expected CC-SK-006 error for name: {}",
             name
         );
+    }
+}
+
+#[test]
+fn test_cc_sk_006_matches_whole_segments_only() {
+    for (name, expected) in [
+        ("send-slack-message", 1),
+        ("commit", 1),
+        ("prepare-release", 1),
+        ("deployment-triage", 0),
+        ("codedeploy-triage", 0),
+        ("ownership-map", 0),
+        ("commit-style", 0),
+        ("release-notes", 0),
+        ("pipeline-release-friction-analysis", 0),
+    ] {
+        let content = format!("---\nname: {name}\ndescription: A skill\n---\nBody");
+        let diagnostics =
+            SkillValidator.validate(Path::new("test.md"), &content, &LintConfig::default());
+        let count = diagnostics.iter().filter(|d| d.rule == "CC-SK-006").count();
+        assert_eq!(count, expected, "name: {name}");
     }
 }
 
@@ -3495,9 +3517,11 @@ Process path: $ARGUMENTS[0]"#;
         .collect();
 
     assert_eq!(cc_sk_016.len(), 1);
+    // `argument-hint` is only an autocomplete hint in the skills reference, so
+    // CC-SK-016 is an agnix suggestion reported at LOW (info).
     assert_eq!(
         cc_sk_016[0].level,
-        crate::diagnostics::DiagnosticLevel::Warning
+        crate::diagnostics::DiagnosticLevel::Info
     );
 }
 

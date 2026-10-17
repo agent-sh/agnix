@@ -25,6 +25,8 @@ pub enum FileType {
     Hooks,
     /// plugin.json (validator checks .claude-plugin/ location)
     Plugin,
+    /// Claude Code plugin marketplace file (.claude-plugin/marketplace.json)
+    ClaudeMarketplace,
     /// MCP configuration files (*.mcp.json, mcp.json, mcp-*.json)
     Mcp,
     /// GitHub Copilot global instructions (.github/copilot-instructions.md)
@@ -52,6 +54,8 @@ pub enum FileType {
     ClaudeMemoryIndex,
     /// .claudeignore, which Claude Code does not read
     ClaudeIgnore,
+    /// Claude Code legacy custom command files (.claude/commands/**/*.md)
+    ClaudeCommand,
     /// Cursor project rules (.cursor/rules/*.md, .cursor/rules/*.mdc, including nested dirs)
     CursorRule,
     /// Cursor hooks configuration (.cursor/hooks.json)
@@ -190,6 +194,7 @@ impl fmt::Display for FileType {
             FileType::AmpCheck => "AmpCheck",
             FileType::Hooks => "Hooks",
             FileType::Plugin => "Plugin",
+            FileType::ClaudeMarketplace => "ClaudeMarketplace",
             FileType::Mcp => "Mcp",
             FileType::Copilot => "Copilot",
             FileType::CopilotScoped => "CopilotScoped",
@@ -201,6 +206,7 @@ impl fmt::Display for FileType {
             FileType::ClaudeOutputStyle => "ClaudeOutputStyle",
             FileType::ClaudeMemoryIndex => "ClaudeMemoryIndex",
             FileType::ClaudeIgnore => "ClaudeIgnore",
+            FileType::ClaudeCommand => "ClaudeCommand",
             FileType::CursorRule => "CursorRule",
             FileType::CursorHooks => "CursorHooks",
             FileType::CursorAgent => "CursorAgent",
@@ -265,6 +271,7 @@ mod tests {
             (FileType::AmpCheck, "AmpCheck"),
             (FileType::Hooks, "Hooks"),
             (FileType::Plugin, "Plugin"),
+            (FileType::ClaudeMarketplace, "ClaudeMarketplace"),
             (FileType::Mcp, "Mcp"),
             (FileType::Copilot, "Copilot"),
             (FileType::CopilotScoped, "CopilotScoped"),
@@ -276,6 +283,7 @@ mod tests {
             (FileType::ClaudeOutputStyle, "ClaudeOutputStyle"),
             (FileType::ClaudeMemoryIndex, "ClaudeMemoryIndex"),
             (FileType::ClaudeIgnore, "ClaudeIgnore"),
+            (FileType::ClaudeCommand, "ClaudeCommand"),
             (FileType::CursorRule, "CursorRule"),
             (FileType::CursorHooks, "CursorHooks"),
             (FileType::CursorAgent, "CursorAgent"),
@@ -339,6 +347,7 @@ mod tests {
             FileType::AmpCheck,
             FileType::Hooks,
             FileType::Plugin,
+            FileType::ClaudeMarketplace,
             FileType::Mcp,
             FileType::Copilot,
             FileType::CopilotScoped,
@@ -348,6 +357,7 @@ mod tests {
             FileType::CopilotPlugin,
             FileType::ClaudeRule,
             FileType::ClaudeOutputStyle,
+            FileType::ClaudeCommand,
             FileType::CursorRule,
             FileType::CursorHooks,
             FileType::CursorAgent,
@@ -425,6 +435,7 @@ mod tests {
             FileType::AmpCheck,
             FileType::Hooks,
             FileType::Plugin,
+            FileType::ClaudeMarketplace,
             FileType::Mcp,
             FileType::Copilot,
             FileType::CopilotScoped,
@@ -434,6 +445,7 @@ mod tests {
             FileType::CopilotPlugin,
             FileType::ClaudeRule,
             FileType::ClaudeOutputStyle,
+            FileType::ClaudeCommand,
             FileType::CursorRule,
             FileType::CursorHooks,
             FileType::CursorAgent,

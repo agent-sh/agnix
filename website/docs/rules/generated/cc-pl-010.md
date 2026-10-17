@@ -2,18 +2,18 @@
 id: cc-pl-010
 title: "CC-PL-010: Invalid Homepage URL - Claude Plugins"
 sidebar_label: "CC-PL-010"
-description: "agnix rule CC-PL-010 checks for invalid homepage url in claude plugins files. Severity: MEDIUM. See examples and fix guidance."
+description: "agnix rule CC-PL-010 checks for invalid homepage url in claude plugins files. Severity: HIGH. See examples and fix guidance."
 keywords: ["CC-PL-010", "invalid homepage url", "claude plugins", "validation", "agnix", "linter"]
 ---
 
 ## Summary
 
 - **Rule ID**: `CC-PL-010`
-- **Severity**: `MEDIUM`
+- **Severity**: `HIGH`
 - **Category**: `Claude Plugins`
-- **Normative Level**: `SHOULD`
+- **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-02-07`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,7 @@ keywords: ["CC-PL-010", "invalid homepage url", "claude plugins", "validation", 
 
 ## Evidence Sources
 
-- https://code.claude.com/docs/en/plugins-reference
+- https://code.claude.com/docs/en/plugins/manifest-reference
 
 ## Test Coverage Metadata
 

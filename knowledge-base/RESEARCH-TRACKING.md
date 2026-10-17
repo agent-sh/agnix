@@ -16,7 +16,7 @@ Tools are organized by support tier (see [../CONTRIBUTING.md#tool-tier-system](.
 
 | Tool | Config Format | Documentation URL | Monitoring | Frequency | Last Reviewed | Rule Prefix |
 |------|---------------|-------------------|------------|-----------|---------------|-------------|
-| Claude Code | `CLAUDE.md`, `AGENTS.md` (fallback or combined project instructions in 2.1.277+), `.claude/settings.json`, `.claude/settings.local.json`, `.claude/managed-settings.json`, `.claude/agents/*.md`, `.claude/skills/*/SKILL.md`, `.claude/hooks configuration`, `.mcp.json`, `.claude-plugin/plugin.json`, `.claude/rules/**/*.md`, `.claude/output-styles/*.md` | https://code.claude.com/docs/en | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-10-16 | AGM, XP, CC-SK, CC-HK, CC-MEM, CC-AG, CC-PL, CC-SET, CC-OS, MCP |
+| Claude Code | `CLAUDE.md`, `AGENTS.md` (fallback or combined project instructions in 2.1.277+), `.claude/settings.json`, `.claude/settings.local.json`, `.claude/managed-settings.json`, `.claude/agents/*.md`, `.claude/skills/*/SKILL.md`, `.claude/hooks configuration`, `.mcp.json`, `.claude-plugin/plugin.json`, `.claude/rules/**/*.md`, `.claude/output-styles/*.md`, `.claude/commands/**/*.md`, `.claude-plugin/marketplace.json` | https://code.claude.com/docs/en | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-10-16 | AGM, XP, CC-SK, CC-HK, CC-MEM, CC-AG, CC-PL, CC-MP, CC-SET, CC-OS, CC-MCP, MCP |
 | Codex CLI | `AGENTS.md`, `.codex/config.toml` (also `.codex/config.json`/`.yaml`/`.yml`, including `[mcp_servers.*]` blocks), `.mcp.json`, `codex/requirements.toml` (managed environments), `.codex/skills/*/SKILL.md`, `.codex-plugin/plugin.json`, Agent Plugins root `plugin.json` | https://developers.openai.com/codex/ | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-10-16 | AGM, XP, MCP, CDX, CDX-AG, CDX-APP, CDX-CFG, CDX-PL, CDX-REQ, CX-SK |
 | OpenCode | `AGENTS.md`, `opencode.json`, `opencode.jsonc`, `.opencode/config.json`, `.mcp.json`, `.opencode/skills/*/SKILL.md` | https://opencode.ai/docs/ | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-10-07 | AGM, XP, MCP, OC, OC-AG, OC-AGM, OC-CFG, OC-DEP, OC-LSP, OC-PM, OC-TUI, OC-SK |
 | Kiro CLI | `.kiro/steering/*.md`, `.kiro/agents/**/*.{json,md}`, `.kiro/hooks/*.kiro.hook`, `.kiro/hooks/*.json` (V3 standalone since 2.8.0; `~/.kiro/hooks` since 2.13.0), `.kiro/settings/mcp.json`, `.kiro/settings/cli.json`, `.kiro/settings/permissions.{yaml,json}`, `~/.kiro/workspace-roots/<hash>/permissions.{yaml,json}`, `POWER.md` and power `plugin.json` / `mcp.json` / `steering/*.md`, `.kiro/skills/*/SKILL.md`, `.amazonq/cli-agents/*.json` (CLI 2.x fallback), `.kiro/workflows/*.workflow.{json,yaml,yml}` (V3), `.kiroignore`, `AGENTS.md` (nested, loaded as steering since 2.18.0) | https://kiro.dev/changelog/cli/ | Automated (tool-release-watch.yml via HTML scrape) | Quarterly | 2026-10-16 | AGM, KIRO, KR-AG, KR-HK, KR-MCP, KR-PW, KR-SK, KR-SET, KR-PM, KR-WF, KR-IGN |
@@ -178,8 +178,8 @@ The Model Context Protocol ecosystem is tracked separately due to its rapid evol
 ### Current MCP Coverage
 
 - **Protocol version monitored**: 2026-07-28
-- **Rules implemented**: MCP-001 through MCP-026; MCP-025 and MCP-026 are Claude Code vendor rules
-- **Automated monitoring**: mcp-release-watch.yml plus spec-drift.yml for MCP-001 through MCP-024; Claude Code release tracking covers MCP-025 and MCP-026
+- **Rules implemented**: MCP-001 through MCP-024; Claude Code's own MCP rules are CC-MCP-001 through CC-MCP-005
+- **Automated monitoring**: mcp-release-watch.yml plus spec-drift.yml for MCP-001 through MCP-024; Claude Code release tracking covers CC-MCP-001 through CC-MCP-005
 - **Baseline hash**: See `.github/spec-baselines.json` for current hash
 
 ### MCP Areas to Watch

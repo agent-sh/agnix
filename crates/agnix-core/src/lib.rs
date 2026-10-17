@@ -382,7 +382,6 @@ mod i18n_tests {
         assert_not_raw_key!("rules.cc_ag_009.suggestion");
 
         // Rules section - assumptions
-        assert_not_raw_key!("rules.cc_hk_010.assumption");
         assert_not_raw_key!("rules.mcp_008.assumption");
 
         // CLI section

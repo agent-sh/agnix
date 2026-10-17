@@ -85,9 +85,6 @@ rules:
     message: Tipo de agente invalido '%{agent}'. Debe ser Explore, Plan, general-purpose, o un nombre kebab-case personalizado
       (1-64 caracteres)
     suggestion: Usa un agente integrado (Explore, Plan, general-purpose) o un nombre kebab-case personalizado
-  cc_sk_006:
-    message: 'El skill peligroso ''%{name}'' debe establecer ''disable-model-invocation: true'' para prevenir invocacion accidental'
-    suggestion: 'Agrega ''disable-model-invocation: true'' al frontmatter'
   cc_sk_007:
     message: Se detecto acceso irrestricto a Bash. Considera usar una version con alcance para mejor seguridad.
     suggestion: Usa Bash con alcance como 'Bash(git:*)' o 'Bash(npm:*)' en lugar de 'Bash' simple
@@ -98,9 +95,6 @@ rules:
   cc_sk_009:
     message: Demasiadas inyecciones dinamicas (%{count}). Limite de %{max} para mejor rendimiento
     suggestion: Considera mover logica compleja a un directorio scripts/ o reducir las inyecciones
-  cc_sk_016:
-    message: El cuerpo usa $ARGUMENTS[n] indexado pero falta argument-hint
-    suggestion: Agrega argument-hint al frontmatter para indicar como proporcionar argumentos
   cc_sk_017:
     message: Campo de frontmatter desconocido '%{field}'
     suggestion: Elimina campos no soportados o corrige errores tipograficos en claves del frontmatter
@@ -159,24 +153,6 @@ rules:
   cc_hk_009:
     message: 'Patron de comando potencialmente peligroso detectado: %{reason}'
     suggestion: 'Revisa el comando por seguridad. Patron coincidente: %{pattern}'
-  cc_hk_010:
-    command_no_timeout: Hook de comando en %{location} no tiene timeout especificado
-    command_no_timeout_suggestion: Agrega un campo "timeout" (ej., %{default} para este evento)
-    command_exceeds: Hook de comando en %{location} tiene timeout %{timeout}s excediendo el predeterminado de %{default}s
-    command_exceeds_suggestion: Considera timeout <= %{default}s
-    session_end_no_timeout_suggestion: Los hooks SessionEnd comparten 1.5 segundos. Un timeout entero explicito en settings puede elevar el presupuesto hasta 60 segundos; los timeouts de plugins no lo elevan.
-    session_end_exceeds: El hook de comando en %{location} tiene timeout %{timeout}s superior al presupuesto SessionEnd de 60 segundos elevado por settings
-    session_end_exceeds_suggestion: Usa timeout <= 60s o configura CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS explicitamente si necesitas mas tiempo
-    prompt_no_timeout: Hook de prompt en %{location} no tiene timeout especificado
-    prompt_no_timeout_suggestion: Agrega un campo "timeout" (ej., 30 para hooks de prompt)
-    prompt_exceeds: Hook de prompt en %{location} tiene timeout %{timeout}s excediendo el predeterminado de %{default}s
-    prompt_exceeds_suggestion: Considera timeout <= %{default}s (limite predeterminado de 30 segundos)
-    agent_no_timeout: Hook de agente en %{location} no tiene timeout especificado
-    agent_no_timeout_suggestion: Agrega un campo "timeout" (ej., 60 para hooks de agente)
-    agent_exceeds: Hook de agente en %{location} tiene timeout %{timeout}s excediendo el predeterminado de %{default}s
-    agent_exceeds_suggestion: Considera timeout <= %{default}s (limite predeterminado de 60 segundos)
-    assumption: Asume comportamiento de timeout predeterminado de Claude Code. Fija la version de claude_code en .agnix.toml
-      [tool_versions] para validacion especifica de version.
   cc_hk_011:
     message: 'Valor de timeout invalido en %{location}: debe ser un entero positivo'
     suggestion: Establece timeout a un entero positivo como 30
@@ -221,9 +197,6 @@ rules:
   invalid_tool_single: 'Definicion de herramienta invalida: %{error}'
   invalid_tool_suggestion: 'Asegurate de que la herramienta tenga tipos de campo validos (name: string, description: string,
     inputSchema: object)'
-  cc_ag_001:
-    message: Al frontmatter del agente le falta el campo requerido 'name'
-    suggestion: 'Agrega ''name: nombre-del-agente'' al frontmatter'
   cc_ag_002:
     message: Al frontmatter del agente le falta el campo requerido 'description'
     suggestion: 'Agrega ''description: Describe que hace este agente'' al frontmatter'
@@ -239,9 +212,6 @@ rules:
   cc_ag_006:
     message: 'Herramienta(s) aparecen en ambos ''tools'' y ''disallowedTools'': %{conflicts}'
     suggestion: Elimina las herramientas en conflicto de 'tools' o 'disallowedTools'
-  cc_ag_007:
-    message: El archivo de agente debe tener frontmatter YAML
-    suggestion: Agrega frontmatter entre marcadores ---
   cc_ag_020:
     message: "El nombre del agente local '%{name}' empieza con '-', contiene ':' o supera 256 caracteres"
     suggestion: "Usa un nombre de hasta 256 caracteres sin '-' inicial ni ':'"

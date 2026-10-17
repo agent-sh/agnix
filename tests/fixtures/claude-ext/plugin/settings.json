@@ -1,0 +1,4 @@
+{
+  "agent": "reviewer",
+  "permissions": { "allow": ["Bash"] }
+}

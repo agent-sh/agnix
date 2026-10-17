@@ -1,0 +1,3 @@
+[
+  { "name": "deploys", "command": "poll ${user_config.url}", "description": "Deploy status" }
+]

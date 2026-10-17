@@ -13,7 +13,7 @@ keywords: ["CC-PL-003", "invalid semver", "claude plugins", "validation", "agnix
 - **Category**: `Claude Plugins`
 - **Normative Level**: `BEST_PRACTICE`
 - **Auto-Fix**: `Yes (unsafe)`
-- **Verified On**: `2026-10-04`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,7 @@ keywords: ["CC-PL-003", "invalid semver", "claude plugins", "validation", "agnix
 
 ## Evidence Sources
 
-- https://code.claude.com/docs/en/plugins-reference#version
+- https://code.claude.com/docs/en/plugins/manifest-reference
 - https://code.claude.com/docs/en/plugins/dependencies#tag-plugin-releases-for-version-resolution
 
 ## Test Coverage Metadata

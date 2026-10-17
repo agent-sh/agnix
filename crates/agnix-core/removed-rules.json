@@ -310,6 +310,36 @@
       "replaced_by": [
         "CC-SET-034"
       ]
+    },
+    {
+      "id": "CC-HK-017",
+      "removed_in": "0.59.0",
+      "reason": "`$ARGUMENTS` is optional in prompt and agent hooks: Claude Code appends the hook input JSON when the prompt does not use it.",
+      "replaced_by": []
+    },
+    {
+      "id": "CC-AG-013",
+      "removed_in": "0.59.0",
+      "reason": "Claude Code documents no naming format for a subagent's `skills` list; CC-AG-005 still reports skill names that do not resolve.",
+      "replaced_by": [
+        "CC-AG-005"
+      ]
+    },
+    {
+      "id": "MCP-025",
+      "removed_in": "0.59.0",
+      "reason": "`alwaysLoad` is a Claude Code setting, so the check moved to the Claude Code MCP family and runs only on Claude Code MCP files.",
+      "replaced_by": [
+        "CC-MCP-004"
+      ]
+    },
+    {
+      "id": "MCP-026",
+      "removed_in": "0.59.0",
+      "reason": "Reserved server names are a Claude Code rule, so the check moved to the Claude Code MCP family and runs only on Claude Code MCP files.",
+      "replaced_by": [
+        "CC-MCP-005"
+      ]
     }
   ]
 }

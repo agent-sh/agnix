@@ -13,7 +13,7 @@ keywords: ["CC-PL-007", "invalid component path", "claude plugins", "validation"
 - **Category**: `Claude Plugins`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `Yes (safe)`
-- **Verified On**: `2026-10-04`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,8 +23,7 @@ keywords: ["CC-PL-007", "invalid component path", "claude plugins", "validation"
 
 ## Evidence Sources
 
-- https://code.claude.com/docs/en/plugins-reference
-- https://github.com/anthropics/claude-code/releases/tag/v2.1.221
+- https://code.claude.com/docs/en/plugins/manifest-reference
 
 ## Test Coverage Metadata
 

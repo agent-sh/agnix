@@ -13,7 +13,7 @@ keywords: ["CC-HK-002", "prompt or agent hook on wrong event", "claude hooks", "
 - **Category**: `Claude Hooks`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-10-04`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 

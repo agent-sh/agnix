@@ -132,7 +132,7 @@ rules:
     suggestion: Use a built-in agent (Explore, Plan, general-purpose) or a custom kebab-case name
     fix: Replace invalid agent with 'general-purpose'
   cc_sk_006:
-    message: 'Dangerous skill ''%{name}'' must set ''disable-model-invocation: true'' to prevent accidental invocation'
+    message: 'Skill ''%{name}'' looks like a workflow with side effects, but Claude may invoke it on its own; set ''disable-model-invocation: true'' to run it only when you type /%{name}'
     suggestion: 'Add ''disable-model-invocation: true'' to the frontmatter'
   cc_sk_007:
     message: Unrestricted Bash access detected. Consider using scoped version for better security.
@@ -163,7 +163,7 @@ rules:
     suggestion: Use true/false, yes/no, on/off, or 1/0 (quoted or unquoted)
   cc_sk_016:
     message: Body uses indexed $ARGUMENTS[n] but argument-hint is missing
-    suggestion: Add argument-hint to frontmatter so users know how to provide arguments
+    suggestion: Add argument-hint to frontmatter so the / menu shows which arguments to type (agnix suggestion; the field is an autocomplete hint)
   cc_sk_017:
     message: Unknown frontmatter field '%{field}'
     suggestion: Remove unsupported fields or fix typos in frontmatter keys
@@ -238,23 +238,10 @@ rules:
     message: 'Potentially dangerous command pattern detected: %{reason}'
     suggestion: 'Review the command for safety. Pattern matched: %{pattern}'
   cc_hk_010:
-    command_no_timeout: Command hook at %{location} has no timeout specified
-    command_no_timeout_suggestion: Add a "timeout" field (e.g., %{default} for this event)
-    command_exceeds: Command hook at %{location} has timeout %{timeout}s exceeding %{default}s default
-    command_exceeds_suggestion: Consider timeout <= %{default}s
-    session_end_no_timeout_suggestion: SessionEnd hooks share a 1.5-second budget. Set an explicit integer timeout to raise the settings budget, up to 60 seconds; plugin timeouts do not raise it.
-    session_end_exceeds: Command hook at %{location} has timeout %{timeout}s above the 60-second settings-raised SessionEnd budget
-    session_end_exceeds_suggestion: Use timeout <= 60s, or configure CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS explicitly when more time is needed
-    prompt_no_timeout: Prompt hook at %{location} has no timeout specified
-    prompt_no_timeout_suggestion: Add a "timeout" field (e.g., 30 for prompt hooks)
-    prompt_exceeds: Prompt hook at %{location} has timeout %{timeout}s exceeding %{default}s default
-    prompt_exceeds_suggestion: Consider timeout <= %{default}s (30-second default limit)
-    agent_no_timeout: Agent hook at %{location} has no timeout specified
-    agent_no_timeout_suggestion: Add a "timeout" field (e.g., 60 for agent hooks)
-    agent_exceeds: Agent hook at %{location} has timeout %{timeout}s exceeding %{default}s default
-    agent_exceeds_suggestion: Consider timeout <= %{default}s (60-second default limit)
-    assumption: Assumes Claude Code default timeout behavior. Pin claude_code version in .agnix.toml [tool_versions] for version-specific
-      validation.
+    message: Hook at %{location} sets timeout %{timeout}s on SessionEnd, but SessionEnd hooks share a budget that settings raise to at most 60 seconds
+    suggestion: Keep SessionEnd work under 60 seconds, or set CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS when it needs longer
+    plugin_message: Plugin SessionEnd hook at %{location} sets timeout %{timeout}s, but timeouts on plugin-provided hooks don't raise the 1.5-second SessionEnd budget
+    plugin_suggestion: Keep plugin SessionEnd work under 1.5 seconds; a user can raise the budget with CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS or a timeout in their own settings
   cc_hk_011:
     message: 'Invalid timeout value at %{location}: must be a positive integer'
     suggestion: Set timeout to a positive integer like 30
@@ -274,11 +261,8 @@ rules:
     fix: Remove 'model' field (has no effect on command hooks)
   cc_hk_016:
     message: Unknown hook type '%{hook_type}' at %{location}
-    suggestion: 'Valid hook types are: command, prompt, agent'
+    suggestion: 'Valid hook types are: command, http, mcp_tool, prompt, agent'
     fix: Change hook type to '%{fixed}'
-  cc_hk_017:
-    message: Prompt/agent hook at %{location} does not reference $ARGUMENTS
-    suggestion: Include $ARGUMENTS in the prompt to receive event context
   cc_hk_018:
     message: Matcher at %{location} is silently ignored for '%{event}' events
     suggestion: Remove the matcher field as it has no effect on %{event} events
@@ -334,7 +318,7 @@ rules:
   invalid_tool_single: 'Invalid tool definition: %{error}'
   invalid_tool_suggestion: 'Ensure tool has valid field types (name: string, description: string, inputSchema: object)'
   cc_ag_001:
-    message: Agent frontmatter is missing required 'name' field
+    message: Agent frontmatter has no 'name' field, so Claude Code treats the file as documentation and doesn't load it as a subagent
     suggestion: 'Add ''name: your-agent-name'' to frontmatter'
   cc_ag_002:
     message: Agent frontmatter is missing required 'description' field
@@ -348,12 +332,16 @@ rules:
   cc_ag_005:
     message: Referenced skill '%{skill}' not found in project or user skills; an enabled plugin may supply it
     suggestion: Check enabled plugin skills or add the skill in the project or user skill directory
+    too_many: 'skills lists %{count} distinct skills; Claude Code preloads only the first 32, so these are skipped: %{skipped}'
+    too_many_suggestion: Preload at most 32 skills; the subagent can still invoke the others through the Skill tool
+    not_preloadable: Skill '%{skill}' sets disable-model-invocation, so Claude Code can't preload it into this subagent
+    not_preloadable_suggestion: Remove the skill from 'skills', or drop disable-model-invocation from the skill if it may be preloaded
   cc_ag_006:
     message: 'Tool(s) appear in both ''tools'' and ''disallowedTools'': %{conflicts}'
     suggestion: Claude Code removes overlapping tools; remove a redundant entry if unintended
   cc_ag_007:
-    message: Agent file must have YAML frontmatter
-    suggestion: Add frontmatter between --- markers
+    message: File in an agents directory has no frontmatter on its first line, so Claude Code treats it as documentation, not a subagent
+    suggestion: To make it a subagent, start the file with --- frontmatter that sets name and description; otherwise no change is needed
     parse_error: 'Failed to parse agent frontmatter: %{error}'
     parse_error_suggestion: Check YAML frontmatter syntax -- ensure proper indentation, colon spacing, and matching quotes
   cc_ag_008:
@@ -376,9 +364,30 @@ rules:
     message: permissionMode 'bypassPermissions' is restricted to an already-bypassing parent in Claude Code 2.1.267 or later; review older versions separately
     suggestion: Review the parent permission mode and pinned Claude Code version before enabling bypassPermissions
     fix: Replace 'bypassPermissions' with 'default'
-  cc_ag_013:
-    message: Invalid skill name format '%{name}'. Must be lowercase with hyphens
-    suggestion: Use kebab-case format (e.g., 'my-skill-name')
+  cc_ag_019:
+    unknown: Unknown agent frontmatter field '%{field}'; Claude Code ignores fields it doesn't recognize
+    unknown_suggestion: 'Remove or rename ''%{field}'' - known fields: %{known}'
+    cache_ttl_suggestion: Write cacheTtl inside the experimental map (experimental.cacheTtl), not at the top level
+    auto_compact_window: autoCompactWindow %{value} is ignored; Claude Code accepts a plain integer token count from 100000 to 1000000
+    auto_compact_window_suggestion: Write the value as a plain integer such as 200000 (in frontmatter '200k' reads as 200)
+  cc_ag_021:
+    message: The project's subagent descriptions add up to about %{tokens} tokens across %{count} files, over the %{budget}-token total that makes Claude Code show a startup warning
+    suggestion: Trim the description fields and move detail into each subagent's body, which loads only when that subagent runs
+  cc_ag_022:
+    message: This subagent sets neither tools nor disallowedTools, so it inherits every tool available to subagents
+    suggestion: List only the tools it needs in 'tools', or remove the risky ones with 'disallowedTools'
+  cc_ag_023:
+    message: 'Subagent name ''%{name}'' is also declared in %{others}; Claude Code loads only one of them, chosen by filesystem read order'
+    suggestion: Give each subagent in the .claude/agents tree a unique name
+  cc_ag_024:
+    disallowed_specifier: disallowedTools entry '%{entry}' removes the whole %{tool} tool from this subagent, not only the matching calls
+    disallowed_specifier_suggestion: To keep the tool and block only those calls, add '%{entry}' to permissions.deny in settings instead
+    agent_type_list: tools entry '%{entry}' limits spawnable agent types only when this agent runs as the main thread with claude --agent; as a subagent the type list is ignored
+    agent_type_list_suggestion: If this file is used as a subagent, write 'Agent' without a type list
+  cc_pl_014:
+    message: Plugin agent sets '%{field}', which Claude Code ignores for agents in plugin '%{plugin}'
+    suggestion_remove: Remove '%{field}' from the plugin agent; it has no effect there
+    suggestion_plugin_level: Remove '%{field}' and declare it at plugin level (hooks/hooks.json or the plugin's MCP servers)
   cc_ag_020:
     message: "Local agent name '%{name}' starts with '-', contains ':', or exceeds 256 characters"
     suggestion: "Use a name of at most 256 characters without a leading '-' or ':'"
@@ -1302,6 +1311,11 @@ rules:
   cc_pl_007:
     message: 'Invalid component path in ''%{field}'': ''%{path}'' must be relative (no absolute paths or ''..'' traversal)'
     suggestion: Use a relative path starting with './' (e.g., './skills/')
+    agents_entry: '''agents'' entries must be .md file paths (directories aren''t accepted), got %{value}'
+    skills_entry: '''skills'' entries must be directories, got the file ''%{value}'''
+    entry_suggestion: List agent .md files in 'agents' and skill directories in 'skills'
+    missing: Component path '%{path}' in '%{field}' does not exist, so it doesn't load
+    missing_suggestion: Create the file or directory, or fix the path; every component path must exist
   cc_pl_008:
     message: 'Component path in ''%{field}'' points inside .claude-plugin/: ''%{path}'''
     suggestion: Move the component to the plugin root directory and update the path
@@ -1309,8 +1323,10 @@ rules:
     message: 'Invalid author object: ''author.name'' must be a non-empty string'
     suggestion: Set 'author.name' to a non-empty string
   cc_pl_010:
-    message: 'Invalid homepage URL: ''%{url}'' must use http:// or https:// scheme'
-    suggestion: Use a valid URL with http:// or https:// scheme
+    message: 'Plugin homepage ''%{url}'' does not parse as a URL, so the plugin fails to load'
+    suggestion: Set homepage to an absolute URL such as https://example.com/docs, or remove it
+    scheme: Plugin homepage '%{url}' parses as a URL but isn't http or https
+    scheme_suggestion: Use an https:// documentation URL
   cc_pl_015:
     message: Default component folder '%{component}' exists but plugin.json overrides '%{component}' without including './%{component}'
     suggestion: Add './%{component}' to '%{component}' or move those files into the configured component path
@@ -1910,6 +1926,39 @@ rules:
   cc_sk_023:
     message: '%{token} inside code is replaced by $ARGUMENTS[%{index}] when the skill is invoked with arguments'
     suggestion: 'If %{token} is shell, awk or other code syntax, escape it as \%{token}. If it should receive an argument, add an argument-hint.'
+  cc_sk_024:
+    message: Skill has no description or when_to_use, so Claude Code uses the first non-empty body line to decide when to load it
+    suggestion: Add a description that says what the skill does and when to use it
+  cc_sk_025:
+    message: Skills in this .claude/skills directory use about %{chars} characters of names and descriptions across %{count} skills, over the %{budget} characters agnix estimates for Claude Code's listing budget (1% of a 200,000-token context window)
+    suggestion: Shorten descriptions and put the key use case first; over budget, Claude Code drops descriptions from the listing
+  cc_sk_027:
+    message: Legacy custom command file; Claude Code still loads .claude/commands files, but skills are the current format
+    ignored_fields: Legacy custom command file sets %{fields}, which have no effect in .claude/commands files; skills are the current format and support them
+    suggestion: Move it to .claude/skills/%{name}/SKILL.md when convenient; the command keeps the same /%{name} name
+  cc_sk_028:
+    unrecognized: Injected command in '%{snippet}' is left as literal text and never runs; Claude Code recognizes !`...` only at the start of a line or after whitespace
+    unrecognized_suggestion: Put whitespace before the ! or move the placeholder to the start of a line
+    control_character: File contains a raw control character, so Claude Code runs none of its injected !`...` commands
+    control_character_suggestion: Remove control characters other than tab and newline from the file
+  cc_sk_030:
+    message: Skill name '%{name}' contains the reserved word '%{word}', so claude.ai and the Claude API reject the skill on upload
+    suggestion: Rename the skill if it may be uploaded; Claude Code itself still loads it
+  cc_sk_031:
+    message: Skill %{field} contains the XML tag '%{tag}', so claude.ai and the Claude API reject the skill on upload
+    suggestion: Remove XML tags from the name and description if the skill may be uploaded
+  cc_sk_032:
+    message: Skill description starts with '%{opening}'; Anthropic's skill guidance says to write descriptions in the third person because they're injected into the system prompt
+    suggestion: Describe the skill in the third person, such as 'Processes Excel files and generates reports'
+  cc_sk_033:
+    message: Skill name '%{name}' is too generic for Claude to tell when to use it
+    suggestion: Use a specific name that says what the skill does, such as 'processing-pdfs' or 'analyzing-spreadsheets'
+  cc_sk_034:
+    message: Reference file has %{lines} lines and no table of contents near the top (Anthropic's skill guidance asks for one above %{threshold} lines)
+    suggestion: Add a short contents list at the top so Claude can see the whole file's scope when it previews it
+  cc_pl_020:
+    message: Plugin content uses %{spelling}, which isn't set in the Bash tool's environment and isn't substituted without braces
+    suggestion: Write %{braced} so Claude Code substitutes the path when it loads the content
   cln_005:
     message: Cline workflow file is empty
     message_no_content: "Cline workflow has no steps after the frontmatter; the Cline SDK loader rejects it"
@@ -2006,6 +2055,51 @@ rules:
   cdx_cfg_029_duplicate:
     message: '''agents.max_concurrent_threads_per_session'' and its ''agents.max_threads'' compatibility alias cannot both be set'
     suggestion: 'Remove one concurrency field; prefer ''agents.max_concurrent_threads_per_session'' for new configuration.'
+  cc_hk_021:
+    non_tool_event: 'Hook at %{location} sets ''if'' on ''%{event}'', so it never runs: ''if'' is evaluated only on tool events (%{events})'
+    non_tool_event_suggestion: Remove the 'if' field, or move the handler to a tool event
+    combined: 'Hook at %{location} combines rules in ''if'' with ''%{operator}''; ''if'' holds exactly one permission rule and has no &&, || or list syntax'
+    combined_suggestion: Define a separate hook handler for each condition
+    invalid: Hook at %{location} has an 'if' that is not a non-empty permission rule string
+    invalid_suggestion: Set 'if' to one permission rule such as "Bash(git *)", or remove it
+  cc_hk_025:
+    case_message: Matcher '%{matcher}' at %{location} matches no tool because matchers are case-sensitive; the tool is '%{tool}'
+    case_suggestion: Write the tool name as '%{tool}'
+  cc_hk_029:
+    invalid: 'Hook at %{location} has onFailure ''%{value}''; it accepts only "continue" or "block"'
+    invalid_suggestion: Set onFailure to "block" to block the action when the hook fails, or "continue" to let it go ahead
+    no_effect: 'onFailure at %{location} has no effect: %{reason}'
+    no_effect_suggestion: Remove onFailure, or move the check to a hook where a failure can block
+    version: it requires Claude Code v2.1.295 or later, and the pinned version is %{version}
+    wrong_type: it applies only to command and http hooks, not %{hook_type} hooks
+    non_blocking_event: exit code 2 on %{event} already sends Claude back to work, so a failed hook can't block it
+    background: background hooks that set async or asyncRewake can't block
+  cc_hk_030:
+    message: Shell-form hook command at %{location} uses %{placeholder} outside double quotes, so a path with spaces splits into several words
+    suggestion: Wrap the placeholder in double quotes, as in "%{placeholder}"/scripts/x.sh, or switch to exec form with "args"
+    relative: Hook command at %{location} runs '%{script}' by a relative path; hooks run in Claude Code's current directory, which moves when Claude runs cd
+    relative_suggestion: Reference the script as "%{anchor}"/... (in double quotes), or use exec form with the placeholder in "args"
+  cc_hk_031:
+    message: Exec-form hook at %{location} sets command '%{command}', which can't be spawned because in exec form command is only the executable
+    suggestion: Put the executable in "command" and move the other words into "args"
+    shell_ignored: Hook at %{location} sets 'shell' together with 'args'; shell is ignored in exec form
+    shell_ignored_suggestion: Remove 'shell', or remove 'args' to run the command through that shell
+  cc_hk_032:
+    bare: PowerShell hook at %{location} uses %{placeholder}; PowerShell resolves that spelling to $null, which drops the path prefix
+    single_quoted: PowerShell hook at %{location} puts %{placeholder} inside single quotes, where PowerShell never expands it
+    suggestion: Write ${CLAUDE_PROJECT_DIR} or $env:CLAUDE_PROJECT_DIR, inside double quotes
+  cc_hk_033:
+    message: Matcher '%{matcher}' at %{location} is compared as an exact tool name, so it matches no MCP tool
+    suggestion: Use '%{fixed}' to match every tool from that server
+    fix: Change the matcher to '%{fixed}'
+  cc_hk_034:
+    matcher_message: Matcher '%{value}' at %{location} names the plugin's own MCP server '%{server}' by its bare key, so it never fires
+    server_message: MCP tool hook at %{location} names the plugin's own server '%{server}' by its bare key
+    if_message: '''if'' rule ''%{value}'' at %{location} names the plugin''s own MCP server ''%{server}'' by its bare key, so it never matches'
+    suggestion: Tools from this plugin's servers are named %{scoped_tool}<tool>; an mcp_tool hook names the server as %{scoped_server}
+  cc_hk_035:
+    message: PermissionRequest hook at %{location} has matcher %{matcher}; a hook that allows here approves every permission prompt, including file writes and shell commands
+    suggestion: Narrow the matcher to the tools the hook should approve, such as 'Bash' or 'Edit|Write'
   cc_hk_026:
     message: MCP tool hook at %{location} is missing required 'server' field
     suggestion: 'Add a ''server'' field naming an already-connected MCP server (e.g. "server": "my_server")'
@@ -2353,6 +2447,99 @@ rules:
     exclude_suggestion: "Write an absolute path or a glob that can match one, for example **/%{pattern}."
     memory_dir_message: "autoMemoryDirectory '%{value}' must be an absolute path or start with ~/"
     memory_dir_suggestion: "Use an absolute path or a ~/ path, for example ~/my-memory-dir."
+  cc_pl_018:
+    error: Plugin name '%{name}' is reserved because it passes as one of Anthropic's own; claude plugin validate reports an error and claude plugin init and tag refuse it
+    warning: Plugin name '%{name}' reads as one of Anthropic's own; claude plugin validate warns about it
+    suggestion: Rename the plugin without claude, anthropic or anthropics as a word; Claude Code still loads it under the current name
+  cc_pl_019:
+    message: Dependency '%{name}' has version '%{version}', which is not a semantic-version range such as ~2.1.0, ^2.0 or >=1.4
+    suggestion: Write the constraint as a node-semver range; the dependency installs at the highest git tag that satisfies it
+  cc_pl_021:
+    message: '''%{key}'' in plugin %{location} is dropped; only agent and subagentStatusLine take effect from a plugin'
+    suggestion: Remove the key; plugins can't set other settings
+  cc_pl_022:
+    message: Monitor '%{monitor}' command references ${user_config.*}, so the monitor doesn't start
+    suggestion: Have the monitor script obtain the value itself; monitors get neither ${user_config.*} nor CLAUDE_PLUGIN_OPTION_<KEY>
+  cc_pl_023:
+    unknown_key: Unknown key '%{key}' in %{location}; this object is strict, so the plugin fails to load
+    unknown_key_suggestion: Remove the key or fix its spelling
+    option_label: userConfig option '%{option}' has an option label that is not a string of 1 to 64 characters
+    option_default: userConfig option '%{option}' sets options but its default is not one of them and it isn't required
+    option_type: userConfig option '%{option}' sets options, which apply only to a string field that isn't multiple or sensitive
+    option_suggestion: Fix the options so the plugin loads; options need Claude Code v2.1.271 or later
+  cc_mcp_001:
+    message: MCP server '%{server}' references ${%{var}} in %{field}, but Claude Code reads that credential variable as empty in a remote server's url and headers, so the server gets no credential
+    suggestion: Copy the value into a variable with a name of your own and reference that instead of ${%{var}}
+  cc_mcp_002:
+    message: MCP server '%{server}' uses ${CLAUDE_PROJECT_DIR} in command or args without a default; that variable is set only in the server's environment, not in Claude Code's, so it stays unexpanded
+    suggestion: Write ${CLAUDE_PROJECT_DIR:-.} or read CLAUDE_PROJECT_DIR from inside the server process
+  cc_mcp_003:
+    tool: MCP tool '%{tool}' has a %{len}-character description; Claude Code keeps only the first %{limit} characters of a tool that loads upfront
+    instructions: MCP server instructions are %{len} characters; Claude Code keeps only the first %{limit}
+    suggestion: Keep descriptions and instructions concise and put the key details and search words near the start
+  cc_mcp_004:
+    message: MCP server '%{server}' has a non-boolean alwaysLoad value (got %{actual})
+    suggestion: Set alwaysLoad to true or false, without quotes
+  cc_mcp_005:
+    message: MCP server name '%{name}' is reserved for a Claude Code built-in server, so Claude Code skips this server at load time
+    suggestion: Rename the server; Claude Code reserves workspace, claude-in-chrome, computer-use, Claude Preview and Claude Browser
+    prompts_hidden: Prompts from an MCP server named 'anthropic-skills' don't appear in Claude Code, because the name is reserved for skills synced from claude.ai; its tools still work
+    prompts_hidden_suggestion: Rename the server to list its prompts
+  cc_mp_001:
+    parse: 'Marketplace file does not parse as JSON: %{error}'
+    parse_suggestion: Fix the JSON syntax; Claude Code can't read the marketplace
+    not_object: Marketplace file must be a JSON object
+    not_object_suggestion: Write the marketplace as an object with name, owner and plugins
+    missing: Marketplace is missing required '%{field}'
+    missing_suggestion: Set '%{field}'; name, owner (with owner.name) and plugins are required
+    entry_not_object: plugins[%{index}] must be an object with name and source
+    entry_missing: plugins[%{index}] is missing required '%{field}'
+    entry_suggestion: Give every plugin entry a name and a source
+  cc_mp_002:
+    control: Marketplace name '%{name}' contains control or bidirectional-formatting characters
+    impersonates: Marketplace name '%{name}' contains a non-ASCII character, which Claude Code treats as impersonating an official Anthropic marketplace
+    spaces: Marketplace name '%{name}' contains spaces
+    path: Marketplace name '%{name}' contains a path separator or '..', or is '.'
+    charset: Marketplace name '%{name}' may use only letters, digits, '.', '_' and '-', starting with a letter or digit, so Claude Code can't install plugins from it
+    claudeai: Marketplace name '%{name}' starts with 'claudeai-', which is reserved for marketplaces hosted on claude.ai
+    reserved: Marketplace name '%{name}' is reserved ('%{reserved}'), so Claude Code refuses to add the marketplace
+    suggestion: Choose a marketplace name of letters, digits, '.', '_' and '-' that isn't reserved
+    plugin_control: Plugin name '%{name}' contains control or bidirectional-formatting characters
+    plugin_spaces: Plugin name '%{name}' contains spaces
+    plugin_charset: Plugin name '%{name}' may use only letters, digits, '.', '_' and '-', starting with a letter or digit, so Claude Code can't install it
+    plugin_reserved: Plugin name '%{name}' is reserved because it passes as one of Anthropic's own; claude plugin validate reports it as an error
+    plugin_reads_as: Plugin name '%{name}' reads as one of Anthropic's own; claude plugin validate warns about it
+    plugin_suggestion: Rename the plugin entry; use kebab-case without claude or anthropic as a word
+  cc_mp_003:
+    duplicate: Duplicate plugin name '%{name}' in the marketplace
+    duplicate_suggestion: Give each plugin entry a unique name
+    traversal: Plugin source '%{source}' contains '..', which escapes the marketplace root
+    backslash: Plugin source '%{source}' contains a backslash, which Claude Code refuses on macOS and Linux
+    dot_slash: 'Plugin source ''%{source}'' must start with "./" (or be "." or a bare name under metadata.pluginRoot)'
+    placeholder: Plugin source type 'unsupported' is a parse-time placeholder and can't be written in a marketplace
+    unknown_type: 'Plugin source matches no source type (got %{kind}); use a relative path or github, url, git-subdir, npm, archive or command'
+    missing_field: Plugin source of type '%{kind}' is missing required '%{field}'
+    source_suggestion: See the marketplace reference "Plugin sources" for the fields each source type needs
+    rename: renames entry '%{old}' does not resolve to a plugin in plugins, a key in renames, or null
+    rename_suggestion: Point the rename at a current plugin name, another renames key, or null for a removed plugin
+  cc_mp_004:
+    hooks: plugins[%{index}].hooks is a file path or array; hooks in a marketplace entry load only as an inline object, so these never run
+    hooks_suggestion: Write the hooks inline as an event map, or move them to the plugin's hooks/hooks.json
+    headers_helper: Plugin '%{name}' sets headersHelper but not "strict" false, which Claude Code rejects
+    headers_helper_suggestion: Set "strict" to false on an entry that uses headersHelper
+    strict_conflict: 'Plugin ''%{name}'' sets "strict": false and declares %{fields}, but the plugin has its own plugin.json, so it fails to load with conflicting manifests'
+    strict_conflict_suggestion: Remove the component fields from the entry, or drop "strict" false so they are appended to plugin.json
+  cc_mp_005:
+    unknown_key: Unknown marketplace field '%{key}'; Claude Code ignores it at load time
+    unknown_key_suggestion: Remove the field or fix its spelling
+    no_description: Marketplace has no description
+    no_description_suggestion: Add a description so users know what the marketplace offers
+    no_plugins: Marketplace has no plugins defined
+    no_plugins_suggestion: Add plugin entries to plugins
+    version_mismatch: Entry version '%{entry}' differs from the plugin's plugin.json version '%{manifest}'; at install time plugin.json wins
+    version_mismatch_suggestion: Keep the entry and plugin.json versions in sync, or drop the entry version
+    headers_no_effect: Plugin '%{name}' sets %{key}, which applies only to archive sources and has no effect here
+    headers_no_effect_suggestion: Remove the field, or switch the entry to an archive source
   cc_pl_016:
     message: Plugin name '%{name}' is not kebab-case
     suggestion: Use lowercase letters, digits, and hyphens only. Claude Code rejects names with control or invisible characters.

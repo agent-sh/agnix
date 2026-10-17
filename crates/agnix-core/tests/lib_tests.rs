@@ -384,9 +384,10 @@ fn test_validators_for_amp_settings() {
 fn test_validators_for_mcp() {
     let registry = ValidatorRegistry::with_defaults();
     let validators = registry.validators_for(FileType::Mcp);
-    // 3: McpValidator, plus the Copilot (COP-035) and Cursor (CUR-024)
-    // validators for their own MCP files.
-    assert_eq!(validators.len(), 3);
+    // 4: McpValidator, ClaudeMcpValidator (CC-MCP-*, Claude Code MCP files),
+    // and the Copilot (COP-035) and Cursor (CUR-024) validators for their own
+    // MCP files.
+    assert_eq!(validators.len(), 4);
 }
 
 #[test]
@@ -4856,10 +4857,12 @@ const ALL_VALIDATED_FILE_TYPES: &[FileType] = &[
     FileType::AmpCheck,
     FileType::Hooks,
     FileType::Plugin,
+    FileType::ClaudeMarketplace,
     FileType::Mcp,
     FileType::Copilot,
     FileType::CopilotScoped,
     FileType::ClaudeRule,
+    FileType::ClaudeCommand,
     FileType::CursorRule,
     FileType::CursorHooks,
     FileType::CursorAgent,

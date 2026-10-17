@@ -14,7 +14,9 @@
         "skill",
         "hooks",
         "plugin",
-        "mcp"
+        "mcp",
+        "claude_marketplace",
+        "claude_mcp"
       ],
       "github_repo": "anthropics/claude-code",
       "last_known_version": "v2.1.299",
@@ -32,7 +34,9 @@
           ".mcp.json",
           ".claude-plugin/plugin.json",
           ".claude/rules/**/*.md",
-          ".claude/output-styles/*.md"
+          ".claude/output-styles/*.md",
+          ".claude/commands/**/*.md",
+          ".claude-plugin/marketplace.json"
         ],
         "relevant": [
           "New or renamed top-level keys in settings.json / managed-settings.json",
@@ -42,7 +46,8 @@
           "Plugin manifest schema changes in .claude-plugin/plugin.json",
           "MCP server config schema changes (fields, auth shapes, placeholders)",
           "New built-in tool names (affecting the allow-list validator)",
-          "Output-style or rules-file schema changes"
+          "Output-style or rules-file schema changes",
+          "Marketplace schema changes in .claude-plugin/marketplace.json (fields, source types, reserved names)"
         ],
         "irrelevant": [
           "Model additions or model-selection UI",

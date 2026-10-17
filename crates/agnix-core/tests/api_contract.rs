@@ -266,6 +266,7 @@ fn file_type_enum_covers_all_variants() {
         agnix_core::FileType::AmpCheck,
         agnix_core::FileType::Hooks,
         agnix_core::FileType::Plugin,
+        agnix_core::FileType::ClaudeMarketplace,
         agnix_core::FileType::Mcp,
         agnix_core::FileType::Copilot,
         agnix_core::FileType::CopilotScoped,
@@ -277,6 +278,7 @@ fn file_type_enum_covers_all_variants() {
         agnix_core::FileType::ClaudeOutputStyle,
         agnix_core::FileType::ClaudeMemoryIndex,
         agnix_core::FileType::ClaudeIgnore,
+        agnix_core::FileType::ClaudeCommand,
         agnix_core::FileType::CursorRule,
         agnix_core::FileType::CursorHooks,
         agnix_core::FileType::CursorAgent,
@@ -327,7 +329,7 @@ fn file_type_enum_covers_all_variants() {
 
     assert_eq!(
         variants.len(),
-        63,
+        65,
         "A new FileType variant may have been added or removed. Please update this test's variant list and the match statement below."
     );
 
@@ -339,6 +341,7 @@ fn file_type_enum_covers_all_variants() {
             agnix_core::FileType::AmpCheck => {}
             agnix_core::FileType::Hooks => {}
             agnix_core::FileType::Plugin => {}
+            agnix_core::FileType::ClaudeMarketplace => {}
             agnix_core::FileType::Mcp => {}
             agnix_core::FileType::Copilot => {}
             agnix_core::FileType::CopilotScoped => {}
@@ -350,6 +353,7 @@ fn file_type_enum_covers_all_variants() {
             agnix_core::FileType::ClaudeOutputStyle => {}
             agnix_core::FileType::ClaudeMemoryIndex => {}
             agnix_core::FileType::ClaudeIgnore => {}
+            agnix_core::FileType::ClaudeCommand => {}
             agnix_core::FileType::CursorRule => {}
             agnix_core::FileType::CursorHooks => {}
             agnix_core::FileType::CursorAgent => {}
