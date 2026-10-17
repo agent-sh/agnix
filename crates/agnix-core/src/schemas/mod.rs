@@ -24,6 +24,7 @@ pub mod hooks;
 pub mod kiro_agent;
 pub mod kiro_hook;
 pub mod kiro_hook_v3;
+pub(crate) mod kiro_json;
 pub mod kiro_mcp;
 pub mod kiro_permissions;
 pub mod kiro_power;

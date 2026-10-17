@@ -13,7 +13,7 @@ keywords: ["KR-MCP-006", "invalid oauth configuration", "kiro mcp", "validation"
 - **Category**: `Kiro MCP`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-07-11`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,8 @@ keywords: ["KR-MCP-006", "invalid oauth configuration", "kiro mcp", "validation"
 
 ## Evidence Sources
 
-- https://kiro.dev/docs/cli/mcp/configuration/#oauth-configuration
+- https://kiro.dev/docs/mcp/configuration/
+- https://kiro.dev/docs/custom-agents/configuration-reference/
 - https://kiro.dev/changelog/cli/2-12/
 
 ## Test Coverage Metadata
@@ -45,5 +46,5 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Valid
 
 ```json
-{"mcpServers": {"remote": {"url": "https://example.com/mcp", "oauth": {"clientId": "registered-client", "clientSecret": "registered-secret", "redirectUri": "http://localhost:7778/oauth/callback", "oauthScopes": ["read"]}}}}
+{"mcpServers": {"remote": {"url": "https://example.com/mcp", "oauth": {"clientId": "registered-client", "redirectUri": "http://localhost:7778/oauth/callback"}}}}
 ```

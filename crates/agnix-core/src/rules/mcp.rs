@@ -1472,6 +1472,32 @@ fn is_cursor_mcp_file(path: &Path) -> bool {
             .is_some_and(|name| name.eq_ignore_ascii_case(".cursor"))
 }
 
+/// A Kiro power's `mcp.json`: inside `.kiro/powers/`, or next to the power's
+/// `POWER.md` or `plugin.json`.
+fn is_kiro_power_mcp_file(path: &Path, config: &PerFileLintConfig<'_>) -> bool {
+    if !path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| name.eq_ignore_ascii_case("mcp.json"))
+    {
+        return false;
+    }
+    let names: Vec<String> = path
+        .components()
+        .map(|c| c.as_os_str().to_string_lossy().to_ascii_lowercase())
+        .collect();
+    if names
+        .windows(2)
+        .any(|w| w[0] == ".kiro" && w[1] == "powers")
+    {
+        return true;
+    }
+    path.parent().is_some_and(|dir| {
+        let fs = config.fs();
+        fs.exists(&dir.join("POWER.md")) || fs.exists(&dir.join("plugin.json"))
+    })
+}
+
 fn has_meaningful_server_config(server: &McpServerConfig) -> bool {
     let has_type = server
         .server_type
@@ -1509,13 +1535,14 @@ fn validate_server(
 ) {
     let (line, col) = find_json_field_location(content, name);
 
-    // Cursor documents URL-only remote entries. Other clients, including
-    // Claude Code, still default an omitted type to stdio.
+    // Cursor documents URL-only remote entries, and Kiro picks the transport
+    // from the fields present (a url without a command is remote). Other
+    // clients, including Claude Code, still default an omitted type to stdio.
     let effective_type = server.server_type.as_deref().unwrap_or_else(|| {
         if raw_server_type.is_none()
-            && is_cursor_mcp_file(path)
             && !has_usable_command(server)
             && server.url.is_some()
+            && (is_cursor_mcp_file(path) || is_kiro_power_mcp_file(path, config))
         {
             "http"
         } else {
@@ -2994,6 +3021,59 @@ mod tests {
                 "URL-only inference must not apply to {path}: {diagnostics:?}"
             );
         }
+    }
+
+    #[test]
+    fn test_mcp_009_kiro_power_url_only_server_is_remote() {
+        let content = r#"{
+            "mcpServers": {
+                "autodesk-product-help": {
+                    "url": "https://developer.api.autodesk.com/knowledge/public/v1/mcp",
+                    "disabled": false,
+                    "autoApprove": []
+                }
+            }
+        }"#;
+        for path in [
+            ".kiro/powers/3dsmax-design-power/mcp.json",
+            "/home/u/.kiro/powers/installed/design/mcp.json",
+        ] {
+            let diagnostics = validate_path(path, content);
+            assert!(
+                diagnostics.iter().all(|d| d.rule != "MCP-009"),
+                "Kiro power url-only servers are remote ({path}): {diagnostics:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_mcp_009_kiro_published_power_detected_by_power_md_sibling() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let power = temp.path().join("powers").join("design");
+        let other = temp.path().join("other").join("design");
+        std::fs::create_dir_all(&power).unwrap();
+        std::fs::create_dir_all(&other).unwrap();
+        std::fs::write(power.join("POWER.md"), "---\nname: design\n---\n").unwrap();
+        let config = LintConfig::default();
+        let content = r#"{"mcpServers": {"remote": {"url": "https://example.com/mcp"}}}"#;
+        let diagnostics = McpValidator.validate(&power.join("mcp.json"), content, &config);
+        assert!(
+            diagnostics.iter().all(|d| d.rule != "MCP-009"),
+            "{diagnostics:?}"
+        );
+        // Without a power sibling the stdio default still applies.
+        let diagnostics = McpValidator.validate(&other.join("mcp.json"), content, &config);
+        assert!(
+            diagnostics.iter().any(|d| d.rule == "MCP-009"),
+            "{diagnostics:?}"
+        );
+    }
+
+    #[test]
+    fn test_mcp_009_kiro_power_without_url_or_command_stays_stdio() {
+        let content = r#"{"mcpServers": {"broken": {"args": ["x"]}}}"#;
+        let diagnostics = validate_path(".kiro/powers/p/mcp.json", content);
+        assert!(diagnostics.iter().any(|d| d.rule == "MCP-009"));
     }
 
     #[test]

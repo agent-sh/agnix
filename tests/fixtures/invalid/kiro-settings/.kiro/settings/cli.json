@@ -1,0 +1,20 @@
+{
+  "toolSearch.enabled": "true",
+  "toolSearch.minPct": -5,
+  "toolSearch.minTokens": 100.5,
+  "chat.autoCompact": true,
+  "mcpServers": {
+    "serena": {
+      "command": "oma",
+      "args": ["bridge"]
+    }
+  },
+  "chat": {
+    "defaultModel": "claude-sonnet-4.6"
+  },
+  "chat.enableKnowledge": "yes",
+  "chat.agentEngine": "v4",
+  "chat.defaultAgent": "first",
+  "chat.defaultAgent": "second",
+  "chat.uiMode": "tui"
+}

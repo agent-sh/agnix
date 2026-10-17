@@ -1,8 +1,8 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 459,
-  "last_updated": "2026-10-16",
+  "total_rules": 485,
+  "last_updated": "2026-10-17",
   "schema": {
     "evidence": {
       "source_type": "spec|vendor_docs|vendor_code|paper|community",
@@ -9515,15 +9515,16 @@
     },
     {
       "id": "KR-MCP-001",
-      "name": "Kiro MCP Server Missing command and url",
+      "name": "Kiro MCP Config Fails to Load",
       "severity": "HIGH",
       "category": "kiro-mcp",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/docs/mcp/configuration"
+          "https://kiro.dev/docs/mcp/configuration/",
+          "https://kiro.dev/docs/custom-agents/configuration-reference/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro"
         },
@@ -9537,20 +9538,23 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"mcpServers\": {\n    \"local\": {\"command\": \"node\", \"args\": [\"server.js\"]}\n  }\n}",
-      "bad_example": "{\n  \"mcpServers\": {\n    \"broken\": {\"args\": [\"--debug\"]}\n  }\n}"
+      "good_example": "{\"mcpServers\": {\"local\": {\"command\": \"node\", \"args\": [\"server.js\"]}}}",
+      "bad_example": "{\"mcpServers\": {\"broken\": {\"args\": [\"--debug\"]}}}"
     },
     {
       "id": "KR-MCP-002",
-      "name": "Hardcoded Secrets in Kiro MCP env",
+      "name": "Hardcoded Secret in Kiro MCP Server Config",
       "severity": "MEDIUM",
       "category": "kiro-mcp",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/docs/mcp/configuration"
+          "https://kiro.dev/docs/mcp/configuration/",
+          "https://kiro.dev/docs/custom-agents/configuration-reference/",
+          "https://kiro.dev/docs/mcp/security/",
+          "https://kiro.dev/docs/powers/create/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro"
         },
@@ -9564,33 +9568,21 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"mcpServers\": {\n    \"server\": {\n      \"command\": \"node\",\n      \"env\": {\"API_KEY\": \"${API_KEY}\"}\n    }\n  }\n}",
-      "bad_example": "{\n  \"mcpServers\": {\n    \"server\": {\n      \"command\": \"node\",\n      \"env\": {\"API_KEY\": \"hardcoded-secret\"}\n    }\n  }\n}",
-      "security": {
-        "cwe": [
-          "CWE-798"
-        ],
-        "owasp": [
-          "A07:2021"
-        ],
-        "vulnerability_class": "hardcoded-secret",
-        "subcategory": "vuln",
-        "confidence": "HIGH",
-        "likelihood": "MEDIUM",
-        "impact": "HIGH"
-      }
+      "good_example": "{\"mcpServers\": {\"s\": {\"command\": \"npx\", \"args\": [\"-y\", \"server\"], \"env\": {\"API_KEY\": \"${API_KEY}\"}}}}",
+      "bad_example": "{\"mcpServers\": {\"s\": {\"command\": \"npx\", \"args\": [\"-y\", \"server\"], \"env\": {\"API_KEY\": \"x7Rf2kLp9QwZ3mTnB5vD\"}}}}"
     },
     {
       "id": "KR-MCP-003",
-      "name": "Missing Required Args",
+      "name": "Kiro MCP Command Includes Arguments",
       "severity": "MEDIUM",
       "category": "kiro-mcp",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/docs/mcp"
+          "https://kiro.dev/docs/mcp/configuration/",
+          "https://kiro.dev/docs/custom-agents/configuration-reference/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro"
         },
@@ -9604,20 +9596,22 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\"mcpServers\": {\"fs\": {\"command\": \"node\", \"args\": [\"server.js\"]}}}",
-      "bad_example": "{\"mcpServers\": {\"fs\": {\"command\": \"node\"}}}"
+      "good_example": "{\"mcpServers\": {\"s\": {\"command\": \"npx\", \"args\": [\"-y\", \"@modelcontextprotocol/server-github\"]}}}",
+      "bad_example": "{\"mcpServers\": {\"s\": {\"command\": \"npx -y @modelcontextprotocol/server-github\"}}}"
     },
     {
       "id": "KR-MCP-004",
-      "name": "Invalid MCP URL",
+      "name": "Invalid Kiro MCP Server URL",
       "severity": "HIGH",
       "category": "kiro-mcp",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/docs/mcp"
+          "https://kiro.dev/docs/mcp/configuration/",
+          "https://kiro.dev/docs/custom-agents/configuration-reference/",
+          "https://kiro.dev/docs/mcp/security/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro"
         },
@@ -9631,33 +9625,21 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\"mcpServers\": {\"remote\": {\"url\": \"https://example.com/mcp\"}}}",
-      "bad_example": "{\"mcpServers\": {\"remote\": {\"url\": \"not-a-url\"}}}",
-      "security": {
-        "cwe": [
-          "CWE-918"
-        ],
-        "owasp": [
-          "A10:2021"
-        ],
-        "vulnerability_class": "ssrf",
-        "subcategory": "audit",
-        "confidence": "MEDIUM",
-        "likelihood": "LOW",
-        "impact": "HIGH"
-      }
+      "good_example": "{\"mcpServers\": {\"s\": {\"url\": \"https://example.com/mcp\"}}}",
+      "bad_example": "{\"mcpServers\": {\"s\": {\"url\": \"wss://example.com/mcp\"}}}"
     },
     {
       "id": "KR-MCP-005",
-      "name": "Duplicate MCP Server Names",
+      "name": "Duplicate Kiro MCP Server Name in One File",
       "severity": "MEDIUM",
       "category": "kiro-mcp",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/docs/mcp"
+          "https://kiro.dev/docs/mcp/configuration/",
+          "https://kiro.dev/docs/custom-agents/configuration-reference/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro"
         },
@@ -9671,8 +9653,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\"mcpServers\": {\"a\": {\"command\": \"a\"}, \"b\": {\"command\": \"b\"}}}",
-      "bad_example": "# Two servers with same name in different config files"
+      "good_example": "{\"mcpServers\": {\"git\": {\"command\": \"uvx\", \"args\": [\"mcp-server-git\"]}}}",
+      "bad_example": "{\"mcpServers\": {\"git\": {\"command\": \"uvx\"}, \"git\": {\"command\": \"npx\"}}}"
     },
     {
       "id": "KR-MCP-006",
@@ -9682,10 +9664,11 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/docs/cli/mcp/configuration/#oauth-configuration",
+          "https://kiro.dev/docs/mcp/configuration/",
+          "https://kiro.dev/docs/custom-agents/configuration-reference/",
           "https://kiro.dev/changelog/cli/2-12/"
         ],
-        "verified_on": "2026-07-11",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro",
           "version_range": ">=2.3.0"
@@ -9700,8 +9683,270 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\"mcpServers\": {\"remote\": {\"url\": \"https://example.com/mcp\", \"oauth\": {\"clientId\": \"registered-client\", \"clientSecret\": \"registered-secret\", \"redirectUri\": \"http://localhost:7778/oauth/callback\", \"oauthScopes\": [\"read\"]}}}}",
+      "good_example": "{\"mcpServers\": {\"remote\": {\"url\": \"https://example.com/mcp\", \"oauth\": {\"clientId\": \"registered-client\", \"redirectUri\": \"http://localhost:7778/oauth/callback\"}}}}",
       "bad_example": "{\"mcpServers\": {\"remote\": {\"url\": \"https://example.com/mcp\", \"oauth\": {\"clientSecret\": \"secret-without-client-id\", \"redirectUri\": \"https://example.com/callback\"}}}}"
+    },
+    {
+      "id": "KR-MCP-007",
+      "name": "Invalid Kiro MCP Server Field Type",
+      "severity": "HIGH",
+      "category": "kiro-mcp",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/mcp/configuration/",
+          "https://kiro.dev/docs/custom-agents/configuration-reference/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"mcpServers\": {\"s\": {\"command\": \"node\", \"args\": [\"server.js\"], \"timeout\": 120000}}}",
+      "bad_example": "{\"mcpServers\": {\"s\": {\"command\": \"node\", \"args\": \"server.js\", \"timeout\": 0}}}"
+    },
+    {
+      "id": "KR-MCP-008",
+      "name": "Kiro MCP Remote URL Uses Plain HTTP",
+      "severity": "HIGH",
+      "category": "kiro-mcp",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/mcp/configuration/",
+          "https://kiro.dev/docs/custom-agents/configuration-reference/",
+          "https://kiro.dev/docs/mcp/security/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "spec_revision": "Kiro V3 engine (opt-in from CLI 2.8.0, default from CLI 3.0)"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"mcpServers\": {\"s\": {\"url\": \"https://mcp.example.com/mcp\"}}}",
+      "bad_example": "{\"mcpServers\": {\"s\": {\"url\": \"http://mcp.example.com/mcp\"}}}"
+    },
+    {
+      "id": "KR-MCP-009",
+      "name": "Unexpanded Variable Reference in Kiro MCP Config",
+      "severity": "MEDIUM",
+      "category": "kiro-mcp",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/mcp/configuration/",
+          "https://kiro.dev/docs/custom-agents/configuration-reference/",
+          "https://kiro.dev/changelog/cli/2-4/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"mcpServers\": {\"s\": {\"command\": \"uvx\", \"args\": [\"mcp-atlassian\"], \"env\": {\"JIRA_API_TOKEN\": \"${JIRA_API_TOKEN}\"}}}}",
+      "bad_example": "{\"mcpServers\": {\"s\": {\"command\": \"uvx\", \"args\": [\"mcp-atlassian\"], \"env\": {\"JIRA_API_TOKEN\": \"$JIRA_API_TOKEN\"}}}}"
+    },
+    {
+      "id": "KR-MCP-010",
+      "name": "Unknown Kiro MCP Server Field",
+      "severity": "LOW",
+      "category": "kiro-mcp",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/mcp/configuration/",
+          "https://kiro.dev/docs/custom-agents/configuration-reference/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"mcpServers\": {\"s\": {\"command\": \"uvx\", \"args\": [\"server\"], \"env\": {\"LOG\": \"info\"}}}}",
+      "bad_example": "{\"mcpServers\": {\"s\": {\"command\": \"uvx\", \"args\": [\"server\"], \"evn\": {\"LOG\": \"info\"}}}}"
+    },
+    {
+      "id": "KR-MCP-011",
+      "name": "Kiro MCP Server Has Both command and url",
+      "severity": "LOW",
+      "category": "kiro-mcp",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/mcp/configuration/",
+          "https://kiro.dev/docs/custom-agents/configuration-reference/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "spec_revision": "Kiro V3 engine (opt-in from CLI 2.8.0, default from CLI 3.0)"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"mcpServers\": {\"s\": {\"url\": \"https://example.com/mcp\"}}}",
+      "bad_example": "{\"mcpServers\": {\"s\": {\"command\": \"node\", \"url\": \"https://example.com/mcp\"}}}"
+    },
+    {
+      "id": "KR-MCP-012",
+      "name": "Agent Plugins mcp.json Schema Missing or Mismatched",
+      "severity": "HIGH",
+      "category": "kiro-mcp",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/powers/create/",
+          "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+          "https://github.com/kirodotdev/powers/blob/e974b7be3c5d83b0b1cd6e3fa71a9a04196803e0/power-builder/skills/migrate-plugin/SKILL.md"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "spec_revision": "Kiro V3 engine (opt-in from CLI 2.8.0, default from CLI 3.0)"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"$schema\": \"https://agent-plugins.org/schemas/1.0.0/mcp.schema.json\", \"mcpServers\": {}}",
+      "bad_example": "{\"mcpServers\": {\"docs\": {\"type\": \"streamable-http\", \"url\": \"https://example.com/mcp\"}}}"
+    },
+    {
+      "id": "KR-MCP-013",
+      "name": "Unknown Top-Level Field in Agent Plugins mcp.json",
+      "severity": "HIGH",
+      "category": "kiro-mcp",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/powers/create/",
+          "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+          "https://github.com/kirodotdev/powers/blob/e974b7be3c5d83b0b1cd6e3fa71a9a04196803e0/power-builder/skills/migrate-plugin/SKILL.md"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "spec_revision": "Kiro V3 engine (opt-in from CLI 2.8.0, default from CLI 3.0)"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"$schema\": \"https://agent-plugins.org/schemas/1.0.0/mcp.schema.json\", \"mcpServers\": {}}",
+      "bad_example": "{\"$schema\": \"https://agent-plugins.org/schemas/1.0.0/mcp.schema.json\", \"mcpServers\": {}, \"inputs\": []}"
+    },
+    {
+      "id": "KR-MCP-014",
+      "name": "Invalid Agent Plugins MCP Server Entry",
+      "severity": "HIGH",
+      "category": "kiro-mcp",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/powers/create/",
+          "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+          "https://github.com/kirodotdev/powers/blob/e974b7be3c5d83b0b1cd6e3fa71a9a04196803e0/power-builder/skills/migrate-plugin/SKILL.md"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "spec_revision": "Kiro V3 engine (opt-in from CLI 2.8.0, default from CLI 3.0)"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"$schema\": \"https://agent-plugins.org/schemas/1.0.0/mcp.schema.json\", \"mcpServers\": {\"docs\": {\"type\": \"stdio\", \"command\": \"uvx\", \"args\": [\"docs-mcp\"]}}}",
+      "bad_example": "{\"$schema\": \"https://agent-plugins.org/schemas/1.0.0/mcp.schema.json\", \"mcpServers\": {\"docs\": {\"command\": \"uvx\", \"disabled\": false}}}"
+    },
+    {
+      "id": "KR-MCP-015",
+      "name": "Kiro MCP autoApprove Wildcard",
+      "severity": "MEDIUM",
+      "category": "kiro-mcp",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/mcp/security/",
+          "https://kiro.dev/docs/mcp/configuration/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"mcpServers\": {\"s\": {\"command\": \"uvx\", \"args\": [\"aws-docs-mcp\"], \"autoApprove\": [\"search_documentation\"]}}}",
+      "bad_example": "{\"mcpServers\": {\"s\": {\"command\": \"uvx\", \"args\": [\"aws-docs-mcp\"], \"autoApprove\": [\"*\"]}}}"
     },
     {
       "id": "KR-PW-001",
@@ -9937,18 +10182,19 @@
     {
       "id": "KR-SET-001",
       "name": "Invalid toolSearch.enabled Value",
-      "severity": "HIGH",
+      "severity": "MEDIUM",
       "category": "kiro-settings",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/docs/cli/mcp/tool-search/"
+          "https://kiro.dev/docs/reference/settings/",
+          "https://kiro.dev/docs/mcp/tool-search/"
         ],
-        "verified_on": "2026-04-26",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro"
         },
-        "normative_level": "MUST",
+        "normative_level": "SHOULD",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -9957,7 +10203,7 @@
       },
       "fix": {
         "autofix": true,
-        "fix_safety": "safe"
+        "fix_safety": "unsafe"
       },
       "good_example": "{\n  \"toolSearch.enabled\": true\n}",
       "bad_example": "{\n  \"toolSearch.enabled\": \"true\"\n}"
@@ -9970,9 +10216,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/docs/cli/mcp/tool-search/"
+          "https://kiro.dev/docs/reference/settings/",
+          "https://kiro.dev/docs/mcp/tool-search/"
         ],
-        "verified_on": "2026-04-26",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro"
         },
@@ -9985,7 +10232,7 @@
       },
       "fix": {
         "autofix": true,
-        "fix_safety": "safe"
+        "fix_safety": "unsafe"
       },
       "good_example": "{\n  \"toolSearch.minPct\": 5\n}",
       "bad_example": "{\n  \"toolSearch.minPct\": -5\n}"
@@ -9998,9 +10245,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/docs/cli/mcp/tool-search/"
+          "https://kiro.dev/docs/reference/settings/",
+          "https://kiro.dev/docs/mcp/tool-search/"
         ],
-        "verified_on": "2026-04-26",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro"
         },
@@ -10013,10 +10261,256 @@
       },
       "fix": {
         "autofix": true,
-        "fix_safety": "safe"
+        "fix_safety": "unsafe"
       },
       "good_example": "{\n  \"toolSearch.minTokens\": 50000\n}",
-      "bad_example": "{\n  \"toolSearch.minTokens\": -1\n}"
+      "bad_example": "{\n  \"toolSearch.minTokens\": 100.5\n}"
+    },
+    {
+      "id": "KR-SET-004",
+      "name": "Unparseable Kiro CLI Settings File",
+      "severity": "HIGH",
+      "category": "kiro-settings",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/reference/settings/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"chat.defaultAgent\": \"my-agent\"}",
+      "bad_example": "{\n  // default agent\n  \"chat.defaultAgent\": \"my-agent\",\n}"
+    },
+    {
+      "id": "KR-SET-005",
+      "name": "Unknown Kiro CLI Setting",
+      "severity": "LOW",
+      "category": "kiro-settings",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/reference/settings/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"chat.disableAutoCompaction\": false}",
+      "bad_example": "{\"chat.autoCompact\": true}"
+    },
+    {
+      "id": "KR-SET-006",
+      "name": "Config Section Misplaced in Kiro CLI Settings",
+      "severity": "MEDIUM",
+      "category": "kiro-settings",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/reference/settings/",
+          "https://kiro.dev/docs/mcp/configuration/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"chat.defaultAgent\": \"my-agent\"}",
+      "bad_example": "{\"chat.defaultAgent\": \"my-agent\", \"mcpServers\": {\"git\": {\"command\": \"uvx\"}}}"
+    },
+    {
+      "id": "KR-SET-007",
+      "name": "Nested Kiro CLI Settings Object",
+      "severity": "MEDIUM",
+      "category": "kiro-settings",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/reference/settings/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"toolSearch.enabled\": true}",
+      "bad_example": "{\"toolSearch\": {\"enabled\": true}}"
+    },
+    {
+      "id": "KR-SET-008",
+      "name": "Kiro CLI Setting Has Wrong Value Type",
+      "severity": "MEDIUM",
+      "category": "kiro-settings",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/reference/settings/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": true,
+        "fix_safety": "unsafe"
+      },
+      "good_example": "{\"chat.enableKnowledge\": true}",
+      "bad_example": "{\"chat.enableKnowledge\": \"yes\"}"
+    },
+    {
+      "id": "KR-SET-009",
+      "name": "Unrecognized Kiro CLI Setting Value",
+      "severity": "MEDIUM",
+      "category": "kiro-settings",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/reference/settings/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"chat.uiMode\": \"tui\"}",
+      "bad_example": "{\"chat.uiMode\": \"compact\"}"
+    },
+    {
+      "id": "KR-SET-010",
+      "name": "Duplicate Kiro CLI Setting Key",
+      "severity": "MEDIUM",
+      "category": "kiro-settings",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/reference/settings/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"chat.defaultAgent\": \"b\"}",
+      "bad_example": "{\"chat.defaultAgent\": \"a\", \"chat.defaultAgent\": \"b\"}"
+    },
+    {
+      "id": "KR-SET-011",
+      "name": "Global-Only Kiro CLI Setting in Workspace File",
+      "severity": "LOW",
+      "category": "kiro-settings",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/reference/settings/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"chat.defaultAgent\": \"project-agent\"}",
+      "bad_example": "{\"chat.uiMode\": \"tui\"}"
+    },
+    {
+      "id": "KR-SET-012",
+      "name": "Kiro CLI Settings in Legacy .kiro/settings.json",
+      "severity": "MEDIUM",
+      "category": "kiro-settings",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/reference/settings/",
+          "https://kiro.dev/changelog/cli/1-23/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "// .kiro/settings/cli.json\n{\"chat.defaultModel\": \"claude-sonnet-4.6\"}",
+      "bad_example": "// .kiro/settings.json\n{\"chat.defaultModel\": \"claude-sonnet-4.6\"}"
     },
     {
       "id": "MCP-001",
@@ -13160,9 +13654,10 @@
         "source_type": "vendor_docs",
         "source_urls": [
           "https://kiro.dev/docs/permissions/",
-          "https://kiro.dev/docs/cli/v3/permissions/"
+          "https://kiro.dev/docs/cli/v3/permissions/",
+          "https://kiro.dev/docs/enterprise/governance/permissions/"
         ],
-        "verified_on": "2026-10-16",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro",
           "spec_revision": "CLI V3 / IDE 1.x capability permissions"
@@ -13170,15 +13665,15 @@
         "normative_level": "MUST",
         "tests": {
           "unit": true,
-          "fixtures": false,
+          "fixtures": true,
           "e2e": true
         }
       },
       "fix": {
         "autofix": false
       },
-      "good_example": "rules:\n  - capability: shell\n    match: [\"git *\"]\n    effect: allow\n",
-      "bad_example": "rules: {}"
+      "good_example": "rules: []\n",
+      "bad_example": "capability: fs_write\nmatch: /**\neffect: allow\n"
     },
     {
       "id": "KR-PM-002",
@@ -13191,7 +13686,7 @@
           "https://kiro.dev/docs/permissions/",
           "https://kiro.dev/docs/cli/v3/permissions/"
         ],
-        "verified_on": "2026-10-16",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro",
           "spec_revision": "CLI V3 / IDE 1.x capability permissions"
@@ -13207,7 +13702,7 @@
         "autofix": false
       },
       "good_example": "rules:\n  - capability: shell\n    match: [\"git *\"]\n    effect: allow\n",
-      "bad_example": "rules: [{capability: unknown, effect: allow}]"
+      "bad_example": "rules: [{capability: \"*\", effect: allow}]"
     },
     {
       "id": "KR-PM-003",
@@ -13218,9 +13713,10 @@
         "source_type": "vendor_docs",
         "source_urls": [
           "https://kiro.dev/docs/permissions/",
-          "https://kiro.dev/docs/cli/v3/permissions/"
+          "https://kiro.dev/docs/cli/v3/permissions/",
+          "https://kiro.dev/docs/enterprise/governance/permissions/"
         ],
-        "verified_on": "2026-10-16",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro",
           "spec_revision": "CLI V3 / IDE 1.x capability permissions"
@@ -13249,7 +13745,7 @@
           "https://kiro.dev/docs/permissions/",
           "https://kiro.dev/docs/cli/v3/permissions/"
         ],
-        "verified_on": "2026-10-16",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro",
           "spec_revision": "CLI V3 / IDE 1.x capability permissions"
@@ -13264,8 +13760,243 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "rules:\n  - capability: shell\n    match: [\"git *\"]\n    effect: allow\n",
-      "bad_example": "rules: [{capability: shell, effect: allow, match: \"git *\"}]"
+      "good_example": "rules: [{capability: shell, match: [\"git *\"], effect: allow}]",
+      "bad_example": "rules: [{capability: shell, match: \"git *\", effect: allow}]"
+    },
+    {
+      "id": "KR-PM-005",
+      "name": "Unknown Field in Kiro Permission Rule",
+      "severity": "HIGH",
+      "category": "kiro-permissions",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/permissions/",
+          "https://kiro.dev/docs/cli/v3/permissions/",
+          "https://kiro.dev/docs/enterprise/governance/permissions/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "spec_revision": "CLI V3 / IDE 1.x capability permissions"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "rules: [{capability: shell, match: [\"git *\"], effect: allow}]",
+      "bad_example": "rules: [{capability: shell, match: [\"git *\"], effect: allow, comment: \"git only\"}]"
+    },
+    {
+      "id": "KR-PM-006",
+      "name": "Invalid Kiro Permission Policy Presets",
+      "severity": "HIGH",
+      "category": "kiro-permissions",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/permissions/",
+          "https://kiro.dev/docs/cli/v3/permissions/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "spec_revision": "CLI V3 / IDE 1.x capability permissions"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "policies: [read-only-shell]\nrules: []\n",
+      "bad_example": "policies: read-only-shell\nrules: []\n"
+    },
+    {
+      "id": "KR-PM-007",
+      "name": "Kiro Permission Pattern Has No Effect",
+      "severity": "MEDIUM",
+      "category": "kiro-permissions",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/permissions/",
+          "https://kiro.dev/docs/cli/v3/permissions/",
+          "https://kiro.dev/docs/enterprise/governance/permissions/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "spec_revision": "CLI V3 / IDE 1.x capability permissions"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "rules: [{capability: mcp, match: [\"github/*\"], effect: allow}]",
+      "bad_example": "rules: [{capability: mcp, match: [\"@github\"], effect: allow}]"
+    },
+    {
+      "id": "KR-PM-008",
+      "name": "Empty Kiro Permission match List Matches Everything",
+      "severity": "MEDIUM",
+      "category": "kiro-permissions",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/permissions/",
+          "https://kiro.dev/docs/cli/v3/permissions/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "spec_revision": "CLI V3 / IDE 1.x capability permissions"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "rules: [{capability: shell, match: [\"git status\"], effect: allow}]",
+      "bad_example": "rules: [{capability: shell, match: [], effect: allow}]"
+    },
+    {
+      "id": "KR-PM-009",
+      "name": "Kiro Does Not Read This Permissions File",
+      "severity": "LOW",
+      "category": "kiro-permissions",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/permissions/",
+          "https://kiro.dev/docs/cli/v3/permissions/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "spec_revision": "CLI V3 / IDE 1.x capability permissions"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "# ~/.kiro/settings/permissions.yaml\nrules: []\n",
+      "bad_example": "# <repo>/.kiro/settings/permissions.yaml\nrules: []\n"
+    },
+    {
+      "id": "KR-PM-010",
+      "name": "Unrestricted Kiro Allow Rule for a Write-Capable Capability",
+      "severity": "MEDIUM",
+      "category": "kiro-permissions",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/permissions/",
+          "https://kiro.dev/docs/cli/v3/permissions/",
+          "https://kiro.dev/docs/custom-agents/configuration-reference/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "spec_revision": "CLI V3 / IDE 1.x capability permissions"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "rules: [{capability: shell, match: [\"git status\", \"npm test *\"], effect: allow}]",
+      "bad_example": "rules: [{capability: shell, effect: allow}]"
+    },
+    {
+      "id": "KR-PM-011",
+      "name": "Unsupported Pattern Syntax in Kiro Shell, Web or MCP Rule",
+      "severity": "MEDIUM",
+      "category": "kiro-permissions",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/permissions/",
+          "https://kiro.dev/docs/cli/v3/permissions/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "spec_revision": "CLI V3 / IDE 1.x capability permissions"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "rules: [{capability: shell, match: [\"git *\"], effect: allow}]",
+      "bad_example": "rules: [{capability: shell, match: [\"git **\"], effect: allow}]"
+    },
+    {
+      "id": "KR-PM-012",
+      "name": "Shadowed Kiro sandbox_network Deny",
+      "severity": "MEDIUM",
+      "category": "kiro-permissions",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/permissions/",
+          "https://kiro.dev/docs/cli/v3/permissions/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "spec_revision": "CLI V3 / IDE 1.x capability permissions"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "rules:\n  - {capability: sandbox_network, match: [\"evil.example.com\"], effect: deny}\n  - {capability: sandbox_network, match: [\"*.example.com\"], effect: allow}\n",
+      "bad_example": "rules:\n  - {capability: sandbox_network, match: [\"*.example.com\"], effect: allow}\n  - {capability: sandbox_network, match: [\"evil.example.com\"], effect: deny}\n"
     },
     {
       "id": "KR-HK-014",
@@ -13478,12 +14209,12 @@
     },
     "kiro-permissions": {
       "prefix": "KR-PM",
-      "count": 4,
-      "description": "Kiro capability permissions YAML rules"
+      "count": 12,
+      "description": "Kiro capability permissions (permissions.yaml / permissions.json / managed-settings.json) rules"
     },
     "kiro-mcp": {
       "prefix": "KR-MCP",
-      "count": 6,
+      "count": 15,
       "description": "Kiro MCP configuration rules"
     },
     "kiro-powers": {
@@ -13493,8 +14224,8 @@
     },
     "kiro-settings": {
       "prefix": "KR-SET",
-      "count": 3,
-      "description": "Kiro CLI settings (.kiro/settings.json) rules"
+      "count": 12,
+      "description": "Kiro CLI settings (.kiro/settings/cli.json) rules"
     },
     "claude-settings": {
       "prefix": "CC-SET",

@@ -39,10 +39,10 @@
 | Kiro Skills | .kiro/skills/*/SKILL.md | 1 |
 | Kiro Agents | .kiro/agents/**/*.{json,md} | 15 |
 | Kiro Hooks | .kiro/hooks/*.kiro.hook, .kiro/hooks/*.json | 14 |
-| Kiro Permissions | .kiro/settings/permissions.yaml, ~/.kiro/workspace-roots/<hash>/permissions.yaml | 4 |
-| Kiro MCP | .kiro/settings/mcp.json | 6 |
+| Kiro Permissions | .kiro/settings/permissions.yaml, ~/.kiro/workspace-roots/<hash>/permissions.yaml | 12 |
+| Kiro MCP | .kiro/settings/mcp.json | 15 |
 | Kiro Powers | .kiro/powers/*/POWER.md | 8 |
-| Kiro Settings | .kiro/settings/*.json | 3 |
+| Kiro Settings | .kiro/settings/*.json | 12 |
 | Amp Skills | .agents/skills/*/SKILL.md | 1 |
 | Amp Checks | .agents/checks/*.md, .amp/settings*.json | 4 |
 | Roo Code Skills | .roo/skills/*/SKILL.md | 1 |

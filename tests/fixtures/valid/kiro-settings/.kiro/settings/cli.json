@@ -1,0 +1,16 @@
+{
+  "chat.defaultAgent": "project-agent",
+  "chat.defaultModel": "claude-sonnet-4.6",
+  "chat.enableKnowledge": true,
+  "knowledge.defaultIncludePatterns": ["**/*.ts", "**/*.md"],
+  "chat.modelDefaults": {
+    "claude-sonnet-4.6": {
+      "output_config": {
+        "effort": "high"
+      }
+    }
+  },
+  "toolSearch.enabled": true,
+  "toolSearch.minPct": 5,
+  "toolSearch.minTokens": 50000
+}

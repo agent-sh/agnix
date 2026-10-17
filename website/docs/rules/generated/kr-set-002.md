@@ -12,8 +12,8 @@ keywords: ["KR-SET-002", "invalid toolsearch.minpct value", "kiro settings", "va
 - **Severity**: `MEDIUM`
 - **Category**: `Kiro Settings`
 - **Normative Level**: `SHOULD`
-- **Auto-Fix**: `Yes (safe)`
-- **Verified On**: `2026-04-26`
+- **Auto-Fix**: `Yes (unsafe)`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,8 @@ keywords: ["KR-SET-002", "invalid toolsearch.minpct value", "kiro settings", "va
 
 ## Evidence Sources
 
-- https://kiro.dev/docs/cli/mcp/tool-search/
+- https://kiro.dev/docs/reference/settings/
+- https://kiro.dev/docs/mcp/tool-search/
 
 ## Test Coverage Metadata
 

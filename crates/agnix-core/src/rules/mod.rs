@@ -52,8 +52,10 @@ use std::path::Path;
 /// plaintext secret rather than a template/variable reference.
 ///
 /// Returns `false` for empty values, template expressions (`${...}`, `$(...)`,
-/// `{{...}}`, `<...>`), and values shorter than 8 characters (too short to be
-/// a real secret).
+/// `{{...}}`, `<...>`), variable references (`$NAME`, `%NAME%`), placeholders
+/// (`YOUR_API_KEY`, `your-token-here`, an upper-case variable name such as
+/// `OPENAI_API_KEY`, `xxxxxxxx`), file paths, and values shorter than 8
+/// characters (too short to be a real secret).
 pub(crate) fn seems_plaintext_secret(value: &str) -> bool {
     let trimmed = value.trim_matches(|ch| ch == '"' || ch == '\'').trim();
     !trimmed.is_empty()
@@ -63,6 +65,80 @@ pub(crate) fn seems_plaintext_secret(value: &str) -> bool {
         && !trimmed.starts_with('<')
         && !trimmed.starts_with("env:")
         && trimmed.len() >= 8
+        && !is_variable_reference(trimmed)
+        && !is_secret_placeholder(trimmed)
+        && !is_file_path(trimmed)
+}
+
+/// `$NAME...` or `%NAME%` (a shell or Windows environment variable).
+fn is_variable_reference(value: &str) -> bool {
+    let shell = value
+        .strip_prefix('$')
+        .and_then(|rest| rest.chars().next())
+        .is_some_and(|c| c.is_ascii_alphabetic() || c == '_');
+    let windows = value.len() > 2
+        && value.starts_with('%')
+        && value[1..].find('%').is_some_and(|end| {
+            end > 0
+                && value[1..1 + end]
+                    .chars()
+                    .all(|c| c.is_ascii_alphanumeric() || c == '_')
+        });
+    shell || windows
+}
+
+/// Documentation placeholders rather than real credentials.
+fn is_secret_placeholder(value: &str) -> bool {
+    let lower = value.to_ascii_lowercase();
+    let starts = [
+        "your_",
+        "your-",
+        "your ",
+        "replace",
+        "change_me",
+        "changeme",
+        "change-me",
+        "insert",
+        "enter_",
+        "enter-",
+        "enter ",
+        "put_your",
+        "add_your",
+        "placeholder",
+        "example",
+    ];
+    if starts.iter().any(|p| lower.starts_with(p))
+        || lower.contains("your_")
+        || lower.contains("your-")
+        || lower.ends_with("_here")
+        || lower.ends_with("-here")
+    {
+        return true;
+    }
+    // An upper-case identifier such as OPENAI_API_KEY names a variable.
+    let env_name = value.contains('_')
+        && value
+            .chars()
+            .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_');
+    // A run of one repeated filler character: xxxxxxxx, ********, ........
+    let mut chars = value.chars();
+    let filler = chars.next().is_some_and(|first| {
+        matches!(first, 'x' | 'X' | '*' | '.' | '#' | '0') && chars.all(|c| c == first)
+    });
+    env_name || filler
+}
+
+/// Absolute, home-relative or explicitly relative file paths.
+fn is_file_path(value: &str) -> bool {
+    let bytes = value.as_bytes();
+    value.starts_with('/')
+        || value.starts_with("~/")
+        || value.starts_with("./")
+        || value.starts_with("../")
+        || (bytes.len() > 2
+            && bytes[0].is_ascii_alphabetic()
+            && bytes[1] == b':'
+            && matches!(bytes[2], b'\\' | b'/'))
 }
 
 /// Compute 1-based (line, column) from a byte offset in `content`.
@@ -383,6 +459,39 @@ fn contains_ignore_ascii_case(haystack: &[u8], needle: &[u8]) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_seems_plaintext_secret_ignores_references_placeholders_and_paths() {
+        for value in [
+            "$CONFLUENCE_API_TOKEN",
+            "%GITHUB_TOKEN%",
+            "${GITHUB_TOKEN}",
+            "YOUR_ANTHROPIC_API_KEY",
+            "your-datadog-api-key",
+            "xoxb-your-token-here",
+            "OPENAI_API_KEY_HERE",
+            "POSTGRES_CONNECTION_STRING_ENV_VAR",
+            "changeme123",
+            "xxxxxxxxxx",
+            "**********",
+            "/Users/3fn/Documents/tokens",
+            "~/.config/token",
+            "./secrets/token.txt",
+            "C:\\Users\\me\\token",
+            "short",
+        ] {
+            assert!(!seems_plaintext_secret(value), "{value}");
+        }
+        for value in [
+            "\"DeployTest!2025\"",
+            "q8Zt3vWx9LmN2pRs7KdYb4Hc",
+            "x7Rf2kLp9QwZ3mTn",
+            "hardcoded-secret",
+            "Abcdefgh_12345",
+        ] {
+            assert!(seems_plaintext_secret(value), "{value}");
+        }
+    }
 
     #[test]
     fn test_find_closest_value_exact_case_insensitive() {

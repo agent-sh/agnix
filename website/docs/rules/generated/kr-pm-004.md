@@ -13,7 +13,7 @@ keywords: ["KR-PM-004", "invalid kiro permission patterns", "kiro permissions", 
 - **Category**: `Kiro Permissions`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-10-16`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -39,14 +39,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```yaml
-rules: [{capability: shell, effect: allow, match: "git *"}]
+rules: [{capability: shell, match: "git *", effect: allow}]
 ```
 
 ### Valid
 
 ```yaml
-rules:
-  - capability: shell
-    match: ["git *"]
-    effect: allow
+rules: [{capability: shell, match: ["git *"], effect: allow}]
 ```

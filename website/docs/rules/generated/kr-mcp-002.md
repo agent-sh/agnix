@@ -1,9 +1,9 @@
 ---
 id: kr-mcp-002
-title: "KR-MCP-002: Hardcoded Secrets in Kiro MCP env - Kiro MCP"
+title: "KR-MCP-002: Hardcoded Secret in Kiro MCP Server Config"
 sidebar_label: "KR-MCP-002"
-description: "agnix rule KR-MCP-002 checks for hardcoded secrets in kiro mcp env in kiro mcp files. Severity: MEDIUM. See examples and fix guidance."
-keywords: ["KR-MCP-002", "hardcoded secrets in kiro mcp env", "kiro mcp", "validation", "agnix", "linter"]
+description: "agnix rule KR-MCP-002 checks for hardcoded secret in kiro mcp server config in kiro mcp files. Severity: MEDIUM. See examples and fix guidance."
+keywords: ["KR-MCP-002", "hardcoded secret in kiro mcp server config", "kiro mcp", "validation", "agnix", "linter"]
 ---
 
 ## Summary
@@ -13,7 +13,7 @@ keywords: ["KR-MCP-002", "hardcoded secrets in kiro mcp env", "kiro mcp", "valid
 - **Category**: `Kiro MCP`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,10 @@ keywords: ["KR-MCP-002", "hardcoded secrets in kiro mcp env", "kiro mcp", "valid
 
 ## Evidence Sources
 
-- https://kiro.dev/docs/mcp/configuration
+- https://kiro.dev/docs/mcp/configuration/
+- https://kiro.dev/docs/custom-agents/configuration-reference/
+- https://kiro.dev/docs/mcp/security/
+- https://kiro.dev/docs/powers/create/
 
 ## Test Coverage Metadata
 
@@ -38,25 +41,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{
-  "mcpServers": {
-    "server": {
-      "command": "node",
-      "env": {"API_KEY": "hardcoded-secret"}
-    }
-  }
-}
+{"mcpServers": {"s": {"command": "npx", "args": ["-y", "server"], "env": {"API_KEY": "x7Rf2kLp9QwZ3mTnB5vD"}}}}
 ```
 
 ### Valid
 
 ```json
-{
-  "mcpServers": {
-    "server": {
-      "command": "node",
-      "env": {"API_KEY": "${API_KEY}"}
-    }
-  }
-}
+{"mcpServers": {"s": {"command": "npx", "args": ["-y", "server"], "env": {"API_KEY": "${API_KEY}"}}}}
 ```

@@ -1,7 +1,7 @@
 # Rules Reference
 
-This section contains all `459` validation rules generated from `knowledge-base/rules.json`.
-`129` rules have automatic fixes.
+This section contains all `485` validation rules generated from `knowledge-base/rules.json`.
+`130` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
 |------|------|----------|----------|----------|
@@ -333,12 +333,21 @@ This section contains all `459` validation rules generated from `knowledge-base/
 | [KR-HK-011](./generated/kr-hk-011.md) | Invalid Kiro V3 Hook Document Version | MEDIUM | Kiro Hooks | Yes (unsafe) |
 | [KR-HK-012](./generated/kr-hk-012.md) | Invalid Kiro V3 Hook Entry | HIGH | Kiro Hooks | No |
 | [KR-HK-013](./generated/kr-hk-013.md) | Invalid Kiro V3 Hook Action | HIGH | Kiro Hooks | No |
-| [KR-MCP-001](./generated/kr-mcp-001.md) | Kiro MCP Server Missing command and url | HIGH | Kiro MCP | No |
-| [KR-MCP-002](./generated/kr-mcp-002.md) | Hardcoded Secrets in Kiro MCP env | MEDIUM | Kiro MCP | No |
-| [KR-MCP-003](./generated/kr-mcp-003.md) | Missing Required Args | MEDIUM | Kiro MCP | No |
-| [KR-MCP-004](./generated/kr-mcp-004.md) | Invalid MCP URL | HIGH | Kiro MCP | No |
-| [KR-MCP-005](./generated/kr-mcp-005.md) | Duplicate MCP Server Names | MEDIUM | Kiro MCP | No |
+| [KR-MCP-001](./generated/kr-mcp-001.md) | Kiro MCP Config Fails to Load | HIGH | Kiro MCP | No |
+| [KR-MCP-002](./generated/kr-mcp-002.md) | Hardcoded Secret in Kiro MCP Server Config | MEDIUM | Kiro MCP | No |
+| [KR-MCP-003](./generated/kr-mcp-003.md) | Kiro MCP Command Includes Arguments | MEDIUM | Kiro MCP | No |
+| [KR-MCP-004](./generated/kr-mcp-004.md) | Invalid Kiro MCP Server URL | HIGH | Kiro MCP | No |
+| [KR-MCP-005](./generated/kr-mcp-005.md) | Duplicate Kiro MCP Server Name in One File | MEDIUM | Kiro MCP | No |
 | [KR-MCP-006](./generated/kr-mcp-006.md) | Invalid OAuth Configuration | MEDIUM | Kiro MCP | No |
+| [KR-MCP-007](./generated/kr-mcp-007.md) | Invalid Kiro MCP Server Field Type | HIGH | Kiro MCP | No |
+| [KR-MCP-008](./generated/kr-mcp-008.md) | Kiro MCP Remote URL Uses Plain HTTP | HIGH | Kiro MCP | No |
+| [KR-MCP-009](./generated/kr-mcp-009.md) | Unexpanded Variable Reference in Kiro MCP Config | MEDIUM | Kiro MCP | No |
+| [KR-MCP-010](./generated/kr-mcp-010.md) | Unknown Kiro MCP Server Field | LOW | Kiro MCP | No |
+| [KR-MCP-011](./generated/kr-mcp-011.md) | Kiro MCP Server Has Both command and url | LOW | Kiro MCP | No |
+| [KR-MCP-012](./generated/kr-mcp-012.md) | Agent Plugins mcp.json Schema Missing or Mismatched | HIGH | Kiro MCP | No |
+| [KR-MCP-013](./generated/kr-mcp-013.md) | Unknown Top-Level Field in Agent Plugins mcp.json | HIGH | Kiro MCP | No |
+| [KR-MCP-014](./generated/kr-mcp-014.md) | Invalid Agent Plugins MCP Server Entry | HIGH | Kiro MCP | No |
+| [KR-MCP-015](./generated/kr-mcp-015.md) | Kiro MCP autoApprove Wildcard | MEDIUM | Kiro MCP | No |
 | [KR-PW-001](./generated/kr-pw-001.md) | Missing Required POWER.md Frontmatter Fields | HIGH | Kiro Powers | No |
 | [KR-PW-002](./generated/kr-pw-002.md) | Empty POWER.md Keywords Array | MEDIUM | Kiro Powers | No |
 | [KR-PW-003](./generated/kr-pw-003.md) | Empty POWER.md Body | MEDIUM | Kiro Powers | No |
@@ -347,9 +356,18 @@ This section contains all `459` validation rules generated from `knowledge-base/
 | [KR-PW-006](./generated/kr-pw-006.md) | Duplicate Keywords | LOW | Kiro Powers | No |
 | [KR-PW-007](./generated/kr-pw-007.md) | Name Invalid Characters | MEDIUM | Kiro Powers | No |
 | [KR-PW-008](./generated/kr-pw-008.md) | Secrets in Power Body | HIGH | Kiro Powers | No |
-| [KR-SET-001](./generated/kr-set-001.md) | Invalid toolSearch.enabled Value | HIGH | Kiro Settings | Yes (safe) |
-| [KR-SET-002](./generated/kr-set-002.md) | Invalid toolSearch.minPct Value | MEDIUM | Kiro Settings | Yes (safe) |
-| [KR-SET-003](./generated/kr-set-003.md) | Invalid toolSearch.minTokens Value | MEDIUM | Kiro Settings | Yes (safe) |
+| [KR-SET-001](./generated/kr-set-001.md) | Invalid toolSearch.enabled Value | MEDIUM | Kiro Settings | Yes (unsafe) |
+| [KR-SET-002](./generated/kr-set-002.md) | Invalid toolSearch.minPct Value | MEDIUM | Kiro Settings | Yes (unsafe) |
+| [KR-SET-003](./generated/kr-set-003.md) | Invalid toolSearch.minTokens Value | MEDIUM | Kiro Settings | Yes (unsafe) |
+| [KR-SET-004](./generated/kr-set-004.md) | Unparseable Kiro CLI Settings File | HIGH | Kiro Settings | No |
+| [KR-SET-005](./generated/kr-set-005.md) | Unknown Kiro CLI Setting | LOW | Kiro Settings | No |
+| [KR-SET-006](./generated/kr-set-006.md) | Config Section Misplaced in Kiro CLI Settings | MEDIUM | Kiro Settings | No |
+| [KR-SET-007](./generated/kr-set-007.md) | Nested Kiro CLI Settings Object | MEDIUM | Kiro Settings | No |
+| [KR-SET-008](./generated/kr-set-008.md) | Kiro CLI Setting Has Wrong Value Type | MEDIUM | Kiro Settings | Yes (unsafe) |
+| [KR-SET-009](./generated/kr-set-009.md) | Unrecognized Kiro CLI Setting Value | MEDIUM | Kiro Settings | No |
+| [KR-SET-010](./generated/kr-set-010.md) | Duplicate Kiro CLI Setting Key | MEDIUM | Kiro Settings | No |
+| [KR-SET-011](./generated/kr-set-011.md) | Global-Only Kiro CLI Setting in Workspace File | LOW | Kiro Settings | No |
+| [KR-SET-012](./generated/kr-set-012.md) | Kiro CLI Settings in Legacy .kiro/settings.json | MEDIUM | Kiro Settings | No |
 | [MCP-001](./generated/mcp-001.md) | Invalid JSON-RPC Version | HIGH | MCP | Yes (safe) |
 | [MCP-002](./generated/mcp-002.md) | Missing Required Tool Field | HIGH | MCP | No |
 | [MCP-003](./generated/mcp-003.md) | Invalid JSON Schema | HIGH | MCP | No |
@@ -463,4 +481,12 @@ This section contains all `459` validation rules generated from `knowledge-base/
 | [KR-PM-002](./generated/kr-pm-002.md) | Invalid Kiro Permission Capability | HIGH | Kiro Permissions | No |
 | [KR-PM-003](./generated/kr-pm-003.md) | Invalid Kiro Permission Effect | HIGH | Kiro Permissions | No |
 | [KR-PM-004](./generated/kr-pm-004.md) | Invalid Kiro Permission Patterns | HIGH | Kiro Permissions | No |
+| [KR-PM-005](./generated/kr-pm-005.md) | Unknown Field in Kiro Permission Rule | HIGH | Kiro Permissions | No |
+| [KR-PM-006](./generated/kr-pm-006.md) | Invalid Kiro Permission Policy Presets | HIGH | Kiro Permissions | No |
+| [KR-PM-007](./generated/kr-pm-007.md) | Kiro Permission Pattern Has No Effect | MEDIUM | Kiro Permissions | No |
+| [KR-PM-008](./generated/kr-pm-008.md) | Empty Kiro Permission match List Matches Everything | MEDIUM | Kiro Permissions | No |
+| [KR-PM-009](./generated/kr-pm-009.md) | Kiro Does Not Read This Permissions File | LOW | Kiro Permissions | No |
+| [KR-PM-010](./generated/kr-pm-010.md) | Unrestricted Kiro Allow Rule for a Write-Capable Capability | MEDIUM | Kiro Permissions | No |
+| [KR-PM-011](./generated/kr-pm-011.md) | Unsupported Pattern Syntax in Kiro Shell, Web or MCP Rule | MEDIUM | Kiro Permissions | No |
+| [KR-PM-012](./generated/kr-pm-012.md) | Shadowed Kiro sandbox_network Deny | MEDIUM | Kiro Permissions | No |
 | [KR-HK-014](./generated/kr-hk-014.md) | Kiro Hook Migration and Canonical Trigger Hint | LOW | Kiro Hooks | Yes (safe) |

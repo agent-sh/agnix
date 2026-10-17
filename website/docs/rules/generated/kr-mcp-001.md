@@ -1,9 +1,9 @@
 ---
 id: kr-mcp-001
-title: "KR-MCP-001: Kiro MCP Server Missing command and url"
+title: "KR-MCP-001: Kiro MCP Config Fails to Load - Kiro MCP"
 sidebar_label: "KR-MCP-001"
-description: "agnix rule KR-MCP-001 checks for kiro mcp server missing command and url in kiro mcp files. Severity: HIGH. See examples and fix guidance."
-keywords: ["KR-MCP-001", "kiro mcp server missing command and url", "kiro mcp", "validation", "agnix", "linter"]
+description: "agnix rule KR-MCP-001 checks for kiro mcp config fails to load in kiro mcp files. Severity: HIGH. See examples and fix guidance."
+keywords: ["KR-MCP-001", "kiro mcp config fails to load", "kiro mcp", "validation", "agnix", "linter"]
 ---
 
 ## Summary
@@ -13,7 +13,7 @@ keywords: ["KR-MCP-001", "kiro mcp server missing command and url", "kiro mcp", 
 - **Category**: `Kiro MCP`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,8 @@ keywords: ["KR-MCP-001", "kiro mcp server missing command and url", "kiro mcp", 
 
 ## Evidence Sources
 
-- https://kiro.dev/docs/mcp/configuration
+- https://kiro.dev/docs/mcp/configuration/
+- https://kiro.dev/docs/custom-agents/configuration-reference/
 
 ## Test Coverage Metadata
 
@@ -38,19 +39,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{
-  "mcpServers": {
-    "broken": {"args": ["--debug"]}
-  }
-}
+{"mcpServers": {"broken": {"args": ["--debug"]}}}
 ```
 
 ### Valid
 
 ```json
-{
-  "mcpServers": {
-    "local": {"command": "node", "args": ["server.js"]}
-  }
-}
+{"mcpServers": {"local": {"command": "node", "args": ["server.js"]}}}
 ```

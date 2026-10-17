@@ -64,8 +64,11 @@ fn required_paths() -> Vec<&'static str> {
         "tests/fixtures/kiro-mcp/.kiro/settings/valid-remote-mcp.json",
         "tests/fixtures/kiro-mcp/.kiro/settings/missing-command-url.json",
         "tests/fixtures/kiro-mcp/.kiro/settings/hardcoded-secrets.json",
+        "tests/fixtures/kiro-mcp/invalid/.kiro/settings/mcp.json",
+        "tests/fixtures/kiro-mcp/jsonc/.kiro/settings/mcp.json",
         "tests/fixtures/kiro-permissions/valid/.kiro/settings/permissions.yaml",
         "tests/fixtures/kiro-permissions/invalid/.kiro/settings/permissions.yaml",
+        "tests/fixtures/kiro-permissions/strict/.kiro/settings/permissions.yaml",
     ]
 }
 
@@ -219,8 +222,11 @@ fn kiro_fixture_families_are_cli_runnable() {
         // KR-AG-009 no longer flags the 10 agents that omit the optional `prompt`.
         ("tests/fixtures/kiro-agents", 10_u64, 10_u64),
         ("tests/fixtures/kiro-hooks", 7_u64, 4_u64),
-        ("tests/fixtures/kiro-mcp", 1_u64, 0_u64),
-        ("tests/fixtures/kiro-permissions", 2_u64, 4_u64),
+        // invalid/ and jsonc/ exercise KR-MCP-001..011 and 015.
+        ("tests/fixtures/kiro-mcp", 3_u64, 13_u64),
+        // strict/ adds KR-PM-003 (evaluate), 005..008 and 010..012; each
+        // repository-local permissions file also gets the KR-PM-009 note.
+        ("tests/fixtures/kiro-permissions", 3_u64, 16_u64),
     ];
 
     for (rel, expected_files_checked, expected_diagnostics) in fixture_roots {
@@ -258,7 +264,13 @@ fn kiro_permissions_invalid_shape_is_reported_by_cli() {
     fs::create_dir_all(path.parent().unwrap()).unwrap();
     fs::write(&path, "rules: {}\n").unwrap();
     let output = run_agnix_json(dir.path());
-    let diagnostics = output["diagnostics"].as_array().unwrap();
+    // KR-PM-009 notes that Kiro does not read a repository-local policy.
+    let diagnostics: Vec<_> = output["diagnostics"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|d| d["rule"] != "KR-PM-009")
+        .collect();
     assert_eq!(diagnostics.len(), 1);
     assert_eq!(diagnostics[0]["rule"], "KR-PM-001");
 }
@@ -268,17 +280,39 @@ fn kiro_permissions_fixtures_cover_claimed_rule_ids() {
     let root = workspace_root();
     let valid = root.join("tests/fixtures/kiro-permissions/valid");
     let invalid = root.join("tests/fixtures/kiro-permissions/invalid");
-    assert_eq!(diagnostics_len(&run_agnix_json(&valid), &valid), 0);
-    let output = run_agnix_json(&invalid);
-    let rules: BTreeSet<_> = output["diagnostics"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .map(|diagnostic| diagnostic["rule"].as_str().unwrap())
-        .collect();
+    let rules_of = |dir: &Path| -> BTreeSet<String> {
+        run_agnix_json(dir)["diagnostics"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|diagnostic| diagnostic["rule"].as_str().unwrap().to_string())
+            .collect()
+    };
+    // The valid policy only gets the KR-PM-009 note: Kiro does not read a
+    // repository-local .kiro/settings/permissions.yaml.
+    assert_eq!(rules_of(&valid), BTreeSet::from(["KR-PM-009".to_string()]));
     assert_eq!(
-        rules,
-        BTreeSet::from(["KR-PM-002", "KR-PM-003", "KR-PM-004"])
+        rules_of(&invalid),
+        ["KR-PM-002", "KR-PM-003", "KR-PM-004", "KR-PM-009"]
+            .map(str::to_string)
+            .into()
+    );
+    let strict = root.join("tests/fixtures/kiro-permissions/strict");
+    assert_eq!(
+        rules_of(&strict),
+        [
+            "KR-PM-003",
+            "KR-PM-005",
+            "KR-PM-006",
+            "KR-PM-007",
+            "KR-PM-008",
+            "KR-PM-009",
+            "KR-PM-010",
+            "KR-PM-011",
+            "KR-PM-012"
+        ]
+        .map(str::to_string)
+        .into()
     );
     // KR-PM-001 shape failures are covered by unit/integration tests, not this fixture.
 }
@@ -291,7 +325,8 @@ fn kiro_fixture_files_have_explicit_detection_baselines() {
             || rel.starts_with("tests/fixtures/kiro-agents/.kiro/agents/")
             || rel.starts_with("tests/fixtures/kiro-hooks/.kiro/hooks/")
             || rel.starts_with("tests/fixtures/kiro-permissions/")
-            || rel == "tests/fixtures/kiro-mcp/.kiro/settings/mcp.json";
+            || (rel.starts_with("tests/fixtures/kiro-mcp/")
+                && rel.ends_with("/.kiro/settings/mcp.json"));
 
         assert_eq!(
             is_detected, should_be_detected,

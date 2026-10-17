@@ -3205,109 +3205,293 @@ Validates Codex's admin-written managed `requirements.toml` (system location: `/
 
 ## KIRO PERMISSIONS RULES
 
-Capability policy YAML is recognized at `.kiro/settings/permissions.yaml` and `.kiro/workspace-roots/<hash>/permissions.yaml`. The user policy is `~/.kiro/settings/permissions.yaml`; real workspace policies live outside the repository in `~/.kiro/workspace-roots/<hash>/permissions.yaml`. Repository-local `.kiro/settings/permissions.yaml` templates can be linted, but are not the real workspace policy store. All corrections below are manual because permissions affect access.
+Capability policies are read by the V3 engine (and Kiro IDE 1.0) from `~/.kiro/settings/permissions.yaml` (or `permissions.json`; the YAML file wins when both exist), from `~/.kiro/workspace-roots/<hash>/permissions.yaml` (workspace scope, stored outside the repository) and from an administrator `managed-settings.json` (`/Library/Application Support/Kiro/`, `/etc/kiro/`, `C:\ProgramData\Kiro\`; deny and ask only). `$KIRO_HOME` replaces `~/.kiro`. A repository-local `.kiro/settings/permissions.yaml` is linted as a template; Kiro does not read it (KR-PM-009). The engine's parser is strict: a fatal problem drops every rule of the file and the session fails closed, denying all tool calls until the file is fixed. An unknown capability, the unsupported effect `evaluate` and an unknown preset only skip that entry. All corrections below are manual because permissions affect access.
 
 <a id="kr-pm-001"></a>
 ### KR-PM-001 [HIGH] Invalid Kiro Permissions Document
-**Requirement**: A permissions document MUST be valid YAML with a top-level mapping containing a `rules` array of mappings. `rules: []` is valid.
-**Detection**: Reject YAML parse errors, non-mapping documents, missing/non-array `rules`, and non-mapping rule entries. Do not invent unknown-field or non-empty-array restrictions.
-**Fix**: No auto-fix - repair the YAML and document shape without guessing access policy.
-**Source**: kiro.dev/docs/permissions, kiro.dev/docs/cli/v3/permissions
+**Requirement**: A permissions document MUST parse (YAML for `.yaml`/`.yml`, strict JSON otherwise) to a mapping with a `rules` array whose entries are mappings. `rules: []` is valid.
+**Detection**: Flag parse errors (duplicate keys included), an empty or comment-only file, a non-mapping document, a missing or non-array `rules`, and non-mapping rule entries. Each is fatal: Kiro rejects the file and fails closed.
+**Fix**: No auto-fix - repair the document shape without guessing access policy.
+**Source**: kiro.dev/docs/permissions, kiro.dev/docs/cli/v3/permissions, kiro.dev/docs/enterprise/governance/permissions
 
 <a id="kr-pm-002"></a>
 ### KR-PM-002 [HIGH] Invalid Kiro Permission Capability
-**Requirement**: Each rule MUST have a documented, case-sensitive string `capability`: `fs_read`, `fs_write`, `shell`, `web_fetch`, `web_search`, `mcp`, `subagent`, `skill`, `power`, `context`, `diagnostics`, `sandbox_network`, or the meta-capabilities `all`, `builtin`, `filesystem`.
-**Detection**: Flag a missing, non-string, or unknown capability; values are not coerced or case-normalized.
+**Requirement**: Each rule MUST have a case-sensitive string `capability` the engine knows: `fs_read`, `fs_write`, `shell`, `web_fetch`, `web_search`, `mcp`, `subagent`, `skill`, `power`, `context`, `diagnostics`, `workflow` (accepted by the engine, not listed on kiro.dev), `sandbox_network`, or the meta-capabilities `all`, `builtin`, `filesystem`.
+**Detection**: A missing or non-string capability is fatal for the file. An unknown capability string (for example `*` or `execute_bash`) makes Kiro skip that rule before reading its other fields; problems in the rest of such a rule are reported by KR-PM-003..005 as warnings because they become fatal once the capability is fixed.
 **Fix**: No auto-fix - choose the intended capability after reviewing access scope.
 **Source**: kiro.dev/docs/permissions, kiro.dev/docs/cli/v3/permissions
 
 <a id="kr-pm-003"></a>
 ### KR-PM-003 [HIGH] Invalid Kiro Permission Effect
-**Requirement**: Each permission rule MUST have a string `effect` of `allow`, `deny`, or `ask`.
-**Detection**: Flag missing, wrong-type, or unknown effect values. For example, `permit` and `Allow` are invalid.
+**Requirement**: Each rule MUST have a string `effect` of `allow`, `deny`, or `ask`; an administrator `managed-settings.json` may use only `deny` and `ask`.
+**Detection**: A missing, wrong-type or unknown effect (`permit`, `Allow`) and an `allow` rule in managed-settings.json are fatal (error). `effect: evaluate` is parsed but skipped as "not supported yet" (warning).
 **Fix**: No auto-fix - explicitly select the intended access decision.
-**Source**: kiro.dev/docs/permissions, kiro.dev/docs/cli/v3/permissions
+**Source**: kiro.dev/docs/permissions, kiro.dev/docs/cli/v3/permissions, kiro.dev/docs/enterprise/governance/permissions
 
 <a id="kr-pm-004"></a>
 ### KR-PM-004 [HIGH] Invalid Kiro Permission Patterns
-**Requirement**: Optional `match` and `exclude` MUST be arrays of strings. Omitting `match` means unrestricted scope; empty arrays are accepted.
-**Detection**: Flag a scalar, mapping, null, or any non-string array member. `match: ["git *"]` is valid; `match: "git *"` is not. This checks shape, not whether a glob grants appropriate access.
+**Requirement**: Optional `match` and `exclude` MUST be arrays of strings. Omitting `match` means every resource.
+**Detection**: Flag a scalar, mapping, null, or any non-string array member; each is fatal for the file. `match: ["git *"]` is valid; `match: "git *"` is not.
 **Fix**: No auto-fix - supply string arrays after reviewing their scope.
 **Source**: kiro.dev/docs/permissions, kiro.dev/docs/cli/v3/permissions
+
+<a id="kr-pm-005"></a>
+### KR-PM-005 [HIGH] Unknown Field in Kiro Permission Rule
+**Requirement**: A rule MUST contain only `capability`, `effect`, `match` and `exclude`.
+**Detection**: Any other key in a rule (`comment`, `note`, `description`) is fatal: the engine reports "Unknown field(s) ... in rule N" and rejects the file. kiro.dev documents the same for administrator files ("Rules with extra fields not in the schema cause the entire file to be rejected").
+**Fix**: No auto-fix - remove the field or move the note into a YAML comment.
+**Source**: kiro.dev/docs/permissions, kiro.dev/docs/enterprise/governance/permissions
+
+<a id="kr-pm-006"></a>
+### KR-PM-006 [HIGH] Invalid Kiro Permission Policy Presets
+**Requirement**: The optional top-level `policies` list MUST be an array of preset id strings: `allow-all`, `edit-workspace`, `read-workspace`, `read-all`, `read-only-shell`, `dev-shell`.
+**Detection**: A non-array `policies` or a non-string entry is fatal (error). An unknown preset id is skipped (warning). In managed-settings.json every preset is skipped because presets contain only allow rules (warning).
+**Fix**: No auto-fix - list valid preset ids or write explicit rules.
+**Source**: kiro.dev/docs/permissions ("Policy presets"), kiro.dev/docs/cli/v3/permissions
+
+<a id="kr-pm-007"></a>
+### KR-PM-007 [MEDIUM] Kiro Permission Pattern Has No Effect
+**Requirement**: Patterns SHOULD use the resource form Kiro compares for the capability and target paths an allow rule can open.
+**Detection**: Warn on an `mcp` pattern that starts with `@` (resources are `server/tool`; `@server` is the CLI 2.x tools selector form), a `web_fetch` pattern containing `://` or `/` (rules are compared with the URL host name, as read from the V3 engine; for example the upgrader's `https://docs.aws.amazon.com/*`), a `web_search` or `diagnostics` match pattern other than `*` (those requests carry no other resource), and an `fs_write` allow for `.git`, `.vscode`, `.kiroignore`, `*.code-workspace` or the `.kiro` agents, hooks, workflows, powers, settings and workspace-roots directories, which Kiro always asks about or denies whatever allow rule exists.
+**Fix**: No auto-fix - rewrite the pattern (`@github` becomes `github/*`, `https://docs.example.com/*` becomes `docs.example.com`) or remove the ineffective allow.
+**Source**: kiro.dev/docs/permissions ("Pattern matching", "Default behavior"), kiro.dev/docs/enterprise/governance/permissions
+
+<a id="kr-pm-008"></a>
+### KR-PM-008 [MEDIUM] Empty Kiro Permission match List Matches Everything
+**Requirement**: A rule meant to cover specific resources SHOULD list them; `match: []` is treated like an omitted `match` (and like `["*"]`).
+**Detection**: Warn on `match: []`, which applies the rule's effect to every resource of the capability (an `allow` rule allows everything).
+**Fix**: No auto-fix - list the intended resources, or omit `match` to make the full scope explicit.
+**Source**: kiro.dev/docs/permissions, kiro.dev/docs/cli/v3/permissions
+
+<a id="kr-pm-009"></a>
+### KR-PM-009 [LOW] Kiro Does Not Read This Permissions File
+**Requirement**: Policies take effect only in the locations Kiro reads.
+**Detection**: Info for a permissions file outside `<kiro>/settings/` and `<kiro>/workspace-roots/<hash>/` (`<kiro>` = `~/.kiro`, `$KIRO_HOME`, or another account's `/home/<user>/.kiro` or `/Users/<user>/.kiro`), for a managed-settings.json outside its operating-system path, and for a `permissions.json` next to a `permissions.yaml` (the YAML file is read instead).
+**Fix**: No auto-fix - install the policy where Kiro reads it, or keep the file as a template.
+**Source**: kiro.dev/docs/permissions, kiro.dev/docs/cli/v3/permissions
+
+<a id="kr-pm-010"></a>
+### KR-PM-010 [MEDIUM] Unrestricted Kiro Allow Rule for a Write-Capable Capability
+**Requirement**: Allow rules for `shell`, `fs_write`, `filesystem`, `mcp`, `all` and `builtin` SHOULD name the commands, paths or servers they cover ("Use specific patterns over wildcards", "Start restrictive").
+**Detection**: Warn on an `allow` rule for one of these capabilities whose `match` is omitted or only `*` / `**` and that has no `exclude`. `match: []` is KR-PM-008.
+**Fix**: No auto-fix - list what the agent needs, or add exclude patterns.
+**Source**: kiro.dev/docs/permissions, kiro.dev/docs/custom-agents/configuration-reference ("Security best practices")
+
+<a id="kr-pm-011"></a>
+### KR-PM-011 [MEDIUM] Unsupported Pattern Syntax in Kiro Shell, Web or MCP Rule
+**Requirement**: Shell, web and MCP patterns MUST use only `*` as a wildcard; `**`, `?` and character classes are not supported.
+**Detection**: Warn on a `shell`, `web_fetch`, `web_search` or `mcp` pattern containing `**` (treated as `*`), `?` or `[...]` (matched literally). File-system patterns support these globs and are not checked.
+**Fix**: No auto-fix - rewrite the pattern with `*`.
+**Source**: kiro.dev/docs/permissions ("Pattern matching")
+
+<a id="kr-pm-012"></a>
+### KR-PM-012 [MEDIUM] Shadowed Kiro sandbox_network Deny
+**Requirement**: A specific `sandbox_network` deny SHOULD come before a broader allow that also matches; host rules are first-match in order.
+**Detection**: Within one file, warn on a `sandbox_network` deny whose host an earlier `sandbox_network` allow already matches (omitted match, `*`, or a `*` pattern such as `*.example.com`) without excluding it.
+**Fix**: No auto-fix - move the deny before the allow.
+**Source**: kiro.dev/docs/permissions ("Sandbox network rules")
 
 ---
 
 ## KIRO MCP RULES
 
+Kiro reads MCP servers from `~/.kiro/settings/mcp.json` and `<workspace>/.kiro/settings/mcp.json`, from a legacy power's `mcp.json` (next to `POWER.md`) and from an Agent Plugins power's `mcp.json` (next to `plugin.json`). Kiro CLI 2.x (the V2 engine) parses settings files with strict JSON and rejects the whole file when any field has the wrong type; the V3 engine accepts comments and trailing commas and skips only an invalid server. Severity follows the targeted engines: a condition fatal in every targeted engine is an error, fatal in one engine a warning naming it. Pin the engine with `[tool_versions] kiro`. Powers are V3 only.
+
 <a id="kr-mcp-001"></a>
-### KR-MCP-001 [HIGH] Kiro MCP Server Missing command and url
-**Requirement**: Each Kiro MCP server MUST define `command` (local) or `url` (remote)
-**Detection**: Server entry has neither `command` nor `url`, or top-level `mcpServers` is invalid
-**Fix**: Define `command` or `url` for each MCP server
-**Source**: kiro.dev/docs/mcp/configuration
+### KR-MCP-001 [HIGH] Kiro MCP Config Fails to Load
+**Requirement**: An mcp.json MUST parse and contain an `mcpServers` object, and each server MUST define `command` (local) or `url` (remote).
+**Detection**: Error on invalid JSON, a missing or non-object `mcpServers` (Kiro loads no server from the file), and a server with neither `command` nor `url` (skipped; `"disabled": true` and `"type": "registry"` servers are exempt). Comments or trailing commas are accepted by the V3 engine but make Kiro CLI 2.x reject the file (warning naming V2, or an error when V2 is pinned). Agent Plugins mcp.json must be plain JSON.
+**Fix**: No auto-fix - repair the JSON or define `command` or `url`.
+**Source**: kiro.dev/docs/mcp/configuration, kiro.dev/docs/custom-agents/configuration-reference
 
 <a id="kr-mcp-002"></a>
-### KR-MCP-002 [MEDIUM] Hardcoded Secrets in Kiro MCP env
-**Requirement**: Sensitive MCP `env` values SHOULD use variable expansion instead of plaintext
-**Detection**: Sensitive env keys (API_KEY/SECRET/TOKEN/PASSWORD) contain hardcoded values
-**Fix**: Use `${VAR_NAME}` expansion for sensitive env values
-**Source**: kiro.dev/docs/mcp/configuration
+### KR-MCP-002 [MEDIUM] Hardcoded Secret in Kiro MCP Server Config
+**Requirement**: Credentials in MCP `env`, `headers` and `args` SHOULD use `${VAR}` expansion instead of plaintext ("Never hardcode API keys or tokens in configuration files"; powers: "Use environment variables for API keys and secrets").
+**Detection**: Warn when an `env` or `headers` entry whose name denotes a credential (API_KEY, SECRET, TOKEN, PASSWORD, PAT, Authorization, ...; not names ending in DIR, PATH, URL, NAME and similar) holds a value that looks like a real secret, and on command-line credentials in `args` (`--api-key=VALUE`, `--token VALUE`, `Authorization: Bearer VALUE`). References (`${VAR}`, `$VAR`, `%VAR%`), placeholders (`YOUR_API_KEY`, `your-token-here`, `<KEY>`, an upper-case variable name), file paths and values shorter than 8 characters are not flagged. A `Bearer` / `Basic` / `Token` scheme prefix is skipped. Settings, legacy power and Agent Plugins mcp.json files are checked.
+**Fix**: No auto-fix - move the secret to an environment variable and reference it as `${NAME}`.
+**Source**: kiro.dev/docs/mcp/configuration, kiro.dev/docs/mcp/security, kiro.dev/docs/powers/create
 
 <a id="kr-mcp-003"></a>
-### KR-MCP-003 [MEDIUM] Missing Required Args
-**Requirement**: Command-based MCP servers SHOULD include an `args` array
-**Detection**: Server has `command` but no `args` or empty `args`
-**Fix**: No auto-fix (add args array)
-**Source**: kiro.dev/docs/mcp
+### KR-MCP-003 [MEDIUM] Kiro MCP Command Includes Arguments
+**Requirement**: `command` SHOULD name only the executable; arguments belong in `args` (which is optional, `[]` included).
+**Detection**: Warn when `command` contains whitespace and its first word has no path separator or quote (`"npx -y @scope/server"`). Kiro starts the command without a shell (Kiro CLI 2.x on every platform, the V3 engine through cross-spawn on macOS and Linux), so such a server fails to start. Paths with spaces and commands containing `${` are not flagged.
+**Fix**: No auto-fix - split the command into `command` and `args`.
+**Source**: kiro.dev/docs/mcp/configuration
 
 <a id="kr-mcp-004"></a>
-### KR-MCP-004 [HIGH] Invalid MCP URL
-**Requirement**: Remote MCP server `url` MUST use a valid scheme (http/https/ws/wss/sse)
-**Detection**: Validate URL scheme
-**Fix**: No auto-fix (fix URL format)
-**Source**: kiro.dev/docs/mcp
+### KR-MCP-004 [HIGH] Invalid Kiro MCP Server URL
+**Requirement**: A remote server `url` MUST be a valid `https://` URL, or `http://` for localhost, 127.0.0.1 or ::1.
+**Detection**: Error on a URL that does not parse and on another scheme (`ws://`, `wss://`, `sse://`, `ftp://`) for a non-local host, which the V3 engine rejects and an HTTP transport cannot use. A non-HTTP scheme on a loopback host is a warning (the V3 engine accepts it at load, but kiro.dev documents only HTTPS and localhost HTTP). URLs containing `${VAR}` are not checked (expanded first). Checked only when `url` is the transport (no `command`).
+**Fix**: No auto-fix - correct the URL.
+**Source**: kiro.dev/docs/mcp/configuration
 
 <a id="kr-mcp-005"></a>
-### KR-MCP-005 [MEDIUM] Duplicate MCP Server Names
-**Requirement**: MCP server names SHOULD be unique across configurations
-**Detection**: Cross-file analysis (project-level check)
-**Fix**: No auto-fix (rename servers)
-**Source**: kiro.dev/docs/mcp
+### KR-MCP-005 [MEDIUM] Duplicate Kiro MCP Server Name in One File
+**Requirement**: A server name SHOULD appear once per `mcpServers` object.
+**Detection**: Warn on the earlier definition of a repeated name; JSON keeps the last one, so the earlier entry is silently ignored. Same-named servers in different files are documented overrides and are not flagged.
+**Fix**: No auto-fix - remove or rename one definition.
+**Source**: kiro.dev/docs/mcp/configuration
 
 <a id="kr-mcp-006"></a>
 ### KR-MCP-006 [MEDIUM] Invalid OAuth Configuration
-**Requirement**: An `oauth` block SHOULD be an object on an HTTP(S) remote MCP server. Its optional `clientId`, `clientSecret`, and `redirectUri` fields SHOULD be valid strings, `clientSecret` requires `clientId`, `redirectUri` SHOULD use a documented HTTP loopback form, and `oauthScopes` SHOULD be an array of strings. `clientId` is optional because Kiro uses Dynamic Client Registration when it is absent.
-**Detection**: Validate each MCP server `oauth` block against the Kiro CLI 2.12 OAuth field types and relationships, including the loopback redirect host and port constraints.
-**Fix**: No auto-fix (correct the OAuth fields on an HTTP(S) remote MCP server, or remove the block).
-**Source**: kiro.dev/docs/cli/mcp/configuration/#oauth-configuration, kiro.dev/changelog/cli/2-12/
+**Requirement**: An `oauth` block SHOULD be used on an HTTP(S) remote server. `clientId` and `clientSecret` SHOULD be non-empty, `clientSecret` requires `clientId`, `redirectUri` SHOULD be `:port`, `localhost:port`, `127.0.0.1:port` or `http://localhost:port[/path]` (port 1-65535, no query or fragment), and `clientMetadataUrl` SHOULD be an https URL with a path. `clientId` is optional (dynamic client registration).
+**Detection**: Warn on the problems above, on `clientMetadataUrl` together with `clientId` ("When a `clientId` is present, Kiro uses it and never consults `clientMetadataUrl`") and on `clientMetadataUrl` without a pinned `redirectUri` ("an unpinned callback is rejected on every connect"). An invalid `redirectUri` or `clientMetadataUrl` makes the V3 engine skip the server (warning naming V3, error when V3 is pinned). Wrong value types are KR-MCP-007.
+**Fix**: No auto-fix - correct the OAuth fields or remove the block.
+**Source**: kiro.dev/docs/mcp/configuration, kiro.dev/changelog/cli/2-12/
+
+<a id="kr-mcp-007"></a>
+### KR-MCP-007 [HIGH] Invalid Kiro MCP Server Field Type
+**Requirement**: Server fields MUST have the documented types: `command`, `url`, `cwd`, `type` strings; `args`, `disabledTools`, `autoApprove`, `oauthScopes` arrays of strings; `env`, `headers` objects of strings; `disabled`, `waitForReady` booleans; `timeout` a whole number of milliseconds of at least 1; `versionNegotiation` `"auto"` or `"legacy"`; `oauth` an object with string `clientId`, `redirectUri`, `clientMetadataUrl`, `clientSecret` and a string-array `oauthScopes`.
+**Detection**: Kiro CLI 2.x rejects the whole file on any wrong type it reads (`null` included, except for `env`, `type` and `oauth`), observed with `kiro-cli mcp list` 2.32.1; the V3 engine skips the server (`null` never passes). Severity follows the engines each value fails in, for example `timeout: 0` fails only in V3 and `timeout: 1.5` only in V2. A server entry that is not an object is an error.
+**Fix**: No auto-fix - write the value with the documented type.
+**Source**: kiro.dev/docs/mcp/configuration, kiro.dev/docs/custom-agents/configuration-reference
+
+<a id="kr-mcp-008"></a>
+### KR-MCP-008 [HIGH] Kiro MCP Remote URL Uses Plain HTTP
+**Requirement**: A remote server on a host other than localhost, 127.0.0.1 or ::1 MUST use `https://`.
+**Detection**: The V3 engine skips such a server ("must use https or a localhost url"); Kiro CLI 2.x does not check. Warning naming V3 when both engines are targeted, error when V3 is pinned, nothing when 2.x is pinned.
+**Fix**: No auto-fix - switch the endpoint to HTTPS.
+**Source**: kiro.dev/docs/mcp/configuration
+
+<a id="kr-mcp-009"></a>
+### KR-MCP-009 [MEDIUM] Unexpanded Variable Reference in Kiro MCP Config
+**Requirement**: Environment references SHOULD use `${NAME}`, the only form Kiro expands.
+**Detection**: Warn on a bare `$NAME`, `${env:NAME}` / `${input:...}` and VS Code variables such as `${workspaceFolder}` in `command`, `args`, `url`, `cwd`, `env` and `headers` values; the server receives the text literally. Arguments passed to a shell command (`bash -c ...`) are not checked. Skipped when only Kiro CLI 2.x is targeted (its expansion beyond `${NAME}` is undocumented).
+**Fix**: No auto-fix - use `${NAME}` or write the value out.
+**Source**: kiro.dev/docs/mcp/configuration, kiro.dev/changelog/cli/2-4/
+
+<a id="kr-mcp-010"></a>
+### KR-MCP-010 [LOW] Unknown Kiro MCP Server Field
+**Requirement**: Server entries SHOULD use only fields Kiro reads.
+**Detection**: Info for any other field (`transport`, `description`, typos such as `evn`), with a suggestion when it is close to a known field. Kiro ignores these fields.
+**Fix**: No auto-fix - remove the field or correct its spelling.
+**Source**: kiro.dev/docs/mcp/configuration, kiro.dev/docs/custom-agents/configuration-reference
+
+<a id="kr-mcp-011"></a>
+### KR-MCP-011 [LOW] Kiro MCP Server Has Both command and url
+**Requirement**: A server SHOULD define either `command` or `url`.
+**Detection**: Info when both are set; the V3 engine starts the command and ignores `url`.
+**Fix**: No auto-fix - keep the transport you intend.
+**Source**: kiro.dev/docs/mcp/configuration
+
+<a id="kr-mcp-012"></a>
+### KR-MCP-012 [HIGH] Agent Plugins mcp.json Schema Missing or Mismatched
+**Requirement**: A power's Agent Plugins mcp.json MUST set `$schema` to `https://agent-plugins.org/schemas/1.x.y/mcp.schema.json` with the same version as its plugin.json.
+**Detection**: Error when `$schema` is missing, not an Agent Plugins MCP schema, or targets another version than plugin.json; Kiro then loads none of the power's servers.
+**Fix**: No auto-fix - set the matching `$schema`.
+**Source**: kiro.dev/docs/powers/create, agent-plugins.org/schemas/1.0.0/mcp.schema.json
+
+<a id="kr-mcp-013"></a>
+### KR-MCP-013 [HIGH] Unknown Top-Level Field in Agent Plugins mcp.json
+**Requirement**: A power's Agent Plugins mcp.json MUST contain only `$schema` and `mcpServers` at the top level.
+**Detection**: Error on any other top-level key; Kiro disables all of the power's MCP servers.
+**Fix**: No auto-fix - remove the field.
+**Source**: kiro.dev/docs/powers/create, agent-plugins.org/schemas/1.0.0/mcp.schema.json
+
+<a id="kr-mcp-014"></a>
+### KR-MCP-014 [HIGH] Invalid Agent Plugins MCP Server Entry
+**Requirement**: Each Agent Plugins server MUST set `type` to `stdio`, `streamable-http` or `sse`. A stdio server takes only `type`, `command` (a bare executable name or a `./` path inside the power), `args`, `env` (no `PLUGIN_ROOT` / `PLUGIN_DATA`) and `cwd` (starting with `./`, `${PLUGIN_ROOT}` or `${PLUGIN_DATA}`, without `..`). A remote server takes only `type`, `url` (http or https, https for a non-local host, no user info or fragment) and `headers` (strings, no names differing only in case). Kiro-specific fields such as `disabled`, `autoApprove` and `disabledTools` are not part of the format.
+**Detection**: Error on the first reason the loader skips the server.
+**Fix**: No auto-fix - follow the Agent Plugins MCP schema.
+**Source**: kiro.dev/docs/powers/create, agent-plugins.org/schemas/1.0.0/mcp.schema.json, github.com/kirodotdev/powers power-builder migrate-plugin
+
+<a id="kr-mcp-015"></a>
+### KR-MCP-015 [MEDIUM] Kiro MCP autoApprove Wildcard
+**Requirement**: `autoApprove` SHOULD list specific trusted tools; Kiro advises auto-approving only tools that do not have write access to sensitive systems, come from trusted sources and have limited scope.
+**Detection**: Warn when `autoApprove` contains `"*"`, which approves every tool of the server without prompting (Kiro IDE; Kiro CLI V3 approves MCP tools through permission rules and ignores `autoApprove`).
+**Fix**: No auto-fix - list the tool names to auto-approve.
+**Source**: kiro.dev/docs/mcp/security ("Auto-approval guidelines"), kiro.dev/docs/mcp/configuration
 
 ---
 
 ## KIRO CLI SETTINGS RULES
 
-Rules for `.kiro/settings.json` (and `~/.kiro/settings.json`) - the flat-key JSON that Kiro's `kiro-cli settings <key> <value>` command writes to. Today covers the Tool Search feature added in Kiro CLI 2.1.
+Rules for the Kiro CLI settings files `~/.kiro/settings/cli.json` (global, `$KIRO_HOME/settings/cli.json` when set) and `<workspace>/.kiro/settings/cli.json`: a flat JSON object keyed by dotted setting names that `kiro-cli settings <key> <value>` and `/settings` write. The key list and types are those of `kiro-cli settings list --all` 2.32.1 (140 keys). A wrongly typed value is not coerced; Kiro keeps the default.
 
 <a id="kr-set-001"></a>
-### KR-SET-001 [HIGH] Invalid toolSearch.enabled Value
-**Requirement**: `toolSearch.enabled` MUST be a boolean (true or false) when present. Non-boolean values will cause Kiro CLI to fail to apply the setting.
-**Detection**: Parse settings.json; look up top-level `toolSearch.enabled`; flag non-boolean types (string, number, array, object, null)
-**Fix**: [AUTO-FIX, safe] When the value is a quoted string that's unambiguously boolean (`"true"`/`"True"`/`"false"`/`"FALSE"` etc.), strip the quotes + normalize case. Other non-boolean types (number/array/null) remain manual since the user's intent isn't mechanically recoverable.
-**Source**: kiro.dev/docs/cli/mcp/tool-search/ (Kiro CLI 2.1+)
+### KR-SET-001 [MEDIUM] Invalid toolSearch.enabled Value
+**Requirement**: `toolSearch.enabled` SHOULD be a boolean (true or false); other values are not read.
+**Detection**: Warn on a non-boolean top-level `toolSearch.enabled` (the last occurrence when the key repeats).
+**Fix**: [AUTO-FIX, unsafe] Replace an exact quoted `"true"`/`"false"` (any case) with the JSON boolean, on the value span of the top-level key. Unsafe because Kiro ignores the quoted value today, so the conversion activates the setting.
+**Source**: kiro.dev/docs/reference/settings, kiro.dev/docs/mcp/tool-search/
 
 <a id="kr-set-002"></a>
 ### KR-SET-002 [MEDIUM] Invalid toolSearch.minPct Value
-**Requirement**: `toolSearch.minPct` SHOULD be a non-negative number representing the percentage-of-context-window threshold that activates Tool Search. Default 5. Value 0 means "always active". Values above 100 will never trigger Tool Search because MCP tool specs cannot exceed the context window.
-**Detection**: Parse settings.json; type-check top-level `toolSearch.minPct`; flag non-numbers and negative numbers (ERROR), warn on values above 100 (WARNING)
-**Fix**: [AUTO-FIX, safe] When the value is a quoted numeric string (`"5"`, `"2.5"`), strip the quotes. Negative and >100 warnings remain manual since they're semantic intent problems.
-**Source**: kiro.dev/docs/cli/mcp/tool-search/
+**Requirement**: `toolSearch.minPct` SHOULD be a number from 0 to 100 (default 5; 0 means always active; the V3 engine accepts only 0 to 100).
+**Detection**: Warn on a non-number, a negative value and a value above 100.
+**Fix**: [AUTO-FIX, unsafe] Replace a quoted plain decimal (`"5"`, `"2.5"`) with the bare number. Exponents, signs, leading zeros and out-of-range values are left manual, so the result always parses.
+**Source**: kiro.dev/docs/reference/settings, kiro.dev/docs/mcp/tool-search/
 
 <a id="kr-set-003"></a>
 ### KR-SET-003 [MEDIUM] Invalid toolSearch.minTokens Value
-**Requirement**: `toolSearch.minTokens` SHOULD be a non-negative integer representing the token-count threshold that activates Tool Search. Default 50000. Value 0 means "always active".
-**Detection**: Parse settings.json; type-check top-level `toolSearch.minTokens`; flag non-numbers, negative numbers, and fractional values (ERROR)
-**Fix**: [AUTO-FIX, safe] When the value is a quoted integer string (`"50000"`), strip the quotes. Fractional strings, negatives, and fractional numbers remain manual.
-**Source**: kiro.dev/docs/cli/mcp/tool-search/
+**Requirement**: `toolSearch.minTokens` SHOULD be a non-negative integer (default 50000; 0 means always active).
+**Detection**: Warn on a non-number, a negative value and a fractional value.
+**Fix**: [AUTO-FIX, unsafe] Replace a quoted plain integer (`"50000"`) with the bare integer.
+**Source**: kiro.dev/docs/reference/settings, kiro.dev/docs/mcp/tool-search/
 
+<a id="kr-set-004"></a>
+### KR-SET-004 [HIGH] Unparseable Kiro CLI Settings File
+**Requirement**: cli.json MUST be strict JSON with a top-level object.
+**Detection**: Error on a syntax error, comments, trailing commas, an empty file or a non-object root. kiro-cli 2.32.1 then exits with "failed to parse" for every command, chat included, for a global or a workspace file.
+**Fix**: No auto-fix - repair the JSON.
+**Source**: kiro.dev/docs/reference/settings
+
+<a id="kr-set-005"></a>
+### KR-SET-005 [LOW] Unknown Kiro CLI Setting
+**Requirement**: Keys SHOULD be Kiro CLI settings (`kiro-cli settings` refuses to write other keys).
+**Detection**: Info for any other top-level key (`chat.autoCompact`, third-party keys), with a suggestion for a close or known spelling. Kiro ignores these keys.
+**Fix**: No auto-fix - correct or remove the key.
+**Source**: kiro.dev/docs/reference/settings
+
+<a id="kr-set-006"></a>
+### KR-SET-006 [MEDIUM] Config Section Misplaced in Kiro CLI Settings
+**Requirement**: Sections of other Kiro files SHOULD NOT be pasted into cli.json.
+**Detection**: Warn on top-level `mcpServers`/`powers` (belongs in .kiro/settings/mcp.json), `hooks` (agent or .kiro/hooks), `rules`/`permissions`/`policies` (permissions.yaml) and agent fields (`tools`, `allowedTools`, `toolsSettings`, `resources`, `prompt`, `includeMcpJson`); they have no effect here.
+**Fix**: No auto-fix - move the section to the file Kiro reads it from.
+**Source**: kiro.dev/docs/reference/settings, kiro.dev/docs/mcp/configuration
+
+<a id="kr-set-007"></a>
+### KR-SET-007 [MEDIUM] Nested Kiro CLI Settings Object
+**Requirement**: Settings SHOULD be written as flat dotted keys.
+**Detection**: Warn on a top-level object such as `{"toolSearch": {"enabled": true}}` whose nested paths are settings; Kiro reads only `"toolSearch.enabled"`, so the nested values stay unset (observed with kiro-cli 2.32.1).
+**Fix**: No auto-fix - rewrite each setting as a dotted key.
+**Source**: kiro.dev/docs/reference/settings
+
+<a id="kr-set-008"></a>
+### KR-SET-008 [MEDIUM] Kiro CLI Setting Has Wrong Value Type
+**Requirement**: Each setting SHOULD have its declared type (boolean, number, string, array of strings, object).
+**Detection**: Warn when a known setting other than `toolSearch.*` has another type, for example `"chat.enableKnowledge": "yes"` or `"cleanup.periodDays": "7d"`. Kiro does not read the value and keeps the default.
+**Fix**: [AUTO-FIX, unsafe] Convert an exact quoted `"true"`/`"false"` for a boolean setting, or a quoted plain decimal for a number setting, on the exact value span. Unsafe because it activates a value Kiro ignores today.
+**Source**: kiro.dev/docs/reference/settings
+
+<a id="kr-set-009"></a>
+### KR-SET-009 [MEDIUM] Unrecognized Kiro CLI Setting Value
+**Requirement**: Settings with documented values SHOULD use one of them.
+**Detection**: Warn on values outside the documented sets: `chat.agentEngine` (v1, v2, v3), `chat.uiMode` (lite, tui, structured), `chat.ui` (legacy, classic, tui), `chat.notificationMethod`, `chat.screenReader`, `chat.historyMode`, `chat.defaultInterruptBehavior`, `chat.modelPicker.sortBy`, `chat.sessionDashboard.scope`, `memory.mode`, `compaction.excludeContextWindowPercent` (0-100) and `chat.fullscreenWheelRows` (1-3).
+**Fix**: No auto-fix - choose a documented value.
+**Source**: kiro.dev/docs/reference/settings
+
+<a id="kr-set-010"></a>
+### KR-SET-010 [MEDIUM] Duplicate Kiro CLI Setting Key
+**Requirement**: A key SHOULD appear once.
+**Detection**: Warn on the earlier occurrence of a repeated top-level key; Kiro keeps only the last value (observed with kiro-cli 2.32.1). Other KR-SET rules check the last value.
+**Fix**: No auto-fix - remove one occurrence.
+**Source**: kiro.dev/docs/reference/settings
+
+<a id="kr-set-011"></a>
+### KR-SET-011 [LOW] Global-Only Kiro CLI Setting in Workspace File
+**Requirement**: Global-only settings SHOULD be set in `~/.kiro/settings/cli.json`.
+**Detection**: Info when a workspace `.kiro/settings/cli.json` (any cli.json outside `~/.kiro` or `$KIRO_HOME`) sets one of the 76 keys `kiro-cli settings --workspace` refuses ("cannot be overridden at workspace level"), for example `chat.uiMode`, `chat.agentEngine` or `telemetry.enabled`; Kiro ignores the workspace value.
+**Fix**: No auto-fix - move the key to the global file.
+**Source**: kiro.dev/docs/reference/settings
+
+
+<a id="kr-set-012"></a>
+### KR-SET-012 [MEDIUM] Kiro CLI Settings in Legacy .kiro/settings.json
+**Requirement**: Kiro CLI settings SHOULD live in `.kiro/settings/cli.json` or `~/.kiro/settings/cli.json`; Kiro CLI 1.23 saved the default model to `~/.kiro/settings.json`, which current versions do not read.
+**Detection**: Warn when a `.kiro/settings.json` routed to the settings validator contains at least one Kiro CLI setting key; such a file of another tool (editor preferences) is not reported. The remaining KR-SET rules then check its values.
+**Fix**: No auto-fix - move the settings to cli.json (for example with `kiro-cli settings --workspace <key> <value>`).
+**Source**: kiro.dev/docs/reference/settings, kiro.dev/changelog/cli/1-23/
 ---
 
 ## UNIVERSAL RULES (XML)
@@ -3653,6 +3837,10 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | COP-027 | Migrate infer while preserving explicit invocation fields | unsafe |
 | KR-HK-011 | Normalize version strings 1 / 1.0 to v1 | unsafe |
 | KR-HK-014 | Normalize supported V3 trigger aliases | safe |
+| KR-SET-001 | Convert quoted true/false to a JSON boolean | unsafe |
+| KR-SET-002 | Convert a quoted plain decimal to a JSON number | unsafe |
+| KR-SET-003 | Convert a quoted plain integer to a JSON number | unsafe |
+| KR-SET-008 | Convert a quoted boolean or number to its JSON type | unsafe |
 | OC-DEP-003 | Rename `autoshare` key to `share` | safe |
 | OC-CFG-008 | Replace logLevel with closest valid value | unsafe |
 | OC-AG-006 | Replace color with closest named color | unsafe |
@@ -3701,10 +3889,10 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Gemini CLI | 10 | 3 | 5 | 2 | 3 |
 | Kiro Agents | 15 | 5 | 8 | 2 | 0 |
 | Kiro Hooks | 14 | 8 | 5 | 1 | 2 |
-| Kiro Permissions | 4 | 4 | 0 | 0 | 0 |
-| Kiro MCP | 6 | 2 | 4 | 0 | 0 |
+| Kiro Permissions | 12 | 6 | 5 | 1 | 0 |
+| Kiro MCP | 15 | 7 | 6 | 2 | 0 |
 | Kiro Powers | 8 | 3 | 4 | 1 | 0 |
-| Kiro Settings | 3 | 1 | 2 | 0 | 3 |
+| Kiro Settings | 12 | 1 | 9 | 2 | 4 |
 | Kiro Skills | 1 | 0 | 1 | 0 | 1 |
 | Kiro Steering | 14 | 3 | 9 | 2 | 1 |
 | MCP | 25 | 18 | 6 | 1 | 8 |
@@ -3718,7 +3906,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **459** | **210** | **212** | **37** | **129** |
+| **TOTAL** | **485** | **217** | **226** | **42** | **130** |
 
 
 ---
@@ -3748,8 +3936,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 459 validation rules across 41 categories
+**Total Coverage**: 485 validation rules across 41 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 210 HIGH, 212 MEDIUM, 37 LOW
-**Auto-Fixable**: 129 rules (28%)
+**Certainty**: 217 HIGH, 226 MEDIUM, 42 LOW
+**Auto-Fixable**: 130 rules (27%)

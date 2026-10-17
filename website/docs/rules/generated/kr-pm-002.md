@@ -13,7 +13,7 @@ keywords: ["KR-PM-002", "invalid kiro permission capability", "kiro permissions"
 - **Category**: `Kiro Permissions`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-10-16`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -39,7 +39,7 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```yaml
-rules: [{capability: unknown, effect: allow}]
+rules: [{capability: "*", effect: allow}]
 ```
 
 ### Valid

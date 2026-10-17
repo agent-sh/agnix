@@ -1,28 +1,306 @@
-//! Kiro CLI settings validation (KR-SET-*).
+//! Kiro CLI settings validation (KR-SET-001 to KR-SET-012).
 //!
-//! Validates `.kiro/settings.json` (and `~/.kiro/settings.json`) against the
-//! documented CLI settings fields. Today focuses on the Tool Search feature
-//! added in Kiro CLI 2.1:
+//! Validates Kiro CLI settings files: `~/.kiro/settings/cli.json` (global,
+//! `$KIRO_HOME/settings/cli.json` when set) and `<workspace>/.kiro/settings/cli.json`.
+//! Both are a flat JSON object keyed by dotted setting names, for example
+//! `{"chat.defaultModel": "claude-sonnet-4.6", "toolSearch.enabled": true}`;
+//! `kiro-cli settings <key> <value>` and `/settings` write them.
 //!
-//! - `toolSearch.enabled` (boolean, default false) - master toggle
-//! - `toolSearch.minPct` (number, default 5) - % of context window threshold
-//! - `toolSearch.minTokens` (number, default 50000) - token count threshold
+//! Behavior observed with kiro-cli 2.32.1 (`kiro-cli settings`, offline):
+//! - the file is parsed with strict serde_json: invalid JSON, comments,
+//!   trailing commas, an empty file or a non-object root make every
+//!   kiro-cli command, chat included, exit with "failed to parse";
+//! - only flat dotted keys are read (`{"chat": {"defaultAgent": "x"}}` leaves
+//!   `chat.defaultAgent` unset), a repeated key keeps its last value, and
+//!   `kiro-cli settings` refuses to write unknown keys;
+//! - global-only keys (for example `chat.uiMode`) are ignored in a workspace
+//!   file (`settings --workspace` refuses them: "cannot be overridden at
+//!   workspace level").
 //!
-//! Source: <https://kiro.dev/docs/cli/mcp/tool-search/>
+//! The key list and value types come from `kiro-cli settings list --all`
+//! 2.32.1 (140 keys). A value of the wrong type is not coerced: the Q
+//! Developer CLI lineage reads settings with typed getters that return no
+//! value, so Kiro falls back to the default.
 //!
-//! Settings are stored as a flat JSON object with dotted keys, e.g.
-//! `{"toolSearch.enabled": true, "toolSearch.minPct": 10}`. This mirrors how
-//! `kiro-cli settings toolSearch.enabled true` writes them.
+//! Sources: <https://kiro.dev/docs/reference/settings/>,
+//! <https://kiro.dev/docs/mcp/tool-search/>.
 
 use crate::{
     config::PerFileLintConfig,
-    diagnostics::{Diagnostic, Fix},
+    diagnostics::{Diagnostic, DiagnosticLevel, Fix},
     rules::{Validator, ValidatorMetadata},
+    schemas::kiro_json::{
+        JsonMember, JsonNode, JsonValue, LineIndex, closest_name, parse_json_document,
+    },
 };
 use rust_i18n::t;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
-const RULE_IDS: &[&str] = &["KR-SET-001", "KR-SET-002", "KR-SET-003"];
+const RULE_IDS: &[&str] = &[
+    "KR-SET-001",
+    "KR-SET-002",
+    "KR-SET-003",
+    "KR-SET-004",
+    "KR-SET-005",
+    "KR-SET-006",
+    "KR-SET-007",
+    "KR-SET-008",
+    "KR-SET-009",
+    "KR-SET-010",
+    "KR-SET-011",
+    "KR-SET-012",
+];
+
+/// Value type of a setting.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum SettingKind {
+    Bool,
+    Number,
+    String,
+    StringArray,
+    Object,
+}
+
+/// One Kiro CLI setting.
+#[derive(Clone, Copy, Debug)]
+struct SettingSpec {
+    key: &'static str,
+    kind: SettingKind,
+    /// `kiro-cli settings --workspace <key>` refuses the key, and a workspace
+    /// value is ignored.
+    global_only: bool,
+    /// Documented string values; empty when free-form.
+    values: &'static [&'static str],
+}
+
+const fn spec(
+    key: &'static str,
+    kind: SettingKind,
+    global_only: bool,
+    values: &'static [&'static str],
+) -> SettingSpec {
+    SettingSpec {
+        key,
+        kind,
+        global_only,
+        values,
+    }
+}
+
+use SettingKind::{Bool, Number, Object, String as Str, StringArray};
+
+/// Every key `kiro-cli settings list --all` reports in 2.32.1, with the type
+/// from its description and the global-only flag from
+/// `kiro-cli settings --workspace`. String values come from the descriptions
+/// and kiro.dev/docs/reference/settings.
+const SETTINGS: &[SettingSpec] = &[
+    spec("telemetry.enabled", Bool, true, &[]),
+    spec("telemetryClientId", Str, true, &[]),
+    spec(
+        "codeWhisperer.shareCodeWhispererContentWithAWS",
+        Bool,
+        true,
+        &[],
+    ),
+    spec("chat.enableThinking", Bool, false, &[]),
+    spec("chat.enableKnowledge", Bool, false, &[]),
+    spec("chat.enableCodeIntelligence", Bool, false, &[]),
+    spec("knowledge.defaultIncludePatterns", StringArray, false, &[]),
+    spec("knowledge.defaultExcludePatterns", StringArray, false, &[]),
+    spec("knowledge.maxFiles", Number, false, &[]),
+    spec("knowledge.chunkSize", Number, false, &[]),
+    spec("knowledge.chunkOverlap", Number, false, &[]),
+    spec("knowledge.indexType", Str, false, &[]),
+    spec("chat.skimCommandKey", Str, false, &[]),
+    spec("chat.autocompletionKey", Str, false, &[]),
+    spec("chat.enableTangentMode", Bool, false, &[]),
+    spec("chat.tangentModeKey", Str, false, &[]),
+    spec("chat.enableSubagent", Bool, false, &[]),
+    spec("chat.delegateModeKey", Str, false, &[]),
+    spec("introspect.tangentMode", Bool, false, &[]),
+    spec("introspect.progressiveMode", Bool, false, &[]),
+    spec("chat.greeting.enabled", Bool, false, &[]),
+    spec("api.timeout", Number, false, &[]),
+    spec("api.streamIdleSoftTimeout", Number, false, &[]),
+    spec("api.streamIdleHardTimeout", Number, false, &[]),
+    spec("api.subagentTimeout", Number, false, &[]),
+    spec("chat.editMode", Bool, false, &[]),
+    spec("chat.enableNotifications", Bool, false, &[]),
+    spec(
+        "chat.notificationMethod",
+        Str,
+        false,
+        &["auto", "bel", "osc9"],
+    ),
+    spec("api.oidc.scopePrefix", Str, true, &[]),
+    spec("api.codewhisperer.service", Str, true, &[]),
+    spec("api.krs.service", Object, true, &[]),
+    spec("api.cps.service", Object, true, &[]),
+    spec("api.q.service", Str, true, &[]),
+    spec("api.kiroauth.service", Str, true, &[]),
+    spec("mcp.initTimeout", Number, false, &[]),
+    spec("mcp.noInteractiveTimeout", Number, false, &[]),
+    spec("mcp.loadedBefore", Bool, true, &[]),
+    spec("chat.enableContextUsageIndicator", Bool, false, &[]),
+    spec("chat.defaultModel", Str, false, &[]),
+    spec("chat.disableMarkdownRendering", Bool, false, &[]),
+    spec("chat.defaultAgent", Str, false, &[]),
+    spec("chat.disableAutoCompaction", Bool, false, &[]),
+    spec("compaction.excludeContextWindowPercent", Number, false, &[]),
+    spec("compaction.excludeMessages", Number, false, &[]),
+    spec("chat.enableHistoryHints", Bool, false, &[]),
+    spec("chat.enablePromptHints", Bool, false, &[]),
+    spec("chat.enableTodoList", Bool, false, &[]),
+    spec("chat.enableCheckpoint", Bool, false, &[]),
+    spec("chat.enableDelegate", Bool, false, &[]),
+    spec("chat.uiMode", Str, true, &["lite", "tui", "structured"]),
+    spec("chat.diffTool", Str, false, &[]),
+    spec("chat.ui", Str, true, &["legacy", "classic", "tui"]),
+    spec("cleanup.periodDays", Number, true, &[]),
+    spec("chat.disableGranularTrust", Bool, false, &[]),
+    spec("app.disableAutoupdates", Bool, true, &[]),
+    spec("hooks.showStatus", Bool, false, &[]),
+    spec("chat.autoExpandToolOutput", Bool, false, &[]),
+    spec("chat.disableTrustAllConfirmation", Bool, true, &[]),
+    spec("toolSearch.enabled", Bool, false, &[]),
+    spec("toolSearch.minPct", Number, false, &[]),
+    spec("toolSearch.minTokens", Number, false, &[]),
+    spec("chat.disableWrap", Bool, false, &[]),
+    spec("chat.preserveScrollback", Bool, true, &[]),
+    spec("chat.startFullscreen", Bool, true, &[]),
+    spec("chat.fullscreenWheelRows", Number, true, &[]),
+    spec("chat.fullscreenCopyOnSelect", Bool, true, &[]),
+    spec("chat.modelDefaults", Object, false, &[]),
+    spec("chat.disabledModelFallbacks", Object, true, &[]),
+    spec("chat.spinnerVerbs", Object, true, &[]),
+    spec("chat.enableCustomSpinnerVerbs", Bool, true, &[]),
+    spec("chat.verbosity.lite", Object, true, &[]),
+    spec("chat.verbosity.tui", Object, true, &[]),
+    spec("chat.tools.filters", Object, true, &[]),
+    spec("chat.tools.showReasoning", Bool, true, &[]),
+    spec("chat.tools.argsMode", Str, true, &[]),
+    spec("chat.tools.showElapsed", Bool, true, &[]),
+    spec("chat.tools.argsMaxLines", Number, true, &[]),
+    spec("chat.tools.outputMaxLines", Number, true, &[]),
+    spec("chat.tools.argsMaxChars", Number, true, &[]),
+    spec("chat.tools.outputMaxChars", Number, true, &[]),
+    spec("chat.tools.persistOutput", Bool, true, &[]),
+    spec("chat.tools.showWriteDiffs", Bool, true, &[]),
+    spec("chat.showTasks", Bool, true, &[]),
+    spec("chat.subagent.showPipeline", Bool, true, &[]),
+    spec("chat.subagent.showPrompts", Bool, true, &[]),
+    spec("chat.subagent.showRoles", Bool, true, &[]),
+    spec("chat.subagent.showDeps", Bool, true, &[]),
+    spec("chat.subagent.showResponses", Bool, true, &[]),
+    spec("chat.statusLine.tui", Object, true, &[]),
+    spec("chat.statusLine.lite", Object, true, &[]),
+    spec("chat.keybindings.toggleSessionDashboard", Str, true, &[]),
+    spec("chat.keybindings.moveToBackground", Str, true, &[]),
+    spec("chat.sessionDashboard.groupBy", Str, true, &[]),
+    spec("chat.sessionDashboard.sortBy", Str, true, &[]),
+    spec(
+        "chat.sessionDashboard.scope",
+        Str,
+        true,
+        &["current", "all"],
+    ),
+    spec("chat.sessionDashboard.indexResponses", Bool, true, &[]),
+    spec(
+        "chat.modelPicker.sortBy",
+        Str,
+        true,
+        &["last-used", "cost", "company"],
+    ),
+    spec("chat.modelPicker.lastUsed", Object, true, &[]),
+    spec("chat.enableInfraSafetyMonitor", Bool, true, &[]),
+    spec("chat.enableInfraSafetyEnforce", Bool, true, &[]),
+    spec("trust.classifier.shadow", Bool, true, &[]),
+    spec("trust.classifier.shadowLogPath", Str, true, &[]),
+    spec("chat.workflowMonitor.mouseEnabled", Bool, true, &[]),
+    spec("chat.workflow.continueInterrupted", Bool, true, &[]),
+    spec("chat.specReview.mouseEnabled", Bool, true, &[]),
+    spec("chat.turnUsage.thisTurn", Bool, true, &[]),
+    spec("chat.turnUsage.thisSession", Bool, true, &[]),
+    spec("chat.turnUsage.time", Bool, true, &[]),
+    spec("chat.keybindings.cancelStream", Str, true, &[]),
+    spec("chat.keybindings.closeMenu", Str, true, &[]),
+    spec("chat.keybindings.quit", Str, true, &[]),
+    spec("chat.agentEngine", Str, true, &["v1", "v2", "v3"]),
+    spec("chat.allowAnimations", Bool, true, &[]),
+    spec("chat.allowAsciiArt", Bool, true, &[]),
+    spec("chat.allowIcons", Bool, true, &[]),
+    spec("chat.screenReader", Str, true, &["auto", "on", "off"]),
+    spec("chat.hasSeenLogo", Bool, true, &[]),
+    spec("chat.showThinking", Bool, false, &[]),
+    spec("chat.showThinkingTips", Bool, false, &[]),
+    spec("chat.terminalTitle", Bool, true, &[]),
+    spec("chat.historyMode", Str, false, &["session", "global"]),
+    spec("chat.outputStyle", Str, false, &[]),
+    spec(
+        "chat.defaultInterruptBehavior",
+        Str,
+        false,
+        &["steer", "queue"],
+    ),
+    spec("chat.keybindings.toggleInterruptBehavior", Str, false, &[]),
+    spec("chat.disableInheritingDefaultResources", Bool, false, &[]),
+    spec("chat.enableAutoAgentUpgrade", Bool, true, &[]),
+    spec("chat.enableWorkflows", Bool, false, &[]),
+    spec("chat.enableMainAgentSubagentTool", Bool, false, &[]),
+    spec("chat.highPerformanceMode", Bool, true, &[]),
+    spec("chat.enableC2s", Bool, true, &[]),
+    spec(
+        "memory.mode",
+        Str,
+        true,
+        &["read_write", "read_only", "disabled"],
+    ),
+    spec("memory.reflection", Bool, true, &[]),
+    spec("voice.language", Str, false, &[]),
+    spec("voice.modelSize", Str, false, &[]),
+    spec("voice.silenceTimeout", Number, false, &[]),
+    spec("voice.partialPause", Number, false, &[]),
+    spec("voice.maxSessionTime", Number, false, &[]),
+    spec("voice.serverUrl", Str, true, &[]),
+    spec("voice.seenWelcome", Bool, false, &[]),
+    spec("voice.autoSubmit", Bool, false, &[]),
+];
+
+fn setting(key: &str) -> Option<&'static SettingSpec> {
+    SETTINGS.iter().find(|s| s.key == key)
+}
+
+fn setting_keys() -> Vec<&'static str> {
+    SETTINGS.iter().map(|s| s.key).collect()
+}
+
+/// Keys of other Kiro files that people paste into cli.json, with the file
+/// Kiro reads them from.
+fn misplaced_section(key: &str) -> Option<&'static str> {
+    match key {
+        "mcpServers" | "powers" => Some(".kiro/settings/mcp.json"),
+        "hooks" => Some("a custom agent (.kiro/agents/) or .kiro/hooks/*.json"),
+        "rules" | "permissions" | "policies" => Some("~/.kiro/settings/permissions.yaml"),
+        "tools" | "allowedTools" | "toolsSettings" | "resources" | "prompt" | "includeMcpJson" => {
+            Some("a custom agent file in .kiro/agents/")
+        }
+        _ => None,
+    }
+}
+
+/// Undotted spellings of common settings.
+fn alias(key: &str) -> Option<&'static str> {
+    match key {
+        "model" | "defaultModel" => Some("chat.defaultModel"),
+        "agent" | "defaultAgent" => Some("chat.defaultAgent"),
+        "agentEngine" | "engine" => Some("chat.agentEngine"),
+        "autoCompact" | "chat.autoCompact" | "chat.autoCompaction" => {
+            Some("chat.disableAutoCompaction")
+        }
+        "telemetry" => Some("telemetry.enabled"),
+        _ => None,
+    }
+}
 
 pub struct KiroSettingsValidator;
 
@@ -40,1089 +318,523 @@ impl Validator for KiroSettingsValidator {
         content: &str,
         config: &PerFileLintConfig<'_>,
     ) -> Vec<Diagnostic> {
-        let mut diagnostics = Vec::new();
-
-        // Parse JSON; bail silently on parse errors (other validators in the
-        // pipeline surface malformed JSON with a dedicated rule).
-        let Ok(value) = serde_json::from_str::<serde_json::Value>(content) else {
-            return diagnostics;
+        let mut cx = Cx {
+            path,
+            lines: LineIndex::new(content),
+            config,
+            diagnostics: Vec::new(),
         };
-
-        if config.is_rule_enabled("KR-SET-001") {
-            validate_tool_search_enabled(path, content, &value, &mut diagnostics);
+        // `.kiro/settings.json` is where Kiro CLI 1.23 saved the default model;
+        // current Kiro CLI does not read it. Many such files belong to other
+        // tools, so only one carrying Kiro settings is reported (KR-SET-012).
+        let legacy_file = path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .is_some_and(|n| n.eq_ignore_ascii_case("settings.json"));
+        if legacy_file {
+            let doc = parse_json_document(content, false).ok();
+            let first_setting = doc.as_ref().and_then(|doc| {
+                doc.root
+                    .value
+                    .as_object()?
+                    .iter()
+                    .find(|m| setting(&m.key).is_some())
+                    .map(|m| (m.key_start, m.key_end))
+            });
+            let Some((start, end)) = first_setting else {
+                return cx.diagnostics;
+            };
+            if cx.enabled("KR-SET-012") {
+                cx.push(
+                    DiagnosticLevel::Warning,
+                    "KR-SET-012",
+                    start,
+                    end,
+                    t!("rules.kr_set_012.message").to_string(),
+                    t!("rules.kr_set_012.suggestion").to_string(),
+                );
+            }
         }
-        if config.is_rule_enabled("KR-SET-002") {
-            validate_tool_search_min_pct(path, content, &value, &mut diagnostics);
+        let doc = match parse_json_document(content, false) {
+            Ok(doc) => doc,
+            Err(error) => {
+                if cx.enabled("KR-SET-004") {
+                    let offset = offset_of(content, error.line, error.column);
+                    cx.push(
+                        DiagnosticLevel::Error,
+                        "KR-SET-004",
+                        offset,
+                        offset,
+                        t!("rules.kr_set_004.message", error = error.message.as_str()).to_string(),
+                        t!("rules.kr_set_004.suggestion").to_string(),
+                    );
+                }
+                return cx.diagnostics;
+            }
+        };
+        let Some(members) = doc.root.value.as_object() else {
+            if cx.enabled("KR-SET-004") {
+                cx.push(
+                    DiagnosticLevel::Error,
+                    "KR-SET-004",
+                    doc.root.start,
+                    doc.root.end,
+                    t!("rules.kr_set_004.root", found = doc.root.value.type_name()).to_string(),
+                    t!("rules.kr_set_004.suggestion").to_string(),
+                );
+            }
+            return cx.diagnostics;
+        };
+        let workspace_file = is_workspace_settings_file(path) == Some(true);
+        for (index, member) in members.iter().enumerate() {
+            // A repeated key: Kiro (serde_json) keeps the last value.
+            if let Some(later) = members[index + 1..].iter().find(|m| m.key == member.key) {
+                if cx.enabled("KR-SET-010") {
+                    let (later_line, _) = cx.lines.line_col(later.key_start);
+                    cx.push(
+                        DiagnosticLevel::Warning,
+                        "KR-SET-010",
+                        member.key_start,
+                        member.key_end,
+                        t!(
+                            "rules.kr_set_010.message",
+                            key = member.key.as_str(),
+                            line = later_line
+                        )
+                        .to_string(),
+                        t!("rules.kr_set_010.suggestion").to_string(),
+                    );
+                }
+                continue;
+            }
+            validate_member(&mut cx, content, member, workspace_file);
         }
-        if config.is_rule_enabled("KR-SET-003") {
-            validate_tool_search_min_tokens(path, content, &value, &mut diagnostics);
-        }
-
-        diagnostics
+        cx.diagnostics
     }
 }
 
-/// KR-SET-001: `toolSearch.enabled` must be a boolean when present.
-fn validate_tool_search_enabled(
-    path: &Path,
-    content: &str,
-    value: &serde_json::Value,
-    diagnostics: &mut Vec<Diagnostic>,
-) {
-    let Some(field) = value.get("toolSearch.enabled") else {
+struct Cx<'a> {
+    path: &'a Path,
+    lines: LineIndex<'a>,
+    config: &'a PerFileLintConfig<'a>,
+    diagnostics: Vec<Diagnostic>,
+}
+
+impl Cx<'_> {
+    fn enabled(&self, rule: &str) -> bool {
+        self.config.is_rule_enabled(rule)
+    }
+
+    fn diagnostic(
+        &self,
+        level: DiagnosticLevel,
+        rule: &str,
+        start: usize,
+        end: usize,
+        message: String,
+        suggestion: String,
+    ) -> Diagnostic {
+        let (line, column) = self.lines.line_col(start);
+        let (end_line, end_column) = self.lines.line_col(end.max(start));
+        let path = self.path.to_path_buf();
+        let diagnostic = match level {
+            DiagnosticLevel::Error => Diagnostic::error(path, line, column, rule, message),
+            DiagnosticLevel::Warning => Diagnostic::warning(path, line, column, rule, message),
+            DiagnosticLevel::Info => Diagnostic::info(path, line, column, rule, message),
+        };
+        diagnostic
+            .with_span(end_line, end_column)
+            .with_suggestion(suggestion)
+    }
+
+    fn push(
+        &mut self,
+        level: DiagnosticLevel,
+        rule: &str,
+        start: usize,
+        end: usize,
+        message: String,
+        suggestion: String,
+    ) {
+        let diagnostic = self.diagnostic(level, rule, start, end, message, suggestion);
+        self.diagnostics.push(diagnostic);
+    }
+}
+
+/// Byte offset of a 1-based (line, column) position, clamped to the text.
+fn offset_of(content: &str, line: usize, column: usize) -> usize {
+    let mut offset = 0;
+    for (index, text) in content.split_inclusive('\n').enumerate() {
+        if index + 1 == line {
+            let col_offset = text
+                .char_indices()
+                .nth(column.saturating_sub(1))
+                .map_or(text.len(), |(i, _)| i);
+            return (offset + col_offset).min(content.len());
+        }
+        offset += text.len();
+    }
+    content.len()
+}
+
+fn validate_member(cx: &mut Cx<'_>, content: &str, member: &JsonMember, workspace_file: bool) {
+    let key = member.key.as_str();
+    let Some(spec) = setting(key) else {
+        report_unknown_key(cx, member);
         return;
     };
-    if field.as_bool().is_none() {
-        let line = find_key_line(content, "toolSearch.enabled").unwrap_or(1);
-        let mut diagnostic = Diagnostic::error(
-            path.to_path_buf(),
-            line,
-            0,
-            "KR-SET-001",
-            t!("rules.kr_set_001.type_error"),
-        )
-        .with_suggestion(t!("rules.kr_set_001.suggestion"));
-
-        // Auto-fix: when the user wrote "true" / "false" / "True" / "FALSE"
-        // as a quoted string, strip the quotes + normalize case. Safe
-        // because the fix preserves the user's clearly-intended value:
-        // Kiro's toolSearch.enabled field expects a boolean, not a string,
-        // so the quoted form would be rejected at config load anyway.
-        if let Some(s) = field.as_str()
-            && let Some(parsed) = parse_string_as_bool(s)
-            && let Some((start, end)) = find_value_span(content, "toolSearch.enabled")
-        {
-            diagnostic = diagnostic.with_fix(Fix::replace(
-                start,
-                end,
-                if parsed { "true" } else { "false" }.to_string(),
-                format!("Remove quotes: \"{s}\" -> {parsed}"),
-                true,
-            ));
-        }
-
-        diagnostics.push(diagnostic);
+    if workspace_file && spec.global_only && cx.enabled("KR-SET-011") {
+        cx.push(
+            DiagnosticLevel::Info,
+            "KR-SET-011",
+            member.key_start,
+            member.key_end,
+            t!("rules.kr_set_011.message", key = key).to_string(),
+            t!("rules.kr_set_011.suggestion").to_string(),
+        );
+    }
+    match key {
+        "toolSearch.enabled" => validate_tool_search_enabled(cx, content, member),
+        "toolSearch.minPct" => validate_tool_search_min_pct(cx, content, member),
+        "toolSearch.minTokens" => validate_tool_search_min_tokens(cx, content, member),
+        _ => validate_value(cx, content, member, spec),
     }
 }
 
-/// Parse a string like "true"/"True"/"false"/"FALSE" as a boolean.
-/// Returns None for anything ambiguous ("1"/"0"/"yes"/"no" etc.) to keep
-/// the auto-fix conservative.
-fn parse_string_as_bool(s: &str) -> Option<bool> {
-    match s.to_lowercase().as_str() {
-        "true" => Some(true),
-        "false" => Some(false),
+fn report_unknown_key(cx: &mut Cx<'_>, member: &JsonMember) {
+    let key = member.key.as_str();
+    if let Some(home) = misplaced_section(key) {
+        if cx.enabled("KR-SET-006") {
+            cx.push(
+                DiagnosticLevel::Warning,
+                "KR-SET-006",
+                member.key_start,
+                member.key_end,
+                t!("rules.kr_set_006.message", key = key, file = home).to_string(),
+                t!("rules.kr_set_006.suggestion", file = home).to_string(),
+            );
+        }
+        return;
+    }
+    // A nested object whose dotted paths are settings: Kiro reads only the
+    // flat dotted keys, so the nested values are ignored.
+    if let Some(members) = member.value.value.as_object() {
+        let mut nested = Vec::new();
+        collect_nested_settings(key, members, &mut nested);
+        if !nested.is_empty() {
+            if cx.enabled("KR-SET-007") {
+                let list = nested.join(", ");
+                cx.push(
+                    DiagnosticLevel::Warning,
+                    "KR-SET-007",
+                    member.key_start,
+                    member.key_end,
+                    t!(
+                        "rules.kr_set_007.message",
+                        key = key,
+                        settings = list.as_str()
+                    )
+                    .to_string(),
+                    t!("rules.kr_set_007.suggestion", example = nested[0].as_str()).to_string(),
+                );
+            }
+            return;
+        }
+    }
+    if !cx.enabled("KR-SET-005") {
+        return;
+    }
+    let keys = setting_keys();
+    let suggestion = match alias(key).or_else(|| closest_name(key, &keys)) {
+        Some(close) => t!("rules.kr_set_005.did_you_mean", key = close).to_string(),
+        None => t!("rules.kr_set_005.suggestion").to_string(),
+    };
+    cx.push(
+        DiagnosticLevel::Info,
+        "KR-SET-005",
+        member.key_start,
+        member.key_end,
+        t!("rules.kr_set_005.message", key = key).to_string(),
+        suggestion,
+    );
+}
+
+fn collect_nested_settings(prefix: &str, members: &[JsonMember], out: &mut Vec<String>) {
+    for member in members {
+        let dotted = format!("{prefix}.{}", member.key);
+        if setting(&dotted).is_some() {
+            out.push(dotted);
+        } else if let Some(children) = member.value.value.as_object() {
+            collect_nested_settings(&dotted, children, out);
+        }
+    }
+}
+
+fn kind_name(kind: SettingKind) -> &'static str {
+    match kind {
+        Bool => "a boolean (true or false)",
+        Number => "a number",
+        Str => "a string",
+        StringArray => "an array of strings",
+        Object => "an object",
+    }
+}
+
+fn kind_matches(kind: SettingKind, value: &JsonValue) -> bool {
+    match kind {
+        Bool => value.as_bool().is_some(),
+        Number => value.as_number().is_some(),
+        Str => value.as_str().is_some(),
+        StringArray => value
+            .as_array()
+            .is_some_and(|items| items.iter().all(|i| i.value.as_str().is_some())),
+        Object => value.as_object().is_some(),
+    }
+}
+
+/// KR-SET-008 / KR-SET-009 for every setting except toolSearch.*.
+fn validate_value(cx: &mut Cx<'_>, content: &str, member: &JsonMember, spec: &SettingSpec) {
+    let node = &member.value;
+    if !kind_matches(spec.kind, &node.value) {
+        if !cx.enabled("KR-SET-008") {
+            return;
+        }
+        let mut diagnostic = cx.diagnostic(
+            DiagnosticLevel::Warning,
+            "KR-SET-008",
+            node.start,
+            node.end,
+            t!(
+                "rules.kr_set_008.message",
+                key = spec.key,
+                expected = kind_name(spec.kind),
+                found = node.value.type_name()
+            )
+            .to_string(),
+            t!("rules.kr_set_008.suggestion").to_string(),
+        );
+        let fix = match spec.kind {
+            Bool => quoted_bool_fix(content, node),
+            Number => quoted_number_fix(content, node, false),
+            _ => None,
+        };
+        if let Some(fix) = fix {
+            diagnostic = diagnostic.with_fix(fix);
+        }
+        cx.diagnostics.push(diagnostic);
+        return;
+    }
+    if !cx.enabled("KR-SET-009") {
+        return;
+    }
+    let invalid = match (&node.value, spec.key) {
+        (JsonValue::String(value), _) if !spec.values.is_empty() => {
+            (!spec.values.contains(&value.as_str())).then(|| spec.values.join(", "))
+        }
+        (JsonValue::Number(n), "compaction.excludeContextWindowPercent") => n
+            .as_f64()
+            .is_none_or(|v| !(0.0..=100.0).contains(&v))
+            .then(|| "a number from 0 to 100".to_string()),
+        (JsonValue::Number(n), "chat.fullscreenWheelRows") => {
+            (!matches!(n.as_u64(), Some(1..=3))).then(|| "1, 2, 3".to_string())
+        }
         _ => None,
-    }
-}
-
-/// Parse a string as a JSON number (integer or float) per RFC 8259
-/// section 6. Stricter than `f64::from_str` - rejects leading `+`,
-/// leading zeros on multi-digit integers, leading/trailing `.`, and
-/// negative values (since KR-SET-002/003 both expect non-negative).
-///
-/// Returns the canonical JSON representation so the auto-fix rewrites
-/// exactly what Kiro would have accepted. Returns None if the string
-/// isn't a valid non-negative JSON number. This prevents auto-fix from
-/// emitting invalid JSON like `05` or from auto-correcting a negative
-/// string that would just re-flag on the negative rule.
-fn parse_string_as_number(s: &str) -> Option<String> {
-    let trimmed = s.trim();
-    if !is_json_nonneg_number(trimmed) {
-        return None;
-    }
-    Some(trimmed.to_string())
-}
-
-/// Parse a string as a JSON non-negative integer. Rejects everything
-/// `parse_string_as_number` rejects plus any fractional/exponent form.
-fn parse_string_as_integer(s: &str) -> Option<String> {
-    let trimmed = s.trim();
-    if !is_json_nonneg_integer(trimmed) {
-        return None;
-    }
-    Some(trimmed.to_string())
-}
-
-/// JSON RFC 8259 number grammar, restricted to non-negative values:
-///   number = int [ frac ] [ exp ]
-///   int    = "0" | ( digit1-9 *DIGIT )       ; no leading zeros on multi-digit
-///   frac   = "." 1*DIGIT                     ; requires digits after .
-///   exp    = ("e"|"E") [ "+" | "-" ] 1*DIGIT
-/// Rejects negative numbers, leading `+`, `.5`, `5.`, `05`, empty string.
-fn is_json_nonneg_number(s: &str) -> bool {
-    let bytes = s.as_bytes();
-    if bytes.is_empty() {
-        return false;
-    }
-    let mut i;
-    // int part
-    match bytes.first() {
-        Some(b'0') => {
-            i = 1;
-            // Must be followed by end, `.`, or exponent - not another digit.
-            if let Some(b) = bytes.get(i)
-                && b.is_ascii_digit()
-            {
-                return false; // leading zero
-            }
-        }
-        Some(b) if (b'1'..=b'9').contains(b) => {
-            i = 1;
-            while let Some(c) = bytes.get(i)
-                && c.is_ascii_digit()
-            {
-                i += 1;
-            }
-        }
-        _ => return false, // empty, `-`, `+`, `.`, or other
-    }
-    // frac part
-    if bytes.get(i) == Some(&b'.') {
-        i += 1;
-        let frac_start = i;
-        while let Some(c) = bytes.get(i)
-            && c.is_ascii_digit()
-        {
-            i += 1;
-        }
-        if i == frac_start {
-            return false; // `5.` with no fraction digits
-        }
-    }
-    // exp part
-    if let Some(c) = bytes.get(i)
-        && (*c == b'e' || *c == b'E')
-    {
-        i += 1;
-        if let Some(s) = bytes.get(i)
-            && (*s == b'+' || *s == b'-')
-        {
-            i += 1;
-        }
-        let exp_start = i;
-        while let Some(c) = bytes.get(i)
-            && c.is_ascii_digit()
-        {
-            i += 1;
-        }
-        if i == exp_start {
-            return false; // `5e` with no exponent digits
-        }
-    }
-    i == bytes.len()
-}
-
-/// Non-negative JSON integer: digits only, no leading zeros on multi-digit,
-/// no fraction, no exponent.
-fn is_json_nonneg_integer(s: &str) -> bool {
-    let bytes = s.as_bytes();
-    match bytes.first() {
-        Some(b'0') => bytes.len() == 1,
-        Some(b) if (b'1'..=b'9').contains(b) => bytes.iter().all(|c| c.is_ascii_digit()),
-        _ => false,
-    }
-}
-
-/// KR-SET-002: `toolSearch.minPct` must be a non-negative number when present.
-/// Kiro treats 0 as "always active" so negatives are the only invalid numbers.
-/// The docs don't enforce an upper bound, so we only flag obvious misuses
-/// (non-number types, negative, or > 100 which would never trigger).
-fn validate_tool_search_min_pct(
-    path: &Path,
-    content: &str,
-    value: &serde_json::Value,
-    diagnostics: &mut Vec<Diagnostic>,
-) {
-    let Some(field) = value.get("toolSearch.minPct") else {
-        return;
     };
-    let line = find_key_line(content, "toolSearch.minPct").unwrap_or(1);
-    match field.as_f64() {
-        None => {
-            let mut diagnostic = Diagnostic::error(
-                path.to_path_buf(),
-                line,
-                0,
-                "KR-SET-002",
-                t!("rules.kr_set_002.type_error"),
+    if let Some(allowed) = invalid {
+        cx.push(
+            DiagnosticLevel::Warning,
+            "KR-SET-009",
+            node.start,
+            node.end,
+            t!(
+                "rules.kr_set_009.message",
+                key = spec.key,
+                value = content.get(node.start..node.end).unwrap_or_default(),
+                allowed = allowed.as_str()
             )
-            .with_suggestion(t!("rules.kr_set_002.suggestion"));
-
-            // Auto-fix: string-that-parses-as-number -> bare number. Safe
-            // because the user's numeric intent is clearly preserved and
-            // Kiro rejects quoted numbers anyway.
-            if let Some(s) = field.as_str()
-                && let Some(parsed) = parse_string_as_number(s)
-                && let Some((start, end)) = find_value_span(content, "toolSearch.minPct")
-            {
-                diagnostic = diagnostic.with_fix(Fix::replace(
-                    start,
-                    end,
-                    parsed.clone(),
-                    format!("Remove quotes: \"{s}\" -> {parsed}"),
-                    true,
-                ));
-            }
-
-            diagnostics.push(diagnostic);
-        }
-        Some(n) if n < 0.0 => {
-            diagnostics.push(
-                Diagnostic::error(
-                    path.to_path_buf(),
-                    line,
-                    0,
-                    "KR-SET-002",
-                    t!("rules.kr_set_002.negative"),
-                )
-                .with_suggestion(t!("rules.kr_set_002.suggestion")),
-            );
-        }
-        Some(n) if n > 100.0 => {
-            // A percentage over 100 would never trigger Tool Search since the
-            // spec tokens can't exceed the context window. Warn (not error)
-            // so power users setting it as a disable-by-default knob aren't
-            // blocked.
-            diagnostics.push(
-                Diagnostic::warning(
-                    path.to_path_buf(),
-                    line,
-                    0,
-                    "KR-SET-002",
-                    t!("rules.kr_set_002.over_100"),
-                )
-                .with_suggestion(t!("rules.kr_set_002.suggestion")),
-            );
-        }
-        _ => {}
+            .to_string(),
+            t!("rules.kr_set_009.suggestion").to_string(),
+        );
     }
 }
 
-/// KR-SET-003: `toolSearch.minTokens` must be a non-negative integer number
-/// when present. 0 is valid (means "always active").
-fn validate_tool_search_min_tokens(
-    path: &Path,
-    content: &str,
-    value: &serde_json::Value,
-    diagnostics: &mut Vec<Diagnostic>,
-) {
-    let Some(field) = value.get("toolSearch.minTokens") else {
-        return;
+/// Unsafe fix for `"true"` / `"false"` (any case): replace the exact string
+/// token with a JSON boolean. Unsafe because Kiro ignores the quoted value
+/// today, so converting it activates the setting.
+fn quoted_bool_fix(content: &str, node: &JsonNode) -> Option<Fix> {
+    let text = node.value.as_str()?;
+    let parsed = match text.to_ascii_lowercase().as_str() {
+        "true" => true,
+        "false" => false,
+        _ => return None,
     };
-    let line = find_key_line(content, "toolSearch.minTokens").unwrap_or(1);
-    match field.as_f64() {
-        None => {
-            let mut diagnostic = Diagnostic::error(
-                path.to_path_buf(),
-                line,
-                0,
-                "KR-SET-003",
-                t!("rules.kr_set_003.type_error"),
-            )
-            .with_suggestion(t!("rules.kr_set_003.suggestion"));
-
-            // Auto-fix: string-that-parses-as-integer -> bare integer. Only
-            // integers qualify here since minTokens is a token count; a
-            // fractional string like "1.5" falls through to manual fix.
-            if let Some(s) = field.as_str()
-                && let Some(parsed) = parse_string_as_integer(s)
-                && let Some((start, end)) = find_value_span(content, "toolSearch.minTokens")
-            {
-                diagnostic = diagnostic.with_fix(Fix::replace(
-                    start,
-                    end,
-                    parsed.clone(),
-                    format!("Remove quotes: \"{s}\" -> {parsed}"),
-                    true,
-                ));
-            }
-
-            diagnostics.push(diagnostic);
-        }
-        Some(n) if n < 0.0 => {
-            diagnostics.push(
-                Diagnostic::error(
-                    path.to_path_buf(),
-                    line,
-                    0,
-                    "KR-SET-003",
-                    t!("rules.kr_set_003.negative"),
-                )
-                .with_suggestion(t!("rules.kr_set_003.suggestion")),
-            );
-        }
-        Some(n) if n.fract() != 0.0 => {
-            diagnostics.push(
-                Diagnostic::error(
-                    path.to_path_buf(),
-                    line,
-                    0,
-                    "KR-SET-003",
-                    t!("rules.kr_set_003.not_integer"),
-                )
-                .with_suggestion(t!("rules.kr_set_003.suggestion")),
-            );
-        }
-        _ => {}
-    }
+    let token = content.get(node.start..node.end)?;
+    Some(Fix::replace(
+        node.start,
+        node.end,
+        if parsed { "true" } else { "false" },
+        t!("rules.boolean_unwrap.json_fix", value = token).to_string(),
+        false,
+    ))
 }
 
-/// Locate the byte span of the JSON *value* that follows `"<key>":`.
-///
-/// Returns `(start, end)` covering the value token exactly - no leading or
-/// trailing whitespace and no comma. For a string value `"abc"` the span
-/// includes both surrounding quotes. This drives auto-fix replacements like
-/// `"true"` -> `true` where we want to swap the whole token.
-///
-/// Returns `None` when the key isn't present, when the value is an object/
-/// array (which would need bracket-matching), or when parsing ambiguity
-/// would make the span unsafe to rewrite. Callers fall back to "manual fix"
-/// in that case.
-fn find_value_span(content: &str, key: &str) -> Option<(usize, usize)> {
-    debug_assert!(
-        key.is_ascii() && !key.contains('"') && !key.contains('\\'),
-        "find_value_span expects ASCII key without quotes or backslashes"
-    );
-    let needle = format!("\"{key}\"");
-    let needle_bytes = needle.as_bytes();
-    let needle_len = needle_bytes.len();
-    let bytes = content.as_bytes();
-    let mut in_string = false;
-    let mut escape = false;
-    let mut i = 0;
-
-    // Phase 1: walk to the `:` after the key.
-    let mut colon_pos: Option<usize> = None;
-    while i < bytes.len() {
-        let b = bytes[i];
-        if escape {
-            escape = false;
-            i += 1;
-            continue;
-        }
-        if b == b'\\' && in_string {
-            escape = true;
-            i += 1;
-            continue;
-        }
-        if b == b'"' {
-            if !in_string
-                && i + needle_len <= bytes.len()
-                && &bytes[i..i + needle_len] == needle_bytes
-            {
-                let mut j = i + needle_len;
-                while j < bytes.len() && matches!(bytes[j], b' ' | b'\t' | b'\n' | b'\r') {
-                    j += 1;
-                }
-                if j < bytes.len() && bytes[j] == b':' {
-                    colon_pos = Some(j);
-                    break;
-                }
-            }
-            in_string = !in_string;
-        }
-        i += 1;
-    }
-    let colon = colon_pos?;
-
-    // Phase 2: skip whitespace after `:` to find the value start.
-    let mut start = colon + 1;
-    while start < bytes.len() && matches!(bytes[start], b' ' | b'\t' | b'\n' | b'\r') {
-        start += 1;
-    }
-    if start >= bytes.len() {
+/// Unsafe fix for a quoted plain decimal (`"5"`, `"2.5"`; `"50000"` when
+/// `integer`): the replacement is the same digits as a JSON number, so the
+/// file still parses. Exponents, signs, leading zeros and values a JSON
+/// number cannot hold exactly are left for a manual fix.
+fn quoted_number_fix(content: &str, node: &JsonNode, integer: bool) -> Option<Fix> {
+    let text = node.value.as_str()?;
+    if !is_plain_decimal(text, integer) {
         return None;
     }
-
-    // Phase 3: scan the value token. We only handle string, number, true,
-    // false, null - the shapes the type-coercion fixes care about.
-    // Objects and arrays would need bracket-matching; return None so callers
-    // skip auto-fix rather than guessing.
-    match bytes[start] {
-        b'"' => {
-            // String literal. Walk until closing `"` respecting escapes.
-            let mut k = start + 1;
-            let mut esc = false;
-            while k < bytes.len() {
-                let b = bytes[k];
-                if esc {
-                    esc = false;
-                } else if b == b'\\' {
-                    esc = true;
-                } else if b == b'"' {
-                    return Some((start, k + 1));
-                }
-                k += 1;
-            }
-            None // unterminated string
-        }
-        b't' | b'f' | b'n' => {
-            // true / false / null literal. Match the canonical spelling.
-            for lit in ["true", "false", "null"] {
-                let lit_bytes = lit.as_bytes();
-                if start + lit_bytes.len() <= bytes.len()
-                    && &bytes[start..start + lit_bytes.len()] == lit_bytes
-                {
-                    return Some((start, start + lit_bytes.len()));
-                }
-            }
-            None
-        }
-        b'-' | b'+' | b'0'..=b'9' => {
-            // Number token. Walk while the next byte is a valid number
-            // character (JSON number grammar: digits, ., e, +, -). This is
-            // a lenient scan - good enough for rewriting a string back to
-            // a bare number form.
-            let mut k = start + 1;
-            while k < bytes.len()
-                && matches!(bytes[k], b'0'..=b'9' | b'.' | b'e' | b'E' | b'+' | b'-')
-            {
-                k += 1;
-            }
-            Some((start, k))
-        }
-        _ => None, // object, array, or other unhandled shape
+    // Stay within the range both serde_json and JavaScript read exactly.
+    let value: f64 = text.parse().ok()?;
+    if !(value.is_finite() && value <= 9_007_199_254_740_991.0) {
+        return None;
     }
+    let token = content.get(node.start..node.end)?;
+    Some(Fix::replace(
+        node.start,
+        node.end,
+        text.to_string(),
+        t!("rules.kr_set_008.number_fix", value = token).to_string(),
+        false,
+    ))
 }
 
-/// 1-indexed line of the first occurrence of `"<key>":` in a JSON document,
-/// skipping matches inside string literals. Matches ASCII keys only.
-///
-/// Shares the same byte-slice-safe + full-JSON-whitespace implementation as
-/// `claude_settings::find_key_line`. Duplicated here (rather than shared via
-/// a common helper) to keep this validator self-contained - the two scanners
-/// diverge on what counts as a valid key character (Kiro uses dotted keys
-/// like `toolSearch.enabled`, which the scanner must accept as-is).
-fn find_key_line(content: &str, key: &str) -> Option<usize> {
-    debug_assert!(
-        key.is_ascii() && !key.contains('"') && !key.contains('\\'),
-        "find_key_line expects ASCII key without quotes or backslashes"
-    );
-    let needle = format!("\"{key}\"");
-    let needle_bytes = needle.as_bytes();
-    let needle_len = needle_bytes.len();
-    let bytes = content.as_bytes();
-    let mut in_string = false;
-    let mut escape = false;
-    let mut line = 1usize;
-    let mut i = 0;
-    while i < bytes.len() {
-        let b = bytes[i];
-        if b == b'\n' {
-            line += 1;
-            i += 1;
-            continue;
-        }
-        if escape {
-            escape = false;
-            i += 1;
-            continue;
-        }
-        if b == b'\\' && in_string {
-            escape = true;
-            i += 1;
-            continue;
-        }
-        if b == b'"' {
-            if !in_string
-                && i + needle_len <= bytes.len()
-                && &bytes[i..i + needle_len] == needle_bytes
-            {
-                let mut j = i + needle_len;
-                while j < bytes.len() && matches!(bytes[j], b' ' | b'\t' | b'\n' | b'\r') {
-                    j += 1;
-                }
-                if j < bytes.len() && bytes[j] == b':' {
-                    return Some(line);
-                }
-            }
-            in_string = !in_string;
-        }
-        i += 1;
+/// `0`, `42`, `2.5` (no sign, exponent, leading zero or bare dot).
+fn is_plain_decimal(text: &str, integer: bool) -> bool {
+    let (int, frac) = match text.split_once('.') {
+        Some(_) if integer => return false,
+        Some((int, frac)) => (int, Some(frac)),
+        None => (text, None),
+    };
+    let int_ok = !int.is_empty()
+        && int.bytes().all(|b| b.is_ascii_digit())
+        && (int == "0" || !int.starts_with('0'));
+    let frac_ok = frac.is_none_or(|f| !f.is_empty() && f.bytes().all(|b| b.is_ascii_digit()));
+    int_ok && frac_ok
+}
+
+/// KR-SET-001: `toolSearch.enabled` must be a boolean.
+fn validate_tool_search_enabled(cx: &mut Cx<'_>, content: &str, member: &JsonMember) {
+    let node = &member.value;
+    if node.value.as_bool().is_some() || !cx.enabled("KR-SET-001") {
+        return;
     }
+    let mut diagnostic = cx.diagnostic(
+        DiagnosticLevel::Warning,
+        "KR-SET-001",
+        node.start,
+        node.end,
+        t!("rules.kr_set_001.type_error").to_string(),
+        t!("rules.kr_set_001.suggestion").to_string(),
+    );
+    if let Some(fix) = quoted_bool_fix(content, node) {
+        diagnostic = diagnostic.with_fix(fix);
+    }
+    cx.diagnostics.push(diagnostic);
+}
+
+/// KR-SET-002: `toolSearch.minPct` must be a number from 0 to 100.
+fn validate_tool_search_min_pct(cx: &mut Cx<'_>, content: &str, member: &JsonMember) {
+    if !cx.enabled("KR-SET-002") {
+        return;
+    }
+    let node = &member.value;
+    let (message, fix) = match node.value.as_number().and_then(serde_json::Number::as_f64) {
+        None => (
+            t!("rules.kr_set_002.type_error"),
+            quoted_number_fix(content, node, false),
+        ),
+        Some(n) if n < 0.0 => (t!("rules.kr_set_002.negative"), None),
+        Some(n) if n > 100.0 => (t!("rules.kr_set_002.over_100"), None),
+        Some(_) => return,
+    };
+    let mut diagnostic = cx.diagnostic(
+        DiagnosticLevel::Warning,
+        "KR-SET-002",
+        node.start,
+        node.end,
+        message.to_string(),
+        t!("rules.kr_set_002.suggestion").to_string(),
+    );
+    if let Some(fix) = fix {
+        diagnostic = diagnostic.with_fix(fix);
+    }
+    cx.diagnostics.push(diagnostic);
+}
+
+/// KR-SET-003: `toolSearch.minTokens` must be a non-negative integer.
+fn validate_tool_search_min_tokens(cx: &mut Cx<'_>, content: &str, member: &JsonMember) {
+    if !cx.enabled("KR-SET-003") {
+        return;
+    }
+    let node = &member.value;
+    let (message, fix) = match node.value.as_number() {
+        None => (
+            t!("rules.kr_set_003.type_error"),
+            quoted_number_fix(content, node, true),
+        ),
+        Some(n) if n.as_f64().is_some_and(|v| v < 0.0) => (t!("rules.kr_set_003.negative"), None),
+        Some(n) if n.as_u64().is_none() => (t!("rules.kr_set_003.not_integer"), None),
+        Some(_) => return,
+    };
+    let mut diagnostic = cx.diagnostic(
+        DiagnosticLevel::Warning,
+        "KR-SET-003",
+        node.start,
+        node.end,
+        message.to_string(),
+        t!("rules.kr_set_003.suggestion").to_string(),
+    );
+    if let Some(fix) = fix {
+        diagnostic = diagnostic.with_fix(fix);
+    }
+    cx.diagnostics.push(diagnostic);
+}
+
+/// Whether `path` is a workspace `.kiro/settings/cli.json` rather than the
+/// global one (`~/.kiro/settings/cli.json` or `$KIRO_HOME/settings/cli.json`).
+/// `None` when it cannot be told (no home directory available).
+fn is_workspace_settings_file(path: &Path) -> Option<bool> {
+    let kiro_home = std::env::var_os("KIRO_HOME").map(PathBuf::from);
+    workspace_settings_decision(path, user_home().as_deref(), kiro_home.as_deref())
+}
+
+#[cfg(feature = "filesystem")]
+fn user_home() -> Option<PathBuf> {
+    dirs::home_dir()
+}
+
+#[cfg(not(feature = "filesystem"))]
+fn user_home() -> Option<PathBuf> {
     None
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::config::LintConfig;
-    use std::path::PathBuf;
-
-    fn validate(content: &str) -> Vec<Diagnostic> {
-        let validator = KiroSettingsValidator;
-        validator.validate(
-            &PathBuf::from(".kiro/settings.json"),
-            content,
-            &LintConfig::default(),
-        )
+fn workspace_settings_decision(
+    path: &Path,
+    home: Option<&Path>,
+    kiro_home: Option<&Path>,
+) -> Option<bool> {
+    let settings_dir = path.parent()?;
+    let config_dir = settings_dir.parent()?;
+    let absolute = std::path::absolute(config_dir).ok()?;
+    // KIRO_HOME counts only when absolute, not "/", and not $HOME or one of
+    // its ancestors (otherwise Kiro ignores it and uses ~/.kiro).
+    let kiro_home = kiro_home.filter(|k| {
+        k.is_absolute() && k.parent().is_some() && home.is_none_or(|h| !h.starts_with(k))
+    });
+    let global_dirs: Vec<PathBuf> = kiro_home
+        .map(Path::to_path_buf)
+        .into_iter()
+        .chain(home.map(|h| h.join(".kiro")))
+        .collect();
+    if global_dirs.is_empty() {
+        return None;
     }
-
-    fn validate_with_config(content: &str, config: &LintConfig) -> Vec<Diagnostic> {
-        let validator = KiroSettingsValidator;
-        validator.validate(&PathBuf::from(".kiro/settings.json"), content, config)
-    }
-
-    // ===== KR-SET-001: toolSearch.enabled =====
-
-    #[test]
-    fn test_kr_set_001_absent_field_is_fine() {
-        let diagnostics = validate(r#"{"chat.ui": "prose"}"#);
-        assert!(diagnostics.is_empty());
-    }
-
-    #[test]
-    fn test_kr_set_001_true_is_fine() {
-        let diagnostics = validate(r#"{"toolSearch.enabled": true}"#);
-        let hits: Vec<_> = diagnostics
-            .iter()
-            .filter(|d| d.rule == "KR-SET-001")
-            .collect();
-        assert!(hits.is_empty());
-    }
-
-    #[test]
-    fn test_kr_set_001_false_is_fine() {
-        let diagnostics = validate(r#"{"toolSearch.enabled": false}"#);
-        let hits: Vec<_> = diagnostics
-            .iter()
-            .filter(|d| d.rule == "KR-SET-001")
-            .collect();
-        assert!(hits.is_empty());
-    }
-
-    #[test]
-    fn test_kr_set_001_string_flags() {
-        let diagnostics = validate(r#"{"toolSearch.enabled": "true"}"#);
-        let hits: Vec<_> = diagnostics
-            .iter()
-            .filter(|d| d.rule == "KR-SET-001")
-            .collect();
-        assert_eq!(hits.len(), 1);
-        assert_eq!(hits[0].level, crate::diagnostics::DiagnosticLevel::Error);
-    }
-
-    #[test]
-    fn test_kr_set_001_number_flags() {
-        let diagnostics = validate(r#"{"toolSearch.enabled": 1}"#);
-        let hits: Vec<_> = diagnostics
-            .iter()
-            .filter(|d| d.rule == "KR-SET-001")
-            .collect();
-        assert_eq!(hits.len(), 1);
-    }
-
-    #[test]
-    fn test_kr_set_001_null_flags() {
-        let diagnostics = validate(r#"{"toolSearch.enabled": null}"#);
-        let hits: Vec<_> = diagnostics
-            .iter()
-            .filter(|d| d.rule == "KR-SET-001")
-            .collect();
-        assert_eq!(hits.len(), 1);
-    }
-
-    // ===== KR-SET-002: toolSearch.minPct =====
-
-    #[test]
-    fn test_kr_set_002_valid_percentage_is_fine() {
-        let diagnostics = validate(r#"{"toolSearch.minPct": 5}"#);
-        let hits: Vec<_> = diagnostics
-            .iter()
-            .filter(|d| d.rule == "KR-SET-002")
-            .collect();
-        assert!(hits.is_empty());
-    }
-
-    #[test]
-    fn test_kr_set_002_zero_is_fine() {
-        // Kiro documents 0 as "always active".
-        let diagnostics = validate(r#"{"toolSearch.minPct": 0}"#);
-        let hits: Vec<_> = diagnostics
-            .iter()
-            .filter(|d| d.rule == "KR-SET-002")
-            .collect();
-        assert!(hits.is_empty());
-    }
-
-    #[test]
-    fn test_kr_set_002_float_is_fine() {
-        // Percentages can be fractional (e.g. 2.5%).
-        let diagnostics = validate(r#"{"toolSearch.minPct": 2.5}"#);
-        let hits: Vec<_> = diagnostics
-            .iter()
-            .filter(|d| d.rule == "KR-SET-002")
-            .collect();
-        assert!(hits.is_empty());
-    }
-
-    #[test]
-    fn test_kr_set_002_negative_flags() {
-        let diagnostics = validate(r#"{"toolSearch.minPct": -1}"#);
-        let hits: Vec<_> = diagnostics
-            .iter()
-            .filter(|d| d.rule == "KR-SET-002")
-            .collect();
-        assert_eq!(hits.len(), 1);
-        assert_eq!(hits[0].level, crate::diagnostics::DiagnosticLevel::Error);
-    }
-
-    #[test]
-    fn test_kr_set_002_over_100_warns() {
-        let diagnostics = validate(r#"{"toolSearch.minPct": 150}"#);
-        let hits: Vec<_> = diagnostics
-            .iter()
-            .filter(|d| d.rule == "KR-SET-002")
-            .collect();
-        assert_eq!(hits.len(), 1);
-        assert_eq!(hits[0].level, crate::diagnostics::DiagnosticLevel::Warning);
-    }
-
-    #[test]
-    fn test_kr_set_002_string_flags() {
-        let diagnostics = validate(r#"{"toolSearch.minPct": "5"}"#);
-        let hits: Vec<_> = diagnostics
-            .iter()
-            .filter(|d| d.rule == "KR-SET-002")
-            .collect();
-        assert_eq!(hits.len(), 1);
-    }
-
-    // ===== KR-SET-003: toolSearch.minTokens =====
-
-    #[test]
-    fn test_kr_set_003_valid_is_fine() {
-        let diagnostics = validate(r#"{"toolSearch.minTokens": 50000}"#);
-        let hits: Vec<_> = diagnostics
-            .iter()
-            .filter(|d| d.rule == "KR-SET-003")
-            .collect();
-        assert!(hits.is_empty());
-    }
-
-    #[test]
-    fn test_kr_set_003_zero_is_fine() {
-        let diagnostics = validate(r#"{"toolSearch.minTokens": 0}"#);
-        let hits: Vec<_> = diagnostics
-            .iter()
-            .filter(|d| d.rule == "KR-SET-003")
-            .collect();
-        assert!(hits.is_empty());
-    }
-
-    #[test]
-    fn test_kr_set_003_negative_flags() {
-        let diagnostics = validate(r#"{"toolSearch.minTokens": -10}"#);
-        let hits: Vec<_> = diagnostics
-            .iter()
-            .filter(|d| d.rule == "KR-SET-003")
-            .collect();
-        assert_eq!(hits.len(), 1);
-    }
-
-    #[test]
-    fn test_kr_set_003_fractional_flags() {
-        // Token counts must be whole numbers.
-        let diagnostics = validate(r#"{"toolSearch.minTokens": 100.5}"#);
-        let hits: Vec<_> = diagnostics
-            .iter()
-            .filter(|d| d.rule == "KR-SET-003")
-            .collect();
-        assert_eq!(hits.len(), 1);
-    }
-
-    #[test]
-    fn test_kr_set_003_string_flags() {
-        let diagnostics = validate(r#"{"toolSearch.minTokens": "50000"}"#);
-        let hits: Vec<_> = diagnostics
-            .iter()
-            .filter(|d| d.rule == "KR-SET-003")
-            .collect();
-        assert_eq!(hits.len(), 1);
-    }
-
-    // ===== Combined + disable + edge cases =====
-
-    #[test]
-    fn test_all_three_rules_fire_on_combined_bad_config() {
-        let content = r#"{
-            "toolSearch.enabled": "true",
-            "toolSearch.minPct": -5,
-            "toolSearch.minTokens": "lots"
-        }"#;
-        let diagnostics = validate(content);
-        let ids: Vec<&str> = diagnostics.iter().map(|d| d.rule.as_str()).collect();
-        assert!(ids.contains(&"KR-SET-001"));
-        assert!(ids.contains(&"KR-SET-002"));
-        assert!(ids.contains(&"KR-SET-003"));
-    }
-
-    #[test]
-    fn test_rules_are_independently_disableable() {
-        let mut config = LintConfig::default();
-        config.rules_mut().disabled_rules = vec!["KR-SET-002".to_string()];
-        let content = r#"{
-            "toolSearch.enabled": "true",
-            "toolSearch.minPct": -5
-        }"#;
-        let diagnostics = validate_with_config(content, &config);
-        assert!(diagnostics.iter().any(|d| d.rule == "KR-SET-001"));
-        assert!(!diagnostics.iter().any(|d| d.rule == "KR-SET-002"));
-    }
-
-    #[test]
-    fn test_malformed_json_is_silent() {
-        let diagnostics = validate(r#"{"toolSearch.enabled": tr"#);
-        assert!(diagnostics.is_empty());
-    }
-
-    #[test]
-    fn test_line_reporting_for_toolsearch_enabled() {
-        let content = "{\n  \"chat.ui\": \"prose\",\n  \"toolSearch.enabled\": \"true\"\n}";
-        let diagnostics = validate(content);
-        let hit = diagnostics
-            .iter()
-            .find(|d| d.rule == "KR-SET-001")
-            .expect("KR-SET-001 diagnostic");
-        assert_eq!(hit.line, 3);
-    }
-
-    #[test]
-    fn test_prefix_typo_does_not_match_scanner() {
-        // toolSearch.enabledX should NOT be matched when searching for
-        // toolSearch.enabled.
-        let content = "{\n  \"toolSearch.enabledX\": true,\n  \"toolSearch.enabled\": \"bad\"\n}";
-        let diagnostics = validate(content);
-        let hit = diagnostics
-            .iter()
-            .find(|d| d.rule == "KR-SET-001")
-            .expect("KR-SET-001 diagnostic");
-        assert_eq!(hit.line, 3);
-    }
-
-    #[test]
-    fn test_does_not_panic_on_non_ascii_content() {
-        // Byte-slice comparison guards against UTF-8 boundary panics.
-        let content = "{\n  \"chat.ui\": \"\u{1F525}prose\u{4e2d}\u{6587}\",\n  \"toolSearch.enabled\": 42\n}";
-        let diagnostics = validate(content);
-        let hit = diagnostics
-            .iter()
-            .find(|d| d.rule == "KR-SET-001")
-            .expect("KR-SET-001 diagnostic");
-        assert_eq!(hit.line, 3);
-    }
-
-    // ===== Auto-fix: string-to-typed coercion =====
-
-    /// Apply the first fix on the first matching diagnostic to `content`
-    /// and return the new string. Panics if no matching diagnostic or fix
-    /// exists so failing tests point at the missing autofix.
-    fn apply_first_fix(content: &str, rule: &str) -> String {
-        let diagnostics = validate(content);
-        let diag = diagnostics
-            .iter()
-            .find(|d| d.rule == rule)
-            .unwrap_or_else(|| panic!("expected {rule} diagnostic, got {:?}", diagnostics));
-        let fix = diag
-            .fixes
-            .first()
-            .unwrap_or_else(|| panic!("{rule} diagnostic had no fix attached: {:?}", diag));
-        let mut out = content.to_string();
-        out.replace_range(fix.start_byte..fix.end_byte, &fix.replacement);
-        out
-    }
-
-    #[test]
-    fn test_kr_set_001_autofix_string_true_to_bool() {
-        let content = r#"{"toolSearch.enabled": "true"}"#;
-        let fixed = apply_first_fix(content, "KR-SET-001");
-        assert_eq!(fixed, r#"{"toolSearch.enabled": true}"#);
-        // And re-validation of the fixed output should be clean.
-        assert!(validate(&fixed).iter().all(|d| d.rule != "KR-SET-001"));
-    }
-
-    #[test]
-    fn test_kr_set_001_autofix_string_false_to_bool() {
-        let content = r#"{"toolSearch.enabled": "false"}"#;
-        let fixed = apply_first_fix(content, "KR-SET-001");
-        assert_eq!(fixed, r#"{"toolSearch.enabled": false}"#);
-    }
-
-    #[test]
-    fn test_kr_set_001_autofix_case_insensitive() {
-        // "True" / "FALSE" / "TRUE" etc. should all normalize to lowercase bool.
-        let content = r#"{"toolSearch.enabled": "TRUE"}"#;
-        let fixed = apply_first_fix(content, "KR-SET-001");
-        assert_eq!(fixed, r#"{"toolSearch.enabled": true}"#);
-    }
-
-    #[test]
-    fn test_kr_set_001_no_autofix_for_ambiguous_string() {
-        // "1" / "yes" / "on" are NOT unambiguously bool - no fix offered.
-        let content = r#"{"toolSearch.enabled": "yes"}"#;
-        let diagnostics = validate(content);
-        let diag = diagnostics
-            .iter()
-            .find(|d| d.rule == "KR-SET-001")
-            .expect("KR-SET-001");
-        assert!(
-            diag.fixes.is_empty(),
-            "ambiguous string must not get an auto-fix, got {:?}",
-            diag.fixes
-        );
-    }
-
-    #[test]
-    fn test_kr_set_001_no_autofix_for_non_string_type() {
-        // Number/array/object get the diagnostic but no auto-fix - we
-        // can't guess what value the user meant.
-        for fixture in [
-            r#"{"toolSearch.enabled": 1}"#,
-            r#"{"toolSearch.enabled": 0}"#,
-            r#"{"toolSearch.enabled": null}"#,
-            r#"{"toolSearch.enabled": []}"#,
-        ] {
-            let diagnostics = validate(fixture);
-            let diag = diagnostics
-                .iter()
-                .find(|d| d.rule == "KR-SET-001")
-                .unwrap_or_else(|| panic!("fixture {fixture} did not flag"));
-            assert!(
-                diag.fixes.is_empty(),
-                "no fix expected for {fixture}, got {:?}",
-                diag.fixes
-            );
-        }
-    }
-
-    #[test]
-    fn test_kr_set_002_autofix_string_to_number() {
-        let content = r#"{"toolSearch.minPct": "5"}"#;
-        let fixed = apply_first_fix(content, "KR-SET-002");
-        assert_eq!(fixed, r#"{"toolSearch.minPct": 5}"#);
-    }
-
-    #[test]
-    fn test_kr_set_002_autofix_string_float_to_number() {
-        let content = r#"{"toolSearch.minPct": "2.5"}"#;
-        let fixed = apply_first_fix(content, "KR-SET-002");
-        assert_eq!(fixed, r#"{"toolSearch.minPct": 2.5}"#);
-    }
-
-    #[test]
-    fn test_kr_set_002_no_autofix_for_non_numeric_string() {
-        let content = r#"{"toolSearch.minPct": "five"}"#;
-        let diagnostics = validate(content);
-        let diag = diagnostics
-            .iter()
-            .find(|d| d.rule == "KR-SET-002")
-            .expect("KR-SET-002");
-        assert!(diag.fixes.is_empty());
-    }
-
-    #[test]
-    fn test_kr_set_002_no_autofix_for_negative_number() {
-        // Negative gets the rule but not type_error - no fix path (negative
-        // is a semantic mistake, can't mechanically correct).
-        let content = r#"{"toolSearch.minPct": -5}"#;
-        let diagnostics = validate(content);
-        let diag = diagnostics
-            .iter()
-            .find(|d| d.rule == "KR-SET-002")
-            .expect("KR-SET-002");
-        assert!(diag.fixes.is_empty());
-    }
-
-    #[test]
-    fn test_kr_set_003_autofix_string_to_integer() {
-        let content = r#"{"toolSearch.minTokens": "50000"}"#;
-        let fixed = apply_first_fix(content, "KR-SET-003");
-        assert_eq!(fixed, r#"{"toolSearch.minTokens": 50000}"#);
-    }
-
-    #[test]
-    fn test_kr_set_003_no_autofix_for_fractional_string() {
-        // Integer parser rejects "50000.5" so no fix - and the "not_integer"
-        // rule message would immediately re-flag anyway.
-        let content = r#"{"toolSearch.minTokens": "50000.5"}"#;
-        let diagnostics = validate(content);
-        let diag = diagnostics
-            .iter()
-            .find(|d| d.rule == "KR-SET-003")
-            .expect("KR-SET-003");
-        assert!(diag.fixes.is_empty());
-    }
-
-    #[test]
-    fn test_autofix_line_reporting_stays_intact() {
-        // Autofix replaces only the value span - the line number of the
-        // diagnostic should still point at the key line.
-        let content = "{\n  \"chat.ui\": \"prose\",\n  \"toolSearch.enabled\": \"true\"\n}";
-        let diagnostics = validate(content);
-        let diag = diagnostics
-            .iter()
-            .find(|d| d.rule == "KR-SET-001")
-            .expect("KR-SET-001");
-        assert_eq!(diag.line, 3);
-        let fix = diag.fixes.first().expect("fix attached");
-        // The fix replacement points at the value on line 3, not the key.
-        assert_eq!(&content[fix.start_byte..fix.end_byte], "\"true\"");
-        assert_eq!(fix.replacement, "true");
-    }
-
-    // ===== find_value_span unit tests =====
-
-    #[test]
-    fn test_find_value_span_string() {
-        let content = r#"{"k": "v"}"#;
-        let (s, e) = find_value_span(content, "k").unwrap();
-        assert_eq!(&content[s..e], r#""v""#);
-    }
-
-    #[test]
-    fn test_find_value_span_number() {
-        let content = r#"{"k": 42}"#;
-        let (s, e) = find_value_span(content, "k").unwrap();
-        assert_eq!(&content[s..e], "42");
-    }
-
-    #[test]
-    fn test_find_value_span_bool() {
-        let content = r#"{"k": true}"#;
-        let (s, e) = find_value_span(content, "k").unwrap();
-        assert_eq!(&content[s..e], "true");
-    }
-
-    #[test]
-    fn test_find_value_span_null() {
-        let content = r#"{"k": null}"#;
-        let (s, e) = find_value_span(content, "k").unwrap();
-        assert_eq!(&content[s..e], "null");
-    }
-
-    #[test]
-    fn test_find_value_span_object_returns_none() {
-        // Object/array need bracket-matching; return None so callers skip
-        // auto-fix rather than mis-slicing.
-        let content = r#"{"k": {"nested": 1}}"#;
-        assert!(find_value_span(content, "k").is_none());
-    }
-
-    #[test]
-    fn test_find_value_span_missing_key() {
-        let content = r#"{"k": 1}"#;
-        assert!(find_value_span(content, "other").is_none());
-    }
-
-    #[test]
-    fn test_find_value_span_key_inside_string_literal_ignored() {
-        // "k" mentioned in a prose value must not be treated as the key.
-        let content = r#"{"note": "k is an important key", "k": 42}"#;
-        let (s, e) = find_value_span(content, "k").unwrap();
-        assert_eq!(&content[s..e], "42");
-    }
-
-    // ===== JSON number grammar (is_json_nonneg_number / _integer) =====
-
-    #[test]
-    fn test_json_number_accepts_valid_forms() {
-        for v in [
-            "0", "5", "42", "100", "2.5", "0.5", "1e10", "1E10", "1.5e-3", "1.5E+3",
-        ] {
-            assert!(is_json_nonneg_number(v), "should accept {v}");
-        }
-    }
-
-    #[test]
-    fn test_json_number_rejects_leading_zero() {
-        // "05" is invalid JSON per RFC 8259. Auto-fix must not emit it.
-        for v in ["05", "05.5", "007", "00"] {
-            assert!(!is_json_nonneg_number(v), "should reject {v}");
-        }
-    }
-
-    #[test]
-    fn test_json_number_rejects_negative_and_leading_plus() {
-        // Rust parses these fine but JSON doesn't accept `+`, and
-        // negatives re-flag on the .negative rule so auto-fix shouldn't
-        // produce them.
-        for v in ["-5", "+5", "-0.5", "+100"] {
-            assert!(!is_json_nonneg_number(v), "should reject {v}");
-        }
-    }
-
-    #[test]
-    fn test_json_number_rejects_malformed_fraction_or_exponent() {
-        for v in [".5", "5.", "5.e3", "5e", "5e+", "5.e", ""] {
-            assert!(!is_json_nonneg_number(v), "should reject {v}");
-        }
-    }
-
-    #[test]
-    fn test_json_integer_accepts_valid_forms() {
-        for v in ["0", "5", "42", "50000", "9999999"] {
-            assert!(is_json_nonneg_integer(v), "should accept {v}");
-        }
-    }
-
-    #[test]
-    fn test_json_integer_rejects_fractional_and_exponent_and_leading_zero() {
-        for v in ["5.5", "1e10", "05", "00", "-5", "+5", "", "5."] {
-            assert!(!is_json_nonneg_integer(v), "should reject {v}");
-        }
-    }
-
-    // ===== Regression: parse_string_as_* declines shapes that would
-    //       break the invariant "autofix produces valid JSON" =====
-
-    #[test]
-    fn test_parse_string_as_number_declines_leading_zero() {
-        assert!(parse_string_as_number("050").is_none());
-        assert!(parse_string_as_number("007.5").is_none());
-    }
-
-    #[test]
-    fn test_parse_string_as_number_declines_negative() {
-        // Negative strings on minPct would auto-fix to a negative number
-        // and immediately re-flag on .negative. Better to stay manual.
-        assert!(parse_string_as_number("-5").is_none());
-        assert!(parse_string_as_number("+5").is_none());
-    }
-
-    #[test]
-    fn test_parse_string_as_integer_declines_fractional_string() {
-        assert!(parse_string_as_integer("5.5").is_none());
-        assert!(parse_string_as_integer("1e10").is_none());
-    }
-
-    #[test]
-    fn test_kr_set_002_no_autofix_for_leading_zero_string() {
-        // Even though "05" looks number-ish, emitting it as bare `05`
-        // would produce invalid JSON. Stay manual.
-        let content = r#"{"toolSearch.minPct": "05"}"#;
-        let diagnostics = validate(content);
-        let diag = diagnostics
-            .iter()
-            .find(|d| d.rule == "KR-SET-002")
-            .expect("KR-SET-002");
-        assert!(
-            diag.fixes.is_empty(),
-            "leading-zero string must not auto-fix to invalid JSON, got {:?}",
-            diag.fixes
-        );
-    }
-
-    #[test]
-    fn test_kr_set_002_no_autofix_for_negative_string() {
-        // Auto-fixing "-5" to `-5` would immediately re-flag on the
-        // negative rule. Keep it manual.
-        let content = r#"{"toolSearch.minPct": "-5"}"#;
-        let diagnostics = validate(content);
-        let diag = diagnostics
-            .iter()
-            .find(|d| d.rule == "KR-SET-002")
-            .expect("KR-SET-002");
-        assert!(diag.fixes.is_empty());
-    }
+    Some(!global_dirs.contains(&absolute))
 }
+
+#[cfg(test)]
+mod tests;

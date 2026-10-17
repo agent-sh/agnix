@@ -1,0 +1,9 @@
+{
+  // Accepted by the V3 engine, rejected by Kiro CLI 2.x
+  "mcpServers": {
+    "fetch": {
+      "command": "uvx",
+      "args": ["mcp-server-fetch"],
+    },
+  },
+}
