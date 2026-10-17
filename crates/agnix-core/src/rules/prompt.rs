@@ -1,29 +1,78 @@
 //! Prompt engineering validation rules
 //!
-//! Validates:
-//! - PE-001: Critical content in middle 40-60% zone ("lost in the middle")
-//! - PE-002: Chain-of-thought phrases in simple tasks
-//! - PE-003: Weak language (should/try/consider) in critical sections
-//! - PE-004: Ambiguous terms (usually/sometimes/if possible)
-//! - PE-005: Redundant generic instructions (be helpful, be accurate)
-//! - PE-006: Negative-only instructions without positive alternative
+//! Each rule runs only on files whose vendor documents the advice:
+//! - PE-002: chain-of-thought phrases on simple tasks. Claude memory files
+//!   (Anthropic prompting best practices).
+//! - PE-004: ambiguous terms (usually/sometimes/if possible). Claude memory
+//!   files ("Write instructions that are concrete enough to verify"),
+//!   AGENTS.md (also Codex: "a long file full of vague rules") and Cursor
+//!   rules ("Avoid vague guidance").
+//! - PE-005: redundant generic instructions (be helpful, write clean code).
+//!   Claude memory files (best-practices Exclude column) and AGENTS.md (also
+//!   Windsurf, VS Code and Copilot code review).
+//! - PE-006: negative-only instructions. Claude memory files only ("Tell
+//!   Claude what to do instead of what not to do"); Gemini advises the
+//!   opposite ("Use negative constraints"), so GEMINI.md and AGENTS.md, which
+//!   Gemini can read, are skipped.
 
 use crate::{
+    FileType,
     config::PerFileLintConfig,
     diagnostics::{Diagnostic, Fix},
     rules::{Validator, ValidatorMetadata, line_byte_range},
     schemas::prompt::{
-        find_ambiguous_instructions, find_cot_on_simple_tasks, find_critical_in_middle_pe,
-        find_negative_only_instructions, find_redundant_instructions,
-        find_weak_imperative_language,
+        find_ambiguous_instructions, find_cot_on_simple_tasks, find_negative_only_instructions,
+        find_redundant_instructions, is_only_redundant_instruction,
     },
 };
 use rust_i18n::t;
 use std::path::Path;
 
-const RULE_IDS: &[&str] = &["PE-001", "PE-002", "PE-003", "PE-004", "PE-005", "PE-006"];
+const RULE_IDS: &[&str] = &["PE-002", "PE-004", "PE-005", "PE-006"];
 
 pub struct PromptValidator;
+
+/// Whose instruction file this is, which decides the PE rules that apply.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Audience {
+    /// CLAUDE.md, CLAUDE.local.md, and direct calls on other Markdown.
+    Claude,
+    /// AGENTS.md, AGENTS.local.md, AGENTS.override.md: read by many tools.
+    AgentsMd,
+    /// `.cursor/rules/**` and `.cursorrules`.
+    Cursor,
+    /// Files no PE source covers (GEMINI.md).
+    None,
+}
+
+impl Audience {
+    fn of(path: &Path) -> Self {
+        match crate::detect_file_type(path) {
+            FileType::ClaudeMd => {
+                let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+                if name.starts_with("AGENTS") {
+                    Self::AgentsMd
+                } else {
+                    Self::Claude
+                }
+            }
+            FileType::CursorRule | FileType::CursorRulesLegacy => Self::Cursor,
+            FileType::GeminiMd => Self::None,
+            // The registry runs this validator only on the types above; a
+            // direct call on other Markdown gets the Claude rule set.
+            _ => Self::Claude,
+        }
+    }
+
+    fn runs(self, rule: &str) -> bool {
+        match self {
+            Self::Claude => true,
+            Self::AgentsMd => matches!(rule, "PE-004" | "PE-005"),
+            Self::Cursor => rule == "PE-004",
+            Self::None => false,
+        }
+    }
+}
 
 impl Validator for PromptValidator {
     fn metadata(&self) -> ValidatorMetadata {
@@ -40,30 +89,11 @@ impl Validator for PromptValidator {
         config: &PerFileLintConfig<'_>,
     ) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
-
-        // PE-001: Critical content in middle ("lost in the middle")
-        if config.is_rule_enabled("PE-001") {
-            let critical_in_middle = find_critical_in_middle_pe(content);
-            for issue in critical_in_middle {
-                diagnostics.push(
-                    Diagnostic::info(
-                        path.to_path_buf(),
-                        issue.line,
-                        issue.column,
-                        "PE-001",
-                        t!(
-                            "rules.pe_001.message",
-                            keyword = issue.keyword.as_str(),
-                            percent = format!("{:.0}", issue.position_percent)
-                        ),
-                    )
-                    .with_suggestion(t!("rules.pe_001.suggestion")),
-                );
-            }
-        }
+        let audience = Audience::of(path);
+        let enabled = |rule: &str| audience.runs(rule) && config.is_rule_enabled(rule);
 
         // PE-002: Chain-of-thought on simple tasks
-        if config.is_rule_enabled("PE-002") {
+        if enabled("PE-002") {
             let cot_issues = find_cot_on_simple_tasks(content);
             for issue in cot_issues {
                 diagnostics.push(
@@ -83,29 +113,8 @@ impl Validator for PromptValidator {
             }
         }
 
-        // PE-003: Weak imperative language in critical sections
-        if config.is_rule_enabled("PE-003") {
-            let weak_language = find_weak_imperative_language(content);
-            for issue in weak_language {
-                let diagnostic = Diagnostic::info(
-                    path.to_path_buf(),
-                    issue.line,
-                    issue.column,
-                    "PE-003",
-                    t!(
-                        "rules.pe_003.message",
-                        term = issue.weak_term.as_str(),
-                        section = issue.section_name.as_str()
-                    ),
-                )
-                .with_suggestion(t!("rules.pe_003.suggestion"));
-
-                diagnostics.push(diagnostic);
-            }
-        }
-
         // PE-004: Ambiguous instructions
-        if config.is_rule_enabled("PE-004") {
+        if enabled("PE-004") {
             let ambiguous = find_ambiguous_instructions(content);
             for issue in ambiguous {
                 diagnostics.push(
@@ -122,8 +131,9 @@ impl Validator for PromptValidator {
         }
 
         // PE-005: Redundant generic instructions
-        if config.is_rule_enabled("PE-005") {
+        if enabled("PE-005") {
             let redundant = find_redundant_instructions(content);
+            let lines: Vec<&str> = content.lines().collect();
             for issue in redundant {
                 let mut diagnostic = Diagnostic::warning(
                     path.to_path_buf(),
@@ -134,7 +144,13 @@ impl Validator for PromptValidator {
                 )
                 .with_suggestion(t!("rules.pe_005.suggestion"));
 
-                if let Some((start, end)) = line_byte_range(content, issue.line) {
+                // Offer to delete the line only when it holds nothing but
+                // generic phrases. Deleting text the model reads changes what
+                // it is told, so the fix stays opt-in (unsafe).
+                let only_generic = lines
+                    .get(issue.line.saturating_sub(1))
+                    .is_some_and(|line| is_only_redundant_instruction(line));
+                if only_generic && let Some((start, end)) = line_byte_range(content, issue.line) {
                     diagnostic = diagnostic.with_fix(Fix::delete(
                         start,
                         end,
@@ -148,7 +164,7 @@ impl Validator for PromptValidator {
         }
 
         // PE-006: Negative-only instructions
-        if config.is_rule_enabled("PE-006") {
+        if enabled("PE-006") {
             let negative_only = find_negative_only_instructions(content);
             for issue in negative_only {
                 diagnostics.push(
@@ -173,64 +189,6 @@ mod tests {
     use super::*;
     use crate::config::LintConfig;
     use crate::diagnostics::DiagnosticLevel;
-
-    // ===== PE-001: Critical Content in Middle =====
-
-    #[test]
-    fn test_pe_001_critical_in_middle() {
-        // Create 20 lines with "critical" at line 10 (50%)
-        let mut lines: Vec<String> = (0..20).map(|i| format!("Line {}", i)).collect();
-        lines[10] = "This is critical information.".to_string();
-        let content = lines.join("\n");
-
-        let validator = PromptValidator;
-        let diagnostics =
-            validator.validate(Path::new("SKILL.md"), &content, &LintConfig::default());
-
-        let pe_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "PE-001").collect();
-        assert_eq!(pe_001.len(), 1);
-        assert_eq!(pe_001[0].level, DiagnosticLevel::Info);
-        assert!(pe_001[0].message.contains("critical"));
-    }
-
-    #[test]
-    fn test_pe_001_critical_at_start_ok() {
-        let mut lines: Vec<String> = (0..20).map(|i| format!("Line {}", i)).collect();
-        lines[1] = "This is critical information.".to_string();
-        let content = lines.join("\n");
-
-        let validator = PromptValidator;
-        let diagnostics =
-            validator.validate(Path::new("SKILL.md"), &content, &LintConfig::default());
-
-        let pe_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "PE-001").collect();
-        assert!(pe_001.is_empty());
-    }
-
-    #[test]
-    fn test_pe_001_critical_at_end_ok() {
-        let mut lines: Vec<String> = (0..20).map(|i| format!("Line {}", i)).collect();
-        lines[18] = "This is critical information.".to_string();
-        let content = lines.join("\n");
-
-        let validator = PromptValidator;
-        let diagnostics =
-            validator.validate(Path::new("SKILL.md"), &content, &LintConfig::default());
-
-        let pe_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "PE-001").collect();
-        assert!(pe_001.is_empty());
-    }
-
-    #[test]
-    fn test_pe_001_short_document_skipped() {
-        let content = "Critical info.\nShort doc.";
-        let validator = PromptValidator;
-        let diagnostics =
-            validator.validate(Path::new("SKILL.md"), content, &LintConfig::default());
-
-        let pe_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "PE-001").collect();
-        assert!(pe_001.is_empty());
-    }
 
     // ===== PE-002: Chain-of-Thought on Simple Tasks =====
 
@@ -275,52 +233,6 @@ Read the file and return contents.
 
         let pe_002: Vec<_> = diagnostics.iter().filter(|d| d.rule == "PE-002").collect();
         assert!(pe_002.is_empty());
-    }
-
-    // ===== PE-003: Weak Imperative Language =====
-
-    #[test]
-    fn test_pe_003_weak_language_in_critical() {
-        let content = r#"# Critical Rules
-
-You should follow the style guide.
-"#;
-        let validator = PromptValidator;
-        let diagnostics =
-            validator.validate(Path::new("CLAUDE.md"), content, &LintConfig::default());
-
-        let pe_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "PE-003").collect();
-        assert_eq!(pe_003.len(), 1);
-        assert_eq!(pe_003[0].level, DiagnosticLevel::Info);
-        assert!(pe_003[0].message.contains("should"));
-    }
-
-    #[test]
-    fn test_pe_003_strong_language_in_critical_ok() {
-        let content = r#"# Critical Rules
-
-You must follow the style guide.
-"#;
-        let validator = PromptValidator;
-        let diagnostics =
-            validator.validate(Path::new("CLAUDE.md"), content, &LintConfig::default());
-
-        let pe_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "PE-003").collect();
-        assert!(pe_003.is_empty());
-    }
-
-    #[test]
-    fn test_pe_003_weak_language_outside_critical_ok() {
-        let content = r#"# General Guidelines
-
-You should follow the style guide.
-"#;
-        let validator = PromptValidator;
-        let diagnostics =
-            validator.validate(Path::new("CLAUDE.md"), content, &LintConfig::default());
-
-        let pe_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "PE-003").collect();
-        assert!(pe_003.is_empty());
     }
 
     // ===== PE-004: Ambiguous Instructions =====
@@ -396,50 +308,6 @@ Usually do Y.
         assert!(pe_rules.is_empty());
     }
 
-    #[test]
-    fn test_config_disabled_specific_rule() {
-        let mut config = LintConfig::default();
-        config.rules_mut().disabled_rules = vec!["PE-003".to_string()];
-
-        let content = r#"# Critical Rules
-You should do X.
-"#;
-
-        let validator = PromptValidator;
-        let diagnostics = validator.validate(Path::new("SKILL.md"), content, &config);
-
-        // PE-003 should not fire when specifically disabled
-        let pe_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "PE-003").collect();
-        assert!(pe_003.is_empty());
-
-        // PE-004 should still work
-        assert!(config.is_rule_enabled("PE-004"));
-    }
-
-    #[test]
-    fn test_combined_issues() {
-        // Create content that triggers multiple PE rules
-        let mut lines: Vec<String> = (0..20).map(|i| format!("Line {}", i)).collect();
-        lines[0] = "# Critical Rules".to_string();
-        lines[1] = "You should follow the style.".to_string();
-        lines[2] = "Usually do X.".to_string();
-        lines[10] = "This is critical information.".to_string();
-        let content = lines.join("\n");
-
-        let validator = PromptValidator;
-        let diagnostics =
-            validator.validate(Path::new("SKILL.md"), &content, &LintConfig::default());
-
-        // Should have PE-001, PE-003, and PE-004 issues
-        let pe_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "PE-001").collect();
-        let pe_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "PE-003").collect();
-        let pe_004: Vec<_> = diagnostics.iter().filter(|d| d.rule == "PE-004").collect();
-
-        assert!(!pe_001.is_empty(), "Expected PE-001 for critical in middle");
-        assert!(!pe_003.is_empty(), "Expected PE-003 for weak language");
-        assert!(!pe_004.is_empty(), "Expected PE-004 for ambiguous term");
-    }
-
     // ===== Edge Case Tests =====
 
     #[test]
@@ -453,57 +321,6 @@ You should do X.
         assert!(
             diagnostics.is_empty(),
             "Empty content should produce no diagnostics"
-        );
-    }
-
-    #[test]
-    fn test_pe_001_exactly_ten_lines() {
-        // PE-001 requires at least 10 lines to check
-        let lines: Vec<&str> = (0..10).map(|_| "Line").collect();
-        let content = lines.join("\n");
-
-        let validator = PromptValidator;
-        let diagnostics =
-            validator.validate(Path::new("SKILL.md"), &content, &LintConfig::default());
-
-        let pe_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "PE-001").collect();
-        // 10 lines is the boundary; at 50% no critical word, so empty
-        assert!(
-            pe_001.is_empty(),
-            "10 exact lines without critical keyword should be ok"
-        );
-    }
-
-    #[test]
-    fn test_pe_001_nine_lines_skipped() {
-        // Fewer than 10 lines should skip PE-001 check
-        let lines: Vec<&str> = (0..9).map(|_| "Line").collect();
-        let content = lines.join("\n");
-
-        let validator = PromptValidator;
-        let diagnostics =
-            validator.validate(Path::new("SKILL.md"), &content, &LintConfig::default());
-
-        let pe_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "PE-001").collect();
-        assert!(pe_001.is_empty(), "9 lines should skip PE-001 check");
-    }
-
-    #[test]
-    fn test_pe_003_word_boundary_hypercritical() {
-        let content = r#"# Hypercritical Guide
-
-This is not a critical section.
-"#;
-        let validator = PromptValidator;
-        let diagnostics =
-            validator.validate(Path::new("SKILL.md"), content, &LintConfig::default());
-
-        let pe_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "PE-003").collect();
-        // "Hypercritical" should NOT be recognized as a critical section
-        // because the pattern should match word boundaries
-        assert!(
-            pe_003.is_empty(),
-            "Hypercritical should not trigger critical section"
         );
     }
 
@@ -523,93 +340,7 @@ This is not a critical section.
         );
     }
 
-    #[test]
-    fn test_config_disabled_pe_001_only() {
-        let mut config = LintConfig::default();
-        config.rules_mut().disabled_rules = vec!["PE-001".to_string()];
-
-        let mut lines: Vec<String> = (0..20).map(|i| format!("Line {}", i)).collect();
-        lines[10] = "This is critical information.".to_string();
-        lines[1] = "# Critical Rules".to_string();
-        lines[2] = "You should follow style.".to_string();
-        lines[3] = "Usually do X.".to_string();
-        let content = lines.join("\n");
-
-        let validator = PromptValidator;
-        let diagnostics = validator.validate(Path::new("SKILL.md"), &content, &config);
-
-        // PE-001 should be disabled
-        let pe_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "PE-001").collect();
-        assert!(pe_001.is_empty(), "PE-001 should be disabled");
-
-        // PE-003 and PE-004 should still work
-        let pe_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "PE-003").collect();
-        let pe_004: Vec<_> = diagnostics.iter().filter(|d| d.rule == "PE-004").collect();
-        assert!(!pe_003.is_empty(), "PE-003 should still be enabled");
-        assert!(!pe_004.is_empty(), "PE-004 should still be enabled");
-    }
-
-    #[test]
-    fn test_config_disabled_multiple_pe_rules() {
-        let mut config = LintConfig::default();
-        config.rules_mut().disabled_rules = vec!["PE-001".to_string(), "PE-004".to_string()];
-
-        let mut lines: Vec<String> = (0..20).map(|i| format!("Line {}", i)).collect();
-        lines[10] = "This is critical information.".to_string();
-        lines[1] = "# Critical Rules".to_string();
-        lines[2] = "You should follow style.".to_string();
-        lines[3] = "Usually do X.".to_string();
-        let content = lines.join("\n");
-
-        let validator = PromptValidator;
-        let diagnostics = validator.validate(Path::new("SKILL.md"), &content, &config);
-
-        // PE-001 and PE-004 should be disabled
-        let pe_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "PE-001").collect();
-        let pe_004: Vec<_> = diagnostics.iter().filter(|d| d.rule == "PE-004").collect();
-        assert!(pe_001.is_empty(), "PE-001 should be disabled");
-        assert!(pe_004.is_empty(), "PE-004 should be disabled");
-
-        // PE-003 should still work
-        let pe_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "PE-003").collect();
-        assert!(!pe_003.is_empty(), "PE-003 should still be enabled");
-    }
-
     // ===== Additional PE rule tests =====
-
-    #[test]
-    fn test_pe_001_critical_at_very_end() {
-        let mut lines: Vec<String> = (0..20).map(|i| format!("Line {}", i)).collect();
-        lines[19] = "This is critical information.".to_string();
-        let content = lines.join("\n");
-
-        let validator = PromptValidator;
-        let diagnostics =
-            validator.validate(Path::new("SKILL.md"), &content, &LintConfig::default());
-
-        let pe_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "PE-001").collect();
-        assert!(
-            pe_001.is_empty(),
-            "Critical at end should not trigger PE-001"
-        );
-    }
-
-    #[test]
-    fn test_pe_001_critical_at_very_start() {
-        let mut lines: Vec<String> = (0..20).map(|i| format!("Line {}", i)).collect();
-        lines[0] = "This is critical information.".to_string();
-        let content = lines.join("\n");
-
-        let validator = PromptValidator;
-        let diagnostics =
-            validator.validate(Path::new("SKILL.md"), &content, &LintConfig::default());
-
-        let pe_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "PE-001").collect();
-        assert!(
-            pe_001.is_empty(),
-            "Critical at start should not trigger PE-001"
-        );
-    }
 
     #[test]
     fn test_pe_002_cot_on_file_read() {
@@ -626,54 +357,6 @@ This is not a critical section.
             !pe_002.is_empty(),
             "Chain-of-thought near 'read the file' should trigger PE-002"
         );
-    }
-
-    #[test]
-    fn test_pe_003_should_weak_word() {
-        // Test with known weak word
-        let content = "# Critical Rules\n\nYou should do this.";
-        let validator = PromptValidator;
-        let diagnostics =
-            validator.validate(Path::new("SKILL.md"), content, &LintConfig::default());
-
-        let pe_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "PE-003").collect();
-        assert!(
-            !pe_003.is_empty(),
-            "Weak word 'should' in critical section should trigger PE-003"
-        );
-    }
-
-    #[test]
-    fn test_pe_003_consider_weak_word() {
-        let content = "# Critical Rules\n\nYou consider doing this.";
-        let validator = PromptValidator;
-        let diagnostics =
-            validator.validate(Path::new("SKILL.md"), content, &LintConfig::default());
-
-        let pe_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "PE-003").collect();
-        assert!(
-            !pe_003.is_empty(),
-            "Weak word 'consider' in critical section should trigger PE-003"
-        );
-    }
-
-    #[test]
-    fn test_pe_003_strong_words_ok() {
-        let strong_words = ["must", "always", "never", "shall"];
-
-        for word in strong_words {
-            let content = format!("# Critical Rules\n\nYou {} do this.", word);
-            let validator = PromptValidator;
-            let diagnostics =
-                validator.validate(Path::new("SKILL.md"), &content, &LintConfig::default());
-
-            let pe_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "PE-003").collect();
-            assert!(
-                pe_003.is_empty(),
-                "Strong word '{}' should not trigger PE-003",
-                word
-            );
-        }
     }
 
     #[test]
@@ -707,34 +390,6 @@ This is not a critical section.
             pe_004.is_empty(),
             "Clear instructions should not trigger PE-004"
         );
-    }
-
-    #[test]
-    fn test_all_pe_rules_can_be_disabled() {
-        let rules = ["PE-001", "PE-002", "PE-003", "PE-004", "PE-005", "PE-006"];
-
-        for rule in rules {
-            let mut config = LintConfig::default();
-            config.rules_mut().disabled_rules = vec![rule.to_string()];
-
-            // Content that could trigger each rule
-            let mut lines: Vec<String> = (0..20).map(|i| format!("Line {}", i)).collect();
-            lines[10] = "This is critical information.".to_string();
-            lines[1] = "# Critical Rules".to_string();
-            lines[2] = "You should step by step read the file. Usually do it.".to_string();
-            lines[3] = "Be helpful and accurate.".to_string();
-            lines[4] = "Don't use global variables.".to_string();
-            let content = lines.join("\n");
-
-            let validator = PromptValidator;
-            let diagnostics = validator.validate(Path::new("SKILL.md"), &content, &config);
-
-            assert!(
-                !diagnostics.iter().any(|d| d.rule == rule),
-                "Rule {} should be disabled",
-                rule
-            );
-        }
     }
 
     // ===== PE-005: Redundant Generic Instructions =====
@@ -771,17 +426,6 @@ This is not a critical section.
 
         let pe_005: Vec<_> = diagnostics.iter().filter(|d| d.rule == "PE-005").collect();
         assert!(pe_005.is_empty());
-    }
-
-    #[test]
-    fn test_pe_005_multiple_redundant() {
-        let content = "Be helpful.\nBe accurate.\nBe concise.";
-        let validator = PromptValidator;
-        let diagnostics =
-            validator.validate(Path::new("SKILL.md"), content, &LintConfig::default());
-
-        let pe_005: Vec<_> = diagnostics.iter().filter(|d| d.rule == "PE-005").collect();
-        assert_eq!(pe_005.len(), 3);
     }
 
     // ===== PE-006: Negative-Only Instructions =====
@@ -861,65 +505,127 @@ This is not a critical section.
 
     // ===== Autofix Tests =====
 
-    #[test]
-    fn test_pe_003_has_no_fix() {
-        let content = "# Critical Rules\n\nYou should follow the style guide.";
-        let validator = PromptValidator;
-        let diagnostics =
-            validator.validate(Path::new("SKILL.md"), content, &LintConfig::default());
+    // ===== Retired rules =====
 
-        let pe_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "PE-003").collect();
-        assert_eq!(pe_003.len(), 1);
+    #[test]
+    fn test_retired_pe_001_and_pe_003_absent() {
+        // PE-001 (keyword position, no vendor source) and PE-003 (pushed for
+        // stronger wording, which Anthropic now advises against) are retired.
+        let mut lines: Vec<String> = (0..20).map(|i| format!("Line {}", i)).collect();
+        lines[0] = "# Critical Rules".to_string();
+        lines[1] = "You should follow the style.".to_string();
+        lines[10] = "This is critical information.".to_string();
+        let diagnostics = PromptValidator.validate(
+            Path::new("CLAUDE.md"),
+            &lines.join("\n"),
+            &LintConfig::default(),
+        );
         assert!(
-            !pe_003[0].has_fixes(),
-            "Recommendations must not rewrite prose"
+            !diagnostics
+                .iter()
+                .any(|d| d.rule == "PE-001" || d.rule == "PE-003")
         );
     }
 
     #[test]
-    fn test_pe_003_preserves_consider() {
-        let content = "# Critical Rules\n\nConsider doing this.";
-        let validator = PromptValidator;
-        let diagnostics =
-            validator.validate(Path::new("SKILL.md"), content, &LintConfig::default());
+    fn test_all_pe_rules_can_be_disabled() {
+        let content = "# Rules\nLet's think step by step to read the file.\nUsually do it.\nBe helpful.\nDon't use global variables.\n";
+        for rule in RULE_IDS {
+            let baseline =
+                PromptValidator.validate(Path::new("CLAUDE.md"), content, &LintConfig::default());
+            assert!(baseline.iter().any(|d| d.rule == *rule), "{rule} fires");
 
-        let pe_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "PE-003").collect();
-        assert_eq!(pe_003.len(), 1);
-        assert!(
-            !pe_003[0].has_fixes(),
-            "Recommendations must not rewrite prose"
-        );
+            let mut config = LintConfig::default();
+            config.rules_mut().disabled_rules = vec![rule.to_string()];
+            let diagnostics = PromptValidator.validate(Path::new("CLAUDE.md"), content, &config);
+            assert!(
+                !diagnostics.iter().any(|d| d.rule == *rule),
+                "Rule {} should be disabled",
+                rule
+            );
+        }
+    }
+
+    // ===== Per-vendor scope =====
+
+    fn rules_on(path: &str, content: &str) -> Vec<String> {
+        let mut rules: Vec<String> = PromptValidator
+            .validate(Path::new(path), content, &LintConfig::default())
+            .into_iter()
+            .map(|d| d.rule)
+            .collect();
+        rules.sort();
+        rules.dedup();
+        rules
+    }
+
+    const ALL_PE: &str = "# Rules\nLet's think step by step to read the file.\nUsually do it.\nBe helpful.\nDon't use global variables.\n";
+
+    #[test]
+    fn test_claude_files_get_every_pe_rule() {
+        for path in ["CLAUDE.md", "CLAUDE.local.md", ".claude/CLAUDE.md"] {
+            assert_eq!(
+                rules_on(path, ALL_PE),
+                vec!["PE-002", "PE-004", "PE-005", "PE-006"],
+                "{path}"
+            );
+        }
     }
 
     #[test]
-    fn test_pe_005_has_fix() {
-        let content = "Be helpful and accurate when responding.";
-        let validator = PromptValidator;
-        let diagnostics =
-            validator.validate(Path::new("SKILL.md"), content, &LintConfig::default());
+    fn test_agents_md_gets_only_multi_vendor_rules() {
+        // PE-006 contradicts Gemini ("Use negative constraints"), which can
+        // read AGENTS.md; PE-002 has only an Anthropic source.
+        for path in ["AGENTS.md", "AGENTS.local.md", "AGENTS.override.md"] {
+            assert_eq!(rules_on(path, ALL_PE), vec!["PE-004", "PE-005"], "{path}");
+        }
+    }
 
+    #[test]
+    fn test_cursor_rules_get_only_pe_004() {
+        // Cursor: "Avoid vague guidance". No Cursor source for the others.
+        for path in [".cursor/rules/style.mdc", ".cursorrules"] {
+            assert_eq!(rules_on(path, ALL_PE), vec!["PE-004"], "{path}");
+        }
+    }
+
+    #[test]
+    fn test_gemini_md_gets_no_pe_rules() {
+        // Gemini's own example "Do not use class components" and "Be concise".
+        let content = "- Do not use class components.\n- Be concise.\n";
+        assert!(rules_on("GEMINI.md", content).is_empty());
+    }
+
+    // ===== PE-005 fix =====
+
+    #[test]
+    fn test_pe_005_fix_only_for_generic_only_lines() {
+        let content = "Line one.\n- Be helpful and accurate.\nBe helpful and accurate when responding.\nLine four.";
+        let diagnostics =
+            PromptValidator.validate(Path::new("CLAUDE.md"), content, &LintConfig::default());
         let pe_005: Vec<_> = diagnostics.iter().filter(|d| d.rule == "PE-005").collect();
-        assert_eq!(pe_005.len(), 1);
-        assert!(pe_005[0].has_fixes(), "PE-005 should have auto-fix");
-        assert!(!pe_005[0].fixes[0].safe, "PE-005 fix should be unsafe");
-        assert!(
-            pe_005[0].fixes[0].is_deletion(),
-            "PE-005 fix should be a deletion"
-        );
-    }
+        assert_eq!(pe_005.len(), 2);
 
-    #[test]
-    fn test_pe_005_fix_application() {
-        let content = "Line one.\nBe helpful and accurate.\nLine three.";
-        let validator = PromptValidator;
-        let diagnostics =
-            validator.validate(Path::new("SKILL.md"), content, &LintConfig::default());
-
-        let pe_005: Vec<_> = diagnostics.iter().filter(|d| d.rule == "PE-005").collect();
-        assert_eq!(pe_005.len(), 1);
+        // Line 2 holds nothing else: an opt-in deletion is offered.
         let fix = &pe_005[0].fixes[0];
+        assert!(!fix.safe, "PE-005 fix should be unsafe");
+        assert!(fix.is_deletion());
         let mut fixed = content.to_string();
         fixed.replace_range(fix.start_byte..fix.end_byte, &fix.replacement);
-        assert_eq!(fixed, "Line one.\nLine three.");
+        assert_eq!(
+            fixed,
+            "Line one.\nBe helpful and accurate when responding.\nLine four."
+        );
+
+        // Line 3 also says when the instruction applies: no fix.
+        assert!(!pe_005[1].has_fixes());
+    }
+
+    #[test]
+    fn test_pe_005_write_clean_code() {
+        let content = "- Write clean code.";
+        let diagnostics =
+            PromptValidator.validate(Path::new("CLAUDE.md"), content, &LintConfig::default());
+        assert!(diagnostics.iter().any(|d| d.rule == "PE-005"));
     }
 }

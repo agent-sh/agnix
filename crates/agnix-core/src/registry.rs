@@ -398,7 +398,7 @@ impl ValidatorRegistryBuilder {
 ///
 /// Used by `BuiltinProvider` (via `debug_assert_eq!`) and tests to catch
 /// accidental additions or removals without updating all providers.
-const EXPECTED_BUILTIN_COUNT: usize = 88;
+const EXPECTED_BUILTIN_COUNT: usize = 89;
 
 // -- Category providers -----------------------------------------------------
 //
@@ -487,6 +487,23 @@ impl ValidatorProvider for ClaudeProvider {
                 Some("OutputStyleValidator"),
                 output_style_validator,
             ),
+            // Rule files count as instruction files (CC-MEM-014, CC-MEM-017);
+            // MEMORY.md load limit (CC-MEM-016); .claudeignore (CC-SET-038).
+            (
+                FileType::ClaudeRule,
+                Some("ClaudeMdValidator"),
+                claude_md_validator,
+            ),
+            (
+                FileType::ClaudeMemoryIndex,
+                Some("ClaudeMdValidator"),
+                claude_md_validator,
+            ),
+            (
+                FileType::ClaudeIgnore,
+                Some("ClaudeMdValidator"),
+                claude_md_validator,
+            ),
         ]
     }
 }
@@ -555,15 +572,13 @@ impl ValidatorProvider for CursorProvider {
                 Some("CursorValidator"),
                 cursor_validator,
             ),
+            // PromptValidator runs only PE-004 on Cursor rules (Cursor: "Avoid
+            // vague guidance"). ClaudeMdValidator is not registered here: its
+            // rules follow Claude Code's memory docs, not Cursor's.
             (
                 FileType::CursorRule,
                 Some("PromptValidator"),
                 prompt_validator,
-            ),
-            (
-                FileType::CursorRule,
-                Some("ClaudeMdValidator"),
-                claude_md_validator,
             ),
             (
                 FileType::CursorHooks,
@@ -590,11 +605,6 @@ impl ValidatorProvider for CursorProvider {
                 Some("PromptValidator"),
                 prompt_validator,
             ),
-            (
-                FileType::CursorRulesLegacy,
-                Some("ClaudeMdValidator"),
-                claude_md_validator,
-            ),
         ]
     }
 }
@@ -617,11 +627,8 @@ impl ValidatorProvider for GeminiProvider {
                 Some("GeminiMdValidator"),
                 gemini_md_validator,
             ),
-            (
-                FileType::GeminiMd,
-                Some("PromptValidator"),
-                prompt_validator,
-            ),
+            // No PromptValidator: Gemini advises "Use negative constraints",
+            // the opposite of PE-006, and no PE rule has a Gemini source.
             (FileType::GeminiMd, Some("XmlValidator"), xml_validator),
             (
                 FileType::GeminiMd,
@@ -729,6 +736,12 @@ impl ValidatorProvider for MiscProvider {
                 FileType::Hooks,
                 Some("ClaudeSettingsValidator"),
                 claude_settings_validator,
+            ),
+            // CC-MEM-020: an untracked-by-gitignore .claude/settings.local.json.
+            (
+                FileType::Hooks,
+                Some("ClaudeMdValidator"),
+                claude_md_validator,
             ),
             (FileType::Plugin, Some("PluginValidator"), plugin_validator),
             (
@@ -1515,6 +1528,8 @@ mod tests {
             FileType::CopilotHooks,
             FileType::ClaudeRule,
             FileType::ClaudeOutputStyle,
+            FileType::ClaudeMemoryIndex,
+            FileType::ClaudeIgnore,
             FileType::CursorRule,
             FileType::CursorHooks,
             FileType::CursorAgent,
@@ -1572,6 +1587,8 @@ mod tests {
                 | FileType::CopilotHooks
                 | FileType::ClaudeRule
                 | FileType::ClaudeOutputStyle
+                | FileType::ClaudeMemoryIndex
+                | FileType::ClaudeIgnore
                 | FileType::CursorRule
                 | FileType::CursorHooks
                 | FileType::CursorAgent
@@ -2148,7 +2165,8 @@ mod tests {
 
     #[test]
     fn claude_provider_count() {
-        assert_eq!(ClaudeProvider.named_validators().len(), 12);
+        // +3: ClaudeMdValidator on ClaudeRule, ClaudeMemoryIndex and ClaudeIgnore.
+        assert_eq!(ClaudeProvider.named_validators().len(), 15);
     }
 
     #[test]
@@ -2158,12 +2176,14 @@ mod tests {
 
     #[test]
     fn cursor_provider_count() {
-        assert_eq!(CursorProvider.named_validators().len(), 9);
+        // ClaudeMdValidator no longer runs on CursorRule or CursorRulesLegacy.
+        assert_eq!(CursorProvider.named_validators().len(), 7);
     }
 
     #[test]
     fn gemini_provider_count() {
-        assert_eq!(GeminiProvider.named_validators().len(), 8);
+        // PromptValidator no longer runs on GeminiMd.
+        assert_eq!(GeminiProvider.named_validators().len(), 7);
     }
 
     #[test]
@@ -2180,8 +2200,9 @@ mod tests {
     fn misc_provider_count() {
         // 38: Kiro hooks and powers dropped four Imports/CrossPlatform entries
         // and gained power plugin, power steering, workflow, ignore-file,
-        // not-loaded and Kiro AGENTS.md entries.
-        assert_eq!(MiscProvider.named_validators().len(), 38);
+        // not-loaded and Kiro AGENTS.md entries. 39: ClaudeMdValidator on Hooks
+        // (CC-MEM-020 for .claude/settings.local.json).
+        assert_eq!(MiscProvider.named_validators().len(), 39);
     }
 
     #[test]

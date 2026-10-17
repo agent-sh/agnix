@@ -139,8 +139,9 @@ fn parse_paths_schema(raw: &str) -> (Option<ClaudeRuleSchema>, Option<String>) {
                     }
                 }
             }
+            // "Accepts a YAML list or a comma-separated string"
             serde_yaml::Value::String(s) => {
-                paths.push(s.to_string());
+                paths.extend(split_comma_separated_paths(s));
             }
             _ => {
                 return (
@@ -155,6 +156,46 @@ fn parse_paths_schema(raw: &str) -> (Option<ClaudeRuleSchema>, Option<String>) {
     }
 
     (Some(ClaudeRuleSchema { paths }), None)
+}
+
+/// Split a comma-separated `paths` string into patterns. Commas inside a
+/// brace group (`src/*.{ts,tsx}`) belong to the brace expansion, not the list.
+pub fn split_comma_separated_paths(value: &str) -> Vec<String> {
+    let mut patterns = Vec::new();
+    let mut depth = 0usize;
+    let mut current = String::new();
+    let mut escaped = false;
+    for ch in value.chars() {
+        if escaped {
+            current.push(ch);
+            escaped = false;
+            continue;
+        }
+        match ch {
+            '\\' => {
+                escaped = true;
+                current.push(ch);
+            }
+            '{' => {
+                depth += 1;
+                current.push(ch);
+            }
+            '}' => {
+                depth = depth.saturating_sub(1);
+                current.push(ch);
+            }
+            ',' if depth == 0 => {
+                patterns.push(std::mem::take(&mut current));
+            }
+            _ => current.push(ch),
+        }
+    }
+    patterns.push(current);
+    patterns
+        .into_iter()
+        .map(|pattern| pattern.trim().to_string())
+        .filter(|pattern| !pattern.is_empty())
+        .collect()
 }
 
 /// Find unknown keys in frontmatter YAML
@@ -190,11 +231,35 @@ fn find_unknown_keys(yaml: &str, start_line: usize) -> Vec<UnknownKey> {
     unknown
 }
 
+/// Rewrite Claude Code's backslash escapes ("escape it as `photos \\[2024/**`")
+/// into the bracket form the `glob` crate understands, so a documented escape
+/// is not reported as an unclosed bracket expression.
+fn translate_backslash_escapes(pattern: &str) -> String {
+    let mut out = String::with_capacity(pattern.len());
+    let mut chars = pattern.chars();
+    while let Some(ch) = chars.next() {
+        if ch != '\\' {
+            out.push(ch);
+            continue;
+        }
+        match chars.next() {
+            Some(escaped @ ('[' | ']' | '*' | '?' | '{' | '}')) => {
+                out.push('[');
+                out.push(escaped);
+                out.push(']');
+            }
+            Some(other) => out.push(other),
+            None => out.push('\\'),
+        }
+    }
+    out
+}
+
 /// Validate a glob pattern
 ///
 /// Uses the glob crate to validate pattern syntax.
 pub fn validate_glob_pattern(pattern: &str) -> GlobValidation {
-    match glob::Pattern::new(pattern) {
+    match glob::Pattern::new(&translate_backslash_escapes(pattern)) {
         Ok(_) => GlobValidation {
             valid: true,
             pattern: pattern.to_string(),
@@ -241,6 +306,28 @@ Use TypeScript strict mode.
         let schema = result.schema.unwrap();
         assert_eq!(schema.paths.len(), 1);
         assert_eq!(schema.paths[0], "src/**/*.ts");
+    }
+
+    #[test]
+    fn test_parse_comma_separated_path_string() {
+        // memory "Rule frontmatter reference": "Accepts a YAML list or a
+        // comma-separated string"
+        let content = "---\npaths: \"src/**/*.{ts,tsx}, lib/**/*.ts ,tests/**\"\n---\nContent";
+        let schema = parse_frontmatter(content).unwrap().schema.unwrap();
+        assert_eq!(
+            schema.paths,
+            vec!["src/**/*.{ts,tsx}", "lib/**/*.ts", "tests/**"]
+        );
+    }
+
+    #[test]
+    fn test_split_comma_separated_paths_edge_cases() {
+        assert_eq!(split_comma_separated_paths(" , a,,b , "), vec!["a", "b"]);
+        assert_eq!(
+            split_comma_separated_paths("{a,b}/{c,d}/*.md"),
+            vec!["{a,b}/{c,d}/*.md"]
+        );
+        assert_eq!(split_comma_separated_paths("a\\,b,c"), vec!["a\\,b", "c"]);
     }
 
     #[test]

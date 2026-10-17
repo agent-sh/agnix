@@ -11,9 +11,9 @@ keywords: ["CC-OS-001", "output style missing description", "claude-output-style
 - **Rule ID**: `CC-OS-001`
 - **Severity**: `LOW`
 - **Category**: `claude-output-styles`
-- **Normative Level**: `SHOULD`
+- **Normative Level**: `BEST_PRACTICE`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 

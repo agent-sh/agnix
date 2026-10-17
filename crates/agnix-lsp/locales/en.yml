@@ -391,25 +391,69 @@ rules:
   cc_mem_006:
     message: Negative instruction '%{text}' without positive alternative
     suggestion: 'Add a positive alternative: ''Instead, do...'' or ''Use X instead.'''
-  cc_mem_007:
-    message: Weak constraint '%{text}' in critical section '%{section}'
-    suggestion: 'Use strong language in critical sections: ''must'', ''always'', ''required''.'
-    fix: Replace '%{text}' with stronger language
   cc_mem_008:
     message: Critical keyword '%{keyword}' at %{percent} percent of document (middle zone)
     suggestion: Move critical content to the top or bottom of the document for better recall.
-  cc_mem_009:
-    message: File exceeds recommended token limit (~%{tokens} tokens, limit is %{limit})
-    suggestion: Consider using @import to split content into multiple files.
   cc_mem_010:
-    message: 'CLAUDE.md has %{overlap} percent overlap with README.md (threshold: %{threshold} percent)'
-    suggestion: CLAUDE.md should complement README, not duplicate it. Remove duplicated sections.
+    message: "%{file} has %{overlap} percent word overlap with README.md (agnix heuristic threshold: %{threshold} percent)"
+    suggestion: "Claude can read the README when it needs it. Keep pitfalls, rationale and conventions in CLAUDE.md, and cut what repeats the README or what Claude can derive from the code."
   cc_mem_011:
     message: 'Invalid glob pattern ''%{pattern}'' in paths field (item %{index}): %{error}'
     suggestion: 'Fix the glob pattern syntax. Valid examples: ''src/**/*.ts'', ''*.rs'', ''tests/**/*.test.js'''
+    parse_error: "Invalid rule frontmatter (%{error}); Claude Code ignores the frontmatter and loads this rule in every session as if it had no paths"
+    parse_error_suggestion: "Fix the YAML between the --- markers (close it with a line containing only ---) so the paths field applies."
   cc_mem_012:
     message: Unknown frontmatter key '%{key}' in .claude/rules file
     suggestion: Only 'paths' is a recognized key in .claude/rules/*.md frontmatter. Remove '%{key}' or check for typos.
+  cc_mem_014:
+    message: "%{file} has %{lines} lines; Claude Code recommends keeping each CLAUDE.md under %{limit} lines because longer files use more context and reduce adherence"
+    suggestion: "Move guidance that applies to part of the codebase into path-scoped .claude/rules/ files and multi-step procedures into skills. @imports and CLAUDE.local.md also load at launch, so they do not reduce context."
+    rule_message: "Rule file has %{lines} lines; Claude Code counts each rules file as a separate instruction file and recommends under %{limit} lines"
+    rule_suggestion: "Add a paths field so the rule loads only for matching files, split it into narrower rules, or move procedures into a skill."
+    rule_scoped_suggestion: "Split the rule into narrower path-scoped rules, or move procedures into a skill."
+    import_message: "Imported file '@%{import}' has %{lines} lines; Claude Code counts each @path import as a separate instruction file and recommends under %{limit} lines"
+    import_suggestion: "Imports load at launch with the file that names them. Move part-of-codebase guidance into path-scoped .claude/rules/ files and procedures into skills, or trim the imported file."
+  cc_mem_015:
+    message: "Instruction files loaded at launch total %{lines} lines across %{files} files (%{breakdown}); Claude Code warns when files add up past a combined limit (agnix heuristic: %{limit} lines)"
+    suggestion: "Add paths to rules that apply to part of the codebase so they load on demand, move procedures into skills, and trim content Claude can derive from the code."
+  cc_mem_016:
+    message: "MEMORY.md has %{lines} lines and %{bytes} bytes; Claude Code loads only the first 200 lines or 25KB, so everything from line %{line} on is not loaded"
+    suggestion: "Keep one line per entry in MEMORY.md, move detail into topic files, and merge or drop stale entries."
+  cc_mem_017:
+    message: "%{count} lines use emphasis such as IMPORTANT, MUST or NEVER (first at lines %{lines}); Claude Code advises emphasizing only the one line Claude keeps skipping, because emphasis on many lines makes none stand out"
+    suggestion: "Write the instructions in plain, specific language and give the reason behind each; keep emphasis for a single instruction Claude keeps missing. Current Claude models over-trigger on aggressive wording such as 'CRITICAL: You MUST'."
+  cc_mem_018:
+    prose_message: "%{file} asks Claude in prose to read AGENTS.md ('%{text}'); Claude sees AGENTS.md only if it decides to open the file"
+    prose_suggestion: "Replace the sentence with an @AGENTS.md import, or delete CLAUDE.md so Claude Code reads AGENTS.md directly."
+    local_message: "CLAUDE.local.md stops Claude Code from reading the AGENTS.md next to it: with no CLAUDE.md here or above, CLAUDE.local.md counts as the project's CLAUDE.md"
+    local_suggestion: "Add a CLAUDE.md that contains @AGENTS.md, or set Project instructions to claude-md-and-agents-md in /config."
+  cc_mem_019:
+    quoted_message: "Import %{import} is quoted, so Claude Code does not import it"
+    quoted_suggestion: "Remove the quotes and put a backslash before each space: %{escaped}"
+    space_message: "Import @%{import} ends at the first space, so Claude Code looks for '%{import}' instead of '%{intended}'"
+    space_suggestion: "Put a backslash before each space in the path: %{escaped}"
+  cc_mem_020:
+    message: "%{file} holds personal settings or notes and no .gitignore rule covers it, so it can be committed"
+    suggestion: "Add %{file} to .gitignore."
+  cc_mem_021:
+    tree_message: "CLAUDE.md has a %{lines}-line directory tree; Claude can derive directory layouts from the code, and /doctor proposes cutting them"
+    listing_message: "CLAUDE.md has a %{items}-item file-by-file listing; Claude Code's best practices list file-by-file descriptions of the codebase as content to leave out"
+    suggestion: "Keep the parts of the layout Claude would get wrong (pitfalls, rationale, conventions that differ from tool defaults) and cut the rest."
+  cc_os_003:
+    message: "Output style frontmatter has unknown key '%{key}'; Claude Code ignores misspelled fields without an error"
+    suggestion: "Use name, description or keep-coding-instructions, or check the key for typos."
+    plugin_only_message: "force-for-plugin applies only to output styles shipped in a plugin; Claude Code ignores it in .claude/output-styles/"
+    plugin_only_suggestion: "Remove force-for-plugin, or move the style into a plugin's output-styles/ directory."
+  cc_os_004:
+    message: "Output style has no instructions after the frontmatter; selecting it adds nothing and, without keep-coding-instructions: true, also drops Claude Code's software engineering instructions"
+    suggestion: "Write the style's instructions for Claude below the closing ---."
+  cc_os_006:
+    message: "Invalid output-style frontmatter (%{error}); Claude Code loads the style under its file name with no fields set"
+    suggestion: "Fix the YAML syntax (close the frontmatter with a line containing only ---, quote values with special characters)."
+  cc_os_007:
+    message: "outputStyle '%{value}' differs from the %{kind} style '%{expected}' only in case; the value is case-sensitive, so Claude Code uses the Default style"
+    suggestion: 'Write "outputStyle": "%{expected}".'
+    fix: "Replace with '%{expected}' (selects that style)"
   agm_001:
     message: 'Invalid markdown: %{description}'
     suggestion: Fix the markdown syntax error -- check for unclosed tags, mismatched headers, or invalid link syntax
@@ -996,24 +1040,18 @@ rules:
   kr_mcp_015:
     message: "Kiro MCP server '%{server}' auto-approves every tool with autoApprove [\"*\"]; Kiro advises auto-approving only trusted, read-only tools with limited scope"
     suggestion: "List the specific tool names to auto-approve (Kiro CLI V3 ignores autoApprove and approves MCP tools through permission rules)"
-  pe_001:
-    message: Critical keyword '%{keyword}' at %{percent} percent of document (40-60 percent is the 'lost in the middle' zone)
-    suggestion: Move critical content to the start or end of the document for better recall
   pe_002:
     message: Chain-of-thought phrase '%{phrase}' used with simple task '%{task}'
-    suggestion: Remove chain-of-thought instructions for simple tasks; CoT can hurt performance on direct operations
-  pe_003:
-    message: Weak language '%{term}' in critical section '%{section}'
-    suggestion: Use strong language (must/always/never) in critical sections for better compliance
+    suggestion: "Drop the step-by-step instruction for this simple operation; for real reasoning tasks a general instruction such as 'think thoroughly' usually works better than a prescribed plan"
   pe_004:
     message: Ambiguous term '%{term}' creates unclear instruction
-    suggestion: Replace with specific criteria or remove ambiguity (e.g., 'always' instead of 'usually')
+    suggestion: "Replace the hedge with a condition Claude can check (e.g., 'when the change touches src/api/'), or state the rule without it"
   pe_005:
-    message: Redundant instruction '%{phrase}' - LLMs already follow this by default
-    suggestion: Remove generic instructions and focus on project-specific behavior and constraints
+    message: "Generic instruction '%{phrase}' adds no project-specific guidance"
+    suggestion: "Remove it, or replace it with the concrete convention it stands for (e.g., 'Use 2-space indentation' instead of 'write clean code')"
   pe_006:
     message: Negative instruction '%{text}' without positive alternative
-    suggestion: Add a positive alternative after negative instructions (e.g., 'Instead, use...')
+    suggestion: "Say what to do instead (e.g., 'Instead, use...'), or give the reason for the prohibition"
   cc_pl_001:
     message: plugin.json must be located in .claude-plugin/ directory
     suggestion: Move plugin.json to .claude-plugin/plugin.json
@@ -2016,6 +2054,9 @@ rules:
   cc_set_033:
     message: idleCompaction must be a boolean (got %{actual})
     suggestion: Set idleCompaction to a strict true/false boolean; adjust the 200K-token minimum with CLAUDE_CODE_IDLE_COMPACT_MIN_TOKENS instead.
+  cc_set_038:
+    message: "Claude Code does not read .claudeignore (%{entries} entries), so these paths are not protected"
+    suggestion: 'Move the entries into Read deny rules in .claude/settings.json, for example "permissions": {"deny": ["Read(./.env)", "Read(./secrets/**)"]}.'
   cc_pl_016:
     message: Plugin name '%{name}' is not kebab-case
     suggestion: Use lowercase letters, digits, and hyphens only. Claude Code rejects names with control or invisible characters.

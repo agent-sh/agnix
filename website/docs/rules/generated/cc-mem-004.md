@@ -13,7 +13,7 @@ keywords: ["CC-MEM-004", "invalid command reference", "claude memory", "validati
 - **Category**: `Claude Memory`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-10-04`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,7 @@ keywords: ["CC-MEM-004", "invalid command reference", "claude memory", "validati
 
 ## Evidence Sources
 
-- https://github.com/anthropics/claude-code/tree/main/.claude/commands
+- https://code.claude.com/docs/en/memory
 
 ## Test Coverage Metadata
 

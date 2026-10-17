@@ -13,7 +13,7 @@ keywords: ["CC-MEM-011", "invalid paths glob in rules", "claude memory", "valida
 - **Category**: `Claude Memory`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-02-07`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 

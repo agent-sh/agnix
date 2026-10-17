@@ -977,8 +977,8 @@ fn test_audited_fix_metadata_matches_supported_migrations() {
         ("OC-DEP-002", None),
         ("CC-SK-020", None),
         ("CDX-CFG-023", None),
-        ("CC-MEM-007", None),
-        ("PE-003", None),
+        ("CC-MEM-017", None),
+        ("PE-005", Some("unsafe")),
         ("CC-AG-012", None),
     ] {
         let rule = index.rules.iter().find(|rule| rule.id == id).unwrap();

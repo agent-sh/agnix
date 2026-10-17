@@ -589,6 +589,13 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Fix**: Opt-in unsafe autofix converts exact quoted `true` or `false` to a boolean. This can activate ignored settings or change security policy; plain `--fix` leaves them unchanged. Other invalid values require manual correction.
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.299
 
+
+<a id="cc-set-038"></a>
+### CC-SET-038 [MEDIUM] .claudeignore Has No Effect
+**Requirement**: Protect files with Read deny rules, not `.claudeignore`: "If your project has a `.claudeignore` file, it has no effect, so move its entries into `Read` deny rules."
+**Detection**: Any `.claudeignore` file
+**Fix**: Manual - move the entries into `permissions.deny` as `Read(...)` rules
+**Source**: code.claude.com/docs/en/permissions ("Read and Edit")
 ---
 
 ## PER-CLIENT SKILL RULES
@@ -1248,48 +1255,48 @@ Kiro agent rules check `.kiro/agents/**/*.json` and `*.md` against the engines a
 
 ## CLAUDE CODE RULES (OUTPUT STYLES)
 
-Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.md`) customise Claude's response tone/format. The `keep-coding-instructions` frontmatter field was added in Claude Code v2.1.94. Frontmatter has 3 known optional fields: `name`, `description`, `keep-coding-instructions`.
+Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.md`) customise Claude's response tone/format. The `keep-coding-instructions` frontmatter field was added in Claude Code v2.1.94. The output-styles page lists the fields `name`, `description`, `keep-coding-instructions`, and `force-for-plugin` ("Plugin output styles only"), and says: "All fields are optional, and field names use lowercase words separated by hyphens. A misspelled field is ignored without an error. If the YAML doesn't parse, the style still loads under its file name with no fields set".
 
 <a id="cc-os-001"></a>
 ### CC-OS-001 [LOW] Output Style Missing Description
-**Requirement**: `description` SHOULD be present and non-empty
+**Requirement**: Best practice: give the style a `description`. The field is optional ("All fields are optional"), but it is the text "shown in the `/config` picker".
 **Detection**: Frontmatter parse - flag if `description` absent or whitespace-only
 **Fix**: Manual - add a one-sentence summary
 **Source**: code.claude.com/docs/en/output-styles
 
 <a id="cc-os-002"></a>
 ### CC-OS-002 [HIGH] Output Style Invalid keep-coding-instructions Type
-**Requirement**: `keep-coding-instructions` MUST be a YAML boolean (`true` or `false`)
+**Requirement**: `keep-coding-instructions` MUST be a YAML boolean (`true` or `false`): "Set to `true` to keep Claude Code's section of built-in software engineering instructions". Any other value does not keep them.
 **Detection**: Frontmatter parse - reject string `"yes"`, number `1`, `null`, etc.
 **Fix**: Opt-in unsafe autofix converts exact quoted `true` or `false` to a boolean. This can activate ignored settings or change security policy; plain `--fix` leaves them unchanged. Other invalid values require manual correction.
 **Source**: code.claude.com/docs/en/output-styles
 
 <a id="cc-os-003"></a>
 ### CC-OS-003 [MEDIUM] Output Style Unknown Frontmatter Key
-**Requirement**: Top-level frontmatter keys SHOULD be one of `name`, `description`, `keep-coding-instructions`
+**Requirement**: Top-level frontmatter keys SHOULD be one of `name`, `description`, `keep-coding-instructions`: "A misspelled field is ignored without an error." `force-for-plugin` is reported with its own message, because it applies to "Plugin output styles only" and this rule sees only `.claude/output-styles/`.
 **Detection**: Line scan - flag any other top-level key
 **Fix**: Manual - remove or rename
 **Source**: code.claude.com/docs/en/output-styles
 
 <a id="cc-os-004"></a>
 ### CC-OS-004 [MEDIUM] Output Style Empty Body
-**Requirement**: Output styles SHOULD have a non-empty body after the closing `---`
+**Requirement**: Output styles SHOULD have instructions after the closing `---` ("frontmatter for metadata, then the instructions for Claude"). An empty custom style adds nothing, and without `keep-coding-instructions: true` it also leaves out "Claude Code's section of built-in software engineering instructions".
 **Detection**: Body lines after frontmatter are all whitespace
-**Fix**: Manual - add the system-prompt instructions
-**Source**: code.claude.com/docs/en/output-styles
-
-<a id="cc-os-005"></a>
-### CC-OS-005 [LOW] Output Style Name Exceeds Length
-**Requirement**: `name` SHOULD be 64 characters or fewer
-**Detection**: Count characters in `name` value
-**Fix**: Manual - shorten the name
+**Fix**: Manual - add the style's instructions
 **Source**: code.claude.com/docs/en/output-styles
 
 <a id="cc-os-006"></a>
 ### CC-OS-006 [HIGH] Invalid Output Style Frontmatter Syntax
-**Requirement**: Output-style frontmatter MUST be valid YAML between two `---` delimiters
+**Requirement**: Output-style frontmatter MUST be valid YAML between two `---` delimiters: "If the YAML doesn't parse, the style still loads under its file name with no fields set".
 **Detection**: YAML parse error or unclosed frontmatter
 **Fix**: Manual - fix the YAML syntax (close frontmatter, escape special chars, etc.)
+**Source**: code.claude.com/docs/en/output-styles
+
+<a id="cc-os-007"></a>
+### CC-OS-007 [MEDIUM] outputStyle Case Mismatch
+**Requirement**: The settings key `outputStyle` MUST match a style name exactly: "The value is case-sensitive, so write the built-in names as `Proactive`, `Concise`, `Explanatory`, and `Learning`. A value that doesn't match a style name exactly, such as `explanatory`, gives you the Default style."
+**Detection**: In Claude settings files, flag a string `outputStyle` that equals a built-in style name (or `default`) case-insensitively but not exactly, or the name or file stem of an output style in the project's `.claude/output-styles/` with different case. Unknown names are not reported, because user-level and plugin styles are not visible.
+**Fix**: [AUTO-FIX, unsafe] Replace the value with the exact style name. It selects that style instead of Default, so it changes behavior.
 **Source**: code.claude.com/docs/en/output-styles
 
 ---
@@ -1298,8 +1305,8 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 <a id="cc-mem-001"></a>
 ### CC-MEM-001 [HIGH] Invalid Import Path
-**Requirement**: @import paths MUST exist on filesystem. Both relative and absolute paths are allowed, including home-directory imports such as `@~/.claude/my-project-instructions.md` (the documented way to share personal instructions across worktrees); Claude Code gates external imports behind a one-time approval dialog rather than rejecting them. Path shape is only rejected for non-memory files (REF-001), where no spec sanctions escaping the project root.
-**Detection**: Extract `@path` references, check existence
+**Requirement**: @import paths MUST exist on filesystem. Both relative and absolute paths are allowed, including home-directory imports such as `@~/.claude/my-project-instructions.md` (the documented way to share personal instructions across worktrees); Claude Code gates external imports behind a one-time approval dialog rather than rejecting them. Path shape is only rejected for non-memory files (REF-001), where no spec sanctions escaping the project root. A backslash-escaped space is part of the path: "To import a file whose path contains spaces, put a backslash before each space."
+**Detection**: Extract `@path` references (code spans and fences skipped, `\ ` read as a space), check existence
 **Fix**: Show error with resolved path
 **Source**: code.claude.com/docs/en/memory
 
@@ -1319,52 +1326,87 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 <a id="cc-mem-004"></a>
 ### CC-MEM-004 [MEDIUM] Invalid Command Reference
-**Requirement**: npm scripts referenced SHOULD exist in package.json
-**Detection**: Extract `npm run <script>`, check package.json
+**Requirement**: npm scripts referenced in CLAUDE.md or CLAUDE.local.md SHOULD exist in package.json. The memory page's prompt audit looks for "references to files or commands that don't exist".
+**Detection**: Extract `npm run <script>`, check the package.json of the project the memory file belongs to (the parent of `.claude/` for `.claude/CLAUDE.md`)
 **Fix**: Show available scripts
-**Source**: agentsys/enhance-claude-memory
-
-<a id="cc-mem-007"></a>
-### CC-MEM-007 [LOW] Weak Constraint Language
-**Requirement**: Consider explicit wording for critical rules. This is optional writing advice, not a configuration requirement.
-**Detection**: In critical section, check for `should|try to|consider|maybe`
-**Fix**: Review manually; no automatic rewrite of intent or permission behavior.
-**Source**: research: constraint strength affects compliance
-
-<a id="cc-mem-009"></a>
-### CC-MEM-009 [MEDIUM] Token Count Exceeded
-**Requirement**: File SHOULD be under 1500 tokens (~6000 chars)
-**Detection**: `content.len() / 4 > 1500`
-**Fix**: Suggest using @imports
-**Source**: code.claude.com/docs/en/memory
+**Source**: code.claude.com/docs/en/memory ("Audit your instruction files")
 
 <a id="cc-mem-010"></a>
 ### CC-MEM-010 [MEDIUM] README Duplication
-**Requirement**: CLAUDE.md SHOULD complement README, not duplicate
-**Detection**: Compare with README.md, check >40% overlap
+**Requirement**: Best practice: CLAUDE.md SHOULD NOT repeat the README. The best-practices Exclude column lists "Anything Claude can figure out by reading code", and the memory page says `/doctor` "cuts content Claude can derive from the codebase". The 40 percent word-overlap threshold is an agnix heuristic.
+**Detection**: Word-set Jaccard similarity between CLAUDE.md (or CLAUDE.local.md) and the project's README.md above 40 percent
 **Fix**: Remove duplicated sections
-**Source**: agentsys/enhance-claude-memory
+**Source**: code.claude.com/docs/en/best-practices, code.claude.com/docs/en/memory
 
 <a id="cc-mem-011"></a>
 ### CC-MEM-011 [HIGH] Invalid Paths Glob in Rules
-**Requirement**: Glob patterns in `.claude/rules/*.md` frontmatter `paths` field MUST be valid
-**Detection**: Parse YAML frontmatter, validate each glob pattern in `paths` array
+**Requirement**: Glob patterns in `.claude/rules/**/*.md` frontmatter `paths` MUST be valid. `paths` "Accepts a YAML list or a comma-separated string". "A pattern with a `[` that can't be read as a bracket expression, such as `photos [2024/**`, is invalid: it matches nothing". Frontmatter that does not parse is reported too: "If the YAML between the markers doesn't parse, Claude Code ignores the frontmatter and loads the rule as if it had no `paths`."
+**Detection**: Parse YAML frontmatter; split a scalar `paths` string on commas outside brace groups; validate each pattern. Backslash escapes such as `photos \[2024/**` are valid.
 **Fix**: Manual - fix glob syntax
 **Source**: code.claude.com/docs/en/memory
 
 <a id="cc-mem-012"></a>
 ### CC-MEM-012 [MEDIUM] Rules File Unknown Frontmatter Key
-**Requirement**: `.claude/rules/*.md` frontmatter SHOULD only contain known keys (`paths`)
+**Requirement**: `.claude/rules/*.md` frontmatter SHOULD only contain known keys: "`paths` is the only field Claude Code reads from a rule; any other field is ignored without an error."
 **Detection**: Parse YAML frontmatter, flag keys not in known set
 **Fix**: Auto-fix (unsafe) - remove unknown key line (may miss multi-line values)
 **Source**: code.claude.com/docs/en/memory
 
 <a id="cc-mem-014"></a>
-### CC-MEM-014 [MEDIUM] CLAUDE.md Exceeds Line Limit
-**Requirement**: CLAUDE.md SHOULD be under 200 lines
-**Detection**: Count non-empty lines
-**Fix**: Manual - split or trim content
+### CC-MEM-014 [MEDIUM] Instruction File Exceeds 200 Lines
+**Requirement**: Each instruction file SHOULD stay under 200 lines: "**Size**: target under 200 lines per CLAUDE.md file. Longer files consume more context and reduce adherence." The page counts more than CLAUDE.md: "Each CLAUDE.md, rules file, and `@path` import counts as a separate file." Splitting does not help on its own: "[Imports] help you organize a long file but don't reduce its context cost, because imported files also load at launch."
+**Detection**: Count all lines (blank lines included) of CLAUDE.md, `.claude/CLAUDE.md`, CLAUDE.local.md and `.claude/rules/**/*.md`, and of files a memory file imports with `@path`. Block-level HTML comments in CLAUDE.md ("stripped before the content is injected") and rule frontmatter ("Claude Code removes the frontmatter before loading the rule") are not counted. An oversized import is reported at its `@path` line.
+**Fix**: Manual - move part-of-codebase guidance into path-scoped `.claude/rules/` files and multi-step procedures into skills
 **Source**: code.claude.com/docs/en/memory
+
+<a id="cc-mem-015"></a>
+### CC-MEM-015 [LOW] Always-Loaded Instructions Exceed Combined Size
+**Requirement**: Instruction files loaded at launch SHOULD stay within a combined size: "You also see a warning when files that are each within that length add up past a combined limit at session start." Claude Code does not document the combined limit (its changelog says the warning threshold scales with the context window); the 400-line threshold is an agnix heuristic.
+**Detection**: For each project directory, sum the lines of CLAUDE.md, `.claude/CLAUDE.md`, CLAUDE.local.md, every `.claude/rules/**/*.md` without `paths` ("Rules without a `paths` field are loaded unconditionally"), and the files they import (four hops, each file once). Report on the directory's first memory file when at least two files total more than 400 lines.
+**Fix**: Manual - give part-of-codebase rules a `paths` field, move procedures into skills, trim content Claude can derive from the code
+**Source**: code.claude.com/docs/en/memory ("My CLAUDE.md is too large")
+
+<a id="cc-mem-016"></a>
+### CC-MEM-016 [MEDIUM] MEMORY.md Exceeds Load Limit
+**Requirement**: A MEMORY.md index MUST fit the load limit: "The first 200 lines of `MEMORY.md`, or the first 25KB, whichever comes first, are loaded at the start of every conversation. Content beyond that threshold is not loaded at session start." Subagent memory loads the same way: "The subagent's system prompt also includes the first 200 lines or 25KB of `MEMORY.md`". The docs do not say whether 25KB is 25,000 or 25,600 bytes; agnix uses 25,600.
+**Detection**: `MEMORY.md` under `.claude/agent-memory/<agent>/`, `.claude/agent-memory-local/<agent>/` or `.claude/projects/<project>/memory/` with more than 200 lines or 25,600 bytes. Reported at the first line that is not loaded.
+**Fix**: Manual - keep one line per entry, move detail into topic files, merge or drop stale entries
+**Source**: code.claude.com/docs/en/memory, code.claude.com/docs/en/sub-agents
+
+<a id="cc-mem-017"></a>
+### CC-MEM-017 [LOW] Emphasis Overuse
+**Requirement**: Best practice: emphasize one instruction, not many. "If Claude keeps skipping one instruction, add emphasis such as "IMPORTANT" to that line alone. If you emphasize many lines, none of them stands out." Anthropic's prompting guide adds: "The fix is to dial back any aggressive language. Where you might have said "CRITICAL: You MUST use this tool when...", you can use more normal prompting like "Use this tool when..."." The threshold of more than 5 emphasized lines is an agnix heuristic.
+**Detection**: In CLAUDE.md, CLAUDE.local.md and `.claude/rules/**/*.md`, count lines outside code and HTML comments with an all-caps IMPORTANT, CRITICAL, MUST, NEVER, ALWAYS, MANDATORY or DO NOT. Documents that cite RFC 2119 or RFC 8174 are skipped.
+**Fix**: Manual - write the instructions plainly and give the reason; keep emphasis for the one line Claude keeps skipping
+**Source**: code.claude.com/docs/en/best-practices, platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices
+
+<a id="cc-mem-018"></a>
+### CC-MEM-018 [LOW] AGENTS.md Not Imported
+**Requirement**: A CLAUDE.md SHOULD import AGENTS.md rather than tell Claude to read it: "**A `CLAUDE.md` that tells Claude in words to read `AGENTS.md`**: Claude sees `AGENTS.md` only if it decides to open the file. Delete the `CLAUDE.md` so Claude reads `AGENTS.md` directly, or replace the sentence with an `@AGENTS.md` import." A CLAUDE.local.md alone also hides AGENTS.md: "Because `CLAUDE.local.md` counts, adding one to keep your own uncommitted instructions in a project that relies on `AGENTS.md` stops Claude from reading `AGENTS.md` for you."
+**Detection**: An AGENTS.md sits in the memory file's project directory and the file has no `@AGENTS.md` import. For CLAUDE.md: prose such as "Read AGENTS.md" or "see the `AGENTS.md` file" outside code blocks. For CLAUDE.local.md: no CLAUDE.md or `.claude/CLAUDE.md` in that directory or any directory above it.
+**Fix**: Manual - add `@AGENTS.md`, or set Project instructions to `claude-md-and-agents-md`
+**Source**: code.claude.com/docs/en/memory
+
+<a id="cc-mem-019"></a>
+### CC-MEM-019 [MEDIUM] Import Path Quoted or Split by a Space
+**Requirement**: An import path with spaces MUST escape them: "Without the backslashes, the path ends at the first space, even when the import is on a line of its own. A path wrapped in quotes isn't imported at all, with or without the backslashes."
+**Detection**: Outside code and comments: `@"path"` or `@'path'` whose path exists; `@name more words` where `name` does not exist but the name joined with the following words does.
+**Fix**: Manual - remove the quotes and write `@Design\ Docs/api-conventions.md`
+**Source**: code.claude.com/docs/en/memory ("Import additional files")
+
+<a id="cc-mem-020"></a>
+### CC-MEM-020 [LOW] Personal Claude File Not Gitignored
+**Requirement**: Personal files SHOULD be gitignored: "Add `CLAUDE.local.md` to your `.gitignore` so it isn't committed." For a hand-made `.claude/settings.local.json`: "If you created the file by hand and Claude Code hasn't written to it yet, add it to `.gitignore` yourself." Local subagent memory in `.claude/agent-memory-local/` "shouldn't be checked into version control".
+**Detection**: Inside a git repository, CLAUDE.local.md, `.claude/agent-memory-local/<agent>/MEMORY.md` or `.claude/settings.local.json` that no `.gitignore` from the repository root down (or `.git/info/exclude`) ignores. For settings.local.json the global excludes file also counts, because Claude Code adds `**/.claude/settings.local.json` there when it writes the file.
+**Fix**: Manual - add the file to `.gitignore`
+**Source**: code.claude.com/docs/en/memory, code.claude.com/docs/en/settings, code.claude.com/docs/en/sub-agents
+
+<a id="cc-mem-021"></a>
+### CC-MEM-021 [LOW] Directory Tree or File Listing in CLAUDE.md
+**Requirement**: Best practice: leave out content Claude can derive from the code. The best-practices Exclude column lists "File-by-file descriptions of the codebase", and `/doctor` "cuts content Claude can derive from the codebase, such as directory layouts, dependency lists, and architecture overviews". A short layout note is fine ("project layout" is among the facts to keep), so the thresholds (a 20-line tree, a 15-item file listing) are agnix heuristics.
+**Detection**: In CLAUDE.md, the longest run of directory-tree lines (`├──`, `└──`, `│`, `|-- `) of at least 20 lines, or at least 15 consecutive list items of the form `` - `path/file.ext` - description ``
+**Fix**: Manual - keep pitfalls, rationale and conventions; cut the listing
+**Source**: code.claude.com/docs/en/best-practices, code.claude.com/docs/en/memory
 
 ---
 
@@ -3862,25 +3904,25 @@ Rules for `.kiroignore` (workspace root or any subdirectory; Kiro CLI V3 and IDE
 ## UNIVERSAL RULES (XML)
 
 <a id="xml-001"></a>
-### XML-001 [HIGH] Unclosed XML Tag
-**Requirement**: All XML tags MUST be properly closed
+### XML-001 [MEDIUM] Unclosed XML Tag
+**Requirement**: XML tags used to structure a prompt SHOULD be closed. Anthropic recommends tags as structure ("Use consistent, descriptive tag names across your prompts." / "Nest tags when content has a natural hierarchy"); no tool rejects an unbalanced tag, but an unclosed one leaves the rest of the file inside it.
 **Detection**: Parse tags, check balance with stack
-**Fix**: [AUTO-FIX] Automatically insert matching closing XML tag
-**Source**: platform.claude.com/docs prompt engineering
+**Fix**: [AUTO-FIX, unsafe] Insert the matching closing tag at the end of the content
+**Source**: platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices
 
 <a id="xml-002"></a>
-### XML-002 [HIGH] Mismatched Closing Tag
-**Requirement**: Closing tag MUST match opening tag
+### XML-002 [MEDIUM] Mismatched Closing Tag
+**Requirement**: A closing tag SHOULD match the open tag
 **Detection**: `stack.last().name != closing_tag.name`
 **Fix**: Replace with correct closing tag
-**Source**: XML parsing standard
+**Source**: XML parsing standard (w3.org/TR/xml), platform.claude.com prompting best practices
 
 <a id="xml-003"></a>
-### XML-003 [HIGH] Unmatched Closing Tag
-**Requirement**: Closing tag MUST have corresponding opening tag
+### XML-003 [MEDIUM] Unmatched Closing Tag
+**Requirement**: A closing tag SHOULD have a corresponding opening tag
 **Detection**: `stack.is_empty() && found_closing_tag`
 **Fix**: Remove or add opening tag
-**Source**: XML parsing standard
+**Source**: XML parsing standard (w3.org/TR/xml), platform.claude.com prompting best practices
 
 ---
 
@@ -3911,47 +3953,35 @@ Rules for `.kiroignore` (workspace root or any subdirectory; Kiro CLI V3 and IDE
 
 ## PROMPT ENGINEERING RULES
 
-<a id="pe-001"></a>
-### PE-001 [LOW] Lost in the Middle
-**Requirement**: Critical content SHOULD NOT be in middle 40-60%
-**Detection**: Find "critical|important|must" positions, check if in middle
-**Fix**: Move to start or end
-**Source**: Liu et al. (2023), "Lost in the Middle: How Language Models Use Long Contexts", TACL
+Each rule runs only on files whose vendor documents its advice: CLAUDE.md and CLAUDE.local.md get PE-002, PE-004, PE-005 and PE-006; AGENTS.md, AGENTS.local.md and AGENTS.override.md get PE-004 and PE-005; Cursor rule files get PE-004; GEMINI.md gets none (Gemini advises "**Use negative constraints:** Explicitly telling the agent what _not_ to do ... is often more effective than vague positive instructions.").
 
 <a id="pe-002"></a>
 ### PE-002 [LOW] Chain-of-Thought on Simple Task
-**Requirement**: SHOULD NOT use "think step by step" for simple operations
-**Detection**: Check for CoT phrases in simple skills (file reads, basic commands)
-**Fix**: Remove CoT instructions
-**Source**: Wei et al. (2022), research shows CoT hurts simple tasks
-
-<a id="pe-003"></a>
-### PE-003 [LOW] Weak Imperative Language
-**Requirement**: Use strong language (must/always/never) for critical rules
-**Detection**: Critical section with `should|could|try|consider|maybe`
-**Fix**: Review manually; no automatic rewrite of intent or permission behavior.
-**Source**: Multiple prompt engineering studies
+**Requirement**: SHOULD NOT add "think step by step" to a simple operation. Anthropic: "**Prefer general instructions over prescriptive steps.** A prompt like "think thoroughly" often produces better reasoning than a hand-written step-by-step plan."
+**Detection**: A chain-of-thought phrase within 5 lines of a simple task (file reads, basic commands) in CLAUDE.md or CLAUDE.local.md
+**Fix**: Remove the step-by-step instruction
+**Source**: platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices
 
 <a id="pe-004"></a>
 ### PE-004 [MEDIUM] Ambiguous Instructions
-**Requirement**: Instructions SHOULD be specific and measurable
-**Detection**: Check for vague terms without concrete criteria
-**Fix**: Add specific criteria or examples
-**Source**: Anthropic prompt engineering guide
+**Requirement**: Instructions SHOULD be specific. Claude Code: "Write instructions that are concrete enough to verify". Cursor: "Avoid vague guidance". Codex: "A short, accurate AGENTS.md is more useful than a long file full of vague rules." Cline: "**Be specific, not vague.**"
+**Detection**: Hedges such as usually, sometimes, if possible, when appropriate outside code and parentheses, in CLAUDE.md, CLAUDE.local.md, AGENTS.md variants and Cursor rules
+**Fix**: Replace the hedge with a condition that can be checked
+**Source**: code.claude.com/docs/en/memory, cursor.com/docs/rules, learn.chatgpt.com/guides/best-practices, docs.cline.bot/customization/cline-rules
 
 <a id="pe-005"></a>
 ### PE-005 [MEDIUM] Redundant Generic Instructions
-**Requirement**: Instructions SHOULD NOT include generic directives that LLMs already follow by default
-**Detection**: Check for phrases like "be helpful", "be accurate", "be concise", "follow instructions", etc.
-**Fix**: [AUTO-FIX] Remove generic instructions and focus on project-specific behavior
-**Source**: Anthropic prompt engineering guide
+**Requirement**: Instructions SHOULD NOT include generic directives. Claude Code's best practices exclude "Self-evident practices like "write clean code"". Windsurf: "There's no need to add generic rules (e.g. "write good code")". VS Code: "Avoid generic advice that applies to any project." Copilot code review: "Vague quality improvements" such as "Be more accurate" "add noise". Response-length instructions such as "be concise" are not flagged: Anthropic now says to "Prompt explicitly for conciseness" for Claude Opus 5.
+**Detection**: Phrases like "be helpful", "be accurate", "follow instructions", "do your best", "write clean code", "write good code" outside code blocks, in CLAUDE.md, CLAUDE.local.md and AGENTS.md variants
+**Fix**: [AUTO-FIX, unsafe] Delete the line, offered only when the line holds nothing but generic phrases
+**Source**: code.claude.com/docs/en/best-practices, docs.devin.ai/desktop/cascade/memories, code.visualstudio.com/docs/agents/guides/customize-copilot-guide, docs.github.com/en/copilot/tutorials/customize-code-review
 
 <a id="pe-006"></a>
 ### PE-006 [MEDIUM] Negative-Only Instructions
-**Requirement**: Negative instructions SHOULD include a positive alternative
-**Detection**: Check for "don't/never/avoid" without "instead/rather/prefer" within 3-line window
-**Fix**: Add positive alternative (e.g., "Instead, use...")
-**Source**: Anthropic prompt engineering guide
+**Requirement**: In Claude memory files, a negative instruction SHOULD say what to do instead: "**Tell Claude what to do instead of what not to do**". Not applied to GEMINI.md or AGENTS.md, since Gemini advises the opposite.
+**Detection**: Check for "don't/never/avoid" without "instead/rather/prefer" within a 3-line window, in CLAUDE.md and CLAUDE.local.md
+**Fix**: Add positive alternative (e.g., "Instead, use..."), or give the reason
+**Source**: platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices
 
 ---
 
@@ -4086,14 +4116,14 @@ Implement these 30 rules first:
 ### P1 (Week 4)
 Add these 15 rules:
 - AS-011 through AS-013 and AS-015 (Skills best practices)
-- CC-MEM-007, CC-MEM-009, CC-MEM-010 (Memory quality)
+- CC-MEM-004, CC-MEM-010, CC-MEM-014 through CC-MEM-021 (Memory quality)
 - CC-AG-001 through CC-AG-013 (Agents)
 - CC-PL-001 through CC-PL-010 (Plugins)
 
 ### P2 (Week 5-6)
 Complete coverage:
 - MCP-001 through MCP-004, MCP-006 (MCP protocol)
-- PE-001 through PE-006 (Prompt engineering)
+- PE-002, PE-004, PE-005, PE-006 (Prompt engineering)
 - XP-001 through XP-008, XP-SK-001 through XP-SK-002 (Cross-platform)
 - CR-SK-001, CL-SK-001, CP-SK-001, CX-SK-001, OC-SK-001, WS-SK-001, KR-SK-001, KR-AG-001 to KR-AG-006, KR-AG-008 to KR-AG-030, KR-HK-001 through KR-HK-006, KR-PW-001 through KR-PW-004, KR-MCP-001 through KR-MCP-002, AMP-SK-001, RC-SK-001 (Per-client and Kiro rules)
 - Remaining MEDIUM/LOW certainty rules
@@ -4200,6 +4230,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | OC-DEP-001 | Rename `mode` key to `agent` | safe |
 | OC-DEP-005 | Remove TUI keys after manual migration to tui.json | unsafe |
 | CC-SET-016 | Rename deprecated permission tool names | unsafe |
+| CC-OS-007 | Replace outputStyle with the exact style name | unsafe |
 | COP-027 | Migrate infer while preserving explicit invocation fields | unsafe |
 | KR-HK-001 | Replace fileCreate / fileDelete / manual with the documented IDE event | unsafe |
 | KR-HK-011 | Normalize version strings 1 / 1.0 to v1 | unsafe |
@@ -4243,10 +4274,10 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Amp Skills | 1 | 0 | 1 | 0 | 1 |
 | Claude Agents | 18 | 10 | 7 | 1 | 9 |
 | Claude Hooks | 26 | 15 | 7 | 4 | 11 |
-| Claude Memory | 10 | 4 | 5 | 1 | 1 |
-| Claude Output Styles | 6 | 2 | 2 | 2 | 1 |
+| Claude Memory | 15 | 4 | 6 | 5 | 1 |
+| Claude Output Styles | 6 | 2 | 3 | 1 | 2 |
 | Claude Plugins | 17 | 8 | 8 | 1 | 4 |
-| Claude Settings | 33 | 1 | 31 | 1 | 12 |
+| Claude Settings | 34 | 1 | 32 | 1 | 12 |
 | Claude Skills | 19 | 10 | 8 | 1 | 7 |
 | Cline | 7 | 4 | 3 | 0 | 3 |
 | Cline Skills | 3 | 2 | 1 | 0 | 2 |
@@ -4272,15 +4303,15 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | MCP | 25 | 18 | 6 | 1 | 8 |
 | OpenCode | 46 | 28 | 17 | 1 | 11 |
 | OpenCode Skills | 1 | 0 | 1 | 0 | 1 |
-| Prompt Eng | 6 | 0 | 3 | 3 | 1 |
+| Prompt Eng | 4 | 0 | 3 | 1 | 1 |
 | References | 3 | 2 | 1 | 0 | 1 |
 | Roo Code | 6 | 3 | 3 | 0 | 0 |
 | Roo Code Skills | 1 | 0 | 1 | 0 | 1 |
 | Version Awareness | 1 | 0 | 0 | 1 | 0 |
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
-| XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **535** | **241** | **242** | **52** | **136** |
+| XML | 3 | 0 | 3 | 0 | 3 |
+| **TOTAL** | **539** | **238** | **248** | **53** | **137** |
 
 
 ---
@@ -4296,8 +4327,6 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 - github.com/cline/cline (Cline repository)
 
 ### Research Papers
-- Liu et al. (2023) - Lost in the middle (TACL)
-- Wei et al. (2022) - Chain-of-Thought
 - Zhao et al. (2021) - Few-shot calibration
 
 ### Production Code
@@ -4310,8 +4339,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 535 validation rules across 43 categories
+**Total Coverage**: 539 validation rules across 43 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 241 HIGH, 242 MEDIUM, 52 LOW
-**Auto-Fixable**: 136 rules (25%)
+**Certainty**: 238 HIGH, 248 MEDIUM, 53 LOW
+**Auto-Fixable**: 137 rules (25%)

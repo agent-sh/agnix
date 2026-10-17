@@ -214,7 +214,7 @@
             "type": "string"
           },
           "default": [],
-          "description": "Specific rule IDs to disable (e.g., [\"AS-004\", \"PE-003\"])",
+          "description": "Specific rule IDs to disable (e.g., [\"AS-004\", \"PE-004\"])",
           "scope": "resource"
         },
         "agnix.versions.claudeCode": {

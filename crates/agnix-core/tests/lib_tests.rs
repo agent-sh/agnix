@@ -310,7 +310,9 @@ fn test_detect_gemini_md() {
 fn test_validators_for_gemini_md() {
     let registry = ValidatorRegistry::with_defaults();
     let validators = registry.validators_for(FileType::GeminiMd);
-    assert_eq!(validators.len(), 5);
+    // PromptValidator is not registered for GEMINI.md: Gemini advises
+    // "Use negative constraints", the opposite of PE-006.
+    assert_eq!(validators.len(), 4);
 }
 
 #[test]
@@ -2891,7 +2893,9 @@ fn test_validators_for_cursor() {
     let registry = ValidatorRegistry::with_defaults();
 
     let cursor_validators = registry.validators_for(FileType::CursorRule);
-    assert_eq!(cursor_validators.len(), 3); // cursor + prompt + claude_md
+    // cursor + prompt (PE-004 only); ClaudeMdValidator no longer runs on
+    // Cursor rules.
+    assert_eq!(cursor_validators.len(), 2);
 
     let hooks_validators = registry.validators_for(FileType::CursorHooks);
     assert_eq!(hooks_validators.len(), 1); // cursor
@@ -2906,7 +2910,7 @@ fn test_validators_for_cursor() {
     assert_eq!(environment_validators[0].name(), "CursorValidator");
 
     let legacy_validators = registry.validators_for(FileType::CursorRulesLegacy);
-    assert_eq!(legacy_validators.len(), 3); // cursor + prompt + claude_md
+    assert_eq!(legacy_validators.len(), 2); // cursor + prompt (PE-004 only)
 }
 
 #[test]
@@ -3238,11 +3242,10 @@ fn test_pe_rules_dispatched() {
     let temp = tempfile::TempDir::new().unwrap();
     let claude_path = temp.path().join("CLAUDE.md");
 
-    // Test cases: (fixture_file, expected_rule)
+    // Test cases: (fixture_file, expected_rule). PE-001 and PE-003 are
+    // retired; their fixtures now assert absence below.
     let test_cases = [
-        ("pe-001-critical-in-middle.md", "PE-001"),
         ("pe-002-cot-on-simple.md", "PE-002"),
-        ("pe-003-weak-language.md", "PE-003"),
         ("pe-004-ambiguous.md", "PE-004"),
     ];
 
@@ -3260,17 +3263,34 @@ fn test_pe_rules_dispatched() {
         );
     }
 
-    // Also verify PE rules dispatch on AGENTS.md file type
+    for (fixture, retired) in [
+        ("pe-001-critical-in-middle.md", "PE-001"),
+        ("pe-003-weak-language.md", "PE-003"),
+    ] {
+        let content = std::fs::read_to_string(fixtures_dir.join(fixture)).unwrap();
+        std::fs::write(&claude_path, &content).unwrap();
+        let diagnostics =
+            expect_success(validate_file_with_registry(&claude_path, &config, &registry).unwrap());
+        assert!(!diagnostics.iter().any(|d| d.rule == retired), "{retired}");
+    }
+
+    // AGENTS.md gets the PE rules with sources from tools that read it
+    // (PE-004, PE-005), but not the Claude-only PE-002.
     let agents_path = temp.path().join("AGENTS.md");
-    let pe_003_content =
-        std::fs::read_to_string(fixtures_dir.join("pe-003-weak-language.md")).unwrap();
-    std::fs::write(&agents_path, &pe_003_content).unwrap();
+    let pe_004_content = std::fs::read_to_string(fixtures_dir.join("pe-004-ambiguous.md")).unwrap();
+    std::fs::write(&agents_path, &pe_004_content).unwrap();
     let diagnostics =
         expect_success(validate_file_with_registry(&agents_path, &config, &registry).unwrap());
     assert!(
-        diagnostics.iter().any(|d| d.rule == "PE-003"),
-        "Expected PE-003 from AGENTS.md with weak language content"
+        diagnostics.iter().any(|d| d.rule == "PE-004"),
+        "Expected PE-004 from AGENTS.md with ambiguous content"
     );
+    let pe_002_content =
+        std::fs::read_to_string(fixtures_dir.join("pe-002-cot-on-simple.md")).unwrap();
+    std::fs::write(&agents_path, &pe_002_content).unwrap();
+    let diagnostics =
+        expect_success(validate_file_with_registry(&agents_path, &config, &registry).unwrap());
+    assert!(!diagnostics.iter().any(|d| d.rule == "PE-002"));
 }
 
 #[test]
@@ -5160,10 +5180,11 @@ fn test_disabled_validators_multi_validator_validate_file_with_registry() {
     let temp_dir = tempfile::tempdir().unwrap();
     let claude_md = temp_dir.path().join("CLAUDE.md");
     // Unclosed XML tag triggers XmlValidator (XML-001).
-    // Weak language in a critical section triggers ClaudeMdValidator (CC-MEM-007).
+    // Emphasis on many lines triggers ClaudeMdValidator (CC-MEM-017), which
+    // replaced the retired CC-MEM-017.
     std::fs::write(
         &claude_md,
-        "# Critical Rules\nYou should follow the coding style.\n\n<example>some content here\n",
+        "# Rules\n- IMPORTANT: a\n- IMPORTANT: b\n- IMPORTANT: c\n- IMPORTANT: d\n- IMPORTANT: e\n- IMPORTANT: f\n\n<example>some content here\n",
     )
     .unwrap();
 
@@ -5179,8 +5200,8 @@ fn test_disabled_validators_multi_validator_validate_file_with_registry() {
         diags.iter().map(|d| &d.rule).collect::<Vec<_>>()
     );
     assert!(
-        diags.iter().any(|d| d.rule == "CC-MEM-007"),
-        "Expected CC-MEM-007 to fire with default config, got rules: {:?}",
+        diags.iter().any(|d| d.rule == "CC-MEM-017"),
+        "Expected CC-MEM-017 to fire with default config, got rules: {:?}",
         diags.iter().map(|d| &d.rule).collect::<Vec<_>>()
     );
 
@@ -5199,11 +5220,11 @@ fn test_disabled_validators_multi_validator_validate_file_with_registry() {
             .collect::<Vec<_>>()
     );
     assert!(
-        !diags_multi.iter().any(|d| d.rule == "CC-MEM-007"),
-        "Expected CC-MEM-007 absent when ClaudeMdValidator is disabled, got: {:?}",
+        !diags_multi.iter().any(|d| d.rule == "CC-MEM-017"),
+        "Expected CC-MEM-017 absent when ClaudeMdValidator is disabled, got: {:?}",
         diags_multi
             .iter()
-            .filter(|d| d.rule == "CC-MEM-007")
+            .filter(|d| d.rule == "CC-MEM-017")
             .collect::<Vec<_>>()
     );
 }

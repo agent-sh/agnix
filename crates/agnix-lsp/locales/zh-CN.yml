@@ -249,19 +249,9 @@ rules:
   cc_mem_006:
     message: 否定指令 '%{text}' 没有积极替代方案
     suggestion: '添加积极替代方案: ''改为做...'' 或 ''使用 X 代替。'''
-  cc_mem_007:
-    message: 关键部分 '%{section}' 中的弱约束 '%{text}'
-    suggestion: '在关键部分使用强语言: ''must''、''always''、''required''。'
-    fix: 将 '%{text}' 替换为更强的语言
   cc_mem_008:
     message: 关键词 '%{keyword}' 在文档的 %{percent} 百分比处（中间区域）
     suggestion: 将关键内容移到文档的顶部或底部以获得更好的记忆效果。
-  cc_mem_009:
-    message: 文件超过推荐的 token 限制（约 %{tokens} tokens，限制为 %{limit}）
-    suggestion: 考虑使用 @import 将内容拆分为多个文件。
-  cc_mem_010:
-    message: 'CLAUDE.md 与 README.md 有 %{overlap} 百分比的重叠（阈值: %{threshold} 百分比）'
-    suggestion: CLAUDE.md 应补充 README，而不是复制它。删除重复的部分。
   cc_mem_011:
     message: paths 字段中的 glob 模式 '%{pattern}' 无效（第 %{index} 项）：%{error}
     suggestion: 修复 glob 模式语法。有效示例：'src/**/*.ts'、'*.rs'、'tests/**/*.test.js'
@@ -657,18 +647,10 @@ rules:
   cdx_pl_016:
     message: interface.logoDark 中的深色模式 logo 路径 '%{path}' 必须以 ./ 开头且不使用 '..' 遍历
     suggestion: 使用相对深色模式 logo 资源路径，例如 './assets/logo-dark.png'
-  pe_001:
-    message: 关键词 '%{keyword}' 在文档的 %{percent} 百分比处（40-60 百分比是'中间遗忘'区域）
-    suggestion: 将关键内容移到文档的开头或结尾以获得更好的记忆效果
   pe_002:
     message: 思维链短语 '%{phrase}' 用于简单任务 '%{task}'
-    suggestion: 对简单任务删除思维链指令；CoT 可能会降低直接操作的性能
-  pe_003:
-    message: 关键部分 '%{section}' 中的弱语言 '%{term}'
-    suggestion: 在关键部分使用强语言（must/always/never）以获得更好的遵从性
   pe_004:
     message: 模糊术语 '%{term}' 造成不明确的指令
-    suggestion: 替换为具体标准或消除歧义（例如用 'always' 代替 'usually'）
   cc_pl_001:
     message: plugin.json 必须位于 .claude-plugin/ 目录中
     suggestion: 将 plugin.json 移至 .claude-plugin/plugin.json

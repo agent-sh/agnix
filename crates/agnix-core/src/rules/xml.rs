@@ -1,4 +1,9 @@
-//! XML tag balance validation
+//! XML tag balance validation (XML-001..003)
+//!
+//! Anthropic's prompting guide recommends XML tags as structure ("Use
+//! consistent, descriptive tag names", "Nest tags when content has a natural
+//! hierarchy"). No tool rejects a prompt with an unbalanced tag, so these are
+//! warnings: the tag still confuses which text belongs to which section.
 
 use crate::{
     config::PerFileLintConfig,
@@ -138,7 +143,7 @@ impl Validator for XmlValidator {
                     );
 
                     let diagnostic =
-                        Diagnostic::error(path.to_path_buf(), line, column, rule_id, message)
+                        Diagnostic::warning(path.to_path_buf(), line, column, rule_id, message)
                             .with_suggestion(suggestion)
                             .with_fix(fix);
                     diagnostics.push(diagnostic);
@@ -161,7 +166,7 @@ impl Validator for XmlValidator {
                     );
 
                     let mut diagnostic =
-                        Diagnostic::error(path.to_path_buf(), line, column, rule_id, message)
+                        Diagnostic::warning(path.to_path_buf(), line, column, rule_id, message)
                             .with_suggestion(suggestion);
 
                     // Unsafe auto-fix: rewrite mismatched closing tag to expected closing tag.
@@ -188,7 +193,7 @@ impl Validator for XmlValidator {
                     let suggestion = t!("rules.xml_003.suggestion", tag = tag);
 
                     let mut diagnostic =
-                        Diagnostic::error(path.to_path_buf(), line, column, rule_id, message)
+                        Diagnostic::warning(path.to_path_buf(), line, column, rule_id, message)
                             .with_suggestion(suggestion);
 
                     // Unsafe auto-fix: remove unmatched closing tag.

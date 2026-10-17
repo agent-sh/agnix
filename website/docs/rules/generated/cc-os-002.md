@@ -13,7 +13,7 @@ keywords: ["CC-OS-002", "output style invalid keep-coding-instructions type", "c
 - **Category**: `claude-output-styles`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `Yes (unsafe)`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 

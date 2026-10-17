@@ -373,8 +373,8 @@ mod i18n_tests {
         assert_not_raw_key!("rules.cc_ag_009.message", tool = "x", known = "y");
         assert_not_raw_key!("rules.xml_001.message", tag = "div");
         assert_not_raw_key!("rules.cc_hk_001.message");
-        assert_not_raw_key!("rules.pe_003.message");
-        assert_not_raw_key!("rules.cc_mem_009.message");
+        assert_not_raw_key!("rules.pe_004.message", term = "usually");
+        assert_not_raw_key!("rules.cc_mem_017.message", count = 6, lines = "1");
 
         // Rules section - suggestions
         assert_not_raw_key!("rules.as_001.suggestion");

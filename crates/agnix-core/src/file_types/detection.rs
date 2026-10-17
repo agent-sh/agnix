@@ -235,6 +235,26 @@ fn is_under_claude_rules(path: &Path) -> bool {
     path_contains_consecutive_components(path, ".claude", "rules")
 }
 
+/// Returns true for a MEMORY.md index Claude Code loads at session start:
+/// subagent memory in `.claude/agent-memory/<agent>/` or
+/// `.claude/agent-memory-local/<agent>/` (sub-agents "Enable persistent
+/// memory"), and auto memory in `.claude/projects/<project>/memory/` (memory
+/// "Storage location").
+fn is_claude_memory_index(path: &Path) -> bool {
+    let comps = normal_components(path);
+    let Some((filename, dirs)) = comps.split_last() else {
+        return false;
+    };
+    if *filename != "MEMORY.md" {
+        return false;
+    }
+    matches!(
+        dirs,
+        [.., ".claude", "agent-memory" | "agent-memory-local", _]
+            | [.., ".claude", "projects", _, "memory"]
+    )
+}
+
 /// Returns true if the path contains `.cursor/agents` as consecutive
 /// components anywhere in the path.
 fn is_under_cursor_agents(path: &Path) -> bool {
@@ -981,6 +1001,10 @@ pub fn detect_file_type(path: &Path) -> FileType {
         {
             FileType::ClaudeOutputStyle
         }
+        // Claude Code MEMORY.md indexes (subagent memory and auto memory)
+        "MEMORY.md" if is_claude_memory_index(path) => FileType::ClaudeMemoryIndex,
+        // .claudeignore: documented as having no effect in Claude Code
+        ".claudeignore" => FileType::ClaudeIgnore,
         // Cursor project rules (.cursor/rules/**/*.md and .mdc)
         name if (ends_with_ignore_ascii_case(name, ".md")
             || ends_with_ignore_ascii_case(name, ".mdc"))

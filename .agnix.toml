@@ -29,15 +29,12 @@ import_references = true
 # Disable rules that don't apply to this repo:
 # - XP-001/002/003: We document tool paths, so mentioning them is expected
 # - VER-001: Version pinning not needed for the linter itself
-# - PE-003: Weak language in docs is acceptable
 disabled_rules = [
     "XP-001",      # We document tool paths, mentioning them is expected
     "XP-002",      # Same as XP-001
     "XP-003",      # Same as XP-001
     "VER-001",     # Version pinning not needed for the linter itself
-    "PE-003",      # Weak language in docs is acceptable
     "CDX-AG-005",  # AGENTS.md uses structured code blocks for API documentation
-    "CC-MEM-009",  # CLAUDE.md is intentionally detailed - it's the project memory
     "CC-SK-017",   # Intentional - version is a client-specific frontmatter field
 ]
 

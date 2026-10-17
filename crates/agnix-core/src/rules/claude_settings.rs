@@ -57,7 +57,10 @@ use crate::{
 use rust_i18n::t;
 use std::{collections::HashMap, path::Path};
 
+mod paths_and_styles;
+
 const RULE_IDS: &[&str] = &[
+    "CC-OS-007",
     "CC-SET-001",
     "CC-SET-002",
     "CC-SET-003",
@@ -298,6 +301,20 @@ impl Validator for ClaudeSettingsValidator {
 
         if config.is_rule_enabled("CC-SET-033") {
             validate_idle_compaction(path, content, &value, &mut diagnostics);
+        }
+
+        // Rules that point at a key or value need source spans.
+        if let Ok(document) = crate::schemas::kiro_json::parse_json_document(content, false) {
+            let root = &document.root;
+            if config.is_rule_enabled("CC-OS-007") {
+                paths_and_styles::check_output_style_case(
+                    path,
+                    content,
+                    root,
+                    config.fs().as_ref(),
+                    &mut diagnostics,
+                );
+            }
         }
 
         diagnostics

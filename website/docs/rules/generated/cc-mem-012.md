@@ -13,7 +13,7 @@ keywords: ["CC-MEM-012", "rules file unknown frontmatter key", "claude memory", 
 - **Category**: `Claude Memory`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `Yes (unsafe)`
-- **Verified On**: `2026-02-07`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 

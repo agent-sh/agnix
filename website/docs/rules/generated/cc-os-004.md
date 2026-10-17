@@ -13,7 +13,7 @@ keywords: ["CC-OS-004", "output style empty body", "claude-output-styles", "vali
 - **Category**: `claude-output-styles`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 

@@ -110,7 +110,9 @@ fn test_e2e_as_006_fix_collapses_consecutive_hyphens() {
 
 #[test]
 fn test_e2e_pe_005_fix_removes_generic_instruction() {
-    let content = "# Project\n\nBe helpful and concise.\n\n## Details\nActual content.";
+    // PE-005 offers the deletion only for a line made of generic phrases;
+    // "concise" is a response-length instruction, so it is not used here.
+    let content = "# Project\n\nBe helpful and accurate.\n\n## Details\nActual content.";
     assert_fix_resolves(
         FileType::ClaudeMd,
         Path::new("CLAUDE.md"),
@@ -544,7 +546,9 @@ fn test_unsafe_fix_correctly_marked_xml_003() {
 
 #[test]
 fn test_pe_005_fix_is_safe() {
-    let content = "Be helpful and concise.";
+    // A line with only generic phrases; "concise" would make the line keep a
+    // real instruction, and then no deletion is offered.
+    let content = "Be helpful and accurate.";
     let path = Path::new("CLAUDE.md");
     let config = LintConfig::default();
     let registry = ValidatorRegistry::with_defaults();

@@ -259,19 +259,9 @@ rules:
   cc_mem_006:
     message: Instruccion negativa '%{text}' sin alternativa positiva
     suggestion: 'Agrega una alternativa positiva: ''En su lugar, haz...'' o ''Usa X en su lugar.'''
-  cc_mem_007:
-    message: Restriccion debil '%{text}' en seccion critica '%{section}'
-    suggestion: 'Usa lenguaje fuerte en secciones criticas: ''must'', ''always'', ''required''.'
-    fix: Reemplazar '%{text}' con lenguaje mas fuerte
   cc_mem_008:
     message: Palabra clave critica '%{keyword}' al %{percent} por ciento del documento (zona media)
     suggestion: Mueve contenido critico al inicio o final del documento para mejor recuerdo.
-  cc_mem_009:
-    message: El archivo excede el limite recomendado de tokens (~%{tokens} tokens, limite es %{limit})
-    suggestion: Considera usar @import para dividir contenido en multiples archivos.
-  cc_mem_010:
-    message: 'CLAUDE.md tiene %{overlap} por ciento de superposicion con README.md (umbral: %{threshold} por ciento)'
-    suggestion: CLAUDE.md debe complementar README, no duplicarlo. Elimina secciones duplicadas.
   cc_mem_011:
     message: 'Patron glob invalido ''%{pattern}'' en campo paths (elemento %{index}): %{error}'
     suggestion: 'Corrige la sintaxis del patron glob. Ejemplos validos: ''src/**/*.ts'', ''*.rs'', ''tests/**/*.test.js'''
@@ -679,20 +669,10 @@ rules:
   cdx_pl_016:
     message: La ruta de logo oscuro '%{path}' en interface.logoDark debe comenzar con ./ y no usar recorrido '..'
     suggestion: Usa una ruta relativa para el logo oscuro, como './assets/logo-dark.png'
-  pe_001:
-    message: Palabra clave critica '%{keyword}' al %{percent} por ciento del documento (40-60 por ciento es la zona 'perdido
-      en el medio')
-    suggestion: Mueve contenido critico al inicio o final del documento para mejor recuerdo
   pe_002:
     message: Frase de cadena de pensamiento '%{phrase}' usada con tarea simple '%{task}'
-    suggestion: Elimina instrucciones de cadena de pensamiento para tareas simples; CoT puede perjudicar el rendimiento en
-      operaciones directas
-  pe_003:
-    message: Lenguaje debil '%{term}' en seccion critica '%{section}'
-    suggestion: Usa lenguaje fuerte (must/always/never) en secciones criticas para mejor cumplimiento
   pe_004:
     message: Termino ambiguo '%{term}' crea instruccion poco clara
-    suggestion: Reemplaza con criterios especificos o elimina la ambiguedad (ej., 'always' en lugar de 'usually')
   cc_pl_001:
     message: plugin.json debe estar ubicado en el directorio .claude-plugin/
     suggestion: Mueve plugin.json a .claude-plugin/plugin.json
