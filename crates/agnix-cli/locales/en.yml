@@ -1124,7 +1124,7 @@ rules:
     message: "Steering frontmatter does not start on the first line, so Kiro does not read it and includes the whole file in every interaction"
     suggestion: "Remove the blank lines or text before the opening ---"
   kiro_015_unclosed:
-    message: "Steering frontmatter has no closing --- line, so Kiro cannot read its settings"
+    message: "Steering frontmatter has no closing --- line, so Kiro reads the rest of the file as frontmatter YAML instead of steering text"
     suggestion: "Add a line with --- after the frontmatter fields"
   kiro_015_yaml:
     message: "Steering frontmatter is not valid YAML (%{error}); Kiro CLI V3 then ignores it and includes the whole file, frontmatter text included, in every interaction"
