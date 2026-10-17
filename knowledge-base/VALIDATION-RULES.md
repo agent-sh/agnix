@@ -137,30 +137,30 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 <a id="as-004"></a>
 ### AS-004 [HIGH] Invalid Name Format
 **Requirement**: name MUST be 1-64 characters of lowercase letters, digits and hyphens ("May only contain unicode lowercase alphanumeric characters (`a-z`, `0-9`) and hyphens (`-`)"). Claude Code is laxer and the rule follows it: Claude Code "refuses a command name or a frontmatter `name` that contains characters such as" zero-width or control characters, private-use characters, characters that change text direction, blanks other than one plain space between words, and `<` or `>` (an error); any other non-kebab name loads in Claude Code but is rejected by Claude API and claude.ai uploads ("lowercase letters, numbers, and hyphens only"), a warning. The `<plugin>:<skill-name>` form is a Claude Code plugin convention, accepted only where the skill may be Claude Code's (Claude skills and unscoped skills).
-**Detection**: Other clients: `!is_valid_name_segment(name)` (regex `^[a-z0-9]+(-[a-z0-9]+)*$`, at most 64 characters). Claude Code: refused characters, then the kebab-case check with the plugin form allowed.
+**Detection**: Other clients: `!is_valid_name_segment(name)` (regex `^[a-z0-9]+(-[a-z0-9]+)*$`, at most 64 characters). Claude Code: refused characters, then the kebab-case check with the plugin form allowed. OpenCode skills with `[tool_versions] opencode` 2.x or later: warning, since OpenCode 2 takes the skill ID from the file path and "does not enforce this pattern".
 **Fix**: [AUTO-FIX] Convert each name segment to kebab-case (lowercase, replace `_` with `-`, remove invalid chars, collapse consecutive hyphens, truncate to 64 chars); safe only for case-only changes. A `plugin:skill` name outside Claude Code needs a manual rename.
-**Source**: agentskills.io/specification, code.claude.com/docs/en/skills, platform.claude.com/docs/en/build-with-claude/skills-guide
+**Source**: agentskills.io/specification, code.claude.com/docs/en/skills, platform.claude.com/docs/en/build-with-claude/skills-guide, opencode.ai/v2/docs/skills
 
 <a id="as-005"></a>
 ### AS-005 [HIGH] Name Starts/Ends with Hyphen
 **Requirement**: name MUST NOT start or end with `-` ("Must not start or end with a hyphen (`-`)"). A warning for Claude Code skills, which load such names.
-**Detection**: `name.starts_with('-') || name.ends_with('-')`
+**Detection**: `name.starts_with('-') || name.ends_with('-')`. Warning for Claude Code skills, and for OpenCode skills with OpenCode 2 pinned.
 **Fix**: Remove leading/trailing hyphens
-**Source**: agentskills.io/specification
+**Source**: agentskills.io/specification, opencode.ai/v2/docs/skills
 
 <a id="as-006"></a>
 ### AS-006 [HIGH] Consecutive Hyphens in Name
 **Requirement**: name MUST NOT contain `--` ("Must not contain consecutive hyphens (`--`)"). A warning for Claude Code skills, which load such names.
-**Detection**: `name.contains("--")`
+**Detection**: `name.contains("--")`. Warning for Claude Code skills, and for OpenCode skills with OpenCode 2 pinned.
 **Fix**: Replace `--` with `-`
-**Source**: agentskills.io/specification
+**Source**: agentskills.io/specification, opencode.ai/v2/docs/skills
 
 <a id="as-008"></a>
 ### AS-008 [HIGH] Description Too Short
 **Requirement**: description MUST be 1-1024 characters (agentskills.io: "Must be 1-1024 characters"; Codex's sample validator quick_validate.py applies the same cap, the Codex runtime keeps longer text). **Claude Code skills**: "the combined `description` and `when_to_use` text is truncated at 1,536 characters in the skill listing"; the cap is `skillListingMaxDescChars` (default 1536, "Scope: Any file"). Longer text is cut, not rejected, so this is a warning; a description over 1,024 characters is also noted, since Claude API and claude.ai uploads accept "Maximum 1024 characters, non-empty".
-**Detection**: Other clients: `description.chars().count()` outside 1..=1024 (error). Claude Code: `description` plus `when_to_use` characters above the cap read from the nearest `.claude/settings.local.json` or `.claude/settings.json` (warning), else a description over 1024 characters (info). An empty description is not reported for Claude Code, which treats the field as optional.
+**Detection**: Other clients: `description.chars().count()` outside 1..=1024 (error). Claude Code: `description` plus `when_to_use` characters above the cap read from the nearest `.claude/settings.local.json` or `.claude/settings.json` (warning), else a description over 1024 characters (info). An empty description is not reported for Claude Code, which treats the field as optional. OpenCode skills with OpenCode 2 pinned: a description over 1024 characters is a warning (OpenCode 2 enforces no "maximum description length").
 **Fix**: Add a description, or trim it and put the key use case first
-**Source**: agentskills.io/specification, code.claude.com/docs/en/skills, code.claude.com/docs/en/settings-reference, platform.claude.com/docs/en/build-with-claude/skills-guide
+**Source**: agentskills.io/specification, code.claude.com/docs/en/skills, code.claude.com/docs/en/settings-reference, platform.claude.com/docs/en/build-with-claude/skills-guide, opencode.ai/v2/docs/skills
 
 <a id="as-009"></a>
 ### AS-009 [HIGH] Description Contains Angle Brackets (Codex)
@@ -207,9 +207,9 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 <a id="as-017"></a>
 ### AS-017 [HIGH] Name Must Match Parent Directory
 **Requirement**: Skill name MUST match parent directory name ("Must match the parent directory name"). **agentskills.io baseline only** - Claude Code decouples the two ("In a personal or project skill directory, `name` sets the command that the `/` menu shows and that you type"), and a plugin skill's `name` deliberately replaces the last command segment, so the rule is scoped out for Claude Code skills.
-**Detection**: owning client is not Claude Code AND name field does not match directory containing SKILL.md
+**Detection**: owning client is not Claude Code AND name field does not match directory containing SKILL.md. Warning for OpenCode skills with `[tool_versions] opencode` 2.x or later ("The frontmatter name is only a display label").
 **Fix**: Manual fix required - rename directory or update name field
-**Source**: agentskills.io/specification, code.claude.com/docs/en/skills
+**Source**: agentskills.io/specification, code.claude.com/docs/en/skills, opencode.ai/v2/docs/skills
 
 <a id="as-020"></a>
 ### AS-020 [LOW] Skill Description Lacks a When-to-Use Trigger
@@ -221,7 +221,7 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 <a id="as-021"></a>
 ### AS-021 [MEDIUM] SKILL.md Body Exceeds 5,000 Tokens
 **Requirement**: The SKILL.md body SHOULD stay under 5,000 tokens ("**Instructions** (< 5000 tokens recommended)"; "recommends keeping `SKILL.md` under 500 lines and 5,000 tokens"). Cline: "Keep SKILL.md under 5k tokens." Claude Code keeps only "the first 5,000 tokens of each" invoked skill after compaction.
-**Detection**: Body characters / 4 (an agnix estimate) above 5,000. Not reported when AS-012 already reports the file (over 500 lines).
+**Detection**: Body characters / 4 (an agnix estimate) above 5,000. Not reported when AS-012 already reports the file (over 500 lines). For Claude Code skills the suggestion adds the compaction limit.
 **Fix**: No auto-fix - move detail into references/ files and say when to read each one
 **Source**: agentskills.io/specification, agentskills.io/skill-creation/best-practices
 
@@ -1646,7 +1646,7 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 <a id="mcp-009"></a>
 ### MCP-009 [HIGH] Missing command for stdio server
 **Requirement**: Stdio MCP servers MUST have a `command`. The MCP specification defines no client configuration file; the `mcpServers` map and its fields are each client's format. Cursor: "**command** | Yes | Command to start the server executable."; Claude Code: "Claude Code reads an entry with no `type` as a stdio server, so a `url` entry without a `type` fails."
-**Detection**: Server entry has `type: "stdio"` (or Copilot's `local`), or omits `type` and has no usable `command`. A URL-only entry is read as remote in `.cursor/mcp.json` (Cursor's documented remote form), a Kiro power `mcp.json`, and an Amp skill's sibling `mcp.json`.
+**Detection**: Server entry has `type: "stdio"` (or Copilot's `local`), or omits `type` and has no usable `command`. A URL-only entry is read as remote in `.cursor/mcp.json` (Cursor's documented remote form), a Kiro power `mcp.json`, an Amp skill's sibling `mcp.json`, and a Codex plugin's `.mcp.json` (next to `.codex-plugin/plugin.json`, not in a Claude Code plugin). Without a `type`, the message says the entry defaults to stdio, and for a `url` entry asks for a `type`.
 **Fix**: Add a `command` field specifying the executable to run
 **Source**: code.claude.com/docs/en/mcp, cursor.com/docs/mcp, code.visualstudio.com MCP configuration, geminicli.com/docs/tools/mcp-server
 
@@ -4107,18 +4107,9 @@ agent: reviewer
 <a id="xp-006"></a>
 ### XP-006 [LOW] Several Tools' Instruction Files Without a Note
 **Requirement**: When instruction files for several tools exist (CLAUDE.md, AGENTS.md, Cursor rules, Copilot instructions, GEMINI.md, .clinerules), they SHOULD be kept consistent. An agnix heuristic. Each tool applies its own precedence: Claude Code "All discovered files are concatenated into context rather than overriding each other"; Codex "concatenates files from the root down"; Cursor "Team Rules → Project Rules → User Rules"; agents.md "The closest AGENTS.md to the edited file wins". VS Code: "Do not depend on a file order or precedence rule to resolve conflicts".
-**Detection**: Instruction files of two or more different kinds (several files of one kind, such as nested AGENTS.md, are that tool's own hierarchy) and none mentions precedence, priority, override or hierarchy. Files with identical content count once; files in `.opencode/` are agents, commands and skills, not instruction layers. Info level.
+**Detection**: Instruction files of two or more different kinds (several files of one kind, such as nested AGENTS.md, are that tool's own hierarchy) and none mentions precedence, priority, override or hierarchy. Files with identical content count once; files in `.opencode/` are agents, commands and skills, and `.github/copilot/` settings and hook files configure Copilot; neither is an instruction layer. Info level.
 **Fix**: Keep the files consistent, or say which tool each file is for
 **Source**: community heuristic; code.visualstudio.com custom instructions, code.claude.com/docs/en/memory, cursor.com/docs/rules
-
-<a id="xp-007"></a>
-### XP-007 [MEDIUM] AGENTS.md Exceeds Codex Byte Limit
-**Requirement**: AGENTS.md SHOULD stay under Codex CLI's 32768-byte `project_doc_max_bytes` default ("stops adding files once the combined size reaches the limit defined by `project_doc_max_bytes` (32 KiB by default)"). `AGENTS.override.md` is checked too, since Codex reads it first in each directory and it draws on the same budget. Codex states the cap in bytes. Runs only when Codex is in scope (the rule's tool, `tools` or `--target`).
-**Detection**: Check byte length of `AGENTS.md` / `AGENTS.override.md` content against the 32768-byte threshold. The documented cap is cumulative across the root-to-cwd chain; that dimension is covered by [XP-009](#xp-009), while this rule catches a single file that blows the limit on its own.
-
-Known asymmetry with XP-009: this is a per-file validator, so it has no view of which files Codex actually loads. An `AGENTS.md` shadowed by an `AGENTS.override.md` in the same directory is never read by Codex, and XP-009 correctly excludes its bytes - but XP-007 still reports it on size alone.
-**Fix**: Trim the file, move directory-specific guidance into nested AGENTS.md files closer to the code ("Raise the limit or split instructions across nested directories when you hit the cap."), or raise `project_doc_max_bytes`. Codex does not expand `@import` lines, so splitting into imported files drops the content.
-**Source**: learn.chatgpt.com/docs/agent-configuration/agents-md
 
 <a id="xp-008"></a>
 ### XP-008 [MEDIUM] CLAUDE.md @-Imports Cursor Does Not Inline
@@ -4126,13 +4117,6 @@ Known asymmetry with XP-009: this is a per-file validator, so it has no view of 
 **Detection**: CLAUDE.md, when Cursor is in scope: selected with `tools` or `--target`, or unscoped with `.cursor/` or `.cursorrules` next to the file or above it. Each `@path` reference outside code and outside a Claude-specific section.
 **Fix**: No auto-fix - put the instructions Cursor needs in CLAUDE.md itself or in `.cursor/rules/`, and keep `@` imports for Claude Code
 **Source**: cursor.com/help/customization/rules, cursor.com/docs/rules
-
-<a id="xp-009"></a>
-### XP-009 [MEDIUM] Codex Instruction Chain Exceeds project_doc_max_bytes
-**Requirement**: The *combined* size of the Codex instruction chain SHOULD stay under the 32768-byte `project_doc_max_bytes` default. The cap is cumulative, not per-file - Codex "stops adding files once the combined size reaches the limit", so a project split across several mid-size files is truncated even when every individual file passes XP-007. Runs only when Codex is in scope.
-**Detection**: Project-level check. Builds **one chain per leaf directory** the way Codex discovers them - start at the project root, walk down, at most one file per directory, preferring `AGENTS.override.md` over `AGENTS.md` - then sums each chain independently and reports on the largest file in a chain over the limit. Sibling subtrees are separate chains and are never summed together. A leaf inside a nested Git repository starts its chain at that repository, since Codex starts at the Git root. A chain of one file over the cap is left to XP-007. `project_doc_fallback_filenames` lives in the user's Codex config, so a project using fallbacks has a longer real chain and this check under-reports rather than over-reports.
-**Fix**: Manual - trim the chain, or raise `project_doc_max_bytes` in the Codex config
-**Source**: learn.chatgpt.com/docs/agent-configuration/agents-md
 
 <a id="xp-sk-001"></a>
 ### XP-SK-001 [LOW] Skill Uses Client-Specific Features
@@ -4364,7 +4348,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Codex Skills | 1 | 0 | 1 | 0 | 1 |
 | GitHub Copilot | 25 | 13 | 9 | 3 | 12 |
 | Copilot Skills | 1 | 0 | 1 | 0 | 1 |
-| Cross-Platform | 13 | 0 | 8 | 5 | 0 |
+| Cross-Platform | 11 | 0 | 6 | 5 | 0 |
 | Cursor | 20 | 10 | 9 | 1 | 6 |
 | Cursor Skills | 1 | 0 | 1 | 0 | 1 |
 | Gemini Agents | 1 | 1 | 0 | 0 | 0 |
@@ -4390,7 +4374,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **553** | **236** | **248** | **69** | **135** |
+| **TOTAL** | **551** | **236** | **246** | **69** | **135** |
 
 
 ---
@@ -4420,8 +4404,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 553 validation rules across 42 categories
+**Total Coverage**: 551 validation rules across 42 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 236 HIGH, 248 MEDIUM, 69 LOW
-**Auto-Fixable**: 135 rules (24%)
+**Certainty**: 236 HIGH, 246 MEDIUM, 69 LOW
+**Auto-Fixable**: 135 rules (25%)

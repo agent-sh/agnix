@@ -1515,14 +1515,13 @@ fn test_tools_array_kiro_only() {
 
 /// Rules that name one vendor in rules.json are gated on that vendor even when
 /// their ID prefix also holds generic rules. Before 0.59 the filter read only
-/// TOOL_RULE_PREFIXES, so AGM-003 (Windsurf), XP-007/XP-009 (Codex), AS-009
-/// (Codex), AS-015 and MCP-025/MCP-026 (Claude Code) ran for every tool.
+/// TOOL_RULE_PREFIXES, so AGM-003 (Windsurf), AS-009 (Codex), AS-015 and
+/// MCP-025/MCP-026 (Claude Code) ran for every tool. (XP-007 and XP-009, the
+/// Codex byte limits, were gated the same way until they were retired.)
 #[test]
 fn test_tools_array_gates_vendor_rules_in_mixed_prefixes() {
     let vendor_rules = [
         ("AGM-003", "windsurf"),
-        ("XP-007", "codex"),
-        ("XP-009", "codex"),
         ("AS-009", "codex"),
         ("AS-015", "claude-code"),
         ("MCP-025", "claude-code"),
@@ -1566,13 +1565,13 @@ fn test_tools_array_gates_vendor_rules_in_mixed_prefixes() {
 fn test_target_gates_vendor_rules_in_mixed_prefixes() {
     let mut codex = LintConfig::default();
     dm(&mut codex).target = TargetTool::Codex;
-    assert!(codex.is_rule_enabled("XP-007"));
+    assert!(codex.is_rule_enabled("AS-009"));
     assert!(!codex.is_rule_enabled("AGM-003"));
 
     let mut cursor = LintConfig::default();
     dm(&mut cursor).target = TargetTool::Cursor;
-    assert!(!cursor.is_rule_enabled("XP-007"));
-    assert!(!cursor.is_rule_enabled("XP-009"));
+    assert!(!cursor.is_rule_enabled("AS-009"));
+    assert!(!cursor.is_rule_enabled("AGM-003"));
 }
 
 #[test]

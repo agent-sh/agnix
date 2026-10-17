@@ -1224,7 +1224,7 @@ pub fn validate_paths_with_registry(
         }
     }
 
-    // Run project-level checks (AGM-008/009, AS-025, XP-004/005/006, XP-009, VER-001)
+    // Run project-level checks (AGM-008/009, AS-025, XP-004/005/006, VER-001)
     diagnostics.extend(run_project_level_checks_with_panic_guard(&root_dir, || {
         agents_md_paths.sort();
         instruction_file_paths.sort();

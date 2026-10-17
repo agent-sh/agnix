@@ -89,6 +89,7 @@ rules:
     claude_refused: 'Claude Code refuses the skill name ''%{name}'': it contains %{what}'
     claude_upload: Name '%{name}' is not lowercase kebab-case; Claude Code loads it, but the Claude API and claude.ai require
       lowercase letters, numbers and hyphens (at most 64)
+    opencode_2: "Skill name '%{name}' is not lowercase kebab-case; OpenCode 2 takes the skill ID from the file path and accepts it, but OpenCode 1 and other clients reject it"
   as_005:
     message: Name '%{name}' cannot start or end with hyphen
     suggestion: Remove leading/trailing hyphens from the name
@@ -123,6 +124,7 @@ rules:
   as_017:
     message: Skill name '%{name}' must match parent directory '%{directory}'
     suggestion: Rename the skill directory or update the name field so they match
+    opencode_2: "Skill name '%{name}' does not match directory '%{directory}'; OpenCode 2 uses the directory as the skill ID and the name only as a label, but OpenCode 1 and other clients require them to match"
   as_020:
     message: Skill description says what the skill does but not when to use it
     suggestion: Add a trigger such as 'Use when ...' so the agent knows when to load the skill
@@ -131,6 +133,7 @@ rules:
   as_021:
     message: SKILL.md body is about %{tokens} tokens; the Agent Skills spec recommends instructions under %{limit} tokens
     suggestion: Move detail into references/ files and say when to read each one
+    claude_suggestion: Move detail into references/ files and say when to read each one; after compaction Claude Code re-attaches only the first 5,000 tokens of an invoked skill, so keep the steps that must survive near the top
   as_022:
     message: Script '%{script}' prompts for interactive input (%{pattern}); agents run non-interactive shells, so it hangs
     suggestion: Accept input through command-line flags, environment variables or stdin
@@ -340,6 +343,9 @@ rules:
   mcp_009:
     message: Server '%{server}' has type 'stdio' but is missing required 'command' field
     suggestion: Add a 'command' field specifying the executable to run
+    no_type: Server '%{server}' has no 'type' and no 'command'; an entry without a type is a stdio server, which needs a command
+    url_without_type: Server '%{server}' has a 'url' but no 'type'; an entry without a type is read as a stdio server, so the client skips it
+    url_without_type_suggestion: 'Add "type": "http" (or "sse" / "ws") to match the endpoint'
   mcp_010:
     message: Server '%{server}' has type '%{server_type}' but is missing required 'url' field
     suggestion: Add a 'url' field specifying the server endpoint
@@ -559,17 +565,10 @@ rules:
     suggestion: Each tool applies its own precedence (Claude Code concatenates its files, Codex reads AGENTS.md from the root
       down, Cursor applies Team, Project, then User rules). Keep the files consistent instead of relying on precedence, or
       say which tool each file is for
-  xp_007:
-    message: AGENTS.md exceeds Codex CLI byte limit (%{bytes} bytes, max %{limit})
-    suggestion: Trim the file, move directory-specific guidance into nested AGENTS.md files closer to the code, or raise
-      project_doc_max_bytes in the Codex config
   xp_008:
     message: 'Cursor does not inline @-imports from CLAUDE.md: ''%{reference}'' is only a pointer there, so its content is missing
       for Cursor'
     suggestion: Put the instructions Cursor needs in CLAUDE.md itself or in .cursor/rules/, and keep @-imports for Claude Code
-  xp_009:
-    message: 'Codex instruction chain reaches %{bytes} bytes across %{count} file(s), past the %{limit}-byte project_doc_max_bytes default. Codex stops appending once the combined size hits the limit, so this file and any deeper ones are dropped.'
-    suggestion: Trim the chain, or raise project_doc_max_bytes in the Codex config (e.g. project_doc_max_bytes = 65536)
   cop_001:
     message_empty: Copilot instruction file is empty
     message_no_content: Copilot instruction file has no content after frontmatter

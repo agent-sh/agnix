@@ -59,8 +59,8 @@ impl<'a> DefaultRuleFilter<'a> {
     ///
     /// The tool comes from the rule's own `evidence.applies_to.tool` in
     /// rules.json. Gating by ID prefix alone let vendor rules in mixed
-    /// families run for every tool: AGM-003 (Windsurf) and XP-007/XP-009
-    /// (Codex) share their prefixes with generic rules, so TOOL_RULE_PREFIXES
+    /// families run for every tool: AGM-003 (Windsurf) and AS-009 (Codex)
+    /// share their prefixes with generic rules, so TOOL_RULE_PREFIXES
     /// never lists them. The prefix table and the CC-* convention remain the
     /// fallback for IDs rules.json does not know (or that name no tool).
     fn is_rule_for_tool(rule_id: &str, selected: impl Fn(&str) -> bool) -> bool {
@@ -74,8 +74,9 @@ impl<'a> DefaultRuleFilter<'a> {
             }
         }
 
-        // CC-* rules are Claude Code's by naming convention, also in a family the
-        // prefix table leaves out because one rule names no tool (CC-MEM-007).
+        // CC-* rules are Claude Code's by naming convention: this covers CC-*
+        // IDs rules.json does not know, and any CC-* family the prefix table
+        // leaves out because one of its rules names no tool.
         if rule_id.starts_with("CC-") {
             return selected("claude-code");
         }

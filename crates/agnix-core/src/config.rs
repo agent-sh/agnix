@@ -57,6 +57,13 @@ pub struct ToolVersions {
         description = "Kiro CLI version for version-aware validation (e.g., \"2.32.1\"). 2.x selects the V2 agent engine and 3.x or later the V3 engine; unpinned, each Kiro file is checked against the engines its own fields target"
     )]
     pub kiro: Option<String>,
+
+    /// OpenCode version (e.g., "1.19.3" or "2.0.32")
+    #[serde(default)]
+    #[schemars(
+        description = "OpenCode version for version-aware validation (e.g., \"2.0.32\"). 1.x selects OpenCode 1 behavior and 2.x or later OpenCode 2; unpinned, each OpenCode file is checked against the line its own fields target"
+    )]
+    pub opencode: Option<String>,
 }
 
 /// Specification revision pinning for version-aware validation
@@ -1296,6 +1303,12 @@ impl LintConfig {
     #[inline]
     pub fn get_kiro_version(&self) -> Option<&str> {
         self.data.tool_versions.kiro.as_deref()
+    }
+
+    /// Get the pinned OpenCode version, if any
+    #[inline]
+    pub fn get_opencode_version(&self) -> Option<&str> {
+        self.data.tool_versions.opencode.as_deref()
     }
 }
 

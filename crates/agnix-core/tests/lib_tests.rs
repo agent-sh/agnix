@@ -1859,10 +1859,7 @@ fn test_agm_003_over_char_limit() {
     .unwrap();
     let result = validate_project(temp.path(), &kiro).unwrap();
     assert!(
-        result
-            .diagnostics
-            .iter()
-            .all(|d| d.rule != "AGM-003" && d.rule != "XP-007" && d.rule != "XP-009"),
+        result.diagnostics.iter().all(|d| d.rule != "AGM-003"),
         "{:?}",
         result.diagnostics
     );

@@ -1,7 +1,7 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 553,
+  "total_rules": 551,
   "last_updated": "2026-10-17",
   "schema": {
     "evidence": {
@@ -465,7 +465,8 @@
         "source_urls": [
           "https://agentskills.io/specification",
           "https://code.claude.com/docs/en/skills",
-          "https://platform.claude.com/docs/en/build-with-claude/skills-guide"
+          "https://platform.claude.com/docs/en/build-with-claude/skills-guide",
+          "https://opencode.ai/v2/docs/skills"
         ],
         "verified_on": "2026-10-17",
         "applies_to": {
@@ -493,7 +494,8 @@
       "evidence": {
         "source_type": "spec",
         "source_urls": [
-          "https://agentskills.io/specification"
+          "https://agentskills.io/specification",
+          "https://opencode.ai/v2/docs/skills"
         ],
         "verified_on": "2026-10-17",
         "applies_to": {
@@ -521,7 +523,8 @@
       "evidence": {
         "source_type": "spec",
         "source_urls": [
-          "https://agentskills.io/specification"
+          "https://agentskills.io/specification",
+          "https://opencode.ai/v2/docs/skills"
         ],
         "verified_on": "2026-10-17",
         "applies_to": {
@@ -552,7 +555,8 @@
           "https://agentskills.io/specification",
           "https://code.claude.com/docs/en/skills",
           "https://code.claude.com/docs/en/settings-reference",
-          "https://platform.claude.com/docs/en/build-with-claude/skills-guide"
+          "https://platform.claude.com/docs/en/build-with-claude/skills-guide",
+          "https://opencode.ai/v2/docs/skills"
         ],
         "verified_on": "2026-10-17",
         "applies_to": {
@@ -761,7 +765,8 @@
         "source_type": "spec",
         "source_urls": [
           "https://agentskills.io/specification",
-          "https://code.claude.com/docs/en/skills"
+          "https://code.claude.com/docs/en/skills",
+          "https://opencode.ai/v2/docs/skills"
         ],
         "verified_on": "2026-10-17",
         "applies_to": {
@@ -14323,64 +14328,6 @@
       "bad_example": "# CLAUDE.md\n\n## Code Style\n- Use TypeScript\n- Follow ESLint rules\n\n# AGENTS.md (separate file, same project)\n\n## Code Style\n- Use JavaScript\n- Follow Prettier rules"
     },
     {
-      "id": "XP-007",
-      "name": "AGENTS.md Exceeds Codex Byte Limit",
-      "description": "Codex CLI stops adding AGENTS.md content once the combined size reaches project_doc_max_bytes (32 KiB by default), so a larger file is truncated.",
-      "severity": "MEDIUM",
-      "category": "cross-platform",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://learn.chatgpt.com/docs/agent-configuration/agents-md"
-        ],
-        "verified_on": "2026-10-17",
-        "applies_to": {
-          "tool": "codex"
-        },
-        "normative_level": "SHOULD",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": false
-      },
-      "good_example": "# AGENTS.md\n\n## Overview\nConcise project instructions under 32KB.\n\n## Commands\n- npm run build\n- npm run test",
-      "bad_example": "# AGENTS.md\n\n(content exceeding 32768 bytes - will be truncated by Codex CLI)"
-    },
-    {
-      "id": "XP-009",
-      "name": "Codex Instruction Chain Exceeds project_doc_max_bytes",
-      "severity": "MEDIUM",
-      "category": "cross-platform",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://learn.chatgpt.com/docs/agent-configuration/agents-md"
-        ],
-        "verified_on": "2026-10-17",
-        "applies_to": {
-          "tool": "codex",
-          "file_types": [
-            "agents-md"
-          ]
-        },
-        "normative_level": "SHOULD",
-        "tests": {
-          "unit": true,
-          "fixtures": false,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": false
-      },
-      "good_example": "# Root AGENTS.md (8 KB)\\n\\nProject conventions.\\n\\n# nested/AGENTS.md (6 KB)\\n\\nModule specifics. Combined 14 KB, under the 32768-byte cap.",
-      "bad_example": "# Root AGENTS.md (20 KB)\\n\\n# api/AGENTS.md (10 KB)\\n\\n# api/v2/AGENTS.md (8 KB)\\n\\nCombined 38 KB: Codex stops appending once the running total passes 32768, so api/v2 is silently dropped."
-    },
-    {
       "id": "XP-008",
       "name": "CLAUDE.md @-Imports Cursor Does Not Inline",
       "description": "Cursor reads CLAUDE.md the same way it reads AGENTS.md, but @-references there are pointers: the file's contents are not inlined, so content behind a Claude Code import is missing for Cursor.",
@@ -16158,7 +16105,7 @@
     },
     "cross-platform": {
       "prefix": "XP",
-      "count": 13,
+      "count": 11,
       "description": "Cross-platform compatibility rules"
     },
     "cursor-skills": {

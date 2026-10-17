@@ -139,7 +139,7 @@ Rule IDs follow the format `[PREFIX]-[NUMBER]` where the prefix indicates the ru
 | `WS-` | 4 | WS-001 through WS-004 |
 | `WS-SK-` | 1 | WS-SK-001 |
 | `XML-` | 3 | XML-001 through XML-003 |
-| `XP-` | 9 | XP-001 through XP-009 |
+| `XP-` | 7 | XP-001 through XP-006, XP-008 |
 | `XP-SK-` | 4 | XP-SK-001 through XP-SK-004 |
 
 To find the next available number for a prefix, check `knowledge-base/rules.json` for the highest existing number in that prefix group and increment by one.

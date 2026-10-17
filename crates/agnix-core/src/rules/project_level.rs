@@ -1,5 +1,5 @@
 //! Project-level cross-file validation rules (AGM-008, AGM-009, AS-025,
-//! XP-004/005/006, XP-009, VER-001).
+//! XP-004/005/006, VER-001).
 // All items in this module require the filesystem feature. The file-level inner
 // attribute avoids repeating #[cfg(feature = "filesystem")] on each import and
 // function - unlike pipeline.rs, this file has no non-filesystem items.
@@ -15,7 +15,6 @@ use crate::diagnostics::Diagnostic;
 use crate::file_utils;
 use crate::parsers::frontmatter::normalize_line_endings;
 use crate::schemas;
-use crate::schemas::cross_platform::CODEX_BYTE_LIMIT;
 
 /// Run project-level checks that require cross-file analysis.
 ///
@@ -249,6 +248,7 @@ pub(crate) fn run_project_level_checks(
             || config.tool_versions().cursor.is_some()
             || config.tool_versions().copilot.is_some()
             || config.tool_versions().kiro.is_some()
+            || config.tool_versions().opencode.is_some()
             || config.is_mcp_revision_pinned()
             || config.spec_revisions().agent_skills_spec.is_some()
             || config.spec_revisions().agents_md_spec.is_some();
@@ -265,108 +265,6 @@ pub(crate) fn run_project_level_checks(
                 diagnostics.push(
                     Diagnostic::info(report_path, 1, 0, "VER-001", t!("rules.ver_001.message"))
                         .with_suggestion(t!("rules.ver_001.suggestion")),
-                );
-            }
-        }
-    }
-
-    // XP-009: the Codex instruction chain exceeds `project_doc_max_bytes`.
-    //
-    // XP-007 checks each AGENTS.md against the 32 KiB default in isolation, but
-    // the documented cap is cumulative: Codex "stops adding files once the
-    // combined size reaches the limit defined by `project_doc_max_bytes`". A
-    // project split across several mid-size files is therefore truncated with no
-    // per-file diagnostic - the gap recorded in the XP-007 rule docs.
-    //
-    // Modelled on the documented discovery rules: start at the project root,
-    // walk down, take at most one file per directory in the order
-    // `AGENTS.override.md`, `AGENTS.md`, then any configured
-    // `project_doc_fallback_filenames`. Names outside that set "are ignored for
-    // instruction discovery" and so do not count.
-    if config.is_rule_enabled("XP-009") {
-        // One chain per leaf directory, not one total for the whole tree.
-        //
-        // A Codex chain is a single root-to-cwd path: two sibling packages are
-        // never concatenated. Summing every discovered file into one running
-        // total blamed a sibling for bytes it does not share - and it scaled the
-        // wrong way, since N packages would eventually cross the cap no matter
-        // how small each one is. Nested AGENTS.md is a supported hierarchy, which
-        // recommends splitting across nested directories precisely to stay under
-        // this cap.
-        let chains =
-            codex_instruction_chains(instruction_file_paths, root_dir, config.fs().as_ref());
-
-        // Attribute each over-cap chain to the *largest* file in it, not to the
-        // file where the running total happens to cross.
-        //
-        // Those differ, and the difference matters: a 30 KB root with twenty 5 KB
-        // packages crosses inside each package, so blaming the crossing file
-        // produced twenty diagnostics against twenty 5 KB files for a problem
-        // that only trimming the 30 KB root fixes. Trimming any one of them
-        // removes 5 KB from a chain that needs 30 KB removed, and the suggestion
-        // points at the file it names. Attributing to the biggest contributor
-        // names the one edit that resolves every affected chain, and collapses
-        // those twenty reports into one.
-        let mut reported: BTreeMap<PathBuf, (usize, usize)> = BTreeMap::new();
-
-        for chain in &chains {
-            let mut sizes: Vec<(PathBuf, usize)> = Vec::with_capacity(chain.len());
-            let mut total = 0usize;
-            for path in chain {
-                let Ok(content) = config.fs().read_to_string(path) else {
-                    continue;
-                };
-                total += content.len();
-                sizes.push((path.clone(), content.len()));
-            }
-
-            if total <= CODEX_BYTE_LIMIT {
-                continue;
-            }
-
-            // A one-file chain over the cap is exactly what XP-007 reports for
-            // that file, so XP-009 would only repeat it.
-            if let [only] = chain.as_slice()
-                && config.for_path(only).is_rule_enabled("XP-007")
-            {
-                continue;
-            }
-
-            // Largest first, then shallowest, so the choice is deterministic when
-            // two files tie.
-            let Some((culprit, _)) = sizes
-                .iter()
-                .max_by_key(|(path, size)| (*size, std::cmp::Reverse(path.components().count())))
-            else {
-                continue;
-            };
-
-            reported
-                .entry(culprit.clone())
-                .and_modify(|entry| {
-                    if total > entry.0 {
-                        *entry = (total, chain.len());
-                    }
-                })
-                .or_insert((total, chain.len()));
-        }
-
-        for (report_path, (running_total, chain_len)) in reported {
-            if config.for_path(&report_path).is_rule_enabled("XP-009") {
-                diagnostics.push(
-                    Diagnostic::warning(
-                        report_path,
-                        1,
-                        1,
-                        "XP-009",
-                        t!(
-                            "rules.xp_009.message",
-                            bytes = running_total,
-                            limit = CODEX_BYTE_LIMIT,
-                            count = chain_len
-                        ),
-                    )
-                    .with_suggestion(t!("rules.xp_009.suggestion")),
                 );
             }
         }
@@ -587,7 +485,9 @@ fn check_duplicate_skill_names(
     }
 }
 
-/// Build every Codex instruction chain for XP-009, one per leaf directory.
+/// Build every Codex instruction chain, one per leaf directory. XP-009 used
+/// this before it was retired; the Codex rule that replaces it (CDX-AG-010)
+/// calls it.
 ///
 /// A chain is a single root-to-directory path: "Starting at the project root
 /// (typically the Git root), Codex walks down to your current working
@@ -599,7 +499,8 @@ fn check_duplicate_skill_names(
 /// Only files the project walk already collected are considered, so this adds no
 /// filesystem traversal. Each chain is returned root-first, the order Codex
 /// concatenates in.
-fn codex_instruction_chains(
+#[cfg_attr(not(test), allow(dead_code))]
+pub(crate) fn codex_instruction_chains(
     instruction_file_paths: &[PathBuf],
     root_dir: &Path,
     fs: &dyn crate::fs::FileSystem,
@@ -843,6 +744,40 @@ mod tests {
             temp.path(),
         );
         assert!(diagnostics.iter().all(|d| d.rule != "AGM-009"));
+    }
+
+    /// The Codex chain builder (used by CDX-AG-010 after XP-009's retirement):
+    /// one chain per leaf directory, at most one file per directory with
+    /// `AGENTS.override.md` (any case) ahead of `AGENTS.md`, sibling subtrees
+    /// apart, and a nested Git repository starting its own chain.
+    #[test]
+    fn test_codex_instruction_chains() {
+        let fs = crate::fs::MockFileSystem::new();
+        let root = Path::new("/repo");
+        let files = [
+            "/repo/AGENTS.md",
+            "/repo/api/AGENTS.md",
+            "/repo/api/agents.override.md",
+            "/repo/web/AGENTS.md",
+            "/repo/sub/AGENTS.md",
+            "/repo/sub/x/AGENTS.md",
+        ];
+        for file in files {
+            fs.add_file(file, "x");
+        }
+        fs.add_dir("/repo/sub/.git");
+        let paths: Vec<PathBuf> = files.iter().map(PathBuf::from).collect();
+        let mut chains = codex_instruction_chains(&paths, root, &fs);
+        chains.sort();
+        let expected: Vec<Vec<PathBuf>> = vec![
+            vec![
+                "/repo/AGENTS.md".into(),
+                "/repo/api/agents.override.md".into(),
+            ],
+            vec!["/repo/AGENTS.md".into(), "/repo/web/AGENTS.md".into()],
+            vec!["/repo/sub/AGENTS.md".into(), "/repo/sub/x/AGENTS.md".into()],
+        ];
+        assert_eq!(chains, expected);
     }
 
     #[test]

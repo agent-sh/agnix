@@ -236,7 +236,7 @@ fn main() {
     // Generate RULE_TOOLS: (id, tool) for every rule that names one tool,
     // sorted by id for binary search. The rule filter reads it so a rule
     // naming one vendor is gated on that vendor even when its ID prefix also
-    // holds generic rules (AGM-003, XP-007).
+    // holds generic rules (AGM-003, AS-009).
     // =========================================================================
     let mut rule_tools: Vec<(&str, &str)> = rules_array
         .iter()

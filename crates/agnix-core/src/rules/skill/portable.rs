@@ -515,7 +515,13 @@ impl ValidationContext<'_> {
                     limit = BODY_TOKEN_LIMIT
                 ),
             )
-            .with_suggestion(t!("rules.as_021.suggestion")),
+            // Claude Code re-attaches "the first 5,000 tokens of each"
+            // invoked skill after compaction, so the order matters there.
+            .with_suggestion(if self.client == SkillClient::ClaudeCode {
+                t!("rules.as_021.claude_suggestion")
+            } else {
+                t!("rules.as_021.suggestion")
+            }),
         );
     }
 

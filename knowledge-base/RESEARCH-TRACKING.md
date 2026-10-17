@@ -72,7 +72,7 @@ Authoritative sources monitored for changes that may affect validation rules.
 
 | Source | URL | Watch Method | Rules Affected |
 |--------|-----|-------------|----------------|
-| Claude Code - Memory and AGENTS.md | https://code.claude.com/docs/en/memory | spec-drift.yml (weekly) | AGM-001 through AGM-005, XP-001 through XP-009, CC-MEM-001 through CC-MEM-010 |
+| Claude Code - Memory and AGENTS.md | https://code.claude.com/docs/en/memory | spec-drift.yml (weekly) | AGM-001 through AGM-005, XP-001 through XP-008, CC-MEM-001 through CC-MEM-010 |
 | Claude Code - Hooks | https://code.claude.com/docs/en/hooks | spec-drift.yml (weekly) | CC-HK-001 through CC-HK-028 |
 | Claude Code - Skills | https://code.claude.com/docs/en/skills | spec-drift.yml (weekly) | CC-SK-001 through CC-SK-022 |
 | Claude Code - Plugins | https://code.claude.com/docs/en/plugins-reference | spec-drift.yml (weekly) | CC-PL-001 through CC-PL-015 |

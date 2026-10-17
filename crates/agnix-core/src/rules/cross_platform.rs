@@ -4,22 +4,23 @@
 //! - XP-001: AGENTS.md content that not every reader uses (info)
 //! - XP-002: AGENTS.md heading hierarchy (info)
 //! - XP-003: Hard-coded user home paths in files agents load (warning)
-//! - XP-007: AGENTS.md exceeds Codex CLI byte limit (warning)
 //! - XP-008: CLAUDE.md @-imports that Cursor does not inline (warning)
+//!
+//! XP-007 and XP-009 (Codex's `project_doc_max_bytes`) were retired for the
+//! Codex rules that report the same limits with Codex's own fix text.
 
 use crate::{
     config::{LintConfig, PerFileLintConfig, TargetTool},
     diagnostics::Diagnostic,
     rules::{Validator, ValidatorMetadata},
     schemas::cross_platform::{
-        CODEX_BYTE_LIMIT, FeatureKind, check_byte_limit, check_markdown_structure,
-        find_claude_specific_features, find_hard_coded_paths,
+        FeatureKind, check_markdown_structure, find_claude_specific_features, find_hard_coded_paths,
     },
 };
 use rust_i18n::t;
 use std::path::Path;
 
-const RULE_IDS: &[&str] = &["XP-001", "XP-002", "XP-003", "XP-007", "XP-008"];
+const RULE_IDS: &[&str] = &["XP-001", "XP-002", "XP-003", "XP-008"];
 
 /// Tools that expand `@path` references in AGENTS.md: Amp ("To include other
 /// files as context, @-mention them in agent files"), Copilot CLI ("use `@`
@@ -173,37 +174,6 @@ impl Validator for CrossPlatformValidator {
                         ),
                     )
                     .with_suggestion(t!("rules.xp_003.suggestion")),
-                );
-            }
-        }
-
-        // XP-007: AGENTS.md exceeds Codex byte limit (WARNING)
-        //
-        // `AGENTS.override.md` is included: Codex reads it *first* in each
-        // directory ("AGENTS.override.md, then AGENTS.md, then
-        // project_doc_fallback_filenames"), so it counts against the same
-        // `project_doc_max_bytes` budget. Codex states the cap in bytes, so
-        // this counts bytes.
-        //
-        // Note this remains a per-file check while the documented cap is
-        // cumulative across the root-to-cwd chain; XP-009 covers the chain.
-        if config.is_rule_enabled("XP-007")
-            && matches!(filename, "AGENTS.md" | "AGENTS.override.md")
-        {
-            if let Some(exceeded) = check_byte_limit(content, CODEX_BYTE_LIMIT) {
-                diagnostics.push(
-                    Diagnostic::warning(
-                        path.to_path_buf(),
-                        1,
-                        1,
-                        "XP-007",
-                        t!(
-                            "rules.xp_007.message",
-                            bytes = exceeded.byte_count,
-                            limit = exceeded.limit
-                        ),
-                    )
-                    .with_suggestion(t!("rules.xp_007.suggestion")),
                 );
             }
         }
@@ -415,31 +385,13 @@ mod tests {
         );
     }
 
-    // ===== XP-007 =====
-
+    /// The coordinator's case: with `tools = ["kiro"]`, Windsurf's AGENTS.md
+    /// limit must not fire. (Codex's limits, XP-007 and XP-009, are retired.)
     #[test]
-    fn test_xp_007_suggestion_does_not_recommend_import() {
-        let content = "x".repeat(CODEX_BYTE_LIMIT + 1);
-        let diagnostics = run("AGENTS.md", &content, &LintConfig::default());
-        let xp_007 = rules(&diagnostics, "XP-007");
-        assert_eq!(xp_007.len(), 1);
-        let suggestion = xp_007[0].suggestion.as_deref().unwrap_or_default();
-        // Codex does not expand @import; content behind one is never loaded.
-        assert!(!suggestion.contains("@import"), "{suggestion}");
-        assert!(
-            suggestion.contains("nested AGENTS.md") && suggestion.contains("project_doc_max_bytes")
-        );
-    }
-
-    /// The coordinator's case: with `tools = ["kiro"]`, Codex's and Windsurf's
-    /// AGENTS.md limits must not fire.
-    #[test]
-    fn test_xp_007_not_enabled_for_kiro_only() {
+    fn test_agm_003_not_enabled_for_kiro_only() {
         let config = with_tools(&["kiro"]);
-        assert!(!config.is_rule_enabled("XP-007"));
-        assert!(!config.is_rule_enabled("XP-009"));
         assert!(!config.is_rule_enabled("AGM-003"));
-        assert!(with_tools(&["codex"]).is_rule_enabled("XP-007"));
+        assert!(with_tools(&["windsurf"]).is_rule_enabled("AGM-003"));
     }
 
     // ===== XP-008 =====

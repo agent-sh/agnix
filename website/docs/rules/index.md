@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `553` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `551` validation rules generated from `knowledge-base/rules.json`.
 `135` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -499,8 +499,6 @@ This section contains all `553` validation rules generated from `knowledge-base/
 | [XP-004](./generated/xp-004.md) | Conflicting Build/Test Commands | MEDIUM | Cross-Platform | No |
 | [XP-005](./generated/xp-005.md) | Conflicting Tool Constraints | MEDIUM | Cross-Platform | No |
 | [XP-006](./generated/xp-006.md) | Several Tools' Instruction Files Without a Note | LOW | Cross-Platform | No |
-| [XP-007](./generated/xp-007.md) | AGENTS.md Exceeds Codex Byte Limit | MEDIUM | Cross-Platform | No |
-| [XP-009](./generated/xp-009.md) | Codex Instruction Chain Exceeds project_doc_max_bytes | MEDIUM | Cross-Platform | No |
 | [XP-008](./generated/xp-008.md) | CLAUDE.md @-Imports Cursor Does Not Inline | MEDIUM | Cross-Platform | No |
 | [XP-SK-001](./generated/xp-sk-001.md) | Skill Uses Client-Specific Features | LOW | Cross-Platform | No |
 | [XP-SK-002](./generated/xp-sk-002.md) | Hardcoded User Directory Path In Skill | MEDIUM | Cross-Platform | No |

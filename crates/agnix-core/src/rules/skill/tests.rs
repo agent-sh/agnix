@@ -5450,6 +5450,22 @@ fn test_as_021_body_over_5000_tokens() {
     let as_021 = rules_named(&diagnostics, "AS-021");
     assert_eq!(as_021.len(), 1, "{diagnostics:?}");
     assert_eq!(as_021[0].level, DiagnosticLevel::Warning);
+    // Claude Code keeps only the first 5,000 tokens after compaction.
+    let diagnostics = SkillValidator.validate(
+        Path::new(".claude/skills/big/SKILL.md"),
+        &content,
+        &LintConfig::default(),
+    );
+    let claude = rules_named(&diagnostics, "AS-021");
+    assert_eq!(claude.len(), 1, "{diagnostics:?}");
+    assert!(
+        claude[0]
+            .suggestion
+            .as_deref()
+            .is_some_and(|s| s.contains("after compaction")),
+        "{:?}",
+        claude[0].suggestion
+    );
     // A long file is AS-012's finding; AS-021 does not repeat it.
     let long = format!(
         "---\nname: big\ndescription: Use when testing\n---\n{}",
@@ -5580,5 +5596,46 @@ fn test_xp_sk_003_and_xp_sk_004() {
             .as_deref()
             .unwrap()
             .contains("scripts/call.py")
+    );
+}
+
+/// OpenCode 2 takes the skill ID from the path and "does not enforce" the
+/// name pattern, the name-directory match or a description length, so with
+/// OpenCode 2 pinned these spec checks are portability warnings. Unpinned
+/// (OpenCode 1 still ships) and with OpenCode 1 pinned they stay errors.
+#[test]
+fn test_opencode_2_pin_downgrades_name_and_description_checks() {
+    let opencode = |version: Option<&str>| {
+        let mut builder = LintConfig::builder();
+        builder.tool_versions(crate::config::ToolVersions {
+            opencode: version.map(str::to_string),
+            ..Default::default()
+        });
+        builder.build().unwrap()
+    };
+    let long = "a".repeat(1100);
+    let content = format!("---\nname: Release_Notes\ndescription: Use when {long}\n---\nBody.\n");
+    let path = Path::new(".opencode/skills/release/SKILL.md");
+    for (version, level) in [
+        (None, DiagnosticLevel::Error),
+        (Some("1.19.3"), DiagnosticLevel::Error),
+        (Some("2.0.32"), DiagnosticLevel::Warning),
+    ] {
+        let diagnostics = SkillValidator.validate(path, &content, &opencode(version));
+        for rule in ["AS-004", "AS-008", "AS-017"] {
+            let hits = rules_named(&diagnostics, rule);
+            assert_eq!(hits.len(), 1, "{rule} {version:?}: {diagnostics:?}");
+            assert_eq!(hits[0].level, level, "{rule} {version:?}");
+        }
+    }
+    // The pin applies to OpenCode skills only.
+    let diagnostics = SkillValidator.validate(
+        Path::new(".cursor/skills/release/SKILL.md"),
+        &content,
+        &opencode(Some("2.0.32")),
+    );
+    assert_eq!(
+        rules_named(&diagnostics, "AS-004")[0].level,
+        DiagnosticLevel::Error
     );
 }

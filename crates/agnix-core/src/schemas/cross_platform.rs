@@ -4,7 +4,6 @@
 //! - XP-001: Features in AGENTS.md that not every AGENTS.md reader uses
 //! - XP-002: AGENTS.md heading hierarchy
 //! - XP-003: Hard-coded user home paths in files agents load
-//! - XP-007: AGENTS.md exceeds Codex CLI byte limit
 //!
 //! ## Security
 //!
@@ -1090,7 +1089,7 @@ pub fn is_instruction_file(path: &Path) -> bool {
         || file_name.eq_ignore_ascii_case("agents.md")
         // Codex checks `AGENTS.override.md` before `AGENTS.md` in each
         // directory, so it is part of the instruction set and counts toward
-        // `project_doc_max_bytes` (XP-007, XP-009).
+        // `project_doc_max_bytes`.
         || file_name.eq_ignore_ascii_case("agents.override.md")
         || file_name.eq_ignore_ascii_case("gemini.md")
         || file_name.eq_ignore_ascii_case("gemini.local.md")
@@ -1140,8 +1139,16 @@ pub fn is_instruction_file(path: &Path) -> bool {
         }
     }
 
-    // .github directory with a copilot-related component after it
-    if found_github && found_copilot_after_github {
+    // .github directory with a copilot-related component after it, Markdown
+    // only: `.github/copilot-instructions.md` is an instruction file, while
+    // `.github/copilot/settings.json` and hook files configure Copilot.
+    if found_github
+        && found_copilot_after_github
+        && Path::new(file_name)
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
+    {
         return true;
     }
 
@@ -1170,32 +1177,14 @@ fn ascii_contains_ignore_case(haystack: &str, needle: &str) -> bool {
 }
 
 // ============================================================================
-// XP-007: AGENTS.md Codex Byte Limit
+// Codex byte limit
 // ============================================================================
 
-/// Codex CLI project_doc_max_bytes default (32 KiB)
+/// Codex CLI `project_doc_max_bytes` default (32 KiB). XP-007 and XP-009 used
+/// it before they were retired; the Codex rules that replace them (CDX-AG-009,
+/// CDX-AG-010) read it, as does the chain builder in `project_level`.
+#[allow(dead_code)]
 pub const CODEX_BYTE_LIMIT: usize = 32_768;
-
-/// Byte limit exceeded result
-#[derive(Debug, Clone)]
-pub struct ByteLimitExceeded {
-    pub byte_count: usize,
-    pub limit: usize,
-}
-
-/// Check if content exceeds a byte limit
-///
-/// Codex CLI has a default `project_doc_max_bytes` of 32768. AGENTS.md files
-/// exceeding this limit will be silently truncated, potentially losing
-/// important instructions.
-pub fn check_byte_limit(content: &str, limit: usize) -> Option<ByteLimitExceeded> {
-    let byte_count = content.len();
-    if byte_count > limit {
-        Some(ByteLimitExceeded { byte_count, limit })
-    } else {
-        None
-    }
-}
 
 #[cfg(test)]
 mod tests {
@@ -2221,6 +2210,15 @@ Use pnpm install for dependencies.
         )));
         assert!(is_instruction_file(&PathBuf::from(".clinerules")));
 
+        // Copilot settings and hooks configure Copilot; they are not
+        // instruction layers for XP-004/005/006.
+        assert!(!is_instruction_file(&PathBuf::from(
+            ".github/copilot/settings.json"
+        )));
+        assert!(!is_instruction_file(&PathBuf::from(
+            ".github/copilot/settings.local.json"
+        )));
+
         assert!(!is_instruction_file(&PathBuf::from("README.md")));
         assert!(!is_instruction_file(&PathBuf::from("src/main.rs")));
     }
@@ -2663,9 +2661,11 @@ Use pnpm install for dependencies.
             is_instruction_file(&PathBuf::from(".github/copilot-instructions.md")),
             ".github/copilot-instructions.md should match"
         );
+        // Copilot settings configure Copilot (and may hold hooks); they are
+        // not an instruction layer, so XP-006 must not count them.
         assert!(
-            is_instruction_file(&PathBuf::from(".github/copilot/settings.json")),
-            ".github/copilot/settings.json should match"
+            !is_instruction_file(&PathBuf::from(".github/copilot/settings.json")),
+            ".github/copilot/settings.json should NOT match"
         );
         // .github without copilot should not match
         assert!(
@@ -3001,37 +3001,5 @@ Use pnpm install for dependencies.
                 file
             );
         }
-    }
-
-    // ===== XP-007: Byte Limit =====
-
-    #[test]
-    fn test_check_byte_limit_under() {
-        let content = "Short content";
-        let result = check_byte_limit(content, CODEX_BYTE_LIMIT);
-        assert!(result.is_none());
-    }
-
-    #[test]
-    fn test_check_byte_limit_exact() {
-        let content = "a".repeat(CODEX_BYTE_LIMIT);
-        let result = check_byte_limit(&content, CODEX_BYTE_LIMIT);
-        assert!(result.is_none(), "Exact limit should not trigger");
-    }
-
-    #[test]
-    fn test_check_byte_limit_over() {
-        let content = "a".repeat(CODEX_BYTE_LIMIT + 1);
-        let result = check_byte_limit(&content, CODEX_BYTE_LIMIT);
-        assert!(result.is_some());
-        let exceeded = result.unwrap();
-        assert_eq!(exceeded.byte_count, CODEX_BYTE_LIMIT + 1);
-        assert_eq!(exceeded.limit, CODEX_BYTE_LIMIT);
-    }
-
-    #[test]
-    fn test_check_byte_limit_empty() {
-        let result = check_byte_limit("", CODEX_BYTE_LIMIT);
-        assert!(result.is_none());
     }
 }

@@ -311,7 +311,11 @@ fn mcp_file_readers(path: &Path) -> &'static [&'static str] {
 /// `tools` names some of them. A file no specific client owns accepts the
 /// union of every client's values.
 fn valid_server_types(path: &Path, config: &PerFileLintConfig<'_>) -> Vec<&'static str> {
-    let readers = mcp_file_readers(path);
+    let readers = if is_codex_plugin_mcp_file(path, config) {
+        &["codex"][..]
+    } else {
+        mcp_file_readers(path)
+    };
     let selected: Vec<&str> = readers
         .iter()
         .copied()
@@ -1923,6 +1927,23 @@ fn is_cursor_mcp_file(path: &Path) -> bool {
             .is_some_and(|name| name.eq_ignore_ascii_case(".cursor"))
 }
 
+/// A Codex plugin's `.mcp.json`: next to `.codex-plugin/plugin.json`, in a
+/// directory that is not also a Claude Code plugin. Codex picks the transport
+/// from the fields present, so an entry with only a `url` is remote.
+fn is_codex_plugin_mcp_file(path: &Path, config: &PerFileLintConfig<'_>) -> bool {
+    let is_dot_mcp = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| name.eq_ignore_ascii_case(".mcp.json"));
+    let Some(dir) = path.parent() else {
+        return false;
+    };
+    let fs = config.fs();
+    is_dot_mcp
+        && fs.exists(&dir.join(".codex-plugin").join("plugin.json"))
+        && !fs.exists(&dir.join(".claude-plugin").join("plugin.json"))
+}
+
 /// A Kiro power's `mcp.json`: inside `.kiro/powers/`, or next to the power's
 /// `POWER.md` or `plugin.json`.
 fn is_kiro_power_mcp_file(path: &Path, config: &PerFileLintConfig<'_>) -> bool {
@@ -2001,9 +2022,10 @@ fn validate_server(
         .and_then(serde_json::Value::as_object)
         .and_then(|obj| obj.get("type"));
 
-    // Cursor documents URL-only remote entries, Kiro picks the transport
-    // from the fields present (a url without a command is remote), and an
-    // Amp skill's sibling `mcp.json` lists remote servers with only a `url`.
+    // Cursor documents URL-only remote entries, Kiro and Codex pick the
+    // transport from the fields present (a url without a command is remote;
+    // a Codex plugin's `.mcp.json`), and an Amp skill's sibling `mcp.json`
+    // lists remote servers with only a `url`.
     // Other clients, including Claude Code, still default an omitted type to
     // stdio ("Claude Code reads an entry with no `type` as a stdio server").
     let effective_type = server
@@ -2016,7 +2038,8 @@ fn validate_server(
                 && server.url.is_some()
                 && (is_cursor_mcp_file(path)
                     || is_kiro_power_mcp_file(path, config)
-                    || is_skill_mcp_file(path, config))
+                    || is_skill_mcp_file(path, config)
+                    || is_codex_plugin_mcp_file(path, config))
             {
                 "http"
             } else {
@@ -2106,15 +2129,26 @@ fn validate_server(
     // Treat null and empty string/array as missing (not a usable command)
     if config.is_rule_enabled("MCP-009") && effective_type == "stdio" {
         if !has_usable_command(server) {
-            diagnostics.push(
-                Diagnostic::error(
-                    path.to_path_buf(),
-                    line,
-                    col,
-                    "MCP-009",
+            // Without a `type` the entry is stdio by default; say so, and for
+            // a `url` entry give the client's own advice ("add "type":
+            // "http" (or "sse" / "ws")") instead of asking for a command.
+            let (message, suggestion) = match (raw_server_type.is_none(), server.url.is_some()) {
+                (true, true) => (
+                    t!("rules.mcp_009.url_without_type", server = name),
+                    t!("rules.mcp_009.url_without_type_suggestion"),
+                ),
+                (true, false) => (
+                    t!("rules.mcp_009.no_type", server = name),
+                    t!("rules.mcp_009.suggestion"),
+                ),
+                _ => (
                     t!("rules.mcp_009.message", server = name),
-                )
-                .with_suggestion(t!("rules.mcp_009.suggestion")),
+                    t!("rules.mcp_009.suggestion"),
+                ),
+            };
+            diagnostics.push(
+                Diagnostic::error(path.to_path_buf(), line, col, "MCP-009", message)
+                    .with_suggestion(suggestion),
             );
         }
     }
@@ -2502,6 +2536,26 @@ mod tests {
         for rule in ["MCP-009", "MCP-024"] {
             assert!(rules_of(&diagnostics, rule).is_empty(), "{diagnostics:?}");
         }
+    }
+
+    #[test]
+    fn test_codex_plugin_mcp_json_url_only_entry_is_remote() {
+        // Codex infers the transport, so a url-only entry in a Codex plugin's
+        // `.mcp.json` is a remote server, not a stdio server missing a
+        // command. The same file in a Claude Code plugin still needs `type`.
+        let content = r#"{"mcpServers": {"notes": {"url": "https://example.com/mcp"}}}"#;
+        let fs = crate::fs::MockFileSystem::new();
+        fs.add_file("/p/notes/.codex-plugin/plugin.json", "{}");
+        fs.add_file("/p/notes/.mcp.json", content);
+        fs.add_file("/p/both/.codex-plugin/plugin.json", "{}");
+        fs.add_file("/p/both/.claude-plugin/plugin.json", "{}");
+        fs.add_file("/p/both/.mcp.json", content);
+        let mut config = LintConfig::default();
+        config.set_fs(std::sync::Arc::new(fs));
+        let codex = McpValidator.validate(Path::new("/p/notes/.mcp.json"), content, &config);
+        assert!(rules_of(&codex, "MCP-009").is_empty(), "{codex:?}");
+        let both = McpValidator.validate(Path::new("/p/both/.mcp.json"), content, &config);
+        assert_eq!(rules_of(&both, "MCP-009").len(), 1, "{both:?}");
     }
 
     #[test]
@@ -3660,6 +3714,28 @@ mod tests {
         let mcp_009: Vec<_> = diagnostics.iter().filter(|d| d.rule == "MCP-009").collect();
         assert_eq!(mcp_009.len(), 1);
         assert!(mcp_009[0].message.contains("no-type-server"));
+        // The message says the entry has no type, not that it is typed stdio.
+        assert!(
+            mcp_009[0].message.contains("no 'type'"),
+            "{}",
+            mcp_009[0].message
+        );
+    }
+
+    #[test]
+    fn test_mcp_009_url_without_type_asks_for_a_type() {
+        // Claude Code: "add "type": "http" (or "sse" / "ws") to this entry".
+        let content = r#"{"mcpServers": {"remote": {"url": "https://mcp.example.com/mcp"}}}"#;
+        let diagnostics = validate_path(".mcp.json", content);
+        let mcp_009 = rules_of(&diagnostics, "MCP-009");
+        assert_eq!(mcp_009.len(), 1, "{diagnostics:?}");
+        assert!(mcp_009[0].message.contains("'url' but no 'type'"));
+        assert!(
+            mcp_009[0]
+                .suggestion
+                .as_deref()
+                .is_some_and(|s| s.contains("\"type\": \"http\""))
+        );
     }
 
     #[test]

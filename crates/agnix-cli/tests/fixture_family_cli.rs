@@ -326,7 +326,7 @@ fn test_cli_shared_agents_skills_follow_tools() {
 
 #[test]
 fn test_cli_vendor_rules_gated_by_tools() {
-    // AGM-003 (Windsurf) and XP-007 (Codex) do not run for a Kiro-only scope.
+    // AGM-003 (Windsurf) and AS-009 (Codex) do not run for a Kiro-only scope.
     let temp = tempfile::TempDir::new().unwrap();
     std::fs::create_dir(temp.path().join(".windsurf")).unwrap();
     std::fs::write(
@@ -334,13 +334,20 @@ fn test_cli_vendor_rules_gated_by_tools() {
         format!("# Project\n\nRun `cargo test`.\n\n{}\n", "x".repeat(40_000)),
     )
     .unwrap();
+    let skill = temp.path().join(".codex/skills/notes");
+    std::fs::create_dir_all(&skill).unwrap();
+    std::fs::write(
+        skill.join("SKILL.md"),
+        "---\nname: notes\ndescription: Use when writing <release> notes\n---\nWrite the notes.\n",
+    )
+    .unwrap();
     let unscoped = run_json(temp.path());
     assert_has_rule(&unscoped, "AGM-003");
-    assert_has_rule(&unscoped, "XP-007");
+    assert_has_rule(&unscoped, "AS-009");
     let kiro = run_json_with_config(temp.path(), "tools = [\"kiro\"]\n");
     assert_eq!(count_rule(&kiro, "AGM-003"), 0);
-    assert_eq!(count_rule(&kiro, "XP-007"), 0);
+    assert_eq!(count_rule(&kiro, "AS-009"), 0);
     let windsurf = run_json_with_config(temp.path(), "tools = [\"windsurf\"]\n");
     assert_has_rule(&windsurf, "AGM-003");
-    assert_eq!(count_rule(&windsurf, "XP-007"), 0);
+    assert_eq!(count_rule(&windsurf, "AS-009"), 0);
 }

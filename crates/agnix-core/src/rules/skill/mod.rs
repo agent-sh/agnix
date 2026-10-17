@@ -76,6 +76,26 @@ where
     }))
 }
 
+/// True when `[tool_versions] opencode` pins OpenCode 2 or later. OpenCode 2
+/// takes the skill ID from the file path ("The frontmatter name is only a
+/// display label") and "does not enforce" the name pattern, the 1-64
+/// character limit, a name-directory match or a description length; OpenCode
+/// 1 enforces them, so an unpinned OpenCode skill keeps the spec checks.
+fn opencode_2_pinned(config: &crate::config::LintConfig) -> bool {
+    config
+        .get_opencode_version()
+        .and_then(|version| {
+            version
+                .trim()
+                .trim_start_matches(['v', 'V'])
+                .split(['.', '-', '+'])
+                .next()?
+                .parse::<u64>()
+                .ok()
+        })
+        .is_some_and(|major| major >= 2)
+}
+
 fn de_metadata_value<'de, D>(deserializer: D) -> Result<Option<serde_yaml::Value>, D::Error>
 where
     D: serde::Deserializer<'de>,
@@ -781,6 +801,14 @@ impl<'a> ValidationContext<'a> {
                         "AS-004",
                         t!("rules.as_004.claude_upload", name = name_trimmed),
                     )
+                } else if self.client == SkillClient::OpenCode && opencode_2_pinned(self.config) {
+                    Diagnostic::warning(
+                        self.path.to_path_buf(),
+                        name_line,
+                        name_col,
+                        "AS-004",
+                        t!("rules.as_004.opencode_2", name = name_trimmed),
+                    )
                 } else {
                     Diagnostic::error(
                         self.path.to_path_buf(),
@@ -828,7 +856,10 @@ impl<'a> ValidationContext<'a> {
         // AS-005: Name cannot start or end with hyphen
         // Claude Code loads names with edge or doubled hyphens (and so do
         // API uploads), so these spec checks are warnings for Claude skills.
-        let name_level = if self.client == SkillClient::ClaudeCode {
+        // OpenCode 2 "does not enforce this pattern" either.
+        let name_level = if self.client == SkillClient::ClaudeCode
+            || (self.client == SkillClient::OpenCode && opencode_2_pinned(self.config))
+        {
             Diagnostic::warning
         } else {
             Diagnostic::error
@@ -940,7 +971,21 @@ impl<'a> ValidationContext<'a> {
         }
 
         let (name_line, name_col) = self.frontmatter_key_line_col("name");
-        self.diagnostics.push(
+        // OpenCode 2 takes the ID from the directory and shows `name` as a
+        // label, so a mismatch only hurts portability there.
+        let diagnostic = if self.client == SkillClient::OpenCode && opencode_2_pinned(self.config) {
+            Diagnostic::warning(
+                self.path.to_path_buf(),
+                name_line,
+                name_col,
+                "AS-017",
+                t!(
+                    "rules.as_017.opencode_2",
+                    name = name_trimmed,
+                    directory = parent_name
+                ),
+            )
+        } else {
             Diagnostic::error(
                 self.path.to_path_buf(),
                 name_line,
@@ -952,8 +997,9 @@ impl<'a> ValidationContext<'a> {
                     directory = parent_name
                 ),
             )
-            .with_suggestion(t!("rules.as_017.suggestion")),
-        );
+        };
+        self.diagnostics
+            .push(diagnostic.with_suggestion(t!("rules.as_017.suggestion")));
     }
 
     /// AS-008, AS-009: Validate description format and rules
@@ -998,8 +1044,17 @@ impl<'a> ValidationContext<'a> {
                     );
                 }
             } else if !(1..=1024).contains(&len) {
+                // OpenCode 2 enforces no maximum description length.
+                let level = if len > 1024
+                    && self.client == SkillClient::OpenCode
+                    && opencode_2_pinned(self.config)
+                {
+                    Diagnostic::warning
+                } else {
+                    Diagnostic::error
+                };
                 self.diagnostics.push(
-                    Diagnostic::error(
+                    level(
                         self.path.to_path_buf(),
                         description_line,
                         description_col,
