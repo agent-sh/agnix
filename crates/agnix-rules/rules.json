@@ -12301,7 +12301,7 @@
         "source_urls": [
           "https://modelcontextprotocol.io/specification/2026-07-28/server/tools"
         ],
-        "verified_on": "2026-10-16",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "spec_revision": "2026-07-28"
         },
@@ -12356,7 +12356,7 @@
         "source_urls": [
           "https://modelcontextprotocol.io/specification/2026-07-28/server/tools"
         ],
-        "verified_on": "2026-10-16",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "spec_revision": "2026-07-28"
         },
@@ -12454,7 +12454,7 @@
           "https://modelcontextprotocol.io/specification/2025-11-25/basic/lifecycle",
           "https://modelcontextprotocol.io/specification/2026-07-28/basic/versioning"
         ],
-        "verified_on": "2026-10-04",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "spec_revision": "2025-11-25"
         },
