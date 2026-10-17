@@ -9,13 +9,19 @@
 //! `command`, `url` and `args` are each client's format (MCP-009..012,
 //! MCP-022..024), so those rules follow the clients' documentation. The
 //! server-level security checks shared with other clients' config files
-//! (MCP-018, MCP-019, MCP-027..029) live in `mcp_servers`.
+//! (MCP-018, MCP-019, MCP-027..029) live in `mcp_servers`. Servers a plugin
+//! manifest declares inline in `mcpServers` (Claude Code, legacy Copilot and
+//! Cursor manifests) get the server-level rules, with each client's `type`
+//! values.
 
 use crate::{
     config::PerFileLintConfig,
     diagnostics::{Diagnostic, Fix},
+    file_types::FileType,
+    rules::claude_json_spans::Seg,
     rules::mcp_servers::{Locator, ServerView, check_server},
     rules::{Validator, ValidatorMetadata},
+    schemas::kiro_json::{JsonNode, JsonValue, parse_json_document},
     schemas::mcp::{
         CURRENT_MCP_PROTOCOL_VERSIONS, McpServerConfig, McpToolSchema, VALID_MCP_ANNOTATION_HINTS,
         VALID_MCP_CAPABILITY_KEYS, extract_request_protocol_version,
@@ -307,6 +313,15 @@ fn valid_server_types(path: &Path, config: &PerFileLintConfig<'_>) -> Vec<&'stat
     } else {
         mcp_file_readers(path)
     };
+    server_types_for_readers(readers, config)
+}
+
+/// The `type` values valid for a server that `readers` read, narrowed to the
+/// selected tools as [`valid_server_types`] describes.
+fn server_types_for_readers(
+    readers: &[&'static str],
+    config: &PerFileLintConfig<'_>,
+) -> Vec<&'static str> {
     let selected: Vec<&str> = readers
         .iter()
         .copied()
@@ -400,6 +415,14 @@ impl Validator for McpValidator {
             return crate::rules::mcp_servers::validate_client_config(
                 file_type, path, content, config,
             );
+        }
+        // Plugin manifests may declare servers inline in `mcpServers`; only
+        // those servers are checked here.
+        if matches!(
+            file_type,
+            FileType::Plugin | FileType::CopilotPlugin | FileType::CursorPlugin
+        ) {
+            return validate_plugin_manifest_servers(file_type, path, content, config);
         }
 
         // VS Code reads `.vscode/mcp.json` as JSON with comments; blank them
@@ -523,6 +546,8 @@ impl Validator for McpValidator {
                     path,
                     content,
                     locator: &locator,
+                    position: None,
+                    inline: None,
                 },
                 config,
                 &mut diagnostics,
@@ -531,6 +556,192 @@ impl Validator for McpValidator {
 
         diagnostics
     }
+}
+
+// ---------------------------------------------------------------------------
+// Inline servers in plugin manifests
+// ---------------------------------------------------------------------------
+
+/// A server map declared inline in a plugin manifest's `mcpServers`.
+pub(crate) struct InlineServerMap<'a> {
+    /// The map: server name to server config.
+    pub node: &'a JsonNode,
+    /// Path from the manifest root to the map.
+    pub segs: Vec<Seg<'static>>,
+}
+
+/// The inline server maps of a plugin manifest: `mcpServers` as an object,
+/// or each object in an `mcpServers` array (the strings there are file paths
+/// or bundle URLs, linted as their own files where agnix detects them). With
+/// `unwrap`, an inline object that holds an `mcpServers` object (the
+/// `.mcp.json` shape) yields the inner object.
+pub(crate) fn inline_server_maps(root: &JsonNode, unwrap: bool) -> Vec<InlineServerMap<'_>> {
+    let Some(member) = root.value.get("mcpServers") else {
+        return Vec::new();
+    };
+    let mut maps: Vec<InlineServerMap<'_>> = Vec::new();
+    match &member.value.value {
+        JsonValue::Object(_) => maps.push(InlineServerMap {
+            node: &member.value,
+            segs: vec![Seg::Key("mcpServers")],
+        }),
+        JsonValue::Array(items) => {
+            for (index, item) in items.iter().enumerate() {
+                if item.value.as_object().is_some() {
+                    maps.push(InlineServerMap {
+                        node: item,
+                        segs: vec![Seg::Key("mcpServers"), Seg::Index(index)],
+                    });
+                }
+            }
+        }
+        _ => {}
+    }
+    if unwrap {
+        for map in &mut maps {
+            if let Some(inner) = map.node.value.get("mcpServers")
+                && inner.value.value.as_object().is_some()
+            {
+                map.node = &inner.value;
+                map.segs.push(Seg::Key("mcpServers"));
+            }
+        }
+    }
+    maps
+}
+
+/// The serde value at `segs` below `root`.
+pub(crate) fn json_value_at<'v>(
+    root: &'v serde_json::Value,
+    segs: &[Seg<'_>],
+) -> Option<&'v serde_json::Value> {
+    segs.iter().try_fold(root, |value, seg| match seg {
+        Seg::Key(key) => value.get(*key),
+        Seg::Index(index) => value.get(*index),
+    })
+}
+
+/// True for a `.claude-plugin/plugin.json`.
+pub(crate) fn is_claude_plugin_manifest(path: &Path) -> bool {
+    path.file_name()
+        .and_then(|n| n.to_str())
+        .is_some_and(|n| n.eq_ignore_ascii_case("plugin.json"))
+        && path
+            .parent()
+            .and_then(Path::file_name)
+            .and_then(|n| n.to_str())
+            .is_some_and(|n| n.eq_ignore_ascii_case(".claude-plugin"))
+}
+
+/// Who reads the inline servers of the plugin manifest at `path`, or `None`
+/// when the manifest format has no inline servers.
+///
+/// - `.claude-plugin/plugin.json`: Claude Code ("inline server configs keyed
+///   by name"), and Copilot CLI, which reads that location for legacy
+///   plugins.
+/// - Any other `plugin.json` (a root manifest), `.github/plugin/plugin.json`
+///   and `.plugin/plugin.json`: legacy Copilot plugins, whose `mcpServers` is
+///   a "Path to an MCP configuration file ... or inline server definitions".
+/// - `.cursor-plugin/plugin.json`: Cursor, which takes "inline MCP server
+///   config" and infers "the transport from `command` or `url`".
+fn plugin_manifest_readers(file_type: FileType, path: &Path) -> Option<InlineReaders> {
+    let is_plugin_json = path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .is_some_and(|n| n.eq_ignore_ascii_case("plugin.json"));
+    match file_type {
+        FileType::Plugin if is_claude_plugin_manifest(path) => Some(InlineReaders {
+            readers: &["claude-code", "github-copilot"],
+            url_only_is_remote: false,
+        }),
+        FileType::Plugin | FileType::CopilotPlugin => Some(InlineReaders {
+            readers: &["github-copilot"],
+            url_only_is_remote: false,
+        }),
+        FileType::CursorPlugin if is_plugin_json => Some(InlineReaders {
+            readers: &["cursor"],
+            url_only_is_remote: true,
+        }),
+        _ => None,
+    }
+}
+
+/// The server-level MCP checks (MCP-009 to MCP-012, MCP-017 to MCP-019,
+/// MCP-021 to MCP-024, MCP-027 to MCP-029) on the servers a plugin manifest
+/// declares inline in `mcpServers`. Diagnostics point at each server's key
+/// in the manifest. An Agent Plugins manifest has no `mcpServers` field
+/// ("Component path fields such as ... `mcpServers` ... are not Agent
+/// Plugins 1.0 manifest fields"), so it is skipped.
+fn validate_plugin_manifest_servers(
+    file_type: FileType,
+    path: &Path,
+    content: &str,
+    config: &PerFileLintConfig<'_>,
+) -> Vec<Diagnostic> {
+    let mut diagnostics = Vec::new();
+    let Some(inline) = plugin_manifest_readers(file_type, path) else {
+        return diagnostics;
+    };
+    // Manifest parse errors belong to the manifest's own validator.
+    let Ok(document) = parse_json_document(content, false) else {
+        return diagnostics;
+    };
+    let Ok(raw_value) = serde_json::from_str::<serde_json::Value>(content) else {
+        return diagnostics;
+    };
+    if raw_value
+        .get("$schema")
+        .and_then(serde_json::Value::as_str)
+        .is_some_and(|schema| {
+            schema.starts_with(crate::rules::codex_plugin::AGENT_PLUGIN_SCHEMA_PREFIX)
+        })
+    {
+        return diagnostics;
+    }
+    // Claude Code documents only the bare map ("Uses the map as server
+    // configs keyed by name"); the Copilot and Cursor pages do not say
+    // whether the inline object may keep the `.mcp.json` wrapper.
+    let unwrap = !is_claude_plugin_manifest(path);
+    let line_starts = compute_line_starts(content);
+    for map in inline_server_maps(&document.root, unwrap) {
+        let Some(members) = map.node.value.as_object() else {
+            continue;
+        };
+        let key_offsets: Vec<(String, usize)> = members
+            .iter()
+            .map(|member| (member.key.clone(), member.key_start))
+            .collect();
+        if config.is_rule_enabled("MCP-023") {
+            validate_duplicate_server_names(path, &key_offsets, &line_starts, &mut diagnostics);
+        }
+        let Some(servers) = json_value_at(&raw_value, &map.segs).and_then(|v| v.as_object()) else {
+            continue;
+        };
+        let locator = Locator::within(content, map.node.start, map.node.end, key_offsets);
+        for (name, server) in parse_server_map(servers) {
+            // serde_json keeps the last of duplicate keys; so does the span.
+            let position = members
+                .iter()
+                .rev()
+                .find(|member| member.key == name)
+                .map(|member| line_col_at(member.key_start, &line_starts));
+            validate_server(
+                &name,
+                &server,
+                servers.get(&name),
+                ServerContext {
+                    path,
+                    content,
+                    locator: &locator,
+                    position,
+                    inline: Some(inline),
+                },
+                config,
+                &mut diagnostics,
+            );
+        }
+    }
+    diagnostics
 }
 
 /// Extract tools from various MCP config formats, reporting parse errors for invalid entries
@@ -1932,6 +2143,20 @@ struct ServerContext<'a> {
     path: &'a Path,
     content: &'a str,
     locator: &'a Locator<'a>,
+    /// Line and column of the server's key, when the caller knows it (inline
+    /// servers in a plugin manifest); otherwise the first `"<name>"` key.
+    position: Option<(usize, usize)>,
+    /// Inline servers in a plugin manifest: the clients that read the
+    /// manifest, and whether they read an entry with only a `url` as remote.
+    /// `None` for MCP files, whose readers follow from the path.
+    inline: Option<InlineReaders>,
+}
+
+/// Who reads the inline `mcpServers` of a plugin manifest.
+#[derive(Clone, Copy)]
+struct InlineReaders {
+    readers: &'static [&'static str],
+    url_only_is_remote: bool,
 }
 
 /// Validate a single MCP server configuration entry (MCP-009 to MCP-012,
@@ -1948,8 +2173,14 @@ fn validate_server(
         path,
         content,
         locator,
+        position,
+        inline,
     } = ctx;
-    let (line, col) = find_json_field_location(content, name);
+    let (line, col) = position.unwrap_or_else(|| find_json_field_location(content, name));
+    let valid_server_types = |path: &Path, config: &PerFileLintConfig<'_>| match inline {
+        Some(inline) => server_types_for_readers(inline.readers, config),
+        None => valid_server_types(path, config),
+    };
     let raw_server_type = raw_server
         .and_then(serde_json::Value::as_object)
         .and_then(|obj| obj.get("type"));
@@ -1968,10 +2199,15 @@ fn validate_server(
             if raw_server_type.is_none()
                 && !has_usable_command(server)
                 && server.url.is_some()
-                && (is_cursor_mcp_file(path)
-                    || is_kiro_power_mcp_file(path, config)
-                    || is_skill_mcp_file(path, config)
-                    || is_codex_plugin_mcp_file(path, config))
+                && match inline {
+                    Some(inline) => inline.url_only_is_remote,
+                    None => {
+                        is_cursor_mcp_file(path)
+                            || is_kiro_power_mcp_file(path, config)
+                            || is_skill_mcp_file(path, config)
+                            || is_codex_plugin_mcp_file(path, config)
+                    }
+                }
             {
                 "http"
             } else {
@@ -2437,6 +2673,162 @@ mod tests {
     }
 
     // ===== MCP-027 / MCP-028 / MCP-029 through McpValidator =====
+
+    // ===== Inline servers in plugin manifests =====
+
+    fn apply_first_fix(content: &str, diagnostic: &Diagnostic) -> String {
+        let fix = diagnostic.fixes.first().expect("a fix");
+        let mut fixed = content.to_string();
+        fixed.replace_range(fix.start_byte..fix.end_byte, &fix.replacement);
+        fixed
+    }
+
+    #[test]
+    fn test_inline_servers_in_claude_plugin_manifest() {
+        // A keyword and the top-level `name` key share text with server names;
+        // diagnostics must point into the server entries.
+        let content = r#"{
+  "name": "db-tools",
+  "keywords": ["db", "gw"],
+  "mcpServers": {
+    "db": {
+      "command": "npx",
+      "args": ["-y", "@example/db-server"],
+      "env": { "DB_PASSWORD": "hunter2hunter2hunter2" }
+    },
+    "gw": {
+      "type": "http",
+      "url": "http://gateway.internal.test/mcp",
+      "headers": { "Authorization": "Bearer abcdefghijklmnopqrstuvwxyz" }
+    },
+    "name": { "url": "https://mcp.example.com/mcp" },
+    "bad": { "type": "STDIO", "command": "node" }
+  }
+}"#;
+        let diagnostics = validate_path("p/.claude-plugin/plugin.json", content);
+        let lines = |rule: &str| -> Vec<usize> {
+            rules_of(&diagnostics, rule)
+                .iter()
+                .map(|d| d.line)
+                .collect()
+        };
+        assert_eq!(lines("MCP-027"), vec![7], "{diagnostics:?}");
+        assert_eq!(lines("MCP-018"), vec![8], "{diagnostics:?}");
+        assert_eq!(lines("MCP-017"), vec![10], "{diagnostics:?}");
+        assert_eq!(lines("MCP-028"), vec![13], "{diagnostics:?}");
+        // Claude Code reads an entry without `type` as stdio.
+        assert_eq!(lines("MCP-009"), vec![15], "{diagnostics:?}");
+        assert_eq!(lines("MCP-011"), vec![16], "{diagnostics:?}");
+        // Only server-level rules run on a manifest.
+        assert!(
+            diagnostics.iter().all(|d| [
+                "MCP-009", "MCP-011", "MCP-017", "MCP-018", "MCP-027", "MCP-028"
+            ]
+            .contains(&d.rule.as_str())),
+            "{diagnostics:?}"
+        );
+
+        // The MCP-011 fix edits the server's own `type` and keeps the file
+        // valid JSON.
+        let mcp_011 = rules_of(&diagnostics, "MCP-011")[0];
+        assert!(
+            mcp_011.message.contains("streamable-http"),
+            "{}",
+            mcp_011.message
+        );
+        let fixed = apply_first_fix(content, mcp_011);
+        let value: serde_json::Value = serde_json::from_str(&fixed).unwrap();
+        assert_eq!(value["mcpServers"]["bad"]["type"], "stdio");
+    }
+
+    #[test]
+    fn test_inline_servers_in_manifest_array_and_duplicates() {
+        let content = r#"{
+  "name": "p",
+  "mcpServers": [
+    "./mcp/servers.json",
+    {
+      "local": { "command": "node", "env": { "API_TOKEN": "tok-1234567890abcdef" } },
+      "local": { "command": "node" }
+    },
+    { "remote": { "type": "sse", "url": "https://mcp.example.com/sse" } }
+  ]
+}"#;
+        let diagnostics = validate_path(".claude-plugin/plugin.json", content);
+        // The last `local` wins, so its env is not the one with the secret.
+        assert!(
+            rules_of(&diagnostics, "MCP-018").is_empty(),
+            "{diagnostics:?}"
+        );
+        let mcp_023 = rules_of(&diagnostics, "MCP-023");
+        assert_eq!(mcp_023.len(), 1, "{diagnostics:?}");
+        assert_eq!(mcp_023[0].line, 7);
+        let mcp_012 = rules_of(&diagnostics, "MCP-012");
+        assert_eq!(mcp_012.len(), 1, "{diagnostics:?}");
+        assert_eq!(mcp_012[0].line, 9);
+    }
+
+    #[test]
+    fn test_inline_servers_skip_paths_and_agent_plugins_manifests() {
+        for (path, content) in [
+            (
+                ".claude-plugin/plugin.json",
+                r#"{"name":"p","mcpServers":"./.mcp.json"}"#,
+            ),
+            (
+                ".claude-plugin/plugin.json",
+                r#"{"name":"p","mcpServers":["./a.json","./b.mcpb"]}"#,
+            ),
+            // Agent Plugins has no `mcpServers` manifest field.
+            (
+                "plugin.json",
+                r#"{"$schema":"https://agent-plugins.org/schemas/1.0.0/plugin.schema.json","name":"p","mcpServers":{"s":{}}}"#,
+            ),
+            (
+                ".cursor-plugin/marketplace.json",
+                r#"{"name":"m","mcpServers":{"s":{}}}"#,
+            ),
+            // Manifest parse errors belong to the manifest validators.
+            (
+                ".claude-plugin/plugin.json",
+                r#"{"name":"p","mcpServers":{"#,
+            ),
+        ] {
+            let diagnostics = validate_path(path, content);
+            assert!(diagnostics.is_empty(), "{path} {content}: {diagnostics:?}");
+        }
+    }
+
+    #[test]
+    fn test_inline_servers_in_copilot_and_cursor_manifests() {
+        // Copilot: `local` is a documented type, `ws` is not; the `.mcp.json`
+        // wrapper inside the inline object is read through.
+        let content = r#"{"name":"p","mcpServers":{"mcpServers":{"a":{"type":"local","command":"node"},"b":{"type":"ws","url":"wss://mcp.example.com"}}}}"#;
+        for path in [
+            ".github/plugin/plugin.json",
+            ".plugin/plugin.json",
+            "plugin.json",
+        ] {
+            let diagnostics = validate_path(path, content);
+            let mcp_011 = rules_of(&diagnostics, "MCP-011");
+            assert_eq!(mcp_011.len(), 1, "{path}: {diagnostics:?}");
+            assert!(mcp_011[0].message.contains("'b'"));
+        }
+        // Cursor infers the transport: a url-only entry is remote.
+        let diagnostics = validate_path(
+            ".cursor-plugin/plugin.json",
+            r#"{"name":"p","mcpServers":{"api":{"url":"https://mcp.example.com/mcp","headers":{"Authorization":"Bearer ${API_TOKEN}"}},"local":{"command":"npx","args":["-y","pkg@latest"]}}}"#,
+        );
+        assert!(
+            rules_of(&diagnostics, "MCP-009").is_empty(),
+            "{diagnostics:?}"
+        );
+        assert_eq!(
+            rules_of(&diagnostics, "MCP-027").len(),
+            1,
+            "{diagnostics:?}"
+        );
+    }
 
     #[test]
     fn test_mcp_027_028_029_in_mcp_json() {

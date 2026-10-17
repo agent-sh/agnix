@@ -777,7 +777,11 @@ fn test_validate_project_files_checked_count() {
 #[test]
 fn test_validate_project_plugin_detection() {
     let temp = tempfile::TempDir::new().unwrap();
-    let plugin_dir = temp.path().join("my-plugin.claude-plugin");
+    // A real `.claude-plugin/` directory: the content checks (CC-PL-004) no
+    // longer run on a plugin.json elsewhere (here `my-plugin.claude-plugin/`)
+    // with no Claude Code signal, because GitHub Copilot reads such a file
+    // under its own rules; that case gets only a CC-PL-001 warning.
+    let plugin_dir = temp.path().join("my-plugin").join(".claude-plugin");
     std::fs::create_dir_all(&plugin_dir).unwrap();
 
     // Create plugin.json with a validation issue (missing recommended description - CC-PL-004 warning)

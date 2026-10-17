@@ -1,0 +1,8 @@
+{
+  "name": "misplaced-manifest",
+  "description": "Claude Code plugin whose manifest is not in .claude-plugin/",
+  "version": "1.0.0",
+  "userConfig": {
+    "api_token": { "type": "string", "title": "API token", "description": "Token for the API", "sensitive": true }
+  }
+}

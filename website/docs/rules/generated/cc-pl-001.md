@@ -24,6 +24,8 @@ keywords: ["CC-PL-001", "plugin manifest not in .claude-plugin/", "claude plugin
 ## Evidence Sources
 
 - https://code.claude.com/docs/en/plugins/manifest-reference
+- https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-plugin-reference
+- https://code.visualstudio.com/docs/agents/reference/agent-plugin-reference
 
 ## Test Coverage Metadata
 

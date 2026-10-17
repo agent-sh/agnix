@@ -1,9 +1,11 @@
 //! Claude Code MCP configuration rules (CC-MCP-001 to CC-MCP-005).
 //!
 //! These encode Claude Code's own handling of MCP server entries, so they run
-//! only on the MCP files Claude Code reads: a project `.mcp.json` and a
-//! plugin's `.mcp.json`. CC-MCP-003 checks MCP tool and server descriptions
-//! that Claude Code truncates and runs on any MCP JSON file that lists tools.
+//! only on the MCP servers Claude Code reads: a project `.mcp.json`, a
+//! plugin's `.mcp.json`, and the servers a `.claude-plugin/plugin.json`
+//! declares inline in `mcpServers` (checked as plugin servers). CC-MCP-003
+//! checks MCP tool and server descriptions that Claude Code truncates and
+//! runs on any MCP JSON file that lists tools.
 //!
 //! - CC-MCP-001: credential variable in a remote server's `url` or `headers`,
 //!   which Claude Code reads as empty
@@ -149,6 +151,14 @@ impl Validator for ClaudeMcpValidator {
         };
         let locator = JsonLocator::new(content);
 
+        // A Claude Code plugin manifest: only its inline `mcpServers`.
+        if crate::file_types::detect_file_type(path) == crate::file_types::FileType::Plugin {
+            if crate::rules::mcp::is_claude_plugin_manifest(path) {
+                check_inline_servers(path, content, &root, &locator, config, &mut diagnostics);
+            }
+            return diagnostics;
+        }
+
         check_descriptions(path, &root, &locator, config, &mut diagnostics);
 
         let Some(scope) = claude_mcp_scope(path, config) else {
@@ -167,6 +177,47 @@ impl Validator for ClaudeMcpValidator {
     }
 }
 
+/// The servers a `.claude-plugin/plugin.json` declares inline in
+/// `mcpServers` (a map, or maps inside an array), checked as plugin servers.
+fn check_inline_servers(
+    path: &Path,
+    content: &str,
+    root: &Value,
+    locator: &JsonLocator<'_>,
+    config: &PerFileLintConfig<'_>,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Ok(document) = crate::schemas::kiro_json::parse_json_document(content, false) else {
+        return;
+    };
+    for map in crate::rules::mcp::inline_server_maps(&document.root, false) {
+        let Some(servers) =
+            crate::rules::mcp::json_value_at(root, &map.segs).and_then(Value::as_object)
+        else {
+            continue;
+        };
+        let pointer: String = map
+            .segs
+            .iter()
+            .map(|seg| match seg {
+                Seg::Key(key) => format!("/{}", key.replace('~', "~0").replace('/', "~1")),
+                Seg::Index(index) => format!("/{index}"),
+            })
+            .collect();
+        check_server_map(
+            path,
+            content,
+            servers,
+            &map.segs,
+            &pointer,
+            McpScope::Plugin,
+            locator,
+            config,
+            diagnostics,
+        );
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 fn check_servers<'v>(
     path: &Path,
@@ -177,18 +228,44 @@ fn check_servers<'v>(
     config: &PerFileLintConfig<'_>,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
-    {
-        let Some((servers, wrapped)) = server_map(root, scope) else {
-            return;
-        };
-        let prefix: Vec<Seg<'v>> = if wrapped {
-            vec![Seg::Key("mcpServers")]
-        } else {
-            Vec::new()
-        };
+    let Some((servers, wrapped)) = server_map(root, scope) else {
+        return;
+    };
+    let (prefix, pointer): (Vec<Seg<'v>>, &str) = if wrapped {
+        (vec![Seg::Key("mcpServers")], "/mcpServers")
+    } else {
+        (Vec::new(), "")
+    };
+    check_server_map(
+        path,
+        content,
+        servers,
+        &prefix,
+        pointer,
+        scope,
+        locator,
+        config,
+        diagnostics,
+    );
+}
 
+/// CC-MCP-001, CC-MCP-002, CC-MCP-004 and CC-MCP-005 on one server map at
+/// `prefix` (JSON pointer `pointer`) in the file.
+#[allow(clippy::too_many_arguments)]
+fn check_server_map<'v>(
+    path: &Path,
+    content: &str,
+    servers: &'v serde_json::Map<String, Value>,
+    prefix: &[Seg<'v>],
+    pointer: &str,
+    scope: McpScope,
+    locator: &JsonLocator<'_>,
+    config: &PerFileLintConfig<'_>,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    {
         for (name, server) in servers {
-            let at = |extra: &[Seg<'v>]| join_path(&prefix, name.as_str(), extra);
+            let at = |extra: &[Seg<'v>]| join_path(prefix, name.as_str(), extra);
 
             // CC-MCP-005: reserved names. A plugin's servers are scoped as
             // `plugin:<plugin>:<server>`, so their keys can't collide.
@@ -323,11 +400,7 @@ fn check_servers<'v>(
                 .with_suggestion(t!("rules.cc_mcp_004.suggestion"));
                 if let Some(quoted) = value.as_str() {
                     let escaped = name.replace('~', "~0").replace('/', "~1");
-                    let pointer = if wrapped {
-                        format!("/mcpServers/{escaped}/alwaysLoad")
-                    } else {
-                        format!("/{escaped}/alwaysLoad")
-                    };
+                    let pointer = format!("{pointer}/{escaped}/alwaysLoad");
                     if let Some((start, end)) = crate::schemas::mcp::quoted_json_boolean_span(
                         content,
                         &pointer,
@@ -472,6 +545,61 @@ mod tests {
 
     fn rules<'a>(diagnostics: &'a [Diagnostic], id: &str) -> Vec<&'a Diagnostic> {
         diagnostics.iter().filter(|d| d.rule == id).collect()
+    }
+
+    #[test]
+    fn inline_plugin_manifest_servers_get_plugin_scope_checks() {
+        let content = r#"{
+  "name": "gw-tools",
+  "mcpServers": {
+    "workspace": { "command": "${CLAUDE_PROJECT_DIR}/bin/server", "alwaysLoad": "true" },
+    "gw": {
+      "type": "http",
+      "url": "https://gw.example.com/mcp",
+      "headers": { "Authorization": "Bearer ${ANTHROPIC_AUTH_TOKEN}" }
+    }
+  }
+}"#;
+        let diagnostics = validate("p/.claude-plugin/plugin.json", content);
+        let cc_mcp_001 = rules(&diagnostics, "CC-MCP-001");
+        assert_eq!(cc_mcp_001.len(), 1, "{diagnostics:?}");
+        assert_eq!(cc_mcp_001[0].line, 8);
+        let cc_mcp_004 = rules(&diagnostics, "CC-MCP-004");
+        assert_eq!(cc_mcp_004.len(), 1, "{diagnostics:?}");
+        assert_eq!(cc_mcp_004[0].line, 4);
+        // Plugin servers are namespaced (`plugin:<plugin>:<server>`) and
+        // substitute ${CLAUDE_PROJECT_DIR} directly: no CC-MCP-005 or
+        // CC-MCP-002. CC-MCP-003 checks tool lists, which a manifest has not.
+        assert!(
+            diagnostics
+                .iter()
+                .all(|d| d.rule == "CC-MCP-001" || d.rule == "CC-MCP-004"),
+            "{diagnostics:?}"
+        );
+        // The alwaysLoad fix edits the inline server and keeps valid JSON.
+        let fix = &cc_mcp_004[0].fixes[0];
+        let mut fixed = content.to_string();
+        fixed.replace_range(fix.start_byte..fix.end_byte, &fix.replacement);
+        let value: Value = serde_json::from_str(&fixed).unwrap();
+        assert_eq!(value["mcpServers"]["workspace"]["alwaysLoad"], true);
+    }
+
+    #[test]
+    fn inline_plugin_manifest_server_arrays_and_other_manifests() {
+        let content = r#"{"name":"p","mcpServers":["./.mcp.json",{"s":{"command":"node","alwaysLoad":"false"}}]}"#;
+        let diagnostics = validate(".claude-plugin/plugin.json", content);
+        let cc_mcp_004 = rules(&diagnostics, "CC-MCP-004");
+        assert_eq!(cc_mcp_004.len(), 1, "{diagnostics:?}");
+        let fix = &cc_mcp_004[0].fixes[0];
+        let mut fixed = content.to_string();
+        fixed.replace_range(fix.start_byte..fix.end_byte, &fix.replacement);
+        let value: Value = serde_json::from_str(&fixed).unwrap();
+        assert_eq!(value["mcpServers"][1]["s"]["alwaysLoad"], false);
+
+        // Claude Code reads no other plugin.json.
+        for path in ["plugin.json", "my-plugin/plugin.json"] {
+            assert!(validate(path, content).is_empty(), "{path}");
+        }
     }
 
     #[test]

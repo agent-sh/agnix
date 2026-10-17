@@ -1,0 +1,8 @@
+{
+  "name": "my-dev-tools",
+  "description": "React development utilities",
+  "agents": "agents/",
+  "skills": ["skills/", "extra-skills/"],
+  "hooks": "hooks.json",
+  "mcpServers": ".mcp.json"
+}

@@ -17,7 +17,8 @@ Keep fixtures minimal, deterministic, and focused on one rule family when possib
 | CC-AG | `valid/agents/`, `invalid/agents/` | `valid/agents/valid-agent.md` | `invalid/agents/missing-name.md` |
 | CC-MEM | `valid/memory/`, `invalid/memory/` | `valid/memory/CLAUDE.md` | `invalid/memory/CLAUDE.md` |
 | CC-MEM, CC-SET, CC-OS-007 (fixture pack) | `claude-mem/` | `claude-mem/valid/CLAUDE.md`, `claude-mem/settings-valid/.claude/settings.json` | `claude-mem/emphasis/` (CC-MEM-017), `claude-mem/long-file/` (CC-MEM-014), `claude-mem/combined/` (CC-MEM-015), `claude-mem/agent-memory/` (CC-MEM-016), `claude-mem/settings-scope/` (CC-SET-034), `claude-mem/settings-rules/` (CC-SET-035, CC-SET-036); exercised by `crates/agnix-core/tests/claude_memory_rules.rs` |
-| CC-PL | `valid/plugins/`, `invalid/plugins/` | `valid/plugins/` fixtures | `invalid/plugins/` fixtures |
+| CC-PL | `valid/plugins/`, `invalid/plugins/` | `valid/plugins/` fixtures | `invalid/plugins/` fixtures (`invalid/plugins/misplaced-manifest/` is a Claude Code manifest outside `.claude-plugin/`, CC-PL-001) |
+| CC-PL-001 on other tools' manifests, inline `mcpServers` (MCP, CC-MCP) | `plugin-manifests/` | `plugin-manifests/agent-plugins/plugin.json`, `plugin-manifests/dual-manifest/plugin.json` (no CC-PL) | `plugin-manifests/copilot-legacy/plugin.json` (CC-PL-001 warning), `plugin-manifests/claude-inline-mcp/.claude-plugin/plugin.json`, `plugin-manifests/copilot-inline-mcp/`, `plugin-manifests/cursor-inline-mcp/`; exercised by `crates/agnix-cli/tests/fixture_family_cli.rs` |
 | AGM | `agents_md/` | `agents_md/valid/AGENTS.md` | `agents_md/no-headers/AGENTS.md` |
 | COP | `copilot/`, `copilot-invalid/` | `copilot/.github/copilot-instructions.md` | `copilot-invalid/.github/copilot-instructions.md` |
 | CUR | `cursor/`, `cursor-invalid/`, `cursor-legacy/` | `cursor/.cursor/rules/valid.mdc` | `cursor-invalid/.cursor/rules/empty.mdc` |

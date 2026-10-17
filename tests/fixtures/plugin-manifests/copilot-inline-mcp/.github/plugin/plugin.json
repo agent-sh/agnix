@@ -1,0 +1,12 @@
+{
+  "name": "copilot-inline-mcp",
+  "description": "Legacy Copilot plugin with inline MCP servers",
+  "mcpServers": {
+    "tracker": {
+      "type": "local",
+      "command": "node",
+      "args": ["server.js"],
+      "env": { "TRACKER_API_KEY": "trk-0123456789abcdef0123" }
+    }
+  }
+}

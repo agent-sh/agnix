@@ -1675,10 +1675,10 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 <a id="cc-pl-001"></a>
 ### CC-PL-001 [HIGH] Plugin Manifest Not in .claude-plugin/
-**Requirement**: The manifest is optional. When present, plugin.json MUST be in `.claude-plugin/`.
-**Detection**: For an existing plugin.json, check that its parent directory is `.claude-plugin/`.
-**Fix**: Move to correct location
-**Source**: code.claude.com/docs/en/plugins/manifest-reference
+**Requirement**: The manifest is optional. When present, plugin.json MUST be in `.claude-plugin/`: "Save the manifest at `.claude-plugin/plugin.json` under the plugin root." (plugins manifest reference, "Manifest file"). GitHub Copilot reads a `plugin.json` at the plugin root: "Agent Plugins requires the manifest at the plugin root" and "Legacy plugins: `.plugin/plugin.json`, `plugin.json`, `.github/plugin/plugin.json`, or `.claude-plugin/plugin.json` (checked in this order)" (Copilot CLI plugin reference, "`plugin.json`", "File locations"); VS Code lists the Copilot format as a root `plugin.json` and "The Copilot format is used as the default when no other format marker is found" (agent plugin reference, "Plugin formats").
+**Detection**: A plugin.json outside `.claude-plugin/` (the Codex, Copilot and Cursor manifest directories have their own rules). No CC-PL rule runs on it when it is an Agent Plugins or Copilot manifest: its `$schema` starts with `https://agent-plugins.org/schemas/` ("Copilot CLI recognizes the canonical `$schema` values for Agent Plugins ... opting a plugin into Agent Plugins semantics"); a `.claude-plugin/plugin.json` sits beside it; a `com.github.copilot/` directory sits beside it ("Copilot CLI reads its client-specific components from the `com.github.copilot` directory"); a root `mcp.json` declares an Agent Plugins `$schema` ("The root `mcp.json` must declare a recognized Agent Plugins `$schema` version"); or it has a field only Copilot documents (`extensions`, `category`, `tags`) and none only Claude Code documents. It is an error when the file is a Claude Code manifest: it has a field only Claude Code documents (`userConfig`, `channels`, `settings`, `dependencies`, `defaultEnabled`, `displayName`, `outputStyles`, `workflows`, `experimental`, `themes`, `monitors`, `types`, `metadata` or a directory listing field), or the run selects Claude Code and not GitHub Copilot (`tools`, or the deprecated `target = "ClaudeCode"`); the other CC-PL checks then run too. Otherwise it is a warning and the other CC-PL checks are skipped, because GitHub Copilot may read the file under its own rules.
+**Fix**: Move a Claude Code manifest to `.claude-plugin/plugin.json`; leave a GitHub Copilot manifest where it is
+**Source**: code.claude.com/docs/en/plugins/manifest-reference, docs.github.com/en/copilot/reference/copilot-cli-reference/cli-plugin-reference, code.visualstudio.com/docs/agents/reference/agent-plugin-reference
 
 <a id="cc-pl-002"></a>
 ### CC-PL-002 [HIGH] Components in .claude-plugin/
@@ -1883,7 +1883,7 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 ## MCP RULES
 
-<a id="mcp-001"></a>
+> **Scope:** The server-level rules (MCP-009 to MCP-012, MCP-017 to MCP-019, MCP-021 to MCP-024, MCP-027 to MCP-029) also run on the servers a plugin manifest declares inline in `mcpServers`, with diagnostics at each server's key: `.claude-plugin/plugin.json` (Claude Code: "inline server configs keyed by name"; `claude plugin validate` "also checks each MCP server entry the plugin declares in `.mcp.json`, in a `.json` file that `mcpServers` names, or inline in `plugin.json`"), legacy Copilot manifests (a root `plugin.json`, `.github/plugin/plugin.json`, `.plugin/plugin.json`: "Path to an MCP configuration file (e.g., `.mcp.json`), or inline server definitions") and `.cursor-plugin/plugin.json` ("Path to MCP config file, inline MCP server config, or an array of either"). An inline map may also be an element of an `mcpServers` array. Agent Plugins manifests are skipped: "Component path fields such as `agents`, `skills`, `hooks`, `mcpServers`, and `lspServers` are not Agent Plugins 1.0 manifest fields." The protocol and tool-definition rules do not apply to a manifest.
 
 <a id="mcp-001"></a>
 ### MCP-001 [HIGH] Invalid JSON-RPC Version
@@ -1939,7 +1939,7 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 <a id="mcp-009"></a>
 ### MCP-009 [HIGH] Missing command for stdio server
 **Requirement**: Stdio MCP servers MUST have a `command`. The MCP specification defines no client configuration file; the `mcpServers` map and its fields are each client's format. Cursor: "**command** | Yes | Command to start the server executable."; Claude Code: "Claude Code reads an entry with no `type` as a stdio server, so a `url` entry without a `type` fails."
-**Detection**: Server entry has `type: "stdio"` (or Copilot's `local`), or omits `type` and has no usable `command`. A URL-only entry is read as remote in `.cursor/mcp.json` (Cursor's documented remote form), a Kiro power `mcp.json`, an Amp skill's sibling `mcp.json`, and a Codex plugin's `.mcp.json` (next to `.codex-plugin/plugin.json`, not in a Claude Code plugin). Without a `type`, the message says the entry defaults to stdio, and for a `url` entry asks for a `type`.
+**Detection**: Server entry has `type: "stdio"` (or Copilot's `local`), or omits `type` and has no usable `command`. A URL-only entry is read as remote in `.cursor/mcp.json` (Cursor's documented remote form), inline servers of `.cursor-plugin/plugin.json` (Cursor Plugins "infer the transport from `command` or `url`"), a Kiro power `mcp.json`, an Amp skill's sibling `mcp.json`, and a Codex plugin's `.mcp.json` (next to `.codex-plugin/plugin.json`, not in a Claude Code plugin). Without a `type`, the message says the entry defaults to stdio, and for a `url` entry asks for a `type`.
 **Fix**: Add a `command` field specifying the executable to run
 **Source**: code.claude.com/docs/en/mcp, cursor.com/docs/mcp, code.visualstudio.com MCP configuration, geminicli.com/docs/tools/mcp-server
 
@@ -1953,7 +1953,7 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 <a id="mcp-011"></a>
 ### MCP-011 [HIGH] Invalid MCP server type
 **Requirement**: An MCP server `type` MUST be one the client that reads the file accepts. The MCP specification defines no client configuration file; the `mcpServers` map and its fields are each client's format. Claude Code: stdio, http, `streamable-http` ("accepts `streamable-http` as an alias for `http`"), sse, ws; GitHub Copilot: "accepts `local`, `stdio`, `http`, or `sse`"; Codex plugins: stdio, http, streamable-http; Cursor: stdio, http, sse, streamable-http; Cline: `streamableHttp`, sse. Claude Code "skips a `"type": "sdk"` entry" (only an Agent SDK host registers it), a warning.
-**Detection**: The valid set is the union of the types the file's readers accept: `.mcp.json` (Claude Code, Copilot, Codex plugins), `.cursor/mcp.json` (Cursor), `.vscode/mcp.json`, `.github/mcp.json` and `mcp-config.json` (Copilot), narrowed to the selected tools when `tools` names some of them. A file no specific client owns accepts every client's values.
+**Detection**: The valid set is the union of the types the file's readers accept: `.mcp.json` (Claude Code, Copilot, Codex plugins), `.cursor/mcp.json` (Cursor), `.vscode/mcp.json`, `.github/mcp.json` and `mcp-config.json` (Copilot); for inline manifest servers, `.claude-plugin/plugin.json` (Claude Code, Copilot), other Copilot manifests (Copilot) and `.cursor-plugin/plugin.json` (Cursor), narrowed to the selected tools when `tools` names some of them. A file no specific client owns accepts every client's values.
 **Fix**: [AUTO-FIX, unsafe] Replace with the closest valid type
 **Source**: code.claude.com/docs/en/mcp, docs.github.com Copilot MCP servers, code.visualstudio.com MCP configuration, cursor.com/docs/mcp, docs.cline.bot/mcp/mcp-overview
 
@@ -2052,7 +2052,7 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 ## CLAUDE CODE RULES (MCP)
 
-> **Scope:** Claude Code's own handling of MCP server entries. CC-MCP-001, -002, -004 and -005 run only on the MCP files Claude Code reads - a project `.mcp.json` and a plugin's `.mcp.json` (the directory has `.claude-plugin/`) - so other clients' MCP files (`.cursor/mcp.json`, `.vscode/mcp.json`, ...) don't get Claude Code facts. CC-MCP-003 runs on MCP tool listings. The generic MCP rules (MCP-*) still run on every MCP file.
+> **Scope:** Claude Code's own handling of MCP server entries. CC-MCP-001, -002, -004 and -005 run only on the MCP files Claude Code reads - a project `.mcp.json` and a plugin's `.mcp.json` (the directory has `.claude-plugin/`) - so other clients' MCP files (`.cursor/mcp.json`, `.vscode/mcp.json`, ...) don't get Claude Code facts. The servers a `.claude-plugin/plugin.json` declares inline in `mcpServers` are plugin servers: CC-MCP-001 and CC-MCP-004 run on them; CC-MCP-002 and CC-MCP-005 do not (plugin configurations "substitute `${CLAUDE_PROJECT_DIR}` directly", and plugin servers are named `plugin:<plugin>:<server>`). CC-MCP-003 runs on MCP tool listings. The generic MCP rules (MCP-*) still run on every MCP file.
 
 <a id="cc-mcp-001"></a>
 ### CC-MCP-001 [HIGH] Credential Variable Reads as Empty in Remote MCP Server
@@ -2078,7 +2078,7 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 <a id="cc-mcp-004"></a>
 ### CC-MCP-004 [MEDIUM] Non-boolean alwaysLoad in Claude Code MCP Config
 **Requirement**: `alwaysLoad` MUST be a boolean when present. Vendor text: "If a server's tools should always be visible to Claude without a search step, set `alwaysLoad` to `true` in that server's configuration." and "To keep all of a server's tools behind tool search, set `"alwaysLoad": false`" (mcp, "Exempt a server from deferral")
-**Detection**: string, number, array or object `alwaysLoad` on a server in a Claude Code `.mcp.json` (JSON `null` counts as absent)
+**Detection**: string, number, array or object `alwaysLoad` on a server in a Claude Code `.mcp.json` or inline in `.claude-plugin/plugin.json` (JSON `null` counts as absent)
 **Fix**: Opt-in unsafe autofix converts exact quoted `true` or `false` to a boolean. This can activate ignored settings or change security policy; plain `--fix` leaves them unchanged. Other invalid values require manual correction.
 **Source**: code.claude.com/docs/en/mcp
 

@@ -398,7 +398,7 @@ impl ValidatorRegistryBuilder {
 ///
 /// Used by `BuiltinProvider` (via `debug_assert_eq!`) and tests to catch
 /// accidental additions or removals without updating all providers.
-const EXPECTED_BUILTIN_COUNT: usize = 135;
+const EXPECTED_BUILTIN_COUNT: usize = 139;
 
 // -- Category providers -----------------------------------------------------
 //
@@ -843,6 +843,17 @@ impl ValidatorProvider for MiscProvider {
             (FileType::AmpSettings, Some("McpValidator"), mcp_validator),
             (FileType::CodexConfig, Some("McpValidator"), mcp_validator),
             (FileType::CopilotAgent, Some("McpValidator"), mcp_validator),
+            // Servers declared inline in a plugin manifest's `mcpServers`
+            // get the server-level MCP checks; ClaudeMcpValidator adds the
+            // CC-MCP rules for `.claude-plugin/plugin.json`.
+            (FileType::Plugin, Some("McpValidator"), mcp_validator),
+            (FileType::CopilotPlugin, Some("McpValidator"), mcp_validator),
+            (FileType::CursorPlugin, Some("McpValidator"), mcp_validator),
+            (
+                FileType::Plugin,
+                Some("ClaudeMcpValidator"),
+                claude_mcp_validator,
+            ),
             (
                 FileType::Mcp,
                 Some("ClaudeMcpValidator"),
@@ -1633,7 +1644,17 @@ mod tests {
             .iter()
             .map(|validator| validator.name())
             .collect();
-        assert_eq!(names, vec!["PluginValidator", "CodexPluginValidator"]);
+        // The MCP validators check the servers a manifest declares inline in
+        // `mcpServers`.
+        assert_eq!(
+            names,
+            vec![
+                "PluginValidator",
+                "CodexPluginValidator",
+                "McpValidator",
+                "ClaudeMcpValidator"
+            ]
+        );
     }
 
     // ---- Multiple disabled validators ----
@@ -2530,8 +2551,10 @@ mod tests {
         // Codex hooks, custom agents, rules, prompts, skill metadata and plugin
         // MCP files, and OpenCode agents, commands, tools, plugins, instruction
         // files and skills added 21; McpValidator on the six client configs that
-        // embed MCP servers added 6.
-        assert_eq!(MiscProvider.named_validators().len(), 70);
+        // embed MCP servers added 6; McpValidator on the three plugin manifest
+        // types and ClaudeMcpValidator on Claude plugin manifests (inline
+        // `mcpServers`) added 4.
+        assert_eq!(MiscProvider.named_validators().len(), 74);
     }
 
     #[test]

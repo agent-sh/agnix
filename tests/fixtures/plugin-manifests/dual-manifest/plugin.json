@@ -1,0 +1,5 @@
+{
+  "name": "dual-manifest",
+  "description": "Copilot reads this root manifest; Claude Code reads .claude-plugin/plugin.json",
+  "agents": "agents/"
+}

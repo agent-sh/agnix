@@ -1,0 +1,24 @@
+{
+  "name": "inline-mcp",
+  "description": "Claude Code plugin with inline MCP servers",
+  "version": "1.0.0",
+  "mcpServers": {
+    "db": {
+      "command": "npx",
+      "args": ["-y", "@example/db-server"],
+      "env": { "DB_PASSWORD": "hunter2hunter2hunter2" }
+    },
+    "gateway": {
+      "type": "http",
+      "url": "https://gateway.example.com/mcp",
+      "headers": { "Authorization": "Bearer ${ANTHROPIC_AUTH_TOKEN}" },
+      "alwaysLoad": "true"
+    },
+    "search": {
+      "type": "http",
+      "url": "https://search.example.com/mcp",
+      "headers": { "Authorization": "Bearer abcdefghijklmnopqrstuvwxyz012345" }
+    },
+    "docs": { "url": "https://docs.example.com/mcp" }
+  }
+}

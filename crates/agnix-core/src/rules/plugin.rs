@@ -55,6 +55,129 @@ fn is_kebab_case_plugin_name(name: &str) -> bool {
             .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
 }
 
+/// Who reads a `plugin.json` that is not in `.claude-plugin/`. Claude Code
+/// reads its manifest only from `.claude-plugin/plugin.json`, while GitHub
+/// Copilot CLI and VS Code read a `plugin.json` at the plugin root: "Agent
+/// Plugins requires the manifest at the plugin root", and legacy Copilot
+/// plugins look in "`.plugin/plugin.json`, `plugin.json`,
+/// `.github/plugin/plugin.json`, or `.claude-plugin/plugin.json`" (Copilot
+/// CLI plugin reference, "File locations"); VS Code lists the Copilot format
+/// as a root `plugin.json` and uses it "as the default when no other format
+/// marker is found".
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum OutsideManifest {
+    /// An Agent Plugins or GitHub Copilot manifest; no Claude Code rule applies.
+    OtherTool,
+    /// A Claude Code manifest in the wrong place: it uses fields only Claude
+    /// Code documents, or the run selects Claude Code and not Copilot.
+    Claude,
+    /// No signal either way.
+    Unknown,
+}
+
+/// Manifest fields Claude Code documents and the legacy Copilot manifest
+/// does not (plugins manifest reference, "Fields"; Copilot CLI plugin
+/// reference, "Legacy manifest fields").
+const CLAUDE_ONLY_FIELDS: &[&str] = &[
+    "displayName",
+    "metadata",
+    "icon",
+    "documentationUrl",
+    "supportUrl",
+    "privacyPolicyUrl",
+    "termsOfServiceUrl",
+    "defaultEnabled",
+    "dependencies",
+    "settings",
+    "userConfig",
+    "types",
+    "channels",
+    "outputStyles",
+    "workflows",
+    "experimental",
+    "themes",
+    "monitors",
+];
+
+/// Manifest fields of GitHub Copilot's formats that Claude Code does not
+/// document: `extensions` (Agent Plugins client data, or legacy extension
+/// directories) and the legacy `category` and `tags` metadata.
+const COPILOT_ONLY_FIELDS: &[&str] = &["extensions", "category", "tags"];
+
+fn has_agent_plugins_schema(value: &serde_json::Value) -> bool {
+    value
+        .get("$schema")
+        .and_then(serde_json::Value::as_str)
+        .is_some_and(|schema| {
+            schema.starts_with(crate::rules::codex_plugin::AGENT_PLUGIN_SCHEMA_PREFIX)
+        })
+}
+
+/// Whether the run selects Claude Code and not GitHub Copilot.
+fn selects_claude_without_copilot(config: &PerFileLintConfig<'_>) -> bool {
+    let tools = config.tools();
+    if tools.is_empty() {
+        return config.target() == crate::config::TargetTool::ClaudeCode;
+    }
+    let selects = |names: &[&str]| {
+        tools
+            .iter()
+            .any(|tool| names.iter().any(|name| tool.eq_ignore_ascii_case(name)))
+    };
+    selects(&["claude-code"]) && !selects(&["github-copilot", "copilot"])
+}
+
+/// Classify a `plugin.json` outside `.claude-plugin/` by the signals the
+/// vendor docs give.
+fn classify_outside_manifest(
+    path: &Path,
+    content: &str,
+    config: &PerFileLintConfig<'_>,
+) -> OutsideManifest {
+    let value = serde_json::from_str::<serde_json::Value>(content).ok();
+    let fields = value.as_ref().and_then(serde_json::Value::as_object);
+    // "Copilot CLI recognizes the canonical `$schema` values for Agent
+    // Plugins ... opting a plugin into Agent Plugins semantics."
+    if value.as_ref().is_some_and(has_agent_plugins_schema) {
+        return OutsideManifest::OtherTool;
+    }
+    if let Some(dir) = path.parent() {
+        let fs = config.fs();
+        // The plugin keeps its Claude Code manifest in `.claude-plugin/`, so
+        // this one is for the tools that read a root manifest first.
+        if fs.is_file(&dir.join(".claude-plugin").join("plugin.json")) {
+            return OutsideManifest::OtherTool;
+        }
+        // Agent Plugins layout: "Copilot CLI reads its client-specific
+        // components from the `com.github.copilot` directory", and "The root
+        // `mcp.json` must declare a recognized Agent Plugins `$schema`".
+        if fs.is_dir(&dir.join("com.github.copilot")) {
+            return OutsideManifest::OtherTool;
+        }
+        if fs
+            .read_to_string(&dir.join("mcp.json"))
+            .ok()
+            .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok())
+            .is_some_and(|mcp| has_agent_plugins_schema(&mcp))
+        {
+            return OutsideManifest::OtherTool;
+        }
+    }
+    let has_any = |names: &[&str]| {
+        fields.is_some_and(|fields| names.iter().any(|name| fields.contains_key(*name)))
+    };
+    if has_any(CLAUDE_ONLY_FIELDS) {
+        return OutsideManifest::Claude;
+    }
+    if has_any(COPILOT_ONLY_FIELDS) {
+        return OutsideManifest::OtherTool;
+    }
+    if selects_claude_without_copilot(config) {
+        return OutsideManifest::Claude;
+    }
+    OutsideManifest::Unknown
+}
+
 pub struct PluginValidator;
 
 impl Validator for PluginValidator {
@@ -94,33 +217,42 @@ impl Validator for PluginValidator {
             return diagnostics;
         }
 
-        if !is_in_claude_plugin
-            && serde_json::from_str::<serde_json::Value>(content)
-                .ok()
-                .and_then(|value| {
-                    value
-                        .get("$schema")
-                        .and_then(|value| value.as_str())
-                        .map(str::to_owned)
-                })
-                .is_some_and(|schema| {
-                    schema.starts_with(crate::rules::codex_plugin::AGENT_PLUGIN_SCHEMA_PREFIX)
-                })
-        {
-            return diagnostics;
-        }
-
-        if config.is_rule_enabled("CC-PL-001") && !is_in_claude_plugin {
-            diagnostics.push(
-                Diagnostic::error(
-                    path.to_path_buf(),
-                    1,
-                    0,
-                    "CC-PL-001",
-                    t!("rules.cc_pl_001.message"),
-                )
-                .with_suggestion(t!("rules.cc_pl_001.suggestion")),
-            );
+        if !is_in_claude_plugin {
+            match classify_outside_manifest(path, content, config) {
+                // Not a Claude Code manifest: no Claude Code rule applies.
+                OutsideManifest::OtherTool => return diagnostics,
+                // Claude Code ignores the file, and GitHub Copilot may read
+                // it with its own rules: report the location only.
+                OutsideManifest::Unknown => {
+                    if config.is_rule_enabled("CC-PL-001") {
+                        diagnostics.push(
+                            Diagnostic::warning(
+                                path.to_path_buf(),
+                                1,
+                                0,
+                                "CC-PL-001",
+                                t!("rules.cc_pl_001.shared_root"),
+                            )
+                            .with_suggestion(t!("rules.cc_pl_001.shared_root_suggestion")),
+                        );
+                    }
+                    return diagnostics;
+                }
+                OutsideManifest::Claude => {
+                    if config.is_rule_enabled("CC-PL-001") {
+                        diagnostics.push(
+                            Diagnostic::error(
+                                path.to_path_buf(),
+                                1,
+                                0,
+                                "CC-PL-001",
+                                t!("rules.cc_pl_001.message"),
+                            )
+                            .with_suggestion(t!("rules.cc_pl_001.suggestion")),
+                        );
+                    }
+                }
+            }
         }
 
         #[allow(clippy::collapsible_if)]
@@ -1724,7 +1856,162 @@ mod tests {
             &LintConfig::default(),
         );
 
-        assert!(diagnostics.iter().any(|d| d.rule == "CC-PL-001"));
+        // Copilot CLI and VS Code also read a root plugin.json, so with no
+        // signal either way the location is a warning, not an error.
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-PL-001")
+            .collect();
+        assert_eq!(hits.len(), 1, "{diagnostics:?}");
+        assert_eq!(hits[0].level, crate::diagnostics::DiagnosticLevel::Warning);
+    }
+
+    /// Write `files` under a temp plugin directory and validate its root
+    /// `plugin.json`.
+    fn validate_root_manifest(
+        manifest: &str,
+        files: &[(&str, &str)],
+        config: &LintConfig,
+    ) -> Vec<Diagnostic> {
+        let temp = TempDir::new().unwrap();
+        for (name, content) in files {
+            write_plugin(&temp.path().join(name), content);
+        }
+        let plugin_path = temp.path().join("plugin.json");
+        write_plugin(&plugin_path, manifest);
+        PluginValidator.validate(&plugin_path, manifest, config)
+    }
+
+    fn cc_pl_001_levels(diagnostics: &[Diagnostic]) -> Vec<crate::diagnostics::DiagnosticLevel> {
+        diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-PL-001")
+            .map(|d| d.level)
+            .collect()
+    }
+
+    #[test]
+    fn test_cc_pl_001_root_copilot_legacy_manifest_is_a_warning_only() {
+        use crate::diagnostics::DiagnosticLevel;
+        // The legacy example from "Creating a plugin for GitHub Copilot CLI":
+        // its paths have no `./` prefix, which Claude Code would reject, so
+        // the Claude content checks must not run on it.
+        let manifest = r#"{
+  "name": "my-dev-tools",
+  "description": "React development utilities",
+  "agents": "agents/",
+  "skills": ["skills/", "extra-skills/"],
+  "hooks": "hooks.json",
+  "mcpServers": ".mcp.json"
+}"#;
+        let diagnostics = validate_root_manifest(manifest, &[], &LintConfig::default());
+        assert_eq!(
+            cc_pl_001_levels(&diagnostics),
+            vec![DiagnosticLevel::Warning]
+        );
+        assert_eq!(diagnostics.len(), 1, "{diagnostics:?}");
+        assert!(diagnostics[0].message.contains("GitHub Copilot"));
+
+        // Both tools selected: still only a warning.
+        let both = LintConfig::builder()
+            .tools(vec![
+                "claude-code".to_string(),
+                "github-copilot".to_string(),
+            ])
+            .build()
+            .unwrap();
+        let diagnostics = validate_root_manifest(manifest, &[], &both);
+        assert_eq!(
+            cc_pl_001_levels(&diagnostics),
+            vec![DiagnosticLevel::Warning]
+        );
+    }
+
+    #[test]
+    fn test_cc_pl_001_claude_manifest_in_wrong_place_is_an_error() {
+        use crate::diagnostics::DiagnosticLevel;
+        // A field only Claude Code documents marks a Claude Code manifest.
+        let manifest = r#"{"name":"helper","userConfig":{"token":{"type":"string","title":"Token","description":"API token","sensitive":true}}}"#;
+        let diagnostics = validate_root_manifest(manifest, &[], &LintConfig::default());
+        assert_eq!(cc_pl_001_levels(&diagnostics), vec![DiagnosticLevel::Error]);
+        // The other manifest checks still run on a misplaced Claude manifest.
+        assert!(
+            diagnostics.iter().any(|d| d.rule == "CC-PL-004"),
+            "{diagnostics:?}"
+        );
+
+        // A run that selects Claude Code and not Copilot.
+        let claude_only = LintConfig::builder()
+            .tools(vec!["claude-code".to_string()])
+            .build()
+            .unwrap();
+        let diagnostics = validate_root_manifest(r#"{"name":"helper"}"#, &[], &claude_only);
+        assert_eq!(cc_pl_001_levels(&diagnostics), vec![DiagnosticLevel::Error]);
+        // The deprecated `target` still selects Claude Code.
+        let target = LintConfig::builder()
+            .target(crate::config::TargetTool::ClaudeCode)
+            .build_unchecked();
+        let diagnostics = validate_root_manifest(r#"{"name":"helper"}"#, &[], &target);
+        assert_eq!(cc_pl_001_levels(&diagnostics), vec![DiagnosticLevel::Error]);
+    }
+
+    #[test]
+    fn test_cc_pl_001_skips_agent_plugins_and_copilot_root_manifests() {
+        let claude_only = LintConfig::builder()
+            .tools(vec!["claude-code".to_string()])
+            .build()
+            .unwrap();
+        let cases: &[(&str, &[(&str, &str)])] = &[
+            // Agent Plugins `$schema`, any version.
+            (
+                r#"{"$schema":"https://agent-plugins.org/schemas/1.1.0/plugin.schema.json","name":"p"}"#,
+                &[],
+            ),
+            // Agent Plugins layout without the manifest `$schema`: a root
+            // mcp.json that declares the Agent Plugins MCP schema.
+            (
+                r#"{"name":"p"}"#,
+                &[(
+                    "mcp.json",
+                    r#"{"$schema":"https://agent-plugins.org/schemas/1.0.0/mcp.schema.json","mcpServers":{}}"#,
+                )],
+            ),
+            // Copilot client directory of an Agent Plugins package.
+            (r#"{"name":"p"}"#, &[("com.github.copilot/lsp.json", "{}")]),
+            // The Claude Code manifest is in .claude-plugin/; this one is for
+            // the tools that read the root first.
+            (
+                r#"{"name":"p","agents":"agents/"}"#,
+                &[(".claude-plugin/plugin.json", r#"{"name":"p"}"#)],
+            ),
+            // Copilot-only manifest fields.
+            (r#"{"name":"p","category":"dev","tags":["x"]}"#, &[]),
+            (r#"{"name":"p","extensions":"extensions/"}"#, &[]),
+        ];
+        for (manifest, files) in cases {
+            for config in [&LintConfig::default(), &claude_only] {
+                let diagnostics = validate_root_manifest(manifest, files, config);
+                assert!(
+                    diagnostics.is_empty(),
+                    "{manifest} {files:?}: {diagnostics:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_cc_pl_001_mcp_json_without_agent_plugins_schema_is_not_a_signal() {
+        // A plain root mcp.json is Cursor's or the portable file of other
+        // tools; it says nothing about the manifest.
+        let diagnostics = validate_root_manifest(
+            r#"{"name":"p"}"#,
+            &[("mcp.json", r#"{"mcpServers":{}}"#)],
+            &LintConfig::default(),
+        );
+        assert_eq!(
+            cc_pl_001_levels(&diagnostics),
+            vec![crate::diagnostics::DiagnosticLevel::Warning]
+        );
     }
 
     #[test]

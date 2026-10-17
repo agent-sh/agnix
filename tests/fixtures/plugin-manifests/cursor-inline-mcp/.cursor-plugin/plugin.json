@@ -1,0 +1,17 @@
+{
+  "name": "cursor-inline-mcp",
+  "description": "Cursor plugin with inline MCP servers",
+  "mcpServers": {
+    "api": {
+      "url": "https://mcp.example.com/mcp",
+      "headers": { "Authorization": "Bearer ${API_TOKEN}" }
+    },
+    "local": { "command": "npx", "args": ["-y", "@example/local-server@latest"] }
+  },
+  "variables": {
+    "type": "object",
+    "properties": {
+      "API_TOKEN": { "type": "string", "title": "API token", "description": "Bearer token" }
+    }
+  }
+}

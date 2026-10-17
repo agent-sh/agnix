@@ -12,8 +12,9 @@
 //! servers inside a larger config: OpenCode (`mcp`, V2 `mcp.servers`), Gemini
 //! settings and extensions (`mcpServers`), Amp settings (`amp.mcpServers`),
 //! Codex `config.toml` (`[mcp_servers.<name>]`) and Copilot custom agents
-//! (`mcp-servers` frontmatter). Kiro MCP files are not
-//! covered here: KR-MCP-002 checks their secrets.
+//! (`mcp-servers` frontmatter). Inline `mcpServers` in plugin manifests go
+//! through `McpValidator`'s server checks, which end here. Kiro MCP files are
+//! not covered here: KR-MCP-002 checks their secrets.
 //!
 //! Evidence: MCP local server security guide ("Keep long-lived secrets out of
 //! plaintext config", "Pin the version", "Grant the narrowest root that works
@@ -686,15 +687,36 @@ pub(crate) fn home_or_root_argument(argv: &[String]) -> Option<String> {
 pub(crate) struct Locator<'a> {
     content: &'a str,
     line_starts: Vec<usize>,
+    /// Byte range that holds the server map; lookups stay inside it.
+    start: usize,
+    end: usize,
+    /// Byte offset of each server's key, when the caller parsed the map with
+    /// spans; otherwise the name is searched for.
+    server_keys: Vec<(String, usize)>,
 }
 
 impl<'a> Locator<'a> {
     pub(crate) fn new(content: &'a str) -> Self {
+        Self::within(content, 0, content.len(), Vec::new())
+    }
+
+    /// A locator for a server map at `start..end` of `content` (inline
+    /// servers in a larger file), with the byte offset of each server key.
+    pub(crate) fn within(
+        content: &'a str,
+        start: usize,
+        end: usize,
+        server_keys: Vec<(String, usize)>,
+    ) -> Self {
         let mut line_starts = vec![0];
         line_starts.extend(content.match_indices('\n').map(|(i, _)| i + 1));
+        let end = end.min(content.len());
         Self {
             content,
             line_starts,
+            start: start.min(end),
+            end,
+            server_keys,
         }
     }
 
@@ -703,9 +725,13 @@ impl<'a> Locator<'a> {
         (idx + 1, offset - self.line_starts[idx] + 1)
     }
 
-    /// Offset of the server's name: a quoted key, a TOML table header, or a
-    /// YAML key.
+    /// Offset of the server's name: its known key offset, or else a quoted
+    /// key, a TOML table header, or a YAML key.
     fn server_offset(&self, name: &str) -> Option<usize> {
+        if let Some((_, offset)) = self.server_keys.iter().rev().find(|(key, _)| key == name) {
+            return Some(*offset);
+        }
+        let scope = self.content.get(self.start..self.end)?;
         [
             format!("\"{name}\""),
             format!("mcp_servers.{name}]"),
@@ -714,14 +740,20 @@ impl<'a> Locator<'a> {
             format!("'{name}'"),
         ]
         .iter()
-        .find_map(|needle| self.content.find(needle.as_str()))
+        .find_map(|needle| scope.find(needle.as_str()))
+        .map(|rel| self.start + rel)
     }
 
     /// Line and column of `needle` after the server's name, or of the name.
     pub(crate) fn locate(&self, server: &str, needle: &str) -> (usize, usize) {
-        let start = self.server_offset(server).unwrap_or(0);
+        let start = self.server_offset(server).unwrap_or(self.start);
         let offset = (!needle.is_empty())
-            .then(|| self.content[start..].find(needle).map(|rel| start + rel))
+            .then(|| {
+                self.content
+                    .get(start..self.end)
+                    .and_then(|scope| scope.find(needle))
+                    .map(|rel| start + rel)
+            })
             .flatten()
             .unwrap_or(start);
         self.line_col(offset)

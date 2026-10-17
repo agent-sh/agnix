@@ -3162,7 +3162,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.claude.com/docs/en/plugins/manifest-reference"
+          "https://code.claude.com/docs/en/plugins/manifest-reference",
+          "https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-plugin-reference",
+          "https://code.visualstudio.com/docs/agents/reference/agent-plugin-reference"
         ],
         "verified_on": "2026-10-17",
         "applies_to": {

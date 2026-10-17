@@ -396,3 +396,70 @@ fn test_cli_vendor_rules_gated_by_tools() {
     assert_has_rule(&windsurf, "AGM-003");
     assert_eq!(count_rule(&windsurf, "AS-009"), 0);
 }
+
+// ===== Plugin manifests: CC-PL-001 on root manifests, inline mcpServers =====
+
+fn diagnostics_in<'a>(json: &'a serde_json::Value, file_part: &str) -> Vec<&'a serde_json::Value> {
+    json["diagnostics"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|d| d["file"].as_str().is_some_and(|f| f.contains(file_part)))
+        .collect()
+}
+
+#[test]
+fn test_cli_plugin_manifest_locations() {
+    let json = run_json(&workspace_root().join("tests/fixtures/plugin-manifests"));
+    // Agent Plugins manifests and a root manifest beside .claude-plugin/
+    // belong to other tools: no Claude Code plugin rule.
+    for dir in [
+        "agent-plugins/",
+        "agent-plugins-no-schema/",
+        "dual-manifest/",
+    ] {
+        let found: Vec<_> = diagnostics_in(&json, dir)
+            .into_iter()
+            .filter(|d| d["rule"].as_str().unwrap().starts_with("CC-PL-"))
+            .collect();
+        assert!(found.is_empty(), "{dir}: {found:?}");
+    }
+    // The Copilot legacy example: Claude Code ignores it, so CC-PL-001 is a
+    // warning and Claude's path rules (`./` prefix) do not run.
+    let legacy = diagnostics_in(&json, "copilot-legacy/plugin.json");
+    assert_eq!(legacy.len(), 1, "{legacy:?}");
+    assert_eq!(legacy[0]["rule"], "CC-PL-001");
+    assert_eq!(legacy[0]["level"], "warning");
+
+    // A Claude Code manifest (it has `userConfig`) in the wrong place.
+    let json =
+        run_json(&workspace_root().join("tests/fixtures/invalid/plugins/misplaced-manifest"));
+    let misplaced = diagnostics_in(&json, "misplaced-manifest/plugin.json");
+    assert!(
+        misplaced
+            .iter()
+            .any(|d| d["rule"] == "CC-PL-001" && d["level"] == "error"),
+        "{misplaced:?}"
+    );
+}
+
+#[test]
+fn test_cli_inline_mcp_servers_in_plugin_manifests() {
+    let json = run_json(&workspace_root().join("tests/fixtures/plugin-manifests"));
+    let claude = rules_in_file(&json, "claude-inline-mcp/.claude-plugin/plugin.json");
+    for rule in [
+        "MCP-009",
+        "MCP-018",
+        "MCP-027",
+        "MCP-028",
+        "CC-MCP-001",
+        "CC-MCP-004",
+    ] {
+        assert!(claude.contains(&rule.to_string()), "{rule}: {claude:?}");
+    }
+    let copilot = rules_in_file(&json, "copilot-inline-mcp/.github/plugin/plugin.json");
+    assert_eq!(copilot, vec!["MCP-018".to_string()], "{copilot:?}");
+    // Cursor reads a url-only entry as remote: no MCP-009.
+    let cursor = rules_in_file(&json, "cursor-inline-mcp/.cursor-plugin/plugin.json");
+    assert_eq!(cursor, vec!["MCP-027".to_string()], "{cursor:?}");
+}

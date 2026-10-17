@@ -1590,6 +1590,8 @@ rules:
   cc_pl_001:
     message: plugin.json must be located in .claude-plugin/ directory
     suggestion: Move plugin.json to .claude-plugin/plugin.json
+    shared_root: "Claude Code reads a plugin manifest only from .claude-plugin/plugin.json and ignores this file; GitHub Copilot reads a plugin.json at the plugin root"
+    shared_root_suggestion: "For a Claude Code plugin, move it to .claude-plugin/plugin.json. For a GitHub Copilot plugin, keep it here and leave Claude Code out of `tools` in .agnix.toml"
   cc_pl_002:
     message: Component '%{component}' must not be inside .claude-plugin/
     suggestion: Move components to the plugin root directory
