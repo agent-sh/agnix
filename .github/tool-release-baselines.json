@@ -1,7 +1,7 @@
 {
   "version": "1.1",
-  "last_updated": "2026-10-16",
-  "description": "Tracks the latest release of every tool agnix validates (one entry per tool with a validator in crates/agnix-core/src/rules/). Used by .github/workflows/tool-release-watch.yml to open per-tool issues when a new release is published. Untracked tools include the precise publication URL in untracked_reason so a maintainer can monitor manually.\n\nOptional `changes_of_interest` per tool describes what agnix cares about: `config_surfaces` (files agnix validates), `relevant` (change-types that likely affect a validator), `irrelevant` (safe to skip). When set and GLM_API_KEY is available, the watcher runs scripts/glm-extract.js --mode=agnix-triage to produce a pre-filtered summary at the top of the issue body. Falls back gracefully to the full changelog on any LLM failure.",
+  "last_updated": "2026-10-17",
+  "description": "Tracks the latest release of every tool agnix validates (one entry per tool with a validator in crates/agnix-core/src/rules/, and one entry per release line when agnix supports two lines of the same tool: `opencode` is OpenCode 1 and `opencode-v2` is OpenCode 2). `validators` lists the file stems of the crates/agnix-core/src/rules/*.rs modules that check the tool's files; shared helpers (for example mcp_servers, kiro_engine, opencode_version) and modules that run on every tool's Markdown (xml, imports, prompt, cross_platform, project_level) are not listed. Used by .github/workflows/tool-release-watch.yml to open per-tool issues when a new release is published. Untracked tools include the precise publication URL in untracked_reason so a maintainer can monitor manually.\n\nOptional `changes_of_interest` per tool describes what agnix cares about: `config_surfaces` (files agnix validates), `relevant` (change-types that likely affect a validator), `irrelevant` (safe to skip). When set and GLM_API_KEY is available, the watcher runs scripts/glm-extract.js --mode=agnix-triage to produce a pre-filtered summary at the top of the issue body. Falls back gracefully to the full changelog on any LLM failure.",
   "tools": {
     "claude-code": {
       "tier": "s",
@@ -16,7 +16,9 @@
         "plugin",
         "mcp",
         "claude_marketplace",
-        "claude_mcp"
+        "claude_mcp",
+        "claude_settings",
+        "agents_md"
       ],
       "github_repo": "anthropics/claude-code",
       "last_known_version": "v2.1.299",
@@ -47,7 +49,9 @@
           "MCP server config schema changes (fields, auth shapes, placeholders)",
           "New built-in tool names (affecting the allow-list validator)",
           "Output-style or rules-file schema changes",
-          "Marketplace schema changes in .claude-plugin/marketplace.json (fields, source types, reserved names)"
+          "Marketplace schema changes in .claude-plugin/marketplace.json (fields, source types, reserved names)",
+          "Permission rule syntax, sandbox settings, and settings keys that only take effect at some scopes",
+          "MEMORY.md load limits for subagent and auto memory, and the memory directory settings"
         ],
         "irrelevant": [
           "Model additions or model-selection UI",
@@ -66,19 +70,30 @@
         "codex",
         "codex_plugin",
         "agents_md",
-        "per_client_skill"
+        "per_client_skill",
+        "codex_agent",
+        "codex_chain",
+        "codex_files",
+        "codex_hooks",
+        "codex_requirements",
+        "mcp"
       ],
       "github_repo": "openai/codex",
       "last_known_version": "rust-v0.163.0",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
-          "AGENTS.md",
-          "codex-rs/core/config.toml (project + ~/.codex/config.toml)",
+          "AGENTS.md and AGENTS.override.md",
+          ".codex/config.toml (project + ~/.codex/config.toml; also config.json / config.yaml / config.yml)",
           ".codex/skills/*/SKILL.md",
           ".codex-plugin/plugin.json and Agent Plugins root plugin.json",
           ".mcp.json or [mcp_servers.*] TOML blocks referenced from config.toml",
-          "requirements.toml (managed environment config)"
+          "requirements.toml (managed environment config)",
+          ".codex/hooks.json, ~/.codex/hooks.json and plugin hooks/hooks.json",
+          ".codex/agents/*.toml (custom agents)",
+          ".codex/rules/*.rules (command rules)",
+          "~/.codex/prompts/*.md (deprecated custom prompts)",
+          ".agents/skills/*/SKILL.md and <skill>/agents/openai.yaml"
         ],
         "relevant": [
           "New / renamed / removed keys in config.toml ([app], [agents], [features], [mcp_servers.*], [permissions], [sandbox], [windows], etc.)",
@@ -88,7 +103,12 @@
           "Per-client skill schema or .codex/skills directory layout changes",
           "Apps config shape ([apps.*], tool-approval modes, default_tools_* keys)",
           "Hook configuration schema (config.toml hooks block stabilized in 0.124)",
-          "AGENTS.md size limits, required sections, or directive grammar"
+          "AGENTS.md size limits, required sections, or directive grammar",
+          "hooks.json schema: hook event names, handler fields, timeouts, discovery locations",
+          "Custom agent TOML fields in .codex/agents/*.toml and the built-in agent names",
+          "Command rule (.rules) grammar: prefix_rule fields, decisions, justification",
+          "AGENTS.override.md precedence and the project_doc_max_bytes limit",
+          "Custom prompt deprecation, skills.max_context_tokens and agents/openai.yaml skill metadata"
         ],
         "irrelevant": [
           "Model additions, reasoning presets, context-length bumps",
@@ -101,29 +121,39 @@
     },
     "opencode": {
       "tier": "s",
-      "display_name": "OpenCode",
+      "display_name": "OpenCode 1",
       "validators": [
         "opencode",
+        "opencode_common",
+        "opencode_files",
+        "mcp",
         "agents_md",
         "per_client_skill"
       ],
-      "github_repo": "sst/opencode",
+      "github_repo": "anomalyco/opencode",
+      "release_tag_regex": "^v1\\.[0-9]+\\.[0-9]+$",
       "last_known_version": "v1.18.35",
       "tracked": true,
+      "notes": "OpenCode 1 line (npm opencode-ai, docs at https://opencode.ai/docs/). The repository moved from sst/opencode to anomalyco/opencode. OpenCode 2 ships from the same repository and is tracked separately as opencode-v2; release_tag_regex keeps this entry on the v1.X.Y GitHub releases even if a v2 release is ever marked latest. Validators are shared by both lines and gated by [tool_versions] opencode (rules with version_range <2.0.0 or >=2.0.0).",
       "changes_of_interest": {
         "config_surfaces": [
           "AGENTS.md",
-          "opencode.json / opencode.jsonc",
-          ".opencode/config.json",
-          "opencode agent definitions",
-          "opencode MCP config (inside .opencode/config.json or referenced .mcp.json)",
+          "CLAUDE.md (read only when no AGENTS.md exists)",
+          "opencode.json / opencode.jsonc (project, .opencode/, ~/.config/opencode/ and the system managed directory)",
+          ".opencode/agents/**/*.md (legacy agent/ and modes/)",
+          ".opencode/commands/**/*.md (legacy command/)",
+          ".opencode/tools/*.{ts,js} and .opencode/plugins/*.{ts,js}",
+          "MCP servers in opencode.json (mcp) and .mcp.json",
           ".opencode/skills/*/SKILL.md"
         ],
         "relevant": [
-          "New / renamed / removed top-level keys in opencode.json, opencode.jsonc, or .opencode/config.json",
+          "New / renamed / removed top-level keys in opencode.json or opencode.jsonc, including V1 keys deprecated in favor of OpenCode 2 forms",
           "Permission config schema (including rule ordering semantics)",
           "LSP config shape (request keys, permission-prompt payload)",
           "MCP server definition shape / auth / env-var substitution rules",
+          "Markdown agent and command frontmatter, and plural vs legacy singular .opencode/ directory names",
+          "Custom tool and plugin module layout, and built-in tool names",
+          "Policies and references config",
           "Per-client skill schema or .opencode/skills directory layout changes",
           "AGENTS.md grammar or size limits"
         ],
@@ -132,6 +162,50 @@
           "Desktop app icon/session UX",
           "npmrc / build-tool fixes",
           "Experimental HTTP API endpoints that don't change config files"
+        ]
+      }
+    },
+    "opencode-v2": {
+      "tier": "s",
+      "display_name": "OpenCode 2",
+      "validators": [
+        "opencode",
+        "opencode_common",
+        "opencode_files",
+        "mcp",
+        "agents_md",
+        "per_client_skill"
+      ],
+      "github_repo": "anomalyco/opencode",
+      "release_tag_regex": "^v2\\.[0-9]+\\.[0-9]+$",
+      "last_known_version": "v2.0.32",
+      "tracked": true,
+      "notes": "OpenCode 2 line (npm @opencode/cli, docs at https://opencode.ai/v2/docs/, first release v2.0.0 on 2026-09-11). It is published as v2.X.Y git tags in anomalyco/opencode with no GitHub releases (on 2026-10-17 every GitHub release was v1.X.Y and releases/latest was v1.19.3), so the watcher finds no matching release and falls back to the tags API filtered by release_tag_regex; the issue body is then the tags-only stub and triage is skipped. Read the change via https://www.npmjs.com/package/@opencode/cli, the tag diff (https://github.com/anomalyco/opencode/compare/<baseline>...<new tag>) and https://opencode.ai/v2/docs/migrate-v1/. Baseline v2.0.32 matches npm @opencode/cli latest and the v2 docs reviewed on 2026-10-17. Shares validators with opencode (OpenCode 1).",
+      "changes_of_interest": {
+        "config_surfaces": [
+          "AGENTS.md (nested; CLAUDE.md is not read)",
+          "opencode.json / opencode.jsonc (project, .opencode/, ~/.config/opencode/ and the system managed directory)",
+          ".opencode/agents/**/*.md",
+          ".opencode/commands/**/*.md",
+          ".opencode/tools/*.{ts,js} and .opencode/plugins/*.{ts,js}",
+          "MCP servers in opencode.json (mcp.servers) and .mcp.json",
+          ".opencode/skills/*/SKILL.md"
+        ],
+        "relevant": [
+          "Native V2 config keys (agents, commands, permissions, plugins, providers, policies, references, snapshots, update, media) and V1 keys that V2 deprecates or ignores",
+          "permissions array shape, action names (shell, subagent, edit, external_directory) and rule ordering",
+          "Policy statement schema and precedence across config files",
+          "mcp.servers entry fields (enabled flag, snake_case OAuth fields, timeouts)",
+          "Agent and command Markdown frontmatter and V2 agent fields",
+          "Skill discovery, skill ID and frontmatter rules",
+          "AGENTS.md discovery and instruction files",
+          "Changes to V1 compatibility in the migration guide (opencode.ai/v2/docs/migrate-v1)"
+        ],
+        "irrelevant": [
+          "Model additions, provider plumbing, OAuth flow UI",
+          "TUI and terminal settings in ~/.config/opencode/cli.json (not validated)",
+          "Server API, SDK and session-runner internals",
+          "npmrc / build-tool fixes"
         ]
       }
     },
@@ -186,7 +260,10 @@
           "Hook event names, payload shapes, required fields",
           "MCP server config shape (auth, env substitution, tool filtering)",
           "Power manifest schema",
-          "Skills directory layout or slash-command naming rules"
+          "Skills directory layout or slash-command naming rules",
+          "Capability policy (permissions.yaml / permissions.json, managed-settings.json) schema",
+          "Workflow recipe schema in .kiro/workflows",
+          ".kiroignore syntax and locations"
         ],
         "irrelevant": [
           "IDE UX (image-maps, previews, theming)",
@@ -201,7 +278,9 @@
       "tier": "a",
       "display_name": "GitHub Copilot",
       "validators": [
-        "copilot"
+        "copilot",
+        "copilot_hooks",
+        "mcp"
       ],
       "github_repo": "microsoft/vscode-copilot-chat",
       "last_known_version": "v0.43.0",
@@ -223,7 +302,8 @@
           "Additions to the supported instruction-file markdown directives",
           "Changes to custom agent and reusable prompt frontmatter or file layout",
           "Changes to Copilot hook events, hook configuration, or setup workflow conventions",
-          "Changes to Copilot skill frontmatter or the .github/skills directory layout"
+          "Changes to Copilot skill frontmatter or the .github/skills directory layout",
+          "MCP server config inside custom agent files (mcp-servers, COPILOT_MCP_ secret names)"
         ],
         "irrelevant": [
           "Chat UX / conversation history",
@@ -253,14 +333,20 @@
           ".clinerules/workflows/*.md",
           ".clinerules/hooks/*",
           ".clinerules/skills/*/SKILL.md",
-          ".cline/skills/*/SKILL.md"
+          ".cline/skills/*/SKILL.md",
+          ".cline/workflows/*.md",
+          ".cline/hooks/*",
+          ".clineignore (deprecated)",
+          "cline_mcp_settings.json"
         ],
         "relevant": [
           "Changes to .clinerules parsing (file vs dir, precedence)",
           "Changes to .cline/rules Markdown discovery or conditional paths",
           "New workflow/hook/skill file layouts",
           "Skill frontmatter schema changes",
-          "Memory-bank format changes"
+          "Memory-bank format changes",
+          ".clineignore deprecation or removal",
+          "MCP server fields in cline_mcp_settings.json (type for remote servers)"
         ],
         "irrelevant": [
           "Model additions",
@@ -276,7 +362,10 @@
       "validators": [
         "cursor",
         "mcp",
-        "per_client_skill"
+        "per_client_skill",
+        "cursor_cli",
+        "cursor_hooks",
+        "cursor_plugin"
       ],
       "github_repo": null,
       "html_url": "https://api2.cursor.sh/updates/api/update/darwin/cursor/0.0.1/stable",
@@ -292,7 +381,11 @@
           ".cursor/agents/**/*.md",
           ".cursor/environment.json",
           ".cursor/mcp.json",
-          ".cursor/skills/*/SKILL.md"
+          ".cursor/skills/*/SKILL.md",
+          ".cursor/cli.json and ~/.cursor/cli-config.json",
+          ".cursor/permissions.json",
+          ".cursor-plugin/plugin.json and .cursor-plugin/marketplace.json",
+          ".cursorignore"
         ],
         "relevant": [
           "Changes to .cursor/rules/**/*.mdc extension requirements or frontmatter (globs, description, alwaysApply)",
@@ -300,7 +393,10 @@
           "Agent frontmatter schema in .cursor/agents/**/*.md",
           "environment.json schema changes",
           "MCP config shape inside .cursor/mcp.json",
-          "Per-client skill schema or .cursor/skills directory layout changes"
+          "Per-client skill schema or .cursor/skills directory layout changes",
+          "Cursor CLI config and permissions.json allowlist schema",
+          "Plugin manifest and marketplace schema in .cursor-plugin/",
+          ".cursorignore pattern semantics"
         ],
         "irrelevant": [
           "Agents Window UX (worktrees, multitask, subagents orchestration)",
@@ -316,7 +412,10 @@
       "validators": [
         "amp",
         "amp_skill",
-        "agents_md"
+        "agents_md",
+        "amp_settings",
+        "amp_mcp",
+        "mcp"
       ],
       "github_repo": null,
       "html_url": "https://ampcode.com/news.rss",
@@ -333,7 +432,8 @@
           ".agents/checks/*.md",
           ".agents/skills/*/SKILL.md",
           ".agents/skills/*/mcp.json",
-          "AGENTS.md"
+          "AGENTS.md",
+          "ampcode/managed-settings.json (system managed settings)"
         ],
         "relevant": [
           "New or renamed keys in .amp/settings.json (cli-settings.schema.json)",
@@ -358,7 +458,12 @@
         "gemini_settings",
         "gemini_extension",
         "gemini_ignore",
-        "gemini_agent"
+        "gemini_agent",
+        "gemini_command",
+        "gemini_policy",
+        "gemini_hooks",
+        "gemini_mcp",
+        "mcp"
       ],
       "github_repo": "google-gemini/gemini-cli",
       "last_known_version": "v0.64.0",
@@ -369,14 +474,21 @@
           ".gemini/settings.json",
           ".geminiignore",
           "gemini-extension.json",
-          ".gemini/agents/*.md (local agent definitions, validated by GeminiAgentValidator)"
+          ".gemini/agents/*.md (local agent definitions, validated by GeminiAgentValidator)",
+          ".gemini/commands/**/*.toml (custom commands)",
+          ".gemini/policies/*.toml and admin policy directories (policy engine)",
+          "<extension>/hooks/hooks.json (extension hooks)"
         ],
         "relevant": [
           "Changes to .gemini/settings.json top-level keys",
           "Agent markdown frontmatter schema (kind, mcp_servers block, auth variants, system_prompt)",
           "gemini-extension.json manifest shape",
           "GEMINI.md grammar / size limits / import syntax",
-          "Hook env vars and plan-mode directives that affect agent files"
+          "Hook env vars and plan-mode directives that affect agent files",
+          "Custom command TOML fields (prompt, description) and {{args}}, !{...}, @{...} injection syntax",
+          "Policy engine TOML rule schema and policy file locations",
+          "Hook events, matchers and timeout units in settings.json and extension hooks/hooks.json",
+          "MCP server fields in settings.json and gemini-extension.json (transport, trust)"
         ],
         "irrelevant": [
           "Model additions / Gemini 2.x version bumps",
@@ -390,7 +502,9 @@
       "tier": "d",
       "display_name": "Windsurf (Devin Desktop)",
       "validators": [
-        "windsurf"
+        "windsurf",
+        "windsurf_hooks",
+        "agents_md"
       ],
       "github_repo": null,
       "html_url": "https://windsurf.com/changelog",
@@ -410,7 +524,9 @@
           ".windsurfrules (legacy)",
           "~/.codeium/windsurf/memories/global_rules.md",
           "~/.codeium/windsurf/hooks.json",
-          "AGENTS.md"
+          "AGENTS.md",
+          "~/.codeium/windsurf/global_workflows/*.md",
+          "~/.codeium/hooks.json and system hooks.json (Devin and Windsurf admin directories)"
         ],
         "relevant": [
           "New rules or workflows file layout / frontmatter (trigger values, globs, description)",
