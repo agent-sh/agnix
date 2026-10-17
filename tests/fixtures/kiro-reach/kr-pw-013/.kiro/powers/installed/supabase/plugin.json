@@ -1,0 +1,8 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "supabase",
+  "version": "1.0.0",
+  "description": "Build apps with Supabase",
+  "author": "Supabase",
+  "keywords": "database"
+}

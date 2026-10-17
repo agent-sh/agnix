@@ -30,7 +30,7 @@ keywords: ["KR-AG-025", "agent hook matcher never fires in kiro cli 2.x", "kiro 
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples

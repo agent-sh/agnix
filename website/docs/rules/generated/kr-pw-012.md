@@ -29,7 +29,7 @@ keywords: ["KR-PW-012", "plugin.json field outside the agent plugins manifest", 
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples

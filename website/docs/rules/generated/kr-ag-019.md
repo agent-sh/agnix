@@ -30,7 +30,7 @@ keywords: ["KR-AG-019", "kiro agent missing name for cli 2.x", "kiro agents", "v
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples

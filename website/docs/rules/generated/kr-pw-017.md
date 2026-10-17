@@ -29,7 +29,7 @@ keywords: ["KR-PW-017", "power.md ignored next to plugin.json", "kiro powers", "
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples

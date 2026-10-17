@@ -29,7 +29,7 @@ keywords: ["KR-AG-006", "kiro agent sub-agent access cannot work", "kiro agents"
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples

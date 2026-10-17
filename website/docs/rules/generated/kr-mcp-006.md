@@ -30,7 +30,7 @@ keywords: ["KR-MCP-006", "invalid oauth configuration", "kiro mcp", "validation"
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples

@@ -1,0 +1,15 @@
+{
+  "name": "lead",
+  "description": "Coordinates reviews and hands each diff to a reviewer",
+  "prompt": "Delegate the review.",
+  "tools": [
+    "read"
+  ],
+  "toolsSettings": {
+    "subagent": {
+      "availableAgents": [
+        "reviewer"
+      ]
+    }
+  }
+}

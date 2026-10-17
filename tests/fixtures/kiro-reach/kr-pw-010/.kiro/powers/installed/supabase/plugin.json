@@ -1,0 +1,11 @@
+{
+  "name": "supabase",
+  "version": "1.0.0",
+  "description": "Build apps with Supabase",
+  "keywords": [
+    "database"
+  ],
+  "author": {
+    "name": "Supabase"
+  }
+}

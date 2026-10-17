@@ -30,7 +30,7 @@ keywords: ["KR-AG-014", "invalid kiro agent permissions block", "kiro agents", "
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples

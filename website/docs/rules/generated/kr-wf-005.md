@@ -28,7 +28,7 @@ keywords: ["KR-WF-005", "interactive workflow step inside parallel", "kiro workf
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples

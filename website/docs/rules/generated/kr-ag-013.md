@@ -29,7 +29,7 @@ keywords: ["KR-AG-013", "secrets in agent prompt", "kiro agents", "validation", 
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples

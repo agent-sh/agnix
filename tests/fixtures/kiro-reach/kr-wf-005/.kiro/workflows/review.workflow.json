@@ -1,0 +1,21 @@
+{
+  "name": "review",
+  "steps": [
+    {
+      "type": "parallel",
+      "id": "p",
+      "joinPolicy": "all",
+      "branches": [
+        {
+          "type": "step",
+          "id": "chat",
+          "agent": "wf-coder",
+          "prompt": "Ask me",
+          "completion": {
+            "completionSignal": "success"
+          }
+        }
+      ]
+    }
+  ]
+}

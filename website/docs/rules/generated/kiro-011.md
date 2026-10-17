@@ -29,7 +29,7 @@ keywords: ["KIRO-011", "always-included steering doc excessively long", "kiro st
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples

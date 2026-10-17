@@ -29,7 +29,7 @@ keywords: ["KR-PW-016", "documented plugin.json field missing or not semver", "k
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples

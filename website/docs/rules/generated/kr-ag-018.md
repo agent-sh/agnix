@@ -29,7 +29,7 @@ keywords: ["KR-AG-018", "kiro agent field has the wrong type", "kiro agents", "v
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples

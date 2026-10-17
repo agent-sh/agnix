@@ -1,0 +1,14 @@
+{
+  "name": "review-agent",
+  "description": "Reviews pull requests for correctness and style",
+  "prompt": "Review the diff.",
+  "permissions": {
+    "rules": [
+      {
+        "capability": "shell",
+        "effect": "sometimes",
+        "match": "npm *"
+      }
+    ]
+  }
+}

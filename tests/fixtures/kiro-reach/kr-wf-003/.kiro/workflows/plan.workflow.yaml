@@ -1,0 +1,6 @@
+name: plan
+steps:
+  - type: step
+    id: plan
+    agent: wf-planner
+    prompt: Plan the change

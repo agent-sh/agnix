@@ -29,7 +29,7 @@ keywords: ["KR-AG-011", "empty tools array", "kiro agents", "validation", "agnix
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples

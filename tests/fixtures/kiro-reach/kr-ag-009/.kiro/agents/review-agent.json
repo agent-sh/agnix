@@ -1,0 +1,7 @@
+{
+  "name": "review-agent",
+  "description": "Reviews pull requests for correctness and style",
+  "prompt": [
+    "Review code"
+  ]
+}

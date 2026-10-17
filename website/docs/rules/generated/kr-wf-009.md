@@ -28,7 +28,7 @@ keywords: ["KR-WF-009", "workflow loop stop file never written", "kiro workflows
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples

@@ -29,7 +29,7 @@ keywords: ["KR-AG-010", "duplicate tool entries", "kiro agents", "validation", "
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples

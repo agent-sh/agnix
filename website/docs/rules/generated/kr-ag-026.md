@@ -30,7 +30,7 @@ keywords: ["KR-AG-026", "kiro agent hook timeout field or unit mismatch", "kiro 
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples

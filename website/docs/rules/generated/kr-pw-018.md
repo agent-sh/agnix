@@ -28,7 +28,7 @@ keywords: ["KR-PW-018", "legacy steering directory in a plugin.json power", "kir
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples

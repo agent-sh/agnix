@@ -28,7 +28,7 @@ keywords: ["KR-WF-003", "workflow recipe suffix conflict", "kiro workflows", "va
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples

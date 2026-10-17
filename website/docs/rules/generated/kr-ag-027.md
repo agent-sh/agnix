@@ -30,7 +30,7 @@ keywords: ["KR-AG-027", "kiro agent hook field ignored", "kiro agents", "validat
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples

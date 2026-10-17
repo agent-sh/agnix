@@ -1,0 +1,26 @@
+{
+  "name": "loop",
+  "steps": [
+    {
+      "type": "repeat",
+      "id": "loop",
+      "maxIterations": 5,
+      "onMaxIterations": "pause",
+      "stopCondition": {
+        "fileCheck": {
+          "path": "status.json",
+          "jsonPath": "done",
+          "value": true
+        }
+      },
+      "steps": [
+        {
+          "type": "step",
+          "id": "work",
+          "agent": "wf-coder",
+          "prompt": "Do the next item"
+        }
+      ]
+    }
+  ]
+}

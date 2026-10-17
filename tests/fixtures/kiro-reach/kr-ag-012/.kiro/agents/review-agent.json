@@ -1,0 +1,11 @@
+{
+  "name": "review-agent",
+  "description": "Reviews pull requests for correctness and style",
+  "prompt": "Review the diff.",
+  "tools": [
+    "read"
+  ],
+  "toolAliases": {
+    "@github-mcp/get_issues": "github_issues"
+  }
+}

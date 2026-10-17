@@ -1,0 +1,17 @@
+{
+  "name": "review",
+  "steps": [
+    {
+      "type": "watch",
+      "id": "review",
+      "handler": "command",
+      "config": {
+        "command": "node",
+        "args": [
+          "watch-review.mjs"
+        ],
+        "pollIntervalSec": 5
+      }
+    }
+  ]
+}

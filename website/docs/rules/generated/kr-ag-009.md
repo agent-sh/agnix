@@ -29,7 +29,7 @@ keywords: ["KR-AG-009", "agent prompt empty or invalid", "kiro agents", "validat
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples

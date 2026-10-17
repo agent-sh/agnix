@@ -1,0 +1,8 @@
+{
+  "name": "review-agent",
+  "description": "Reviews pull requests for correctness and style",
+  "prompt": "Review the diff.",
+  "resources": [
+    "file://**"
+  ]
+}

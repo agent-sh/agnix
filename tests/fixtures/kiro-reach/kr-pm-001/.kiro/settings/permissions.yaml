@@ -1,0 +1,3 @@
+capability: fs_write
+match: /**
+effect: allow

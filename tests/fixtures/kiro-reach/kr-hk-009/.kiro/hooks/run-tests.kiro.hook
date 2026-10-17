@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "name": "Run tests",
+  "description": "Run the tests when a prompt is submitted",
+  "version": "1",
+  "when": {
+    "type": "promptSubmit"
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "/usr/local/bin/npm test"
+  }
+}

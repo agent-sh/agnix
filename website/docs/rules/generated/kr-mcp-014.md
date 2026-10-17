@@ -30,7 +30,7 @@ keywords: ["KR-MCP-014", "invalid agent plugins mcp server entry", "kiro mcp", "
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples

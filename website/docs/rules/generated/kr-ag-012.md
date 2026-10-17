@@ -28,7 +28,7 @@ keywords: ["KR-AG-012", "toolaliases renames a tool not in tools", "kiro agents"
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples

@@ -1,0 +1,11 @@
+{
+  "name": "review-agent",
+  "description": "Reviews pull requests for correctness and style",
+  "prompt": "Review the diff.",
+  "mcpServers": {
+    "git": {
+      "command": "git-mcp",
+      "args": "--repo ."
+    }
+  }
+}
