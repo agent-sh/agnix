@@ -30,11 +30,13 @@ Keep fixtures minimal, deterministic, and focused on one rule family when possib
 | Kiro Agents (fixture pack) | `kiro-agents/` | `kiro-agents/.kiro/agents/valid-agent.json` | `kiro-agents/.kiro/agents/invalid-model.json`, `kiro-agents/.kiro/agents/missing-hook-command.json` |
 | Kiro Hooks (fixture pack) | `kiro-hooks/` | `kiro-hooks/.kiro/hooks/valid-file-save.kiro.hook` | `kiro-hooks/.kiro/hooks/invalid-event.kiro.hook`, `kiro-hooks/.kiro/hooks/missing-action.kiro.hook` |
 | Kiro MCP (fixture pack) | `kiro-mcp/` | `kiro-mcp/.kiro/settings/mcp.json` | `kiro-mcp/.kiro/settings/missing-command-url.json`, `kiro-mcp/.kiro/settings/hardcoded-secrets.json` |
+| Kiro detection (fixture pack) | `kiro-detect/` | `kiro-detect/.kiro/settings/cli.json`, `kiro-detect/power/POWER.md` | `kiro-detect/.kiro/agents/reviewer.JSON`, `kiro-detect/.kiro/settings/permissions.yml` (KIRO-026) |
+| KR-SET | `valid/kiro-settings/`, `invalid/kiro-settings/` | `valid/kiro-settings/.kiro/settings/cli.json` | `invalid/kiro-settings/.kiro/settings/cli.json` |
 
 ## Notes
 - AGENTS.md and cross-platform fixtures intentionally overlap; they are validated by different rule families.
 - `real-world/` fixtures are regression tests derived from testing against 121 real-world repositories.
 - REF-002 only fires on agent config files (CLAUDE.md, AGENTS.md, SKILL.md), so broken-link fixture uses CLAUDE.md.
 - Keep fixture paths stable, as tests assert on filenames.
-- Kiro powers/agents/hooks/MCP fixture packs are guarded by inventory and CLI smoke-baseline checks in `crates/agnix-cli/tests/kiro_fixture_inventory.rs`, including detection baselines and representative file-type assertions.
+- Kiro powers/agents/hooks/MCP/permissions/detection fixture packs are guarded by inventory and CLI smoke-baseline checks in `crates/agnix-cli/tests/kiro_fixture_inventory.rs`, including detection baselines and representative file-type assertions.
 - Kiro MCP file-type detection currently only matches `.kiro/settings/mcp.json`; other JSON files in `kiro-mcp/.kiro/settings/` are fixture artifacts and are not detected as `KiroMcp`.

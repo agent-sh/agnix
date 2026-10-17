@@ -88,10 +88,10 @@ fn catalog() -> &'static AuthoringCatalog {
 fn family_id_for_file_type(file_type: FileType) -> Option<&'static str> {
     match file_type {
         FileType::Skill => Some("skill"),
-        FileType::Agent | FileType::KiroAgent => Some("agent"),
-        FileType::Hooks | FileType::KiroHook => Some("hooks"),
+        FileType::Agent => Some("agent"),
+        FileType::Hooks => Some("hooks"),
         FileType::Plugin => Some("plugin"),
-        FileType::Mcp | FileType::KiroMcp => Some("mcp"),
+        FileType::Mcp => Some("mcp"),
         FileType::Copilot | FileType::CopilotScoped => Some("copilot"),
         FileType::CursorRule | FileType::CursorRulesLegacy => Some("cursor"),
         FileType::CursorHooks | FileType::CursorAgent | FileType::CursorEnvironment => None,
@@ -103,6 +103,9 @@ fn family_id_for_file_type(file_type: FileType) -> Option<&'static str> {
 }
 
 fn family_for_file_type(file_type: FileType) -> Option<&'static AuthoringFamily> {
+    if let Some(family) = kiro::family_for_file_type(file_type) {
+        return Some(family);
+    }
     let family_id = family_id_for_file_type(file_type)?;
     catalog()
         .families
@@ -110,7 +113,8 @@ fn family_for_file_type(file_type: FileType) -> Option<&'static AuthoringFamily>
         .find(|family| family.id == family_id)
 }
 
-fn is_yaml_family(file_type: FileType) -> bool {
+/// YAML frontmatter files: completions apply inside the frontmatter only.
+fn is_yaml_family(file_type: FileType, content: &str) -> bool {
     matches!(
         file_type,
         FileType::Skill
@@ -119,19 +123,14 @@ fn is_yaml_family(file_type: FileType) -> bool {
             | FileType::CursorRule
             | FileType::CursorAgent
             | FileType::ClaudeRule
-    )
+    ) || kiro::syntax(file_type, content) == Some(kiro::Syntax::Frontmatter)
 }
 
-fn is_json_family(file_type: FileType) -> bool {
+fn is_json_family(file_type: FileType, content: &str) -> bool {
     matches!(
         file_type,
-        FileType::Hooks
-            | FileType::KiroHook
-            | FileType::Plugin
-            | FileType::Mcp
-            | FileType::KiroMcp
-            | FileType::KiroAgent
-    )
+        FileType::Hooks | FileType::Plugin | FileType::Mcp
+    ) || kiro::syntax(file_type, content) == Some(kiro::Syntax::Json)
 }
 
 fn clamp_to_char_boundary(content: &str, cursor_byte: usize) -> usize {
@@ -160,6 +159,11 @@ fn parse_context_from_line(line: &str, cursor_col: usize) -> CursorContext {
     if trimmed.is_empty() || trimmed.starts_with('#') {
         return CursorContext::Key;
     }
+    // A YAML sequence item (`- capability: shell`) holds a mapping key too.
+    let trimmed = trimmed
+        .strip_prefix("- ")
+        .map(str::trim_start)
+        .unwrap_or(trimmed);
 
     if let Some(colon_idx) = trimmed.find(':') {
         let key_raw = trimmed[..colon_idx].trim();
@@ -177,6 +181,90 @@ fn parse_context_from_line(line: &str, cursor_col: usize) -> CursorContext {
     }
 }
 
+/// Cursor context in a JSON document from the text before the cursor, so a
+/// value position is attributed to its own key even on a line such as
+/// `"hooks": [{"trigger": ` or inside an array value (`"tools": ["re`).
+fn json_cursor_context(before: &str) -> CursorContext {
+    enum Frame {
+        Object {
+            key: Option<String>,
+            after_colon: bool,
+        },
+        Array {
+            key: Option<String>,
+        },
+    }
+
+    let mut stack: Vec<Frame> = Vec::new();
+    let mut in_string = false;
+    let mut escaped = false;
+    let mut current = String::new();
+    let mut last_string: Option<String> = None;
+
+    for ch in before.chars() {
+        if in_string {
+            if escaped {
+                escaped = false;
+                current.push(ch);
+            } else if ch == '\\' {
+                escaped = true;
+            } else if ch == '"' {
+                in_string = false;
+                last_string = Some(std::mem::take(&mut current));
+            } else {
+                current.push(ch);
+            }
+            continue;
+        }
+        match ch {
+            '"' => {
+                in_string = true;
+                current.clear();
+            }
+            ':' => {
+                if let Some(Frame::Object { key, after_colon }) = stack.last_mut() {
+                    *key = last_string.take();
+                    *after_colon = true;
+                }
+            }
+            ',' => {
+                if let Some(Frame::Object { key, after_colon }) = stack.last_mut() {
+                    *key = None;
+                    *after_colon = false;
+                }
+            }
+            '{' => stack.push(Frame::Object {
+                key: None,
+                after_colon: false,
+            }),
+            '[' => {
+                let key = match stack.last() {
+                    Some(Frame::Object {
+                        key,
+                        after_colon: true,
+                    })
+                    | Some(Frame::Array { key }) => key.clone(),
+                    _ => None,
+                };
+                stack.push(Frame::Array { key });
+            }
+            '}' | ']' => {
+                stack.pop();
+            }
+            _ => {}
+        }
+    }
+
+    match stack.last() {
+        Some(Frame::Object {
+            key: Some(key),
+            after_colon: true,
+        })
+        | Some(Frame::Array { key: Some(key) }) => CursorContext::Value(key.clone()),
+        _ => CursorContext::Key,
+    }
+}
+
 fn detect_cursor_context(file_type: FileType, content: &str, cursor_byte: usize) -> CursorContext {
     if content.is_empty() {
         return CursorContext::Key;
@@ -184,7 +272,11 @@ fn detect_cursor_context(file_type: FileType, content: &str, cursor_byte: usize)
 
     let cursor_byte = clamp_to_char_boundary(content, cursor_byte);
 
-    if is_yaml_family(file_type) {
+    if kiro::syntax(file_type, content) == Some(kiro::Syntax::Json) {
+        return json_cursor_context(&content[..cursor_byte]);
+    }
+
+    if is_yaml_family(file_type, content) {
         let parts = split_frontmatter(content);
         let within_frontmatter = parts.has_frontmatter
             && parts.has_closing
@@ -203,16 +295,16 @@ fn detect_cursor_context(file_type: FileType, content: &str, cursor_byte: usize)
     parse_context_from_line(line, cursor_col)
 }
 
-fn key_insert_text(file_type: FileType, key: &str) -> String {
-    if is_json_family(file_type) {
+fn key_insert_text(file_type: FileType, content: &str, key: &str) -> String {
+    if is_json_family(file_type, content) {
         format!("\"{}\": ", key)
     } else {
         format!("{}: ", key)
     }
 }
 
-fn value_insert_text(file_type: FileType, value: &str) -> String {
-    if !is_json_family(file_type) {
+fn value_insert_text(file_type: FileType, content: &str, value: &str) -> String {
+    if !is_json_family(file_type, content) {
         return value.to_string();
     }
 
@@ -234,6 +326,586 @@ fn dedupe_candidates(candidates: &mut Vec<CompletionCandidate>) {
     });
 }
 
+/// Kiro completion catalogs.
+///
+/// Kiro surfaces have their own schemas, so they get their own families here
+/// instead of the Claude `agent`/`hooks` and MCP-protocol families. Values are
+/// offered only where the set is closed and valid in every engine that reads
+/// the file (for example no static model list: Kiro serves model IDs at
+/// runtime, so only the `auto` router is offered).
+mod kiro {
+    use super::{AuthoringFamily, AuthoringKey, AuthoringSnippet};
+    use crate::FileType;
+    use std::sync::OnceLock;
+
+    /// How a Kiro file is written.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    pub(super) enum Syntax {
+        Json,
+        /// YAML frontmatter (Markdown agents, steering, POWER.md).
+        Frontmatter,
+        /// A plain YAML document (permissions.yaml).
+        Yaml,
+    }
+
+    /// The syntax of a Kiro file, from its type and, where the type allows
+    /// two formats, its content. `None` for non-Kiro types and Kiro types
+    /// without a catalog.
+    pub(super) fn syntax(file_type: FileType, content: &str) -> Option<Syntax> {
+        let start = content.trim_start();
+        match file_type {
+            // `.kiro/agents/` holds JSON and Markdown agents.
+            FileType::KiroAgent if start.starts_with("---") => Some(Syntax::Frontmatter),
+            FileType::KiroAgent => Some(Syntax::Json),
+            FileType::KiroHookV3
+            | FileType::KiroMcp
+            | FileType::KiroPowerMcp
+            | FileType::KiroPowerPlugin
+            | FileType::KiroSettings => Some(Syntax::Json),
+            FileType::KiroSteering | FileType::KiroPower => Some(Syntax::Frontmatter),
+            // permissions.yaml, or permissions.json / managed-settings.json.
+            FileType::KiroPermissions if start.starts_with('{') => Some(Syntax::Json),
+            FileType::KiroPermissions => Some(Syntax::Yaml),
+            _ => None,
+        }
+    }
+
+    fn family_id(file_type: FileType) -> Option<&'static str> {
+        Some(match file_type {
+            FileType::KiroAgent => "kiro-agent",
+            FileType::KiroHookV3 => "kiro-hook",
+            FileType::KiroMcp => "kiro-mcp",
+            FileType::KiroSteering => "kiro-steering",
+            FileType::KiroPower => "kiro-power",
+            FileType::KiroPowerPlugin => "kiro-power-plugin",
+            FileType::KiroPowerMcp => "kiro-power-mcp",
+            FileType::KiroSettings => "kiro-settings",
+            FileType::KiroPermissions => "kiro-permissions",
+            // Legacy IDE 0.x `.kiro.hook` files, power steering and files
+            // Kiro never loads have no catalog: no completions rather than
+            // another tool's.
+            _ => return None,
+        })
+    }
+
+    pub(super) fn family_for_file_type(file_type: FileType) -> Option<&'static AuthoringFamily> {
+        let id = family_id(file_type)?;
+        families().iter().find(|family| family.id == id)
+    }
+
+    struct Key {
+        key: &'static str,
+        docs: &'static str,
+        rules: &'static [&'static str],
+        values: &'static [&'static str],
+    }
+
+    const fn key(key: &'static str, docs: &'static str) -> Key {
+        Key {
+            key,
+            docs,
+            rules: &[],
+            values: &[],
+        }
+    }
+
+    const fn key_with(
+        key: &'static str,
+        docs: &'static str,
+        rules: &'static [&'static str],
+        values: &'static [&'static str],
+    ) -> Key {
+        Key {
+            key,
+            docs,
+            rules,
+            values,
+        }
+    }
+
+    struct Family {
+        id: &'static str,
+        keys: &'static [Key],
+        /// (label, body, docs)
+        snippets: &'static [(&'static str, &'static str, &'static str)],
+    }
+
+    const BOOL: &[&str] = &["true", "false"];
+
+    /// Selectors valid in the `tools` of both engines.
+    const AGENT_TOOLS: &[&str] = &[
+        "*",
+        "@builtin",
+        "read",
+        "write",
+        "shell",
+        "web_fetch",
+        "code",
+        "introspect",
+        "knowledge",
+    ];
+
+    const AGENT_KEYS: &[Key] = &[
+        key_with(
+            "name",
+            "Agent name. Kiro CLI 2.x skips an agent without one; V3 falls back to the path under .kiro/agents/.",
+            &["KR-AG-008"],
+            &[],
+        ),
+        key("description", "What the agent does, shown in agent lists."),
+        key(
+            "prompt",
+            "System prompt: inline text or file://<path> relative to the agent file. A Markdown agent uses its body instead.",
+        ),
+        key_with(
+            "model",
+            "Model ID served by Kiro (see /model), or auto for the router.",
+            &[],
+            &["auto"],
+        ),
+        key_with(
+            "tools",
+            "Tools the agent may use: tool names or tags, @builtin, @<server>, @<server>/<tool>, or \"*\" for all. V3 selects no built-in tools when omitted.",
+            &[],
+            AGENT_TOOLS,
+        ),
+        key(
+            "excludedTools",
+            "Tools removed after tools is applied (V3).",
+        ),
+        key(
+            "allowedTools",
+            "Tools that run without asking (Kiro CLI 2.x). V3 skips a .json agent that has allowedTools or toolsSettings but no permissions.",
+        ),
+        key(
+            "toolsSettings",
+            "Per-tool settings such as shell.allowedCommands (Kiro CLI 2.x).",
+        ),
+        key(
+            "toolAliases",
+            "Renames tools: original tool name to new name (Kiro CLI 2.x).",
+        ),
+        key_with(
+            "permissions",
+            "V3 capability rules: {\"rules\": [{\"capability\", \"match\", \"exclude\", \"effect\"}]}.",
+            &["KR-AG-014"],
+            &[],
+        ),
+        key_with(
+            "resources",
+            "Context: file://<path or glob>, skill://<path to SKILL.md>, or knowledgeBase objects.",
+            &["KR-AG-002"],
+            &[],
+        ),
+        key(
+            "mcpServers",
+            "MCP servers of this agent: name to {command, args, env} or {url, headers}.",
+        ),
+        key_with(
+            "includeMcpJson",
+            "Also load the servers of .kiro/settings/mcp.json and ~/.kiro/settings/mcp.json.",
+            &[],
+            BOOL,
+        ),
+        key_with(
+            "includePowers",
+            "Give the agent the powers tool (V3).",
+            &[],
+            BOOL,
+        ),
+        key_with(
+            "hooks",
+            "Hooks: a V3 array [{name, trigger, matcher, action}] or the Kiro CLI 2.x object {\"agentSpawn\": [{\"command\": ...}]}.",
+            &["KR-HK-005", "KR-HK-006"],
+            &[],
+        ),
+        key(
+            "welcomeMessage",
+            "Message shown when switching to the agent.",
+        ),
+        key(
+            "keyboardShortcut",
+            "Shortcut that switches to the agent, for example ctrl+a (Kiro CLI 2.x).",
+        ),
+    ];
+
+    const HOOK_KEYS: &[Key] = &[
+        key_with(
+            "version",
+            "Hook file format version; V3 skips the whole file unless it is \"v1\".",
+            &["KR-HK-011"],
+            &["v1"],
+        ),
+        key_with(
+            "hooks",
+            "Hook definitions; at least one.",
+            &["KR-HK-012"],
+            &[],
+        ),
+        key_with("name", "Hook name (required).", &["KR-HK-012"], &[]),
+        key("description", "What the hook does (documentation only)."),
+        key_with(
+            "trigger",
+            "Event that runs the hook.",
+            &["KR-HK-012", "KR-HK-014"],
+            &[
+                "SessionStart",
+                "UserPromptSubmit",
+                "PreToolUse",
+                "PostToolUse",
+                "Stop",
+                "PostFileCreate",
+                "PostFileSave",
+                "PostFileDelete",
+                "PreTaskExec",
+                "PostTaskExec",
+                "SessionEnd",
+            ],
+        ),
+        key(
+            "matcher",
+            "Tool triggers: a tool selector or regex; file triggers: a regex over the file path.",
+        ),
+        key_with(
+            "action",
+            "{\"type\": \"command\", \"command\": ...} or {\"type\": \"agent\", \"prompt\": ...}.",
+            &["KR-HK-013"],
+            &[],
+        ),
+        key_with(
+            "type",
+            "Action type.",
+            &["KR-HK-013"],
+            &["command", "agent"],
+        ),
+        key("command", "Shell command of a command action."),
+        key("prompt", "Text an agent action adds to the conversation."),
+        key(
+            "timeout",
+            "Command timeout in seconds (default 60, 0 disables).",
+        ),
+        key_with("enabled", "Set to false to skip the hook.", &[], BOOL),
+        key(
+            "confirm",
+            "Stop hooks only: {question, options: [{id, label, run}]} asked before the command runs.",
+        ),
+    ];
+
+    const MCP_KEYS: &[Key] = &[
+        key_with(
+            "mcpServers",
+            "Servers by name. A workspace entry replaces a global entry of the same name.",
+            &["KR-MCP-001"],
+            &[],
+        ),
+        key("command", "Executable of a local (stdio) server."),
+        key("args", "Arguments of the command."),
+        key("env", "Environment variables; values may use ${VAR}."),
+        key("cwd", "Working directory of the command (V3)."),
+        key(
+            "url",
+            "Endpoint of a remote server: https, or http only for localhost.",
+        ),
+        key("headers", "HTTP headers; values may use ${VAR}."),
+        key(
+            "timeout",
+            "Timeout in milliseconds (V3 default 60000, at most 600000).",
+        ),
+        key_with("disabled", "Set to true to keep the server off.", &[], BOOL),
+        key("disabledTools", "MCP tool names to disable."),
+        key("oauth", "OAuth settings: clientId, redirectUri."),
+        key("oauthScopes", "OAuth scopes; [] skips scope requirements."),
+    ];
+
+    const STEERING_KEYS: &[Key] = &[
+        key_with(
+            "inclusion",
+            "When the steering file is included (default always). V2 loads only always files.",
+            &["KIRO-001"],
+            &["always", "fileMatch", "manual", "auto"],
+        ),
+        key(
+            "fileMatchPattern",
+            "fileMatch only: glob or list of globs relative to the workspace root (use a list, not commas).",
+        ),
+        key("name", "Display name (defaults to the file name)."),
+        key(
+            "description",
+            "When to use the file; required for inclusion: auto.",
+        ),
+    ];
+
+    const POWER_KEYS: &[Key] = &[
+        key("name", "Power name in kebab-case."),
+        key("displayName", "Name shown in the powers list."),
+        key("description", "What the power does."),
+        key("keywords", "Words that activate the power."),
+        key("author", "Power author."),
+    ];
+
+    const POWER_PLUGIN_KEYS: &[Key] = &[
+        key_with(
+            "$schema",
+            "Agent Plugins manifest schema; Kiro rejects the power without it.",
+            &[],
+            &["https://agent-plugins.org/schemas/1.0.0/plugin.schema.json"],
+        ),
+        key(
+            "name",
+            "Power name: lowercase letters, digits, dots and hyphens (required).",
+        ),
+        key("version", "Power version."),
+        key("description", "What the power does."),
+        key("author", "{\"name\", \"email\", \"url\"}."),
+        key("keywords", "Words that activate the power."),
+        key("homepage", "Homepage URL."),
+        key("repository", "Repository URL."),
+        key("license", "License identifier."),
+        key(
+            "extensions",
+            "Client-specific data by reverse-domain namespace.",
+        ),
+    ];
+
+    const POWER_MCP_KEYS: &[Key] = &[
+        key_with(
+            "$schema",
+            "Agent Plugins MCP schema; must target the same version as plugin.json.",
+            &[],
+            &["https://agent-plugins.org/schemas/1.0.0/mcp.schema.json"],
+        ),
+        key(
+            "mcpServers",
+            "Servers by name; Kiro registers them as power-<power>-<server>.",
+        ),
+        key_with(
+            "type",
+            "Server transport (Agent Plugins format).",
+            &[],
+            &["stdio", "streamable-http", "sse"],
+        ),
+        key(
+            "command",
+            "Executable: a bare name or ./path inside the power.",
+        ),
+        key("args", "Arguments of the command."),
+        key("env", "Environment variables."),
+        key("cwd", "Working directory of the command."),
+        key("url", "Endpoint of a remote server."),
+        key("headers", "HTTP headers."),
+    ];
+
+    const SETTINGS_KEYS: &[Key] = &[
+        key_with(
+            "chat.agentEngine",
+            "Default agent engine of kiro-cli chat.",
+            &[],
+            &["v1", "v2", "v3"],
+        ),
+        key("chat.defaultAgent", "Agent used when none is given."),
+        key("chat.defaultModel", "Model used when the agent sets none."),
+        key_with(
+            "chat.enableAutoAgentUpgrade",
+            "Upgrade CLI 2.x agents to the V3 format on launch (unset: ask once).",
+            &[],
+            BOOL,
+        ),
+        key_with(
+            "chat.disableInheritingDefaultResources",
+            "Stop custom agents inheriting steering, skills and AGENTS.md (Kiro CLI 2.x).",
+            &[],
+            BOOL,
+        ),
+        key_with(
+            "toolSearch.enabled",
+            "Load MCP tools on demand.",
+            &["KR-SET-001"],
+            BOOL,
+        ),
+        key_with(
+            "toolSearch.minPct",
+            "Context percentage above which tool search applies.",
+            &["KR-SET-002"],
+            &[],
+        ),
+        key_with(
+            "toolSearch.minTokens",
+            "Tool-definition tokens above which tool search applies.",
+            &["KR-SET-003"],
+            &[],
+        ),
+        key(
+            "mcp.initTimeout",
+            "MCP server start timeout in milliseconds.",
+        ),
+        key(
+            "mcp.noInteractiveTimeout",
+            "MCP start timeout in milliseconds without a terminal.",
+        ),
+        key_with("hooks.showStatus", "Show hook execution status.", &[], BOOL),
+    ];
+
+    const PERMISSIONS_KEYS: &[Key] = &[
+        key_with(
+            "rules",
+            "Permission rules; any error in this file makes Kiro deny every tool call.",
+            &["KR-PM-001"],
+            &[],
+        ),
+        key_with(
+            "capability",
+            "What the rule governs.",
+            &["KR-PM-002"],
+            &[
+                "fs_read",
+                "fs_write",
+                "shell",
+                "web_fetch",
+                "web_search",
+                "mcp",
+                "subagent",
+                "skill",
+                "power",
+                "context",
+                "diagnostics",
+                "sandbox_network",
+                "filesystem",
+                "builtin",
+                "all",
+            ],
+        ),
+        key_with(
+            "effect",
+            "deny beats ask beats allow across every scope.",
+            &["KR-PM-003"],
+            &["allow", "ask", "deny"],
+        ),
+        key_with(
+            "match",
+            "Patterns the rule applies to (a list; omitted means all).",
+            &["KR-PM-004"],
+            &[],
+        ),
+        key_with(
+            "exclude",
+            "Patterns the rule does not apply to (a list).",
+            &["KR-PM-004"],
+            &[],
+        ),
+    ];
+
+    const FAMILIES: &[Family] = &[
+        Family {
+            id: "kiro-agent",
+            keys: AGENT_KEYS,
+            snippets: &[(
+                "Kiro agent",
+                "{\n  \"name\": \"my-agent\",\n  \"description\": \"Handles focused tasks\",\n  \"prompt\": \"You are a focused assistant.\",\n  \"tools\": [\"read\", \"write\", \"shell\"]\n}\n",
+                "Kiro agent profile that both CLI engines load.",
+            )],
+        },
+        Family {
+            id: "kiro-hook",
+            keys: HOOK_KEYS,
+            snippets: &[(
+                "Kiro hook file",
+                "{\n  \"version\": \"v1\",\n  \"hooks\": [\n    {\n      \"name\": \"lint-after-write\",\n      \"trigger\": \"PostToolUse\",\n      \"matcher\": \"write\",\n      \"action\": {\n        \"type\": \"command\",\n        \"command\": \"npm run lint\"\n      }\n    }\n  ]\n}\n",
+                "Standalone hook file (.kiro/hooks/*.json).",
+            )],
+        },
+        Family {
+            id: "kiro-mcp",
+            keys: MCP_KEYS,
+            snippets: &[(
+                "Kiro MCP server",
+                "{\n  \"mcpServers\": {\n    \"server-name\": {\n      \"command\": \"npx\",\n      \"args\": [\"-y\", \"my-mcp-server\"]\n    }\n  }\n}\n",
+                "Local MCP server in .kiro/settings/mcp.json.",
+            )],
+        },
+        Family {
+            id: "kiro-steering",
+            keys: STEERING_KEYS,
+            snippets: &[(
+                "Kiro steering frontmatter",
+                "---\ninclusion: fileMatch\nfileMatchPattern: [\"**/*.ts\", \"**/*.tsx\"]\n---\n",
+                "Steering file included while matching files are in play.",
+            )],
+        },
+        Family {
+            id: "kiro-power",
+            keys: POWER_KEYS,
+            snippets: &[],
+        },
+        Family {
+            id: "kiro-power-plugin",
+            keys: POWER_PLUGIN_KEYS,
+            snippets: &[(
+                "Kiro power manifest",
+                // `\$` keeps the LSP snippet syntax from reading `$schema` as a variable.
+                "{\n  \"\\$schema\": \"https://agent-plugins.org/schemas/1.0.0/plugin.schema.json\",\n  \"name\": \"my-power\",\n  \"version\": \"1.0.0\",\n  \"description\": \"What the power does\",\n  \"keywords\": [\"keyword\"]\n}\n",
+                "Agent Plugins manifest of a Kiro power.",
+            )],
+        },
+        Family {
+            id: "kiro-power-mcp",
+            keys: POWER_MCP_KEYS,
+            snippets: &[],
+        },
+        Family {
+            id: "kiro-settings",
+            keys: SETTINGS_KEYS,
+            snippets: &[],
+        },
+        Family {
+            id: "kiro-permissions",
+            keys: PERMISSIONS_KEYS,
+            snippets: &[(
+                "Kiro permission rule",
+                "rules:\n  - capability: shell\n    match: [\"git status\"]\n    effect: allow\n",
+                "permissions.yaml rule allowing one shell command.",
+            )],
+        },
+    ];
+
+    fn families() -> &'static [AuthoringFamily] {
+        static FAMILIES_CACHE: OnceLock<Vec<AuthoringFamily>> = OnceLock::new();
+        FAMILIES_CACHE.get_or_init(|| {
+            FAMILIES
+                .iter()
+                .map(|family| AuthoringFamily {
+                    id: family.id.to_string(),
+                    keys: family
+                        .keys
+                        .iter()
+                        .map(|key| AuthoringKey {
+                            key: key.key.to_string(),
+                            docs: key.docs.to_string(),
+                            rules: key.rules.iter().map(ToString::to_string).collect(),
+                            values: key.values.iter().map(ToString::to_string).collect(),
+                            snippet: None,
+                        })
+                        .collect(),
+                    snippets: family
+                        .snippets
+                        .iter()
+                        .map(|(label, body, docs)| AuthoringSnippet {
+                            label: label.to_string(),
+                            body: body.to_string(),
+                            docs: Some(docs.to_string()),
+                            rules: Vec::new(),
+                        })
+                        .collect(),
+                })
+                .collect()
+        })
+    }
+
+    #[cfg(test)]
+    pub(super) fn all_families() -> &'static [AuthoringFamily] {
+        families()
+    }
+}
+
 /// Return context-aware completion candidates for a file and cursor byte offset.
 pub fn completion_candidates(
     file_type: FileType,
@@ -252,7 +924,7 @@ pub fn completion_candidates(
             for key in &family.keys {
                 out.push(CompletionCandidate {
                     label: key.key.clone(),
-                    insert_text: key_insert_text(file_type, &key.key),
+                    insert_text: key_insert_text(file_type, content, &key.key),
                     detail: Some("Field".to_string()),
                     documentation: Some(key.docs.clone()),
                     kind: CompletionKind::Key,
@@ -276,7 +948,7 @@ pub fn completion_candidates(
                 for value in &key.values {
                     out.push(CompletionCandidate {
                         label: value.clone(),
-                        insert_text: value_insert_text(file_type, value),
+                        insert_text: value_insert_text(file_type, content, value),
                         detail: Some("Allowed value".to_string()),
                         documentation: Some(key.docs.clone()),
                         kind: CompletionKind::Value,
@@ -438,29 +1110,70 @@ mod tests {
 
     #[test]
     fn test_completion_kiro_agent_value_context() {
+        // Kiro agents used to get the Claude agent family, whose `sonnet` and
+        // `opus` aliases Kiro does not serve (KR-AG-004 rejects them). Kiro
+        // serves model IDs at runtime, so only the `auto` router is offered.
         let content = "{\n  \"model\": \n}";
         let byte = content
             .find("\"model\": ")
             .expect("test content must contain '\"model\": '")
             + "\"model\": ".len();
         let candidates = completion_candidates(FileType::KiroAgent, content, byte);
-        let sonnet = candidates
+        let auto = candidates
             .iter()
-            .find(|c| c.label == "sonnet")
-            .expect("KiroAgent model values should include 'sonnet'");
-        let opus = candidates
-            .iter()
-            .find(|c| c.label == "opus")
-            .expect("KiroAgent model values should include 'opus'");
+            .find(|c| c.label == "auto")
+            .expect("KiroAgent model values should include 'auto'");
+        assert_eq!(
+            auto.insert_text, "\"auto\"",
+            "KiroAgent value insert text should be JSON-quoted"
+        );
+        for claude_alias in ["sonnet", "opus", "haiku"] {
+            assert!(
+                !candidates.iter().any(|c| c.label == claude_alias),
+                "KiroAgent must not offer the Claude model alias {claude_alias}"
+            );
+        }
+    }
 
-        assert_eq!(
-            sonnet.insert_text, "\"sonnet\"",
-            "KiroAgent value insert text should be JSON-quoted"
+    #[test]
+    fn test_completion_kiro_markdown_agent_uses_frontmatter_syntax() {
+        let content = "---\nname: reviewer\nincl\n---\nYou review code.\n";
+        let byte = content.find("incl").unwrap();
+        let candidates = completion_candidates(FileType::KiroAgent, content, byte);
+        let key = candidates
+            .iter()
+            .find(|c| c.label == "includeMcpJson")
+            .expect("Markdown agents get Kiro agent keys");
+        assert_eq!(key.insert_text, "includeMcpJson: ");
+        // The prompt body is not frontmatter: no key completions there.
+        let body = content.find("You review").unwrap();
+        assert!(
+            completion_candidates(FileType::KiroAgent, content, body)
+                .iter()
+                .all(|c| c.kind != CompletionKind::Key)
         );
-        assert_eq!(
-            opus.insert_text, "\"opus\"",
-            "KiroAgent value insert text should be JSON-quoted"
-        );
+        // Claude-only agent fields are not offered.
+        assert!(!candidates.iter().any(|c| c.label == "permissionMode"));
+    }
+
+    #[test]
+    fn test_completion_kiro_agent_tools_values_are_valid_in_both_engines() {
+        let content = "{\n  \"tools\": \n}";
+        let byte = content.find("\"tools\": ").unwrap() + "\"tools\": ".len();
+        let labels: Vec<_> = completion_candidates(FileType::KiroAgent, content, byte)
+            .into_iter()
+            .filter(|c| c.kind == CompletionKind::Value)
+            .map(|c| c.label)
+            .collect();
+        assert!(labels.contains(&"@builtin".to_string()), "{labels:?}");
+        assert!(labels.contains(&"read".to_string()), "{labels:?}");
+        // CLI 2.x-only names select nothing in V3; Claude names are not Kiro tools.
+        for name in ["fs_read", "execute_bash", "use_aws", "Read", "Bash"] {
+            assert!(
+                !labels.contains(&name.to_string()),
+                "{name} offered: {labels:?}"
+            );
+        }
     }
 
     #[test]
@@ -504,15 +1217,36 @@ mod tests {
     }
 
     #[test]
-    fn test_completion_kiro_hooks_value_context() {
+    fn test_completion_kiro_ide_hooks_get_no_claude_hook_values() {
+        // Legacy `.kiro.hook` files (Kiro IDE 0.x) used to get the Claude hooks
+        // family, whose `command` type is not an IDE action type. They now get
+        // no catalog rather than another tool's.
         let content = "{\n  \"type\": \n}";
         let byte = content.find("\"type\": ").unwrap() + "\"type\": ".len();
-        let candidates = completion_candidates(FileType::KiroHook, content, byte);
-        assert!(
-            candidates.iter().any(|c| c.label == "command"),
-            "KiroHook type values should include 'command', got: {:?}",
-            candidates.iter().map(|c| &c.label).collect::<Vec<_>>()
-        );
+        assert!(completion_candidates(FileType::KiroHook, content, byte).is_empty());
+        assert!(hover_doc(FileType::KiroHook, "type").is_none());
+    }
+
+    #[test]
+    fn test_completion_kiro_v3_hook_values() {
+        let content = "{\n  \"version\": \"v1\",\n  \"hooks\": [{\"trigger\": \n}";
+        let byte = content.find("\"trigger\": ").unwrap() + "\"trigger\": ".len();
+        let labels: Vec<_> = completion_candidates(FileType::KiroHookV3, content, byte)
+            .into_iter()
+            .map(|c| c.label)
+            .collect();
+        assert!(labels.contains(&"PreToolUse".to_string()), "{labels:?}");
+        assert!(labels.contains(&"PostFileSave".to_string()), "{labels:?}");
+        // Aliases are accepted by V3 but KR-HK-014 suggests the canonical name.
+        assert!(!labels.contains(&"preToolUse".to_string()));
+
+        let content = "{\n  \"type\": \n}";
+        let byte = content.find("\"type\": ").unwrap() + "\"type\": ".len();
+        let labels: Vec<_> = completion_candidates(FileType::KiroHookV3, content, byte)
+            .into_iter()
+            .map(|c| c.label)
+            .collect();
+        assert_eq!(labels, vec!["command", "agent"]);
     }
 
     #[test]
@@ -529,14 +1263,105 @@ mod tests {
 
     #[test]
     fn test_completion_kiro_mcp_key_context() {
-        let content = "{\n  \"json\n}";
-        let byte = content.find("\"json").unwrap() + 1;
+        // Kiro mcp.json used to get the MCP protocol family (jsonrpc, method,
+        // ...), which are message fields, not configuration keys.
+        let content = "{\n  \"mcpServers\": {\"x\": {\n    \"comm\n}}}";
+        let byte = content.find("\"comm").unwrap() + 1;
         let candidates = completion_candidates(FileType::KiroMcp, content, byte);
-        assert!(
-            candidates.iter().any(|c| c.label == "jsonrpc"),
-            "Kiro MCP key completions should include 'jsonrpc', got: {:?}",
-            candidates.iter().map(|c| &c.label).collect::<Vec<_>>()
-        );
+        let labels: Vec<_> = candidates.iter().map(|c| c.label.as_str()).collect();
+        assert!(labels.contains(&"command"), "{labels:?}");
+        assert!(labels.contains(&"mcpServers"), "{labels:?}");
+        assert!(!labels.contains(&"jsonrpc"), "{labels:?}");
+        let command = candidates.iter().find(|c| c.label == "command").unwrap();
+        assert_eq!(command.insert_text, "\"command\": ");
+    }
+
+    #[test]
+    fn test_completion_kiro_steering_inclusion_values() {
+        let content = "---\ninclusion: \n---\n# Style\n";
+        let byte = content.find("inclusion: ").unwrap() + "inclusion: ".len();
+        let labels: Vec<_> = completion_candidates(FileType::KiroSteering, content, byte)
+            .into_iter()
+            .map(|c| c.label)
+            .collect();
+        assert_eq!(labels, vec!["always", "fileMatch", "manual", "auto"]);
+    }
+
+    #[test]
+    fn test_completion_kiro_permissions_yaml_list_item() {
+        let content = "rules:\n  - capability: \n    effect: deny\n";
+        let byte = content.find("capability: ").unwrap() + "capability: ".len();
+        let candidates = completion_candidates(FileType::KiroPermissions, content, byte);
+        let shell = candidates
+            .iter()
+            .find(|c| c.label == "shell")
+            .expect("capability values in a YAML sequence item");
+        assert_eq!(shell.insert_text, "shell");
+        assert!(!candidates.iter().any(|c| c.label == "execute_bash"));
+
+        // permissions.json and managed-settings.json are JSON.
+        let content = "{\"rules\": [{\"effect\": \n}]}";
+        let byte = content.find("\"effect\": ").unwrap() + "\"effect\": ".len();
+        let deny = completion_candidates(FileType::KiroPermissions, content, byte)
+            .into_iter()
+            .find(|c| c.label == "deny")
+            .unwrap();
+        assert_eq!(deny.insert_text, "\"deny\"");
+    }
+
+    #[test]
+    fn test_completion_kiro_types_without_catalog_are_empty() {
+        let content = "{\n  \"na\n}";
+        let byte = content.find("\"na").unwrap() + 1;
+        for file_type in [
+            FileType::KiroHook,
+            FileType::KiroPowerSteering,
+            FileType::KiroNotLoaded,
+        ] {
+            assert!(
+                completion_candidates(file_type, content, byte).is_empty(),
+                "{file_type}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_kiro_catalog_rule_links_exist() {
+        let known: std::collections::HashSet<&str> =
+            agnix_rules::RULES_DATA.iter().map(|(id, _)| *id).collect();
+        for family in kiro::all_families() {
+            for key in &family.keys {
+                for rule in &key.rules {
+                    assert!(
+                        known.contains(rule.as_str()),
+                        "{}: key {} links unknown rule {rule}",
+                        family.id,
+                        key.key
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_every_kiro_type_with_syntax_has_a_family() {
+        for file_type in [
+            FileType::KiroAgent,
+            FileType::KiroHookV3,
+            FileType::KiroMcp,
+            FileType::KiroSteering,
+            FileType::KiroPower,
+            FileType::KiroPowerPlugin,
+            FileType::KiroPowerMcp,
+            FileType::KiroSettings,
+            FileType::KiroPermissions,
+        ] {
+            assert!(kiro::syntax(file_type, "").is_some(), "{file_type}");
+            assert!(
+                family_for_file_type(file_type).is_some_and(|f| f.id.starts_with("kiro-")),
+                "{file_type}"
+            );
+        }
     }
 
     #[test]
@@ -624,12 +1449,13 @@ mod tests {
     }
 
     #[test]
-    fn test_hover_doc_for_kiro_mcp_jsonrpc() {
-        let hover = hover_doc(FileType::KiroMcp, "jsonrpc");
-        assert!(hover.is_some(), "KiroMcp should have hover for 'jsonrpc'");
-        let markdown = hover.unwrap().markdown;
-        assert!(markdown.contains("jsonrpc"));
-        assert!(markdown.contains("MCP-001"));
+    fn test_hover_doc_for_kiro_mcp_servers() {
+        // Kiro mcp.json is configuration, not MCP protocol messages.
+        assert!(hover_doc(FileType::KiroMcp, "jsonrpc").is_none());
+        let markdown = hover_doc(FileType::KiroMcp, "mcpServers")
+            .expect("KiroMcp should have hover for 'mcpServers'")
+            .markdown;
+        assert!(markdown.contains("KR-MCP-001"));
     }
 
     #[test]

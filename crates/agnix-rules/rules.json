@@ -1,8 +1,8 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 459,
-  "last_updated": "2026-10-16",
+  "total_rules": 460,
+  "last_updated": "2026-10-17",
   "schema": {
     "evidence": {
       "source_type": "spec|vendor_docs|vendor_code|paper|community",
@@ -8665,6 +8665,38 @@
       "bad_example": "---\ninclusion: always\n---\nNo heading, just text."
     },
     {
+      "id": "KIRO-026",
+      "name": "Kiro Configuration File Never Loaded",
+      "severity": "MEDIUM",
+      "category": "kiro-steering",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/configuration/",
+          "https://kiro.dev/docs/custom-agents/",
+          "https://kiro.dev/docs/hooks/",
+          "https://kiro.dev/docs/steering/",
+          "https://kiro.dev/docs/reference/settings/",
+          "https://kiro.dev/docs/permissions/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": true
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": ".kiro/agents/reviewer.json\n.kiro/settings/permissions.yaml\n.kiro/settings/cli.json",
+      "bad_example": ".kiro/agents/reviewer.JSON\n.kiro/settings/permissions.yml\n.kiro/settings.json"
+    },
+    {
       "id": "KR-SK-001",
       "name": "Kiro Skill Uses Unsupported Field",
       "severity": "MEDIUM",
@@ -13468,8 +13500,8 @@
     },
     "kiro-steering": {
       "prefix": "KIRO",
-      "count": 14,
-      "description": "Kiro steering file validation rules"
+      "count": 15,
+      "description": "Kiro steering file validation and Kiro file placement rules"
     },
     "kiro-hooks": {
       "prefix": "KR-HK",
@@ -13494,7 +13526,7 @@
     "kiro-settings": {
       "prefix": "KR-SET",
       "count": 3,
-      "description": "Kiro CLI settings (.kiro/settings.json) rules"
+      "description": "Kiro CLI settings (.kiro/settings/cli.json) rules"
     },
     "claude-settings": {
       "prefix": "CC-SET",

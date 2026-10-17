@@ -1102,6 +1102,18 @@ rules:
   kiro_014:
     message: Kiro steering file has markdown structure issues (headings out of order or missing)
     suggestion: Ensure headings follow a consistent hierarchy (h1 -> h2 -> h3) and the file starts with a title heading
+  kiro_026:
+    extension_case: Kiro loads only files ending in lowercase '%{expected}' from %{dir}, so it never loads '%{name}'
+    unsupported_extension: Kiro loads only '%{expected}' files from %{dir}, so it never loads '%{name}'
+    nested_hook: Kiro loads hook files only from the top level of .kiro/hooks/, so it never loads this hook document
+    misnamed: Kiro looks for '%{expected}' in this directory, so it never loads '%{name}'
+    misplaced: Kiro reads '%{name}' only from %{expected}, so it never loads it from .kiro/
+    legacy_settings: Kiro CLI reads its settings from .kiro/settings/cli.json, so it ignores '%{key}' in .kiro/settings.json
+    rename_suggestion: Rename the file to '%{fixed}'
+    convert_suggestion: Convert the file to JSON and rename it to '%{fixed}'
+    nested_hook_suggestion: Move the hook file directly into .kiro/hooks/
+    move_suggestion: Move the file to %{expected}
+    legacy_settings_suggestion: Move the settings to .kiro/settings/cli.json (kiro-cli settings writes there; use --workspace for the project file)
   kr_pw_005:
     message: 'POWER.md step #%{index} is missing a description'
     suggestion: Add a short description below each step heading so agents know what the step does

@@ -124,33 +124,36 @@ impl<'a> DefaultRuleFilter<'a> {
             s if s.starts_with("CDX-") => self.rules.codex,
             s if s.starts_with("ROO-") => self.rules.roo_code,
             s if s.starts_with("WS-") => self.rules.windsurf,
-            // Kiro category routing:
-            // - Steering umbrella: steering files, IDE hooks, MCP, and power metadata checks
-            // - Agents: agent JSON rules and CLI hook checks nested under agents
-            s if s.starts_with("KIRO-")
-                || s.starts_with("KR-HK-001")
-                || s.starts_with("KR-HK-002")
-                || s.starts_with("KR-HK-003")
-                || s.starts_with("KR-HK-004")
-                || s.starts_with("KR-HK-011")
-                || s.starts_with("KR-HK-012")
-                || s.starts_with("KR-HK-013")
-                || s.starts_with("KR-HK-014")
-                || s.starts_with("KR-PM-")
-                || s.starts_with("KR-MCP-")
-                || s.starts_with("KR-PW-") =>
-            {
-                self.rules.kiro_steering
-            }
-            s if s.starts_with("KR-AG-")
-                || s.starts_with("KR-HK-005")
-                || s.starts_with("KR-HK-006") =>
-            {
-                self.rules.kiro_agents
-            }
+            s if s.starts_with("KIRO-") || s.starts_with("KR-") => self.is_kiro_category_enabled(s),
             s if s.starts_with("PE-") => self.rules.prompt_engineering,
             // Unknown rules are enabled by default
             _ => true,
+        }
+    }
+
+    /// Kiro category toggles, routed by the rule's `category` in rules.json
+    /// so new Kiro rule IDs land under the right toggle whatever their prefix:
+    ///
+    /// - `rules.kiro_agents`: agent profile rules, category `kiro-agents`
+    ///   (KR-AG-*), plus KR-HK-005 and KR-HK-006, which check the hooks
+    ///   embedded in an agent profile.
+    /// - `rules.skills`: category `kiro-skills` (KR-SK-*, matched earlier).
+    /// - `rules.kiro_steering`: every other Kiro rule: steering (KIRO-*),
+    ///   hook files (KR-HK-*), MCP (KR-MCP-*), powers (KR-PW-*), CLI settings
+    ///   (KR-SET-*), permissions (KR-PM-*) and file placement (KIRO-026).
+    ///
+    /// A Kiro-prefixed ID missing from rules.json falls back to its prefix.
+    fn is_kiro_category_enabled(&self, rule_id: &str) -> bool {
+        if matches!(rule_id, "KR-HK-005" | "KR-HK-006") {
+            return self.rules.kiro_agents;
+        }
+        match agnix_rules::get_rule_metadata(rule_id).map(|(category, _, _)| category) {
+            Some("kiro-agents") => self.rules.kiro_agents,
+            Some("kiro-skills") => self.rules.skills,
+            Some(_) => self.rules.kiro_steering,
+            None if rule_id.starts_with("KR-AG-") => self.rules.kiro_agents,
+            None if rule_id.starts_with("KR-SK-") => self.rules.skills,
+            None => self.rules.kiro_steering,
         }
     }
 }
@@ -316,5 +319,75 @@ impl PerFileLintConfig<'_> {
             return false;
         }
         self.config.is_rule_enabled(rule_id)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn config_with(kiro_steering: bool, kiro_agents: bool, skills: bool) -> LintConfig {
+        let mut config = LintConfig::default();
+        config.rules_mut().kiro_steering = kiro_steering;
+        config.rules_mut().kiro_agents = kiro_agents;
+        config.rules_mut().skills = skills;
+        config
+    }
+
+    /// Every Kiro rule in rules.json follows exactly one toggle, chosen by
+    /// its category.
+    #[test]
+    fn every_kiro_rule_follows_the_toggle_of_its_category() {
+        let kiro_rules: Vec<_> = agnix_rules::RULES_METADATA
+            .iter()
+            .filter(|(id, ..)| id.starts_with("KIRO-") || id.starts_with("KR-"))
+            .collect();
+        assert!(kiro_rules.len() > 60);
+
+        for (id, category, _, _) in kiro_rules {
+            let toggle = match (*id, *category) {
+                ("KR-HK-005" | "KR-HK-006", _) | (_, "kiro-agents") => "kiro_agents",
+                (_, "kiro-skills") => "skills",
+                _ => "kiro_steering",
+            };
+            for (name, config) in [
+                ("kiro_steering", config_with(false, true, true)),
+                ("kiro_agents", config_with(true, false, true)),
+                ("skills", config_with(true, true, false)),
+            ] {
+                assert_eq!(
+                    config.is_rule_enabled(id),
+                    name != toggle,
+                    "{id} (category {category}) should follow rules.{toggle}, not rules.{name}"
+                );
+            }
+        }
+    }
+
+    /// KR-HK-007..010 and KR-SET-* used to ignore both Kiro toggles.
+    #[test]
+    fn hook_timeout_and_settings_rules_follow_kiro_steering() {
+        let config = config_with(false, true, true);
+        for id in [
+            "KR-HK-007",
+            "KR-HK-008",
+            "KR-HK-009",
+            "KR-HK-010",
+            "KR-SET-001",
+            "KR-SET-002",
+            "KR-SET-003",
+        ] {
+            assert!(!config.is_rule_enabled(id), "{id}");
+        }
+        assert!(config.is_rule_enabled("KR-AG-001"));
+    }
+
+    #[test]
+    fn unknown_kiro_ids_fall_back_to_their_prefix() {
+        assert!(!config_with(true, false, true).is_rule_enabled("KR-AG-999"));
+        assert!(!config_with(true, true, false).is_rule_enabled("KR-SK-999"));
+        assert!(!config_with(false, true, true).is_rule_enabled("KIRO-999"));
+        assert!(!config_with(false, true, true).is_rule_enabled("KR-XYZ-001"));
+        assert!(config_with(false, false, false).is_rule_enabled("XYZ-001"));
     }
 }

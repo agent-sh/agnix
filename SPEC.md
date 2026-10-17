@@ -35,14 +35,14 @@
 | OpenCode Skills | .opencode/skills/*/SKILL.md | 1 |
 | Windsurf | .windsurf/rules/*.md, .windsurf/workflows/*.md, .windsurfrules | 4 |
 | Windsurf Skills | .windsurf/skills/*/SKILL.md | 1 |
-| Kiro Steering | .kiro/steering/*.md | 14 |
+| Kiro Steering | .kiro/steering/**/*.md (KIRO-026: near-miss names in Kiro config dirs) | 15 |
 | Kiro Skills | .kiro/skills/*/SKILL.md | 1 |
-| Kiro Agents | .kiro/agents/**/*.{json,md} | 15 |
+| Kiro Agents | .kiro/agents/**/*.{json,md}, .amazonq/cli-agents/*.json (CLI 2.x fallback) | 15 |
 | Kiro Hooks | .kiro/hooks/*.kiro.hook, .kiro/hooks/*.json | 14 |
-| Kiro Permissions | .kiro/settings/permissions.yaml, ~/.kiro/workspace-roots/<hash>/permissions.yaml | 4 |
+| Kiro Permissions | .kiro/settings/permissions.{yaml,json}, ~/.kiro/workspace-roots/<hash>/permissions.{yaml,json}, Kiro managed-settings.json | 4 |
 | Kiro MCP | .kiro/settings/mcp.json | 6 |
-| Kiro Powers | .kiro/powers/*/POWER.md | 8 |
-| Kiro Settings | .kiro/settings/*.json | 3 |
+| Kiro Powers | POWER.md, power plugin.json / mcp.json / steering/*.md (.kiro/powers/[installed/]<name>/, power/, powers/<name>/) | 8 |
+| Kiro Settings | .kiro/settings/cli.json | 3 |
 | Amp Skills | .agents/skills/*/SKILL.md | 1 |
 | Amp Checks | .agents/checks/*.md, .amp/settings*.json | 4 |
 | Roo Code Skills | .roo/skills/*/SKILL.md | 1 |

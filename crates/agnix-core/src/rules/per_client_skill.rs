@@ -95,7 +95,7 @@ pub(crate) fn detect_client(path: &Path) -> SkillClient {
 
     // Walk backwards from the end to find "skills", then look at the component before it.
     let Some(skills_idx) = components.iter().rposition(|c| *c == "skills") else {
-        return SkillClient::Unknown;
+        return kiro_skill_client(&components);
     };
     let Some(owner_idx) = skills_idx.checked_sub(1) else {
         return SkillClient::Unknown;
@@ -117,7 +117,22 @@ pub(crate) fn detect_client(path: &Path) -> SkillClient {
         ".windsurf" => SkillClient::Windsurf,
         ".kiro" => SkillClient::Kiro,
         ".roo" => SkillClient::RooCode,
-        _ => SkillClient::Unknown,
+        _ => kiro_skill_client(&components),
+    }
+}
+
+/// Kiro skills in a `.kiro/skills` directory whose name differs in case
+/// (`.KIRO/Skills/x/SKILL.md`). File-type detection matches the `.kiro`
+/// directories case-insensitively, since case-insensitive file systems load
+/// them, so the client must too.
+fn kiro_skill_client(components: &[&str]) -> SkillClient {
+    let is_kiro_skills = components.windows(2).any(|pair| {
+        pair[0].eq_ignore_ascii_case(".kiro") && pair[1].eq_ignore_ascii_case("skills")
+    });
+    if is_kiro_skills {
+        SkillClient::Kiro
+    } else {
+        SkillClient::Unknown
     }
 }
 
@@ -637,6 +652,31 @@ mod tests {
         assert_eq!(
             detect_client(Path::new(".kiro/skills/my-skill/SKILL.md")),
             SkillClient::Kiro
+        );
+    }
+
+    #[test]
+    fn test_detect_client_kiro_is_case_insensitive_like_detection() {
+        for path in [
+            ".KIRO/SKILLS/my-skill/SKILL.md",
+            ".Kiro/skills/my-skill/SKILL.md",
+            "/home/u/.kiro/Skills/my-skill/SKILL.md",
+        ] {
+            assert_eq!(
+                crate::detect_file_type(Path::new(path)),
+                crate::FileType::Skill,
+                "{path}"
+            );
+            assert_eq!(detect_client(Path::new(path)), SkillClient::Kiro, "{path}");
+        }
+        // Other clients keep their exact directory names.
+        assert_eq!(
+            detect_client(Path::new(".CLAUDE/skills/my-skill/SKILL.md")),
+            SkillClient::Unknown
+        );
+        assert_eq!(
+            detect_client(Path::new("project/.kiro-old/skills/x/SKILL.md")),
+            SkillClient::Unknown
         );
     }
 

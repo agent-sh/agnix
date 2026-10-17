@@ -3051,6 +3051,13 @@ Validates Codex's admin-written managed `requirements.toml` (system location: `/
 **Fix**: No auto-fix (add headings for structure)
 **Source**: kiro.dev/docs/steering
 
+<a id="kiro-026"></a>
+### KIRO-026 [MEDIUM] Kiro Configuration File Never Loaded
+**Requirement**: A Kiro configuration file MUST use the name and location Kiro loads. Kiro lists `.kiro/agents/` (`*.json`; V3 also `*.md`, recursively), the top level of `.kiro/hooks/` (`*.json`) and `.kiro/steering/` (`**/*.md`) and compares extensions case-sensitively; it opens `.kiro/settings/mcp.json`, `.kiro/settings/cli.json`, and `permissions.yaml` or `permissions.json` in `~/.kiro/settings/` and `~/.kiro/workspace-roots/<hash>/`. Kiro CLI does not read `.kiro/settings.json` (only the CLI 2.x session tool's description still names it).
+**Detection**: Report, as a warning, a file no Kiro engine loads although its name shows the intent: an extension that differs only by case (`reviewer.JSON`, `style.MD`) or a JSON variant (`reviewer.jsonc`, `lint.yaml`) in `.kiro/agents/`, `.kiro/hooks/` or `.kiro/steering/`; `permissions.yml`, `mcp.jsonc`, `cli.jsonc` or a settings name with surrounding whitespace (` permissions.yaml`); `mcp.json`, `cli.json` or `permissions.*` placed directly in `.kiro/`; a hook document (`hooks` array, or `when` and `then`) in a subdirectory of `.kiro/hooks/`; and a `.kiro/settings.json` that holds a Kiro CLI setting key (`chat.defaultModel`, `toolSearch.enabled`, ...). Unrelated files in those directories (scripts, `package.json`, editor settings) are not reported.
+**Fix**: No auto-fix (rename or move the file)
+**Source**: kiro.dev/docs/configuration, kiro.dev/docs/custom-agents, kiro.dev/docs/hooks, kiro.dev/docs/steering, kiro.dev/docs/reference/settings, kiro.dev/docs/permissions
+
 ---
 
 ## KIRO POWERS RULES
@@ -3205,7 +3212,7 @@ Validates Codex's admin-written managed `requirements.toml` (system location: `/
 
 ## KIRO PERMISSIONS RULES
 
-Capability policy YAML is recognized at `.kiro/settings/permissions.yaml` and `.kiro/workspace-roots/<hash>/permissions.yaml`. The user policy is `~/.kiro/settings/permissions.yaml`; real workspace policies live outside the repository in `~/.kiro/workspace-roots/<hash>/permissions.yaml`. Repository-local `.kiro/settings/permissions.yaml` templates can be linted, but are not the real workspace policy store. All corrections below are manual because permissions affect access.
+Capability policies are recognized at `.kiro/settings/permissions.yaml` and `.kiro/workspace-roots/<hash>/permissions.yaml`, their `permissions.json` variants (Kiro reads the YAML file first, else the JSON one), and the administrator's `managed-settings.json` (`/Library/Application Support/Kiro/`, `/etc/kiro/`, `C:\ProgramData\Kiro\`). `permissions.yml` is never read (KIRO-026). The user policy is `~/.kiro/settings/permissions.yaml`; real workspace policies live outside the repository in `~/.kiro/workspace-roots/<hash>/permissions.yaml`. Repository-local `.kiro/settings/permissions.yaml` templates can be linted, but are not the real workspace policy store. All corrections below are manual because permissions affect access.
 
 <a id="kr-pm-001"></a>
 ### KR-PM-001 [HIGH] Invalid Kiro Permissions Document
@@ -3285,26 +3292,26 @@ Capability policy YAML is recognized at `.kiro/settings/permissions.yaml` and `.
 
 ## KIRO CLI SETTINGS RULES
 
-Rules for `.kiro/settings.json` (and `~/.kiro/settings.json`) - the flat-key JSON that Kiro's `kiro-cli settings <key> <value>` command writes to. Today covers the Tool Search feature added in Kiro CLI 2.1.
+Rules for `.kiro/settings/cli.json` (and `~/.kiro/settings/cli.json`) - the flat-key JSON that Kiro's `kiro-cli settings <key> <value>` command writes to (`--workspace` writes the project file). Kiro CLI does not read `.kiro/settings.json` (KIRO-026). Today covers the Tool Search feature added in Kiro CLI 2.1.
 
 <a id="kr-set-001"></a>
 ### KR-SET-001 [HIGH] Invalid toolSearch.enabled Value
 **Requirement**: `toolSearch.enabled` MUST be a boolean (true or false) when present. Non-boolean values will cause Kiro CLI to fail to apply the setting.
-**Detection**: Parse settings.json; look up top-level `toolSearch.enabled`; flag non-boolean types (string, number, array, object, null)
+**Detection**: Parse cli.json; look up top-level `toolSearch.enabled`; flag non-boolean types (string, number, array, object, null)
 **Fix**: [AUTO-FIX, safe] When the value is a quoted string that's unambiguously boolean (`"true"`/`"True"`/`"false"`/`"FALSE"` etc.), strip the quotes + normalize case. Other non-boolean types (number/array/null) remain manual since the user's intent isn't mechanically recoverable.
 **Source**: kiro.dev/docs/cli/mcp/tool-search/ (Kiro CLI 2.1+)
 
 <a id="kr-set-002"></a>
 ### KR-SET-002 [MEDIUM] Invalid toolSearch.minPct Value
 **Requirement**: `toolSearch.minPct` SHOULD be a non-negative number representing the percentage-of-context-window threshold that activates Tool Search. Default 5. Value 0 means "always active". Values above 100 will never trigger Tool Search because MCP tool specs cannot exceed the context window.
-**Detection**: Parse settings.json; type-check top-level `toolSearch.minPct`; flag non-numbers and negative numbers (ERROR), warn on values above 100 (WARNING)
+**Detection**: Parse cli.json; type-check top-level `toolSearch.minPct`; flag non-numbers and negative numbers (ERROR), warn on values above 100 (WARNING)
 **Fix**: [AUTO-FIX, safe] When the value is a quoted numeric string (`"5"`, `"2.5"`), strip the quotes. Negative and >100 warnings remain manual since they're semantic intent problems.
 **Source**: kiro.dev/docs/cli/mcp/tool-search/
 
 <a id="kr-set-003"></a>
 ### KR-SET-003 [MEDIUM] Invalid toolSearch.minTokens Value
 **Requirement**: `toolSearch.minTokens` SHOULD be a non-negative integer representing the token-count threshold that activates Tool Search. Default 50000. Value 0 means "always active".
-**Detection**: Parse settings.json; type-check top-level `toolSearch.minTokens`; flag non-numbers, negative numbers, and fractional values (ERROR)
+**Detection**: Parse cli.json; type-check top-level `toolSearch.minTokens`; flag non-numbers, negative numbers, and fractional values (ERROR)
 **Fix**: [AUTO-FIX, safe] When the value is a quoted integer string (`"50000"`), strip the quotes. Fractional strings, negatives, and fractional numbers remain manual.
 **Source**: kiro.dev/docs/cli/mcp/tool-search/
 
@@ -3706,7 +3713,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Kiro Powers | 8 | 3 | 4 | 1 | 0 |
 | Kiro Settings | 3 | 1 | 2 | 0 | 3 |
 | Kiro Skills | 1 | 0 | 1 | 0 | 1 |
-| Kiro Steering | 14 | 3 | 9 | 2 | 1 |
+| Kiro Steering | 15 | 3 | 10 | 2 | 1 |
 | MCP | 25 | 18 | 6 | 1 | 8 |
 | OpenCode | 46 | 28 | 17 | 1 | 11 |
 | OpenCode Skills | 1 | 0 | 1 | 0 | 1 |
@@ -3718,7 +3725,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **459** | **210** | **212** | **37** | **129** |
+| **TOTAL** | **460** | **210** | **213** | **37** | **129** |
 
 
 ---
@@ -3748,8 +3755,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 459 validation rules across 41 categories
+**Total Coverage**: 460 validation rules across 41 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 210 HIGH, 212 MEDIUM, 37 LOW
+**Certainty**: 210 HIGH, 213 MEDIUM, 37 LOW
 **Auto-Fixable**: 129 rules (28%)

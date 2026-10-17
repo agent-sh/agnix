@@ -63,14 +63,21 @@ fn kiro_permissions_detection_and_dispatch() {
     for name in [
         "permissions.yaml",
         "settings/permissions.yaml",
-        ".kiro/permissions.yaml",
         ".kiro/settings/nested/permissions.yaml",
         ".kiro/workspace-roots/permissions.yaml",
-        ".kiro/settings/permissions.yml",
     ] {
         assert_eq!(
             detect_file_type(Path::new(name)),
             FileType::Unknown,
+            "{name}"
+        );
+    }
+    // Kiro never reads these near misses either, but they were clearly meant
+    // as policies, so they are KiroNotLoaded (KIRO-026) instead of Unknown.
+    for name in [".kiro/permissions.yaml", ".kiro/settings/permissions.yml"] {
+        assert_eq!(
+            detect_file_type(Path::new(name)),
+            FileType::KiroNotLoaded,
             "{name}"
         );
     }

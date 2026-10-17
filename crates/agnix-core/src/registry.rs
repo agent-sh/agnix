@@ -398,7 +398,7 @@ impl ValidatorRegistryBuilder {
 ///
 /// Used by `BuiltinProvider` (via `debug_assert_eq!`) and tests to catch
 /// accidental additions or removals without updating all providers.
-const EXPECTED_BUILTIN_COUNT: usize = 86;
+const EXPECTED_BUILTIN_COUNT: usize = 85;
 
 // -- Category providers -----------------------------------------------------
 //
@@ -778,31 +778,36 @@ impl ValidatorProvider for MiscProvider {
                 Some("KiroSteeringValidator"),
                 kiro_steering_validator,
             ),
+            // Kiro resolves no Claude-style `@path` imports in any file it loads
+            // (steering uses `#[[file:...]]`, agents `file://`), so the
+            // ImportsValidator is not registered for Kiro types. POWER.md bodies
+            // document paths for users, so the CrossPlatformValidator (XP-003)
+            // is not registered either.
             (
                 FileType::KiroPower,
                 Some("KiroPowerValidator"),
                 kiro_power_validator,
             ),
-            (
-                FileType::KiroPower,
-                Some("ImportsValidator"),
-                imports_validator,
-            ),
-            (
-                FileType::KiroPower,
-                Some("CrossPlatformValidator"),
-                cross_platform_validator,
-            ),
             (FileType::KiroPower, Some("XmlValidator"), xml_validator),
+            (
+                FileType::KiroPowerPlugin,
+                Some("KiroPowerPluginValidator"),
+                kiro_power_plugin_validator,
+            ),
+            (
+                FileType::KiroPowerMcp,
+                Some("KiroMcpValidator"),
+                kiro_power_mcp_validator,
+            ),
+            (
+                FileType::KiroPowerSteering,
+                Some("XmlValidator"),
+                xml_validator,
+            ),
             (
                 FileType::KiroAgent,
                 Some("KiroAgentValidator"),
                 kiro_agent_validator,
-            ),
-            (
-                FileType::KiroAgent,
-                Some("ImportsValidator"),
-                imports_validator,
             ),
             (
                 FileType::KiroHook,
@@ -815,19 +820,9 @@ impl ValidatorProvider for MiscProvider {
                 kiro_v3_hook_validator,
             ),
             (
-                FileType::KiroHook,
-                Some("ImportsValidator"),
-                imports_validator,
-            ),
-            (
                 FileType::KiroHookV3,
                 Some("KiroV3HookValidator"),
                 kiro_v3_hook_validator,
-            ),
-            (
-                FileType::KiroHookV3,
-                Some("ImportsValidator"),
-                imports_validator,
             ),
             (
                 FileType::KiroMcp,
@@ -843,6 +838,11 @@ impl ValidatorProvider for MiscProvider {
                 FileType::KiroSettings,
                 Some("KiroSettingsValidator"),
                 kiro_settings_validator,
+            ),
+            (
+                FileType::KiroNotLoaded,
+                Some("KiroNotLoadedValidator"),
+                kiro_not_loaded_validator,
             ),
             (
                 FileType::GeminiAgent,
@@ -1045,6 +1045,46 @@ fn gemini_agent_validator() -> Box<dyn Validator> {
 
 fn kiro_mcp_validator() -> Box<dyn Validator> {
     Box::new(crate::rules::kiro_mcp::KiroMcpValidator)
+}
+
+/// Validator for a power's `mcp.json` (`FileType::KiroPowerMcp`). Until the
+/// strict power validator lands this is the Kiro mcp.json validator, which
+/// matches the legacy power format (plain Kiro `mcpServers`).
+fn kiro_power_mcp_validator() -> Box<dyn Validator> {
+    Box::new(crate::rules::kiro_mcp::KiroMcpValidator)
+}
+
+/// Validator for a power's `plugin.json` (`FileType::KiroPowerPlugin`).
+fn kiro_power_plugin_validator() -> Box<dyn Validator> {
+    Box::new(KiroPowerPluginValidator)
+}
+
+fn kiro_not_loaded_validator() -> Box<dyn Validator> {
+    Box::new(crate::rules::kiro_not_loaded::KiroNotLoadedValidator)
+}
+
+/// Placeholder for the Kiro power `plugin.json` (Agent Plugins manifest)
+/// validator. It reserves the registry slot for `FileType::KiroPowerPlugin`
+/// so those manifests stop reaching the Claude and Codex plugin validators,
+/// and emits nothing. Replace the factory above with the real validator.
+struct KiroPowerPluginValidator;
+
+impl Validator for KiroPowerPluginValidator {
+    fn metadata(&self) -> crate::rules::ValidatorMetadata {
+        crate::rules::ValidatorMetadata {
+            name: self.name(),
+            rule_ids: &[],
+        }
+    }
+
+    fn validate_per_file(
+        &self,
+        _path: &std::path::Path,
+        _content: &str,
+        _config: &crate::config::PerFileLintConfig<'_>,
+    ) -> Vec<crate::diagnostics::Diagnostic> {
+        Vec::new()
+    }
 }
 
 #[cfg(test)]
@@ -1499,11 +1539,16 @@ mod tests {
             FileType::WindsurfRulesLegacy,
             FileType::KiroSteering,
             FileType::KiroPower,
+            FileType::KiroPowerPlugin,
+            FileType::KiroPowerMcp,
+            FileType::KiroPowerSteering,
             FileType::KiroAgent,
             FileType::KiroHook,
             FileType::KiroHookV3,
             FileType::KiroPermissions,
             FileType::KiroMcp,
+            FileType::KiroSettings,
+            FileType::KiroNotLoaded,
             FileType::GenericMarkdown,
         ];
 
@@ -1551,12 +1596,16 @@ mod tests {
                 | FileType::WindsurfRulesLegacy
                 | FileType::KiroSteering
                 | FileType::KiroPower
+                | FileType::KiroPowerPlugin
+                | FileType::KiroPowerMcp
+                | FileType::KiroPowerSteering
                 | FileType::KiroAgent
                 | FileType::KiroHook
                 | FileType::KiroHookV3
                 | FileType::KiroMcp
                 | FileType::KiroSettings
                 | FileType::KiroPermissions
+                | FileType::KiroNotLoaded
                 | FileType::GeminiAgent
                 | FileType::GenericMarkdown => (),
                 FileType::Unknown => {
@@ -1588,36 +1637,86 @@ mod tests {
                 .collect()
         };
 
+        // Kiro resolves no `@path` imports, so the ImportsValidator is not
+        // registered for Kiro types (it raised REF-001 on agent and hook
+        // prompts). POWER.md drops the CrossPlatformValidator (XP-003 flagged
+        // documented OS paths).
         assert_eq!(
             names_for(FileType::KiroPower),
-            vec![
-                "KiroPowerValidator",
-                "ImportsValidator",
-                "CrossPlatformValidator",
-                "XmlValidator"
-            ]
+            vec!["KiroPowerValidator", "XmlValidator"]
         );
         assert_eq!(
-            names_for(FileType::KiroAgent),
-            vec!["KiroAgentValidator", "ImportsValidator"]
+            names_for(FileType::KiroPowerPlugin),
+            vec!["KiroPowerPluginValidator"]
         );
+        assert_eq!(names_for(FileType::KiroPowerMcp), vec!["KiroMcpValidator"]);
+        assert_eq!(names_for(FileType::KiroPowerSteering), vec!["XmlValidator"]);
+        assert_eq!(
+            names_for(FileType::KiroSteering),
+            vec!["KiroSteeringValidator"]
+        );
+        assert_eq!(names_for(FileType::KiroAgent), vec!["KiroAgentValidator"]);
         assert_eq!(
             names_for(FileType::KiroHook),
-            vec![
-                "KiroHookValidator",
-                "KiroV3HookValidator",
-                "ImportsValidator"
-            ]
+            vec!["KiroHookValidator", "KiroV3HookValidator"]
         );
-        assert_eq!(
-            names_for(FileType::KiroHookV3),
-            vec!["KiroV3HookValidator", "ImportsValidator"]
-        );
+        assert_eq!(names_for(FileType::KiroHookV3), vec!["KiroV3HookValidator"]);
         assert_eq!(names_for(FileType::KiroMcp), vec!["KiroMcpValidator"]);
         assert_eq!(
             names_for(FileType::KiroPermissions),
             vec!["KiroPermissionsValidator"]
         );
+        assert_eq!(
+            names_for(FileType::KiroSettings),
+            vec!["KiroSettingsValidator"]
+        );
+        assert_eq!(
+            names_for(FileType::KiroNotLoaded),
+            vec!["KiroNotLoadedValidator"]
+        );
+        for file_type in [
+            FileType::KiroSteering,
+            FileType::KiroPower,
+            FileType::KiroPowerPlugin,
+            FileType::KiroPowerMcp,
+            FileType::KiroPowerSteering,
+            FileType::KiroAgent,
+            FileType::KiroHook,
+            FileType::KiroHookV3,
+            FileType::KiroMcp,
+            FileType::KiroSettings,
+            FileType::KiroPermissions,
+            FileType::KiroNotLoaded,
+        ] {
+            let names = names_for(file_type);
+            for claude_or_generic in [
+                "ImportsValidator",
+                "CrossPlatformValidator",
+                "HooksValidator",
+                "PluginValidator",
+                "CodexPluginValidator",
+                "McpValidator",
+            ] {
+                assert!(
+                    !names.contains(&claude_or_generic),
+                    "{file_type:?} must not run {claude_or_generic}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn kiro_power_plugin_placeholder_emits_nothing() {
+        let registry = ValidatorRegistry::with_defaults();
+        let config = crate::config::LintConfig::default();
+        let path = std::path::Path::new(".kiro/powers/installed/x/plugin.json");
+        for validator in registry.validators_for(FileType::KiroPowerPlugin) {
+            assert!(
+                validator
+                    .validate_per_file(path, "{\"name\": 1}", &config.for_path(path))
+                    .is_empty()
+            );
+        }
     }
 
     // ---- Caching correctness tests ----
@@ -1716,9 +1815,10 @@ mod tests {
             .iter()
             .filter(|(_, name, _)| *name == Some("XmlValidator"))
             .count();
+        // 12 since Kiro power steering (KiroPowerSteering) runs XmlValidator.
         assert_eq!(
-            xml_occurrences, 11,
-            "Expected XmlValidator in 11 BuiltinProvider entries"
+            xml_occurrences, 12,
+            "Expected XmlValidator in 12 BuiltinProvider entries"
         );
         let total_after = registry.total_validator_count();
         assert_eq!(
@@ -2059,7 +2159,9 @@ mod tests {
 
     #[test]
     fn misc_provider_count() {
-        assert_eq!(MiscProvider.named_validators().len(), 36);
+        // 35: Kiro types dropped five Imports/CrossPlatform entries and added
+        // power plugin, power MCP, power steering and not-loaded entries.
+        assert_eq!(MiscProvider.named_validators().len(), 35);
     }
 
     #[test]

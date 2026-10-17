@@ -467,7 +467,10 @@ fn readme_supported_tools_kiro_row_matches_current_rules_surface() {
             && kiro_row.contains(".kiro/agents/\\*\\*/\\*.{json,md}")
             && kiro_row.contains(".kiro/hooks/\\*.kiro.hook")
             && kiro_row.contains(".kiro/hooks/\\*.json")
-            && kiro_row.contains(".kiro/settings.json")
+            // Kiro CLI settings live in .kiro/settings/cli.json, not the
+            // .kiro/settings.json this test used to require.
+            && kiro_row.contains(".kiro/settings/cli.json")
+            && !kiro_row.contains(".kiro/settings.json")
             && kiro_row.contains(".kiro/settings/permissions.yaml")
             && kiro_row.contains(".kiro/settings/mcp.json")
             && kiro_row.contains(".kiro/powers/\\*/POWER.md"),

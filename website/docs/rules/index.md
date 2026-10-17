@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `459` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `460` validation rules generated from `knowledge-base/rules.json`.
 `129` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -304,6 +304,7 @@ This section contains all `459` validation rules generated from `knowledge-base/
 | [KIRO-012](./generated/kiro-012.md) | Duplicate Steering Name | MEDIUM | Kiro Steering | No |
 | [KIRO-013](./generated/kiro-013.md) | Conflicting Inclusion Modes | MEDIUM | Kiro Steering | No |
 | [KIRO-014](./generated/kiro-014.md) | Markdown Structure Issues | LOW | Kiro Steering | No |
+| [KIRO-026](./generated/kiro-026.md) | Kiro Configuration File Never Loaded | MEDIUM | Kiro Steering | No |
 | [KR-SK-001](./generated/kr-sk-001.md) | Kiro Skill Uses Unsupported Field | MEDIUM | Kiro Skills | Yes (safe/unsafe) |
 | [KR-AG-001](./generated/kr-ag-001.md) | Unknown Field in Kiro Agent JSON | MEDIUM | Kiro Agents | No |
 | [KR-AG-002](./generated/kr-ag-002.md) | Invalid Kiro Agent Resource Protocol | HIGH | Kiro Agents | No |

@@ -1,0 +1,5 @@
+{
+  "mcpServers": {
+    "docs": { "command": "npx", "args": ["-y", "docs-mcp"] }
+  }
+}

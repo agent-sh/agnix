@@ -1,0 +1,11 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "lint-after-write",
+      "trigger": "PostToolUse",
+      "matcher": "write",
+      "action": { "type": "command", "command": "npm run lint" }
+    }
+  ]
+}
