@@ -3300,7 +3300,7 @@ Kiro reads MCP servers from `~/.kiro/settings/mcp.json` and `<workspace>/.kiro/s
 <a id="kr-mcp-001"></a>
 ### KR-MCP-001 [HIGH] Kiro MCP Config Fails to Load
 **Requirement**: An mcp.json MUST parse and contain an `mcpServers` object, and each server MUST define `command` (local) or `url` (remote).
-**Detection**: Error on invalid JSON, a missing or non-object `mcpServers` (Kiro loads no server from the file), and a server with neither `command` nor `url` (skipped; `"disabled": true` and `"type": "registry"` servers are exempt). Comments or trailing commas are accepted by the V3 engine but make Kiro CLI 2.x reject the file (warning naming V2, or an error when V2 is pinned). Agent Plugins mcp.json must be plain JSON.
+**Detection**: Error on invalid JSON, a missing or non-object `mcpServers` (Kiro loads no server from the file), and a server with neither `command` nor `url` (skipped; `"disabled": true` and `"type": "registry"` servers are exempt). Comments or trailing commas are accepted by the V3 engine in settings files but make Kiro CLI 2.x reject the file (warning naming V2, or an error when V2 is pinned). Power mcp.json files are read with `JSON.parse` (plain JSON); for a legacy power with a POWER.md, parse and `mcpServers` problems are reported once, by KR-PW-004 on the POWER.md.
 **Fix**: No auto-fix - repair the JSON or define `command` or `url`.
 **Source**: kiro.dev/docs/mcp/configuration, kiro.dev/docs/custom-agents/configuration-reference
 
@@ -3461,7 +3461,7 @@ Rules for the Kiro CLI settings files `~/.kiro/settings/cli.json` (global, `$KIR
 ### KR-SET-008 [MEDIUM] Kiro CLI Setting Has Wrong Value Type
 **Requirement**: Each setting SHOULD have its declared type (boolean, number, string, array of strings, object).
 **Detection**: Warn when a known setting other than `toolSearch.*` has another type, for example `"chat.enableKnowledge": "yes"` or `"cleanup.periodDays": "7d"`. Kiro does not read the value and keeps the default.
-**Fix**: [AUTO-FIX, unsafe] Convert an exact quoted `"true"`/`"false"` for a boolean setting, or a quoted plain decimal for a number setting, on the exact value span. Unsafe because it activates a value Kiro ignores today.
+**Fix**: [AUTO-FIX, unsafe] Convert an exact quoted `"true"`/`"false"` for a boolean setting, or a quoted plain integer for a number setting, on the exact value span. Unsafe because it activates a value Kiro ignores today.
 **Source**: kiro.dev/docs/reference/settings
 
 <a id="kr-set-009"></a>
@@ -3840,7 +3840,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | KR-SET-001 | Convert quoted true/false to a JSON boolean | unsafe |
 | KR-SET-002 | Convert a quoted plain decimal to a JSON number | unsafe |
 | KR-SET-003 | Convert a quoted plain integer to a JSON number | unsafe |
-| KR-SET-008 | Convert a quoted boolean or number to its JSON type | unsafe |
+| KR-SET-008 | Convert a quoted boolean or integer to its JSON type | unsafe |
 | OC-DEP-003 | Rename `autoshare` key to `share` | safe |
 | OC-CFG-008 | Replace logLevel with closest valid value | unsafe |
 | OC-AG-006 | Replace color with closest named color | unsafe |

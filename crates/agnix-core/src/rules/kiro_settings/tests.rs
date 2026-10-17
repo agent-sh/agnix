@@ -296,11 +296,16 @@ fn test_kr_set_008_quoted_value_fixes_are_unsafe() {
         "KR-SET-008",
     );
     assert!(!d.fixes[0].safe);
-    assert!(
-        only(&validate(r#"{"cleanup.periodDays": "7d"}"#), "KR-SET-008")
-            .fixes
-            .is_empty()
-    );
+    for content in [
+        r#"{"cleanup.periodDays": "7d"}"#,
+        // Fractional values of numeric settings are not converted.
+        r#"{"knowledge.maxFiles": "2.5"}"#,
+    ] {
+        assert!(
+            only(&validate(content), "KR-SET-008").fixes.is_empty(),
+            "{content}"
+        );
+    }
 }
 
 #[test]
@@ -391,6 +396,14 @@ fn test_kr_set_011_global_only_key_in_workspace_file() {
         assert_eq!(d.level, DiagnosticLevel::Info);
         assert!(d.message.contains("chat.uiMode"));
     }
+    // A copy of the global file (it carries keys only Kiro writes, globally)
+    // is not treated as a workspace file.
+    let copy = r#"{"chat.uiMode": "tui", "mcp.loadedBefore": true}"#;
+    let diagnostics = KiroSettingsValidator.validate(&path, copy, &LintConfig::default());
+    assert!(
+        hits(&diagnostics, "KR-SET-011").is_empty(),
+        "{diagnostics:#?}"
+    );
 }
 
 #[test]

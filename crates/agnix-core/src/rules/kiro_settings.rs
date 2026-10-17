@@ -266,6 +266,17 @@ const SETTINGS: &[SettingSpec] = &[
     spec("voice.autoSubmit", Bool, false, &[]),
 ];
 
+/// Global-only keys Kiro writes on its own (startup prompts, pickers, MCP
+/// bookkeeping), never through `kiro-cli settings --workspace`.
+const GLOBAL_STATE_KEYS: &[&str] = &[
+    "mcp.loadedBefore",
+    "chat.modelPicker.lastUsed",
+    "chat.hasSeenLogo",
+    "telemetryClientId",
+    "chat.enableAutoAgentUpgrade",
+    "chat.disabledModelFallbacks",
+];
+
 fn setting(key: &str) -> Option<&'static SettingSpec> {
     SETTINGS.iter().find(|s| s.key == key)
 }
@@ -385,7 +396,13 @@ impl Validator for KiroSettingsValidator {
             }
             return cx.diagnostics;
         };
-        let workspace_file = is_workspace_settings_file(path) == Some(true);
+        // Keys only Kiro itself writes, and only to the global file: a file
+        // carrying them is a copy of ~/.kiro/settings/cli.json (for example in
+        // a dotfiles repository), not a workspace file.
+        let global_copy = members
+            .iter()
+            .any(|m| GLOBAL_STATE_KEYS.contains(&m.key.as_str()));
+        let workspace_file = !global_copy && is_workspace_settings_file(path) == Some(true);
         for (index, member) in members.iter().enumerate() {
             // A repeated key: Kiro (serde_json) keeps the last value.
             if let Some(later) = members[index + 1..].iter().find(|m| m.key == member.key) {
@@ -615,7 +632,9 @@ fn validate_value(cx: &mut Cx<'_>, content: &str, member: &JsonMember, spec: &Se
         );
         let fix = match spec.kind {
             Bool => quoted_bool_fix(content, node),
-            Number => quoted_number_fix(content, node, false),
+            // Integers only: most numeric settings are counts or seconds,
+            // and a fractional value would be ignored again.
+            Number => quoted_number_fix(content, node, true),
             _ => None,
         };
         if let Some(fix) = fix {

@@ -7,7 +7,9 @@
 //!   wrongly typed field anywhere rejects the WHOLE file. The V3 engine parses
 //!   them with comment-json (comments and trailing commas allowed) and checks
 //!   each server separately: an invalid server is skipped, the others load.
-//! - A legacy power's `mcp.json` (next to `POWER.md`): same format, V3 only.
+//! - A legacy power's `mcp.json` (next to `POWER.md`): same format, V3 only,
+//!   read with `JSON.parse`; KR-PW-004 on the POWER.md reports a file that
+//!   does not parse or lacks `mcpServers`, so this validator does not.
 //! - An Agent Plugins power's `mcp.json` (next to `plugin.json`): strict JSON
 //!   and a strict schema (V3 only). An unknown top-level key disables every
 //!   server of the power; an invalid server entry is skipped.
@@ -109,16 +111,19 @@ impl Validator for KiroMcpValidator {
                 cx.engines = KiroEngines::V3_ONLY;
                 validate_plugin_mcp(&mut cx, manifest_schema.as_deref());
             }
-            McpVariant::LegacyPower => {
-                // Powers exist only in the V3 engine.
+            McpVariant::LegacyPower { power_md } => {
+                // Powers exist only in the V3 engine, which reads a legacy
+                // power's mcp.json with JSON.parse. When the power has a
+                // POWER.md, KR-PW-004 already reports a file that does not
+                // parse or lacks mcpServers, so this validator does not repeat it.
                 cx.engines = KiroEngines::V3_ONLY;
-                validate_kiro_mcp(&mut cx);
+                validate_kiro_mcp(&mut cx, false, !power_md);
             }
             McpVariant::Settings => {
                 // mcp.json carries no reliable engine markers: the same file is
                 // read by whichever engine runs, so check both unless pinned.
                 cx.engines = engines_for(config, false, false);
-                validate_kiro_mcp(&mut cx);
+                validate_kiro_mcp(&mut cx, true, true);
             }
         }
         cx.diagnostics
@@ -130,8 +135,9 @@ impl Validator for KiroMcpValidator {
 enum McpVariant {
     /// `.kiro/settings/mcp.json` (user or workspace).
     Settings,
-    /// `<power>/mcp.json` next to POWER.md.
-    LegacyPower,
+    /// `<power>/mcp.json` of a legacy power: next to POWER.md (`power_md`) or
+    /// inside `.kiro/powers/`.
+    LegacyPower { power_md: bool },
     /// `<power>/mcp.json` next to plugin.json. `manifest_schema` is the
     /// plugin.json `$schema`, when it can be read.
     AgentPlugin { manifest_schema: Option<String> },
@@ -163,8 +169,9 @@ fn mcp_variant(path: &Path, content: &str, config: &PerFileLintConfig<'_>) -> Mc
             });
             return McpVariant::AgentPlugin { manifest_schema };
         }
-        if fs.exists(&dir.join("POWER.md")) || path_is_under_kiro_powers(path) {
-            return McpVariant::LegacyPower;
+        let power_md = fs.exists(&dir.join("POWER.md"));
+        if power_md || path_is_under_kiro_powers(path) {
+            return McpVariant::LegacyPower { power_md };
         }
     }
     // Without a manifest on disk, an Agent Plugins `$schema` still identifies
@@ -296,11 +303,13 @@ fn server_effect(hit: Fatal) -> String {
 // Settings and legacy power mcp.json
 // ---------------------------------------------------------------------------
 
-fn validate_kiro_mcp(cx: &mut Cx<'_>) {
-    let doc = match parse_json_document(cx.content, true) {
+/// `jsonc`: comments and trailing commas are accepted (V3 settings files).
+/// `report_file`: report parse and `mcpServers` shape problems (KR-MCP-001).
+fn validate_kiro_mcp(cx: &mut Cx<'_>, jsonc: bool, report_file: bool) {
+    let doc = match parse_json_document(cx.content, jsonc) {
         Ok(doc) => doc,
         Err(error) => {
-            if cx.enabled("KR-MCP-001") {
+            if report_file && cx.enabled("KR-MCP-001") {
                 let offset = offset_of(cx.content, error.line, error.column);
                 cx.push(
                     DiagnosticLevel::Error,
@@ -344,7 +353,7 @@ fn validate_kiro_mcp(cx: &mut Cx<'_>) {
     let servers = match root.value.get("mcpServers") {
         Some(member) => member,
         None => {
-            if cx.enabled("KR-MCP-001") {
+            if report_file && cx.enabled("KR-MCP-001") {
                 cx.push(
                     DiagnosticLevel::Error,
                     "KR-MCP-001",
@@ -358,7 +367,7 @@ fn validate_kiro_mcp(cx: &mut Cx<'_>) {
         }
     };
     let Some(members) = servers.value.value.as_object() else {
-        if cx.enabled("KR-MCP-001") {
+        if report_file && cx.enabled("KR-MCP-001") {
             cx.push(
                 DiagnosticLevel::Error,
                 "KR-MCP-001",
@@ -635,6 +644,49 @@ fn field_type_issue(key: &str, value: &JsonValue) -> Option<TypeIssue> {
             issue(Fatal::V3, "\"auto\" or \"legacy\"")
         }
         _ => None,
+    }
+}
+
+/// Field-type check for one MCP server field, for callers holding a
+/// `serde_json::Value` (for example an agent's inline `mcpServers`, which
+/// Kiro CLI 2.x deserializes with the same struct as mcp.json, skipping the
+/// whole agent on a type error). Returns (fatal in V2, fatal in V3, expected
+/// type). `oauth.<field>` keys check the nested OAuth fields.
+#[allow(dead_code)] // shared with the Kiro agent validator
+pub(crate) fn server_field_issue(
+    key: &str,
+    value: &serde_json::Value,
+) -> Option<(bool, bool, &'static str)> {
+    let value = json_value_from_serde(value);
+    let issue = match key.strip_prefix("oauth.") {
+        Some(field) => oauth_field_type_issue(field, &value),
+        None => field_type_issue(key, &value),
+    }?;
+    Some((issue.fatal.v2, issue.fatal.v3, issue.expected))
+}
+
+fn json_value_from_serde(value: &serde_json::Value) -> JsonValue {
+    let node = |value: &serde_json::Value| JsonNode {
+        start: 0,
+        end: 0,
+        value: json_value_from_serde(value),
+    };
+    match value {
+        serde_json::Value::Null => JsonValue::Null,
+        serde_json::Value::Bool(b) => JsonValue::Bool(*b),
+        serde_json::Value::Number(n) => JsonValue::Number(n.clone()),
+        serde_json::Value::String(s) => JsonValue::String(s.clone()),
+        serde_json::Value::Array(items) => JsonValue::Array(items.iter().map(node).collect()),
+        serde_json::Value::Object(map) => JsonValue::Object(
+            map.iter()
+                .map(|(key, value)| JsonMember {
+                    key: key.clone(),
+                    key_start: 0,
+                    key_end: 0,
+                    value: node(value),
+                })
+                .collect(),
+        ),
     }
 }
 
@@ -1413,12 +1465,11 @@ fn validate_plugin_mcp(cx: &mut Cx<'_>, manifest_schema: Option<&str>) {
         }
         return;
     }
-    if let Some(manifest_version) = manifest_schema.map(|s| {
-        s.split("/schemas/")
-            .nth(1)
-            .and_then(|r| r.split('/').next())
-            .unwrap_or("")
-    }) && Some(manifest_version) != mcp_version
+    // Compared only against a valid plugin.json schema: an invalid one makes
+    // Kiro reject the whole plugin before it reads mcp.json.
+    if let Some(manifest_version) =
+        manifest_schema.and_then(|s| plugin_schema_version(s, "plugin.schema.json"))
+        && Some(manifest_version) != mcp_version
         && let Some(schema) = schema
     {
         if cx.enabled("KR-MCP-012") {
@@ -1430,11 +1481,7 @@ fn validate_plugin_mcp(cx: &mut Cx<'_>, manifest_schema: Option<&str>) {
                 t!(
                     "rules.kr_mcp_012.version_message",
                     mcp = mcp_version.unwrap_or_default(),
-                    manifest = if manifest_version.is_empty() {
-                        "an unknown version"
-                    } else {
-                        manifest_version
-                    }
+                    manifest = manifest_version
                 )
                 .to_string(),
                 t!("rules.kr_mcp_012.suggestion").to_string(),
@@ -1495,7 +1542,23 @@ fn validate_plugin_mcp(cx: &mut Cx<'_>, manifest_schema: Option<&str>) {
         return;
     };
     for (index, entry) in entries.iter().enumerate() {
-        if entries[index + 1..].iter().any(|m| m.key == entry.key) {
+        if let Some(later) = entries[index + 1..].iter().find(|m| m.key == entry.key) {
+            if cx.enabled("KR-MCP-005") {
+                let (later_line, _) = cx.lines.line_col(later.key_start);
+                cx.push(
+                    DiagnosticLevel::Warning,
+                    "KR-MCP-005",
+                    entry.key_start,
+                    entry.key_end,
+                    t!(
+                        "rules.kr_mcp_005.message",
+                        server = entry.key.as_str(),
+                        line = later_line
+                    )
+                    .to_string(),
+                    t!("rules.kr_mcp_005.suggestion").to_string(),
+                );
+            }
             continue;
         }
         check_secrets(cx, &entry.key, &entry.value);

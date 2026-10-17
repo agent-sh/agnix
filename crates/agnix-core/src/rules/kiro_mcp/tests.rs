@@ -679,15 +679,36 @@ const PLUGIN_SCHEMA: &str = "https://agent-plugins.org/schemas/1.0.0/mcp.schema.
 #[test]
 fn test_legacy_power_mcp_is_v3_only() {
     let dir = power_dir(None);
-    let content = "// docs\n{\"mcpServers\": {\"s\": {\"url\": \"http://example.com/mcp\"}}}";
+    let content = r#"{"mcpServers": {"s": {"url": "http://example.com/mcp"}}}"#;
     let diagnostics = validate_in(&dir, content);
-    // V3 accepts comments; insecure http is fatal in the only engine with powers.
-    assert!(
-        rules(&diagnostics, "KR-MCP-001").is_empty(),
-        "{diagnostics:#?}"
-    );
+    // Insecure http is fatal in the only engine with powers.
     assert_eq!(
         only(&diagnostics, "KR-MCP-008").level,
+        DiagnosticLevel::Error
+    );
+}
+
+#[test]
+fn test_legacy_power_file_problems_are_left_to_kr_pw_004() {
+    // The V3 engine reads a legacy power's mcp.json with JSON.parse; with a
+    // POWER.md next to it, KR-PW-004 reports parse and mcpServers problems.
+    let dir = power_dir(None);
+    for content in [
+        "// docs\n{\"mcpServers\": {}}",
+        "{\"mcpServers\": []}",
+        "{}",
+    ] {
+        assert!(validate_in(&dir, content).is_empty(), "{content}");
+    }
+    // Without a POWER.md (only the .kiro/powers path) this validator reports them.
+    let content = "// docs\n{\"mcpServers\": {}}";
+    let diagnostics = KiroMcpValidator.validate(
+        Path::new(".kiro/powers/x/mcp.json"),
+        content,
+        &LintConfig::default(),
+    );
+    assert_eq!(
+        only(&diagnostics, "KR-MCP-001").level,
         DiagnosticLevel::Error
     );
 }
@@ -823,6 +844,25 @@ fn test_plugin_schema_version_parsing() {
     ] {
         assert_eq!(plugin_schema_version(bad, "mcp.schema.json"), None, "{bad}");
     }
+}
+
+#[test]
+fn test_server_field_issue_for_agent_mcp_servers() {
+    use serde_json::json;
+    assert_eq!(
+        server_field_issue("args", &json!("x")),
+        Some((true, true, "an array of strings"))
+    );
+    assert_eq!(
+        server_field_issue("timeout", &json!(0)).map(|i| (i.0, i.1)),
+        Some((false, true))
+    );
+    assert_eq!(
+        server_field_issue("oauth.clientSecret", &json!(5)).map(|i| (i.0, i.1)),
+        Some((true, false))
+    );
+    assert_eq!(server_field_issue("env", &json!({"A": "b"})), None);
+    assert_eq!(server_field_issue("unknownField", &json!(1)), None);
 }
 
 // ===== Rule toggles and metadata =====
