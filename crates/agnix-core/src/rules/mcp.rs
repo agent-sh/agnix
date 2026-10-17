@@ -1,14 +1,24 @@
-//! MCP (Model Context Protocol) validation (MCP-001 to MCP-024). MCP-025 and
-//! MCP-026 encoded Claude Code facts and moved to `claude_mcp` (CC-MCP-004,
-//! CC-MCP-005), which runs only on Claude Code MCP files.
+//! MCP (Model Context Protocol) validation (MCP-001 to MCP-024, MCP-027 to
+//! MCP-033). MCP-025 and MCP-026 encoded Claude Code facts and moved to
+//! `claude_mcp` (CC-MCP-004, CC-MCP-005), which runs only on Claude Code MCP
+//! files.
+//!
+//! The MCP specification defines tool, resource and prompt definitions and the
+//! JSON-RPC messages (MCP-001..008, MCP-013..016, MCP-020, MCP-030..033). It
+//! does not define client configuration files: the `mcpServers` map, `type`,
+//! `command`, `url` and `args` are each client's format (MCP-009..012,
+//! MCP-022..024), so those rules follow the clients' documentation. The
+//! server-level security checks shared with other clients' config files
+//! (MCP-018, MCP-019, MCP-027..029) live in `mcp_servers`.
 
 use crate::{
     config::PerFileLintConfig,
     diagnostics::{Diagnostic, Fix},
+    rules::mcp_servers::{Locator, ServerView, check_server},
     rules::{Validator, ValidatorMetadata},
     schemas::mcp::{
         CURRENT_MCP_PROTOCOL_VERSIONS, McpServerConfig, McpToolSchema, VALID_MCP_ANNOTATION_HINTS,
-        VALID_MCP_CAPABILITY_KEYS, VALID_MCP_SERVER_TYPES, extract_request_protocol_version,
+        VALID_MCP_CAPABILITY_KEYS, extract_request_protocol_version,
         extract_response_protocol_version, is_initialize_message, is_initialize_response,
         validate_json_schema_structure,
     },
@@ -234,8 +244,131 @@ fn find_json_field_location_in_span(
 const RULE_IDS: &[&str] = &[
     "MCP-001", "MCP-002", "MCP-003", "MCP-004", "MCP-006", "MCP-007", "MCP-008", "MCP-009",
     "MCP-010", "MCP-011", "MCP-012", "MCP-013", "MCP-014", "MCP-015", "MCP-016", "MCP-017",
-    "MCP-018", "MCP-019", "MCP-020", "MCP-021", "MCP-022", "MCP-023", "MCP-024",
+    "MCP-018", "MCP-019", "MCP-020", "MCP-021", "MCP-022", "MCP-023", "MCP-024", "MCP-027",
+    "MCP-028", "MCP-029", "MCP-030", "MCP-031", "MCP-032", "MCP-033",
 ];
+
+/// `type` values each client documents for an MCP server entry. The MCP
+/// specification defines no client config format, so the valid set depends
+/// on who reads the file.
+const CLIENT_SERVER_TYPES: &[(&str, &[&str])] = &[
+    // "the `type` field accepts `streamable-http` as an alias for `http`";
+    // WebSocket example `"type":"ws"`.
+    (
+        "claude-code",
+        &["stdio", "http", "streamable-http", "sse", "ws"],
+    ),
+    // Copilot cloud agent "accepts `local`, `stdio`, `http`, or `sse`";
+    // VS Code `.vscode/mcp.json` uses stdio, http and sse.
+    ("github-copilot", &["stdio", "local", "http", "sse"]),
+    // Codex plugin `.mcp.json` uses `http`; Agent Plugins `mcp.json` uses
+    // `streamable-http`.
+    ("codex", &["stdio", "http", "streamable-http"]),
+    // Cursor lists stdio, SSE and Streamable HTTP transports; remote entries
+    // may omit `type`.
+    ("cursor", &["stdio", "http", "sse", "streamable-http"]),
+    // Cline: `streamableHttp` or legacy `sse`.
+    ("cline", &["stdio", "sse", "streamableHttp"]),
+];
+
+/// Clients that read a generic MCP file at `path`. Empty when the location
+/// is not one specific clients document (a plugin or skill `mcp.json`).
+fn mcp_file_readers(path: &Path) -> &'static [&'static str] {
+    let name = path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or_default()
+        .to_ascii_lowercase();
+    let parent = path
+        .parent()
+        .and_then(Path::file_name)
+        .and_then(|n| n.to_str())
+        .unwrap_or_default()
+        .to_ascii_lowercase();
+    match (name.as_str(), parent.as_str()) {
+        // Claude Code project servers, Copilot CLI's portable config and
+        // Codex plugins all use `.mcp.json`.
+        (".mcp.json", _) => &["claude-code", "github-copilot", "codex"],
+        ("mcp.json", ".cursor") => &["cursor"],
+        ("mcp.json", ".vscode") | ("mcp.json", ".github") | ("mcp-config.json", _) => {
+            &["github-copilot"]
+        }
+        _ => &[],
+    }
+}
+
+/// The `type` values valid for an MCP server in the file at `path`: the
+/// union of what its readers accept, narrowed to the selected tools when
+/// `tools` names some of them. A file no specific client owns accepts the
+/// union of every client's values.
+fn valid_server_types(path: &Path, config: &PerFileLintConfig<'_>) -> Vec<&'static str> {
+    let readers = if is_codex_plugin_mcp_file(path, config) {
+        &["codex"][..]
+    } else {
+        mcp_file_readers(path)
+    };
+    let selected: Vec<&str> = readers
+        .iter()
+        .copied()
+        .filter(|reader| {
+            config.tools().iter().any(|t| {
+                t.eq_ignore_ascii_case(reader)
+                    || crate::config::LintConfig::is_tool_alias(t, reader)
+            })
+        })
+        .collect();
+    let clients: Vec<&str> = if !selected.is_empty() {
+        selected
+    } else if !readers.is_empty() {
+        readers.to_vec()
+    } else {
+        CLIENT_SERVER_TYPES
+            .iter()
+            .map(|(client, _)| *client)
+            .collect()
+    };
+    let mut types: Vec<&'static str> = CLIENT_SERVER_TYPES
+        .iter()
+        .filter(|(client, _)| clients.contains(client))
+        .flat_map(|(_, types)| types.iter().copied())
+        .collect();
+    let mut seen = std::collections::HashSet::new();
+    types.retain(|t| seen.insert(*t));
+    types
+}
+
+/// The transport a `type` value selects: `local` is stdio, `streamable-http`
+/// and Cline's `streamableHttp` are Streamable HTTP.
+fn normalized_transport(server_type: &str) -> &str {
+    match server_type {
+        "local" => "stdio",
+        "streamable-http" | "streamableHttp" => "http",
+        other => other,
+    }
+}
+
+/// An Amp skill's sibling `mcp.json` (next to a `SKILL.md`), which uses a
+/// flat server map where remote entries carry only `url`.
+fn is_skill_mcp_file(path: &Path, config: &PerFileLintConfig<'_>) -> bool {
+    path.file_name()
+        .and_then(|n| n.to_str())
+        .is_some_and(|n| n.eq_ignore_ascii_case("mcp.json"))
+        && path
+            .parent()
+            .is_some_and(|dir| config.fs().is_file(&dir.join("SKILL.md")))
+}
+
+/// `.vscode/mcp.json`, which VS Code reads as JSON with comments.
+fn is_vscode_mcp_file(path: &Path) -> bool {
+    path.file_name()
+        .and_then(|n| n.to_str())
+        .is_some_and(|n| n.eq_ignore_ascii_case("mcp.json"))
+        && path
+            .parent()
+            .and_then(Path::file_name)
+            .and_then(|n| n.to_str())
+            .is_some_and(|n| n.eq_ignore_ascii_case(".vscode"))
+}
 
 pub struct McpValidator;
 
@@ -259,6 +392,25 @@ impl Validator for McpValidator {
         if !config.rules().mcp {
             return diagnostics;
         }
+
+        // Client configs that embed MCP servers (OpenCode, Gemini, Amp,
+        // Codex, Copilot agents) get only the server-level checks.
+        let file_type = crate::file_types::detect_file_type(path);
+        if crate::rules::mcp_servers::is_client_config_with_mcp(file_type) {
+            return crate::rules::mcp_servers::validate_client_config(
+                file_type, path, content, config,
+            );
+        }
+
+        // VS Code reads `.vscode/mcp.json` as JSON with comments; blank them
+        // (offsets are kept) so documented comments are not a parse error.
+        let stripped;
+        let content = if is_vscode_mcp_file(path) {
+            stripped = crate::schemas::kiro_agent::strip_jsonc(content).0;
+            stripped.as_str()
+        } else {
+            content
+        };
 
         // Try to parse as JSON
         let raw_value: serde_json::Value = match serde_json::from_str(content) {
@@ -302,6 +454,18 @@ impl Validator for McpValidator {
             &line_starts,
         );
 
+        // MCP-030: tool names should be unique within a server.
+        if config.is_rule_enabled("MCP-030") {
+            validate_duplicate_tool_names(
+                &tools,
+                path,
+                content,
+                &tool_spans,
+                &line_starts,
+                &mut diagnostics,
+            );
+        }
+
         // Validate each successfully parsed tool
         for (idx, tool) in tools.iter().enumerate() {
             validate_tool(
@@ -326,6 +490,8 @@ impl Validator for McpValidator {
         // `mcpServers` - kept adjacent to the server-name rules only by
         // historical grouping).
         validate_capability_keys(&raw_value, path, content, config, &mut diagnostics);
+        // MCP-032: capabilities and sampling options deprecated in 2026-07-28.
+        validate_deprecated_capabilities(&raw_value, path, content, config, &mut diagnostics);
 
         // MCP-023 walks the top-level `mcpServers` key list; files where the
         // rule is disabled pay nothing.
@@ -344,15 +510,20 @@ impl Validator for McpValidator {
             );
         }
 
-        // Validate MCP server configurations (MCP-009 to MCP-012, MCP-024)
+        // Validate MCP server configurations (MCP-009 to MCP-012, MCP-017 to
+        // MCP-019, MCP-021, MCP-022, MCP-024, MCP-025, MCP-027 to MCP-029)
+        let locator = Locator::new(content);
         for (name, server) in extract_mcp_servers(&raw_value) {
-            let raw_server_type = find_raw_server_type(&raw_value, &name);
+            let raw_server = find_raw_server(&raw_value, &name);
             validate_server(
                 &name,
                 &server,
-                raw_server_type,
-                path,
-                content,
+                raw_server,
+                ServerContext {
+                    path,
+                    content,
+                    locator: &locator,
+                },
                 config,
                 &mut diagnostics,
             );
@@ -465,6 +636,17 @@ fn extract_mcp_servers(raw_value: &serde_json::Value) -> Vec<(String, McpServerC
         return parse_server_map(servers_obj);
     }
 
+    // VS Code `.vscode/mcp.json` "defines servers in a top-level `servers`
+    // object" (next to `inputs`). Every entry must look like a server (it
+    // has `command` or `url`): other JSON files named like MCP configs use a
+    // `servers` key for other records, such as a tool cache keyed by server.
+    if let Some(servers_obj) = raw_value.get("servers").and_then(|v| v.as_object())
+        && !servers_obj.is_empty()
+        && servers_obj.values().all(looks_like_mcp_server_config)
+    {
+        return parse_server_map(servers_obj);
+    }
+
     // Fallback shape: flat top-level server map `{ "name": {...}, ... }`.
     // Accepted by Codex plugin MCP loading as of rust-v0.123.0 (openai/codex
     // "Make plugin MCP loading accept both mcpServers and top-level server
@@ -487,17 +669,21 @@ fn extract_mcp_servers(raw_value: &serde_json::Value) -> Vec<(String, McpServerC
     Vec::new()
 }
 
-fn find_raw_server_type<'a>(
+fn find_raw_server<'a>(
     raw_value: &'a serde_json::Value,
     name: &str,
 ) -> Option<&'a serde_json::Value> {
-    let server = if let Some(servers) = raw_value.get("mcpServers").and_then(|v| v.as_object()) {
+    if let Some(servers) = raw_value.get("mcpServers").and_then(|v| v.as_object()) {
+        servers.get(name)
+    } else if let Some(servers) = raw_value
+        .get("servers")
+        .and_then(|v| v.as_object())
+        .filter(|servers| servers.contains_key(name))
+    {
         servers.get(name)
     } else {
         raw_value.as_object().and_then(|root| root.get(name))
-    }?;
-
-    server.as_object()?.get("type")
+    }
 }
 
 /// Parse a JSON object into `(name, McpServerConfig)` entries. Strict
@@ -688,6 +874,261 @@ fn validate_prompt_definitions(
             }
         }
     }
+}
+
+/// True unless the project pins an MCP revision older than 2026-07-28, the
+/// revision that deprecated Roots, Sampling and Logging and added
+/// `x-mcp-header`.
+fn targets_2026_07_28(config: &PerFileLintConfig<'_>) -> bool {
+    !config.is_mcp_revision_pinned() || config.get_mcp_protocol_version() >= "2026-07-28"
+}
+
+/// MCP-032: Roots, Sampling and Logging are deprecated in 2026-07-28 ("new
+/// implementations should not add support for them"), and so are the
+/// `includeContext` values `thisServer` and `allServers`.
+fn validate_deprecated_capabilities(
+    value: &serde_json::Value,
+    path: &Path,
+    content: &str,
+    config: &PerFileLintConfig<'_>,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    if !config.is_rule_enabled("MCP-032") || !targets_2026_07_28(config) {
+        return;
+    }
+    let candidates = [
+        value.get("capabilities"),
+        value.get("params").and_then(|v| v.get("capabilities")),
+        value.get("result").and_then(|v| v.get("capabilities")),
+    ];
+    let mut reported = std::collections::BTreeSet::new();
+    for caps in candidates.into_iter().flatten() {
+        let Some(caps) = caps.as_object() else {
+            continue;
+        };
+        for key in ["roots", "sampling", "logging"] {
+            if caps.contains_key(key) && reported.insert(key) {
+                let (line, col) = find_json_field_location(content, key);
+                diagnostics.push(
+                    Diagnostic::info(
+                        path.to_path_buf(),
+                        line,
+                        col,
+                        "MCP-032",
+                        t!("rules.mcp_032.message", feature = key),
+                    )
+                    .with_suggestion(t!("rules.mcp_032.suggestion")),
+                );
+            }
+        }
+    }
+    let include_context = value
+        .get("params")
+        .and_then(|p| p.get("includeContext"))
+        .and_then(|v| v.as_str());
+    if let Some(mode) = include_context
+        && matches!(mode, "thisServer" | "allServers")
+    {
+        let (line, col) = find_json_field_location(content, "includeContext");
+        diagnostics.push(
+            Diagnostic::info(
+                path.to_path_buf(),
+                line,
+                col,
+                "MCP-032",
+                t!(
+                    "rules.mcp_032.message",
+                    feature = format!("includeContext: \"{mode}\"")
+                ),
+            )
+            .with_suggestion(t!("rules.mcp_032.include_context_suggestion")),
+        );
+    }
+}
+
+/// MCP-030: "Tool names SHOULD be unique within a server."
+fn validate_duplicate_tool_names(
+    tools: &[McpToolSchema],
+    path: &Path,
+    content: &str,
+    tool_spans: &[(usize, usize)],
+    line_starts: &[usize],
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let mut counts: std::collections::BTreeMap<&str, Vec<usize>> =
+        std::collections::BTreeMap::new();
+    for (idx, tool) in tools.iter().enumerate() {
+        if let Some(name) = tool
+            .name
+            .as_deref()
+            .map(str::trim)
+            .filter(|n| !n.is_empty())
+        {
+            counts.entry(name).or_default().push(idx);
+        }
+    }
+    for (name, indexes) in counts {
+        if indexes.len() < 2 {
+            continue;
+        }
+        let second = indexes[1];
+        let (line, col) = tool_spans
+            .get(second)
+            .and_then(|span| find_json_field_location_in_span(content, "name", *span, line_starts))
+            .or_else(|| tool_location_from_span(tool_spans, second, line_starts))
+            .unwrap_or_else(|| find_json_field_location(content, name));
+        diagnostics.push(
+            Diagnostic::warning(
+                path.to_path_buf(),
+                line,
+                col,
+                "MCP-030",
+                t!("rules.mcp_030.message", name = name, count = indexes.len()),
+            )
+            .with_suggestion(t!("rules.mcp_030.suggestion")),
+        );
+    }
+}
+
+/// HTTP field-name token characters (RFC 9110 `tchar`).
+fn is_http_token(value: &str) -> bool {
+    !value.is_empty()
+        && value.bytes().all(|b| {
+            b.is_ascii_alphanumeric()
+                || matches!(
+                    b,
+                    b'!' | b'#'
+                        | b'$'
+                        | b'%'
+                        | b'&'
+                        | b'\''
+                        | b'*'
+                        | b'+'
+                        | b'-'
+                        | b'.'
+                        | b'^'
+                        | b'_'
+                        | b'`'
+                        | b'|'
+                        | b'~'
+                )
+        })
+}
+
+/// One problem with an `x-mcp-header` annotation (MCP-031).
+struct HeaderAnnotationIssue {
+    property: String,
+    reason: String,
+}
+
+/// Walk `schema` for `x-mcp-header` annotations. `reachable` is true while
+/// the path from the root is a chain of `properties` keys only; `path` is
+/// that chain.
+fn collect_header_annotations(
+    schema: &serde_json::Value,
+    reachable: bool,
+    path: &str,
+    found: &mut Vec<(String, String, bool, Option<String>)>,
+    issues: &mut Vec<HeaderAnnotationIssue>,
+) {
+    let Some(obj) = schema.as_object() else {
+        if let Some(items) = schema.as_array() {
+            for item in items {
+                collect_header_annotations(item, false, path, found, issues);
+            }
+        }
+        return;
+    };
+    if let Some(value) = obj.get("x-mcp-header") {
+        let property = if path.is_empty() { "(root)" } else { path }.to_string();
+        match value.as_str() {
+            None => issues.push(HeaderAnnotationIssue {
+                property,
+                reason: "the value is not a string".to_string(),
+            }),
+            Some(header) => {
+                let schema_type = obj
+                    .get("type")
+                    .and_then(|t| t.as_str())
+                    .map(ToOwned::to_owned);
+                found.push((property, header.to_string(), reachable, schema_type));
+            }
+        }
+    }
+    for (key, child) in obj {
+        match key.as_str() {
+            "properties" => {
+                if let Some(props) = child.as_object() {
+                    for (name, prop) in props {
+                        let child_path = if path.is_empty() {
+                            name.clone()
+                        } else {
+                            format!("{path}.{name}")
+                        };
+                        collect_header_annotations(prop, reachable, &child_path, found, issues);
+                    }
+                }
+            }
+            "x-mcp-header" => {}
+            _ if child.is_object() || child.is_array() => {
+                collect_header_annotations(child, false, path, found, issues);
+            }
+            _ => {}
+        }
+    }
+}
+
+/// MCP-031: `x-mcp-header` constraints. Streamable HTTP clients "MUST reject
+/// tool definitions where any `x-mcp-header` value violates these
+/// constraints", dropping the tool from `tools/list`.
+fn header_annotation_issues(
+    input_schema: &serde_json::Value,
+) -> (Vec<HeaderAnnotationIssue>, Vec<String>) {
+    let mut found = Vec::new();
+    let mut issues = Vec::new();
+    collect_header_annotations(input_schema, true, "", &mut found, &mut issues);
+    let mut sensitive = Vec::new();
+    let mut seen: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+    for (property, header, reachable, schema_type) in found {
+        let reason = if header.is_empty() {
+            Some("the value is empty".to_string())
+        } else if header.chars().any(char::is_control) {
+            Some("the value contains a control character".to_string())
+        } else if !is_http_token(&header) {
+            Some(format!("'{header}' is not an HTTP field-name token"))
+        } else if !reachable {
+            Some("it is not reachable from the schema root through 'properties' alone".to_string())
+        } else if let Some(other) = seen.get(&header.to_ascii_lowercase()) {
+            Some(format!("'{header}' repeats the header of '{other}'"))
+        } else {
+            match schema_type.as_deref() {
+                Some("string" | "integer" | "boolean") => None,
+                Some(other) => Some(format!(
+                    "it is set on a '{other}' parameter; only string, integer and boolean are allowed"
+                )),
+                None => Some(
+                    "the parameter has no primitive 'type' (string, integer or boolean)"
+                        .to_string(),
+                ),
+            }
+        };
+        seen.entry(header.to_ascii_lowercase())
+            .or_insert_with(|| property.clone());
+        if let Some(reason) = reason {
+            issues.push(HeaderAnnotationIssue { property, reason });
+            continue;
+        }
+        let lower = property.to_ascii_lowercase();
+        if [
+            "password", "secret", "token", "apikey", "api_key", "api-key",
+        ]
+        .iter()
+        .any(|needle| lower.contains(needle))
+        {
+            sensitive.push(property);
+        }
+    }
+    (issues, sensitive)
 }
 
 fn validate_capability_keys(
@@ -1103,9 +1544,10 @@ fn validate_tool(
         let valid_chars = name
             .chars()
             .all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '.' | '-'));
-        if name.len() > 128 || !valid_chars {
+        if name.chars().count() > 128 || !valid_chars {
             let (line, col) = find_field("name");
-            let mut diagnostic = Diagnostic::error(
+            // A warning: the spec says tool names "SHOULD" follow this format.
+            let mut diagnostic = Diagnostic::warning(
                 path.to_path_buf(),
                 line,
                 col,
@@ -1263,45 +1705,102 @@ fn validate_tool(
         );
     }
 
-    // MCP-006: Untrusted annotations
-    if config.is_rule_enabled("MCP-006") && tool.has_annotations() {
-        let (line, col) = find_field("annotations");
+    // MCP-031: invalid x-mcp-header annotations (2026-07-28).
+    if config.is_rule_enabled("MCP-031")
+        && targets_2026_07_28(config)
+        && let Some(schema) = &tool.input_schema
+    {
+        let (issues, sensitive) = header_annotation_issues(schema);
+        let (line, col) = find_field("x-mcp-header");
+        for issue in issues {
+            diagnostics.push(
+                Diagnostic::error(
+                    path.to_path_buf(),
+                    line,
+                    col,
+                    "MCP-031",
+                    t!(
+                        "rules.mcp_031.message",
+                        prefix = tool_prefix.as_str(),
+                        property = issue.property.as_str(),
+                        reason = issue.reason.as_str()
+                    ),
+                )
+                .with_suggestion(t!("rules.mcp_031.suggestion")),
+            );
+        }
+        for property in sensitive {
+            diagnostics.push(
+                Diagnostic::info(
+                    path.to_path_buf(),
+                    line,
+                    col,
+                    "MCP-031",
+                    t!(
+                        "rules.mcp_031.sensitive",
+                        prefix = tool_prefix.as_str(),
+                        property = property.as_str()
+                    ),
+                )
+                .with_suggestion(t!("rules.mcp_031.sensitive_suggestion")),
+            );
+        }
+    }
+
+    // MCP-033: a tool without parameters should say so. The spec lists
+    // `{ "type": "object", "additionalProperties": false }` as "Recommended"
+    // for tools that take no parameters; `{ "type": "object" }` "accepts any
+    // object".
+    if config.is_rule_enabled("MCP-033")
+        && let Some(schema) = tool.input_schema.as_ref().and_then(|v| v.as_object())
+        && schema.get("type").and_then(|t| t.as_str()) == Some("object")
+        && schema.len() == 1
+    {
+        let (line, col) = find_field("inputSchema");
         diagnostics.push(
-            Diagnostic::warning(
+            Diagnostic::info(
                 path.to_path_buf(),
                 line,
                 col,
-                "MCP-006",
-                t!("rules.mcp_006.message", prefix = tool_prefix.as_str()),
+                "MCP-033",
+                t!("rules.mcp_033.message", prefix = tool_prefix.as_str()),
             )
-            .with_suggestion(t!("rules.mcp_006.suggestion")),
+            .with_suggestion(t!("rules.mcp_033.suggestion")),
         );
+    }
 
-        if let Some(annotations) = &tool.annotations {
-            let unknown_keys: Vec<_> = annotations
-                .keys()
-                .filter(|key| !VALID_MCP_ANNOTATION_HINTS.contains(&key.as_str()))
-                .cloned()
-                .collect();
+    // MCP-006: unknown annotation keys (INFO). The spec's trust rule ("clients
+    // MUST consider tool annotations to be untrusted unless they come from
+    // trusted servers") is a duty of the client, not of the tool author, so a
+    // tool that sets annotations is not reported. Only keys outside the
+    // `ToolAnnotations` hints are. Keys are sorted so the message is the same
+    // on every run (HashMap iteration order is not).
+    if config.is_rule_enabled("MCP-006")
+        && let Some(annotations) = &tool.annotations
+    {
+        let mut unknown_keys: Vec<&str> = annotations
+            .keys()
+            .map(String::as_str)
+            .filter(|key| !VALID_MCP_ANNOTATION_HINTS.contains(key))
+            .collect();
+        unknown_keys.sort_unstable();
 
-            if !unknown_keys.is_empty() {
-                diagnostics.push(
-                    Diagnostic::warning(
-                        path.to_path_buf(),
-                        line,
-                        col,
-                        "MCP-006",
-                        format!(
-                            "{}unknown annotation keys: {}",
-                            tool_prefix.as_str(),
-                            unknown_keys.join(", ")
-                        ),
-                    )
-                    .with_suggestion(
-                        "Use only standard annotation hints: readOnlyHint, destructiveHint, idempotentHint, openWorldHint, title",
+        if !unknown_keys.is_empty() {
+            let (line, col) = find_field("annotations");
+            diagnostics.push(
+                Diagnostic::info(
+                    path.to_path_buf(),
+                    line,
+                    col,
+                    "MCP-006",
+                    t!(
+                        "rules.mcp_006.message",
+                        prefix = tool_prefix.as_str(),
+                        keys = unknown_keys.join(", ")
                     ),
-                );
-            }
+                )
+                .with_suggestion(t!("rules.mcp_006.suggestion")),
+            );
         }
     }
 }
@@ -1340,48 +1839,6 @@ fn is_wildcard_http_host(host: &str) -> bool {
     matches!(host, "0.0.0.0" | "::" | "[::]" | "*")
 }
 
-fn command_value_as_string(command: &serde_json::Value) -> Option<String> {
-    match command {
-        serde_json::Value::String(value) => Some(value.clone()),
-        serde_json::Value::Array(values) => {
-            let parts: Vec<&str> = values
-                .iter()
-                .filter_map(serde_json::Value::as_str)
-                .collect();
-            if parts.is_empty() {
-                None
-            } else {
-                Some(parts.join(" "))
-            }
-        }
-        _ => None,
-    }
-}
-
-fn seems_plaintext_secret(value: &str) -> bool {
-    let trimmed = value.trim();
-    !trimmed.is_empty()
-        && !trimmed.starts_with("${")
-        && !trimmed.starts_with("$(")
-        && !trimmed.starts_with("{{")
-}
-
-fn is_dangerous_command(command: &str) -> bool {
-    let normalized = command.to_ascii_lowercase();
-    let has_remote_pipe = (normalized.contains("curl") || normalized.contains("wget"))
-        && normalized.contains('|')
-        && (normalized.contains("| sh")
-            || normalized.contains("|sh")
-            || normalized.contains("| bash")
-            || normalized.contains("|bash"));
-    let has_sudo_rm = normalized.contains("sudo rm");
-    let has_exfil_pattern = (normalized.contains("nc ") || normalized.contains("netcat "))
-        && (normalized.contains("/etc/")
-            || normalized.contains(".ssh")
-            || normalized.contains("token"));
-    has_remote_pipe || has_sudo_rm || has_exfil_pattern
-}
-
 fn has_usable_command(server: &McpServerConfig) -> bool {
     server.command.as_ref().is_some_and(|value| match value {
         serde_json::Value::String(command) => !command.trim().is_empty(),
@@ -1400,6 +1857,23 @@ fn is_cursor_mcp_file(path: &Path) -> bool {
             .and_then(Path::file_name)
             .and_then(|name| name.to_str())
             .is_some_and(|name| name.eq_ignore_ascii_case(".cursor"))
+}
+
+/// A Codex plugin's `.mcp.json`: next to `.codex-plugin/plugin.json`, in a
+/// directory that is not also a Claude Code plugin. Codex picks the transport
+/// from the fields present, so an entry with only a `url` is remote.
+fn is_codex_plugin_mcp_file(path: &Path, config: &PerFileLintConfig<'_>) -> bool {
+    let is_dot_mcp = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| name.eq_ignore_ascii_case(".mcp.json"));
+    let Some(dir) = path.parent() else {
+        return false;
+    };
+    let fs = config.fs();
+    is_dot_mcp
+        && fs.exists(&dir.join(".codex-plugin").join("plugin.json"))
+        && !fs.exists(&dir.join(".claude-plugin").join("plugin.json"))
 }
 
 /// A Kiro power's `mcp.json`: inside `.kiro/powers/`, or next to the power's
@@ -1453,32 +1927,57 @@ fn has_meaningful_server_config(server: &McpServerConfig) -> bool {
     has_type || has_command || has_args || has_url || has_env || has_always_load
 }
 
-/// Validate a single MCP server configuration entry (MCP-009 to MCP-012, MCP-017 to MCP-022, MCP-024, MCP-025)
+/// Where a server entry lives, for diagnostics and fixes.
+struct ServerContext<'a> {
+    path: &'a Path,
+    content: &'a str,
+    locator: &'a Locator<'a>,
+}
+
+/// Validate a single MCP server configuration entry (MCP-009 to MCP-012,
+/// MCP-017 to MCP-019, MCP-021, MCP-022, MCP-024, MCP-025, MCP-027 to MCP-029)
 fn validate_server(
     name: &str,
     server: &McpServerConfig,
-    raw_server_type: Option<&serde_json::Value>,
-    path: &Path,
-    content: &str,
+    raw_server: Option<&serde_json::Value>,
+    ctx: ServerContext<'_>,
     config: &PerFileLintConfig<'_>,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
+    let ServerContext {
+        path,
+        content,
+        locator,
+    } = ctx;
     let (line, col) = find_json_field_location(content, name);
+    let raw_server_type = raw_server
+        .and_then(serde_json::Value::as_object)
+        .and_then(|obj| obj.get("type"));
 
-    // Cursor documents URL-only remote entries, and Kiro picks the transport
-    // from the fields present (a url without a command is remote). Other
-    // clients, including Claude Code, still default an omitted type to stdio.
-    let effective_type = server.server_type.as_deref().unwrap_or_else(|| {
-        if raw_server_type.is_none()
-            && !has_usable_command(server)
-            && server.url.is_some()
-            && (is_cursor_mcp_file(path) || is_kiro_power_mcp_file(path, config))
-        {
-            "http"
-        } else {
-            "stdio"
-        }
-    });
+    // Cursor documents URL-only remote entries, Kiro and Codex pick the
+    // transport from the fields present (a url without a command is remote;
+    // a Codex plugin's `.mcp.json`), and an Amp skill's sibling `mcp.json`
+    // lists remote servers with only a `url`.
+    // Other clients, including Claude Code, still default an omitted type to
+    // stdio ("Claude Code reads an entry with no `type` as a stdio server").
+    let effective_type = server
+        .server_type
+        .as_deref()
+        .map(normalized_transport)
+        .unwrap_or_else(|| {
+            if raw_server_type.is_none()
+                && !has_usable_command(server)
+                && server.url.is_some()
+                && (is_cursor_mcp_file(path)
+                    || is_kiro_power_mcp_file(path, config)
+                    || is_skill_mcp_file(path, config)
+                    || is_codex_plugin_mcp_file(path, config))
+            {
+                "http"
+            } else {
+                "stdio"
+            }
+        });
 
     // MCP-011: Invalid server type (check first, skip other type-based rules if invalid)
     if config.is_rule_enabled("MCP-011") {
@@ -1494,7 +1993,8 @@ fn validate_server(
                     t!(
                         "rules.mcp_011.message",
                         server = name,
-                        server_type = raw_type.to_string()
+                        server_type = raw_type.to_string(),
+                        valid = valid_server_types(path, config).join(", ")
                     ),
                 )
                 .with_suggestion(t!("rules.mcp_011.suggestion")),
@@ -1503,7 +2003,23 @@ fn validate_server(
         }
 
         if let Some(ref server_type) = server.server_type {
-            if !VALID_MCP_SERVER_TYPES.contains(&server_type.as_str()) {
+            let valid_types = valid_server_types(path, config);
+            if server_type == "sdk" {
+                // Claude Code "skips a `"type": "sdk"` entry": only an Agent
+                // SDK host can register such a server.
+                diagnostics.push(
+                    Diagnostic::warning(
+                        path.to_path_buf(),
+                        line,
+                        col,
+                        "MCP-011",
+                        t!("rules.mcp_011.sdk", server = name),
+                    )
+                    .with_suggestion(t!("rules.mcp_011.suggestion")),
+                );
+                return;
+            }
+            if !valid_types.contains(&server_type.as_str()) {
                 let mut diagnostic = Diagnostic::error(
                     path.to_path_buf(),
                     line,
@@ -1512,14 +2028,14 @@ fn validate_server(
                     t!(
                         "rules.mcp_011.message",
                         server = name,
-                        server_type = server_type.as_str()
+                        server_type = server_type.as_str(),
+                        valid = valid_types.join(", ")
                     ),
                 )
                 .with_suggestion(t!("rules.mcp_011.suggestion"));
 
                 // Unsafe auto-fix: replace with closest valid server type
-                if let Some(closest) =
-                    super::find_closest_value(server_type.as_str(), VALID_MCP_SERVER_TYPES)
+                if let Some(closest) = super::find_closest_value(server_type.as_str(), &valid_types)
                 {
                     if let Some((start, end)) =
                         find_unique_json_string_value_span(content, "type", server_type)
@@ -1545,15 +2061,26 @@ fn validate_server(
     // Treat null and empty string/array as missing (not a usable command)
     if config.is_rule_enabled("MCP-009") && effective_type == "stdio" {
         if !has_usable_command(server) {
-            diagnostics.push(
-                Diagnostic::error(
-                    path.to_path_buf(),
-                    line,
-                    col,
-                    "MCP-009",
+            // Without a `type` the entry is stdio by default; say so, and for
+            // a `url` entry give the client's own advice ("add "type":
+            // "http" (or "sse" / "ws")") instead of asking for a command.
+            let (message, suggestion) = match (raw_server_type.is_none(), server.url.is_some()) {
+                (true, true) => (
+                    t!("rules.mcp_009.url_without_type", server = name),
+                    t!("rules.mcp_009.url_without_type_suggestion"),
+                ),
+                (true, false) => (
+                    t!("rules.mcp_009.no_type", server = name),
+                    t!("rules.mcp_009.suggestion"),
+                ),
+                _ => (
                     t!("rules.mcp_009.message", server = name),
-                )
-                .with_suggestion(t!("rules.mcp_009.suggestion")),
+                    t!("rules.mcp_009.suggestion"),
+                ),
+            };
+            diagnostics.push(
+                Diagnostic::error(path.to_path_buf(), line, col, "MCP-009", message)
+                    .with_suggestion(suggestion),
             );
         }
     }
@@ -1584,7 +2111,7 @@ fn validate_server(
 
     // MCP-010: Missing url for http/sse server
     // Treat empty/whitespace-only URL as missing
-    if config.is_rule_enabled("MCP-010") && ["http", "sse"].contains(&effective_type) {
+    if config.is_rule_enabled("MCP-010") && ["http", "sse", "ws"].contains(&effective_type) {
         let has_url = server.url.as_deref().is_some_and(|u| !u.trim().is_empty());
         if !has_url {
             diagnostics.push(
@@ -1613,7 +2140,9 @@ fn validate_server(
             && let Some(host) = extract_http_host(url)
             && !is_local_http_host(&host)
         {
-            let mut diagnostic = Diagnostic::error(
+            // A warning: the security guidance says clients "SHOULD require
+            // HTTPS for all OAuth-related URLs"; no client rejects the entry.
+            let mut diagnostic = Diagnostic::warning(
                 path.to_path_buf(),
                 line,
                 col,
@@ -1680,57 +2209,18 @@ fn validate_server(
         diagnostics.push(diagnostic);
     }
 
-    if effective_type == "stdio" {
-        if config.is_rule_enabled("MCP-018")
-            && let Some(env) = &server.env
-        {
-            for (env_key, env_value) in env {
-                let key_upper = env_key.to_ascii_uppercase();
-                let looks_sensitive = ["API_KEY", "SECRET", "TOKEN", "PASSWORD"]
-                    .iter()
-                    .any(|needle| key_upper.contains(needle));
-                if looks_sensitive && seems_plaintext_secret(env_value) {
-                    diagnostics.push(
-                        Diagnostic::warning(
-                            path.to_path_buf(),
-                            line,
-                            col,
-                            "MCP-018",
-                            format!(
-                                "Server '{}' defines potential plaintext secret in env var '{}'",
-                                name, env_key
-                            ),
-                        )
-                        .with_suggestion("Use secret injection from environment/runtime instead of hardcoded values"),
-                    );
-                }
-            }
-        }
-
-        if config.is_rule_enabled("MCP-019")
-            && let Some(command) = &server.command
-            && let Some(command_text) = command_value_as_string(command)
-            && is_dangerous_command(&command_text)
-        {
-            diagnostics.push(
-                Diagnostic::warning(
-                    path.to_path_buf(),
-                    line,
-                    col,
-                    "MCP-019",
-                    format!(
-                        "Server '{}' command appears dangerous: {}",
-                        name, command_text
-                    ),
-                )
-                .with_suggestion("Avoid remote shell pipes, destructive commands, and potential data exfiltration patterns"),
-            );
-        }
+    // MCP-018, MCP-019, MCP-027, MCP-028, MCP-029: shared with the other
+    // clients' config files.
+    if let Some(raw_server) = raw_server {
+        let view = ServerView::from_json(name, raw_server, Some(effective_type == "stdio"));
+        check_server(&view, path, locator, config, diagnostics);
     }
 
     // MCP-012: Deprecated SSE transport
     if config.is_rule_enabled("MCP-012") && effective_type == "sse" {
-        let mut diag = Diagnostic::error(
+        // A warning: HTTP+SSE is deprecated ("new implementations SHOULD NOT
+        // adopt it") but Claude Code, Roo Code, Cline and Gemini still load it.
+        let mut diag = Diagnostic::warning(
             path.to_path_buf(),
             line,
             col,
@@ -1790,6 +2280,286 @@ mod tests {
     fn validate_path(path: &str, content: &str) -> Vec<Diagnostic> {
         let validator = McpValidator;
         validator.validate(Path::new(path), content, &LintConfig::default())
+    }
+
+    fn rules_of<'a>(diagnostics: &'a [Diagnostic], rule: &str) -> Vec<&'a Diagnostic> {
+        diagnostics.iter().filter(|d| d.rule == rule).collect()
+    }
+
+    // ===== 0.59 vendor survey: MCP-011 per client =====
+
+    /// MCP-011 used to accept only stdio, http and sse for every file. The
+    /// set is client-defined: Claude Code accepts `streamable-http` and `ws`,
+    /// Copilot accepts `local`.
+    #[test]
+    fn test_mcp_011_accepts_each_readers_documented_types() {
+        for server_type in ["streamable-http", "ws", "local", "stdio", "http", "sse"] {
+            let content = format!(
+                r#"{{"mcpServers": {{"s": {{"type": "{server_type}", "command": "node", "url": "https://mcp.example.com/x"}}}}}}"#
+            );
+            let diagnostics = validate_path(".mcp.json", &content);
+            assert!(
+                rules_of(&diagnostics, "MCP-011").is_empty(),
+                "{server_type}: {diagnostics:?}"
+            );
+        }
+        // Cursor documents no `local` or `ws`.
+        let content = r#"{"mcpServers": {"s": {"type": "local", "command": "node"}}}"#;
+        let diagnostics = validate_path(".cursor/mcp.json", content);
+        let mcp_011 = rules_of(&diagnostics, "MCP-011");
+        assert_eq!(mcp_011.len(), 1);
+        assert!(
+            mcp_011[0].message.contains("stdio"),
+            "{}",
+            mcp_011[0].message
+        );
+    }
+
+    #[test]
+    fn test_mcp_011_narrows_to_selected_tools() {
+        let content = r#"{"mcpServers": {"s": {"type": "local", "command": "node"}}}"#;
+        let mut claude = LintConfig::default();
+        claude.set_tools(vec!["claude-code".to_string()]);
+        let diagnostics = McpValidator.validate(Path::new(".mcp.json"), content, &claude);
+        assert_eq!(
+            rules_of(&diagnostics, "MCP-011").len(),
+            1,
+            "{diagnostics:?}"
+        );
+        let mut copilot = LintConfig::default();
+        copilot.set_tools(vec!["github-copilot".to_string()]);
+        let diagnostics = McpValidator.validate(Path::new(".mcp.json"), content, &copilot);
+        assert!(
+            rules_of(&diagnostics, "MCP-011").is_empty(),
+            "{diagnostics:?}"
+        );
+    }
+
+    #[test]
+    fn test_mcp_011_sdk_is_a_warning() {
+        let content = r#"{"mcpServers": {"s": {"type": "sdk"}}}"#;
+        let diagnostics = validate_path(".mcp.json", content);
+        let mcp_011 = rules_of(&diagnostics, "MCP-011");
+        assert_eq!(mcp_011.len(), 1);
+        assert_eq!(
+            mcp_011[0].level,
+            crate::diagnostics::DiagnosticLevel::Warning
+        );
+        assert!(mcp_011[0].fixes.is_empty());
+    }
+
+    #[test]
+    fn test_streamable_http_and_ws_need_a_url_and_get_https_checks() {
+        let content = r#"{"mcpServers": {"a": {"type": "ws"}, "b": {"type": "streamable-http", "url": "http://mcp.example.com/mcp"}}}"#;
+        let diagnostics = validate_path(".mcp.json", content);
+        assert_eq!(
+            rules_of(&diagnostics, "MCP-010").len(),
+            1,
+            "{diagnostics:?}"
+        );
+        let mcp_017 = rules_of(&diagnostics, "MCP-017");
+        assert_eq!(mcp_017.len(), 1);
+        assert_eq!(
+            mcp_017[0].level,
+            crate::diagnostics::DiagnosticLevel::Warning
+        );
+    }
+
+    #[test]
+    fn test_vscode_servers_map_and_comments() {
+        let content = r#"{
+  // VS Code reads this file as JSON with comments.
+  "inputs": [],
+  "servers": {
+    "gh": { "type": "stdio", "command": "npx", "args": ["-y", "@modelcontextprotocol/server-github"] },
+  }
+}"#;
+        let diagnostics = validate_path(".vscode/mcp.json", content);
+        assert!(
+            rules_of(&diagnostics, "MCP-007").is_empty(),
+            "{diagnostics:?}"
+        );
+        let mcp_027 = rules_of(&diagnostics, "MCP-027");
+        assert_eq!(mcp_027.len(), 1, "{diagnostics:?}");
+        assert_eq!(mcp_027[0].line, 5);
+        // Comments are still a parse error in other MCP files.
+        assert_eq!(
+            rules_of(&validate_path(".mcp.json", content), "MCP-007").len(),
+            1
+        );
+    }
+
+    #[test]
+    fn test_servers_map_of_non_server_records_is_not_read_as_servers() {
+        // A tool cache keyed by server name (pi's mcp-cache.json) is not a
+        // VS Code server map: no entry has `command` or `url`.
+        let content = r#"{"version": 1, "servers": {"docs": {"configHash": "abc", "tools": [], "cachedAt": 1}}}"#;
+        let diagnostics = validate_path("mcp-cache.json", content);
+        for rule in ["MCP-009", "MCP-024"] {
+            assert!(rules_of(&diagnostics, rule).is_empty(), "{diagnostics:?}");
+        }
+    }
+
+    #[test]
+    fn test_codex_plugin_mcp_json_url_only_entry_is_remote() {
+        // Codex infers the transport, so a url-only entry in a Codex plugin's
+        // `.mcp.json` is a remote server, not a stdio server missing a
+        // command. The same file in a Claude Code plugin still needs `type`.
+        let content = r#"{"mcpServers": {"notes": {"url": "https://example.com/mcp"}}}"#;
+        let fs = crate::fs::MockFileSystem::new();
+        fs.add_file("/p/notes/.codex-plugin/plugin.json", "{}");
+        fs.add_file("/p/notes/.mcp.json", content);
+        fs.add_file("/p/both/.codex-plugin/plugin.json", "{}");
+        fs.add_file("/p/both/.claude-plugin/plugin.json", "{}");
+        fs.add_file("/p/both/.mcp.json", content);
+        let mut config = LintConfig::default();
+        config.set_fs(std::sync::Arc::new(fs));
+        let codex = McpValidator.validate(Path::new("/p/notes/.mcp.json"), content, &config);
+        assert!(rules_of(&codex, "MCP-009").is_empty(), "{codex:?}");
+        let both = McpValidator.validate(Path::new("/p/both/.mcp.json"), content, &config);
+        assert_eq!(rules_of(&both, "MCP-009").len(), 1, "{both:?}");
+    }
+
+    #[test]
+    fn test_amp_skill_mcp_json_url_only_entry_is_remote() {
+        let fs = crate::fs::MockFileSystem::new();
+        fs.add_file("/s/my-skill/SKILL.md", "---\nname: my-skill\n---\n");
+        let mut config = LintConfig::default();
+        config.set_fs(std::sync::Arc::new(fs));
+        let content =
+            r#"{"linear": {"url": "https://mcp.linear.app/sse", "includeTools": ["list_issues"]}}"#;
+        let diagnostics =
+            McpValidator.validate(Path::new("/s/my-skill/mcp.json"), content, &config);
+        assert!(
+            rules_of(&diagnostics, "MCP-009").is_empty(),
+            "{diagnostics:?}"
+        );
+    }
+
+    // ===== MCP-027 / MCP-028 / MCP-029 through McpValidator =====
+
+    #[test]
+    fn test_mcp_027_028_029_in_mcp_json() {
+        let content = r#"{
+  "mcpServers": {
+    "fs": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "/Users/alice"] },
+    "remote": { "type": "http", "url": "https://mcp.example.com/mcp", "headers": { "Authorization": "Bearer abcdefghijklmnopqrstuvwxyz" } },
+    "safe": { "type": "http", "url": "https://mcp.example.com/mcp", "headers": { "Authorization": "Bearer ${API_TOKEN}" } },
+    "pinned": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-github@2025.4.8"] }
+  }
+}"#;
+        let diagnostics = validate_path(".mcp.json", content);
+        let mcp_027 = rules_of(&diagnostics, "MCP-027");
+        assert_eq!(mcp_027.len(), 1, "{diagnostics:?}");
+        assert!(mcp_027[0].message.contains("server-filesystem"));
+        let mcp_028 = rules_of(&diagnostics, "MCP-028");
+        assert_eq!(mcp_028.len(), 1, "{diagnostics:?}");
+        assert_eq!(mcp_028[0].line, 4);
+        assert!(mcp_028[0].message.contains("Authorization"));
+        let mcp_029 = rules_of(&diagnostics, "MCP-029");
+        assert_eq!(mcp_029.len(), 1);
+        assert!(mcp_029[0].message.contains("/Users/alice"));
+    }
+
+    #[test]
+    fn test_mcp_018_skips_references_and_placeholders() {
+        let content = r#"{"mcpServers": {"s": {"command": "node", "env": {"API_KEY": "${API_KEY}", "TOKEN": "your-token-here", "SECRET": "GITHUB_SECRET", "PASSWORD": "literal-password-1"}}}}"#;
+        let diagnostics = validate(content);
+        let mcp_018 = rules_of(&diagnostics, "MCP-018");
+        assert_eq!(mcp_018.len(), 1, "{diagnostics:?}");
+        assert!(mcp_018[0].message.contains("PASSWORD"));
+    }
+
+    // ===== MCP-030..033 =====
+
+    #[test]
+    fn test_mcp_030_duplicate_tool_names() {
+        let content = r#"{"tools": [
+  {"name": "search", "description": "Search the docs index", "inputSchema": {"type": "object", "properties": {"q": {"type": "string"}}}},
+  {"name": "search", "description": "Search the docs index", "inputSchema": {"type": "object", "properties": {"q": {"type": "string"}}}}
+]}"#;
+        let diagnostics = validate(content);
+        let mcp_030 = rules_of(&diagnostics, "MCP-030");
+        assert_eq!(mcp_030.len(), 1);
+        assert_eq!(mcp_030[0].line, 3);
+    }
+
+    #[test]
+    fn test_mcp_031_x_mcp_header_constraints() {
+        let content = r#"{"tools": [{
+  "name": "execute_sql",
+  "description": "Execute SQL on a database",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "region": {"type": "string", "x-mcp-header": "Region"},
+      "zone": {"type": "string", "x-mcp-header": "region"},
+      "limit": {"type": "number", "x-mcp-header": "Limit"},
+      "bad": {"type": "string", "x-mcp-header": "Bad Name"},
+      "list": {"type": "array", "items": {"type": "string", "x-mcp-header": "Item"}},
+      "api_token": {"type": "string", "x-mcp-header": "Token"}
+    }
+  }
+}]}"#;
+        let diagnostics = validate(content);
+        let errors: Vec<_> = rules_of(&diagnostics, "MCP-031")
+            .into_iter()
+            .filter(|d| d.level == crate::diagnostics::DiagnosticLevel::Error)
+            .collect();
+        let messages: Vec<&str> = errors.iter().map(|d| d.message.as_str()).collect();
+        assert_eq!(errors.len(), 4, "{messages:#?}");
+        assert!(
+            messages
+                .iter()
+                .any(|m| m.contains("'zone'") && m.contains("repeats"))
+        );
+        assert!(
+            messages
+                .iter()
+                .any(|m| m.contains("'limit'") && m.contains("'number'"))
+        );
+        assert!(
+            messages
+                .iter()
+                .any(|m| m.contains("'bad'") && m.contains("token"))
+        );
+        assert!(
+            messages
+                .iter()
+                .any(|m| m.contains("'list'") && m.contains("reachable"))
+        );
+        let sensitive: Vec<_> = rules_of(&diagnostics, "MCP-031")
+            .into_iter()
+            .filter(|d| d.level == crate::diagnostics::DiagnosticLevel::Info)
+            .collect();
+        assert_eq!(sensitive.len(), 1);
+        assert!(sensitive[0].message.contains("api_token"));
+
+        // A project pinned to 2025-11-25 predates x-mcp-header.
+        let mut config = LintConfig::default();
+        config.set_mcp_protocol_version(Some("2025-11-25".to_string()));
+        assert!(rules_of(&validate_with_config(content, &config), "MCP-031").is_empty());
+    }
+
+    #[test]
+    fn test_mcp_032_deprecated_capabilities() {
+        let content = r#"{"jsonrpc": "2.0", "id": 1, "result": {"capabilities": {"logging": {}, "tools": {}}}}"#;
+        let diagnostics = validate(content);
+        let mcp_032 = rules_of(&diagnostics, "MCP-032");
+        assert_eq!(mcp_032.len(), 1, "{diagnostics:?}");
+        assert!(mcp_032[0].message.contains("logging"));
+        assert_eq!(mcp_032[0].level, crate::diagnostics::DiagnosticLevel::Info);
+        let sampling = r#"{"jsonrpc": "2.0", "id": 2, "method": "sampling/createMessage", "params": {"includeContext": "allServers", "messages": []}}"#;
+        assert_eq!(rules_of(&validate(sampling), "MCP-032").len(), 1);
+    }
+
+    #[test]
+    fn test_mcp_033_open_no_parameter_schema() {
+        let open = r#"{"name": "ping", "description": "Check the server is up", "inputSchema": {"type": "object"}}"#;
+        let diagnostics = validate(open);
+        assert_eq!(rules_of(&diagnostics, "MCP-033").len(), 1);
+        let closed = r#"{"name": "ping", "description": "Check the server is up", "inputSchema": {"type": "object", "additionalProperties": false}}"#;
+        assert!(rules_of(&validate(closed), "MCP-033").is_empty());
     }
 
     #[test]
@@ -2118,7 +2888,7 @@ mod tests {
     }
 
     #[test]
-    fn test_mcp_006_has_annotations() {
+    fn test_mcp_006_unknown_key_is_info() {
         let content = r#"{
             "name": "test-tool",
             "description": "A test tool for testing",
@@ -2126,12 +2896,10 @@ mod tests {
             "annotations": {"untrusted": "data"}
         }"#;
         let diagnostics = validate(content);
-        assert!(diagnostics.iter().any(|d| d.rule == "MCP-006"));
-        assert!(
-            diagnostics
-                .iter()
-                .any(|d| d.message.contains("annotations"))
-        );
+        let mcp_006: Vec<_> = diagnostics.iter().filter(|d| d.rule == "MCP-006").collect();
+        assert_eq!(mcp_006.len(), 1);
+        assert_eq!(mcp_006[0].level, crate::diagnostics::DiagnosticLevel::Info);
+        assert!(mcp_006[0].message.contains("untrusted"));
     }
 
     #[test]
@@ -2148,25 +2916,34 @@ mod tests {
     }
 
     #[test]
-    fn test_mcp_006_unknown_annotation_keys() {
+    fn test_mcp_006_unknown_annotation_keys_sorted() {
+        // Keys come from a HashMap; the message must not depend on its order.
         let content = r#"{
             "name": "test-tool",
             "description": "A test tool for testing",
             "inputSchema": {"type": "object"},
-            "annotations": {"dangerous": true, "readOnlyHint": true}
+            "annotations": {"zeta": 1, "dangerous": true, "readOnlyHint": true, "alpha": 2, "mid": 3}
         }"#;
-        let diagnostics = validate(content);
-        let mcp_006: Vec<_> = diagnostics.iter().filter(|d| d.rule == "MCP-006").collect();
+        let first = validate(content);
+        let messages: Vec<_> = first
+            .iter()
+            .filter(|d| d.rule == "MCP-006")
+            .map(|d| d.message.clone())
+            .collect();
+        assert_eq!(messages.len(), 1);
         assert!(
-            mcp_006
-                .iter()
-                .any(|d| d.message.contains("unknown annotation keys")),
-            "Expected MCP-006 warning for unknown annotation keys, got: {:?}",
-            mcp_006
-                .iter()
-                .map(|d| d.message.clone())
-                .collect::<Vec<_>>()
+            messages[0].ends_with("alpha, dangerous, mid, zeta"),
+            "{messages:?}"
         );
+        for _ in 0..20 {
+            let again: Vec<_> = validate(content)
+                .into_iter()
+                .filter(|d| d.rule == "MCP-006")
+                .map(|d| d.message)
+                .collect();
+            assert_eq!(again, messages);
+        }
+        assert!(!first.iter().any(|d| d.rule == "MCP-003"));
     }
 
     // Config wiring tests
@@ -2665,24 +3442,23 @@ mod tests {
     }
 
     #[test]
-    fn test_mcp_006_annotations_triggers_warning() {
-        // MCP-006 warns when annotations exist (they should be validated before trusting)
+    fn test_mcp_006_known_annotations_are_not_reported() {
+        // MCP-006 used to warn whenever a tool had annotations. The spec's
+        // "MUST consider tool annotations to be untrusted" is a client duty;
+        // a tool that sets the standard hints is spec-conformant.
         let content = r#"{
             "tools": [{
                 "name": "annotated-tool",
                 "description": "A tool with annotations",
                 "inputSchema": {},
-                "requiresApproval": true,
-                "annotations": {
-                    "dangerous": false
-                }
+                "annotations": {"title": "T", "readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
             }]
         }"#;
-
         let diagnostics = validate(content);
-        // MCP-006 SHOULD trigger (annotations present = warning)
-        let mcp_006: Vec<_> = diagnostics.iter().filter(|d| d.rule == "MCP-006").collect();
-        assert!(!mcp_006.is_empty(), "MCP-006 should warn about annotations");
+        assert!(
+            !diagnostics.iter().any(|d| d.rule == "MCP-006"),
+            "{diagnostics:?}"
+        );
     }
 
     #[test]
@@ -2795,6 +3571,28 @@ mod tests {
         let mcp_009: Vec<_> = diagnostics.iter().filter(|d| d.rule == "MCP-009").collect();
         assert_eq!(mcp_009.len(), 1);
         assert!(mcp_009[0].message.contains("no-type-server"));
+        // The message says the entry has no type, not that it is typed stdio.
+        assert!(
+            mcp_009[0].message.contains("no 'type'"),
+            "{}",
+            mcp_009[0].message
+        );
+    }
+
+    #[test]
+    fn test_mcp_009_url_without_type_asks_for_a_type() {
+        // Claude Code: "add "type": "http" (or "sse" / "ws") to this entry".
+        let content = r#"{"mcpServers": {"remote": {"url": "https://mcp.example.com/mcp"}}}"#;
+        let diagnostics = validate_path(".mcp.json", content);
+        let mcp_009 = rules_of(&diagnostics, "MCP-009");
+        assert_eq!(mcp_009.len(), 1, "{diagnostics:?}");
+        assert!(mcp_009[0].message.contains("'url' but no 'type'"));
+        assert!(
+            mcp_009[0]
+                .suggestion
+                .as_deref()
+                .is_some_and(|s| s.contains("\"type\": \"http\""))
+        );
     }
 
     #[test]
@@ -3279,7 +4077,7 @@ mod tests {
     // ===== MCP-012 Tests =====
 
     #[test]
-    fn test_mcp_012_sse_deprecated_error() {
+    fn test_mcp_012_sse_deprecated_warning() {
         let content = r#"{
             "mcpServers": {
                 "sse-server": {
@@ -3293,7 +4091,12 @@ mod tests {
         assert_eq!(mcp_012.len(), 1);
         assert!(mcp_012[0].message.contains("sse-server"));
         assert!(mcp_012[0].message.contains("deprecated"));
-        assert_eq!(mcp_012[0].level, crate::diagnostics::DiagnosticLevel::Error);
+        // A warning since 0.59: HTTP+SSE is deprecated (SHOULD NOT adopt) but
+        // clients still load it, so it is not an error.
+        assert_eq!(
+            mcp_012[0].level,
+            crate::diagnostics::DiagnosticLevel::Warning
+        );
     }
 
     #[test]
@@ -3771,32 +4574,18 @@ mod tests {
     // ===== MCP-006 improved suggestion test =====
 
     #[test]
-    fn test_mcp_006_suggestion_warns_about_self_reported() {
+    fn test_mcp_006_suggestion_lists_standard_hints() {
         let content = r#"{
             "name": "test-tool",
             "description": "A test tool that does useful things",
             "inputSchema": {"type": "object"},
-            "annotations": {"title": "My Tool", "readOnlyHint": true}
+            "annotations": {"title": "My Tool", "readonly": true}
         }"#;
         let diagnostics = validate(content);
-
         let mcp_006: Vec<_> = diagnostics.iter().filter(|d| d.rule == "MCP-006").collect();
         assert_eq!(mcp_006.len(), 1);
-        assert!(
-            mcp_006[0].suggestion.is_some(),
-            "MCP-006 should have a suggestion"
-        );
         let suggestion = mcp_006[0].suggestion.as_ref().unwrap();
-        assert!(
-            suggestion.contains("self-reported"),
-            "MCP-006 suggestion should warn about self-reported annotations, got: {}",
-            suggestion
-        );
-        assert!(
-            suggestion.contains("malicious"),
-            "MCP-006 suggestion should warn about potential malicious annotations, got: {}",
-            suggestion
-        );
+        assert!(suggestion.contains("readOnlyHint"), "{suggestion}");
     }
 
     // ===== Flat top-level server-map shape (Codex rust-v0.123.0) =====

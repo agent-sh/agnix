@@ -20,7 +20,7 @@ cases:
     description: "Invalid skill name (underscores) triggers AS-004"
 
   - file: fixtures/invalid/skills/deploy-prod/SKILL.md
-    expected: [CC-SK-006, CC-SK-007]
+    expected: [CC-SK-006, CC-SK-007, AS-020]
     description: "Dangerous deploy-prod with unknown tools triggers multiple rules"
 
   - file: fixtures/invalid/skills/unknown-tool/SKILL.md
@@ -86,7 +86,7 @@ cases:
     description: "Invalid input schema triggers MCP-003"
 
   - file: fixtures/mcp/empty-description.mcp.json
-    expected: [MCP-004]
+    expected: [MCP-004, MCP-033]
     description: "Empty description triggers MCP-004"
 
   - file: fixtures/mcp/missing-consent.mcp.json
@@ -94,7 +94,7 @@ cases:
     description: "Tool schemas do not require a consent field"
 
   - file: fixtures/mcp/untrusted-annotations.mcp.json
-    expected: [MCP-006]
+    expected: [MCP-006, MCP-033]
     description: "Untrusted annotations triggers MCP-006"
 
   - file: fixtures/mcp/protocol-version-mismatch.mcp.json
@@ -122,11 +122,11 @@ cases:
     description: "Valid MCP tool should have no errors"
 
   - file: fixtures/mcp/invalid-tool-name.mcp.json
-    expected: [MCP-013]
+    expected: [MCP-013, MCP-033]
     description: "Invalid tool name format triggers MCP-013"
 
   - file: fixtures/mcp/invalid-output-schema.mcp.json
-    expected: [MCP-014]
+    expected: [MCP-014, MCP-033]
     description: "Invalid outputSchema triggers MCP-014"
 
   - file: fixtures/mcp/missing-resource-required-fields.mcp.json
@@ -176,20 +176,26 @@ cases:
     description: "Unclosed code block triggers AGM-001"
 
   - file: fixtures/agents_md/no-headers/AGENTS.md
-    expected: [AGM-002, XP-002, CDX-AG-006]
-    description: "No headers trigger AGM-002 and XP-002 (Codex also flags missing context: CDX-AG-006)"
+    expected: [AGM-002]
+    description: "A long file without headings triggers AGM-002"
 
   - file: fixtures/agents_md/too-large/AGENTS.md
     expected: [AGM-003]
-    description: "Exceeding character limit triggers AGM-003"
+    description: "Exceeding the Windsurf character limit triggers AGM-003 (the fixture's .devin/ directory puts Windsurf in scope)"
 
   - file: fixtures/agents_md/no-context/AGENTS.md
     expected: [AGM-004]
     description: "Missing context/purpose triggers AGM-004"
 
+  # AGM-007 needs a build manifest next to the file; the other AGENTS.md
+  # fixtures have none, so it stays quiet there
+  - file: fixtures/agents_md/no-commands/AGENTS.md
+    expected: [AGM-007]
+    description: "A buildable project whose AGENTS.md lists no build or test command triggers AGM-007"
+
   - file: fixtures/agents_md/unguarded-platform/AGENTS.md
-    expected: [AGM-005, XP-001]
-    description: "Unguarded platform features triggers AGM-005 and XP-001"
+    expected: [XP-001]
+    description: "Hook and skill configuration in AGENTS.md triggers XP-001"
 
   - file: fixtures/agents_md/valid/AGENTS.md
     expected: []
@@ -198,17 +204,17 @@ cases:
   # ===== Cross-Platform Rules (XP-*) =====
 
   - file: fixtures/cross_platform/with-hooks/AGENTS.md
-    expected: [XP-001, AGM-005]
-    description: "Claude-specific hooks triggers XP-001 and AGM-005"
+    expected: [XP-001]
+    description: "Hook definitions in AGENTS.md trigger XP-001"
 
   - file: fixtures/cross_platform/with-context-fork/AGENTS.md
-    expected: [XP-001, AGM-004, AGM-005]
-    description: "Context fork triggers XP-001, AGM-004, and AGM-005"
+    expected: [XP-001, AGM-004]
+    description: "Context fork triggers XP-001 and AGM-004"
 
-  # No headers file lacks context section too
+  # A short file without headings is fine; it lacks context and commands
   - file: fixtures/cross_platform/no-headers/AGENTS.md
-    expected: [XP-002, AGM-002, AGM-004]
-    description: "No headers triggers XP-002, AGM-002, and AGM-004"
+    expected: [AGM-004]
+    description: "Headings are optional in a short AGENTS.md; missing context triggers AGM-004"
 
   # Hard-coded paths file also lacks context section
   - file: fixtures/cross_platform/hard-coded/AGENTS.md
@@ -265,4 +271,4 @@ cases:
 
   - file: fixtures/real-world/absolute-paths/AGENTS.md
     expected: [XP-003]
-    description: "Absolute OS paths (/Users/, /home/, ~/Library/) should trigger XP-003"
+    description: "Hard-coded home directories (/Users/<name>/, /home/<name>/) should trigger XP-003"

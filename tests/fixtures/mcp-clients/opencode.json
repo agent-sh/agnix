@@ -1,0 +1,11 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  // OpenCode reads JSON with comments.
+  "mcp": {
+    "docs": {
+      "type": "local",
+      "command": ["npx", "-y", "docs-mcp-server"],
+      "environment": { "DOCS_API_TOKEN": "literal-token-value-123" }
+    }
+  }
+}

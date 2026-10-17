@@ -31,19 +31,12 @@ rules:
   as_003:
     message: Skill frontmatter 缺少必需的 'description' 字段
     suggestion: '在 frontmatter 中添加 ''description: Use when...'''
-  as_004:
-    message: 名称 '%{name}' 的每个段必须是1-64个小写字母、数字和连字符，可为 skill-name 或 plugin:skill-name
-    suggestion: 转为小写并修剪每个名称段，将空格和 '_' 替换为 '-'，合并多个 '-'，删除无效字符，并将每个段截断为64个字符
-    fix: '将名称转换为 kebab-case: ''%{name}'''
   as_005:
     message: 名称 '%{name}' 不能以连字符开头或结尾
     suggestion: 删除名称中的前导/尾随连字符
   as_006:
     message: 名称 '%{name}' 不能包含连续连字符
     suggestion: 将名称中的 '--' 替换为 '-'
-  as_008:
-    message: 描述必须为1-%{max}个字符，当前为 %{len}
-    suggestion: 将描述修剪为%{max}个字符或更少
   as_009:
     message: 描述不得包含 XML 标签
     suggestion: 从描述中删除 XML 标签
@@ -53,9 +46,6 @@ rules:
   as_012:
     message: Skill 内容超过500行（当前 %{count} 行）
     suggestion: 将额外内容移至 references/
-  as_013:
-    message: 文件引用 '%{path}' 深度超过一级
-    suggestion: 扁平化 references/ 目录结构
   as_015:
     message: "目录超过 Claude API 的 30MB 上传限制（%{size} 字节）；本地 Claude Code 没有已公布的大小限制"
     suggestion: "上传到 Claude API 前减少技能资源大小"
@@ -90,30 +80,6 @@ rules:
   cc_sk_017:
     message: 未知的 frontmatter 字段 '%{field}'
     suggestion: 删除不受支持的字段或修正 frontmatter 键名拼写
-  cr_sk_001:
-    message: 字段 '%{field}' 不受 %{client} 支持 -- 将被忽略
-    suggestion: 移除 '%{field}' 或将此技能移至支持它的客户端
-  cl_sk_001:
-    message: 字段 '%{field}' 不受 %{client} 支持 -- 将被忽略
-    suggestion: 移除 '%{field}' 或将此技能移至支持它的客户端
-  cp_sk_001:
-    message: 字段 '%{field}' 不受 %{client} 支持 -- 将被忽略
-    suggestion: 移除 '%{field}' 或将此技能移至支持它的客户端
-  cx_sk_001:
-    message: 字段 '%{field}' 不受 %{client} 支持 -- 将被忽略
-    suggestion: 移除 '%{field}' 或将此技能移至支持它的客户端
-  oc_sk_001:
-    message: 字段 '%{field}' 不受 %{client} 支持 -- 将被忽略
-    suggestion: 移除 '%{field}' 或将此技能移至支持它的客户端
-  ws_sk_001:
-    message: 字段 '%{field}' 不受 %{client} 支持 -- 将被忽略
-    suggestion: 移除 '%{field}' 或将此技能移至支持它的客户端
-  amp_sk_001:
-    message: 字段 '%{field}' 不受 %{client} 支持 -- 将被忽略
-    suggestion: 移除 '%{field}' 或将此技能移至支持它的客户端
-  rc_sk_001:
-    message: 字段 '%{field}' 不受 %{client} 支持 -- 将被忽略
-    suggestion: 移除 '%{field}' 或将此技能移至支持它的客户端
   xp_sk_001:
     message: 技能使用了客户端特定字段 '%{field}'，该字段不属于通用 Agent Skills 规范
     suggestion: 考虑移除 '%{field}' 以提高跨平台可移植性
@@ -170,9 +136,6 @@ rules:
   mcp_005:
     message: '%{prefix}工具缺少同意机制（无 ''requiresApproval'' 或 ''confirmation'' 字段）'
     suggestion: '考虑为修改数据或有副作用的工具添加 ''requiresApproval: true'''
-  mcp_006:
-    message: '%{prefix}工具有应在信任之前验证的注解'
-    suggestion: 独立验证注解值 -- 注解由服务器自我报告，可能不准确或恶意
   mcp_007:
     message: '解析 MCP 配置失败: %{error}'
     suggestion: 验证 JSON 语法 -- 检查是否缺少逗号、括号或不带引号的键
@@ -222,16 +185,6 @@ rules:
   cc_mem_012:
     message: .claude/rules 文件中的未知前置元数据键 '%{key}'
     suggestion: .claude/rules/*.md 前置元数据中只有 'paths' 是已知键。删除 '%{key}' 或检查拼写错误。
-  agm_001:
-    message: '无效的 markdown: %{description}'
-    suggestion: 修复 markdown 语法错误 -- 检查不闭合的标签、不匹配的标题或无效的链接语法
-  agm_002: null
-  agm_003:
-    message: '%{filename} 超过字符限制（%{chars} 个字符，最大 %{limit}，Windsurf 兼容性要求）'
-    suggestion: 将内容拆分为多个文件或减少内容长度
-  agm_004: null
-  agm_005:
-    suggestion: 在平台特定内容之前添加平台保护部分标题，如 '## %{platform} Specific'
   agm_006: null
   xml_001:
     message: 未关闭的 XML 标签 '<%{tag}>'
@@ -265,22 +218,14 @@ rules:
     suggestion: 验证器在持有导入缓存锁时崩溃。验证将继续使用恢复的数据，但结果可能已过期。
   file_panic_error: '验证此文件时发生崩溃: %{error}'
   file_panic_error_suggestion: 请将此作为 bug 报告，并附上文件类型和规则上下文
-  xp_001:
-    message: '%{filename} 中的 Claude 特有功能 ''%{feature}'': %{description}'
-    suggestion: 移至 CLAUDE.md 或包装在 Claude 特定部分中（例如 '## Claude Code Specific'）
   xp_002:
     message: '%{filename} 结构问题: %{issue}'
-  xp_003:
-    message: 硬编码的 %{platform} 路径 '%{path}' 可能导致可移植性问题
-    suggestion: 使用环境变量或相对路径以获得更好的可移植性
   xp_004:
     message: '包管理器冲突: %{file1} 使用 %{mgr1} 但 %{file2} 使用 %{mgr2} 用于 %{cmd_type} 命令'
     suggestion: 在所有指令文件中标准化使用单一包管理器
   xp_005:
     message: '工具约束冲突: ''%{tool}'' 在 %{allow_file} 中被允许但在 %{disallow_file} 中被禁止'
     suggestion: 通过一致地允许或禁止工具来解决冲突
-  xp_006:
-    suggestion: 记录哪个文件优先（例如 'CLAUDE.md 优先于 AGENTS.md'）
   cop_001:
     message_empty: Copilot 指令文件为空
     message_no_content: Copilot 指令文件在 frontmatter 之后没有内容

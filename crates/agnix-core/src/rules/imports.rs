@@ -209,7 +209,9 @@ impl Validator for ImportsValidator {
                     .unwrap_or(&import.path)
                     .to_string();
                 if !seen_paths.insert(normalized) {
-                    let mut diagnostic = Diagnostic::warning(
+                    // Info: Claude Code loads each file once, so a duplicate
+                    // import is clutter rather than a behavior change.
+                    let mut diagnostic = Diagnostic::info(
                         path.to_path_buf(),
                         import.line,
                         import.column,
@@ -367,6 +369,13 @@ fn visit_imports(
     // Determine file type for current file to route its own diagnostics
     let filename = file_path.file_name().and_then(|n| n.to_str()).unwrap_or("");
     let is_claude_md = matches!(filename, "CLAUDE.md" | "CLAUDE.local.md");
+    // Gemini CLI imports "support both relative and absolute paths", and its
+    // own example is `@../shared/style-guide.md` from a GEMINI.md that may sit
+    // at the repository root; the memport loader limits imports to its
+    // allowed directories, not to the repository. So, as for CLAUDE.md, a path
+    // outside the project is checked for existence only.
+    let is_gemini_md = matches!(filename, "GEMINI.md" | "GEMINI.local.md");
+    let allows_external_imports = is_claude_md || is_gemini_md;
 
     // Check rules based on CURRENT file type for missing imports
     // Check rules based on ROOT file type for cycles/depth (applies to entire chain)
@@ -410,7 +419,7 @@ fn visit_imports(
         //
         // The guard stays for non-memory files (REF-001), where no upstream
         // spec sanctions escaping the project root.
-        if is_external_path && is_claude_md {
+        if is_external_path && allows_external_imports {
             let resolved_external = resolve_import_path(&import.path, base_dir);
             if check_not_found && !fs.exists(&resolved_external) {
                 push_unique_diagnostic(
@@ -453,6 +462,28 @@ fn visit_imports(
         }
 
         let normalized_resolved = normalize_join(&normalized_base, &import.path);
+        if is_gemini_md && !normalized_resolved.starts_with(normalized_root) {
+            // A parent-directory import from GEMINI.md: report only a target
+            // that does not exist, and do not follow it outside the project.
+            if check_not_found && !fs.exists(&resolved) {
+                push_unique_diagnostic(
+                    diagnostics,
+                    seen_diagnostics,
+                    Diagnostic::error(
+                        file_path.clone(),
+                        import.line,
+                        import.column,
+                        rule_not_found,
+                        t!("rules.cc_mem_001.not_found", path = import.path.as_str()),
+                    )
+                    .with_suggestion(format!(
+                        "Check that the file exists: {}",
+                        resolved.display()
+                    )),
+                );
+            }
+            continue;
+        }
         if !normalized_resolved.starts_with(normalized_root) {
             if check_not_found {
                 push_unique_diagnostic(
@@ -1285,6 +1316,42 @@ mod tests {
                 .iter()
                 .any(|d| { d.rule == "CC-MEM-001" && d.message.contains("escapes project root") })
         );
+    }
+
+    /// REF-001 reported "Import path escapes project root" on Gemini's own
+    /// example `@../shared/style-guide.md` from a repo-root GEMINI.md. Gemini
+    /// allows relative and absolute imports, so only a missing target is
+    /// reported.
+    #[test]
+    fn test_gemini_parent_import_checked_for_existence_only() {
+        let temp = TempDir::new().unwrap();
+        let root = temp.path().join("repo");
+        fs::create_dir_all(&root).unwrap();
+        fs::create_dir_all(temp.path().join("shared")).unwrap();
+        fs::write(temp.path().join("shared/style-guide.md"), "Style").unwrap();
+        let file_path = root.join("GEMINI.md");
+        let mut config = LintConfig::default();
+        config.set_root_dir(root.clone());
+
+        let ok = "# Rules\n\n@../shared/style-guide.md\n";
+        fs::write(&file_path, ok).unwrap();
+        let diagnostics = ImportsValidator.validate(&file_path, ok, &config);
+        assert!(
+            diagnostics.iter().all(|d| d.rule != "REF-001"),
+            "{diagnostics:?}"
+        );
+
+        let missing = "# Rules\n\n@../shared/missing.md\n";
+        fs::write(&file_path, missing).unwrap();
+        let diagnostics = ImportsValidator.validate(&file_path, missing, &config);
+        let ref_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "REF-001").collect();
+        assert_eq!(ref_001.len(), 1, "{diagnostics:?}");
+        assert!(
+            ref_001[0].message.contains("not found"),
+            "{}",
+            ref_001[0].message
+        );
+        assert!(!ref_001[0].message.contains("escapes"));
     }
 
     #[cfg(unix)]

@@ -1,0 +1,8 @@
+{
+  "amp.mcpServers": {
+    "tracker": {
+      "url": "https://mcp.example.com/sse",
+      "oauth": { "clientId": "amp", "clientSecret": "s3cr3t-client-value-abcdef" }
+    }
+  }
+}

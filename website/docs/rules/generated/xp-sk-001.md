@@ -13,7 +13,7 @@ keywords: ["XP-SK-001", "skill uses client-specific features", "cross-platform",
 - **Category**: `Cross-Platform`
 - **Normative Level**: `BEST_PRACTICE`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-02-07`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -24,6 +24,7 @@ keywords: ["XP-SK-001", "skill uses client-specific features", "cross-platform",
 ## Evidence Sources
 
 - https://agentskills.io/specification
+- https://raw.githubusercontent.com/agentskills/agentskills/main/skills-ref/src/skills_ref/validator.py
 
 ## Test Coverage Metadata
 

@@ -418,12 +418,13 @@ fn overrides_suppress_ver001_on_agnix_toml() {
     assert!(result.diagnostics.iter().all(|d| d.rule != "VER-001"));
 }
 
-/// XP-009: Codex's `project_doc_max_bytes` cap is cumulative across the
-/// instruction chain, not per-file. XP-007 checks each file alone, so a project
+/// CDX-AG-010 (formerly XP-009, retired with XP-007 for the Codex twins):
+/// Codex's `project_doc_max_bytes` cap is cumulative across the
+/// instruction chain, not per-file. CDX-AG-009 checks each file alone, so a project
 /// split into several mid-size AGENTS.md files was silently truncated with no
 /// diagnostic at all (issue #1289).
 #[test]
-fn xp009_flags_cumulative_chain_over_the_cap() {
+fn cdx_ag_010_flags_cumulative_chain_over_the_cap() {
     let temp = tempfile::TempDir::new().unwrap();
     // Three files, each well under the 32 KiB per-file limit, 14 KB each.
     // Combined 42 KB, so Codex stops appending partway through.
@@ -436,32 +437,32 @@ fn xp009_flags_cumulative_chain_over_the_cap() {
 
     let result = validate_project(temp.path(), &LintConfig::default()).expect("validate_project");
 
-    let xp007: Vec<_> = result
+    let cdx_ag_009: Vec<_> = result
         .diagnostics
         .iter()
-        .filter(|d| d.rule == "XP-007")
+        .filter(|d| d.rule == "CDX-AG-009")
         .collect();
     assert!(
-        xp007.is_empty(),
-        "each file is under the per-file limit, so XP-007 must stay quiet - that is the gap XP-009 fills: {xp007:?}"
+        cdx_ag_009.is_empty(),
+        "each file is under the per-file limit, so CDX-AG-009 must stay quiet - that is the gap CDX-AG-010 fills: {cdx_ag_009:?}"
     );
 
-    let xp009: Vec<_> = result
+    let cdx_ag_010: Vec<_> = result
         .diagnostics
         .iter()
-        .filter(|d| d.rule == "XP-009")
+        .filter(|d| d.rule == "CDX-AG-010")
         .collect();
     assert_eq!(
-        xp009.len(),
+        cdx_ag_010.len(),
         1,
         "a 42 KB chain exceeds the 32768-byte cap and must be reported once: {:?}",
         result.diagnostics
     );
 }
 
-/// A single AGENTS.md over the cap is XP-007's finding; XP-009 must not repeat it.
+/// A single AGENTS.md over the cap is CDX-AG-009's finding; CDX-AG-010 must not repeat it.
 #[test]
-fn xp009_single_file_chain_defers_to_xp007() {
+fn cdx_ag_010_single_file_chain_defers_to_cdx_ag_009() {
     let temp = tempfile::TempDir::new().unwrap();
     fs::write(temp.path().join("AGENTS.md"), "x".repeat(40 * 1024)).unwrap();
 
@@ -469,16 +470,16 @@ fn xp009_single_file_chain_defers_to_xp007() {
     let rules: Vec<_> = result
         .diagnostics
         .iter()
-        .filter(|d| d.rule == "XP-007" || d.rule == "XP-009")
+        .filter(|d| d.rule == "CDX-AG-009" || d.rule == "CDX-AG-010")
         .map(|d| d.rule.as_str())
         .collect();
-    assert_eq!(rules, ["XP-007"], "got: {:?}", result.diagnostics);
+    assert_eq!(rules, ["CDX-AG-009"], "got: {:?}", result.diagnostics);
 }
 
 /// Codex starts at the Git root, so a nested repository does not inherit the
 /// AGENTS.md above it.
 #[test]
-fn xp009_chain_stops_at_nested_git_root() {
+fn cdx_ag_010_chain_stops_at_nested_git_root() {
     let temp = tempfile::TempDir::new().unwrap();
     fs::write(temp.path().join("AGENTS.md"), "r".repeat(20 * 1024)).unwrap();
     let nested = temp.path().join("src").join("pkg");
@@ -486,20 +487,20 @@ fn xp009_chain_stops_at_nested_git_root() {
     fs::write(nested.join("AGENTS.md"), "p".repeat(20 * 1024)).unwrap();
 
     let result = validate_project(temp.path(), &LintConfig::default()).expect("validate_project");
-    let xp009: Vec<_> = result
+    let cdx_ag_010: Vec<_> = result
         .diagnostics
         .iter()
-        .filter(|d| d.rule == "XP-009")
+        .filter(|d| d.rule == "CDX-AG-010")
         .collect();
     assert!(
-        xp009.is_empty(),
-        "each repository's chain is 20 KB, under the cap: {xp009:?}"
+        cdx_ag_010.is_empty(),
+        "each repository's chain is 20 KB, under the cap: {cdx_ag_010:?}"
     );
 }
 
 /// A chain that fits stays clean, so the rule is not simply counting files.
 #[test]
-fn xp009_quiet_when_chain_fits_under_the_cap() {
+fn cdx_ag_010_quiet_when_chain_fits_under_the_cap() {
     let temp = tempfile::TempDir::new().unwrap();
     let body = "x".repeat(6 * 1024);
     fs::write(temp.path().join("AGENTS.md"), &body).unwrap();
@@ -508,14 +509,14 @@ fn xp009_quiet_when_chain_fits_under_the_cap() {
 
     let result = validate_project(temp.path(), &LintConfig::default()).expect("validate_project");
 
-    let xp009: Vec<_> = result
+    let cdx_ag_010: Vec<_> = result
         .diagnostics
         .iter()
-        .filter(|d| d.rule == "XP-009")
+        .filter(|d| d.rule == "CDX-AG-010")
         .collect();
     assert!(
-        xp009.is_empty(),
-        "12 KB combined is under the cap and must not be reported: {xp009:?}"
+        cdx_ag_010.is_empty(),
+        "12 KB combined is under the cap and must not be reported: {cdx_ag_010:?}"
     );
 }
 
@@ -523,7 +524,7 @@ fn xp009_quiet_when_chain_fits_under_the_cap() {
 /// shadowed `AGENTS.md` must not inflate the total, or a project using overrides
 /// would be reported for bytes Codex never reads.
 #[test]
-fn xp009_counts_one_file_per_directory_preferring_override() {
+fn cdx_ag_010_counts_one_file_per_directory_preferring_override() {
     let temp = tempfile::TempDir::new().unwrap();
     // Override is small; the shadowed AGENTS.md alongside it is huge. If both
     // counted, the chain would blow the cap.
@@ -532,20 +533,20 @@ fn xp009_counts_one_file_per_directory_preferring_override() {
 
     let result = validate_project(temp.path(), &LintConfig::default()).expect("validate_project");
 
-    let xp009: Vec<_> = result
+    let cdx_ag_010: Vec<_> = result
         .diagnostics
         .iter()
-        .filter(|d| d.rule == "XP-009")
+        .filter(|d| d.rule == "CDX-AG-010")
         .collect();
     assert!(
-        xp009.is_empty(),
-        "the shadowed AGENTS.md is not in the chain, so its bytes must not count: {xp009:?}"
+        cdx_ag_010.is_empty(),
+        "the shadowed AGENTS.md is not in the chain, so its bytes must not count: {cdx_ag_010:?}"
     );
 }
 
-/// Per-file `[[overrides]]` must suppress XP-009 like any other rule.
+/// Per-file `[[overrides]]` must suppress CDX-AG-010 like any other rule.
 #[test]
-fn xp009_respects_per_file_overrides() {
+fn cdx_ag_010_respects_per_file_overrides() {
     let temp = tempfile::TempDir::new().unwrap();
     let body = "x".repeat(20 * 1024);
     fs::write(temp.path().join("AGENTS.md"), &body).unwrap();
@@ -555,7 +556,7 @@ fn xp009_respects_per_file_overrides() {
     let baseline =
         validate_project(temp.path(), &LintConfig::default()).expect("validate_project baseline");
     assert!(
-        baseline.diagnostics.iter().any(|d| d.rule == "XP-009"),
+        baseline.diagnostics.iter().any(|d| d.rule == "CDX-AG-010"),
         "baseline: a 40 KB chain must be reported, got: {:?}",
         baseline.diagnostics
     );
@@ -563,20 +564,20 @@ fn xp009_respects_per_file_overrides() {
     let config = LintConfig::builder()
         .overrides(vec![OverrideConfig {
             paths: vec!["**/AGENTS.md".to_string()],
-            disabled_rules: vec!["XP-009".to_string()],
+            disabled_rules: vec!["CDX-AG-010".to_string()],
         }])
         .build()
         .expect("valid config");
 
     let result = validate_project(temp.path(), &config).expect("validate_project");
-    let xp009: Vec<_> = result
+    let cdx_ag_010: Vec<_> = result
         .diagnostics
         .iter()
-        .filter(|d| d.rule == "XP-009")
+        .filter(|d| d.rule == "CDX-AG-010")
         .collect();
     assert!(
-        xp009.is_empty(),
-        "an override on the reported file must suppress XP-009: {xp009:?}"
+        cdx_ag_010.is_empty(),
+        "an override on the reported file must suppress CDX-AG-010: {cdx_ag_010:?}"
     );
 }
 
@@ -586,7 +587,7 @@ fn xp009_respects_per_file_overrides() {
 /// cross the cap however small each one is. Supported nested guidance
 /// recommends splitting across nested directories to stay under this very cap.
 #[test]
-fn xp009_does_not_sum_across_sibling_subtrees() {
+fn cdx_ag_010_does_not_sum_across_sibling_subtrees() {
     let temp = tempfile::TempDir::new().unwrap();
     // root 10 KB + two 12 KB siblings. Real chains are 22 KB each, both fine;
     // a naive whole-tree sum reaches 34 KB and reports the second sibling.
@@ -601,14 +602,14 @@ fn xp009_does_not_sum_across_sibling_subtrees() {
     }
 
     let result = validate_project(temp.path(), &LintConfig::default()).expect("validate_project");
-    let xp009: Vec<_> = result
+    let cdx_ag_010: Vec<_> = result
         .diagnostics
         .iter()
-        .filter(|d| d.rule == "XP-009")
+        .filter(|d| d.rule == "CDX-AG-010")
         .collect();
     assert!(
-        xp009.is_empty(),
-        "neither root->pkg-a nor root->pkg-b exceeds the cap, so nothing may be reported: {xp009:?}"
+        cdx_ag_010.is_empty(),
+        "neither root->pkg-a nor root->pkg-b exceeds the cap, so nothing may be reported: {cdx_ag_010:?}"
     );
 }
 
@@ -617,7 +618,7 @@ fn xp009_does_not_sum_across_sibling_subtrees() {
 /// is named - see `xp009_blames_a_deep_file_when_it_is_the_biggest` for the case
 /// where a leaf dominates.
 #[test]
-fn xp009_reports_a_single_deep_chain_once() {
+fn cdx_ag_010_reports_a_single_deep_chain_once() {
     let temp = tempfile::TempDir::new().unwrap();
     let body = "x".repeat(14 * 1024);
     fs::write(temp.path().join("AGENTS.md"), &body).unwrap();
@@ -626,13 +627,13 @@ fn xp009_reports_a_single_deep_chain_once() {
     fs::write(temp.path().join("api").join("v2").join("AGENTS.md"), &body).unwrap();
 
     let result = validate_project(temp.path(), &LintConfig::default()).expect("validate_project");
-    let xp009: Vec<_> = result
+    let cdx_ag_010: Vec<_> = result
         .diagnostics
         .iter()
-        .filter(|d| d.rule == "XP-009")
+        .filter(|d| d.rule == "CDX-AG-010")
         .collect();
     assert_eq!(
-        xp009.len(),
+        cdx_ag_010.len(),
         1,
         "a 42 KB root->api->v2 chain must be reported exactly once: {:?}",
         result.diagnostics
@@ -641,9 +642,12 @@ fn xp009_reports_a_single_deep_chain_once() {
     // TempDir under /var resolves to /private/var, so equality on the parent
     // fails for a reason unrelated to what this asserts.
     assert!(
-        !xp009[0].file.components().any(|c| c.as_os_str() == "api"),
+        !cdx_ag_010[0]
+            .file
+            .components()
+            .any(|c| c.as_os_str() == "api"),
         "with equal sizes the shallowest (root) file is named, got: {}",
-        xp009[0].file.display()
+        cdx_ag_010[0].file.display()
     );
 }
 
@@ -710,7 +714,7 @@ fn xp004_still_flags_a_real_cross_file_conflict() {
 /// one step along: N reports against the wrong file instead of one report with
 /// the wrong total.
 #[test]
-fn xp009_blames_the_largest_file_not_every_sibling() {
+fn cdx_ag_010_blames_the_largest_file_not_every_sibling() {
     let temp = tempfile::TempDir::new().unwrap();
     fs::write(temp.path().join("AGENTS.md"), "r".repeat(30 * 1024)).unwrap();
     for i in 0..20 {
@@ -720,17 +724,17 @@ fn xp009_blames_the_largest_file_not_every_sibling() {
     }
 
     let result = validate_project(temp.path(), &LintConfig::default()).expect("validate_project");
-    let xp009: Vec<_> = result
+    let cdx_ag_010: Vec<_> = result
         .diagnostics
         .iter()
-        .filter(|d| d.rule == "XP-009")
+        .filter(|d| d.rule == "CDX-AG-010")
         .collect();
 
     assert_eq!(
-        xp009.len(),
+        cdx_ag_010.len(),
         1,
         "20 chains sharing one oversized root must collapse to a single report, got: {:?}",
-        xp009
+        cdx_ag_010
             .iter()
             .map(|d| d.file.display().to_string())
             .collect::<Vec<_>>()
@@ -739,19 +743,19 @@ fn xp009_blames_the_largest_file_not_every_sibling() {
     // so comparing the parent against `temp.path()` fails for a reason unrelated
     // to what this asserts. The root file is the one with no `pkgNN` component.
     assert!(
-        xp009[0].file.ends_with("AGENTS.md")
-            && !xp009[0]
+        cdx_ag_010[0].file.ends_with("AGENTS.md")
+            && !cdx_ag_010[0]
                 .file
                 .components()
                 .any(|c| c.as_os_str().to_string_lossy().starts_with("pkg")),
         "the 30 KB root is the only edit that fixes every chain, got: {}",
-        xp009[0].file.display()
+        cdx_ag_010[0].file.display()
     );
 }
 
 /// When a deep file is the largest contributor, it is named rather than the root.
 #[test]
-fn xp009_blames_a_deep_file_when_it_is_the_biggest() {
+fn cdx_ag_010_blames_a_deep_file_when_it_is_the_biggest() {
     let temp = tempfile::TempDir::new().unwrap();
     fs::write(temp.path().join("AGENTS.md"), "r".repeat(4 * 1024)).unwrap();
     let deep = temp.path().join("api").join("v2");
@@ -764,16 +768,16 @@ fn xp009_blames_a_deep_file_when_it_is_the_biggest() {
     fs::write(deep.join("AGENTS.md"), "v".repeat(30 * 1024)).unwrap();
 
     let result = validate_project(temp.path(), &LintConfig::default()).expect("validate_project");
-    let xp009: Vec<_> = result
+    let cdx_ag_010: Vec<_> = result
         .diagnostics
         .iter()
-        .filter(|d| d.rule == "XP-009")
+        .filter(|d| d.rule == "CDX-AG-010")
         .collect();
-    assert_eq!(xp009.len(), 1, "got: {:?}", result.diagnostics);
+    assert_eq!(cdx_ag_010.len(), 1, "got: {:?}", result.diagnostics);
     assert!(
-        xp009[0].file.ends_with("v2/AGENTS.md"),
+        cdx_ag_010[0].file.ends_with("v2/AGENTS.md"),
         "the 30 KB leaf is the biggest contributor, got: {}",
-        xp009[0].file.display()
+        cdx_ag_010[0].file.display()
     );
 }
 
@@ -783,7 +787,7 @@ fn xp009_blames_a_deep_file_when_it_is_the_biggest() {
 /// file while shadowing nothing - the 40 KB file it should have hidden was still
 /// summed.
 #[test]
-fn xp009_override_shadowing_is_case_insensitive() {
+fn cdx_ag_010_override_shadowing_is_case_insensitive() {
     for override_name in ["AGENTS.override.md", "agents.override.md"] {
         let temp = tempfile::TempDir::new().unwrap();
         fs::write(temp.path().join(override_name), "small override\n").unwrap();
@@ -791,14 +795,14 @@ fn xp009_override_shadowing_is_case_insensitive() {
 
         let result =
             validate_project(temp.path(), &LintConfig::default()).expect("validate_project");
-        let xp009: Vec<_> = result
+        let cdx_ag_010: Vec<_> = result
             .diagnostics
             .iter()
-            .filter(|d| d.rule == "XP-009")
+            .filter(|d| d.rule == "CDX-AG-010")
             .collect();
         assert!(
-            xp009.is_empty(),
-            "'{override_name}' must shadow AGENTS.md, so its 40 KB must not count: {xp009:?}"
+            cdx_ag_010.is_empty(),
+            "'{override_name}' must shadow AGENTS.md, so its 40 KB must not count: {cdx_ag_010:?}"
         );
     }
 }

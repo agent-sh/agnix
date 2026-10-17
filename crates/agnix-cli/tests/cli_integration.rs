@@ -549,12 +549,18 @@ fn test_format_json_strict_mode_with_warnings() {
 
     let skill_path = skills_dir.join("SKILL.md");
     let mut file = fs::File::create(&skill_path).unwrap();
-    // Valid skill, but a too-deep file reference triggers AS-013 (warning).
+    // Valid skill, but a reference chain (SKILL.md -> references/guide.md ->
+    // references/deep.md) triggers AS-013 (warning). AS-013 used to count
+    // directory levels; it now follows chains.
     writeln!(
         file,
-        "---\nname: test-skill-name\ndescription: A test skill for validation\n---\nSee references/deep/nested/guide.md for details."
+        "---\nname: test-skill-name\ndescription: A test skill for validation\n---\nSee references/guide.md for details."
     )
     .unwrap();
+    let references = skill_path.parent().unwrap().join("references");
+    fs::create_dir_all(&references).unwrap();
+    fs::write(references.join("guide.md"), "See references/deep.md.\n").unwrap();
+    fs::write(references.join("deep.md"), "# Deep\n").unwrap();
 
     // Without --strict, warnings should not cause failure
     let mut cmd = agnix();
@@ -1197,12 +1203,18 @@ fn test_format_text_shows_warning_level() {
 
     let skill_path = skills_dir.join("SKILL.md");
     let mut file = fs::File::create(&skill_path).unwrap();
-    // Valid skill, but a too-deep file reference triggers AS-013 (warning).
+    // Valid skill, but a reference chain (SKILL.md -> references/guide.md ->
+    // references/deep.md) triggers AS-013 (warning). AS-013 used to count
+    // directory levels; it now follows chains.
     writeln!(
         file,
-        "---\nname: test-skill-name\ndescription: A test skill\n---\nSee references/deep/nested/guide.md"
+        "---\nname: test-skill-name\ndescription: A test skill\n---\nSee references/guide.md for details."
     )
     .unwrap();
+    let references = skill_path.parent().unwrap().join("references");
+    fs::create_dir_all(&references).unwrap();
+    fs::write(references.join("guide.md"), "See references/deep.md.\n").unwrap();
+    fs::write(references.join("deep.md"), "# Deep\n").unwrap();
 
     let mut cmd = agnix();
     // Match diagnostic line format: file:line:col warning: message
@@ -1495,12 +1507,18 @@ fn test_strict_with_sarif_format() {
 
     let skill_path = skills_dir.join("SKILL.md");
     let mut file = fs::File::create(&skill_path).unwrap();
-    // Valid skill, but a too-deep file reference triggers AS-013 (warning).
+    // Valid skill, but a reference chain (SKILL.md -> references/guide.md ->
+    // references/deep.md) triggers AS-013 (warning). AS-013 used to count
+    // directory levels; it now follows chains.
     writeln!(
         file,
-        "---\nname: test-skill\ndescription: A test skill\n---\nSee references/deep/nested/guide.md"
+        "---\nname: test-skill\ndescription: A test skill\n---\nSee references/guide.md for details."
     )
     .unwrap();
+    let references = skill_path.parent().unwrap().join("references");
+    fs::create_dir_all(&references).unwrap();
+    fs::write(references.join("guide.md"), "See references/deep.md.\n").unwrap();
+    fs::write(references.join("deep.md"), "# Deep\n").unwrap();
 
     // With --strict, warnings should cause exit code 1
     let mut cmd = agnix();

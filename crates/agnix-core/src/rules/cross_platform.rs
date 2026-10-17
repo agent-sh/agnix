@@ -1,25 +1,78 @@
 //! Cross-platform validation rules
 //!
 //! Validates:
-//! - XP-001: Claude-specific features in AGENTS.md (info)
-//! - XP-002: AGENTS.md markdown structure (warning)
-//! - XP-003: Hard-coded platform paths in configs (warning)
-//! - XP-007: AGENTS.md exceeds Codex CLI byte limit (warning)
-//! - XP-008: Claude-specific features in CLAUDE.md for Cursor users (warning)
+//! - XP-001: AGENTS.md content that not every reader uses (info)
+//! - XP-002: AGENTS.md heading hierarchy (info)
+//! - XP-003: Hard-coded user home paths in files agents load (warning)
+//! - XP-008: CLAUDE.md @-imports that Cursor does not inline (warning)
+//!
+//! XP-007 and XP-009 (Codex's `project_doc_max_bytes`) were retired for the
+//! Codex rules that report the same limits with Codex's own fix text.
 
 use crate::{
-    config::{PerFileLintConfig, TargetTool},
+    config::{LintConfig, PerFileLintConfig, TargetTool},
     diagnostics::Diagnostic,
     rules::{Validator, ValidatorMetadata},
     schemas::cross_platform::{
-        CODEX_BYTE_LIMIT, check_byte_limit, check_markdown_structure,
-        find_claude_specific_features, find_hard_coded_paths,
+        FeatureKind, check_markdown_structure, find_claude_specific_features, find_hard_coded_paths,
     },
 };
 use rust_i18n::t;
 use std::path::Path;
 
-const RULE_IDS: &[&str] = &["XP-001", "XP-002", "XP-003", "XP-007", "XP-008"];
+const RULE_IDS: &[&str] = &["XP-001", "XP-002", "XP-003", "XP-008"];
+
+/// Tools that expand `@path` references in AGENTS.md: Amp ("To include other
+/// files as context, @-mention them in agent files"), Copilot CLI ("use `@`
+/// followed by a relative path to include another file") and Claude Code
+/// (memory imports). Codex, Cursor and OpenCode do not.
+const AT_REFERENCE_TOOLS: &[&str] = &["amp", "github-copilot", "copilot", "claude-code"];
+
+/// Whether `tool` is in scope for `path`: selected with `tools` (or the
+/// legacy `target`), or nothing is selected and one of `markers` (a
+/// directory or file the tool keeps in a project, such as `.cursor`) sits
+/// next to the file or above it, up to the lint root. Shared instruction files
+/// are read by many tools, so an unscoped run applies one tool's facts only to
+/// projects that show signs of using it.
+pub(crate) fn tool_in_scope(
+    path: &Path,
+    config: &LintConfig,
+    tool: &str,
+    markers: &[&str],
+) -> bool {
+    let tools = config.tools();
+    if !tools.is_empty() {
+        return tools
+            .iter()
+            .any(|t| t.eq_ignore_ascii_case(tool) || LintConfig::is_tool_alias(t, tool));
+    }
+    if let Some(name) = config.target().tool_name() {
+        return name == tool;
+    }
+    let fs = config.fs();
+    let root = config.root_dir();
+    for dir in path.ancestors().skip(1) {
+        if markers.iter().any(|marker| fs.exists(&dir.join(marker))) {
+            return true;
+        }
+        if root.is_some_and(|root| dir == root.as_path()) || dir.as_os_str().is_empty() {
+            break;
+        }
+    }
+    false
+}
+
+/// True when every selected tool expands `@path` references, so an
+/// @-reference in AGENTS.md reaches all of them. False for an unscoped run.
+fn every_selected_tool_expands_at_references(config: &LintConfig) -> bool {
+    let tools = config.tools();
+    if !tools.is_empty() {
+        return tools
+            .iter()
+            .all(|t| AT_REFERENCE_TOOLS.iter().any(|r| r.eq_ignore_ascii_case(t)));
+    }
+    config.target() == TargetTool::ClaudeCode
+}
 
 pub struct CrossPlatformValidator;
 
@@ -45,11 +98,21 @@ impl Validator for CrossPlatformValidator {
             "AGENTS.md" | "AGENTS.local.md" | "AGENTS.override.md"
         );
 
-        // XP-001: Claude-specific features in AGENTS.md (INFO)
-        // Only check AGENTS.md files - CLAUDE.md is allowed to have these features
+        // XP-001: content in AGENTS.md that not every reader uses (INFO).
+        // An agnix heuristic: @-references reach only the tools that expand
+        // them, and skill or hook configuration does nothing in an instruction
+        // file. @-references are not reported when every selected tool
+        // expands them.
         if config.is_rule_enabled("XP-001") && is_agents_md {
-            let claude_features = find_claude_specific_features(content);
-            for feature in claude_features {
+            let skip_at_references = every_selected_tool_expands_at_references(config);
+            for feature in find_claude_specific_features(content) {
+                if feature.kind == FeatureKind::AtReference && skip_at_references {
+                    continue;
+                }
+                let suggestion = match feature.kind {
+                    FeatureKind::AtReference => t!("rules.xp_001.at_reference_suggestion"),
+                    FeatureKind::InertConfig => t!("rules.xp_001.suggestion"),
+                };
                 diagnostics.push(
                     Diagnostic::info(
                         path.to_path_buf(),
@@ -63,18 +126,18 @@ impl Validator for CrossPlatformValidator {
                             description = feature.description.as_str()
                         ),
                     )
-                    .with_suggestion(t!("rules.xp_001.suggestion")),
+                    .with_suggestion(suggestion),
                 );
             }
         }
 
-        // XP-002: AGENTS.md markdown structure (WARNING)
-        // Validate that AGENTS.md has proper markdown structure
+        // XP-002: AGENTS.md heading hierarchy (INFO). A style heuristic; a
+        // file with no headings at all is AGM-002's finding.
         if config.is_rule_enabled("XP-002") && is_agents_md {
             let structure_issues = check_markdown_structure(content);
             for issue in structure_issues {
                 diagnostics.push(
-                    Diagnostic::warning(
+                    Diagnostic::info(
                         path.to_path_buf(),
                         issue.line,
                         issue.column,
@@ -90,19 +153,14 @@ impl Validator for CrossPlatformValidator {
             }
         }
 
-        // XP-003: Hard-coded platform paths (WARNING)
-        // Tool directories (`.claude/`, `.cursor/`, ...) are checked in every
-        // file, since any Markdown can end up in an agent's context. Machine
-        // paths (home directories, `~/.<dir>/`, `~/Library/`) are checked only
-        // in files agents load: in generic Markdown they mostly document where
-        // a tool keeps its data.
-        if config.is_rule_enabled("XP-003") {
-            let generic_markdown =
-                crate::file_types::detect_file_type(path) == crate::FileType::GenericMarkdown;
-            let hard_coded = find_hard_coded_paths(content)
-                .into_iter()
-                .filter(|issue| !generic_markdown || issue.is_tool_directory());
-            for path_issue in hard_coded {
+        // XP-003: Hard-coded user home paths (WARNING), in files agents load.
+        // In generic Markdown such paths mostly document where a tool keeps
+        // its data. Tool directories (`.claude/`, `.cursor/`) are not
+        // reported: vendors document them and ask for them by name.
+        if config.is_rule_enabled("XP-003")
+            && crate::file_types::detect_file_type(path) != crate::FileType::GenericMarkdown
+        {
+            for path_issue in find_hard_coded_paths(content) {
                 diagnostics.push(
                     Diagnostic::warning(
                         path.to_path_buf(),
@@ -120,57 +178,27 @@ impl Validator for CrossPlatformValidator {
             }
         }
 
-        // XP-007: AGENTS.md exceeds Codex byte limit (WARNING)
-        //
-        // `AGENTS.override.md` is included: Codex reads it *first* in each
-        // directory ("AGENTS.override.md, then AGENTS.md, then
-        // project_doc_fallback_filenames"), so it counts against the same
-        // `project_doc_max_bytes` budget. The previous comment here claimed
-        // Codex "reads this file, not local/override variants", which the
-        // current guide contradicts.
-        //
-        // Note this remains a per-file check while the documented cap is
-        // cumulative across the root-to-cwd chain, so a project split into
-        // several mid-size files can still be truncated without a diagnostic.
-        // Catching that needs project-level accounting; tracked separately.
-        if config.is_rule_enabled("XP-007")
-            && matches!(filename, "AGENTS.md" | "AGENTS.override.md")
+        // XP-008: CLAUDE.md @-imports when Cursor reads the file (WARNING).
+        // Cursor "reads CLAUDE.md files the same way it reads AGENTS.md" and
+        // applies them to every conversation, but an @-reference is only a
+        // pointer there: "The file's contents are not inlined into the
+        // prompt". The other XP-001 findings are inert for every tool, Claude
+        // Code included, so they are not repeated here.
+        if config.is_rule_enabled("XP-008")
+            && filename == "CLAUDE.md"
+            && tool_in_scope(path, config, "cursor", &[".cursor", ".cursorrules"])
         {
-            if let Some(exceeded) = check_byte_limit(content, CODEX_BYTE_LIMIT) {
-                diagnostics.push(
-                    Diagnostic::warning(
-                        path.to_path_buf(),
-                        1,
-                        1,
-                        "XP-007",
-                        t!(
-                            "rules.xp_007.message",
-                            bytes = exceeded.byte_count,
-                            limit = exceeded.limit
-                        ),
-                    )
-                    .with_suggestion(t!("rules.xp_007.suggestion")),
-                );
-            }
-        }
-
-        // XP-008: Claude-specific features in CLAUDE.md for Cursor (WARNING)
-        let is_claude_md = matches!(filename, "CLAUDE.md" | "CLAUDE.local.md");
-        if config.is_rule_enabled("XP-008") && is_claude_md && config.target() == TargetTool::Cursor
-        {
-            let claude_features = find_claude_specific_features(content);
-            for feature in claude_features {
+            for feature in find_claude_specific_features(content)
+                .into_iter()
+                .filter(|feature| feature.kind == FeatureKind::AtReference)
+            {
                 diagnostics.push(
                     Diagnostic::warning(
                         path.to_path_buf(),
                         feature.line,
                         feature.column,
                         "XP-008",
-                        t!(
-                            "rules.xp_008.message",
-                            feature = feature.feature.as_str(),
-                            description = feature.description.as_str()
-                        ),
+                        t!("rules.xp_008.message", reference = feature.text.as_str()),
                     )
                     .with_suggestion(t!("rules.xp_008.suggestion")),
                 );
@@ -186,935 +214,308 @@ mod tests {
     use super::*;
     use crate::config::{LintConfig, TargetTool};
     use crate::diagnostics::DiagnosticLevel;
+    use crate::fs::MockFileSystem;
+    use std::sync::Arc;
 
-    // ===== XP-001: Claude-Specific Features in AGENTS.md =====
-
-    #[test]
-    fn test_xp_001_hooks_in_agents_md() {
-        let content = r#"# Agent Config
-
-- type: PreToolExecution
-  command: echo "test"
-"#;
-        let validator = CrossPlatformValidator;
-        let diagnostics =
-            validator.validate(Path::new("AGENTS.md"), content, &LintConfig::default());
-
-        let xp_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-001").collect();
-        assert_eq!(xp_001.len(), 1);
-        assert_eq!(xp_001[0].level, DiagnosticLevel::Info);
-        assert!(xp_001[0].message.contains("hooks"));
+    fn run(path: &str, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+        CrossPlatformValidator.validate(Path::new(path), content, config)
     }
 
-    #[test]
-    fn test_xp_001_context_fork_in_agents_md() {
-        let content = r#"---
-name: test
-context: fork
----
-Body"#;
-        let validator = CrossPlatformValidator;
-        let diagnostics =
-            validator.validate(Path::new("AGENTS.md"), content, &LintConfig::default());
-
-        let xp_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-001").collect();
-        assert!(xp_001.iter().any(|d| d.message.contains("context:fork")));
+    fn rules<'a>(diagnostics: &'a [Diagnostic], rule: &str) -> Vec<&'a Diagnostic> {
+        diagnostics.iter().filter(|d| d.rule == rule).collect()
     }
 
-    #[test]
-    fn test_xp_001_allowed_in_claude_md() {
-        // Same content but in CLAUDE.md should NOT trigger XP-001
-        let content = r#"---
-name: test
-context: fork
-agent: Explore
-allowed-tools: Read Write
----
-Body"#;
-        let validator = CrossPlatformValidator;
-        let diagnostics =
-            validator.validate(Path::new("CLAUDE.md"), content, &LintConfig::default());
-
-        let xp_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-001").collect();
-        assert!(
-            xp_001.is_empty(),
-            "XP-001 should not fire for CLAUDE.md files"
-        );
+    fn with_tools(tools: &[&str]) -> LintConfig {
+        let mut config = LintConfig::default();
+        config.set_tools(tools.iter().map(|t| t.to_string()).collect());
+        config
     }
 
-    #[test]
-    fn test_xp_001_allowed_in_claude_local_md() {
-        // CLAUDE.local.md should NOT trigger XP-001 (it's a Claude-specific file)
-        let content = r#"---
-name: test
-context: fork
-agent: Explore
----
-Body"#;
-        let validator = CrossPlatformValidator;
-        let diagnostics = validator.validate(
-            Path::new("CLAUDE.local.md"),
-            content,
-            &LintConfig::default(),
-        );
-
-        let xp_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-001").collect();
-        assert!(
-            xp_001.is_empty(),
-            "XP-001 should not fire for CLAUDE.local.md files"
-        );
-    }
+    // ===== XP-001 =====
 
     #[test]
-    fn test_xp_001_agents_local_md() {
-        // AGENTS.local.md SHOULD trigger XP-001 for Claude-specific features
-        let content = r#"---
-name: test
-context: fork
-agent: Explore
----
-Body"#;
-        let validator = CrossPlatformValidator;
-        let diagnostics = validator.validate(
-            Path::new("AGENTS.local.md"),
-            content,
-            &LintConfig::default(),
-        );
-
-        let xp_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-001").collect();
-        assert!(
-            !xp_001.is_empty(),
-            "XP-001 should fire for Claude-specific features in AGENTS.local.md"
-        );
-    }
-
-    #[test]
-    fn test_xp_001_agents_override_md() {
-        // AGENTS.override.md SHOULD trigger XP-001 for Claude-specific features
-        let content = r#"# Config
-- type: PreToolExecution
-  command: echo "test"
-"#;
-        let validator = CrossPlatformValidator;
-        let diagnostics = validator.validate(
-            Path::new("AGENTS.override.md"),
-            content,
-            &LintConfig::default(),
-        );
-
-        let xp_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-001").collect();
-        assert!(
-            !xp_001.is_empty(),
-            "XP-001 should fire for hooks in AGENTS.override.md"
-        );
-    }
-
-    #[test]
-    fn test_xp_002_agents_variants() {
-        // AGENTS variants should get XP-002 for structure issues
-        let content = "Just plain text without any markdown headers.";
-        let validator = CrossPlatformValidator;
-        let variants = ["AGENTS.local.md", "AGENTS.override.md"];
-
-        for variant in variants {
-            let diagnostics =
-                validator.validate(Path::new(variant), content, &LintConfig::default());
-
-            let xp_002: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-002").collect();
-            assert_eq!(
-                xp_002.len(),
-                1,
-                "XP-002 should fire for {} without headers",
-                variant
+    fn test_xp_001_inert_config_in_agents_md_is_info() {
+        for feature in [
+            "context: fork",
+            "agent: reviewer",
+            "allowed-tools: Read Write",
+            "- type: PreToolUse",
+            "- event: Stop",
+        ] {
+            let content = format!("# Project\n\n{feature}\n");
+            let diagnostics = run("AGENTS.md", &content, &LintConfig::default());
+            let xp_001 = rules(&diagnostics, "XP-001");
+            assert_eq!(xp_001.len(), 1, "{feature}");
+            assert_eq!(xp_001[0].level, DiagnosticLevel::Info);
+            // The old message called these "Claude-specific" for every reader;
+            // no tool, Claude Code included, reads them from AGENTS.md.
+            assert!(
+                xp_001[0].message.contains("instruction file"),
+                "{}",
+                xp_001[0].message
             );
         }
     }
 
     #[test]
-    fn test_xp_001_clean_agents_md() {
-        let content = r#"# Project Guidelines
-
-Follow the coding style guide.
-
-## Commands
-- npm run build
-- npm run test
-"#;
-        let validator = CrossPlatformValidator;
-        let diagnostics =
-            validator.validate(Path::new("AGENTS.md"), content, &LintConfig::default());
-
-        let xp_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-001").collect();
-        assert!(xp_001.is_empty());
+    fn test_xp_001_variants_and_claude_files() {
+        let content = "# Config\n\ncontext: fork\n";
+        for name in ["AGENTS.local.md", "AGENTS.override.md"] {
+            assert_eq!(
+                rules(&run(name, content, &LintConfig::default()), "XP-001").len(),
+                1,
+                "{name}"
+            );
+        }
+        for name in ["CLAUDE.md", "CLAUDE.local.md"] {
+            assert!(
+                rules(&run(name, content, &LintConfig::default()), "XP-001").is_empty(),
+                "{name}"
+            );
+        }
     }
 
     #[test]
-    fn test_xp_001_multiple_features() {
-        let content = r#"---
-name: test
-context: fork
-agent: Plan
-allowed-tools: Read Write
----
+    fn test_xp_001_at_reference_depends_on_selected_tools() {
+        let content = "# Project\n\nSee @docs/coding.md for coding guidelines\n";
+        let unscoped = run("AGENTS.md", content, &LintConfig::default());
+        let xp_001 = rules(&unscoped, "XP-001");
+        assert_eq!(xp_001.len(), 1);
+        assert!(xp_001[0].message.contains("Codex, Cursor and OpenCode"));
 
-# Config
-- type: Stop
-  command: echo
-"#;
-        let validator = CrossPlatformValidator;
-        let diagnostics =
-            validator.validate(Path::new("AGENTS.md"), content, &LintConfig::default());
-
-        let xp_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-001").collect();
-        // Should detect multiple Claude-specific features
-        assert!(
-            xp_001.len() >= 3,
-            "Expected at least 3 XP-001 errors, got {}",
-            xp_001.len()
+        // Amp documents @-mentions in AGENTS.md; so do Copilot CLI and
+        // Claude Code. With only those tools selected, nothing is reported.
+        for tools in [&["amp"][..], &["github-copilot", "claude-code"][..]] {
+            assert!(
+                rules(&run("AGENTS.md", content, &with_tools(tools)), "XP-001").is_empty(),
+                "{tools:?}"
+            );
+        }
+        assert_eq!(
+            rules(
+                &run("AGENTS.md", content, &with_tools(&["amp", "codex"])),
+                "XP-001"
+            )
+            .len(),
+            1
         );
     }
 
-    // ===== XP-002: AGENTS.md Markdown Structure =====
+    #[test]
+    fn test_xp_001_guarded_sections() {
+        let guarded = "# AGENTS.md\n\n## Claude Code Specific\n- type: Stop\n  command: cleanup\n\n## General\nagent: some-agent\n";
+        let xp_001 = run("AGENTS.md", guarded, &LintConfig::default());
+        let xp_001 = rules(&xp_001, "XP-001");
+        assert_eq!(xp_001.len(), 1);
+        assert!(xp_001[0].message.contains("agent"));
+    }
+
+    // ===== XP-002 =====
 
     #[test]
-    fn test_xp_002_no_headers() {
-        let content = "Just plain text without any markdown headers.";
-        let validator = CrossPlatformValidator;
-        let diagnostics =
-            validator.validate(Path::new("AGENTS.md"), content, &LintConfig::default());
-
-        let xp_002: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-002").collect();
+    fn test_xp_002_skipped_level_is_info_and_no_headers_is_not_reported() {
+        let skipped = run(
+            "AGENTS.md",
+            "# Main Title\n\n#### Skipped to h4\n",
+            &LintConfig::default(),
+        );
+        let xp_002 = rules(&skipped, "XP-002");
         assert_eq!(xp_002.len(), 1);
-        assert_eq!(xp_002[0].level, DiagnosticLevel::Warning);
-        assert!(xp_002[0].message.contains("No markdown headers"));
+        assert_eq!(xp_002[0].level, DiagnosticLevel::Info);
+        // AGM-002 reports a file without headings; XP-002 no longer repeats it.
+        assert!(
+            rules(
+                &run("AGENTS.md", "Just plain text.", &LintConfig::default()),
+                "XP-002"
+            )
+            .is_empty()
+        );
+        assert!(
+            rules(
+                &run("CLAUDE.md", "# A\n\n### B\n", &LintConfig::default()),
+                "XP-002"
+            )
+            .is_empty()
+        );
+    }
+
+    // ===== XP-003 =====
+
+    #[test]
+    fn test_xp_003_reports_user_home_paths() {
+        let content = "# Project\n\n- Path: /Users/lunelson/Code/project/src\n- Windows: C:\\Users\\carol\\app\n";
+        let diagnostics = run("AGENTS.md", content, &LintConfig::default());
+        let xp_003 = rules(&diagnostics, "XP-003");
+        assert_eq!(xp_003.len(), 2);
+        assert_eq!((xp_003[0].line, xp_003[0].column), (3, 9));
+        assert!(xp_003[0].message.contains("author's machine"));
+        assert_eq!(
+            rules(&run("CLAUDE.md", content, &LintConfig::default()), "XP-003").len(),
+            2
+        );
+    }
+
+    /// XP-003 used to report every mention of a tool directory (1,175 of its
+    /// 1,183 findings on the real-config corpus). Vendors document those
+    /// paths (Cursor hooks use ".cursor/hooks/format.sh", Copilot reads
+    /// ".github/copilot/settings.json"), so naming them is not a defect.
+    #[test]
+    fn test_xp_003_tool_directories_and_user_relative_paths_are_fine() {
+        let content = "# Project\n\nCheck .claude/settings.json, .cursor/rules, ~/.config/app/x, ~/Library/Foo and ./src/main.rs.\n";
+        assert!(rules(&run("AGENTS.md", content, &LintConfig::default()), "XP-003").is_empty());
     }
 
     #[test]
-    fn test_xp_002_skipped_header_level() {
-        let content = r#"# Main Title
+    fn test_xp_003_skips_generic_markdown_and_placeholders() {
+        let content = "Install into /Users/alice/tools.\n";
+        assert!(
+            rules(
+                &run("notes/design.md", content, &LintConfig::default()),
+                "XP-003"
+            )
+            .is_empty()
+        );
+        let placeholder = "# P\n\nUse /home/user/project or /Users/<name>/x.\n";
+        assert!(
+            rules(
+                &run("AGENTS.md", placeholder, &LintConfig::default()),
+                "XP-003"
+            )
+            .is_empty()
+        );
+    }
 
-#### Skipped to h4
-"#;
-        let validator = CrossPlatformValidator;
-        let diagnostics =
-            validator.validate(Path::new("AGENTS.md"), content, &LintConfig::default());
+    /// The coordinator's case: with `tools = ["kiro"]`, Windsurf's AGENTS.md
+    /// limit must not fire. (Codex's limits, XP-007 and XP-009, are retired.)
+    #[test]
+    fn test_agm_003_not_enabled_for_kiro_only() {
+        let config = with_tools(&["kiro"]);
+        assert!(!config.is_rule_enabled("AGM-003"));
+        assert!(with_tools(&["windsurf"]).is_rule_enabled("AGM-003"));
+    }
 
-        let xp_002: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-002").collect();
-        assert_eq!(xp_002.len(), 1);
-        assert!(xp_002[0].message.contains("skipped"));
+    // ===== XP-008 =====
+
+    #[test]
+    fn test_xp_008_reports_imports_when_cursor_selected() {
+        let content = "# Project\n\nSee @docs/style.md.\n\ncontext: fork\n";
+        for config in [with_tools(&["cursor", "claude-code"]), {
+            let mut c = LintConfig::default();
+            c.set_target(TargetTool::Cursor);
+            c
+        }] {
+            let diagnostics = run("CLAUDE.md", content, &config);
+            let xp_008 = rules(&diagnostics, "XP-008");
+            assert_eq!(xp_008.len(), 1, "{diagnostics:?}");
+            assert_eq!(xp_008[0].level, DiagnosticLevel::Warning);
+            assert!(
+                xp_008[0].message.contains("@docs/style.md"),
+                "{}",
+                xp_008[0].message
+            );
+        }
     }
 
     #[test]
-    fn test_xp_002_valid_structure() {
-        let content = r#"# Project Memory
+    fn test_xp_008_scope() {
+        let content = "# Project\n\nSee @docs/style.md.\n";
+        // Not for Claude-only runs, AGENTS.md, or unscoped runs without Cursor.
+        assert!(
+            rules(
+                &run("CLAUDE.md", content, &with_tools(&["claude-code"])),
+                "XP-008"
+            )
+            .is_empty()
+        );
+        assert!(
+            rules(
+                &run("AGENTS.md", content, &with_tools(&["cursor"])),
+                "XP-008"
+            )
+            .is_empty()
+        );
+        assert!(rules(&run("CLAUDE.md", content, &LintConfig::default()), "XP-008").is_empty());
 
-## Build Commands
-
-### Testing
-
-Run tests with npm test.
-"#;
-        let validator = CrossPlatformValidator;
-        let diagnostics =
-            validator.validate(Path::new("AGENTS.md"), content, &LintConfig::default());
-
-        let xp_002: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-002").collect();
-        assert!(xp_002.is_empty());
+        // Unscoped, but the project has a .cursor directory.
+        let fs = MockFileSystem::new();
+        fs.add_dir("/repo");
+        fs.add_dir("/repo/.cursor");
+        let mut config = LintConfig::default();
+        config.set_fs(Arc::new(fs));
+        config.set_root_dir(std::path::PathBuf::from("/repo"));
+        assert_eq!(
+            rules(&run("/repo/CLAUDE.md", content, &config), "XP-008").len(),
+            1
+        );
     }
 
     #[test]
-    fn test_xp_002_not_checked_for_claude_md() {
-        // XP-002 is specifically for AGENTS.md
-        let content = "Plain text without headers.";
-        let validator = CrossPlatformValidator;
-        let diagnostics =
-            validator.validate(Path::new("CLAUDE.md"), content, &LintConfig::default());
-
-        let xp_002: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-002").collect();
-        assert!(xp_002.is_empty(), "XP-002 should not fire for CLAUDE.md");
+    fn test_xp_008_respects_claude_section_guards() {
+        let content =
+            "# Project\n\n## Claude Code\n\n@docs/claude-only.md\n\n## General\n\nKeep code clean.";
+        assert!(
+            rules(
+                &run("CLAUDE.md", content, &with_tools(&["cursor"])),
+                "XP-008"
+            )
+            .is_empty()
+        );
     }
 
-    // ===== XP-003: Hard-Coded Platform Paths =====
-
-    #[test]
-    fn test_xp_003_claude_path() {
-        let content = "Check the config at .claude/settings.json";
-        let validator = CrossPlatformValidator;
-        let diagnostics =
-            validator.validate(Path::new("AGENTS.md"), content, &LintConfig::default());
-
-        let xp_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-003").collect();
-        assert_eq!(xp_003.len(), 1);
-        assert_eq!(xp_003[0].level, DiagnosticLevel::Warning);
-        assert!(xp_003[0].message.contains("Claude Code"));
-    }
-
-    #[test]
-    fn test_xp_003_multiple_platforms() {
-        let content = r#"
-# Platform Configs
-- Claude: .claude/settings.json
-- Cursor: .cursor/rules/
-- OpenCode: .opencode/config.yaml
-"#;
-        let validator = CrossPlatformValidator;
-        let diagnostics =
-            validator.validate(Path::new("AGENTS.md"), content, &LintConfig::default());
-
-        let xp_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-003").collect();
-        assert_eq!(xp_003.len(), 3);
-    }
-
-    #[test]
-    fn test_xp_003_no_platform_paths() {
-        let content = r#"# Configuration
-
-Use environment variables for all platform-specific settings.
-"#;
-        let validator = CrossPlatformValidator;
-        let diagnostics =
-            validator.validate(Path::new("AGENTS.md"), content, &LintConfig::default());
-
-        let xp_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-003").collect();
-        assert!(xp_003.is_empty());
-    }
-
-    #[test]
-    fn test_xp_003_machine_paths_only_in_agent_files() {
-        let content = "Data lives in ~/.local/share/tool/ and /home/bob/cache/; settings in .claude/settings.json";
-        let validator = CrossPlatformValidator;
-        let rules_for = |path: &str| {
-            validator
-                .validate(Path::new(path), content, &LintConfig::default())
-                .into_iter()
-                .filter(|d| d.rule == "XP-003")
-                .map(|d| d.message)
-                .collect::<Vec<_>>()
-        };
-
-        assert_eq!(rules_for("CLAUDE.md").len(), 3);
-        let generic = rules_for("notes/design.md");
-        assert_eq!(generic.len(), 1, "{generic:?}");
-        assert!(generic[0].contains(".claude/"), "{generic:?}");
-    }
-
-    #[test]
-    fn test_xp_003_applies_to_all_files() {
-        // XP-003 should check all config files, not just AGENTS.md
-        let content = "Config at .claude/settings.json";
-        let validator = CrossPlatformValidator;
-
-        // Test CLAUDE.md
-        let diagnostics =
-            validator.validate(Path::new("CLAUDE.md"), content, &LintConfig::default());
-        let xp_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-003").collect();
-        assert_eq!(xp_003.len(), 1, "XP-003 should fire for CLAUDE.md too");
-
-        // Test generic markdown (non-excluded file)
-        let diagnostics =
-            validator.validate(Path::new("notes/setup.md"), content, &LintConfig::default());
-        let xp_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-003").collect();
-        assert_eq!(xp_003.len(), 1, "XP-003 should fire for generic markdown");
-    }
-
-    // ===== Config Integration Tests =====
+    // ===== Config integration =====
 
     #[test]
     fn test_config_disabled_cross_platform_category() {
         let mut config = LintConfig::default();
         config.rules_mut().cross_platform = false;
-
-        let content = r#"---
-context: fork
----
-Check .claude/settings.json"#;
-
-        let validator = CrossPlatformValidator;
-        let diagnostics = validator.validate(Path::new("AGENTS.md"), content, &config);
-
-        // All XP-* rules should be disabled
-        let xp_rules: Vec<_> = diagnostics
-            .iter()
-            .filter(|d| d.rule.starts_with("XP-"))
-            .collect();
-        assert!(xp_rules.is_empty());
+        let content = "context: fork\n/Users/alice/x\n";
+        let diagnostics = run("AGENTS.md", content, &config);
+        assert!(diagnostics.iter().all(|d| !d.rule.starts_with("XP-")));
     }
 
     #[test]
     fn test_config_disabled_specific_rule() {
         let mut config = LintConfig::default();
         config.rules_mut().disabled_rules = vec!["XP-001".to_string()];
-
-        let content = r#"---
-context: fork
-agent: Explore
----
-Body"#;
-
-        let validator = CrossPlatformValidator;
-        let diagnostics = validator.validate(Path::new("AGENTS.md"), content, &config);
-
-        // XP-001 should not fire when specifically disabled
-        let xp_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-001").collect();
-        assert!(xp_001.is_empty());
-
-        // XP-002 and XP-003 should still work
+        let diagnostics = run("AGENTS.md", "# P\n\ncontext: fork\n", &config);
+        assert!(rules(&diagnostics, "XP-001").is_empty());
         assert!(config.is_rule_enabled("XP-002"));
         assert!(config.is_rule_enabled("XP-003"));
     }
 
     #[test]
-    fn test_xp_rules_not_target_specific() {
-        // XP-* rules should apply to all targets (not just Claude Code)
-        let mut config = LintConfig::default();
-        config.set_target(TargetTool::Cursor);
-
-        // Cursor target should still have XP-* rules enabled
-        assert!(config.is_rule_enabled("XP-001"));
-        assert!(config.is_rule_enabled("XP-002"));
-        assert!(config.is_rule_enabled("XP-003"));
-        assert!(config.is_rule_enabled("XP-008"));
-    }
-
-    #[test]
-    fn test_combined_issues() {
-        // Test that all three rules can fire together
-        let content = r#"context: fork
-Check .claude/ and .cursor/ paths"#;
-
-        let validator = CrossPlatformValidator;
-        let diagnostics =
-            validator.validate(Path::new("AGENTS.md"), content, &LintConfig::default());
-
-        // Should have:
-        // - XP-001 for context:fork
-        // - XP-002 for no headers
-        // - XP-003 for .claude/ and .cursor/
-        let xp_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-001").collect();
-        let xp_002: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-002").collect();
-        let xp_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-003").collect();
-
-        assert!(!xp_001.is_empty(), "Expected XP-001 errors");
-        assert!(!xp_002.is_empty(), "Expected XP-002 warnings");
-        assert_eq!(xp_003.len(), 2, "Expected 2 XP-003 warnings");
-    }
-
-    // ===== XP-001: Section Guard Integration Tests =====
-
-    #[test]
-    fn test_xp_001_guarded_section_no_errors() {
-        let content = r#"# Project AGENTS.md
-
-## Overview
-This project uses various tools.
-
-## Claude Code Specific
-- type: PreToolExecution
-  command: echo "lint"
-
-context: fork
-agent: security-reviewer
-allowed-tools: Read Write Bash
-"#;
-        let validator = CrossPlatformValidator;
-        let diagnostics =
-            validator.validate(Path::new("AGENTS.md"), content, &LintConfig::default());
-
-        let xp_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-001").collect();
-        assert!(
-            xp_001.is_empty(),
-            "XP-001 should not fire for features in Claude-specific section, got {} errors",
-            xp_001.len()
-        );
-    }
-
-    #[test]
-    fn test_xp_001_mixed_guarded_unguarded() {
-        let content = r#"# AGENTS.md
-
-## Claude Code Specific
-- type: Stop
-  command: cleanup
-
-## General Configuration
-agent: some-agent
-"#;
-        let validator = CrossPlatformValidator;
-        let diagnostics =
-            validator.validate(Path::new("AGENTS.md"), content, &LintConfig::default());
-
-        let xp_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-001").collect();
-
-        assert_eq!(
-            xp_001.len(),
-            1,
-            "Expected 1 XP-001 error for unguarded agent field"
-        );
-        assert!(
-            xp_001[0].message.contains("agent"),
-            "Error should be for 'agent' feature"
-        );
-    }
-
-    #[test]
-    fn test_xp_001_guard_resets_at_new_section() {
-        let content = r#"# Project
-
-## Claude Only
-- type: Notification
-  command: notify
-
-## Build Commands
-- type: PostToolExecution
-  command: build-check
-"#;
-        let validator = CrossPlatformValidator;
-        let diagnostics =
-            validator.validate(Path::new("AGENTS.md"), content, &LintConfig::default());
-
-        let xp_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-001").collect();
-
-        assert_eq!(
-            xp_001.len(),
-            1,
-            "Expected 1 XP-001 error for hooks outside Claude section"
-        );
-    }
-
-    // ===== Additional XP rule tests =====
-
-    #[test]
-    fn test_xp_001_claude_code_features() {
-        // Test all known Claude Code-specific features
-        let features = [
-            "context: fork",
-            "agent: reviewer",
-            "allowed-tools: Read Write",
-            "- type: PreToolExecution",
-        ];
-
-        for feature in features {
-            let content = format!("# Project\n\n{}", feature);
-            let validator = CrossPlatformValidator;
-            let diagnostics =
-                validator.validate(Path::new("AGENTS.md"), &content, &LintConfig::default());
-
-            let xp_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-001").collect();
-            assert!(
-                !xp_001.is_empty(),
-                "Feature '{}' should trigger XP-001 in AGENTS.md",
-                feature
-            );
-        }
-    }
-
-    #[test]
-    fn test_xp_001_allowed_in_claude_local() {
-        // Claude-specific features are allowed in CLAUDE.local.md
-        let content = "# Project\n\ncontext: fork\nagent: reviewer";
-        let validator = CrossPlatformValidator;
-        let diagnostics = validator.validate(
-            Path::new("CLAUDE.local.md"),
-            content,
+    fn test_tool_in_scope_uses_tools_target_and_markers() {
+        assert!(tool_in_scope(
+            Path::new("AGENTS.md"),
+            &with_tools(&["Windsurf"]),
+            "windsurf",
+            &[]
+        ));
+        assert!(!tool_in_scope(
+            Path::new("AGENTS.md"),
+            &with_tools(&["cursor"]),
+            "windsurf",
+            &[".windsurf"]
+        ));
+        assert!(tool_in_scope(
+            Path::new("AGENTS.md"),
+            &with_tools(&["copilot"]),
+            "github-copilot",
+            &[]
+        ));
+        let mut codex = LintConfig::default();
+        codex.set_target(TargetTool::Codex);
+        assert!(!tool_in_scope(
+            Path::new("AGENTS.md"),
+            &codex,
+            "windsurf",
+            &[".windsurf"]
+        ));
+        assert!(!tool_in_scope(
+            Path::new("AGENTS.md"),
             &LintConfig::default(),
-        );
-
-        let xp_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-001").collect();
-        assert!(
-            xp_001.is_empty(),
-            "CLAUDE.local.md should allow Claude features"
-        );
-    }
-
-    #[test]
-    fn test_xp_002_valid_markdown_structure() {
-        let content = r#"# Project Name
-
-## Overview
-
-Description here.
-
-## Tech Stack
-
-- Rust
-- TypeScript
-"#;
-        let validator = CrossPlatformValidator;
-        let diagnostics =
-            validator.validate(Path::new("AGENTS.md"), content, &LintConfig::default());
-
-        let xp_002: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-002").collect();
-        assert!(xp_002.is_empty());
-    }
-
-    #[test]
-    fn test_xp_003_dot_claude_dir_path() {
-        // Test with .claude directory path (without tilde)
-        let content = "# Project\n\nCheck the .claude/settings.json file.";
-        let validator = CrossPlatformValidator;
-        let diagnostics =
-            validator.validate(Path::new("AGENTS.md"), content, &LintConfig::default());
-
-        let xp_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-003").collect();
-        // .claude/ path should trigger XP-003
-        assert!(!xp_003.is_empty());
-    }
-
-    #[test]
-    fn test_xp_003_dot_cursor_dir_path() {
-        let content = "# Project\n\nSee .cursor/rules for configuration.";
-        let validator = CrossPlatformValidator;
-        let diagnostics =
-            validator.validate(Path::new("AGENTS.md"), content, &LintConfig::default());
-
-        let xp_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-003").collect();
-        // .cursor/ path should trigger XP-003
-        assert!(!xp_003.is_empty());
-    }
-
-    #[test]
-    fn test_xp_003_relative_paths_ok() {
-        let content = "# Project\n\nSee ./src/main.rs and ../docs/README.md.";
-        let validator = CrossPlatformValidator;
-        let diagnostics =
-            validator.validate(Path::new("AGENTS.md"), content, &LintConfig::default());
-
-        let xp_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-003").collect();
-        assert!(xp_003.is_empty(), "Relative paths should be OK");
-    }
-
-    #[test]
-    fn test_xp_003_absolute_user_paths() {
-        let content = "# Project\n\n- Path: /Users/lunelson/Code/project/src\n- Linux: /home/user/.config/app";
-        let validator = CrossPlatformValidator;
-        let diagnostics =
-            validator.validate(Path::new("AGENTS.md"), content, &LintConfig::default());
-
-        let xp_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-003").collect();
-        assert_eq!(
-            xp_003.len(),
-            2,
-            "Should detect /Users/ and /home/ absolute paths"
-        );
-    }
-
-    #[test]
-    fn test_xp_003_macos_library_path() {
-        let content = "# Config\n\nChrome profile: ~/Library/Application Support/Google/Chrome";
-        let validator = CrossPlatformValidator;
-        let diagnostics =
-            validator.validate(Path::new("AGENTS.md"), content, &LintConfig::default());
-
-        let xp_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-003").collect();
-        assert_eq!(
-            xp_003.len(),
-            1,
-            "Should detect ~/Library/ as macOS-specific"
-        );
-    }
-
-    #[test]
-    fn test_xp_003_tilde_hidden_dir() {
-        let content = "# Config\n\nSee ~/.config/my-tool/config.yaml for settings";
-        let validator = CrossPlatformValidator;
-        let diagnostics =
-            validator.validate(Path::new("AGENTS.md"), content, &LintConfig::default());
-
-        let xp_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-003").collect();
-        assert_eq!(
-            xp_003.len(),
-            1,
-            "Should detect ~/.config/ as user-specific path"
-        );
-    }
-
-    #[test]
-    fn test_xp_001_at_import_in_agents_md() {
-        let content = "# Project\n\nSee @.config/agents/rules/coding.md for coding guidelines";
-        let validator = CrossPlatformValidator;
-        let diagnostics =
-            validator.validate(Path::new("AGENTS.md"), content, &LintConfig::default());
-
-        let xp_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-001").collect();
-        assert!(
-            xp_001.iter().any(|d| d.message.contains("@import")),
-            "Should detect @file import as Claude-specific. Got: {:?}",
-            xp_001.iter().map(|d| &d.message).collect::<Vec<_>>()
-        );
-    }
-
-    #[test]
-    fn test_xp_001_guarded_with_claude_code_section() {
-        let content = r#"# Project
-
-## Claude Code
-
-Use context: fork for subagents.
-"#;
-        let validator = CrossPlatformValidator;
-        let diagnostics =
-            validator.validate(Path::new("AGENTS.md"), content, &LintConfig::default());
-
-        let xp_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-001").collect();
-        assert!(
-            xp_001.is_empty(),
-            "Guarded features should not trigger XP-001"
-        );
-    }
-
-    // ===== XP-008: Claude-specific Features in CLAUDE.md for Cursor =====
-
-    #[test]
-    fn test_xp_008_fires_on_claude_md_with_cursor_target() {
-        let validator = CrossPlatformValidator;
-        let content = "# Project\n\ncontext: fork\nagent: reviewer\nallowed-tools: Read Write";
-        let mut config = LintConfig::default();
-        config.set_target(TargetTool::Cursor);
-        let path = Path::new("CLAUDE.md");
-        let diagnostics = validator.validate(path, content, &config);
-        let xp_008: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-008").collect();
-        // Content has 3 Claude-specific features: context:fork, agent, allowed-tools
-        assert_eq!(
-            xp_008.len(),
-            3,
-            "XP-008 should fire once per Claude-specific feature (context:fork, agent, allowed-tools)"
-        );
-        assert!(
-            xp_008.iter().all(|d| d.level == DiagnosticLevel::Warning),
-            "XP-008 should emit warnings"
-        );
-        // Verify feature names appear in messages
-        let messages: Vec<&str> = xp_008.iter().map(|d| d.message.as_str()).collect();
-        assert!(
-            messages.iter().any(|m| m.contains("context:fork")),
-            "Should mention context:fork feature"
-        );
-        assert!(
-            messages.iter().any(|m| m.contains("agent")),
-            "Should mention agent feature"
-        );
-        assert!(
-            messages.iter().any(|m| m.contains("allowed-tools")),
-            "Should mention allowed-tools feature"
-        );
-    }
-
-    #[test]
-    fn test_xp_008_does_not_fire_with_claude_code_target() {
-        let validator = CrossPlatformValidator;
-        let content = "# Project\n\ncontext: fork\nagent: reviewer";
-        let mut config = LintConfig::default();
-        config.set_target(TargetTool::ClaudeCode);
-        let path = Path::new("CLAUDE.md");
-        let diagnostics = validator.validate(path, content, &config);
-        let xp_008: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-008").collect();
-        assert!(
-            xp_008.is_empty(),
-            "XP-008 should not fire when target is ClaudeCode"
-        );
-    }
-
-    #[test]
-    fn test_xp_008_does_not_fire_on_agents_md() {
-        let validator = CrossPlatformValidator;
-        let content = "# Project\n\ncontext: fork\nagent: reviewer";
-        let mut config = LintConfig::default();
-        config.set_target(TargetTool::Cursor);
-        let path = Path::new("AGENTS.md");
-        let diagnostics = validator.validate(path, content, &config);
-        let xp_008: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-008").collect();
-        assert!(xp_008.is_empty(), "XP-008 should not fire on AGENTS.md");
-    }
-
-    #[test]
-    fn test_xp_008_respects_claude_section_guards() {
-        let validator = CrossPlatformValidator;
-        let content = "# Project\n\n## Claude Code\n\ncontext: fork\nagent: reviewer\n\n## General\n\nKeep code clean.";
-        let mut config = LintConfig::default();
-        config.set_target(TargetTool::Cursor);
-        let path = Path::new("CLAUDE.md");
-        let diagnostics = validator.validate(path, content, &config);
-        let xp_008: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-008").collect();
-        assert!(
-            xp_008.is_empty(),
-            "XP-008 should respect Claude-section guards"
-        );
-    }
-
-    #[test]
-    fn test_xp_008_fires_on_claude_local_md() {
-        let validator = CrossPlatformValidator;
-        let content = "# Project\n\ncontext: fork\nagent: reviewer";
-        let mut config = LintConfig::default();
-        config.set_target(TargetTool::Cursor);
-        let path = Path::new("CLAUDE.local.md");
-        let diagnostics = validator.validate(path, content, &config);
-        let xp_008: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-008").collect();
-        assert!(
-            !xp_008.is_empty(),
-            "XP-008 should fire on CLAUDE.local.md with Cursor target"
-        );
-    }
-
-    #[test]
-    fn test_xp_008_does_not_fire_with_generic_target() {
-        let validator = CrossPlatformValidator;
-        let content = "# Project\n\ncontext: fork\nagent: reviewer";
-        let config = LintConfig::default();
-        let path = Path::new("CLAUDE.md");
-        let diagnostics = validator.validate(path, content, &config);
-        let xp_008: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-008").collect();
-        assert!(
-            xp_008.is_empty(),
-            "XP-008 should not fire with Generic target"
-        );
-    }
-
-    #[test]
-    fn test_xp_008_mixed_guarded_and_unguarded() {
-        let validator = CrossPlatformValidator;
-        // "agent: reviewer" is inside the Claude Code guard, "context: fork" is outside
-        let content = "# Project\n\n## Claude Code\n\nagent: reviewer\n\n## General\n\ncontext: fork\nallowed-tools: Read Write";
-        let mut config = LintConfig::default();
-        config.set_target(TargetTool::Cursor);
-        let path = Path::new("CLAUDE.md");
-        let diagnostics = validator.validate(path, content, &config);
-        let xp_008: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-008").collect();
-        // Only the unguarded features should produce diagnostics
-        assert_eq!(
-            xp_008.len(),
-            2,
-            "Only unguarded features (context:fork, allowed-tools) should produce diagnostics"
-        );
-        let messages: Vec<&str> = xp_008.iter().map(|d| d.message.as_str()).collect();
-        assert!(
-            messages.iter().any(|m| m.contains("context:fork")),
-            "Should flag unguarded context:fork"
-        );
-        assert!(
-            messages.iter().any(|m| m.contains("allowed-tools")),
-            "Should flag unguarded allowed-tools"
-        );
-        assert!(
-            !messages.iter().any(|m| m.contains("agent")),
-            "Should not flag guarded agent field"
-        );
-    }
-
-    #[test]
-    fn test_xp_008_does_not_fire_with_codex_target() {
-        let validator = CrossPlatformValidator;
-        let content = "# Project\n\ncontext: fork\nagent: reviewer";
-        let mut config = LintConfig::default();
-        config.set_target(TargetTool::Codex);
-        let path = Path::new("CLAUDE.md");
-        let diagnostics = validator.validate(path, content, &config);
-        let xp_008: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-008").collect();
-        assert!(
-            xp_008.is_empty(),
-            "XP-008 should not fire when target is Codex"
-        );
-    }
-
-    #[test]
-    fn test_xp_008_reports_correct_line_numbers() {
-        let validator = CrossPlatformValidator;
-        // Place "context: fork" at line 5 (1-indexed)
-        let content = "# Project\n\nSome intro text.\n\ncontext: fork\n\nMore text.";
-        let mut config = LintConfig::default();
-        config.set_target(TargetTool::Cursor);
-        let path = Path::new("CLAUDE.md");
-        let diagnostics = validator.validate(path, content, &config);
-        let xp_008: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-008").collect();
-        assert_eq!(xp_008.len(), 1, "Should find exactly one feature");
-        assert_eq!(xp_008[0].line, 5, "context: fork is on line 5 (1-indexed)");
-    }
-
-    #[test]
-    fn test_all_xp_rules_can_be_disabled() {
-        let rules = ["XP-001", "XP-002", "XP-003", "XP-007", "XP-008"];
-
-        for rule in rules {
-            let mut config = LintConfig::default();
-            config.rules_mut().disabled_rules = vec![rule.to_string()];
-
-            // Content that could trigger each rule (XP-007 needs >32KB)
-            let mut content = "# Project\ncontext: fork\n/etc/hosts\n".to_string();
-            if rule == "XP-007" {
-                content = "a".repeat(33000);
-            }
-
-            // XP-008 requires Cursor target and CLAUDE.md path
-            let path = if rule == "XP-008" {
-                config.set_target(TargetTool::Cursor);
-                Path::new("CLAUDE.md")
-            } else {
-                Path::new("AGENTS.md")
-            };
-
-            let validator = CrossPlatformValidator;
-            let diagnostics = validator.validate(path, &content, &config);
-
-            assert!(
-                !diagnostics.iter().any(|d| d.rule == rule),
-                "Rule {} should be disabled",
-                rule
-            );
-        }
-    }
-
-    // ===== XP-007: AGENTS.md Codex Byte Limit =====
-
-    #[test]
-    fn test_xp_007_agents_md_over_limit() {
-        let content = "a".repeat(33000); // Over 32768 limit
-        let validator = CrossPlatformValidator;
-        let diagnostics =
-            validator.validate(Path::new("AGENTS.md"), &content, &LintConfig::default());
-
-        let xp_007: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-007").collect();
-        assert_eq!(xp_007.len(), 1);
-        assert_eq!(xp_007[0].level, DiagnosticLevel::Warning);
-        assert!(xp_007[0].message.contains("33000"));
-    }
-
-    #[test]
-    fn test_xp_007_agents_md_under_limit() {
-        let content = "# Project\n\nShort content.";
-        let validator = CrossPlatformValidator;
-        let diagnostics =
-            validator.validate(Path::new("AGENTS.md"), content, &LintConfig::default());
-
-        let xp_007: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-007").collect();
-        assert!(xp_007.is_empty());
-    }
-
-    #[test]
-    fn test_xp_007_not_checked_for_claude_md() {
-        let content = "a".repeat(33000);
-        let validator = CrossPlatformValidator;
-        let diagnostics =
-            validator.validate(Path::new("CLAUDE.md"), &content, &LintConfig::default());
-
-        let xp_007: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-007").collect();
-        assert!(xp_007.is_empty(), "XP-007 should only apply to AGENTS.md");
-    }
-
-    #[test]
-    fn test_xp_007_not_checked_for_agents_local_md() {
-        // Codex CLI only reads AGENTS.md, not local/override variants
-        let content = "a".repeat(33000);
-        let validator = CrossPlatformValidator;
-        let diagnostics = validator.validate(
-            Path::new("AGENTS.local.md"),
-            &content,
-            &LintConfig::default(),
-        );
-
-        let xp_007: Vec<_> = diagnostics.iter().filter(|d| d.rule == "XP-007").collect();
-        assert!(
-            xp_007.is_empty(),
-            "XP-007 should only apply to AGENTS.md, not AGENTS.local.md"
-        );
+            "windsurf",
+            &[".windsurf"]
+        ));
     }
 }

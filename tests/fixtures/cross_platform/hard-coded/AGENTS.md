@@ -19,6 +19,10 @@ Settings file: `.opencode/config.yaml`
 
 Configuration at `.cline/settings.json`
 
+## Local Paths
+
+The build script lives at /Users/alice/dev/tools/build.sh on the author's laptop.
+
 ## Better Approach
 
 Instead of hard-coding platform paths, use environment variables

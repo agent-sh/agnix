@@ -163,13 +163,11 @@ pub struct McpJsonRpcMessage {
     pub error: Option<serde_json::Value>,
 }
 
-/// Valid MCP server transport types
-pub const VALID_MCP_SERVER_TYPES: &[&str] = &["stdio", "http", "sse"];
-
 /// MCP server configuration (as used in .mcp.json or settings.json)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct McpServerConfig {
-    /// Transport type: stdio (default), http, or sse
+    /// Transport type. Each client documents its own set (stdio, http,
+    /// streamable-http, sse, ws, local, ...); MCP-011 checks it per client.
     #[serde(rename = "type")]
     pub server_type: Option<String>,
 
@@ -321,11 +319,6 @@ impl McpToolSchema {
         self.description
             .as_deref()
             .is_some_and(|desc| !desc.trim().is_empty() && desc.len() >= 10)
-    }
-
-    /// Check if tool has annotations (which should be validated)
-    pub fn has_annotations(&self) -> bool {
-        self.annotations.as_ref().is_some_and(|a| !a.is_empty())
     }
 }
 

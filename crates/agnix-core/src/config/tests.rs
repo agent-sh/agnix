@@ -626,8 +626,11 @@ fn test_category_disabled_prompt_engineering() {
 }
 
 #[test]
-fn test_pe_rules_work_with_all_targets() {
-    // PE-* rules are NOT target-specific
+fn test_pe_rules_per_target() {
+    // PE-004 and PE-005 follow several vendors' docs and run for every target.
+    // PE-002 and PE-006 cite Claude's prompting guidance only
+    // (`applies_to.tool = "claude-code"`), so a single non-Claude target turns
+    // them off.
     let targets = [
         TargetTool::Generic,
         TargetTool::ClaudeCode,
@@ -640,26 +643,20 @@ fn test_pe_rules_work_with_all_targets() {
         let mut config = LintConfig::default();
         dm(&mut config).target = target;
 
-        assert!(
-            config.is_rule_enabled("PE-005"),
-            "PE-005 should be enabled for {:?}",
-            target
-        );
-        assert!(
-            config.is_rule_enabled("PE-002"),
-            "PE-002 should be enabled for {:?}",
-            target
-        );
-        assert!(
-            config.is_rule_enabled("PE-006"),
-            "PE-006 should be enabled for {:?}",
-            target
-        );
-        assert!(
-            config.is_rule_enabled("PE-004"),
-            "PE-004 should be enabled for {:?}",
-            target
-        );
+        for rule in ["PE-004", "PE-005"] {
+            assert!(
+                config.is_rule_enabled(rule),
+                "{rule} should be enabled for {target:?}"
+            );
+        }
+        let claude = matches!(target, TargetTool::Generic | TargetTool::ClaudeCode);
+        for rule in ["PE-002", "PE-006"] {
+            assert_eq!(
+                config.is_rule_enabled(rule),
+                claude,
+                "{rule} for {target:?}"
+            );
+        }
     }
 }
 
@@ -1511,6 +1508,67 @@ fn test_tools_array_kiro_only() {
     // Generic rules should still be enabled
     assert!(config.is_rule_enabled("AS-005"));
     assert!(config.is_rule_enabled("XP-001"));
+}
+
+/// Rules that name one vendor in rules.json are gated on that vendor even when
+/// their ID prefix also holds generic rules. Before 0.59 the filter read only
+/// TOOL_RULE_PREFIXES, so AGM-003 (Windsurf), AS-009 (Codex), AS-015 and
+/// MCP-025/MCP-026 (Claude Code) ran for every tool. (XP-007 and XP-009, the
+/// Codex byte limits, were gated the same way until they were retired.)
+#[test]
+fn test_tools_array_gates_vendor_rules_in_mixed_prefixes() {
+    let vendor_rules = [
+        ("AGM-003", "windsurf"),
+        ("AS-009", "codex"),
+        ("AS-015", "claude-code"),
+        ("MCP-025", "claude-code"),
+        ("MCP-026", "claude-code"),
+    ];
+    for (rule, tool) in vendor_rules {
+        // Some of these may move or be retired by other workstreams; only
+        // check the ones rules.json still names a tool for.
+        let Some(named) = agnix_rules::get_rule_tool(rule) else {
+            continue;
+        };
+        assert_eq!(named, tool, "{rule}");
+
+        let mut own = LintConfig::default();
+        dm(&mut own).tools = vec![tool.to_string()];
+        assert!(own.is_rule_enabled(rule), "{rule} with tools = [{tool}]");
+
+        let mut other = LintConfig::default();
+        dm(&mut other).tools = vec!["github-copilot".to_string()];
+        assert!(
+            !other.is_rule_enabled(rule),
+            "{rule} with tools = [copilot]"
+        );
+
+        // An unscoped run still selects every rule.
+        assert!(
+            LintConfig::default().is_rule_enabled(rule),
+            "{rule} unscoped"
+        );
+    }
+
+    // Generic rules in the same prefixes keep running for every tool.
+    let mut cursor = LintConfig::default();
+    dm(&mut cursor).tools = vec!["cursor".to_string()];
+    for rule in ["AGM-001", "XP-001", "AS-001", "MCP-001"] {
+        assert!(cursor.is_rule_enabled(rule), "{rule}");
+    }
+}
+
+#[test]
+fn test_target_gates_vendor_rules_in_mixed_prefixes() {
+    let mut codex = LintConfig::default();
+    dm(&mut codex).target = TargetTool::Codex;
+    assert!(codex.is_rule_enabled("AS-009"));
+    assert!(!codex.is_rule_enabled("AGM-003"));
+
+    let mut cursor = LintConfig::default();
+    dm(&mut cursor).target = TargetTool::Cursor;
+    assert!(!cursor.is_rule_enabled("AS-009"));
+    assert!(!cursor.is_rule_enabled("AGM-003"));
 }
 
 #[test]

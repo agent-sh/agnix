@@ -47,6 +47,7 @@ pub mod kiro_settings;
 pub mod kiro_steering;
 pub mod kiro_workflow;
 pub mod mcp;
+pub mod mcp_servers;
 pub mod opencode;
 pub(crate) mod opencode_common;
 pub mod opencode_files;

@@ -87,10 +87,14 @@ rules:
     message: Skill frontmatter is missing required 'description' field
     suggestion: 'Add ''description: Use when...'' to frontmatter'
   as_004:
-    message: Name '%{name}' must be 1-64 characters per segment using lowercase letters, digits, and hyphens, as a bare skill name or plugin:skill-name
-    suggestion: Lowercase and trim each name segment, replace spaces and '_' with '-', collapse multiple '-' into one, remove invalid
-      characters, and truncate each segment to 64 characters
+    message: Name '%{name}' must be 1-64 characters of lowercase letters, digits and hyphens
+    suggestion: Lowercase and trim the name, replace spaces and '_' with '-', collapse multiple '-' into one, remove invalid
+      characters, and keep it within 64 characters
     fix: 'Convert name to kebab-case: ''%{name}'''
+    claude_refused: 'Claude Code refuses the skill name ''%{name}'': it contains %{what}'
+    claude_upload: Name '%{name}' is not lowercase kebab-case; Claude Code loads it, but the Claude API and claude.ai require
+      lowercase letters, numbers and hyphens (at most 64)
+    opencode_2: "Skill name '%{name}' is not lowercase kebab-case; OpenCode 2 takes the skill ID from the file path and accepts it, but OpenCode 1 and other clients reject it"
   as_005:
     message: Name '%{name}' cannot start or end with hyphen
     suggestion: Remove leading/trailing hyphens from the name
@@ -100,6 +104,10 @@ rules:
   as_008:
     message: Description must be 1-%{max} characters, got %{len}
     suggestion: Trim the description to %{max} characters or fewer
+    claude_truncated: description and when_to_use are %{len} characters; Claude Code truncates them at %{max} in the skill
+      listing
+    claude_truncated_suggestion: Put the key use case first and trim the text below %{max} characters, or raise skillListingMaxDescChars
+    claude_api: Description is %{len} characters; the Claude API and claude.ai accept at most 1024 when the skill is uploaded
   as_009:
     message: Description must not contain XML tags
     suggestion: Remove XML tags from the description
@@ -110,8 +118,8 @@ rules:
     message: Skill content exceeds 500 lines (got %{count})
     suggestion: Move extra content into references/
   as_013:
-    message: File reference '%{path}' is deeper than one level
-    suggestion: Flatten the references/ directory structure
+    message: '''%{path}'' links ''%{nested}'', which SKILL.md does not link; keep references one level deep from SKILL.md'
+    suggestion: Link '%{nested}' directly from SKILL.md and say when to read it, so agents read it whole
   as_015:
     message: Skill directory exceeds the Claude API 30MB upload limit (%{size} bytes); local Claude Code has no documented size limit
     suggestion: Remove large assets or split the skill into smaller parts
@@ -121,6 +129,35 @@ rules:
   as_017:
     message: Skill name '%{name}' must match parent directory '%{directory}'
     suggestion: Rename the skill directory or update the name field so they match
+    opencode_2: "Skill name '%{name}' does not match directory '%{directory}'; OpenCode 2 uses the directory as the skill ID and the name only as a label, but OpenCode 1 and other clients require them to match"
+  as_020:
+    message: Skill description says what the skill does but not when to use it
+    suggestion: Add a trigger such as 'Use when ...' so the agent knows when to load the skill
+    body_section_suggestion: Move the 'When to use' guidance from the body into the description; agents pick skills from the
+      description and read the body only after loading the skill
+  as_021:
+    message: SKILL.md body is about %{tokens} tokens; the Agent Skills spec recommends instructions under %{limit} tokens
+    suggestion: Move detail into references/ files and say when to read each one
+    claude_suggestion: Move detail into references/ files and say when to read each one; after compaction Claude Code re-attaches only the first 5,000 tokens of an invoked skill, so keep the steps that must survive near the top
+  as_022:
+    message: Script '%{script}' prompts for interactive input (%{pattern}); agents run non-interactive shells, so it hangs
+    suggestion: Accept input through command-line flags, environment variables or stdin
+  as_023:
+    message: Bundled file '%{path}' is not mentioned in SKILL.md or another skill file, so the agent may not know it exists
+    suggestion: List '%{path}' in SKILL.md and say when to use it, or remove it
+  as_024:
+    message: Command runs '%{package}' without a pinned version
+    suggestion: Pin a version (for example 'npx eslint@9.0.0') so the skill behaves the same over time
+  as_025:
+    message: Skill '%{name}' is also defined in %{other}; %{clients} read both locations, so one copy is shadowed
+    suggestion: Rename one skill or keep a single copy, unless the override is intended
+  as_026:
+    message: Generic pointer to bundled docs without saying when to read them
+    suggestion: Say when to load the reference (for example 'Read references/api-errors.md if the API returns a non-200 status')
+  as_027:
+    description: The skill description is an unfinished [TODO:] scaffold placeholder
+    instructions: The skill instructions contain an unfinished [TODO:] scaffold placeholder
+    suggestion: Replace the placeholder with the real text before sharing the skill
   cc_sk_001:
     message: 'Invalid model ''%{model}''. Must be one of: %{valid}'
     suggestion: 'Use one of the valid model values: %{valid}'
@@ -170,18 +207,6 @@ rules:
   cc_sk_017:
     message: Unknown frontmatter field '%{field}'
     suggestion: Remove unsupported fields or fix typos in frontmatter keys
-  cr_sk_001:
-    message: field '%{field}' is not supported by %{client} -- it will be ignored
-    suggestion: Remove '%{field}' or move this skill to a client that supports it
-  cl_sk_001:
-    message: field '%{field}' is not supported by %{client} -- it will be ignored
-    suggestion: Remove '%{field}' or move this skill to a client that supports it
-  cp_sk_001:
-    message: field '%{field}' is not supported by %{client} -- it will be ignored
-    suggestion: Remove '%{field}' or move this skill to a client that supports it
-  cx_sk_001:
-    message: field '%{field}' is not supported by %{client} -- it will be ignored
-    suggestion: Remove '%{field}' or move this skill to a client that supports it
   cx_sk_004:
     message: "The %{count} skills in this skills directory use about %{chars} characters of name, description and path metadata; Codex limits its initial skill list to 2% of the context window, or %{limit} characters when the window is unknown, and shortens descriptions or omits skills beyond that"
     suggestion: Shorten skill descriptions (front-load the key use case), or raise skills.max_context_tokens (capped at 10000)
@@ -198,12 +223,14 @@ rules:
   cx_sk_007:
     message: "Skill folder contains %{files}; Codex's skill guidance says to avoid a README, installation guide or changelog inside a skill"
     suggestion: Keep only files the skill uses; put needed material in SKILL.md or references/
-  oc_sk_001:
-    message: field '%{field}' is not supported by %{client} -- it will be ignored
-    suggestion: Remove '%{field}' or move this skill to a client that supports it
-  ws_sk_001:
-    message: field '%{field}' is not supported by %{client} -- it will be ignored
-    suggestion: Remove '%{field}' or move this skill to a client that supports it
+  per_client_skill:
+    other_client_field: '%{client} ignores skill frontmatter field ''%{field}'', which other skill clients act on'
+    other_client_field_suggestion: Remove '%{field}' if no tool that reads this skill needs it, or move it under metadata
+    data_field: '%{client} ignores skill frontmatter field ''%{field}'''
+    data_field_suggestion: Move '%{field}' under metadata, where skills keep extra data such as author or version
+    codex_compatibility: Codex's skill validator (quick_validate.py) rejects 'compatibility', and the Codex runtime ignores
+      it
+    codex_compatibility_suggestion: Keep 'compatibility' if other clients read this skill; the Agent Skills spec defines it
   kr_sk_001:
     message: "Kiro ignores skill frontmatter field '%{field}' (a field other skill clients act on), so it has no effect in Kiro"
     suggestion: "Kiro reads only name, description, license, compatibility and metadata; remove '%{field}', or move it under metadata if no other tool needs it"
@@ -216,12 +243,6 @@ rules:
   kr_sk_002:
     message: "Skill description '%{description}' is too vague for Kiro to match requests against"
     suggestion: "Describe what the skill does and when to use it, with specific keywords and actions (e.g. 'Review pull requests for security vulnerabilities and test coverage. Use when reviewing PRs.')"
-  amp_sk_001:
-    message: field '%{field}' is not supported by %{client} -- it will be ignored
-    suggestion: Remove '%{field}' or move this skill to a client that supports it
-  rc_sk_001:
-    message: field '%{field}' is not supported by %{client} -- it will be ignored
-    suggestion: Remove '%{field}' or move this skill to a client that supports it
   xp_sk_001:
     message: skill uses client-specific field '%{field}' which is not part of the universal Agent Skills spec
     suggestion: Consider removing '%{field}' for cross-platform portability
@@ -229,6 +250,12 @@ rules:
     message: Hardcoded user directory path '%{path}' leaks author identity and is not portable across machines
     suggestion: Use a path relative to the skill root, '~/', '$HOME/', or an env var. For shebangs prefer '#!/usr/bin/env
       <interpreter>'.
+  xp_sk_003:
+    message: Skill file contains what looks like a credential
+    suggestion: Remove the secret and read it from an environment variable or secret store at run time
+  xp_sk_004:
+    message: Path '%{path}' uses Windows backslashes, which fail on macOS and Linux
+    suggestion: Use forward slashes ('%{fixed}'); they work on every platform
   cc_hk_001:
     message: 'Invalid hook event ''%{event}'', valid events: %{valid}'
     fix: Replace '%{old}' with '%{new}'
@@ -308,9 +335,8 @@ rules:
     message: '%{prefix}Tool lacks consent mechanism (no ''requiresApproval'' or ''confirmation'' field)'
     suggestion: 'Consider adding ''requiresApproval: true'' for tools that modify data or have side effects'
   mcp_006:
-    message: '%{prefix}Tool has annotations that should be validated before trusting'
-    suggestion: Verify annotation values independently -- annotations are self-reported by the server and may be inaccurate
-      or malicious
+    message: '%{prefix}unknown annotation keys: %{keys}'
+    suggestion: 'Use only the ToolAnnotations hints: title, readOnlyHint, destructiveHint, idempotentHint, openWorldHint'
   mcp_007:
     message: 'Failed to parse MCP configuration: %{error}'
     suggestion: Validate JSON syntax -- check for missing commas, brackets, or unquoted keys
@@ -322,17 +348,59 @@ rules:
   mcp_009:
     message: Server '%{server}' has type 'stdio' but is missing required 'command' field
     suggestion: Add a 'command' field specifying the executable to run
+    no_type: Server '%{server}' has no 'type' and no 'command'; an entry without a type is a stdio server, which needs a command
+    url_without_type: Server '%{server}' has a 'url' but no 'type'; an entry without a type is read as a stdio server, so the client skips it
+    url_without_type_suggestion: 'Add "type": "http" (or "sse" / "ws") to match the endpoint'
   mcp_010:
     message: Server '%{server}' has type '%{server_type}' but is missing required 'url' field
     suggestion: Add a 'url' field specifying the server endpoint
   mcp_011:
-    message: Server '%{server}' has invalid type '%{server_type}'. Must be 'stdio', 'http', or 'sse'
-    suggestion: 'Use one of: stdio, http, sse'
+    message: 'Server ''%{server}'' has invalid type ''%{server_type}''. Valid types for this file: %{valid}'
+    suggestion: Use a type the client that reads this file documents (for example stdio, http or sse)
     fix: Change server type to '%{fixed}'
+    sdk: Server '%{server}' has type 'sdk', which only an Agent SDK host can register; Claude Code skips this entry
   mcp_012:
     message: Server '%{server}' uses deprecated SSE transport
     suggestion: Consider changing type from 'sse' to 'http' (Streamable HTTP)
     fix: Change type from 'sse' to 'http'
+  mcp_018:
+    message: Server '%{server}' sets env var '%{key}' to a literal secret
+    suggestion: Reference an environment variable or secret store (for example ${API_KEY}) instead of keeping the secret
+      in the config file
+  mcp_019:
+    message: 'Server ''%{server}'' command appears dangerous: %{command}'
+    suggestion: Avoid remote shell pipes, destructive commands, and potential data exfiltration patterns
+  mcp_027:
+    message_missing: Server '%{server}' runs '%{package}' without a pinned version
+    message_floating: Server '%{server}' runs '%{package}' with the floating version '%{version}'
+    suggestion: Pin an exact version (for example pkg@1.2.3, tool==1.2.3) or an image digest (image@sha256:...) so a future
+      release cannot change what runs
+  mcp_028:
+    message: Server '%{server}' has a literal credential in %{field}
+    suggestion: Reference an environment variable, input or secret store instead (for example 'Bearer ${API_TOKEN}'); the
+      client documents which reference syntax it expands
+  mcp_029:
+    message: Server '%{server}' is given '%{path}' as a root, the home directory or the filesystem root
+    suggestion: Grant a single project directory instead, read-only if the server supports it
+  mcp_030:
+    message: Tool name '%{name}' appears %{count} times in this server's tool list
+    suggestion: Give each tool a unique name; clients select tools by name
+  mcp_031:
+    message: '%{prefix}invalid x-mcp-header on ''%{property}'': %{reason}; Streamable HTTP clients drop the whole tool
+      from tools/list'
+    suggestion: 'Use a non-empty HTTP token name, unique per tool, on a string, integer or boolean property reached only through
+      ''properties'''
+    sensitive: '%{prefix}x-mcp-header mirrors ''%{property}'' into an HTTP header, which proxies and logs can see'
+    sensitive_suggestion: Do not mark passwords, API keys or tokens with x-mcp-header
+  mcp_032:
+    message: '''%{feature}'' is deprecated in MCP 2026-07-28 and eligible for removal from revisions released on or after
+      2027-07-28'
+    suggestion: New implementations should not add Roots, Sampling or Logging; see the deprecated-features registry for
+      the replacement
+    include_context_suggestion: Omit includeContext or set it to "none"
+  mcp_033:
+    message: '%{prefix}Tool takes no parameters but its inputSchema accepts any object'
+    suggestion: 'Use { "type": "object", "additionalProperties": false } for a tool without parameters'
   invalid_tool: 'Tool #%{num}: Invalid tool definition: %{error}'
   invalid_tool_single: 'Invalid tool definition: %{error}'
   invalid_tool_suggestion: 'Ensure tool has valid field types (name: string, description: string, inputSchema: object)'
@@ -485,16 +553,33 @@ rules:
     suggestion: 'Write "outputStyle": "%{expected}".'
     fix: "Replace with '%{expected}' (selects that style)"
   agm_001:
-    message: 'Invalid markdown: %{description}'
-    suggestion: Fix the markdown syntax error -- check for unclosed tags, mismatched headers, or invalid link syntax
-  agm_002: null
+    message: 'Malformed markdown: %{description}'
+    suggestion: Close the link with ')' or ']' so it renders as a link instead of literal text
+    unclosed_fence: 'Unclosed code fence on line %{line}: everything after it is treated as code'
+    unclosed_fence_suggestion: Add the closing fence where the code example ends; Markdown reads every later line as part
+      of the code block
+  agm_002:
+    message: AGENTS.md has %{lines} non-blank lines and no headings
+    suggestion: Group related instructions under headings (for example '## Build and test', '## Code style') so agents can
+      find them
   agm_003:
-    message: '%{filename} exceeds character limit (%{chars} chars, max %{limit} for Windsurf compatibility)'
-    suggestion: Split content into multiple files or reduce content length
-  agm_004: null
-  agm_005:
-    suggestion: Add a platform guard section header like '## %{platform} Specific' before platform-specific content
+    message: '%{filename} is %{chars} characters; Windsurf limits rule files to %{limit} characters, and it processes AGENTS.md
+      with the same rules engine'
+    suggestion: Move directory-specific guidance into nested AGENTS.md files or trim the file below %{limit} characters
+  agm_004:
+    message: Root AGENTS.md has no project overview
+    suggestion: Add a short overview of what the project is and its tech stack, a popular AGENTS.md section
   agm_006: null
+  agm_007:
+    message: Root AGENTS.md lists no build, test or setup commands
+    suggestion: Add the commands agents should run (for example '## Build and test' with 'npm test'); agents run the checks
+      an AGENTS.md lists
+  agm_008:
+    message: AGENT.md is a legacy name; most AGENTS.md readers do not read it
+    suggestion: Rename it to AGENTS.md and keep a symbolic link named AGENT.md for older tools
+  agm_009:
+    message: Nested AGENTS.md files exist, but the repository root has no AGENTS.md
+    suggestion: Add a root AGENTS.md with the project-wide guidance; nested files then add package-specific detail
   xml_001:
     message: Unclosed XML tag '<%{tag}>'
     suggestion: Add closing tag '</%{tag}>'
@@ -535,13 +620,15 @@ rules:
   file_panic_error: 'Validation panicked while processing this file: %{error}'
   file_panic_error_suggestion: Please report this as a bug with the file type and rule context
   xp_001:
-    message: 'Claude-specific feature ''%{feature}'' in %{filename}: %{description}'
-    suggestion: Move to CLAUDE.md or wrap in a Claude-specific section (e.g., '## Claude Code Specific')
+    message: '''%{feature}'' in %{filename}: %{description}'
+    suggestion: Move it to the skill, subagent or hooks file it configures, or mark the section as tool-specific (for example
+      '## Claude Code Specific')
+    at_reference_suggestion: Inline the referenced content, or name the file in prose for tools that do not expand @-references
   xp_002:
     message: '%{filename} structure issue: %{issue}'
   xp_003:
-    message: Hard-coded %{platform} path '%{path}' may cause portability issues
-    suggestion: Use environment variables or relative paths for better portability
+    message: Hard-coded %{platform} path '%{path}' resolves only on the author's machine
+    suggestion: Use a path relative to the project, '~/', or an environment variable such as $HOME
   xp_004:
     message: 'Conflicting package managers: %{file1} uses %{mgr1} but %{file2} uses %{mgr2} for %{cmd_type} commands'
     suggestion: Standardize on a single package manager across all instruction files
@@ -549,17 +636,13 @@ rules:
     message: 'Conflicting tool constraints: ''%{tool}'' is allowed in %{allow_file} but disallowed in %{disallow_file}'
     suggestion: Resolve the conflict by consistently allowing or disallowing the tool
   xp_006:
-    suggestion: Document which file takes precedence (e.g., 'CLAUDE.md takes precedence over AGENTS.md')
-  xp_007:
-    message: AGENTS.md exceeds Codex CLI byte limit (%{bytes} bytes, max %{limit})
-    suggestion: Reduce content or split into multiple files using @import for Codex CLI compatibility
+    suggestion: Each tool applies its own precedence (Claude Code concatenates its files, Codex reads AGENTS.md from the root
+      down, Cursor applies Team, Project, then User rules). Keep the files consistent instead of relying on precedence, or
+      say which tool each file is for
   xp_008:
-    message: 'CLAUDE.md contains Claude-specific feature ''%{feature}'' that Cursor cannot interpret: %{description}'
-    suggestion: Move Cursor-compatible instructions to .cursor/rules/ or guard Claude-specific content under a '## Claude
-      Code' section header
-  xp_009:
-    message: 'Codex instruction chain reaches %{bytes} bytes across %{count} file(s), past the %{limit}-byte project_doc_max_bytes default. Codex stops appending once the combined size hits the limit, so this file and any deeper ones are dropped.'
-    suggestion: Trim the chain, or raise project_doc_max_bytes in the Codex config (e.g. project_doc_max_bytes = 65536)
+    message: 'Cursor does not inline @-imports from CLAUDE.md: ''%{reference}'' is only a pointer there, so its content is missing
+      for Cursor'
+    suggestion: Put the instructions Cursor needs in CLAUDE.md itself or in .cursor/rules/, and keep @-imports for Claude Code
   cop_001:
     message_empty: Copilot instruction file is empty
     message_no_content: Copilot instruction file has no content after frontmatter

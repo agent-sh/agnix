@@ -3,4 +3,4 @@ name: deep-reference
 description: Use when validating deep references
 ---
 
-See references/deep/nested/guide.md for details.
+Read references/guide.md before calling the API.

@@ -53,48 +53,6 @@ pub(super) fn extract_reference_paths(body: &str) -> Vec<PathMatch> {
     paths
 }
 
-pub(super) fn reference_path_too_deep(path: &str) -> bool {
-    let normalized = path.replace('\\', "/");
-    let mut parts = normalized.split('/').filter(|part| !part.is_empty());
-    let Some(prefix) = parts.next() else {
-        return false;
-    };
-
-    // Check for bundled resource references. The spec scopes skill resources to
-    // "`scripts/`, `references/`, or `assets/`" and states the depth rule over
-    // file references generally - "Keep file references one level deep from
-    // `SKILL.md`" - with `scripts/extract.py` used in its own example. Only the
-    // `references*` spellings were inspected, so deep `scripts/` and `assets/`
-    // paths were invisible to AS-013.
-    if !prefix.eq_ignore_ascii_case("references")
-        && !prefix.eq_ignore_ascii_case("reference")
-        && !prefix.eq_ignore_ascii_case("refs")
-        && !prefix.eq_ignore_ascii_case("scripts")
-        && !prefix.eq_ignore_ascii_case("assets")
-    {
-        return false;
-    }
-
-    // Exclude git refs - they're not file references
-    // Git refs look like: refs/remotes/..., refs/heads/..., refs/tags/...
-    if prefix.eq_ignore_ascii_case("refs") {
-        if let Some(second) = parts.next() {
-            if second.eq_ignore_ascii_case("remotes")
-                || second.eq_ignore_ascii_case("heads")
-                || second.eq_ignore_ascii_case("tags")
-                || second.eq_ignore_ascii_case("stash")
-            {
-                return false; // This is a git ref, not a file reference
-            }
-        }
-        // Reset iterator for depth check
-        let parts = normalized.split('/').filter(|part| !part.is_empty());
-        return parts.skip(1).count() > 1;
-    }
-
-    parts.count() > 1
-}
-
 pub(super) fn trim_path_token(token: &str) -> &str {
     token
         .trim_start_matches(['(', '[', '{', '<', '"', '\'', '`', '*'])

@@ -7,10 +7,10 @@
 
 | Type | Files | Rules |
 |------|-------|-------|
-| Skills | SKILL.md | 42 |
+| Skills | SKILL.md | 50 |
 | Hooks | settings.json | 32 |
 | Memory (Claude Code) | CLAUDE.md, CLAUDE.local.md, .claude/rules/*.md | 15 |
-| Instructions (Cross-Tool) | AGENTS.md, AGENTS.local.md, AGENTS.override.md | 5 |
+| Instructions (Cross-Tool) | AGENTS.md, AGENTS.local.md, AGENTS.override.md | 7 |
 | Agents | agents/*.md | 21 |
 | Plugins | plugin.json | 23 |
 | Claude Marketplaces | .claude-plugin/marketplace.json | 5 |
@@ -19,7 +19,7 @@
 | Claude Settings | .claude/settings.json | 35 |
 | Prompt Engineering | CLAUDE.md, AGENTS.md | 4 |
 | Cross-Platform | AGENTS.md | 11 |
-| MCP | tool definitions | 23 |
+| MCP | tool definitions | 30 |
 | XML | all .md files | 3 |
 | References | @imports | 3 |
 | GitHub Copilot | .github/copilot-instructions.md, .github/instructions/*.instructions.md, .github/agents/*.agent.md, .github/prompts/*.prompt.md, .github/hooks/hooks.json, .github/workflows/copilot-setup-steps.yml | 33 |
@@ -49,7 +49,7 @@
 | Kiro Ignore | .kiroignore, ~/.kiro/settings/kiroignore | 1 |
 | Amp Skills | .agents/skills/*/SKILL.md | 1 |
 | Amp Checks | .agents/checks/*.md, .amp/settings*.json | 4 |
-| Roo Code Skills | .roo/skills/*/SKILL.md | 1 |
+| Roo Code Skills | .roo/skills/*/SKILL.md | 0 |
 | Roo Code | .roo/rules/*.md, .roomodes, .roorules, .roo/mcp.json, .rooignore | 6 |
 
 ## Architecture
@@ -174,8 +174,7 @@ All rules in `knowledge-base/VALIDATION-RULES.md`
 | CC-HK-009 | WARN | Dangerous command pattern |
 | CC-MEM-004 | WARN | Invalid command reference |
 | PE-005 | WARN | Redundant generic instruction detected |
-| AGM-003 | WARN | Character limit exceeded (12000 chars) |
-| AGM-005 | WARN | Platform features without guard |
+| AGM-003 | WARN | Windsurf character limit exceeded (12000 chars, when Windsurf is in scope) |
 | PE-002 | INFO | Chain-of-thought on simple task |
 | CC-AG-001 | ERROR | Missing agent name field |
 | CC-AG-002 | ERROR | Missing agent description field |

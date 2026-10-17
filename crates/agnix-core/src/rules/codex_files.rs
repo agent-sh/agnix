@@ -14,7 +14,7 @@ use crate::{
     diagnostics::Diagnostic,
     parsers::frontmatter::split_frontmatter,
     rules::config_span::{line_col, yaml_key_pos},
-    rules::per_client_skill::{SkillClient, resolve_skill_client},
+    rules::per_client_skill::{SkillClient, resolve_skill_client, shared_scope_includes},
     rules::{Validator, ValidatorMetadata},
 };
 use rust_i18n::t;
@@ -567,7 +567,14 @@ impl Validator for CodexSkillValidator {
                 Vec::new()
             };
         }
-        if filename != "SKILL.md" || resolve_skill_client(path, config) != SkillClient::Codex {
+        // `.agents/skills` is shared: these Codex notes apply whenever Codex
+        // is one of the readers in scope, not only when it is the only one.
+        let codex_reads = match resolve_skill_client(path, config) {
+            SkillClient::Codex => true,
+            SkillClient::Shared => shared_scope_includes(config, SkillClient::Codex),
+            _ => false,
+        };
+        if filename != "SKILL.md" || !codex_reads {
             return Vec::new();
         }
         let mut diagnostics = Vec::new();
@@ -1164,6 +1171,18 @@ x = "prefix_rule(pattern = ['sh'])"
         assert_eq!(diagnostics.len(), 1);
         assert_eq!(diagnostics[0].rule, "CX-SK-007");
         assert!(diagnostics[0].message.contains("README.md"));
+
+        // `.agents/skills` is shared: a scope with Codex among its tools still
+        // gets the note, a scope without Codex does not.
+        for (tools, expected) in [(vec!["codex", "amp"], 1), (vec!["amp"], 0)] {
+            config.set_tools(tools.iter().map(|t| t.to_string()).collect());
+            let diagnostics = CodexSkillValidator.validate(
+                Path::new("/r/.agents/skills/a/SKILL.md"),
+                &skill("a", 10),
+                &config,
+            );
+            assert_eq!(diagnostics.len(), expected, "{tools:?}: {diagnostics:?}");
+        }
     }
 
     fn openai_yaml(content: &str) -> Vec<Diagnostic> {

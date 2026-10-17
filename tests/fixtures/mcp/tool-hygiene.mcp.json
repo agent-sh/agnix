@@ -1,0 +1,25 @@
+{
+  "tools": [
+    {
+      "name": "ping",
+      "description": "Check that the server is reachable",
+      "inputSchema": { "type": "object" }
+    },
+    {
+      "name": "ping",
+      "description": "Check that the server is reachable",
+      "inputSchema": { "type": "object", "additionalProperties": false }
+    },
+    {
+      "name": "query",
+      "description": "Run a read-only query in a region",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "region": { "type": "string", "x-mcp-header": "Region" },
+          "limit": { "type": "number", "x-mcp-header": "Limit" }
+        }
+      }
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 use super::*;
 use crate::config::LintConfig;
+use crate::diagnostics::DiagnosticLevel;
 use crate::fs::RealFileSystem;
 use crate::schemas::skill::{VALID_EFFORT_LEVELS, VALID_MODEL_ALIASES};
 use std::fs;
@@ -450,9 +451,11 @@ Body"#;
     let validator = SkillValidator;
     let cfg = LintConfig::default();
 
-    // Codex skill (.agents/skills/) -> fires.
+    // Codex skill (.codex/skills/) -> fires. `.agents/skills/` used to count
+    // as Codex; several clients read it, so it is Codex only when Codex is
+    // the one selected reader.
     let codex = validator.validate(
-        Path::new(".agents/skills/test-skill/SKILL.md"),
+        Path::new(".codex/skills/test-skill/SKILL.md"),
         content,
         &cfg,
     );
@@ -461,6 +464,20 @@ Body"#;
         1,
         "AS-009 should fire for a Codex skill"
     );
+    let shared = validator.validate(
+        Path::new(".agents/skills/test-skill/SKILL.md"),
+        content,
+        &cfg,
+    );
+    assert_eq!(shared.iter().filter(|d| d.rule == "AS-009").count(), 0);
+    let mut codex_only = LintConfig::default();
+    codex_only.set_tools(vec!["codex".to_string()]);
+    let selected = validator.validate(
+        Path::new(".agents/skills/test-skill/SKILL.md"),
+        content,
+        &codex_only,
+    );
+    assert_eq!(selected.iter().filter(|d| d.rule == "AS-009").count(), 1);
 
     // Claude skill (.claude/skills/) -> does NOT fire (reporter's false positive).
     let claude = validator.validate(
@@ -485,8 +502,7 @@ Body"#;
     // Codex rejects ANY angle bracket, not just tag-shaped pairs: a lone `<`
     // must fire too (matches quick_validate.py's `"<" in description`).
     let lone = "---\nname: test-skill\ndescription: Use when a < b comparison holds\n---\nBody";
-    let codex_lone =
-        validator.validate(Path::new(".agents/skills/test-skill/SKILL.md"), lone, &cfg);
+    let codex_lone = validator.validate(Path::new(".codex/skills/test-skill/SKILL.md"), lone, &cfg);
     assert_eq!(
         codex_lone.iter().filter(|d| d.rule == "AS-009").count(),
         1,
@@ -511,10 +527,14 @@ fn test_as_008_claude_allows_1536() {
         &content,
         &claude_cfg,
     );
-    assert_eq!(
-        claude.iter().filter(|d| d.rule == "AS-008").count(),
-        0,
-        "1025-char description must be accepted for a Claude Code skill"
+    // Accepted for Claude Code: only an info note remains, since Claude API
+    // and claude.ai uploads allow at most 1,024 characters.
+    let claude_as_008: Vec<_> = claude.iter().filter(|d| d.rule == "AS-008").collect();
+    assert!(
+        claude_as_008
+            .iter()
+            .all(|d| d.level == DiagnosticLevel::Info && d.message.contains("1024")),
+        "1025-char description must be accepted for a Claude Code skill: {claude_as_008:?}"
     );
 
     // Generic (agentskills.io) -> 1025 exceeds the 1024 baseline, flagged.
@@ -588,31 +608,47 @@ fn test_as_012_content_too_long() {
     assert_eq!(as_012_warnings.len(), 1);
 }
 
+/// AS-013 follows reference chains: the fixture's SKILL.md links
+/// references/guide.md, which links references/errors.md that SKILL.md does
+/// not. (It used to count directory levels, flagging a direct link to
+/// `references/deep/nested/guide.md`.)
 #[test]
 fn test_as_013_reference_too_deep() {
-    let content = include_str!("../../../../../tests/fixtures/skills/deep-reference/SKILL.md");
+    let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../tests/fixtures/skills/deep-reference/SKILL.md");
+    let content = fs::read_to_string(&path).unwrap();
 
     let validator = SkillValidator;
-    let diagnostics = validator.validate(Path::new("SKILL.md"), content, &LintConfig::default());
+    let diagnostics = validator.validate(&path, &content, &LintConfig::default());
 
-    let as_013_errors: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-013").collect();
-    assert_eq!(as_013_errors.len(), 1);
+    let as_013: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-013").collect();
+    assert_eq!(as_013.len(), 1, "{diagnostics:?}");
+    assert_eq!(as_013[0].level, DiagnosticLevel::Warning);
+    assert!(
+        as_013[0].message.contains("references/errors.md"),
+        "{}",
+        as_013[0].message
+    );
+    assert_eq!(as_013[0].line, 6);
 }
 
 #[test]
-fn test_as_013_reference_single_name_too_deep() {
+fn test_as_013_directory_depth_alone_is_one_level() {
+    // The spec's rule is about chains ("Avoid deeply nested reference
+    // chains"); a direct link into a subdirectory is one level of reference.
     let content = r#"---
 name: deep-reference
 description: Use when validating deep references
 ---
 
-See reference/deep/guide.md for details."#;
+See reference/deep/guide.md and scripts/deep/nested/extract.py."#;
 
     let validator = SkillValidator;
     let diagnostics = validator.validate(Path::new("SKILL.md"), content, &LintConfig::default());
-
-    let as_013_errors: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-013").collect();
-    assert_eq!(as_013_errors.len(), 1);
+    assert!(
+        diagnostics.iter().all(|d| d.rule != "AS-013"),
+        "{diagnostics:?}"
+    );
 }
 
 #[test]
@@ -2956,6 +2992,24 @@ Body content"#;
 }
 
 #[test]
+fn test_as_016_unquoted_bracket_argument_hint_parses() {
+    // Claude Code documents hints such as `[issue-number]`; written unquoted,
+    // YAML reads `argument-hint: [issue-number]` as a list. That used to fail
+    // the typed parse and trip AS-016.
+    let content = "---\nname: fix-issue\ndescription: Use when fixing a GitHub issue by number\nargument-hint: [issue-number]\n---\nFix issue $ARGUMENTS.\n";
+    for path in [
+        "/p/.claude/skills/fix-issue/SKILL.md",
+        "/p/.agents/skills/fix-issue/SKILL.md",
+    ] {
+        let diagnostics = SkillValidator.validate(Path::new(path), content, &LintConfig::default());
+        assert!(
+            diagnostics.iter().all(|d| d.rule != "AS-016"),
+            "{path}: {diagnostics:?}"
+        );
+    }
+}
+
+#[test]
 fn test_as_016_disabled() {
     let mut config = LintConfig::default();
     config.rules_mut().disabled_rules = vec!["AS-016".to_string()];
@@ -4429,7 +4483,7 @@ fn test_as_009_has_fix() {
     let content = "---\nname: test-skill\ndescription: <b>Use when testing</b>\n---\nBody";
     let validator = SkillValidator;
     let diagnostics = validator.validate(
-        Path::new(".agents/skills/test-skill/SKILL.md"),
+        Path::new(".codex/skills/test-skill/SKILL.md"),
         content,
         &LintConfig::default(),
     );
@@ -5089,62 +5143,87 @@ Copy `assets/frontend-template/` and vendor into **`scripts/vendor/`**:
 }
 
 #[test]
-fn test_as_013_still_flags_deep_skill_relative_paths() {
+fn test_as_013_chain_found_through_skill_relative_and_root_paths() {
+    let temp = tempfile::tempdir().unwrap();
+    let skill = temp.path().join("test-skill");
+    fs::create_dir_all(skill.join("references/api")).unwrap();
+    fs::write(
+        skill.join("references/api/v2.md"),
+        "See references/api/errors.md for codes.\n",
+    )
+    .unwrap();
+    fs::write(skill.join("references/api/errors.md"), "# Errors\n").unwrap();
     for path in [
-        "`references/api/v2/guide.md`",
-        "./references/api/v2/guide.md",
-        "${CLAUDE_SKILL_DIR}/references/api/v2/guide.md",
+        "`references/api/v2.md`",
+        "./references/api/v2.md",
+        "${CLAUDE_SKILL_DIR}/references/api/v2.md",
     ] {
         let content = format!(
-            r#"---
-name: test-skill
-description: Use when testing deep reference detection
----
-Read {path} first.
-"#
+            "---\nname: test-skill\ndescription: Use when testing deep reference detection\n---\nRead {path} first.\n"
         );
-
-        let validator = SkillValidator;
-        let diagnostics = validator.validate(
-            Path::new(".claude/skills/test-skill/SKILL.md"),
-            &content,
-            &LintConfig::default(),
-        );
-
+        let file = skill.join("SKILL.md");
+        fs::write(&file, &content).unwrap();
+        let diagnostics = SkillValidator.validate(&file, &content, &LintConfig::default());
         assert!(
             diagnostics.iter().any(|d| d.rule == "AS-013"),
-            "{path} is two levels deep, got: {diagnostics:?}"
+            "{path}: {diagnostics:?}"
+        );
+
+        // Linking the deeper file from SKILL.md too keeps everything one level.
+        let both = format!("{content}Error codes: references/api/errors.md\n");
+        fs::write(&file, &both).unwrap();
+        let diagnostics = SkillValidator.validate(&file, &both, &LintConfig::default());
+        assert!(
+            diagnostics.iter().all(|d| d.rule != "AS-013"),
+            "{path}: {diagnostics:?}"
         );
     }
 }
 
 #[test]
-fn test_as_013_covers_scripts_and_assets() {
-    for path in [
-        "scripts/deep/nested/extract.py",
-        "assets/deep/nested/logo.png",
-    ] {
-        let content = format!(
-            r#"---
-name: test-skill
-description: Use when testing deep resource reference detection
----
-Run the helper at {path} to continue.
-"#
-        );
+fn test_as_013_ignores_non_markdown_targets() {
+    // Scripts and assets are not read as references, so they start no chain.
+    let temp = tempfile::tempdir().unwrap();
+    let skill = temp.path().join("test-skill");
+    fs::create_dir_all(skill.join("scripts")).unwrap();
+    fs::write(
+        skill.join("scripts/extract.py"),
+        "# see references/other.md\n",
+    )
+    .unwrap();
+    let content =
+        "---\nname: test-skill\ndescription: Use when testing\n---\nRun scripts/extract.py.\n";
+    let file = skill.join("SKILL.md");
+    fs::write(&file, content).unwrap();
+    let diagnostics = SkillValidator.validate(&file, content, &LintConfig::default());
+    assert!(
+        diagnostics.iter().all(|d| d.rule != "AS-013"),
+        "{diagnostics:?}"
+    );
+}
 
-        let validator = SkillValidator;
-        let diagnostics = validator.validate(
-            Path::new(".claude/skills/test-skill/SKILL.md"),
-            &content,
-            &LintConfig::default(),
-        );
-
-        assert!(
-            diagnostics.iter().any(|d| d.rule == "AS-013"),
-            "deep path '{path}' must be reported by AS-013, got: {diagnostics:?}"
-        );
-    }
+#[test]
+fn test_as_013_scripts_and_back_links_are_not_chains() {
+    // A reference that runs a script, or links back to SKILL.md, starts no
+    // chain: the script is executed, not read, and SKILL.md is the skill.
+    let temp = tempfile::tempdir().unwrap();
+    let skill = temp.path().join("test-skill");
+    fs::create_dir_all(skill.join("references")).unwrap();
+    fs::create_dir_all(skill.join("scripts")).unwrap();
+    fs::write(
+        skill.join("references/discover.md"),
+        "Run `scripts/discover.sh`.\n\nSee [SKILL.md](../SKILL.md) for the file list.\n",
+    )
+    .unwrap();
+    fs::write(skill.join("scripts/discover.sh"), "#!/bin/sh\n").unwrap();
+    let content = "---\nname: test-skill\ndescription: Use when testing reference chains\n---\nFollow [discovery](references/discover.md).\n";
+    let file = skill.join("SKILL.md");
+    fs::write(&file, content).unwrap();
+    let diagnostics = SkillValidator.validate(&file, content, &LintConfig::default());
+    assert!(
+        diagnostics.iter().all(|d| d.rule != "AS-013"),
+        "{diagnostics:?}"
+    );
 }
 
 /// One level deep stays clean for the newly covered prefixes.
@@ -5223,5 +5302,364 @@ Body with instructions to run the task.
     assert!(
         diagnostics.iter().any(|d| d.rule == "AS-017"),
         "the agentskills.io baseline requires name==directory, got: {diagnostics:?}"
+    );
+}
+
+// ===== 0.59 vendor survey: AS and XP-SK changes =====
+
+fn rules_named<'a>(diagnostics: &'a [Diagnostic], rule: &str) -> Vec<&'a Diagnostic> {
+    diagnostics.iter().filter(|d| d.rule == rule).collect()
+}
+
+/// Write a skill tree under a temp dir and validate its SKILL.md.
+fn validate_tree(files: &[(&str, &str)]) -> (tempfile::TempDir, Vec<Diagnostic>) {
+    let temp = tempfile::tempdir().unwrap();
+    let skill = temp.path().join("demo-skill");
+    for (relative, text) in files {
+        let path = skill.join(relative);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(&path, text).unwrap();
+    }
+    let skill_md = skill.join("SKILL.md");
+    let content = fs::read_to_string(&skill_md).unwrap();
+    let diagnostics = SkillValidator.validate(&skill_md, &content, &LintConfig::default());
+    (temp, diagnostics)
+}
+
+#[test]
+fn test_as_004_claude_refuses_only_listed_characters() {
+    let validator = SkillValidator;
+    let path = Path::new(".claude/skills/My Skill/SKILL.md");
+    let upper = "---\nname: My Skill\ndescription: Use when testing\n---\nBody";
+    let diagnostics = validator.validate(path, upper, &LintConfig::default());
+    let as_004 = rules_named(&diagnostics, "AS-004");
+    assert_eq!(as_004.len(), 1);
+    // Claude Code loads it; only uploads to the Claude API reject it.
+    assert_eq!(as_004[0].level, DiagnosticLevel::Warning);
+    assert!(
+        as_004[0].message.contains("Claude API"),
+        "{}",
+        as_004[0].message
+    );
+
+    let refused = "---\nname: \"bad<name>\"\ndescription: Use when testing\n---\nBody";
+    let diagnostics = validator.validate(path, refused, &LintConfig::default());
+    let as_004 = rules_named(&diagnostics, "AS-004");
+    assert_eq!(as_004.len(), 1);
+    assert_eq!(as_004[0].level, DiagnosticLevel::Error);
+    assert!(
+        as_004[0].message.contains("refuses"),
+        "{}",
+        as_004[0].message
+    );
+}
+
+#[test]
+fn test_as_004_colon_form_only_where_claude_may_read() {
+    let content = "---\nname: my-plugin:review\ndescription: Use when testing\n---\nBody";
+    let claude = SkillValidator.validate(
+        Path::new(".claude/skills/review/SKILL.md"),
+        content,
+        &LintConfig::default(),
+    );
+    assert!(rules_named(&claude, "AS-004").is_empty());
+    let cursor = SkillValidator.validate(
+        Path::new(".cursor/skills/review/SKILL.md"),
+        content,
+        &LintConfig::default(),
+    );
+    let as_004 = rules_named(&cursor, "AS-004");
+    assert_eq!(as_004.len(), 1, "{cursor:?}");
+    assert_eq!(as_004[0].level, DiagnosticLevel::Error);
+    assert!(
+        as_004[0].fixes.is_empty(),
+        "a plugin:skill name needs a manual rename"
+    );
+}
+
+#[test]
+fn test_as_008_claude_counts_when_to_use_against_configured_cap() {
+    let temp = tempfile::tempdir().unwrap();
+    let claude_dir = temp.path().join(".claude");
+    let skill_dir = claude_dir.join("skills/demo");
+    fs::create_dir_all(&skill_dir).unwrap();
+    let content = format!(
+        "---\nname: demo\ndescription: {}\nwhen_to_use: {}\n---\nBody",
+        "d".repeat(900),
+        "w".repeat(700)
+    );
+    let path = skill_dir.join("SKILL.md");
+    fs::write(&path, &content).unwrap();
+    let diagnostics = SkillValidator.validate(&path, &content, &LintConfig::default());
+    let as_008 = rules_named(&diagnostics, "AS-008");
+    assert_eq!(as_008.len(), 1, "{diagnostics:?}");
+    assert_eq!(as_008[0].level, DiagnosticLevel::Warning);
+    assert!(as_008[0].message.contains("1600") && as_008[0].message.contains("1536"));
+
+    // skillListingMaxDescChars raises the cap.
+    fs::write(
+        claude_dir.join("settings.json"),
+        r#"{"skillListingMaxDescChars": 2000}"#,
+    )
+    .unwrap();
+    let diagnostics = SkillValidator.validate(&path, &content, &LintConfig::default());
+    assert!(
+        rules_named(&diagnostics, "AS-008").is_empty(),
+        "{diagnostics:?}"
+    );
+}
+
+#[test]
+fn test_as_016_kiro_accepts_non_string_metadata() {
+    let content = "---\nname: test-skill\ndescription: Use when testing\nmetadata:\n  version: 2\n  beta: true\n---\nBody";
+    let kiro = SkillValidator.validate(
+        Path::new(".kiro/skills/test-skill/SKILL.md"),
+        content,
+        &LintConfig::default(),
+    );
+    assert!(rules_named(&kiro, "AS-016").is_empty(), "{kiro:?}");
+    let cursor = SkillValidator.validate(
+        Path::new(".cursor/skills/test-skill/SKILL.md"),
+        content,
+        &LintConfig::default(),
+    );
+    assert_eq!(rules_named(&cursor, "AS-016").len(), 1);
+}
+
+#[test]
+fn test_as_020_description_without_trigger() {
+    let validator = SkillValidator;
+    let path = Path::new(".codex/skills/pdf/SKILL.md");
+    let bare = "---\nname: pdf\ndescription: Helps with PDFs.\n---\nBody";
+    let diagnostics = validator.validate(path, bare, &LintConfig::default());
+    let as_020 = rules_named(&diagnostics, "AS-020");
+    assert_eq!(as_020.len(), 1);
+    assert_eq!(as_020[0].level, DiagnosticLevel::Info);
+    assert_eq!(as_020[0].line, 3);
+    for ok in [
+        "---\nname: pdf\ndescription: Extracts PDF text. Use when the user mentions PDFs.\n---\nBody",
+        "---\nname: pdf\ndescription: Helps with PDFs.\ndisable-model-invocation: true\n---\nBody",
+        "---\nname: pdf\ndescription: PDF のテキストを抽出します。\n---\nBody",
+    ] {
+        let diagnostics = validator.validate(path, ok, &LintConfig::default());
+        assert!(rules_named(&diagnostics, "AS-020").is_empty(), "{ok}");
+    }
+    // A "When to use" body section points at the description.
+    let section = "---\nname: pdf\ndescription: Helps with PDFs.\n---\n## When to use\n\nWhen the user attaches a PDF.\n";
+    let diagnostics = validator.validate(path, section, &LintConfig::default());
+    let as_020 = rules_named(&diagnostics, "AS-020");
+    assert!(
+        as_020[0]
+            .suggestion
+            .as_deref()
+            .unwrap()
+            .contains("into the description")
+    );
+    // Claude Code's when_to_use carries the trigger.
+    let claude = "---\nname: pdf\ndescription: Helps with PDFs.\nwhen_to_use: the user attaches a PDF\n---\nBody";
+    let diagnostics = validator.validate(
+        Path::new(".claude/skills/pdf/SKILL.md"),
+        claude,
+        &LintConfig::default(),
+    );
+    assert!(rules_named(&diagnostics, "AS-020").is_empty());
+}
+
+#[test]
+fn test_as_021_body_over_5000_tokens() {
+    let body = format!("{}\n", "word ".repeat(4_400));
+    let content = format!("---\nname: big\ndescription: Use when testing\n---\n{body}");
+    let diagnostics =
+        SkillValidator.validate(Path::new("SKILL.md"), &content, &LintConfig::default());
+    let as_021 = rules_named(&diagnostics, "AS-021");
+    assert_eq!(as_021.len(), 1, "{diagnostics:?}");
+    assert_eq!(as_021[0].level, DiagnosticLevel::Warning);
+    // Claude Code keeps only the first 5,000 tokens after compaction.
+    let diagnostics = SkillValidator.validate(
+        Path::new(".claude/skills/big/SKILL.md"),
+        &content,
+        &LintConfig::default(),
+    );
+    let claude = rules_named(&diagnostics, "AS-021");
+    assert_eq!(claude.len(), 1, "{diagnostics:?}");
+    assert!(
+        claude[0]
+            .suggestion
+            .as_deref()
+            .is_some_and(|s| s.contains("after compaction")),
+        "{:?}",
+        claude[0].suggestion
+    );
+    // A long file is AS-012's finding; AS-021 does not repeat it.
+    let long = format!(
+        "---\nname: big\ndescription: Use when testing\n---\n{}",
+        "word word word word word\n".repeat(900)
+    );
+    let diagnostics = SkillValidator.validate(Path::new("SKILL.md"), &long, &LintConfig::default());
+    assert!(rules_named(&diagnostics, "AS-021").is_empty());
+    assert_eq!(rules_named(&diagnostics, "AS-012").len(), 1);
+}
+
+#[test]
+fn test_as_022_and_as_023_bundled_scripts() {
+    let (_temp, diagnostics) = validate_tree(&[
+        (
+            "SKILL.md",
+            "---\nname: demo-skill\ndescription: Use when deploying\n---\nRun scripts/deploy.sh.\n",
+        ),
+        (
+            "scripts/deploy.sh",
+            "#!/bin/sh\nread -p \"Continue? \" answer\nsource scripts/lib.sh\n",
+        ),
+        (
+            "scripts/lib.sh",
+            "#!/bin/sh\nif [ -t 0 ]; then\n  read -p 'ok? ' x\nfi\n",
+        ),
+        ("scripts/orphan.py", "print('x')\n"),
+        ("references/unused.md", "# Notes\n"),
+    ]);
+    let as_022 = rules_named(&diagnostics, "AS-022");
+    assert_eq!(as_022.len(), 1, "{diagnostics:?}");
+    assert!(as_022[0].file.ends_with("scripts/deploy.sh"));
+    assert_eq!(as_022[0].line, 2);
+    let as_023: Vec<_> = rules_named(&diagnostics, "AS-023")
+        .iter()
+        .map(|d| d.message.clone())
+        .collect();
+    assert_eq!(as_023.len(), 2, "{as_023:?}");
+    assert!(as_023.iter().any(|m| m.contains("scripts/orphan.py")));
+    assert!(as_023.iter().any(|m| m.contains("references/unused.md")));
+}
+
+#[test]
+fn test_as_024_unpinned_runner_in_code() {
+    let (_temp, diagnostics) = validate_tree(&[
+        (
+            "SKILL.md",
+            "---\nname: demo-skill\ndescription: Use when linting\n---\nRun `npx eslint .` or `npx prettier@3.3.3 --check .`.\n\n```bash\nuvx ruff check\ngo run golang.org/x/tools/cmd/goimports@latest\nnpx tsc --noEmit\n```\n\nIn prose, npx eslint is fine to mention.\n",
+        ),
+        (
+            "package.json",
+            r#"{"devDependencies": {"typescript": "5.6.0"}}"#,
+        ),
+    ]);
+    let packages: Vec<_> = rules_named(&diagnostics, "AS-024")
+        .iter()
+        .map(|d| d.message.clone())
+        .collect();
+    // eslint and ruff are unpinned; prettier is pinned, goimports uses
+    // @latest (accepted for go run), tsc is a local dependency, and prose is
+    // not a command.
+    assert_eq!(packages.len(), 2, "{packages:?}");
+    assert!(packages.iter().any(|m| m.contains("'eslint'")));
+    assert!(packages.iter().any(|m| m.contains("'ruff'")));
+}
+
+#[test]
+fn test_as_024_skips_project_tools_prose_and_repository_dependencies() {
+    // A project skill under `.agents/skills/` runs the repository's tools:
+    // `c8` comes from the repository-root package.json two levels up.
+    let temp = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(temp.path().join(".git")).unwrap();
+    std::fs::write(
+        temp.path().join("package.json"),
+        r#"{"name": "probe-kit", "bin": {"probe-dev": "./bin/dev.js"}, "devDependencies": {"c8": "10.1.2"}}"#,
+    )
+    .unwrap();
+    let skill = temp.path().join(".agents/skills/probe");
+    std::fs::create_dir_all(&skill).unwrap();
+    let content = "---\nname: probe\ndescription: Use when probing runtime behavior\n---\nRun `npx c8 node probe.js`, `npx probe-dev bump 1.2.3`, then `npx tsc --noEmit` and `npx wrangler deploy`.\n\n```bash\ncommand -v npx >/dev/null 2>&1\npnpm dlx wrangler deploy\n```\n\n```json\n{\"reason\": \"npx not found on PATH\"}\n```\n";
+    let file = skill.join("SKILL.md");
+    std::fs::write(&file, content).unwrap();
+    let diagnostics = SkillValidator.validate(&file, content, &LintConfig::default());
+    let messages: Vec<_> = rules_named(&diagnostics, "AS-024")
+        .iter()
+        .map(|d| d.message.clone())
+        .collect();
+    // Only `pnpm dlx`, which always downloads, is reported.
+    assert_eq!(messages.len(), 1, "{messages:?}");
+    assert!(messages[0].contains("'wrangler'"), "{messages:?}");
+}
+
+#[test]
+fn test_as_026_and_as_027() {
+    let content = "---\nname: demo\ndescription: \"[TODO: describe the skill]\"\n---\n# Demo\n\nSee references/ for details.\n\nRead references/errors.md if the API returns an error.\n\n[TODO: add the steps]\n\n```\n[TODO: in code is fine]\n```\n";
+    let diagnostics =
+        SkillValidator.validate(Path::new("SKILL.md"), content, &LintConfig::default());
+    let as_026 = rules_named(&diagnostics, "AS-026");
+    assert_eq!(as_026.len(), 1, "{diagnostics:?}");
+    assert_eq!(as_026[0].line, 7);
+    let as_027 = rules_named(&diagnostics, "AS-027");
+    assert_eq!(as_027.len(), 2, "{diagnostics:?}");
+    assert_eq!(as_027[0].line, 3);
+    assert_eq!(as_027[1].line, 11);
+}
+
+#[test]
+fn test_xp_sk_003_and_xp_sk_004() {
+    let (_temp, diagnostics) = validate_tree(&[
+        (
+            "SKILL.md",
+            "---\nname: demo-skill\ndescription: Use when calling the API\n---\nRun scripts\\call.py with the token.\n\n```powershell\n.\\scripts\\call.ps1\n```\n",
+        ),
+        (
+            "scripts/call.py",
+            "TOKEN = \"ghp_abcdefghijklmnopqrstuvwxyz0123456789\"\n",
+        ),
+        ("references/notes.md", "Use ${GITHUB_TOKEN}.\n"),
+    ]);
+    let xp_sk_003 = rules_named(&diagnostics, "XP-SK-003");
+    assert_eq!(xp_sk_003.len(), 1, "{diagnostics:?}");
+    assert!(xp_sk_003[0].file.ends_with("scripts/call.py"));
+    let xp_sk_004 = rules_named(&diagnostics, "XP-SK-004");
+    assert_eq!(xp_sk_004.len(), 1, "{diagnostics:?}");
+    assert_eq!(xp_sk_004[0].line, 5);
+    assert!(
+        xp_sk_004[0]
+            .suggestion
+            .as_deref()
+            .unwrap()
+            .contains("scripts/call.py")
+    );
+}
+
+/// OpenCode 2 takes the skill ID from the path and "does not enforce" the
+/// name pattern, the name-directory match or a description length, so with
+/// OpenCode 2 pinned these spec checks are portability warnings. Unpinned
+/// (OpenCode 1 still ships) and with OpenCode 1 pinned they stay errors.
+#[test]
+fn test_opencode_2_pin_downgrades_name_and_description_checks() {
+    let opencode = |version: Option<&str>| {
+        let mut builder = LintConfig::builder();
+        builder.tool_versions(crate::config::ToolVersions {
+            opencode: version.map(str::to_string),
+            ..Default::default()
+        });
+        builder.build().unwrap()
+    };
+    let long = "a".repeat(1100);
+    let content = format!("---\nname: Release_Notes\ndescription: Use when {long}\n---\nBody.\n");
+    let path = Path::new(".opencode/skills/release/SKILL.md");
+    for (version, level) in [
+        (None, DiagnosticLevel::Error),
+        (Some("1.19.3"), DiagnosticLevel::Error),
+        (Some("2.0.32"), DiagnosticLevel::Warning),
+    ] {
+        let diagnostics = SkillValidator.validate(path, &content, &opencode(version));
+        for rule in ["AS-004", "AS-008", "AS-017"] {
+            let hits = rules_named(&diagnostics, rule);
+            assert_eq!(hits.len(), 1, "{rule} {version:?}: {diagnostics:?}");
+            assert_eq!(hits[0].level, level, "{rule} {version:?}");
+        }
+    }
+    // The pin applies to OpenCode skills only.
+    let diagnostics = SkillValidator.validate(
+        Path::new(".cursor/skills/release/SKILL.md"),
+        &content,
+        &opencode(Some("2.0.32")),
+    );
+    assert_eq!(
+        rules_named(&diagnostics, "AS-004")[0].level,
+        DiagnosticLevel::Error
     );
 }

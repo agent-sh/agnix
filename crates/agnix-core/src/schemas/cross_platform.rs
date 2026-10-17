@@ -1,10 +1,9 @@
 //! Cross-platform validation schema helpers
 //!
 //! Provides detection functions for:
-//! - XP-001: Claude-specific features in AGENTS.md
-//! - XP-002: AGENTS.md markdown structure validation
-//! - XP-003: Hard-coded platform paths in configs
-//! - XP-007: AGENTS.md exceeds Codex CLI byte limit
+//! - XP-001: Features in AGENTS.md that not every AGENTS.md reader uses
+//! - XP-002: AGENTS.md heading hierarchy
+//! - XP-003: Hard-coded user home paths in files agents load
 //!
 //! ## Security
 //!
@@ -20,7 +19,7 @@ use crate::parsers::markdown::{MAX_REGEX_INPUT_SIZE, mask_code_spans};
 use crate::regex_util::static_regex;
 
 // XP-001: Claude-specific feature patterns
-static_regex!(fn claude_hooks_pattern, r"(?im)^\s*-?\s*(?:type|event):\s*(?:PreToolExecution|PostToolExecution|Notification|Stop|SubagentStop)\b");
+static_regex!(fn claude_hooks_pattern, r"(?im)^\s*-?\s*(?:type|event):\s*(?:PreToolUse|PostToolUse|PreToolExecution|PostToolExecution|UserPromptSubmit|SessionStart|SessionEnd|PreCompact|Notification|Stop|SubagentStop)\b");
 static_regex!(fn context_fork_pattern, r"(?im)^\s*context:\s*fork\b");
 static_regex!(fn agent_field_pattern, r"(?im)^\s*agent:\s*\S+");
 static_regex!(fn allowed_tools_pattern, r"(?im)^\s*allowed-tools:\s*.+");
@@ -48,6 +47,18 @@ static_regex!(fn layer_precedence_pattern, r"(?im)(?:precedence|priority|overrid
 // XP-001: Claude-Specific Features Detection
 // ============================================================================
 
+/// What kind of XP-001 finding a [`ClaudeSpecificFeature`] is.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FeatureKind {
+    /// An `@path` file reference. Amp, Copilot CLI and Claude Code expand
+    /// these in AGENTS.md; Codex, Cursor and OpenCode treat them as text.
+    AtReference,
+    /// A hook definition, or a skill or subagent frontmatter field
+    /// (`context: fork`, `agent:`, `allowed-tools:`). No tool reads these from
+    /// an instruction file.
+    InertConfig,
+}
+
 /// Claude-specific feature found in content
 #[derive(Debug, Clone)]
 pub struct ClaudeSpecificFeature {
@@ -55,6 +66,9 @@ pub struct ClaudeSpecificFeature {
     pub column: usize,
     pub feature: String,
     pub description: String,
+    pub kind: FeatureKind,
+    /// The matched text (for an @-reference, the `@path` itself).
+    pub text: String,
 }
 
 /// Find Claude-specific features in content (for XP-001)
@@ -131,8 +145,11 @@ pub fn find_claude_specific_features(content: &str) -> Vec<ClaudeSpecificFeature
                 line: line_num + 1,
                 column: mat.start() + 1,
                 feature: "hooks".to_string(),
-                description: "Claude Code hooks are not supported by other AGENTS.md readers"
-                    .to_string(),
+                description:
+                    "no tool loads hook definitions from an instruction file; hooks belong in the tool's settings or hooks file"
+                        .to_string(),
+                kind: FeatureKind::InertConfig,
+                text: mat.as_str().trim().to_string(),
             });
         }
 
@@ -142,7 +159,11 @@ pub fn find_claude_specific_features(content: &str) -> Vec<ClaudeSpecificFeature
                 line: line_num + 1,
                 column: mat.start() + 1,
                 feature: "context:fork".to_string(),
-                description: "Context forking is Claude Code specific".to_string(),
+                description:
+                    "'context' is a Claude Code skill and subagent frontmatter field; no tool reads it from an instruction file"
+                        .to_string(),
+                kind: FeatureKind::InertConfig,
+                text: mat.as_str().trim().to_string(),
             });
         }
 
@@ -152,7 +173,11 @@ pub fn find_claude_specific_features(content: &str) -> Vec<ClaudeSpecificFeature
                 line: line_num + 1,
                 column: mat.start() + 1,
                 feature: "agent".to_string(),
-                description: "Agent field is Claude Code specific".to_string(),
+                description:
+                    "'agent' is a Claude Code skill frontmatter field; no tool reads it from an instruction file"
+                        .to_string(),
+                kind: FeatureKind::InertConfig,
+                text: mat.as_str().trim().to_string(),
             });
         }
 
@@ -162,7 +187,11 @@ pub fn find_claude_specific_features(content: &str) -> Vec<ClaudeSpecificFeature
                 line: line_num + 1,
                 column: mat.start() + 1,
                 feature: "allowed-tools".to_string(),
-                description: "Tool restrictions are Claude Code specific".to_string(),
+                description:
+                    "'allowed-tools' is a skill frontmatter field; no tool reads it from an instruction file"
+                        .to_string(),
+                kind: FeatureKind::InertConfig,
+                text: mat.as_str().trim().to_string(),
             });
         }
 
@@ -175,7 +204,11 @@ pub fn find_claude_specific_features(content: &str) -> Vec<ClaudeSpecificFeature
                     line: line_num + 1,
                     column: mat.start() + 1,
                     feature: "@import".to_string(),
-                    description: "The @file import syntax is Claude Code specific".to_string(),
+                    description:
+                        "Codex, Cursor and OpenCode do not expand @file references in AGENTS.md (Amp, Copilot CLI and Claude Code do)"
+                            .to_string(),
+                    kind: FeatureKind::AtReference,
+                    text: matched.to_string(),
                 });
             }
         }
@@ -197,33 +230,17 @@ pub struct MarkdownStructureIssue {
     pub suggestion: String,
 }
 
-/// Check AGENTS.md markdown structure (for XP-002)
+/// Check AGENTS.md heading hierarchy (for XP-002)
 ///
-/// Validates that AGENTS.md follows good markdown conventions for
-/// cross-platform compatibility.
+/// Reports a heading that skips a level (`#` followed by `###`). An agnix
+/// style heuristic: no vendor requires a heading hierarchy.
 pub fn check_markdown_structure(content: &str) -> Vec<MarkdownStructureIssue> {
     let mut results = Vec::new();
     let pattern = markdown_header_pattern();
 
-    // Check if file has any headers at all (skip fenced code blocks)
-    let mut fence_check = false;
-    let has_headers = content.lines().any(|line| {
-        if line.trim_start().starts_with("```") {
-            fence_check = !fence_check;
-            return false;
-        }
-        !fence_check && pattern.is_match(line)
-    });
-
-    if !has_headers && !content.trim().is_empty() {
-        results.push(MarkdownStructureIssue {
-            line: 1,
-            column: 0,
-            issue: "No markdown headers found".to_string(),
-            suggestion: "Add headers (# Section) to structure the document for better readability"
-                .to_string(),
-        });
-    }
+    // A file without any heading is AGM-002's finding (reported only for long
+    // files, since headings are optional in AGENTS.md); this check covers the
+    // heading hierarchy only.
 
     // Check for proper header hierarchy (no skipping levels)
     let mut last_level = 0;
@@ -266,10 +283,10 @@ pub fn check_markdown_structure(content: &str) -> Vec<MarkdownStructureIssue> {
 }
 
 // ============================================================================
-// XP-003: Hard-Coded Platform Paths Detection
+// XP-003: Hard-Coded User Home Path Detection
 // ============================================================================
 
-/// Hard-coded platform path found in content
+/// Hard-coded user home path found in content
 #[derive(Debug, Clone)]
 pub struct HardCodedPath {
     pub line: usize,
@@ -278,23 +295,87 @@ pub struct HardCodedPath {
     pub platform: String,
 }
 
-impl HardCodedPath {
-    /// Returns true for an agent tool's directory (`.claude/`, `.cursor/`, ...)
-    /// rather than a machine-specific path such as a home directory.
-    pub fn is_tool_directory(&self) -> bool {
-        matches!(
-            self.platform.as_str(),
-            "Claude Code" | "OpenCode" | "Cursor" | "Cline" | "GitHub Copilot"
-        )
+/// Name segments treated as placeholders rather than a real username
+/// (case-insensitive). Matches with one of these names are not reported.
+const USER_PATH_PLACEHOLDERS: &[&str] = &[
+    "user",
+    "username",
+    "name",
+    "you",
+    "your-name",
+    "yourname",
+    "me",
+    "myname",
+    "someone",
+    "example",
+    "johndoe",
+    "jdoe",
+    "foo",
+    "bar",
+];
+
+static_regex!(fn posix_user_path_pattern, r"(?:/Users/|/home/)([A-Za-z0-9._-]+)");
+static_regex!(fn windows_user_path_pattern, r"[Cc]:[\\/]Users[\\/]([A-Za-z0-9._-]+)");
+
+fn is_placeholder_user_name(name: &str) -> bool {
+    // A name without letters or digits is an elided example, as in `C:\Users\...`.
+    if !name.chars().any(|c| c.is_ascii_alphanumeric()) {
+        return true;
     }
+    let lower = name.to_ascii_lowercase();
+    USER_PATH_PLACEHOLDERS.contains(&lower.as_str())
 }
 
-// Expanded XP-003 pattern: tool-specific dirs + OS-specific absolute paths
-static_regex!(fn hard_coded_path_pattern, r"(?i)(?:\.claude/|\.opencode/|\.cursor/|\.cline/|\.github/copilot/|~/Library/|~/\.[a-z][\w-]*/|/Users/[a-zA-Z][\w.-]*/|/home/[a-zA-Z][\w.-]*/|[A-Z]:\\Users\\[a-zA-Z][\w.-]*\\)");
-/// Find hard-coded platform-specific paths (for XP-003)
+/// A hard-coded user home path: byte offset of the match and the matched
+/// prefix (for example `/Users/alice`).
+struct UserHomePath {
+    offset: usize,
+    text: String,
+    posix: bool,
+}
+
+/// Find hard-coded user home paths (`/Users/<name>/`, `/home/<name>/`,
+/// `C:\Users\<name>\`) in `content`, skipping placeholder names. Angle-bracket
+/// (`<name>`), template (`${...}`, `{{...}}`) and env-var (`$HOME`) forms never
+/// match the name character class, so they are skipped implicitly. The skill
+/// rules (XP-SK-002, CC-SK-021) use the same placeholder list.
+fn find_user_home_paths(content: &str) -> Vec<UserHomePath> {
+    let mut hits = Vec::new();
+    for (re, posix) in [
+        (posix_user_path_pattern(), true),
+        (windows_user_path_pattern(), false),
+    ] {
+        for caps in re.captures_iter(content) {
+            let whole = caps.get(0).expect("group 0 always present");
+            let name = caps.get(1).map(|m| m.as_str()).unwrap_or_default();
+            if is_placeholder_user_name(name) {
+                continue;
+            }
+            // `/home/` inside a longer path segment (`/srv/home/x`) or a URL
+            // (`https://example.com/home/page`) is not a home directory.
+            if posix
+                && whole.start() > 0
+                && content.as_bytes()[whole.start() - 1].is_ascii_alphanumeric()
+            {
+                continue;
+            }
+            hits.push(UserHomePath {
+                offset: whole.start(),
+                text: whole.as_str().to_string(),
+                posix,
+            });
+        }
+    }
+    hits.sort_by_key(|h| h.offset);
+    hits
+}
+
+/// Find hard-coded user home paths (for XP-003)
 ///
-/// Detects paths like `.claude/`, `.opencode/`, `.cursor/` that may cause
-/// portability issues when the same config is used across different platforms.
+/// A path under one person's home directory resolves on no other machine and
+/// names its author. Tool directories (`.claude/`, `.cursor/`, `~/.codex/`)
+/// are not reported: each vendor documents those locations and asks for them
+/// by name.
 ///
 /// # Security
 ///
@@ -305,44 +386,27 @@ pub fn find_hard_coded_paths(content: &str) -> Vec<HardCodedPath> {
         return Vec::new();
     }
 
-    let mut results = Vec::new();
-    let pattern = hard_coded_path_pattern();
-
-    for (line_num, line) in content.lines().enumerate() {
-        for mat in pattern.find_iter(line) {
-            let path = mat.as_str().to_lowercase();
-            let platform = if path.contains(".claude") {
-                "Claude Code"
-            } else if path.contains(".opencode") {
-                "OpenCode"
-            } else if path.contains(".cursor") {
-                "Cursor"
-            } else if path.contains(".cline") {
-                "Cline"
-            } else if path.contains(".github/copilot") {
-                "GitHub Copilot"
-            } else if path.contains("/library/") || path.starts_with("~/library/") {
-                "macOS"
-            } else if path.starts_with("/users/") || path.starts_with("/home/") {
-                "OS-specific absolute path"
-            } else if path.contains(":\\users\\") {
-                "Windows absolute path"
-            } else if path.starts_with("~/.") {
-                "User-specific hidden directory"
+    let mut line_starts = vec![0usize];
+    line_starts.extend(content.match_indices('\n').map(|(i, _)| i + 1));
+    find_user_home_paths(content)
+        .into_iter()
+        .map(|hit| {
+            let line_idx = line_starts.partition_point(|&start| start <= hit.offset) - 1;
+            let platform = if !hit.posix {
+                "Windows home directory"
+            } else if hit.text.starts_with("/Users/") {
+                "macOS home directory"
             } else {
-                "OS-specific"
+                "Linux home directory"
             };
-
-            results.push(HardCodedPath {
-                line: line_num + 1,
-                column: mat.start() + 1,
-                path: mat.as_str().to_string(),
+            HardCodedPath {
+                line: line_idx + 1,
+                column: hit.offset - line_starts[line_idx] + 1,
+                path: hit.text,
                 platform: platform.to_string(),
-            });
-        }
-    }
-
-    results
+            }
+        })
+        .collect()
 }
 
 // ============================================================================
@@ -875,8 +939,6 @@ pub enum LayerType {
     CopilotInstructions,
     /// Cline rules (.clinerules)
     ClineRules,
-    /// OpenCode rules (.opencode/)
-    OpenCodeRules,
     /// Other instruction file
     Other,
 }
@@ -892,7 +954,6 @@ impl LayerType {
             LayerType::CursorRules => "Cursor Rules",
             LayerType::CopilotInstructions => "Copilot Instructions",
             LayerType::ClineRules => "Cline Rules",
-            LayerType::OpenCodeRules => "OpenCode Rules",
             LayerType::Other => "Other",
         }
     }
@@ -935,8 +996,6 @@ pub fn categorize_layer(path: &Path, content: &str) -> InstructionLayer {
         LayerType::CopilotInstructions
     } else if file_name == ".clinerules" || path_str.contains(".clinerules") {
         LayerType::ClineRules
-    } else if path_str.contains(".opencode") {
-        LayerType::OpenCodeRules
     } else {
         LayerType::Other
     };
@@ -972,8 +1031,13 @@ pub fn detect_precedence_issues(layers: &[InstructionLayer]) -> Option<LayerPrec
         .filter(|l| l.layer_type != LayerType::Other)
         .collect();
 
-    // If there's only one or zero layers, no issue
-    if meaningful_layers.len() <= 1 {
+    // Several files of one kind (nested AGENTS.md, several Cursor rules) are
+    // one tool's own hierarchy, which that tool documents; only files for
+    // different tools are separate layers.
+    let mut kinds: Vec<LayerType> = meaningful_layers.iter().map(|l| l.layer_type).collect();
+    kinds.sort_by_key(|kind| kind.as_str());
+    kinds.dedup();
+    if kinds.len() <= 1 {
         return None;
     }
 
@@ -989,7 +1053,7 @@ pub fn detect_precedence_issues(layers: &[InstructionLayer]) -> Option<LayerPrec
         Some(LayerPrecedenceIssue {
             layers: meaningful_layers.into_iter().cloned().collect(),
             description: format!(
-                "Multiple instruction layers detected without documented precedence: {}",
+                "Instruction files for several tools, with no note on how they relate: {}",
                 layer_names.join(", ")
             ),
         })
@@ -1025,7 +1089,7 @@ pub fn is_instruction_file(path: &Path) -> bool {
         || file_name.eq_ignore_ascii_case("agents.md")
         // Codex checks `AGENTS.override.md` before `AGENTS.md` in each
         // directory, so it is part of the instruction set and counts toward
-        // `project_doc_max_bytes` (XP-007, XP-009).
+        // `project_doc_max_bytes`.
         || file_name.eq_ignore_ascii_case("agents.override.md")
         || file_name.eq_ignore_ascii_case("gemini.md")
         || file_name.eq_ignore_ascii_case("gemini.local.md")
@@ -1043,7 +1107,6 @@ pub fn is_instruction_file(path: &Path) -> bool {
     let mut found_github = false;
     let mut found_copilot_after_github = false;
     let mut found_rules = false;
-    let mut found_opencode = false;
 
     for component in path.components() {
         let s = match component {
@@ -1062,8 +1125,6 @@ pub fn is_instruction_file(path: &Path) -> bool {
             found_github = true;
         } else if found_github && ascii_contains_ignore_case(s, "copilot") {
             found_copilot_after_github = true;
-        } else if s.eq_ignore_ascii_case(".opencode") {
-            found_opencode = true;
         }
     }
 
@@ -1078,15 +1139,23 @@ pub fn is_instruction_file(path: &Path) -> bool {
         }
     }
 
-    // .github directory with a copilot-related component after it
-    if found_github && found_copilot_after_github {
+    // .github directory with a copilot-related component after it, Markdown
+    // only: `.github/copilot-instructions.md` is an instruction file, while
+    // `.github/copilot/settings.json` and hook files configure Copilot.
+    if found_github
+        && found_copilot_after_github
+        && Path::new(file_name)
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
+    {
         return true;
     }
 
-    // .opencode directory
-    if found_opencode {
-        return true;
-    }
+    // `.opencode/` holds agents, commands, skills and config, not instruction
+    // layers: OpenCode's instructions are AGENTS.md and the `instructions`
+    // array, which are matched above or live elsewhere. Counting every file
+    // there made XP-004/005/006 compare OpenCode agent definitions as rules.
 
     false
 }
@@ -1108,32 +1177,14 @@ fn ascii_contains_ignore_case(haystack: &str, needle: &str) -> bool {
 }
 
 // ============================================================================
-// XP-007: AGENTS.md Codex Byte Limit
+// Codex byte limit
 // ============================================================================
 
-/// Codex CLI project_doc_max_bytes default (32 KiB)
+/// Codex CLI `project_doc_max_bytes` default (32 KiB). XP-007 and XP-009 used
+/// it before they were retired; the Codex rules that replace them (CDX-AG-009,
+/// CDX-AG-010) read it, as does the chain builder in `project_level`.
+#[allow(dead_code)]
 pub const CODEX_BYTE_LIMIT: usize = 32_768;
-
-/// Byte limit exceeded result
-#[derive(Debug, Clone)]
-pub struct ByteLimitExceeded {
-    pub byte_count: usize,
-    pub limit: usize,
-}
-
-/// Check if content exceeds a byte limit
-///
-/// Codex CLI has a default `project_doc_max_bytes` of 32768. AGENTS.md files
-/// exceeding this limit will be silently truncated, potentially losing
-/// important instructions.
-pub fn check_byte_limit(content: &str, limit: usize) -> Option<ByteLimitExceeded> {
-    let byte_count = content.len();
-    if byte_count > limit {
-        Some(ByteLimitExceeded { byte_count, limit })
-    } else {
-        None
-    }
-}
 
 #[cfg(test)]
 mod tests {
@@ -1147,7 +1198,8 @@ mod tests {
         let _ = allowed_tools_pattern();
         let _ = claude_section_guard_pattern();
         let _ = markdown_header_pattern();
-        let _ = hard_coded_path_pattern();
+        let _ = posix_user_path_pattern();
+        let _ = windows_user_path_pattern();
         #[cfg(feature = "filesystem")]
         {
             let _ = build_command_pattern();
@@ -1621,11 +1673,11 @@ agent: reviewer
     // ===== XP-002: Markdown Structure =====
 
     #[test]
-    fn test_detect_no_headers() {
+    fn test_no_headers_is_left_to_agm_002() {
+        // XP-002 used to report a file without headings too, duplicating
+        // AGM-002 on the same file; it now checks the hierarchy only.
         let content = "Just some text without any headers.\nMore text here.";
-        let results = check_markdown_structure(content);
-        assert_eq!(results.len(), 1);
-        assert!(results[0].issue.contains("No markdown headers"));
+        assert!(check_markdown_structure(content).is_empty());
     }
 
     #[test]
@@ -1685,20 +1737,18 @@ make java-lint     # Run Java spotlessApply
     }
 
     #[test]
-    fn test_only_headers_in_code_block_means_no_headers() {
-        // If the only "headers" are inside code blocks, file has no real headers
+    fn test_headers_in_code_block_do_not_count_for_hierarchy() {
+        // `#` then `###` inside a fence is code, not a skipped level.
         let content = r#"Some content without headers.
 
 ```markdown
 # This is inside a code block
-## Also inside
+### Also inside
 ```
 
 More content.
 "#;
-        let results = check_markdown_structure(content);
-        assert_eq!(results.len(), 1);
-        assert!(results[0].issue.contains("No markdown headers found"));
+        assert!(check_markdown_structure(content).is_empty());
     }
 
     #[test]
@@ -1718,39 +1768,12 @@ More content.
     // ===== XP-003: Hard-Coded Paths =====
 
     #[test]
-    fn test_detect_claude_path() {
-        let content = "Check the config at .claude/settings.json";
-        let results = find_hard_coded_paths(content);
-        assert_eq!(results.len(), 1);
-        assert_eq!(results[0].platform, "Claude Code");
-    }
-
-    #[test]
-    fn test_detect_opencode_path() {
-        let content = "OpenCode stores settings in .opencode/config.yaml";
-        let results = find_hard_coded_paths(content);
-        assert_eq!(results.len(), 1);
-        assert_eq!(results[0].platform, "OpenCode");
-    }
-
-    #[test]
-    fn test_detect_cursor_path() {
-        let content = "Cursor rules are in .cursor/rules/";
-        let results = find_hard_coded_paths(content);
-        assert_eq!(results.len(), 1);
-        assert_eq!(results[0].platform, "Cursor");
-    }
-
-    #[test]
-    fn test_detect_multiple_platform_paths() {
-        let content = r#"
-Platform configs:
-- Claude: .claude/settings.json
-- Cursor: .cursor/rules/
-- OpenCode: .opencode/config.yaml
-"#;
-        let results = find_hard_coded_paths(content);
-        assert_eq!(results.len(), 3);
+    fn test_tool_directories_are_not_reported() {
+        // Vendors document these locations and ask for them by name, so
+        // mentioning one is not a portability defect (XP-003 used to report
+        // each of them).
+        let content = "See .claude/settings.json, .cursor/rules/, .opencode/config.yaml, .cline/x, .github/copilot/settings.json and ~/.codex/config.toml.";
+        assert!(find_hard_coded_paths(content).is_empty());
     }
 
     #[test]
@@ -1765,10 +1788,25 @@ Check the project root for settings.
     }
 
     #[test]
-    fn test_case_insensitive_path_detection() {
-        let content = "Config at .CLAUDE/Settings.json";
+    fn test_detect_user_home_paths() {
+        let content = "Run /Users/alice/bin/x\nor /home/bob/tools\nor C:\\Users\\carol\\app\n";
         let results = find_hard_coded_paths(content);
-        assert_eq!(results.len(), 1);
+        let platforms: Vec<_> = results.iter().map(|r| r.platform.as_str()).collect();
+        assert_eq!(
+            platforms,
+            [
+                "macOS home directory",
+                "Linux home directory",
+                "Windows home directory"
+            ]
+        );
+        assert_eq!((results[1].line, results[1].column), (2, 4));
+    }
+
+    #[test]
+    fn test_placeholder_and_url_home_paths_are_skipped() {
+        let content = "/Users/<name>/x /home/user/x /Users/you/x https://example.com/home/page /srv/home/data";
+        assert!(find_hard_coded_paths(content).is_empty());
     }
 
     // ===== Additional edge case tests from review =====
@@ -1785,22 +1823,6 @@ Check the project root for settings.
         let results = find_claude_specific_features(content);
         assert_eq!(results.len(), 2);
         assert!(results.iter().all(|r| r.feature == "hooks"));
-    }
-
-    #[test]
-    fn test_detect_cline_path() {
-        let content = "Cline config is in .cline/settings.json";
-        let results = find_hard_coded_paths(content);
-        assert_eq!(results.len(), 1);
-        assert_eq!(results[0].platform, "Cline");
-    }
-
-    #[test]
-    fn test_detect_github_copilot_path() {
-        let content = "GitHub Copilot config at .github/copilot/config.json";
-        let results = find_hard_coded_paths(content);
-        assert_eq!(results.len(), 1);
-        assert_eq!(results[0].platform, "GitHub Copilot");
     }
 
     #[test]
@@ -2089,6 +2111,27 @@ Use pnpm install for dependencies.
 
     #[cfg(feature = "filesystem")]
     #[test]
+    fn test_nested_files_of_one_kind_are_one_layer() {
+        // A monorepo's nested AGENTS.md files are the hierarchy agents.md
+        // documents ("the closest one takes precedence"), not competing layers.
+        use std::path::PathBuf;
+        let layers = vec![
+            InstructionLayer {
+                path: PathBuf::from("AGENTS.md"),
+                layer_type: LayerType::AgentsMd,
+                has_precedence_doc: false,
+            },
+            InstructionLayer {
+                path: PathBuf::from("pkg/AGENTS.md"),
+                layer_type: LayerType::AgentsMd,
+                has_precedence_doc: false,
+            },
+        ];
+        assert!(detect_precedence_issues(&layers).is_none());
+    }
+
+    #[cfg(feature = "filesystem")]
+    #[test]
     fn test_detect_precedence_issues_multiple_layers() {
         use std::path::PathBuf;
 
@@ -2111,7 +2154,7 @@ Use pnpm install for dependencies.
             issue
                 .unwrap()
                 .description
-                .contains("without documented precedence")
+                .contains("no note on how they relate")
         );
     }
 
@@ -2166,6 +2209,15 @@ Use pnpm install for dependencies.
             ".github/copilot-instructions.md"
         )));
         assert!(is_instruction_file(&PathBuf::from(".clinerules")));
+
+        // Copilot settings and hooks configure Copilot; they are not
+        // instruction layers for XP-004/005/006.
+        assert!(!is_instruction_file(&PathBuf::from(
+            ".github/copilot/settings.json"
+        )));
+        assert!(!is_instruction_file(&PathBuf::from(
+            ".github/copilot/settings.local.json"
+        )));
 
         assert!(!is_instruction_file(&PathBuf::from("README.md")));
         assert!(!is_instruction_file(&PathBuf::from("src/main.rs")));
@@ -2591,15 +2643,14 @@ Use pnpm install for dependencies.
     #[cfg(feature = "filesystem")]
     #[test]
     fn test_instruction_file_opencode_directory() {
+        // OpenCode's instructions are AGENTS.md and `instructions[]`; files in
+        // `.opencode/` are agents, commands, skills and config.
         use std::path::PathBuf;
-        assert!(
-            is_instruction_file(&PathBuf::from(".opencode/config.md")),
-            ".opencode directory should match"
-        );
-        assert!(
-            is_instruction_file(&PathBuf::from("project/.opencode/something.yaml")),
-            "nested .opencode directory should match"
-        );
+        assert!(!is_instruction_file(&PathBuf::from(".opencode/config.md")));
+        assert!(!is_instruction_file(&PathBuf::from(
+            "project/.opencode/agents/review.md"
+        )));
+        assert!(is_instruction_file(&PathBuf::from("project/AGENTS.md")));
     }
 
     #[cfg(feature = "filesystem")]
@@ -2610,9 +2661,11 @@ Use pnpm install for dependencies.
             is_instruction_file(&PathBuf::from(".github/copilot-instructions.md")),
             ".github/copilot-instructions.md should match"
         );
+        // Copilot settings configure Copilot (and may hold hooks); they are
+        // not an instruction layer, so XP-006 must not count them.
         assert!(
-            is_instruction_file(&PathBuf::from(".github/copilot/settings.json")),
-            ".github/copilot/settings.json should match"
+            !is_instruction_file(&PathBuf::from(".github/copilot/settings.json")),
+            ".github/copilot/settings.json should NOT match"
         );
         // .github without copilot should not match
         assert!(
@@ -2769,9 +2822,8 @@ Use pnpm install for dependencies.
 
     #[test]
     fn test_find_hard_coded_paths_exactly_at_64kb_limit() {
-        // '/Users/name/project' matches hard_coded_path_pattern via the
-        // '/Users/[a-zA-Z][\w.-]*/' arm.
-        let base = "/Users/name/project\n";
+        // '/Users/alice/project' is a real (non-placeholder) home path.
+        let base = "/Users/alice/project\n";
         let needed = MAX_REGEX_INPUT_SIZE - base.len();
         let content = format!("{}{}", base, "a".repeat(needed));
         assert_eq!(
@@ -2788,7 +2840,7 @@ Use pnpm install for dependencies.
 
     #[test]
     fn test_find_hard_coded_paths_one_byte_over_limit() {
-        let base = "/Users/name/project\n";
+        let base = "/Users/alice/project\n";
         let needed = MAX_REGEX_INPUT_SIZE - base.len() + 1;
         let content = format!("{}{}", base, "a".repeat(needed));
         assert_eq!(
@@ -2949,37 +3001,5 @@ Use pnpm install for dependencies.
                 file
             );
         }
-    }
-
-    // ===== XP-007: Byte Limit =====
-
-    #[test]
-    fn test_check_byte_limit_under() {
-        let content = "Short content";
-        let result = check_byte_limit(content, CODEX_BYTE_LIMIT);
-        assert!(result.is_none());
-    }
-
-    #[test]
-    fn test_check_byte_limit_exact() {
-        let content = "a".repeat(CODEX_BYTE_LIMIT);
-        let result = check_byte_limit(&content, CODEX_BYTE_LIMIT);
-        assert!(result.is_none(), "Exact limit should not trigger");
-    }
-
-    #[test]
-    fn test_check_byte_limit_over() {
-        let content = "a".repeat(CODEX_BYTE_LIMIT + 1);
-        let result = check_byte_limit(&content, CODEX_BYTE_LIMIT);
-        assert!(result.is_some());
-        let exceeded = result.unwrap();
-        assert_eq!(exceeded.byte_count, CODEX_BYTE_LIMIT + 1);
-        assert_eq!(exceeded.limit, CODEX_BYTE_LIMIT);
-    }
-
-    #[test]
-    fn test_check_byte_limit_empty() {
-        let result = check_byte_limit("", CODEX_BYTE_LIMIT);
-        assert!(result.is_none());
     }
 }

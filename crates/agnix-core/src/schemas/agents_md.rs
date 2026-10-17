@@ -3,20 +3,17 @@
 //! Provides detection functions for:
 //! - AGM-001: Valid Markdown Structure (unclosed code blocks, malformed links)
 //! - AGM-002: Missing Section Headers
-//! - AGM-003: Character Limit (12000 chars for Windsurf compatibility)
+//! - AGM-003: Character Limit (Windsurf's 12,000-character rule-file limit)
 //! - AGM-004: Missing Project Context
-//! - AGM-005: Platform-Specific Features Without Guard
+//! - AGM-007: Root AGENTS.md lists no build or test command
 
 use regex::Regex;
 
 use crate::regex_util::static_regex;
 
-static_regex!(fn code_block_pattern, r"^```");
 static_regex!(fn link_pattern, r"\[([^\]]*)\](?:\(([^)]*)\)?|\[([^\]]*)\]?)");
 static_regex!(fn markdown_header_pattern, r"^#+\s+.+");
 static_regex!(fn project_context_pattern, r"(?im)^#+\s*(project|overview|about|description|introduction|summary|this\s+(project|repository|repo))\b");
-static_regex!(fn platform_guard_pattern, r#"(?im)^(?:#+\s*|<!--\s*)(claude|cursor|codex|opencode|cline|copilot|windsurf)(?:\s+code)?(?:\s+specific|\s+only)?(?:\s*-->)?"#);
-static_regex!(fn platform_feature_pattern, r#"(?im)(?:^\s*-?\s*(?:type|event):\s*(?:PreToolExecution|PostToolExecution|Notification|Stop|SubagentStop)\b|^\s*context:\s*fork\b|^\s*agent:\s*\S+|^\s*allowed-tools:\s*.+|\.cursor/|@rules)"#);
 
 // ============================================================================
 // AGM-001: Valid Markdown Structure
@@ -29,6 +26,9 @@ pub struct MarkdownValidityIssue {
     pub column: usize,
     pub issue_type: MarkdownIssueType,
     pub description: String,
+    /// For an unclosed code block, the opening fence (for example "```" or
+    /// "~~~~"), so a fix can close it with a matching fence. Empty otherwise.
+    pub fence: String,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -37,35 +37,64 @@ pub enum MarkdownIssueType {
     MalformedLink,
 }
 
+/// A fenced code block marker per CommonMark ("Fenced code blocks"): at most
+/// three spaces of indentation, then three or more backticks or tildes. A
+/// backtick fence's info string may not contain a backtick.
+fn fence_marker(line: &str) -> Option<(u8, usize, &str)> {
+    let rest = line.trim_start_matches(' ');
+    if line.len() - rest.len() > 3 {
+        return None;
+    }
+    let ch = *rest.as_bytes().first()?;
+    if ch != b'`' && ch != b'~' {
+        return None;
+    }
+    let len = rest.bytes().take_while(|&b| b == ch).count();
+    if len < 3 {
+        return None;
+    }
+    let info = &rest[len..];
+    if ch == b'`' && info.contains('`') {
+        return None;
+    }
+    Some((ch, len, info))
+}
+
 /// Check markdown validity (for AGM-001)
 ///
 /// Detects:
-/// - Unclosed code blocks (unmatched ```)
+/// - Unclosed fenced code blocks. CommonMark defines them: the block runs to
+///   the end of the document, so everything after the opening fence is read
+///   as code. Fences follow CommonMark: backticks or tildes, at least three,
+///   closed by a fence of the same character that is at least as long and has
+///   no info string.
 /// - Malformed links ([text]( without closing)
 pub fn check_markdown_validity(content: &str) -> Vec<MarkdownValidityIssue> {
     let mut results = Vec::new();
-    let code_pattern = code_block_pattern();
     let link_pattern = link_pattern();
 
-    // Track code block state
-    let mut in_code_block = false;
-    let mut code_block_start_line = 0;
+    // Open fence: character, length and 1-based opening line.
+    let mut open_fence: Option<(u8, usize, usize)> = None;
 
     for (line_num, line) in content.lines().enumerate() {
-        // Check for code block markers
-        if code_pattern.is_match(line) {
-            if in_code_block {
-                // Closing code block
-                in_code_block = false;
-            } else {
-                // Opening code block
-                in_code_block = true;
-                code_block_start_line = line_num + 1;
+        if let Some((ch, len, info)) = fence_marker(line) {
+            match open_fence {
+                Some((open_ch, open_len, _))
+                    if ch == open_ch && len >= open_len && info.trim().is_empty() =>
+                {
+                    open_fence = None;
+                    continue;
+                }
+                Some(_) => {}
+                None => {
+                    open_fence = Some((ch, len, line_num + 1));
+                    continue;
+                }
             }
         }
 
         // Check for malformed links (only outside code blocks)
-        if !in_code_block {
+        if open_fence.is_none() {
             // Look for [text]( patterns that don't close properly
             for mat in link_pattern.find_iter(line) {
                 let matched_str = mat.as_str();
@@ -85,6 +114,7 @@ pub fn check_markdown_validity(content: &str) -> Vec<MarkdownValidityIssue> {
                                 description:
                                     "Malformed markdown link (missing closing parenthesis)"
                                         .to_string(),
+                                fence: String::new(),
                             });
                         }
                     }
@@ -101,6 +131,7 @@ pub fn check_markdown_validity(content: &str) -> Vec<MarkdownValidityIssue> {
                             description:
                                 "Malformed markdown link reference (missing closing bracket)"
                                     .to_string(),
+                            fence: String::new(),
                         });
                     }
                 }
@@ -109,12 +140,13 @@ pub fn check_markdown_validity(content: &str) -> Vec<MarkdownValidityIssue> {
     }
 
     // Check if code block was never closed
-    if in_code_block {
+    if let Some((ch, len, start_line)) = open_fence {
         results.push(MarkdownValidityIssue {
-            line: code_block_start_line,
+            line: start_line,
             column: 0,
             issue_type: MarkdownIssueType::UnclosedCodeBlock,
             description: "Unclosed code block (missing closing ```)".to_string(),
+            fence: String::from(ch as char).repeat(len),
         });
     }
 
@@ -130,7 +162,11 @@ pub fn check_markdown_validity(content: &str) -> Vec<MarkdownValidityIssue> {
 pub struct SectionHeaderIssue {
     pub line: usize,
     pub column: usize,
+    /// English text. AGM-002/AGM-004 read their messages from the locale
+    /// files; kept for callers that want a plain description.
+    #[allow(dead_code)]
     pub description: String,
+    #[allow(dead_code)]
     pub suggestion: String,
 }
 
@@ -161,6 +197,19 @@ pub fn check_section_headers(content: &str) -> Option<SectionHeaderIssue> {
     }
 }
 
+/// Number of non-blank lines above which AGM-002 reports a file without
+/// headings. agnix heuristic: agents.md makes headings optional ("Use any
+/// headings you like"), and a short file needs none.
+pub const AGM_002_MIN_LINES: usize = 50;
+
+/// Count the non-blank lines of `content`.
+pub fn non_blank_line_count(content: &str) -> usize {
+    content
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .count()
+}
+
 // ============================================================================
 // AGM-003: Character Limit
 // ============================================================================
@@ -172,14 +221,16 @@ pub struct CharacterLimitExceeded {
     pub limit: usize,
 }
 
-/// Character limit for Windsurf compatibility
+/// Windsurf's limit for a workspace rule file, in characters ("Limited to
+/// 12,000 characters per file", docs.devin.ai/desktop/cascade/memories).
 pub const WINDSURF_CHAR_LIMIT: usize = 12000;
 
 /// Check if content exceeds character limit (for AGM-003)
 ///
-/// Windsurf requires rules files under 12000 characters
+/// Counts characters (Unicode scalar values), the unit Windsurf states, not
+/// UTF-8 bytes: a 7,000-character CJK file is about 21,000 bytes.
 pub fn check_character_limit(content: &str, limit: usize) -> Option<CharacterLimitExceeded> {
-    let char_count = content.len();
+    let char_count = content.chars().count();
 
     if char_count > limit {
         Some(CharacterLimitExceeded { char_count, limit })
@@ -197,7 +248,11 @@ pub fn check_character_limit(content: &str, limit: usize) -> Option<CharacterLim
 pub struct MissingProjectContext {
     pub line: usize,
     pub column: usize,
+    /// English text. AGM-002/AGM-004 read their messages from the locale
+    /// files; kept for callers that want a plain description.
+    #[allow(dead_code)]
     pub description: String,
+    #[allow(dead_code)]
     pub suggestion: String,
 }
 
@@ -238,92 +293,45 @@ pub fn check_project_context(content: &str) -> Option<MissingProjectContext> {
 }
 
 // ============================================================================
-// AGM-005: Platform-Specific Features Without Guard
+// AGM-007: Root AGENTS.md Lists No Build or Test Command
 // ============================================================================
 
-/// Unguarded platform feature
-#[derive(Debug, Clone)]
-pub struct UnguardedPlatformFeature {
-    pub line: usize,
-    pub column: usize,
-    #[allow(dead_code)] // parsed but not yet consumed by validators
-    pub feature: String,
-    pub platform: String,
-    pub description: String,
+static_regex!(fn command_heading_pattern, r"(?im)^\s{0,3}#{1,6}\s+.*\b(build|test|tests|testing|setup|commands?|development|dev\s+environment|running|lint|linting|scripts|checks|verification|ci)\b");
+static_regex!(fn command_runner_pattern, r"(?i)\b(?:(?:npm|pnpm|yarn|bun|npx|bunx)\s+(?:run\s+)?(?:test|build|lint|check|typecheck|format|ci|verify)\b|cargo\s+(?:test|build|check|clippy|nextest|fmt)\b|go\s+(?:test|build|vet)\b|pytest\b|python3?\s+-m\s+(?:pytest|unittest)\b|gradlew?\s+\w|mvn\s+\w|dotnet\s+(?:test|build)\b|uv\s+run\b|bundle\s+exec\b|brazil-build\b|bazel\s+(?:test|build)\b|ctest\b|mix\s+test\b|swift\s+(?:test|build)\b|phpunit\b|composer\s+(?:test|run)\b|hatch\s+(?:test|run)\b|poetry\s+run\b|turbo\s+run\b|nx\s+(?:test|build|run)\b)");
+// Runner names that are also English words count only inside code.
+static_regex!(fn code_runner_pattern, r"(?m)(?:^|[\s`$])(?:make|just|tox|nox|rake|cmake|deno\s+(?:test|task))(?:\s|$|`)");
+static_regex!(fn command_doc_reference_pattern, r"(?i)(?:\]\(|@)[^)\s]*(?:contributing|development|developing|commands|building|testing|makefile|justfile|package\.json)");
+
+/// Whether an AGENTS.md lists a build, test or setup command (for AGM-007).
+///
+/// Satisfied by a heading about commands (Build, Test, Setup, Commands,
+/// Development, ...), a common runner command anywhere in the text, or a link
+/// or @-mention to a file that usually holds them (CONTRIBUTING.md,
+/// DEVELOPMENT.md, a Makefile, package.json). agents.md lists "Build and test
+/// commands" among the popular sections and says agents run the checks a file
+/// lists.
+pub fn lists_build_or_test_commands(content: &str) -> bool {
+    command_heading_pattern().is_match(content)
+        || command_runner_pattern().is_match(content)
+        || command_doc_reference_pattern().is_match(content)
+        || code_runner_pattern().is_match(&code_text(content))
 }
 
-/// Find platform-specific features without guard comments (for AGM-005)
-///
-/// Platform-specific instructions should be labeled with guard comments
-pub fn find_unguarded_platform_features(content: &str) -> Vec<UnguardedPlatformFeature> {
-    let mut results = Vec::new();
-    let guard_pattern = platform_guard_pattern();
-    let feature_pattern = platform_feature_pattern();
-
-    // Track if we're in a guarded section
-    let mut in_guarded_section = false;
-    let mut current_platform: Option<String> = None;
-
-    for (line_num, line) in content.lines().enumerate() {
-        // Check if this line is a platform guard
-        if let Some(cap) = guard_pattern.captures(line) {
-            in_guarded_section = true;
-            current_platform = cap.get(1).map(|m| m.as_str().to_string());
-            continue;
-        }
-
-        // Check if we hit a new section header (non-guard)
-        if line.starts_with('#') && !guard_pattern.is_match(line) {
-            // New section, reset guard status
-            in_guarded_section = false;
-            current_platform = None;
-        }
-
-        // Check for platform-specific features
-        if let Some(mat) = feature_pattern.find(line) {
-            let matched_str = mat.as_str().trim();
-
-            // Determine which platform this feature belongs to
-            let (feature, platform) = if matched_str.contains("PreToolExecution")
-                || matched_str.contains("PostToolExecution")
-                || matched_str.contains("Notification")
-                || matched_str.contains("Stop")
-                || matched_str.contains("SubagentStop")
-            {
-                ("hooks".to_string(), "Claude Code".to_string())
-            } else if matched_str.contains("context:") && matched_str.contains("fork") {
-                ("context:fork".to_string(), "Claude Code".to_string())
-            } else if matched_str.contains("agent:") {
-                ("agent field".to_string(), "Claude Code".to_string())
-            } else if matched_str.contains("allowed-tools:") {
-                ("allowed-tools".to_string(), "Claude Code".to_string())
-            } else if matched_str.contains(".cursor/") || matched_str.contains("@rules") {
-                ("Cursor paths/rules".to_string(), "Cursor".to_string())
+/// The code spans and fences of `content`, everything else blanked.
+fn code_text(content: &str) -> String {
+    let masked = crate::parsers::markdown::mask_code_spans(content);
+    let bytes: Vec<u8> = content
+        .bytes()
+        .zip(masked.bytes())
+        .map(|(orig, mask)| {
+            if orig == b'\n' || orig != mask {
+                orig
             } else {
-                continue;
-            };
-
-            // Only report if not in a guarded section for this platform
-            if !in_guarded_section
-                || current_platform
-                    .as_ref()
-                    .is_none_or(|p| !platform.to_lowercase().contains(&p.to_lowercase()))
-            {
-                results.push(UnguardedPlatformFeature {
-                    line: line_num + 1,
-                    column: mat.start() + 1,
-                    feature: feature.clone(),
-                    platform: platform.clone(),
-                    description: format!(
-                        "{} feature '{}' without platform guard",
-                        platform, feature
-                    ),
-                });
+                b' '
             }
-        }
-    }
-
-    results
+        })
+        .collect();
+    String::from_utf8_lossy(&bytes).into_owned()
 }
 
 #[cfg(test)]
@@ -332,12 +340,13 @@ mod tests {
 
     #[test]
     fn test_regex_patterns_compile() {
-        let _ = code_block_pattern();
         let _ = link_pattern();
         let _ = markdown_header_pattern();
         let _ = project_context_pattern();
-        let _ = platform_guard_pattern();
-        let _ = platform_feature_pattern();
+        let _ = command_heading_pattern();
+        let _ = command_runner_pattern();
+        let _ = code_runner_pattern();
+        let _ = command_doc_reference_pattern();
     }
 
     // ===== AGM-001: Valid Markdown Structure =====
@@ -516,61 +525,87 @@ Use cargo build.
         assert!(result.is_none());
     }
 
-    // ===== AGM-005: Unguarded Platform Features =====
+    // ===== AGM-001: CommonMark fences =====
 
     #[test]
-    fn test_unguarded_hooks() {
-        let content = r#"# Config
-- type: PreToolExecution
-  command: echo "test"
-"#;
-        let results = find_unguarded_platform_features(content);
+    fn test_tilde_and_long_fences_follow_commonmark() {
+        // A ``` line inside a four-backtick fence does not close it, and a
+        // tilde fence closes only on tildes.
+        let content = "````markdown\n```bash\nls\n```\n````\n\n~~~\ncode\n~~~\n";
+        assert!(check_markdown_validity(content).is_empty());
+
+        let unclosed = "# T\n\n~~~~\ncode\n~~~\n";
+        let results = check_markdown_validity(unclosed);
         assert_eq!(results.len(), 1);
-        assert_eq!(results[0].feature, "hooks");
-        assert_eq!(results[0].platform, "Claude Code");
+        assert_eq!(results[0].line, 3);
+        assert_eq!(results[0].fence, "~~~~");
     }
 
     #[test]
-    fn test_guarded_hooks() {
-        let content = r#"## Claude Code Specific
-- type: PreToolExecution
-  command: echo "test"
-"#;
-        let results = find_unguarded_platform_features(content);
-        assert!(results.is_empty());
+    fn test_closing_fence_cannot_carry_info_string() {
+        // "```rust" inside an open block is content, not a closing fence.
+        let content = "```\nfirst\n```rust\nsecond\n";
+        let results = check_markdown_validity(content);
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].issue_type, MarkdownIssueType::UnclosedCodeBlock);
+        assert_eq!(results[0].line, 1);
     }
 
     #[test]
-    fn test_unguarded_context_fork() {
-        let content = r#"---
-name: test
-context: fork
----
-Body"#;
-        let results = find_unguarded_platform_features(content);
-        assert!(results.iter().any(|r| r.feature == "context:fork"));
+    fn test_indented_four_spaces_is_not_a_fence() {
+        let content = "    ```\nindented code\n";
+        assert!(check_markdown_validity(content).is_empty());
     }
 
+    // ===== AGM-002: size threshold =====
+
     #[test]
-    fn test_unguarded_agent_field() {
-        let content = r#"agent: security-reviewer"#;
-        let results = find_unguarded_platform_features(content);
-        assert!(results.iter().any(|r| r.feature == "agent field"));
+    fn test_non_blank_line_count() {
+        assert_eq!(non_blank_line_count("a\n\n  \nb\n"), 2);
     }
 
-    #[test]
-    fn test_guard_section_ends() {
-        let content = r#"## Claude Code Specific
-- type: Stop
-  command: cleanup
+    // ===== AGM-003: characters, not bytes =====
 
-## Other Settings
-agent: something
-"#;
-        let results = find_unguarded_platform_features(content);
-        // agent field is in a non-guarded section
-        assert!(results.iter().any(|r| r.feature == "agent field"));
-        // hooks are in guarded section
-        assert!(!results.iter().any(|r| r.feature == "hooks"));
+    #[test]
+    fn test_char_limit_counts_characters_not_bytes() {
+        // 7,029 CJK characters are 21,087 UTF-8 bytes; Windsurf counts characters.
+        let content = "漢".repeat(7029);
+        assert!(content.len() > WINDSURF_CHAR_LIMIT);
+        assert!(check_character_limit(&content, WINDSURF_CHAR_LIMIT).is_none());
+        let over = "漢".repeat(12_001);
+        assert_eq!(
+            check_character_limit(&over, WINDSURF_CHAR_LIMIT).map(|e| e.char_count),
+            Some(12_001)
+        );
+    }
+
+    // ===== AGM-007: build and test commands =====
+
+    #[test]
+    fn test_lists_build_or_test_commands() {
+        assert!(lists_build_or_test_commands(
+            "# P\n\n## Testing\n\nRun the suite.\n"
+        ));
+        assert!(lists_build_or_test_commands(
+            "# P\n\nUse `cargo test` before pushing.\n"
+        ));
+        assert!(lists_build_or_test_commands(
+            "# P\n\n```\nnpm run lint\n```\n"
+        ));
+        assert!(lists_build_or_test_commands(
+            "# P\n\nSee [contributing](CONTRIBUTING.md).\n"
+        ));
+        assert!(lists_build_or_test_commands(
+            "# P\n\n@docs/development.md\n"
+        ));
+        assert!(!lists_build_or_test_commands(
+            "# Project\n\nA library for parsing dates.\n\n## Style\n\nUse tabs.\n"
+        ));
+        // `make` and `just` are commands only in code; in prose they are words.
+        assert!(!lists_build_or_test_commands(
+            "Just plain text, which makes it harder to read.\n"
+        ));
+        assert!(lists_build_or_test_commands("Run `make check` first.\n"));
+        assert!(lists_build_or_test_commands("```\njust test\n```\n"));
     }
 }

@@ -208,3 +208,191 @@ fn test_cli_reports_pe_fixtures() {
     let json = run_json(temp.path());
     assert_has_rule(&json, "PE-004");
 }
+
+// ===== 0.59 vendor survey (cross-tool rules): every new rule fires through
+// the real pipeline (detection, registry, validator) =====
+
+fn run_json_with_config(path: &std::path::Path, config_toml: &str) -> serde_json::Value {
+    let config = tempfile::NamedTempFile::new().unwrap();
+    std::fs::write(config.path(), config_toml).unwrap();
+    let output = agnix()
+        .arg("--config")
+        .arg(config.path())
+        .arg(path)
+        .arg("--format")
+        .arg("json")
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    serde_json::from_str(&stdout)
+        .unwrap_or_else(|_| panic!("Expected JSON for {}, got: {}", path.display(), stdout))
+}
+
+fn rules_in_file(json: &serde_json::Value, file_part: &str) -> Vec<String> {
+    json["diagnostics"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|d| d["file"].as_str().is_some_and(|f| f.contains(file_part)))
+        .filter_map(|d| d["rule"].as_str().map(str::to_string))
+        .collect()
+}
+
+#[test]
+fn test_cli_reports_portable_skill_rules() {
+    let json = run_json(&workspace_root().join("tests/fixtures/skills/portable-rules"));
+    for rule in [
+        "AS-020",
+        "AS-022",
+        "AS-023",
+        "AS-024",
+        "AS-026",
+        "AS-027",
+        "XP-SK-003",
+        "XP-SK-004",
+    ] {
+        assert_has_rule(&json, rule);
+    }
+    let json = run_json(&workspace_root().join("tests/fixtures/skills/long-body"));
+    assert_has_rule(&json, "AS-021");
+    let json = run_json(&workspace_root().join("tests/fixtures/skills/deep-reference"));
+    assert_has_rule(&json, "AS-013");
+}
+
+#[test]
+fn test_cli_reports_duplicate_skill_names_across_roots() {
+    let json = run_json(&workspace_root().join("tests/fixtures/skills-duplicate"));
+    assert_has_rule(&json, "AS-025");
+    // Claude Code and Codex never read both roots.
+    let json = run_json_with_config(
+        &workspace_root().join("tests/fixtures/skills-duplicate"),
+        "tools = [\"claude-code\", \"codex\"]\n",
+    );
+    assert_eq!(count_rule(&json, "AS-025"), 0);
+}
+
+#[test]
+fn test_cli_reports_agents_md_layout_rules() {
+    let json = run_json(&workspace_root().join("tests/fixtures/agents_md/legacy-agent"));
+    assert_has_rule(&json, "AGM-008");
+    // AGM-007 applies to a repository-root AGENTS.md of a buildable project;
+    // fixtures inside this repository are nested, so the project is built at
+    // run time.
+    let project = tempfile::TempDir::new().unwrap();
+    std::fs::write(
+        project.path().join("AGENTS.md"),
+        "# Project\n\nA date parser.\n\n## Style\n\nUse tabs.\n",
+    )
+    .unwrap();
+    std::fs::write(project.path().join("package.json"), "{}\n").unwrap();
+    let json = run_json(project.path());
+    assert_has_rule(&json, "AGM-007");
+
+    // AGM-009 needs a repository root (`.git`), which a fixture in this
+    // repository cannot carry, so the project is built at run time.
+    let temp = tempfile::TempDir::new().unwrap();
+    std::fs::create_dir(temp.path().join(".git")).unwrap();
+    std::fs::create_dir(temp.path().join("pkg")).unwrap();
+    std::fs::write(
+        temp.path().join("pkg/AGENTS.md"),
+        "# Pkg\n\nRun `cargo test`.\n",
+    )
+    .unwrap();
+    let json = run_json(temp.path());
+    assert_has_rule(&json, "AGM-009");
+}
+
+#[test]
+fn test_cli_reports_mcp_server_and_tool_rules() {
+    let mcp = workspace_root().join("tests/fixtures/mcp");
+    let json = run_json(&mcp.join("server-hygiene.mcp.json"));
+    for rule in ["MCP-027", "MCP-028", "MCP-029"] {
+        assert_has_rule(&json, rule);
+    }
+    let json = run_json(&mcp.join("tool-hygiene.mcp.json"));
+    for rule in ["MCP-030", "MCP-031", "MCP-033"] {
+        assert_has_rule(&json, rule);
+    }
+    let json = run_json(&mcp.join("deprecated-capabilities.mcp.json"));
+    assert_has_rule(&json, "MCP-032");
+}
+
+#[test]
+fn test_cli_reports_mcp_rules_in_client_configs() {
+    let json = run_json(&workspace_root().join("tests/fixtures/mcp-clients"));
+    let gemini = rules_in_file(&json, ".gemini/settings.json");
+    assert!(gemini.contains(&"MCP-028".to_string()), "{gemini:?}");
+    let opencode = rules_in_file(&json, "opencode.json");
+    assert!(opencode.contains(&"MCP-018".to_string()), "{opencode:?}");
+    assert!(opencode.contains(&"MCP-027".to_string()), "{opencode:?}");
+    let amp = rules_in_file(&json, ".amp/settings.json");
+    assert!(amp.contains(&"MCP-028".to_string()), "{amp:?}");
+    let codex = rules_in_file(&json, ".codex/config.toml");
+    assert!(codex.contains(&"MCP-027".to_string()), "{codex:?}");
+    assert!(codex.contains(&"MCP-028".to_string()), "{codex:?}");
+
+    // `.vscode/` is gitignored here, so this file is created at run time.
+    let temp = tempfile::TempDir::new().unwrap();
+    std::fs::create_dir(temp.path().join(".vscode")).unwrap();
+    std::fs::write(
+        temp.path().join(".vscode/mcp.json"),
+        "{\n  // JSON with comments\n  \"servers\": {\n    \"gh\": { \"type\": \"stdio\", \"command\": \"docker\", \"args\": [\"run\", \"-i\", \"--rm\", \"ghcr.io/github/github-mcp-server\"] },\n  }\n}\n",
+    )
+    .unwrap();
+    let json = run_json(temp.path());
+    assert_has_rule(&json, "MCP-027");
+    assert_eq!(
+        count_rule(&json, "MCP-007"),
+        0,
+        "VS Code mcp.json allows comments"
+    );
+}
+
+#[test]
+fn test_cli_shared_agents_skills_follow_tools() {
+    let fixture =
+        workspace_root().join("tests/fixtures/per_client_skills/.agents/skills/test-skill");
+    let unscoped = run_json(&fixture);
+    assert_eq!(count_rule(&unscoped, "CX-SK-001"), 0);
+    assert_eq!(count_rule(&unscoped, "AMP-SK-001"), 0);
+    assert_has_rule(&unscoped, "XP-SK-001");
+
+    let amp = run_json_with_config(&fixture, "tools = [\"amp\"]\n");
+    // `hooks` only: `mcpServers` is an Amp field.
+    assert_eq!(count_rule(&amp, "AMP-SK-001"), 1, "{amp}");
+    let codex = run_json_with_config(&fixture, "tools = [\"codex\"]\n");
+    assert_eq!(count_rule(&codex, "CX-SK-001"), 2, "{codex}");
+
+    let cx = run_json(
+        &workspace_root().join("tests/fixtures/per_client_skills/.codex/skills/test-skill"),
+    );
+    assert_has_rule(&cx, "CX-SK-001");
+}
+
+#[test]
+fn test_cli_vendor_rules_gated_by_tools() {
+    // AGM-003 (Windsurf) and AS-009 (Codex) do not run for a Kiro-only scope.
+    let temp = tempfile::TempDir::new().unwrap();
+    std::fs::create_dir(temp.path().join(".windsurf")).unwrap();
+    std::fs::write(
+        temp.path().join("AGENTS.md"),
+        format!("# Project\n\nRun `cargo test`.\n\n{}\n", "x".repeat(40_000)),
+    )
+    .unwrap();
+    let skill = temp.path().join(".codex/skills/notes");
+    std::fs::create_dir_all(&skill).unwrap();
+    std::fs::write(
+        skill.join("SKILL.md"),
+        "---\nname: notes\ndescription: Use when writing <release> notes\n---\nWrite the notes.\n",
+    )
+    .unwrap();
+    let unscoped = run_json(temp.path());
+    assert_has_rule(&unscoped, "AGM-003");
+    assert_has_rule(&unscoped, "AS-009");
+    let kiro = run_json_with_config(temp.path(), "tools = [\"kiro\"]\n");
+    assert_eq!(count_rule(&kiro, "AGM-003"), 0);
+    assert_eq!(count_rule(&kiro, "AS-009"), 0);
+    let windsurf = run_json_with_config(temp.path(), "tools = [\"windsurf\"]\n");
+    assert_has_rule(&windsurf, "AGM-003");
+    assert_eq!(count_rule(&windsurf, "AS-009"), 0);
+}

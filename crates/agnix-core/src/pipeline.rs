@@ -912,8 +912,12 @@ pub fn validate_project_rules(root: &Path, config: &LintConfig) -> LintResult<Ve
             continue;
         }
 
-        // Collect AGENTS.md paths for AGM-006 check
-        if file_path.file_name().and_then(|n| n.to_str()) == Some("AGENTS.md") {
+        // Collect AGENTS.md, legacy AGENT.md and SKILL.md paths for the
+        // project-level AGM-008/AGM-009 and AS-025 checks
+        if matches!(
+            file_path.file_name().and_then(|n| n.to_str()),
+            Some("AGENTS.md" | "AGENT.md" | "SKILL.md")
+        ) {
             agents_md_paths.push(file_path.clone());
         }
 
@@ -1127,8 +1131,13 @@ pub fn validate_paths_with_registry(
                     }
                 }
 
-                // Collect AGENTS.md paths for AGM-006 check (thread-local, no lock).
-                if file_path.file_name().and_then(|n| n.to_str()) == Some("AGENTS.md") {
+                // Collect AGENTS.md, legacy AGENT.md and SKILL.md paths for the
+                // project-level AGM-008/AGM-009 and AS-025 checks (thread-local,
+                // no lock).
+                if matches!(
+                    file_path.file_name().and_then(|n| n.to_str()),
+                    Some("AGENTS.md" | "AGENT.md" | "SKILL.md")
+                ) {
                     agents.push(file_path.clone());
                 }
 
@@ -1215,7 +1224,7 @@ pub fn validate_paths_with_registry(
         }
     }
 
-    // Run project-level checks (AGM-006, XP-004/005/006, VER-001)
+    // Run project-level checks (AGM-008/009, AS-025, XP-004/005/006, VER-001)
     diagnostics.extend(run_project_level_checks_with_panic_guard(&root_dir, || {
         agents_md_paths.sort();
         instruction_file_paths.sort();

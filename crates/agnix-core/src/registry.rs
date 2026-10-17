@@ -398,7 +398,7 @@ impl ValidatorRegistryBuilder {
 ///
 /// Used by `BuiltinProvider` (via `debug_assert_eq!`) and tests to catch
 /// accidental additions or removals without updating all providers.
-const EXPECTED_BUILTIN_COUNT: usize = 129;
+const EXPECTED_BUILTIN_COUNT: usize = 135;
 
 // -- Category providers -----------------------------------------------------
 //
@@ -821,6 +821,28 @@ impl ValidatorProvider for MiscProvider {
                 claude_marketplace_validator,
             ),
             (FileType::Mcp, Some("McpValidator"), mcp_validator),
+            // MCP servers embedded in other clients' config files get the
+            // server-level MCP checks (MCP-018/019/027/028/029); McpValidator
+            // dispatches on the file type, and the clients' own validators
+            // check the rest of each file.
+            (
+                FileType::OpenCodeConfig,
+                Some("McpValidator"),
+                mcp_validator,
+            ),
+            (
+                FileType::GeminiSettings,
+                Some("McpValidator"),
+                mcp_validator,
+            ),
+            (
+                FileType::GeminiExtension,
+                Some("McpValidator"),
+                mcp_validator,
+            ),
+            (FileType::AmpSettings, Some("McpValidator"), mcp_validator),
+            (FileType::CodexConfig, Some("McpValidator"), mcp_validator),
+            (FileType::CopilotAgent, Some("McpValidator"), mcp_validator),
             (
                 FileType::Mcp,
                 Some("ClaudeMcpValidator"),
@@ -2507,8 +2529,9 @@ mod tests {
         // and the Claude marketplace and Claude MCP validators added 5 entries;
         // Codex hooks, custom agents, rules, prompts, skill metadata and plugin
         // MCP files, and OpenCode agents, commands, tools, plugins, instruction
-        // files and skills added 21.
-        assert_eq!(MiscProvider.named_validators().len(), 64);
+        // files and skills added 21; McpValidator on the six client configs that
+        // embed MCP servers added 6.
+        assert_eq!(MiscProvider.named_validators().len(), 70);
     }
 
     #[test]

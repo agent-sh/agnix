@@ -131,9 +131,9 @@
     {
       "id": "CDX-AG-004",
       "removed_in": "0.59.0",
-      "reason": "The 100,000-byte AGENTS.md limit had no source. XP-007 checks AGENTS.md against Codex's documented 32 KiB project_doc_max_bytes default, and XP-009 checks the combined chain.",
+      "reason": "Its 100,000-byte AGENTS.md limit had no source. CDX-AG-009 checks AGENTS.md against Codex's documented 32 KiB `project_doc_max_bytes` default, and CDX-AG-010 checks the combined chain.",
       "replaced_by": [
-        "XP-007"
+        "CDX-AG-009"
       ]
     },
     {
@@ -396,6 +396,36 @@
       "removed_in": "0.59.0",
       "reason": "OpenCode documents no requirement against an empty AGENTS.md.",
       "replaced_by": []
+    },
+    {
+      "id": "AGM-005",
+      "removed_in": "0.59.0",
+      "reason": "Reported the same Claude Code features in AGENTS.md as XP-001; its Cursor path check was dropped along with XP-003's tool-directory checks.",
+      "replaced_by": [
+        "XP-001"
+      ]
+    },
+    {
+      "id": "RC-SK-001",
+      "removed_in": "0.59.0",
+      "reason": "Roo Code shut down on 2026-05-15 and its support was removed.",
+      "replaced_by": []
+    },
+    {
+      "id": "XP-007",
+      "removed_in": "0.59.0",
+      "reason": "Codex-only byte limit; CDX-AG-009 reports the same AGENTS.md files with Codex's own fix text.",
+      "replaced_by": [
+        "CDX-AG-009"
+      ]
+    },
+    {
+      "id": "XP-009",
+      "removed_in": "0.59.0",
+      "reason": "Codex-only chain limit; CDX-AG-010 reports the same chains with Codex's own fix text.",
+      "replaced_by": [
+        "CDX-AG-010"
+      ]
     }
   ]
 }
