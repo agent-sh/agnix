@@ -3,7 +3,7 @@
 Real-time validation for AI agent configuration files in VS Code.
 Install from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=avifenesh.agnix).
 
-**703 rules** | **Real-time diagnostics** | **Auto-fix** | **Completion** | **Multi-tool support**
+**702 rules** | **Real-time diagnostics** | **Auto-fix** | **Completion** | **Multi-tool support**
 
 
 ## Features
@@ -11,28 +11,34 @@ Install from the [VS Code Marketplace](https://marketplace.visualstudio.com/item
 - **Real-time validation** - Diagnostics as you type
 - **Context-aware completions** - Frontmatter keys, values, and snippets
 - **JSON Schema validation and autocomplete for `.agnix.toml` config files**
-- **Validates 703 rules** - From official specs and best practices
+- **Validates 702 rules** - From official specs and best practices
 
 - **Diagnostics panel** - Sidebar tree view of all issues by file
 - **CodeLens** - Rule info shown inline above problematic lines
 - **Quick-fix preview** - See diff before applying fixes
 - **Safe fixes** - Apply only high-confidence fixes automatically
 - **Ignore rules** - Disable rules directly from the editor
-- **Multi-tool** - Claude Code, Cursor, GitHub Copilot, Codex CLI
+- **Multi-tool** - Claude Code, Codex CLI, OpenCode, Kiro, GitHub Copilot, Cline, Cursor, Amp, Gemini CLI, Windsurf (Devin Desktop)
 
 ![Validation in action](assets/vscode-validation.png)
 
 ## Supported File Types
 
-| File | Tool | Description |
-|------|------|-------------|
-| `SKILL.md` | Claude Code | Agent skill definitions |
-| `CLAUDE.md`, `AGENTS.md` | Claude Code, Codex | Memory files |
-| `.claude/settings.json` | Claude Code | Hook configurations |
-| `plugin.json` | Claude Code | Plugin manifests |
-| `*.mcp.json` | All | MCP tool configurations |
-| `.github/copilot-instructions.md` | GitHub Copilot | Custom instructions |
-| `.cursor/rules/*.mdc` | Cursor | Project rules |
+The extension starts when the workspace contains one of these files and sends them to agnix-lsp in any language mode. User-level and system files (for example `~/.codex/hooks.json` or `/etc/gemini-cli/policies/*.toml`) are validated when opened.
+
+| Tool | Files |
+|------|-------|
+| All | `SKILL.md`, `AGENTS.md` (`AGENTS.local.md`, `AGENTS.override.md`), `mcp.json`, `*.mcp.json`, `mcp-*.json` |
+| Claude Code | `CLAUDE.md`, `CLAUDE.local.md`, `.claude/settings.json`, `.claude/settings.local.json`, managed settings, `hooks/hooks.json`, `plugin.json`, `.claude-plugin/marketplace.json`, `agents/*.md`, `.claude/rules/**/*.md`, `.claude/commands/**/*.md`, `.claude/output-styles/*.md`, `MEMORY.md` indexes, `.claudeignore` |
+| Codex CLI | `.codex/config.toml` (`.json`, `.yaml`), `.codex/hooks.json`, `.codex/agents/*.toml`, `.codex/rules/*.rules`, `.codex/prompts/*.md`, `codex/requirements.toml`, `.codex-plugin/plugin.json`, `skills/<skill>/agents/openai.yaml` |
+| OpenCode | `opencode.json`, `opencode.jsonc`, `.opencode/agents/**/*.md`, `.opencode/commands/**/*.md`, `.opencode/tools/*.ts` (`.js`), `.opencode/plugins/*.ts` (`.js`), including the singular legacy directories and `~/.config/opencode/` |
+| Kiro | `.kiro/steering/**/*.md`, `.kiro/agents/**/*.json` (`.md`), `.kiro/hooks/*.json`, `.kiro/hooks/*.kiro.hook`, `.kiro/settings/mcp.json`, `.kiro/settings/cli.json`, `permissions.yaml`, `.kiro/workflows/*.workflow.json` (`.yaml`, `.yml`), `.kiroignore`, `POWER.md` and power files, `.amazonq/cli-agents/*.json` |
+| GitHub Copilot | `.github/copilot-instructions.md`, `.github/instructions/**/*.instructions.md`, `.github/agents/**/*.md`, `*.agent.md`, `*.chatmode.md`, `.github/prompts/*.prompt.md`, `.github/hooks/*.json`, `.github/copilot/settings.json`, `.github/plugin/plugin.json`, `copilot-setup-steps.yml` |
+| Cline | `.clinerules` (file or folder, with workflows and hooks), `.cline/rules/`, `.cline/workflows/`, `.cline/hooks/`, `.clineignore`, `cline_mcp_settings.json` |
+| Cursor | `.cursor/rules/**/*.mdc` (`.md`), `.cursor/agents/**/*.md`, `.cursor/hooks.json`, `.cursor/mcp.json`, `.cursor/environment.json`, `.cursor/cli.json`, `~/.cursor/cli-config.json`, `.cursor/permissions.json`, `.cursor-plugin/plugin.json`, `.cursor-plugin/marketplace.json`, `.cursorignore`, `.cursorrules` |
+| Amp | `.amp/settings.json` (`.jsonc`), `~/.config/amp/settings.json` (`.jsonc`), managed settings, `.agents/checks/**/*.md`, skill `mcp.json` |
+| Gemini CLI | `GEMINI.md`, `.gemini/settings.json`, `.gemini/agents/*.md`, `.gemini/commands/**/*.toml`, `.gemini/policies/*.toml`, `gemini-extension.json`, `.geminiignore`, and an extension's `commands/`, `policies/`, `agents/` and `hooks/hooks.json` |
+| Windsurf (Devin Desktop) | `.devin/rules/**/*.md`, `.devin/workflows/**/*.md`, `.devin/hooks.json` (and the legacy `.windsurf/` equivalents), `~/.codeium/windsurf/memories/global_rules.md`, global workflows, `.windsurfrules` |
 
 ## Commands
 
@@ -45,7 +51,7 @@ Access via Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`):
 | `agnix: Fix All Issues in File` | `Ctrl+Shift+.` | Apply all available fixes |
 | `agnix: Preview Fixes` | - | Browse fixes with diff preview |
 | `agnix: Fix All Safe Issues` | `Ctrl+Alt+.` | Apply only safe fixes |
-| `agnix: Show All Rules` | - | Browse 703 rules by category |
+| `agnix: Show All Rules` | - | Browse 702 rules by category |
 
 | `agnix: Show Rule Documentation` | - | Open docs for a rule (via CodeLens) |
 | `agnix: Ignore Rule in Project` | - | Add rule to `.agnix.toml` disabled list |

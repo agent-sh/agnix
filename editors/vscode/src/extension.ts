@@ -20,6 +20,7 @@ import {
   parseLspVersionOutput,
 } from './version-check';
 import { verifySha256File } from './checksum';
+import { AGNIX_DOCUMENT_SELECTOR, AGNIX_WATCH_PATTERNS } from './filePatterns';
 
 const execAsync = promisify(exec);
 
@@ -279,20 +280,6 @@ export function buildLspConfig(): LspConfig {
 
   return result;
 }
-
-const AGNIX_FILE_PATTERNS = [
-  '**/SKILL.md',
-  '**/CLAUDE.md',
-  '**/CLAUDE.local.md',
-  '**/AGENTS.md',
-  '**/.claude/settings.json',
-  '**/.claude/settings.local.json',
-  '**/plugin.json',
-  '**/*.mcp.json',
-  '**/.github/copilot-instructions.md',
-  '**/.github/instructions/*.instructions.md',
-  '**/.cursor/rules/*.mdc',
-];
 
 const AGNIX_RULE_RE = /^(AS|CC|PE|MCP|AGM|COP|CUR|XML|XP)-/;
 
@@ -693,12 +680,7 @@ export async function activate(
   codeLensProvider = new AgnixCodeLensProvider();
   context.subscriptions.push(
     vscode.languages.registerCodeLensProvider(
-      [
-        { scheme: 'file', language: 'markdown' },
-        { scheme: 'file', language: 'skill-markdown' },
-        { scheme: 'file', language: 'json' },
-        { scheme: 'file', pattern: '**/*.mdc' },
-      ],
+      AGNIX_DOCUMENT_SELECTOR,
       codeLensProvider
     )
   );
@@ -838,14 +820,9 @@ async function startClientInternal(): Promise<LanguageClient | undefined> {
   };
 
   const clientOptions: LanguageClientOptions = {
-    documentSelector: [
-      { scheme: 'file', language: 'markdown' },
-      { scheme: 'file', language: 'skill-markdown' },
-      { scheme: 'file', language: 'json' },
-      { scheme: 'file', pattern: '**/*.mdc' },
-    ],
+    documentSelector: AGNIX_DOCUMENT_SELECTOR,
     synchronize: {
-      fileEvents: AGNIX_FILE_PATTERNS.map((pattern) =>
+      fileEvents: AGNIX_WATCH_PATTERNS.map((pattern) =>
         vscode.workspace.createFileSystemWatcher(pattern)
       ),
     },
@@ -995,18 +972,26 @@ async function validateWorkspace(): Promise<void> {
   outputChannel.appendLine('Validating workspace...');
 
   // Find all agnix files and open them to trigger validation
-  const patterns = AGNIX_FILE_PATTERNS.map((p) => new vscode.RelativePattern(workspaceFolders[0], p));
+  const patterns = AGNIX_WATCH_PATTERNS.map((p) => new vscode.RelativePattern(workspaceFolders[0], p));
 
-  let fileCount = 0;
+  // Patterns overlap (.gemini/commands/review.toml matches both
+  // **/.gemini/commands/**/*.toml and **/commands/**/*.toml), so count and
+  // open each file once.
+  const seen = new Set<string>();
   for (const pattern of patterns) {
     const files = await vscode.workspace.findFiles(pattern, '**/node_modules/**', 100);
-    fileCount += files.length;
 
     for (const file of files) {
+      const key = file.toString();
+      if (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
       // Open document to trigger LSP validation
       await vscode.workspace.openTextDocument(file);
     }
   }
+  const fileCount = seen.size;
 
   // Also trigger project-level validation (AGM-006, XP-004/005/006, VER-001)
   try {
