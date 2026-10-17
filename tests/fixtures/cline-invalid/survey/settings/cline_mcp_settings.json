@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "remote-docs": {
+      "url": "https://mcp.example.com/mcp",
+      "disabled": false
+    },
+    "local-files": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "."]
+    }
+  }
+}

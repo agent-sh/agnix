@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      { "type": "http", "url": "http://hooks.example.com/check" },
+      { "bash": "x", "matcher": "*" }
+    ],
+    "postToolUse": [
+      { "powershell": "./scripts/audit.ps1" },
+      { "type": "http", "url": "https://hooks.example.com/audit", "headers": { "Authorization": "Bearer 3f9a1c7e5b2d8a4f6c0e9b1d" } }
+    ],
+    "beforeTool": [{ "bash": "./scripts/check.sh" }]
+  }
+}

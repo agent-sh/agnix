@@ -1,0 +1,3 @@
+# Deploy notes
+
+The staging deploy uses api_key: "4f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c".

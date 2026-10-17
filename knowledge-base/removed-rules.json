@@ -186,6 +186,56 @@
       "replaced_by": [
         "KR-AG-006"
       ]
+    },
+    {
+      "id": "COP-022",
+      "removed_in": "0.59.0",
+      "reason": "Duplicated the Agent Skills checks: a Copilot skill without frontmatter is reported by AS-002 and AS-003 (missing name and description).",
+      "replaced_by": [
+        "AS-002",
+        "AS-003"
+      ]
+    },
+    {
+      "id": "COP-023",
+      "removed_in": "0.59.0",
+      "reason": "Duplicated the Agent Skills name format checks AS-004 and AS-005.",
+      "replaced_by": [
+        "AS-004",
+        "AS-005"
+      ]
+    },
+    {
+      "id": "COP-024",
+      "removed_in": "0.59.0",
+      "reason": "CP-SK-001 owns the Copilot skill field list.",
+      "replaced_by": [
+        "CP-SK-001"
+      ]
+    },
+    {
+      "id": "COP-026",
+      "removed_in": "0.59.0",
+      "reason": "Duplicated MCP-012, which reports deprecated SSE transports for every tool.",
+      "replaced_by": [
+        "MCP-012"
+      ]
+    },
+    {
+      "id": "CL-SK-002",
+      "removed_in": "0.59.0",
+      "reason": "Unreachable: SKILL.md files are detected as Agent Skills, and AS-002 reports a missing name.",
+      "replaced_by": [
+        "AS-002"
+      ]
+    },
+    {
+      "id": "CL-SK-003",
+      "removed_in": "0.59.0",
+      "reason": "Unreachable: SKILL.md files are detected as Agent Skills, and AS-003 reports a missing description.",
+      "replaced_by": [
+        "AS-003"
+      ]
     }
   ]
 }

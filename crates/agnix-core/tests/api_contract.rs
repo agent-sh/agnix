@@ -272,6 +272,7 @@ fn file_type_enum_covers_all_variants() {
         agnix_core::FileType::CopilotAgent,
         agnix_core::FileType::CopilotPrompt,
         agnix_core::FileType::CopilotHooks,
+        agnix_core::FileType::CopilotPlugin,
         agnix_core::FileType::ClaudeRule,
         agnix_core::FileType::ClaudeOutputStyle,
         agnix_core::FileType::CursorRule,
@@ -279,8 +280,14 @@ fn file_type_enum_covers_all_variants() {
         agnix_core::FileType::CursorAgent,
         agnix_core::FileType::CursorEnvironment,
         agnix_core::FileType::CursorRulesLegacy,
+        agnix_core::FileType::CursorCliConfig,
+        agnix_core::FileType::CursorPermissions,
+        agnix_core::FileType::CursorPlugin,
+        agnix_core::FileType::CursorIgnore,
         agnix_core::FileType::ClineRules,
         agnix_core::FileType::ClineRulesFolder,
+        agnix_core::FileType::ClineIgnore,
+        agnix_core::FileType::ClineMcpSettings,
         agnix_core::FileType::OpenCodeConfig,
         agnix_core::FileType::GeminiMd,
         agnix_core::FileType::GeminiSettings,
@@ -318,7 +325,7 @@ fn file_type_enum_covers_all_variants() {
 
     assert_eq!(
         variants.len(),
-        54,
+        61,
         "A new FileType variant may have been added or removed. Please update this test's variant list and the match statement below."
     );
 
@@ -336,6 +343,7 @@ fn file_type_enum_covers_all_variants() {
             agnix_core::FileType::CopilotAgent => {}
             agnix_core::FileType::CopilotPrompt => {}
             agnix_core::FileType::CopilotHooks => {}
+            agnix_core::FileType::CopilotPlugin => {}
             agnix_core::FileType::ClaudeRule => {}
             agnix_core::FileType::ClaudeOutputStyle => {}
             agnix_core::FileType::CursorRule => {}
@@ -343,8 +351,14 @@ fn file_type_enum_covers_all_variants() {
             agnix_core::FileType::CursorAgent => {}
             agnix_core::FileType::CursorEnvironment => {}
             agnix_core::FileType::CursorRulesLegacy => {}
+            agnix_core::FileType::CursorCliConfig => {}
+            agnix_core::FileType::CursorPermissions => {}
+            agnix_core::FileType::CursorPlugin => {}
+            agnix_core::FileType::CursorIgnore => {}
             agnix_core::FileType::ClineRules => {}
             agnix_core::FileType::ClineRulesFolder => {}
+            agnix_core::FileType::ClineIgnore => {}
+            agnix_core::FileType::ClineMcpSettings => {}
             agnix_core::FileType::OpenCodeConfig => {}
             agnix_core::FileType::GeminiMd => {}
             agnix_core::FileType::GeminiSettings => {}

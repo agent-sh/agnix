@@ -149,6 +149,7 @@ fn required_paths() -> Vec<&'static str> {
         "tests/fixtures/kiro-reach/kr-ag-030/.kiro/agents/lead.json",
         "tests/fixtures/kiro-reach/kr-ag-030/.kiro/agents/review-agent.json",
         "tests/fixtures/kiro-reach/kr-hk-009/.kiro/hooks/run-tests.kiro.hook",
+        "tests/fixtures/kiro-reach/kr-hk-010/.kiro/hooks/deploy-notify.json",
         "tests/fixtures/kiro-reach/kr-hk-010/.kiro/hooks/notify.kiro.hook",
         "tests/fixtures/kiro-reach/kr-hk-025/.agnix.toml",
         "tests/fixtures/kiro-reach/kr-hk-025/.kiro/hooks/lint.json",
@@ -432,7 +433,7 @@ fn kiro_fixture_families_are_cli_runnable() {
         // lints each fixture with its own config. The two AGENTS.md files add
         // AGM-003, XP-006 and XP-007, and several fixtures also trip related
         // Kiro rules (KR-AG-001, KR-AG-015, KR-PW-015, KR-PW-016, ...).
-        ("tests/fixtures/kiro-reach", 59_u64, 66_u64),
+        ("tests/fixtures/kiro-reach", 60_u64, 67_u64),
     ];
 
     for (rel, expected_files_checked, expected_diagnostics) in fixture_roots {

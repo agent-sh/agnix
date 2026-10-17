@@ -1,0 +1,520 @@
+---
+description: Style guide copied into a rule
+globs: "src/**/*.ts"
+---
+# Style guide
+
+```ts
+export const value0 = 0;
+export const value1 = 1;
+export const value2 = 2;
+export const value3 = 3;
+export const value4 = 4;
+export const value5 = 5;
+export const value6 = 6;
+export const value7 = 7;
+export const value8 = 8;
+export const value9 = 9;
+export const value10 = 10;
+export const value11 = 11;
+export const value12 = 12;
+export const value13 = 13;
+export const value14 = 14;
+export const value15 = 15;
+export const value16 = 16;
+export const value17 = 17;
+export const value18 = 18;
+export const value19 = 19;
+export const value20 = 20;
+export const value21 = 21;
+export const value22 = 22;
+export const value23 = 23;
+export const value24 = 24;
+export const value25 = 25;
+export const value26 = 26;
+export const value27 = 27;
+export const value28 = 28;
+export const value29 = 29;
+export const value30 = 30;
+export const value31 = 31;
+export const value32 = 32;
+export const value33 = 33;
+export const value34 = 34;
+export const value35 = 35;
+export const value36 = 36;
+export const value37 = 37;
+export const value38 = 38;
+export const value39 = 39;
+export const value40 = 40;
+export const value41 = 41;
+export const value42 = 42;
+export const value43 = 43;
+export const value44 = 44;
+```
+
+- Rule 54: name things descriptively.
+- Rule 55: name things descriptively.
+- Rule 56: name things descriptively.
+- Rule 57: name things descriptively.
+- Rule 58: name things descriptively.
+- Rule 59: name things descriptively.
+- Rule 60: name things descriptively.
+- Rule 61: name things descriptively.
+- Rule 62: name things descriptively.
+- Rule 63: name things descriptively.
+- Rule 64: name things descriptively.
+- Rule 65: name things descriptively.
+- Rule 66: name things descriptively.
+- Rule 67: name things descriptively.
+- Rule 68: name things descriptively.
+- Rule 69: name things descriptively.
+- Rule 70: name things descriptively.
+- Rule 71: name things descriptively.
+- Rule 72: name things descriptively.
+- Rule 73: name things descriptively.
+- Rule 74: name things descriptively.
+- Rule 75: name things descriptively.
+- Rule 76: name things descriptively.
+- Rule 77: name things descriptively.
+- Rule 78: name things descriptively.
+- Rule 79: name things descriptively.
+- Rule 80: name things descriptively.
+- Rule 81: name things descriptively.
+- Rule 82: name things descriptively.
+- Rule 83: name things descriptively.
+- Rule 84: name things descriptively.
+- Rule 85: name things descriptively.
+- Rule 86: name things descriptively.
+- Rule 87: name things descriptively.
+- Rule 88: name things descriptively.
+- Rule 89: name things descriptively.
+- Rule 90: name things descriptively.
+- Rule 91: name things descriptively.
+- Rule 92: name things descriptively.
+- Rule 93: name things descriptively.
+- Rule 94: name things descriptively.
+- Rule 95: name things descriptively.
+- Rule 96: name things descriptively.
+- Rule 97: name things descriptively.
+- Rule 98: name things descriptively.
+- Rule 99: name things descriptively.
+- Rule 100: name things descriptively.
+- Rule 101: name things descriptively.
+- Rule 102: name things descriptively.
+- Rule 103: name things descriptively.
+- Rule 104: name things descriptively.
+- Rule 105: name things descriptively.
+- Rule 106: name things descriptively.
+- Rule 107: name things descriptively.
+- Rule 108: name things descriptively.
+- Rule 109: name things descriptively.
+- Rule 110: name things descriptively.
+- Rule 111: name things descriptively.
+- Rule 112: name things descriptively.
+- Rule 113: name things descriptively.
+- Rule 114: name things descriptively.
+- Rule 115: name things descriptively.
+- Rule 116: name things descriptively.
+- Rule 117: name things descriptively.
+- Rule 118: name things descriptively.
+- Rule 119: name things descriptively.
+- Rule 120: name things descriptively.
+- Rule 121: name things descriptively.
+- Rule 122: name things descriptively.
+- Rule 123: name things descriptively.
+- Rule 124: name things descriptively.
+- Rule 125: name things descriptively.
+- Rule 126: name things descriptively.
+- Rule 127: name things descriptively.
+- Rule 128: name things descriptively.
+- Rule 129: name things descriptively.
+- Rule 130: name things descriptively.
+- Rule 131: name things descriptively.
+- Rule 132: name things descriptively.
+- Rule 133: name things descriptively.
+- Rule 134: name things descriptively.
+- Rule 135: name things descriptively.
+- Rule 136: name things descriptively.
+- Rule 137: name things descriptively.
+- Rule 138: name things descriptively.
+- Rule 139: name things descriptively.
+- Rule 140: name things descriptively.
+- Rule 141: name things descriptively.
+- Rule 142: name things descriptively.
+- Rule 143: name things descriptively.
+- Rule 144: name things descriptively.
+- Rule 145: name things descriptively.
+- Rule 146: name things descriptively.
+- Rule 147: name things descriptively.
+- Rule 148: name things descriptively.
+- Rule 149: name things descriptively.
+- Rule 150: name things descriptively.
+- Rule 151: name things descriptively.
+- Rule 152: name things descriptively.
+- Rule 153: name things descriptively.
+- Rule 154: name things descriptively.
+- Rule 155: name things descriptively.
+- Rule 156: name things descriptively.
+- Rule 157: name things descriptively.
+- Rule 158: name things descriptively.
+- Rule 159: name things descriptively.
+- Rule 160: name things descriptively.
+- Rule 161: name things descriptively.
+- Rule 162: name things descriptively.
+- Rule 163: name things descriptively.
+- Rule 164: name things descriptively.
+- Rule 165: name things descriptively.
+- Rule 166: name things descriptively.
+- Rule 167: name things descriptively.
+- Rule 168: name things descriptively.
+- Rule 169: name things descriptively.
+- Rule 170: name things descriptively.
+- Rule 171: name things descriptively.
+- Rule 172: name things descriptively.
+- Rule 173: name things descriptively.
+- Rule 174: name things descriptively.
+- Rule 175: name things descriptively.
+- Rule 176: name things descriptively.
+- Rule 177: name things descriptively.
+- Rule 178: name things descriptively.
+- Rule 179: name things descriptively.
+- Rule 180: name things descriptively.
+- Rule 181: name things descriptively.
+- Rule 182: name things descriptively.
+- Rule 183: name things descriptively.
+- Rule 184: name things descriptively.
+- Rule 185: name things descriptively.
+- Rule 186: name things descriptively.
+- Rule 187: name things descriptively.
+- Rule 188: name things descriptively.
+- Rule 189: name things descriptively.
+- Rule 190: name things descriptively.
+- Rule 191: name things descriptively.
+- Rule 192: name things descriptively.
+- Rule 193: name things descriptively.
+- Rule 194: name things descriptively.
+- Rule 195: name things descriptively.
+- Rule 196: name things descriptively.
+- Rule 197: name things descriptively.
+- Rule 198: name things descriptively.
+- Rule 199: name things descriptively.
+- Rule 200: name things descriptively.
+- Rule 201: name things descriptively.
+- Rule 202: name things descriptively.
+- Rule 203: name things descriptively.
+- Rule 204: name things descriptively.
+- Rule 205: name things descriptively.
+- Rule 206: name things descriptively.
+- Rule 207: name things descriptively.
+- Rule 208: name things descriptively.
+- Rule 209: name things descriptively.
+- Rule 210: name things descriptively.
+- Rule 211: name things descriptively.
+- Rule 212: name things descriptively.
+- Rule 213: name things descriptively.
+- Rule 214: name things descriptively.
+- Rule 215: name things descriptively.
+- Rule 216: name things descriptively.
+- Rule 217: name things descriptively.
+- Rule 218: name things descriptively.
+- Rule 219: name things descriptively.
+- Rule 220: name things descriptively.
+- Rule 221: name things descriptively.
+- Rule 222: name things descriptively.
+- Rule 223: name things descriptively.
+- Rule 224: name things descriptively.
+- Rule 225: name things descriptively.
+- Rule 226: name things descriptively.
+- Rule 227: name things descriptively.
+- Rule 228: name things descriptively.
+- Rule 229: name things descriptively.
+- Rule 230: name things descriptively.
+- Rule 231: name things descriptively.
+- Rule 232: name things descriptively.
+- Rule 233: name things descriptively.
+- Rule 234: name things descriptively.
+- Rule 235: name things descriptively.
+- Rule 236: name things descriptively.
+- Rule 237: name things descriptively.
+- Rule 238: name things descriptively.
+- Rule 239: name things descriptively.
+- Rule 240: name things descriptively.
+- Rule 241: name things descriptively.
+- Rule 242: name things descriptively.
+- Rule 243: name things descriptively.
+- Rule 244: name things descriptively.
+- Rule 245: name things descriptively.
+- Rule 246: name things descriptively.
+- Rule 247: name things descriptively.
+- Rule 248: name things descriptively.
+- Rule 249: name things descriptively.
+- Rule 250: name things descriptively.
+- Rule 251: name things descriptively.
+- Rule 252: name things descriptively.
+- Rule 253: name things descriptively.
+- Rule 254: name things descriptively.
+- Rule 255: name things descriptively.
+- Rule 256: name things descriptively.
+- Rule 257: name things descriptively.
+- Rule 258: name things descriptively.
+- Rule 259: name things descriptively.
+- Rule 260: name things descriptively.
+- Rule 261: name things descriptively.
+- Rule 262: name things descriptively.
+- Rule 263: name things descriptively.
+- Rule 264: name things descriptively.
+- Rule 265: name things descriptively.
+- Rule 266: name things descriptively.
+- Rule 267: name things descriptively.
+- Rule 268: name things descriptively.
+- Rule 269: name things descriptively.
+- Rule 270: name things descriptively.
+- Rule 271: name things descriptively.
+- Rule 272: name things descriptively.
+- Rule 273: name things descriptively.
+- Rule 274: name things descriptively.
+- Rule 275: name things descriptively.
+- Rule 276: name things descriptively.
+- Rule 277: name things descriptively.
+- Rule 278: name things descriptively.
+- Rule 279: name things descriptively.
+- Rule 280: name things descriptively.
+- Rule 281: name things descriptively.
+- Rule 282: name things descriptively.
+- Rule 283: name things descriptively.
+- Rule 284: name things descriptively.
+- Rule 285: name things descriptively.
+- Rule 286: name things descriptively.
+- Rule 287: name things descriptively.
+- Rule 288: name things descriptively.
+- Rule 289: name things descriptively.
+- Rule 290: name things descriptively.
+- Rule 291: name things descriptively.
+- Rule 292: name things descriptively.
+- Rule 293: name things descriptively.
+- Rule 294: name things descriptively.
+- Rule 295: name things descriptively.
+- Rule 296: name things descriptively.
+- Rule 297: name things descriptively.
+- Rule 298: name things descriptively.
+- Rule 299: name things descriptively.
+- Rule 300: name things descriptively.
+- Rule 301: name things descriptively.
+- Rule 302: name things descriptively.
+- Rule 303: name things descriptively.
+- Rule 304: name things descriptively.
+- Rule 305: name things descriptively.
+- Rule 306: name things descriptively.
+- Rule 307: name things descriptively.
+- Rule 308: name things descriptively.
+- Rule 309: name things descriptively.
+- Rule 310: name things descriptively.
+- Rule 311: name things descriptively.
+- Rule 312: name things descriptively.
+- Rule 313: name things descriptively.
+- Rule 314: name things descriptively.
+- Rule 315: name things descriptively.
+- Rule 316: name things descriptively.
+- Rule 317: name things descriptively.
+- Rule 318: name things descriptively.
+- Rule 319: name things descriptively.
+- Rule 320: name things descriptively.
+- Rule 321: name things descriptively.
+- Rule 322: name things descriptively.
+- Rule 323: name things descriptively.
+- Rule 324: name things descriptively.
+- Rule 325: name things descriptively.
+- Rule 326: name things descriptively.
+- Rule 327: name things descriptively.
+- Rule 328: name things descriptively.
+- Rule 329: name things descriptively.
+- Rule 330: name things descriptively.
+- Rule 331: name things descriptively.
+- Rule 332: name things descriptively.
+- Rule 333: name things descriptively.
+- Rule 334: name things descriptively.
+- Rule 335: name things descriptively.
+- Rule 336: name things descriptively.
+- Rule 337: name things descriptively.
+- Rule 338: name things descriptively.
+- Rule 339: name things descriptively.
+- Rule 340: name things descriptively.
+- Rule 341: name things descriptively.
+- Rule 342: name things descriptively.
+- Rule 343: name things descriptively.
+- Rule 344: name things descriptively.
+- Rule 345: name things descriptively.
+- Rule 346: name things descriptively.
+- Rule 347: name things descriptively.
+- Rule 348: name things descriptively.
+- Rule 349: name things descriptively.
+- Rule 350: name things descriptively.
+- Rule 351: name things descriptively.
+- Rule 352: name things descriptively.
+- Rule 353: name things descriptively.
+- Rule 354: name things descriptively.
+- Rule 355: name things descriptively.
+- Rule 356: name things descriptively.
+- Rule 357: name things descriptively.
+- Rule 358: name things descriptively.
+- Rule 359: name things descriptively.
+- Rule 360: name things descriptively.
+- Rule 361: name things descriptively.
+- Rule 362: name things descriptively.
+- Rule 363: name things descriptively.
+- Rule 364: name things descriptively.
+- Rule 365: name things descriptively.
+- Rule 366: name things descriptively.
+- Rule 367: name things descriptively.
+- Rule 368: name things descriptively.
+- Rule 369: name things descriptively.
+- Rule 370: name things descriptively.
+- Rule 371: name things descriptively.
+- Rule 372: name things descriptively.
+- Rule 373: name things descriptively.
+- Rule 374: name things descriptively.
+- Rule 375: name things descriptively.
+- Rule 376: name things descriptively.
+- Rule 377: name things descriptively.
+- Rule 378: name things descriptively.
+- Rule 379: name things descriptively.
+- Rule 380: name things descriptively.
+- Rule 381: name things descriptively.
+- Rule 382: name things descriptively.
+- Rule 383: name things descriptively.
+- Rule 384: name things descriptively.
+- Rule 385: name things descriptively.
+- Rule 386: name things descriptively.
+- Rule 387: name things descriptively.
+- Rule 388: name things descriptively.
+- Rule 389: name things descriptively.
+- Rule 390: name things descriptively.
+- Rule 391: name things descriptively.
+- Rule 392: name things descriptively.
+- Rule 393: name things descriptively.
+- Rule 394: name things descriptively.
+- Rule 395: name things descriptively.
+- Rule 396: name things descriptively.
+- Rule 397: name things descriptively.
+- Rule 398: name things descriptively.
+- Rule 399: name things descriptively.
+- Rule 400: name things descriptively.
+- Rule 401: name things descriptively.
+- Rule 402: name things descriptively.
+- Rule 403: name things descriptively.
+- Rule 404: name things descriptively.
+- Rule 405: name things descriptively.
+- Rule 406: name things descriptively.
+- Rule 407: name things descriptively.
+- Rule 408: name things descriptively.
+- Rule 409: name things descriptively.
+- Rule 410: name things descriptively.
+- Rule 411: name things descriptively.
+- Rule 412: name things descriptively.
+- Rule 413: name things descriptively.
+- Rule 414: name things descriptively.
+- Rule 415: name things descriptively.
+- Rule 416: name things descriptively.
+- Rule 417: name things descriptively.
+- Rule 418: name things descriptively.
+- Rule 419: name things descriptively.
+- Rule 420: name things descriptively.
+- Rule 421: name things descriptively.
+- Rule 422: name things descriptively.
+- Rule 423: name things descriptively.
+- Rule 424: name things descriptively.
+- Rule 425: name things descriptively.
+- Rule 426: name things descriptively.
+- Rule 427: name things descriptively.
+- Rule 428: name things descriptively.
+- Rule 429: name things descriptively.
+- Rule 430: name things descriptively.
+- Rule 431: name things descriptively.
+- Rule 432: name things descriptively.
+- Rule 433: name things descriptively.
+- Rule 434: name things descriptively.
+- Rule 435: name things descriptively.
+- Rule 436: name things descriptively.
+- Rule 437: name things descriptively.
+- Rule 438: name things descriptively.
+- Rule 439: name things descriptively.
+- Rule 440: name things descriptively.
+- Rule 441: name things descriptively.
+- Rule 442: name things descriptively.
+- Rule 443: name things descriptively.
+- Rule 444: name things descriptively.
+- Rule 445: name things descriptively.
+- Rule 446: name things descriptively.
+- Rule 447: name things descriptively.
+- Rule 448: name things descriptively.
+- Rule 449: name things descriptively.
+- Rule 450: name things descriptively.
+- Rule 451: name things descriptively.
+- Rule 452: name things descriptively.
+- Rule 453: name things descriptively.
+- Rule 454: name things descriptively.
+- Rule 455: name things descriptively.
+- Rule 456: name things descriptively.
+- Rule 457: name things descriptively.
+- Rule 458: name things descriptively.
+- Rule 459: name things descriptively.
+- Rule 460: name things descriptively.
+- Rule 461: name things descriptively.
+- Rule 462: name things descriptively.
+- Rule 463: name things descriptively.
+- Rule 464: name things descriptively.
+- Rule 465: name things descriptively.
+- Rule 466: name things descriptively.
+- Rule 467: name things descriptively.
+- Rule 468: name things descriptively.
+- Rule 469: name things descriptively.
+- Rule 470: name things descriptively.
+- Rule 471: name things descriptively.
+- Rule 472: name things descriptively.
+- Rule 473: name things descriptively.
+- Rule 474: name things descriptively.
+- Rule 475: name things descriptively.
+- Rule 476: name things descriptively.
+- Rule 477: name things descriptively.
+- Rule 478: name things descriptively.
+- Rule 479: name things descriptively.
+- Rule 480: name things descriptively.
+- Rule 481: name things descriptively.
+- Rule 482: name things descriptively.
+- Rule 483: name things descriptively.
+- Rule 484: name things descriptively.
+- Rule 485: name things descriptively.
+- Rule 486: name things descriptively.
+- Rule 487: name things descriptively.
+- Rule 488: name things descriptively.
+- Rule 489: name things descriptively.
+- Rule 490: name things descriptively.
+- Rule 491: name things descriptively.
+- Rule 492: name things descriptively.
+- Rule 493: name things descriptively.
+- Rule 494: name things descriptively.
+- Rule 495: name things descriptively.
+- Rule 496: name things descriptively.
+- Rule 497: name things descriptively.
+- Rule 498: name things descriptively.
+- Rule 499: name things descriptively.
+- Rule 500: name things descriptively.
+- Rule 501: name things descriptively.
+- Rule 502: name things descriptively.
+- Rule 503: name things descriptively.
+- Rule 504: name things descriptively.
+- Rule 505: name things descriptively.
+- Rule 506: name things descriptively.
+- Rule 507: name things descriptively.
+- Rule 508: name things descriptively.
+- Rule 509: name things descriptively.
+- Rule 510: name things descriptively.
+- Rule 511: name things descriptively.
+- Rule 512: name things descriptively.
+- Rule 513: name things descriptively.
+- Rule 514: name things descriptively.
+- Rule 515: name things descriptively.
+- Rule 516: name things descriptively.
+- Rule 517: name things descriptively.
+- Rule 518: name things descriptively.
+- Rule 519: name things descriptively.

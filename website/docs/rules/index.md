@@ -1,7 +1,7 @@
 # Rules Reference
 
-This section contains all `535` validation rules generated from `knowledge-base/rules.json`.
-`136` rules have automatic fixes.
+This section contains all `569` validation rules generated from `knowledge-base/rules.json`.
+`131` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
 |------|------|----------|----------|----------|
@@ -222,51 +222,66 @@ This section contains all `535` validation rules generated from `knowledge-base/
 | [CDX-REQ-000](./generated/cdx-req-000.md) | Codex requirements.toml TOML Parse Error | HIGH | Codex CLI | No |
 | [CDX-REQ-001](./generated/cdx-req-001.md) | Unknown Codex requirements.toml Key | MEDIUM | Codex CLI | No |
 | [CL-SK-001](./generated/cl-sk-001.md) | Cline Skill Uses Unsupported Field | MEDIUM | Cline Skills | Yes (safe/unsafe) |
-| [CL-SK-002](./generated/cl-sk-002.md) | Missing Skill Name | HIGH | Cline Skills | Yes (safe) |
-| [CL-SK-003](./generated/cl-sk-003.md) | Missing Skill Description | HIGH | Cline Skills | No |
+| [CL-SK-004](./generated/cl-sk-004.md) | Cline Skill Without Instructions | MEDIUM | Cline Skills | No |
 | [CLN-001](./generated/cln-001.md) | Empty Cline Rules File | HIGH | Cline | No |
 | [CLN-002](./generated/cln-002.md) | Invalid Paths Glob in Cline Rules | HIGH | Cline | No |
 | [CLN-003](./generated/cln-003.md) | Unknown Frontmatter Key in Cline Rules | MEDIUM | Cline | Yes (unsafe) |
 | [CLN-004](./generated/cln-004.md) | Scalar Paths in Cline Rules | HIGH | Cline | Yes (safe) |
 | [CLN-005](./generated/cln-005.md) | Empty Workflow File | HIGH | Cline | No |
-| [CLN-006](./generated/cln-006.md) | Workflow With Frontmatter | MEDIUM | Cline | Yes (unsafe) |
+| [CLN-006](./generated/cln-006.md) | Unknown Frontmatter Key in Cline Workflow | MEDIUM | Cline | No |
 | [CLN-009](./generated/cln-009.md) | Unknown Hook Event Name | MEDIUM | Cline | No |
+| [CLN-010](./generated/cln-010.md) | Unparseable Cline Rule Frontmatter | HIGH | Cline | No |
+| [CLN-011](./generated/cln-011.md) | Invalid paths Entries in Cline Rules | HIGH | Cline | No |
+| [CLN-012](./generated/cln-012.md) | Cline Hook Not Runnable in the VS Code Extension | MEDIUM | Cline | No |
+| [CLN-013](./generated/cln-013.md) | Deprecated .clineignore | LOW | Cline | No |
+| [CLN-014](./generated/cln-014.md) | Literal Secret in Cline Rule or Workflow | MEDIUM | Cline | No |
+| [CLN-015](./generated/cln-015.md) | Cline paths Pattern Never Matches | MEDIUM | Cline | No |
+| [CLN-016](./generated/cln-016.md) | Remote MCP Server Without type in Cline Settings | MEDIUM | Cline | No |
 | [COP-001](./generated/cop-001.md) | Empty Copilot Instruction File | HIGH | GitHub Copilot | No |
-| [COP-002](./generated/cop-002.md) | Invalid Frontmatter in Scoped Instructions | HIGH | GitHub Copilot | Yes (unsafe) |
+| [COP-002](./generated/cop-002.md) | Scoped Instructions Without applyTo or Valid Frontmatter | HIGH | GitHub Copilot | Yes (unsafe) |
 | [COP-003](./generated/cop-003.md) | Invalid Glob Pattern in applyTo | HIGH | GitHub Copilot | No |
 | [COP-004](./generated/cop-004.md) | Unknown Frontmatter Keys | MEDIUM | GitHub Copilot | Yes (safe) |
 | [COP-005](./generated/cop-005.md) | Invalid excludeAgent Value | HIGH | GitHub Copilot | Yes (unsafe) |
-| [COP-006](./generated/cop-006.md) | File Length Limit | MEDIUM | GitHub Copilot | No |
+| [COP-006](./generated/cop-006.md) | Instruction File Over About 1,000 Lines | MEDIUM | GitHub Copilot | No |
 | [COP-007](./generated/cop-007.md) | Custom Agent Missing Description | HIGH | GitHub Copilot | No |
 | [COP-008](./generated/cop-008.md) | Custom Agent Unknown or Invalid Frontmatter Field | MEDIUM | GitHub Copilot | Yes (safe) |
 | [COP-009](./generated/cop-009.md) | Custom Agent Invalid Target | HIGH | GitHub Copilot | Yes (unsafe) |
 | [COP-010](./generated/cop-010.md) | Custom Agent infer Field Must Be Boolean | MEDIUM | GitHub Copilot | No |
 | [COP-011](./generated/cop-011.md) | Custom Agent Prompt Body Exceeds Length Limit | HIGH | GitHub Copilot | No |
-| [COP-012](./generated/cop-012.md) | Custom Agent Uses GitHub.com Unsupported Fields | MEDIUM | GitHub Copilot | Yes (safe) |
+| [COP-012](./generated/cop-012.md) | Custom Agent Field Ignored on GitHub.com | LOW | GitHub Copilot | No |
 | [COP-013](./generated/cop-013.md) | Prompt File Empty Body | HIGH | GitHub Copilot | No |
 | [COP-014](./generated/cop-014.md) | Prompt File Unknown Frontmatter Field | MEDIUM | GitHub Copilot | Yes (safe) |
-| [COP-015](./generated/cop-015.md) | Prompt File Invalid Agent Mode | HIGH | GitHub Copilot | Yes (safe) |
-| [COP-017](./generated/cop-017.md) | Copilot Hooks Schema Validation | HIGH | GitHub Copilot | No |
+| [COP-015](./generated/cop-015.md) | Prompt File Agent Not Found | LOW | GitHub Copilot | No |
+| [COP-017](./generated/cop-017.md) | Copilot Hook File Schema | HIGH | GitHub Copilot | No |
 | [COP-018](./generated/cop-018.md) | Invalid copilot-setup-steps Job | HIGH | GitHub Copilot | No |
-| [COP-019](./generated/cop-019.md) | Plugin Missing Required Fields | HIGH | GitHub Copilot | No |
+| [COP-019](./generated/cop-019.md) | Plugin Manifest Missing Required Fields | HIGH | GitHub Copilot | No |
 | [COP-020](./generated/cop-020.md) | Plugin Invalid Field Types | MEDIUM | GitHub Copilot | No |
-| [COP-022](./generated/cop-022.md) | CLI Skill Missing Frontmatter | HIGH | GitHub Copilot | No |
-| [COP-023](./generated/cop-023.md) | CLI Skill Name Format | MEDIUM | GitHub Copilot | Yes (safe) |
-| [COP-024](./generated/cop-024.md) | CLI Skill Unknown Field | MEDIUM | GitHub Copilot | Yes (safe) |
 | [COP-025](./generated/cop-025.md) | Agent File Wrong Location | LOW | GitHub Copilot | No |
-| [COP-026](./generated/cop-026.md) | Deprecated SSE Transport | LOW | GitHub Copilot | Yes (unsafe) |
 | [COP-027](./generated/cop-027.md) | Deprecated Infer Field | LOW | GitHub Copilot | Yes (unsafe) |
+| [COP-028](./generated/cop-028.md) | Custom Agent MCP Secret Without COPILOT_MCP_ Prefix | HIGH | GitHub Copilot | No |
+| [COP-029](./generated/cop-029.md) | copilot-setup-steps Job Setting Ignored | MEDIUM | GitHub Copilot | No |
+| [COP-030](./generated/cop-030.md) | File Reference Copilot CLI Does Not Load | MEDIUM | GitHub Copilot | No |
+| [COP-031](./generated/cop-031.md) | Copilot Hook Entry Violates Documented Constraints | HIGH | GitHub Copilot | No |
+| [COP-032](./generated/cop-032.md) | Legacy Chat Mode File | LOW | GitHub Copilot | No |
+| [COP-033](./generated/cop-033.md) | Invalid Custom Agent Filename | MEDIUM | GitHub Copilot | No |
+| [COP-034](./generated/cop-034.md) | Custom Agent MCP Server Tools List | MEDIUM | GitHub Copilot | No |
+| [COP-035](./generated/cop-035.md) | MCP File Uses Unsupported Feature or Wrong Server Key | MEDIUM | GitHub Copilot | No |
+| [COP-036](./generated/cop-036.md) | Copilot Hook Skipped by Cloud Agent or Missing Script | LOW | GitHub Copilot | No |
+| [COP-037](./generated/cop-037.md) | Literal Secret in Copilot Hook | MEDIUM | GitHub Copilot | No |
+| [COP-038](./generated/cop-038.md) | Code Review Instruction Points to an External Link | LOW | GitHub Copilot | No |
+| [COP-039](./generated/cop-039.md) | Copilot Plugin Name or Manifest Constraints | MEDIUM | GitHub Copilot | No |
 | [CP-SK-001](./generated/cp-sk-001.md) | Copilot Skill Uses Unsupported Field | MEDIUM | Copilot Skills | Yes (safe/unsafe) |
+| [CP-SK-002](./generated/cp-sk-002.md) | Copilot Skill Pre-approves shell or bash | MEDIUM | Copilot Skills | No |
 | [CR-SK-001](./generated/cr-sk-001.md) | Cursor Skill Uses Unsupported Field | MEDIUM | Cursor Skills | Yes (safe/unsafe) |
 | [CUR-001](./generated/cur-001.md) | Empty Cursor Rule File | HIGH | Cursor | No |
 | [CUR-002](./generated/cur-002.md) | Missing Frontmatter in .mdc File | MEDIUM | Cursor | Yes (unsafe) |
 | [CUR-003](./generated/cur-003.md) | Invalid YAML Frontmatter | HIGH | Cursor | No |
 | [CUR-004](./generated/cur-004.md) | Invalid Glob Pattern in globs Field | HIGH | Cursor | No |
 | [CUR-005](./generated/cur-005.md) | Unknown Frontmatter Keys | MEDIUM | Cursor | Yes (safe) |
-| [CUR-006](./generated/cur-006.md) | Legacy .cursorrules File Detected | MEDIUM | Cursor | No |
+| [CUR-006](./generated/cur-006.md) | Legacy .cursorrules File Detected | LOW | Cursor | No |
 | [CUR-007](./generated/cur-007.md) | alwaysApply with Redundant globs | MEDIUM | Cursor | Yes (safe) |
 | [CUR-008](./generated/cur-008.md) | Invalid alwaysApply Type | HIGH | Cursor | Yes (safe) |
-| [CUR-009](./generated/cur-009.md) | Missing Description for Agent-Requested Rule | MEDIUM | Cursor | No |
+| [CUR-009](./generated/cur-009.md) | Rule Applied Only When Mentioned | MEDIUM | Cursor | No |
 | [CUR-010](./generated/cur-010.md) | Invalid Cursor Hooks Schema | HIGH | Cursor | No |
 | [CUR-011](./generated/cur-011.md) | Unknown Cursor Hook Event Name | MEDIUM | Cursor | Yes (safe) |
 | [CUR-012](./generated/cur-012.md) | Hook Entry Missing Required Command Field | HIGH | Cursor | No |
@@ -278,6 +293,25 @@ This section contains all `535` validation rules generated from `knowledge-base/
 | [CUR-018](./generated/cur-018.md) | Invalid or Missing Prompt Hook Field | MEDIUM | Cursor | No |
 | [CUR-019](./generated/cur-019.md) | Invalid Prompt Hook Model Type | LOW | Cursor | No |
 | [CUR-020](./generated/cur-020.md) | Ignored Plain Markdown Cursor Rule | HIGH | Cursor | No |
+| [CUR-021](./generated/cur-021.md) | Cursor Rule Over 500 Lines | MEDIUM | Cursor | No |
+| [CUR-022](./generated/cur-022.md) | Project Hook Script Path Relative to the Wrong Base | HIGH | Cursor | Yes (unsafe) |
+| [CUR-023](./generated/cur-023.md) | Cursor Skill Uses Legacy globs | LOW | Cursor | Yes (unsafe) |
+| [CUR-024](./generated/cur-024.md) | MCP Field Not Supported for the Transport | MEDIUM | Cursor | No |
+| [CUR-025](./generated/cur-025.md) | Cursor Permission Allows Everything | MEDIUM | Cursor | No |
+| [CUR-026](./generated/cur-026.md) | CLI Setting Ignored in a Project cli.json | MEDIUM | Cursor | No |
+| [CUR-027](./generated/cur-027.md) | Ignored permissions.json Entry | MEDIUM | Cursor | No |
+| [CUR-028](./generated/cur-028.md) | Cursor Subagent Without Description | LOW | Cursor | No |
+| [CUR-029](./generated/cur-029.md) | Cursor Subagent Prompt Too Long | LOW | Cursor | No |
+| [CUR-030](./generated/cur-030.md) | Invalid Cursor Plugin Manifest | HIGH | Cursor | No |
+| [CUR-031](./generated/cur-031.md) | Literal Secret in environment.json Command | MEDIUM | Cursor | No |
+| [CUR-032](./generated/cur-032.md) | MCP Permission Hook Fails Open | LOW | Cursor | No |
+| [CUR-033](./generated/cur-033.md) | Hook Not Run by Cloud Agents | LOW | Cursor | No |
+| [CUR-034](./generated/cur-034.md) | .cursorignore Negation Cannot Re-include | LOW | Cursor | No |
+| [CUR-035](./generated/cur-035.md) | Too Many Cursor Subagents | LOW | Cursor | No |
+| [CUR-036](./generated/cur-036.md) | Long Code Block in a Cursor Rule | LOW | Cursor | No |
+| [CUR-037](./generated/cur-037.md) | Long-running Process in environment.json install | LOW | Cursor | No |
+| [CUR-039](./generated/cur-039.md) | Invalid Cursor CLI Config | HIGH | Cursor | No |
+| [CUR-040](./generated/cur-040.md) | Cursor Plugin Submission Checklist | MEDIUM | Cursor | No |
 | [CX-SK-001](./generated/cx-sk-001.md) | Codex Skill Uses Unsupported Field | MEDIUM | Codex Skills | Yes (safe/unsafe) |
 | [GM-001](./generated/gm-001.md) | Invalid Markdown Structure in GEMINI.md | HIGH | Gemini CLI | Yes (safe) |
 | [GM-002](./generated/gm-002.md) | Missing Section Headers in GEMINI.md | MEDIUM | Gemini CLI | No |

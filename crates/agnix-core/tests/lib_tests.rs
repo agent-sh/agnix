@@ -310,7 +310,8 @@ fn test_detect_gemini_md() {
 fn test_validators_for_gemini_md() {
     let registry = ValidatorRegistry::with_defaults();
     let validators = registry.validators_for(FileType::GeminiMd);
-    assert_eq!(validators.len(), 5);
+    // 6: CopilotValidator checks GEMINI.md @references for Copilot runs (COP-030).
+    assert_eq!(validators.len(), 6);
 }
 
 #[test]
@@ -341,14 +342,18 @@ fn test_validators_for_gemini_ignore() {
 fn test_validators_for_skill() {
     let registry = ValidatorRegistry::with_defaults();
     let validators = registry.validators_for(FileType::Skill);
-    assert_eq!(validators.len(), 4);
+    // 7: the Copilot, Cursor and Cline validators act on their own skill
+    // folders (CP-SK-002, CUR-023, CL-SK-004).
+    assert_eq!(validators.len(), 7);
 }
 
 #[test]
 fn test_validators_for_claude_md() {
     let registry = ValidatorRegistry::with_defaults();
     let validators = registry.validators_for(FileType::ClaudeMd);
-    assert_eq!(validators.len(), 9);
+    // 10: CopilotValidator checks AGENTS.md / CLAUDE.md @references for
+    // Copilot runs (COP-030).
+    assert_eq!(validators.len(), 10);
     assert!(validators.iter().any(|v| v.name() == "AmpValidator"));
     assert!(
         validators
@@ -377,7 +382,9 @@ fn test_validators_for_amp_settings() {
 fn test_validators_for_mcp() {
     let registry = ValidatorRegistry::with_defaults();
     let validators = registry.validators_for(FileType::Mcp);
-    assert_eq!(validators.len(), 1);
+    // 3: McpValidator, plus the Copilot (COP-035) and Cursor (CUR-024)
+    // validators for their own MCP files.
+    assert_eq!(validators.len(), 3);
 }
 
 #[test]

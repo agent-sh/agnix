@@ -1,10 +1,7 @@
 {
   "version": 1,
-  "hooks": [
-    {
-      "type": "command",
-      "events": ["sessionStart"],
-      "command": { "bash": "echo start" }
-    }
-  ]
+  "hooks": {
+    "sessionStart": [{ "type": "command", "bash": "echo start", "powershell": "Write-Output start" }],
+    "preToolUse": [{ "bash": "echo check", "matcher": "bash|edit", "timeoutSec": 10 }]
+  }
 }

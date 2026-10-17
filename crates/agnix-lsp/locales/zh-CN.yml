@@ -333,24 +333,16 @@ rules:
     suggestion_empty: 添加有意义的指令供 Copilot 遵循
     suggestion_scoped_empty: 添加包含 applyTo 字段和指令的 frontmatter
   cop_002:
-    message_missing: 范围限定的 Copilot 指令文件缺少必需的 frontmatter
     message_invalid_yaml: '无效的 YAML frontmatter: %{error}'
-    message_missing_apply_to: 范围限定的 Copilot 指令文件缺少必需的 'applyTo' 字段
-    suggestion_add_frontmatter: 添加包含 --- 标记和 applyTo 字段的 YAML frontmatter
     suggestion_fix_yaml: 修复 frontmatter 中的 YAML 语法
-    suggestion_add_apply_to: '添加 ''applyTo: "**/*.ts"'' 或类似的 glob 模式'
   cop_003:
     message: '无效的 glob 模式 ''%{pattern}'': %{error}'
     suggestion: 使用有效的 glob 语法，如 '**/*.ts' 或 'src/**/*.js'
   cop_004:
     message: Copilot 指令文件中未知的 frontmatter 键 '%{key}'
-    suggestion: 删除未知键 '%{key}'。只认可 'applyTo' 和 'excludeAgent'。
   cop_005:
     message: '无效的 excludeAgent 值 ''%{value}''。有效值: ''code-review''、''cloud-agent'''
     suggestion: 为 excludeAgent 使用 'code-review' 或 'cloud-agent'
-  cop_006:
-    message: Copilot 指令文件超过推荐长度（%{len} 个字符，限制约 4000）
-    suggestion: 减少内容长度或拆分为范围限定的指令文件
   cur_001:
     message_empty: Cursor 规则文件为空
     message_no_content: Cursor 规则文件在 frontmatter 之后没有内容
@@ -369,19 +361,12 @@ rules:
   cur_005:
     message: Cursor 规则文件中未知的 frontmatter 键 '%{key}'
     suggestion: '删除未知键 ''%{key}''。有效键为: description、globs、alwaysApply。'
-  cur_006:
-    message: 检测到旧版 .cursorrules 文件 - 考虑迁移到 .cursor/rules/*.mdc 格式
-    suggestion: 创建 .cursor/rules/ 目录并添加带有 frontmatter 的 .mdc 文件以获得更好的组织
-    legacy_empty: Cursor 规则文件为空
   cur_007:
     message: alwaysApply 为 true 但 globs 字段也已设置 - globs 是多余的
     suggestion: '移除 globs 字段，因为 alwaysApply: true 会使规则在每次聊天会话中应用，而不受文件模式限制'
   cur_008:
     message: alwaysApply 必须是布尔值（true/false），而不是带引号的字符串
     suggestion: '使用 alwaysApply: true 或 alwaysApply: false，不要加引号。YAML 将引号值解析为字符串。'
-  cur_009:
-    message: 代理请求的规则没有描述 - 代理无法确定何时应用它
-    suggestion: 添加 description 字段说明此规则何时应用，或设置 alwaysApply 或 globs 来控制激活
   cln_001:
     message_empty: Cline 规则文件为空
     message_no_content: Cline 规则文件在 frontmatter 之后没有内容
@@ -392,9 +377,7 @@ rules:
     suggestion: 使用有效的 glob 语法，如 '**/*.ts' 或 'src/**/*.js'
   cln_003:
     message: Cline 规则文件中未知的 frontmatter 键 '%{key}'
-    suggestion: 删除未知键 '%{key}'。只有 'paths' 是已识别的 frontmatter 键。
   cln_004:
-    message: Cline 会忽略标量 paths 值 - 请改用 YAML 数组
     suggestion: "将 paths 改为数组格式: paths:\n  - \"%{pattern}\""
     fix: 将标量 paths 转换为数组格式
   gm_001:
@@ -711,19 +694,8 @@ rules:
   cln_005:
     message: Cline 工作流文件为空
     suggestion: 向文件添加工作流步骤
-  cln_006:
-    message: Cline 工作流文件包含 frontmatter
-    suggestion: Cline 工作流应为纯 markdown，不包含 frontmatter
   cln_009:
     message: 未知的 Cline hook 事件名称 '%{event}'
-    suggestion: '使用有效的 hook 事件名称: TaskStart, TaskResume, TaskCancel, TaskComplete, PreToolUse, PostToolUse, UserPromptSubmit,
-      PreCompact'
-  cl_sk_002:
-    message: Cline 技能缺少必需的 frontmatter 'name' 字段
-    suggestion: 在 SKILL.md 的 frontmatter 中添加 'name' 字段
-  cl_sk_003:
-    message: Cline 技能缺少必需的 frontmatter 'description' 字段
-    suggestion: 在 SKILL.md 的 frontmatter 中添加 'description' 字段
   gm_010:
     message: experimental.memoryManager 已启用但未设置 experimental.autoMemory（Gemini CLI v0.40+ 已拆分这两个标志）
     suggestion: '在 memoryManager 旁同时设置 experimental.autoMemory: true，以保持 v0.40 之后后台技能提取和 /memory inbox 正常工作（参见 https://github.com/google-gemini/gemini-cli/pull/25601）'

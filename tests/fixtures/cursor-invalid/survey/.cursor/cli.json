@@ -1,0 +1,5 @@
+{
+  // project CLI settings
+  "editor": { "vimMode": true },
+  "permissions": { "allow": ["WebFetch(*)", "Shell(git)"], "deny": [] }
+}
