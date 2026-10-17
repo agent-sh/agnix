@@ -1,5 +1,6 @@
 {
   "name": "invalid-hook-event-agent",
+  "description": "Agent fixture with an unknown CLI hook trigger",
   "hooks": {
     "beforePrompt": [
       {

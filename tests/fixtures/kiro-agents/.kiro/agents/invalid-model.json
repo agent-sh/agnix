@@ -1,4 +1,5 @@
 {
   "name": "invalid-model-agent",
-  "model": "unsupported-model"
+  "description": "Agent fixture that pins a Claude Code model alias",
+  "model": "sonnet"
 }

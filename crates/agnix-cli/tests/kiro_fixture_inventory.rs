@@ -52,6 +52,12 @@ fn required_paths() -> Vec<&'static str> {
         "tests/fixtures/kiro-agents/.kiro/agents/valid-hooks.json",
         "tests/fixtures/kiro-agents/.kiro/agents/invalid-hook-event.json",
         "tests/fixtures/kiro-agents/.kiro/agents/missing-hook-command.json",
+        "tests/fixtures/kiro-agents/.kiro/agents/valid-markdown-agent.md",
+        "tests/fixtures/kiro-agents/.kiro/agents/jsonc-agent.json",
+        "tests/fixtures/kiro-agents/.kiro/agents/missing-name.json",
+        "tests/fixtures/kiro-agents/.kiro/agents/missing-prompt-file.json",
+        "tests/fixtures/kiro-agents/.kiro/agents/invalid-v3-hooks.json",
+        "tests/fixtures/kiro-agents/.kiro/agents/notes.md",
         "tests/fixtures/kiro-hooks/.kiro/hooks/valid-file-save.kiro.hook",
         "tests/fixtures/kiro-hooks/.kiro/hooks/valid-prompt-submit.kiro.hook",
         "tests/fixtures/kiro-hooks/.kiro/hooks/valid-pre-tool.kiro.hook",
@@ -216,8 +222,11 @@ fn kiro_fixture_families_are_cli_runnable() {
     let root = workspace_root();
     let fixture_roots = [
         ("tests/fixtures/kiro-powers", 7_u64, 4_u64),
-        // KR-AG-009 no longer flags the 10 agents that omit the optional `prompt`.
-        ("tests/fixtures/kiro-agents", 10_u64, 10_u64),
+        // One finding per invalid fixture (two for unknown-fields.json and
+        // missing-name.json, three for invalid-v3-hooks.json); valid-agent.json,
+        // valid-hooks.json, valid-markdown-agent.md and minimal-agent.json are
+        // clean.
+        ("tests/fixtures/kiro-agents", 16_u64, 16_u64),
         ("tests/fixtures/kiro-hooks", 7_u64, 4_u64),
         ("tests/fixtures/kiro-mcp", 1_u64, 0_u64),
         ("tests/fixtures/kiro-permissions", 2_u64, 4_u64),

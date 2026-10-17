@@ -13,7 +13,7 @@ keywords: ["KR-AG-013", "secrets in agent prompt", "kiro agents", "validation", 
 - **Category**: `Kiro Agents`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,13 +23,13 @@ keywords: ["KR-AG-013", "secrets in agent prompt", "kiro agents", "validation", 
 
 ## Evidence Sources
 
-- https://kiro.dev/docs/agents
-- https://kiro.dev/docs/configuration
+- https://kiro.dev/docs/custom-agents/configuration-reference/
+- https://kiro.dev/docs/cli/v3/agent-config/
 
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `true`
+- Fixture tests: `false`
 - E2E tests: `false`
 
 ## Examples
@@ -39,11 +39,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{"prompt": "API_KEY=sk-live-secret123"}
+{"name": "review-agent", "prompt": "api_key = sk-live-0123456789abcdefghij"}
 ```
 
 ### Valid
 
 ```json
-{"prompt": "Use ${API_KEY} from env"}
+{"name": "review-agent", "prompt": "Use the API key from ${API_KEY}"}
 ```

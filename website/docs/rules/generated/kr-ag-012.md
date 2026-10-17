@@ -1,9 +1,9 @@
 ---
 id: kr-ag-012
-title: "KR-AG-012: toolAliases References Unknown Tool - Kiro Agents"
+title: "KR-AG-012: toolAliases Renames a Tool Not in tools"
 sidebar_label: "KR-AG-012"
-description: "agnix rule KR-AG-012 checks for toolaliases references unknown tool in kiro agents files. Severity: MEDIUM. See examples and fix guidance."
-keywords: ["KR-AG-012", "toolaliases references unknown tool", "kiro agents", "validation", "agnix", "linter"]
+description: "agnix rule KR-AG-012 checks for toolaliases renames a tool not in tools in kiro agents files. Severity: MEDIUM. See examples and fix guidance."
+keywords: ["KR-AG-012", "toolaliases renames a tool not in tools", "kiro agents", "validation", "agnix", "linter"]
 ---
 
 ## Summary
@@ -13,7 +13,7 @@ keywords: ["KR-AG-012", "toolaliases references unknown tool", "kiro agents", "v
 - **Category**: `Kiro Agents`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,13 +23,12 @@ keywords: ["KR-AG-012", "toolaliases references unknown tool", "kiro agents", "v
 
 ## Evidence Sources
 
-- https://kiro.dev/docs/agents
-- https://kiro.dev/docs/configuration
+- https://kiro.dev/docs/custom-agents/configuration-reference/
 
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `true`
+- Fixture tests: `false`
 - E2E tests: `false`
 
 ## Examples
@@ -39,11 +38,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{"tools": ["readFiles"], "toolAliases": {"wf": "writeFiles"}}
+{"name": "review-agent", "tools": ["read"], "toolAliases": {"@github-mcp/get_issues": "github_issues"}}
 ```
 
 ### Valid
 
 ```json
-{"tools": ["readFiles"], "toolAliases": {"rf": "readFiles"}}
+{"name": "review-agent", "tools": ["@github-mcp"], "toolAliases": {"@github-mcp/get_issues": "github_issues"}}
 ```

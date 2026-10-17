@@ -1,4 +1,6 @@
 {
   "name": "no-mcp-access-agent",
-  "includeMcpJson": false
+  "description": "Agent fixture that references an MCP server it cannot load",
+  "includeMcpJson": false,
+  "tools": ["read", "@git"]
 }

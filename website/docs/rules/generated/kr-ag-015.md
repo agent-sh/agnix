@@ -12,19 +12,20 @@ keywords: ["KR-AG-015", "unconverted cli 2.x trust configuration", "kiro agents"
 - **Severity**: `MEDIUM`
 - **Category**: `Kiro Agents`
 - **Normative Level**: `MUST`
-- **Auto-Fix**: `No`
-- **Verified On**: `2026-10-16`
+- **Auto-Fix**: `Yes (unsafe)`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
 - **Tool**: `kiro`
-- **Version Range**: `>=2.30.0`
+- **Version Range**: `>=2.8.0`
 - **Spec Revision**: `unspecified`
 
 ## Evidence Sources
 
 - https://kiro.dev/docs/custom-agents/configuration-reference/
 - https://kiro.dev/docs/cli/v3/migration-guide/
+- https://kiro.dev/docs/cli/v3/upgrade-agent/
 
 ## Test Coverage Metadata
 
@@ -39,11 +40,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{"tools": ["fs_read"], "allowedTools": ["fs_read"], "toolsSettings": {"fs_read": {"allowedPaths": ["src/**"]}}}
+{"name": "review-agent", "tools": ["fs_read"], "allowedTools": ["fs_read"], "toolsSettings": {"fs_read": {"allowedPaths": ["src/**"]}}}
 ```
 
 ### Valid
 
 ```json
-{"tools": ["read", "shell"], "permissions": {"rules": [{"capability": "shell", "match": ["npm *"], "effect": "allow"}]}}
+{"name": "review-agent", "tools": ["read", "shell"], "permissions": {"rules": [{"capability": "shell", "match": ["npm *"], "effect": "allow"}]}}
 ```

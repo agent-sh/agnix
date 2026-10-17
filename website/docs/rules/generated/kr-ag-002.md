@@ -1,9 +1,9 @@
 ---
 id: kr-ag-002
-title: "KR-AG-002: Invalid Kiro Agent Resource Protocol"
+title: "KR-AG-002: Invalid Kiro Agent Resource Entry - Kiro Agents"
 sidebar_label: "KR-AG-002"
-description: "agnix rule KR-AG-002 checks for invalid kiro agent resource protocol in kiro agents files. Severity: HIGH. See examples and fix guidance."
-keywords: ["KR-AG-002", "invalid kiro agent resource protocol", "kiro agents", "validation", "agnix", "linter"]
+description: "agnix rule KR-AG-002 checks for invalid kiro agent resource entry in kiro agents files. Severity: HIGH. See examples and fix guidance."
+keywords: ["KR-AG-002", "invalid kiro agent resource entry", "kiro agents", "validation", "agnix", "linter"]
 ---
 
 ## Summary
@@ -13,7 +13,7 @@ keywords: ["KR-AG-002", "invalid kiro agent resource protocol", "kiro agents", "
 - **Category**: `Kiro Agents`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,9 @@ keywords: ["KR-AG-002", "invalid kiro agent resource protocol", "kiro agents", "
 
 ## Evidence Sources
 
-- https://kiro.dev/docs/cli/custom-agents/creating
+- https://kiro.dev/docs/custom-agents/configuration-reference/
+- https://kiro.dev/docs/cli/v3/agent-config/
+- https://kiro.dev/docs/custom-agents/creating/
 
 ## Test Coverage Metadata
 
@@ -38,15 +40,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{
-  "resources": ["https://example.com/private"]
-}
+{"name": "review-agent", "resources": ["README.md"]}
 ```
 
 ### Valid
 
 ```json
-{
-  "resources": ["file://docs/architecture.md", "skill://deploy"]
-}
+{"name": "review-agent", "resources": ["file://README.md", "skill://.kiro/skills/*/SKILL.md"]}
 ```

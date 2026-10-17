@@ -817,28 +817,6 @@ rules:
   kr_pw_004:
     message: Adjacent power mcp.json has invalid mcpServers structure
     suggestion: Ensure mcp.json uses an object mcpServers map with valid server entries
-  kr_ag_001:
-    message: Unknown field '%{field}' in Kiro agent JSON
-    suggestion: Remove unsupported fields or use documented Kiro agent keys
-  kr_ag_002:
-    message: 'Invalid Kiro agent resource entry: %{resource}'
-    suggestion: 'Use file://, skill://, or object entries with type: knowledgeBase'
-  kr_ag_003:
-    message: allowedTools contains '%{tool}' which is not present in tools
-    suggestion: Keep allowedTools as a subset of tools
-  kr_ag_004:
-    message: Invalid Kiro agent model value '%{model}'
-    suggestion: Use a documented model value (claude-sonnet-4, claude-sonnet4.5, claude-sonnet-4-5, claude-opus4.5, claude-opus-4-5,
-      Auto)
-  kr_ag_005:
-    message: 'Kiro agent has includeMcpJson: false and no inline mcpServers'
-    suggestion: Enable includeMcpJson or configure inline mcpServers for MCP access
-  kr_ag_006:
-    message: Kiro agent references unknown subagent '@%{agent}'
-    suggestion: Create .kiro/agents/%{agent}.json or .md, or remove the subagent reference
-  kr_ag_007:
-    message: 'Kiro agent has broader tools than referenced subagent ''@%{agent}'' (extra tools: %{extra_tools})'
-    suggestion: Narrow this agent's tool scope or align '@%{agent}' tool permissions
   kr_hk_001:
     message: Invalid Kiro IDE hook event '%{event}'
     suggestion: 'Use one of: fileEdited, fileCreate, fileDelete, promptSubmit, agentStop, preToolUse, postToolUse, manual'
@@ -854,12 +832,6 @@ rules:
   kr_hk_004:
     message: Kiro '%{event}' hook is missing toolTypes filter
     suggestion: Add toolTypes to scope preToolUse/postToolUse hooks
-  kr_hk_005:
-    message: Invalid Kiro CLI hook event key '%{event}' in agent JSON
-    suggestion: 'Use one of: agentSpawn, userPromptSubmit, preToolUse, postToolUse, stop'
-  kr_hk_006:
-    message: Kiro CLI hook entry at %{event}[%{index}] is missing required command
-    suggestion: Add a non-empty command to each CLI hook entry
   kr_mcp_001:
     message: Kiro MCP server '%{server}' is missing both command and url
     suggestion: Set command for local servers or url for remote servers
@@ -1114,30 +1086,211 @@ rules:
   kr_pw_008:
     message: Potential hardcoded secret detected in POWER.md body
     suggestion: Remove hardcoded credentials from the power body; reference environment variables instead
+  kr_ag_engine:
+    format_json: JSON
+    format_frontmatter: frontmatter
+    engines_both: Kiro CLI 2.x and V3
+    engines_v2: Kiro CLI 2.x only
+    engines_v3: Kiro CLI V3 only
+    assumption: 'Kiro version not pinned; this file was checked against %{engines}, judging by its fields. Set [tool_versions] kiro = "2.x" or "3.x" to check one engine'
+    skip_both: Kiro CLI 2.x and V3 both skip this agent
+    skip_v2: Kiro CLI 2.x skips this agent
+    skip_v2_partial: Kiro CLI 2.x skips this agent (V3 loads it)
+    skip_v3: Kiro CLI V3 skips this agent
+    skip_v3_partial: Kiro CLI V3 skips this agent (2.x loads it)
+    skip_v3_migration: Kiro CLI V3, the default from CLI 3.0, will skip this agent
+  kr_ag_001:
+    unknown: 'Unknown field ''%{field}'' in Kiro agent %{format}; Kiro ignores it'
+    suggestion: Remove the field or rename it to a documented Kiro agent field
+    markdown_prompt: 'Kiro CLI V3 ignores ''prompt'' in Markdown agent frontmatter; the Markdown body is the prompt'
+    markdown_prompt_suggestion: Move the prompt text into the body below the frontmatter and remove the 'prompt' key
+    v2_field_markdown: '''%{field}'' is a Kiro CLI 2.x field; Kiro CLI V3 ignores it in Markdown agents'
+    v2_field: '''%{field}'' is a Kiro CLI 2.x field; Kiro CLI V3 ignores it'
+    v3_field: '''%{field}'' is a Kiro CLI V3 field; Kiro CLI 2.x ignores it'
+    trust_suggestion: Use a permissions block (permissions.rules) to pre-approve tools in V3
+    remove_suggestion: Remove the field if no targeted Kiro engine needs it
+    v2_field_universal: '''%{field}'' is a Kiro CLI 2.x field that Kiro CLI V3 does not apply'
+    v2_field_universal_suggestion: Keep it only while the agent also runs on Kiro CLI 2.x
+    legacy_mcp_json: 'Kiro CLI V3 ignores useLegacyMcpJson, so in V3 this agent gets only the mcp.json servers that tools references'
+    legacy_mcp_json_suggestion: 'Set "includeMcpJson": true (its CLI 2.x alias), and drop useLegacyMcpJson'
+  kr_ag_002:
+    message: 'Invalid Kiro agent resource %{resource}: %{problem}; %{effect}'
+    bad_scheme: it must start with file:// or skill://
+    bad_type: 'type ''%{kind}'' is not knowledgeBase'
+    missing_type: 'object resources need "type": "knowledgeBase"'
+    bad_value: 'it must be a file:// or skill:// string or a knowledgeBase object, found %{found}'
+    v3_drops: V3 drops the entry
+    v3_drops_only: Kiro CLI V3 drops this entry
+    suggestion: 'Use a file:// or skill:// URI, or an object with type: knowledgeBase'
+    kb_suggestion: 'Give knowledgeBase entries a file:// source, indexType best or fast, and a boolean autoUpdate'
+  kr_ag_003:
+    message: 'allowedTools trusts ''%{tool}'', but tools does not make it available'
+    suggestion: Add the tool to tools (or a selector such as @builtin, @server, or *), or remove it from allowedTools
+  kr_ag_004:
+    alias: '''%{model}'' is a Claude Code model alias, not a Kiro model ID; Kiro CLI 2.x sends it unchanged, and V3 accepts it only if it matches one served model ID'
+    display_name: '''%{model}'' looks like a model display name, not a Kiro model ID'
+    alias_suggestion: Use a Kiro model ID such as claude-sonnet-4.6 (run /model to list them), or remove 'model' to use the default
+    type: 'Kiro agent ''model'' must be a string, found %{found}; %{effect}'
+    type_suggestion: Set 'model' to a Kiro model ID string, or remove it
+  kr_ag_005:
+    message_v2: 'tools references MCP server ''@%{server}'', but includeMcpJson is false and mcpServers does not define it, so Kiro CLI 2.x has no such server for this agent'
+    message_both: 'tools references MCP server ''@%{server}'', but includeMcpJson is false and mcpServers does not define it, so Kiro CLI 2.x has no such server for this agent (V3 includes mcp.json servers that tools references)'
+    suggestion: Set includeMcpJson to true, or define the server in the agent's mcpServers
+  kr_ag_006:
+    no_tool: 'toolsSettings.%{key} configures sub-agents, but tools has no subagent tool, so the agent cannot delegate in Kiro CLI 2.x'
+    no_tool_suggestion: Add "subagent" to tools (or use @builtin)
+    unknown_agent: '%{field} entry ''%{agent}'' matches no agent in this .kiro/agents directory or Kiro''s built-in agents'
+    unknown_agent_suggestion: Check the agent name; ignore this if the agent is a global agent in ~/.kiro/agents
   kr_ag_008:
-    message: Kiro agent has an empty explicit 'name' field
-    suggestion: Remove the empty field to derive the name from its relative path, or set a non-empty name
+    empty: 'Kiro agent ''name'' is empty; %{effect}'
+    empty_v2: Kiro agent 'name' is empty, so the agent has no usable name
+    blank: Kiro agent 'name' contains only whitespace
+    type: 'Kiro agent ''name'' must be a string, found %{found}; %{effect}'
+    suggestion: Set a non-empty name, or remove the field so V3 derives the name from the file path
   kr_ag_009:
-    message: Kiro agent 'prompt' is empty or not a string
+    empty: Kiro agent 'prompt' is empty, so the agent has no system prompt
+    empty_body: Markdown agent has an empty body, so it has no system prompt
+    empty_body_suggestion: Write the system prompt below the frontmatter
+    type: 'Kiro agent ''prompt'' must be a string or null, found %{found}; %{effect}'
     suggestion: Set 'prompt' to inline text or a file:// URI, or remove it
   kr_ag_010:
     message: 'Kiro agent has duplicate tool entries: ''%{tool}'''
     suggestion: Remove duplicate tool names from the 'tools' array
   kr_ag_011:
-    message: Kiro agent 'tools' array is empty
-    suggestion: Add at least one tool or remove the 'tools' field to inherit defaults
+    message: Kiro agent 'tools' array is empty, so the agent has no tools
+    suggestion: Add tools, or remove the field if that is not intended
   kr_ag_012:
-    message: Kiro agent toolAliases maps '%{alias}' to unknown tool '%{tool}'
-    suggestion: Alias a tool that's present in the 'tools' array, or add the target to 'tools'
+    renames: 'toolAliases renames ''%{tool}'' to ''%{alias}'', but tools does not make ''%{tool}'' available'
+    renames_suggestion: 'toolAliases keys are original tool names (for MCP tools @server/tool) and values are the new names; add the original tool to tools or remove the alias'
   kr_ag_013:
     message: Potential hardcoded secret detected in Kiro agent prompt
     suggestion: Remove hardcoded credentials from the prompt; reference environment variables instead
   kr_ag_014:
-    message: 'Invalid Kiro universal permissions rule: %{issue}'
-    suggestion: Use permissions.rules entries with a documented capability, deny/ask/allow effect, and string-array match/exclude fields
+    fatal: 'Invalid Kiro agent permissions: %{issue}; %{effect}'
+    ignored: 'Kiro agent permissions: %{issue}'
+    suggestion: Use permissions.rules entries with a known capability, an allow, ask, or deny effect, and string-array match and exclude fields
   kr_ag_015:
     message: 'Kiro agent uses CLI 2.x trust fields (%{fields}) without a permissions block; CLI V3 skips this profile until it is upgraded'
-    suggestion: Run /upgrade-agent in a V3 session to convert allowedTools/toolsSettings into permissions.rules, or add a permissions block manually
+    suggestion: Run /upgrade-agent in a V3 session (or kiro-cli agent upgrade) to convert allowedTools/toolsSettings into permissions.rules, or add a permissions block manually
+    empty_suggestion: Remove the empty field (kiro-cli agent upgrade leaves such profiles unconverted), or add a permissions block
+    fix: Remove the empty CLI 2.x trust field so Kiro CLI V3 loads the agent
+  kr_ag_016:
+    syntax: 'Kiro agent file is not valid JSON (%{error}); Kiro CLI 2.x and V3 both skip it'
+    not_object: 'Kiro agent file must contain a JSON object, found %{found}; Kiro CLI 2.x and V3 both skip it'
+    jsonc: 'Kiro agent JSON uses comments or trailing commas; %{effect}'
+    jsonc_suggestion: Remove comments and trailing commas (only Kiro CLI V3 accepts JSONC agent files)
+    suggestion: Fix the JSON syntax
+  kr_ag_017:
+    missing: 'Markdown file in .kiro/agents has no YAML frontmatter; Kiro CLI V3 loads every .md file there as an agent and reports "No front matter found"'
+    missing_suggestion: Add frontmatter (at least a description) to make it an agent, or move the file out of .kiro/agents
+    empty: 'Markdown agent frontmatter is empty; Kiro CLI V3 skips this agent ("No front matter found")'
+    invalid: 'Markdown agent frontmatter is invalid (%{error}); Kiro CLI V3 skips this agent'
+    not_mapping: 'frontmatter must be a mapping of fields, found %{found}'
+    suggestion: Write the frontmatter as a YAML mapping of agent fields between --- lines
+  kr_ag_018:
+    message: 'Kiro agent field ''%{field}'' must be %{expected}, found %{found}; %{effect}'
+    suggestion: Use the type the Kiro agent configuration reference documents for this field
+    duplicate: 'Kiro agent field ''%{field}'' appears more than once; %{effect}'
+    duplicate_suggestion: Keep a single occurrence of the field
+    legacy_alias: 'useLegacyMcpJson is an alias of includeMcpJson in Kiro CLI 2.x, so setting both is a duplicate field; %{effect}'
+    legacy_alias_suggestion: Keep only includeMcpJson
+    tools_settings: 'toolsSettings.%{tool} must be an object, found %{found}; Kiro CLI 2.x warns and ignores it'
+  kr_ag_019:
+    message: 'Kiro agent has no ''name'' field; %{effect}'
+    message_v3: 'Kiro agent has no ''name'' field; %{effect}, which derives the name ''%{id}'' from the file path'
+    suggestion: Add a "name" field (Kiro CLI 2.x requires it)
+  kr_ag_020:
+    both: 'File in .kiro/agents has no Kiro agent fields (it has %{fields}); Kiro CLI 2.x rejects it (missing name) and V3 lists it as an empty agent ''%{id}'''
+    v2: 'File in .kiro/agents has no Kiro agent fields (it has %{fields}); Kiro CLI 2.x rejects it (missing name)'
+    v3: 'File in .kiro/agents has no Kiro agent fields (it has %{fields}); Kiro CLI V3 lists it as an empty agent ''%{id}'''
+    suggestion: Move non-agent files out of .kiro/agents; Kiro loads every JSON file there as an agent
+  kr_ag_021:
+    empty: 'Kiro agent prompt "file://" has an empty path; %{effect}'
+    absolute: 'Kiro agent prompt ''file://%{target}'' is absolute or starts with ~; Kiro CLI V3 rejects such prompt paths, so %{effect}'
+    missing: 'Kiro agent prompt file ''file://%{target}'' does not exist (resolved to %{resolved}); %{effect}'
+    escapes: 'Kiro agent prompt ''file://%{target}'' resolves outside the workspace root; Kiro CLI V3 rejects it, so %{effect}'
+    suggestion: Use a file:// path relative to the agent file that stays inside the workspace
+    missing_suggestion: Fix the path (relative paths resolve against the agent file's directory) or create the prompt file
+  kr_ag_022:
+    reserved: 'Kiro agent id ''%{id}'' is reserved for a built-in Kiro agent; %{effect} (silently)'
+    reserved_suggestion: Rename the agent
+    duplicate_both: 'Kiro agent name ''%{name}'' is also used by %{other}; Kiro CLI 2.x keeps the first of the two files it reads and V3 keeps the last'
+    duplicate_v2: 'Kiro agent name ''%{name}'' is also used by %{other}; Kiro CLI 2.x keeps only the first of the two files it reads'
+    duplicate_v3: 'Kiro agent name ''%{name}'' is also used by %{other}; Kiro CLI V3 keeps only the last definition'
+    duplicate_suggestion: Give each agent file a unique name
+  kr_ag_023:
+    message: 'Inline MCP server ''%{server}'' in Kiro agent: %{problem}; %{effect}'
+    not_object: 'Kiro agent mcpServers must be an object of servers, found %{found}; %{effect}'
+    not_object_both: 'Kiro agent mcpServers must be an object of servers, found %{found}; %{effect} (V3 ignores the field)'
+    not_object_v3: 'Kiro agent mcpServers must be an object of servers, found %{found}; Kiro CLI V3 ignores it'
+    v3_skips_server: V3 skips only this server
+    v3_skips_server_only: Kiro CLI V3 skips this server
+    suggestion: Define each server as an object with a command (local) or an https url (remote) and correctly typed fields
+  kr_ag_024:
+    claude_name: '%{field} entry ''%{tool}'' is a Claude Code tool name; Kiro tool names are lowercase and case-sensitive, so it matches no tool (use ''%{replacement}'')'
+    claude_mcp: '%{field} entry ''%{tool}'' uses Claude Code MCP naming; Kiro references MCP tools as ''%{replacement}'', so it matches no tool'
+    case: '%{field} entry ''%{tool}'' matches no tool; Kiro tool names are case-sensitive (use ''%{replacement}'')'
+    v2_name_in_v3: 'tools entry ''%{tool}'' is a Kiro CLI 2.x name that V3 does not alias, so it selects nothing in V3 (use ''%{selector}'')'
+    v3_id_in_v2: 'tools entry ''%{tool}'' is a Kiro CLI V3 tool id that Kiro CLI 2.x does not know (use ''%{equivalent}'')'
+    v3_id_in_allowed: 'allowedTools entry ''%{tool}'' is a Kiro CLI V3 tool id; Kiro CLI 2.x does not know it, so it trusts nothing (use ''%{equivalent}'')'
+    aws: 'tools entry ''%{tool}'' selects nothing in Kiro CLI V3, which has no AWS tool'
+    aws_suggestion: Use an MCP server for AWS access in V3 and reference it as @server
+    aws_trust: '%{tool} trust has no Kiro CLI V3 equivalent: V3 has no AWS tool, and kiro-cli agent upgrade turns it into a use_aws capability that V3 skips'
+    unmapped: 'allowedTools entry ''%{tool}'' is not a Kiro CLI 2.x tool name, so it trusts nothing; MCP tools are written @server/tool'
+    suggestion: Use Kiro tool names (read, write, shell, ...), @builtin, or @server and @server/tool selectors
+    allowed_suggestion: List built-in tools by their Kiro names and MCP tools as @server/tool (or give them a toolAliases alias)
+    allowed_star: 'allowedTools does not support the "*" wildcard, so this entry trusts nothing'
+    allowed_star_suggestion: Use @builtin, @server, or glob patterns such as "@server/*" to pre-approve groups of tools
+  kr_ag_025:
+    v3: 'Hook matcher ''%{matcher}'' names a Kiro CLI 2.x tool that V3 does not have, so the hook never fires in V3'
+    v2: 'Hook matcher ''%{matcher}'' names a Kiro CLI V3 tool id that Kiro CLI 2.x does not know, so the hook never fires in 2.x'
+    v3_suggestion: 'Use the V3 matcher ''%{replacement}'''
+    v3_remove_suggestion: Remove the hook or match the replacement tool (for AWS, the MCP server's @server/tool)
+    v2_suggestion: 'Use the Kiro CLI 2.x name ''%{replacement}'''
+  kr_ag_026:
+    timeout_in_object: '%{hook} sets ''timeout'', which object-form hooks do not read; Kiro CLI 2.x uses timeout_ms (milliseconds, default 30000) and V3 its 60-second default'
+    timeout_in_object_suggestion: Use timeout_ms in milliseconds, or move the hook to the array form, which takes timeout in seconds
+    ms_looks_like_seconds: '%{hook} timeout_ms is %{value}, which is milliseconds; it looks like a value in seconds'
+    ms_suggestion: Give timeout_ms in milliseconds (for example 30000 for 30 seconds)
+    seconds_looks_like_ms: '%{hook} timeout is %{value} seconds; array-form timeouts are seconds, so this looks like milliseconds (%{seconds} s)'
+    seconds_suggestion: Give timeout in seconds (0 disables the timeout)
+    timeout_ms_in_array: '%{hook} sets timeout_ms, which array-form hooks ignore; the timeout field is in seconds'
+    timeout_ms_in_array_suggestion: Replace timeout_ms with timeout in seconds
+  kr_ag_027:
+    object_unknown: '%{hook} field ''%{field}'' is ignored; object-form hooks read command, matcher, timeout_ms, max_output_size, and cache_ttl_seconds'
+    object_suggestion: Remove the field, or use matcher to limit which tools trigger the hook
+    v3_drops: '%{hook} field ''%{field}'' is a Kiro CLI 2.x hook field that V3 drops'
+    v3_drops_suggestion: Use the array hook form with timeout in seconds for V3
+    array_unknown: '%{hook} field ''%{field}'' is ignored; array-form hooks read name, trigger, matcher, action, timeout, enabled, and confirm'
+    array_suggestion: Remove the field or rename it to a documented hook field
+    agent_action_v2: '%{hook} uses an agent action; Kiro CLI 2.x skips agent-type hook actions when loading'
+    agent_action_suggestion: Use a command action if the hook must also run in Kiro CLI 2.x
+  kr_ag_028:
+    markdown: Kiro CLI 2.x does not load Markdown agents; this agent is available only in Kiro CLI V3
+    nested: Kiro CLI 2.x loads only agent files directly in .kiro/agents; this nested agent is available only in Kiro CLI V3
+    suggestion: Use a top-level JSON agent for Kiro CLI 2.x, or pin [tool_versions] kiro = "3.x" if you use V3
+  kr_ag_029:
+    message: 'Kiro agent resource ''%{resource}'' loads every file in the workspace into context on each request'
+    suggestion: List the specific files or globs the agent needs; use skill:// resources or a knowledgeBase for large material
+  kr_ag_030:
+    missing: 'Kiro agent is a sub-agent of %{orchestrator} but has no description, which Kiro uses to pick sub-agents'
+    short: 'Kiro agent is a sub-agent of %{orchestrator} but its description is very short; Kiro picks sub-agents by their description'
+    suggestion: Describe what the agent does and when to use it, with the keywords a request would contain
+  kr_hk_005:
+    object_key: 'Kiro agent hook trigger ''%{trigger}'' is not one of agentSpawn, userPromptSubmit, preToolUse, postToolUse, stop; %{effect}'
+    v3_runs: 'V3 runs it as %{trigger}'
+    v3_skips_hook: V3 skips this hook
+    v3_unknown: 'Kiro agent hook trigger ''%{trigger}'' is not a V3 trigger, so Kiro CLI V3 skips this hook'
+    array_trigger: '%{hook} trigger ''%{trigger}'' is not a V3 trigger name (names are case-sensitive), so Kiro CLI V3 skips this hook'
+    suggestion: 'Use one of: agentSpawn, userPromptSubmit, preToolUse, postToolUse, stop'
+    rename_suggestion: 'Rename the trigger to ''%{trigger}'''
+    v3_suggestion: Use a V3 trigger such as SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, Stop, PostFileSave, or SessionEnd
+    fix: 'Rename the hook trigger to %{trigger} (activates the hook)'
+  kr_hk_006:
+    invalid: 'Invalid Kiro agent hook %{hook}: %{issue}; %{effect}'
+    blank: '%{hook} has a blank command'
+    matcher_dropped: '%{hook} matcher is not a string; Kiro CLI V3 drops it, so the hook runs for every tool'
+    suggestion: 'Give each hook a non-empty command (object form), or a name, trigger, and action {type, command|prompt} (array form)'
   kr_hk_011:
     message: "Kiro V3 hook document has %{version_desc}"
     suggestion: "Set \"version\" to \"v1\" at the top level of the standalone hook file"

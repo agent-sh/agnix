@@ -37,7 +37,7 @@
 | Windsurf Skills | .windsurf/skills/*/SKILL.md | 1 |
 | Kiro Steering | .kiro/steering/*.md | 14 |
 | Kiro Skills | .kiro/skills/*/SKILL.md | 1 |
-| Kiro Agents | .kiro/agents/**/*.{json,md} | 15 |
+| Kiro Agents | .kiro/agents/**/*.{json,md} | 29 |
 | Kiro Hooks | .kiro/hooks/*.kiro.hook, .kiro/hooks/*.json | 14 |
 | Kiro Permissions | .kiro/settings/permissions.yaml, ~/.kiro/workspace-roots/<hash>/permissions.yaml | 4 |
 | Kiro MCP | .kiro/settings/mcp.json | 6 |

@@ -1,19 +1,19 @@
 ---
 id: kr-ag-005
-title: "KR-AG-005: Kiro Agent Has No MCP Access - Kiro Agents"
+title: "KR-AG-005: Referenced MCP Server Not Loaded by Kiro CLI 2.x"
 sidebar_label: "KR-AG-005"
-description: "agnix rule KR-AG-005 checks for kiro agent has no mcp access in kiro agents files. Severity: LOW. See examples and fix guidance."
-keywords: ["KR-AG-005", "kiro agent has no mcp access", "kiro agents", "validation", "agnix", "linter"]
+description: "agnix rule KR-AG-005 checks for referenced mcp server not loaded by kiro cli 2.x in kiro agents files. Severity: MEDIUM. See examples and fix guidance."
+keywords: ["KR-AG-005", "referenced mcp server not loaded by kiro cli 2.x", "kiro agents", "validation", "agnix", "linter"]
 ---
 
 ## Summary
 
 - **Rule ID**: `KR-AG-005`
-- **Severity**: `LOW`
+- **Severity**: `MEDIUM`
 - **Category**: `Kiro Agents`
-- **Normative Level**: `BEST_PRACTICE`
+- **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,8 @@ keywords: ["KR-AG-005", "kiro agent has no mcp access", "kiro agents", "validati
 
 ## Evidence Sources
 
-- https://kiro.dev/docs/cli/custom-agents/configuration-reference
+- https://kiro.dev/docs/custom-agents/configuration-reference/
+- https://kiro.dev/docs/mcp/configuration/
 
 ## Test Coverage Metadata
 
@@ -38,15 +39,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{
-  "includeMcpJson": false
-}
+{"name": "review-agent", "includeMcpJson": false, "tools": ["read", "@git"]}
 ```
 
 ### Valid
 
 ```json
-{
-  "includeMcpJson": true
-}
+{"name": "review-agent", "includeMcpJson": true, "tools": ["read", "@git"]}
 ```

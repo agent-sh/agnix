@@ -1,4 +1,5 @@
 {
   "name": "invalid-resource-agent",
+  "description": "Agent fixture with a resource that is not a file URI",
   "resources": ["https://example.com/not-supported"]
 }
