@@ -89,17 +89,19 @@ Rule IDs follow the format `[PREFIX]-[NUMBER]` where the prefix indicates the ru
 
 | Prefix | Rules | Current IDs |
 |--------|-------|-------------|
-| `AGM-` | 7 | AGM-001 through AGM-004, AGM-007 through AGM-009 |
-| `AMP-` | 4 | AMP-001 through AMP-004 |
-| `AMP-SK-` | 1 | AMP-SK-001 |
+| `AGM-` | 6 | AGM-001 through AGM-002, AGM-004, AGM-007 through AGM-009 |
+| `AMP-` | 9 | AMP-001 through AMP-008, AMP-010 |
+| `AMP-SK-` | 3 | AMP-SK-001 through AMP-SK-003 |
 | `AS-` | 22 | AS-001 through AS-006, AS-008 through AS-009, AS-011 through AS-013, AS-015 through AS-017, AS-020 through AS-027 |
-| `CC-AG-` | 17 | CC-AG-001 through CC-AG-015, CC-AG-017, CC-AG-019 |
-| `CC-HK-` | 28 | CC-HK-001 through CC-HK-028 |
+| `CC-AG-` | 21 | CC-AG-001 through CC-AG-012, CC-AG-014 through CC-AG-015, CC-AG-017, CC-AG-019 through CC-AG-024 |
+| `CC-HK-` | 32 | CC-HK-001 through CC-HK-003, CC-HK-005 through CC-HK-016, CC-HK-018, CC-HK-020 through CC-HK-035 |
+| `CC-MCP-` | 5 | CC-MCP-001 through CC-MCP-005 |
 | `CC-MEM-` | 15 | CC-MEM-001 through CC-MEM-004, CC-MEM-010 through CC-MEM-012, CC-MEM-014 through CC-MEM-021 |
+| `CC-MP-` | 5 | CC-MP-001 through CC-MP-005 |
 | `CC-OS-` | 6 | CC-OS-001 through CC-OS-004, CC-OS-006 through CC-OS-007 |
-| `CC-PL-` | 15 | CC-PL-001 through CC-PL-015 |
+| `CC-PL-` | 23 | CC-PL-001 through CC-PL-023 |
 | `CC-SET-` | 35 | CC-SET-001 through CC-SET-013, CC-SET-016 through CC-SET-020, CC-SET-022 through CC-SET-023, CC-SET-025 through CC-SET-031, CC-SET-033 through CC-SET-040 |
-| `CC-SK-` | 19 | CC-SK-001 through CC-SK-002, CC-SK-004 through CC-SK-008, CC-SK-010, CC-SK-013 through CC-SK-023 |
+| `CC-SK-` | 28 | CC-SK-001 through CC-SK-002, CC-SK-004 through CC-SK-008, CC-SK-010, CC-SK-013 through CC-SK-025, CC-SK-027 through CC-SK-028, CC-SK-030 through CC-SK-034 |
 | `CDX-` | 4 | CDX-000, CDX-004 through CDX-006 |
 | `CDX-AG-` | 8 | CDX-AG-001 through CDX-AG-003, CDX-AG-005 through CDX-AG-006, CDX-AG-008 through CDX-AG-010 |
 | `CDX-APP-` | 3 | CDX-APP-001 through CDX-APP-003 |
@@ -110,23 +112,27 @@ Rule IDs follow the format `[PREFIX]-[NUMBER]` where the prefix indicates the ru
 | `CDX-REQ-` | 5 | CDX-REQ-000 through CDX-REQ-004 |
 | `CDX-RL-` | 2 | CDX-RL-001 through CDX-RL-002 |
 | `CDX-SUB-` | 3 | CDX-SUB-001 through CDX-SUB-003 |
-| `CL-SK-` | 3 | CL-SK-001 through CL-SK-003 |
-| `CLN-` | 7 | CLN-001 through CLN-006, CLN-009 |
-| `COP-` | 25 | COP-001 through COP-015, COP-017 through COP-020, COP-022 through COP-027 |
-| `CP-SK-` | 1 | CP-SK-001 |
+| `CL-SK-` | 2 | CL-SK-001, CL-SK-004 |
+| `CLN-` | 14 | CLN-001 through CLN-006, CLN-009 through CLN-016 |
+| `COP-` | 33 | COP-001 through COP-015, COP-017 through COP-020, COP-025, COP-027 through COP-039 |
+| `CP-SK-` | 2 | CP-SK-001 through CP-SK-002 |
 | `CR-SK-` | 1 | CR-SK-001 |
-| `CUR-` | 20 | CUR-001 through CUR-020 |
+| `CUR-` | 39 | CUR-001 through CUR-037, CUR-039 through CUR-040 |
 | `CX-SK-` | 4 | CX-SK-001, CX-SK-004, CX-SK-006 through CX-SK-007 |
-| `GM-` | 13 | GM-001 through GM-006, GM-008 through GM-010, GM-018, GM-019, GM-026, GM-028 |
-| `GM-AG-` | 1 | GM-AG-001 |
-| `KIRO-` | 14 | KIRO-001 through KIRO-014 |
-| `KR-AG-` | 13 | KR-AG-001 through KR-AG-013 |
-| `KR-HK-` | 10 | KR-HK-001 through KR-HK-010 |
-| `KR-MCP-` | 6 | KR-MCP-001 through KR-MCP-006 |
-| `KR-PW-` | 8 | KR-PW-001 through KR-PW-008 |
-| `KR-SET-` | 3 | KR-SET-001 through KR-SET-003 |
-| `KR-SK-` | 1 | KR-SK-001 |
-| `MCP-` | 32 | MCP-001 through MCP-004, MCP-006 through MCP-033 |
+| `GM-` | 26 | GM-001 through GM-006, GM-008 through GM-011, GM-013 through GM-028 |
+| `GM-AG-` | 6 | GM-AG-001 through GM-AG-006 |
+| `GM-CMD-` | 3 | GM-CMD-001 through GM-CMD-003 |
+| `KIRO-` | 16 | KIRO-001 through KIRO-011, KIRO-015 through KIRO-018, KIRO-026 |
+| `KR-AG-` | 29 | KR-AG-001 through KR-AG-006, KR-AG-008 through KR-AG-030 |
+| `KR-HK-` | 28 | KR-HK-001 through KR-HK-006, KR-HK-009 through KR-HK-030 |
+| `KR-IGN-` | 1 | KR-IGN-001 |
+| `KR-MCP-` | 15 | KR-MCP-001 through KR-MCP-015 |
+| `KR-PM-` | 12 | KR-PM-001 through KR-PM-012 |
+| `KR-PW-` | 18 | KR-PW-001 through KR-PW-004, KR-PW-006 through KR-PW-019 |
+| `KR-SET-` | 11 | KR-SET-001 through KR-SET-011 |
+| `KR-SK-` | 2 | KR-SK-001 through KR-SK-002 |
+| `KR-WF-` | 9 | KR-WF-001 through KR-WF-009 |
+| `MCP-` | 30 | MCP-001 through MCP-004, MCP-006 through MCP-024, MCP-027 through MCP-033 |
 | `OC-` | 8 | OC-001 through OC-004, OC-006 through OC-009 |
 | `OC-AG-` | 11 | OC-AG-001 through OC-AG-011 |
 | `OC-AGM-` | 2 | OC-AGM-002 through OC-AGM-003 |
@@ -142,7 +148,8 @@ Rule IDs follow the format `[PREFIX]-[NUMBER]` where the prefix indicates the ru
 | `PE-` | 4 | PE-002, PE-004 through PE-006 |
 | `REF-` | 3 | REF-001 through REF-003 |
 | `VER-` | 1 | VER-001 |
-| `WS-` | 4 | WS-001 through WS-004 |
+| `WS-` | 11 | WS-001 through WS-011 |
+| `WS-HK-` | 5 | WS-HK-001 through WS-HK-005 |
 | `WS-SK-` | 1 | WS-SK-001 |
 | `XML-` | 3 | XML-001 through XML-003 |
 | `XP-` | 7 | XP-001 through XP-006, XP-008 |

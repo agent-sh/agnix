@@ -124,15 +124,19 @@ Kiro permission YAML templates at `.kiro/settings/permissions.yaml` are lintable
 
 | Tool | Rules | Count | Config Files |
 |------|-------|-------|--------------|
-| [Agent Skills](https://agentskills.io) | AS-\*, CC-SK-\* | 31 | SKILL.md |
-| [Claude Code](https://docs.anthropic.com/en/docs/build-with-claude/claude-code) | CC-\* | 53 | CLAUDE.md, hooks, agents, plugins |
-| [GitHub Copilot](https://docs.github.com/en/copilot) | COP-\* | 6 | .github/copilot-instructions.md, .github/instructions/\*.instructions.md |
-| [Cursor](https://cursor.com) | CUR-\* | 16 | .cursor/rules/\*.mdc, .cursorrules, .cursor/hooks.json, .cursor/agents/\*\*/\*.md, .cursor/environment.json |
+| [Agent Skills](https://agentskills.io) | AS-\*, XP-SK-\* | 26 | SKILL.md |
+| [Claude Code](https://code.claude.com/docs) | CC-\* | 170 | CLAUDE.md, .claude/rules/\*.md, settings.json, hooks, agents, skills, output styles, plugins, marketplace.json, .mcp.json |
+| [GitHub Copilot](https://docs.github.com/en/copilot) | COP-\*, CP-SK-\* | 35 | .github/copilot-instructions.md, .github/instructions/\*.instructions.md, .github/agents/, .github/prompts/, .github/hooks/\*.json, copilot-setup-steps.yml, plugin.json, .github/skills/ |
+| [Cursor](https://cursor.com) | CUR-\*, CR-SK-\* | 40 | .cursor/rules/\*.mdc, .cursorrules, .cursor/hooks.json, .cursor/agents/, .cursor/environment.json, .cursor/cli.json, permissions.json, .cursor-plugin/, .cursorignore, .cursor/skills/ |
+| [Codex CLI](https://developers.openai.com/codex) | CDX-\*, CX-SK-\* | 89 | AGENTS.md, .codex/config.toml, .codex/hooks.json, .codex/agents/\*.toml, .codex/rules/\*.rules, requirements.toml, .codex-plugin/plugin.json, .agents/skills/ |
+| [OpenCode](https://opencode.ai) | OC-\* | 67 | opencode.json(c), .opencode/agents/, .opencode/commands/, .opencode/tools/, .opencode/plugins/, .opencode/skills/ |
 | [Kiro](https://kiro.dev) | KIRO-\*, KR-SK-\*, KR-AG-\*, KR-HK-\*, KR-PW-\*, KR-MCP-\*, KR-SET-\*, KR-PM-\*, KR-WF-\*, KR-IGN-\* | 141 | .kiro/steering/\*\*/\*.md, .kiro/skills/\*\*/SKILL.md, .kiro/agents/\*\*/\*.{json,md}, .kiro/hooks/\*.kiro.hook, .kiro/hooks/\*.json, .kiro/settings/mcp.json, .kiro/settings/cli.json, .kiro/settings/permissions.yaml (or .json), .kiro/powers/\*/POWER.md and published POWER.md, power plugin.json and mcp.json, .kiro/workflows/\*.workflow.{json,yaml,yml}, .kiroignore |
-| [MCP](https://modelcontextprotocol.io) | MCP-\* | 12 | \*.mcp.json |
-| [AGENTS.md](https://agentsmd.org) | AGM-\*, XP-\* | 13 | AGENTS.md, AGENTS.local.md, AGENTS.override.md |
-| [Cline](https://docs.cline.bot) | CLN-\* | 4 | .clinerules, .clinerules/\*.md, .clinerules/\*.txt |
-| [Gemini CLI](https://github.com/google-gemini/gemini-cli) | GM-\* | 9 | GEMINI.md, GEMINI.local.md, .gemini/settings.json (hooks), gemini-extension.json (extensions), .geminiignore |
+| [MCP](https://modelcontextprotocol.io) | MCP-\* | 30 | .mcp.json and the MCP server blocks of client configs |
+| [AGENTS.md](https://agents.md) | AGM-\*, XP-\* | 13 | AGENTS.md, AGENTS.local.md, AGENTS.override.md |
+| [Cline](https://docs.cline.bot) | CLN-\*, CL-SK-\* | 16 | .clinerules/, .cline/rules/, .cline/workflows/, .cline/hooks/, .clineignore, cline_mcp_settings.json, .cline/skills/ |
+| [Gemini CLI](https://github.com/google-gemini/gemini-cli) | GM-\* | 35 | GEMINI.md, .gemini/settings.json, gemini-extension.json, extension hooks and agents, .gemini/commands/\*.toml, policies, .gemini/agents/, .geminiignore |
+| [Windsurf / Devin Desktop](https://docs.devin.ai) | WS-\* | 17 | .devin/rules/, .devin/workflows/, .devin/hooks.json (and the legacy .windsurf/ layout), .windsurfrules, global_rules.md, .windsurf/skills/ |
+| [Amp](https://ampcode.com) | AMP-\* | 12 | .agents/checks/\*.md, .amp/settings.json(c), skills and skill mcp.json |
 
 ## Architecture
 

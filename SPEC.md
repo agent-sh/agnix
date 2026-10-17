@@ -1,6 +1,6 @@
 # agnix Technical Reference
 
-> Linter for agent configs. 443 rules across 40 categories.
+> Linter for agent configs. 702 rules across 43 categories.
 
 
 ## What agnix Validates
