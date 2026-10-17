@@ -1,7 +1,7 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 544,
+  "total_rules": 563,
   "last_updated": "2026-10-17",
   "schema": {
     "evidence": {
@@ -7611,9 +7611,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://cursor.com/docs/context/skills"
+          "https://cursor.com/docs/skills"
         ],
-        "verified_on": "2026-02-07",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "cursor"
         },
@@ -7641,7 +7641,7 @@
         "source_urls": [
           "https://cursor.com/docs/rules"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "cursor"
         },
@@ -7668,7 +7668,7 @@
         "source_urls": [
           "https://cursor.com/docs/rules"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "cursor"
         },
@@ -7696,7 +7696,7 @@
         "source_urls": [
           "https://cursor.com/docs/rules"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "cursor"
         },
@@ -7723,7 +7723,7 @@
         "source_urls": [
           "https://cursor.com/docs/rules"
         ],
-        "verified_on": "2026-07-31",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "cursor"
         },
@@ -7750,7 +7750,7 @@
         "source_urls": [
           "https://cursor.com/docs/rules"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "cursor"
         },
@@ -7771,15 +7771,16 @@
     {
       "id": "CUR-006",
       "name": "Legacy .cursorrules File Detected",
-      "severity": "MEDIUM",
+      "severity": "LOW",
       "category": "cursor",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
           "https://cursor.com/help/customization/rules",
-          "https://cursor.com/docs/rules"
+          "https://cursor.com/docs/rules",
+          "https://docs.cline.bot/customization/cline-rules"
         ],
-        "verified_on": "2026-09-16",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "cursor"
         },
@@ -7806,7 +7807,7 @@
         "source_urls": [
           "https://cursor.com/docs/rules"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "cursor"
         },
@@ -7834,7 +7835,7 @@
         "source_urls": [
           "https://cursor.com/docs/rules"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "cursor"
         },
@@ -7854,7 +7855,7 @@
     },
     {
       "id": "CUR-009",
-      "name": "Missing Description for Agent-Requested Rule",
+      "name": "Rule Applied Only When Mentioned",
       "severity": "MEDIUM",
       "category": "cursor",
       "evidence": {
@@ -7862,7 +7863,7 @@
         "source_urls": [
           "https://cursor.com/docs/rules"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "cursor"
         },
@@ -7889,7 +7890,7 @@
         "source_urls": [
           "https://cursor.com/docs/hooks"
         ],
-        "verified_on": "2026-09-16",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "cursor"
         },
@@ -7916,7 +7917,7 @@
         "source_urls": [
           "https://cursor.com/docs/hooks"
         ],
-        "verified_on": "2026-07-30",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "cursor"
         },
@@ -7944,7 +7945,7 @@
         "source_urls": [
           "https://cursor.com/docs/hooks"
         ],
-        "verified_on": "2026-07-31",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "cursor"
         },
@@ -7971,7 +7972,7 @@
         "source_urls": [
           "https://cursor.com/docs/hooks"
         ],
-        "verified_on": "2026-08-01",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "cursor"
         },
@@ -7999,7 +8000,7 @@
         "source_urls": [
           "https://cursor.com/docs/subagents"
         ],
-        "verified_on": "2026-09-30",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "cursor"
         },
@@ -8026,7 +8027,7 @@
         "source_urls": [
           "https://cursor.com/docs/subagents"
         ],
-        "verified_on": "2026-09-30",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "cursor"
         },
@@ -8054,7 +8055,7 @@
           "https://cursor.com/docs/cloud-agent/setup",
           "https://cursor.com/schemas/environment.schema.json"
         ],
-        "verified_on": "2026-09-16",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "cursor"
         },
@@ -8081,7 +8082,7 @@
         "source_urls": [
           "https://cursor.com/docs/hooks"
         ],
-        "verified_on": "2026-09-16",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "cursor",
           "file_types": [
@@ -8111,7 +8112,7 @@
         "source_urls": [
           "https://cursor.com/docs/hooks"
         ],
-        "verified_on": "2026-08-01",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "cursor",
           "file_types": [
@@ -8141,7 +8142,7 @@
         "source_urls": [
           "https://cursor.com/docs/hooks"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "cursor",
           "file_types": [
@@ -8171,7 +8172,7 @@
         "source_urls": [
           "https://cursor.com/docs/rules"
         ],
-        "verified_on": "2026-08-01",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "cursor",
           "file_types": [
@@ -8190,6 +8191,524 @@
       },
       "good_example": ".cursor/rules/typescript.mdc",
       "bad_example": ".cursor/rules/typescript.md"
+    },
+    {
+      "id": "CUR-021",
+      "name": "Cursor Rule Over 500 Lines",
+      "severity": "MEDIUM",
+      "category": "cursor",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://cursor.com/docs/rules",
+          "https://cursor.com/help/customization/rules"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "cursor"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\ndescription: API conventions\nglobs: \"src/api/**\"\n---\n- Validate input with zod.\n- See @src/api/users.ts for the handler pattern.",
+      "bad_example": "A .cursor/rules/style-guide.mdc of 900 lines that copies a style guide"
+    },
+    {
+      "id": "CUR-022",
+      "name": "Project Hook Script Path Relative to the Wrong Base",
+      "severity": "HIGH",
+      "category": "cursor",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://cursor.com/docs/hooks"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "cursor"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": true,
+        "fix_safety": "unsafe"
+      },
+      "good_example": "{\n  \"version\": 1,\n  \"hooks\": { \"afterFileEdit\": [{ \"command\": \".cursor/hooks/format.sh\" }] }\n}",
+      "bad_example": "{\n  \"version\": 1,\n  \"hooks\": { \"afterFileEdit\": [{ \"command\": \"./hooks/format.sh\" }] }\n}\n(.cursor/hooks.json in a project; the script is .cursor/hooks/format.sh)"
+    },
+    {
+      "id": "CUR-023",
+      "name": "Cursor Skill Uses Legacy globs",
+      "severity": "LOW",
+      "category": "cursor",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://cursor.com/docs/skills"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "cursor"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": true,
+        "fix_safety": "unsafe"
+      },
+      "good_example": "---\nname: react\ndescription: React patterns. Use when editing components.\npaths: \"**/*.tsx\"\n---\nFollow the component patterns.",
+      "bad_example": "---\nname: react\ndescription: React patterns. Use when editing components.\nglobs: \"**/*.tsx\"\n---\nFollow the component patterns."
+    },
+    {
+      "id": "CUR-024",
+      "name": "MCP Field Not Supported for the Transport",
+      "severity": "MEDIUM",
+      "category": "cursor",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://cursor.com/docs/mcp"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "cursor"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"mcpServers\": {\n    \"api\": { \"url\": \"https://api.example.com/mcp\", \"headers\": { \"Authorization\": \"Bearer ${env:API_TOKEN}\" } }\n  }\n}",
+      "bad_example": "{\n  \"mcpServers\": {\n    \"api\": { \"url\": \"https://api.example.com/mcp\", \"envFile\": \".env\" }\n  }\n}"
+    },
+    {
+      "id": "CUR-025",
+      "name": "Cursor Permission Allows Everything",
+      "severity": "MEDIUM",
+      "category": "cursor",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://cursor.com/docs/cli/reference/permissions",
+          "https://cursor.com/docs/reference/permissions"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "cursor"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"permissions\": { \"allow\": [\"WebFetch(docs.github.com)\", \"Mcp(datadog:*)\"], \"deny\": [] }\n}",
+      "bad_example": "{\n  \"permissions\": { \"allow\": [\"WebFetch(*)\", \"Mcp(*:*)\"], \"deny\": [] }\n}"
+    },
+    {
+      "id": "CUR-026",
+      "name": "CLI Setting Ignored in a Project cli.json",
+      "severity": "MEDIUM",
+      "category": "cursor",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://cursor.com/docs/cli/reference/configuration"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "cursor"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"permissions\": { \"allow\": [\"Shell(git)\"], \"deny\": [] }\n}",
+      "bad_example": "{\n  \"editor\": { \"vimMode\": true },\n  \"permissions\": { \"allow\": [\"Shell(git)\"], \"deny\": [] }\n}\n(.cursor/cli.json)"
+    },
+    {
+      "id": "CUR-027",
+      "name": "Ignored permissions.json Entry",
+      "severity": "MEDIUM",
+      "category": "cursor",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://cursor.com/docs/reference/permissions"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "cursor"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"mcpAllowlist\": [\"github:*\", \"linear:list_issues\"],\n  \"terminalAllowlist\": [\"git\", \"npm\"]\n}",
+      "bad_example": "{\n  \"mcpAllowlist\": [\"github\"],\n  \"terminalAllowList\": [\"git\"]\n}"
+    },
+    {
+      "id": "CUR-028",
+      "name": "Cursor Subagent Without Description",
+      "severity": "LOW",
+      "category": "cursor",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://cursor.com/docs/subagents"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "cursor"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: verifier\ndescription: Validates completed work. Use after tasks are marked done.\n---\nCheck that the work is complete.",
+      "bad_example": "---\nname: verifier\n---\nCheck that the work is complete."
+    },
+    {
+      "id": "CUR-029",
+      "name": "Cursor Subagent Prompt Too Long",
+      "severity": "LOW",
+      "category": "cursor",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://cursor.com/docs/subagents"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "cursor"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "A .cursor/agents/reviewer.md prompt of a few hundred words",
+      "bad_example": "A .cursor/agents/reviewer.md prompt of 2,500 words"
+    },
+    {
+      "id": "CUR-030",
+      "name": "Invalid Cursor Plugin Manifest",
+      "severity": "HIGH",
+      "category": "cursor",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://cursor.com/docs/reference/plugins"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "cursor"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"name\": \"enterprise-plugin\",\n  \"version\": \"1.2.0\",\n  \"author\": { \"name\": \"ACME DevTools\" }\n}",
+      "bad_example": "{\n  \"name\": \"Enterprise_Plugin\",\n  \"author\": { \"email\": \"devtools@acme.com\" }\n}"
+    },
+    {
+      "id": "CUR-031",
+      "name": "Literal Secret in environment.json Command",
+      "severity": "MEDIUM",
+      "category": "cursor",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://cursor.com/docs/cloud-agent/setup"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "cursor"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"install\": \"pnpm install\"\n}",
+      "bad_example": "{\n  \"install\": \"export API_TOKEN=3f9a1c7e5b2d8a4f && pnpm install\"\n}"
+    },
+    {
+      "id": "CUR-032",
+      "name": "MCP Permission Hook Fails Open",
+      "severity": "LOW",
+      "category": "cursor",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://cursor.com/docs/hooks"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "cursor"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"version\": 1,\n  \"hooks\": { \"beforeMCPExecution\": [{ \"command\": \".cursor/hooks/mcp-guard.sh\", \"failClosed\": true }] }\n}",
+      "bad_example": "{\n  \"version\": 1,\n  \"hooks\": { \"beforeMCPExecution\": [{ \"command\": \".cursor/hooks/mcp-guard.sh\" }] }\n}"
+    },
+    {
+      "id": "CUR-033",
+      "name": "Hook Not Run by Cloud Agents",
+      "severity": "LOW",
+      "category": "cursor",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://cursor.com/docs/hooks"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "cursor"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"version\": 1,\n  \"hooks\": { \"afterFileEdit\": [{ \"command\": \".cursor/hooks/format.sh\" }] }\n}",
+      "bad_example": "{\n  \"version\": 1,\n  \"hooks\": { \"sessionStart\": [{ \"command\": \".cursor/hooks/init.sh\" }] }\n}\n(project with .cursor/environment.json)"
+    },
+    {
+      "id": "CUR-034",
+      "name": ".cursorignore Negation Cannot Re-include",
+      "severity": "LOW",
+      "category": "cursor",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://cursor.com/docs/reference/ignore-file"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "cursor"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "public/*\npublic/assets/*\n!public/assets/style.css",
+      "bad_example": "public/*\n!public/assets/style.css"
+    },
+    {
+      "id": "CUR-035",
+      "name": "Too Many Cursor Subagents",
+      "severity": "LOW",
+      "category": "cursor",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://cursor.com/docs/subagents"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "cursor"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "Two or three focused subagents in .cursor/agents/",
+      "bad_example": "Fifty or more subagents in .cursor/agents/"
+    },
+    {
+      "id": "CUR-036",
+      "name": "Long Code Block in a Cursor Rule",
+      "severity": "LOW",
+      "category": "cursor",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://cursor.com/docs/rules"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "cursor"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\ndescription: Settings pattern\n---\nFollow @src/settings/Example.ts when adding a setting.",
+      "bad_example": "---\ndescription: Settings pattern\n---\n```ts\n(60 lines copied from the codebase)\n```"
+    },
+    {
+      "id": "CUR-037",
+      "name": "Long-running Process in environment.json install",
+      "severity": "LOW",
+      "category": "cursor",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://cursor.com/docs/cloud-agent/setup"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "cursor"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"install\": \"npm install\",\n  \"terminals\": [{ \"name\": \"dev\", \"command\": \"npm run dev\" }]\n}",
+      "bad_example": "{\n  \"install\": \"npm install && npm run dev\"\n}"
+    },
+    {
+      "id": "CUR-039",
+      "name": "Invalid Cursor CLI Config",
+      "severity": "HIGH",
+      "category": "cursor",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://cursor.com/docs/cli/reference/configuration",
+          "https://cursor.com/docs/cli/reference/permissions"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "cursor"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"version\": 1,\n  \"permissions\": { \"allow\": [\"Shell(git)\"], \"deny\": [\"Shell(rm)\"] }\n}",
+      "bad_example": "{\n  // allow git\n  \"permissions\": { \"allow\": [\"Bash(git)\"], \"deny\": \"Shell(rm)\" }\n}"
+    },
+    {
+      "id": "CUR-040",
+      "name": "Cursor Plugin Submission Checklist",
+      "severity": "MEDIUM",
+      "category": "cursor",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://cursor.com/docs/reference/plugins"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "cursor"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"name\": \"example-plugin\",\n  \"rules\": \"rules/\",\n  \"variables\": { \"type\": \"object\", \"properties\": { \"API_TOKEN\": { \"type\": \"string\" } } }\n}",
+      "bad_example": "{\n  \"name\": \"example-plugin\",\n  \"rules\": \"../shared/rules/\"\n}\n(mcp.json uses ${API_TOKEN}, which variables does not declare)"
     },
     {
       "id": "CX-SK-001",
@@ -15805,7 +16324,7 @@
     },
     "cursor": {
       "prefix": "CUR",
-      "count": 20,
+      "count": 39,
       "description": "Cursor project rules"
     },
     "cline": {

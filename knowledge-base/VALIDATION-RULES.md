@@ -595,10 +595,10 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="cr-sk-001"></a>
 ### CR-SK-001 [MEDIUM] Cursor Skill Uses Unsupported Field
-**Requirement**: Skills in `.cursor/skills/` SHOULD NOT use frontmatter fields unsupported by Cursor
+**Requirement**: Skills in `.cursor/skills/` SHOULD NOT use frontmatter fields Cursor does not read. Cursor reads `name`, `description`, `paths`, `disable-model-invocation`, `icon`, `color` and `metadata` ("Frontmatter fields"), and still accepts the legacy `globs` ("still accepted as a fallback for older skills"; CUR-023 notes it).
 **Detection**: SKILL.md path contains `.cursor/skills/` AND frontmatter has unsupported fields
 **Fix**: [AUTO-FIX, safe] Remove unsupported field
-**Source**: docs.cursor.com/en/context/skills
+**Source**: cursor.com/docs/skills ("Frontmatter fields", "Scoping a skill to specific files")
 
 <a id="cl-sk-001"></a>
 ### CL-SK-001 [MEDIUM] Cline Skill Uses Unsupported Field
@@ -1994,11 +1994,11 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 **Source**: cursor.com/docs/rules
 
 <a id="cur-006"></a>
-### CUR-006 [MEDIUM] Legacy .cursorrules File Detected
-**Requirement**: Projects SHOULD migrate from .cursorrules to .cursor/rules/*.mdc format
-**Detection**: File named `.cursorrules`
-**Fix**: Create `.cursor/rules/` directory and migrate rules to .mdc files
-**Source**: cursor.com/help/customization/rules ("How do I migrate from .cursorrules?": the file "is legacy and will be deprecated"); cursor.com/docs/rules documents the `.mdc` format that replaces it
+### CUR-006 [LOW] Legacy .cursorrules File Detected
+**Requirement**: Projects SHOULD migrate from `.cursorrules` to `.cursor/rules/*.mdc`: the file "is legacy and will be deprecated". Cursor still reads it, so this is a LOW migration note. Cline reads `.cursorrules` but not `.cursor/rules/` ("Cursor Rules | `.cursorrules` | Automatically detected"), so rules both tools should see belong in AGENTS.md.
+**Detection**: File named `.cursorrules` (info)
+**Fix**: Create `.cursor/rules/` and move the rules into .mdc files, or into AGENTS.md
+**Source**: cursor.com/help/customization/rules ("How do I migrate from .cursorrules?"), cursor.com/docs/rules, docs.cline.bot/customization/cline-rules ("Supported Rule Types")
 
 <a id="cur-007"></a>
 ### CUR-007 [MEDIUM] alwaysApply with Redundant globs
@@ -2015,11 +2015,11 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 **Source**: cursor.com/docs/rules
 
 <a id="cur-009"></a>
-### CUR-009 [MEDIUM] Missing Description for Agent-Requested Rule
-**Requirement**: Rules with no `alwaysApply` and no `globs` (agent-requested rules) SHOULD have a `description`
-**Detection**: Frontmatter has no `alwaysApply`, no `globs`, and no `description` (or empty description)
-**Fix**: Add a `description` field explaining when the rule should apply
-**Source**: cursor.com/docs/rules
+### CUR-009 [MEDIUM] Rule Applied Only When Mentioned
+**Requirement**: A rule with none of `alwaysApply`, `globs` and `description` SHOULD say how it applies: the behavior table gives it "Included only when you `@`-mention the rule in chat.", and "For `Apply Intelligently`, ensure a description is defined." A rule that sets `alwaysApply: false` explicitly is manual on purpose and not reported.
+**Detection**: Frontmatter has no `alwaysApply`, no `globs`, and no (or an empty) `description`
+**Fix**: Add a `description` (Apply Intelligently), `globs` (Apply to Specific Files) or `alwaysApply: false` (manual on purpose)
+**Source**: cursor.com/docs/rules ("Rule anatomy", "FAQ")
 
 <a id="cur-010"></a>
 ### CUR-010 [HIGH] Invalid .cursor/hooks.json Schema
@@ -2097,6 +2097,139 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 **Detection**: Classify `.cursor/rules/**/*.md` so agnix can report the ignored extension before validating content
 **Fix**: Rename the file with a `.mdc` extension
 **Source**: cursor.com/docs/rules
+
+<a id="cur-021"></a>
+### CUR-021 [MEDIUM] Cursor Rule Over 500 Lines
+**Requirement**: A project rule SHOULD stay under 500 lines: "Keep rules under 500 lines" and "Split large rules into multiple, composable rules" (docs), "Keep rules under 500 lines. Split large rules into smaller, focused files." (help)
+**Detection**: `.cursor/rules/**/*.mdc` with more than 500 lines, reported at line 501. Legacy `.cursorrules` files get only the CUR-006 migration note.
+**Fix**: Split the rule into focused rules and reference files instead of copying them
+**Source**: cursor.com/docs/rules ("Best practices"), cursor.com/help/customization/rules
+
+<a id="cur-022"></a>
+### CUR-022 [HIGH] Project Hook Script Path Relative to the Wrong Base
+**Requirement**: Script paths in a project `.cursor/hooks.json` MUST be relative to the project root: "Project hooks run from the **project root**, so use `.cursor/hooks/format.sh` (not `./hooks/format.sh`)" and "For project hooks, use paths like `.cursor/hooks/script.sh` (relative to project root), not `./hooks/script.sh` (which would look for `<project>/hooks/script.sh`)."
+**Detection**: For each command hook whose first word is a relative path: an error when the path does not exist at the project root but does under `.cursor/`; a warning when it starts with `./hooks/` or `hooks/` and the project has no `hooks/` directory. The user file `~/.cursor/hooks.json`, which runs from `~/.cursor/`, is not checked.
+**Fix**: [AUTO-FIX, unsafe] Prefix the path with `.cursor/` when that file exists (it changes which script runs)
+**Source**: cursor.com/docs/hooks ("Project hooks (.cursor/)", "Configuration")
+
+<a id="cur-023"></a>
+### CUR-023 [LOW] Cursor Skill Uses Legacy globs
+**Requirement**: Skills SHOULD scope files with `paths`: "The legacy `globs` field is still accepted as a fallback for older skills, but new skills should use `paths`."
+**Detection**: A `globs` frontmatter key in a skill Cursor loads: `.cursor/skills/`, and `.agents/skills/` when the run targets Cursor (other tools read that folder too). A LOW migration note; when `paths` is also set, the note says `globs` is only a fallback.
+**Fix**: [AUTO-FIX, unsafe] Rename `globs` to `paths` when `paths` is absent; offered only when the edited frontmatter re-parses to the same mapping with the key renamed
+**Source**: cursor.com/docs/skills ("Scoping a skill to specific files")
+
+<a id="cur-024"></a>
+### CUR-024 [MEDIUM] MCP Field Not Supported for the Transport
+**Requirement**: MCP server fields MUST match the transport: "The `envFile` option is only available for STDIO servers. Remote servers (HTTP/SSE) do not support `envFile`." and "Add an `auth` object to remote server entries that use `url`".
+**Detection**: In `.cursor/mcp.json` and `~/.cursor/mcp.json`: `envFile` on a server with `url`, and `auth` on a stdio server (with `command` and no `url`), at the key
+**Fix**: Manual - use `${env:NAME}` interpolation for remote servers
+**Source**: cursor.com/docs/mcp ("STDIO server configuration", "Static OAuth for remote servers")
+
+<a id="cur-025"></a>
+### CUR-025 [MEDIUM] Cursor Permission Allows Everything
+**Requirement**: Allowlists SHOULD name specific domains and tools. The CLI permissions reference marks "`WebFetch(*)` | Allow fetches from any domain (use with caution)" and "`Mcp(*:*)` | Allow all MCP tools (use with caution)"; for `permissions.json`, `*:*` matches "All tools from all servers" and "Allowlists and `autoRun` instructions are best-effort convenience. They are not a security guarantee."
+**Detection**: Warning for `WebFetch(*)` and `Mcp(*:*)` in `permissions.allow` of `.cursor/cli.json` or `~/.cursor/cli-config.json`; info for `*:*` in a `permissions.json` `mcpAllowlist`
+**Fix**: Manual
+**Source**: cursor.com/docs/cli/reference/permissions, cursor.com/docs/reference/permissions
+
+<a id="cur-026"></a>
+### CUR-026 [MEDIUM] CLI Setting Ignored in a Project cli.json
+**Requirement**: A project `.cursor/cli.json` SHOULD hold only permissions: "Only permissions can be configured at the project level. All other CLI settings must be set globally."
+**Detection**: Top-level CLI settings in `.cursor/cli.json` other than `permissions` and `version` that the configuration reference lists (`editor`, `channel`, `model`, `maxMode`, `hasChangedDefaultModel`, `notifications`, `hints`, `rewind`, `suggestNextPrompt`, `display`, `approvalMode`, `sandbox`, `network`, `attribution`)
+**Fix**: Manual - move the setting to `~/.cursor/cli-config.json`
+**Source**: cursor.com/docs/cli/reference/configuration ("File location")
+
+<a id="cur-027"></a>
+### CUR-027 [MEDIUM] Ignored permissions.json Entry
+**Requirement**: `permissions.json` entries MUST be in a form Cursor reads: "Entries that do not contain a `:` are ignored." (MCP allowlist), "Non-string entries inside either array are silently dropped.", "All fields are optional. Unknown keys are ignored.", and "If neither file is present, both are unparseable, or no file contains a given key, Cursor falls back to the IDE allowlist for that key."
+**Detection**: In `.cursor/permissions.json` and `~/.cursor/permissions.json` (JSONC): an unparseable file, a non-object root, an unknown top-level key (with a near-miss suggestion), a non-array allowlist, a non-string entry, and an `mcpAllowlist` entry without `:`
+**Fix**: Manual
+**Source**: cursor.com/docs/reference/permissions ("Top-level fields", "MCP allowlist format", "Precedence")
+
+<a id="cur-028"></a>
+### CUR-028 [LOW] Cursor Subagent Without Description
+**Requirement**: A subagent SHOULD have a description: "**Invest in descriptions** — The `description` field determines when Agent delegates to your subagent." (`description` itself is optional.)
+**Detection**: Info for `.cursor/agents/**/*.md` without a non-empty string `description`
+**Fix**: Manual - say what the subagent does and when to use it
+**Source**: cursor.com/docs/subagents ("Best practices", "Configuration fields")
+
+<a id="cur-029"></a>
+### CUR-029 [LOW] Cursor Subagent Prompt Too Long
+**Requirement**: Subagent prompts SHOULD be concise: "**Overly long prompts** — A 2,000-word prompt doesn't make a subagent smarter. It makes it slower and harder to maintain."
+**Detection**: Info when the body of a `.cursor/agents/**/*.md` file has more than 2,000 whitespace-separated words outside code fences
+**Fix**: Manual
+**Source**: cursor.com/docs/subagents ("Anti-patterns to avoid")
+
+<a id="cur-030"></a>
+### CUR-030 [HIGH] Invalid Cursor Plugin Manifest
+**Requirement**: A Cursor plugin manifest MUST be valid JSON with the required fields. `.cursor-plugin/plugin.json` requires `name`: "Plugin identifier. Lowercase, kebab-case (alphanumerics, hyphens, and periods). Must start and end with an alphanumeric character."; `author` needs "`name` (required)". `.cursor-plugin/marketplace.json` requires `name`, `owner` (with `name`) and `plugins`, and each plugin entry a `name`.
+**Detection**: Invalid JSON, a non-object root, a missing or non-string `name`, a name outside the format, an `author` or `owner` without `name`, and missing marketplace fields
+**Fix**: Manual
+**Source**: cursor.com/docs/reference/plugins ("Required fields", "Optional fields", "Marketplace manifest fields")
+
+<a id="cur-031"></a>
+### CUR-031 [MEDIUM] Literal Secret in environment.json Command
+**Requirement**: Cloud agent credentials SHOULD stay out of the repository: "The Secrets tab remains the recommended approach for security and management."
+**Detection**: `install`, `start` and `terminals[].command` strings in `.cursor/environment.json` that assign a literal to a credential-named variable (`API_TOKEN=...`), pass one to a credential flag (`--token ...`), or contain a known token prefix (`sk-`, `ghp_`, `github_pat_`, `xox?-`, `AKIA`, `glpat-`); variable references and placeholders are skipped (shared plaintext-secret heuristic)
+**Fix**: Manual - store the value in the Secrets tab
+**Source**: cursor.com/docs/cloud-agent/setup ("Monorepos with multiple .env files")
+
+<a id="cur-032"></a>
+### CUR-032 [LOW] MCP Permission Hook Fails Open
+**Requirement**: Security-critical MCP hooks SHOULD fail closed: "Crashes, timeouts, and non-zero exit codes other than `2` fail open by default ... Set `failClosed: true` on the hook definition to block on those failures too. This is recommended for security-critical `beforeMCPExecution` hooks."
+**Detection**: Info for a project `beforeMCPExecution` command hook without `failClosed: true`
+**Fix**: Manual - set `failClosed: true` if the hook enforces a policy
+**Source**: cursor.com/docs/hooks ("beforeShellExecution / beforeMCPExecution")
+
+<a id="cur-033"></a>
+### CUR-033 [LOW] Hook Not Run by Cloud Agents
+**Requirement**: Hooks meant for cloud agents SHOULD use what they run: "Cloud agents run **command-based hooks** only." and "Hooks not available in cloud agents": `sessionStart`, `sessionEnd`, `beforeMCPExecution`, `afterMCPExecution`, `beforeTabFileRead`, `afterTabFileEdit`, `workspaceOpen`.
+**Detection**: Info for those events and for `type: "prompt"` entries in a project `.cursor/hooks.json`, only when the project has `.cursor/environment.json` (a sign it uses cloud agents)
+**Fix**: Manual
+**Source**: cursor.com/docs/hooks ("Cloud agent support")
+
+<a id="cur-034"></a>
+### CUR-034 [LOW] .cursorignore Negation Cannot Re-include
+**Requirement**: Negations SHOULD NOT target files in a nested directory of a `dir/*` exclusion: "When using negation patterns (prefixed with `!`), you cannot re-include a file if a parent directory is excluded via \*." The workaround is to "Explicitly exclude nested directories".
+**Detection**: Info for `!dir/sub/.../file` after `dir/*` without a `dir/sub/*` line
+**Fix**: Manual - add the nested exclusion before the negation
+**Source**: cursor.com/docs/reference/ignore-file ("Negation pattern limitations")
+
+<a id="cur-035"></a>
+### CUR-035 [LOW] Too Many Cursor Subagents
+**Requirement**: A project SHOULD keep a small set of focused subagents: "Having 50+ subagents with vague instructions like "helps with coding" is ineffective." and "Start with 2-3 focused subagents."
+**Detection**: Info, once per project on the first file in path order, when `.cursor/agents/` holds 50 or more `.md` files (the vendor's figure)
+**Fix**: Manual - merge or remove overlapping subagents
+**Source**: cursor.com/docs/subagents ("Anti-patterns to avoid")
+
+<a id="cur-036"></a>
+### CUR-036 [LOW] Long Code Block in a Cursor Rule
+**Requirement**: Rules SHOULD reference code rather than copy it: "Reference files instead of copying their contents. This keeps rules short and prevents them from becoming stale as code changes." and "**Duplicating what's already in your codebase**: Point to canonical examples instead of copying code."
+**Detection**: Info for a fenced code block of more than 40 lines in a `.cursor/rules/**/*.mdc` body. The 40-line threshold is an agnix heuristic; Cursor's own example rule has a 20-line block.
+**Fix**: Manual - reference the example file
+**Source**: cursor.com/docs/rules ("Best practices", "What to avoid in rules")
+
+<a id="cur-037"></a>
+### CUR-037 [LOW] Long-running Process in environment.json install
+**Requirement**: `install` SHOULD finish: "Keep long-running processes out of `install`. Put Docker, databases, tunnels, and dev servers in startup commands."
+**Detection**: Info when `install` runs a dev server or watcher (`npm run dev`, `pnpm dev`, `next dev`, `python -m http.server`), `tail -f`, `sleep infinity`, `docker compose up` without `-d`, or ends with a background `&` (agnix heuristic patterns)
+**Fix**: Manual - move the process to `start` or `terminals`
+**Source**: cursor.com/docs/cloud-agent/setup ("How to decide what to put in your install script")
+
+<a id="cur-039"></a>
+### CUR-039 [HIGH] Invalid Cursor CLI Config
+**Requirement**: Cursor CLI config files MUST be valid: "Pure JSON format (no comments)" and "Corrupted files are backed up as `.bad` and recreated"; `permissions.allow` and `permissions.deny` are string arrays of `Shell(commandBase)`, `Read(pathOrGlob)`, `Write(pathOrGlob)`, `WebFetch(domainOrPattern)` and `Mcp(server:tool)` tokens.
+**Detection**: In `.cursor/cli.json` and `~/.cursor/cli-config.json`: invalid JSON, comments or trailing commas, a non-object root, a non-object `permissions`, non-array lists and non-string entries (errors); an entry that is not one of the five token forms (warning, with a near-miss suggestion)
+**Fix**: Manual
+**Source**: cursor.com/docs/cli/reference/configuration ("Notes"), cursor.com/docs/cli/reference/permissions
+
+<a id="cur-040"></a>
+### CUR-040 [MEDIUM] Cursor Plugin Submission Checklist
+**Requirement**: Cursor plugins SHOULD meet the submission checklist: "All paths in manifest are relative and valid (no `..`, no absolute paths)", "Cursor Plugins using variables declare every `${VAR}` from `mcp.json` in the manifest schema", and "Cursor multi-plugin repositories have `.cursor-plugin/marketplace.json` at the repo root with unique plugin names".
+**Detection**: Manifest paths (`rules`, `agents`, `skills`, `commands`, `hooks`, `mcpServers`, `logo`, and marketplace `source`) that are absolute or contain `..` (URLs allowed for `logo`); `${VAR}` placeholders in the plugin's `mcp.json` (root `mcp.json`, the `mcpServers` path, or inline servers) not declared under `variables.properties` (`${env:...}`, `${CURSOR_PLUGIN_ROOT}` and the other built-in variables excepted); duplicate plugin names in a marketplace
+**Fix**: Manual
+**Source**: cursor.com/docs/reference/plugins ("Submission checklist", "Variables")
 
 ---
 
@@ -4319,7 +4452,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | GitHub Copilot | 33 | 13 | 13 | 7 | 7 |
 | Copilot Skills | 2 | 0 | 2 | 0 | 1 |
 | Cross-Platform | 11 | 1 | 8 | 2 | 0 |
-| Cursor | 20 | 10 | 9 | 1 | 6 |
+| Cursor | 39 | 13 | 15 | 11 | 8 |
 | Cursor Skills | 1 | 0 | 1 | 0 | 1 |
 | Gemini Agents | 1 | 1 | 0 | 0 | 0 |
 | Gemini CLI | 10 | 3 | 5 | 2 | 3 |
@@ -4344,7 +4477,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **544** | **241** | **247** | **56** | **131** |
+| **TOTAL** | **563** | **244** | **253** | **66** | **133** |
 
 
 ---
@@ -4374,8 +4507,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 544 validation rules across 43 categories
+**Total Coverage**: 563 validation rules across 43 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 241 HIGH, 247 MEDIUM, 56 LOW
-**Auto-Fixable**: 131 rules (24%)
+**Certainty**: 244 HIGH, 253 MEDIUM, 66 LOW
+**Auto-Fixable**: 133 rules (24%)

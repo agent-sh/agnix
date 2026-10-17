@@ -1,4 +1,4 @@
-//! Cursor project rules validation rules (CUR-001 to CUR-020)
+//! Cursor validation rules (CUR-001 to CUR-040)
 //!
 //! Validates:
 //! - CUR-001: Empty .mdc rule file (HIGH) - files must have content
@@ -9,7 +9,7 @@
 //! - CUR-006: Legacy .cursorrules detected (MEDIUM) - migration warning
 //! - CUR-007: alwaysApply with redundant globs (MEDIUM) - globs ignored when alwaysApply is true
 //! - CUR-008: Invalid alwaysApply type (HIGH) - must be boolean, not string
-//! - CUR-009: Missing description for agent-requested rule (MEDIUM) - agent needs description
+//! - CUR-009: Rule applied only when @-mentioned (MEDIUM) - no description, globs or alwaysApply
 //! - CUR-010: Invalid .cursor/hooks.json schema (HIGH)
 //! - CUR-011: Unknown hook event name in .cursor/hooks.json (MEDIUM)
 //! - CUR-012: Hook entry missing required command field (HIGH)
@@ -21,6 +21,10 @@
 //! - CUR-018: Invalid or missing prompt hook field (MEDIUM) - type:"prompt" requires a non-empty string
 //! - CUR-019: Invalid model field on prompt hook (LOW) - model must be a string
 //! - CUR-020: Ignored .md project rule (HIGH) - project rules must use .mdc
+//! - CUR-021 to CUR-040: rules from the 2026-10-17 vendor-docs survey (rule
+//!   size, skills, MCP, subagents, environment.json, .cursorignore, and, in
+//!   `cursor_hooks`, `cursor_cli` and `cursor_plugin`, project hooks, CLI
+//!   configuration, permissions.json and plugin manifests)
 
 use crate::{
     FileType,
@@ -37,12 +41,14 @@ use crate::{
 use rust_i18n::t;
 use serde_json::Value as JsonValue;
 use serde_yaml::Value as YamlValue;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 const RULE_IDS: &[&str] = &[
     "CUR-001", "CUR-002", "CUR-003", "CUR-004", "CUR-005", "CUR-006", "CUR-007", "CUR-008",
     "CUR-009", "CUR-010", "CUR-011", "CUR-012", "CUR-013", "CUR-014", "CUR-015", "CUR-016",
-    "CUR-017", "CUR-018", "CUR-019", "CUR-020",
+    "CUR-017", "CUR-018", "CUR-019", "CUR-020", "CUR-021", "CUR-022", "CUR-023", "CUR-024",
+    "CUR-025", "CUR-026", "CUR-027", "CUR-028", "CUR-029", "CUR-030", "CUR-031", "CUR-032",
+    "CUR-033", "CUR-034", "CUR-035", "CUR-036", "CUR-037", "CUR-039", "CUR-040",
 ];
 
 const CURSOR_HOOK_EVENTS: &[&str] = &[
@@ -1507,6 +1513,539 @@ fn validate_cursor_environment_file(
     diagnostics
 }
 
+// ---------------------------------------------------------------------------
+// Survey rules on rule files, subagents, skills, MCP, environment.json and
+// .cursorignore (CUR-021, CUR-023, CUR-024, CUR-028, CUR-029, CUR-031,
+// CUR-034 to CUR-037)
+// ---------------------------------------------------------------------------
+
+/// "Keep rules under 500 lines" (rules "Best practices").
+const RULE_LINE_LIMIT: usize = 500;
+
+/// agnix heuristic for a code block that copies code instead of referencing
+/// it: Cursor states no number, and its own example rule has a 20-line block.
+const RULE_CODE_BLOCK_LINES: usize = 40;
+
+/// "A 2,000-word prompt doesn't make a subagent smarter."
+const SUBAGENT_WORD_LIMIT: usize = 2000;
+
+/// "Having 50+ subagents with vague instructions like "helps with coding" is
+/// ineffective."
+const SUBAGENT_COUNT_LIMIT: usize = 50;
+
+/// True when the run explicitly targets Cursor.
+fn cursor_selected(config: &crate::config::LintConfig) -> bool {
+    config
+        .tools()
+        .iter()
+        .any(|tool| tool.eq_ignore_ascii_case("cursor"))
+        || config.target() == crate::config::TargetTool::Cursor
+}
+
+/// Fenced code blocks of a Markdown body: (opening line, line count), with
+/// 1-based lines relative to `first_line`.
+fn fenced_blocks(body: &str, first_line: usize) -> Vec<(usize, usize)> {
+    let mut blocks = Vec::new();
+    let mut open: Option<(usize, &str)> = None;
+    for (idx, line) in body.lines().enumerate() {
+        let trimmed = line.trim_start();
+        let fence = if trimmed.starts_with("```") {
+            "```"
+        } else if trimmed.starts_with("~~~") {
+            "~~~"
+        } else {
+            continue;
+        };
+        match open {
+            Some((start, kind)) if kind == fence => {
+                blocks.push((first_line + start, idx - start - 1));
+                open = None;
+            }
+            None => open = Some((idx, fence)),
+            _ => {}
+        }
+    }
+    blocks
+}
+
+/// CUR-021 and CUR-036 for `.cursor/rules/**/*.mdc`.
+fn validate_rule_size(
+    path: &Path,
+    content: &str,
+    config: &PerFileLintConfig<'_>,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    if config.is_rule_enabled("CUR-021") {
+        let lines = content.lines().count();
+        if lines > RULE_LINE_LIMIT {
+            diagnostics.push(
+                Diagnostic::warning(
+                    path.to_path_buf(),
+                    RULE_LINE_LIMIT + 1,
+                    0,
+                    "CUR-021",
+                    t!(
+                        "rules.cur_021.message",
+                        lines = lines,
+                        limit = RULE_LINE_LIMIT
+                    ),
+                )
+                .with_suggestion(t!("rules.cur_021.suggestion")),
+            );
+        }
+    }
+    if config.is_rule_enabled("CUR-036") {
+        let parts = split_frontmatter(content);
+        let (body, first_line) = if parts.has_frontmatter && parts.has_closing {
+            let offset = parts.body_start.min(content.len());
+            (
+                &content[offset..],
+                content[..offset].bytes().filter(|b| *b == b'\n').count() + 1,
+            )
+        } else {
+            (content, 1)
+        };
+        for (line, length) in fenced_blocks(body, first_line) {
+            if length > RULE_CODE_BLOCK_LINES {
+                diagnostics.push(
+                    Diagnostic::info(
+                        path.to_path_buf(),
+                        line,
+                        0,
+                        "CUR-036",
+                        t!("rules.cur_036.message", lines = length),
+                    )
+                    .with_suggestion(t!("rules.cur_036.suggestion")),
+                );
+            }
+        }
+    }
+}
+
+/// CUR-028, CUR-029 and CUR-035 for `.cursor/agents/**/*.md`.
+fn validate_subagent_guidance(
+    path: &Path,
+    content: &str,
+    config: &PerFileLintConfig<'_>,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let parts = split_frontmatter(content);
+    let frontmatter = (parts.has_frontmatter && parts.has_closing)
+        .then(|| serde_yaml::from_str::<YamlValue>(&parts.frontmatter).ok())
+        .flatten();
+    if config.is_rule_enabled("CUR-028") {
+        let description = frontmatter.as_ref().and_then(|fm| fm.get("description"));
+        // A non-string description is CUR-014's error.
+        let missing = match description {
+            None => true,
+            Some(YamlValue::String(text)) => text.trim().is_empty(),
+            Some(_) => false,
+        };
+        if missing {
+            diagnostics.push(
+                Diagnostic::info(
+                    path.to_path_buf(),
+                    1,
+                    0,
+                    "CUR-028",
+                    t!("rules.cur_028.message"),
+                )
+                .with_suggestion(t!("rules.cur_028.suggestion")),
+            );
+        }
+    }
+    if config.is_rule_enabled("CUR-029") {
+        let body = if parts.has_frontmatter && parts.has_closing {
+            parts.body.as_str()
+        } else {
+            content
+        };
+        let mut in_fence = false;
+        let words: usize = body
+            .lines()
+            .filter(|line| {
+                let trimmed = line.trim_start();
+                if trimmed.starts_with("```") || trimmed.starts_with("~~~") {
+                    in_fence = !in_fence;
+                    return false;
+                }
+                !in_fence
+            })
+            .map(|line| line.split_whitespace().count())
+            .sum();
+        if words > SUBAGENT_WORD_LIMIT {
+            diagnostics.push(
+                Diagnostic::info(
+                    path.to_path_buf(),
+                    1,
+                    0,
+                    "CUR-029",
+                    t!("rules.cur_029.message", words = words),
+                )
+                .with_suggestion(t!("rules.cur_029.suggestion")),
+            );
+        }
+    }
+    if config.is_rule_enabled("CUR-035") {
+        validate_subagent_count(path, config, diagnostics);
+    }
+}
+
+/// CUR-035: reported once, on the first agent file of the `.cursor/agents`
+/// tree in path order.
+fn validate_subagent_count(
+    path: &Path,
+    config: &PerFileLintConfig<'_>,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(agents_dir) = path.ancestors().find(|dir| {
+        dir.file_name()
+            .is_some_and(|n| n.eq_ignore_ascii_case("agents"))
+            && dir
+                .parent()
+                .and_then(Path::file_name)
+                .is_some_and(|n| n.eq_ignore_ascii_case(".cursor"))
+    }) else {
+        return;
+    };
+    let fs = config.fs();
+    let mut files = Vec::new();
+    let mut pending = vec![agents_dir.to_path_buf()];
+    while let Some(dir) = pending.pop() {
+        let Ok(entries) = fs.read_dir(&dir) else {
+            continue;
+        };
+        for entry in entries {
+            if entry.metadata.is_dir {
+                pending.push(entry.path);
+            } else if entry
+                .path
+                .extension()
+                .and_then(|e| e.to_str())
+                .is_some_and(|e| e.eq_ignore_ascii_case("md"))
+            {
+                files.push(entry.path);
+            }
+        }
+    }
+    files.sort();
+    if files.len() >= SUBAGENT_COUNT_LIMIT && files.first().map(PathBuf::as_path) == Some(path) {
+        diagnostics.push(
+            Diagnostic::info(
+                path.to_path_buf(),
+                1,
+                0,
+                "CUR-035",
+                t!("rules.cur_035.message", count = files.len()),
+            )
+            .with_suggestion(t!("rules.cur_035.suggestion")),
+        );
+    }
+}
+
+/// CUR-023 for skills Cursor loads: `.cursor/skills/` always, and
+/// `.agents/skills/` when the run targets Cursor (other tools read it too).
+fn validate_cursor_skill(
+    path: &Path,
+    content: &str,
+    config: &PerFileLintConfig<'_>,
+) -> Vec<Diagnostic> {
+    let mut diagnostics = Vec::new();
+    let cursor_skill =
+        crate::file_types::path_contains_consecutive_components(path, ".cursor", "skills")
+            || (cursor_selected(config)
+                && crate::file_types::path_contains_consecutive_components(
+                    path, ".agents", "skills",
+                ));
+    if !cursor_skill || !config.is_rule_enabled("CUR-023") {
+        return diagnostics;
+    }
+    let parts = split_frontmatter(content);
+    if !parts.has_frontmatter || !parts.has_closing {
+        return diagnostics;
+    }
+    let Ok(yaml) = serde_yaml::from_str::<YamlValue>(&parts.frontmatter) else {
+        return diagnostics;
+    };
+    let Some(mapping) = yaml.as_mapping() else {
+        return diagnostics;
+    };
+    let globs_key = YamlValue::String("globs".into());
+    if !mapping.contains_key(&globs_key) {
+        return diagnostics;
+    }
+    let entries = crate::rules::kiro_steering::yaml_top_level_entries(&parts.frontmatter);
+    let Some(entry) = entries.iter().find(|entry| entry.key == "globs") else {
+        return diagnostics;
+    };
+    let offset = parts.frontmatter_start + entry.start;
+    let line = content[..offset].bytes().filter(|b| *b == b'\n').count() + 1;
+    let has_paths = mapping.contains_key(YamlValue::String("paths".into()));
+    let (message, suggestion) = if has_paths {
+        (
+            t!("rules.cur_023.with_paths"),
+            t!("rules.cur_023.with_paths_suggestion"),
+        )
+    } else {
+        (t!("rules.cur_023.message"), t!("rules.cur_023.suggestion"))
+    };
+    let mut diagnostic = Diagnostic::info(path.to_path_buf(), line, 1, "CUR-023", message)
+        .with_suggestion(suggestion);
+    // Rename `globs` to `paths` when the result parses to the same mapping
+    // with the key renamed (same position, same value). Unsafe: it renames a
+    // key Cursor reads.
+    if !has_paths && content.get(offset..offset + "globs".len()) == Some("globs") {
+        let expected: serde_yaml::Mapping = mapping
+            .iter()
+            .map(|(key, value)| {
+                if key == &globs_key {
+                    (YamlValue::String("paths".into()), value.clone())
+                } else {
+                    (key.clone(), value.clone())
+                }
+            })
+            .collect();
+        if crate::rules::kiro_steering::frontmatter_edit_yields(
+            content,
+            offset,
+            offset + "globs".len(),
+            "paths",
+            &YamlValue::Mapping(expected),
+        ) {
+            diagnostic = diagnostic.with_fix(Fix::replace(
+                offset,
+                offset + "globs".len(),
+                "paths",
+                t!("rules.cur_023.fix"),
+                false,
+            ));
+        }
+    }
+    diagnostics.push(diagnostic);
+    diagnostics
+}
+
+/// CUR-024 for `.cursor/mcp.json` and `~/.cursor/mcp.json`: "The `envFile`
+/// option is only available for STDIO servers. Remote servers (HTTP/SSE) do
+/// not support `envFile`." and "Add an `auth` object to remote server entries
+/// that use `url`".
+fn validate_cursor_mcp(
+    path: &Path,
+    content: &str,
+    config: &PerFileLintConfig<'_>,
+) -> Vec<Diagnostic> {
+    use crate::rules::config_json::{JsonCx, key_span};
+    let mut cx = JsonCx::new(path, content, config);
+    let is_cursor_mcp = path.file_name().and_then(|n| n.to_str()) == Some("mcp.json")
+        && path
+            .parent()
+            .and_then(Path::file_name)
+            .is_some_and(|n| n.eq_ignore_ascii_case(".cursor"));
+    if !is_cursor_mcp || !cx.enabled("CUR-024") {
+        return cx.diagnostics;
+    }
+    let Ok(document) = crate::schemas::kiro_json::parse_json_document(content, true) else {
+        return cx.diagnostics;
+    };
+    let Some(servers) = document
+        .root
+        .value
+        .get("mcpServers")
+        .and_then(|m| m.value.value.as_object())
+    else {
+        return cx.diagnostics;
+    };
+    for server in servers {
+        let fields = &server.value.value;
+        let remote = fields.get("url").is_some();
+        let local = fields.get("command").is_some();
+        if remote && let Some(env_file) = fields.get("envFile") {
+            cx.push(
+                crate::diagnostics::DiagnosticLevel::Warning,
+                "CUR-024",
+                key_span(env_file),
+                t!("rules.cur_024.env_file", server = server.key.as_str()),
+                t!("rules.cur_024.env_file_suggestion"),
+            );
+        }
+        if local
+            && !remote
+            && let Some(auth) = fields.get("auth")
+        {
+            cx.push(
+                crate::diagnostics::DiagnosticLevel::Warning,
+                "CUR-024",
+                key_span(auth),
+                t!("rules.cur_024.auth", server = server.key.as_str()),
+                t!("rules.cur_024.auth_suggestion"),
+            );
+        }
+    }
+    cx.diagnostics
+}
+
+/// Credentials written into a command line.
+fn command_secret_regex() -> &'static regex::Regex {
+    static RE: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+    RE.get_or_init(|| {
+        regex::Regex::new(
+            r#"(?ix)
+            \b[A-Z0-9_]*(?:TOKEN|SECRET|PASSWORD|PASSWD|API_?KEY|ACCESS_KEY|PRIVATE_KEY)[A-Z0-9_]*\s*=\s*["']?(?P<assigned>[^\s"';&|]+)
+            | --(?:token|api-key|apikey|password|secret)(?:=|\s+)["']?(?P<flag>[^\s"';&|]+)
+            | (?P<prefixed>\b(?:sk-[A-Za-z0-9_-]{20,}|ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}|xox[abp]-[A-Za-z0-9-]{10,}|AKIA[0-9A-Z]{16}|glpat-[A-Za-z0-9_-]{20,}))
+            "#,
+        )
+        .expect("command secret pattern")
+    })
+}
+
+/// Long-running commands that belong in `start` or `terminals`.
+fn is_long_running(command: &str) -> bool {
+    static RE: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+    let re = RE.get_or_init(|| {
+        regex::Regex::new(
+            r"\b(?:(?:npm|pnpm|yarn|bun)\s+(?:run\s+)?(?:dev|start|serve|watch)\b|tail\s+-f\b|sleep\s+infinity\b|python3?\s+-m\s+http\.server\b|next\s+dev\b)",
+        )
+        .expect("long-running pattern")
+    });
+    if re.is_match(command)
+        || command.trim_end().ends_with('&') && !command.trim_end().ends_with("&&")
+    {
+        return true;
+    }
+    // `docker compose up` / `docker-compose up` without -d or --detach.
+    for (index, _) in command.match_indices("compose up") {
+        let rest = &command[index + "compose up".len()..];
+        let segment = rest.split(['&', ';', '|']).next().unwrap_or("");
+        if !segment
+            .split_whitespace()
+            .any(|arg| arg == "-d" || arg == "--detach")
+        {
+            return true;
+        }
+    }
+    false
+}
+
+/// CUR-031 and CUR-037 for `.cursor/environment.json`.
+fn validate_environment_extras(
+    path: &Path,
+    content: &str,
+    config: &PerFileLintConfig<'_>,
+) -> Vec<Diagnostic> {
+    use crate::rules::config_json::{JsonCx, node_span};
+    let mut cx = JsonCx::new(path, content, config);
+    if !cx.enabled("CUR-031") && !cx.enabled("CUR-037") {
+        return cx.diagnostics;
+    }
+    let Ok(document) = crate::schemas::kiro_json::parse_json_document(content, true) else {
+        return cx.diagnostics;
+    };
+    let root = &document.root.value;
+    let mut commands = Vec::new();
+    for field in ["install", "start"] {
+        if let Some(member) = root.get(field)
+            && member.value.value.as_str().is_some()
+        {
+            commands.push((field, &member.value));
+        }
+    }
+    if let Some(terminals) = root.get("terminals").and_then(|m| m.value.value.as_array()) {
+        for terminal in terminals {
+            if let Some(member) = terminal.value.get("command")
+                && member.value.value.as_str().is_some()
+            {
+                commands.push(("terminals", &member.value));
+            }
+        }
+    }
+    for (field, node) in commands {
+        let command = node.value.as_str().unwrap_or("");
+        if cx.enabled("CUR-031") {
+            let secret = command_secret_regex()
+                .captures_iter(command)
+                .any(|capture| {
+                    capture.name("prefixed").is_some()
+                        || capture
+                            .name("assigned")
+                            .or_else(|| capture.name("flag"))
+                            .is_some_and(|value| {
+                                crate::rules::seems_plaintext_secret(value.as_str())
+                            })
+                });
+            if secret {
+                cx.push(
+                    crate::diagnostics::DiagnosticLevel::Warning,
+                    "CUR-031",
+                    node_span(node),
+                    t!("rules.cur_031.message", field = field),
+                    t!("rules.cur_031.suggestion"),
+                );
+            }
+        }
+        if field == "install" && cx.enabled("CUR-037") && is_long_running(command) {
+            cx.push(
+                crate::diagnostics::DiagnosticLevel::Info,
+                "CUR-037",
+                node_span(node),
+                t!("rules.cur_037.message"),
+                t!("rules.cur_037.suggestion"),
+            );
+        }
+    }
+    cx.diagnostics
+}
+
+/// CUR-034: "When using negation patterns (prefixed with `!`), you cannot
+/// re-include a file if a parent directory is excluded via \*."
+fn validate_cursor_ignore(
+    path: &Path,
+    content: &str,
+    config: &PerFileLintConfig<'_>,
+) -> Vec<Diagnostic> {
+    let mut diagnostics = Vec::new();
+    if !config.is_rule_enabled("CUR-034") {
+        return diagnostics;
+    }
+    let mut star_dirs: Vec<String> = Vec::new();
+    for (idx, raw) in content.lines().enumerate() {
+        let line = raw.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        if let Some(target) = line.strip_prefix('!') {
+            let target = target.trim_start_matches('/');
+            for dir in &star_dirs {
+                let Some(rest) = target.strip_prefix(&format!("{dir}/")) else {
+                    continue;
+                };
+                let Some((sub, _)) = rest.split_once('/') else {
+                    continue;
+                };
+                let nested = format!("{dir}/{sub}");
+                if !star_dirs.contains(&nested) {
+                    diagnostics.push(
+                        Diagnostic::info(
+                            path.to_path_buf(),
+                            idx + 1,
+                            0,
+                            "CUR-034",
+                            t!("rules.cur_034.message", pattern = line, dir = dir.as_str()),
+                        )
+                        .with_suggestion(t!("rules.cur_034.suggestion", nested = nested.as_str())),
+                    );
+                    break;
+                }
+            }
+            continue;
+        }
+        if let Some(dir) = line.strip_suffix("/*") {
+            star_dirs.push(dir.trim_start_matches('/').to_string());
+        }
+    }
+    diagnostics
+}
+
 impl Validator for CursorValidator {
     fn metadata(&self) -> ValidatorMetadata {
         ValidatorMetadata {
@@ -1547,12 +2086,37 @@ impl Validator for CursorValidator {
         }
 
         match file_type {
-            FileType::CursorHooks => return validate_cursor_hooks_file(path, content, config),
-            FileType::CursorAgent => return validate_cursor_agent_file(path, content, config),
-            FileType::CursorEnvironment => {
-                return validate_cursor_environment_file(path, content, config);
+            FileType::CursorHooks => {
+                let mut diagnostics = validate_cursor_hooks_file(path, content, config);
+                diagnostics.extend(super::cursor_hooks::validate_hook_extras(
+                    path, content, config,
+                ));
+                return diagnostics;
             }
-            FileType::CursorRule | FileType::CursorRulesLegacy => {}
+            FileType::CursorAgent => {
+                let mut diagnostics = validate_cursor_agent_file(path, content, config);
+                validate_subagent_guidance(path, content, config, &mut diagnostics);
+                return diagnostics;
+            }
+            FileType::CursorEnvironment => {
+                let mut diagnostics = validate_cursor_environment_file(path, content, config);
+                diagnostics.extend(validate_environment_extras(path, content, config));
+                return diagnostics;
+            }
+            FileType::CursorCliConfig => {
+                return super::cursor_cli::validate_cli_config(path, content, config);
+            }
+            FileType::CursorPermissions => {
+                return super::cursor_cli::validate_permissions_json(path, content, config);
+            }
+            FileType::CursorPlugin => {
+                return super::cursor_plugin::validate_plugin_file(path, content, config);
+            }
+            FileType::CursorIgnore => return validate_cursor_ignore(path, content, config),
+            FileType::Skill => return validate_cursor_skill(path, content, config),
+            FileType::Mcp => return validate_cursor_mcp(path, content, config),
+            FileType::CursorRule => validate_rule_size(path, content, config, &mut diagnostics),
+            FileType::CursorRulesLegacy => {}
             _ => return diagnostics,
         }
 
@@ -1561,8 +2125,9 @@ impl Validator for CursorValidator {
 
         // CUR-006: Legacy .cursorrules detected (WARNING)
         if is_legacy && config.is_rule_enabled("CUR-006") {
+            // A LOW migration note: Cursor still reads the file.
             diagnostics.push(
-                Diagnostic::warning(
+                Diagnostic::info(
                     path.to_path_buf(),
                     1,
                     0,
@@ -1708,8 +2273,11 @@ impl Validator for CursorValidator {
                 )
                 .with_suggestion(t!("rules.cur_005.suggestion", key = unknown.key.as_str()));
 
-                // Safe auto-fix: remove unknown top-level frontmatter key line.
-                if let Some((start, end)) = line_byte_range(content, unknown.line) {
+                // Safe auto-fix: Cursor ignores the key; remove the whole entry
+                // when it can be removed exactly (verified by re-parsing).
+                if let Some((start, end)) =
+                    super::copilot::frontmatter_key_removal(content, &unknown.key)
+                {
                     diagnostic = diagnostic.with_fix(Fix::delete(
                         start,
                         end,
@@ -1798,9 +2366,8 @@ impl Validator for CursorValidator {
                 }
             }
 
-            // CUR-009: Missing description for agent-requested rule (WARNING)
-            // If no alwaysApply and no globs, the rule is "agent-requested" and
-            // the agent uses the description to decide when to apply it.
+            // CUR-009: With none of alwaysApply, globs and description, Cursor
+            // includes the rule "only when you `@`-mention the rule in chat".
             if config.is_rule_enabled("CUR-009") {
                 let has_always_apply = schema.always_apply.is_some();
                 let has_globs = schema.globs.is_some();
@@ -2178,9 +2745,11 @@ alwaysApply: true
         let diagnostics = validate_legacy(content);
         let cur_006: Vec<_> = diagnostics.iter().filter(|d| d.rule == "CUR-006").collect();
         assert_eq!(cur_006.len(), 1);
-        assert_eq!(cur_006[0].level, DiagnosticLevel::Warning);
+        // Cursor still reads the file, so this is a LOW migration note.
+        assert_eq!(cur_006[0].level, DiagnosticLevel::Info);
         assert!(cur_006[0].message.contains("Legacy .cursorrules"));
-        assert!(cur_006[0].message.contains("migrating"));
+        // Cline reads .cursorrules but not .cursor/rules.
+        assert!(cur_006[0].suggestion.as_deref().unwrap().contains("Cline"));
     }
 
     #[test]
@@ -3983,5 +4552,172 @@ Use strict mode.
                 "matcher {matcher} is a valid regex string, got: {diagnostics:?}"
             );
         }
+    }
+}
+
+/// Rules and corrections from the 2026-10-17 vendor-docs survey.
+#[cfg(test)]
+mod survey_tests {
+    use super::*;
+    use crate::config::LintConfig;
+    use crate::diagnostics::DiagnosticLevel;
+
+    fn validate_at(path: &str, content: &str) -> Vec<Diagnostic> {
+        CursorValidator.validate(Path::new(path), content, &LintConfig::default())
+    }
+
+    fn rule<'a>(diagnostics: &'a [Diagnostic], id: &str) -> Vec<&'a Diagnostic> {
+        diagnostics.iter().filter(|d| d.rule == id).collect()
+    }
+
+    #[test]
+    fn cur_009_message_describes_manual_rules() {
+        let diagnostics = validate_at(".cursor/rules/a.mdc", "---\nfoo_unused: x\n---\nBody\n");
+        let cur_009 = rule(&diagnostics, "CUR-009");
+        assert_eq!(cur_009.len(), 1);
+        assert!(
+            cur_009[0].message.contains("@-mention"),
+            "{}",
+            cur_009[0].message
+        );
+    }
+
+    #[test]
+    fn cur_021_rule_over_500_lines() {
+        let body = "- Use strict mode.\n".repeat(500);
+        let content = format!("---\ndescription: d\n---\n{body}");
+        let diagnostics = validate_at(".cursor/rules/big.mdc", &content);
+        let cur_021 = rule(&diagnostics, "CUR-021");
+        assert_eq!(cur_021.len(), 1);
+        assert_eq!(cur_021[0].line, 501);
+        let short = format!("---\ndescription: d\n---\n{}", "- x\n".repeat(400));
+        assert!(rule(&validate_at(".cursor/rules/ok.mdc", &short), "CUR-021").is_empty());
+        // Legacy .cursorrules gets only the migration note.
+        let legacy = validate_at(".cursorrules", &body);
+        assert!(legacy.iter().all(|d| d.rule == "CUR-006"), "{legacy:#?}");
+    }
+
+    #[test]
+    fn cur_036_long_code_block() {
+        let block = format!("```ts\n{}```\n", "const x = 1;\n".repeat(41));
+        let content =
+            format!("---\ndescription: d\n---\n# Rule\n\n{block}\nShort:\n```\nok\n```\n");
+        let diagnostics = validate_at(".cursor/rules/a.mdc", &content);
+        let cur_036 = rule(&diagnostics, "CUR-036");
+        assert_eq!(cur_036.len(), 1, "{cur_036:#?}");
+        assert_eq!(cur_036[0].line, 6);
+    }
+
+    #[test]
+    fn cur_023_legacy_skill_globs() {
+        let content = "---\nname: react\ndescription: React patterns. Use when editing components.\nglobs: \"**/*.tsx\"\n---\nBody\n";
+        let diagnostics = validate_at(".cursor/skills/react/SKILL.md", content);
+        let cur_023 = rule(&diagnostics, "CUR-023");
+        assert_eq!(cur_023.len(), 1);
+        assert_eq!(cur_023[0].line, 4);
+        let fix = &cur_023[0].fixes[0];
+        assert!(!fix.safe);
+        let mut fixed = content.to_string();
+        fixed.replace_range(fix.start_byte..fix.end_byte, &fix.replacement);
+        assert!(fixed.contains("paths: \"**/*.tsx\""));
+        assert!(validate_at(".cursor/skills/react/SKILL.md", &fixed).is_empty());
+        let both = content.replace("globs:", "paths: \"src/**\"\nglobs:");
+        let diagnostics = validate_at(".cursor/skills/react/SKILL.md", &both);
+        assert!(rule(&diagnostics, "CUR-023")[0].fixes.is_empty());
+        // Other tools' skill folders are not Cursor's.
+        assert!(validate_at(".claude/skills/react/SKILL.md", content).is_empty());
+        assert!(validate_at(".agents/skills/react/SKILL.md", content).is_empty());
+    }
+
+    #[test]
+    fn cur_024_mcp_transport_fields() {
+        let content = r#"{ "mcpServers": {
+  "remote": { "url": "https://api.example.com/mcp", "envFile": ".env" },
+  "local": { "command": "npx", "args": ["x"], "envFile": ".env", "auth": { "CLIENT_ID": "${env:ID}" } },
+  "oauth": { "url": "https://api.example.com/mcp", "auth": { "CLIENT_ID": "${env:ID}" } }
+} }"#;
+        let diagnostics = validate_at(".cursor/mcp.json", content);
+        let cur_024 = rule(&diagnostics, "CUR-024");
+        assert_eq!(cur_024.len(), 2, "{cur_024:#?}");
+        assert!(validate_at(".vscode/mcp.json", content).is_empty());
+    }
+
+    #[test]
+    fn cur_028_029_subagent_guidance() {
+        let no_description = validate_at(
+            ".cursor/agents/helper.md",
+            "---\nname: helper\n---\nHelp.\n",
+        );
+        assert_eq!(rule(&no_description, "CUR-028").len(), 1);
+        let long = format!(
+            "---\nname: writer\ndescription: Writes docs\n---\n{}",
+            "word ".repeat(2001)
+        );
+        let diagnostics = validate_at(".cursor/agents/writer.md", &long);
+        assert_eq!(rule(&diagnostics, "CUR-029").len(), 1);
+        assert!(rule(&diagnostics, "CUR-028").is_empty());
+    }
+
+    #[test]
+    fn cur_035_too_many_subagents_reported_once() {
+        let temp = tempfile::tempdir().unwrap();
+        let agents = temp.path().join(".cursor/agents");
+        std::fs::create_dir_all(&agents).unwrap();
+        for i in 0..50 {
+            std::fs::write(
+                agents.join(format!("a{i:02}.md")),
+                "---\ndescription: d\n---\nx\n",
+            )
+            .unwrap();
+        }
+        let first = agents.join("a00.md");
+        let second = agents.join("a01.md");
+        let content = "---\ndescription: d\n---\nx\n";
+        let config = LintConfig::default();
+        assert_eq!(
+            rule(
+                &CursorValidator.validate(&first, content, &config),
+                "CUR-035"
+            )
+            .len(),
+            1
+        );
+        assert!(
+            rule(
+                &CursorValidator.validate(&second, content, &config),
+                "CUR-035"
+            )
+            .is_empty()
+        );
+    }
+
+    #[test]
+    fn cur_031_037_environment_commands() {
+        let content = r#"{
+  "install": "export API_TOKEN=3f9a1c7e5b2d8a4f6c0e && npm install && npm run dev",
+  "start": "docker compose up -d",
+  "terminals": [{ "name": "db", "command": "docker compose up" }, { "name": "auth", "command": "login --token ghp_abcdefghijklmnopqrstuvwxyz0123456789" }]
+}"#;
+        let diagnostics = validate_at(".cursor/environment.json", content);
+        let cur_031 = rule(&diagnostics, "CUR-031");
+        assert_eq!(cur_031.len(), 2, "{cur_031:#?}");
+        let cur_037 = rule(&diagnostics, "CUR-037");
+        assert_eq!(cur_037.len(), 1, "{cur_037:#?}");
+        assert_eq!(cur_037[0].line, 2);
+        let clean = r#"{ "install": "export TOKEN=$CI_TOKEN && pnpm install", "start": "sudo service docker start" }"#;
+        let diagnostics = validate_at(".cursor/environment.json", clean);
+        assert!(
+            rule(&diagnostics, "CUR-031").is_empty() && rule(&diagnostics, "CUR-037").is_empty()
+        );
+    }
+
+    #[test]
+    fn cur_034_cursorignore_negation() {
+        let content = "public/*\n!public/index.html\n!public/assets/style.css\nsrc/*\nsrc/gen/*\n!src/gen/keep.ts\n";
+        let diagnostics = validate_at(".cursorignore", content);
+        let cur_034 = rule(&diagnostics, "CUR-034");
+        assert_eq!(cur_034.len(), 1, "{cur_034:#?}");
+        assert_eq!(cur_034[0].line, 3);
+        assert_eq!(cur_034[0].level, DiagnosticLevel::Info);
     }
 }

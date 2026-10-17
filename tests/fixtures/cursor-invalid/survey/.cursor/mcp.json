@@ -1,0 +1,5 @@
+{
+  "mcpServers": {
+    "api": { "url": "https://api.example.com/mcp", "envFile": ".env" }
+  }
+}

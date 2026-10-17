@@ -1,7 +1,7 @@
 # Rules Reference
 
-This section contains all `544` validation rules generated from `knowledge-base/rules.json`.
-`131` rules have automatic fixes.
+This section contains all `563` validation rules generated from `knowledge-base/rules.json`.
+`133` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
 |------|------|----------|----------|----------|
@@ -272,10 +272,10 @@ This section contains all `544` validation rules generated from `knowledge-base/
 | [CUR-003](./generated/cur-003.md) | Invalid YAML Frontmatter | HIGH | Cursor | No |
 | [CUR-004](./generated/cur-004.md) | Invalid Glob Pattern in globs Field | HIGH | Cursor | No |
 | [CUR-005](./generated/cur-005.md) | Unknown Frontmatter Keys | MEDIUM | Cursor | Yes (safe) |
-| [CUR-006](./generated/cur-006.md) | Legacy .cursorrules File Detected | MEDIUM | Cursor | No |
+| [CUR-006](./generated/cur-006.md) | Legacy .cursorrules File Detected | LOW | Cursor | No |
 | [CUR-007](./generated/cur-007.md) | alwaysApply with Redundant globs | MEDIUM | Cursor | Yes (safe) |
 | [CUR-008](./generated/cur-008.md) | Invalid alwaysApply Type | HIGH | Cursor | Yes (safe) |
-| [CUR-009](./generated/cur-009.md) | Missing Description for Agent-Requested Rule | MEDIUM | Cursor | No |
+| [CUR-009](./generated/cur-009.md) | Rule Applied Only When Mentioned | MEDIUM | Cursor | No |
 | [CUR-010](./generated/cur-010.md) | Invalid Cursor Hooks Schema | HIGH | Cursor | No |
 | [CUR-011](./generated/cur-011.md) | Unknown Cursor Hook Event Name | MEDIUM | Cursor | Yes (safe) |
 | [CUR-012](./generated/cur-012.md) | Hook Entry Missing Required Command Field | HIGH | Cursor | No |
@@ -287,6 +287,25 @@ This section contains all `544` validation rules generated from `knowledge-base/
 | [CUR-018](./generated/cur-018.md) | Invalid or Missing Prompt Hook Field | MEDIUM | Cursor | No |
 | [CUR-019](./generated/cur-019.md) | Invalid Prompt Hook Model Type | LOW | Cursor | No |
 | [CUR-020](./generated/cur-020.md) | Ignored Plain Markdown Cursor Rule | HIGH | Cursor | No |
+| [CUR-021](./generated/cur-021.md) | Cursor Rule Over 500 Lines | MEDIUM | Cursor | No |
+| [CUR-022](./generated/cur-022.md) | Project Hook Script Path Relative to the Wrong Base | HIGH | Cursor | Yes (unsafe) |
+| [CUR-023](./generated/cur-023.md) | Cursor Skill Uses Legacy globs | LOW | Cursor | Yes (unsafe) |
+| [CUR-024](./generated/cur-024.md) | MCP Field Not Supported for the Transport | MEDIUM | Cursor | No |
+| [CUR-025](./generated/cur-025.md) | Cursor Permission Allows Everything | MEDIUM | Cursor | No |
+| [CUR-026](./generated/cur-026.md) | CLI Setting Ignored in a Project cli.json | MEDIUM | Cursor | No |
+| [CUR-027](./generated/cur-027.md) | Ignored permissions.json Entry | MEDIUM | Cursor | No |
+| [CUR-028](./generated/cur-028.md) | Cursor Subagent Without Description | LOW | Cursor | No |
+| [CUR-029](./generated/cur-029.md) | Cursor Subagent Prompt Too Long | LOW | Cursor | No |
+| [CUR-030](./generated/cur-030.md) | Invalid Cursor Plugin Manifest | HIGH | Cursor | No |
+| [CUR-031](./generated/cur-031.md) | Literal Secret in environment.json Command | MEDIUM | Cursor | No |
+| [CUR-032](./generated/cur-032.md) | MCP Permission Hook Fails Open | LOW | Cursor | No |
+| [CUR-033](./generated/cur-033.md) | Hook Not Run by Cloud Agents | LOW | Cursor | No |
+| [CUR-034](./generated/cur-034.md) | .cursorignore Negation Cannot Re-include | LOW | Cursor | No |
+| [CUR-035](./generated/cur-035.md) | Too Many Cursor Subagents | LOW | Cursor | No |
+| [CUR-036](./generated/cur-036.md) | Long Code Block in a Cursor Rule | LOW | Cursor | No |
+| [CUR-037](./generated/cur-037.md) | Long-running Process in environment.json install | LOW | Cursor | No |
+| [CUR-039](./generated/cur-039.md) | Invalid Cursor CLI Config | HIGH | Cursor | No |
+| [CUR-040](./generated/cur-040.md) | Cursor Plugin Submission Checklist | MEDIUM | Cursor | No |
 | [CX-SK-001](./generated/cx-sk-001.md) | Codex Skill Uses Unsupported Field | MEDIUM | Codex Skills | Yes (safe/unsafe) |
 | [GM-001](./generated/gm-001.md) | Invalid Markdown Structure in GEMINI.md | HIGH | Gemini CLI | Yes (safe) |
 | [GM-002](./generated/gm-002.md) | Missing Section Headers in GEMINI.md | MEDIUM | Gemini CLI | No |

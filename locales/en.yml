@@ -659,8 +659,8 @@ rules:
     message: Unknown frontmatter key '%{key}' in Cursor rule file
     suggestion: 'Remove unknown key ''%{key}''. Valid keys are: description, globs, alwaysApply.'
   cur_006:
-    message: Legacy .cursorrules file detected - consider migrating to .cursor/rules/*.mdc format
-    suggestion: Create .cursor/rules/ directory and add .mdc files with frontmatter for better organization
+    message: "Legacy .cursorrules file: Cursor says it is legacy and will be deprecated"
+    suggestion: "Move the rules to .cursor/rules/*.mdc. Cline reads .cursorrules but not .cursor/rules, so put rules that Cline should also see in AGENTS.md"
     legacy_empty: Cursor rules file is empty
   cur_007:
     message: alwaysApply is true but globs field is also set - globs are redundant
@@ -671,8 +671,8 @@ rules:
     suggestion: 'Use alwaysApply: true or alwaysApply: false without quotes. YAML parses quoted values as strings.'
     fix: Convert '%{value}' to boolean %{fixed}
   cur_009:
-    message: Agent-requested rule has no description - the agent cannot determine when to apply it
-    suggestion: Add a description field explaining when this rule should apply, or set alwaysApply or globs to control activation
+    message: "Rule has no description, globs or alwaysApply, so Cursor applies it only when you @-mention it"
+    suggestion: "Add a description for Apply Intelligently, globs to attach it to matching files, or alwaysApply: false to mark it manual on purpose"
   cur_010:
     message: .cursor/hooks.json must define a hooks object and a positive integer version
     missing_version: "Field 'version' is required (use 1)"
@@ -749,6 +749,104 @@ rules:
   cur_020:
     message: Cursor ignores plain .md files in .cursor/rules
     suggestion: Rename the project rule with the .mdc extension
+  cur_021:
+    message: "Cursor rule has %{lines} lines; Cursor recommends keeping rules under %{limit} lines"
+    suggestion: Split it into focused rules, and reference files instead of copying their contents
+  cur_022:
+    missing: "Project hooks run from the project root: '%{path}' does not exist there, but '%{fixed}' does"
+    suggestion: "Use '%{fixed}' (paths in a project .cursor/hooks.json are relative to the project root)"
+    fix: "Use %{path}"
+    user_style: "'%{path}' is a user-hook path: project hooks run from the project root, where it does not exist"
+    user_style_suggestion: "Use a path from the project root, such as .cursor/hooks/<script>"
+  cur_023:
+    message: "Skill frontmatter 'globs' is a legacy fallback in Cursor; new skills should use 'paths'"
+    suggestion: "Rename 'globs' to 'paths' (same pattern format)"
+    with_paths: "Skill sets both 'paths' and the legacy 'globs'; Cursor uses 'globs' only as a fallback"
+    with_paths_suggestion: "Remove 'globs' and keep its patterns in 'paths'"
+    fix: Rename 'globs' to 'paths'
+  cur_024:
+    env_file: "MCP server '%{server}' is a remote (url) server; Cursor supports 'envFile' only for stdio servers"
+    env_file_suggestion: "Use ${env:NAME} interpolation in url or headers instead of envFile"
+    auth: "MCP server '%{server}' is a stdio server; Cursor reads 'auth' only on remote servers that use 'url'"
+    auth_suggestion: "Move the OAuth settings to the remote server entry, or remove 'auth'"
+  cur_025:
+    message: "permissions.allow entry '%{entry}' allows everything of its kind; Cursor documents it as 'use with caution'"
+    suggestion: "Allow specific domains, MCP servers or tools instead"
+    all_mcp_tools: "mcpAllowlist entry '*:*' lets every MCP tool run without approval; Cursor notes allowlists are not a security boundary"
+  cur_026:
+    message: "'%{key}' has no effect in a project .cursor/cli.json: only permissions can be configured at the project level"
+    suggestion: "Move '%{key}' to ~/.cursor/cli-config.json"
+  cur_027:
+    parse_error: "permissions.json cannot be parsed (%{error}); Cursor then falls back to the IDE allowlists"
+    parse_error_suggestion: Fix the JSON (comments are allowed)
+    not_object: "permissions.json must be a JSON object"
+    unknown_key: "Unknown permissions.json key '%{key}'; Cursor ignores unknown keys"
+    unknown_key_suggestion: "Did you mean '%{key}'?"
+    unknown_key_suggestion_none: "Use mcpAllowlist, terminalAllowlist or autoRun"
+    not_array: "'%{key}' must be an array of strings (found %{got}); Cursor ignores it"
+    not_array_suggestion: Use an array of strings
+    non_string: "Non-string entry in '%{key}' (%{got}); Cursor silently drops it"
+    non_string_suggestion: Write each entry as a string
+    missing_colon: "mcpAllowlist entry '%{entry}' has no ':'; Cursor ignores entries that are not server:tool"
+    missing_colon_suggestion: "Use '%{entry}:*' for all tools of the server, or '%{entry}:<tool>'"
+  cur_028:
+    message: "Subagent has no description; Cursor uses the description to decide when to delegate to it"
+    suggestion: "Say what the subagent does and when to use it, for example 'Use proactively after code changes to ...'"
+  cur_029:
+    message: "Subagent prompt has %{words} words; Cursor notes that a 2,000-word prompt makes a subagent slower and harder to maintain"
+    suggestion: Keep the prompt concise and specific, and move reference material into files the subagent can read
+  cur_030:
+    parse_error: "Cursor plugin manifest is not valid JSON (%{error})"
+    parse_error_suggestion: Fix the JSON syntax of the manifest
+    not_object: Cursor plugin manifest must be a JSON object
+    missing_name: "Cursor %{what} manifest is missing the required 'name'"
+    name_not_string: "Cursor %{what} 'name' must be a string"
+    invalid_name: "Cursor %{what} name '%{name}' must be lowercase kebab-case (letters, digits, hyphens, periods) and start and end with a letter or digit"
+    name_suggestion: "Use a name such as my-plugin or prompts.chat"
+    author_name: "'author' needs a 'name'"
+    author_name_suggestion: "Add author.name, for example { \"name\": \"ACME DevTools\" }"
+    marketplace_missing: "Cursor marketplace manifest is missing the required '%{field}' field"
+    owner_name: "Marketplace 'owner' needs a 'name'"
+    marketplace_suggestion: "A marketplace needs name, owner (with name) and plugins"
+  cur_031:
+    message: "environment.json '%{field}' command contains what looks like a literal secret; Cursor recommends the Secrets tab for cloud agent credentials"
+    suggestion: "Store the value in the Secrets tab (Cursor settings) and read it from the environment"
+  cur_032:
+    message: "beforeMCPExecution hook fails open on a crash or timeout unless it sets failClosed: true"
+    suggestion: "Set failClosed: true if this hook enforces a security policy"
+  cur_033:
+    event: "Cloud agents do not run '%{event}' hooks; this hook runs only in the editor"
+    prompt: "Cloud agents run command-based hooks only; this prompt hook on '%{event}' does not run there"
+    suggestion: "Keep it for editor sessions, or use a command hook on an event cloud agents run"
+  cur_034:
+    message: "'%{pattern}' cannot re-include a file under '%{dir}/*' in Cursor: a negation cannot re-include files in a nested directory of an excluded one"
+    suggestion: "Also exclude the nested directory before the negation, for example '%{nested}/*'"
+  cur_035:
+    message: "Project defines %{count} Cursor subagents; Cursor advises starting with 2-3 focused subagents and calls 50+ vague ones ineffective"
+    suggestion: Merge or remove overlapping subagents, or turn single-purpose ones into skills
+  cur_036:
+    message: "Rule has a %{lines}-line code block; Cursor recommends referencing files instead of copying their contents"
+    suggestion: "Point to a canonical example file (for example @src/components/Example.tsx) instead of pasting code"
+  cur_037:
+    message: "'install' starts a long-running process; Cursor runs install to completion during Builds"
+    suggestion: "Move dev servers, watchers and services to 'start' or 'terminals'"
+  cur_039:
+    parse_error: "Cursor CLI config is not valid JSON (%{error}); the CLI moves a corrupted file aside and recreates it"
+    comments: "Cursor CLI config is pure JSON: comments and trailing commas are not allowed"
+    not_object: Cursor CLI config must be a JSON object
+    field_type: "'%{field}' must be %{expected} (found %{got})"
+    entry_type: "permissions.%{list} entries must be strings (found %{got})"
+    entry_format: "Permission entry '%{entry}' is not a Shell(...), Read(...), Write(...), WebFetch(...) or Mcp(server:tool) token"
+    entry_suggestion: "Use a documented permission token, for example Shell(git) or Mcp(github:*)"
+    entry_suggestion_close: "Did you mean %{kind}(...)?"
+    suggestion: "Use the documented format: { \"permissions\": { \"allow\": [\"Shell(ls)\"], \"deny\": [] } }"
+  cur_040:
+    path: "Manifest '%{field}' path '%{path}' is absolute or uses '..'; Cursor's submission checklist requires relative paths inside the plugin"
+    path_suggestion: Use a path relative to the plugin root without '..'
+    undeclared_variable: "mcp.json uses ${%{name}}, which is not declared in the manifest's variables"
+    undeclared_variable_suggestion: "Declare %{name} under variables.properties so users can set it in the dashboard"
+    duplicate_name: "Marketplace lists the plugin name '%{name}' more than once"
+    duplicate_name_suggestion: Give every plugin in the marketplace a unique name
   cln_001:
     message_empty: Cline rules file is empty
     message_no_content: Cline rules file has no content after frontmatter

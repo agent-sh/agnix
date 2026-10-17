@@ -85,3 +85,35 @@ fn copilot_too_long_fixture_reports_line_count() {
         .expect("COP-006 on a 1,012-line instruction file");
     assert_eq!(cop_006.line, 1001);
 }
+
+#[test]
+fn cursor_survey_rules_fire_through_the_pipeline() {
+    let diagnostics = diagnostics_in("cursor-invalid/survey", &LintConfig::default());
+    let found = rule_ids(&diagnostics);
+    for id in [
+        "CUR-021", "CUR-022", "CUR-023", "CUR-024", "CUR-025", "CUR-026", "CUR-027", "CUR-028",
+        "CUR-029", "CUR-030", "CUR-031", "CUR-032", "CUR-033", "CUR-034", "CUR-036", "CUR-037",
+        "CUR-039", "CUR-040",
+    ] {
+        assert!(found.contains(id), "{id} not found; got {found:?}");
+    }
+    // The plugin manifest in .cursor-plugin/ is not a Claude Code plugin.
+    assert!(
+        diagnostics.iter().all(|d| !d.rule.starts_with("CC-PL-")),
+        "{diagnostics:#?}"
+    );
+
+    let agents = diagnostics_in("cursor-invalid/survey-agents", &LintConfig::default());
+    let cur_035: Vec<_> = agents.iter().filter(|d| d.rule == "CUR-035").collect();
+    assert_eq!(cur_035.len(), 1, "{cur_035:#?}");
+}
+
+#[test]
+fn cursor_valid_fixtures_have_no_errors() {
+    let diagnostics = diagnostics_in("cursor", &LintConfig::default());
+    let errors: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule.starts_with("CUR-") && d.level == DiagnosticLevel::Error)
+        .collect();
+    assert!(errors.is_empty(), "{errors:#?}");
+}

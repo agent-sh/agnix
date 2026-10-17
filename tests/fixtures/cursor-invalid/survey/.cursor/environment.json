@@ -1,0 +1,3 @@
+{
+  "install": "export API_TOKEN=3f9a1c7e5b2d8a4f6c0e && npm install && npm run dev"
+}
