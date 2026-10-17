@@ -314,16 +314,76 @@ fn is_amp_skill_mcp_path(path: &Path) -> bool {
     amp_skill_location(path).is_some_and(|location| location.depth == 1)
 }
 
-/// Returns true if the path contains `.windsurf/rules` as consecutive
-/// components anywhere in the path.
+// ============================================================================
+// Windsurf (Devin Desktop)
+// ============================================================================
+//
+// Devin Desktop (formerly Windsurf) reads workspace rules from
+// "`.devin/rules/*.md` (preferred) or `.windsurf/rules/*.md` (fallback)",
+// workflows from `.devin/workflows/*.md` or the legacy `.windsurf/workflows/`,
+// global workflows from `~/.codeium/windsurf/global_workflows/*.md`, global
+// rules from `~/.codeium/windsurf/memories/global_rules.md`, and Cascade hooks
+// from `.devin/hooks.json` (legacy `.windsurf/hooks.json`), the user files
+// `~/.codeium/windsurf/hooks.json` (IDE) and `~/.codeium/hooks.json`
+// (JetBrains plugin), and the system `hooks.json` files
+// (docs.devin.ai/desktop/cascade/memories, workflows, hooks). Rule and
+// workflow directories are matched at any depth below `rules/` or
+// `workflows/`, as `.windsurf/rules` always was. `.devin/` is also the Devin
+// CLI configuration directory (`.devin/config.json`, `.devin/hooks.v1.json`),
+// so only these paths are matched there.
+
+/// Returns true if the path contains `.devin/rules` or `.windsurf/rules` as
+/// consecutive components anywhere in the path.
 fn is_under_windsurf_rules(path: &Path) -> bool {
-    path_contains_consecutive_components(path, ".windsurf", "rules")
+    path_contains_consecutive_components(path, ".devin", "rules")
+        || path_contains_consecutive_components(path, ".windsurf", "rules")
 }
 
-/// Returns true if the path contains `.windsurf/workflows` as consecutive
-/// components anywhere in the path.
+/// Returns true if the path contains `.devin/workflows` or
+/// `.windsurf/workflows` as consecutive components anywhere in the path, or
+/// is a global workflow (`~/.codeium/windsurf/global_workflows/*.md`).
 fn is_under_windsurf_workflows(path: &Path) -> bool {
-    path_contains_consecutive_components(path, ".windsurf", "workflows")
+    path_contains_consecutive_components(path, ".devin", "workflows")
+        || path_contains_consecutive_components(path, ".windsurf", "workflows")
+        || path.parent().is_some_and(|dir| {
+            path_ends_with_components_ignore_ascii_case(
+                dir,
+                &[".codeium", "windsurf", "global_workflows"],
+            )
+        })
+}
+
+/// Devin Desktop's global rules file, `~/.codeium/windsurf/memories/global_rules.md`.
+/// Devin CLI's project-level `.devin/global_rules.md` and
+/// `.windsurf/global_rules.md` are not matched: Devin CLI states no size limit
+/// for them, so they stay generic Markdown.
+fn is_windsurf_global_rules(path: &Path) -> bool {
+    path_ends_with_components_ignore_ascii_case(
+        path,
+        &[".codeium", "windsurf", "memories", "global_rules.md"],
+    )
+}
+
+/// Cascade hook files: workspace `.devin/hooks.json` and legacy
+/// `.windsurf/hooks.json`, user `~/.codeium/windsurf/hooks.json` (Devin
+/// Desktop IDE) and `~/.codeium/hooks.json` (JetBrains plugin), and the
+/// system files of macOS, Linux/WSL and Windows with their legacy `Windsurf`
+/// equivalents.
+fn is_windsurf_hooks_path(path: &Path, parent: Option<&str>) -> bool {
+    parent_eq_ignore_ascii_case(parent, ".devin")
+        || parent_eq_ignore_ascii_case(parent, ".windsurf")
+        || [
+            &[".codeium", "windsurf", "hooks.json"][..],
+            &[".codeium", "hooks.json"][..],
+            &["Library", "Application Support", "Devin", "hooks.json"][..],
+            &["Library", "Application Support", "Windsurf", "hooks.json"][..],
+            &["etc", "devin", "hooks.json"][..],
+            &["etc", "windsurf", "hooks.json"][..],
+            &["ProgramData", "Devin", "hooks.json"][..],
+            &["ProgramData", "Windsurf", "hooks.json"][..],
+        ]
+        .iter()
+        .any(|suffix| path_ends_with_components_ignore_ascii_case(path, suffix))
 }
 
 /// Returns true if any path component is `.clinerules`, meaning the file
@@ -1271,6 +1331,13 @@ pub fn detect_file_type(path: &Path) -> FileType {
         ".clinerules" => FileType::ClineRules,
         // Legacy Windsurf rules file (.windsurfrules)
         ".windsurfrules" => FileType::WindsurfRulesLegacy,
+        // Cascade hooks (.devin/hooks.json, .windsurf/hooks.json, user and
+        // system hooks.json)
+        name if name.eq_ignore_ascii_case("hooks.json") && is_windsurf_hooks_path(path, parent) => {
+            FileType::WindsurfHooks
+        }
+        // Devin Desktop global rules (~/.codeium/windsurf/memories/global_rules.md)
+        _ if is_windsurf_global_rules(path) => FileType::WindsurfGlobalRules,
         // Gemini CLI ignore file (.geminiignore)
         ".geminiignore" => FileType::GeminiIgnore,
         // Cline rules folder - .md/.txt under .clinerules/, or Markdown
@@ -1282,9 +1349,10 @@ pub fn detect_file_type(path: &Path) -> FileType {
         {
             FileType::ClineRulesFolder
         }
-        // Windsurf rules (.windsurf/rules/**/*.md)
+        // Windsurf rules (.devin/rules/**/*.md, .windsurf/rules/**/*.md)
         name if name.ends_with(".md") && is_under_windsurf_rules(path) => FileType::WindsurfRule,
-        // Windsurf workflows (.windsurf/workflows/**/*.md)
+        // Windsurf workflows (.devin/workflows/**/*.md, .windsurf/workflows/**/*.md,
+        // ~/.codeium/windsurf/global_workflows/*.md)
         name if name.ends_with(".md") && is_under_windsurf_workflows(path) => {
             FileType::WindsurfWorkflow
         }
@@ -2397,6 +2465,76 @@ mod tests {
             detect_file_type(Path::new(".windsurf/README.md")),
             FileType::WindsurfRule
         );
+    }
+
+    #[test]
+    fn detect_devin_desktop_locations() {
+        use FileType::*;
+        assert_types(&[
+            // Preferred `.devin/` directories, same types as `.windsurf/`.
+            (".devin/rules/style.md", WindsurfRule),
+            ("packages/web/.devin/rules/frontend/style.md", WindsurfRule),
+            ("/home/u/.devin/rules/style.md", WindsurfRule),
+            (".DEVIN/Rules/style.md", WindsurfRule),
+            (".devin/workflows/deploy.md", WindsurfWorkflow),
+            (".devin/workflows/release/deploy.md", WindsurfWorkflow),
+            (
+                "/home/u/.codeium/windsurf/global_workflows/deploy.md",
+                WindsurfWorkflow,
+            ),
+            (
+                "/home/u/.codeium/windsurf/memories/global_rules.md",
+                WindsurfGlobalRules,
+            ),
+            // Devin CLI's project global rules state no limit.
+            (".devin/global_rules.md", GenericMarkdown),
+            (".windsurf/global_rules.md", GenericMarkdown),
+            // Skills keep the Agent Skills type.
+            (".devin/skills/deploy/SKILL.md", Skill),
+            (".devin/rules/SKILL.md", Skill),
+            (".devin/rules/AGENTS.md", ClaudeMd),
+            // Not rule or workflow files.
+            (".devin/rules/notes.txt", Unknown),
+            (".devin/README.md", Unknown),
+            ("rules/style.md", GenericMarkdown),
+            ("devin/rules/style.md", GenericMarkdown),
+        ]);
+    }
+
+    #[test]
+    fn detect_windsurf_hooks_json() {
+        use FileType::*;
+        assert_types(&[
+            (".devin/hooks.json", WindsurfHooks),
+            (".windsurf/hooks.json", WindsurfHooks),
+            ("project/.Devin/Hooks.json", WindsurfHooks),
+            ("/home/u/.codeium/windsurf/hooks.json", WindsurfHooks),
+            ("/home/u/.codeium/hooks.json", WindsurfHooks),
+            (
+                "/Library/Application Support/Devin/hooks.json",
+                WindsurfHooks,
+            ),
+            (
+                "/Library/Application Support/Windsurf/hooks.json",
+                WindsurfHooks,
+            ),
+            ("/etc/devin/hooks.json", WindsurfHooks),
+            ("/etc/windsurf/hooks.json", WindsurfHooks),
+            ("C:/ProgramData/Devin/hooks.json", WindsurfHooks),
+            ("C:/ProgramData/Windsurf/hooks.json", WindsurfHooks),
+            // Devin CLI lifecycle hooks use another format and file name.
+            (".devin/hooks.v1.json", Unknown),
+            (".devin/config.json", Unknown),
+            // Other tools' hooks.json files keep their types.
+            (".cursor/hooks.json", CursorHooks),
+            (".github/hooks/hooks.json", CopilotHooks),
+            ("my-plugin/hooks/hooks.json", Hooks),
+            (".devin/hooks/hooks.json", Hooks),
+            (".kiro/hooks/hooks.json", KiroHookV3),
+            ("hooks.json", Unknown),
+            ("devin/hooks.json", Unknown),
+            ("/home/u/.codeium/windsurf/other/hooks.json", Unknown),
+        ]);
     }
 
     // ---- Kiro Steering detection ----

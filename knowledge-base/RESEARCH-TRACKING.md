@@ -45,7 +45,7 @@ Tools are organized by support tier (see [../CONTRIBUTING.md#tool-tier-system](.
 
 | Tool | Config Format | Documentation URL | Monitoring | Frequency | Last Reviewed | Rule Prefix |
 |------|---------------|-------------------|------------|-----------|---------------|-------------|
-| Windsurf | `.windsurf/rules/*.md`, `.windsurf/workflows/*.md`, `.windsurfrules` | https://windsurf.com/changelog | Automated (tool-release-watch.yml via HTML scrape; Wave-level granularity) | Ad hoc | 2026-07-26 | WS, WS-SK |
+| Windsurf (Devin Desktop) | `.devin/rules/*.md`, `.devin/workflows/*.md`, `.devin/hooks.json` (legacy `.windsurf/` equivalents), `.windsurfrules`, `~/.codeium/windsurf/memories/global_rules.md`, `~/.codeium/windsurf/hooks.json`; docs at https://docs.devin.ai/desktop | https://windsurf.com/changelog | Automated (tool-release-watch.yml via HTML scrape; Wave-level granularity) | Ad hoc | 2026-07-26 | WS, WS-SK |
 
 ### E Tier (no support, community only)
 

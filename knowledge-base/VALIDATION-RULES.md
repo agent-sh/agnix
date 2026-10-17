@@ -630,10 +630,10 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="ws-sk-001"></a>
 ### WS-SK-001 [MEDIUM] Windsurf Skill Uses Unsupported Field
-**Requirement**: Skills in `.windsurf/skills/` SHOULD NOT use frontmatter fields unsupported by Windsurf
-**Detection**: SKILL.md path contains `.windsurf/skills/` AND frontmatter has unsupported fields
-**Fix**: [AUTO-FIX, safe] Remove unsupported field
-**Source**: docs.windsurf.com/windsurf/memories
+**Requirement**: Skills in `.windsurf/skills/` SHOULD NOT use frontmatter fields unsupported by Windsurf. Devin Desktop documents `name` and `description` ("Required Frontmatter Fields") and prefers `.devin/skills/`: "Create a directory: `.devin/skills/<skill-name>/` (the legacy `.windsurf/skills/<skill-name>/` is still read)". "The Devin Local agent uses the Devin CLI skills format and discovery", which documents more fields (`argument-hint`, `model`, `subagent`, `agent`, `allowed-tools`, `permissions`, `triggers`); whether they take effect for `.windsurf/skills` is unverified.
+**Detection**: SKILL.md path contains `.windsurf/skills/` AND frontmatter has unsupported fields. `.devin/skills/` is not attributed to Windsurf yet.
+**Fix**: [AUTO-FIX, safe/unsafe] Remove unsupported field
+**Source**: docs.devin.ai/desktop/cascade/skills
 
 <a id="kr-sk-001"></a>
 ### KR-SK-001 [MEDIUM] Kiro Skill Uses Unsupported Field
@@ -3202,33 +3202,119 @@ Validates Codex's admin-written managed `requirements.toml` (system location: `/
 
 ## WINDSURF RULES
 
+Windsurf is now documented as Devin Desktop (docs.windsurf.com redirects to docs.devin.ai). Devin Desktop reads workspace rules from "`.devin/rules/*.md` (preferred) or `.windsurf/rules/*.md` (fallback)", workflows from `.devin/workflows/*.md` (legacy `.windsurf/workflows/`) and `~/.codeium/windsurf/global_workflows/*.md`, global rules from `~/.codeium/windsurf/memories/global_rules.md`, and Cascade hooks from `.devin/hooks.json` (legacy `.windsurf/hooks.json`), `~/.codeium/windsurf/hooks.json`, `~/.codeium/hooks.json` (JetBrains plugin) and the system `hooks.json` files. Both directory layouts get the same checks; rule and workflow directories are matched at any depth below `rules/` and `workflows/`. Devin CLI (the engine of the default Devin Local agent) reads `.devin/rules/` with the same `trigger` frontmatter; its own `.devin/config.json`, `.devin/hooks.v1.json` and project `.devin/global_rules.md` / `.windsurf/global_rules.md` (no stated limit) are not Cascade files and get no WS checks. Sizes are counted in characters, as the docs state them; the docs do not say whether frontmatter counts, so the whole file is counted. All WS rules are tool-gated on `windsurf`.
+
 <a id="ws-001"></a>
 ### WS-001 [MEDIUM] Empty Windsurf Rule File
-**Requirement**: Windsurf rule files in `.windsurf/rules/` SHOULD have content
-**Detection**: File is empty or whitespace-only
+**Requirement**: Workspace rule files in `.devin/rules/` or `.windsurf/rules/` SHOULD have content. Rules are "manually defined by the user" instructions; an empty file gives Cascade nothing to follow.
+**Detection**: File is empty or whitespace-only (WS-002, WS-005, WS-006 and WS-008 are then skipped)
 **Fix**: Add rule content to the file
-**Source**: docs.windsurf.com/windsurf/cascade/memories
+**Source**: docs.devin.ai/desktop/cascade/memories ("Rules")
 
 <a id="ws-002"></a>
 ### WS-002 [HIGH] Windsurf Rule File Exceeds Character Limit
-**Requirement**: Windsurf rule files MUST be under 12000 characters
-**Detection**: File content length exceeds 12000 characters
-**Fix**: Reduce content length or split into multiple rule files
-**Source**: docs.windsurf.com/windsurf/cascade/memories
+**Requirement**: Workspace rule files MUST stay within 12,000 characters: "One file per rule, each with its own activation mode. Limited to 12,000 characters per file." and "Workspace rule files are limited to 12,000 characters each." The page does not say how an oversized file is handled.
+**Detection**: More than 12,000 characters (Unicode scalar values, not UTF-8 bytes; a 7,029-character CJK rule is 21,087 bytes and passes) in a `.devin/rules/**/*.md` or `.windsurf/rules/**/*.md` file. The whole file is counted, frontmatter included, because the docs do not say whether frontmatter counts. Reported at the first character past the limit, with the file's character count.
+**Fix**: Shorten the rule, split it into several rule files, or move long procedures into a skill
+**Source**: docs.devin.ai/desktop/cascade/memories ("Rules", "Rules Storage Locations")
 
 <a id="ws-003"></a>
-### WS-003 [MEDIUM] Empty or Oversized Windsurf Workflow File
-**Requirement**: Windsurf workflow files in `.windsurf/workflows/` SHOULD have content and be under 12000 characters
-**Detection**: File is empty or exceeds 12000 characters
-**Fix**: Add workflow steps or reduce content length
-**Source**: docs.windsurf.com/windsurf/cascade/memories
+### WS-003 [HIGH] Empty or Oversized Windsurf Workflow File
+**Requirement**: Workflow files MUST stay within 12,000 characters: "Workflow files are limited to 12000 characters each." The workflows page states this limit the same way the memories page states WS-002's, so both are errors. Workflows "contain a title, description, and a series of steps", so an empty file SHOULD NOT exist.
+**Detection**: Error for more than 12,000 characters (counted as in WS-002, at the first character past the limit); warning for an empty or whitespace-only file. Applies to `.devin/workflows/**/*.md`, `.windsurf/workflows/**/*.md` and `~/.codeium/windsurf/global_workflows/*.md`.
+**Fix**: Add workflow steps, or shorten or split the workflow
+**Source**: docs.devin.ai/desktop/cascade/workflows ("How to create a Workflow", "Workflow Storage Locations")
 
 <a id="ws-004"></a>
 ### WS-004 [LOW] Legacy .windsurfrules File Detected
-**Requirement**: Projects SHOULD migrate from `.windsurfrules` to `.windsurf/rules/` directory format
-**Detection**: File named `.windsurfrules`
-**Fix**: Migrate to `.windsurf/rules/` directory with individual `.md` files
-**Source**: docs.windsurf.com/windsurf/cascade/memories
+**Requirement**: Projects SHOULD move from the single `.windsurfrules` file to one file per rule in `.devin/rules/`: "The legacy single-file `.windsurfrules` at the workspace root is also still read." AGENTS.md is the cross-tool alternative ("Processed by the same Rules engine").
+**Detection**: File named `.windsurfrules` (info). When no `tools` are configured or `cline` is among them, the suggestion adds that Cline still reads `.windsurfrules` and does not read `.devin/rules/` or `.windsurf/rules/` (docs.cline.bot/customization/cline-rules lists `.windsurfrules` among the files Cline reads), so a project that also uses Cline should keep the file or use AGENTS.md.
+**Fix**: Move each rule to `.devin/rules/<name>.md` with a `trigger`, or put shared instructions in AGENTS.md
+**Source**: docs.devin.ai/desktop/cascade/memories ("Rules"), docs.cline.bot/customization/cline-rules
+
+<a id="ws-005"></a>
+### WS-005 [MEDIUM] Model-Decision Rule Without Description
+**Requirement**: A rule with `trigger: model_decision` SHOULD have a description, because Cascade selects it by the description alone: "Only the `description` is shown in the system prompt. Cascade reads the full rule file when it decides the description is relevant." (inference: without a description the rule is never picked)
+**Detection**: Workspace rule (`.devin/rules`, `.windsurf/rules`) whose frontmatter has `trigger: model_decision` and no `description`, or a blank one (empty, `""`, `null`, a block scalar with nothing below it). Reported at the blank `description` key, else at the trigger value. Frontmatter is read line by line, not with a YAML parser: the documented example `globs: **/*.test.ts` is not valid YAML.
+**Fix**: Add a description that says when the rule applies, or choose another trigger
+**Source**: docs.devin.ai/desktop/cascade/memories ("Activation Modes")
+
+<a id="ws-006"></a>
+### WS-006 [MEDIUM] Invalid or Missing Windsurf Rule Trigger
+**Requirement**: "Each workspace rule declares an activation mode in its frontmatter via the `trigger` field." Devin Desktop documents `always_on`, `model_decision`, `glob` and `manual`; Devin CLI adds `agent` ("the `trigger` values `always_on`, `manual`, `model_decision`, `agent`, and `glob` all apply"). A `glob` rule "is applied when Cascade reads or edits a file matching the `globs` pattern", so it SHOULD have `globs`.
+**Detection**: Warning, at the value, for a `trigger` outside those five values (case-sensitive, with a closest-match suggestion) and for `trigger: glob` without a non-empty `globs` (missing, empty, `[]`). Info for a workspace rule with no frontmatter or no `trigger`: the docs do not say what activation a rule without one gets. When the frontmatter has Cursor's `alwaysApply` and no `trigger`, the info message says so and maps `alwaysApply: true` to `trigger: always_on`. Not applied to `.windsurfrules`, global_rules.md or AGENTS.md, which "don't use frontmatter".
+**Fix**: Use one of the documented triggers; add `globs` for `trigger: glob`
+**Source**: docs.devin.ai/desktop/cascade/memories ("Activation Modes"), docs.devin.ai/cli/extensibility/rules ("Rules in the .devin Directory")
+
+<a id="ws-007"></a>
+### WS-007 [LOW] Legacy .windsurf Directory
+**Requirement**: Projects SHOULD use `.devin/`: "The `.devin/` directory is the preferred location and takes precedence, with `.windsurf/` kept as a fallback for backward compatibility". Workflows: "`.devin/workflows/*.md` (preferred) or `.windsurf/workflows/*.md` (fallback)"; hooks: "`.devin/hooks.json` in your workspace root (the legacy `.windsurf/hooks.json` is used only when `.devin/hooks.json` is absent or defines no hooks)".
+**Detection**: Info, once per legacy directory: on the first rule file of a `.windsurf/rules` directory and the first workflow of a `.windsurf/workflows` directory (in path order, including subdirectories, listed through the configured file system; when the directory cannot be listed, the file itself), and on `.windsurf/hooks.json`. Not reported for `.windsurf/skills` (skills are `FileType::Skill`, checked by the per-client skill rules).
+**Fix**: Move the files to the `.devin/` equivalent; `.windsurf/` still works
+**Source**: docs.devin.ai/desktop/cascade/memories ("Rules Discovery"), docs.devin.ai/desktop/cascade/workflows, docs.devin.ai/desktop/cascade/hooks ("Workspace-Level")
+
+<a id="ws-008"></a>
+### WS-008 [LOW] Generic Instruction in Windsurf Rule
+**Requirement**: Rule files SHOULD NOT contain generic instructions: "There's no need to add generic rules (e.g. "write good code"), as these are already baked into Cascade's training data." and "Keep rules simple, concise, and specific." The AGENTS.md page lists "Write good code", "Be careful with errors" and "Use best practices" as its "Less Effective Example".
+**Detection**: Info, at the phrase, in workspace rules, `.windsurfrules` and global_rules.md (not in frontmatter, code blocks or headings), for the PE-005 phrase list (`find_redundant_instructions`: "be helpful", "be concise", "be accurate", ...) and the vendor's own examples ("write good code", "write clean code", "be careful with errors", "use best practices", "follow best practices"), only when the instruction is little more than the phrase: at most one other word remains after removing list markers and filler words ("always", "please", "and", ...). "Be concise." is reported; "Be concise in commit messages" is not. This word budget is an agnix heuristic. PE-005 itself does not run on Windsurf files.
+**Fix**: No auto-fix - remove the line or replace it with a project-specific instruction
+**Source**: docs.devin.ai/desktop/cascade/memories ("Best Practices"), docs.devin.ai/desktop/cascade/agents-md ("Content Guidelines")
+
+<a id="ws-009"></a>
+### WS-009 [LOW] Workflow Not Supported by the Devin Local Agent
+**Requirement**: Teams SHOULD consider skills for procedures the default agent must run: "Workflows are specific to Cascade — the [Devin Local agent](/desktop/devin-local) does not support them. Migrate your workflows to [skills](/desktop/cascade/skills) with the **Devin: Open Cascade Migration Wizard** command." The Devin Local agent is "the default agent for new tabs" (memories page).
+**Detection**: Info on every workflow file (`.devin/workflows`, `.windsurf/workflows`, global workflows)
+**Fix**: Migrate the workflow to a skill, or keep it if the team uses the Cascade agent
+**Source**: docs.devin.ai/desktop/cascade/workflows, docs.devin.ai/desktop/devin-local ("Limitations")
+
+<a id="ws-010"></a>
+### WS-010 [HIGH] Global Rules File Exceeds Character Limit
+**Requirement**: The global rules file MUST stay within 6,000 characters: "Single file, applied across all workspaces. Always on. Limited to 6,000 characters." and "The global rules file is limited to 6,000 characters."
+**Detection**: `~/.codeium/windsurf/memories/global_rules.md` with more than 6,000 characters, counted and reported as in WS-002. Devin CLI's project `.devin/global_rules.md` and `.windsurf/global_rules.md` are not this file (no limit is stated for them) and are not checked.
+**Fix**: Shorten it, or move project-specific rules into workspace rule files
+**Source**: docs.devin.ai/desktop/cascade/memories ("Rules")
+
+<a id="ws-011"></a>
+### WS-011 [MEDIUM] AGENTS.md Exceeds Windsurf Rule Character Limit (Inferred)
+**Requirement**: AGENTS.md SHOULD stay within the 12,000-character workspace-rule limit in projects that use Devin Desktop. This is an agnix inference: the docs state no AGENTS.md limit, but AGENTS.md is "Processed by the same Rules engine — root-level = always-on, subdirectory = auto-glob for that directory." and Devin Desktop "feeds it into the same Rules engine that powers `.devin/rules/`". Devin CLI also advises "**Rules and AGENTS should be kept as small as possible.**" Windsurf-side twin of AGM-003, which the cross-cutting rules apply to every AGENTS.md.
+**Detection**: Warning, at the first character past the limit, for a file named `AGENTS.md` (not CLAUDE.md, AGENTS.local.md or AGENTS.override.md) over 12,000 characters, when windsurf is among the configured `tools`, or no tools are configured, the target is generic, and the project shows Windsurf use: `.devin/rules/`, `.devin/workflows/`, `.devin/hooks.json`, a `.windsurf/` directory or `.windsurfrules` next to the file or in a parent directory up to the project root. `.devin/` alone is not enough (it is also the Devin CLI config directory). Devin Desktop also reads a lowercase `agents.md`; agnix does not detect that name.
+**Fix**: Move directory-specific guidance into nested AGENTS.md files, rules with their own activation into `.devin/rules/`, or procedures into skills
+**Source**: docs.devin.ai/desktop/cascade/memories ("Rules"), docs.devin.ai/desktop/cascade/agents-md ("How It Works")
+
+<a id="ws-hk-001"></a>
+### WS-HK-001 [HIGH] Invalid Cascade Hooks File
+**Requirement**: A Cascade hooks file MUST be a JSON object whose `hooks` object maps events to arrays of hooks (Basic Structure). Each hook takes `command` (string), `powershell` (string), `show_output` (boolean) and `working_directory` (string): "At least one of `command` or `powershell` must be specified."; with neither, the Cross-Platform Behavior table gives "Validation error".
+**Detection**: Error for a JSON syntax error, a top level that is not an object, `hooks` that is not an object, an event value that is not an array, a hook that is not an object, a hook with neither `command` nor `powershell` (null counts as absent), and an option of the wrong type. Warning for comments or trailing commas (the docs describe JSON files and do not say whether they are accepted) and for an event name at the top level instead of under `hooks`. A file without `hooks` (`{}`) defines no hooks and is not reported. Positions at the key or value.
+**Fix**: Fix the JSON and the hook entries
+**Source**: docs.devin.ai/desktop/cascade/hooks ("Basic Structure", "Configuration Options", "Cross-Platform Behavior")
+
+<a id="ws-hk-002"></a>
+### WS-HK-002 [MEDIUM] Unknown Cascade Hook Event
+**Requirement**: Hook events SHOULD be one of the twelve Cascade events: "Cascade provides twelve hook events that cover the most critical actions in the agent workflow." They are `pre_read_code`, `post_read_code`, `pre_write_code`, `post_write_code`, `pre_run_command`, `post_run_command`, `pre_mcp_tool_use`, `post_mcp_tool_use`, `pre_user_prompt`, `post_cascade_response`, `post_cascade_response_with_transcript`, `post_setup_worktree`.
+**Detection**: Warning, at the key, for any other key in `hooks`, with a closest-match suggestion. Claude Code or Devin CLI event names (`PreToolUse`) are reported too: they belong to other files (`.devin/hooks.v1.json` for the Devin Local agent).
+**Fix**: Use a documented event name
+**Source**: docs.devin.ai/desktop/cascade/hooks ("Hook Events")
+
+<a id="ws-hk-003"></a>
+### WS-HK-003 [MEDIUM] Cascade Hook Skipped or Option Ignored
+**Requirement**: Hooks SHOULD be written so Cascade runs them as intended. A powershell-only hook on macOS/Linux: "Hook is silently skipped". `working_directory`: "Using `~` for home directory expansion is not supported". Workspace files: "the legacy `.windsurf/hooks.json` is used only when `.devin/hooks.json` is absent or defines no hooks". For `pre_user_prompt`, `post_cascade_response` and `post_cascade_response_with_transcript`: "The `show_output` configuration option does not apply to this hook."
+**Detection**: Warning for a hook with `powershell` and no `command` (at `powershell`), a `working_directory` starting with `~` (at the value), and a `.windsurf/hooks.json` that defines hooks while the sibling `.devin/hooks.json` defines hooks (at `hooks`; read through the configured file system). Info for `show_output` on the three events above.
+**Fix**: Add a `command`; use an absolute or workspace-relative directory; move legacy hooks into `.devin/hooks.json`; remove `show_output`
+**Source**: docs.devin.ai/desktop/cascade/hooks ("Cross-Platform Behavior", "Configuration Options", "Workspace-Level", "Hook Events")
+
+<a id="ws-hk-004"></a>
+### WS-HK-004 [LOW] Relative Script Path in Cascade Hook
+**Requirement**: Workspace hooks SHOULD use absolute script paths: "**Use absolute paths**: Always use absolute paths in your hook configurations to avoid ambiguity." Kiro's KR-HK-009 advises the opposite for Kiro hooks; each rule stays scoped to its vendor.
+**Detection**: Info, at the command value, in `.devin/hooks.json` and `.windsurf/hooks.json`, when the script a hook runs is a relative path: the program itself (`./scripts/check.sh`) or the first non-flag argument of an interpreter (`python3 hooks/check.py`, `bash scripts/x.sh`, `deno run tools/x.ts`). A path is a token with `/` (also `\` in `powershell`) that does not start with `/`, `\`, `~`, `$`, `%`, `@`, `-` or a drive letter and is not a URL. Commands on PATH (`black .`), inline code (`bash -c ...`) and `$ROOT_WORKSPACE_PATH/...` are not reported. User and system hooks are not checked.
+**Fix**: No auto-fix - use an absolute path
+**Source**: docs.devin.ai/desktop/cascade/hooks ("Best Practices")
+
+<a id="ws-hk-005"></a>
+### WS-HK-005 [MEDIUM] Secret in Workspace Hook Command
+**Requirement**: Workspace hooks are committed with the project, so their commands SHOULD NOT contain literal credentials: "Keep security-critical policies at the cloud or system level, and avoid checking sensitive information into version control." and "**Protect sensitive data**: Avoid logging sensitive information like API keys or credentials." This is vendor advice, so the rule is a warning.
+**Detection**: Warning, at the value, for a `command` or `powershell` in `.devin/hooks.json` or `.windsurf/hooks.json` with a token prefix that starts a word and has a token-shaped body (`sk-` 16+, `ghp_`/`gho_`/`github_pat_` 30+, `xoxb-`/`xoxp-` 10+, `glpat-` 20+, `AKIA` + 16 uppercase characters), or a literal value after `api_key=`, `apikey=`, `api-key=`, `token=`, `password=`, `secret=`, `access_key=`, `private_key=` (so `GITHUB_TOKEN=...` and `--token=...` count), after `--token`, `--api-key`, `--apikey`, `--password`, `--secret`, `--auth-token`, `--access-token`, or after `Bearer `. References (`$VAR`, `${VAR}`, `$(cmd)`, `%VAR%`, `<...>`, `{{...}}`), placeholders and values shorter than 8 characters are not secrets. Same detector shape as KR-HK-010.
+**Fix**: No auto-fix - read the value from an environment variable or a file outside the repository
+**Source**: docs.devin.ai/desktop/cascade/hooks ("Workspace Hooks for Team Projects", "Best Practices")
 
 ---
 
@@ -4449,10 +4535,10 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | References | 3 | 2 | 1 | 0 | 1 |
 | Roo Code Skills | 1 | 0 | 1 | 0 | 1 |
 | Version Awareness | 1 | 0 | 0 | 1 | 0 |
-| Windsurf | 4 | 1 | 2 | 1 | 0 |
+| Windsurf | 16 | 4 | 7 | 5 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **560** | **247** | **250** | **63** | **135** |
+| **TOTAL** | **572** | **250** | **255** | **67** | **135** |
 
 
 ---
@@ -4464,7 +4550,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 - modelcontextprotocol.io (MCP specification)
 - code.claude.com/docs (Claude Code documentation)
 - cursor.com/docs (Cursor AI documentation)
-- docs.windsurf.com (Windsurf/Codeium documentation)
+- docs.devin.ai (Devin Desktop, formerly Windsurf; docs.windsurf.com redirects there)
 - github.com/cline/cline (Cline repository)
 
 ### Research Papers
@@ -4482,8 +4568,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 560 validation rules across 42 categories
+**Total Coverage**: 572 validation rules across 42 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 247 HIGH, 250 MEDIUM, 63 LOW
+**Certainty**: 250 HIGH, 255 MEDIUM, 67 LOW
 **Auto-Fixable**: 135 rules (24%)

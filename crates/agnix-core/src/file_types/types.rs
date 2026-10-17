@@ -88,12 +88,19 @@ pub enum FileType {
     /// Codex CLI managed requirements (system `codex/requirements.toml` -
     /// `/etc/codex/` on Unix, `%ProgramData%\OpenAI\Codex\` on Windows)
     CodexRequirements,
-    /// Windsurf rule files (.windsurf/rules/*.md)
+    /// Windsurf (Devin Desktop) workspace rule files (.devin/rules/**/*.md,
+    /// legacy .windsurf/rules/**/*.md)
     WindsurfRule,
-    /// Windsurf workflow files (.windsurf/workflows/*.md)
+    /// Windsurf (Devin Desktop) workflow files (.devin/workflows/**/*.md,
+    /// legacy .windsurf/workflows/**/*.md, ~/.codeium/windsurf/global_workflows/*.md)
     WindsurfWorkflow,
     /// Legacy Windsurf rules file (.windsurfrules)
     WindsurfRulesLegacy,
+    /// Devin Desktop global rules (~/.codeium/windsurf/memories/global_rules.md)
+    WindsurfGlobalRules,
+    /// Cascade hooks (.devin/hooks.json, legacy .windsurf/hooks.json,
+    /// ~/.codeium/windsurf/hooks.json, ~/.codeium/hooks.json, system hooks.json)
+    WindsurfHooks,
     /// Kiro steering files (.kiro/steering/**/*.md)
     KiroSteering,
     /// Kiro legacy power manifest (POWER.md at a power root: installed powers
@@ -201,6 +208,8 @@ impl fmt::Display for FileType {
             FileType::WindsurfRule => "WindsurfRule",
             FileType::WindsurfWorkflow => "WindsurfWorkflow",
             FileType::WindsurfRulesLegacy => "WindsurfRulesLegacy",
+            FileType::WindsurfGlobalRules => "WindsurfGlobalRules",
+            FileType::WindsurfHooks => "WindsurfHooks",
             FileType::KiroSteering => "KiroSteering",
             FileType::KiroPower => "KiroPower",
             FileType::KiroPowerPlugin => "KiroPowerPlugin",
@@ -266,6 +275,8 @@ mod tests {
             (FileType::WindsurfRule, "WindsurfRule"),
             (FileType::WindsurfWorkflow, "WindsurfWorkflow"),
             (FileType::WindsurfRulesLegacy, "WindsurfRulesLegacy"),
+            (FileType::WindsurfGlobalRules, "WindsurfGlobalRules"),
+            (FileType::WindsurfHooks, "WindsurfHooks"),
             (FileType::KiroSteering, "KiroSteering"),
             (FileType::KiroPower, "KiroPower"),
             (FileType::KiroPowerPlugin, "KiroPowerPlugin"),
@@ -330,6 +341,8 @@ mod tests {
             FileType::WindsurfRule,
             FileType::WindsurfWorkflow,
             FileType::WindsurfRulesLegacy,
+            FileType::WindsurfGlobalRules,
+            FileType::WindsurfHooks,
             FileType::KiroSteering,
             FileType::KiroPower,
             FileType::KiroPowerPlugin,
@@ -408,6 +421,8 @@ mod tests {
             FileType::WindsurfRule,
             FileType::WindsurfWorkflow,
             FileType::WindsurfRulesLegacy,
+            FileType::WindsurfGlobalRules,
+            FileType::WindsurfHooks,
             FileType::KiroSteering,
             FileType::KiroPower,
             FileType::KiroPowerPlugin,

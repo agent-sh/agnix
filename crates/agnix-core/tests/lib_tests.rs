@@ -361,8 +361,15 @@ fn test_validators_for_skill() {
 fn test_validators_for_claude_md() {
     let registry = ValidatorRegistry::with_defaults();
     let validators = registry.validators_for(FileType::ClaudeMd);
-    assert_eq!(validators.len(), 9);
+    // 10: WindsurfAgentsMdValidator (WS-011, AGENTS.md in Windsurf projects)
+    // joined the nine ClaudeMd validators.
+    assert_eq!(validators.len(), 10);
     assert!(validators.iter().any(|v| v.name() == "AmpValidator"));
+    assert!(
+        validators
+            .iter()
+            .any(|v| v.name() == "WindsurfAgentsMdValidator")
+    );
     assert!(
         validators
             .iter()

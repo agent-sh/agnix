@@ -434,7 +434,7 @@ fn infer_fixture_coverage(rules: &[RuleEntry]) -> HashMap<String, Vec<String>> {
             ],
         ),
         ("codex", vec!["codex", "codex-invalid"]),
-        ("windsurf", vec!["windsurf", "windsurf-legacy"]),
+        ("windsurf", vec!["windsurf", "windsurf-legacy", "devin"]),
         ("kiro-steering", vec!["kiro-steering"]),
     ]
     .into_iter()

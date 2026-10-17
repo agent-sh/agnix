@@ -383,7 +383,7 @@
     },
     "windsurf": {
       "tier": "d",
-      "display_name": "Windsurf",
+      "display_name": "Windsurf (Devin Desktop)",
       "validators": [
         "windsurf"
       ],
@@ -396,14 +396,24 @@
       "notes": "Proprietary IDE (Codeium/Exafunction); no GH releases. Tracked via HTML scrape of windsurf.com/changelog - the first 'Wave NN' marker on the page is the latest. Release-note body is upgraded via GLM (scripts/glm-extract.js). Wave is the marketing release event; underlying VS Code-fork build version (e.g., 1.9544.24) bumps more often but is not the agnix-relevant signal. Separate /vscode, /jetbrains, /windsurf-next channels are not tracked.",
       "changes_of_interest": {
         "config_surfaces": [
-          ".windsurf/rules/*.md",
-          ".windsurf/workflows/*.md",
-          ".windsurfrules (legacy)"
+          ".devin/rules/*.md",
+          ".devin/workflows/*.md",
+          ".devin/hooks.json",
+          ".windsurf/rules/*.md (legacy)",
+          ".windsurf/workflows/*.md (legacy)",
+          ".windsurf/hooks.json (legacy)",
+          ".windsurfrules (legacy)",
+          "~/.codeium/windsurf/memories/global_rules.md",
+          "~/.codeium/windsurf/hooks.json",
+          "AGENTS.md"
         ],
         "relevant": [
-          "New rules or workflows file layout / frontmatter",
-          "Legacy .windsurfrules deprecation status",
-          "Any new per-project config file under .windsurf/"
+          "New rules or workflows file layout / frontmatter (trigger values, globs, description)",
+          "Rule, workflow and global_rules.md character limits",
+          "Legacy .windsurf/ and .windsurfrules deprecation status",
+          "Cascade hook events, hook options and hooks.json locations",
+          "Workflow support in the Devin Local agent",
+          "Any new per-project config file under .devin/ or .windsurf/"
         ],
         "irrelevant": [
           "Cascade / agent UX",

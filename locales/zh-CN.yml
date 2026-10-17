@@ -451,18 +451,9 @@ rules:
   ws_001:
     message: Windsurf 规则文件为空
     suggestion: 向文件添加规则内容
-  ws_002:
-    message: Windsurf 规则文件超过 %{limit} 字符限制（%{len} 个字符）
-    suggestion: 减少内容长度或拆分为多个规则文件
   ws_003_empty:
     message: Windsurf 工作流文件为空
     suggestion: 向文件添加工作流步骤
-  ws_003_too_long:
-    message: Windsurf 工作流文件超过 %{limit} 字符限制（%{len} 个字符）
-    suggestion: 减少内容长度或拆分为多个工作流文件
-  ws_004:
-    message: 检测到旧版 .windsurfrules 文件
-    suggestion: 迁移到 .windsurf/rules/ 目录并使用单独的 .md 文件
   kiro_001:
     message: '无效的引导文件包含模式 ''%{value}'' - 有效模式为: always, fileMatch, manual, auto'
     suggestion: '使用以下之一: always, fileMatch, manual, auto'

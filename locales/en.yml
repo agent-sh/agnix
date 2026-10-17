@@ -1009,17 +1009,81 @@ rules:
     message: Windsurf rule file is empty
     suggestion: Add rule content to the file
   ws_002:
-    message: Windsurf rule file exceeds %{limit} character limit (%{len} characters)
-    suggestion: Reduce content length or split into multiple rule files
+    message: 'Workspace rule file has %{len} characters; Devin Desktop limits workspace rule files to %{limit} characters (agnix counts the whole file, frontmatter included)'
+    suggestion: Shorten the rule, split it into several rule files, or move long procedures into a skill
   ws_003_empty:
     message: Windsurf workflow file is empty
     suggestion: Add workflow steps to the file
   ws_003_too_long:
-    message: Windsurf workflow file exceeds %{limit} character limit (%{len} characters)
-    suggestion: Reduce content length or split into multiple workflow files
+    message: 'Workflow file has %{len} characters; Devin Desktop limits workflow files to %{limit} characters'
+    suggestion: Shorten the workflow, split it into workflows that call each other, or move it into a skill
   ws_004:
-    message: Legacy .windsurfrules file detected
-    suggestion: Migrate to .windsurf/rules/ directory with individual .md files
+    message: 'Legacy .windsurfrules file: Devin Desktop still reads it, but workspace rules now live in .devin/rules/'
+    suggestion: 'Move each rule to its own .devin/rules/<name>.md file with a `trigger` in its frontmatter, or put instructions every tool should see in AGENTS.md'
+    suggestion_cline: 'Move each rule to its own .devin/rules/<name>.md file with a `trigger` in its frontmatter, or put instructions every tool should see in AGENTS.md. If the project also uses Cline, keep in mind that Cline reads .windsurfrules but not .devin/rules/ or .windsurf/rules/'
+  ws_005:
+    message: 'Rule uses `trigger: model_decision` but has no description; only the description is shown in the system prompt, so Cascade cannot tell when to read this rule'
+    suggestion: 'Add a `description` that says when the rule applies, or choose another trigger (always_on, glob, manual)'
+  ws_006:
+    unknown: "Unknown rule trigger '%{value}'; Devin Desktop documents always_on, model_decision, glob and manual, and Devin CLI also accepts agent"
+    unknown_suggestion: 'Use one of: always_on, model_decision, glob, manual, agent'
+    unknown_suggestion_closest: "Did you mean '%{closest}'? Valid triggers: always_on, model_decision, glob, manual, agent"
+    glob_without_globs: 'Rule uses `trigger: glob` but has no `globs`, so it never applies to a file'
+    glob_without_globs_suggestion: 'Add `globs` with the file patterns the rule is for (for example `globs: **/*.test.ts`), or choose another trigger'
+    missing: 'Rule has no `trigger` in its frontmatter; each workspace rule declares its activation mode there, and the docs do not say what a rule without one gets'
+    missing_suggestion: 'Add frontmatter with a `trigger`: always_on, model_decision (with a description), glob (with globs) or manual'
+    cursor_always_apply: "Rule uses Cursor's `alwaysApply` and has no `trigger`; Devin Desktop selects rules by `trigger`"
+    cursor_always_apply_suggestion: 'Replace `alwaysApply: true` with `trigger: always_on`; for `alwaysApply: false`, use `trigger: glob` with globs, `trigger: model_decision` with a description, or `trigger: manual`'
+  ws_007:
+    message: 'Legacy location %{legacy}: Devin Desktop prefers %{preferred}, which takes precedence, and keeps .windsurf/ as a fallback for backward compatibility'
+    suggestion: 'Move the files to %{preferred} when everyone on the project uses a release that reads it; .windsurf/ still works'
+  ws_008:
+    message: "Generic instruction '%{phrase}': Devin Desktop says generic rules are not needed, as they are already baked into Cascade's training data"
+    suggestion: Remove it, or replace it with an instruction specific to this project (a command, a path, a convention)
+  ws_009:
+    message: 'Workflows run only in the legacy Cascade agent; the Devin Local agent, the default for new tabs, does not support them'
+    suggestion: 'Migrate the workflow to a skill (.devin/skills/<name>/SKILL.md) with the Devin: Open Cascade Migration Wizard command, or keep it if the team uses the Cascade agent'
+  ws_010:
+    message: 'Global rules file has %{len} characters; Devin Desktop limits global_rules.md to %{limit} characters (agnix counts the whole file)'
+    suggestion: Shorten it, or move project-specific rules into workspace rule files (.devin/rules/)
+  ws_011:
+    message: "AGENTS.md has %{len} characters, over the %{limit}-character limit Devin Desktop states for workspace rule files; agnix applies it because AGENTS.md is processed by the same Rules engine (the docs state no AGENTS.md limit)"
+    suggestion: Move directory-specific parts into AGENTS.md files in those directories, rules with their own activation into .devin/rules/, or procedures into skills
+  ws_hk_001:
+    parse: 'hooks.json is not valid JSON: %{error}'
+    parse_suggestion: Fix the JSON syntax; Cascade cannot load hooks from this file
+    jsonc: 'hooks.json uses comments or trailing commas; the docs describe JSON files and do not say whether Devin Desktop accepts them'
+    jsonc_suggestion: Remove the comments and trailing commas
+    root: 'hooks.json must be a JSON object with a `hooks` object, found %{found}'
+    root_suggestion: 'Use {"hooks": {"<event>": [{"command": "..."}]}}, with an array of hooks for each event'
+    hooks_type: '`hooks` must be an object that maps event names to arrays of hooks, found %{found}'
+    event_type: "Hook event '%{event}' must be an array of hooks, found %{found}"
+    entry_type: 'Each hook must be an object, found %{found}'
+    missing_command: 'Hook has neither `command` nor `powershell`; at least one of them must be specified'
+    missing_command_suggestion: 'Add a `command` (run via bash -c on macOS and Linux, and via PowerShell on Windows when `powershell` is not set)'
+    field_type: "Hook option '%{field}' must be a %{expected}, found %{found}"
+    field_type_suggestion: "Set '%{field}' to a %{expected}"
+    top_level_event: "Hook event '%{event}' is at the top level of hooks.json; Cascade reads events from the `hooks` object"
+    top_level_event_suggestion: 'Move the event into the `hooks` object: {"hooks": {"<event>": [...]}}'
+  ws_hk_002:
+    message: "Unknown Cascade hook event '%{event}'"
+    suggestion: 'Use one of the twelve events: pre_read_code, post_read_code, pre_write_code, post_write_code, pre_run_command, post_run_command, pre_mcp_tool_use, post_mcp_tool_use, pre_user_prompt, post_cascade_response, post_cascade_response_with_transcript, post_setup_worktree'
+    suggestion_closest: "Did you mean '%{closest}'?"
+  ws_hk_003:
+    powershell_only: 'Hook sets only `powershell`, so it is silently skipped on macOS and Linux'
+    powershell_only_suggestion: 'Add a `command` for macOS and Linux (Windows falls back to `command` when `powershell` is not set)'
+    tilde: '`working_directory` starts with `~`, which Cascade does not expand'
+    tilde_suggestion: Use an absolute path, or a path relative to the workspace root
+    shadowed: 'This legacy .windsurf/hooks.json is ignored: .devin/hooks.json defines hooks, and the legacy file is used only when .devin/hooks.json is absent or defines no hooks'
+    shadowed_suggestion: Move these hooks into .devin/hooks.json and delete the legacy file
+    show_output: '`show_output` does not apply to the %{event} hook'
+    show_output_suggestion: Remove `show_output` from this hook
+  ws_hk_004:
+    message: "Hook script path '%{path}' is relative; Devin Desktop advises absolute paths in hook configurations to avoid ambiguity"
+    suggestion: 'Use an absolute path; relative paths resolve from `working_directory`, which defaults to the workspace root (in multi-repo workspaces, the root of the repo being worked on)'
+  ws_hk_005:
+    message: 'Hook `%{field}` contains what looks like a literal secret; workspace hooks are committed with the project'
+    suggestion: Read the value from an environment variable or from a file outside the repository
   kiro_001:
     message: "Invalid steering inclusion mode '%{value}' - valid modes are always, fileMatch, manual and auto (case-sensitive)"
     suggestion: "Use one of: always, fileMatch, manual, auto. Kiro CLI V3 ignores frontmatter with an invalid mode and includes the whole file, frontmatter text included, in every interaction"

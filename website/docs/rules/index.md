@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `560` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `572` validation rules generated from `knowledge-base/rules.json`.
 `135` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -496,8 +496,20 @@ This section contains all `560` validation rules generated from `knowledge-base/
 | [VER-001](./generated/ver-001.md) | No Tool/Spec Versions Pinned | LOW | Version Awareness | No |
 | [WS-001](./generated/ws-001.md) | Empty Windsurf Rule File | MEDIUM | windsurf | No |
 | [WS-002](./generated/ws-002.md) | Windsurf Rule File Exceeds Character Limit | HIGH | windsurf | No |
-| [WS-003](./generated/ws-003.md) | Empty or Oversized Windsurf Workflow File | MEDIUM | windsurf | No |
+| [WS-003](./generated/ws-003.md) | Empty or Oversized Windsurf Workflow File | HIGH | windsurf | No |
 | [WS-004](./generated/ws-004.md) | Legacy .windsurfrules File Detected | LOW | windsurf | No |
+| [WS-005](./generated/ws-005.md) | Model-Decision Rule Without Description | MEDIUM | windsurf | No |
+| [WS-006](./generated/ws-006.md) | Invalid or Missing Windsurf Rule Trigger | MEDIUM | windsurf | No |
+| [WS-007](./generated/ws-007.md) | Legacy .windsurf Directory | LOW | windsurf | No |
+| [WS-008](./generated/ws-008.md) | Generic Instruction in Windsurf Rule | LOW | windsurf | No |
+| [WS-009](./generated/ws-009.md) | Workflow Not Supported by the Devin Local Agent | LOW | windsurf | No |
+| [WS-010](./generated/ws-010.md) | Global Rules File Exceeds Character Limit | HIGH | windsurf | No |
+| [WS-011](./generated/ws-011.md) | AGENTS.md Exceeds Windsurf Rule Character Limit (Inferred) | MEDIUM | windsurf | No |
+| [WS-HK-001](./generated/ws-hk-001.md) | Invalid Cascade Hooks File | HIGH | windsurf | No |
+| [WS-HK-002](./generated/ws-hk-002.md) | Unknown Cascade Hook Event | MEDIUM | windsurf | No |
+| [WS-HK-003](./generated/ws-hk-003.md) | Cascade Hook Skipped or Option Ignored | MEDIUM | windsurf | No |
+| [WS-HK-004](./generated/ws-hk-004.md) | Relative Script Path in Cascade Hook | LOW | windsurf | No |
+| [WS-HK-005](./generated/ws-hk-005.md) | Secret in Workspace Hook Command | MEDIUM | windsurf | No |
 | [WS-SK-001](./generated/ws-sk-001.md) | Windsurf Skill Uses Unsupported Field | MEDIUM | Windsurf Skills | Yes (safe/unsafe) |
 | [XML-001](./generated/xml-001.md) | Unclosed XML Tag | HIGH | XML | Yes (unsafe) |
 | [XML-002](./generated/xml-002.md) | Mismatched Closing Tag | HIGH | XML | Yes (unsafe) |

@@ -470,18 +470,9 @@ rules:
   ws_001:
     message: El archivo de reglas de Windsurf esta vacio
     suggestion: Agrega contenido de reglas al archivo
-  ws_002:
-    message: El archivo de reglas de Windsurf excede el limite de %{limit} caracteres (%{len} caracteres)
-    suggestion: Reduce la longitud del contenido o divide en multiples archivos de reglas
   ws_003_empty:
     message: El archivo de flujo de trabajo de Windsurf esta vacio
     suggestion: Agrega pasos del flujo de trabajo al archivo
-  ws_003_too_long:
-    message: El archivo de flujo de trabajo de Windsurf excede el limite de %{limit} caracteres (%{len} caracteres)
-    suggestion: Reduce la longitud del contenido o divide en multiples archivos de flujo de trabajo
-  ws_004:
-    message: Archivo heredado .windsurfrules detectado
-    suggestion: Migra al directorio .windsurf/rules/ con archivos .md individuales
   kiro_001:
     message: 'Modo de inclusion invalido ''%{value}'' en archivo de orientacion - modos validos: always, fileMatch, manual,
       auto'

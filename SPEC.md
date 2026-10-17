@@ -33,7 +33,7 @@
 | Copilot Skills | .github/skills/*/SKILL.md | 1 |
 | Codex Skills | .agents/skills/*/SKILL.md | 1 |
 | OpenCode Skills | .opencode/skills/*/SKILL.md | 1 |
-| Windsurf | .windsurf/rules/*.md, .windsurf/workflows/*.md, .windsurfrules | 4 |
+| Windsurf | .devin/rules/**/*.md, .devin/workflows/**/*.md, .devin/hooks.json (and the legacy .windsurf/ equivalents), .windsurfrules, ~/.codeium/windsurf/memories/global_rules.md, ~/.codeium/windsurf/hooks.json, AGENTS.md (WS-011) | 16 |
 | Windsurf Skills | .windsurf/skills/*/SKILL.md | 1 |
 | Kiro Steering | .kiro/steering/**/*.md (KIRO-026: near-miss names in Kiro config dirs) | 16 |
 | Kiro Skills | .kiro/skills/*/SKILL.md | 2 |

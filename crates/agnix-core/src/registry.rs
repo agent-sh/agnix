@@ -397,7 +397,7 @@ impl ValidatorRegistryBuilder {
 ///
 /// Used by `BuiltinProvider` (via `debug_assert_eq!`) and tests to catch
 /// accidental additions or removals without updating all providers.
-const EXPECTED_BUILTIN_COUNT: usize = 88;
+const EXPECTED_BUILTIN_COUNT: usize = 91;
 
 // -- Category providers -----------------------------------------------------
 //
@@ -701,6 +701,23 @@ impl ValidatorProvider for WindsurfProvider {
                 FileType::WindsurfRulesLegacy,
                 Some("WindsurfValidator"),
                 windsurf_validator,
+            ),
+            (
+                FileType::WindsurfGlobalRules,
+                Some("WindsurfValidator"),
+                windsurf_validator,
+            ),
+            (
+                FileType::WindsurfHooks,
+                Some("WindsurfValidator"),
+                windsurf_validator,
+            ),
+            // WS-011 acts only on AGENTS.md files of projects that use
+            // Windsurf; every other ClaudeMd file returns early.
+            (
+                FileType::ClaudeMd,
+                Some("WindsurfAgentsMdValidator"),
+                windsurf_agents_md_validator,
             ),
         ]
     }
@@ -1049,6 +1066,10 @@ fn codex_requirements_validator() -> Box<dyn Validator> {
 
 fn windsurf_validator() -> Box<dyn Validator> {
     Box::new(crate::rules::windsurf::WindsurfValidator)
+}
+
+fn windsurf_agents_md_validator() -> Box<dyn Validator> {
+    Box::new(crate::rules::windsurf::WindsurfAgentsMdValidator)
 }
 
 fn kiro_steering_validator() -> Box<dyn Validator> {
@@ -1562,6 +1583,8 @@ mod tests {
             FileType::WindsurfRule,
             FileType::WindsurfWorkflow,
             FileType::WindsurfRulesLegacy,
+            FileType::WindsurfGlobalRules,
+            FileType::WindsurfHooks,
             FileType::KiroSteering,
             FileType::KiroPower,
             FileType::KiroPowerPlugin,
@@ -1619,6 +1642,8 @@ mod tests {
                 | FileType::WindsurfRule
                 | FileType::WindsurfWorkflow
                 | FileType::WindsurfRulesLegacy
+                | FileType::WindsurfGlobalRules
+                | FileType::WindsurfHooks
                 | FileType::KiroSteering
                 | FileType::KiroPower
                 | FileType::KiroPowerPlugin
@@ -2193,7 +2218,9 @@ mod tests {
 
     #[test]
     fn windsurf_provider_count() {
-        assert_eq!(WindsurfProvider.named_validators().len(), 3);
+        // 6: global rules, Cascade hooks and the AGENTS.md check (WS-011)
+        // joined the rule, workflow and .windsurfrules entries.
+        assert_eq!(WindsurfProvider.named_validators().len(), 6);
     }
 
     #[test]

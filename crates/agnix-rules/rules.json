@@ -1,7 +1,7 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 560,
+  "total_rules": 572,
   "last_updated": "2026-10-17",
   "schema": {
     "evidence": {
@@ -14238,9 +14238,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://docs.windsurf.com/windsurf/cascade/memories"
+          "https://docs.devin.ai/desktop/cascade/memories"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "windsurf"
         },
@@ -14254,7 +14254,7 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "# TypeScript Guidelines\nUse strict mode and explicit types.",
+      "good_example": "---\ntrigger: always_on\n---\n\n# TypeScript Guidelines\n- Use strict mode and explicit types.",
       "bad_example": ""
     },
     {
@@ -14265,9 +14265,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://docs.windsurf.com/windsurf/cascade/memories"
+          "https://docs.devin.ai/desktop/cascade/memories"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "windsurf"
         },
@@ -14281,24 +14281,24 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "# TypeScript Guidelines\nUse strict mode and explicit types.",
-      "bad_example": "# Very long rule file exceeding 12000 characters..."
+      "good_example": "---\ntrigger: always_on\n---\n\n# TypeScript Guidelines\n- Use strict mode and explicit types.",
+      "bad_example": "---\ntrigger: always_on\n---\n\n# Everything we know (12,001 or more characters in one rule file)..."
     },
     {
       "id": "WS-003",
       "name": "Empty or Oversized Windsurf Workflow File",
-      "severity": "MEDIUM",
+      "severity": "HIGH",
       "category": "windsurf",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://docs.windsurf.com/windsurf/cascade/memories"
+          "https://docs.devin.ai/desktop/cascade/workflows"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "windsurf"
         },
-        "normative_level": "SHOULD",
+        "normative_level": "MUST",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -14309,7 +14309,7 @@
         "autofix": false
       },
       "good_example": "# Deploy Workflow\nRun deployment steps.",
-      "bad_example": ""
+      "bad_example": "# Deploy Workflow (empty, or 12,001 or more characters)"
     },
     {
       "id": "WS-004",
@@ -14319,9 +14319,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://docs.windsurf.com/windsurf/cascade/memories"
+          "https://docs.devin.ai/desktop/cascade/memories",
+          "https://docs.cline.bot/customization/cline-rules"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "windsurf"
         },
@@ -14335,8 +14336,353 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "# .windsurf/rules/typescript.md\n# TypeScript Guidelines\nUse strict mode.",
-      "bad_example": "# .windsurfrules (legacy file)\nUse strict mode."
+      "good_example": "# .devin/rules/typescript.md\n---\ntrigger: always_on\n---\n\nUse strict mode.",
+      "bad_example": "# .windsurfrules (legacy single file)\nUse strict mode."
+    },
+    {
+      "id": "WS-005",
+      "name": "Model-Decision Rule Without Description",
+      "severity": "MEDIUM",
+      "category": "windsurf",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://docs.devin.ai/desktop/cascade/memories"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "windsurf"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\ntrigger: model_decision\ndescription: Use when writing or reviewing SQL migrations\n---\n\nCreate migrations with `pnpm db:migrate:new`.",
+      "bad_example": "---\ntrigger: model_decision\n---\n\nCreate migrations with `pnpm db:migrate:new`."
+    },
+    {
+      "id": "WS-006",
+      "name": "Invalid or Missing Windsurf Rule Trigger",
+      "severity": "MEDIUM",
+      "category": "windsurf",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://docs.devin.ai/desktop/cascade/memories",
+          "https://docs.devin.ai/cli/extensibility/rules"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "windsurf"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\ntrigger: glob\nglobs: **/*.test.ts\n---\n\nAll test files must use `describe`/`it` blocks.",
+      "bad_example": "---\ntrigger: glob\n---\n\nAll test files must use `describe`/`it` blocks."
+    },
+    {
+      "id": "WS-007",
+      "name": "Legacy .windsurf Directory",
+      "severity": "LOW",
+      "category": "windsurf",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://docs.devin.ai/desktop/cascade/memories",
+          "https://docs.devin.ai/desktop/cascade/workflows",
+          "https://docs.devin.ai/desktop/cascade/hooks"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "windsurf"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "# .devin/rules/typescript.md\n---\ntrigger: always_on\n---\n\nUse strict mode.",
+      "bad_example": "# .windsurf/rules/typescript.md\n---\ntrigger: always_on\n---\n\nUse strict mode."
+    },
+    {
+      "id": "WS-008",
+      "name": "Generic Instruction in Windsurf Rule",
+      "severity": "LOW",
+      "category": "windsurf",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://docs.devin.ai/desktop/cascade/memories",
+          "https://docs.devin.ai/desktop/cascade/agents-md"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "windsurf"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\ntrigger: always_on\n---\n\n- Use pnpm, not npm\n- Use early returns when possible",
+      "bad_example": "---\ntrigger: always_on\n---\n\n- Write good code\n- Be concise."
+    },
+    {
+      "id": "WS-009",
+      "name": "Workflow Not Supported by the Devin Local Agent",
+      "severity": "LOW",
+      "category": "windsurf",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://docs.devin.ai/desktop/cascade/workflows",
+          "https://docs.devin.ai/desktop/devin-local"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "windsurf"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "# .devin/skills/address-pr-comments/SKILL.md\n---\nname: address-pr-comments\ndescription: Addresses PR review comments one at a time. Use when asked to handle PR feedback.\n---\n\n1. Check out the PR branch",
+      "bad_example": "# .devin/workflows/address-pr-comments.md\n1. Check out the PR branch"
+    },
+    {
+      "id": "WS-010",
+      "name": "Global Rules File Exceeds Character Limit",
+      "severity": "HIGH",
+      "category": "windsurf",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://docs.devin.ai/desktop/cascade/memories"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "windsurf"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "# ~/.codeium/windsurf/memories/global_rules.md\n# Coding Guidelines\n- My project's programming language is python\n- Use early returns when possible",
+      "bad_example": "# ~/.codeium/windsurf/memories/global_rules.md (6,001 or more characters)..."
+    },
+    {
+      "id": "WS-011",
+      "name": "AGENTS.md Exceeds Windsurf Rule Character Limit (Inferred)",
+      "severity": "MEDIUM",
+      "category": "windsurf",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://docs.devin.ai/desktop/cascade/memories",
+          "https://docs.devin.ai/desktop/cascade/agents-md"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "windsurf"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "# AGENTS.md (under 12,000 characters; directory-specific guidance in nested AGENTS.md files)\n- Use TypeScript strict mode",
+      "bad_example": "# AGENTS.md (12,001 or more characters in a project with .devin/rules or .windsurf/)..."
+    },
+    {
+      "id": "WS-HK-001",
+      "name": "Invalid Cascade Hooks File",
+      "severity": "HIGH",
+      "category": "windsurf",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://docs.devin.ai/desktop/cascade/hooks"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "windsurf"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"hooks\": {\n    \"post_write_code\": [\n      { \"command\": \"python3 /path/to/another/script.py\", \"show_output\": true }\n    ]\n  }\n}",
+      "bad_example": "{\n  \"hooks\": {\n    \"post_write_code\": [\n      { \"show_output\": true }\n    ]\n  }\n}"
+    },
+    {
+      "id": "WS-HK-002",
+      "name": "Unknown Cascade Hook Event",
+      "severity": "MEDIUM",
+      "category": "windsurf",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://docs.devin.ai/desktop/cascade/hooks"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "windsurf"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"hooks\": {\"pre_read_code\": [{\"command\": \"python3 /path/to/your/script.py\"}]}}",
+      "bad_example": "{\"hooks\": {\"pre_read_file\": [{\"command\": \"python3 /path/to/your/script.py\"}]}}"
+    },
+    {
+      "id": "WS-HK-003",
+      "name": "Cascade Hook Skipped or Option Ignored",
+      "severity": "MEDIUM",
+      "category": "windsurf",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://docs.devin.ai/desktop/cascade/hooks"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "windsurf"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"hooks\": {\"pre_run_command\": [{\"command\": \"python3 /opt/hooks/check.py\", \"powershell\": \"python3 C:\\\\hooks\\\\check.py\"}]}}",
+      "bad_example": "{\"hooks\": {\"pre_run_command\": [{\"powershell\": \"python3 C:\\\\hooks\\\\check.py\", \"working_directory\": \"~/project\"}]}}"
+    },
+    {
+      "id": "WS-HK-004",
+      "name": "Relative Script Path in Cascade Hook",
+      "severity": "LOW",
+      "category": "windsurf",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://docs.devin.ai/desktop/cascade/hooks"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "windsurf"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"hooks\": {\"post_write_code\": [{\"command\": \"bash /Users/me/hooks/format_code.sh\"}]}}",
+      "bad_example": "{\"hooks\": {\"post_write_code\": [{\"command\": \"bash hooks/format_code.sh\"}]}}"
+    },
+    {
+      "id": "WS-HK-005",
+      "name": "Secret in Workspace Hook Command",
+      "severity": "MEDIUM",
+      "category": "windsurf",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://docs.devin.ai/desktop/cascade/hooks"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "windsurf"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"hooks\": {\"post_cascade_response\": [{\"command\": \"/usr/local/bin/notify --token $NOTIFY_TOKEN\"}]}}",
+      "bad_example": "{\"hooks\": {\"post_cascade_response\": [{\"command\": \"/usr/local/bin/notify --token hk_9f8e7d6c5b4a3f2e1d0c\"}]}}",
+      "security": {
+        "cwe": [
+          "CWE-798",
+          "CWE-200"
+        ],
+        "owasp": [
+          "A07:2021",
+          "A02:2021"
+        ],
+        "vulnerability_class": "secret-exposure",
+        "subcategory": "vuln",
+        "confidence": "MEDIUM",
+        "likelihood": "MEDIUM",
+        "impact": "HIGH"
+      }
     },
     {
       "id": "WS-SK-001",
@@ -14346,9 +14692,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://docs.windsurf.com/windsurf/cascade/memories"
+          "https://docs.devin.ai/desktop/cascade/skills"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "windsurf"
         },
@@ -16402,8 +16748,8 @@
     },
     "windsurf": {
       "prefix": "WS",
-      "count": 4,
-      "description": "Windsurf rules, workflows, and legacy file validation"
+      "count": 16,
+      "description": "Windsurf (Devin Desktop) rules, workflows, global rules, AGENTS.md and Cascade hooks"
     },
     "kiro-skills": {
       "prefix": "KR-SK",

@@ -297,6 +297,8 @@ fn file_type_enum_covers_all_variants() {
         agnix_core::FileType::WindsurfRule,
         agnix_core::FileType::WindsurfWorkflow,
         agnix_core::FileType::WindsurfRulesLegacy,
+        agnix_core::FileType::WindsurfGlobalRules,
+        agnix_core::FileType::WindsurfHooks,
         agnix_core::FileType::KiroSteering,
         agnix_core::FileType::KiroPower,
         agnix_core::FileType::KiroPowerPlugin,
@@ -317,7 +319,7 @@ fn file_type_enum_covers_all_variants() {
 
     assert_eq!(
         variants.len(),
-        53,
+        55,
         "A new FileType variant may have been added or removed. Please update this test's variant list and the match statement below."
     );
 
@@ -360,6 +362,8 @@ fn file_type_enum_covers_all_variants() {
             agnix_core::FileType::WindsurfRule => {}
             agnix_core::FileType::WindsurfWorkflow => {}
             agnix_core::FileType::WindsurfRulesLegacy => {}
+            agnix_core::FileType::WindsurfGlobalRules => {}
+            agnix_core::FileType::WindsurfHooks => {}
             agnix_core::FileType::KiroSteering => {}
             agnix_core::FileType::KiroPower => {}
             agnix_core::FileType::KiroPowerPlugin => {}

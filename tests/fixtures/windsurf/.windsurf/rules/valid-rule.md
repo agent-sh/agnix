@@ -1,3 +1,7 @@
+---
+trigger: always_on
+---
+
 # TypeScript Guidelines
 
 Use strict mode and explicit types for all TypeScript files.

@@ -48,6 +48,7 @@ pub mod project_level;
 pub mod prompt;
 pub mod skill;
 pub mod windsurf;
+pub mod windsurf_hooks;
 pub mod xml;
 
 use crate::{
