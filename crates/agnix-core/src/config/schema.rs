@@ -15,6 +15,8 @@ pub(in crate::config) const KNOWN_RULE_PREFIXES: &[&str] = &[
     "CC-MEM-",
     "CC-OS-",
     "CC-PL-",
+    "CC-MP-",
+    "CC-MCP-",
     "CC-SET-",
     "CDX-",
     "XML-",

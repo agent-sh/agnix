@@ -1,4 +1,6 @@
-//! MCP (Model Context Protocol) validation (MCP-001 to MCP-026)
+//! MCP (Model Context Protocol) validation (MCP-001 to MCP-024). MCP-025 and
+//! MCP-026 encoded Claude Code facts and moved to `claude_mcp` (CC-MCP-004,
+//! CC-MCP-005), which runs only on Claude Code MCP files.
 
 use crate::{
     config::PerFileLintConfig,
@@ -113,18 +115,6 @@ fn find_json_field_location(content: &str, field_name: &str) -> (usize, usize) {
 /// Returns the full value span (including quotes for strings).
 fn find_unique_json_scalar_value_span(content: &str, key: &str) -> Option<(usize, usize)> {
     crate::span_utils::find_unique_json_scalar_span(content, key)
-}
-
-/// JSON pointers escape server names independently of JSON key encoding.
-fn server_boolean_span(content: &str, name: &str, quoted: &str) -> Option<(usize, usize)> {
-    let root: serde_json::Value = serde_json::from_str(content).ok()?;
-    let name = name.replace('~', "~0").replace('/', "~1");
-    let pointer = if root.get("mcpServers").is_some() {
-        format!("/mcpServers/{name}/alwaysLoad")
-    } else {
-        format!("/{name}/alwaysLoad")
-    };
-    crate::schemas::mcp::quoted_json_boolean_span(content, &pointer, "alwaysLoad", quoted)
 }
 
 use super::find_unique_json_string_value_span;
@@ -244,8 +234,7 @@ fn find_json_field_location_in_span(
 const RULE_IDS: &[&str] = &[
     "MCP-001", "MCP-002", "MCP-003", "MCP-004", "MCP-006", "MCP-007", "MCP-008", "MCP-009",
     "MCP-010", "MCP-011", "MCP-012", "MCP-013", "MCP-014", "MCP-015", "MCP-016", "MCP-017",
-    "MCP-018", "MCP-019", "MCP-020", "MCP-021", "MCP-022", "MCP-023", "MCP-024", "MCP-025",
-    "MCP-026",
+    "MCP-018", "MCP-019", "MCP-020", "MCP-021", "MCP-022", "MCP-023", "MCP-024",
 ];
 
 pub struct McpValidator;
@@ -338,27 +327,16 @@ impl Validator for McpValidator {
         // historical grouping).
         validate_capability_keys(&raw_value, path, content, config, &mut diagnostics);
 
-        // MCP-023 + MCP-026 both walk the top-level `mcpServers` key list.
-        // Hoist the walk here so a file with both rules enabled pays
-        // exactly one JSON scan instead of two; the gated `if` also means
-        // files where neither rule is enabled pay nothing.
-        let server_name_offsets =
-            if config.is_rule_enabled("MCP-023") || config.is_rule_enabled("MCP-026") {
-                collect_mcp_server_name_offsets(content)
-            } else {
-                Vec::new()
-            };
+        // MCP-023 walks the top-level `mcpServers` key list; files where the
+        // rule is disabled pay nothing.
+        let server_name_offsets = if config.is_rule_enabled("MCP-023") {
+            collect_mcp_server_name_offsets(content)
+        } else {
+            Vec::new()
+        };
 
         if config.is_rule_enabled("MCP-023") {
             validate_duplicate_server_names(
-                path,
-                &server_name_offsets,
-                &line_starts,
-                &mut diagnostics,
-            );
-        }
-        if config.is_rule_enabled("MCP-026") {
-            validate_reserved_server_names(
                 path,
                 &server_name_offsets,
                 &line_starts,
@@ -780,57 +758,9 @@ fn validate_duplicate_server_names(
     }
 }
 
-/// MCP-026: flag MCP server names that Claude Code reserves for internal use.
-/// As of Claude Code 2.1.128, `workspace` is a reserved server name - existing
-/// servers with that name are skipped at load with only a warning in Claude
-/// Code's own logs, which is easy for users to miss. Surface it as a hard
-/// config error so the silent-skip footgun is caught before deployment.
-///
-/// Reserved names are compared case-sensitively to match Claude Code's own
-/// comparison - the upstream release note uses the lowercase literal
-/// `workspace`, and MCP server maps elsewhere in the config are
-/// case-sensitive JSON keys.
-fn validate_reserved_server_names(
-    path: &Path,
-    server_name_offsets: &[(String, usize)],
-    line_starts: &[usize],
-    diagnostics: &mut Vec<Diagnostic>,
-) {
-    for (name, offset) in server_name_offsets {
-        if !RESERVED_MCP_SERVER_NAMES.contains(&name.as_str()) {
-            continue;
-        }
-        let (line, col) = line_col_at(*offset, line_starts);
-        diagnostics.push(
-            Diagnostic::error(
-                path.to_path_buf(),
-                line,
-                col,
-                "MCP-026",
-                format!(
-                    "MCP server name '{}' is reserved by Claude Code and will be skipped at load",
-                    name
-                ),
-            )
-            .with_suggestion(
-                "Rename the server to something unique - Claude Code reserves 'workspace' as of v2.1.128 and silently skips servers with reserved names at startup",
-            ),
-        );
-    }
-}
-
-/// Names Claude Code treats as reserved for internal use. Kept as a
-/// `&[&str]` so future reservations (if upstream adds more) just append
-/// here; the scanner stays size-agnostic.
-///
-/// Evidence: anthropics/claude-code release notes for v2.1.128
-/// ("MCP: `workspace` is now a reserved server name").
-const RESERVED_MCP_SERVER_NAMES: &[&str] = &["workspace"];
-
 /// Walks the top-level keys of the `mcpServers` object and yields each
 /// `(name, quote_start_offset)` pair in source order. Used by MCP-023
-/// (duplicates) and MCP-026 (reserved names). Shared so we only pay
-/// one JSON walk per file regardless of how many name-based rules exist.
+/// (duplicates).
 fn collect_mcp_server_name_offsets(content: &str) -> Vec<(String, usize)> {
     let bytes = content.as_bytes();
     let Some(object_start) = find_json_object_start_for_key(content, "mcpServers") else {
@@ -1837,76 +1767,6 @@ fn validate_server(
             ),
         );
     }
-
-    // MCP-025: Claude Code 2.1.121+ introduced an `alwaysLoad` MCP server
-    // field. When `true`, every tool from that server skips tool-search
-    // deferral. The key is declared as boolean; a string like "true" is a
-    // silent footgun - Claude Code treats it as truthy in some code paths
-    // and ignores it in others. Flag non-boolean values so the typo is
-    // caught before it silently disables the intended always-available
-    // behavior.
-    //
-    // Severity is MEDIUM and we emit `Diagnostic::warning` to match
-    // MCP-021 and the other MEDIUM MCP rules. An incorrect alwaysLoad
-    // value fails safe-by-default - Claude Code just uses on-demand
-    // tool search - so this is a config smell, not a breakage.
-    //
-    // Explicit JSON `null` is treated as field-absent, matching JSON
-    // convention and `has_meaningful_server_config` above. For
-    // `Option<Value>`, serde's own `Option` impl collapses an explicit
-    // `null` into `None` (independent of `#[serde(default)]`, which
-    // only affects missing keys). `parse_mcp_server_lenient` filters
-    // `null` before cloning so the two paths agree. The
-    // `!value.is_null()` guard here is defense-in-depth against a
-    // future caller that constructs `McpServerConfig` with
-    // `Some(Value::Null)` directly.
-    //
-    // The diagnostic points at the server-header `(line, col)` used by
-    // all other per-server rules. A precise per-field location would
-    // require a server-span collector (like `collect_tools_array_object_spans`
-    // for tools); left as a future enhancement so every per-server rule
-    // can benefit together rather than MCP-025 inventing its own.
-    if config.is_rule_enabled("MCP-025")
-        && let Some(value) = &server.always_load
-        && !value.is_boolean()
-        && !value.is_null()
-    {
-        let actual_type = match value {
-            serde_json::Value::String(_) => "string",
-            serde_json::Value::Number(_) => "number",
-            serde_json::Value::Array(_) => "array",
-            serde_json::Value::Object(_) => "object",
-            // Bool and Null are excluded by the guards above.
-            serde_json::Value::Bool(_) | serde_json::Value::Null => unreachable!(),
-        };
-        let mut diagnostic = Diagnostic::warning(
-            path.to_path_buf(),
-            line,
-            col,
-            "MCP-025",
-            format!(
-                "Server '{}' has non-boolean 'alwaysLoad' value (got {})",
-                name, actual_type
-            ),
-        )
-        .with_suggestion(
-            "Set alwaysLoad to true or false (unquoted). Non-boolean values are not consistently applied by Claude Code - they may be treated as truthy in some code paths and ignored in others.",
-        );
-
-        if let Some(quoted) = value.as_str()
-            && let Some((start, end)) = server_boolean_span(content, name, quoted)
-        {
-            diagnostic = diagnostic.with_fix(Fix::replace(
-                start,
-                end,
-                quoted,
-                t!("rules.boolean_unwrap.json_fix", value = quoted),
-                false,
-            ));
-        }
-
-        diagnostics.push(diagnostic);
-    }
 }
 
 #[cfg(test)]
@@ -2830,8 +2690,7 @@ mod tests {
         let rules = [
             "MCP-001", "MCP-002", "MCP-003", "MCP-004", "MCP-006", "MCP-007", "MCP-008", "MCP-009",
             "MCP-010", "MCP-011", "MCP-012", "MCP-013", "MCP-014", "MCP-015", "MCP-016", "MCP-017",
-            "MCP-018", "MCP-019", "MCP-020", "MCP-021", "MCP-022", "MCP-023", "MCP-024", "MCP-025",
-            "MCP-026",
+            "MCP-018", "MCP-019", "MCP-020", "MCP-021", "MCP-022", "MCP-023", "MCP-024",
         ];
 
         for rule in rules {
@@ -2874,10 +2733,6 @@ mod tests {
                     r#"{"mcpServers":{"dup":{"type":"stdio","command":"node"},"dup":{"type":"stdio","command":"node"}}}"#
                 }
                 "MCP-024" => r#"{"mcpServers":{"empty":{}}}"#,
-                "MCP-025" => {
-                    r#"{"mcpServers":{"s":{"type":"stdio","command":"node","alwaysLoad":"true"}}}"#
-                }
-                "MCP-026" => r#"{"mcpServers":{"workspace":{"type":"stdio","command":"node"}}}"#,
                 _ => r#"{"tools": [{"name": "t"}]}"#,
             };
 
@@ -3803,289 +3658,11 @@ mod tests {
         );
     }
 
-    // ===== MCP-025 Tests =====
-
-    #[test]
-    fn test_mcp_025_accepts_boolean_true() {
-        let content = r#"{
-            "mcpServers": {
-                "fs": { "type": "stdio", "command": "node", "alwaysLoad": true }
-            }
-        }"#;
-        let diagnostics = validate(content);
-        assert!(
-            !diagnostics.iter().any(|d| d.rule == "MCP-025"),
-            "MCP-025 should not fire on a real boolean"
-        );
-    }
-
-    #[test]
-    fn test_mcp_025_accepts_boolean_false() {
-        let content = r#"{
-            "mcpServers": {
-                "fs": { "type": "stdio", "command": "node", "alwaysLoad": false }
-            }
-        }"#;
-        let diagnostics = validate(content);
-        assert!(!diagnostics.iter().any(|d| d.rule == "MCP-025"));
-    }
-
-    #[test]
-    fn test_mcp_025_accepts_missing_field() {
-        let content = r#"{
-            "mcpServers": {
-                "fs": { "type": "stdio", "command": "node" }
-            }
-        }"#;
-        let diagnostics = validate(content);
-        assert!(!diagnostics.iter().any(|d| d.rule == "MCP-025"));
-    }
-
-    #[test]
-    fn test_mcp_025_flags_string_value() {
-        let content = r#"{
-            "mcpServers": {
-                "fs": { "type": "stdio", "command": "node", "alwaysLoad": "true" }
-            }
-        }"#;
-        let diagnostics = validate(content);
-        let mcp_025: Vec<_> = diagnostics.iter().filter(|d| d.rule == "MCP-025").collect();
-        assert_eq!(mcp_025.len(), 1);
-        assert!(
-            mcp_025[0].message.contains("string"),
-            "diagnostic should mention the actual type, got: {}",
-            mcp_025[0].message
-        );
-    }
-
-    #[test]
-    fn test_mcp_025_flags_number_value() {
-        let content = r#"{
-            "mcpServers": {
-                "fs": { "type": "stdio", "command": "node", "alwaysLoad": 1 }
-            }
-        }"#;
-        let diagnostics = validate(content);
-        let mcp_025: Vec<_> = diagnostics.iter().filter(|d| d.rule == "MCP-025").collect();
-        assert_eq!(mcp_025.len(), 1);
-        assert!(mcp_025[0].message.contains("number"));
-    }
-
     #[test]
     fn test_mcp_004_short_description_is_advisory() {
         let diagnostics = validate(r#"{"name":"test","description":"short","inputSchema":{}}"#);
         let hit = diagnostics.iter().find(|d| d.rule == "MCP-004").unwrap();
         assert_eq!(hit.level, crate::diagnostics::DiagnosticLevel::Info);
-    }
-
-    #[test]
-    fn test_mcp_025_roundtrip_changes_only_intended_server_field() {
-        for content in [
-            r#"{"mcpServers":{"s":{"command":"node","alwaysLoad":"true"}}}"#,
-            r#"{"s":{"command":"node","alwaysLoad":"false"}}"#,
-            r#"{"mcpServers":{"a\"/~é":{"command":"node","alwaysLoad":"false"}}}"#,
-            r#"{"nested":{"mcpServers":{"decoy":{"alwaysLoad":true}}},"mcpServers":{"s":{"command":"node","alwaysLoad":"true"}}}"#,
-            r#"{"mcpServers":{"s":{"command":"node","env":{"alwaysLoad":false},"alwaysLoad":"true"}}}"#,
-        ] {
-            let diagnostics = validate(content);
-            let hit = diagnostics.iter().find(|d| d.rule == "MCP-025").unwrap();
-            assert_eq!(hit.fixes.len(), 1, "{content}");
-            let fix = &hit.fixes[0];
-            assert!(!fix.safe);
-            let mut fixed = content.to_owned();
-            fixed.replace_range(fix.start_byte..fix.end_byte, &fix.replacement);
-            let mut expected: serde_json::Value = serde_json::from_str(content).unwrap();
-            let servers = if expected.get("mcpServers").is_some() {
-                expected.get_mut("mcpServers").unwrap()
-            } else {
-                &mut expected
-            };
-            let server = servers
-                .as_object_mut()
-                .unwrap()
-                .values_mut()
-                .next()
-                .unwrap();
-            server["alwaysLoad"] = serde_json::Value::Bool(fix.replacement == "true");
-            assert_eq!(
-                serde_json::from_str::<serde_json::Value>(&fixed).unwrap(),
-                expected
-            );
-            assert!(!validate(&fixed).iter().any(|d| d.rule == "MCP-025"));
-        }
-    }
-
-    #[test]
-    fn test_mcp_025_no_fix_for_duplicate_maps_or_escaped_decoys() {
-        for content in [
-            r#"{"mcpServers":{},"mcpServers":{"s":{"command":"node","alwaysLoad":"true"}}}"#,
-            r#"{"mcpServers":{"s":{"command":"node","alwaysLoad":false,"alwaysLoad":"true"}}}"#,
-            r#"{"decoy":{"alwaysLoad":"true"},"mcpServers":{"s":{"command":"node","always\u004coad":"true"}}}"#,
-        ] {
-            let diagnostics = validate(content);
-            let hits: Vec<_> = diagnostics.iter().filter(|d| d.rule == "MCP-025").collect();
-            assert_eq!(hits.len(), 1, "{content}");
-            assert!(!hits[0].has_fixes(), "{content}");
-        }
-    }
-
-    #[test]
-    fn test_mcp_025_quoted_true_has_unsafe_unwrap() {
-        let content = r#"{
-            "mcpServers": {
-                "fs": { "type": "stdio", "command": "node", "alwaysLoad": "true" }
-            }
-        }"#;
-        let diagnostics = validate(content);
-        let hits: Vec<_> = diagnostics.iter().filter(|d| d.rule == "MCP-025").collect();
-        assert_eq!(hits.len(), 1);
-        assert!(hits[0].has_fixes());
-        let fix = &hits[0].fixes[0];
-        assert!(!fix.safe);
-        assert_eq!(fix.replacement, "true");
-        assert_eq!(content.get(fix.start_byte..fix.end_byte), Some("\"true\""));
-    }
-
-    #[test]
-    fn test_mcp_025_quoted_false_has_unsafe_unwrap() {
-        let content = r#"{
-            "mcpServers": {
-                "fs": { "type": "stdio", "command": "node", "alwaysLoad": "false" }
-            }
-        }"#;
-        let diagnostics = validate(content);
-        let hits: Vec<_> = diagnostics.iter().filter(|d| d.rule == "MCP-025").collect();
-        assert_eq!(hits.len(), 1);
-        let fix = &hits[0].fixes[0];
-        assert!(!fix.safe);
-        assert_eq!(fix.replacement, "false");
-        assert_eq!(content.get(fix.start_byte..fix.end_byte), Some("\"false\""));
-    }
-
-    #[test]
-    fn test_mcp_025_number_has_no_fix() {
-        let content = r#"{
-            "mcpServers": {
-                "fs": { "type": "stdio", "command": "node", "alwaysLoad": 1 }
-            }
-        }"#;
-        let diagnostics = validate(content);
-        let hits: Vec<_> = diagnostics.iter().filter(|d| d.rule == "MCP-025").collect();
-        assert_eq!(hits.len(), 1);
-        assert!(!hits[0].has_fixes());
-    }
-
-    #[test]
-    fn test_mcp_025_quoted_boolean_is_scoped_to_server() {
-        let content = r#"{
-            "mcpServers": {
-                "fs": { "type": "stdio", "command": "node", "alwaysLoad": true },
-                "web": { "type": "stdio", "command": "node", "alwaysLoad": "false" }
-            }
-        }"#;
-        let diagnostics = validate(content);
-        let hits: Vec<_> = diagnostics.iter().filter(|d| d.rule == "MCP-025").collect();
-        assert_eq!(hits.len(), 1);
-        let fix = &hits[0].fixes[0];
-        assert!(!fix.safe);
-        assert_eq!(fix.replacement, "false");
-        assert_eq!(content.get(fix.start_byte..fix.end_byte), Some("\"false\""));
-    }
-
-    #[test]
-    fn test_mcp_025_null_is_treated_as_absent() {
-        // serde collapses an explicit JSON `null` into "field absent" when
-        // the target is `Option<Value>`, matching the usual JSON convention.
-        // MCP-025 should therefore NOT fire on `alwaysLoad: null` - the
-        // user clearly didn't intend to enable always-load.
-        let content = r#"{
-            "mcpServers": {
-                "fs": { "type": "stdio", "command": "node", "alwaysLoad": null }
-            }
-        }"#;
-        let diagnostics = validate(content);
-        assert!(!diagnostics.iter().any(|d| d.rule == "MCP-025"));
-    }
-
-    #[test]
-    fn test_mcp_025_flags_array_value() {
-        let content = r#"{
-            "mcpServers": {
-                "fs": { "type": "stdio", "command": "node", "alwaysLoad": [true] }
-            }
-        }"#;
-        let diagnostics = validate(content);
-        let mcp_025: Vec<_> = diagnostics.iter().filter(|d| d.rule == "MCP-025").collect();
-        assert_eq!(mcp_025.len(), 1);
-        assert!(mcp_025[0].message.contains("array"));
-    }
-
-    #[test]
-    fn test_mcp_025_flags_object_value() {
-        // Covers the `object` branch of the type-name match arm so no
-        // arm is silently untested - a user might imagine alwaysLoad as
-        // a structured config like `{ "enabled": true, "scope": "all" }`.
-        let content = r#"{
-            "mcpServers": {
-                "fs": {
-                    "type": "stdio",
-                    "command": "node",
-                    "alwaysLoad": { "enabled": true }
-                }
-            }
-        }"#;
-        let diagnostics = validate(content);
-        let mcp_025: Vec<_> = diagnostics.iter().filter(|d| d.rule == "MCP-025").collect();
-        assert_eq!(mcp_025.len(), 1);
-        assert!(
-            mcp_025[0].message.contains("object"),
-            "diagnostic should name the object type, got: {}",
-            mcp_025[0].message
-        );
-    }
-
-    #[test]
-    fn test_mcp_025_emits_warning_not_error() {
-        // Severity is MEDIUM, so the diagnostic level must match the
-        // MEDIUM convention used by MCP-021 and other MEDIUM MCP rules.
-        use crate::diagnostics::DiagnosticLevel;
-        let content = r#"{
-            "mcpServers": {
-                "fs": { "type": "stdio", "command": "node", "alwaysLoad": "true" }
-            }
-        }"#;
-        let diagnostics = validate(content);
-        let mcp_025: Vec<_> = diagnostics.iter().filter(|d| d.rule == "MCP-025").collect();
-        assert_eq!(mcp_025.len(), 1);
-        assert_eq!(
-            mcp_025[0].level,
-            DiagnosticLevel::Warning,
-            "MCP-025 is MEDIUM severity; diagnostic level must be Warning (not Error)"
-        );
-    }
-
-    #[test]
-    fn test_mcp_025_null_ignored_via_lenient_parser_fallback() {
-        // This exercises `parse_mcp_server_lenient` - when a sibling field
-        // forces the fallback (here `args: "oops"` breaks strict parsing),
-        // `alwaysLoad: null` must still be treated as absent rather than
-        // flagged as a non-boolean. Regression guard for Copilot's finding
-        // that the lenient parser was cloning null into Some(Value::Null).
-        let content = r#"{
-            "mcpServers": {
-                "fs": {
-                    "type": "stdio",
-                    "command": "node",
-                    "args": "not-an-array-so-strict-parse-fails",
-                    "alwaysLoad": null
-                }
-            }
-        }"#;
-        let diagnostics = validate(content);
-        assert!(
-            !diagnostics.iter().any(|d| d.rule == "MCP-025"),
-            "MCP-025 must not fire on alwaysLoad: null even through the lenient parser"
-        );
     }
 
     // ===== Multiple servers test =====
@@ -4360,126 +3937,6 @@ mod tests {
         assert!(
             !per_server.is_empty(),
             "flat-shape server must surface per-server diagnostics, got none"
-        );
-    }
-
-    // ===== MCP-026 Tests =====
-
-    #[test]
-    fn test_mcp_026_flags_workspace_server_name() {
-        let content = r#"{
-            "mcpServers": {
-                "workspace": { "type": "stdio", "command": "node" }
-            }
-        }"#;
-        let diagnostics = validate(content);
-        let mcp_026: Vec<_> = diagnostics.iter().filter(|d| d.rule == "MCP-026").collect();
-        assert_eq!(
-            mcp_026.len(),
-            1,
-            "MCP-026 should fire exactly once on a 'workspace' server"
-        );
-
-        let key_offset = content
-            .find(r#""workspace""#)
-            .expect("expected reserved key occurrence");
-        let (expected_line, expected_col) = line_col_at(key_offset, &compute_line_starts(content));
-
-        assert_eq!(mcp_026[0].line, expected_line);
-        assert_eq!(mcp_026[0].column, expected_col);
-        assert_eq!(
-            mcp_026[0].level,
-            crate::diagnostics::DiagnosticLevel::Error,
-            "MCP-026 is HIGH severity - must be an error, not a warning"
-        );
-        assert!(
-            mcp_026[0].message.contains("workspace"),
-            "diagnostic should name the reserved server, got: {}",
-            mcp_026[0].message
-        );
-    }
-
-    #[test]
-    fn test_mcp_026_ignores_non_reserved_names() {
-        let content = r#"{
-            "mcpServers": {
-                "fs": { "type": "stdio", "command": "node" },
-                "remote": { "type": "http", "url": "https://api.example.com/mcp" }
-            }
-        }"#;
-        let diagnostics = validate(content);
-        assert!(
-            !diagnostics.iter().any(|d| d.rule == "MCP-026"),
-            "MCP-026 must not fire on non-reserved server names"
-        );
-    }
-
-    #[test]
-    fn test_mcp_026_is_case_sensitive() {
-        // Claude Code compares server names as raw JSON keys (case-sensitive).
-        // Uppercase 'Workspace' is NOT reserved - don't false-positive.
-        let content = r#"{
-            "mcpServers": {
-                "Workspace": { "type": "stdio", "command": "node" }
-            }
-        }"#;
-        let diagnostics = validate(content);
-        assert!(
-            !diagnostics.iter().any(|d| d.rule == "MCP-026"),
-            "MCP-026 must be case-sensitive - 'Workspace' != 'workspace'"
-        );
-    }
-
-    #[test]
-    fn test_mcp_026_ignores_workspace_mention_in_string_literal() {
-        // 'workspace' appearing as a string value (not a key) must not trip
-        // the scanner. Shares the same JSON-key walker as MCP-023 so the
-        // test is deliberately structural.
-        let content = r#"{
-            "note": "the 'workspace' name is reserved",
-            "mcpServers": {
-                "fs": { "type": "stdio", "command": "node" }
-            }
-        }"#;
-        let diagnostics = validate(content);
-        assert!(
-            !diagnostics.iter().any(|d| d.rule == "MCP-026"),
-            "MCP-026 must only match top-level mcpServers keys"
-        );
-    }
-
-    #[test]
-    fn test_mcp_026_fires_alongside_siblings() {
-        // A 'workspace' server in the same map as valid servers must still
-        // be flagged without affecting the siblings.
-        let content = r#"{
-            "mcpServers": {
-                "fs": { "type": "stdio", "command": "node" },
-                "workspace": { "type": "stdio", "command": "python" },
-                "remote": { "type": "http", "url": "https://api.example.com/mcp" }
-            }
-        }"#;
-        let diagnostics = validate(content);
-        let mcp_026: Vec<_> = diagnostics.iter().filter(|d| d.rule == "MCP-026").collect();
-        assert_eq!(mcp_026.len(), 1);
-    }
-
-    #[test]
-    fn test_mcp_026_suggestion_mentions_claude_code() {
-        // The suggestion text is what users see in the editor hover. It
-        // must make clear the name is Claude-Code-specific so a user
-        // migrating from another MCP host isn't confused.
-        let content = r#"{"mcpServers":{"workspace":{"type":"stdio","command":"node"}}}"#;
-        let diagnostics = validate(content);
-        let mcp_026 = diagnostics
-            .iter()
-            .find(|d| d.rule == "MCP-026")
-            .expect("MCP-026 diagnostic");
-        let suggestion = mcp_026.suggestion.as_deref().unwrap_or("");
-        assert!(
-            suggestion.contains("Claude Code"),
-            "suggestion should identify Claude Code as the source of the reservation, got: {}",
-            suggestion
         );
     }
 }

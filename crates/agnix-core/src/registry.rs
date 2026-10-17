@@ -398,7 +398,7 @@ impl ValidatorRegistryBuilder {
 ///
 /// Used by `BuiltinProvider` (via `debug_assert_eq!`) and tests to catch
 /// accidental additions or removals without updating all providers.
-const EXPECTED_BUILTIN_COUNT: usize = 88;
+const EXPECTED_BUILTIN_COUNT: usize = 94;
 
 // -- Category providers -----------------------------------------------------
 //
@@ -428,6 +428,24 @@ impl ValidatorProvider for SkillProvider {
             ),
             (FileType::Skill, Some("XmlValidator"), xml_validator),
             (FileType::Skill, Some("ImportsValidator"), imports_validator),
+            // Legacy `.claude/commands/` files take the skill frontmatter, and
+            // keep the generic Markdown checks they got before detection.
+            (
+                FileType::ClaudeCommand,
+                Some("SkillValidator"),
+                skill_validator,
+            ),
+            (
+                FileType::ClaudeCommand,
+                Some("CrossPlatformValidator"),
+                cross_platform_validator,
+            ),
+            (FileType::ClaudeCommand, Some("XmlValidator"), xml_validator),
+            (
+                FileType::ClaudeCommand,
+                Some("ImportsValidator"),
+                imports_validator,
+            ),
         ]
     }
 }
@@ -736,7 +754,17 @@ impl ValidatorProvider for MiscProvider {
                 Some("CodexPluginValidator"),
                 codex_plugin_validator,
             ),
+            (
+                FileType::ClaudeMarketplace,
+                Some("ClaudeMarketplaceValidator"),
+                claude_marketplace_validator,
+            ),
             (FileType::Mcp, Some("McpValidator"), mcp_validator),
+            (
+                FileType::Mcp,
+                Some("ClaudeMcpValidator"),
+                claude_mcp_validator,
+            ),
             (
                 FileType::ClineRules,
                 Some("ClineValidator"),
@@ -944,6 +972,14 @@ fn plugin_validator() -> Box<dyn Validator> {
 
 fn mcp_validator() -> Box<dyn Validator> {
     Box::new(crate::rules::mcp::McpValidator)
+}
+
+fn claude_mcp_validator() -> Box<dyn Validator> {
+    Box::new(crate::rules::claude_mcp::ClaudeMcpValidator)
+}
+
+fn claude_marketplace_validator() -> Box<dyn Validator> {
+    Box::new(crate::rules::claude_marketplace::ClaudeMarketplaceValidator)
 }
 
 fn xml_validator() -> Box<dyn Validator> {
@@ -1507,6 +1543,7 @@ mod tests {
             FileType::AmpCheck,
             FileType::Hooks,
             FileType::Plugin,
+            FileType::ClaudeMarketplace,
             FileType::Mcp,
             FileType::Copilot,
             FileType::CopilotScoped,
@@ -1515,6 +1552,7 @@ mod tests {
             FileType::CopilotHooks,
             FileType::ClaudeRule,
             FileType::ClaudeOutputStyle,
+            FileType::ClaudeCommand,
             FileType::CursorRule,
             FileType::CursorHooks,
             FileType::CursorAgent,
@@ -1564,6 +1602,7 @@ mod tests {
                 | FileType::AmpCheck
                 | FileType::Hooks
                 | FileType::Plugin
+                | FileType::ClaudeMarketplace
                 | FileType::Mcp
                 | FileType::Copilot
                 | FileType::CopilotScoped
@@ -1572,6 +1611,7 @@ mod tests {
                 | FileType::CopilotHooks
                 | FileType::ClaudeRule
                 | FileType::ClaudeOutputStyle
+                | FileType::ClaudeCommand
                 | FileType::CursorRule
                 | FileType::CursorHooks
                 | FileType::CursorAgent

@@ -1,5 +1,6 @@
 use crate::config::PerFileLintConfig;
 use crate::diagnostics::{Diagnostic, Fix};
+use crate::rules::claude_json_spans::{JsonLocator, Seg};
 use crate::rules::find_closest_value;
 use crate::schemas::hooks::HooksSchema;
 use regex::Regex;
@@ -980,76 +981,6 @@ pub(super) fn validate_cc_hk_020_http_missing_url(
     });
 }
 
-/// CC-HK-021: Invalid `if` field syntax.
-/// The `if` field must be a non-empty string and is only valid on tool events.
-#[allow(dead_code)]
-pub(super) fn validate_cc_hk_021_invalid_if_field(
-    raw_value: &serde_json::Value,
-    path: &Path,
-    diagnostics: &mut Vec<Diagnostic>,
-) {
-    let tool_events = HooksSchema::TOOL_EVENTS;
-    if let Some(hooks_obj) = raw_value.get("hooks").and_then(|h| h.as_object()) {
-        for (event, matchers) in hooks_obj {
-            if let Some(matchers_arr) = matchers.as_array() {
-                for (matcher_idx, matcher) in matchers_arr.iter().enumerate() {
-                    if let Some(hooks_arr) = matcher.get("hooks").and_then(|h| h.as_array()) {
-                        for (hook_idx, hook) in hooks_arr.iter().enumerate() {
-                            if let Some(if_val) = hook.get("if") {
-                                let hook_location =
-                                    format!("hooks.{}[{}].hooks[{}]", event, matcher_idx, hook_idx);
-
-                                // Check if the event is a tool event
-                                if !tool_events.contains(&event.as_str()) {
-                                    diagnostics.push(
-                                        Diagnostic::warning(
-                                            path.to_path_buf(),
-                                            1,
-                                            0,
-                                            "CC-HK-021",
-                                            format!(
-                                                "Hook at {} has 'if' field on non-tool event '{}'; 'if' is only valid on tool events: {}",
-                                                hook_location, event, HooksSchema::TOOL_EVENTS.join(", ")
-                                            ),
-                                        )
-                                        .with_suggestion(
-                                            "Remove the 'if' field or move the hook to a tool event".to_string(),
-                                        ),
-                                    );
-                                    continue;
-                                }
-
-                                // Validate it is a non-empty string
-                                let is_invalid = match if_val {
-                                    serde_json::Value::String(s) => s.is_empty(),
-                                    _ => true,
-                                };
-                                if is_invalid {
-                                    diagnostics.push(
-                                        Diagnostic::warning(
-                                            path.to_path_buf(),
-                                            1,
-                                            0,
-                                            "CC-HK-021",
-                                            format!(
-                                                "Hook at {} has invalid 'if' field; must be a non-empty string",
-                                                hook_location
-                                            ),
-                                        )
-                                        .with_suggestion(
-                                            "Set 'if' to a valid filter expression string".to_string(),
-                                        ),
-                                    );
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
 /// CC-HK-022: Invalid `shell` value.
 /// When present, `shell` must be either "bash" or "powershell".
 #[allow(dead_code)]
@@ -1168,6 +1099,27 @@ pub(super) fn validate_cc_hk_024_headers_env_vars(
     });
 }
 
+/// The combining syntax an `if` rule uses outside parentheses: `&&`, `||`
+/// or a `,` list. Text inside `Tool(...)` is the rule's own argument (a Bash
+/// pattern may contain `&&`), so it is skipped.
+pub(super) fn if_rule_combinator(rule: &str) -> Option<&'static str> {
+    let bytes = rule.as_bytes();
+    let mut depth = 0usize;
+    let mut i = 0;
+    while i < bytes.len() {
+        match bytes[i] {
+            b'(' => depth += 1,
+            b')' => depth = depth.saturating_sub(1),
+            b'&' if depth == 0 && bytes.get(i + 1) == Some(&b'&') => return Some("&&"),
+            b'|' if depth == 0 && bytes.get(i + 1) == Some(&b'|') => return Some("||"),
+            b',' if depth == 0 => return Some(","),
+            _ => {}
+        }
+        i += 1;
+    }
+    None
+}
+
 /// Consolidated raw-JSON validation for hooks.
 ///
 /// Walks the hooks tree at most twice instead of 11 separate traversals:
@@ -1181,6 +1133,7 @@ pub(super) fn validate_all_raw_hooks(
     raw_value: &serde_json::Value,
     path: &Path,
     content: &str,
+    locator: &JsonLocator<'_>,
     config: &PerFileLintConfig<'_>,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> bool {
@@ -1536,47 +1489,81 @@ pub(super) fn validate_all_raw_hooks(
                             }
                         }
 
-                        // CC-HK-021: Invalid if field syntax
+                        // CC-HK-021: `if` is "Only evaluated on tool events ...
+                        // On other events, a hook with `if` set never runs", and
+                        // it "holds exactly one permission rule. There is no
+                        // `&&`, `||`, or list syntax".
                         if check_021 {
                             if let Some(if_val) = hook.get("if") {
+                                let if_path = [
+                                    Seg::Key("hooks"),
+                                    Seg::Key(event.as_str()),
+                                    Seg::Index(matcher_idx),
+                                    Seg::Key("hooks"),
+                                    Seg::Index(hook_idx),
+                                    Seg::Key("if"),
+                                ];
                                 if !tool_events.contains(&event.as_str()) {
+                                    let (line, col) = locator.key_pos(&if_path);
                                     conditional_diags.push(
-                                        Diagnostic::warning(
+                                        Diagnostic::error(
                                             path.to_path_buf(),
-                                            1,
-                                            0,
+                                            line,
+                                            col,
                                             "CC-HK-021",
-                                            format!(
-                                                "Hook at {} has 'if' field on non-tool event '{}'; 'if' is only valid on tool events: {}",
-                                                hook_location, event, HooksSchema::TOOL_EVENTS.join(", ")
+                                            t!(
+                                                "rules.cc_hk_021.non_tool_event",
+                                                location = hook_location.as_str(),
+                                                event = event.as_str(),
+                                                events = HooksSchema::TOOL_EVENTS.join(", ")
                                             ),
                                         )
                                         .with_suggestion(
-                                            "Remove the 'if' field or move the hook to a tool event".to_string(),
+                                            t!("rules.cc_hk_021.non_tool_event_suggestion"),
                                         ),
                                     );
                                 } else {
-                                    let is_invalid = match if_val {
-                                        serde_json::Value::String(s) => s.is_empty(),
-                                        _ => true,
-                                    };
-                                    if is_invalid {
-                                        conditional_diags.push(
-                                            Diagnostic::warning(
-                                                path.to_path_buf(),
-                                                1,
-                                                0,
-                                                "CC-HK-021",
-                                                format!(
-                                                    "Hook at {} has invalid 'if' field; must be a non-empty string",
-                                                    hook_location
-                                                ),
-                                            )
-                                            .with_suggestion(
-                                                "Set 'if' to a valid filter expression string"
-                                                    .to_string(),
-                                            ),
-                                        );
+                                    let (line, col) = locator.value_pos(&if_path);
+                                    match if_val {
+                                        serde_json::Value::String(rule)
+                                            if !rule.trim().is_empty() =>
+                                        {
+                                            if let Some(op) = if_rule_combinator(rule) {
+                                                conditional_diags.push(
+                                                    Diagnostic::warning(
+                                                        path.to_path_buf(),
+                                                        line,
+                                                        col,
+                                                        "CC-HK-021",
+                                                        t!(
+                                                            "rules.cc_hk_021.combined",
+                                                            location = hook_location.as_str(),
+                                                            operator = op
+                                                        ),
+                                                    )
+                                                    .with_suggestion(t!(
+                                                        "rules.cc_hk_021.combined_suggestion"
+                                                    )),
+                                                );
+                                            }
+                                        }
+                                        _ => {
+                                            conditional_diags.push(
+                                                Diagnostic::warning(
+                                                    path.to_path_buf(),
+                                                    line,
+                                                    col,
+                                                    "CC-HK-021",
+                                                    t!(
+                                                        "rules.cc_hk_021.invalid",
+                                                        location = hook_location.as_str()
+                                                    ),
+                                                )
+                                                .with_suggestion(t!(
+                                                    "rules.cc_hk_021.invalid_suggestion"
+                                                )),
+                                            );
+                                        }
                                     }
                                 }
                             }

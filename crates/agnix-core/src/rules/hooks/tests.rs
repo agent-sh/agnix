@@ -1081,31 +1081,6 @@ fn test_cc_hk_003_missing_matcher_pretooluse() {
 }
 
 #[test]
-fn test_cc_hk_003_missing_matcher_permission_request() {
-    let content = r#"{
-            "hooks": {
-                "PermissionRequest": [
-                    {
-                        "hooks": [
-                            { "type": "command", "command": "echo 'test'" }
-                        ]
-                    }
-                ]
-            }
-        }"#;
-
-    let diagnostics = validate(content);
-    let cc_hk_003: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-HK-003")
-        .collect();
-
-    assert_eq!(cc_hk_003.len(), 1);
-    assert_eq!(cc_hk_003[0].level, DiagnosticLevel::Info);
-    assert!(cc_hk_003[0].message.contains("has no matcher"));
-}
-
-#[test]
 fn test_cc_hk_003_missing_matcher_posttooluse() {
     let content = r#"{
             "hooks": {
@@ -1188,8 +1163,13 @@ fn test_fixture_missing_matcher() {
         .iter()
         .filter(|d| d.rule == "CC-HK-003")
         .collect();
-    // All 4 tool events without matchers
-    assert_eq!(cc_hk_003.len(), 4);
+    // 3 of the 4 tool events without matchers; the PermissionRequest group is
+    // reported by CC-HK-035 (broad PermissionRequest matcher) instead.
+    assert_eq!(cc_hk_003.len(), 3);
+    assert_eq!(
+        diagnostics.iter().filter(|d| d.rule == "CC-HK-035").count(),
+        1
+    );
     assert!(
         cc_hk_003.iter().all(|d| d.level == DiagnosticLevel::Info),
         "All CC-HK-003 diagnostics should be Info level"
@@ -1748,84 +1728,10 @@ fn test_find_event_key_position_not_found() {
     assert!(pos.is_none());
 }
 
-// ===== CC-HK-010 Tests: No Timeout Specified =====
-
-#[test]
-fn test_cc_hk_010_command_hook_no_timeout() {
-    let content = r#"{
-            "hooks": {
-                "PreToolUse": [
-                    {
-                        "matcher": "Bash",
-                        "hooks": [
-                            { "type": "command", "command": "echo test" }
-                        ]
-                    }
-                ]
-            }
-        }"#;
-
-    let diagnostics = validate(content);
-    let cc_hk_010: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-HK-010")
-        .collect();
-
-    assert_eq!(cc_hk_010.len(), 1);
-    assert_eq!(cc_hk_010[0].level, DiagnosticLevel::Warning);
-    assert!(cc_hk_010[0].message.contains("no timeout specified"));
-}
-
-#[test]
-fn test_cc_hk_010_prompt_hook_no_timeout() {
-    let content = r#"{
-            "hooks": {
-                "Stop": [
-                    {
-                        "hooks": [
-                            { "type": "prompt", "prompt": "Summarize session" }
-                        ]
-                    }
-                ]
-            }
-        }"#;
-
-    let diagnostics = validate(content);
-    let cc_hk_010: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-HK-010")
-        .collect();
-
-    assert_eq!(cc_hk_010.len(), 1);
-    assert_eq!(cc_hk_010[0].level, DiagnosticLevel::Warning);
-    assert!(cc_hk_010[0].message.contains("Prompt hook"));
-}
-
-#[test]
-fn test_cc_hk_010_agent_hook_uses_agent_default_timeout() {
-    let content = r#"{
-            "hooks": {
-                "Stop": [
-                    {
-                        "hooks": [
-                            { "type": "agent", "prompt": "Review $ARGUMENTS", "timeout": 61 }
-                        ]
-                    }
-                ]
-            }
-        }"#;
-
-    let diagnostics = validate(content);
-    let cc_hk_010: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-HK-010")
-        .collect();
-
-    assert_eq!(cc_hk_010.len(), 1);
-    assert_eq!(cc_hk_010[0].level, DiagnosticLevel::Warning);
-    assert!(cc_hk_010[0].message.contains("Agent hook"));
-    assert!(cc_hk_010[0].message.contains("exceeding 60s default"));
-}
+// ===== CC-HK-010 Tests: timeouts other than SessionEnd are not reported =====
+// CC-HK-010 no longer warns about a missing timeout or one above the default:
+// the hooks reference documents defaults only, and its own agent-hook example
+// sets "timeout": 120. SessionEnd cases are in tests_extra.rs.
 
 #[test]
 fn test_cc_hk_010_agent_timeout_at_default_ok() {
@@ -1875,33 +1781,6 @@ fn test_cc_hk_010_with_timeout_ok() {
 }
 
 #[test]
-fn test_cc_hk_010_command_timeout_exceeds_default() {
-    // Command hooks have 600s default - 700 should warn
-    let content = r#"{
-            "hooks": {
-                "PreToolUse": [
-                    {
-                        "matcher": "Bash",
-                        "hooks": [
-                            { "type": "command", "command": "echo test", "timeout": 700 }
-                        ]
-                    }
-                ]
-            }
-        }"#;
-
-    let diagnostics = validate(content);
-    let cc_hk_010: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-HK-010")
-        .collect();
-
-    assert_eq!(cc_hk_010.len(), 1);
-    assert_eq!(cc_hk_010[0].level, DiagnosticLevel::Warning);
-    assert!(cc_hk_010[0].message.contains("exceeding 600s default"));
-}
-
-#[test]
 fn test_cc_hk_010_command_timeout_at_default_ok() {
     // Command hooks have 600s default - 600 should NOT warn
     let content = r#"{
@@ -1927,32 +1806,6 @@ fn test_cc_hk_010_command_timeout_at_default_ok() {
 }
 
 #[test]
-fn test_cc_hk_010_prompt_timeout_exceeds_default() {
-    // Prompt hooks have 30s default - 45 should warn
-    let content = r#"{
-            "hooks": {
-                "Stop": [
-                    {
-                        "hooks": [
-                            { "type": "prompt", "prompt": "test prompt", "timeout": 45 }
-                        ]
-                    }
-                ]
-            }
-        }"#;
-
-    let diagnostics = validate(content);
-    let cc_hk_010: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-HK-010")
-        .collect();
-
-    assert_eq!(cc_hk_010.len(), 1);
-    assert_eq!(cc_hk_010[0].level, DiagnosticLevel::Warning);
-    assert!(cc_hk_010[0].message.contains("exceeding 30s default"));
-}
-
-#[test]
 fn test_cc_hk_010_prompt_timeout_at_default_ok() {
     // Prompt hooks have 30s default - 30 should NOT warn
     let content = r#"{
@@ -1974,45 +1827,6 @@ fn test_cc_hk_010_prompt_timeout_at_default_ok() {
         .collect();
 
     assert_eq!(cc_hk_010.len(), 0);
-}
-
-#[test]
-fn test_cc_hk_010_multiple_hooks_mixed() {
-    let content = r#"{
-            "hooks": {
-                "PreToolUse": [
-                    {
-                        "matcher": "*",
-                        "hooks": [
-                            { "type": "command", "command": "echo 'no timeout'" },
-                            { "type": "command", "command": "echo 'with timeout'", "timeout": 30 },
-                            { "type": "command", "command": "echo 'also no timeout'" }
-                        ]
-                    }
-                ]
-            }
-        }"#;
-
-    let diagnostics = validate(content);
-    let cc_hk_010: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-HK-010")
-        .collect();
-
-    assert_eq!(cc_hk_010.len(), 2);
-}
-
-#[test]
-fn test_fixture_no_timeout() {
-    let content =
-        include_str!("../../../../../tests/fixtures/invalid/hooks/no-timeout/settings.json");
-    let diagnostics = validate(content);
-    let cc_hk_010: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-HK-010")
-        .collect();
-    // PreToolUse command and Stop prompt are missing timeout
-    assert_eq!(cc_hk_010.len(), 2);
 }
 
 // ===== CC-HK-011 Tests: Invalid Timeout Value =====
@@ -2427,133 +2241,6 @@ fn test_config_dangerous_pattern_disabled() {
     assert_eq!(cc_hk_009.len(), 0);
 }
 
-// ===== Version-Aware CC-HK-010 Tests =====
-
-#[test]
-fn test_cc_hk_010_assumption_when_version_not_pinned() {
-    // Default config has no version pinned
-    let config = LintConfig::default();
-    assert!(!config.is_claude_code_version_pinned());
-
-    let content = r#"{
-            "hooks": {
-                "PreToolUse": [
-                    {
-                        "matcher": "Bash",
-                        "hooks": [
-                            { "type": "command", "command": "echo test" }
-                        ]
-                    }
-                ]
-            }
-        }"#;
-
-    let validator = HooksValidator;
-    let diagnostics = validator.validate(Path::new("settings.json"), content, &config);
-
-    let cc_hk_010: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-HK-010")
-        .collect();
-
-    assert_eq!(cc_hk_010.len(), 1);
-    // Should have an assumption note when version not pinned
-    assert!(cc_hk_010[0].assumption.is_some());
-    let assumption = cc_hk_010[0].assumption.as_ref().unwrap();
-    assert!(assumption.contains("Assumes Claude Code default timeout behavior"));
-    assert!(assumption.contains("[tool_versions]"));
-}
-
-#[test]
-fn test_cc_hk_010_no_assumption_when_version_pinned() {
-    let mut config = LintConfig::default();
-    config.tool_versions_mut().claude_code = Some("1.0.0".to_string());
-    assert!(config.is_claude_code_version_pinned());
-
-    let content = r#"{
-            "hooks": {
-                "PreToolUse": [
-                    {
-                        "matcher": "Bash",
-                        "hooks": [
-                            { "type": "command", "command": "echo test" }
-                        ]
-                    }
-                ]
-            }
-        }"#;
-
-    let validator = HooksValidator;
-    let diagnostics = validator.validate(Path::new("settings.json"), content, &config);
-
-    let cc_hk_010: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-HK-010")
-        .collect();
-
-    assert_eq!(cc_hk_010.len(), 1);
-    // Should NOT have an assumption note when version is pinned
-    assert!(cc_hk_010[0].assumption.is_none());
-}
-
-#[test]
-fn test_cc_hk_010_prompt_assumption_when_version_not_pinned() {
-    let config = LintConfig::default();
-
-    let content = r#"{
-            "hooks": {
-                "Stop": [
-                    {
-                        "hooks": [
-                            { "type": "prompt", "prompt": "Summarize session" }
-                        ]
-                    }
-                ]
-            }
-        }"#;
-
-    let validator = HooksValidator;
-    let diagnostics = validator.validate(Path::new("settings.json"), content, &config);
-
-    let cc_hk_010: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-HK-010")
-        .collect();
-
-    assert_eq!(cc_hk_010.len(), 1);
-    assert!(cc_hk_010[0].assumption.is_some());
-}
-
-#[test]
-fn test_cc_hk_010_exceeds_default_assumption_when_version_not_pinned() {
-    let config = LintConfig::default();
-
-    let content = r#"{
-            "hooks": {
-                "PreToolUse": [
-                    {
-                        "matcher": "Bash",
-                        "hooks": [
-                            { "type": "command", "command": "echo test", "timeout": 700 }
-                        ]
-                    }
-                ]
-            }
-        }"#;
-
-    let validator = HooksValidator;
-    let diagnostics = validator.validate(Path::new("settings.json"), content, &config);
-
-    let cc_hk_010: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-HK-010")
-        .collect();
-
-    assert_eq!(cc_hk_010.len(), 1);
-    // Warning about exceeding default should also have assumption when unpinned
-    assert!(cc_hk_010[0].assumption.is_some());
-}
-
 // ===== CC-HK-012: Hooks Parse Error =====
 
 #[test]
@@ -2800,8 +2487,12 @@ fn test_cc_hk_001_model_switch_events_are_valid() {
 
 #[test]
 fn test_cc_hk_003_all_tool_events_hint_matcher() {
-    // Must match HooksSchema::TOOL_EVENTS constant
-    let tool_events = HooksSchema::TOOL_EVENTS;
+    // Must match HooksSchema::TOOL_EVENTS constant. PermissionRequest is
+    // excluded: a PermissionRequest group without a matcher can approve every
+    // permission prompt, so CC-HK-035 reports it instead of this hint.
+    let tool_events = HooksSchema::TOOL_EVENTS
+        .iter()
+        .filter(|event| **event != "PermissionRequest");
 
     for event in tool_events {
         let content = format!(
@@ -3484,140 +3175,6 @@ fn test_cc_hk_016_non_string_type() {
     );
 }
 
-// ===== CC-HK-017 Tests: Prompt Hook Missing $ARGUMENTS =====
-
-#[test]
-fn test_cc_hk_017_prompt_missing_arguments() {
-    let content = r#"{
-            "hooks": {
-                "Stop": [
-                    {
-                        "hooks": [
-                            { "type": "prompt", "prompt": "Summarize what happened in this session" }
-                        ]
-                    }
-                ]
-            }
-        }"#;
-
-    let diagnostics = validate(content);
-    let cc_hk_017: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-HK-017")
-        .collect();
-
-    assert_eq!(cc_hk_017.len(), 1);
-    assert_eq!(cc_hk_017[0].level, DiagnosticLevel::Warning);
-    assert!(cc_hk_017[0].message.contains("$ARGUMENTS"));
-}
-
-#[test]
-fn test_cc_hk_017_prompt_with_arguments_ok() {
-    let content = r#"{
-            "hooks": {
-                "Stop": [
-                    {
-                        "hooks": [
-                            { "type": "prompt", "prompt": "Summarize: $ARGUMENTS" }
-                        ]
-                    }
-                ]
-            }
-        }"#;
-
-    let diagnostics = validate(content);
-    let cc_hk_017: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-HK-017")
-        .collect();
-
-    assert_eq!(cc_hk_017.len(), 0);
-}
-
-#[test]
-fn test_cc_hk_017_agent_missing_arguments() {
-    let content = r#"{
-            "hooks": {
-                "Stop": [
-                    {
-                        "hooks": [
-                            { "type": "agent", "prompt": "Review the session" }
-                        ]
-                    }
-                ]
-            }
-        }"#;
-
-    let diagnostics = validate(content);
-    let cc_hk_017: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-HK-017")
-        .collect();
-
-    assert_eq!(cc_hk_017.len(), 1);
-}
-
-#[test]
-fn test_cc_hk_017_agent_with_arguments_ok() {
-    let content = r#"{
-            "hooks": {
-                "Stop": [
-                    {
-                        "hooks": [
-                            { "type": "agent", "prompt": "Review: $ARGUMENTS" }
-                        ]
-                    }
-                ]
-            }
-        }"#;
-
-    let diagnostics = validate(content);
-    let cc_hk_017: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-HK-017")
-        .collect();
-
-    assert_eq!(cc_hk_017.len(), 0);
-}
-
-#[test]
-fn test_cc_hk_017_no_prompt_field_no_trigger() {
-    // Missing prompt field should not trigger CC-HK-017 (that's CC-HK-007's job)
-    let content = r#"{
-            "hooks": {
-                "Stop": [
-                    {
-                        "hooks": [
-                            { "type": "prompt" }
-                        ]
-                    }
-                ]
-            }
-        }"#;
-
-    let diagnostics = validate(content);
-    let cc_hk_017: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-HK-017")
-        .collect();
-
-    assert_eq!(cc_hk_017.len(), 0);
-}
-
-#[test]
-fn test_fixture_prompt_missing_arguments() {
-    let content = include_str!(
-        "../../../../../tests/fixtures/invalid/hooks/prompt-missing-arguments/settings.json"
-    );
-    let diagnostics = validate(content);
-    let cc_hk_017: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-HK-017")
-        .collect();
-    // First prompt lacks $ARGUMENTS, second has it
-    assert_eq!(cc_hk_017.len(), 1);
-}
-
 // ===== CC-HK-018 Tests: Matcher on UserPromptSubmit/Stop =====
 
 #[test]
@@ -3797,29 +3354,6 @@ fn test_agent_hook_missing_prompt() {
         .filter(|d| d.rule == "CC-HK-007")
         .collect();
     assert_eq!(cc_hk_007.len(), 1);
-}
-
-#[test]
-fn test_agent_hook_timeout_policy() {
-    let content = r#"{
-            "hooks": {
-                "Stop": [
-                    {
-                        "hooks": [
-                            { "type": "agent", "prompt": "Review $ARGUMENTS" }
-                        ]
-                    }
-                ]
-            }
-        }"#;
-
-    let diagnostics = validate(content);
-    let cc_hk_010: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-HK-010")
-        .collect();
-    // Agent hooks should get timeout warnings like prompt hooks
-    assert_eq!(cc_hk_010.len(), 1);
 }
 
 // ===== CC-HK-013 Auto-Fix =====
@@ -4338,31 +3872,6 @@ fn test_cc_hk_020_http_hook_non_string_url() {
 // ---------------------------------------------------------------------------
 // CC-HK-021: Invalid `if` field
 // ---------------------------------------------------------------------------
-
-#[test]
-fn test_cc_hk_021_if_field_on_non_tool_event() {
-    let content = r#"{
-            "hooks": {
-                "Stop": [
-                    {
-                        "hooks": [
-                            { "type": "command", "command": "echo done", "if": "tool === 'Bash'" }
-                        ]
-                    }
-                ]
-            }
-        }"#;
-
-    let diagnostics = validate(content);
-    let cc_hk_021: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CC-HK-021")
-        .collect();
-
-    assert_eq!(cc_hk_021.len(), 1);
-    assert_eq!(cc_hk_021[0].level, DiagnosticLevel::Warning);
-    assert!(cc_hk_021[0].message.contains("non-tool event"));
-}
 
 #[test]
 fn test_cc_hk_021_if_field_on_pre_tool_use_ok() {
@@ -5500,112 +5009,6 @@ fn test_cc_hk_025_removed_session_end_matcher_respects_version_pin() {
             "{version}: {diagnostics:?}"
         );
     }
-}
-
-#[test]
-fn test_cc_hk_010_command_defaults_follow_event() {
-    for (event, default) in [
-        ("UserPromptSubmit", 30),
-        ("PreModelSwitch", 30),
-        ("PostModelSwitch", 30),
-        ("MessageDisplay", 10),
-        ("PreToolUse", 600),
-        ("DirectoryAdded", 600),
-    ] {
-        for (timeout, warns) in [(default, false), (default + 1, true)] {
-            let content = command_hook_settings(
-                event,
-                None,
-                serde_json::json!({"type":"command", "command":"echo event", "timeout":timeout}),
-            );
-            let diagnostics = validate(&content);
-            let hits: Vec<_> = diagnostics
-                .iter()
-                .filter(|d| d.rule == "CC-HK-010")
-                .collect();
-            assert_eq!(
-                !hits.is_empty(),
-                warns,
-                "{event}/{timeout}: {diagnostics:?}"
-            );
-            if warns {
-                assert!(hits[0].message.contains(&format!("{default}s default")));
-            }
-        }
-        let content = command_hook_settings(
-            event,
-            None,
-            serde_json::json!({"type":"command", "command":"echo event"}),
-        );
-        let diagnostics = validate(&content);
-        let hit = diagnostics.iter().find(|d| d.rule == "CC-HK-010").unwrap();
-        assert!(
-            hit.suggestion
-                .as_deref()
-                .unwrap()
-                .contains(&default.to_string())
-        );
-    }
-}
-
-#[test]
-fn test_cc_hk_010_async_timeout_is_not_enforced_but_async_rewake_is() {
-    for (is_async, async_rewake, timeout, warns) in [
-        (true, false, None, false),
-        (true, false, Some(700), false),
-        (false, true, None, true),
-        (false, true, Some(700), true),
-        (true, true, Some(700), true),
-        (false, false, Some(600), false),
-    ] {
-        let mut hook = serde_json::json!({
-            "type":"command", "command":"echo event", "async":is_async, "asyncRewake":async_rewake,
-        });
-        if let Some(timeout) = timeout {
-            hook["timeout"] = serde_json::json!(timeout);
-        }
-        let content = command_hook_settings("PostToolUse", Some("Write"), hook);
-        let diagnostics = validate(&content);
-        assert!(
-            !diagnostics.iter().any(|d| d.rule == "CC-HK-012"),
-            "{diagnostics:?}"
-        );
-        assert_eq!(
-            diagnostics.iter().any(|d| d.rule == "CC-HK-010"),
-            warns,
-            "async={is_async}, asyncRewake={async_rewake}, timeout={timeout:?}: {diagnostics:?}"
-        );
-    }
-}
-
-#[test]
-fn test_cc_hk_010_session_end_accepts_settings_budget_overrides() {
-    for (timeout, warns) in [(1, false), (5, false), (60, false), (61, true)] {
-        let content = command_hook_settings(
-            "SessionEnd",
-            None,
-            serde_json::json!({"type":"command", "command":"echo exit", "timeout":timeout}),
-        );
-        let diagnostics = validate(&content);
-        assert_eq!(
-            diagnostics.iter().any(|d| d.rule == "CC-HK-010"),
-            warns,
-            "{diagnostics:?}"
-        );
-        assert!(
-            !diagnostics.iter().any(|d| d.rule == "CC-HK-011"),
-            "{diagnostics:?}"
-        );
-    }
-    let content = command_hook_settings(
-        "SessionEnd",
-        None,
-        serde_json::json!({"type":"command", "command":"echo exit"}),
-    );
-    let diagnostics = validate(&content);
-    let hit = diagnostics.iter().find(|d| d.rule == "CC-HK-010").unwrap();
-    assert!(hit.suggestion.as_deref().unwrap().contains("1.5-second"));
-    assert!(hit.suggestion.as_deref().unwrap().contains("60 seconds"));
 }
 
 // ===== Kiro paths are never Claude Code settings =====

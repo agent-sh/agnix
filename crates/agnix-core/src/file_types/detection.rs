@@ -923,6 +923,11 @@ pub fn detect_file_type(path: &Path) -> FileType {
         }
         // Classify any other plugin.json as Plugin - validator checks .claude-plugin/ constraint (CC-PL-001)
         "plugin.json" => FileType::Plugin,
+        // Claude Code plugin marketplace: "Save the marketplace file at
+        // `.claude-plugin/marketplace.json` in your marketplace's directory."
+        "marketplace.json" if parent_eq_ignore_ascii_case(parent, ".claude-plugin") => {
+            FileType::ClaudeMarketplace
+        }
         // Roo Code MCP configuration (.roo/mcp.json) - must be before generic mcp.json
         "mcp.json" if parent_eq_ignore_ascii_case(parent, ".roo") => FileType::RooMcp,
         // MCP configuration files
@@ -974,6 +979,15 @@ pub fn detect_file_type(path: &Path) -> FileType {
         // so nested rule files were never validated at all. Mirrors the
         // existing `.cursor/rules` and `.roo/rules` handling.
         name if name.ends_with(".md") && is_under_claude_rules(path) => FileType::ClaudeRule,
+        // Claude Code legacy custom commands (.claude/commands/**/*.md): "a
+        // Markdown file in `.claude/commands/` is the older format and still
+        // works", including subdirectories (`frontend/component.md` ->
+        // `/frontend:component`).
+        name if ends_with_ignore_ascii_case(name, ".md")
+            && path_contains_consecutive_components(path, ".claude", "commands") =>
+        {
+            FileType::ClaudeCommand
+        }
         // Claude Code output styles (.claude/output-styles/*.md)
         name if name.ends_with(".md")
             && parent == Some("output-styles")

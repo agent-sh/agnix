@@ -3,6 +3,9 @@
 pub mod agent;
 pub mod agents_md;
 pub mod amp;
+pub mod claude_json_spans;
+pub mod claude_marketplace;
+pub mod claude_mcp;
 pub mod claude_md;
 pub mod claude_rules;
 pub mod claude_settings;
