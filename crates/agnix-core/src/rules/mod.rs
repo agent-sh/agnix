@@ -21,6 +21,7 @@ pub mod gemini_settings;
 pub mod hooks;
 pub mod imports;
 pub mod kiro_agent;
+pub(crate) mod kiro_engine;
 pub mod kiro_hook;
 pub mod kiro_hook_v3;
 pub mod kiro_mcp;
