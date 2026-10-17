@@ -128,7 +128,7 @@ Kiro permission YAML templates at `.kiro/settings/permissions.yaml` are lintable
 | [Claude Code](https://docs.anthropic.com/en/docs/build-with-claude/claude-code) | CC-\* | 53 | CLAUDE.md, hooks, agents, plugins |
 | [GitHub Copilot](https://docs.github.com/en/copilot) | COP-\* | 6 | .github/copilot-instructions.md, .github/instructions/\*.instructions.md |
 | [Cursor](https://cursor.com) | CUR-\* | 16 | .cursor/rules/\*.mdc, .cursorrules, .cursor/hooks.json, .cursor/agents/\*\*/\*.md, .cursor/environment.json |
-| [Kiro](https://kiro.dev) | KIRO-\*, KR-SK-\*, KR-AG-\*, KR-HK-\*, KR-PW-\*, KR-MCP-\*, KR-SET-\*, KR-PM-\* | 65 | .kiro/steering/\*\*/\*.md, .kiro/skills/\*\*/SKILL.md, .kiro/agents/\*\*/\*.{json,md}, .kiro/hooks/\*.kiro.hook, .kiro/hooks/\*.json, .kiro/settings/mcp.json, .kiro/settings.json, .kiro/settings/permissions.yaml, .kiro/powers/\*/POWER.md |
+| [Kiro](https://kiro.dev) | KIRO-\*, KR-SK-\*, KR-AG-\*, KR-HK-\*, KR-PW-\*, KR-MCP-\*, KR-SET-\*, KR-PM-\* | 74 | .kiro/steering/\*\*/\*.md, .kiro/skills/\*\*/SKILL.md, .kiro/agents/\*\*/\*.{json,md}, .kiro/hooks/\*.kiro.hook, .kiro/hooks/\*.json, .kiro/settings/mcp.json, .kiro/settings.json, .kiro/settings/permissions.yaml, .kiro/powers/\*/POWER.md |
 | [MCP](https://modelcontextprotocol.io) | MCP-\* | 12 | \*.mcp.json |
 | [AGENTS.md](https://agentsmd.org) | AGM-\*, XP-\* | 13 | AGENTS.md, AGENTS.local.md, AGENTS.override.md |
 | [Cline](https://docs.cline.bot) | CLN-\* | 4 | .clinerules, .clinerules/\*.md, .clinerules/\*.txt |

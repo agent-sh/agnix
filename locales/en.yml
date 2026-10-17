@@ -808,6 +808,9 @@ rules:
   kiro_008:
     message: Unknown Kiro steering frontmatter field '%{field}'
     suggestion: 'Use only supported fields: inclusion, name, description, fileMatchPattern'
+  kiro_008_scope:
+    message: "Unknown Kiro steering frontmatter field '%{field}'"
+    suggestion: "Kiro ignores '%{field}'; to load this file only for matching files, use inclusion: fileMatch with fileMatchPattern"
   kiro_009:
     message: 'Inline file or folder reference points to a missing target: %{reference}'
     suggestion: Fix the reference path or create the referenced file or folder

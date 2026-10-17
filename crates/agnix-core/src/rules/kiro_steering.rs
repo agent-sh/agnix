@@ -50,6 +50,18 @@ const RULE_IDS: &[&str] = &[
 const MAX_STEERING_DOC_CHARS: usize = 50_000;
 const VALID_INCLUSION_MODES: &[&str] = &["always", "fileMatch", "manual", "auto"];
 const VALID_FRONTMATTER_FIELDS: &[&str] = &["inclusion", "name", "description", "fileMatchPattern"];
+/// File-scoping keys of other tools' rule files (Cursor `globs`, Copilot
+/// `applyTo`, Claude Code `paths`, ...). Kiro ignores them.
+const FILE_SCOPE_FIELDS: &[&str] = &[
+    "globs",
+    "glob",
+    "paths",
+    "applyTo",
+    "applicableTo",
+    "filePatterns",
+    "files",
+    "include",
+];
 
 // ---------------------------------------------------------------------------
 // YAML frontmatter span helpers (shared with the Kiro skill rules)
@@ -1186,6 +1198,12 @@ fn validate_mapping(
                 continue;
             }
             let (line, col) = steering.key_location(field);
+            // Other tools' file-scoping keys: Kiro loads such a file always.
+            let suggestion = if FILE_SCOPE_FIELDS.contains(&field) {
+                t!("rules.kiro_008_scope.suggestion", field = field)
+            } else {
+                t!("rules.kiro_008.suggestion")
+            };
             diagnostics.push(
                 Diagnostic::warning(
                     path.to_path_buf(),
@@ -1194,7 +1212,7 @@ fn validate_mapping(
                     "KIRO-008",
                     t!("rules.kiro_008.message", field = field),
                 )
-                .with_suggestion(t!("rules.kiro_008.suggestion")),
+                .with_suggestion(suggestion),
             );
         }
     }
@@ -1795,6 +1813,19 @@ mod tests {
     fn test_kiro_007_null_pattern_ignored() {
         let content = "---\ninclusion: always\nfileMatchPattern:\n---\n# body\n";
         assert!(rule(&validate_steering(content), "KIRO-007").is_empty());
+    }
+
+    #[test]
+    fn test_kiro_008_scope_keys_suggest_file_match() {
+        let content = "---\npaths:\n  - \"manifests/**\"\n---\n# Manifests\n";
+        let diagnostics = validate_steering(content);
+        let kiro_008 = rule(&diagnostics, "KIRO-008");
+        assert_eq!(kiro_008.len(), 1);
+        let suggestion = kiro_008[0].suggestion.as_deref().unwrap();
+        assert!(
+            suggestion.contains("fileMatchPattern") && suggestion.contains("'paths'"),
+            "{suggestion}"
+        );
     }
 
     #[test]
