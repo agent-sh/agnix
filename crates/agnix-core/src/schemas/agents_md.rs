@@ -3,7 +3,6 @@
 //! Provides detection functions for:
 //! - AGM-001: Valid Markdown Structure (unclosed code blocks, malformed links)
 //! - AGM-002: Missing Section Headers
-//! - AGM-003: Character Limit (Windsurf's 12,000-character rule-file limit)
 //! - AGM-004: Missing Project Context
 //! - AGM-007: Root AGENTS.md lists no build or test command
 
@@ -208,35 +207,6 @@ pub fn non_blank_line_count(content: &str) -> usize {
         .lines()
         .filter(|line| !line.trim().is_empty())
         .count()
-}
-
-// ============================================================================
-// AGM-003: Character Limit
-// ============================================================================
-
-/// Character limit exceeded result
-#[derive(Debug, Clone)]
-pub struct CharacterLimitExceeded {
-    pub char_count: usize,
-    pub limit: usize,
-}
-
-/// Windsurf's limit for a workspace rule file, in characters ("Limited to
-/// 12,000 characters per file", docs.devin.ai/desktop/cascade/memories).
-pub const WINDSURF_CHAR_LIMIT: usize = 12000;
-
-/// Check if content exceeds character limit (for AGM-003)
-///
-/// Counts characters (Unicode scalar values), the unit Windsurf states, not
-/// UTF-8 bytes: a 7,000-character CJK file is about 21,000 bytes.
-pub fn check_character_limit(content: &str, limit: usize) -> Option<CharacterLimitExceeded> {
-    let char_count = content.chars().count();
-
-    if char_count > limit {
-        Some(CharacterLimitExceeded { char_count, limit })
-    } else {
-        None
-    }
 }
 
 // ============================================================================
@@ -446,32 +416,6 @@ print("hello")
         assert!(result.is_none());
     }
 
-    // ===== AGM-003: Character Limit =====
-
-    #[test]
-    fn test_under_char_limit() {
-        let content = "x".repeat(11000);
-        let result = check_character_limit(&content, WINDSURF_CHAR_LIMIT);
-        assert!(result.is_none());
-    }
-
-    #[test]
-    fn test_over_char_limit() {
-        let content = "x".repeat(13000);
-        let result = check_character_limit(&content, WINDSURF_CHAR_LIMIT);
-        assert!(result.is_some());
-        let exceeded = result.unwrap();
-        assert_eq!(exceeded.char_count, 13000);
-        assert_eq!(exceeded.limit, WINDSURF_CHAR_LIMIT);
-    }
-
-    #[test]
-    fn test_exact_char_limit() {
-        let content = "x".repeat(12000);
-        let result = check_character_limit(&content, WINDSURF_CHAR_LIMIT);
-        assert!(result.is_none());
-    }
-
     // ===== AGM-004: Missing Project Context =====
 
     #[test]
@@ -562,21 +506,6 @@ Use cargo build.
     #[test]
     fn test_non_blank_line_count() {
         assert_eq!(non_blank_line_count("a\n\n  \nb\n"), 2);
-    }
-
-    // ===== AGM-003: characters, not bytes =====
-
-    #[test]
-    fn test_char_limit_counts_characters_not_bytes() {
-        // 7,029 CJK characters are 21,087 UTF-8 bytes; Windsurf counts characters.
-        let content = "漢".repeat(7029);
-        assert!(content.len() > WINDSURF_CHAR_LIMIT);
-        assert!(check_character_limit(&content, WINDSURF_CHAR_LIMIT).is_none());
-        let over = "漢".repeat(12_001);
-        assert_eq!(
-            check_character_limit(&over, WINDSURF_CHAR_LIMIT).map(|e| e.char_count),
-            Some(12_001)
-        );
     }
 
     // ===== AGM-007: build and test commands =====

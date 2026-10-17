@@ -350,6 +350,22 @@ fn test_cli_reports_mcp_rules_in_client_configs() {
     let codex = rules_in_file(&json, ".codex/config.toml");
     assert!(codex.contains(&"MCP-027".to_string()), "{codex:?}");
     assert!(codex.contains(&"MCP-028".to_string()), "{codex:?}");
+    // MCP-018/028 also run on Gemini agent frontmatter and on Amp skill
+    // servers (SKILL.md `mcpServers` and the skill's `mcp.json`).
+    let gemini_agent = rules_in_file(&json, ".gemini/agents/researcher.md");
+    assert_eq!(gemini_agent, ["MCP-018"], "{gemini_agent:?}");
+    let skill = rules_in_file(&json, ".agents/skills/tracker/SKILL.md");
+    assert!(skill.contains(&"MCP-028".to_string()), "{skill:?}");
+    let skill_mcp = rules_in_file(&json, ".agents/skills/browser/mcp.json");
+    assert_eq!(skill_mcp, ["MCP-018"], "{skill_mcp:?}");
+    // Each secret is reported once: OC-CFG-005 leaves the MCP server's
+    // environment secret to MCP-018, and CDX-CFG-010 leaves the Codex
+    // server header to MCP-028.
+    assert!(
+        !opencode.contains(&"OC-CFG-005".to_string()),
+        "{opencode:?}"
+    );
+    assert!(!codex.contains(&"CDX-CFG-010".to_string()), "{codex:?}");
 
     // `.vscode/` is gitignored here, so this file is created at run time.
     let temp = tempfile::TempDir::new().unwrap();
@@ -391,7 +407,8 @@ fn test_cli_shared_agents_skills_follow_tools() {
 
 #[test]
 fn test_cli_vendor_rules_gated_by_tools() {
-    // AGM-003 (Windsurf) and AS-009 (Codex) do not run for a Kiro-only scope.
+    // WS-011 (Windsurf, which replaced AGM-003) and AS-009 (Codex) do not run
+    // for a Kiro-only scope.
     let temp = tempfile::TempDir::new().unwrap();
     std::fs::create_dir(temp.path().join(".windsurf")).unwrap();
     std::fs::write(
@@ -407,13 +424,14 @@ fn test_cli_vendor_rules_gated_by_tools() {
     )
     .unwrap();
     let unscoped = run_json(temp.path());
-    assert_has_rule(&unscoped, "AGM-003");
+    assert_has_rule(&unscoped, "WS-011");
+    assert_eq!(count_rule(&unscoped, "AGM-003"), 0);
     assert_has_rule(&unscoped, "AS-009");
     let kiro = run_json_with_config(temp.path(), "tools = [\"kiro\"]\n");
-    assert_eq!(count_rule(&kiro, "AGM-003"), 0);
+    assert_eq!(count_rule(&kiro, "WS-011"), 0);
     assert_eq!(count_rule(&kiro, "AS-009"), 0);
     let windsurf = run_json_with_config(temp.path(), "tools = [\"windsurf\"]\n");
-    assert_has_rule(&windsurf, "AGM-003");
+    assert_has_rule(&windsurf, "WS-011");
     assert_eq!(count_rule(&windsurf, "AS-009"), 0);
 }
 

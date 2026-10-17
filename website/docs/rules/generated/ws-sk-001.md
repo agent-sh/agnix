@@ -25,6 +25,7 @@ keywords: ["WS-SK-001", "windsurf skill uses unsupported field", "windsurf skill
 
 - https://docs.devin.ai/desktop/cascade/skills
 - https://docs.devin.ai/cli/extensibility/skills/creating-skills
+- https://docs.devin.ai/cli/reference/configuration/read-config-from
 
 ## Test Coverage Metadata
 

@@ -10,7 +10,9 @@
 //! (`.mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`, ...).
 //! [`validate_client_config`] runs them on client files that hold MCP
 //! servers inside a larger config: OpenCode (`mcp`, V2 `mcp.servers`), Gemini
-//! settings and extensions (`mcpServers`), Amp settings (`amp.mcpServers`),
+//! settings and extensions (`mcpServers`), Gemini agents (`mcpServers` or
+//! `mcp_servers` frontmatter), Amp settings (`amp.mcpServers`), Amp skill
+//! servers (SKILL.md `mcpServers` frontmatter and the skill's `mcp.json`),
 //! Codex `config.toml` (`[mcp_servers.<name>]`) and Copilot custom agents
 //! (`mcp-servers` frontmatter). Inline `mcpServers` in plugin manifests go
 //! through `McpValidator`'s server checks, which end here. Kiro MCP files are
@@ -740,23 +742,103 @@ impl<'a> Locator<'a> {
             format!("'{name}'"),
         ]
         .iter()
-        .find_map(|needle| scope.find(needle.as_str()))
+        .find_map(|needle| find_key(scope, needle))
         .map(|rel| self.start + rel)
     }
 
     /// Line and column of `needle` after the server's name, or of the name.
+    /// A quoted JSON key (`"API_TOKEN"`) is also looked up bare, as YAML
+    /// frontmatter and TOML inline tables write it.
     pub(crate) fn locate(&self, server: &str, needle: &str) -> (usize, usize) {
         let start = self.server_offset(server).unwrap_or(self.start);
+        let bare = needle
+            .strip_prefix('"')
+            .and_then(|rest| rest.strip_suffix('"'))
+            .filter(|key| !key.is_empty());
         let offset = (!needle.is_empty())
             .then(|| {
-                self.content
-                    .get(start..self.end)
-                    .and_then(|scope| scope.find(needle))
+                let scope = self.content.get(start..self.end)?;
+                scope
+                    .find(needle)
+                    .or_else(|| bare.and_then(|key| find_key(scope, key)))
                     .map(|rel| start + rel)
             })
             .flatten()
             .unwrap_or(start);
         self.line_col(offset)
+    }
+}
+
+/// The first `needle` in `haystack` that starts a key: not preceded by a
+/// letter, digit, `_` or `-`, so the YAML key `s:` is not found inside
+/// `mcpServers:`.
+fn find_key(haystack: &str, needle: &str) -> Option<usize> {
+    let starts_word = needle
+        .chars()
+        .next()
+        .is_some_and(|c| c.is_alphanumeric() || c == '_' || c == '-');
+    haystack
+        .match_indices(needle)
+        .map(|(at, _)| at)
+        .find(|&at| {
+            !starts_word
+                || !haystack[..at]
+                    .chars()
+                    .next_back()
+                    .is_some_and(|c| c.is_alphanumeric() || c == '_' || c == '-')
+        })
+}
+
+/// MCP-018's test for one `env` entry of a local server. Client rules that
+/// also look for secrets in MCP server config (OC-CFG-005) skip what this
+/// reports, so a secret is reported once.
+pub(crate) fn is_literal_env_secret(key: &str, value: &str) -> bool {
+    is_sensitive_env_key(key) && !is_reference_or_placeholder(value)
+}
+
+/// MCP-028's test for one header of a server.
+pub(crate) fn is_literal_header_secret(name: &str, value: &str) -> bool {
+    literal_header_credential(name, value).is_some()
+}
+
+/// MCP-028's test for an OAuth client secret (`oauth.clientSecret`).
+pub(crate) fn is_literal_oauth_secret(value: &str) -> bool {
+    !is_reference_or_placeholder(value)
+}
+
+/// Whether MCP-018 or MCP-028 reports the string at `field` (a key path
+/// inside the server entry, such as `["env", "API_TOKEN"]`,
+/// `["http_headers", "Authorization"]` or `["bearer_token"]`) of the server
+/// `name`. Client rules that scan a whole config for secrets (CDX-CFG-010)
+/// skip these, so each secret in an MCP server is reported once.
+pub(crate) fn mcp_reports_server_secret(
+    name: &str,
+    server: &Value,
+    field: &[&str],
+    config: &PerFileLintConfig<'_>,
+) -> bool {
+    let Some(value) = field
+        .iter()
+        .try_fold(server, |node, key| node.get(*key))
+        .and_then(Value::as_str)
+    else {
+        return false;
+    };
+    let view = ServerView::from_json(name, server, None);
+    match field {
+        ["env" | "environment", key] => {
+            view.stdio && config.is_rule_enabled("MCP-018") && is_literal_env_secret(key, value)
+        }
+        ["headers" | "http_headers", header] => {
+            config.is_rule_enabled("MCP-028") && is_literal_header_secret(header, value)
+        }
+        ["bearer_token"] => config.is_rule_enabled("MCP-028") && is_literal_oauth_secret(value),
+        ["oauth" | "auth", key] => {
+            key.to_ascii_lowercase().replace(['_', '-'], "") == "clientsecret"
+                && config.is_rule_enabled("MCP-028")
+                && is_literal_oauth_secret(value)
+        }
+        _ => false,
     }
 }
 
@@ -773,7 +855,7 @@ pub(crate) fn check_server(
     // MCP-018: literal secret in env (local servers).
     if view.stdio && config.is_rule_enabled("MCP-018") {
         for (key, value) in &view.env {
-            if is_sensitive_env_key(key) && !is_reference_or_placeholder(value) {
+            if is_literal_env_secret(key, value) {
                 let (line, col) = locator.locate(name, &format!("\"{key}\""));
                 diagnostics.push(
                     Diagnostic::warning(
@@ -852,7 +934,7 @@ pub(crate) fn check_server(
             );
         };
         for (header, value) in &view.headers {
-            if literal_header_credential(header, value).is_some() {
+            if is_literal_header_secret(header, value) {
                 push(&format!("header '{header}'"), header);
             }
         }
@@ -861,9 +943,13 @@ pub(crate) fn check_server(
         {
             push(&format!("URL ({part})"), url);
         }
+        // CDX-PL-019 reports a `clientSecret` in a Codex plugin's MCP file
+        // as a field the manifest rejects; it is not reported twice.
+        let codex_plugin_secrets = crate::rules::codex_plugin::reports_client_secrets(path, config);
         for (field, value) in &view.secrets {
-            if !is_reference_or_placeholder(value) {
-                let key = field.rsplit('.').next().unwrap_or(field);
+            let key = field.rsplit('.').next().unwrap_or(field);
+            let client_secret = key.to_ascii_lowercase().replace(['_', '-'], "") == "clientsecret";
+            if is_literal_oauth_secret(value) && !(codex_plugin_secrets && client_secret) {
                 push(field, key);
             }
         }
@@ -954,20 +1040,108 @@ fn client_servers(file_type: FileType, path: &Path, content: &str) -> Vec<(Strin
             map_entries(json.get("mcp_servers"))
         }
         FileType::CopilotAgent => {
-            let parts = crate::parsers::frontmatter::split_frontmatter(content);
-            if !parts.has_frontmatter || !parts.has_closing {
-                return Vec::new();
-            }
-            let Ok(yaml) = serde_yaml::from_str::<serde_yaml::Value>(&parts.frontmatter) else {
-                return Vec::new();
-            };
-            let Ok(json) = serde_json::to_value(yaml) else {
+            let Some(json) = frontmatter_json(content) else {
                 return Vec::new();
             };
             map_entries(json.get("mcp-servers").or_else(|| json.get("mcpServers")))
         }
+        // Gemini CLI agents: `mcpServers` as the subagents page shows, or
+        // `mcp_servers` as the agent loader's schema reads it.
+        FileType::GeminiAgent => {
+            let Some(json) = frontmatter_json(content) else {
+                return Vec::new();
+            };
+            map_entries(json.get("mcpServers").or_else(|| json.get("mcp_servers")))
+        }
+        // Amp skill servers in SKILL.md frontmatter (`mcpServers`).
+        FileType::Skill => {
+            let Some(json) = frontmatter_json(content) else {
+                return Vec::new();
+            };
+            map_entries(json.get("mcpServers"))
+        }
+        // A skill's sibling `mcp.json`: Amp's flat server map, or the same
+        // servers under an `mcpServers` key.
+        FileType::AmpSkillMcp => {
+            let Some(root) = parse_jsonc(content) else {
+                return Vec::new();
+            };
+            match root.get("mcpServers").filter(|servers| servers.is_object()) {
+                Some(servers) => map_entries(Some(servers)),
+                None => map_entries(Some(&root)),
+            }
+        }
         _ => Vec::new(),
     }
+}
+
+/// The YAML frontmatter of a Markdown file as JSON.
+fn frontmatter_json(content: &str) -> Option<Value> {
+    let parts = crate::parsers::frontmatter::split_frontmatter(content);
+    if !parts.has_frontmatter || !parts.has_closing {
+        return None;
+    }
+    let yaml = serde_yaml::from_str::<serde_yaml::Value>(&parts.frontmatter).ok()?;
+    serde_json::to_value(yaml).ok()
+}
+
+/// The literal secret values MCP-018 and MCP-028 report for the servers of a
+/// client file (`file_type` as [`validate_client_config`] reads it). XP-SK-003
+/// scans skill files as text and skips credentials inside these values, so a
+/// secret in a skill's MCP server is reported once, by the MCP rule that
+/// names the server and field.
+pub(crate) fn reported_secret_values(
+    file_type: FileType,
+    path: &Path,
+    content: &str,
+    config: &PerFileLintConfig<'_>,
+) -> Vec<String> {
+    let mut values = Vec::new();
+    if !is_client_config_with_mcp(file_type) {
+        return values;
+    }
+    let env_rule = config.is_rule_enabled("MCP-018");
+    let credential_rule = config.is_rule_enabled("MCP-028");
+    if !env_rule && !credential_rule {
+        return values;
+    }
+    let codex_plugin_secrets = crate::rules::codex_plugin::reports_client_secrets(path, config);
+    for (name, server) in client_servers(file_type, path, content) {
+        let view = ServerView::from_json(&name, &server, None);
+        if env_rule && view.stdio {
+            values.extend(
+                view.env
+                    .iter()
+                    .filter(|(key, value)| is_literal_env_secret(key, value))
+                    .map(|(_, value)| value.clone()),
+            );
+        }
+        if credential_rule {
+            values.extend(
+                view.headers
+                    .iter()
+                    .filter(|(header, value)| is_literal_header_secret(header, value))
+                    .map(|(_, value)| value.clone()),
+            );
+            if let Some(url) = &view.url
+                && literal_url_credential(url).is_some()
+            {
+                values.push(url.clone());
+            }
+            values.extend(
+                view.secrets
+                    .iter()
+                    .filter(|(field, value)| {
+                        let key = field.rsplit('.').next().unwrap_or(field);
+                        let client_secret =
+                            key.to_ascii_lowercase().replace(['_', '-'], "") == "clientsecret";
+                        is_literal_oauth_secret(value) && !(codex_plugin_secrets && client_secret)
+                    })
+                    .map(|(_, value)| value.clone()),
+            );
+        }
+    }
+    values
 }
 
 /// File types that hold MCP servers inside a larger client config.
@@ -980,6 +1154,9 @@ pub(crate) fn is_client_config_with_mcp(file_type: FileType) -> bool {
             | FileType::AmpSettings
             | FileType::CodexConfig
             | FileType::CopilotAgent
+            | FileType::GeminiAgent
+            | FileType::Skill
+            | FileType::AmpSkillMcp
     )
 }
 

@@ -1,13 +1,14 @@
-//! AGENTS.md validation rules (AGM-001 to AGM-004, AGM-007)
+//! AGENTS.md validation rules (AGM-001, AGM-002, AGM-004, AGM-007)
 //!
 //! Validates:
 //! - AGM-001: Valid Markdown Structure (MEDIUM) - unclosed code fences, malformed links
 //! - AGM-002: Missing Section Headers (LOW) - a long file with no headings
-//! - AGM-003: Character Limit (MEDIUM) - over Windsurf's 12,000-character rule
-//!   file limit, only when Windsurf reads the file
 //! - AGM-004: Missing Project Context (LOW) - root file without a project description
 //! - AGM-007: Root AGENTS.md lists no build or test command (LOW)
 //!
+//! AGM-003 (Windsurf's 12,000-character limit) was retired in 0.59.0: the
+//! Windsurf family owns Windsurf's limits, and WS-011
+//! ([`super::windsurf::WindsurfAgentsMdValidator`]) reported the same files.
 //! AGM-005 was retired: it reported the same Claude Code features as XP-001.
 //! AGM-006 (nested AGENTS.md) was retired earlier; AGM-008 and AGM-009 are
 //! project-level checks in `project_level.rs`.
@@ -15,17 +16,16 @@
 use crate::{
     config::{LintConfig, PerFileLintConfig},
     diagnostics::{Diagnostic, Fix},
-    rules::{Validator, ValidatorMetadata, cross_platform::tool_in_scope},
+    rules::{Validator, ValidatorMetadata},
     schemas::agents_md::{
-        AGM_002_MIN_LINES, MarkdownIssueType, WINDSURF_CHAR_LIMIT, check_character_limit,
-        check_markdown_validity, check_project_context, check_section_headers,
-        lists_build_or_test_commands, non_blank_line_count,
+        AGM_002_MIN_LINES, MarkdownIssueType, check_markdown_validity, check_project_context,
+        check_section_headers, lists_build_or_test_commands, non_blank_line_count,
     },
 };
 use rust_i18n::t;
 use std::path::Path;
 
-const RULE_IDS: &[&str] = &["AGM-001", "AGM-002", "AGM-003", "AGM-004", "AGM-007"];
+const RULE_IDS: &[&str] = &["AGM-001", "AGM-002", "AGM-004", "AGM-007"];
 
 /// Whether `path` sits at a repository root: the lint root, or a directory
 /// holding `.git` (a nested repository). AGM-004 and AGM-007 apply to these
@@ -130,11 +130,6 @@ fn has_build_manifest(path: &Path, config: &LintConfig) -> bool {
     })
 }
 
-/// Project markers that show Windsurf (Devin Desktop) is used: its
-/// configuration directories (`.devin/` preferred, `.windsurf/` legacy) and
-/// the legacy `.windsurfrules` file.
-const WINDSURF_MARKERS: &[&str] = &[".devin", ".windsurf", ".windsurfrules"];
-
 pub struct AgentsMdValidator;
 
 impl Validator for AgentsMdValidator {
@@ -227,33 +222,6 @@ impl Validator for AgentsMdValidator {
                     .with_suggestion(t!("rules.agm_002.suggestion")),
                 );
             }
-        }
-
-        // AGM-003: Windsurf's 12,000-character limit (WARNING). Windsurf states
-        // the limit for workspace rule files and processes AGENTS.md "by the
-        // same Rules engine"; applying the limit to AGENTS.md is an inference.
-        // Windsurf reads AGENTS.md only (not the Codex .local/.override
-        // variants), and the limit is in characters.
-        if filename == "AGENTS.md"
-            && config.is_rule_enabled("AGM-003")
-            && tool_in_scope(path, config, "windsurf", WINDSURF_MARKERS)
-            && let Some(exceeded) = check_character_limit(content, WINDSURF_CHAR_LIMIT)
-        {
-            diagnostics.push(
-                Diagnostic::warning(
-                    path.to_path_buf(),
-                    1,
-                    0,
-                    "AGM-003",
-                    t!(
-                        "rules.agm_003.message",
-                        filename = filename,
-                        chars = exceeded.char_count,
-                        limit = exceeded.limit
-                    ),
-                )
-                .with_suggestion(t!("rules.agm_003.suggestion", limit = exceeded.limit)),
-            );
         }
 
         let at_repository_root = filename == "AGENTS.md" && is_repository_root_file(path, config);
@@ -422,48 +390,14 @@ mod tests {
         assert!(rules(&validate(&with_heading), "AGM-002").is_empty());
     }
 
-    // ===== AGM-003 =====
+    // ===== AGM-003 retirement =====
 
+    /// AGM-003 reported Windsurf's 12,000-character limit on the same
+    /// AGENTS.md files as WS-011, which the Windsurf family owns.
     #[test]
-    fn test_agm_003_needs_windsurf_in_scope() {
-        let content = "a".repeat(WINDSURF_CHAR_LIMIT + 1);
-        // Unscoped run, no Windsurf configuration nearby: not Windsurf's file.
-        assert!(rules(&validate(&content), "AGM-003").is_empty());
-
-        let diagnostics = validate_with_config(&content, &windsurf_config());
-        let agm_003 = rules(&diagnostics, "AGM-003");
-        assert_eq!(agm_003.len(), 1);
-        assert_eq!(agm_003[0].level, DiagnosticLevel::Warning);
-        assert!(agm_003[0].message.contains("12001 characters"));
-
-        let at_limit = "a".repeat(WINDSURF_CHAR_LIMIT);
-        assert!(
-            rules(
-                &validate_with_config(&at_limit, &windsurf_config()),
-                "AGM-003"
-            )
-            .is_empty()
-        );
-    }
-
-    #[test]
-    fn test_agm_003_unscoped_run_with_windsurf_directory() {
-        let fs = MockFileSystem::new();
-        fs.add_dir("/repo/.windsurf");
-        fs.add_dir("/repo");
-        let mut config = LintConfig::default();
-        config.set_fs(Arc::new(fs));
-        config.set_root_dir(std::path::PathBuf::from("/repo"));
-        let content = "a".repeat(WINDSURF_CHAR_LIMIT + 1);
-        let diagnostics =
-            AgentsMdValidator.validate(Path::new("/repo/AGENTS.md"), &content, &config);
-        assert_eq!(rules(&diagnostics, "AGM-003").len(), 1);
-    }
-
-    #[test]
-    fn test_agm_003_counts_characters() {
-        // 7,029 CJK characters are about 21,000 bytes but fit Windsurf's limit.
-        let content = format!("# P\n\n{}", "漢".repeat(7029));
+    fn test_agm_003_is_retired() {
+        assert!(!RULE_IDS.contains(&"AGM-003"));
+        let content = "a".repeat(12_001);
         assert!(
             rules(
                 &validate_with_config(&content, &windsurf_config()),
@@ -471,16 +405,6 @@ mod tests {
             )
             .is_empty()
         );
-    }
-
-    #[test]
-    fn test_agm_003_skips_codex_variants() {
-        let content = "a".repeat(WINDSURF_CHAR_LIMIT + 1);
-        for variant in ["AGENTS.local.md", "AGENTS.override.md"] {
-            let diagnostics =
-                AgentsMdValidator.validate(Path::new(variant), &content, &windsurf_config());
-            assert!(rules(&diagnostics, "AGM-003").is_empty(), "{variant}");
-        }
     }
 
     // ===== AGM-004 =====
@@ -584,7 +508,7 @@ mod tests {
     #[test]
     fn test_all_agm_rules_can_be_disabled() {
         let content = format!("```unclosed\n{}", "x\n".repeat(13000));
-        for rule in ["AGM-001", "AGM-002", "AGM-003", "AGM-004", "AGM-007"] {
+        for rule in ["AGM-001", "AGM-002", "AGM-004", "AGM-007"] {
             let mut config = windsurf_config();
             config.rules_mut().disabled_rules = vec![rule.to_string()];
             let diagnostics = validate_with_config(&content, &config);

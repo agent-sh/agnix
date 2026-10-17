@@ -347,6 +347,13 @@ pub fn check_xml_balance_with_content_end(
                         line: tag.line,
                         column: tag.column,
                     });
+                    // Crossed tags (`<a><b></a></b>`): the closing tag closes
+                    // its own opening tag deeper in the stack, out of order.
+                    // Taking that tag off the stack keeps the one mistake from
+                    // also being reported as an unclosed `<a>` (XML-001).
+                    if let Some(index) = stack.iter().rposition(|open| open.name == tag.name) {
+                        stack.remove(index);
+                    }
                 }
             } else {
                 errors.push(XmlBalanceError::UnmatchedClosing {

@@ -122,13 +122,14 @@ impl Backend {
     pub(crate) async fn validate_file(&self, path: PathBuf) -> Vec<Diagnostic> {
         let config = self.config.load_full();
         let registry = Arc::clone(&self.registry);
+        let document = path.clone();
         let result = tokio::task::spawn_blocking(move || {
             agnix_core::validate_file_with_registry(&path, &config, &registry)
         })
         .await;
 
         match result {
-            Ok(Ok(outcome)) => to_lsp_diagnostics(outcome.into_diagnostics()),
+            Ok(Ok(outcome)) => document_diagnostics(&document, outcome.into_diagnostics()),
             Ok(Err(e)) => vec![create_error_diagnostic(
                 "agnix::validation-error",
                 format!("Validation error: {}", e),
@@ -230,29 +231,7 @@ impl Backend {
             }
         };
 
-        let config = self.config.load_full();
-        let registry = Arc::clone(&self.registry);
-        let result = tokio::task::spawn_blocking(move || {
-            Ok::<_, agnix_core::LintError>(agnix_core::validate_content(
-                &file_path,
-                content.as_str(),
-                &config,
-                &registry,
-            ))
-        })
-        .await;
-
-        let mut diagnostics = match result {
-            Ok(Ok(diagnostics)) => to_lsp_diagnostics(diagnostics),
-            Ok(Err(e)) => vec![create_error_diagnostic(
-                "agnix::validation-error",
-                format!("Validation error: {}", e),
-            )],
-            Err(e) => vec![create_error_diagnostic(
-                "agnix::internal-error",
-                format!("Internal error: {}", e),
-            )],
-        };
+        let mut diagnostics = self.validate_content_diagnostics(file_path, content).await;
 
         // Merge cached project-level diagnostics for this URI (AGM-006, XP-004/005/006, VER-001)
         {
@@ -275,6 +254,74 @@ impl Backend {
         self.client
             .publish_diagnostics(uri, diagnostics, version)
             .await;
+    }
+}
+
+impl Backend {
+    /// Validate a document's in-memory content and convert the diagnostics
+    /// that belong to it (see [`document_diagnostics`]).
+    pub(crate) async fn validate_content_diagnostics(
+        &self,
+        file_path: PathBuf,
+        content: Arc<String>,
+    ) -> Vec<Diagnostic> {
+        let config = self.config.load_full();
+        let registry = Arc::clone(&self.registry);
+        let document = file_path.clone();
+        let result = tokio::task::spawn_blocking(move || {
+            Ok::<_, agnix_core::LintError>(agnix_core::validate_content(
+                &file_path,
+                content.as_str(),
+                &config,
+                &registry,
+            ))
+        })
+        .await;
+
+        match result {
+            Ok(Ok(diagnostics)) => document_diagnostics(&document, diagnostics),
+            Ok(Err(e)) => vec![create_error_diagnostic(
+                "agnix::validation-error",
+                format!("Validation error: {}", e),
+            )],
+            Err(e) => vec![create_error_diagnostic(
+                "agnix::internal-error",
+                format!("Internal error: {}", e),
+            )],
+        }
+    }
+}
+
+/// The diagnostics to publish for the document at `document`.
+///
+/// A validator can report on a file other than the one it validates: AMP-003
+/// reports invalid `globs` in the file an AGENTS.md @-mentions, and XP-SK-003
+/// reports credentials in a skill's bundled files. Their line and column
+/// belong to that other file, so publishing them on the open document would
+/// show them at a wrong position (and offer their fixes there). They are
+/// dropped: the CLI and project runs report them on their own file, and the
+/// LSP cannot publish them for the other file's URI without overwriting that
+/// file's own diagnostics.
+pub(crate) fn document_diagnostics(
+    document: &std::path::Path,
+    diagnostics: Vec<agnix_core::Diagnostic>,
+) -> Vec<Diagnostic> {
+    let own: Vec<agnix_core::Diagnostic> = diagnostics
+        .into_iter()
+        .filter(|diagnostic| same_file(&diagnostic.file, document))
+        .collect();
+    to_lsp_diagnostics(own)
+}
+
+/// Whether two paths name the same file: equal, equal after resolving `.`
+/// and `..`, or equal after canonicalization (symlinked directories).
+fn same_file(a: &std::path::Path, b: &std::path::Path) -> bool {
+    if a == b || normalize_path(a) == normalize_path(b) {
+        return true;
+    }
+    match (a.canonicalize(), b.canonicalize()) {
+        (Ok(a), Ok(b)) => a == b,
+        _ => false,
     }
 }
 

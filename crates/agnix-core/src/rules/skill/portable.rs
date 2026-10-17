@@ -873,9 +873,33 @@ impl ValidationContext<'_> {
     }
 
     fn report_secrets(&mut self, file: PathBuf, text: &str) {
+        // MCP-018 and MCP-028 report literal secrets in the skill's MCP
+        // servers (SKILL.md `mcpServers`, the sibling `mcp.json`) and name
+        // the server and field; those credentials are not reported again.
+        let mcp_file_type = if file.as_path() == self.path {
+            Some(crate::FileType::Skill)
+        } else {
+            match crate::file_types::detect_file_type(&file) {
+                crate::FileType::AmpSkillMcp | crate::FileType::Mcp => {
+                    Some(crate::FileType::AmpSkillMcp)
+                }
+                _ => None,
+            }
+        };
+        let mcp_reported = mcp_file_type
+            .map(|file_type| {
+                crate::rules::mcp_servers::reported_secret_values(
+                    file_type,
+                    &file,
+                    text,
+                    self.config,
+                )
+            })
+            .unwrap_or_default();
         let line_starts = compute_line_starts(text);
         let hits: Vec<usize> = secret_pattern()
             .find_iter(text)
+            .filter(|m| !mcp_reported.iter().any(|value| value.contains(m.as_str())))
             .map(|m| m.start())
             .collect();
         for hit in hits {

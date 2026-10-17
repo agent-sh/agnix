@@ -470,6 +470,14 @@
       "removed_in": "0.59.0",
       "reason": "Roo Code shut down on 2026-05-15 and its support was removed.",
       "replaced_by": []
+    },
+    {
+      "id": "AGM-003",
+      "removed_in": "0.59.0",
+      "reason": "Windsurf's 12,000-character limit is owned by the Windsurf family: WS-011 reports the same AGENTS.md files, only in projects that use Devin Desktop.",
+      "replaced_by": [
+        "WS-011"
+      ]
     }
   ]
 }

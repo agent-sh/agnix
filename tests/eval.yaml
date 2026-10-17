@@ -40,8 +40,8 @@ cases:
     description: "Indexed $ARGUMENTS[n] without argument-hint triggers CC-SK-016"
 
   - file: fixtures/invalid/skills/unknown-frontmatter-field/SKILL.md
-    expected: [CC-SK-017, XP-SK-001]
-    description: "Unknown frontmatter field triggers CC-SK-017 (and XP-SK-001 for the non-universal field)"
+    expected: [CC-SK-017]
+    description: "Unknown frontmatter field triggers CC-SK-017 (XP-SK-001 leaves a field CC-SK-017 reports to it)"
 
   - file: fixtures/invalid/skills/invalid-model/SKILL.md
     expected: [AS-017, CC-SK-001, XP-SK-001]
@@ -166,8 +166,8 @@ cases:
     description: "Duplicate mcpServers keys trigger MCP-023"
 
   - file: fixtures/mcp/empty-server-config.mcp.json
-    expected: [MCP-024, MCP-009]
-    description: "Empty mcpServers entry triggers MCP-024 (stdio server also missing its command: MCP-009)"
+    expected: [MCP-024]
+    description: "Empty mcpServers entry triggers MCP-024 (MCP-009 no longer reports the same empty entry a second time)"
 
   # ===== AGENTS.md Rules (AGM-*) =====
 
@@ -179,9 +179,10 @@ cases:
     expected: [AGM-002]
     description: "A long file without headings triggers AGM-002"
 
-  - file: fixtures/agents_md/too-large/AGENTS.md
-    expected: [AGM-003]
-    description: "Exceeding the Windsurf character limit triggers AGM-003 (the fixture's .devin/ directory puts Windsurf in scope)"
+  # AGM-003 was retired in 0.59.0; WS-011 reports Windsurf's limit
+  - file: fixtures/devin/invalid/AGENTS.md
+    expected: [WS-011]
+    description: "Exceeding the Windsurf character limit in a Devin Desktop project triggers WS-011 (the fixture's .devin/rules/ directory puts Windsurf in scope)"
 
   - file: fixtures/agents_md/no-context/AGENTS.md
     expected: [AGM-004]
@@ -237,10 +238,9 @@ cases:
     expected: [XML-001]
     description: "Unclosed XML tag triggers XML-001"
 
-  # Mismatched tags also trigger XML-001 (unclosed inner) in addition to XML-002
   - file: fixtures/xml/xml-002-mismatch.md
-    expected: [XML-001, XML-002]
-    description: "Mismatched XML tags triggers XML-001 and XML-002"
+    expected: [XML-002]
+    description: "Crossed XML tags trigger XML-002 once (the out-of-order closing tag no longer also counts as an unclosed XML-001)"
 
   - file: fixtures/xml/xml-003-unmatched.md
     expected: [XML-003]

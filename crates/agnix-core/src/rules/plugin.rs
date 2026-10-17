@@ -386,8 +386,16 @@ impl Validator for PluginValidator {
             }
         }
 
+        // A blank name is CC-PL-005's finding (it carries the fix); CC-PL-004
+        // still reports it when CC-PL-005 is disabled.
+        let blank_name = raw_value
+            .get("name")
+            .and_then(|v| v.as_str())
+            .is_some_and(|name| name.trim().is_empty());
         if config.is_rule_enabled("CC-PL-004") {
-            check_required_field(&raw_value, "name", path, diagnostics.as_mut());
+            if !(blank_name && config.is_rule_enabled("CC-PL-005")) {
+                check_required_field(&raw_value, "name", path, diagnostics.as_mut());
+            }
             check_recommended_field(&raw_value, "description", path, diagnostics.as_mut());
             check_recommended_field(&raw_value, "version", path, diagnostics.as_mut());
         }
@@ -2699,20 +2707,26 @@ mod tests {
             &plugin_path,
             r#"{"name":"   ","description":"desc","version":"1.0.0"}"#,
         );
+        let content = fs::read_to_string(&plugin_path).unwrap();
 
-        let validator = PluginValidator;
-        let diagnostics = validator.validate(
-            &plugin_path,
-            &fs::read_to_string(&plugin_path).unwrap(),
-            &LintConfig::default(),
+        // CC-PL-005 owns a blank name, so CC-PL-004 does not report it twice.
+        let diagnostics = PluginValidator.validate(&plugin_path, &content, &LintConfig::default());
+        assert!(diagnostics.iter().any(|d| d.rule == "CC-PL-005"));
+        assert!(
+            diagnostics.iter().all(|d| d.rule != "CC-PL-004"),
+            "{diagnostics:?}"
         );
 
+        // With CC-PL-005 disabled, CC-PL-004 still reports the blank name as an error.
+        let mut config = LintConfig::default();
+        config.rules_mut().disabled_rules = vec!["CC-PL-005".to_string()];
+        let diagnostics = PluginValidator.validate(&plugin_path, &content, &config);
         assert!(
             diagnostics
                 .iter()
                 .any(|d| d.rule == "CC-PL-004"
                     && d.level == crate::diagnostics::DiagnosticLevel::Error),
-            "Whitespace-only name should trigger CC-PL-004 error"
+            "Whitespace-only name should trigger CC-PL-004 error when CC-PL-005 is off"
         );
     }
 

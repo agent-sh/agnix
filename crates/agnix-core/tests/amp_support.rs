@@ -150,7 +150,11 @@ fn amp_skills_invalid_pack() {
 fn amp_skill_mcp_json_gets_no_generic_mcp_rules() {
     // The generic MCP rules read `{"linear": {"url": ...}}` as a stdio
     // server without a command (MCP-009); Amp's flat skill shape has its
-    // own file type now.
+    // own file type now. Since 0.59.0 the skill's servers get the
+    // server-level MCP checks that Amp settings get (MCP-018/019/027/028/029,
+    // in rules/mcp_servers.rs), so the floating `@latest` in Amp's own
+    // chrome-devtools example is an MCP-027 warning; no structural MCP rule
+    // runs on the file.
     let root = fixtures("amp-skills/valid");
     let result = validate_project(&root, &LintConfig::default()).unwrap();
     let mcp: Vec<_> = result
@@ -158,7 +162,10 @@ fn amp_skill_mcp_json_gets_no_generic_mcp_rules() {
         .iter()
         .filter(|d| d.rule.starts_with("MCP-") && d.file.ends_with("mcp.json"))
         .collect();
-    assert!(mcp.is_empty(), "{mcp:?}");
+    let rules: Vec<&str> = mcp.iter().map(|d| d.rule.as_str()).collect();
+    assert_eq!(rules, ["MCP-027"], "{mcp:?}");
+    assert!(mcp[0].file.ends_with("chrome-devtools/mcp.json"));
+    assert_eq!(mcp[0].level, agnix_core::DiagnosticLevel::Warning);
 }
 
 #[test]

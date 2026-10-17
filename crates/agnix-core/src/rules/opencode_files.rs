@@ -369,7 +369,16 @@ impl Validator for OpenCodeInstructionValidator {
             return out.diags;
         };
         if file_name == "AGENTS.md" {
+            // CDX-AG-002 reports the first secret line of every AGENTS.md
+            // (Codex reads it too); that line is not reported a second time.
+            let codex_line = config
+                .is_rule_enabled("CDX-AG-002")
+                .then(|| crate::rules::codex::agents_md_secret_line(content))
+                .flatten();
             for (index, line) in content.lines().enumerate() {
+                if codex_line == Some(index + 1) {
+                    continue;
+                }
                 if let Some(column) = SECRET_PREFIXES
                     .iter()
                     .filter_map(|prefix| line.find(prefix))
@@ -622,10 +631,15 @@ mod tests {
             OpenCodeInstructionValidator.validate(Path::new("/p/CLAUDE.md"), "# Rules", &config);
         assert_eq!(rules(&claude), ["OC-AGM-003"]);
         assert_eq!(claude[0].level, crate::diagnostics::DiagnosticLevel::Info);
+        // With only OpenCode selected, CDX-AG-002 does not run and OC-AGM-002
+        // reports the secret. (Unscoped, CDX-AG-002 owns that line; see
+        // `oc_agm_002_skips_the_line_cdx_ag_002_reports`.)
+        let mut opencode = config.clone();
+        opencode.set_tools(vec!["opencode".to_string()]);
         let agents = OpenCodeInstructionValidator.validate(
             Path::new("/p/AGENTS.md"),
             "token: ghp_abcdefghijklmnopqrstuvwxyz0123456789",
-            &config,
+            &opencode,
         );
         assert_eq!(rules(&agents), ["OC-AGM-002"]);
         assert_eq!(agents[0].column, 8);
@@ -637,6 +651,29 @@ mod tests {
                 .validate(Path::new("/q/CLAUDE.md"), "# Rules", &empty)
                 .is_empty()
         );
+    }
+
+    /// An AGENTS.md in an OpenCode project is read by Codex too, and both
+    /// CDX-AG-002 and OC-AGM-002 reported the same secret line. CDX-AG-002
+    /// reports the first secret line; OC-AGM-002 reports the other lines.
+    #[test]
+    fn oc_agm_002_skips_the_line_cdx_ag_002_reports() {
+        let fs = MockFileSystem::new();
+        fs.add_dir("/p");
+        fs.add_dir("/p/.opencode");
+        let config = config_with(fs);
+        let content = "# P\n\nUse ghp_abcdefghijklmnopqrstuvwxyz0123456789 here.\nMaps key AIzaSyA1234567890abcdefghijklmnopqrstu\n";
+        assert_eq!(crate::rules::codex::agents_md_secret_line(content), Some(3));
+        let agents =
+            OpenCodeInstructionValidator.validate(Path::new("/p/AGENTS.md"), content, &config);
+        assert_eq!(rules(&agents), ["OC-AGM-002"]);
+        assert_eq!(agents[0].line, 4);
+        // With CDX-AG-002 disabled, OC-AGM-002 reports both lines.
+        let mut no_codex = config.clone();
+        no_codex.rules_mut().disabled_rules = vec!["CDX-AG-002".to_string()];
+        let agents =
+            OpenCodeInstructionValidator.validate(Path::new("/p/AGENTS.md"), content, &no_codex);
+        assert_eq!(rules(&agents), ["OC-AGM-002", "OC-AGM-002"]);
     }
 
     #[test]

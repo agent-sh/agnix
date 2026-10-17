@@ -471,6 +471,34 @@ Persist the resolved path to a file:
         );
     }
 
+    /// Crossed tags are one mistake. They used to get XML-002 for `</outer>`
+    /// and XML-001 claiming `<outer>` was never closed; now XML-002 alone.
+    /// A tag that really is left open is still XML-001.
+    #[test]
+    fn test_crossed_tags_reported_once() {
+        let validator = XmlValidator;
+        let crossed = validator.validate(
+            Path::new("test.md"),
+            "<outer><inner></outer></inner>",
+            &LintConfig::default(),
+        );
+        let rules: Vec<_> = crossed.iter().map(|d| d.rule.as_str()).collect();
+        assert_eq!(rules, ["XML-002"], "{crossed:?}");
+
+        let open = validator.validate(
+            Path::new("test.md"),
+            "<a>\n<b>\n</a>\n",
+            &LintConfig::default(),
+        );
+        let mut rules: Vec<_> = open.iter().map(|d| d.rule.as_str()).collect();
+        rules.sort();
+        assert_eq!(rules, ["XML-001", "XML-002"], "{open:?}");
+        assert!(
+            open.iter()
+                .any(|d| d.rule == "XML-001" && d.message.contains("'<b>'"))
+        );
+    }
+
     // XML-003: Unmatched closing tag produces XML-003 rule ID
     #[test]
     fn test_xml_003_rule_id() {

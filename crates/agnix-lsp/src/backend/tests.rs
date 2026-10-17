@@ -3899,3 +3899,68 @@ async fn test_oversized_did_change_is_rejected() {
     assert!(backend.get_document_content(&uri).await.is_none());
     assert_eq!(backend.get_document_version(&uri).await, None);
 }
+
+/// AMP-003 reports invalid `globs` on the file an AGENTS.md @-mentions, not
+/// on AGENTS.md. Validating the open AGENTS.md must not publish that
+/// diagnostic on AGENTS.md, where its line and column point at the wrong
+/// text; diagnostics for the open document itself are kept.
+#[tokio::test]
+async fn test_cross_file_diagnostics_are_not_published_on_the_open_document() {
+    let workspace = tempfile::tempdir().unwrap();
+    let root = workspace.path().canonicalize().unwrap();
+    let doc = root.join("doc").join("ts.md");
+    std::fs::create_dir_all(doc.parent().unwrap()).unwrap();
+    std::fs::write(&doc, "---\nglobs:\n  - \"[broken\"\n---\n\nTS rules\n").unwrap();
+    let agents = root.join("AGENTS.md");
+    // An unclosed fence gives AGENTS.md a diagnostic of its own (AGM-001).
+    let content = "# Project\n\nSee @doc/ts.md.\n\n```sh\nmake\n".to_string();
+    std::fs::write(&agents, &content).unwrap();
+
+    // The core reports AMP-003 on the mentioned file.
+    let core = agnix_core::validate_content(
+        &agents,
+        &content,
+        &agnix_core::LintConfig::default(),
+        &agnix_core::ValidatorRegistry::with_defaults(),
+    );
+    assert!(
+        core.iter().any(|d| d.rule == "AMP-003" && d.file == doc),
+        "{core:?}"
+    );
+
+    let backend = Backend::new_test();
+    let code = |d: &Diagnostic| match &d.code {
+        Some(NumberOrString::String(code)) => code.clone(),
+        _ => String::new(),
+    };
+    for diagnostics in [
+        backend
+            .validate_content_diagnostics(agents.clone(), Arc::new(content.clone()))
+            .await,
+        backend.validate_file(agents.clone()).await,
+    ] {
+        let codes: Vec<String> = diagnostics.iter().map(code).collect();
+        assert!(!codes.contains(&"AMP-003".to_string()), "{codes:?}");
+        assert!(codes.contains(&"AGM-001".to_string()), "{codes:?}");
+    }
+}
+
+#[test]
+fn test_document_diagnostics_keeps_only_the_documents_own() {
+    let dir = tempfile::tempdir().unwrap();
+    let document = dir.path().join("AGENTS.md");
+    let own = agnix_core::Diagnostic::warning(document.clone(), 3, 1, "AGM-001", "own");
+    // The same file written with `.` components still counts as the document.
+    let dotted = agnix_core::Diagnostic::warning(
+        dir.path().join(".").join("AGENTS.md"),
+        4,
+        1,
+        "XP-001",
+        "dotted",
+    );
+    let other =
+        agnix_core::Diagnostic::warning(dir.path().join("doc/ts.md"), 2, 1, "AMP-003", "other");
+    let published = crate::backend::document_diagnostics(&document, vec![own, other, dotted]);
+    let messages: Vec<&str> = published.iter().map(|d| d.message.as_str()).collect();
+    assert_eq!(messages, ["own", "dotted"]);
+}

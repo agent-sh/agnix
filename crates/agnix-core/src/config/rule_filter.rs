@@ -59,7 +59,7 @@ impl<'a> DefaultRuleFilter<'a> {
     ///
     /// The tool comes from the rule's own `evidence.applies_to.tool` in
     /// rules.json. Gating by ID prefix alone let vendor rules in mixed
-    /// families run for every tool: AGM-003 (Windsurf) and AS-009 (Codex)
+    /// families run for every tool: AS-009 (Codex) and AS-015 (Claude Code)
     /// share their prefixes with generic rules, so TOOL_RULE_PREFIXES
     /// never lists them. The prefix table and the CC-* convention remain the
     /// fallback for IDs rules.json does not know (or that name no tool).
