@@ -985,6 +985,79 @@ mod tests {
         assert!(!diagnostics.iter().any(|d| d.rule == "CC-MEM-001"));
     }
 
+    // ---- Kiro files: no @-import semantics ----
+
+    fn rules_for(path: &Path, content: &str) -> Vec<String> {
+        ImportsValidator
+            .validate(path, content, &LintConfig::default())
+            .into_iter()
+            .map(|d| d.rule)
+            .collect()
+    }
+
+    #[test]
+    fn test_kiro_files_get_no_import_rules() {
+        let temp = TempDir::new().unwrap();
+        let content = "You are a reviewer. Ask @docs/guide.md, use @git/status and @server/tool.\n\n### @app.entrypoint\n\nSee @a.md\nSee @a.md\n";
+        for rel in [
+            ".kiro/agents/reviewer.md",
+            ".kiro/agents/reviewer.json",
+            ".kiro/hooks/lint.json",
+            ".kiro/steering/style.md",
+            ".kiro/powers/aws/steering/patterns.md",
+            ".kiro/powers/aws/POWER.md",
+            ".kiro/skills/review/references/guide.md",
+            ".kiro/specs/feature/design.md",
+        ] {
+            let path = temp.path().join(rel);
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            fs::write(&path, content).unwrap();
+            let rules = rules_for(&path, content);
+            assert!(rules.is_empty(), "{rel}: {rules:?}");
+        }
+        // The same text outside a Kiro tree still gets REF-001 and REF-003.
+        let path = temp.path().join("notes/guide.md");
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(&path, content).unwrap();
+        let rules = rules_for(&path, content);
+        assert!(rules.iter().any(|r| r == "REF-001"), "{rules:?}");
+        assert!(rules.iter().any(|r| r == "REF-003"), "{rules:?}");
+    }
+
+    #[test]
+    fn test_kiro_agent_docs_keep_markdown_link_checks() {
+        // `.kiro/agents/AGENTS.md` is loaded as an agent; its broken links are
+        // still reported (REF-002), its `@` mentions are not imports.
+        let temp = TempDir::new().unwrap();
+        let path = temp.path().join(".kiro/agents/AGENTS.md");
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        let content = "# Agents\n\nSee [guide](docs/missing.md) and @missing.md\n";
+        fs::write(&path, content).unwrap();
+        let rules = rules_for(&path, content);
+        assert_eq!(rules, vec!["REF-002"]);
+    }
+
+    #[test]
+    fn test_published_power_steering_gets_no_import_rules() {
+        let temp = TempDir::new().unwrap();
+        let content = "### @app.entrypoint\n";
+        for marker in ["POWER.md", "plugin.json"] {
+            let root = temp
+                .path()
+                .join(format!("power-{}", marker.replace('.', "-")));
+            let path = root.join("steering/patterns.md");
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            fs::write(root.join(marker), "{}").unwrap();
+            fs::write(&path, content).unwrap();
+            assert!(rules_for(&path, content).is_empty(), "{marker}");
+        }
+        // A `steering/` directory that is not in a power is ordinary Markdown.
+        let path = temp.path().join("car/steering/notes.md");
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(&path, content).unwrap();
+        assert_eq!(rules_for(&path, content), vec!["REF-001"]);
+    }
+
     #[test]
     fn test_cycle_in_skill_md() {
         let temp = TempDir::new().unwrap();

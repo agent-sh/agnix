@@ -398,7 +398,7 @@ impl ValidatorRegistryBuilder {
 ///
 /// Used by `BuiltinProvider` (via `debug_assert_eq!`) and tests to catch
 /// accidental additions or removals without updating all providers.
-const EXPECTED_BUILTIN_COUNT: usize = 85;
+const EXPECTED_BUILTIN_COUNT: usize = 86;
 
 // -- Category providers -----------------------------------------------------
 //
@@ -780,9 +780,11 @@ impl ValidatorProvider for MiscProvider {
             ),
             // Kiro resolves no Claude-style `@path` imports in any file it loads
             // (steering uses `#[[file:...]]`, agents `file://`), so the
-            // ImportsValidator is not registered for Kiro types. POWER.md bodies
-            // document paths for users, so the CrossPlatformValidator (XP-003)
-            // is not registered either.
+            // ImportsValidator skips its @-import rules under `.kiro` and is not
+            // registered for hooks and powers, where it has nothing else to
+            // check. Agents keep it for REF-002 links in an AGENTS.md there.
+            // POWER.md bodies document paths for users, so the
+            // CrossPlatformValidator (XP-003) is not registered either.
             (
                 FileType::KiroPower,
                 Some("KiroPowerValidator"),
@@ -808,6 +810,11 @@ impl ValidatorProvider for MiscProvider {
                 FileType::KiroAgent,
                 Some("KiroAgentValidator"),
                 kiro_agent_validator,
+            ),
+            (
+                FileType::KiroAgent,
+                Some("ImportsValidator"),
+                imports_validator,
             ),
             (
                 FileType::KiroHook,
@@ -1638,8 +1645,9 @@ mod tests {
         };
 
         // Kiro resolves no `@path` imports, so the ImportsValidator is not
-        // registered for Kiro types (it raised REF-001 on agent and hook
-        // prompts). POWER.md drops the CrossPlatformValidator (XP-003 flagged
+        // registered for Kiro hooks and powers (it raised REF-001 on hook
+        // prompts); agents keep it for REF-002 and it skips @-imports under
+        // `.kiro`. POWER.md drops the CrossPlatformValidator (XP-003 flagged
         // documented OS paths).
         assert_eq!(
             names_for(FileType::KiroPower),
@@ -1655,7 +1663,10 @@ mod tests {
             names_for(FileType::KiroSteering),
             vec!["KiroSteeringValidator"]
         );
-        assert_eq!(names_for(FileType::KiroAgent), vec!["KiroAgentValidator"]);
+        assert_eq!(
+            names_for(FileType::KiroAgent),
+            vec!["KiroAgentValidator", "ImportsValidator"]
+        );
         assert_eq!(
             names_for(FileType::KiroHook),
             vec!["KiroHookValidator", "KiroV3HookValidator"]
@@ -1689,8 +1700,13 @@ mod tests {
             FileType::KiroNotLoaded,
         ] {
             let names = names_for(file_type);
+            if file_type != FileType::KiroAgent {
+                assert!(
+                    !names.contains(&"ImportsValidator"),
+                    "{file_type:?} must not run ImportsValidator"
+                );
+            }
             for claude_or_generic in [
-                "ImportsValidator",
                 "CrossPlatformValidator",
                 "HooksValidator",
                 "PluginValidator",
@@ -2159,9 +2175,10 @@ mod tests {
 
     #[test]
     fn misc_provider_count() {
-        // 35: Kiro types dropped five Imports/CrossPlatform entries and added
-        // power plugin, power MCP, power steering and not-loaded entries.
-        assert_eq!(MiscProvider.named_validators().len(), 35);
+        // Still 36: Kiro hooks and powers dropped four Imports/CrossPlatform
+        // entries and gained power plugin, power MCP, power steering and
+        // not-loaded entries.
+        assert_eq!(MiscProvider.named_validators().len(), 36);
     }
 
     #[test]
