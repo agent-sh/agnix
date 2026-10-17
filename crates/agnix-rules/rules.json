@@ -1,7 +1,7 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 532,
+  "total_rules": 553,
   "last_updated": "2026-10-17",
   "schema": {
     "evidence": {
@@ -8342,6 +8342,496 @@
       "bad_example": "{\"name\":\"My-Extension\",\"version\":\"1.0\"}"
     },
     {
+      "id": "GM-011",
+      "name": "Gemini MCP Server Name Contains Underscore",
+      "severity": "MEDIUM",
+      "category": "gemini-cli",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/tools/mcp-server",
+          "https://geminicli.com/docs/reference/configuration",
+          "https://geminicli.com/docs/reference/policy-engine"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"mcpServers\":{\"my-server\":{\"command\":\"node\",\"args\":[\"server.js\"]}}}",
+      "bad_example": "{\"mcpServers\":{\"my_server\":{\"command\":\"node\",\"args\":[\"server.js\"]}}}"
+    },
+    {
+      "id": "GM-013",
+      "name": "Deprecated tools.exclude Setting",
+      "severity": "LOW",
+      "category": "gemini-cli",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/reference/policy-engine",
+          "https://geminicli.com/docs/tools/shell",
+          "https://geminicli.com/docs/cli/enterprise"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "[[rule]]\ntoolName = \"run_shell_command\"\ncommandPrefix = \"rm -rf\"\ndecision = \"deny\"\npriority = 100\n",
+      "bad_example": "{\"tools\":{\"exclude\":[\"run_shell_command(rm -rf)\"]}}"
+    },
+    {
+      "id": "GM-014",
+      "name": "Gemini MCP Server Transport Missing or Ambiguous",
+      "severity": "HIGH",
+      "category": "gemini-cli",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/reference/configuration",
+          "https://geminicli.com/docs/tools/mcp-server",
+          "https://geminicli.com/docs/extensions/reference"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"mcpServers\":{\"docs\":{\"command\":\"node\",\"args\":[\"server.js\"]}}}",
+      "bad_example": "{\"mcpServers\":{\"docs\":{\"args\":[\"server.js\"]}}}"
+    },
+    {
+      "id": "GM-015",
+      "name": "Gemini MCP Server Trust Bypasses Confirmations",
+      "severity": "MEDIUM",
+      "category": "gemini-cli",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/tools/mcp-server",
+          "https://geminicli.com/docs/extensions/reference"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "security": {
+        "cwe": [
+          "CWE-284"
+        ],
+        "owasp": [
+          "A01:2021"
+        ],
+        "vulnerability_class": "authorization-bypass",
+        "subcategory": "audit",
+        "confidence": "HIGH",
+        "likelihood": "MEDIUM",
+        "impact": "MEDIUM"
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"mcpServers\":{\"docs\":{\"command\":\"node\",\"args\":[\"server.js\"]}}}",
+      "bad_example": "{\"mcpServers\":{\"docs\":{\"command\":\"node\",\"args\":[\"server.js\"],\"trust\":true}}}"
+    },
+    {
+      "id": "GM-016",
+      "name": "Invalid Gemini Default Approval Mode",
+      "severity": "MEDIUM",
+      "category": "gemini-cli",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/reference/configuration",
+          "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/cli/src/config/settingsSchema.ts"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"general\":{\"defaultApprovalMode\":\"auto_edit\"}}",
+      "bad_example": "{\"general\":{\"defaultApprovalMode\":\"yolo\"}}"
+    },
+    {
+      "id": "GM-017",
+      "name": "Gemini tools.core Lists Only Shell Entries",
+      "severity": "MEDIUM",
+      "category": "gemini-cli",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/tools/shell",
+          "https://geminicli.com/docs/reference/configuration"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"tools\":{\"core\":[\"read_file\",\"glob\",\"run_shell_command(git)\"]}}",
+      "bad_example": "{\"tools\":{\"core\":[\"run_shell_command(git)\",\"run_shell_command(npm)\"]}}"
+    },
+    {
+      "id": "GM-020",
+      "name": "Gemini Workspace Policy File Has No Effect",
+      "severity": "LOW",
+      "category": "gemini-cli",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/reference/policy-engine",
+          "https://github.com/google-gemini/gemini-cli/issues/18186"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "# ~/.gemini/policies/rules.toml\n[[rule]]\ntoolName = \"run_shell_command\"\ncommandPrefix = \"rm -rf\"\ndecision = \"deny\"\npriority = 100\n",
+      "bad_example": "# <project>/.gemini/policies/rules.toml\n[[rule]]\ntoolName = \"run_shell_command\"\ncommandPrefix = \"rm -rf\"\ndecision = \"deny\"\npriority = 100\n"
+    },
+    {
+      "id": "GM-021",
+      "name": "Ignored allow or yolo in Gemini Extension Policy",
+      "severity": "MEDIUM",
+      "category": "gemini-cli",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/extensions/reference",
+          "https://geminicli.com/docs/reference/policy-engine"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "# <extension>/policies/policies.toml\n[[rule]]\nmcpName = \"my-server\"\ntoolName = \"dangerous_tool\"\ndecision = \"ask_user\"\npriority = 100\n",
+      "bad_example": "# <extension>/policies/policies.toml\n[[rule]]\nmcpName = \"my-server\"\ntoolName = \"dangerous_tool\"\ndecision = \"allow\"\npriority = 100\n"
+    },
+    {
+      "id": "GM-022",
+      "name": "Gemini Extension Secret Setting Not Marked Sensitive",
+      "severity": "MEDIUM",
+      "category": "gemini-cli",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/extensions/best-practices",
+          "https://geminicli.com/docs/extensions/reference"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "security": {
+        "cwe": [
+          "CWE-312"
+        ],
+        "owasp": [
+          "A02:2021"
+        ],
+        "vulnerability_class": "secret-exposure",
+        "subcategory": "audit",
+        "confidence": "MEDIUM",
+        "likelihood": "MEDIUM",
+        "impact": "MEDIUM"
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"name\":\"my-api-extension\",\"version\":\"1.0.0\",\"settings\":[{\"name\":\"API Key\",\"envVar\":\"MY_API_KEY\",\"sensitive\":true}]}",
+      "bad_example": "{\"name\":\"my-api-extension\",\"version\":\"1.0.0\",\"settings\":[{\"name\":\"API Key\",\"envVar\":\"MY_API_KEY\"}]}"
+    },
+    {
+      "id": "GM-023",
+      "name": "Gemini Extension MCP Command Not Portable",
+      "severity": "LOW",
+      "category": "gemini-cli",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/extensions/reference"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"name\":\"x\",\"version\":\"1.0.0\",\"mcpServers\":{\"my-server\":{\"command\":\"node\",\"args\":[\"${extensionPath}/my-server.js\"],\"cwd\":\"${extensionPath}\"}}}",
+      "bad_example": "{\"name\":\"x\",\"version\":\"1.0.0\",\"mcpServers\":{\"my-server\":{\"command\":\"node my-server.js\"}}}"
+    },
+    {
+      "id": "GM-024",
+      "name": "Broad Shell Auto-Approval in Gemini Project Settings",
+      "severity": "MEDIUM",
+      "category": "gemini-cli",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/cli/trusted-folders",
+          "https://geminicli.com/docs/reference/configuration",
+          "https://geminicli.com/docs/tools/shell"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "security": {
+        "cwe": [
+          "CWE-732"
+        ],
+        "owasp": [
+          "A01:2021"
+        ],
+        "vulnerability_class": "insecure-permissions",
+        "subcategory": "audit",
+        "confidence": "HIGH",
+        "likelihood": "MEDIUM",
+        "impact": "HIGH"
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"tools\":{\"allowed\":[\"run_shell_command(git status)\",\"run_shell_command(npm test)\"]}}",
+      "bad_example": "{\"tools\":{\"allowed\":[\"run_shell_command\"]}}"
+    },
+    {
+      "id": "GM-025",
+      "name": "Deprecated Gemini Settings Key",
+      "severity": "LOW",
+      "category": "gemini-cli",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/reference/configuration",
+          "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/cli/src/config/settingsSchema.ts"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"ui\":{\"loadingPhrases\":\"off\"},\"general\":{\"topicUpdateNarration\":true}}",
+      "bad_example": "{\"ui\":{\"accessibility\":{\"enableLoadingPhrases\":false}},\"experimental\":{\"topicUpdateNarration\":true}}"
+    },
+    {
+      "id": "GM-027",
+      "name": "Invalid Gemini Policy Rule",
+      "severity": "HIGH",
+      "category": "gemini-cli",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/reference/policy-engine",
+          "https://geminicli.com/docs/extensions/reference"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "[[rule]]\ntoolName = \"run_shell_command\"\ncommandPrefix = \"git\"\ndecision = \"ask_user\"\npriority = 100\n",
+      "bad_example": "[[rule]]\ntoolName = \"run_shell_command\"\ncommandPrefix = \"git\"\ncommandRegex = \"git (commit|push)\"\ndecision = \"ask\"\npriority = 1000\n"
+    },
+    {
+      "id": "GM-CMD-001",
+      "name": "Invalid Gemini Custom Command File",
+      "severity": "HIGH",
+      "category": "gemini-cli",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/cli/custom-commands",
+          "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/cli/src/services/FileCommandLoader.ts"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "description = \"Generates a fix for a given issue.\"\nprompt = \"Please provide a code fix for the issue described here: {{args}}.\"\n",
+      "bad_example": "description = \"Generates a fix for a given issue.\"\ntext = \"Please provide a code fix for the issue described here: {{args}}.\"\n"
+    },
+    {
+      "id": "GM-CMD-002",
+      "name": "Gemini Command Description Missing, Multi-Line or Truncated",
+      "severity": "LOW",
+      "category": "gemini-cli",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/cli/custom-commands",
+          "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/cli/src/services/FileCommandLoader.ts"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "description = \"Asks the model to refactor the current context into a pure function.\"\nprompt = \"Refactor the code in the current context into a pure function.\"\n",
+      "bad_example": "prompt = \"Refactor the code in the current context into a pure function.\"\n"
+    },
+    {
+      "id": "GM-CMD-003",
+      "name": "Unbalanced Braces in Gemini Command Injection",
+      "severity": "HIGH",
+      "category": "gemini-cli",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/cli/custom-commands",
+          "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/cli/src/services/prompt-processors/injectionParser.ts"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "description = \"Commit message\"\nprompt = \"\"\"\nWrite a commit message for:\n!{git diff --staged}\n\"\"\"\n",
+      "bad_example": "description = \"First column\"\nprompt = \"\"\"\nSummarize:\n!{awk '{print $1' data.txt}\n\"\"\"\n"
+    },
+    {
       "id": "GM-AG-001",
       "name": "Invalid auth block in Gemini agent MCP server",
       "severity": "HIGH",
@@ -8369,6 +8859,159 @@
       },
       "good_example": "---\nname: spanner-agent\ndescription: Queries Spanner through its MCP server\nmcp_servers:\n  spanner:\n    url: https://spanner.googleapis.com/mcp\n    type: http\n    auth:\n      type: google-credentials\n      scopes:\n        - https://www.googleapis.com/auth/cloud-platform\n---\n\nYou are a Spanner agent.\n",
       "bad_example": "---\nname: spanner-agent\ndescription: Queries Spanner through its MCP server\nmcp_servers:\n  spanner:\n    auth:\n      type: basic-auth\n---\n\nYou are a Spanner agent.\n"
+    },
+    {
+      "id": "GM-AG-002",
+      "name": "Invalid Gemini Agent Frontmatter",
+      "severity": "HIGH",
+      "category": "gemini-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/core/subagents",
+          "https://geminicli.com/docs/core/remote-agents",
+          "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/core/src/agents/agentLoader.ts"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: security-auditor\ndescription: Specialized in finding security vulnerabilities in code.\ntools:\n  - read_file\n  - grep_search\n---\n\nYou are a ruthless Security Auditor.\n",
+      "bad_example": "---\nname: Security Auditor\ntools:\n  - read_file\n---\n\nYou are a ruthless Security Auditor.\n"
+    },
+    {
+      "id": "GM-AG-003",
+      "name": "Unknown Gemini Agent Frontmatter Key",
+      "severity": "HIGH",
+      "category": "gemini-agents",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/core/src/agents/agentLoader.ts",
+          "https://geminicli.com/docs/core/subagents"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: spanner-agent\ndescription: Queries Spanner\ntools: [read_file]\n---\n\nYou are a Spanner agent.\n",
+      "bad_example": "---\nname: spanner-agent\ndescription: Queries Spanner\ntools: [read_file]\nsystem_prompt: You are a Spanner agent.\n---\n"
+    },
+    {
+      "id": "GM-AG-004",
+      "name": "Gemini Agent Numeric Field Out of Range",
+      "severity": "HIGH",
+      "category": "gemini-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/core/subagents",
+          "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/core/src/agents/agentLoader.ts"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: a\ndescription: d\ntools: [read_file]\ntemperature: 0.2\nmax_turns: 10\ntimeout_mins: 5\n---\n",
+      "bad_example": "---\nname: a\ndescription: d\ntools: [read_file]\ntemperature: 3\nmax_turns: 0\n---\n"
+    },
+    {
+      "id": "GM-AG-005",
+      "name": "Literal Secret in Gemini Remote Agent Auth",
+      "severity": "MEDIUM",
+      "category": "gemini-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/core/remote-agents",
+          "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/core/src/agents/agentLoader.ts"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "security": {
+        "cwe": [
+          "CWE-798"
+        ],
+        "owasp": [
+          "A07:2021"
+        ],
+        "vulnerability_class": "hardcoded-secret",
+        "subcategory": "vuln",
+        "confidence": "MEDIUM",
+        "likelihood": "MEDIUM",
+        "impact": "HIGH"
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nkind: remote\nname: my-agent\nagent_card_url: https://example.com/agent-card\nauth:\n  type: apiKey\n  key: $MY_API_KEY\n---\n",
+      "bad_example": "---\nkind: remote\nname: my-agent\nagent_card_url: https://example.com/agent-card\nauth:\n  type: apiKey\n  key: sk-live-4f9a8b7c6d5e4f3a\n---\n"
+    },
+    {
+      "id": "GM-AG-006",
+      "name": "Gemini Local Agent Inherits Every Tool",
+      "severity": "LOW",
+      "category": "gemini-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/core/subagents"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: reviewer\ndescription: Reviews pull requests\ntools:\n  - read_file\n  - grep_search\n---\n",
+      "bad_example": "---\nname: reviewer\ndescription: Reviews pull requests\n---\n"
     },
     {
       "id": "KIRO-001",
@@ -15506,7 +16149,7 @@
     },
     "gemini-cli": {
       "prefix": "GM",
-      "count": 13,
+      "count": 29,
       "description": "Gemini CLI instruction file rules"
     },
     "codex": {
@@ -15646,7 +16289,7 @@
     },
     "gemini-agents": {
       "prefix": "GM-AG",
-      "count": 1,
+      "count": 6,
       "description": "Gemini CLI local agent (.gemini/agents/*.md) rules"
     }
   },

@@ -1,26 +1,62 @@
-//! Gemini CLI settings validation rules (GM-009, GM-010)
+//! Gemini CLI settings validation rules
 //!
 //! Validates:
 //! - GM-009: Settings.json parse error (HIGH) and unknown top-level keys
 //!   (warning; the documented categories of geminicli.com/docs/reference/configuration)
 //! - GM-010: `experimental.memoryManager`, which is not a setting since v0.40.0
+//! - GM-011, GM-014, GM-015: `mcpServers` names, transports and `trust`
+//!   (shared with the extension manifest, `rules::gemini_mcp`)
+//! - GM-013: the deprecated `tools.exclude`
+//! - GM-016: `general.defaultApprovalMode` outside its enum
+//! - GM-017: a `tools.core` allowlist with only shell entries
+//! - GM-024: a project `tools.allowed` that auto-approves every shell command
+//! - GM-025: deprecated settings keys
 //!
 //! The `hooks` and `hooksConfig` blocks (GM-004, GM-018, GM-019, GM-026) are
 //! checked by `rules::gemini_hooks`, which also runs on this file.
 
 use crate::{
     config::PerFileLintConfig,
-    diagnostics::{Diagnostic, Fix},
-    rules::{Validator, ValidatorMetadata},
+    diagnostics::{Diagnostic, DiagnosticLevel, Fix},
+    rules::{
+        Validator, ValidatorMetadata,
+        gemini_hooks::is_home_dir,
+        gemini_mcp::{JsonSink, McpSource, check_mcp_servers},
+    },
     schemas::{
         gemini_settings::parse_gemini_settings,
-        kiro_json::{JsonMember, LineIndex, parse_json_document},
+        kiro_json::{JsonMember, JsonValue, LineIndex, closest_name, parse_json_document},
     },
 };
 use rust_i18n::t;
 use std::path::Path;
 
-const RULE_IDS: &[&str] = &["GM-009", "GM-010"];
+/// Rules this validator owns, including the MCP server rules that
+/// GeminiExtensionValidator also emits (GM-011, GM-014, GM-015).
+const RULE_IDS: &[&str] = &[
+    "GM-009", "GM-010", "GM-011", "GM-013", "GM-014", "GM-015", "GM-016", "GM-017", "GM-024",
+    "GM-025",
+];
+
+/// `general.defaultApprovalMode` options in settingsSchema.ts: "**Values:**
+/// `"default"`, `"auto_edit"`, `"plan"`".
+const APPROVAL_MODES: &[&str] = &["default", "auto_edit", "plan"];
+
+/// Deprecated settings in settingsSchema.ts, with their replacement:
+/// "@deprecated Use ui.loadingPhrases instead." and "Deprecated: Use
+/// general.topicUpdateNarration instead."
+const DEPRECATED_SETTINGS: &[(&str, &str, &str)] = &[
+    (
+        "ui.accessibility",
+        "enableLoadingPhrases",
+        "ui.loadingPhrases",
+    ),
+    (
+        "experimental",
+        "topicUpdateNarration",
+        "general.topicUpdateNarration",
+    ),
+];
 
 pub struct GeminiSettingsValidator;
 
@@ -141,7 +177,167 @@ impl Validator for GeminiSettingsValidator {
             );
         }
 
+        if let Some(doc) = doc.as_ref() {
+            let mut sink = JsonSink::new(path, content, config);
+            check_settings_values(&mut sink, content, &doc.root.value, is_user_settings(path));
+            diagnostics.append(&mut sink.diagnostics);
+        }
+
         diagnostics
+    }
+}
+
+/// `~/.gemini/settings.json`: the `.gemini` folder is in the home directory.
+fn is_user_settings(path: &Path) -> bool {
+    path.parent()
+        .and_then(Path::parent)
+        .is_some_and(is_home_dir)
+}
+
+/// The value of `a.b.c` (the last member of each key, as `JSON.parse` keeps).
+fn lookup<'v>(root: &'v JsonValue, dotted: &str) -> Option<&'v JsonMember> {
+    let mut parts = dotted.split('.');
+    let mut member = root.get(parts.next()?)?;
+    for part in parts {
+        member = member.value.value.get(part)?;
+    }
+    Some(member)
+}
+
+/// A `tools.core` / `tools.allowed` entry for the shell tool: the tool name
+/// `run_shell_command` (or the class name `ShellTool` the enterprise guide
+/// uses), bare or with a `(<command prefix>)`.
+fn shell_entry(entry: &str) -> Option<bool> {
+    ["run_shell_command", "ShellTool"].iter().find_map(|tool| {
+        let rest = entry.strip_prefix(tool)?;
+        if rest.is_empty() {
+            Some(true)
+        } else {
+            rest.starts_with('(').then_some(false)
+        }
+    })
+}
+
+fn check_settings_values(sink: &mut JsonSink<'_, '_>, content: &str, root: &JsonValue, user: bool) {
+    let server_command = lookup(root, "mcp.serverCommand")
+        .and_then(|m| m.value.value.as_str())
+        .is_some_and(|command| !command.is_empty());
+    if let Some(mcp_servers) = root.get("mcpServers") {
+        let source = if user {
+            McpSource::UserSettings { server_command }
+        } else {
+            McpSource::ProjectSettings { server_command }
+        };
+        check_mcp_servers(sink, mcp_servers, &source);
+    }
+
+    // GM-013: "The legacy `tools.exclude` setting in `settings.json` is
+    // deprecated in favor of policy rules with a `deny` decision."
+    if let Some(exclude) = lookup(root, "tools.exclude") {
+        sink.push(
+            DiagnosticLevel::Info,
+            "GM-013",
+            (exclude.key_start, exclude.key_end),
+            t!("rules.gm_013.message"),
+            t!("rules.gm_013.suggestion"),
+        );
+    }
+
+    // GM-016: the enum of settingsSchema.ts, and "YOLO mode (auto-approve
+    // all actions) can only be enabled via command line".
+    if let Some(mode) = lookup(root, "general.defaultApprovalMode") {
+        let node = &mode.value;
+        let value = node.value.as_str();
+        if !value.is_some_and(|v| APPROVAL_MODES.contains(&v)) {
+            let shown = value.map_or_else(
+                || content.get(node.start..node.end).unwrap_or("").to_string(),
+                ToString::to_string,
+            );
+            let message = if value.is_some_and(|v| v.eq_ignore_ascii_case("yolo")) {
+                t!("rules.gm_016.yolo")
+            } else {
+                t!(
+                    "rules.gm_016.message",
+                    value = shown.as_str(),
+                    valid = APPROVAL_MODES.join(", ")
+                )
+            };
+            let suggestion = match value.and_then(|v| closest_name(v, APPROVAL_MODES)) {
+                Some(closest) if !value.is_some_and(|v| v.eq_ignore_ascii_case("yolo")) => {
+                    t!("rules.gm_016.did_you_mean", closest = closest)
+                }
+                _ => t!("rules.gm_016.suggestion"),
+            };
+            sink.push(
+                DiagnosticLevel::Warning,
+                "GM-016",
+                (node.start, node.end),
+                message,
+                suggestion,
+            );
+        }
+    }
+
+    // GM-017: "When you set `tools.core` to any value, _only_ the tools
+    // explicitly listed will be enabled."
+    if let Some(core) = lookup(root, "tools.core")
+        && let Some(entries) = core.value.value.as_array()
+        && !entries.is_empty()
+        && entries.iter().all(|entry| {
+            entry
+                .value
+                .as_str()
+                .is_some_and(|text| shell_entry(text.trim()).is_some())
+        })
+    {
+        sink.push(
+            DiagnosticLevel::Warning,
+            "GM-017",
+            (core.key_start, core.key_end),
+            t!("rules.gm_017.message"),
+            t!("rules.gm_017.suggestion"),
+        );
+    }
+
+    // GM-024: auto-approving every shell command in a project's settings,
+    // which the trust dialog flags as "potentially dangerous".
+    if !user
+        && let Some(allowed) = lookup(root, "tools.allowed")
+        && let Some(entries) = allowed.value.value.as_array()
+    {
+        for entry in entries {
+            let Some(text) = entry.value.as_str() else {
+                continue;
+            };
+            let trimmed = text.trim();
+            if trimmed == "*" || shell_entry(trimmed) == Some(true) {
+                sink.push(
+                    DiagnosticLevel::Warning,
+                    "GM-024",
+                    (entry.start, entry.end),
+                    t!("rules.gm_024.message", entry = text),
+                    t!("rules.gm_024.suggestion"),
+                );
+            }
+        }
+    }
+
+    // GM-025: deprecated keys, with their replacement.
+    for (parent, key, replacement) in DEPRECATED_SETTINGS {
+        if let Some(member) = lookup(root, parent).and_then(|m| m.value.value.get(key)) {
+            let setting = format!("{parent}.{key}");
+            sink.push(
+                DiagnosticLevel::Info,
+                "GM-025",
+                (member.key_start, member.key_end),
+                t!(
+                    "rules.gm_025.message",
+                    key = setting.as_str(),
+                    replacement = *replacement
+                ),
+                t!("rules.gm_025.suggestion", replacement = *replacement),
+            );
+        }
     }
 }
 
@@ -444,6 +640,196 @@ mod tests {
             );
             assert!(validate(&fixed).is_empty(), "{fixed}");
         }
+    }
+
+    // ===== MCP servers (GM-011, GM-014, GM-015) =====
+
+    fn levels(diagnostics: &[Diagnostic], id: &str) -> Vec<(DiagnosticLevel, usize, usize)> {
+        rule(diagnostics, id)
+            .iter()
+            .map(|d| (d.level, d.line, d.column))
+            .collect()
+    }
+
+    #[test]
+    fn test_documented_mcp_examples_are_clean() {
+        // configuration structure and override examples of tools/mcp-server.
+        let content = r#"{
+  "mcp": {"allowed": ["my-trusted-server"], "excluded": ["experimental-server"]},
+  "mcpServers": {
+    "serverName": {
+      "command": "path/to/server",
+      "args": ["--arg1", "value1"],
+      "env": {"API_KEY": "$MY_API_TOKEN"},
+      "cwd": "./server-directory",
+      "timeout": 30000,
+      "trust": false
+    },
+    "httpServer": {"httpUrl": "http://localhost:3000/mcp", "headers": {"Authorization": "Bearer $T"}},
+    "google-workspace": {"excludeTools": ["gmail.send"]}
+  }
+}"#;
+        assert!(validate(content).is_empty(), "{:?}", validate(content));
+    }
+
+    #[test]
+    fn test_gm_011_underscore_server_name() {
+        let content = "{\n  \"mcpServers\": {\n    \"my_server\": {\"command\": \"node\"}\n  }\n}";
+        let diagnostics = validate(content);
+        assert_eq!(
+            levels(&diagnostics, "GM-011"),
+            [(DiagnosticLevel::Warning, 3, 5)]
+        );
+        assert!(diagnostics[0].message.contains("'my-server'"));
+    }
+
+    #[test]
+    fn test_gm_014_transport() {
+        let content = r#"{"mcpServers": {
+  "none": {"args": ["server.js"]},
+  "empty-command": {"command": "", "cwd": "."},
+  "override": {"excludeTools": ["x"], "env": {"A": "1"}, "trust": false},
+  "both": {"httpUrl": "https://a/mcp", "url": "https://a/sse"},
+  "tcp": {"tcp": "localhost:9000"}
+}}"#;
+        let diagnostics = validate(content);
+        assert_eq!(
+            levels(&diagnostics, "GM-014"),
+            [
+                (DiagnosticLevel::Error, 2, 3),
+                (DiagnosticLevel::Error, 3, 3),
+                (DiagnosticLevel::Info, 5, 3)
+            ]
+        );
+        let both = rule(&diagnostics, "GM-014")[2];
+        assert!(both.message.contains("only httpUrl"), "{}", both.message);
+
+        // mcp.serverCommand may serve entries without a transport.
+        let content =
+            r#"{"mcp": {"serverCommand": "node s.js"}, "mcpServers": {"none": {"args": ["x"]}}}"#;
+        assert!(rule(&validate(content), "GM-014").is_empty());
+    }
+
+    #[test]
+    fn test_gm_015_trust_in_project_settings() {
+        let content = r#"{"mcpServers": {"mine": {"command": "node", "trust": true}}}"#;
+        let diagnostics = validate(content);
+        assert_eq!(
+            levels(&diagnostics, "GM-015"),
+            [(DiagnosticLevel::Warning, 1, 54)]
+        );
+    }
+
+    // ===== tools and general settings (GM-013, GM-016, GM-017, GM-024, GM-025) =====
+
+    #[test]
+    fn test_gm_013_tools_exclude_is_deprecated() {
+        let content = "{\n  \"tools\": {\n    \"exclude\": [\"run_shell_command(rm)\"]\n  }\n}";
+        assert_eq!(
+            levels(&validate(content), "GM-013"),
+            [(DiagnosticLevel::Info, 3, 5)]
+        );
+    }
+
+    #[test]
+    fn test_gm_016_approval_mode() {
+        for valid in ["default", "auto_edit", "plan"] {
+            let content = format!(r#"{{"general": {{"defaultApprovalMode": "{valid}"}}}}"#);
+            assert!(rule(&validate(&content), "GM-016").is_empty(), "{valid}");
+        }
+        let diagnostics = validate(r#"{"general": {"defaultApprovalMode": "yolo"}}"#);
+        assert_eq!(
+            levels(&diagnostics, "GM-016"),
+            [(DiagnosticLevel::Warning, 1, 37)]
+        );
+        assert!(diagnostics[0].message.contains("command line"));
+        let diagnostics = validate(r#"{"general": {"defaultApprovalMode": "autoEdit"}}"#);
+        assert_eq!(rule(&diagnostics, "GM-016").len(), 1);
+        assert!(
+            diagnostics[0]
+                .suggestion
+                .as_deref()
+                .unwrap_or("")
+                .contains("auto_edit")
+        );
+        assert_eq!(
+            rule(
+                &validate(r#"{"general": {"defaultApprovalMode": 1}}"#),
+                "GM-016"
+            )
+            .len(),
+            1
+        );
+    }
+
+    #[test]
+    fn test_gm_017_shell_only_core() {
+        let content = r#"{"tools": {"core": ["run_shell_command(git)", "ShellTool(ls)"]}}"#;
+        assert_eq!(
+            levels(&validate(content), "GM-017"),
+            [(DiagnosticLevel::Warning, 1, 12)]
+        );
+        // The enterprise guide's mixed allowlist, and the generic shell tool
+        // next to other tools.
+        for content in [
+            r#"{"tools": {"core": ["ReadFileTool", "GlobTool", "ShellTool(ls)"]}}"#,
+            r#"{"tools": {"core": ["read_file", "run_shell_command"]}}"#,
+            r#"{"tools": {"core": []}}"#,
+        ] {
+            assert!(rule(&validate(content), "GM-017").is_empty(), "{content}");
+        }
+    }
+
+    #[test]
+    fn test_gm_024_broad_shell_auto_approval() {
+        let content = r#"{"tools": {"allowed": ["run_shell_command(git)", "run_shell_command", "*", "ShellTool"]}}"#;
+        let diagnostics = validate(content);
+        assert_eq!(rule(&diagnostics, "GM-024").len(), 3);
+        // The configuration reference example.
+        let content =
+            r#"{"tools": {"allowed": ["run_shell_command(git)", "run_shell_command(npm test)"]}}"#;
+        assert!(rule(&validate(content), "GM-024").is_empty());
+    }
+
+    #[test]
+    fn test_gm_025_deprecated_keys() {
+        let content = r#"{
+  "ui": {"accessibility": {"enableLoadingPhrases": false, "screenReader": true}},
+  "experimental": {"topicUpdateNarration": true}
+}"#;
+        let diagnostics = validate(content);
+        assert_eq!(
+            levels(&diagnostics, "GM-025"),
+            [
+                (DiagnosticLevel::Info, 2, 28),
+                (DiagnosticLevel::Info, 3, 20)
+            ]
+        );
+        assert!(diagnostics[0].message.contains("ui.loadingPhrases"));
+        assert!(
+            diagnostics[1]
+                .message
+                .contains("general.topicUpdateNarration")
+        );
+    }
+
+    #[cfg(feature = "filesystem")]
+    #[test]
+    fn test_user_settings_tone_down_trust_and_skip_allowed() {
+        let Some(home) = dirs::home_dir() else {
+            return;
+        };
+        let path = home.join(".gemini/settings.json");
+        let content = r#"{"tools": {"allowed": ["run_shell_command"]}, "mcpServers": {"mine": {"command": "node", "trust": true}}}"#;
+        let diagnostics = GeminiSettingsValidator.validate(&path, content, &LintConfig::default());
+        assert!(rule(&diagnostics, "GM-024").is_empty());
+        assert_eq!(
+            rule(&diagnostics, "GM-015")
+                .iter()
+                .map(|d| d.level)
+                .collect::<Vec<_>>(),
+            [DiagnosticLevel::Info]
+        );
     }
 
     #[test]

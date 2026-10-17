@@ -422,11 +422,16 @@ fn infer_fixture_coverage(rules: &[RuleEntry]) -> HashMap<String, Vec<String>> {
                 "gemini_extension",
                 "gemini_ignore",
                 "gemini_hooks",
+                "gemini_surfaces",
             ],
         ),
         (
             "gemini-agents",
-            vec!["valid/gemini-agents", "invalid/gemini-agents"],
+            vec![
+                "valid/gemini-agents",
+                "invalid/gemini-agents",
+                "gemini_surfaces",
+            ],
         ),
         ("codex", vec!["codex", "codex-invalid"]),
         ("windsurf", vec!["windsurf", "windsurf-legacy"]),

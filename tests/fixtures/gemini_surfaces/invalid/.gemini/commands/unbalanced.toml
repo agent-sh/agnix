@@ -1,0 +1,5 @@
+description = "Summarizes the first column of a file."
+prompt = """
+Summarize the first column:
+!{awk '{print $1' data.txt}
+"""

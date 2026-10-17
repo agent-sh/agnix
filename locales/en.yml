@@ -716,6 +716,83 @@ rules:
     uppercase_name: "Extension name '%{name}' has uppercase letters; the docs say the name should be lowercase"
     not_semver: "Version '%{version}' does not appear to be standard semver (e.g., 1.0.0); `gemini extensions validate` warns about it"
     suggestion: 'See geminicli.com/docs/extensions/reference: "description: A short description of the extension", "The name should be lowercase or numbers and use dashes instead of underscores or spaces", and use a semver version such as 1.0.0.'
+  gm_011:
+    message: "MCP server name '%{name}' contains '_'; Gemini CLI splits mcp_<server>_<tool> on the first underscore, so policy and wildcard rules for this server can fail silently. Use '%{suggested}'."
+    suggestion: 'geminicli.com/docs/tools/mcp-server: "Do not use underscores (_) in your MCP server names (for example, use my-server rather than my_server)." Renaming the server changes its tool names (mcp_<server>_<tool>), so update the policies and tools lists that name them.'
+  gm_013:
+    message: tools.exclude is deprecated; use a policy rule with decision = "deny" instead
+    suggestion: 'The policy engine reference: "The legacy tools.exclude setting in settings.json is deprecated in favor of policy rules with a deny decision." Put the deny rule in ~/.gemini/policies/*.toml (user tier) or an admin policy directory: workspace .gemini/policies files currently have no effect (issue #18186).'
+  gm_014:
+    missing: "MCP server '%{name}' has none of command, url or httpUrl, so Gemini CLI cannot connect to it"
+    missing_suggestion: 'The configuration reference: "At least one of command, url, or httpUrl must be provided." Add command (stdio), url (SSE) or httpUrl (streamable HTTP).'
+    multiple: "MCP server '%{name}' sets %{fields}; Gemini CLI uses only %{winner}"
+    multiple_suggestion: 'The configuration reference: "If multiple are specified, the order of precedence is httpUrl, then url, then command." Remove the transports that are not used.'
+  gm_015:
+    project: "MCP server '%{name}' sets trust: true, which bypasses every tool confirmation for anyone who trusts this folder"
+    user: "MCP server '%{name}' sets trust: true, which bypasses every tool confirmation for this server"
+    suggestion: 'geminicli.com/docs/tools/mcp-server: "The trust option bypasses all confirmation dialogs. Use cautiously and only for servers you completely control." Prefer policy rules that allow specific tools.'
+    extension: "MCP server '%{name}' sets trust, which Gemini CLI does not support in extension MCP servers; the setting is ignored"
+    extension_suggestion: 'The extension reference: "all MCP server configuration options are supported except for trust." Remove it; users can trust the server in their own settings.json.'
+  gm_016:
+    message: "general.defaultApprovalMode is '%{value}'; the valid values are %{valid}"
+    yolo: general.defaultApprovalMode cannot be "yolo"; YOLO mode can only be enabled on the command line
+    suggestion: 'The configuration reference: "YOLO mode (auto-approve all actions) can only be enabled via command line (--yolo or --approval-mode=yolo)." Use default, auto_edit or plan.'
+    did_you_mean: "Did you mean '%{closest}'? The values are default, auto_edit and plan."
+  gm_017:
+    message: tools.core lists only shell entries, so every other built-in tool (read_file, write_file, glob, grep_search, ...) is disabled
+    suggestion: 'geminicli.com/docs/tools/shell: "When you set tools.core to any value, only the tools explicitly listed will be enabled." List the other tools the agent needs, or restrict shell commands with policy rules instead of tools.core.'
+  gm_020:
+    message: 'Workspace policy files (.gemini/policies) currently have no effect in Gemini CLI (issue #18186); the rules in this file are not applied'
+    suggestion: 'The policy engine reference: "The Workspace tier (project-level policies) is currently non-functional. Defining policies in a workspace''s .gemini/policies directory will not have any effect." Move the rules to ~/.gemini/policies/ or an admin policy directory.'
+  gm_021:
+    allow: Gemini CLI ignores allow decisions in extension policies, so this rule never auto-approves anything
+    yolo: Gemini CLI ignores yolo mode configurations in extension policies
+    suggestion: 'The extension reference: "For security, Gemini CLI ignores any allow decisions or yolo mode configurations in extension policies." Use deny or ask_user in extension policies; users grant allow rules in their own policies.'
+  gm_022:
+    message: "Extension setting '%{setting}' looks like a secret but is not marked sensitive: true"
+    suggestion: 'Extension best practices: "If your extension requires API keys or other secrets, use the sensitive: true option in your manifest. This ensures keys are stored in the system keychain and obfuscated in the CLI output." The name match is an agnix heuristic; suppress it for settings that are not secrets.'
+  gm_023:
+    split_command: "MCP server '%{name}' puts arguments in command ('%{command}'); Gemini CLI runs command as one executable"
+    split_command_suggestion: 'The extension reference: "Separate your executable and its arguments using command and args instead of putting them both in command."'
+    extension_path: "MCP server '%{name}' %{field} '%{value}' points into the extension without ${extensionPath}; it resolves against the working directory, not the extension"
+    extension_path_suggestion: 'The extension reference: "For portability, you should use ${extensionPath} to refer to files within your extension directory." For example "args": ["${extensionPath}/server.js"], or set "cwd": "${extensionPath}".'
+  gm_024:
+    message: "tools.allowed entry '%{entry}' auto-approves every shell command for anyone who trusts this folder"
+    suggestion: 'Allow specific command prefixes instead, such as "run_shell_command(git status)" (the configuration reference example: ["run_shell_command(git)", "run_shell_command(npm test)"]). The trusted-folders page: the CLI flags "potentially dangerous settings, such as auto-approving certain tools".'
+  gm_025:
+    message: '%{key} is deprecated; use %{replacement}'
+    suggestion: 'settingsSchema.ts marks this setting deprecated; move the value to %{replacement} (the value may need converting: check the configuration reference).'
+  gm_027:
+    parse_error: "Policy file is not valid TOML (%{error}); Gemini CLI cannot load its rules"
+    suggestion: 'See the TOML rule schema of geminicli.com/docs/reference/policy-engine: [[rule]] entries with toolName or mcpName, decision ("allow", "deny" or "ask_user") and priority (0 to 999).'
+    not_array: "'%{key}' must be an array of tables ([[%{key}]]), one per rule"
+    entry_not_table: "Policy rule entries must be tables, found %{found}"
+    missing_decision: 'Policy rule has no decision; it must be "allow", "deny" or "ask_user"'
+    action_not_decision: 'Policy rule sets `action` but no `decision`; the policy engine reference names this field decision ("allow", "deny" or "ask_user")'
+    invalid_decision: "Policy rule decision '%{value}' must be \"allow\", \"deny\" or \"ask_user\""
+    invalid_decision_closest: "Policy rule decision '%{value}' must be \"allow\", \"deny\" or \"ask_user\" (did you mean '%{closest}'?)"
+    decision_not_string: "Policy rule decision must be the string \"allow\", \"deny\" or \"ask_user\", found %{found}"
+    priority_range: "Policy rule priority %{value} is outside 0 to 999"
+    priority_not_integer: "Policy rule priority must be an integer from 0 to 999, found %{found}"
+    prefix_and_regex: "Policy rule sets both commandPrefix and commandRegex; \"You cannot use commandPrefix and commandRegex in the same rule.\""
+    fqn_tool_name: "toolName '%{value}' is a fully qualified MCP name, but the rule also sets mcpName; with mcpName, toolName must be the simple tool name, so this rule never matches"
+  gm_cmd_001:
+    message: 'Gemini CLI skips this custom command file: %{detail}'
+    suggestion: 'A command file needs prompt (String) and may have description (String): geminicli.com/docs/cli/custom-commands, "TOML file format (v1)".'
+    parse_error: 'it is not valid TOML (%{error})'
+    missing_prompt: "the required 'prompt' field is missing (\"The 'prompt' field is required.\")"
+    prompt_not_string: "'prompt' must be a string, found %{found}"
+    description_not_string: "'description' must be a string, found %{found}"
+  gm_cmd_002:
+    missing: Command has no description; /help shows a generic description generated from the file name
+    multiline: Command description spans several lines; the docs ask for a brief, one-line description
+    too_long: Command description has %{length} characters; /help truncates it to %{limit}
+    suggestion: 'custom-commands: "description (String): A brief, one-line description of what the command does. This text will be displayed next to your command in the /help menu." FileCommandLoader.ts shows it with sanitizeForDisplay(description, 100).'
+  gm_cmd_003:
+    message: "Unclosed %{kind} block %{trigger}...}: its braces never balance, so the rest of the prompt is read as part of the block and the command fails when it runs"
+    shell: shell injection
+    file: file injection
+    suggestion: 'custom-commands: "The content inside !{...} must have balanced braces ({ and }). If you need to execute a command containing unbalanced braces, consider wrapping it in an external script file and calling the script within the !{...} block." The same holds for @{...} paths.'
   oc_001:
     message: 'Invalid share mode ''%{value}''. Valid values: ''manual'', ''auto'', ''disabled'''
     type_error: 'Field ''share'' must be a string. Valid values: ''manual'', ''auto'', ''disabled'''
@@ -1737,6 +1814,41 @@ rules:
     array_not_array: 'MCP server ''%{server}'': ''auth.%{field}'' must be an array of strings'
     array_item_not_string: 'MCP server ''%{server}'': ''auth.%{field}[%{index}]'' must be a string'
     suggestion: 'Align the auth block with agentLoader.ts (gemini-cli). For google-credentials: {type: google-credentials, scopes?: [...]}. For oauth: {type: oauth, client_id?, client_secret?, scopes?, audiences?, authorization_url?, token_url?, issuer?, redirect_uri?, registration_url?, token_param_name?}'
+  gm_ag_002:
+    no_frontmatter: 'Gemini agent file does not start with YAML frontmatter enclosed in ---, so the agent loader rejects it'
+    yaml_error: 'Gemini agent frontmatter is not valid YAML (%{error}); the agent loader rejects the file'
+    yaml_tag: "Gemini agent frontmatter uses the YAML tag '%{tag}', which the agent loader's YAML parser (js-yaml) rejects as an unknown tag; quote the value (for example \"!command ...\" for a dynamic auth value)"
+    not_mapping: 'Gemini agent frontmatter must be a mapping of agent fields (or a list of remote agents), found %{found}'
+    missing: "Gemini agent '%{field}' is missing or empty; the agent loader requires it"
+    not_string: "Gemini agent '%{field}' must be a string, found %{found}"
+    not_list: "Gemini agent '%{field}' must be a list, found %{found}"
+    tools_not_strings: Gemini agent tools must be a list of tool name strings
+    bad_name: "Gemini agent name '%{name}' is not a valid slug: only lowercase letters, numbers, hyphens and underscores are allowed"
+    bad_kind: "Gemini agent kind '%{value}' must be local or remote"
+    list_local: 'A list of agents in one file must hold remote agents only ("the list format is currently remote-only")'
+    no_agent_card: "Remote Gemini agent '%{name}' needs agent_card_url or agent_card_json"
+    both_agent_cards: "Remote Gemini agent '%{name}' sets both agent_card_url and agent_card_json; the loader accepts only one"
+    bad_agent_card_url: "agent_card_url '%{value}' is not a URL"
+    bad_agent_card_json: 'agent_card_json must be a string of valid JSON (%{error})'
+    suggestion: 'See geminicli.com/docs/core/subagents ("Configuration schema") and core/remote-agents: "The file MUST start with YAML frontmatter enclosed in triple-dashes ---", name is a slug of lowercase letters, numbers, hyphens and underscores, a local agent needs a description, a remote agent needs agent_card_url or agent_card_json.'
+  gm_ag_003:
+    message: "Unknown key '%{key}' in %{kind} Gemini agent frontmatter; the agent loader's strict schema rejects the file"
+    suggestion: 'agentLoader.ts accepts only these %{kind} agent keys: %{valid}. Remove or rename the key.'
+    system_prompt_suggestion: The Markdown body after the closing --- is the agent's system prompt; move the text there and remove system_prompt from the frontmatter.
+    mcp_servers_camel_case: "Gemini agent frontmatter uses 'mcpServers' as the subagents page shows, but the agent loader's strict schema accepts only 'mcp_servers'"
+    mcp_servers_camel_case_suggestion: 'Rename mcpServers to mcp_servers (and httpUrl / includeTools / excludeTools inside it to http_url / include_tools / exclude_tools). agnix read this from agentLoader.ts; it was not run against a live gemini binary.'
+  gm_ag_004:
+    not_positive_integer: "Gemini agent %{field} must be a positive integer, found %{value}; the agent loader rejects the file"
+    temperature_not_number: 'Gemini agent temperature must be a number, found %{found}; the agent loader rejects the file'
+    temperature_range: 'Gemini agent temperature %{value} is outside the documented range 0.0 to 2.0'
+    suggestion: 'geminicli.com/docs/core/subagents: "temperature: Model temperature (0.0 - 2.0)", max_turns defaults to 30 and timeout_mins to 10 (agentLoader.ts: z.number().int().positive()).'
+  gm_ag_005:
+    message: "Remote agent '%{name}' auth.%{field} is a literal value that looks like a secret"
+    suggestion: 'core/remote-agents: "Prefer $ENV_VAR or !command over embedding secrets directly in agent files, especially for project-level agents checked into version control." For example key: $MY_API_KEY.'
+  gm_ag_006:
+    no_tools: "Local Gemini agent '%{name}' has no tools list, so it inherits every tool of the parent session"
+    wildcard: "Local Gemini agent '%{name}' grants every tool with '*'"
+    suggestion: 'geminicli.com/docs/core/subagents: "If omitted, it inherits all tools from the parent session." List only the tools the agent needs (tool isolation). A generalist agent may keep every tool.'
   kr_set_001:
     type_error: "toolSearch.enabled must be a boolean (true or false); Kiro does not read other values and keeps the default"
     suggestion: "Set toolSearch.enabled to true or false. Example: {\"toolSearch.enabled\": true}. See https://kiro.dev/docs/mcp/tool-search/"

@@ -838,31 +838,92 @@ fn is_excluded_parent(parent: Option<&str>) -> bool {
 // Gemini CLI extensions
 // ============================================================================
 
-/// The extension root and file type of a file that Gemini CLI reads from an
-/// extension directory, judged by the path below the root only. Whether the
-/// root really is an extension is decided by the callers: installed
-/// extensions by their location, other roots by a `gemini-extension.json`.
+/// The candidate extension roots and file type of a file that Gemini CLI
+/// reads from an extension directory, judged by the path below the root
+/// only. Whether a root really is an extension is decided by the callers:
+/// installed extensions by their location, other roots by a
+/// `gemini-extension.json`.
 ///
 /// geminicli.com/docs/extensions/reference: "Define hooks in a
-/// `hooks/hooks.json` file within your extension directory" and "Add agent
-/// definition files (`.md`) to an `agents/` directory in your extension root".
-fn gemini_extension_member(path: &Path) -> Option<(&Path, FileType)> {
-    let filename = path.file_name()?.to_str()?;
-    let dir = path.parent()?;
-    let dir_name = dir.file_name()?.to_str()?;
-    let file_type = if filename == "hooks.json" && dir_name.eq_ignore_ascii_case("hooks") {
-        FileType::GeminiHooks
+/// `hooks/hooks.json` file within your extension directory", "Add agent
+/// definition files (`.md`) to an `agents/` directory in your extension
+/// root", "Provide custom commands by placing TOML files in a `commands/`
+/// subdirectory" (FileCommandLoader.ts globs `**/*.toml` under
+/// `<extension>/commands`, so every `commands` ancestor is a candidate) and
+/// "create a `policies/` directory in your extension's root and place your
+/// `.toml` policy files inside it".
+fn gemini_extension_members(path: &Path) -> Vec<(&Path, FileType)> {
+    let Some(filename) = path.file_name().and_then(|n| n.to_str()) else {
+        return Vec::new();
+    };
+    let Some(dir) = path.parent() else {
+        return Vec::new();
+    };
+    let dir_name = dir.file_name().and_then(|n| n.to_str()).unwrap_or("");
+    let single = |file_type| dir.parent().map(|root| vec![(root, file_type)]);
+    let members = if filename == "hooks.json" && dir_name.eq_ignore_ascii_case("hooks") {
+        single(FileType::GeminiHooks)
     } else if ends_with_ignore_ascii_case(filename, ".md")
         && dir_name.eq_ignore_ascii_case("agents")
     {
-        FileType::GeminiAgent
+        single(FileType::GeminiAgent)
+    } else if ends_with_ignore_ascii_case(filename, ".toml") {
+        let mut members: Vec<(&Path, FileType)> = dir
+            .ancestors()
+            .filter(|ancestor| {
+                ancestor
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .is_some_and(|n| n.eq_ignore_ascii_case("commands"))
+            })
+            .filter_map(|commands| commands.parent())
+            .map(|root| (root, FileType::GeminiCommand))
+            .collect();
+        if dir_name.eq_ignore_ascii_case("policies")
+            && let Some(root) = dir.parent()
+        {
+            members.push((root, FileType::GeminiPolicy));
+        }
+        Some(members)
     } else {
-        // Further extension members (custom commands, policies) are added
-        // here; a nested member returns the directory that holds its
-        // top-level folder as the root.
-        return None;
+        None
     };
-    Some((dir.parent()?, file_type))
+    members.unwrap_or_default()
+}
+
+/// A `.toml` file below a `.gemini/commands/` directory (`~/.gemini/commands/`
+/// or `<project>/.gemini/commands/`), at any depth: "Subdirectories are used
+/// to create namespaced commands" (geminicli.com/docs/cli/custom-commands).
+fn is_gemini_command_path(path: &Path) -> bool {
+    let comps = normal_components(path);
+    let Some((filename, dirs)) = comps.split_last() else {
+        return false;
+    };
+    ends_with_ignore_ascii_case(filename, ".toml")
+        && dirs.windows(2).any(|pair| {
+            pair[0].eq_ignore_ascii_case(".gemini") && pair[1].eq_ignore_ascii_case("commands")
+        })
+}
+
+/// A `.toml` file directly in a Gemini CLI policy directory: the user and
+/// workspace tiers (`~/.gemini/policies/*.toml`,
+/// `$WORKSPACE_ROOT/.gemini/policies/*.toml`) and the admin directories of
+/// geminicli.com/docs/reference/policy-engine ("Standard Locations"):
+/// `/etc/gemini-cli/policies`, `/Library/Application Support/GeminiCli/policies`
+/// and `C:\ProgramData\gemini-cli\policies`.
+fn is_gemini_policy_path(path: &Path) -> bool {
+    let comps = normal_components(path);
+    let Some((filename, dirs)) = comps.split_last() else {
+        return false;
+    };
+    ends_with_ignore_ascii_case(filename, ".toml")
+        && (dirs_end_with(dirs, &[".gemini", "policies"])
+            || dirs_end_with(dirs, &["etc", "gemini-cli", "policies"])
+            || dirs_end_with(
+                dirs,
+                &["Library", "Application Support", "GeminiCli", "policies"],
+            )
+            || dirs_end_with(dirs, &["ProgramData", "gemini-cli", "policies"]))
 }
 
 /// `root` is `.gemini/extensions/<name>`, where Gemini CLI installs (and
@@ -890,9 +951,10 @@ fn is_installed_gemini_extension_root(root: &Path) -> bool {
 /// detection is never replaced, and nothing inside `.kiro/` is touched.
 ///
 /// Each tool adds one branch that returns `Some` for its own layouts:
-/// - Gemini CLI: a `hooks/hooks.json` or `agents/*.md` whose extension root
-///   (a repository that is an extension, or a `.gemini/` folder that ships
-///   one) holds `gemini-extension.json`.
+/// - Gemini CLI: a `hooks/hooks.json`, `agents/*.md`, `commands/**/*.toml`
+///   or `policies/*.toml` whose extension root (a repository that is an
+///   extension, or a `.gemini/` folder that ships one) holds
+///   `gemini-extension.json`.
 pub(crate) fn refine_file_type(
     path: &Path,
     detected: FileType,
@@ -912,9 +974,28 @@ pub(crate) fn refine_file_type(
 }
 
 fn refine_gemini_extension_member(path: &Path, fs: &dyn crate::fs::FileSystem) -> Option<FileType> {
-    let (root, file_type) = gemini_extension_member(path)?;
-    fs.is_file(&root.join("gemini-extension.json"))
-        .then_some(file_type)
+    gemini_extension_members(path)
+        .into_iter()
+        .find(|(root, _)| fs.is_file(&root.join("gemini-extension.json")))
+        .map(|(_, file_type)| file_type)
+}
+
+/// The extension directory of a Gemini CLI extension policy file
+/// (`<extension>/policies/*.toml`): an installed extension under
+/// `.gemini/extensions/<name>/`, or a directory that holds a
+/// `gemini-extension.json`. `None` for user, workspace and admin policies.
+pub(crate) fn gemini_policy_extension_root<'p>(
+    path: &'p Path,
+    fs: &dyn crate::fs::FileSystem,
+) -> Option<&'p Path> {
+    gemini_extension_members(path)
+        .into_iter()
+        .filter(|(_, file_type)| *file_type == FileType::GeminiPolicy)
+        .map(|(root, _)| root)
+        .find(|root| {
+            is_installed_gemini_extension_root(root)
+                || fs.is_file(&root.join("gemini-extension.json"))
+        })
 }
 
 // ============================================================================
@@ -967,10 +1048,20 @@ pub fn detect_file_type(path: &Path) -> FileType {
     // `agents/*.md` Gemini agents (not Claude subagents). Extension roots
     // elsewhere need the `gemini-extension.json` sibling, see
     // `refine_file_type`.
-    if let Some((root, file_type)) = gemini_extension_member(path)
-        && is_installed_gemini_extension_root(root)
+    if let Some((_, file_type)) = gemini_extension_members(path)
+        .into_iter()
+        .find(|(root, _)| is_installed_gemini_extension_root(root))
     {
         return file_type;
+    }
+
+    // Gemini CLI custom commands (`.gemini/commands/**/*.toml`) and policy
+    // files (`.gemini/policies/*.toml`, admin policy directories).
+    if is_gemini_command_path(path) {
+        return FileType::GeminiCommand;
+    }
+    if is_gemini_policy_path(path) {
+        return FileType::GeminiPolicy;
     }
 
     match filename {
@@ -2403,6 +2494,77 @@ mod tests {
             ("my-ext/agents/reviewer.md", Agent),
             ("remember/.gemini/hooks/hooks.json", Unknown),
         ]);
+    }
+
+    #[test]
+    fn detect_gemini_commands_and_policies() {
+        use FileType::*;
+        assert_types(&[
+            // Custom commands: user and project, at any depth.
+            ("/home/u/.gemini/commands/test.toml", GeminiCommand),
+            (".gemini/commands/git/commit.toml", GeminiCommand),
+            (".gemini/commands/a/b/c.toml", GeminiCommand),
+            (".GEMINI/Commands/review.TOML", GeminiCommand),
+            // Installed extensions.
+            (
+                "/home/u/.gemini/extensions/gcp/commands/gcs/sync.toml",
+                GeminiCommand,
+            ),
+            (".gemini/extensions/gcp/policies/rules.toml", GeminiPolicy),
+            // Policies: user, workspace and admin directories, top level only.
+            ("/home/u/.gemini/policies/my-rules.toml", GeminiPolicy),
+            (".gemini/policies/rules.toml", GeminiPolicy),
+            ("/etc/gemini-cli/policies/org.toml", GeminiPolicy),
+            (
+                "/Library/Application Support/GeminiCli/policies/org.toml",
+                GeminiPolicy,
+            ),
+            ("C:/ProgramData/gemini-cli/policies/org.toml", GeminiPolicy),
+            (".gemini/policies/sub/rules.toml", Unknown),
+            // Not commands or policies.
+            (".gemini/commands/notes.md", GenericMarkdown),
+            (".gemini/commands.toml", Unknown),
+            ("commands/deploy.toml", Unknown),
+            ("policies/rules.toml", Unknown),
+            (".codex/config.toml", CodexConfig),
+        ]);
+    }
+
+    #[test]
+    fn refine_gemini_extension_commands_and_policies() {
+        use FileType::*;
+        let fs = crate::fs::MockFileSystem::new();
+        fs.add_file("ext/gemini-extension.json", "{}");
+        fs.add_file("remember/.gemini/gemini-extension.json", "{}");
+        for (path, expected) in [
+            ("ext/commands/deploy.toml", GeminiCommand),
+            ("ext/commands/gcs/sync.toml", GeminiCommand),
+            ("ext/policies/policies.toml", GeminiPolicy),
+            ("remember/.gemini/policies/p.toml", GeminiPolicy),
+            // No manifest above the folder, or not a member location.
+            ("other/commands/deploy.toml", Unknown),
+            ("other/policies/p.toml", Unknown),
+            ("ext/policies/sub/p.toml", Unknown),
+            ("ext/config.toml", Unknown),
+        ] {
+            assert_eq!(refine(path, &fs), expected, "{path}");
+        }
+        // The extension root of a policy file, for the extension-tier rules.
+        assert_eq!(
+            gemini_policy_extension_root(Path::new("ext/policies/policies.toml"), &fs),
+            Some(Path::new("ext"))
+        );
+        assert_eq!(
+            gemini_policy_extension_root(
+                Path::new("/home/u/.gemini/extensions/gcp/policies/p.toml"),
+                &fs
+            ),
+            Some(Path::new("/home/u/.gemini/extensions/gcp"))
+        );
+        assert_eq!(
+            gemini_policy_extension_root(Path::new("proj/.gemini/policies/p.toml"), &fs),
+            None
+        );
     }
 
     fn refine(path: &str, fs: &crate::fs::MockFileSystem) -> FileType {

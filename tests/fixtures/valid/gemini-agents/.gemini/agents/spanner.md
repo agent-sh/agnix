@@ -2,6 +2,8 @@
 kind: local
 name: spanner-test-agent
 description: An agent to test Spanner MCP with auth
+tools:
+  - read_file
 mcp_servers:
   spanner:
     url: https://spanner.googleapis.com/mcp

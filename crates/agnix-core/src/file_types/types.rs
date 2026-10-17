@@ -71,6 +71,12 @@ pub enum FileType {
     /// Gemini CLI extension hooks (`<extension>/hooks/hooks.json`: under
     /// `.gemini/extensions/<name>/`, or next to a `gemini-extension.json`)
     GeminiHooks,
+    /// Gemini CLI custom command (`.gemini/commands/**/*.toml`, user and
+    /// project, and an extension's `commands/**/*.toml`)
+    GeminiCommand,
+    /// Gemini CLI policy file (`.gemini/policies/*.toml`, an extension's
+    /// `policies/*.toml`, and the admin policy directories)
+    GeminiPolicy,
     /// Codex CLI configuration (.codex/config.toml, .codex/config.json, .codex/config.yaml/.yml)
     CodexConfig,
     /// Codex CLI plugin manifest (.codex-plugin/plugin.json)
@@ -182,6 +188,8 @@ impl fmt::Display for FileType {
             FileType::GeminiExtension => "GeminiExtension",
             FileType::GeminiIgnore => "GeminiIgnore",
             FileType::GeminiHooks => "GeminiHooks",
+            FileType::GeminiCommand => "GeminiCommand",
+            FileType::GeminiPolicy => "GeminiPolicy",
             FileType::CodexConfig => "CodexConfig",
             FileType::CodexPlugin => "CodexPlugin",
             FileType::CodexRequirements => "CodexRequirements",
@@ -244,6 +252,8 @@ mod tests {
             (FileType::GeminiExtension, "GeminiExtension"),
             (FileType::GeminiIgnore, "GeminiIgnore"),
             (FileType::GeminiHooks, "GeminiHooks"),
+            (FileType::GeminiCommand, "GeminiCommand"),
+            (FileType::GeminiPolicy, "GeminiPolicy"),
             (FileType::CodexConfig, "CodexConfig"),
             (FileType::CodexPlugin, "CodexPlugin"),
             (FileType::CodexRequirements, "CodexRequirements"),
@@ -305,6 +315,8 @@ mod tests {
             FileType::GeminiExtension,
             FileType::GeminiIgnore,
             FileType::GeminiHooks,
+            FileType::GeminiCommand,
+            FileType::GeminiPolicy,
             FileType::CodexConfig,
             FileType::CodexPlugin,
             FileType::CodexRequirements,
@@ -380,6 +392,8 @@ mod tests {
             FileType::GeminiExtension,
             FileType::GeminiIgnore,
             FileType::GeminiHooks,
+            FileType::GeminiCommand,
+            FileType::GeminiPolicy,
             FileType::CodexConfig,
             FileType::CodexPlugin,
             FileType::CodexRequirements,

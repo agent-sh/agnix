@@ -32,6 +32,8 @@ pub(crate) use detection::{
 };
 // Sibling-file refinement applied by the pipeline after path detection.
 pub(crate) use detection::refine_file_type;
+// The extension root of a Gemini CLI extension policy file.
+pub(crate) use detection::gemini_policy_extension_root;
 // Path facts for the Kiro agent and permissions validators.
 #[allow(unused_imports)]
 pub(crate) use detection::{KiroAgentLoaders, kiro_agent_loaders};

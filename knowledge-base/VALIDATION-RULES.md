@@ -2495,6 +2495,48 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 **Fix**: No auto-fix (deleting the key changes behavior on Gemini CLI before v0.40.0)
 **Source**: geminicli.com/docs/reference/configuration ("`experimental`"), settingsSchema.ts history (v0.39.0 vs v0.40.0)
 
+<a id="gm-011"></a>
+### GM-011 [MEDIUM] Gemini MCP Server Name Contains Underscore
+**Requirement**: MCP server names SHOULD NOT contain `_`: "Do not use underscores (`_`) in your MCP server names (for example, use `my-server` rather than `my_server`). The policy parser splits Fully Qualified Names (`mcp_server_tool`) on the _first_ underscore following the `mcp_` prefix. If your server name contains an underscore, the parser will misinterpret the server identity, which can cause wildcard rules and security policies to fail silently." (tools/mcp-server, "3. Tool naming and namespaces"; the same warning is in the configuration reference "`mcpServers`" and the policy engine "Special syntax for MCP tools").
+**Detection**: Warning, at the name, for a key of `mcpServers` in `.gemini/settings.json` and `gemini-extension.json`, a key of `mcp_servers` (or `mcpServers`) in agent frontmatter, and an `mcpName` value in a policy file (`[[rule]]`, `[[rules]]` and `[[safety_checker]]` entries) that contains `_`. The message names the dashed alternative. The extension reference's own policy example uses `mcpName = "my_server"`; it is still reported, since the warning is the vendor's.
+**Fix**: No auto-fix. Renaming a server changes the names of its tools (`mcp_<server>_<tool>`), so policies and tool lists that name them must change too.
+**Source**: geminicli.com/docs/tools/mcp-server ("3. Tool naming and namespaces"), geminicli.com/docs/reference/configuration ("`mcpServers`"), geminicli.com/docs/reference/policy-engine ("Special syntax for MCP tools")
+
+<a id="gm-013"></a>
+### GM-013 [LOW] Deprecated tools.exclude Setting
+**Requirement**: `tools.exclude` SHOULD be replaced by deny rules: "The `deny` decision is the recommended way to exclude tools. The legacy `tools.exclude` setting in `settings.json` is deprecated in favor of policy rules with a `deny` decision." (policy engine, "Decisions"); "`tools.exclude` [DEPRECATED]: To block specific commands, use the [Policy Engine](/docs/reference/policy-engine)." (tools/shell).
+**Detection**: Info, at the key, when `.gemini/settings.json` has `tools.exclude`. The suggestion points to user (`~/.gemini/policies/`) or admin policy files, not `.gemini/policies`, because the workspace tier is non-functional (GM-020).
+**Fix**: No auto-fix (the setting still works; moving it to a policy file is a manual change)
+**Source**: geminicli.com/docs/reference/policy-engine ("Decisions"), geminicli.com/docs/tools/shell ("Command restrictions"), geminicli.com/docs/cli/enterprise ("Blocklisting with `excludeTools` (Deprecated)")
+
+<a id="gm-014"></a>
+### GM-014 [HIGH] Gemini MCP Server Transport Missing or Ambiguous
+**Requirement**: Each MCP server MUST name a transport: "At least one of `command`, `url`, or `httpUrl` must be provided. If multiple are specified, the order of precedence is `httpUrl`, then `url`, then `command`." (configuration reference, "`mcpServers`").
+**Detection**: Error, at the server name, for an `mcpServers` entry with no non-empty `command`, `url` or `httpUrl` (`tcp`, a transport of `MCPServerConfig`, also counts). In `.gemini/settings.json` an entry may be a partial override of an extension's server ("Properties like `command`, `url`, and `timeout` are replaced by your local values if provided", with an `excludeTools`-only example), so entries made only of `includeTools`, `excludeTools`, `env`, `timeout`, `trust` and `description` are skipped, and no entry is reported when `mcp.serverCommand` is set. `gemini-extension.json` servers have no override form and are always checked. Info, at the server name, when more than one transport is set, naming the one Gemini uses.
+**Fix**: No auto-fix
+**Source**: geminicli.com/docs/reference/configuration ("`mcpServers`"), geminicli.com/docs/tools/mcp-server ("Configuration properties", "Overriding extension configurations")
+
+<a id="gm-015"></a>
+### GM-015 [MEDIUM] Gemini MCP Server Trust Bypasses Confirmations
+**Requirement**: `trust: true` SHOULD be used only for servers you control: "**Trust settings:** The `trust` option bypasses all confirmation dialogs. Use cautiously and only for servers you completely control" (tools/mcp-server, "Security considerations"). In extensions it does nothing: "Note that all MCP server configuration options are supported except for `trust`." (extensions/reference).
+**Detection**: Warning, at the value, for `mcpServers.<name>.trust: true` in a project `.gemini/settings.json` (anyone who trusts the folder gets the bypass); info in `~/.gemini/settings.json` (the user's own servers); info in `gemini-extension.json`, saying the setting is ignored.
+**Fix**: No auto-fix (removing `trust` changes behavior)
+**Source**: geminicli.com/docs/tools/mcp-server ("Security considerations"), geminicli.com/docs/extensions/reference ("`gemini-extension.json`")
+
+<a id="gm-016"></a>
+### GM-016 [MEDIUM] Invalid Gemini Default Approval Mode
+**Requirement**: `general.defaultApprovalMode` MUST be one of the documented values: "**Values:** `"default"`, `"auto_edit"`, `"plan"`", and "YOLO mode (auto-approve all actions) can only be enabled via command line (--yolo or --approval-mode=yolo)." (configuration reference, "`general`"; the same enum in settingsSchema.ts).
+**Detection**: Warning, at the value, for any other value or type. `yolo` gets a message saying YOLO can only be enabled on the command line; near misses (for example `autoEdit`, the policy engine's spelling) get a did-you-mean.
+**Fix**: No auto-fix
+**Source**: geminicli.com/docs/reference/configuration ("`general`"), settingsSchema.ts (`defaultApprovalMode.options`)
+
+<a id="gm-017"></a>
+### GM-017 [MEDIUM] Gemini tools.core Lists Only Shell Entries
+**Requirement**: `tools.core` SHOULD list every tool the agent needs: "The `tools.core` setting is an **allowlist for _all_ built-in tools**, not just shell commands. When you set `tools.core` to any value, _only_ the tools explicitly listed will be enabled. This includes all built-in tools like `read_file`, `write_file`, `glob`, `grep_search`, `list_directory`, `replace`, etc." (tools/shell, "Command restrictions").
+**Detection**: Warning, at the key, when `tools.core` is a non-empty list whose entries are all shell entries: `run_shell_command`, `run_shell_command(<prefix>)`, or the class-style `ShellTool` / `ShellTool(<prefix>)` of the enterprise guide. A list with any other tool is fine.
+**Fix**: No auto-fix
+**Source**: geminicli.com/docs/tools/shell ("Command restrictions"), geminicli.com/docs/reference/configuration ("`tools`")
+
 <a id="gm-018"></a>
 ### GM-018 [MEDIUM] Gemini Hook Timeout Looks Like Seconds
 **Requirement**: Hook timeouts SHOULD be written in milliseconds: "`timeout` | `number` | No | Execution timeout in milliseconds (default: 60000)." Claude Code hook timeouts are seconds, so a value copied from Claude Code (for example 30) gives the hook 30 ms.
@@ -2509,12 +2551,61 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 **Fix**: No auto-fix
 **Source**: geminicli.com/docs/hooks/best-practices ("Make scripts executable", "Hook not executing"), geminicli.com/docs/hooks ("Environment variables"), geminicli.com/docs/extensions/reference ("Variables"), hookRunner.ts (`expandCommand`, `cwd: input.cwd`)
 
+<a id="gm-020"></a>
+### GM-020 [LOW] Gemini Workspace Policy File Has No Effect
+**Requirement**: Policies SHOULD live in the user or admin tier while the workspace tier is broken: "The **Workspace** tier (project-level policies) is currently non-functional. Defining policies in a workspace's `.gemini/policies` directory will not have any effect. See [issue #18186](https://github.com/google-gemini/gemini-cli/issues/18186). Use User or Admin policies instead." (policy engine, "Priority system and tiers").
+**Detection**: Info, at the top of the file, for a `.gemini/policies/*.toml` whose `.gemini` folder is not in the home directory, unless the directory is an extension root (a `gemini-extension.json` next to `policies/`, or `.gemini/extensions/<name>/`), whose policies GM-021 covers. This tracks google-gemini/gemini-cli issue #18186; re-check the rule when the issue is fixed and retire it then. A dotfiles repository that keeps a copy of `~/.gemini/policies` is reported too; suppress it there.
+**Fix**: No auto-fix (move the file to `~/.gemini/policies/` or an admin policy directory)
+**Source**: geminicli.com/docs/reference/policy-engine ("Priority system and tiers", "Policy locations"), github.com/google-gemini/gemini-cli/issues/18186
+
+<a id="gm-021"></a>
+### GM-021 [MEDIUM] Ignored allow or yolo in Gemini Extension Policy
+**Requirement**: Extension policies SHOULD NOT rely on `allow` or `yolo`: "For security, Gemini CLI ignores any `allow` decisions or `yolo` mode configurations in extension policies. This ensures that an extension cannot automatically approve tool calls or bypass security measures without your confirmation." (extensions/reference, "Policy Engine").
+**Detection**: Warning, at the value, for `decision = "allow"` and for a `"yolo"` entry in `modes` in an extension's `policies/*.toml` (next to `gemini-extension.json`, or under `.gemini/extensions/<name>/`).
+**Fix**: No auto-fix
+**Source**: geminicli.com/docs/extensions/reference ("Policy Engine")
+
+<a id="gm-022"></a>
+### GM-022 [MEDIUM] Gemini Extension Secret Setting Not Marked Sensitive
+**Requirement**: Secret settings SHOULD be sensitive: "If your extension requires API keys or other secrets, use the `sensitive: true` option in your manifest. This ensures keys are stored in the system keychain and obfuscated in the CLI output." (extensions/best-practices, "Secure sensitive settings"); "`sensitive`: If `true`, the value is stored in the system keychain and obfuscated in the UI." (extensions/reference, "Extension settings").
+**Detection**: Warning, at the `envVar` (or `name`) value, for a `settings[]` entry without `sensitive: true` whose `envVar` or `name` contains the whole word KEY, TOKEN, SECRET, PASSWORD, PASSWD, CREDENTIAL or APIKEY (or a plural). Words are split at non-alphanumeric characters and lower-to-upper case changes, so `KEYBOARD_LAYOUT` does not match; describing forms such as `KEY_PATH`, `TOKEN_URL`, `ACCESS_KEY_ID`, `PUBLIC_KEY` and `MAX_TOKENS` are skipped. The word list is an agnix heuristic.
+**Fix**: No auto-fix (`sensitive: true` moves the value to the keychain, which changes where it is stored)
+**Source**: geminicli.com/docs/extensions/best-practices ("Secure sensitive settings"), geminicli.com/docs/extensions/reference ("Extension settings")
+
+<a id="gm-023"></a>
+### GM-023 [LOW] Gemini Extension MCP Command Not Portable
+**Requirement**: Extension MCP servers SHOULD split the command and use `${extensionPath}`: "For portability, you should use `${extensionPath}` to refer to files within your extension directory." and "Separate your executable and its arguments using `command` and `args` instead of putting them both in `command`." (extensions/reference, "`gemini-extension.json`").
+**Detection**: Info, at the value, in `gemini-extension.json` `mcpServers`: a `command` with whitespace; a relative `command` path (one with a `/`), an `args` entry naming a file that exists in the extension directory, or a relative `cwd` naming a directory there, when `cwd` does not start with `${extensionPath}` (relative paths resolve against the working directory, which is the open project); and an absolute `command`, `args` or `cwd` path inside the extension directory. Commands on PATH (`node`, `npx`, `uvx`) and values with variables are not reported.
+**Fix**: No auto-fix
+**Source**: geminicli.com/docs/extensions/reference ("`gemini-extension.json`", "Variables")
+
+<a id="gm-024"></a>
+### GM-024 [MEDIUM] Broad Shell Auto-Approval in Gemini Project Settings
+**Requirement**: Project settings SHOULD auto-approve specific command prefixes only. `tools.allowed` holds "Tool names that bypass the confirmation dialog. Useful for trusted commands (for example ["run_shell_command(git)", "run_shell_command(npm test)"])." (configuration reference, "`tools`"); "Including the generic `run_shell_command` acts as a wildcard, allowing any command not explicitly blocked." (tools/shell); and the trust dialog flags such settings: "**Security Warnings**: The CLI will explicitly flag potentially dangerous settings, such as auto-approving certain tools or disabling the security sandbox." (trusted-folders, "Security warnings and errors").
+**Detection**: Warning, at the entry, for a bare `run_shell_command`, `ShellTool` or `*` in `tools.allowed` of a project `.gemini/settings.json`. `~/.gemini/settings.json` (the user's own choice) is not checked.
+**Fix**: No auto-fix
+**Source**: geminicli.com/docs/cli/trusted-folders ("Security warnings and errors"), geminicli.com/docs/reference/configuration ("`tools`"), geminicli.com/docs/tools/shell ("Command restrictions")
+
+<a id="gm-025"></a>
+### GM-025 [LOW] Deprecated Gemini Settings Key
+**Requirement**: Deprecated settings SHOULD be replaced. The configuration reference and settingsSchema.ts: "`ui.accessibility.enableLoadingPhrases` (boolean): ... @deprecated Use ui.loadingPhrases instead." and "`experimental.topicUpdateNarration` (boolean): ... Deprecated: Use general.topicUpdateNarration instead."
+**Detection**: Info, at the key, for `ui.accessibility.enableLoadingPhrases` and `experimental.topicUpdateNarration`; the message names the replacement. The other "Deprecated alias" entries of settingsSchema.ts are model-resolution condition flags inside `modelConfigs` definitions and are not checked. `experimental.memoryManager` is not deprecated but gone (GM-010).
+**Fix**: No auto-fix (`ui.loadingPhrases` is an enum, not a boolean, and the narration flag moves to another category)
+**Source**: geminicli.com/docs/reference/configuration ("`ui`", "`experimental`"), settingsSchema.ts
+
 <a id="gm-026"></a>
 ### GM-026 [LOW] Gemini Tool Hook Matches Every Tool
 **Requirement**: BeforeTool and AfterTool hooks SHOULD name the tools they need: "Use specific matchers to avoid unnecessary hook execution. Instead of matching all tools with `*`, specify only the tools you need." Tool-event matchers "are **Regular Expressions**"; "**Wildcards**: `"*"` or `""` (empty string) matches all occurrences.".
 **Detection**: Info for a BeforeTool or AfterTool group whose matcher is absent, empty, `*` or `.*` (hookPlanner.ts trims the matcher and treats empty and `*` as match-all before building a regex). Info, too, for a tool matcher that is not a valid ECMAScript regex (checked with the `regress` engine): Gemini does not fail, it compares the matcher with the tool name as plain text, so the hook runs only for a tool with exactly that name. Lifecycle-event matchers are exact strings and are not checked. Catch-all audit hooks are legitimate; keep or suppress them.
 **Fix**: No auto-fix
 **Source**: geminicli.com/docs/hooks/best-practices ("Filter with matchers"), geminicli.com/docs/hooks ("Matchers"), hookPlanner.ts (`matchesContext`, `matchesToolName`)
+
+<a id="gm-027"></a>
+### GM-027 [HIGH] Invalid Gemini Policy Rule
+**Requirement**: Policy rules MUST follow the TOML rule schema (policy engine, "TOML rule schema"): "# The decision to take. Must be "allow", "deny", or "ask_user".", "# The priority of the rule, from 0 to 999.", "# You cannot use commandPrefix and commandRegex in the same rule.", and "When using `mcpName`, the `toolName` field should strictly be the simple name of the tool (for example, `search`), **not** the Fully Qualified Name (for example, `mcp_server_search`)."
+**Detection**: Runs on policy files: `~/.gemini/policies/*.toml`, `.gemini/policies/*.toml`, the admin directories `/etc/gemini-cli/policies`, `/Library/Application Support/GeminiCli/policies` and `C:\ProgramData\gemini-cli\policies`, and an extension's `policies/*.toml` (top level only: "all such files in this directory will be loaded"). Error for a TOML syntax error, at its position. Warnings, at the value (or the `[[rule]]` header for a missing field): `rule` that is not an array of tables; a missing decision (with a hint when the entry uses `action`, the subagents page's spelling), a decision other than allow, deny or ask_user; a priority that is not an integer or is outside 0 to 999; `commandRegex` next to `commandPrefix`; a `toolName` starting with `mcp_` in a rule that sets `mcpName` (the rule never matches). The reference writes `[[rule]]` and the subagents page `[[rules]]`; which one the loader reads was not verified, so neither spelling is reported and the entries of both are checked. Schema problems are warnings because the loader's handling of an invalid rule was not verified.
+**Fix**: No auto-fix
+**Source**: geminicli.com/docs/reference/policy-engine ("TOML rule schema", "Special syntax for MCP tools", "Policy locations"), geminicli.com/docs/extensions/reference ("Policy Engine")
 
 <a id="gm-028"></a>
 ### GM-028 [LOW] Gemini Extension Manifest Advisory
@@ -2523,9 +2614,34 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 **Fix**: No auto-fix
 **Source**: geminicli.com/docs/extensions/reference ("`gemini-extension.json`"), commands/extensions/validate.ts
 
+## GEMINI CLI CUSTOM COMMAND RULES
+
+Custom commands are TOML files under `~/.gemini/commands/`, `<project>/.gemini/commands/` and an extension's `commands/`, at any depth ("Subdirectories are used to create namespaced commands"). FileCommandLoader.ts parses each file and validates it with `z.object({ prompt: z.string(...), description: z.string().optional() })`; a file that fails is skipped ("Skipping invalid command file").
+
+<a id="gm-cmd-001"></a>
+### GM-CMD-001 [HIGH] Invalid Gemini Custom Command File
+**Requirement**: A command file MUST be TOML with a string `prompt`: "Your command definition files must be written in the TOML format and use the `.toml` file extension." and, under "Required fields", "`prompt` (String): The prompt that will be sent to the Gemini model when the command is executed." FileCommandLoader.ts: `required_error: "The 'prompt' field is required."`, `invalid_type_error: "The 'prompt' field must be a string."`; invalid files are skipped with "Skipping invalid command file".
+**Detection**: Error for a TOML syntax error (at its position), a missing `prompt` (at the top of the file), and a `prompt` or `description` that is not a string (at the value). Other keys are not reported: the schema is not strict. agnix parses TOML 1.1; Gemini uses `@iarna/toml` (TOML 0.5), so a few TOML 1.1-only forms that agnix accepts may still fail in Gemini.
+**Fix**: No auto-fix
+**Source**: geminicli.com/docs/cli/custom-commands ("TOML file format (v1)"), FileCommandLoader.ts (`TomlCommandDefSchema`, `parseAndAdaptFile`)
+
+<a id="gm-cmd-002"></a>
+### GM-CMD-002 [LOW] Gemini Command Description Missing, Multi-Line or Truncated
+**Requirement**: A command SHOULD have a brief, one-line description: "`description` (String): A brief, one-line description of what the command does. This text will be displayed next to your command in the `/help` menu. **If you omit this field, a generic description will be generated from the filename.**" FileCommandLoader.ts shows `sanitizeForDisplay(description, 100)`.
+**Detection**: Info for a missing or empty description (at the top of the file), a description with a line break, and one longer than 100 characters (Unicode characters, not bytes). Not reported for files that GM-CMD-001 says are skipped.
+**Fix**: No auto-fix
+**Source**: geminicli.com/docs/cli/custom-commands ("Optional fields"), FileCommandLoader.ts
+
+<a id="gm-cmd-003"></a>
+### GM-CMD-003 [HIGH] Unbalanced Braces in Gemini Command Injection
+**Requirement**: Injection blocks MUST have balanced braces: "The content inside `!{...}` must have balanced braces (`{` and `}`). If you need to execute a command containing unbalanced braces, consider wrapping it in an external script file and calling the script within the `!{...}` block." and "The parser requires the content inside `@{...}` (the path) to have balanced braces (`{` and `}`)." (custom-commands, "3. Executing shell commands", "4. Injecting file content").
+**Detection**: Error, at the `!{` or `@{` inside the TOML string, for the first block whose braces never balance: after the trigger the depth is 1, each `{` adds one and each `}` removes one, and a block that does not return to 0 runs to the end of the prompt. The position is exact for basic, literal and multi-line strings, escapes included. An extra `}` ends a block early and is not reported (the rest is plain text). This is the scan of `extractInjections` (prompt-processors/injectionParser.ts), which throws "Unclosed injection starting at index ... Ensure braces are balanced." when the command runs; the processors do not catch it, so the command fails.
+**Fix**: No auto-fix (move the command into a script)
+**Source**: geminicli.com/docs/cli/custom-commands ("3. Executing shell commands", "4. Injecting file content"), prompt-processors/injectionParser.ts (`extractInjections`)
+
 ## GEMINI CLI AGENT RULES
 
-Rules for local Gemini agent markdown files at `.gemini/agents/*.md` and an extension's `agents/*.md` ("Add agent definition files (`.md`) to an `agents/` directory in your extension root"). The YAML frontmatter holds `name`, `description` and optional `kind`, `display_name`, `tools`, `mcp_servers`, `model`, `temperature`, `max_turns`, `timeout_mins` (a strict schema); the Markdown body is the system prompt. Schema in the gemini-cli source at `packages/core/src/agents/agentLoader.ts`.
+Rules for Gemini agent markdown files at `.gemini/agents/*.md` (project and `~/.gemini/agents/`) and an extension's `agents/*.md` ("Add agent definition files (`.md`) to an `agents/` directory in your extension root"). A local agent's YAML frontmatter holds `name`, `description` and optional `kind`, `display_name`, `tools`, `mcp_servers`, `model`, `temperature`, `max_turns`, `timeout_mins` (a strict schema); the Markdown body is the system prompt. A remote agent (`kind: remote`, core/remote-agents) holds `name`, `agent_card_url` or `agent_card_json`, and optional `description`, `display_name`, `auth`; one file may hold a list of remote agents. Schema in the gemini-cli source at `packages/core/src/agents/agentLoader.ts`. Files whose name starts with `_` are not loaded and get no GM-AG rule.
 
 <a id="gm-ag-001"></a>
 ### GM-AG-001 [HIGH] Invalid auth block in Gemini agent MCP server
@@ -2535,6 +2651,41 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md` and an exte
 **Detection**: Parse YAML frontmatter; walk `mcp_servers.*.auth`. Error (the agent fails validation and is not loaded) for a non-mapping auth block, a missing, non-string or unknown `type`, a wrongly typed value and a malformed URL. Warning for a field that is not part of the variant: the auth objects are not strict, so zod drops the field and it has no effect.
 **Fix**: Manual - align the auth block with the variant schema
 **Source**: agentLoader.ts (gemini-cli main), google-gemini/gemini-cli#24770 (v0.39.0+)
+
+<a id="gm-ag-002"></a>
+### GM-AG-002 [HIGH] Invalid Gemini Agent Frontmatter
+**Requirement**: An agent file MUST load: "The file **MUST** start with YAML frontmatter enclosed in triple-dashes `---`." (subagents, "File format"); `name` is required, "Unique identifier (slug) used as the tool name for the agent. Only lowercase letters, numbers, hyphens, and underscores." and `description` is required for local agents ("Configuration schema"). Remote agents (core/remote-agents) need `agent_card_url` ("Required if `agent_card_json` is not provided") or `agent_card_json`, and "Mixed local and remote agents, or multiple local agents, are not supported in a single file; the list format is currently remote-only." agentLoader.ts throws `AgentLoadError` ("Missing mandatory YAML frontmatter", "YAML frontmatter parsing failed", "Validation failed").
+**Detection**: Error, at the key where one exists: no frontmatter matching the loader's `FRONTMATTER_REGEX` (opening `---` on the first line after an optional BOM, closing `---` on its own line; trailing blanks and CRLF allowed); invalid YAML; a YAML local tag such as an unquoted `!command` value (js-yaml rejects unknown tags; quote the value); frontmatter that is not a mapping or a list of remote agents; a missing, empty, non-string or non-slug `name` (`^[a-z0-9-_]+$`); a missing or empty `description` on a local agent; `kind` other than local or remote; a non-string `display_name`, `model` or `description`; `tools` that is not a list of strings; a remote agent with neither or both agent cards, an `agent_card_url` that is not a URL, or an `agent_card_json` that is not valid JSON; a local agent in a list. The kind of an agent without `kind` follows `guessIntendedKind`. Files whose name starts with `_` are skipped, as `loadAgentsFromDirectory` does.
+**Fix**: No auto-fix
+**Source**: geminicli.com/docs/core/subagents ("File format", "Configuration schema"), geminicli.com/docs/core/remote-agents ("Configuration schema", "Multi-subagent example"), agentLoader.ts (`parseAgentMarkdown`, `localAgentSchema`, `remoteAgentUrlSchema`, `remoteAgentJsonSchema`)
+
+<a id="gm-ag-003"></a>
+### GM-AG-003 [HIGH] Unknown Gemini Agent Frontmatter Key
+**Requirement**: Frontmatter keys MUST belong to the agent's schema; both schemas are strict (`z.object({...}).strict()` in agentLoader.ts). Local: kind, name, description, display_name, tools, mcp_servers, model, temperature, max_turns, timeout_mins. Remote: kind, name, description, display_name, auth, agent_card_url, agent_card_json.
+**Detection**: Error, at the key, for any other key; `system_prompt` gets a hint that the Markdown body is the system prompt. Special case: the subagents page documents `mcpServers` ("Add an `mcpServers` object to define inline MCP servers"), while the strict schema accepts only `mcp_servers`. Because the docs document it, `mcpServers` on a local agent is a warning, not an error, saying the loader's strict schema expects `mcp_servers`. This was read from agentLoader.ts and not run against a live gemini binary (unverified at runtime).
+**Fix**: No auto-fix
+**Source**: agentLoader.ts (`localAgentSchema`, `remoteAgentUrlSchema`, `remoteAgentJsonSchema`), geminicli.com/docs/core/subagents ("Configuration schema", "Configuring isolated tools and servers")
+
+<a id="gm-ag-004"></a>
+### GM-AG-004 [HIGH] Gemini Agent Numeric Field Out of Range
+**Requirement**: `max_turns` and `timeout_mins` MUST be positive integers (`z.number().int().positive().optional()` in agentLoader.ts; "Defaults to `30`" and "Defaults to `10`"), and `temperature` is a number documented as "Model temperature (0.0 - 2.0). Defaults to `1`." (subagents, "Configuration schema").
+**Detection**: Error, at the value, for a `max_turns` or `timeout_mins` that is not a positive whole number (`10.0` is accepted, as JavaScript treats it as an integer) and for a non-numeric `temperature`: the loader rejects the file. Warning for a numeric `temperature` outside 0.0 to 2.0: the range is documented, but the code accepts any number.
+**Fix**: No auto-fix
+**Source**: geminicli.com/docs/core/subagents ("Configuration schema"), agentLoader.ts (`localAgentSchema`)
+
+<a id="gm-ag-005"></a>
+### GM-AG-005 [MEDIUM] Literal Secret in Gemini Remote Agent Auth
+**Requirement**: Remote agent secrets SHOULD be references: "For `apiKey` and `http` auth types, secret values (`key`, `token`, `username`, `password`, `value`) support dynamic resolution" (`$ENV_VAR`, `!command`, with `$$` / `!!` as escapes for a literal), and "**Security tip:** Prefer `$ENV_VAR` or `!command` over embedding secrets directly in agent files, especially for project-level agents checked into version control." (core/remote-agents, "Dynamic values").
+**Detection**: Warning, at the field, for `auth.key` (`type: apiKey`) and `auth.token`, `auth.password`, `auth.value` (`type: http`) values that do not start with `$` or `!` (a `$$` or `!!` escape is a literal and is checked) and that look like a secret (the shared plaintext-secret check, which skips placeholders such as `your-api-key-here` and short values). `username`, `client_id` and the OAuth `client_secret` (which does not support dynamic values) are not checked.
+**Fix**: No auto-fix
+**Source**: geminicli.com/docs/core/remote-agents ("Dynamic values", "Authentication")
+
+<a id="gm-ag-006"></a>
+### GM-AG-006 [LOW] Gemini Local Agent Inherits Every Tool
+**Requirement**: A local agent SHOULD list its tools: `tools` - "List of tool names this agent can use. ... **If omitted, it inherits all tools from the parent session.**" and "By providing isolated execution environments, you can ensure that subagents only interact with the parts of the system they are designed for." (subagents, "Configuration schema", "Subagent tool isolation").
+**Detection**: Info for a local agent without `tools` (at the opening `---`) and for a `tools` list with `*` (at the key). Remote agents, and agents the loader rejects (an error of GM-AG-002, GM-AG-003 or GM-AG-004), are not checked. A generalist agent may keep every tool; suppress the rule for it.
+**Fix**: No auto-fix
+**Source**: geminicli.com/docs/core/subagents ("Configuration schema", "Subagent tool isolation")
 
 ---
 
@@ -4230,8 +4381,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Cross-Platform | 11 | 1 | 8 | 2 | 0 |
 | Cursor | 20 | 10 | 9 | 1 | 6 |
 | Cursor Skills | 1 | 0 | 1 | 0 | 1 |
-| Gemini Agents | 1 | 1 | 0 | 0 | 0 |
-| Gemini CLI | 13 | 3 | 5 | 5 | 2 |
+| Gemini Agents | 6 | 4 | 1 | 1 | 0 |
+| Gemini CLI | 29 | 7 | 12 | 10 | 2 |
 | Kiro Agents | 29 | 11 | 15 | 3 | 1 |
 | Kiro Hooks | 28 | 15 | 6 | 7 | 7 |
 | Kiro Permissions | 12 | 6 | 5 | 1 | 0 |
@@ -4252,7 +4403,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **532** | **238** | **239** | **55** | **135** |
+| **TOTAL** | **553** | **245** | **247** | **61** | **135** |
 
 
 ---
@@ -4282,8 +4433,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 532 validation rules across 42 categories
+**Total Coverage**: 553 validation rules across 42 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 238 HIGH, 239 MEDIUM, 55 LOW
-**Auto-Fixable**: 135 rules (25%)
+**Certainty**: 245 HIGH, 247 MEDIUM, 61 LOW
+**Auto-Fixable**: 135 rules (24%)

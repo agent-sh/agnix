@@ -20,6 +20,7 @@ pub mod cursor;
 pub mod gemini_extension;
 pub mod gemini_ignore;
 pub mod gemini_settings;
+pub(crate) mod gemini_toml;
 pub mod hooks;
 pub mod kiro_agent;
 pub mod kiro_hook;

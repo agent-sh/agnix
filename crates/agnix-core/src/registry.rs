@@ -397,7 +397,7 @@ impl ValidatorRegistryBuilder {
 ///
 /// Used by `BuiltinProvider` (via `debug_assert_eq!`) and tests to catch
 /// accidental additions or removals without updating all providers.
-const EXPECTED_BUILTIN_COUNT: usize = 84;
+const EXPECTED_BUILTIN_COUNT: usize = 86;
 
 // -- Category providers -----------------------------------------------------
 //
@@ -659,6 +659,16 @@ impl ValidatorProvider for GeminiProvider {
                 FileType::GeminiIgnore,
                 Some("GeminiIgnoreValidator"),
                 gemini_ignore_validator,
+            ),
+            (
+                FileType::GeminiCommand,
+                Some("GeminiCommandValidator"),
+                gemini_command_validator,
+            ),
+            (
+                FileType::GeminiPolicy,
+                Some("GeminiPolicyValidator"),
+                gemini_policy_validator,
             ),
         ]
     }
@@ -994,6 +1004,14 @@ fn gemini_hooks_validator() -> Box<dyn Validator> {
 
 fn gemini_ignore_validator() -> Box<dyn Validator> {
     Box::new(crate::rules::gemini_ignore::GeminiIgnoreValidator)
+}
+
+fn gemini_command_validator() -> Box<dyn Validator> {
+    Box::new(crate::rules::gemini_command::GeminiCommandValidator)
+}
+
+fn gemini_policy_validator() -> Box<dyn Validator> {
+    Box::new(crate::rules::gemini_policy::GeminiPolicyValidator)
 }
 
 fn codex_validator() -> Box<dyn Validator> {
@@ -1515,6 +1533,8 @@ mod tests {
             FileType::GeminiExtension,
             FileType::GeminiIgnore,
             FileType::GeminiHooks,
+            FileType::GeminiCommand,
+            FileType::GeminiPolicy,
             FileType::CodexConfig,
             FileType::CodexPlugin,
             FileType::WindsurfRule,
@@ -1568,6 +1588,8 @@ mod tests {
                 | FileType::GeminiExtension
                 | FileType::GeminiIgnore
                 | FileType::GeminiHooks
+                | FileType::GeminiCommand
+                | FileType::GeminiPolicy
                 | FileType::CodexConfig
                 | FileType::CodexPlugin
                 | FileType::CodexRequirements
@@ -2141,8 +2163,9 @@ mod tests {
 
     #[test]
     fn gemini_provider_count() {
-        // -1 PromptValidator on GEMINI.md, +2 GeminiHooksValidator.
-        assert_eq!(GeminiProvider.named_validators().len(), 9);
+        // -1 PromptValidator on GEMINI.md, +2 GeminiHooksValidator,
+        // +2 GeminiCommandValidator and GeminiPolicyValidator.
+        assert_eq!(GeminiProvider.named_validators().len(), 11);
     }
 
     #[test]

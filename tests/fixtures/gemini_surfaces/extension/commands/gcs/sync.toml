@@ -1,0 +1,2 @@
+description = "Syncs a local folder to a bucket."
+prompt = "Sync {{args}} to the bucket with gsutil rsync."

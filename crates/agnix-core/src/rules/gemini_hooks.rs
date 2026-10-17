@@ -799,13 +799,14 @@ fn normalize(path: &Path) -> PathBuf {
     out
 }
 
+/// `dir` is the user's home directory (where `~/.gemini/` lives).
 #[cfg(feature = "filesystem")]
-fn is_home_dir(dir: &Path) -> bool {
+pub(crate) fn is_home_dir(dir: &Path) -> bool {
     dirs::home_dir().is_some_and(|home| home == dir)
 }
 
 #[cfg(not(feature = "filesystem"))]
-fn is_home_dir(_dir: &Path) -> bool {
+pub(crate) fn is_home_dir(_dir: &Path) -> bool {
     false
 }
 

@@ -19,6 +19,81 @@ pub fn is_semver(version: &str) -> bool {
     version.len() <= 256 && semver::Version::parse(version).is_ok()
 }
 
+/// Words that name a secret in an extension setting's `envVar` or `name`
+/// (geminicli.com/docs/extensions/best-practices: "If your extension
+/// requires API keys or other secrets, use the `sensitive: true` option").
+const SECRET_WORDS: &[&str] = &[
+    "KEY",
+    "KEYS",
+    "APIKEY",
+    "TOKEN",
+    "TOKENS",
+    "SECRET",
+    "SECRETS",
+    "PASSWORD",
+    "PASSWORDS",
+    "PASSWD",
+    "CREDENTIAL",
+    "CREDENTIALS",
+];
+
+/// A word after a secret word that makes the setting describe the secret
+/// rather than hold it (`KEY_PATH`, `TOKEN_URL`, `ACCESS_KEY_ID`).
+const NOT_SECRET_AFTER: &[&str] = &[
+    "PATH", "FILE", "DIR", "URL", "URI", "ID", "NAME", "TYPE", "LIMIT", "COUNT", "SIZE", "LENGTH",
+    "HEADER", "FIELD", "PREFIX", "ENDPOINT", "HOST", "PORT", "ENV", "VAR", "FORMAT", "MODE",
+];
+
+/// A word before a secret word that makes it something else
+/// (`PUBLIC_KEY`, `MAX_TOKENS`).
+const NOT_SECRET_BEFORE: &[&str] = &["PUBLIC", "MAX", "MIN", "NUM"];
+
+/// Upper-case words of an identifier or label: split at characters other
+/// than letters and digits and at lower-to-upper case changes
+/// (`MY_API_KEY`, `apiKey`, `API Key`).
+fn words(text: &str) -> Vec<String> {
+    let mut words = Vec::new();
+    let mut current = String::new();
+    let mut previous_lower = false;
+    for ch in text.chars() {
+        if !ch.is_alphanumeric() {
+            if !current.is_empty() {
+                words.push(std::mem::take(&mut current));
+            }
+            previous_lower = false;
+            continue;
+        }
+        if ch.is_uppercase() && previous_lower && !current.is_empty() {
+            words.push(std::mem::take(&mut current));
+        }
+        previous_lower = ch.is_lowercase() || ch.is_ascii_digit();
+        current.extend(ch.to_uppercase());
+    }
+    if !current.is_empty() {
+        words.push(current);
+    }
+    words
+}
+
+/// Whether an extension setting's `envVar` or `name` looks like it holds a
+/// secret: a whole word KEY, TOKEN, SECRET, PASSWORD or CREDENTIAL (or a
+/// plural), so `KEYBOARD_LAYOUT` does not match, and not one of the
+/// describing forms such as `KEY_PATH`, `TOKEN_URL`, `PUBLIC_KEY` or
+/// `MAX_TOKENS`. An agnix heuristic; Gemini CLI defines no list.
+pub fn looks_like_secret_setting(text: &str) -> bool {
+    let words = words(text);
+    words.iter().enumerate().any(|(index, word)| {
+        SECRET_WORDS.contains(&word.as_str())
+            && !words
+                .get(index + 1)
+                .is_some_and(|next| NOT_SECRET_AFTER.contains(&next.as_str()))
+            && !index
+                .checked_sub(1)
+                .and_then(|i| words.get(i))
+                .is_some_and(|previous| NOT_SECRET_BEFORE.contains(&previous.as_str()))
+    })
+}
+
 /// Why `validateContextFilePath` rejects a `contextFileName` entry.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ContextPathProblem {
@@ -90,6 +165,42 @@ fn percent_decode(text: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn secret_settings_match_whole_words() {
+        for secret in [
+            "MY_API_KEY",
+            "API Key",
+            "apiKey",
+            "GITHUB_TOKEN",
+            "Access tokens",
+            "CLIENT_SECRET",
+            "AWS_SECRET_ACCESS_KEY",
+            "DB_PASSWORD",
+            "Password",
+            "SERVICE_CREDENTIALS",
+            "OPENAI_APIKEY",
+        ] {
+            assert!(looks_like_secret_setting(secret), "{secret}");
+        }
+        for other in [
+            "KEYBOARD_LAYOUT",
+            "MONKEY",
+            "TOKENIZER",
+            "SSH_KEY_PATH",
+            "KEY_FILE",
+            "AWS_ACCESS_KEY_ID",
+            "TOKEN_URL",
+            "PUBLIC_KEY",
+            "Max tokens",
+            "MAX_TOKENS",
+            "API Base URL",
+            "Project ID",
+            "",
+        ] {
+            assert!(!looks_like_secret_setting(other), "{other}");
+        }
+    }
 
     #[test]
     fn loadable_names_follow_validate_name() {

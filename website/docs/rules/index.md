@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `532` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `553` validation rules generated from `knowledge-base/rules.json`.
 `135` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -292,7 +292,28 @@ This section contains all `532` validation rules generated from `knowledge-base/
 | [GM-019](./generated/gm-019.md) | Gemini Hook Script Not Found | MEDIUM | Gemini CLI | No |
 | [GM-026](./generated/gm-026.md) | Gemini Tool Hook Matches Every Tool | LOW | Gemini CLI | No |
 | [GM-028](./generated/gm-028.md) | Gemini Extension Manifest Advisory | LOW | Gemini CLI | No |
+| [GM-011](./generated/gm-011.md) | Gemini MCP Server Name Contains Underscore | MEDIUM | Gemini CLI | No |
+| [GM-013](./generated/gm-013.md) | Deprecated tools.exclude Setting | LOW | Gemini CLI | No |
+| [GM-014](./generated/gm-014.md) | Gemini MCP Server Transport Missing or Ambiguous | HIGH | Gemini CLI | No |
+| [GM-015](./generated/gm-015.md) | Gemini MCP Server Trust Bypasses Confirmations | MEDIUM | Gemini CLI | No |
+| [GM-016](./generated/gm-016.md) | Invalid Gemini Default Approval Mode | MEDIUM | Gemini CLI | No |
+| [GM-017](./generated/gm-017.md) | Gemini tools.core Lists Only Shell Entries | MEDIUM | Gemini CLI | No |
+| [GM-020](./generated/gm-020.md) | Gemini Workspace Policy File Has No Effect | LOW | Gemini CLI | No |
+| [GM-021](./generated/gm-021.md) | Ignored allow or yolo in Gemini Extension Policy | MEDIUM | Gemini CLI | No |
+| [GM-022](./generated/gm-022.md) | Gemini Extension Secret Setting Not Marked Sensitive | MEDIUM | Gemini CLI | No |
+| [GM-023](./generated/gm-023.md) | Gemini Extension MCP Command Not Portable | LOW | Gemini CLI | No |
+| [GM-024](./generated/gm-024.md) | Broad Shell Auto-Approval in Gemini Project Settings | MEDIUM | Gemini CLI | No |
+| [GM-025](./generated/gm-025.md) | Deprecated Gemini Settings Key | LOW | Gemini CLI | No |
+| [GM-027](./generated/gm-027.md) | Invalid Gemini Policy Rule | HIGH | Gemini CLI | No |
+| [GM-CMD-001](./generated/gm-cmd-001.md) | Invalid Gemini Custom Command File | HIGH | Gemini CLI | No |
+| [GM-CMD-002](./generated/gm-cmd-002.md) | Gemini Command Description Missing, Multi-Line or Truncated | LOW | Gemini CLI | No |
+| [GM-CMD-003](./generated/gm-cmd-003.md) | Unbalanced Braces in Gemini Command Injection | HIGH | Gemini CLI | No |
 | [GM-AG-001](./generated/gm-ag-001.md) | Invalid auth block in Gemini agent MCP server | HIGH | Gemini Agents | No |
+| [GM-AG-002](./generated/gm-ag-002.md) | Invalid Gemini Agent Frontmatter | HIGH | Gemini Agents | No |
+| [GM-AG-003](./generated/gm-ag-003.md) | Unknown Gemini Agent Frontmatter Key | HIGH | Gemini Agents | No |
+| [GM-AG-004](./generated/gm-ag-004.md) | Gemini Agent Numeric Field Out of Range | HIGH | Gemini Agents | No |
+| [GM-AG-005](./generated/gm-ag-005.md) | Literal Secret in Gemini Remote Agent Auth | MEDIUM | Gemini Agents | No |
+| [GM-AG-006](./generated/gm-ag-006.md) | Gemini Local Agent Inherits Every Tool | LOW | Gemini Agents | No |
 | [KIRO-001](./generated/kiro-001.md) | Invalid Steering File Inclusion Mode | HIGH | Kiro Steering | Yes (unsafe) |
 | [KIRO-002](./generated/kiro-002.md) | Inclusion Mode Without the Field It Loads By | HIGH | Kiro Steering | No |
 | [KIRO-003](./generated/kiro-003.md) | fileMatchPattern Does Not Match as Written | MEDIUM | Kiro Steering | No |

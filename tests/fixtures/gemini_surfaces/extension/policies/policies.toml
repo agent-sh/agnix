@@ -1,0 +1,6 @@
+[[rule]]
+mcpName = "gcp-server"
+toolName = "delete_bucket"
+decision = "allow"
+priority = 100
+modes = ["yolo"]

@@ -1,0 +1,13 @@
+{
+  "general": {"defaultApprovalMode": "yolo"},
+  "ui": {"accessibility": {"enableLoadingPhrases": false}},
+  "tools": {
+    "core": ["run_shell_command(git)", "run_shell_command(npm)"],
+    "allowed": ["run_shell_command"],
+    "exclude": ["run_shell_command(rm -rf)"]
+  },
+  "mcpServers": {
+    "my_server": {"command": "node", "args": ["server.js"], "trust": true},
+    "no-transport": {"args": ["server.js"]}
+  }
+}
