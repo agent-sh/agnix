@@ -24,7 +24,6 @@ use crate::{
     config::PerFileLintConfig,
     diagnostics::{Diagnostic, Fix},
     rules::{Validator, ValidatorMetadata},
-    schemas::claude_md::count_generic_instructions,
     schemas::codex::{VALID_MCP_OAUTH_STORES, VALID_MODEL_REASONING_SUMMARIES, parse_codex_toml},
 };
 use rust_i18n::t;
@@ -40,6 +39,7 @@ const CODEX_MARKDOWN_RULE_IDS: &[&str] = &[
     "CDX-AG-005",
     "CDX-AG-006",
     "CDX-AG-008",
+    "CDX-AG-009",
 ];
 
 const CODEX_CONFIG_RULE_IDS: &[&str] = &[
@@ -768,11 +768,11 @@ fn validate_codex_markdown_rules(
 
     // CDX-AG-008: an AGENTS.override.md in the same directory replaces this
     // AGENTS.md for Codex; other tools still read AGENTS.md.
-    if filename == "AGENTS.md"
-        && config.is_rule_enabled("CDX-AG-008")
-        && let Some(dir) = path.parent()
-        && config.fs().is_file(&dir.join("AGENTS.override.md"))
-    {
+    let shadowed = filename == "AGENTS.md"
+        && path
+            .parent()
+            .is_some_and(|dir| config.fs().is_file(&dir.join("AGENTS.override.md")));
+    if shadowed && config.is_rule_enabled("CDX-AG-008") {
         diagnostics.push(
             Diagnostic::info(
                 path.to_path_buf(),
@@ -845,7 +845,7 @@ fn validate_codex_markdown_rules(
     }
 
     if config.is_rule_enabled("CDX-AG-003") {
-        let generic_count = count_generic_instructions(content);
+        let generic_count = count_vague_rules(content);
         let trimmed = content.trim();
         let too_short = trimmed.len() < 120;
         let low_specificity =
@@ -864,9 +864,31 @@ fn validate_codex_markdown_rules(
         }
     }
 
-    // CDX-AG-004 is retired: XP-007 checks AGENTS.md against Codex's
-    // documented 32 KiB project_doc_max_bytes, and the 100,000-byte limit
-    // here had no source.
+    // CDX-AG-009: one instruction file over project_doc_max_bytes. "Codex
+    // skips empty files and stops adding files once the combined size reaches
+    // the limit defined by `project_doc_max_bytes` (32 KiB by default)." An
+    // AGENTS.md shadowed by AGENTS.override.md is never read, so it is not
+    // counted. The chain-wide total is CDX-AG-010 (rules/codex_chain.rs).
+    if config.is_rule_enabled("CDX-AG-009")
+        && !shadowed
+        && content.len() > crate::schemas::cross_platform::CODEX_BYTE_LIMIT
+    {
+        diagnostics.push(
+            Diagnostic::warning(
+                path.to_path_buf(),
+                1,
+                1,
+                "CDX-AG-009",
+                t!(
+                    "rules.cdx_ag_009.message",
+                    file = filename,
+                    bytes = content.len(),
+                    limit = crate::schemas::cross_platform::CODEX_BYTE_LIMIT
+                ),
+            )
+            .with_suggestion(t!("rules.cdx_ag_009.suggestion")),
+        );
+    }
 
     // CDX-AG-005: AGENTS.md references a missing file. Only inline-code spans
     // shaped like a relative file path are checked: method names
@@ -3024,6 +3046,36 @@ fn find_key_line(content: &str, key: &str) -> Option<usize> {
     None
 }
 
+/// CDX-AG-003: the vague, project-independent rules Codex's guidance warns
+/// about ("A short, accurate AGENTS.md is more useful than a long file full of
+/// vague rules"). The phrase list is an agnix heuristic; it no longer reuses the
+/// Claude memory list of model-behavior phrases ("be helpful", "think step by
+/// step"), which Codex does not address.
+fn count_vague_rules(content: &str) -> usize {
+    static VAGUE: std::sync::OnceLock<Vec<regex::Regex>> = std::sync::OnceLock::new();
+    let patterns = VAGUE.get_or_init(|| {
+        [
+            r"(?i)\bfollow\s+(?:the\s+)?(?:best\s+practices|coding\s+standards|clean\s+code)\b",
+            r"(?i)\bwrite\s+(?:clean|good|high[- ]quality|maintainable|readable)\b[\w\s,]*\bcode\b",
+            r"(?i)\bkeep\s+(?:the\s+)?code\s+(?:clean|simple|readable|tidy)\b",
+            r"(?i)\bbe\s+careful\b",
+            r"(?i)\buse\s+common\s+sense\b",
+        ]
+        .iter()
+        .map(|pattern| regex::Regex::new(pattern).expect("valid CDX-AG-003 pattern"))
+        .collect()
+    });
+    content
+        .lines()
+        .map(|line| {
+            patterns
+                .iter()
+                .filter(|pattern| pattern.is_match(line))
+                .count()
+        })
+        .sum()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -3267,6 +3319,42 @@ extends = "defined-in-another-layer"
             &config,
         );
         assert!(!alone.iter().any(|d| d.rule == "CDX-AG-008"));
+    }
+
+    #[test]
+    fn test_cdx_ag_009_size_limit_skips_shadowed_files() {
+        use crate::fs::MockFileSystem;
+        use std::sync::Arc;
+        let big = format!(
+            "# Rules\n\n{}",
+            "Run `make test` before committing.\n".repeat(1000)
+        );
+        assert!(big.len() > 32768);
+        let diagnostics = validate_claude_md("AGENTS.md", &big);
+        let ag_009: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-AG-009")
+            .collect();
+        assert_eq!(ag_009.len(), 1);
+        assert!(
+            !ag_009[0]
+                .suggestion
+                .as_deref()
+                .unwrap_or("")
+                .contains("@import")
+        );
+        assert!(
+            validate_claude_md("AGENTS.md", "# Rules\n\nRun `make test`.")
+                .iter()
+                .all(|d| d.rule != "CDX-AG-009")
+        );
+        // Shadowed by AGENTS.override.md: Codex never reads it.
+        let fs = Arc::new(MockFileSystem::new());
+        fs.add_file("/repo/AGENTS.override.md", "# Override");
+        let mut config = LintConfig::default();
+        config.set_fs(fs);
+        let shadowed = CodexValidator.validate(Path::new("/repo/AGENTS.md"), &big, &config);
+        assert!(!shadowed.iter().any(|d| d.rule == "CDX-AG-009"));
     }
 
     #[test]
@@ -4571,8 +4659,13 @@ whimsy = true
             "Keyword in assignment context should still trigger"
         );
 
-        let generic = validate_claude_md("AGENTS.md", "Be helpful and accurate.");
+        // CDX-AG-003 now uses a Codex-owned list of vague rules instead of the
+        // Claude memory list of model-behavior phrases.
+        let generic =
+            validate_claude_md("AGENTS.md", "Follow best practices and write clean code.");
         assert!(generic.iter().any(|d| d.rule == "CDX-AG-003"));
+        let claude_phrase = validate_claude_md("AGENTS.md", "Be helpful and accurate.");
+        assert!(!claude_phrase.iter().any(|d| d.rule == "CDX-AG-003"));
     }
 
     #[test]

@@ -26,7 +26,7 @@
 | OpenCode | opencode.json, opencode.jsonc | 66 |
 | Gemini Agents | .gemini/agents/*.json | 1 |
 | Gemini CLI | GEMINI.md, GEMINI.local.md, .gemini/settings.json (hooks), gemini-extension.json (extensions), .geminiignore | 10 |
-| Codex CLI | .codex/config.toml/.json/.yaml | 83 |
+| Codex CLI | .codex/config.toml/.json/.yaml | 85 |
 | Version Awareness | .agnix.toml | 1 |
 | Cursor Skills | .cursor/skills/*/SKILL.md | 1 |
 | Cline Skills | .cline/skills/*/SKILL.md | 3 |

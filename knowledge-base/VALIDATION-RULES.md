@@ -2812,9 +2812,9 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 
 <a id="cdx-ag-003"></a>
 ### CDX-AG-003 [LOW] Generic AGENTS.md Guidance for Codex
-**Requirement**: AGENTS.md SHOULD provide specific, actionable repo guidance instead of generic boilerplate: "A short, accurate AGENTS.md is more useful than a long file full of vague rules." The generic-phrase list is an agnix heuristic (shared with the Claude memory rules); Codex publishes no such list.
-**Detection**: A short file (under 120 characters) with generic instruction phrases and no inline code, paths or flags. Info level.
-**Fix**: No auto-fix (replace generic text with concrete repository guidance)
+**Requirement**: AGENTS.md SHOULD provide specific, actionable repo guidance instead of vague rules: "Keep it practical. A short, accurate AGENTS.md is more useful than a long file full of vague rules." The vague-rule phrases (follow best practices or coding standards, write clean code, keep code clean, be careful, use common sense) are an agnix heuristic; Codex publishes no list. The rule no longer reuses the Claude memory list of model-behavior phrases such as "be helpful" or "think step by step".
+**Detection**: A short file (under 120 characters) with a vague-rule phrase and no inline code, paths or flags. Info level.
+**Fix**: No auto-fix (replace vague rules with concrete repository guidance)
 **Source**: learn.chatgpt.com/guides/best-practices
 
 <a id="cdx-app-001"></a>
@@ -2999,6 +2999,20 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 **Fix**: No auto-fix
 **Source**: learn.chatgpt.com/docs/agent-configuration/agents-md
 
+<a id="cdx-ag-009"></a>
+### CDX-AG-009 [MEDIUM] AGENTS.md Exceeds Codex project_doc_max_bytes
+**Requirement**: A Codex instruction file SHOULD fit the instruction budget: "Codex skips empty files and stops adding files once the combined size reaches the limit defined by `project_doc_max_bytes` (32 KiB by default). ... Raise the limit or split instructions across nested directories when you hit the cap." Codex has no import mechanism, so the fix is nesting or a higher limit.
+**Detection**: Warning on an `AGENTS.md` or `AGENTS.override.md` over 32768 bytes. An `AGENTS.md` next to an `AGENTS.override.md` is not checked, since Codex never reads it. Codex-family twin of XP-007 with the Codex fix text.
+**Fix**: No auto-fix (move guidance into nested AGENTS.md files or raise `project_doc_max_bytes`)
+**Source**: learn.chatgpt.com/docs/agent-configuration/agents-md
+
+<a id="cdx-ag-010"></a>
+### CDX-AG-010 [MEDIUM] Codex Instruction Chain Exceeds project_doc_max_bytes
+**Requirement**: The combined instruction chain SHOULD fit `project_doc_max_bytes`: Codex "stops adding files once the combined size reaches the limit" (32 KiB by default), walking from the project root to the working directory with at most one file per directory (`AGENTS.override.md`, then `AGENTS.md`).
+**Detection**: Project-level: one chain per leaf directory; a chain over 32768 bytes is reported once, on its largest file. A chain of one file is left to CDX-AG-009. Fallback names from the user's Codex config are not visible, so the check can under-report. Codex-family twin of XP-009.
+**Fix**: No auto-fix (trim the largest file, nest guidance deeper, or raise `project_doc_max_bytes`)
+**Source**: learn.chatgpt.com/docs/agent-configuration/agents-md
+
 <a id="cdx-app-002"></a>
 ### CDX-APP-002 [MEDIUM] Invalid skills Configuration
 **Requirement**: `skills` SHOULD be a TOML table (object)
@@ -3107,9 +3121,9 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 **Source**: github.com/openai/codex (codex-rs/core-plugins/src/manifest.rs, agent_plugin_manifest.rs @ rust-v0.146.0)
 
 <a id="cdx-pl-014"></a>
-### CDX-PL-014 [MEDIUM] Missing Required Codex-Format Package Field
-**Requirement**: A Codex-format manifest (`.codex-plugin/plugin.json` with no portable root manifest) MUST define the fields the Codex format requires: "`description` | Required for Codex; optional for Agent Plugins | Package summary, at most 4000 characters.", likewise `version` and `author` (`author.name`) and `interface`; "Codex package validation requires both" `logo` and `composerIcon`. Formerly LOW and description only.
-**Detection**: Warning listing the missing fields among `version`, `description`, `author.name`, `interface`, `interface.composerIcon`, `interface.logo`. Not reported for a compatibility overlay next to a portable root `plugin.json`. A `description` over 4,000 characters is reported in both formats.
+### CDX-PL-014 [LOW] Missing Required Codex-Format Package Field
+**Requirement**: A Codex-format manifest (`.codex-plugin/plugin.json` with no portable root manifest) MUST define the fields the Codex format requires before it is uploaded: "`description` | Required for Codex; optional for Agent Plugins | Package summary, at most 4000 characters.", likewise `version` and `author` (`author.name`) and `interface`; "Codex package validation requires both" `logo` and `composerIcon`. Upload validation enforces this ("If validation fails, correct the reported package errors and upload again"); locally installed plugins load without these fields, so the rule is informational.
+**Detection**: Info listing the missing fields among `version`, `description`, `author.name`, `interface`, `interface.composerIcon`, `interface.logo`. Not reported for a compatibility overlay next to a portable root `plugin.json`. A `description` over 4,000 characters is a warning in both formats.
 **Fix**: No auto-fix
 **Source**: developers.openai.com/plugins/deploy/submission, developers.openai.com/plugins/build/plugins
 
@@ -4543,7 +4557,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Claude Skills | 19 | 10 | 8 | 1 | 7 |
 | Cline | 7 | 4 | 3 | 0 | 3 |
 | Cline Skills | 3 | 2 | 1 | 0 | 2 |
-| Codex CLI | 83 | 31 | 37 | 15 | 8 |
+| Codex CLI | 85 | 31 | 38 | 16 | 8 |
 | Codex Skills | 4 | 0 | 2 | 2 | 1 |
 | GitHub Copilot | 25 | 13 | 9 | 3 | 12 |
 | Copilot Skills | 1 | 0 | 1 | 0 | 1 |
@@ -4573,7 +4587,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **577** | **238** | **264** | **75** | **134** |
+| **TOTAL** | **579** | **238** | **265** | **76** | **134** |
 
 
 ---
@@ -4603,8 +4617,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 577 validation rules across 43 categories
+**Total Coverage**: 579 validation rules across 43 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 238 HIGH, 264 MEDIUM, 75 LOW
+**Certainty**: 238 HIGH, 265 MEDIUM, 76 LOW
 **Auto-Fixable**: 134 rules (23%)

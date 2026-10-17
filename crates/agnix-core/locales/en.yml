@@ -1313,8 +1313,8 @@ rules:
     message: 'Invalid ''hooks'' value: expected a string, string array, object, or object array; found %{actual}'
     suggestion: Use a relative hook-file path, an array of paths, an inline hooks object, or an array of inline hooks objects
   cdx_pl_014:
-    missing: "Codex-format plugin manifest is missing required package fields: %{fields}; Codex package validation requires them"
-    suggestion: Add the missing fields (version, description, author.name and an interface with composerIcon and logo), or publish a portable root plugin.json
+    missing: "Codex-format plugin manifest lacks %{fields}, which Codex package validation requires when the plugin is uploaded"
+    suggestion: Add the missing fields (version, description, author.name and an interface with composerIcon and logo) before uploading, or publish a portable root plugin.json
     too_long: Plugin description has %{length} characters; Codex allows at most %{max}
     too_long_suggestion: Shorten the description to 4000 characters or fewer
   cdx_pl_016:
@@ -1419,6 +1419,12 @@ rules:
   cdx_ag_008:
     message: An AGENTS.override.md in this directory replaces this AGENTS.md for Codex; Codex reads at most one instruction file per directory, while other tools still read AGENTS.md
     suggestion: Keep shared guidance in AGENTS.md and only Codex-specific overrides in AGENTS.override.md, or remove the override if it is not intended
+  cdx_ag_009:
+    message: "%{file} is %{bytes} bytes; Codex reads at most project_doc_max_bytes (%{limit} bytes by default) of instruction files and drops the rest"
+    suggestion: Move directory-specific guidance into nested AGENTS.md files, or raise project_doc_max_bytes in the Codex config
+  cdx_ag_010:
+    message: "The Codex instruction chain through this file reaches %{bytes} bytes across %{count} files, past the %{limit}-byte project_doc_max_bytes default; Codex stops adding files at the limit"
+    suggestion: Trim this file (the largest in the chain), move guidance into deeper nested AGENTS.md files, or raise project_doc_max_bytes
   cdx_app_002:
     type_error: Field 'skills' must be a table
     suggestion: Use a [skills] table (for example skills.max_context_tokens or [[skills.config]] entries)

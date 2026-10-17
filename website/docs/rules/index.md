@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `577` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `579` validation rules generated from `knowledge-base/rules.json`.
 `134` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -188,6 +188,8 @@ This section contains all `577` validation rules generated from `knowledge-base/
 | [CDX-AG-005](./generated/cdx-ag-005.md) | AGENTS.md References Missing File | MEDIUM | Codex CLI | No |
 | [CDX-AG-006](./generated/cdx-ag-006.md) | AGENTS.md Missing Project Context | LOW | Codex CLI | No |
 | [CDX-AG-008](./generated/cdx-ag-008.md) | AGENTS.md Shadowed by AGENTS.override.md | LOW | Codex CLI | No |
+| [CDX-AG-009](./generated/cdx-ag-009.md) | AGENTS.md Exceeds Codex project_doc_max_bytes | MEDIUM | Codex CLI | No |
+| [CDX-AG-010](./generated/cdx-ag-010.md) | Codex Instruction Chain Exceeds project_doc_max_bytes | MEDIUM | Codex CLI | No |
 | [CDX-APP-001](./generated/cdx-app-001.md) | Invalid Tool Approval Mode | HIGH | Codex CLI | No |
 | [CDX-APP-002](./generated/cdx-app-002.md) | Invalid skills Configuration | MEDIUM | Codex CLI | No |
 | [CDX-APP-003](./generated/cdx-app-003.md) | Removed Profile Selector or Profiles Table | MEDIUM | Codex CLI | No |
@@ -204,7 +206,7 @@ This section contains all `577` validation rules generated from `knowledge-base/
 | [CDX-PL-011](./generated/cdx-pl-011.md) | Invalid Interface URL | MEDIUM | Codex CLI | No |
 | [CDX-PL-012](./generated/cdx-pl-012.md) | Invalid Asset Path | MEDIUM | Codex CLI | No |
 | [CDX-PL-013](./generated/cdx-pl-013.md) | Invalid Hooks Value | LOW | Codex CLI | No |
-| [CDX-PL-014](./generated/cdx-pl-014.md) | Missing Required Codex-Format Package Field | MEDIUM | Codex CLI | No |
+| [CDX-PL-014](./generated/cdx-pl-014.md) | Missing Required Codex-Format Package Field | LOW | Codex CLI | No |
 | [CDX-PL-015](./generated/cdx-pl-015.md) | Invalid Skills Path Type | MEDIUM | Codex CLI | No |
 | [CDX-PL-016](./generated/cdx-pl-016.md) | Invalid Dark-mode Logo Path | MEDIUM | Codex CLI | No |
 | [CDX-PL-017](./generated/cdx-pl-017.md) | Codex Compatibility Manifest Without Portable Root Manifest | LOW | Codex CLI | No |

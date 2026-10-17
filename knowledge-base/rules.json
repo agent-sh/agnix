@@ -1,7 +1,7 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 577,
+  "total_rules": 579,
   "last_updated": "2026-10-17",
   "schema": {
     "evidence": {
@@ -5310,7 +5310,7 @@
         "autofix": false
       },
       "good_example": "Run `cargo test -p agnix-core` and `cargo test -p agnix-cli` before merge.",
-      "bad_example": "Be helpful and accurate."
+      "bad_example": "Follow best practices and write clean code."
     },
     {
       "id": "CDX-AG-005",
@@ -5392,6 +5392,62 @@
       },
       "good_example": "services/payments/AGENTS.override.md (no AGENTS.md next to it)",
       "bad_example": "services/payments/AGENTS.md next to services/payments/AGENTS.override.md"
+    },
+    {
+      "id": "CDX-AG-009",
+      "name": "AGENTS.md Exceeds Codex project_doc_max_bytes",
+      "severity": "MEDIUM",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://learn.chatgpt.com/docs/agent-configuration/agents-md",
+          "https://learn.chatgpt.com/docs/config-file/config-advanced"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "AGENTS.md under 32 KiB, details in nested AGENTS.md files",
+      "bad_example": "one AGENTS.md of 40 KiB"
+    },
+    {
+      "id": "CDX-AG-010",
+      "name": "Codex Instruction Chain Exceeds project_doc_max_bytes",
+      "severity": "MEDIUM",
+      "category": "codex",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://learn.chatgpt.com/docs/agent-configuration/agents-md",
+          "https://learn.chatgpt.com/docs/config-file/config-advanced"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "codex"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "root and nested AGENTS.md together under 32 KiB",
+      "bad_example": "a 20 KiB root AGENTS.md and a 15 KiB nested AGENTS.md on one path"
     },
     {
       "id": "CDX-APP-001",
@@ -5864,7 +5920,7 @@
     {
       "id": "CDX-PL-014",
       "name": "Missing Required Codex-Format Package Field",
-      "severity": "MEDIUM",
+      "severity": "LOW",
       "category": "codex",
       "evidence": {
         "source_type": "vendor_docs",
@@ -16800,7 +16856,7 @@
     },
     "codex": {
       "prefix": "CDX",
-      "count": 83,
+      "count": 85,
       "description": "Codex CLI configuration validation"
     },
     "roo-code": {

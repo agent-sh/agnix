@@ -9,6 +9,8 @@ pub mod claude_settings;
 pub mod cline;
 pub mod codex;
 pub mod codex_agent;
+#[cfg(feature = "filesystem")]
+pub(crate) mod codex_chain;
 pub mod codex_files;
 pub mod codex_hooks;
 pub mod codex_plugin;

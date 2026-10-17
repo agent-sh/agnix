@@ -363,7 +363,9 @@ impl Validator for CodexPluginValidator {
         // Required for Codex; optional for Agent Plugins | Package summary, at
         // most 4000 characters", and likewise `version`, `author.name`,
         // `interface`; "Codex package validation requires both" `logo` and
-        // `composerIcon`.
+        // `composerIcon`. That validation runs when a package is uploaded, and
+        // locally installed plugins load without these fields, so missing
+        // fields are info.
         if config.is_rule_enabled("CDX-PL-014") {
             if is_in_codex_plugin && !has_portable_root {
                 let interface = raw_value.get("interface");
@@ -394,7 +396,7 @@ impl Validator for CodexPluginValidator {
                 }
                 if !missing.is_empty() {
                     diagnostics.push(
-                        Diagnostic::warning(
+                        Diagnostic::info(
                             path.to_path_buf(),
                             1,
                             1,
@@ -2135,7 +2137,7 @@ mod tests {
         assert_eq!(cdx_pl_014.len(), 1);
         assert_eq!(
             cdx_pl_014[0].level,
-            crate::diagnostics::DiagnosticLevel::Warning
+            crate::diagnostics::DiagnosticLevel::Info
         );
     }
 

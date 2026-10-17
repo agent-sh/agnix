@@ -2805,6 +2805,8 @@ fn test_validate_project_finds_codex_invalid_fixtures() {
     for rule in [
         "CDX-004",
         "CDX-AG-008",
+        "CDX-AG-009",
+        "CDX-AG-010",
         "CDX-APP-001",
         "CDX-APP-003",
         "CDX-CFG-007",

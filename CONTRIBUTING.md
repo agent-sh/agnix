@@ -100,19 +100,23 @@ Rule IDs follow the format `[PREFIX]-[NUMBER]` where the prefix indicates the ru
 | `CC-PL-` | 15 | CC-PL-001 through CC-PL-015 |
 | `CC-SET-` | 16 | CC-SET-001 through CC-SET-016 |
 | `CC-SK-` | 19 | CC-SK-001 through CC-SK-002, CC-SK-004 through CC-SK-008, CC-SK-010, CC-SK-013 through CC-SK-023 |
-| `CDX-` | 7 | CDX-000 through CDX-006 |
-| `CDX-AG-` | 6 | CDX-AG-001 through CDX-AG-003, CDX-AG-005 through CDX-AG-007 |
+| `CDX-` | 4 | CDX-000, CDX-004 through CDX-006 |
+| `CDX-AG-` | 8 | CDX-AG-001 through CDX-AG-003, CDX-AG-005 through CDX-AG-006, CDX-AG-008 through CDX-AG-010 |
 | `CDX-APP-` | 3 | CDX-APP-001 through CDX-APP-003 |
-| `CDX-CFG-` | 30 | CDX-CFG-001 through CDX-CFG-030 |
-| `CDX-PL-` | 16 | CDX-PL-001 through CDX-PL-016 |
-| `CDX-REQ-` | 2 | CDX-REQ-000 through CDX-REQ-001 |
+| `CDX-CFG-` | 34 | CDX-CFG-001 through CDX-CFG-012, CDX-CFG-014 through CDX-CFG-035 |
+| `CDX-DEP-` | 1 | CDX-DEP-001 |
+| `CDX-HK-` | 6 | CDX-HK-000 through CDX-HK-005 |
+| `CDX-PL-` | 19 | CDX-PL-001 through CDX-PL-019 |
+| `CDX-REQ-` | 5 | CDX-REQ-000 through CDX-REQ-004 |
+| `CDX-RL-` | 2 | CDX-RL-001 through CDX-RL-002 |
+| `CDX-SUB-` | 3 | CDX-SUB-001 through CDX-SUB-003 |
 | `CL-SK-` | 3 | CL-SK-001 through CL-SK-003 |
 | `CLN-` | 7 | CLN-001 through CLN-006, CLN-009 |
 | `COP-` | 25 | COP-001 through COP-015, COP-017 through COP-020, COP-022 through COP-027 |
 | `CP-SK-` | 1 | CP-SK-001 |
 | `CR-SK-` | 1 | CR-SK-001 |
 | `CUR-` | 20 | CUR-001 through CUR-020 |
-| `CX-SK-` | 1 | CX-SK-001 |
+| `CX-SK-` | 4 | CX-SK-001, CX-SK-004, CX-SK-006 through CX-SK-007 |
 | `GM-` | 10 | GM-001 through GM-010 |
 | `GM-AG-` | 1 | GM-AG-001 |
 | `KIRO-` | 14 | KIRO-001 through KIRO-014 |
@@ -124,13 +128,16 @@ Rule IDs follow the format `[PREFIX]-[NUMBER]` where the prefix indicates the ru
 | `KR-SK-` | 1 | KR-SK-001 |
 | `MCP-` | 26 | MCP-001 through MCP-026 |
 | `OC-` | 8 | OC-001 through OC-004, OC-006 through OC-009 |
-| `OC-AG-` | 9 | OC-AG-001 through OC-AG-009 |
-| `OC-AGM-` | 2 | OC-AGM-001 through OC-AGM-002 |
-| `OC-CFG-` | 14 | OC-CFG-001 through OC-CFG-014 |
-| `OC-DEP-` | 6 | OC-DEP-001 through OC-DEP-003, OC-DEP-005 through OC-DEP-007 |
+| `OC-AG-` | 11 | OC-AG-001 through OC-AG-011 |
+| `OC-AGM-` | 2 | OC-AGM-002 through OC-AGM-003 |
+| `OC-CFG-` | 20 | OC-CFG-001 through OC-CFG-002, OC-CFG-004 through OC-CFG-015, OC-CFG-017 through OC-CFG-022 |
+| `OC-CMD-` | 3 | OC-CMD-001 through OC-CMD-003 |
+| `OC-DEP-` | 8 | OC-DEP-001 through OC-DEP-003, OC-DEP-005 through OC-DEP-009 |
 | `OC-LSP-` | 2 | OC-LSP-001 through OC-LSP-002 |
-| `OC-PM-` | 2 | OC-PM-001 through OC-PM-002 |
-| `OC-SK-` | 1 | OC-SK-001 |
+| `OC-PM-` | 6 | OC-PM-002 through OC-PM-007 |
+| `OC-POL-` | 1 | OC-POL-001 |
+| `OC-SK-` | 2 | OC-SK-001 through OC-SK-002 |
+| `OC-TOOL-` | 1 | OC-TOOL-001 |
 | `OC-TUI-` | 3 | OC-TUI-001 through OC-TUI-003 |
 | `PE-` | 6 | PE-001 through PE-006 |
 | `RC-SK-` | 1 | RC-SK-001 |
