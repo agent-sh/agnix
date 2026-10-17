@@ -13,13 +13,13 @@ keywords: ["KR-HK-014", "kiro hook migration and canonical trigger hint", "kiro 
 - **Category**: `Kiro Hooks`
 - **Normative Level**: `BEST_PRACTICE`
 - **Auto-Fix**: `Yes (safe)`
-- **Verified On**: `2026-10-16`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
 - **Tool**: `kiro`
-- **Version Range**: `unspecified`
-- **Spec Revision**: `CLI V3 / IDE 1.x hooks`
+- **Version Range**: `>=2.8.0`
+- **Spec Revision**: `unspecified`
 
 ## Evidence Sources
 
@@ -30,8 +30,8 @@ keywords: ["KR-HK-014", "kiro hook migration and canonical trigger hint", "kiro 
 
 ## Test Coverage Metadata
 
-- Unit tests: `false`
-- Fixture tests: `false`
+- Unit tests: `true`
+- Fixture tests: `true`
 - E2E tests: `true`
 
 ## Examples

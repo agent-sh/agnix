@@ -13,17 +13,18 @@ keywords: ["KR-HK-010", "secrets in hook command", "kiro hooks", "validation", "
 - **Category**: `Kiro Hooks`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
 - **Tool**: `kiro`
 - **Version Range**: `unspecified`
-- **Spec Revision**: `unspecified`
+- **Spec Revision**: `IDE 0.x .kiro.hook`
 
 ## Evidence Sources
 
-- https://kiro.dev/docs/hooks
+- https://kiro.dev/docs/mcp/security/
+- https://kiro.dev/docs/ide/0x-reference/
 
 ## Test Coverage Metadata
 
@@ -38,11 +39,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{"event": "promptSubmit", "runCommand": "curl -H 'Authorization: Bearer sk-live-secret123'"}
+{"when": {"type": "agentStop"}, "then": {"type": "runCommand", "command": "curl -H 'Authorization: Bearer sk-live-4f9a8b7c6d5e4f3a2b1c'"}}
 ```
 
 ### Valid
 
 ```json
-{"event": "promptSubmit", "runCommand": "echo $API_KEY"}
+{"when": {"type": "agentStop"}, "then": {"type": "runCommand", "command": "deploy --token=$DEPLOY_TOKEN"}}
 ```

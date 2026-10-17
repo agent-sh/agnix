@@ -13,9 +13,6 @@
 //!   (`toolsSettings`, `allowedTools`, `toolAliases`, object-form hooks,
 //!   `timeout_ms`) targets V2, and a file with both or neither targets both.
 
-// Allowed until every Kiro validator uses these helpers; removed at integration.
-#![allow(dead_code)]
-
 use crate::config::LintConfig;
 
 /// A Kiro CLI agent engine.

@@ -1,4 +1,5 @@
-//! Kiro CLI settings validation (KR-SET-001 to KR-SET-012).
+//! Kiro CLI settings validation (KR-SET-001 to KR-SET-011). Kiro settings left
+//! in the legacy `.kiro/settings.json` are reported by KIRO-026.
 //!
 //! Validates Kiro CLI settings files: `~/.kiro/settings/cli.json` (global,
 //! `$KIRO_HOME/settings/cli.json` when set) and `<workspace>/.kiro/settings/cli.json`.
@@ -48,7 +49,6 @@ const RULE_IDS: &[&str] = &[
     "KR-SET-009",
     "KR-SET-010",
     "KR-SET-011",
-    "KR-SET-012",
 ];
 
 /// Value type of a setting.
@@ -335,37 +335,6 @@ impl Validator for KiroSettingsValidator {
             config,
             diagnostics: Vec::new(),
         };
-        // `.kiro/settings.json` is where Kiro CLI 1.23 saved the default model;
-        // current Kiro CLI does not read it. Many such files belong to other
-        // tools, so only one carrying Kiro settings is reported (KR-SET-012).
-        let legacy_file = path
-            .file_name()
-            .and_then(|n| n.to_str())
-            .is_some_and(|n| n.eq_ignore_ascii_case("settings.json"));
-        if legacy_file {
-            let doc = parse_json_document(content, false).ok();
-            let first_setting = doc.as_ref().and_then(|doc| {
-                doc.root
-                    .value
-                    .as_object()?
-                    .iter()
-                    .find(|m| setting(&m.key).is_some())
-                    .map(|m| (m.key_start, m.key_end))
-            });
-            let Some((start, end)) = first_setting else {
-                return cx.diagnostics;
-            };
-            if cx.enabled("KR-SET-012") {
-                cx.push(
-                    DiagnosticLevel::Warning,
-                    "KR-SET-012",
-                    start,
-                    end,
-                    t!("rules.kr_set_012.message").to_string(),
-                    t!("rules.kr_set_012.suggestion").to_string(),
-                );
-            }
-        }
         let doc = match parse_json_document(content, false) {
             Ok(doc) => doc,
             Err(error) => {

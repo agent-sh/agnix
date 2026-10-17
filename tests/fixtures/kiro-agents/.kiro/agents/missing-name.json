@@ -1,0 +1,5 @@
+{
+  "description": "CLI 2.x agent without a name",
+  "tools": ["read"],
+  "allowedTools": ["read"]
+}

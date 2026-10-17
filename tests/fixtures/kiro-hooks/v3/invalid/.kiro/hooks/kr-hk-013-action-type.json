@@ -1,0 +1,6 @@
+{
+  "version": "v1",
+  "hooks": [
+    { "name": "review", "trigger": "Stop", "action": { "type": "askAgent", "prompt": "Review the diff" } }
+  ]
+}

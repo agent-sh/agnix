@@ -1,0 +1,7 @@
+{
+  "version": "v1",
+  "hooks": [
+    { "name": "rustfmt", "trigger": "PostFileSave", "matcher": "\\.rs$", "action": { "type": "command", "command": "rustfmt \"{{filePath}}\"" } },
+    { "name": "stylelint", "trigger": "PostFileSave", "matcher": "\\.css$", "action": { "type": "command", "command": "npx stylelint \"$FILE_PATH\" --fix" } }
+  ]
+}

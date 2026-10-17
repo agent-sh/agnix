@@ -1,10 +1,21 @@
 {
   "name": "valid-agent",
-  "description": "Valid Kiro agent fixture",
-  "model": "claude-sonnet-4-5",
-  "tools": ["readFiles", "listDirectory"],
-  "allowedTools": ["readFiles", "listDirectory"],
-  "resources": ["file://docs/overview.md", "skill://linting"],
+  "description": "Valid universal Kiro agent fixture (loads in CLI 2.x and V3)",
+  "model": "claude-sonnet-4.6",
+  "tools": ["read", "write", "@git"],
+  "allowedTools": ["read", "@git/git_status"],
+  "resources": ["file://README.md", "skill://.kiro/skills/*/SKILL.md"],
   "includeMcpJson": true,
-  "mcpServers": ["filesystem"]
+  "mcpServers": {
+    "git": {
+      "command": "git-mcp-server",
+      "args": ["--repository", "."]
+    }
+  },
+  "permissions": {
+    "rules": [
+      { "capability": "fs_read", "match": ["./**"], "effect": "allow" },
+      { "capability": "mcp", "match": ["git/git_status"], "effect": "allow" }
+    ]
+  }
 }

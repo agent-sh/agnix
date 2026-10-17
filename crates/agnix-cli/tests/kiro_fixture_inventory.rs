@@ -53,6 +53,12 @@ fn required_paths() -> Vec<&'static str> {
         "tests/fixtures/kiro-agents/.kiro/agents/valid-hooks.json",
         "tests/fixtures/kiro-agents/.kiro/agents/invalid-hook-event.json",
         "tests/fixtures/kiro-agents/.kiro/agents/missing-hook-command.json",
+        "tests/fixtures/kiro-agents/.kiro/agents/valid-markdown-agent.md",
+        "tests/fixtures/kiro-agents/.kiro/agents/jsonc-agent.json",
+        "tests/fixtures/kiro-agents/.kiro/agents/missing-name.json",
+        "tests/fixtures/kiro-agents/.kiro/agents/missing-prompt-file.json",
+        "tests/fixtures/kiro-agents/.kiro/agents/invalid-v3-hooks.json",
+        "tests/fixtures/kiro-agents/.kiro/agents/notes.md",
         "tests/fixtures/kiro-hooks/.kiro/hooks/valid-file-save.kiro.hook",
         "tests/fixtures/kiro-hooks/.kiro/hooks/valid-prompt-submit.kiro.hook",
         "tests/fixtures/kiro-hooks/.kiro/hooks/valid-pre-tool.kiro.hook",
@@ -60,6 +66,33 @@ fn required_paths() -> Vec<&'static str> {
         "tests/fixtures/kiro-hooks/.kiro/hooks/missing-patterns.kiro.hook",
         "tests/fixtures/kiro-hooks/.kiro/hooks/missing-action.kiro.hook",
         "tests/fixtures/kiro-hooks/.kiro/hooks/missing-tool-types.kiro.hook",
+        "tests/fixtures/kiro-hooks/.kiro/hooks/kr-hk-001-undocumented-manual.kiro.hook",
+        "tests/fixtures/kiro-hooks/v3/invalid/.kiro/hooks/kr-hk-027-tool-hook-without-matcher.json",
+        "tests/fixtures/kiro-hooks/v3/invalid/.kiro/hooks/kr-hk-028-broad-file-hook.json",
+        "tests/fixtures/kiro-hooks/v3/invalid/.kiro/hooks/kr-hk-029-unanchored-matcher.json",
+        "tests/fixtures/kiro-hooks/v3/invalid/.kiro/hooks/kr-hk-030-Lint_On_Save.json",
+        "tests/fixtures/kiro-hooks/.kiro/hooks/kr-hk-016-v1-format.kiro.hook",
+        "tests/fixtures/kiro-hooks/.kiro/hooks/kr-hk-026-field-types.kiro.hook",
+        "tests/fixtures/kiro-hooks/.kiro/hooks/valid-env-reference.kiro.hook",
+        "tests/fixtures/kiro-hooks/.kiro/hooks/valid-ide-0x-format.kiro.hook",
+        "tests/fixtures/kiro-hooks/v3/invalid/.kiro/hooks/kr-hk-011-version.json",
+        "tests/fixtures/kiro-hooks/v3/invalid/.kiro/hooks/kr-hk-012-missing-fields.json",
+        "tests/fixtures/kiro-hooks/v3/invalid/.kiro/hooks/kr-hk-012-unknown-trigger.json",
+        "tests/fixtures/kiro-hooks/v3/invalid/.kiro/hooks/kr-hk-013-action-type.json",
+        "tests/fixtures/kiro-hooks/v3/invalid/.kiro/hooks/kr-hk-014-trigger-alias.json",
+        "tests/fixtures/kiro-hooks/v3/invalid/.kiro/hooks/kr-hk-015-legacy-when-then.json",
+        "tests/fixtures/kiro-hooks/v3/invalid/.kiro/hooks/kr-hk-017-field-types.json",
+        "tests/fixtures/kiro-hooks/v3/invalid/.kiro/hooks/kr-hk-018-confirm.json",
+        "tests/fixtures/kiro-hooks/v3/invalid/.kiro/hooks/kr-hk-019-glob-matcher.json",
+        "tests/fixtures/kiro-hooks/v3/invalid/.kiro/hooks/kr-hk-020-ignored-matcher.json",
+        "tests/fixtures/kiro-hooks/v3/invalid/.kiro/hooks/kr-hk-021-claude-tool-names.json",
+        "tests/fixtures/kiro-hooks/v3/invalid/.kiro/hooks/kr-hk-022-misplaced-timeout.json",
+        "tests/fixtures/kiro-hooks/v3/invalid/.kiro/hooks/kr-hk-023-placeholders.json",
+        "tests/fixtures/kiro-hooks/v3/invalid/.kiro/hooks/kr-hk-024-never-runs.json",
+        "tests/fixtures/kiro-hooks/v3/valid/.kiro/hooks/guard-writes.json",
+        "tests/fixtures/kiro-hooks/v3/valid/.kiro/hooks/lint-on-save.json",
+        "tests/fixtures/kiro-hooks/v3/valid/.kiro/hooks/session-context.json",
+        "tests/fixtures/kiro-hooks/v3/valid/.kiro/hooks/stop-confirm.json",
         "tests/fixtures/kiro-mcp/.kiro/settings/mcp.json",
         "tests/fixtures/kiro-mcp/.kiro/settings/valid-local-mcp.json",
         "tests/fixtures/kiro-mcp/.kiro/settings/valid-remote-mcp.json",
@@ -308,18 +341,24 @@ fn kiro_fixture_families_are_cli_runnable() {
         // steps-and-samples/POWER.md adds a KR-PW-006 info; its Rust code
         // sample no longer trips KR-PW-008.
         ("tests/fixtures/kiro-powers", 8_u64, 11_u64),
-        // KR-AG-009 no longer flags the 10 agents that omit the optional `prompt`.
-        ("tests/fixtures/kiro-agents", 10_u64, 10_u64),
-        ("tests/fixtures/kiro-hooks", 7_u64, 4_u64),
+        // One finding per invalid fixture (two for unknown-fields.json and
+        // missing-name.json, three for invalid-v3-hooks.json); valid-agent.json,
+        // valid-hooks.json, valid-markdown-agent.md and minimal-agent.json are
+        // clean.
+        ("tests/fixtures/kiro-agents", 16_u64, 16_u64),
+        // V3 hook fixtures (v3/valid, v3/invalid: one file per rule) and the
+        // legacy KR-HK-001/016/026 and valid IDE 0.x fixtures were added.
+        ("tests/fixtures/kiro-hooks", 34_u64, 31_u64),
         // invalid/ and jsonc/ exercise KR-MCP-001..011 and 015.
         ("tests/fixtures/kiro-mcp", 3_u64, 13_u64),
         // strict/ adds KR-PM-003 (evaluate), 005..008 and 010..012; each
         // repository-local permissions file also gets the KR-PM-009 note.
         ("tests/fixtures/kiro-permissions", 3_u64, 16_u64),
         // Six KIRO-026 near misses, five KR-WF findings in broken.workflow.yaml
-        // one KR-IGN-001 and the KR-PW-019 legacy-format note on power/POWER.md;
+        // one KR-IGN-001, the KR-PW-019 legacy-format note on power/POWER.md and
+        // the KR-PW-016 author note on the power plugin.json;
         // settings/settings.json is not validated.
-        ("tests/fixtures/kiro-detect", 14_u64, 13_u64),
+        ("tests/fixtures/kiro-detect", 14_u64, 14_u64),
     ];
 
     for (rel, expected_files_checked, expected_diagnostics) in fixture_roots {
@@ -416,7 +455,7 @@ fn kiro_fixture_files_have_explicit_detection_baselines() {
         let is_detected = detect_file_type(Path::new(rel)).is_validatable();
         let should_be_detected = rel.starts_with("tests/fixtures/kiro-powers/")
             || rel.starts_with("tests/fixtures/kiro-agents/.kiro/agents/")
-            || rel.starts_with("tests/fixtures/kiro-hooks/.kiro/hooks/")
+            || rel.starts_with("tests/fixtures/kiro-hooks/")
             || rel.starts_with("tests/fixtures/kiro-permissions/")
             || (rel.starts_with("tests/fixtures/kiro-mcp/")
                 && rel.ends_with("/.kiro/settings/mcp.json"))
@@ -511,6 +550,11 @@ fn kiro_detect_fixtures_report_exactly_the_expected_findings() {
     expected.insert((
         "KR-PW-019".to_string(),
         "tests/fixtures/kiro-detect/power/POWER.md".to_string(),
+    ));
+    // The power plugin.json has no author.name (KR-PW-016 info).
+    expected.insert((
+        "KR-PW-016".to_string(),
+        "tests/fixtures/kiro-detect/.kiro/powers/installed/demo/plugin.json".to_string(),
     ));
     // No Claude import, cross-platform or hook rules on Kiro files: power
     // steering has `### @app.entrypoint`, POWER.md documents OS paths, and

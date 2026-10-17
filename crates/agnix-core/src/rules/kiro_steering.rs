@@ -1280,19 +1280,16 @@ pub(crate) fn is_vague_description(description: &str) -> bool {
 // ---------------------------------------------------------------------------
 
 // Used once the integrator registers KiroAgentsMdValidator for AGENTS.md files.
-#[allow(dead_code)]
 const AGENTS_MD_RULE_IDS: &[&str] = &["KIRO-016", "KIRO-017"];
 
 /// Kiro CLI V3 truncates an AGENTS.md (workspace root or nested) to this many
 /// characters, counted as JavaScript string length (UTF-16 code units).
 // Used once the integrator registers KiroAgentsMdValidator for AGENTS.md files.
-#[allow(dead_code)]
 const AGENTS_MD_TRUNCATE_AT: usize = 50_000;
 
 /// True when `path` is inside a `.kiro/steering` directory, where an
 /// AGENTS.md is an ordinary steering document.
 // Used once the integrator registers KiroAgentsMdValidator for AGENTS.md files.
-#[allow(dead_code)]
 fn is_in_kiro_steering_dir(path: &Path) -> bool {
     let components: Vec<&str> = path
         .components()
@@ -1308,7 +1305,6 @@ fn is_in_kiro_steering_dir(path: &Path) -> bool {
 /// the project root). AGENTS.md is shared by many tools, so an unscoped run
 /// does not apply Kiro limits to projects that do not use Kiro.
 // Used once the integrator registers KiroAgentsMdValidator for AGENTS.md files.
-#[allow(dead_code)]
 fn project_uses_kiro(path: &Path, config: &LintConfig) -> bool {
     let tools = config.tools();
     if !tools.is_empty() {
@@ -1335,7 +1331,6 @@ fn project_uses_kiro(path: &Path, config: &LintConfig) -> bool {
 /// Checks AGENTS.md files the way Kiro loads them: read raw (no frontmatter
 /// parsing) and, in CLI V3, truncated at 50,000 characters.
 // Used once the integrator registers KiroAgentsMdValidator for AGENTS.md files.
-#[allow(dead_code)]
 pub struct KiroAgentsMdValidator;
 
 impl Validator for KiroAgentsMdValidator {

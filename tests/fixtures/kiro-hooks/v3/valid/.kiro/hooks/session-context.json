@@ -1,0 +1,26 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "branch-context",
+      "trigger": "SessionStart",
+      "action": { "type": "command", "command": "git status --short --branch" }
+    },
+    {
+      "name": "conventions",
+      "trigger": "UserPromptSubmit",
+      "action": { "type": "agent", "prompt": "Follow the conventions in .kiro/steering/." }
+    },
+    {
+      "name": "spec-gate",
+      "trigger": "PreTaskExec",
+      "action": { "type": "command", "command": "npm test --silent" },
+      "enabled": false
+    },
+    {
+      "name": "cleanup",
+      "trigger": "SessionEnd",
+      "action": { "type": "command", "command": "rm -f .kiro/tmp-session.lock" }
+    }
+  ]
+}

@@ -1,5 +1,7 @@
 {
   "name": "mismatched-tools-agent",
-  "tools": ["readFiles"],
-  "allowedTools": ["runShellCommand"]
+  "description": "Agent fixture that trusts a tool it does not load",
+  "tools": ["read"],
+  "allowedTools": ["read", "@git/git_status"],
+  "permissions": { "rules": [] }
 }

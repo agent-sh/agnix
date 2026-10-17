@@ -1,9 +1,9 @@
 ---
 id: kr-ag-003
-title: "KR-AG-003: allowedTools Not Subset of tools - Kiro Agents"
+title: "KR-AG-003: allowedTools Trusts a Tool Not in tools"
 sidebar_label: "KR-AG-003"
-description: "agnix rule KR-AG-003 checks for allowedtools not subset of tools in kiro agents files. Severity: MEDIUM. See examples and fix guidance."
-keywords: ["KR-AG-003", "allowedtools not subset of tools", "kiro agents", "validation", "agnix", "linter"]
+description: "agnix rule KR-AG-003 checks for allowedtools trusts a tool not in tools in kiro agents files. Severity: MEDIUM. See examples and fix guidance."
+keywords: ["KR-AG-003", "allowedtools trusts a tool not in tools", "kiro agents", "validation", "agnix", "linter"]
 ---
 
 ## Summary
@@ -13,7 +13,7 @@ keywords: ["KR-AG-003", "allowedtools not subset of tools", "kiro agents", "vali
 - **Category**: `Kiro Agents`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,8 @@ keywords: ["KR-AG-003", "allowedtools not subset of tools", "kiro agents", "vali
 
 ## Evidence Sources
 
-- https://kiro.dev/docs/cli/custom-agents/configuration-reference
+- https://kiro.dev/docs/custom-agents/configuration-reference/
+- https://kiro.dev/docs/reference/built-in-tools/
 
 ## Test Coverage Metadata
 
@@ -38,17 +39,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{
-  "tools": ["readFiles"],
-  "allowedTools": ["runShellCommand"]
-}
+{"name": "review-agent", "tools": ["read"], "allowedTools": ["read", "@git/git_status"]}
 ```
 
 ### Valid
 
 ```json
-{
-  "tools": ["readFiles", "listDirectory"],
-  "allowedTools": ["readFiles"]
-}
+{"name": "review-agent", "tools": ["@builtin", "@git"], "allowedTools": ["read", "@git/git_status"]}
 ```

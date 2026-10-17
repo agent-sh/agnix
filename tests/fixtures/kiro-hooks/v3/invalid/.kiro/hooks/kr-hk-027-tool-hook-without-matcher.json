@@ -1,0 +1,6 @@
+{
+  "version": "v1",
+  "hooks": [
+    { "name": "audit", "trigger": "PreToolUse", "action": { "type": "command", "command": "./scripts/audit.sh" } }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Dependency check",
+  "version": "1",
+  "when": { "type": "manual" },
+  "then": { "type": "askAgent", "prompt": "Check for outdated dependencies." }
+}

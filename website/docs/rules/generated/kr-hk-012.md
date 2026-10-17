@@ -12,13 +12,13 @@ keywords: ["KR-HK-012", "invalid kiro v3 hook entry", "kiro hooks", "validation"
 - **Severity**: `HIGH`
 - **Category**: `Kiro Hooks`
 - **Normative Level**: `MUST`
-- **Auto-Fix**: `No`
-- **Verified On**: `2026-10-16`
+- **Auto-Fix**: `Yes (unsafe)`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
 - **Tool**: `kiro`
-- **Version Range**: `>=2.26.0`
+- **Version Range**: `>=2.8.0`
 - **Spec Revision**: `unspecified`
 
 ## Evidence Sources
@@ -30,7 +30,7 @@ keywords: ["KR-HK-012", "invalid kiro v3 hook entry", "kiro hooks", "validation"
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples
@@ -40,11 +40,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{"name": "audit", "trigger": "onFileChange", "action": {"type": "command", "command": "echo"}}
+{"version":"v1","hooks":[{"name":"audit","trigger":"AgentSpawn","action":{"type":"command","command":"./audit.sh"}}]}
 ```
 
 ### Valid
 
 ```json
-{"name": "audit-shell", "trigger": "PreToolUse", "matcher": "shell", "action": {"type": "command", "command": "echo audit"}}
+{"version":"v1","hooks":[{"name":"audit-shell","trigger":"PreToolUse","matcher":"shell","action":{"type":"command","command":"./audit.sh"}}]}
 ```

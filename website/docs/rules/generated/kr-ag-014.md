@@ -1,9 +1,9 @@
 ---
 id: kr-ag-014
-title: "KR-AG-014: Invalid Universal Permissions Rule - Kiro Agents"
+title: "KR-AG-014: Invalid Kiro Agent Permissions Block"
 sidebar_label: "KR-AG-014"
-description: "agnix rule KR-AG-014 checks for invalid universal permissions rule in kiro agents files. Severity: HIGH. See examples and fix guidance."
-keywords: ["KR-AG-014", "invalid universal permissions rule", "kiro agents", "validation", "agnix", "linter"]
+description: "agnix rule KR-AG-014 checks for invalid kiro agent permissions block in kiro agents files. Severity: HIGH. See examples and fix guidance."
+keywords: ["KR-AG-014", "invalid kiro agent permissions block", "kiro agents", "validation", "agnix", "linter"]
 ---
 
 ## Summary
@@ -13,18 +13,18 @@ keywords: ["KR-AG-014", "invalid universal permissions rule", "kiro agents", "va
 - **Category**: `Kiro Agents`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-07-26`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
 - **Tool**: `kiro`
-- **Version Range**: `>=2.14.0`
+- **Version Range**: `>=2.8.0`
 - **Spec Revision**: `unspecified`
 
 ## Evidence Sources
 
-- https://kiro.dev/changelog/cli/2-14/
 - https://kiro.dev/docs/cli/v3/agent-config/
+- https://kiro.dev/docs/permissions/
 - https://kiro.dev/docs/cli/v3/permissions/
 
 ## Test Coverage Metadata
@@ -40,11 +40,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{"permissions": {"rules": [{"capability": "shell", "effect": "sometimes", "match": "npm *"}]}}
+{"name": "review-agent", "permissions": {"rules": [{"capability": "shell", "effect": "sometimes", "match": "npm *"}]}}
 ```
 
 ### Valid
 
 ```json
-{"permissions": {"rules": [{"capability": "shell", "effect": "allow", "match": ["npm *"]}]}}
+{"name": "review-agent", "permissions": {"rules": [{"capability": "shell", "effect": "allow", "match": ["npm *"]}]}}
 ```

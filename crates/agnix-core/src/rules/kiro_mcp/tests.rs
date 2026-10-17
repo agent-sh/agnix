@@ -847,27 +847,6 @@ fn test_plugin_schema_version_parsing() {
 }
 
 #[test]
-fn test_server_field_issue_for_agent_mcp_servers() {
-    use serde_json::json;
-    assert_eq!(
-        server_field_issue("args", &json!("x")),
-        Some((true, true, "an array of strings"))
-    );
-    assert_eq!(
-        server_field_issue("timeout", &json!(0)).map(|i| (i.0, i.1)),
-        Some((false, true))
-    );
-    assert_eq!(
-        server_field_issue("oauth.clientSecret", &json!(5)).map(|i| (i.0, i.1)),
-        Some((true, false))
-    );
-    assert_eq!(server_field_issue("env", &json!({"A": "b"})), None);
-    assert_eq!(server_field_issue("unknownField", &json!(1)), None);
-}
-
-// ===== Rule toggles and metadata =====
-
-#[test]
 fn test_rules_can_be_disabled_individually() {
     let mut config = LintConfig::default();
     config.rules_mut().disabled_rules = RULE_IDS.iter().map(|id| id.to_string()).collect();

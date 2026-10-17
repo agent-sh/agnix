@@ -813,14 +813,16 @@ pub struct RuleConfig {
     #[schemars(description = "Enable Windsurf validation rules (WS-*)")]
     pub windsurf: bool,
 
-    /// Enable Kiro steering validation (KIRO-*)
+    /// Enable Kiro rules other than agent-profile and skill rules
     #[serde(default = "default_true")]
-    #[schemars(description = "Enable Kiro steering validation rules (KIRO-*)")]
+    #[schemars(
+        description = "Enable Kiro rules other than agent-profile and skill rules: steering (KIRO-*), hook files (KR-HK-* except KR-HK-005/006), MCP (KR-MCP-*), powers (KR-PW-*), CLI settings (KR-SET-*), permissions (KR-PM-*), workflows (KR-WF-*) and ignore files (KR-IGN-*)"
+    )]
     pub kiro_steering: bool,
 
-    /// Enable Kiro agent validation (KR-AG-*)
+    /// Enable Kiro agent profile rules (KR-AG-*, KR-HK-005, KR-HK-006)
     #[serde(default = "default_true")]
-    #[schemars(description = "Enable Kiro agent validation rules (KR-AG-*)")]
+    #[schemars(description = "Enable Kiro agent profile rules (KR-AG-*, KR-HK-005, KR-HK-006)")]
     pub kiro_agents: bool,
 
     /// Enable Amp checks validation (AMP-*)

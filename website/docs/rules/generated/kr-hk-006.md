@@ -1,9 +1,9 @@
 ---
 id: kr-hk-006
-title: "KR-HK-006: Kiro CLI Hook Missing Command - Kiro Hooks"
+title: "KR-HK-006: Invalid Kiro Agent Hook Entry - Kiro Hooks"
 sidebar_label: "KR-HK-006"
-description: "agnix rule KR-HK-006 checks for kiro cli hook missing command in kiro hooks files. Severity: HIGH. See examples and fix guidance."
-keywords: ["KR-HK-006", "kiro cli hook missing command", "kiro hooks", "validation", "agnix", "linter"]
+description: "agnix rule KR-HK-006 checks for invalid kiro agent hook entry in kiro hooks files. Severity: HIGH. See examples and fix guidance."
+keywords: ["KR-HK-006", "invalid kiro agent hook entry", "kiro hooks", "validation", "agnix", "linter"]
 ---
 
 ## Summary
@@ -13,7 +13,7 @@ keywords: ["KR-HK-006", "kiro cli hook missing command", "kiro hooks", "validati
 - **Category**: `Kiro Hooks`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,9 @@ keywords: ["KR-HK-006", "kiro cli hook missing command", "kiro hooks", "validati
 
 ## Evidence Sources
 
-- https://kiro.dev/docs/cli/hooks
+- https://kiro.dev/docs/cli/2x-reference/
+- https://kiro.dev/docs/hooks/
+- https://kiro.dev/docs/custom-agents/configuration-reference/
 
 ## Test Coverage Metadata
 
@@ -38,19 +40,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{
-  "hooks": {
-    "preToolUse": [{"toolTypes": ["readFiles"]}]
-  }
-}
+{"name": "review-agent", "hooks": [{"name": "lint", "trigger": "PostToolUse", "action": {"type": "command"}}]}
 ```
 
 ### Valid
 
 ```json
-{
-  "hooks": {
-    "preToolUse": [{"command": "echo pre", "toolTypes": ["readFiles"]}]
-  }
-}
+{"name": "review-agent", "hooks": [{"name": "lint", "trigger": "PostToolUse", "matcher": "write", "action": {"type": "command", "command": "npm run lint"}}]}
 ```

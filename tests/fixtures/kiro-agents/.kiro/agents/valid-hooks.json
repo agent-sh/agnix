@@ -1,10 +1,12 @@
 {
   "name": "valid-hooks-agent",
+  "description": "Agent fixture with a valid CLI 2.x hook",
   "hooks": {
     "preToolUse": [
       {
         "command": "echo pre-tool",
-        "toolTypes": ["readFiles"]
+        "matcher": "fs_write",
+        "timeout_ms": 5000
       }
     ]
   }

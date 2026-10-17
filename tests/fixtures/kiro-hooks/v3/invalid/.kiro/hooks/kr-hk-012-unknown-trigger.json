@@ -1,0 +1,7 @@
+{
+  "version": "v1",
+  "hooks": [
+    { "name": "init", "trigger": "AgentSpawn", "action": { "type": "command", "command": "git status" } },
+    { "name": "save", "trigger": "OnFileChange", "action": { "type": "command", "command": "make lint" } }
+  ]
+}

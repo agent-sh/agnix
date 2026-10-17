@@ -1,0 +1,6 @@
+{
+  // Kiro CLI V3 accepts comments in agent JSON; CLI 2.x does not.
+  "name": "jsonc-agent",
+  "description": "Agent fixture written as JSON with comments",
+  "tools": ["read"]
+}

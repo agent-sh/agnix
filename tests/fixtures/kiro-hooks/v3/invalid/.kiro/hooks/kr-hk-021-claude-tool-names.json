@@ -1,0 +1,6 @@
+{
+  "version": "v1",
+  "hooks": [
+    { "name": "guard", "trigger": "PreToolUse", "matcher": "^Bash$|^Write$|^Edit$", "action": { "type": "command", "command": "./guard.sh" } }
+  ]
+}

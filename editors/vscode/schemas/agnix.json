@@ -136,7 +136,8 @@
         "claude_code": null,
         "codex": null,
         "copilot": null,
-        "cursor": null
+        "cursor": null,
+        "kiro": null
       }
     },
     "tools": {
@@ -295,12 +296,12 @@
           "default": true
         },
         "kiro_agents": {
-          "description": "Enable Kiro agent validation rules (KR-AG-*)",
+          "description": "Enable Kiro agent profile rules (KR-AG-*, KR-HK-005, KR-HK-006)",
           "type": "boolean",
           "default": true
         },
         "kiro_steering": {
-          "description": "Enable Kiro steering validation rules (KIRO-*)",
+          "description": "Enable Kiro rules other than agent-profile and skill rules: steering (KIRO-*), hook files (KR-HK-* except KR-HK-005/006), MCP (KR-MCP-*), powers (KR-PW-*), CLI settings (KR-SET-*), permissions (KR-PM-*), workflows (KR-WF-*) and ignore files (KR-IGN-*)",
           "type": "boolean",
           "default": true
         },
@@ -491,6 +492,14 @@
         },
         "cursor": {
           "description": "Cursor version for version-aware validation (e.g., \"0.45.0\")",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "kiro": {
+          "description": "Kiro CLI version for version-aware validation (e.g., \"2.32.1\"). 2.x selects the V2 agent engine and 3.x or later the V3 engine; unpinned, each Kiro file is checked against the engines its own fields target",
           "type": [
             "string",
             "null"

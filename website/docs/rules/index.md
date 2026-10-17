@@ -1,7 +1,7 @@
 # Rules Reference
 
-This section contains all `508` validation rules generated from `knowledge-base/rules.json`.
-`130` rules have automatic fixes.
+This section contains all `535` validation rules generated from `knowledge-base/rules.json`.
+`136` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
 |------|------|----------|----------|----------|
@@ -308,34 +308,62 @@ This section contains all `508` validation rules generated from `knowledge-base/
 | [KIRO-026](./generated/kiro-026.md) | Kiro Configuration File Never Loaded | MEDIUM | Kiro Steering | No |
 | [KR-SK-001](./generated/kr-sk-001.md) | Kiro Skill Uses Unsupported Field | MEDIUM | Kiro Skills | Yes (safe/unsafe) |
 | [KR-SK-002](./generated/kr-sk-002.md) | Vague Kiro Skill Description | LOW | Kiro Skills | No |
-| [KR-AG-001](./generated/kr-ag-001.md) | Unknown Field in Kiro Agent JSON | MEDIUM | Kiro Agents | No |
-| [KR-AG-002](./generated/kr-ag-002.md) | Invalid Kiro Agent Resource Protocol | HIGH | Kiro Agents | No |
-| [KR-AG-003](./generated/kr-ag-003.md) | allowedTools Not Subset of tools | MEDIUM | Kiro Agents | No |
-| [KR-AG-004](./generated/kr-ag-004.md) | Invalid Kiro Agent Model Value | MEDIUM | Kiro Agents | No |
-| [KR-AG-005](./generated/kr-ag-005.md) | Kiro Agent Has No MCP Access | LOW | Kiro Agents | No |
-| [KR-AG-006](./generated/kr-ag-006.md) | Kiro Agent References Unknown Subagent | MEDIUM | Kiro Agents | No |
-| [KR-AG-007](./generated/kr-ag-007.md) | Kiro Agent Tool Scope Broader Than Referenced Subagent | MEDIUM | Kiro Agents | No |
-| [KR-AG-008](./generated/kr-ag-008.md) | Empty Explicit Agent Name | HIGH | Kiro Agents | No |
-| [KR-AG-009](./generated/kr-ag-009.md) | Agent Prompt Empty Or Invalid | HIGH | Kiro Agents | No |
+| [KR-AG-001](./generated/kr-ag-001.md) | Unknown or Ignored Kiro Agent Field | MEDIUM | Kiro Agents | No |
+| [KR-AG-002](./generated/kr-ag-002.md) | Invalid Kiro Agent Resource Entry | HIGH | Kiro Agents | No |
+| [KR-AG-003](./generated/kr-ag-003.md) | allowedTools Trusts a Tool Not in tools | MEDIUM | Kiro Agents | No |
+| [KR-AG-004](./generated/kr-ag-004.md) | Kiro Agent Model Is Not a Kiro Model ID | MEDIUM | Kiro Agents | No |
+| [KR-AG-005](./generated/kr-ag-005.md) | Referenced MCP Server Not Loaded by Kiro CLI 2.x | MEDIUM | Kiro Agents | No |
+| [KR-AG-006](./generated/kr-ag-006.md) | Kiro Agent Sub-agent Access Cannot Work | MEDIUM | Kiro Agents | No |
+| [KR-AG-008](./generated/kr-ag-008.md) | Invalid Explicit Agent Name | HIGH | Kiro Agents | No |
+| [KR-AG-009](./generated/kr-ag-009.md) | Agent Prompt Empty or Invalid | HIGH | Kiro Agents | No |
 | [KR-AG-010](./generated/kr-ag-010.md) | Duplicate Tool Entries | MEDIUM | Kiro Agents | No |
 | [KR-AG-011](./generated/kr-ag-011.md) | Empty Tools Array | LOW | Kiro Agents | No |
-| [KR-AG-012](./generated/kr-ag-012.md) | toolAliases References Unknown Tool | MEDIUM | Kiro Agents | No |
+| [KR-AG-012](./generated/kr-ag-012.md) | toolAliases Renames a Tool Not in tools | MEDIUM | Kiro Agents | No |
 | [KR-AG-013](./generated/kr-ag-013.md) | Secrets in Agent Prompt | HIGH | Kiro Agents | No |
-| [KR-AG-014](./generated/kr-ag-014.md) | Invalid Universal Permissions Rule | HIGH | Kiro Agents | No |
-| [KR-AG-015](./generated/kr-ag-015.md) | Unconverted CLI 2.x Trust Configuration | MEDIUM | Kiro Agents | No |
-| [KR-HK-001](./generated/kr-hk-001.md) | Invalid Kiro IDE Hook Event Type | HIGH | Kiro Hooks | No |
+| [KR-AG-014](./generated/kr-ag-014.md) | Invalid Kiro Agent Permissions Block | HIGH | Kiro Agents | No |
+| [KR-AG-015](./generated/kr-ag-015.md) | Unconverted CLI 2.x Trust Configuration | MEDIUM | Kiro Agents | Yes (unsafe) |
+| [KR-AG-016](./generated/kr-ag-016.md) | Invalid Kiro Agent JSON | HIGH | Kiro Agents | No |
+| [KR-AG-017](./generated/kr-ag-017.md) | Invalid Kiro Markdown Agent Frontmatter | HIGH | Kiro Agents | No |
+| [KR-AG-018](./generated/kr-ag-018.md) | Kiro Agent Field Has the Wrong Type | HIGH | Kiro Agents | No |
+| [KR-AG-019](./generated/kr-ag-019.md) | Kiro Agent Missing Name for CLI 2.x | HIGH | Kiro Agents | No |
+| [KR-AG-020](./generated/kr-ag-020.md) | Non-Agent File in Kiro Agents Directory | MEDIUM | Kiro Agents | No |
+| [KR-AG-021](./generated/kr-ag-021.md) | Kiro Agent file:// Prompt Cannot Be Loaded | HIGH | Kiro Agents | No |
+| [KR-AG-022](./generated/kr-ag-022.md) | Reserved or Duplicate Kiro Agent Name | MEDIUM | Kiro Agents | No |
+| [KR-AG-023](./generated/kr-ag-023.md) | Invalid Inline MCP Server in Kiro Agent | HIGH | Kiro Agents | No |
+| [KR-AG-024](./generated/kr-ag-024.md) | Kiro Agent Tool Name Matches No Tool | MEDIUM | Kiro Agents | No |
+| [KR-AG-025](./generated/kr-ag-025.md) | Agent Hook Matcher Never Fires in Kiro CLI 2.x | MEDIUM | Kiro Agents | No |
+| [KR-AG-026](./generated/kr-ag-026.md) | Kiro Agent Hook Timeout Field or Unit Mismatch | MEDIUM | Kiro Agents | No |
+| [KR-AG-027](./generated/kr-ag-027.md) | Kiro Agent Hook Field Ignored | MEDIUM | Kiro Agents | No |
+| [KR-AG-028](./generated/kr-ag-028.md) | Agent File Not Loaded by a Targeted Kiro Engine | MEDIUM | Kiro Agents | No |
+| [KR-AG-029](./generated/kr-ag-029.md) | Overly Broad Kiro Agent Resource Glob | LOW | Kiro Agents | No |
+| [KR-AG-030](./generated/kr-ag-030.md) | Sub-agent Description Missing or Too Short | LOW | Kiro Agents | No |
+| [KR-HK-001](./generated/kr-hk-001.md) | Invalid Kiro IDE Hook Event Type | HIGH | Kiro Hooks | Yes (unsafe) |
 | [KR-HK-002](./generated/kr-hk-002.md) | Kiro File Hook Missing Patterns | HIGH | Kiro Hooks | No |
 | [KR-HK-003](./generated/kr-hk-003.md) | Kiro IDE Hook Missing Action | HIGH | Kiro Hooks | No |
 | [KR-HK-004](./generated/kr-hk-004.md) | Kiro Tool Hook Missing toolTypes Filter | MEDIUM | Kiro Hooks | No |
-| [KR-HK-005](./generated/kr-hk-005.md) | Invalid Kiro CLI Hook Event Key | HIGH | Kiro Hooks | No |
-| [KR-HK-006](./generated/kr-hk-006.md) | Kiro CLI Hook Missing Command | HIGH | Kiro Hooks | No |
-| [KR-HK-007](./generated/kr-hk-007.md) | Hook Timeout Out of Range | MEDIUM | Kiro Hooks | No |
-| [KR-HK-008](./generated/kr-hk-008.md) | Duplicate Event Handlers | MEDIUM | Kiro Hooks | No |
-| [KR-HK-009](./generated/kr-hk-009.md) | Command Uses Absolute Path | MEDIUM | Kiro Hooks | No |
+| [KR-HK-005](./generated/kr-hk-005.md) | Invalid Kiro Agent Hook Trigger | HIGH | Kiro Hooks | Yes (unsafe) |
+| [KR-HK-006](./generated/kr-hk-006.md) | Invalid Kiro Agent Hook Entry | HIGH | Kiro Hooks | No |
+| [KR-HK-009](./generated/kr-hk-009.md) | Command Uses Absolute Path | LOW | Kiro Hooks | No |
 | [KR-HK-010](./generated/kr-hk-010.md) | Secrets in Hook Command | HIGH | Kiro Hooks | No |
-| [KR-HK-011](./generated/kr-hk-011.md) | Invalid Kiro V3 Hook Document Version | MEDIUM | Kiro Hooks | Yes (unsafe) |
-| [KR-HK-012](./generated/kr-hk-012.md) | Invalid Kiro V3 Hook Entry | HIGH | Kiro Hooks | No |
-| [KR-HK-013](./generated/kr-hk-013.md) | Invalid Kiro V3 Hook Action | HIGH | Kiro Hooks | No |
+| [KR-HK-011](./generated/kr-hk-011.md) | Invalid Kiro V3 Hook Document Version | HIGH | Kiro Hooks | Yes (unsafe) |
+| [KR-HK-012](./generated/kr-hk-012.md) | Invalid Kiro V3 Hook Entry | HIGH | Kiro Hooks | Yes (unsafe) |
+| [KR-HK-013](./generated/kr-hk-013.md) | Invalid Kiro V3 Hook Action | HIGH | Kiro Hooks | Yes (unsafe) |
+| [KR-HK-015](./generated/kr-hk-015.md) | Legacy IDE Hook Saved as a V3 Hook File | HIGH | Kiro Hooks | No |
+| [KR-HK-016](./generated/kr-hk-016.md) | V3 Hook File Saved as .kiro.hook | HIGH | Kiro Hooks | No |
+| [KR-HK-017](./generated/kr-hk-017.md) | Invalid Kiro V3 Hook Field Value | HIGH | Kiro Hooks | Yes (unsafe) |
+| [KR-HK-018](./generated/kr-hk-018.md) | Invalid Kiro V3 Hook Confirm Block | HIGH | Kiro Hooks | No |
+| [KR-HK-019](./generated/kr-hk-019.md) | Kiro V3 Hook Matcher Is Not a Valid Regex | HIGH | Kiro Hooks | No |
+| [KR-HK-020](./generated/kr-hk-020.md) | Kiro V3 Hook Matcher Has No Effect | MEDIUM | Kiro Hooks | No |
+| [KR-HK-021](./generated/kr-hk-021.md) | Kiro V3 Tool Matcher Uses Non-V3 Tool Names | MEDIUM | Kiro Hooks | No |
+| [KR-HK-022](./generated/kr-hk-022.md) | Misplaced or Misspelled Kiro V3 Hook Field | MEDIUM | Kiro Hooks | No |
+| [KR-HK-023](./generated/kr-hk-023.md) | Kiro V3 Hook Command Uses Unsupported Placeholder | MEDIUM | Kiro Hooks | No |
+| [KR-HK-024](./generated/kr-hk-024.md) | Kiro V3 Hook Never Runs | MEDIUM | Kiro Hooks | No |
+| [KR-HK-025](./generated/kr-hk-025.md) | Standalone Hook File Ignored by Pinned Kiro CLI 2.x | LOW | Kiro Hooks | No |
+| [KR-HK-026](./generated/kr-hk-026.md) | Invalid Kiro IDE Hook File | HIGH | Kiro Hooks | No |
+| [KR-HK-027](./generated/kr-hk-027.md) | Kiro Tool Hook Without a Specific Matcher | LOW | Kiro Hooks | No |
+| [KR-HK-028](./generated/kr-hk-028.md) | Kiro File Hook Matching Every File | LOW | Kiro Hooks | No |
+| [KR-HK-029](./generated/kr-hk-029.md) | Kiro Tool Matcher Is an Unanchored Regex | LOW | Kiro Hooks | No |
+| [KR-HK-030](./generated/kr-hk-030.md) | Kiro Hook File Name Not Kebab-Case | LOW | Kiro Hooks | No |
 | [KR-MCP-001](./generated/kr-mcp-001.md) | Kiro MCP Config Fails to Load | HIGH | Kiro MCP | No |
 | [KR-MCP-002](./generated/kr-mcp-002.md) | Hardcoded Secret in Kiro MCP Server Config | MEDIUM | Kiro MCP | No |
 | [KR-MCP-003](./generated/kr-mcp-003.md) | Kiro MCP Command Includes Arguments | MEDIUM | Kiro MCP | No |
@@ -380,7 +408,6 @@ This section contains all `508` validation rules generated from `knowledge-base/
 | [KR-SET-009](./generated/kr-set-009.md) | Unrecognized Kiro CLI Setting Value | MEDIUM | Kiro Settings | No |
 | [KR-SET-010](./generated/kr-set-010.md) | Duplicate Kiro CLI Setting Key | MEDIUM | Kiro Settings | No |
 | [KR-SET-011](./generated/kr-set-011.md) | Global-Only Kiro CLI Setting in Workspace File | LOW | Kiro Settings | No |
-| [KR-SET-012](./generated/kr-set-012.md) | Kiro CLI Settings in Legacy .kiro/settings.json | MEDIUM | Kiro Settings | No |
 | [KR-WF-001](./generated/kr-wf-001.md) | Workflow Recipe Exceeds Kiro Limits | HIGH | Kiro Workflows | No |
 | [KR-WF-002](./generated/kr-wf-002.md) | Invalid Workflow Repeat Cap | HIGH | Kiro Workflows | No |
 | [KR-WF-003](./generated/kr-wf-003.md) | Workflow Recipe Suffix Conflict | MEDIUM | Kiro Workflows | No |

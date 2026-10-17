@@ -1,9 +1,10 @@
 {
   "name": "missing-hook-command-agent",
+  "description": "Agent fixture with a hook entry that has no command",
   "hooks": {
     "preToolUse": [
       {
-        "toolTypes": ["readFiles"]
+        "matcher": "read"
       }
     ]
   }

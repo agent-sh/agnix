@@ -1,0 +1,6 @@
+{
+  "version": "v1",
+  "hooks": [
+    { "name": "clippy", "trigger": "Stop", "action": { "type": "command", "command": "cargo clippy", "timeout": 300 } }
+  ]
+}

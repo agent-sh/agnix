@@ -1,0 +1,19 @@
+{
+  "name": "invalid-v3-hooks-agent",
+  "description": "Agent fixture with invalid array-form hooks",
+  "tools": ["read", "shell"],
+  "permissions": { "rules": [] },
+  "hooks": [
+    {
+      "name": "start",
+      "trigger": "AgentSpawn",
+      "action": { "type": "command", "command": "git status" }
+    },
+    {
+      "name": "audit-reads",
+      "trigger": "PostToolUse",
+      "matcher": "fs_read",
+      "action": { "type": "command" }
+    }
+  ]
+}

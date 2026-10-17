@@ -1,0 +1,6 @@
+{
+  "version": "v1",
+  "hooks": [
+    { "name": "guard-writes", "trigger": "PreToolUse", "matcher": "fs_write|str_replace", "action": { "type": "command", "command": "./scripts/guard.sh" } }
+  ]
+}

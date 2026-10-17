@@ -348,8 +348,13 @@ fn test_validators_for_skill() {
 fn test_validators_for_claude_md() {
     let registry = ValidatorRegistry::with_defaults();
     let validators = registry.validators_for(FileType::ClaudeMd);
-    assert_eq!(validators.len(), 8);
+    assert_eq!(validators.len(), 9);
     assert!(validators.iter().any(|v| v.name() == "AmpValidator"));
+    assert!(
+        validators
+            .iter()
+            .any(|v| v.name() == "KiroAgentsMdValidator")
+    );
 }
 
 #[test]

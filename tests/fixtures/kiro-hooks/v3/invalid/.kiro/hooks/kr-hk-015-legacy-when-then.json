@@ -1,0 +1,7 @@
+{
+  "name": "Test on save",
+  "description": "IDE 0.x hook saved with a .json extension",
+  "version": "1.0.0",
+  "when": { "type": "fileEdited", "patterns": ["src/**/*.ts"] },
+  "then": { "type": "askAgent", "prompt": "Run the tests related to the saved file." }
+}

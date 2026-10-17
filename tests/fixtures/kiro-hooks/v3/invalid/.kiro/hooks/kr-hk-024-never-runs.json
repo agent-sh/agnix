@@ -1,0 +1,7 @@
+{
+  "version": "v1",
+  "hooks": [
+    { "name": "farewell", "trigger": "SessionEnd", "action": { "type": "agent", "prompt": "Summarize the session." } },
+    { "name": "on-demand", "trigger": "Manual", "action": { "type": "command", "command": "npm run report" } }
+  ]
+}

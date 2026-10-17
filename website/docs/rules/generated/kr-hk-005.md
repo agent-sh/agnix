@@ -1,9 +1,9 @@
 ---
 id: kr-hk-005
-title: "KR-HK-005: Invalid Kiro CLI Hook Event Key - Kiro Hooks"
+title: "KR-HK-005: Invalid Kiro Agent Hook Trigger - Kiro Hooks"
 sidebar_label: "KR-HK-005"
-description: "agnix rule KR-HK-005 checks for invalid kiro cli hook event key in kiro hooks files. Severity: HIGH. See examples and fix guidance."
-keywords: ["KR-HK-005", "invalid kiro cli hook event key", "kiro hooks", "validation", "agnix", "linter"]
+description: "agnix rule KR-HK-005 checks for invalid kiro agent hook trigger in kiro hooks files. Severity: HIGH. See examples and fix guidance."
+keywords: ["KR-HK-005", "invalid kiro agent hook trigger", "kiro hooks", "validation", "agnix", "linter"]
 ---
 
 ## Summary
@@ -12,8 +12,8 @@ keywords: ["KR-HK-005", "invalid kiro cli hook event key", "kiro hooks", "valida
 - **Severity**: `HIGH`
 - **Category**: `Kiro Hooks`
 - **Normative Level**: `MUST`
-- **Auto-Fix**: `No`
-- **Verified On**: `2026-04-22`
+- **Auto-Fix**: `Yes (unsafe)`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,9 @@ keywords: ["KR-HK-005", "invalid kiro cli hook event key", "kiro hooks", "valida
 
 ## Evidence Sources
 
-- https://kiro.dev/docs/cli/hooks
+- https://kiro.dev/docs/cli/2x-reference/
+- https://kiro.dev/docs/hooks/types/
+- https://kiro.dev/docs/custom-agents/configuration-reference/
 
 ## Test Coverage Metadata
 
@@ -38,19 +40,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{
-  "hooks": {
-    "beforePrompt": [{"command": "echo bad"}]
-  }
-}
+{"name": "review-agent", "hooks": {"PreToolUse": [{"command": "echo pre"}]}}
 ```
 
 ### Valid
 
 ```json
-{
-  "hooks": {
-    "preToolUse": [{"command": "echo pre"}]
-  }
-}
+{"name": "review-agent", "hooks": {"preToolUse": [{"command": "echo pre"}]}}
 ```

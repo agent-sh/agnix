@@ -37,12 +37,12 @@
 | Windsurf Skills | .windsurf/skills/*/SKILL.md | 1 |
 | Kiro Steering | .kiro/steering/**/*.md (KIRO-026: near-miss names in Kiro config dirs) | 16 |
 | Kiro Skills | .kiro/skills/*/SKILL.md | 2 |
-| Kiro Agents | .kiro/agents/**/*.{json,md}, .amazonq/cli-agents/*.json (CLI 2.x fallback) | 15 |
-| Kiro Hooks | .kiro/hooks/*.kiro.hook, .kiro/hooks/*.json | 14 |
+| Kiro Agents | .kiro/agents/**/*.{json,md}, .amazonq/cli-agents/*.json (CLI 2.x fallback) | 29 |
+| Kiro Hooks | .kiro/hooks/*.kiro.hook, .kiro/hooks/*.json | 28 |
 | Kiro Permissions | .kiro/settings/permissions.{yaml,json}, ~/.kiro/workspace-roots/<hash>/permissions.{yaml,json}, Kiro managed-settings.json | 12 |
 | Kiro MCP | .kiro/settings/mcp.json | 15 |
 | Kiro Powers | POWER.md, power plugin.json / mcp.json / steering/*.md (.kiro/powers/[installed/]<name>/, power/, powers/<name>/) | 18 |
-| Kiro Settings | .kiro/settings/cli.json | 12 |
+| Kiro Settings | .kiro/settings/cli.json | 11 |
 | Kiro Workflows | .kiro/workflows/*.workflow.{json,yaml,yml} | 9 |
 | Kiro Ignore | .kiroignore, ~/.kiro/settings/kiroignore | 1 |
 | Amp Skills | .agents/skills/*/SKILL.md | 1 |

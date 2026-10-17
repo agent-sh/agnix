@@ -1,0 +1,5 @@
+{
+  "name": "missing-prompt-file-agent",
+  "description": "Agent fixture whose prompt file is missing",
+  "prompt": "file://./prompts/missing.md"
+}

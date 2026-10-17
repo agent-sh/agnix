@@ -1,6 +1,6 @@
 {
   "name": "unknown-fields-agent",
-  "description": "Contains unsupported keys",
+  "description": "Agent fixture that contains unsupported keys",
   "madeUpField": true,
   "anotherOne": "value"
 }

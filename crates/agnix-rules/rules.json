@@ -1,7 +1,7 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 508,
+  "total_rules": 535,
   "last_updated": "2026-10-17",
   "schema": {
     "evidence": {
@@ -8785,15 +8785,17 @@
     },
     {
       "id": "KR-AG-001",
-      "name": "Unknown Field in Kiro Agent JSON",
+      "name": "Unknown or Ignored Kiro Agent Field",
       "severity": "MEDIUM",
       "category": "kiro-agents",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/docs/cli/custom-agents/configuration-reference"
+          "https://kiro.dev/docs/custom-agents/configuration-reference/",
+          "https://kiro.dev/docs/cli/v3/agent-config/",
+          "https://kiro.dev/docs/cli/v3/migration-guide/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro"
         },
@@ -8807,20 +8809,22 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"name\": \"review-agent\",\n  \"prompt\": \"Review the diff\",\n  \"model\": \"claude-sonnet-4\"\n}",
+      "good_example": "{\n  \"name\": \"review-agent\",\n  \"prompt\": \"Review the diff\",\n  \"useLegacyMcpJson\": false\n}",
       "bad_example": "{\n  \"name\": \"review-agent\",\n  \"madeUpField\": true\n}"
     },
     {
       "id": "KR-AG-002",
-      "name": "Invalid Kiro Agent Resource Protocol",
+      "name": "Invalid Kiro Agent Resource Entry",
       "severity": "HIGH",
       "category": "kiro-agents",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/docs/cli/custom-agents/creating"
+          "https://kiro.dev/docs/custom-agents/configuration-reference/",
+          "https://kiro.dev/docs/cli/v3/agent-config/",
+          "https://kiro.dev/docs/custom-agents/creating/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro"
         },
@@ -8834,8 +8838,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"resources\": [\"file://docs/architecture.md\", \"skill://deploy\"]\n}",
-      "bad_example": "{\n  \"resources\": [\"https://example.com/private\"]\n}",
+      "good_example": "{\"name\": \"review-agent\", \"resources\": [\"file://README.md\", \"skill://.kiro/skills/*/SKILL.md\"]}",
+      "bad_example": "{\"name\": \"review-agent\", \"resources\": [\"README.md\"]}",
       "security": {
         "cwe": [
           "CWE-918"
@@ -8852,180 +8856,14 @@
     },
     {
       "id": "KR-AG-003",
-      "name": "allowedTools Not Subset of tools",
+      "name": "allowedTools Trusts a Tool Not in tools",
       "severity": "MEDIUM",
       "category": "kiro-agents",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/docs/cli/custom-agents/configuration-reference"
-        ],
-        "verified_on": "2026-04-22",
-        "applies_to": {
-          "tool": "kiro"
-        },
-        "normative_level": "SHOULD",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": false
-      },
-      "good_example": "{\n  \"tools\": [\"readFiles\", \"listDirectory\"],\n  \"allowedTools\": [\"readFiles\"]\n}",
-      "bad_example": "{\n  \"tools\": [\"readFiles\"],\n  \"allowedTools\": [\"runShellCommand\"]\n}"
-    },
-    {
-      "id": "KR-AG-004",
-      "name": "Invalid Kiro Agent Model Value",
-      "severity": "MEDIUM",
-      "category": "kiro-agents",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://kiro.dev/docs/cli/custom-agents/configuration-reference"
-        ],
-        "verified_on": "2026-04-22",
-        "applies_to": {
-          "tool": "kiro"
-        },
-        "normative_level": "SHOULD",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": false
-      },
-      "good_example": "{\n  \"model\": \"claude-sonnet-4-5\"\n}",
-      "bad_example": "{\n  \"model\": \"unsupported-model\"\n}"
-    },
-    {
-      "id": "KR-AG-005",
-      "name": "Kiro Agent Has No MCP Access",
-      "severity": "LOW",
-      "category": "kiro-agents",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://kiro.dev/docs/cli/custom-agents/configuration-reference"
-        ],
-        "verified_on": "2026-04-22",
-        "applies_to": {
-          "tool": "kiro"
-        },
-        "normative_level": "BEST_PRACTICE",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": false
-      },
-      "good_example": "{\n  \"includeMcpJson\": true\n}",
-      "bad_example": "{\n  \"includeMcpJson\": false\n}"
-    },
-    {
-      "id": "KR-AG-006",
-      "name": "Kiro Agent References Unknown Subagent",
-      "severity": "MEDIUM",
-      "category": "kiro-agents",
-      "evidence": {
-        "source_type": "community",
-        "source_urls": [
-          "https://github.com/kirodotdev/kiro/issues/5743",
-          "https://github.com/kirodotdev/kiro/issues/4262"
-        ],
-        "verified_on": "2026-04-22",
-        "applies_to": {
-          "tool": "kiro"
-        },
-        "normative_level": "SHOULD",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": false
-      },
-      "good_example": "{\n  \"name\": \"orchestrator\",\n  \"prompt\": \"Delegate review to @reviewer-agent\"\n}",
-      "bad_example": "{\n  \"name\": \"orchestrator\",\n  \"prompt\": \"Delegate review to @missing-agent\"\n}"
-    },
-    {
-      "id": "KR-AG-007",
-      "name": "Kiro Agent Tool Scope Broader Than Referenced Subagent",
-      "severity": "MEDIUM",
-      "category": "kiro-agents",
-      "evidence": {
-        "source_type": "community",
-        "source_urls": [
-          "https://github.com/kirodotdev/kiro/issues/5071",
-          "https://github.com/kirodotdev/kiro/issues/5449"
-        ],
-        "verified_on": "2026-04-22",
-        "applies_to": {
-          "tool": "kiro"
-        },
-        "normative_level": "SHOULD",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": false
-      },
-      "good_example": "{\n  \"name\": \"orchestrator\",\n  \"allowedTools\": [\"readFiles\"],\n  \"prompt\": \"Delegate review to @reviewer-agent\"\n}",
-      "bad_example": "{\n  \"name\": \"orchestrator\",\n  \"allowedTools\": [\"readFiles\", \"runShellCommand\"],\n  \"prompt\": \"Delegate review to @reviewer-agent\"\n}"
-    },
-    {
-      "id": "KR-AG-008",
-      "name": "Empty Explicit Agent Name",
-      "severity": "HIGH",
-      "category": "kiro-agents",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://kiro.dev/docs/cli/custom-agents/configuration-reference/",
-          "https://kiro.dev/docs/cli/v3/agent-config/"
-        ],
-        "verified_on": "2026-07-26",
-        "applies_to": {
-          "tool": "kiro"
-        },
-        "normative_level": "MUST",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": false
-      },
-      "good_example": "{\"prompt\": \"Review code\"}",
-      "bad_example": "{\"name\": \"   \", \"prompt\": \"Review code\"}"
-    },
-    {
-      "id": "KR-AG-009",
-      "name": "Agent Prompt Empty Or Invalid",
-      "severity": "HIGH",
-      "category": "kiro-agents",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://kiro.dev/docs/agents",
-          "https://kiro.dev/docs/configuration",
-          "https://kiro.dev/docs/custom-agents/configuration-reference/"
+          "https://kiro.dev/docs/custom-agents/configuration-reference/",
+          "https://kiro.dev/docs/reference/built-in-tools/"
         ],
         "verified_on": "2026-10-17",
         "applies_to": {
@@ -9041,8 +8879,149 @@
       "fix": {
         "autofix": false
       },
+      "good_example": "{\"name\": \"review-agent\", \"tools\": [\"@builtin\", \"@git\"], \"allowedTools\": [\"read\", \"@git/git_status\"]}",
+      "bad_example": "{\"name\": \"review-agent\", \"tools\": [\"read\"], \"allowedTools\": [\"read\", \"@git/git_status\"]}"
+    },
+    {
+      "id": "KR-AG-004",
+      "name": "Kiro Agent Model Is Not a Kiro Model ID",
+      "severity": "MEDIUM",
+      "category": "kiro-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/custom-agents/configuration-reference/",
+          "https://kiro.dev/docs/cli/v3/agent-config/",
+          "https://kiro.dev/docs/models/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"name\": \"review-agent\", \"model\": \"claude-sonnet-4.6\"}",
+      "bad_example": "{\"name\": \"review-agent\", \"model\": \"sonnet\"}"
+    },
+    {
+      "id": "KR-AG-005",
+      "name": "Referenced MCP Server Not Loaded by Kiro CLI 2.x",
+      "severity": "MEDIUM",
+      "category": "kiro-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/custom-agents/configuration-reference/",
+          "https://kiro.dev/docs/mcp/configuration/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"name\": \"review-agent\", \"includeMcpJson\": true, \"tools\": [\"read\", \"@git\"]}",
+      "bad_example": "{\"name\": \"review-agent\", \"includeMcpJson\": false, \"tools\": [\"read\", \"@git\"]}"
+    },
+    {
+      "id": "KR-AG-006",
+      "name": "Kiro Agent Sub-agent Access Cannot Work",
+      "severity": "MEDIUM",
+      "category": "kiro-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/custom-agents/subagents/",
+          "https://kiro.dev/docs/custom-agents/configuration-reference/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"name\": \"lead\", \"tools\": [\"read\", \"subagent\"], \"toolsSettings\": {\"subagent\": {\"availableAgents\": [\"reviewer\"]}}}",
+      "bad_example": "{\"name\": \"lead\", \"tools\": [\"read\"], \"toolsSettings\": {\"subagent\": {\"availableAgents\": [\"reviewer\"]}}}"
+    },
+    {
+      "id": "KR-AG-008",
+      "name": "Invalid Explicit Agent Name",
+      "severity": "HIGH",
+      "category": "kiro-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/custom-agents/configuration-reference/",
+          "https://kiro.dev/docs/cli/v3/agent-config/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"name\": \"review-agent\"}",
+      "bad_example": "{\"name\": \"\"}"
+    },
+    {
+      "id": "KR-AG-009",
+      "name": "Agent Prompt Empty or Invalid",
+      "severity": "HIGH",
+      "category": "kiro-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/custom-agents/configuration-reference/",
+          "https://kiro.dev/docs/cli/v3/agent-config/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
       "good_example": "{\"name\": \"review-agent\", \"prompt\": \"Review code\"}",
-      "bad_example": "{\"name\": \"review-agent\", \"prompt\": \"\"}"
+      "bad_example": "{\"name\": \"review-agent\", \"prompt\": [\"Review code\"]}"
     },
     {
       "id": "KR-AG-010",
@@ -9052,25 +9031,25 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/docs/agents",
-          "https://kiro.dev/docs/configuration"
+          "https://kiro.dev/docs/custom-agents/configuration-reference/",
+          "https://kiro.dev/docs/cli/v3/agent-config/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro"
         },
         "normative_level": "SHOULD",
         "tests": {
           "unit": true,
-          "fixtures": true,
+          "fixtures": false,
           "e2e": false
         }
       },
       "fix": {
         "autofix": false
       },
-      "good_example": "{\"tools\": [\"readFiles\", \"writeFiles\"]}",
-      "bad_example": "{\"tools\": [\"readFiles\", \"readFiles\"]}"
+      "good_example": "{\"name\": \"review-agent\", \"tools\": [\"read\", \"shell\"]}",
+      "bad_example": "{\"name\": \"review-agent\", \"tools\": [\"read\", \"read\"]}"
     },
     {
       "id": "KR-AG-011",
@@ -9080,53 +9059,52 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/docs/agents",
-          "https://kiro.dev/docs/configuration"
+          "https://kiro.dev/docs/custom-agents/configuration-reference/",
+          "https://kiro.dev/docs/cli/v3/agent-config/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro"
         },
         "normative_level": "BEST_PRACTICE",
         "tests": {
           "unit": true,
-          "fixtures": true,
+          "fixtures": false,
           "e2e": false
         }
       },
       "fix": {
         "autofix": false
       },
-      "good_example": "{\"tools\": [\"readFiles\"]}",
-      "bad_example": "{\"tools\": []}"
+      "good_example": "{\"name\": \"review-agent\", \"tools\": [\"read\"]}",
+      "bad_example": "{\"name\": \"review-agent\", \"tools\": []}"
     },
     {
       "id": "KR-AG-012",
-      "name": "toolAliases References Unknown Tool",
+      "name": "toolAliases Renames a Tool Not in tools",
       "severity": "MEDIUM",
       "category": "kiro-agents",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/docs/agents",
-          "https://kiro.dev/docs/configuration"
+          "https://kiro.dev/docs/custom-agents/configuration-reference/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro"
         },
         "normative_level": "SHOULD",
         "tests": {
           "unit": true,
-          "fixtures": true,
+          "fixtures": false,
           "e2e": false
         }
       },
       "fix": {
         "autofix": false
       },
-      "good_example": "{\"tools\": [\"readFiles\"], \"toolAliases\": {\"rf\": \"readFiles\"}}",
-      "bad_example": "{\"tools\": [\"readFiles\"], \"toolAliases\": {\"wf\": \"writeFiles\"}}"
+      "good_example": "{\"name\": \"review-agent\", \"tools\": [\"@github-mcp\"], \"toolAliases\": {\"@github-mcp/get_issues\": \"github_issues\"}}",
+      "bad_example": "{\"name\": \"review-agent\", \"tools\": [\"read\"], \"toolAliases\": {\"@github-mcp/get_issues\": \"github_issues\"}}"
     },
     {
       "id": "KR-AG-013",
@@ -9136,25 +9114,25 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/docs/agents",
-          "https://kiro.dev/docs/configuration"
+          "https://kiro.dev/docs/custom-agents/configuration-reference/",
+          "https://kiro.dev/docs/cli/v3/agent-config/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro"
         },
         "normative_level": "MUST",
         "tests": {
           "unit": true,
-          "fixtures": true,
+          "fixtures": false,
           "e2e": false
         }
       },
       "fix": {
         "autofix": false
       },
-      "good_example": "{\"prompt\": \"Use ${API_KEY} from env\"}",
-      "bad_example": "{\"prompt\": \"API_KEY=sk-live-secret123\"}",
+      "good_example": "{\"name\": \"review-agent\", \"prompt\": \"Use the API key from ${API_KEY}\"}",
+      "bad_example": "{\"name\": \"review-agent\", \"prompt\": \"api_key = sk-live-0123456789abcdefghij\"}",
       "security": {
         "cwe": [
           "CWE-798",
@@ -9173,20 +9151,20 @@
     },
     {
       "id": "KR-AG-014",
-      "name": "Invalid Universal Permissions Rule",
+      "name": "Invalid Kiro Agent Permissions Block",
       "severity": "HIGH",
       "category": "kiro-agents",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/changelog/cli/2-14/",
           "https://kiro.dev/docs/cli/v3/agent-config/",
+          "https://kiro.dev/docs/permissions/",
           "https://kiro.dev/docs/cli/v3/permissions/"
         ],
-        "verified_on": "2026-07-26",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro",
-          "version_range": ">=2.14.0"
+          "version_range": ">=2.8.0"
         },
         "normative_level": "MUST",
         "tests": {
@@ -9198,8 +9176,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\"permissions\": {\"rules\": [{\"capability\": \"shell\", \"effect\": \"allow\", \"match\": [\"npm *\"]}]}}",
-      "bad_example": "{\"permissions\": {\"rules\": [{\"capability\": \"shell\", \"effect\": \"sometimes\", \"match\": \"npm *\"}]}}"
+      "good_example": "{\"name\": \"review-agent\", \"permissions\": {\"rules\": [{\"capability\": \"shell\", \"effect\": \"allow\", \"match\": [\"npm *\"]}]}}",
+      "bad_example": "{\"name\": \"review-agent\", \"permissions\": {\"rules\": [{\"capability\": \"shell\", \"effect\": \"sometimes\", \"match\": \"npm *\"}]}}"
     },
     {
       "id": "KR-AG-015",
@@ -9210,12 +9188,99 @@
         "source_type": "vendor_docs",
         "source_urls": [
           "https://kiro.dev/docs/custom-agents/configuration-reference/",
-          "https://kiro.dev/docs/cli/v3/migration-guide/"
+          "https://kiro.dev/docs/cli/v3/migration-guide/",
+          "https://kiro.dev/docs/cli/v3/upgrade-agent/"
         ],
-        "verified_on": "2026-10-16",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro",
-          "version_range": ">=2.30.0"
+          "version_range": ">=2.8.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": true,
+        "fix_safety": "unsafe"
+      },
+      "good_example": "{\"name\": \"review-agent\", \"tools\": [\"read\", \"shell\"], \"permissions\": {\"rules\": [{\"capability\": \"shell\", \"match\": [\"npm *\"], \"effect\": \"allow\"}]}}",
+      "bad_example": "{\"name\": \"review-agent\", \"tools\": [\"fs_read\"], \"allowedTools\": [\"fs_read\"], \"toolsSettings\": {\"fs_read\": {\"allowedPaths\": [\"src/**\"]}}}"
+    },
+    {
+      "id": "KR-AG-016",
+      "name": "Invalid Kiro Agent JSON",
+      "severity": "HIGH",
+      "category": "kiro-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/custom-agents/configuration-reference/",
+          "https://kiro.dev/docs/cli/v3/agent-config/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"name\": \"review-agent\",\n  \"tools\": [\"read\"]\n}",
+      "bad_example": "{\n  \"name\": \"review-agent\",\n  \"tools\": [\"read\"],\n}"
+    },
+    {
+      "id": "KR-AG-017",
+      "name": "Invalid Kiro Markdown Agent Frontmatter",
+      "severity": "HIGH",
+      "category": "kiro-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/custom-agents/",
+          "https://kiro.dev/docs/cli/v3/agent-config/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.8.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\ndescription: Reviews pull requests\ntools: [read]\n---\nReview the diff.",
+      "bad_example": "# Reviewer\n\nReview the diff."
+    },
+    {
+      "id": "KR-AG-018",
+      "name": "Kiro Agent Field Has the Wrong Type",
+      "severity": "HIGH",
+      "category": "kiro-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/custom-agents/configuration-reference/",
+          "https://kiro.dev/docs/cli/v3/agent-config/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro"
         },
         "normative_level": "MUST",
         "tests": {
@@ -9227,8 +9292,354 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\"tools\": [\"read\", \"shell\"], \"permissions\": {\"rules\": [{\"capability\": \"shell\", \"match\": [\"npm *\"], \"effect\": \"allow\"}]}}",
-      "bad_example": "{\"tools\": [\"fs_read\"], \"allowedTools\": [\"fs_read\"], \"toolsSettings\": {\"fs_read\": {\"allowedPaths\": [\"src/**\"]}}}"
+      "good_example": "{\"name\": \"review-agent\", \"tools\": [\"read\"], \"includeMcpJson\": true}",
+      "bad_example": "{\"name\": \"review-agent\", \"tools\": \"read\", \"includeMcpJson\": \"yes\"}"
+    },
+    {
+      "id": "KR-AG-019",
+      "name": "Kiro Agent Missing Name for CLI 2.x",
+      "severity": "HIGH",
+      "category": "kiro-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/custom-agents/configuration-reference/",
+          "https://kiro.dev/docs/cli/2x-reference/",
+          "https://kiro.dev/docs/cli/v3/agent-config/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"name\": \"review-agent\", \"allowedTools\": [\"read\"]}",
+      "bad_example": "{\"description\": \"Reviews code\", \"allowedTools\": [\"read\"]}"
+    },
+    {
+      "id": "KR-AG-020",
+      "name": "Non-Agent File in Kiro Agents Directory",
+      "severity": "MEDIUM",
+      "category": "kiro-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/custom-agents/configuration-reference/",
+          "https://kiro.dev/docs/custom-agents/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"name\": \"review-agent\", \"description\": \"Reviews code\"}",
+      "bad_example": "{\"artifact\": \".kiro/agents/review-agent.json\", \"spans\": []}"
+    },
+    {
+      "id": "KR-AG-021",
+      "name": "Kiro Agent file:// Prompt Cannot Be Loaded",
+      "severity": "HIGH",
+      "category": "kiro-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/custom-agents/configuration-reference/",
+          "https://kiro.dev/docs/cli/v3/agent-config/",
+          "https://kiro.dev/docs/cli/v3/upgrade-agent/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"name\": \"review-agent\", \"prompt\": \"file://./prompts/review.md\"}",
+      "bad_example": "{\"name\": \"review-agent\", \"prompt\": \"file://~/prompts/review.md\", \"permissions\": {\"rules\": []}}"
+    },
+    {
+      "id": "KR-AG-022",
+      "name": "Reserved or Duplicate Kiro Agent Name",
+      "severity": "MEDIUM",
+      "category": "kiro-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/custom-agents/",
+          "https://kiro.dev/docs/custom-agents/creating/",
+          "https://kiro.dev/docs/custom-agents/built-in/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: release-planner\ndescription: Plans releases\n---\nPlan the release.",
+      "bad_example": "---\nname: plan\ndescription: Plans releases\n---\nPlan the release."
+    },
+    {
+      "id": "KR-AG-023",
+      "name": "Invalid Inline MCP Server in Kiro Agent",
+      "severity": "HIGH",
+      "category": "kiro-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/custom-agents/configuration-reference/",
+          "https://kiro.dev/docs/mcp/configuration/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"name\": \"review-agent\", \"mcpServers\": {\"git\": {\"command\": \"git-mcp\", \"args\": [\"--repo\", \".\"]}}}",
+      "bad_example": "{\"name\": \"review-agent\", \"mcpServers\": {\"git\": {\"command\": \"git-mcp\", \"args\": \"--repo .\"}}}"
+    },
+    {
+      "id": "KR-AG-024",
+      "name": "Kiro Agent Tool Name Matches No Tool",
+      "severity": "MEDIUM",
+      "category": "kiro-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/custom-agents/configuration-reference/",
+          "https://kiro.dev/docs/reference/built-in-tools/",
+          "https://kiro.dev/docs/tools/",
+          "https://kiro.dev/docs/cli/v3/migration-guide/",
+          "https://kiro.dev/docs/cli/v3/upgrade-agent/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"name\": \"review-agent\", \"tools\": [\"read\", \"shell\"], \"allowedTools\": [\"read\", \"@jira/get_ticket\"]}",
+      "bad_example": "{\"name\": \"review-agent\", \"tools\": [\"read\", \"shell\"], \"allowedTools\": [\"Read\", \"mcp__jira__get_ticket\"]}"
+    },
+    {
+      "id": "KR-AG-025",
+      "name": "Agent Hook Matcher Never Fires in Kiro CLI 2.x",
+      "severity": "MEDIUM",
+      "category": "kiro-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/cli/2x-reference/",
+          "https://kiro.dev/docs/cli/v3/hooks-migration/",
+          "https://kiro.dev/docs/reference/built-in-tools/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"name\": \"review-agent\", \"hooks\": {\"preToolUse\": [{\"matcher\": \"fs_read\", \"command\": \"./audit.sh\"}]}}",
+      "bad_example": "{\"name\": \"review-agent\", \"hooks\": {\"preToolUse\": [{\"matcher\": \"read_file\", \"command\": \"./audit.sh\"}]}}"
+    },
+    {
+      "id": "KR-AG-026",
+      "name": "Kiro Agent Hook Timeout Field or Unit Mismatch",
+      "severity": "MEDIUM",
+      "category": "kiro-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/hooks/",
+          "https://kiro.dev/docs/hooks/actions/",
+          "https://kiro.dev/docs/cli/2x-reference/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"name\": \"review-agent\", \"hooks\": {\"preToolUse\": [{\"command\": \"./audit.sh\", \"timeout_ms\": 5000}]}}",
+      "bad_example": "{\"name\": \"review-agent\", \"hooks\": {\"preToolUse\": [{\"command\": \"./audit.sh\", \"timeout\": 5}]}}"
+    },
+    {
+      "id": "KR-AG-027",
+      "name": "Kiro Agent Hook Field Ignored",
+      "severity": "MEDIUM",
+      "category": "kiro-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/hooks/",
+          "https://kiro.dev/docs/cli/2x-reference/",
+          "https://kiro.dev/docs/cli/v3/hooks-migration/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"name\": \"review-agent\", \"hooks\": {\"preToolUse\": [{\"command\": \"./audit.sh\", \"matcher\": \"read\"}]}}",
+      "bad_example": "{\"name\": \"review-agent\", \"hooks\": {\"preToolUse\": [{\"command\": \"./audit.sh\", \"toolTypes\": [\"read\"]}]}}"
+    },
+    {
+      "id": "KR-AG-028",
+      "name": "Agent File Not Loaded by a Targeted Kiro Engine",
+      "severity": "MEDIUM",
+      "category": "kiro-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/cli/2x-reference/",
+          "https://kiro.dev/docs/custom-agents/",
+          "https://kiro.dev/docs/cli/v3/agent-config/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"name\": \"review-agent\", \"description\": \"Reviews code\"}",
+      "bad_example": "---\ndescription: Reviews code\n---\nReview the diff."
+    },
+    {
+      "id": "KR-AG-029",
+      "name": "Overly Broad Kiro Agent Resource Glob",
+      "severity": "LOW",
+      "category": "kiro-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/cli/chat/context/",
+          "https://kiro.dev/docs/custom-agents/configuration-reference/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"name\": \"review-agent\", \"resources\": [\"file://docs/**/*.md\", \"file://README.md\"]}",
+      "bad_example": "{\"name\": \"review-agent\", \"resources\": [\"file://**\"]}"
+    },
+    {
+      "id": "KR-AG-030",
+      "name": "Sub-agent Description Missing or Too Short",
+      "severity": "LOW",
+      "category": "kiro-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/custom-agents/subagents/",
+          "https://kiro.dev/docs/custom-agents/configuration-reference/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"name\": \"review-agent\", \"description\": \"Reviews Rust pull requests for safety and style issues\"}",
+      "bad_example": "{\"name\": \"review-agent\", \"description\": \"Reviewer\"}"
     },
     {
       "id": "KR-HK-001",
@@ -9238,11 +9649,13 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/docs/hooks/types"
+          "https://kiro.dev/docs/ide/0x-reference/",
+          "https://kiro.dev/docs/ide/whats-new-v1/hooks/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
-          "tool": "kiro"
+          "tool": "kiro",
+          "spec_revision": "IDE 0.x .kiro.hook"
         },
         "normative_level": "MUST",
         "tests": {
@@ -9252,10 +9665,11 @@
         }
       },
       "fix": {
-        "autofix": false
+        "autofix": true,
+        "fix_safety": "unsafe"
       },
-      "good_example": "{\n  \"event\": \"fileEdited\",\n  \"patterns\": [\"**/*.md\"],\n  \"runCommand\": \"echo changed\"\n}",
-      "bad_example": "{\n  \"event\": \"beforeSave\",\n  \"runCommand\": \"echo invalid\"\n}"
+      "good_example": "{\n  \"when\": {\n    \"type\": \"fileEdited\",\n    \"patterns\": [\n      \"src/**/*.ts\"\n    ]\n  },\n  \"then\": {\n    \"type\": \"askAgent\",\n    \"prompt\": \"Review the change\"\n  }\n}",
+      "bad_example": "{\n  \"when\": {\n    \"type\": \"userPrompt\"\n  },\n  \"then\": {\n    \"type\": \"askAgent\",\n    \"prompt\": \"Review the change\"\n  }\n}"
     },
     {
       "id": "KR-HK-002",
@@ -9265,11 +9679,12 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/docs/hooks/types"
+          "https://kiro.dev/docs/ide/0x-reference/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
-          "tool": "kiro"
+          "tool": "kiro",
+          "spec_revision": "IDE 0.x .kiro.hook"
         },
         "normative_level": "MUST",
         "tests": {
@@ -9281,8 +9696,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"event\": \"fileEdited\",\n  \"patterns\": [\"**/*.ts\"],\n  \"runCommand\": \"echo ok\"\n}",
-      "bad_example": "{\n  \"event\": \"fileEdited\",\n  \"runCommand\": \"echo missing patterns\"\n}"
+      "good_example": "{\n  \"when\": {\n    \"type\": \"fileEdited\",\n    \"patterns\": [\n      \"**/*.ts\"\n    ]\n  },\n  \"then\": {\n    \"type\": \"runCommand\",\n    \"command\": \"npm run lint\"\n  }\n}",
+      "bad_example": "{\n  \"when\": {\n    \"type\": \"fileEdited\"\n  },\n  \"then\": {\n    \"type\": \"runCommand\",\n    \"command\": \"npm run lint\"\n  }\n}"
     },
     {
       "id": "KR-HK-003",
@@ -9292,11 +9707,12 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/docs/hooks/actions"
+          "https://kiro.dev/docs/ide/0x-reference/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
-          "tool": "kiro"
+          "tool": "kiro",
+          "spec_revision": "IDE 0.x .kiro.hook"
         },
         "normative_level": "MUST",
         "tests": {
@@ -9308,8 +9724,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"event\": \"promptSubmit\",\n  \"askAgent\": \"review-agent\"\n}",
-      "bad_example": "{\n  \"event\": \"promptSubmit\"\n}"
+      "good_example": "{\n  \"when\": {\n    \"type\": \"promptSubmit\"\n  },\n  \"then\": {\n    \"type\": \"askAgent\",\n    \"prompt\": \"Check the runbooks first\"\n  }\n}",
+      "bad_example": "{\n  \"when\": {\n    \"type\": \"promptSubmit\"\n  },\n  \"then\": {\n    \"type\": \"askAgent\"\n  }\n}"
     },
     {
       "id": "KR-HK-004",
@@ -9319,11 +9735,13 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/docs/hooks/types"
+          "https://kiro.dev/docs/ide/0x-reference/",
+          "https://kiro.dev/docs/hooks/best-practices/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
-          "tool": "kiro"
+          "tool": "kiro",
+          "spec_revision": "IDE 0.x .kiro.hook"
         },
         "normative_level": "SHOULD",
         "tests": {
@@ -9335,20 +9753,22 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"event\": \"preToolUse\",\n  \"toolTypes\": [\"readFiles\"],\n  \"runCommand\": \"echo ok\"\n}",
-      "bad_example": "{\n  \"event\": \"preToolUse\",\n  \"runCommand\": \"echo broad\"\n}"
+      "good_example": "{\n  \"when\": {\n    \"type\": \"preToolUse\",\n    \"patterns\": [\n      \"fs_write\"\n    ]\n  },\n  \"then\": {\n    \"type\": \"askAgent\",\n    \"prompt\": \"Check the write\"\n  }\n}",
+      "bad_example": "{\n  \"when\": {\n    \"type\": \"preToolUse\"\n  },\n  \"then\": {\n    \"type\": \"askAgent\",\n    \"prompt\": \"Check every tool\"\n  }\n}"
     },
     {
       "id": "KR-HK-005",
-      "name": "Invalid Kiro CLI Hook Event Key",
+      "name": "Invalid Kiro Agent Hook Trigger",
       "severity": "HIGH",
       "category": "kiro-hooks",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/docs/cli/hooks"
+          "https://kiro.dev/docs/cli/2x-reference/",
+          "https://kiro.dev/docs/hooks/types/",
+          "https://kiro.dev/docs/custom-agents/configuration-reference/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro"
         },
@@ -9360,22 +9780,25 @@
         }
       },
       "fix": {
-        "autofix": false
+        "autofix": true,
+        "fix_safety": "unsafe"
       },
-      "good_example": "{\n  \"hooks\": {\n    \"preToolUse\": [{\"command\": \"echo pre\"}]\n  }\n}",
-      "bad_example": "{\n  \"hooks\": {\n    \"beforePrompt\": [{\"command\": \"echo bad\"}]\n  }\n}"
+      "good_example": "{\"name\": \"review-agent\", \"hooks\": {\"preToolUse\": [{\"command\": \"echo pre\"}]}}",
+      "bad_example": "{\"name\": \"review-agent\", \"hooks\": {\"PreToolUse\": [{\"command\": \"echo pre\"}]}}"
     },
     {
       "id": "KR-HK-006",
-      "name": "Kiro CLI Hook Missing Command",
+      "name": "Invalid Kiro Agent Hook Entry",
       "severity": "HIGH",
       "category": "kiro-hooks",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/docs/cli/hooks"
+          "https://kiro.dev/docs/cli/2x-reference/",
+          "https://kiro.dev/docs/hooks/",
+          "https://kiro.dev/docs/custom-agents/configuration-reference/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro"
         },
@@ -9389,78 +9812,25 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"hooks\": {\n    \"preToolUse\": [{\"command\": \"echo pre\", \"toolTypes\": [\"readFiles\"]}]\n  }\n}",
-      "bad_example": "{\n  \"hooks\": {\n    \"preToolUse\": [{\"toolTypes\": [\"readFiles\"]}]\n  }\n}"
-    },
-    {
-      "id": "KR-HK-007",
-      "name": "Hook Timeout Out of Range",
-      "severity": "MEDIUM",
-      "category": "kiro-hooks",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://kiro.dev/docs/hooks"
-        ],
-        "verified_on": "2026-04-22",
-        "applies_to": {
-          "tool": "kiro"
-        },
-        "normative_level": "SHOULD",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": false
-      },
-      "good_example": "{\"event\": \"fileEdited\", \"patterns\": [\"**/*.md\"], \"runCommand\": \"echo ok\"}",
-      "bad_example": "{\"event\": \"fileEdited\", \"patterns\": [\"**/*.md\"], \"runCommand\": \"echo ok\", \"timeout\": 999999}"
-    },
-    {
-      "id": "KR-HK-008",
-      "name": "Duplicate Event Handlers",
-      "severity": "MEDIUM",
-      "category": "kiro-hooks",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://kiro.dev/docs/hooks"
-        ],
-        "verified_on": "2026-04-22",
-        "applies_to": {
-          "tool": "kiro"
-        },
-        "normative_level": "SHOULD",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": false
-      },
-      "good_example": "{\"event\": \"fileEdited\", \"patterns\": [\"**/*.md\"], \"runCommand\": \"echo ok\"}",
-      "bad_example": "# Two hooks with identical event+patterns"
+      "good_example": "{\"name\": \"review-agent\", \"hooks\": [{\"name\": \"lint\", \"trigger\": \"PostToolUse\", \"matcher\": \"write\", \"action\": {\"type\": \"command\", \"command\": \"npm run lint\"}}]}",
+      "bad_example": "{\"name\": \"review-agent\", \"hooks\": [{\"name\": \"lint\", \"trigger\": \"PostToolUse\", \"action\": {\"type\": \"command\"}}]}"
     },
     {
       "id": "KR-HK-009",
       "name": "Command Uses Absolute Path",
-      "severity": "MEDIUM",
+      "severity": "LOW",
       "category": "kiro-hooks",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/docs/hooks"
+          "https://kiro.dev/docs/hooks/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
-          "tool": "kiro"
+          "tool": "kiro",
+          "spec_revision": "IDE 0.x .kiro.hook"
         },
-        "normative_level": "SHOULD",
+        "normative_level": "BEST_PRACTICE",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -9470,8 +9840,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\"event\": \"promptSubmit\", \"runCommand\": \"npm test\"}",
-      "bad_example": "{\"event\": \"promptSubmit\", \"runCommand\": \"/usr/local/bin/npm test\"}"
+      "good_example": "{\"when\": {\"type\": \"promptSubmit\"}, \"then\": {\"type\": \"runCommand\", \"command\": \"npm test\"}}",
+      "bad_example": "{\"when\": {\"type\": \"promptSubmit\"}, \"then\": {\"type\": \"runCommand\", \"command\": \"/usr/local/bin/npm test\"}}"
     },
     {
       "id": "KR-HK-010",
@@ -9481,11 +9851,13 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/docs/hooks"
+          "https://kiro.dev/docs/mcp/security/",
+          "https://kiro.dev/docs/ide/0x-reference/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
-          "tool": "kiro"
+          "tool": "kiro",
+          "spec_revision": "IDE 0.x .kiro.hook"
         },
         "normative_level": "MUST",
         "tests": {
@@ -9497,8 +9869,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\"event\": \"promptSubmit\", \"runCommand\": \"echo $API_KEY\"}",
-      "bad_example": "{\"event\": \"promptSubmit\", \"runCommand\": \"curl -H 'Authorization: Bearer sk-live-secret123'\"}",
+      "good_example": "{\"when\": {\"type\": \"agentStop\"}, \"then\": {\"type\": \"runCommand\", \"command\": \"deploy --token=$DEPLOY_TOKEN\"}}",
+      "bad_example": "{\"when\": {\"type\": \"agentStop\"}, \"then\": {\"type\": \"runCommand\", \"command\": \"curl -H 'Authorization: Bearer sk-live-4f9a8b7c6d5e4f3a2b1c'\"}}",
       "security": {
         "cwe": [
           "CWE-798",
@@ -9518,7 +9890,7 @@
     {
       "id": "KR-HK-011",
       "name": "Invalid Kiro V3 Hook Document Version",
-      "severity": "MEDIUM",
+      "severity": "HIGH",
       "category": "kiro-hooks",
       "evidence": {
         "source_type": "vendor_docs",
@@ -9526,15 +9898,15 @@
           "https://kiro.dev/docs/hooks/",
           "https://kiro.dev/docs/cli/v3/hooks-migration/"
         ],
-        "verified_on": "2026-10-16",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro",
-          "version_range": ">=2.26.0"
+          "version_range": ">=2.8.0"
         },
         "normative_level": "MUST",
         "tests": {
           "unit": true,
-          "fixtures": false,
+          "fixtures": true,
           "e2e": true
         }
       },
@@ -9557,23 +9929,24 @@
           "https://kiro.dev/docs/hooks/types/",
           "https://kiro.dev/docs/cli/v3/hooks-migration/"
         ],
-        "verified_on": "2026-10-16",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro",
-          "version_range": ">=2.26.0"
+          "version_range": ">=2.8.0"
         },
         "normative_level": "MUST",
         "tests": {
           "unit": true,
-          "fixtures": false,
+          "fixtures": true,
           "e2e": false
         }
       },
       "fix": {
-        "autofix": false
+        "autofix": true,
+        "fix_safety": "unsafe"
       },
-      "good_example": "{\"name\": \"audit-shell\", \"trigger\": \"PreToolUse\", \"matcher\": \"shell\", \"action\": {\"type\": \"command\", \"command\": \"echo audit\"}}",
-      "bad_example": "{\"name\": \"audit\", \"trigger\": \"onFileChange\", \"action\": {\"type\": \"command\", \"command\": \"echo\"}}"
+      "good_example": "{\"version\":\"v1\",\"hooks\":[{\"name\":\"audit-shell\",\"trigger\":\"PreToolUse\",\"matcher\":\"shell\",\"action\":{\"type\":\"command\",\"command\":\"./audit.sh\"}}]}",
+      "bad_example": "{\"version\":\"v1\",\"hooks\":[{\"name\":\"audit\",\"trigger\":\"AgentSpawn\",\"action\":{\"type\":\"command\",\"command\":\"./audit.sh\"}}]}"
     },
     {
       "id": "KR-HK-013",
@@ -9586,12 +9959,332 @@
           "https://kiro.dev/docs/hooks/",
           "https://kiro.dev/docs/hooks/actions/"
         ],
-        "verified_on": "2026-10-16",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro",
-          "version_range": ">=2.26.0"
+          "version_range": ">=2.8.0"
         },
         "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": true,
+        "fix_safety": "unsafe"
+      },
+      "good_example": "{\"version\":\"v1\",\"hooks\":[{\"name\":\"ctx\",\"trigger\":\"UserPromptSubmit\",\"action\":{\"type\":\"agent\",\"prompt\":\"Add repo context\"}}]}",
+      "bad_example": "{\"version\":\"v1\",\"hooks\":[{\"name\":\"ctx\",\"trigger\":\"UserPromptSubmit\",\"action\":{\"type\":\"askAgent\",\"prompt\":\"Add repo context\"}}]}"
+    },
+    {
+      "id": "KR-HK-015",
+      "name": "Legacy IDE Hook Saved as a V3 Hook File",
+      "severity": "HIGH",
+      "category": "kiro-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/hooks/",
+          "https://kiro.dev/docs/ide/whats-new-v1/hooks/",
+          "https://kiro.dev/docs/ide/0x-reference/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.8.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"version\":\"v1\",\"hooks\":[{\"name\":\"Lint on save\",\"trigger\":\"PostFileSave\",\"matcher\":\"\\\\.ts$\",\"action\":{\"type\":\"command\",\"command\":\"npx eslint --fix\"}}]}",
+      "bad_example": "{\"name\": \"Lint on save\", \"version\": \"1.0.0\", \"when\": {\"type\": \"fileEdited\", \"patterns\": [\"**/*.ts\"]}, \"then\": {\"type\": \"askAgent\", \"prompt\": \"Lint the file\"}}"
+    },
+    {
+      "id": "KR-HK-016",
+      "name": "V3 Hook File Saved as .kiro.hook",
+      "severity": "HIGH",
+      "category": "kiro-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/hooks/",
+          "https://kiro.dev/docs/ide/whats-new-v1/hooks/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "spec_revision": "IDE 0.x .kiro.hook / IDE 1.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"name\": \"Lint\", \"version\": \"1\", \"when\": {\"type\": \"fileEdited\", \"patterns\": [\"**/*.ts\"]}, \"then\": {\"type\": \"askAgent\", \"prompt\": \"Lint the file\"}}",
+      "bad_example": "{\"version\":\"v1\",\"hooks\":[{\"name\":\"Lint on save\",\"trigger\":\"PostFileSave\",\"matcher\":\"\\\\.ts$\",\"action\":{\"type\":\"command\",\"command\":\"npx eslint --fix\"}}]}"
+    },
+    {
+      "id": "KR-HK-017",
+      "name": "Invalid Kiro V3 Hook Field Value",
+      "severity": "HIGH",
+      "category": "kiro-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/hooks/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.8.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": true,
+        "fix_safety": "unsafe"
+      },
+      "good_example": "{\"version\":\"v1\",\"hooks\":[{\"name\":\"build\",\"trigger\":\"Stop\",\"action\":{\"type\":\"command\",\"command\":\"make\"},\"timeout\":120,\"enabled\":true}]}",
+      "bad_example": "{\"version\":\"v1\",\"hooks\":[{\"name\":\"build\",\"trigger\":\"Stop\",\"action\":{\"type\":\"command\",\"command\":\"make\"},\"timeout\":\"120\",\"enabled\":\"true\"}]}"
+    },
+    {
+      "id": "KR-HK-018",
+      "name": "Invalid Kiro V3 Hook Confirm Block",
+      "severity": "HIGH",
+      "category": "kiro-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/hooks/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.8.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"version\":\"v1\",\"hooks\":[{\"name\":\"submit\",\"trigger\":\"Stop\",\"action\":{\"type\":\"command\",\"command\":\"./submit.sh\"},\"confirm\":{\"question\":\"Submit?\",\"options\":[{\"id\":\"yes\",\"label\":\"Yes\",\"run\":true}]}}]}",
+      "bad_example": "{\"version\":\"v1\",\"hooks\":[{\"name\":\"submit\",\"trigger\":\"Stop\",\"action\":{\"type\":\"command\",\"command\":\"./submit.sh\"},\"confirm\":{\"question\":\"Submit?\",\"options\":[]}}]}"
+    },
+    {
+      "id": "KR-HK-019",
+      "name": "Kiro V3 Hook Matcher Is Not a Valid Regex",
+      "severity": "HIGH",
+      "category": "kiro-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/hooks/",
+          "https://kiro.dev/docs/hooks/types/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.8.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"version\":\"v1\",\"hooks\":[{\"name\":\"format\",\"trigger\":\"PostFileSave\",\"matcher\":\"\\\\.ts$\",\"action\":{\"type\":\"command\",\"command\":\"npx eslint --fix\"}}]}",
+      "bad_example": "{\"version\":\"v1\",\"hooks\":[{\"name\":\"format\",\"trigger\":\"PostFileSave\",\"matcher\":\"**/*.ts\",\"action\":{\"type\":\"command\",\"command\":\"npx eslint --fix\"}}]}"
+    },
+    {
+      "id": "KR-HK-020",
+      "name": "Kiro V3 Hook Matcher Has No Effect",
+      "severity": "MEDIUM",
+      "category": "kiro-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/hooks/",
+          "https://kiro.dev/docs/hooks/types/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.8.0"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"version\":\"v1\",\"hooks\":[{\"name\":\"context\",\"trigger\":\"UserPromptSubmit\",\"action\":{\"type\":\"agent\",\"prompt\":\"Read docs/deploy.md first\"}}]}",
+      "bad_example": "{\"version\":\"v1\",\"hooks\":[{\"name\":\"context\",\"trigger\":\"UserPromptSubmit\",\"matcher\":\"deploy\",\"action\":{\"type\":\"agent\",\"prompt\":\"Read docs/deploy.md first\"}}]}"
+    },
+    {
+      "id": "KR-HK-021",
+      "name": "Kiro V3 Tool Matcher Uses Non-V3 Tool Names",
+      "severity": "MEDIUM",
+      "category": "kiro-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/hooks/types/",
+          "https://kiro.dev/docs/cli/v3/hooks-migration/",
+          "https://kiro.dev/docs/hooks/best-practices/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.8.0"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"version\":\"v1\",\"hooks\":[{\"name\":\"guard\",\"trigger\":\"PreToolUse\",\"matcher\":\"shell\",\"action\":{\"type\":\"command\",\"command\":\"./guard.sh\"}}]}",
+      "bad_example": "{\"version\":\"v1\",\"hooks\":[{\"name\":\"guard\",\"trigger\":\"PreToolUse\",\"matcher\":\"^Bash$\",\"action\":{\"type\":\"command\",\"command\":\"./guard.sh\"}}]}"
+    },
+    {
+      "id": "KR-HK-022",
+      "name": "Misplaced or Misspelled Kiro V3 Hook Field",
+      "severity": "MEDIUM",
+      "category": "kiro-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/hooks/",
+          "https://kiro.dev/docs/cli/v3/hooks-migration/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.8.0"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"version\":\"v1\",\"hooks\":[{\"name\":\"clippy\",\"trigger\":\"Stop\",\"action\":{\"type\":\"command\",\"command\":\"cargo clippy\"},\"timeout\":300}]}",
+      "bad_example": "{\"version\":\"v1\",\"hooks\":[{\"name\":\"clippy\",\"trigger\":\"Stop\",\"action\":{\"type\":\"command\",\"command\":\"cargo clippy\",\"timeout\":300}}]}"
+    },
+    {
+      "id": "KR-HK-023",
+      "name": "Kiro V3 Hook Command Uses Unsupported Placeholder",
+      "severity": "MEDIUM",
+      "category": "kiro-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/hooks/",
+          "https://kiro.dev/docs/hooks/actions/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.8.0"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"version\":\"v1\",\"hooks\":[{\"name\":\"fmt\",\"trigger\":\"PostFileSave\",\"matcher\":\"\\\\.rs$\",\"action\":{\"type\":\"command\",\"command\":\"rustfmt \\\"$(jq -r .file_path)\\\"\"}}]}",
+      "bad_example": "{\"version\":\"v1\",\"hooks\":[{\"name\":\"fmt\",\"trigger\":\"PostFileSave\",\"matcher\":\"\\\\.rs$\",\"action\":{\"type\":\"command\",\"command\":\"rustfmt {{filePath}}\"}}]}"
+    },
+    {
+      "id": "KR-HK-024",
+      "name": "Kiro V3 Hook Never Runs",
+      "severity": "MEDIUM",
+      "category": "kiro-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/hooks/types/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.8.0"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"version\":\"v1\",\"hooks\":[{\"name\":\"cleanup\",\"trigger\":\"SessionEnd\",\"action\":{\"type\":\"command\",\"command\":\"rm -f .lock\"}}]}",
+      "bad_example": "{\"version\":\"v1\",\"hooks\":[{\"name\":\"farewell\",\"trigger\":\"SessionEnd\",\"action\":{\"type\":\"agent\",\"prompt\":\"Summarize the session\"}}]}"
+    },
+    {
+      "id": "KR-HK-025",
+      "name": "Standalone Hook File Ignored by Pinned Kiro CLI 2.x",
+      "severity": "LOW",
+      "category": "kiro-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/hooks/",
+          "https://kiro.dev/docs/cli/v3/hooks-migration/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.8.0"
+        },
+        "normative_level": "BEST_PRACTICE",
         "tests": {
           "unit": true,
           "fixtures": false,
@@ -9601,8 +10294,150 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\"name\": \"ctx\", \"trigger\": \"UserPromptSubmit\", \"action\": {\"type\": \"agent\", \"prompt\": \"Add repo context\"}}",
-      "bad_example": "{\"name\": \"ctx\", \"trigger\": \"UserPromptSubmit\", \"action\": {\"type\": \"http\", \"url\": \"https://x.example\"}}"
+      "good_example": "[tool_versions]\nkiro = \"3.0.0\"",
+      "bad_example": "[tool_versions]\nkiro = \"2.32.1\"\n# with .kiro/hooks/lint.json present"
+    },
+    {
+      "id": "KR-HK-026",
+      "name": "Invalid Kiro IDE Hook File",
+      "severity": "HIGH",
+      "category": "kiro-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/ide/0x-reference/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "spec_revision": "IDE 0.x .kiro.hook"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"name\": \"Lint docs\", \"when\": {\"type\": \"fileEdited\", \"patterns\": [\"docs/**/*.md\"]}, \"then\": {\"type\": \"askAgent\", \"prompt\": \"Check links\"}}",
+      "bad_example": "{\"name\": \"Lint docs\", \"when\": {\"type\": \"fileEdited\", \"patterns\": \"docs/**/*.md\"}, \"then\": {\"type\": \"askAgent\", \"prompt\": \"Check links\"}}"
+    },
+    {
+      "id": "KR-HK-027",
+      "name": "Kiro Tool Hook Without a Specific Matcher",
+      "severity": "LOW",
+      "category": "kiro-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/hooks/best-practices/",
+          "https://kiro.dev/docs/hooks/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.8.0"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"version\":\"v1\",\"hooks\":[{\"name\":\"guard-writes\",\"trigger\":\"PreToolUse\",\"matcher\":\"write\",\"action\":{\"type\":\"command\",\"command\":\"./scripts/guard.sh\"}}]}",
+      "bad_example": "{\"version\":\"v1\",\"hooks\":[{\"name\":\"guard\",\"trigger\":\"PreToolUse\",\"matcher\":\"*\",\"action\":{\"type\":\"command\",\"command\":\"./scripts/guard.sh\"}}]}"
+    },
+    {
+      "id": "KR-HK-028",
+      "name": "Kiro File Hook Matching Every File",
+      "severity": "LOW",
+      "category": "kiro-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/hooks/best-practices/",
+          "https://kiro.dev/docs/hooks/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.8.0"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"version\":\"v1\",\"hooks\":[{\"name\":\"lint-ts\",\"trigger\":\"PostFileSave\",\"matcher\":\"\\\\.ts$\",\"action\":{\"type\":\"command\",\"command\":\"npx eslint --fix\"}}]}",
+      "bad_example": "{\"version\":\"v1\",\"hooks\":[{\"name\":\"lint\",\"trigger\":\"PostFileSave\",\"matcher\":\".*\",\"action\":{\"type\":\"command\",\"command\":\"npx eslint --fix\"}}]}"
+    },
+    {
+      "id": "KR-HK-029",
+      "name": "Kiro Tool Matcher Is an Unanchored Regex",
+      "severity": "LOW",
+      "category": "kiro-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/hooks/types/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.8.0"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"version\":\"v1\",\"hooks\":[{\"name\":\"guard-writes\",\"trigger\":\"PreToolUse\",\"matcher\":\"^(fs_write|str_replace)$\",\"action\":{\"type\":\"command\",\"command\":\"./scripts/guard.sh\"}}]}",
+      "bad_example": "{\"version\":\"v1\",\"hooks\":[{\"name\":\"guard-writes\",\"trigger\":\"PreToolUse\",\"matcher\":\"fs_write|str_replace\",\"action\":{\"type\":\"command\",\"command\":\"./scripts/guard.sh\"}}]}"
+    },
+    {
+      "id": "KR-HK-030",
+      "name": "Kiro Hook File Name Not Kebab-Case",
+      "severity": "LOW",
+      "category": "kiro-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/hooks/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.8.0"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": ".kiro/hooks/lint-on-save.json",
+      "bad_example": ".kiro/hooks/Lint_On_Save.json"
     },
     {
       "id": "KR-MCP-001",
@@ -10866,34 +11701,6 @@
       },
       "good_example": "{\"chat.defaultAgent\": \"project-agent\"}",
       "bad_example": "{\"chat.uiMode\": \"tui\"}"
-    },
-    {
-      "id": "KR-SET-012",
-      "name": "Kiro CLI Settings in Legacy .kiro/settings.json",
-      "severity": "MEDIUM",
-      "category": "kiro-settings",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://kiro.dev/docs/reference/settings/",
-          "https://kiro.dev/changelog/cli/1-23/"
-        ],
-        "verified_on": "2026-10-17",
-        "applies_to": {
-          "tool": "kiro"
-        },
-        "normative_level": "SHOULD",
-        "tests": {
-          "unit": true,
-          "fixtures": false,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": false
-      },
-      "good_example": "// .kiro/settings/cli.json\n{\"chat.defaultModel\": \"claude-sonnet-4.6\"}",
-      "bad_example": "// .kiro/settings.json\n{\"chat.defaultModel\": \"claude-sonnet-4.6\"}"
     },
     {
       "id": "KR-WF-001",
@@ -14673,15 +15480,15 @@
           "https://kiro.dev/docs/ide/whats-new-v1/hooks/",
           "https://kiro.dev/docs/custom-agents/configuration-reference/"
         ],
-        "verified_on": "2026-10-16",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro",
-          "spec_revision": "CLI V3 / IDE 1.x hooks"
+          "version_range": ">=2.8.0"
         },
         "normative_level": "BEST_PRACTICE",
         "tests": {
-          "unit": false,
-          "fixtures": false,
+          "unit": true,
+          "fixtures": true,
           "e2e": true
         }
       },
@@ -14836,7 +15643,7 @@
     },
     "kiro-agents": {
       "prefix": "KR-AG",
-      "count": 15,
+      "count": 29,
       "description": "Kiro agent configuration and invocation rules"
     },
     "amp-skills": {
@@ -14866,7 +15673,7 @@
     },
     "kiro-hooks": {
       "prefix": "KR-HK",
-      "count": 14,
+      "count": 28,
       "description": "Kiro IDE and CLI hook rules"
     },
     "kiro-permissions": {
@@ -14886,7 +15693,7 @@
     },
     "kiro-settings": {
       "prefix": "KR-SET",
-      "count": 12,
+      "count": 11,
       "description": "Kiro CLI settings (.kiro/settings/cli.json) rules"
     },
     "kiro-workflows": {

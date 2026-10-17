@@ -32,7 +32,5 @@ pub(crate) use detection::{
 };
 // Path facts for the Kiro agent and permissions validators.
 #[allow(unused_imports)]
-pub(crate) use detection::{
-    KiroAgentLoaders, KiroPermissionScope, kiro_agent_loaders, kiro_permissions_scope,
-};
+pub(crate) use detection::{KiroAgentLoaders, kiro_agent_loaders};
 pub use detector::{BuiltinDetector, FileTypeDetector, FileTypeDetectorChain};

@@ -370,18 +370,6 @@ pub(crate) struct KiroAgentLoaders {
     pub v3: bool,
 }
 
-/// The permission scope a Kiro policy file is read in.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum KiroPermissionScope {
-    /// `<config>/settings/permissions.{yaml,json}`. Kiro reads it only from
-    /// the user config dir (`~/.kiro`); a repo copy is linted as a template.
-    User,
-    /// `<config>/workspace-roots/<hash>/permissions.{yaml,json}`.
-    Workspace,
-    /// `managed-settings.json`: only `deny` and `ask` are allowed.
-    Administration,
-}
-
 enum KiroClass {
     Type(FileType),
     NotLoaded(KiroNotLoadedReason),
@@ -823,7 +811,6 @@ pub(crate) fn kiro_not_loaded_reason(path: &Path) -> Option<KiroNotLoadedReason>
 /// under `.kiro/agents/` and never reads `.amazonq`. Combine it with
 /// `rules::kiro_engine::engines_for` so a check never blames an engine that
 /// does not read the file. Returns `None` for paths that are not agent files.
-#[allow(dead_code)] // Consumed by the Kiro agent validator at integration.
 pub(crate) fn kiro_agent_loaders(path: &Path) -> Option<KiroAgentLoaders> {
     if detect_kiro_file_type(path) != Some(FileType::KiroAgent) {
         return None;
@@ -845,26 +832,6 @@ pub(crate) fn kiro_agent_loaders(path: &Path) -> Option<KiroAgentLoaders> {
         v2: top_level && filename.ends_with(".json"),
         v3: true,
     })
-}
-
-/// The scope a `FileType::KiroPermissions` file is evaluated in, from its
-/// path. Administration files may hold only `deny` and `ask` rules (an
-/// `allow` there is fatal and fails the session closed).
-#[allow(dead_code)] // Consumed by the Kiro permissions validator at integration.
-pub(crate) fn kiro_permissions_scope(path: &Path) -> Option<KiroPermissionScope> {
-    if detect_kiro_file_type(path) != Some(FileType::KiroPermissions) {
-        return None;
-    }
-    if is_kiro_managed_settings_path(path) {
-        return Some(KiroPermissionScope::Administration);
-    }
-    let comps = normal_components(path);
-    let (_, dirs) = comps.split_last()?;
-    if dirs_end_with(dirs, &["settings"]) {
-        Some(KiroPermissionScope::User)
-    } else {
-        Some(KiroPermissionScope::Workspace)
-    }
 }
 
 fn is_excluded_filename(name: &str) -> bool {
@@ -2692,33 +2659,18 @@ mod tests {
     }
 
     #[test]
-    fn kiro_permissions_files_and_scopes() {
+    fn kiro_permissions_files() {
         use FileType::*;
-        use KiroPermissionScope::*;
-        let cases = [
-            (".kiro/settings/permissions.yaml", Some(User)),
-            ("/home/u/.kiro/settings/permissions.json", Some(User)),
-            (
-                "/home/u/.kiro/workspace-roots/0123456789abcdef/permissions.yaml",
-                Some(Workspace),
-            ),
-            (
-                "/home/u/.kiro/workspace-roots/0123456789abcdef/permissions.json",
-                Some(Workspace),
-            ),
-            (
-                "/Library/Application Support/Kiro/managed-settings.json",
-                Some(Administration),
-            ),
-            ("/etc/kiro/managed-settings.json", Some(Administration)),
-            (
-                "C:/ProgramData/Kiro/managed-settings.json",
-                Some(Administration),
-            ),
-        ];
-        for (path, scope) in cases {
+        for path in [
+            ".kiro/settings/permissions.yaml",
+            "/home/u/.kiro/settings/permissions.json",
+            "/home/u/.kiro/workspace-roots/0123456789abcdef/permissions.yaml",
+            "/home/u/.kiro/workspace-roots/0123456789abcdef/permissions.json",
+            "/Library/Application Support/Kiro/managed-settings.json",
+            "/etc/kiro/managed-settings.json",
+            "C:/ProgramData/Kiro/managed-settings.json",
+        ] {
             assert_eq!(detect_file_type(Path::new(path)), KiroPermissions, "{path}");
-            assert_eq!(kiro_permissions_scope(Path::new(path)), scope, "{path}");
         }
         assert_types(&[
             // Only `.yaml` and `.json` are opened.
@@ -2738,10 +2690,6 @@ mod tests {
             ),
             ("other/managed-settings.json", Unknown),
         ]);
-        assert_eq!(
-            kiro_permissions_scope(Path::new(".kiro/settings/mcp.json")),
-            None
-        );
     }
 
     #[test]

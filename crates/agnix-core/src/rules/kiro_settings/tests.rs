@@ -406,33 +406,6 @@ fn test_kr_set_011_global_only_key_in_workspace_file() {
     );
 }
 
-#[test]
-fn test_kr_set_012_legacy_settings_json() {
-    let path = Path::new(".kiro/settings.json");
-    let config = LintConfig::default();
-    // Another tool's settings.json is not a Kiro file: nothing to report.
-    for content in [
-        r#"{"editor.tabSize": 2, "statusLine": {"enabled": true}}"#,
-        "{not json",
-        "[]",
-    ] {
-        assert!(
-            KiroSettingsValidator
-                .validate(path, content, &config)
-                .is_empty(),
-            "{content}"
-        );
-    }
-    let diagnostics = KiroSettingsValidator.validate(
-        path,
-        r#"{"chat.defaultModel": "claude-sonnet-4.6", "toolSearch.enabled": "true"}"#,
-        &config,
-    );
-    let d = only(&diagnostics, "KR-SET-012");
-    assert_eq!(d.level, DiagnosticLevel::Warning);
-    only(&diagnostics, "KR-SET-001");
-}
-
 // ===== Toggles and metadata =====
 
 #[test]

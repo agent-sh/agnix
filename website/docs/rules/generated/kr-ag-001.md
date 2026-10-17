@@ -1,9 +1,9 @@
 ---
 id: kr-ag-001
-title: "KR-AG-001: Unknown Field in Kiro Agent JSON - Kiro Agents"
+title: "KR-AG-001: Unknown or Ignored Kiro Agent Field - Kiro Agents"
 sidebar_label: "KR-AG-001"
-description: "agnix rule KR-AG-001 checks for unknown field in kiro agent json in kiro agents files. Severity: MEDIUM. See examples and fix guidance."
-keywords: ["KR-AG-001", "unknown field in kiro agent json", "kiro agents", "validation", "agnix", "linter"]
+description: "agnix rule KR-AG-001 checks for unknown or ignored kiro agent field in kiro agents files. Severity: MEDIUM. See examples and fix guidance."
+keywords: ["KR-AG-001", "unknown or ignored kiro agent field", "kiro agents", "validation", "agnix", "linter"]
 ---
 
 ## Summary
@@ -13,7 +13,7 @@ keywords: ["KR-AG-001", "unknown field in kiro agent json", "kiro agents", "vali
 - **Category**: `Kiro Agents`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,9 @@ keywords: ["KR-AG-001", "unknown field in kiro agent json", "kiro agents", "vali
 
 ## Evidence Sources
 
-- https://kiro.dev/docs/cli/custom-agents/configuration-reference
+- https://kiro.dev/docs/custom-agents/configuration-reference/
+- https://kiro.dev/docs/cli/v3/agent-config/
+- https://kiro.dev/docs/cli/v3/migration-guide/
 
 ## Test Coverage Metadata
 
@@ -50,6 +52,6 @@ The following examples demonstrate what triggers this rule and how to fix it.
 {
   "name": "review-agent",
   "prompt": "Review the diff",
-  "model": "claude-sonnet-4"
+  "useLegacyMcpJson": false
 }
 ```

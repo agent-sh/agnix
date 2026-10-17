@@ -145,13 +145,11 @@ pub fn parse_kiro_power(content: &str) -> ParsedKiroPower {
 // ---------------------------------------------------------------------------
 
 /// `$schema` values Kiro accepts for plugin.json (Agent Plugins 1.x).
-#[allow(dead_code)] // used by KiroPowerPluginValidator once plugin.json powers are routed
 pub const AGENT_PLUGINS_SCHEMA_PATTERN: &str =
     r"^https://agent-plugins\.org/schemas/1\.\d+\.\d+/plugin\.schema\.json$";
 
 /// Top-level plugin.json keys the Kiro V3 loader accepts. `displayName` is
 /// accepted by Kiro but is not in the Agent Plugins 1.0.0 schema.
-#[allow(dead_code)] // used by KiroPowerPluginValidator once plugin.json powers are routed
 pub const PLUGIN_MANIFEST_FIELDS: &[&str] = &[
     "$schema",
     "name",
@@ -167,12 +165,10 @@ pub const PLUGIN_MANIFEST_FIELDS: &[&str] = &[
 ];
 
 /// Keys allowed in the plugin.json `author` object.
-#[allow(dead_code)] // used by KiroPowerPluginValidator once plugin.json powers are routed
 pub const PLUGIN_AUTHOR_FIELDS: &[&str] = &["name", "email", "url"];
 
 /// True for a valid Agent Plugins `name`: 1-64 chars of `a-z`, `0-9`, `.`
 /// and `-`, starting and ending with a letter or digit, without `--` or `..`.
-#[allow(dead_code)] // used by KiroPowerPluginValidator once plugin.json powers are routed
 pub fn is_valid_plugin_name(name: &str) -> bool {
     let bytes = name.as_bytes();
     !name.is_empty()
@@ -189,7 +185,6 @@ pub fn is_valid_plugin_name(name: &str) -> bool {
 /// True for a valid Agent Skills name (also required of plugin skill
 /// directory names): 1-64 chars of `a-z`, `0-9` and `-`, starting and ending
 /// with a letter or digit, without `--`.
-#[allow(dead_code)] // used by KiroPowerPluginValidator once plugin.json powers are routed
 pub fn is_valid_skill_name(name: &str) -> bool {
     let bytes = name.as_bytes();
     !name.is_empty()
@@ -203,7 +198,6 @@ pub fn is_valid_skill_name(name: &str) -> bool {
 }
 
 /// One member of a JSON object: decoded key and byte spans in the document.
-#[allow(dead_code)] // used by KiroPowerPluginValidator once plugin.json powers are routed
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct JsonMember {
     pub key: String,
@@ -215,7 +209,6 @@ pub struct JsonMember {
 /// List the members (objects) or items (arrays, with an empty key) of the JSON
 /// value spanning `content[start..end]`, with absolute byte offsets. Uses
 /// serde's own parser for keys and values, so escapes and nesting are exact.
-#[allow(dead_code)] // used by KiroPowerPluginValidator once plugin.json powers are routed
 pub fn json_children(content: &str, start: usize, end: usize) -> Option<Vec<JsonMember>> {
     fn first_value<'de, T: Deserialize<'de>>(text: &'de str) -> Option<(T, usize)> {
         let mut stream = serde_json::Deserializer::from_str(text).into_iter::<T>();
@@ -269,7 +262,6 @@ pub fn json_children(content: &str, start: usize, end: usize) -> Option<Vec<Json
 }
 
 /// Parsed plugin.json: the value and the top-level member spans.
-#[allow(dead_code)] // used by KiroPowerPluginValidator once plugin.json powers are routed
 #[derive(Debug, Clone)]
 pub struct ParsedPluginManifest {
     pub value: Value,
@@ -279,7 +271,6 @@ pub struct ParsedPluginManifest {
 
 /// Parse plugin.json strictly (Kiro uses `JSON.parse`: no comments, no
 /// trailing commas). `Err` carries the message and 1-based line and column.
-#[allow(dead_code)] // used by KiroPowerPluginValidator once plugin.json powers are routed
 pub fn parse_plugin_manifest(content: &str) -> Result<ParsedPluginManifest, ParseError> {
     let value: Value = serde_json::from_str(content)
         .map_err(|e| ParseError::new(e.to_string(), e.line().max(1), e.column().max(1)))?;

@@ -1,0 +1,25 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "guard-env-writes",
+      "trigger": "PreToolUse",
+      "matcher": "write",
+      "action": { "type": "command", "command": "${WORKSPACE_ROOT}/scripts/guard-env.sh" },
+      "timeout": 0
+    },
+    {
+      "name": "audit-shell",
+      "trigger": "PreToolUse",
+      "matcher": "^(execute_bash|execute_pwsh)$",
+      "action": { "type": "command", "command": "./scripts/audit.sh" }
+    },
+    {
+      "name": "audit-github-mcp",
+      "trigger": "PostToolUse",
+      "matcher": "@github",
+      "action": { "type": "command", "command": "jq -r .tool_name >> .kiro/mcp-audit.log" },
+      "timeout": 7200
+    }
+  ]
+}

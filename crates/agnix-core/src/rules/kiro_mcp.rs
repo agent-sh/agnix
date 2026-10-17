@@ -647,49 +647,6 @@ fn field_type_issue(key: &str, value: &JsonValue) -> Option<TypeIssue> {
     }
 }
 
-/// Field-type check for one MCP server field, for callers holding a
-/// `serde_json::Value` (for example an agent's inline `mcpServers`, which
-/// Kiro CLI 2.x deserializes with the same struct as mcp.json, skipping the
-/// whole agent on a type error). Returns (fatal in V2, fatal in V3, expected
-/// type). `oauth.<field>` keys check the nested OAuth fields.
-#[allow(dead_code)] // shared with the Kiro agent validator
-pub(crate) fn server_field_issue(
-    key: &str,
-    value: &serde_json::Value,
-) -> Option<(bool, bool, &'static str)> {
-    let value = json_value_from_serde(value);
-    let issue = match key.strip_prefix("oauth.") {
-        Some(field) => oauth_field_type_issue(field, &value),
-        None => field_type_issue(key, &value),
-    }?;
-    Some((issue.fatal.v2, issue.fatal.v3, issue.expected))
-}
-
-fn json_value_from_serde(value: &serde_json::Value) -> JsonValue {
-    let node = |value: &serde_json::Value| JsonNode {
-        start: 0,
-        end: 0,
-        value: json_value_from_serde(value),
-    };
-    match value {
-        serde_json::Value::Null => JsonValue::Null,
-        serde_json::Value::Bool(b) => JsonValue::Bool(*b),
-        serde_json::Value::Number(n) => JsonValue::Number(n.clone()),
-        serde_json::Value::String(s) => JsonValue::String(s.clone()),
-        serde_json::Value::Array(items) => JsonValue::Array(items.iter().map(node).collect()),
-        serde_json::Value::Object(map) => JsonValue::Object(
-            map.iter()
-                .map(|(key, value)| JsonMember {
-                    key: key.clone(),
-                    key_start: 0,
-                    key_end: 0,
-                    value: node(value),
-                })
-                .collect(),
-        ),
-    }
-}
-
 /// `oauth.*` field types. V2 accepts `null` for these optional strings; V3
 /// keeps only clientId, redirectUri and clientMetadataUrl (others stripped).
 fn oauth_field_type_issue(key: &str, value: &JsonValue) -> Option<TypeIssue> {

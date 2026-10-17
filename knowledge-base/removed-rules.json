@@ -137,6 +137,55 @@
       "replaced_by": [
         "XP-007"
       ]
+    },
+    {
+      "id": "KIRO-012",
+      "removed_in": "0.59.0",
+      "reason": "Never emitted. Duplicate steering names change nothing in Kiro, and slash-command names come from file paths.",
+      "replaced_by": []
+    },
+    {
+      "id": "KIRO-013",
+      "removed_in": "0.59.0",
+      "reason": "It could not fire on real duplicate frontmatter keys and misfired on nested keys. KIRO-015 reports invalid and duplicate frontmatter.",
+      "replaced_by": [
+        "KIRO-015"
+      ]
+    },
+    {
+      "id": "KIRO-014",
+      "removed_in": "0.59.0",
+      "reason": "Kiro documents no heading structure for steering files.",
+      "replaced_by": []
+    },
+    {
+      "id": "KR-PW-005",
+      "removed_in": "0.59.0",
+      "reason": "POWER.md step sections are not documented by Kiro.",
+      "replaced_by": []
+    },
+    {
+      "id": "KR-HK-007",
+      "removed_in": "0.59.0",
+      "reason": "The Kiro IDE 0.x hook format has no documented timeout field, and the check used milliseconds while its message said seconds. KR-HK-017 checks V3 hook timeouts in seconds and KR-HK-026 legacy timeout values.",
+      "replaced_by": [
+        "KR-HK-017",
+        "KR-HK-026"
+      ]
+    },
+    {
+      "id": "KR-HK-008",
+      "removed_in": "0.59.0",
+      "reason": "Never implemented, and Kiro allows several hooks for one event.",
+      "replaced_by": []
+    },
+    {
+      "id": "KR-AG-007",
+      "removed_in": "0.59.0",
+      "reason": "It depended on an @agent mention syntax Kiro does not have, and contradicted the docs, which restrict a sub-agent's tools in its own configuration. KR-AG-006 checks documented sub-agent access.",
+      "replaced_by": [
+        "KR-AG-006"
+      ]
     }
   ]
 }

@@ -649,124 +649,224 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Fix**: No auto-fix (describe the task and add "Use when ...")
 **Source**: kiro.dev/docs/skills/
 
+Kiro agent rules check `.kiro/agents/**/*.json` and `*.md` against the engines a file targets. Kiro CLI 2.x ships two agent engines: V2, the 2.x default, loads the top-level `*.json` files with a strict loader; V3, opt-in since CLI 2.8.0 and the default from CLI 3.0, loads JSON (comments and trailing commas allowed) and Markdown agents recursively. `[tool_versions] kiro = "2.x"` checks V2 only and `"3.x"` V3 only. Unpinned, a JSON file with only CLI 2.x fields (`allowedTools`, `toolsSettings`, `toolAliases`, `keyboardShortcut`, `useLegacyMcpJson`, object-form `hooks`) targets V2, one with only V3 fields (non-null `permissions`, `excludedTools`, `includePowers`, `effortLevel`, `dispatchKind`, array `hooks`) targets V3, and other files target both; Markdown and nested JSON agents always target V3. A condition that makes every targeted engine skip the agent is an error, one that makes only one targeted engine skip it is a warning naming that engine, and dropped or ignored values are warnings or info. For an unpinned CLI 2.x-only file, conditions that will make V3 skip the agent are migration warnings. Evidence: the kiro.dev docs below, the Kiro CLI 2.32.1 loader (`kiro-cli agent validate`) and the V3 engine it bundles. Agent-embedded hooks that target V3 also get the hook rules KR-HK-021 (CLI 2.x or Claude Code tool names in a matcher), KR-HK-027 (tool hook without a specific matcher) and KR-HK-029 (unanchored regex matcher); the standalone hook file rules are documented with the Kiro hooks rules.
+
 <a id="kr-ag-001"></a>
-### KR-AG-001 [MEDIUM] Unknown Field in Kiro Agent JSON
-**Requirement**: Kiro agent JSON or Markdown frontmatter SHOULD only use documented top-level fields
-**Detection**: A JSON or Markdown profile under `.kiro/agents/` contains unknown top-level keys outside the documented schema
-**Fix**: Remove unsupported keys or rename to documented fields
-**Source**: kiro.dev/docs/cli/custom-agents/configuration-reference
+### KR-AG-001 [MEDIUM] Unknown or Ignored Kiro Agent Field
+**Requirement**: Agent JSON and Markdown frontmatter SHOULD use only fields that a targeted engine reads
+**Detection**: A top-level key that no engine knows (warning; the message says "JSON" or "frontmatter"). CLI 2.x fields in a Markdown agent, which V3 strips (warning), or in a JSON file that targets only V3 (info). In JSON files that also target V3 (universal profiles, or unpinned CLI 2.x profiles as a migration note), `toolAliases` and `keyboardShortcut` are info because V3 does not apply them, and `useLegacyMcpJson: true` without `includeMcpJson` is a warning when V3 is targeted (info as a migration note), since V3 then loads only the mcp.json servers that `tools` references. V3 fields in a file pinned to 2.x (info). A frontmatter `prompt`, which V3 ignores in favor of the body (warning). `useLegacyMcpJson`, `$schema`, `kiroUpgrade`, `effortLevel` and `dispatchKind` are known fields
+**Fix**: Remove the field, or rename it to a documented field
+**Source**: kiro.dev/docs/custom-agents/configuration-reference, kiro.dev/docs/cli/v3/agent-config, kiro.dev/docs/cli/v3/migration-guide
 
 <a id="kr-ag-002"></a>
-### KR-AG-002 [HIGH] Invalid Kiro Agent Resource Protocol
-**Requirement**: Agent `resources` entries MUST use valid Kiro resource forms
-**Detection**: Resource is not `file://`, not `skill://`, and not an object with `type: knowledgeBase`
-**Fix**: Use valid resource URIs or supported structured resource object
-**Source**: kiro.dev/docs/cli/custom-agents/creating
+### KR-AG-002 [HIGH] Invalid Kiro Agent Resource Entry
+**Requirement**: Agent `resources` entries MUST be `file://` or `skill://` strings (case-sensitive) or `knowledgeBase` objects
+**Detection**: Another string, an object with another or no `type`, or a non-string non-object entry: Kiro CLI 2.x skips the agent and V3 drops the entry (error when only V2 is targeted, otherwise a warning). For V3, a `knowledgeBase` entry without a `file://` source, with an `indexType` other than `best` or `fast`, a non-boolean `autoUpdate`, or non-string `name`/`description` is dropped (warning)
+**Fix**: Use a valid resource URI or `knowledgeBase` object
+**Source**: kiro.dev/docs/custom-agents/configuration-reference, kiro.dev/docs/cli/v3/agent-config
 
 <a id="kr-ag-003"></a>
-### KR-AG-003 [MEDIUM] allowedTools Not Subset of tools
-**Requirement**: `allowedTools` SHOULD be a subset of `tools`
-**Detection**: One or more `allowedTools` entries are not present in `tools`
-**Fix**: Remove mismatched `allowedTools` entries or add them to `tools`
-**Source**: kiro.dev/docs/cli/custom-agents/configuration-reference
+### KR-AG-003 [MEDIUM] allowedTools Trusts a Tool Not in tools
+**Requirement**: Each `allowedTools` entry SHOULD name a tool that `tools` makes available (CLI 2.x)
+**Detection**: Only when Kiro CLI 2.x is targeted and `tools` is present. An entry is covered by `*`, by `@builtin` for built-in tools, by any name or alias of the same tool (`read`/`fs_read`/`fsRead`, `shell`/`execute_bash`, ...), by the V3 tags `read`, `write` and `web` for the tools they group, by `@server` for `@server/tool`, by a tools glob, or through a `toolAliases` alias. Glob entries and names that match no tool (KR-AG-024) are not reported
+**Fix**: Add the tool to `tools` or remove it from `allowedTools`
+**Source**: kiro.dev/docs/custom-agents/configuration-reference, kiro.dev/docs/reference/built-in-tools
 
 <a id="kr-ag-004"></a>
-### KR-AG-004 [MEDIUM] Invalid Kiro Agent Model Value
-**Requirement**: Agent `model` SHOULD use a documented Kiro model value
-**Detection**: `model` value is not one of the known Kiro model identifiers
-**Fix**: Replace `model` with a documented value
-**Source**: kiro.dev/docs/cli/custom-agents/configuration-reference
+### KR-AG-004 [MEDIUM] Kiro Agent Model Is Not a Kiro Model ID
+**Requirement**: Agent `model` SHOULD be a Kiro model ID string or null
+**Detection**: Kiro serves model IDs dynamically, so there is no allowlist. Warn on Claude Code aliases (`inherit`, `sonnet`, `opus`, `haiku`, `opusplan`, `default`, optionally with `[1m]`): Kiro CLI 2.x sends them unchanged and V3 accepts one only if it matches a single served ID. Warn on values with whitespace (display names). A non-string value skips the agent in both engines (error), and `model: null` in Markdown frontmatter skips it in V3 (JSON accepts null)
+**Fix**: Use a Kiro model ID such as `claude-sonnet-4.6` (see `/model`), or remove the field
+**Source**: kiro.dev/docs/custom-agents/configuration-reference, kiro.dev/docs/cli/v3/agent-config, kiro.dev/docs/models
 
 <a id="kr-ag-005"></a>
-### KR-AG-005 [LOW] Kiro Agent Has No MCP Access
-**Requirement**: Agent MCP access SHOULD be explicit when `includeMcpJson` is disabled
-**Detection**: `includeMcpJson: false` and no inline `mcpServers` are defined
-**Fix**: Enable `includeMcpJson` or configure inline `mcpServers`
-**Source**: kiro.dev/docs/cli/custom-agents/configuration-reference
+### KR-AG-005 [MEDIUM] Referenced MCP Server Not Loaded by Kiro CLI 2.x
+**Requirement**: An agent whose `tools` or `allowedTools` reference `@server` SHOULD make that server available in Kiro CLI 2.x
+**Detection**: Kiro CLI 2.x is targeted, `includeMcpJson` (or its alias `useLegacyMcpJson`) is explicitly false, and a referenced server is not in the agent's `mcpServers`. V3 includes mcp.json servers that `tools` references, so the message notes V3 when it is targeted
+**Fix**: Set `includeMcpJson` to true or define the server inline
+**Source**: kiro.dev/docs/custom-agents/configuration-reference, kiro.dev/docs/mcp/configuration
 
 <a id="kr-ag-006"></a>
-### KR-AG-006 [MEDIUM] Kiro Agent References Unknown Subagent
-**Requirement**: Kiro agent prompts SHOULD reference only JSON or Markdown subagents defined under `.kiro/agents/`
-**Detection**: Prompt contains `@agent-name` mention where agent name is not present in sibling Kiro agent definitions
-**Fix**: Add the missing agent file or remove the unresolved `@agent-name` reference
-**Source**: github.com/kirodotdev/kiro/issues/5743, github.com/kirodotdev/kiro/issues/4262
-
-<a id="kr-ag-007"></a>
-### KR-AG-007 [MEDIUM] Kiro Agent Tool Scope Broader Than Referenced Subagent
-**Requirement**: Orchestrator agent tool scope SHOULD NOT exceed the referenced subagent tool scope
-**Detection**: For each referenced `@agent-name`, parent `allowedTools/tools` contains entries not present in the referenced subagent
-**Fix**: Narrow parent tool scope or align referenced subagent permissions
-**Source**: github.com/kirodotdev/kiro/issues/5071, github.com/kirodotdev/kiro/issues/5449
+### KR-AG-006 [MEDIUM] Kiro Agent Sub-agent Access Cannot Work
+**Requirement**: An agent that configures sub-agents SHOULD be able to spawn them, and its agent lists SHOULD name agents that exist
+**Detection**: Kiro CLI 2.x is targeted and `toolsSettings.subagent` (or an alias key) is set, but `tools` has no `subagent`, `use_subagent`, `agent_crew`, `@builtin`, `*` or `subagent/...` entry: the docs say "Without it, the agent can't delegate" (warning). `toolsSettings.subagent.availableAgents` / `trustedAgents` entries (globs allowed) and V3 `tools` entries `subagent/<agent>` that match no agent file in the same `.kiro/agents/` directory, the agent itself, or a built-in agent (info, since global agents in `~/.kiro/agents/` are not visible). Prompt `@name` mentions are not checked: Kiro selects sub-agents by description or an explicit request, not an `@` syntax
+**Fix**: Add `subagent` to `tools`; fix the agent name
+**Source**: kiro.dev/docs/custom-agents/subagents, kiro.dev/docs/custom-agents/configuration-reference
 
 <a id="kr-ag-008"></a>
-### KR-AG-008 [HIGH] Empty Explicit Agent Name
-**Requirement**: An explicit Kiro agent `name` MUST be non-empty; omitted names are derived from the path relative to `.kiro/agents/`
-**Detection**: Flag an explicitly present `name` that is empty or whitespace-only
-**Fix**: Remove the field to use the path-derived name, or set a non-empty name
-**Source**: kiro.dev/docs/cli/custom-agents/configuration-reference, kiro.dev/docs/cli/v3/agent-config
+### KR-AG-008 [HIGH] Invalid Explicit Agent Name
+**Requirement**: An explicit agent `name` MUST be a non-empty string
+**Detection**: A non-string or null `name` skips the agent in both engines (error). An empty string skips it in V3 (error or engine warning; Kiro CLI 2.x accepts it, so a 2.x-only file gets a warning). A whitespace-only name loads but is a warning
+**Fix**: Set a non-empty name, or remove the field so V3 derives it from the path relative to `.kiro/agents/`
+**Source**: kiro.dev/docs/custom-agents/configuration-reference, kiro.dev/docs/cli/v3/agent-config
 
 <a id="kr-ag-009"></a>
-### KR-AG-009 [HIGH] Agent Prompt Empty Or Invalid
-**Requirement**: A Kiro agent JSON `prompt`, when set, SHOULD be a non-empty string (inline text or a `file://` URI). The field is optional: the configuration reference says every agent file "can include" it, and Markdown agents take the prompt from the body
-**Detection**: Check that a present `prompt` field is a non-empty string
-**Fix**: No auto-fix (add a prompt field)
-**Source**: kiro.dev/docs/agents, kiro.dev/docs/configuration
+### KR-AG-009 [HIGH] Agent Prompt Empty or Invalid
+**Requirement**: A JSON `prompt` MUST be a string or null; a prompt SHOULD not be empty
+**Detection**: A non-string, non-null `prompt` skips the agent in both engines (error). `"prompt": null` is valid. A blank JSON prompt or an empty Markdown body is a warning
+**Fix**: Set the prompt to inline text or a `file://` URI, or remove it
+**Source**: kiro.dev/docs/custom-agents/configuration-reference, kiro.dev/docs/cli/v3/agent-config
 
 <a id="kr-ag-010"></a>
 ### KR-AG-010 [MEDIUM] Duplicate Tool Entries
-**Requirement**: Kiro agent `tools` array SHOULD NOT contain duplicate entries
-**Detection**: Check for duplicate tool names (case-insensitive)
-**Fix**: No auto-fix (remove duplicates)
-**Source**: kiro.dev/docs/agents, kiro.dev/docs/configuration
+**Requirement**: Kiro agent `tools` SHOULD NOT contain duplicate entries
+**Detection**: Case-insensitive duplicates in `tools`, reported at the repeated entry
+**Fix**: Remove the duplicate
+**Source**: kiro.dev/docs/custom-agents/configuration-reference, kiro.dev/docs/cli/v3/agent-config
 
 <a id="kr-ag-011"></a>
 ### KR-AG-011 [LOW] Empty Tools Array
-**Requirement**: Kiro agent `tools` array SHOULD contain at least one entry if present
-**Detection**: Check if `tools` is an empty array
-**Fix**: No auto-fix (add tools or remove the field)
-**Source**: kiro.dev/docs/agents, kiro.dev/docs/configuration
+**Requirement**: Kiro agent `tools` SHOULD contain at least one entry if present
+**Detection**: `tools` is an empty array (the agent gets no tools in either engine)
+**Fix**: Add tools, or remove the field if that is not intended
+**Source**: kiro.dev/docs/custom-agents/configuration-reference, kiro.dev/docs/cli/v3/agent-config
 
 <a id="kr-ag-012"></a>
-### KR-AG-012 [MEDIUM] toolAliases References Unknown Tool
-**Requirement**: `toolAliases` targets SHOULD reference tools in the `tools` array
-**Detection**: Check each alias target against the tools set
-**Fix**: No auto-fix (fix alias or add missing tool)
-**Source**: kiro.dev/docs/agents, kiro.dev/docs/configuration
+### KR-AG-012 [MEDIUM] toolAliases Renames a Tool Not in tools
+**Requirement**: Each `toolAliases` key (the original tool name, `@server/tool` for MCP tools) SHOULD be a tool that `tools` makes available; the value is the new name
+**Detection**: Kiro CLI 2.x is targeted, `tools` is present, and the key is not covered by `tools` with the KR-AG-003 selector semantics
+**Fix**: Add the original tool to `tools` or remove the alias
+**Source**: kiro.dev/docs/custom-agents/configuration-reference
 
 <a id="kr-ag-013"></a>
 ### KR-AG-013 [HIGH] Secrets in Agent Prompt
-**Requirement**: Kiro agent `prompt` MUST NOT contain hardcoded credentials
-**Detection**: Scan prompt for secret patterns (API keys, tokens, passwords)
+**Requirement**: Kiro agent prompts MUST NOT contain hardcoded credentials
+**Detection**: Scan the JSON `prompt` and the Markdown body for secret patterns (API keys, tokens, passwords); `${VAR}` references are ignored
 **Fix**: No auto-fix (use environment variables)
-**Source**: kiro.dev/docs/agents, kiro.dev/docs/configuration
+**Source**: kiro.dev/docs/custom-agents/configuration-reference, kiro.dev/docs/cli/v3/agent-config
 
 <a id="kr-ag-014"></a>
-### KR-AG-014 [HIGH] Invalid Universal Permissions Rule
-**Requirement**: Kiro universal agent `permissions.rules` entries MUST use a documented capability, an effect of `deny`, `ask`, or `allow`, and string arrays for optional `match` / `exclude`
-**Detection**: Validate the permissions container, rules array, required string fields, capability/effect enums, and pattern array shapes
-**Fix**: Manual - correct the invalid permissions rule
-**Source**: kiro.dev/changelog/cli/2-14, kiro.dev/docs/cli/v3/agent-config, kiro.dev/docs/cli/v3/permissions
+### KR-AG-014 [HIGH] Invalid Kiro Agent Permissions Block
+**Requirement**: An agent `permissions` block MUST be an object with a `rules` array of `{capability, effect, match?, exclude?}` rules (V3)
+**Detection**: For V3, any shape error skips the whole agent: `permissions` null or not an object, `rules` missing or not an array, a rule that is not an object, a missing or non-string `capability`, an `effect` other than `allow`, `ask`, `deny` or `evaluate`, non-string-array `match`/`exclude`, or non-string-array `policies` (error, or a warning naming V3 when 2.x is also targeted). Values V3 skips or strips are warnings: an unknown capability or `effect: evaluate` (rule skipped), an unknown policy preset, and unknown keys (a typo such as `matches` leaves a rule that applies to every resource). Kiro CLI 2.x ignores `permissions`
+**Fix**: Manual - correct the permissions rule
+**Source**: kiro.dev/docs/cli/v3/agent-config, kiro.dev/docs/permissions, kiro.dev/docs/cli/v3/permissions
 
 <a id="kr-ag-015"></a>
 ### KR-AG-015 [MEDIUM] Unconverted CLI 2.x Trust Configuration
-**Requirement**: A Kiro agent profile carrying CLI 2.x trust fields (`allowedTools`, or `toolsSettings`) MUST also include a `permissions` block; CLI V3 skips unconverted profiles
-**Detection**: Agent JSON has `allowedTools` or `toolsSettings` but no non-null `permissions` field
-**Fix**: Manual - run `/upgrade-agent` in a V3 session or add a `permissions.rules` block
-**Source**: kiro.dev/docs/custom-agents/configuration-reference, kiro.dev/docs/cli/v3/migration-guide
+**Requirement**: A JSON agent with an `allowedTools` or `toolsSettings` key MUST also have a non-null `permissions` block to load in Kiro CLI V3
+**Detection**: Key presence counts, even for null, `[]` or `{}`. Markdown agents are not reported (V3 strips the keys there; see KR-AG-001). Warning when unpinned, error when pinned to 3.x, nothing when pinned to 2.x
+**Fix**: [AUTO-FIX, unsafe] When every such key is empty or null, remove them (`kiro-cli agent upgrade` leaves such profiles unconverted); this makes V3 load the agent. Otherwise run `/upgrade-agent` (or `kiro-cli agent upgrade`) or add a `permissions` block
+**Source**: kiro.dev/docs/custom-agents/configuration-reference, kiro.dev/docs/cli/v3/migration-guide, kiro.dev/docs/cli/v3/upgrade-agent
+
+<a id="kr-ag-016"></a>
+### KR-AG-016 [HIGH] Invalid Kiro Agent JSON
+**Requirement**: Agent JSON MUST parse as a JSON object in every targeted engine
+**Detection**: JSON that does not parse even after removing comments and trailing commas, or whose top level is not an object, skips the agent in both engines (error at the syntax error). Comments or trailing commas parse only in V3 (error for a 2.x-only file, a warning naming 2.x when both engines are targeted, nothing for a V3-only file)
+**Fix**: Fix the syntax; remove comments and trailing commas for Kiro CLI 2.x
+**Source**: kiro.dev/docs/custom-agents/configuration-reference, kiro.dev/docs/cli/v3/agent-config
+
+<a id="kr-ag-017"></a>
+### KR-AG-017 [HIGH] Invalid Kiro Markdown Agent Frontmatter
+**Requirement**: A Markdown agent MUST start with a non-empty YAML frontmatter mapping (V3)
+**Detection**: V3 loads every `.md` file under `.kiro/agents/` as an agent. A file without frontmatter makes V3 report "No front matter found" (warning, since such files are usually notes or prompt files); empty frontmatter, invalid YAML or a non-mapping skips the agent (error)
+**Fix**: Add valid frontmatter, or move non-agent Markdown out of `.kiro/agents/`
+**Source**: kiro.dev/docs/custom-agents, kiro.dev/docs/cli/v3/agent-config
+
+<a id="kr-ag-018"></a>
+### KR-AG-018 [HIGH] Kiro Agent Field Has the Wrong Type
+**Requirement**: Known agent fields MUST have the type their engine expects
+**Detection**: Wrong types skip the agent in each engine that reads the field: `description`, `welcomeMessage`, `includeMcpJson` and `resources` in both; `allowedTools`, `toolAliases` (and its values), `toolsSettings`, `useLegacyMcpJson`, `keyboardShortcut` and `$schema` in 2.x; `excludedTools`, `includePowers`, `effortLevel` and `dispatchKind` in V3. `tools` must be an array of strings in 2.x, `"*"` or an array in V3 JSON, and a string or array in Markdown. V3 rejects null for most fields (JSON accepts null for `description`, `prompt`, `model`, `welcomeMessage`). A known field repeated in one JSON object, or both `includeMcpJson` and its alias `useLegacyMcpJson`, skips the agent in 2.x. A non-object `toolsSettings` entry only makes 2.x warn (warning)
+**Fix**: Use the documented type
+**Source**: kiro.dev/docs/custom-agents/configuration-reference, kiro.dev/docs/cli/v3/agent-config
+
+<a id="kr-ag-019"></a>
+### KR-AG-019 [HIGH] Kiro Agent Missing Name for CLI 2.x
+**Requirement**: A JSON agent loaded by Kiro CLI 2.x MUST have a `name` field
+**Detection**: A top-level JSON agent without `name` that targets 2.x ("missing field `name`"; V3 derives the name from the path, so the finding is a warning when both engines are targeted)
+**Fix**: Add a `name` field
+**Source**: kiro.dev/docs/custom-agents/configuration-reference, kiro.dev/docs/cli/2x-reference, kiro.dev/docs/cli/v3/agent-config
+
+<a id="kr-ag-020"></a>
+### KR-AG-020 [MEDIUM] Non-Agent File in Kiro Agents Directory
+**Requirement**: JSON files in `.kiro/agents/` SHOULD be agent profiles
+**Detection**: A JSON object with no known agent field (for example generated `*.attribution.json` metadata): Kiro CLI 2.x rejects it (missing name) and V3 lists it as an empty agent. Error when only 2.x is targeted, otherwise a warning. Field-level rules are not run on such files
+**Fix**: Move non-agent files out of `.kiro/agents/`
+**Source**: kiro.dev/docs/custom-agents/configuration-reference, kiro.dev/docs/custom-agents
+
+<a id="kr-ag-021"></a>
+### KR-AG-021 [HIGH] Kiro Agent file:// Prompt Cannot Be Loaded
+**Requirement**: A `file://` prompt MUST point at an existing file that every targeted engine accepts
+**Detection**: Relative paths resolve against the agent file's directory. A missing target or an empty path skips the agent in both engines (error). An absolute or `~` path, or a relative path that leaves the workspace root (the directory holding `.kiro/agents`), skips it in V3 only (error for V3-only files, otherwise a warning, including a migration warning for 2.x-only files)
+**Fix**: Fix the path or create the file; use a relative path inside the workspace for V3
+**Source**: kiro.dev/docs/custom-agents/configuration-reference, kiro.dev/docs/cli/v3/agent-config, kiro.dev/docs/cli/v3/upgrade-agent
+
+<a id="kr-ag-022"></a>
+### KR-AG-022 [MEDIUM] Reserved or Duplicate Kiro Agent Name
+**Requirement**: An agent id SHOULD be unique in its `.kiro/agents/` directory and not reserved by a V3 built-in agent
+**Detection**: V3 silently drops file agents whose id (the `name`, else the path) is `vibe`, `spec`, `quick-spec`, `bug-fix`, `plan`, `autonomous` or `default-v2`. Another file with the same identity is a warning: Kiro CLI 2.x compares the `name` of top-level JSON files and keeps the first it reads; V3 compares ids across JSON and Markdown agents (ignoring JSON profiles it skips) and keeps the last
+**Fix**: Rename the agent
+**Source**: kiro.dev/docs/custom-agents, kiro.dev/docs/custom-agents/creating, kiro.dev/docs/custom-agents/built-in
+
+<a id="kr-ag-023"></a>
+### KR-AG-023 [HIGH] Invalid Inline MCP Server in Kiro Agent
+**Requirement**: Inline `mcpServers` MUST be an object of correctly typed server objects
+**Detection**: A non-object `mcpServers`, a non-object server, or a wrongly typed field (`command`, `args`, `env`, `headers`, `url`, `type`, `timeout`, `disabled`, `oauth`, `oauthScopes`) skips the agent in Kiro CLI 2.x; V3 skips just that server. For V3 (warning): a server with neither `command` nor `url` (unless disabled or of type `registry`), a URL that does not parse or is not https outside localhost, a `timeout` below 1, an invalid `versionNegotiation`, or wrongly typed V3-only fields (`cwd`, `disabledTools`, `autoApprove`, `waitForReady`)
+**Fix**: Correct the server declaration
+**Source**: kiro.dev/docs/custom-agents/configuration-reference, kiro.dev/docs/mcp/configuration
+
+<a id="kr-ag-024"></a>
+### KR-AG-024 [MEDIUM] Kiro Agent Tool Name Matches No Tool
+**Requirement**: `tools` and `allowedTools` entries SHOULD name tools the targeted engines have
+**Detection**: An `allowedTools` entry `"*"`, which the docs say is not supported (warning). Claude Code tool names (`Read`, `Bash`, ...), Claude Code MCP names (`mcp__server__tool`) and names differing from a Kiro name only in case, which match nothing in either engine. `allowedTools` entries (2.x) that are not 2.x tool names, `@` references or globs, which trust nothing (the upgrader's unmapped-allowed-tool). For V3: CLI 2.x names V3 does not alias (`fs_read`, `grep`, `glob`, `fsWrite`, `execute_cmd`, `web_search`, `use_subagent`, ...) when no entry selects the V3 equivalent, and `use_aws`/`aws`, which V3 has no tool for (the upgrader's deprecated-aws-tool). For 2.x: V3 tool ids such as `read_file` without a 2.x equivalent in the list. For an unpinned 2.x-only file, the V3 cases the upgrader does not rewrite are info
+**Fix**: Use Kiro tool names, `@builtin`, or `@server` / `@server/tool`
+**Source**: kiro.dev/docs/custom-agents/configuration-reference, kiro.dev/docs/reference/built-in-tools, kiro.dev/docs/tools, kiro.dev/docs/cli/v3/migration-guide, kiro.dev/docs/cli/v3/upgrade-agent
+
+<a id="kr-ag-025"></a>
+### KR-AG-025 [MEDIUM] Agent Hook Matcher Never Fires in Kiro CLI 2.x
+**Requirement**: A tool-hook matcher in an agent that Kiro CLI 2.x loads SHOULD name tools CLI 2.x has
+**Detection**: Kiro CLI 2.x is targeted and a `preToolUse`/`PreToolUse` or `postToolUse`/`PostToolUse` matcher (or a `|` alternative of one) is a V3 tool id with a CLI 2.x equivalent, such as `read_file`, `file_search`, `grep_search`, `str_replace`, `execute_pwsh` or `remote_web_search`: CLI 2.x matchers are tool names, aliases, globs and `@server` selectors, so the hook never fires there. The V3 direction (CLI 2.x or Claude Code names that match no V3 tool) is KR-HK-021, which also runs on agent-embedded hooks
+**Fix**: Use the CLI 2.x tool name (`read`, `glob`, `grep`, `write`, `shell`, ...)
+**Source**: kiro.dev/docs/cli/2x-reference, kiro.dev/docs/cli/v3/hooks-migration, kiro.dev/docs/reference/built-in-tools
+
+<a id="kr-ag-026"></a>
+### KR-AG-026 [MEDIUM] Kiro Agent Hook Timeout Field or Unit Mismatch
+**Requirement**: Object-form hooks SHOULD set `timeout_ms` (milliseconds); array-form hooks SHOULD set `timeout` (seconds)
+**Detection**: `timeout` in an object-form entry (ignored by 2.x and dropped by V3), `timeout_ms` in an array-form entry (ignored), a `timeout_ms` below 100 (likely seconds), and an array `timeout` that is a multiple of 1000 (likely milliseconds)
+**Fix**: Use the field and unit of the hook form
+**Source**: kiro.dev/docs/hooks, kiro.dev/docs/hooks/actions, kiro.dev/docs/cli/2x-reference
+
+<a id="kr-ag-027"></a>
+### KR-AG-027 [MEDIUM] Kiro Agent Hook Field Ignored
+**Requirement**: Agent hook entries SHOULD use only fields the targeted engines read
+**Detection**: Unknown keys in object-form entries (for example the IDE's `toolTypes`; `description` and `name` are accepted) or array-form entries (warning). For V3-only files, the CLI 2.x fields `timeout_ms`, `max_output_size` and `cache_ttl_seconds`, which V3 drops (info). Agent-type actions, which Kiro CLI 2.x skips when loading (info)
+**Fix**: Remove the field or use the documented field for the hook form
+**Source**: kiro.dev/docs/hooks, kiro.dev/docs/cli/2x-reference, kiro.dev/docs/cli/v3/hooks-migration
+
+<a id="kr-ag-028"></a>
+### KR-AG-028 [MEDIUM] Agent File Not Loaded by a Targeted Kiro Engine
+**Requirement**: An agent file SHOULD sit where the engines it is meant for read it
+**Detection**: Kiro CLI 2.x reads only top-level `.json` files of `.kiro/agents/` (or of the `.amazonq/cli-agents/` fallback); V3 reads `.json` and `.md` at any depth under `.kiro/agents/` and never reads `.amazonq/cli-agents/`. Pinned to 2.x, a Markdown agent with frontmatter or a nested JSON agent is reported; pinned to 3.x, or unpinned (V3 becomes the default in CLI 3.0), an agent in `.amazonq/cli-agents/` is reported. When the pinned engine does not read the file no other rule runs on it, and findings never name an engine that does not read the file
+**Fix**: Move the agent to `.kiro/agents/` as a top-level JSON file, or pin the engine you use
+**Source**: kiro.dev/docs/cli/2x-reference, kiro.dev/docs/custom-agents, kiro.dev/docs/cli/v3/agent-config
+
+<a id="kr-ag-029"></a>
+### KR-AG-029 [LOW] Overly Broad Kiro Agent Resource Glob
+**Requirement**: Agent `resources` SHOULD name the files the agent needs rather than the whole workspace
+**Detection**: A `file://` resource of `**`, `*`, `**/*`, `**/**` or `**/*.*` (optionally after `./`), which loads every workspace file into context on each request (info)
+**Fix**: List specific files or globs; use `skill://` resources or a knowledge base for large material
+**Source**: kiro.dev/docs/cli/chat/context, kiro.dev/docs/custom-agents/configuration-reference
+
+<a id="kr-ag-030"></a>
+### KR-AG-030 [LOW] Sub-agent Description Missing or Too Short
+**Requirement**: An agent that another agent uses as a sub-agent SHOULD have a description that says what it does and when to use it
+**Detection**: Another agent file in the same `.kiro/agents/` directory lists this agent (by name, V3 id or glob) in `toolsSettings.subagent.availableAgents` / `trustedAgents` or as a `subagent/<agent>` tool, and this agent has no `description` or one with fewer than four words (info). Kiro picks sub-agents by their description; agents nobody lists are not reported, since the configuration reference calls the field primarily for human readability
+**Fix**: Describe the agent's purpose and the requests it handles
+**Source**: kiro.dev/docs/custom-agents/subagents, kiro.dev/docs/custom-agents/configuration-reference
 
 <a id="kr-hk-005"></a>
-### KR-HK-005 [HIGH] Invalid Kiro CLI Hook Event Key
-**Requirement**: Agent JSON `hooks` keys MUST use valid CLI hook event names
-**Detection**: `hooks` object contains key outside `agentSpawn`, `userPromptSubmit`, `preToolUse`, `postToolUse`, `stop`
-**Fix**: Rename event key to a valid CLI hook event
-**Source**: kiro.dev/docs/cli/hooks
+### KR-HK-005 [HIGH] Invalid Kiro Agent Hook Trigger
+**Requirement**: Agent hook triggers MUST be names the targeted engines accept
+**Detection**: An object-form `hooks` key other than `agentSpawn`, `userPromptSubmit`, `preToolUse`, `postToolUse` or `stop` skips the agent in Kiro CLI 2.x; V3 converts the object form and runs the hook if the key is a V3 trigger or exact-case alias (`PreToolUse`, `sessionStart`, ...), otherwise skips the hook. An array-form `trigger` that is not a V3 trigger or alias (case-sensitive; `AgentSpawn` is not an alias) makes V3 skip that hook (warning)
+**Fix**: [AUTO-FIX, unsafe] Rename a case variant or V3 name of a CLI 2.x trigger key to its camelCase form (when that key is not already present), or an array trigger to its canonical V3 name; the hook then runs
+**Source**: kiro.dev/docs/cli/2x-reference, kiro.dev/docs/hooks/types, kiro.dev/docs/custom-agents/configuration-reference
 
 <a id="kr-hk-006"></a>
-### KR-HK-006 [HIGH] Kiro CLI Hook Missing Command
-**Requirement**: Each CLI hook entry MUST define a non-empty `command`
-**Detection**: Hook object under a valid CLI event lacks `command` or has an empty value
-**Fix**: Add a non-empty `command` value for each hook entry
-**Source**: kiro.dev/docs/cli/hooks
+### KR-HK-006 [HIGH] Invalid Kiro Agent Hook Entry
+**Requirement**: Each agent hook entry MUST be valid for the targeted engines
+**Detection**: Object form: each trigger value must be an array of objects with a string `command` (both engines), a string `matcher` and integer `timeout_ms`, `max_output_size` and `cache_ttl_seconds` (2.x); an empty command fails V3 and a blank one is a warning. Array form: each entry needs a non-empty `name` (V3) and `trigger`, an `action` of type `command` with a non-empty `command` or `agent` with a non-empty `prompt`, a string `matcher`, a whole non-negative `timeout`, a boolean `enabled` and a valid Stop `confirm` object. A single invalid inline hook skips the whole agent in V3
+**Fix**: Correct the hook entry
+**Source**: kiro.dev/docs/cli/2x-reference, kiro.dev/docs/hooks, kiro.dev/docs/custom-agents/configuration-reference
 
 <a id="amp-sk-001"></a>
 ### AMP-SK-001 [MEDIUM] Amp Skill Uses Unsupported Field
@@ -3206,91 +3306,195 @@ Validates Codex's admin-written managed `requirements.toml` (system location: `/
 
 ## KIRO IDE HOOKS RULES
 
+Kiro IDE 0.x stored each hook in `.kiro/hooks/*.kiro.hook`: `{ "name", "description", "version", "enabled", "when": { "type", "patterns", "toolTypes" }, "then": { "type": "askAgent" | "runCommand", "prompt" | "command" } }`. Kiro CLI never reads these files; Kiro IDE 1.0 lists them as legacy hooks and offers to upgrade each one to the `.kiro/hooks/*.json` v1 format (see the Kiro V3 hook rules below). The documented `when.type` values are `fileEdited`, `fileCreated`, `fileDeleted`, `promptSubmit`, `agentStop`, `preToolUse`, `postToolUse`, `preTaskExecution`, `postTaskExecution`, `sessionStart` and `userTriggered`, plus `agentSpawn` from the IDE 1.0 migration table. The flat `event` / `patterns` / `runCommand` / `askAgent` spellings are still read for compatibility.
+
 <a id="kr-hk-001"></a>
 ### KR-HK-001 [HIGH] Invalid Kiro IDE Hook Event Type
-**Requirement**: IDE hook `event` MUST be one of the documented Kiro IDE events
-**Detection**: `event` is missing or outside `fileEdited`, `fileCreate`, `fileDelete`, `promptSubmit`, `agentStop`, `preToolUse`, `postToolUse`, `manual`
-**Fix**: Set `event` to a valid IDE hook event
-**Source**: kiro.dev/docs/hooks/types
+**Requirement**: The IDE hook event (`when.type`, or `event`) MUST be one of the documented IDE 0.x trigger names
+**Detection**: Error when the event is missing or unknown (for example `userPrompt`). Warning for the undocumented spellings `fileCreate`, `fileDelete` and `manual` (documented: `fileCreated`, `fileDeleted`, `userTriggered`); they are not errors because whether IDE 0.x accepted them is unverified, and the IDE-generated files in the corpus use the documented names. The CLI spellings `SessionEnd`, `AgentSpawn`, `userPromptSubmit` and `stop` get the KR-HK-014 hint instead. A non-string event is reported by KR-HK-026. The diagnostic points at the `when.type` value.
+**Fix**: [AUTO-FIX, unsafe] Replace `fileCreate` / `fileDelete` / `manual` with the documented name, on the exact value span. Unsafe because the IDE's handling of the old spelling is unverified. Other unknown events are fixed manually (for example `promptSubmit` instead of `userPrompt`).
+**Source**: kiro.dev/docs/ide/0x-reference, kiro.dev/docs/ide/whats-new-v1/hooks
 
 <a id="kr-hk-002"></a>
 ### KR-HK-002 [HIGH] File Event Hook Missing Patterns
-**Requirement**: File-based IDE hooks MUST include `patterns`
-**Detection**: `event` is `fileEdited`, `fileCreate`, or `fileDelete` and `patterns` is missing/empty
-**Fix**: Add one or more glob patterns in `patterns`
-**Source**: kiro.dev/docs/hooks/types
+**Requirement**: File event IDE hooks MUST include `when.patterns`
+**Detection**: The event is `fileEdited`, `fileCreated` or `fileDeleted` (or the tolerated `fileCreate` / `fileDelete`) and `when.patterns` is missing or has only blank entries. A `patterns` value of the wrong type is reported by KR-HK-026 instead.
+**Fix**: Add one or more patterns in `when.patterns`
+**Source**: kiro.dev/docs/ide/0x-reference
 
 <a id="kr-hk-003"></a>
 ### KR-HK-003 [HIGH] IDE Hook Missing Action
-**Requirement**: IDE hooks MUST define at least one action (`runCommand` or `askAgent`)
-**Detection**: Both top-level and nested `then` action fields are missing
-**Fix**: Add `runCommand` or `askAgent`
-**Source**: kiro.dev/docs/hooks/actions
+**Requirement**: IDE hooks MUST define an action: `then.prompt` (askAgent) or `then.command` (runCommand)
+**Detection**: Neither `then.command` / `then.runCommand` / `runCommand` nor `then.prompt` / `then.askAgent` / `askAgent` has non-blank text. Action fields of the wrong type are reported by KR-HK-026 instead.
+**Fix**: Add a `then` block with a prompt or a command
+**Source**: kiro.dev/docs/ide/0x-reference
 
 <a id="kr-hk-004"></a>
 ### KR-HK-004 [MEDIUM] Tool Hook Missing toolTypes Filter
-**Requirement**: `preToolUse`/`postToolUse` hooks SHOULD specify `toolTypes`
-**Detection**: Tool hook event has no `toolTypes` filter
-**Fix**: Add `toolTypes` to narrow hook scope
-**Source**: kiro.dev/docs/hooks/types
-
-<a id="kr-hk-007"></a>
-### KR-HK-007 [MEDIUM] Hook Timeout Out of Range
-**Requirement**: Hook timeout SHOULD be between 1 and 300,000 milliseconds
-**Detection**: Check timeout value is within valid range
-**Fix**: No auto-fix (set to a valid timeout)
-**Source**: kiro.dev/docs/hooks
-
-<a id="kr-hk-008"></a>
-### KR-HK-008 [MEDIUM] Duplicate Event Handlers
-**Requirement**: Hook files SHOULD NOT duplicate the same event+pattern combination
-**Detection**: Cross-file analysis (project-level check)
-**Fix**: No auto-fix (remove duplicate handlers)
-**Source**: kiro.dev/docs/hooks
+**Requirement**: `preToolUse`/`postToolUse` hooks SHOULD name the tools they match in `when.patterns` (the IDE 0.x reference says tool events match `when.patterns` against the tool name; the hooks best practices ask for precise tool matchers)
+**Detection**: Tool hook event has no non-blank `when.patterns`. The undocumented `when.toolTypes` key is still accepted because real IDE files use it.
+**Fix**: Add `when.patterns` with the tool names to match. The V3 counterpart is KR-HK-027.
+**Source**: kiro.dev/docs/ide/0x-reference, kiro.dev/docs/hooks/best-practices
 
 <a id="kr-hk-009"></a>
-### KR-HK-009 [MEDIUM] Command Uses Absolute Path
-**Requirement**: Hook commands SHOULD use relative paths for portability
-**Detection**: Check if command starts with `/` or drive letter
-**Fix**: No auto-fix (use relative paths)
+### KR-HK-009 [LOW] Command Uses Absolute Path
+**Requirement**: IDE hook commands SHOULD avoid machine-specific absolute paths. This is an agnix portability heuristic: Kiro does not require relative paths, it runs command actions "in your project root", so relative paths work on every checkout. (Windsurf's docs recommend absolute paths for its own hooks; this rule is not applied to other tools.)
+**Detection**: Info when the run command starts with `/` or a drive letter; the diagnostic points at the command value
+**Fix**: No auto-fix (use relative paths or a tool on PATH)
 **Source**: kiro.dev/docs/hooks
 
 <a id="kr-hk-010"></a>
 ### KR-HK-010 [HIGH] Secrets in Hook Command
-**Requirement**: Hook commands MUST NOT contain hardcoded credentials
-**Detection**: Scan command for secret patterns (API keys, tokens, passwords)
+**Requirement**: IDE hook commands MUST NOT contain hardcoded credentials
+**Detection**: A token prefix that starts a word and is followed by a token-shaped body (`sk-` with 16+ characters, `ghp_` / `gho_` / `github_pat_` with 30+, `xoxb-` / `xoxp-` with 10+, `glpat-` with 20+, `AKIA` + 16 uppercase characters), or a literal value after `api_key=`, `apikey=`, `api-key=`, `token=`, `password=`, `secret=` or `Bearer `. Values that are references (`$VAR`, `${VAR}`, `$(cmd)`, `%VAR%`, `<...>`, `{{...}}`) or shorter than 8 characters are not secrets, so `flask-lint`, `task-check` and `--token=$DEPLOY_TOKEN` are not reported.
 **Fix**: No auto-fix (use environment variables)
-**Source**: kiro.dev/docs/hooks
+**Source**: kiro.dev/docs/mcp/security ("Never hardcode API keys or tokens in configuration files"), kiro.dev/docs/ide/0x-reference. The hooks pages say nothing about secrets.
+
+<a id="kr-hk-016"></a>
+### KR-HK-016 [HIGH] V3 Hook File Saved as .kiro.hook
+**Requirement**: v1 hook documents MUST be saved as `.kiro/hooks/*.json`
+**Detection**: A `.kiro.hook` file has a `hooks` array, or a v1 `trigger` / `action`, and no IDE 0.x `when` / `then` / `event` fields. Kiro CLI V3 and IDE 1.0 load v1 hooks only from `.json` files, so these hooks never run. No other IDE hook rule is reported for the file.
+**Fix**: No auto-fix (rename the file to `.json`)
+**Source**: kiro.dev/docs/hooks, kiro.dev/docs/ide/whats-new-v1/hooks
+
+<a id="kr-hk-026"></a>
+### KR-HK-026 [HIGH] Invalid Kiro IDE Hook File
+**Requirement**: An IDE hook file MUST be a JSON object whose fields have the documented types
+**Detection**: Error for invalid JSON or a non-object document. Warning, at the offending value, for `when` / `then` that are not objects, `when.type` and command or prompt fields that are not strings, `patterns` / `toolTypes` that are not arrays of strings, and a `timeout` / `then.timeout` that is not a number or is negative (the IDE documents `timeout` in seconds, example 10; 0 is allowed and there is no upper bound). The remaining checks still run. (JSON syntax and type errors were previously reported as KR-HK-001; the former millisecond range check for legacy timeouts is retired.)
+**Fix**: No auto-fix (repair the JSON)
+**Source**: kiro.dev/docs/ide/0x-reference
+
+---
+
+## KIRO V3 HOOK RULES
+
+Kiro CLI V3 (opt-in in CLI 2.x with `kiro-cli --v3`, the default from CLI 3.0) and Kiro IDE 1.0 load `.kiro/hooks/*.json` in the workspace and, for the CLI, `~/.kiro/hooks/*.json`: `{ "version": "v1", "hooks": [ { "name", "trigger", "matcher"?, "action": { "type": "command" | "agent", "command" | "prompt" }, "timeout"?, "enabled"?, "description"?, "confirm"? } ] }`. Kiro CLI 2.x does not load these files. The engine reads each file with strict `JSON.parse` (no comments; the last copy of a duplicate key wins) and validates the whole document with one schema: a single malformed hook makes Kiro skip the whole file ("Hook file does not match v2 schema"), while an unrecognized trigger name skips only that hook. Unknown keys are stripped silently. Every diagnostic points at the offending key or value. These rules follow the V3 engine bundled with kiro-cli 2.32.1 (`@kiro/agent` 0.66.48) where it is more precise than the docs.
 
 <a id="kr-hk-011"></a>
-### KR-HK-011 [MEDIUM] Invalid Kiro V3 Hook Document Version
-**Requirement**: A standalone `.kiro/hooks/*.json` document MUST set `version` to the documented `"v1"` value
-**Detection**: Top-level `version` is missing or not `"v1"`
-**Fix**: [AUTO-FIX, unsafe] Replace only decoded version strings `"1"` or `"1.0"` with `"v1"`. This can activate previously ignored hooks. Missing, numeric, and future versions require manual review.
+### KR-HK-011 [HIGH] Invalid Kiro V3 Hook Document Version
+**Requirement**: A standalone hook file MUST set `version` to the string `"v1"`; any other value makes Kiro skip the whole file
+**Detection**: Error when `version` is missing, not a string, or not exactly `"v1"`. Not reported when the file also has no `hooks` array (KR-HK-012 covers it) or is a legacy when/then document (KR-HK-015 covers it).
+**Fix**: [AUTO-FIX, unsafe] Replace only the decoded version strings `"1"` or `"1.0"` with `"v1"`, on the exact top-level value span and only when `version` is not duplicated. Unsafe because it activates hooks Kiro currently skips. Numeric, missing, legacy (`"1.0.0"`) and future versions are not guessed.
 **Source**: kiro.dev/docs/hooks, kiro.dev/docs/cli/v3/hooks-migration
 
 <a id="kr-hk-012"></a>
 ### KR-HK-012 [HIGH] Invalid Kiro V3 Hook Entry
-**Requirement**: Each hook in a `.kiro/hooks/*.json` document MUST have a `name`, a documented PascalCase `trigger` (camelCase CLI 2.x aliases accepted), and an `action`; the document MUST contain a `hooks` array
-**Detection**: Missing `name`/`trigger`/`action`, unknown trigger name, missing `hooks` array, or invalid JSON. `Manual` is a documented trigger and is accepted; this does not imply CLI V3 provides a `/hooks` invoke action.
-**Fix**: Manual - correct the trigger name and required fields
+**Requirement**: A hook file MUST be a JSON object with a non-empty `hooks` array of objects, and each hook MUST have a non-empty string `name`, a recognized `trigger` and an `action` object
+**Detection**: Invalid JSON (with serde's line and column); a non-object document; `hooks` missing, not an array or empty; a bare hook definition without the wrapper; an entry that is not an object; `name` / `trigger` missing, not a string or empty (whitespace-only passes the schema); `action` missing (with a hint when `command` or `prompt` sits at the hook level). These skip the whole file. An unrecognized trigger name skips only that hook: the lookup is exact and case-sensitive over SessionStart, SessionEnd, Stop, PreToolUse, PostToolUse, PreTaskExec, PostTaskExec, UserPromptSubmit, PostFileCreate, PostFileSave, PostFileDelete, Manual and the aliases sessionStart, agentSpawn, agentStop, stop, promptSubmit, userPromptSubmit, preToolUse, postToolUse, preTaskExecution, postTaskExecution, fileEdited, AfterFileEdit, fileCreated, fileDeleted and userTriggered. `AgentSpawn` is not accepted, although the hook-types docs say it is.
+**Fix**: [AUTO-FIX, unsafe] An unrecognized trigger that matches a canonical name or alias ignoring case (for example `AgentSpawn`, `postfilesave`) is replaced with the canonical name. Unsafe because the hook starts running.
 **Source**: kiro.dev/docs/hooks, kiro.dev/docs/hooks/types, kiro.dev/docs/cli/v3/hooks-migration
 
 <a id="kr-hk-013"></a>
 ### KR-HK-013 [HIGH] Invalid Kiro V3 Hook Action
-**Requirement**: `action.type` MUST be `command` (with a non-empty `command`) or `agent` (with a non-empty `prompt`); optional `timeout` is seconds, `0` disables it
-**Detection**: Unknown/missing `action.type`, empty command/prompt payload, or an out-of-range/negative timeout
-**Fix**: Manual - use a documented action type and payload
+**Requirement**: `action.type` MUST be `command` (with a non-empty string `command`) or `agent` (with a non-empty string `prompt`)
+**Detection**: Error, because Kiro skips the whole file, when `action` is not an object, `type` is missing, not a string or another value, or the matching payload is missing, not a string or empty. Warning when the payload contains only whitespace (it passes the schema but does nothing). The timeout check moved to KR-HK-017.
+**Fix**: [AUTO-FIX, unsafe] `type` values `runCommand` / `askAgent` (IDE 0.x spellings) and case variants of `command` / `agent` are replaced when the matching `command` / `prompt` field is present. Unsafe because it activates the file.
 **Source**: kiro.dev/docs/hooks, kiro.dev/docs/hooks/actions
-
----
 
 <a id="kr-hk-014"></a>
 ### KR-HK-014 [LOW] Kiro Hook Migration and Canonical Trigger Hint
-**Requirement**: Prefer canonical trigger names when editing V3 hooks; supported aliases remain valid. Legacy IDE manual hooks may stay in their original format.
-**Detection**: In standalone `.kiro/hooks/*.json`, advise `AgentSpawn` / `agentSpawn` → `SessionStart`, `userPromptSubmit` → `UserPromptSubmit`, `preToolUse` → `PreToolUse`, `postToolUse` → `PostToolUse`, and `stop` → `Stop`. In legacy `.kiro.hook` files, advise migration for CLI-only spellings `SessionEnd`, `AgentSpawn`, `userPromptSubmit`, and `stop` only when no parsed, enabled `v1` sibling contains the same canonical trigger and action. Unrelated, disabled, or invalid siblings do not suppress the hint; an unreadable directory is inconclusive. Lowercase `agentSpawn` and legacy manual `userTriggered` are not misplaced-CLI hints.
-**Fix**: [AUTO-FIX, safe] Normalize compatible trigger aliases in standalone V3 JSON using exact structural string spans. Legacy file migration is manual; do not rename a file or convert an IDE hook automatically.
+**Requirement**: Prefer canonical trigger names when editing V3 hooks; the accepted aliases remain valid. Legacy IDE manual hooks may stay in their original format.
+**Detection**: In standalone `.kiro/hooks/*.json`, any accepted alias (see KR-HK-012) gets an info diagnostic naming its canonical trigger. In legacy `.kiro.hook` files, advise migration for the CLI-only spellings `SessionEnd`, `AgentSpawn`, `userPromptSubmit` and `stop` only when no parsed, enabled `v1` sibling contains the same canonical trigger and action. Unrelated, disabled, or invalid siblings do not suppress the hint; an unreadable directory is inconclusive. Lowercase `agentSpawn` and legacy manual `userTriggered` are not misplaced-CLI hints.
+**Fix**: [AUTO-FIX, safe] Replace the alias with its canonical name using the exact structural string span (never when the trigger or a containing key is duplicated). Safe because the engine resolves the alias to that canonical name before anything else, and the stdin payload already carries the canonical name. Legacy file migration is manual; do not rename a file or convert an IDE hook automatically.
 **Source**: kiro.dev/docs/hooks/types, kiro.dev/docs/ide/whats-new-v1/hooks, kiro.dev/docs/custom-agents/configuration-reference
+
+<a id="kr-hk-015"></a>
+### KR-HK-015 [HIGH] Legacy IDE Hook Saved as a V3 Hook File
+**Requirement**: `.kiro/hooks/*.json` files MUST use the v1 format; Kiro CLI V3 and IDE 1.0 skip a legacy IDE `when` / `then` document saved there
+**Detection**: A `.json` hook file with no `hooks` array and a top-level `when` or `then`, or a `hooks` entry with `when` / `then` and no `trigger` / `action` (the "Current format (1.0)" example on the IDE 0.x reference page has this shape and is wrong). One diagnostic replaces the former KR-HK-011 plus KR-HK-012 pair.
+**Fix**: No auto-fix. Rename the file to `.kiro.hook` to keep it as a legacy IDE hook (IDE 1.0 offers to upgrade it), or convert it: `when.type` becomes `trigger` (for example `fileEdited` becomes `PostFileSave`), `when.patterns` becomes a regex `matcher`, and `then` becomes `action`.
+**Source**: kiro.dev/docs/hooks, kiro.dev/docs/ide/whats-new-v1/hooks, kiro.dev/docs/ide/0x-reference
+
+<a id="kr-hk-017"></a>
+### KR-HK-017 [HIGH] Invalid Kiro V3 Hook Field Value
+**Requirement**: `description` and `matcher` MUST be strings, `enabled` MUST be a boolean, and `timeout` MUST be a non-negative whole number of seconds (default 60, `0` disables it)
+**Detection**: Error, because Kiro skips the whole file, for any other type, a fractional or a negative timeout. There is no upper bound: the engine passes `timeout` x 1000 ms to the process runner (agnix's former 3,600-second ceiling had no vendor basis and was removed). `timeout` is ignored for agent actions.
+**Fix**: [AUTO-FIX, unsafe] `"true"` / `"false"` strings in `enabled` become booleans and plain integer strings in `timeout` become numbers. Unsafe because the file starts loading.
+**Source**: kiro.dev/docs/hooks
+
+<a id="kr-hk-018"></a>
+### KR-HK-018 [HIGH] Invalid Kiro V3 Hook Confirm Block
+**Requirement**: `confirm` MUST be an object with a non-empty string `question` and a non-empty `options` array of `{ "id": non-empty string, "label": non-empty string, "run": boolean, "continueReason"?: string }`, plus an optional non-empty string `confirmCommand`
+**Detection**: Error (Kiro skips the whole file) for any shape violation. Warning when a valid `confirm` sits on a hook that is not a Stop hook with a command action, where Kiro ignores it.
+**Fix**: No auto-fix
+**Source**: kiro.dev/docs/hooks
+
+<a id="kr-hk-019"></a>
+### KR-HK-019 [HIGH] Kiro V3 Hook Matcher Is Not a Valid Regex
+**Requirement**: A hook `matcher` MUST compile as a JavaScript regular expression, unless it is a glob selector on a tool trigger
+**Detection**: The matcher fails to compile with ECMAScript syntax (checked with the `regress` engine, which never rejects a pattern V8 accepts). On PreToolUse / PostToolUse a matcher without the metacharacters `\ ^ $ ( ) [ ] { } | +` that contains `*` or `?` is kept as a glob selector and is not reported. Otherwise the engine logs "Hook matcher regex failed to compile" and the hook never fires, on any trigger. The usual cause is a glob such as `*.ts` or `src/**` on a file trigger.
+**Fix**: No auto-fix (write a regex such as `\.ts$`)
+**Source**: kiro.dev/docs/hooks, kiro.dev/docs/hooks/types
+
+<a id="kr-hk-020"></a>
+### KR-HK-020 [MEDIUM] Kiro V3 Hook Matcher Has No Effect
+**Requirement**: A `matcher` SHOULD only be set on triggers that use it: PreToolUse, PostToolUse, PostFileCreate, PostFileSave and PostFileDelete
+**Detection**: Warning for a non-empty, compilable matcher on any other trigger. The engine ignores it (logging "Hook matcher has no effect for this trigger") and the hook runs on every event; the hook-types page says "Stop Hooks do not use matchers." The IDE 1.0 page says UserPromptSubmit matches the prompt text; the engine does not. A matcher that does not compile disables the hook on any trigger (KR-HK-019).
+**Fix**: No auto-fix (remove the matcher or filter inside the command)
+**Source**: kiro.dev/docs/hooks, kiro.dev/docs/hooks/types
+
+<a id="kr-hk-021"></a>
+### KR-HK-021 [MEDIUM] Kiro V3 Tool Matcher Uses Non-V3 Tool Names
+**Requirement**: Tool trigger matchers SHOULD use V3 tool ids or tags
+**Detection**: Warning when a PreToolUse / PostToolUse matcher cannot match any V3 built-in tool id or tag under the V3 rules (a selector-shaped matcher matches ids or tags, with `*` / `?` globs and the execute_bash / execute_pwsh equivalence, and is also an unanchored regex over ids; any other matcher is only a regex over ids) and names Kiro CLI 2.x tools (`fs_read`, `execute_cmd`, `use_aws`, `aws`, `glob`, ...; the hook-types page: "V3 does not expand CLI 2.x tool names") or Claude Code tools (`Bash`, `Write`, `Edit`, `Task`, ...). Matchers that mention `@` or `mcp_` (MCP selectors and ids) are not checked.
+**Fix**: No auto-fix (use ids such as `read_file`, `fs_write`, `execute_bash` or tags such as `read`, `write`, `shell`, `@mcp`)
+**Source**: kiro.dev/docs/hooks/types, kiro.dev/docs/cli/v3/hooks-migration
+
+<a id="kr-hk-022"></a>
+### KR-HK-022 [MEDIUM] Misplaced or Misspelled Kiro V3 Hook Field
+**Requirement**: Hook fields SHOULD be spelled and placed as documented; Kiro strips unknown keys silently
+**Detection**: Warning, at the key, only where dropping the key changes what the hook does: `timeout` inside `action` (the hook uses the default 60 seconds), the CLI 2.x `timeout_ms` / `timeoutMs`, the IDE 0.x `patterns` / `toolTypes` (the hook runs on every event), hook-level `command` / `prompt` / `type` next to an `action`, and case variants of documented keys such as `Matcher`. Other unknown keys are not reported.
+**Fix**: No auto-fix (move or rename the key)
+**Source**: kiro.dev/docs/hooks, kiro.dev/docs/cli/v3/hooks-migration
+
+<a id="kr-hk-023"></a>
+### KR-HK-023 [MEDIUM] Kiro V3 Hook Command Uses Unsupported Placeholder
+**Requirement**: Hook commands SHOULD read event data from the JSON on stdin; Kiro substitutes only `${WORKSPACE_ROOT}` in `action.command` and `$HOME` in `confirm.confirmCommand`, and adds only `KIRO_SESSION_ID` to the environment
+**Detection**: Warning for `{{filePath}}`-style templates (filePath, file, fileName, prompt, toolName, toolInput and their snake_case forms; the IDE 1.0 docs example uses `{{filePath}}` but the V3 engine does not substitute it), bare `$WORKSPACE_ROOT` (the shell expands it to an empty string), `${WORKSPACE_ROOT}` in `confirmCommand`, and the variables `USER_PROMPT` (set by CLI 2.x only), `FILE_PATH`, `TOOL_NAME`, `TOOL_INPUT` and `TOOL_RESPONSE`. Hook commands run in a shell, so other `$VAR` and `${VAR}` references expand from the process environment as usual.
+**Fix**: No auto-fix (for example `jq -r .file_path`)
+**Source**: kiro.dev/docs/hooks, kiro.dev/docs/hooks/actions
+
+<a id="kr-hk-024"></a>
+### KR-HK-024 [MEDIUM] Kiro V3 Hook Never Runs
+**Requirement**: Hooks SHOULD use a trigger and action combination that Kiro runs
+**Detection**: Warning for a SessionEnd hook with an agent action (SessionEnd runs only command actions, within a 5-second budget). Info for a Manual (or `userTriggered`) hook: Kiro CLI V3 lists it but `/hooks` has no action to run it.
+**Fix**: No auto-fix
+**Source**: kiro.dev/docs/hooks/types
+
+<a id="kr-hk-025"></a>
+### KR-HK-025 [LOW] Standalone Hook File Ignored by Pinned Kiro CLI 2.x
+**Requirement**: Projects that pin Kiro CLI 2.x SHOULD know that the default 2.x engine does not load `.kiro/hooks/*.json`
+**Detection**: Info once per standalone hook file when `[tool_versions] kiro` selects the 2.x engine. The file is still validated, because Kiro IDE 1.0 and the V3 engine load it.
+**Fix**: No auto-fix (define CLI 2.x hooks in an agent's `hooks` field)
+**Source**: kiro.dev/docs/hooks, kiro.dev/docs/cli/v3/hooks-migration
+
+<a id="kr-hk-027"></a>
+### KR-HK-027 [LOW] Kiro Tool Hook Without a Specific Matcher
+**Requirement**: PreToolUse / PostToolUse hooks SHOULD target specific tools ("Use precise `matcher` values ... rather than matching all tools with `"*"` when possible")
+**Detection**: Info when a tool hook's matcher is missing, empty, `*`, `**` or a match-all regex such as `.*`; the engine also warns "Hook has no matcher and will run on every tool call". Deliberate audit-everything hooks are a known false positive, hence the info level. (The legacy IDE counterpart is KR-HK-004.)
+**Fix**: No auto-fix (use a tag such as `shell` or `write`, an MCP selector such as `@github`, or an anchored regex)
+**Source**: kiro.dev/docs/hooks/best-practices, kiro.dev/docs/hooks
+
+<a id="kr-hk-028"></a>
+### KR-HK-028 [LOW] Kiro File Hook Matching Every File
+**Requirement**: File hooks SHOULD use specific file patterns ("Use specific file glob patterns (e.g., `src/**/*.ts`) rather than broad patterns that match everything")
+**Detection**: Info for a PostFileCreate / PostFileSave / PostFileDelete hook (or alias) whose matcher is missing, empty or a match-all regex such as `.*`, and for a legacy `.kiro.hook` file event whose `when.patterns` are all match-all globs (`*`, `**`, `**/*`, `**/*.*`, `*.*`). Globs such as `*` on a V3 file trigger do not compile and are KR-HK-019 errors instead; a legacy file hook with no patterns is KR-HK-002.
+**Fix**: No auto-fix (match the files the hook is for, for example `\.ts$`)
+**Source**: kiro.dev/docs/hooks/best-practices, kiro.dev/docs/hooks
+
+<a id="kr-hk-029"></a>
+### KR-HK-029 [LOW] Kiro Tool Matcher Is an Unanchored Regex
+**Requirement**: Regex tool matchers SHOULD be anchored ("A matcher that contains regex metacharacters is evaluated only as an unanchored regular expression against the tool ID. Anchor it (`^...$`) to match exactly.")
+**Detection**: Info for a PreToolUse / PostToolUse matcher in regex form (it contains one of `\ ^ $ ( ) [ ] { } | +`) with an alternation or group that does not both start with `^` and end with `$`, for example `fs_write|str_replace`, which also matches any id containing those names. Not reported when KR-HK-021 already reports the matcher, or for file triggers.
+**Fix**: No auto-fix (anchoring can break intentional substring matching such as `([Ss]hell|[Bb]ash)`)
+**Source**: kiro.dev/docs/hooks/types
+
+<a id="kr-hk-030"></a>
+### KR-HK-030 [LOW] Kiro Hook File Name Not Kebab-Case
+**Requirement**: Hook files SHOULD have descriptive kebab-case names ("Any `.json` filename works - use descriptive kebab-case names (e.g., `lint-on-save.json`, `guard-writes.json`)")
+**Detection**: Info when the file name without `.json` has uppercase letters, underscores, spaces, other characters, or empty words. Dot-separated parts such as `lint.hook.json` are accepted. Style only: Kiro loads any `.json` name.
+**Fix**: No auto-fix (rename the file)
+**Source**: kiro.dev/docs/hooks
 
 ---
 
@@ -3576,18 +3780,6 @@ Rules for the Kiro CLI settings files `~/.kiro/settings/cli.json` (global, `$KIR
 **Fix**: No auto-fix - move the key to the global file.
 **Source**: kiro.dev/docs/reference/settings
 
-
-<a id="kr-set-012"></a>
-### KR-SET-012 [MEDIUM] Kiro CLI Settings in Legacy .kiro/settings.json
-**Requirement**: Kiro CLI settings SHOULD live in `.kiro/settings/cli.json` or `~/.kiro/settings/cli.json`; Kiro CLI 1.23 saved the default model to `~/.kiro/settings.json`, which current versions do not read.
-**Detection**: Warn when a `.kiro/settings.json` routed to the settings validator contains at least one Kiro CLI setting key; such a file of another tool (editor preferences) is not reported. The remaining KR-SET rules then check its values.
-**Fix**: No auto-fix - move the settings to cli.json (for example with `kiro-cli settings --workspace <key> <value>`).
-**Source**: kiro.dev/docs/reference/settings, kiro.dev/changelog/cli/1-23/
----
-
-## KIRO WORKFLOW RULES
-
-Rules for Kiro workflow recipes (Kiro CLI V3 2.26+, IDE, Web): the top-level `*.workflow.json`, `*.workflow.yaml` and `*.workflow.yml` files of `.kiro/workflows/` and `~/.kiro/workflows/` (recipes in subdirectories or without the `.workflow` infix are never loaded: KIRO-026). The checks mirror the V3 engine's load-time validation and the documented run-time rules. An `include` node is resolved by Kiro before validation; its target is not read, so references that may come from an included recipe are not reported.
 
 <a id="kr-wf-001"></a>
 ### KR-WF-001 [HIGH] Workflow Recipe Exceeds Kiro Limits
@@ -3903,7 +4095,7 @@ Complete coverage:
 - MCP-001 through MCP-004, MCP-006 (MCP protocol)
 - PE-001 through PE-006 (Prompt engineering)
 - XP-001 through XP-008, XP-SK-001 through XP-SK-002 (Cross-platform)
-- CR-SK-001, CL-SK-001, CP-SK-001, CX-SK-001, OC-SK-001, WS-SK-001, KR-SK-001, KR-AG-001 through KR-AG-007, KR-HK-001 through KR-HK-006, KR-PW-001 through KR-PW-004, KR-MCP-001 through KR-MCP-002, AMP-SK-001, RC-SK-001 (Per-client and Kiro rules)
+- CR-SK-001, CL-SK-001, CP-SK-001, CX-SK-001, OC-SK-001, WS-SK-001, KR-SK-001, KR-AG-001 to KR-AG-006, KR-AG-008 to KR-AG-030, KR-HK-001 through KR-HK-006, KR-PW-001 through KR-PW-004, KR-MCP-001 through KR-MCP-002, AMP-SK-001, RC-SK-001 (Per-client and Kiro rules)
 - Remaining MEDIUM/LOW certainty rules
 
 ---
@@ -4009,12 +4201,18 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | OC-DEP-005 | Remove TUI keys after manual migration to tui.json | unsafe |
 | CC-SET-016 | Rename deprecated permission tool names | unsafe |
 | COP-027 | Migrate infer while preserving explicit invocation fields | unsafe |
+| KR-HK-001 | Replace fileCreate / fileDelete / manual with the documented IDE event | unsafe |
 | KR-HK-011 | Normalize version strings 1 / 1.0 to v1 | unsafe |
+| KR-HK-012 | Replace a case-mismatched trigger with its canonical name | unsafe |
+| KR-HK-013 | Replace runCommand / askAgent action types with command / agent | unsafe |
 | KR-HK-014 | Normalize supported V3 trigger aliases | safe |
 | KR-SET-001 | Convert quoted true/false to a JSON boolean | unsafe |
 | KR-SET-002 | Convert a quoted plain decimal to a JSON number | unsafe |
 | KR-SET-003 | Convert a quoted plain integer to a JSON number | unsafe |
 | KR-SET-008 | Convert a quoted boolean or integer to its JSON type | unsafe |
+| KR-HK-005 | Rename a mis-cased agent hook trigger to the accepted name | unsafe |
+| KR-AG-015 | Remove empty CLI 2.x trust fields so V3 loads the agent | unsafe |
+| KR-HK-017 | Unquote boolean enabled and integer timeout values | unsafe |
 | OC-DEP-003 | Rename `autoshare` key to `share` | safe |
 | OC-CFG-008 | Replace logLevel with closest valid value | unsafe |
 | OC-AG-006 | Replace color with closest named color | unsafe |
@@ -4061,12 +4259,12 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Cursor Skills | 1 | 0 | 1 | 0 | 1 |
 | Gemini Agents | 1 | 1 | 0 | 0 | 0 |
 | Gemini CLI | 10 | 3 | 5 | 2 | 3 |
-| Kiro Agents | 15 | 5 | 8 | 2 | 0 |
-| Kiro Hooks | 14 | 8 | 5 | 1 | 2 |
+| Kiro Agents | 29 | 11 | 15 | 3 | 1 |
+| Kiro Hooks | 28 | 15 | 6 | 7 | 7 |
 | Kiro Permissions | 12 | 6 | 5 | 1 | 0 |
 | Kiro MCP | 15 | 7 | 6 | 2 | 0 |
 | Kiro Powers | 18 | 6 | 9 | 3 | 0 |
-| Kiro Settings | 12 | 1 | 9 | 2 | 4 |
+| Kiro Settings | 11 | 1 | 8 | 2 | 4 |
 | Kiro Workflows | 9 | 7 | 2 | 0 | 0 |
 | Kiro Ignore | 1 | 0 | 1 | 0 | 0 |
 | Kiro Skills | 2 | 0 | 1 | 1 | 1 |
@@ -4082,7 +4280,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **508** | **228** | **235** | **45** | **130** |
+| **TOTAL** | **535** | **241** | **242** | **52** | **136** |
 
 
 ---
@@ -4112,8 +4310,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 508 validation rules across 43 categories
+**Total Coverage**: 535 validation rules across 43 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 228 HIGH, 235 MEDIUM, 45 LOW
-**Auto-Fixable**: 130 rules (26%)
+**Certainty**: 241 HIGH, 242 MEDIUM, 52 LOW
+**Auto-Fixable**: 136 rules (25%)

@@ -398,7 +398,7 @@ impl ValidatorRegistryBuilder {
 ///
 /// Used by `BuiltinProvider` (via `debug_assert_eq!`) and tests to catch
 /// accidental additions or removals without updating all providers.
-const EXPECTED_BUILTIN_COUNT: usize = 87;
+const EXPECTED_BUILTIN_COUNT: usize = 88;
 
 // -- Category providers -----------------------------------------------------
 //
@@ -791,6 +791,13 @@ impl ValidatorProvider for MiscProvider {
                 kiro_power_validator,
             ),
             (FileType::KiroPower, Some("XmlValidator"), xml_validator),
+            // KiroAgentsMdValidator acts only on AGENTS.md files in Kiro
+            // projects (KIRO-016, KIRO-017) and returns early elsewhere.
+            (
+                FileType::ClaudeMd,
+                Some("KiroAgentsMdValidator"),
+                kiro_agents_md_validator,
+            ),
             (
                 FileType::KiroPowerPlugin,
                 Some("KiroPowerPluginValidator"),
@@ -1061,7 +1068,12 @@ fn kiro_mcp_validator() -> Box<dyn Validator> {
 
 /// Validator for a power's `plugin.json` (`FileType::KiroPowerPlugin`).
 fn kiro_power_plugin_validator() -> Box<dyn Validator> {
-    Box::new(KiroPowerPluginValidator)
+    Box::new(crate::rules::kiro_power::KiroPowerPluginValidator)
+}
+
+/// Kiro checks for AGENTS.md (`FileType::ClaudeMd`).
+fn kiro_agents_md_validator() -> Box<dyn Validator> {
+    Box::new(crate::rules::kiro_steering::KiroAgentsMdValidator)
 }
 
 fn kiro_workflow_validator() -> Box<dyn Validator> {
@@ -1074,30 +1086,6 @@ fn kiro_ignore_validator() -> Box<dyn Validator> {
 
 fn kiro_not_loaded_validator() -> Box<dyn Validator> {
     Box::new(crate::rules::kiro_not_loaded::KiroNotLoadedValidator)
-}
-
-/// Placeholder for the Kiro power `plugin.json` (Agent Plugins manifest)
-/// validator. It reserves the registry slot for `FileType::KiroPowerPlugin`
-/// so those manifests stop reaching the Claude and Codex plugin validators,
-/// and emits nothing. Replace the factory above with the real validator.
-struct KiroPowerPluginValidator;
-
-impl Validator for KiroPowerPluginValidator {
-    fn metadata(&self) -> crate::rules::ValidatorMetadata {
-        crate::rules::ValidatorMetadata {
-            name: self.name(),
-            rule_ids: &[],
-        }
-    }
-
-    fn validate_per_file(
-        &self,
-        _path: &std::path::Path,
-        _content: &str,
-        _config: &crate::config::PerFileLintConfig<'_>,
-    ) -> Vec<crate::diagnostics::Diagnostic> {
-        Vec::new()
-    }
 }
 
 #[cfg(test)]
@@ -1735,17 +1723,19 @@ mod tests {
     }
 
     #[test]
-    fn kiro_power_plugin_placeholder_emits_nothing() {
+    fn kiro_power_plugin_validator_reports_invalid_manifest() {
         let registry = ValidatorRegistry::with_defaults();
         let config = crate::config::LintConfig::default();
         let path = std::path::Path::new(".kiro/powers/installed/x/plugin.json");
-        for validator in registry.validators_for(FileType::KiroPowerPlugin) {
-            assert!(
-                validator
-                    .validate_per_file(path, "{\"name\": 1}", &config.for_path(path))
-                    .is_empty()
-            );
-        }
+        let diagnostics: Vec<_> = registry
+            .validators_for(FileType::KiroPowerPlugin)
+            .iter()
+            .flat_map(|v| v.validate_per_file(path, "{\"name\": 1}", &config.for_path(path)))
+            .collect();
+        assert!(
+            diagnostics.iter().any(|d| d.rule.starts_with("KR-PW-")),
+            "{diagnostics:?}"
+        );
     }
 
     // ---- Caching correctness tests ----
@@ -2188,10 +2178,10 @@ mod tests {
 
     #[test]
     fn misc_provider_count() {
-        // 37: Kiro hooks and powers dropped four Imports/CrossPlatform entries
-        // and gained power plugin, power steering, workflow, ignore-file and
-        // not-loaded entries.
-        assert_eq!(MiscProvider.named_validators().len(), 37);
+        // 38: Kiro hooks and powers dropped four Imports/CrossPlatform entries
+        // and gained power plugin, power steering, workflow, ignore-file,
+        // not-loaded and Kiro AGENTS.md entries.
+        assert_eq!(MiscProvider.named_validators().len(), 38);
     }
 
     #[test]

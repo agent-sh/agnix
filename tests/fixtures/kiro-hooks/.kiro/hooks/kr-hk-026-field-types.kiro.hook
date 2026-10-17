@@ -1,0 +1,6 @@
+{
+  "name": "Lint docs",
+  "version": "1",
+  "when": { "type": "fileEdited", "patterns": "docs/**/*.md" },
+  "then": { "type": "askAgent", "prompt": "Check the edited docs for broken links." }
+}

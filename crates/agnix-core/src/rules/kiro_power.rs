@@ -61,7 +61,6 @@ const RULE_IDS: &[&str] = &[
 ];
 
 // Used once the integrator routes plugin.json powers to KiroPowerPluginValidator.
-#[allow(dead_code)]
 const PLUGIN_RULE_IDS: &[&str] = &[
     "KR-PW-006",
     "KR-PW-009",
@@ -82,7 +81,6 @@ fn power_name_pattern() -> &'static Regex {
 }
 
 // Used once the integrator routes plugin.json powers to KiroPowerPluginValidator.
-#[allow(dead_code)]
 fn plugin_schema_pattern() -> &'static Regex {
     static RE: OnceLock<Regex> = OnceLock::new();
     RE.get_or_init(|| {
@@ -391,11 +389,9 @@ impl Validator for KiroPowerValidator {
 /// Validates an Agent Plugins `plugin.json` power manifest. Works for any
 /// path: the power root is the manifest's directory.
 // Used once the integrator routes plugin.json powers to KiroPowerPluginValidator.
-#[allow(dead_code)]
 pub struct KiroPowerPluginValidator;
 
 // Used once the integrator routes plugin.json powers to KiroPowerPluginValidator.
-#[allow(dead_code)]
 fn json_type_name(value: &Value) -> &'static str {
     match value {
         Value::Null => "null",
@@ -408,7 +404,6 @@ fn json_type_name(value: &Value) -> &'static str {
 }
 
 // Used once the integrator routes plugin.json powers to KiroPowerPluginValidator.
-#[allow(dead_code)]
 struct Manifest<'a> {
     path: &'a Path,
     content: &'a str,
@@ -416,7 +411,6 @@ struct Manifest<'a> {
 }
 
 // Used once the integrator routes plugin.json powers to KiroPowerPluginValidator.
-#[allow(dead_code)]
 impl Manifest<'_> {
     /// The last member with `key` (JSON.parse keeps the last duplicate).
     fn member(&self, key: &str) -> Option<&JsonMember> {
