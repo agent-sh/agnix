@@ -1748,7 +1748,9 @@ impl<'a> ValidationContext<'a> {
     /// is Claude Code's field set; the CC-SK family is gated to Claude Code
     /// skills at the dispatch (other clients use the per-client skill validator).
     fn validate_cc_unknown_frontmatter_fields(&mut self) {
-        if !self.config.is_rule_enabled("CC-SK-017") {
+        if !self.config.is_rule_enabled("CC-SK-017")
+            || !crate::rules::per_client_skill::claude_field_rule_applies(self.client, self.config)
+        {
             return;
         }
 

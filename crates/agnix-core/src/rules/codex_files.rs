@@ -42,14 +42,16 @@ fn user_home() -> Option<PathBuf> {
     None
 }
 
-/// Whether `dir` is the user's Codex home directory.
-pub(crate) fn is_codex_home(dir: &Path) -> bool {
-    codex_home().is_some_and(|home| same_dir(dir, &home))
+/// Whether `dir` is the user's Codex home directory. Symlinks resolve
+/// through `fs`, so a mock or LSP file system answers the same way the rest
+/// of the pipeline sees the tree.
+pub(crate) fn is_codex_home(dir: &Path, fs: &dyn crate::fs::FileSystem) -> bool {
+    codex_home().is_some_and(|home| same_dir(dir, &home, fs))
 }
 
-fn same_dir(a: &Path, b: &Path) -> bool {
+fn same_dir(a: &Path, b: &Path, fs: &dyn crate::fs::FileSystem) -> bool {
     a == b
-        || match (std::fs::canonicalize(a), std::fs::canonicalize(b)) {
+        || match (fs.canonicalize(a), fs.canonicalize(b)) {
             (Ok(a), Ok(b)) => a == b,
             _ => false,
         }
@@ -500,7 +502,7 @@ impl Validator for CodexPromptValidator {
             .find(|dir| dir.file_name().and_then(|n| n.to_str()) == Some(".codex"))
             .map(Path::to_path_buf)
             .unwrap_or_default();
-        let in_home = is_codex_home(&dot_codex);
+        let in_home = is_codex_home(&dot_codex, config.fs().as_ref());
         let message = if nested {
             t!("rules.cdx_dep_001.nested")
         } else if !in_home && !dot_codex.as_os_str().is_empty() && codex_home().is_some() {
@@ -1100,6 +1102,19 @@ x = "prefix_rule(pattern = ['sh'])"
             nested[0].level,
             crate::diagnostics::DiagnosticLevel::Warning
         );
+    }
+
+    #[test]
+    fn same_dir_resolves_symlinks_through_the_injected_file_system() {
+        // Neither path exists on disk; only the mock knows the symlink.
+        let fs = MockFileSystem::new();
+        fs.add_dir("/agnix-mock-home/.codex");
+        fs.add_symlink("/agnix-mock-links/codex", "/agnix-mock-home/.codex");
+        let link = Path::new("/agnix-mock-links/codex");
+        let home = Path::new("/agnix-mock-home/.codex");
+        assert!(same_dir(link, home, &fs));
+        assert!(!same_dir(link, home, &crate::fs::RealFileSystem));
+        assert!(!same_dir(Path::new("/agnix-mock-other"), home, &fs));
     }
 
     fn skill(name: &str, description_len: usize) -> String {

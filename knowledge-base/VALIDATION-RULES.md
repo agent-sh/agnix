@@ -361,7 +361,7 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 <a id="cc-sk-017"></a>
 ### CC-SK-017 [MEDIUM] Unknown Frontmatter Field
 **Requirement**: Skill frontmatter SHOULD only use recognized Claude Code fields. **Claude Code skills only** - other clients' field support is checked by the per-client skill validator (CL-SK/CX-SK/OC-SK/WS-SK). Known fields include the documented `when_to_use`, `arguments`, and `disallowed-tools`.
-**Detection**: skill client is Claude Code AND frontmatter contains a field not in the Claude Code skill schema
+**Detection**: frontmatter contains a field not in the Claude Code skill schema, on a skill Claude Code reads: one in a Claude Code location (`.claude/skills/`, a Claude plugin's `skills/`), or one outside every client directory when the run selects Claude Code (`tools` or `--target`). Claude Code loads skills only from its own locations, so in an unscoped run a skill elsewhere may belong to any tool (KiroCrew reads `triggers`, pi skills carry `version`); its non-universal fields get the XP-SK-001 note instead.
 **Fix**: Manual fix required - remove unknown field or correct typo
 **Source**: code.claude.com/docs/en/skills
 
@@ -5204,7 +5204,7 @@ agent: reviewer
 <a id="xp-sk-001"></a>
 ### XP-SK-001 [LOW] Skill Uses Client-Specific Features
 **Requirement**: Skills SHOULD keep client-specific frontmatter out of the top level for portability: the spec defines `metadata` so "Clients can use this to store additional properties not defined by the Agent Skills spec", and the reference validator (skills-ref) reports "Unexpected fields in frontmatter" for any other top-level key.
-**Detection**: Skill frontmatter uses a top-level field outside the Agent Skills set (`name`, `description`, `license`, `compatibility`, `metadata`, `allowed-tools`). Not reported on Claude Code skills, nor on Kiro skills while KR-SK-001 is enabled, which reports the same fields. A field the reading client's own rule reports is reported once, by that rule: the per-client rule (CR-SK-001, CL-SK-001, CP-SK-001, CX-SK-001, OC-SK-001, WS-SK-001, AMP-SK-001) for a field the client ignores, and CC-SK-017 for a field Claude Code does not know on a skill outside any client directory (since 0.59.0; both used to report the same key).
+**Detection**: Skill frontmatter uses a top-level field outside the Agent Skills set (`name`, `description`, `license`, `compatibility`, `metadata`, `allowed-tools`). Not reported on Claude Code skills, nor on Kiro skills while KR-SK-001 is enabled, which reports the same fields. A field the reading client's own rule reports is reported once, by that rule: the per-client rule (CR-SK-001, CL-SK-001, CP-SK-001, CX-SK-001, OC-SK-001, WS-SK-001, AMP-SK-001) for a field the client ignores, and CC-SK-017 for a field Claude Code does not know on a skill outside any client directory when the run selects Claude Code (since 0.59.0; both used to report the same key). Unscoped, such a skill has no known reader, so XP-SK-001 reports its non-universal fields.
 **Fix**: No auto-fix - remove the field or move it under `metadata`
 **Source**: agentskills.io/specification, agentskills/agentskills skills-ref validator.py
 

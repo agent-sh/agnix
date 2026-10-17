@@ -376,16 +376,16 @@ fn test_kr_mcp_006_client_id_is_optional_for_dcr() {
 
 #[test]
 fn test_kr_mcp_006_semantic_problems() {
-    for oauth in [
+    for block in [
         r#"{"clientId": ""}"#,
         r#"{"clientSecret": "secret"}"#,
         r#"{"clientId": "id", "clientSecret": ""}"#,
     ] {
         let content = server(&format!(
-            r#""url": "https://example.com/mcp", "oauth": {oauth}"#
+            r#""url": "https://example.com/mcp", "oauth": {block}"#
         ));
         let d = only(&validate(&content), "KR-MCP-006");
-        assert_eq!(d.level, DiagnosticLevel::Warning, "{oauth}");
+        assert_eq!(d.level, DiagnosticLevel::Warning, "{block}");
     }
     let d = only(
         &validate(&server(

@@ -39,9 +39,13 @@ cases:
     expected: [CC-SK-016]
     description: "Indexed $ARGUMENTS[n] without argument-hint triggers CC-SK-016"
 
-  - file: fixtures/invalid/skills/unknown-frontmatter-field/SKILL.md
+  - file: fixtures/invalid/claude-skills/.claude/skills/unknown-frontmatter-field/SKILL.md
     expected: [CC-SK-017]
-    description: "Unknown frontmatter field triggers CC-SK-017 (XP-SK-001 leaves a field CC-SK-017 reports to it)"
+    description: "Unknown frontmatter field in a Claude Code skill triggers CC-SK-017"
+
+  - file: fixtures/invalid/skills/unknown-frontmatter-field/SKILL.md
+    expected: [XP-SK-001]
+    description: "Outside every client directory an unscoped skill has no known reader: XP-SK-001 notes the field instead of CC-SK-017"
 
   - file: fixtures/invalid/skills/invalid-model/SKILL.md
     expected: [AS-017, CC-SK-001, XP-SK-001]

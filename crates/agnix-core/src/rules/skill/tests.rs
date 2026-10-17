@@ -3670,6 +3670,55 @@ Body"#;
 }
 
 #[test]
+fn test_cc_sk_017_only_where_claude_code_reads_the_skill() {
+    // A skill outside every client directory may belong to any tool (KiroCrew
+    // reads `triggers`, pi skills carry `version`): in an unscoped run its
+    // extra fields get the XP-SK-001 note, not a Claude Code warning.
+    let content = r#"---
+name: bootstrap
+description: Use when bootstrapping a project
+triggers: bootstrap, project setup
+---
+Body"#;
+    let path = Path::new("integrations/kirocrew/skills/bootstrap/SKILL.md");
+    let unscoped =
+        crate::rules::Validator::validate(&SkillValidator, path, content, &LintConfig::default());
+    assert!(
+        unscoped.iter().all(|d| d.rule != "CC-SK-017"),
+        "{unscoped:?}"
+    );
+    let note = crate::rules::per_client_skill::PerClientSkillValidator.validate(
+        path,
+        content,
+        &LintConfig::default(),
+    );
+    assert!(
+        note.iter()
+            .any(|d| d.rule == "XP-SK-001" && d.message.contains("triggers")),
+        "{note:?}"
+    );
+
+    // A run that selects Claude Code still judges the skill by Claude's fields.
+    let mut claude = LintConfig::default();
+    claude.set_tools(vec!["claude-code".to_string()]);
+    let scoped = SkillValidator.validate(path, content, &claude);
+    assert!(
+        scoped
+            .iter()
+            .any(|d| d.rule == "CC-SK-017" && d.message.contains("triggers")),
+        "{scoped:?}"
+    );
+
+    // And a skill in a Claude Code location always does.
+    let claude_path = SkillValidator.validate(
+        Path::new(".claude/skills/bootstrap/SKILL.md"),
+        content,
+        &LintConfig::default(),
+    );
+    assert!(claude_path.iter().any(|d| d.rule == "CC-SK-017"));
+}
+
+#[test]
 fn test_cc_sk_017_claude_v2_1_186_frontmatter_aliases() {
     let validator = SkillValidator;
     let content = r#"---

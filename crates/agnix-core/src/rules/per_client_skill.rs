@@ -254,6 +254,29 @@ pub(crate) fn claude_skill_rules_apply(client: SkillClient, config: &LintConfig)
     }
 }
 
+/// Whether CC-SK-017 (fields Claude Code does not know) applies: a skill in
+/// a Claude Code location, or a skill outside every client directory when the
+/// run selects Claude Code. Claude Code loads skills only from its own
+/// locations, so an unscoped skill elsewhere may belong to any tool (KiroCrew
+/// reads `triggers`, pi skills carry `version`); its non-universal fields get
+/// the XP-SK-001 portability note instead of a Claude Code warning.
+pub(crate) fn claude_field_rule_applies(client: SkillClient, config: &LintConfig) -> bool {
+    match client {
+        SkillClient::ClaudeCode => true,
+        SkillClient::Unknown => {
+            let tools = config.tools();
+            if tools.is_empty() {
+                config.target() == TargetTool::ClaudeCode
+            } else {
+                tools
+                    .iter()
+                    .any(|t| skill_client_from_tool_str(t) == Some(SkillClient::ClaudeCode))
+            }
+        }
+        _ => false,
+    }
+}
+
 /// Detect which client owns a SKILL.md based on its path components.
 ///
 /// Iterates path components looking for the `skills` directory name, then
@@ -925,11 +948,10 @@ impl Validator for PerClientSkillValidator {
         let entries = yaml_top_level_entries(&parts.frontmatter);
         let line_starts = compute_line_starts(content);
         let client_name = client_display_name(client);
-        // CC-SK-017 reports fields Claude Code does not know on skills the
-        // Claude skill rules cover (an unscoped skill outside any client
-        // directory); XP-SK-001 leaves those fields to it.
+        // CC-SK-017 reports fields Claude Code does not know on skills Claude
+        // Code reads; XP-SK-001 leaves those fields to it.
         let claude_reports_unknown =
-            config.is_rule_enabled("CC-SK-017") && claude_skill_rules_apply(client, config);
+            config.is_rule_enabled("CC-SK-017") && claude_field_rule_applies(client, config);
 
         for (key, value) in mapping {
             let Some(field) = key.as_str() else {
@@ -1954,13 +1976,29 @@ mod tests {
             "name: my-skill\ndescription: A test\nversion: 1.0.0\nmodel: opus",
             "Body",
         );
-        let diags = validate("skills/my-skill/SKILL.md", &content);
-        let xp: Vec<_> = diags.iter().filter(|d| d.rule == "XP-SK-001").collect();
-        assert_eq!(xp.len(), 1, "{diags:?}");
-        assert!(xp[0].message.contains("'model'"));
+        // With Claude Code in scope the skill is Claude Code's: CC-SK-017
+        // reports `version` and XP-SK-001 stays silent (Claude Code reads every
+        // other field).
+        let mut claude = LintConfig::default();
+        claude.set_tools(vec!["claude-code".to_string()]);
+        let diags = PerClientSkillValidator.validate(
+            Path::new("skills/my-skill/SKILL.md"),
+            &content,
+            &claude,
+        );
+        assert!(diags.iter().all(|d| d.rule != "XP-SK-001"), "{diags:?}");
 
-        // Without Claude Code in scope CC-SK-017 does not run, so XP-SK-001
-        // reports both fields.
+        // Unscoped, the skill's reader is unknown and CC-SK-017 does not run
+        // there (changed in 0.59: it used to treat such skills as Claude
+        // Code's), so XP-SK-001 reports both fields.
+        let diags = validate("skills/my-skill/SKILL.md", &content);
+        assert_eq!(
+            diags.iter().filter(|d| d.rule == "XP-SK-001").count(),
+            2,
+            "{diags:?}"
+        );
+
+        // Without Claude Code in scope CC-SK-017 does not run either.
         let mut config = LintConfig::default();
         config.set_tools(vec!["codex".to_string(), "cursor".to_string()]);
         let diags = PerClientSkillValidator.validate(
@@ -2099,9 +2137,9 @@ mod tests {
     #[test]
     fn test_unknown_custom_field_xp_fires() {
         // XP-SK-001 fires for any non-universal field, including unknown ones,
-        // when no client rule reports it. Unscoped, CC-SK-017 reports a field
-        // Claude Code does not know, so XP-SK-001 needs a scope without
-        // Claude Code here (it used to report the same key as CC-SK-017).
+        // when no client rule reports it. A skill outside every client
+        // directory has no known reader when unscoped, so CC-SK-017 does not
+        // run there and XP-SK-001 reports the field (changed in 0.59).
         let content = make_skill(
             "name: my-skill\ndescription: A test\nmy-custom-field: value",
             "Body",
@@ -2116,8 +2154,9 @@ mod tests {
             "XP-SK-001 should fire for unknown custom field"
         );
         let unscoped = validate("SKILL.md", &content);
-        assert!(
-            unscoped.iter().all(|d| d.rule != "XP-SK-001"),
+        assert_eq!(
+            unscoped.iter().filter(|d| d.rule == "XP-SK-001").count(),
+            1,
             "{unscoped:?}"
         );
     }

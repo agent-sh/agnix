@@ -2405,7 +2405,7 @@ fn validate_codex_config_rules(
     if config.is_rule_enabled("CDX-CFG-032")
         && let Some(dot_codex) = path.parent()
         && crate::rules::codex_files::codex_home().is_some()
-        && !crate::rules::codex_files::is_codex_home(dot_codex)
+        && !crate::rules::codex_files::is_codex_home(dot_codex, config.fs().as_ref())
         && let Some(root_obj) = root.as_object()
     {
         let app_003 = config.is_rule_enabled("CDX-APP-003");

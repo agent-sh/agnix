@@ -168,7 +168,7 @@ mod tests {
 
     #[test]
     fn secret_settings_match_whole_words() {
-        for secret in [
+        for setting in [
             "MY_API_KEY",
             "API Key",
             "apiKey",
@@ -181,7 +181,7 @@ mod tests {
             "SERVICE_CREDENTIALS",
             "OPENAI_APIKEY",
         ] {
-            assert!(looks_like_secret_setting(secret), "{secret}");
+            assert!(looks_like_secret_setting(setting), "{setting}");
         }
         for other in [
             "KEYBOARD_LAYOUT",
