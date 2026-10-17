@@ -52,6 +52,8 @@ Tools are organized by support tier (see [../CONTRIBUTING.md#tool-tier-system](.
 
 All other AI coding tools - including continue, Antigravity, Tabnine, Codeium, Amazon Q, Aider, SourceGraph Cody, pi, and others. These tools do **not** have validators in `crates/agnix-core/src/rules/` and are not currently supported by agnix. Community contributions welcome via the Tool Support Request issue template.
 
+pi is not validated, but its subagent files are recognized so Claude agent rules do not run on them. pi has no marker file; extensions load agents by location: `<agentDir>/agents` where agentDir is `$PI_CODING_AGENT_DIR` or `~/.pi/agent` (`packages/coding-agent/src/config.ts` `getAgentDir`), project `.pi/agents` (`examples/extensions/subagent/README.md`), and paths from a package manifest's `pi` object or `pi-subagents.agents` (`docs/packages.md`, github.com/nicobailon/pi-subagents `docs/agents.md`). agnix treats an `agents/` directory as pi's when its parent is not a Claude root and has a `package.json` with a `pi` or `pi-subagents` object, a `settings.json` with a pi-only key (`defaultProvider`, `defaultModel`, `defaultThinkingLevel`, `modelThinkingLevels`, `enabledModels`, `packages`; `docs/settings.md`), or an extension importing `@earendil-works/pi-coding-agent`. Verified 2026-10-17 against pi-coding-agent's installed docs: 0 matches on 124 real Claude plugin agents and 8245 other agent files on one machine.
+
 ---
 
 ## Documentation Sources

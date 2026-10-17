@@ -371,6 +371,13 @@ impl Validator for AgentValidator {
     ) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
 
+        // pi subagent definitions use pi's own fields, tool names and model ids,
+        // and a Claude-rule autofix would break them (CC-AG-003 rewrote a pi
+        // `model` to `sonnet`).
+        if is_pi_agent_root(path, config.fs().as_ref()) {
+            return diagnostics;
+        }
+
         let local_agent = path
             .ancestors()
             .skip(1)
@@ -1191,6 +1198,98 @@ impl Validator for AgentValidator {
     }
 }
 
+/// pi settings keys that Claude Code settings never use (pi `docs/settings.md`).
+const PI_SETTINGS_KEYS: &[&str] = &[
+    "defaultProvider",
+    "defaultModel",
+    "defaultThinkingLevel",
+    "modelThinkingLevels",
+    "enabledModels",
+    "packages",
+];
+
+/// Package names whose import marks an extension directory as pi's.
+const PI_PACKAGES: &[&str] = &[
+    "@earendil-works/pi-coding-agent",
+    "@mariozechner/pi-coding-agent",
+];
+
+/// Returns true if `path` is an agent in a pi agent directory: the directory
+/// holding `agents/` is not a Claude Code root (`.claude`, `claude-code`, or one
+/// with `.claude-plugin/`), and it has a pi package manifest, pi settings, or an
+/// extension that imports pi. pi has no marker file of its own; it finds agents
+/// by location (`~/.pi/agent/agents`, `.pi/agents`, package and settings paths),
+/// and these are the files that define those locations.
+fn is_pi_agent_root(path: &Path, fs: &dyn crate::fs::FileSystem) -> bool {
+    let Some(agents_dir) = path
+        .ancestors()
+        .skip(1)
+        .find(|dir| dir.file_name().is_some_and(|name| name == "agents"))
+    else {
+        return false;
+    };
+    let Some(root) = agents_dir.parent() else {
+        return false;
+    };
+    let root_name = root.file_name().and_then(|n| n.to_str()).unwrap_or("");
+    if root_name == ".claude"
+        || root_name == "claude-code"
+        || fs.exists(&root.join(".claude-plugin"))
+    {
+        return false;
+    }
+
+    let json_object = |name: &str| {
+        fs.read_to_string(&root.join(name))
+            .ok()
+            .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok())
+            .and_then(|value| value.as_object().cloned())
+    };
+    if json_object("package.json").is_some_and(|manifest| {
+        manifest.get("pi").is_some_and(serde_json::Value::is_object)
+            || manifest
+                .get("pi-subagents")
+                .is_some_and(serde_json::Value::is_object)
+    }) {
+        return true;
+    }
+    if json_object("settings.json").is_some_and(|settings| {
+        PI_SETTINGS_KEYS
+            .iter()
+            .any(|key| settings.contains_key(*key))
+    }) {
+        return true;
+    }
+    imports_pi_package(fs, root, 0) || imports_pi_package(fs, &root.join("extensions"), 1)
+}
+
+/// Returns true if a `.ts`, `.js` or `.mjs` file in `dir` (and, at depth 1, its
+/// subdirectories) imports pi. Only the first 64 KiB of each file is searched.
+fn imports_pi_package(fs: &dyn crate::fs::FileSystem, dir: &Path, depth: usize) -> bool {
+    const MAX_BYTES: usize = 64 * 1024;
+    let Ok(entries) = fs.read_dir(dir) else {
+        return false;
+    };
+    entries.iter().any(|entry| {
+        if entry.metadata.is_symlink {
+            return false;
+        }
+        if entry.metadata.is_dir {
+            return depth == 1 && imports_pi_package(fs, &entry.path, depth + 1);
+        }
+        let script = entry
+            .path
+            .extension()
+            .and_then(|e| e.to_str())
+            .is_some_and(|e| matches!(e, "ts" | "js" | "mjs"));
+        script
+            && fs.read_to_string(&entry.path).is_ok_and(|text| {
+                let head = &text[..text.floor_char_boundary(MAX_BYTES.min(text.len()))];
+                PI_PACKAGES.iter().any(|package| head.contains(package))
+            })
+    })
+}
+
 #[cfg(test)]
 #[allow(clippy::field_reassign_with_default)]
 mod tests {
@@ -1198,6 +1297,110 @@ mod tests {
     use crate::config::LintConfig;
     use crate::diagnostics::DiagnosticLevel;
     use tempfile::TempDir;
+
+    /// A pi agent with pi-only fields, lowercase tools and a provider model id.
+    const PI_AGENT: &str = "---\nname: explore\ndescription: Explore the codebase\ntools: read, bash\nmodel: amazon-bedrock/claude\nthinking: high\nmax_turns: 4\n---\nExplore.\n";
+
+    /// Write `files` under a temp root and return the CC-AG rules reported for
+    /// `agent`.
+    fn cc_ag_rules(files: &[(&str, &str)], agent: &str) -> Vec<String> {
+        let temp = TempDir::new().unwrap();
+        for (name, content) in files {
+            let path = temp.path().join(name);
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(&path, content).unwrap();
+        }
+        let path = temp.path().join(agent);
+        let content = std::fs::read_to_string(&path).unwrap();
+        AgentValidator
+            .validate(&path, &content, &LintConfig::default())
+            .into_iter()
+            .filter(|d| d.rule.starts_with("CC-AG-"))
+            .map(|d| d.rule)
+            .collect()
+    }
+
+    #[test]
+    fn test_pi_agent_roots_skip_claude_rules() {
+        let agent = ("agent/agents/explore.md", PI_AGENT);
+        for marker in [
+            (
+                "agent/settings.json",
+                r#"{"defaultProvider": "amazon-bedrock"}"#,
+            ),
+            (
+                "agent/package.json",
+                r#"{"name": "x", "pi": {"extensions": ["./index.ts"]}}"#,
+            ),
+            (
+                "agent/package.json",
+                r#"{"pi-subagents": {"agents": ["./agents"]}}"#,
+            ),
+            (
+                "agent/index.ts",
+                "import type { ExtensionAPI } from \"@earendil-works/pi-coding-agent\";\n",
+            ),
+            (
+                "agent/extensions/dash/index.ts",
+                "import { Text } from \"@mariozechner/pi-coding-agent\";\n",
+            ),
+        ] {
+            let rules = cc_ag_rules(&[agent, marker], agent.0);
+            assert!(rules.is_empty(), "{marker:?}: {rules:?}");
+        }
+    }
+
+    #[test]
+    fn test_pi_markers_do_not_hide_claude_agents() {
+        let pi_settings = r#"{"defaultProvider": "amazon-bedrock"}"#;
+        // A Claude plugin root wins over pi markers.
+        let rules = cc_ag_rules(
+            &[
+                ("plugin/.claude-plugin/plugin.json", r#"{"name": "plugin"}"#),
+                ("plugin/settings.json", pi_settings),
+                ("plugin/agents/explore.md", PI_AGENT),
+            ],
+            "plugin/agents/explore.md",
+        );
+        assert!(rules.contains(&"CC-AG-009".to_string()), "{rules:?}");
+
+        // `.claude/agents` is always Claude's, even in a pi package repo.
+        let rules = cc_ag_rules(
+            &[
+                (
+                    "repo/package.json",
+                    r#"{"pi": {"extensions": ["./index.ts"]}}"#,
+                ),
+                ("repo/.claude/agents/explore.md", PI_AGENT),
+            ],
+            "repo/.claude/agents/explore.md",
+        );
+        assert!(rules.contains(&"CC-AG-009".to_string()), "{rules:?}");
+
+        // Claude-only settings, malformed settings, and a package.json without
+        // a `pi` object are not pi markers.
+        for marker in [
+            (
+                "plugin/settings.json",
+                r#"{"model": "sonnet", "permissions": {}}"#,
+            ),
+            ("plugin/settings.json", "{not json"),
+            ("plugin/settings.json", r#"["defaultProvider"]"#),
+            (
+                "plugin/package.json",
+                r#"{"name": "can-i-help", "keywords": ["pi-package"]}"#,
+            ),
+        ] {
+            let rules = cc_ag_rules(
+                &[marker, ("plugin/agents/explore.md", PI_AGENT)],
+                "plugin/agents/explore.md",
+            );
+            assert!(
+                rules.contains(&"CC-AG-009".to_string()),
+                "{marker:?}: {rules:?}"
+            );
+        }
+    }
 
     fn validate(content: &str) -> Vec<Diagnostic> {
         let validator = AgentValidator;

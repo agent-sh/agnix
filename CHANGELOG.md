@@ -38,7 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The CLI applies a `.agnix.toml` from the working directory only to targets inside that directory. Linting another tree from a project directory applied that project's `exclude` patterns to it, which could skip every file.
 - `removed-rules.json` now redirects AS-018, AS-019 (removed in 0.28.0), CC-SK-003 and CC-HK-019 (removed in 0.44.0).
 - XP-009 no longer repeats XP-007 for a single AGENTS.md over the cap, and starts a chain at a nested Git repository, where Codex starts, instead of adding the instruction files above it.
-- pi subagent definitions in `~/.pi/agent/agents/` and `.pi/agents/` are no longer validated as Claude Code agents.
+- pi subagent definitions are no longer validated as Claude Code agents: files in `~/.pi/agent/agents/` and `.pi/agents/`, and any `agents/` directory whose parent has a pi package manifest (`pi` or `pi-subagents` in `package.json`), pi settings (`defaultProvider`, `packages` and other pi-only keys in `settings.json`), or an extension importing `@earendil-works/pi-coding-agent`. This also covers a repo that is symlinked into `~/.pi/agent`. A `.claude` root or a `.claude-plugin/` folder still marks Claude agents. Before, CC-AG-009 and CC-AG-019 fired on pi tool names and fields, and the unsafe CC-AG-003 fix rewrote pi models to `sonnet`.
 - KR-AG-006 ignores `@` mentions inside code in an agent prompt, such as `require('@scope/pkg')` in a fenced block.
 - XP-003 checks tool directories such as `.claude/` in every file but reports machine paths (`~/.<dir>/`, `/Users/<name>/`, `~/Library/`) only in files agents load. In generic Markdown, such as design docs, those paths mostly document where a tool keeps its data.
 
