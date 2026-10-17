@@ -187,6 +187,12 @@ cases:
     expected: [AGM-004]
     description: "Missing context/purpose triggers AGM-004"
 
+  # CDX-AG-006 needs a short file (under 200 characters) with no heading,
+  # inline code or path; the other AGENTS.md fixtures have one of those
+  - file: fixtures/agents_md/codex-missing-context/AGENTS.md
+    expected: [AGM-004, CDX-AG-006]
+    description: "A short AGENTS.md with no heading, command or path triggers CDX-AG-006 (Codex: missing project context) and AGM-004"
+
   # AGM-007 needs a build manifest next to the file; the other AGENTS.md
   # fixtures have none, so it stays quiet there
   - file: fixtures/agents_md/no-commands/AGENTS.md
