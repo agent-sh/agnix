@@ -1,0 +1,6 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "My--Tools",
+  "description": "Agent Plugins manifest with a name Copilot CLI rejects",
+  "skills": "skills/"
+}

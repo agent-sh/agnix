@@ -463,3 +463,97 @@ fn test_cli_inline_mcp_servers_in_plugin_manifests() {
     let cursor = rules_in_file(&json, "cursor-inline-mcp/.cursor-plugin/plugin.json");
     assert_eq!(cursor, vec!["MCP-027".to_string()], "{cursor:?}");
 }
+
+// ===== COP-019, COP-020, COP-039 on the root and .claude-plugin/ manifests =====
+
+/// `(rule, level)` pairs of the diagnostics on one file, sorted.
+fn findings_in(json: &serde_json::Value, file_part: &str) -> Vec<(String, String)> {
+    let mut found: Vec<_> = diagnostics_in(json, file_part)
+        .into_iter()
+        .map(|d| {
+            (
+                d["rule"].as_str().unwrap().to_string(),
+                d["level"].as_str().unwrap().to_string(),
+            )
+        })
+        .collect();
+    found.sort();
+    found
+}
+
+fn pairs(expected: &[(&str, &str)]) -> Vec<(String, String)> {
+    expected
+        .iter()
+        .map(|(rule, level)| (rule.to_string(), level.to_string()))
+        .collect()
+}
+
+#[test]
+fn test_cli_copilot_rules_on_shared_plugin_manifests() {
+    let fixtures = workspace_root().join("tests/fixtures/plugin-manifests");
+    let unscoped = run_json(&fixtures);
+    // A legacy root manifest with Copilot-only fields (`category`, `tags`).
+    assert_eq!(
+        findings_in(&unscoped, "copilot-legacy-invalid/plugin.json"),
+        pairs(&[("COP-020", "warning"), ("COP-039", "warning")])
+    );
+    // An Agent Plugins root manifest: its name rule and closed schema.
+    // CDX-PL-004 reports the same name for Codex.
+    let agent_plugins: Vec<_> = findings_in(&unscoped, "agent-plugins-invalid/plugin.json")
+        .into_iter()
+        .filter(|(rule, _)| rule.starts_with("COP-"))
+        .collect();
+    assert_eq!(
+        agent_plugins,
+        pairs(&[("COP-039", "info"), ("COP-039", "warning")])
+    );
+    // An Agent Plugins layout (mcp.json) whose manifest has no $schema.
+    assert_eq!(
+        findings_in(&unscoped, "agent-plugins-no-schema/plugin.json"),
+        pairs(&[("COP-019", "warning")])
+    );
+    // The valid examples stay clean, and no Claude Code manifest gets a
+    // Copilot rule in an unscoped run.
+    for clean in [
+        "agent-plugins/plugin.json",
+        "dual-manifest/plugin.json",
+        "claude-copilot-limits/.claude-plugin/plugin.json",
+    ] {
+        assert!(findings_in(&unscoped, clean).is_empty(), "{clean}");
+    }
+    let claude_cop: Vec<_> = diagnostics_in(&unscoped, ".claude-plugin/plugin.json")
+        .into_iter()
+        .filter(|d| d["rule"].as_str().unwrap().starts_with("COP-"))
+        .collect();
+    assert!(claude_cop.is_empty(), "{claude_cop:?}");
+    // The documented legacy example has no Copilot signal: only CC-PL-001.
+    assert_eq!(
+        findings_in(&unscoped, "copilot-legacy/plugin.json"),
+        pairs(&[("CC-PL-001", "warning")])
+    );
+
+    // A run that selects Copilot reads .claude-plugin/plugin.json as a
+    // legacy manifest, unless an earlier location exists (dual-manifest).
+    let copilot = run_json_with_config(&fixtures, "tools = [\"copilot\"]\n");
+    assert_eq!(
+        findings_in(&copilot, "claude-copilot-limits/.claude-plugin/plugin.json"),
+        pairs(&[("COP-039", "warning"), ("COP-039", "warning")])
+    );
+    for clean in [
+        "dual-manifest/.claude-plugin/plugin.json",
+        "claude-inline-mcp/.claude-plugin/plugin.json",
+    ] {
+        let cop: Vec<_> = findings_in(&copilot, clean)
+            .into_iter()
+            .filter(|(rule, _)| rule.starts_with("COP-"))
+            .collect();
+        assert!(cop.is_empty(), "{clean}: {cop:?}");
+    }
+    // Without Copilot in scope, no Copilot rule runs at all.
+    let claude = run_json_with_config(&fixtures, "tools = [\"claude-code\"]\n");
+    assert!(
+        diagnostics_in(&claude, "plugin.json")
+            .iter()
+            .all(|d| !d["rule"].as_str().unwrap().starts_with("COP-"))
+    );
+}

@@ -715,6 +715,8 @@ rules:
     missing_name_suggestion: "Add a 'name', for example \"name\": \"my-plugin\""
     unsupported_schema: "Copilot CLI does not support the Agent Plugins schema '%{url}' and rejects the plugin"
     unsupported_schema_suggestion: "Use https://agent-plugins.org/schemas/1.0.0/plugin.schema.json or the 1.1.0 schema"
+    agent_plugins_layout: "plugin.json declares no Agent Plugins $schema, so Copilot CLI loads this plugin in the legacy format and ignores its Agent Plugins %{marker}"
+    agent_plugins_layout_suggestion: "Add \"$schema\": \"https://agent-plugins.org/schemas/1.0.0/plugin.schema.json\" to plugin.json, or move the components to the legacy locations"
   cop_020:
     message: "Copilot plugin manifest field '%{field}' should be %{expected} but found %{got}"
     suggestion: "Change '%{field}' to %{expected}."
