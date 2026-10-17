@@ -1,7 +1,7 @@
 # Rules Reference
 
-This section contains all `535` validation rules generated from `knowledge-base/rules.json`.
-`136` rules have automatic fixes.
+This section contains all `544` validation rules generated from `knowledge-base/rules.json`.
+`131` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
 |------|------|----------|----------|----------|
@@ -232,31 +232,40 @@ This section contains all `535` validation rules generated from `knowledge-base/
 | [CLN-006](./generated/cln-006.md) | Workflow With Frontmatter | MEDIUM | Cline | Yes (unsafe) |
 | [CLN-009](./generated/cln-009.md) | Unknown Hook Event Name | MEDIUM | Cline | No |
 | [COP-001](./generated/cop-001.md) | Empty Copilot Instruction File | HIGH | GitHub Copilot | No |
-| [COP-002](./generated/cop-002.md) | Invalid Frontmatter in Scoped Instructions | HIGH | GitHub Copilot | Yes (unsafe) |
+| [COP-002](./generated/cop-002.md) | Scoped Instructions Without applyTo or Valid Frontmatter | HIGH | GitHub Copilot | Yes (unsafe) |
 | [COP-003](./generated/cop-003.md) | Invalid Glob Pattern in applyTo | HIGH | GitHub Copilot | No |
 | [COP-004](./generated/cop-004.md) | Unknown Frontmatter Keys | MEDIUM | GitHub Copilot | Yes (safe) |
 | [COP-005](./generated/cop-005.md) | Invalid excludeAgent Value | HIGH | GitHub Copilot | Yes (unsafe) |
-| [COP-006](./generated/cop-006.md) | File Length Limit | MEDIUM | GitHub Copilot | No |
+| [COP-006](./generated/cop-006.md) | Instruction File Over About 1,000 Lines | MEDIUM | GitHub Copilot | No |
 | [COP-007](./generated/cop-007.md) | Custom Agent Missing Description | HIGH | GitHub Copilot | No |
 | [COP-008](./generated/cop-008.md) | Custom Agent Unknown or Invalid Frontmatter Field | MEDIUM | GitHub Copilot | Yes (safe) |
 | [COP-009](./generated/cop-009.md) | Custom Agent Invalid Target | HIGH | GitHub Copilot | Yes (unsafe) |
 | [COP-010](./generated/cop-010.md) | Custom Agent infer Field Must Be Boolean | MEDIUM | GitHub Copilot | No |
 | [COP-011](./generated/cop-011.md) | Custom Agent Prompt Body Exceeds Length Limit | HIGH | GitHub Copilot | No |
-| [COP-012](./generated/cop-012.md) | Custom Agent Uses GitHub.com Unsupported Fields | MEDIUM | GitHub Copilot | Yes (safe) |
+| [COP-012](./generated/cop-012.md) | Custom Agent Field Ignored on GitHub.com | LOW | GitHub Copilot | No |
 | [COP-013](./generated/cop-013.md) | Prompt File Empty Body | HIGH | GitHub Copilot | No |
 | [COP-014](./generated/cop-014.md) | Prompt File Unknown Frontmatter Field | MEDIUM | GitHub Copilot | Yes (safe) |
-| [COP-015](./generated/cop-015.md) | Prompt File Invalid Agent Mode | HIGH | GitHub Copilot | Yes (safe) |
-| [COP-017](./generated/cop-017.md) | Copilot Hooks Schema Validation | HIGH | GitHub Copilot | No |
+| [COP-015](./generated/cop-015.md) | Prompt File Agent Not Found | LOW | GitHub Copilot | No |
+| [COP-017](./generated/cop-017.md) | Copilot Hook File Schema | HIGH | GitHub Copilot | No |
 | [COP-018](./generated/cop-018.md) | Invalid copilot-setup-steps Job | HIGH | GitHub Copilot | No |
-| [COP-019](./generated/cop-019.md) | Plugin Missing Required Fields | HIGH | GitHub Copilot | No |
+| [COP-019](./generated/cop-019.md) | Plugin Manifest Missing Required Fields | HIGH | GitHub Copilot | No |
 | [COP-020](./generated/cop-020.md) | Plugin Invalid Field Types | MEDIUM | GitHub Copilot | No |
-| [COP-022](./generated/cop-022.md) | CLI Skill Missing Frontmatter | HIGH | GitHub Copilot | No |
-| [COP-023](./generated/cop-023.md) | CLI Skill Name Format | MEDIUM | GitHub Copilot | Yes (safe) |
-| [COP-024](./generated/cop-024.md) | CLI Skill Unknown Field | MEDIUM | GitHub Copilot | Yes (safe) |
 | [COP-025](./generated/cop-025.md) | Agent File Wrong Location | LOW | GitHub Copilot | No |
-| [COP-026](./generated/cop-026.md) | Deprecated SSE Transport | LOW | GitHub Copilot | Yes (unsafe) |
 | [COP-027](./generated/cop-027.md) | Deprecated Infer Field | LOW | GitHub Copilot | Yes (unsafe) |
+| [COP-028](./generated/cop-028.md) | Custom Agent MCP Secret Without COPILOT_MCP_ Prefix | HIGH | GitHub Copilot | No |
+| [COP-029](./generated/cop-029.md) | copilot-setup-steps Job Setting Ignored | MEDIUM | GitHub Copilot | No |
+| [COP-030](./generated/cop-030.md) | File Reference Copilot CLI Does Not Load | MEDIUM | GitHub Copilot | No |
+| [COP-031](./generated/cop-031.md) | Copilot Hook Entry Violates Documented Constraints | HIGH | GitHub Copilot | No |
+| [COP-032](./generated/cop-032.md) | Legacy Chat Mode File | LOW | GitHub Copilot | No |
+| [COP-033](./generated/cop-033.md) | Invalid Custom Agent Filename | MEDIUM | GitHub Copilot | No |
+| [COP-034](./generated/cop-034.md) | Custom Agent MCP Server Tools List | MEDIUM | GitHub Copilot | No |
+| [COP-035](./generated/cop-035.md) | MCP File Uses Unsupported Feature or Wrong Server Key | MEDIUM | GitHub Copilot | No |
+| [COP-036](./generated/cop-036.md) | Copilot Hook Skipped by Cloud Agent or Missing Script | LOW | GitHub Copilot | No |
+| [COP-037](./generated/cop-037.md) | Literal Secret in Copilot Hook | MEDIUM | GitHub Copilot | No |
+| [COP-038](./generated/cop-038.md) | Code Review Instruction Points to an External Link | LOW | GitHub Copilot | No |
+| [COP-039](./generated/cop-039.md) | Copilot Plugin Name or Manifest Constraints | MEDIUM | GitHub Copilot | No |
 | [CP-SK-001](./generated/cp-sk-001.md) | Copilot Skill Uses Unsupported Field | MEDIUM | Copilot Skills | Yes (safe/unsafe) |
+| [CP-SK-002](./generated/cp-sk-002.md) | Copilot Skill Pre-approves shell or bash | MEDIUM | Copilot Skills | No |
 | [CR-SK-001](./generated/cr-sk-001.md) | Cursor Skill Uses Unsupported Field | MEDIUM | Cursor Skills | Yes (safe/unsafe) |
 | [CUR-001](./generated/cur-001.md) | Empty Cursor Rule File | HIGH | Cursor | No |
 | [CUR-002](./generated/cur-002.md) | Missing Frontmatter in .mdc File | MEDIUM | Cursor | Yes (unsafe) |

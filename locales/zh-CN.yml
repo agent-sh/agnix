@@ -333,24 +333,16 @@ rules:
     suggestion_empty: 添加有意义的指令供 Copilot 遵循
     suggestion_scoped_empty: 添加包含 applyTo 字段和指令的 frontmatter
   cop_002:
-    message_missing: 范围限定的 Copilot 指令文件缺少必需的 frontmatter
     message_invalid_yaml: '无效的 YAML frontmatter: %{error}'
-    message_missing_apply_to: 范围限定的 Copilot 指令文件缺少必需的 'applyTo' 字段
-    suggestion_add_frontmatter: 添加包含 --- 标记和 applyTo 字段的 YAML frontmatter
     suggestion_fix_yaml: 修复 frontmatter 中的 YAML 语法
-    suggestion_add_apply_to: '添加 ''applyTo: "**/*.ts"'' 或类似的 glob 模式'
   cop_003:
     message: '无效的 glob 模式 ''%{pattern}'': %{error}'
     suggestion: 使用有效的 glob 语法，如 '**/*.ts' 或 'src/**/*.js'
   cop_004:
     message: Copilot 指令文件中未知的 frontmatter 键 '%{key}'
-    suggestion: 删除未知键 '%{key}'。只认可 'applyTo' 和 'excludeAgent'。
   cop_005:
     message: '无效的 excludeAgent 值 ''%{value}''。有效值: ''code-review''、''cloud-agent'''
     suggestion: 为 excludeAgent 使用 'code-review' 或 'cloud-agent'
-  cop_006:
-    message: Copilot 指令文件超过推荐长度（%{len} 个字符，限制约 4000）
-    suggestion: 减少内容长度或拆分为范围限定的指令文件
   cur_001:
     message_empty: Cursor 规则文件为空
     message_no_content: Cursor 规则文件在 frontmatter 之后没有内容

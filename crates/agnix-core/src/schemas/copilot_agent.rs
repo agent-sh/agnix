@@ -4,7 +4,10 @@
 
 use serde::{Deserialize, Serialize};
 
-/// Known valid keys for custom agent frontmatter.
+/// Known valid keys for custom agent frontmatter: the GitHub.com/CLI
+/// properties (custom-agents-configuration) and the VS Code header fields
+/// (custom-agent-file-reference), which add `argument-hint`, `agents`,
+/// `reasoning-effort`, `handoffs` and the Preview `hooks`.
 pub const KNOWN_KEYS: &[&str] = &[
     "name",
     "description",
@@ -18,7 +21,13 @@ pub const KNOWN_KEYS: &[&str] = &[
     "disable-model-invocation",
     "user-invocable",
     "metadata",
+    "agents",
+    "reasoning-effort",
+    "hooks",
 ];
+
+/// `reasoning-effort` values ("`low`, `medium`, `high`, `xhigh`, or `max`").
+pub const REASONING_EFFORT_VALUES: &[&str] = &["low", "medium", "high", "xhigh", "max"];
 
 /// Frontmatter schema for custom Copilot agents.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

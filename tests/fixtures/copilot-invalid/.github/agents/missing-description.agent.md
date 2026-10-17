@@ -1,4 +1,4 @@
 ---
-target: vscode
+name: reviewer
 ---
 Review pull requests.

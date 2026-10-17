@@ -609,10 +609,17 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="cp-sk-001"></a>
 ### CP-SK-001 [MEDIUM] Copilot Skill Uses Unsupported Field
-**Requirement**: Skills in `.github/skills/` SHOULD NOT use frontmatter fields unsupported by GitHub Copilot
+**Requirement**: Skills in `.github/skills/` SHOULD NOT use frontmatter fields GitHub Copilot does not read. Copilot reads the Agent Skills fields (`name`, `description`, `license`, `compatibility`, `metadata`), `allowed-tools` ("In your `SKILL.md` frontmatter, you can use the `allowed-tools` field") and, in VS Code, `argument-hint`, `user-invocable`, `disable-model-invocation` and `context`.
 **Detection**: SKILL.md path contains `.github/skills/` AND frontmatter has unsupported fields
 **Fix**: [AUTO-FIX, safe] Remove unsupported field
-**Source**: docs.github.com/en/copilot/reference/custom-instructions-support
+**Source**: docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/customize-cloud-agent/add-skills, docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-skills, code.visualstudio.com/docs/agent-customization/agent-skills ("Header (required)")
+
+<a id="cp-sk-002"></a>
+### CP-SK-002 [MEDIUM] Copilot Skill Pre-approves shell or bash
+**Requirement**: Copilot skills SHOULD NOT pre-approve terminal tools unless reviewed: "Only pre-approve the `shell` or `bash` tools if you have reviewed this skill and any referenced scripts, and you fully trust their source. ... When in doubt, omit `shell` and `bash` from `allowed-tools` so that Copilot must ask for your explicit confirmation before running terminal commands."
+**Detection**: `allowed-tools` (string or list) names `shell` or `bash` in a skill Copilot loads: `.github/skills/` and `~/.copilot/skills/`, and `.agents/skills/` or `.claude/skills/` when the run targets Copilot (other tools read those folders too). Reported at the `allowed-tools` line.
+**Fix**: Manual - remove the tool after reviewing the skill, or keep it for a trusted skill
+**Source**: docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/customize-cloud-agent/add-skills ("Enabling a skill to run a script"), docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-skills
 
 <a id="cx-sk-001"></a>
 ### CX-SK-001 [MEDIUM] Codex Skill Uses Unsupported Field
@@ -1720,177 +1727,234 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 **Requirement**: Copilot instruction files MUST have non-empty content
 **Detection**: `content.trim().is_empty()` after stripping frontmatter
 **Fix**: Add meaningful instructions
-**Source**: docs.github.com/en/copilot/how-tos/custom-instructions/adding-repository-custom-instructions-for-github-copilot
+**Source**: docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/add-custom-instructions/add-repository-instructions, code.visualstudio.com/docs/agent-customization/custom-instructions
 
 <a id="cop-002"></a>
-### COP-002 [HIGH] Invalid Frontmatter in Scoped Instructions
-**Requirement**: Scoped instruction files (.github/instructions/*.instructions.md) MUST have valid YAML frontmatter with `applyTo` field
-**Detection**: Parse YAML between `---` markers, check for `applyTo` key
-**Fix**: Auto-fix (unsafe) -- insert template frontmatter with applyTo field (missing frontmatter only)
-**Source**: docs.github.com/en/copilot/how-tos/custom-instructions/adding-repository-custom-instructions-for-github-copilot
+### COP-002 [HIGH] Scoped Instructions Without applyTo or Valid Frontmatter
+**Requirement**: A path-specific instruction file (`.github/instructions/**/*.instructions.md`) MUST have valid YAML frontmatter and SHOULD set `applyTo`. GitHub.com and Copilot CLI apply the file only through it ("At the start of the file, create a frontmatter block containing the `applyTo` keyword"). VS Code documents `applyTo` as optional: "If you omit both `description` and `applyTo`, attach the file manually when you want to use it", and a `description` enables on-demand loading.
+**Detection**: YAML parse error or unclosed frontmatter: error. No frontmatter or no `applyTo`: warning. No `applyTo` but a non-empty `description`: info (VS Code loads the file on demand; GitHub.com and Copilot CLI do not apply it).
+**Fix**: Auto-fix (unsafe) - insert frontmatter with `applyTo: "**"` when the file has none (it changes which requests use the file)
+**Source**: docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/add-custom-instructions/add-repository-instructions ("Creating path-specific custom instructions"), code.visualstudio.com/docs/agent-customization/custom-instructions ("Instructions file format")
 
 <a id="cop-003"></a>
 ### COP-003 [HIGH] Invalid Glob Pattern in applyTo
-**Requirement**: `applyTo` field MUST contain valid glob patterns
-**Detection**: Attempt to parse as glob pattern
+**Requirement**: `applyTo` field MUST contain valid glob patterns. "You can specify multiple patterns by separating them with commas."
+**Detection**: Split on commas outside brace and bracket groups, then parse each pattern; reported at the `applyTo` line
 **Fix**: Correct the glob syntax
-**Source**: docs.github.com/en/copilot/how-tos/custom-instructions/adding-repository-custom-instructions-for-github-copilot
+**Source**: docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/add-custom-instructions/add-repository-instructions
 
 <a id="cop-004"></a>
 ### COP-004 [MEDIUM] Unknown Frontmatter Keys
-**Requirement**: Scoped instruction frontmatter SHOULD only contain known keys (`applyTo`, `excludeAgent`)
-**Detection**: Check for keys other than `applyTo` and `excludeAgent` in frontmatter
-**Fix**: Remove unknown keys
-**Source**: docs.github.com/en/copilot/how-tos/custom-instructions/adding-repository-custom-instructions-for-github-copilot
+**Requirement**: Scoped instruction frontmatter SHOULD only contain keys Copilot reads: `applyTo` and `excludeAgent` (GitHub), and `name` ("Display name shown in the UI") and `description` (VS Code)
+**Detection**: Top-level frontmatter keys outside that set
+**Fix**: [AUTO-FIX, safe] Remove the whole entry (key line and continuation lines); offered only when the edited frontmatter re-parses to the original mapping without the key
+**Source**: docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/add-custom-instructions/add-repository-instructions, code.visualstudio.com/docs/agent-customization/custom-instructions
 
 <a id="cop-005"></a>
 ### COP-005 [HIGH] Invalid excludeAgent Value
-**Requirement**: The `excludeAgent` frontmatter field in scoped instruction files MUST be either `"code-review"` or `"coding-agent"`
+**Requirement**: The `excludeAgent` frontmatter field in scoped instruction files MUST be `"code-review"` or `"cloud-agent"` ("Use either `\"code-review\"` or `\"cloud-agent\"`"). `coding-agent`, which earlier agnix versions suggested, is accepted with a LOW note.
 **Detection**: Parse frontmatter, validate `excludeAgent` value against allowed set
-**Fix**: Auto-fix (unsafe) -- replace with closest valid excludeAgent value
-**Source**: docs.github.com/en/copilot/how-tos/custom-instructions/adding-repository-custom-instructions-for-github-copilot
+**Fix**: Auto-fix (unsafe) - replace with the closest documented value 
+**Source**: docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/add-custom-instructions/add-repository-instructions, docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-custom-instructions
 
 <a id="cop-006"></a>
-### COP-006 [MEDIUM] File Length Limit
-**Requirement**: Global instruction files (`.github/copilot-instructions.md`) SHOULD not exceed ~4000 characters
-**Detection**: Check `content.chars().count() > 4000`
-**Fix**: Reduce content or split into scoped instruction files
-**Source**: docs.github.com/en/copilot/how-tos/custom-instructions/adding-repository-custom-instructions-for-github-copilot
+### COP-006 [MEDIUM] Instruction File Over About 1,000 Lines
+**Requirement**: A Copilot instruction file SHOULD stay within about 1,000 lines: "**Best practice**: Limit any single instruction file to a maximum of about 1,000 lines. Beyond this, the quality of responses may deteriorate."
+**Detection**: `.github/copilot-instructions.md` and `.github/instructions/**/*.instructions.md` with more than 1,000 lines, reported at line 1,001. The earlier 4,000-character figure appears only inside a sample prompt of a 2025 GitHub blog post, not in the docs.
+**Fix**: Remove redundant or generic instructions, or move language- and path-specific guidance into `*.instructions.md` files with `applyTo`
+**Source**: docs.github.com/en/copilot/tutorials/customize-code-review ("Keep instructions short and focused")
 
 <a id="cop-007"></a>
 ### COP-007 [HIGH] Custom Agent Missing Description
-**Requirement**: Custom Copilot agent files (`.github/agents/*.agent.md`) MUST include a non-empty `description` frontmatter field
-**Detection**: Parse frontmatter and verify `description` exists and is non-empty
+**Requirement**: Custom Copilot agent files MUST include a non-empty `description` frontmatter field ("`description` | **Required** string" on GitHub.com and in Copilot CLI). Agents with `target: vscode` are exempt: VS Code says "All fields in this table are optional."
+**Detection**: Parse frontmatter and verify `description` exists and is non-empty, unless `target` is `vscode`
 **Fix**: Add `description` to frontmatter
-**Source**: docs.github.com/en/copilot/reference/custom-agents-configuration
+**Source**: docs.github.com/en/copilot/reference/custom-agents-configuration, code.visualstudio.com/docs/agents/reference/custom-agent-file-reference
 
 <a id="cop-008"></a>
 ### COP-008 [MEDIUM] Custom Agent Unknown or Invalid Frontmatter Field
-**Requirement**: Custom agent frontmatter SHOULD only use supported keys and supported value types
-**Detection**: Parse frontmatter and detect unknown top-level keys plus invalid value types for typed fields (`disable-model-invocation`, `user-invocable`, `metadata`)
-**Fix**: [AUTO-FIX] Remove unsupported keys (typed value violations are warning-only and not auto-fixed)
-**Source**: docs.github.com/en/copilot/reference/custom-agents-configuration
+**Requirement**: Custom agent frontmatter SHOULD only use the documented fields with documented types: `name`, `description`, `target`, `tools`, `model`, `disable-model-invocation`, `user-invocable`, `infer`, `mcp-servers`, `metadata` (GitHub) and `argument-hint`, `agents`, `reasoning-effort`, `handoffs`, `hooks` (VS Code). VS Code types `model` as "String or array of strings" and `reasoning-effort` as "`low`, `medium`, `high`, `xhigh`, or `max`".
+**Detection**: Unknown top-level keys; wrong types for `disable-model-invocation`, `user-invocable`, `metadata`, `model`, `tools`, `agents` (array of strings), `hooks` (mapping) and `reasoning-effort` (one of the five values)
+**Fix**: [AUTO-FIX, safe] Remove an unknown field when the whole entry can be removed exactly (verified by re-parsing); value-type problems are not auto-fixed
+**Source**: docs.github.com/en/copilot/reference/custom-agents-configuration, code.visualstudio.com/docs/agents/reference/custom-agent-file-reference
 
 <a id="cop-009"></a>
 ### COP-009 [HIGH] Custom Agent Invalid Target
 **Requirement**: Custom agent `target` MUST be `vscode` or `github-copilot`
 **Detection**: Parse `target` and validate against allowed values
 **Fix**: [AUTO-FIX] Set `target` to `vscode` or `github-copilot`
-**Source**: docs.github.com/en/copilot/reference/custom-agents-configuration
+**Source**: docs.github.com/en/copilot/reference/custom-agents-configuration, code.visualstudio.com/docs/agents/reference/custom-agent-file-reference
 
 <a id="cop-010"></a>
 ### COP-010 [MEDIUM] Custom Agent infer Field Must Be Boolean
 **Requirement**: Custom agent `infer` field MUST be a boolean when present
 **Detection**: Parse custom agent frontmatter and validate that `infer` is boolean
 **Fix**: Set `infer` to either `true` or `false`
-**Source**: docs.github.com/en/copilot/reference/custom-agents-configuration
+**Source**: docs.github.com/en/copilot/reference/custom-agents-configuration, code.visualstudio.com/docs/agents/reference/custom-agent-file-reference
 
 <a id="cop-011"></a>
 ### COP-011 [HIGH] Custom Agent Prompt Body Exceeds Length Limit
-**Requirement**: Custom agent prompt body MUST be at most 30,000 characters
+**Requirement**: Custom agent prompt body MUST be at most 30,000 characters ("The prompt can be a maximum of 30,000 characters.")
 **Detection**: Count body characters after frontmatter and check `> 30000`
 **Fix**: Reduce prompt body length
 **Source**: docs.github.com/en/copilot/reference/custom-agents-configuration
 
 <a id="cop-012"></a>
-### COP-012 [MEDIUM] Custom Agent Uses GitHub.com Unsupported Fields
-**Requirement**: Custom agents for GitHub.com SHOULD NOT use unsupported fields (`model`, `argument-hint`, `handoffs`)
-**Detection**: Parse frontmatter and detect unsupported field presence
-**Fix**: [AUTO-FIX] Remove unsupported fields for GitHub.com compatibility
+### COP-012 [LOW] Custom Agent Field Ignored on GitHub.com
+**Requirement**: "The `argument-hint` and `handoffs` properties from VS Code and other IDE custom agents are currently not supported for Copilot cloud agent on GitHub.com. They are ignored to ensure compatibility." VS Code uses both, so an agent shared between GitHub.com and an IDE may keep them.
+**Detection**: Info when an agent without `target: vscode` sets `argument-hint` or `handoffs`. `model` is a documented GitHub.com property and is not reported.
+**Fix**: No auto-fix (deleting the fields changes VS Code behavior); set `target: vscode` for an IDE-only agent
 **Source**: docs.github.com/en/copilot/reference/custom-agents-configuration
 
 <a id="cop-013"></a>
 ### COP-013 [HIGH] Prompt File Empty Body
-**Requirement**: Reusable prompt files (`.github/prompts/*.prompt.md`) MUST contain non-empty prompt body content
+**Requirement**: Reusable prompt files (`.github/prompts/*.prompt.md`) MUST contain non-empty prompt body content ("The body contains the prompt text in Markdown format.")
 **Detection**: Parse optional frontmatter and check body for non-whitespace content
 **Fix**: Add prompt body content
-**Source**: code.visualstudio.com/docs/copilot/customization/prompt-files
+**Source**: code.visualstudio.com/docs/agent-customization/prompt-files
 
 <a id="cop-014"></a>
 ### COP-014 [MEDIUM] Prompt File Unknown Frontmatter Field
-**Requirement**: Prompt file frontmatter SHOULD only use supported keys
+**Requirement**: Prompt file frontmatter SHOULD only use the documented fields `description`, `name`, `argument-hint`, `agent`, `model` and `tools`
 **Detection**: Parse frontmatter and detect unknown top-level keys
-**Fix**: [AUTO-FIX] Remove unsupported keys
-**Source**: code.visualstudio.com/docs/copilot/customization/prompt-files
+**Fix**: [AUTO-FIX, safe] Remove the whole unknown entry when it can be removed exactly (verified by re-parsing)
+**Source**: code.visualstudio.com/docs/agent-customization/prompt-files
 
 <a id="cop-015"></a>
-### COP-015 [HIGH] Prompt File Invalid Agent Mode
-**Requirement**: Prompt file `agent` field MUST be one of `none`, `ask`, or `always`
-**Detection**: Parse frontmatter and validate `agent` value
-**Fix**: [AUTO-FIX] Set `agent` to a supported mode
-**Source**: code.visualstudio.com/docs/copilot/customization/prompt-files
+### COP-015 [LOW] Prompt File Agent Not Found
+**Requirement**: The prompt file `agent` field SHOULD name "`ask`, `agent`, `plan`, or the name of a custom agent"
+**Detection**: Info when `agent` is none of the three built-in values and the repository has a `.github/agents/` folder in which no agent matches by file ID (file name without `.agent.md` or `.md`) or `name` (`.claude/agents/` is searched too). Not reported when the repository has no `.github/agents/` folder, since user and organization agents are not visible. A case-only mismatch is named in the suggestion.
+**Fix**: No auto-fix (the earlier fix rewrote valid values such as `agent` and `plan`)
+**Source**: code.visualstudio.com/docs/agent-customization/prompt-files ("Prompt file format")
 
 <a id="cop-017"></a>
-### COP-017 [HIGH] Copilot Hooks Schema Validation
-**Requirement**: `.github/hooks/hooks.json` MUST use version `1`, valid event names, `type: "command"`, and valid command structure
-**Detection**: Parse JSON and validate version, events, required hook `type`, and command object shape
-**Fix**: Correct hooks schema structure
-**Source**: docs.github.com/en/copilot/concepts/agents/coding-agent/about-hooks
+### COP-017 [HIGH] Copilot Hook File Schema
+**Requirement**: Copilot hook files MUST match the hooks reference. Copilot loads every `.github/hooks/*.json` file ("stored in your repository at `.github/hooks/*.json`") and the CLI also `~/.copilot/hooks/*.json`; "The JSON must contain a `version` field with a value of `1` and a `hooks` object containing arrays of hook definitions." Events are `agentStop`, `errorOccurred`, `notification`, `permissionRequest`, `postToolUse`, `postToolUseFailure`, `preCompact`, `preToolUse`, `sessionEnd`, `sessionStart`, `subagentStart`, `subagentStop`, `userPromptSubmitted` and `userPromptTransformed`, plus their documented PascalCase aliases. Command entries default to `type: "command"` ("Defaults to `\"command\"` when omitted") and need `bash`, `powershell`, `command` or `exec`; `http` entries need `url`; `prompt` entries need `prompt`. VS Code's native format ("PascalCase events without a numeric `version` property") is accepted with a note that Copilot CLI and cloud agent skip it. Inline `hooks` in `.github/copilot/settings.json` and `~/.copilot/settings.json` use the same entries and are strict: "any item-level validation error rejects the whole `hooks` field".
+**Detection**: Parse JSON with spans; report invalid JSON, a missing or wrong `version`, a `hooks` value that is not an event map (the undocumented array form included), unknown events (with a near-miss suggestion), non-array event lists, malformed entries, a `command` written as an object, and wrongly typed fields, each at the offending key or value
+**Fix**: Correct the hook file structure
+**Source**: docs.github.com/en/copilot/reference/hooks-reference, docs.github.com/en/copilot/concepts/agents/hooks, code.visualstudio.com/docs/agent-customization/hooks
 
 <a id="cop-018"></a>
 ### COP-018 [HIGH] Invalid copilot-setup-steps Job
-**Requirement**: `copilot-setup-steps.yml` MUST define `jobs.copilot-setup-steps` with an Ubuntu runner and non-empty `steps`
-**Detection**: Parse workflow YAML and verify `jobs.copilot-setup-steps` exists, `runs-on` targets Ubuntu (or expression), and `steps` is non-empty
-**Fix**: Add or correct `copilot-setup-steps` job in the workflow
-**Source**: docs.github.com/en/copilot/how-tos/agents/copilot-coding-agent/customizing-the-development-environment-for-copilot-coding-agent
+**Requirement**: `copilot-setup-steps.yml` MUST define a job named `copilot-setup-steps` ("The job MUST be called `copilot-setup-steps` or it will not be picked up by Copilot.") on a supported runner: "Copilot cloud agent is only compatible with Ubuntu x64 and Windows 64-bit runners. Runners with macOS or other operating systems are not supported." Larger, self-hosted and ARC runner labels are documented.
+**Detection**: Parse workflow YAML; report a missing `jobs.copilot-setup-steps` job and a `runs-on` label (string, list or `labels` of a group) that names macOS. Other labels and expressions are accepted; `steps` is optional.
+**Fix**: Add or correct the `copilot-setup-steps` job in the workflow
+**Source**: docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/customize-cloud-agent/customize-the-agent-environment
 
 <a id="cop-019"></a>
-### COP-019 [HIGH] Plugin Missing Required Fields
-**Requirement**: Copilot plugin.json MUST have name, description, and version
-**Detection**: Check plugin manifest for required fields
+### COP-019 [HIGH] Plugin Manifest Missing Required Fields
+**Requirement**: A Copilot CLI plugin manifest MUST be valid JSON with a `name`. The legacy manifest's only required field is `name` (`description` and `version` are "Optional metadata fields"); an Agent Plugins 1.0 manifest requires `$schema` and `name`, and "If a plugin declares an Agent Plugins version that Copilot CLI doesn't support, the CLI rejects the plugin".
+**Detection**: `.github/plugin/plugin.json` and `.plugin/plugin.json`: invalid JSON, a non-object root, a missing `name`, or an agent-plugins.org `$schema` other than the 1.0.0 and 1.1.0 schemas
 **Fix**: Manual
-**Source**: docs.github.com/en/copilot/customizing-copilot
+**Source**: docs.github.com/en/copilot/reference/copilot-cli-reference/cli-plugin-reference
 
 <a id="cop-020"></a>
 ### COP-020 [MEDIUM] Plugin Invalid Field Types
-**Requirement**: Plugin manifest fields SHOULD have correct types
-**Detection**: Check name/version/description are strings, keywords is array, agents/skills are objects
+**Requirement**: Plugin manifest fields SHOULD have the documented types: strings for `name`, `version`, `description`, `homepage`, `repository`, `license` and `category`; string arrays for `keywords` and `tags`; an object for `author`; "string | string[]" for the legacy component paths `agents`, `skills` and `commands`; "string | object" for `hooks`, `mcpServers` and `lspServers`
+**Detection**: Check each present field's JSON type, at the value
 **Fix**: Manual
-**Source**: docs.github.com/en/copilot/customizing-copilot
-
-<a id="cop-022"></a>
-### COP-022 [HIGH] CLI Skill Missing Frontmatter
-**Requirement**: Copilot CLI SKILL.md MUST have name and description frontmatter
-**Detection**: Parse frontmatter, check for required fields
-**Fix**: Manual
-**Source**: docs.github.com/en/copilot/customizing-copilot
-
-<a id="cop-023"></a>
-### COP-023 [MEDIUM] CLI Skill Name Format
-**Requirement**: Copilot CLI skill name SHOULD be kebab-case
-**Detection**: Check name against lowercase-hyphen pattern
-**Fix**: Manual
-**Source**: docs.github.com/en/copilot/customizing-copilot
-
-<a id="cop-024"></a>
-### COP-024 [MEDIUM] CLI Skill Unknown Field
-**Requirement**: Copilot CLI SKILL.md frontmatter fields SHOULD be from known set
-**Detection**: Check for unknown frontmatter keys
-**Fix**: Manual
-**Source**: docs.github.com/en/copilot/customizing-copilot
+**Source**: docs.github.com/en/copilot/reference/copilot-cli-reference/cli-plugin-reference
 
 <a id="cop-025"></a>
 ### COP-025 [LOW] Agent File Wrong Location
-**Requirement**: .agent.md files MAY be under .github/agents/ or ~/.copilot/agents/
-**Detection**: Check path of .agent.md files
+**Requirement**: `.agent.md` files SHOULD be in a folder Copilot reads agents from: `.github/agents/` (any depth), `~/.copilot/agents/`, a root `agents/` folder (organization and enterprise agents in the `.github` or `.github-private` repository, and CLI plugin agents), or VS Code's profile `prompts/` folder
+**Detection**: Info for a `*.agent.md` file outside every such folder (Claude Code agent folders and documentation folders are not checked)
 **Fix**: Manual - move file
-**Source**: docs.github.com/en/copilot/customizing-copilot
-
-<a id="cop-026"></a>
-### COP-026 [LOW] Deprecated SSE Transport
-**Requirement**: MCP servers MAY use HTTP instead of deprecated SSE
-**Detection**: Check for type:"sse" in mcp-config.json
-**Fix**: Manual - switch to type:"http"
-**Source**: docs.github.com/en/copilot/customizing-copilot
+**Source**: docs.github.com/en/copilot/concepts/agents/copilot-cli/about-custom-agents, code.visualstudio.com/docs/agent-customization/custom-agents, docs.github.com/en/copilot/reference/copilot-cli-reference/cli-plugin-reference
 
 <a id="cop-027"></a>
 ### COP-027 [LOW] Deprecated Infer Field
-**Requirement**: Agent infer field MAY be replaced with disable-model-invocation
+**Requirement**: Agents SHOULD replace `infer` with `disable-model-invocation` and `user-invocable`: GitHub marks it "**Retired**. Use `disable-model-invocation` and `user-invocable` instead." and VS Code "**Deprecated.**" VS Code still reads it, so this is a LOW migration note.
 **Detection**: Check for infer key in .agent.md frontmatter
 **Fix**: [AUTO-FIX, unsafe] Migrate an unambiguous boolean `infer` to `disable-model-invocation` (inverted) and default `user-invocable: true` independently of `infer`. Preserve explicit boolean replacement fields; refuse ambiguous or wrong-type fields. Review invocation behavior before applying.
-**Source**: docs.github.com/en/copilot/customizing-copilot
+**Source**: docs.github.com/en/copilot/reference/custom-agents-configuration, code.visualstudio.com/docs/agents/reference/custom-agent-file-reference
+
+<a id="cop-028"></a>
+### COP-028 [HIGH] Custom Agent MCP Secret Without COPILOT_MCP_ Prefix
+**Requirement**: Secrets and variables referenced by a custom agent's `mcp-servers` MUST be named `COPILOT_MCP_*`: "Only Agents secrets and variables with names prefixed with `COPILOT_MCP_` will be available to your MCP configuration." and "Referenced names must start with `COPILOT_MCP_`."
+**Detection**: In `mcp-servers.<server>.env` and `.headers` values: `${{ secrets.NAME }}` or `${{ vars.NAME }}` without the prefix is an error; `$NAME`, `${NAME}` or `${NAME:-default}` without the prefix is a warning (the CLI may read the variable from the local environment). Skipped for `target: vscode` agents, since `mcp-servers` is "Not used in VS Code and other IDE custom agents".
+**Fix**: Manual - rename the Agents secret or variable
+**Source**: docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/configure-mcp-servers, docs.github.com/en/copilot/reference/custom-agents-configuration
+
+<a id="cop-029"></a>
+### COP-029 [MEDIUM] copilot-setup-steps Job Setting Ignored
+**Requirement**: The `copilot-setup-steps` job SHOULD use only the settings Copilot honors: "you can only customize the following settings of the `copilot-setup-steps` job. If you try to customize other settings, your changes will be ignored." The list is `steps`, `permissions`, `runs-on`, `services`, `snapshot` and `timeout-minutes` ("maximum value: `59`").
+**Detection**: Warning for each other job key (a display `name` is not reported) and for `timeout-minutes` above 59, at the key's line
+**Fix**: Manual - move job-level settings such as `env` into the steps
+**Source**: docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/customize-cloud-agent/customize-the-agent-environment
+
+<a id="cop-030"></a>
+### COP-030 [MEDIUM] File Reference Copilot CLI Does Not Load
+**Requirement**: `@` file references SHOULD be ones Copilot CLI loads: "Referenced files must remain within the repository, or within the custom instructions directory for local instructions. Absolute paths and paths beginning with `~/` are not loaded. File references are not expanded in `GEMINI.md` or `*.instructions.md` files."
+**Detection**: In `.github/copilot-instructions.md`: `@` imports that are absolute, start with `~`, or resolve outside the project root. In `*.instructions.md`: any `@` import. AGENTS.md, CLAUDE.md and GEMINI.md are checked only when the run targets Copilot (`tools = ["copilot"]`), since Claude Code and Gemini CLI expand their own imports. Uses the shared import parser (code spans and fences excluded).
+**Fix**: Manual - reference a repository file or copy the content
+**Source**: docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-custom-instructions ("Referencing other files")
+
+<a id="cop-031"></a>
+### COP-031 [HIGH] Copilot Hook Entry Violates Documented Constraints
+**Requirement**: Hook entries MUST respect the hooks reference: "By default, only `https://` URLs are allowed. Non-TLS `http://` requests are rejected, except for `http://localhost`, `http://127.*`, and `http://[::1]` when `COPILOT_HOOK_ALLOW_LOCALHOST=1` is set"; for `preToolUse` and `permissionRequest` the URL "must use `https://` because the response can grant tool permissions"; with `allowedEnvVars` "`url` must use `https://`"; prompt hooks "are only supported on `sessionStart`"; "Do not combine `exec` with `bash`, `powershell`, or `command`"; and a matcher "is compiled as `^(?:PATTERN)$` ... Invalid regexes cause the hook entry to be skipped".
+**Detection**: Error for each violation, at the URL, key or matcher; info for an http localhost URL (allowed only with the environment opt-in). Matchers are compiled with an ECMAScript regex engine. PascalCase `PreToolUse` and `PermissionRequest` matchers follow Claude's semantics, so `*`, `**`, an empty value and `|`-separated names are not regexes there.
+**Fix**: Manual
+**Source**: docs.github.com/en/copilot/reference/hooks-reference ("HTTP hooks", "Prompt hooks", "Command hooks", "Matcher filtering")
+
+<a id="cop-032"></a>
+### COP-032 [LOW] Legacy Chat Mode File
+**Requirement**: Chat mode files SHOULD be migrated: "Custom agents were previously known as custom chat modes." and "If you have existing `.chatmode.md` files, rename them to `.agent.md` and place them in one of the supported custom agent locations."
+**Detection**: Any `*.chatmode.md` file; a LOW migration note only, the file is not validated as an agent
+**Fix**: Manual - rename to `.agent.md` and move to `.github/agents/`
+**Source**: code.visualstudio.com/docs/agent-customization/custom-agents ("Are custom agents different from chat modes?")
+
+<a id="cop-033"></a>
+### COP-033 [MEDIUM] Invalid Custom Agent Filename
+**Requirement**: A custom agent file name MUST use only the documented characters: "the filename may only contain the following characters: `.`, `-`, `_`, `a-z`, `A-Z`, `0-9`."
+**Detection**: Agent files in Copilot agent folders whose name, without `.agent.md` or `.md`, has any other character
+**Fix**: Manual - rename the file
+**Source**: docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/customize-cloud-agent/create-custom-agents
+
+<a id="cop-034"></a>
+### COP-034 [MEDIUM] Custom Agent MCP Server Tools List
+**Requirement**: Each MCP server in a custom agent MUST list its `tools` ("Required keys for local and remote MCP servers"), and SHOULD allowlist specific tools: "We strongly recommend that you allowlist specific read-only tools, since the agent will be able to use these tools autonomously and will not ask you for approval first."
+**Detection**: `mcp-servers.<server>` without `tools`: warning. `tools` containing `"*"`: info. Skipped for `target: vscode` agents.
+**Fix**: Manual
+**Source**: docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/configure-mcp-servers, docs.github.com/en/copilot/reference/custom-agents-configuration
+
+<a id="cop-035"></a>
+### COP-035 [MEDIUM] MCP File Uses Unsupported Feature or Wrong Server Key
+**Requirement**: MCP files SHOULD use the features their format supports: "Portable files use a top-level `mcpServers` object. The VS Code format uses `servers`." and "Portable configurations don't support VS Code input variables or environment files. Servers requiring interactive inputs aren't forwarded to Copilot harness sessions." Workspace-root `.mcp.json` supports "stdio and HTTP" transports and no working directory.
+**Detection**: `.vscode/mcp.json` with `mcpServers` and no `servers`; `~/.copilot/mcp-config.json` with `servers` and no `mcpServers`, `envFile`, or `${input:...}`; workspace `.mcp.json` (only when the run targets Copilot, since it is also Claude Code's file) with `servers`, `envFile`, `cwd`, `type: "sse"` or `${input:...}`
+**Fix**: Manual
+**Source**: code.visualstudio.com/docs/agents/reference/mcp-configuration ("Configuration file"), code.visualstudio.com/docs/agent-customization/mcp-servers ("Choose a configuration destination")
+
+<a id="cop-036"></a>
+### COP-036 [LOW] Copilot Hook Skipped by Cloud Agent or Missing Script
+**Requirement**: Repository hooks SHOULD run where they are deployed: under cloud agent "Only the `bash` field is honored; `powershell` entries are ignored. The cross-platform `command` field is honored as a fallback.", and the troubleshooting steps ask to "Verify the script you are calling from your hook is executable" and "Check that the script has a proper shebang".
+**Detection**: Info for a `.github/hooks/*.json` command entry with only `powershell`; for a `bash` or `command` whose first word is a relative script path (`./x.sh`, `scripts/x.py`) that does not exist at the repository root (entries with `cwd` are skipped); and for such a script without a `#!` first line. The executable bit is not checked.
+**Fix**: Manual
+**Source**: docs.github.com/en/copilot/reference/hooks-reference ("Cloud agent execution environment"), docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/use-hooks ("Troubleshooting")
+
+<a id="cop-037"></a>
+### COP-037 [MEDIUM] Literal Secret in Copilot Hook
+**Requirement**: Hook files SHOULD NOT hold credentials: "**Never log sensitive data, such as tokens or passwords**". Hook files in `.github/hooks/` are committed.
+**Detection**: `env` and `headers` values whose key names a credential (token, secret, password, API key, authorization) and whose value is a literal secret rather than a variable reference or placeholder (shared plaintext-secret heuristic)
+**Fix**: Manual - read the value from the environment
+**Source**: docs.github.com/en/copilot/concepts/agents/hooks ("Security considerations"), docs.github.com/en/copilot/reference/hooks-reference
+
+<a id="cop-038"></a>
+### COP-038 [LOW] Code Review Instruction Points to an External Link
+**Requirement**: Code review instructions SHOULD NOT depend on external links: "**Follow external links**" is listed under unsupported instruction types, for example "`Review this code according to the standards at https://example.com/standards`", with the workaround "Copy the relevant content directly into your instruction file instead".
+**Detection**: Info for a line outside code fences that has an http(s) URL with a directive phrase (follow, according to, refer to, adhere to, comply with, as described at, standards/guidelines/conventions at) in `.github/copilot-instructions.md` and `*.instructions.md`, unless the file sets `excludeAgent: "code-review"`
+**Fix**: Manual - copy the guidance in
+**Source**: docs.github.com/en/copilot/tutorials/customize-code-review ("What not to do")
+
+<a id="cop-039"></a>
+### COP-039 [MEDIUM] Copilot Plugin Name or Manifest Constraints
+**Requirement**: Plugin names and descriptions MUST meet the CLI plugin reference: the legacy `name` is a "Kebab-case plugin name (letters, numbers, and hyphens only). Maximum 64 characters."; an Agent Plugins 1.0 name must "Contain between 1 and 64 characters", "Contain only lowercase ASCII letters, digits, hyphens, and periods", "Start and end with an alphanumeric character" and "Not contain `--` or `..`"; `description` is "Max 1024 chars". The Agent Plugins 1.0 manifest is closed: "Unknown top-level fields are reported and ignored. Component path fields such as `agents`, `skills`, `hooks`, `mcpServers`, and `lspServers` are not Agent Plugins 1.0 manifest fields."
+**Detection**: Warning for a name or description that breaks these limits; info for a field outside the Agent Plugins 1.0 schema in a manifest that declares it
+**Fix**: Manual
+**Source**: docs.github.com/en/copilot/reference/copilot-cli-reference/cli-plugin-reference ("Name constraints", "Optional metadata fields", "Agent Plugins 1.0 manifest fields")
 
 ---
+
 
 ## CURSOR PROJECT RULES
 
@@ -4252,8 +4316,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Cline Skills | 3 | 2 | 1 | 0 | 2 |
 | Codex CLI | 64 | 31 | 28 | 5 | 9 |
 | Codex Skills | 1 | 0 | 1 | 0 | 1 |
-| GitHub Copilot | 25 | 13 | 9 | 3 | 12 |
-| Copilot Skills | 1 | 0 | 1 | 0 | 1 |
+| GitHub Copilot | 33 | 13 | 13 | 7 | 7 |
+| Copilot Skills | 2 | 0 | 2 | 0 | 1 |
 | Cross-Platform | 11 | 1 | 8 | 2 | 0 |
 | Cursor | 20 | 10 | 9 | 1 | 6 |
 | Cursor Skills | 1 | 0 | 1 | 0 | 1 |
@@ -4280,7 +4344,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **535** | **241** | **242** | **52** | **136** |
+| **TOTAL** | **544** | **241** | **247** | **56** | **131** |
 
 
 ---
@@ -4310,8 +4374,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 535 validation rules across 43 categories
+**Total Coverage**: 544 validation rules across 43 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 241 HIGH, 242 MEDIUM, 52 LOW
-**Auto-Fixable**: 136 rules (25%)
+**Certainty**: 241 HIGH, 247 MEDIUM, 56 LOW
+**Auto-Fixable**: 131 rules (24%)

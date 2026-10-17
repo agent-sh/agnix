@@ -221,6 +221,60 @@ fn is_under_github_instructions(path: &Path) -> bool {
     path_contains_consecutive_components(path, ".github", "instructions")
 }
 
+/// Returns true for a Copilot custom agent file: any `.md` file under
+/// `.github/agents/` or `~/.copilot/agents/` (at any depth; the CLI joins
+/// subdirectories into the agent ID with `--`), and `*.agent.md` or legacy
+/// `*.chatmode.md` files elsewhere, which only Copilot uses. Claude Code
+/// agent directories and documentation folders keep their own handling, and
+/// project files such as README.md are not agents unless named `*.agent.md`.
+fn is_copilot_agent_path(path: &Path, filename: &str) -> bool {
+    if !ends_with_ignore_ascii_case(filename, ".md") {
+        return false;
+    }
+    let copilot_suffix = ends_with_ignore_ascii_case(filename, ".agent.md")
+        || ends_with_ignore_ascii_case(filename, ".chatmode.md");
+    if path_contains_consecutive_components(path, ".github", "agents")
+        || path_contains_consecutive_components(path, ".copilot", "agents")
+    {
+        return copilot_suffix || !is_excluded_filename(filename);
+    }
+    copilot_suffix
+        && !path_contains_consecutive_components(path, ".claude", "agents")
+        && !is_documentation_directory(path)
+}
+
+/// Returns true for a Copilot hook file: any `*.json` directly in
+/// `.github/hooks/` ("stored in your repository at `.github/hooks/*.json`") or
+/// in the user-level `~/.copilot/hooks/`.
+fn is_copilot_hook_file(filename: &str, parent: Option<&str>, grandparent: Option<&str>) -> bool {
+    ends_with_ignore_ascii_case(filename, ".json")
+        && parent_eq_ignore_ascii_case(parent, "hooks")
+        && (parent_eq_ignore_ascii_case(grandparent, ".github")
+            || parent_eq_ignore_ascii_case(grandparent, ".copilot"))
+}
+
+/// Returns true for Copilot settings files that carry an inline `hooks` block:
+/// `.github/copilot/settings.json`, `.github/copilot/settings.local.json` and
+/// the user-level `~/.copilot/settings.json`. They are not Claude settings.
+fn is_copilot_settings_file(
+    filename: &str,
+    parent: Option<&str>,
+    grandparent: Option<&str>,
+) -> bool {
+    matches!(filename, "settings.json" | "settings.local.json")
+        && (parent_eq_ignore_ascii_case(parent, ".copilot")
+            || (parent_eq_ignore_ascii_case(parent, "copilot")
+                && parent_eq_ignore_ascii_case(grandparent, ".github")))
+}
+
+/// Returns true for a Copilot CLI plugin manifest in a location only Copilot
+/// reads: `.github/plugin/plugin.json` or `.plugin/plugin.json`.
+fn is_copilot_plugin_manifest(parent: Option<&str>, grandparent: Option<&str>) -> bool {
+    parent_eq_ignore_ascii_case(parent, ".plugin")
+        || (parent_eq_ignore_ascii_case(parent, "plugin")
+            && parent_eq_ignore_ascii_case(grandparent, ".github"))
+}
+
 /// Returns true if the path contains `.cursor/rules` as consecutive
 /// components anywhere in the path. This allows Cursor rules to live in
 /// nested subdirectories under `.cursor/rules/`.
@@ -280,6 +334,13 @@ fn has_clinerules_ancestor(path: &Path) -> bool {
     path.components().any(
         |c| matches!(c, std::path::Component::Normal(name) if name.to_str() == Some(".clinerules")),
     )
+}
+
+/// Returns true for a file in a Cline hooks directory: `.clinerules/hooks/`
+/// (VS Code extension) or `.cline/hooks/` (CLI).
+fn is_cline_hooks_dir(path: &Path) -> bool {
+    path_contains_consecutive_components(path, ".clinerules", "hooks")
+        || path_contains_consecutive_components(path, ".cline", "hooks")
 }
 
 // ============================================================================
@@ -915,11 +976,24 @@ pub fn detect_file_type(path: &Path) -> FileType {
         {
             FileType::GeminiSettings
         }
+        // GitHub Copilot settings with an inline `hooks` block
+        // (.github/copilot/settings.json, ~/.copilot/settings.json)
+        name if is_copilot_settings_file(name, parent, grandparent) => FileType::CopilotHooks,
         _ if is_claude_managed_settings_path(path) => FileType::Hooks,
         "settings.json" | "settings.local.json" => FileType::Hooks,
         // Codex CLI plugin manifest (.codex-plugin/plugin.json)
         "plugin.json" if parent_eq_ignore_ascii_case(parent, ".codex-plugin") => {
             FileType::CodexPlugin
+        }
+        // GitHub Copilot CLI plugin manifest (.github/plugin/plugin.json,
+        // .plugin/plugin.json)
+        "plugin.json" if is_copilot_plugin_manifest(parent, grandparent) => FileType::CopilotPlugin,
+        // Cursor plugin manifests (.cursor-plugin/plugin.json and the
+        // multi-plugin .cursor-plugin/marketplace.json)
+        "plugin.json" | "marketplace.json"
+            if parent_eq_ignore_ascii_case(parent, ".cursor-plugin") =>
+        {
+            FileType::CursorPlugin
         }
         // Classify any other plugin.json as Plugin - validator checks .claude-plugin/ constraint (CC-PL-001)
         "plugin.json" => FileType::Plugin,
@@ -937,12 +1011,16 @@ pub fn detect_file_type(path: &Path) -> FileType {
         name if name.ends_with(".instructions.md") && is_under_github_instructions(path) => {
             FileType::CopilotScoped
         }
-        // GitHub Copilot custom agents (.github/agents/*.agent.md)
-        name if name.ends_with(".agent.md")
-            && parent_eq_ignore_ascii_case(parent, "agents")
-            && parent_eq_ignore_ascii_case(grandparent, ".github") =>
+        // GitHub Copilot custom agents (.github/agents/**/*.md,
+        // ~/.copilot/agents/**/*.md, *.agent.md and legacy *.chatmode.md)
+        name if is_copilot_agent_path(path, name) => FileType::CopilotAgent,
+        // README.md and other project files in those folders are not agents
+        // (and not Claude Code subagents either).
+        name if ends_with_ignore_ascii_case(name, ".md")
+            && (path_contains_consecutive_components(path, ".github", "agents")
+                || path_contains_consecutive_components(path, ".copilot", "agents")) =>
         {
-            FileType::CopilotAgent
+            FileType::Unknown
         }
         // GitHub Copilot reusable prompts (.github/prompts/*.prompt.md)
         name if name.ends_with(".prompt.md")
@@ -951,13 +1029,8 @@ pub fn detect_file_type(path: &Path) -> FileType {
         {
             FileType::CopilotPrompt
         }
-        // GitHub Copilot hooks configuration (.github/hooks/hooks.json)
-        "hooks.json"
-            if parent_eq_ignore_ascii_case(parent, "hooks")
-                && parent_eq_ignore_ascii_case(grandparent, ".github") =>
-        {
-            FileType::CopilotHooks
-        }
+        // GitHub Copilot hook files (.github/hooks/*.json, ~/.copilot/hooks/*.json)
+        name if is_copilot_hook_file(name, parent, grandparent) => FileType::CopilotHooks,
         // GitHub Copilot setup workflow (.github/workflows/copilot-setup-steps.yml/.yaml)
         "copilot-setup-steps.yml" | "copilot-setup-steps.yaml"
             if parent_eq_ignore_ascii_case(parent, "workflows")
@@ -1015,10 +1088,31 @@ pub fn detect_file_type(path: &Path) -> FileType {
         {
             FileType::CursorEnvironment
         }
+        // Cursor CLI configuration (.cursor/cli.json in a project,
+        // ~/.cursor/cli-config.json for the user)
+        name if (name.eq_ignore_ascii_case("cli.json")
+            || name.eq_ignore_ascii_case("cli-config.json"))
+            && parent_eq_ignore_ascii_case(parent, ".cursor") =>
+        {
+            FileType::CursorCliConfig
+        }
+        // Cursor allowlists (.cursor/permissions.json, ~/.cursor/permissions.json)
+        name if name.eq_ignore_ascii_case("permissions.json")
+            && parent_eq_ignore_ascii_case(parent, ".cursor") =>
+        {
+            FileType::CursorPermissions
+        }
+        // Cursor ignore file (.cursorignore)
+        ".cursorignore" => FileType::CursorIgnore,
         // Legacy Cursor rules file (.cursorrules or .cursorrules.md)
         ".cursorrules" | ".cursorrules.md" => FileType::CursorRulesLegacy,
         // Cline rules single file (.clinerules without extension)
         ".clinerules" => FileType::ClineRules,
+        // Cline ignore file (.clineignore), being removed by Cline
+        ".clineignore" => FileType::ClineIgnore,
+        // Cline MCP settings (~/.cline/data/settings/cline_mcp_settings.json and
+        // the VS Code extension's global storage copy)
+        "cline_mcp_settings.json" => FileType::ClineMcpSettings,
         // Legacy Windsurf rules file (.windsurfrules)
         ".windsurfrules" => FileType::WindsurfRulesLegacy,
         // Gemini CLI ignore file (.geminiignore)
@@ -1035,12 +1129,20 @@ pub fn detect_file_type(path: &Path) -> FileType {
         }
         // Roo Code rules (.roo/rules/*.md)
         name if name.ends_with(".md") && is_under_roo_rules(path) => FileType::RooRules,
+        // Notes kept next to Cline hook scripts are not hooks (a hook file is
+        // named after its event, with no extension in the VS Code extension).
+        name if (name.ends_with(".md") || name.ends_with(".txt")) && is_cline_hooks_dir(path) => {
+            FileType::Unknown
+        }
         // Cline rules folder - .md/.txt under .clinerules/, or Markdown
-        // rules under the documented .cline/rules/ layout.
+        // rules and workflows under the documented .cline/ layout. Skills in
+        // .clinerules/skills/ are skills: their resource files are not rules.
         name if (name.ends_with(".md") || name.ends_with(".txt"))
-            && (has_clinerules_ancestor(path)
+            && ((has_clinerules_ancestor(path)
+                && !path_contains_consecutive_components(path, ".clinerules", "skills"))
                 || (name.ends_with(".md")
-                    && path_contains_consecutive_components(path, ".cline", "rules"))) =>
+                    && (path_contains_consecutive_components(path, ".cline", "rules")
+                        || path_contains_consecutive_components(path, ".cline", "workflows")))) =>
         {
             FileType::ClineRulesFolder
         }
@@ -1105,11 +1207,10 @@ pub fn detect_file_type(path: &Path) -> FileType {
                 }
             }
         }
-        // Cline hook scripts under .clinerules/hooks/ (any extension or no extension)
-        // (e.g., .clinerules/hooks/TaskStart, .clinerules/hooks/PreToolUse.sh)
-        _ if path_contains_consecutive_components(path, ".clinerules", "hooks") => {
-            FileType::ClineRulesFolder
-        }
+        // Cline hook scripts under .clinerules/hooks/ (VS Code extension) or
+        // .cline/hooks/ (CLI), any extension or none
+        // (e.g., .clinerules/hooks/TaskStart, .cline/hooks/PreToolUse.sh)
+        _ if is_cline_hooks_dir(path) => FileType::ClineRulesFolder,
         _ => FileType::Unknown,
     }
 }
@@ -2776,7 +2877,8 @@ mod tests {
             (".gitignore", Unknown),
             (".geminiignore", GeminiIgnore),
             (".rooignore", RooIgnore),
-            (".cursorignore", Unknown),
+            // Cursor's ignore file has its own type (CUR-034).
+            (".cursorignore", CursorIgnore),
             ("kiroignore", Unknown),
         ]);
     }

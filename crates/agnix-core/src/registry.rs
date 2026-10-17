@@ -398,7 +398,7 @@ impl ValidatorRegistryBuilder {
 ///
 /// Used by `BuiltinProvider` (via `debug_assert_eq!`) and tests to catch
 /// accidental additions or removals without updating all providers.
-const EXPECTED_BUILTIN_COUNT: usize = 88;
+const EXPECTED_BUILTIN_COUNT: usize = 101;
 
 // -- Category providers -----------------------------------------------------
 //
@@ -533,6 +533,28 @@ impl ValidatorProvider for CopilotProvider {
                 Some("CopilotValidator"),
                 copilot_validator,
             ),
+            (
+                FileType::CopilotPlugin,
+                Some("CopilotValidator"),
+                copilot_validator,
+            ),
+            // Copilot reads files that other tools own too. The validator acts
+            // only on Copilot's part of each and returns early otherwise:
+            // skills (CP-SK-002), the portable and VS Code MCP files
+            // (COP-035), and the @file references of AGENTS.md, CLAUDE.md and
+            // GEMINI.md that Copilot CLI does not load (COP-030).
+            (FileType::Skill, Some("CopilotValidator"), copilot_validator),
+            (FileType::Mcp, Some("CopilotValidator"), copilot_validator),
+            (
+                FileType::ClaudeMd,
+                Some("CopilotValidator"),
+                copilot_validator,
+            ),
+            (
+                FileType::GeminiMd,
+                Some("CopilotValidator"),
+                copilot_validator,
+            ),
         ]
     }
 }
@@ -595,6 +617,31 @@ impl ValidatorProvider for CursorProvider {
                 Some("ClaudeMdValidator"),
                 claude_md_validator,
             ),
+            (
+                FileType::CursorCliConfig,
+                Some("CursorValidator"),
+                cursor_validator,
+            ),
+            (
+                FileType::CursorPermissions,
+                Some("CursorValidator"),
+                cursor_validator,
+            ),
+            (
+                FileType::CursorPlugin,
+                Some("CursorValidator"),
+                cursor_validator,
+            ),
+            (
+                FileType::CursorIgnore,
+                Some("CursorValidator"),
+                cursor_validator,
+            ),
+            // Cursor's part of shared files: skills under .cursor/skills
+            // (CUR-023) and .cursor/mcp.json (CUR-024). The validator returns
+            // early for every other skill and MCP file.
+            (FileType::Skill, Some("CursorValidator"), cursor_validator),
+            (FileType::Mcp, Some("CursorValidator"), cursor_validator),
         ]
     }
 }
@@ -748,7 +795,19 @@ impl ValidatorProvider for MiscProvider {
                 cline_validator,
             ),
             (
-                FileType::ClineRulesFolder,
+                FileType::ClineIgnore,
+                Some("ClineValidator"),
+                cline_validator,
+            ),
+            (
+                FileType::ClineMcpSettings,
+                Some("ClineValidator"),
+                cline_validator,
+            ),
+            // SKILL.md is always FileType::Skill; ClineSkillValidator acts only
+            // on skills in .cline/skills/ and .clinerules/skills/ (CL-SK-004).
+            (
+                FileType::Skill,
                 Some("ClineSkillValidator"),
                 cline_skill_validator,
             ),
@@ -1327,8 +1386,11 @@ mod tests {
     fn validators_for_returns_all_when_none_disabled() {
         let registry = ValidatorRegistry::with_defaults();
         let skill_validators = registry.validators_for(FileType::Skill);
-        // Skill has: SkillValidator, PerClientSkillValidator, XmlValidator, ImportsValidator
-        assert_eq!(skill_validators.len(), 4);
+        // Skill has: SkillValidator, PerClientSkillValidator, XmlValidator,
+        // ImportsValidator, and the Copilot, Cursor and Cline validators,
+        // which act only on their own skill folders (CP-SK-002, CUR-023,
+        // CL-SK-004).
+        assert_eq!(skill_validators.len(), 7);
     }
 
     #[test]
@@ -1385,6 +1447,9 @@ mod tests {
             .without_validator("PerClientSkillValidator")
             .without_validator("XmlValidator")
             .without_validator("ImportsValidator")
+            .without_validator("CopilotValidator")
+            .without_validator("CursorValidator")
+            .without_validator("ClineSkillValidator")
             .build();
 
         assert!(
@@ -1513,6 +1578,7 @@ mod tests {
             FileType::CopilotAgent,
             FileType::CopilotPrompt,
             FileType::CopilotHooks,
+            FileType::CopilotPlugin,
             FileType::ClaudeRule,
             FileType::ClaudeOutputStyle,
             FileType::CursorRule,
@@ -1520,8 +1586,14 @@ mod tests {
             FileType::CursorAgent,
             FileType::CursorEnvironment,
             FileType::CursorRulesLegacy,
+            FileType::CursorCliConfig,
+            FileType::CursorPermissions,
+            FileType::CursorPlugin,
+            FileType::CursorIgnore,
             FileType::ClineRules,
             FileType::ClineRulesFolder,
+            FileType::ClineIgnore,
+            FileType::ClineMcpSettings,
             FileType::OpenCodeConfig,
             FileType::GeminiMd,
             FileType::GeminiSettings,
@@ -1570,6 +1642,7 @@ mod tests {
                 | FileType::CopilotAgent
                 | FileType::CopilotPrompt
                 | FileType::CopilotHooks
+                | FileType::CopilotPlugin
                 | FileType::ClaudeRule
                 | FileType::ClaudeOutputStyle
                 | FileType::CursorRule
@@ -1577,8 +1650,14 @@ mod tests {
                 | FileType::CursorAgent
                 | FileType::CursorEnvironment
                 | FileType::CursorRulesLegacy
+                | FileType::CursorCliConfig
+                | FileType::CursorPermissions
+                | FileType::CursorPlugin
+                | FileType::CursorIgnore
                 | FileType::ClineRules
                 | FileType::ClineRulesFolder
+                | FileType::ClineIgnore
+                | FileType::ClineMcpSettings
                 | FileType::OpenCodeConfig
                 | FileType::GeminiMd
                 | FileType::GeminiSettings
@@ -2153,12 +2232,16 @@ mod tests {
 
     #[test]
     fn copilot_provider_count() {
-        assert_eq!(CopilotProvider.named_validators().len(), 9);
+        // 14: plugin manifests, and Copilot's part of skills, MCP files and
+        // AGENTS.md / CLAUDE.md / GEMINI.md.
+        assert_eq!(CopilotProvider.named_validators().len(), 14);
     }
 
     #[test]
     fn cursor_provider_count() {
-        assert_eq!(CursorProvider.named_validators().len(), 9);
+        // 15: CLI config, permissions.json, plugin manifests, .cursorignore,
+        // and Cursor's part of skills and MCP files.
+        assert_eq!(CursorProvider.named_validators().len(), 15);
     }
 
     #[test]
@@ -2180,8 +2263,9 @@ mod tests {
     fn misc_provider_count() {
         // 38: Kiro hooks and powers dropped four Imports/CrossPlatform entries
         // and gained power plugin, power steering, workflow, ignore-file,
-        // not-loaded and Kiro AGENTS.md entries.
-        assert_eq!(MiscProvider.named_validators().len(), 38);
+        // not-loaded and Kiro AGENTS.md entries. 40: .clineignore and
+        // cline_mcp_settings.json; ClineSkillValidator moved to skills.
+        assert_eq!(MiscProvider.named_validators().len(), 40);
     }
 
     #[test]

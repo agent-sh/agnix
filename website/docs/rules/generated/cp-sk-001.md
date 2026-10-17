@@ -13,7 +13,7 @@ keywords: ["CP-SK-001", "copilot skill uses unsupported field", "copilot skills"
 - **Category**: `Copilot Skills`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `Yes (safe/unsafe)`
-- **Verified On**: `2026-07-31`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,9 @@ keywords: ["CP-SK-001", "copilot skill uses unsupported field", "copilot skills"
 
 ## Evidence Sources
 
-- https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/add-custom-instructions/add-repository-instructions
+- https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/customize-cloud-agent/add-skills
+- https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-skills
+- https://code.visualstudio.com/docs/agent-customization/agent-skills
 
 ## Test Coverage Metadata
 

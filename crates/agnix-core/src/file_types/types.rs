@@ -35,9 +35,13 @@ pub enum FileType {
     CopilotAgent,
     /// GitHub Copilot reusable prompts (.github/prompts/*.prompt.md)
     CopilotPrompt,
-    /// GitHub Copilot coding agent hooks (.github/hooks/hooks.json)
-    /// and setup workflow (.github/workflows/copilot-setup-steps.yml)
+    /// GitHub Copilot hook files (.github/hooks/*.json, ~/.copilot/hooks/*.json),
+    /// Copilot settings with inline hooks (.github/copilot/settings.json) and
+    /// the setup workflow (.github/workflows/copilot-setup-steps.yml)
     CopilotHooks,
+    /// GitHub Copilot CLI plugin manifest (.github/plugin/plugin.json,
+    /// .plugin/plugin.json)
+    CopilotPlugin,
     /// Claude Code rules (.claude/rules/*.md)
     ClaudeRule,
     /// Claude Code output style files (.claude/output-styles/*.md)
@@ -52,10 +56,23 @@ pub enum FileType {
     CursorEnvironment,
     /// Legacy Cursor rules file (.cursorrules)
     CursorRulesLegacy,
+    /// Cursor CLI configuration (.cursor/cli.json, ~/.cursor/cli-config.json)
+    CursorCliConfig,
+    /// Cursor allowlists (.cursor/permissions.json, ~/.cursor/permissions.json)
+    CursorPermissions,
+    /// Cursor plugin manifests (.cursor-plugin/plugin.json, .cursor-plugin/marketplace.json)
+    CursorPlugin,
+    /// Cursor ignore file (.cursorignore)
+    CursorIgnore,
     /// Cline rules single file (.clinerules)
     ClineRules,
-    /// Cline rules folder files (.clinerules/*.md, .clinerules/*.txt)
+    /// Cline rules folder files (.clinerules/*.md, .clinerules/*.txt), and the
+    /// workflows and hooks of the .clinerules/ and .cline/ layouts
     ClineRulesFolder,
+    /// Cline ignore file (.clineignore)
+    ClineIgnore,
+    /// Cline MCP settings (cline_mcp_settings.json)
+    ClineMcpSettings,
     /// OpenCode configuration (opencode.json, opencode.jsonc)
     OpenCodeConfig,
     /// Gemini CLI instruction files (GEMINI.md, GEMINI.local.md)
@@ -173,6 +190,7 @@ impl fmt::Display for FileType {
             FileType::CopilotAgent => "CopilotAgent",
             FileType::CopilotPrompt => "CopilotPrompt",
             FileType::CopilotHooks => "CopilotHooks",
+            FileType::CopilotPlugin => "CopilotPlugin",
             FileType::ClaudeRule => "ClaudeRule",
             FileType::ClaudeOutputStyle => "ClaudeOutputStyle",
             FileType::CursorRule => "CursorRule",
@@ -180,8 +198,14 @@ impl fmt::Display for FileType {
             FileType::CursorAgent => "CursorAgent",
             FileType::CursorEnvironment => "CursorEnvironment",
             FileType::CursorRulesLegacy => "CursorRulesLegacy",
+            FileType::CursorCliConfig => "CursorCliConfig",
+            FileType::CursorPermissions => "CursorPermissions",
+            FileType::CursorPlugin => "CursorPlugin",
+            FileType::CursorIgnore => "CursorIgnore",
             FileType::ClineRules => "ClineRules",
             FileType::ClineRulesFolder => "ClineRulesFolder",
+            FileType::ClineIgnore => "ClineIgnore",
+            FileType::ClineMcpSettings => "ClineMcpSettings",
             FileType::OpenCodeConfig => "OpenCodeConfig",
             FileType::GeminiMd => "GeminiMd",
             FileType::GeminiSettings => "GeminiSettings",
@@ -239,6 +263,7 @@ mod tests {
             (FileType::CopilotAgent, "CopilotAgent"),
             (FileType::CopilotPrompt, "CopilotPrompt"),
             (FileType::CopilotHooks, "CopilotHooks"),
+            (FileType::CopilotPlugin, "CopilotPlugin"),
             (FileType::ClaudeRule, "ClaudeRule"),
             (FileType::ClaudeOutputStyle, "ClaudeOutputStyle"),
             (FileType::CursorRule, "CursorRule"),
@@ -246,8 +271,14 @@ mod tests {
             (FileType::CursorAgent, "CursorAgent"),
             (FileType::CursorEnvironment, "CursorEnvironment"),
             (FileType::CursorRulesLegacy, "CursorRulesLegacy"),
+            (FileType::CursorCliConfig, "CursorCliConfig"),
+            (FileType::CursorPermissions, "CursorPermissions"),
+            (FileType::CursorPlugin, "CursorPlugin"),
+            (FileType::CursorIgnore, "CursorIgnore"),
             (FileType::ClineRules, "ClineRules"),
             (FileType::ClineRulesFolder, "ClineRulesFolder"),
+            (FileType::ClineIgnore, "ClineIgnore"),
+            (FileType::ClineMcpSettings, "ClineMcpSettings"),
             (FileType::OpenCodeConfig, "OpenCodeConfig"),
             (FileType::GeminiMd, "GeminiMd"),
             (FileType::GeminiSettings, "GeminiSettings"),
@@ -304,6 +335,7 @@ mod tests {
             FileType::CopilotAgent,
             FileType::CopilotPrompt,
             FileType::CopilotHooks,
+            FileType::CopilotPlugin,
             FileType::ClaudeRule,
             FileType::ClaudeOutputStyle,
             FileType::CursorRule,
@@ -311,8 +343,14 @@ mod tests {
             FileType::CursorAgent,
             FileType::CursorEnvironment,
             FileType::CursorRulesLegacy,
+            FileType::CursorCliConfig,
+            FileType::CursorPermissions,
+            FileType::CursorPlugin,
+            FileType::CursorIgnore,
             FileType::ClineRules,
             FileType::ClineRulesFolder,
+            FileType::ClineIgnore,
+            FileType::ClineMcpSettings,
             FileType::OpenCodeConfig,
             FileType::GeminiMd,
             FileType::GeminiSettings,
@@ -383,6 +421,7 @@ mod tests {
             FileType::CopilotAgent,
             FileType::CopilotPrompt,
             FileType::CopilotHooks,
+            FileType::CopilotPlugin,
             FileType::ClaudeRule,
             FileType::ClaudeOutputStyle,
             FileType::CursorRule,
@@ -390,8 +429,14 @@ mod tests {
             FileType::CursorAgent,
             FileType::CursorEnvironment,
             FileType::CursorRulesLegacy,
+            FileType::CursorCliConfig,
+            FileType::CursorPermissions,
+            FileType::CursorPlugin,
+            FileType::CursorIgnore,
             FileType::ClineRules,
             FileType::ClineRulesFolder,
+            FileType::ClineIgnore,
+            FileType::ClineMcpSettings,
             FileType::OpenCodeConfig,
             FileType::GeminiMd,
             FileType::GeminiSettings,

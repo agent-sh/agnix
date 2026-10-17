@@ -10,8 +10,10 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
-/// Known valid keys for scoped instruction frontmatter
-const KNOWN_KEYS: &[&str] = &["applyTo", "description", "excludeAgent"];
+/// Known valid keys for scoped instruction frontmatter. GitHub documents
+/// `applyTo` and `excludeAgent`; VS Code adds `name` ("Display name shown in
+/// the UI") and `description` (on-demand loading).
+const KNOWN_KEYS: &[&str] = &["applyTo", "description", "excludeAgent", "name"];
 
 /// Frontmatter schema for scoped Copilot instructions
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -26,7 +28,7 @@ pub struct CopilotScopedSchema {
     #[serde(default)]
     pub description: Option<String>,
 
-    /// Agent exclusion filter (e.g., "code-review" or "coding-agent")
+    /// Agent exclusion filter ("code-review" or "cloud-agent")
     #[serde(default)]
     pub exclude_agent: Option<String>,
 }

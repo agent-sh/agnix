@@ -68,6 +68,8 @@ rules:
   oc_dep_002:
     migration_suggestion: "Migrate tools boolean values to permission actions/rules; do not only rename the key. Legacy tools remains supported."
   cop_027:
+    message: "Field 'infer' is retired on GitHub.com and deprecated in VS Code; use 'disable-model-invocation' and 'user-invocable' instead"
+    suggestion: "Replace 'infer' with 'disable-model-invocation' (the inverse of infer) and 'user-invocable'."
     fix: "Replace infer with invocation controls, preserving explicit fields"
   boolean_unwrap:
     json_fix: "Convert quoted %{value} to a JSON boolean (may change behavior or security policy)"
@@ -492,19 +494,20 @@ rules:
     suggestion_empty: Add meaningful instructions for Copilot to follow
     suggestion_scoped_empty: Add frontmatter with applyTo field and instructions
   cop_002:
-    message_missing: Scoped Copilot instruction file missing required frontmatter
+    message_missing: "Path-specific instruction file has no frontmatter, so it has no 'applyTo': GitHub.com and Copilot CLI never apply it, and VS Code attaches it only manually"
     message_invalid_yaml: 'Invalid YAML frontmatter: %{error}'
-    message_missing_apply_to: Scoped Copilot instruction file missing required 'applyTo' field
-    suggestion_add_frontmatter: Add YAML frontmatter with --- markers and applyTo field
-    fix: Insert template frontmatter with applyTo field
+    message_missing_apply_to: "Path-specific instruction file has no 'applyTo': GitHub.com and Copilot CLI never apply it, and VS Code attaches it only manually"
+    message_on_demand: "No 'applyTo': VS Code loads this file on demand from its description, but GitHub.com (cloud agent, code review) and Copilot CLI never apply it"
+    suggestion_add_frontmatter: "Add frontmatter with an 'applyTo' glob, for example applyTo: \"**/*.ts\""
+    fix: Insert frontmatter that applies the file to all files
     suggestion_fix_yaml: Fix the YAML syntax in frontmatter
-    suggestion_add_apply_to: 'Add ''applyTo: "**/*.ts"'' or similar glob pattern'
+    suggestion_add_apply_to: "Add 'applyTo' with the files it covers, for example applyTo: \"**/*.ts\" (use \"**\" for all files)"
   cop_003:
     message: 'Invalid glob pattern ''%{pattern}'': %{error}'
     suggestion: Use valid glob syntax like '**/*.ts' or 'src/**/*.js'
   cop_004:
     message: Unknown frontmatter key '%{key}' in Copilot instruction file
-    suggestion: Remove unknown key '%{key}'. Only 'applyTo' and 'excludeAgent' are recognized.
+    suggestion: "Remove unknown key '%{key}'. Copilot reads applyTo, excludeAgent, description and name."
   cop_005:
     message: 'Invalid excludeAgent value ''%{value}''. Valid values: ''code-review'', ''cloud-agent'''
     suggestion: Use 'code-review' or 'cloud-agent' for excludeAgent
@@ -512,8 +515,130 @@ rules:
     legacy_coding_agent: "'coding-agent' is not a documented excludeAgent value - Copilot uses 'cloud-agent'. Accepted for compatibility with earlier agnix advice."
     legacy_suggestion: Change 'coding-agent' to 'cloud-agent'
   cop_006:
-    message: Copilot instruction file exceeds recommended length (%{len} characters, limit ~4000)
-    suggestion: Reduce content length or split into scoped instruction files
+    message: "Copilot instruction file has %{lines} lines; GitHub recommends at most about %{limit} lines per instruction file, beyond which response quality may deteriorate"
+    suggestion: Remove redundant or generic instructions, or move language- and path-specific guidance into .github/instructions/*.instructions.md files with applyTo
+  cop_012:
+    message: "Field '%{field}' is ignored by Copilot cloud agent on GitHub.com; only VS Code and other IDEs use it"
+    suggestion: "Keep '%{field}' if the agent is also used in an IDE, or set target: vscode for an IDE-only agent"
+  cop_015:
+    message: "Prompt agent '%{agent}' is not ask, agent, plan or a custom agent defined in this repository"
+    suggestion: "Use ask, agent, plan or the name or file name of a custom agent; user and organization agents are not visible to agnix"
+    case_suggestion: "Did you mean '%{name}'? Agent names are case-sensitive."
+  cop_017:
+    parse_error: "Copilot hook file is not valid JSON (%{error}); Copilot rejects the whole file"
+    root_not_object: Copilot hook file must be a JSON object
+    missing_version: "Copilot hook file has no \"version\": 1; Copilot CLI and cloud agent reject the whole file"
+    invalid_version: "Field 'version' must be the number 1 (found %{got}); Copilot rejects the whole file"
+    native_no_version: "This is VS Code's native hook format (PascalCase events, no version). Copilot CLI and cloud agent read .github/hooks/ too and skip a file without \"version\": 1"
+    native_no_version_suggestion: "If Copilot CLI or cloud agent should run these hooks, use the Copilot format: \"version\": 1 with camelCase events and bash/powershell commands"
+    missing_hooks: Copilot hook file is missing the 'hooks' object
+    hooks_not_object: "'hooks' must be an object that maps event names to arrays of hook entries (found %{got}); Copilot rejects the whole file"
+    unknown_event: "Unknown Copilot hook event '%{event}'; this hook never runs"
+    unknown_event_suggestion: "Did you mean '%{event}'?"
+    event_not_array: "hooks.%{event} must be an array of hook entries (found %{got}); Copilot rejects the whole file"
+    entry_not_object: "hooks.%{event}[%{index}] must be an object; Copilot drops this entry"
+    invalid_type: "hooks.%{event}[%{index}] has type %{got}; use \"command\" (the default), \"http\" or \"prompt\""
+    native_type: "VS Code native hook entries must have type \"command\" (found %{got})"
+    missing_command: "Command hook hooks.%{event}[%{index}] needs a non-empty 'bash', 'powershell' or 'command' string, or 'exec'; Copilot drops this entry"
+    native_missing_command: "Hook hooks.%{event}[%{index}] needs a 'command', 'windows', 'linux' or 'osx' string"
+    command_object: "'command' in hooks.%{event}[%{index}] must be a string; put 'bash' and 'powershell' on the entry itself"
+    missing_url: "HTTP hook hooks.%{event}[%{index}] needs a 'url' string; Copilot drops this entry"
+    missing_prompt: "Prompt hook hooks.%{event}[%{index}] needs a non-empty 'prompt' string; Copilot drops this entry"
+    field_type: "Field '%{field}' in hooks.%{event}[%{index}] must be %{expected} (found %{got}); Copilot drops this entry"
+    suggestion: "Use the Copilot hook format: {\"version\": 1, \"hooks\": {\"preToolUse\": [{\"type\": \"command\", \"bash\": \"./scripts/check.sh\"}]}}"
+    settings_suggestion: "Fix the entry: in settings.json, one invalid hook entry makes Copilot CLI reject the whole hooks field"
+  cop_018:
+    missing_job: "copilot-setup-steps workflow must define a job named copilot-setup-steps; Copilot does not pick up other jobs"
+    missing_job_suggestion: "Name the job copilot-setup-steps in .github/workflows/copilot-setup-steps.yml"
+    macos_runner: "Runner label '%{label}' is macOS; Copilot cloud agent supports only Ubuntu x64 and Windows 64-bit runners"
+    macos_runner_suggestion: "Use an Ubuntu or Windows runner, such as ubuntu-latest, a larger runner, or a self-hosted or ARC runner label"
+  cop_019:
+    parse_error: "plugin.json is not valid JSON (%{error}); Copilot CLI cannot load the plugin"
+    parse_error_suggestion: Fix the JSON syntax of the plugin manifest
+    not_object: plugin.json must be a JSON object
+    missing_name: "Copilot plugin manifest is missing the required 'name' field"
+    missing_name_suggestion: "Add a 'name', for example \"name\": \"my-plugin\""
+    unsupported_schema: "Copilot CLI does not support the Agent Plugins schema '%{url}' and rejects the plugin"
+    unsupported_schema_suggestion: "Use https://agent-plugins.org/schemas/1.0.0/plugin.schema.json or the 1.1.0 schema"
+  cop_020:
+    message: "Copilot plugin manifest field '%{field}' should be %{expected} but found %{got}"
+    suggestion: "Change '%{field}' to %{expected}."
+  cop_025:
+    message: "Agent file '%{file}' is not in a folder Copilot reads custom agents from"
+    suggestion: "Move it to .github/agents/ (repository), ~/.copilot/agents/ (user) or the agents/ folder of your organization's .github repository."
+  cop_028:
+    message: "MCP server '%{server}' references the secret or variable '%{name}', which is not prefixed with COPILOT_MCP_; Copilot cloud agent exposes only Agents secrets and variables named COPILOT_MCP_* to MCP configuration"
+    shell_message: "MCP server '%{server}' references '%{name}', which is not prefixed with COPILOT_MCP_; Copilot cloud agent makes only COPILOT_MCP_* Agents secrets and variables available to MCP configuration"
+    suggestion: "Rename the Agents secret or variable to COPILOT_MCP_%{name} and reference that name"
+  cop_029:
+    ignored_key: "Copilot ignores the '%{key}' setting of the copilot-setup-steps job"
+    ignored_key_suggestion: "Only steps, permissions, runs-on, services, snapshot and timeout-minutes take effect; move job-level settings such as env into the steps"
+    timeout: "timeout-minutes is %{minutes}; the copilot-setup-steps job allows at most 59"
+    timeout_suggestion: Set timeout-minutes to 59 or less
+  cop_030:
+    not_loaded: "Copilot CLI does not load '@%{reference}': absolute paths and paths beginning with ~/ are not loaded"
+    outside_repo: "Copilot CLI does not load '@%{reference}': referenced files must stay inside the repository"
+    not_expanded: "Copilot CLI does not expand '@%{reference}': file references are not expanded in GEMINI.md or *.instructions.md files"
+    suggestion: "Reference a file inside the repository with a relative @path from copilot-instructions.md, AGENTS.md or CLAUDE.md, or copy the content in"
+  cop_031:
+    url_scheme: "HTTP hook URL '%{url}' must start with http:// or https://"
+    http_scheme: "HTTP hook URL '%{url}' uses http://; Copilot rejects non-TLS URLs"
+    http_permission: "%{event} HTTP hooks must use https:// because the response can grant tool permissions"
+    allowed_env_vars: "'allowedEnvVars' requires an https:// URL"
+    http_localhost: "Copilot accepts this http://localhost URL only when COPILOT_HOOK_ALLOW_LOCALHOST=1 is set"
+    http_localhost_suggestion: "Set COPILOT_HOOK_ALLOW_LOCALHOST=1 where the hook runs, or use https://"
+    https_suggestion: Use an https:// URL
+    prompt_event: "Prompt hooks are only supported on sessionStart, not %{event}; Copilot skips this entry"
+    prompt_event_suggestion: Move the prompt hook to sessionStart or use a command hook
+    exec_combined: "Do not combine 'exec' with '%{field}' in one hook entry"
+    exec_combined_suggestion: "Use either exec (with args) or a shell command (bash, powershell or command)"
+    invalid_matcher: "Matcher '%{matcher}' is not a valid regular expression (%{error}); Copilot skips this hook entry"
+    invalid_matcher_suggestion: "Copilot compiles the matcher as ^(?:PATTERN)$; use for example \"bash|edit\", or omit the matcher to match every tool"
+  cop_032:
+    message: "Custom chat modes are now custom agents: VS Code no longer treats '%{file}' as a chat mode"
+    suggestion: "Rename it to %{stem}.agent.md and move it to .github/agents/"
+  cop_033:
+    message: "Custom agent filename '%{file}' has characters Copilot does not allow; it may only contain '.', '-', '_', a-z, A-Z and 0-9"
+    suggestion: Rename the file, for example to lowercase-with-hyphens.agent.md
+  cop_034:
+    missing_tools: "MCP server '%{server}' has no 'tools' list; Copilot requires 'tools' for each MCP server"
+    missing_tools_suggestion: "Add tools with the server's tools to enable, for example tools: [\"list_issues\"]"
+    all_tools: "MCP server '%{server}' enables all tools ('*'); Copilot cloud agent uses them without asking for approval"
+    all_tools_suggestion: "GitHub strongly recommends allowlisting specific read-only tools instead of '*'"
+  cop_035:
+    vscode_key: ".vscode/mcp.json defines servers under 'servers'; VS Code ignores a top-level 'mcpServers'"
+    vscode_key_suggestion: "Rename 'mcpServers' to 'servers' in .vscode/mcp.json"
+    portable_key: "The portable Copilot MCP format defines servers under 'mcpServers'; 'servers' is the .vscode/mcp.json key"
+    portable_key_suggestion: "Rename 'servers' to 'mcpServers'"
+    unsupported_field: "MCP server '%{server}' uses '%{field}', which this portable MCP file does not support"
+    unsupported_field_suggestion: "Workspace .mcp.json supports neither SSE, cwd nor env files, and ~/.copilot/mcp-config.json no env files; move this server to .vscode/mcp.json or drop the field"
+    input_variable: "MCP server '%{server}' uses a ${input:...} variable; portable MCP files do not support VS Code input variables, and servers that need them are not forwarded to Copilot sessions"
+    input_variable_suggestion: Read the value from an environment variable, or keep this server in .vscode/mcp.json for the Local harness
+  cop_036:
+    powershell_only: "Hook hooks.%{event}[%{index}] has only 'powershell'; Copilot cloud agent runs hooks on Linux and ignores powershell entries"
+    powershell_only_suggestion: "Add 'bash' (or a cross-platform 'command') so the hook also runs in cloud agent"
+    script_missing: "Hook script '%{script}' does not exist at the repository root, where Copilot runs hook commands"
+    script_missing_suggestion: "Use a path relative to the repository root, or set 'cwd'"
+    no_shebang: "Hook script '%{script}' has no shebang line"
+    no_shebang_suggestion: "Start the script with a shebang such as #!/bin/bash and make it executable (chmod +x)"
+  cop_037:
+    message: "Hook %{field} '%{key}' holds what looks like a literal secret; hook files are committed, and GitHub advises never exposing tokens or passwords"
+    suggestion: "Read the secret from the environment instead of writing it in the hook file"
+  cop_038:
+    message: "Copilot code review does not follow external links; instructions that point to a URL have no effect on reviews"
+    suggestion: Copy the relevant guidance into the instruction file, or set excludeAgent to code-review if the file is not for reviews
+  cop_039:
+    legacy_name: "Plugin name '%{name}' must be kebab-case letters, numbers and hyphens, at most 64 characters"
+    agent_plugins_name: "Plugin name '%{name}' violates the Agent Plugins name rule: 1-64 lowercase letters, digits, hyphens and periods, starting and ending with a letter or digit, without '--' or '..'"
+    name_suggestion: "Rename the plugin, for example my-dev-tools"
+    description: "Plugin description has %{len} characters; Copilot allows at most 1024"
+    description_suggestion: Shorten the description to 1024 characters
+    unknown_field: "Field '%{field}' is not part of the Agent Plugins 1.0 manifest; Copilot CLI reports and ignores it"
+    component_field: "Field '%{field}' is not an Agent Plugins 1.0 manifest field; components load from fixed locations (skills/, mcp.json, com.github.copilot/)"
+    unknown_field_suggestion: "Remove the field, or put client-specific data under 'extensions'"
+  cp_sk_002:
+    message: "allowed-tools pre-approves '%{tool}': Copilot runs terminal commands for this skill without asking"
+    suggestion: "GitHub advises pre-approving shell or bash only for skills and scripts you have reviewed and fully trust; when in doubt, remove them from allowed-tools"
   cur_001:
     message_empty: Cursor rule file is empty
     message_no_content: Cursor rule file has no content after frontmatter

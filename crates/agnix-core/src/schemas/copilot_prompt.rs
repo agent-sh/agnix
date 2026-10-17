@@ -14,8 +14,9 @@ pub const KNOWN_KEYS: &[&str] = &[
     "tools",
 ];
 
-/// Valid `agent` values for prompt frontmatter.
-pub const VALID_AGENT_MODES: &[&str] = &["none", "ask", "always"];
+/// Built-in `agent` values for prompt frontmatter: "`ask`, `agent`, `plan`,
+/// or the name of a custom agent".
+pub const BUILT_IN_AGENTS: &[&str] = &["ask", "agent", "plan"];
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -268,11 +269,11 @@ Body
         assert!(parse_prompt_frontmatter("Prompt body").is_none());
     }
 
+    // The list used to be none/ask/always, which no VS Code page documents;
+    // the prompt-files page lists ask, agent and plan plus custom agents.
     #[test]
-    fn valid_agent_modes_constant() {
-        assert!(VALID_AGENT_MODES.contains(&"none"));
-        assert!(VALID_AGENT_MODES.contains(&"ask"));
-        assert!(VALID_AGENT_MODES.contains(&"always"));
+    fn built_in_agents_constant() {
+        assert_eq!(BUILT_IN_AGENTS, &["ask", "agent", "plan"]);
     }
 
     #[test]

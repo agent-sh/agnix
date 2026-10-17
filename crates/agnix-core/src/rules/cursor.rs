@@ -1552,7 +1552,8 @@ impl Validator for CursorValidator {
             FileType::CursorEnvironment => {
                 return validate_cursor_environment_file(path, content, config);
             }
-            _ => {}
+            FileType::CursorRule | FileType::CursorRulesLegacy => {}
+            _ => return diagnostics,
         }
 
         // Determine if this is a .mdc rule file or legacy .cursorrules

@@ -20,7 +20,7 @@
 | MCP | tool definitions | 25 |
 | XML | all .md files | 3 |
 | References | @imports | 3 |
-| GitHub Copilot | .github/copilot-instructions.md, .github/instructions/*.instructions.md, .github/agents/*.agent.md, .github/prompts/*.prompt.md, .github/hooks/hooks.json, .github/workflows/copilot-setup-steps.yml | 25 |
+| GitHub Copilot | .github/copilot-instructions.md, .github/instructions/*.instructions.md, .github/agents/*.agent.md, .github/prompts/*.prompt.md, .github/hooks/hooks.json, .github/workflows/copilot-setup-steps.yml | 33 |
 | Cursor Project Rules | .cursor/rules/*.mdc, .cursorrules, .cursor/hooks.json, .cursor/agents/**/*.md, .cursor/environment.json | 20 |
 | Cline | .clinerules, .clinerules/*.md, .clinerules/*.txt | 7 |
 | OpenCode | opencode.json, opencode.jsonc | 46 |
@@ -30,7 +30,7 @@
 | Version Awareness | .agnix.toml | 1 |
 | Cursor Skills | .cursor/skills/*/SKILL.md | 1 |
 | Cline Skills | .cline/skills/*/SKILL.md | 3 |
-| Copilot Skills | .github/skills/*/SKILL.md | 1 |
+| Copilot Skills | .github/skills/*/SKILL.md | 2 |
 | Codex Skills | .agents/skills/*/SKILL.md | 1 |
 | OpenCode Skills | .opencode/skills/*/SKILL.md | 1 |
 | Windsurf | .windsurf/rules/*.md, .windsurf/workflows/*.md, .windsurfrules | 4 |

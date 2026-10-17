@@ -118,6 +118,9 @@ impl Validator for ClineValidator {
         let mut diagnostics = Vec::new();
 
         let file_type = crate::detect_file_type(path);
+        if !matches!(file_type, FileType::ClineRules | FileType::ClineRulesFolder) {
+            return diagnostics;
+        }
         let is_folder = file_type == FileType::ClineRulesFolder;
 
         // CLN-001: Empty clinerules file (ERROR)
@@ -1368,9 +1371,22 @@ unknownKey: value
 
     #[test]
     fn test_hook_file_detected_as_cline_rules_folder() {
+        for path in [
+            ".clinerules/hooks/TaskStart",
+            ".cline/hooks/PreToolUse.sh",
+            "project/.cline/hooks/TaskError",
+        ] {
+            assert_eq!(
+                crate::detect_file_type(Path::new(path)),
+                FileType::ClineRulesFolder,
+                "{path}"
+            );
+        }
+        // Markdown notes next to the hook scripts are not hooks; this used
+        // to be classified as a hook named "TaskStart" with a .md extension.
         assert_eq!(
             crate::detect_file_type(Path::new(".clinerules/hooks/TaskStart.md")),
-            FileType::ClineRulesFolder
+            FileType::Unknown
         );
     }
 }

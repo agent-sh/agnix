@@ -1,10 +1,7 @@
 {
   "version": 1,
-  "hooks": [
-    {
-      "type": "command",
-      "events": ["notRealEvent"],
-      "command": { "bash": "echo start" }
-    }
-  ]
+  "hooks": {
+    "notRealEvent": [{ "type": "command", "bash": "echo start" }],
+    "sessionStart": [{ "type": "command", "command": { "bash": "echo start" } }]
+  }
 }
