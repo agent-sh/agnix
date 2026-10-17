@@ -1,9 +1,9 @@
 ---
 id: kr-pw-016
-title: "KR-PW-016: Documented plugin.json Field Missing"
+title: "KR-PW-016: Documented plugin.json Field Missing or Not Semver"
 sidebar_label: "KR-PW-016"
-description: "agnix rule KR-PW-016 checks for documented plugin.json field missing in kiro powers files. Severity: LOW. See examples and fix guidance."
-keywords: ["KR-PW-016", "documented plugin.json field missing", "kiro powers", "validation", "agnix", "linter"]
+description: "agnix rule KR-PW-016 checks for documented plugin.json field missing or not semver in kiro powers files. Severity: LOW. See examples and fix guidance."
+keywords: ["KR-PW-016", "documented plugin.json field missing or not semver", "kiro powers", "validation", "agnix", "linter"]
 ---
 
 ## Summary

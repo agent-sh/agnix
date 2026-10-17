@@ -23,12 +23,12 @@ keywords: ["KR-PW-006", "duplicate keywords", "kiro powers", "validation", "agni
 
 ## Evidence Sources
 
-- https://kiro.dev/docs/powers/
+- https://kiro.dev/docs/powers/create/
 
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples

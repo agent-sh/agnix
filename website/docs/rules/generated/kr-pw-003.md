@@ -13,7 +13,7 @@ keywords: ["KR-PW-003", "empty power.md body", "kiro powers", "validation", "agn
 - **Category**: `Kiro Powers`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,7 @@ keywords: ["KR-PW-003", "empty power.md body", "kiro powers", "validation", "agn
 
 ## Evidence Sources
 
-- https://kiro.dev/docs/powers/create
+- https://kiro.dev/docs/powers/
 
 ## Test Coverage Metadata
 

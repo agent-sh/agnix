@@ -1,9 +1,9 @@
 ---
 id: kiro-011
-title: "KIRO-011: Steering Doc Excessively Long - Kiro Steering"
+title: "KIRO-011: Always-Included Steering Doc Excessively Long"
 sidebar_label: "KIRO-011"
-description: "agnix rule KIRO-011 checks for steering doc excessively long in kiro steering files. Severity: LOW. See examples and fix guidance."
-keywords: ["KIRO-011", "steering doc excessively long", "kiro steering", "validation", "agnix", "linter"]
+description: "agnix rule KIRO-011 checks for always-included steering doc excessively long in kiro steering files. Severity: LOW. See examples and fix guidance."
+keywords: ["KIRO-011", "always-included steering doc excessively long", "kiro steering", "validation", "agnix", "linter"]
 ---
 
 ## Summary
@@ -24,6 +24,7 @@ keywords: ["KIRO-011", "steering doc excessively long", "kiro steering", "valida
 ## Evidence Sources
 
 - https://kiro.dev/docs/steering/
+- https://kiro.dev/docs/cli/chat/context/
 
 ## Test Coverage Metadata
 
@@ -41,14 +42,16 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ---
 inclusion: always
 ---
-# Very long doc...
+# Everything
+(more than 50,000 characters)
 ```
 
 ### Valid
 
 ```markdown
 ---
-inclusion: always
+inclusion: manual
 ---
-# Concise guidance
+# Long Reference
+(loaded only on request)
 ```

@@ -24,7 +24,7 @@ keywords: ["KR-PW-001", "power.md frontmatter kiro cannot use", "kiro powers", "
 ## Evidence Sources
 
 - https://kiro.dev/docs/powers/
-- https://kiro.dev/docs/powers/create/
+- https://kiro.dev/docs/powers/installation/
 
 ## Test Coverage Metadata
 

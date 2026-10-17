@@ -1,7 +1,7 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 468,
+  "total_rules": 471,
   "last_updated": "2026-10-17",
   "schema": {
     "evidence": {
@@ -8362,7 +8362,7 @@
         "source_urls": [
           "https://kiro.dev/docs/steering/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro"
         },
@@ -8389,7 +8389,7 @@
         "source_urls": [
           "https://kiro.dev/docs/steering/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro"
         },
@@ -8512,7 +8512,7 @@
         "source_urls": [
           "https://kiro.dev/docs/steering/"
         ],
-        "verified_on": "2026-10-04",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro"
         },
@@ -8558,13 +8558,14 @@
     },
     {
       "id": "KIRO-011",
-      "name": "Steering Doc Excessively Long",
+      "name": "Always-Included Steering Doc Excessively Long",
       "severity": "LOW",
       "category": "kiro-steering",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/docs/steering/"
+          "https://kiro.dev/docs/steering/",
+          "https://kiro.dev/docs/cli/chat/context/"
         ],
         "verified_on": "2026-10-17",
         "applies_to": {
@@ -8580,35 +8581,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "---\ninclusion: always\n---\n# Concise guidance",
-      "bad_example": "---\ninclusion: always\n---\n# Very long doc..."
-    },
-    {
-      "id": "KIRO-014",
-      "name": "Steering Body Without Markdown Heading",
-      "severity": "LOW",
-      "category": "kiro-steering",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://kiro.dev/docs/steering/"
-        ],
-        "verified_on": "2026-10-17",
-        "applies_to": {
-          "tool": "kiro"
-        },
-        "normative_level": "BEST_PRACTICE",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": false
-      },
-      "good_example": "---\ninclusion: always\n---\n# Heading\n\nContent here.",
-      "bad_example": "---\ninclusion: always\n---\nNo heading, just text."
+      "good_example": "---\ninclusion: manual\n---\n# Long Reference\n(loaded only on request)",
+      "bad_example": "---\ninclusion: always\n---\n# Everything\n(more than 50,000 characters)"
     },
     {
       "id": "KIRO-015",
@@ -8638,6 +8612,89 @@
       "bad_example": "---\ninclusion: manual\nname:\ninclusion: always\n---\n# Release Checklist"
     },
     {
+      "id": "KIRO-016",
+      "name": "AGENTS.md Exceeds Kiro Truncation Limit",
+      "severity": "MEDIUM",
+      "category": "kiro-steering",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://kiro.dev/docs/steering/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "spec_revision": "Kiro CLI 2.32.1 V3 engine (@kiro/agent 0.66.48)"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "AGENTS.md under 50,000 characters, with scoped guidance in .kiro/steering/",
+      "bad_example": "AGENTS.md of 80,000 characters (Kiro CLI V3 keeps the first 50,000)"
+    },
+    {
+      "id": "KIRO-017",
+      "name": "Kiro Steering Frontmatter in AGENTS.md",
+      "severity": "MEDIUM",
+      "category": "kiro-steering",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/steering/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "# Project Rules\n\nUse pnpm for every package script.",
+      "bad_example": "---\ninclusion: fileMatch\nfileMatchPattern: \"src/**\"\n---\n# Project Rules"
+    },
+    {
+      "id": "KIRO-018",
+      "name": "Vague Auto Steering Description",
+      "severity": "LOW",
+      "category": "kiro-steering",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/steering/",
+          "https://kiro.dev/docs/skills/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\ninclusion: auto\ndescription: REST API design patterns and conventions. Use when creating or modifying API endpoints.\n---\n# API Design",
+      "bad_example": "---\ninclusion: auto\ndescription: Helps with APIs\n---\n# API Design"
+    },
+    {
       "id": "KR-SK-001",
       "name": "Kiro Skill Uses Unsupported Field",
       "severity": "MEDIUM",
@@ -8665,6 +8722,33 @@
       },
       "good_example": "---\nname: my-skill\ndescription: A useful development skill\nmetadata:\n  version: 1.0.0\n---\n# My Skill\n\nSkill instructions here.",
       "bad_example": "---\nname: my-skill\ndescription: A useful development skill\nversion: 1.0.0\nmodel: haiku\n---\n# My Skill\n\nSkill instructions here."
+    },
+    {
+      "id": "KR-SK-002",
+      "name": "Vague Kiro Skill Description",
+      "severity": "LOW",
+      "category": "kiro-skills",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/skills/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: pr-review\ndescription: Review pull requests for security vulnerabilities and test coverage. Use when reviewing PRs.\n---\n# PR Review",
+      "bad_example": "---\nname: pr-review\ndescription: Helps with code review\n---\n# PR Review"
     },
     {
       "id": "KR-AG-001",
@@ -9686,7 +9770,7 @@
         "source_type": "vendor_docs",
         "source_urls": [
           "https://kiro.dev/docs/powers/",
-          "https://kiro.dev/docs/powers/create/"
+          "https://kiro.dev/docs/powers/installation/"
         ],
         "verified_on": "2026-10-17",
         "applies_to": {
@@ -9740,9 +9824,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/docs/powers/create"
+          "https://kiro.dev/docs/powers/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro"
         },
@@ -9788,33 +9872,6 @@
       "bad_example": "{\n  \"mcpServers\": []\n}"
     },
     {
-      "id": "KR-PW-005",
-      "name": "Step Heading Without Content",
-      "severity": "LOW",
-      "category": "kiro-powers",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://kiro.dev/docs/powers/"
-        ],
-        "verified_on": "2026-10-17",
-        "applies_to": {
-          "tool": "kiro"
-        },
-        "normative_level": "BEST_PRACTICE",
-        "tests": {
-          "unit": true,
-          "fixtures": false,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": false
-      },
-      "good_example": "---\nname: test\ndescription: desc\nkeywords: [test]\n---\n## Step 1: Install\nRun the installer.",
-      "bad_example": "---\nname: test\ndescription: desc\nkeywords: [test]\n---\n## Step 1: Install\n## Step 2: Configure\nEdit the config."
-    },
-    {
       "id": "KR-PW-006",
       "name": "Duplicate Keywords",
       "severity": "LOW",
@@ -9822,7 +9879,7 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/docs/powers/"
+          "https://kiro.dev/docs/powers/create/"
         ],
         "verified_on": "2026-10-17",
         "applies_to": {
@@ -9831,7 +9888,7 @@
         "normative_level": "BEST_PRACTICE",
         "tests": {
           "unit": true,
-          "fixtures": false,
+          "fixtures": true,
           "e2e": false
         }
       },
@@ -10115,7 +10172,7 @@
     },
     {
       "id": "KR-PW-016",
-      "name": "Documented plugin.json Field Missing",
+      "name": "Documented plugin.json Field Missing or Not Semver",
       "severity": "LOW",
       "category": "kiro-powers",
       "evidence": {
@@ -10198,6 +10255,34 @@
       },
       "good_example": "power/\n  plugin.json\n  skills/setup/SKILL.md",
       "bad_example": "power/\n  plugin.json\n  steering/setup.md"
+    },
+    {
+      "id": "KR-PW-019",
+      "name": "Legacy POWER.md Power Format",
+      "severity": "LOW",
+      "category": "kiro-powers",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/powers/",
+          "https://kiro.dev/docs/powers/create/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "power/\n  plugin.json\n  skills/setup/SKILL.md\n  mcp.json",
+      "bad_example": "power/\n  POWER.md\n  steering/setup.md\n  mcp.json"
     },
     {
       "id": "KR-SET-001",
@@ -13703,7 +13788,7 @@
     },
     "kiro-skills": {
       "prefix": "KR-SK",
-      "count": 1,
+      "count": 2,
       "description": "Kiro per-client skill rules"
     },
     "kiro-agents": {
@@ -13733,7 +13818,7 @@
     },
     "kiro-steering": {
       "prefix": "KIRO",
-      "count": 13,
+      "count": 15,
       "description": "Kiro steering file validation rules"
     },
     "kiro-hooks": {

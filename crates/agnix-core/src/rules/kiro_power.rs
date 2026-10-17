@@ -1,16 +1,17 @@
 //! Kiro power validation rules.
 //!
-//! Legacy `POWER.md` powers (KR-PW-001 to KR-PW-008, KR-PW-017):
+//! Legacy `POWER.md` powers (KR-PW-001 to KR-PW-004, KR-PW-006 to KR-PW-008,
+//! KR-PW-017, KR-PW-019):
 //! - KR-PW-001: POWER.md frontmatter Kiro cannot read, or without the
 //!   description and keywords Kiro activates a power by
 //! - KR-PW-002: Empty POWER.md keywords array
 //! - KR-PW-003: Empty POWER.md body
 //! - KR-PW-004: Adjacent power mcp.json Kiro cannot read
-//! - KR-PW-005: Step heading without content
 //! - KR-PW-006: Duplicate keywords
 //! - KR-PW-007: Name invalid characters
 //! - KR-PW-008: Secrets in power body
 //! - KR-PW-017: POWER.md ignored because the power has a plugin.json
+//! - KR-PW-019: Legacy POWER.md format (Kiro recommends plugin.json)
 //!
 //! Agent Plugins `plugin.json` powers (KR-PW-009 to KR-PW-016, KR-PW-018),
 //! validated by [`KiroPowerPluginValidator`] for any `plugin.json` path it is
@@ -22,7 +23,9 @@
 //! - KR-PW-013: Field value Kiro ignores (wrong type)
 //! - KR-PW-014: Plugin skill Kiro skips
 //! - KR-PW-015: No activation description or keywords
-//! - KR-PW-016: Field the powers docs list as required is missing
+//! - KR-PW-016: Field the powers docs list as required is missing, or a
+//!   version that is not semver
+//! - KR-PW-006: Duplicate keywords (shared with POWER.md)
 //! - KR-PW-018: Legacy `steering/` directory in a plugin power
 //!
 //! Ground truth: Kiro CLI 2.32 V3 engine (`PowersManager`, `AgentPluginLoader`)
@@ -50,16 +53,17 @@ const RULE_IDS: &[&str] = &[
     "KR-PW-002",
     "KR-PW-003",
     "KR-PW-004",
-    "KR-PW-005",
     "KR-PW-006",
     "KR-PW-007",
     "KR-PW-008",
     "KR-PW-017",
+    "KR-PW-019",
 ];
 
 // Used once the integrator routes plugin.json powers to KiroPowerPluginValidator.
 #[allow(dead_code)]
 const PLUGIN_RULE_IDS: &[&str] = &[
+    "KR-PW-006",
     "KR-PW-009",
     "KR-PW-010",
     "KR-PW-011",
@@ -83,14 +87,6 @@ fn plugin_schema_pattern() -> &'static Regex {
     static RE: OnceLock<Regex> = OnceLock::new();
     RE.get_or_init(|| {
         Regex::new(AGENT_PLUGINS_SCHEMA_PATTERN).expect("schema pattern must compile")
-    })
-}
-
-/// `## Step ...` headings (any level from 2 down), the documented step form.
-fn step_heading_pattern() -> &'static Regex {
-    static RE: OnceLock<Regex> = OnceLock::new();
-    RE.get_or_init(|| {
-        Regex::new(r"(?i)^ {0,3}(#{2,6})[ \t]+(step\b.*)$").expect("step heading pattern")
     })
 }
 
@@ -144,6 +140,20 @@ impl Validator for KiroPowerValidator {
                 );
             }
             return diagnostics;
+        }
+
+        // KR-PW-019: POWER.md still loads, but Kiro recommends Agent Plugins
+        if config.is_rule_enabled("KR-PW-019") {
+            diagnostics.push(
+                Diagnostic::info(
+                    path.to_path_buf(),
+                    1,
+                    1,
+                    "KR-PW-019",
+                    t!("rules.kr_pw_019.message"),
+                )
+                .with_suggestion(t!("rules.kr_pw_019.suggestion")),
+            );
         }
 
         let parsed = parse_kiro_power(content);
@@ -296,60 +306,6 @@ impl Validator for KiroPowerValidator {
                         )
                         .with_suggestion(t!("rules.kr_pw_004_parse.suggestion")),
                     ),
-                }
-            }
-        }
-
-        let body_line_offset = line_col_at_offset(content, parsed.body_start).0 - 1;
-
-        // KR-PW-005: a `## Step ...` heading followed by no content before the
-        // next heading of the same or a higher level (code fences skipped).
-        if config.is_rule_enabled("KR-PW-005") && parsed.frontmatter.is_some() {
-            let lines: Vec<&str> = parsed.body.lines().collect();
-            let mut in_fence = false;
-            let mut fenced = vec![false; lines.len()];
-            for (i, line) in lines.iter().enumerate() {
-                let trimmed = line.trim_start();
-                if trimmed.starts_with("```") || trimmed.starts_with("~~~") {
-                    in_fence = !in_fence;
-                    fenced[i] = true;
-                } else {
-                    fenced[i] = in_fence;
-                }
-            }
-            let heading_level = |line: &str| {
-                let trimmed = line.trim_start();
-                let hashes = trimmed.bytes().take_while(|b| *b == b'#').count();
-                ((1..=6).contains(&hashes) && trimmed[hashes..].starts_with([' ', '\t']))
-                    .then_some(hashes)
-            };
-            for (i, line) in lines.iter().enumerate() {
-                if fenced[i] {
-                    continue;
-                }
-                let Some(captures) = step_heading_pattern().captures(line) else {
-                    continue;
-                };
-                let level = captures[1].len();
-                let has_content = lines[i + 1..]
-                    .iter()
-                    .enumerate()
-                    .take_while(|(j, next)| {
-                        fenced[i + 1 + j] || heading_level(next).is_none_or(|l| l > level)
-                    })
-                    .any(|(_, next)| !next.trim().is_empty());
-                if !has_content {
-                    let step = captures[2].trim();
-                    diagnostics.push(
-                        Diagnostic::info(
-                            path.to_path_buf(),
-                            body_line_offset + i + 1,
-                            1,
-                            "KR-PW-005",
-                            t!("rules.kr_pw_005.message", step = step),
-                        )
-                        .with_suggestion(t!("rules.kr_pw_005.suggestion")),
-                    );
                 }
             }
         }
@@ -789,7 +745,44 @@ impl Validator for KiroPowerPluginValidator {
             }
         }
 
+        // KR-PW-006: duplicate keywords add nothing to activation
+        if config.is_rule_enabled("KR-PW-006")
+            && let Some(Value::Array(items)) = object.get("keywords")
+        {
+            let mut seen = HashSet::new();
+            let duplicates: Vec<&str> = items
+                .iter()
+                .filter_map(Value::as_str)
+                .map(str::trim)
+                .filter(|keyword| !keyword.is_empty() && !seen.insert(keyword.to_ascii_lowercase()))
+                .collect();
+            if !duplicates.is_empty() {
+                diagnostics.push(manifest.diagnostic(
+                    Info,
+                    manifest.value_location("keywords"),
+                    "KR-PW-006",
+                    t!(
+                        "rules.kr_pw_006_plugin.message",
+                        duplicates = duplicates.join(", ")
+                    ),
+                    t!("rules.kr_pw_006.suggestion"),
+                ));
+            }
+        }
+
         // KR-PW-016: fields the powers docs list as required (Kiro loads without them)
+        if config.is_rule_enabled("KR-PW-016")
+            && let Some(version) = object.get("version").and_then(Value::as_str)
+            && semver::Version::parse(version.trim()).is_err()
+        {
+            diagnostics.push(manifest.diagnostic(
+                Info,
+                manifest.value_location("version"),
+                "KR-PW-016",
+                t!("rules.kr_pw_016_semver.message", version = version),
+                t!("rules.kr_pw_016_semver.suggestion"),
+            ));
+        }
         if config.is_rule_enabled("KR-PW-016") {
             let author_named = object
                 .get("author")
@@ -909,12 +902,15 @@ mod tests {
     use std::fs;
     use std::sync::Arc;
 
+    /// Validate a POWER.md with KR-PW-019 (reported on every legacy power)
+    /// disabled so assertions about the other rules stay exact.
     fn validate(content: &str) -> Vec<Diagnostic> {
-        let validator = KiroPowerValidator;
-        validator.validate(
+        let mut config = LintConfig::default();
+        config.rules_mut().disabled_rules = vec!["KR-PW-019".to_string()];
+        KiroPowerValidator.validate(
             Path::new(".kiro/powers/test-power/POWER.md"),
             content,
-            &LintConfig::default(),
+            &config,
         )
     }
 
@@ -1071,58 +1067,6 @@ mod tests {
     #[test]
     fn test_valid_power_has_no_pw_diagnostics() {
         assert!(validate(VALID).is_empty());
-    }
-
-    #[test]
-    fn test_kr_pw_005_step_missing_description() {
-        let diagnostics = validate(
-            "---\nname: empty-step\ndescription: test\nkeywords:\n  - one\n---\n## Step 1\n## Step 2\nSome content here.\n",
-        );
-        let kr = rule(&diagnostics, "KR-PW-005");
-        assert_eq!(kr.len(), 1);
-        assert_eq!(kr[0].line, 7);
-        // Changed expectation: an empty doc section does not affect loading.
-        assert_eq!(kr[0].level, DiagnosticLevel::Info);
-        assert!(kr[0].message.contains("'Step 1'"), "{}", kr[0].message);
-        assert_rendered(&diagnostics);
-    }
-
-    #[test]
-    fn test_kr_pw_005_only_step_headings() {
-        // Changed expectation: other `##` headings are not steps.
-        let diagnostics = validate(
-            "---\nname: x\ndescription: d\nkeywords: [a]\n---\n## Overview\n## Usage\ntext\n",
-        );
-        assert!(rule(&diagnostics, "KR-PW-005").is_empty());
-    }
-
-    #[test]
-    fn test_kr_pw_005_subsections_and_code_count_as_content() {
-        for body in [
-            "## Step 1: Setup\n### Details\ntext\n## Step 2\ntext\n",
-            "## Step 1\n```bash\n## not a heading\n```\n",
-            "```\n## Step 1\n```\ntext\n",
-        ] {
-            let content = format!("---\nname: x\ndescription: d\nkeywords: [a]\n---\n{body}");
-            assert!(rule(&validate(&content), "KR-PW-005").is_empty(), "{body}");
-        }
-    }
-
-    #[test]
-    fn test_kr_pw_005_step_with_description_no_diagnostic() {
-        let diagnostics = validate(
-            "---\nname: good-steps\ndescription: test\nkeywords:\n  - one\n---\n## Step 1\nThis step does something.\n## Step 2\nThis step does another thing.\n",
-        );
-        assert!(diagnostics.iter().all(|d| d.rule != "KR-PW-005"));
-    }
-
-    // M14: KR-PW-005 step at end of body with no content after
-    #[test]
-    fn test_kr_pw_005_step_at_end_of_body() {
-        let diagnostics = validate(
-            "---\nname: end-step\ndescription: test\nkeywords:\n  - one\n---\n## Step 1\n",
-        );
-        assert!(diagnostics.iter().any(|d| d.rule == "KR-PW-005"));
     }
 
     #[test]
@@ -1362,6 +1306,38 @@ mod tests {
             rule(&validate_plugin(&empty_keywords), "KR-PW-015").len(),
             1
         );
+    }
+
+    #[test]
+    fn test_kr_pw_019_legacy_format_info() {
+        let diagnostics = KiroPowerValidator.validate(
+            Path::new("powers/x/POWER.md"),
+            VALID,
+            &LintConfig::default(),
+        );
+        assert_eq!(diagnostics.len(), 1, "{diagnostics:?}");
+        assert_eq!(diagnostics[0].rule, "KR-PW-019");
+        assert_eq!(diagnostics[0].level, DiagnosticLevel::Info);
+        assert_rendered(&diagnostics);
+    }
+
+    #[test]
+    fn test_plugin_duplicate_keywords_and_semver() {
+        let content = POWER_BUILDER
+            .replacen(
+                "[\"kiro power\", \"power builder\"]",
+                "[\"db\", \"DB\", \"sql\"]",
+                1,
+            )
+            .replacen("\"version\": \"1.0.0\"", "\"version\": \"v1\"", 1);
+        let diagnostics = validate_plugin(&content);
+        let dupes = rule(&diagnostics, "KR-PW-006");
+        assert_eq!(dupes.len(), 1);
+        assert!(dupes[0].message.ends_with("DB"), "{}", dupes[0].message);
+        let semver = rule(&diagnostics, "KR-PW-016");
+        assert_eq!(semver.len(), 1);
+        assert!(semver[0].message.contains("'v1'"), "{}", semver[0].message);
+        assert_rendered(&diagnostics);
     }
 
     #[test]

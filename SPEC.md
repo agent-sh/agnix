@@ -35,8 +35,8 @@
 | OpenCode Skills | .opencode/skills/*/SKILL.md | 1 |
 | Windsurf | .windsurf/rules/*.md, .windsurf/workflows/*.md, .windsurfrules | 4 |
 | Windsurf Skills | .windsurf/skills/*/SKILL.md | 1 |
-| Kiro Steering | .kiro/steering/*.md | 13 |
-| Kiro Skills | .kiro/skills/*/SKILL.md | 1 |
+| Kiro Steering | .kiro/steering/*.md | 15 |
+| Kiro Skills | .kiro/skills/*/SKILL.md | 2 |
 | Kiro Agents | .kiro/agents/**/*.{json,md} | 15 |
 | Kiro Hooks | .kiro/hooks/*.kiro.hook, .kiro/hooks/*.json | 14 |
 | Kiro Permissions | .kiro/settings/permissions.yaml, ~/.kiro/workspace-roots/<hash>/permissions.yaml | 4 |

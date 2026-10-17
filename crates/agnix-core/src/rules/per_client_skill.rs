@@ -8,7 +8,8 @@ use crate::config::{LintConfig, PerFileLintConfig, TargetTool};
 use crate::diagnostics::{Diagnostic, Fix};
 use crate::parsers::frontmatter::split_frontmatter;
 use crate::rules::kiro_steering::{
-    YamlTopLevelEntry, frontmatter_edit_yields, single_line_scalar_text, yaml_top_level_entries,
+    YamlTopLevelEntry, frontmatter_edit_yields, is_vague_description, single_line_scalar_text,
+    yaml_top_level_entries,
 };
 use crate::rules::{Validator, ValidatorMetadata};
 use rust_i18n::t;
@@ -405,6 +406,7 @@ const RULE_IDS: &[&str] = &[
     "CR-SK-001",
     "CX-SK-001",
     "KR-SK-001",
+    "KR-SK-002",
     "OC-SK-001",
     "RC-SK-001",
     "WS-SK-001",
@@ -603,6 +605,7 @@ fn validate_kiro_skill(
     path: &Path,
     content: &str,
     parts: &crate::parsers::frontmatter::FrontmatterParts,
+    (unsupported_fields, vague_description): (bool, bool),
     diagnostics: &mut Vec<Diagnostic>,
 ) {
     let Ok(yaml) = serde_yaml::from_str::<serde_yaml::Value>(&parts.frontmatter) else {
@@ -617,7 +620,7 @@ fn validate_kiro_skill(
         let Some(field) = key.as_str() else {
             continue;
         };
-        if is_field_supported(SkillClient::Kiro, field) {
+        if !unsupported_fields || is_field_supported(SkillClient::Kiro, field) {
             continue;
         }
         let entry = entries.iter().find(|entry| entry.key == field);
@@ -654,6 +657,32 @@ fn validate_kiro_skill(
         }
         diagnostics.push(diagnostic);
     }
+
+    // KR-SK-002: Kiro activates a skill by matching requests against its
+    // description; a very short or generic one rarely matches.
+    if vague_description
+        && let Some(description) = mapping
+            .get(serde_yaml::Value::String("description".into()))
+            .and_then(|value| value.as_str())
+        && is_vague_description(description)
+    {
+        let offset = parts.frontmatter_start
+            + entries
+                .iter()
+                .find(|entry| entry.key == "description")
+                .map_or(0, |entry| entry.start);
+        let (line, col) = line_col_at(offset, &line_starts);
+        diagnostics.push(
+            Diagnostic::info(
+                path.to_path_buf(),
+                line,
+                col,
+                "KR-SK-002",
+                t!("rules.kr_sk_002.message", description = description.trim()),
+            )
+            .with_suggestion(t!("rules.kr_sk_002.suggestion")),
+        );
+    }
 }
 
 pub struct PerClientSkillValidator;
@@ -687,14 +716,25 @@ impl Validator for PerClientSkillValidator {
             .unwrap_or(false);
         let has_xp = config.is_rule_enabled("XP-SK-001");
 
-        if !has_per_client && !has_xp {
-            return diagnostics;
-        }
-
         // Kiro: KR-SK-001 says everything XP-SK-001 would (Kiro supports only
         // universal fields), so it replaces XP-SK-001 for Kiro skills.
-        if client == SkillClient::Kiro && has_per_client {
-            validate_kiro_skill(path, content, &parts, &mut diagnostics);
+        if client == SkillClient::Kiro {
+            let vague = config.is_rule_enabled("KR-SK-002");
+            if has_per_client || vague {
+                validate_kiro_skill(
+                    path,
+                    content,
+                    &parts,
+                    (has_per_client, vague),
+                    &mut diagnostics,
+                );
+            }
+            if has_per_client {
+                return diagnostics;
+            }
+        }
+
+        if !has_per_client && !has_xp {
             return diagnostics;
         }
 
@@ -1400,7 +1440,7 @@ mod tests {
 
     #[test]
     fn test_kiro_supported_and_nested_fields_not_flagged() {
-        let content = "---\nname: a\ndescription: b\nlicense: MIT\ncompatibility: node\nmetadata:\n  model: x\n  version: \"1\"\n---\nBody\n";
+        let content = "---\nname: a\ndescription: Review pull requests for security issues\nlicense: MIT\ncompatibility: node\nmetadata:\n  model: x\n  version: \"1\"\n---\nBody\n";
         assert!(kiro_diags(content).is_empty());
     }
 
@@ -1412,7 +1452,10 @@ mod tests {
 
     #[test]
     fn test_kiro_xp_sk_001_kept_when_kr_sk_001_disabled() {
-        let content = make_skill("name: a\ndescription: b\nversion: 1.0.0", "Body");
+        let content = make_skill(
+            "name: a\ndescription: Review pull requests for security issues\nversion: 1.0.0",
+            "Body",
+        );
         let mut config = LintConfig::default();
         config.rules_mut().disabled_rules = vec!["KR-SK-001".to_string()];
         let diagnostics = PerClientSkillValidator.validate(Path::new(KIRO_PATH), &content, &config);
@@ -1425,7 +1468,8 @@ mod tests {
         let content =
             "---\nname: a\ndescription: b\nallowed-tools: Read\nmodel: x\nversion: 1\n---\nBody\n";
         let diagnostics = kiro_diags(content);
-        assert_eq!(diagnostics.len(), 3);
+        // Three KR-SK-001 fields plus KR-SK-002 for the one-word description.
+        assert_eq!(diagnostics.len(), 4);
         for d in &diagnostics {
             assert!(
                 !d.message.contains("%{") && !d.message.starts_with("rules."),
@@ -1461,6 +1505,46 @@ mod tests {
         assert_eq!(value["metadata"]["argument-hint"], "[path] [--fix]");
         assert_eq!(value["metadata"]["author"], "agnix");
         assert!(value.get("tags").is_none());
+    }
+
+    #[test]
+    fn test_kiro_vague_description() {
+        for (description, vague) in [
+            ("Helps with code review", true),
+            ("Code review", true),
+            (
+                "Review pull requests for security vulnerabilities and test coverage. Use when reviewing PRs.",
+                false,
+            ),
+            (
+                "ML Enablement Workshop のファシリテーションを行います。「MLEWをはじめる」などのリクエストで起動します。",
+                false,
+            ),
+        ] {
+            let content = make_skill(&format!("name: a\ndescription: \"{description}\""), "Body");
+            let diagnostics = kiro_diags(&content);
+            let kr: Vec<_> = diagnostics
+                .iter()
+                .filter(|d| d.rule == "KR-SK-002")
+                .collect();
+            assert_eq!(kr.len(), usize::from(vague), "{description}");
+            if vague {
+                assert_eq!(kr[0].level, crate::diagnostics::DiagnosticLevel::Info);
+                assert_eq!(kr[0].line, 3);
+                assert!(!kr[0].message.contains("%{"), "{}", kr[0].message);
+            }
+        }
+        // Independent of KR-SK-001, and only for Kiro skills.
+        let content = make_skill("name: a\ndescription: Code review\nversion: 1", "Body");
+        let mut config = LintConfig::default();
+        config.rules_mut().disabled_rules = vec!["KR-SK-001".to_string()];
+        let diagnostics = PerClientSkillValidator.validate(Path::new(KIRO_PATH), &content, &config);
+        assert!(diagnostics.iter().any(|d| d.rule == "KR-SK-002"));
+        assert!(
+            validate(".cursor/skills/a/SKILL.md", &content)
+                .iter()
+                .all(|d| d.rule != "KR-SK-002")
+        );
     }
 
     #[test]

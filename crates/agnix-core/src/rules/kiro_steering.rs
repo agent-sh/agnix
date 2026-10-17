@@ -1,4 +1,4 @@
-//! Kiro steering file validation rules (KIRO-001 to KIRO-011, KIRO-014, KIRO-015)
+//! Kiro steering file validation rules (KIRO-001 to KIRO-011, KIRO-015 to KIRO-018)
 //!
 //! Validates:
 //! - KIRO-001: Invalid steering file inclusion mode (HIGH/ERROR)
@@ -11,10 +11,14 @@
 //! - KIRO-008: Unknown frontmatter field (MEDIUM/WARNING)
 //! - KIRO-009: Inline file or folder reference points to a missing target (MEDIUM/WARNING)
 //! - KIRO-010: On-demand fields without an inclusion mode (MEDIUM/WARNING)
-//! - KIRO-011: Steering doc excessively long (LOW/INFO)
-//! - KIRO-014: Steering body without a Markdown heading (LOW/INFO)
+//! - KIRO-011: Always-included steering doc excessively long (LOW/INFO)
 //! - KIRO-015: Frontmatter Kiro cannot use (HIGH/ERROR, or WARNING when only
 //!   Kiro CLI V3 rejects it and V2 is also targeted)
+//! - KIRO-018: Vague auto steering description (LOW/INFO)
+//!
+//! [`KiroAgentsMdValidator`] checks AGENTS.md files for Kiro projects:
+//! - KIRO-016: AGENTS.md longer than the Kiro CLI V3 truncation limit (MEDIUM/WARNING)
+//! - KIRO-017: Kiro steering frontmatter in AGENTS.md (MEDIUM/WARNING)
 //!
 //! Ground truth (Kiro CLI 2.32 V3 engine): the frontmatter is parsed only when
 //! `---` is the very first line; a YAML error, a non-mapping document or a
@@ -25,7 +29,7 @@
 //! `always`. The V2 engine reads only `inclusion` and loads only `always` files.
 
 use crate::{
-    config::PerFileLintConfig,
+    config::{LintConfig, PerFileLintConfig, TargetTool},
     diagnostics::{Diagnostic, Fix},
     parsers::frontmatter::split_frontmatter,
     rules::{
@@ -41,7 +45,7 @@ use std::sync::OnceLock;
 
 const RULE_IDS: &[&str] = &[
     "KIRO-001", "KIRO-002", "KIRO-003", "KIRO-004", "KIRO-005", "KIRO-006", "KIRO-007", "KIRO-008",
-    "KIRO-009", "KIRO-010", "KIRO-011", "KIRO-014", "KIRO-015",
+    "KIRO-009", "KIRO-010", "KIRO-011", "KIRO-015", "KIRO-018",
 ];
 
 /// agnix's size guidance for one steering document. Kiro documents no limit
@@ -357,6 +361,45 @@ fn duplicate_key_offset(frontmatter: &str) -> Option<usize> {
         .map(|entry| entry.start)
 }
 
+/// Offset of a `---` steering frontmatter block that does not start the file
+/// (blank lines or text come first, within the first ten lines). The block
+/// must close and parse to a mapping of steering keys with `inclusion` or
+/// `fileMatchPattern`, so horizontal rules in prose are not mistaken for it.
+/// The flag is true when the block asks for on-demand loading (fileMatch,
+/// manual, auto), which Kiro then never applies.
+fn misplaced_frontmatter_offset(content: &str) -> Option<(usize, bool)> {
+    let mut offset = 0;
+    let mut open: Option<(usize, usize)> = None; // (line start, block start)
+    for (index, raw_line) in content.split_inclusive('\n').enumerate() {
+        let line = raw_line.trim_end_matches(['\n', '\r']).trim_end();
+        let line_start = offset;
+        offset += raw_line.len();
+        match open {
+            None if line == "---" => open = Some((line_start, offset)),
+            None if index >= 10 => return None,
+            Some((dash, block_start)) if line == "---" => {
+                let block = &content[block_start..line_start];
+                let value: serde_yaml::Value = serde_yaml::from_str(block).ok()?;
+                let mapping = value.as_mapping()?;
+                let keys: Vec<&str> = mapping.keys().filter_map(|k| k.as_str()).collect();
+                let steering_keys = keys.iter().all(|k| VALID_FRONTMATTER_FIELDS.contains(k));
+                let has_mode = keys.contains(&"inclusion") || keys.contains(&"fileMatchPattern");
+                let on_demand = matches!(
+                    mapping
+                        .get(serde_yaml::Value::String("inclusion".into()))
+                        .and_then(|v| v.as_str()),
+                    Some("fileMatch" | "manual" | "auto")
+                );
+                return (has_mode || (steering_keys && !keys.is_empty()))
+                    .then_some((dash, on_demand));
+            }
+            Some(_) if index >= 60 => return None,
+            _ => {}
+        }
+    }
+    None
+}
+
 /// 1-based line and column of a byte offset inside `content`.
 fn location(content: &str, offset: usize) -> (usize, usize) {
     line_col_at_offset(content, offset)
@@ -538,54 +581,6 @@ fn has_unclosed_class(pattern: &str) -> bool {
 }
 
 // ---------------------------------------------------------------------------
-// Markdown helpers
-// ---------------------------------------------------------------------------
-
-/// True when `body` has at least one ATX or `===` setext heading outside
-/// fenced code blocks.
-fn has_markdown_heading(body: &str) -> bool {
-    static ATX: OnceLock<Regex> = OnceLock::new();
-    let atx = ATX.get_or_init(|| Regex::new(r"^ {0,3}#{1,6}(?:[ \t]|$)").expect("atx heading"));
-    let mut fence: Option<&str> = None;
-    let mut previous_text = false;
-    for line in body.lines() {
-        let trimmed = line.trim_start();
-        let indent = line.len() - trimmed.len();
-        if indent <= 3 {
-            let marker = if trimmed.starts_with("```") {
-                Some("```")
-            } else if trimmed.starts_with("~~~") {
-                Some("~~~")
-            } else {
-                None
-            };
-            if let Some(marker) = marker {
-                match fence {
-                    Some(open) if open == marker => fence = None,
-                    None => fence = Some(marker),
-                    _ => {}
-                }
-                previous_text = false;
-                continue;
-            }
-        }
-        if fence.is_some() {
-            continue;
-        }
-        if atx.is_match(line) {
-            return true;
-        }
-        let is_setext =
-            indent <= 3 && trimmed.len() >= 3 && trimmed.trim_end().chars().all(|c| c == '=');
-        if is_setext && previous_text {
-            return true;
-        }
-        previous_text = !trimmed.is_empty();
-    }
-    false
-}
-
-// ---------------------------------------------------------------------------
 // KIRO-009 helpers
 // ---------------------------------------------------------------------------
 
@@ -720,9 +715,16 @@ impl Validator for KiroSteeringValidator {
             check_inline_references(path, content, config, &mut diagnostics);
         }
 
-        // KIRO-011: Steering doc excessively long (applies with or without frontmatter)
+        let always_loaded = check_frontmatter(path, content, config, &mut diagnostics);
+
+        // KIRO-011: an always-included steering doc costs context on every
+        // request. 50,000 characters is agnix guidance: Kiro documents no
+        // steering size limit ("Keep Files Focused").
         let char_count = content.chars().count();
-        if config.is_rule_enabled("KIRO-011") && char_count > MAX_STEERING_DOC_CHARS {
+        if config.is_rule_enabled("KIRO-011")
+            && always_loaded
+            && char_count > MAX_STEERING_DOC_CHARS
+        {
             diagnostics.push(
                 Diagnostic::info(
                     path.to_path_buf(),
@@ -738,156 +740,145 @@ impl Validator for KiroSteeringValidator {
                 .with_suggestion(t!("rules.kiro_011.suggestion")),
             );
         }
+        diagnostics
+    }
+}
 
-        let parts = split_frontmatter(content);
-        let without_bom = content.strip_prefix('\u{FEFF}').unwrap_or(content);
-        let frontmatter_at_start = without_bom.starts_with("---");
+/// The frontmatter rules. Returns true when Kiro includes the file in every
+/// interaction (no usable frontmatter, or an `always`/unset inclusion mode).
+fn check_frontmatter(
+    path: &Path,
+    content: &str,
+    config: &PerFileLintConfig<'_>,
+    diagnostics: &mut Vec<Diagnostic>,
+) -> bool {
+    let parts = split_frontmatter(content);
+    let without_bom = content.strip_prefix('\u{FEFF}').unwrap_or(content);
+    let frontmatter_at_start = without_bom.starts_with("---");
 
-        // KIRO-014: Markdown structure (body, or the whole file without frontmatter)
-        let body = if parts.has_frontmatter && parts.has_closing && frontmatter_at_start {
-            parts.body.as_str()
-        } else {
-            content
-        };
-        if config.is_rule_enabled("KIRO-014")
-            && !body.trim().is_empty()
-            && !has_markdown_heading(body)
+    // KIRO-015: a steering block after blank lines or text is not frontmatter
+    // for Kiro, so the file is always included and its settings are ignored
+    if !frontmatter_at_start {
+        if config.is_rule_enabled("KIRO-015")
+            && let Some((offset, on_demand)) = misplaced_frontmatter_offset(content)
         {
+            // Errors when the ignored block asked for on-demand loading; a
+            // misplaced `always` block only leaks its text into the context.
+            let (line, col) = location(content, offset);
+            let message = t!("rules.kiro_015_not_first.message");
+            let diagnostic = if on_demand {
+                Diagnostic::error(path.to_path_buf(), line, col, "KIRO-015", message)
+            } else {
+                Diagnostic::warning(path.to_path_buf(), line, col, "KIRO-015", message)
+            };
+            diagnostics.push(diagnostic.with_suggestion(t!("rules.kiro_015_not_first.suggestion")));
+        }
+        return true;
+    }
+
+    if !parts.has_frontmatter {
+        return true; // No frontmatter: always included, nothing to check
+    }
+
+    if !parts.has_closing {
+        if config.is_rule_enabled("KIRO-015") {
             diagnostics.push(
-                Diagnostic::info(
+                Diagnostic::error(
                     path.to_path_buf(),
                     1,
                     1,
-                    "KIRO-014",
-                    t!("rules.kiro_014.message"),
+                    "KIRO-015",
+                    t!("rules.kiro_015_unclosed.message"),
                 )
-                .with_suggestion(t!("rules.kiro_014.suggestion")),
+                .with_suggestion(t!("rules.kiro_015_unclosed.suggestion")),
             );
         }
+        return true;
+    }
 
-        if !parts.has_frontmatter {
-            return diagnostics; // No frontmatter: always included, nothing to check
-        }
+    // KIRO-005: Empty body after valid frontmatter delimiters
+    if config.is_rule_enabled("KIRO-005") && parts.body.trim().is_empty() {
+        diagnostics.push(
+            Diagnostic::warning(
+                path.to_path_buf(),
+                1,
+                1,
+                "KIRO-005",
+                t!("rules.kiro_005.message"),
+            )
+            .with_suggestion(t!("rules.kiro_005.suggestion")),
+        );
+    }
 
-        // KIRO-015: frontmatter not on the first line is not frontmatter for Kiro
-        if !frontmatter_at_start {
+    // KIRO-015: YAML that does not parse or is not a mapping
+    let yaml: serde_yaml::Value = match serde_yaml::from_str(&parts.frontmatter) {
+        Ok(value) => value,
+        Err(error) => {
             if config.is_rule_enabled("KIRO-015") {
-                let (line, col) = location(content, parts.frontmatter_start.saturating_sub(4));
+                let duplicate = error
+                    .to_string()
+                    .contains("duplicate")
+                    .then(|| duplicate_key_offset(&parts.frontmatter))
+                    .flatten();
+                let (line, col) = duplicate
+                    .map(|offset| location(content, parts.frontmatter_start + offset))
+                    .or_else(|| {
+                        error.location().map(|mark| {
+                            let (fm_line, _) = location(content, parts.frontmatter_start);
+                            (
+                                fm_line + mark.line().saturating_sub(1),
+                                mark.column().max(1),
+                            )
+                        })
+                    })
+                    .unwrap_or_else(|| location(content, parts.frontmatter_start));
                 diagnostics.push(
                     Diagnostic::error(
                         path.to_path_buf(),
                         line,
                         col,
                         "KIRO-015",
-                        t!("rules.kiro_015_not_first.message"),
+                        t!("rules.kiro_015_yaml.message", error = error.to_string()),
                     )
-                    .with_suggestion(t!("rules.kiro_015_not_first.suggestion")),
+                    .with_suggestion(t!("rules.kiro_015_yaml.suggestion")),
                 );
             }
-            return diagnostics;
+            return true;
         }
-
-        if !parts.has_closing {
+    };
+    let mapping = match &yaml {
+        serde_yaml::Value::Mapping(mapping) => mapping,
+        // An empty or comments-only block is no frontmatter: always included.
+        serde_yaml::Value::Null => return true,
+        other => {
             if config.is_rule_enabled("KIRO-015") {
+                let (line, col) = location(content, parts.frontmatter_start);
                 diagnostics.push(
                     Diagnostic::error(
                         path.to_path_buf(),
-                        1,
-                        1,
+                        line,
+                        col,
                         "KIRO-015",
-                        t!("rules.kiro_015_unclosed.message"),
+                        t!(
+                            "rules.kiro_015_not_mapping.message",
+                            kind = yaml_type_name(other)
+                        ),
                     )
-                    .with_suggestion(t!("rules.kiro_015_unclosed.suggestion")),
+                    .with_suggestion(t!("rules.kiro_015_not_mapping.suggestion")),
                 );
             }
-            return diagnostics;
+            return true;
         }
+    };
 
-        // KIRO-005: Empty body after valid frontmatter delimiters
-        if config.is_rule_enabled("KIRO-005") && parts.body.trim().is_empty() {
-            diagnostics.push(
-                Diagnostic::warning(
-                    path.to_path_buf(),
-                    1,
-                    1,
-                    "KIRO-005",
-                    t!("rules.kiro_005.message"),
-                )
-                .with_suggestion(t!("rules.kiro_005.suggestion")),
-            );
-        }
-
-        // KIRO-015: YAML that does not parse or is not a mapping
-        let yaml: serde_yaml::Value = match serde_yaml::from_str(&parts.frontmatter) {
-            Ok(value) => value,
-            Err(error) => {
-                if config.is_rule_enabled("KIRO-015") {
-                    let duplicate = error
-                        .to_string()
-                        .contains("duplicate")
-                        .then(|| duplicate_key_offset(&parts.frontmatter))
-                        .flatten();
-                    let (line, col) = duplicate
-                        .map(|offset| location(content, parts.frontmatter_start + offset))
-                        .or_else(|| {
-                            error.location().map(|mark| {
-                                let (fm_line, _) = location(content, parts.frontmatter_start);
-                                (
-                                    fm_line + mark.line().saturating_sub(1),
-                                    mark.column().max(1),
-                                )
-                            })
-                        })
-                        .unwrap_or_else(|| location(content, parts.frontmatter_start));
-                    diagnostics.push(
-                        Diagnostic::error(
-                            path.to_path_buf(),
-                            line,
-                            col,
-                            "KIRO-015",
-                            t!("rules.kiro_015_yaml.message", error = error.to_string()),
-                        )
-                        .with_suggestion(t!("rules.kiro_015_yaml.suggestion")),
-                    );
-                }
-                return diagnostics;
-            }
-        };
-        let mapping = match &yaml {
-            serde_yaml::Value::Mapping(mapping) => mapping,
-            // An empty or comments-only block is no frontmatter: always included.
-            serde_yaml::Value::Null => return diagnostics,
-            other => {
-                if config.is_rule_enabled("KIRO-015") {
-                    let (line, col) = location(content, parts.frontmatter_start);
-                    diagnostics.push(
-                        Diagnostic::error(
-                            path.to_path_buf(),
-                            line,
-                            col,
-                            "KIRO-015",
-                            t!(
-                                "rules.kiro_015_not_mapping.message",
-                                kind = yaml_type_name(other)
-                            ),
-                        )
-                        .with_suggestion(t!("rules.kiro_015_not_mapping.suggestion")),
-                    );
-                }
-                return diagnostics;
-            }
-        };
-
-        let steering = Steering {
-            path,
-            content,
-            frontmatter: &parts.frontmatter,
-            frontmatter_start: parts.frontmatter_start,
-            entries: yaml_top_level_entries(&parts.frontmatter),
-        };
-        validate_mapping(&steering, &yaml, mapping, config, &mut diagnostics);
-        diagnostics
-    }
+    let steering = Steering {
+        path,
+        content,
+        frontmatter: &parts.frontmatter,
+        frontmatter_start: parts.frontmatter_start,
+        entries: yaml_top_level_entries(&parts.frontmatter),
+    };
+    validate_mapping(&steering, &yaml, mapping, config, diagnostics)
 }
 
 fn check_inline_references(
@@ -995,7 +986,7 @@ fn validate_mapping(
     mapping: &serde_yaml::Mapping,
     config: &PerFileLintConfig<'_>,
     diagnostics: &mut Vec<Diagnostic>,
-) {
+) -> bool {
     let path = steering.path;
     let get = |key: &str| mapping.get(serde_yaml::Value::String(key.into()));
     let inclusion_val = get("inclusion").filter(|value| !value.is_null());
@@ -1039,30 +1030,32 @@ fn validate_mapping(
     // only the V3 engine: an error when only V3 is targeted, a warning that
     // names V3 when both are.
     let engines = engines_for(config, false, false);
-    if config.is_rule_enabled("KIRO-015") && engines.includes(KiroEngine::V3) {
-        let mut type_errors: Vec<(&str, &'static str, &str)> = Vec::new();
-        for field in ["name", "description"] {
-            if let Some(value) = get(field)
-                && !value.is_string()
-            {
-                type_errors.push((field, yaml_type_name(value), "a string"));
-            }
+    let mut type_errors: Vec<(&str, &'static str, &str)> = Vec::new();
+    for field in ["name", "description"] {
+        if let Some(value) = get(field)
+            && !value.is_string()
+        {
+            type_errors.push((field, yaml_type_name(value), "a string"));
         }
-        if let Some(value) = pattern_val {
-            let valid = match value {
-                serde_yaml::Value::Null | serde_yaml::Value::String(_) => true,
-                serde_yaml::Value::Sequence(items) => items.iter().all(|item| item.is_string()),
-                _ => false,
+    }
+    if let Some(value) = pattern_val {
+        let valid = match value {
+            serde_yaml::Value::Null | serde_yaml::Value::String(_) => true,
+            serde_yaml::Value::Sequence(items) => items.iter().all(|item| item.is_string()),
+            _ => false,
+        };
+        if !valid {
+            let kind = if value.is_sequence() {
+                "a list with non-string items"
+            } else {
+                yaml_type_name(value)
             };
-            if !valid {
-                let kind = if value.is_sequence() {
-                    "a list with non-string items"
-                } else {
-                    yaml_type_name(value)
-                };
-                type_errors.push(("fileMatchPattern", kind, "a string or a list of strings"));
-            }
+            type_errors.push(("fileMatchPattern", kind, "a string or a list of strings"));
         }
+    }
+    let on_demand = matches!(inclusion_str, Some("fileMatch" | "manual" | "auto"))
+        && !(engines.includes(KiroEngine::V3) && !type_errors.is_empty());
+    if config.is_rule_enabled("KIRO-015") && engines.includes(KiroEngine::V3) {
         for (field, kind, expected) in type_errors {
             let (line, col) = steering.value_location(field);
             let message = t!(
@@ -1237,6 +1230,195 @@ fn validate_mapping(
                 .with_suggestion(t!("rules.kiro_010.suggestion")),
             );
         }
+    }
+
+    // KIRO-018: an auto description Kiro can hardly match requests against
+    if config.is_rule_enabled("KIRO-018")
+        && inclusion_str == Some("auto")
+        && let Some(description) = get("description").and_then(|d| d.as_str())
+        && is_vague_description(description)
+    {
+        let (line, col) = steering.value_location("description");
+        diagnostics.push(
+            Diagnostic::info(
+                path.to_path_buf(),
+                line,
+                col,
+                "KIRO-018",
+                t!("rules.kiro_018.message", description = description.trim()),
+            )
+            .with_suggestion(t!("rules.kiro_018.suggestion")),
+        );
+    }
+
+    !on_demand
+}
+
+/// True for an activation description too thin to match requests against:
+/// fewer than four words (or, for text written without spaces, fewer than 12
+/// characters), or a generic "Helps with ..." phrase - the docs' own "Vague"
+/// example. Empty descriptions are left to the required-field rules.
+pub(crate) fn is_vague_description(description: &str) -> bool {
+    let text = description.trim();
+    if text.is_empty() {
+        return false;
+    }
+    static GENERIC: OnceLock<Regex> = OnceLock::new();
+    let generic = GENERIC.get_or_init(|| {
+        Regex::new(r"(?i)^(helps?|assists?|helper)\s+(with|for|to)\b").expect("generic pattern")
+    });
+    let short = if text.contains(char::is_whitespace) {
+        text.split_whitespace().count() < 4
+    } else {
+        text.chars().count() < 12
+    };
+    short || generic.is_match(text)
+}
+
+// ---------------------------------------------------------------------------
+// AGENTS.md (KIRO-016, KIRO-017)
+// ---------------------------------------------------------------------------
+
+// Used once the integrator registers KiroAgentsMdValidator for AGENTS.md files.
+#[allow(dead_code)]
+const AGENTS_MD_RULE_IDS: &[&str] = &["KIRO-016", "KIRO-017"];
+
+/// Kiro CLI V3 truncates an AGENTS.md (workspace root or nested) to this many
+/// characters, counted as JavaScript string length (UTF-16 code units).
+// Used once the integrator registers KiroAgentsMdValidator for AGENTS.md files.
+#[allow(dead_code)]
+const AGENTS_MD_TRUNCATE_AT: usize = 50_000;
+
+/// True when `path` is inside a `.kiro/steering` directory, where an
+/// AGENTS.md is an ordinary steering document.
+// Used once the integrator registers KiroAgentsMdValidator for AGENTS.md files.
+#[allow(dead_code)]
+fn is_in_kiro_steering_dir(path: &Path) -> bool {
+    let components: Vec<&str> = path
+        .components()
+        .filter_map(|c| c.as_os_str().to_str())
+        .collect();
+    components.windows(2).any(|pair| {
+        pair[0].eq_ignore_ascii_case(".kiro") && pair[1].eq_ignore_ascii_case("steering")
+    })
+}
+
+/// Whether Kiro reads this AGENTS.md: Kiro is the selected tool, or nothing is
+/// selected and a `.kiro` directory sits next to the file or above it (up to
+/// the project root). AGENTS.md is shared by many tools, so an unscoped run
+/// does not apply Kiro limits to projects that do not use Kiro.
+// Used once the integrator registers KiroAgentsMdValidator for AGENTS.md files.
+#[allow(dead_code)]
+fn project_uses_kiro(path: &Path, config: &LintConfig) -> bool {
+    let tools = config.tools();
+    if !tools.is_empty() {
+        return tools.iter().any(|tool| tool.eq_ignore_ascii_case("kiro"));
+    }
+    match config.target() {
+        TargetTool::Kiro => return true,
+        TargetTool::Generic => {}
+        _ => return false,
+    }
+    let fs = config.fs();
+    let root = config.root_dir();
+    for dir in path.ancestors().skip(1) {
+        if fs.is_dir(&dir.join(".kiro")) {
+            return true;
+        }
+        if root.is_some_and(|root| dir == root.as_path()) {
+            break;
+        }
+    }
+    false
+}
+
+/// Checks AGENTS.md files the way Kiro loads them: read raw (no frontmatter
+/// parsing) and, in CLI V3, truncated at 50,000 characters.
+// Used once the integrator registers KiroAgentsMdValidator for AGENTS.md files.
+#[allow(dead_code)]
+pub struct KiroAgentsMdValidator;
+
+impl Validator for KiroAgentsMdValidator {
+    fn metadata(&self) -> ValidatorMetadata {
+        ValidatorMetadata {
+            name: self.name(),
+            rule_ids: AGENTS_MD_RULE_IDS,
+        }
+    }
+
+    fn validate_per_file(
+        &self,
+        path: &Path,
+        content: &str,
+        config: &PerFileLintConfig<'_>,
+    ) -> Vec<Diagnostic> {
+        let mut diagnostics = Vec::new();
+        if path.file_name().and_then(|name| name.to_str()) != Some("AGENTS.md")
+            || is_in_kiro_steering_dir(path)
+            || !project_uses_kiro(path, config)
+        {
+            return diagnostics;
+        }
+
+        // KIRO-016: V3 keeps only the first 50,000 characters
+        let engines = engines_for(config, false, false);
+        if config.is_rule_enabled("KIRO-016") && engines.includes(KiroEngine::V3) {
+            let mut units = 0usize;
+            let cut = content.char_indices().find_map(|(offset, ch)| {
+                units += ch.len_utf16();
+                (units > AGENTS_MD_TRUNCATE_AT).then_some(offset)
+            });
+            if let Some(cut) = cut {
+                let total = content.encode_utf16().count();
+                let (line, col) = location(content, cut);
+                diagnostics.push(
+                    Diagnostic::warning(
+                        path.to_path_buf(),
+                        line,
+                        col,
+                        "KIRO-016",
+                        t!(
+                            "rules.kiro_016.message",
+                            len = total.to_string(),
+                            limit = AGENTS_MD_TRUNCATE_AT.to_string()
+                        ),
+                    )
+                    .with_suggestion(t!("rules.kiro_016.suggestion")),
+                );
+            }
+        }
+
+        // KIRO-017: steering frontmatter has no effect in AGENTS.md
+        let without_bom = content.strip_prefix('\u{FEFF}').unwrap_or(content);
+        let parts = split_frontmatter(content);
+        if config.is_rule_enabled("KIRO-017")
+            && without_bom.starts_with("---")
+            && parts.has_closing
+            && let Ok(serde_yaml::Value::Mapping(mapping)) =
+                serde_yaml::from_str::<serde_yaml::Value>(&parts.frontmatter)
+        {
+            let field = ["inclusion", "fileMatchPattern"]
+                .into_iter()
+                .find(|key| mapping.contains_key(serde_yaml::Value::String((*key).into())));
+            if let Some(field) = field {
+                let offset = yaml_top_level_entries(&parts.frontmatter)
+                    .into_iter()
+                    .find(|entry| entry.key == field)
+                    .map_or(0, |entry| entry.start);
+                let (line, col) = location(content, parts.frontmatter_start + offset);
+                diagnostics.push(
+                    Diagnostic::warning(
+                        path.to_path_buf(),
+                        line,
+                        col,
+                        "KIRO-017",
+                        t!("rules.kiro_017.message", field = field),
+                    )
+                    .with_suggestion(t!("rules.kiro_017.suggestion")),
+                );
+            }
+        }
+        diagnostics
     }
 }
 
@@ -2020,39 +2202,6 @@ mod tests {
         assert!(rule(&validate_steering(content), "KIRO-011").is_empty());
     }
 
-    // ===== KIRO-014: Markdown structure =====
-
-    #[test]
-    fn test_kiro_014_no_heading_in_body() {
-        for content in [
-            "---\ninclusion: always\n---\nJust plain text without any heading.\n",
-            "Plain text, no frontmatter.\n",
-            // An inline reference or a hashtag is not a heading.
-            "Intro\n#[[file:docs/a.md]]\n#tag\n",
-            "Intro\n```\n# comment in code\n```\n",
-        ] {
-            assert_eq!(
-                rule(&validate_steering(content), "KIRO-014").len(),
-                1,
-                "{content}"
-            );
-        }
-    }
-
-    #[test]
-    fn test_kiro_014_has_heading_no_diagnostic() {
-        for content in [
-            "---\ninclusion: always\n---\n# Heading\nSome content.\n",
-            "Intro\n\n## Section\ntext\n",
-            "Title\n=====\ntext\n",
-        ] {
-            assert!(
-                rule(&validate_steering(content), "KIRO-014").is_empty(),
-                "{content}"
-            );
-        }
-    }
-
     // ===== KIRO-015: frontmatter Kiro cannot use =====
 
     #[test]
@@ -2173,7 +2322,7 @@ mod tests {
             (fixture!("literal-comma-pattern.md"), &["KIRO-003"]),
             (fixture!("missing-fields-auto.md"), &["KIRO-002"]),
             (fixture!("missing-pattern-filematch.md"), &["KIRO-002"]),
-            (fixture!("no-heading.md"), &["KIRO-009", "KIRO-014"]),
+            (fixture!("missing-reference.md"), &["KIRO-009"]),
             (fixture!("on-demand-without-inclusion.md"), &["KIRO-010"]),
             (fixture!("unknown-fields.md"), &["KIRO-007", "KIRO-008"]),
             (fixture!("valid-always.md"), &[]),
@@ -2188,6 +2337,190 @@ mod tests {
             rules.sort_unstable();
             assert_eq!(&rules, expected, "{name}: {diagnostics:?}");
         }
+    }
+
+    #[test]
+    fn test_kiro_011_only_always_included_files() {
+        let body = "x".repeat(51_000);
+        for frontmatter in [
+            "inclusion: manual",
+            "inclusion: fileMatch\nfileMatchPattern: \"**/*.ts\"",
+            "inclusion: auto\ndescription: Use when editing TypeScript files in this repo",
+        ] {
+            let content = format!("---\n{frontmatter}\n---\n# T\n{body}\n");
+            assert!(
+                rule(&validate_steering(&content), "KIRO-011").is_empty(),
+                "{frontmatter}"
+            );
+        }
+        // An invalid mode makes Kiro V3 include the whole file again.
+        let content = format!("---\ninclusion: Manual\n---\n# T\n{body}\n");
+        assert_eq!(rule(&validate_steering(&content), "KIRO-011").len(), 1);
+    }
+
+    #[test]
+    fn test_kiro_015_frontmatter_after_text() {
+        let content = "# Release Checklist\n---\ninclusion: manual\n---\nSteps.\n";
+        let diagnostics = validate_steering(content);
+        let kiro_015 = rule(&diagnostics, "KIRO-015");
+        assert_eq!(kiro_015.len(), 1);
+        assert_eq!(kiro_015[0].line, 2);
+    }
+
+    #[test]
+    fn test_kiro_015_misplaced_always_block_is_a_warning() {
+        // Corpus case: an HTML comment above the frontmatter.
+        let content =
+            "<!-- adopted from upstream -->\n---\ntitle: CDK\ninclusion: always\n---\n# CDK\n";
+        let diagnostics = validate_steering(content);
+        let kiro_015 = rule(&diagnostics, "KIRO-015");
+        assert_eq!(kiro_015.len(), 1);
+        assert_eq!(kiro_015[0].level, DiagnosticLevel::Warning);
+        assert_eq!(kiro_015[0].line, 2);
+    }
+
+    #[test]
+    fn test_kiro_015_horizontal_rules_are_not_frontmatter() {
+        for content in [
+            "Intro\n\n---\n\nSome text\n\n---\nMore\n",
+            "\n---\nfoo: bar\n---\n# Body\n",
+            "# Title\n---\nStatus: done\n---\n",
+        ] {
+            assert!(
+                rule(&validate_steering(content), "KIRO-015").is_empty(),
+                "{content:?}"
+            );
+        }
+    }
+
+    // ===== KIRO-018: vague auto description =====
+
+    #[test]
+    fn test_kiro_018_vague_auto_description() {
+        for (description, vague) in [
+            ("Helps with code review", true),
+            ("API rules", true),
+            (
+                "REST API design patterns and conventions. Use when creating or modifying API endpoints.",
+                false,
+            ),
+            (
+                "API 설계 규칙과 엔드포인트 작성 시 지켜야 할 관례를 설명합니다",
+                false,
+            ),
+            ("API規約", true),
+        ] {
+            let content =
+                format!("---\ninclusion: auto\ndescription: {description}\n---\n# Steering\n");
+            let diagnostics = validate_steering(&content);
+            let kiro_018 = rule(&diagnostics, "KIRO-018");
+            assert_eq!(kiro_018.len(), usize::from(vague), "{description}");
+            if vague {
+                assert_eq!(kiro_018[0].level, DiagnosticLevel::Info);
+                assert_eq!(kiro_018[0].line, 3);
+            }
+        }
+        // Only auto steering is matched by description.
+        let content = "---\ninclusion: manual\ndescription: Helps with code review\n---\n# S\n";
+        assert!(rule(&validate_steering(content), "KIRO-018").is_empty());
+    }
+
+    // ===== AGENTS.md (KIRO-016, KIRO-017) =====
+
+    fn agents_md(path: &str, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
+        KiroAgentsMdValidator.validate(Path::new(path), content, config)
+    }
+
+    fn kiro_project() -> LintConfig {
+        let fs = Arc::new(MockFileSystem::new());
+        fs.add_dir("/project/.kiro");
+        fs.add_dir("/project/services");
+        let mut config = LintConfig::default();
+        config.set_fs(fs);
+        config.set_root_dir("/project".into());
+        config
+    }
+
+    #[test]
+    fn test_kiro_016_agents_md_truncation() {
+        let content = format!("# Rules\n{}\ntail\n", "y".repeat(50_000));
+        let config = kiro_project();
+        for path in ["/project/AGENTS.md", "/project/services/AGENTS.md"] {
+            let diagnostics = agents_md(path, &content, &config);
+            let kiro_016 = rule(&diagnostics, "KIRO-016");
+            assert_eq!(kiro_016.len(), 1, "{path}");
+            assert_eq!(kiro_016[0].level, DiagnosticLevel::Warning);
+            // The first character Kiro drops: 8 + 49,992 characters on line 2.
+            assert_eq!((kiro_016[0].line, kiro_016[0].column), (2, 49_993));
+            assert!(
+                kiro_016[0].message.contains("50000"),
+                "{}",
+                kiro_016[0].message
+            );
+        }
+        // Exactly 50,000 UTF-16 units is kept whole; an astral character counts twice.
+        assert!(agents_md("/project/AGENTS.md", &"y".repeat(50_000), &config).is_empty());
+        let astral = format!("{}\u{1F600}", "y".repeat(49_999));
+        assert_eq!(
+            rule(
+                &agents_md("/project/AGENTS.md", &astral, &config),
+                "KIRO-016"
+            )
+            .len(),
+            1
+        );
+    }
+
+    #[test]
+    fn test_kiro_agents_md_rules_need_a_kiro_project() {
+        let content = format!("{}\n", "y".repeat(50_001));
+        // No .kiro directory and no tool selection: not a Kiro project.
+        let fs = Arc::new(MockFileSystem::new());
+        let mut plain = LintConfig::default();
+        plain.set_fs(fs);
+        plain.set_root_dir("/elsewhere".into());
+        assert!(agents_md("/elsewhere/AGENTS.md", &content, &plain).is_empty());
+        // tools = ["kiro"] opts in; another tool opts out.
+        let mut kiro = plain.clone();
+        kiro.set_tools(vec!["kiro".to_string()]);
+        assert_eq!(agents_md("/elsewhere/AGENTS.md", &content, &kiro).len(), 1);
+        let mut codex = plain.clone();
+        codex.set_tools(vec!["codex".to_string()]);
+        assert!(agents_md("/elsewhere/AGENTS.md", &content, &codex).is_empty());
+        // CLI 2.x (V2) does not truncate; AGENTS.md inside steering is steering.
+        let mut v2 = kiro.clone();
+        v2.tool_versions_mut().kiro = Some("2.32.1".to_string());
+        assert!(agents_md("/elsewhere/AGENTS.md", &content, &v2).is_empty());
+        let config = kiro_project();
+        assert!(agents_md("/project/.kiro/steering/AGENTS.md", &content, &config).is_empty());
+        assert!(agents_md("/project/CLAUDE.md", &content, &config).is_empty());
+    }
+
+    #[test]
+    fn test_kiro_017_steering_frontmatter_in_agents_md() {
+        let config = kiro_project();
+        let content =
+            "---\ntitle: Rules\ninclusion: fileMatch\nfileMatchPattern: \"src/**\"\n---\n# Rules\n";
+        let diagnostics = agents_md("/project/AGENTS.md", content, &config);
+        let kiro_017 = rule(&diagnostics, "KIRO-017");
+        assert_eq!(kiro_017.len(), 1);
+        assert_eq!(kiro_017[0].line, 3);
+        assert!(
+            kiro_017[0].message.contains("'inclusion'"),
+            "{}",
+            kiro_017[0].message
+        );
+        // Amp's `globs` frontmatter and plain AGENTS.md are left alone.
+        for content in ["---\nglobs: \"src/**\"\n---\n# Rules\n", "# Rules\n"] {
+            assert!(
+                agents_md("/project/AGENTS.md", content, &config).is_empty(),
+                "{content}"
+            );
+        }
+        assert!(
+            agents_md("/project/.kiro/steering/AGENTS.md", content, &config).is_empty(),
+            "steering-dir AGENTS.md frontmatter is honored"
+        );
     }
 
     // ===== Messages and metadata =====
@@ -2242,7 +2575,7 @@ mod tests {
             meta.rule_ids,
             &[
                 "KIRO-001", "KIRO-002", "KIRO-003", "KIRO-004", "KIRO-005", "KIRO-006", "KIRO-007",
-                "KIRO-008", "KIRO-009", "KIRO-010", "KIRO-011", "KIRO-014", "KIRO-015",
+                "KIRO-008", "KIRO-009", "KIRO-010", "KIRO-011", "KIRO-015", "KIRO-018",
             ]
         );
     }

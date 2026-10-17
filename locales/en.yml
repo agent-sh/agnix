@@ -152,6 +152,9 @@ rules:
   kr_sk_001_data:
     message: "Kiro ignores skill frontmatter field '%{field}'; it reads only name, description, license, compatibility and metadata"
     suggestion: "Move '%{field}' under metadata, where Kiro skills keep extra data such as author or version"
+  kr_sk_002:
+    message: "Skill description '%{description}' is too vague for Kiro to match requests against"
+    suggestion: "Describe what the skill does and when to use it, with specific keywords and actions (e.g. 'Review pull requests for security vulnerabilities and test coverage. Use when reviewing PRs.')"
   amp_sk_001:
     message: field '%{field}' is not supported by %{client} -- it will be ignored
     suggestion: Remove '%{field}' or move this skill to a client that supports it
@@ -1115,11 +1118,8 @@ rules:
     message: "Steering file sets '%{field}' but no inclusion mode, so Kiro includes it in every interaction"
     suggestion: "Add inclusion: auto (with a description) to load it on demand or inclusion: manual to load it on request; remove the field if the file should always load"
   kiro_011:
-    message: "Kiro steering file is %{len} characters long (agnix recommends under %{limit}); Kiro adds the whole file to the context whenever it loads"
-    suggestion: "Split oversized steering docs by concern or move detail into linked files"
-  kiro_014:
-    message: "Kiro steering file has no Markdown heading"
-    suggestion: "Organize the guidance under Markdown headings (# Title, ## Section)"
+    message: "Always-included Kiro steering file is %{len} characters long (agnix recommends under %{limit}); Kiro adds it to the context of every interaction"
+    suggestion: "Keep steering files focused: split the file by concern, or load detail on demand with inclusion: fileMatch, manual or auto"
   kiro_015_not_first:
     message: "Steering frontmatter does not start on the first line, so Kiro does not read it and includes the whole file in every interaction"
     suggestion: "Remove the blank lines or text before the opening ---"
@@ -1135,12 +1135,21 @@ rules:
   kiro_015_type:
     message: "Kiro CLI V3 rejects steering frontmatter field '%{field}' (%{kind}, expected %{expected}) and then includes the whole file, frontmatter text included, in every interaction"
     suggestion: "Give the field the expected type or remove it"
-  kr_pw_005:
-    message: "POWER.md step heading '%{step}' has no content below it"
-    suggestion: "Add a short description below each step heading so agents know what the step does"
+  kiro_016:
+    message: "AGENTS.md is %{len} characters long; Kiro CLI V3 keeps only the first %{limit} and replaces the rest with a truncation notice"
+    suggestion: "Move scoped guidance into .kiro/steering/ files or nested AGENTS.md files, or shorten this file"
+  kiro_017:
+    message: "AGENTS.md sets steering field '%{field}', but Kiro reads AGENTS.md as plain text: inclusion modes do not apply and the frontmatter reaches the model as text"
+    suggestion: "Put scoped guidance in a .kiro/steering/ file with this frontmatter, or remove the block"
+  kiro_018:
+    message: "Auto steering description '%{description}' is too vague for Kiro to match requests against"
+    suggestion: "Say what the file covers and when to use it, with specific keywords (e.g. 'REST API design patterns and conventions. Use when creating or modifying API endpoints.')"
   kr_pw_006:
     message: 'POWER.md has duplicate keywords: %{duplicates}'
     suggestion: Deduplicate the keywords array so each activation keyword is unique
+  kr_pw_006_plugin:
+    message: "plugin.json has duplicate keywords: %{duplicates}"
+    suggestion: "Deduplicate the keywords array so each activation keyword is unique"
   kr_pw_007:
     message: "POWER.md name '%{name}' contains invalid characters"
     suggestion: "Use lowercase letters, digits and hyphens only (e.g. 'my-power')"
@@ -1195,12 +1204,18 @@ rules:
   kr_pw_016:
     message: "plugin.json has no %{fields}; the Kiro powers docs list them as required, though Kiro loads the power without them"
     suggestion: "Add a version and an author object with a name"
+  kr_pw_016_semver:
+    message: "plugin.json version '%{version}' is not a semantic version; the Kiro powers docs ask for one (e.g. 1.0.0)"
+    suggestion: "Use a MAJOR.MINOR.PATCH version"
   kr_pw_017:
     message: "Kiro loads this power from plugin.json and ignores POWER.md (and its steering/ and mcp.json layout)"
     suggestion: "Finish the migration to the Agent Plugins format and delete POWER.md, or remove plugin.json to keep the legacy power"
   kr_pw_018:
     message: "This plugin.json power has a steering/ directory, which Kiro does not load for Agent Plugins powers"
     suggestion: "Move the guidance into skills/<name>/SKILL.md or dev.kiro/steering/"
+  kr_pw_019:
+    message: "POWER.md is the legacy power format; Kiro recommends the Agent Plugins format (plugin.json, skills/, mcp.json) for new powers"
+    suggestion: "Migrate with Kiro's power-builder power, or keep POWER.md, which still loads"
   kr_ag_008:
     message: Kiro agent has an empty explicit 'name' field
     suggestion: Remove the empty field to derive the name from its relative path, or set a non-empty name

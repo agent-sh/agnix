@@ -1,6 +1,6 @@
 # agnix Knowledge Base - Master Index
 
-> 468 validation rules across 40 categories, sourced from 75+ references
+> 471 validation rules across 40 categories, sourced from 75+ references
 
 
 ---
@@ -9,7 +9,7 @@
 
 | What You Need | Start Here |
 |---------------|------------|
-| **Implement validator** | [VALIDATION-RULES.md](./VALIDATION-RULES.md) - 468 rules with detection logic |
+| **Implement validator** | [VALIDATION-RULES.md](./VALIDATION-RULES.md) - 471 rules with detection logic |
 
 | **Understand a standard** | [standards/](#standards) - HARD-RULES files |
 | **Learn best practices** | [standards/](#standards) - OPINIONS files |
@@ -28,7 +28,7 @@
 knowledge-base/
 ├── INDEX.md                        # This file
 ├── README.md                       # Detailed navigation guide
-├── VALIDATION-RULES.md             # Master validation reference (468 rules)
+├── VALIDATION-RULES.md             # Master validation reference (471 rules)
 
 ├── PATTERNS-CATALOG.md             # 70 production-tested patterns
 ├── RESEARCH-TRACKING.md            # Tool inventory and monitoring process
@@ -81,7 +81,7 @@ knowledge-base/
 | **AGENTS.md** | 5 | - | - | 6 rules |
 | **Cursor** | 2 | - | - | 9 rules |
 | **agentsys** | 12 | - | - | 70 patterns |
-| **Total** | **75+** | **117KB** | **160KB** | **468 rules** |
+| **Total** | **75+** | **117KB** | **160KB** | **471 rules** |
 
 
 ### Validation Rules by Category
@@ -116,8 +116,8 @@ knowledge-base/
 | Kiro MCP | 6 | 2 | 4 | 0 | 0 |
 | Kiro Powers | 18 | 6 | 9 | 3 | 0 |
 | Kiro Settings | 3 | 1 | 2 | 0 | 3 |
-| Kiro Skills | 1 | 0 | 1 | 0 | 1 |
-| Kiro Steering | 13 | 4 | 7 | 2 | 1 |
+| Kiro Skills | 2 | 0 | 1 | 1 | 1 |
+| Kiro Steering | 15 | 4 | 9 | 2 | 1 |
 | MCP | 25 | 18 | 6 | 1 | 8 |
 | OpenCode | 46 | 28 | 17 | 1 | 11 |
 | OpenCode Skills | 1 | 0 | 1 | 0 | 1 |
@@ -129,7 +129,7 @@ knowledge-base/
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **468** | **214** | **215** | **39** | **129** |
+| **TOTAL** | **471** | **214** | **217** | **40** | **129** |
 
 
 ---
@@ -167,7 +167,7 @@ knowledge-base/
 
 ### For Implementation
 
-**Start here**: [VALIDATION-RULES.md](./VALIDATION-RULES.md) - 468 rules with rule IDs (AS-001, CC-HK-001, etc.)
+**Start here**: [VALIDATION-RULES.md](./VALIDATION-RULES.md) - 471 rules with rule IDs (AS-001, CC-HK-001, etc.)
 
 - Detection pseudocode
 - Auto-fix implementations
@@ -293,7 +293,7 @@ Total Size:           650KB
 Standards Covered:     5 (Agent Skills, MCP, Claude Code, Multi-Platform, Prompt Eng)
 Sources Consulted:    75+ (specs, docs, research papers, repos)
 Research Agents:       5 (10+ sources each)
-Validation Rules:     468 rules
+Validation Rules:     471 rules
 Auto-Fixable Rules:   124 rules
 
 Test Fixtures:        116 files

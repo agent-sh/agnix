@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `468` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `471` validation rules generated from `knowledge-base/rules.json`.
 `129` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -300,10 +300,13 @@ This section contains all `468` validation rules generated from `knowledge-base/
 | [KIRO-008](./generated/kiro-008.md) | Unknown Kiro Steering Frontmatter Field | MEDIUM | Kiro Steering | No |
 | [KIRO-009](./generated/kiro-009.md) | Broken Inline Steering Reference | MEDIUM | Kiro Steering | No |
 | [KIRO-010](./generated/kiro-010.md) | On-Demand Steering Fields Without Inclusion Mode | MEDIUM | Kiro Steering | No |
-| [KIRO-011](./generated/kiro-011.md) | Steering Doc Excessively Long | LOW | Kiro Steering | No |
-| [KIRO-014](./generated/kiro-014.md) | Steering Body Without Markdown Heading | LOW | Kiro Steering | No |
+| [KIRO-011](./generated/kiro-011.md) | Always-Included Steering Doc Excessively Long | LOW | Kiro Steering | No |
 | [KIRO-015](./generated/kiro-015.md) | Steering Frontmatter Kiro Cannot Read | HIGH | Kiro Steering | No |
+| [KIRO-016](./generated/kiro-016.md) | AGENTS.md Exceeds Kiro Truncation Limit | MEDIUM | Kiro Steering | No |
+| [KIRO-017](./generated/kiro-017.md) | Kiro Steering Frontmatter in AGENTS.md | MEDIUM | Kiro Steering | No |
+| [KIRO-018](./generated/kiro-018.md) | Vague Auto Steering Description | LOW | Kiro Steering | No |
 | [KR-SK-001](./generated/kr-sk-001.md) | Kiro Skill Uses Unsupported Field | MEDIUM | Kiro Skills | Yes (safe/unsafe) |
+| [KR-SK-002](./generated/kr-sk-002.md) | Vague Kiro Skill Description | LOW | Kiro Skills | No |
 | [KR-AG-001](./generated/kr-ag-001.md) | Unknown Field in Kiro Agent JSON | MEDIUM | Kiro Agents | No |
 | [KR-AG-002](./generated/kr-ag-002.md) | Invalid Kiro Agent Resource Protocol | HIGH | Kiro Agents | No |
 | [KR-AG-003](./generated/kr-ag-003.md) | allowedTools Not Subset of tools | MEDIUM | Kiro Agents | No |
@@ -342,7 +345,6 @@ This section contains all `468` validation rules generated from `knowledge-base/
 | [KR-PW-002](./generated/kr-pw-002.md) | Empty POWER.md Keywords Array | MEDIUM | Kiro Powers | No |
 | [KR-PW-003](./generated/kr-pw-003.md) | Empty POWER.md Body | MEDIUM | Kiro Powers | No |
 | [KR-PW-004](./generated/kr-pw-004.md) | Adjacent Power mcp.json Kiro Cannot Use | MEDIUM | Kiro Powers | No |
-| [KR-PW-005](./generated/kr-pw-005.md) | Step Heading Without Content | LOW | Kiro Powers | No |
 | [KR-PW-006](./generated/kr-pw-006.md) | Duplicate Keywords | LOW | Kiro Powers | No |
 | [KR-PW-007](./generated/kr-pw-007.md) | Name Invalid Characters | MEDIUM | Kiro Powers | No |
 | [KR-PW-008](./generated/kr-pw-008.md) | Secrets in Power Body | HIGH | Kiro Powers | No |
@@ -353,9 +355,10 @@ This section contains all `468` validation rules generated from `knowledge-base/
 | [KR-PW-013](./generated/kr-pw-013.md) | plugin.json Value Kiro Ignores | MEDIUM | Kiro Powers | No |
 | [KR-PW-014](./generated/kr-pw-014.md) | Plugin Skill Kiro Skips | HIGH | Kiro Powers | No |
 | [KR-PW-015](./generated/kr-pw-015.md) | Power Without Activation Description or Keywords | MEDIUM | Kiro Powers | No |
-| [KR-PW-016](./generated/kr-pw-016.md) | Documented plugin.json Field Missing | LOW | Kiro Powers | No |
+| [KR-PW-016](./generated/kr-pw-016.md) | Documented plugin.json Field Missing or Not Semver | LOW | Kiro Powers | No |
 | [KR-PW-017](./generated/kr-pw-017.md) | POWER.md Ignored Next to plugin.json | MEDIUM | Kiro Powers | No |
 | [KR-PW-018](./generated/kr-pw-018.md) | Legacy steering Directory in a plugin.json Power | MEDIUM | Kiro Powers | No |
+| [KR-PW-019](./generated/kr-pw-019.md) | Legacy POWER.md Power Format | LOW | Kiro Powers | No |
 | [KR-SET-001](./generated/kr-set-001.md) | Invalid toolSearch.enabled Value | HIGH | Kiro Settings | Yes (safe) |
 | [KR-SET-002](./generated/kr-set-002.md) | Invalid toolSearch.minPct Value | MEDIUM | Kiro Settings | Yes (safe) |
 | [KR-SET-003](./generated/kr-set-003.md) | Invalid toolSearch.minTokens Value | MEDIUM | Kiro Settings | Yes (safe) |

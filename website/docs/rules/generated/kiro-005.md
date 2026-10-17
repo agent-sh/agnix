@@ -13,7 +13,7 @@ keywords: ["KIRO-005", "empty steering body after frontmatter", "kiro steering",
 - **Category**: `Kiro Steering`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
