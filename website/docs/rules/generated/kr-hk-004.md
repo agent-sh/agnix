@@ -24,6 +24,7 @@ keywords: ["KR-HK-004", "kiro tool hook missing tooltypes filter", "kiro hooks",
 ## Evidence Sources
 
 - https://kiro.dev/docs/ide/0x-reference/
+- https://kiro.dev/docs/hooks/best-practices/
 
 ## Test Coverage Metadata
 
@@ -55,8 +56,8 @@ The following examples demonstrate what triggers this rule and how to fix it.
 {
   "when": {
     "type": "preToolUse",
-    "toolTypes": [
-      "write"
+    "patterns": [
+      "fs_write"
     ]
   },
   "then": {

@@ -820,6 +820,8 @@ rules:
   kr_hk_001:
     message: Invalid Kiro IDE hook event '%{event}'
     missing: Kiro IDE hook has no event (when.type)
+    undocumented: "Kiro IDE hook event '%{event}' is not a documented IDE 0.x event; the documented name is %{documented}"
+    fix: 'Replace the event with %{documented}'
     suggestion: 'Use one of the IDE 0.x when.type values: fileEdited, fileCreated, fileDeleted, promptSubmit, agentStop, preToolUse, postToolUse, preTaskExecution, postTaskExecution, sessionStart, userTriggered'
   kr_hk_002:
     message: Kiro file hook for event '%{event}' is missing patterns
@@ -828,8 +830,8 @@ rules:
     message: 'Kiro IDE hook has no action: set then.command (runCommand) or then.prompt (askAgent)'
     suggestion: 'Add a then block, for example {"type": "askAgent", "prompt": "..."} or {"type": "runCommand", "command": "..."}'
   kr_hk_004:
-    message: Kiro '%{event}' hook is missing toolTypes filter
-    suggestion: Add when.toolTypes (or when.patterns) to scope preToolUse/postToolUse hooks
+    message: Kiro '%{event}' hook has no tool filter (when.patterns), so it runs on every tool call
+    suggestion: Add when.patterns with the tool names to match; Kiro recommends targeting specific tools rather than all of them
   kr_mcp_001:
     message: Kiro MCP server '%{server}' is missing both command and url
     suggestion: Set command for local servers or url for remote servers
@@ -1392,7 +1394,21 @@ rules:
     parse_error: 'Kiro IDE hook file is not valid JSON: %{error}'
     root_type: 'Kiro IDE hook file must be a JSON object (found %{found})'
     field_type: 'Kiro IDE hook field %{field} is %{found}, expected %{expected}'
-    suggestion: 'An IDE 0.x hook is {"name": "...", "when": {"type": "...", "patterns": [...]}, "then": {"type": "askAgent" or "runCommand", "prompt" or "command": "..."}}'
+    negative_timeout: 'Kiro IDE hook field %{field} is negative; the timeout is in seconds and 0 disables it'
+    suggestion: 'An IDE 0.x hook is {"name": "...", "when": {"type": "...", "patterns": [...]}, "then": {"type": "askAgent" or "runCommand", "prompt" or "command": "...", "timeout": seconds}}'
+  kr_hk_027:
+    message: 'hooks[%{index}] %{trigger} hook has no specific matcher, so it runs on every tool call'
+    suggestion: 'Target specific tools or tags, for example shell, write, @github or ^fs_write$; Kiro recommends precise matchers over "*"'
+  kr_hk_028:
+    message: 'hooks[%{index}] %{trigger} hook has no specific matcher, so it runs on every file the agent changes'
+    legacy: "Kiro '%{event}' hook patterns match every file"
+    suggestion: 'Kiro recommends specific file patterns, for example \.ts$ (V3 matcher regex) or src/**/*.ts (IDE 0.x patterns)'
+  kr_hk_029:
+    message: 'hooks[%{index}] matcher "%{matcher}" is an unanchored regex, so it also matches tool ids that only contain these names'
+    suggestion: 'Anchor the regex as ^(...)$ to match exact tool ids, unless substring matching is intended'
+  kr_hk_030:
+    message: 'Hook file name "%{name}" is not kebab-case'
+    suggestion: 'Kiro suggests descriptive kebab-case names such as lint-on-save.json or guard-writes.json'
   kr_mcp_003:
     message: Kiro MCP server '%{server}' is missing required 'args' field
     suggestion: Add an 'args' array (even if empty) alongside 'command', or switch to 'url' for remote servers

@@ -25,6 +25,7 @@ keywords: ["KR-HK-021", "kiro v3 tool matcher uses non-v3 tool names", "kiro hoo
 
 - https://kiro.dev/docs/hooks/types/
 - https://kiro.dev/docs/cli/v3/hooks-migration/
+- https://kiro.dev/docs/hooks/best-practices/
 
 ## Test Coverage Metadata
 

@@ -1,7 +1,7 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 483,
+  "total_rules": 487,
   "last_updated": "2026-10-17",
   "schema": {
     "evidence": {
@@ -9575,7 +9575,8 @@
         }
       },
       "fix": {
-        "autofix": false
+        "autofix": true,
+        "fix_safety": "unsafe"
       },
       "good_example": "{\n  \"when\": {\n    \"type\": \"fileEdited\",\n    \"patterns\": [\n      \"src/**/*.ts\"\n    ]\n  },\n  \"then\": {\n    \"type\": \"askAgent\",\n    \"prompt\": \"Review the change\"\n  }\n}",
       "bad_example": "{\n  \"when\": {\n    \"type\": \"userPrompt\"\n  },\n  \"then\": {\n    \"type\": \"askAgent\",\n    \"prompt\": \"Review the change\"\n  }\n}"
@@ -9644,7 +9645,8 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/docs/ide/0x-reference/"
+          "https://kiro.dev/docs/ide/0x-reference/",
+          "https://kiro.dev/docs/hooks/best-practices/"
         ],
         "verified_on": "2026-10-17",
         "applies_to": {
@@ -9661,7 +9663,7 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"when\": {\n    \"type\": \"preToolUse\",\n    \"toolTypes\": [\n      \"write\"\n    ]\n  },\n  \"then\": {\n    \"type\": \"askAgent\",\n    \"prompt\": \"Check the write\"\n  }\n}",
+      "good_example": "{\n  \"when\": {\n    \"type\": \"preToolUse\",\n    \"patterns\": [\n      \"fs_write\"\n    ]\n  },\n  \"then\": {\n    \"type\": \"askAgent\",\n    \"prompt\": \"Check the write\"\n  }\n}",
       "bad_example": "{\n  \"when\": {\n    \"type\": \"preToolUse\"\n  },\n  \"then\": {\n    \"type\": \"askAgent\",\n    \"prompt\": \"Check every tool\"\n  }\n}"
     },
     {
@@ -9726,12 +9728,11 @@
     {
       "id": "KR-HK-009",
       "name": "Command Uses Absolute Path",
-      "severity": "MEDIUM",
+      "severity": "LOW",
       "category": "kiro-hooks",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/docs/ide/0x-reference/",
           "https://kiro.dev/docs/hooks/"
         ],
         "verified_on": "2026-10-17",
@@ -9739,7 +9740,7 @@
           "tool": "kiro",
           "spec_revision": "IDE 0.x .kiro.hook"
         },
-        "normative_level": "SHOULD",
+        "normative_level": "BEST_PRACTICE",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -9760,8 +9761,8 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/docs/ide/0x-reference/",
-          "https://kiro.dev/docs/hooks/"
+          "https://kiro.dev/docs/mcp/security/",
+          "https://kiro.dev/docs/ide/0x-reference/"
         ],
         "verified_on": "2026-10-17",
         "applies_to": {
@@ -10070,7 +10071,8 @@
         "source_type": "vendor_docs",
         "source_urls": [
           "https://kiro.dev/docs/hooks/types/",
-          "https://kiro.dev/docs/cli/v3/hooks-migration/"
+          "https://kiro.dev/docs/cli/v3/hooks-migration/",
+          "https://kiro.dev/docs/hooks/best-practices/"
         ],
         "verified_on": "2026-10-17",
         "applies_to": {
@@ -10232,6 +10234,120 @@
       },
       "good_example": "{\"name\": \"Lint docs\", \"when\": {\"type\": \"fileEdited\", \"patterns\": [\"docs/**/*.md\"]}, \"then\": {\"type\": \"askAgent\", \"prompt\": \"Check links\"}}",
       "bad_example": "{\"name\": \"Lint docs\", \"when\": {\"type\": \"fileEdited\", \"patterns\": \"docs/**/*.md\"}, \"then\": {\"type\": \"askAgent\", \"prompt\": \"Check links\"}}"
+    },
+    {
+      "id": "KR-HK-027",
+      "name": "Kiro Tool Hook Without a Specific Matcher",
+      "severity": "LOW",
+      "category": "kiro-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/hooks/best-practices/",
+          "https://kiro.dev/docs/hooks/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.8.0"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"version\":\"v1\",\"hooks\":[{\"name\":\"guard-writes\",\"trigger\":\"PreToolUse\",\"matcher\":\"write\",\"action\":{\"type\":\"command\",\"command\":\"./scripts/guard.sh\"}}]}",
+      "bad_example": "{\"version\":\"v1\",\"hooks\":[{\"name\":\"guard\",\"trigger\":\"PreToolUse\",\"matcher\":\"*\",\"action\":{\"type\":\"command\",\"command\":\"./scripts/guard.sh\"}}]}"
+    },
+    {
+      "id": "KR-HK-028",
+      "name": "Kiro File Hook Matching Every File",
+      "severity": "LOW",
+      "category": "kiro-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/hooks/best-practices/",
+          "https://kiro.dev/docs/hooks/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.8.0"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"version\":\"v1\",\"hooks\":[{\"name\":\"lint-ts\",\"trigger\":\"PostFileSave\",\"matcher\":\"\\\\.ts$\",\"action\":{\"type\":\"command\",\"command\":\"npx eslint --fix\"}}]}",
+      "bad_example": "{\"version\":\"v1\",\"hooks\":[{\"name\":\"lint\",\"trigger\":\"PostFileSave\",\"matcher\":\".*\",\"action\":{\"type\":\"command\",\"command\":\"npx eslint --fix\"}}]}"
+    },
+    {
+      "id": "KR-HK-029",
+      "name": "Kiro Tool Matcher Is an Unanchored Regex",
+      "severity": "LOW",
+      "category": "kiro-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/hooks/types/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.8.0"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"version\":\"v1\",\"hooks\":[{\"name\":\"guard-writes\",\"trigger\":\"PreToolUse\",\"matcher\":\"^(fs_write|str_replace)$\",\"action\":{\"type\":\"command\",\"command\":\"./scripts/guard.sh\"}}]}",
+      "bad_example": "{\"version\":\"v1\",\"hooks\":[{\"name\":\"guard-writes\",\"trigger\":\"PreToolUse\",\"matcher\":\"fs_write|str_replace\",\"action\":{\"type\":\"command\",\"command\":\"./scripts/guard.sh\"}}]}"
+    },
+    {
+      "id": "KR-HK-030",
+      "name": "Kiro Hook File Name Not Kebab-Case",
+      "severity": "LOW",
+      "category": "kiro-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/hooks/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.8.0"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": ".kiro/hooks/lint-on-save.json",
+      "bad_example": ".kiro/hooks/Lint_On_Save.json"
     },
     {
       "id": "KR-MCP-001",
@@ -14193,7 +14309,7 @@
     },
     "kiro-hooks": {
       "prefix": "KR-HK",
-      "count": 24,
+      "count": 28,
       "description": "Kiro IDE and CLI hook rules"
     },
     "kiro-permissions": {

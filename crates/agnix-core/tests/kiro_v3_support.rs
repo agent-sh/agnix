@@ -183,7 +183,12 @@ fn kiro_alias_fixes_each_entry_without_touching_payloads() {
         assert_eq!(value["hooks"][i]["action"]["trigger"], *old);
     }
     assert_eq!(value["trigger"], "agentSpawn");
-    assert!(validate(path, &fixed, &LintConfig::default()).is_empty());
+    // The tool and file hooks here have no matcher, which KR-HK-027/028 note.
+    assert!(
+        validate(path, &fixed, &LintConfig::default())
+            .iter()
+            .all(|d| matches!(d.rule.as_str(), "KR-HK-027" | "KR-HK-028"))
+    );
 }
 
 #[test]
@@ -714,7 +719,7 @@ fn kiro_v3_hook_fixtures_cover_each_rule() {
         assert!(rules.is_empty(), "{name}: {rules:?}");
     }
     let invalid = fixture_rules("invalid");
-    assert_eq!(invalid.len(), 14);
+    assert_eq!(invalid.len(), 18);
     for (name, rules) in invalid {
         // kr-hk-0NN-*.json reports exactly its own rule.
         let expected = name[..9].to_uppercase();
@@ -749,6 +754,7 @@ fn kiro_legacy_fixture_misroutes_and_types() {
         ("kr-hk-026-field-types.kiro.hook", vec!["KR-HK-026"]),
         ("valid-ide-0x-format.kiro.hook", vec![]),
         ("valid-env-reference.kiro.hook", vec![]),
+        ("kr-hk-001-undocumented-manual.kiro.hook", vec!["KR-HK-001"]),
     ] {
         let path = Path::new(dir).join(file);
         let content = std::fs::read_to_string(&path).unwrap();

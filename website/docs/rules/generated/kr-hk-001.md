@@ -12,7 +12,7 @@ keywords: ["KR-HK-001", "invalid kiro ide hook event type", "kiro hooks", "valid
 - **Severity**: `HIGH`
 - **Category**: `Kiro Hooks`
 - **Normative Level**: `MUST`
-- **Auto-Fix**: `No`
+- **Auto-Fix**: `Yes (unsafe)`
 - **Verified On**: `2026-10-17`
 
 ## Applicability

@@ -58,6 +58,7 @@ pub struct StringList<'a> {
     pub values: Vec<&'a str>,
     /// The list exists but is not an array, so its contents are unknown.
     pub malformed: bool,
+    pub path: Vec<Seg<'static>>,
 }
 
 /// Lenient view of a legacy IDE hook. A field of the wrong type is recorded
@@ -74,6 +75,9 @@ pub struct KiroIdeHook<'a> {
     pub action_malformed: bool,
     pub enabled: Option<bool>,
     pub type_errors: Vec<FieldTypeError>,
+    /// `timeout` / `then.timeout` values below zero (the IDE documents the
+    /// field in seconds, with 0 allowed).
+    pub negative_timeouts: Vec<Vec<Seg<'static>>>,
 }
 
 impl<'a> KiroIdeHook<'a> {
@@ -168,6 +172,22 @@ impl<'a> KiroIdeHook<'a> {
         });
         hook.action_malformed = action_error;
         hook.enabled = root.get("enabled").and_then(Value::as_bool);
+        // IDE files carry `then.timeout` in seconds (the IDE 0.x reference
+        // lists `timeout` among the 1.0 fields, example 10); no upper bound.
+        for (object, parent) in [(Some(root), &[][..]), (then, &then_path[..])] {
+            let Some(value) = object.and_then(|object| object.get("timeout")) else {
+                continue;
+            };
+            let path = child_path(parent, "timeout");
+            match value.as_f64() {
+                Some(seconds) if seconds < 0.0 => hook.negative_timeouts.push(path),
+                Some(_) => {}
+                None => hook.type_errors.push(FieldTypeError {
+                    path,
+                    expected: "a number of seconds",
+                }),
+            }
+        }
         hook.type_errors.dedup();
         hook
     }
@@ -250,7 +270,10 @@ fn list_field<'a>(
     let path = child_path(parent, key);
     match object.get(key)? {
         Value::Array(items) => {
-            let mut list = StringList::default();
+            let mut list = StringList {
+                path: path.clone(),
+                ..StringList::default()
+            };
             for (index, item) in items.iter().enumerate() {
                 match item.as_str() {
                     Some(value) => list.values.push(value),
@@ -269,12 +292,13 @@ fn list_field<'a>(
         }
         _ => {
             errors.push(FieldTypeError {
-                path,
+                path: path.clone(),
                 expected: "an array of strings",
             });
             Some(StringList {
                 values: Vec::new(),
                 malformed: true,
+                path,
             })
         }
     }
@@ -349,6 +373,33 @@ mod tests {
                 vec![Seg::Key("then"), Seg::Key("command")],
             ]
         );
+    }
+
+    #[test]
+    fn timeouts_are_seconds_with_zero_allowed() {
+        let value: Value = serde_json::from_str(
+            r#"{"timeout":"10","then":{"type":"runCommand","command":"x","timeout":-1}}"#,
+        )
+        .unwrap();
+        let hook = KiroIdeHook::from_value(&value);
+        assert_eq!(hook.type_errors.len(), 1);
+        assert_eq!(hook.type_errors[0].path, [Seg::Key("timeout")]);
+        assert_eq!(
+            hook.negative_timeouts,
+            [vec![Seg::Key("then"), Seg::Key("timeout")]]
+        );
+        for ok in [
+            r#"{"then":{"timeout":0}}"#,
+            r#"{"then":{"timeout":30}}"#,
+            r#"{"then":{"timeout":300000}}"#,
+        ] {
+            let value: Value = serde_json::from_str(ok).unwrap();
+            let hook = KiroIdeHook::from_value(&value);
+            assert!(
+                hook.type_errors.is_empty() && hook.negative_timeouts.is_empty(),
+                "{ok}"
+            );
+        }
     }
 
     #[test]

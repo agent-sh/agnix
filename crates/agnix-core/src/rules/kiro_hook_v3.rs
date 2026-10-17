@@ -35,7 +35,7 @@ use crate::{
     schemas::kiro_hook_v3::{
         JsonSpans, KIRO_V3_HOOK_ACTION_KEYS, KIRO_V3_HOOK_KEYS, MatcherSubject, Seg,
         VALID_KIRO_V3_HOOK_DOC_VERSIONS, compile_js_regex, foreign_tool_names, is_tool_selector,
-        matcher_subject, resolve_trigger, tool_matcher_matches_builtin,
+        matcher_subject, matches_everything, resolve_trigger, tool_matcher_matches_builtin,
         trigger_case_insensitive_match,
     },
 };
@@ -58,6 +58,10 @@ const RULE_IDS: &[&str] = &[
     "KR-HK-023",
     "KR-HK-024",
     "KR-HK-025",
+    "KR-HK-027",
+    "KR-HK-028",
+    "KR-HK-029",
+    "KR-HK-030",
 ];
 
 pub struct KiroV3HookValidator;
@@ -100,6 +104,20 @@ impl Validator for KiroV3HookValidator {
                     t!("rules.kr_hk_025.message", version = version.as_str()),
                 )
                 .suggest(t!("rules.kr_hk_025.suggestion")),
+            );
+        }
+        if config.is_rule_enabled("KR-HK-030")
+            && let Some(name) = path.file_name().and_then(|name| name.to_str())
+            && !is_kebab_case_hook_file_name(name)
+        {
+            ctx.push(
+                Finding::new(
+                    "KR-HK-030",
+                    DiagnosticLevel::Info,
+                    At::Value(&[]),
+                    t!("rules.kr_hk_030.message", name = name),
+                )
+                .suggest(t!("rules.kr_hk_030.suggestion")),
             );
         }
         // Hook files go through strict JSON.parse; duplicate keys are legal
@@ -454,6 +472,15 @@ impl Ctx<'_> {
         self.check_optional_fields(index, &base, hook);
         if let (Some(trigger), Some(Value::String(matcher))) = (trigger, hook.get("matcher")) {
             self.check_matcher(index, &base, trigger, matcher);
+        }
+        if let Some(trigger) = trigger {
+            match hook.get("matcher") {
+                None => self.check_scope(index, &base, trigger, None),
+                Some(Value::String(matcher)) => {
+                    self.check_scope(index, &base, trigger, Some(matcher))
+                }
+                Some(_) => {} // KR-HK-017
+            }
         }
         if let Some(confirm) = hook.get("confirm") {
             self.check_confirm(index, &base, confirm, trigger, action);
@@ -901,44 +928,102 @@ impl Ctx<'_> {
                 )
                 .suggest(t!("rules.kr_hk_020.suggestion")),
             ),
-            MatcherSubject::Tool
-                if !matcher.contains('@')
+            MatcherSubject::Tool => {
+                let names = if !matcher.contains('@')
                     && !matcher.contains("mcp_")
-                    && tool_matcher_matches_builtin(matcher) == Some(false) =>
-            {
-                let names = foreign_tool_names(matcher);
-                if names.is_empty() {
+                    && tool_matcher_matches_builtin(matcher) == Some(false)
+                {
+                    foreign_tool_names(matcher)
+                } else {
+                    Vec::new()
+                };
+                if !names.is_empty() {
+                    let names = names
+                        .iter()
+                        .map(|(name, origin, replacement)| {
+                            t!(
+                                "rules.kr_hk_021.name",
+                                name = *name,
+                                origin = *origin,
+                                replacement = *replacement
+                            )
+                            .to_string()
+                        })
+                        .collect::<Vec<_>>()
+                        .join("; ");
+                    self.push(
+                        Finding::warning(
+                            "KR-HK-021",
+                            At::Value(&matcher_path),
+                            t!(
+                                "rules.kr_hk_021.message",
+                                index = index,
+                                matcher = matcher,
+                                names = names
+                            ),
+                        )
+                        .suggest(t!("rules.kr_hk_021.suggestion")),
+                    );
                     return;
                 }
-                let names = names
-                    .iter()
-                    .map(|(name, origin, replacement)| {
-                        t!(
-                            "rules.kr_hk_021.name",
-                            name = *name,
-                            origin = *origin,
-                            replacement = *replacement
+                // KR-HK-029: a regex-form tool matcher is an unanchored search
+                // over tool ids, so `fs_write|str_replace` also matches any id
+                // that merely contains those names.
+                if !is_tool_selector(matcher)
+                    && matcher.contains(['|', '('])
+                    && !(matcher.starts_with('^') && matcher.ends_with('$'))
+                {
+                    self.push(
+                        Finding::new(
+                            "KR-HK-029",
+                            DiagnosticLevel::Info,
+                            At::Value(&matcher_path),
+                            t!("rules.kr_hk_029.message", index = index, matcher = matcher),
                         )
-                        .to_string()
-                    })
-                    .collect::<Vec<_>>()
-                    .join("; ");
-                self.push(
-                    Finding::warning(
-                        "KR-HK-021",
-                        At::Value(&matcher_path),
-                        t!(
-                            "rules.kr_hk_021.message",
-                            index = index,
-                            matcher = matcher,
-                            names = names
-                        ),
-                    )
-                    .suggest(t!("rules.kr_hk_021.suggestion")),
-                );
+                        .suggest(t!("rules.kr_hk_029.suggestion")),
+                    );
+                }
             }
             _ => {}
         }
+    }
+
+    /// KR-HK-027 / KR-HK-028: tool and file hooks that run on every event.
+    /// The engine itself warns "Hook has no matcher and will run on every
+    /// tool call"; the hooks best-practices page asks for precise matchers
+    /// and specific file patterns.
+    fn check_scope(
+        &mut self,
+        index: usize,
+        base: &[Seg<'_>],
+        trigger: &str,
+        matcher: Option<&str>,
+    ) {
+        let subject = matcher_subject(trigger);
+        if subject == MatcherSubject::None || !matches_everything(matcher, subject) {
+            return;
+        }
+        let at_path = match matcher {
+            Some(_) => path(base, &[Seg::Key("matcher")]),
+            None => path(base, &[Seg::Key("trigger")]),
+        };
+        let (rule, message, suggestion) = if subject == MatcherSubject::Tool {
+            (
+                "KR-HK-027",
+                t!("rules.kr_hk_027.message", index = index, trigger = trigger),
+                t!("rules.kr_hk_027.suggestion"),
+            )
+        } else {
+            (
+                "KR-HK-028",
+                t!("rules.kr_hk_028.message", index = index, trigger = trigger),
+                t!("rules.kr_hk_028.suggestion"),
+            )
+        };
+        self.push(
+            Finding::new(rule, DiagnosticLevel::Info, At::Value(&at_path), message)
+                .suggest(suggestion),
+        );
     }
 
     /// KR-HK-018: `confirm` is validated with the hook, so a malformed block
@@ -1399,6 +1484,24 @@ fn references_variable(command: &str, name: &str) -> bool {
     bare_variable_references(command, name) || command.contains(&format!("${{{name}}}"))
 }
 
+/// The hooks docs ask for "descriptive kebab-case names (e.g.,
+/// `lint-on-save.json`)". Dot-separated parts such as `lint.hook.json` are
+/// accepted; uppercase letters, underscores, spaces and other characters are
+/// not.
+fn is_kebab_case_hook_file_name(name: &str) -> bool {
+    let stem = name.strip_suffix(".json").unwrap_or(name);
+    !stem.is_empty()
+        && stem.split('.').all(|part| {
+            !part.is_empty()
+                && part.split('-').all(|word| {
+                    !word.is_empty()
+                        && word
+                            .bytes()
+                            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit())
+                })
+        })
+}
+
 /// A JSON integer token Kiro would accept as a timeout (no sign, no leading
 /// zeros, short enough to stay an exact integer).
 fn is_plain_integer(text: &str) -> bool {
@@ -1649,7 +1752,9 @@ mod tests {
             );
             let diagnostics: Vec<_> = validate(&content)
                 .into_iter()
-                .filter(|d| d.rule != "KR-HK-024")
+                // Hooks without a matcher on tool and file triggers also get the
+                // KR-HK-027 / KR-HK-028 scope notes, and Manual gets KR-HK-024.
+                .filter(|d| !matches!(d.rule.as_str(), "KR-HK-024" | "KR-HK-027" | "KR-HK-028"))
                 .collect();
             assert_eq!(rules(&diagnostics), ["KR-HK-014"], "{alias}");
             assert_eq!(diagnostics[0].level, DiagnosticLevel::Info);
@@ -1796,9 +1901,14 @@ mod tests {
             ));
             assert_eq!(rules(&diagnostics), ["KR-HK-019"], "{matcher}");
         }
-        // Glob selectors on tool triggers are fine even though they are not regexes.
+        // Glob selectors on tool triggers are fine even though they are not
+        // regexes; "*" selects every tool, which is a KR-HK-027 note.
         for matcher in ["*", "?ead*", "fs_*", "@mcp", "@github/*"] {
-            assert!(validate(&hook_doc(serde_json::json!({"name": "a", "trigger": "PreToolUse", "matcher": matcher, "action": {"type": "command", "command": "echo"}}))).is_empty(), "{matcher}");
+            let diagnostics = validate(&hook_doc(
+                serde_json::json!({"name": "a", "trigger": "PreToolUse", "matcher": matcher, "action": {"type": "command", "command": "echo"}}),
+            ));
+            let expected: &[&str] = if matcher == "*" { &["KR-HK-027"] } else { &[] };
+            assert_eq!(rules(&diagnostics), expected, "{matcher}");
         }
     }
 
@@ -1821,7 +1931,130 @@ mod tests {
             "grep",
             "^my_tool$",
         ] {
-            assert!(validate(&hook_doc(serde_json::json!({"name": "a", "trigger": "PreToolUse", "matcher": matcher, "action": {"type": "command", "command": "echo"}}))).is_empty(), "{matcher}");
+            let diagnostics = validate(&hook_doc(
+                serde_json::json!({"name": "a", "trigger": "PreToolUse", "matcher": matcher, "action": {"type": "command", "command": "echo"}}),
+            ));
+            // fs_write matches, so no KR-HK-021; the alternation is unanchored (KR-HK-029).
+            let expected: &[&str] = if matcher == "fs_write|Bash" {
+                &["KR-HK-029"]
+            } else {
+                &[]
+            };
+            assert_eq!(rules(&diagnostics), expected, "{matcher}");
+        }
+    }
+
+    #[test]
+    fn test_kr_hk_027_028_hooks_without_a_specific_matcher() {
+        for (trigger, matcher, expected) in [
+            ("PreToolUse", None, Some("KR-HK-027")),
+            ("PostToolUse", Some(""), Some("KR-HK-027")),
+            ("preToolUse", Some("*"), Some("KR-HK-027")),
+            ("PreToolUse", Some(".*"), Some("KR-HK-027")),
+            ("PreToolUse", Some("shell"), None),
+            ("PostFileSave", None, Some("KR-HK-028")),
+            ("PostFileCreate", Some("^.*$"), Some("KR-HK-028")),
+            ("fileDeleted", Some(".+"), Some("KR-HK-028")),
+            ("PostFileSave", Some("\\.ts$"), None),
+            ("Stop", None, None),
+        ] {
+            let mut hook = serde_json::json!({"name": "a", "trigger": trigger, "action": {"type": "command", "command": "echo"}});
+            if let Some(matcher) = matcher {
+                hook["matcher"] = matcher.into();
+            }
+            let content = hook_doc(hook);
+            let diagnostics: Vec<_> = validate(&content)
+                .into_iter()
+                .filter(|d| d.rule != "KR-HK-014")
+                .collect();
+            assert_eq!(
+                rules(&diagnostics),
+                expected.into_iter().collect::<Vec<_>>(),
+                "{trigger} {matcher:?}"
+            );
+            if let Some(d) = diagnostics.first() {
+                assert_eq!(d.level, DiagnosticLevel::Info);
+                // Points at the matcher, or at the trigger when there is none.
+                let key = if matcher.is_some() {
+                    "\"matcher\": "
+                } else {
+                    "\"trigger\": "
+                };
+                let offset = content.find(key).unwrap() + key.len();
+                assert_eq!(
+                    (d.line, d.column),
+                    crate::rules::line_col_at_offset(&content, offset),
+                    "{trigger} {matcher:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_kr_hk_029_unanchored_regex_tool_matchers() {
+        for (matcher, expected) in [
+            ("fs_write|str_replace", true),
+            ("([Ss]hell|[Bb]ash)", true),
+            ("^fs_write|str_replace", true),
+            ("^(fs_write|str_replace)$", false),
+            ("^fs_write$|^str_replace$", false),
+            ("shell", false),          // selector form
+            ("^execute_bash$", false), // no alternation or group
+        ] {
+            let diagnostics = validate(&hook_doc(
+                serde_json::json!({"name": "a", "trigger": "PreToolUse", "matcher": matcher, "action": {"type": "command", "command": "echo"}}),
+            ));
+            let expected: &[&str] = if expected { &["KR-HK-029"] } else { &[] };
+            assert_eq!(rules(&diagnostics), expected, "{matcher}");
+        }
+        // File matchers are paths, not tool ids: not reported.
+        assert!(validate(&hook_doc(serde_json::json!({"name": "a", "trigger": "PostFileSave", "matcher": "\\.(ts|tsx)$", "action": {"type": "command", "command": "echo"}}))).is_empty());
+    }
+
+    #[test]
+    fn test_kr_hk_021_cli_2x_aws_alias() {
+        let diagnostics = validate(&hook_doc(
+            serde_json::json!({"name": "a", "trigger": "PreToolUse", "matcher": "aws", "action": {"type": "command", "command": "echo"}}),
+        ));
+        assert_eq!(rules(&diagnostics), ["KR-HK-021"]);
+    }
+
+    #[test]
+    fn test_kr_hk_030_hook_file_names() {
+        let content = command_hook(serde_json::json!({}));
+        for (name, kebab) in [
+            ("lint-on-save.json", true),
+            ("guard-writes.json", true),
+            ("v2-hooks.json", true),
+            ("lint.hook.json", true),
+            ("LintOnSave.json", false),
+            ("lint_on_save.json", false),
+            ("lint on save.json", false),
+            ("-lint.json", false),
+        ] {
+            let diagnostics = KiroV3HookValidator.validate(
+                &Path::new(".kiro/hooks").join(name),
+                &content,
+                &LintConfig::default(),
+            );
+            let expected: &[&str] = if kebab { &[] } else { &["KR-HK-030"] };
+            assert_eq!(rules(&diagnostics), expected, "{name}");
+        }
+    }
+
+    #[test]
+    fn test_kr_hk_028_legacy_patterns_matching_every_file() {
+        let path = Path::new(".kiro/hooks/all.kiro.hook");
+        for (patterns, expected) in [
+            (serde_json::json!(["**/*"]), true),
+            (serde_json::json!(["*", "**"]), true),
+            (serde_json::json!(["src/**/*.ts"]), false),
+            (serde_json::json!(["**/*", "src/*.ts"]), false),
+        ] {
+            let content = serde_json::json!({"when": {"type": "fileEdited", "patterns": patterns}, "then": {"type": "askAgent", "prompt": "x"}}).to_string();
+            let diagnostics = KiroV3HookValidator.validate(path, &content, &LintConfig::default());
+            let expected: &[&str] = if expected { &["KR-HK-028"] } else { &[] };
+            assert_eq!(rules(&diagnostics), expected, "{patterns}");
         }
     }
 
@@ -1832,9 +2065,13 @@ mod tests {
             "action": {"type": "command", "command": "cargo fmt", "timeout": 30}, "note": "kept"
         }));
         let diagnostics = validate(&content);
-        assert_eq!(rules(&diagnostics), ["KR-HK-022", "KR-HK-022", "KR-HK-022"]);
+        // "Matcher" is dropped, so the hook also runs on every file (KR-HK-028).
+        assert_eq!(
+            rules(&diagnostics),
+            ["KR-HK-028", "KR-HK-022", "KR-HK-022", "KR-HK-022"]
+        );
         assert!(
-            diagnostics
+            diagnostics[1..]
                 .iter()
                 .all(|d| d.level == DiagnosticLevel::Warning)
         );
@@ -1864,7 +2101,7 @@ mod tests {
             ("echo $FILE_PATHS $WORKSPACE_ROOTS", 0),
         ] {
             let diagnostics = validate(&hook_doc(
-                serde_json::json!({"name": "a", "trigger": "PostFileSave", "action": {"type": "command", "command": command}}),
+                serde_json::json!({"name": "a", "trigger": "PostFileSave", "matcher": "\\.rs$", "action": {"type": "command", "command": command}}),
             ));
             assert_eq!(diagnostics.len(), count, "{command}: {diagnostics:?}");
             assert!(diagnostics.iter().all(|d| d.rule == "KR-HK-023"));

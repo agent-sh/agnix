@@ -23,8 +23,8 @@ keywords: ["KR-HK-010", "secrets in hook command", "kiro hooks", "validation", "
 
 ## Evidence Sources
 
+- https://kiro.dev/docs/mcp/security/
 - https://kiro.dev/docs/ide/0x-reference/
-- https://kiro.dev/docs/hooks/
 
 ## Test Coverage Metadata
 

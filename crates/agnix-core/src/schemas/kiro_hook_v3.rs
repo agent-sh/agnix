@@ -234,6 +234,11 @@ const FOREIGN_TOOL_NAMES: &[(&str, &str, &str)] = &[
         "Kiro CLI 2.x",
         "the tools of an AWS MCP server (@<server>)",
     ),
+    (
+        "aws",
+        "Kiro CLI 2.x",
+        "the tools of an AWS MCP server (@<server>)",
+    ),
     ("glob", "Kiro CLI 2.x", "file_search"),
     ("grep", "Kiro CLI 2.x", "grep_search"),
     ("use_subagent", "Kiro CLI 2.x", "subagent"),
@@ -264,6 +269,28 @@ fn selector_alias(name: &str) -> Option<&'static str> {
         "control_pwsh_process" => Some("control_bash_process"),
         _ => None,
     }
+}
+
+/// True when a matcher selects every event its trigger can produce: no
+/// matcher, an empty one, the `*` selector (tool triggers), or a regex that
+/// matches any subject such as `.*`.
+pub fn matches_everything(matcher: Option<&str>, subject: MatcherSubject) -> bool {
+    let Some(matcher) = matcher else {
+        return true;
+    };
+    let any_regex = matches!(
+        matcher,
+        "" | ".*" | "^.*" | ".*$" | "^.*$" | "(.*)" | "^(.*)$" | ".+" | "^.+" | ".+$" | "^.+$"
+    );
+    any_regex || (subject == MatcherSubject::Tool && matches!(matcher, "*" | "**"))
+}
+
+/// Glob patterns that select every file (legacy IDE `when.patterns`).
+pub fn is_match_all_glob(pattern: &str) -> bool {
+    matches!(
+        pattern.trim(),
+        "*" | "**" | "**/*" | "**/*.*" | "*.*" | "./**" | "./**/*" | "**/**"
+    )
 }
 
 /// True when V3 treats a tool matcher as a selector as well as a regex: it
@@ -670,6 +697,7 @@ mod tests {
             ("fs_read", false),
             ("Bash", false),
             ("glob", false),
+            ("aws", false),
         ] {
             assert_eq!(
                 tool_matcher_matches_builtin(matcher),
@@ -695,6 +723,28 @@ mod tests {
         for good in ["\\.ts$", "src/*.ts", "a{", "]", "(?=a)*", "\\k<x>", "[]"] {
             assert!(compile_js_regex(good).is_ok(), "{good}");
         }
+    }
+
+    #[test]
+    fn match_all_matchers() {
+        for (matcher, subject, expected) in [
+            (None, MatcherSubject::Tool, true),
+            (Some(""), MatcherSubject::FilePath, true),
+            (Some("*"), MatcherSubject::Tool, true),
+            (Some("*"), MatcherSubject::FilePath, false), // a compile error instead
+            (Some(".*"), MatcherSubject::FilePath, true),
+            (Some("^.*$"), MatcherSubject::Tool, true),
+            (Some("shell"), MatcherSubject::Tool, false),
+            (Some("\\.ts$"), MatcherSubject::FilePath, false),
+        ] {
+            assert_eq!(
+                matches_everything(matcher, subject),
+                expected,
+                "{matcher:?}"
+            );
+        }
+        assert!(is_match_all_glob("**/*") && is_match_all_glob(" * "));
+        assert!(!is_match_all_glob("src/**/*.ts"));
     }
 
     #[test]

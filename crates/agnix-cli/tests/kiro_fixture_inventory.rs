@@ -65,6 +65,11 @@ fn required_paths() -> Vec<&'static str> {
         "tests/fixtures/kiro-hooks/.kiro/hooks/missing-patterns.kiro.hook",
         "tests/fixtures/kiro-hooks/.kiro/hooks/missing-action.kiro.hook",
         "tests/fixtures/kiro-hooks/.kiro/hooks/missing-tool-types.kiro.hook",
+        "tests/fixtures/kiro-hooks/.kiro/hooks/kr-hk-001-undocumented-manual.kiro.hook",
+        "tests/fixtures/kiro-hooks/v3/invalid/.kiro/hooks/kr-hk-027-tool-hook-without-matcher.json",
+        "tests/fixtures/kiro-hooks/v3/invalid/.kiro/hooks/kr-hk-028-broad-file-hook.json",
+        "tests/fixtures/kiro-hooks/v3/invalid/.kiro/hooks/kr-hk-029-unanchored-matcher.json",
+        "tests/fixtures/kiro-hooks/v3/invalid/.kiro/hooks/kr-hk-030-Lint_On_Save.json",
         "tests/fixtures/kiro-hooks/.kiro/hooks/kr-hk-016-v1-format.kiro.hook",
         "tests/fixtures/kiro-hooks/.kiro/hooks/kr-hk-026-field-types.kiro.hook",
         "tests/fixtures/kiro-hooks/.kiro/hooks/valid-env-reference.kiro.hook",
@@ -250,8 +255,8 @@ fn kiro_fixture_families_are_cli_runnable() {
         // clean.
         ("tests/fixtures/kiro-agents", 16_u64, 16_u64),
         // V3 hook fixtures (v3/valid, v3/invalid: one file per rule) and the
-        // legacy KR-HK-016/026 and valid IDE 0.x fixtures were added.
-        ("tests/fixtures/kiro-hooks", 29_u64, 26_u64),
+        // legacy KR-HK-001/016/026 and valid IDE 0.x fixtures were added.
+        ("tests/fixtures/kiro-hooks", 34_u64, 31_u64),
         ("tests/fixtures/kiro-mcp", 1_u64, 0_u64),
         ("tests/fixtures/kiro-permissions", 2_u64, 4_u64),
     ];

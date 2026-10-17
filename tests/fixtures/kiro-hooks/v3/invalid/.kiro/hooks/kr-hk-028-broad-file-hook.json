@@ -1,0 +1,6 @@
+{
+  "version": "v1",
+  "hooks": [
+    { "name": "format", "trigger": "PostFileSave", "matcher": ".*", "action": { "type": "command", "command": "npx prettier --write ." } }
+  ]
+}

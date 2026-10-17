@@ -14,11 +14,11 @@
 
 use crate::{
     config::PerFileLintConfig,
-    diagnostics::Diagnostic,
+    diagnostics::{Diagnostic, Fix},
     rules::{Validator, ValidatorMetadata},
     schemas::{
         kiro_hook::{KiroIdeHook, is_known_ide_event, looks_like_v1_hook},
-        kiro_hook_v3::{JsonSpans, Seg, resolve_trigger},
+        kiro_hook_v3::{JsonSpans, Seg, is_match_all_glob, resolve_trigger},
     },
 };
 use rust_i18n::t;
@@ -149,15 +149,18 @@ fn has_corresponding_v3_hook(
     false
 }
 
-/// Low-certainty placement advice owned by the V3 validator. IDE legacy manual
-/// hooks remain runnable, and agentSpawn appears in the IDE migration mapping:
+/// Legacy-file checks owned by the V3 validator: the KR-HK-014 placement
+/// hint and the KR-HK-028 broad file pattern note. IDE legacy manual hooks
+/// remain runnable, and agentSpawn appears in the IDE migration mapping:
 /// neither is evidence of a misplaced CLI-only hook.
 pub(super) fn validate_legacy_migration(
     path: &Path,
     content: &str,
     config: &PerFileLintConfig<'_>,
 ) -> Vec<Diagnostic> {
-    if !config.is_rule_enabled("KR-HK-014") {
+    let hint = config.is_rule_enabled("KR-HK-014");
+    let broad = config.is_rule_enabled("KR-HK-028");
+    if !hint && !broad {
         return Vec::new();
     }
     let Ok(root) = serde_json::from_str::<Value>(content) else {
@@ -173,25 +176,51 @@ pub(super) fn validate_legacy_migration(
     let Some(event) = hook.event.as_ref() else {
         return Vec::new();
     };
-    if !CLI_ONLY_EVENTS.contains(&event.value)
-        || has_corresponding_v3_hook(path, event.value, &hook, config)
+    let locator = Locator {
+        content,
+        spans: OnceCell::new(),
+    };
+    let mut diagnostics = Vec::new();
+    if hint
+        && CLI_ONLY_EVENTS.contains(&event.value)
+        && !has_corresponding_v3_hook(path, event.value, &hook, config)
     {
-        return Vec::new();
+        let (line, column) = locator.at(&event.path);
+        diagnostics.push(
+            Diagnostic::info(
+                path.to_path_buf(),
+                line,
+                column,
+                "KR-HK-014",
+                t!("rules.kr_hk_014.legacy", trigger = event.value),
+            )
+            .with_suggestion(t!("rules.kr_hk_014.legacy_suggestion")),
+        );
     }
-    let spans = JsonSpans::new(content);
-    let (line, column) = spans
-        .nearest(&event.path)
-        .map_or((1, 1), |loc| (loc.line, loc.column));
-    vec![
-        Diagnostic::info(
-            path.to_path_buf(),
-            line,
-            column,
-            "KR-HK-014",
-            t!("rules.kr_hk_014.legacy", trigger = event.value),
-        )
-        .with_suggestion(t!("rules.kr_hk_014.legacy_suggestion")),
-    ]
+    // Missing patterns are KR-HK-002; here every pattern selects every file.
+    if broad
+        && is_file_event(event.value.trim())
+        && let Some(patterns) = hook.patterns.as_ref()
+        && !patterns.malformed
+        && !patterns.values.is_empty()
+        && patterns
+            .values
+            .iter()
+            .all(|pattern| is_match_all_glob(pattern))
+    {
+        let (line, column) = locator.at(&patterns.path);
+        diagnostics.push(
+            Diagnostic::info(
+                path.to_path_buf(),
+                line,
+                column,
+                "KR-HK-028",
+                t!("rules.kr_hk_028.legacy", event = event.value.trim()),
+            )
+            .with_suggestion(t!("rules.kr_hk_028.suggestion")),
+        );
+    }
+    diagnostics
 }
 
 pub struct KiroHookValidator;
@@ -202,11 +231,26 @@ struct Locator<'a> {
 }
 
 impl Locator<'_> {
+    fn spans(&self) -> &JsonSpans {
+        self.spans.get_or_init(|| JsonSpans::new(self.content))
+    }
+
     fn at(&self, path: &[Seg<'_>]) -> (usize, usize) {
-        self.spans
-            .get_or_init(|| JsonSpans::new(self.content))
+        self.spans()
             .nearest(path)
             .map_or((1, 1), |loc| (loc.line, loc.column))
+    }
+}
+
+/// Undocumented event spellings agnix used to accept, with the documented
+/// IDE 0.x name. Whether IDE 0.x also accepted them is unverified, so they
+/// are warnings rather than errors.
+fn documented_event_for(event: &str) -> Option<&'static str> {
+    match event {
+        "fileCreate" => Some("fileCreated"),
+        "fileDelete" => Some("fileDeleted"),
+        "manual" => Some("userTriggered"),
+        _ => None,
     }
 }
 
@@ -339,6 +383,25 @@ impl Validator for KiroHookValidator {
             }
         }
 
+        if config.is_rule_enabled("KR-HK-026") {
+            for timeout_path in &hook.negative_timeouts {
+                let (line, column) = locator.at(timeout_path);
+                diagnostics.push(
+                    Diagnostic::warning(
+                        path.to_path_buf(),
+                        line,
+                        column,
+                        "KR-HK-026",
+                        t!(
+                            "rules.kr_hk_026.negative_timeout",
+                            field = display_path(timeout_path)
+                        ),
+                    )
+                    .with_suggestion(t!("rules.kr_hk_026.suggestion")),
+                );
+            }
+        }
+
         // IDE 0.x whitespace handling is unverified, so surrounding spaces are tolerated.
         let event = hook.effective_event().unwrap_or("").trim();
         let event_at = |locator: &Locator<'_>| match hook.event.as_ref() {
@@ -347,6 +410,38 @@ impl Validator for KiroHookValidator {
         };
         let cli_only = CLI_ONLY_EVENTS.contains(&event);
         let event_valid = is_known_ide_event(event);
+
+        if config.is_rule_enabled("KR-HK-001")
+            && let Some(documented) = documented_event_for(event)
+            && let Some(located) = hook.event.as_ref()
+        {
+            let (line, column) = locator.at(&located.path);
+            let mut diagnostic = Diagnostic::warning(
+                path.to_path_buf(),
+                line,
+                column,
+                "KR-HK-001",
+                t!(
+                    "rules.kr_hk_001.undocumented",
+                    event = event,
+                    documented = documented
+                ),
+            )
+            .with_suggestion(t!("rules.kr_hk_001.suggestion"));
+            // Unsafe: the IDE's handling of the old spelling is unverified.
+            if located.value == event
+                && let Some(loc) = locator.spans().unique(&located.path)
+            {
+                diagnostic = diagnostic.with_fix(Fix::replace(
+                    loc.start,
+                    loc.end,
+                    format!("\"{documented}\""),
+                    t!("rules.kr_hk_001.fix", documented = documented),
+                    false,
+                ));
+            }
+            diagnostics.push(diagnostic);
+        }
 
         // A malformed event field is already reported as KR-HK-026.
         if config.is_rule_enabled("KR-HK-001") && !event_valid && !cli_only && !hook.event_malformed
@@ -420,10 +515,12 @@ impl Validator for KiroHookValidator {
         }
 
         if let Some(command) = hook.run_command.as_ref() {
+            // A portability note, not a Kiro requirement: commands run in the
+            // project root, so relative paths work on every machine.
             if config.is_rule_enabled("KR-HK-009") && is_absolute_command(command.value) {
                 let (line, column) = locator.at(&command.path);
                 diagnostics.push(
-                    Diagnostic::warning(
+                    Diagnostic::info(
                         path.to_path_buf(),
                         line,
                         column,
@@ -588,6 +685,60 @@ mod tests {
     }
 
     #[test]
+    fn test_kr_hk_001_undocumented_spellings_warn_with_unsafe_fix() {
+        for (event, documented) in [
+            ("manual", "userTriggered"),
+            ("fileCreate", "fileCreated"),
+            ("fileDelete", "fileDeleted"),
+        ] {
+            let content = serde_json::json!({"when": {"type": event, "patterns": ["src/**"]}, "then": {"type": "askAgent", "prompt": "x"}}).to_string();
+            let diagnostics = validate(&content);
+            assert_eq!(rules(&diagnostics), ["KR-HK-001"], "{event}");
+            let d = &diagnostics[0];
+            assert_eq!(d.level, crate::diagnostics::DiagnosticLevel::Warning);
+            let fix = &d.fixes[0];
+            assert!(!fix.is_safe());
+            assert_eq!(
+                &content[fix.start_byte..fix.end_byte],
+                format!("\"{event}\"")
+            );
+            assert_eq!(fix.replacement, format!("\"{documented}\""));
+        }
+    }
+
+    #[test]
+    fn test_kr_hk_026_legacy_timeouts_are_seconds() {
+        for (then, expected) in [
+            (
+                serde_json::json!({"type": "runCommand", "command": "npm test", "timeout": 30}),
+                0,
+            ),
+            (
+                serde_json::json!({"type": "runCommand", "command": "npm test", "timeout": 0}),
+                0,
+            ),
+            (
+                serde_json::json!({"type": "runCommand", "command": "npm test", "timeout": 600000}),
+                0,
+            ),
+            (
+                serde_json::json!({"type": "runCommand", "command": "npm test", "timeout": -1}),
+                1,
+            ),
+            (
+                serde_json::json!({"type": "runCommand", "command": "npm test", "timeout": "30"}),
+                1,
+            ),
+        ] {
+            let content =
+                serde_json::json!({"when": {"type": "agentStop"}, "then": then}).to_string();
+            let diagnostics = validate(&content);
+            assert_eq!(diagnostics.len(), expected, "{then}: {diagnostics:?}");
+            assert!(diagnostics.iter().all(|d| d.rule == "KR-HK-026"));
+        }
+    }
+
+    #[test]
     fn test_kr_hk_002_missing_patterns_for_file_event() {
         let diagnostics = validate(include_str!(
             "../../../../tests/fixtures/kiro-hooks/.kiro/hooks/missing-patterns.kiro.hook"
@@ -716,6 +867,12 @@ mod tests {
 }"#,
         );
         assert!(diagnostics.iter().any(|d| d.rule == "KR-HK-009"));
+        // A portability note with no Kiro requirement behind it.
+        assert!(
+            diagnostics
+                .iter()
+                .all(|d| d.level == crate::diagnostics::DiagnosticLevel::Info)
+        );
     }
 
     #[test]
