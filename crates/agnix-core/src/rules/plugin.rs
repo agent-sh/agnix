@@ -104,13 +104,44 @@ const CLAUDE_ONLY_FIELDS: &[&str] = &[
 /// directories) and the legacy `category` and `tags` metadata.
 const COPILOT_ONLY_FIELDS: &[&str] = &["extensions", "category", "tags"];
 
-fn has_agent_plugins_schema(value: &serde_json::Value) -> bool {
+pub(crate) fn has_agent_plugins_schema(value: &serde_json::Value) -> bool {
     value
         .get("$schema")
         .and_then(serde_json::Value::as_str)
         .is_some_and(|schema| {
             schema.starts_with(crate::rules::codex_plugin::AGENT_PLUGIN_SCHEMA_PREFIX)
         })
+}
+
+/// The Agent Plugins layout in the plugin directory `dir`, if any: "Copilot
+/// CLI reads its client-specific components from the `com.github.copilot`
+/// directory", and "The root `mcp.json` must declare a recognized Agent
+/// Plugins `$schema`". Returns the marker found (`com.github.copilot/` or
+/// `mcp.json`).
+pub(crate) fn agent_plugins_layout(
+    dir: &Path,
+    fs: &dyn crate::fs::FileSystem,
+) -> Option<&'static str> {
+    if fs.is_dir(&dir.join("com.github.copilot")) {
+        return Some("com.github.copilot/");
+    }
+    fs.read_to_string(&dir.join("mcp.json"))
+        .ok()
+        .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok())
+        .is_some_and(|mcp| has_agent_plugins_schema(&mcp))
+        .then_some("mcp.json")
+}
+
+/// Whether the `plugin.json` at `path`, outside `.claude-plugin/`, is an
+/// Agent Plugins or GitHub Copilot manifest by its content and the files
+/// beside it (the signals CC-PL-001 uses). The run's tool scope is left to
+/// the caller.
+pub(crate) fn is_copilot_root_manifest(
+    path: &Path,
+    content: &str,
+    config: &PerFileLintConfig<'_>,
+) -> bool {
+    classify_outside_manifest(path, content, config) == OutsideManifest::OtherTool
 }
 
 /// Whether the run selects Claude Code and not GitHub Copilot.
@@ -148,18 +179,7 @@ fn classify_outside_manifest(
         if fs.is_file(&dir.join(".claude-plugin").join("plugin.json")) {
             return OutsideManifest::OtherTool;
         }
-        // Agent Plugins layout: "Copilot CLI reads its client-specific
-        // components from the `com.github.copilot` directory", and "The root
-        // `mcp.json` must declare a recognized Agent Plugins `$schema`".
-        if fs.is_dir(&dir.join("com.github.copilot")) {
-            return OutsideManifest::OtherTool;
-        }
-        if fs
-            .read_to_string(&dir.join("mcp.json"))
-            .ok()
-            .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok())
-            .is_some_and(|mcp| has_agent_plugins_schema(&mcp))
-        {
+        if agent_plugins_layout(dir, fs.as_ref()).is_some() {
             return OutsideManifest::OtherTool;
         }
     }

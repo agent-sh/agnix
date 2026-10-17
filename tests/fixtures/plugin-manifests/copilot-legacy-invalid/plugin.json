@@ -1,0 +1,6 @@
+{
+  "name": "My Dev Tools!",
+  "description": "Legacy Copilot plugin: category and tags are Copilot-only fields",
+  "category": "development",
+  "tags": "react"
+}

@@ -264,6 +264,24 @@ cases:
     expected: []
     description: "Valid references should have no errors"
 
+  # ===== Plugin manifests Copilot CLI reads (COP-019, COP-020, COP-039) =====
+
+  - file: fixtures/plugin-manifests/copilot-legacy-invalid/plugin.json
+    expected: [COP-020, COP-039]
+    description: "Legacy Copilot root manifest (Copilot-only fields) gets the Copilot manifest rules"
+
+  - file: fixtures/plugin-manifests/agent-plugins-invalid/plugin.json
+    expected: [CDX-PL-004, COP-039]
+    description: "Agent Plugins root manifest name violates the Agent Plugins name rule (Codex and Copilot)"
+
+  - file: fixtures/plugin-manifests/agent-plugins-no-schema/plugin.json
+    expected: [COP-019]
+    description: "Agent Plugins layout (mcp.json) whose plugin.json has no $schema loads as a legacy plugin"
+
+  - file: fixtures/plugin-manifests/claude-copilot-limits/.claude-plugin/plugin.json
+    expected: []
+    description: "Valid Claude Code manifest gets no Copilot rule in an unscoped run"
+
   # ===== Real-World Regression Tests =====
   # Derived from real-world validation against 121 repos
 

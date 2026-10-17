@@ -397,7 +397,7 @@ impl ValidatorRegistryBuilder {
 ///
 /// Used by `BuiltinProvider` (via `debug_assert_eq!`) and tests to catch
 /// accidental additions or removals without updating all providers.
-const EXPECTED_BUILTIN_COUNT: usize = 143;
+const EXPECTED_BUILTIN_COUNT: usize = 144;
 
 // -- Category providers -----------------------------------------------------
 //
@@ -580,6 +580,13 @@ impl ValidatorProvider for CopilotProvider {
             // GEMINI.md that Copilot CLI does not load (COP-030).
             (FileType::Skill, Some("CopilotValidator"), copilot_validator),
             (FileType::Mcp, Some("CopilotValidator"), copilot_validator),
+            // Plugin manifests at the plugin root and in .claude-plugin/
+            // (COP-019, COP-020, COP-039).
+            (
+                FileType::Plugin,
+                Some("CopilotValidator"),
+                copilot_validator,
+            ),
             (
                 FileType::ClaudeMd,
                 Some("CopilotValidator"),
@@ -1691,10 +1698,12 @@ mod tests {
             .map(|validator| validator.name())
             .collect();
         // The MCP validators check the servers a manifest declares inline in
-        // `mcpServers`.
+        // `mcpServers`; CopilotValidator checks the manifests Copilot CLI
+        // reads (a root plugin.json, .claude-plugin/plugin.json).
         assert_eq!(
             names,
             vec![
+                "CopilotValidator",
                 "PluginValidator",
                 "CodexPluginValidator",
                 "McpValidator",
@@ -2561,9 +2570,11 @@ mod tests {
 
     #[test]
     fn copilot_provider_count() {
-        // 14: plugin manifests, and Copilot's part of skills, MCP files and
-        // AGENTS.md / CLAUDE.md / GEMINI.md.
-        assert_eq!(CopilotProvider.named_validators().len(), 14);
+        // 15: plugin manifests (its own locations, and the root and
+        // .claude-plugin/ manifests it shares with Claude Code), and
+        // Copilot's part of skills, MCP files and AGENTS.md / CLAUDE.md /
+        // GEMINI.md.
+        assert_eq!(CopilotProvider.named_validators().len(), 15);
     }
 
     #[test]

@@ -12,7 +12,9 @@
 //! - COP-013 to COP-015: prompt files
 //! - COP-017, COP-031, COP-036, COP-037: hook files (`rules::copilot_hooks`)
 //! - COP-018, COP-029: `copilot-setup-steps` workflow
-//! - COP-019, COP-020, COP-039: CLI plugin manifests
+//! - COP-019, COP-020, COP-039: CLI plugin manifests (`.github/plugin/`,
+//!   `.plugin/`, a root `plugin.json` Copilot reads, and
+//!   `.claude-plugin/plugin.json` when the run selects Copilot)
 //! - COP-025: `.agent.md` outside the agent folders (LOW)
 //! - COP-030: `@` file references Copilot CLI does not load (MEDIUM)
 //! - COP-035: portable and VS Code MCP files (MEDIUM)
@@ -1269,16 +1271,94 @@ fn is_legacy_plugin_name(name: &str) -> bool {
         && name.chars().all(|c| c.is_ascii_alphanumeric() || c == '-')
 }
 
+/// Where a plugin manifest that Copilot CLI reads sits.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ManifestLocation {
+    /// `.github/plugin/plugin.json` or `.plugin/plugin.json`, which only
+    /// Copilot reads.
+    CopilotOnly,
+    /// A `plugin.json` at the plugin root.
+    Root,
+    /// `.claude-plugin/plugin.json`, Claude Code's manifest.
+    ClaudePlugin,
+}
+
+/// Copilot CLI's legacy manifest locations before `.claude-plugin/plugin.json`,
+/// relative to the plugin root: "Legacy plugins: `.plugin/plugin.json`,
+/// `plugin.json`, `.github/plugin/plugin.json`, or
+/// `.claude-plugin/plugin.json` (checked in this order)."
+const LEGACY_MANIFESTS_BEFORE_CLAUDE: &[&[&str]] = &[
+    &[".plugin", "plugin.json"],
+    &["plugin.json"],
+    &[".github", "plugin", "plugin.json"],
+];
+
+/// Whether Copilot CLI reads a `plugin.json` that Claude Code's file type
+/// covers (a root manifest or `.claude-plugin/plugin.json`), and where it is.
+///
+/// - `.claude-plugin/plugin.json` is Claude Code's manifest, and Copilot CLI
+///   reads it only as the last legacy location. Copilot's rules run on it
+///   only when the run selects Copilot and no earlier location exists.
+/// - A root `plugin.json`: when the run selects Copilot, or by the signals
+///   CC-PL-001 uses (an Agent Plugins `$schema`, a `.claude-plugin/plugin.json`
+///   or `com.github.copilot/` beside it, an Agent Plugins `mcp.json`, or
+///   Copilot-only fields). "A root manifest targeting Agent Plugins takes
+///   precedence over `.plugin/plugin.json`"; a legacy one does not, so it is
+///   skipped when `.plugin/plugin.json` exists.
+fn shared_manifest_location(
+    path: &Path,
+    content: &str,
+    config: &PerFileLintConfig<'_>,
+) -> Option<ManifestLocation> {
+    if !["COP-019", "COP-020", "COP-039"]
+        .iter()
+        .any(|rule| config.is_rule_enabled(rule))
+    {
+        return None;
+    }
+    let dir = path.parent()?;
+    let fs = config.fs();
+    let exists = |root: &Path, parts: &[&str]| {
+        fs.is_file(
+            &parts
+                .iter()
+                .fold(root.to_path_buf(), |p, part| p.join(part)),
+        )
+    };
+    if super::mcp::is_claude_plugin_manifest(path) {
+        let root = dir.parent()?;
+        let shadowed = LEGACY_MANIFESTS_BEFORE_CLAUDE
+            .iter()
+            .any(|parts| exists(root, parts));
+        return (copilot_selected(config) && !shadowed).then_some(ManifestLocation::ClaudePlugin);
+    }
+    let agent_plugins = serde_json::from_str::<serde_json::Value>(content)
+        .is_ok_and(|value| super::plugin::has_agent_plugins_schema(&value));
+    if !agent_plugins && exists(dir, LEGACY_MANIFESTS_BEFORE_CLAUDE[0]) {
+        return None;
+    }
+    (copilot_selected(config) || super::plugin::is_copilot_root_manifest(path, content, config))
+        .then_some(ManifestLocation::Root)
+}
+
 fn validate_plugin_manifest(
     path: &Path,
     content: &str,
     config: &PerFileLintConfig<'_>,
+    location: ManifestLocation,
 ) -> Vec<Diagnostic> {
     let mut cx = JsonCx::new(path, content, config);
+    // Claude Code owns `.claude-plugin/plugin.json`: when its own rules run,
+    // they report a parse error (CC-PL-006) and a missing name (CC-PL-004)
+    // there, so Copilot does not repeat them.
+    let claude_reports =
+        |rule: &str| location == ManifestLocation::ClaudePlugin && config.is_rule_enabled(rule);
     let document = match parse_json_document(content, false) {
         Ok(document) => document,
         Err(error) => {
-            if cx.enabled("COP-019") {
+            let reported_by_claude = claude_reports("CC-PL-006")
+                && serde_json::from_str::<serde_json::Value>(content).is_err();
+            if cx.enabled("COP-019") && !reported_by_claude {
                 cx.push_at(
                     DiagnosticLevel::Error,
                     "COP-019",
@@ -1292,7 +1372,7 @@ fn validate_plugin_manifest(
     };
     let root = &document.root;
     let Some(members) = root.value.as_object() else {
-        if cx.enabled("COP-019") {
+        if cx.enabled("COP-019") && !claude_reports("CC-PL-004") {
             cx.push(
                 DiagnosticLevel::Error,
                 "COP-019",
@@ -1323,7 +1403,7 @@ fn validate_plugin_manifest(
                 t!("rules.cop_019.unsupported_schema_suggestion"),
             );
         }
-        if root.value.get("name").is_none() {
+        if root.value.get("name").is_none() && !claude_reports("CC-PL-004") {
             cx.push(
                 DiagnosticLevel::Error,
                 "COP-019",
@@ -1332,11 +1412,48 @@ fn validate_plugin_manifest(
                 t!("rules.cop_019.missing_name_suggestion"),
             );
         }
+        // An Agent Plugins layout whose root manifest does not opt in: "A
+        // manifest without one of these exact values uses the legacy format",
+        // and the `com.github.copilot` locations "apply only to Agent Plugins
+        // 1.0 plugins" (legacy MCP files are `.mcp.json` and
+        // `.github/mcp.json`). A manifest that sets legacy component paths
+        // is legacy on purpose and is left alone.
+        if location == ManifestLocation::Root
+            && !schema_url.is_some_and(|url| url.contains("agent-plugins.org"))
+            && !members
+                .iter()
+                .any(|member| LEGACY_COMPONENT_FIELDS.contains(&member.key.as_str()))
+            && let Some(marker) = path
+                .parent()
+                .and_then(|dir| super::plugin::agent_plugins_layout(dir, config.fs().as_ref()))
+        {
+            cx.push(
+                DiagnosticLevel::Warning,
+                "COP-019",
+                schema_value.map_or_else(
+                    || members.first().map_or(node_span(root), key_span),
+                    key_span,
+                ),
+                t!("rules.cop_019.agent_plugins_layout", marker = marker),
+                t!("rules.cop_019.agent_plugins_layout_suggestion"),
+            );
+        }
     }
 
-    // COP-020: field types.
+    // COP-020: field types. On `.claude-plugin/plugin.json`, Claude Code's
+    // rules already report a wrong `name`, `description` or `version`
+    // (CC-PL-004), `author` (CC-PL-009) and `homepage` (CC-PL-010).
     if cx.enabled("COP-020") {
         for member in members {
+            let claude_rule = match member.key.as_str() {
+                "name" | "description" | "version" => Some("CC-PL-004"),
+                "author" => Some("CC-PL-009"),
+                "homepage" => Some("CC-PL-010"),
+                _ => None,
+            };
+            if claude_rule.is_some_and(claude_reports) {
+                continue;
+            }
             let value = &member.value.value;
             let strings = |node: &JsonValue| {
                 node.as_array()
@@ -1812,7 +1929,22 @@ impl Validator for CopilotValidator {
             FileType::CopilotHooks => {
                 return super::copilot_hooks::validate_hook_file(path, content, config);
             }
-            FileType::CopilotPlugin => return validate_plugin_manifest(path, content, config),
+            FileType::CopilotPlugin => {
+                return validate_plugin_manifest(
+                    path,
+                    content,
+                    config,
+                    ManifestLocation::CopilotOnly,
+                );
+            }
+            // A root `plugin.json` or `.claude-plugin/plugin.json`, which
+            // Copilot CLI also reads.
+            FileType::Plugin => {
+                return match shared_manifest_location(path, content, config) {
+                    Some(location) => validate_plugin_manifest(path, content, config, location),
+                    None => diagnostics,
+                };
+            }
             FileType::Skill => return validate_copilot_skill(path, content, config),
             FileType::Mcp => return validate_mcp_file(path, content, config),
             FileType::ClaudeMd | FileType::GeminiMd => {
@@ -4319,5 +4451,300 @@ mod survey_tests {
         let crlf = "---\r\na: 1\r\nb: 2\r\n---\r\nBody\r\n";
         let (start, end) = frontmatter_key_removal(crlf, "b").unwrap();
         assert_eq!(&crlf[start..end], "b: 2\r\n");
+    }
+}
+
+/// COP-019, COP-020 and COP-039 on the manifest locations Copilot CLI shares
+/// with Claude Code: a root `plugin.json` and `.claude-plugin/plugin.json`.
+#[cfg(test)]
+mod shared_manifest_tests {
+    use super::*;
+    use crate::config::LintConfig;
+    use std::fs;
+    use tempfile::TempDir;
+
+    const AGENT_PLUGINS: &str = "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json";
+
+    fn config_with(tools: &[&str]) -> LintConfig {
+        let mut config = LintConfig::default();
+        config.set_tools(tools.iter().map(|t| t.to_string()).collect());
+        config
+    }
+
+    /// Write `files` into a temp plugin directory and validate `manifest`
+    /// (a path inside it) with `content`.
+    fn validate_in(
+        manifest: &str,
+        content: &str,
+        files: &[(&str, &str)],
+        config: &LintConfig,
+    ) -> Vec<Diagnostic> {
+        let temp = TempDir::new().unwrap();
+        for (name, text) in files.iter().chain([(manifest, content)].iter()) {
+            let path = temp.path().join(name);
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            fs::write(path, text).unwrap();
+        }
+        let path = temp.path().join(manifest);
+        assert_eq!(crate::detect_file_type(&path), FileType::Plugin);
+        CopilotValidator.validate(&path, content, config)
+    }
+
+    fn rules(diagnostics: &[Diagnostic]) -> Vec<(&str, DiagnosticLevel)> {
+        diagnostics
+            .iter()
+            .map(|d| (d.rule.as_str(), d.level))
+            .collect()
+    }
+
+    #[test]
+    fn root_manifest_gets_copilot_rules_when_copilot_reads_it() {
+        use DiagnosticLevel::{Error, Info, Warning};
+        let unscoped = LintConfig::default();
+        // Copilot-only fields (`category`, `tags`): a legacy Copilot manifest.
+        let diagnostics = validate_in(
+            "plugin.json",
+            r#"{ "name": "my plugin!", "category": "dev", "tags": "x" }"#,
+            &[],
+            &unscoped,
+        );
+        assert_eq!(
+            rules(&diagnostics),
+            vec![("COP-020", Warning), ("COP-039", Warning)],
+            "{diagnostics:#?}"
+        );
+        // The legacy format requires only `name`.
+        let diagnostics = validate_in(
+            "plugin.json",
+            r#"{ "description": "d", "extensions": "ext/" }"#,
+            &[],
+            &unscoped,
+        );
+        assert_eq!(rules(&diagnostics), vec![("COP-019", Error)]);
+        assert_eq!(diagnostics[0].line, 1);
+        // Beside a .claude-plugin/plugin.json, the root manifest is the one
+        // Copilot CLI reads first.
+        let diagnostics = validate_in(
+            "plugin.json",
+            r#"{ "name": "dual_manifest" }"#,
+            &[(".claude-plugin/plugin.json", r#"{ "name": "dual" }"#)],
+            &unscoped,
+        );
+        assert_eq!(rules(&diagnostics), vec![("COP-039", Warning)]);
+        // Agent Plugins: its own name rule and closed schema.
+        let content = format!(
+            r#"{{ "$schema": "{AGENT_PLUGINS}", "name": "My--Tools", "skills": "skills/" }}"#
+        );
+        let diagnostics = validate_in("plugin.json", &content, &[], &unscoped);
+        assert_eq!(
+            rules(&diagnostics),
+            vec![("COP-039", Warning), ("COP-039", Info)],
+            "{diagnostics:#?}"
+        );
+        let content = r#"{ "$schema": "https://agent-plugins.org/schemas/9.0.0/plugin.schema.json", "name": "p" }"#;
+        let diagnostics = validate_in("plugin.json", content, &[], &unscoped);
+        assert_eq!(rules(&diagnostics), vec![("COP-019", Error)]);
+    }
+
+    #[test]
+    fn root_manifest_without_signals_needs_a_copilot_run() {
+        // Any app's plugin.json: no Copilot signal, so no Copilot rule in an
+        // unscoped run.
+        let content = r#"{ "id": "my-panel", "type": "panel" }"#;
+        assert!(validate_in("src/plugin.json", content, &[], &LintConfig::default()).is_empty());
+        assert!(
+            validate_in("plugin.json", content, &[], &config_with(&["claude-code"])).is_empty()
+        );
+        // A run that selects Copilot reads it as a legacy manifest.
+        for tool in ["copilot", "github-copilot"] {
+            let diagnostics = validate_in("plugin.json", content, &[], &config_with(&[tool]));
+            assert_eq!(
+                rules(&diagnostics),
+                vec![("COP-019", DiagnosticLevel::Error)]
+            );
+        }
+        // The deprecated target selects Claude Code, not Copilot.
+        let target = LintConfig::builder()
+            .target(crate::config::TargetTool::ClaudeCode)
+            .build_unchecked();
+        let diagnostics = validate_in(
+            "plugin.json",
+            r#"{ "description": "d", "category": "dev" }"#,
+            &[],
+            &target,
+        );
+        assert!(diagnostics.is_empty(), "{diagnostics:#?}");
+    }
+
+    #[test]
+    fn legacy_root_manifest_behind_dot_plugin_is_skipped() {
+        // Copilot CLI checks `.plugin/plugin.json` before `plugin.json`.
+        let files = [(".plugin/plugin.json", r#"{ "name": "p" }"#)];
+        let copilot = config_with(&["copilot"]);
+        assert!(
+            validate_in("plugin.json", r#"{ "category": "dev" }"#, &files, &copilot).is_empty()
+        );
+        // A root Agent Plugins manifest takes precedence.
+        let content = format!(r#"{{ "$schema": "{AGENT_PLUGINS}" }}"#);
+        assert_eq!(
+            rules(&validate_in("plugin.json", &content, &files, &copilot)),
+            vec![("COP-019", DiagnosticLevel::Error)]
+        );
+    }
+
+    #[test]
+    fn agent_plugins_layout_without_schema_is_a_warning() {
+        let mcp = (
+            "mcp.json",
+            r#"{ "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json", "mcpServers": {} }"#,
+        );
+        let copilot_dir = ("com.github.copilot/agents/reviewer.md", "# Reviewer\n");
+        let unscoped = LintConfig::default();
+        for (files, marker) in [
+            (&[mcp][..], "mcp.json"),
+            (&[copilot_dir][..], "com.github.copilot/"),
+        ] {
+            let diagnostics = validate_in(
+                "plugin.json",
+                "{\n  \"name\": \"deploy-tools\",\n  \"version\": \"0.1.0\"\n}",
+                files,
+                &unscoped,
+            );
+            assert_eq!(
+                rules(&diagnostics),
+                vec![("COP-019", DiagnosticLevel::Warning)],
+                "{diagnostics:#?}"
+            );
+            assert!(
+                diagnostics[0].message.contains(marker),
+                "{}",
+                diagnostics[0].message
+            );
+            assert_eq!((diagnostics[0].line, diagnostics[0].column), (2, 3));
+        }
+        // With the schema, or with legacy component paths, the format is clear.
+        let content = format!(r#"{{ "$schema": "{AGENT_PLUGINS}", "name": "deploy-tools" }}"#);
+        assert!(validate_in("plugin.json", &content, &[mcp], &unscoped).is_empty());
+        let legacy = r#"{ "name": "deploy-tools", "mcpServers": "mcp.json" }"#;
+        assert!(validate_in("plugin.json", legacy, &[mcp], &unscoped).is_empty());
+        // A plain mcp.json is not a signal.
+        let plain = ("mcp.json", r#"{ "mcpServers": {} }"#);
+        assert!(
+            validate_in(
+                "plugin.json",
+                r#"{ "name": "p" }"#,
+                &[plain],
+                &config_with(&["copilot"])
+            )
+            .is_empty()
+        );
+    }
+
+    #[test]
+    fn claude_plugin_manifest_needs_a_copilot_run() {
+        use DiagnosticLevel::{Error, Warning};
+        let manifest = ".claude-plugin/plugin.json";
+        let long = "d".repeat(1025);
+        let content = format!(
+            r#"{{ "name": "My Plugin", "description": "{long}", "keywords": "x", "userConfig": {{}} }}"#
+        );
+        // Claude Code's manifest: no Copilot rule unless the run selects
+        // Copilot.
+        for config in [LintConfig::default(), config_with(&["claude-code"])] {
+            assert!(validate_in(manifest, &content, &[], &config).is_empty());
+            assert!(validate_in(manifest, "{ not json", &[], &config).is_empty());
+        }
+        let copilot = config_with(&["copilot"]);
+        let diagnostics = validate_in(manifest, &content, &[], &copilot);
+        assert_eq!(
+            rules(&diagnostics),
+            vec![
+                ("COP-020", Warning),
+                ("COP-039", Warning),
+                ("COP-039", Warning)
+            ],
+            "{diagnostics:#?}"
+        );
+        assert_eq!(
+            rules(&validate_in(
+                manifest,
+                r#"{ "description": "d" }"#,
+                &[],
+                &copilot
+            )),
+            vec![("COP-019", Error)]
+        );
+        assert_eq!(
+            rules(&validate_in(manifest, "{ not json", &[], &copilot)),
+            vec![("COP-019", Error)]
+        );
+        // Both tools: Claude Code's own rules report the parse error
+        // (CC-PL-006) and the missing name (CC-PL-004).
+        let both = config_with(&["claude-code", "copilot"]);
+        assert!(validate_in(manifest, "{ not json", &[], &both).is_empty());
+        assert!(validate_in(manifest, r#"{ "description": "d" }"#, &[], &both).is_empty());
+        assert!(validate_in(manifest, "[]", &[], &both).is_empty());
+        // ... and the wrong types of name, description, version (CC-PL-004),
+        // author (CC-PL-009) and homepage (CC-PL-010); the rest stay.
+        let types = r#"{ "name": 1, "description": 2, "version": 3, "author": "x", "homepage": 4, "license": 5 }"#;
+        let fields = |config: &LintConfig| -> Vec<String> {
+            validate_in(manifest, types, &[], config)
+                .iter()
+                .filter(|d| d.rule == "COP-020")
+                .map(|d| d.message.split('\'').nth(1).unwrap_or("").to_string())
+                .collect()
+        };
+        assert_eq!(fields(&both), vec!["license"]);
+        assert_eq!(
+            fields(&copilot),
+            vec![
+                "name",
+                "description",
+                "version",
+                "author",
+                "homepage",
+                "license"
+            ]
+        );
+    }
+
+    #[test]
+    fn claude_plugin_manifest_behind_an_earlier_location_is_skipped() {
+        let copilot = config_with(&["copilot"]);
+        for earlier in [
+            "plugin.json",
+            ".plugin/plugin.json",
+            ".github/plugin/plugin.json",
+        ] {
+            let files = [(earlier, r#"{ "name": "p" }"#)];
+            assert!(
+                validate_in(
+                    ".claude-plugin/plugin.json",
+                    r#"{ "description": "d" }"#,
+                    &files,
+                    &copilot
+                )
+                .is_empty(),
+                "{earlier}"
+            );
+        }
+    }
+
+    #[test]
+    fn valid_manifests_are_clean_everywhere() {
+        let legacy = r#"{ "name": "my-dev-tools", "description": "React development utilities", "version": "1.2.0", "author": { "name": "Jane Doe" }, "keywords": ["react"], "agents": "agents/", "skills": ["skills/"], "hooks": "hooks.json", "mcpServers": ".mcp.json" }"#;
+        let agent_plugins = format!(
+            r#"{{ "$schema": "{AGENT_PLUGINS}", "name": "my-dev-tools", "version": "1.2.0", "license": "MIT", "keywords": ["react"] }}"#
+        );
+        for config in [LintConfig::default(), config_with(&["copilot"])] {
+            for (manifest, content) in [
+                ("plugin.json", legacy),
+                ("plugin.json", agent_plugins.as_str()),
+                (".claude-plugin/plugin.json", legacy),
+            ] {
+                let diagnostics = validate_in(manifest, content, &[], &config);
+                assert!(diagnostics.is_empty(), "{manifest}: {diagnostics:#?}");
+            }
+        }
     }
 }
