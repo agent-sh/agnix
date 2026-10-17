@@ -3,6 +3,9 @@
 pub mod agent;
 pub mod agents_md;
 pub mod amp;
+pub(crate) mod amp_mcp;
+pub(crate) mod amp_settings;
+pub mod amp_skill;
 pub mod claude_json_spans;
 pub mod claude_marketplace;
 pub mod claude_mcp;
@@ -28,9 +31,13 @@ pub mod cursor_cli;
 pub mod cursor_hooks;
 pub mod cursor_plugin;
 pub mod gemini_agent;
+pub mod gemini_command;
 pub mod gemini_extension;
+pub mod gemini_hooks;
 pub mod gemini_ignore;
+pub(crate) mod gemini_mcp;
 pub mod gemini_md;
+pub mod gemini_policy;
 pub mod gemini_settings;
 pub mod hooks;
 pub mod imports;
@@ -57,9 +64,9 @@ pub mod per_client_skill;
 pub mod plugin;
 pub mod project_level;
 pub mod prompt;
-pub mod roo;
 pub mod skill;
 pub mod windsurf;
+pub mod windsurf_hooks;
 pub mod xml;
 
 use crate::{

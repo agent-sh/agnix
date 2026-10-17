@@ -1,0 +1,7 @@
+{
+	"internal-tools": {
+		"command": "internal-mcp",
+		"args": ["--token", "${amp:id-token}"],
+		"includeTools": ["lookup"]
+	}
+}

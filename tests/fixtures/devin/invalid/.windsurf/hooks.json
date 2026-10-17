@@ -1,0 +1,7 @@
+{
+  "hooks": {
+    "post_read_code": [
+      { "command": "/usr/local/bin/audit-read" }
+    ]
+  }
+}

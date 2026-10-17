@@ -1,0 +1,11 @@
+{
+  "general": {"defaultApprovalMode": "auto_edit"},
+  "tools": {
+    "core": ["read_file", "glob", "grep_search", "run_shell_command(git)"],
+    "allowed": ["run_shell_command(git status)", "run_shell_command(npm test)"]
+  },
+  "mcpServers": {
+    "docs-server": {"command": "node", "args": ["server.js"], "timeout": 30000},
+    "remote-docs": {"httpUrl": "https://example.com/mcp"}
+  }
+}

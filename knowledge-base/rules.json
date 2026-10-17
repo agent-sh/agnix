@@ -1,7 +1,7 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 666,
+  "total_rules": 703,
   "last_updated": "2026-10-17",
   "schema": {
     "evidence": {
@@ -231,15 +231,15 @@
     },
     {
       "id": "AMP-001",
-      "name": "Invalid Amp Check Frontmatter",
+      "name": "Invalid Amp Check File",
       "severity": "HIGH",
       "category": "amp-checks",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://ampcode.com/manual#code-review-checks"
+          "https://ampcode.com/docs/review"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "amp"
         },
@@ -252,10 +252,10 @@
       },
       "fix": {
         "autofix": true,
-        "fix_safety": "safe"
+        "fix_safety": "unsafe"
       },
-      "good_example": "---\nname: security-review\ndescription: Review security-sensitive changes\nseverity-default: high\ntools:\n  - rg\n---\n# Security Review\n\nReview auth, secrets, and shell execution paths.",
-      "bad_example": "---\ndescription: Review security-sensitive changes\nunknownKey: true\n---\n# Security Review\n\nMissing required name field."
+      "good_example": "---\nname: no-emojis\ndescription: Flags emoji characters in user-facing text\nseverity-default: medium\n---\n\nReport emoji characters in user-facing strings.",
+      "bad_example": "---\ndescription: Flags emoji characters in user-facing text\n---\n"
     },
     {
       "id": "AMP-002",
@@ -265,13 +265,13 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://ampcode.com/manual#code-review-checks"
+          "https://ampcode.com/docs/review"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "amp"
         },
-        "normative_level": "SHOULD",
+        "normative_level": "MUST",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -280,22 +280,22 @@
       },
       "fix": {
         "autofix": true,
-        "fix_safety": "safe"
+        "fix_safety": "unsafe"
       },
-      "good_example": "---\nname: security-review\nseverity-default: high\n---\n# Security Review\n\nReview auth and secret handling.",
-      "bad_example": "---\nname: security-review\nseverity-default: urgent\n---\n# Security Review\n\nInvalid severity-default value."
+      "good_example": "---\nname: security-review\nseverity-default: high\n---\n\nReview auth and secret handling.",
+      "bad_example": "---\nname: security-review\nseverity-default: urgent\n---\n\nReview auth and secret handling."
     },
     {
       "id": "AMP-003",
-      "name": "Invalid AGENTS.md globs Frontmatter for Amp",
+      "name": "Invalid globs in a File AGENTS.md Mentions",
       "severity": "MEDIUM",
       "category": "amp-checks",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://ampcode.com/manual#settings"
+          "https://ampcode.com/docs/customize/agents-md"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "amp"
         },
@@ -309,8 +309,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "---\nglobs:\n  - \"src/**/*.rs\"\n---\n# AGENTS\n\nProject instructions for Amp.",
-      "bad_example": "---\nglobs: \"[broken\"\n---\n# AGENTS\n\nInvalid glob syntax."
+      "good_example": "<!-- AGENTS.md -->\nSee @docs/*.md.\n\n<!-- docs/typescript-conventions.md -->\n---\nglobs:\n  - '**/*.ts'\n  - '**/*.tsx'\n---\n\nFollow these TypeScript conventions.",
+      "bad_example": "<!-- AGENTS.md -->\nSee @docs/*.md.\n\n<!-- docs/typescript-conventions.md -->\n---\nglobs:\n  - '[broken'\n---\n\nFollow these TypeScript conventions."
     },
     {
       "id": "AMP-004",
@@ -321,9 +321,9 @@
         "source_type": "vendor_docs",
         "source_urls": [
           "https://ampcode.com/docs/cli/settings",
-          "https://ampcode.com/docs/cli/runners"
+          "https://ampcode.com/cli-settings.schema.json"
         ],
-        "verified_on": "2026-09-18",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "amp"
         },
@@ -336,14 +336,208 @@
       },
       "fix": {
         "autofix": true,
-        "fix_safety": "safe"
+        "fix_safety": "unsafe"
       },
-      "good_example": "{\n  \"model\": \"amp-default\",\n  \"notify\": true\n}",
-      "bad_example": "{\n  \"model\": \"amp-default\",\n  \"unknownKey\": true\n}"
+      "good_example": "{\n  \"$schema\": \"https://ampcode.com/cli-settings.schema.json\",\n  \"amp.showCosts\": true,\n  \"amp.updates.mode\": \"warn\"\n}",
+      "bad_example": "{\n  \"model\": \"amp-default\",\n  \"amp.updates.mode\": \"never\"\n}"
+    },
+    {
+      "id": "AMP-005",
+      "name": "Amp Skill Defines MCP Servers Twice",
+      "severity": "MEDIUM",
+      "category": "amp-checks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://ampcode.com/docs/customize/skills"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "amp"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: linear\ndescription: Manages Linear issues. Use when filing or updating an issue.\nmcpServers:\n  linear:\n    url: https://mcp.linear.app/mcp\n    includeTools: [list_issues]\n---\n\nUse the linear tools.\n\n(No sibling mcp.json.)",
+      "bad_example": "---\nname: linear\ndescription: Manages Linear issues. Use when filing or updating an issue.\nmcpServers:\n  linear:\n    url: https://mcp.linear.app/mcp\n---\n\nUse the linear tools.\n\n(A sibling mcp.json also defines servers; Amp ignores it.)"
+    },
+    {
+      "id": "AMP-006",
+      "name": "Amp ID Token Outside HTTPS Headers",
+      "severity": "HIGH",
+      "category": "amp-checks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://ampcode.com/docs/customize/mcp"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "amp"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"amp.mcpServers\": {\n    \"internal-tools\": {\n      \"url\": \"https://mcp.example.com/mcp\",\n      \"headers\": { \"Authorization\": \"Bearer ${amp:id-token}\" }\n    }\n  }\n}",
+      "bad_example": "{\n  \"amp.mcpServers\": {\n    \"internal-tools\": {\n      \"command\": \"internal-mcp\",\n      \"env\": { \"TOKEN\": \"${amp:id-token}\" }\n    }\n  }\n}"
+    },
+    {
+      "id": "AMP-007",
+      "name": "Invalid amp.mcpPermissions Rule",
+      "severity": "MEDIUM",
+      "category": "amp-checks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://ampcode.com/docs/cli/settings",
+          "https://ampcode.com/cli-settings.schema.json"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "amp"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"amp.mcpPermissions\": [\n    { \"matches\": { \"command\": \"npx\", \"args\": \"* @playwright/mcp@*\" }, \"action\": \"allow\" },\n    { \"matches\": { \"url\": \"*\" }, \"action\": \"reject\" }\n  ]\n}",
+      "bad_example": "{\n  \"amp.mcpPermissions\": [\n    { \"matches\": \"*\", \"action\": \"deny\" }\n  ]\n}"
+    },
+    {
+      "id": "AMP-008",
+      "name": "Amp Skill MCP Server Without includeTools",
+      "severity": "LOW",
+      "category": "amp-checks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://ampcode.com/docs/customize/skills"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "amp"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"linear\": {\n    \"url\": \"https://mcp.linear.app/sse\",\n    \"includeTools\": [\"list_issues\", \"create_issue\", \"update_issue\"]\n  }\n}",
+      "bad_example": "{\n  \"linear\": {\n    \"url\": \"https://mcp.linear.app/sse\"\n  }\n}"
+    },
+    {
+      "id": "AMP-010",
+      "name": "Invalid Amp MCP Server Configuration",
+      "severity": "HIGH",
+      "category": "amp-checks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://ampcode.com/docs/customize/skills",
+          "https://ampcode.com/docs/customize/mcp",
+          "https://ampcode.com/cli-settings.schema.json"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "amp"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"chrome-devtools\": {\n    \"command\": \"npx\",\n    \"args\": [\"-y\", \"chrome-devtools-mcp@latest\"],\n    \"includeTools\": [\"navigate_*\", \"take_screenshot\"]\n  }\n}",
+      "bad_example": "{\n  \"chrome-devtools\": {\n    \"args\": \"-y chrome-devtools-mcp@latest\",\n    \"includeTools\": \"navigate_*\"\n  }\n}"
     },
     {
       "id": "AMP-SK-001",
       "name": "Amp Skill Uses Unsupported Field",
+      "severity": "MEDIUM",
+      "category": "amp-skills",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://ampcode.com/docs/customize/skills",
+          "https://ampcode.com/docs/plugin-api"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "amp"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": true,
+        "fix_safety": "safe/unsafe"
+      },
+      "good_example": "---\nname: my-skill\ndescription: A useful development skill\n---\n# My Skill\n\nSkill instructions here.",
+      "bad_example": "---\nname: my-skill\ndescription: A useful development skill\nmodel: opus\n---\n# My Skill\n\nSkill instructions here.\n\n(Note: AMP-SK-001 requires explicit Amp configuration context. The .agents/ directory is mapped to Codex by default.)"
+    },
+    {
+      "id": "AMP-SK-002",
+      "name": "Amp Skill Masked by an .agents/skills Copy",
+      "severity": "LOW",
+      "category": "amp-skills",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://ampcode.com/docs/customize/skills"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "amp"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "# .claude/skills/deploy/SKILL.md\n---\nname: deploy-claude\ndescription: Deploys the app. Use when deploying.\n---\n\n(.agents/skills/deploy/SKILL.md names its skill 'deploy', or is byte-identical.)",
+      "bad_example": "# .claude/skills/deploy/SKILL.md\n---\nname: deploy\ndescription: Deploys the app. Use when deploying.\n---\n\n(.agents/skills/deploy/SKILL.md, with different content, also has name: deploy; Amp loads that one.)"
+    },
+    {
+      "id": "AMP-SK-003",
+      "name": "Amp Skill Too Deep to Be Discovered",
       "severity": "MEDIUM",
       "category": "amp-skills",
       "evidence": {
@@ -363,11 +557,10 @@
         }
       },
       "fix": {
-        "autofix": true,
-        "fix_safety": "safe/unsafe"
+        "autofix": false
       },
-      "good_example": "---\nname: my-skill\ndescription: A useful development skill\n---\n# My Skill\n\nSkill instructions here.",
-      "bad_example": "---\nname: my-skill\ndescription: A useful development skill\nmodel: opus\n---\n# My Skill\n\nSkill instructions here.\n\n(Note: AMP-SK-001 requires explicit Amp configuration context. The .agents/ directory is mapped to Codex by default.)"
+      "good_example": "~/.agents/skills/something/deep/SKILL.md",
+      "bad_example": ".agents/skills/a/b/c/d/e/f/SKILL.md"
     },
     {
       "id": "AS-001",
@@ -10568,18 +10761,18 @@
     {
       "id": "GM-001",
       "name": "Invalid Markdown Structure in GEMINI.md",
-      "severity": "HIGH",
+      "severity": "MEDIUM",
       "category": "gemini-cli",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://geminicli.com/docs/cli/gemini-md/"
+          "https://geminicli.com/docs/reference/memport"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "gemini-cli"
         },
-        "normative_level": "MUST",
+        "normative_level": "SHOULD",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -10588,7 +10781,7 @@
       },
       "fix": {
         "autofix": true,
-        "fix_safety": "safe"
+        "fix_safety": "unsafe"
       },
       "good_example": "# Project\n\nThis is a web application.\n\n```bash\nnpm install\n```\n\n## Testing\n\nRun npm test.",
       "bad_example": "# Project\n\nThis is a web application.\n\n```bash\nnpm install"
@@ -10596,18 +10789,18 @@
     {
       "id": "GM-002",
       "name": "Missing Section Headers in GEMINI.md",
-      "severity": "MEDIUM",
+      "severity": "LOW",
       "category": "gemini-cli",
       "evidence": {
-        "source_type": "vendor_docs",
+        "source_type": "community",
         "source_urls": [
-          "https://geminicli.com/docs/cli/gemini-md/"
+          "https://geminicli.com/docs/cli/gemini-md"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "gemini-cli"
         },
-        "normative_level": "SHOULD",
+        "normative_level": "BEST_PRACTICE",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -10623,18 +10816,19 @@
     {
       "id": "GM-003",
       "name": "Missing Project Context in GEMINI.md",
-      "severity": "MEDIUM",
+      "severity": "LOW",
       "category": "gemini-cli",
       "evidence": {
-        "source_type": "vendor_docs",
+        "source_type": "community",
         "source_urls": [
-          "https://geminicli.com/docs/cli/gemini-md/"
+          "https://geminicli.com/docs/reference/configuration",
+          "https://geminicli.com/docs/cli/gemini-md"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "gemini-cli"
         },
-        "normative_level": "SHOULD",
+        "normative_level": "BEST_PRACTICE",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -10649,15 +10843,19 @@
     },
     {
       "id": "GM-004",
-      "name": "Invalid Hooks Configuration in Gemini Settings",
+      "name": "Invalid Gemini Hooks Configuration",
       "severity": "MEDIUM",
       "category": "gemini-cli",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://geminicli.com/docs/hooks"
+          "https://geminicli.com/docs/hooks",
+          "https://geminicli.com/docs/hooks/reference",
+          "https://geminicli.com/docs/reference/configuration",
+          "https://geminicli.com/docs/extensions/reference",
+          "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/cli/src/config/extension-manager.ts"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "gemini-cli"
         },
@@ -10671,20 +10869,22 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\"hooksConfig\":{\"BeforeAgent\":[{\"type\":\"command\",\"command\":\"echo test\"}]}}",
-      "bad_example": "{\"hooksConfig\":{\"InvalidEvent\":[{\"type\":\"command\",\"command\":\"echo test\"}]}}"
+      "good_example": "{\"hooksConfig\":{\"enabled\":true,\"disabled\":[]},\"hooks\":{\"BeforeTool\":[{\"matcher\":\"write_file|replace\",\"hooks\":[{\"name\":\"security-check\",\"type\":\"command\",\"command\":\"$GEMINI_PROJECT_DIR/.gemini/hooks/security.sh\",\"timeout\":5000}]}]}}",
+      "bad_example": "{\"hooksConfig\":{\"BeforeTool\":[{\"type\":\"command\",\"command\":\"echo test\"}]},\"hooks\":{\"PreToolUse\":[{\"hooks\":[{\"type\":\"prompt\"}]}]}}"
     },
     {
       "id": "GM-005",
-      "name": "Invalid Extension Manifest",
+      "name": "Gemini Extension Manifest Does Not Load",
       "severity": "HIGH",
       "category": "gemini-cli",
       "evidence": {
-        "source_type": "vendor_docs",
+        "source_type": "vendor_code",
         "source_urls": [
-          "https://geminicli.com/docs/extensions/reference"
+          "https://geminicli.com/docs/extensions/reference",
+          "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/cli/src/config/extension-manager.ts",
+          "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/cli/src/config/extension.ts"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "gemini-cli"
         },
@@ -10699,7 +10899,7 @@
         "autofix": false
       },
       "good_example": "{\"name\":\"my-extension\",\"version\":\"1.0.0\",\"description\":\"A useful extension\"}",
-      "bad_example": "{\"version\":\"1.0.0\"}"
+      "bad_example": "{\"name\":\"my_extension\",\"description\":\"No version and an underscore in the name\"}"
     },
     {
       "id": "GM-006",
@@ -10709,9 +10909,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://geminicli.com/docs/cli/settings"
+          "https://geminicli.com/docs/cli/gemini-ignore"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "gemini-cli"
         },
@@ -10726,23 +10926,25 @@
         "autofix": false
       },
       "good_example": "node_modules/\n*.log\n.env",
-      "bad_example": ""
+      "bad_example": "[unclosed\n*.log"
     },
     {
-      "id": "GM-007",
-      "name": "@import File Not Found in GEMINI.md",
-      "severity": "MEDIUM",
+      "id": "GM-008",
+      "name": "Invalid Extension contextFileName",
+      "severity": "HIGH",
       "category": "gemini-cli",
       "evidence": {
-        "source_type": "vendor_docs",
+        "source_type": "vendor_code",
         "source_urls": [
-          "https://geminicli.com/docs/cli/gemini-md/"
+          "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/cli/src/config/extension-manager.ts",
+          "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/cli/src/commands/extensions/validate.ts",
+          "https://geminicli.com/docs/extensions/reference"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "gemini-cli"
         },
-        "normative_level": "SHOULD",
+        "normative_level": "MUST",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -10752,48 +10954,21 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "@import shared-rules.md",
-      "bad_example": "@import nonexistent-file.md"
-    },
-    {
-      "id": "GM-008",
-      "name": "Invalid Context File Name Configuration",
-      "severity": "LOW",
-      "category": "gemini-cli",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://geminicli.com/docs/extensions/reference"
-        ],
-        "verified_on": "2026-04-23",
-        "applies_to": {
-          "tool": "gemini-cli"
-        },
-        "normative_level": "SHOULD",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": true,
-        "fix_safety": "safe"
-      },
-      "good_example": "{\"contextFileName\":\"CONTEXT.md\"}",
-      "bad_example": "{\"contextFileName\":\"docs/context.md\"}"
+      "good_example": "{\"name\":\"ext\",\"version\":\"1.0.0\",\"contextFileName\":[\"GEMINI.md\",\"docs/CONTEXT.md\"]}",
+      "bad_example": "{\"name\":\"ext\",\"version\":\"1.0.0\",\"contextFileName\":\"../shared/GEMINI.md\"}"
     },
     {
       "id": "GM-009",
-      "name": "Settings.json Parse Error",
+      "name": "Gemini Settings Parse Error or Unknown Top-Level Key",
       "severity": "HIGH",
       "category": "gemini-cli",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://geminicli.com/docs/cli/settings"
+          "https://geminicli.com/docs/reference/configuration",
+          "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/cli/src/config/settingsSchema.ts"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "gemini-cli"
         },
@@ -10806,24 +10981,24 @@
       },
       "fix": {
         "autofix": true,
-        "fix_safety": "safe"
+        "fix_safety": "unsafe"
       },
-      "good_example": "{\"general\":{},\"model\":{}}",
+      "good_example": "{\"general\":{},\"hooks\":{},\"mcpServers\":{\"docs\":{\"command\":\"node\",\"args\":[\"server.js\"]}}}",
       "bad_example": "{ invalid json }"
     },
     {
       "id": "GM-010",
-      "name": "memoryManager Without autoMemory After v0.40 Split",
+      "name": "Stale experimental.memoryManager Setting",
       "severity": "MEDIUM",
       "category": "gemini-cli",
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/google-gemini/gemini-cli/pull/25601",
-          "https://github.com/google-gemini/gemini-cli/blob/v0.40.0/packages/cli/src/config/settingsSchema.ts",
-          "https://github.com/google-gemini/gemini-cli/blob/v0.40.0/docs/cli/auto-memory.md"
+          "https://geminicli.com/docs/reference/configuration",
+          "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/cli/src/config/settingsSchema.ts",
+          "https://github.com/google-gemini/gemini-cli/blob/v0.40.0/packages/cli/src/config/settingsSchema.ts"
         ],
-        "verified_on": "2026-04-29",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "gemini-cli",
           "version_range": ">=0.40.0"
@@ -10831,15 +11006,621 @@
         "normative_level": "SHOULD",
         "tests": {
           "unit": true,
-          "fixtures": false,
+          "fixtures": true,
           "e2e": false
         }
       },
       "fix": {
         "autofix": false
       },
-      "good_example": "{\"experimental\":{\"memoryManager\":true,\"autoMemory\":true}}",
+      "good_example": "{\"experimental\":{\"autoMemory\":true}}",
       "bad_example": "{\"experimental\":{\"memoryManager\":true}}"
+    },
+    {
+      "id": "GM-018",
+      "name": "Gemini Hook Timeout Looks Like Seconds",
+      "severity": "MEDIUM",
+      "category": "gemini-cli",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/hooks/reference",
+          "https://geminicli.com/docs/hooks/best-practices",
+          "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/core/src/hooks/hookRunner.ts"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"hooks\":{\"BeforeTool\":[{\"matcher\":\"write_file\",\"hooks\":[{\"type\":\"command\",\"command\":\"./check.sh\",\"timeout\":30000}]}]}}",
+      "bad_example": "{\"hooks\":{\"BeforeTool\":[{\"matcher\":\"write_file\",\"hooks\":[{\"type\":\"command\",\"command\":\"./check.sh\",\"timeout\":30}]}]}}"
+    },
+    {
+      "id": "GM-019",
+      "name": "Gemini Hook Script Not Found",
+      "severity": "MEDIUM",
+      "category": "gemini-cli",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/hooks/best-practices",
+          "https://geminicli.com/docs/hooks",
+          "https://geminicli.com/docs/extensions/reference",
+          "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/core/src/hooks/hookRunner.ts"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"hooks\":{\"SessionStart\":[{\"hooks\":[{\"type\":\"command\",\"command\":\"$GEMINI_PROJECT_DIR/.gemini/hooks/start.sh\"}]}]}}",
+      "bad_example": "{\"hooks\":{\"SessionStart\":[{\"hooks\":[{\"type\":\"command\",\"command\":\"$GEMINI_PROJECT_DIR/.gemini/hooks/missing.sh\"}]}]}}"
+    },
+    {
+      "id": "GM-026",
+      "name": "Gemini Tool Hook Matches Every Tool",
+      "severity": "LOW",
+      "category": "gemini-cli",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/hooks/best-practices",
+          "https://geminicli.com/docs/hooks",
+          "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/core/src/hooks/hookPlanner.ts"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"hooks\":{\"BeforeTool\":[{\"matcher\":\"write_file|replace\",\"hooks\":[{\"type\":\"command\",\"command\":\"./validate.sh\"}]}]}}",
+      "bad_example": "{\"hooks\":{\"BeforeTool\":[{\"matcher\":\"*\",\"hooks\":[{\"type\":\"command\",\"command\":\"./validate.sh\"}]}]}}"
+    },
+    {
+      "id": "GM-028",
+      "name": "Gemini Extension Manifest Advisory",
+      "severity": "LOW",
+      "category": "gemini-cli",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/extensions/reference",
+          "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/cli/src/commands/extensions/validate.ts"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"name\":\"my-extension\",\"version\":\"1.0.0\",\"description\":\"Adds deployment commands\"}",
+      "bad_example": "{\"name\":\"My-Extension\",\"version\":\"1.0\"}"
+    },
+    {
+      "id": "GM-011",
+      "name": "Gemini MCP Server Name Contains Underscore",
+      "severity": "MEDIUM",
+      "category": "gemini-cli",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/tools/mcp-server",
+          "https://geminicli.com/docs/reference/configuration",
+          "https://geminicli.com/docs/reference/policy-engine"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"mcpServers\":{\"my-server\":{\"command\":\"node\",\"args\":[\"server.js\"]}}}",
+      "bad_example": "{\"mcpServers\":{\"my_server\":{\"command\":\"node\",\"args\":[\"server.js\"]}}}"
+    },
+    {
+      "id": "GM-013",
+      "name": "Deprecated tools.exclude Setting",
+      "severity": "LOW",
+      "category": "gemini-cli",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/reference/policy-engine",
+          "https://geminicli.com/docs/tools/shell",
+          "https://geminicli.com/docs/cli/enterprise"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "[[rule]]\ntoolName = \"run_shell_command\"\ncommandPrefix = \"rm -rf\"\ndecision = \"deny\"\npriority = 100\n",
+      "bad_example": "{\"tools\":{\"exclude\":[\"run_shell_command(rm -rf)\"]}}"
+    },
+    {
+      "id": "GM-014",
+      "name": "Gemini MCP Server Transport Missing or Ambiguous",
+      "severity": "HIGH",
+      "category": "gemini-cli",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/reference/configuration",
+          "https://geminicli.com/docs/tools/mcp-server",
+          "https://geminicli.com/docs/extensions/reference"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"mcpServers\":{\"docs\":{\"command\":\"node\",\"args\":[\"server.js\"]}}}",
+      "bad_example": "{\"mcpServers\":{\"docs\":{\"args\":[\"server.js\"]}}}"
+    },
+    {
+      "id": "GM-015",
+      "name": "Gemini MCP Server Trust Bypasses Confirmations",
+      "severity": "MEDIUM",
+      "category": "gemini-cli",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/tools/mcp-server",
+          "https://geminicli.com/docs/extensions/reference"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "security": {
+        "cwe": [
+          "CWE-284"
+        ],
+        "owasp": [
+          "A01:2021"
+        ],
+        "vulnerability_class": "authorization-bypass",
+        "subcategory": "audit",
+        "confidence": "HIGH",
+        "likelihood": "MEDIUM",
+        "impact": "MEDIUM"
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"mcpServers\":{\"docs\":{\"command\":\"node\",\"args\":[\"server.js\"]}}}",
+      "bad_example": "{\"mcpServers\":{\"docs\":{\"command\":\"node\",\"args\":[\"server.js\"],\"trust\":true}}}"
+    },
+    {
+      "id": "GM-016",
+      "name": "Invalid Gemini Default Approval Mode",
+      "severity": "MEDIUM",
+      "category": "gemini-cli",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/reference/configuration",
+          "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/cli/src/config/settingsSchema.ts"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"general\":{\"defaultApprovalMode\":\"auto_edit\"}}",
+      "bad_example": "{\"general\":{\"defaultApprovalMode\":\"yolo\"}}"
+    },
+    {
+      "id": "GM-017",
+      "name": "Gemini tools.core Lists Only Shell Entries",
+      "severity": "MEDIUM",
+      "category": "gemini-cli",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/tools/shell",
+          "https://geminicli.com/docs/reference/configuration"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"tools\":{\"core\":[\"read_file\",\"glob\",\"run_shell_command(git)\"]}}",
+      "bad_example": "{\"tools\":{\"core\":[\"run_shell_command(git)\",\"run_shell_command(npm)\"]}}"
+    },
+    {
+      "id": "GM-020",
+      "name": "Gemini Workspace Policy File Has No Effect",
+      "severity": "LOW",
+      "category": "gemini-cli",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/reference/policy-engine",
+          "https://github.com/google-gemini/gemini-cli/issues/18186"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "# ~/.gemini/policies/rules.toml\n[[rule]]\ntoolName = \"run_shell_command\"\ncommandPrefix = \"rm -rf\"\ndecision = \"deny\"\npriority = 100\n",
+      "bad_example": "# <project>/.gemini/policies/rules.toml\n[[rule]]\ntoolName = \"run_shell_command\"\ncommandPrefix = \"rm -rf\"\ndecision = \"deny\"\npriority = 100\n"
+    },
+    {
+      "id": "GM-021",
+      "name": "Ignored allow or yolo in Gemini Extension Policy",
+      "severity": "MEDIUM",
+      "category": "gemini-cli",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/extensions/reference",
+          "https://geminicli.com/docs/reference/policy-engine"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "# <extension>/policies/policies.toml\n[[rule]]\nmcpName = \"my-server\"\ntoolName = \"dangerous_tool\"\ndecision = \"ask_user\"\npriority = 100\n",
+      "bad_example": "# <extension>/policies/policies.toml\n[[rule]]\nmcpName = \"my-server\"\ntoolName = \"dangerous_tool\"\ndecision = \"allow\"\npriority = 100\n"
+    },
+    {
+      "id": "GM-022",
+      "name": "Gemini Extension Secret Setting Not Marked Sensitive",
+      "severity": "MEDIUM",
+      "category": "gemini-cli",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/extensions/best-practices",
+          "https://geminicli.com/docs/extensions/reference"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "security": {
+        "cwe": [
+          "CWE-312"
+        ],
+        "owasp": [
+          "A02:2021"
+        ],
+        "vulnerability_class": "secret-exposure",
+        "subcategory": "audit",
+        "confidence": "MEDIUM",
+        "likelihood": "MEDIUM",
+        "impact": "MEDIUM"
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"name\":\"my-api-extension\",\"version\":\"1.0.0\",\"settings\":[{\"name\":\"API Key\",\"envVar\":\"MY_API_KEY\",\"sensitive\":true}]}",
+      "bad_example": "{\"name\":\"my-api-extension\",\"version\":\"1.0.0\",\"settings\":[{\"name\":\"API Key\",\"envVar\":\"MY_API_KEY\"}]}"
+    },
+    {
+      "id": "GM-023",
+      "name": "Gemini Extension MCP Command Not Portable",
+      "severity": "LOW",
+      "category": "gemini-cli",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/extensions/reference"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"name\":\"x\",\"version\":\"1.0.0\",\"mcpServers\":{\"my-server\":{\"command\":\"node\",\"args\":[\"${extensionPath}/my-server.js\"],\"cwd\":\"${extensionPath}\"}}}",
+      "bad_example": "{\"name\":\"x\",\"version\":\"1.0.0\",\"mcpServers\":{\"my-server\":{\"command\":\"node my-server.js\"}}}"
+    },
+    {
+      "id": "GM-024",
+      "name": "Broad Shell Auto-Approval in Gemini Project Settings",
+      "severity": "MEDIUM",
+      "category": "gemini-cli",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/cli/trusted-folders",
+          "https://geminicli.com/docs/reference/configuration",
+          "https://geminicli.com/docs/tools/shell"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "security": {
+        "cwe": [
+          "CWE-732"
+        ],
+        "owasp": [
+          "A01:2021"
+        ],
+        "vulnerability_class": "insecure-permissions",
+        "subcategory": "audit",
+        "confidence": "HIGH",
+        "likelihood": "MEDIUM",
+        "impact": "HIGH"
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"tools\":{\"allowed\":[\"run_shell_command(git status)\",\"run_shell_command(npm test)\"]}}",
+      "bad_example": "{\"tools\":{\"allowed\":[\"run_shell_command\"]}}"
+    },
+    {
+      "id": "GM-025",
+      "name": "Deprecated Gemini Settings Key",
+      "severity": "LOW",
+      "category": "gemini-cli",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/reference/configuration",
+          "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/cli/src/config/settingsSchema.ts"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"ui\":{\"loadingPhrases\":\"off\"},\"general\":{\"topicUpdateNarration\":true}}",
+      "bad_example": "{\"ui\":{\"accessibility\":{\"enableLoadingPhrases\":false}},\"experimental\":{\"topicUpdateNarration\":true}}"
+    },
+    {
+      "id": "GM-027",
+      "name": "Invalid Gemini Policy Rule",
+      "severity": "HIGH",
+      "category": "gemini-cli",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/reference/policy-engine",
+          "https://geminicli.com/docs/extensions/reference"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "[[rule]]\ntoolName = \"run_shell_command\"\ncommandPrefix = \"git\"\ndecision = \"ask_user\"\npriority = 100\n",
+      "bad_example": "[[rule]]\ntoolName = \"run_shell_command\"\ncommandPrefix = \"git\"\ncommandRegex = \"git (commit|push)\"\ndecision = \"ask\"\npriority = 1000\n"
+    },
+    {
+      "id": "GM-CMD-001",
+      "name": "Invalid Gemini Custom Command File",
+      "severity": "HIGH",
+      "category": "gemini-cli",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/cli/custom-commands",
+          "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/cli/src/services/FileCommandLoader.ts"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "description = \"Generates a fix for a given issue.\"\nprompt = \"Please provide a code fix for the issue described here: {{args}}.\"\n",
+      "bad_example": "description = \"Generates a fix for a given issue.\"\ntext = \"Please provide a code fix for the issue described here: {{args}}.\"\n"
+    },
+    {
+      "id": "GM-CMD-002",
+      "name": "Gemini Command Description Missing, Multi-Line or Truncated",
+      "severity": "LOW",
+      "category": "gemini-cli",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/cli/custom-commands",
+          "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/cli/src/services/FileCommandLoader.ts"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "description = \"Asks the model to refactor the current context into a pure function.\"\nprompt = \"Refactor the code in the current context into a pure function.\"\n",
+      "bad_example": "prompt = \"Refactor the code in the current context into a pure function.\"\n"
+    },
+    {
+      "id": "GM-CMD-003",
+      "name": "Unbalanced Braces in Gemini Command Injection",
+      "severity": "HIGH",
+      "category": "gemini-cli",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/cli/custom-commands",
+          "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/cli/src/services/prompt-processors/injectionParser.ts"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "description = \"Commit message\"\nprompt = \"\"\"\nWrite a commit message for:\n!{git diff --staged}\n\"\"\"\n",
+      "bad_example": "description = \"First column\"\nprompt = \"\"\"\nSummarize:\n!{awk '{print $1' data.txt}\n\"\"\"\n"
     },
     {
       "id": "GM-AG-001",
@@ -10849,9 +11630,11 @@
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/google-gemini/gemini-cli/pull/24770"
+          "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/core/src/agents/agentLoader.ts",
+          "https://github.com/google-gemini/gemini-cli/pull/24770",
+          "https://geminicli.com/docs/core/subagents"
         ],
-        "verified_on": "2026-04-26",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "gemini-cli"
         },
@@ -10865,8 +11648,161 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "---\nkind: local\nname: spanner-agent\nmcp_servers:\n  spanner:\n    url: https://spanner.googleapis.com/mcp\n    type: http\n    auth:\n      type: google-credentials\n      scopes:\n        - https://www.googleapis.com/auth/cloud-platform\nsystem_prompt: Example\n---\n",
-      "bad_example": "---\nkind: local\nname: spanner-agent\nmcp_servers:\n  spanner:\n    auth:\n      type: basic-auth\nsystem_prompt: Example\n---\n"
+      "good_example": "---\nname: spanner-agent\ndescription: Queries Spanner through its MCP server\nmcp_servers:\n  spanner:\n    url: https://spanner.googleapis.com/mcp\n    type: http\n    auth:\n      type: google-credentials\n      scopes:\n        - https://www.googleapis.com/auth/cloud-platform\n---\n\nYou are a Spanner agent.\n",
+      "bad_example": "---\nname: spanner-agent\ndescription: Queries Spanner through its MCP server\nmcp_servers:\n  spanner:\n    auth:\n      type: basic-auth\n---\n\nYou are a Spanner agent.\n"
+    },
+    {
+      "id": "GM-AG-002",
+      "name": "Invalid Gemini Agent Frontmatter",
+      "severity": "HIGH",
+      "category": "gemini-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/core/subagents",
+          "https://geminicli.com/docs/core/remote-agents",
+          "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/core/src/agents/agentLoader.ts"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: security-auditor\ndescription: Specialized in finding security vulnerabilities in code.\ntools:\n  - read_file\n  - grep_search\n---\n\nYou are a ruthless Security Auditor.\n",
+      "bad_example": "---\nname: Security Auditor\ntools:\n  - read_file\n---\n\nYou are a ruthless Security Auditor.\n"
+    },
+    {
+      "id": "GM-AG-003",
+      "name": "Unknown Gemini Agent Frontmatter Key",
+      "severity": "HIGH",
+      "category": "gemini-agents",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/core/src/agents/agentLoader.ts",
+          "https://geminicli.com/docs/core/subagents"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: spanner-agent\ndescription: Queries Spanner\ntools: [read_file]\n---\n\nYou are a Spanner agent.\n",
+      "bad_example": "---\nname: spanner-agent\ndescription: Queries Spanner\ntools: [read_file]\nsystem_prompt: You are a Spanner agent.\n---\n"
+    },
+    {
+      "id": "GM-AG-004",
+      "name": "Gemini Agent Numeric Field Out of Range",
+      "severity": "HIGH",
+      "category": "gemini-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/core/subagents",
+          "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/core/src/agents/agentLoader.ts"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: a\ndescription: d\ntools: [read_file]\ntemperature: 0.2\nmax_turns: 10\ntimeout_mins: 5\n---\n",
+      "bad_example": "---\nname: a\ndescription: d\ntools: [read_file]\ntemperature: 3\nmax_turns: 0\n---\n"
+    },
+    {
+      "id": "GM-AG-005",
+      "name": "Literal Secret in Gemini Remote Agent Auth",
+      "severity": "MEDIUM",
+      "category": "gemini-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/core/remote-agents",
+          "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/core/src/agents/agentLoader.ts"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "security": {
+        "cwe": [
+          "CWE-798"
+        ],
+        "owasp": [
+          "A07:2021"
+        ],
+        "vulnerability_class": "hardcoded-secret",
+        "subcategory": "vuln",
+        "confidence": "MEDIUM",
+        "likelihood": "MEDIUM",
+        "impact": "HIGH"
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nkind: remote\nname: my-agent\nagent_card_url: https://example.com/agent-card\nauth:\n  type: apiKey\n  key: $MY_API_KEY\n---\n",
+      "bad_example": "---\nkind: remote\nname: my-agent\nagent_card_url: https://example.com/agent-card\nauth:\n  type: apiKey\n  key: sk-live-4f9a8b7c6d5e4f3a\n---\n"
+    },
+    {
+      "id": "GM-AG-006",
+      "name": "Gemini Local Agent Inherits Every Tool",
+      "severity": "LOW",
+      "category": "gemini-agents",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/core/subagents"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: reviewer\ndescription: Reviews pull requests\ntools:\n  - read_file\n  - grep_search\n---\n",
+      "bad_example": "---\nname: reviewer\ndescription: Reviews pull requests\n---\n"
     },
     {
       "id": "KIRO-001",
@@ -16126,168 +17062,6 @@
       "bad_example": "# Project\n\n@docs/coding-standards.md\n@docs/testing-guide.md\n@docs/coding-standards.md"
     },
     {
-      "id": "ROO-001",
-      "name": "Empty Roo Code Rule File",
-      "severity": "HIGH",
-      "category": "roo-code",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://docs.roocode.com/features/custom-modes"
-        ],
-        "verified_on": "2026-04-23",
-        "applies_to": {
-          "tool": "roo-code"
-        },
-        "normative_level": "MUST",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": false
-      },
-      "good_example": "# General Rules\n\nFollow project coding standards and write clean, maintainable code.",
-      "bad_example": ""
-    },
-    {
-      "id": "ROO-002",
-      "name": "Invalid .roomodes Configuration",
-      "severity": "HIGH",
-      "category": "roo-code",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://docs.roocode.com/features/custom-modes"
-        ],
-        "verified_on": "2026-04-23",
-        "applies_to": {
-          "tool": "roo-code"
-        },
-        "normative_level": "MUST",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": false
-      },
-      "good_example": "{\n  \"customModes\": [\n    {\n      \"slug\": \"designer\",\n      \"name\": \"Designer\",\n      \"roleDefinition\": \"You are a UI/UX designer.\",\n      \"groups\": [\"read\", \"edit\"]\n    }\n  ]\n}",
-      "bad_example": "{\n  \"customModes\": \"not-an-array\"\n}"
-    },
-    {
-      "id": "ROO-003",
-      "name": "Invalid .rooignore File",
-      "severity": "MEDIUM",
-      "category": "roo-code",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://docs.roocode.com/features/rooignore"
-        ],
-        "verified_on": "2026-04-23",
-        "applies_to": {
-          "tool": "roo-code"
-        },
-        "normative_level": "SHOULD",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": false
-      },
-      "good_example": "node_modules/\n*.log\n.env\nbuild/",
-      "bad_example": ""
-    },
-    {
-      "id": "ROO-004",
-      "name": "Invalid Mode Slug in Rule Directory",
-      "severity": "MEDIUM",
-      "category": "roo-code",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://docs.roocode.com/features/custom-modes"
-        ],
-        "verified_on": "2026-04-23",
-        "applies_to": {
-          "tool": "roo-code"
-        },
-        "normative_level": "SHOULD",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": false
-      },
-      "good_example": ".roo/rules-architect/general.md",
-      "bad_example": ".roo/rules-INVALID SLUG/general.md"
-    },
-    {
-      "id": "ROO-005",
-      "name": "Invalid .roo/mcp.json Configuration",
-      "severity": "HIGH",
-      "category": "roo-code",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://docs.roocode.com/features/mcp/using-mcp-in-roo"
-        ],
-        "verified_on": "2026-04-23",
-        "applies_to": {
-          "tool": "roo-code"
-        },
-        "normative_level": "MUST",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": false
-      },
-      "good_example": "{\n  \"mcpServers\": {\n    \"my-server\": {\n      \"command\": \"node\",\n      \"args\": [\"server.js\"]\n    }\n  }\n}",
-      "bad_example": "{\n  \"mcpServers\": \"not-an-object\"\n}"
-    },
-    {
-      "id": "ROO-006",
-      "name": "Mode Slug Not Recognized",
-      "severity": "MEDIUM",
-      "category": "roo-code",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://docs.roocode.com/features/custom-modes"
-        ],
-        "verified_on": "2026-04-23",
-        "applies_to": {
-          "tool": "roo-code"
-        },
-        "normative_level": "SHOULD",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": false
-      },
-      "good_example": ".roo/rules-code/SKILL.md with content",
-      "bad_example": ".roo/rules-custom-undefined/SKILL.md"
-    },
-    {
       "id": "VER-001",
       "name": "No Tool/Spec Versions Pinned",
       "severity": "LOW",
@@ -16320,9 +17094,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://docs.windsurf.com/windsurf/cascade/memories"
+          "https://docs.devin.ai/desktop/cascade/memories"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "windsurf"
         },
@@ -16336,7 +17110,7 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "# TypeScript Guidelines\nUse strict mode and explicit types.",
+      "good_example": "---\ntrigger: always_on\n---\n\n# TypeScript Guidelines\n- Use strict mode and explicit types.",
       "bad_example": ""
     },
     {
@@ -16347,9 +17121,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://docs.windsurf.com/windsurf/cascade/memories"
+          "https://docs.devin.ai/desktop/cascade/memories"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "windsurf"
         },
@@ -16363,24 +17137,24 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "# TypeScript Guidelines\nUse strict mode and explicit types.",
-      "bad_example": "# Very long rule file exceeding 12000 characters..."
+      "good_example": "---\ntrigger: always_on\n---\n\n# TypeScript Guidelines\n- Use strict mode and explicit types.",
+      "bad_example": "---\ntrigger: always_on\n---\n\n# Everything we know (12,001 or more characters in one rule file)..."
     },
     {
       "id": "WS-003",
       "name": "Empty or Oversized Windsurf Workflow File",
-      "severity": "MEDIUM",
+      "severity": "HIGH",
       "category": "windsurf",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://docs.windsurf.com/windsurf/cascade/memories"
+          "https://docs.devin.ai/desktop/cascade/workflows"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "windsurf"
         },
-        "normative_level": "SHOULD",
+        "normative_level": "MUST",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -16391,7 +17165,7 @@
         "autofix": false
       },
       "good_example": "# Deploy Workflow\nRun deployment steps.",
-      "bad_example": ""
+      "bad_example": "# Deploy Workflow (empty, or 12,001 or more characters)"
     },
     {
       "id": "WS-004",
@@ -16401,9 +17175,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://docs.windsurf.com/windsurf/cascade/memories"
+          "https://docs.devin.ai/desktop/cascade/memories",
+          "https://docs.cline.bot/customization/cline-rules"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "windsurf"
         },
@@ -16417,8 +17192,353 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "# .windsurf/rules/typescript.md\n# TypeScript Guidelines\nUse strict mode.",
-      "bad_example": "# .windsurfrules (legacy file)\nUse strict mode."
+      "good_example": "# .devin/rules/typescript.md\n---\ntrigger: always_on\n---\n\nUse strict mode.",
+      "bad_example": "# .windsurfrules (legacy single file)\nUse strict mode."
+    },
+    {
+      "id": "WS-005",
+      "name": "Model-Decision Rule Without Description",
+      "severity": "MEDIUM",
+      "category": "windsurf",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://docs.devin.ai/desktop/cascade/memories"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "windsurf"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\ntrigger: model_decision\ndescription: Use when writing or reviewing SQL migrations\n---\n\nCreate migrations with `pnpm db:migrate:new`.",
+      "bad_example": "---\ntrigger: model_decision\n---\n\nCreate migrations with `pnpm db:migrate:new`."
+    },
+    {
+      "id": "WS-006",
+      "name": "Invalid or Missing Windsurf Rule Trigger",
+      "severity": "MEDIUM",
+      "category": "windsurf",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://docs.devin.ai/desktop/cascade/memories",
+          "https://docs.devin.ai/cli/extensibility/rules"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "windsurf"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\ntrigger: glob\nglobs: **/*.test.ts\n---\n\nAll test files must use `describe`/`it` blocks.",
+      "bad_example": "---\ntrigger: glob\n---\n\nAll test files must use `describe`/`it` blocks."
+    },
+    {
+      "id": "WS-007",
+      "name": "Legacy .windsurf Directory",
+      "severity": "LOW",
+      "category": "windsurf",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://docs.devin.ai/desktop/cascade/memories",
+          "https://docs.devin.ai/desktop/cascade/workflows",
+          "https://docs.devin.ai/desktop/cascade/hooks"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "windsurf"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "# .devin/rules/typescript.md\n---\ntrigger: always_on\n---\n\nUse strict mode.",
+      "bad_example": "# .windsurf/rules/typescript.md\n---\ntrigger: always_on\n---\n\nUse strict mode."
+    },
+    {
+      "id": "WS-008",
+      "name": "Generic Instruction in Windsurf Rule",
+      "severity": "LOW",
+      "category": "windsurf",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://docs.devin.ai/desktop/cascade/memories",
+          "https://docs.devin.ai/desktop/cascade/agents-md"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "windsurf"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\ntrigger: always_on\n---\n\n- Use pnpm, not npm\n- Use early returns when possible",
+      "bad_example": "---\ntrigger: always_on\n---\n\n- Write good code\n- Be concise."
+    },
+    {
+      "id": "WS-009",
+      "name": "Workflow Not Supported by the Devin Local Agent",
+      "severity": "LOW",
+      "category": "windsurf",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://docs.devin.ai/desktop/cascade/workflows",
+          "https://docs.devin.ai/desktop/devin-local"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "windsurf"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "# .devin/skills/address-pr-comments/SKILL.md\n---\nname: address-pr-comments\ndescription: Addresses PR review comments one at a time. Use when asked to handle PR feedback.\n---\n\n1. Check out the PR branch",
+      "bad_example": "# .devin/workflows/address-pr-comments.md\n1. Check out the PR branch"
+    },
+    {
+      "id": "WS-010",
+      "name": "Global Rules File Exceeds Character Limit",
+      "severity": "HIGH",
+      "category": "windsurf",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://docs.devin.ai/desktop/cascade/memories"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "windsurf"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "# ~/.codeium/windsurf/memories/global_rules.md\n# Coding Guidelines\n- My project's programming language is python\n- Use early returns when possible",
+      "bad_example": "# ~/.codeium/windsurf/memories/global_rules.md (6,001 or more characters)..."
+    },
+    {
+      "id": "WS-011",
+      "name": "AGENTS.md Exceeds Windsurf Rule Character Limit (Inferred)",
+      "severity": "MEDIUM",
+      "category": "windsurf",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://docs.devin.ai/desktop/cascade/memories",
+          "https://docs.devin.ai/desktop/cascade/agents-md"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "windsurf"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "# AGENTS.md (under 12,000 characters; directory-specific guidance in nested AGENTS.md files)\n- Use TypeScript strict mode",
+      "bad_example": "# AGENTS.md (12,001 or more characters in a project with .devin/rules or .windsurf/)..."
+    },
+    {
+      "id": "WS-HK-001",
+      "name": "Invalid Cascade Hooks File",
+      "severity": "HIGH",
+      "category": "windsurf",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://docs.devin.ai/desktop/cascade/hooks"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "windsurf"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"hooks\": {\n    \"post_write_code\": [\n      { \"command\": \"python3 /path/to/another/script.py\", \"show_output\": true }\n    ]\n  }\n}",
+      "bad_example": "{\n  \"hooks\": {\n    \"post_write_code\": [\n      { \"show_output\": true }\n    ]\n  }\n}"
+    },
+    {
+      "id": "WS-HK-002",
+      "name": "Unknown Cascade Hook Event",
+      "severity": "MEDIUM",
+      "category": "windsurf",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://docs.devin.ai/desktop/cascade/hooks"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "windsurf"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"hooks\": {\"pre_read_code\": [{\"command\": \"python3 /path/to/your/script.py\"}]}}",
+      "bad_example": "{\"hooks\": {\"pre_read_file\": [{\"command\": \"python3 /path/to/your/script.py\"}]}}"
+    },
+    {
+      "id": "WS-HK-003",
+      "name": "Cascade Hook Skipped or Option Ignored",
+      "severity": "MEDIUM",
+      "category": "windsurf",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://docs.devin.ai/desktop/cascade/hooks"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "windsurf"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"hooks\": {\"pre_run_command\": [{\"command\": \"python3 /opt/hooks/check.py\", \"powershell\": \"python3 C:\\\\hooks\\\\check.py\"}]}}",
+      "bad_example": "{\"hooks\": {\"pre_run_command\": [{\"powershell\": \"python3 C:\\\\hooks\\\\check.py\", \"working_directory\": \"~/project\"}]}}"
+    },
+    {
+      "id": "WS-HK-004",
+      "name": "Relative Script Path in Cascade Hook",
+      "severity": "LOW",
+      "category": "windsurf",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://docs.devin.ai/desktop/cascade/hooks"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "windsurf"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"hooks\": {\"post_write_code\": [{\"command\": \"bash /Users/me/hooks/format_code.sh\"}]}}",
+      "bad_example": "{\"hooks\": {\"post_write_code\": [{\"command\": \"bash hooks/format_code.sh\"}]}}"
+    },
+    {
+      "id": "WS-HK-005",
+      "name": "Secret in Workspace Hook Command",
+      "severity": "MEDIUM",
+      "category": "windsurf",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://docs.devin.ai/desktop/cascade/hooks"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "windsurf"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"hooks\": {\"post_cascade_response\": [{\"command\": \"/usr/local/bin/notify --token $NOTIFY_TOKEN\"}]}}",
+      "bad_example": "{\"hooks\": {\"post_cascade_response\": [{\"command\": \"/usr/local/bin/notify --token hk_9f8e7d6c5b4a3f2e1d0c\"}]}}",
+      "security": {
+        "cwe": [
+          "CWE-798",
+          "CWE-200"
+        ],
+        "owasp": [
+          "A07:2021",
+          "A02:2021"
+        ],
+        "vulnerability_class": "secret-exposure",
+        "subcategory": "vuln",
+        "confidence": "MEDIUM",
+        "likelihood": "MEDIUM",
+        "impact": "HIGH"
+      }
     },
     {
       "id": "WS-SK-001",
@@ -19347,18 +20467,13 @@
     },
     "gemini-cli": {
       "prefix": "GM",
-      "count": 10,
+      "count": 29,
       "description": "Gemini CLI instruction file rules"
     },
     "codex": {
       "prefix": "CDX",
       "count": 85,
       "description": "Codex CLI configuration validation"
-    },
-    "roo-code": {
-      "prefix": "ROO",
-      "count": 6,
-      "description": "Roo Code rules and configuration validation"
     },
     "xml": {
       "prefix": "XML",
@@ -19412,8 +20527,8 @@
     },
     "windsurf": {
       "prefix": "WS",
-      "count": 4,
-      "description": "Windsurf rules, workflows, and legacy file validation"
+      "count": 16,
+      "description": "Windsurf (Devin Desktop) rules, workflows, global rules, AGENTS.md and Cascade hooks"
     },
     "kiro-skills": {
       "prefix": "KR-SK",
@@ -19427,7 +20542,7 @@
     },
     "amp-skills": {
       "prefix": "AMP-SK",
-      "count": 1,
+      "count": 3,
       "description": "Amp per-client skill rules"
     },
     "version-awareness": {
@@ -19437,7 +20552,7 @@
     },
     "amp-checks": {
       "prefix": "AMP",
-      "count": 4,
+      "count": 9,
       "description": "Amp code review checks and settings rules"
     },
     "kiro-steering": {
@@ -19487,7 +20602,7 @@
     },
     "gemini-agents": {
       "prefix": "GM-AG",
-      "count": 1,
+      "count": 6,
       "description": "Gemini CLI local agent (.gemini/agents/*.md) rules"
     }
   },

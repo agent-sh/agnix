@@ -1,0 +1,21 @@
+{
+  "hooks": {
+    "pre_read_file": [
+      { "command": "/usr/local/bin/audit-read" }
+    ],
+    "pre_run_command": [
+      { "powershell": "C:\\hooks\\block_dangerous.ps1" },
+      { "show_output": true }
+    ],
+    "post_write_code": [
+      { "command": "python3 hooks/format_code.py", "working_directory": "~/project" },
+      { "command": "/usr/local/bin/lint", "show_output": "yes" }
+    ],
+    "post_cascade_response": [
+      {
+        "command": "/usr/local/bin/notify --token hk_9f8e7d6c5b4a3f2e1d0c",
+        "show_output": true
+      }
+    ]
+  }
+}

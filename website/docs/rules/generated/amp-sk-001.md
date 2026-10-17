@@ -24,6 +24,7 @@ keywords: ["AMP-SK-001", "amp skill uses unsupported field", "amp skills", "vali
 ## Evidence Sources
 
 - https://ampcode.com/docs/customize/skills
+- https://ampcode.com/docs/plugin-api
 
 ## Test Coverage Metadata
 

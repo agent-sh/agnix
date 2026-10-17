@@ -135,7 +135,6 @@ impl<'a> DefaultRuleFilter<'a> {
             s if s.starts_with("OC-") => self.rules.opencode,
             s if s.starts_with("GM-") => self.rules.gemini_md,
             s if s.starts_with("CDX-") => self.rules.codex,
-            s if s.starts_with("ROO-") => self.rules.roo_code,
             s if s.starts_with("WS-") => self.rules.windsurf,
             s if s.starts_with("KIRO-") || s.starts_with("KR-") => self.is_kiro_category_enabled(s),
             s if s.starts_with("PE-") => self.rules.prompt_engineering,

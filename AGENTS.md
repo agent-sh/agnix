@@ -47,7 +47,7 @@ editors/
 ├── vscode/         # VS Code extension
 ├── jetbrains/      # JetBrains IDE plugin
 └── zed/            # Zed extension
-knowledge-base/     # 666 rules, 75+ sources, rules.json
+knowledge-base/     # 703 rules, 75+ sources, rules.json
 
 tests/fixtures/     # Test cases by category
 ```
@@ -101,7 +101,7 @@ CI runs lint and the workspace merge contracts on owner PRs and pushes to main; 
 
 ## Rules reference
 
-666 rules defined in `knowledge-base/rules.json` (source of truth), 666 validation rules across 59 validators. Human-readable docs: `knowledge-base/VALIDATION-RULES.md`. IDs are `[CATEGORY]-[NUMBER]` (AS-004, CC-HK-001).
+703 rules defined in `knowledge-base/rules.json` (source of truth), 703 validation rules across 63 validators. Human-readable docs: `knowledge-base/VALIDATION-RULES.md`. IDs are `[CATEGORY]-[NUMBER]` (AS-004, CC-HK-001).
 
 ### Adding a rule
 
@@ -110,17 +110,19 @@ CI runs lint and the workspace merge contracts on owner PRs and pushes to main; 
 
 ## Tool support tiers
 
-agnix validates 11 tools, those with a per-tool validator in `crates/agnix-core/src/rules/`. A higher tier gets stricter testing and release tracking.
+agnix validates 10 tools, those with a per-tool validator in `crates/agnix-core/src/rules/`. A higher tier gets stricter testing and release tracking.
 
 **Validated** (have a validator in agnix):
 
 - **S** (test always): Claude Code, Codex CLI, OpenCode, Kiro CLI
 - **A** (test on major changes): GitHub Copilot, Cline, Cursor
-- **B** (test if time permits): Roo Code, amp
+- **B** (test if time permits): amp
 - **C** (community reports only): Gemini CLI
 - **D** (nice to have): Windsurf
 
 Release tracking is automated where the upstream publishes to GitHub: `.github/tool-release-baselines.json` and `.github/workflows/tool-release-watch.yml`.
+
+**Dropped**: Roo Code (discontinued 2026-05-15; support removed in 0.59.0).
 
 **Watchlist** (no validator yet; tracked by hand in `knowledge-base/RESEARCH-TRACKING.md`): continue, Antigravity, Tabnine, Codeium, Amazon Q, Aider, SourceGraph Cody, pi.
 

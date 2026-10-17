@@ -407,10 +407,10 @@ pub(in crate::config) struct ConfigData {
     /// and disables rules for tools not in the list.
     /// Valid values: "claude-code", "cursor", "codex", "kiro", "copilot",
     /// "github-copilot", "cline", "opencode", "gemini-cli", "amp",
-    /// "roo-code", "windsurf", "generic"
+    /// "windsurf", "generic"
     #[serde(default)]
     #[schemars(
-        description = "Tools to validate for. Valid values: \"claude-code\", \"cursor\", \"codex\", \"kiro\", \"copilot\", \"github-copilot\", \"cline\", \"opencode\", \"gemini-cli\", \"amp\", \"roo-code\", \"windsurf\", \"generic\""
+        description = "Tools to validate for. Valid values: \"claude-code\", \"cursor\", \"codex\", \"kiro\", \"copilot\", \"github-copilot\", \"cline\", \"opencode\", \"gemini-cli\", \"amp\", \"windsurf\", \"generic\""
     )]
     tools: Vec<String>,
 
@@ -810,9 +810,12 @@ pub struct RuleConfig {
     #[schemars(description = "Enable Codex CLI validation rules (CDX-*)")]
     pub codex: bool,
 
-    /// Enable Roo Code validation (ROO-*)
+    /// Deprecated no-op retained so older configs still parse: Roo Code
+    /// support was removed (discontinued 2026-05-15).
     #[serde(default = "default_true")]
-    #[schemars(description = "Enable Roo Code validation rules (ROO-*)")]
+    #[schemars(
+        description = "Deprecated no-op retained for older configs: Roo Code support was removed (discontinued 2026-05-15)"
+    )]
     pub roo_code: bool,
 
     /// Enable Windsurf validation (WS-*)

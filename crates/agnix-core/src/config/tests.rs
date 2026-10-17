@@ -1043,6 +1043,36 @@ required_fields = true
     // The removed fields are simply ignored
 }
 
+#[test]
+fn test_old_config_with_roo_code_settings_still_loads() {
+    // Roo Code support was removed (discontinued 2026-05-15). `rules.roo_code`
+    // stays a deprecated no-op because `[rules]` denies unknown fields, and a
+    // leftover "roo-code" in `tools` only warns: neither may stop the load.
+    let toml_str = r#"
+tools = ["claude-code", "roo-code"]
+
+[rules]
+roo_code = false
+disabled_rules = ["ROO-001"]
+"#;
+
+    let config: LintConfig =
+        toml::from_str(toml_str).expect("a config that still sets roo_code must load");
+    assert!(!config.data.rules.roo_code);
+
+    let warnings = config.validate();
+    assert!(
+        warnings
+            .iter()
+            .any(|w| w.field == "tools" && w.message.contains("roo-code")),
+        "a leftover roo-code tool should warn: {warnings:?}"
+    );
+    assert!(
+        warnings.iter().all(|w| w.field != "rules.roo_code"),
+        "the deprecated toggle itself should not warn: {warnings:?}"
+    );
+}
+
 // ===== Tool Versions Tests =====
 
 #[test]

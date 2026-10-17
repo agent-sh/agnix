@@ -1,0 +1,6 @@
+{
+  "name": "review-tools",
+  "version": "0.3.1",
+  "description": "Review hooks and a reviewer agent",
+  "contextFileName": ["GEMINI.md", "docs/CONTEXT.md"]
+}

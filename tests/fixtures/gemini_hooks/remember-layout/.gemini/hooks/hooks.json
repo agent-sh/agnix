@@ -1,0 +1,35 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${extensionPath}/../scripts/session-start-hook.sh\""
+          }
+        ]
+      }
+    ],
+    "BeforeTool": [],
+    "AfterTool": [
+      {
+        "matcher": "write_file|replace",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${extensionPath}/../scripts/post-tool-hook.sh\"",
+            "timeout": 30000
+          }
+        ]
+      }
+    ],
+    "BeforeAgent": [],
+    "AfterAgent": [],
+    "Notification": [],
+    "PreCompress": [],
+    "BeforeModel": [],
+    "AfterModel": [],
+    "BeforeToolSelection": [],
+    "SessionEnd": []
+  }
+}

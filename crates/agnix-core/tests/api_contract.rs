@@ -300,8 +300,12 @@ fn file_type_enum_covers_all_variants() {
         agnix_core::FileType::GeminiMd,
         agnix_core::FileType::GeminiSettings,
         agnix_core::FileType::AmpSettings,
+        agnix_core::FileType::AmpSkillMcp,
         agnix_core::FileType::GeminiExtension,
         agnix_core::FileType::GeminiIgnore,
+        agnix_core::FileType::GeminiHooks,
+        agnix_core::FileType::GeminiCommand,
+        agnix_core::FileType::GeminiPolicy,
         agnix_core::FileType::CodexConfig,
         agnix_core::FileType::CodexPlugin,
         agnix_core::FileType::CodexRequirements,
@@ -310,14 +314,11 @@ fn file_type_enum_covers_all_variants() {
         agnix_core::FileType::CodexRules,
         agnix_core::FileType::CodexPrompt,
         agnix_core::FileType::CodexSkillMetadata,
-        agnix_core::FileType::RooRules,
-        agnix_core::FileType::RooModes,
-        agnix_core::FileType::RooIgnore,
-        agnix_core::FileType::RooModeRules,
-        agnix_core::FileType::RooMcp,
         agnix_core::FileType::WindsurfRule,
         agnix_core::FileType::WindsurfWorkflow,
         agnix_core::FileType::WindsurfRulesLegacy,
+        agnix_core::FileType::WindsurfGlobalRules,
+        agnix_core::FileType::WindsurfHooks,
         agnix_core::FileType::KiroSteering,
         agnix_core::FileType::KiroPower,
         agnix_core::FileType::KiroPowerPlugin,
@@ -338,7 +339,7 @@ fn file_type_enum_covers_all_variants() {
 
     assert_eq!(
         variants.len(),
-        74,
+        75,
         "A new FileType variant may have been added or removed. Please update this test's variant list and the match statement below."
     );
 
@@ -384,8 +385,12 @@ fn file_type_enum_covers_all_variants() {
             agnix_core::FileType::GeminiMd => {}
             agnix_core::FileType::GeminiSettings => {}
             agnix_core::FileType::AmpSettings => {}
+            agnix_core::FileType::AmpSkillMcp => {}
             agnix_core::FileType::GeminiExtension => {}
             agnix_core::FileType::GeminiIgnore => {}
+            agnix_core::FileType::GeminiHooks => {}
+            agnix_core::FileType::GeminiCommand => {}
+            agnix_core::FileType::GeminiPolicy => {}
             agnix_core::FileType::CodexConfig => {}
             agnix_core::FileType::CodexPlugin => {}
             agnix_core::FileType::CodexRequirements => {}
@@ -394,14 +399,11 @@ fn file_type_enum_covers_all_variants() {
             agnix_core::FileType::CodexRules => {}
             agnix_core::FileType::CodexPrompt => {}
             agnix_core::FileType::CodexSkillMetadata => {}
-            agnix_core::FileType::RooRules => {}
-            agnix_core::FileType::RooModes => {}
-            agnix_core::FileType::RooIgnore => {}
-            agnix_core::FileType::RooModeRules => {}
-            agnix_core::FileType::RooMcp => {}
             agnix_core::FileType::WindsurfRule => {}
             agnix_core::FileType::WindsurfWorkflow => {}
             agnix_core::FileType::WindsurfRulesLegacy => {}
+            agnix_core::FileType::WindsurfGlobalRules => {}
+            agnix_core::FileType::WindsurfHooks => {}
             agnix_core::FileType::KiroSteering => {}
             agnix_core::FileType::KiroPower => {}
             agnix_core::FileType::KiroPowerPlugin => {}

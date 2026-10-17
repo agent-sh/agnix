@@ -1,0 +1,24 @@
+{
+  "hooksConfig": {
+    "enabled": true,
+    "BeforeAgent": [
+      {"type": "command", "command": "echo misplaced"}
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {"hooks": [{"type": "command", "command": "echo claude-event"}]}
+    ],
+    "BeforeTool": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {"type": "command", "command": "$GEMINI_PROJECT_DIR/.gemini/hooks/missing.sh", "timeout": 10}
+        ]
+      }
+    ]
+  },
+  "experimental": {
+    "memoryManager": true
+  }
+}

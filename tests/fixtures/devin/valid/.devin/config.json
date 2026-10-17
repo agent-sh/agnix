@@ -1,0 +1,6 @@
+{
+  "read_config_from": {
+    "agents_standard": true,
+    "windsurf": true
+  }
+}

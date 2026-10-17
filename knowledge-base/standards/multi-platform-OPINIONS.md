@@ -19,7 +19,7 @@ This document contains BEST PRACTICES, RECOMMENDATIONS, and STRATEGIC GUIDANCE f
 Pure Portable ←────────────────→ Platform-Specific
 │                                 │
 │  MCP Servers                    │  Hooks (Claude Code only)
-│  Git repos                      │  Custom Modes (Roo-Cline)
+│  Git repos                      │
 │  Markdown docs                  │  Voice (Aider only)
 │  Environment vars               │  .cursor/rules/*.mdc (Cursor)
 │                                 │
@@ -193,10 +193,8 @@ skills/
 └── implementations/           # ❌ Platform-specific
     ├── claude-code/
     │   └── .claude/skills/pr-creation/SKILL.md
-    ├── continue/
-    │   └── pr-creation.yaml
-    └── roo-cline/
-        └── .roomodes         # Custom mode for PR creation
+    └── continue/
+        └── pr-creation.yaml
 ```
 
 **CONTRACT EXAMPLE (contracts/pr-creation.md):**
@@ -251,7 +249,6 @@ Build MCP servers for functionality you need across platforms:
 **TIER 2 (Secondary):**
 Use platform-specific features for UX enhancements:
 - Hooks for pre-commit validation (Claude Code)
-- Custom modes for specialized workflows (Roo-Cline)
 - Voice input for brainstorming (Aider)
 
 **WHY:** MCP servers work in Claude Code, Cline, and Continue.dev TODAY. As the standard matures, expect broader adoption.
@@ -428,7 +425,6 @@ When creating a new API endpoint:
 # Platform state directories (NEVER COMMIT)
 .claude/state/
 .cline/
-.roo/
 .aider/
 .continue/
 
@@ -736,20 +732,6 @@ prompts:
 ```
 
 **WHY:** Streamlines repetitive debugging workflows.
-
-### Roo-Cline: Custom Modes for Roles
-
-**USE CASE:** Different modes for different tasks
-
-```
-# .roomodes
-code: Standard development
-architect: High-level design (no implementation)
-debug: Focus on error investigation
-docs: Documentation writing only
-```
-
-**WHY:** Forces AI into task-appropriate behavior.
 
 ---
 

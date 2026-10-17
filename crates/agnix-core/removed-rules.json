@@ -426,6 +426,50 @@
       "replaced_by": [
         "CDX-AG-010"
       ]
+    },
+    {
+      "id": "GM-007",
+      "removed_in": "0.59.0",
+      "reason": "It scanned `@import` lines, but Gemini CLI imports are written `@path`; REF-001 checks those imports.",
+      "replaced_by": [
+        "REF-001"
+      ]
+    },
+    {
+      "id": "ROO-001",
+      "removed_in": "0.59.0",
+      "reason": "Roo Code shut down on 2026-05-15 and its support was removed.",
+      "replaced_by": []
+    },
+    {
+      "id": "ROO-002",
+      "removed_in": "0.59.0",
+      "reason": "Roo Code shut down on 2026-05-15 and its support was removed.",
+      "replaced_by": []
+    },
+    {
+      "id": "ROO-003",
+      "removed_in": "0.59.0",
+      "reason": "Roo Code shut down on 2026-05-15 and its support was removed.",
+      "replaced_by": []
+    },
+    {
+      "id": "ROO-004",
+      "removed_in": "0.59.0",
+      "reason": "Roo Code shut down on 2026-05-15 and its support was removed.",
+      "replaced_by": []
+    },
+    {
+      "id": "ROO-005",
+      "removed_in": "0.59.0",
+      "reason": "Roo Code shut down on 2026-05-15 and its support was removed.",
+      "replaced_by": []
+    },
+    {
+      "id": "ROO-006",
+      "removed_in": "0.59.0",
+      "reason": "Roo Code shut down on 2026-05-15 and its support was removed.",
+      "replaced_by": []
     }
   ]
 }

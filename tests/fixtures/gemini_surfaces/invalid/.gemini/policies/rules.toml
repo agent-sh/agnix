@@ -1,0 +1,12 @@
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "git"
+commandRegex = "git (commit|push)"
+decision = "ask"
+priority = 1000
+
+[[rule]]
+mcpName = "jira_server"
+toolName = "mcp_jira_server_search"
+decision = "deny"
+priority = 100

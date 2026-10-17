@@ -142,7 +142,7 @@
       }
     },
     "tools": {
-      "description": "Tools to validate for. Valid values: \"claude-code\", \"cursor\", \"codex\", \"kiro\", \"copilot\", \"github-copilot\", \"cline\", \"opencode\", \"gemini-cli\", \"amp\", \"roo-code\", \"windsurf\", \"generic\"",
+      "description": "Tools to validate for. Valid values: \"claude-code\", \"cursor\", \"codex\", \"kiro\", \"copilot\", \"github-copilot\", \"cline\", \"opencode\", \"gemini-cli\", \"amp\", \"windsurf\", \"generic\"",
       "type": "array",
       "default": [],
       "items": {
@@ -342,7 +342,7 @@
           "default": true
         },
         "roo_code": {
-          "description": "Enable Roo Code validation rules (ROO-*)",
+          "description": "Deprecated no-op retained for older configs: Roo Code support was removed (discontinued 2026-05-15)",
           "type": "boolean",
           "default": true
         },

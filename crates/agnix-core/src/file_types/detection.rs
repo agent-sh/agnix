@@ -315,36 +315,149 @@ fn is_under_cursor_agents(path: &Path) -> bool {
     path_contains_consecutive_components(path, ".cursor", "agents")
 }
 
-/// Returns true if the path contains `.roo/rules` as consecutive
-/// components anywhere in the path. This allows Roo Code rules to live in
-/// `.roo/rules/*.md`.
-fn is_under_roo_rules(path: &Path) -> bool {
-    path_contains_consecutive_components(path, ".roo", "rules")
-}
-
-/// Returns true if the path contains `.agents/checks` as consecutive
-/// components anywhere in the path.
+/// Returns true for Amp code review check locations: `.agents/checks` as
+/// consecutive components anywhere in the path, and the global check
+/// directories `$XDG_CONFIG_HOME/agents/checks/` and
+/// `$XDG_CONFIG_HOME/amp/checks/` ("When `XDG_CONFIG_HOME` is not set, it
+/// uses `~/.config`", ampcode.com/docs/review).
 fn is_under_agents_checks(path: &Path) -> bool {
     path_contains_consecutive_components(path, ".agents", "checks")
+        || path.parent().is_some_and(|dir| {
+            dir.ancestors().any(|ancestor| {
+                path_ends_with_components_ignore_ascii_case(
+                    ancestor,
+                    &[".config", "agents", "checks"],
+                ) || path_ends_with_components_ignore_ascii_case(
+                    ancestor,
+                    &[".config", "amp", "checks"],
+                )
+            })
+        })
 }
 
-/// Returns true if the path has a parent directory starting with `rules-`
-/// inside a `.roo` grandparent directory. This detects mode-specific rule
-/// files at `.roo/rules-{slug}/*.md`.
-fn is_roo_mode_rules(_path: &Path, parent: Option<&str>, grandparent: Option<&str>) -> bool {
-    parent.is_some_and(|p| p.starts_with("rules-")) && grandparent == Some(".roo")
+/// Amp's local skill roots, as trailing directory names
+/// (ampcode.com/docs/customize/skills, "Skill Sources and Precedence"):
+/// `.agents/skills/` (project, and `~/.agents/skills/`), `.claude/skills/`
+/// (project, and `~/.claude/skills/`), `~/.config/agents/skills/` and
+/// `~/.config/amp/skills/`.
+const AMP_SKILL_ROOTS: &[&[&str]] = &[
+    &[".agents", "skills"],
+    &[".claude", "skills"],
+    &[".config", "agents", "skills"],
+    &[".config", "amp", "skills"],
+];
+
+/// A file inside a skill directory below one of Amp's local skill roots.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct AmpSkillLocation<'p> {
+    /// The nearest skills root directory, such as `<project>/.agents/skills`.
+    pub root: &'p Path,
+    /// Directories from the root to the file's directory: 1 for
+    /// `<root>/<skill>/SKILL.md`, 2 for `<root>/something/deep/SKILL.md`.
+    pub depth: usize,
 }
 
-/// Returns true if the path contains `.windsurf/rules` as consecutive
-/// components anywhere in the path.
+impl AmpSkillLocation<'_> {
+    /// The root is a Claude Code location (`.claude/skills/`), which Amp
+    /// skips when `amp.skills.disableClaudeCodeSkills` is set.
+    pub fn is_claude_root(&self) -> bool {
+        path_ends_with_components_ignore_ascii_case(self.root, &[".claude", "skills"])
+    }
+}
+
+/// Where `path` sits below the nearest Amp skills root, or `None` outside
+/// them (a file directly in a root is not in a skill directory).
+pub(crate) fn amp_skill_location(path: &Path) -> Option<AmpSkillLocation<'_>> {
+    let dir = path.parent()?;
+    dir.ancestors().enumerate().find_map(|(depth, ancestor)| {
+        AMP_SKILL_ROOTS
+            .iter()
+            .any(|root| path_ends_with_components_ignore_ascii_case(ancestor, root))
+            .then_some(AmpSkillLocation {
+                root: ancestor,
+                depth,
+            })
+            .filter(|location| location.depth > 0)
+    })
+}
+
+/// A skill's sibling `mcp.json` in Amp's layout, `<skills root>/<skill>/mcp.json`
+/// ("A skill can define MCP servers in a sibling `mcp.json` file"). It uses
+/// Amp's flat shape (server names at the top level, no `mcpServers` wrapper).
+fn is_amp_skill_mcp_path(path: &Path) -> bool {
+    amp_skill_location(path).is_some_and(|location| location.depth == 1)
+}
+
+// ============================================================================
+// Windsurf (Devin Desktop)
+// ============================================================================
+//
+// Devin Desktop (formerly Windsurf) reads workspace rules from
+// "`.devin/rules/*.md` (preferred) or `.windsurf/rules/*.md` (fallback)",
+// workflows from `.devin/workflows/*.md` or the legacy `.windsurf/workflows/`,
+// global workflows from `~/.codeium/windsurf/global_workflows/*.md`, global
+// rules from `~/.codeium/windsurf/memories/global_rules.md`, and Cascade hooks
+// from `.devin/hooks.json` (legacy `.windsurf/hooks.json`), the user files
+// `~/.codeium/windsurf/hooks.json` (IDE) and `~/.codeium/hooks.json`
+// (JetBrains plugin), and the system `hooks.json` files
+// (docs.devin.ai/desktop/cascade/memories, workflows, hooks). Rule and
+// workflow directories are matched at any depth below `rules/` or
+// `workflows/`, as `.windsurf/rules` always was. `.devin/` is also the Devin
+// CLI configuration directory (`.devin/config.json`, `.devin/hooks.v1.json`),
+// so only these paths are matched there.
+
+/// Returns true if the path contains `.devin/rules` or `.windsurf/rules` as
+/// consecutive components anywhere in the path.
 fn is_under_windsurf_rules(path: &Path) -> bool {
-    path_contains_consecutive_components(path, ".windsurf", "rules")
+    path_contains_consecutive_components(path, ".devin", "rules")
+        || path_contains_consecutive_components(path, ".windsurf", "rules")
 }
 
-/// Returns true if the path contains `.windsurf/workflows` as consecutive
-/// components anywhere in the path.
+/// Returns true if the path contains `.devin/workflows` or
+/// `.windsurf/workflows` as consecutive components anywhere in the path, or
+/// is a global workflow (`~/.codeium/windsurf/global_workflows/*.md`).
 fn is_under_windsurf_workflows(path: &Path) -> bool {
-    path_contains_consecutive_components(path, ".windsurf", "workflows")
+    path_contains_consecutive_components(path, ".devin", "workflows")
+        || path_contains_consecutive_components(path, ".windsurf", "workflows")
+        || path.parent().is_some_and(|dir| {
+            path_ends_with_components_ignore_ascii_case(
+                dir,
+                &[".codeium", "windsurf", "global_workflows"],
+            )
+        })
+}
+
+/// Devin Desktop's global rules file, `~/.codeium/windsurf/memories/global_rules.md`.
+/// Devin CLI's project-level `.devin/global_rules.md` and
+/// `.windsurf/global_rules.md` are not matched: Devin CLI states no size limit
+/// for them, so they stay generic Markdown.
+fn is_windsurf_global_rules(path: &Path) -> bool {
+    path_ends_with_components_ignore_ascii_case(
+        path,
+        &[".codeium", "windsurf", "memories", "global_rules.md"],
+    )
+}
+
+/// Cascade hook files: workspace `.devin/hooks.json` and legacy
+/// `.windsurf/hooks.json`, user `~/.codeium/windsurf/hooks.json` (Devin
+/// Desktop IDE) and `~/.codeium/hooks.json` (JetBrains plugin), and the
+/// system files of macOS, Linux/WSL and Windows with their legacy `Windsurf`
+/// equivalents.
+fn is_windsurf_hooks_path(path: &Path, parent: Option<&str>) -> bool {
+    parent_eq_ignore_ascii_case(parent, ".devin")
+        || parent_eq_ignore_ascii_case(parent, ".windsurf")
+        || [
+            &[".codeium", "windsurf", "hooks.json"][..],
+            &[".codeium", "hooks.json"][..],
+            &["Library", "Application Support", "Devin", "hooks.json"][..],
+            &["Library", "Application Support", "Windsurf", "hooks.json"][..],
+            &["etc", "devin", "hooks.json"][..],
+            &["etc", "windsurf", "hooks.json"][..],
+            &["ProgramData", "Devin", "hooks.json"][..],
+            &["ProgramData", "Windsurf", "hooks.json"][..],
+        ]
+        .iter()
+        .any(|suffix| path_ends_with_components_ignore_ascii_case(path, suffix))
 }
 
 /// Returns true if any path component is `.clinerules`, meaning the file
@@ -986,6 +1099,170 @@ fn is_excluded_parent(parent: Option<&str>) -> bool {
 }
 
 // ============================================================================
+// Gemini CLI extensions
+// ============================================================================
+
+/// The candidate extension roots and file type of a file that Gemini CLI
+/// reads from an extension directory, judged by the path below the root
+/// only. Whether a root really is an extension is decided by the callers:
+/// installed extensions by their location, other roots by a
+/// `gemini-extension.json`.
+///
+/// geminicli.com/docs/extensions/reference: "Define hooks in a
+/// `hooks/hooks.json` file within your extension directory", "Add agent
+/// definition files (`.md`) to an `agents/` directory in your extension
+/// root", "Provide custom commands by placing TOML files in a `commands/`
+/// subdirectory" (FileCommandLoader.ts globs `**/*.toml` under
+/// `<extension>/commands`, so every `commands` ancestor is a candidate) and
+/// "create a `policies/` directory in your extension's root and place your
+/// `.toml` policy files inside it".
+fn gemini_extension_members(path: &Path) -> Vec<(&Path, FileType)> {
+    let Some(filename) = path.file_name().and_then(|n| n.to_str()) else {
+        return Vec::new();
+    };
+    let Some(dir) = path.parent() else {
+        return Vec::new();
+    };
+    let dir_name = dir.file_name().and_then(|n| n.to_str()).unwrap_or("");
+    let single = |file_type| dir.parent().map(|root| vec![(root, file_type)]);
+    let members = if filename == "hooks.json" && dir_name.eq_ignore_ascii_case("hooks") {
+        single(FileType::GeminiHooks)
+    } else if ends_with_ignore_ascii_case(filename, ".md")
+        && dir_name.eq_ignore_ascii_case("agents")
+    {
+        single(FileType::GeminiAgent)
+    } else if ends_with_ignore_ascii_case(filename, ".toml") {
+        let mut members: Vec<(&Path, FileType)> = dir
+            .ancestors()
+            .filter(|ancestor| {
+                ancestor
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .is_some_and(|n| n.eq_ignore_ascii_case("commands"))
+            })
+            .filter_map(|commands| commands.parent())
+            .map(|root| (root, FileType::GeminiCommand))
+            .collect();
+        if dir_name.eq_ignore_ascii_case("policies")
+            && let Some(root) = dir.parent()
+        {
+            members.push((root, FileType::GeminiPolicy));
+        }
+        Some(members)
+    } else {
+        None
+    };
+    members.unwrap_or_default()
+}
+
+/// A `.toml` file below a `.gemini/commands/` directory (`~/.gemini/commands/`
+/// or `<project>/.gemini/commands/`), at any depth: "Subdirectories are used
+/// to create namespaced commands" (geminicli.com/docs/cli/custom-commands).
+fn is_gemini_command_path(path: &Path) -> bool {
+    let comps = normal_components(path);
+    let Some((filename, dirs)) = comps.split_last() else {
+        return false;
+    };
+    ends_with_ignore_ascii_case(filename, ".toml")
+        && dirs.windows(2).any(|pair| {
+            pair[0].eq_ignore_ascii_case(".gemini") && pair[1].eq_ignore_ascii_case("commands")
+        })
+}
+
+/// A `.toml` file directly in a Gemini CLI policy directory: the user and
+/// workspace tiers (`~/.gemini/policies/*.toml`,
+/// `$WORKSPACE_ROOT/.gemini/policies/*.toml`) and the admin directories of
+/// geminicli.com/docs/reference/policy-engine ("Standard Locations"):
+/// `/etc/gemini-cli/policies`, `/Library/Application Support/GeminiCli/policies`
+/// and `C:\ProgramData\gemini-cli\policies`.
+fn is_gemini_policy_path(path: &Path) -> bool {
+    let comps = normal_components(path);
+    let Some((filename, dirs)) = comps.split_last() else {
+        return false;
+    };
+    ends_with_ignore_ascii_case(filename, ".toml")
+        && (dirs_end_with(dirs, &[".gemini", "policies"])
+            || dirs_end_with(dirs, &["etc", "gemini-cli", "policies"])
+            || dirs_end_with(
+                dirs,
+                &["Library", "Application Support", "GeminiCli", "policies"],
+            )
+            || dirs_end_with(dirs, &["ProgramData", "gemini-cli", "policies"]))
+}
+
+/// `root` is `.gemini/extensions/<name>`, where Gemini CLI installs (and
+/// links) extensions: "Gemini CLI loads extensions from
+/// `<home>/.gemini/extensions`".
+fn is_installed_gemini_extension_root(root: &Path) -> bool {
+    fn name_of(p: Option<&Path>) -> Option<&str> {
+        p.and_then(Path::file_name).and_then(|n| n.to_str())
+    }
+    let parent = root.parent();
+    root.file_name().is_some()
+        && parent_eq_ignore_ascii_case(name_of(parent), "extensions")
+        && parent_eq_ignore_ascii_case(name_of(parent.and_then(|p| p.parent())), ".gemini")
+}
+
+/// Refine a path-detected [`FileType`] with sibling-file lookups.
+///
+/// [`detect_file_type`] is path-only by design. Some layouts can only be
+/// told apart by a sibling file, so the pipeline calls this for real files
+/// once `[files]` overrides are applied (overridden types never get here).
+///
+/// Only the generic fallbacks that path detection gives such files are
+/// refined (Claude `Hooks` for any `hooks/hooks.json`, Claude `Agent` for
+/// any `agents/*.md`, `GenericMarkdown`, `Unknown`), so a tool-specific
+/// detection is never replaced, and nothing inside `.kiro/` is touched.
+///
+/// Each tool adds one branch that returns `Some` for its own layouts:
+/// - Gemini CLI: a `hooks/hooks.json`, `agents/*.md`, `commands/**/*.toml`
+///   or `policies/*.toml` whose extension root (a repository that is an
+///   extension, or a `.gemini/` folder that ships one) holds
+///   `gemini-extension.json`.
+pub(crate) fn refine_file_type(
+    path: &Path,
+    detected: FileType,
+    fs: &dyn crate::fs::FileSystem,
+) -> FileType {
+    if !matches!(
+        detected,
+        FileType::Hooks | FileType::Agent | FileType::GenericMarkdown | FileType::Unknown
+    ) || is_inside_kiro_dir(path)
+    {
+        return detected;
+    }
+    if let Some(file_type) = refine_gemini_extension_member(path, fs) {
+        return file_type;
+    }
+    detected
+}
+
+fn refine_gemini_extension_member(path: &Path, fs: &dyn crate::fs::FileSystem) -> Option<FileType> {
+    gemini_extension_members(path)
+        .into_iter()
+        .find(|(root, _)| fs.is_file(&root.join("gemini-extension.json")))
+        .map(|(_, file_type)| file_type)
+}
+
+/// The extension directory of a Gemini CLI extension policy file
+/// (`<extension>/policies/*.toml`): an installed extension under
+/// `.gemini/extensions/<name>/`, or a directory that holds a
+/// `gemini-extension.json`. `None` for user, workspace and admin policies.
+pub(crate) fn gemini_policy_extension_root<'p>(
+    path: &'p Path,
+    fs: &dyn crate::fs::FileSystem,
+) -> Option<&'p Path> {
+    gemini_extension_members(path)
+        .into_iter()
+        .filter(|(_, file_type)| *file_type == FileType::GeminiPolicy)
+        .map(|(root, _)| root)
+        .find(|root| {
+            is_installed_gemini_extension_root(root)
+                || fs.is_file(&root.join("gemini-extension.json"))
+        })
+}
+
+// ============================================================================
 // Primary detection function
 // ============================================================================
 
@@ -1045,6 +1322,27 @@ pub fn detect_file_type(path: &Path) -> FileType {
         return FileType::GeminiAgent;
     }
 
+    // Gemini CLI extensions installed under `.gemini/extensions/<name>/`:
+    // `hooks/hooks.json` holds Gemini hooks (not Claude hooks) and
+    // `agents/*.md` Gemini agents (not Claude subagents). Extension roots
+    // elsewhere need the `gemini-extension.json` sibling, see
+    // `refine_file_type`.
+    if let Some((_, file_type)) = gemini_extension_members(path)
+        .into_iter()
+        .find(|(root, _)| is_installed_gemini_extension_root(root))
+    {
+        return file_type;
+    }
+
+    // Gemini CLI custom commands (`.gemini/commands/**/*.toml`) and policy
+    // files (`.gemini/policies/*.toml`, admin policy directories).
+    if is_gemini_command_path(path) {
+        return FileType::GeminiCommand;
+    }
+    if is_gemini_policy_path(path) {
+        return FileType::GeminiPolicy;
+    }
+
     match filename {
         // Amp code review checks (.agents/checks/**/*.md), excluding AGENTS
         // variants so AGENTS.md keeps ClaudeMd validator coverage.
@@ -1054,14 +1352,26 @@ pub fn detect_file_type(path: &Path) -> FileType {
         {
             FileType::AmpCheck
         }
-        "SKILL.md" if is_roo_mode_rules(path, parent, grandparent) => FileType::RooModeRules,
-        "SKILL.md" if is_under_roo_rules(path) => FileType::RooRules,
         "SKILL.md" => FileType::Skill,
         "CLAUDE.md" | "CLAUDE.local.md" | "AGENTS.md" | "AGENTS.local.md"
         | "AGENTS.override.md" => FileType::ClaudeMd,
-        "settings.json" | "settings.local.json" if parent_eq_ignore_ascii_case(parent, ".amp") => {
+        // Amp settings: workspace `.amp/settings.json(c)`, user
+        // `~/.config/amp/settings.json(c)` and the managed-settings.json of
+        // `/Library/Application Support/ampcode/`, `/etc/ampcode/` and
+        // `%ProgramData%\ampcode\` (ampcode.com/docs/cli/settings).
+        "settings.json" | "settings.jsonc"
+            if parent_eq_ignore_ascii_case(parent, ".amp")
+                || (parent_eq_ignore_ascii_case(parent, "amp")
+                    && parent_eq_ignore_ascii_case(grandparent, ".config")) =>
+        {
             FileType::AmpSettings
         }
+        "managed-settings.json" if parent_eq_ignore_ascii_case(parent, "ampcode") => {
+            FileType::AmpSettings
+        }
+        // No Amp page documents `.amp/settings.local.json`; it is not Claude
+        // Code's `settings.local.json` either.
+        "settings.local.json" if parent_eq_ignore_ascii_case(parent, ".amp") => FileType::Unknown,
         "settings.json" | "settings.local.json"
             if parent_eq_ignore_ascii_case(parent, ".gemini") =>
         {
@@ -1093,8 +1403,8 @@ pub fn detect_file_type(path: &Path) -> FileType {
         "marketplace.json" if parent_eq_ignore_ascii_case(parent, ".claude-plugin") => {
             FileType::ClaudeMarketplace
         }
-        // Roo Code MCP configuration (.roo/mcp.json) - must be before generic mcp.json
-        "mcp.json" if parent_eq_ignore_ascii_case(parent, ".roo") => FileType::RooMcp,
+        // Amp skill MCP servers (`<skills root>/<skill>/mcp.json`, flat shape)
+        "mcp.json" if is_amp_skill_mcp_path(path) => FileType::AmpSkillMcp,
         // MCP configuration files
         "mcp.json" => FileType::Mcp,
         name if name.ends_with(".mcp.json") => FileType::Mcp,
@@ -1141,7 +1451,7 @@ pub fn detect_file_type(path: &Path) -> FileType {
         // can organize rules into subdirectories like `frontend/` or
         // `backend/`". The previous parent/grandparent check saw only depth 1,
         // so nested rule files were never validated at all. Mirrors the
-        // existing `.cursor/rules` and `.roo/rules` handling.
+        // existing `.cursor/rules` handling.
         name if name.ends_with(".md") && is_under_claude_rules(path) => FileType::ClaudeRule,
         // Claude Code legacy custom commands (.claude/commands/**/*.md): "a
         // Markdown file in `.claude/commands/` is the older format and still
@@ -1224,20 +1534,15 @@ pub fn detect_file_type(path: &Path) -> FileType {
         "cline_mcp_settings.json" => FileType::ClineMcpSettings,
         // Legacy Windsurf rules file (.windsurfrules)
         ".windsurfrules" => FileType::WindsurfRulesLegacy,
+        // Cascade hooks (.devin/hooks.json, .windsurf/hooks.json, user and
+        // system hooks.json)
+        name if name.eq_ignore_ascii_case("hooks.json") && is_windsurf_hooks_path(path, parent) => {
+            FileType::WindsurfHooks
+        }
+        // Devin Desktop global rules (~/.codeium/windsurf/memories/global_rules.md)
+        _ if is_windsurf_global_rules(path) => FileType::WindsurfGlobalRules,
         // Gemini CLI ignore file (.geminiignore)
         ".geminiignore" => FileType::GeminiIgnore,
-        // Roo Code custom modes file (.roomodes)
-        ".roomodes" => FileType::RooModes,
-        // Roo Code ignore file (.rooignore)
-        ".rooignore" => FileType::RooIgnore,
-        // Roo Code rules file (.roorules)
-        ".roorules" => FileType::RooRules,
-        // Roo Code mode-specific rules (.roo/rules-{slug}/*.md)
-        name if name.ends_with(".md") && is_roo_mode_rules(path, parent, grandparent) => {
-            FileType::RooModeRules
-        }
-        // Roo Code rules (.roo/rules/*.md)
-        name if name.ends_with(".md") && is_under_roo_rules(path) => FileType::RooRules,
         // Notes kept next to Cline hook scripts are not hooks (a hook file is
         // named after its event, with no extension in the VS Code extension).
         name if (name.ends_with(".md") || name.ends_with(".txt")) && is_cline_hooks_dir(path) => {
@@ -1255,9 +1560,10 @@ pub fn detect_file_type(path: &Path) -> FileType {
         {
             FileType::ClineRulesFolder
         }
-        // Windsurf rules (.windsurf/rules/**/*.md)
+        // Windsurf rules (.devin/rules/**/*.md, .windsurf/rules/**/*.md)
         name if name.ends_with(".md") && is_under_windsurf_rules(path) => FileType::WindsurfRule,
-        // Windsurf workflows (.windsurf/workflows/**/*.md)
+        // Windsurf workflows (.devin/workflows/**/*.md, .windsurf/workflows/**/*.md,
+        // ~/.codeium/windsurf/global_workflows/*.md)
         name if name.ends_with(".md") && is_under_windsurf_workflows(path) => {
             FileType::WindsurfWorkflow
         }
@@ -2265,18 +2571,118 @@ mod tests {
 
     #[test]
     fn detect_amp_settings() {
-        assert_eq!(
-            detect_file_type(Path::new(".amp/settings.json")),
-            FileType::AmpSettings
-        );
+        for path in [
+            ".amp/settings.json",
+            ".amp/settings.jsonc",
+            ".AMP/settings.json",
+            "/home/u/.config/amp/settings.json",
+            "/home/u/.config/amp/settings.jsonc",
+            "C:/Users/u/.config/amp/settings.json",
+            "/Library/Application Support/ampcode/managed-settings.json",
+            "/etc/ampcode/managed-settings.json",
+            "C:/ProgramData/ampcode/managed-settings.json",
+        ] {
+            assert_eq!(
+                detect_file_type(Path::new(path)),
+                FileType::AmpSettings,
+                "{path}"
+            );
+        }
+        // `.amp/settings.local.json` was AmpSettings; no Amp page documents
+        // it, and it must not fall through to the Claude settings arm.
         assert_eq!(
             detect_file_type(Path::new(".amp/settings.local.json")),
-            FileType::AmpSettings
+            FileType::Unknown
+        );
+        // An `amp/` directory outside `~/.config` is not Amp's user config.
+        assert_eq!(
+            detect_file_type(Path::new("tools/amp/settings.json")),
+            FileType::Hooks
+        );
+        // Claude Code and Kiro managed settings keep their own types.
+        assert_eq!(
+            detect_file_type(Path::new("/etc/claude-code/managed-settings.json")),
+            FileType::Hooks
         );
         assert_eq!(
-            detect_file_type(Path::new(".AMP/settings.json")),
-            FileType::AmpSettings
+            detect_file_type(Path::new("/etc/kiro/managed-settings.json")),
+            FileType::KiroPermissions
         );
+    }
+
+    #[test]
+    fn detect_amp_global_checks() {
+        for path in [
+            "/home/u/.config/agents/checks/no-emojis.md",
+            "/home/u/.config/amp/checks/api/auth.md",
+        ] {
+            assert_eq!(
+                detect_file_type(Path::new(path)),
+                FileType::AmpCheck,
+                "{path}"
+            );
+        }
+        assert_ne!(
+            detect_file_type(Path::new("/home/u/agents/checks/no-emojis.md")),
+            FileType::AmpCheck
+        );
+    }
+
+    #[test]
+    fn detect_amp_skill_mcp() {
+        for path in [
+            ".agents/skills/browser/mcp.json",
+            ".claude/skills/linear/mcp.json",
+            "/home/u/.agents/skills/linear/mcp.json",
+            "/home/u/.config/agents/skills/linear/mcp.json",
+            "/home/u/.config/amp/skills/linear/mcp.json",
+        ] {
+            assert_eq!(
+                detect_file_type(Path::new(path)),
+                FileType::AmpSkillMcp,
+                "{path}"
+            );
+        }
+        for (path, expected) in [
+            // Directly in the root, or deeper than a skill directory.
+            (".agents/skills/mcp.json", FileType::Mcp),
+            (".agents/skills/browser/config/mcp.json", FileType::Mcp),
+            ("skills/browser/mcp.json", FileType::Mcp),
+            ("mcp.json", FileType::Mcp),
+            // Kiro detection runs first and keeps power files.
+            (".kiro/powers/linear/mcp.json", FileType::KiroMcp),
+        ] {
+            assert_eq!(detect_file_type(Path::new(path)), expected, "{path}");
+        }
+    }
+
+    #[test]
+    fn amp_skill_location_depth() {
+        let location = |path: &str| amp_skill_location(Path::new(path)).map(|l| l.depth);
+        assert_eq!(location(".agents/skills/a/SKILL.md"), Some(1));
+        // The skills page example: `~/.agents/skills/something/deep/SKILL.md`.
+        assert_eq!(
+            location("/home/u/.agents/skills/something/deep/SKILL.md"),
+            Some(2)
+        );
+        assert_eq!(location(".claude/skills/a/b/c/d/e/SKILL.md"), Some(5));
+        assert_eq!(location(".claude/skills/a/b/c/d/e/f/SKILL.md"), Some(6));
+        assert_eq!(location("/home/u/.config/amp/skills/a/SKILL.md"), Some(1));
+        assert_eq!(location(".agents/skills/SKILL.md"), None);
+        assert_eq!(location("skills/a/SKILL.md"), None);
+        // The nearest root counts.
+        assert_eq!(
+            location(".agents/skills/a/.claude/skills/b/SKILL.md"),
+            Some(1)
+        );
+        let claude = amp_skill_location(Path::new(".claude/skills/a/SKILL.md")).unwrap();
+        assert!(claude.is_claude_root());
+        assert!(
+            !amp_skill_location(Path::new(".agents/skills/a/SKILL.md"))
+                .unwrap()
+                .is_claude_root()
+        );
+        assert_eq!(claude.root, Path::new(".claude/skills"));
     }
 
     #[test]
@@ -2328,114 +2734,33 @@ mod tests {
         );
     }
 
-    // ---- Roo Code file type detection ----
+    // ---- Former Roo Code paths ----
 
     #[test]
-    fn detect_roo_rules() {
-        assert_eq!(detect_file_type(Path::new(".roorules")), FileType::RooRules);
-        assert_eq!(
-            detect_file_type(Path::new("project/.roorules")),
-            FileType::RooRules
-        );
+    fn former_roo_code_paths_use_generic_detection() {
+        // Roo Code was discontinued on 2026-05-15 and its file types were
+        // removed. Its former paths now take the generic arms: Markdown
+        // becomes GenericMarkdown, `mcp.json` the generic MCP type, `SKILL.md`
+        // an Agent Skill, and the extensionless dotfiles are not linted.
+        use FileType::*;
+        assert_types(&[
+            (".roorules", Unknown),
+            ("project/.roorules", Unknown),
+            (".roomodes", Unknown),
+            (".rooignore", Unknown),
+            (".roo/rules/general.md", GenericMarkdown),
+            ("project/.roo/rules/coding.md", GenericMarkdown),
+            (".roo/rules-architect/general.md", GenericMarkdown),
+            (".roo/rules/SKILL.md", Skill),
+            (".roo/rules-architect/SKILL.md", Skill),
+            (".roo/mcp.json", Mcp),
+            ("project/.ROO/mcp.json", Mcp),
+            (".roo/skills/review/SKILL.md", Skill),
+        ]);
     }
 
     #[test]
-    fn detect_roo_rules_folder() {
-        assert_eq!(
-            detect_file_type(Path::new(".roo/rules/general.md")),
-            FileType::RooRules
-        );
-        assert_eq!(
-            detect_file_type(Path::new("project/.roo/rules/coding.md")),
-            FileType::RooRules
-        );
-    }
-
-    #[test]
-    fn detect_roo_modes() {
-        assert_eq!(detect_file_type(Path::new(".roomodes")), FileType::RooModes);
-        assert_eq!(
-            detect_file_type(Path::new("project/.roomodes")),
-            FileType::RooModes
-        );
-    }
-
-    #[test]
-    fn detect_roo_ignore() {
-        assert_eq!(
-            detect_file_type(Path::new(".rooignore")),
-            FileType::RooIgnore
-        );
-        assert_eq!(
-            detect_file_type(Path::new("project/.rooignore")),
-            FileType::RooIgnore
-        );
-    }
-
-    #[test]
-    fn detect_roo_mode_rules() {
-        assert_eq!(
-            detect_file_type(Path::new(".roo/rules-architect/general.md")),
-            FileType::RooModeRules
-        );
-        assert_eq!(
-            detect_file_type(Path::new("project/.roo/rules-code/style.md")),
-            FileType::RooModeRules
-        );
-    }
-
-    #[test]
-    fn detect_roo_mode_rules_not_under_roo() {
-        // rules-slug without .roo grandparent should not match
-        assert_ne!(
-            detect_file_type(Path::new("other/rules-architect/general.md")),
-            FileType::RooModeRules
-        );
-    }
-
-    #[test]
-    fn detect_roo_mode_skill_md() {
-        // SKILL.md in .roo/rules-{slug}/ should be RooModeRules, not Skill
-        assert_eq!(
-            detect_file_type(Path::new(".roo/rules-architect/SKILL.md")),
-            FileType::RooModeRules
-        );
-        // Regular SKILL.md should still be Skill
-        assert_eq!(
-            detect_file_type(Path::new("project/SKILL.md")),
-            FileType::Skill
-        );
-        assert_eq!(detect_file_type(Path::new("SKILL.md")), FileType::Skill);
-    }
-
-    #[test]
-    fn detect_roo_rules_skill_md() {
-        // SKILL.md in .roo/rules/ should be RooRules, not Skill
-        assert_eq!(
-            detect_file_type(Path::new(".roo/rules/SKILL.md")),
-            FileType::RooRules
-        );
-    }
-
-    #[test]
-    fn detect_roo_mcp() {
-        assert_eq!(
-            detect_file_type(Path::new(".roo/mcp.json")),
-            FileType::RooMcp
-        );
-        assert_eq!(
-            detect_file_type(Path::new("project/.roo/mcp.json")),
-            FileType::RooMcp
-        );
-        assert_eq!(
-            detect_file_type(Path::new("project/.ROO/mcp.json")),
-            FileType::RooMcp
-        );
-    }
-
-    #[test]
-    fn detect_mcp_json_without_roo_parent_is_mcp() {
-        // mcp.json without .roo parent should remain Mcp
+    fn detect_mcp_json_is_mcp() {
         assert_eq!(detect_file_type(Path::new("mcp.json")), FileType::Mcp);
         assert_eq!(
             detect_file_type(Path::new(".claude/mcp.json")),
@@ -2483,6 +2808,76 @@ mod tests {
             detect_file_type(Path::new(".windsurf/README.md")),
             FileType::WindsurfRule
         );
+    }
+
+    #[test]
+    fn detect_devin_desktop_locations() {
+        use FileType::*;
+        assert_types(&[
+            // Preferred `.devin/` directories, same types as `.windsurf/`.
+            (".devin/rules/style.md", WindsurfRule),
+            ("packages/web/.devin/rules/frontend/style.md", WindsurfRule),
+            ("/home/u/.devin/rules/style.md", WindsurfRule),
+            (".DEVIN/Rules/style.md", WindsurfRule),
+            (".devin/workflows/deploy.md", WindsurfWorkflow),
+            (".devin/workflows/release/deploy.md", WindsurfWorkflow),
+            (
+                "/home/u/.codeium/windsurf/global_workflows/deploy.md",
+                WindsurfWorkflow,
+            ),
+            (
+                "/home/u/.codeium/windsurf/memories/global_rules.md",
+                WindsurfGlobalRules,
+            ),
+            // Devin CLI's project global rules state no limit.
+            (".devin/global_rules.md", GenericMarkdown),
+            (".windsurf/global_rules.md", GenericMarkdown),
+            // Skills keep the Agent Skills type.
+            (".devin/skills/deploy/SKILL.md", Skill),
+            (".devin/rules/SKILL.md", Skill),
+            (".devin/rules/AGENTS.md", ClaudeMd),
+            // Not rule or workflow files.
+            (".devin/rules/notes.txt", Unknown),
+            (".devin/README.md", Unknown),
+            ("rules/style.md", GenericMarkdown),
+            ("devin/rules/style.md", GenericMarkdown),
+        ]);
+    }
+
+    #[test]
+    fn detect_windsurf_hooks_json() {
+        use FileType::*;
+        assert_types(&[
+            (".devin/hooks.json", WindsurfHooks),
+            (".windsurf/hooks.json", WindsurfHooks),
+            ("project/.Devin/Hooks.json", WindsurfHooks),
+            ("/home/u/.codeium/windsurf/hooks.json", WindsurfHooks),
+            ("/home/u/.codeium/hooks.json", WindsurfHooks),
+            (
+                "/Library/Application Support/Devin/hooks.json",
+                WindsurfHooks,
+            ),
+            (
+                "/Library/Application Support/Windsurf/hooks.json",
+                WindsurfHooks,
+            ),
+            ("/etc/devin/hooks.json", WindsurfHooks),
+            ("/etc/windsurf/hooks.json", WindsurfHooks),
+            ("C:/ProgramData/Devin/hooks.json", WindsurfHooks),
+            ("C:/ProgramData/Windsurf/hooks.json", WindsurfHooks),
+            // Devin CLI lifecycle hooks use another format and file name.
+            (".devin/hooks.v1.json", Unknown),
+            (".devin/config.json", Unknown),
+            // Other tools' hooks.json files keep their types.
+            (".cursor/hooks.json", CursorHooks),
+            (".github/hooks/hooks.json", CopilotHooks),
+            ("my-plugin/hooks/hooks.json", Hooks),
+            (".devin/hooks/hooks.json", Hooks),
+            (".kiro/hooks/hooks.json", KiroHookV3),
+            ("hooks.json", Unknown),
+            ("devin/hooks.json", Unknown),
+            ("/home/u/.codeium/windsurf/other/hooks.json", Unknown),
+        ]);
     }
 
     // ---- Kiro Steering detection ----
@@ -2740,6 +3135,154 @@ mod tests {
     }
 
     #[test]
+    fn detect_installed_gemini_extension_members() {
+        use FileType::*;
+        assert_types(&[
+            (
+                "/home/u/.gemini/extensions/remember/hooks/hooks.json",
+                GeminiHooks,
+            ),
+            (".gemini/extensions/remember/hooks/hooks.json", GeminiHooks),
+            (".GEMINI/Extensions/remember/Hooks/hooks.json", GeminiHooks),
+            (
+                "/home/u/.gemini/extensions/remember/agents/reviewer.md",
+                GeminiAgent,
+            ),
+            // Not members: other files, other folders, other roots.
+            (".gemini/extensions/remember/hooks/other.json", Unknown),
+            (".gemini/extensions/remember/agents/sub/deep.md", Agent),
+            ("extensions/remember/hooks/hooks.json", Hooks),
+            // Path-only detection cannot see gemini-extension.json; these
+            // are refined by `refine_file_type`.
+            ("my-ext/hooks/hooks.json", Hooks),
+            ("my-ext/agents/reviewer.md", Agent),
+            ("remember/.gemini/hooks/hooks.json", Unknown),
+        ]);
+    }
+
+    #[test]
+    fn detect_gemini_commands_and_policies() {
+        use FileType::*;
+        assert_types(&[
+            // Custom commands: user and project, at any depth.
+            ("/home/u/.gemini/commands/test.toml", GeminiCommand),
+            (".gemini/commands/git/commit.toml", GeminiCommand),
+            (".gemini/commands/a/b/c.toml", GeminiCommand),
+            (".GEMINI/Commands/review.TOML", GeminiCommand),
+            // Installed extensions.
+            (
+                "/home/u/.gemini/extensions/gcp/commands/gcs/sync.toml",
+                GeminiCommand,
+            ),
+            (".gemini/extensions/gcp/policies/rules.toml", GeminiPolicy),
+            // Policies: user, workspace and admin directories, top level only.
+            ("/home/u/.gemini/policies/my-rules.toml", GeminiPolicy),
+            (".gemini/policies/rules.toml", GeminiPolicy),
+            ("/etc/gemini-cli/policies/org.toml", GeminiPolicy),
+            (
+                "/Library/Application Support/GeminiCli/policies/org.toml",
+                GeminiPolicy,
+            ),
+            ("C:/ProgramData/gemini-cli/policies/org.toml", GeminiPolicy),
+            (".gemini/policies/sub/rules.toml", Unknown),
+            // Not commands or policies.
+            (".gemini/commands/notes.md", GenericMarkdown),
+            (".gemini/commands.toml", Unknown),
+            ("commands/deploy.toml", Unknown),
+            ("policies/rules.toml", Unknown),
+            (".codex/config.toml", CodexConfig),
+        ]);
+    }
+
+    #[test]
+    fn refine_gemini_extension_commands_and_policies() {
+        use FileType::*;
+        let fs = crate::fs::MockFileSystem::new();
+        fs.add_file("ext/gemini-extension.json", "{}");
+        fs.add_file("remember/.gemini/gemini-extension.json", "{}");
+        for (path, expected) in [
+            ("ext/commands/deploy.toml", GeminiCommand),
+            ("ext/commands/gcs/sync.toml", GeminiCommand),
+            ("ext/policies/policies.toml", GeminiPolicy),
+            ("remember/.gemini/policies/p.toml", GeminiPolicy),
+            // No manifest above the folder, or not a member location.
+            ("other/commands/deploy.toml", Unknown),
+            ("other/policies/p.toml", Unknown),
+            ("ext/policies/sub/p.toml", Unknown),
+            ("ext/config.toml", Unknown),
+        ] {
+            assert_eq!(refine(path, &fs), expected, "{path}");
+        }
+        // The extension root of a policy file, for the extension-tier rules.
+        assert_eq!(
+            gemini_policy_extension_root(Path::new("ext/policies/policies.toml"), &fs),
+            Some(Path::new("ext"))
+        );
+        assert_eq!(
+            gemini_policy_extension_root(
+                Path::new("/home/u/.gemini/extensions/gcp/policies/p.toml"),
+                &fs
+            ),
+            Some(Path::new("/home/u/.gemini/extensions/gcp"))
+        );
+        assert_eq!(
+            gemini_policy_extension_root(Path::new("proj/.gemini/policies/p.toml"), &fs),
+            None
+        );
+    }
+
+    fn refine(path: &str, fs: &crate::fs::MockFileSystem) -> FileType {
+        refine_file_type(Path::new(path), detect_file_type(Path::new(path)), fs)
+    }
+
+    #[test]
+    fn refine_gemini_extension_roots_by_manifest() {
+        use FileType::*;
+        let fs = crate::fs::MockFileSystem::new();
+        // A repository that is an extension, and remember's `.gemini/` layout.
+        fs.add_file("ext/gemini-extension.json", "{}");
+        fs.add_file("remember/.gemini/gemini-extension.json", "{}");
+        // A directory named like the manifest is not a manifest.
+        fs.add_dir("odd/gemini-extension.json");
+        for (path, expected) in [
+            ("ext/hooks/hooks.json", GeminiHooks),
+            ("ext/agents/reviewer.md", GeminiAgent),
+            ("remember/.gemini/hooks/hooks.json", GeminiHooks),
+            ("remember/.gemini/agents/a.md", GeminiAgent),
+            // No manifest next to the folder: unchanged.
+            ("other/hooks/hooks.json", Hooks),
+            ("other/agents/reviewer.md", Agent),
+            ("ext/sub/hooks/hooks.json", Hooks),
+            ("odd/hooks/hooks.json", Hooks),
+            ("remember/hooks/hooks.json", Hooks),
+            // Other members of an extension root keep their type.
+            ("ext/gemini-extension.json", GeminiExtension),
+            ("ext/GEMINI.md", GeminiMd),
+        ] {
+            assert_eq!(refine(path, &fs), expected, "{path}");
+        }
+    }
+
+    #[test]
+    fn refine_never_replaces_specific_or_kiro_types() {
+        use FileType::*;
+        let fs = crate::fs::MockFileSystem::new();
+        for root in [".github", ".cursor", ".kiro/specs/x", ".claude"] {
+            fs.add_file(format!("{root}/gemini-extension.json"), "{}");
+        }
+        for (path, expected) in [
+            (".github/hooks/hooks.json", CopilotHooks),
+            (".cursor/agents/reviewer.md", CursorAgent),
+            (".kiro/specs/x/hooks/hooks.json", Unknown),
+            // A Claude `.claude/agents/*.md` is the generic Agent type, so a
+            // (contrived) manifest next to it would refine it.
+            (".claude/agents/reviewer.md", GeminiAgent),
+        ] {
+            assert_eq!(refine(path, &fs), expected, "{path}");
+        }
+    }
+
+    #[test]
     fn detect_plugin_hooks_json_as_hooks() {
         // Claude Code plugin hooks/hooks.json → FileType::Hooks
         assert_eq!(
@@ -2876,7 +3419,8 @@ mod tests {
             ("mcp.json", Mcp),
             (".cursor/mcp.json", Mcp),
             (".amazonq/mcp.json", Mcp),
-            (".roo/mcp.json", RooMcp),
+            // Was RooMcp; Roo Code support was removed, so it is generic MCP.
+            (".roo/mcp.json", Mcp),
         ]);
     }
 
@@ -3118,7 +3662,8 @@ mod tests {
             // Other tools' ignore files.
             (".gitignore", Unknown),
             (".geminiignore", GeminiIgnore),
-            (".rooignore", RooIgnore),
+            // Was RooIgnore; Roo Code support was removed.
+            (".rooignore", Unknown),
             // Cursor's ignore file has its own type (CUR-034).
             (".cursorignore", CursorIgnore),
             ("kiroignore", Unknown),

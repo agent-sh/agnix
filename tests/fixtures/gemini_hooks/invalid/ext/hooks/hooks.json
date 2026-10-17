@@ -1,0 +1,10 @@
+{
+  "hooks": {
+    "AfterTool": [
+      {"type": "command", "command": "echo flat"}
+    ],
+    "SessionStart": [
+      {"hooks": [{"type": "command", "command": "${extensionPath}/scripts/missing.sh", "timeout": 5}]}
+    ]
+  }
+}

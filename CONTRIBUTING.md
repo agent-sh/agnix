@@ -117,7 +117,7 @@ Rule IDs follow the format `[PREFIX]-[NUMBER]` where the prefix indicates the ru
 | `CR-SK-` | 1 | CR-SK-001 |
 | `CUR-` | 20 | CUR-001 through CUR-020 |
 | `CX-SK-` | 4 | CX-SK-001, CX-SK-004, CX-SK-006 through CX-SK-007 |
-| `GM-` | 10 | GM-001 through GM-010 |
+| `GM-` | 13 | GM-001 through GM-006, GM-008 through GM-010, GM-018, GM-019, GM-026, GM-028 |
 | `GM-AG-` | 1 | GM-AG-001 |
 | `KIRO-` | 14 | KIRO-001 through KIRO-014 |
 | `KR-AG-` | 13 | KR-AG-001 through KR-AG-013 |
@@ -141,7 +141,6 @@ Rule IDs follow the format `[PREFIX]-[NUMBER]` where the prefix indicates the ru
 | `OC-TUI-` | 3 | OC-TUI-001 through OC-TUI-003 |
 | `PE-` | 4 | PE-002, PE-004 through PE-006 |
 | `REF-` | 3 | REF-001 through REF-003 |
-| `ROO-` | 6 | ROO-001 through ROO-006 |
 | `VER-` | 1 | VER-001 |
 | `WS-` | 4 | WS-001 through WS-004 |
 | `WS-SK-` | 1 | WS-SK-001 |

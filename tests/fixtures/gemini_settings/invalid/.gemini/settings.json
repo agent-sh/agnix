@@ -7,10 +7,16 @@
         "type": "command",
         "command": "echo test"
       }
-    ],
+    ]
+  },
+  "hooks": {
     "BeforeAgent": [
       {
-        "command": "echo missing type"
+        "hooks": [
+          {
+            "command": "echo missing type"
+          }
+        ]
       }
     ]
   }

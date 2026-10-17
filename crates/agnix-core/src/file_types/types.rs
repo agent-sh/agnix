@@ -101,12 +101,25 @@ pub enum FileType {
     GeminiMd,
     /// Gemini CLI settings (.gemini/settings.json)
     GeminiSettings,
-    /// Amp settings (.amp/settings.json, .amp/settings.local.json)
+    /// Amp settings (.amp/settings.json(c), ~/.config/amp/settings.json(c),
+    /// ampcode/managed-settings.json)
     AmpSettings,
+    /// Amp skill MCP servers (`mcp.json` in a skill directory below an Amp
+    /// skills root, such as `.agents/skills/<skill>/mcp.json`)
+    AmpSkillMcp,
     /// Gemini CLI extension manifest (gemini-extension.json)
     GeminiExtension,
     /// Gemini CLI ignore file (.geminiignore)
     GeminiIgnore,
+    /// Gemini CLI extension hooks (`<extension>/hooks/hooks.json`: under
+    /// `.gemini/extensions/<name>/`, or next to a `gemini-extension.json`)
+    GeminiHooks,
+    /// Gemini CLI custom command (`.gemini/commands/**/*.toml`, user and
+    /// project, and an extension's `commands/**/*.toml`)
+    GeminiCommand,
+    /// Gemini CLI policy file (`.gemini/policies/*.toml`, an extension's
+    /// `policies/*.toml`, and the admin policy directories)
+    GeminiPolicy,
     /// Codex CLI configuration (.codex/config.toml, .codex/config.json, .codex/config.yaml/.yml)
     CodexConfig,
     /// Codex CLI plugin manifest (.codex-plugin/plugin.json)
@@ -125,22 +138,19 @@ pub enum FileType {
     CodexPrompt,
     /// Codex skill interface metadata (<skill>/agents/openai.yaml)
     CodexSkillMetadata,
-    /// Roo Code rules files (.roorules, .roo/rules/*.md)
-    RooRules,
-    /// Roo Code custom modes configuration (.roomodes)
-    RooModes,
-    /// Roo Code ignore file (.rooignore)
-    RooIgnore,
-    /// Roo Code mode-specific rules (.roo/rules-{slug}/*.md)
-    RooModeRules,
-    /// Roo Code MCP configuration (.roo/mcp.json)
-    RooMcp,
-    /// Windsurf rule files (.windsurf/rules/*.md)
+    /// Windsurf (Devin Desktop) workspace rule files (.devin/rules/**/*.md,
+    /// legacy .windsurf/rules/**/*.md)
     WindsurfRule,
-    /// Windsurf workflow files (.windsurf/workflows/*.md)
+    /// Windsurf (Devin Desktop) workflow files (.devin/workflows/**/*.md,
+    /// legacy .windsurf/workflows/**/*.md, ~/.codeium/windsurf/global_workflows/*.md)
     WindsurfWorkflow,
     /// Legacy Windsurf rules file (.windsurfrules)
     WindsurfRulesLegacy,
+    /// Devin Desktop global rules (~/.codeium/windsurf/memories/global_rules.md)
+    WindsurfGlobalRules,
+    /// Cascade hooks (.devin/hooks.json, legacy .windsurf/hooks.json,
+    /// ~/.codeium/windsurf/hooks.json, ~/.codeium/hooks.json, system hooks.json)
+    WindsurfHooks,
     /// Kiro steering files (.kiro/steering/**/*.md)
     KiroSteering,
     /// Kiro legacy power manifest (POWER.md at a power root: installed powers
@@ -251,8 +261,12 @@ impl fmt::Display for FileType {
             FileType::GeminiMd => "GeminiMd",
             FileType::GeminiSettings => "GeminiSettings",
             FileType::AmpSettings => "AmpSettings",
+            FileType::AmpSkillMcp => "AmpSkillMcp",
             FileType::GeminiExtension => "GeminiExtension",
             FileType::GeminiIgnore => "GeminiIgnore",
+            FileType::GeminiHooks => "GeminiHooks",
+            FileType::GeminiCommand => "GeminiCommand",
+            FileType::GeminiPolicy => "GeminiPolicy",
             FileType::CodexConfig => "CodexConfig",
             FileType::CodexPlugin => "CodexPlugin",
             FileType::CodexRequirements => "CodexRequirements",
@@ -261,14 +275,11 @@ impl fmt::Display for FileType {
             FileType::CodexRules => "CodexRules",
             FileType::CodexPrompt => "CodexPrompt",
             FileType::CodexSkillMetadata => "CodexSkillMetadata",
-            FileType::RooRules => "RooRules",
-            FileType::RooModes => "RooModes",
-            FileType::RooIgnore => "RooIgnore",
-            FileType::RooModeRules => "RooModeRules",
-            FileType::RooMcp => "RooMcp",
             FileType::WindsurfRule => "WindsurfRule",
             FileType::WindsurfWorkflow => "WindsurfWorkflow",
             FileType::WindsurfRulesLegacy => "WindsurfRulesLegacy",
+            FileType::WindsurfGlobalRules => "WindsurfGlobalRules",
+            FileType::WindsurfHooks => "WindsurfHooks",
             FileType::KiroSteering => "KiroSteering",
             FileType::KiroPower => "KiroPower",
             FileType::KiroPowerPlugin => "KiroPowerPlugin",
@@ -337,8 +348,12 @@ mod tests {
             (FileType::GeminiMd, "GeminiMd"),
             (FileType::GeminiSettings, "GeminiSettings"),
             (FileType::AmpSettings, "AmpSettings"),
+            (FileType::AmpSkillMcp, "AmpSkillMcp"),
             (FileType::GeminiExtension, "GeminiExtension"),
             (FileType::GeminiIgnore, "GeminiIgnore"),
+            (FileType::GeminiHooks, "GeminiHooks"),
+            (FileType::GeminiCommand, "GeminiCommand"),
+            (FileType::GeminiPolicy, "GeminiPolicy"),
             (FileType::CodexConfig, "CodexConfig"),
             (FileType::CodexPlugin, "CodexPlugin"),
             (FileType::CodexRequirements, "CodexRequirements"),
@@ -347,14 +362,11 @@ mod tests {
             (FileType::CodexRules, "CodexRules"),
             (FileType::CodexPrompt, "CodexPrompt"),
             (FileType::CodexSkillMetadata, "CodexSkillMetadata"),
-            (FileType::RooRules, "RooRules"),
-            (FileType::RooModes, "RooModes"),
-            (FileType::RooIgnore, "RooIgnore"),
-            (FileType::RooModeRules, "RooModeRules"),
-            (FileType::RooMcp, "RooMcp"),
             (FileType::WindsurfRule, "WindsurfRule"),
             (FileType::WindsurfWorkflow, "WindsurfWorkflow"),
             (FileType::WindsurfRulesLegacy, "WindsurfRulesLegacy"),
+            (FileType::WindsurfGlobalRules, "WindsurfGlobalRules"),
+            (FileType::WindsurfHooks, "WindsurfHooks"),
             (FileType::KiroSteering, "KiroSteering"),
             (FileType::KiroPower, "KiroPower"),
             (FileType::KiroPowerPlugin, "KiroPowerPlugin"),
@@ -420,8 +432,12 @@ mod tests {
             FileType::GeminiMd,
             FileType::GeminiSettings,
             FileType::AmpSettings,
+            FileType::AmpSkillMcp,
             FileType::GeminiExtension,
             FileType::GeminiIgnore,
+            FileType::GeminiHooks,
+            FileType::GeminiCommand,
+            FileType::GeminiPolicy,
             FileType::CodexConfig,
             FileType::CodexPlugin,
             FileType::CodexRequirements,
@@ -430,14 +446,11 @@ mod tests {
             FileType::CodexRules,
             FileType::CodexPrompt,
             FileType::CodexSkillMetadata,
-            FileType::RooRules,
-            FileType::RooModes,
-            FileType::RooIgnore,
-            FileType::RooModeRules,
-            FileType::RooMcp,
             FileType::WindsurfRule,
             FileType::WindsurfWorkflow,
             FileType::WindsurfRulesLegacy,
+            FileType::WindsurfGlobalRules,
+            FileType::WindsurfHooks,
             FileType::KiroSteering,
             FileType::KiroPower,
             FileType::KiroPowerPlugin,
@@ -517,8 +530,12 @@ mod tests {
             FileType::GeminiMd,
             FileType::GeminiSettings,
             FileType::AmpSettings,
+            FileType::AmpSkillMcp,
             FileType::GeminiExtension,
             FileType::GeminiIgnore,
+            FileType::GeminiHooks,
+            FileType::GeminiCommand,
+            FileType::GeminiPolicy,
             FileType::CodexConfig,
             FileType::CodexPlugin,
             FileType::CodexRequirements,
@@ -527,14 +544,11 @@ mod tests {
             FileType::CodexRules,
             FileType::CodexPrompt,
             FileType::CodexSkillMetadata,
-            FileType::RooRules,
-            FileType::RooModes,
-            FileType::RooIgnore,
-            FileType::RooModeRules,
-            FileType::RooMcp,
             FileType::WindsurfRule,
             FileType::WindsurfWorkflow,
             FileType::WindsurfRulesLegacy,
+            FileType::WindsurfGlobalRules,
+            FileType::WindsurfHooks,
             FileType::KiroSteering,
             FileType::KiroPower,
             FileType::KiroPowerPlugin,

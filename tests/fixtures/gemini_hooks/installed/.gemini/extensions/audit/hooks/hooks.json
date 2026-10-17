@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "AfterTool": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${extensionPath}/log.js\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

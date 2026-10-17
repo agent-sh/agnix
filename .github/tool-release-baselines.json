@@ -310,42 +310,12 @@
         ]
       }
     },
-    "roo-code": {
-      "tier": "b",
-      "display_name": "Roo Code",
-      "validators": [
-        "roo"
-      ],
-      "github_repo": "RooCodeInc/Roo-Code",
-      "last_known_version": "v3.54.0",
-      "tracked": true,
-      "notes": "Repo moved from RooVetGit/Roo-Code (still referenced in some docs) to RooCodeInc/Roo-Code.",
-      "changes_of_interest": {
-        "config_surfaces": [
-          ".roomodes",
-          ".rooignore",
-          ".roorules",
-          ".roo/rules/*.md",
-          ".roo/rules-{slug}/*.md",
-          ".roo/mcp.json"
-        ],
-        "relevant": [
-          "Schema changes in .roomodes (mode definitions, permissions, custom instructions)",
-          "Rules resolution order between .roorules and .roo/rules/*",
-          "MCP config shape changes"
-        ],
-        "irrelevant": [
-          "Model provider additions (GPT-5.5, Vertex, etc.)",
-          "Checkpoint navigation UI",
-          "Webview / activity bar tweaks"
-        ]
-      }
-    },
     "amp": {
       "tier": "b",
       "display_name": "amp (Sourcegraph)",
       "validators": [
         "amp",
+        "amp_skill",
         "agents_md"
       ],
       "github_repo": null,
@@ -358,13 +328,19 @@
       "changes_of_interest": {
         "config_surfaces": [
           ".amp/settings.json",
+          ".amp/settings.jsonc",
+          "~/.config/amp/settings.json",
           ".agents/checks/*.md",
+          ".agents/skills/*/SKILL.md",
+          ".agents/skills/*/mcp.json",
           "AGENTS.md"
         ],
         "relevant": [
-          "New or renamed keys in .amp/settings.json",
-          "Changes to check frontmatter schema (name, description, severity-default, tools)",
-          "Changes to AGENTS.md glob pattern parsing or frontmatter"
+          "New or renamed keys in .amp/settings.json (cli-settings.schema.json)",
+          "Changes to check frontmatter schema (name, description, severity-default)",
+          "Changes to AGENTS.md @-mentions or globs frontmatter in mentioned files",
+          "Changes to skill roots, discovery depth or precedence, and skill MCP fields (mcp.json, mcpServers, includeTools)",
+          "Changes to amp.mcpPermissions or ${amp:id-token} handling"
         ],
         "irrelevant": [
           "Model additions (e.g. GPT-5.5, Opus 4.x)",
@@ -412,7 +388,7 @@
     },
     "windsurf": {
       "tier": "d",
-      "display_name": "Windsurf",
+      "display_name": "Windsurf (Devin Desktop)",
       "validators": [
         "windsurf"
       ],
@@ -425,14 +401,24 @@
       "notes": "Proprietary IDE (Codeium/Exafunction); no GH releases. Tracked via HTML scrape of windsurf.com/changelog - the first 'Wave NN' marker on the page is the latest. Release-note body is upgraded via GLM (scripts/glm-extract.js). Wave is the marketing release event; underlying VS Code-fork build version (e.g., 1.9544.24) bumps more often but is not the agnix-relevant signal. Separate /vscode, /jetbrains, /windsurf-next channels are not tracked.",
       "changes_of_interest": {
         "config_surfaces": [
-          ".windsurf/rules/*.md",
-          ".windsurf/workflows/*.md",
-          ".windsurfrules (legacy)"
+          ".devin/rules/*.md",
+          ".devin/workflows/*.md",
+          ".devin/hooks.json",
+          ".windsurf/rules/*.md (legacy)",
+          ".windsurf/workflows/*.md (legacy)",
+          ".windsurf/hooks.json (legacy)",
+          ".windsurfrules (legacy)",
+          "~/.codeium/windsurf/memories/global_rules.md",
+          "~/.codeium/windsurf/hooks.json",
+          "AGENTS.md"
         ],
         "relevant": [
-          "New rules or workflows file layout / frontmatter",
-          "Legacy .windsurfrules deprecation status",
-          "Any new per-project config file under .windsurf/"
+          "New rules or workflows file layout / frontmatter (trigger values, globs, description)",
+          "Rule, workflow and global_rules.md character limits",
+          "Legacy .windsurf/ and .windsurfrules deprecation status",
+          "Cascade hook events, hook options and hooks.json locations",
+          "Workflow support in the Devin Local agent",
+          "Any new per-project config file under .devin/ or .windsurf/"
         ],
         "irrelevant": [
           "Cascade / agent UX",

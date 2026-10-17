@@ -1,6 +1,6 @@
 # agnix Knowledge Base - Master Index
 
-> 666 validation rules across 40 categories, sourced from 75+ references
+> 703 validation rules across 40 categories, sourced from 75+ references
 
 
 ---
@@ -9,7 +9,7 @@
 
 | What You Need | Start Here |
 |---------------|------------|
-| **Implement validator** | [VALIDATION-RULES.md](./VALIDATION-RULES.md) - 666 rules with detection logic |
+| **Implement validator** | [VALIDATION-RULES.md](./VALIDATION-RULES.md) - 703 rules with detection logic |
 
 | **Understand a standard** | [standards/](#standards) - HARD-RULES files |
 | **Learn best practices** | [standards/](#standards) - OPINIONS files |
@@ -28,7 +28,7 @@
 knowledge-base/
 ├── INDEX.md                        # This file
 ├── README.md                       # Detailed navigation guide
-├── VALIDATION-RULES.md             # Master validation reference (666 rules)
+├── VALIDATION-RULES.md             # Master validation reference (703 rules)
 
 ├── PATTERNS-CATALOG.md             # 70 production-tested patterns
 ├── RESEARCH-TRACKING.md            # Tool inventory and monitoring process
@@ -81,7 +81,7 @@ knowledge-base/
 | **AGENTS.md** | 5 | - | - | 6 rules |
 | **Cursor** | 2 | - | - | 9 rules |
 | **agentsys** | 12 | - | - | 70 patterns |
-| **Total** | **75+** | **117KB** | **160KB** | **666 rules** |
+| **Total** | **75+** | **117KB** | **160KB** | **703 rules** |
 
 
 ### Validation Rules by Category
@@ -90,8 +90,8 @@ knowledge-base/
 |----------|-------|------|--------|-----|----------|
 | Agent Skills | 22 | 11 | 6 | 5 | 7 |
 | AGENTS.md | 7 | 0 | 2 | 5 | 1 |
-| Amp Checks | 4 | 2 | 2 | 0 | 3 |
-| Amp Skills | 1 | 0 | 1 | 0 | 1 |
+| Amp Checks | 9 | 4 | 4 | 1 | 3 |
+| Amp Skills | 3 | 0 | 2 | 1 | 1 |
 | Claude Agents | 21 | 10 | 10 | 1 | 7 |
 | Claude Hooks | 32 | 19 | 10 | 3 | 11 |
 | Claude Memory | 15 | 4 | 6 | 5 | 1 |
@@ -110,8 +110,8 @@ knowledge-base/
 | Cross-Platform | 11 | 0 | 6 | 5 | 0 |
 | Cursor | 39 | 13 | 15 | 11 | 8 |
 | Cursor Skills | 1 | 0 | 1 | 0 | 1 |
-| Gemini Agents | 1 | 1 | 0 | 0 | 0 |
-| Gemini CLI | 10 | 3 | 5 | 2 | 3 |
+| Gemini Agents | 6 | 4 | 1 | 1 | 0 |
+| Gemini CLI | 29 | 7 | 12 | 10 | 2 |
 | Kiro Agents | 29 | 11 | 15 | 3 | 1 |
 | Kiro Hooks | 28 | 15 | 6 | 7 | 7 |
 | Kiro Permissions | 12 | 6 | 5 | 1 | 0 |
@@ -127,13 +127,11 @@ knowledge-base/
 | OpenCode Skills | 1 | 0 | 1 | 0 | 1 |
 | Prompt Eng | 4 | 0 | 3 | 1 | 1 |
 | References | 3 | 2 | 0 | 1 | 1 |
-| Roo Code | 6 | 3 | 3 | 0 | 0 |
-| Roo Code Skills | 0 | 0 | 0 | 0 | 0 |
 | Version Awareness | 1 | 0 | 0 | 1 | 0 |
-| Windsurf | 4 | 1 | 2 | 1 | 0 |
+| Windsurf | 16 | 4 | 7 | 5 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 0 | 3 | 0 | 3 |
-| **TOTAL** | **666** | **246** | **301** | **119** | **126** |
+| **TOTAL** | **703** | **255** | **314** | **134** | **125** |
 
 
 ---
@@ -171,7 +169,7 @@ knowledge-base/
 
 ### For Implementation
 
-**Start here**: [VALIDATION-RULES.md](./VALIDATION-RULES.md) - 666 rules with rule IDs (AS-001, CC-HK-001, etc.)
+**Start here**: [VALIDATION-RULES.md](./VALIDATION-RULES.md) - 703 rules with rule IDs (AS-001, CC-HK-001, etc.)
 
 - Detection pseudocode
 - Auto-fix implementations
@@ -297,7 +295,7 @@ Total Size:           650KB
 Standards Covered:     5 (Agent Skills, MCP, Claude Code, Multi-Platform, Prompt Eng)
 Sources Consulted:    75+ (specs, docs, research papers, repos)
 Research Agents:       5 (10+ sources each)
-Validation Rules:     666 rules
+Validation Rules:     703 rules
 Auto-Fixable Rules:   124 rules
 
 Test Fixtures:        116 files

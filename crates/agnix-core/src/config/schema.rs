@@ -31,7 +31,6 @@ pub(in crate::config) const KNOWN_RULE_PREFIXES: &[&str] = &[
     "GM-",
     "PE-",
     "VER-",
-    "ROO-",
     "AMP-",
     "WS-",
     "WS-SK-",
@@ -110,7 +109,6 @@ impl LintConfig {
             "opencode",
             "gemini-cli",
             "amp",
-            "roo-code",
             "windsurf",
             "generic",
         ];

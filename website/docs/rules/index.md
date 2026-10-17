@@ -1,7 +1,7 @@
 # Rules Reference
 
-This section contains all `666` validation rules generated from `knowledge-base/rules.json`.
-`126` rules have automatic fixes.
+This section contains all `703` validation rules generated from `knowledge-base/rules.json`.
+`125` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
 |------|------|----------|----------|----------|
@@ -12,11 +12,18 @@ This section contains all `666` validation rules generated from `knowledge-base/
 | [AGM-007](./generated/agm-007.md) | Root AGENTS.md Lists No Build or Test Command | LOW | AGENTS.md | No |
 | [AGM-008](./generated/agm-008.md) | Legacy AGENT.md Without AGENTS.md | LOW | AGENTS.md | No |
 | [AGM-009](./generated/agm-009.md) | Nested AGENTS.md Without a Root AGENTS.md | LOW | AGENTS.md | No |
-| [AMP-001](./generated/amp-001.md) | Invalid Amp Check Frontmatter | HIGH | Amp Checks | Yes (safe) |
-| [AMP-002](./generated/amp-002.md) | Invalid Amp severity-default | MEDIUM | Amp Checks | Yes (safe) |
-| [AMP-003](./generated/amp-003.md) | Invalid AGENTS.md globs Frontmatter for Amp | MEDIUM | Amp Checks | No |
-| [AMP-004](./generated/amp-004.md) | Invalid Amp Settings Configuration | HIGH | Amp Checks | Yes (safe) |
+| [AMP-001](./generated/amp-001.md) | Invalid Amp Check File | HIGH | Amp Checks | Yes (unsafe) |
+| [AMP-002](./generated/amp-002.md) | Invalid Amp severity-default | MEDIUM | Amp Checks | Yes (unsafe) |
+| [AMP-003](./generated/amp-003.md) | Invalid globs in a File AGENTS.md Mentions | MEDIUM | Amp Checks | No |
+| [AMP-004](./generated/amp-004.md) | Invalid Amp Settings Configuration | HIGH | Amp Checks | Yes (unsafe) |
+| [AMP-005](./generated/amp-005.md) | Amp Skill Defines MCP Servers Twice | MEDIUM | Amp Checks | No |
+| [AMP-006](./generated/amp-006.md) | Amp ID Token Outside HTTPS Headers | HIGH | Amp Checks | No |
+| [AMP-007](./generated/amp-007.md) | Invalid amp.mcpPermissions Rule | MEDIUM | Amp Checks | No |
+| [AMP-008](./generated/amp-008.md) | Amp Skill MCP Server Without includeTools | LOW | Amp Checks | No |
+| [AMP-010](./generated/amp-010.md) | Invalid Amp MCP Server Configuration | HIGH | Amp Checks | No |
 | [AMP-SK-001](./generated/amp-sk-001.md) | Amp Skill Uses Unsupported Field | MEDIUM | Amp Skills | Yes (safe/unsafe) |
+| [AMP-SK-002](./generated/amp-sk-002.md) | Amp Skill Masked by an .agents/skills Copy | LOW | Amp Skills | No |
+| [AMP-SK-003](./generated/amp-sk-003.md) | Amp Skill Too Deep to Be Discovered | MEDIUM | Amp Skills | No |
 | [AS-001](./generated/as-001.md) | Missing Frontmatter | HIGH | Agent Skills | Yes (safe) |
 | [AS-002](./generated/as-002.md) | Missing Required Field: name | HIGH | Agent Skills | Yes (safe) |
 | [AS-003](./generated/as-003.md) | Missing Required Field: description | HIGH | Agent Skills | Yes (safe) |
@@ -372,17 +379,41 @@ This section contains all `666` validation rules generated from `knowledge-base/
 | [CX-SK-004](./generated/cx-sk-004.md) | Skill Catalog Exceeds Codex Fallback Budget | LOW | Codex Skills | No |
 | [CX-SK-006](./generated/cx-sk-006.md) | agents/openai.yaml Field Ignored by Codex | MEDIUM | Codex Skills | No |
 | [CX-SK-007](./generated/cx-sk-007.md) | Auxiliary Documentation in Codex Skill Folder | LOW | Codex Skills | No |
-| [GM-001](./generated/gm-001.md) | Invalid Markdown Structure in GEMINI.md | HIGH | Gemini CLI | Yes (safe) |
-| [GM-002](./generated/gm-002.md) | Missing Section Headers in GEMINI.md | MEDIUM | Gemini CLI | No |
-| [GM-003](./generated/gm-003.md) | Missing Project Context in GEMINI.md | MEDIUM | Gemini CLI | No |
-| [GM-004](./generated/gm-004.md) | Invalid Hooks Configuration in Gemini Settings | MEDIUM | Gemini CLI | No |
-| [GM-005](./generated/gm-005.md) | Invalid Extension Manifest | HIGH | Gemini CLI | No |
+| [GM-001](./generated/gm-001.md) | Invalid Markdown Structure in GEMINI.md | MEDIUM | Gemini CLI | Yes (unsafe) |
+| [GM-002](./generated/gm-002.md) | Missing Section Headers in GEMINI.md | LOW | Gemini CLI | No |
+| [GM-003](./generated/gm-003.md) | Missing Project Context in GEMINI.md | LOW | Gemini CLI | No |
+| [GM-004](./generated/gm-004.md) | Invalid Gemini Hooks Configuration | MEDIUM | Gemini CLI | No |
+| [GM-005](./generated/gm-005.md) | Gemini Extension Manifest Does Not Load | HIGH | Gemini CLI | No |
 | [GM-006](./generated/gm-006.md) | Invalid .geminiignore File | LOW | Gemini CLI | No |
-| [GM-007](./generated/gm-007.md) | @import File Not Found in GEMINI.md | MEDIUM | Gemini CLI | No |
-| [GM-008](./generated/gm-008.md) | Invalid Context File Name Configuration | LOW | Gemini CLI | Yes (safe) |
-| [GM-009](./generated/gm-009.md) | Settings.json Parse Error | HIGH | Gemini CLI | Yes (safe) |
-| [GM-010](./generated/gm-010.md) | memoryManager Without autoMemory After v0.40 Split | MEDIUM | Gemini CLI | No |
+| [GM-008](./generated/gm-008.md) | Invalid Extension contextFileName | HIGH | Gemini CLI | No |
+| [GM-009](./generated/gm-009.md) | Gemini Settings Parse Error or Unknown Top-Level Key | HIGH | Gemini CLI | Yes (unsafe) |
+| [GM-010](./generated/gm-010.md) | Stale experimental.memoryManager Setting | MEDIUM | Gemini CLI | No |
+| [GM-018](./generated/gm-018.md) | Gemini Hook Timeout Looks Like Seconds | MEDIUM | Gemini CLI | No |
+| [GM-019](./generated/gm-019.md) | Gemini Hook Script Not Found | MEDIUM | Gemini CLI | No |
+| [GM-026](./generated/gm-026.md) | Gemini Tool Hook Matches Every Tool | LOW | Gemini CLI | No |
+| [GM-028](./generated/gm-028.md) | Gemini Extension Manifest Advisory | LOW | Gemini CLI | No |
+| [GM-011](./generated/gm-011.md) | Gemini MCP Server Name Contains Underscore | MEDIUM | Gemini CLI | No |
+| [GM-013](./generated/gm-013.md) | Deprecated tools.exclude Setting | LOW | Gemini CLI | No |
+| [GM-014](./generated/gm-014.md) | Gemini MCP Server Transport Missing or Ambiguous | HIGH | Gemini CLI | No |
+| [GM-015](./generated/gm-015.md) | Gemini MCP Server Trust Bypasses Confirmations | MEDIUM | Gemini CLI | No |
+| [GM-016](./generated/gm-016.md) | Invalid Gemini Default Approval Mode | MEDIUM | Gemini CLI | No |
+| [GM-017](./generated/gm-017.md) | Gemini tools.core Lists Only Shell Entries | MEDIUM | Gemini CLI | No |
+| [GM-020](./generated/gm-020.md) | Gemini Workspace Policy File Has No Effect | LOW | Gemini CLI | No |
+| [GM-021](./generated/gm-021.md) | Ignored allow or yolo in Gemini Extension Policy | MEDIUM | Gemini CLI | No |
+| [GM-022](./generated/gm-022.md) | Gemini Extension Secret Setting Not Marked Sensitive | MEDIUM | Gemini CLI | No |
+| [GM-023](./generated/gm-023.md) | Gemini Extension MCP Command Not Portable | LOW | Gemini CLI | No |
+| [GM-024](./generated/gm-024.md) | Broad Shell Auto-Approval in Gemini Project Settings | MEDIUM | Gemini CLI | No |
+| [GM-025](./generated/gm-025.md) | Deprecated Gemini Settings Key | LOW | Gemini CLI | No |
+| [GM-027](./generated/gm-027.md) | Invalid Gemini Policy Rule | HIGH | Gemini CLI | No |
+| [GM-CMD-001](./generated/gm-cmd-001.md) | Invalid Gemini Custom Command File | HIGH | Gemini CLI | No |
+| [GM-CMD-002](./generated/gm-cmd-002.md) | Gemini Command Description Missing, Multi-Line or Truncated | LOW | Gemini CLI | No |
+| [GM-CMD-003](./generated/gm-cmd-003.md) | Unbalanced Braces in Gemini Command Injection | HIGH | Gemini CLI | No |
 | [GM-AG-001](./generated/gm-ag-001.md) | Invalid auth block in Gemini agent MCP server | HIGH | Gemini Agents | No |
+| [GM-AG-002](./generated/gm-ag-002.md) | Invalid Gemini Agent Frontmatter | HIGH | Gemini Agents | No |
+| [GM-AG-003](./generated/gm-ag-003.md) | Unknown Gemini Agent Frontmatter Key | HIGH | Gemini Agents | No |
+| [GM-AG-004](./generated/gm-ag-004.md) | Gemini Agent Numeric Field Out of Range | HIGH | Gemini Agents | No |
+| [GM-AG-005](./generated/gm-ag-005.md) | Literal Secret in Gemini Remote Agent Auth | MEDIUM | Gemini Agents | No |
+| [GM-AG-006](./generated/gm-ag-006.md) | Gemini Local Agent Inherits Every Tool | LOW | Gemini Agents | No |
 | [KIRO-001](./generated/kiro-001.md) | Invalid Steering File Inclusion Mode | HIGH | Kiro Steering | Yes (unsafe) |
 | [KIRO-002](./generated/kiro-002.md) | Inclusion Mode Without the Field It Loads By | HIGH | Kiro Steering | No |
 | [KIRO-003](./generated/kiro-003.md) | fileMatchPattern Does Not Match as Written | MEDIUM | Kiro Steering | No |
@@ -562,17 +593,23 @@ This section contains all `666` validation rules generated from `knowledge-base/
 | [REF-001](./generated/ref-001.md) | Import File Not Found | HIGH | References | No |
 | [REF-002](./generated/ref-002.md) | Broken Markdown Link | HIGH | References | No |
 | [REF-003](./generated/ref-003.md) | Duplicate Import | LOW | References | Yes (unsafe) |
-| [ROO-001](./generated/roo-001.md) | Empty Roo Code Rule File | HIGH | Roo Code | No |
-| [ROO-002](./generated/roo-002.md) | Invalid .roomodes Configuration | HIGH | Roo Code | No |
-| [ROO-003](./generated/roo-003.md) | Invalid .rooignore File | MEDIUM | Roo Code | No |
-| [ROO-004](./generated/roo-004.md) | Invalid Mode Slug in Rule Directory | MEDIUM | Roo Code | No |
-| [ROO-005](./generated/roo-005.md) | Invalid .roo/mcp.json Configuration | HIGH | Roo Code | No |
-| [ROO-006](./generated/roo-006.md) | Mode Slug Not Recognized | MEDIUM | Roo Code | No |
 | [VER-001](./generated/ver-001.md) | No Tool/Spec Versions Pinned | LOW | Version Awareness | No |
 | [WS-001](./generated/ws-001.md) | Empty Windsurf Rule File | MEDIUM | windsurf | No |
 | [WS-002](./generated/ws-002.md) | Windsurf Rule File Exceeds Character Limit | HIGH | windsurf | No |
-| [WS-003](./generated/ws-003.md) | Empty or Oversized Windsurf Workflow File | MEDIUM | windsurf | No |
+| [WS-003](./generated/ws-003.md) | Empty or Oversized Windsurf Workflow File | HIGH | windsurf | No |
 | [WS-004](./generated/ws-004.md) | Legacy .windsurfrules File Detected | LOW | windsurf | No |
+| [WS-005](./generated/ws-005.md) | Model-Decision Rule Without Description | MEDIUM | windsurf | No |
+| [WS-006](./generated/ws-006.md) | Invalid or Missing Windsurf Rule Trigger | MEDIUM | windsurf | No |
+| [WS-007](./generated/ws-007.md) | Legacy .windsurf Directory | LOW | windsurf | No |
+| [WS-008](./generated/ws-008.md) | Generic Instruction in Windsurf Rule | LOW | windsurf | No |
+| [WS-009](./generated/ws-009.md) | Workflow Not Supported by the Devin Local Agent | LOW | windsurf | No |
+| [WS-010](./generated/ws-010.md) | Global Rules File Exceeds Character Limit | HIGH | windsurf | No |
+| [WS-011](./generated/ws-011.md) | AGENTS.md Exceeds Windsurf Rule Character Limit (Inferred) | MEDIUM | windsurf | No |
+| [WS-HK-001](./generated/ws-hk-001.md) | Invalid Cascade Hooks File | HIGH | windsurf | No |
+| [WS-HK-002](./generated/ws-hk-002.md) | Unknown Cascade Hook Event | MEDIUM | windsurf | No |
+| [WS-HK-003](./generated/ws-hk-003.md) | Cascade Hook Skipped or Option Ignored | MEDIUM | windsurf | No |
+| [WS-HK-004](./generated/ws-hk-004.md) | Relative Script Path in Cascade Hook | LOW | windsurf | No |
+| [WS-HK-005](./generated/ws-hk-005.md) | Secret in Workspace Hook Command | MEDIUM | windsurf | No |
 | [WS-SK-001](./generated/ws-sk-001.md) | Windsurf Skill Uses Unsupported Field | MEDIUM | Windsurf Skills | Yes (safe/unsafe) |
 | [XML-001](./generated/xml-001.md) | Unclosed XML Tag | MEDIUM | XML | Yes (unsafe) |
 | [XML-002](./generated/xml-002.md) | Mismatched Closing Tag | MEDIUM | XML | Yes (unsafe) |

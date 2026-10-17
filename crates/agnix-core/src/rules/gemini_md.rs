@@ -1,10 +1,17 @@
-//! Gemini CLI instruction file validation rules (GM-001 to GM-003, GM-007)
+//! Gemini CLI instruction file validation rules (GM-001 to GM-003)
 //!
 //! Validates:
-//! - GM-001: Valid markdown structure (HIGH) - unclosed code blocks, malformed links
-//! - GM-002: Missing section headers (MEDIUM) - no # or ## headers
-//! - GM-003: Missing project context (MEDIUM) - no project description
-//! - GM-007: @import file not found (MEDIUM) - referenced files must exist
+//! - GM-001: Markdown structure (MEDIUM) - an unclosed code fence hides the
+//!   `@` imports after it (memport: the import processor uses `marked` "to
+//!   detect code blocks and inline code spans, ensuring that `@` imports
+//!   inside these regions are properly ignored"); malformed links are an
+//!   agnix heuristic
+//! - GM-002: Missing section headers (LOW) - agnix heuristic
+//! - GM-003: Missing project context (LOW) - agnix heuristic
+//!
+//! `@path` imports are resolved by REF-001 (ImportsValidator). The former
+//! GM-007 scanned `@import` lines, a syntax Gemini CLI does not use, and
+//! was retired.
 
 use crate::{
     config::PerFileLintConfig,
@@ -17,7 +24,7 @@ use crate::{
 use rust_i18n::t;
 use std::path::Path;
 
-const RULE_IDS: &[&str] = &["GM-001", "GM-002", "GM-003", "GM-007"];
+const RULE_IDS: &[&str] = &["GM-001", "GM-002", "GM-003"];
 
 pub struct GeminiMdValidator;
 
@@ -45,15 +52,16 @@ impl Validator for GeminiMdValidator {
 
         let path_buf = path.to_path_buf();
 
-        // GM-001: Valid Markdown Structure (ERROR)
+        // GM-001: Markdown structure (WARNING). Gemini loads the file either
+        // way; an unclosed fence makes it skip every later `@` import.
         if config.is_rule_enabled("GM-001") {
             let validity_issues = check_markdown_validity(content);
             for issue in validity_issues {
-                let level_fn = match issue.issue_type {
-                    MarkdownIssueType::UnclosedCodeBlock => Diagnostic::error,
-                    MarkdownIssueType::MalformedLink => Diagnostic::error,
+                let suggestion = match issue.issue_type {
+                    MarkdownIssueType::UnclosedCodeBlock => t!("rules.gm_001.unclosed_suggestion"),
+                    MarkdownIssueType::MalformedLink => t!("rules.gm_001.suggestion"),
                 };
-                let mut diagnostic = level_fn(
+                let mut diagnostic = Diagnostic::warning(
                     path_buf.clone(),
                     issue.line,
                     issue.column,
@@ -63,9 +71,11 @@ impl Validator for GeminiMdValidator {
                         description = issue.description.as_str()
                     ),
                 )
-                .with_suggestion(t!("rules.gm_001.suggestion"));
+                .with_suggestion(suggestion);
 
                 if issue.issue_type == MarkdownIssueType::UnclosedCodeBlock {
+                    // Unsafe: where the fence should end is a guess, and the
+                    // text after it changes from code to instructions.
                     let insert_pos = content.len();
                     let prefix = if content.ends_with('\n') { "" } else { "\n" };
                     diagnostic = diagnostic.with_fix(Fix::insert(
@@ -80,11 +90,11 @@ impl Validator for GeminiMdValidator {
             }
         }
 
-        // GM-002: Missing Section Headers (WARNING)
+        // GM-002: Missing Section Headers (INFO, agnix heuristic)
         if config.is_rule_enabled("GM-002") {
             if let Some(issue) = check_section_headers(content) {
                 diagnostics.push(
-                    Diagnostic::warning(
+                    Diagnostic::info(
                         path_buf.clone(),
                         issue.line,
                         issue.column,
@@ -96,11 +106,11 @@ impl Validator for GeminiMdValidator {
             }
         }
 
-        // GM-003: Missing Project Context (WARNING)
+        // GM-003: Missing Project Context (INFO, agnix heuristic)
         if config.is_rule_enabled("GM-003") {
             if let Some(issue) = check_project_context(content) {
                 diagnostics.push(
-                    Diagnostic::warning(
+                    Diagnostic::info(
                         path_buf.clone(),
                         issue.line,
                         issue.column,
@@ -109,52 +119,6 @@ impl Validator for GeminiMdValidator {
                     )
                     .with_suggestion(t!("rules.gm_003.suggestion")),
                 );
-            }
-        }
-
-        // GM-007: @import file not found (WARNING)
-        if config.is_rule_enabled("GM-007") {
-            for (line_num, line) in content.lines().enumerate() {
-                let trimmed = line.trim();
-                if let Some(import_path) = trimmed.strip_prefix("@import ") {
-                    let import_path = import_path.trim().trim_matches('"').trim_matches('\'');
-                    if !import_path.is_empty() {
-                        // Reject absolute paths and path traversal attempts
-                        let is_absolute = import_path.starts_with('/')
-                            || import_path.starts_with('\\')
-                            || (import_path.len() >= 2 && import_path.as_bytes()[1] == b':');
-                        let has_traversal = Path::new(import_path)
-                            .components()
-                            .any(|c| matches!(c, std::path::Component::ParentDir));
-                        if is_absolute || has_traversal {
-                            diagnostics.push(
-                                Diagnostic::warning(
-                                    path_buf.clone(),
-                                    line_num + 1,
-                                    0,
-                                    "GM-007",
-                                    t!("rules.gm_007.message", path = import_path),
-                                )
-                                .with_suggestion(t!("rules.gm_007.suggestion")),
-                            );
-                            continue;
-                        }
-                        let base_dir = path.parent().unwrap_or(Path::new("."));
-                        let resolved = base_dir.join(import_path);
-                        if std::fs::symlink_metadata(&resolved).is_err() {
-                            diagnostics.push(
-                                Diagnostic::warning(
-                                    path_buf.clone(),
-                                    line_num + 1,
-                                    0,
-                                    "GM-007",
-                                    t!("rules.gm_007.message", path = import_path),
-                                )
-                                .with_suggestion(t!("rules.gm_007.suggestion")),
-                            );
-                        }
-                    }
-                }
             }
         }
 
@@ -230,7 +194,8 @@ fn main() {}
         let diagnostics = validate(content);
         let gm_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-001").collect();
         assert_eq!(gm_001.len(), 1);
-        assert_eq!(gm_001[0].level, DiagnosticLevel::Error);
+        // Was an error; Gemini loads the file, so it is MEDIUM (warning).
+        assert_eq!(gm_001[0].level, DiagnosticLevel::Warning);
         assert!(gm_001[0].message.contains("Unclosed code block"));
     }
 
@@ -249,6 +214,12 @@ fn main() {}
         assert!(
             fix.replacement.contains("```"),
             "Fix should append closing code fence"
+        );
+        let mut fixed = content.to_string();
+        fixed.replace_range(fix.start_byte..fix.end_byte, &fix.replacement);
+        assert!(
+            !validate(&fixed).iter().any(|d| d.rule == "GM-001"),
+            "{fixed}"
         );
     }
 
@@ -275,8 +246,10 @@ Check [this link](http://example.com for more info.
         let diagnostics = validate(content);
         let gm_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-001").collect();
         assert_eq!(gm_001.len(), 1);
-        assert_eq!(gm_001[0].level, DiagnosticLevel::Error);
+        // Was an error; the malformed-link branch is an agnix heuristic.
+        assert_eq!(gm_001[0].level, DiagnosticLevel::Warning);
         assert!(gm_001[0].message.contains("Malformed markdown link"));
+        assert!(gm_001[0].fixes.is_empty());
     }
 
     #[test]
@@ -302,7 +275,8 @@ More text here."#;
         let diagnostics = validate(content);
         let gm_002: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-002").collect();
         assert_eq!(gm_002.len(), 1);
-        assert_eq!(gm_002[0].level, DiagnosticLevel::Warning);
+        // Was a warning; GM-002 is an agnix heuristic (LOW).
+        assert_eq!(gm_002[0].level, DiagnosticLevel::Info);
     }
 
     #[test]
@@ -349,7 +323,8 @@ Use npm test.
         let diagnostics = validate(content);
         let gm_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-003").collect();
         assert_eq!(gm_003.len(), 1);
-        assert_eq!(gm_003[0].level, DiagnosticLevel::Warning);
+        // Was a warning; GM-003 is an agnix heuristic (LOW).
+        assert_eq!(gm_003[0].level, DiagnosticLevel::Info);
     }
 
     #[test]
@@ -419,7 +394,9 @@ Just text without headers."#;
 
     #[test]
     fn test_all_gm_rules_can_be_disabled() {
-        let rules = ["GM-001", "GM-002", "GM-003", "GM-007"];
+        // GM-007 was retired (it scanned `@import` lines; REF-001 resolves
+        // Gemini's `@path` imports).
+        let rules = ["GM-001", "GM-002", "GM-003"];
 
         for rule in rules {
             let mut config = LintConfig::default();
@@ -502,85 +479,18 @@ Run npm test.
         );
     }
 
-    // ===== GM-007: @import file not found =====
-
     #[test]
-    fn test_gm_007_import_not_found() {
-        let content = r#"# Project
-
-This project validates agent configs.
-
-@import "nonexistent-file-that-does-not-exist.md"
-"#;
-        let diagnostics = validate(content);
-        let gm_007: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-007").collect();
-        assert_eq!(
-            gm_007.len(),
-            1,
-            "GM-007 should fire for non-existent import path"
-        );
-        assert_eq!(gm_007[0].level, DiagnosticLevel::Warning);
+    fn test_import_lines_are_not_checked_here() {
+        // The retired GM-007 reported `@import "x"` lines; Gemini imports
+        // are `@path` and REF-001 resolves them.
+        let content = "# Project\n\nThis project validates agent configs.\n\n@import \"nonexistent-file.md\"\n";
+        assert!(validate(content).is_empty());
     }
 
-    #[test]
-    fn test_gm_007_no_imports_no_error() {
-        let content = r#"# Project
-
-This project validates agent configs.
-
-## Build
-
-Run cargo build.
-"#;
-        let diagnostics = validate(content);
-        let gm_007: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-007").collect();
-        assert!(
-            gm_007.is_empty(),
-            "GM-007 should not fire when there are no @import directives"
-        );
-    }
+    // ===== GM-001 suggestions =====
 
     #[test]
-    fn test_gm_007_empty_import_path() {
-        let content = r#"# Project
-
-This project validates agent configs.
-
-@import ""
-@import ''
-@import
-"#;
-        let diagnostics = validate(content);
-        let gm_007: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-007").collect();
-        assert!(
-            gm_007.is_empty(),
-            "GM-007 should handle empty import paths gracefully without firing"
-        );
-    }
-
-    #[test]
-    fn test_gm_007_disabled_rule() {
-        let mut config = LintConfig::default();
-        config.rules_mut().disabled_rules = vec!["GM-007".to_string()];
-
-        let content = r#"# Project
-
-This project validates agent configs.
-
-@import "nonexistent-file.md"
-"#;
-        let diagnostics = validate_with_config(content, &config);
-        let gm_007: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-007").collect();
-        assert!(
-            gm_007.is_empty(),
-            "GM-007 should not fire when disabled via config"
-        );
-    }
-
-    // ===== GM-001 improved suggestion test =====
-
-    #[test]
-    fn test_gm_001_suggestion_mentions_unclosed_tags() {
+    fn test_gm_001_unclosed_fence_suggestion_mentions_imports() {
         let content = r#"```unclosed
 Some content"#;
         let diagnostics = validate(content);
@@ -590,14 +500,10 @@ Some content"#;
             !gm_001.is_empty(),
             "GM-001 should fire for unclosed code block"
         );
-        assert!(
-            gm_001[0].suggestion.is_some(),
-            "GM-001 should have a suggestion"
-        );
         let suggestion = gm_001[0].suggestion.as_ref().unwrap();
         assert!(
-            suggestion.contains("unclosed tags"),
-            "GM-001 suggestion should mention 'unclosed tags', got: {}",
+            suggestion.contains("@ imports"),
+            "GM-001 suggestion should explain the hidden imports, got: {}",
             suggestion
         );
     }

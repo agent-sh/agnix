@@ -1,0 +1,5 @@
+{
+  "name": "audit",
+  "version": "2.0.0",
+  "description": "Audit log of tool calls"
+}

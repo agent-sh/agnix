@@ -310,20 +310,37 @@ fn test_detect_gemini_md() {
 fn test_validators_for_gemini_md() {
     let registry = ValidatorRegistry::with_defaults();
     let validators = registry.validators_for(FileType::GeminiMd);
-    // PromptValidator is not registered for GEMINI.md: Gemini advises
-    // "Use negative constraints", the opposite of PE-006. CopilotValidator
-    // checks GEMINI.md @references for Copilot runs (COP-030).
+    // PromptValidator is not registered for GEMINI.md: PE-005/PE-006 contradict
+    // Gemini's "Use negative constraints" guidance. CopilotValidator checks
+    // GEMINI.md @references for Copilot runs (COP-030).
     assert_eq!(validators.len(), 5);
+    assert!(validators.iter().all(|v| v.name() != "PromptValidator"));
 }
 
 #[test]
 fn test_validators_for_gemini_settings() {
     let registry = ValidatorRegistry::with_defaults();
     let validators = registry.validators_for(FileType::GeminiSettings);
-    // McpValidator runs the server-level MCP checks on `mcpServers`.
-    assert_eq!(validators.len(), 2);
-    assert_eq!(validators[0].name(), "GeminiSettingsValidator");
-    assert_eq!(validators[1].name(), "McpValidator");
+    // McpValidator runs the server-level MCP checks on `mcpServers`;
+    // GeminiHooksValidator checks the `hooks` / `hooksConfig` blocks.
+    let mut names: Vec<_> = validators.iter().map(|v| v.name()).collect();
+    names.sort_unstable();
+    assert_eq!(
+        names,
+        [
+            "GeminiHooksValidator",
+            "GeminiSettingsValidator",
+            "McpValidator"
+        ]
+    );
+}
+
+#[test]
+fn test_validators_for_gemini_hooks() {
+    let registry = ValidatorRegistry::with_defaults();
+    let validators = registry.validators_for(FileType::GeminiHooks);
+    let names: Vec<_> = validators.iter().map(|v| v.name()).collect();
+    assert_eq!(names, ["GeminiHooksValidator"]);
 }
 
 #[test]
@@ -348,21 +365,28 @@ fn test_validators_for_gemini_ignore() {
 fn test_validators_for_skill() {
     let registry = ValidatorRegistry::with_defaults();
     let validators = registry.validators_for(FileType::Skill);
-    // 9: the Copilot, Cursor and Cline validators act on their own skill
-    // folders (CP-SK-002, CUR-023, CL-SK-004), and the Codex (CX-SK-004/007)
-    // and OpenCode skill directory validators run on SKILL.md too.
-    assert_eq!(validators.len(), 9);
+    // 10: the Copilot, Cursor and Cline validators act on their own skill
+    // folders (CP-SK-002, CUR-023, CL-SK-004), the Codex (CX-SK-004/007) and
+    // OpenCode skill directory validators run on SKILL.md too, and
+    // AmpSkillValidator joined for the Amp skill checks.
+    assert_eq!(validators.len(), 10);
 }
 
 #[test]
 fn test_validators_for_claude_md() {
     let registry = ValidatorRegistry::with_defaults();
     let validators = registry.validators_for(FileType::ClaudeMd);
-    // 11: CopilotValidator checks AGENTS.md / CLAUDE.md @references for
-    // Copilot runs (COP-030), and the OpenCode instruction-file validator
-    // (OC-AGM-*) runs on AGENTS.md and CLAUDE.md.
-    assert_eq!(validators.len(), 11);
+    // 12: CopilotValidator checks AGENTS.md / CLAUDE.md @references for
+    // Copilot runs (COP-030), the OpenCode instruction-file validator
+    // (OC-AGM-*) runs on AGENTS.md and CLAUDE.md, and WindsurfAgentsMdValidator
+    // (WS-011, AGENTS.md in Windsurf projects) joined.
+    assert_eq!(validators.len(), 12);
     assert!(validators.iter().any(|v| v.name() == "AmpValidator"));
+    assert!(
+        validators
+            .iter()
+            .any(|v| v.name() == "WindsurfAgentsMdValidator")
+    );
     assert!(
         validators
             .iter()
@@ -2134,15 +2158,17 @@ fn test_validate_fixtures_directory() {
         }),
         "Expected AMP-002 from amp-checks/.agents/checks/invalid-severity.md fixture"
     );
+    // AMP-003 now reports on the file AGENTS.md @-mentions (Amp reads
+    // `globs` there), not on AGENTS.md itself.
     assert!(
         amp_diagnostics.iter().any(|d| {
             d.rule == "AMP-003"
                 && d.file
                     .to_string_lossy()
                     .replace('\\', "/")
-                    .contains("amp-checks/AGENTS.md")
+                    .contains("amp-checks/docs/typescript.md")
         }),
-        "Expected AMP-003 from amp-checks/AGENTS.md fixture"
+        "Expected AMP-003 from amp-checks/docs/typescript.md (mentioned by amp-checks/AGENTS.md)"
     );
     assert!(
         amp_diagnostics.iter().any(|d| {
@@ -4926,8 +4952,10 @@ fn test_validator_names_are_ascii_and_nonempty() {
         FileType::GeminiMd,
         FileType::GeminiSettings,
         FileType::AmpSettings,
+        FileType::AmpSkillMcp,
         FileType::GeminiExtension,
         FileType::GeminiIgnore,
+        FileType::GeminiHooks,
         FileType::CodexConfig,
         FileType::GenericMarkdown,
     ];
@@ -4975,8 +5003,10 @@ const ALL_VALIDATED_FILE_TYPES: &[FileType] = &[
     FileType::GeminiMd,
     FileType::GeminiSettings,
     FileType::AmpSettings,
+    FileType::AmpSkillMcp,
     FileType::GeminiExtension,
     FileType::GeminiIgnore,
+    FileType::GeminiHooks,
     FileType::CodexConfig,
     FileType::CodexHooks,
     FileType::CodexAgent,

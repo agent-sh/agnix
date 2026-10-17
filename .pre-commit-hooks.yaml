@@ -23,9 +23,6 @@
       \.geminiignore|
       \.cursorrules(\.md)?|
       \.clinerules(/.+)?|
-      \.roorules|
-      \.roomodes|
-      \.rooignore|
       \.windsurfrules|
       \.claude/settings(\.local)?\.json|
       \.claude/managed-settings\.json|
@@ -50,7 +47,6 @@
       \.gemini/agents/[^/]+\.md|
       \.amp/settings(\.local)?\.json|
       \.agents/(checks|skills)/.+\.md|
-      \.roo/rules[^/]*/.+\.md|
       \.windsurf/(rules|workflows)/.+\.md|
       \.windsurf/[^/]+\.md|
       \.kiro/steering/.+\.md|
@@ -88,9 +84,6 @@
       \.geminiignore|
       \.cursorrules(\.md)?|
       \.clinerules(/.+)?|
-      \.roorules|
-      \.roomodes|
-      \.rooignore|
       \.windsurfrules|
       \.claude/settings(\.local)?\.json|
       \.claude/managed-settings\.json|
@@ -115,7 +108,6 @@
       \.gemini/agents/[^/]+\.md|
       \.amp/settings(\.local)?\.json|
       \.agents/(checks|skills)/.+\.md|
-      \.roo/rules[^/]*/.+\.md|
       \.windsurf/(rules|workflows)/.+\.md|
       \.windsurf/[^/]+\.md|
       \.kiro/steering/.+\.md|

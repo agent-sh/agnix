@@ -100,7 +100,6 @@ impl ValidatorProvider for BuiltinProvider {
             &CopilotProvider,
             &CursorProvider,
             &GeminiProvider,
-            &RooProvider,
             &WindsurfProvider,
             &MiscProvider,
         ];
@@ -398,7 +397,7 @@ impl ValidatorRegistryBuilder {
 ///
 /// Used by `BuiltinProvider` (via `debug_assert_eq!`) and tests to catch
 /// accidental additions or removals without updating all providers.
-const EXPECTED_BUILTIN_COUNT: usize = 139;
+const EXPECTED_BUILTIN_COUNT: usize = 143;
 
 // -- Category providers -----------------------------------------------------
 //
@@ -693,8 +692,12 @@ impl ValidatorProvider for GeminiProvider {
                 Some("GeminiMdValidator"),
                 gemini_md_validator,
             ),
-            // No PromptValidator: Gemini advises "Use negative constraints",
-            // the opposite of PE-006, and no PE rule has a Gemini source.
+            // No PromptValidator on GEMINI.md: its PE-005/PE-006 wording
+            // advice contradicts Gemini's own guidance, "**Use negative
+            // constraints:** Explicitly telling the agent what _not_ to do
+            // (for example, "Do not use class components") is often more
+            // effective than vague positive instructions."
+            // (geminicli.com/docs/cli/tutorials/memory-management)
             (FileType::GeminiMd, Some("XmlValidator"), xml_validator),
             (
                 FileType::GeminiMd,
@@ -711,6 +714,18 @@ impl ValidatorProvider for GeminiProvider {
                 Some("GeminiSettingsValidator"),
                 gemini_settings_validator,
             ),
+            // The `hooks` / `hooksConfig` blocks of settings.json and an
+            // extension's hooks/hooks.json share one hook validator.
+            (
+                FileType::GeminiSettings,
+                Some("GeminiHooksValidator"),
+                gemini_hooks_validator,
+            ),
+            (
+                FileType::GeminiHooks,
+                Some("GeminiHooksValidator"),
+                gemini_hooks_validator,
+            ),
             (
                 FileType::GeminiExtension,
                 Some("GeminiExtensionValidator"),
@@ -721,32 +736,16 @@ impl ValidatorProvider for GeminiProvider {
                 Some("GeminiIgnoreValidator"),
                 gemini_ignore_validator,
             ),
-        ]
-    }
-}
-
-/// Roo Code validators.
-struct RooProvider;
-
-impl ValidatorProvider for RooProvider {
-    fn validators(&self) -> Vec<(FileType, ValidatorFactory)> {
-        self.named_validators()
-            .into_iter()
-            .map(|(ft, _, f)| (ft, f))
-            .collect()
-    }
-
-    fn named_validators(&self) -> Vec<(FileType, Option<&'static str>, ValidatorFactory)> {
-        vec![
-            (FileType::RooRules, Some("RooCodeValidator"), roo_validator),
-            (FileType::RooModes, Some("RooCodeValidator"), roo_validator),
-            (FileType::RooIgnore, Some("RooCodeValidator"), roo_validator),
             (
-                FileType::RooModeRules,
-                Some("RooCodeValidator"),
-                roo_validator,
+                FileType::GeminiCommand,
+                Some("GeminiCommandValidator"),
+                gemini_command_validator,
             ),
-            (FileType::RooMcp, Some("RooCodeValidator"), roo_validator),
+            (
+                FileType::GeminiPolicy,
+                Some("GeminiPolicyValidator"),
+                gemini_policy_validator,
+            ),
         ]
     }
 }
@@ -779,6 +778,23 @@ impl ValidatorProvider for WindsurfProvider {
                 Some("WindsurfValidator"),
                 windsurf_validator,
             ),
+            (
+                FileType::WindsurfGlobalRules,
+                Some("WindsurfValidator"),
+                windsurf_validator,
+            ),
+            (
+                FileType::WindsurfHooks,
+                Some("WindsurfValidator"),
+                windsurf_validator,
+            ),
+            // WS-011 acts only on AGENTS.md files of projects that use
+            // Windsurf; every other ClaudeMd file returns early.
+            (
+                FileType::ClaudeMd,
+                Some("WindsurfAgentsMdValidator"),
+                windsurf_agents_md_validator,
+            ),
         ]
     }
 }
@@ -797,6 +813,19 @@ impl ValidatorProvider for MiscProvider {
     fn named_validators(&self) -> Vec<(FileType, Option<&'static str>, ValidatorFactory)> {
         vec![
             (FileType::AmpCheck, Some("AmpValidator"), amp_validator),
+            // Amp skill checks (AMP-005, AMP-006, AMP-008, AMP-010, AMP-SK-002,
+            // AMP-SK-003). On SKILL.md the validator returns early for paths
+            // outside Amp's skill roots; AmpSkillMcp is a skill's mcp.json.
+            (
+                FileType::Skill,
+                Some("AmpSkillValidator"),
+                amp_skill_validator,
+            ),
+            (
+                FileType::AmpSkillMcp,
+                Some("AmpSkillValidator"),
+                amp_skill_validator,
+            ),
             (FileType::Hooks, Some("HooksValidator"), hooks_validator),
             (
                 FileType::Hooks,
@@ -1161,6 +1190,10 @@ fn amp_validator() -> Box<dyn Validator> {
     Box::new(crate::rules::amp::AmpValidator)
 }
 
+fn amp_skill_validator() -> Box<dyn Validator> {
+    Box::new(crate::rules::amp_skill::AmpSkillValidator)
+}
+
 fn claude_md_validator() -> Box<dyn Validator> {
     Box::new(crate::rules::claude_md::ClaudeMdValidator)
 }
@@ -1253,8 +1286,20 @@ fn gemini_extension_validator() -> Box<dyn Validator> {
     Box::new(crate::rules::gemini_extension::GeminiExtensionValidator)
 }
 
+fn gemini_hooks_validator() -> Box<dyn Validator> {
+    Box::new(crate::rules::gemini_hooks::GeminiHooksValidator)
+}
+
 fn gemini_ignore_validator() -> Box<dyn Validator> {
     Box::new(crate::rules::gemini_ignore::GeminiIgnoreValidator)
+}
+
+fn gemini_command_validator() -> Box<dyn Validator> {
+    Box::new(crate::rules::gemini_command::GeminiCommandValidator)
+}
+
+fn gemini_policy_validator() -> Box<dyn Validator> {
+    Box::new(crate::rules::gemini_policy::GeminiPolicyValidator)
 }
 
 fn codex_validator() -> Box<dyn Validator> {
@@ -1317,12 +1362,12 @@ fn opencode_skill_validator() -> Box<dyn Validator> {
     Box::new(crate::rules::opencode_files::OpenCodeSkillValidator)
 }
 
-fn roo_validator() -> Box<dyn Validator> {
-    Box::new(crate::rules::roo::RooCodeValidator)
-}
-
 fn windsurf_validator() -> Box<dyn Validator> {
     Box::new(crate::rules::windsurf::WindsurfValidator)
+}
+
+fn windsurf_agents_md_validator() -> Box<dyn Validator> {
+    Box::new(crate::rules::windsurf::WindsurfAgentsMdValidator)
 }
 
 fn kiro_steering_validator() -> Box<dyn Validator> {
@@ -1625,8 +1670,9 @@ mod tests {
         // Skill has: SkillValidator, PerClientSkillValidator, XmlValidator,
         // ImportsValidator, the Copilot, Cursor and Cline validators, which
         // act only on their own skill folders (CP-SK-002, CUR-023, CL-SK-004),
-        // and the Codex (CX-SK-004/007) and OpenCode skill validators.
-        assert_eq!(skill_validators.len(), 9);
+        // the Codex (CX-SK-004/007) and OpenCode skill validators, and
+        // AmpSkillValidator (AMP-005, AMP-SK-002/003).
+        assert_eq!(skill_validators.len(), 10);
     }
 
     #[test]
@@ -1698,6 +1744,8 @@ mod tests {
             .without_validator("ClineSkillValidator")
             .without_validator("CodexSkillValidator")
             .without_validator("OpenCodeSkillValidator")
+            // Added with the Amp skill checks (AMP-005, AMP-SK-002/003).
+            .without_validator("AmpSkillValidator")
             .build();
 
         assert!(
@@ -1854,8 +1902,12 @@ mod tests {
             FileType::GeminiMd,
             FileType::GeminiSettings,
             FileType::AmpSettings,
+            FileType::AmpSkillMcp,
             FileType::GeminiExtension,
             FileType::GeminiIgnore,
+            FileType::GeminiHooks,
+            FileType::GeminiCommand,
+            FileType::GeminiPolicy,
             FileType::CodexConfig,
             FileType::CodexPlugin,
             FileType::CodexHooks,
@@ -1863,14 +1915,11 @@ mod tests {
             FileType::CodexRules,
             FileType::CodexPrompt,
             FileType::CodexSkillMetadata,
-            FileType::RooRules,
-            FileType::RooModes,
-            FileType::RooIgnore,
-            FileType::RooModeRules,
-            FileType::RooMcp,
             FileType::WindsurfRule,
             FileType::WindsurfWorkflow,
             FileType::WindsurfRulesLegacy,
+            FileType::WindsurfGlobalRules,
+            FileType::WindsurfHooks,
             FileType::KiroSteering,
             FileType::KiroPower,
             FileType::KiroPowerPlugin,
@@ -1931,8 +1980,12 @@ mod tests {
                 | FileType::GeminiMd
                 | FileType::GeminiSettings
                 | FileType::AmpSettings
+                | FileType::AmpSkillMcp
                 | FileType::GeminiExtension
                 | FileType::GeminiIgnore
+                | FileType::GeminiHooks
+                | FileType::GeminiCommand
+                | FileType::GeminiPolicy
                 | FileType::CodexConfig
                 | FileType::CodexPlugin
                 | FileType::CodexRequirements
@@ -1941,14 +1994,11 @@ mod tests {
                 | FileType::CodexRules
                 | FileType::CodexPrompt
                 | FileType::CodexSkillMetadata
-                | FileType::RooRules
-                | FileType::RooModes
-                | FileType::RooIgnore
-                | FileType::RooModeRules
-                | FileType::RooMcp
                 | FileType::WindsurfRule
                 | FileType::WindsurfWorkflow
                 | FileType::WindsurfRulesLegacy
+                | FileType::WindsurfGlobalRules
+                | FileType::WindsurfHooks
                 | FileType::KiroSteering
                 | FileType::KiroPower
                 | FileType::KiroPowerPlugin
@@ -2526,18 +2576,16 @@ mod tests {
 
     #[test]
     fn gemini_provider_count() {
-        // PromptValidator no longer runs on GeminiMd.
-        assert_eq!(GeminiProvider.named_validators().len(), 7);
-    }
-
-    #[test]
-    fn roo_provider_count() {
-        assert_eq!(RooProvider.named_validators().len(), 5);
+        // -1 PromptValidator on GEMINI.md, +2 GeminiHooksValidator,
+        // +2 GeminiCommandValidator and GeminiPolicyValidator.
+        assert_eq!(GeminiProvider.named_validators().len(), 11);
     }
 
     #[test]
     fn windsurf_provider_count() {
-        assert_eq!(WindsurfProvider.named_validators().len(), 3);
+        // 6: global rules, Cascade hooks and the AGENTS.md check (WS-011)
+        // joined the rule, workflow and .windsurfrules entries.
+        assert_eq!(WindsurfProvider.named_validators().len(), 6);
     }
 
     #[test]
@@ -2553,8 +2601,9 @@ mod tests {
         // files and skills added 21; McpValidator on the six client configs that
         // embed MCP servers added 6; McpValidator on the three plugin manifest
         // types and ClaudeMcpValidator on Claude plugin manifests (inline
-        // `mcpServers`) added 4.
-        assert_eq!(MiscProvider.named_validators().len(), 74);
+        // `mcpServers`) added 4; AmpSkillValidator on Skill and AmpSkillMcp
+        // added 2.
+        assert_eq!(MiscProvider.named_validators().len(), 76);
     }
 
     #[test]
@@ -2564,7 +2613,6 @@ mod tests {
             + CopilotProvider.named_validators().len()
             + CursorProvider.named_validators().len()
             + GeminiProvider.named_validators().len()
-            + RooProvider.named_validators().len()
             + WindsurfProvider.named_validators().len()
             + MiscProvider.named_validators().len();
         assert_eq!(
@@ -2581,7 +2629,6 @@ mod tests {
             &CopilotProvider,
             &CursorProvider,
             &GeminiProvider,
-            &RooProvider,
             &WindsurfProvider,
             &MiscProvider,
         ];
@@ -2604,7 +2651,6 @@ mod tests {
             &CopilotProvider,
             &CursorProvider,
             &GeminiProvider,
-            &RooProvider,
             &WindsurfProvider,
             &MiscProvider,
         ];
@@ -2709,14 +2755,13 @@ mod tests {
     #[test]
     fn builtin_provider_output_matches_sub_provider_concatenation() {
         // BuiltinProvider::named_validators() must be a pure flat_map of all
-        // 8 sub-providers in declaration order with no reordering or deduplication.
+        // 7 sub-providers in declaration order with no reordering or deduplication.
         let expected: Vec<_> = [
             SkillProvider.named_validators(),
             ClaudeProvider.named_validators(),
             CopilotProvider.named_validators(),
             CursorProvider.named_validators(),
             GeminiProvider.named_validators(),
-            RooProvider.named_validators(),
             WindsurfProvider.named_validators(),
             MiscProvider.named_validators(),
         ]

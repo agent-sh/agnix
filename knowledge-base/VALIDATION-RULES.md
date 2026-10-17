@@ -1030,35 +1030,84 @@ Kiro agent rules check `.kiro/agents/**/*.json` and `*.md` against the engines a
 **Requirement**: Skills in `.agents/skills/` when Amp is the one selected tool that reads it SHOULD use only the frontmatter fields Amp reads: the Agent Skills fields plus `mcpServers` ("MCP Servers in Skills") and `builtin-tools` for plugin-bundled skills. `.agents/skills/` is shared by Codex, Amp, Cline, Devin Desktop, Copilot, OpenCode, Cursor and Gemini, so with no single reader selected no client's field list applies.
 **Detection**: Top-level keys of the parsed frontmatter (unparseable frontmatter is left to AS-016). A field another skill client acts on is a warning; plain extra data (`version`, `tags`, `author`, ...) is info.
 **Fix**: [AUTO-FIX, safe/unsafe] Move a single-line scalar field under `metadata` (into an existing block mapping, or by creating the block in place), quoting numbers and booleans so `metadata` stays a string map; safe for plain data no skill client reads, unsafe for another client's field. Other values (lists, maps, multi-line scalars) are an unsafe deletion of the whole entry. Every fix is applied to a copy and re-parsed and is offered only when the frontmatter parses to the intended mapping (the old fix deleted only the key line, leaving list items behind).
-**Source**: ampcode.com/docs/customize/skills
+**Source**: ampcode.com/docs/customize/skills ("Skill Format", "MCP Servers in Skills"), ampcode.com/docs/plugin-api (bundled skills)
+
+<a id="amp-sk-002"></a>
+### AMP-SK-002 [LOW] Amp Skill Masked by an .agents/skills Copy
+**Requirement**: A project SHOULD NOT define one skill name in both `.agents/skills/` and `.claude/skills/` with different content: "Amp uses the first skill with a given frontmatter `name`. The order is:" ... "4. `.agents/skills/` in the project and searched parent directories" "5. `.claude/skills/` in those directories" (skills, "Skill Sources and Precedence")
+**Detection**: Info, at `name`, on `<dir>/.claude/skills/<skill>/SKILL.md` when `<dir>/.agents/skills/<skill>/SKILL.md` exists, is not byte-identical (identical copies are deliberate per-tool copies, and masking one is harmless) and has the same frontmatter `name`. A `.claude` copy whose text names the `.agents` copy (`.agents/skills/<skill>/SKILL.md`, a pointer stub such as "Read `.agents/skills/<skill>/SKILL.md` and follow it") is also not reported: Amp then uses the copy the stub points to. Not reported when the workspace or user settings next to the `.claude/skills/` root set `amp.skills.disableClaudeCodeSkills` to true. Claude Code reads only `.claude/skills/`, so a deliberate per-tool variant may want this rule off
+**Fix**: No auto-fix - keep one copy, make the copies identical, or rename one
+**Source**: ampcode.com/docs/customize/skills ("Skill Sources and Precedence")
+
+<a id="amp-sk-003"></a>
+### AMP-SK-003 [MEDIUM] Amp Skill Too Deep to Be Discovered
+**Requirement**: A skill directory SHOULD be at most five directories below an Amp skills root: "Amp searches local skill directories recursively, up to five directories below each skills root. For example, it discovers `~/.agents/skills/something/deep/SKILL.md`; the directory containing `SKILL.md` is the skill directory." (skills, "Skill Sources and Precedence")
+**Detection**: Warning on a SKILL.md whose directory is more than five directories below the nearest Amp skills root (`.agents/skills/`, `.claude/skills/`, `~/.config/agents/skills/`, `~/.agents/skills/`, `~/.config/amp/skills/`). Depth counts the directories from the root to the skill directory, so the docs example `something/deep` is depth 2 and `<root>/a/b/c/d/e/SKILL.md` (depth 5) is the deepest one found. Reading "five directories below" as the depth of the skill directory is agnix's interpretation of the example
+**Fix**: No auto-fix - move the skill directory closer to the root
+**Source**: ampcode.com/docs/customize/skills ("Skill Sources and Precedence")
 
 <a id="amp-001"></a>
-### AMP-001 [HIGH] Invalid Amp Check Frontmatter
-**Requirement**: `.agents/checks/*.md` files MUST include valid YAML frontmatter with required `name` and known optional fields
-**Detection**: Missing frontmatter OR invalid YAML OR missing `name` OR unknown key outside `name`, `description`, `severity-default`, `tools`
-**Fix**: [AUTO-FIX] Add valid frontmatter with required fields and remove unknown keys
-**Source**: ampcode.com/manual#code-review-checks
+### AMP-001 [HIGH] Invalid Amp Check File
+**Requirement**: A check MUST have frontmatter and instructions: "Each check must have valid YAML frontmatter with a non-empty `name`, followed by non-empty check instructions" and "Existing checks under `.agents/checks/` continue to apply if they use the format below." (review, "Check File Format"; checks now run through the `@amp/review-checks` plugin, "`amp review` is deprecated")
+**Detection**: Error for a missing or unclosed frontmatter block, invalid YAML, frontmatter that is not a mapping, a missing, empty or non-string `name`, and no non-whitespace text after the frontmatter. Warning (at the key) for a key other than `name`, `description`, `severity-default` and `tools`, a non-string `description`, and a `tools` that is not a string or a list of strings. `tools` is not on the current page; whether the plugin still reads it is unverified, so it is accepted. Files: `.agents/checks/**/*.md` (any `.agents/checks/` in the tree) and the global `~/.config/agents/checks/` and `~/.config/amp/checks/` ("The plugin also finds global checks under `$XDG_CONFIG_HOME/agents/checks/` and `$XDG_CONFIG_HOME/amp/checks/`")
+**Fix**: [AUTO-FIX, unsafe] Remove an unknown key with its value lines (the plugin may read keys the page does not document)
+**Source**: ampcode.com/docs/review ("Check File Format", "Migrating From `amp review`")
 
 <a id="amp-002"></a>
 ### AMP-002 [MEDIUM] Invalid Amp severity-default
-**Requirement**: `severity-default` SHOULD be one of `low`, `medium`, `high`, `critical`
-**Detection**: Frontmatter `severity-default` value is missing, non-string, or outside allowed values
-**Fix**: [AUTO-FIX] Set `severity-default` to a valid value
-**Source**: ampcode.com/manual#code-review-checks
+**Requirement**: `severity-default` MUST be one of the documented values when present: "`severity-default` is optional. Its value must be `low`, `medium`, `high`, or `critical`." (review, "Check File Format")
+**Detection**: Warning, at the value, for a non-string or a value other than `low`, `medium`, `high`, `critical`. A missing field is not reported
+**Fix**: [AUTO-FIX, unsafe] Replace the value with the closest valid one (for example `High` with `high`), keeping its quotes
+**Source**: ampcode.com/docs/review ("Check File Format")
 
 <a id="amp-003"></a>
-### AMP-003 [MEDIUM] Invalid AGENTS.md globs Frontmatter for Amp
-**Requirement**: AGENTS frontmatter `globs` SHOULD contain syntactically valid glob patterns for Amp
-**Detection**: `globs` is invalid type OR contains a pattern that fails glob parsing (after Amp implicit `**/` behavior)
-**Fix**: Correct glob syntax in `globs` frontmatter
-**Source**: ampcode.com/manual#settings
+### AMP-003 [MEDIUM] Invalid globs in a File AGENTS.md Mentions
+**Requirement**: `globs` frontmatter of a file that an agent file @-mentions SHOULD be valid glob patterns: "To provide guidance that only applies when working with certain files, you can specify `globs` in YAML front matter of mentioned files." "Mentioned files with `globs` will only be included if Amp has read a file matching any of the globs" and "Globs are implicitly prefixed with `**/` unless they start with `../` or `./`, in which case they refer to paths relative to the mentioned file." (agents-md, "Granular Guidance")
+**Detection**: Follows the @-mentions of AGENTS.md, AGENTS.local.md and AGENTS.override.md outside fenced and inline code ("@-mentions in code blocks are ignored"), relative to the mentioning file ("Relative paths are interpreted relative to the agent file containing the mention"), literal Markdown paths and glob mentions such as `@doc/*.md` or `@.agent/**/*.md` (expanded inside the project root, at most 64 files and 4096 directory entries per agent file; `.git`, `node_modules` and `target` are skipped). `@~/` and absolute mentions are not followed. For each mentioned Markdown file with frontmatter `globs`, warning on that file at `globs` when the value is not a string or a list of strings, or a pattern (after the implicit `**/` prefix) is not a valid glob. Each file is checked once per agent file. `globs` on AGENTS.md itself is not reported: Amp documents it only for mentioned files (unverified whether Amp ignores it on AGENTS.md)
+**Fix**: No auto-fix - correct the glob syntax
+**Source**: ampcode.com/docs/customize/agents-md ("Writing AGENTS.md Files", "Granular Guidance")
 
 <a id="amp-004"></a>
 ### AMP-004 [HIGH] Invalid Amp Settings Configuration
-**Requirement**: `.amp/settings.json` MUST be valid JSON and use known top-level keys, including documented dotted keys such as `amp.runner.autoUpdate.enabled`, `amp.remoteThreadCreation.enabled`, and `amp.updates.mode`
-**Detection**: JSON parse error OR unknown top-level key in `.amp/settings.json` / `.amp/settings.local.json`
-**Fix**: [AUTO-FIX] Fix JSON syntax and remove unknown keys
-**Source**: ampcode.com/docs/cli/settings, ampcode.com/docs/cli/runners
+**Requirement**: Amp settings files MUST parse and SHOULD use the keys and types of the official schema: "All settings use the `amp.` prefix." and "Before distributing a managed settings file, validate it against the Amp settings JSON Schema" (settings, "Configuration", "Managed Settings"). The schema (cli-settings.schema.json) lists `$schema` and 21 `amp.` properties with `"additionalProperties": false` and `"patternProperties": { "^amp\\.": true }`; the settings page also names `amp.url`, `amp.proxy`, `amp.workspaces` and `amp.mcpTrustedServers`
+**Detection**: Files: workspace `.amp/settings.json` / `.amp/settings.jsonc` ("the nearest `.amp/settings.json` or `.amp/settings.jsonc`"), user `~/.config/amp/settings.json(c)`, and `managed-settings.json` in `/Library/Application Support/ampcode/`, `/etc/ampcode/` or `%ProgramData%\ampcode\`. Both names are parsed as JSONC (Amp documents `settings.jsonc` and shows `//` comments in its examples; whether `settings.json` accepts comments is unverified, so comments are not reported). Error for a parse error or a non-object top level. Warning, at the key, for a key without the `amp.` prefix other than `$schema` (outside the schema). Info for an undocumented `amp.` key (the schema accepts any `amp.` key through `patternProperties`, so it may be a typo or a setting of another Amp client), with a "did you mean" hint for close spellings. Warning, at the value, for a value of the wrong schema type: booleans, `amp.fuzzy.alwaysIncludePaths` and `amp.tools.disable` (string arrays), `amp.skills.path` and `$schema` (strings), `amp.keymap` (object of string, string array or null), `amp.defaultVisibility` (object of `private`, `workspace`, `group`), `amp.mcpServers` (object), `amp.updates.mode` (`auto`, `warn`, `disabled`) and `amp.admin.compatibilityDate` (`YYYY-MM-DD`). `amp.admin.compatibilityDate` outside `managed-settings.json` is info: "Both the local file and the workspace document support one additional field" (managed settings only; the page does not say what a workspace or user file does with it). `amp.mcpPermissions` is AMP-007 and `amp.mcpServers` entries AMP-006 and AMP-010. `.amp/settings.local.json` is documented nowhere and is not validated (it is not Claude Code's `settings.local.json` either)
+**Fix**: [AUTO-FIX, unsafe] Remove an unknown key with its comma, keeping the JSON valid (Amp may read keys its schema leaves out)
+**Source**: ampcode.com/docs/cli/settings ("Configuration", "Settings", "Managed Settings"), ampcode.com/cli-settings.schema.json
+
+<a id="amp-005"></a>
+### AMP-005 [MEDIUM] Amp Skill Defines MCP Servers Twice
+**Requirement**: A skill SHOULD define its MCP servers in one place: "A skill can define MCP servers in a sibling `mcp.json` file or in the `mcpServers` field of its `SKILL.md` frontmatter. If both are present, Amp uses `mcpServers` and ignores `mcp.json`." (skills, "MCP Servers in Skills")
+**Detection**: Warning, at `mcpServers`, on a SKILL.md below an Amp skills root (`.agents/skills/`, `.claude/skills/`, `~/.config/agents/skills/`, `~/.agents/skills/`, `~/.config/amp/skills/`) whose frontmatter has a non-null `mcpServers` while a sibling `mcp.json` exists. The servers of that ignored `mcp.json` are not checked by AMP-006, AMP-008 or AMP-010
+**Fix**: No auto-fix - move the servers into one place
+**Source**: ampcode.com/docs/customize/skills ("MCP Servers in Skills")
+
+<a id="amp-006"></a>
+### AMP-006 [HIGH] Amp ID Token Outside HTTPS Headers
+**Requirement**: `${amp:id-token}` MUST appear only in headers of an HTTPS server without OAuth: "`${amp:id-token}` works only in headers of HTTPS servers without OAuth configuration. Amp rejects it in URLs and in the command, arguments, and environment of local servers." (mcp, "Amp ID Tokens")
+**Detection**: Error, at the value, for `${amp:id-token}` in `url`, `command`, an `args` item or an `env` value, and in a `headers` value of a server with an `oauth` object or a literal `url` that does not start with `https://`. A `url` built from a variable (`${SRC_ENDPOINT}/...`) is not judged. Checked in `amp.mcpServers` of Amp settings files, skill `mcp.json` files and SKILL.md `mcpServers` frontmatter (positions in YAML are found by key text and are approximate for flow-style values)
+**Fix**: No auto-fix - send the token in a header of an https:// server, or let a local server run `amp orb id-token` itself
+**Source**: ampcode.com/docs/customize/mcp ("Amp ID Tokens")
+
+<a id="amp-007"></a>
+### AMP-007 [MEDIUM] Invalid amp.mcpPermissions Rule
+**Requirement**: `amp.mcpPermissions` MUST be a list of rules with an object `matches` and an `allow`/`reject` action: "In `amp.mcpPermissions`, each rule's `matches` must be an object, such as `{"command":"*"}`, not a string. The workspace settings editor rejects invalid MCP permissions without changing the saved policy." and "For a remote MCP server, use the `url` key to match the server endpoint. For a local MCP server, use the `command` and `args` keys to match an executable command and its arguments." (settings, "Settings", "Managed Settings"). Schema: items `required: ["matches", "action"]`, `additionalProperties: false`, `action` enum `allow`, `reject`
+**Detection**: Warning for an `amp.mcpPermissions` value that is not an array, a rule that is not an object, a rule key other than `matches` and `action`, a missing `matches`, a `matches` that is not an object, a `matches` key other than `command`, `args` and `url`, a `matches` that combines `url` with `command` or `args` (no server has both, so the rule never matches), and a missing or invalid `action`. Warnings, not errors: the editor rejects such a policy, but how the CLI treats an invalid rule in a file is not documented
+**Fix**: No auto-fix
+**Source**: ampcode.com/docs/cli/settings ("Settings", "Managed Settings"), ampcode.com/cli-settings.schema.json
+
+<a id="amp-008"></a>
+### AMP-008 [LOW] Amp Skill MCP Server Without includeTools
+**Requirement**: Skill MCP servers SHOULD list the tools they expose: "`includeTools` (`string[]`, optional but recommended) contains tool names or glob patterns used to choose which tools are exposed." (skills, "MCP Servers in Skills"); "Too many available tools can reduce model performance" (mcp, "MCP Best Practices")
+**Detection**: Info, at the server name, for a skill `mcp.json` entry or a SKILL.md `mcpServers` entry with `command` or `url` and no `includeTools`. Not reported for `amp.mcpServers` in settings files (the recommendation is for skill servers). A server with a handful of tools may not need the filter; the rule stays informational
+**Fix**: No auto-fix - add `includeTools` with the tools the skill needs
+**Source**: ampcode.com/docs/customize/skills ("MCP Servers in Skills"), ampcode.com/docs/customize/mcp ("MCP Best Practices")
+
+<a id="amp-010"></a>
+### AMP-010 [HIGH] Invalid Amp MCP Server Configuration
+**Requirement**: MCP server entries MUST have the shape Amp reads: "MCP servers use the same configuration fields as MCP servers in skills—`command`/`args`/`env` for local servers, `url`/`headers` for remote." (mcp, "MCP"); skills, "MCP Servers in Skills": "`command` (`string`) is the command to run.", "`args` (`string[]`, optional) contains the command arguments.", "`env` (`object`, optional) contains the environment variables.", "`url` (`string`) is the server endpoint.", "`headers` (`object`, optional) contains the HTTP headers to send with requests."; the settings schema types the entries as `stdioMCPServer` (`command` required) or `httpMCPServer` (`url` required, `transport` `http`/`sse`/`http-first`, `oauth` with `clientId`, `authUrl`, `tokenUrl` required)
+**Detection**: Skill `mcp.json` (`<skills root>/<skill>/mcp.json`, Amp's flat shape with server names at the top level; detected as its own file type, so the generic MCP rules no longer misread a `url` entry as a stdio server): error for a parse error or a non-object top level (Amp cannot load the servers; JSONC is accepted). Warning, in skill `mcp.json` and SKILL.md `mcpServers`, for an entry that is not an object, has neither or both of `command` and `url`, a non-string `command` or `url`, `args` or `includeTools` that is not a string array, `env` or `headers` that is not an object of strings, an unknown `transport`, and an `oauth` that is not an object or lacks `clientId`, `authUrl` or `tokenUrl`; also a SKILL.md `mcpServers` that is not a mapping. In settings `amp.mcpServers` only the Amp-specific checks run (both `command` and `url`, `transport`, `oauth`); the generic MCP server checks cover the rest there. Other entry keys are not reported: the schema rejects them, but the MCP page says skill fields (such as `includeTools`) also apply to settings entries
+**Fix**: No auto-fix
+**Source**: ampcode.com/docs/customize/skills ("MCP Servers in Skills"), ampcode.com/docs/customize/mcp ("MCP"), ampcode.com/cli-settings.schema.json
 
 ---
 
@@ -3231,88 +3280,259 @@ OpenCode 1 (`opencode-ai`) and OpenCode 2 (`@opencode/cli`, released 2026-09-11)
 ## GEMINI CLI RULES
 
 <a id="gm-001"></a>
-### GM-001 [HIGH] Invalid Markdown Structure in GEMINI.md
-**Requirement**: GEMINI.md MUST have valid markdown (no unclosed code blocks or malformed links)
-**Detection**: Parse markdown, check for unclosed ``` blocks and malformed [text]( links
-**Fix**: [AUTO-FIX] No auto-fix (manual correction required)
-**Source**: geminicli.com/docs/cli/gemini-md/
+### GM-001 [MEDIUM] Invalid Markdown Structure in GEMINI.md
+**Requirement**: GEMINI.md SHOULD close its code fences, because Gemini CLI ignores `@` imports inside code: "The import processor uses the `marked` library to detect code blocks and inline code spans, ensuring that `@` imports inside these regions are properly ignored." An unclosed fence therefore hides every later `@path` import.
+**Detection**: Warning for an unclosed ``` fence. Warning for a malformed `[text](` link; this branch is an agnix heuristic (Gemini CLI documents no link requirement). Gemini still loads the file in both cases.
+**Fix**: [AUTO-FIX, unsafe] Append a closing fence at the end of the file. Unsafe: where the fence should end is a guess, and the text after it changes from code to instructions.
+**Source**: geminicli.com/docs/reference/memport ("Code region detection")
 
 <a id="gm-002"></a>
-### GM-002 [MEDIUM] Missing Section Headers in GEMINI.md
-**Requirement**: GEMINI.md SHOULD have markdown section headers for organization
-**Detection**: Scan for `^#+\s+.+` patterns, report if none found
+### GM-002 [LOW] Missing Section Headers in GEMINI.md
+**Requirement**: agnix heuristic, not a Gemini CLI requirement: GEMINI.md MAY use markdown headers to organize its instructions. Gemini CLI states no header requirement; the gemini-md page only shows an example file with headers.
+**Detection**: Info when no `^#+\s+.+` header is found (the community AGENTS.md check shared with AGM-002)
 **Fix**: No auto-fix (headers must be authored by user)
-**Source**: geminicli.com/docs/cli/gemini-md/
+**Source**: community practice; example on geminicli.com/docs/cli/gemini-md
 
 <a id="gm-003"></a>
-### GM-003 [MEDIUM] Missing Project Context in GEMINI.md
-**Requirement**: GEMINI.md SHOULD include a project context section describing purpose and tech stack
-**Detection**: Check for headers matching project/overview/about/description patterns or content referencing "this project"
+### GM-003 [LOW] Missing Project Context in GEMINI.md
+**Requirement**: agnix heuristic, not a Gemini CLI requirement: GEMINI.md MAY describe the project. The configuration reference only encourages context files: "Project-specific context files are highly encouraged to establish conventions and context."
+**Detection**: Info when no header matches project/overview/about/description patterns and no text refers to "this project" (the community AGENTS.md check shared with AGM-004)
 **Fix**: No auto-fix (project context must be authored by user)
-**Source**: geminicli.com/docs/cli/gemini-md/
+**Source**: community practice; geminicli.com/docs/reference/configuration ("Context files")
 
 <a id="gm-004"></a>
-### GM-004 [MEDIUM] Invalid Hooks Configuration in Gemini Settings
-**Requirement**: hooksConfig in .gemini/settings.json MUST use valid event names and hook structure
-**Detection**: Parse hooksConfig object, validate event names against known set, check required fields (type, command)
+### GM-004 [MEDIUM] Invalid Gemini Hooks Configuration
+**Requirement**: Hooks MUST use the documented structure. "Hooks are defined in `settings.json` within the `hooks` object. Each event (for example, `BeforeTool`) contains an array of **hook definitions**": `{matcher?, sequential?, hooks: [...]}` where each hook is `{type, command, name?, timeout?, description?}`, `type` "Currently only `"command"` is supported" and `command` is "(Required when `type` is `"command"`)". `hooksConfig` holds only `hooksConfig.enabled` (boolean), `hooksConfig.disabled` ("List of hook names (commands) that should be disabled") and `hooksConfig.notifications` (boolean). Extensions: "Define hooks in a `hooks/hooks.json` file within your extension directory. Note that hooks are not defined in the `gemini-extension.json` manifest."
+**Detection**: Runs on `.gemini/settings.json` (`hooks` and `hooksConfig`) and on an extension's `hooks/hooks.json` (`.gemini/extensions/<name>/hooks/hooks.json`, or a `hooks/hooks.json` next to a `gemini-extension.json`; these files no longer get the Claude Code CC-HK rules). Warnings, at the offending key or value: an event other than SessionStart, SessionEnd, BeforeAgent, AfterAgent, BeforeModel, AfterModel, BeforeToolSelection, BeforeTool, AfterTool, PreCompress and Notification (with the Gemini name for Claude Code names such as PreToolUse); `hooks.enabled` / `disabled` / `notifications` (hooksConfig settings); an event that is not an array; a group that is not an object, has no `hooks` array (or is the flat `{type, command}` form), or has a non-string `matcher` or non-boolean `sequential`; a hook that is not an object, lacks `type` or `command`, has a `type` other than "command", an empty `command`, a non-string `name` / `description`, or a `timeout` that is not a positive number; `hooksConfig` that is not an object, has wrongly typed values, or has other keys (an event name there gets a message saying hook definitions belong under `hooks`). For `hooks/hooks.json`: invalid JSON (read with `JSON.parse`) or no `hooks` object, where extension-manager.ts logs `Invalid hooks configuration in ...: "hooks" property must be an object` and loads none of the extension's hooks. Unknown keys inside a hook (such as `env`, which hookRunner.ts reads) are not reported. A tool matcher that is not a valid regex is not GM-004: Gemini falls back to an exact name match (GM-026).
 **Fix**: No auto-fix (manual correction required)
-**Source**: geminicli.com/docs/hooks
+**Source**: geminicli.com/docs/hooks, geminicli.com/docs/hooks/reference, geminicli.com/docs/reference/configuration ("`hooksConfig`", "`hooks`"), geminicli.com/docs/extensions/reference ("Hooks"), extension-manager.ts `loadExtensionHooks`
 
 <a id="gm-005"></a>
-### GM-005 [HIGH] Invalid Extension Manifest
-**Requirement**: gemini-extension.json MUST have valid JSON with required fields (name, version, description)
-**Detection**: Parse JSON, check required fields exist and are non-empty strings, validate name format
+### GM-005 [HIGH] Gemini Extension Manifest Does Not Load
+**Requirement**: gemini-extension.json MUST parse and have `name` and `version` (`export interface ExtensionConfig { name: string; version: string; ...`; the loader throws `Invalid configuration in ...: missing "name"` or `missing "version"`), and the name MUST pass `validateName`: "Invalid extension name: ... Only letters (a-z, A-Z), numbers (0-9), and dashes (-) are allowed."
+**Detection**: Error for JSON syntax errors (the manifest is read with `JSON.parse`, so comments fail), a root that is not an object, a missing or falsy `name` or `version`, and a name with any character outside `[a-zA-Z0-9-]` (underscores, spaces, dots). Points at the value. A missing description is GM-028, not GM-005; an uppercase name is GM-028.
 **Fix**: No auto-fix (manual correction required)
-**Source**: geminicli.com/docs/extensions/reference
+**Source**: geminicli.com/docs/extensions/reference, extension-manager.ts (`loadExtensionConfig`, `validateName`), extension.ts (`ExtensionConfig`)
 
 <a id="gm-006"></a>
 ### GM-006 [LOW] Invalid .geminiignore File
-**Requirement**: .geminiignore MAY have valid gitignore-style patterns
-**Detection**: Check for empty content and unmatched brackets in glob patterns
+**Requirement**: .geminiignore patterns SHOULD be well-formed: "For the most part, `.geminiignore` follows the conventions of `.gitignore` files", and "Standard glob patterns are supported (such as `*`, `?`, and `[]`)."
+**Detection**: Info for a line with unmatched `[` / `]` brackets (an agnix heuristic for a broken character class). An empty or comment-only file is not reported: "Blank lines and lines starting with `#` are ignored", and the page has no content requirement.
 **Fix**: No auto-fix (manual correction required)
-**Source**: geminicli.com/docs/cli/settings
-
-<a id="gm-007"></a>
-### GM-007 [MEDIUM] @import File Not Found in GEMINI.md
-**Requirement**: @import directives in GEMINI.md SHOULD reference existing files
-**Detection**: Scan for @import lines, resolve paths relative to GEMINI.md, check file existence
-**Fix**: No auto-fix (create the file or fix the path)
-**Source**: geminicli.com/docs/cli/gemini-md/
+**Source**: geminicli.com/docs/cli/gemini-ignore ("How it works")
 
 <a id="gm-008"></a>
-### GM-008 [LOW] Invalid Context File Name Configuration
-**Requirement**: contextFileName in gemini-extension.json MAY reference a valid filename
-**Detection**: Check if contextFileName contains path separators (should be a filename only)
-**Fix**: [AUTO-FIX] No auto-fix (manual correction required)
-**Source**: geminicli.com/docs/extensions/reference
+### GM-008 [HIGH] Invalid Extension contextFileName
+**Requirement**: `contextFileName` (`contextFileName?: string | string[]`) entries MUST be paths inside the extension directory that exist. `validateContextFilePath` rejects "Absolute paths are not allowed." and `Relative parent directory references ("..") are not allowed.`, and the loader skips the entry; `gemini extensions validate` fails with "The following context files referenced in gemini-extension.json are missing: ...".
+**Detection**: Error, at the value or array entry, for a POSIX or Windows absolute path, a path that starts with `${extensionPath}` or `${workspacePath}` (absolute once the manifest is hydrated), any `..` (the loader checks the substring, also URL-encoded), an empty or non-string entry, a value that is neither a string nor an array, and an entry whose file does not exist relative to the manifest's directory. Relative subpaths such as `docs/CONTEXT.md` are valid. A falsy value falls back to GEMINI.md and is not reported.
+**Fix**: No auto-fix. The former fix stripped the directory part, which pointed the manifest at a file that does not exist.
+**Source**: extension-manager.ts (`validateContextFilePath`, `resolveContextFilePaths`), commands/extensions/validate.ts, geminicli.com/docs/extensions/reference
 
 <a id="gm-009"></a>
-### GM-009 [HIGH] Settings.json Parse Error
-**Requirement**: .gemini/settings.json MUST have valid JSON/JSONC syntax
-**Detection**: Attempt to parse as JSONC; report parse errors with line/column. Detect unknown top-level keys.
-**Fix**: [AUTO-FIX] No auto-fix (correct the JSON syntax)
-**Source**: geminicli.com/docs/cli/settings
+### GM-009 [HIGH] Gemini Settings Parse Error or Unknown Top-Level Key
+**Requirement**: .gemini/settings.json MUST be valid JSON/JSONC, and "All settings should be placed within their corresponding top-level category object in your `settings.json` file."
+**Detection**: Error for a parse failure, with line and column. Warning, at the key, for a top-level key other than the 25 categories of the configuration reference (policyPaths, adminPolicyPaths, general, output, ui, ide, privacy, billing, model, modelConfigs, agents, context, tools, mcp, useWriteTodos, security, advanced, experimental, skills, hooksConfig, hooks, contextManagement, admin, mcpServers, telemetry), `extensions` (in settingsSchema.ts, not in the reference) and `$schema`.
+**Fix**: [AUTO-FIX, unsafe] Delete the unknown key and its value, together with one separating comma so the file still parses. Unsafe: the key may be a misplaced or mistyped setting the user wants, or one a newer Gemini CLI reads.
+**Source**: geminicli.com/docs/reference/configuration ("Available settings in `settings.json`"), settingsSchema.ts
 
 <a id="gm-010"></a>
-### GM-010 [MEDIUM] memoryManager Without autoMemory After v0.40 Split
-**Requirement**: Users who set `experimental.memoryManager: true` SHOULD also set `experimental.autoMemory: true` on Gemini CLI v0.40+
-**Detection**: Parse `.gemini/settings.json`; warn when `experimental.memoryManager === true` and `experimental.autoMemory` is missing or false
-**Fix**: No auto-fix (upstream declined to ship a migration shim - users may legitimately want only the subagent)
-**Rationale**: Gemini CLI v0.40 (PR #25601) split the combined `memoryManager` flag. Pre-v0.40 it gated both the Memory Manager subagent and background skill extraction + `/memory inbox`. Post-v0.40 `memoryManager` gates only the subagent; extraction and the inbox move to the new `autoMemory` flag. Users carrying forward only `memoryManager: true` lose the inbox silently.
-**Source**: github.com/google-gemini/gemini-cli/pull/25601
+### GM-010 [MEDIUM] Stale experimental.memoryManager Setting
+**Requirement**: `experimental.memoryManager` SHOULD be removed: it is not a Gemini CLI setting since v0.40.0 (settingsSchema.ts has it at v0.36.0 to v0.39.0 and not at v0.40.0, v0.50.0, v0.64.0 or main). The configuration reference documents only "`experimental.autoMemory` (boolean): ... Automatically extract memory patches and skills from past sessions in the background", which feeds the /memory inbox.
+**Detection**: Warning, at the key, whenever `experimental.memoryManager` is present, whatever its value. agnix has no gemini-cli version pin, so the rule applies to every project.
+**Fix**: No auto-fix (deleting the key changes behavior on Gemini CLI before v0.40.0)
+**Source**: geminicli.com/docs/reference/configuration ("`experimental`"), settingsSchema.ts history (v0.39.0 vs v0.40.0)
+
+<a id="gm-011"></a>
+### GM-011 [MEDIUM] Gemini MCP Server Name Contains Underscore
+**Requirement**: MCP server names SHOULD NOT contain `_`: "Do not use underscores (`_`) in your MCP server names (for example, use `my-server` rather than `my_server`). The policy parser splits Fully Qualified Names (`mcp_server_tool`) on the _first_ underscore following the `mcp_` prefix. If your server name contains an underscore, the parser will misinterpret the server identity, which can cause wildcard rules and security policies to fail silently." (tools/mcp-server, "3. Tool naming and namespaces"; the same warning is in the configuration reference "`mcpServers`" and the policy engine "Special syntax for MCP tools").
+**Detection**: Warning, at the name, for a key of `mcpServers` in `.gemini/settings.json` and `gemini-extension.json`, a key of `mcp_servers` (or `mcpServers`) in agent frontmatter, and an `mcpName` value in a policy file (`[[rule]]`, `[[rules]]` and `[[safety_checker]]` entries) that contains `_`. The message names the dashed alternative. The extension reference's own policy example uses `mcpName = "my_server"`; it is still reported, since the warning is the vendor's.
+**Fix**: No auto-fix. Renaming a server changes the names of its tools (`mcp_<server>_<tool>`), so policies and tool lists that name them must change too.
+**Source**: geminicli.com/docs/tools/mcp-server ("3. Tool naming and namespaces"), geminicli.com/docs/reference/configuration ("`mcpServers`"), geminicli.com/docs/reference/policy-engine ("Special syntax for MCP tools")
+
+<a id="gm-013"></a>
+### GM-013 [LOW] Deprecated tools.exclude Setting
+**Requirement**: `tools.exclude` SHOULD be replaced by deny rules: "The `deny` decision is the recommended way to exclude tools. The legacy `tools.exclude` setting in `settings.json` is deprecated in favor of policy rules with a `deny` decision." (policy engine, "Decisions"); "`tools.exclude` [DEPRECATED]: To block specific commands, use the [Policy Engine](/docs/reference/policy-engine)." (tools/shell).
+**Detection**: Info, at the key, when `.gemini/settings.json` has `tools.exclude`. The suggestion points to user (`~/.gemini/policies/`) or admin policy files, not `.gemini/policies`, because the workspace tier is non-functional (GM-020).
+**Fix**: No auto-fix (the setting still works; moving it to a policy file is a manual change)
+**Source**: geminicli.com/docs/reference/policy-engine ("Decisions"), geminicli.com/docs/tools/shell ("Command restrictions"), geminicli.com/docs/cli/enterprise ("Blocklisting with `excludeTools` (Deprecated)")
+
+<a id="gm-014"></a>
+### GM-014 [HIGH] Gemini MCP Server Transport Missing or Ambiguous
+**Requirement**: Each MCP server MUST name a transport: "At least one of `command`, `url`, or `httpUrl` must be provided. If multiple are specified, the order of precedence is `httpUrl`, then `url`, then `command`." (configuration reference, "`mcpServers`").
+**Detection**: Error, at the server name, for an `mcpServers` entry with no non-empty `command`, `url` or `httpUrl` (`tcp`, a transport of `MCPServerConfig`, also counts). In `.gemini/settings.json` an entry may be a partial override of an extension's server ("Properties like `command`, `url`, and `timeout` are replaced by your local values if provided", with an `excludeTools`-only example), so entries made only of `includeTools`, `excludeTools`, `env`, `timeout`, `trust` and `description` are skipped, and no entry is reported when `mcp.serverCommand` is set. `gemini-extension.json` servers have no override form and are always checked. Info, at the server name, when more than one transport is set, naming the one Gemini uses.
+**Fix**: No auto-fix
+**Source**: geminicli.com/docs/reference/configuration ("`mcpServers`"), geminicli.com/docs/tools/mcp-server ("Configuration properties", "Overriding extension configurations")
+
+<a id="gm-015"></a>
+### GM-015 [MEDIUM] Gemini MCP Server Trust Bypasses Confirmations
+**Requirement**: `trust: true` SHOULD be used only for servers you control: "**Trust settings:** The `trust` option bypasses all confirmation dialogs. Use cautiously and only for servers you completely control" (tools/mcp-server, "Security considerations"). In extensions it does nothing: "Note that all MCP server configuration options are supported except for `trust`." (extensions/reference).
+**Detection**: Warning, at the value, for `mcpServers.<name>.trust: true` in a project `.gemini/settings.json` (anyone who trusts the folder gets the bypass); info in `~/.gemini/settings.json` (the user's own servers); info in `gemini-extension.json`, saying the setting is ignored.
+**Fix**: No auto-fix (removing `trust` changes behavior)
+**Source**: geminicli.com/docs/tools/mcp-server ("Security considerations"), geminicli.com/docs/extensions/reference ("`gemini-extension.json`")
+
+<a id="gm-016"></a>
+### GM-016 [MEDIUM] Invalid Gemini Default Approval Mode
+**Requirement**: `general.defaultApprovalMode` MUST be one of the documented values: "**Values:** `"default"`, `"auto_edit"`, `"plan"`", and "YOLO mode (auto-approve all actions) can only be enabled via command line (--yolo or --approval-mode=yolo)." (configuration reference, "`general`"; the same enum in settingsSchema.ts).
+**Detection**: Warning, at the value, for any other value or type. `yolo` gets a message saying YOLO can only be enabled on the command line; near misses (for example `autoEdit`, the policy engine's spelling) get a did-you-mean.
+**Fix**: No auto-fix
+**Source**: geminicli.com/docs/reference/configuration ("`general`"), settingsSchema.ts (`defaultApprovalMode.options`)
+
+<a id="gm-017"></a>
+### GM-017 [MEDIUM] Gemini tools.core Lists Only Shell Entries
+**Requirement**: `tools.core` SHOULD list every tool the agent needs: "The `tools.core` setting is an **allowlist for _all_ built-in tools**, not just shell commands. When you set `tools.core` to any value, _only_ the tools explicitly listed will be enabled. This includes all built-in tools like `read_file`, `write_file`, `glob`, `grep_search`, `list_directory`, `replace`, etc." (tools/shell, "Command restrictions").
+**Detection**: Warning, at the key, when `tools.core` is a non-empty list whose entries are all shell entries: `run_shell_command`, `run_shell_command(<prefix>)`, or the class-style `ShellTool` / `ShellTool(<prefix>)` of the enterprise guide. A list with any other tool is fine.
+**Fix**: No auto-fix
+**Source**: geminicli.com/docs/tools/shell ("Command restrictions"), geminicli.com/docs/reference/configuration ("`tools`")
+
+<a id="gm-018"></a>
+### GM-018 [MEDIUM] Gemini Hook Timeout Looks Like Seconds
+**Requirement**: Hook timeouts SHOULD be written in milliseconds: "`timeout` | `number` | No | Execution timeout in milliseconds (default: 60000)." Claude Code hook timeouts are seconds, so a value copied from Claude Code (for example 30) gives the hook 30 ms.
+**Detection**: Warning, at the value, for a hook `timeout` from 1 to 999 in `.gemini/settings.json` or an extension `hooks/hooks.json`: "Gemini hook timeouts are milliseconds (default 60000); 30 means 30 ms. Did you mean 30000?" The threshold of 1000 is an agnix heuristic; a deliberate sub-second limit can be suppressed.
+**Fix**: No auto-fix (the intended value is a guess)
+**Source**: geminicli.com/docs/hooks/reference ("Hook configuration"), geminicli.com/docs/hooks/best-practices ("Use timeouts"), hookRunner.ts (`DEFAULT_HOOK_TIMEOUT = 60000`)
+
+<a id="gm-019"></a>
+### GM-019 [MEDIUM] Gemini Hook Script Not Found
+**Requirement**: A hook's script SHOULD exist and, when it is the command itself, be executable: "**Verify script path:** Ensure the path in `settings.json` resolves correctly." and "Always make hook scripts executable on macOS/Linux".
+**Detection**: Warning, at the `command` value, when the script a command runs does not exist. Only a word that contains a `/` is checked: the first word, or the first path argument of bash, sh, zsh, dash, ksh, node or python (inline code such as `bash -c` or `python -m` is skipped). Quotes are removed; `$GEMINI_PROJECT_DIR`, `${GEMINI_PROJECT_DIR}`, `$CLAUDE_PROJECT_DIR` and `${CLAUDE_PROJECT_DIR}` (Gemini sets both: "`GEMINI_PROJECT_DIR`: The absolute path to the project root", "`CLAUDE_PROJECT_DIR`: (Alias) Provided for compatibility") resolve to the parent of `.gemini`, and relative paths resolve there too (hooks run in the project root). In an extension's `hooks/hooks.json`, `${extensionPath}` resolves to the directory of `gemini-extension.json` and `${/}` to `/`; relative paths are not checked there (they run in the open project). Not checked: other variables, `~`, globs, `node_modules`, absolute paths outside the project or extension, and project-directory variables and relative paths in the user-level `~/.gemini/settings.json`. On Unix, a missing executable bit is reported only when the path is the command itself.
+**Fix**: No auto-fix
+**Source**: geminicli.com/docs/hooks/best-practices ("Make scripts executable", "Hook not executing"), geminicli.com/docs/hooks ("Environment variables"), geminicli.com/docs/extensions/reference ("Variables"), hookRunner.ts (`expandCommand`, `cwd: input.cwd`)
+
+<a id="gm-020"></a>
+### GM-020 [LOW] Gemini Workspace Policy File Has No Effect
+**Requirement**: Policies SHOULD live in the user or admin tier while the workspace tier is broken: "The **Workspace** tier (project-level policies) is currently non-functional. Defining policies in a workspace's `.gemini/policies` directory will not have any effect. See [issue #18186](https://github.com/google-gemini/gemini-cli/issues/18186). Use User or Admin policies instead." (policy engine, "Priority system and tiers").
+**Detection**: Info, at the top of the file, for a `.gemini/policies/*.toml` whose `.gemini` folder is not in the home directory, unless the directory is an extension root (a `gemini-extension.json` next to `policies/`, or `.gemini/extensions/<name>/`), whose policies GM-021 covers. This tracks google-gemini/gemini-cli issue #18186; re-check the rule when the issue is fixed and retire it then. A dotfiles repository that keeps a copy of `~/.gemini/policies` is reported too; suppress it there.
+**Fix**: No auto-fix (move the file to `~/.gemini/policies/` or an admin policy directory)
+**Source**: geminicli.com/docs/reference/policy-engine ("Priority system and tiers", "Policy locations"), github.com/google-gemini/gemini-cli/issues/18186
+
+<a id="gm-021"></a>
+### GM-021 [MEDIUM] Ignored allow or yolo in Gemini Extension Policy
+**Requirement**: Extension policies SHOULD NOT rely on `allow` or `yolo`: "For security, Gemini CLI ignores any `allow` decisions or `yolo` mode configurations in extension policies. This ensures that an extension cannot automatically approve tool calls or bypass security measures without your confirmation." (extensions/reference, "Policy Engine").
+**Detection**: Warning, at the value, for `decision = "allow"` and for a `"yolo"` entry in `modes` in an extension's `policies/*.toml` (next to `gemini-extension.json`, or under `.gemini/extensions/<name>/`).
+**Fix**: No auto-fix
+**Source**: geminicli.com/docs/extensions/reference ("Policy Engine")
+
+<a id="gm-022"></a>
+### GM-022 [MEDIUM] Gemini Extension Secret Setting Not Marked Sensitive
+**Requirement**: Secret settings SHOULD be sensitive: "If your extension requires API keys or other secrets, use the `sensitive: true` option in your manifest. This ensures keys are stored in the system keychain and obfuscated in the CLI output." (extensions/best-practices, "Secure sensitive settings"); "`sensitive`: If `true`, the value is stored in the system keychain and obfuscated in the UI." (extensions/reference, "Extension settings").
+**Detection**: Warning, at the `envVar` (or `name`) value, for a `settings[]` entry without `sensitive: true` whose `envVar` or `name` contains the whole word KEY, TOKEN, SECRET, PASSWORD, PASSWD, CREDENTIAL or APIKEY (or a plural). Words are split at non-alphanumeric characters and lower-to-upper case changes, so `KEYBOARD_LAYOUT` does not match; describing forms such as `KEY_PATH`, `TOKEN_URL`, `ACCESS_KEY_ID`, `PUBLIC_KEY` and `MAX_TOKENS` are skipped. The word list is an agnix heuristic.
+**Fix**: No auto-fix (`sensitive: true` moves the value to the keychain, which changes where it is stored)
+**Source**: geminicli.com/docs/extensions/best-practices ("Secure sensitive settings"), geminicli.com/docs/extensions/reference ("Extension settings")
+
+<a id="gm-023"></a>
+### GM-023 [LOW] Gemini Extension MCP Command Not Portable
+**Requirement**: Extension MCP servers SHOULD split the command and use `${extensionPath}`: "For portability, you should use `${extensionPath}` to refer to files within your extension directory." and "Separate your executable and its arguments using `command` and `args` instead of putting them both in `command`." (extensions/reference, "`gemini-extension.json`").
+**Detection**: Info, at the value, in `gemini-extension.json` `mcpServers`: a `command` with whitespace; a relative `command` path (one with a `/`), an `args` entry naming a file that exists in the extension directory, or a relative `cwd` naming a directory there, when `cwd` does not start with `${extensionPath}` (relative paths resolve against the working directory, which is the open project); and an absolute `command`, `args` or `cwd` path inside the extension directory. Commands on PATH (`node`, `npx`, `uvx`) and values with variables are not reported.
+**Fix**: No auto-fix
+**Source**: geminicli.com/docs/extensions/reference ("`gemini-extension.json`", "Variables")
+
+<a id="gm-024"></a>
+### GM-024 [MEDIUM] Broad Shell Auto-Approval in Gemini Project Settings
+**Requirement**: Project settings SHOULD auto-approve specific command prefixes only. `tools.allowed` holds "Tool names that bypass the confirmation dialog. Useful for trusted commands (for example ["run_shell_command(git)", "run_shell_command(npm test)"])." (configuration reference, "`tools`"); "Including the generic `run_shell_command` acts as a wildcard, allowing any command not explicitly blocked." (tools/shell); and the trust dialog flags such settings: "**Security Warnings**: The CLI will explicitly flag potentially dangerous settings, such as auto-approving certain tools or disabling the security sandbox." (trusted-folders, "Security warnings and errors").
+**Detection**: Warning, at the entry, for a bare `run_shell_command`, `ShellTool` or `*` in `tools.allowed` of a project `.gemini/settings.json`. `~/.gemini/settings.json` (the user's own choice) is not checked.
+**Fix**: No auto-fix
+**Source**: geminicli.com/docs/cli/trusted-folders ("Security warnings and errors"), geminicli.com/docs/reference/configuration ("`tools`"), geminicli.com/docs/tools/shell ("Command restrictions")
+
+<a id="gm-025"></a>
+### GM-025 [LOW] Deprecated Gemini Settings Key
+**Requirement**: Deprecated settings SHOULD be replaced. The configuration reference and settingsSchema.ts: "`ui.accessibility.enableLoadingPhrases` (boolean): ... @deprecated Use ui.loadingPhrases instead." and "`experimental.topicUpdateNarration` (boolean): ... Deprecated: Use general.topicUpdateNarration instead."
+**Detection**: Info, at the key, for `ui.accessibility.enableLoadingPhrases` and `experimental.topicUpdateNarration`; the message names the replacement. The other "Deprecated alias" entries of settingsSchema.ts are model-resolution condition flags inside `modelConfigs` definitions and are not checked. `experimental.memoryManager` is not deprecated but gone (GM-010).
+**Fix**: No auto-fix (`ui.loadingPhrases` is an enum, not a boolean, and the narration flag moves to another category)
+**Source**: geminicli.com/docs/reference/configuration ("`ui`", "`experimental`"), settingsSchema.ts
+
+<a id="gm-026"></a>
+### GM-026 [LOW] Gemini Tool Hook Matches Every Tool
+**Requirement**: BeforeTool and AfterTool hooks SHOULD name the tools they need: "Use specific matchers to avoid unnecessary hook execution. Instead of matching all tools with `*`, specify only the tools you need." Tool-event matchers "are **Regular Expressions**"; "**Wildcards**: `"*"` or `""` (empty string) matches all occurrences.".
+**Detection**: Info for a BeforeTool or AfterTool group whose matcher is absent, empty, `*` or `.*` (hookPlanner.ts trims the matcher and treats empty and `*` as match-all before building a regex). Info, too, for a tool matcher that is not a valid ECMAScript regex (checked with the `regress` engine): Gemini does not fail, it compares the matcher with the tool name as plain text, so the hook runs only for a tool with exactly that name. Lifecycle-event matchers are exact strings and are not checked. Catch-all audit hooks are legitimate; keep or suppress them.
+**Fix**: No auto-fix
+**Source**: geminicli.com/docs/hooks/best-practices ("Filter with matchers"), geminicli.com/docs/hooks ("Matchers"), hookPlanner.ts (`matchesContext`, `matchesToolName`)
+
+<a id="gm-027"></a>
+### GM-027 [HIGH] Invalid Gemini Policy Rule
+**Requirement**: Policy rules MUST follow the TOML rule schema (policy engine, "TOML rule schema"): "# The decision to take. Must be "allow", "deny", or "ask_user".", "# The priority of the rule, from 0 to 999.", "# You cannot use commandPrefix and commandRegex in the same rule.", and "When using `mcpName`, the `toolName` field should strictly be the simple name of the tool (for example, `search`), **not** the Fully Qualified Name (for example, `mcp_server_search`)."
+**Detection**: Runs on policy files: `~/.gemini/policies/*.toml`, `.gemini/policies/*.toml`, the admin directories `/etc/gemini-cli/policies`, `/Library/Application Support/GeminiCli/policies` and `C:\ProgramData\gemini-cli\policies`, and an extension's `policies/*.toml` (top level only: "all such files in this directory will be loaded"). Error for a TOML syntax error, at its position. Warnings, at the value (or the `[[rule]]` header for a missing field): `rule` that is not an array of tables; a missing decision (with a hint when the entry uses `action`, the subagents page's spelling), a decision other than allow, deny or ask_user; a priority that is not an integer or is outside 0 to 999; `commandRegex` next to `commandPrefix`; a `toolName` starting with `mcp_` in a rule that sets `mcpName` (the rule never matches). The reference writes `[[rule]]` and the subagents page `[[rules]]`; which one the loader reads was not verified, so neither spelling is reported and the entries of both are checked. Schema problems are warnings because the loader's handling of an invalid rule was not verified.
+**Fix**: No auto-fix
+**Source**: geminicli.com/docs/reference/policy-engine ("TOML rule schema", "Special syntax for MCP tools", "Policy locations"), geminicli.com/docs/extensions/reference ("Policy Engine")
+
+<a id="gm-028"></a>
+### GM-028 [LOW] Gemini Extension Manifest Advisory
+**Requirement**: An extension SHOULD have a description ("`description`: A short description of the extension. This will be displayed on [geminicli.com/extensions](https://geminicli.com/extensions)."), a lowercase name ("The name should be lowercase or numbers and use dashes instead of underscores or spaces.") and a semver version (`gemini extensions validate`: "Warning: Version '...' does not appear to be standard semver (e.g., 1.0.0).").
+**Detection**: Info for a missing or blank description, a loadable name with uppercase letters, and a version that is not valid semver (node-semver rules: surrounding blanks and one leading `v` are accepted). The docs also say "we expect this name to match the extension directory name"; that is not checked, because repository checkouts rename directories.
+**Fix**: No auto-fix
+**Source**: geminicli.com/docs/extensions/reference ("`gemini-extension.json`"), commands/extensions/validate.ts
+
+## GEMINI CLI CUSTOM COMMAND RULES
+
+Custom commands are TOML files under `~/.gemini/commands/`, `<project>/.gemini/commands/` and an extension's `commands/`, at any depth ("Subdirectories are used to create namespaced commands"). FileCommandLoader.ts parses each file and validates it with `z.object({ prompt: z.string(...), description: z.string().optional() })`; a file that fails is skipped ("Skipping invalid command file").
+
+<a id="gm-cmd-001"></a>
+### GM-CMD-001 [HIGH] Invalid Gemini Custom Command File
+**Requirement**: A command file MUST be TOML with a string `prompt`: "Your command definition files must be written in the TOML format and use the `.toml` file extension." and, under "Required fields", "`prompt` (String): The prompt that will be sent to the Gemini model when the command is executed." FileCommandLoader.ts: `required_error: "The 'prompt' field is required."`, `invalid_type_error: "The 'prompt' field must be a string."`; invalid files are skipped with "Skipping invalid command file".
+**Detection**: Error for a TOML syntax error (at its position), a missing `prompt` (at the top of the file), and a `prompt` or `description` that is not a string (at the value). Other keys are not reported: the schema is not strict. agnix parses TOML 1.1; Gemini uses `@iarna/toml` (TOML 0.5), so a few TOML 1.1-only forms that agnix accepts may still fail in Gemini.
+**Fix**: No auto-fix
+**Source**: geminicli.com/docs/cli/custom-commands ("TOML file format (v1)"), FileCommandLoader.ts (`TomlCommandDefSchema`, `parseAndAdaptFile`)
+
+<a id="gm-cmd-002"></a>
+### GM-CMD-002 [LOW] Gemini Command Description Missing, Multi-Line or Truncated
+**Requirement**: A command SHOULD have a brief, one-line description: "`description` (String): A brief, one-line description of what the command does. This text will be displayed next to your command in the `/help` menu. **If you omit this field, a generic description will be generated from the filename.**" FileCommandLoader.ts shows `sanitizeForDisplay(description, 100)`.
+**Detection**: Info for a missing or empty description (at the top of the file), a description with a line break, and one longer than 100 characters (Unicode characters, not bytes). Not reported for files that GM-CMD-001 says are skipped.
+**Fix**: No auto-fix
+**Source**: geminicli.com/docs/cli/custom-commands ("Optional fields"), FileCommandLoader.ts
+
+<a id="gm-cmd-003"></a>
+### GM-CMD-003 [HIGH] Unbalanced Braces in Gemini Command Injection
+**Requirement**: Injection blocks MUST have balanced braces: "The content inside `!{...}` must have balanced braces (`{` and `}`). If you need to execute a command containing unbalanced braces, consider wrapping it in an external script file and calling the script within the `!{...}` block." and "The parser requires the content inside `@{...}` (the path) to have balanced braces (`{` and `}`)." (custom-commands, "3. Executing shell commands", "4. Injecting file content").
+**Detection**: Error, at the `!{` or `@{` inside the TOML string, for the first block whose braces never balance: after the trigger the depth is 1, each `{` adds one and each `}` removes one, and a block that does not return to 0 runs to the end of the prompt. The position is exact for basic, literal and multi-line strings, escapes included. An extra `}` ends a block early and is not reported (the rest is plain text). This is the scan of `extractInjections` (prompt-processors/injectionParser.ts), which throws "Unclosed injection starting at index ... Ensure braces are balanced." when the command runs; the processors do not catch it, so the command fails.
+**Fix**: No auto-fix (move the command into a script)
+**Source**: geminicli.com/docs/cli/custom-commands ("3. Executing shell commands", "4. Injecting file content"), prompt-processors/injectionParser.ts (`extractInjections`)
 
 ## GEMINI CLI AGENT RULES
 
-Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These define `kind: local` agents with YAML frontmatter containing `name`, `description`, `tools`, `mcp_servers`, and `system_prompt`. Schema documented in the gemini-cli source at `packages/core/src/agents/agentLoader.ts`.
+Rules for Gemini agent markdown files at `.gemini/agents/*.md` (project and `~/.gemini/agents/`) and an extension's `agents/*.md` ("Add agent definition files (`.md`) to an `agents/` directory in your extension root"). A local agent's YAML frontmatter holds `name`, `description` and optional `kind`, `display_name`, `tools`, `mcp_servers`, `model`, `temperature`, `max_turns`, `timeout_mins` (a strict schema); the Markdown body is the system prompt. A remote agent (`kind: remote`, core/remote-agents) holds `name`, `agent_card_url` or `agent_card_json`, and optional `description`, `display_name`, `auth`; one file may hold a list of remote agents. Schema in the gemini-cli source at `packages/core/src/agents/agentLoader.ts`. Files whose name starts with `_` are not loaded and get no GM-AG rule.
 
 <a id="gm-ag-001"></a>
 ### GM-AG-001 [HIGH] Invalid auth block in Gemini agent MCP server
-**Requirement**: The `auth` block inside `mcp_servers.<name>` MUST follow the schema added in gemini-cli v0.39.0 (google-gemini/gemini-cli#24770):
-- Variant `type: "google-credentials"` - only `scopes` (optional array of strings) is accepted
-- Variant `type: "oauth"` - `client_id`, `client_secret`, `scopes`, `authorization_url`, `token_url` are all optional; URLs must be valid http(s); scopes must be an array of strings
-**Detection**: Parse YAML frontmatter; walk `mcp_servers.*.auth`; enforce discriminator, reject unknown fields per variant, type-check string/array values, validate URL shape for `authorization_url` and `token_url`
-**Fix**: Manual - align the auth block with the documented variant schema
-**Source**: google-gemini/gemini-cli#24770 (gemini-cli v0.39.0+)
+**Requirement**: The `auth` block inside `mcp_servers.<name>` MUST follow agentLoader.ts (added in gemini-cli v0.39.0, google-gemini/gemini-cli#24770; verified against main):
+- Variant `type: "google-credentials"` - `scopes: z.array(z.string()).optional()`
+- Variant `type: "oauth"` - all optional: `client_id`, `client_secret`, `token_param_name` (strings), `scopes`, `audiences` (string arrays), `authorization_url`, `token_url`, `issuer`, `redirect_uri`, `registration_url` (`z.string().url()`)
+**Detection**: Parse YAML frontmatter; walk `mcp_servers.*.auth`. Error (the agent fails validation and is not loaded) for a non-mapping auth block, a missing, non-string or unknown `type`, a wrongly typed value and a malformed URL. Warning for a field that is not part of the variant: the auth objects are not strict, so zod drops the field and it has no effect.
+**Fix**: Manual - align the auth block with the variant schema
+**Source**: agentLoader.ts (gemini-cli main), google-gemini/gemini-cli#24770 (v0.39.0+)
+
+<a id="gm-ag-002"></a>
+### GM-AG-002 [HIGH] Invalid Gemini Agent Frontmatter
+**Requirement**: An agent file MUST load: "The file **MUST** start with YAML frontmatter enclosed in triple-dashes `---`." (subagents, "File format"); `name` is required, "Unique identifier (slug) used as the tool name for the agent. Only lowercase letters, numbers, hyphens, and underscores." and `description` is required for local agents ("Configuration schema"). Remote agents (core/remote-agents) need `agent_card_url` ("Required if `agent_card_json` is not provided") or `agent_card_json`, and "Mixed local and remote agents, or multiple local agents, are not supported in a single file; the list format is currently remote-only." agentLoader.ts throws `AgentLoadError` ("Missing mandatory YAML frontmatter", "YAML frontmatter parsing failed", "Validation failed").
+**Detection**: Error, at the key where one exists: no frontmatter matching the loader's `FRONTMATTER_REGEX` (opening `---` on the first line after an optional BOM, closing `---` on its own line; trailing blanks and CRLF allowed); invalid YAML; a YAML local tag such as an unquoted `!command` value (js-yaml rejects unknown tags; quote the value); frontmatter that is not a mapping or a list of remote agents; a missing, empty, non-string or non-slug `name` (`^[a-z0-9-_]+$`); a missing or empty `description` on a local agent; `kind` other than local or remote; a non-string `display_name`, `model` or `description`; `tools` that is not a list of strings; a remote agent with neither or both agent cards, an `agent_card_url` that is not a URL, or an `agent_card_json` that is not valid JSON; a local agent in a list. The kind of an agent without `kind` follows `guessIntendedKind`. Files whose name starts with `_` are skipped, as `loadAgentsFromDirectory` does.
+**Fix**: No auto-fix
+**Source**: geminicli.com/docs/core/subagents ("File format", "Configuration schema"), geminicli.com/docs/core/remote-agents ("Configuration schema", "Multi-subagent example"), agentLoader.ts (`parseAgentMarkdown`, `localAgentSchema`, `remoteAgentUrlSchema`, `remoteAgentJsonSchema`)
+
+<a id="gm-ag-003"></a>
+### GM-AG-003 [HIGH] Unknown Gemini Agent Frontmatter Key
+**Requirement**: Frontmatter keys MUST belong to the agent's schema; both schemas are strict (`z.object({...}).strict()` in agentLoader.ts). Local: kind, name, description, display_name, tools, mcp_servers, model, temperature, max_turns, timeout_mins. Remote: kind, name, description, display_name, auth, agent_card_url, agent_card_json.
+**Detection**: Error, at the key, for any other key; `system_prompt` gets a hint that the Markdown body is the system prompt. Special case: the subagents page documents `mcpServers` ("Add an `mcpServers` object to define inline MCP servers"), while the strict schema accepts only `mcp_servers`. Because the docs document it, `mcpServers` on a local agent is a warning, not an error, saying the loader's strict schema expects `mcp_servers`. This was read from agentLoader.ts and not run against a live gemini binary (unverified at runtime).
+**Fix**: No auto-fix
+**Source**: agentLoader.ts (`localAgentSchema`, `remoteAgentUrlSchema`, `remoteAgentJsonSchema`), geminicli.com/docs/core/subagents ("Configuration schema", "Configuring isolated tools and servers")
+
+<a id="gm-ag-004"></a>
+### GM-AG-004 [HIGH] Gemini Agent Numeric Field Out of Range
+**Requirement**: `max_turns` and `timeout_mins` MUST be positive integers (`z.number().int().positive().optional()` in agentLoader.ts; "Defaults to `30`" and "Defaults to `10`"), and `temperature` is a number documented as "Model temperature (0.0 - 2.0). Defaults to `1`." (subagents, "Configuration schema").
+**Detection**: Error, at the value, for a `max_turns` or `timeout_mins` that is not a positive whole number (`10.0` is accepted, as JavaScript treats it as an integer) and for a non-numeric `temperature`: the loader rejects the file. Warning for a numeric `temperature` outside 0.0 to 2.0: the range is documented, but the code accepts any number.
+**Fix**: No auto-fix
+**Source**: geminicli.com/docs/core/subagents ("Configuration schema"), agentLoader.ts (`localAgentSchema`)
+
+<a id="gm-ag-005"></a>
+### GM-AG-005 [MEDIUM] Literal Secret in Gemini Remote Agent Auth
+**Requirement**: Remote agent secrets SHOULD be references: "For `apiKey` and `http` auth types, secret values (`key`, `token`, `username`, `password`, `value`) support dynamic resolution" (`$ENV_VAR`, `!command`, with `$$` / `!!` as escapes for a literal), and "**Security tip:** Prefer `$ENV_VAR` or `!command` over embedding secrets directly in agent files, especially for project-level agents checked into version control." (core/remote-agents, "Dynamic values").
+**Detection**: Warning, at the field, for `auth.key` (`type: apiKey`) and `auth.token`, `auth.password`, `auth.value` (`type: http`) values that do not start with `$` or `!` (a `$$` or `!!` escape is a literal and is checked) and that look like a secret (the shared plaintext-secret check, which skips placeholders such as `your-api-key-here` and short values). `username`, `client_id` and the OAuth `client_secret` (which does not support dynamic values) are not checked.
+**Fix**: No auto-fix
+**Source**: geminicli.com/docs/core/remote-agents ("Dynamic values", "Authentication")
+
+<a id="gm-ag-006"></a>
+### GM-AG-006 [LOW] Gemini Local Agent Inherits Every Tool
+**Requirement**: A local agent SHOULD list its tools: `tools` - "List of tool names this agent can use. ... **If omitted, it inherits all tools from the parent session.**" and "By providing isolated execution environments, you can ensure that subagents only interact with the parts of the system they are designed for." (subagents, "Configuration schema", "Subagent tool isolation").
+**Detection**: Info for a local agent without `tools` (at the opening `---`) and for a `tools` list with `*` (at the key). Remote agents, and agents the loader rejects (an error of GM-AG-002, GM-AG-003 or GM-AG-004), are not checked. A generalist agent may keep every tool; suppress the rule for it.
+**Fix**: No auto-fix
+**Source**: geminicli.com/docs/core/subagents ("Configuration schema", "Subagent tool isolation")
 
 ---
 
@@ -3925,81 +4145,121 @@ Validates Codex's admin-written managed `requirements.toml` (system location: `/
 
 ---
 
-## ROO CODE RULES
-
-<a id="roo-001"></a>
-### ROO-001 [HIGH] Empty Roo Code Rule File
-**Requirement**: Roo Code rule files (`.roorules`, `.roo/rules/*.md`) MUST contain content
-**Detection**: Check if `content.trim().is_empty()`
-**Fix**: Add meaningful rule content to the file
-**Source**: docs.roocode.com/features/custom-modes
-
-<a id="roo-002"></a>
-### ROO-002 [HIGH] Invalid .roomodes Configuration
-**Requirement**: `.roomodes` MUST be valid JSON with `customModes` array containing mode entries with slug, name, roleDefinition, and groups
-**Detection**: Parse JSON, validate structure - check customModes is array, each entry has required fields, slug format is valid, groups are valid names
-**Fix**: Correct the .roomodes configuration to match the expected schema
-**Source**: docs.roocode.com/features/custom-modes
-
-<a id="roo-003"></a>
-### ROO-003 [MEDIUM] Invalid .rooignore File
-**Requirement**: `.rooignore` SHOULD have valid gitignore-style glob patterns
-**Detection**: Check for empty content, validate each non-comment line as a glob pattern
-**Fix**: Add valid glob patterns or fix syntax errors
-**Source**: docs.roocode.com/features/rooignore
-
-<a id="roo-004"></a>
-### ROO-004 [MEDIUM] Invalid Mode Slug in Rule Directory
-**Requirement**: Mode-specific rule directories (`.roo/rules-{slug}/`) SHOULD use valid slug format (lowercase alphanumeric with hyphens)
-**Detection**: Extract slug from parent directory name, validate format
-**Fix**: Rename directory to use a valid slug format
-**Source**: docs.roocode.com/features/custom-modes
-
-<a id="roo-005"></a>
-### ROO-005 [HIGH] Invalid .roo/mcp.json Configuration
-**Requirement**: `.roo/mcp.json` MUST be valid JSON with `mcpServers` object containing server entries with required fields
-**Detection**: Parse JSON, validate structure - check mcpServers is object, stdio servers have command, http/sse servers have url
-**Fix**: Correct the .roo/mcp.json configuration to match the expected schema
-**Source**: docs.roocode.com/features/mcp/using-mcp-in-roo
-
-<a id="roo-006"></a>
-### ROO-006 [MEDIUM] Mode Slug Not Recognized
-**Requirement**: SKILL.md files in mode-specific directories SHOULD reference built-in modes or modes defined in .roomodes
-**Detection**: Check if slug matches built-in modes (code, architect, ask, debug, orchestrator) for SKILL.md files
-**Fix**: Define the mode in .roomodes or use a built-in mode slug
-**Source**: docs.roocode.com/features/custom-modes
-
----
-
 ## WINDSURF RULES
+
+Windsurf is now documented as Devin Desktop (docs.windsurf.com redirects to docs.devin.ai). Devin Desktop reads workspace rules from "`.devin/rules/*.md` (preferred) or `.windsurf/rules/*.md` (fallback)", workflows from `.devin/workflows/*.md` (legacy `.windsurf/workflows/`) and `~/.codeium/windsurf/global_workflows/*.md`, global rules from `~/.codeium/windsurf/memories/global_rules.md`, and Cascade hooks from `.devin/hooks.json` (legacy `.windsurf/hooks.json`), `~/.codeium/windsurf/hooks.json`, `~/.codeium/hooks.json` (JetBrains plugin) and the system `hooks.json` files. Both directory layouts get the same checks; rule and workflow directories are matched at any depth below `rules/` and `workflows/`. Devin CLI (the engine of the default Devin Local agent) reads `.devin/rules/` with the same `trigger` frontmatter; its own `.devin/config.json`, `.devin/hooks.v1.json` and project `.devin/global_rules.md` / `.windsurf/global_rules.md` (no stated limit) are not Cascade files and get no WS checks. Sizes are counted in characters, as the docs state them; the docs do not say whether frontmatter counts, so the whole file is counted. All WS rules are tool-gated on `windsurf`.
 
 <a id="ws-001"></a>
 ### WS-001 [MEDIUM] Empty Windsurf Rule File
-**Requirement**: Windsurf rule files in `.windsurf/rules/` SHOULD have content
-**Detection**: File is empty or whitespace-only
+**Requirement**: Workspace rule files in `.devin/rules/` or `.windsurf/rules/` SHOULD have content. Rules are "manually defined by the user" instructions; an empty file gives Cascade nothing to follow.
+**Detection**: File is empty or whitespace-only (WS-002, WS-005, WS-006 and WS-008 are then skipped)
 **Fix**: Add rule content to the file
-**Source**: docs.windsurf.com/windsurf/cascade/memories
+**Source**: docs.devin.ai/desktop/cascade/memories ("Rules")
 
 <a id="ws-002"></a>
 ### WS-002 [HIGH] Windsurf Rule File Exceeds Character Limit
-**Requirement**: Windsurf rule files MUST be under 12000 characters
-**Detection**: File content length exceeds 12000 characters
-**Fix**: Reduce content length or split into multiple rule files
-**Source**: docs.windsurf.com/windsurf/cascade/memories
+**Requirement**: Workspace rule files MUST stay within 12,000 characters: "One file per rule, each with its own activation mode. Limited to 12,000 characters per file." and "Workspace rule files are limited to 12,000 characters each." The page does not say how an oversized file is handled.
+**Detection**: More than 12,000 characters (Unicode scalar values, not UTF-8 bytes; a 7,029-character CJK rule is 21,087 bytes and passes) in a `.devin/rules/**/*.md` or `.windsurf/rules/**/*.md` file. The whole file is counted, frontmatter included, because the docs do not say whether frontmatter counts. Reported at the first character past the limit, with the file's character count.
+**Fix**: Shorten the rule, split it into several rule files, or move long procedures into a skill
+**Source**: docs.devin.ai/desktop/cascade/memories ("Rules", "Rules Storage Locations")
 
 <a id="ws-003"></a>
-### WS-003 [MEDIUM] Empty or Oversized Windsurf Workflow File
-**Requirement**: Windsurf workflow files in `.windsurf/workflows/` SHOULD have content and be under 12000 characters
-**Detection**: File is empty or exceeds 12000 characters
-**Fix**: Add workflow steps or reduce content length
-**Source**: docs.windsurf.com/windsurf/cascade/memories
+### WS-003 [HIGH] Empty or Oversized Windsurf Workflow File
+**Requirement**: Workflow files MUST stay within 12,000 characters: "Workflow files are limited to 12000 characters each." The workflows page states this limit the same way the memories page states WS-002's, so both are errors. Workflows "contain a title, description, and a series of steps", so an empty file SHOULD NOT exist.
+**Detection**: Error for more than 12,000 characters (counted as in WS-002, at the first character past the limit); warning for an empty or whitespace-only file. Applies to `.devin/workflows/**/*.md`, `.windsurf/workflows/**/*.md` and `~/.codeium/windsurf/global_workflows/*.md`.
+**Fix**: Add workflow steps, or shorten or split the workflow
+**Source**: docs.devin.ai/desktop/cascade/workflows ("How to create a Workflow", "Workflow Storage Locations")
 
 <a id="ws-004"></a>
 ### WS-004 [LOW] Legacy .windsurfrules File Detected
-**Requirement**: Projects SHOULD migrate from `.windsurfrules` to `.windsurf/rules/` directory format
-**Detection**: File named `.windsurfrules`
-**Fix**: Migrate to `.windsurf/rules/` directory with individual `.md` files
-**Source**: docs.windsurf.com/windsurf/cascade/memories
+**Requirement**: Projects SHOULD move from the single `.windsurfrules` file to one file per rule in `.devin/rules/`: "The legacy single-file `.windsurfrules` at the workspace root is also still read." AGENTS.md is the cross-tool alternative ("Processed by the same Rules engine").
+**Detection**: File named `.windsurfrules` (info). When no `tools` are configured or `cline` is among them, the suggestion adds that Cline still reads `.windsurfrules` and does not read `.devin/rules/` or `.windsurf/rules/` (docs.cline.bot/customization/cline-rules lists `.windsurfrules` among the files Cline reads), so a project that also uses Cline should keep the file or use AGENTS.md.
+**Fix**: Move each rule to `.devin/rules/<name>.md` with a `trigger`, or put shared instructions in AGENTS.md
+**Source**: docs.devin.ai/desktop/cascade/memories ("Rules"), docs.cline.bot/customization/cline-rules
+
+<a id="ws-005"></a>
+### WS-005 [MEDIUM] Model-Decision Rule Without Description
+**Requirement**: A rule with `trigger: model_decision` SHOULD have a description, because Cascade selects it by the description alone: "Only the `description` is shown in the system prompt. Cascade reads the full rule file when it decides the description is relevant." (inference: without a description the rule is never picked)
+**Detection**: Workspace rule (`.devin/rules`, `.windsurf/rules`) whose frontmatter has `trigger: model_decision` and no `description`, or a blank one (empty, `""`, `null`, a block scalar with nothing below it). Reported at the blank `description` key, else at the trigger value. Frontmatter is read line by line, not with a YAML parser: the documented example `globs: **/*.test.ts` is not valid YAML.
+**Fix**: Add a description that says when the rule applies, or choose another trigger
+**Source**: docs.devin.ai/desktop/cascade/memories ("Activation Modes")
+
+<a id="ws-006"></a>
+### WS-006 [MEDIUM] Invalid or Missing Windsurf Rule Trigger
+**Requirement**: "Each workspace rule declares an activation mode in its frontmatter via the `trigger` field." Devin Desktop documents `always_on`, `model_decision`, `glob` and `manual`; Devin CLI adds `agent` ("the `trigger` values `always_on`, `manual`, `model_decision`, `agent`, and `glob` all apply"). A `glob` rule "is applied when Cascade reads or edits a file matching the `globs` pattern", so it SHOULD have `globs`.
+**Detection**: Warning, at the value, for a `trigger` outside those five values (case-sensitive, with a closest-match suggestion) and for `trigger: glob` without a non-empty `globs` (missing, empty, `[]`). Info for a workspace rule with no frontmatter or no `trigger`: the docs do not say what activation a rule without one gets. When the frontmatter has Cursor's `alwaysApply` and no `trigger`, the info message says so and maps `alwaysApply: true` to `trigger: always_on`. Not applied to `.windsurfrules`, global_rules.md or AGENTS.md, which "don't use frontmatter".
+**Fix**: Use one of the documented triggers; add `globs` for `trigger: glob`
+**Source**: docs.devin.ai/desktop/cascade/memories ("Activation Modes"), docs.devin.ai/cli/extensibility/rules ("Rules in the .devin Directory")
+
+<a id="ws-007"></a>
+### WS-007 [LOW] Legacy .windsurf Directory
+**Requirement**: Projects SHOULD use `.devin/`: "The `.devin/` directory is the preferred location and takes precedence, with `.windsurf/` kept as a fallback for backward compatibility". Workflows: "`.devin/workflows/*.md` (preferred) or `.windsurf/workflows/*.md` (fallback)"; hooks: "`.devin/hooks.json` in your workspace root (the legacy `.windsurf/hooks.json` is used only when `.devin/hooks.json` is absent or defines no hooks)".
+**Detection**: Info, once per legacy directory: on the first rule file of a `.windsurf/rules` directory and the first workflow of a `.windsurf/workflows` directory (in path order, including subdirectories, listed through the configured file system; when the directory cannot be listed, the file itself), and on `.windsurf/hooks.json`. Not reported for `.windsurf/skills` (skills are `FileType::Skill`, checked by the per-client skill rules).
+**Fix**: Move the files to the `.devin/` equivalent; `.windsurf/` still works
+**Source**: docs.devin.ai/desktop/cascade/memories ("Rules Discovery"), docs.devin.ai/desktop/cascade/workflows, docs.devin.ai/desktop/cascade/hooks ("Workspace-Level")
+
+<a id="ws-008"></a>
+### WS-008 [LOW] Generic Instruction in Windsurf Rule
+**Requirement**: Rule files SHOULD NOT contain generic instructions: "There's no need to add generic rules (e.g. "write good code"), as these are already baked into Cascade's training data." and "Keep rules simple, concise, and specific." The AGENTS.md page lists "Write good code", "Be careful with errors" and "Use best practices" as its "Less Effective Example".
+**Detection**: Info, at the phrase, in workspace rules, `.windsurfrules` and global_rules.md (not in frontmatter, code blocks or headings), for the PE-005 phrase list (`find_redundant_instructions`: "be helpful", "be concise", "be accurate", ...) and the vendor's own examples ("write good code", "write clean code", "be careful with errors", "use best practices", "follow best practices"), only when the instruction is little more than the phrase: at most one other word remains after removing list markers and filler words ("always", "please", "and", ...). "Be concise." is reported; "Be concise in commit messages" is not. This word budget is an agnix heuristic. PE-005 itself does not run on Windsurf files.
+**Fix**: No auto-fix - remove the line or replace it with a project-specific instruction
+**Source**: docs.devin.ai/desktop/cascade/memories ("Best Practices"), docs.devin.ai/desktop/cascade/agents-md ("Content Guidelines")
+
+<a id="ws-009"></a>
+### WS-009 [LOW] Workflow Not Supported by the Devin Local Agent
+**Requirement**: Teams SHOULD consider skills for procedures the default agent must run: "Workflows are specific to Cascade — the [Devin Local agent](/desktop/devin-local) does not support them. Migrate your workflows to [skills](/desktop/cascade/skills) with the **Devin: Open Cascade Migration Wizard** command." The Devin Local agent is "the default agent for new tabs" (memories page).
+**Detection**: Info on every workflow file (`.devin/workflows`, `.windsurf/workflows`, global workflows)
+**Fix**: Migrate the workflow to a skill, or keep it if the team uses the Cascade agent
+**Source**: docs.devin.ai/desktop/cascade/workflows, docs.devin.ai/desktop/devin-local ("Limitations")
+
+<a id="ws-010"></a>
+### WS-010 [HIGH] Global Rules File Exceeds Character Limit
+**Requirement**: The global rules file MUST stay within 6,000 characters: "Single file, applied across all workspaces. Always on. Limited to 6,000 characters." and "The global rules file is limited to 6,000 characters."
+**Detection**: `~/.codeium/windsurf/memories/global_rules.md` with more than 6,000 characters, counted and reported as in WS-002. Devin CLI's project `.devin/global_rules.md` and `.windsurf/global_rules.md` are not this file (no limit is stated for them) and are not checked.
+**Fix**: Shorten it, or move project-specific rules into workspace rule files
+**Source**: docs.devin.ai/desktop/cascade/memories ("Rules")
+
+<a id="ws-011"></a>
+### WS-011 [MEDIUM] AGENTS.md Exceeds Windsurf Rule Character Limit (Inferred)
+**Requirement**: AGENTS.md SHOULD stay within the 12,000-character workspace-rule limit in projects that use Devin Desktop. This is an agnix inference: the docs state no AGENTS.md limit, but AGENTS.md is "Processed by the same Rules engine — root-level = always-on, subdirectory = auto-glob for that directory." and Devin Desktop "feeds it into the same Rules engine that powers `.devin/rules/`". Devin CLI also advises "**Rules and AGENTS should be kept as small as possible.**" Windsurf-side twin of AGM-003, which the cross-cutting rules apply to every AGENTS.md.
+**Detection**: Warning, at the first character past the limit, for a file named `AGENTS.md` (not CLAUDE.md, AGENTS.local.md or AGENTS.override.md) over 12,000 characters, when windsurf is among the configured `tools`, or no tools are configured, the target is generic, and the project shows Windsurf use: `.devin/rules/`, `.devin/workflows/`, `.devin/hooks.json`, a `.windsurf/` directory or `.windsurfrules` next to the file or in a parent directory up to the project root. `.devin/` alone is not enough (it is also the Devin CLI config directory). Devin Desktop also reads a lowercase `agents.md`; agnix does not detect that name.
+**Fix**: Move directory-specific guidance into nested AGENTS.md files, rules with their own activation into `.devin/rules/`, or procedures into skills
+**Source**: docs.devin.ai/desktop/cascade/memories ("Rules"), docs.devin.ai/desktop/cascade/agents-md ("How It Works")
+
+<a id="ws-hk-001"></a>
+### WS-HK-001 [HIGH] Invalid Cascade Hooks File
+**Requirement**: A Cascade hooks file MUST be a JSON object whose `hooks` object maps events to arrays of hooks (Basic Structure). Each hook takes `command` (string), `powershell` (string), `show_output` (boolean) and `working_directory` (string): "At least one of `command` or `powershell` must be specified."; with neither, the Cross-Platform Behavior table gives "Validation error".
+**Detection**: Error for a JSON syntax error, a top level that is not an object, `hooks` that is not an object, an event value that is not an array, a hook that is not an object, a hook with neither `command` nor `powershell` (null counts as absent), and an option of the wrong type. Warning for comments or trailing commas (the docs describe JSON files and do not say whether they are accepted) and for an event name at the top level instead of under `hooks`. A file without `hooks` (`{}`) defines no hooks and is not reported. Positions at the key or value.
+**Fix**: Fix the JSON and the hook entries
+**Source**: docs.devin.ai/desktop/cascade/hooks ("Basic Structure", "Configuration Options", "Cross-Platform Behavior")
+
+<a id="ws-hk-002"></a>
+### WS-HK-002 [MEDIUM] Unknown Cascade Hook Event
+**Requirement**: Hook events SHOULD be one of the twelve Cascade events: "Cascade provides twelve hook events that cover the most critical actions in the agent workflow." They are `pre_read_code`, `post_read_code`, `pre_write_code`, `post_write_code`, `pre_run_command`, `post_run_command`, `pre_mcp_tool_use`, `post_mcp_tool_use`, `pre_user_prompt`, `post_cascade_response`, `post_cascade_response_with_transcript`, `post_setup_worktree`.
+**Detection**: Warning, at the key, for any other key in `hooks`, with a closest-match suggestion. Claude Code or Devin CLI event names (`PreToolUse`) are reported too: they belong to other files (`.devin/hooks.v1.json` for the Devin Local agent).
+**Fix**: Use a documented event name
+**Source**: docs.devin.ai/desktop/cascade/hooks ("Hook Events")
+
+<a id="ws-hk-003"></a>
+### WS-HK-003 [MEDIUM] Cascade Hook Skipped or Option Ignored
+**Requirement**: Hooks SHOULD be written so Cascade runs them as intended. A powershell-only hook on macOS/Linux: "Hook is silently skipped". `working_directory`: "Using `~` for home directory expansion is not supported". Workspace files: "the legacy `.windsurf/hooks.json` is used only when `.devin/hooks.json` is absent or defines no hooks". For `pre_user_prompt`, `post_cascade_response` and `post_cascade_response_with_transcript`: "The `show_output` configuration option does not apply to this hook."
+**Detection**: Warning for a hook with `powershell` and no `command` (at `powershell`), a `working_directory` starting with `~` (at the value), and a `.windsurf/hooks.json` that defines hooks while the sibling `.devin/hooks.json` defines hooks (at `hooks`; read through the configured file system). Info for `show_output` on the three events above.
+**Fix**: Add a `command`; use an absolute or workspace-relative directory; move legacy hooks into `.devin/hooks.json`; remove `show_output`
+**Source**: docs.devin.ai/desktop/cascade/hooks ("Cross-Platform Behavior", "Configuration Options", "Workspace-Level", "Hook Events")
+
+<a id="ws-hk-004"></a>
+### WS-HK-004 [LOW] Relative Script Path in Cascade Hook
+**Requirement**: Workspace hooks SHOULD use absolute script paths: "**Use absolute paths**: Always use absolute paths in your hook configurations to avoid ambiguity." Kiro's KR-HK-009 advises the opposite for Kiro hooks; each rule stays scoped to its vendor.
+**Detection**: Info, at the command value, in `.devin/hooks.json` and `.windsurf/hooks.json`, when the script a hook runs is a relative path: the program itself (`./scripts/check.sh`) or the first non-flag argument of an interpreter (`python3 hooks/check.py`, `bash scripts/x.sh`, `deno run tools/x.ts`). A path is a token with `/` (also `\` in `powershell`) that does not start with `/`, `\`, `~`, `$`, `%`, `@`, `-` or a drive letter and is not a URL. Commands on PATH (`black .`), inline code (`bash -c ...`) and `$ROOT_WORKSPACE_PATH/...` are not reported. User and system hooks are not checked.
+**Fix**: No auto-fix - use an absolute path
+**Source**: docs.devin.ai/desktop/cascade/hooks ("Best Practices")
+
+<a id="ws-hk-005"></a>
+### WS-HK-005 [MEDIUM] Secret in Workspace Hook Command
+**Requirement**: Workspace hooks are committed with the project, so their commands SHOULD NOT contain literal credentials: "Keep security-critical policies at the cloud or system level, and avoid checking sensitive information into version control." and "**Protect sensitive data**: Avoid logging sensitive information like API keys or credentials." This is vendor advice, so the rule is a warning.
+**Detection**: Warning, at the value, for a `command` or `powershell` in `.devin/hooks.json` or `.windsurf/hooks.json` with a token prefix that starts a word and has a token-shaped body (`sk-` 16+, `ghp_`/`gho_`/`github_pat_` 30+, `xoxb-`/`xoxp-` 10+, `glpat-` 20+, `AKIA` + 16 uppercase characters), or a literal value after `api_key=`, `apikey=`, `api-key=`, `token=`, `password=`, `secret=`, `access_key=`, `private_key=` (so `GITHUB_TOKEN=...` and `--token=...` count), after `--token`, `--api-key`, `--apikey`, `--password`, `--secret`, `--auth-token`, `--access-token`, or after `Bearer `. References (`$VAR`, `${VAR}`, `$(cmd)`, `%VAR%`, `<...>`, `{{...}}`), placeholders and values shorter than 8 characters are not secrets. Same detector shape as KR-HK-010.
+**Fix**: No auto-fix - read the value from an environment variable or a file outside the repository
+**Source**: docs.devin.ai/desktop/cascade/hooks ("Workspace Hooks for Team Projects", "Best Practices")
 
 ---
 
@@ -5112,7 +5372,6 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | CC-PL-003 | Normalize partial semver | unsafe |
 | AGM-001 | Append closing code fence for unclosed blocks | unsafe |
 | GM-001 | Append closing code fence for unclosed blocks | unsafe |
-| GM-008 | Strip directory prefix from contextFileName | unsafe |
 | PE-005 | Delete redundant instruction line | unsafe |
 | REF-003 | Delete duplicate import line | unsafe |
 | CUR-011 | Replace invalid cursor hook event with closest match | unsafe |
@@ -5149,9 +5408,9 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | COP-012 | Delete unsupported GitHub.com agent field | safe |
 | COP-014 | Delete unknown prompt frontmatter key | safe |
 | COP-015 | Replace invalid prompt type | unsafe |
-| AMP-001 | Delete unknown check frontmatter key | unsafe |
-| AMP-004 | Delete unknown settings JSON key | unsafe |
-| GM-009 | Delete unknown settings JSON key | unsafe |
+| AMP-001 | Delete unknown check frontmatter key and its value lines | unsafe |
+| AMP-004 | Delete unknown settings key and its comma | unsafe |
+| GM-009 | Delete unknown top-level settings key (and one comma) | unsafe |
 | CDX-004 | Delete unknown TOML config key | unsafe |
 | AMP-002 | Replace invalid severity-default with closest match | unsafe |
 
@@ -5163,8 +5422,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 |----------|-------------|------|--------|-----|--------------|
 | Agent Skills | 22 | 11 | 6 | 5 | 7 |
 | AGENTS.md | 7 | 0 | 2 | 5 | 1 |
-| Amp Checks | 4 | 2 | 2 | 0 | 3 |
-| Amp Skills | 1 | 0 | 1 | 0 | 1 |
+| Amp Checks | 9 | 4 | 4 | 1 | 3 |
+| Amp Skills | 3 | 0 | 2 | 1 | 1 |
 | Claude Agents | 21 | 10 | 10 | 1 | 7 |
 | Claude Hooks | 32 | 19 | 10 | 3 | 11 |
 | Claude Memory | 15 | 4 | 6 | 5 | 1 |
@@ -5183,8 +5442,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Cross-Platform | 11 | 0 | 6 | 5 | 0 |
 | Cursor | 39 | 13 | 15 | 11 | 8 |
 | Cursor Skills | 1 | 0 | 1 | 0 | 1 |
-| Gemini Agents | 1 | 1 | 0 | 0 | 0 |
-| Gemini CLI | 10 | 3 | 5 | 2 | 3 |
+| Gemini Agents | 6 | 4 | 1 | 1 | 0 |
+| Gemini CLI | 29 | 7 | 12 | 10 | 2 |
 | Kiro Agents | 29 | 11 | 15 | 3 | 1 |
 | Kiro Hooks | 28 | 15 | 6 | 7 | 7 |
 | Kiro Permissions | 12 | 6 | 5 | 1 | 0 |
@@ -5200,13 +5459,11 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | OpenCode Skills | 1 | 0 | 1 | 0 | 1 |
 | Prompt Eng | 4 | 0 | 3 | 1 | 1 |
 | References | 3 | 2 | 0 | 1 | 1 |
-| Roo Code | 6 | 3 | 3 | 0 | 0 |
-| Roo Code Skills | 0 | 0 | 0 | 0 | 0 |
 | Version Awareness | 1 | 0 | 0 | 1 | 0 |
-| Windsurf | 4 | 1 | 2 | 1 | 0 |
+| Windsurf | 16 | 4 | 7 | 5 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 0 | 3 | 0 | 3 |
-| **TOTAL** | **666** | **246** | **301** | **119** | **126** |
+| **TOTAL** | **703** | **255** | **314** | **134** | **125** |
 
 
 ---
@@ -5218,7 +5475,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 - modelcontextprotocol.io (MCP specification)
 - code.claude.com/docs (Claude Code documentation)
 - cursor.com/docs (Cursor AI documentation)
-- docs.windsurf.com (Windsurf/Codeium documentation)
+- docs.devin.ai (Devin Desktop, formerly Windsurf; docs.windsurf.com redirects there)
 - github.com/cline/cline (Cline repository)
 
 ### Research Papers
@@ -5234,8 +5491,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 666 validation rules across 44 categories
+**Total Coverage**: 703 validation rules across 43 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 246 HIGH, 301 MEDIUM, 119 LOW
-**Auto-Fixable**: 126 rules (19%)
+**Certainty**: 255 HIGH, 314 MEDIUM, 134 LOW
+**Auto-Fixable**: 125 rules (18%)

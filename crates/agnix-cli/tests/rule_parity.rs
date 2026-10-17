@@ -243,7 +243,7 @@ fn extract_implemented_rule_ids() -> BTreeSet<String> {
         "CC-SET-", "AGM-", "MCP-", "COP-", "CUR-", "CLN-", "CDX-", "OC-", "GM-", "GM-AG-", "XML-",
         "REF-", "PE-", "XP-", "VER-", "WS-", "CR-SK-", "CL-SK-", "CP-SK-", "CX-SK-", "OC-SK-",
         "WS-SK-", "KR-SK-", "KR-AG-", "KR-PM-", "KR-HK-", "KR-PW-", "KR-MCP-", "KR-SET-", "KR-WF-",
-        "KR-IGN-", "KIRO-", "AMP-SK-", "AMP-", "RC-SK-", "ROO-",
+        "KR-IGN-", "KIRO-", "AMP-SK-", "AMP-", "RC-SK-",
     ];
 
     fn extract_from_file(
@@ -412,17 +412,31 @@ fn infer_fixture_coverage(rules: &[RuleEntry]) -> HashMap<String, Vec<String>> {
         ),
         ("kiro-workflows", vec!["kiro-detect"]),
         ("kiro-ignore", vec!["kiro-detect"]),
-        ("amp-skills", vec!["per_client_skills"]),
-        ("amp-checks", vec!["amp-checks"]),
+        ("amp-skills", vec!["per_client_skills", "amp-skills"]),
+        ("amp-checks", vec!["amp-checks", "amp-skills"]),
         ("roo-code-skills", vec!["per_client_skills"]),
-        ("gemini-cli", vec!["gemini_md", "gemini_md-invalid"]),
+        (
+            "gemini-cli",
+            vec![
+                "gemini_md",
+                "gemini_md-invalid",
+                "gemini_settings",
+                "gemini_extension",
+                "gemini_ignore",
+                "gemini_hooks",
+                "gemini_surfaces",
+            ],
+        ),
         (
             "gemini-agents",
-            vec!["valid/gemini-agents", "invalid/gemini-agents"],
+            vec![
+                "valid/gemini-agents",
+                "invalid/gemini-agents",
+                "gemini_surfaces",
+            ],
         ),
         ("codex", vec!["codex", "codex-invalid"]),
-        ("roo-code", vec!["roo-code"]),
-        ("windsurf", vec!["windsurf", "windsurf-legacy"]),
+        ("windsurf", vec!["windsurf", "windsurf-legacy", "devin"]),
         ("kiro-steering", vec!["kiro-steering"]),
     ]
     .into_iter()
@@ -647,7 +661,6 @@ fn test_rules_json_integrity() {
         "amp-skills",
         "amp-checks",
         "roo-code-skills",
-        "roo-code",
     ];
     for rule in &rules_index.rules {
         assert!(

@@ -1,7 +1,7 @@
 {
-  "totalRules": 666,
-  "categoryCount": 44,
-  "autofixCount": 126,
+  "totalRules": 703,
+  "categoryCount": 43,
+  "autofixCount": 125,
   "uniqueTools": [
     "amp",
     "claude-code",
@@ -12,7 +12,6 @@
     "github-copilot",
     "kiro",
     "opencode",
-    "roo-code",
     "windsurf"
   ]
 }

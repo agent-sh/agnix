@@ -2,7 +2,7 @@
 
 > Master document for tracking AI tool ecosystem changes, research updates, and community feedback.
 
-**Last Updated**: 2026-10-16
+**Last Updated**: 2026-10-17
 **Review Cadence**: Monthly (1st week of each month)
 **Related**: [MONTHLY-REVIEW.md](./MONTHLY-REVIEW.md) | [VALIDATION-RULES.md](./VALIDATION-RULES.md) | [INDEX.md](./INDEX.md)
 
@@ -33,8 +33,7 @@ Tools are organized by support tier (see [../CONTRIBUTING.md#tool-tier-system](.
 
 | Tool | Config Format | Documentation URL | Monitoring | Frequency | Last Reviewed | Rule Prefix |
 |------|---------------|-------------------|------------|-----------|---------------|-------------|
-| Roo Code | `.roomodes`, `.rooignore`, `.roorules`, `.roo/rules/*.md`, `.roo/rules-{slug}/*.md`, `.roo/mcp.json` | https://github.com/RooCodeInc/Roo-Code | Automated (tool-release-watch.yml) | Quarterly | 2026-07-26 | ROO |
-| amp | `.amp/settings.json`, `.agents/checks/*.md`, `AGENTS.md` | https://ampcode.com/news | Automated (tool-release-watch.yml via ampcode.com/news.rss; tracks latest news-post slug as the release marker) | Quarterly | 2026-10-08 | AGM, AMP, AMP-SK |
+| amp | `.amp/settings.json(c)`, `~/.config/amp/settings.json(c)`, `.agents/checks/*.md`, `.agents/skills/*/SKILL.md`, skill `mcp.json`, `AGENTS.md` | https://ampcode.com/news | Automated (tool-release-watch.yml via ampcode.com/news.rss; tracks latest news-post slug as the release marker) | Quarterly | 2026-10-08 | AGM, AMP, AMP-SK |
 
 ### C Tier (community reports fixes only)
 
@@ -46,11 +45,17 @@ Tools are organized by support tier (see [../CONTRIBUTING.md#tool-tier-system](.
 
 | Tool | Config Format | Documentation URL | Monitoring | Frequency | Last Reviewed | Rule Prefix |
 |------|---------------|-------------------|------------|-----------|---------------|-------------|
-| Windsurf | `.windsurf/rules/*.md`, `.windsurf/workflows/*.md`, `.windsurfrules` | https://windsurf.com/changelog | Automated (tool-release-watch.yml via HTML scrape; Wave-level granularity) | Ad hoc | 2026-07-26 | WS, WS-SK |
+| Windsurf (Devin Desktop) | `.devin/rules/*.md`, `.devin/workflows/*.md`, `.devin/hooks.json` (legacy `.windsurf/` equivalents), `.windsurfrules`, `~/.codeium/windsurf/memories/global_rules.md`, `~/.codeium/windsurf/hooks.json`; docs at https://docs.devin.ai/desktop | https://windsurf.com/changelog | Automated (tool-release-watch.yml via HTML scrape; Wave-level granularity) | Ad hoc | 2026-07-26 | WS, WS-SK |
 
 ### E Tier (no support, community only)
 
 All other AI coding tools - including continue, Antigravity, Tabnine, Codeium, Amazon Q, Aider, SourceGraph Cody, pi, and others. These tools do **not** have validators in `crates/agnix-core/src/rules/` and are not currently supported by agnix. Community contributions welcome via the Tool Support Request issue template.
+
+### Dropped
+
+| Tool | Reason | Removed in |
+|------|--------|------------|
+| Roo Code | Discontinued 2026-05-15: docs.roocode.com says "The Roo Code Extension was shut down on May 15th."; the RooCodeInc/Roo-Code repository is archived (last release v3.54.0, 2026-05-15). Its rules (ROO-001 through ROO-006), file types and release tracking were removed. | 0.59.0 |
 
 pi is not validated, but its subagent files are recognized so Claude agent rules do not run on them. pi has no marker file; extensions load agents by location: `<agentDir>/agents` where agentDir is `$PI_CODING_AGENT_DIR` or `~/.pi/agent` (`packages/coding-agent/src/config.ts` `getAgentDir`), project `.pi/agents` (`examples/extensions/subagent/README.md`), and paths from a package manifest's `pi` object or `pi-subagents.agents` (`docs/packages.md`, github.com/nicobailon/pi-subagents `docs/agents.md`). agnix treats an `agents/` directory as pi's when its parent is not a Claude root and has a `package.json` with a `pi` or `pi-subagents` object, a `settings.json` with a pi-only key (`defaultProvider`, `defaultModel`, `defaultThinkingLevel`, `modelThinkingLevels`, `enabledModels`, `packages`; `docs/settings.md`), or an extension importing `@earendil-works/pi-coding-agent`. Verified 2026-10-17 against pi-coding-agent's installed docs: 0 matches on 124 real Claude plugin agents and 8245 other agent files on one machine.
 
@@ -202,6 +207,7 @@ Tracking community input that influences rule development, tool support decision
 
 | Date | Source | Feedback | Action Taken | Issue/PR |
 |------|--------|----------|-------------|----------|
+| 2026-10-17 | Roo Code shutdown (docs.roocode.com, RooCodeInc/Roo-Code archived) | "The Roo Code Extension was shut down on May 15th."; last release v3.54.0 | Dropped Roo Code: removed ROO-001 through ROO-006, the Roo file types and detection, and the release baseline; `rules.roo_code` is a deprecated no-op | -- |
 | 2026-10-16 | Codex CLI rust-v0.163.0 tagged schema (#1673) | Root `include_environment_context_time`, `js_repl_node_module_dirs`, `js_repl_node_path` and 67 new `[features]` flags (instant_interrupt, recommended_plugins, ultrafast_mode, write_stdin_approval etc.); retired patched zsh flags get a migration notice upstream | Extended the two key allowlists and added a tagged-schema regression | #1673 |
 | 2026-10-16 | Claude Code v2.1.299 (#1666) | `idleCompaction` boolean settings key documented (added 2.1.290, surfaced 2.1.299) with `CLAUDE_CODE_IDLE_COMPACT_MIN_TOKENS` env knob | Added CC-SET-033 boolean check; env vars are not settings keys so no rule | #1666 |
 | 2026-10-16 | Spec drift #1665: cline-rules, cursor rules/subagents/environment (#1665) | Cline keeps `paths` as the only conditional; Cursor keeps .mdc + frontmatter, subagent fields and the environment.json schema unchanged in validated surface | Re-read all five sources; rule behavior accurate, refreshed five sentinel hashes only | #1665 |

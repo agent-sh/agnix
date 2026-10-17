@@ -271,8 +271,6 @@ def main(fix: bool = False) -> int:
         "kiro-steering": "Kiro Steering",
         "amp-skills": "Amp Skills",
         "amp-checks": "Amp Checks",
-        "roo-code": "Roo Code",
-        "roo-code-skills": "Roo Code Skills",
     }
 
     totals = [
@@ -346,8 +344,6 @@ def main(fix: bool = False) -> int:
         "Kiro Skills": ["kiro-skills"],
         "Amp Skills": ["amp-skills"],
         "Amp Checks": ["amp-checks"],
-        "Roo Code Skills": ["roo-code-skills"],
-        "Roo Code": ["roo-code"],
     }
     spec_sum = 0
     spec_stale: dict[str, int] = {}

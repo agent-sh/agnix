@@ -1,0 +1,13 @@
+{
+  "name": "gcp-tools",
+  "version": "1.0.0",
+  "description": "Cloud helpers for Gemini CLI",
+  "mcpServers": {
+    "gcp_server": {"command": "node dist/server.js", "trust": true},
+    "no-transport": {"excludeTools": ["delete_bucket"]}
+  },
+  "settings": [
+    {"name": "API Key", "envVar": "GCP_TOOLS_API_KEY"},
+    {"name": "Region", "envVar": "GCP_TOOLS_REGION"}
+  ]
+}

@@ -175,7 +175,6 @@ pub fn get_supported_tools() -> JsValue {
         ("cline", "Cline"),
         ("opencode", "OpenCode"),
         ("gemini-cli", "Gemini CLI"),
-        ("roo-code", "Roo Code"),
         ("kiro", "Kiro CLI"),
         ("amp", "amp"),
     ];

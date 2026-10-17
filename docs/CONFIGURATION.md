@@ -73,7 +73,7 @@ severity = "Warning"  # Warning, Error, Info
 target = "Generic"    # Deprecated: Generic, ClaudeCode, Cursor, Codex, Kiro
 
 # Multi-tool support (overrides target)
-tools = ["claude-code", "cursor", "github-copilot"]  # Valid: claude-code, cursor, codex, kiro, copilot, github-copilot, cline, opencode, gemini-cli, amp, roo-code, windsurf, generic
+tools = ["claude-code", "cursor", "github-copilot"]  # Valid: claude-code, cursor, codex, kiro, copilot, github-copilot, cline, opencode, gemini-cli, amp, windsurf, generic
 
 exclude = [
   "node_modules/**",

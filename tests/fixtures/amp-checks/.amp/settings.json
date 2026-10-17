@@ -1,4 +1,15 @@
 {
+  "$schema": "https://ampcode.com/cli-settings.schema.json",
   "model": "amp-default",
-  "unknownKey": true
+  "unknownKey": true,
+  "amp.showCosts": "yes",
+  "amp.mcpServers": {
+    "internal-tools": {
+      "command": "internal-mcp",
+      "env": { "TOKEN": "${amp:id-token}" }
+    }
+  },
+  "amp.mcpPermissions": [
+    { "matches": "*", "action": "reject" }
+  ]
 }

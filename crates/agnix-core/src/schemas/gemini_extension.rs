@@ -1,147 +1,165 @@
-//! Gemini CLI extension manifest schema helpers
+//! Gemini CLI extension manifest (`gemini-extension.json`) helpers.
 //!
-//! Provides parsing and validation for gemini-extension.json files.
-//!
-//! Validates:
-//! - JSON syntax
-//! - Required fields: name, version, description
-//! - Extension name format (lowercase alphanumeric with dashes)
-//! - Unknown top-level keys
+//! Mirrors what Gemini CLI does when it loads a manifest
+//! (packages/cli/src/config/extension-manager.ts, `loadExtensionConfig`,
+//! `validateName`, `validateContextFilePath`) and what
+//! `gemini extensions validate` adds (commands/extensions/validate.ts).
 
-/// Required fields in gemini-extension.json
-pub const REQUIRED_FIELDS: &[&str] = &["name", "version", "description"];
-
-/// Known optional top-level keys
-pub const KNOWN_OPTIONAL_KEYS: &[&str] =
-    &["mcpServers", "contextFileName", "excludeTools", "settings"];
-
-/// A JSON parse error with location information
-#[derive(Debug, Clone)]
-pub struct ParseError {
-    pub message: String,
-    pub line: usize,
-    pub column: usize,
+/// `validateName`: `/^[a-zA-Z0-9-]+$/`, otherwise "Invalid extension name:
+/// ... Only letters (a-z, A-Z), numbers (0-9), and dashes (-) are allowed."
+pub fn is_loadable_extension_name(name: &str) -> bool {
+    !name.is_empty() && name.chars().all(|c| c.is_ascii_alphanumeric() || c == '-')
 }
 
-/// Result of parsing gemini-extension.json
-#[derive(Debug, Clone)]
-pub struct ParsedGeminiExtension {
-    /// Parse error if JSON is invalid
-    pub parse_error: Option<ParseError>,
-    /// The parsed schema (if valid JSON)
-    pub schema: Option<GeminiExtensionSchema>,
-    /// Top-level keys not in known required or optional sets
-    #[allow(dead_code)] // parsed but not yet consumed by validators
-    pub unknown_keys: Vec<String>,
+/// `gemini extensions validate` warns when `semver.valid(version)` fails.
+/// node-semver trims the string and accepts one leading `v`.
+pub fn is_semver(version: &str) -> bool {
+    let version = version.trim();
+    let version = version.strip_prefix('v').unwrap_or(version);
+    version.len() <= 256 && semver::Version::parse(version).is_ok()
 }
 
-/// Partial schema for gemini-extension.json
-#[derive(Debug, Clone, Default)]
-pub struct GeminiExtensionSchema {
-    /// Extension name
-    pub name: Option<String>,
-    /// Extension version
-    pub version: Option<String>,
-    /// Extension description
-    pub description: Option<String>,
-    /// Context file name (e.g., "CONTEXT.md")
-    pub context_file_name: Option<String>,
-}
+/// Words that name a secret in an extension setting's `envVar` or `name`
+/// (geminicli.com/docs/extensions/best-practices: "If your extension
+/// requires API keys or other secrets, use the `sensitive: true` option").
+const SECRET_WORDS: &[&str] = &[
+    "KEY",
+    "KEYS",
+    "APIKEY",
+    "TOKEN",
+    "TOKENS",
+    "SECRET",
+    "SECRETS",
+    "PASSWORD",
+    "PASSWORDS",
+    "PASSWD",
+    "CREDENTIAL",
+    "CREDENTIALS",
+];
 
-/// Validate an extension name follows the required format.
-///
-/// Must be lowercase alphanumeric with dashes, starting with a letter or digit.
-/// Pattern: `^[a-z0-9][a-z0-9-]*$`
-pub fn is_valid_extension_name(name: &str) -> bool {
-    if name.is_empty() {
-        return false;
-    }
+/// A word after a secret word that makes the setting describe the secret
+/// rather than hold it (`KEY_PATH`, `TOKEN_URL`, `ACCESS_KEY_ID`).
+const NOT_SECRET_AFTER: &[&str] = &[
+    "PATH", "FILE", "DIR", "URL", "URI", "ID", "NAME", "TYPE", "LIMIT", "COUNT", "SIZE", "LENGTH",
+    "HEADER", "FIELD", "PREFIX", "ENDPOINT", "HOST", "PORT", "ENV", "VAR", "FORMAT", "MODE",
+];
 
-    let mut chars = name.chars();
+/// A word before a secret word that makes it something else
+/// (`PUBLIC_KEY`, `MAX_TOKENS`).
+const NOT_SECRET_BEFORE: &[&str] = &["PUBLIC", "MAX", "MIN", "NUM"];
 
-    // First character must be lowercase letter or digit
-    match chars.next() {
-        Some(c) if c.is_ascii_lowercase() || c.is_ascii_digit() => {}
-        _ => return false,
-    }
-
-    // Remaining characters must be lowercase letters, digits, or dashes
-    chars.all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
-}
-
-/// Parse gemini-extension.json content
-pub fn parse_gemini_extension(content: &str) -> ParsedGeminiExtension {
-    // Parse JSON
-    let value: serde_json::Value = match serde_json::from_str(content) {
-        Ok(v) => v,
-        Err(e) => {
-            return ParsedGeminiExtension {
-                parse_error: Some(ParseError {
-                    message: e.to_string(),
-                    line: e.line(),
-                    column: e.column(),
-                }),
-                schema: None,
-                unknown_keys: Vec::new(),
-            };
+/// Upper-case words of an identifier or label: split at characters other
+/// than letters and digits and at lower-to-upper case changes
+/// (`MY_API_KEY`, `apiKey`, `API Key`).
+fn words(text: &str) -> Vec<String> {
+    let mut words = Vec::new();
+    let mut current = String::new();
+    let mut previous_lower = false;
+    for ch in text.chars() {
+        if !ch.is_alphanumeric() {
+            if !current.is_empty() {
+                words.push(std::mem::take(&mut current));
+            }
+            previous_lower = false;
+            continue;
         }
-    };
-
-    let obj = match value.as_object() {
-        Some(o) => o,
-        None => {
-            return ParsedGeminiExtension {
-                parse_error: Some(ParseError {
-                    message: "Expected a JSON object".to_string(),
-                    line: 1,
-                    column: 1,
-                }),
-                schema: None,
-                unknown_keys: Vec::new(),
-            };
+        if ch.is_uppercase() && previous_lower && !current.is_empty() {
+            words.push(std::mem::take(&mut current));
         }
-    };
-
-    // Check for unknown keys
-    let all_known: Vec<&str> = REQUIRED_FIELDS
-        .iter()
-        .chain(KNOWN_OPTIONAL_KEYS.iter())
-        .copied()
-        .collect();
-    let unknown_keys: Vec<String> = obj
-        .keys()
-        .filter(|k| !all_known.contains(&k.as_str()))
-        .cloned()
-        .collect();
-
-    // Extract schema fields
-    let name = obj
-        .get("name")
-        .and_then(|v| v.as_str())
-        .map(|s| s.to_string());
-    let version = obj
-        .get("version")
-        .and_then(|v| v.as_str())
-        .map(|s| s.to_string());
-    let description = obj
-        .get("description")
-        .and_then(|v| v.as_str())
-        .map(|s| s.to_string());
-    let context_file_name = obj
-        .get("contextFileName")
-        .and_then(|v| v.as_str())
-        .map(|s| s.to_string());
-
-    ParsedGeminiExtension {
-        parse_error: None,
-        schema: Some(GeminiExtensionSchema {
-            name,
-            version,
-            description,
-            context_file_name,
-        }),
-        unknown_keys,
+        previous_lower = ch.is_lowercase() || ch.is_ascii_digit();
+        current.extend(ch.to_uppercase());
     }
+    if !current.is_empty() {
+        words.push(current);
+    }
+    words
+}
+
+/// Whether an extension setting's `envVar` or `name` looks like it holds a
+/// secret: a whole word KEY, TOKEN, SECRET, PASSWORD or CREDENTIAL (or a
+/// plural), so `KEYBOARD_LAYOUT` does not match, and not one of the
+/// describing forms such as `KEY_PATH`, `TOKEN_URL`, `PUBLIC_KEY` or
+/// `MAX_TOKENS`. An agnix heuristic; Gemini CLI defines no list.
+pub fn looks_like_secret_setting(text: &str) -> bool {
+    let words = words(text);
+    words.iter().enumerate().any(|(index, word)| {
+        SECRET_WORDS.contains(&word.as_str())
+            && !words
+                .get(index + 1)
+                .is_some_and(|next| NOT_SECRET_AFTER.contains(&next.as_str()))
+            && !index
+                .checked_sub(1)
+                .and_then(|i| words.get(i))
+                .is_some_and(|previous| NOT_SECRET_BEFORE.contains(&previous.as_str()))
+    })
+}
+
+/// Why `validateContextFilePath` rejects a `contextFileName` entry.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ContextPathProblem {
+    /// Not a string, empty, or containing a null byte ("expected a
+    /// non-empty string.", "null bytes are not allowed.").
+    NotNonEmptyString,
+    /// Starts with `${extensionPath}` or `${workspacePath}`: the manifest is
+    /// hydrated before validation, so the entry becomes an absolute path.
+    VariableAbsolute,
+    /// POSIX or Windows absolute path ("Absolute paths are not allowed.").
+    Absolute,
+    /// Contains `..`, also URL-encoded ("Relative parent directory
+    /// references ("..") are not allowed."). The loader checks the
+    /// substring, so `notes..md` is rejected too.
+    ParentReference,
+}
+
+/// Check one `contextFileName` entry the way the loader does, after the
+/// `${/}` / `${pathSeparator}` hydration. Returns the hydrated path when it
+/// is accepted.
+pub fn check_context_file_path(entry: &str) -> Result<String, ContextPathProblem> {
+    if entry.trim().is_empty() || entry.contains('\0') {
+        return Err(ContextPathProblem::NotNonEmptyString);
+    }
+    if entry.starts_with("${extensionPath}") || entry.starts_with("${workspacePath}") {
+        return Err(ContextPathProblem::VariableAbsolute);
+    }
+    let hydrated = entry.replace("${/}", "/").replace("${pathSeparator}", "/");
+    if is_absolute_posix_or_windows(&hydrated) {
+        return Err(ContextPathProblem::Absolute);
+    }
+    if hydrated.contains("..") || percent_decode(&hydrated).contains("..") {
+        return Err(ContextPathProblem::ParentReference);
+    }
+    Ok(hydrated)
+}
+
+/// `path.isAbsolute(p) || path.win32.isAbsolute(p)`.
+fn is_absolute_posix_or_windows(path: &str) -> bool {
+    let bytes = path.as_bytes();
+    path.starts_with('/')
+        || path.starts_with('\\')
+        || (bytes.len() >= 3
+            && bytes[0].is_ascii_alphabetic()
+            && bytes[1] == b':'
+            && matches!(bytes[2], b'/' | b'\\'))
+}
+
+/// Decode `%XX` escapes (like `decodeURIComponent`, keeping malformed ones).
+fn percent_decode(text: &str) -> String {
+    let bytes = text.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%'
+            && let Some(hex) = text.get(i + 1..i + 3)
+            && let Ok(byte) = u8::from_str_radix(hex, 16)
+        {
+            out.push(byte);
+            i += 3;
+            continue;
+        }
+        out.push(bytes[i]);
+        i += 1;
+    }
+    String::from_utf8_lossy(&out).into_owned()
 }
 
 #[cfg(test)]
@@ -149,107 +167,98 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_valid_extension() {
-        let content = r#"{
-  "name": "my-extension",
-  "version": "1.0.0",
-  "description": "A test extension"
-}"#;
-        let result = parse_gemini_extension(content);
-        assert!(result.parse_error.is_none());
-        assert!(result.schema.is_some());
-        assert!(result.unknown_keys.is_empty());
-        let schema = result.schema.unwrap();
-        assert_eq!(schema.name, Some("my-extension".to_string()));
-        assert_eq!(schema.version, Some("1.0.0".to_string()));
-        assert_eq!(schema.description, Some("A test extension".to_string()));
+    fn secret_settings_match_whole_words() {
+        for secret in [
+            "MY_API_KEY",
+            "API Key",
+            "apiKey",
+            "GITHUB_TOKEN",
+            "Access tokens",
+            "CLIENT_SECRET",
+            "AWS_SECRET_ACCESS_KEY",
+            "DB_PASSWORD",
+            "Password",
+            "SERVICE_CREDENTIALS",
+            "OPENAI_APIKEY",
+        ] {
+            assert!(looks_like_secret_setting(secret), "{secret}");
+        }
+        for other in [
+            "KEYBOARD_LAYOUT",
+            "MONKEY",
+            "TOKENIZER",
+            "SSH_KEY_PATH",
+            "KEY_FILE",
+            "AWS_ACCESS_KEY_ID",
+            "TOKEN_URL",
+            "PUBLIC_KEY",
+            "Max tokens",
+            "MAX_TOKENS",
+            "API Base URL",
+            "Project ID",
+            "",
+        ] {
+            assert!(!looks_like_secret_setting(other), "{other}");
+        }
     }
 
     #[test]
-    fn test_parse_with_optional_fields() {
-        let content = r#"{
-  "name": "ext",
-  "version": "0.1.0",
-  "description": "Test",
-  "contextFileName": "CONTEXT.md",
-  "mcpServers": {},
-  "excludeTools": [],
-  "settings": {}
-}"#;
-        let result = parse_gemini_extension(content);
-        assert!(result.parse_error.is_none());
-        assert!(result.unknown_keys.is_empty());
-        let schema = result.schema.unwrap();
-        assert_eq!(schema.context_file_name, Some("CONTEXT.md".to_string()));
+    fn loadable_names_follow_validate_name() {
+        for name in [
+            "my-extension",
+            "ext",
+            "ext123",
+            "a",
+            "0ext",
+            "My-Extension",
+            "-ext",
+            "EXT",
+        ] {
+            assert!(is_loadable_extension_name(name), "{name}");
+        }
+        for name in ["", "ext_name", "ext name", "ext.name", "café"] {
+            assert!(!is_loadable_extension_name(name), "{name}");
+        }
     }
 
     #[test]
-    fn test_parse_invalid_json() {
-        let result = parse_gemini_extension("{ invalid }");
-        assert!(result.parse_error.is_some());
-        assert!(result.schema.is_none());
+    fn semver_matches_node_semver_valid() {
+        for version in [
+            "1.0.0",
+            "v1.2.3",
+            " 1.2.3 ",
+            "1.0.0-beta.1",
+            "1.0.0+build.5",
+        ] {
+            assert!(is_semver(version), "{version}");
+        }
+        for version in ["1.0", "1", "latest", "01.0.0", "1.0.0.0", ""] {
+            assert!(!is_semver(version), "{version}");
+        }
     }
 
     #[test]
-    fn test_parse_empty_object() {
-        let result = parse_gemini_extension("{}");
-        assert!(result.parse_error.is_none());
-        assert!(result.schema.is_some());
-        let schema = result.schema.unwrap();
-        assert!(schema.name.is_none());
-        assert!(schema.version.is_none());
-        assert!(schema.description.is_none());
-    }
-
-    #[test]
-    fn test_unknown_keys_detected() {
-        let content = r#"{
-  "name": "ext",
-  "version": "1.0.0",
-  "description": "Test",
-  "unknownField": true
-}"#;
-        let result = parse_gemini_extension(content);
-        assert!(result.parse_error.is_none());
-        assert_eq!(result.unknown_keys.len(), 1);
-        assert_eq!(result.unknown_keys[0], "unknownField");
-    }
-
-    #[test]
-    fn test_is_valid_extension_name_valid() {
-        assert!(is_valid_extension_name("my-extension"));
-        assert!(is_valid_extension_name("ext"));
-        assert!(is_valid_extension_name("ext123"));
-        assert!(is_valid_extension_name("a"));
-        assert!(is_valid_extension_name("0ext"));
-    }
-
-    #[test]
-    fn test_is_valid_extension_name_invalid() {
-        assert!(!is_valid_extension_name(""));
-        assert!(!is_valid_extension_name("My-Extension")); // uppercase
-        assert!(!is_valid_extension_name("-ext")); // starts with dash
-        assert!(!is_valid_extension_name("ext_name")); // underscore
-        assert!(!is_valid_extension_name("ext name")); // space
-        assert!(!is_valid_extension_name("EXT")); // all uppercase
-    }
-
-    #[test]
-    fn test_parse_error_location() {
-        let content = "{\n  \"name\": \n}";
-        let result = parse_gemini_extension(content);
-        assert!(result.parse_error.is_some());
-        let err = result.parse_error.unwrap();
-        assert!(err.line > 0);
-    }
-
-    #[test]
-    fn test_non_string_fields_ignored() {
-        // name as number should result in name being None
-        let content = r#"{"name": 42, "version": "1.0.0", "description": "Test"}"#;
-        let result = parse_gemini_extension(content);
-        assert!(result.parse_error.is_none());
-        let schema = result.schema.unwrap();
-        assert!(schema.name.is_none());
+    fn context_file_paths_follow_validate_context_file_path() {
+        use ContextPathProblem::*;
+        for (entry, expected) in [
+            ("GEMINI.md", Ok("GEMINI.md".to_string())),
+            ("docs/CONTEXT.md", Ok("docs/CONTEXT.md".to_string())),
+            ("docs${/}CONTEXT.md", Ok("docs/CONTEXT.md".to_string())),
+            ("./GEMINI.md", Ok("./GEMINI.md".to_string())),
+            ("", Err(NotNonEmptyString)),
+            ("  ", Err(NotNonEmptyString)),
+            ("a\0b", Err(NotNonEmptyString)),
+            ("${extensionPath}/GEMINI.md", Err(VariableAbsolute)),
+            ("/etc/GEMINI.md", Err(Absolute)),
+            ("C:\\ctx\\GEMINI.md", Err(Absolute)),
+            ("C:/ctx/GEMINI.md", Err(Absolute)),
+            ("\\\\server\\share\\GEMINI.md", Err(Absolute)),
+            ("../shared/GEMINI.md", Err(ParentReference)),
+            ("docs/../GEMINI.md", Err(ParentReference)),
+            ("notes..md", Err(ParentReference)),
+            ("%2e%2e/GEMINI.md", Err(ParentReference)),
+        ] {
+            assert_eq!(check_context_file_path(entry), expected, "{entry:?}");
+        }
     }
 }

@@ -1,19 +1,43 @@
 {
+  "$schema": "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/schemas/settings.schema.json",
   "general": {},
   "model": {},
   "hooksConfig": {
+    "enabled": true,
+    "disabled": [],
+    "notifications": true
+  },
+  "hooks": {
     "BeforeAgent": [
       {
-        "type": "command",
-        "command": "echo starting agent",
-        "name": "pre-agent-hook"
+        "hooks": [
+          {
+            "name": "pre-agent-hook",
+            "type": "command",
+            "command": "echo starting agent"
+          }
+        ]
       }
     ],
     "AfterAgent": [
       {
-        "type": "command",
-        "command": "echo agent finished"
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo agent finished",
+            "timeout": 5000
+          }
+        ]
       }
     ]
+  },
+  "mcpServers": {
+    "docs": {
+      "command": "node",
+      "args": ["server.js"]
+    }
+  },
+  "experimental": {
+    "autoMemory": true
   }
 }

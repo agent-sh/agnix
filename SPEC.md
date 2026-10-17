@@ -26,8 +26,8 @@
 | Cursor Project Rules | .cursor/rules/*.mdc, .cursorrules, .cursor/hooks.json, .cursor/agents/**/*.md, .cursor/environment.json | 39 |
 | Cline | .clinerules, .clinerules/*.md, .clinerules/*.txt | 14 |
 | OpenCode | opencode.json, opencode.jsonc | 66 |
-| Gemini Agents | .gemini/agents/*.json | 1 |
-| Gemini CLI | GEMINI.md, GEMINI.local.md, .gemini/settings.json (hooks), gemini-extension.json (extensions), .geminiignore | 10 |
+| Gemini Agents | .gemini/agents/*.md, extension agents/*.md | 6 |
+| Gemini CLI | GEMINI.md, GEMINI.local.md, .gemini/settings.json (hooks), gemini-extension.json and extension hooks/hooks.json (extensions), .geminiignore | 29 |
 | Codex CLI | .codex/config.toml/.json/.yaml | 85 |
 | Version Awareness | .agnix.toml | 1 |
 | Cursor Skills | .cursor/skills/*/SKILL.md | 1 |
@@ -35,7 +35,7 @@
 | Copilot Skills | .github/skills/*/SKILL.md | 2 |
 | Codex Skills | .agents/skills/*/SKILL.md | 4 |
 | OpenCode Skills | .opencode/skills/*/SKILL.md | 1 |
-| Windsurf | .windsurf/rules/*.md, .windsurf/workflows/*.md, .windsurfrules | 4 |
+| Windsurf | .devin/rules/**/*.md, .devin/workflows/**/*.md, .devin/hooks.json (and the legacy .windsurf/ equivalents), .windsurfrules, ~/.codeium/windsurf/memories/global_rules.md, ~/.codeium/windsurf/hooks.json, AGENTS.md (WS-011) | 16 |
 | Windsurf Skills | .windsurf/skills/*/SKILL.md | 1 |
 | Kiro Steering | .kiro/steering/**/*.md (KIRO-026: near-miss names in Kiro config dirs) | 16 |
 | Kiro Skills | .kiro/skills/*/SKILL.md | 2 |
@@ -47,10 +47,8 @@
 | Kiro Settings | .kiro/settings/cli.json | 11 |
 | Kiro Workflows | .kiro/workflows/*.workflow.{json,yaml,yml} | 9 |
 | Kiro Ignore | .kiroignore, ~/.kiro/settings/kiroignore | 1 |
-| Amp Skills | .agents/skills/*/SKILL.md | 1 |
-| Amp Checks | .agents/checks/*.md, .amp/settings*.json | 4 |
-| Roo Code Skills | .roo/skills/*/SKILL.md | 0 |
-| Roo Code | .roo/rules/*.md, .roomodes, .roorules, .roo/mcp.json, .rooignore | 6 |
+| Amp Skills | SKILL.md and mcp.json under .agents/skills/, .claude/skills/, ~/.config/agents/skills/, ~/.config/amp/skills/ | 3 |
+| Amp Checks | .agents/checks/*.md, ~/.config/{agents,amp}/checks/*.md, .amp/settings.json(c), ~/.config/amp/settings.json(c), ampcode/managed-settings.json, files AGENTS.md @-mentions, skill mcp.json | 9 |
 
 ## Architecture
 

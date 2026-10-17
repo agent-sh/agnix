@@ -1,0 +1,11 @@
+# Invoked via: /git:commit
+description = "Generates a Git commit message based on staged changes."
+
+# The prompt uses !{...} to execute the command and inject its output.
+prompt = """
+Please generate a Conventional Commit message based on the following git diff:
+
+```diff
+!{git diff --staged}
+```
+"""
