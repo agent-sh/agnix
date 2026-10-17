@@ -1,9 +1,9 @@
 ---
 id: kiro-014
-title: "KIRO-014: Markdown Structure Issues - Kiro Steering"
+title: "KIRO-014: Steering Body Without Markdown Heading"
 sidebar_label: "KIRO-014"
-description: "agnix rule KIRO-014 checks for markdown structure issues in kiro steering files. Severity: LOW. See examples and fix guidance."
-keywords: ["KIRO-014", "markdown structure issues", "kiro steering", "validation", "agnix", "linter"]
+description: "agnix rule KIRO-014 checks for steering body without markdown heading in kiro steering files. Severity: LOW. See examples and fix guidance."
+keywords: ["KIRO-014", "steering body without markdown heading", "kiro steering", "validation", "agnix", "linter"]
 ---
 
 ## Summary
@@ -13,7 +13,7 @@ keywords: ["KIRO-014", "markdown structure issues", "kiro steering", "validation
 - **Category**: `Kiro Steering`
 - **Normative Level**: `BEST_PRACTICE`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,7 @@ keywords: ["KIRO-014", "markdown structure issues", "kiro steering", "validation
 
 ## Evidence Sources
 
-- https://kiro.dev/docs/steering
+- https://kiro.dev/docs/steering/
 
 ## Test Coverage Metadata
 

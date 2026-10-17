@@ -13,7 +13,7 @@ keywords: ["KIRO-006", "secrets detected in steering file", "kiro steering", "va
 - **Category**: `Kiro Steering`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 

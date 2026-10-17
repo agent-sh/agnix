@@ -7,6 +7,9 @@
 use crate::config::{LintConfig, PerFileLintConfig, TargetTool};
 use crate::diagnostics::{Diagnostic, Fix};
 use crate::parsers::frontmatter::split_frontmatter;
+use crate::rules::kiro_steering::{
+    YamlTopLevelEntry, frontmatter_edit_yields, single_line_scalar_text, yaml_top_level_entries,
+};
 use crate::rules::{Validator, ValidatorMetadata};
 use rust_i18n::t;
 use std::path::{Component, Path, PathBuf};
@@ -42,11 +45,50 @@ const UNIVERSAL_FIELDS: &[&str] = &[
     "allowed-tools",
 ];
 
+/// SKILL.md frontmatter fields Kiro reads (kiro.dev Skills; the V3 skill
+/// schema validates exactly these and passes every other key through unread).
+/// `allowed-tools` is not among them: Kiro never restricts a skill's tools.
+const KIRO_SKILL_FIELDS: &[&str] = &[
+    "name",
+    "description",
+    "license",
+    "compatibility",
+    "metadata",
+];
+
+/// Fields other skill clients act on (Agent Skills `allowed-tools` and the
+/// Claude Code extensions). Kiro ignores them, so a skill relying on one does
+/// not behave in Kiro the way it does elsewhere.
+const OTHER_CLIENT_SKILL_FIELDS: &[&str] = &[
+    "allowed-tools",
+    "disallowed-tools",
+    "when_to_use",
+    "arguments",
+    "argument-hint",
+    "disable-model-invocation",
+    "user-invocable",
+    "model",
+    "context",
+    "background",
+    "agent",
+    "hooks",
+    "effort",
+    "paths",
+    "shell",
+];
+
+/// Groups the KR-SK-001 fixes that create a `metadata` block, so one run
+/// applies at most one of them.
+const KIRO_CREATE_METADATA_GROUP: &str = "kr-sk-001-create-metadata";
+
 /// Check whether a client supports a given frontmatter field.
 ///
 /// Claude Code supports all extension fields. Cursor additionally supports
 /// `disable-model-invocation`. All other clients only support universal fields.
 fn is_field_supported(client: SkillClient, field: &str) -> bool {
+    if client == SkillClient::Kiro {
+        return KIRO_SKILL_FIELDS.contains(&field);
+    }
     if UNIVERSAL_FIELDS.contains(&field) {
         return true;
     }
@@ -369,6 +411,251 @@ const RULE_IDS: &[&str] = &[
     "XP-SK-001",
 ];
 
+// ---------------------------------------------------------------------------
+// Kiro (KR-SK-001)
+// ---------------------------------------------------------------------------
+
+/// Where a moved field can go.
+enum KiroMetadataTarget {
+    /// No `metadata` key: a fix may create the block in place.
+    Absent,
+    /// A block mapping with at least one child line.
+    Block {
+        /// Start of the `metadata:` line.
+        start: usize,
+        /// End of the `metadata:` line (before its line break).
+        header_end: usize,
+        /// Indentation of the existing children.
+        indent: String,
+    },
+    /// Flow, null, scalar or otherwise unusual metadata: fields are not moved.
+    Unusable,
+}
+
+fn kiro_metadata_target(
+    frontmatter: &str,
+    entries: &[YamlTopLevelEntry],
+    mapping: &serde_yaml::Mapping,
+) -> KiroMetadataTarget {
+    let Some(value) = mapping.get(serde_yaml::Value::String("metadata".into())) else {
+        return KiroMetadataTarget::Absent;
+    };
+    let Some(children) = value.as_mapping() else {
+        return KiroMetadataTarget::Unusable;
+    };
+    let Some(entry) = entries.iter().find(|entry| entry.key == "metadata") else {
+        return KiroMetadataTarget::Unusable;
+    };
+    // The value must start on the next line (not `metadata: {...}`).
+    if children.is_empty()
+        || entry.value_start != entry.line_end
+        || entry.value_end <= entry.line_end
+    {
+        return KiroMetadataTarget::Unusable;
+    }
+    let indent = frontmatter[entry.line_end..entry.value_end]
+        .lines()
+        .map(|line| (line, line.trim_start()))
+        .find(|(_, trimmed)| !trimmed.is_empty() && !trimmed.starts_with('#'))
+        .map(|(line, trimmed)| &line[..line.len() - trimmed.len()]);
+    match indent {
+        Some(indent) if !indent.is_empty() && indent.bytes().all(|b| b == b' ') => {
+            KiroMetadataTarget::Block {
+                start: entry.start,
+                header_end: entry.line_end,
+                indent: indent.to_string(),
+            }
+        }
+        _ => KiroMetadataTarget::Unusable,
+    }
+}
+
+/// The value text to write under `metadata` for a single-line scalar, and the
+/// value it must parse to. Strings keep their exact text; numbers and booleans
+/// are quoted so `metadata` stays a string-to-string map.
+fn kiro_movable_value(
+    frontmatter: &str,
+    entry: &YamlTopLevelEntry,
+    value: &serde_yaml::Value,
+) -> Option<(String, serde_yaml::Value)> {
+    let scalar = single_line_scalar_text(frontmatter, entry)?;
+    match value {
+        serde_yaml::Value::String(_) => Some((
+            frontmatter[entry.value_start..entry.line_end].to_string(),
+            value.clone(),
+        )),
+        serde_yaml::Value::Number(_) | serde_yaml::Value::Bool(_) => Some((
+            serde_json::to_string(scalar).ok()?,
+            serde_yaml::Value::String(scalar.to_string()),
+        )),
+        _ => None,
+    }
+}
+
+/// Build the KR-SK-001 fix for one unsupported top-level field: move it under
+/// `metadata` when it is a single-line scalar, otherwise delete the whole
+/// entry. Every candidate is applied to a copy and re-parsed; a fix is offered
+/// only when the frontmatter parses to exactly the intended mapping. Moves are
+/// safe for plain data fields (Kiro reads neither location); moving another
+/// client's field, and every deletion, is unsafe.
+fn kiro_field_fix(
+    content: &str,
+    parts: &crate::parsers::frontmatter::FrontmatterParts,
+    yaml: &serde_yaml::Value,
+    entries: &[YamlTopLevelEntry],
+    entry: &YamlTopLevelEntry,
+    value: &serde_yaml::Value,
+    other_client_field: bool,
+) -> Option<Fix> {
+    let frontmatter = parts.frontmatter.as_str();
+    let base = parts.frontmatter_start;
+    let key = serde_yaml::Value::String(entry.key.clone());
+    let mut without_key = yaml.clone();
+    without_key.as_mapping_mut()?.shift_remove(&key);
+
+    if let Some((text, moved)) = kiro_movable_value(frontmatter, entry, value) {
+        let mut expected = without_key.clone();
+        let target = kiro_metadata_target(frontmatter, entries, yaml.as_mapping()?);
+        let candidate = match &target {
+            KiroMetadataTarget::Absent => {
+                expected.as_mapping_mut()?.insert(
+                    serde_yaml::Value::String("metadata".into()),
+                    serde_yaml::Value::Mapping(serde_yaml::Mapping::from_iter([(
+                        key.clone(),
+                        moved,
+                    )])),
+                );
+                Some((
+                    entry.start,
+                    entry.line_end,
+                    format!("metadata:\n  {}: {text}", entry.key),
+                    true,
+                ))
+            }
+            KiroMetadataTarget::Block {
+                start,
+                header_end,
+                indent,
+            } => {
+                expected
+                    .get_mut("metadata")?
+                    .as_mapping_mut()?
+                    .insert(key.clone(), moved);
+                let inserted = format!("\n{indent}{}: {text}", entry.key);
+                if entry.start < *start {
+                    // Field above the block: drop its line, insert after the header.
+                    let after_line = (entry.line_end + 1).min(*header_end);
+                    Some((
+                        entry.start,
+                        *header_end,
+                        format!("{}{inserted}", &frontmatter[after_line..*header_end]),
+                        false,
+                    ))
+                } else if entry.start > 0 && frontmatter.as_bytes()[entry.start - 1] == b'\n' {
+                    // Field below the block: insert after the header, drop its line.
+                    Some((
+                        *header_end,
+                        entry.line_end,
+                        format!("{inserted}{}", &frontmatter[*header_end..entry.start - 1]),
+                        false,
+                    ))
+                } else {
+                    None
+                }
+            }
+            KiroMetadataTarget::Unusable => None,
+        };
+        if let Some((start, end, replacement, creates_metadata)) = candidate
+            && frontmatter_edit_yields(content, base + start, base + end, &replacement, &expected)
+        {
+            let mut fix = Fix::replace(
+                base + start,
+                base + end,
+                replacement,
+                format!("Move '{}' under metadata", entry.key),
+                !other_client_field,
+            );
+            if creates_metadata {
+                fix = fix.with_group(KIRO_CREATE_METADATA_GROUP);
+            }
+            return Some(fix);
+        }
+    }
+
+    // Delete the whole entry: key line, continuation lines and the line break.
+    // A last entry also takes the line break before the closing `---`.
+    let end = (base + entry.value_end + 1).min(content.len());
+    frontmatter_edit_yields(content, base + entry.start, end, "", &without_key).then(|| {
+        Fix::delete(
+            base + entry.start,
+            end,
+            format!("Remove '{}', which Kiro ignores", entry.key),
+            false,
+        )
+    })
+}
+
+/// KR-SK-001 for Kiro skills. Runs only on frontmatter that parses (AS-016
+/// reports YAML errors; Kiro skips such skills) and reads the keys from the
+/// parsed mapping, so nested or continuation lines are never mistaken for
+/// fields.
+fn validate_kiro_skill(
+    path: &Path,
+    content: &str,
+    parts: &crate::parsers::frontmatter::FrontmatterParts,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Ok(yaml) = serde_yaml::from_str::<serde_yaml::Value>(&parts.frontmatter) else {
+        return;
+    };
+    let Some(mapping) = yaml.as_mapping() else {
+        return;
+    };
+    let entries = yaml_top_level_entries(&parts.frontmatter);
+    let line_starts = compute_line_starts(content);
+    for (key, value) in mapping {
+        let Some(field) = key.as_str() else {
+            continue;
+        };
+        if is_field_supported(SkillClient::Kiro, field) {
+            continue;
+        }
+        let entry = entries.iter().find(|entry| entry.key == field);
+        let offset = parts.frontmatter_start + entry.map_or(0, |entry| entry.start);
+        let (line, col) = line_col_at(offset, &line_starts);
+        let other_client_field = OTHER_CLIENT_SKILL_FIELDS.contains(&field);
+        let message_key = if field == "allowed-tools" || field == "disallowed-tools" {
+            "kr_sk_001_tools"
+        } else if other_client_field {
+            "kr_sk_001"
+        } else {
+            "kr_sk_001_data"
+        };
+        let message = t!(&format!("rules.{message_key}.message"), field = field);
+        let suggestion = t!(&format!("rules.{message_key}.suggestion"), field = field);
+        let mut diagnostic = if other_client_field {
+            Diagnostic::warning(path.to_path_buf(), line, col, "KR-SK-001", message)
+        } else {
+            Diagnostic::info(path.to_path_buf(), line, col, "KR-SK-001", message)
+        }
+        .with_suggestion(suggestion);
+        if let Some(entry) = entry
+            && let Some(fix) = kiro_field_fix(
+                content,
+                parts,
+                &yaml,
+                &entries,
+                entry,
+                value,
+                other_client_field,
+            )
+        {
+            diagnostic = diagnostic.with_fix(fix);
+        }
+        diagnostics.push(diagnostic);
+    }
+}
+
 pub struct PerClientSkillValidator;
 
 impl Validator for PerClientSkillValidator {
@@ -401,6 +688,13 @@ impl Validator for PerClientSkillValidator {
         let has_xp = config.is_rule_enabled("XP-SK-001");
 
         if !has_per_client && !has_xp {
+            return diagnostics;
+        }
+
+        // Kiro: KR-SK-001 says everything XP-SK-001 would (Kiro supports only
+        // universal fields), so it replaces XP-SK-001 for Kiro skills.
+        if client == SkillClient::Kiro && has_per_client {
+            validate_kiro_skill(path, content, &parts, &mut diagnostics);
             return diagnostics;
         }
 
@@ -924,6 +1218,249 @@ mod tests {
         let diags = validate(".kiro/skills/my-skill/SKILL.md", &content);
         let kr_diags: Vec<_> = diags.iter().filter(|d| d.rule == "KR-SK-001").collect();
         assert_eq!(kr_diags.len(), 1);
+    }
+
+    // ===== Kiro (KR-SK-001) =====
+
+    const KIRO_PATH: &str = ".kiro/skills/my-skill/SKILL.md";
+
+    fn kiro_diags(content: &str) -> Vec<Diagnostic> {
+        validate(KIRO_PATH, content)
+    }
+
+    fn apply_fixes(content: &str, diagnostics: &[Diagnostic], safe_only: bool) -> String {
+        use crate::fs::{FileSystem, MockFileSystem};
+        let fs = std::sync::Arc::new(MockFileSystem::new());
+        fs.add_file(KIRO_PATH, content);
+        crate::fixes::apply_fixes_with_fs(diagnostics, false, safe_only, Some(fs.clone())).unwrap();
+        fs.read_to_string(Path::new(KIRO_PATH)).unwrap()
+    }
+
+    fn frontmatter_of(content: &str) -> serde_yaml::Value {
+        let parts = split_frontmatter(content);
+        assert!(parts.has_frontmatter && parts.has_closing, "{content}");
+        serde_yaml::from_str(&parts.frontmatter)
+            .unwrap_or_else(|e| panic!("frontmatter must parse after fixes: {e}\n{content}"))
+    }
+
+    /// Apply fixes run after run (as repeated `agnix --fix` would) and check
+    /// that every intermediate file parses and the body never changes.
+    fn fix_until_stable(content: &str, safe_only: bool) -> String {
+        let body = split_frontmatter(content).body;
+        let mut current = content.to_string();
+        for _ in 0..10 {
+            let diagnostics = kiro_diags(&current);
+            let next = apply_fixes(&current, &diagnostics, safe_only);
+            frontmatter_of(&next);
+            assert_eq!(split_frontmatter(&next).body, body);
+            if next == current {
+                return current;
+            }
+            current = next;
+        }
+        panic!("fixes did not converge:\n{current}");
+    }
+
+    #[test]
+    fn test_kiro_aim_skill_fixes_keep_yaml_valid() {
+        // The corpus shape that the old line-delete fix broke: a column-0
+        // block sequence followed by a metadata block.
+        let content = "---\nname: brazil\ndescription: Build system\nversion: 1.0.0\ntags:\n- skill\n- brazil\nmetadata:\n  brazil_package_interface: '1.0'\n  commit: abc\n---\n# Brazil\n";
+        let diagnostics = kiro_diags(content);
+        let kr: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "KR-SK-001")
+            .collect();
+        assert_eq!(kr.len(), 2, "{diagnostics:?}");
+        assert!(
+            diagnostics.iter().all(|d| d.rule != "XP-SK-001"),
+            "XP-SK-001 duplicates KR-SK-001 on Kiro skills"
+        );
+        let version = kr.iter().find(|d| d.message.contains("'version'")).unwrap();
+        assert_eq!((version.line, version.column), (4, 1));
+        assert_eq!(version.level, crate::diagnostics::DiagnosticLevel::Info);
+        assert!(
+            version.fixes[0].safe,
+            "moving plain data under metadata is safe"
+        );
+        let tags = kr.iter().find(|d| d.message.contains("'tags'")).unwrap();
+        assert!(!tags.fixes[0].safe, "deleting a list is unsafe");
+
+        // Safe mode: version moves under metadata, tags stay, YAML parses.
+        let safe = apply_fixes(content, &diagnostics, true);
+        let value = frontmatter_of(&safe);
+        assert_eq!(value["metadata"]["version"], "1.0.0");
+        assert_eq!(value["metadata"]["commit"], "abc");
+        assert!(value.get("version").is_none());
+        assert_eq!(value["tags"][1], "brazil");
+
+        // Unsafe runs converge to a clean, parseable skill.
+        let fixed = fix_until_stable(content, false);
+        let value = frontmatter_of(&fixed);
+        assert_eq!(value["metadata"]["version"], "1.0.0");
+        assert!(value.get("tags").is_none());
+        assert!(kiro_diags(&fixed).iter().all(|d| d.rule != "KR-SK-001"));
+    }
+
+    #[test]
+    fn test_kiro_fix_creates_metadata_once_per_run() {
+        let content = "---\nname: a\ndescription: b\nversion: 2.0.0\nstatus: verified\ntriggers:\n  - x\n  - y\n---\nBody\n";
+        let diagnostics = kiro_diags(content);
+        assert_eq!(
+            diagnostics.iter().filter(|d| d.rule == "KR-SK-001").count(),
+            3
+        );
+        let once = apply_fixes(content, &diagnostics, true);
+        let value = frontmatter_of(&once);
+        // Two creating fixes share a group: exactly one metadata block appears.
+        assert_eq!(value["metadata"].as_mapping().unwrap().len(), 1);
+        let fixed = fix_until_stable(content, true);
+        let value = frontmatter_of(&fixed);
+        assert_eq!(value["metadata"]["version"], "2.0.0");
+        assert_eq!(value["metadata"]["status"], "verified");
+        assert_eq!(
+            value["triggers"][0], "x",
+            "safe mode never deletes the list"
+        );
+    }
+
+    #[test]
+    fn test_kiro_fix_quotes_numbers_and_handles_fields_after_metadata() {
+        let content = "---\nname: a\ndescription: b\nmetadata:\n    author: me\nversion: 1.0\nenabled: true # flag\n---\nBody\n";
+        let fixed = fix_until_stable(content, true);
+        let value = frontmatter_of(&fixed);
+        assert_eq!(value["metadata"]["version"], "1.0");
+        assert_eq!(value["metadata"]["enabled"], "true");
+        assert_eq!(value["metadata"]["author"], "me");
+        assert!(fixed.contains("    version: \"1.0\""), "{fixed}");
+    }
+
+    #[test]
+    fn test_kiro_fix_falls_back_to_unsafe_delete() {
+        for content in [
+            // flow-style metadata cannot take a new line
+            "---\nname: a\ndescription: b\nmetadata: {author: me}\nversion: 1.0.0\n---\nBody\n",
+            // metadata already has the key
+            "---\nname: a\ndescription: b\nversion: 1.0.0\nmetadata:\n  version: \"0.9\"\n---\nBody\n",
+            // multi-line folded value
+            "---\nname: a\ndescription: b\nversion: >\n  1.0.0\n---\nBody\n",
+        ] {
+            let diagnostics = kiro_diags(content);
+            let kr: Vec<_> = diagnostics
+                .iter()
+                .filter(|d| d.rule == "KR-SK-001")
+                .collect();
+            assert_eq!(kr.len(), 1, "{content}");
+            assert_eq!(kr[0].fixes.len(), 1, "{content}");
+            assert!(!kr[0].fixes[0].safe, "{content}");
+            assert_eq!(apply_fixes(content, &diagnostics, true), content);
+            let fixed = apply_fixes(content, &diagnostics, false);
+            let value = frontmatter_of(&fixed);
+            assert!(value.get("version").is_none(), "{fixed}");
+            assert_eq!(value["name"], "a");
+        }
+    }
+
+    #[test]
+    fn test_kiro_last_entry_delete_keeps_closing_delimiter() {
+        let content = "---\nname: a\ndescription: b\ntags:\n- x\n- y\n---\nBody\n";
+        let diagnostics = kiro_diags(content);
+        let fixed = apply_fixes(content, &diagnostics, false);
+        assert_eq!(fixed, "---\nname: a\ndescription: b\n---\nBody\n");
+    }
+
+    #[test]
+    fn test_kiro_other_client_fields_warn_and_move_unsafely() {
+        let content = "---\nname: a\ndescription: b\nallowed-tools: Read, Grep\nargument-hint: \"[path]\"\n---\nBody\n";
+        let diagnostics = kiro_diags(content);
+        let kr: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "KR-SK-001")
+            .collect();
+        assert_eq!(
+            kr.len(),
+            2,
+            "allowed-tools is not a Kiro field: {diagnostics:?}"
+        );
+        for d in &kr {
+            assert_eq!(d.level, crate::diagnostics::DiagnosticLevel::Warning);
+            assert!(!d.fixes[0].safe, "moving another client's field is unsafe");
+        }
+        assert!(
+            kr[0].message.contains("restrict tools"),
+            "{}",
+            kr[0].message
+        );
+        assert_eq!(apply_fixes(content, &diagnostics, true), content);
+        let fixed = fix_until_stable(content, false);
+        let value = frontmatter_of(&fixed);
+        assert_eq!(value["metadata"]["allowed-tools"], "Read, Grep");
+        assert_eq!(value["metadata"]["argument-hint"], "[path]");
+    }
+
+    #[test]
+    fn test_kiro_supported_and_nested_fields_not_flagged() {
+        let content = "---\nname: a\ndescription: b\nlicense: MIT\ncompatibility: node\nmetadata:\n  model: x\n  version: \"1\"\n---\nBody\n";
+        assert!(kiro_diags(content).is_empty());
+    }
+
+    #[test]
+    fn test_kiro_unparseable_frontmatter_left_to_as_016() {
+        let content = "---\nname: a\ndescription: b\nversion: [1\n---\nBody\n";
+        assert!(kiro_diags(content).iter().all(|d| d.rule != "KR-SK-001"));
+    }
+
+    #[test]
+    fn test_kiro_xp_sk_001_kept_when_kr_sk_001_disabled() {
+        let content = make_skill("name: a\ndescription: b\nversion: 1.0.0", "Body");
+        let mut config = LintConfig::default();
+        config.rules_mut().disabled_rules = vec!["KR-SK-001".to_string()];
+        let diagnostics = PerClientSkillValidator.validate(Path::new(KIRO_PATH), &content, &config);
+        assert_eq!(diagnostics.len(), 1);
+        assert_eq!(diagnostics[0].rule, "XP-SK-001");
+    }
+
+    #[test]
+    fn test_kiro_messages_render() {
+        let content =
+            "---\nname: a\ndescription: b\nallowed-tools: Read\nmodel: x\nversion: 1\n---\nBody\n";
+        let diagnostics = kiro_diags(content);
+        assert_eq!(diagnostics.len(), 3);
+        for d in &diagnostics {
+            assert!(
+                !d.message.contains("%{") && !d.message.starts_with("rules."),
+                "{}",
+                d.message
+            );
+            let suggestion = d.suggestion.as_deref().unwrap();
+            assert!(!suggestion.contains("%{"), "{suggestion}");
+        }
+    }
+
+    #[test]
+    fn test_kiro_fixture_metadata_move() {
+        let content = include_str!(
+            "../../../../tests/fixtures/per_client_skills/.kiro/skills/metadata-move/SKILL.md"
+        );
+        let diagnostics = kiro_diags(content);
+        let rules: Vec<_> = diagnostics
+            .iter()
+            .map(|d| (d.rule.as_str(), d.line))
+            .collect();
+        assert_eq!(
+            rules,
+            [("KR-SK-001", 4), ("KR-SK-001", 5), ("KR-SK-001", 8)]
+        );
+        let safe = fix_until_stable(content, true);
+        let value = frontmatter_of(&safe);
+        assert_eq!(value["metadata"]["version"], "1.0.0");
+        assert_eq!(value["argument-hint"], "[path] [--fix]");
+        assert_eq!(value["tags"][0], "skill");
+        let all = fix_until_stable(content, false);
+        let value = frontmatter_of(&all);
+        assert_eq!(value["metadata"]["argument-hint"], "[path] [--fix]");
+        assert_eq!(value["metadata"]["author"], "agnix");
+        assert!(value.get("tags").is_none());
     }
 
     #[test]

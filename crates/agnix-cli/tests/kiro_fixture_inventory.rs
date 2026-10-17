@@ -42,6 +42,7 @@ fn required_paths() -> Vec<&'static str> {
         "tests/fixtures/kiro-powers/.kiro/powers/empty-body/POWER.md",
         "tests/fixtures/kiro-powers/.kiro/powers/bad-mcp/POWER.md",
         "tests/fixtures/kiro-powers/.kiro/powers/bad-mcp/mcp.json",
+        "tests/fixtures/kiro-powers/.kiro/powers/steps-and-samples/POWER.md",
         "tests/fixtures/kiro-agents/.kiro/agents/valid-agent.json",
         "tests/fixtures/kiro-agents/.kiro/agents/minimal-agent.json",
         "tests/fixtures/kiro-agents/.kiro/agents/invalid-resource.json",
@@ -215,7 +216,9 @@ fn kiro_fixture_families_exist_with_required_cases() {
 fn kiro_fixture_families_are_cli_runnable() {
     let root = workspace_root();
     let fixture_roots = [
-        ("tests/fixtures/kiro-powers", 7_u64, 4_u64),
+        // steps-and-samples/POWER.md adds a KR-PW-005 and a KR-PW-006 info;
+        // its Rust code sample no longer trips KR-PW-008.
+        ("tests/fixtures/kiro-powers", 8_u64, 6_u64),
         // KR-AG-009 no longer flags the 10 agents that omit the optional `prompt`.
         ("tests/fixtures/kiro-agents", 10_u64, 10_u64),
         ("tests/fixtures/kiro-hooks", 7_u64, 4_u64),

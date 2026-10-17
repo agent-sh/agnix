@@ -637,10 +637,10 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="kr-sk-001"></a>
 ### KR-SK-001 [MEDIUM] Kiro Skill Uses Unsupported Field
-**Requirement**: Skills in `.kiro/skills/` SHOULD NOT use frontmatter fields unsupported by Kiro
-**Detection**: SKILL.md path contains `.kiro/skills/` AND frontmatter has unsupported fields
-**Fix**: [AUTO-FIX, safe] Remove unsupported field
-**Source**: kiro.dev/docs/context/steering
+**Requirement**: Skills in `.kiro/skills/` SHOULD use only the frontmatter fields Kiro reads: `name`, `description`, `license`, `compatibility` and `metadata`. Kiro keeps any other top-level key but never reads it.
+**Detection**: Top-level keys of the parsed frontmatter (nested keys and continuation lines are never mistaken for fields; unparseable frontmatter is left to AS-016). Fields other skill clients act on (`allowed-tools`, `disallowed-tools`, `argument-hint`, `model`, `context`, `agent`, `hooks`, `user-invocable`, `disable-model-invocation` and the other Claude Code skill fields) are warnings, because a skill relying on them behaves differently in Kiro; plain extra data (`version`, `tags`, `author`, ...) is info. Replaces XP-SK-001 on Kiro skills (XP-SK-001 still runs when KR-SK-001 is disabled).
+**Fix**: [AUTO-FIX, safe/unsafe] Move a single-line scalar field under `metadata` (into an existing block mapping, or by creating the block in place), quoting numbers and booleans so `metadata` stays a string map; safe for plain data, unsafe for another client's field. Other values (lists, maps, multi-line scalars) and moves that cannot be applied are an unsafe deletion of the whole entry. Every fix is applied to a copy and re-parsed and is offered only when the frontmatter parses to the intended mapping. One run creates at most one `metadata` block; run `--fix` again to move the remaining fields.
+**Source**: kiro.dev/docs/skills, agentskills.io/specification
 
 <a id="kr-ag-001"></a>
 ### KR-AG-001 [MEDIUM] Unknown Field in Kiro Agent JSON
@@ -2955,23 +2955,23 @@ Validates Codex's admin-written managed `requirements.toml` (system location: `/
 
 <a id="kiro-001"></a>
 ### KIRO-001 [HIGH] Invalid Steering File Inclusion Mode
-**Requirement**: Kiro steering files MUST use a valid inclusion mode
-**Detection**: Frontmatter `inclusion` field is not one of: always, fileMatch, manual, auto
-**Fix**: [AUTO-FIX] Use one of: always, fileMatch, manual, auto
+**Requirement**: Kiro steering files MUST use a valid inclusion mode. Kiro CLI V3 drops frontmatter with any other value and includes the whole file, frontmatter text included, in every interaction; the V2 engine loads only `always` files.
+**Detection**: Top-level `inclusion` is present, not null, and not exactly (case-sensitive) one of `always`, `fileMatch`, `manual`, `auto`. Reported at the value.
+**Fix**: [AUTO-FIX, unsafe] Replace the exact top-level value (never a nested key) with the closest valid mode, keeping its quote style; offered only when the edit re-parses to the same frontmatter with only `inclusion` changed. Unsafe because a new mode changes when Kiro loads the file.
 **Source**: kiro.dev/docs/steering/
 
 <a id="kiro-002"></a>
-### KIRO-002 [HIGH] Missing Required Fields for Inclusion Mode
-**Requirement**: Steering files MUST include required fields for their inclusion mode
-**Detection**: `inclusion: auto` without `name` and `description` fields, or `inclusion: fileMatch` without `fileMatchPattern` field
-**Fix**: Add the missing required fields for the specified inclusion mode
+### KIRO-002 [HIGH] Inclusion Mode Without the Field It Loads By
+**Requirement**: `inclusion: auto` MUST have a non-empty `description` (Kiro activates auto steering by description; without one the file is only a slash command). `inclusion: fileMatch` MUST have a non-empty `fileMatchPattern` (without one the file never loads). `name` is optional: Kiro falls back to the file name.
+**Detection**: `auto` without `description` or with `description: ""`; `fileMatch` with a missing, null, empty-string or empty-array pattern. Wrong types are KIRO-015.
+**Fix**: Add the missing description or pattern
 **Source**: kiro.dev/docs/steering/
 
 <a id="kiro-003"></a>
-### KIRO-003 [MEDIUM] Invalid fileMatchPattern Glob
-**Requirement**: The `fileMatchPattern` field SHOULD contain a valid glob pattern
-**Detection**: Glob pattern fails to parse
-**Fix**: Fix the glob pattern syntax
+### KIRO-003 [MEDIUM] fileMatchPattern Does Not Match as Written
+**Requirement**: Each `fileMatchPattern` (a string or the documented array of strings) SHOULD match the way it reads. Kiro uses minimatch: a comma outside `{...}` alternation and `[...]` classes is a literal character, and an unclosed `[` is a literal `[`.
+**Detection**: For every string pattern: a comma left after brace expansion outside a class (the same check, and limits, as Kiro's `fileMatchPatternLiteralComma` issue), or a `[` with no closing `]`. Reported at the pattern.
+**Fix**: Use the array form or braces (`**/*.{ts,tsx}`); close or escape the bracket
 **Source**: kiro.dev/docs/steering/
 
 <a id="kiro-004"></a>
@@ -2991,21 +2991,21 @@ Validates Codex's admin-written managed `requirements.toml` (system location: `/
 <a id="kiro-006"></a>
 ### KIRO-006 [HIGH] Secrets Detected in Steering File
 **Requirement**: Steering files MUST NOT include hardcoded credentials
-**Detection**: Content includes likely secret assignment patterns (API keys, tokens, passwords, secrets)
+**Detection**: A secret-like key (`api_key`, `token`, `password`, `*secret`) assigned a literal value. Values that name code instead of holding a literal are skipped: identifiers (`hashedPassword`, `SecretString`), member access (`user.password`), calls, `$VAR` references and templates. Quoted literals are always checked. Reported at the match.
 **Fix**: Remove plaintext secrets and use environment variable expansion
 **Source**: kiro.dev/docs/steering/
 
 <a id="kiro-007"></a>
 ### KIRO-007 [MEDIUM] fileMatchPattern Without fileMatch Inclusion
-**Requirement**: `fileMatchPattern` SHOULD only be used with `inclusion: fileMatch`
-**Detection**: `fileMatchPattern` exists while inclusion mode is missing or not `fileMatch`
+**Requirement**: `fileMatchPattern` SHOULD only be used with `inclusion: fileMatch`; otherwise Kiro ignores the pattern and loads the file by its actual mode (`always` when unset)
+**Detection**: A non-null `fileMatchPattern` while inclusion is missing or not `fileMatch`. Reported at the key.
 **Fix**: Set `inclusion: fileMatch` or remove `fileMatchPattern`
 **Source**: kiro.dev/docs/steering/
 
 <a id="kiro-008"></a>
 ### KIRO-008 [MEDIUM] Unknown Steering Frontmatter Field
-**Requirement**: Steering frontmatter SHOULD use only documented keys
-**Detection**: Frontmatter includes key outside `inclusion`, `name`, `description`, `fileMatchPattern`
+**Requirement**: Steering frontmatter SHOULD use only documented keys; Kiro drops the others
+**Detection**: Top-level key outside `inclusion`, `name`, `description`, `fileMatchPattern`. Reported at the key.
 **Fix**: Rename or remove unknown frontmatter keys
 **Source**: kiro.dev/docs/steering/
 
@@ -3017,99 +3017,162 @@ Validates Codex's admin-written managed `requirements.toml` (system location: `/
 **Source**: kiro.dev/docs/steering/
 
 <a id="kiro-010"></a>
-### KIRO-010 [MEDIUM] Missing Inclusion Mode
-**Requirement**: Kiro steering frontmatter SHOULD include an `inclusion` field
-**Detection**: Check if `inclusion` field is absent from frontmatter
-**Fix**: No auto-fix (add inclusion field)
-**Source**: kiro.dev/docs/steering
+### KIRO-010 [MEDIUM] On-Demand Steering Fields Without Inclusion Mode
+**Requirement**: A steering file that sets `name` or `description` SHOULD declare an inclusion mode. Kiro reads those fields only for `auto` steering; without `inclusion` (or with `inclusion: null`) the file is `always` included.
+**Detection**: `inclusion` missing or null while `description` or `name` is set. Files without frontmatter, or with frontmatter but no such field, are the documented default and are not reported.
+**Fix**: No auto-fix (add `inclusion: auto` with a description, or `inclusion: manual`)
+**Source**: kiro.dev/docs/steering/
 
 <a id="kiro-011"></a>
 ### KIRO-011 [LOW] Steering Doc Excessively Long
-**Requirement**: Kiro steering documents SHOULD be concise (under 50,000 bytes)
-**Detection**: Check document byte length against threshold
+**Requirement**: Kiro steering documents SHOULD be concise (under 50,000 characters, agnix guidance; Kiro adds the whole file to the context whenever it loads and documents no limit)
+**Detection**: Character count of the whole file, with or without frontmatter
 **Fix**: No auto-fix (split into smaller files)
-**Source**: kiro.dev/docs/steering
-
-<a id="kiro-012"></a>
-### KIRO-012 [MEDIUM] Duplicate Steering Name
-**Requirement**: Kiro steering file names SHOULD be unique across the project
-**Detection**: Cross-file analysis (project-level check)
-**Fix**: No auto-fix (rename steering files)
-**Source**: kiro.dev/docs/steering
-
-<a id="kiro-013"></a>
-### KIRO-013 [MEDIUM] Conflicting Inclusion Modes
-**Requirement**: Kiro steering frontmatter SHOULD have exactly one `inclusion` key
-**Detection**: Count `inclusion:` entries in frontmatter
-**Fix**: No auto-fix (remove duplicate entries)
-**Source**: kiro.dev/docs/steering
+**Source**: kiro.dev/docs/steering/
 
 <a id="kiro-014"></a>
-### KIRO-014 [LOW] Markdown Structure Issues
-**Requirement**: Kiro steering body SHOULD have Markdown heading structure
-**Detection**: Check if body content contains at least one heading
+### KIRO-014 [LOW] Steering Body Without Markdown Heading
+**Requirement**: Kiro steering body SHOULD organize guidance under Markdown headings
+**Detection**: No ATX (`#` to `######` followed by a space) or `===` setext heading outside fenced code blocks, in the body or in the whole file when there is no frontmatter. `#[[file:...]]` references and `#tags` are not headings.
 **Fix**: No auto-fix (add headings for structure)
-**Source**: kiro.dev/docs/steering
+**Source**: kiro.dev/docs/steering/
+
+<a id="kiro-015"></a>
+### KIRO-015 [HIGH] Steering Frontmatter Kiro Cannot Read
+**Requirement**: Steering frontmatter MUST be readable by Kiro: it starts on the very first line, has a closing `---`, is valid YAML without duplicate keys, is a mapping, and `name`/`description` are strings and `fileMatchPattern` a string or string array. Otherwise Kiro CLI V3 includes the whole file, frontmatter text included, in every interaction, so the inclusion mode is lost.
+**Detection**: Frontmatter after blank lines or text, an unclosed block, a YAML error (reported at the error, or at a repeated key), or a non-mapping document: error. A wrong type for `name`, `description` (including null) or `fileMatchPattern`: the V2 engine reads only `inclusion`, so this is an error when only V3 is targeted (`[tool_versions] kiro = "3.x"`), a warning naming V3 when both engines are, and not reported when V2 is pinned. An empty or comments-only block is no frontmatter (always included) and is not reported. A repeated `inclusion` key is a YAML error reported here.
+**Fix**: No auto-fix (fix the YAML or the field type)
+**Source**: kiro.dev/docs/steering/
 
 ---
 
 ## KIRO POWERS RULES
 
 <a id="kr-pw-001"></a>
-### KR-PW-001 [HIGH] Missing Required POWER.md Frontmatter Fields
-**Requirement**: `POWER.md` MUST define required frontmatter fields `name`, `description`, and `keywords`
-**Detection**: Missing frontmatter, invalid frontmatter, or missing required fields
-**Fix**: Add required frontmatter fields and valid YAML
-**Source**: kiro.dev/docs/powers/create
+### KR-PW-001 [HIGH] POWER.md Frontmatter Kiro Cannot Use
+**Requirement**: A legacy `POWER.md` MUST have frontmatter Kiro can read and SHOULD set `description` and a `keywords` array, which Kiro uses to describe and activate the power. Kiro takes the power name from its directory, so `name` is not required.
+**Detection**: Error: invalid YAML or an unclosed frontmatter block (Kiro cannot read the power and skips it). Warning: no frontmatter, frontmatter not on the first line, or no `description` / no array `keywords` (a non-array `keywords` counts as none).
+**Fix**: Fix the YAML; add description and keywords
+**Source**: kiro.dev/docs/powers, kiro.dev/docs/powers/create
 
 <a id="kr-pw-002"></a>
 ### KR-PW-002 [MEDIUM] Empty POWER.md Keywords Array
 **Requirement**: `keywords` SHOULD contain one or more activation keywords
-**Detection**: `keywords` exists but is an empty array
+**Detection**: `keywords` exists but is an empty array. Reported at the key.
 **Fix**: Add one or more keywords used for power activation
 **Source**: kiro.dev/docs/powers/
 
 <a id="kr-pw-003"></a>
 ### KR-PW-003 [MEDIUM] Empty POWER.md Body
 **Requirement**: `POWER.md` SHOULD include onboarding/workflow/reference content
-**Detection**: Non-empty frontmatter with empty markdown body
+**Detection**: Readable frontmatter with an empty markdown body
 **Fix**: Add body content describing usage and behavior
 **Source**: kiro.dev/docs/powers/create
 
 <a id="kr-pw-004"></a>
-### KR-PW-004 [MEDIUM] Invalid Adjacent Power mcp.json Structure
-**Requirement**: Power-local `mcp.json` SHOULD define a valid `mcpServers` object
-**Detection**: Adjacent `mcp.json` is malformed, missing `mcpServers`, or uses invalid `mcpServers` shape
-**Fix**: Update `mcp.json` to use valid `mcpServers` object structure
-**Source**: kiro.dev/docs/powers/
+### KR-PW-004 [MEDIUM] Adjacent Power mcp.json Kiro Cannot Use
+**Requirement**: A legacy power's adjacent `mcp.json` MUST be strict JSON (Kiro reads it with JSON.parse; otherwise it skips the whole power) and SHOULD define an `mcpServers` object
+**Detection**: Error: the adjacent `mcp.json` is unreadable or not valid JSON (comments and trailing commas included). Warning: `mcpServers` is missing or not an object. Server contents are left to the MCP rules.
+**Fix**: Fix the JSON; use an `mcpServers` object keyed by server name
+**Source**: kiro.dev/docs/powers/, kiro.dev/docs/powers/installation
 
 <a id="kr-pw-005"></a>
-### KR-PW-005 [HIGH] Step Missing Description
-**Requirement**: Each step heading in POWER.md MUST have description content below it
-**Detection**: Check for empty sections after `## Step` headings
+### KR-PW-005 [LOW] Step Heading Without Content
+**Requirement**: Each `## Step ...` heading in POWER.md SHOULD have content below it
+**Detection**: A `Step` heading (level 2 to 6) followed by no non-blank line before the next heading of the same or a higher level; deeper subsections and code blocks count as content, headings inside code fences are ignored. Other headings are not steps. Info level: an empty section does not affect loading. Reported at the heading.
 **Fix**: No auto-fix (add step description)
 **Source**: kiro.dev/docs/powers
 
 <a id="kr-pw-006"></a>
 ### KR-PW-006 [LOW] Duplicate Keywords
 **Requirement**: POWER.md keywords SHOULD be unique
-**Detection**: Check for duplicate entries in keywords array (case-insensitive)
+**Detection**: Duplicate entries in the keywords array (case-insensitive), listed in one diagnostic at the key
 **Fix**: No auto-fix (remove duplicate keywords)
 **Source**: kiro.dev/docs/powers
 
 <a id="kr-pw-007"></a>
 ### KR-PW-007 [MEDIUM] Name Invalid Characters
-**Requirement**: POWER.md name SHOULD use lowercase alphanumeric characters and hyphens only
-**Detection**: Validate name against `^[a-z0-9][a-z0-9_-]*$` pattern
+**Requirement**: POWER.md name SHOULD use lowercase letters, digits and hyphens only
+**Detection**: Validate name against `^[a-z0-9][a-z0-9-]*$`. Reported at the key.
 **Fix**: No auto-fix (rename to valid format)
-**Source**: kiro.dev/docs/powers
+**Source**: kiro.dev/docs/powers/create
 
 <a id="kr-pw-008"></a>
 ### KR-PW-008 [HIGH] Secrets in Power Body
 **Requirement**: POWER.md body MUST NOT contain hardcoded credentials
-**Detection**: Scan body for secret patterns (API keys, tokens, passwords)
+**Detection**: The KIRO-006 secret check on the body, so identifiers, member access and calls in code samples are skipped. Reported at the match.
 **Fix**: No auto-fix (use environment variables)
-**Source**: kiro.dev/docs/powers
+**Source**: kiro.dev/docs/powers/create
+
+<a id="kr-pw-009"></a>
+### KR-PW-009 [HIGH] plugin.json Is Not a JSON Object
+**Requirement**: An Agent Plugins power's `plugin.json` MUST be strict JSON holding an object; otherwise Kiro rejects the power
+**Detection**: JSON syntax error (comments and trailing commas included), reported at the error; or a top-level value that is not an object
+**Fix**: Fix the JSON
+**Source**: kiro.dev/docs/powers/create, agent-plugins.org/schemas/1.0.0/plugin.schema.json
+
+<a id="kr-pw-010"></a>
+### KR-PW-010 [HIGH] Missing or Unsupported plugin.json $schema
+**Requirement**: `plugin.json` MUST set `$schema` to an Agent Plugins 1.x manifest schema (`https://agent-plugins.org/schemas/1.x.y/plugin.schema.json`); otherwise Kiro rejects the power
+**Detection**: `$schema` missing, not a string, or not matching `^https://agent-plugins.org/schemas/1.\d+.\d+/plugin.schema.json$`. Reported at the value.
+**Fix**: Set `"$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json"`
+**Source**: kiro.dev/docs/powers/create, agent-plugins.org/schemas/1.0.0/plugin.schema.json
+
+<a id="kr-pw-011"></a>
+### KR-PW-011 [HIGH] Missing or Invalid plugin.json Name
+**Requirement**: `plugin.json` MUST set `name` to 1-64 characters of `a-z`, `0-9`, `.` and `-`, starting and ending with a letter or digit, without `--` or `..`; otherwise Kiro rejects the power
+**Detection**: `name` missing, not a string, or not matching the Agent Plugins name rule. Reported at the value.
+**Fix**: Rename to a valid plugin name
+**Source**: kiro.dev/docs/powers/create, agent-plugins.org/schemas/1.0.0/plugin.schema.json
+
+<a id="kr-pw-012"></a>
+### KR-PW-012 [MEDIUM] plugin.json Field Outside the Agent Plugins Manifest
+**Requirement**: `plugin.json` SHOULD contain only manifest fields (`$schema`, `name`, `displayName`, `version`, `description`, `author`, `homepage`, `repository`, `license`, `keywords`, `extensions`). Kiro ignores other keys (and reports an issue); the Agent Plugins schema rejects them. `displayName` is accepted by Kiro although the 1.0.0 schema lacks it.
+**Detection**: Any other top-level key, reported at the key; `mcpServers` and component keys (`skills`, `steering`, `hooks`, ...) get a targeted suggestion
+**Fix**: Remove the key, or move client-specific data under `extensions`; put MCP servers in `mcp.json`
+**Source**: kiro.dev/docs/powers/create, agent-plugins.org/schemas/1.0.0/plugin.schema.json
+
+<a id="kr-pw-013"></a>
+### KR-PW-013 [MEDIUM] plugin.json Value Kiro Ignores
+**Requirement**: `plugin.json` field values SHOULD have the manifest types; Kiro drops values of the wrong type
+**Detection**: `version`, `description`, `displayName`, `homepage`, `repository`, `license` not strings; `author` not an object, or with a key other than `name`/`email`/`url` (Kiro then drops the whole author), or with non-string values; `keywords` not an array, or with non-string items (dropped); `extensions` not an object. Reported at the value or item.
+**Fix**: Fix the value type
+**Source**: kiro.dev/docs/powers/create, agent-plugins.org/schemas/1.0.0/plugin.schema.json
+
+<a id="kr-pw-014"></a>
+### KR-PW-014 [HIGH] Plugin Skill Kiro Skips
+**Requirement**: Skills of an Agent Plugins power MUST be loadable: `skills/` is a directory, each `skills/<dir>/SKILL.md` sits in a directory whose name is a valid skill name, and no two skills declare the same name
+**Detection**: From the manifest's directory: `skills` exists but is not a directory (no skills load); a skill directory with a `SKILL.md` whose name is not a valid skill name (Kiro skips it); two skills declaring the same frontmatter `name` (Kiro keeps the first in name order and skips the rest). Reported on plugin.json.
+**Fix**: Rename the directory or the skill
+**Source**: kiro.dev/docs/powers/create, kiro.dev/docs/skills
+
+<a id="kr-pw-015"></a>
+### KR-PW-015 [MEDIUM] Power Without Activation Description or Keywords
+**Requirement**: `plugin.json` SHOULD set a non-empty `description` and at least one string in `keywords`; Kiro describes and activates powers by them
+**Detection**: `description` missing or blank; `keywords` missing, not an array, or with no string items
+**Fix**: Add a description and keywords
+**Source**: kiro.dev/docs/powers/create
+
+<a id="kr-pw-016"></a>
+### KR-PW-016 [LOW] Documented plugin.json Field Missing
+**Requirement**: The powers docs list `version` and `author` (with `name`) as required; Kiro loads a power without them
+**Detection**: `version` missing, or no `author.name` string. Info level.
+**Fix**: Add a version and an author object with a name
+**Source**: kiro.dev/docs/powers/create
+
+<a id="kr-pw-017"></a>
+### KR-PW-017 [MEDIUM] POWER.md Ignored Next to plugin.json
+**Requirement**: A power directory SHOULD NOT mix formats: when `plugin.json` exists Kiro loads the power from it and never reads `POWER.md`, its `steering/` or its legacy `mcp.json` layout
+**Detection**: A `POWER.md` whose directory also has a `plugin.json`; other POWER.md checks are skipped for it
+**Fix**: Finish the migration and delete POWER.md, or remove plugin.json
+**Source**: kiro.dev/docs/powers, kiro.dev/docs/powers/installation
+
+<a id="kr-pw-018"></a>
+### KR-PW-018 [MEDIUM] Legacy steering Directory in a plugin.json Power
+**Requirement**: An Agent Plugins power SHOULD NOT rely on a `steering/` directory: Kiro loads plugin steering only from `dev.kiro/steering/`
+**Detection**: A `steering/` directory next to `plugin.json`
+**Fix**: Move the guidance into `skills/<name>/SKILL.md` or `dev.kiro/steering/`
+**Source**: kiro.dev/docs/powers/create
 
 ---
 
@@ -3492,8 +3555,8 @@ Known asymmetry with XP-009: this is a per-file validator, so it has no view of 
 <a id="xp-sk-001"></a>
 ### XP-SK-001 [LOW] Skill Uses Client-Specific Features
 **Requirement**: Skills SHOULD avoid client-specific frontmatter fields for maximum portability
-**Detection**: Skill frontmatter uses extension fields (model, context, agent, hooks, etc.) that are not part of the universal Agent Skills spec
-**Fix**: No auto-fix -- review whether the field is needed or can be removed for portability
+**Detection**: Skill frontmatter uses extension fields (model, context, agent, hooks, etc.) that are not part of the universal Agent Skills spec. Not reported on Kiro skills while KR-SK-001 is enabled, which reports the same fields.
+**Fix**: No auto-fix - review whether the field is needed or can be removed for portability
 **Source**: agentskills.io/specification
 
 <a id="xp-sk-002"></a>
@@ -3646,6 +3709,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | CUR-011 | Replace invalid cursor hook event with closest match | unsafe |
 | CUR-013 | Replace invalid cursor hook type with closest match | unsafe |
 | KIRO-001 | Replace invalid inclusion mode with closest match | unsafe |
+| KR-SK-001 | Move unsupported skill field under metadata, or delete it | safe/unsafe |
 | OC-008 | Replace invalid permission mode with closest match | unsafe |
 | OC-DEP-001 | Rename `mode` key to `agent` | safe |
 | OC-DEP-005 | Remove TUI keys after manual migration to tui.json | unsafe |
@@ -3703,10 +3767,10 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Kiro Hooks | 14 | 8 | 5 | 1 | 2 |
 | Kiro Permissions | 4 | 4 | 0 | 0 | 0 |
 | Kiro MCP | 6 | 2 | 4 | 0 | 0 |
-| Kiro Powers | 8 | 3 | 4 | 1 | 0 |
+| Kiro Powers | 18 | 6 | 9 | 3 | 0 |
 | Kiro Settings | 3 | 1 | 2 | 0 | 3 |
 | Kiro Skills | 1 | 0 | 1 | 0 | 1 |
-| Kiro Steering | 14 | 3 | 9 | 2 | 1 |
+| Kiro Steering | 13 | 4 | 7 | 2 | 1 |
 | MCP | 25 | 18 | 6 | 1 | 8 |
 | OpenCode | 46 | 28 | 17 | 1 | 11 |
 | OpenCode Skills | 1 | 0 | 1 | 0 | 1 |
@@ -3718,7 +3782,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **459** | **210** | **212** | **37** | **129** |
+| **TOTAL** | **468** | **214** | **215** | **39** | **129** |
 
 
 ---
@@ -3748,8 +3812,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 459 validation rules across 41 categories
+**Total Coverage**: 468 validation rules across 41 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 210 HIGH, 212 MEDIUM, 37 LOW
+**Certainty**: 214 HIGH, 215 MEDIUM, 39 LOW
 **Auto-Fixable**: 129 rules (28%)

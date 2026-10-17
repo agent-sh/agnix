@@ -1,9 +1,9 @@
 ---
 id: kr-pw-001
-title: "KR-PW-001: Missing Required POWER.md Frontmatter Fields"
+title: "KR-PW-001: POWER.md Frontmatter Kiro Cannot Use"
 sidebar_label: "KR-PW-001"
-description: "agnix rule KR-PW-001 checks for missing required power.md frontmatter fields in kiro powers files. Severity: HIGH. See examples and fix guidance."
-keywords: ["KR-PW-001", "missing required power.md frontmatter fields", "kiro powers", "validation", "agnix", "linter"]
+description: "agnix rule KR-PW-001 checks for power.md frontmatter kiro cannot use in kiro powers files. Severity: HIGH. See examples and fix guidance."
+keywords: ["KR-PW-001", "power.md frontmatter kiro cannot use", "kiro powers", "validation", "agnix", "linter"]
 ---
 
 ## Summary
@@ -13,7 +13,7 @@ keywords: ["KR-PW-001", "missing required power.md frontmatter fields", "kiro po
 - **Category**: `Kiro Powers`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,8 @@ keywords: ["KR-PW-001", "missing required power.md frontmatter fields", "kiro po
 
 ## Evidence Sources
 
-- https://kiro.dev/docs/powers/create
+- https://kiro.dev/docs/powers/
+- https://kiro.dev/docs/powers/create/
 
 ## Test Coverage Metadata
 
@@ -39,7 +40,7 @@ The following examples demonstrate what triggers this rule and how to fix it.
 
 ```text
 # Missing frontmatter
-This power omits required metadata.
+This power has no description or activation keywords.
 ```
 
 ### Valid

@@ -133,9 +133,6 @@ rules:
   ws_sk_001:
     message: 字段 '%{field}' 不受 %{client} 支持 -- 将被忽略
     suggestion: 移除 '%{field}' 或将此技能移至支持它的客户端
-  kr_sk_001:
-    message: 字段 '%{field}' 不受 %{client} 支持 -- 将被忽略
-    suggestion: 移除 '%{field}' 或将此技能移至支持它的客户端
   amp_sk_001:
     message: 字段 '%{field}' 不受 %{client} 支持 -- 将被忽略
     suggestion: 移除 '%{field}' 或将此技能移至支持它的客户端
@@ -504,15 +501,9 @@ rules:
   kiro_001:
     message: '无效的引导文件包含模式 ''%{value}'' - 有效模式为: always, fileMatch, manual, auto'
     suggestion: '使用以下之一: always, fileMatch, manual, auto'
-  kiro_002_auto:
-    message: 使用 'auto' 包含模式的引导文件缺少必需字段 '%{field}'
-    suggestion: '使用 inclusion: auto 时需要添加 ''name'' 和 ''description'' 字段'
   kiro_002_filematch:
     message: 使用 'fileMatch' 包含模式的引导文件缺少必需的 'fileMatchPattern' 字段
     suggestion: '添加 ''fileMatchPattern'' glob 模式（例如 fileMatchPattern: ''**/*.ts''）'
-  kiro_003:
-    message: '无效的 fileMatchPattern glob: %{error}'
-    suggestion: 修复 glob 模式语法
   kiro_004:
     message: Kiro 引导文件为空
     suggestion: 向文件添加引导内容

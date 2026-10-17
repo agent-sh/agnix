@@ -13,7 +13,7 @@ keywords: ["KR-PW-006", "duplicate keywords", "kiro powers", "validation", "agni
 - **Category**: `Kiro Powers`
 - **Normative Level**: `BEST_PRACTICE`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,12 +23,12 @@ keywords: ["KR-PW-006", "duplicate keywords", "kiro powers", "validation", "agni
 
 ## Evidence Sources
 
-- https://kiro.dev/docs/powers
+- https://kiro.dev/docs/powers/
 
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `true`
+- Fixture tests: `false`
 - E2E tests: `false`
 
 ## Examples

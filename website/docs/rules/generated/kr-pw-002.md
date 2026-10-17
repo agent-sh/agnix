@@ -13,7 +13,7 @@ keywords: ["KR-PW-002", "empty power.md keywords array", "kiro powers", "validat
 - **Category**: `Kiro Powers`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 

@@ -13,7 +13,7 @@ keywords: ["KIRO-011", "steering doc excessively long", "kiro steering", "valida
 - **Category**: `Kiro Steering`
 - **Normative Level**: `BEST_PRACTICE`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,12 +23,12 @@ keywords: ["KIRO-011", "steering doc excessively long", "kiro steering", "valida
 
 ## Evidence Sources
 
-- https://kiro.dev/docs/steering
+- https://kiro.dev/docs/steering/
 
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `true`
+- Fixture tests: `false`
 - E2E tests: `false`
 
 ## Examples

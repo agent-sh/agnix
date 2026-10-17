@@ -13,7 +13,7 @@ keywords: ["KIRO-008", "unknown kiro steering frontmatter field", "kiro steering
 - **Category**: `Kiro Steering`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 

@@ -1,9 +1,9 @@
 ---
 id: kr-pw-004
-title: "KR-PW-004: Invalid Adjacent Power mcp.json Structure"
+title: "KR-PW-004: Adjacent Power mcp.json Kiro Cannot Use"
 sidebar_label: "KR-PW-004"
-description: "agnix rule KR-PW-004 checks for invalid adjacent power mcp.json structure in kiro powers files. Severity: MEDIUM. See examples and fix guidance."
-keywords: ["KR-PW-004", "invalid adjacent power mcp.json structure", "kiro powers", "validation", "agnix", "linter"]
+description: "agnix rule KR-PW-004 checks for adjacent power mcp.json kiro cannot use in kiro powers files. Severity: MEDIUM. See examples and fix guidance."
+keywords: ["KR-PW-004", "adjacent power mcp.json kiro cannot use", "kiro powers", "validation", "agnix", "linter"]
 ---
 
 ## Summary
@@ -13,7 +13,7 @@ keywords: ["KR-PW-004", "invalid adjacent power mcp.json structure", "kiro power
 - **Category**: `Kiro Powers`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -24,6 +24,7 @@ keywords: ["KR-PW-004", "invalid adjacent power mcp.json structure", "kiro power
 ## Evidence Sources
 
 - https://kiro.dev/docs/powers/
+- https://kiro.dev/docs/powers/installation/
 
 ## Test Coverage Metadata
 

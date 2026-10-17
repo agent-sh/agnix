@@ -13,7 +13,7 @@ keywords: ["KR-SK-001", "kiro skill uses unsupported field", "kiro skills", "val
 - **Category**: `Kiro Skills`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `Yes (safe/unsafe)`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,8 @@ keywords: ["KR-SK-001", "kiro skill uses unsupported field", "kiro skills", "val
 
 ## Evidence Sources
 
-- https://kiro.dev/docs/steering/
+- https://kiro.dev/docs/skills/
+- https://agentskills.io/specification
 
 ## Test Coverage Metadata
 
@@ -41,6 +42,7 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ---
 name: my-skill
 description: A useful development skill
+version: 1.0.0
 model: haiku
 ---
 # My Skill
@@ -54,6 +56,8 @@ Skill instructions here.
 ---
 name: my-skill
 description: A useful development skill
+metadata:
+  version: 1.0.0
 ---
 # My Skill
 

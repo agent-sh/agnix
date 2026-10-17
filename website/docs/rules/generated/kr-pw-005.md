@@ -1,19 +1,19 @@
 ---
 id: kr-pw-005
-title: "KR-PW-005: Step Missing Description - Kiro Powers"
+title: "KR-PW-005: Step Heading Without Content - Kiro Powers"
 sidebar_label: "KR-PW-005"
-description: "agnix rule KR-PW-005 checks for step missing description in kiro powers files. Severity: HIGH. See examples and fix guidance."
-keywords: ["KR-PW-005", "step missing description", "kiro powers", "validation", "agnix", "linter"]
+description: "agnix rule KR-PW-005 checks for step heading without content in kiro powers files. Severity: LOW. See examples and fix guidance."
+keywords: ["KR-PW-005", "step heading without content", "kiro powers", "validation", "agnix", "linter"]
 ---
 
 ## Summary
 
 - **Rule ID**: `KR-PW-005`
-- **Severity**: `HIGH`
+- **Severity**: `LOW`
 - **Category**: `Kiro Powers`
-- **Normative Level**: `MUST`
+- **Normative Level**: `BEST_PRACTICE`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,12 +23,12 @@ keywords: ["KR-PW-005", "step missing description", "kiro powers", "validation",
 
 ## Evidence Sources
 
-- https://kiro.dev/docs/powers
+- https://kiro.dev/docs/powers/
 
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `true`
+- Fixture tests: `false`
 - E2E tests: `false`
 
 ## Examples
@@ -43,7 +43,9 @@ name: test
 description: desc
 keywords: [test]
 ---
-## Step 1
+## Step 1: Install
+## Step 2: Configure
+Edit the config.
 ```
 
 ### Valid
@@ -54,6 +56,6 @@ name: test
 description: desc
 keywords: [test]
 ---
-## Step 1
-Do something.
+## Step 1: Install
+Run the installer.
 ```

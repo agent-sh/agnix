@@ -144,8 +144,14 @@ rules:
     message: field '%{field}' is not supported by %{client} -- it will be ignored
     suggestion: Remove '%{field}' or move this skill to a client that supports it
   kr_sk_001:
-    message: field '%{field}' is not supported by %{client} -- it will be ignored
-    suggestion: Remove '%{field}' or move this skill to a client that supports it
+    message: "Kiro ignores skill frontmatter field '%{field}' (a field other skill clients act on), so it has no effect in Kiro"
+    suggestion: "Kiro reads only name, description, license, compatibility and metadata; remove '%{field}', or move it under metadata if no other tool needs it"
+  kr_sk_001_tools:
+    message: "Kiro ignores skill frontmatter field '%{field}', so this skill does not restrict tools in Kiro"
+    suggestion: "Restrict tools with the Kiro agent's tools and permissions settings; remove '%{field}' if no other tool needs it"
+  kr_sk_001_data:
+    message: "Kiro ignores skill frontmatter field '%{field}'; it reads only name, description, license, compatibility and metadata"
+    suggestion: "Move '%{field}' under metadata, where Kiro skills keep extra data such as author or version"
   amp_sk_001:
     message: field '%{field}' is not supported by %{client} -- it will be ignored
     suggestion: Remove '%{field}' or move this skill to a client that supports it
@@ -773,17 +779,20 @@ rules:
     message: Legacy .windsurfrules file detected
     suggestion: Migrate to .windsurf/rules/ directory with individual .md files
   kiro_001:
-    message: 'Invalid steering file inclusion mode ''%{value}'' - valid modes are: always, fileMatch, manual, auto'
-    suggestion: 'Use one of: always, fileMatch, manual, auto'
+    message: "Invalid steering inclusion mode '%{value}' - valid modes are always, fileMatch, manual and auto (case-sensitive)"
+    suggestion: "Use one of: always, fileMatch, manual, auto. Kiro CLI V3 ignores frontmatter with an invalid mode and includes the whole file, frontmatter text included, in every interaction"
   kiro_002_auto:
-    message: Steering file with 'auto' inclusion mode is missing required field '%{field}'
-    suggestion: 'Add both ''name'' and ''description'' fields when using inclusion: auto'
+    message: "Steering file with inclusion 'auto' has no description, so Kiro never loads it automatically (it is only offered as a slash command)"
+    suggestion: "Add a description that says when Kiro should load this file"
   kiro_002_filematch:
-    message: Steering file with 'fileMatch' inclusion mode is missing required 'fileMatchPattern' field
-    suggestion: 'Add a ''fileMatchPattern'' glob pattern (e.g., fileMatchPattern: ''**/*.ts'')'
-  kiro_003:
-    message: 'Invalid fileMatchPattern glob: %{error}'
-    suggestion: Fix the glob pattern syntax
+    message: "Steering file with inclusion 'fileMatch' has no fileMatchPattern, so Kiro never loads it"
+    suggestion: "Add a fileMatchPattern glob or a list of globs (e.g., fileMatchPattern: \"**/*.ts\")"
+  kiro_003_comma:
+    message: "fileMatchPattern '%{pattern}' has a comma outside braces, which Kiro matches as a literal character, not as 'or'"
+    suggestion: "List alternatives as an array (fileMatchPattern: [\"*.ts\", \"*.tsx\"]) or use braces (**/*.{ts,tsx})"
+  kiro_003_bracket:
+    message: "fileMatchPattern '%{pattern}' has a '[' that is never closed, so Kiro matches it as a literal '['"
+    suggestion: "Close the character class with ']' or escape the bracket"
   kiro_004:
     message: Kiro steering file is empty
     suggestion: Add steering content to the file
@@ -803,11 +812,20 @@ rules:
     message: 'Inline file or folder reference points to a missing target: %{reference}'
     suggestion: Fix the reference path or create the referenced file or folder
   kr_pw_001:
-    message: 'POWER.md is missing required frontmatter fields: %{fields}'
-    suggestion: 'Add required frontmatter fields: name, description, keywords'
+    message: "POWER.md frontmatter has no %{fields}; Kiro activates a power by its keywords and describes it by its description"
+    suggestion: "Add a description and a keywords list to the POWER.md frontmatter"
   kr_pw_001_parse:
-    message: 'POWER.md frontmatter is invalid YAML: %{error}'
-    suggestion: Fix YAML syntax in POWER.md frontmatter
+    message: "POWER.md frontmatter is not valid YAML (%{error}); Kiro cannot read this power and skips it"
+    suggestion: "Fix the YAML syntax in the POWER.md frontmatter"
+  kr_pw_001_none:
+    message: "POWER.md has no frontmatter, so Kiro reads no description or activation keywords for this power"
+    suggestion: "Start POWER.md with a --- frontmatter block that sets description and keywords"
+  kr_pw_001_not_first:
+    message: "POWER.md frontmatter does not start on the first line, so Kiro reads no description or activation keywords for this power"
+    suggestion: "Remove the blank lines or text before the opening ---"
+  kr_pw_001_unclosed:
+    message: "POWER.md frontmatter has no closing --- line; Kiro reads the rest of the file as YAML and skips the power when it does not parse"
+    suggestion: "Add a line with --- after the frontmatter fields"
   kr_pw_002:
     message: POWER.md keywords array is empty
     suggestion: Add one or more activation keywords to POWER.md
@@ -815,8 +833,11 @@ rules:
     message: POWER.md body is empty
     suggestion: Add onboarding/workflow/reference guidance to POWER.md body
   kr_pw_004:
-    message: Adjacent power mcp.json has invalid mcpServers structure
-    suggestion: Ensure mcp.json uses an object mcpServers map with valid server entries
+    message: "Adjacent power mcp.json has no mcpServers object, so Kiro registers no MCP servers for this power"
+    suggestion: "Put the servers in an mcpServers object keyed by server name"
+  kr_pw_004_parse:
+    message: "Adjacent power mcp.json is not valid JSON (%{error}); Kiro cannot read this power and skips it"
+    suggestion: "Fix the JSON syntax (comments and trailing commas are not allowed)"
   kr_ag_001:
     message: Unknown field '%{field}' in Kiro agent JSON
     suggestion: Remove unsupported fields or use documented Kiro agent keys
@@ -1088,32 +1109,95 @@ rules:
     type_error: Field 'profile' for app '%{app}' must be a string
     suggestion: Set 'profile' to a profile name defined in your Codex config
   kiro_010:
-    message: Kiro steering file has no inclusion mode declared
-    suggestion: 'Add an `inclusion:` field with one of: always, fileMatch, manual, auto'
+    message: "Steering file sets '%{field}' but no inclusion mode, so Kiro includes it in every interaction"
+    suggestion: "Add inclusion: auto (with a description) to load it on demand or inclusion: manual to load it on request; remove the field if the file should always load"
   kiro_011:
-    message: Kiro steering file is excessively long (%{len} chars; recommended under %{limit})
-    suggestion: Split oversized steering docs by concern or move detail into linked files
-  kiro_012:
-    message: Duplicate Kiro steering name '%{name}' found across multiple files
-    suggestion: Use unique names for each steering file
-  kiro_013:
-    message: Conflicting inclusion modes detected in Kiro steering files
-    suggestion: Choose a single inclusion strategy (always, fileMatch, manual, or auto) for overlapping scopes
+    message: "Kiro steering file is %{len} characters long (agnix recommends under %{limit}); Kiro adds the whole file to the context whenever it loads"
+    suggestion: "Split oversized steering docs by concern or move detail into linked files"
   kiro_014:
-    message: Kiro steering file has markdown structure issues (headings out of order or missing)
-    suggestion: Ensure headings follow a consistent hierarchy (h1 -> h2 -> h3) and the file starts with a title heading
+    message: "Kiro steering file has no Markdown heading"
+    suggestion: "Organize the guidance under Markdown headings (# Title, ## Section)"
+  kiro_015_not_first:
+    message: "Steering frontmatter does not start on the first line, so Kiro does not read it and includes the whole file in every interaction"
+    suggestion: "Remove the blank lines or text before the opening ---"
+  kiro_015_unclosed:
+    message: "Steering frontmatter has no closing --- line, so Kiro cannot read its settings"
+    suggestion: "Add a line with --- after the frontmatter fields"
+  kiro_015_yaml:
+    message: "Steering frontmatter is not valid YAML (%{error}); Kiro CLI V3 then ignores it and includes the whole file, frontmatter text included, in every interaction"
+    suggestion: "Fix the YAML syntax; each key may appear only once"
+  kiro_015_not_mapping:
+    message: "Steering frontmatter is %{kind}, not a mapping of fields, so Kiro cannot read its settings"
+    suggestion: "Write the frontmatter as key: value lines (inclusion, fileMatchPattern, name, description)"
+  kiro_015_type:
+    message: "Kiro CLI V3 rejects steering frontmatter field '%{field}' (%{kind}, expected %{expected}) and then includes the whole file, frontmatter text included, in every interaction"
+    suggestion: "Give the field the expected type or remove it"
   kr_pw_005:
-    message: 'POWER.md step #%{index} is missing a description'
-    suggestion: Add a short description below each step heading so agents know what the step does
+    message: "POWER.md step heading '%{step}' has no content below it"
+    suggestion: "Add a short description below each step heading so agents know what the step does"
   kr_pw_006:
     message: 'POWER.md has duplicate keywords: %{duplicates}'
     suggestion: Deduplicate the keywords array so each activation keyword is unique
   kr_pw_007:
-    message: POWER.md name '%{name}' contains invalid characters
-    suggestion: Use lowercase letters, digits, and hyphens only (e.g. 'my-power')
+    message: "POWER.md name '%{name}' contains invalid characters"
+    suggestion: "Use lowercase letters, digits and hyphens only (e.g. 'my-power')"
   kr_pw_008:
     message: Potential hardcoded secret detected in POWER.md body
     suggestion: Remove hardcoded credentials from the power body; reference environment variables instead
+  kr_pw_009:
+    message: "plugin.json is not valid JSON (%{error}); Kiro rejects the power"
+    suggestion: "Fix the JSON syntax (comments and trailing commas are not allowed)"
+  kr_pw_009_object:
+    message: "plugin.json is %{kind}, not a JSON object; Kiro rejects the power"
+    suggestion: "Make plugin.json an object with at least $schema and name"
+  kr_pw_010:
+    message: "plugin.json $schema '%{schema}' is not an Agent Plugins 1.x manifest schema; Kiro rejects the power"
+    suggestion: "Set \"$schema\": \"https://agent-plugins.org/schemas/1.0.0/plugin.schema.json\""
+  kr_pw_010_missing:
+    message: "plugin.json has no $schema; Kiro rejects the power"
+    suggestion: "Add \"$schema\": \"https://agent-plugins.org/schemas/1.0.0/plugin.schema.json\""
+  kr_pw_011:
+    message: "plugin.json name '%{name}' is not a valid Agent Plugins name; Kiro rejects the power"
+    suggestion: "Use 1-64 lowercase letters, digits, '.' and '-', starting and ending with a letter or digit, without '--' or '..'"
+  kr_pw_011_missing:
+    message: "plugin.json has no name; Kiro rejects the power"
+    suggestion: "Add a name of 1-64 lowercase letters, digits, '.' and '-'"
+  kr_pw_012:
+    message: "plugin.json field '%{field}' is not part of the Agent Plugins manifest; Kiro ignores it"
+    suggestion: "Remove '%{field}' or move client-specific data under extensions"
+  kr_pw_012_mcp:
+    message: "plugin.json field '%{field}' is not part of the Agent Plugins manifest; Kiro ignores it"
+    suggestion: "Kiro does not read MCP servers from plugin.json; put them in an mcp.json next to plugin.json"
+  kr_pw_012_component:
+    message: "plugin.json field '%{field}' is not part of the Agent Plugins manifest; Kiro ignores it"
+    suggestion: "Kiro finds a plugin's components by location (skills/<name>/SKILL.md, mcp.json, dev.kiro/steering/), not from plugin.json; remove '%{field}'"
+  kr_pw_013:
+    message: "plugin.json '%{field}' is ignored by Kiro: %{problem}"
+    suggestion: "Fix the type of '%{field}' or remove it"
+  kr_pw_014_not_dir:
+    message: "The power's skills path is not a directory, so Kiro loads no skills from it"
+    suggestion: "Make skills/ a directory with one <skill-name>/SKILL.md per skill"
+  kr_pw_014_dir_name:
+    message: "Kiro skips plugin skill directory 'skills/%{dir}': the directory name is not a valid skill name"
+    suggestion: "Rename the directory to 1-64 lowercase letters, digits and hyphens (no leading, trailing or double hyphen)"
+  kr_pw_014_duplicate:
+    message: "Plugin skills in %{kept} and %{skipped} declare the same name '%{name}'; Kiro loads only the one in %{kept}"
+    suggestion: "Give each skill a unique name"
+  kr_pw_015_description:
+    message: "plugin.json has no description; Kiro uses it to describe the power and decide when to activate it"
+    suggestion: "Add a short description of what the power does"
+  kr_pw_015_keywords:
+    message: "plugin.json has no keywords, so Kiro cannot activate the power from what you say"
+    suggestion: "Add keywords that match how developers talk about the tool"
+  kr_pw_016:
+    message: "plugin.json has no %{fields}; the Kiro powers docs list them as required, though Kiro loads the power without them"
+    suggestion: "Add a version and an author object with a name"
+  kr_pw_017:
+    message: "Kiro loads this power from plugin.json and ignores POWER.md (and its steering/ and mcp.json layout)"
+    suggestion: "Finish the migration to the Agent Plugins format and delete POWER.md, or remove plugin.json to keep the legacy power"
+  kr_pw_018:
+    message: "This plugin.json power has a steering/ directory, which Kiro does not load for Agent Plugins powers"
+    suggestion: "Move the guidance into skills/<name>/SKILL.md or dev.kiro/steering/"
   kr_ag_008:
     message: Kiro agent has an empty explicit 'name' field
     suggestion: Remove the empty field to derive the name from its relative path, or set a non-empty name
