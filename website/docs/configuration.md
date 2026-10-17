@@ -24,7 +24,7 @@ disabled_rules = []
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `target` | string | `Generic` | Legacy single tool focus: `Generic`, `ClaudeCode`, `Cursor`, `Codex`, `Kiro`. A specific tool filters like `tools = ["<tool>"]` |
-| `tools` | string[] | `[]` | Multi-tool targeting. Overrides `target`. Use values like `claude-code`, `cursor`, `codex`, `kiro`, `github-copilot`, `cline`, `opencode`, `gemini-cli`, `amp`, `roo-code`, `windsurf`, `generic`. |
+| `tools` | string[] | `[]` | Multi-tool targeting. Overrides `target`. Use values like `claude-code`, `cursor`, `codex`, `kiro`, `github-copilot`, `cline`, `opencode`, `gemini-cli`, `amp`, `windsurf`, `generic`. |
 | `severity` | string | `Warning` | Minimum severity level: `Warning`, `Error`, or `Info` |
 | `max_files_to_validate` | int | `10000` | Maximum files to scan |
 | `locale` | string | `"en"` | Output locale |

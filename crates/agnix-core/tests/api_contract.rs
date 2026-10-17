@@ -291,11 +291,6 @@ fn file_type_enum_covers_all_variants() {
         agnix_core::FileType::CodexConfig,
         agnix_core::FileType::CodexPlugin,
         agnix_core::FileType::CodexRequirements,
-        agnix_core::FileType::RooRules,
-        agnix_core::FileType::RooModes,
-        agnix_core::FileType::RooIgnore,
-        agnix_core::FileType::RooModeRules,
-        agnix_core::FileType::RooMcp,
         agnix_core::FileType::WindsurfRule,
         agnix_core::FileType::WindsurfWorkflow,
         agnix_core::FileType::WindsurfRulesLegacy,
@@ -319,7 +314,7 @@ fn file_type_enum_covers_all_variants() {
 
     assert_eq!(
         variants.len(),
-        55,
+        50,
         "A new FileType variant may have been added or removed. Please update this test's variant list and the match statement below."
     );
 
@@ -356,11 +351,6 @@ fn file_type_enum_covers_all_variants() {
             agnix_core::FileType::CodexConfig => {}
             agnix_core::FileType::CodexPlugin => {}
             agnix_core::FileType::CodexRequirements => {}
-            agnix_core::FileType::RooRules => {}
-            agnix_core::FileType::RooModes => {}
-            agnix_core::FileType::RooIgnore => {}
-            agnix_core::FileType::RooModeRules => {}
-            agnix_core::FileType::RooMcp => {}
             agnix_core::FileType::WindsurfRule => {}
             agnix_core::FileType::WindsurfWorkflow => {}
             agnix_core::FileType::WindsurfRulesLegacy => {}

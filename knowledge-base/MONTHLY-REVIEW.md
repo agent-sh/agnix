@@ -54,7 +54,7 @@ These tools have automated monthly monitoring. Review confirms accuracy and chec
 - https://cursor.com/docs/subagents
 - https://cursor.com/docs/cloud-agent/setup
 
-### B/C Tier: Roo Code, Kiro CLI, amp, pi, gemini cli, continue, Antigravity
+### B/C Tier: Kiro CLI, amp, pi, gemini cli, continue, Antigravity
 
 Spot-check for significant changes only. Do not invest significant time here.
 

@@ -135,7 +135,6 @@ Rule IDs follow the format `[PREFIX]-[NUMBER]` where the prefix indicates the ru
 | `PE-` | 6 | PE-001 through PE-006 |
 | `RC-SK-` | 1 | RC-SK-001 |
 | `REF-` | 3 | REF-001 through REF-003 |
-| `ROO-` | 6 | ROO-001 through ROO-006 |
 | `VER-` | 1 | VER-001 |
 | `WS-` | 4 | WS-001 through WS-004 |
 | `WS-SK-` | 1 | WS-SK-001 |

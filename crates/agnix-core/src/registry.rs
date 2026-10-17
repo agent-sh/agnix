@@ -100,7 +100,6 @@ impl ValidatorProvider for BuiltinProvider {
             &CopilotProvider,
             &CursorProvider,
             &GeminiProvider,
-            &RooProvider,
             &WindsurfProvider,
             &MiscProvider,
         ];
@@ -398,7 +397,7 @@ impl ValidatorRegistryBuilder {
 ///
 /// Used by `BuiltinProvider` (via `debug_assert_eq!`) and tests to catch
 /// accidental additions or removals without updating all providers.
-const EXPECTED_BUILTIN_COUNT: usize = 89;
+const EXPECTED_BUILTIN_COUNT: usize = 84;
 
 // -- Category providers -----------------------------------------------------
 //
@@ -661,32 +660,6 @@ impl ValidatorProvider for GeminiProvider {
                 Some("GeminiIgnoreValidator"),
                 gemini_ignore_validator,
             ),
-        ]
-    }
-}
-
-/// Roo Code validators.
-struct RooProvider;
-
-impl ValidatorProvider for RooProvider {
-    fn validators(&self) -> Vec<(FileType, ValidatorFactory)> {
-        self.named_validators()
-            .into_iter()
-            .map(|(ft, _, f)| (ft, f))
-            .collect()
-    }
-
-    fn named_validators(&self) -> Vec<(FileType, Option<&'static str>, ValidatorFactory)> {
-        vec![
-            (FileType::RooRules, Some("RooCodeValidator"), roo_validator),
-            (FileType::RooModes, Some("RooCodeValidator"), roo_validator),
-            (FileType::RooIgnore, Some("RooCodeValidator"), roo_validator),
-            (
-                FileType::RooModeRules,
-                Some("RooCodeValidator"),
-                roo_validator,
-            ),
-            (FileType::RooMcp, Some("RooCodeValidator"), roo_validator),
         ]
     }
 }
@@ -1037,10 +1010,6 @@ fn codex_plugin_validator() -> Box<dyn Validator> {
 
 fn codex_requirements_validator() -> Box<dyn Validator> {
     Box::new(crate::rules::codex_requirements::CodexRequirementsValidator)
-}
-
-fn roo_validator() -> Box<dyn Validator> {
-    Box::new(crate::rules::roo::RooCodeValidator)
 }
 
 fn windsurf_validator() -> Box<dyn Validator> {
@@ -1548,11 +1517,6 @@ mod tests {
             FileType::GeminiHooks,
             FileType::CodexConfig,
             FileType::CodexPlugin,
-            FileType::RooRules,
-            FileType::RooModes,
-            FileType::RooIgnore,
-            FileType::RooModeRules,
-            FileType::RooMcp,
             FileType::WindsurfRule,
             FileType::WindsurfWorkflow,
             FileType::WindsurfRulesLegacy,
@@ -1607,11 +1571,6 @@ mod tests {
                 | FileType::CodexConfig
                 | FileType::CodexPlugin
                 | FileType::CodexRequirements
-                | FileType::RooRules
-                | FileType::RooModes
-                | FileType::RooIgnore
-                | FileType::RooModeRules
-                | FileType::RooMcp
                 | FileType::WindsurfRule
                 | FileType::WindsurfWorkflow
                 | FileType::WindsurfRulesLegacy
@@ -2187,11 +2146,6 @@ mod tests {
     }
 
     #[test]
-    fn roo_provider_count() {
-        assert_eq!(RooProvider.named_validators().len(), 5);
-    }
-
-    #[test]
     fn windsurf_provider_count() {
         assert_eq!(WindsurfProvider.named_validators().len(), 3);
     }
@@ -2211,7 +2165,6 @@ mod tests {
             + CopilotProvider.named_validators().len()
             + CursorProvider.named_validators().len()
             + GeminiProvider.named_validators().len()
-            + RooProvider.named_validators().len()
             + WindsurfProvider.named_validators().len()
             + MiscProvider.named_validators().len();
         assert_eq!(
@@ -2228,7 +2181,6 @@ mod tests {
             &CopilotProvider,
             &CursorProvider,
             &GeminiProvider,
-            &RooProvider,
             &WindsurfProvider,
             &MiscProvider,
         ];
@@ -2251,7 +2203,6 @@ mod tests {
             &CopilotProvider,
             &CursorProvider,
             &GeminiProvider,
-            &RooProvider,
             &WindsurfProvider,
             &MiscProvider,
         ];
@@ -2355,14 +2306,13 @@ mod tests {
     #[test]
     fn builtin_provider_output_matches_sub_provider_concatenation() {
         // BuiltinProvider::named_validators() must be a pure flat_map of all
-        // 8 sub-providers in declaration order with no reordering or deduplication.
+        // 7 sub-providers in declaration order with no reordering or deduplication.
         let expected: Vec<_> = [
             SkillProvider.named_validators(),
             ClaudeProvider.named_validators(),
             CopilotProvider.named_validators(),
             CursorProvider.named_validators(),
             GeminiProvider.named_validators(),
-            RooProvider.named_validators(),
             WindsurfProvider.named_validators(),
             MiscProvider.named_validators(),
         ]

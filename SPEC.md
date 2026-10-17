@@ -48,7 +48,6 @@
 | Amp Skills | .agents/skills/*/SKILL.md | 1 |
 | Amp Checks | .agents/checks/*.md, .amp/settings*.json | 4 |
 | Roo Code Skills | .roo/skills/*/SKILL.md | 1 |
-| Roo Code | .roo/rules/*.md, .roomodes, .roorules, .roo/mcp.json, .rooignore | 6 |
 
 ## Architecture
 

@@ -183,7 +183,8 @@ fn escaped_single_quotes_do_not_hide_later_comments() {
 
 #[test]
 fn extensionless_markdown_rules_support_html_suppressions() {
-    for filename in [".cursorrules", ".clinerules", ".windsurfrules", ".roorules"] {
+    // `.roorules` left this list with Roo Code support (it is no longer linted).
+    for filename in [".cursorrules", ".clinerules", ".windsurfrules"] {
         let path = Path::new(filename);
         let config = LintConfig::default();
         let file_type = agnix_core::resolve_file_type(path, &config);

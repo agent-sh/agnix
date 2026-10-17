@@ -364,7 +364,7 @@ fn collect_inline_suppressions(content: &str, path: &Path) -> InlineSuppressions
     let markdown = matches!(extension.as_str(), "md" | "mdc" | "markdown")
         || matches!(
             filename.as_str(),
-            ".cursorrules" | ".clinerules" | ".windsurfrules" | ".roorules"
+            ".cursorrules" | ".clinerules" | ".windsurfrules"
         );
     let prefixes: &[&str] = if markdown {
         &["<!--"]

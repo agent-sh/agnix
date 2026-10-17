@@ -78,16 +78,6 @@ pub enum FileType {
     /// Codex CLI managed requirements (system `codex/requirements.toml` -
     /// `/etc/codex/` on Unix, `%ProgramData%\OpenAI\Codex\` on Windows)
     CodexRequirements,
-    /// Roo Code rules files (.roorules, .roo/rules/*.md)
-    RooRules,
-    /// Roo Code custom modes configuration (.roomodes)
-    RooModes,
-    /// Roo Code ignore file (.rooignore)
-    RooIgnore,
-    /// Roo Code mode-specific rules (.roo/rules-{slug}/*.md)
-    RooModeRules,
-    /// Roo Code MCP configuration (.roo/mcp.json)
-    RooMcp,
     /// Windsurf rule files (.windsurf/rules/*.md)
     WindsurfRule,
     /// Windsurf workflow files (.windsurf/workflows/*.md)
@@ -195,11 +185,6 @@ impl fmt::Display for FileType {
             FileType::CodexConfig => "CodexConfig",
             FileType::CodexPlugin => "CodexPlugin",
             FileType::CodexRequirements => "CodexRequirements",
-            FileType::RooRules => "RooRules",
-            FileType::RooModes => "RooModes",
-            FileType::RooIgnore => "RooIgnore",
-            FileType::RooModeRules => "RooModeRules",
-            FileType::RooMcp => "RooMcp",
             FileType::WindsurfRule => "WindsurfRule",
             FileType::WindsurfWorkflow => "WindsurfWorkflow",
             FileType::WindsurfRulesLegacy => "WindsurfRulesLegacy",
@@ -262,11 +247,6 @@ mod tests {
             (FileType::CodexConfig, "CodexConfig"),
             (FileType::CodexPlugin, "CodexPlugin"),
             (FileType::CodexRequirements, "CodexRequirements"),
-            (FileType::RooRules, "RooRules"),
-            (FileType::RooModes, "RooModes"),
-            (FileType::RooIgnore, "RooIgnore"),
-            (FileType::RooModeRules, "RooModeRules"),
-            (FileType::RooMcp, "RooMcp"),
             (FileType::WindsurfRule, "WindsurfRule"),
             (FileType::WindsurfWorkflow, "WindsurfWorkflow"),
             (FileType::WindsurfRulesLegacy, "WindsurfRulesLegacy"),
@@ -328,11 +308,6 @@ mod tests {
             FileType::CodexConfig,
             FileType::CodexPlugin,
             FileType::CodexRequirements,
-            FileType::RooRules,
-            FileType::RooModes,
-            FileType::RooIgnore,
-            FileType::RooModeRules,
-            FileType::RooMcp,
             FileType::WindsurfRule,
             FileType::WindsurfWorkflow,
             FileType::WindsurfRulesLegacy,
@@ -408,11 +383,6 @@ mod tests {
             FileType::CodexConfig,
             FileType::CodexPlugin,
             FileType::CodexRequirements,
-            FileType::RooRules,
-            FileType::RooModes,
-            FileType::RooIgnore,
-            FileType::RooModeRules,
-            FileType::RooMcp,
             FileType::WindsurfRule,
             FileType::WindsurfWorkflow,
             FileType::WindsurfRulesLegacy,

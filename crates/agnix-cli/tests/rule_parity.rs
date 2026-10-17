@@ -243,7 +243,7 @@ fn extract_implemented_rule_ids() -> BTreeSet<String> {
         "MCP-", "COP-", "CUR-", "CLN-", "CDX-", "OC-", "GM-", "GM-AG-", "XML-", "REF-", "PE-",
         "XP-", "VER-", "WS-", "CR-SK-", "CL-SK-", "CP-SK-", "CX-SK-", "OC-SK-", "WS-SK-", "KR-SK-",
         "KR-AG-", "KR-PM-", "KR-HK-", "KR-PW-", "KR-MCP-", "KR-SET-", "KR-WF-", "KR-IGN-", "KIRO-",
-        "AMP-SK-", "AMP-", "RC-SK-", "ROO-",
+        "AMP-SK-", "AMP-", "RC-SK-",
     ];
 
     fn extract_from_file(
@@ -429,7 +429,6 @@ fn infer_fixture_coverage(rules: &[RuleEntry]) -> HashMap<String, Vec<String>> {
             vec!["valid/gemini-agents", "invalid/gemini-agents"],
         ),
         ("codex", vec!["codex", "codex-invalid"]),
-        ("roo-code", vec!["roo-code"]),
         ("windsurf", vec!["windsurf", "windsurf-legacy"]),
         ("kiro-steering", vec!["kiro-steering"]),
     ]
@@ -653,7 +652,6 @@ fn test_rules_json_integrity() {
         "amp-skills",
         "amp-checks",
         "roo-code-skills",
-        "roo-code",
     ];
     for rule in &rules_index.rules {
         assert!(

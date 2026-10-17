@@ -40,7 +40,6 @@ pub mod per_client_skill;
 pub mod plugin;
 pub mod project_level;
 pub mod prompt;
-pub mod roo;
 pub mod skill;
 pub mod windsurf;
 pub mod xml;

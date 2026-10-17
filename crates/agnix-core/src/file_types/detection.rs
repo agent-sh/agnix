@@ -241,24 +241,10 @@ fn is_under_cursor_agents(path: &Path) -> bool {
     path_contains_consecutive_components(path, ".cursor", "agents")
 }
 
-/// Returns true if the path contains `.roo/rules` as consecutive
-/// components anywhere in the path. This allows Roo Code rules to live in
-/// `.roo/rules/*.md`.
-fn is_under_roo_rules(path: &Path) -> bool {
-    path_contains_consecutive_components(path, ".roo", "rules")
-}
-
 /// Returns true if the path contains `.agents/checks` as consecutive
 /// components anywhere in the path.
 fn is_under_agents_checks(path: &Path) -> bool {
     path_contains_consecutive_components(path, ".agents", "checks")
-}
-
-/// Returns true if the path has a parent directory starting with `rules-`
-/// inside a `.roo` grandparent directory. This detects mode-specific rule
-/// files at `.roo/rules-{slug}/*.md`.
-fn is_roo_mode_rules(_path: &Path, parent: Option<&str>, grandparent: Option<&str>) -> bool {
-    parent.is_some_and(|p| p.starts_with("rules-")) && grandparent == Some(".roo")
 }
 
 /// Returns true if the path contains `.windsurf/rules` as consecutive
@@ -996,8 +982,6 @@ pub fn detect_file_type(path: &Path) -> FileType {
         {
             FileType::AmpCheck
         }
-        "SKILL.md" if is_roo_mode_rules(path, parent, grandparent) => FileType::RooModeRules,
-        "SKILL.md" if is_under_roo_rules(path) => FileType::RooRules,
         "SKILL.md" => FileType::Skill,
         "CLAUDE.md" | "CLAUDE.local.md" | "AGENTS.md" | "AGENTS.local.md"
         | "AGENTS.override.md" => FileType::ClaudeMd,
@@ -1017,8 +1001,6 @@ pub fn detect_file_type(path: &Path) -> FileType {
         }
         // Classify any other plugin.json as Plugin - validator checks .claude-plugin/ constraint (CC-PL-001)
         "plugin.json" => FileType::Plugin,
-        // Roo Code MCP configuration (.roo/mcp.json) - must be before generic mcp.json
-        "mcp.json" if parent_eq_ignore_ascii_case(parent, ".roo") => FileType::RooMcp,
         // MCP configuration files
         "mcp.json" => FileType::Mcp,
         name if name.ends_with(".mcp.json") => FileType::Mcp,
@@ -1066,7 +1048,7 @@ pub fn detect_file_type(path: &Path) -> FileType {
         // can organize rules into subdirectories like `frontend/` or
         // `backend/`". The previous parent/grandparent check saw only depth 1,
         // so nested rule files were never validated at all. Mirrors the
-        // existing `.cursor/rules` and `.roo/rules` handling.
+        // existing `.cursor/rules` handling.
         name if name.ends_with(".md") && is_under_claude_rules(path) => FileType::ClaudeRule,
         // Claude Code output styles (.claude/output-styles/*.md)
         name if name.ends_with(".md")
@@ -1117,18 +1099,6 @@ pub fn detect_file_type(path: &Path) -> FileType {
         ".windsurfrules" => FileType::WindsurfRulesLegacy,
         // Gemini CLI ignore file (.geminiignore)
         ".geminiignore" => FileType::GeminiIgnore,
-        // Roo Code custom modes file (.roomodes)
-        ".roomodes" => FileType::RooModes,
-        // Roo Code ignore file (.rooignore)
-        ".rooignore" => FileType::RooIgnore,
-        // Roo Code rules file (.roorules)
-        ".roorules" => FileType::RooRules,
-        // Roo Code mode-specific rules (.roo/rules-{slug}/*.md)
-        name if name.ends_with(".md") && is_roo_mode_rules(path, parent, grandparent) => {
-            FileType::RooModeRules
-        }
-        // Roo Code rules (.roo/rules/*.md)
-        name if name.ends_with(".md") && is_under_roo_rules(path) => FileType::RooRules,
         // Cline rules folder - .md/.txt under .clinerules/, or Markdown
         // rules under the documented .cline/rules/ layout.
         name if (name.ends_with(".md") || name.ends_with(".txt"))
@@ -2079,114 +2049,33 @@ mod tests {
         );
     }
 
-    // ---- Roo Code file type detection ----
+    // ---- Former Roo Code paths ----
 
     #[test]
-    fn detect_roo_rules() {
-        assert_eq!(detect_file_type(Path::new(".roorules")), FileType::RooRules);
-        assert_eq!(
-            detect_file_type(Path::new("project/.roorules")),
-            FileType::RooRules
-        );
+    fn former_roo_code_paths_use_generic_detection() {
+        // Roo Code was discontinued on 2026-05-15 and its file types were
+        // removed. Its former paths now take the generic arms: Markdown
+        // becomes GenericMarkdown, `mcp.json` the generic MCP type, `SKILL.md`
+        // an Agent Skill, and the extensionless dotfiles are not linted.
+        use FileType::*;
+        assert_types(&[
+            (".roorules", Unknown),
+            ("project/.roorules", Unknown),
+            (".roomodes", Unknown),
+            (".rooignore", Unknown),
+            (".roo/rules/general.md", GenericMarkdown),
+            ("project/.roo/rules/coding.md", GenericMarkdown),
+            (".roo/rules-architect/general.md", GenericMarkdown),
+            (".roo/rules/SKILL.md", Skill),
+            (".roo/rules-architect/SKILL.md", Skill),
+            (".roo/mcp.json", Mcp),
+            ("project/.ROO/mcp.json", Mcp),
+            (".roo/skills/review/SKILL.md", Skill),
+        ]);
     }
 
     #[test]
-    fn detect_roo_rules_folder() {
-        assert_eq!(
-            detect_file_type(Path::new(".roo/rules/general.md")),
-            FileType::RooRules
-        );
-        assert_eq!(
-            detect_file_type(Path::new("project/.roo/rules/coding.md")),
-            FileType::RooRules
-        );
-    }
-
-    #[test]
-    fn detect_roo_modes() {
-        assert_eq!(detect_file_type(Path::new(".roomodes")), FileType::RooModes);
-        assert_eq!(
-            detect_file_type(Path::new("project/.roomodes")),
-            FileType::RooModes
-        );
-    }
-
-    #[test]
-    fn detect_roo_ignore() {
-        assert_eq!(
-            detect_file_type(Path::new(".rooignore")),
-            FileType::RooIgnore
-        );
-        assert_eq!(
-            detect_file_type(Path::new("project/.rooignore")),
-            FileType::RooIgnore
-        );
-    }
-
-    #[test]
-    fn detect_roo_mode_rules() {
-        assert_eq!(
-            detect_file_type(Path::new(".roo/rules-architect/general.md")),
-            FileType::RooModeRules
-        );
-        assert_eq!(
-            detect_file_type(Path::new("project/.roo/rules-code/style.md")),
-            FileType::RooModeRules
-        );
-    }
-
-    #[test]
-    fn detect_roo_mode_rules_not_under_roo() {
-        // rules-slug without .roo grandparent should not match
-        assert_ne!(
-            detect_file_type(Path::new("other/rules-architect/general.md")),
-            FileType::RooModeRules
-        );
-    }
-
-    #[test]
-    fn detect_roo_mode_skill_md() {
-        // SKILL.md in .roo/rules-{slug}/ should be RooModeRules, not Skill
-        assert_eq!(
-            detect_file_type(Path::new(".roo/rules-architect/SKILL.md")),
-            FileType::RooModeRules
-        );
-        // Regular SKILL.md should still be Skill
-        assert_eq!(
-            detect_file_type(Path::new("project/SKILL.md")),
-            FileType::Skill
-        );
-        assert_eq!(detect_file_type(Path::new("SKILL.md")), FileType::Skill);
-    }
-
-    #[test]
-    fn detect_roo_rules_skill_md() {
-        // SKILL.md in .roo/rules/ should be RooRules, not Skill
-        assert_eq!(
-            detect_file_type(Path::new(".roo/rules/SKILL.md")),
-            FileType::RooRules
-        );
-    }
-
-    #[test]
-    fn detect_roo_mcp() {
-        assert_eq!(
-            detect_file_type(Path::new(".roo/mcp.json")),
-            FileType::RooMcp
-        );
-        assert_eq!(
-            detect_file_type(Path::new("project/.roo/mcp.json")),
-            FileType::RooMcp
-        );
-        assert_eq!(
-            detect_file_type(Path::new("project/.ROO/mcp.json")),
-            FileType::RooMcp
-        );
-    }
-
-    #[test]
-    fn detect_mcp_json_without_roo_parent_is_mcp() {
-        // mcp.json without .roo parent should remain Mcp
+    fn detect_mcp_json_is_mcp() {
         assert_eq!(detect_file_type(Path::new("mcp.json")), FileType::Mcp);
         assert_eq!(
             detect_file_type(Path::new(".claude/mcp.json")),
@@ -2704,7 +2593,8 @@ mod tests {
             ("mcp.json", Mcp),
             (".cursor/mcp.json", Mcp),
             (".amazonq/mcp.json", Mcp),
-            (".roo/mcp.json", RooMcp),
+            // Was RooMcp; Roo Code support was removed, so it is generic MCP.
+            (".roo/mcp.json", Mcp),
         ]);
     }
 
@@ -2946,7 +2836,8 @@ mod tests {
             // Other tools' ignore files.
             (".gitignore", Unknown),
             (".geminiignore", GeminiIgnore),
-            (".rooignore", RooIgnore),
+            // Was RooIgnore; Roo Code support was removed.
+            (".rooignore", Unknown),
             (".cursorignore", Unknown),
             ("kiroignore", Unknown),
         ]);

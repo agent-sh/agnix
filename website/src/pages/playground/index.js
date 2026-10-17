@@ -106,7 +106,6 @@ const TOOLS = [
   {value: 'cline', label: 'Cline'},
   {value: 'opencode', label: 'OpenCode'},
   {value: 'gemini-cli', label: 'Gemini CLI'},
-  {value: 'roo-code', label: 'Roo Code'},
   {value: 'kiro', label: 'Kiro CLI'},
   {value: 'amp', label: 'amp'},
 ];

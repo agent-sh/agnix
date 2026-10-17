@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `538` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `532` validation rules generated from `knowledge-base/rules.json`.
 `135` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -465,12 +465,6 @@ This section contains all `538` validation rules generated from `knowledge-base/
 | [REF-001](./generated/ref-001.md) | Import File Not Found | HIGH | References | No |
 | [REF-002](./generated/ref-002.md) | Broken Markdown Link | HIGH | References | No |
 | [REF-003](./generated/ref-003.md) | Duplicate Import | MEDIUM | References | Yes (safe) |
-| [ROO-001](./generated/roo-001.md) | Empty Roo Code Rule File | HIGH | Roo Code | No |
-| [ROO-002](./generated/roo-002.md) | Invalid .roomodes Configuration | HIGH | Roo Code | No |
-| [ROO-003](./generated/roo-003.md) | Invalid .rooignore File | MEDIUM | Roo Code | No |
-| [ROO-004](./generated/roo-004.md) | Invalid Mode Slug in Rule Directory | MEDIUM | Roo Code | No |
-| [ROO-005](./generated/roo-005.md) | Invalid .roo/mcp.json Configuration | HIGH | Roo Code | No |
-| [ROO-006](./generated/roo-006.md) | Mode Slug Not Recognized | MEDIUM | Roo Code | No |
 | [VER-001](./generated/ver-001.md) | No Tool/Spec Versions Pinned | LOW | Version Awareness | No |
 | [WS-001](./generated/ws-001.md) | Empty Windsurf Rule File | MEDIUM | windsurf | No |
 | [WS-002](./generated/ws-002.md) | Windsurf Rule File Exceeds Character Limit | HIGH | windsurf | No |

@@ -35,7 +35,6 @@ CATEGORY_LABELS: Dict[str, str] = {
     "gemini-cli": "Gemini CLI",
     "gemini-agents": "Gemini Agents",
     "opencode": "OpenCode",
-    "roo-code": "Roo Code",
     "version-awareness": "Version Awareness",
     "cursor-skills": "Cursor Skills",
     "cline-skills": "Cline Skills",
@@ -154,11 +153,6 @@ TEMPLATES: Dict[str, Dict[str, str]] = {
         "valid": """{"model": "claude-sonnet-4-5-20250929", "share": "manual"}\n""",
         "lang": "json",
     },
-    "roo-code": {
-        "invalid": "# Rules\n",
-        "valid": "# Roo Rules\n\nFollow project coding and review policies.\n",
-        "lang": "markdown",
-    },
     "cline-skills": {"invalid": "", "valid": "", "lang": "markdown"},
     "codex-skills": {"invalid": "", "valid": "", "lang": "markdown"},
     "copilot-skills": {"invalid": "", "valid": "", "lang": "markdown"},
@@ -190,7 +184,7 @@ def infer_fence_language(default_lang: str, invalid: str, valid: str) -> str:
     invalid_trimmed = invalid.lstrip()
     valid_trimmed = valid.lstrip()
 
-    # JSON-heavy categories (e.g., roo-code, amp-checks) need per-rule inference.
+    # JSON-heavy categories (e.g., amp-checks) need per-rule inference.
     if invalid_trimmed.startswith("{") or valid_trimmed.startswith("{"):
         return "json"
 

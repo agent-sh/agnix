@@ -33,5 +33,4 @@ pub mod opencode;
 pub mod output_style;
 pub mod plugin;
 pub mod prompt;
-pub mod roo;
 pub mod skill;

@@ -80,7 +80,6 @@ const tools = [
   {name: 'Cline', config: '.clinerules, .clinerules/*.md'},
   {name: 'OpenCode', config: 'opencode.json/jsonc'},
   {name: 'Gemini CLI', config: 'GEMINI.md'},
-  {name: 'Roo Code', config: '.roo/rules/'},
   {name: 'Kiro CLI', config: 'kiro.md'},
   {name: 'And many more', config: 'Any tool using Markdown, JSON, or YAML configs'},
 ];

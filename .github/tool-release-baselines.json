@@ -305,37 +305,6 @@
         ]
       }
     },
-    "roo-code": {
-      "tier": "b",
-      "display_name": "Roo Code",
-      "validators": [
-        "roo"
-      ],
-      "github_repo": "RooCodeInc/Roo-Code",
-      "last_known_version": "v3.54.0",
-      "tracked": true,
-      "notes": "Repo moved from RooVetGit/Roo-Code (still referenced in some docs) to RooCodeInc/Roo-Code.",
-      "changes_of_interest": {
-        "config_surfaces": [
-          ".roomodes",
-          ".rooignore",
-          ".roorules",
-          ".roo/rules/*.md",
-          ".roo/rules-{slug}/*.md",
-          ".roo/mcp.json"
-        ],
-        "relevant": [
-          "Schema changes in .roomodes (mode definitions, permissions, custom instructions)",
-          "Rules resolution order between .roorules and .roo/rules/*",
-          "MCP config shape changes"
-        ],
-        "irrelevant": [
-          "Model provider additions (GPT-5.5, Vertex, etc.)",
-          "Checkpoint navigation UI",
-          "Webview / activity bar tweaks"
-        ]
-      }
-    },
     "amp": {
       "tier": "b",
       "display_name": "amp (Sourcegraph)",
