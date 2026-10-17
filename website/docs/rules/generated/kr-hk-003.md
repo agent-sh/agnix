@@ -13,17 +13,17 @@ keywords: ["KR-HK-003", "kiro ide hook missing action", "kiro hooks", "validatio
 - **Category**: `Kiro Hooks`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
 - **Tool**: `kiro`
 - **Version Range**: `unspecified`
-- **Spec Revision**: `unspecified`
+- **Spec Revision**: `IDE 0.x .kiro.hook`
 
 ## Evidence Sources
 
-- https://kiro.dev/docs/hooks/actions
+- https://kiro.dev/docs/ide/0x-reference/
 
 ## Test Coverage Metadata
 
@@ -39,7 +39,12 @@ The following examples demonstrate what triggers this rule and how to fix it.
 
 ```json
 {
-  "event": "promptSubmit"
+  "when": {
+    "type": "promptSubmit"
+  },
+  "then": {
+    "type": "askAgent"
+  }
 }
 ```
 
@@ -47,7 +52,12 @@ The following examples demonstrate what triggers this rule and how to fix it.
 
 ```json
 {
-  "event": "promptSubmit",
-  "askAgent": "review-agent"
+  "when": {
+    "type": "promptSubmit"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Check the runbooks first"
+  }
 }
 ```

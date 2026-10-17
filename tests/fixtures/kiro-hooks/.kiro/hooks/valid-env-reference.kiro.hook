@@ -1,0 +1,6 @@
+{
+  "name": "Deploy preview",
+  "version": "1",
+  "when": { "type": "agentStop" },
+  "then": { "type": "runCommand", "command": "python -m flask-lint && npm run task-check && deploy --token=$DEPLOY_TOKEN" }
+}

@@ -13,17 +13,18 @@ keywords: ["KR-HK-009", "command uses absolute path", "kiro hooks", "validation"
 - **Category**: `Kiro Hooks`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
 - **Tool**: `kiro`
 - **Version Range**: `unspecified`
-- **Spec Revision**: `unspecified`
+- **Spec Revision**: `IDE 0.x .kiro.hook`
 
 ## Evidence Sources
 
-- https://kiro.dev/docs/hooks
+- https://kiro.dev/docs/ide/0x-reference/
+- https://kiro.dev/docs/hooks/
 
 ## Test Coverage Metadata
 
@@ -38,11 +39,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{"event": "promptSubmit", "runCommand": "/usr/local/bin/npm test"}
+{"when": {"type": "promptSubmit"}, "then": {"type": "runCommand", "command": "/usr/local/bin/npm test"}}
 ```
 
 ### Valid
 
 ```json
-{"event": "promptSubmit", "runCommand": "npm test"}
+{"when": {"type": "promptSubmit"}, "then": {"type": "runCommand", "command": "npm test"}}
 ```

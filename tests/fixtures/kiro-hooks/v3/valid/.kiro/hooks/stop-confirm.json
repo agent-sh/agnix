@@ -1,0 +1,18 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Submit session results",
+      "trigger": "Stop",
+      "action": { "type": "command", "command": "./submit.sh" },
+      "confirm": {
+        "question": "Submit this session's results?",
+        "confirmCommand": "$HOME/.kiro/bin/confirm-options.sh",
+        "options": [
+          { "id": "submit", "label": "Yes, submit", "run": true },
+          { "id": "dismiss", "label": "Not this time", "run": false, "continueReason": "User declined" }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "version": "v1",
+  "hooks": [
+    { "name": "build", "trigger": "Stop", "action": { "type": "command", "command": "make" }, "enabled": "true", "timeout": "120" }
+  ]
+}

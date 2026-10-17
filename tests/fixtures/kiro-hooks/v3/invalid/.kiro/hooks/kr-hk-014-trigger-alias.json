@@ -1,0 +1,7 @@
+{
+  "version": "v1",
+  "hooks": [
+    { "name": "lint", "trigger": "fileEdited", "matcher": "\\.py$", "action": { "type": "command", "command": "ruff check --fix" } },
+    { "name": "done", "trigger": "stop", "action": { "type": "command", "command": "git diff --stat" } }
+  ]
+}

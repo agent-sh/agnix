@@ -65,6 +65,28 @@ fn required_paths() -> Vec<&'static str> {
         "tests/fixtures/kiro-hooks/.kiro/hooks/missing-patterns.kiro.hook",
         "tests/fixtures/kiro-hooks/.kiro/hooks/missing-action.kiro.hook",
         "tests/fixtures/kiro-hooks/.kiro/hooks/missing-tool-types.kiro.hook",
+        "tests/fixtures/kiro-hooks/.kiro/hooks/kr-hk-016-v1-format.kiro.hook",
+        "tests/fixtures/kiro-hooks/.kiro/hooks/kr-hk-026-field-types.kiro.hook",
+        "tests/fixtures/kiro-hooks/.kiro/hooks/valid-env-reference.kiro.hook",
+        "tests/fixtures/kiro-hooks/.kiro/hooks/valid-ide-0x-format.kiro.hook",
+        "tests/fixtures/kiro-hooks/v3/invalid/.kiro/hooks/kr-hk-011-version.json",
+        "tests/fixtures/kiro-hooks/v3/invalid/.kiro/hooks/kr-hk-012-missing-fields.json",
+        "tests/fixtures/kiro-hooks/v3/invalid/.kiro/hooks/kr-hk-012-unknown-trigger.json",
+        "tests/fixtures/kiro-hooks/v3/invalid/.kiro/hooks/kr-hk-013-action-type.json",
+        "tests/fixtures/kiro-hooks/v3/invalid/.kiro/hooks/kr-hk-014-trigger-alias.json",
+        "tests/fixtures/kiro-hooks/v3/invalid/.kiro/hooks/kr-hk-015-legacy-when-then.json",
+        "tests/fixtures/kiro-hooks/v3/invalid/.kiro/hooks/kr-hk-017-field-types.json",
+        "tests/fixtures/kiro-hooks/v3/invalid/.kiro/hooks/kr-hk-018-confirm.json",
+        "tests/fixtures/kiro-hooks/v3/invalid/.kiro/hooks/kr-hk-019-glob-matcher.json",
+        "tests/fixtures/kiro-hooks/v3/invalid/.kiro/hooks/kr-hk-020-ignored-matcher.json",
+        "tests/fixtures/kiro-hooks/v3/invalid/.kiro/hooks/kr-hk-021-claude-tool-names.json",
+        "tests/fixtures/kiro-hooks/v3/invalid/.kiro/hooks/kr-hk-022-misplaced-timeout.json",
+        "tests/fixtures/kiro-hooks/v3/invalid/.kiro/hooks/kr-hk-023-placeholders.json",
+        "tests/fixtures/kiro-hooks/v3/invalid/.kiro/hooks/kr-hk-024-never-runs.json",
+        "tests/fixtures/kiro-hooks/v3/valid/.kiro/hooks/guard-writes.json",
+        "tests/fixtures/kiro-hooks/v3/valid/.kiro/hooks/lint-on-save.json",
+        "tests/fixtures/kiro-hooks/v3/valid/.kiro/hooks/session-context.json",
+        "tests/fixtures/kiro-hooks/v3/valid/.kiro/hooks/stop-confirm.json",
         "tests/fixtures/kiro-mcp/.kiro/settings/mcp.json",
         "tests/fixtures/kiro-mcp/.kiro/settings/valid-local-mcp.json",
         "tests/fixtures/kiro-mcp/.kiro/settings/valid-remote-mcp.json",
@@ -227,7 +249,9 @@ fn kiro_fixture_families_are_cli_runnable() {
         // valid-hooks.json, valid-markdown-agent.md and minimal-agent.json are
         // clean.
         ("tests/fixtures/kiro-agents", 16_u64, 16_u64),
-        ("tests/fixtures/kiro-hooks", 7_u64, 4_u64),
+        // V3 hook fixtures (v3/valid, v3/invalid: one file per rule) and the
+        // legacy KR-HK-016/026 and valid IDE 0.x fixtures were added.
+        ("tests/fixtures/kiro-hooks", 29_u64, 26_u64),
         ("tests/fixtures/kiro-mcp", 1_u64, 0_u64),
         ("tests/fixtures/kiro-permissions", 2_u64, 4_u64),
     ];
@@ -298,7 +322,7 @@ fn kiro_fixture_files_have_explicit_detection_baselines() {
         let is_detected = detect_file_type(Path::new(rel)).is_validatable();
         let should_be_detected = rel.starts_with("tests/fixtures/kiro-powers/")
             || rel.starts_with("tests/fixtures/kiro-agents/.kiro/agents/")
-            || rel.starts_with("tests/fixtures/kiro-hooks/.kiro/hooks/")
+            || rel.starts_with("tests/fixtures/kiro-hooks/")
             || rel.starts_with("tests/fixtures/kiro-permissions/")
             || rel == "tests/fixtures/kiro-mcp/.kiro/settings/mcp.json";
 

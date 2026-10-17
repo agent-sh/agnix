@@ -13,17 +13,17 @@ keywords: ["KR-HK-002", "kiro file hook missing patterns", "kiro hooks", "valida
 - **Category**: `Kiro Hooks`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
 - **Tool**: `kiro`
 - **Version Range**: `unspecified`
-- **Spec Revision**: `unspecified`
+- **Spec Revision**: `IDE 0.x .kiro.hook`
 
 ## Evidence Sources
 
-- https://kiro.dev/docs/hooks/types
+- https://kiro.dev/docs/ide/0x-reference/
 
 ## Test Coverage Metadata
 
@@ -39,8 +39,13 @@ The following examples demonstrate what triggers this rule and how to fix it.
 
 ```json
 {
-  "event": "fileEdited",
-  "runCommand": "echo missing patterns"
+  "when": {
+    "type": "fileEdited"
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "npm run lint"
+  }
 }
 ```
 
@@ -48,8 +53,15 @@ The following examples demonstrate what triggers this rule and how to fix it.
 
 ```json
 {
-  "event": "fileEdited",
-  "patterns": ["**/*.ts"],
-  "runCommand": "echo ok"
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "**/*.ts"
+    ]
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "npm run lint"
+  }
 }
 ```

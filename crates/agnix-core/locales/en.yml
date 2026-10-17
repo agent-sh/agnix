@@ -3,8 +3,8 @@
 # ===========================================================================
 rules:
   kr_hk_014:
-    alias: "Hook trigger alias %{trigger} is supported; prefer canonical %{canonical}"
-    alias_suggestion: "Use the canonical PascalCase trigger when editing V3 hooks. Compatibility aliases remain valid."
+    alias: "Hook trigger alias %{trigger} is accepted; the canonical name is %{canonical}"
+    alias_suggestion: "Use the canonical PascalCase trigger when editing V3 hooks. Kiro maps the alias to it, so both behave the same."
     fix: "Normalize hook trigger to %{canonical}"
     legacy: "Legacy .kiro.hook uses CLI trigger spelling %{trigger} without a corresponding V3 JSON hook in this directory"
     legacy_suggestion: "If this hook is intended for CLI V3, migrate it to a versioned .kiro/hooks/*.json file. Legacy IDE manual hooks can remain in their original format."
@@ -819,19 +819,17 @@ rules:
     suggestion: Ensure mcp.json uses an object mcpServers map with valid server entries
   kr_hk_001:
     message: Invalid Kiro IDE hook event '%{event}'
-    suggestion: 'Use one of: fileEdited, fileCreate, fileDelete, promptSubmit, agentStop, preToolUse, postToolUse, manual'
-  kr_hk_001_parse:
-    message: 'Kiro IDE hook file has invalid JSON structure: %{error}'
-    suggestion: Fix JSON syntax in the hook file before configuring event/actions
+    missing: Kiro IDE hook has no event (when.type)
+    suggestion: 'Use one of the IDE 0.x when.type values: fileEdited, fileCreated, fileDeleted, promptSubmit, agentStop, preToolUse, postToolUse, preTaskExecution, postTaskExecution, sessionStart, userTriggered'
   kr_hk_002:
     message: Kiro file hook for event '%{event}' is missing patterns
-    suggestion: Add patterns for fileEdited/fileCreate/fileDelete hooks
+    suggestion: Add when.patterns for fileEdited, fileCreated and fileDeleted hooks
   kr_hk_003:
-    message: Kiro IDE hook is missing both runCommand and askAgent action
-    suggestion: Configure runCommand or askAgent (top-level or under then)
+    message: 'Kiro IDE hook has no action: set then.command (runCommand) or then.prompt (askAgent)'
+    suggestion: 'Add a then block, for example {"type": "askAgent", "prompt": "..."} or {"type": "runCommand", "command": "..."}'
   kr_hk_004:
     message: Kiro '%{event}' hook is missing toolTypes filter
-    suggestion: Add toolTypes to scope preToolUse/postToolUse hooks
+    suggestion: Add when.toolTypes (or when.patterns) to scope preToolUse/postToolUse hooks
   kr_mcp_001:
     message: Kiro MCP server '%{server}' is missing both command and url
     suggestion: Set command for local servers or url for remote servers
@@ -1292,41 +1290,109 @@ rules:
     matcher_dropped: '%{hook} matcher is not a string; Kiro CLI V3 drops it, so the hook runs for every tool'
     suggestion: 'Give each hook a non-empty command (object form), or a name, trigger, and action {type, command|prompt} (array form)'
   kr_hk_011:
-    message: "Kiro V3 hook document has %{version_desc}"
-    suggestion: "Set \"version\" to \"v1\" at the top level of the standalone hook file"
-    invalid_version: "invalid version \"%{version}\" (expected \"v1\")"
-    missing_version: "no version field"
-    fix: "Replace the invalid version string with v1 (may activate this hook)"
+    missing_version: 'Kiro V3 hook file has no "version" field; Kiro skips the whole file'
+    invalid_version: 'Kiro V3 hook file has version "%{version}" (expected "v1"); Kiro skips the whole file'
+    version_type: 'Kiro V3 hook file "version" is %{found}, not the string "v1"; Kiro skips the whole file'
+    suggestion: 'Set "version" to "v1" at the top level of the hook file'
+    fix: 'Replace the version with "v1" (activates the hooks in this file)'
   kr_hk_012:
-    message: Invalid Kiro V3 hook entry
-    suggestion: Use documented PascalCase triggers (SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, PostFileCreate, PostFileSave, PostFileDelete, PreTaskExec, PostTaskExec, Stop, SessionEnd) with required name and action fields
-    parse_error: 'Kiro V3 hook file is not valid JSON: %{error}'
-    missing_hooks: Kiro V3 hook document has no hooks array
-    missing_name: 'hooks[%{index}] is missing the required name field'
-    missing_trigger: 'hooks[%{index}] is missing the required trigger field'
-    invalid_trigger: 'hooks entry uses unknown trigger "%{trigger}"'
-    missing_action: 'hooks[%{index}] is missing the required action field'
+    suggestion: 'A hook file is {"version": "v1", "hooks": [...]}; each hook needs a non-empty name, a trigger and an action object'
+    parse_error: 'Kiro V3 hook file is not valid JSON: %{error}; Kiro skips the whole file'
+    parse_suggestion: Fix the JSON syntax. Hook files are strict JSON (no comments or trailing commas).
+    root_type: 'Kiro V3 hook file must be a JSON object with "version" and "hooks" (found %{found}); Kiro skips the whole file'
+    missing_hooks: 'Kiro V3 hook file has no "hooks" array; Kiro skips the whole file'
+    bare_hook: 'Kiro V3 hook file holds a bare hook definition without the {"version": "v1", "hooks": [...]} wrapper; Kiro skips the whole file'
+    bare_hook_suggestion: 'Wrap the definition: {"version": "v1", "hooks": [ <this object> ]}'
+    hooks_type: '"hooks" is %{found}, not an array; Kiro skips the whole file'
+    empty_hooks: '"hooks" is empty; Kiro skips a hook file that does not define at least one hook'
+    entry_type: 'hooks[%{index}] is %{found}, not an object; Kiro skips the whole file'
+    missing_name: 'hooks[%{index}] has no "name"; Kiro skips the whole file'
+    empty_name: 'hooks[%{index}] has an empty "name"; Kiro skips the whole file'
+    name_type: 'hooks[%{index}] "name" is %{found}, not a string; Kiro skips the whole file'
+    missing_trigger: 'hooks[%{index}] has no "trigger"; Kiro skips the whole file'
+    empty_trigger: 'hooks[%{index}] has an empty "trigger"; Kiro skips the whole file'
+    trigger_type: 'hooks[%{index}] "trigger" is %{found}, not a string; Kiro skips the whole file'
+    unknown_trigger: 'hooks[%{index}] trigger "%{trigger}" is not a Kiro V3 trigger; Kiro skips this hook'
+    unknown_trigger_suggestion: 'Use SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, PostFileCreate, PostFileSave, PostFileDelete, PreTaskExec, PostTaskExec, Stop, SessionEnd or Manual, or an accepted alias such as agentSpawn, stop or fileEdited. Names are case-sensitive.'
+    unknown_trigger_fix: 'Replace the trigger with %{canonical} (activates this hook)'
+    missing_action: 'hooks[%{index}] has no "action"; Kiro skips the whole file'
+    missing_action_flat: 'hooks[%{index}] has no "action" ("%{key}" must be inside action); Kiro skips the whole file'
   kr_hk_013:
-    message: Invalid Kiro V3 hook action
-    suggestion: Use action.type "command" with a non-empty command, or "agent" with a non-empty prompt
-    invalid_type: 'hooks[%{index}] action.type "%{kind}" is not command or agent'
-    missing_type: 'hooks[%{index}] action is missing the type field'
-    command_required: 'hooks[%{index}] command action is missing a non-empty command'
-    prompt_required: 'hooks[%{index}] agent action is missing a non-empty prompt'
-    timeout_range: 'hooks[%{index}] timeout %{value}s exceeds the %{limit}s ceiling; 0 disables the timeout'
-    timeout_negative: 'hooks[%{index}] timeout %{value}s is negative; use 0 to disable'
-  kr_hk_007:
-    message: Kiro hook timeout is out of range (0 or > 300s)
-    suggestion: Set 'timeout' between 1 and 300 seconds
-  kr_hk_008:
-    message: Duplicate event handlers detected for the same event and pattern
-    suggestion: Remove duplicate hook files or differentiate their patterns
+    suggestion: 'Use {"type": "command", "command": "..."} or {"type": "agent", "prompt": "..."}'
+    action_type: 'hooks[%{index}] "action" is %{found}, not an object; Kiro skips the whole file'
+    missing_type: 'hooks[%{index}] action has no "type"; Kiro skips the whole file'
+    type_type: 'hooks[%{index}] action.type is %{found}, not a string; Kiro skips the whole file'
+    invalid_type: 'hooks[%{index}] action.type "%{kind}" is not "command" or "agent"; Kiro skips the whole file'
+    invalid_type_fix: 'Replace action.type with "%{kind}" (activates the hooks in this file)'
+    command_required: 'hooks[%{index}] command action has no "command"; Kiro skips the whole file'
+    prompt_required: 'hooks[%{index}] agent action has no "prompt"; Kiro skips the whole file'
+    payload_empty: 'hooks[%{index}] action.%{field} is empty; Kiro skips the whole file'
+    payload_type: 'hooks[%{index}] action.%{field} is %{found}, not a string; Kiro skips the whole file'
+    payload_blank: 'hooks[%{index}] action.%{field} contains only whitespace, so the hook does nothing'
   kr_hk_009:
     message: Kiro hook command uses an absolute path
     suggestion: Use a relative path or a tool on PATH to keep hooks portable across machines
   kr_hk_010:
     message: Potential hardcoded secret detected in Kiro hook command
     suggestion: Remove hardcoded credentials from the hook command; reference environment variables (e.g. ${API_KEY}) instead
+  kr_hk_015:
+    document: 'Legacy Kiro IDE hook format (when/then) in a .json hook file: Kiro CLI V3 and IDE 1.0 read .kiro/hooks/*.json only as v1 hook files and skip this file'
+    entry: 'hooks[%{index}] uses the legacy IDE when/then fields instead of trigger and action; Kiro skips the whole file'
+    suggestion: 'Rename the file to .kiro.hook to keep it as a legacy IDE hook (IDE 1.0 offers to upgrade it), or convert it to a v1 hook file: when.type becomes trigger (for example fileEdited becomes PostFileSave), when.patterns becomes a regex matcher, and then becomes action {"type": "command" or "agent"}'
+  kr_hk_016:
+    message: 'v1 hook format in a .kiro.hook file: Kiro loads v1 hooks only from .kiro/hooks/*.json, so these hooks never run'
+    suggestion: Rename the file so it ends in .json
+  kr_hk_017:
+    field_type: 'hooks[%{index}] "%{field}" is %{found}, expected %{expected}; Kiro skips the whole file'
+    timeout_fraction: 'hooks[%{index}] timeout %{value} is not a whole number of seconds; Kiro skips the whole file'
+    timeout_negative: 'hooks[%{index}] timeout %{value} is negative; Kiro skips the whole file'
+    suggestion: 'timeout is a whole number of seconds (default 60, 0 disables it), enabled is true or false, and matcher and description are strings'
+    fix: 'Replace the quoted value with %{value} (activates the hooks in this file)'
+  kr_hk_018:
+    confirm_type: 'hooks[%{index}] "confirm" is %{found}, not an object; Kiro skips the whole file'
+    missing_field: 'hooks[%{index}] confirm has no "%{field}"; Kiro skips the whole file'
+    empty_field: 'hooks[%{index}] confirm.%{field} is empty; Kiro skips the whole file'
+    field_type: 'hooks[%{index}] confirm.%{field} is %{found}, expected %{expected}; Kiro skips the whole file'
+    empty_options: 'hooks[%{index}] confirm.options is empty; Kiro skips the whole file'
+    suggestion: 'confirm needs a non-empty question and at least one option {"id": "...", "label": "...", "run": true or false}; confirmCommand is an optional non-empty string'
+    no_effect: 'hooks[%{index}] confirm is ignored: Kiro asks for confirmation only before Stop hooks with a command action'
+    no_effect_suggestion: Remove confirm, or use it on a Stop hook whose action is a command
+  kr_hk_019:
+    message: 'hooks[%{index}] matcher "%{matcher}" is not a valid regular expression (%{error}); Kiro never runs this hook'
+    suggestion: 'Matchers are JavaScript regular expressions, not globs: write \.ts$ rather than *.ts, and (^|/)src/ rather than src/**. Tool matchers may also be plain selectors such as shell, @mcp or fs_*.'
+  kr_hk_020:
+    message: 'hooks[%{index}] matcher has no effect for %{trigger}; the hook runs on every %{trigger} event'
+    suggestion: Remove the matcher, or filter inside the command. Only PreToolUse, PostToolUse, PostFileCreate, PostFileSave and PostFileDelete use a matcher.
+  kr_hk_021:
+    message: 'hooks[%{index}] matcher "%{matcher}" matches no Kiro V3 built-in tool: %{names}'
+    name: '%{name} is a %{origin} tool name (V3: %{replacement})'
+    suggestion: 'Kiro V3 matches tool ids such as read_file, fs_write and execute_bash, or tags such as read, write and shell; MCP tools are mcp_<server>_<tool> or @<server>'
+  kr_hk_022:
+    misspelled: 'hooks[%{index}] key "%{key}" is ignored because keys are case-sensitive (did you mean "%{expected}"?)'
+    v2_timeout: 'hooks[%{index}] "%{key}" is a Kiro CLI 2.x field that V3 ignores; this hook uses the default 60 second timeout'
+    action_timeout: 'hooks[%{index}] action.timeout is ignored because timeout belongs on the hook, next to action; this hook uses the default 60 second timeout'
+    legacy_filter: 'hooks[%{index}] "%{key}" is an IDE 0.x field that V3 ignores; without a matcher the hook runs on every event'
+    belongs_in_action: 'hooks[%{index}] "%{key}" is ignored at the hook level; it belongs inside action'
+    suggestion: Kiro V3 drops unknown hook keys silently. Move or rename the key (timeout is in seconds on the hook object).
+  kr_hk_023:
+    template: 'hooks[%{index}] %{field} uses %{placeholder}, which Kiro V3 does not substitute; the shell receives it literally'
+    env: 'hooks[%{index}] %{field} reads $%{variable}, which Kiro V3 does not set, so it expands to an empty string'
+    workspace_root: 'hooks[%{index}] %{field} uses $WORKSPACE_ROOT; Kiro substitutes only ${WORKSPACE_ROOT}, and the shell expands $WORKSPACE_ROOT to an empty string'
+    confirm_workspace_root: 'hooks[%{index}] confirm.confirmCommand uses ${WORKSPACE_ROOT}, which Kiro substitutes only in action.command, so it expands to an empty string'
+    suggestion: 'Kiro V3 passes event data (file_path, tool_name, tool_input, prompt) as JSON on stdin, for example jq -r .file_path. It substitutes only ${WORKSPACE_ROOT} in action.command and $HOME in confirmCommand.'
+  kr_hk_024:
+    session_end_agent: 'hooks[%{index}] SessionEnd runs only command actions, so this agent action never runs'
+    session_end_suggestion: Use a command action, or use Stop for work after every turn
+    manual: 'hooks[%{index}] is a Manual hook: Kiro CLI V3 lists it but cannot run it (/hooks has no run action)'
+    manual_suggestion: 'Start it from the IDE Agent Hooks panel; for an on-demand workflow in the CLI, use a steering file with inclusion: manual (it runs as a /<name> slash command)'
+  kr_hk_025:
+    message: 'Kiro CLI 2.x ([tool_versions] kiro = "%{version}") does not load .kiro/hooks/*.json; these hooks run only in the V3 engine (kiro-cli --v3, the default from CLI 3.0) and in Kiro IDE 1.0'
+    suggestion: To run hooks in CLI 2.x, define them in an agent's hooks field; keep this file for V3 and the IDE
+  kr_hk_026:
+    parse_error: 'Kiro IDE hook file is not valid JSON: %{error}'
+    root_type: 'Kiro IDE hook file must be a JSON object (found %{found})'
+    field_type: 'Kiro IDE hook field %{field} is %{found}, expected %{expected}'
+    suggestion: 'An IDE 0.x hook is {"name": "...", "when": {"type": "...", "patterns": [...]}, "then": {"type": "askAgent" or "runCommand", "prompt" or "command": "..."}}'
   kr_mcp_003:
     message: Kiro MCP server '%{server}' is missing required 'args' field
     suggestion: Add an 'args' array (even if empty) alongside 'command', or switch to 'url' for remote servers

@@ -47,7 +47,7 @@ editors/
 ├── vscode/         # VS Code extension
 ├── jetbrains/      # JetBrains IDE plugin
 └── zed/            # Zed extension
-knowledge-base/     # 473 rules, 75+ sources, rules.json
+knowledge-base/     # 483 rules, 75+ sources, rules.json
 
 tests/fixtures/     # Test cases by category
 ```
@@ -101,7 +101,7 @@ CI runs lint and the workspace merge contracts on owner PRs and pushes to main; 
 
 ## Rules reference
 
-473 rules defined in `knowledge-base/rules.json` (source of truth), 473 validation rules across 41 validators. Human-readable docs: `knowledge-base/VALIDATION-RULES.md`. IDs are `[CATEGORY]-[NUMBER]` (AS-004, CC-HK-001).
+483 rules defined in `knowledge-base/rules.json` (source of truth), 483 validation rules across 41 validators. Human-readable docs: `knowledge-base/VALIDATION-RULES.md`. IDs are `[CATEGORY]-[NUMBER]` (AS-004, CC-HK-001).
 
 ### Adding a rule
 

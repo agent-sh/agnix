@@ -13,17 +13,17 @@ keywords: ["KR-HK-004", "kiro tool hook missing tooltypes filter", "kiro hooks",
 - **Category**: `Kiro Hooks`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
 - **Tool**: `kiro`
 - **Version Range**: `unspecified`
-- **Spec Revision**: `unspecified`
+- **Spec Revision**: `IDE 0.x .kiro.hook`
 
 ## Evidence Sources
 
-- https://kiro.dev/docs/hooks/types
+- https://kiro.dev/docs/ide/0x-reference/
 
 ## Test Coverage Metadata
 
@@ -39,8 +39,13 @@ The following examples demonstrate what triggers this rule and how to fix it.
 
 ```json
 {
-  "event": "preToolUse",
-  "runCommand": "echo broad"
+  "when": {
+    "type": "preToolUse"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Check every tool"
+  }
 }
 ```
 
@@ -48,8 +53,15 @@ The following examples demonstrate what triggers this rule and how to fix it.
 
 ```json
 {
-  "event": "preToolUse",
-  "toolTypes": ["readFiles"],
-  "runCommand": "echo ok"
+  "when": {
+    "type": "preToolUse",
+    "toolTypes": [
+      "write"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Check the write"
+  }
 }
 ```

@@ -12,13 +12,13 @@ keywords: ["KR-HK-013", "invalid kiro v3 hook action", "kiro hooks", "validation
 - **Severity**: `HIGH`
 - **Category**: `Kiro Hooks`
 - **Normative Level**: `MUST`
-- **Auto-Fix**: `No`
-- **Verified On**: `2026-10-16`
+- **Auto-Fix**: `Yes (unsafe)`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
 - **Tool**: `kiro`
-- **Version Range**: `>=2.26.0`
+- **Version Range**: `>=2.8.0`
 - **Spec Revision**: `unspecified`
 
 ## Evidence Sources
@@ -29,7 +29,7 @@ keywords: ["KR-HK-013", "invalid kiro v3 hook action", "kiro hooks", "validation
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples
@@ -39,11 +39,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{"name": "ctx", "trigger": "UserPromptSubmit", "action": {"type": "http", "url": "https://x.example"}}
+{"version":"v1","hooks":[{"name":"ctx","trigger":"UserPromptSubmit","action":{"type":"askAgent","prompt":"Add repo context"}}]}
 ```
 
 ### Valid
 
 ```json
-{"name": "ctx", "trigger": "UserPromptSubmit", "action": {"type": "agent", "prompt": "Add repo context"}}
+{"version":"v1","hooks":[{"name":"ctx","trigger":"UserPromptSubmit","action":{"type":"agent","prompt":"Add repo context"}}]}
 ```

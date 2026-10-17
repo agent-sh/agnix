@@ -1,0 +1,6 @@
+{
+  "version": "1",
+  "hooks": [
+    { "name": "fmt", "trigger": "PostFileSave", "matcher": "\\.rs$", "action": { "type": "command", "command": "cargo fmt" } }
+  ]
+}

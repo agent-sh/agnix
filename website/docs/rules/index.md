@@ -1,7 +1,7 @@
 # Rules Reference
 
-This section contains all `473` validation rules generated from `knowledge-base/rules.json`.
-`131` rules have automatic fixes.
+This section contains all `483` validation rules generated from `knowledge-base/rules.json`.
+`134` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
 |------|------|----------|----------|----------|
@@ -340,13 +340,23 @@ This section contains all `473` validation rules generated from `knowledge-base/
 | [KR-HK-004](./generated/kr-hk-004.md) | Kiro Tool Hook Missing toolTypes Filter | MEDIUM | Kiro Hooks | No |
 | [KR-HK-005](./generated/kr-hk-005.md) | Invalid Kiro Agent Hook Trigger | HIGH | Kiro Hooks | Yes (unsafe) |
 | [KR-HK-006](./generated/kr-hk-006.md) | Invalid Kiro Agent Hook Entry | HIGH | Kiro Hooks | No |
-| [KR-HK-007](./generated/kr-hk-007.md) | Hook Timeout Out of Range | MEDIUM | Kiro Hooks | No |
-| [KR-HK-008](./generated/kr-hk-008.md) | Duplicate Event Handlers | MEDIUM | Kiro Hooks | No |
 | [KR-HK-009](./generated/kr-hk-009.md) | Command Uses Absolute Path | MEDIUM | Kiro Hooks | No |
 | [KR-HK-010](./generated/kr-hk-010.md) | Secrets in Hook Command | HIGH | Kiro Hooks | No |
-| [KR-HK-011](./generated/kr-hk-011.md) | Invalid Kiro V3 Hook Document Version | MEDIUM | Kiro Hooks | Yes (unsafe) |
-| [KR-HK-012](./generated/kr-hk-012.md) | Invalid Kiro V3 Hook Entry | HIGH | Kiro Hooks | No |
-| [KR-HK-013](./generated/kr-hk-013.md) | Invalid Kiro V3 Hook Action | HIGH | Kiro Hooks | No |
+| [KR-HK-011](./generated/kr-hk-011.md) | Invalid Kiro V3 Hook Document Version | HIGH | Kiro Hooks | Yes (unsafe) |
+| [KR-HK-012](./generated/kr-hk-012.md) | Invalid Kiro V3 Hook Entry | HIGH | Kiro Hooks | Yes (unsafe) |
+| [KR-HK-013](./generated/kr-hk-013.md) | Invalid Kiro V3 Hook Action | HIGH | Kiro Hooks | Yes (unsafe) |
+| [KR-HK-015](./generated/kr-hk-015.md) | Legacy IDE Hook Saved as a V3 Hook File | HIGH | Kiro Hooks | No |
+| [KR-HK-016](./generated/kr-hk-016.md) | V3 Hook File Saved as .kiro.hook | HIGH | Kiro Hooks | No |
+| [KR-HK-017](./generated/kr-hk-017.md) | Invalid Kiro V3 Hook Field Value | HIGH | Kiro Hooks | Yes (unsafe) |
+| [KR-HK-018](./generated/kr-hk-018.md) | Invalid Kiro V3 Hook Confirm Block | HIGH | Kiro Hooks | No |
+| [KR-HK-019](./generated/kr-hk-019.md) | Kiro V3 Hook Matcher Is Not a Valid Regex | HIGH | Kiro Hooks | No |
+| [KR-HK-020](./generated/kr-hk-020.md) | Kiro V3 Hook Matcher Has No Effect | MEDIUM | Kiro Hooks | No |
+| [KR-HK-021](./generated/kr-hk-021.md) | Kiro V3 Tool Matcher Uses Non-V3 Tool Names | MEDIUM | Kiro Hooks | No |
+| [KR-HK-022](./generated/kr-hk-022.md) | Misplaced or Misspelled Kiro V3 Hook Field | MEDIUM | Kiro Hooks | No |
+| [KR-HK-023](./generated/kr-hk-023.md) | Kiro V3 Hook Command Uses Unsupported Placeholder | MEDIUM | Kiro Hooks | No |
+| [KR-HK-024](./generated/kr-hk-024.md) | Kiro V3 Hook Never Runs | MEDIUM | Kiro Hooks | No |
+| [KR-HK-025](./generated/kr-hk-025.md) | Standalone Hook File Ignored by Pinned Kiro CLI 2.x | LOW | Kiro Hooks | No |
+| [KR-HK-026](./generated/kr-hk-026.md) | Invalid Kiro IDE Hook File | HIGH | Kiro Hooks | No |
 | [KR-MCP-001](./generated/kr-mcp-001.md) | Kiro MCP Server Missing command and url | HIGH | Kiro MCP | No |
 | [KR-MCP-002](./generated/kr-mcp-002.md) | Hardcoded Secrets in Kiro MCP env | MEDIUM | Kiro MCP | No |
 | [KR-MCP-003](./generated/kr-mcp-003.md) | Missing Required Args | MEDIUM | Kiro MCP | No |

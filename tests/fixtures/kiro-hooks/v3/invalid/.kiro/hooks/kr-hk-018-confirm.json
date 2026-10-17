@@ -1,0 +1,11 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "publish",
+      "trigger": "Stop",
+      "action": { "type": "command", "command": "./publish.sh" },
+      "confirm": { "question": "Publish?", "options": [ { "id": "yes", "label": "Yes", "run": "true" } ] }
+    }
+  ]
+}

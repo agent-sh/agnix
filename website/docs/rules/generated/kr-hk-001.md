@@ -13,17 +13,18 @@ keywords: ["KR-HK-001", "invalid kiro ide hook event type", "kiro hooks", "valid
 - **Category**: `Kiro Hooks`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
 - **Tool**: `kiro`
 - **Version Range**: `unspecified`
-- **Spec Revision**: `unspecified`
+- **Spec Revision**: `IDE 0.x .kiro.hook`
 
 ## Evidence Sources
 
-- https://kiro.dev/docs/hooks/types
+- https://kiro.dev/docs/ide/0x-reference/
+- https://kiro.dev/docs/ide/whats-new-v1/hooks/
 
 ## Test Coverage Metadata
 
@@ -39,8 +40,13 @@ The following examples demonstrate what triggers this rule and how to fix it.
 
 ```json
 {
-  "event": "beforeSave",
-  "runCommand": "echo invalid"
+  "when": {
+    "type": "userPrompt"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Review the change"
+  }
 }
 ```
 
@@ -48,8 +54,15 @@ The following examples demonstrate what triggers this rule and how to fix it.
 
 ```json
 {
-  "event": "fileEdited",
-  "patterns": ["**/*.md"],
-  "runCommand": "echo changed"
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "src/**/*.ts"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Review the change"
+  }
 }
 ```

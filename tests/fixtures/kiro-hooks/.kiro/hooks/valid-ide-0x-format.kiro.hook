@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "Review changed components",
+  "description": "IDE 0.x hook in the format the IDE wrote",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": ["src/components/**/*.tsx"]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Review the edited component for accessibility issues."
+  }
+}

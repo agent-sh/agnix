@@ -1,0 +1,6 @@
+{
+  "version": "v1",
+  "hooks": [
+    { "name": "deploy-context", "trigger": "UserPromptSubmit", "matcher": "deploy", "action": { "type": "agent", "prompt": "Read docs/deploy.md first." } }
+  ]
+}
