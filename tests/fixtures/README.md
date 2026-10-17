@@ -16,13 +16,14 @@ Keep fixtures minimal, deterministic, and focused on one rule family when possib
 | CC-HK | `valid/hooks/`, `invalid/hooks/` | `valid/hooks/valid-hooks.json` | `invalid/hooks/` fixtures |
 | CC-AG | `valid/agents/`, `invalid/agents/` | `valid/agents/valid-agent.md` | `invalid/agents/missing-name.md` |
 | CC-MEM | `valid/memory/`, `invalid/memory/` | `valid/memory/CLAUDE.md` | `invalid/memory/CLAUDE.md` |
+| CC-MEM, CC-SET, CC-OS-007 (fixture pack) | `claude-mem/` | `claude-mem/valid/CLAUDE.md`, `claude-mem/settings-valid/.claude/settings.json` | `claude-mem/emphasis/` (CC-MEM-017), `claude-mem/long-file/` (CC-MEM-014), `claude-mem/combined/` (CC-MEM-015), `claude-mem/agent-memory/` (CC-MEM-016), `claude-mem/settings-scope/` (CC-SET-034), `claude-mem/settings-rules/` (CC-SET-035, CC-SET-036); exercised by `crates/agnix-core/tests/claude_memory_rules.rs` |
 | CC-PL | `valid/plugins/`, `invalid/plugins/` | `valid/plugins/` fixtures | `invalid/plugins/` fixtures |
 | AGM | `agents_md/` | `agents_md/valid/AGENTS.md` | `agents_md/no-headers/AGENTS.md` |
 | COP | `copilot/`, `copilot-invalid/` | `copilot/.github/copilot-instructions.md` | `copilot-invalid/.github/copilot-instructions.md` |
 | CUR | `cursor/`, `cursor-invalid/`, `cursor-legacy/` | `cursor/.cursor/rules/valid.mdc` | `cursor-invalid/.cursor/rules/empty.mdc` |
 | XP | `cross_platform/` | `cross_platform/valid/AGENTS.md` | `cross_platform/hard-coded/AGENTS.md` |
 | MCP | `mcp/` | `mcp/valid-tool.mcp.json` | `mcp/invalid-jsonrpc-version.mcp.json` |
-| PE | `prompt/` | `prompt/pe-001-valid.md` | `prompt/pe-001-critical-in-middle.md` |
+| PE | `prompt/` | `prompt/pe-004-valid.md` | `prompt/pe-002-cot-on-simple.md`, `prompt/pe-004-ambiguous.md` (the `pe-001-*` and `pe-003-*` files assert that the retired rules stay silent) |
 | REF | `refs/` | `refs/valid-links.md` | `refs/broken-link/CLAUDE.md`, `refs/missing-import.md` |
 | XML | `xml/` | `xml/xml-valid.md` | `xml/xml-001-unclosed.md` |
 | Real-world | `real-world/` | `real-world/html5-void-elements/CLAUDE.md` | `real-world/absolute-paths/AGENTS.md` |

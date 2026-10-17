@@ -418,9 +418,10 @@ mod tests {
         assert_eq!(get_tool_for_prefix("CC-SK-"), Some("claude-code"));
         assert_eq!(get_tool_for_prefix("CC-AG-"), Some("claude-code"));
         assert_eq!(get_tool_for_prefix("CC-PL-"), Some("claude-code"));
-        // Note: CC-MEM- is NOT in the mapping because some CC-MEM-* rules
-        // have empty applies_to (making them generic)
-        assert_eq!(get_tool_for_prefix("CC-MEM-"), None);
+        // CC-MEM-* used to be unmapped because CC-MEM-007 had an empty
+        // applies_to. CC-MEM-007 is retired and every remaining CC-MEM-* rule
+        // applies to claude-code, so the prefix now maps to it.
+        assert_eq!(get_tool_for_prefix("CC-MEM-"), Some("claude-code"));
     }
 
     #[test]
@@ -460,11 +461,12 @@ mod tests {
     }
 
     #[test]
-    fn test_mixed_tool_prefix_cc_mem() {
-        // CC-MEM-* prefix has mixed tools: some rules have "claude-code",
-        // some have null/no tool. Since they're not all the same tool,
-        // the prefix returns None.
-        assert_eq!(get_tool_for_prefix("CC-MEM-"), None);
+    fn test_mixed_tool_prefix_pe() {
+        // PE-* prefix has mixed tools: PE-002 and PE-006 apply to
+        // "claude-code", PE-004 and PE-005 have no tool. Since they're not all
+        // the same tool, the prefix returns None. (This test used CC-MEM-*,
+        // which became consistent when CC-MEM-007 was retired.)
+        assert_eq!(get_tool_for_prefix("PE-"), None);
     }
 
     #[test]
@@ -482,9 +484,11 @@ mod tests {
         assert!(prefixes.contains(&"CC-SK-"));
         assert!(prefixes.contains(&"CC-AG-"));
         assert!(prefixes.contains(&"CC-PL-"));
-        // Note: CC-MEM- is NOT in the list because some CC-MEM-* rules
-        // have empty applies_to (making them generic rules)
-        assert!(!prefixes.contains(&"CC-MEM-"));
+        // CC-MEM- is in the list now that every CC-MEM-* rule applies to
+        // claude-code (the generic CC-MEM-007 is retired). PE- stays out
+        // because only some PE-* rules name a tool.
+        assert!(prefixes.contains(&"CC-MEM-"));
+        assert!(!prefixes.contains(&"PE-"));
     }
 
     #[test]

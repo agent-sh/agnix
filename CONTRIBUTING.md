@@ -95,10 +95,10 @@ Rule IDs follow the format `[PREFIX]-[NUMBER]` where the prefix indicates the ru
 | `AS-` | 14 | AS-001 through AS-006, AS-008 through AS-009, AS-011 through AS-013, AS-015 through AS-017 |
 | `CC-AG-` | 17 | CC-AG-001 through CC-AG-015, CC-AG-017, CC-AG-019 |
 | `CC-HK-` | 28 | CC-HK-001 through CC-HK-028 |
-| `CC-MEM-` | 13 | CC-MEM-001 through CC-MEM-012, CC-MEM-014 |
-| `CC-OS-` | 6 | CC-OS-001 through CC-OS-006 |
+| `CC-MEM-` | 15 | CC-MEM-001 through CC-MEM-004, CC-MEM-010 through CC-MEM-012, CC-MEM-014 through CC-MEM-021 |
+| `CC-OS-` | 6 | CC-OS-001 through CC-OS-004, CC-OS-006 through CC-OS-007 |
 | `CC-PL-` | 15 | CC-PL-001 through CC-PL-015 |
-| `CC-SET-` | 16 | CC-SET-001 through CC-SET-016 |
+| `CC-SET-` | 35 | CC-SET-001 through CC-SET-013, CC-SET-016 through CC-SET-020, CC-SET-022 through CC-SET-023, CC-SET-025 through CC-SET-031, CC-SET-033 through CC-SET-040 |
 | `CC-SK-` | 19 | CC-SK-001 through CC-SK-002, CC-SK-004 through CC-SK-008, CC-SK-010, CC-SK-013 through CC-SK-023 |
 | `CDX-` | 7 | CDX-000 through CDX-006 |
 | `CDX-AG-` | 6 | CDX-AG-001 through CDX-AG-003, CDX-AG-005 through CDX-AG-007 |
@@ -132,7 +132,7 @@ Rule IDs follow the format `[PREFIX]-[NUMBER]` where the prefix indicates the ru
 | `OC-PM-` | 2 | OC-PM-001 through OC-PM-002 |
 | `OC-SK-` | 1 | OC-SK-001 |
 | `OC-TUI-` | 3 | OC-TUI-001 through OC-TUI-003 |
-| `PE-` | 6 | PE-001 through PE-006 |
+| `PE-` | 4 | PE-002, PE-004 through PE-006 |
 | `RC-SK-` | 1 | RC-SK-001 |
 | `REF-` | 3 | REF-001 through REF-003 |
 | `ROO-` | 6 | ROO-001 through ROO-006 |

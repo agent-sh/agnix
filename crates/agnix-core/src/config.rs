@@ -138,7 +138,7 @@ pub struct FilesConfig {
 /// ```toml
 /// [[overrides]]
 /// paths = [".claude/CLAUDE.md", "docs/agents/**/*.md"]
-/// disabled_rules = ["PE-001"]
+/// disabled_rules = ["PE-004"]
 /// ```
 #[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -151,12 +151,12 @@ pub struct OverrideConfig {
     #[schemars(description = "Glob patterns for files this override applies to")]
     pub paths: Vec<String>,
 
-    /// Rule IDs to disable for the matched files (e.g., `["PE-001"]`).
+    /// Rule IDs to disable for the matched files (e.g., `["PE-004"]`).
     ///
     /// Stacks with the global `rules.disabled_rules` for the matched files.
     #[serde(default)]
     #[schemars(
-        description = "Rule IDs to disable for files matching `paths` (e.g., [\"PE-001\"])"
+        description = "Rule IDs to disable for files matching `paths` (e.g., [\"PE-004\"])"
     )]
     pub disabled_rules: Vec<String>,
 }
