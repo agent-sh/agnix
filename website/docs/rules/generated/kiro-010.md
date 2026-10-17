@@ -1,9 +1,9 @@
 ---
 id: kiro-010
-title: "KIRO-010: Missing Inclusion Mode - Kiro Steering"
+title: "KIRO-010: On-Demand Steering Fields Without Inclusion Mode"
 sidebar_label: "KIRO-010"
-description: "agnix rule KIRO-010 checks for missing inclusion mode in kiro steering files. Severity: MEDIUM. See examples and fix guidance."
-keywords: ["KIRO-010", "missing inclusion mode", "kiro steering", "validation", "agnix", "linter"]
+description: "agnix rule KIRO-010 checks for on-demand steering fields without inclusion mode in kiro steering files. Severity: MEDIUM. See examples and fix guidance."
+keywords: ["KIRO-010", "on-demand steering fields without inclusion mode", "kiro steering", "validation", "agnix", "linter"]
 ---
 
 ## Summary
@@ -13,7 +13,7 @@ keywords: ["KIRO-010", "missing inclusion mode", "kiro steering", "validation", 
 - **Category**: `Kiro Steering`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,7 @@ keywords: ["KIRO-010", "missing inclusion mode", "kiro steering", "validation", 
 
 ## Evidence Sources
 
-- https://kiro.dev/docs/steering
+- https://kiro.dev/docs/steering/
 
 ## Test Coverage Metadata
 
@@ -39,7 +39,8 @@ The following examples demonstrate what triggers this rule and how to fix it.
 
 ```markdown
 ---
-name: test
+name: api-design
+description: REST API conventions
 ---
 # Steering
 ```
@@ -48,7 +49,9 @@ name: test
 
 ```markdown
 ---
-inclusion: always
+inclusion: auto
+name: api-design
+description: REST API conventions
 ---
 # Steering
 ```

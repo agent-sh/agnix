@@ -257,16 +257,16 @@ fn test_format_sarif_has_all_rules() {
 
     // Use threshold range to avoid brittleness when rules are added/removed,
     // while still catching major regressions (missing rules) or explosions.
-    // As of writing, there are 451 rules documented in VALIDATION-RULES.md;
-    // the upper bound has ~10% headroom against accidental explosion.
+    // The upper bound only guards against an accidental explosion (for
+    // example rules registered twice); raise it when the rule set grows.
     assert!(
         rules.len() >= 70,
         "Expected at least 70 validation rules, found {} (possible rule registration bug)",
         rules.len()
     );
     assert!(
-        rules.len() <= 500,
-        "Expected at most 500 validation rules, found {} (unexpected rule explosion)",
+        rules.len() <= 1000,
+        "Expected at most 1000 validation rules, found {} (unexpected rule explosion)",
         rules.len()
     );
 

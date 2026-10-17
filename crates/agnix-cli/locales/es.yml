@@ -122,9 +122,6 @@ rules:
   ws_sk_001:
     message: El campo '%{field}' no es soportado por %{client} -- sera ignorado
     suggestion: Elimina '%{field}' o mueve este skill a un cliente que lo soporte
-  kr_sk_001:
-    message: El campo '%{field}' no es soportado por %{client} -- sera ignorado
-    suggestion: Elimina '%{field}' o mueve este skill a un cliente que lo soporte
   amp_sk_001:
     message: El campo '%{field}' no es soportado por %{client} -- sera ignorado
     suggestion: Elimina '%{field}' o mueve este skill a un cliente que lo soporte
@@ -510,15 +507,9 @@ rules:
     message: 'Modo de inclusion invalido ''%{value}'' en archivo de orientacion - modos validos: always, fileMatch, manual,
       auto'
     suggestion: 'Usa uno de: always, fileMatch, manual, auto'
-  kiro_002_auto:
-    message: Archivo de orientacion con modo de inclusion 'auto' no tiene el campo requerido '%{field}'
-    suggestion: 'Agrega los campos ''name'' y ''description'' cuando uses inclusion: auto'
   kiro_002_filematch:
     message: Archivo de orientacion con modo de inclusion 'fileMatch' no tiene el campo requerido 'fileMatchPattern'
     suggestion: 'Agrega un patron glob ''fileMatchPattern'' (ej., fileMatchPattern: ''**/*.ts'')'
-  kiro_003:
-    message: 'Patron glob fileMatchPattern invalido: %{error}'
-    suggestion: Corrige la sintaxis del patron glob
   kiro_004:
     message: El archivo de orientacion Kiro esta vacio
     suggestion: Agrega contenido de orientacion al archivo

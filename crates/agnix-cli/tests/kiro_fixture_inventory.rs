@@ -42,6 +42,7 @@ fn required_paths() -> Vec<&'static str> {
         "tests/fixtures/kiro-powers/.kiro/powers/empty-body/POWER.md",
         "tests/fixtures/kiro-powers/.kiro/powers/bad-mcp/POWER.md",
         "tests/fixtures/kiro-powers/.kiro/powers/bad-mcp/mcp.json",
+        "tests/fixtures/kiro-powers/.kiro/powers/steps-and-samples/POWER.md",
         "tests/fixtures/kiro-agents/.kiro/agents/valid-agent.json",
         "tests/fixtures/kiro-agents/.kiro/agents/minimal-agent.json",
         "tests/fixtures/kiro-agents/.kiro/agents/invalid-resource.json",
@@ -303,11 +304,10 @@ fn kiro_fixture_families_exist_with_required_cases() {
 fn kiro_fixture_families_are_cli_runnable() {
     let root = workspace_root();
     let fixture_roots = [
-        // The power mcp.json files are KiroMcp now and get Kiro MCP rules:
-        // bad-mcp/mcp.json adds KR-MCP-001 (mcpServers is an array).
-        // A legacy power's invalid mcp.json is reported once, by KR-PW-004 on
-        // POWER.md; the Kiro MCP validator leaves it to that rule.
-        ("tests/fixtures/kiro-powers", 7_u64, 4_u64),
+        // Every legacy POWER.md now gets the KR-PW-019 format info (6), and
+        // steps-and-samples/POWER.md adds a KR-PW-006 info; its Rust code
+        // sample no longer trips KR-PW-008.
+        ("tests/fixtures/kiro-powers", 8_u64, 11_u64),
         // KR-AG-009 no longer flags the 10 agents that omit the optional `prompt`.
         ("tests/fixtures/kiro-agents", 10_u64, 10_u64),
         ("tests/fixtures/kiro-hooks", 7_u64, 4_u64),
@@ -317,8 +317,9 @@ fn kiro_fixture_families_are_cli_runnable() {
         // repository-local permissions file also gets the KR-PM-009 note.
         ("tests/fixtures/kiro-permissions", 3_u64, 16_u64),
         // Six KIRO-026 near misses, five KR-WF findings in broken.workflow.yaml
-        // and one KR-IGN-001; settings/settings.json is not validated.
-        ("tests/fixtures/kiro-detect", 14_u64, 12_u64),
+        // one KR-IGN-001 and the KR-PW-019 legacy-format note on power/POWER.md;
+        // settings/settings.json is not validated.
+        ("tests/fixtures/kiro-detect", 14_u64, 13_u64),
     ];
 
     for (rel, expected_files_checked, expected_diagnostics) in fixture_roots {
@@ -505,6 +506,11 @@ fn kiro_detect_fixtures_report_exactly_the_expected_findings() {
     expected.insert((
         "KR-IGN-001".to_string(),
         "tests/fixtures/kiro-detect/.kiroignore".to_string(),
+    ));
+    // A published POWER.md is the legacy power format (KR-PW-019 info).
+    expected.insert((
+        "KR-PW-019".to_string(),
+        "tests/fixtures/kiro-detect/power/POWER.md".to_string(),
     ));
     // No Claude import, cross-platform or hook rules on Kiro files: power
     // steering has `### @app.entrypoint`, POWER.md documents OS paths, and

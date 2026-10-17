@@ -1,7 +1,7 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 496,
+  "total_rules": 508,
   "last_updated": "2026-10-17",
   "schema": {
     "evidence": {
@@ -8280,7 +8280,7 @@
         "source_urls": [
           "https://kiro.dev/docs/steering/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro"
         },
@@ -8293,14 +8293,14 @@
       },
       "fix": {
         "autofix": true,
-        "fix_safety": "safe"
+        "fix_safety": "unsafe"
       },
       "good_example": "---\ninclusion: always\n---\n# TypeScript Guidelines\n\nUse strict mode.",
       "bad_example": "---\ninclusion: invalid_mode\n---\n# TypeScript Guidelines\n\nUse strict mode."
     },
     {
       "id": "KIRO-002",
-      "name": "Missing Required Fields for Inclusion Mode",
+      "name": "Inclusion Mode Without the Field It Loads By",
       "severity": "HIGH",
       "category": "kiro-steering",
       "evidence": {
@@ -8308,7 +8308,7 @@
         "source_urls": [
           "https://kiro.dev/docs/steering/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro"
         },
@@ -8322,12 +8322,12 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "---\ninclusion: auto\nname: typescript-guidelines\ndescription: Guidelines for TypeScript development\n---\n# TypeScript Guidelines",
-      "bad_example": "---\ninclusion: auto\n---\n# TypeScript Guidelines"
+      "good_example": "---\ninclusion: auto\ndescription: REST API conventions. Use when editing API endpoints.\n---\n# API Design",
+      "bad_example": "---\ninclusion: auto\nname: api-design\n---\n# API Design"
     },
     {
       "id": "KIRO-003",
-      "name": "Invalid fileMatchPattern Glob",
+      "name": "fileMatchPattern Does Not Match as Written",
       "severity": "MEDIUM",
       "category": "kiro-steering",
       "evidence": {
@@ -8335,7 +8335,7 @@
         "source_urls": [
           "https://kiro.dev/docs/steering/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro"
         },
@@ -8349,8 +8349,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "---\ninclusion: fileMatch\nfileMatchPattern: \"**/*.ts\"\n---\n# TypeScript Guidelines",
-      "bad_example": "---\ninclusion: fileMatch\nfileMatchPattern: \"[unclosed\"\n---\n# TypeScript Guidelines"
+      "good_example": "---\ninclusion: fileMatch\nfileMatchPattern: [\"**/*.ts\", \"**/*.tsx\"]\n---\n# TypeScript Guidelines",
+      "bad_example": "---\ninclusion: fileMatch\nfileMatchPattern: \"**/*.ts,**/*.tsx\"\n---\n# TypeScript Guidelines"
     },
     {
       "id": "KIRO-004",
@@ -8362,7 +8362,7 @@
         "source_urls": [
           "https://kiro.dev/docs/steering/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro"
         },
@@ -8389,7 +8389,7 @@
         "source_urls": [
           "https://kiro.dev/docs/steering/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro"
         },
@@ -8416,7 +8416,7 @@
         "source_urls": [
           "https://kiro.dev/docs/steering/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro"
         },
@@ -8458,7 +8458,7 @@
         "source_urls": [
           "https://kiro.dev/docs/steering/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro"
         },
@@ -8485,7 +8485,7 @@
         "source_urls": [
           "https://kiro.dev/docs/steering/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro"
         },
@@ -8512,7 +8512,7 @@
         "source_urls": [
           "https://kiro.dev/docs/steering/"
         ],
-        "verified_on": "2026-10-04",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro"
         },
@@ -8531,15 +8531,15 @@
     },
     {
       "id": "KIRO-010",
-      "name": "Missing Inclusion Mode",
+      "name": "On-Demand Steering Fields Without Inclusion Mode",
       "severity": "MEDIUM",
       "category": "kiro-steering",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/docs/steering"
+          "https://kiro.dev/docs/steering/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro"
         },
@@ -8553,51 +8553,52 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "---\ninclusion: always\n---\n# Steering",
-      "bad_example": "---\nname: test\n---\n# Steering"
+      "good_example": "---\ninclusion: auto\nname: api-design\ndescription: REST API conventions\n---\n# Steering",
+      "bad_example": "---\nname: api-design\ndescription: REST API conventions\n---\n# Steering"
     },
     {
       "id": "KIRO-011",
-      "name": "Steering Doc Excessively Long",
+      "name": "Always-Included Steering Doc Excessively Long",
       "severity": "LOW",
       "category": "kiro-steering",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/docs/steering"
+          "https://kiro.dev/docs/steering/",
+          "https://kiro.dev/docs/cli/chat/context/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro"
         },
         "normative_level": "BEST_PRACTICE",
         "tests": {
           "unit": true,
-          "fixtures": true,
+          "fixtures": false,
           "e2e": false
         }
       },
       "fix": {
         "autofix": false
       },
-      "good_example": "---\ninclusion: always\n---\n# Concise guidance",
-      "bad_example": "---\ninclusion: always\n---\n# Very long doc..."
+      "good_example": "---\ninclusion: manual\n---\n# Long Reference\n(loaded only on request)",
+      "bad_example": "---\ninclusion: always\n---\n# Everything\n(more than 50,000 characters)"
     },
     {
-      "id": "KIRO-012",
-      "name": "Duplicate Steering Name",
-      "severity": "MEDIUM",
+      "id": "KIRO-015",
+      "name": "Steering Frontmatter Kiro Cannot Read",
+      "severity": "HIGH",
       "category": "kiro-steering",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/docs/steering"
+          "https://kiro.dev/docs/steering/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro"
         },
-        "normative_level": "SHOULD",
+        "normative_level": "MUST",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -8607,62 +8608,91 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "---\ninclusion: auto\nname: unique-name\ndescription: desc\n---\n# Content",
-      "bad_example": "# Two steering files with name: duplicate-name"
+      "good_example": "---\ninclusion: manual\nname: release-checklist\n---\n# Release Checklist",
+      "bad_example": "---\ninclusion: manual\nname:\ninclusion: always\n---\n# Release Checklist"
     },
     {
-      "id": "KIRO-013",
-      "name": "Conflicting Inclusion Modes",
+      "id": "KIRO-016",
+      "name": "AGENTS.md Exceeds Kiro Truncation Limit",
       "severity": "MEDIUM",
       "category": "kiro-steering",
       "evidence": {
-        "source_type": "vendor_docs",
+        "source_type": "vendor_code",
         "source_urls": [
-          "https://kiro.dev/docs/steering"
+          "https://kiro.dev/docs/steering/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
-          "tool": "kiro"
+          "tool": "kiro",
+          "spec_revision": "Kiro CLI 2.32.1 V3 engine (@kiro/agent 0.66.48)"
         },
         "normative_level": "SHOULD",
         "tests": {
           "unit": true,
-          "fixtures": true,
+          "fixtures": false,
           "e2e": false
         }
       },
       "fix": {
         "autofix": false
       },
-      "good_example": "---\ninclusion: always\n---\n# Content",
-      "bad_example": "---\ninclusion: always\ninclusion: manual\n---\n# Content"
+      "good_example": "AGENTS.md under 50,000 characters, with scoped guidance in .kiro/steering/",
+      "bad_example": "AGENTS.md of 80,000 characters (Kiro CLI V3 keeps the first 50,000)"
     },
     {
-      "id": "KIRO-014",
-      "name": "Markdown Structure Issues",
+      "id": "KIRO-017",
+      "name": "Kiro Steering Frontmatter in AGENTS.md",
+      "severity": "MEDIUM",
+      "category": "kiro-steering",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/steering/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "# Project Rules\n\nUse pnpm for every package script.",
+      "bad_example": "---\ninclusion: fileMatch\nfileMatchPattern: \"src/**\"\n---\n# Project Rules"
+    },
+    {
+      "id": "KIRO-018",
+      "name": "Vague Auto Steering Description",
       "severity": "LOW",
       "category": "kiro-steering",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/docs/steering"
+          "https://kiro.dev/docs/steering/",
+          "https://kiro.dev/docs/skills/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro"
         },
         "normative_level": "BEST_PRACTICE",
         "tests": {
           "unit": true,
-          "fixtures": true,
+          "fixtures": false,
           "e2e": false
         }
       },
       "fix": {
         "autofix": false
       },
-      "good_example": "---\ninclusion: always\n---\n# Heading\n\nContent here.",
-      "bad_example": "---\ninclusion: always\n---\nNo heading, just text."
+      "good_example": "---\ninclusion: auto\ndescription: REST API design patterns and conventions. Use when creating or modifying API endpoints.\n---\n# API Design",
+      "bad_example": "---\ninclusion: auto\ndescription: Helps with APIs\n---\n# API Design"
     },
     {
       "id": "KIRO-026",
@@ -8705,9 +8735,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/docs/steering/"
+          "https://kiro.dev/docs/skills/",
+          "https://agentskills.io/specification"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro"
         },
@@ -8722,8 +8753,35 @@
         "autofix": true,
         "fix_safety": "safe/unsafe"
       },
-      "good_example": "---\nname: my-skill\ndescription: A useful development skill\n---\n# My Skill\n\nSkill instructions here.",
-      "bad_example": "---\nname: my-skill\ndescription: A useful development skill\nmodel: haiku\n---\n# My Skill\n\nSkill instructions here."
+      "good_example": "---\nname: my-skill\ndescription: A useful development skill\nmetadata:\n  version: 1.0.0\n---\n# My Skill\n\nSkill instructions here.",
+      "bad_example": "---\nname: my-skill\ndescription: A useful development skill\nversion: 1.0.0\nmodel: haiku\n---\n# My Skill\n\nSkill instructions here."
+    },
+    {
+      "id": "KR-SK-002",
+      "name": "Vague Kiro Skill Description",
+      "severity": "LOW",
+      "category": "kiro-skills",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/skills/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: pr-review\ndescription: Review pull requests for security vulnerabilities and test coverage. Use when reviewing PRs.\n---\n# PR Review",
+      "bad_example": "---\nname: pr-review\ndescription: Helps with code review\n---\n# PR Review"
     },
     {
       "id": "KR-AG-001",
@@ -9983,15 +10041,16 @@
     },
     {
       "id": "KR-PW-001",
-      "name": "Missing Required POWER.md Frontmatter Fields",
+      "name": "POWER.md Frontmatter Kiro Cannot Use",
       "severity": "HIGH",
       "category": "kiro-powers",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/docs/powers/create"
+          "https://kiro.dev/docs/powers/",
+          "https://kiro.dev/docs/powers/installation/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro"
         },
@@ -10006,7 +10065,7 @@
         "autofix": false
       },
       "good_example": "---\nname: review-power\ndescription: Reviews code changes\nkeywords:\n  - review\n  - quality\n---\n# Review Power\n",
-      "bad_example": "# Missing frontmatter\nThis power omits required metadata."
+      "bad_example": "# Missing frontmatter\nThis power has no description or activation keywords."
     },
     {
       "id": "KR-PW-002",
@@ -10018,7 +10077,7 @@
         "source_urls": [
           "https://kiro.dev/docs/powers/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro"
         },
@@ -10043,9 +10102,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/docs/powers/create"
+          "https://kiro.dev/docs/powers/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro"
         },
@@ -10064,15 +10123,16 @@
     },
     {
       "id": "KR-PW-004",
-      "name": "Invalid Adjacent Power mcp.json Structure",
+      "name": "Adjacent Power mcp.json Kiro Cannot Use",
       "severity": "MEDIUM",
       "category": "kiro-powers",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/docs/powers/"
+          "https://kiro.dev/docs/powers/",
+          "https://kiro.dev/docs/powers/installation/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro"
         },
@@ -10090,33 +10150,6 @@
       "bad_example": "{\n  \"mcpServers\": []\n}"
     },
     {
-      "id": "KR-PW-005",
-      "name": "Step Missing Description",
-      "severity": "HIGH",
-      "category": "kiro-powers",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://kiro.dev/docs/powers"
-        ],
-        "verified_on": "2026-04-22",
-        "applies_to": {
-          "tool": "kiro"
-        },
-        "normative_level": "MUST",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": false
-      },
-      "good_example": "---\nname: test\ndescription: desc\nkeywords: [test]\n---\n## Step 1\nDo something.",
-      "bad_example": "---\nname: test\ndescription: desc\nkeywords: [test]\n---\n## Step 1\n"
-    },
-    {
       "id": "KR-PW-006",
       "name": "Duplicate Keywords",
       "severity": "LOW",
@@ -10124,9 +10157,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/docs/powers"
+          "https://kiro.dev/docs/powers/create/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro"
         },
@@ -10151,16 +10184,16 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/docs/powers"
+          "https://kiro.dev/docs/powers/create/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro"
         },
         "normative_level": "SHOULD",
         "tests": {
           "unit": true,
-          "fixtures": true,
+          "fixtures": false,
           "e2e": false
         }
       },
@@ -10168,7 +10201,7 @@
         "autofix": false
       },
       "good_example": "---\nname: my-power\ndescription: desc\nkeywords: [test]\n---\n# Body",
-      "bad_example": "---\nname: My Power!\ndescription: desc\nkeywords: [test]\n---\n# Body"
+      "bad_example": "---\nname: My_Power\ndescription: desc\nkeywords: [test]\n---\n# Body"
     },
     {
       "id": "KR-PW-008",
@@ -10178,16 +10211,16 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/docs/powers"
+          "https://kiro.dev/docs/powers/create/"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro"
         },
         "normative_level": "MUST",
         "tests": {
           "unit": true,
-          "fixtures": true,
+          "fixtures": false,
           "e2e": false
         }
       },
@@ -10211,6 +10244,323 @@
         "likelihood": "MEDIUM",
         "impact": "HIGH"
       }
+    },
+    {
+      "id": "KR-PW-009",
+      "name": "plugin.json Is Not a JSON Object",
+      "severity": "HIGH",
+      "category": "kiro-powers",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/powers/create/",
+          "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.16.2"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"$schema\": \"https://agent-plugins.org/schemas/1.0.0/plugin.schema.json\", \"name\": \"supabase\", \"version\": \"1.0.0\", \"description\": \"Build apps with Supabase\", \"author\": {\"name\": \"Supabase\"}, \"keywords\": [\"database\", \"postgres\"]}",
+      "bad_example": "{\"name\": \"supabase\", // comment\n}"
+    },
+    {
+      "id": "KR-PW-010",
+      "name": "Missing or Unsupported plugin.json $schema",
+      "severity": "HIGH",
+      "category": "kiro-powers",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/powers/create/",
+          "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.16.2"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"$schema\": \"https://agent-plugins.org/schemas/1.0.0/plugin.schema.json\", \"name\": \"supabase\", \"version\": \"1.0.0\", \"description\": \"Build apps with Supabase\", \"author\": {\"name\": \"Supabase\"}, \"keywords\": [\"database\", \"postgres\"]}",
+      "bad_example": "{\"name\": \"supabase\", \"description\": \"Build apps with Supabase\", \"keywords\": [\"database\"]}"
+    },
+    {
+      "id": "KR-PW-011",
+      "name": "Missing or Invalid plugin.json Name",
+      "severity": "HIGH",
+      "category": "kiro-powers",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/powers/create/",
+          "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.16.2"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"$schema\": \"https://agent-plugins.org/schemas/1.0.0/plugin.schema.json\", \"name\": \"supabase\", \"version\": \"1.0.0\", \"description\": \"Build apps with Supabase\", \"author\": {\"name\": \"Supabase\"}, \"keywords\": [\"database\", \"postgres\"]}",
+      "bad_example": "{\"$schema\": \"https://agent-plugins.org/schemas/1.0.0/plugin.schema.json\", \"name\": \"Supabase_Power\"}"
+    },
+    {
+      "id": "KR-PW-012",
+      "name": "plugin.json Field Outside the Agent Plugins Manifest",
+      "severity": "MEDIUM",
+      "category": "kiro-powers",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/powers/create/",
+          "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.16.2"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"$schema\": \"https://agent-plugins.org/schemas/1.0.0/plugin.schema.json\", \"name\": \"supabase\", \"version\": \"1.0.0\", \"description\": \"Build apps with Supabase\", \"author\": {\"name\": \"Supabase\"}, \"keywords\": [\"database\", \"postgres\"]}",
+      "bad_example": "{\"$schema\": \"https://agent-plugins.org/schemas/1.0.0/plugin.schema.json\", \"name\": \"supabase\", \"mcpServers\": {}}"
+    },
+    {
+      "id": "KR-PW-013",
+      "name": "plugin.json Value Kiro Ignores",
+      "severity": "MEDIUM",
+      "category": "kiro-powers",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/powers/create/",
+          "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.16.2"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"$schema\": \"https://agent-plugins.org/schemas/1.0.0/plugin.schema.json\", \"name\": \"supabase\", \"version\": \"1.0.0\", \"description\": \"Build apps with Supabase\", \"author\": {\"name\": \"Supabase\"}, \"keywords\": [\"database\", \"postgres\"]}",
+      "bad_example": "{\"$schema\": \"https://agent-plugins.org/schemas/1.0.0/plugin.schema.json\", \"name\": \"supabase\", \"author\": \"Supabase\", \"keywords\": \"database\"}"
+    },
+    {
+      "id": "KR-PW-014",
+      "name": "Plugin Skill Kiro Skips",
+      "severity": "HIGH",
+      "category": "kiro-powers",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/powers/create/",
+          "https://kiro.dev/docs/skills/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.16.2"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "power/\n  plugin.json\n  skills/\n    setup-db/SKILL.md",
+      "bad_example": "power/\n  plugin.json\n  skills/\n    Setup_DB/SKILL.md"
+    },
+    {
+      "id": "KR-PW-015",
+      "name": "Power Without Activation Description or Keywords",
+      "severity": "MEDIUM",
+      "category": "kiro-powers",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/powers/create/",
+          "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.16.2"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"$schema\": \"https://agent-plugins.org/schemas/1.0.0/plugin.schema.json\", \"name\": \"supabase\", \"version\": \"1.0.0\", \"description\": \"Build apps with Supabase\", \"author\": {\"name\": \"Supabase\"}, \"keywords\": [\"database\", \"postgres\"]}",
+      "bad_example": "{\"$schema\": \"https://agent-plugins.org/schemas/1.0.0/plugin.schema.json\", \"name\": \"supabase\"}"
+    },
+    {
+      "id": "KR-PW-016",
+      "name": "Documented plugin.json Field Missing or Not Semver",
+      "severity": "LOW",
+      "category": "kiro-powers",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/powers/create/",
+          "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.16.2"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"$schema\": \"https://agent-plugins.org/schemas/1.0.0/plugin.schema.json\", \"name\": \"supabase\", \"version\": \"1.0.0\", \"description\": \"Build apps with Supabase\", \"author\": {\"name\": \"Supabase\"}, \"keywords\": [\"database\", \"postgres\"]}",
+      "bad_example": "{\"$schema\": \"https://agent-plugins.org/schemas/1.0.0/plugin.schema.json\", \"name\": \"supabase\", \"description\": \"d\", \"keywords\": [\"db\"]}"
+    },
+    {
+      "id": "KR-PW-017",
+      "name": "POWER.md Ignored Next to plugin.json",
+      "severity": "MEDIUM",
+      "category": "kiro-powers",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/powers/",
+          "https://kiro.dev/docs/powers/installation/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.16.2"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "power/\n  plugin.json\n  skills/setup/SKILL.md",
+      "bad_example": "power/\n  plugin.json\n  POWER.md\n  steering/setup.md"
+    },
+    {
+      "id": "KR-PW-018",
+      "name": "Legacy steering Directory in a plugin.json Power",
+      "severity": "MEDIUM",
+      "category": "kiro-powers",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/powers/create/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.16.2"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "power/\n  plugin.json\n  skills/setup/SKILL.md",
+      "bad_example": "power/\n  plugin.json\n  steering/setup.md"
+    },
+    {
+      "id": "KR-PW-019",
+      "name": "Legacy POWER.md Power Format",
+      "severity": "LOW",
+      "category": "kiro-powers",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/powers/",
+          "https://kiro.dev/docs/powers/create/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "power/\n  plugin.json\n  skills/setup/SKILL.md\n  mcp.json",
+      "bad_example": "power/\n  POWER.md\n  steering/setup.md\n  mcp.json"
     },
     {
       "id": "KR-SET-001",
@@ -14481,7 +14831,7 @@
     },
     "kiro-skills": {
       "prefix": "KR-SK",
-      "count": 1,
+      "count": 2,
       "description": "Kiro per-client skill rules"
     },
     "kiro-agents": {
@@ -14511,7 +14861,7 @@
     },
     "kiro-steering": {
       "prefix": "KIRO",
-      "count": 15,
+      "count": 16,
       "description": "Kiro steering file validation and Kiro file placement rules"
     },
     "kiro-hooks": {
@@ -14531,7 +14881,7 @@
     },
     "kiro-powers": {
       "prefix": "KR-PW",
-      "count": 8,
+      "count": 18,
       "description": "Kiro power configuration rules"
     },
     "kiro-settings": {
