@@ -1,0 +1,14 @@
+{
+  "autoMode": {
+    "environment": ["Trusted repo: github.com/acme/app"]
+  },
+  "allowedProviders": ["firstParty"],
+  "remoteControlAtStartup": true,
+  "permissions": {
+    "defaultMode": "bypassPermissions"
+  },
+  "env": {
+    "CLAUDE_CONFIG_DIR": "/tmp/claude-config",
+    "OTEL_METRICS_EXPORTER": "none"
+  }
+}

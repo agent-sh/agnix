@@ -1,7 +1,7 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 539,
+  "total_rules": 540,
   "last_updated": "2026-10-17",
   "schema": {
     "evidence": {
@@ -3659,9 +3659,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://github.com/anthropics/claude-code/releases/tag/v2.1.128"
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.128",
+          "https://code.claude.com/docs/en/settings-reference"
         ],
-        "verified_on": "2026-05-06",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code",
           "version_range": ">=2.1.128"
@@ -3716,9 +3717,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://github.com/anthropics/claude-code/releases/tag/v2.1.133"
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.133",
+          "https://code.claude.com/docs/en/settings-reference"
         ],
-        "verified_on": "2026-05-08",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code",
           "version_range": ">=2.1.133",
@@ -3745,9 +3747,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://github.com/anthropics/claude-code/releases/tag/v2.1.133"
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.133",
+          "https://code.claude.com/docs/en/settings-reference"
         ],
-        "verified_on": "2026-05-08",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code",
           "version_range": ">=2.1.133"
@@ -3834,9 +3837,10 @@
         "source_type": "vendor_docs",
         "source_urls": [
           "https://github.com/anthropics/claude-code/releases/tag/v2.1.181",
-          "https://code.claude.com/docs/en/settings"
+          "https://code.claude.com/docs/en/settings",
+          "https://code.claude.com/docs/en/settings-reference"
         ],
-        "verified_on": "2026-06-18",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code",
           "version_range": ">=2.1.181",
@@ -3958,9 +3962,10 @@
           "https://github.com/anthropics/claude-code/releases/tag/v2.1.221",
           "https://github.com/anthropics/claude-code/releases/tag/v2.1.224",
           "https://code.claude.com/docs/en/settings",
-          "https://code.claude.com/docs/en/sandboxing"
+          "https://code.claude.com/docs/en/sandboxing",
+          "https://code.claude.com/docs/en/settings-reference"
         ],
-        "verified_on": "2026-08-08",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code",
           "version_range": ">=2.1.187"
@@ -3986,9 +3991,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://github.com/anthropics/claude-code/releases/tag/v2.1.193"
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.193",
+          "https://code.claude.com/docs/en/settings-reference"
         ],
-        "verified_on": "2026-06-27",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code",
           "version_range": ">=2.1.193"
@@ -4008,80 +4014,25 @@
       "bad_example": "{\n  \"autoMode\": {\"classifyAllShell\": \"true\"}\n}"
     },
     {
-      "id": "CC-SET-014",
-      "name": "autoMode Setting Ignored in settings.local.json",
-      "severity": "MEDIUM",
-      "category": "claude-settings",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://github.com/anthropics/claude-code/releases/tag/v2.1.207"
-        ],
-        "verified_on": "2026-07-15",
-        "applies_to": {
-          "tool": "claude-code",
-          "version_range": ">=2.1.207"
-        },
-        "normative_level": "SHOULD",
-        "tests": {
-          "unit": true,
-          "fixtures": false,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": false
-      },
-      "good_example": "{\n  \"model\": \"claude-sonnet-4\"\n}",
-      "bad_example": "{\n  \"autoMode\": {\"classifyAllShell\": true}\n}"
-    },
-    {
-      "id": "CC-SET-015",
-      "name": "Dead pluginConfigs in Project-Level Settings",
-      "severity": "MEDIUM",
-      "category": "claude-settings",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://github.com/anthropics/claude-code/releases/tag/v2.1.207"
-        ],
-        "verified_on": "2026-07-15",
-        "applies_to": {
-          "tool": "claude-code",
-          "version_range": ">=2.1.207"
-        },
-        "normative_level": "SHOULD",
-        "tests": {
-          "unit": true,
-          "fixtures": false,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": false
-      },
-      "good_example": "{\n  \"model\": \"claude-sonnet-4\"\n}",
-      "bad_example": "{\n  \"pluginConfigs\": {\"my-plugin\": {\"apiKey\": \"abc\"}}\n}"
-    },
-    {
       "id": "CC-SET-016",
-      "name": "Deprecated Tool-Scoped Permission Rule Form",
-      "severity": "LOW",
+      "name": "File Path Rule Never Consulted",
+      "severity": "MEDIUM",
       "category": "claude-settings",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://github.com/anthropics/claude-code/releases/tag/v2.1.210"
+          "https://code.claude.com/docs/en/permissions",
+          "https://code.claude.com/docs/en/errors"
         ],
-        "verified_on": "2026-07-16",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code",
           "version_range": ">=2.1.210"
         },
-        "normative_level": "SHOULD",
+        "normative_level": "MUST",
         "tests": {
           "unit": true,
-          "fixtures": false,
+          "fixtures": true,
           "e2e": false
         }
       },
@@ -4089,8 +4040,8 @@
         "autofix": true,
         "fix_safety": "unsafe"
       },
-      "good_example": "{\n  \"permissions\": {\"allow\": [\"Edit(src/**)\", \"Read(docs/**)\"]}\n}",
-      "bad_example": "{\n  \"permissions\": {\"allow\": [\"Write(src/**)\", \"Glob(docs/**)\"]}\n}"
+      "good_example": "{\n  \"permissions\": {\"deny\": [\"Edit(docs/**)\", \"Read(./.env)\"]}\n}",
+      "bad_example": "{\n  \"permissions\": {\"deny\": [\"Write(docs/**)\", \"MultiEdit(docs/**)\", \"Glob(./.env)\"]}\n}"
     },
     {
       "id": "CC-SET-017",
@@ -4101,9 +4052,10 @@
         "source_type": "vendor_docs",
         "source_urls": [
           "https://github.com/anthropics/claude-code/releases/tag/v2.1.216",
-          "https://code.claude.com/docs/en/sandboxing"
+          "https://code.claude.com/docs/en/sandboxing",
+          "https://code.claude.com/docs/en/settings-reference"
         ],
-        "verified_on": "2026-07-26",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code",
           "version_range": ">=2.1.216"
@@ -4161,9 +4113,10 @@
         "source_type": "vendor_docs",
         "source_urls": [
           "https://github.com/anthropics/claude-code/releases/tag/v2.1.219",
-          "https://code.claude.com/docs/en/sandboxing"
+          "https://code.claude.com/docs/en/sandboxing",
+          "https://code.claude.com/docs/en/settings-reference"
         ],
-        "verified_on": "2026-07-26",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code",
           "version_range": ">=2.1.219"
@@ -4212,36 +4165,6 @@
       "bad_example": "{\n  \"workflowSizeGuideline\": \"tiny\"\n}"
     },
     {
-      "id": "CC-SET-021",
-      "name": "Ineffective Project Remote Control Auto-start",
-      "severity": "MEDIUM",
-      "category": "claude-settings",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://github.com/anthropics/claude-code/releases/tag/v2.1.222",
-          "https://code.claude.com/docs/en/settings",
-          "https://code.claude.com/docs/en/remote-control"
-        ],
-        "verified_on": "2026-08-05",
-        "applies_to": {
-          "tool": "claude-code",
-          "version_range": ">=2.1.222"
-        },
-        "normative_level": "SHOULD",
-        "tests": {
-          "unit": true,
-          "fixtures": false,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": false
-      },
-      "good_example": "{\n  \"remoteControlAtStartup\": false\n}",
-      "bad_example": "{\n  \"remoteControlAtStartup\": true\n}"
-    },
-    {
       "id": "CC-SET-022",
       "name": "Invalid crossSessionInbound Setting",
       "severity": "MEDIUM",
@@ -4280,9 +4203,10 @@
         "source_type": "vendor_docs",
         "source_urls": [
           "https://github.com/anthropics/claude-code/releases/tag/v2.1.224",
-          "https://code.claude.com/docs/en/settings"
+          "https://code.claude.com/docs/en/settings",
+          "https://code.claude.com/docs/en/settings-reference"
         ],
-        "verified_on": "2026-08-08",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code",
           "version_range": ">=2.1.224"
@@ -4301,35 +4225,6 @@
       "bad_example": "{\n  \"dialogExpiry\": \"30s\"\n}"
     },
     {
-      "id": "CC-SET-024",
-      "name": "Ineffective Project sandbox.ripgrep Override",
-      "severity": "MEDIUM",
-      "category": "claude-settings",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://github.com/anthropics/claude-code/releases/tag/v2.1.232",
-          "https://code.claude.com/docs/en/sandboxing"
-        ],
-        "verified_on": "2026-08-15",
-        "applies_to": {
-          "tool": "claude-code",
-          "version_range": ">=2.1.232"
-        },
-        "normative_level": "SHOULD",
-        "tests": {
-          "unit": true,
-          "fixtures": false,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": false
-      },
-      "good_example": "{\n  \"sandbox\": {\"enabled\": true}\n}",
-      "bad_example": "{\n  \"sandbox\": {\"ripgrep\": \"/opt/rg/bin/rg\"}\n}"
-    },
-    {
       "id": "CC-SET-025",
       "name": "Invalid modelPicker Setting",
       "severity": "MEDIUM",
@@ -4338,9 +4233,10 @@
         "source_type": "vendor_docs",
         "source_urls": [
           "https://github.com/anthropics/claude-code/releases/tag/v2.1.243",
-          "https://code.claude.com/docs/en/settings-reference#modelpicker"
+          "https://code.claude.com/docs/en/settings-reference#modelpicker",
+          "https://code.claude.com/docs/en/settings-reference"
         ],
-        "verified_on": "2026-08-25",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code",
           "version_range": ">=2.1.242"
@@ -4425,9 +4321,10 @@
         "source_type": "vendor_docs",
         "source_urls": [
           "https://github.com/anthropics/claude-code/releases/tag/v2.1.247",
-          "https://code.claude.com/docs/en/settings-reference#feedbackdrafts"
+          "https://code.claude.com/docs/en/settings-reference#feedbackdrafts",
+          "https://code.claude.com/docs/en/settings-reference"
         ],
-        "verified_on": "2026-08-27",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code",
           "version_range": ">=2.1.247"
@@ -4482,9 +4379,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://github.com/anthropics/claude-code/releases/tag/v2.1.259"
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.259",
+          "https://code.claude.com/docs/en/settings-reference"
         ],
-        "verified_on": "2026-09-06",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code",
           "version_range": ">=2.1.259"
@@ -4532,34 +4430,6 @@
       "bad_example": "{\n  \"maxEffortLevel\": \"ultracode\",\n  \"modelSettings\": {\n    \"claude-opus-5\": { \"maxEffortLevel\": 3 }\n  }\n}"
     },
     {
-      "id": "CC-SET-032",
-      "name": "Ineffective Project allowedProviders Setting",
-      "severity": "MEDIUM",
-      "category": "claude-settings",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://github.com/anthropics/claude-code/releases/tag/v2.1.285"
-        ],
-        "verified_on": "2026-09-30",
-        "applies_to": {
-          "tool": "claude-code",
-          "version_range": ">=2.1.285"
-        },
-        "normative_level": "MUST",
-        "tests": {
-          "unit": true,
-          "fixtures": false,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": false
-      },
-      "good_example": "{\n  \"allowedProviders\": [\"anthropic\", \"bedrock\"]\n}",
-      "bad_example": "{\n  \"allowedProviders\": [\"anthropic\"]\n}"
-    },
-    {
       "id": "CC-SET-033",
       "name": "Idle Compaction Not Boolean",
       "severity": "MEDIUM",
@@ -4589,6 +4459,117 @@
       "bad_example": "{\"idleCompaction\": \"false\"}"
     },
     {
+      "id": "CC-SET-034",
+      "name": "Settings Key Ignored at This Scope",
+      "severity": "MEDIUM",
+      "category": "claude-settings",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/settings",
+          "https://code.claude.com/docs/en/settings-reference"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "~/.claude/settings.json:\n{\"autoMode\": {\"environment\": [\"Trusted repo: github.com/acme\"]}}",
+      "bad_example": ".claude/settings.json:\n{\"autoMode\": {\"environment\": [\"...\"]}, \"allowedProviders\": [\"firstParty\"]}"
+    },
+    {
+      "id": "CC-SET-035",
+      "name": "Ineffective Permission Rule Syntax",
+      "severity": "HIGH",
+      "category": "claude-settings",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/permissions",
+          "https://code.claude.com/docs/en/errors"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"permissions\": {\"allow\": [\"Bash(git status *)\", \"mcp__github__*\"], \"deny\": [\"Read(//Users/alice/secrets/**)\"]}}",
+      "bad_example": "{\"permissions\": {\"allow\": [\"Bash(git * main)\", \"mcp__*\", \"Bash(ls) x\"], \"deny\": [\"Bash(command:rm *)\", \"Read(/Users/alice/secrets/**)\"]}}"
+    },
+    {
+      "id": "CC-SET-036",
+      "name": "Broad Code-Execution Allow Rule",
+      "severity": "MEDIUM",
+      "category": "claude-settings",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/permission-modes",
+          "https://code.claude.com/docs/en/permissions"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"permissions\": {\"allow\": [\"Bash(npm run test)\", \"Bash(devbox run npm test)\"]}}",
+      "bad_example": "{\"permissions\": {\"allow\": [\"Bash(*)\", \"Bash(python*)\", \"Bash(devbox run *)\"]}}"
+    },
+    {
+      "id": "CC-SET-037",
+      "name": "Sandbox Weakened by Repository Settings",
+      "severity": "MEDIUM",
+      "category": "claude-settings",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/sandboxing"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"sandbox\": {\"enabled\": true, \"excludedCommands\": [\"docker compose *\"], \"filesystem\": {\"allowWrite\": [\"~/.kube\"]}}}",
+      "bad_example": "{\"sandbox\": {\"enableWeakerNestedSandbox\": true, \"excludedCommands\": [\"docker *\"], \"network\": {\"allowUnixSockets\": [\"/var/run/docker.sock\"]}}}"
+    },
+    {
       "id": "CC-SET-038",
       "name": ".claudeignore Has No Effect",
       "severity": "MEDIUM",
@@ -4614,6 +4595,62 @@
       },
       "good_example": "{\"permissions\": {\"deny\": [\"Read(./.env)\", \"Read(./secrets/**)\"]}}",
       "bad_example": ".claudeignore:\n.env\nsecrets/"
+    },
+    {
+      "id": "CC-SET-039",
+      "name": "Secret Files Not Denied",
+      "severity": "LOW",
+      "category": "claude-settings",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/settings-reference",
+          "https://code.claude.com/docs/en/permissions"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"permissions\": {\"deny\": [\"Read(./.env)\", \"Read(./.env.*)\", \"Read(./secrets/**)\"]}}",
+      "bad_example": "Project with .env and .claude/settings.json that has no Read deny rule"
+    },
+    {
+      "id": "CC-SET-040",
+      "name": "Memory Path Setting Cannot Match",
+      "severity": "MEDIUM",
+      "category": "claude-settings",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://code.claude.com/docs/en/memory",
+          "https://code.claude.com/docs/en/settings-reference"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "claude-code"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"claudeMdExcludes\": [\"**/packages/web/CLAUDE.md\"], \"autoMemoryDirectory\": \"~/memory\"}",
+      "bad_example": "{\"claudeMdExcludes\": [\"packages/web/CLAUDE.md\"], \"autoMemoryDirectory\": \"memory\"}"
     },
     {
       "id": "CDX-000",
@@ -15827,7 +15864,7 @@
     },
     "claude-settings": {
       "prefix": "CC-SET",
-      "count": 34,
+      "count": 35,
       "description": "Claude Code settings (.claude/settings.json) rules"
     },
     "gemini-agents": {

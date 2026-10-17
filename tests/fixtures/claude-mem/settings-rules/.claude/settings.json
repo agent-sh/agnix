@@ -1,0 +1,6 @@
+{
+  "permissions": {
+    "allow": ["Bash(*)", "Bash(git * main)", "mcp__*", "Bash(npm run test)"],
+    "deny": ["Write(docs/**)", "Read(/Users/alice/secrets/**)", "Bash(command:rm *)"]
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "outputStyle": "Explanatory",
+  "claudeMdExcludes": ["**/vendor/**/CLAUDE.md"],
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": ["Bash(npm run test)", "Bash(git status *)", "Edit(src/**)", "mcp__github__get_*"],
+    "deny": ["Read(./.env)", "Read(./secrets/**)", "Edit(/src/generated/**)"]
+  },
+  "sandbox": {
+    "enabled": true,
+    "excludedCommands": ["docker compose *"],
+    "filesystem": { "allowWrite": ["~/.kube"] }
+  },
+  "env": { "NODE_ENV": "test", "OTEL_LOG_USER_PROMPTS": "0" }
+}

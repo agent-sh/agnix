@@ -362,10 +362,10 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="cc-set-002"></a>
 ### CC-SET-002 [MEDIUM] Non-boolean channelsEnabled Setting
-**Requirement**: `channelsEnabled` in `.claude/settings.json` / `.local.json` / `managed-settings.json` MUST be a boolean when present (Claude Code 2.1.128+). A quoted `"true"` or numeric value leaves Channels silently disabled - same footgun shape as MCP-025 `alwaysLoad`.
+**Requirement**: `channelsEnabled` MUST be a boolean when present (Claude Code 2.1.128+). Its Scope is `Managed`. Checked only where Claude Code reads the key; in other files CC-SET-034 reports it instead. A quoted `"true"` or numeric value leaves Channels silently disabled - same footgun shape as MCP-025 `alwaysLoad`.
 **Detection**: Parse settings.json; look up top-level `channelsEnabled`; flag (warning) string / number / array / object values. Explicit `false` and `null` are not flagged.
 **Fix**: Opt-in unsafe autofix converts exact quoted `true` or `false` to a boolean. This can activate ignored settings or change security policy; plain `--fix` leaves them unchanged. Other invalid values require manual correction.
-**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.128 (introduced `--channels` support for console API-key auth; console orgs with managed settings must opt in via `channelsEnabled: true`)
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.128 (introduced `--channels` support for console API-key auth; console orgs with managed settings must opt in via `channelsEnabled: true`), code.claude.com/docs/en/settings-reference
 
 <a id="cc-set-003"></a>
 ### CC-SET-003 [MEDIUM] Invalid worktree.baseRef Value
@@ -376,17 +376,17 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="cc-set-004"></a>
 ### CC-SET-004 [MEDIUM] Invalid Sandbox Path Setting
-**Requirement**: `sandbox.bwrapPath` and `sandbox.socatPath` in `.claude/settings.json` / `.local.json` / `managed-settings.json` MUST be non-empty strings when present (Claude Code 2.1.133+, Linux/WSL only). These override the default bubblewrap / socat binary lookup; an empty string or non-string value means Claude Code cannot locate the sandbox helper.
+**Requirement**: `sandbox.bwrapPath` and `sandbox.socatPath` MUST be non-empty strings when present (Claude Code 2.1.133+, Linux/WSL only). Their Scope is `Managed`: "Claude Code reads it only from managed settings so that a user, project, or local file can't point the sandbox at a different binary." Checked only where Claude Code reads the key; in other files CC-SET-034 reports it instead. These override the default bubblewrap / socat binary lookup; an empty string or non-string value means Claude Code cannot locate the sandbox helper.
 **Detection**: Parse settings.json; walk `sandbox.bwrapPath` and `sandbox.socatPath`; flag (warning) empty strings and non-string types independently (both fields fire their own diagnostic when wrong). `null` values and absent keys are not flagged. Path existence is NOT checked (agnix validates files, not filesystem state).
 **Fix**: Manual - set the field to an absolute path string, or remove it to use Claude Code's default lookup.
-**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.133 (added `sandbox.bwrapPath` and `sandbox.socatPath` managed settings for Linux/WSL)
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.133 (added `sandbox.bwrapPath` and `sandbox.socatPath` managed settings for Linux/WSL), code.claude.com/docs/en/settings-reference
 
 <a id="cc-set-005"></a>
 ### CC-SET-005 [MEDIUM] Invalid parentSettingsBehavior Value
-**Requirement**: `parentSettingsBehavior` in `.claude/settings.json` / `.local.json` / `managed-settings.json` MUST be one of the strings `"first-wins"` or `"merge"` when present (Claude Code 2.1.133+). `"first-wins"` preserves existing behavior; `"merge"` opts SDK `managedSettings` (the parent tier) into the policy merge.
+**Requirement**: `parentSettingsBehavior` (Scope `Managed`; in other files CC-SET-034 reports it) MUST be one of the strings `"first-wins"` or `"merge"` when present (Claude Code 2.1.133+). `"first-wins"` preserves existing behavior; `"merge"` opts SDK `managedSettings` (the parent tier) into the policy merge.
 **Detection**: Parse settings.json; look up top-level `parentSettingsBehavior`; flag (warning) non-string types and strings that don't match the `{first-wins, merge}` enum. Case-sensitive. `null` values and absent keys are not flagged.
 **Fix**: Manual - set `parentSettingsBehavior` to `"first-wins"` or `"merge"`.
-**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.133 (added `parentSettingsBehavior` admin-tier key)
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.133 (added `parentSettingsBehavior` admin-tier key), code.claude.com/docs/en/settings-reference
 
 <a id="cc-set-006"></a>
 ### CC-SET-006 [MEDIUM] Non-boolean disableBundledSkills Setting
@@ -404,10 +404,10 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="cc-set-008"></a>
 ### CC-SET-008 [MEDIUM] Non-boolean sandbox.allowAppleEvents Setting
-**Requirement**: `sandbox.allowAppleEvents` in `.claude/settings.json` / `.local.json` / `managed-settings.json` MUST be a boolean when present (Claude Code 2.1.181+). `true` opts macOS sandboxed commands into sending Apple Events; only strict `true`/`false` is documented.
+**Requirement**: `sandbox.allowAppleEvents` MUST be a boolean when present (Claude Code 2.1.181+). Its Scope is `User or managed` ("Project settings cannot enable it"). Checked only where Claude Code reads the key; in other files CC-SET-034 reports it instead. `true` opts macOS sandboxed commands into sending Apple Events; only strict `true`/`false` is documented.
 **Detection**: Parse settings.json; walk `sandbox.allowAppleEvents`; flag (warning) non-boolean types (string, number, array, object). `null` values and absent keys are not flagged. Non-object `sandbox` values are ignored by this rule to avoid conflating shape errors with the specific boolean opt-in.
 **Fix**: Opt-in unsafe autofix converts exact quoted `true` or `false` to a boolean. This can activate ignored settings or change security policy; plain `--fix` leaves them unchanged. Other invalid values require manual correction.
-**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.181 (added `sandbox.allowAppleEvents`), code.claude.com/docs/en/settings
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.181 (added `sandbox.allowAppleEvents`), code.claude.com/docs/en/settings, code.claude.com/docs/en/settings-reference
 
 <a id="cc-set-009"></a>
 ### CC-SET-009 [MEDIUM] Non-boolean attribution.sessionUrl Setting
@@ -432,45 +432,31 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="cc-set-012"></a>
 ### CC-SET-012 [MEDIUM] Invalid sandbox.credentials Setting
-**Requirement**: `sandbox.credentials` in `.claude/settings.json` / `.local.json` / `managed-settings.json` MUST be an object with optional `files` and `envVars` arrays when present (Claude Code 2.1.187+). Each entry MUST use `mode: "deny"` or `mode: "mask"`; environment-variable masking was added in 2.1.199 and file masking in 2.1.221. Claude Code 2.1.224 added structured environment extraction, JWT-aware `decode: "jwt"` with non-empty `maskClaims`, `awsPairs`, and `sigv4` policies. File entries require a non-empty string `path`; environment entries require a shell-compatible variable `name`. Masked `extract` patterns require a valid ECMAScript regex with a credential capture group. Environment entries cannot combine `extract` and `decode`, and decoded environment variables only accept `onExtractNoMatch: "warn"`. `awsPairs` entries require non-empty `accessKeyIdVar` and `secretAccessKeyVar` strings with an optional non-empty `sessionTokenVar`; every variable name MUST be unique across every credential slot and pair. `sigv4` accepts only `streaming`, `presigned`, and `sigv4a` keys with `deny` or `passthrough` values. When `awsPairs` or `sigv4` is configured, `sandbox.network.tlsTerminate` MUST be an object so Claude Code can inspect and re-sign AWS requests. AWS re-signing options MUST be placed in user settings, managed settings, or a `--settings` file because Claude Code ignores them in project-level `.claude/settings.json` and `.claude/settings.local.json`. Claude Code accepts but ignores mask-only fields on `deny` entries. Top-level `allowPlaintextInject`, when present, MUST be boolean.
-**Detection**: Parse settings.json; walk `sandbox.credentials`; validate the container and arrays, required target fields, supported modes, environment-variable names, mask-only constraints, optional field types and enums, ECMAScript regex syntax and capture-group presence, JWT decode and claim-mask combinations, AWS credential-pair fields and variable-name uniqueness, SigV4 policies, the AWS re-signing TLS-termination prerequisite and settings scope, injection host arrays, and `allowPlaintextInject`. Skip mask-only optional-field validation for `deny` entries to match Claude Code preprocessing. Treat repository `.claude/settings.json` and `.claude/settings.local.json` as project scope; exempt an absolute home-directory `~/.claude/settings.json` and dispatch managed settings from `.claude/managed-settings.json`, the documented macOS, Linux/WSL, and Windows system `managed-settings.json` paths, and their non-hidden `managed-settings.d/*.json` drop-ins.
-**Fix**: Manual - use a valid `deny` or `mask` entry shape for the credential target, or remove the invalid entry or option. Move `awsPairs` and `sigv4` to user settings, managed settings, or a `--settings` file.
-**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.187 (added `sandbox.credentials`), github.com/anthropics/claude-code/releases/tag/v2.1.199 (added environment-variable masking), github.com/anthropics/claude-code/releases/tag/v2.1.221 (added file masking), github.com/anthropics/claude-code/releases/tag/v2.1.224 (added structured environment, JWT, and AWS masking), code.claude.com/docs/en/settings, code.claude.com/docs/en/sandboxing
+**Requirement**: `sandbox.credentials` MUST be an object with optional `files` and `envVars` arrays when present (Claude Code 2.1.187+). Each entry MUST use `mode: "deny"` or `mode: "mask"`; environment-variable masking was added in 2.1.199 and file masking in 2.1.221. Claude Code 2.1.224 added structured environment extraction, JWT-aware `decode: "jwt"` with non-empty `maskClaims`, `awsPairs`, and `sigv4` policies. File entries require a non-empty string `path`; environment entries require a shell-compatible variable `name`. Masked `extract` patterns require a valid ECMAScript regex with a credential capture group. Environment entries cannot combine `extract` and `decode`, and decoded environment variables only accept `onExtractNoMatch: "warn"`. `awsPairs` entries require non-empty `accessKeyIdVar` and `secretAccessKeyVar` strings with an optional non-empty `sessionTokenVar`; every variable name MUST be unique across every credential slot and pair. `sigv4` accepts only `streaming`, `presigned`, and `sigv4a` keys with `deny` or `passthrough` values. When `awsPairs` or `sigv4` is configured, `sandbox.network.tlsTerminate` MUST be an object so Claude Code can inspect and re-sign AWS requests. AWS re-signing options MUST be placed in user settings, managed settings, or a `--settings` file because Claude Code ignores them in project-level `.claude/settings.json` and `.claude/settings.local.json`. Claude Code accepts but ignores mask-only fields on `deny` entries. Top-level `allowPlaintextInject`, when present, MUST be boolean.
+**Detection**: Parse settings.json; walk `sandbox.credentials`; validate the container and arrays, required target fields, supported modes, environment-variable names, mask-only constraints, optional field types and enums, ECMAScript regex syntax and capture-group presence, JWT decode and claim-mask combinations, AWS credential-pair fields and variable-name uniqueness, SigV4 policies, the AWS re-signing TLS-termination prerequisite, injection host arrays, and `allowPlaintextInject`. Skip mask-only optional-field validation for `deny` entries to match Claude Code preprocessing. Treat repository `.claude/settings.json` and `.claude/settings.local.json` as project scope; exempt an absolute home-directory `~/.claude/settings.json` and dispatch managed settings from `.claude/managed-settings.json`, the documented macOS, Linux/WSL, and Windows system `managed-settings.json` paths, and their non-hidden `managed-settings.d/*.json` drop-ins.
+**Fix**: Manual - use a valid `deny` or `mask` entry shape for the credential target, or remove the invalid entry or option. `allowPlaintextInject`, `awsPairs` and `sigv4` have Scope `User or managed`; in project and local files CC-SET-034 reports them and their shape is not checked.
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.187 (added `sandbox.credentials`), github.com/anthropics/claude-code/releases/tag/v2.1.199 (added environment-variable masking), github.com/anthropics/claude-code/releases/tag/v2.1.221 (added file masking), github.com/anthropics/claude-code/releases/tag/v2.1.224 (added structured environment, JWT, and AWS masking), code.claude.com/docs/en/settings, code.claude.com/docs/en/sandboxing, code.claude.com/docs/en/settings-reference
 
 <a id="cc-set-013"></a>
 ### CC-SET-013 [MEDIUM] Non-boolean autoMode.classifyAllShell Setting
-**Requirement**: `autoMode.classifyAllShell` in `.claude/settings.json` / `.local.json` / `managed-settings.json` MUST be a boolean when present (Claude Code 2.1.193+). `true` routes all Bash/PowerShell commands through the auto-mode classifier; only strict `true`/`false` is documented.
+**Requirement**: `autoMode.classifyAllShell` MUST be a boolean when present (Claude Code 2.1.193+). `autoMode` has Scope `User or managed`: "The classifier doesn't read `autoMode` from project settings in `.claude/settings.json` or `.claude/settings.local.json`." Checked only where Claude Code reads the key; in other files CC-SET-034 reports it instead. `true` routes all Bash/PowerShell commands through the auto-mode classifier; only strict `true`/`false` is documented.
 **Detection**: Parse settings.json; walk `autoMode.classifyAllShell`; flag (warning) non-boolean types (string, number, array, object). `null` values and absent keys are not flagged. Non-object `autoMode` values are ignored by this rule to avoid conflating container shape errors with the specific boolean toggle.
 **Fix**: Opt-in unsafe autofix converts exact quoted `true` or `false` to a boolean. This can activate ignored settings or change security policy; plain `--fix` leaves them unchanged. Other invalid values require manual correction.
-**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.193 (added `autoMode.classifyAllShell`)
-
-<a id="cc-set-014"></a>
-### CC-SET-014 [MEDIUM] autoMode Setting Ignored in settings.local.json
-**Requirement**: `autoMode` SHOULD NOT be placed in `.claude/settings.local.json`. As of Claude Code v2.1.207, auto mode no longer reads `autoMode` from the repo-resident local settings file; the key is silently ignored there and is only read from `~/.claude/settings.json`.
-**Detection**: Parse `.claude/settings.local.json` only (not `settings.json`, not `managed-settings.json`); flag (warning) any non-null value for the top-level `autoMode` key. Fires on any value type — the rule is about presence in the wrong file, not value shape. `null` values and absent keys are not flagged.
-**Fix**: Manual - move `autoMode` (with its nested keys) from `.claude/settings.local.json` to `~/.claude/settings.json`.
-**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.207 (auto mode no longer reads `autoMode` from repo-resident `settings.local.json`)
-
-<a id="cc-set-015"></a>
-### CC-SET-015 [MEDIUM] Dead pluginConfigs in Project-Level Settings
-**Requirement**: `pluginConfigs` SHOULD NOT be present in project-level `.claude/settings.json` or `.claude/settings.local.json` for Claude Code 2.1.207+. As of that release, plugin option values are only read from user-level settings (`~/.claude/settings.json`), `--settings` files, and managed settings; project-level `pluginConfigs` is silently ignored.
-**Detection**: Parse `settings.json` / `settings.local.json` under `.claude/`; flag (warning) any non-null value for the top-level `pluginConfigs` key. `null` values and absent keys are not flagged. `managed-settings.json` is excluded — the managed tier is still honored.
-**Fix**: Manual - move `pluginConfigs` to `~/.claude/settings.json` (user-level), pass it via the `--settings` flag, or configure it in managed settings; then remove it from the project-level file.
-**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.207 (project-level `pluginConfigs` no longer read)
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.193 (added `autoMode.classifyAllShell`), code.claude.com/docs/en/settings-reference
 
 <a id="cc-set-016"></a>
-### CC-SET-016 [LOW] Deprecated Tool-Scoped Permission Rule Form
-**Requirement**: `Write(path)`, `NotebookEdit(path)`, and `Glob(path)` permission rule forms SHOULD NOT be used as of Claude Code 2.1.210, which added a startup warning for them. Use `Edit(path)` instead of `Write(path)` or `NotebookEdit(path)`, and use `Read(path)` instead of `Glob(path)`.
-**Detection**: Walk `permissions.allow`, `permissions.deny`, and `permissions.ask` arrays in `.claude/settings.json`, `.claude/settings.local.json`, and `.claude/managed-settings.json`. Flag (warning) any string entry that starts with `Write(`, `NotebookEdit(`, or `Glob(`. Bare tool names without `(` (e.g. `"Write"`) are NOT flagged — only path-scoped forms. Non-array values, non-string entries, and absent `permissions` key are silently skipped.
-**Fix**: [AUTO-FIX, unsafe] Replace `Write(path)` with `Edit(path)`, `NotebookEdit(path)` with `Edit(path)`, and `Glob(path)` with `Read(path)` in the permissions array. Review changed tool scope before applying.
-**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.210 (startup warning added for deprecated `Write(path)`, `NotebookEdit(path)`, `Glob(path)` permission rule forms)
+### CC-SET-016 [MEDIUM] File Path Rule Never Consulted
+**Requirement**: File path rules MUST use `Edit(path)` or `Read(path)`: "Claude Code checks file permissions against `Edit(path)` and `Read(path)` rules only. If you write a path rule for `Write`, `NotebookEdit`, `Glob`, or the legacy `MultiEdit` tool instead, Claude Code accepts the rule but never consults it". A deny or ask rule of that form protects nothing, so it is reported as an error; an allow rule as a warning. Bare tool names (`"Write"`) are fine: "Claude Code doesn't warn about a tool-name rule with no path".
+**Detection**: Walk `permissions.allow`, `permissions.deny` and `permissions.ask` in Claude settings files; flag `Write(...)`, `NotebookEdit(...)`, `MultiEdit(...)` and `Glob(...)` with a non-empty path. The diagnostic points at the array entry.
+**Fix**: [AUTO-FIX, unsafe] Replace the entry with `Edit(path)` (Write, NotebookEdit, MultiEdit) or `Read(path)` (Glob). The rule starts being enforced, so the permissions change.
+**Source**: code.claude.com/docs/en/permissions ("Read and Edit"), code.claude.com/docs/en/errors ("Is not matched by file permission checks")
 
 <a id="cc-set-017"></a>
 ### CC-SET-017 [MEDIUM] Non-boolean sandbox.filesystem.disabled Setting
-**Requirement**: `sandbox.filesystem.disabled` in `.claude/settings.json` / `.local.json` / `managed-settings.json` MUST be a boolean when present (Claude Code 2.1.216+). `true` disables filesystem isolation while preserving network isolation; only strict `true` / `false` is accepted.
+**Requirement**: `sandbox.filesystem.disabled` MUST be a boolean when present (Claude Code 2.1.216+). Its Scope is `User or managed`. Checked only where Claude Code reads the key; in other files CC-SET-034 reports it instead. `true` disables filesystem isolation while preserving network isolation; only strict `true` / `false` is accepted.
 **Detection**: Parse settings.json; walk `sandbox.filesystem.disabled`; flag (warning) non-boolean types (string, number, array, object). `null` values and absent keys are not flagged. Non-object `sandbox` or `filesystem` values are ignored by this rule to avoid conflating container shape errors with the boolean toggle.
 **Fix**: Opt-in unsafe autofix converts exact quoted `true` or `false` to a boolean. This can activate ignored settings or change security policy; plain `--fix` leaves them unchanged. Other invalid values require manual correction.
-**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.216, code.claude.com/docs/en/sandboxing
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.216, code.claude.com/docs/en/sandboxing, code.claude.com/docs/en/settings-reference
 
 <a id="cc-set-018"></a>
 ### CC-SET-018 [MEDIUM] Non-boolean emojiCompletionEnabled Setting
@@ -481,10 +467,10 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="cc-set-019"></a>
 ### CC-SET-019 [MEDIUM] Non-boolean sandbox.network.strictAllowlist Setting
-**Requirement**: `sandbox.network.strictAllowlist` MUST be a boolean when present in Claude Code 2.1.219+
+**Requirement**: `sandbox.network.strictAllowlist` MUST be a boolean when present in Claude Code 2.1.219+. Its Scope is `User or managed` ("A repository can't turn it on or off"). Checked only where Claude Code reads the key; in other files CC-SET-034 reports it instead.
 **Detection**: Parse settings JSON and flag non-boolean, non-null `sandbox.network.strictAllowlist` values
 **Fix**: Opt-in unsafe autofix converts exact quoted `true` or `false` to a boolean. This can activate ignored settings or change security policy; plain `--fix` leaves them unchanged. Other invalid values require manual correction.
-**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.219, code.claude.com/docs/en/sandboxing
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.219, code.claude.com/docs/en/sandboxing, code.claude.com/docs/en/settings-reference
 
 <a id="cc-set-020"></a>
 ### CC-SET-020 [MEDIUM] Invalid workflowSizeGuideline Setting
@@ -492,13 +478,6 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Detection**: Parse settings JSON and flag non-string values or strings outside the documented enum
 **Fix**: Manual - choose one of the four documented values
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.219, code.claude.com/docs/en/settings
-
-<a id="cc-set-021"></a>
-### CC-SET-021 [MEDIUM] Ineffective Project Remote Control Auto-start
-**Requirement**: Project-level `.claude/settings.json` and `.claude/settings.local.json` SHOULD NOT set `remoteControlAtStartup` to `true` in Claude Code 2.1.222+. Enabling Remote Control from repository settings is ignored; `false` remains valid for disabling it in that project.
-**Detection**: Parse project settings JSON and flag a strict `true` value for `remoteControlAtStartup`. Ignore `false`, `null`, absent values, and managed settings.
-**Fix**: Manual - enable Remote Control in user settings through `/config`, or set the project value to `false` when the project should disable it.
-**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.222, code.claude.com/docs/en/settings, code.claude.com/docs/en/remote-control
 
 <a id="cc-set-022"></a>
 ### CC-SET-022 [MEDIUM] Invalid crossSessionInbound Setting
@@ -509,23 +488,16 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="cc-set-023"></a>
 ### CC-SET-023 [MEDIUM] Invalid dialogExpiry Setting
-**Requirement**: `dialogExpiry` MUST be `60s`, `5m`, `10m`, or `never` when present in Claude Code 2.1.224+
+**Requirement**: `dialogExpiry` MUST be `60s`, `5m`, `10m`, or `never` when present in Claude Code 2.1.224+. Its Scope is `User or managed`. Checked only where Claude Code reads the key; in other files CC-SET-034 reports it instead.
 **Detection**: Parse settings JSON and flag non-string values or strings outside the documented enum
 **Fix**: Manual - choose one of the four documented values
-**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.224, code.claude.com/docs/en/settings
-
-<a id="cc-set-024"></a>
-### CC-SET-024 [MEDIUM] Ineffective Project sandbox.ripgrep Override
-**Requirement**: Project-level `.claude/settings.json` and `.claude/settings.local.json` SHOULD NOT set `sandbox.ripgrep` in Claude Code 2.1.232+. The sandbox ripgrep binary is honored only from user settings, managed settings, and the `--settings` flag, so a repository-local value is ignored.
-**Detection**: Parse settings JSON and flag a present `sandbox.ripgrep` key in project settings. Ignore user settings (`~/.claude/settings.json`) and managed settings.
-**Fix**: Manual - move the override to user settings, managed settings, or a `--settings` file, or drop it from the repository.
-**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.232, code.claude.com/docs/en/sandboxing
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.224, code.claude.com/docs/en/settings, code.claude.com/docs/en/settings-reference
 
 <a id="cc-set-025"></a>
 ### CC-SET-025 [MEDIUM] Invalid modelPicker Setting
-**Requirement**: `modelPicker` MUST appear only in user or managed settings (or a `--settings` file) in Claude Code 2.1.242+, and MUST be an object with an `options` array. Each option MUST be an object with a non-empty string `model`; optional `label` and `description` fields MUST be strings, and optional `replaceBuiltInOptions` MUST be boolean.
-**Detection**: Parse settings JSON and flag repository-local `modelPicker` values, non-object values, a missing or non-array `options`, malformed option rows, or a non-boolean `replaceBuiltInOptions`.
-**Fix**: Manual - move the setting to an honored scope and use the documented object and option-row shape.
+**Requirement**: `modelPicker` (Scope `User or managed`: "ignores it in project and local settings"; CC-SET-034 reports it there) MUST be an object with an `options` array. Each option MUST be an object with a non-empty string `model`; optional `label` and `description` fields MUST be strings, and optional `replaceBuiltInOptions` MUST be boolean.
+**Detection**: In user and managed settings, parse settings JSON and flag non-object values, a missing or non-array `options`, malformed option rows, or a non-boolean `replaceBuiltInOptions`.
+**Fix**: Manual - use the documented object and option-row shape.
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.243, code.claude.com/docs/en/settings-reference#modelpicker
 
 <a id="cc-set-026"></a>
@@ -545,7 +517,7 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 <a id="cc-set-028"></a>
 
 ### CC-SET-028 [MEDIUM] Invalid feedbackDrafts Setting
-**Requirement**: `feedbackDrafts` MUST be the string `notify`, `quiet`, or `off` when present in Claude Code 2.1.247+. It is a string enum, not a boolean; `off` removes the SendFeedback tool.
+**Requirement**: `feedbackDrafts` MUST be the string `notify`, `quiet`, or `off` when present in Claude Code 2.1.247+. It is a string enum, not a boolean; `off` removes the SendFeedback tool. Its Scope is `User or managed`. Checked only where Claude Code reads the key; in other files CC-SET-034 reports it instead.
 **Detection**: Parse settings JSON and flag non-string values or strings outside the documented enum.
 **Fix**: Manual - choose `notify`, `quiet`, or `off`.
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.247, code.claude.com/docs/en/settings-reference#feedbackdrafts
@@ -561,10 +533,10 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 <a id="cc-set-030"></a>
 
 ### CC-SET-030 [HIGH] Local Command in managedMcpServers
-**Requirement**: Every `managedMcpServers` entry MUST describe a remote HTTP or SSE server. Claude Code 2.1.259+ skips entries that name a local command, including entries with `command` or `type: "stdio"`.
+**Requirement**: Every `managedMcpServers` entry MUST describe a remote HTTP or SSE server. Claude Code 2.1.259+ skips entries that name a local command, including entries with `command` or `type: "stdio"`. The key has Scope `Managed` ("Claude Code drops the key with a warning in user, project, and local settings"); CC-SET-034 reports it there.
 **Detection**: Parse settings JSON, require `managedMcpServers` and its named entries to be objects, and flag command-based or explicitly stdio entries.
 **Fix**: Manual - provide the server through HTTP or SSE with a URL. Use another supported deployment mechanism for local stdio servers.
-**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.259
+**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.259, code.claude.com/docs/en/settings-reference
 
 <a id="cc-set-031"></a>
 
@@ -574,20 +546,40 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Fix**: Manual - choose `low`, `medium`, `high`, `xhigh`, or `max`.
 **Source**: code.claude.com/docs/en/settings-reference#maxeffortlevel, github.com/anthropics/claude-code/releases/tag/v2.1.267
 
-<a id="cc-set-032"></a>
-
-### CC-SET-032 [MEDIUM] Ineffective Project allowedProviders Setting
-**Requirement**: `allowedProviders` MUST only appear in Claude Code managed settings. Claude Code 2.1.285 introduced it as a machine-level provider policy, so a repository `.claude/settings.json` or `.claude/settings.local.json` value cannot enforce the configured provider boundary.
-**Detection**: Parse settings JSON and flag any non-null `allowedProviders` value outside a managed-settings.json path.
-**Fix**: Manual - move the setting to the organization's managed-settings.json.
-**Source**: github.com/anthropics/claude-code/releases/tag/v2.1.285
-
 <a id="cc-set-033"></a>
 ### CC-SET-033 [MEDIUM] Idle Compaction Not Boolean
 **Requirement**: `idleCompaction` MUST be a strict boolean when present. Claude Code 2.1.290 added idle compaction with the `"idleCompaction": false` settings.json opt-out (v2.1.299 release notes); a quoted `"false"` or truthy number silently keeps idle compaction enabled.
 **Detection**: Parse settings JSON and flag a non-boolean, non-null `idleCompaction` value.
 **Fix**: Opt-in unsafe autofix converts exact quoted `true` or `false` to a boolean. This can activate ignored settings or change security policy; plain `--fix` leaves them unchanged. Other invalid values require manual correction.
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.299
+
+<a id="cc-set-034"></a>
+### CC-SET-034 [MEDIUM] Settings Key Ignored at This Scope
+**Requirement**: A settings key MUST be set in a file Claude Code reads it from: "**Claude Code ignores the key in a repository file.** Look for `User, local, or managed`, `User or managed`, `User`, `Managed`, or `Global config` in the Scope column of the settings index." Value-level exceptions from the Scope lines: "`auto` and `bypassPermissions` don't take effect from project or local settings"; for `remoteControlAtStartup` "a project or local `true` is ignored"; for `bashEditDiffEnabled` "a `true` in a repository's `.claude/settings.json` or `.claude/settings.local.json` can't turn the recording on". For `env`: "Project and local settings can't set variables that a checked-out repository shouldn't control ... Claude Code drops each one, apart from a few values that turn telemetry off", and some variables are "ignored from every file".
+**Detection**: A table built from the settings-reference index (2026-10-14). `Managed` keys are reported outside managed settings; `User or managed` keys in `.claude/settings.json` and `.claude/settings.local.json`; `User, local, or managed` keys in `.claude/settings.json`; `User` keys outside `~/.claude/settings.json`; `Global config` keys in every settings file. A key covers its children (one finding for `autoMode`). `autoContinueAtUsageLimit` is not reported, since a project value "turns the feature off rather than being ignored". The documented `env` variables are reported in project and local files (the `OTEL_*_EXPORTER=none` and `OTEL_LOG_*=0` off values excepted), and the launch-only variables in every file. Type checks (CC-SET-002, 004, 005, 008, 012, 013, 017, 019, 023, 025, 028, 030) skip the keys this rule reports.
+**Fix**: Manual - move the key to a file that reads it, or remove it
+**Source**: code.claude.com/docs/en/settings ("A committed key doesn't reach teammates"), code.claude.com/docs/en/settings-reference ("Settings index", "Variables Claude Code ignores in `env`")
+
+<a id="cc-set-035"></a>
+### CC-SET-035 [HIGH] Ineffective Permission Rule Syntax
+**Requirement**: Permission rules MUST use a form Claude Code applies. Skipped or ignored (error): a rule that is not `Tool` or `Tool(content)` ("Claude Code skips the rule"); "it skips any `mcp__` rule that has parentheses"; a parameter rule on a primary field, such as `Bash(command:rm *)` ("Claude Code ignores it and emits a startup warning"); an unanchored allow glob ("An unanchored allow glob such as `"*"`, `"B*"`, or `"mcp__*"` is skipped with a warning and doesn't auto-approve anything"). Read differently (warning): "The `:*` form is only recognized at the end of a pattern"; a `*` before the subcommand of a Bash allow rule ("Put the `*` after the subcommand"); "A pattern like `/Users/alice/file` isn't an absolute path"; "A deny or ask rule whose tool name matches no known tool produces a startup warning".
+**Detection**: Each entry of `permissions.allow`, `permissions.deny` and `permissions.ask`. The subcommand check covers programs with subcommands (git, npm, docker, kubectl and similar). The single-slash check covers Read and Edit paths whose first segment is an absolute root (`Users`, `home`, `etc`, `tmp`, a drive letter). The tool-name check exempts names with `_` or `*` and removed tools such as `TaskOutput`, as Claude Code does.
+**Fix**: Manual - rewrite the rule as the message describes
+**Source**: code.claude.com/docs/en/permissions ("Permission rule syntax", "Wildcard patterns", "Tool name wildcards", "Read and Edit"), code.claude.com/docs/en/errors ("Malformed Tool(content) rule", "Has a wildcard before the rest of the command")
+
+<a id="cc-set-036"></a>
+### CC-SET-036 [MEDIUM] Broad Code-Execution Allow Rule
+**Requirement**: Allow rules SHOULD NOT approve arbitrary code execution: "On entering auto mode, broad allow rules that grant arbitrary code execution are dropped: Blanket `Bash(*)` or `PowerShell(*)`; Wildcarded interpreters like `Bash(python*)`; Package-manager run commands; `Agent` allow rules; `Monitor` allow rules". For environment runners: "a rule like `Bash(devbox run *)` matches whatever comes after `run`, including `devbox run rm -rf .`".
+**Detection**: In `permissions.allow`: bare `Bash`/`PowerShell` or `(*)`; a `*` in the program position; interpreters (python, node, bash, sh, ruby, perl and similar) with a wildcard; runners (devbox run, docker exec, mise exec, direnv exec, npx, uvx, pnpm dlx and similar) or bare package managers followed by `*` (warning). Package-manager run commands such as `Bash(npm run *)`, and bare `Agent` or `Monitor`, are info: the permissions page itself uses `Bash(npm run *)` as an example, and auto mode drops them. Findings in `~/.claude/settings.json` are info.
+**Fix**: Manual - allow the specific command, such as `Bash(npm run test)` or `Bash(devbox run npm test)`
+**Source**: code.claude.com/docs/en/permission-modes ("How auto mode evaluates actions"), code.claude.com/docs/en/permissions ("Wrappers")
+
+<a id="cc-set-037"></a>
+### CC-SET-037 [MEDIUM] Sandbox Weakened by Repository Settings
+**Requirement**: A repository's shared settings SHOULD NOT weaken the sandbox: "A repository's `.claude/settings.json` can too, unless the sandbox is admin-required. Each one weakens the sandbox" (`enableWeakerNestedSandbox`, `enableWeakerNetworkIsolation`, `network.allowAllUnixSockets`, `network.allowLocalBinding`). "allowing access to `/var/run/docker.sock` effectively grants access to the host system through the Docker socket." "An excluded command runs with your full access. A broad entry such as `docker *` covers everything that tool can do." "Allowing writes to directories containing executables in `$PATH`, system configuration directories, or user shell configuration files such as `.bashrc` or `.zshrc` can lead to code execution".
+**Detection**: In `.claude/settings.json`: the four flags set to `true`; `network.allowUnixSockets` entries naming `docker.sock`; `excludedCommands` entries that are a whole interpreter or container tool (`docker *`, `python *`, `bash`); `filesystem.allowWrite` entries for shell startup files, `$PATH` directories, `/etc`, `/` or `~`
+**Fix**: Manual - remove the setting from the shared file, or narrow it
+**Source**: code.claude.com/docs/en/sandboxing ("Keep developers from widening the policy", "Run commands outside the sandbox with `excludedCommands`", "Security limitations")
 
 
 <a id="cc-set-038"></a>
@@ -596,6 +588,21 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Detection**: Any `.claudeignore` file
 **Fix**: Manual - move the entries into `permissions.deny` as `Read(...)` rules
 **Source**: code.claude.com/docs/en/permissions ("Read and Edit")
+
+<a id="cc-set-039"></a>
+### CC-SET-039 [LOW] Secret Files Not Denied
+**Requirement**: Best practice: deny reads of files that hold secrets. The `permissions.deny` entry says: "Use it for files that hold API keys, secrets, or environment values: Claude Code excludes matching files from file discovery and search results, denies reads of them, and blocks the Edit and Write tools on the matching paths."
+**Detection**: For `.claude/settings.json`: the project root holds `.env`, `.env.*` (not `.example`, `.sample`, `.template`, `.dist`, `.defaults`), `*.pem`, `*.key` or a `secrets/` directory, and no `Read` deny rule (or `sandbox.filesystem.denyRead` entry) in `.claude/settings.json` or `.claude/settings.local.json` covers it
+**Fix**: Manual - add `Read(./.env)`, `Read(./.env.*)` or `Read(./secrets/**)` deny rules
+**Source**: code.claude.com/docs/en/settings-reference (`permissions.deny`), code.claude.com/docs/en/permissions
+
+<a id="cc-set-040"></a>
+### CC-SET-040 [MEDIUM] Memory Path Setting Cannot Match
+**Requirement**: `claudeMdExcludes` patterns MUST be able to match an absolute path: "Patterns are matched against absolute file paths using glob syntax." `autoMemoryDirectory`: "The value must be an absolute path or start with `~/`."
+**Detection**: `claudeMdExcludes` entries that are relative and start with a literal segment (not `/`, a drive letter, `~` or `*`); an `autoMemoryDirectory` that is neither absolute nor `~/`-prefixed
+**Fix**: Manual - prefix the pattern with `**/` or write an absolute path
+**Source**: code.claude.com/docs/en/memory ("Exclude specific CLAUDE.md files", "Storage location"), code.claude.com/docs/en/settings-reference
+
 ---
 
 ## PER-CLIENT SKILL RULES
@@ -4229,7 +4236,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | OC-008 | Replace invalid permission mode with closest match | unsafe |
 | OC-DEP-001 | Rename `mode` key to `agent` | safe |
 | OC-DEP-005 | Remove TUI keys after manual migration to tui.json | unsafe |
-| CC-SET-016 | Rename deprecated permission tool names | unsafe |
+| CC-SET-016 | Replace never-consulted Write/NotebookEdit/MultiEdit/Glob path rules with Edit/Read | unsafe |
 | CC-OS-007 | Replace outputStyle with the exact style name | unsafe |
 | COP-027 | Migrate infer while preserving explicit invocation fields | unsafe |
 | KR-HK-001 | Replace fileCreate / fileDelete / manual with the documented IDE event | unsafe |
@@ -4277,7 +4284,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Claude Memory | 15 | 4 | 6 | 5 | 1 |
 | Claude Output Styles | 6 | 2 | 3 | 1 | 2 |
 | Claude Plugins | 17 | 8 | 8 | 1 | 4 |
-| Claude Settings | 34 | 1 | 32 | 1 | 12 |
+| Claude Settings | 35 | 2 | 32 | 1 | 12 |
 | Claude Skills | 19 | 10 | 8 | 1 | 7 |
 | Cline | 7 | 4 | 3 | 0 | 3 |
 | Cline Skills | 3 | 2 | 1 | 0 | 2 |
@@ -4311,7 +4318,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 0 | 3 | 0 | 3 |
-| **TOTAL** | **539** | **238** | **248** | **53** | **137** |
+| **TOTAL** | **540** | **239** | **248** | **53** | **137** |
 
 
 ---
@@ -4339,8 +4346,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 539 validation rules across 43 categories
+**Total Coverage**: 540 validation rules across 43 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 238 HIGH, 248 MEDIUM, 53 LOW
+**Certainty**: 239 HIGH, 248 MEDIUM, 53 LOW
 **Auto-Fixable**: 137 rules (25%)

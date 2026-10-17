@@ -13,7 +13,7 @@ keywords: ["CC-SET-028", "invalid feedbackdrafts setting", "claude settings", "v
 - **Category**: `Claude Settings`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-08-27`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -25,6 +25,7 @@ keywords: ["CC-SET-028", "invalid feedbackdrafts setting", "claude settings", "v
 
 - https://github.com/anthropics/claude-code/releases/tag/v2.1.247
 - https://code.claude.com/docs/en/settings-reference#feedbackdrafts
+- https://code.claude.com/docs/en/settings-reference
 
 ## Test Coverage Metadata
 

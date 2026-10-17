@@ -92,3 +92,46 @@ fn valid_memory_fixture_is_clean() {
     let found = findings("valid");
     assert!(found.is_empty(), "{found:?}");
 }
+
+#[test]
+fn settings_key_ignored_at_this_scope() {
+    let found = findings("settings-scope");
+    let scope_hits = found.iter().filter(|(r, _, _)| r == "CC-SET-034").count();
+    // autoMode, allowedProviders, remoteControlAtStartup: true,
+    // defaultMode bypassPermissions, env CLAUDE_CONFIG_DIR (the telemetry
+    // off value still applies).
+    assert_eq!(scope_hits, 5, "{found:?}");
+}
+
+#[test]
+fn permission_rule_checks() {
+    assert_fires("settings-rules", "CC-SET-016", "settings.json");
+    assert_fires("settings-rules", "CC-SET-035", "settings.json");
+    assert_fires("settings-rules", "CC-SET-036", "settings.json");
+    let found = findings("settings-rules");
+    // Write(docs/**) in deny protects nothing: error level.
+    assert!(
+        found
+            .iter()
+            .any(|(r, _, l)| r == "CC-SET-016" && *l == DiagnosticLevel::Error),
+        "{found:?}"
+    );
+}
+
+#[test]
+fn sandbox_weakening_and_secrets() {
+    assert_fires("settings-sandbox", "CC-SET-037", "settings.json");
+    assert_fires("settings-secrets", "CC-SET-039", "settings.json");
+}
+
+#[test]
+fn memory_paths_and_output_style_case() {
+    assert_fires("settings-paths", "CC-SET-040", "settings.json");
+    assert_fires("settings-paths", "CC-OS-007", "settings.json");
+}
+
+#[test]
+fn valid_settings_fixture_is_clean() {
+    let found = findings("settings-valid");
+    assert!(found.is_empty(), "{found:?}");
+}

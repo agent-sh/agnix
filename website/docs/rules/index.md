@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `539` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `540` validation rules generated from `knowledge-base/rules.json`.
 `137` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -142,17 +142,13 @@ This section contains all `539` validation rules generated from `knowledge-base/
 | [CC-SET-011](./generated/cc-set-011.md) | Non-boolean respondToBashCommands Setting | MEDIUM | Claude Settings | Yes (unsafe) |
 | [CC-SET-012](./generated/cc-set-012.md) | Invalid sandbox.credentials Setting | MEDIUM | Claude Settings | No |
 | [CC-SET-013](./generated/cc-set-013.md) | Non-boolean autoMode.classifyAllShell Setting | MEDIUM | Claude Settings | Yes (unsafe) |
-| [CC-SET-014](./generated/cc-set-014.md) | autoMode Setting Ignored in settings.local.json | MEDIUM | Claude Settings | No |
-| [CC-SET-015](./generated/cc-set-015.md) | Dead pluginConfigs in Project-Level Settings | MEDIUM | Claude Settings | No |
-| [CC-SET-016](./generated/cc-set-016.md) | Deprecated Tool-Scoped Permission Rule Form | LOW | Claude Settings | Yes (unsafe) |
+| [CC-SET-016](./generated/cc-set-016.md) | File Path Rule Never Consulted | MEDIUM | Claude Settings | Yes (unsafe) |
 | [CC-SET-017](./generated/cc-set-017.md) | Non-boolean sandbox.filesystem.disabled Setting | MEDIUM | Claude Settings | Yes (unsafe) |
 | [CC-SET-018](./generated/cc-set-018.md) | Non-boolean emojiCompletionEnabled Setting | MEDIUM | Claude Settings | Yes (unsafe) |
 | [CC-SET-019](./generated/cc-set-019.md) | Non-boolean sandbox.network.strictAllowlist Setting | MEDIUM | Claude Settings | Yes (unsafe) |
 | [CC-SET-020](./generated/cc-set-020.md) | Invalid workflowSizeGuideline Setting | MEDIUM | Claude Settings | No |
-| [CC-SET-021](./generated/cc-set-021.md) | Ineffective Project Remote Control Auto-start | MEDIUM | Claude Settings | No |
 | [CC-SET-022](./generated/cc-set-022.md) | Invalid crossSessionInbound Setting | MEDIUM | Claude Settings | No |
 | [CC-SET-023](./generated/cc-set-023.md) | Invalid dialogExpiry Setting | MEDIUM | Claude Settings | No |
-| [CC-SET-024](./generated/cc-set-024.md) | Ineffective Project sandbox.ripgrep Override | MEDIUM | Claude Settings | No |
 | [CC-SET-025](./generated/cc-set-025.md) | Invalid modelPicker Setting | MEDIUM | Claude Settings | No |
 | [CC-SET-026](./generated/cc-set-026.md) | Invalid promptCacheTtl Setting | MEDIUM | Claude Settings | No |
 | [CC-SET-027](./generated/cc-set-027.md) | Invalid subagentPromptCacheTtl Setting | MEDIUM | Claude Settings | No |
@@ -160,9 +156,14 @@ This section contains all `539` validation rules generated from `knowledge-base/
 | [CC-SET-029](./generated/cc-set-029.md) | Invalid spinnerTipsOverride Shape | MEDIUM | Claude Settings | No |
 | [CC-SET-030](./generated/cc-set-030.md) | Local Command in managedMcpServers | HIGH | Claude Settings | No |
 | [CC-SET-031](./generated/cc-set-031.md) | Invalid maxEffortLevel Setting | MEDIUM | Claude Settings | No |
-| [CC-SET-032](./generated/cc-set-032.md) | Ineffective Project allowedProviders Setting | MEDIUM | Claude Settings | No |
 | [CC-SET-033](./generated/cc-set-033.md) | Idle Compaction Not Boolean | MEDIUM | Claude Settings | Yes (unsafe) |
+| [CC-SET-034](./generated/cc-set-034.md) | Settings Key Ignored at This Scope | MEDIUM | Claude Settings | No |
+| [CC-SET-035](./generated/cc-set-035.md) | Ineffective Permission Rule Syntax | HIGH | Claude Settings | No |
+| [CC-SET-036](./generated/cc-set-036.md) | Broad Code-Execution Allow Rule | MEDIUM | Claude Settings | No |
+| [CC-SET-037](./generated/cc-set-037.md) | Sandbox Weakened by Repository Settings | MEDIUM | Claude Settings | No |
 | [CC-SET-038](./generated/cc-set-038.md) | .claudeignore Has No Effect | MEDIUM | Claude Settings | No |
+| [CC-SET-039](./generated/cc-set-039.md) | Secret Files Not Denied | LOW | Claude Settings | No |
+| [CC-SET-040](./generated/cc-set-040.md) | Memory Path Setting Cannot Match | MEDIUM | Claude Settings | No |
 | [CDX-000](./generated/cdx-000.md) | TOML Parse Error | HIGH | Codex CLI | No |
 | [CDX-001](./generated/cdx-001.md) | Invalid Approval Mode | HIGH | Codex CLI | Yes (unsafe) |
 | [CDX-002](./generated/cdx-002.md) | Invalid Full Auto Error Mode | HIGH | Codex CLI | Yes (unsafe) |

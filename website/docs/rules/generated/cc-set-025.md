@@ -13,7 +13,7 @@ keywords: ["CC-SET-025", "invalid modelpicker setting", "claude settings", "vali
 - **Category**: `Claude Settings`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-08-25`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -25,6 +25,7 @@ keywords: ["CC-SET-025", "invalid modelpicker setting", "claude settings", "vali
 
 - https://github.com/anthropics/claude-code/releases/tag/v2.1.243
 - https://code.claude.com/docs/en/settings-reference#modelpicker
+- https://code.claude.com/docs/en/settings-reference
 
 ## Test Coverage Metadata
 

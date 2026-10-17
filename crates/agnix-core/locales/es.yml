@@ -816,28 +816,11 @@ rules:
     aws_features_both: awsPairs y sigv4
     tls_terminate_required: La firma de credenciales de AWS mediante sandbox.credentials.%{feature} requiere que sandbox.network.tlsTerminate sea un objeto
     tls_terminate_suggestion: 'Establece sandbox.network.tlsTerminate en un objeto como {}, o elimina la configuración de firma de credenciales de AWS.'
-    aws_scope: La firma de credenciales de AWS mediante sandbox.credentials.%{feature} se ignora en la configuración .claude a nivel de proyecto
-    aws_scope_suggestion: Mueve la configuración de firma de credenciales de AWS a ~/.claude/settings.json, un archivo --settings o la configuración administrada.
   cc_set_013:
     message: autoMode.classifyAllShell debe ser un booleano cuando esta presente (se obtuvo %{actual}); Claude Code 2.1.193+
       documenta esta configuracion de auto-mode como un interruptor true/false estricto
     suggestion: Establece autoMode.classifyAllShell en true o false sin comillas, o quitalo para conservar el alcance
       predeterminado del clasificador auto-mode.
-  cc_set_014:
-    message: autoMode en .claude/settings.local.json es ignorado silenciosamente desde Claude Code 2.1.207; la clave solo
-      se lee desde ~/.claude/settings.json
-    suggestion: Mueve la configuracion de autoMode a ~/.claude/settings.json (tu archivo de configuracion global de usuario)
-      donde Claude Code 2.1.207+ la lee.
-  cc_set_015:
-    message: pluginConfigs en la configuracion .claude a nivel de proyecto se ignora silenciosamente desde Claude Code
-      2.1.207; los valores de opciones de plugin solo se leen desde la configuracion de usuario, archivos --settings y
-      configuracion administrada
-    suggestion: Mueve pluginConfigs a ~/.claude/settings.json (nivel de usuario), pasalo mediante el indicador --settings,
-      o configuralo en la configuracion administrada; eliminalo del archivo a nivel de proyecto.
-  cc_set_016:
-    message: "'%{rule}' es una forma de regla de permiso obsoleta desde Claude Code 2.1.210; usa '%{replacement}' en su lugar"
-    suggestion: "Reemplaza '%{rule}' con '%{replacement}' en tu lista de permisos."
-    fix: "Reemplazar '%{rule}' por '%{replacement}' (cambia la aplicación de permisos)"
   cc_set_017:
     message: sandbox.filesystem.disabled debe ser un booleano cuando esta presente (se obtuvo %{actual}); Claude Code 2.1.216+
       usa esta opcion para desactivar el aislamiento del sistema de archivos y conservar el aislamiento de red
@@ -854,26 +837,13 @@ rules:
   cc_set_020:
     message: workflowSizeGuideline debe ser unrestricted, small, medium o large (se obtuvo %{actual})
     suggestion: Establece workflowSizeGuideline en unrestricted, small, medium o large.
-  cc_set_021:
-    message: 'remoteControlAtStartup: true no puede habilitar Remote Control desde la configuracion del proyecto en Claude
-      Code 2.1.222+; este valor se ignora'
-    suggestion: Habilita Remote Control en la configuracion de usuario con /config, o establece este campo en false para
-      deshabilitarlo en el proyecto.
   cc_set_022:
     message: crossSessionInbound debe ser accept, hold o refuse (se obtuvo %{actual})
     suggestion: Establece crossSessionInbound en accept, hold o refuse.
   cc_set_023:
     message: dialogExpiry debe ser 60s, 5m, 10m o never (se obtuvo %{actual})
     suggestion: Establece dialogExpiry en 60s, 5m, 10m o never.
-  cc_set_024:
-    message: sandbox.ripgrep se ignora en la configuración del proyecto en Claude Code 2.1.232+; solo la configuración
-      de usuario, la configuración gestionada y la opción --settings pueden reemplazar el binario ripgrep del sandbox
-    suggestion: Mueve el ajuste sandbox.ripgrep a tu configuración de usuario en ~/.claude/settings.json, a la
-      configuración gestionada o a un archivo --settings, y elimínalo del repositorio.
   cc_set_025:
-    scope_message: modelPicker se ignora en la configuración del proyecto y local en Claude Code 2.1.242+; solo se
-      aplica desde la configuración de usuario, la configuración gestionada y los archivos --settings
-    scope_suggestion: Mueve modelPicker a la configuración de usuario, gestionada o a un archivo --settings y elimínalo del repositorio.
     shape_message: 'Configuración modelPicker no válida: %{reason}'
     shape_suggestion: Usa un objeto con un array options cuyas filas tengan model como cadena no vacía, label y
       description opcionales como cadenas, y replaceBuiltInOptions opcional como booleano.
@@ -921,9 +891,6 @@ rules:
   cc_set_031:
     invalid: "%{location} debe ser uno de low, medium, high, xhigh o max"
     suggestion: Establece el límite de esfuerzo en low, medium, high, xhigh o max.
-  cc_set_032:
-    message: allowedProviders solo se respeta en la configuración administrada de Claude Code
-    suggestion: Mueve allowedProviders al managed-settings.json de tu organización.
   cc_set_033:
     message: idleCompaction debe ser un booleano (se obtuvo %{actual})
     suggestion: Define idleCompaction como un booleano estricto true/false; ajusta el mínimo de 200K tokens con CLAUDE_CODE_IDLE_COMPACT_MIN_TOKENS.

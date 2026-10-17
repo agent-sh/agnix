@@ -92,9 +92,12 @@ fn all_settings_quoted_booleans_require_opt_in() {
             let content = serde_json::to_string_pretty(&value).unwrap();
             *value.pointer_mut(pointer).unwrap() = serde_json::Value::Bool(quoted == "true");
             let expected = serde_json::to_string_pretty(&value).unwrap();
+            // Several of these keys are read only from user or managed
+            // settings; in .claude/settings.json CC-SET-034 reports them and
+            // the type check does not run. The managed file reads them all.
             for newline in ["\n", "\r\n"] {
                 assert_requires_opt_in(
-                    Path::new(".claude/settings.json"),
+                    Path::new(".claude/managed-settings.json"),
                     &content.replace('\n', newline),
                     &expected.replace('\n', newline),
                     rule,

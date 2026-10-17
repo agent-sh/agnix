@@ -14,7 +14,7 @@
 | Agents | agents/*.md | 18 |
 | Plugins | plugin.json | 17 |
 | Claude Output Styles | .claude/output-styles/*.md | 6 |
-| Claude Settings | .claude/settings.json | 34 |
+| Claude Settings | .claude/settings.json | 35 |
 | Prompt Engineering | CLAUDE.md, AGENTS.md | 4 |
 | Cross-Platform | AGENTS.md | 11 |
 | MCP | tool definitions | 25 |

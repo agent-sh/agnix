@@ -13,7 +13,7 @@ keywords: ["CC-SET-002", "non-boolean channelsenabled setting", "claude settings
 - **Category**: `Claude Settings`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `Yes (unsafe)`
-- **Verified On**: `2026-05-06`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -24,6 +24,7 @@ keywords: ["CC-SET-002", "non-boolean channelsenabled setting", "claude settings
 ## Evidence Sources
 
 - https://github.com/anthropics/claude-code/releases/tag/v2.1.128
+- https://code.claude.com/docs/en/settings-reference
 
 ## Test Coverage Metadata
 

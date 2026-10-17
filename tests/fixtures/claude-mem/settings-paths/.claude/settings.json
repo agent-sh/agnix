@@ -1,0 +1,5 @@
+{
+  "claudeMdExcludes": ["packages/legacy/CLAUDE.md"],
+  "autoMemoryDirectory": "memory",
+  "outputStyle": "explanatory"
+}
