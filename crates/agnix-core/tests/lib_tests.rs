@@ -310,15 +310,27 @@ fn test_detect_gemini_md() {
 fn test_validators_for_gemini_md() {
     let registry = ValidatorRegistry::with_defaults();
     let validators = registry.validators_for(FileType::GeminiMd);
-    assert_eq!(validators.len(), 5);
+    // PromptValidator no longer runs on GEMINI.md: PE-005/PE-006 contradict
+    // Gemini's "Use negative constraints" guidance.
+    assert_eq!(validators.len(), 4);
+    assert!(validators.iter().all(|v| v.name() != "PromptValidator"));
 }
 
 #[test]
 fn test_validators_for_gemini_settings() {
     let registry = ValidatorRegistry::with_defaults();
     let validators = registry.validators_for(FileType::GeminiSettings);
-    assert_eq!(validators.len(), 1);
-    assert_eq!(validators[0].name(), "GeminiSettingsValidator");
+    // GeminiHooksValidator checks the `hooks` / `hooksConfig` blocks.
+    let names: Vec<_> = validators.iter().map(|v| v.name()).collect();
+    assert_eq!(names, ["GeminiSettingsValidator", "GeminiHooksValidator"]);
+}
+
+#[test]
+fn test_validators_for_gemini_hooks() {
+    let registry = ValidatorRegistry::with_defaults();
+    let validators = registry.validators_for(FileType::GeminiHooks);
+    let names: Vec<_> = validators.iter().map(|v| v.name()).collect();
+    assert_eq!(names, ["GeminiHooksValidator"]);
 }
 
 #[test]
@@ -4799,6 +4811,7 @@ fn test_validator_names_are_ascii_and_nonempty() {
         FileType::AmpSettings,
         FileType::GeminiExtension,
         FileType::GeminiIgnore,
+        FileType::GeminiHooks,
         FileType::CodexConfig,
         FileType::GenericMarkdown,
     ];
@@ -4846,6 +4859,7 @@ const ALL_VALIDATED_FILE_TYPES: &[FileType] = &[
     FileType::AmpSettings,
     FileType::GeminiExtension,
     FileType::GeminiIgnore,
+    FileType::GeminiHooks,
     FileType::CodexConfig,
     FileType::GenericMarkdown,
 ];

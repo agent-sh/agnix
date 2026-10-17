@@ -1,22 +1,26 @@
-//! Gemini CLI settings validation rules (GM-004, GM-009, GM-010)
+//! Gemini CLI settings validation rules (GM-009, GM-010)
 //!
 //! Validates:
-//! - GM-009: Settings.json parse error (HIGH) - must be valid JSON/JSONC
-//! - GM-004: Invalid hooks configuration (MEDIUM) - unknown events, missing fields
-//! - GM-010: memoryManager without autoMemory (MEDIUM) - behavior split in v0.40
+//! - GM-009: Settings.json parse error (HIGH) and unknown top-level keys
+//!   (warning; the documented categories of geminicli.com/docs/reference/configuration)
+//! - GM-010: `experimental.memoryManager`, which is not a setting since v0.40.0
+//!
+//! The `hooks` and `hooksConfig` blocks (GM-004, GM-018, GM-019, GM-026) are
+//! checked by `rules::gemini_hooks`, which also runs on this file.
 
 use crate::{
     config::PerFileLintConfig,
     diagnostics::{Diagnostic, Fix},
     rules::{Validator, ValidatorMetadata},
-    schemas::gemini_settings::{
-        GeminiHook, VALID_HOOK_EVENTS, parse_gemini_settings, strip_jsonc_comments,
+    schemas::{
+        gemini_settings::parse_gemini_settings,
+        kiro_json::{JsonMember, LineIndex, parse_json_document},
     },
 };
 use rust_i18n::t;
 use std::path::Path;
 
-const RULE_IDS: &[&str] = &["GM-004", "GM-009", "GM-010"];
+const RULE_IDS: &[&str] = &["GM-009", "GM-010"];
 
 pub struct GeminiSettingsValidator;
 
@@ -61,21 +65,40 @@ impl Validator for GeminiSettingsValidator {
             None => return diagnostics,
         };
 
+        // Key positions. The document parsed after comment stripping, so the
+        // JSONC tree (comments blanked in place) has the same keys.
+        let doc = parse_json_document(content, true).ok();
+        let lines = LineIndex::new(content);
+        let top_level = doc.as_ref().and_then(|doc| doc.root.value.as_object());
+        let key_position = |members: Option<&[JsonMember]>, key: &str| {
+            members
+                .and_then(|members| members.iter().find(|m| m.key == key))
+                .map(|m| {
+                    let (line, column) = lines.line_col(m.key_start);
+                    let (end_line, end_column) = lines.line_col(m.key_end);
+                    (line, column, end_line, end_column)
+                })
+                .unwrap_or((1, 1, 1, 1))
+        };
+
         // GM-009: Unknown top-level keys (WARNING)
         if config.is_rule_enabled("GM-009") {
             for key in &parsed.unknown_top_keys {
-                let line = find_key_line(content, key).unwrap_or(1);
+                let (line, column, end_line, end_column) = key_position(top_level, key);
                 let mut diagnostic = Diagnostic::warning(
                     path_buf.clone(),
                     line,
-                    0,
+                    column,
                     "GM-009",
                     t!("rules.gm_009.unknown_key", key = key.as_str()),
                 )
-                .with_suggestion(t!("rules.gm_009.suggestion"));
+                .with_span(end_line, end_column)
+                .with_suggestion(t!("rules.gm_009.unknown_key_suggestion"));
 
-                if let Some((start, end)) =
-                    crate::span_utils::find_unique_json_field_line(content, key)
+                // Unsafe: the key may be a mistyped or misplaced setting
+                // the user wants, or one a newer Gemini CLI reads.
+                if let Some(members) = top_level
+                    && let Some((start, end)) = member_deletion_span(content, members, key)
                 {
                     diagnostic = diagnostic.with_fix(Fix::delete(
                         start,
@@ -89,194 +112,79 @@ impl Validator for GeminiSettingsValidator {
             }
         }
 
-        // GM-004: Invalid hooks configuration (WARNING)
-        if config.is_rule_enabled("GM-004") {
-            if let Some(ref hooks_config) = schema.hooks_config {
-                if let Some(hooks_obj) = hooks_config.as_object() {
-                    for (event_name, hooks_array) in hooks_obj {
-                        // Check if event name is valid
-                        if !VALID_HOOK_EVENTS.contains(&event_name.as_str()) {
-                            let line = find_key_line(content, event_name).unwrap_or(1);
-                            diagnostics.push(
-                                Diagnostic::warning(
-                                    path_buf.clone(),
-                                    line,
-                                    0,
-                                    "GM-004",
-                                    t!(
-                                        "rules.gm_004.message",
-                                        description = t!(
-                                            "rules.gm_004.unknown_event",
-                                            event = event_name.as_str()
-                                        )
-                                    ),
-                                )
-                                .with_suggestion(t!("rules.gm_004.suggestion")),
-                            );
-                            continue;
-                        }
-
-                        // Validate each hook in the array
-                        if let Some(arr) = hooks_array.as_array() {
-                            for hook_value in arr {
-                                let hook: GeminiHook =
-                                    match serde_json::from_value(hook_value.clone()) {
-                                        Ok(h) => h,
-                                        Err(_) => {
-                                            let line =
-                                                find_key_line(content, event_name).unwrap_or(1);
-                                            diagnostics.push(
-                                                Diagnostic::warning(
-                                                    path_buf.clone(),
-                                                    line,
-                                                    0,
-                                                    "GM-004",
-                                                    t!(
-                                                        "rules.gm_004.message",
-                                                        description = t!(
-                                                            "rules.gm_004.malformed_hook",
-                                                            event = event_name.as_str()
-                                                        )
-                                                    ),
-                                                )
-                                                .with_suggestion(t!("rules.gm_004.suggestion")),
-                                            );
-                                            continue;
-                                        }
-                                    };
-
-                                // Check required field: type
-                                match &hook.type_ {
-                                    None => {
-                                        let line = find_key_line(content, event_name).unwrap_or(1);
-                                        diagnostics.push(
-                                            Diagnostic::warning(
-                                                path_buf.clone(),
-                                                line,
-                                                0,
-                                                "GM-004",
-                                                t!(
-                                                    "rules.gm_004.message",
-                                                    description = t!(
-                                                        "rules.gm_004.missing_field",
-                                                        event = event_name.as_str(),
-                                                        field = "type"
-                                                    )
-                                                ),
-                                            )
-                                            .with_suggestion(t!("rules.gm_004.suggestion")),
-                                        );
-                                    }
-                                    Some(type_val) if type_val != "command" => {
-                                        let line = find_key_line(content, event_name).unwrap_or(1);
-                                        diagnostics.push(
-                                            Diagnostic::warning(
-                                                path_buf.clone(),
-                                                line,
-                                                0,
-                                                "GM-004",
-                                                t!(
-                                                    "rules.gm_004.message",
-                                                    description = t!(
-                                                        "rules.gm_004.invalid_type",
-                                                        value = type_val.as_str()
-                                                    )
-                                                ),
-                                            )
-                                            .with_suggestion(t!("rules.gm_004.suggestion")),
-                                        );
-                                    }
-                                    _ => {}
-                                }
-
-                                // Check required field: command (only if type is "command")
-                                if hook.type_.as_deref() == Some("command") {
-                                    let command_missing = match &hook.command {
-                                        None => true,
-                                        Some(cmd) => cmd.is_empty(),
-                                    };
-                                    if command_missing {
-                                        let line = find_key_line(content, event_name).unwrap_or(1);
-                                        diagnostics.push(
-                                            Diagnostic::warning(
-                                                path_buf.clone(),
-                                                line,
-                                                0,
-                                                "GM-004",
-                                                t!(
-                                                    "rules.gm_004.message",
-                                                    description = t!(
-                                                        "rules.gm_004.missing_field",
-                                                        event = event_name.as_str(),
-                                                        field = "command"
-                                                    )
-                                                ),
-                                            )
-                                            .with_suggestion(t!("rules.gm_004.suggestion")),
-                                        );
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // GM-010: memoryManager without autoMemory (WARNING)
-        //
-        // Gemini CLI v0.40 split the combined `experimental.memoryManager`
-        // flag (PR google-gemini/gemini-cli#25601). Before the split, setting
-        // `memoryManager: true` gave the user BOTH the Memory Manager
-        // subagent AND background skill extraction + `/memory inbox`. After
-        // the split, `memoryManager` gates only the subagent; the inbox and
-        // background extraction move to the new `experimental.autoMemory`
-        // flag. Users who carried forward only `memoryManager: true` lose
-        // the inbox silently. This rule fires whenever `memoryManager` is
-        // explicitly true and `autoMemory` is missing or false - setting
-        // both is safe on older versions (they ignore unknown flags), so no
-        // version gate is applied.
-        if config.is_rule_enabled("GM-010") {
-            if let Some(exp) = schema.experimental.as_ref() {
-                if exp.memory_manager == Some(true) && exp.auto_memory != Some(true) {
-                    let line = find_key_line(content, "memoryManager").unwrap_or(1);
-                    diagnostics.push(
-                        Diagnostic::warning(
-                            path_buf.clone(),
-                            line,
-                            0,
-                            "GM-010",
-                            t!("rules.gm_010.message"),
-                        )
-                        .with_suggestion(t!("rules.gm_010.suggestion")),
-                    );
-                }
-            }
+        // GM-010: experimental.memoryManager is not a setting since v0.40.0
+        // (WARNING). settingsSchema.ts has `memoryManager` up to v0.39.0 and
+        // not from v0.40.0 on; `experimental.autoMemory` now drives
+        // background extraction and the /memory inbox. Any value is
+        // reported: Gemini ignores the key either way. agnix has no
+        // gemini-cli version pin, so the rule is not version-gated.
+        if config.is_rule_enabled("GM-010")
+            && schema
+                .experimental
+                .as_ref()
+                .is_some_and(|exp| exp.has_memory_manager)
+        {
+            let experimental = top_level
+                .and_then(|members| members.iter().rev().find(|m| m.key == "experimental"))
+                .and_then(|m| m.value.value.as_object());
+            let (line, column, end_line, end_column) = key_position(experimental, "memoryManager");
+            diagnostics.push(
+                Diagnostic::warning(
+                    path_buf.clone(),
+                    line,
+                    column,
+                    "GM-010",
+                    t!("rules.gm_010.message"),
+                )
+                .with_span(end_line, end_column)
+                .with_suggestion(t!("rules.gm_010.suggestion")),
+            );
         }
 
         diagnostics
     }
 }
 
-/// Find the 1-indexed line number of a JSON key in the content.
-///
-/// Uses the shared `strip_jsonc_comments` helper so both `//` line comments
-/// and `/* ... */` block comments are skipped without affecting line counts
-/// (newlines inside comments are preserved). This mirrors what the parser
-/// sees, so a key that only appears inside a comment will not produce a
-/// diagnostic line number.
-fn find_key_line(content: &str, key: &str) -> Option<usize> {
-    let stripped = strip_jsonc_comments(content);
-    let needle = format!("\"{}\"", key);
-    for (i, line) in stripped.lines().enumerate() {
-        if let Some(pos) = line.find(&needle) {
-            let after = &line[pos + needle.len()..];
-            if after.trim_start().starts_with(':') {
-                return Some(i + 1);
-            }
-        }
+/// The bytes to delete to remove member `key` (and one separating comma)
+/// from an object, so the result still parses. `None` when the key repeats.
+fn member_deletion_span(
+    content: &str,
+    members: &[JsonMember],
+    key: &str,
+) -> Option<(usize, usize)> {
+    let mut matching = members.iter().enumerate().filter(|(_, m)| m.key == key);
+    let (index, member) = matching.next()?;
+    if matching.next().is_some() {
+        return None;
     }
-    None
+    let bytes = content.as_bytes();
+    // Start of the line when only blanks precede `pos` on it.
+    let line_start = |pos: usize| {
+        let mut start = pos;
+        while start > 0 && matches!(bytes[start - 1], b' ' | b'\t') {
+            start -= 1;
+        }
+        if start == 0 || bytes[start - 1] == b'\n' {
+            start
+        } else {
+            pos
+        }
+    };
+    if let Some(next) = members.get(index + 1) {
+        // `"key": value,` up to the next member.
+        let start = line_start(member.key_start);
+        let end = if start < member.key_start {
+            line_start(next.key_start)
+        } else {
+            next.key_start
+        };
+        Some((start, end))
+    } else if let Some(previous) = index.checked_sub(1).and_then(|i| members.get(i)) {
+        // Last member: also remove the comma after the previous value.
+        Some((previous.value.end, member.value.end))
+    } else {
+        Some((member.key_start, member.value.end))
+    }
 }
 
 #[cfg(test)]
@@ -299,12 +207,16 @@ mod tests {
         validator.validate(Path::new(".gemini/settings.json"), content, config)
     }
 
+    fn rule<'d>(diagnostics: &'d [Diagnostic], id: &str) -> Vec<&'d Diagnostic> {
+        diagnostics.iter().filter(|d| d.rule == id).collect()
+    }
+
     // ===== GM-009: Parse Error =====
 
     #[test]
     fn test_gm_009_invalid_json() {
         let diagnostics = validate("{ invalid }");
-        let gm_009: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-009").collect();
+        let gm_009 = rule(&diagnostics, "GM-009");
         assert_eq!(gm_009.len(), 1);
         assert_eq!(gm_009[0].level, DiagnosticLevel::Error);
     }
@@ -326,99 +238,52 @@ mod tests {
     #[test]
     fn test_gm_009_empty_content() {
         let diagnostics = validate("");
-        let gm_009: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-009").collect();
-        assert_eq!(gm_009.len(), 1);
+        assert_eq!(rule(&diagnostics, "GM-009").len(), 1);
     }
 
     #[test]
     fn test_gm_009_unknown_top_key() {
-        let content = r#"{"general": {}, "badKey": true}"#;
+        let content = "{\"general\": {}, \"badKey\": true}";
         let diagnostics = validate(content);
-        let gm_009: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-009").collect();
+        let gm_009 = rule(&diagnostics, "GM-009");
         assert_eq!(gm_009.len(), 1);
         assert_eq!(gm_009[0].level, DiagnosticLevel::Warning);
+        // Points at the key.
+        assert_eq!((gm_009[0].line, gm_009[0].column), (1, 17));
+    }
+
+    #[test]
+    fn test_gm_009_documented_keys_are_known() {
+        // agnix 0.58 warned on `hooks` and `mcpServers`, which the
+        // configuration reference documents.
+        let content = r#"{
+  "$schema": "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/schemas/settings.schema.json",
+  "hooks": {},
+  "mcpServers": {},
+  "policyPaths": [],
+  "privacy": {},
+  "billing": {},
+  "modelConfigs": {},
+  "agents": {},
+  "mcp": {},
+  "useWriteTodos": true,
+  "contextManagement": {},
+  "admin": {},
+  "telemetry": {},
+  "extensions": {}
+}"#;
+        assert!(rule(&validate(content), "GM-009").is_empty());
     }
 
     #[test]
     fn test_gm_009_valid_json_no_issues() {
-        let diagnostics = validate(r#"{"general": {}}"#);
-        let gm_009: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-009").collect();
-        assert!(gm_009.is_empty());
+        assert!(rule(&validate(r#"{"general": {}}"#), "GM-009").is_empty());
     }
 
     #[test]
     fn test_gm_009_blocks_further_rules() {
         let diagnostics = validate("{ invalid }");
         assert!(diagnostics.iter().all(|d| d.rule == "GM-009"));
-    }
-
-    // ===== GM-004: Invalid Hooks Configuration =====
-
-    #[test]
-    fn test_gm_004_unknown_event() {
-        let content = r#"{
-  "hooksConfig": {
-    "InvalidEvent": [
-      {"type": "command", "command": "echo test"}
-    ]
-  }
-}"#;
-        let diagnostics = validate(content);
-        let gm_004: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-004").collect();
-        assert_eq!(gm_004.len(), 1);
-        assert_eq!(gm_004[0].level, DiagnosticLevel::Warning);
-    }
-
-    #[test]
-    fn test_gm_004_missing_type() {
-        let content = r#"{
-  "hooksConfig": {
-    "BeforeAgent": [
-      {"command": "echo test"}
-    ]
-  }
-}"#;
-        let diagnostics = validate(content);
-        let gm_004: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-004").collect();
-        assert_eq!(gm_004.len(), 1);
-    }
-
-    #[test]
-    fn test_gm_004_invalid_type() {
-        let content = r#"{
-  "hooksConfig": {
-    "BeforeAgent": [
-      {"type": "prompt", "command": "echo test"}
-    ]
-  }
-}"#;
-        let diagnostics = validate(content);
-        let gm_004: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-004").collect();
-        assert_eq!(gm_004.len(), 1);
-    }
-
-    #[test]
-    fn test_gm_004_valid_hooks() {
-        let content = r#"{
-  "hooksConfig": {
-    "BeforeAgent": [
-      {"type": "command", "command": "echo test"}
-    ],
-    "AfterAgent": [
-      {"type": "command", "command": "echo done", "name": "cleanup"}
-    ]
-  }
-}"#;
-        let diagnostics = validate(content);
-        let gm_004: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-004").collect();
-        assert!(gm_004.is_empty());
-    }
-
-    #[test]
-    fn test_gm_004_no_hooks_no_error() {
-        let diagnostics = validate(r#"{"general": {}}"#);
-        let gm_004: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-004").collect();
-        assert!(gm_004.is_empty());
     }
 
     // ===== Config Integration =====
@@ -429,11 +294,7 @@ mod tests {
         config.rules_mut().gemini_md = false;
 
         let diagnostics = validate_with_config("{ invalid }", &config);
-        let gm_rules: Vec<_> = diagnostics
-            .iter()
-            .filter(|d| d.rule.starts_with("GM-"))
-            .collect();
-        assert!(gm_rules.is_empty());
+        assert!(diagnostics.iter().all(|d| !d.rule.starts_with("GM-")));
     }
 
     #[test]
@@ -442,8 +303,7 @@ mod tests {
         config.rules_mut().disabled_rules = vec!["GM-009".to_string()];
 
         let diagnostics = validate_with_config("{ invalid }", &config);
-        let gm_009: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-009").collect();
-        assert!(gm_009.is_empty());
+        assert!(rule(&diagnostics, "GM-009").is_empty());
     }
 
     // ===== Valid Settings =====
@@ -453,9 +313,10 @@ mod tests {
         let content = r#"{
   "general": {},
   "model": {},
-  "hooksConfig": {
+  "hooksConfig": {"enabled": true},
+  "hooks": {
     "SessionStart": [
-      {"type": "command", "command": "echo hello"}
+      {"hooks": [{"type": "command", "command": "echo hello"}]}
     ]
   }
 }"#;
@@ -467,157 +328,68 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_gm_004_missing_command() {
-        let content = r#"{
-      "hooksConfig": {
-        "BeforeAgent": [
-          {"type": "command"}
-        ]
-      }
-    }"#;
-        let diagnostics = validate(content);
-        let gm_004: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-004").collect();
-        assert!(
-            !gm_004.is_empty(),
-            "GM-004 should fire for missing command field"
-        );
-    }
+    // ===== GM-010: experimental.memoryManager =====
 
     #[test]
-    fn test_gm_004_empty_command() {
-        let content = r#"{
-      "hooksConfig": {
-        "BeforeAgent": [
-          {"type": "command", "command": ""}
-        ]
-      }
-    }"#;
-        let diagnostics = validate(content);
-        let gm_004: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-004").collect();
-        assert!(
-            !gm_004.is_empty(),
-            "GM-004 should fire for empty command field"
-        );
-    }
-
-    // ===== GM-010: memoryManager without autoMemory =====
-
-    #[test]
-    fn test_gm_010_memory_manager_without_auto_memory() {
-        let content = r#"{
-  "experimental": {
-    "memoryManager": true
-  }
-}"#;
-        let diagnostics = validate(content);
-        let gm_010: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-010").collect();
-        assert_eq!(
-            gm_010.len(),
-            1,
-            "GM-010 should fire when only memoryManager is true"
-        );
-        assert_eq!(gm_010[0].level, DiagnosticLevel::Warning);
-    }
-
-    #[test]
-    fn test_gm_010_memory_manager_with_auto_memory_false() {
-        let content = r#"{
-  "experimental": {
-    "memoryManager": true,
-    "autoMemory": false
-  }
-}"#;
-        let diagnostics = validate(content);
-        let gm_010: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-010").collect();
-        assert_eq!(
-            gm_010.len(),
-            1,
-            "GM-010 should fire when autoMemory is explicitly false"
-        );
-    }
-
-    #[test]
-    fn test_gm_010_both_flags_true_no_diagnostic() {
-        let content = r#"{
-  "experimental": {
-    "memoryManager": true,
-    "autoMemory": true
-  }
-}"#;
-        let diagnostics = validate(content);
-        let gm_010: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-010").collect();
-        assert!(
-            gm_010.is_empty(),
-            "GM-010 should not fire when both flags are true"
-        );
-    }
-
-    #[test]
-    fn test_gm_010_memory_manager_false_no_diagnostic() {
-        let content = r#"{
-  "experimental": {
-    "memoryManager": false
-  }
-}"#;
-        let diagnostics = validate(content);
-        let gm_010: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-010").collect();
-        assert!(
-            gm_010.is_empty(),
-            "GM-010 should not fire when memoryManager is false"
-        );
+    fn test_gm_010_fires_for_any_memory_manager_value() {
+        // The rule used to fire only for `true` without autoMemory; since
+        // v0.40.0 the key is not a setting at all, so every value is stale.
+        for value in ["true", "false", "null", "\"on\""] {
+            for auto_memory in ["", ", \"autoMemory\": true", ", \"autoMemory\": false"] {
+                let content = format!(
+                    "{{\n  \"experimental\": {{\n    \"memoryManager\": {value}{auto_memory}\n  }}\n}}"
+                );
+                let diagnostics = validate(&content);
+                let gm_010 = rule(&diagnostics, "GM-010");
+                assert_eq!(gm_010.len(), 1, "{content}");
+                assert_eq!(gm_010[0].level, DiagnosticLevel::Warning);
+                assert_eq!((gm_010[0].line, gm_010[0].column), (3, 5), "{content}");
+                assert!(
+                    gm_010[0]
+                        .message
+                        .contains("not a Gemini CLI setting since v0.40.0")
+                );
+            }
+        }
     }
 
     #[test]
     fn test_gm_010_auto_memory_only_no_diagnostic() {
-        let content = r#"{
-  "experimental": {
-    "autoMemory": true
-  }
-}"#;
-        let diagnostics = validate(content);
-        let gm_010: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-010").collect();
-        assert!(
-            gm_010.is_empty(),
-            "GM-010 should not fire when only autoMemory is set"
-        );
+        let content = r#"{"experimental": {"autoMemory": true}}"#;
+        assert!(rule(&validate(content), "GM-010").is_empty());
     }
 
     #[test]
     fn test_gm_010_no_experimental_block_no_diagnostic() {
-        let diagnostics = validate(r#"{"general": {}}"#);
-        let gm_010: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-010").collect();
-        assert!(gm_010.is_empty());
+        assert!(rule(&validate(r#"{"general": {}}"#), "GM-010").is_empty());
     }
 
     #[test]
     fn test_gm_010_ignores_key_inside_block_comment() {
-        // The string "memoryManager" appears inside a /* ... */ block comment.
-        // find_key_line must not report the comment line; since there is no
-        // real `experimental.memoryManager` key, GM-010 must not fire.
+        // The string "memoryManager" appears only inside a block comment.
         let content = r#"{
-  /* note: experimental.memoryManager was deprecated in v0.40,
+  /* note: experimental.memoryManager was removed in v0.40,
      see https://github.com/google-gemini/gemini-cli/pull/25601 */
   "experimental": {}
 }"#;
-        let diagnostics = validate(content);
-        let gm_010: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-010").collect();
-        assert!(
-            gm_010.is_empty(),
-            "GM-010 must not fire when memoryManager only appears in a block comment"
-        );
+        assert!(rule(&validate(content), "GM-010").is_empty());
     }
 
     #[test]
     fn test_gm_010_ignores_key_inside_line_comment() {
-        // Same check for `//` comments on the same line as a URL-like string.
         let content = r#"{
   // doc: https://example.com/gemini-cli/experimental.memoryManager
   "experimental": {}
 }"#;
+        assert!(rule(&validate(content), "GM-010").is_empty());
+    }
+
+    #[test]
+    fn test_gm_010_memory_manager_outside_experimental_is_gm_009_only() {
+        let content = r#"{"memoryManager": true}"#;
         let diagnostics = validate(content);
-        let gm_010: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-010").collect();
-        assert!(gm_010.is_empty());
+        assert!(rule(&diagnostics, "GM-010").is_empty());
+        assert_eq!(rule(&diagnostics, "GM-009").len(), 1);
     }
 
     #[test]
@@ -627,20 +399,58 @@ mod tests {
 
         let content = r#"{"experimental": {"memoryManager": true}}"#;
         let diagnostics = validate_with_config(content, &config);
-        let gm_010: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-010").collect();
-        assert!(gm_010.is_empty());
+        assert!(rule(&diagnostics, "GM-010").is_empty());
     }
 
     // ===== Autofix Tests =====
 
     #[test]
-    fn test_gm_009_unknown_key_has_fix() {
-        let content = "{\n  \"general\": {},\n  \"badKey\": true\n}";
-        let diagnostics = validate(content);
-        let gm_009: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-009").collect();
+    fn test_gm_009_unknown_key_fix_is_unsafe_exact_and_reparses() {
+        // The former line-based fix left a trailing comma when the unknown
+        // key was the last member, which Gemini cannot parse.
+        for (content, expected) in [
+            (
+                "{\n  \"general\": {},\n  \"badKey\": true\n}",
+                "{\n  \"general\": {}\n}",
+            ),
+            (
+                "{\n  \"badKey\": {\"a\": 1},\n  \"general\": {}\n}",
+                "{\n  \"general\": {}\n}",
+            ),
+            (
+                "{\"ui\": {}, \"badKey\": [1], \"general\": {}}",
+                "{\"ui\": {}, \"general\": {}}",
+            ),
+            ("{\"badKey\": 1}", "{}"),
+            (
+                "{\n  // keep\n  \"general\": {}, // tail\n  \"badKey\": true\n}",
+                "{\n  // keep\n  \"general\": {}\n}",
+            ),
+        ] {
+            let diagnostics = validate(content);
+            let gm_009 = rule(&diagnostics, "GM-009");
+            assert_eq!(gm_009.len(), 1, "{content}");
+            let fix = &gm_009[0].fixes[0];
+            assert!(!fix.safe, "GM-009 fix should be unsafe");
+            assert!(fix.is_deletion());
+            let mut fixed = content.to_string();
+            fixed.replace_range(fix.start_byte..fix.end_byte, &fix.replacement);
+            assert_eq!(fixed, expected, "{content}");
+            assert!(
+                crate::schemas::gemini_settings::parse_gemini_settings(&fixed)
+                    .parse_error
+                    .is_none(),
+                "{fixed}"
+            );
+            assert!(validate(&fixed).is_empty(), "{fixed}");
+        }
+    }
+
+    #[test]
+    fn test_gm_009_duplicate_unknown_key_has_no_fix() {
+        let diagnostics = validate(r#"{"badKey": 1, "badKey": 2}"#);
+        let gm_009 = rule(&diagnostics, "GM-009");
         assert_eq!(gm_009.len(), 1);
-        assert!(gm_009[0].has_fixes(), "GM-009 should have fix");
-        assert!(!gm_009[0].fixes[0].safe, "GM-009 fix should be unsafe");
-        assert!(gm_009[0].fixes[0].is_deletion());
+        assert!(gm_009[0].fixes.is_empty());
     }
 }

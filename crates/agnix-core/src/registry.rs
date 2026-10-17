@@ -398,7 +398,7 @@ impl ValidatorRegistryBuilder {
 ///
 /// Used by `BuiltinProvider` (via `debug_assert_eq!`) and tests to catch
 /// accidental additions or removals without updating all providers.
-const EXPECTED_BUILTIN_COUNT: usize = 88;
+const EXPECTED_BUILTIN_COUNT: usize = 89;
 
 // -- Category providers -----------------------------------------------------
 //
@@ -617,11 +617,12 @@ impl ValidatorProvider for GeminiProvider {
                 Some("GeminiMdValidator"),
                 gemini_md_validator,
             ),
-            (
-                FileType::GeminiMd,
-                Some("PromptValidator"),
-                prompt_validator,
-            ),
+            // No PromptValidator on GEMINI.md: its PE-005/PE-006 wording
+            // advice contradicts Gemini's own guidance, "**Use negative
+            // constraints:** Explicitly telling the agent what _not_ to do
+            // (for example, "Do not use class components") is often more
+            // effective than vague positive instructions."
+            // (geminicli.com/docs/cli/tutorials/memory-management)
             (FileType::GeminiMd, Some("XmlValidator"), xml_validator),
             (
                 FileType::GeminiMd,
@@ -637,6 +638,18 @@ impl ValidatorProvider for GeminiProvider {
                 FileType::GeminiSettings,
                 Some("GeminiSettingsValidator"),
                 gemini_settings_validator,
+            ),
+            // The `hooks` / `hooksConfig` blocks of settings.json and an
+            // extension's hooks/hooks.json share one hook validator.
+            (
+                FileType::GeminiSettings,
+                Some("GeminiHooksValidator"),
+                gemini_hooks_validator,
+            ),
+            (
+                FileType::GeminiHooks,
+                Some("GeminiHooksValidator"),
+                gemini_hooks_validator,
             ),
             (
                 FileType::GeminiExtension,
@@ -1000,6 +1013,10 @@ fn gemini_settings_validator() -> Box<dyn Validator> {
 
 fn gemini_extension_validator() -> Box<dyn Validator> {
     Box::new(crate::rules::gemini_extension::GeminiExtensionValidator)
+}
+
+fn gemini_hooks_validator() -> Box<dyn Validator> {
+    Box::new(crate::rules::gemini_hooks::GeminiHooksValidator)
 }
 
 fn gemini_ignore_validator() -> Box<dyn Validator> {
@@ -1528,6 +1545,7 @@ mod tests {
             FileType::AmpSettings,
             FileType::GeminiExtension,
             FileType::GeminiIgnore,
+            FileType::GeminiHooks,
             FileType::CodexConfig,
             FileType::CodexPlugin,
             FileType::RooRules,
@@ -1585,6 +1603,7 @@ mod tests {
                 | FileType::AmpSettings
                 | FileType::GeminiExtension
                 | FileType::GeminiIgnore
+                | FileType::GeminiHooks
                 | FileType::CodexConfig
                 | FileType::CodexPlugin
                 | FileType::CodexRequirements
@@ -2163,7 +2182,8 @@ mod tests {
 
     #[test]
     fn gemini_provider_count() {
-        assert_eq!(GeminiProvider.named_validators().len(), 8);
+        // -1 PromptValidator on GEMINI.md, +2 GeminiHooksValidator.
+        assert_eq!(GeminiProvider.named_validators().len(), 9);
     }
 
     #[test]

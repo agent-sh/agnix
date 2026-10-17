@@ -1,7 +1,7 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 535,
+  "total_rules": 538,
   "last_updated": "2026-10-17",
   "schema": {
     "evidence": {
@@ -7970,18 +7970,18 @@
     {
       "id": "GM-001",
       "name": "Invalid Markdown Structure in GEMINI.md",
-      "severity": "HIGH",
+      "severity": "MEDIUM",
       "category": "gemini-cli",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://geminicli.com/docs/cli/gemini-md/"
+          "https://geminicli.com/docs/reference/memport"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "gemini-cli"
         },
-        "normative_level": "MUST",
+        "normative_level": "SHOULD",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -7990,7 +7990,7 @@
       },
       "fix": {
         "autofix": true,
-        "fix_safety": "safe"
+        "fix_safety": "unsafe"
       },
       "good_example": "# Project\n\nThis is a web application.\n\n```bash\nnpm install\n```\n\n## Testing\n\nRun npm test.",
       "bad_example": "# Project\n\nThis is a web application.\n\n```bash\nnpm install"
@@ -7998,18 +7998,18 @@
     {
       "id": "GM-002",
       "name": "Missing Section Headers in GEMINI.md",
-      "severity": "MEDIUM",
+      "severity": "LOW",
       "category": "gemini-cli",
       "evidence": {
-        "source_type": "vendor_docs",
+        "source_type": "community",
         "source_urls": [
-          "https://geminicli.com/docs/cli/gemini-md/"
+          "https://geminicli.com/docs/cli/gemini-md"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "gemini-cli"
         },
-        "normative_level": "SHOULD",
+        "normative_level": "BEST_PRACTICE",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -8025,18 +8025,19 @@
     {
       "id": "GM-003",
       "name": "Missing Project Context in GEMINI.md",
-      "severity": "MEDIUM",
+      "severity": "LOW",
       "category": "gemini-cli",
       "evidence": {
-        "source_type": "vendor_docs",
+        "source_type": "community",
         "source_urls": [
-          "https://geminicli.com/docs/cli/gemini-md/"
+          "https://geminicli.com/docs/reference/configuration",
+          "https://geminicli.com/docs/cli/gemini-md"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "gemini-cli"
         },
-        "normative_level": "SHOULD",
+        "normative_level": "BEST_PRACTICE",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -8051,15 +8052,19 @@
     },
     {
       "id": "GM-004",
-      "name": "Invalid Hooks Configuration in Gemini Settings",
+      "name": "Invalid Gemini Hooks Configuration",
       "severity": "MEDIUM",
       "category": "gemini-cli",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://geminicli.com/docs/hooks"
+          "https://geminicli.com/docs/hooks",
+          "https://geminicli.com/docs/hooks/reference",
+          "https://geminicli.com/docs/reference/configuration",
+          "https://geminicli.com/docs/extensions/reference",
+          "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/cli/src/config/extension-manager.ts"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "gemini-cli"
         },
@@ -8073,20 +8078,22 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\"hooksConfig\":{\"BeforeAgent\":[{\"type\":\"command\",\"command\":\"echo test\"}]}}",
-      "bad_example": "{\"hooksConfig\":{\"InvalidEvent\":[{\"type\":\"command\",\"command\":\"echo test\"}]}}"
+      "good_example": "{\"hooksConfig\":{\"enabled\":true,\"disabled\":[]},\"hooks\":{\"BeforeTool\":[{\"matcher\":\"write_file|replace\",\"hooks\":[{\"name\":\"security-check\",\"type\":\"command\",\"command\":\"$GEMINI_PROJECT_DIR/.gemini/hooks/security.sh\",\"timeout\":5000}]}]}}",
+      "bad_example": "{\"hooksConfig\":{\"BeforeTool\":[{\"type\":\"command\",\"command\":\"echo test\"}]},\"hooks\":{\"PreToolUse\":[{\"hooks\":[{\"type\":\"prompt\"}]}]}}"
     },
     {
       "id": "GM-005",
-      "name": "Invalid Extension Manifest",
+      "name": "Gemini Extension Manifest Does Not Load",
       "severity": "HIGH",
       "category": "gemini-cli",
       "evidence": {
-        "source_type": "vendor_docs",
+        "source_type": "vendor_code",
         "source_urls": [
-          "https://geminicli.com/docs/extensions/reference"
+          "https://geminicli.com/docs/extensions/reference",
+          "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/cli/src/config/extension-manager.ts",
+          "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/cli/src/config/extension.ts"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "gemini-cli"
         },
@@ -8101,7 +8108,7 @@
         "autofix": false
       },
       "good_example": "{\"name\":\"my-extension\",\"version\":\"1.0.0\",\"description\":\"A useful extension\"}",
-      "bad_example": "{\"version\":\"1.0.0\"}"
+      "bad_example": "{\"name\":\"my_extension\",\"description\":\"No version and an underscore in the name\"}"
     },
     {
       "id": "GM-006",
@@ -8111,9 +8118,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://geminicli.com/docs/cli/settings"
+          "https://geminicli.com/docs/cli/gemini-ignore"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "gemini-cli"
         },
@@ -8128,23 +8135,25 @@
         "autofix": false
       },
       "good_example": "node_modules/\n*.log\n.env",
-      "bad_example": ""
+      "bad_example": "[unclosed\n*.log"
     },
     {
-      "id": "GM-007",
-      "name": "@import File Not Found in GEMINI.md",
-      "severity": "MEDIUM",
+      "id": "GM-008",
+      "name": "Invalid Extension contextFileName",
+      "severity": "HIGH",
       "category": "gemini-cli",
       "evidence": {
-        "source_type": "vendor_docs",
+        "source_type": "vendor_code",
         "source_urls": [
-          "https://geminicli.com/docs/cli/gemini-md/"
+          "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/cli/src/config/extension-manager.ts",
+          "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/cli/src/commands/extensions/validate.ts",
+          "https://geminicli.com/docs/extensions/reference"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "gemini-cli"
         },
-        "normative_level": "SHOULD",
+        "normative_level": "MUST",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -8154,48 +8163,21 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "@import shared-rules.md",
-      "bad_example": "@import nonexistent-file.md"
-    },
-    {
-      "id": "GM-008",
-      "name": "Invalid Context File Name Configuration",
-      "severity": "LOW",
-      "category": "gemini-cli",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://geminicli.com/docs/extensions/reference"
-        ],
-        "verified_on": "2026-04-23",
-        "applies_to": {
-          "tool": "gemini-cli"
-        },
-        "normative_level": "SHOULD",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": true,
-        "fix_safety": "safe"
-      },
-      "good_example": "{\"contextFileName\":\"CONTEXT.md\"}",
-      "bad_example": "{\"contextFileName\":\"docs/context.md\"}"
+      "good_example": "{\"name\":\"ext\",\"version\":\"1.0.0\",\"contextFileName\":[\"GEMINI.md\",\"docs/CONTEXT.md\"]}",
+      "bad_example": "{\"name\":\"ext\",\"version\":\"1.0.0\",\"contextFileName\":\"../shared/GEMINI.md\"}"
     },
     {
       "id": "GM-009",
-      "name": "Settings.json Parse Error",
+      "name": "Gemini Settings Parse Error or Unknown Top-Level Key",
       "severity": "HIGH",
       "category": "gemini-cli",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://geminicli.com/docs/cli/settings"
+          "https://geminicli.com/docs/reference/configuration",
+          "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/cli/src/config/settingsSchema.ts"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "gemini-cli"
         },
@@ -8208,24 +8190,24 @@
       },
       "fix": {
         "autofix": true,
-        "fix_safety": "safe"
+        "fix_safety": "unsafe"
       },
-      "good_example": "{\"general\":{},\"model\":{}}",
+      "good_example": "{\"general\":{},\"hooks\":{},\"mcpServers\":{\"docs\":{\"command\":\"node\",\"args\":[\"server.js\"]}}}",
       "bad_example": "{ invalid json }"
     },
     {
       "id": "GM-010",
-      "name": "memoryManager Without autoMemory After v0.40 Split",
+      "name": "Stale experimental.memoryManager Setting",
       "severity": "MEDIUM",
       "category": "gemini-cli",
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/google-gemini/gemini-cli/pull/25601",
-          "https://github.com/google-gemini/gemini-cli/blob/v0.40.0/packages/cli/src/config/settingsSchema.ts",
-          "https://github.com/google-gemini/gemini-cli/blob/v0.40.0/docs/cli/auto-memory.md"
+          "https://geminicli.com/docs/reference/configuration",
+          "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/cli/src/config/settingsSchema.ts",
+          "https://github.com/google-gemini/gemini-cli/blob/v0.40.0/packages/cli/src/config/settingsSchema.ts"
         ],
-        "verified_on": "2026-04-29",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "gemini-cli",
           "version_range": ">=0.40.0"
@@ -8233,15 +8215,131 @@
         "normative_level": "SHOULD",
         "tests": {
           "unit": true,
-          "fixtures": false,
+          "fixtures": true,
           "e2e": false
         }
       },
       "fix": {
         "autofix": false
       },
-      "good_example": "{\"experimental\":{\"memoryManager\":true,\"autoMemory\":true}}",
+      "good_example": "{\"experimental\":{\"autoMemory\":true}}",
       "bad_example": "{\"experimental\":{\"memoryManager\":true}}"
+    },
+    {
+      "id": "GM-018",
+      "name": "Gemini Hook Timeout Looks Like Seconds",
+      "severity": "MEDIUM",
+      "category": "gemini-cli",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/hooks/reference",
+          "https://geminicli.com/docs/hooks/best-practices",
+          "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/core/src/hooks/hookRunner.ts"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"hooks\":{\"BeforeTool\":[{\"matcher\":\"write_file\",\"hooks\":[{\"type\":\"command\",\"command\":\"./check.sh\",\"timeout\":30000}]}]}}",
+      "bad_example": "{\"hooks\":{\"BeforeTool\":[{\"matcher\":\"write_file\",\"hooks\":[{\"type\":\"command\",\"command\":\"./check.sh\",\"timeout\":30}]}]}}"
+    },
+    {
+      "id": "GM-019",
+      "name": "Gemini Hook Script Not Found",
+      "severity": "MEDIUM",
+      "category": "gemini-cli",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/hooks/best-practices",
+          "https://geminicli.com/docs/hooks",
+          "https://geminicli.com/docs/extensions/reference",
+          "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/core/src/hooks/hookRunner.ts"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"hooks\":{\"SessionStart\":[{\"hooks\":[{\"type\":\"command\",\"command\":\"$GEMINI_PROJECT_DIR/.gemini/hooks/start.sh\"}]}]}}",
+      "bad_example": "{\"hooks\":{\"SessionStart\":[{\"hooks\":[{\"type\":\"command\",\"command\":\"$GEMINI_PROJECT_DIR/.gemini/hooks/missing.sh\"}]}]}}"
+    },
+    {
+      "id": "GM-026",
+      "name": "Gemini Tool Hook Matches Every Tool",
+      "severity": "LOW",
+      "category": "gemini-cli",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/hooks/best-practices",
+          "https://geminicli.com/docs/hooks",
+          "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/core/src/hooks/hookPlanner.ts"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"hooks\":{\"BeforeTool\":[{\"matcher\":\"write_file|replace\",\"hooks\":[{\"type\":\"command\",\"command\":\"./validate.sh\"}]}]}}",
+      "bad_example": "{\"hooks\":{\"BeforeTool\":[{\"matcher\":\"*\",\"hooks\":[{\"type\":\"command\",\"command\":\"./validate.sh\"}]}]}}"
+    },
+    {
+      "id": "GM-028",
+      "name": "Gemini Extension Manifest Advisory",
+      "severity": "LOW",
+      "category": "gemini-cli",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/extensions/reference",
+          "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/cli/src/commands/extensions/validate.ts"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "gemini-cli"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"name\":\"my-extension\",\"version\":\"1.0.0\",\"description\":\"Adds deployment commands\"}",
+      "bad_example": "{\"name\":\"My-Extension\",\"version\":\"1.0\"}"
     },
     {
       "id": "GM-AG-001",
@@ -8251,9 +8349,11 @@
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/google-gemini/gemini-cli/pull/24770"
+          "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/core/src/agents/agentLoader.ts",
+          "https://github.com/google-gemini/gemini-cli/pull/24770",
+          "https://geminicli.com/docs/core/subagents"
         ],
-        "verified_on": "2026-04-26",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "gemini-cli"
         },
@@ -8267,8 +8367,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "---\nkind: local\nname: spanner-agent\nmcp_servers:\n  spanner:\n    url: https://spanner.googleapis.com/mcp\n    type: http\n    auth:\n      type: google-credentials\n      scopes:\n        - https://www.googleapis.com/auth/cloud-platform\nsystem_prompt: Example\n---\n",
-      "bad_example": "---\nkind: local\nname: spanner-agent\nmcp_servers:\n  spanner:\n    auth:\n      type: basic-auth\nsystem_prompt: Example\n---\n"
+      "good_example": "---\nname: spanner-agent\ndescription: Queries Spanner through its MCP server\nmcp_servers:\n  spanner:\n    url: https://spanner.googleapis.com/mcp\n    type: http\n    auth:\n      type: google-credentials\n      scopes:\n        - https://www.googleapis.com/auth/cloud-platform\n---\n\nYou are a Spanner agent.\n",
+      "bad_example": "---\nname: spanner-agent\ndescription: Queries Spanner through its MCP server\nmcp_servers:\n  spanner:\n    auth:\n      type: basic-auth\n---\n\nYou are a Spanner agent.\n"
     },
     {
       "id": "KIRO-001",
@@ -15568,7 +15668,7 @@
     },
     "gemini-cli": {
       "prefix": "GM",
-      "count": 10,
+      "count": 13,
       "description": "Gemini CLI instruction file rules"
     },
     "codex": {

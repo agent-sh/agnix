@@ -113,7 +113,7 @@ Rule IDs follow the format `[PREFIX]-[NUMBER]` where the prefix indicates the ru
 | `CR-SK-` | 1 | CR-SK-001 |
 | `CUR-` | 20 | CUR-001 through CUR-020 |
 | `CX-SK-` | 1 | CX-SK-001 |
-| `GM-` | 10 | GM-001 through GM-010 |
+| `GM-` | 13 | GM-001 through GM-006, GM-008 through GM-010, GM-018, GM-019, GM-026, GM-028 |
 | `GM-AG-` | 1 | GM-AG-001 |
 | `KIRO-` | 14 | KIRO-001 through KIRO-014 |
 | `KR-AG-` | 13 | KR-AG-001 through KR-AG-013 |

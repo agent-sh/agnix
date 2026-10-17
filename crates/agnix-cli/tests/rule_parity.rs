@@ -413,7 +413,17 @@ fn infer_fixture_coverage(rules: &[RuleEntry]) -> HashMap<String, Vec<String>> {
         ("amp-skills", vec!["per_client_skills"]),
         ("amp-checks", vec!["amp-checks"]),
         ("roo-code-skills", vec!["per_client_skills"]),
-        ("gemini-cli", vec!["gemini_md", "gemini_md-invalid"]),
+        (
+            "gemini-cli",
+            vec![
+                "gemini_md",
+                "gemini_md-invalid",
+                "gemini_settings",
+                "gemini_extension",
+                "gemini_ignore",
+                "gemini_hooks",
+            ],
+        ),
         (
             "gemini-agents",
             vec!["valid/gemini-agents", "invalid/gemini-agents"],

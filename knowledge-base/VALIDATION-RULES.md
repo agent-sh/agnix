@@ -2433,88 +2433,108 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 ## GEMINI CLI RULES
 
 <a id="gm-001"></a>
-### GM-001 [HIGH] Invalid Markdown Structure in GEMINI.md
-**Requirement**: GEMINI.md MUST have valid markdown (no unclosed code blocks or malformed links)
-**Detection**: Parse markdown, check for unclosed ``` blocks and malformed [text]( links
-**Fix**: [AUTO-FIX] No auto-fix (manual correction required)
-**Source**: geminicli.com/docs/cli/gemini-md/
+### GM-001 [MEDIUM] Invalid Markdown Structure in GEMINI.md
+**Requirement**: GEMINI.md SHOULD close its code fences, because Gemini CLI ignores `@` imports inside code: "The import processor uses the `marked` library to detect code blocks and inline code spans, ensuring that `@` imports inside these regions are properly ignored." An unclosed fence therefore hides every later `@path` import.
+**Detection**: Warning for an unclosed ``` fence. Warning for a malformed `[text](` link; this branch is an agnix heuristic (Gemini CLI documents no link requirement). Gemini still loads the file in both cases.
+**Fix**: [AUTO-FIX, unsafe] Append a closing fence at the end of the file. Unsafe: where the fence should end is a guess, and the text after it changes from code to instructions.
+**Source**: geminicli.com/docs/reference/memport ("Code region detection")
 
 <a id="gm-002"></a>
-### GM-002 [MEDIUM] Missing Section Headers in GEMINI.md
-**Requirement**: GEMINI.md SHOULD have markdown section headers for organization
-**Detection**: Scan for `^#+\s+.+` patterns, report if none found
+### GM-002 [LOW] Missing Section Headers in GEMINI.md
+**Requirement**: agnix heuristic, not a Gemini CLI requirement: GEMINI.md MAY use markdown headers to organize its instructions. Gemini CLI states no header requirement; the gemini-md page only shows an example file with headers.
+**Detection**: Info when no `^#+\s+.+` header is found (the community AGENTS.md check shared with AGM-002)
 **Fix**: No auto-fix (headers must be authored by user)
-**Source**: geminicli.com/docs/cli/gemini-md/
+**Source**: community practice; example on geminicli.com/docs/cli/gemini-md
 
 <a id="gm-003"></a>
-### GM-003 [MEDIUM] Missing Project Context in GEMINI.md
-**Requirement**: GEMINI.md SHOULD include a project context section describing purpose and tech stack
-**Detection**: Check for headers matching project/overview/about/description patterns or content referencing "this project"
+### GM-003 [LOW] Missing Project Context in GEMINI.md
+**Requirement**: agnix heuristic, not a Gemini CLI requirement: GEMINI.md MAY describe the project. The configuration reference only encourages context files: "Project-specific context files are highly encouraged to establish conventions and context."
+**Detection**: Info when no header matches project/overview/about/description patterns and no text refers to "this project" (the community AGENTS.md check shared with AGM-004)
 **Fix**: No auto-fix (project context must be authored by user)
-**Source**: geminicli.com/docs/cli/gemini-md/
+**Source**: community practice; geminicli.com/docs/reference/configuration ("Context files")
 
 <a id="gm-004"></a>
-### GM-004 [MEDIUM] Invalid Hooks Configuration in Gemini Settings
-**Requirement**: hooksConfig in .gemini/settings.json MUST use valid event names and hook structure
-**Detection**: Parse hooksConfig object, validate event names against known set, check required fields (type, command)
+### GM-004 [MEDIUM] Invalid Gemini Hooks Configuration
+**Requirement**: Hooks MUST use the documented structure. "Hooks are defined in `settings.json` within the `hooks` object. Each event (for example, `BeforeTool`) contains an array of **hook definitions**": `{matcher?, sequential?, hooks: [...]}` where each hook is `{type, command, name?, timeout?, description?}`, `type` "Currently only `"command"` is supported" and `command` is "(Required when `type` is `"command"`)". `hooksConfig` holds only `hooksConfig.enabled` (boolean), `hooksConfig.disabled` ("List of hook names (commands) that should be disabled") and `hooksConfig.notifications` (boolean). Extensions: "Define hooks in a `hooks/hooks.json` file within your extension directory. Note that hooks are not defined in the `gemini-extension.json` manifest."
+**Detection**: Runs on `.gemini/settings.json` (`hooks` and `hooksConfig`) and on an extension's `hooks/hooks.json` (`.gemini/extensions/<name>/hooks/hooks.json`, or a `hooks/hooks.json` next to a `gemini-extension.json`; these files no longer get the Claude Code CC-HK rules). Warnings, at the offending key or value: an event other than SessionStart, SessionEnd, BeforeAgent, AfterAgent, BeforeModel, AfterModel, BeforeToolSelection, BeforeTool, AfterTool, PreCompress and Notification (with the Gemini name for Claude Code names such as PreToolUse); `hooks.enabled` / `disabled` / `notifications` (hooksConfig settings); an event that is not an array; a group that is not an object, has no `hooks` array (or is the flat `{type, command}` form), or has a non-string `matcher` or non-boolean `sequential`; a hook that is not an object, lacks `type` or `command`, has a `type` other than "command", an empty `command`, a non-string `name` / `description`, or a `timeout` that is not a positive number; `hooksConfig` that is not an object, has wrongly typed values, or has other keys (an event name there gets a message saying hook definitions belong under `hooks`). For `hooks/hooks.json`: invalid JSON (read with `JSON.parse`) or no `hooks` object, where extension-manager.ts logs `Invalid hooks configuration in ...: "hooks" property must be an object` and loads none of the extension's hooks. Unknown keys inside a hook (such as `env`, which hookRunner.ts reads) are not reported. A tool matcher that is not a valid regex is not GM-004: Gemini falls back to an exact name match (GM-026).
 **Fix**: No auto-fix (manual correction required)
-**Source**: geminicli.com/docs/hooks
+**Source**: geminicli.com/docs/hooks, geminicli.com/docs/hooks/reference, geminicli.com/docs/reference/configuration ("`hooksConfig`", "`hooks`"), geminicli.com/docs/extensions/reference ("Hooks"), extension-manager.ts `loadExtensionHooks`
 
 <a id="gm-005"></a>
-### GM-005 [HIGH] Invalid Extension Manifest
-**Requirement**: gemini-extension.json MUST have valid JSON with required fields (name, version, description)
-**Detection**: Parse JSON, check required fields exist and are non-empty strings, validate name format
+### GM-005 [HIGH] Gemini Extension Manifest Does Not Load
+**Requirement**: gemini-extension.json MUST parse and have `name` and `version` (`export interface ExtensionConfig { name: string; version: string; ...`; the loader throws `Invalid configuration in ...: missing "name"` or `missing "version"`), and the name MUST pass `validateName`: "Invalid extension name: ... Only letters (a-z, A-Z), numbers (0-9), and dashes (-) are allowed."
+**Detection**: Error for JSON syntax errors (the manifest is read with `JSON.parse`, so comments fail), a root that is not an object, a missing or falsy `name` or `version`, and a name with any character outside `[a-zA-Z0-9-]` (underscores, spaces, dots). Points at the value. A missing description is GM-028, not GM-005; an uppercase name is GM-028.
 **Fix**: No auto-fix (manual correction required)
-**Source**: geminicli.com/docs/extensions/reference
+**Source**: geminicli.com/docs/extensions/reference, extension-manager.ts (`loadExtensionConfig`, `validateName`), extension.ts (`ExtensionConfig`)
 
 <a id="gm-006"></a>
 ### GM-006 [LOW] Invalid .geminiignore File
-**Requirement**: .geminiignore MAY have valid gitignore-style patterns
-**Detection**: Check for empty content and unmatched brackets in glob patterns
+**Requirement**: .geminiignore patterns SHOULD be well-formed: "For the most part, `.geminiignore` follows the conventions of `.gitignore` files", and "Standard glob patterns are supported (such as `*`, `?`, and `[]`)."
+**Detection**: Info for a line with unmatched `[` / `]` brackets (an agnix heuristic for a broken character class). An empty or comment-only file is not reported: "Blank lines and lines starting with `#` are ignored", and the page has no content requirement.
 **Fix**: No auto-fix (manual correction required)
-**Source**: geminicli.com/docs/cli/settings
-
-<a id="gm-007"></a>
-### GM-007 [MEDIUM] @import File Not Found in GEMINI.md
-**Requirement**: @import directives in GEMINI.md SHOULD reference existing files
-**Detection**: Scan for @import lines, resolve paths relative to GEMINI.md, check file existence
-**Fix**: No auto-fix (create the file or fix the path)
-**Source**: geminicli.com/docs/cli/gemini-md/
+**Source**: geminicli.com/docs/cli/gemini-ignore ("How it works")
 
 <a id="gm-008"></a>
-### GM-008 [LOW] Invalid Context File Name Configuration
-**Requirement**: contextFileName in gemini-extension.json MAY reference a valid filename
-**Detection**: Check if contextFileName contains path separators (should be a filename only)
-**Fix**: [AUTO-FIX] No auto-fix (manual correction required)
-**Source**: geminicli.com/docs/extensions/reference
+### GM-008 [HIGH] Invalid Extension contextFileName
+**Requirement**: `contextFileName` (`contextFileName?: string | string[]`) entries MUST be paths inside the extension directory that exist. `validateContextFilePath` rejects "Absolute paths are not allowed." and `Relative parent directory references ("..") are not allowed.`, and the loader skips the entry; `gemini extensions validate` fails with "The following context files referenced in gemini-extension.json are missing: ...".
+**Detection**: Error, at the value or array entry, for a POSIX or Windows absolute path, a path that starts with `${extensionPath}` or `${workspacePath}` (absolute once the manifest is hydrated), any `..` (the loader checks the substring, also URL-encoded), an empty or non-string entry, a value that is neither a string nor an array, and an entry whose file does not exist relative to the manifest's directory. Relative subpaths such as `docs/CONTEXT.md` are valid. A falsy value falls back to GEMINI.md and is not reported.
+**Fix**: No auto-fix. The former fix stripped the directory part, which pointed the manifest at a file that does not exist.
+**Source**: extension-manager.ts (`validateContextFilePath`, `resolveContextFilePaths`), commands/extensions/validate.ts, geminicli.com/docs/extensions/reference
 
 <a id="gm-009"></a>
-### GM-009 [HIGH] Settings.json Parse Error
-**Requirement**: .gemini/settings.json MUST have valid JSON/JSONC syntax
-**Detection**: Attempt to parse as JSONC; report parse errors with line/column. Detect unknown top-level keys.
-**Fix**: [AUTO-FIX] No auto-fix (correct the JSON syntax)
-**Source**: geminicli.com/docs/cli/settings
+### GM-009 [HIGH] Gemini Settings Parse Error or Unknown Top-Level Key
+**Requirement**: .gemini/settings.json MUST be valid JSON/JSONC, and "All settings should be placed within their corresponding top-level category object in your `settings.json` file."
+**Detection**: Error for a parse failure, with line and column. Warning, at the key, for a top-level key other than the 25 categories of the configuration reference (policyPaths, adminPolicyPaths, general, output, ui, ide, privacy, billing, model, modelConfigs, agents, context, tools, mcp, useWriteTodos, security, advanced, experimental, skills, hooksConfig, hooks, contextManagement, admin, mcpServers, telemetry), `extensions` (in settingsSchema.ts, not in the reference) and `$schema`.
+**Fix**: [AUTO-FIX, unsafe] Delete the unknown key and its value, together with one separating comma so the file still parses. Unsafe: the key may be a misplaced or mistyped setting the user wants, or one a newer Gemini CLI reads.
+**Source**: geminicli.com/docs/reference/configuration ("Available settings in `settings.json`"), settingsSchema.ts
 
 <a id="gm-010"></a>
-### GM-010 [MEDIUM] memoryManager Without autoMemory After v0.40 Split
-**Requirement**: Users who set `experimental.memoryManager: true` SHOULD also set `experimental.autoMemory: true` on Gemini CLI v0.40+
-**Detection**: Parse `.gemini/settings.json`; warn when `experimental.memoryManager === true` and `experimental.autoMemory` is missing or false
-**Fix**: No auto-fix (upstream declined to ship a migration shim - users may legitimately want only the subagent)
-**Rationale**: Gemini CLI v0.40 (PR #25601) split the combined `memoryManager` flag. Pre-v0.40 it gated both the Memory Manager subagent and background skill extraction + `/memory inbox`. Post-v0.40 `memoryManager` gates only the subagent; extraction and the inbox move to the new `autoMemory` flag. Users carrying forward only `memoryManager: true` lose the inbox silently.
-**Source**: github.com/google-gemini/gemini-cli/pull/25601
+### GM-010 [MEDIUM] Stale experimental.memoryManager Setting
+**Requirement**: `experimental.memoryManager` SHOULD be removed: it is not a Gemini CLI setting since v0.40.0 (settingsSchema.ts has it at v0.36.0 to v0.39.0 and not at v0.40.0, v0.50.0, v0.64.0 or main). The configuration reference documents only "`experimental.autoMemory` (boolean): ... Automatically extract memory patches and skills from past sessions in the background", which feeds the /memory inbox.
+**Detection**: Warning, at the key, whenever `experimental.memoryManager` is present, whatever its value. agnix has no gemini-cli version pin, so the rule applies to every project.
+**Fix**: No auto-fix (deleting the key changes behavior on Gemini CLI before v0.40.0)
+**Source**: geminicli.com/docs/reference/configuration ("`experimental`"), settingsSchema.ts history (v0.39.0 vs v0.40.0)
+
+<a id="gm-018"></a>
+### GM-018 [MEDIUM] Gemini Hook Timeout Looks Like Seconds
+**Requirement**: Hook timeouts SHOULD be written in milliseconds: "`timeout` | `number` | No | Execution timeout in milliseconds (default: 60000)." Claude Code hook timeouts are seconds, so a value copied from Claude Code (for example 30) gives the hook 30 ms.
+**Detection**: Warning, at the value, for a hook `timeout` from 1 to 999 in `.gemini/settings.json` or an extension `hooks/hooks.json`: "Gemini hook timeouts are milliseconds (default 60000); 30 means 30 ms. Did you mean 30000?" The threshold of 1000 is an agnix heuristic; a deliberate sub-second limit can be suppressed.
+**Fix**: No auto-fix (the intended value is a guess)
+**Source**: geminicli.com/docs/hooks/reference ("Hook configuration"), geminicli.com/docs/hooks/best-practices ("Use timeouts"), hookRunner.ts (`DEFAULT_HOOK_TIMEOUT = 60000`)
+
+<a id="gm-019"></a>
+### GM-019 [MEDIUM] Gemini Hook Script Not Found
+**Requirement**: A hook's script SHOULD exist and, when it is the command itself, be executable: "**Verify script path:** Ensure the path in `settings.json` resolves correctly." and "Always make hook scripts executable on macOS/Linux".
+**Detection**: Warning, at the `command` value, when the script a command runs does not exist. Only a word that contains a `/` is checked: the first word, or the first path argument of bash, sh, zsh, dash, ksh, node or python (inline code such as `bash -c` or `python -m` is skipped). Quotes are removed; `$GEMINI_PROJECT_DIR`, `${GEMINI_PROJECT_DIR}`, `$CLAUDE_PROJECT_DIR` and `${CLAUDE_PROJECT_DIR}` (Gemini sets both: "`GEMINI_PROJECT_DIR`: The absolute path to the project root", "`CLAUDE_PROJECT_DIR`: (Alias) Provided for compatibility") resolve to the parent of `.gemini`, and relative paths resolve there too (hooks run in the project root). In an extension's `hooks/hooks.json`, `${extensionPath}` resolves to the directory of `gemini-extension.json` and `${/}` to `/`; relative paths are not checked there (they run in the open project). Not checked: other variables, `~`, globs, `node_modules`, absolute paths outside the project or extension, and project-directory variables and relative paths in the user-level `~/.gemini/settings.json`. On Unix, a missing executable bit is reported only when the path is the command itself.
+**Fix**: No auto-fix
+**Source**: geminicli.com/docs/hooks/best-practices ("Make scripts executable", "Hook not executing"), geminicli.com/docs/hooks ("Environment variables"), geminicli.com/docs/extensions/reference ("Variables"), hookRunner.ts (`expandCommand`, `cwd: input.cwd`)
+
+<a id="gm-026"></a>
+### GM-026 [LOW] Gemini Tool Hook Matches Every Tool
+**Requirement**: BeforeTool and AfterTool hooks SHOULD name the tools they need: "Use specific matchers to avoid unnecessary hook execution. Instead of matching all tools with `*`, specify only the tools you need." Tool-event matchers "are **Regular Expressions**"; "**Wildcards**: `"*"` or `""` (empty string) matches all occurrences.".
+**Detection**: Info for a BeforeTool or AfterTool group whose matcher is absent, empty, `*` or `.*` (hookPlanner.ts trims the matcher and treats empty and `*` as match-all before building a regex). Info, too, for a tool matcher that is not a valid ECMAScript regex (checked with the `regress` engine): Gemini does not fail, it compares the matcher with the tool name as plain text, so the hook runs only for a tool with exactly that name. Lifecycle-event matchers are exact strings and are not checked. Catch-all audit hooks are legitimate; keep or suppress them.
+**Fix**: No auto-fix
+**Source**: geminicli.com/docs/hooks/best-practices ("Filter with matchers"), geminicli.com/docs/hooks ("Matchers"), hookPlanner.ts (`matchesContext`, `matchesToolName`)
+
+<a id="gm-028"></a>
+### GM-028 [LOW] Gemini Extension Manifest Advisory
+**Requirement**: An extension SHOULD have a description ("`description`: A short description of the extension. This will be displayed on [geminicli.com/extensions](https://geminicli.com/extensions)."), a lowercase name ("The name should be lowercase or numbers and use dashes instead of underscores or spaces.") and a semver version (`gemini extensions validate`: "Warning: Version '...' does not appear to be standard semver (e.g., 1.0.0).").
+**Detection**: Info for a missing or blank description, a loadable name with uppercase letters, and a version that is not valid semver (node-semver rules: surrounding blanks and one leading `v` are accepted). The docs also say "we expect this name to match the extension directory name"; that is not checked, because repository checkouts rename directories.
+**Fix**: No auto-fix
+**Source**: geminicli.com/docs/extensions/reference ("`gemini-extension.json`"), commands/extensions/validate.ts
 
 ## GEMINI CLI AGENT RULES
 
-Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These define `kind: local` agents with YAML frontmatter containing `name`, `description`, `tools`, `mcp_servers`, and `system_prompt`. Schema documented in the gemini-cli source at `packages/core/src/agents/agentLoader.ts`.
+Rules for local Gemini agent markdown files at `.gemini/agents/*.md` and an extension's `agents/*.md` ("Add agent definition files (`.md`) to an `agents/` directory in your extension root"). The YAML frontmatter holds `name`, `description` and optional `kind`, `display_name`, `tools`, `mcp_servers`, `model`, `temperature`, `max_turns`, `timeout_mins` (a strict schema); the Markdown body is the system prompt. Schema in the gemini-cli source at `packages/core/src/agents/agentLoader.ts`.
 
 <a id="gm-ag-001"></a>
 ### GM-AG-001 [HIGH] Invalid auth block in Gemini agent MCP server
-**Requirement**: The `auth` block inside `mcp_servers.<name>` MUST follow the schema added in gemini-cli v0.39.0 (google-gemini/gemini-cli#24770):
-- Variant `type: "google-credentials"` - only `scopes` (optional array of strings) is accepted
-- Variant `type: "oauth"` - `client_id`, `client_secret`, `scopes`, `authorization_url`, `token_url` are all optional; URLs must be valid http(s); scopes must be an array of strings
-**Detection**: Parse YAML frontmatter; walk `mcp_servers.*.auth`; enforce discriminator, reject unknown fields per variant, type-check string/array values, validate URL shape for `authorization_url` and `token_url`
-**Fix**: Manual - align the auth block with the documented variant schema
-**Source**: google-gemini/gemini-cli#24770 (gemini-cli v0.39.0+)
+**Requirement**: The `auth` block inside `mcp_servers.<name>` MUST follow agentLoader.ts (added in gemini-cli v0.39.0, google-gemini/gemini-cli#24770; verified against main):
+- Variant `type: "google-credentials"` - `scopes: z.array(z.string()).optional()`
+- Variant `type: "oauth"` - all optional: `client_id`, `client_secret`, `token_param_name` (strings), `scopes`, `audiences` (string arrays), `authorization_url`, `token_url`, `issuer`, `redirect_uri`, `registration_url` (`z.string().url()`)
+**Detection**: Parse YAML frontmatter; walk `mcp_servers.*.auth`. Error (the agent fails validation and is not loaded) for a non-mapping auth block, a missing, non-string or unknown `type`, a wrongly typed value and a malformed URL. Warning for a field that is not part of the variant: the auth objects are not strict, so zod drops the field and it has no effect.
+**Fix**: Manual - align the auth block with the variant schema
+**Source**: agentLoader.ts (gemini-cli main), google-gemini/gemini-cli#24770 (v0.39.0+)
 
 ---
 
@@ -4189,7 +4209,6 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | CC-PL-003 | Normalize partial semver | unsafe |
 | AGM-001 | Append closing code fence for unclosed blocks | unsafe |
 | GM-001 | Append closing code fence for unclosed blocks | unsafe |
-| GM-008 | Strip directory prefix from contextFileName | unsafe |
 | PE-005 | Delete redundant instruction line | unsafe |
 | REF-003 | Delete duplicate import line | unsafe |
 | CUR-011 | Replace invalid cursor hook event with closest match | unsafe |
@@ -4227,7 +4246,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | COP-015 | Replace invalid prompt type | unsafe |
 | AMP-001 | Delete unknown check frontmatter key | unsafe |
 | AMP-004 | Delete unknown settings JSON key | unsafe |
-| GM-009 | Delete unknown settings JSON key | unsafe |
+| GM-009 | Delete unknown top-level settings key (and one comma) | unsafe |
 | CDX-004 | Delete unknown TOML config key | unsafe |
 | AMP-002 | Replace invalid severity-default with closest match | unsafe |
 
@@ -4258,7 +4277,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Cursor | 20 | 10 | 9 | 1 | 6 |
 | Cursor Skills | 1 | 0 | 1 | 0 | 1 |
 | Gemini Agents | 1 | 1 | 0 | 0 | 0 |
-| Gemini CLI | 10 | 3 | 5 | 2 | 3 |
+| Gemini CLI | 13 | 3 | 5 | 5 | 2 |
 | Kiro Agents | 29 | 11 | 15 | 3 | 1 |
 | Kiro Hooks | 28 | 15 | 6 | 7 | 7 |
 | Kiro Permissions | 12 | 6 | 5 | 1 | 0 |
@@ -4280,7 +4299,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **535** | **241** | **242** | **52** | **136** |
+| **TOTAL** | **538** | **241** | **242** | **55** | **135** |
 
 
 ---
@@ -4310,8 +4329,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 535 validation rules across 43 categories
+**Total Coverage**: 538 validation rules across 43 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 241 HIGH, 242 MEDIUM, 52 LOW
-**Auto-Fixable**: 136 rules (25%)
+**Certainty**: 241 HIGH, 242 MEDIUM, 55 LOW
+**Auto-Fixable**: 135 rules (25%)

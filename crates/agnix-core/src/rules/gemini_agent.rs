@@ -1,28 +1,33 @@
 //! Gemini CLI agent definition validation (GM-AG-*).
 //!
-//! Validates the YAML frontmatter of `.gemini/agents/*.md` files against the
-//! schema documented in `packages/core/src/agents/agentLoader.ts` in the
-//! gemini-cli repo. Today's scope is narrow: the `mcp_servers.*.auth` block
-//! added in gemini-cli v0.39.0 (google-gemini/gemini-cli#24770).
+//! Validates the YAML frontmatter of `.gemini/agents/*.md` files (and an
+//! extension's `agents/*.md`) against the schema in
+//! `packages/core/src/agents/agentLoader.ts` in the gemini-cli repo
+//! (verified on main, 2026-10-17). Today's scope is narrow: the
+//! `mcp_servers.*.auth` block added in gemini-cli v0.39.0
+//! (google-gemini/gemini-cli#24770).
 //!
 //! ## Auth block schema
 //!
-//! Two variants, distinguished by `type`:
+//! `auth` is `z.union([...])` of two `z.object`s, distinguished by `type`:
 //!
 //! 1. `type: "google-credentials"` - Application Default Credentials
 //!    - `scopes: [string]` (optional)
 //!
-//! 2. `type: "oauth"` - Standard OAuth 2.0 flow
-//!    - `client_id: string` (optional)
-//!    - `client_secret: string` (optional)
-//!    - `scopes: [string]` (optional)
-//!    - `authorization_url: string (URL)` (optional)
-//!    - `token_url: string (URL)` (optional)
+//! 2. `type: "oauth"` - Standard OAuth 2.0 flow, all optional:
+//!    `client_id`, `client_secret`, `token_param_name` (strings),
+//!    `scopes`, `audiences` (string arrays), `authorization_url`,
+//!    `token_url`, `issuer`, `redirect_uri`, `registration_url` (URLs)
+//!
+//! A wrong `type`, a wrong value type or a malformed URL fails validation and
+//! the agent is not loaded (error). The objects are not `.strict()`, so an
+//! unknown field is dropped silently (warning).
 //!
 //! This validator deliberately does NOT enforce frontmatter structure
 //! beyond the auth block - the larger Gemini agent schema (kind, name,
-//! description, tools, system_prompt, mcp_servers shape) is deferred to a
-//! future expansion so #809 can ship as a focused rule.
+//! description, tools, mcp_servers shape; the system prompt is the Markdown
+//! body) is deferred to a future expansion so #809 can ship as a focused
+//! rule.
 
 use crate::{
     config::PerFileLintConfig,
@@ -36,6 +41,17 @@ const RULE_IDS: &[&str] = &["GM-AG-001"];
 
 /// Allowed auth `type` discriminator values.
 const VALID_AUTH_TYPES: &[&str] = &["google-credentials", "oauth"];
+
+/// `type: oauth` fields of agentLoader.ts `mcpServerSchema.auth`.
+const OAUTH_STRING_FIELDS: [&str; 3] = ["client_id", "client_secret", "token_param_name"];
+const OAUTH_ARRAY_FIELDS: [&str; 2] = ["scopes", "audiences"];
+const OAUTH_URL_FIELDS: [&str; 5] = [
+    "authorization_url",
+    "token_url",
+    "issuer",
+    "redirect_uri",
+    "registration_url",
+];
 
 pub struct GeminiAgentValidator;
 
@@ -176,14 +192,14 @@ fn validate_auth_block(
     // Per-variant schema checks.
     match type_str.as_str() {
         "google-credentials" => {
-            // Only `scopes` is allowed beyond `type`. Reject unknown fields
-            // to catch mistakes like pasting OAuth fields under
-            // google-credentials.
+            // Only `scopes` is read beyond `type`. Report other fields (for
+            // example OAuth fields pasted under google-credentials): zod
+            // drops them, so they have no effect.
             for (k, _) in auth_obj {
                 let Some(key_str) = k.as_str() else { continue };
                 if !matches!(key_str, "type" | "scopes") {
                     diagnostics.push(
-                        Diagnostic::error(
+                        Diagnostic::warning(
                             path.to_path_buf(),
                             line,
                             0,
@@ -200,23 +216,19 @@ fn validate_auth_block(
             }
             // `scopes`, if present, must be a list of strings.
             if let Some(scopes) = auth_obj.get("scopes") {
-                validate_scopes(path, line, server, scopes, diagnostics);
+                validate_string_array(path, line, server, "scopes", scopes, diagnostics);
             }
         }
         "oauth" => {
-            let oauth_keys = [
-                "type",
-                "client_id",
-                "client_secret",
-                "scopes",
-                "authorization_url",
-                "token_url",
-            ];
             for (k, _) in auth_obj {
                 let Some(key_str) = k.as_str() else { continue };
-                if !oauth_keys.contains(&key_str) {
+                if key_str != "type"
+                    && !OAUTH_STRING_FIELDS.contains(&key_str)
+                    && !OAUTH_ARRAY_FIELDS.contains(&key_str)
+                    && !OAUTH_URL_FIELDS.contains(&key_str)
+                {
                     diagnostics.push(
-                        Diagnostic::error(
+                        Diagnostic::warning(
                             path.to_path_buf(),
                             line,
                             0,
@@ -232,7 +244,7 @@ fn validate_auth_block(
                 }
             }
             // String fields, when present, must be strings.
-            for string_key in ["client_id", "client_secret"] {
+            for string_key in OAUTH_STRING_FIELDS {
                 if let Some(v) = auth_obj.get(string_key)
                     && v.as_str().is_none()
                 {
@@ -255,7 +267,7 @@ fn validate_auth_block(
             // URL fields, when present, must look like URLs (basic sanity -
             // upstream uses Zod's .url() check which rejects non-HTTPS/non-
             // HTTP and malformed strings).
-            for url_key in ["authorization_url", "token_url"] {
+            for url_key in OAUTH_URL_FIELDS {
                 if let Some(v) = auth_obj.get(url_key) {
                     match v.as_str() {
                         None => diagnostics.push(
@@ -291,29 +303,36 @@ fn validate_auth_block(
                     }
                 }
             }
-            if let Some(scopes) = auth_obj.get("scopes") {
-                validate_scopes(path, line, server, scopes, diagnostics);
+            for array_key in OAUTH_ARRAY_FIELDS {
+                if let Some(value) = auth_obj.get(array_key) {
+                    validate_string_array(path, line, server, array_key, value, diagnostics);
+                }
             }
         }
         _ => unreachable!("type_str already validated against VALID_AUTH_TYPES"),
     }
 }
 
-fn validate_scopes(
+fn validate_string_array(
     path: &Path,
     line: usize,
     server: &str,
-    scopes: &serde_yaml::Value,
+    field: &str,
+    value: &serde_yaml::Value,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
-    let Some(seq) = scopes.as_sequence() else {
+    let Some(seq) = value.as_sequence() else {
         diagnostics.push(
             Diagnostic::error(
                 path.to_path_buf(),
                 line,
                 0,
                 "GM-AG-001",
-                t!("rules.gm_ag_001.scopes_not_array", server = server),
+                t!(
+                    "rules.gm_ag_001.array_not_array",
+                    server = server,
+                    field = field
+                ),
             )
             .with_suggestion(t!("rules.gm_ag_001.suggestion")),
         );
@@ -328,8 +347,9 @@ fn validate_scopes(
                     0,
                     "GM-AG-001",
                     t!(
-                        "rules.gm_ag_001.scope_not_string",
+                        "rules.gm_ag_001.array_item_not_string",
                         server = server,
+                        field = field,
                         index = idx.to_string().as_str()
                     ),
                 )
@@ -438,7 +458,9 @@ mod tests {
     }
 
     const AGENT_HEADER: &str = "---\nkind: local\nname: test-agent\ndescription: Test\n";
-    const AGENT_FOOTER: &str = "system_prompt: You are a test.\n---\n\nBody.\n";
+    // The system prompt is the Markdown body; `system_prompt` is not a
+    // frontmatter key (the local agent schema is `.strict()`).
+    const AGENT_FOOTER: &str = "---\n\nYou are a test.\n";
 
     fn wrap_mcp(mcp: &str) -> String {
         format!("{AGENT_HEADER}mcp_servers:\n{mcp}{AGENT_FOOTER}")
@@ -575,7 +597,8 @@ mod tests {
 
     #[test]
     fn test_oauth_field_on_google_credentials_flags() {
-        // client_id doesn't belong on google-credentials.
+        // client_id doesn't belong on google-credentials. The auth objects
+        // are not strict, so zod drops the field: a warning, not an error.
         let content = wrap_mcp(
             "  myserver:\n    auth:\n      type: google-credentials\n      client_id: abc\n",
         );
@@ -586,6 +609,7 @@ mod tests {
             .collect();
         assert_eq!(hits.len(), 1);
         assert!(hits[0].message.contains("client_id"));
+        assert_eq!(hits[0].level, crate::diagnostics::DiagnosticLevel::Warning);
     }
 
     #[test]
@@ -599,6 +623,34 @@ mod tests {
             .collect();
         assert_eq!(hits.len(), 1);
         assert!(hits[0].message.contains("random_extra"));
+        assert_eq!(hits[0].level, crate::diagnostics::DiagnosticLevel::Warning);
+    }
+
+    #[test]
+    fn test_current_oauth_fields_are_accepted() {
+        // agentLoader.ts on main also has issuer, audiences, redirect_uri,
+        // token_param_name and registration_url; agnix used to error on them.
+        let content = wrap_mcp(
+            "  myserver:\n    auth:\n      type: oauth\n      issuer: https://accounts.example.com\n      audiences: [api]\n      redirect_uri: http://localhost:7777/callback\n      token_param_name: access_token\n      registration_url: https://accounts.example.com/register\n",
+        );
+        assert!(validate(&content).is_empty(), "{:?}", validate(&content));
+    }
+
+    #[test]
+    fn test_new_oauth_field_types_are_checked() {
+        let content = wrap_mcp(
+            "  myserver:\n    auth:\n      type: oauth\n      issuer: not-a-url\n      audiences: api\n      token_param_name: 5\n",
+        );
+        let diagnostics = validate(&content);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "GM-AG-001")
+            .collect();
+        assert_eq!(hits.len(), 3, "{hits:?}");
+        assert!(
+            hits.iter()
+                .all(|d| d.level == crate::diagnostics::DiagnosticLevel::Error)
+        );
     }
 
     // ===== Value-type checks =====

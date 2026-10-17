@@ -119,6 +119,26 @@ make_cli_test!(
     "gemini_md-invalid",
     ["GM-001", "GM-002", "GM-003"]
 );
+make_cli_test!(
+    test_cli_reports_gemini_hooks_fixtures,
+    "gemini_hooks/invalid",
+    [
+        "GM-004", "GM-008", "GM-010", "GM-018", "GM-019", "GM-026", "GM-028"
+    ]
+);
+
+#[test]
+fn test_cli_gemini_extension_hooks_are_not_claude_hooks() {
+    let path = workspace_root().join("tests/fixtures/gemini_hooks");
+    let json = run_json(&path);
+    let claude_hook_rules = json["diagnostics"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|d| d["rule"].as_str().is_some_and(|r| r.starts_with("CC-HK-")))
+        .count();
+    assert_eq!(claude_hook_rules, 0);
+}
 
 make_cli_test!(
     test_cli_reports_codex_invalid_fixtures,

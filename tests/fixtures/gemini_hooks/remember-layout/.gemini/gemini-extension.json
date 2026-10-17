@@ -1,0 +1,5 @@
+{
+  "name": "remember",
+  "version": "1.0.0",
+  "description": "Session memory hooks for Gemini CLI. Hooks live in the sibling hooks/hooks.json, not this manifest."
+}

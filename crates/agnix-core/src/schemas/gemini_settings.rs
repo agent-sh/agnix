@@ -1,15 +1,18 @@
 //! Gemini CLI settings file schema helpers
 //!
-//! Provides parsing and validation for .gemini/settings.json configuration files.
+//! Provides parsing for .gemini/settings.json configuration files.
 //!
 //! Validates:
 //! - JSON/JSONC syntax
-//! - Top-level keys against known schema
-//! - Hook event names and hook object structure
+//! - Top-level keys against the documented settings categories
+//!
+//! The `hooks` and `hooksConfig` blocks are validated by
+//! `rules::gemini_hooks`, which also reads extension `hooks/hooks.json`.
 
-use serde::Deserialize;
+use serde_json::Value;
 
-/// Valid hook event types in Gemini CLI hooksConfig
+/// Hook events Gemini CLI fires (geminicli.com/docs/hooks "Hook events";
+/// the `hooks.*` properties of settingsSchema.ts).
 pub const VALID_HOOK_EVENTS: &[&str] = &[
     "SessionStart",
     "SessionEnd",
@@ -24,20 +27,38 @@ pub const VALID_HOOK_EVENTS: &[&str] = &[
     "Notification",
 ];
 
-/// Valid top-level keys in .gemini/settings.json
+/// Valid top-level keys in .gemini/settings.json: the 25 categories of
+/// geminicli.com/docs/reference/configuration ("Available settings in
+/// `settings.json`"), plus `extensions`, which settingsSchema.ts defines but
+/// the reference does not list, and `$schema`.
 pub const VALID_TOP_LEVEL_KEYS: &[&str] = &[
+    "$schema",
+    "policyPaths",
+    "adminPolicyPaths",
     "general",
     "output",
     "ui",
     "ide",
+    "privacy",
+    "billing",
     "model",
+    "modelConfigs",
+    "agents",
     "context",
     "tools",
+    "mcp",
+    "useWriteTodos",
     "security",
     "advanced",
     "experimental",
+    "extensions",
     "skills",
     "hooksConfig",
+    "hooks",
+    "contextManagement",
+    "admin",
+    "mcpServers",
+    "telemetry",
 ];
 
 /// A JSON parse error with location information
@@ -60,52 +81,22 @@ pub struct ParsedGeminiSettings {
 }
 
 /// Partial schema for .gemini/settings.json (only fields we validate)
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Default)]
 pub struct GeminiSettingsSchema {
-    /// Hooks configuration object
-    #[serde(rename = "hooksConfig")]
-    pub hooks_config: Option<serde_json::Value>,
-    /// Experimental feature flags (nested object).
-    /// Only the flags agnix validates are modeled; unknown flags under `experimental`
-    /// are dropped from the typed result and not accessible via this struct.
-    #[serde(default)]
+    /// The `experimental` object, when present
     pub experimental: Option<GeminiExperimentalFlags>,
 }
 
-/// The subset of `experimental.*` flags agnix tracks.
+/// The `experimental.*` keys agnix tracks.
 ///
-/// Gemini CLI v0.40 (PR google-gemini/gemini-cli#25601) split the combined
-/// `experimental.memoryManager` flag. `memoryManager` now gates ONLY the
-/// Memory Manager subagent + `save_memory` tool swap, while a new
-/// `experimental.autoMemory` flag gates background skill extraction and the
-/// `/memory inbox` UI. Users who upgrade with only `memoryManager: true` lose
-/// the inbox/extraction silently. GM-010 enforces setting both to preserve
-/// pre-v0.40 behavior.
-#[derive(Debug, Clone, Default, Deserialize)]
+/// `experimental.memoryManager` existed in settingsSchema.ts up to v0.39.0
+/// and is gone from v0.40.0 on (main has only `experimental.autoMemory`,
+/// which drives background extraction and the /memory inbox). GM-010
+/// reports the stale key whatever its value.
+#[derive(Debug, Clone, Default)]
 pub struct GeminiExperimentalFlags {
-    #[serde(rename = "memoryManager", default)]
-    pub memory_manager: Option<bool>,
-    #[serde(rename = "autoMemory", default)]
-    pub auto_memory: Option<bool>,
-}
-
-/// A single hook definition in hooksConfig
-#[derive(Debug, Clone, Deserialize)]
-pub struct GeminiHook {
-    /// Hook type (must be "command")
-    #[serde(rename = "type")]
-    pub type_: Option<String>,
-    /// Command to execute
-    pub command: Option<String>,
-    /// Optional hook name
-    #[allow(dead_code)] // deserialized from JSON; fields not individually accessed
-    pub name: Option<String>,
-    /// Optional timeout in seconds
-    #[allow(dead_code)] // deserialized from JSON; fields not individually accessed
-    pub timeout: Option<serde_json::Value>,
-    /// Optional description
-    #[allow(dead_code)] // deserialized from JSON; fields not individually accessed
-    pub description: Option<String>,
+    /// `experimental.memoryManager` is present (any value)
+    pub has_memory_manager: bool,
 }
 
 /// Strip single-line (//) and multi-line (/* */) comments from JSONC content.
@@ -190,7 +181,7 @@ pub fn parse_gemini_settings(content: &str) -> ParsedGeminiSettings {
     let stripped = strip_jsonc_comments(content);
 
     // First pass: validate JSON syntax
-    let value: serde_json::Value = match serde_json::from_str(&stripped) {
+    let value: Value = match serde_json::from_str(&stripped) {
         Ok(v) => v,
         Err(e) => {
             return ParsedGeminiSettings {
@@ -215,22 +206,17 @@ pub fn parse_gemini_settings(content: &str) -> ParsedGeminiSettings {
         Vec::new()
     };
 
-    // Extract hooks_config
-    let hooks_config = value.get("hooksConfig").cloned();
-
-    // Extract experimental.* flags agnix tracks. Unknown flags under
-    // `experimental` are not returned; only the modeled flags in
-    // GeminiExperimentalFlags are extracted.
+    // Extract the experimental.* keys agnix tracks.
     let experimental = value
         .get("experimental")
-        .and_then(|v| serde_json::from_value::<GeminiExperimentalFlags>(v.clone()).ok());
+        .and_then(Value::as_object)
+        .map(|exp| GeminiExperimentalFlags {
+            has_memory_manager: exp.contains_key("memoryManager"),
+        });
 
     ParsedGeminiSettings {
         parse_error: None,
-        schema: Some(GeminiSettingsSchema {
-            hooks_config,
-            experimental,
-        }),
+        schema: Some(GeminiSettingsSchema { experimental }),
         unknown_top_keys,
     }
 }
@@ -244,12 +230,10 @@ mod tests {
         let content = r#"{
   "general": {},
   "model": {},
-  "hooksConfig": {
+  "hooksConfig": {"enabled": true},
+  "hooks": {
     "BeforeAgent": [
-      {
-        "type": "command",
-        "command": "echo hello"
-      }
+      {"hooks": [{"type": "command", "command": "echo hello"}]}
     ]
   }
 }"#;
@@ -257,8 +241,6 @@ mod tests {
         assert!(result.parse_error.is_none());
         assert!(result.schema.is_some());
         assert!(result.unknown_top_keys.is_empty());
-        let schema = result.schema.unwrap();
-        assert!(schema.hooks_config.is_some());
     }
 
     #[test]
@@ -331,39 +313,29 @@ mod tests {
 
     #[test]
     fn test_all_valid_top_level_keys() {
-        let content = r#"{
-  "general": {},
-  "output": {},
-  "ui": {},
-  "ide": {},
-  "model": {},
-  "context": {},
-  "tools": {},
-  "security": {},
-  "advanced": {},
-  "experimental": {},
-  "skills": {},
-  "hooksConfig": {}
-}"#;
-        let result = parse_gemini_settings(content);
+        let content = format!(
+            "{{{}}}",
+            VALID_TOP_LEVEL_KEYS
+                .iter()
+                .map(|key| format!("\"{key}\": {{}}"))
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
+        let result = parse_gemini_settings(&content);
         assert!(result.parse_error.is_none());
         assert!(result.unknown_top_keys.is_empty());
     }
 
     #[test]
-    fn test_hooks_config_extracted() {
-        let content = r#"{
-  "hooksConfig": {
-    "SessionStart": [
-      {"type": "command", "command": "echo start"}
-    ]
-  }
-}"#;
+    fn test_documented_hooks_and_mcp_servers_are_known() {
+        // agnix 0.58 knew only 12 keys and flagged these documented ones.
+        let content = r#"{"$schema": "x", "hooks": {}, "mcpServers": {}, "privacy": {}, "telemetry": {}, "extensions": {}}"#;
         let result = parse_gemini_settings(content);
-        let schema = result.schema.unwrap();
-        assert!(schema.hooks_config.is_some());
-        let hooks = schema.hooks_config.unwrap();
-        assert!(hooks.get("SessionStart").is_some());
+        assert!(
+            result.unknown_top_keys.is_empty(),
+            "{:?}",
+            result.unknown_top_keys
+        );
     }
 
     #[test]
@@ -382,7 +354,8 @@ mod tests {
 
     #[test]
     fn test_valid_top_level_keys_count() {
-        assert_eq!(VALID_TOP_LEVEL_KEYS.len(), 12);
+        // 25 documented categories + `extensions` (settingsSchema.ts) + `$schema`.
+        assert_eq!(VALID_TOP_LEVEL_KEYS.len(), 27);
     }
 
     #[test]
@@ -396,8 +369,20 @@ mod tests {
         let result = parse_gemini_settings(content);
         let schema = result.schema.unwrap();
         let exp = schema.experimental.expect("experimental block parsed");
-        assert_eq!(exp.memory_manager, Some(true));
-        assert_eq!(exp.auto_memory, Some(false));
+        assert!(exp.has_memory_manager);
+    }
+
+    #[test]
+    fn test_memory_manager_presence_ignores_value_type() {
+        for value in ["false", "null", "\"yes\"", "{}"] {
+            let content = format!(r#"{{"experimental": {{"memoryManager": {value}}}}}"#);
+            let exp = parse_gemini_settings(&content)
+                .schema
+                .unwrap()
+                .experimental
+                .unwrap();
+            assert!(exp.has_memory_manager, "{value}");
+        }
     }
 
     #[test]
@@ -405,8 +390,7 @@ mod tests {
         let content = r#"{"experimental": {}}"#;
         let result = parse_gemini_settings(content);
         let exp = result.schema.unwrap().experimental.unwrap();
-        assert!(exp.memory_manager.is_none());
-        assert!(exp.auto_memory.is_none());
+        assert!(!exp.has_memory_manager);
     }
 
     #[test]

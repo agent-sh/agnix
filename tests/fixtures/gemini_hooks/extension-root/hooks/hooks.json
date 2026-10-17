@@ -1,0 +1,18 @@
+{
+  "hooks": {
+    "BeforeTool": [
+      {
+        "matcher": "run_shell_command",
+        "hooks": [
+          {
+            "name": "shell-guard",
+            "type": "command",
+            "command": "${extensionPath}/hooks/check.sh",
+            "timeout": 5000,
+            "description": "Blocks destructive shell commands"
+          }
+        ]
+      }
+    ]
+  }
+}

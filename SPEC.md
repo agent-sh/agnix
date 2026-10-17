@@ -24,8 +24,8 @@
 | Cursor Project Rules | .cursor/rules/*.mdc, .cursorrules, .cursor/hooks.json, .cursor/agents/**/*.md, .cursor/environment.json | 20 |
 | Cline | .clinerules, .clinerules/*.md, .clinerules/*.txt | 7 |
 | OpenCode | opencode.json, opencode.jsonc | 46 |
-| Gemini Agents | .gemini/agents/*.json | 1 |
-| Gemini CLI | GEMINI.md, GEMINI.local.md, .gemini/settings.json (hooks), gemini-extension.json (extensions), .geminiignore | 10 |
+| Gemini Agents | .gemini/agents/*.md, extension agents/*.md | 1 |
+| Gemini CLI | GEMINI.md, GEMINI.local.md, .gemini/settings.json (hooks), gemini-extension.json and extension hooks/hooks.json (extensions), .geminiignore | 13 |
 | Codex CLI | .codex/config.toml/.json/.yaml | 64 |
 | Version Awareness | .agnix.toml | 1 |
 | Cursor Skills | .cursor/skills/*/SKILL.md | 1 |

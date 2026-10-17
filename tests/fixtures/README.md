@@ -32,6 +32,8 @@ Keep fixtures minimal, deterministic, and focused on one rule family when possib
 | Kiro MCP (fixture pack) | `kiro-mcp/` | `kiro-mcp/.kiro/settings/mcp.json` | `kiro-mcp/.kiro/settings/missing-command-url.json`, `kiro-mcp/.kiro/settings/hardcoded-secrets.json` |
 | Kiro detection, workflows, ignore files (fixture pack) | `kiro-detect/` | `kiro-detect/.kiro/settings/cli.json`, `kiro-detect/power/POWER.md`, `kiro-detect/.kiro/workflows/plan-and-implement.workflow.json` | `kiro-detect/.kiro/agents/reviewer.JSON` (KIRO-026), `kiro-detect/.kiro/workflows/broken.workflow.yaml` (KR-WF), `kiro-detect/.kiroignore` (KR-IGN-001) |
 | KR-SET | `valid/kiro-settings/`, `invalid/kiro-settings/` | `valid/kiro-settings/.kiro/settings/cli.json` | `invalid/kiro-settings/.kiro/settings/cli.json` |
+| GM (Gemini CLI settings, extensions, hooks) | `gemini_settings/`, `gemini_extension/`, `gemini_ignore/`, `gemini_md/`, `gemini_md-invalid/` | `gemini_settings/valid/.gemini/settings.json` | `gemini_settings/invalid/.gemini/settings.json`, `gemini_extension/invalid/gemini-extension.json` |
+| Gemini hooks and extension routing (fixture pack) | `gemini_hooks/` | `gemini_hooks/remember-layout/` (extension in `.gemini/`, as in the remember plugin), `gemini_hooks/extension-root/` (repository that is an extension) | `gemini_hooks/invalid/` (GM-004, GM-008, GM-010, GM-018, GM-019, GM-026, GM-028), `gemini_hooks/installed/.gemini/extensions/audit/` (GM-018, GM-026) |
 
 ## Notes
 - AGENTS.md and cross-platform fixtures intentionally overlap; they are validated by different rule families.
@@ -39,4 +41,5 @@ Keep fixtures minimal, deterministic, and focused on one rule family when possib
 - REF-002 only fires on agent config files (CLAUDE.md, AGENTS.md, SKILL.md), so broken-link fixture uses CLAUDE.md.
 - Keep fixture paths stable, as tests assert on filenames.
 - Kiro powers/agents/hooks/MCP/permissions/detection fixture packs are guarded by inventory and CLI smoke-baseline checks in `crates/agnix-cli/tests/kiro_fixture_inventory.rs`, including detection baselines and representative file-type assertions.
+- `gemini_hooks/` fixtures are asserted per file through `validate_project` in `crates/agnix-core/tests/gemini_support.rs`. A `hooks/hooks.json` or `agents/*.md` is a Gemini extension file only next to a `gemini-extension.json` (or under `.gemini/extensions/<name>/`); keep the manifests in place.
 - Kiro MCP file-type detection currently only matches `.kiro/settings/mcp.json`; other JSON files in `kiro-mcp/.kiro/settings/` are fixture artifacts and are not detected as `KiroMcp`.

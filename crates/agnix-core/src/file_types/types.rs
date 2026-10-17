@@ -68,6 +68,9 @@ pub enum FileType {
     GeminiExtension,
     /// Gemini CLI ignore file (.geminiignore)
     GeminiIgnore,
+    /// Gemini CLI extension hooks (`<extension>/hooks/hooks.json`: under
+    /// `.gemini/extensions/<name>/`, or next to a `gemini-extension.json`)
+    GeminiHooks,
     /// Codex CLI configuration (.codex/config.toml, .codex/config.json, .codex/config.yaml/.yml)
     CodexConfig,
     /// Codex CLI plugin manifest (.codex-plugin/plugin.json)
@@ -188,6 +191,7 @@ impl fmt::Display for FileType {
             FileType::AmpSettings => "AmpSettings",
             FileType::GeminiExtension => "GeminiExtension",
             FileType::GeminiIgnore => "GeminiIgnore",
+            FileType::GeminiHooks => "GeminiHooks",
             FileType::CodexConfig => "CodexConfig",
             FileType::CodexPlugin => "CodexPlugin",
             FileType::CodexRequirements => "CodexRequirements",
@@ -254,6 +258,7 @@ mod tests {
             (FileType::AmpSettings, "AmpSettings"),
             (FileType::GeminiExtension, "GeminiExtension"),
             (FileType::GeminiIgnore, "GeminiIgnore"),
+            (FileType::GeminiHooks, "GeminiHooks"),
             (FileType::CodexConfig, "CodexConfig"),
             (FileType::CodexPlugin, "CodexPlugin"),
             (FileType::CodexRequirements, "CodexRequirements"),
@@ -319,6 +324,7 @@ mod tests {
             FileType::AmpSettings,
             FileType::GeminiExtension,
             FileType::GeminiIgnore,
+            FileType::GeminiHooks,
             FileType::CodexConfig,
             FileType::CodexPlugin,
             FileType::CodexRequirements,
@@ -398,6 +404,7 @@ mod tests {
             FileType::AmpSettings,
             FileType::GeminiExtension,
             FileType::GeminiIgnore,
+            FileType::GeminiHooks,
             FileType::CodexConfig,
             FileType::CodexPlugin,
             FileType::CodexRequirements,

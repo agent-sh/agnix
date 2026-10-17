@@ -1,0 +1,5 @@
+{
+  "name": "Bad-Ext",
+  "version": "1.0",
+  "contextFileName": ["GEMINI.md", "../shared/GEMINI.md"]
+}

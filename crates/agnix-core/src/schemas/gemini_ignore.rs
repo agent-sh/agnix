@@ -1,10 +1,15 @@
 //! Gemini CLI ignore file schema helpers
 //!
-//! Provides validation for .geminiignore files.
+//! Provides validation for .geminiignore files, which "for the most part ...
+//! follows the conventions of `.gitignore` files" with "Standard glob patterns
+//! are supported (such as `*`, `?`, and `[]`)" (geminicli.com/docs/cli/gemini-ignore).
 //!
 //! Validates:
-//! - Non-empty content (after stripping comments and whitespace)
-//! - Glob pattern syntax (unmatched brackets)
+//! - Glob pattern syntax (unmatched brackets, an agnix heuristic)
+//!
+//! An empty file (or one with only comments) is not reported: the page
+//! documents no requirement for content ("Blank lines and lines starting
+//! with `#` are ignored").
 
 /// An issue found in a .geminiignore file
 #[derive(Debug, Clone)]
@@ -19,26 +24,9 @@ pub struct GeminiIgnoreIssue {
 
 /// Validate .geminiignore content
 ///
-/// Checks for:
-/// - Empty content (after stripping comments and whitespace)
-/// - Lines with unmatched `[` brackets in glob patterns
+/// Checks for lines with unmatched `[` brackets in glob patterns.
 pub fn validate_geminiignore(content: &str) -> Vec<GeminiIgnoreIssue> {
     let mut issues = Vec::new();
-
-    // Check if content is effectively empty
-    let has_content = content.lines().any(|line| {
-        let trimmed = line.trim();
-        !trimmed.is_empty() && !trimmed.starts_with('#')
-    });
-
-    if !has_content {
-        issues.push(GeminiIgnoreIssue {
-            line: 1,
-            column: 0,
-            description: "empty".to_string(),
-        });
-        return issues;
-    }
 
     // Check each non-comment, non-empty line for syntax issues
     for (line_num, line) in content.lines().enumerate() {
@@ -83,26 +71,12 @@ mod tests {
     }
 
     #[test]
-    fn test_empty_content() {
-        let issues = validate_geminiignore("");
-        assert_eq!(issues.len(), 1);
-        assert_eq!(issues[0].description, "empty");
-    }
-
-    #[test]
-    fn test_only_comments() {
-        let content = "# Comment 1\n# Comment 2\n";
-        let issues = validate_geminiignore(content);
-        assert_eq!(issues.len(), 1);
-        assert_eq!(issues[0].description, "empty");
-    }
-
-    #[test]
-    fn test_only_whitespace() {
-        let content = "   \n   \n";
-        let issues = validate_geminiignore(content);
-        assert_eq!(issues.len(), 1);
-        assert_eq!(issues[0].description, "empty");
+    fn test_empty_comment_only_and_blank_files_are_fine() {
+        // These used to be reported as "empty"; the gemini-ignore page has
+        // no such requirement.
+        for content in ["", "# Comment 1\n# Comment 2\n", "   \n   \n"] {
+            assert!(validate_geminiignore(content).is_empty(), "{content:?}");
+        }
     }
 
     #[test]

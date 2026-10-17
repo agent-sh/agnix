@@ -849,6 +849,89 @@ fn is_excluded_parent(parent: Option<&str>) -> bool {
 }
 
 // ============================================================================
+// Gemini CLI extensions
+// ============================================================================
+
+/// The extension root and file type of a file that Gemini CLI reads from an
+/// extension directory, judged by the path below the root only. Whether the
+/// root really is an extension is decided by the callers: installed
+/// extensions by their location, other roots by a `gemini-extension.json`.
+///
+/// geminicli.com/docs/extensions/reference: "Define hooks in a
+/// `hooks/hooks.json` file within your extension directory" and "Add agent
+/// definition files (`.md`) to an `agents/` directory in your extension root".
+fn gemini_extension_member(path: &Path) -> Option<(&Path, FileType)> {
+    let filename = path.file_name()?.to_str()?;
+    let dir = path.parent()?;
+    let dir_name = dir.file_name()?.to_str()?;
+    let file_type = if filename == "hooks.json" && dir_name.eq_ignore_ascii_case("hooks") {
+        FileType::GeminiHooks
+    } else if ends_with_ignore_ascii_case(filename, ".md")
+        && dir_name.eq_ignore_ascii_case("agents")
+    {
+        FileType::GeminiAgent
+    } else {
+        // Further extension members (custom commands, policies) are added
+        // here; a nested member returns the directory that holds its
+        // top-level folder as the root.
+        return None;
+    };
+    Some((dir.parent()?, file_type))
+}
+
+/// `root` is `.gemini/extensions/<name>`, where Gemini CLI installs (and
+/// links) extensions: "Gemini CLI loads extensions from
+/// `<home>/.gemini/extensions`".
+fn is_installed_gemini_extension_root(root: &Path) -> bool {
+    fn name_of(p: Option<&Path>) -> Option<&str> {
+        p.and_then(Path::file_name).and_then(|n| n.to_str())
+    }
+    let parent = root.parent();
+    root.file_name().is_some()
+        && parent_eq_ignore_ascii_case(name_of(parent), "extensions")
+        && parent_eq_ignore_ascii_case(name_of(parent.and_then(|p| p.parent())), ".gemini")
+}
+
+/// Refine a path-detected [`FileType`] with sibling-file lookups.
+///
+/// [`detect_file_type`] is path-only by design. Some layouts can only be
+/// told apart by a sibling file, so the pipeline calls this for real files
+/// once `[files]` overrides are applied (overridden types never get here).
+///
+/// Only the generic fallbacks that path detection gives such files are
+/// refined (Claude `Hooks` for any `hooks/hooks.json`, Claude `Agent` for
+/// any `agents/*.md`, `GenericMarkdown`, `Unknown`), so a tool-specific
+/// detection is never replaced, and nothing inside `.kiro/` is touched.
+///
+/// Each tool adds one branch that returns `Some` for its own layouts:
+/// - Gemini CLI: a `hooks/hooks.json` or `agents/*.md` whose extension root
+///   (a repository that is an extension, or a `.gemini/` folder that ships
+///   one) holds `gemini-extension.json`.
+pub(crate) fn refine_file_type(
+    path: &Path,
+    detected: FileType,
+    fs: &dyn crate::fs::FileSystem,
+) -> FileType {
+    if !matches!(
+        detected,
+        FileType::Hooks | FileType::Agent | FileType::GenericMarkdown | FileType::Unknown
+    ) || is_inside_kiro_dir(path)
+    {
+        return detected;
+    }
+    if let Some(file_type) = refine_gemini_extension_member(path, fs) {
+        return file_type;
+    }
+    detected
+}
+
+fn refine_gemini_extension_member(path: &Path, fs: &dyn crate::fs::FileSystem) -> Option<FileType> {
+    let (root, file_type) = gemini_extension_member(path)?;
+    fs.is_file(&root.join("gemini-extension.json"))
+        .then_some(file_type)
+}
+
+// ============================================================================
 // Primary detection function
 // ============================================================================
 
@@ -891,6 +974,17 @@ pub fn detect_file_type(path: &Path) -> FileType {
         && parent_eq_ignore_ascii_case(grandparent, ".gemini")
     {
         return FileType::GeminiAgent;
+    }
+
+    // Gemini CLI extensions installed under `.gemini/extensions/<name>/`:
+    // `hooks/hooks.json` holds Gemini hooks (not Claude hooks) and
+    // `agents/*.md` Gemini agents (not Claude subagents). Extension roots
+    // elsewhere need the `gemini-extension.json` sibling, see
+    // `refine_file_type`.
+    if let Some((root, file_type)) = gemini_extension_member(path)
+        && is_installed_gemini_extension_root(root)
+    {
+        return file_type;
     }
 
     match filename {
@@ -2394,6 +2488,83 @@ mod tests {
             detect_file_type(Path::new("remember/.gemini/hooks/hooks.json")),
             FileType::Hooks
         );
+    }
+
+    #[test]
+    fn detect_installed_gemini_extension_members() {
+        use FileType::*;
+        assert_types(&[
+            (
+                "/home/u/.gemini/extensions/remember/hooks/hooks.json",
+                GeminiHooks,
+            ),
+            (".gemini/extensions/remember/hooks/hooks.json", GeminiHooks),
+            (".GEMINI/Extensions/remember/Hooks/hooks.json", GeminiHooks),
+            (
+                "/home/u/.gemini/extensions/remember/agents/reviewer.md",
+                GeminiAgent,
+            ),
+            // Not members: other files, other folders, other roots.
+            (".gemini/extensions/remember/hooks/other.json", Unknown),
+            (".gemini/extensions/remember/agents/sub/deep.md", Agent),
+            ("extensions/remember/hooks/hooks.json", Hooks),
+            // Path-only detection cannot see gemini-extension.json; these
+            // are refined by `refine_file_type`.
+            ("my-ext/hooks/hooks.json", Hooks),
+            ("my-ext/agents/reviewer.md", Agent),
+            ("remember/.gemini/hooks/hooks.json", Unknown),
+        ]);
+    }
+
+    fn refine(path: &str, fs: &crate::fs::MockFileSystem) -> FileType {
+        refine_file_type(Path::new(path), detect_file_type(Path::new(path)), fs)
+    }
+
+    #[test]
+    fn refine_gemini_extension_roots_by_manifest() {
+        use FileType::*;
+        let fs = crate::fs::MockFileSystem::new();
+        // A repository that is an extension, and remember's `.gemini/` layout.
+        fs.add_file("ext/gemini-extension.json", "{}");
+        fs.add_file("remember/.gemini/gemini-extension.json", "{}");
+        // A directory named like the manifest is not a manifest.
+        fs.add_dir("odd/gemini-extension.json");
+        for (path, expected) in [
+            ("ext/hooks/hooks.json", GeminiHooks),
+            ("ext/agents/reviewer.md", GeminiAgent),
+            ("remember/.gemini/hooks/hooks.json", GeminiHooks),
+            ("remember/.gemini/agents/a.md", GeminiAgent),
+            // No manifest next to the folder: unchanged.
+            ("other/hooks/hooks.json", Hooks),
+            ("other/agents/reviewer.md", Agent),
+            ("ext/sub/hooks/hooks.json", Hooks),
+            ("odd/hooks/hooks.json", Hooks),
+            ("remember/hooks/hooks.json", Hooks),
+            // Other members of an extension root keep their type.
+            ("ext/gemini-extension.json", GeminiExtension),
+            ("ext/GEMINI.md", GeminiMd),
+        ] {
+            assert_eq!(refine(path, &fs), expected, "{path}");
+        }
+    }
+
+    #[test]
+    fn refine_never_replaces_specific_or_kiro_types() {
+        use FileType::*;
+        let fs = crate::fs::MockFileSystem::new();
+        for root in [".github", ".cursor", ".kiro/specs/x", ".claude"] {
+            fs.add_file(format!("{root}/gemini-extension.json"), "{}");
+        }
+        for (path, expected) in [
+            (".github/hooks/hooks.json", CopilotHooks),
+            (".cursor/agents/reviewer.md", CursorAgent),
+            (".kiro/specs/x/hooks/hooks.json", Unknown),
+            // A Claude `.claude/agents/*.md` is the generic Agent type, so a
+            // (contrived) manifest next to it would refine it.
+            (".claude/agents/reviewer.md", GeminiAgent),
+        ] {
+            assert_eq!(refine(path, &fs), expected, "{path}");
+        }
     }
 
     #[test]

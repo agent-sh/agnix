@@ -1,1 +1,3 @@
-# Empty patterns section - only comments
+# Unmatched bracket in a glob pattern
+[unclosed
+*.log

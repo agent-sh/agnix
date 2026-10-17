@@ -642,6 +642,7 @@ rules:
   gm_001:
     message: 'Invalid markdown: %{description}'
     suggestion: Fix the markdown syntax error -- check for unclosed tags, mismatched headers, or invalid link syntax
+    unclosed_suggestion: Close the code fence. Gemini CLI ignores @ imports inside code blocks, so an unclosed fence hides every later @ import (the import processor uses `marked` to detect code regions)
   gm_002:
     message: No markdown headers found in GEMINI.md instruction file
     suggestion: 'Add section headers (# Title, ## Section) for better organization'
@@ -649,34 +650,72 @@ rules:
     message: Missing project context section in GEMINI.md instruction file
     suggestion: Add a '# Project' or '## Overview' section describing the project purpose and tech stack
   gm_004:
-    message: 'Invalid hooks configuration: %{description}'
-    suggestion: Check hook event names and required fields (type, command) in .gemini/settings.json
-    unknown_event: Unknown hook event type '%{event}' in hooksConfig
-    missing_field: Hook in '%{event}' is missing required field '%{field}'
-    invalid_type: Hook type must be 'command', got '%{value}'
-    malformed_hook: Malformed hook entry in '%{event}' - expected an object with 'type' and 'command' fields
+    suggestion: 'Gemini hooks are configured as "hooks": {"<Event>": [{"matcher": "...", "hooks": [{"type": "command", "command": "..."}]}]}; hooksConfig holds only enabled, disabled and notifications (geminicli.com/docs/hooks/reference)'
+    parse_error: "hooks/hooks.json is not valid JSON (%{error}); Gemini CLI does not load this extension's hooks"
+    no_hooks_object: "hooks/hooks.json has no \"hooks\" object; Gemini CLI does not load this extension's hooks (\"hooks\" property must be an object)"
+    hooks_not_object: "'hooks' must be an object that maps event names to arrays of hook groups, found %{found}"
+    unknown_event: "Unknown hook event '%{event}'; Gemini CLI fires only SessionStart, SessionEnd, BeforeAgent, AfterAgent, BeforeModel, AfterModel, BeforeToolSelection, BeforeTool, AfterTool, PreCompress and Notification"
+    unknown_event_hint: "Unknown hook event '%{event}' (did you mean '%{suggestion}'?); Gemini CLI never fires '%{event}'"
+    hooks_config_key: "'hooks.%{key}' is not a hook event; it is the hooksConfig.%{key} setting of settings.json"
+    event_not_array: "hooks.%{event} must be an array of hook groups, found %{found}"
+    group_not_object: "%{location} must be a hook group object {matcher?, sequential?, hooks: [...]}, found %{found}"
+    flat_hook: "%{location} has '%{field}' but no 'hooks' array; Gemini hook groups nest their commands: {\"matcher\": ..., \"hooks\": [{\"type\": \"command\", \"command\": ...}]}"
+    missing_hooks: "%{location} has no 'hooks' array, so it runs nothing"
+    hook_not_object: "%{location} must be a hook object {type, command, ...}, found %{found}"
+    field_type: "%{location}.%{field} must be %{expected}, found %{found}"
+    missing_field: "%{location} is missing required field '%{field}'"
+    invalid_type: "%{location}.type is '%{value}'; Gemini CLI supports only \"command\""
+    empty_command: "%{location}.command is empty"
+    timeout_not_positive: "%{location}.timeout must be a positive number of milliseconds, found %{value}"
+    hooks_config_not_object: "hooksConfig must be an object {enabled, disabled, notifications}, found %{found}"
+    hooks_config_type: "hooksConfig.%{key} must be %{expected}, found %{found}"
+    hooks_config_item_type: "hooksConfig.disabled[%{index}] must be a hook name string, found %{found}"
+    hooks_config_event: "'hooksConfig.%{key}' looks like a hook event; hook definitions belong under the top-level \"hooks\" object, and hooksConfig holds only enabled, disabled and notifications"
+    hooks_config_unknown: "Unknown hooksConfig key '%{key}'; hooksConfig holds only enabled, disabled and notifications"
   gm_005:
     message: 'Invalid extension manifest: %{description}'
-    suggestion: 'Ensure gemini-extension.json has required fields: name, version, description'
-    missing_field: Missing required field '%{field}'
-    invalid_name: Extension name '%{name}' must be lowercase alphanumeric with dashes
+    suggestion: 'gemini-extension.json needs a "name" (letters, numbers and dashes) and a "version"; Gemini CLI does not load the extension otherwise'
+    missing_field: "missing required '%{field}'; Gemini CLI refuses to load the extension"
+    invalid_name: "invalid extension name '%{name}': only letters, numbers and dashes are allowed, so Gemini CLI refuses to load the extension"
+    not_object: 'the manifest must be a JSON object, found %{found}'
     parse_error: 'Failed to parse gemini-extension.json: %{error}'
   gm_006:
     message: 'Invalid .geminiignore: %{description}'
     suggestion: Check .geminiignore syntax - use gitignore-style glob patterns
-    empty: .geminiignore file is empty
     syntax_error: 'Invalid glob pattern on line %{line}: %{pattern}'
-  gm_007:
-    message: '@import references missing file: %{path}'
-    suggestion: Verify the import path exists relative to the GEMINI.md file location
   gm_008:
-    message: 'Invalid context file name: %{description}'
-    suggestion: contextFileName should reference a valid file name (e.g., ending in .md)
-    path_not_filename: contextFileName should be a filename, not a path
+    suggestion: 'List paths relative to the extension directory (for example "GEMINI.md" or "docs/CONTEXT.md") and make sure each file exists; `gemini extensions validate` fails otherwise'
+    absolute: "contextFileName '%{value}' is an absolute path; Gemini CLI rejects it and does not load this context file"
+    variable_absolute: "contextFileName '%{value}' becomes an absolute path once the variable is substituted; Gemini CLI rejects it and does not load this context file"
+    parent: "contextFileName '%{value}' contains '..'; Gemini CLI rejects parent-directory references and does not load this context file"
+    not_found: "contextFileName '%{value}' does not exist in the extension directory; Gemini CLI skips it and `gemini extensions validate` fails"
+    empty: "contextFileName entries must be non-empty strings; Gemini CLI rejects this entry"
+    not_string: "contextFileName entries must be strings, found %{found}; Gemini CLI rejects this entry"
+    not_string_or_array: "contextFileName must be a string or an array of strings, found %{found}; Gemini CLI rejects it"
   gm_009:
     message: 'Failed to parse .gemini/settings.json: %{error}'
     suggestion: Fix the JSON syntax error in .gemini/settings.json
     unknown_key: Unknown top-level key '%{key}' in .gemini/settings.json
+    unknown_key_suggestion: 'Gemini CLI settings sit under their documented top-level category (general, ui, tools, hooks, mcpServers, ... - geminicli.com/docs/reference/configuration); move or remove this key'
+  gm_018:
+    message: 'Gemini hook timeouts are milliseconds (default 60000); %{value} means %{value} ms. Did you mean %{suggested}?'
+    suggestion: 'Hook timeout is "Execution timeout in milliseconds (default: 60000)." Claude Code hook timeouts are seconds; write %{suggested} for %{value} seconds, or keep %{value} if a %{value} ms limit is intended.'
+  gm_019:
+    not_found: "Hook command script '%{script}' does not exist (resolved to %{resolved}); Gemini CLI cannot run this hook"
+    not_found_suggestion: 'Fix the script path. Gemini hooks best practices: "Verify script path: Ensure the path in settings.json resolves correctly." $GEMINI_PROJECT_DIR is the project root and ${extensionPath} the extension directory.'
+    not_executable: "Hook command '%{script}' is not executable, so running it fails on macOS and Linux"
+    not_executable_suggestion: 'Run chmod +x on the script. Gemini hooks best practices: "Always make hook scripts executable on macOS/Linux".'
+  gm_026:
+    catch_all: '%{event} hook group matches every tool (matcher %{matcher}); specify only the tools you need'
+    no_matcher: '%{event} hook group has no matcher, so it runs for every tool; specify only the tools you need'
+    invalid_regex: "%{event} matcher '%{matcher}' is not a valid regular expression (%{error}); Gemini CLI then compares it with the tool name as plain text, so the hook runs only for a tool named exactly '%{matcher}'"
+    suggestion: 'Gemini hooks best practices: "Instead of matching all tools with `*`, specify only the tools you need." Use a regex of tool names such as "write_file|replace". Keep the catch-all when the hook must see every tool, for example an audit log.'
+    invalid_regex_suggestion: Fix the regular expression, or escape the characters you mean literally. Tool-event matchers are JavaScript regular expressions tested against the tool name.
+  gm_028:
+    missing_description: 'gemini-extension.json has no description; it is the summary shown on geminicli.com/extensions'
+    uppercase_name: "Extension name '%{name}' has uppercase letters; the docs say the name should be lowercase"
+    not_semver: "Version '%{version}' does not appear to be standard semver (e.g., 1.0.0); `gemini extensions validate` warns about it"
+    suggestion: 'See geminicli.com/docs/extensions/reference: "description: A short description of the extension", "The name should be lowercase or numbers and use dashes instead of underscores or spaces", and use a semver version such as 1.0.0.'
   oc_001:
     message: 'Invalid share mode ''%{value}''. Valid values: ''manual'', ''auto'', ''disabled'''
     type_error: 'Field ''share'' must be a string. Valid values: ''manual'', ''auto'', ''disabled'''
@@ -1663,9 +1702,8 @@ rules:
     message: Cline skill is missing required 'description' field in frontmatter
     suggestion: Add a 'description' field to the SKILL.md frontmatter
   gm_010:
-    message: experimental.memoryManager is enabled without experimental.autoMemory (Gemini CLI v0.40+ split these flags)
-    suggestion: 'Set experimental.autoMemory: true alongside memoryManager to keep background skill extraction and /memory
-      inbox working after v0.40 (see https://github.com/google-gemini/gemini-cli/pull/25601)'
+    message: experimental.memoryManager is not a Gemini CLI setting since v0.40.0; remove it, and set experimental.autoMemory true for the /memory inbox
+    suggestion: 'Gemini CLI v0.40.0 and later ignore experimental.memoryManager. experimental.autoMemory ("Automatically extract memory patches and skills from past sessions in the background") drives background extraction and the /memory inbox.'
   oc_cfg_001:
     message: Invalid model format '%{value}'; expected 'provider/model-id' (e.g. 'anthropic/claude-sonnet-4-5')
     type_error: Field 'model' must be a string
@@ -1726,16 +1764,13 @@ rules:
     not_object: 'MCP server ''%{server}'': ''auth'' block must be a mapping (type + fields)'
     missing_type: 'MCP server ''%{server}'': ''auth'' block is missing required ''type'' discriminator'
     invalid_type: 'MCP server ''%{server}'': ''auth.type'' is ''%{value}'', must be one of: %{valid}'
-    unknown_field_google: 'MCP server ''%{server}'': auth.type is ''google-credentials'' - field ''%{field}'' is not supported
-      for this variant (only ''scopes'' is)'
-    unknown_field_oauth: 'MCP server ''%{server}'': auth.type is ''oauth'' - field ''%{field}'' is not part of the oauth schema'
+    unknown_field_google: 'MCP server ''%{server}'': auth.type is ''google-credentials'' - field ''%{field}'' is not part of this variant (only ''scopes'' is), so Gemini CLI ignores it'
+    unknown_field_oauth: 'MCP server ''%{server}'': auth.type is ''oauth'' - field ''%{field}'' is not part of the oauth schema, so Gemini CLI ignores it'
     not_string: 'MCP server ''%{server}'': ''auth.%{field}'' must be a string'
     invalid_url: 'MCP server ''%{server}'': ''auth.%{field}'' is ''%{value}'', must be a valid http(s) URL'
-    scopes_not_array: 'MCP server ''%{server}'': ''auth.scopes'' must be an array of strings'
-    scope_not_string: 'MCP server ''%{server}'': ''auth.scopes[%{index}]'' must be a string'
-    suggestion: 'Align the auth block with the schema documented at google-gemini/gemini-cli#24770. For google-credentials:
-      {type: google-credentials, scopes?: [...]}. For oauth: {type: oauth, client_id?, client_secret?, scopes?, authorization_url?,
-      token_url?}'
+    array_not_array: 'MCP server ''%{server}'': ''auth.%{field}'' must be an array of strings'
+    array_item_not_string: 'MCP server ''%{server}'': ''auth.%{field}[%{index}]'' must be a string'
+    suggestion: 'Align the auth block with agentLoader.ts (gemini-cli). For google-credentials: {type: google-credentials, scopes?: [...]}. For oauth: {type: oauth, client_id?, client_secret?, scopes?, audiences?, authorization_url?, token_url?, issuer?, redirect_uri?, registration_url?, token_param_name?}'
   kr_set_001:
     type_error: "toolSearch.enabled must be a boolean (true or false); Kiro does not read other values and keeps the default"
     suggestion: "Set toolSearch.enabled to true or false. Example: {\"toolSearch.enabled\": true}. See https://kiro.dev/docs/mcp/tool-search/"

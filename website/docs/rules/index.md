@@ -1,7 +1,7 @@
 # Rules Reference
 
-This section contains all `535` validation rules generated from `knowledge-base/rules.json`.
-`136` rules have automatic fixes.
+This section contains all `538` validation rules generated from `knowledge-base/rules.json`.
+`135` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
 |------|------|----------|----------|----------|
@@ -279,16 +279,19 @@ This section contains all `535` validation rules generated from `knowledge-base/
 | [CUR-019](./generated/cur-019.md) | Invalid Prompt Hook Model Type | LOW | Cursor | No |
 | [CUR-020](./generated/cur-020.md) | Ignored Plain Markdown Cursor Rule | HIGH | Cursor | No |
 | [CX-SK-001](./generated/cx-sk-001.md) | Codex Skill Uses Unsupported Field | MEDIUM | Codex Skills | Yes (safe/unsafe) |
-| [GM-001](./generated/gm-001.md) | Invalid Markdown Structure in GEMINI.md | HIGH | Gemini CLI | Yes (safe) |
-| [GM-002](./generated/gm-002.md) | Missing Section Headers in GEMINI.md | MEDIUM | Gemini CLI | No |
-| [GM-003](./generated/gm-003.md) | Missing Project Context in GEMINI.md | MEDIUM | Gemini CLI | No |
-| [GM-004](./generated/gm-004.md) | Invalid Hooks Configuration in Gemini Settings | MEDIUM | Gemini CLI | No |
-| [GM-005](./generated/gm-005.md) | Invalid Extension Manifest | HIGH | Gemini CLI | No |
+| [GM-001](./generated/gm-001.md) | Invalid Markdown Structure in GEMINI.md | MEDIUM | Gemini CLI | Yes (unsafe) |
+| [GM-002](./generated/gm-002.md) | Missing Section Headers in GEMINI.md | LOW | Gemini CLI | No |
+| [GM-003](./generated/gm-003.md) | Missing Project Context in GEMINI.md | LOW | Gemini CLI | No |
+| [GM-004](./generated/gm-004.md) | Invalid Gemini Hooks Configuration | MEDIUM | Gemini CLI | No |
+| [GM-005](./generated/gm-005.md) | Gemini Extension Manifest Does Not Load | HIGH | Gemini CLI | No |
 | [GM-006](./generated/gm-006.md) | Invalid .geminiignore File | LOW | Gemini CLI | No |
-| [GM-007](./generated/gm-007.md) | @import File Not Found in GEMINI.md | MEDIUM | Gemini CLI | No |
-| [GM-008](./generated/gm-008.md) | Invalid Context File Name Configuration | LOW | Gemini CLI | Yes (safe) |
-| [GM-009](./generated/gm-009.md) | Settings.json Parse Error | HIGH | Gemini CLI | Yes (safe) |
-| [GM-010](./generated/gm-010.md) | memoryManager Without autoMemory After v0.40 Split | MEDIUM | Gemini CLI | No |
+| [GM-008](./generated/gm-008.md) | Invalid Extension contextFileName | HIGH | Gemini CLI | No |
+| [GM-009](./generated/gm-009.md) | Gemini Settings Parse Error or Unknown Top-Level Key | HIGH | Gemini CLI | Yes (unsafe) |
+| [GM-010](./generated/gm-010.md) | Stale experimental.memoryManager Setting | MEDIUM | Gemini CLI | No |
+| [GM-018](./generated/gm-018.md) | Gemini Hook Timeout Looks Like Seconds | MEDIUM | Gemini CLI | No |
+| [GM-019](./generated/gm-019.md) | Gemini Hook Script Not Found | MEDIUM | Gemini CLI | No |
+| [GM-026](./generated/gm-026.md) | Gemini Tool Hook Matches Every Tool | LOW | Gemini CLI | No |
+| [GM-028](./generated/gm-028.md) | Gemini Extension Manifest Advisory | LOW | Gemini CLI | No |
 | [GM-AG-001](./generated/gm-ag-001.md) | Invalid auth block in Gemini agent MCP server | HIGH | Gemini Agents | No |
 | [KIRO-001](./generated/kiro-001.md) | Invalid Steering File Inclusion Mode | HIGH | Kiro Steering | Yes (unsafe) |
 | [KIRO-002](./generated/kiro-002.md) | Inclusion Mode Without the Field It Loads By | HIGH | Kiro Steering | No |

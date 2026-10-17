@@ -30,6 +30,8 @@ pub(crate) use detection::{
     is_claude_system_managed_settings_path, is_inside_kiro_dir, is_kiro_power_skill,
     kiro_not_loaded_reason, path_contains_consecutive_components,
 };
+// Sibling-file refinement applied by the pipeline after path detection.
+pub(crate) use detection::refine_file_type;
 // Path facts for the Kiro agent and permissions validators.
 #[allow(unused_imports)]
 pub(crate) use detection::{KiroAgentLoaders, kiro_agent_loaders};

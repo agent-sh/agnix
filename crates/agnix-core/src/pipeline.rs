@@ -513,13 +513,22 @@ pub(crate) const FILES_MATCH_OPTIONS: glob::MatchOptions = glob::MatchOptions {
     require_literal_leading_dot: false,
 };
 
+/// Built-in detection for a real file: [`detect_file_type`] (path-only) plus
+/// the sibling-file refinement of `file_types::refine_file_type` (for
+/// example a Gemini CLI extension's `hooks/hooks.json` next to
+/// `gemini-extension.json`). Not used for `[files]` override results.
+fn detect_with_siblings(path: &Path, fs: &dyn crate::fs::FileSystem) -> FileType {
+    crate::file_types::refine_file_type(path, detect_file_type(path), fs)
+}
+
 fn resolve_with_compiled(
     path: &Path,
     root_dir: Option<&Path>,
     compiled: &CompiledFilesConfig,
+    fs: &dyn crate::fs::FileSystem,
 ) -> FileType {
     if compiled.is_empty() {
-        return detect_file_type(path);
+        return detect_with_siblings(path, fs);
     }
 
     let rel_path = if let Some(root) = root_dir {
@@ -549,7 +558,7 @@ fn resolve_with_compiled(
         }
     }
 
-    detect_file_type(path)
+    detect_with_siblings(path, fs)
 }
 
 /// Resolve file type with config-based overrides.
@@ -562,15 +571,17 @@ fn resolve_with_compiled(
 ///
 /// Priority: exclude > include_as_memory > include_as_generic > built-in detection.
 ///
-/// When no `[files]` patterns are configured, this is equivalent to
-/// calling `detect_file_type(path)` directly.
+/// When no `[files]` patterns are configured, this is
+/// `detect_file_type(path)` plus the sibling-file refinement (through
+/// `config.fs()`) that tells layouts such as a Gemini CLI extension's
+/// `hooks/hooks.json` apart from Claude Code plugin hooks.
 pub fn resolve_file_type(path: &Path, config: &LintConfig) -> FileType {
     let files = config.files_config();
     if files.include_as_memory.is_empty()
         && files.include_as_generic.is_empty()
         && files.exclude.is_empty()
     {
-        return detect_file_type(path);
+        return detect_with_siblings(path, config.fs().as_ref());
     }
 
     // Compile patterns on-demand for single-file validation. Invalid patterns
@@ -579,7 +590,12 @@ pub fn resolve_file_type(path: &Path, config: &LintConfig) -> FileType {
     // LintConfigBuilder::build() / LintConfig::validate() at config load time
     // for strict validation.
     let compiled = compile_files_config(files);
-    resolve_with_compiled(path, config.root_dir().map(|p| p.as_path()), &compiled)
+    resolve_with_compiled(
+        path,
+        config.root_dir().map(|p| p.as_path()),
+        &compiled,
+        config.fs().as_ref(),
+    )
 }
 
 /// Validate a single file.
@@ -1113,9 +1129,14 @@ pub fn validate_paths_with_registry(
                     return (diags, agents, instructions);
                 }
 
-                // Count recognized files (resolve_with_compiled is string-only, no I/O)
-                let file_type =
-                    resolve_with_compiled(&file_path, Some(&root_path), &compiled_files);
+                // Count recognized files. Resolution is path-based; only
+                // sibling refinement (hooks.json, agents/*.md) stats a file.
+                let file_type = resolve_with_compiled(
+                    &file_path,
+                    Some(&root_path),
+                    &compiled_files,
+                    config.fs().as_ref(),
+                );
                 if file_type != FileType::Unknown {
                     let count = files_checked.fetch_add(1, Ordering::SeqCst) + 1;
                     // Security: Enforce file count limit to prevent DoS

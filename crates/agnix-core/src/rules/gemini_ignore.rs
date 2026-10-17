@@ -1,7 +1,7 @@
 //! Gemini CLI ignore file validation rules (GM-006)
 //!
 //! Validates:
-//! - GM-006: Invalid .geminiignore file (LOW) - empty content, syntax errors
+//! - GM-006: Invalid .geminiignore file (LOW) - unmatched `[` in a pattern
 
 use crate::{
     config::PerFileLintConfig,
@@ -40,35 +40,28 @@ impl Validator for GeminiIgnoreValidator {
         let issues = validate_geminiignore(content);
 
         for issue in issues {
-            let (message, suggestion) = if issue.description == "empty" {
-                (
-                    t!(
-                        "rules.gm_006.message",
-                        description = t!("rules.gm_006.empty")
-                    ),
-                    t!("rules.gm_006.suggestion"),
-                )
-            } else if let Some(pattern) = issue.description.strip_prefix("syntax_error:") {
-                (
-                    t!(
-                        "rules.gm_006.message",
-                        description = t!(
-                            "rules.gm_006.syntax_error",
-                            line = &issue.line.to_string(),
-                            pattern = pattern
-                        )
-                    ),
-                    t!("rules.gm_006.suggestion"),
-                )
-            } else {
-                (
-                    t!(
-                        "rules.gm_006.message",
-                        description = issue.description.as_str()
-                    ),
-                    t!("rules.gm_006.suggestion"),
-                )
-            };
+            let (message, suggestion) =
+                if let Some(pattern) = issue.description.strip_prefix("syntax_error:") {
+                    (
+                        t!(
+                            "rules.gm_006.message",
+                            description = t!(
+                                "rules.gm_006.syntax_error",
+                                line = &issue.line.to_string(),
+                                pattern = pattern
+                            )
+                        ),
+                        t!("rules.gm_006.suggestion"),
+                    )
+                } else {
+                    (
+                        t!(
+                            "rules.gm_006.message",
+                            description = issue.description.as_str()
+                        ),
+                        t!("rules.gm_006.suggestion"),
+                    )
+                };
 
             diagnostics.push(
                 Diagnostic::info(
@@ -105,18 +98,10 @@ mod tests {
     // ===== GM-006: Invalid .geminiignore =====
 
     #[test]
-    fn test_gm_006_empty() {
-        let diagnostics = validate("");
-        let gm_006: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-006").collect();
-        assert_eq!(gm_006.len(), 1);
-        assert_eq!(gm_006[0].level, DiagnosticLevel::Info);
-    }
-
-    #[test]
-    fn test_gm_006_only_comments() {
-        let diagnostics = validate("# Comment\n# Another\n");
-        let gm_006: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-006").collect();
-        assert_eq!(gm_006.len(), 1);
+    fn test_gm_006_empty_and_comment_only_files_are_not_reported() {
+        // The empty-file branch had no vendor basis and was removed.
+        assert!(validate("").is_empty());
+        assert!(validate("# Comment\n# Another\n").is_empty());
     }
 
     #[test]
@@ -125,6 +110,7 @@ mod tests {
         let gm_006: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-006").collect();
         assert_eq!(gm_006.len(), 1);
         assert_eq!(gm_006[0].line, 1);
+        assert_eq!(gm_006[0].level, DiagnosticLevel::Info);
     }
 
     #[test]
@@ -141,7 +127,7 @@ mod tests {
         let mut config = LintConfig::default();
         config.rules_mut().gemini_md = false;
 
-        let diagnostics = validate_with_config("", &config);
+        let diagnostics = validate_with_config("[bad\n", &config);
         let gm_rules: Vec<_> = diagnostics
             .iter()
             .filter(|d| d.rule.starts_with("GM-"))
@@ -154,7 +140,7 @@ mod tests {
         let mut config = LintConfig::default();
         config.rules_mut().disabled_rules = vec!["GM-006".to_string()];
 
-        let diagnostics = validate_with_config("", &config);
+        let diagnostics = validate_with_config("[bad\n", &config);
         let gm_006: Vec<_> = diagnostics.iter().filter(|d| d.rule == "GM-006").collect();
         assert!(gm_006.is_empty());
     }

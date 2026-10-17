@@ -1,0 +1,25 @@
+{
+  "hooks": {
+    "AfterTool": [
+      {
+        "matcher": "write_file|replace",
+        "hooks": [
+          {
+            "command": "bash \"${GEMINI_PROJECT_DIR}/scripts/post-tool-hook.sh\"",
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "command": "$GEMINI_PROJECT_DIR/scripts/session-start-hook.sh",
+            "type": "command"
+          }
+        ]
+      }
+    ]
+  }
+}
